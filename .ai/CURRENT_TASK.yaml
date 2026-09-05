@@ -1,0 +1,87 @@
+schema_version: 1
+task_id: R-001
+title: Bootstrap canonical platform monorepo skeleton
+status: in_progress
+phase: BASIC/MVP
+founder_stage: 0
+branch: ai/R-001-monorepo-bootstrap
+goal: >-
+  Create the Section 74 platform monorepo skeleton and the deterministic Stage 0 onboarding,
+  verification, state, and handoff contract without implementing services or infrastructure.
+source:
+  tracker_sheet: Phase_Roadmap
+  tracker_row: reconstructed because R-001 through R-009 are absent from the supplied workbook
+  brief_sections: [25, 26, 27, 74, 77, 81, 82, 83, 91, 92]
+project_profile:
+  repository: platform_modular_monorepo
+  control_plane_database: postgresql
+  model_routing: balanced
+complexity: L1
+expected_impact:
+  - root repository configuration and documentation
+  - Section 74 directory placeholders
+  - portable AI/developer state and handoff files
+  - deterministic bootstrap and verification scripts
+  - CI and CODEOWNERS skeleton
+allowed_paths:
+  - .ai/**
+  - .cursor/**
+  - .cursorignore
+  - .github/**
+  - apps/**
+  - services/**
+  - modules/**
+  - workers/**
+  - packages/**
+  - ai/**
+  - templates/**
+  - infra/**
+  - security/**
+  - docs/**
+  - scripts/**
+  - AGENTS.md
+  - CLAUDE.md
+  - CHANGELOG.md
+  - PROJECT_STATE.md
+  - README.md
+  - Taskfile.yml
+  - package.json
+  - pnpm-workspace.yaml
+  - pnpm-lock.yaml
+  - .editorconfig
+  - .gitattributes
+  - .gitignore
+  - .env.example
+  - R_&_D/OmniStackAI_Execution_Tracker_v6.xlsx
+must_not_change:
+  - control-plane database choice
+  - service implementations
+  - runtime or cloud provider selection
+  - deployed infrastructure
+  - native mobile or device-cloud functionality
+  - source documents other than the authorized execution tracker status/evidence
+acceptance:
+  - Every path in the Section 74 monorepo contract exists.
+  - Portable start, task, state, work-log, and handoff files exist and agree.
+  - Task commands doctor, bootstrap, lint, test, verify, ai:status, and ai:handoff are defined.
+  - Environment placeholders and secret/context exclusions exist without secret values.
+  - CI and ownership skeletons enforce the same deterministic repository verification.
+  - A fresh developer or AI session can determine the current state without chat history.
+  - No deployable service, database, cloud resource, or mobile implementation is introduced.
+required_gates:
+  - impact_analysis
+  - shell_syntax
+  - repository_contract_test
+  - secret_exclusion_check
+  - task_verify
+  - blast_radius_check
+  - tracker_evidence
+model_tool_trace:
+  routing: deterministic_only
+  model_calls: 0
+  cloud_calls: 0
+  note: No LLM inference is required for repository bootstrap.
+blockers: []
+next_action: Create and verify the approved Stage 0 repository skeleton.
+next_command: task doctor
+

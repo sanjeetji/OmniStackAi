@@ -1,0 +1,19 @@
+{
+  "name": "omnistackai-platform",
+  "version": "0.0.0",
+  "private": true,
+  "description": "OmniStackAI platform monorepo",
+  "packageManager": "pnpm@11.19.0",
+  "engines": {
+    "node": ">=20",
+    "pnpm": ">=10"
+  },
+  "scripts": {
+    "doctor": "bash scripts/doctor.sh",
+    "bootstrap": "bash scripts/bootstrap.sh",
+    "lint": "bash scripts/lint.sh",
+    "test": "bash scripts/test.sh",
+    "verify": "bash scripts/verify.sh"
+  }
+}
+

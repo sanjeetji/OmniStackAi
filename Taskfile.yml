@@ -1,0 +1,69 @@
+version: "3"
+
+silent: true
+
+tasks:
+  doctor:
+    desc: Validate repository structure and available local toolchains
+    cmds:
+      - bash scripts/doctor.sh
+
+  bootstrap:
+    desc: Install declared local dependencies deterministically
+    cmds:
+      - bash scripts/bootstrap.sh
+
+  lint:
+    desc: Run static repository checks
+    cmds:
+      - bash scripts/lint.sh
+
+  test:
+    desc: Run repository contract tests
+    cmds:
+      - bash scripts/test.sh
+
+  build:
+    desc: Build implemented targets
+    cmds:
+      - echo "No deployable targets exist in R-001."
+
+  check:
+    desc: Run lint and tests
+    deps: [lint, test]
+
+  preview:
+    desc: Start the lowest-cost eligible preview
+    cmds:
+      - echo "No preview target exists in R-001. Instant Browser Preview will be added first."
+
+  verify:
+    desc: Run the CI-equivalent Stage 0 verification
+    cmds:
+      - bash scripts/verify.sh
+
+  ci:
+    desc: Run CI verification
+    cmds:
+      - bash scripts/verify.sh --ci
+
+  ai:status:
+    desc: Print durable task and Git status
+    cmds:
+      - bash scripts/ai-status.sh
+
+  ai:handoff:
+    desc: Validate and print the current handoff
+    cmds:
+      - bash scripts/ai-handoff.sh
+
+  env:check:
+    desc: Validate environment placeholders and exclusions
+    cmds:
+      - bash scripts/env-check.sh
+
+  security:quick:
+    desc: Run the Stage 0 secret-policy check
+    cmds:
+      - bash scripts/security-quick.sh
+

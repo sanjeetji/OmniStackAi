@@ -1,0 +1,10 @@
+* @omnistackai/maintainers
+
+/.github/ @omnistackai/maintainers
+/.ai/policies/ @omnistackai/maintainers
+/infra/ @omnistackai/maintainers
+/security/ @omnistackai/maintainers
+/services/control-plane/ @omnistackai/maintainers
+/modules/billing-entitlements/ @omnistackai/maintainers
+/modules/audit-policy/ @omnistackai/maintainers
+

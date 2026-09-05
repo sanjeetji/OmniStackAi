@@ -1,0 +1,10 @@
+---
+description: OmniStackAI portable repository rules
+alwaysApply: true
+---
+
+Follow `AGENTS.md`, `docs/START_HERE.md`, `.ai/PROJECT_STATE.yaml`, and
+`.ai/CURRENT_TASK.yaml`. Keep edits within the current task's allowed paths. Never include
+secret files or values in model context. Tool-specific editor behavior cannot override Git,
+tests, policies, architecture rules, or approval requirements.
+
