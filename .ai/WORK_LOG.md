@@ -18,3 +18,16 @@
 - Created implementation checkpoint `655f01fa0425e8df9022ce6bb1d2040f56b1cb73`.
 - Reconstructed tracker row R-001 with founder approval, marked it Done, recorded evidence, and
   verified the workbook visually and for formula errors.
+
+## 2026-09-06 — R-002
+
+- Reconstructed the R-002 contract from the kickoff kit's canonical example with founder approval.
+- Pinned `pgvector/pgvector:0.8.6-pg18-trixie` as the only local Compose service.
+- Added loopback-only port publishing, ignored environment credentials, and a persistent named volume.
+- Added transactional version 1 up/down migrations for pgvector and the migration ledger.
+- Added deterministic `db:config`, `db:up`, `db:status`, `db:verify`, and `db:down` commands.
+- Corrected the PostgreSQL 18 volume mount to its major-version-aware root after the live health gate
+  exposed the upstream layout change.
+- Verified a healthy live database, pgvector 0.8.6, migration version 1, and loopback-only binding.
+- Ran `task verify` successfully and created implementation checkpoint
+  `56bf4b0dea5486f8d6dcde0c7b1054249ebbb064`.
