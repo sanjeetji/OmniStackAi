@@ -16,7 +16,7 @@ required_files=(
   pnpm-workspace.yaml
 )
 
-required_commands=(git node pnpm python3)
+required_commands=(git node pnpm python3 docker)
 optional_commands=(go uv ollama)
 
 for relative_path in "${required_files[@]}"; do
@@ -25,6 +25,15 @@ for relative_path in "${required_files[@]}"; do
     errors=$((errors + 1))
   fi
 done
+
+if command -v docker >/dev/null 2>&1; then
+  if docker compose version >/dev/null 2>&1; then
+    printf 'OK command: docker compose\n'
+  else
+    printf 'ERROR missing required command: docker compose\n'
+    errors=$((errors + 1))
+  fi
+fi
 
 for command_name in "${required_commands[@]}"; do
   if ! command -v "$command_name" >/dev/null 2>&1; then
@@ -54,4 +63,3 @@ if [[ "$errors" -ne 0 ]]; then
 fi
 
 printf 'Doctor passed.\n'
-

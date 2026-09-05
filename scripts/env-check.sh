@@ -3,7 +3,15 @@ set -euo pipefail
 
 repo_root="$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)"
 
-required_names=(OMNISTACKAI_ENV OMNISTACKAI_LOG_LEVEL OMNISTACKAI_OLLAMA_BASE_URL)
+required_names=(
+  OMNISTACKAI_ENV
+  OMNISTACKAI_LOG_LEVEL
+  OMNISTACKAI_OLLAMA_BASE_URL
+  OMNISTACKAI_POSTGRES_DB
+  OMNISTACKAI_POSTGRES_USER
+  OMNISTACKAI_POSTGRES_PASSWORD
+  OMNISTACKAI_POSTGRES_PORT
+)
 for config_name in "${required_names[@]}"; do
   if ! rg -q "^${config_name}=" "$repo_root/.env.example"; then
     printf 'Missing environment placeholder: %s\n' "$config_name"
@@ -17,4 +25,3 @@ if ! rg -q '^\.env\.\*$' "$repo_root/.gitignore" || ! rg -q '^!\.env\.example$' 
 fi
 
 printf 'Environment contract passed.\n'
-

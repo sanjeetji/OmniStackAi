@@ -1,28 +1,28 @@
 schema_version: 1
-task_id: R-001
-title: Bootstrap canonical platform monorepo skeleton
-status: done
+task_id: R-002
+title: Add local PostgreSQL with pgvector and initial migration
+status: in_progress
 phase: BASIC/MVP
 founder_stage: 0
-branch: ai/R-001-monorepo-bootstrap
+branch: ai/R-002-postgres-pgvector-bootstrap
 goal: >-
-  Create the Section 74 platform monorepo skeleton and the deterministic Stage 0 onboarding,
-  verification, state, and handoff contract without implementing services or infrastructure.
+  Add a pinned local PostgreSQL with pgvector Compose service, one versioned initial migration,
+  and deterministic database lifecycle and verification commands.
 source:
   tracker_sheet: Phase_Roadmap
   tracker_row: reconstructed because R-001 through R-009 are absent from the supplied workbook
-  brief_sections: [25, 26, 27, 74, 77, 81, 82, 83, 91, 92]
+  brief_sections: [25, 26, 27, 74, 77, 83, 91, 92]
 project_profile:
   repository: platform_modular_monorepo
   control_plane_database: postgresql
   model_routing: balanced
-complexity: L1
+complexity: L2
 expected_impact:
-  - root repository configuration and documentation
-  - Section 74 directory placeholders
-  - portable AI/developer state and handoff files
-  - deterministic bootstrap and verification scripts
-  - CI and CODEOWNERS skeleton
+  - infra/environments/local/compose.yaml
+  - services/control-plane/migrations/**
+  - scripts/db.sh
+  - root Taskfile and local environment documentation
+  - portable state, changelog, handoff, and tracker evidence
 allowed_paths:
   - .ai/**
   - .cursor/**
@@ -55,23 +55,24 @@ allowed_paths:
   - R_&_D/OmniStackAI_Execution_Tracker_v6.xlsx
 must_not_change:
   - control-plane database choice
-  - service implementations
-  - runtime or cloud provider selection
-  - deployed infrastructure
+  - Redis or any additional service
+  - application or business schema
+  - cloud database or paid service selection
+  - Kubernetes, Temporal, or deployed infrastructure
   - native mobile or device-cloud functionality
   - source documents other than the authorized execution tracker status/evidence
 acceptance:
-  - Every path in the Section 74 monorepo contract exists.
-  - Portable start, task, state, work-log, and handoff files exist and agree.
-  - Task commands doctor, bootstrap, lint, test, verify, ai:status, and ai:handoff are defined.
-  - Environment placeholders and secret/context exclusions exist without secret values.
-  - CI and ownership skeletons enforce the same deterministic repository verification.
-  - A fresh developer or AI session can determine the current state without chat history.
-  - No deployable service, database, cloud resource, or mobile implementation is introduced.
+  - A pinned pgvector PostgreSQL image is configured as the only Compose service.
+  - Database access is loopback-only and the password is supplied outside version control.
+  - Initial up/down migrations are versioned and the up migration is transactional.
+  - Database lifecycle and live verification commands are deterministic and documented.
+  - Repository verification passes without requiring a running container.
+  - No additional service, cloud resource, orchestration layer, or native work is introduced.
 required_gates:
   - impact_analysis
-  - shell_syntax
-  - repository_contract_test
+  - compose_config
+  - migration_contract_test
+  - live_database_verification
   - secret_exclusion_check
   - task_verify
   - blast_radius_check
@@ -80,35 +81,8 @@ model_tool_trace:
   routing: deterministic_only
   model_calls: 0
   cloud_calls: 0
-  note: No LLM inference is required for repository bootstrap.
-completion:
-  implementation_commit: 655f01fa0425e8df9022ce6bb1d2040f56b1cb73
-  verified_at: "2026-09-06T00:25:00+05:30"
-  verification:
-    - command: task doctor
-      result: pass
-    - command: task bootstrap
-      result: pass
-    - command: task verify
-      result: pass
-    - command: task ai:status
-      result: pass
-    - command: task ai:handoff
-      result: pass
-  acceptance_results:
-    - criterion: Every path in the Section 74 monorepo contract exists.
-      result: pass
-    - criterion: Portable start, task, state, work-log, and handoff files exist and agree.
-      result: pass
-    - criterion: Required root task commands are defined and executable.
-      result: pass
-    - criterion: Environment placeholders and secret/context exclusions contain no secret values.
-      result: pass
-    - criterion: CI and ownership skeletons use the repository verification contract.
-      result: pass
-    - criterion: No deployable service, database, cloud resource, or mobile implementation was introduced.
-      result: pass
-blockers:
-  - R-002 through R-009 are absent from Phase_Roadmap.
-next_action: Obtain or approve reconstruction of the missing R-002 task definition.
-next_command: task ai:status
+  note: No LLM inference is required for the deterministic database bootstrap.
+completion: null
+blockers: []
+next_action: Implement and verify the bounded local database foundation.
+next_command: task db:config

@@ -1,0 +1,14 @@
+BEGIN;
+
+CREATE EXTENSION IF NOT EXISTS vector;
+
+CREATE TABLE IF NOT EXISTS schema_migrations (
+    version BIGINT PRIMARY KEY,
+    applied_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+INSERT INTO schema_migrations (version)
+VALUES (1)
+ON CONFLICT (version) DO NOTHING;
+
+COMMIT;

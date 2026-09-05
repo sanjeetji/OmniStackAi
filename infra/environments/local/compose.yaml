@@ -1,0 +1,25 @@
+name: omnistackai-local
+
+services:
+  postgres:
+    image: pgvector/pgvector:0.8.6-pg18-trixie
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${OMNISTACKAI_POSTGRES_DB:-omnistackai}
+      POSTGRES_USER: ${OMNISTACKAI_POSTGRES_USER:-omnistackai}
+      POSTGRES_PASSWORD: ${OMNISTACKAI_POSTGRES_PASSWORD:?set OMNISTACKAI_POSTGRES_PASSWORD in .env}
+    ports:
+      - "127.0.0.1:${OMNISTACKAI_POSTGRES_PORT:-5432}:5432"
+    volumes:
+      - omnistackai-postgres-data:/var/lib/postgresql
+      - ../../../services/control-plane/migrations/000001_platform_foundation.up.sql:/docker-entrypoint-initdb.d/000001_platform_foundation.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 5s
+      retries: 12
+      start_period: 10s
+
+volumes:
+  omnistackai-postgres-data:
+    name: omnistackai-postgres-data

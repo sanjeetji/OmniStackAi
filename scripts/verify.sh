@@ -8,6 +8,6 @@ bash "$repo_root/scripts/lint.sh"
 bash "$repo_root/scripts/test.sh"
 bash "$repo_root/scripts/env-check.sh"
 bash "$repo_root/scripts/security-quick.sh"
+bash "$repo_root/scripts/db.sh" config
 
 printf 'Stage 0 verification passed.\n'
-
