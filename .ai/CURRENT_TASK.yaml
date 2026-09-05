@@ -82,7 +82,7 @@ model_tool_trace:
   cloud_calls: 0
   note: No LLM inference is required for repository bootstrap.
 completion:
-  implementation_commit: 8a12c4489e078072bfef689c3bfbf5e8042b993c
+  implementation_commit: 655f01fa0425e8df9022ce6bb1d2040f56b1cb73
   verified_at: "2026-09-06T00:25:00+05:30"
   verification:
     - command: task doctor

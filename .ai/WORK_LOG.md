@@ -15,6 +15,6 @@
 - Corrected the tracked-file secret check so the permitted `.env.example` is excluded without
   weakening checks for real secret files.
 - `task doctor`, `task bootstrap`, `task verify`, `task ai:status`, and `task ai:handoff` passed.
-- Created implementation checkpoint `8a12c4489e078072bfef689c3bfbf5e8042b993c`.
+- Created implementation checkpoint `655f01fa0425e8df9022ce6bb1d2040f56b1cb73`.
 - Reconstructed tracker row R-001 with founder approval, marked it Done, recorded evidence, and
   verified the workbook visually and for formula errors.
