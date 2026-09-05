@@ -1,34 +1,40 @@
 # Current Handoff
 
 Task ID: R-001
-Status: in progress
+Status: done
 Phase: BASIC/MVP — Founder Stage 0
 Branch: `ai/R-001-monorepo-bootstrap`
-Head SHA: repository has no commit yet
-Last verified SHA: none
+Head SHA at handoff generation: `8a12c4489e078072bfef689c3bfbf5e8042b993c`
+Last verified implementation SHA: `8a12c4489e078072bfef689c3bfbf5e8042b993c`
 
 ## Completed
 
-- Read the implementation brief in full.
-- Created root `PROJECT_STATE.md` before source-code work.
-- Confirmed that R-001 through R-009 are absent from the supplied tracker.
-- Received approval to create V6-required top-level folders and reconstruct R-001.
+- Created and committed the Section 74 monorepo skeleton without service implementations.
+- Added the V6 portable start, task, state, work-log, and handoff contract.
+- Added deterministic Taskfile commands, CI/CODEOWNERS skeletons, environment placeholders,
+  secret exclusions, and ADR-0001.
+- Reconstructed the missing R-001 tracker row with founder approval and marked it Done with
+  verification evidence.
 
 ## Verification
 
-- No completed verification yet.
+- `task doctor` — pass.
+- `task bootstrap` — pass.
+- `task verify` — pass.
+- Tracker row A12:M12 — R-001, Done, 100%, implementation checkpoint recorded.
+- Workbook formula-error scan — zero matches; changed range visually reviewed.
 
 ## Blockers and risks
 
-- The local `task`, Go, and `uv` commands are not installed. Stage 0 does not yet contain Go
-  or Python service implementations, so Go and uv are advisory for R-001.
+- Go and `uv` are not installed. They remain advisory because R-001 contains no Go or Python
+  implementation.
 - Ollama client 0.33.3 is installed, but its local server is not running.
+- R-002 through R-009 are absent from `Phase_Roadmap`; do not infer or skip them.
 
 ## Next action
 
-Create the canonical Section 74 skeleton and deterministic repository checks.
+Obtain or approve reconstruction of the missing R-002 task definition before implementation.
 
 ## Next command
 
-`task doctor`
-
+`task ai:status`

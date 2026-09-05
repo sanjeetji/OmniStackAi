@@ -3,7 +3,9 @@ set -euo pipefail
 
 repo_root="$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)"
 
-if git -C "$repo_root" ls-files | rg -q '(^|/)(\.env($|\.)|.*\.(pem|key|p12|pfx|jks|keystore)$|credentials\.json$|secrets?\.(yaml|yml|json)$)'; then
+if git -C "$repo_root" ls-files \
+  | rg -v '(^|/)\.env\.example$' \
+  | rg -q '(^|/)(\.env($|\.)|.*\.(pem|key|p12|pfx|jks|keystore)$|credentials\.json$|secrets?\.(yaml|yml|json)$)'; then
   printf 'Tracked path violates the secret exclusion policy.\n'
   exit 1
 fi
