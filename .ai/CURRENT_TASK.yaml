@@ -1,70 +1,75 @@
 schema_version: 1
-task_id: R-004
-title: Add the minimal Go control-plane foundation
-status: done
+task_id: R-005
+title: Add the vendor-neutral ModelProvider contract and registry
+status: in_progress
 phase: BASIC/MVP
 founder_stage: 0
-branch: ai/R-004-control-plane-foundation
+branch: ai/R-005-model-provider-contract
 goal: >-
-  Add the Stage 0 Go modular-monolith control-plane process with typed configuration,
-  liveness, PostgreSQL-backed readiness, structured logs, and graceful shutdown.
+  Establish the Python agent-engine's vendor-neutral ModelProvider protocol, immutable
+  request/response/capability records, and deterministic provider registry before any adapter exists.
 source:
   tracker_sheet: Phase_Roadmap
-  tracker_row: reconstructed because R-004 through R-009 are absent from the supplied workbook
-  brief_sections: [25, 26, 27, 33, 63.1, 74, 77, 83, 84.1]
+  tracker_row: reconstructed because R-005 through R-009 are absent from the supplied workbook
+  brief_sections: [18.3, 25, 26, 27, 74, 75, 77, 83, 84, 85, 91, 92]
 project_profile:
   repository: platform_modular_monorepo
+  service: python_agent_engine
   control_plane_database: postgresql
   model_routing: balanced
 complexity: L2
 expected_impact:
-  - services/control-plane/**
-  - infra/environments/local/compose.yaml
+  - services/agent-engine/**
   - Taskfile.yml
-  - .env.example
-  - scripts/doctor.sh
-  - scripts/bootstrap.sh
+  - scripts/agent-engine.sh
+  - scripts/lint.sh
   - scripts/test.sh
   - scripts/verify.sh
   - .github/workflows/ci.yml
+  - README.md
+  - docs/START_HERE.md
   - docs/DEVELOPMENT.md
-  - docs/ENVIRONMENTS.md
+  - docs/MODEL_PROVIDER.md
   - portable state, changelog, handoff, and tracker evidence
 allowed_paths:
   - .ai/**
   - .github/workflows/ci.yml
-  - .env.example
   - CHANGELOG.md
   - PROJECT_STATE.md
   - README.md
   - R_&_D/OmniStackAI_Execution_Tracker_v6.xlsx
   - Taskfile.yml
-  - docs/**
-  - infra/environments/local/compose.yaml
-  - scripts/**
-  - services/control-plane/**
+  - docs/DEVELOPMENT.md
+  - docs/MODEL_PROVIDER.md
+  - docs/START_HERE.md
+  - scripts/agent-engine.sh
+  - scripts/lint.sh
+  - scripts/test.sh
+  - scripts/verify.sh
+  - services/agent-engine/**
 must_not_change:
-  - PostgreSQL as the control-plane database
-  - database schema beyond the completed R-002 migration
-  - agent-engine, runner-manager, modules, workers, or web console implementations
-  - Redis, NATS, object storage, Kubernetes, Temporal, or cloud infrastructure
+  - PostgreSQL as the control-plane database or the existing schema
+  - provider adapters, including Ollama or any cloud provider
+  - model routing, fallback, circuit breakers, budgets, or accounting behavior
+  - agent orchestration, HTTP endpoints, or a deployable agent-engine process
+  - local Compose services or infrastructure
+  - Redis, NATS, object storage, Kubernetes, Temporal, or cloud resources
   - auth, organizations, billing, Git integration, audit, or business APIs
   - native mobile or device-cloud functionality
   - source documents other than the authorized execution tracker status and evidence
 acceptance:
-  - A minimal Go modular-monolith process starts from typed environment configuration.
-  - GET /healthz returns a stable JSON liveness response without requiring PostgreSQL.
-  - GET /readyz queries PostgreSQL with a bounded timeout and returns 200 or 503 JSON without leaking errors.
-  - The process uses structured logs, bounded HTTP timeouts, and graceful SIGINT/SIGTERM shutdown.
-  - Unit tests cover configuration and both health states; live Compose verifies health and readiness.
-  - Exactly PostgreSQL and control-plane run in local Compose; no additional service is introduced.
+  - Provider, model, capability, request, response, usage, health, discovery, and stream records are immutable and validate invalid input.
+  - A runtime-checkable ModelProvider protocol exposes provider identity, health, model discovery, generation, and streaming without a vendor SDK type.
+  - The registry returns providers deterministically and rejects invalid, duplicate, and unknown providers with stable platform-owned errors.
+  - Standard-library unit tests cover value invariants, protocol substitutability, registration order, duplicates, and unknown lookups.
+  - Stable Taskfile commands compile and test the agent-engine contract in local and CI environments.
+  - No adapter, routing policy, external Python dependency, service process, database change, or infrastructure is introduced.
 required_gates:
   - impact_analysis
-  - go_format_vet_test
-  - typed_config_tests
-  - health_readiness_tests
-  - compose_build_config
-  - live_service_verification
+  - python_compile_test
+  - model_provider_contract_tests
+  - registry_determinism_tests
+  - vendor_import_exclusion
   - secret_exclusion_check
   - task_verify
   - blast_radius_check
@@ -73,39 +78,10 @@ model_tool_trace:
   routing: local_only
   local_provider: ollama
   configured_model: qwen2.5-coder:14b
-  local_calls: 1
+  local_calls: 2
   cloud_calls: 0
-  note: Local Ollama provided a bounded layout and acceptance-check review; deterministic tools decide and verify the implementation.
-completion:
-  implementation_commit: c44fd8d013e3ec1497ccb4ab55f1433df042aeb5
-  verified_at: "2026-09-06T09:57:14+05:30"
-  verification:
-    - command: task verify
-      result: pass
-    - command: go test -race ./...
-      result: pass
-    - command: task control-plane:verify
-      result: pass
-      evidence: PostgreSQL and control-plane healthy; health=ok; readiness=ready
-    - command: docker compose config --services
-      result: pass
-      evidence: exactly postgres and control-plane
-    - command: docker image inspect omnistackai/control-plane:r004
-      result: pass
-      evidence: runtime user is omnistackai
-  acceptance_results:
-    - criterion: The minimal Go modular-monolith starts from typed environment configuration.
-      result: pass
-    - criterion: Liveness is stable JSON and independent of PostgreSQL.
-      result: pass
-    - criterion: Readiness uses a bounded PostgreSQL ping and hides raw database errors.
-      result: pass
-    - criterion: Structured logs, bounded HTTP timeouts, and graceful shutdown are implemented.
-      result: pass
-    - criterion: Unit, race, repository, Compose, and live endpoint verification pass.
-      result: pass
-    - criterion: No service beyond PostgreSQL and control-plane was introduced.
-      result: pass
+  note: Two bounded local review attempts returned no capturable text; the normative brief and deterministic repository evidence define the contract.
+completion: null
 blockers: []
-next_action: Define reconstructed R-005 as the next smallest Stage 0 prerequisite before writing code.
-next_command: task ai:status
+next_action: Implement the bounded Python ModelProvider contract, registry, and deterministic tests.
+next_command: task agent-engine:test

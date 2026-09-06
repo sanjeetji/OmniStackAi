@@ -1,7 +1,8 @@
 # Start Here
 
-OmniStackAI is in Founder Stage 0. The repository currently defines its portable engineering
-contract and contains no deployable platform implementation.
+OmniStackAI is in Founder Stage 0. The repository contains its portable engineering contract,
+local PostgreSQL/Ollama dependencies, the minimal Go control-plane service, and bounded platform
+contracts added by completed Tracker IDs. Read the state files for the exact current task.
 
 ## Start or resume work
 
@@ -22,4 +23,3 @@ older sections when they conflict.
 Run verification, then update `.ai/CURRENT_TASK.yaml`, `.ai/PROJECT_STATE.yaml`,
 `.ai/WORK_LOG.md`, `.ai/HANDOFF.md`, root `PROJECT_STATE.md`, the changelog, and tracker
 evidence. Record one exact next action and command.
-

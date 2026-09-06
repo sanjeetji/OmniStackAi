@@ -2,9 +2,9 @@ schema_version: 1
 project: OmniStackAI
 phase: BASIC/MVP
 founder_stage: 0
-current_task: null
-current_status: ready_for_next_task_definition
-branch: ai/R-004-control-plane-foundation
+current_task: R-005
+current_status: in_progress
+branch: ai/R-005-model-provider-contract
 last_completed_task:
   task_id: R-004
   title: Add the minimal Go control-plane foundation
@@ -16,5 +16,5 @@ model_routing_mode: balanced
 architecture_contract: R_&_D/OmniStackAI_Implementation_Brief_v6.md
 tracker: R_&_D/OmniStackAI_Execution_Tracker_v6.xlsx
 blockers: []
-next_action: Define reconstructed R-005 as the next smallest Stage 0 prerequisite before writing code.
-last_updated: "2026-09-06T09:57:14+05:30"
+next_action: Implement and verify the vendor-neutral ModelProvider contract and deterministic registry.
+last_updated: "2026-09-06T10:09:35+05:30"

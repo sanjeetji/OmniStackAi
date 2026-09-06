@@ -31,7 +31,8 @@ done
 
 for task_name in doctor bootstrap lint test verify ai:status ai:handoff db:config db:up db:status db:verify db:down \
   ollama:config ollama:serve ollama:status ollama:models ollama:pull ollama:verify \
-  control-plane:lint control-plane:test control-plane:build control-plane:verify; do
+  control-plane:lint control-plane:test control-plane:build control-plane:verify \
+  agent-engine:lint agent-engine:test; do
   if ! rg -q "^  ${task_name}:" "$repo_root/Taskfile.yml"; then
     printf 'Missing Taskfile command: %s\n' "$task_name"
     exit 1
@@ -140,6 +141,32 @@ for route in /healthz /readyz; do
     exit 1
   fi
 done
+
+agent_engine_root="$repo_root/services/agent-engine"
+for required_file in \
+  pyproject.toml \
+  src/omnistackai_agent_engine/model_gateway/contracts.py \
+  src/omnistackai_agent_engine/model_gateway/errors.py \
+  src/omnistackai_agent_engine/model_gateway/registry.py \
+  tests/test_contracts.py \
+  tests/test_registry.py; do
+  if [[ ! -f "$agent_engine_root/$required_file" ]]; then
+    printf 'Missing R-005 agent-engine contract file: %s\n' "$required_file"
+    exit 1
+  fi
+done
+
+if rg -n --glob '*.py' '^\s*(from|import)\s+(anthropic|google|ollama|openai)(\.|\s|$)' \
+  "$agent_engine_root/src"; then
+  printf 'R-005 must not import a model-provider SDK.\n'
+  exit 1
+fi
+
+if rg -qi --glob '*.py' '(class .*Adapter|api\.openai\.com|api\.anthropic\.com|/api/generate)' \
+  "$agent_engine_root/src"; then
+  printf 'R-005 must not implement a provider adapter.\n'
+  exit 1
+fi
 
 if ! rg -q '^BEGIN;$' "$up_migration" || ! rg -q '^COMMIT;$' "$up_migration"; then
   printf 'Initial migration must be transactional.\n'

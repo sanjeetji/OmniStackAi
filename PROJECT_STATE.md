@@ -1,5 +1,5 @@
 # Project State — OmniStackAI
-Last updated: 2026-09-06T09:57:14+05:30 by Codex (GPT-5)
+Last updated: 2026-09-06T10:09:35+05:30 by Codex (GPT-5)
 
 ## Current Phase
 Stage 0 (Founder Build Sequence, Brief Section 91) — BASIC/MVP
@@ -10,13 +10,13 @@ and live Compose health/readiness verification passing, implementation checkpoin
 `c44fd8d013e3ec1497ccb4ab55f1433df042aeb5`
 
 ## In Progress (if any)
-Tracker ID: none
-Files touched so far: none
+Tracker ID: R-005 — ModelProvider contract and registry
+Files touched so far: task/state records and tracker row R-005
 Blocker: none
 
 ## Next Up (queued, in order)
-1. R-005 — reconstruct the next smallest Stage 0 prerequisite before writing code
-2. R-006 — task definition missing from `Phase_Roadmap`
+1. Complete R-005 vendor-neutral ModelProvider contract, registry, tests, and evidence
+2. R-006 — reconstruct the Ollama adapter only after the provider contract is accepted
 3. R-007 — task definition missing from `Phase_Roadmap`
 
 ## Decisions Made This Session
@@ -40,6 +40,10 @@ Blocker: none
   logs, bounded HTTP and database timeouts, graceful shutdown, and loopback-only host publishing.
 - Verified stable liveness and PostgreSQL-backed readiness from the running container, plus unit and
   race-enabled tests; the container runs as the non-root `omnistackai` user.
+- Reconstructed R-005 from the brief's explicit provider-registry handoff example and provider
+  boundary rules; provider adapters and routing remain deferred to later Tracker IDs.
+- Classified R-005 as L2. Two bounded local `qwen2.5-coder:14b` review attempts produced no
+  capturable review text, so deterministic brief/repository evidence defines the task; cloud calls remain zero.
 
 ## Environment / Secrets Status
 - Local Ollama: server 0.33.3 healthy on loopback; `qwen2.5-coder:14b` configured and live-verified; `qwen3.5:9b` also discovered

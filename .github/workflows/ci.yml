@@ -21,6 +21,9 @@ jobs:
         with:
           node-version: 24
           cache: pnpm
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.13.7'
       - uses: actions/setup-go@v6
         with:
           go-version: 1.27.1

@@ -1,0 +1,10 @@
+[project]
+name = "omnistackai-agent-engine"
+version = "0.0.0"
+description = "OmniStackAI agent-engine contracts"
+requires-python = ">=3.13,<3.14"
+dependencies = []
+
+[tool.omnistackai]
+stage = 0
+external-runtime-dependencies = false

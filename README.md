@@ -6,8 +6,8 @@ verified, customer-owned software changes. The repository is currently in Founde
 ## Current state
 
 The repository has the canonical modular monorepo, local PostgreSQL+pgvector and Ollama foundations,
-and the minimal Go control-plane health/readiness service. Read `docs/START_HERE.md` and
-`.ai/PROJECT_STATE.yaml` before beginning work.
+the minimal Go control-plane health/readiness service, and the vendor-neutral Python model-provider
+contract. Read `docs/START_HERE.md` and `.ai/PROJECT_STATE.yaml` before beginning work.
 
 ## Repository commands
 
@@ -22,6 +22,7 @@ task ai:handoff
 task db:verify
 task ollama:verify
 task control-plane:verify
+task agent-engine:test
 ```
 
 Install [Task](https://taskfile.dev/) before using the command interface. The validation scripts

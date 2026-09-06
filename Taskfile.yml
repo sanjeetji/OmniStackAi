@@ -112,6 +112,16 @@ tasks:
     cmds:
       - bash scripts/control-plane.sh verify
 
+  agent-engine:lint:
+    desc: Compile and policy-check the Python agent-engine contracts
+    cmds:
+      - bash scripts/agent-engine.sh lint
+
+  agent-engine:test:
+    desc: Run the Python agent-engine contract tests
+    cmds:
+      - bash scripts/agent-engine.sh test
+
   verify:
     desc: Run the CI-equivalent Stage 0 verification
     cmds:
