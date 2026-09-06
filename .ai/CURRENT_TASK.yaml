@@ -1,7 +1,7 @@
 schema_version: 1
 task_id: R-003
 title: Bootstrap the local Ollama Stage 0 runtime
-status: in_progress
+status: done
 phase: BASIC/MVP
 founder_stage: 0
 branch: ai/R-003-local-ollama-bootstrap
@@ -67,10 +67,40 @@ model_tool_trace:
   routing: local_only
   local_provider: ollama
   configured_model: qwen2.5-coder:14b
-  local_calls: 0
+  local_calls: 1
   cloud_calls: 0
   note: One local inference smoke test is required; no cloud API is authorized or needed.
-completion: null
-blockers: []
-next_action: Implement and verify the bounded local Ollama bootstrap contract.
-next_command: task ollama:config
+completion:
+  implementation_commit: 822db27aa9c9e6ab836c28abba10f41dc27918d7
+  verified_at: "2026-09-06T09:38:08+05:30"
+  verification:
+    - command: task verify
+      result: pass
+    - command: task ollama:status
+      result: pass
+      evidence: Ollama 0.33.3 healthy on http://127.0.0.1:11434
+    - command: task ollama:models
+      result: pass
+      evidence: qwen2.5-coder:14b and qwen3.5:9b discovered
+    - command: task ollama:verify
+      result: pass
+      evidence: qwen2.5-coder:14b generated 6 tokens; cloud_calls=0
+    - command: non-loopback configuration rejection
+      result: pass
+  acceptance_results:
+    - criterion: The Stage 0 endpoint is configurable and restricted to loopback.
+      result: pass
+    - criterion: The configured coder model is selected through environment configuration and discovered at runtime.
+      result: pass
+    - criterion: Stable local Ollama lifecycle, discovery, pull, health, and inference commands exist.
+      result: pass
+    - criterion: One live local inference succeeds with zero cloud provider calls.
+      result: pass
+    - criterion: Repository verification passes without requiring a running Ollama server.
+      result: pass
+    - criterion: No cloud provider, extra service, product adapter, or native work was introduced.
+      result: pass
+blockers:
+  - R-004 through R-009 remain absent from Phase_Roadmap.
+next_action: Select the next Stage 0 prerequisite for reconstructed R-004 without adding speculative infrastructure.
+next_command: task ai:status

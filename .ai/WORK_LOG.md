@@ -31,3 +31,14 @@
 - Verified a healthy live database, pgvector 0.8.6, migration version 1, and loopback-only binding.
 - Ran `task verify` successfully and created implementation checkpoint
   `56bf4b0dea5486f8d6dcde0c7b1054249ebbb064`.
+
+## 2026-09-06 — R-003
+
+- Reconstructed R-003 from Brief Sections 79 and 84.1 with the founder's instruction to continue.
+- Confirmed a 16 GB Apple Silicon Mac with Ollama 0.33.3 and two existing local models.
+- Added environment-selected local model configuration and strict loopback endpoint validation.
+- Added deterministic configuration, serve, status, discovery, pull, and inference commands.
+- Kept static `task verify` independent of the running local model service.
+- Verified non-loopback configuration rejection.
+- Ran one live `qwen2.5-coder:14b` inference, generated 6 tokens, and made zero cloud calls.
+- Created implementation checkpoint `822db27aa9c9e6ab836c28abba10f41dc27918d7`.
