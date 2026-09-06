@@ -1,7 +1,7 @@
 schema_version: 1
 task_id: R-005
 title: Add the vendor-neutral ModelProvider contract and registry
-status: in_progress
+status: done
 phase: BASIC/MVP
 founder_stage: 0
 branch: ai/R-005-model-provider-contract
@@ -81,7 +81,31 @@ model_tool_trace:
   local_calls: 2
   cloud_calls: 0
   note: Two bounded local review attempts returned no capturable text; the normative brief and deterministic repository evidence define the contract.
-completion: null
+completion:
+  implementation_commit: afdc4ba9c14b231dece9533dbdd39e1e79e9ace3
+  verified_at: "2026-09-06T10:24:31+05:30"
+  verification:
+    - command: task verify
+      result: pass
+    - command: task agent-engine:lint
+      result: pass
+    - command: task agent-engine:test
+      result: pass
+      evidence: 13 contract and registry tests passed
+    - command: provider SDK and adapter exclusion scan
+      result: pass
+      evidence: no provider SDK import or adapter implementation found
+  acceptance_results:
+    - criterion: Immutable typed model-provider records validate boundary invariants.
+      result: pass
+    - criterion: ModelProvider is runtime-checkable and contains no vendor SDK type.
+      result: pass
+    - criterion: Registry order and platform-owned duplicate, invalid, and unknown errors are deterministic.
+      result: pass
+    - criterion: Standard-library compile and unit tests pass locally and through the CI-equivalent gate.
+      result: pass
+    - criterion: No adapter, external dependency, service process, database, or infrastructure change was introduced.
+      result: pass
 blockers: []
-next_action: Implement the bounded Python ModelProvider contract, registry, and deterministic tests.
-next_command: task agent-engine:test
+next_action: Define reconstructed R-006 for the loopback-only Ollama adapter against the accepted ModelProvider contract.
+next_command: task ai:status

@@ -56,3 +56,17 @@
 - Kept local Compose to exactly PostgreSQL and control-plane, both published only on loopback.
 - Passed `task verify`, `go test -race ./...`, and live `task control-plane:verify`.
 - Created implementation checkpoint `c44fd8d013e3ec1497ccb4ab55f1433df042aeb5`.
+
+## 2026-09-06 — R-005
+
+- Reconstructed R-005 from the brief's explicit provider-registry handoff example and provider
+  boundary rules.
+- Used local-only Balanced routing for the L2 task. Two bounded `qwen2.5-coder:14b` attempts returned
+  no capturable review text; deterministic brief and repository evidence defined the implementation.
+- Added immutable validated provider, model, capability, request, response, token usage, health,
+  discovery, and streaming records.
+- Added a runtime-checkable async `ModelProvider` protocol without vendor SDK types.
+- Added a deterministic registry with platform-owned invalid, duplicate, and unknown-provider errors.
+- Added Python 3.13 compile/policy commands, CI toolchain setup, and 13 standard-library unit tests.
+- Preserved exactly the existing two Compose services and made zero cloud model calls.
+- Created implementation checkpoint `afdc4ba9c14b231dece9533dbdd39e1e79e9ace3`.

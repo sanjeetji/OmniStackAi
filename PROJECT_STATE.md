@@ -1,23 +1,23 @@
 # Project State — OmniStackAI
-Last updated: 2026-09-06T10:09:35+05:30 by Codex (GPT-5)
+Last updated: 2026-09-06T10:24:31+05:30 by Codex (GPT-5)
 
 ## Current Phase
 Stage 0 (Founder Build Sequence, Brief Section 91) — BASIC/MVP
 
 ## Last Completed Task
-Tracker ID: R-004 — Go control-plane foundation — DONE, `task verify`, race-enabled Go tests,
-and live Compose health/readiness verification passing, implementation checkpoint
-`c44fd8d013e3ec1497ccb4ab55f1433df042aeb5`
+Tracker ID: R-005 — ModelProvider contract and registry — DONE, `task verify` and 13 Python
+contract/registry tests passing, implementation checkpoint
+`afdc4ba9c14b231dece9533dbdd39e1e79e9ace3`
 
 ## In Progress (if any)
-Tracker ID: R-005 — ModelProvider contract and registry
-Files touched so far: task/state records and tracker row R-005
+Tracker ID: none
+Files touched so far: none
 Blocker: none
 
 ## Next Up (queued, in order)
-1. Complete R-005 vendor-neutral ModelProvider contract, registry, tests, and evidence
-2. R-006 — reconstruct the Ollama adapter only after the provider contract is accepted
-3. R-007 — task definition missing from `Phase_Roadmap`
+1. R-006 — reconstruct the loopback-only Ollama adapter against the accepted provider contract
+2. R-007 — task definition missing from `Phase_Roadmap`
+3. R-008 — task definition missing from `Phase_Roadmap`
 
 ## Decisions Made This Session
 - Applied the normative V6 precedence rules and Section 91 Phase 0 sequence.
@@ -44,6 +44,10 @@ Blocker: none
   boundary rules; provider adapters and routing remain deferred to later Tracker IDs.
 - Classified R-005 as L2. Two bounded local `qwen2.5-coder:14b` review attempts produced no
   capturable review text, so deterministic brief/repository evidence defines the task; cloud calls remain zero.
+- Added immutable validated provider/model/capability/request/response/usage/health/stream records,
+  a runtime-checkable async `ModelProvider` protocol, and a deterministic provider registry.
+- Used only Python 3.13 standard-library functionality and added no adapter, provider SDK, runtime
+  process, database change, Compose service, or infrastructure.
 
 ## Environment / Secrets Status
 - Local Ollama: server 0.33.3 healthy on loopback; `qwen2.5-coder:14b` configured and live-verified; `qwen3.5:9b` also discovered

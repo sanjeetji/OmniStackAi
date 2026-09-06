@@ -2,19 +2,19 @@ schema_version: 1
 project: OmniStackAI
 phase: BASIC/MVP
 founder_stage: 0
-current_task: R-005
-current_status: in_progress
+current_task: null
+current_status: ready_for_next_task_definition
 branch: ai/R-005-model-provider-contract
 last_completed_task:
-  task_id: R-004
-  title: Add the minimal Go control-plane foundation
-  implementation_commit: c44fd8d013e3ec1497ccb4ab55f1433df042aeb5
-  verification: task verify, go test -race ./..., and task control-plane:verify
+  task_id: R-005
+  title: Add the vendor-neutral ModelProvider contract and registry
+  implementation_commit: afdc4ba9c14b231dece9533dbdd39e1e79e9ace3
+  verification: task verify and 13 agent-engine contract tests
   result: pass
 control_plane_database: postgresql
 model_routing_mode: balanced
 architecture_contract: R_&_D/OmniStackAI_Implementation_Brief_v6.md
 tracker: R_&_D/OmniStackAI_Execution_Tracker_v6.xlsx
 blockers: []
-next_action: Implement and verify the vendor-neutral ModelProvider contract and deterministic registry.
-last_updated: "2026-09-06T10:09:35+05:30"
+next_action: Define reconstructed R-006 for the loopback-only Ollama adapter against the accepted contract.
+last_updated: "2026-09-06T10:24:31+05:30"
