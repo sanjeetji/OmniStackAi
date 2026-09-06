@@ -10,6 +10,7 @@ from .errors import (
     UnsupportedTargetError,
 )
 from .files import GeneratedFile, GeneratedProject
+from .nextjs import NextjsWebAdapter
 
 __all__ = [
     "AdapterRegistry",
@@ -22,5 +23,6 @@ __all__ = [
     "GenerationError",
     "GenerationTarget",
     "InvalidGeneratedFileError",
+    "NextjsWebAdapter",
     "UnsupportedTargetError",
 ]

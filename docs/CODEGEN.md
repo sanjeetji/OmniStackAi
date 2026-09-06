@@ -25,6 +25,25 @@ Package: `omnistackai_agent_engine.codegen` (standard library only; depends on `
 ## Why in-memory and deterministic
 
 Generation is a pure function `IR → GeneratedProject`, so it is fully unit-testable offline by
-asserting emitted file paths and contents — no install, no build, no disk. This is how the first
-Next.js adapter (R-227) is verified in this environment, and it keeps generation reproducible and
-diffable before anything is written to a customer repo (R-228).
+asserting emitted file paths and contents — no install, no build, no disk. This keeps generation
+reproducible and diffable before anything is written to a customer repo (R-228).
+
+## First adapter: Next.js web (R-227)
+
+`NextjsWebAdapter` (target `nextjs-web`) turns an Application IR into a real Next.js App Router
+TypeScript project:
+
+- **Config:** `package.json` (next/react), `tsconfig.json`, `next.config.mjs` with security headers,
+  `.gitignore`, `.env.example` (placeholders only), `README.md`.
+- **Types:** each IR entity → a TypeScript interface in `lib/types.ts` (field-type mapping;
+  non-required fields become optional; relations become typed references, `[]` for to-many).
+- **APIs:** each IR API → an App Router `route.ts` handler, grouped one file per route directory, with
+  `{param}` mapped to Next's `[param]` dynamic segment and one exported `GET/POST/...` per method
+  (scaffolded to a `501 not_implemented` response for now).
+- **Screens:** each IR screen → an `app/<id>/page.tsx`; `app/page.tsx` is an overview of the app,
+  entities, and screens.
+
+The file-path validator (`GeneratedFile`) allows framework route filename characters (`[]()@+`) so
+Next.js/Expo route conventions are valid, while still rejecting absolute paths, `..`, backslashes, and
+control characters. The generated project is what a Next.js toolchain would install and build; this
+platform verifies it offline by asserting the emitted files (no install/build here).

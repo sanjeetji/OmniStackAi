@@ -62,6 +62,13 @@ class GeneratedFileTests(TestCase):
         with self.assertRaises(InvalidGeneratedFileError):
             GeneratedFile("a.txt", 123)  # type: ignore[arg-type]
 
+    def test_framework_route_filenames_are_allowed(self) -> None:
+        # Next.js/Expo route conventions must be valid paths, but traversal must still be rejected.
+        for good in ("app/users/[id]/route.ts", "app/(marketing)/page.tsx", "app/@modal/page.tsx"):
+            self.assertEqual(GeneratedFile(good, "x").path, good)
+        with self.assertRaises(InvalidGeneratedFileError):
+            GeneratedFile("app/[id]/../secret", "x")
+
 
 class GeneratedProjectTests(TestCase):
     def test_unique_and_deterministically_ordered(self) -> None:

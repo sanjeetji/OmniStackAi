@@ -1,50 +1,93 @@
 schema_version: 1
-task_id: R-226
-title: Framework adapter contract and generated file-set model
-status: done
+task_id: R-227
+title: Next.js web framework adapter — generate a real app from the Application IR
+status: in_progress
 phase: BASIC/MVP
 founder_stage: 0
-branch: ai/R-226-adapter-contract
+branch: ai/R-227-nextjs-adapter
 goal: >-
-  Define the platform-owned code-generation boundary: an immutable, validated in-memory generated
-  file-set and a FrameworkAdapter contract that turns an Application IR into a GeneratedProject for a
-  target, plus a deterministic adapter registry. Pure, offline, deterministic; no disk writes, no code
-  execution.
+  Implement the first framework adapter: a NextjsWebAdapter that turns an Application IR into a real
+  Next.js (App Router, TypeScript) project as a GeneratedProject — package.json, tsconfig, next.config
+  with security headers, app/layout, an app/page overview, TypeScript interfaces from entities, App
+  Router API route handlers from the IR APIs (dynamic {param} -> [param]), a page per screen, plus
+  README/.gitignore/.env.example. Deterministic and offline: emitted files are asserted in tests; no
+  install, build, or disk write. Registered via the AdapterRegistry so callers stay provider-agnostic.
 source:
   tracker_sheet: Phase_Roadmap
   tracker_row: reconstructed; new IDs continue after the workbook backlog's R-010..R-219
-  brief_sections: [3, 9, 16, 17, 24, 25, 26, 27, 46, 47, 74, 75, 77, 91, 92]
+  brief_sections: [9, 16, 17, 40, 43, 44, 46, 47, 74, 77, 91, 92]
 project_profile:
   repository: platform_modular_monorepo
   service: python_agent_engine
   control_plane_database: postgresql
   model_routing: balanced
 complexity: L2
+expected_impact:
+  - services/agent-engine/src/omnistackai_agent_engine/codegen/files.py (allow framework route filename chars)
+  - services/agent-engine/src/omnistackai_agent_engine/codegen/nextjs.py
+  - services/agent-engine/src/omnistackai_agent_engine/codegen/__init__.py
+  - services/agent-engine/tests/test_codegen_contract.py (bracketed-path case)
+  - services/agent-engine/tests/test_nextjs_adapter.py
+  - docs/CODEGEN.md
+  - portable state, changelog, handoff, task doc, and tracker evidence
+allowed_paths:
+  - .ai/**
+  - CHANGELOG.md
+  - PROJECT_STATE.md
+  - R_&_D/OmniStackAI_Execution_Tracker_v6.xlsx
+  - docs/**
+  - services/agent-engine/**
+must_not_change:
+  - PostgreSQL as the control-plane database or the existing schema
+  - the model-gateway, Application IR, and codegen-contract public behavior (additive only; the
+    file-path validator is extended, not weakened — still no absolute paths, '..', backslashes, or
+    control chars)
+  - local Compose services or infrastructure; the Section 74 top-level contract; the offline bootstrap
+  - the network-independence of static task verify
+must_not_do:
+  - install, build, or run the generated app; write generated files to disk in this task
+  - add an external Python dependency; store secrets (generated .env.example holds placeholders only)
+acceptance:
+  - NextjsWebAdapter implements FrameworkAdapter (target nextjs-web) and returns a GeneratedProject
+    from an ApplicationIR that a Next.js toolchain could install and build (correct App Router layout).
+  - Entities become TypeScript interfaces (field types mapped); IR APIs become App Router route
+    handlers with {param} mapped to [param] and one route.ts per route directory exporting each method;
+    each screen becomes an app page; an app/page overview lists the app, entities, and screens.
+  - package.json, tsconfig.json, next.config.mjs (security headers), README.md, .gitignore, and
+    .env.example (placeholders only) are emitted; all paths are safe and deterministically ordered.
+  - The file-path validator is extended to allow framework route filename characters ([]()@+) while
+    still rejecting absolute paths, '..', backslashes, and control chars.
+  - Generation is a pure function of the IR; standard-library only; nothing is installed, built, run,
+    or written to disk.
+  - Standard-library offline tests assert emitted paths and key file contents for a representative IR,
+    dynamic-route mapping, entity->interface mapping, and registry wiring.
+  - task verify stays green and network-independent.
+required_gates:
+  - impact_analysis
+  - nextjs_emission_tests
+  - dynamic_route_and_type_mapping_tests
+  - path_validator_extension_tests
+  - registry_wiring_test
+  - python_compile_test
+  - vendor_import_exclusion
+  - secret_exclusion_check
+  - task_verify
+  - blast_radius_check
+  - tracker_evidence
+model_tool_trace:
+  routing: local_only
+  local_provider: ollama
+  configured_model: qwen2.5-coder:14b
+  local_calls: 0
+  cloud_calls: 0
+  note: Deterministic codegen; no model call. No cloud key set; cloud_calls zero.
 completion:
-  implementation_commit: f27bf416e99423d281e1c4e6f3eabc363848f95f
-  verified_at: "2026-09-06T20:00:00+05:30"
-  verification:
-    - command: task verify
-      result: pass
-      evidence: 125 agent-engine tests (10 new codegen-contract tests) plus all Stage 0 checks
-    - command: task agent-engine:lint
-      result: pass
-    - command: task security:quick
-      result: pass
-  acceptance_results:
-    - criterion: GeneratedFile is immutable and validated with a safe relative POSIX path and string content.
-      result: pass
-    - criterion: GeneratedProject holds a target plus path-unique, deterministically ordered files; duplicates raise a stable error; supports lookup/paths/len/merge.
-      result: pass
-    - criterion: FrameworkAdapter is a runtime-checkable contract; AdapterRegistry registers by target with stable duplicate/unknown errors and selection only via the registry.
-      result: pass
-    - criterion: GenerationTarget is a bounded enum over the MVP targets.
-      result: pass
-    - criterion: Offline tests cover path safety, project uniqueness/ordering, a fake adapter via the registry, and registry error paths; nothing is written to disk or executed.
-      result: pass
-  note: Deterministic contracts; no model call. No cloud key set; cloud_calls zero.
+  implementation_commit: null
+  verified_at: null
+  verification: []
+  acceptance_results: []
 blockers: []
 next_action: >-
-  R-227 — implement the first framework adapter (Next.js web) emitting a real app's source from the IR,
-  verified offline by asserting emitted file contents.
-next_command: task ai:status
+  Implement the Next.js adapter and offline emission tests; run the gates; record completion; then
+  R-228 (Git service to materialize a GeneratedProject into a customer-owned repo with a commit).
+next_command: task agent-engine:test

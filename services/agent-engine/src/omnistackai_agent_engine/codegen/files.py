@@ -15,7 +15,9 @@ from .errors import DuplicateFileError, InvalidGeneratedFileError
 _MAX_PATH = 400
 _MAX_CONTENT = 2_000_000
 _CONTROL = re.compile(r"[\x00-\x08\x0b\x0c\x0e-\x1f\x7f]")
-_SEGMENT = re.compile(r"^[A-Za-z0-9._-]+$")
+# Segments allow framework route filename conventions (Next.js/Expo): [param], (group), @slot, +page.
+# Traversal ('..'), absolute paths, backslashes, control chars, and '/' inside a segment stay rejected.
+_SEGMENT = re.compile(r"^[A-Za-z0-9._@()\[\]+-]+$")
 
 
 def _validate_path(path: str) -> str:
