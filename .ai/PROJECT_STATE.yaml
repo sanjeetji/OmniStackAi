@@ -2,19 +2,19 @@ schema_version: 1
 project: OmniStackAI
 phase: BASIC/MVP
 founder_stage: 0
-current_task: R-004
-current_status: in_progress
+current_task: null
+current_status: ready_for_next_task_definition
 branch: ai/R-004-control-plane-foundation
 last_completed_task:
-  task_id: R-003
-  title: Bootstrap the local Ollama Stage 0 runtime
-  implementation_commit: 822db27aa9c9e6ab836c28abba10f41dc27918d7
-  verification: task verify and task ollama:verify
+  task_id: R-004
+  title: Add the minimal Go control-plane foundation
+  implementation_commit: c44fd8d013e3ec1497ccb4ab55f1433df042aeb5
+  verification: task verify, go test -race ./..., and task control-plane:verify
   result: pass
 control_plane_database: postgresql
 model_routing_mode: balanced
 architecture_contract: R_&_D/OmniStackAI_Implementation_Brief_v6.md
 tracker: R_&_D/OmniStackAI_Execution_Tracker_v6.xlsx
 blockers: []
-next_action: Implement and live-verify the minimal Go control-plane foundation.
-last_updated: "2026-09-06T09:42:53+05:30"
+next_action: Define reconstructed R-005 as the next smallest Stage 0 prerequisite before writing code.
+last_updated: "2026-09-06T09:57:14+05:30"

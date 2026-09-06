@@ -1,21 +1,23 @@
 # Project State — OmniStackAI
-Last updated: 2026-09-06T09:42:53+05:30 by Codex (GPT-5)
+Last updated: 2026-09-06T09:57:14+05:30 by Codex (GPT-5)
 
 ## Current Phase
 Stage 0 (Founder Build Sequence, Brief Section 91) — BASIC/MVP
 
 ## Last Completed Task
-Tracker ID: R-003 — Local Ollama Stage 0 bootstrap — DONE, `task verify` and `task ollama:verify` passing, implementation checkpoint `822db27aa9c9e6ab836c28abba10f41dc27918d7`
+Tracker ID: R-004 — Go control-plane foundation — DONE, `task verify`, race-enabled Go tests,
+and live Compose health/readiness verification passing, implementation checkpoint
+`c44fd8d013e3ec1497ccb4ab55f1433df042aeb5`
 
 ## In Progress (if any)
-Tracker ID: R-004 — Go control-plane foundation
-Files touched so far: task/state records and tracker row R-004
+Tracker ID: none
+Files touched so far: none
 Blocker: none
 
 ## Next Up (queued, in order)
-1. Complete R-004 implementation, live health/readiness verification, and evidence
-2. R-005 — task definition missing from `Phase_Roadmap`
-3. R-006 — task definition missing from `Phase_Roadmap`
+1. R-005 — reconstruct the next smallest Stage 0 prerequisite before writing code
+2. R-006 — task definition missing from `Phase_Roadmap`
+3. R-007 — task definition missing from `Phase_Roadmap`
 
 ## Decisions Made This Session
 - Applied the normative V6 precedence rules and Section 91 Phase 0 sequence.
@@ -34,8 +36,13 @@ Blocker: none
 - Reconstructed R-004 as the minimal Go control-plane foundation; Redis remains deferred until an
   implemented feature proves a cache, lease, rate-limit, or ephemeral coordination need.
 - Used local `qwen2.5-coder:14b` for a bounded design review; no cloud model was called.
+- Added only the control-plane as the second Compose service, with typed configuration, structured
+  logs, bounded HTTP and database timeouts, graceful shutdown, and loopback-only host publishing.
+- Verified stable liveness and PostgreSQL-backed readiness from the running container, plus unit and
+  race-enabled tests; the container runs as the non-root `omnistackai` user.
 
 ## Environment / Secrets Status
 - Local Ollama: server 0.33.3 healthy on loopback; `qwen2.5-coder:14b` configured and live-verified; `qwen3.5:9b` also discovered
-- Cloud keys configured: not inspected; no cloud provider API authorized or required for R-003
+- Cloud keys configured: not inspected; no cloud provider API authorized or required for R-004
 - Database: local container healthy via Colima; pgvector 0.8.6 and migration version 1 verified; no cloud database is authorized
+- Control plane: local container healthy on `127.0.0.1:8080`; liveness `ok`, readiness `ready`

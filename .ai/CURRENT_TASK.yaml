@@ -1,7 +1,7 @@
 schema_version: 1
 task_id: R-004
 title: Add the minimal Go control-plane foundation
-status: in_progress
+status: done
 phase: BASIC/MVP
 founder_stage: 0
 branch: ai/R-004-control-plane-foundation
@@ -76,7 +76,36 @@ model_tool_trace:
   local_calls: 1
   cloud_calls: 0
   note: Local Ollama provided a bounded layout and acceptance-check review; deterministic tools decide and verify the implementation.
-completion: null
+completion:
+  implementation_commit: c44fd8d013e3ec1497ccb4ab55f1433df042aeb5
+  verified_at: "2026-09-06T09:57:14+05:30"
+  verification:
+    - command: task verify
+      result: pass
+    - command: go test -race ./...
+      result: pass
+    - command: task control-plane:verify
+      result: pass
+      evidence: PostgreSQL and control-plane healthy; health=ok; readiness=ready
+    - command: docker compose config --services
+      result: pass
+      evidence: exactly postgres and control-plane
+    - command: docker image inspect omnistackai/control-plane:r004
+      result: pass
+      evidence: runtime user is omnistackai
+  acceptance_results:
+    - criterion: The minimal Go modular-monolith starts from typed environment configuration.
+      result: pass
+    - criterion: Liveness is stable JSON and independent of PostgreSQL.
+      result: pass
+    - criterion: Readiness uses a bounded PostgreSQL ping and hides raw database errors.
+      result: pass
+    - criterion: Structured logs, bounded HTTP timeouts, and graceful shutdown are implemented.
+      result: pass
+    - criterion: Unit, race, repository, Compose, and live endpoint verification pass.
+      result: pass
+    - criterion: No service beyond PostgreSQL and control-plane was introduced.
+      result: pass
 blockers: []
-next_action: Install the free Go toolchain and implement the bounded control-plane service.
-next_command: task control-plane:test
+next_action: Define reconstructed R-005 as the next smallest Stage 0 prerequisite before writing code.
+next_command: task ai:status

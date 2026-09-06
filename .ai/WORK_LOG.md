@@ -42,3 +42,17 @@
 - Verified non-loopback configuration rejection.
 - Ran one live `qwen2.5-coder:14b` inference, generated 6 tokens, and made zero cloud calls.
 - Created implementation checkpoint `822db27aa9c9e6ab836c28abba10f41dc27918d7`.
+
+## 2026-09-06 — R-004
+
+- Reconstructed R-004 as the smallest Go modular-monolith control-plane foundation permitted by
+  the Stage 0 sequence; deferred Redis until an implemented workload proves it necessary.
+- Used local `qwen2.5-coder:14b` for one bounded design review and made zero cloud calls.
+- Added typed, fail-fast environment configuration and safe PostgreSQL URL construction.
+- Added stable JSON `/healthz` liveness and bounded PostgreSQL-backed `/readyz` readiness without
+  exposing raw database errors.
+- Added structured logs, bounded HTTP timeouts, graceful SIGINT/SIGTERM shutdown, and a non-root
+  multi-stage container image.
+- Kept local Compose to exactly PostgreSQL and control-plane, both published only on loopback.
+- Passed `task verify`, `go test -race ./...`, and live `task control-plane:verify`.
+- Created implementation checkpoint `c44fd8d013e3ec1497ccb4ab55f1433df042aeb5`.
