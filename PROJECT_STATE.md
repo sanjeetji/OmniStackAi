@@ -10,9 +10,14 @@ tests) passing, default single-provider unchanged, implementation checkpoint
 `9ec809149ab91ebaa13b88ff0a15ebd382d7a728`
 
 ## In Progress (if any)
-Tracker ID: none
-Files touched so far: none
-Blocker: R-224 (Next.js console upgrade) is DEFERRED — Next.js SWC binary install times out in this sandbox (attempted 3x); static console remains the working slice
+Tracker ID: R-225 — Application IR v1 (framework-neutral) — the first real product primitive
+Files touched so far: `services/agent-engine/src/omnistackai_agent_engine/application_ir/{__init__.py,ir.py,errors.py}`, `services/agent-engine/tests/test_application_ir.py`, `docs/APPLICATION_IR.md`, portable state, and tracker row R-225
+Blocker: none (R-224 Next.js upgrade remains deferred — env-blocked)
+
+## Product direction
+The model fabric (R-005..R-223) is the engine. The actual product (Emergent-class app builder) starts
+with the vertical slice: **Application IR (R-225)** → framework adapter contract → Next.js code adapter
+→ Git service → preview/sandbox (the last needs a cloud/network-capable environment).
 
 ## ID note
 The workbook backlog already assigns R-010..R-219 (R-010 = Native iOS Agent, deferred until web/backend

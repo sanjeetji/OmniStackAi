@@ -1,47 +1,91 @@
 schema_version: 1
-task_id: R-224
-title: Next.js console upgrade
-status: deferred
+task_id: R-225
+title: Application IR v1 — framework-neutral intermediate representation
+status: in_progress
 phase: BASIC/MVP
 founder_stage: 0
-branch: ai/R-224-console-nextjs
+branch: ai/R-225-application-ir
 goal: >-
-  Upgrade the R-222 static platform console to a real Next.js (App Router, TypeScript) app under
-  apps/console-web, preserving the overview.json data contract and design, with security headers and a
-  production build.
+  Build the first real product primitive: a framework-neutral, versioned, validated Application IR
+  (Brief 9) that is the source of truth between user intent and generated targets. It models the
+  application, project strategy, roles, entities (fields/relations), APIs, screens, and acceptance
+  criteria, with strict cross-validation and deterministic dict/JSON serialization. This is the
+  foundation every codegen framework adapter will consume; it needs no network or infrastructure.
 source:
   tracker_sheet: Phase_Roadmap
   tracker_row: reconstructed; new IDs continue after the workbook backlog's R-010..R-219
-  brief_sections: [8, 40, 41, 44, 74, 91, 92]
+  brief_sections: [2, 9, 24, 25, 26, 27, 47, 74, 77, 91, 92]
+  founder_intent: >-
+    Founder directed building the actual product per the brief, one Tracker ID at a time, to a smooth,
+    advanced, optimised standard to compete with Emergent-class AI app builders. The Application IR is
+    the correct first product dependency and is fully doable offline.
 project_profile:
   repository: platform_modular_monorepo
-  service: console_web
+  service: python_agent_engine
   control_plane_database: postgresql
   model_routing: balanced
 complexity: L2
-status_reason: >-
-  DEFERRED — this sandbox cannot install the Next.js toolchain: pnpm install for next@15.5.4 repeatedly
-  times out fetching the native SWC binary (@next/swc-darwin-arm64), attempted three times including a
-  standalone install with a 10-minute fetch timeout. Without a completed install there is no next build
-  evidence, and committing an un-installable app would break task bootstrap. Per "record real command
-  evidence — never claim unexecuted tests", this is Deferred, not Done. No application code was
-  committed. The R-222 dependency-free static console remains the working, verified slice.
-resume_plan:
-  - In an environment with reliable npm registry access, scaffold the Next.js app under apps/console-web
-    (package.json next/react, tsconfig, next.config.mjs security headers, app/, lib/ importing data/overview.json).
-  - pnpm install then next build for real evidence.
-  - Evolve task bootstrap from --offline to a normal frozen install; add task console:build/dev; keep task verify independent of the web build.
+expected_impact:
+  - services/agent-engine/src/omnistackai_agent_engine/application_ir/__init__.py
+  - services/agent-engine/src/omnistackai_agent_engine/application_ir/ir.py
+  - services/agent-engine/src/omnistackai_agent_engine/application_ir/errors.py
+  - services/agent-engine/tests/test_application_ir.py
+  - docs/APPLICATION_IR.md
+  - portable state, changelog, handoff, task doc, and tracker evidence
+allowed_paths:
+  - .ai/**
+  - CHANGELOG.md
+  - PROJECT_STATE.md
+  - R_&_D/OmniStackAI_Execution_Tracker_v6.xlsx
+  - docs/**
+  - services/agent-engine/**
+must_not_change:
+  - PostgreSQL as the control-plane database or the existing schema
+  - the model-gateway runtime behavior (R-005..R-223); the IR is a separate additive package
+  - local Compose services or infrastructure; the Section 74 top-level contract; the offline bootstrap
+  - the network-independence of static task verify
+must_not_do:
+  - add an external Python dependency or a provider SDK
+  - generate code, run agents, or add framework adapters yet (this task is the IR data model only)
+  - store secrets anywhere
+acceptance:
+  - The IR models application (name/description/platforms), project strategy, roles, entities with
+    fields and relations, APIs, screens, and acceptance criteria, as immutable validated records.
+  - Validation enforces non-empty bounded identifiers, unique entity/field/role/screen ids, valid
+    enums, well-formed API method+path, and cross-references (relation targets an existing entity;
+    a screen role references an existing role); violations raise stable typed errors.
+  - The IR carries a schema version; deterministic to_dict()/from_dict() round-trip losslessly and
+    from_dict rejects an unknown/newer schema version with a stable error (migration hook).
+  - Standard-library only; no network, no infrastructure; the model is independent of any target
+    framework.
+  - Standard-library offline tests cover valid construction, each validation rule, cross-reference
+    errors, round-trip serialization, and version rejection.
+  - task verify stays green and network-independent.
+required_gates:
+  - impact_analysis
+  - ir_construction_and_validation_tests
+  - cross_reference_and_version_tests
+  - roundtrip_serialization_tests
+  - python_compile_test
+  - vendor_import_exclusion
+  - secret_exclusion_check
+  - task_verify
+  - blast_radius_check
+  - tracker_evidence
 model_tool_trace:
   routing: local_only
   local_provider: ollama
   configured_model: qwen2.5-coder:14b
   local_calls: 0
   cloud_calls: 0
-  note: No model call; no application code committed (install could not complete).
-blockers:
-  - Next.js SWC binary install times out in this sandbox; needs an environment with reliable registry access.
+  note: Deterministic data model; no model call. No cloud key set; cloud_calls zero.
+completion:
+  implementation_commit: null
+  verified_at: null
+  verification: []
+  acceptance_results: []
+blockers: []
 next_action: >-
-  All safe founder-requested items are complete (R-220 streaming, R-221 fallback, R-222 console slice,
-  R-223 env fallback wiring). R-224 (Next.js upgrade) is deferred to a network-capable environment.
-  Native mobile / device-cloud remains deferred per Brief 25/91. Confirm the next Tracker ID.
-next_command: task ai:status
+  Implement the Application IR data model, validation, serialization, and offline tests; run the gates;
+  record completion evidence; then proceed to R-226 (framework adapter contract).
+next_command: task agent-engine:test

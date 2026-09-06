@@ -2,26 +2,26 @@ schema_version: 1
 project: OmniStackAI
 phase: BASIC/MVP
 founder_stage: 0
-current_task: null
-current_status: ready_for_next_task_definition
-branch: ai/R-223-env-fallback-wiring
+current_task: R-225
+current_status: in_progress
+branch: ai/R-225-application-ir
 last_completed_task:
   task_id: R-223
   title: Env-driven fallback chain and circuit breaker wiring in the gateway bootstrap
   implementation_commit: 9ec809149ab91ebaa13b88ff0a15ebd382d7a728
-  verification: task verify (98 agent-engine tests), default single-provider unchanged, cloud_calls=0
+  verification: task verify (98 agent-engine tests)
   result: pass
 control_plane_database: postgresql
 model_routing_mode: balanced
 architecture_contract: R_&_D/OmniStackAI_Implementation_Brief_v6.md
 tracker: R_&_D/OmniStackAI_Execution_Tracker_v6.xlsx
+product_direction: >-
+  Building the actual Emergent-class product per the brief, one Tracker ID at a time. The model fabric
+  (R-005..R-223) is the engine; the product vertical slice starts here: Application IR (R-225) ->
+  framework adapter contract -> Next.js adapter -> Git service -> preview/sandbox (needs cloud env).
 id_note: >-
-  Workbook backlog owns R-010..R-219. Founder-requested tasks use IDs after R-219: R-220 streaming,
-  R-221 fallback, R-222 console slice, R-223 env-driven fallback wiring (all done).
-blockers:
-  - R-224 (Next.js console upgrade) is DEFERRED — the Next.js SWC binary install times out in this
-    sandbox (attempted 3x). The R-222 static console remains the working slice.
-next_action: >-
-  All safe founder-requested items are done (R-220/R-221/R-222/R-223). R-224 deferred to a
-  network-capable environment; native mobile deferred per Brief 25/91. Confirm the next Tracker ID.
-last_updated: "2026-09-06T18:40:00+05:30"
+  Workbook backlog owns R-010..R-219. Founder-requested tasks use IDs after R-219: R-220..R-223 done,
+  R-224 Next.js deferred (env-blocked), R-225 Application IR (in progress).
+blockers: []
+next_action: Complete Application IR (R-225), then R-226 framework adapter contract.
+last_updated: "2026-09-06T19:20:00+05:30"
