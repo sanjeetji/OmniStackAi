@@ -1,16 +1,15 @@
 schema_version: 1
 task_id: R-226
 title: Framework adapter contract and generated file-set model
-status: in_progress
+status: done
 phase: BASIC/MVP
 founder_stage: 0
 branch: ai/R-226-adapter-contract
 goal: >-
   Define the platform-owned code-generation boundary: an immutable, validated in-memory generated
-  file-set (a customer project's source tree as path->content records) and a FrameworkAdapter contract
-  that turns an Application IR into a GeneratedProject for a specific target, plus a deterministic
-  adapter registry. This is the seam every framework adapter (Next.js, Go/Python, Flutter, RN, native)
-  implements. Pure, offline, deterministic; no files are written to disk and no code is run.
+  file-set and a FrameworkAdapter contract that turns an Application IR into a GeneratedProject for a
+  target, plus a deterministic adapter registry. Pure, offline, deterministic; no disk writes, no code
+  execution.
 source:
   tracker_sheet: Phase_Roadmap
   tracker_row: reconstructed; new IDs continue after the workbook backlog's R-010..R-219
@@ -21,66 +20,31 @@ project_profile:
   control_plane_database: postgresql
   model_routing: balanced
 complexity: L2
-expected_impact:
-  - services/agent-engine/src/omnistackai_agent_engine/codegen/__init__.py
-  - services/agent-engine/src/omnistackai_agent_engine/codegen/files.py
-  - services/agent-engine/src/omnistackai_agent_engine/codegen/adapter.py
-  - services/agent-engine/src/omnistackai_agent_engine/codegen/errors.py
-  - services/agent-engine/tests/test_codegen_contract.py
-  - docs/CODEGEN.md
-  - portable state, changelog, handoff, task doc, and tracker evidence
-allowed_paths:
-  - .ai/**
-  - CHANGELOG.md
-  - PROJECT_STATE.md
-  - R_&_D/OmniStackAI_Execution_Tracker_v6.xlsx
-  - docs/**
-  - services/agent-engine/**
-must_not_change:
-  - PostgreSQL as the control-plane database or the existing schema
-  - the model-gateway and Application IR runtime behavior (additive package only)
-  - local Compose services or infrastructure; the Section 74 top-level contract; the offline bootstrap
-  - the network-independence of static task verify
-must_not_do:
-  - write files to disk, run generated code, or add a real framework adapter yet (contract only)
-  - add an external Python dependency; store secrets
-acceptance:
-  - GeneratedFile is an immutable, validated record with a safe relative POSIX path (no absolute paths,
-    no '..' traversal, no control chars, bounded) and string content.
-  - GeneratedProject holds a target plus a set of GeneratedFiles with unique, deterministically ordered
-    paths; duplicate paths raise a stable error; it exposes lookup, paths, and length.
-  - FrameworkAdapter is a runtime-checkable contract (target + generate(ir) -> GeneratedProject); a
-    deterministic AdapterRegistry registers adapters by target with stable duplicate/unknown errors.
-  - The generation target is a bounded enum covering the MVP targets; product code selects an adapter
-    only through the registry, never a concrete class.
-  - Standard-library offline tests cover file-path validation, project uniqueness/ordering, a fake
-    adapter through the registry, and registry error paths.
-  - task verify stays green and network-independent.
-required_gates:
-  - impact_analysis
-  - generated_file_path_safety_tests
-  - project_uniqueness_and_ordering_tests
-  - adapter_registry_tests
-  - python_compile_test
-  - vendor_import_exclusion
-  - secret_exclusion_check
-  - task_verify
-  - blast_radius_check
-  - tracker_evidence
-model_tool_trace:
-  routing: local_only
-  local_provider: ollama
-  configured_model: qwen2.5-coder:14b
-  local_calls: 0
-  cloud_calls: 0
-  note: Deterministic contracts; no model call. No cloud key set; cloud_calls zero.
 completion:
-  implementation_commit: null
-  verified_at: null
-  verification: []
-  acceptance_results: []
+  implementation_commit: f27bf416e99423d281e1c4e6f3eabc363848f95f
+  verified_at: "2026-09-06T20:00:00+05:30"
+  verification:
+    - command: task verify
+      result: pass
+      evidence: 125 agent-engine tests (10 new codegen-contract tests) plus all Stage 0 checks
+    - command: task agent-engine:lint
+      result: pass
+    - command: task security:quick
+      result: pass
+  acceptance_results:
+    - criterion: GeneratedFile is immutable and validated with a safe relative POSIX path and string content.
+      result: pass
+    - criterion: GeneratedProject holds a target plus path-unique, deterministically ordered files; duplicates raise a stable error; supports lookup/paths/len/merge.
+      result: pass
+    - criterion: FrameworkAdapter is a runtime-checkable contract; AdapterRegistry registers by target with stable duplicate/unknown errors and selection only via the registry.
+      result: pass
+    - criterion: GenerationTarget is a bounded enum over the MVP targets.
+      result: pass
+    - criterion: Offline tests cover path safety, project uniqueness/ordering, a fake adapter via the registry, and registry error paths; nothing is written to disk or executed.
+      result: pass
+  note: Deterministic contracts; no model call. No cloud key set; cloud_calls zero.
 blockers: []
 next_action: >-
-  Implement the generated file-set model, adapter contract, and registry with offline tests; run the
-  gates; record completion; then R-227 (Next.js code adapter emitting a real app from the IR).
-next_command: task agent-engine:test
+  R-227 — implement the first framework adapter (Next.js web) emitting a real app's source from the IR,
+  verified offline by asserting emitted file contents.
+next_command: task ai:status

@@ -5,9 +5,9 @@ Last updated: 2026-09-06T10:46:19+05:30 by Codex (GPT-5)
 Stage 0 (Founder Build Sequence, Brief Section 91) — BASIC/MVP
 
 ## Last Completed Task
-Tracker ID: R-225 — Application IR v1 (framework-neutral) — DONE, `task verify` (115 agent-engine
-tests, 17 new IR tests) passing, implementation checkpoint
-`ad5e4ddf5918ddf3e4005c21a07c21601faf2ee6` (R-224 Next.js upgrade deferred — env-blocked)
+Tracker ID: R-226 — Framework adapter contract + file-set model — DONE, `task verify` (125 agent-engine
+tests, 10 new codegen-contract tests) passing, implementation checkpoint
+`f27bf416e99423d281e1c4e6f3eabc363848f95f` (R-224 Next.js upgrade deferred — env-blocked)
 
 ## In Progress (if any)
 Tracker ID: none
@@ -26,11 +26,10 @@ R-221 = cross-provider fallback (done); R-222 = platform console slice (done); R
 fallback wiring (done); R-224 = Next.js console upgrade (deferred — environment-blocked).
 
 ## Next Up (queued, in order)
-1. R-226 — framework adapter contract (interface + in-memory generated file-set model)
-2. R-227 — Next.js code adapter (emit a real app from the IR; unit-tested by asserting emitted files)
-3. R-228 — Git service v1 (materialize the generated file-set into a customer-owned repo + commit)
-4. R-224 — Next.js console upgrade — resume in an environment with reliable npm registry access
-5. R-010 — Native iOS Agent (backlog; deferred until web/backend stability per Brief 25/91)
+1. R-227 — Next.js code adapter (emit a real app from the IR; unit-tested by asserting emitted files)
+2. R-228 — Git service v1 (materialize the generated file-set into a customer-owned repo + commit)
+3. R-224 — Next.js console upgrade — resume in an environment with reliable npm registry access
+4. R-010 — Native iOS Agent (backlog; deferred until web/backend stability per Brief 25/91)
 
 ## Decisions Made This Session
 - Applied the normative V6 precedence rules and Section 91 Phase 0 sequence.

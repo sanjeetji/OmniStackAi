@@ -1,50 +1,45 @@
 # Current Handoff
 
-Task ID: R-225
+Task ID: R-226
 Status: done
 Phase: BASIC/MVP — Founder Stage 0
-Branch: `ai/R-225-application-ir`
-Last verified implementation SHA: `ad5e4ddf5918ddf3e4005c21a07c21601faf2ee6`
+Branch: `ai/R-226-adapter-contract`
+Last verified implementation SHA: `f27bf416e99423d281e1c4e6f3eabc363848f95f`
 
 ## Completed
 
-- Started the actual product per the brief. Added the framework-neutral **Application IR** (Brief §9)
-  in `omnistackai_agent_engine.application_ir` — the source of truth every codegen adapter will
-  consume:
-  - Immutable, validated records: `ApplicationIR`, `ProjectStrategy`, `Role`, `Entity`
-    (`Field`/`Relation`), `ApiEndpoint`, `Screen`, `AcceptanceCriterion`, with the Brief §9 enums.
-  - Cross-validation (a relation targets a declared entity; a screen role references a declared role),
-    unique ids, well-formed API method+path, enum checks → stable `InvalidIRError`.
-  - `IR_SCHEMA_VERSION = 1`; lossless `to_dict`/`from_dict`; `from_dict` rejects an unknown/newer
-    version with `UnsupportedIRVersionError` (migration hook).
-  - Standard-library only; no network, infra, codegen, or framework knowledge.
-- Also (this session): showed the platform live (`task agent-engine:gateway:run`) and published the
-  console UI as a private Artifact; recorded R-224 (Next.js upgrade) as Deferred (env can't install
-  front-end bundlers — tried Next 3× and Vite).
+- Added the **code-generation boundary** in `omnistackai_agent_engine.codegen`:
+  - `GeneratedFile` — one path→content record with a safe relative POSIX path (no absolute, no `..`,
+    no backslashes/control chars, bounded; segments `[A-Za-z0-9._-]`).
+  - `GeneratedProject` — immutable, path-unique, deterministically ordered set for one target; `get`,
+    `paths`, `files`, `__len__`, `merge` (same target only). No disk writes.
+  - `FrameworkAdapter` — runtime-checkable contract (`target` + `generate(ir) -> GeneratedProject`).
+  - `AdapterRegistry` — register/get by target with stable `DuplicateAdapterError`/`UnsupportedTargetError`;
+    `GenerationTarget` enum over the MVP targets. Adapters are chosen only via the registry.
+- Depends on `application_ir`; standard-library only; deterministic; nothing executed.
 
 ## Verification
 
-- `task verify` — pass (115 agent-engine tests; 17 new IR tests).
-- `task agent-engine:lint`, `task security:quick`, `task env:check` — pass.
-- Compose unchanged (`postgres`, `control-plane`); offline `task bootstrap` unchanged.
-- Tracker — R-225 (category Product) at `Phase_Roadmap!A9:M9` (rows 9..232 shifted to 10..233, ranges
-  extended); no ID lost; MVP total 120, Done 14; chart/styles/workbook byte-identical; zip verified.
+- `task verify` — pass (125 agent-engine tests; 10 new). `task agent-engine:lint`, `task security:quick` — pass.
+- Compose unchanged; offline `task bootstrap` unchanged.
+- Tracker — R-226 (Product) at `Phase_Roadmap!A9:M9` (rows 9..233 shifted to 10..234, ranges extended);
+  no ID lost; MVP total 121, Done 15; chart/styles/workbook byte-identical; zip verified.
 
 ## Product roadmap (vertical slice toward an Emergent-class builder)
 
-1. **R-225 Application IR** — done.
-2. **R-226** framework adapter contract — the interface adapters implement + an in-memory generated
-   file-set model (path → contents), all offline/unit-testable.
-3. **R-227** Next.js code adapter — emit a real Next.js app *as files* from the IR; verified by
-   asserting emitted file contents (no install/build needed offline).
-4. **R-228** Git service v1 — materialize the file-set into a customer-owned repo with a commit.
-5. Later (needs a cloud/network env): sandbox run, instant browser preview, deploy; plus the
+1. R-225 Application IR — done.
+2. R-226 framework adapter contract + file-set model — done.
+3. **R-227 (next)** Next.js web adapter — emit a real Next.js app *as files* from the IR; verified by
+   asserting emitted file contents (offline, no install/build).
+4. R-228 Git service v1 — materialize the file-set into a customer-owned repo with a commit.
+5. Later (needs a cloud/network env): sandbox run → instant browser preview → deploy; plus the
    deferred R-224 Next.js console upgrade.
 
 ## Next action
 
-Proceed to **R-226** — framework adapter contract + generated file-set model. Native mobile /
-device-cloud stays deferred per Brief §25/§91 until web/backend stability.
+Proceed to **R-227** — the Next.js web `FrameworkAdapter` that turns an Application IR into a real
+Next.js project (pages/components/API routes/config), registered via `AdapterRegistry`, verified
+offline by asserting the emitted `GeneratedProject`. Native mobile stays deferred per Brief §25/§91.
 
 ## Next command
 

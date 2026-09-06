@@ -251,6 +251,21 @@
   ranges extended); no ID lost, MVP total 120 / Done 14, chart/styles byte-identical, zip valid.
 - Created implementation checkpoint `ad5e4ddf5918ddf3e4005c21a07c21601faf2ee6`.
 
+## 2026-09-06 — R-226
+
+- Added the code-generation boundary in `omnistackai_agent_engine.codegen`: `GeneratedFile` (safe
+  relative POSIX path, bounded content) and `GeneratedProject` (immutable, path-unique,
+  deterministically ordered, mergeable) — a customer project's source tree as a pure in-memory value,
+  no disk writes.
+- Added the `FrameworkAdapter` runtime-checkable contract (`target` + `generate(ir) -> GeneratedProject`),
+  an `AdapterRegistry` with stable duplicate/unknown errors, and the `GenerationTarget` enum over MVP
+  targets; adapters are selected only via the registry.
+- Depends on `application_ir`; standard-library only; no code execution. 10 new offline tests
+  (125 total). `task verify` green.
+- Inserted tracker row R-226 (Product) at Phase_Roadmap row 9 (rows 9..233 shifted to 10..234, ranges
+  extended); no ID lost, MVP total 121 / Done 15, chart/styles byte-identical, zip valid.
+- Created implementation checkpoint `f27bf416e99423d281e1c4e6f3eabc363848f95f`.
+
 ## 2026-09-06 — R-224 (deferred)
 
 - Attempted the Next.js console upgrade. `pnpm install` for next@15.5.4 timed out fetching the native

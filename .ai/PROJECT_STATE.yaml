@@ -2,14 +2,14 @@ schema_version: 1
 project: OmniStackAI
 phase: BASIC/MVP
 founder_stage: 0
-current_task: R-226
-current_status: in_progress
+current_task: null
+current_status: ready_for_next_task_definition
 branch: ai/R-226-adapter-contract
 last_completed_task:
-  task_id: R-225
-  title: Application IR v1 — framework-neutral intermediate representation
-  implementation_commit: ad5e4ddf5918ddf3e4005c21a07c21601faf2ee6
-  verification: task verify (115 agent-engine tests, 17 new IR tests)
+  task_id: R-226
+  title: Framework adapter contract and generated file-set model
+  implementation_commit: f27bf416e99423d281e1c4e6f3eabc363848f95f
+  verification: task verify (125 agent-engine tests, 10 new codegen-contract tests)
   result: pass
 control_plane_database: postgresql
 model_routing_mode: balanced
@@ -23,5 +23,5 @@ id_note: >-
   Workbook backlog owns R-010..R-219. Founder-requested tasks use IDs after R-219: R-220..R-223 done,
   R-224 Next.js deferred (env-blocked), R-225 Application IR (in progress).
 blockers: []
-next_action: R-226 — framework adapter contract (interface + in-memory generated file-set model), then R-227 Next.js code adapter emitting a real app from the IR.
+next_action: R-227 — first framework adapter (Next.js web) emitting a real app's source from the IR, verified offline by asserting emitted files.
 last_updated: "2026-09-06T19:40:00+05:30"
