@@ -133,7 +133,20 @@ gateway raises `AllProvidersFailedError` (a single-provider config still surface
 for a trial; success resets it. The breaker is deterministic (injectable clock) and thread-safe. Every
 attempt is still recorded by the accounting ledger, so fail-over cost is visible.
 
+## R-222 Platform console
+
+`platform_overview()` (`overview.py`) exports a deterministic, **metadata-only** snapshot of the model
+fabric — routing ladder, providers (local + all supported cloud, each with an active flag derived only
+from API-key presence, never the key value), the price book, and the usage/cost summary. It is
+JSON-serialized to `apps/console-web/data/overview.json` by `task console:snapshot`.
+
+`apps/console-web` renders that snapshot as a dependency-free static console (`index.html` +
+`styles.css` + `app.js`, safe DOM APIs only, strict CSP, no external requests). Run it with
+`task console:serve` (serves on `http://127.0.0.1:4321`). The forward path is a Next.js app once the
+build environment can install the front-end toolchain; the `overview.json` contract carries over.
+
 ## Deferred work
 
 Durable/persistent cost storage, benchmark-backed capability promotion, richer context management,
-HTTP serving, and agent orchestration remain deferred to their own Tracker IDs.
+the Next.js console upgrade, HTTP serving of the gateway, and agent orchestration remain deferred to
+their own Tracker IDs.

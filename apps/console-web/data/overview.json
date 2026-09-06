@@ -1,0 +1,127 @@
+{
+  "note": "Static, metadata-only snapshot exported from the model gateway. Contains no API keys or secrets.",
+  "routingMode": "balanced",
+  "cloudTierSelected": null,
+  "routingLadder": [
+    {
+      "level": "L0",
+      "tier": null,
+      "action": "deterministic tool \u2014 not routed to a model"
+    },
+    {
+      "level": "L1",
+      "tier": "local",
+      "action": "small/cheap work \u2192 local Ollama"
+    },
+    {
+      "level": "L2",
+      "tier": "local",
+      "action": "coding work \u2192 local Ollama"
+    },
+    {
+      "level": "L3",
+      "tier": "cloud",
+      "action": "hard reasoning \u2192 selected cloud provider"
+    },
+    {
+      "level": "L4",
+      "tier": "cloud",
+      "action": "critical/review \u2192 selected cloud provider"
+    }
+  ],
+  "providers": [
+    {
+      "providerId": "ollama-local",
+      "tier": "local",
+      "kind": "local",
+      "defaultModel": "qwen2.5-coder:14b",
+      "active": true,
+      "keyEnv": null
+    },
+    {
+      "providerId": "anthropic",
+      "tier": "cloud",
+      "kind": "anthropic",
+      "defaultModel": "claude-sonnet-5",
+      "active": false,
+      "keyEnv": "ANTHROPIC_API_KEY"
+    },
+    {
+      "providerId": "openai",
+      "tier": "cloud",
+      "kind": "openai",
+      "defaultModel": "gpt-4o",
+      "active": false,
+      "keyEnv": "OPENAI_API_KEY"
+    },
+    {
+      "providerId": "google-gemini",
+      "tier": "cloud",
+      "kind": "gemini",
+      "defaultModel": "gemini-1.5-pro",
+      "active": false,
+      "keyEnv": "GOOGLE_API_KEY"
+    },
+    {
+      "providerId": "openrouter",
+      "tier": "cloud",
+      "kind": "openai",
+      "defaultModel": "anthropic/claude-3.5-sonnet",
+      "active": false,
+      "keyEnv": "OPENROUTER_API_KEY"
+    },
+    {
+      "providerId": "groq",
+      "tier": "cloud",
+      "kind": "openai",
+      "defaultModel": "llama-3.3-70b-versatile",
+      "active": false,
+      "keyEnv": "GROQ_API_KEY"
+    }
+  ],
+  "priceBook": [
+    {
+      "providerId": "anthropic",
+      "modelId": "claude-sonnet-5",
+      "inputPerMTokUsd": "3",
+      "outputPerMTokUsd": "15"
+    },
+    {
+      "providerId": "google-gemini",
+      "modelId": "gemini-1.5-pro",
+      "inputPerMTokUsd": "1.25",
+      "outputPerMTokUsd": "5"
+    },
+    {
+      "providerId": "groq",
+      "modelId": "llama-3.3-70b-versatile",
+      "inputPerMTokUsd": "0.59",
+      "outputPerMTokUsd": "0.79"
+    },
+    {
+      "providerId": "ollama-local",
+      "modelId": "*",
+      "inputPerMTokUsd": "0",
+      "outputPerMTokUsd": "0"
+    },
+    {
+      "providerId": "openai",
+      "modelId": "gpt-4o",
+      "inputPerMTokUsd": "2.5",
+      "outputPerMTokUsd": "10"
+    }
+  ],
+  "usage": {
+    "totalCalls": 0,
+    "successfulCalls": 0,
+    "failedCalls": 0,
+    "inputTokens": 0,
+    "outputTokens": 0,
+    "totalCostUsd": "0",
+    "unpricedCalls": 0,
+    "costPerSuccessfulCallUsd": null,
+    "latencyP50Ms": 0,
+    "latencyP95Ms": 0,
+    "breakdowns": []
+  }
+}

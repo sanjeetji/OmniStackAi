@@ -81,6 +81,16 @@ class PriceBook:
     def get(self, provider_id: str, model_id: str) -> ModelPrice | None:
         return self._prices.get((provider_id, model_id)) or self._prices.get((provider_id, None))
 
+    def entries(self) -> tuple[tuple[str, str | None, ModelPrice], ...]:
+        """Return all configured prices, deterministically ordered, for read-only introspection."""
+
+        return tuple(
+            (provider_id, model_id, price)
+            for (provider_id, model_id), price in sorted(
+                self._prices.items(), key=lambda item: (item[0][0], item[0][1] or "")
+            )
+        )
+
     def cost_for(self, provider_id: str, model_id: str, usage: TokenUsage) -> Decimal | None:
         price = self.get(provider_id, model_id)
         return None if price is None else price.cost_for(usage)

@@ -69,6 +69,7 @@ from .gateway import (
     estimate_input_tokens,
 )
 from .ollama import OLLAMA_PROVIDER_ID, OllamaModelProfile, OllamaProvider
+from .overview import platform_overview
 from .registry import ProviderRegistry
 from .resilience import CircuitBreaker
 
@@ -137,4 +138,5 @@ __all__ = [
     "build_gateway_from_env",
     "create_cloud_provider",
     "estimate_input_tokens",
+    "platform_overview",
 ]

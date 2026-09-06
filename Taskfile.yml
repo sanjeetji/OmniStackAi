@@ -132,6 +132,16 @@ tasks:
     cmds:
       - bash scripts/agent-engine.sh gateway-run
 
+  console:snapshot:
+    desc: Refresh the console's metadata-only model/cost overview snapshot
+    cmds:
+      - bash scripts/console.sh snapshot
+
+  console:serve:
+    desc: Refresh the snapshot and serve the console on http://127.0.0.1:4321
+    cmds:
+      - bash scripts/console.sh serve
+
   verify:
     desc: Run the CI-equivalent Stage 0 verification
     cmds:

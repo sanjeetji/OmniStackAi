@@ -1,37 +1,43 @@
 schema_version: 1
-task_id: R-221
-title: Cross-provider fallback and circuit breaking for the model gateway
-status: done
+task_id: R-222
+title: First platform console slice (read-only model & cost overview)
+status: in_progress
 phase: BASIC/MVP
 founder_stage: 0
-branch: ai/R-221-cross-provider-fallback
+branch: ai/R-222-console-web
 goal: >-
-  Add explicit, allowlist-driven cross-provider fallback and per-provider circuit breaking to the
-  Balanced gateway. An operator configures an ordered fallback chain of model descriptors; on a
-  retriable failure (provider unavailable, timeout, or HTTP error) the gateway advances to the next
-  allowed candidate that is registered and whose circuit is closed, never silently and never outside
-  the configured chain. A per-provider circuit breaker opens after repeated failures and recovers
-  after a cooldown. Accounting records each attempt. Default behavior (no fallback configured) is
-  unchanged.
+  Stand up the first slice of the visual platform console under apps/console-web, surfacing the model
+  fabric from R-005..R-221: providers (local + all supported cloud, with tier / default model / active
+  key-state), the Balanced routing ladder, the price book, and the usage/cost dashboard from the R-009
+  accounting ledger. The console reads a deterministic, secrets-free JSON snapshot exported by the
+  Python gateway and renders it with safe DOM APIs; it makes no external network calls and never shows
+  a key.
+scope_note: >-
+  Founder asked for the best/advanced industry-standard approach (Next.js) and a smooth, secure
+  platform. A full Next.js app was authored, but this sandbox's network repeatedly timed out fetching
+  Next's native SWC binary, so it cannot be installed or built here and would break the offline
+  task bootstrap. To deliver a working, verifiable, secure console now, this slice is dependency-free
+  (static HTML/CSS/vanilla JS) with the identical data contract and design; the Next.js upgrade is the
+  documented next step once the build environment can install the toolchain. The offline bootstrap
+  contract is unchanged.
 source:
   tracker_sheet: Phase_Roadmap
-  tracker_row: reconstructed; new model-fabric IDs continue after the workbook backlog's R-010..R-219
-  brief_sections: [18, 18.3, 25, 26, 27, 74, 84, 89, 90, 91, 92]
-  founder_intent: >-
-    Founder asked to complete both the console slice and cross-provider fallback, one by one. R-221 is
-    fallback; the Next.js console slice follows as R-222.
+  tracker_row: reconstructed; new IDs continue after the workbook backlog's R-010..R-219
+  brief_sections: [8, 15.2, 40, 41, 74, 77, 87, 90, 91, 92]
 project_profile:
   repository: platform_modular_monorepo
-  service: python_agent_engine
+  service: console_web
   control_plane_database: postgresql
   model_routing: balanced
 complexity: L2
 expected_impact:
-  - services/agent-engine/src/omnistackai_agent_engine/model_gateway/resilience.py
-  - services/agent-engine/src/omnistackai_agent_engine/model_gateway/gateway.py
-  - services/agent-engine/src/omnistackai_agent_engine/model_gateway/errors.py
+  - apps/console-web/** (index.html, styles.css, app.js, data/overview.json, README.md)
+  - services/agent-engine/src/omnistackai_agent_engine/model_gateway/overview.py
+  - services/agent-engine/src/omnistackai_agent_engine/model_gateway/accounting.py (PriceBook.entries)
   - services/agent-engine/src/omnistackai_agent_engine/model_gateway/__init__.py
-  - services/agent-engine/tests/test_fallback.py
+  - services/agent-engine/tests/test_overview.py
+  - scripts/console.sh
+  - Taskfile.yml
   - docs/MODEL_PROVIDER.md
   - portable state, changelog, handoff, task doc, and tracker evidence
 allowed_paths:
@@ -39,36 +45,38 @@ allowed_paths:
   - CHANGELOG.md
   - PROJECT_STATE.md
   - R_&_D/OmniStackAI_Execution_Tracker_v6.xlsx
-  - docs/MODEL_PROVIDER.md
-  - services/agent-engine/src/omnistackai_agent_engine/model_gateway/**
-  - services/agent-engine/tests/**
+  - Taskfile.yml
+  - apps/console-web/**
+  - docs/**
+  - scripts/**
+  - services/agent-engine/**
 must_not_change:
   - PostgreSQL as the control-plane database or the existing schema
-  - the R-005 records/registry, R-006 Ollama adapter, R-008 cloud adapters, R-009 accounting, or R-220 streaming public behavior
-  - the existing single-provider routing outcome when no fallback chain is configured
-  - local Compose services or infrastructure
-  - auth, organizations, billing, Git integration, audit, or business APIs
-  - native mobile or device-cloud functionality
-  - the Section 74 top-level monorepo contract; no new top-level directory
-  - the network-independence of static task verify
+  - the model-gateway runtime behavior (R-005..R-221); the console is read-only and observational
+  - local Compose services or infrastructure; no new deployable is added to Compose
+  - the Section 74 top-level monorepo contract (apps/console-web already exists in it)
+  - the offline task bootstrap contract and the network-independence of static task verify
 must_not_do:
-  - fall back outside the explicitly configured allowlist chain (never silent)
-  - fall back on non-retriable errors (budget, unknown model, unsupported request)
-  - make any real cloud API call; add an external dependency or provider SDK; store secrets
+  - display, log, or embed any API key or secret in the console, the snapshot, or the repo
+  - make external/runtime network calls from the console (same-origin snapshot fetch only)
+  - add a paid cloud service, a new top-level directory, or a dependency that breaks offline bootstrap
 acceptance:
-  - RoutingPolicy accepts an optional ordered fallback chain of model descriptors; with none configured the gateway behaves exactly as before (single provider).
-  - On a retriable failure the gateway advances to the next allowlisted candidate that is registered and whose circuit is closed; a non-retriable error is raised immediately without fallback.
-  - A per-provider circuit breaker opens after a configurable consecutive-failure threshold, skips the provider until a cooldown elapses, then half-opens; success resets it. The breaker uses an injectable clock and is thread-safe.
-  - When every candidate is unavailable, skipped, or failing, the gateway raises a stable AllProvidersFailedError; it never downgrades high-risk work or leaves the chain.
-  - Each dispatch attempt (success or failure) is recorded by the accounting ledger when a recorder is configured.
-  - Standard-library offline tests cover fallback success, non-retriable no-fallback, circuit open/skip/recover, all-failed, ordering, and accounting of attempts, with zero network access.
-  - Static task verify stays network-independent and green.
+  - apps/console-web serves as a static page that renders providers (local + all supported cloud with
+    tier/default-model/active state), the Balanced routing ladder, the price book, and the usage/cost
+    dashboard from a metadata-only snapshot.
+  - The snapshot is produced by a Python exporter and contains no key or secret (active state is a
+    boolean); the page uses safe DOM APIs (textContent, never innerHTML) and a strict CSP meta tag,
+    with no external network requests.
+  - The Python overview exporter has offline tests, including a no-secret / active-without-key
+    assertion; app.js passes a JavaScript syntax check.
+  - task bootstrap stays offline; task verify remains green and independent of the console; task
+    console:snapshot refreshes the data and task console:serve serves it locally.
 required_gates:
   - impact_analysis
-  - python_compile_test
-  - fallback_ordering_and_retriable_classification_tests
-  - circuit_breaker_open_skip_recover_tests
-  - all_providers_failed_and_accounting_tests
+  - overview_exporter_tests
+  - no_secret_in_snapshot_test
+  - app_js_syntax_check
+  - static_console_serves_over_http
   - vendor_import_exclusion
   - secret_exclusion_check
   - task_verify
@@ -80,42 +88,16 @@ model_tool_trace:
   configured_model: qwen2.5-coder:14b
   local_calls: 0
   cloud_calls: 0
-  note: Fallback and circuit breaking are deterministic; exercised offline with fake providers. No cloud key set.
+  note: Console and exporter are deterministic; no model call. No cloud key set; cloud_calls zero.
 completion:
-  implementation_commit: d0ee9f75b0d124fe60f1121b7f2a70d3b73040de
-  verified_at: "2026-09-06T16:20:00+05:30"
-  verification:
-    - command: task verify
-      result: pass
-    - command: task agent-engine:test
-      result: pass
-      evidence: 86 tests passed, including 8 new fallback/circuit-breaker tests (fail-over, non-retriable, all-failed, ordering, accounting, breaker open/skip/recover, reset)
-    - command: task agent-engine:gateway:run
-      result: pass
-      evidence: local gateway still runs on qwen2.5-coder:14b with cost summary; cloud_calls=0
-    - command: task security:quick
-      result: pass
-    - command: task env:check
-      result: pass
-    - command: docker compose --env-file .env -f infra/environments/local/compose.yaml config --services
-      result: pass
-      evidence: exactly postgres and control-plane; no service added
-  acceptance_results:
-    - criterion: RoutingPolicy accepts an optional ordered fallback chain; with none configured the gateway behaves exactly as before.
-      result: pass
-    - criterion: Retriable failures advance to the next allowlisted, registered, circuit-closed candidate; non-retriable errors raise immediately without fallback.
-      result: pass
-    - criterion: The per-provider circuit breaker opens after the threshold, skips until cooldown, half-opens, and resets on success; injectable clock, thread-safe.
-      result: pass
-    - criterion: When every candidate is unavailable/skipped/failing the gateway raises a stable AllProvidersFailedError; a single-provider config surfaces its own error.
-      result: pass
-    - criterion: Each dispatch attempt (success or failure) is recorded by the accounting ledger when configured.
-      result: pass
-    - criterion: Offline tests cover fail-over, non-retriable, circuit open/skip/recover, all-failed, ordering, and accounting; zero network access.
-      result: pass
-    - criterion: Static task verify stays network-independent and green; single-provider behavior unchanged.
-      result: pass
-blockers: []
+  implementation_commit: null
+  verified_at: null
+  verification: []
+  acceptance_results: []
+blockers:
+  - Full Next.js install/build is not possible in this sandbox (SWC binary download times out); the
+    Next.js upgrade is deferred to an environment with reliable registry access.
 next_action: >-
-  Start R-222, the first Next.js console slice (the second of the two founder-requested items).
-next_command: task ai:status
+  Verify the static console (exporter tests, JS syntax, HTTP serve), run the gates, then record
+  completion evidence and update state and tracker.
+next_command: task verify
