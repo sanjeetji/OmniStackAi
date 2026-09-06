@@ -122,6 +122,11 @@ tasks:
     cmds:
       - bash scripts/agent-engine.sh test
 
+  agent-engine:ollama:verify:
+    desc: Prove the ModelProvider adapter against the configured loopback Ollama runtime
+    cmds:
+      - bash scripts/agent-engine.sh ollama-verify
+
   verify:
     desc: Run the CI-equivalent Stage 0 verification
     cmds:

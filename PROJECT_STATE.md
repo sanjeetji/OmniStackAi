@@ -1,5 +1,5 @@
 # Project State — OmniStackAI
-Last updated: 2026-09-06T10:24:31+05:30 by Codex (GPT-5)
+Last updated: 2026-09-06T10:34:01+05:30 by Codex (GPT-5)
 
 ## Current Phase
 Stage 0 (Founder Build Sequence, Brief Section 91) — BASIC/MVP
@@ -10,14 +10,14 @@ contract/registry tests passing, implementation checkpoint
 `afdc4ba9c14b231dece9533dbdd39e1e79e9ace3`
 
 ## In Progress (if any)
-Tracker ID: none
-Files touched so far: none
+Tracker ID: R-006 — loopback-only Ollama ModelProvider adapter
+Files touched so far: task contract and portable state only
 Blocker: none
 
 ## Next Up (queued, in order)
-1. R-006 — reconstruct the loopback-only Ollama adapter against the accepted provider contract
-2. R-007 — task definition missing from `Phase_Roadmap`
-3. R-008 — task definition missing from `Phase_Roadmap`
+1. R-007 — task definition missing from `Phase_Roadmap`
+2. R-008 — task definition missing from `Phase_Roadmap`
+3. R-009 — task definition missing from `Phase_Roadmap`
 
 ## Decisions Made This Session
 - Applied the normative V6 precedence rules and Section 91 Phase 0 sequence.
@@ -48,9 +48,14 @@ Blocker: none
   a runtime-checkable async `ModelProvider` protocol, and a deterministic provider registry.
 - Used only Python 3.13 standard-library functionality and added no adapter, provider SDK, runtime
   process, database change, Compose service, or infrastructure.
+- Reconstructed R-006 as the smallest early Ollama provider required by the V6 MVP sequence.
+- Bounded R-006 to a loopback-only native HTTP adapter, conservative model profiles, conformance
+  tests, and an explicit live verifier; routing, cloud adapters, and orchestration remain deferred.
+- Classified R-006 as L2. One bounded local `qwen3.5:9b` review call returned no capturable output;
+  deterministic brief/repository evidence and official Ollama API documentation define the task.
 
 ## Environment / Secrets Status
 - Local Ollama: server 0.33.3 healthy on loopback; `qwen2.5-coder:14b` configured and live-verified; `qwen3.5:9b` also discovered
-- Cloud keys configured: not inspected; no cloud provider API authorized or required for R-004
+- Cloud keys configured: not inspected; no cloud provider API authorized or required for R-006
 - Database: local container healthy via Colima; pgvector 0.8.6 and migration version 1 verified; no cloud database is authorized
 - Control plane: local container healthy on `127.0.0.1:8080`; liveness `ok`, readiness `ready`

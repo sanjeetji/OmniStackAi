@@ -26,6 +26,7 @@ The R-004 Go control-plane foundation is checked with `task control-plane:lint`,
 `task control-plane:verify` builds the pinned container and verifies `/healthz` plus
 PostgreSQL-backed `/readyz`.
 
-The R-005 Python model-provider boundary has no third-party runtime dependencies. Run
-`task agent-engine:lint` to compile and policy-check it, then `task agent-engine:test` for its
-contract and registry tests. Provider adapters arrive only through later Tracker IDs.
+The Python model-provider boundary and loopback Ollama adapter have no third-party runtime
+dependencies. Run `task agent-engine:lint` to compile and policy-check them, then
+`task agent-engine:test` for offline contract, registry, and adapter tests. With Ollama running,
+`task agent-engine:ollama:verify` makes two bounded local calls to prove generation and streaming.

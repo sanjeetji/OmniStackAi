@@ -2,9 +2,9 @@ schema_version: 1
 project: OmniStackAI
 phase: BASIC/MVP
 founder_stage: 0
-current_task: null
-current_status: ready_for_next_task_definition
-branch: ai/R-005-model-provider-contract
+current_task: R-006
+current_status: in_progress
+branch: ai/R-006-ollama-provider-adapter
 last_completed_task:
   task_id: R-005
   title: Add the vendor-neutral ModelProvider contract and registry
@@ -16,5 +16,5 @@ model_routing_mode: balanced
 architecture_contract: R_&_D/OmniStackAI_Implementation_Brief_v6.md
 tracker: R_&_D/OmniStackAI_Execution_Tracker_v6.xlsx
 blockers: []
-next_action: Define reconstructed R-006 for the loopback-only Ollama adapter against the accepted contract.
-last_updated: "2026-09-06T10:24:31+05:30"
+next_action: Mark R-006 In Progress in the tracker, then implement the bounded loopback-only Ollama adapter.
+last_updated: "2026-09-06T10:34:01+05:30"
