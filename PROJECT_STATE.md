@@ -10,14 +10,13 @@ tests, and live health/discovery/generation/streaming conformance passing, imple
 `8061ca3b129539ada4b0838d7d70c8acd3df1ea3`
 
 ## In Progress (if any)
-Tracker ID: none
-Files touched so far: none
+Tracker ID: R-007 — Balanced Model Gateway router (deterministic-first, local-default, no silent cloud fallback)
+Files touched so far: `services/agent-engine/src/omnistackai_agent_engine/model_gateway/{gateway.py,errors.py,__init__.py}`, `services/agent-engine/tests/test_gateway.py`, `docs/MODEL_PROVIDER.md`, portable state, and tracker row R-007
 Blocker: none
 
 ## Next Up (queued, in order)
-1. R-007 — task definition missing from `Phase_Roadmap`
-2. R-008 — task definition missing from `Phase_Roadmap`
-3. R-009 — task definition missing from `Phase_Roadmap`
+1. R-008 — first cloud API-key ModelProvider adapter behind the same boundary (requires an explicit founder decision on the paid provider before implementation)
+2. R-009 — task definition missing from `Phase_Roadmap`
 
 ## Decisions Made This Session
 - Applied the normative V6 precedence rules and Section 91 Phase 0 sequence.

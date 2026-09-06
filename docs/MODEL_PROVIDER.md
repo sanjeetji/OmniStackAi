@@ -32,7 +32,32 @@ With the configured model pulled and Ollama running locally, use
 `task agent-engine:ollama:verify` for health, eligible-model discovery, one generation, and one
 streaming conformance proof. That live command makes two local inference calls and zero cloud calls.
 
+## R-007 Balanced Model Gateway router
+
+`ModelGateway` is the only component that selects a provider. Product/agent code submits a
+`RoutingTask` (its `TaskComplexity`, messages, output budget, and timeout) and never names a provider
+or model. Under Balanced routing the gateway applies the Brief 18.1 escalation ladder and 84 routing
+policy deterministically, with no model call needed to route:
+
+- `L0` deterministic work is refused (`DeterministicWorkNotRoutableError`) — a deterministic tool
+  must answer instead of a model.
+- `L1`/`L2` (sub-L3) route to the local tier (`ollama-local`) resolved from the `ProviderRegistry`.
+- `L3`/`L4` route to the cloud tier, which is unconfigured at Stage 0 and returns a stable
+  `NoEligibleProviderError` (escalation required). High-risk work is never silently downgraded to the
+  local model.
+- If the resolved local provider reports `UNAVAILABLE` health, the gateway raises
+  `ProviderUnavailableError` and never silently escalates to an unauthorized cloud provider.
+- A conservative, deterministic token estimate guards each request against the resolved model's
+  `safe_input_tokens` and `max_output_tokens` (`ContextBudgetExceededError`) rather than silently
+  truncating.
+
+`RoutingPolicy.cloud_model` stays `None` at Stage 0. When a later Tracker ID registers a cloud
+API-key adapter behind the same `ModelProvider` boundary, populating `cloud_model` enables L3/L4
+escalation with no gateway change. Routing is covered by offline tests in `tests/test_gateway.py`;
+`task agent-engine:test` exercises it with zero network access and zero model calls.
+
 ## Deferred work
 
-Cloud adapters, selection/routing, fallback, circuit breaking, durable accounting, benchmark-backed
-capability promotion, HTTP serving, and agent orchestration remain deferred to their own Tracker IDs.
+Cloud API-key adapters, fallback across providers, circuit breaking, durable cost accounting,
+benchmark-backed capability promotion, richer context management, HTTP serving, and agent
+orchestration remain deferred to their own Tracker IDs.

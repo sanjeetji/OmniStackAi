@@ -2,9 +2,9 @@ schema_version: 1
 project: OmniStackAI
 phase: BASIC/MVP
 founder_stage: 0
-current_task: null
-current_status: ready_for_next_task_definition
-branch: ai/R-006-ollama-provider-adapter
+current_task: R-007
+current_status: in_progress
+branch: ai/R-007-balanced-model-gateway
 last_completed_task:
   task_id: R-006
   title: Add the loopback-only Ollama ModelProvider adapter
@@ -16,5 +16,5 @@ model_routing_mode: balanced
 architecture_contract: R_&_D/OmniStackAI_Implementation_Brief_v6.md
 tracker: R_&_D/OmniStackAI_Execution_Tracker_v6.xlsx
 blockers: []
-next_action: Define reconstructed R-007 from the next permitted Stage 0/MVP dependency.
-last_updated: "2026-09-06T10:46:19+05:30"
+next_action: Implement and verify the R-007 Balanced Model Gateway router, then record completion evidence.
+last_updated: "2026-09-06T12:00:00+05:30"

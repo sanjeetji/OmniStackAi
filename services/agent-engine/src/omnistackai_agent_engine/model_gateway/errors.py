@@ -57,3 +57,25 @@ class ProviderResponseTooLargeError(ModelProviderError):
 
 class ModelProfileMismatchError(ModelProviderError):
     code = "model_profile_mismatch"
+
+
+class ModelGatewayError(Exception):
+    """Base error safe to expose at the platform model-gateway routing boundary."""
+
+    code = "model_gateway_error"
+
+
+class InvalidRoutingTaskError(ModelGatewayError):
+    code = "invalid_routing_task"
+
+
+class DeterministicWorkNotRoutableError(ModelGatewayError):
+    code = "deterministic_work_not_routable"
+
+
+class NoEligibleProviderError(ModelGatewayError):
+    code = "no_eligible_provider"
+
+
+class ContextBudgetExceededError(ModelGatewayError):
+    code = "context_budget_exceeded"

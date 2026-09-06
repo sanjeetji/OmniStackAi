@@ -1,17 +1,24 @@
 schema_version: 1
-task_id: R-006
-title: Add the loopback-only Ollama ModelProvider adapter
-status: done
+task_id: R-007
+title: Balanced Model Gateway router with deterministic-first escalation and no silent cloud fallback
+status: in_progress
 phase: BASIC/MVP
 founder_stage: 0
-branch: ai/R-006-ollama-provider-adapter
+branch: ai/R-007-balanced-model-gateway
 goal: >-
-  Implement a bounded, loopback-only Ollama adapter that conforms to the accepted
-  ModelProvider boundary for health, model discovery, chat generation, and streaming.
+  Add a deterministic, platform-owned Model Gateway router that resolves which registered
+  ModelProvider handles a request under Balanced routing: reject L0 deterministic work from model
+  dispatch, route sub-L3 work to the local Ollama provider, escalate L3/L4 to a cloud provider only
+  when one is registered (none yet), enforce a conservative context/token budget, and never silently
+  fall back to a cloud model when the local provider is unavailable.
 source:
   tracker_sheet: Phase_Roadmap
-  tracker_row: reconstructed because R-006 through R-009 are absent from the supplied workbook
-  brief_sections: [18.3, 25, 26, 27, 74, 75, 77, 83, 84, 85, 91, 92]
+  tracker_row: reconstructed because R-007 through R-009 are absent from the supplied workbook
+  brief_sections: [18, 18.1, 18.2, 18.3, 25, 26, 27, 74, 75, 77, 83, 84, 85, 91, 92]
+  founder_intent: >-
+    Founder wants both API-key cloud LLM providers and local Ollama, added one Tracker ID at a time.
+    R-007 delivers the routing seam; the first cloud adapter is deferred to R-008 and requires an
+    explicit founder decision on the specific paid provider before implementation.
 project_profile:
   repository: platform_modular_monorepo
   service: python_agent_engine
@@ -19,49 +26,47 @@ project_profile:
   model_routing: balanced
 complexity: L2
 expected_impact:
-  - services/agent-engine/**
-  - .env.example
-  - Taskfile.yml
-  - scripts/agent-engine.sh
-  - directly related model-provider documentation
-  - portable state, changelog, handoff, and tracker evidence
+  - services/agent-engine/src/omnistackai_agent_engine/model_gateway/gateway.py
+  - services/agent-engine/src/omnistackai_agent_engine/model_gateway/errors.py
+  - services/agent-engine/src/omnistackai_agent_engine/model_gateway/__init__.py
+  - services/agent-engine/tests/test_gateway.py
+  - docs/MODEL_PROVIDER.md
+  - portable state, changelog, handoff, task doc, and tracker evidence
 allowed_paths:
   - .ai/**
-  - .env.example
   - CHANGELOG.md
   - PROJECT_STATE.md
   - R_&_D/OmniStackAI_Execution_Tracker_v6.xlsx
-  - Taskfile.yml
-  - docs/DEVELOPMENT.md
   - docs/MODEL_PROVIDER.md
-  - docs/START_HERE.md
-  - scripts/agent-engine.sh
-  - services/agent-engine/**
+  - services/agent-engine/src/omnistackai_agent_engine/model_gateway/**
+  - services/agent-engine/tests/**
 must_not_change:
   - PostgreSQL as the control-plane database or the existing schema
-  - cloud model providers, model routing, fallback, budgets, or accounting behavior
+  - the R-005 ModelProvider protocol/records and the R-006 Ollama adapter public behavior
+  - cloud model providers, adapters, SDKs, or any real cloud model call
   - agent orchestration, product APIs, or a deployable agent-engine process
   - local Compose services or infrastructure
   - Redis, NATS, object storage, Kubernetes, Temporal, or cloud resources
   - auth, organizations, billing, Git integration, audit, or business APIs
   - native mobile or device-cloud functionality
+  - the Section 74 top-level monorepo contract; no new top-level directory
   - source documents other than the authorized execution tracker status and evidence
 acceptance:
-  - The adapter satisfies ModelProvider identity, health, discovery, generation, and streaming using Ollama's native local API.
-  - Configuration accepts only the Stage 0 loopback endpoint and never follows redirects.
-  - Requests have explicit timeouts, bounded response sizes, bounded concurrency, cancellation propagation, and stable platform-owned errors without leaking response bodies.
-  - Discovery is deterministic and capability claims remain conservative unless an exact configured model profile proves them.
-  - Generation and NDJSON streaming map messages, finish reasons, usage, request IDs, and sequence/final events into vendor-neutral records.
-  - Standard-library tests cover success, malformed data, HTTP failure, timeout, size limit, endpoint validation, concurrency, cancellation, and stream termination.
-  - An explicit live verifier proves health, discovery, one generation, and one stream against local Ollama; static task verify stays network-independent.
-  - No SDK dependency, cloud call, router, service process, database change, Compose change, or infrastructure is introduced.
+  - The router selects a registered provider for a task purely from deterministic inputs (complexity, routing mode, registry state, model descriptor) with no provider knowledge in product code.
+  - L0 deterministic work is rejected from model dispatch with a stable typed error; the router never issues a model call for work a deterministic tool should perform.
+  - Under Balanced routing, L1 and L2 work resolves to the local Ollama provider when it is registered and healthy.
+  - L3 and L4 work returns a stable escalation-required outcome because no cloud provider is registered; the router never silently downgrades high-risk work to the local model.
+  - When the resolved local provider reports UNAVAILABLE health, the router returns a stable provider-unavailable outcome and never silently escalates to an unregistered or unauthorized cloud provider.
+  - A conservative deterministic budget guard rejects a request whose estimated input exceeds the model safe-input budget or whose requested output exceeds the model max-output budget, rather than silently truncating.
+  - On a routable, in-budget decision the router dispatches to the provider generate/stream and returns the existing vendor-neutral records unchanged.
+  - Standard-library tests cover L0 rejection, L1/L2 local routing, L3/L4 escalation-required, unavailable-provider no-fallback, budget overflow, empty/unknown registry, and a successful dispatch through a fake provider, all without network access.
+  - No provider SDK/dependency, cloud provider/call, service process, database or Compose change, infrastructure, new top-level folder, or native/device work is introduced; static task verify stays network-independent.
 required_gates:
   - impact_analysis
   - python_compile_test
-  - ollama_adapter_conformance_tests
-  - malformed_and_failure_path_tests
-  - timeout_size_concurrency_and_cancellation_tests
-  - live_loopback_ollama_verification
+  - gateway_routing_ladder_tests
+  - no_silent_cloud_fallback_and_unavailable_provider_tests
+  - context_budget_guard_tests
   - vendor_import_exclusion
   - secret_exclusion_check
   - task_verify
@@ -70,38 +75,20 @@ required_gates:
 model_tool_trace:
   routing: local_only
   local_provider: ollama
-  configured_model: qwen3.5:9b
-  local_calls: 3
+  configured_model: qwen2.5-coder:14b
+  local_calls: 0
   cloud_calls: 0
-  note: One bounded local design-review call returned no capturable text; two live adapter conformance calls passed against qwen2.5-coder:14b. No cloud model was called.
+  note: >-
+    Routing is deterministic and needs no model call to implement or test. Deterministic brief and
+    repository evidence define the task. No cloud model is chosen or called; cloud adapters are
+    deferred to R-008 under an explicit founder paid-provider decision.
 completion:
-  implementation_commit: 8061ca3b129539ada4b0838d7d70c8acd3df1ea3
-  verified_at: "2026-09-06T10:46:19+05:30"
-  verification:
-    - command: task verify
-      result: pass
-    - command: task agent-engine:lint
-      result: pass
-    - command: task agent-engine:test
-      result: pass
-      evidence: 28 contract, registry, adapter, failure-path, concurrency, and cancellation tests passed
-    - command: task agent-engine:ollama:verify
-      result: pass
-      evidence: qwen2.5-coder:14b discovered; generation 4 tokens; stream 4 events and 4 tokens; cloud calls 0
-    - command: docker compose --env-file .env -f infra/environments/local/compose.yaml config --services
-      result: pass
-      evidence: exactly postgres and control-plane; no service added
-  acceptance_results:
-    - criterion: OllamaProvider satisfies the vendor-neutral identity, health, discovery, generation, and streaming port.
-      result: pass
-    - criterion: Stage 0 endpoint, redirect, proxy, timeout, response-size, concurrency, cancellation, and stable-error boundaries are enforced.
-      result: pass
-    - criterion: Model eligibility is explicitly profiled and verified capability claims require an exact digest.
-      result: pass
-    - criterion: Offline conformance and live loopback health, discovery, generation, and streaming proofs pass.
-      result: pass
-    - criterion: No SDK dependency, cloud call, router, service process, database, Compose, infrastructure, or native change was introduced.
-      result: pass
+  implementation_commit: null
+  verified_at: null
+  verification: []
+  acceptance_results: []
 blockers: []
-next_action: Define reconstructed R-007 from the next permitted Stage 0/MVP dependency before implementation.
-next_command: task ai:status
+next_action: >-
+  Implement the deterministic gateway router and its offline test suite, then run the required gates
+  and update all state, changelog, handoff, task doc, and tracker evidence before marking R-007 done.
+next_command: task agent-engine:test
