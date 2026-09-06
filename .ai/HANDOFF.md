@@ -22,6 +22,8 @@ Last verified implementation SHA: `9faacd23dc22c6773f9a51dc58087d557c0be391`
 - Added 14 offline gateway tests (42 agent-engine tests total). No provider SDK, cloud call, service
   process, database/Compose change, infrastructure, new top-level folder, or native/device work.
 - Restored the declared `pnpm` and `ripgrep` toolchains (environment only; no repository dependency).
+- Added an opt-in live runner (`task agent-engine:gateway:run`) that routes real work through the
+  gateway to the local Ollama model, and cloud API-key placeholders in `.env.example` for R-008.
 
 ## Verification
 
@@ -30,7 +32,9 @@ Last verified implementation SHA: `9faacd23dc22c6773f9a51dc58087d557c0be391`
 - `task agent-engine:test` — pass: 42 tests (14 new gateway tests).
 - `task security:quick` and `task env:check` — pass.
 - Compose scope — exactly `postgres` and `control-plane`; unchanged.
-- Model trace — routing is deterministic; zero local and zero cloud model calls; zero paid usage.
+- `task agent-engine:gateway:run` — pass live on `qwen2.5-coder:14b` and `qwen3.5:9b`: L1/L2 routed
+  to `ollama-local`, L0/L3/L4 refused, generation and streaming returned measured output, cloud_calls=0.
+- Model trace — routing is deterministic; the optional live gate made 4 local calls and 0 cloud calls.
 - Tracker — R-007 inserted at `Phase_Roadmap!A9:M9` (rows 9..224 shifted to 10..225); Dashboard/table/
   conditional-formatting/data-validation ranges extended by one; no ID lost; MVP total 112, Done 7;
   chart/styles/workbook parts byte-identical; zip integrity verified.

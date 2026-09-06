@@ -56,6 +56,19 @@ API-key adapter behind the same `ModelProvider` boundary, populating `cloud_mode
 escalation with no gateway change. Routing is covered by offline tests in `tests/test_gateway.py`;
 `task agent-engine:test` exercises it with zero network access and zero model calls.
 
+### Running the platform locally through the gateway
+
+With Ollama running and a local model pulled (e.g. `qwen2.5-coder:14b` or `qwen3.5:9b`), run:
+
+```
+OMNISTACKAI_OLLAMA_MODEL=qwen2.5-coder:14b task agent-engine:gateway:run
+```
+
+This opt-in command prints the deterministic routing decision for every complexity level, then
+dispatches one L2 generation and one L1 stream through `ModelGateway` to the local Ollama provider.
+It makes local inference calls and zero cloud calls, and is excluded from static `task verify`.
+Select the model with `OMNISTACKAI_OLLAMA_MODEL`; override the prompt with `OMNISTACKAI_GATEWAY_PROMPT`.
+
 ## Deferred work
 
 Cloud API-key adapters, fallback across providers, circuit breaking, durable cost accounting,

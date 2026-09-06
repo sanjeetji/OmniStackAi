@@ -62,7 +62,7 @@ if project["project"]["requires-python"] != ">=3.13,<3.14":
       python3 -m unittest discover -s tests -v
     )
     ;;
-  ollama-verify)
+  ollama-verify|gateway-run)
     configure_python
     export OMNISTACKAI_OLLAMA_BASE_URL="$(config_value OMNISTACKAI_OLLAMA_BASE_URL http://127.0.0.1:11434)"
     export OMNISTACKAI_OLLAMA_MODEL="$(config_value OMNISTACKAI_OLLAMA_MODEL qwen2.5-coder:14b)"
@@ -72,10 +72,15 @@ if project["project"]["requires-python"] != ">=3.13,<3.14":
     export OMNISTACKAI_OLLAMA_REQUEST_TIMEOUT_SECONDS="$(config_value OMNISTACKAI_OLLAMA_REQUEST_TIMEOUT_SECONDS 300)"
     export OMNISTACKAI_OLLAMA_HEALTH_TIMEOUT_SECONDS="$(config_value OMNISTACKAI_OLLAMA_HEALTH_TIMEOUT_SECONDS 5)"
     export OMNISTACKAI_OLLAMA_MAX_CONCURRENCY="$(config_value OMNISTACKAI_OLLAMA_MAX_CONCURRENCY 1)"
-    python3 -m omnistackai_agent_engine.model_gateway.live_verify
+    if [[ "$command_name" == "ollama-verify" ]]; then
+      python3 -m omnistackai_agent_engine.model_gateway.live_verify
+    else
+      export OMNISTACKAI_GATEWAY_PROMPT="$(config_value OMNISTACKAI_GATEWAY_PROMPT 'Reply with exactly: gateway routed to local model')"
+      python3 -m omnistackai_agent_engine.model_gateway.live_gateway
+    fi
     ;;
   *)
-    printf 'Usage: %s {lint|test|ollama-verify}\n' "$0"
+    printf 'Usage: %s {lint|test|ollama-verify|gateway-run}\n' "$0"
     exit 2
     ;;
 esac

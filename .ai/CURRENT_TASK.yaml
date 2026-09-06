@@ -29,17 +29,30 @@ expected_impact:
   - services/agent-engine/src/omnistackai_agent_engine/model_gateway/gateway.py
   - services/agent-engine/src/omnistackai_agent_engine/model_gateway/errors.py
   - services/agent-engine/src/omnistackai_agent_engine/model_gateway/__init__.py
+  - services/agent-engine/src/omnistackai_agent_engine/model_gateway/live_gateway.py
   - services/agent-engine/tests/test_gateway.py
   - docs/MODEL_PROVIDER.md
+  - scripts/agent-engine.sh
+  - Taskfile.yml
+  - .env.example
   - portable state, changelog, handoff, task doc, and tracker evidence
 allowed_paths:
   - .ai/**
+  - .env.example
   - CHANGELOG.md
   - PROJECT_STATE.md
   - R_&_D/OmniStackAI_Execution_Tracker_v6.xlsx
+  - Taskfile.yml
   - docs/MODEL_PROVIDER.md
+  - scripts/agent-engine.sh
   - services/agent-engine/src/omnistackai_agent_engine/model_gateway/**
   - services/agent-engine/tests/**
+scope_note: >-
+  The live gateway runner (live_gateway.py), its task command (Taskfile.yml, scripts/agent-engine.sh),
+  and cloud-provider key placeholders (.env.example, names only, no values) were added on founder
+  instruction to run the platform locally on the installed Ollama model and to prepare the R-008 cloud
+  decision. This is the opt-in live gate the R-007 plan left as a founder option; static task verify
+  remains network-independent.
 must_not_change:
   - PostgreSQL as the control-plane database or the existing schema
   - the R-005 ModelProvider protocol/records and the R-006 Ollama adapter public behavior
@@ -76,12 +89,13 @@ model_tool_trace:
   routing: local_only
   local_provider: ollama
   configured_model: qwen2.5-coder:14b
-  local_calls: 0
+  local_calls: 4
   cloud_calls: 0
   note: >-
-    Routing is deterministic and needs no model call to implement or test. Deterministic brief and
-    repository evidence define the task. No cloud model is chosen or called; cloud adapters are
-    deferred to R-008 under an explicit founder paid-provider decision.
+    Routing is deterministic and needs no model call to implement or test. The optional live gate
+    dispatched through the gateway to local Ollama: two generations and two streams across
+    qwen2.5-coder:14b and qwen3.5:9b (4 local calls). No cloud model was chosen or called; cloud
+    adapters are deferred to R-008 under an explicit founder paid-provider decision.
 completion:
   implementation_commit: 9faacd23dc22c6773f9a51dc58087d557c0be391
   verified_at: "2026-09-06T12:15:00+05:30"
@@ -101,6 +115,11 @@ completion:
     - command: docker compose --env-file .env -f infra/environments/local/compose.yaml config --services
       result: pass
       evidence: exactly postgres and control-plane; no service added
+    - command: task agent-engine:gateway:run
+      result: pass
+      evidence: >-
+        Balanced gateway routed L1/L2 to ollama-local and refused L0/L3/L4; live L2 generation and L1
+        stream succeeded on qwen2.5-coder:14b and again on qwen3.5:9b; cloud_calls=0
   acceptance_results:
     - criterion: The router selects a registered provider purely from deterministic inputs with no provider knowledge in product code.
       result: pass

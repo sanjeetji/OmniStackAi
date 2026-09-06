@@ -110,3 +110,9 @@
   ID was lost, formulas self-reference their rows, counts are correct (MVP total 112, Done 7), and
   the chart/styles/workbook parts stayed byte-identical.
 - Created implementation checkpoint `9faacd23dc22c6773f9a51dc58087d557c0be391`.
+- On founder instruction, added the opt-in live gateway runner (`live_gateway.py`) and
+  `task agent-engine:gateway:run` to run the platform locally through the Balanced gateway, plus
+  cloud-provider API-key placeholders in `.env.example` (names only) to prepare the R-008 decision.
+- Live-ran the gateway on both installed models: L0 refused, L1/L2 routed to `ollama-local`, L3/L4
+  refused; L2 generation and L1 stream succeeded on `qwen2.5-coder:14b` and `qwen3.5:9b`; cloud
+  calls remained zero. Static `task verify` stayed network-independent and green.

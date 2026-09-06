@@ -70,6 +70,9 @@ Blocker: none
   calls were made to build or test it.
 - Restored the declared `pnpm` (via corepack) and `ripgrep` toolchains that had regressed from the
   environment; no repository dependency was added. `task doctor` and `task verify` pass again.
+- On founder instruction, added an opt-in live gateway runner (`task agent-engine:gateway:run`) and
+  ran the platform locally through the Balanced gateway on both `qwen2.5-coder:14b` and `qwen3.5:9b`;
+  added cloud API-key placeholders (names only) to `.env.example` for the R-008 provider decision.
 
 ## Environment / Secrets Status
 - Local Ollama: server 0.33.3 healthy on loopback; `qwen2.5-coder:14b` adapter health, discovery,
