@@ -5,13 +5,13 @@ Last updated: 2026-09-06T10:46:19+05:30 by Codex (GPT-5)
 Stage 0 (Founder Build Sequence, Brief Section 91) — BASIC/MVP
 
 ## Last Completed Task
-Tracker ID: R-009 — Deterministic usage and cost accounting for the model gateway — DONE,
-`task verify` and 74 agent-engine tests (13 new accounting tests) passing, records are metadata-only,
-implementation checkpoint `f2fc8654c6a5717e292adcdc2abb5da2fd7409c2`
+Tracker ID: R-220 — True per-provider streaming for the cloud adapters (SSE) — DONE, `task verify` and
+78 agent-engine tests (5 new SSE tests) passing, cloud_calls=0, implementation checkpoint
+`4e31841e730a6466da55843ff352f7144dd763e9`
 
 ## In Progress (if any)
-Tracker ID: R-220 — True per-provider streaming for the cloud adapters (SSE)
-Files touched so far: `services/agent-engine/src/omnistackai_agent_engine/model_gateway/cloud.py`, `services/agent-engine/tests/test_cloud.py`, `docs/MODEL_PROVIDER.md`, portable state, and tracker row R-220
+Tracker ID: none
+Files touched so far: none
 Blocker: none
 
 ## ID note
@@ -92,6 +92,11 @@ R-221 reserved for the confirmed second item (cross-provider fallback or the Nex
   price book (local Ollama zero, unknown unpriced), and an aggregating ledger (per-provider/model
   breakdowns, p50/p95 latency, cost per successful call). Gateway records one record per dispatch
   without altering results; the live runner prints a cost summary. Zero model calls to verify.
+- R-220: founder asked to complete both true streaming and a second required item, one by one. Added
+  true incremental Server-Sent-Events streaming for the cloud adapters (OpenAI-compatible, Anthropic,
+  Gemini), reusing the HTTP-safety bounds; ordered delta events plus a final event with measured
+  usage. Discovered the workbook backlog already owns R-010..R-219 (R-010 = Native iOS Agent), so new
+  model-fabric tasks take unique IDs after R-219 (R-220 here) rather than overwriting a backlog row.
 
 ## Environment / Secrets Status
 - Local Ollama: server 0.33.3 healthy on loopback; `qwen2.5-coder:14b` adapter health, discovery,

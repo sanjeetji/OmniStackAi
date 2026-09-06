@@ -158,3 +158,22 @@
 - Inserted tracker row R-009 at Phase_Roadmap row 9 (shifted 9..226 to 10..227, ranges extended);
   verified no ID lost, MVP total 114 / Done 9, chart/styles byte-identical, zip valid.
 - Created implementation checkpoint `f2fc8654c6a5717e292adcdc2abb5da2fd7409c2`.
+
+## 2026-09-06 — R-220
+
+- Founder asked to complete both true per-provider streaming and a second required item, one by one;
+  R-220 delivers streaming.
+- Replaced the R-008 single-event cloud stream wrapper with real incremental Server-Sent-Events
+  streaming: shared SSE transport in the cloud base (bounded lines/response, finite timeout, redirect
+  rejection, stable errors, key never leaked) plus per-provider parsers — OpenAI-compatible delta
+  chunks with usage in the final chunk, Anthropic message_start/content_block_delta/message_delta/
+  message_stop, and Gemini streamGenerateContent SSE.
+- Yielded ordered StreamEvent deltas plus a final event with measured usage; kept non-streaming
+  generate unchanged. Added 5 offline SSE tests (78 total) with injected fake streaming responses; no
+  cloud call was made.
+- Found the workbook backlog already assigns R-010..R-219 (R-010 = Native iOS Agent). To avoid
+  overwriting a planned row, new founder-requested model-fabric tasks take unique IDs after R-219;
+  this task is R-220, inserted at Phase_Roadmap row 9 (rows 9..227 shifted to 10..228, ranges
+  extended). Verified no ID lost, backlog R-010 intact, MVP total 115 / Done 10, chart/styles
+  byte-identical, zip valid.
+- Created implementation checkpoint `4e31841e730a6466da55843ff352f7144dd763e9`.

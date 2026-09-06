@@ -1,51 +1,53 @@
 # Current Handoff
 
-Task ID: R-009
+Task ID: R-220
 Status: done
 Phase: BASIC/MVP — Founder Stage 0
-Branch: `ai/R-009-usage-cost-accounting`
-Last verified implementation SHA: `f2fc8654c6a5717e292adcdc2abb5da2fd7409c2`
+Branch: `ai/R-220-cloud-streaming`
+Last verified implementation SHA: `4e31841e730a6466da55843ff352f7144dd763e9`
 
 ## Completed
 
-- Added deterministic, privacy-safe usage and cost accounting for the model gateway:
-  - `UsageRecord`: immutable, metadata-only (provider, model, tier, complexity, token counts,
-    latency, finish reason, success/error code) — never message content, response text, or a secret.
-  - `PriceBook`: exact `Decimal` cost with exact and per-provider-wildcard lookup; local Ollama is
-    zero; unknown models are unpriced; cached input can be priced separately. `DEFAULT_PRICE_BOOK`
-    ships illustrative, operator-configurable cloud prices.
-  - `UsageLedger`: thread-safe append with overall and per-provider/model breakdowns, deterministic
-    p50/p95 latency, unpriced-call count, and cost per successful call.
-- `ModelGateway` takes an optional `recorder`; it writes exactly one record per dispatch for success
-  and failure without altering the returned response or the raised error (accounting is
-  observational). `build_gateway_from_env(recorder=...)` threads a ledger through, and the live
-  runner prints a cost summary.
-- 13 new offline tests (74 total). Deterministic; no model call needed to verify.
+- Replaced the cloud adapters' single-event stream wrapper with true incremental Server-Sent-Events
+  streaming behind the same `ModelProvider` boundary:
+  - Shared SSE transport in the cloud base: bounded stream-line/response sizes, finite timeout,
+    redirect rejection, bounded concurrency, stable platform-owned errors, and the API key is never
+    leaked in errors or events.
+  - OpenAI-compatible (OpenAI/OpenRouter/Groq): incremental delta chunks with usage requested in the
+    final chunk (`stream_options.include_usage`).
+  - Anthropic: `message_start` / `content_block_delta` / `message_delta` / `message_stop`.
+  - Gemini: `:streamGenerateContent?alt=sse`.
+- Ordered `StreamEvent` deltas plus one final event with measured usage; non-streaming `generate` is
+  unchanged. 5 new offline SSE tests (78 total) with injected fake streaming responses; no cloud call.
+
+## ID scheme note (important)
+
+The supplied workbook backlog already assigns **R-010..R-219** (R-010 = "Native iOS Agent", deferred
+until web/backend stability). The genuinely-missing gap IDs R-007/R-008/R-009 were used for the
+gateway/cloud-adapters/accounting. New founder-requested model-fabric tasks therefore take unique IDs
+**after the last existing ID (R-219)** rather than overwriting a planned backlog row: this task is
+**R-220**; the confirmed second item will be **R-221**.
 
 ## Verification
 
-- `task verify` — pass (74 agent-engine tests).
-- `task agent-engine:lint` — pass (compileall, no-deps contract, provider-SDK import exclusion).
-- `task agent-engine:gateway:run` — pass live on local Ollama: recorded 2 successful calls,
-  total_cost $0.000000, p50/p95 latency, per-provider breakdown; cloud_calls=0.
-- `task security:quick` and `task env:check` — pass; no secret/content in records or state.
+- `task verify` — pass (78 agent-engine tests).
+- `task agent-engine:lint`, `task security:quick`, `task env:check` — pass; key never in source/records.
 - Compose scope — exactly `postgres` and `control-plane`; unchanged.
-- Tracker — R-009 inserted at `Phase_Roadmap!A9:M9` (rows 9..226 shifted to 10..227, ranges extended);
-  no ID lost; MVP total 114, Done 9; chart/styles/workbook byte-identical; zip verified.
+- Tracker — R-220 inserted at `Phase_Roadmap!A9:M9` (rows 9..227 shifted to 10..228, ranges extended);
+  no ID lost; backlog R-010 (Native iOS Agent) intact; MVP total 115, Done 10; chart/styles/workbook
+  byte-identical; zip verified.
 
 ## Blockers and risks
 
-- The ledger is in-memory (per process); durable/persistent cost storage and reporting are deferred.
-- Default cloud prices are illustrative and must be overridden per deployment; unknown models are
-  reported as unpriced.
-- Cloud `health()` remains a config-readiness check and cloud `stream()` remains a single-event
-  wrapper (from R-008); true per-provider streaming is deferred.
+- Cloud streaming is verified with mocked SSE responses; a live cloud stream needs a real key (none
+  configured). Local Ollama streaming remains fully live-verified.
+- Providers vary in whether they emit usage on stream; when absent, the final event carries the best
+  available counts (Anthropic/Gemini accumulate; OpenAI needs include_usage, which is requested).
 
 ## Next action
 
-Reconstruct R-010 with founder confirmation. The workbook's R-010 is "Native iOS Agent," which must
-not begin before web/backend stability (Brief 25, 91) — recommend reordering to a nearer MVP
-dependency such as true per-provider SSE streaming or cross-provider fallback/circuit breaking.
+Start **R-221**, the confirmed second required item. Confirm with the founder whether R-221 is
+cross-provider fallback + circuit breaking (model layer) or a first Next.js console slice (front end).
 
 ## Next command
 

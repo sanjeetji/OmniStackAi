@@ -1,7 +1,7 @@
 schema_version: 1
 task_id: R-220
 title: True per-provider streaming for the cloud model adapters
-status: in_progress
+status: done
 phase: BASIC/MVP
 founder_stage: 0
 branch: ai/R-220-cloud-streaming
@@ -77,12 +77,38 @@ model_tool_trace:
     SSE parsing is exercised offline with fake streaming responses; no cloud key is set, so no cloud
     call is made. Any local live check uses Ollama.
 completion:
-  implementation_commit: null
-  verified_at: null
-  verification: []
-  acceptance_results: []
+  implementation_commit: 4e31841e730a6466da55843ff352f7144dd763e9
+  verified_at: "2026-09-06T15:20:00+05:30"
+  verification:
+    - command: task verify
+      result: pass
+    - command: task agent-engine:lint
+      result: pass
+    - command: task agent-engine:test
+      result: pass
+      evidence: 78 tests passed, including 5 new SSE streaming tests (OpenAI/Anthropic/Gemini deltas + final usage, malformed and oversized line handling)
+    - command: task security:quick
+      result: pass
+    - command: task env:check
+      result: pass
+    - command: docker compose --env-file .env -f infra/environments/local/compose.yaml config --services
+      result: pass
+      evidence: exactly postgres and control-plane; no service added
+  acceptance_results:
+    - criterion: Each cloud adapter streams incrementally by parsing provider SSE and yields ordered StreamEvent deltas plus one final event with done and measured usage.
+      result: pass
+    - criterion: Streaming reuses bounded line/response sizes, finite timeouts, redirect rejection, bounded concurrency, and stable platform errors without leaking the key or raw bodies.
+      result: pass
+    - criterion: OpenAI-compatible requests usage in the final chunk; Anthropic maps its event types; Gemini uses streamGenerateContent SSE (verified by request URL).
+      result: pass
+    - criterion: The non-streaming generate path and other adapter behavior are unchanged.
+      result: pass
+    - criterion: Offline tests drive each SSE parser with fake streaming responses (multi-chunk, final usage, malformed, oversized), zero network access.
+      result: pass
+    - criterion: Static task verify stays network-independent and green.
+      result: pass
 blockers: []
 next_action: >-
-  Implement incremental SSE streaming in the cloud adapters and offline parser tests; run the gates;
-  then record completion evidence and confirm the second required item (fallback or console slice).
-next_command: task agent-engine:test
+  Start R-221, the confirmed second required item. Confirm with the founder whether R-221 is
+  cross-provider fallback/circuit breaking or a first Next.js console slice.
+next_command: task ai:status
