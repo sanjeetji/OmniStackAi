@@ -1,42 +1,48 @@
 # Current Handoff
 
-Task ID: R-223
-Status: done
+Task ID: R-224
+Status: deferred (environment-blocked)
 Phase: BASIC/MVP — Founder Stage 0
-Branch: `ai/R-223-env-fallback-wiring`
-Last verified implementation SHA: `9ec809149ab91ebaa13b88ff0a15ebd382d7a728`
+Branch: `ai/R-224-console-nextjs`
+Last verified implementation SHA (R-223): `9ec809149ab91ebaa13b88ff0a15ebd382d7a728`
 
-## Completed
+## What happened
 
-- Env-driven resilience wiring in `build_gateway_from_env`:
-  - `OMNISTACKAI_FALLBACK_PROVIDERS` — ordered fallback chain from already-registered providers
-    (`ollama` for local, or a key-present cloud name). Unknown or key-less names raise a clear
-    `CloudProviderSelectionError`.
-  - `CircuitBreaker` (from `OMNISTACKAI_CIRCUIT_FAILURE_THRESHOLD` / `OMNISTACKAI_CIRCUIT_COOLDOWN_SECONDS`,
-    defaults 3 / 30) is attached **only when a chain is configured** — single-provider behavior is
-    unchanged.
-  - `GatewayBootstrap` exposes `fallback_provider_ids` + breaker settings; the overview snapshot has a
-    `resilience` block and the console renders a Resilience panel.
+Attempted the Next.js console upgrade (R-224). This sandbox cannot install the Next.js toolchain:
+`pnpm install` for `next@15.5.4` repeatedly timed out fetching the native SWC binary
+(`@next/swc-darwin-arm64`) — three attempts, including a standalone install with a 10-minute fetch
+timeout and increased retries. With no completed install there is no `next build` evidence, and
+committing an un-installable app would break `task bootstrap`. Per "record real command evidence —
+never claim unexecuted tests," R-224 is recorded **Deferred** (tracker status Deferred), with no
+application code committed. The scaffold was removed; the working tree is clean.
 
-## Verification
+The R-222 dependency-free static console remains the working, verified slice (`task console:serve`).
 
-- `task verify` — pass (98 agent-engine tests; 6 new). `node --check apps/console-web/app.js` — pass.
-- `task security:quick`, `task env:check` — pass; no key/secret in snapshot or console.
-- Compose unchanged (`postgres`, `control-plane`); offline `task bootstrap` unchanged.
-- Tracker — R-223 at `Phase_Roadmap!A9:M9` (rows 9..230 shifted to 10..231, ranges extended); no ID
-  lost; MVP total 118, Done 13; chart/styles/workbook byte-identical; zip verified.
+## Founder-requested items status
 
-## Blockers and risks
+- R-220 — cloud SSE streaming — Done.
+- R-221 — cross-provider fallback + circuit breaking — Done.
+- R-222 — platform console slice (static) — Done.
+- R-223 — env-driven fallback/breaker wiring — Done.
+- R-224 — Next.js console upgrade — Deferred (environment-blocked).
 
-- The Next.js console upgrade (candidate R-224) is still blocked in this sandbox by the Next SWC
-  binary download timing out; the static console is the working slice until an environment with
-  reliable registry access is available.
+## Verification (this branch)
+
+- `task verify` — pass (98 agent-engine tests; unchanged from R-223).
+- Tracker — R-224 inserted at `Phase_Roadmap!A9:M9` with status Deferred (completion 0); rows
+  contiguous, ranges extended, no ID lost; MVP total 119, Done 13, Deferred 1; zip verified.
+
+## Resume plan for R-224
+
+See `.ai/tasks/R-224.md`: in an environment with reliable registry access, scaffold the Next.js app
+under `apps/console-web`, `pnpm install` + `next build` for evidence, evolve `task bootstrap` off
+`--offline`, and keep `task verify` independent of the web build. The `overview.json` contract and
+design carry over from the static console.
 
 ## Next action
 
-Attempt **R-224 (Next.js console upgrade)**; contingent on the SWC install succeeding. If it fails
-again, keep the static console and leave the upgrade deferred (no broken app committed). Native
-mobile / device-cloud remains deferred per Brief 25/91 until web/backend stability.
+Confirm the next Tracker ID with the founder. R-224 resumes in a network-capable environment; native
+mobile / device-cloud stays deferred per Brief 25/91 until web/backend stability.
 
 ## Next command
 

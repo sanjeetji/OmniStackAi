@@ -12,16 +12,17 @@ tests) passing, default single-provider unchanged, implementation checkpoint
 ## In Progress (if any)
 Tracker ID: none
 Files touched so far: none
-Blocker: none
+Blocker: R-224 (Next.js console upgrade) is DEFERRED — Next.js SWC binary install times out in this sandbox (attempted 3x); static console remains the working slice
 
 ## ID note
 The workbook backlog already assigns R-010..R-219 (R-010 = Native iOS Agent, deferred until web/backend
 stability). Founder-requested work uses unique IDs after R-219: R-220 = cloud streaming (done);
-R-221 = cross-provider fallback (done); R-222 = platform console slice (done).
+R-221 = cross-provider fallback (done); R-222 = platform console slice (done); R-223 = env-driven
+fallback wiring (done); R-224 = Next.js console upgrade (deferred — environment-blocked).
 
 ## Next Up (queued, in order)
-1. Next Tracker ID to be confirmed with the founder — candidates: env-driven fallback wiring in `build_gateway_from_env`, or the Next.js console upgrade once registry access is reliable
-2. R-010 — Native iOS Agent (backlog; deferred until web/backend stability)
+1. R-224 — Next.js console upgrade — resume in an environment with reliable npm registry access
+2. R-010 — Native iOS Agent (backlog; deferred until web/backend stability per Brief 25/91)
 
 ## Decisions Made This Session
 - Applied the normative V6 precedence rules and Section 91 Phase 0 sequence.

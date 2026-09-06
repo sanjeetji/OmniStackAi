@@ -233,3 +233,14 @@
 - Inserted tracker row R-223 at Phase_Roadmap row 9 (rows 9..230 shifted to 10..231, ranges
   extended); no ID lost, MVP total 118 / Done 13, chart/styles byte-identical, zip valid.
 - Created implementation checkpoint `9ec809149ab91ebaa13b88ff0a15ebd382d7a728`.
+
+## 2026-09-06 — R-224 (deferred)
+
+- Attempted the Next.js console upgrade. `pnpm install` for next@15.5.4 timed out fetching the native
+  SWC binary (@next/swc-darwin-arm64) three times, including a standalone install under
+  apps/console-web/nextjs/ with a 10-minute fetch timeout and increased retries.
+- Per "record real command evidence — never claim unexecuted tests," recorded R-224 as Deferred with a
+  resume plan; committed no application code and removed the scaffold (working tree clean). The R-222
+  static console remains the working slice.
+- Recorded tracker row R-224 at Phase_Roadmap row 9 with status Deferred (completion 0); rows
+  contiguous, ranges extended, no ID lost; MVP total 119, Done 13, Deferred 1.

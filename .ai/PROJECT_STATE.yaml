@@ -18,6 +18,10 @@ tracker: R_&_D/OmniStackAI_Execution_Tracker_v6.xlsx
 id_note: >-
   Workbook backlog owns R-010..R-219. Founder-requested tasks use IDs after R-219: R-220 streaming,
   R-221 fallback, R-222 console slice, R-223 env-driven fallback wiring (all done).
-blockers: []
-next_action: Attempt R-224 (Next.js console upgrade); contingent on the SWC install succeeding in this environment.
-last_updated: "2026-09-06T18:20:00+05:30"
+blockers:
+  - R-224 (Next.js console upgrade) is DEFERRED — the Next.js SWC binary install times out in this
+    sandbox (attempted 3x). The R-222 static console remains the working slice.
+next_action: >-
+  All safe founder-requested items are done (R-220/R-221/R-222/R-223). R-224 deferred to a
+  network-capable environment; native mobile deferred per Brief 25/91. Confirm the next Tracker ID.
+last_updated: "2026-09-06T18:40:00+05:30"

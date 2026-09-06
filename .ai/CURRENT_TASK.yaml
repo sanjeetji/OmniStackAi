@@ -1,119 +1,47 @@
 schema_version: 1
-task_id: R-223
-title: Env-driven fallback chain and circuit breaker wiring in the gateway bootstrap
-status: done
+task_id: R-224
+title: Next.js console upgrade
+status: deferred
 phase: BASIC/MVP
 founder_stage: 0
-branch: ai/R-223-env-fallback-wiring
+branch: ai/R-224-console-nextjs
 goal: >-
-  Make the R-221 cross-provider fallback and circuit breaker configurable from the environment through
-  build_gateway_from_env, so an operator can enable resilience without code. OMNISTACKAI_FALLBACK_PROVIDERS
-  defines an ordered fallback chain of already-registered providers (local or key-present cloud), and a
-  circuit breaker (threshold/cooldown from env) is attached whenever a chain is configured. The console
-  overview snapshot surfaces the fallback chain and breaker settings. Default behavior (no chain) is
-  unchanged.
+  Upgrade the R-222 static platform console to a real Next.js (App Router, TypeScript) app under
+  apps/console-web, preserving the overview.json data contract and design, with security headers and a
+  production build.
 source:
   tracker_sheet: Phase_Roadmap
   tracker_row: reconstructed; new IDs continue after the workbook backlog's R-010..R-219
-  brief_sections: [18, 18.3, 84, 87, 89, 91, 92]
-  founder_intent: >-
-    Founder asked to complete the remaining candidates one by one in a smooth, optimised, advanced way.
+  brief_sections: [8, 40, 41, 44, 74, 91, 92]
 project_profile:
   repository: platform_modular_monorepo
-  service: python_agent_engine
+  service: console_web
   control_plane_database: postgresql
   model_routing: balanced
 complexity: L2
-expected_impact:
-  - services/agent-engine/src/omnistackai_agent_engine/model_gateway/bootstrap.py
-  - services/agent-engine/src/omnistackai_agent_engine/model_gateway/overview.py
-  - services/agent-engine/tests/test_bootstrap.py
-  - services/agent-engine/tests/test_overview.py
-  - apps/console-web/** (app.js/data snapshot render the resilience panel)
-  - .env.example
-  - docs/MODEL_PROVIDER.md
-  - portable state, changelog, handoff, task doc, and tracker evidence
-allowed_paths:
-  - .ai/**
-  - .env.example
-  - CHANGELOG.md
-  - PROJECT_STATE.md
-  - R_&_D/OmniStackAI_Execution_Tracker_v6.xlsx
-  - apps/console-web/**
-  - docs/**
-  - services/agent-engine/**
-must_not_change:
-  - PostgreSQL as the control-plane database or the existing schema
-  - the gateway/adapter/accounting runtime behavior (R-005..R-222) except adding env-driven wiring
-  - the single-provider default outcome when no fallback chain is configured
-  - local Compose services or infrastructure; the Section 74 contract; the offline bootstrap contract
-  - the network-independence of static task verify
-must_not_do:
-  - fall back outside the explicitly configured chain; enable the breaker when no chain is configured
-  - store any API key/secret in the snapshot, console, logs, or repo
-  - add an external dependency or a provider SDK
-acceptance:
-  - OMNISTACKAI_FALLBACK_PROVIDERS builds an ordered fallback chain from registered providers (local via
-    'ollama', cloud via provider name); a named provider that is unknown or has no key raises a clear
-    configuration error.
-  - A circuit breaker (OMNISTACKAI_CIRCUIT_FAILURE_THRESHOLD / OMNISTACKAI_CIRCUIT_COOLDOWN_SECONDS,
-    with safe defaults) is attached to the gateway only when a fallback chain is configured.
-  - With no chain configured, build_gateway_from_env is behaviorally identical to before (no breaker,
-    no fallback).
-  - GatewayBootstrap exposes the fallback chain provider ids and breaker settings; the overview snapshot
-    and console render a resilience panel; no key/secret appears anywhere.
-  - Standard-library offline tests cover chain building, unknown/no-key errors, breaker attachment, the
-    unchanged default, and the snapshot fields.
-  - task verify stays green and network-independent.
-required_gates:
-  - impact_analysis
-  - env_fallback_chain_tests
-  - unknown_and_missing_key_error_tests
-  - default_unchanged_test
-  - overview_resilience_fields_test
-  - vendor_import_exclusion
-  - secret_exclusion_check
-  - task_verify
-  - blast_radius_check
-  - tracker_evidence
+status_reason: >-
+  DEFERRED — this sandbox cannot install the Next.js toolchain: pnpm install for next@15.5.4 repeatedly
+  times out fetching the native SWC binary (@next/swc-darwin-arm64), attempted three times including a
+  standalone install with a 10-minute fetch timeout. Without a completed install there is no next build
+  evidence, and committing an un-installable app would break task bootstrap. Per "record real command
+  evidence — never claim unexecuted tests", this is Deferred, not Done. No application code was
+  committed. The R-222 dependency-free static console remains the working, verified slice.
+resume_plan:
+  - In an environment with reliable npm registry access, scaffold the Next.js app under apps/console-web
+    (package.json next/react, tsconfig, next.config.mjs security headers, app/, lib/ importing data/overview.json).
+  - pnpm install then next build for real evidence.
+  - Evolve task bootstrap from --offline to a normal frozen install; add task console:build/dev; keep task verify independent of the web build.
 model_tool_trace:
   routing: local_only
   local_provider: ollama
   configured_model: qwen2.5-coder:14b
   local_calls: 0
   cloud_calls: 0
-  note: Deterministic wiring; no model call. No cloud key set; cloud_calls zero.
-completion:
-  implementation_commit: 9ec809149ab91ebaa13b88ff0a15ebd382d7a728
-  verified_at: "2026-09-06T18:20:00+05:30"
-  verification:
-    - command: task verify
-      result: pass
-      evidence: 98 agent-engine tests (6 new fallback-wiring/resilience tests) plus all Stage 0 checks
-    - command: node --check apps/console-web/app.js
-      result: pass
-    - command: task security:quick
-      result: pass
-    - command: task env:check
-      result: pass
-    - command: docker compose --env-file .env -f infra/environments/local/compose.yaml config --services
-      result: pass
-      evidence: exactly postgres and control-plane; no service added
-  acceptance_results:
-    - criterion: OMNISTACKAI_FALLBACK_PROVIDERS builds an ordered chain from registered providers; unknown or key-less names raise a clear error.
-      result: pass
-    - criterion: A circuit breaker (env threshold/cooldown, safe defaults) is attached only when a chain is configured.
-      result: pass
-    - criterion: With no chain, build_gateway_from_env is behaviorally identical to before.
-      result: pass
-    - criterion: GatewayBootstrap exposes the chain + breaker settings; the snapshot/console render a resilience panel; no secret appears.
-      result: pass
-    - criterion: Offline tests cover chain building, unknown/no-key errors, breaker attachment, the unchanged default, and snapshot fields.
-      result: pass
-  note: Deterministic wiring; no model call. No cloud key set; cloud_calls zero.
-blockers: []
+  note: No model call; no application code committed (install could not complete).
+blockers:
+  - Next.js SWC binary install times out in this sandbox; needs an environment with reliable registry access.
 next_action: >-
-  Attempt R-224 (Next.js console upgrade). It is contingent on the SWC install succeeding in this
-  environment (it timed out during R-222); if it fails again the static console remains and the
-  upgrade stays deferred.
+  All safe founder-requested items are complete (R-220 streaming, R-221 fallback, R-222 console slice,
+  R-223 env fallback wiring). R-224 (Next.js upgrade) is deferred to a network-capable environment.
+  Native mobile / device-cloud remains deferred per Brief 25/91. Confirm the next Tracker ID.
 next_command: task ai:status
