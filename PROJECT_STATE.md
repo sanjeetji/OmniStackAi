@@ -5,22 +5,21 @@ Last updated: 2026-09-06T10:46:19+05:30 by Codex (GPT-5)
 Stage 0 (Founder Build Sequence, Brief Section 91) — BASIC/MVP
 
 ## Last Completed Task
-Tracker ID: R-220 — True per-provider streaming for the cloud adapters (SSE) — DONE, `task verify` and
-78 agent-engine tests (5 new SSE tests) passing, cloud_calls=0, implementation checkpoint
-`4e31841e730a6466da55843ff352f7144dd763e9`
+Tracker ID: R-220 — True per-provider streaming for the cloud adapters (SSE) — DONE, implementation
+checkpoint `4e31841e730a6466da55843ff352f7144dd763e9`
 
 ## In Progress (if any)
-Tracker ID: none
-Files touched so far: none
+Tracker ID: R-221 — Cross-provider fallback and circuit breaking
+Files touched so far: `services/agent-engine/src/omnistackai_agent_engine/model_gateway/{resilience.py,gateway.py,errors.py,__init__.py}`, `services/agent-engine/tests/test_fallback.py`, `docs/MODEL_PROVIDER.md`, portable state, and tracker row R-221
 Blocker: none
 
 ## ID note
 The workbook backlog already assigns R-010..R-219 (R-010 = Native iOS Agent, deferred until web/backend
-stability). Founder-requested model-fabric work uses unique IDs after R-219: R-220 = cloud streaming;
-R-221 reserved for the confirmed second item (cross-provider fallback or the Next.js console slice).
+stability). Founder-requested model-fabric work uses unique IDs after R-219: R-220 = cloud streaming
+(done); R-221 = cross-provider fallback (in progress); R-222 = Next.js console slice (next).
 
 ## Next Up (queued, in order)
-1. R-221 — the confirmed second required item (cross-provider fallback/circuit breaking, or a first Next.js console slice)
+1. R-222 — first Next.js console slice (the second of the two founder-requested items)
 2. R-010 — Native iOS Agent (backlog; deferred until web/backend stability)
 
 ## Decisions Made This Session

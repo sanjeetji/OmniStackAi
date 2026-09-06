@@ -39,15 +39,22 @@ from .contracts import (
     TokenUsage,
 )
 from .errors import (
+    AllProvidersFailedError,
     ContextBudgetExceededError,
     DeterministicWorkNotRoutableError,
     InvalidRoutingTaskError,
+    ModelGatewayError,
     ModelProviderError,
     NoEligibleProviderError,
+    ProviderHTTPError,
+    ProviderTimeoutError,
     ProviderUnavailableError,
 )
 from .errors import ProviderRegistryError
 from .registry import ProviderRegistry
+from .resilience import CircuitBreaker
+
+_RETRIABLE_ERRORS = (ProviderUnavailableError, ProviderTimeoutError, ProviderHTTPError)
 
 # Conservative estimator: assume more tokens per request than a typical ~4 chars/token tokenizer
 # would, so the budget guard never under-counts and lets an oversized Context Pack through.
@@ -103,12 +110,17 @@ class RoutingPolicy:
 
     local_model: ModelDescriptor
     cloud_model: ModelDescriptor | None = None
+    fallback: tuple[ModelDescriptor, ...] = ()
 
     def __post_init__(self) -> None:
         if not isinstance(self.local_model, ModelDescriptor):
             raise InvalidRoutingTaskError("local_model must be a ModelDescriptor")
         if self.cloud_model is not None and not isinstance(self.cloud_model, ModelDescriptor):
             raise InvalidRoutingTaskError("cloud_model must be a ModelDescriptor or None")
+        if not isinstance(self.fallback, tuple) or any(
+            not isinstance(descriptor, ModelDescriptor) for descriptor in self.fallback
+        ):
+            raise InvalidRoutingTaskError("fallback must be a tuple of ModelDescriptor")
 
     def descriptor_for(self, tier: RoutingTier) -> ModelDescriptor | None:
         if tier is RoutingTier.LOCAL:
@@ -168,6 +180,7 @@ class ModelGateway:
         policy: RoutingPolicy,
         *,
         recorder: UsageLedger | None = None,
+        breaker: CircuitBreaker | None = None,
     ) -> None:
         if not isinstance(registry, ProviderRegistry):
             raise InvalidRoutingTaskError("registry must be a ProviderRegistry")
@@ -175,9 +188,12 @@ class ModelGateway:
             raise InvalidRoutingTaskError("policy must be a RoutingPolicy")
         if recorder is not None and not isinstance(recorder, UsageLedger):
             raise InvalidRoutingTaskError("recorder must be a UsageLedger or None")
+        if breaker is not None and not isinstance(breaker, CircuitBreaker):
+            raise InvalidRoutingTaskError("breaker must be a CircuitBreaker or None")
         self._registry = registry
         self._policy = policy
         self._recorder = recorder
+        self._breaker = breaker
 
     def resolve(self, task: RoutingTask) -> RoutingDecision:
         """Deterministically resolve a routing task without any network call.
@@ -191,30 +207,31 @@ class ModelGateway:
         if task.routing_mode is not RoutingMode.BALANCED:
             raise InvalidRoutingTaskError("only balanced routing is supported at Stage 0")
 
-        if task.complexity is TaskComplexity.L0:
-            raise DeterministicWorkNotRoutableError(
-                "L0 work must be answered by a deterministic tool, not a model"
-            )
-
-        tier = RoutingTier.LOCAL if task.complexity in _LOCAL_COMPLEXITIES else RoutingTier.CLOUD
-        descriptor = self._policy.descriptor_for(tier)
+        tier, descriptor = self._resolve_tier(task)
         if descriptor is None:
             raise NoEligibleProviderError(
                 f"no {tier.value} provider is configured for {task.complexity.value} work"
             )
-        if descriptor.capabilities.text is CapabilityStatus.UNSUPPORTED:
-            raise NoEligibleProviderError(
-                f"the {tier.value} model does not support text generation"
-            )
+        return self._build_decision(task, tier, descriptor)
 
+    def _resolve_tier(self, task: RoutingTask) -> tuple[RoutingTier, ModelDescriptor | None]:
+        if task.complexity is TaskComplexity.L0:
+            raise DeterministicWorkNotRoutableError(
+                "L0 work must be answered by a deterministic tool, not a model"
+            )
+        tier = RoutingTier.LOCAL if task.complexity in _LOCAL_COMPLEXITIES else RoutingTier.CLOUD
+        return tier, self._policy.descriptor_for(tier)
+
+    def _build_decision(
+        self, task: RoutingTask, tier: RoutingTier, descriptor: ModelDescriptor
+    ) -> RoutingDecision:
+        if descriptor.capabilities.text is CapabilityStatus.UNSUPPORTED:
+            raise NoEligibleProviderError(f"the {tier.value} model does not support text generation")
         provider_id = descriptor.model.provider_id
         try:
             self._registry.get(provider_id)
         except ProviderRegistryError as error:
-            raise NoEligibleProviderError(
-                f"the {tier.value} provider is not registered"
-            ) from error
-
+            raise NoEligibleProviderError(f"the {tier.value} provider is not registered") from error
         try:
             request = GenerateRequest(
                 request_id=task.request_id,
@@ -225,17 +242,11 @@ class ModelGateway:
             )
         except (TypeError, ValueError) as error:
             raise InvalidRoutingTaskError("routing task does not form a valid request") from error
-
         estimated_input_tokens = estimate_input_tokens(task.messages)
         if estimated_input_tokens > descriptor.safe_input_tokens:
-            raise ContextBudgetExceededError(
-                "estimated input tokens exceed the model safe input budget"
-            )
+            raise ContextBudgetExceededError("estimated input tokens exceed the model safe input budget")
         if task.max_output_tokens > descriptor.max_output_tokens:
-            raise ContextBudgetExceededError(
-                "requested output tokens exceed the model max output budget"
-            )
-
+            raise ContextBudgetExceededError("requested output tokens exceed the model max output budget")
         return RoutingDecision(
             tier=tier,
             provider_id=provider_id,
@@ -245,46 +256,105 @@ class ModelGateway:
             complexity=task.complexity,
         )
 
-    async def generate(self, task: RoutingTask) -> GenerateResponse:
-        """Resolve, verify provider health, then dispatch a non-streaming generation.
+    def _candidates(self, task: RoutingTask) -> list[RoutingDecision]:
+        """Ordered, buildable dispatch candidates: the primary then the explicit fallback chain."""
 
-        On success or failure exactly one accounting record is written when a recorder is configured;
-        the returned response and any raised error are never altered by accounting.
+        if not self._policy.fallback:
+            return [self.resolve(task)]  # unchanged single-provider behavior
+        if not isinstance(task, RoutingTask):
+            raise InvalidRoutingTaskError("task must be a RoutingTask")
+        if task.routing_mode is not RoutingMode.BALANCED:
+            raise InvalidRoutingTaskError("only balanced routing is supported at Stage 0")
+        tier, primary = self._resolve_tier(task)
+        descriptors = ([primary] if primary is not None else []) + list(self._policy.fallback)
+        decisions: list[RoutingDecision] = []
+        first_error: ModelGatewayError | None = None
+        for descriptor in descriptors:
+            try:
+                decisions.append(self._build_decision(task, tier, descriptor))
+            except (NoEligibleProviderError, ContextBudgetExceededError) as error:
+                first_error = first_error or error
+        if not decisions:
+            raise first_error or NoEligibleProviderError("no eligible provider is configured")
+        return decisions
+
+    async def generate(self, task: RoutingTask) -> GenerateResponse:
+        """Dispatch a non-streaming generation, failing over across the explicit candidate chain.
+
+        Each attempt (success or failure) is recorded when a recorder is configured; a non-retriable
+        error is raised immediately; a retriable one advances to the next allowlisted, registered,
+        circuit-closed candidate. The returned response and raised error are never altered.
         """
 
-        decision = self.resolve(task)
-        provider = self._registry.get(decision.provider_id)
-        started_at = monotonic()
-        try:
-            await self._require_healthy(provider, decision)
-            response = await provider.generate(decision.request)
-        except ModelProviderError as error:
-            self._record_failure(decision, error, self._elapsed_ms(started_at))
-            raise
-        self._record(decision, response.usage, response.latency_ms, True, response.finish_reason.value)
-        return response
+        decisions = self._candidates(task)
+        last_error: ModelProviderError | None = None
+        for decision in decisions:
+            if self._breaker is not None and not self._breaker.allows(decision.provider_id):
+                continue
+            provider = self._registry.get(decision.provider_id)
+            started_at = monotonic()
+            try:
+                await self._require_healthy(provider, decision)
+                response = await provider.generate(decision.request)
+            except ModelProviderError as error:
+                self._record_failure(decision, error, self._elapsed_ms(started_at))
+                if self._breaker is not None:
+                    self._breaker.record_failure(decision.provider_id)
+                if isinstance(error, _RETRIABLE_ERRORS):
+                    last_error = error
+                    continue
+                raise
+            self._record(decision, response.usage, response.latency_ms, True, response.finish_reason.value)
+            if self._breaker is not None:
+                self._breaker.record_success(decision.provider_id)
+            return response
+        raise self._exhausted(decisions, last_error)
 
     async def stream(self, task: RoutingTask) -> AsyncIterator[StreamEvent]:
-        """Resolve, verify provider health, then dispatch a streaming generation.
+        """Dispatch a streaming generation with fail-over before the first event.
 
-        One accounting record is written after the stream completes (or on failure) when a recorder is
-        configured; the yielded events are never altered by accounting.
+        Fail-over follows the explicit candidate chain only while no event has been yielded; once
+        streaming has begun, a mid-stream error propagates. Each attempt is recorded when configured.
         """
 
-        decision = self.resolve(task)
-        provider = self._registry.get(decision.provider_id)
-        started_at = monotonic()
-        final_usage = None
-        try:
-            await self._require_healthy(provider, decision)
-            async for event in provider.stream(decision.request):
-                if event.done:
-                    final_usage = event.usage
-                yield event
-        except ModelProviderError as error:
-            self._record_failure(decision, error, self._elapsed_ms(started_at))
-            raise
-        self._record(decision, final_usage, self._elapsed_ms(started_at), True, None)
+        decisions = self._candidates(task)
+        last_error: ModelProviderError | None = None
+        for decision in decisions:
+            if self._breaker is not None and not self._breaker.allows(decision.provider_id):
+                continue
+            provider = self._registry.get(decision.provider_id)
+            started_at = monotonic()
+            final_usage = None
+            emitted = False
+            try:
+                await self._require_healthy(provider, decision)
+                async for event in provider.stream(decision.request):
+                    emitted = True
+                    if event.done:
+                        final_usage = event.usage
+                    yield event
+            except ModelProviderError as error:
+                self._record_failure(decision, error, self._elapsed_ms(started_at))
+                if self._breaker is not None:
+                    self._breaker.record_failure(decision.provider_id)
+                if not emitted and isinstance(error, _RETRIABLE_ERRORS):
+                    last_error = error
+                    continue
+                raise
+            self._record(decision, final_usage, self._elapsed_ms(started_at), True, None)
+            if self._breaker is not None:
+                self._breaker.record_success(decision.provider_id)
+            return
+        raise self._exhausted(decisions, last_error)
+
+    def _exhausted(
+        self, decisions: list[RoutingDecision], last_error: ModelProviderError | None
+    ) -> Exception:
+        if len(decisions) == 1 and last_error is not None:
+            return last_error  # single provider: surface its own stable error unchanged
+        error = AllProvidersFailedError("all configured providers were unavailable or failed")
+        error.__cause__ = last_error
+        return error
 
     def _record(
         self,

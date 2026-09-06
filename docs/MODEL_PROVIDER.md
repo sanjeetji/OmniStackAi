@@ -117,8 +117,23 @@ cost per successful accepted change (Brief 18.4, 68, 92.15).
 `build_gateway_from_env(recorder=...)` threads a ledger into the gateway, and
 `task agent-engine:gateway:run` prints the summary after its live run (local Ollama shows $0.000000).
 
+## R-221 Cross-provider fallback and circuit breaking
+
+`RoutingPolicy` accepts an optional ordered `fallback` chain of `ModelDescriptor`. With none set the
+gateway behaves exactly as before (single provider). When set, `generate`/`stream` try the primary
+then each fallback candidate that is registered, in-budget, and whose circuit is closed. Fail-over is
+**explicit** (only along the configured chain) and happens **only on retriable errors**
+(`ProviderUnavailableError`, `ProviderTimeoutError`, `ProviderHTTPError`); a non-retriable error
+(budget, unknown model, unsupported request) is raised immediately. Streaming fails over only before
+the first event; a mid-stream error propagates. When every candidate is skipped or failing, the
+gateway raises `AllProvidersFailedError` (a single-provider config still surfaces its own error).
+
+`ModelGateway(..., breaker=CircuitBreaker())` adds a per-provider circuit breaker: after
+`failure_threshold` consecutive failures a provider is skipped for `cooldown_seconds`, then half-opens
+for a trial; success resets it. The breaker is deterministic (injectable clock) and thread-safe. Every
+attempt is still recorded by the accounting ledger, so fail-over cost is visible.
+
 ## Deferred work
 
-Cross-provider fallback, circuit breaking, durable/persistent cost storage, benchmark-backed
-capability promotion, richer context management, HTTP serving, and agent orchestration remain deferred
-to their own Tracker IDs.
+Durable/persistent cost storage, benchmark-backed capability promotion, richer context management,
+HTTP serving, and agent orchestration remain deferred to their own Tracker IDs.

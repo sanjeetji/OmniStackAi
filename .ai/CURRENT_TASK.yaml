@@ -1,24 +1,25 @@
 schema_version: 1
-task_id: R-220
-title: True per-provider streaming for the cloud model adapters
-status: done
+task_id: R-221
+title: Cross-provider fallback and circuit breaking for the model gateway
+status: in_progress
 phase: BASIC/MVP
 founder_stage: 0
-branch: ai/R-220-cloud-streaming
+branch: ai/R-221-cross-provider-fallback
 goal: >-
-  Replace the Stage 0 single-event stream wrapper on the cloud adapters with real incremental
-  Server-Sent-Events streaming for OpenAI-compatible (OpenAI/OpenRouter/Groq), Anthropic Messages,
-  and Google Gemini, so tokens arrive live like the local Ollama adapter. Streaming reuses the same
-  HTTP-safety bounds, maps into the existing vendor-neutral StreamEvent records with usage only on the
-  final event, and keeps API keys out of logs and records. No real cloud call is made (no key set);
-  offline tests drive the SSE parsers with injected fake streaming responses.
+  Add explicit, allowlist-driven cross-provider fallback and per-provider circuit breaking to the
+  Balanced gateway. An operator configures an ordered fallback chain of model descriptors; on a
+  retriable failure (provider unavailable, timeout, or HTTP error) the gateway advances to the next
+  allowed candidate that is registered and whose circuit is closed, never silently and never outside
+  the configured chain. A per-provider circuit breaker opens after repeated failures and recovers
+  after a cooldown. Accounting records each attempt. Default behavior (no fallback configured) is
+  unchanged.
 source:
   tracker_sheet: Phase_Roadmap
-  tracker_row: reconstructed because R-220 streaming scope is not in the supplied workbook
-  brief_sections: [18, 57, 25, 26, 27, 74, 75, 84, 85, 90, 91, 92]
+  tracker_row: reconstructed; new model-fabric IDs continue after the workbook backlog's R-010..R-219
+  brief_sections: [18, 18.3, 25, 26, 27, 74, 84, 89, 90, 91, 92]
   founder_intent: >-
-    Founder asked to complete both true per-provider streaming and a second required item one by one.
-    R-220 delivers streaming; the second item is confirmed after R-220.
+    Founder asked to complete both the console slice and cross-provider fallback, one by one. R-221 is
+    fallback; the Next.js console slice follows as R-222.
 project_profile:
   repository: platform_modular_monorepo
   service: python_agent_engine
@@ -26,8 +27,11 @@ project_profile:
   model_routing: balanced
 complexity: L2
 expected_impact:
-  - services/agent-engine/src/omnistackai_agent_engine/model_gateway/cloud.py
-  - services/agent-engine/tests/test_cloud.py
+  - services/agent-engine/src/omnistackai_agent_engine/model_gateway/resilience.py
+  - services/agent-engine/src/omnistackai_agent_engine/model_gateway/gateway.py
+  - services/agent-engine/src/omnistackai_agent_engine/model_gateway/errors.py
+  - services/agent-engine/src/omnistackai_agent_engine/model_gateway/__init__.py
+  - services/agent-engine/tests/test_fallback.py
   - docs/MODEL_PROVIDER.md
   - portable state, changelog, handoff, task doc, and tracker evidence
 allowed_paths:
@@ -40,28 +44,31 @@ allowed_paths:
   - services/agent-engine/tests/**
 must_not_change:
   - PostgreSQL as the control-plane database or the existing schema
-  - the R-005 records/registry, R-006 Ollama adapter, R-007 gateway routing, R-008 cloud generate, or R-009 accounting public behavior
+  - the R-005 records/registry, R-006 Ollama adapter, R-008 cloud adapters, R-009 accounting, or R-220 streaming public behavior
+  - the existing single-provider routing outcome when no fallback chain is configured
   - local Compose services or infrastructure
   - auth, organizations, billing, Git integration, audit, or business APIs
   - native mobile or device-cloud functionality
   - the Section 74 top-level monorepo contract; no new top-level directory
   - the network-independence of static task verify
 must_not_do:
-  - make any real cloud API call (no key set; tests use injected fake streaming responses)
-  - add an external Python dependency or a provider SDK
-  - place any API key value in source, tests, logs, records, or commits
+  - fall back outside the explicitly configured allowlist chain (never silent)
+  - fall back on non-retriable errors (budget, unknown model, unsupported request)
+  - make any real cloud API call; add an external dependency or provider SDK; store secrets
 acceptance:
-  - Each cloud adapter streams incrementally by parsing provider SSE, yielding ordered StreamEvent deltas and one final event with done=True and measured token usage (usage only on the final event).
-  - Streaming reuses bounded line/response sizes, finite timeouts, redirect rejection, bounded concurrency, and maps failures to stable platform-owned errors without leaking the key or raw bodies.
-  - OpenAI-compatible streaming requests usage in the final chunk; Anthropic maps message_start/content_block_delta/message_delta/message_stop; Gemini uses streamGenerateContent with SSE.
-  - The non-streaming generate path and all other adapter behavior are unchanged.
-  - Standard-library offline tests drive each provider's SSE parser with injected fake streaming responses covering multi-chunk deltas, final usage, and malformed/oversized lines, with zero network access.
+  - RoutingPolicy accepts an optional ordered fallback chain of model descriptors; with none configured the gateway behaves exactly as before (single provider).
+  - On a retriable failure the gateway advances to the next allowlisted candidate that is registered and whose circuit is closed; a non-retriable error is raised immediately without fallback.
+  - A per-provider circuit breaker opens after a configurable consecutive-failure threshold, skips the provider until a cooldown elapses, then half-opens; success resets it. The breaker uses an injectable clock and is thread-safe.
+  - When every candidate is unavailable, skipped, or failing, the gateway raises a stable AllProvidersFailedError; it never downgrades high-risk work or leaves the chain.
+  - Each dispatch attempt (success or failure) is recorded by the accounting ledger when a recorder is configured.
+  - Standard-library offline tests cover fallback success, non-retriable no-fallback, circuit open/skip/recover, all-failed, ordering, and accounting of attempts, with zero network access.
   - Static task verify stays network-independent and green.
 required_gates:
   - impact_analysis
   - python_compile_test
-  - cloud_streaming_parser_tests
-  - stream_failure_and_bound_tests
+  - fallback_ordering_and_retriable_classification_tests
+  - circuit_breaker_open_skip_recover_tests
+  - all_providers_failed_and_accounting_tests
   - vendor_import_exclusion
   - secret_exclusion_check
   - task_verify
@@ -73,42 +80,14 @@ model_tool_trace:
   configured_model: qwen2.5-coder:14b
   local_calls: 0
   cloud_calls: 0
-  note: >-
-    SSE parsing is exercised offline with fake streaming responses; no cloud key is set, so no cloud
-    call is made. Any local live check uses Ollama.
+  note: Fallback and circuit breaking are deterministic; exercised offline with fake providers. No cloud key set.
 completion:
-  implementation_commit: 4e31841e730a6466da55843ff352f7144dd763e9
-  verified_at: "2026-09-06T15:20:00+05:30"
-  verification:
-    - command: task verify
-      result: pass
-    - command: task agent-engine:lint
-      result: pass
-    - command: task agent-engine:test
-      result: pass
-      evidence: 78 tests passed, including 5 new SSE streaming tests (OpenAI/Anthropic/Gemini deltas + final usage, malformed and oversized line handling)
-    - command: task security:quick
-      result: pass
-    - command: task env:check
-      result: pass
-    - command: docker compose --env-file .env -f infra/environments/local/compose.yaml config --services
-      result: pass
-      evidence: exactly postgres and control-plane; no service added
-  acceptance_results:
-    - criterion: Each cloud adapter streams incrementally by parsing provider SSE and yields ordered StreamEvent deltas plus one final event with done and measured usage.
-      result: pass
-    - criterion: Streaming reuses bounded line/response sizes, finite timeouts, redirect rejection, bounded concurrency, and stable platform errors without leaking the key or raw bodies.
-      result: pass
-    - criterion: OpenAI-compatible requests usage in the final chunk; Anthropic maps its event types; Gemini uses streamGenerateContent SSE (verified by request URL).
-      result: pass
-    - criterion: The non-streaming generate path and other adapter behavior are unchanged.
-      result: pass
-    - criterion: Offline tests drive each SSE parser with fake streaming responses (multi-chunk, final usage, malformed, oversized), zero network access.
-      result: pass
-    - criterion: Static task verify stays network-independent and green.
-      result: pass
+  implementation_commit: null
+  verified_at: null
+  verification: []
+  acceptance_results: []
 blockers: []
 next_action: >-
-  Start R-221, the confirmed second required item. Confirm with the founder whether R-221 is
-  cross-provider fallback/circuit breaking or a first Next.js console slice.
-next_command: task ai:status
+  Implement the fallback chain and circuit breaker, integrate into the gateway, add offline tests, run
+  the gates, record completion evidence, then start R-222 (Next.js console slice).
+next_command: task agent-engine:test

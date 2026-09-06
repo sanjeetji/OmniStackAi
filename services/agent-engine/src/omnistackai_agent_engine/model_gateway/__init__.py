@@ -35,6 +35,7 @@ from .cloud import (
     create_cloud_provider,
 )
 from .errors import (
+    AllProvidersFailedError,
     CloudProviderSelectionError,
     ContextBudgetExceededError,
     DeterministicWorkNotRoutableError,
@@ -69,11 +70,14 @@ from .gateway import (
 )
 from .ollama import OLLAMA_PROVIDER_ID, OllamaModelProfile, OllamaProvider
 from .registry import ProviderRegistry
+from .resilience import CircuitBreaker
 
 __all__ = [
+    "AllProvidersFailedError",
     "AnthropicProvider",
     "CapabilityStatus",
     "ChatRole",
+    "CircuitBreaker",
     "CloudProviderSelectionError",
     "CloudProviderSpec",
     "ContextBudgetExceededError",

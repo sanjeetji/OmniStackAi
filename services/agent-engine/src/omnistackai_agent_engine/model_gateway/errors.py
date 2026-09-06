@@ -87,3 +87,7 @@ class ContextBudgetExceededError(ModelGatewayError):
 
 class CloudProviderSelectionError(ModelGatewayError):
     code = "cloud_provider_selection_error"
+
+
+class AllProvidersFailedError(ModelGatewayError):
+    code = "all_providers_failed"
