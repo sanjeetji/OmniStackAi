@@ -113,6 +113,19 @@ function render(overview) {
     )
   );
 
+  const r = overview.resilience || { fallbackChain: [], circuitBreaker: { enabled: false } };
+  content.appendChild(
+    panel(
+      "Resilience",
+      el("div", { class: "grid" }, [
+        stat("Fallback chain", r.fallbackChain.length ? r.fallbackChain.join(" → ") : "none"),
+        stat("Circuit breaker", r.circuitBreaker.enabled ? "enabled" : "off"),
+        stat("Failure threshold", r.circuitBreaker.failureThreshold != null ? r.circuitBreaker.failureThreshold : "—"),
+        stat("Cooldown (s)", r.circuitBreaker.cooldownSeconds != null ? r.circuitBreaker.cooldownSeconds : "—"),
+      ])
+    )
+  );
+
   const u = overview.usage;
   const usageBody = el("div", null, [
     el("div", { class: "grid" }, [

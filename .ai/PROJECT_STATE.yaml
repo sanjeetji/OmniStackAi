@@ -2,9 +2,9 @@ schema_version: 1
 project: OmniStackAI
 phase: BASIC/MVP
 founder_stage: 0
-current_task: null
-current_status: ready_for_next_task_definition
-branch: ai/R-222-console-web
+current_task: R-223
+current_status: in_progress
+branch: ai/R-223-env-fallback-wiring
 last_completed_task:
   task_id: R-222
   title: First platform console slice (read-only model & cost overview)
@@ -17,9 +17,7 @@ architecture_contract: R_&_D/OmniStackAI_Implementation_Brief_v6.md
 tracker: R_&_D/OmniStackAI_Execution_Tracker_v6.xlsx
 id_note: >-
   Workbook backlog owns R-010..R-219. Founder-requested tasks use IDs after R-219: R-220 streaming,
-  R-221 fallback, R-222 console slice (all done).
-blockers:
-  - Full Next.js install/build times out in this sandbox (SWC binary); console shipped dependency-free
-    static, Next.js upgrade deferred to an environment with reliable registry access.
-next_action: Confirm the next Tracker ID with the founder (env-driven fallback wiring, or the Next.js console upgrade when registry access is reliable).
-last_updated: "2026-09-06T17:20:00+05:30"
+  R-221 fallback, R-222 console slice (done); R-223 env-driven fallback wiring (in progress).
+blockers: []
+next_action: Verify and complete env-driven fallback wiring, then attempt R-224 (Next.js console upgrade).
+last_updated: "2026-09-06T18:00:00+05:30"

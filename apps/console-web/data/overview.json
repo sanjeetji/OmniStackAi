@@ -111,6 +111,14 @@
       "outputPerMTokUsd": "10"
     }
   ],
+  "resilience": {
+    "fallbackChain": [],
+    "circuitBreaker": {
+      "enabled": false,
+      "failureThreshold": null,
+      "cooldownSeconds": null
+    }
+  },
   "usage": {
     "totalCalls": 0,
     "successfulCalls": 0,

@@ -1,82 +1,76 @@
 schema_version: 1
-task_id: R-222
-title: First platform console slice (read-only model & cost overview)
-status: done
+task_id: R-223
+title: Env-driven fallback chain and circuit breaker wiring in the gateway bootstrap
+status: in_progress
 phase: BASIC/MVP
 founder_stage: 0
-branch: ai/R-222-console-web
+branch: ai/R-223-env-fallback-wiring
 goal: >-
-  Stand up the first slice of the visual platform console under apps/console-web, surfacing the model
-  fabric from R-005..R-221: providers (local + all supported cloud, with tier / default model / active
-  key-state), the Balanced routing ladder, the price book, and the usage/cost dashboard from the R-009
-  accounting ledger. The console reads a deterministic, secrets-free JSON snapshot exported by the
-  Python gateway and renders it with safe DOM APIs; it makes no external network calls and never shows
-  a key.
-scope_note: >-
-  Founder asked for the best/advanced industry-standard approach (Next.js) and a smooth, secure
-  platform. A full Next.js app was authored, but this sandbox's network repeatedly timed out fetching
-  Next's native SWC binary, so it cannot be installed or built here and would break the offline
-  task bootstrap. To deliver a working, verifiable, secure console now, this slice is dependency-free
-  (static HTML/CSS/vanilla JS) with the identical data contract and design; the Next.js upgrade is the
-  documented next step once the build environment can install the toolchain. The offline bootstrap
-  contract is unchanged.
+  Make the R-221 cross-provider fallback and circuit breaker configurable from the environment through
+  build_gateway_from_env, so an operator can enable resilience without code. OMNISTACKAI_FALLBACK_PROVIDERS
+  defines an ordered fallback chain of already-registered providers (local or key-present cloud), and a
+  circuit breaker (threshold/cooldown from env) is attached whenever a chain is configured. The console
+  overview snapshot surfaces the fallback chain and breaker settings. Default behavior (no chain) is
+  unchanged.
 source:
   tracker_sheet: Phase_Roadmap
   tracker_row: reconstructed; new IDs continue after the workbook backlog's R-010..R-219
-  brief_sections: [8, 15.2, 40, 41, 74, 77, 87, 90, 91, 92]
+  brief_sections: [18, 18.3, 84, 87, 89, 91, 92]
+  founder_intent: >-
+    Founder asked to complete the remaining candidates one by one in a smooth, optimised, advanced way.
 project_profile:
   repository: platform_modular_monorepo
-  service: console_web
+  service: python_agent_engine
   control_plane_database: postgresql
   model_routing: balanced
 complexity: L2
 expected_impact:
-  - apps/console-web/** (index.html, styles.css, app.js, data/overview.json, README.md)
+  - services/agent-engine/src/omnistackai_agent_engine/model_gateway/bootstrap.py
   - services/agent-engine/src/omnistackai_agent_engine/model_gateway/overview.py
-  - services/agent-engine/src/omnistackai_agent_engine/model_gateway/accounting.py (PriceBook.entries)
-  - services/agent-engine/src/omnistackai_agent_engine/model_gateway/__init__.py
+  - services/agent-engine/tests/test_bootstrap.py
   - services/agent-engine/tests/test_overview.py
-  - scripts/console.sh
-  - Taskfile.yml
+  - apps/console-web/** (app.js/data snapshot render the resilience panel)
+  - .env.example
   - docs/MODEL_PROVIDER.md
   - portable state, changelog, handoff, task doc, and tracker evidence
 allowed_paths:
   - .ai/**
+  - .env.example
   - CHANGELOG.md
   - PROJECT_STATE.md
   - R_&_D/OmniStackAI_Execution_Tracker_v6.xlsx
-  - Taskfile.yml
   - apps/console-web/**
   - docs/**
-  - scripts/**
   - services/agent-engine/**
 must_not_change:
   - PostgreSQL as the control-plane database or the existing schema
-  - the model-gateway runtime behavior (R-005..R-221); the console is read-only and observational
-  - local Compose services or infrastructure; no new deployable is added to Compose
-  - the Section 74 top-level monorepo contract (apps/console-web already exists in it)
-  - the offline task bootstrap contract and the network-independence of static task verify
+  - the gateway/adapter/accounting runtime behavior (R-005..R-222) except adding env-driven wiring
+  - the single-provider default outcome when no fallback chain is configured
+  - local Compose services or infrastructure; the Section 74 contract; the offline bootstrap contract
+  - the network-independence of static task verify
 must_not_do:
-  - display, log, or embed any API key or secret in the console, the snapshot, or the repo
-  - make external/runtime network calls from the console (same-origin snapshot fetch only)
-  - add a paid cloud service, a new top-level directory, or a dependency that breaks offline bootstrap
+  - fall back outside the explicitly configured chain; enable the breaker when no chain is configured
+  - store any API key/secret in the snapshot, console, logs, or repo
+  - add an external dependency or a provider SDK
 acceptance:
-  - apps/console-web serves as a static page that renders providers (local + all supported cloud with
-    tier/default-model/active state), the Balanced routing ladder, the price book, and the usage/cost
-    dashboard from a metadata-only snapshot.
-  - The snapshot is produced by a Python exporter and contains no key or secret (active state is a
-    boolean); the page uses safe DOM APIs (textContent, never innerHTML) and a strict CSP meta tag,
-    with no external network requests.
-  - The Python overview exporter has offline tests, including a no-secret / active-without-key
-    assertion; app.js passes a JavaScript syntax check.
-  - task bootstrap stays offline; task verify remains green and independent of the console; task
-    console:snapshot refreshes the data and task console:serve serves it locally.
+  - OMNISTACKAI_FALLBACK_PROVIDERS builds an ordered fallback chain from registered providers (local via
+    'ollama', cloud via provider name); a named provider that is unknown or has no key raises a clear
+    configuration error.
+  - A circuit breaker (OMNISTACKAI_CIRCUIT_FAILURE_THRESHOLD / OMNISTACKAI_CIRCUIT_COOLDOWN_SECONDS,
+    with safe defaults) is attached to the gateway only when a fallback chain is configured.
+  - With no chain configured, build_gateway_from_env is behaviorally identical to before (no breaker,
+    no fallback).
+  - GatewayBootstrap exposes the fallback chain provider ids and breaker settings; the overview snapshot
+    and console render a resilience panel; no key/secret appears anywhere.
+  - Standard-library offline tests cover chain building, unknown/no-key errors, breaker attachment, the
+    unchanged default, and the snapshot fields.
+  - task verify stays green and network-independent.
 required_gates:
   - impact_analysis
-  - overview_exporter_tests
-  - no_secret_in_snapshot_test
-  - app_js_syntax_check
-  - static_console_serves_over_http
+  - env_fallback_chain_tests
+  - unknown_and_missing_key_error_tests
+  - default_unchanged_test
+  - overview_resilience_fields_test
   - vendor_import_exclusion
   - secret_exclusion_check
   - task_verify
@@ -88,43 +82,14 @@ model_tool_trace:
   configured_model: qwen2.5-coder:14b
   local_calls: 0
   cloud_calls: 0
-  note: Console and exporter are deterministic; no model call. No cloud key set; cloud_calls zero.
+  note: Deterministic wiring; no model call. No cloud key set; cloud_calls zero.
 completion:
-  implementation_commit: c07bbcb1b9b8c010c6d64e3a0e09ac0c855102c8
-  verified_at: "2026-09-06T17:20:00+05:30"
-  verification:
-    - command: task verify
-      result: pass
-      evidence: 92 agent-engine tests (6 new overview tests) plus all Stage 0 checks green
-    - command: node --check apps/console-web/app.js
-      result: pass
-    - command: python3 -m http.server (console served on 127.0.0.1) + fetch
-      result: pass
-      evidence: index.html, styles.css, app.js, data/overview.json all return HTTP 200; snapshot has 6 providers, 5 price rows, 5 ladder steps
-    - command: task security:quick
-      result: pass
-    - command: task env:check
-      result: pass
-    - command: docker compose --env-file .env -f infra/environments/local/compose.yaml config --services
-      result: pass
-      evidence: exactly postgres and control-plane; no service added
-  acceptance_results:
-    - criterion: The console renders providers (local + all supported cloud with tier/default-model/active state), the routing ladder, the price book, and the usage/cost dashboard from a metadata-only snapshot.
-      result: pass
-    - criterion: The snapshot contains no key or secret (active is a boolean); the page uses safe DOM APIs and a strict CSP and makes no external requests.
-      result: pass
-    - criterion: The Python exporter has offline tests including a no-secret / active-without-key assertion; app.js passes a JS syntax check.
-      result: pass
-    - criterion: task bootstrap stays offline; task verify is green and independent of the console; console:snapshot and console:serve work.
-      result: pass
-  note: >-
-    Next.js was authored but not buildable in this sandbox (SWC binary download timed out); shipped a
-    dependency-free static console with the same data contract and design. Next.js upgrade deferred.
-blockers:
-  - Full Next.js install/build is not possible in this sandbox (SWC binary download times out); the
-    Next.js upgrade is deferred to an environment with reliable registry access.
+  implementation_commit: null
+  verified_at: null
+  verification: []
+  acceptance_results: []
+blockers: []
 next_action: >-
-  Both founder-requested items (R-220 streaming, R-221 fallback) and the console slice (R-222) are
-  done. Next candidates: env-driven fallback wiring in build_gateway_from_env, or the Next.js console
-  upgrade when registry access is reliable. Confirm the next Tracker ID with the founder.
-next_command: task ai:status
+  Implement env-driven fallback/breaker wiring, extend the snapshot and console, add tests, run gates,
+  record completion evidence, then attempt R-224 (Next.js console upgrade).
+next_command: task agent-engine:test

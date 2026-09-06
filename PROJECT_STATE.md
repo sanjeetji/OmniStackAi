@@ -5,13 +5,12 @@ Last updated: 2026-09-06T10:46:19+05:30 by Codex (GPT-5)
 Stage 0 (Founder Build Sequence, Brief Section 91) — BASIC/MVP
 
 ## Last Completed Task
-Tracker ID: R-222 — Platform console slice (model & cost overview) — DONE, `task verify` (92
-agent-engine tests) passing, static console served over HTTP (assets 200), no secret in snapshot,
-implementation checkpoint `c07bbcb1b9b8c010c6d64e3a0e09ac0c855102c8`
+Tracker ID: R-222 — Platform console slice (model & cost overview) — DONE, implementation checkpoint
+`c07bbcb1b9b8c010c6d64e3a0e09ac0c855102c8`
 
 ## In Progress (if any)
-Tracker ID: none
-Files touched so far: none
+Tracker ID: R-223 — Env-driven fallback & circuit-breaker wiring
+Files touched so far: `services/agent-engine/src/omnistackai_agent_engine/model_gateway/{bootstrap.py,overview.py,__init__.py}`, `services/agent-engine/tests/{test_bootstrap.py,test_overview.py}`, `apps/console-web/{app.js,data/overview.json}`, `.env.example`, `docs/MODEL_PROVIDER.md`, portable state, and tracker row R-223
 Blocker: none
 
 ## ID note

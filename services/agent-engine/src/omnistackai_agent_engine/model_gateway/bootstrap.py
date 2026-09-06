@@ -19,6 +19,9 @@ from .errors import CloudProviderSelectionError
 from .gateway import ModelGateway, RoutingPolicy
 from .ollama import OLLAMA_PROVIDER_ID, OllamaModelProfile, OllamaProvider
 from .registry import ProviderRegistry
+from .resilience import CircuitBreaker
+
+_LOCAL_ALIASES = frozenset({"ollama", "ollama-local", OLLAMA_PROVIDER_ID})
 
 
 @dataclass(frozen=True, slots=True)
@@ -28,6 +31,29 @@ class GatewayBootstrap:
     local_model_id: str
     registered_provider_ids: tuple[str, ...]
     cloud_tier_provider_id: str | None
+    fallback_provider_ids: tuple[str, ...] = ()
+    breaker_enabled: bool = False
+    breaker_failure_threshold: int | None = None
+    breaker_cooldown_seconds: float | None = None
+
+
+def fallback_provider_ids_from_env() -> tuple[str, ...]:
+    """Parse OMNISTACKAI_FALLBACK_PROVIDERS into normalized provider ids (metadata-only helper)."""
+
+    raw = os.environ.get("OMNISTACKAI_FALLBACK_PROVIDERS", "") or ""
+    ids: list[str] = []
+    for name in (part.strip().lower() for part in raw.split(",")):
+        if not name:
+            continue
+        if name in _LOCAL_ALIASES:
+            ids.append(OLLAMA_PROVIDER_ID)
+        elif name in PROVIDER_SPECS:
+            ids.append(PROVIDER_SPECS[name].provider_id)
+        else:
+            raise CloudProviderSelectionError(
+                f"unknown fallback provider {name!r}; expected ollama or one of {', '.join(sorted(PROVIDER_SPECS))}"
+            )
+    return tuple(ids)
 
 
 def _int_env(name: str, default: int) -> int:
@@ -132,8 +158,43 @@ def build_gateway_from_env(recorder: UsageLedger | None = None) -> GatewayBootst
         cloud_model = cloud_descriptors[selection]
         cloud_tier_provider_id = cloud_model.model.provider_id
 
+    # Optional explicit fallback chain: each named provider must already be registered.
+    fallback_descriptors: list[ModelDescriptor] = []
+    fallback_ids: list[str] = []
+    raw_chain = os.environ.get("OMNISTACKAI_FALLBACK_PROVIDERS", "") or ""
+    for name in (part.strip().lower() for part in raw_chain.split(",")):
+        if not name:
+            continue
+        if name in _LOCAL_ALIASES:
+            descriptor = ollama_descriptor
+        elif name in PROVIDER_SPECS:
+            if name not in cloud_descriptors:
+                raise CloudProviderSelectionError(
+                    f"fallback provider {name!r} needs {PROVIDER_SPECS[name].key_env} to be set"
+                )
+            descriptor = cloud_descriptors[name]
+        else:
+            raise CloudProviderSelectionError(
+                f"unknown fallback provider {name!r}; expected ollama or one of {', '.join(sorted(PROVIDER_SPECS))}"
+            )
+        fallback_descriptors.append(descriptor)
+        fallback_ids.append(descriptor.model.provider_id)
+
+    # A circuit breaker is attached only when a fallback chain exists, so single-provider behavior is
+    # unchanged.
+    threshold = _int_env("OMNISTACKAI_CIRCUIT_FAILURE_THRESHOLD", 3)
+    cooldown = _float_env("OMNISTACKAI_CIRCUIT_COOLDOWN_SECONDS", 30.0)
+    breaker = CircuitBreaker(failure_threshold=threshold, cooldown_seconds=cooldown) if fallback_descriptors else None
+
     gateway = ModelGateway(
-        registry, RoutingPolicy(local_model=ollama_descriptor, cloud_model=cloud_model), recorder=recorder
+        registry,
+        RoutingPolicy(
+            local_model=ollama_descriptor,
+            cloud_model=cloud_model,
+            fallback=tuple(fallback_descriptors),
+        ),
+        recorder=recorder,
+        breaker=breaker,
     )
     return GatewayBootstrap(
         gateway=gateway,
@@ -141,4 +202,8 @@ def build_gateway_from_env(recorder: UsageLedger | None = None) -> GatewayBootst
         local_model_id=ollama_descriptor.model.model_id,
         registered_provider_ids=registry.provider_ids(),
         cloud_tier_provider_id=cloud_tier_provider_id,
+        fallback_provider_ids=tuple(fallback_ids),
+        breaker_enabled=breaker is not None,
+        breaker_failure_threshold=threshold if breaker is not None else None,
+        breaker_cooldown_seconds=cooldown if breaker is not None else None,
     )

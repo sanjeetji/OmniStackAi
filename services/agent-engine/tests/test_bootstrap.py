@@ -81,3 +81,34 @@ class BootstrapTests(TestCase):
         with patch.dict("os.environ", env, clear=True):
             boot = build_gateway_from_env()
         self.assertEqual(boot.gateway.resolve(_task(TaskComplexity.L3)).model.model_id, "gpt-custom-test")
+
+
+class FallbackWiringTests(TestCase):
+    def test_no_chain_leaves_default_unchanged(self) -> None:
+        with patch.dict("os.environ", _env(), clear=True):
+            boot = build_gateway_from_env()
+        self.assertEqual(boot.fallback_provider_ids, ())
+        self.assertFalse(boot.breaker_enabled)
+
+    def test_env_chain_builds_registered_providers_and_attaches_breaker(self) -> None:
+        env = _env(
+            ANTHROPIC_API_KEY="k1", OPENAI_API_KEY="k2",
+            OMNISTACKAI_FALLBACK_PROVIDERS="ollama, anthropic, openai",
+            OMNISTACKAI_CIRCUIT_FAILURE_THRESHOLD="2", OMNISTACKAI_CIRCUIT_COOLDOWN_SECONDS="45",
+        )
+        with patch.dict("os.environ", env, clear=True):
+            boot = build_gateway_from_env()
+        self.assertEqual(boot.fallback_provider_ids, ("ollama-local", "anthropic", "openai"))
+        self.assertTrue(boot.breaker_enabled)
+        self.assertEqual(boot.breaker_failure_threshold, 2)
+        self.assertEqual(boot.breaker_cooldown_seconds, 45.0)
+
+    def test_unknown_fallback_name_is_rejected(self) -> None:
+        with patch.dict("os.environ", _env(OMNISTACKAI_FALLBACK_PROVIDERS="mystery"), clear=True):
+            with self.assertRaises(CloudProviderSelectionError):
+                build_gateway_from_env()
+
+    def test_fallback_provider_without_key_is_rejected(self) -> None:
+        with patch.dict("os.environ", _env(OMNISTACKAI_FALLBACK_PROVIDERS="anthropic"), clear=True):
+            with self.assertRaises(CloudProviderSelectionError):
+                build_gateway_from_env()

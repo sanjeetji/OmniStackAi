@@ -120,6 +120,19 @@ def platform_overview(
         for provider_id, model_id, price in book.entries()
     ]
 
+    from .bootstrap import fallback_provider_ids_from_env  # local import avoids any import-order concern
+
+    fallback_chain = list(fallback_provider_ids_from_env())
+    breaker_enabled = bool(fallback_chain)
+    resilience = {
+        "fallbackChain": fallback_chain,
+        "circuitBreaker": {
+            "enabled": breaker_enabled,
+            "failureThreshold": _positive_int_env("OMNISTACKAI_CIRCUIT_FAILURE_THRESHOLD", 3) if breaker_enabled else None,
+            "cooldownSeconds": _positive_float_env("OMNISTACKAI_CIRCUIT_COOLDOWN_SECONDS", 30.0) if breaker_enabled else None,
+        },
+    }
+
     return {
         "note": "Static, metadata-only snapshot exported from the model gateway. Contains no API keys or secrets.",
         "routingMode": "balanced",
@@ -127,8 +140,27 @@ def platform_overview(
         "routingLadder": routing_ladder,
         "providers": providers,
         "priceBook": price_rows,
+        "resilience": resilience,
         "usage": _usage_dict(ledger) if ledger is not None else _empty_usage(),
     }
+
+
+def _positive_int_env(name: str, default: int) -> int:
+    raw = os.environ.get(name, "")
+    try:
+        value = int(raw) if raw else default
+    except ValueError:
+        return default
+    return value if value > 0 else default
+
+
+def _positive_float_env(name: str, default: float) -> float:
+    raw = os.environ.get(name, "")
+    try:
+        value = float(raw) if raw else default
+    except ValueError:
+        return default
+    return value if value > 0 else default
 
 
 def main() -> None:

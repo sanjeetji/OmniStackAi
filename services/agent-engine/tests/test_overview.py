@@ -71,6 +71,27 @@ class OverviewTests(TestCase):
         self.assertEqual(usage["totalCostUsd"], "0.000000")
         self.assertEqual(usage["breakdowns"][0]["providerId"], "ollama-local")
 
+    def test_resilience_block_reflects_env_fallback_chain(self) -> None:
+        env = {
+            "ANTHROPIC_API_KEY": "k",
+            "OMNISTACKAI_FALLBACK_PROVIDERS": "ollama, anthropic",
+            "OMNISTACKAI_CIRCUIT_FAILURE_THRESHOLD": "4",
+            "OMNISTACKAI_CIRCUIT_COOLDOWN_SECONDS": "60",
+        }
+        with patch.dict("os.environ", env, clear=True):
+            overview = platform_overview()
+        resilience = overview["resilience"]
+        self.assertEqual(resilience["fallbackChain"], ["ollama-local", "anthropic"])
+        self.assertTrue(resilience["circuitBreaker"]["enabled"])
+        self.assertEqual(resilience["circuitBreaker"]["failureThreshold"], 4)
+        self.assertEqual(resilience["circuitBreaker"]["cooldownSeconds"], 60.0)
+
+    def test_resilience_defaults_to_no_fallback(self) -> None:
+        with patch.dict("os.environ", {}, clear=True):
+            resilience = platform_overview()["resilience"]
+        self.assertEqual(resilience["fallbackChain"], [])
+        self.assertFalse(resilience["circuitBreaker"]["enabled"])
+
     def test_snapshot_is_json_serializable(self) -> None:
         with patch.dict("os.environ", {}, clear=True):
             json.dumps(platform_overview())  # must not raise

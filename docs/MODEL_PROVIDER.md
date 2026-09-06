@@ -145,6 +145,21 @@ JSON-serialized to `apps/console-web/data/overview.json` by `task console:snapsh
 `task console:serve` (serves on `http://127.0.0.1:4321`). The forward path is a Next.js app once the
 build environment can install the front-end toolchain; the `overview.json` contract carries over.
 
+## R-223 Env-driven resilience wiring
+
+`build_gateway_from_env` now assembles the R-221 fallback chain and circuit breaker from the
+environment, so resilience is enabled without code:
+
+- `OMNISTACKAI_FALLBACK_PROVIDERS` — a comma-separated, ordered chain of already-registered providers
+  (`ollama` for local, or a cloud provider name whose key is set). Empty means single-provider, no
+  fallback. An unknown name, or a named provider without its key, raises a clear configuration error.
+- `OMNISTACKAI_CIRCUIT_FAILURE_THRESHOLD` (default 3) and `OMNISTACKAI_CIRCUIT_COOLDOWN_SECONDS`
+  (default 30) configure a `CircuitBreaker` that is attached **only when a chain is configured**, so
+  single-provider behavior is unchanged.
+
+`GatewayBootstrap` exposes `fallback_provider_ids` and the breaker settings, and the console's overview
+snapshot includes a `resilience` block rendered as a Resilience panel.
+
 ## Deferred work
 
 Durable/persistent cost storage, benchmark-backed capability promotion, richer context management,

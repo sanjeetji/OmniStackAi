@@ -25,7 +25,7 @@ from .accounting import (
     UsageRecord,
     UsageSummary,
 )
-from .bootstrap import GatewayBootstrap, build_gateway_from_env
+from .bootstrap import GatewayBootstrap, build_gateway_from_env, fallback_provider_ids_from_env
 from .cloud import (
     AnthropicProvider,
     CloudProviderSpec,
@@ -138,5 +138,6 @@ __all__ = [
     "build_gateway_from_env",
     "create_cloud_provider",
     "estimate_input_tokens",
+    "fallback_provider_ids_from_env",
     "platform_overview",
 ]
