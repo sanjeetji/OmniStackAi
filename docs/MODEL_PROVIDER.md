@@ -99,8 +99,25 @@ OMNISTACKAI_CLOUD_PROVIDER=anthropic
 Then `task agent-engine:gateway:run` shows the cloud provider registered and L3/L4 routing to it,
 while L1/L2 stay on local Ollama. With no key set, everything runs locally at zero cloud cost.
 
+## R-009 Usage & cost accounting
+
+`ModelGateway` accepts an optional `recorder=UsageLedger()`. When set, every dispatch writes exactly
+one immutable, **metadata-only** `UsageRecord` (provider, model, tier, complexity, token counts,
+latency, finish reason, success/error code) — never message content, response text, or a secret
+(Brief 90). Accounting is observational: it never changes the returned response or the raised error.
+
+`PriceBook` computes an exact USD estimate with `decimal.Decimal`. `DEFAULT_PRICE_BOOK` ships
+illustrative, operator-configurable cloud prices and prices local Ollama at zero; unknown models are
+recorded as **unpriced** rather than guessed. `UsageLedger.summary()` aggregates overall and
+per-provider/per-model totals, token sums, cost, success/failure counts, deterministic p50/p95
+latency (nearest-rank), unpriced-call count, and cost per successful call — the inputs to optimizing
+cost per successful accepted change (Brief 18.4, 68, 92.15).
+
+`build_gateway_from_env(recorder=...)` threads a ledger into the gateway, and
+`task agent-engine:gateway:run` prints the summary after its live run (local Ollama shows $0.000000).
+
 ## Deferred work
 
-Cross-provider fallback, circuit breaking, durable cost accounting, benchmark-backed capability
-promotion, true per-provider streaming, richer context management, HTTP serving, and agent
+Cross-provider fallback, circuit breaking, durable/persistent cost storage, benchmark-backed
+capability promotion, true per-provider streaming, richer context management, HTTP serving, and agent
 orchestration remain deferred to their own Tracker IDs.

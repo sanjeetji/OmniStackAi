@@ -6,16 +6,15 @@ Stage 0 (Founder Build Sequence, Brief Section 91) — BASIC/MVP
 
 ## Last Completed Task
 Tracker ID: R-008 — Cloud API-key ModelProvider adapters (multi-provider, key-activated) — DONE,
-`task verify` and 61 agent-engine tests (19 new cloud/bootstrap tests) passing, no cloud key set so
-cloud_calls=0, implementation checkpoint `eeade72e84c7f1ebd71dfc8c0f7c2f4db0f79677`
+implementation checkpoint `eeade72e84c7f1ebd71dfc8c0f7c2f4db0f79677`
 
 ## In Progress (if any)
-Tracker ID: none
-Files touched so far: none
+Tracker ID: R-009 — Deterministic usage and cost accounting for the model gateway
+Files touched so far: `services/agent-engine/src/omnistackai_agent_engine/model_gateway/{accounting.py,gateway.py,bootstrap.py,live_gateway.py,__init__.py}`, `services/agent-engine/tests/test_accounting.py`, `docs/MODEL_PROVIDER.md`, portable state, and tracker row R-009
 Blocker: none
 
 ## Next Up (queued, in order)
-1. R-009 — task definition missing from `Phase_Roadmap` (candidate: true per-provider SSE streaming or cross-provider fallback/circuit breaking)
+1. R-010 — Native iOS Agent (from `Phase_Roadmap`) — NOT before web/backend stability; likely reorder to a nearer MVP need (e.g. true per-provider streaming or cross-provider fallback) with founder approval
 
 ## Decisions Made This Session
 - Applied the normative V6 precedence rules and Section 91 Phase 0 sequence.

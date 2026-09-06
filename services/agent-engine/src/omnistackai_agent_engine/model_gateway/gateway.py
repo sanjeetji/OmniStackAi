@@ -24,7 +24,9 @@ import math
 from collections.abc import AsyncIterator
 from dataclasses import dataclass
 from enum import StrEnum
+from time import monotonic
 
+from .accounting import UsageLedger
 from .contracts import (
     CapabilityStatus,
     GenerateRequest,
@@ -34,11 +36,13 @@ from .contracts import (
     ModelDescriptor,
     ModelRef,
     StreamEvent,
+    TokenUsage,
 )
 from .errors import (
     ContextBudgetExceededError,
     DeterministicWorkNotRoutableError,
     InvalidRoutingTaskError,
+    ModelProviderError,
     NoEligibleProviderError,
     ProviderUnavailableError,
 )
@@ -158,13 +162,22 @@ class RoutingDecision:
 class ModelGateway:
     """Selects a registered provider for a routing task and dispatches the model call."""
 
-    def __init__(self, registry: ProviderRegistry, policy: RoutingPolicy) -> None:
+    def __init__(
+        self,
+        registry: ProviderRegistry,
+        policy: RoutingPolicy,
+        *,
+        recorder: UsageLedger | None = None,
+    ) -> None:
         if not isinstance(registry, ProviderRegistry):
             raise InvalidRoutingTaskError("registry must be a ProviderRegistry")
         if not isinstance(policy, RoutingPolicy):
             raise InvalidRoutingTaskError("policy must be a RoutingPolicy")
+        if recorder is not None and not isinstance(recorder, UsageLedger):
+            raise InvalidRoutingTaskError("recorder must be a UsageLedger or None")
         self._registry = registry
         self._policy = policy
+        self._recorder = recorder
 
     def resolve(self, task: RoutingTask) -> RoutingDecision:
         """Deterministically resolve a routing task without any network call.
@@ -233,21 +246,86 @@ class ModelGateway:
         )
 
     async def generate(self, task: RoutingTask) -> GenerateResponse:
-        """Resolve, verify provider health, then dispatch a non-streaming generation."""
+        """Resolve, verify provider health, then dispatch a non-streaming generation.
+
+        On success or failure exactly one accounting record is written when a recorder is configured;
+        the returned response and any raised error are never altered by accounting.
+        """
 
         decision = self.resolve(task)
         provider = self._registry.get(decision.provider_id)
-        await self._require_healthy(provider, decision)
-        return await provider.generate(decision.request)
+        started_at = monotonic()
+        try:
+            await self._require_healthy(provider, decision)
+            response = await provider.generate(decision.request)
+        except ModelProviderError as error:
+            self._record_failure(decision, error, self._elapsed_ms(started_at))
+            raise
+        self._record(decision, response.usage, response.latency_ms, True, response.finish_reason.value)
+        return response
 
     async def stream(self, task: RoutingTask) -> AsyncIterator[StreamEvent]:
-        """Resolve, verify provider health, then dispatch a streaming generation."""
+        """Resolve, verify provider health, then dispatch a streaming generation.
+
+        One accounting record is written after the stream completes (or on failure) when a recorder is
+        configured; the yielded events are never altered by accounting.
+        """
 
         decision = self.resolve(task)
         provider = self._registry.get(decision.provider_id)
-        await self._require_healthy(provider, decision)
-        async for event in provider.stream(decision.request):
-            yield event
+        started_at = monotonic()
+        final_usage = None
+        try:
+            await self._require_healthy(provider, decision)
+            async for event in provider.stream(decision.request):
+                if event.done:
+                    final_usage = event.usage
+                yield event
+        except ModelProviderError as error:
+            self._record_failure(decision, error, self._elapsed_ms(started_at))
+            raise
+        self._record(decision, final_usage, self._elapsed_ms(started_at), True, None)
+
+    def _record(
+        self,
+        decision: RoutingDecision,
+        usage: TokenUsage | None,
+        latency_ms: int,
+        success: bool,
+        finish_reason: str | None,
+    ) -> None:
+        if self._recorder is None:
+            return
+        self._recorder.record_call(
+            request_id=decision.request.request_id,
+            provider_id=decision.provider_id,
+            model_id=decision.model.model_id,
+            tier=decision.tier.value,
+            complexity=decision.complexity.value,
+            usage=usage,
+            latency_ms=latency_ms,
+            success=success,
+            finish_reason=finish_reason,
+        )
+
+    def _record_failure(self, decision: RoutingDecision, error: ModelProviderError, latency_ms: int) -> None:
+        if self._recorder is None:
+            return
+        self._recorder.record_call(
+            request_id=decision.request.request_id,
+            provider_id=decision.provider_id,
+            model_id=decision.model.model_id,
+            tier=decision.tier.value,
+            complexity=decision.complexity.value,
+            usage=None,
+            latency_ms=latency_ms,
+            success=False,
+            error_code=getattr(error, "code", "model_provider_error"),
+        )
+
+    @staticmethod
+    def _elapsed_ms(started_at: float) -> int:
+        return max(0, int((monotonic() - started_at) * 1000))
 
     @staticmethod
     async def _require_healthy(provider: object, decision: RoutingDecision) -> None:

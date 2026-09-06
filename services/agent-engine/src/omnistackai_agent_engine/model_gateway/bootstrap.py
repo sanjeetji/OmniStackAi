@@ -12,6 +12,7 @@ from __future__ import annotations
 import os
 from dataclasses import dataclass
 
+from .accounting import UsageLedger
 from .cloud import PROVIDER_SPECS, create_cloud_provider
 from .contracts import CapabilityStatus, ModelCapabilities, ModelDescriptor, ModelRef
 from .errors import CloudProviderSelectionError
@@ -87,8 +88,11 @@ def _cloud_descriptor(provider_id: str, model_id: str) -> ModelDescriptor:
     )
 
 
-def build_gateway_from_env() -> GatewayBootstrap:
-    """Register local Ollama plus every key-present cloud provider and select the cloud tier."""
+def build_gateway_from_env(recorder: UsageLedger | None = None) -> GatewayBootstrap:
+    """Register local Ollama plus every key-present cloud provider and select the cloud tier.
+
+    An optional ``recorder`` is attached to the gateway so every dispatch is accounted.
+    """
 
     ollama_descriptor = _ollama_descriptor()
     registry = ProviderRegistry()
@@ -128,7 +132,9 @@ def build_gateway_from_env() -> GatewayBootstrap:
         cloud_model = cloud_descriptors[selection]
         cloud_tier_provider_id = cloud_model.model.provider_id
 
-    gateway = ModelGateway(registry, RoutingPolicy(local_model=ollama_descriptor, cloud_model=cloud_model))
+    gateway = ModelGateway(
+        registry, RoutingPolicy(local_model=ollama_descriptor, cloud_model=cloud_model), recorder=recorder
+    )
     return GatewayBootstrap(
         gateway=gateway,
         registry=registry,

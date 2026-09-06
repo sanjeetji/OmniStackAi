@@ -1,25 +1,24 @@
 schema_version: 1
-task_id: R-008
-title: Cloud API-key ModelProvider adapters (multi-provider, key-activated) behind the shared boundary
-status: done
+task_id: R-009
+title: Deterministic usage and cost accounting for the model gateway
+status: in_progress
 phase: BASIC/MVP
 founder_stage: 0
-branch: ai/R-008-cloud-provider-adapters
+branch: ai/R-009-usage-cost-accounting
 goal: >-
-  Add key-activated cloud ModelProvider adapters for multiple providers (Anthropic, OpenAI, Google
-  Gemini, OpenRouter, Groq) behind the existing vendor-neutral boundary, each with a sensible default
-  model that the operator can override. A provider is registered only when its API key is present in
-  the environment, so with no keys the platform keeps running on local Ollama and makes zero cloud
-  calls. An env-driven bootstrap wires local Ollama plus any key-present cloud providers into the
-  Balanced gateway so L3/L4 work can escalate to the selected cloud tier once a key is supplied.
+  Add a deterministic, privacy-safe usage and cost accounting layer for the model gateway. Every
+  gateway dispatch (success or failure) is recorded as an immutable metadata-only record (provider,
+  model, tier, complexity, token usage, latency, finish reason, success/error code) with an estimated
+  monetary cost computed from a configurable price book (local Ollama = zero). A ledger aggregates
+  totals and per-provider/per-model breakdowns, latency percentiles, success/failure counts, and cost
+  per successful call, so the platform can optimize cost per successful accepted change (Brief 18.4,
+  68, 92.15). No prompt content or secret is ever stored.
 source:
   tracker_sheet: Phase_Roadmap
-  tracker_row: reconstructed because R-008 is absent from the supplied workbook
-  brief_sections: [18, 18.1, 18.3, 25, 26, 27, 74, 75, 77, 84, 85, 87, 90, 91, 92]
+  tracker_row: reconstructed because R-009 is absent from the supplied workbook
+  brief_sections: [18, 18.2, 18.4, 23, 25, 26, 27, 68, 74, 84, 85, 90, 91, 92]
   founder_intent: >-
-    Founder asked to configure each cloud provider (not just one) so that adding any provider's API
-    key makes that LLM work with a default model that the user can change, while the platform keeps
-    running on local Ollama with qwen when no keys are set. No keys are configured yet.
+    Founder selected usage and cost accounting for R-009 and asked for a best-in-class implementation.
 project_profile:
   repository: platform_modular_monorepo
   service: python_agent_engine
@@ -27,59 +26,48 @@ project_profile:
   model_routing: balanced
 complexity: L2
 expected_impact:
-  - services/agent-engine/src/omnistackai_agent_engine/model_gateway/cloud.py
-  - services/agent-engine/src/omnistackai_agent_engine/model_gateway/bootstrap.py
-  - services/agent-engine/src/omnistackai_agent_engine/model_gateway/errors.py
+  - services/agent-engine/src/omnistackai_agent_engine/model_gateway/accounting.py
+  - services/agent-engine/src/omnistackai_agent_engine/model_gateway/gateway.py
   - services/agent-engine/src/omnistackai_agent_engine/model_gateway/__init__.py
   - services/agent-engine/src/omnistackai_agent_engine/model_gateway/live_gateway.py
-  - services/agent-engine/tests/test_cloud.py
-  - services/agent-engine/tests/test_bootstrap.py
+  - services/agent-engine/tests/test_accounting.py
   - docs/MODEL_PROVIDER.md
-  - .env.example
   - portable state, changelog, handoff, task doc, and tracker evidence
 allowed_paths:
   - .ai/**
-  - .env.example
   - CHANGELOG.md
   - PROJECT_STATE.md
   - R_&_D/OmniStackAI_Execution_Tracker_v6.xlsx
   - docs/MODEL_PROVIDER.md
-  - scripts/test.sh
   - services/agent-engine/src/omnistackai_agent_engine/model_gateway/**
   - services/agent-engine/tests/**
-scope_note: >-
-  scripts/test.sh was updated to evolve a stale R-005-era guard that forbade any provider adapter
-  (it matched cloud hostnames and the word Adapter). Cloud adapters are the sanctioned R-008
-  deliverable, so the guard now enforces the durable invariants instead: no vendor SDK import, the
-  gateway/cloud/bootstrap files exist, and cloud providers are opt-in with OMNISTACKAI_CLOUD_PROVIDER
-  defaulting to none. This was necessary to implement the founder-approved multi-provider adapters.
 must_not_change:
   - PostgreSQL as the control-plane database or the existing schema
-  - the R-005 ModelProvider protocol/records, R-006 Ollama adapter, or R-007 gateway public behavior
+  - the R-005 records/registry, R-006 Ollama adapter, R-007 gateway routing decisions, or R-008 cloud adapter public behavior
   - local Compose services or infrastructure (Redis, NATS, object storage, Kubernetes, Temporal)
   - auth, organizations, billing, Git integration, audit, or business APIs
   - native mobile or device-cloud functionality
   - the Section 74 top-level monorepo contract; no new top-level directory
   - the network-independence of static task verify
 must_not_do:
-  - make any real cloud API call (no keys are configured; tests use injected fake HTTP openers)
-  - add a third-party provider SDK or any external Python dependency
-  - place any API key value in source, tests, logs, state files, prompts, or commits
+  - store prompt/message content, request payloads, responses text, or any secret in accounting records
+  - add an external Python dependency or a provider SDK
+  - change existing routing outcomes; accounting is observational and must not alter dispatch results
 acceptance:
-  - Each cloud adapter implements the ModelProvider boundary using only the Python standard library over HTTPS; no vendor SDK and no external dependency are added.
-  - OpenAI, OpenRouter, and Groq share one OpenAI-compatible chat-completions adapter; Anthropic uses its Messages API; Google uses its generateContent API. Each maps messages, output, finish reason, and token usage into the existing vendor-neutral records.
-  - Every adapter reads its API key only from the environment, sends it only as the provider auth header, and never includes it in logs, errors, or records.
-  - Each provider has a documented default model that the operator can override by environment variable, plus conservative per-model context and output budgets.
-  - An env bootstrap always registers local Ollama and registers each cloud provider whose key is present; when no cloud key is set only Ollama is registered and L3/L4 return the stable no-eligible-provider outcome.
-  - The bootstrap selects the active L3/L4 cloud tier from OMNISTACKAI_CLOUD_PROVIDER and builds a Balanced gateway; a selected provider without a key is a clear configuration error, not a silent local downgrade.
-  - Standard-library offline tests cover request mapping, auth-header construction, success and error responses, response-size and timeout bounds, key-absent deactivation, and bootstrap registration/selection, all with injected fake openers and zero network access.
-  - The live gateway runner still runs on local Ollama with no keys, and static task verify stays network-independent and green.
+  - Usage records are immutable, validated, metadata-only (no message content or secret) and capture provider, model, tier, complexity, token usage, latency, finish reason, success, and error code.
+  - A configurable price book computes estimated USD cost exactly with Decimal arithmetic; local Ollama is zero; unknown models are recorded as unpriced rather than guessed.
+  - The gateway records exactly one accounting record per dispatch for both success and failure, without changing the returned result or the raised error, and only when a recorder is configured.
+  - The ledger aggregates overall and per-provider/per-model totals, token sums, cost, success/failure counts, deterministic p50/p95 latency, unpriced-call count, and cost per successful call.
+  - Recording is safe under concurrent dispatch and adds no network dependency.
+  - Standard-library offline tests cover record validation, pricing (known, provider-default, unknown, cached-input, local-zero), ledger aggregation and percentiles, gateway success/failure recording, and the no-content privacy guarantee.
+  - Static task verify stays network-independent and green; existing gateway/adapter behavior and tests are unchanged.
 required_gates:
   - impact_analysis
   - python_compile_test
-  - cloud_adapter_mapping_and_error_tests
-  - secret_never_logged_or_stored_tests
-  - key_activation_and_bootstrap_selection_tests
+  - accounting_record_and_pricing_tests
+  - ledger_aggregation_and_percentile_tests
+  - gateway_success_and_failure_recording_tests
+  - no_content_or_secret_stored_test
   - vendor_import_exclusion
   - secret_exclusion_check
   - task_verify
@@ -92,52 +80,16 @@ model_tool_trace:
   local_calls: 0
   cloud_calls: 0
   note: >-
-    No cloud API key is configured, so no cloud provider is called; cloud adapters are exercised only
-    by offline tests with injected fake HTTP openers. Any local live check uses Ollama.
+    Accounting is deterministic and needs no model call to implement or test. Any local live check
+    uses Ollama; no cloud key is configured, so cloud_calls stay zero.
 completion:
-  implementation_commit: eeade72e84c7f1ebd71dfc8c0f7c2f4db0f79677
-  verified_at: "2026-09-06T13:20:00+05:30"
-  verification:
-    - command: task verify
-      result: pass
-    - command: task agent-engine:lint
-      result: pass
-      evidence: compileall, no-external-deps contract, and provider-SDK import exclusion passed
-    - command: task agent-engine:test
-      result: pass
-      evidence: 61 tests passed, including 13 cloud-adapter tests and 6 bootstrap tests, all offline
-    - command: task agent-engine:gateway:run
-      result: pass
-      evidence: with no cloud key set, only ollama-local registered; L1/L2 local, L3/L4 refused; live generation and stream on qwen2.5-coder:14b; cloud_calls=0
-    - command: task security:quick
-      result: pass
-    - command: task env:check
-      result: pass
-    - command: docker compose --env-file .env -f infra/environments/local/compose.yaml config --services
-      result: pass
-      evidence: exactly postgres and control-plane; no service added
-  acceptance_results:
-    - criterion: Each cloud adapter implements the ModelProvider boundary using only the standard library over HTTPS; no vendor SDK or external dependency added.
-      result: pass
-    - criterion: OpenAI/OpenRouter/Groq share one OpenAI-compatible adapter; Anthropic and Gemini have their own; each maps messages, output, finish reason, and usage to vendor-neutral records.
-      result: pass
-    - criterion: API keys are read only from the environment, sent only as the provider auth header, and never appear in logs, errors, records, or repr (asserted by tests).
-      result: pass
-    - criterion: Each provider has an overridable default model and conservative per-model budgets.
-      result: pass
-    - criterion: The bootstrap always registers local Ollama and registers each key-present cloud provider; with no key only Ollama is registered and L3/L4 return no_eligible_provider.
-      result: pass
-    - criterion: OMNISTACKAI_CLOUD_PROVIDER selects the active cloud tier; selecting a provider without its key raises a clear configuration error, not a silent local downgrade.
-      result: pass
-    - criterion: Offline tests cover mapping, auth headers, success/error/oversized/timeout paths, key-absent deactivation, and bootstrap selection with injected fake openers and zero network access.
-      result: pass
-    - criterion: The live gateway runner still runs on local Ollama with no keys; static task verify stays network-independent and green.
-      result: pass
-    - criterion: No real cloud call was made; no vendor SDK, external dependency, Compose/DB change, infrastructure, or new top-level folder introduced.
-      result: pass
+  implementation_commit: null
+  verified_at: null
+  verification: []
+  acceptance_results: []
 blockers: []
 next_action: >-
-  Reconstruct R-009 (candidate: true per-provider SSE streaming for cloud adapters, or cross-provider
-  fallback and circuit breaking). To exercise a cloud provider live, the founder sets that provider's
-  API key and OMNISTACKAI_CLOUD_PROVIDER in the untracked .env.
-next_command: task ai:status
+  Implement the accounting records, price book, and ledger; integrate optional recording into the
+  gateway; add offline tests; run the gates; then record completion evidence and update state,
+  changelog, handoff, task doc, and tracker.
+next_command: task agent-engine:test

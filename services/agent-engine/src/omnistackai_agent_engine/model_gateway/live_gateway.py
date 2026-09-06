@@ -11,6 +11,7 @@ from __future__ import annotations
 import asyncio
 import os
 
+from .accounting import UsageLedger
 from .bootstrap import build_gateway_from_env
 from .errors import ModelGatewayError, ProviderUnavailableError
 from .gateway import ModelGateway, RoutingTask, TaskComplexity
@@ -37,7 +38,8 @@ def _print_ladder(gateway: ModelGateway, timeout: float) -> None:
 
 async def _run() -> None:
     request_timeout = float(os.environ.get("OMNISTACKAI_OLLAMA_REQUEST_TIMEOUT_SECONDS", "300") or "300")
-    boot = build_gateway_from_env()
+    ledger = UsageLedger()
+    boot = build_gateway_from_env(recorder=ledger)
     gateway = boot.gateway
 
     print(f"Registered providers: {', '.join(boot.registered_provider_ids)}")
@@ -89,6 +91,16 @@ async def _run() -> None:
     streamed = "".join(event.delta for event in events).strip()
     print(f"L1 stream   -> {streamed!r} ({len(events)} events, "
           f"{events[-1].usage.output_tokens} output tokens)")
+
+    summary = ledger.summary()
+    print("\nUsage & cost accounting:")
+    print(f"  calls={summary.total_calls} (success={summary.successful_calls}, failed={summary.failed_calls}) "
+          f"tokens in/out={summary.input_tokens}/{summary.output_tokens}")
+    print(f"  total_cost=${summary.total_cost_usd} "
+          f"cost_per_successful_call={('$' + str(summary.cost_per_successful_call_usd)) if summary.cost_per_successful_call_usd is not None else 'n/a'} "
+          f"p50={summary.latency_p50_ms}ms p95={summary.latency_p95_ms}ms")
+    for b in summary.breakdowns:
+        print(f"    {b.provider_id}/{b.model_id}: calls={b.calls} cost=${b.cost_usd}")
 
     print(f"\nPlatform is running via the Balanced gateway on local Ollama "
           f"(model={boot.local_model_id}); cloud_calls=0.")
