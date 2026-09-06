@@ -2,9 +2,9 @@ schema_version: 1
 project: OmniStackAI
 phase: BASIC/MVP
 founder_stage: 0
-current_task: null
-current_status: ready_for_next_task_definition
-branch: ai/R-225-application-ir
+current_task: R-226
+current_status: in_progress
+branch: ai/R-226-adapter-contract
 last_completed_task:
   task_id: R-225
   title: Application IR v1 — framework-neutral intermediate representation

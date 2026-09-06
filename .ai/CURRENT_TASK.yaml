@@ -1,24 +1,20 @@
 schema_version: 1
-task_id: R-225
-title: Application IR v1 — framework-neutral intermediate representation
-status: done
+task_id: R-226
+title: Framework adapter contract and generated file-set model
+status: in_progress
 phase: BASIC/MVP
 founder_stage: 0
-branch: ai/R-225-application-ir
+branch: ai/R-226-adapter-contract
 goal: >-
-  Build the first real product primitive: a framework-neutral, versioned, validated Application IR
-  (Brief 9) that is the source of truth between user intent and generated targets. It models the
-  application, project strategy, roles, entities (fields/relations), APIs, screens, and acceptance
-  criteria, with strict cross-validation and deterministic dict/JSON serialization. This is the
-  foundation every codegen framework adapter will consume; it needs no network or infrastructure.
+  Define the platform-owned code-generation boundary: an immutable, validated in-memory generated
+  file-set (a customer project's source tree as path->content records) and a FrameworkAdapter contract
+  that turns an Application IR into a GeneratedProject for a specific target, plus a deterministic
+  adapter registry. This is the seam every framework adapter (Next.js, Go/Python, Flutter, RN, native)
+  implements. Pure, offline, deterministic; no files are written to disk and no code is run.
 source:
   tracker_sheet: Phase_Roadmap
   tracker_row: reconstructed; new IDs continue after the workbook backlog's R-010..R-219
-  brief_sections: [2, 9, 24, 25, 26, 27, 47, 74, 77, 91, 92]
-  founder_intent: >-
-    Founder directed building the actual product per the brief, one Tracker ID at a time, to a smooth,
-    advanced, optimised standard to compete with Emergent-class AI app builders. The Application IR is
-    the correct first product dependency and is fully doable offline.
+  brief_sections: [3, 9, 16, 17, 24, 25, 26, 27, 46, 47, 74, 75, 77, 91, 92]
 project_profile:
   repository: platform_modular_monorepo
   service: python_agent_engine
@@ -26,11 +22,12 @@ project_profile:
   model_routing: balanced
 complexity: L2
 expected_impact:
-  - services/agent-engine/src/omnistackai_agent_engine/application_ir/__init__.py
-  - services/agent-engine/src/omnistackai_agent_engine/application_ir/ir.py
-  - services/agent-engine/src/omnistackai_agent_engine/application_ir/errors.py
-  - services/agent-engine/tests/test_application_ir.py
-  - docs/APPLICATION_IR.md
+  - services/agent-engine/src/omnistackai_agent_engine/codegen/__init__.py
+  - services/agent-engine/src/omnistackai_agent_engine/codegen/files.py
+  - services/agent-engine/src/omnistackai_agent_engine/codegen/adapter.py
+  - services/agent-engine/src/omnistackai_agent_engine/codegen/errors.py
+  - services/agent-engine/tests/test_codegen_contract.py
+  - docs/CODEGEN.md
   - portable state, changelog, handoff, task doc, and tracker evidence
 allowed_paths:
   - .ai/**
@@ -41,31 +38,29 @@ allowed_paths:
   - services/agent-engine/**
 must_not_change:
   - PostgreSQL as the control-plane database or the existing schema
-  - the model-gateway runtime behavior (R-005..R-223); the IR is a separate additive package
+  - the model-gateway and Application IR runtime behavior (additive package only)
   - local Compose services or infrastructure; the Section 74 top-level contract; the offline bootstrap
   - the network-independence of static task verify
 must_not_do:
-  - add an external Python dependency or a provider SDK
-  - generate code, run agents, or add framework adapters yet (this task is the IR data model only)
-  - store secrets anywhere
+  - write files to disk, run generated code, or add a real framework adapter yet (contract only)
+  - add an external Python dependency; store secrets
 acceptance:
-  - The IR models application (name/description/platforms), project strategy, roles, entities with
-    fields and relations, APIs, screens, and acceptance criteria, as immutable validated records.
-  - Validation enforces non-empty bounded identifiers, unique entity/field/role/screen ids, valid
-    enums, well-formed API method+path, and cross-references (relation targets an existing entity;
-    a screen role references an existing role); violations raise stable typed errors.
-  - The IR carries a schema version; deterministic to_dict()/from_dict() round-trip losslessly and
-    from_dict rejects an unknown/newer schema version with a stable error (migration hook).
-  - Standard-library only; no network, no infrastructure; the model is independent of any target
-    framework.
-  - Standard-library offline tests cover valid construction, each validation rule, cross-reference
-    errors, round-trip serialization, and version rejection.
+  - GeneratedFile is an immutable, validated record with a safe relative POSIX path (no absolute paths,
+    no '..' traversal, no control chars, bounded) and string content.
+  - GeneratedProject holds a target plus a set of GeneratedFiles with unique, deterministically ordered
+    paths; duplicate paths raise a stable error; it exposes lookup, paths, and length.
+  - FrameworkAdapter is a runtime-checkable contract (target + generate(ir) -> GeneratedProject); a
+    deterministic AdapterRegistry registers adapters by target with stable duplicate/unknown errors.
+  - The generation target is a bounded enum covering the MVP targets; product code selects an adapter
+    only through the registry, never a concrete class.
+  - Standard-library offline tests cover file-path validation, project uniqueness/ordering, a fake
+    adapter through the registry, and registry error paths.
   - task verify stays green and network-independent.
 required_gates:
   - impact_analysis
-  - ir_construction_and_validation_tests
-  - cross_reference_and_version_tests
-  - roundtrip_serialization_tests
+  - generated_file_path_safety_tests
+  - project_uniqueness_and_ordering_tests
+  - adapter_registry_tests
   - python_compile_test
   - vendor_import_exclusion
   - secret_exclusion_check
@@ -78,32 +73,14 @@ model_tool_trace:
   configured_model: qwen2.5-coder:14b
   local_calls: 0
   cloud_calls: 0
-  note: Deterministic data model; no model call. No cloud key set; cloud_calls zero.
+  note: Deterministic contracts; no model call. No cloud key set; cloud_calls zero.
 completion:
-  implementation_commit: ad5e4ddf5918ddf3e4005c21a07c21601faf2ee6
-  verified_at: "2026-09-06T19:40:00+05:30"
-  verification:
-    - command: task verify
-      result: pass
-      evidence: 115 agent-engine tests (17 new IR tests) plus all Stage 0 checks green
-    - command: task agent-engine:lint
-      result: pass
-    - command: task security:quick
-      result: pass
-    - command: task env:check
-      result: pass
-  acceptance_results:
-    - criterion: The IR models application, project strategy, roles, entities (fields/relations), APIs, screens, and acceptance criteria as immutable validated records.
-      result: pass
-    - criterion: Validation enforces bounded identifiers, unique ids, valid enums, well-formed API method+path, and cross-references; violations raise stable typed errors.
-      result: pass
-    - criterion: The IR is versioned; to_dict/from_dict round-trip losslessly and from_dict rejects an unknown/newer version.
-      result: pass
-    - criterion: Standard-library only, framework-neutral, no network/infra; offline tests cover construction, each rule, cross-refs, round-trip, and version rejection.
-      result: pass
-  note: Deterministic data model; no model call. No cloud key set; cloud_calls zero.
+  implementation_commit: null
+  verified_at: null
+  verification: []
+  acceptance_results: []
 blockers: []
 next_action: >-
-  Proceed to R-226 — the framework adapter contract (the interface codegen adapters implement, plus an
-  in-memory generated file-set model), then R-227 the first adapter (Next.js code emission from the IR).
-next_command: task ai:status
+  Implement the generated file-set model, adapter contract, and registry with offline tests; run the
+  gates; record completion; then R-227 (Next.js code adapter emitting a real app from the IR).
+next_command: task agent-engine:test
