@@ -1,21 +1,19 @@
 schema_version: 1
-task_id: R-227
-title: Next.js web framework adapter — generate a real app from the Application IR
-status: done
+task_id: R-228
+title: Git service v1 — materialize a generated project into a customer-owned repo
+status: in_progress
 phase: BASIC/MVP
 founder_stage: 0
-branch: ai/R-227-nextjs-adapter
+branch: ai/R-228-git-service
 goal: >-
-  Implement the first framework adapter: a NextjsWebAdapter that turns an Application IR into a real
-  Next.js (App Router, TypeScript) project as a GeneratedProject — package.json, tsconfig, next.config
-  with security headers, app/layout, an app/page overview, TypeScript interfaces from entities, App
-  Router API route handlers from the IR APIs (dynamic {param} -> [param]), a page per screen, plus
-  README/.gitignore/.env.example. Deterministic and offline: emitted files are asserted in tests; no
-  install, build, or disk write. Registered via the AdapterRegistry so callers stay provider-agnostic.
+  Complete the first end-to-end builder slice: safely write a GeneratedProject to a target directory
+  and initialize it as a real Git repository owned by the customer, with a first commit. Deterministic
+  and offline (git is available); writes only inside the caller-provided target directory, never the
+  platform repo. This closes the loop IR -> generated app -> owned Git repo.
 source:
   tracker_sheet: Phase_Roadmap
   tracker_row: reconstructed; new IDs continue after the workbook backlog's R-010..R-219
-  brief_sections: [9, 16, 17, 40, 43, 44, 46, 47, 74, 77, 91, 92]
+  brief_sections: [6, 20, 34, 71, 74, 75, 77, 91, 92]
 project_profile:
   repository: platform_modular_monorepo
   service: python_agent_engine
@@ -23,12 +21,11 @@ project_profile:
   model_routing: balanced
 complexity: L2
 expected_impact:
-  - services/agent-engine/src/omnistackai_agent_engine/codegen/files.py (allow framework route filename chars)
-  - services/agent-engine/src/omnistackai_agent_engine/codegen/nextjs.py
-  - services/agent-engine/src/omnistackai_agent_engine/codegen/__init__.py
-  - services/agent-engine/tests/test_codegen_contract.py (bracketed-path case)
-  - services/agent-engine/tests/test_nextjs_adapter.py
-  - docs/CODEGEN.md
+  - services/agent-engine/src/omnistackai_agent_engine/git_service/__init__.py
+  - services/agent-engine/src/omnistackai_agent_engine/git_service/materialize.py
+  - services/agent-engine/src/omnistackai_agent_engine/git_service/errors.py
+  - services/agent-engine/tests/test_git_service.py
+  - docs/GIT_SERVICE.md
   - portable state, changelog, handoff, task doc, and tracker evidence
 allowed_paths:
   - .ai/**
@@ -39,35 +36,30 @@ allowed_paths:
   - services/agent-engine/**
 must_not_change:
   - PostgreSQL as the control-plane database or the existing schema
-  - the model-gateway, Application IR, and codegen-contract public behavior (additive only; the
-    file-path validator is extended, not weakened — still no absolute paths, '..', backslashes, or
-    control chars)
+  - the model-gateway, Application IR, and codegen public behavior (additive package)
   - local Compose services or infrastructure; the Section 74 top-level contract; the offline bootstrap
   - the network-independence of static task verify
 must_not_do:
-  - install, build, or run the generated app; write generated files to disk in this task
-  - add an external Python dependency; store secrets (generated .env.example holds placeholders only)
+  - write anywhere except the caller-provided target directory; never touch the platform repo
+  - depend on global git config; make any network call; store secrets
 acceptance:
-  - NextjsWebAdapter implements FrameworkAdapter (target nextjs-web) and returns a GeneratedProject
-    from an ApplicationIR that a Next.js toolchain could install and build (correct App Router layout).
-  - Entities become TypeScript interfaces (field types mapped); IR APIs become App Router route
-    handlers with {param} mapped to [param] and one route.ts per route directory exporting each method;
-    each screen becomes an app page; an app/page overview lists the app, entities, and screens.
-  - package.json, tsconfig.json, next.config.mjs (security headers), README.md, .gitignore, and
-    .env.example (placeholders only) are emitted; all paths are safe and deterministically ordered.
-  - The file-path validator is extended to allow framework route filename characters ([]()@+) while
-    still rejecting absolute paths, '..', backslashes, and control chars.
-  - Generation is a pure function of the IR; standard-library only; nothing is installed, built, run,
-    or written to disk.
-  - Standard-library offline tests assert emitted paths and key file contents for a representative IR,
-    dynamic-route mapping, entity->interface mapping, and registry wiring.
+  - materialize_project writes every GeneratedFile under the target directory, creating parent dirs,
+    refusing any path that would escape the target, and (unless overwrite) refusing a non-empty target;
+    executable files get the executable bit.
+  - create_repository initializes a Git repo in the target, stages all files, and makes one commit with
+    the customer as author/committer via explicit -c identity (no global git config), returning the
+    commit SHA and file count.
+  - The written tree exactly matches the GeneratedProject (paths and contents), and the repo has
+    exactly one commit containing those files.
+  - Standard-library + local git only; deterministic; offline; nothing outside the target is modified.
+  - Standard-library offline tests (in a temp dir) cover materialization, escape refusal, non-empty
+    refusal, repo init/commit, author identity, and tree/commit correctness.
   - task verify stays green and network-independent.
 required_gates:
   - impact_analysis
-  - nextjs_emission_tests
-  - dynamic_route_and_type_mapping_tests
-  - path_validator_extension_tests
-  - registry_wiring_test
+  - materialize_and_escape_refusal_tests
+  - repo_init_commit_and_identity_tests
+  - tree_matches_project_test
   - python_compile_test
   - vendor_import_exclusion
   - secret_exclusion_check
@@ -80,33 +72,14 @@ model_tool_trace:
   configured_model: qwen2.5-coder:14b
   local_calls: 0
   cloud_calls: 0
-  note: Deterministic codegen; no model call. No cloud key set; cloud_calls zero.
+  note: Deterministic file/git operations; no model call. No cloud key set; cloud_calls zero.
 completion:
-  implementation_commit: 1a4f8a9b8cc2ca59be32142bb6c16992cb4dbd40
-  verified_at: "2026-09-06T20:30:00+05:30"
-  verification:
-    - command: task verify
-      result: pass
-      evidence: 134 agent-engine tests (9 new adapter/path tests) plus all Stage 0 checks
-    - command: task agent-engine:lint
-      result: pass
-    - command: task security:quick
-      result: pass
-  acceptance_results:
-    - criterion: NextjsWebAdapter implements FrameworkAdapter (nextjs-web) and returns a GeneratedProject with a correct App Router layout.
-      result: pass
-    - criterion: Entities -> TS interfaces; IR APIs -> App Router route handlers with {param}->[param] and a handler per method; screens -> pages; app/page overview.
-      result: pass
-    - criterion: package.json/tsconfig/next.config (security headers)/README/.gitignore/.env.example (placeholders only) emitted; safe deterministic paths.
-      result: pass
-    - criterion: The path validator was extended for framework route filenames while still rejecting absolute paths, '..', backslashes, control chars.
-      result: pass
-    - criterion: Generation is a pure function of the IR; nothing installed/built/run/written to disk; offline tests assert emitted files.
-      result: pass
-  note: Demo IR produced a 13-file Next.js project. Deterministic; no model call; cloud_calls zero.
+  implementation_commit: null
+  verified_at: null
+  verification: []
+  acceptance_results: []
 blockers: []
 next_action: >-
-  R-228 — Git service v1: materialize a GeneratedProject into a customer-owned repo on disk with an
-  initial commit (offline; git is available), completing the first end-to-end builder slice
-  (prompt/IR -> generated app -> owned Git repo).
-next_command: task ai:status
+  Implement the git-service materializer + repo initializer with offline temp-dir tests; run the gates;
+  record completion. This completes the first end-to-end builder slice (IR -> app -> owned Git repo).
+next_command: task agent-engine:test
