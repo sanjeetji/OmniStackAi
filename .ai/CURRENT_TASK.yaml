@@ -1,7 +1,7 @@
 schema_version: 1
 task_id: R-225
 title: Application IR v1 — framework-neutral intermediate representation
-status: in_progress
+status: done
 phase: BASIC/MVP
 founder_stage: 0
 branch: ai/R-225-application-ir
@@ -80,12 +80,30 @@ model_tool_trace:
   cloud_calls: 0
   note: Deterministic data model; no model call. No cloud key set; cloud_calls zero.
 completion:
-  implementation_commit: null
-  verified_at: null
-  verification: []
-  acceptance_results: []
+  implementation_commit: ad5e4ddf5918ddf3e4005c21a07c21601faf2ee6
+  verified_at: "2026-09-06T19:40:00+05:30"
+  verification:
+    - command: task verify
+      result: pass
+      evidence: 115 agent-engine tests (17 new IR tests) plus all Stage 0 checks green
+    - command: task agent-engine:lint
+      result: pass
+    - command: task security:quick
+      result: pass
+    - command: task env:check
+      result: pass
+  acceptance_results:
+    - criterion: The IR models application, project strategy, roles, entities (fields/relations), APIs, screens, and acceptance criteria as immutable validated records.
+      result: pass
+    - criterion: Validation enforces bounded identifiers, unique ids, valid enums, well-formed API method+path, and cross-references; violations raise stable typed errors.
+      result: pass
+    - criterion: The IR is versioned; to_dict/from_dict round-trip losslessly and from_dict rejects an unknown/newer version.
+      result: pass
+    - criterion: Standard-library only, framework-neutral, no network/infra; offline tests cover construction, each rule, cross-refs, round-trip, and version rejection.
+      result: pass
+  note: Deterministic data model; no model call. No cloud key set; cloud_calls zero.
 blockers: []
 next_action: >-
-  Implement the Application IR data model, validation, serialization, and offline tests; run the gates;
-  record completion evidence; then proceed to R-226 (framework adapter contract).
-next_command: task agent-engine:test
+  Proceed to R-226 — the framework adapter contract (the interface codegen adapters implement, plus an
+  in-memory generated file-set model), then R-227 the first adapter (Next.js code emission from the IR).
+next_command: task ai:status

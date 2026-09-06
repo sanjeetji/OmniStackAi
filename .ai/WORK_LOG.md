@@ -234,6 +234,23 @@
   extended); no ID lost, MVP total 118 / Done 13, chart/styles byte-identical, zip valid.
 - Created implementation checkpoint `9ec809149ab91ebaa13b88ff0a15ebd382d7a728`.
 
+## 2026-09-06 — R-224 (deferred) and R-225
+
+- R-224 (Next.js console upgrade): attempted the install three times (incl. standalone with a 10-min
+  timeout) and once with Vite/Preact; this sandbox cannot fetch front-end bundler native binaries, so
+  recorded R-224 as Deferred with a resume plan and committed no application code.
+- Also showed the platform live: ran `task agent-engine:gateway:run` (local qwen routing/gen/stream +
+  cost) and published the console UI as a private Artifact from the snapshot.
+- R-225: began the actual product per the brief. Added the framework-neutral Application IR (Brief 9)
+  under `omnistackai_agent_engine.application_ir`: immutable validated records (application, project
+  strategy, roles, entities with fields/relations, APIs, screens, acceptance criteria), cross-reference
+  validation, unique-id and enum checks, schema versioning, and lossless to_dict/from_dict with a
+  version-rejection migration hook. Standard-library only; no codegen/agents yet.
+- Added 17 offline IR tests (115 total). `task verify` green.
+- Inserted tracker row R-225 (category Product) at Phase_Roadmap row 9 (rows 9..232 shifted to 10..233,
+  ranges extended); no ID lost, MVP total 120 / Done 14, chart/styles byte-identical, zip valid.
+- Created implementation checkpoint `ad5e4ddf5918ddf3e4005c21a07c21601faf2ee6`.
+
 ## 2026-09-06 — R-224 (deferred)
 
 - Attempted the Next.js console upgrade. `pnpm install` for next@15.5.4 timed out fetching the native

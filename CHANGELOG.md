@@ -1,5 +1,6 @@
 # Changelog
 
+2026-09-06  R-225  Added the framework-neutral Application IR v1 (Brief 9) — the source of truth for code generation: validated, versioned records for application/strategy/roles/entities/APIs/screens/acceptance with cross-reference checks and lossless serialization; first real product primitive
 2026-09-06  R-224  Deferred the Next.js console upgrade — the Next.js SWC binary install times out in this sandbox (attempted 3x); recorded a resume plan; no application code committed; the R-222 static console remains the working slice
 2026-09-06  R-223  Wired the cross-provider fallback chain and circuit breaker into build_gateway_from_env via environment configuration (OMNISTACKAI_FALLBACK_PROVIDERS + breaker threshold/cooldown); the console overview surfaces the resilience settings; single-provider default unchanged
 2026-09-06  R-222  Added the first platform console slice (apps/console-web): a dependency-free static console rendering providers, the routing ladder, the price book, and the usage/cost dashboard from a metadata-only Python-exported snapshot (no secrets, strict CSP, no external calls); Next.js upgrade deferred (SWC install times out in this environment)

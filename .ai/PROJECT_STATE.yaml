@@ -2,14 +2,14 @@ schema_version: 1
 project: OmniStackAI
 phase: BASIC/MVP
 founder_stage: 0
-current_task: R-225
-current_status: in_progress
+current_task: null
+current_status: ready_for_next_task_definition
 branch: ai/R-225-application-ir
 last_completed_task:
-  task_id: R-223
-  title: Env-driven fallback chain and circuit breaker wiring in the gateway bootstrap
-  implementation_commit: 9ec809149ab91ebaa13b88ff0a15ebd382d7a728
-  verification: task verify (98 agent-engine tests)
+  task_id: R-225
+  title: Application IR v1 — framework-neutral intermediate representation
+  implementation_commit: ad5e4ddf5918ddf3e4005c21a07c21601faf2ee6
+  verification: task verify (115 agent-engine tests, 17 new IR tests)
   result: pass
 control_plane_database: postgresql
 model_routing_mode: balanced
@@ -23,5 +23,5 @@ id_note: >-
   Workbook backlog owns R-010..R-219. Founder-requested tasks use IDs after R-219: R-220..R-223 done,
   R-224 Next.js deferred (env-blocked), R-225 Application IR (in progress).
 blockers: []
-next_action: Complete Application IR (R-225), then R-226 framework adapter contract.
-last_updated: "2026-09-06T19:20:00+05:30"
+next_action: R-226 — framework adapter contract (interface + in-memory generated file-set model), then R-227 Next.js code adapter emitting a real app from the IR.
+last_updated: "2026-09-06T19:40:00+05:30"
