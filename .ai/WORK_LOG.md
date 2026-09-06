@@ -218,3 +218,18 @@
 - Inserted tracker row R-222 at Phase_Roadmap row 9 (rows 9..229 shifted to 10..230, ranges extended);
   no ID lost, backlog intact, MVP total 117 / Done 12, chart/styles byte-identical, zip valid.
 - Created implementation checkpoint `c07bbcb1b9b8c010c6d64e3a0e09ac0c855102c8`.
+
+## 2026-09-06 — R-223
+
+- Wired R-221 resilience into `build_gateway_from_env`: `OMNISTACKAI_FALLBACK_PROVIDERS` builds an
+  ordered fallback chain from already-registered providers (`ollama` or a key-present cloud name);
+  unknown or key-less names raise a clear `CloudProviderSelectionError`.
+- Attached a `CircuitBreaker` (threshold/cooldown from env, safe defaults 3/30) only when a chain is
+  configured, so single-provider behavior is byte-for-byte unchanged. `GatewayBootstrap` now exposes
+  the chain provider ids and breaker settings.
+- Extended the overview snapshot with a `resilience` block and rendered a Resilience panel in the
+  console; added `.env.example` entries. No key/secret is ever included.
+- Added 6 offline tests (98 total); deterministic, no cloud call. `task verify` green.
+- Inserted tracker row R-223 at Phase_Roadmap row 9 (rows 9..230 shifted to 10..231, ranges
+  extended); no ID lost, MVP total 118 / Done 13, chart/styles byte-identical, zip valid.
+- Created implementation checkpoint `9ec809149ab91ebaa13b88ff0a15ebd382d7a728`.

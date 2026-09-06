@@ -1,7 +1,7 @@
 schema_version: 1
 task_id: R-223
 title: Env-driven fallback chain and circuit breaker wiring in the gateway bootstrap
-status: in_progress
+status: done
 phase: BASIC/MVP
 founder_stage: 0
 branch: ai/R-223-env-fallback-wiring
@@ -84,12 +84,36 @@ model_tool_trace:
   cloud_calls: 0
   note: Deterministic wiring; no model call. No cloud key set; cloud_calls zero.
 completion:
-  implementation_commit: null
-  verified_at: null
-  verification: []
-  acceptance_results: []
+  implementation_commit: 9ec809149ab91ebaa13b88ff0a15ebd382d7a728
+  verified_at: "2026-09-06T18:20:00+05:30"
+  verification:
+    - command: task verify
+      result: pass
+      evidence: 98 agent-engine tests (6 new fallback-wiring/resilience tests) plus all Stage 0 checks
+    - command: node --check apps/console-web/app.js
+      result: pass
+    - command: task security:quick
+      result: pass
+    - command: task env:check
+      result: pass
+    - command: docker compose --env-file .env -f infra/environments/local/compose.yaml config --services
+      result: pass
+      evidence: exactly postgres and control-plane; no service added
+  acceptance_results:
+    - criterion: OMNISTACKAI_FALLBACK_PROVIDERS builds an ordered chain from registered providers; unknown or key-less names raise a clear error.
+      result: pass
+    - criterion: A circuit breaker (env threshold/cooldown, safe defaults) is attached only when a chain is configured.
+      result: pass
+    - criterion: With no chain, build_gateway_from_env is behaviorally identical to before.
+      result: pass
+    - criterion: GatewayBootstrap exposes the chain + breaker settings; the snapshot/console render a resilience panel; no secret appears.
+      result: pass
+    - criterion: Offline tests cover chain building, unknown/no-key errors, breaker attachment, the unchanged default, and snapshot fields.
+      result: pass
+  note: Deterministic wiring; no model call. No cloud key set; cloud_calls zero.
 blockers: []
 next_action: >-
-  Implement env-driven fallback/breaker wiring, extend the snapshot and console, add tests, run gates,
-  record completion evidence, then attempt R-224 (Next.js console upgrade).
-next_command: task agent-engine:test
+  Attempt R-224 (Next.js console upgrade). It is contingent on the SWC install succeeding in this
+  environment (it timed out during R-222); if it fails again the static console remains and the
+  upgrade stays deferred.
+next_command: task ai:status

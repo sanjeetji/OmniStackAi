@@ -1,5 +1,6 @@
 # Changelog
 
+2026-09-06  R-223  Wired the cross-provider fallback chain and circuit breaker into build_gateway_from_env via environment configuration (OMNISTACKAI_FALLBACK_PROVIDERS + breaker threshold/cooldown); the console overview surfaces the resilience settings; single-provider default unchanged
 2026-09-06  R-222  Added the first platform console slice (apps/console-web): a dependency-free static console rendering providers, the routing ladder, the price book, and the usage/cost dashboard from a metadata-only Python-exported snapshot (no secrets, strict CSP, no external calls); Next.js upgrade deferred (SWC install times out in this environment)
 2026-09-06  R-221  Added explicit allowlist-driven cross-provider fallback and a per-provider circuit breaker to the gateway: retriable failures fail over along the configured chain (never silent, never on non-retriable errors), the breaker opens/cools-down/half-opens, and every attempt is accounted
 2026-09-06  R-220  Added true per-provider Server-Sent-Events streaming for the cloud adapters (OpenAI-compatible, Anthropic, Gemini): ordered delta events plus a final event with measured usage, reusing the HTTP-safety bounds (new IDs continue after the workbook backlog's R-010..R-219)

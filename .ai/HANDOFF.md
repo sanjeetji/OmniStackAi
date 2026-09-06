@@ -1,56 +1,42 @@
 # Current Handoff
 
-Task ID: R-222
+Task ID: R-223
 Status: done
 Phase: BASIC/MVP — Founder Stage 0
-Branch: `ai/R-222-console-web`
-Last verified implementation SHA: `c07bbcb1b9b8c010c6d64e3a0e09ac0c855102c8`
+Branch: `ai/R-223-env-fallback-wiring`
+Last verified implementation SHA: `9ec809149ab91ebaa13b88ff0a15ebd382d7a728`
 
 ## Completed
 
-- First platform console slice under `apps/console-web`: renders providers (local + all supported
-  cloud, with tier / default model / active key-state), the Balanced routing ladder, the price book,
-  and the usage/cost dashboard from the accounting ledger.
-- Python `overview.py` `platform_overview()` exports a deterministic, **metadata-only** snapshot
-  (`data/overview.json`); a provider's key state is a boolean and no key/secret is ever included.
-  `PriceBook.entries()` exposes prices read-only.
-- The console is **dependency-free** (`index.html` + `styles.css` + `app.js`): safe DOM APIs only
-  (`textContent`, never `innerHTML`), a strict CSP meta tag, same-origin snapshot fetch only.
-- `task console:snapshot` refreshes the data; `task console:serve` serves it on
-  `http://127.0.0.1:4321`.
-
-## Why static (and the Next.js path)
-
-A full Next.js (App Router, TypeScript) app was authored, but this sandbox's network repeatedly timed
-out fetching Next's native SWC binary (`@next/swc-darwin-arm64`), so it could not be installed or
-built here and a frozen install would have broken the offline `task bootstrap`. The static slice ships
-now with the identical data contract and design; the Next.js upgrade is the documented next step once
-the build environment has reliable registry access. The offline bootstrap contract is unchanged.
+- Env-driven resilience wiring in `build_gateway_from_env`:
+  - `OMNISTACKAI_FALLBACK_PROVIDERS` — ordered fallback chain from already-registered providers
+    (`ollama` for local, or a key-present cloud name). Unknown or key-less names raise a clear
+    `CloudProviderSelectionError`.
+  - `CircuitBreaker` (from `OMNISTACKAI_CIRCUIT_FAILURE_THRESHOLD` / `OMNISTACKAI_CIRCUIT_COOLDOWN_SECONDS`,
+    defaults 3 / 30) is attached **only when a chain is configured** — single-provider behavior is
+    unchanged.
+  - `GatewayBootstrap` exposes `fallback_provider_ids` + breaker settings; the overview snapshot has a
+    `resilience` block and the console renders a Resilience panel.
 
 ## Verification
 
-- `task verify` — pass (92 agent-engine tests; 6 new overview tests).
-- `node --check apps/console-web/app.js` — pass.
-- Served the console over HTTP: `/`, `styles.css`, `app.js`, `data/overview.json` all return 200; the
-  snapshot has 6 providers, 5 price rows, 5 ladder steps; no secret in the console tree.
-- `task security:quick`, `task env:check` — pass. Compose unchanged (`postgres`, `control-plane`).
-- Tracker — R-222 at `Phase_Roadmap!A9:M9` (rows 9..229 shifted to 10..230, ranges extended); no ID
-  lost; backlog intact; MVP total 117, Done 12; chart/styles/workbook byte-identical; zip verified.
+- `task verify` — pass (98 agent-engine tests; 6 new). `node --check apps/console-web/app.js` — pass.
+- `task security:quick`, `task env:check` — pass; no key/secret in snapshot or console.
+- Compose unchanged (`postgres`, `control-plane`); offline `task bootstrap` unchanged.
+- Tracker — R-223 at `Phase_Roadmap!A9:M9` (rows 9..230 shifted to 10..231, ranges extended); no ID
+  lost; MVP total 118, Done 13; chart/styles/workbook byte-identical; zip verified.
 
 ## Blockers and risks
 
-- Next.js install/build is not possible in this sandbox (SWC binary download times out); the upgrade
-  needs an environment with reliable registry access.
-- The console reads a committed snapshot; it is not yet live-wired to a running gateway (no HTTP
-  serving of the gateway exists yet). Refresh with `task console:snapshot`.
-- `build_gateway_from_env` still builds a single-tier policy; env-driven fallback-chain wiring remains
-  a small follow-up (the gateway already supports `RoutingPolicy.fallback`).
+- The Next.js console upgrade (candidate R-224) is still blocked in this sandbox by the Next SWC
+  binary download timing out; the static console is the working slice until an environment with
+  reliable registry access is available.
 
 ## Next action
 
-Both founder-requested items (R-220 streaming, R-221 fallback) and the console slice (R-222) are done.
-Confirm the next Tracker ID with the founder — candidates: env-driven fallback wiring in
-`build_gateway_from_env`, or the Next.js console upgrade once registry access is reliable.
+Attempt **R-224 (Next.js console upgrade)**; contingent on the SWC install succeeding. If it fails
+again, keep the static console and leave the upgrade deferred (no broken app committed). Native
+mobile / device-cloud remains deferred per Brief 25/91 until web/backend stability.
 
 ## Next command
 
