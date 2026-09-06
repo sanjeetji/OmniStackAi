@@ -1,7 +1,7 @@
 schema_version: 1
 task_id: R-009
 title: Deterministic usage and cost accounting for the model gateway
-status: in_progress
+status: done
 phase: BASIC/MVP
 founder_stage: 0
 branch: ai/R-009-usage-cost-accounting
@@ -83,13 +83,44 @@ model_tool_trace:
     Accounting is deterministic and needs no model call to implement or test. Any local live check
     uses Ollama; no cloud key is configured, so cloud_calls stay zero.
 completion:
-  implementation_commit: null
-  verified_at: null
-  verification: []
-  acceptance_results: []
+  implementation_commit: f2fc8654c6a5717e292adcdc2abb5da2fd7409c2
+  verified_at: "2026-09-06T14:20:00+05:30"
+  verification:
+    - command: task verify
+      result: pass
+    - command: task agent-engine:lint
+      result: pass
+    - command: task agent-engine:test
+      result: pass
+      evidence: 74 tests passed, including 13 new accounting tests (pricing, ledger, percentiles, gateway recording, privacy)
+    - command: task agent-engine:gateway:run
+      result: pass
+      evidence: live local run recorded 2 successful calls, total_cost $0.000000, p50/p95 latency, per-provider breakdown; cloud_calls=0
+    - command: task security:quick
+      result: pass
+    - command: task env:check
+      result: pass
+    - command: docker compose --env-file .env -f infra/environments/local/compose.yaml config --services
+      result: pass
+      evidence: exactly postgres and control-plane; no service added
+  acceptance_results:
+    - criterion: Usage records are immutable, validated, and metadata-only (no content or secret) with provider, model, tier, complexity, tokens, latency, finish reason, success, and error code.
+      result: pass
+    - criterion: A configurable Decimal price book computes cost exactly; local Ollama is zero; unknown models are unpriced; cached input can be priced separately.
+      result: pass
+    - criterion: The gateway records exactly one record per dispatch (success and failure) without changing the returned result or raised error, only when a recorder is configured.
+      result: pass
+    - criterion: The ledger aggregates overall and per-provider/model totals, tokens, cost, success/failure, deterministic p50/p95 latency, unpriced-call count, and cost per successful call.
+      result: pass
+    - criterion: Recording is thread-safe and adds no network dependency.
+      result: pass
+    - criterion: Offline tests cover record validation, pricing paths, ledger aggregation and percentiles, gateway success/failure recording, and the no-content privacy guarantee.
+      result: pass
+    - criterion: Static task verify stays network-independent and green; existing routing/adapter behavior and tests are unchanged.
+      result: pass
 blockers: []
 next_action: >-
-  Implement the accounting records, price book, and ledger; integrate optional recording into the
-  gateway; add offline tests; run the gates; then record completion evidence and update state,
-  changelog, handoff, task doc, and tracker.
-next_command: task agent-engine:test
+  Reconstruct R-010 with founder confirmation. The workbook's R-010 is Native iOS Agent, which must
+  not start before web/backend stability; recommend reordering to a nearer MVP dependency such as
+  true per-provider streaming or cross-provider fallback.
+next_command: task ai:status

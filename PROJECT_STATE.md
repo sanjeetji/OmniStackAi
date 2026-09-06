@@ -5,16 +5,17 @@ Last updated: 2026-09-06T10:46:19+05:30 by Codex (GPT-5)
 Stage 0 (Founder Build Sequence, Brief Section 91) — BASIC/MVP
 
 ## Last Completed Task
-Tracker ID: R-008 — Cloud API-key ModelProvider adapters (multi-provider, key-activated) — DONE,
-implementation checkpoint `eeade72e84c7f1ebd71dfc8c0f7c2f4db0f79677`
+Tracker ID: R-009 — Deterministic usage and cost accounting for the model gateway — DONE,
+`task verify` and 74 agent-engine tests (13 new accounting tests) passing, records are metadata-only,
+implementation checkpoint `f2fc8654c6a5717e292adcdc2abb5da2fd7409c2`
 
 ## In Progress (if any)
-Tracker ID: R-009 — Deterministic usage and cost accounting for the model gateway
-Files touched so far: `services/agent-engine/src/omnistackai_agent_engine/model_gateway/{accounting.py,gateway.py,bootstrap.py,live_gateway.py,__init__.py}`, `services/agent-engine/tests/test_accounting.py`, `docs/MODEL_PROVIDER.md`, portable state, and tracker row R-009
+Tracker ID: none
+Files touched so far: none
 Blocker: none
 
 ## Next Up (queued, in order)
-1. R-010 — Native iOS Agent (from `Phase_Roadmap`) — NOT before web/backend stability; likely reorder to a nearer MVP need (e.g. true per-provider streaming or cross-provider fallback) with founder approval
+1. R-010 — Native iOS Agent (from `Phase_Roadmap`) — NOT before web/backend stability; recommend reordering to a nearer MVP need (e.g. true per-provider streaming or cross-provider fallback) with founder approval
 
 ## Decisions Made This Session
 - Applied the normative V6 precedence rules and Section 91 Phase 0 sequence.
@@ -80,6 +81,11 @@ Blocker: none
 - Evolved a stale R-005-era guard in `scripts/test.sh` (it forbade any provider adapter) to enforce
   the durable invariants instead — no vendor SDK import, gateway/cloud/bootstrap files exist, and
   cloud providers are opt-in defaulting to none — since cloud adapters are the sanctioned R-008 work.
+- R-009: founder selected best-in-class usage & cost accounting. Added deterministic, privacy-safe
+  accounting — immutable metadata-only usage records (no content/secret), a configurable Decimal
+  price book (local Ollama zero, unknown unpriced), and an aggregating ledger (per-provider/model
+  breakdowns, p50/p95 latency, cost per successful call). Gateway records one record per dispatch
+  without altering results; the live runner prints a cost summary. Zero model calls to verify.
 
 ## Environment / Secrets Status
 - Local Ollama: server 0.33.3 healthy on loopback; `qwen2.5-coder:14b` adapter health, discovery,

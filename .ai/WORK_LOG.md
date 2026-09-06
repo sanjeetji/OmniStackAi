@@ -139,3 +139,22 @@
   one); verified no ID lost, formulas self-reference their rows, MVP total 113 / Done 8, chart/styles
   byte-identical, zip valid.
 - Created implementation checkpoint `eeade72e84c7f1ebd71dfc8c0f7c2f4db0f79677`.
+
+## 2026-09-06 — R-009
+
+- Reconstructed R-009 as best-in-class usage and cost accounting (founder-selected) from Brief
+  Sections 18.4, 23, 68, 84, 85, 90, 91, and 92.
+- Added `accounting.py`: immutable metadata-only `UsageRecord` (no message content or secret), a
+  `Decimal`-based `PriceBook` (exact and per-provider-wildcard lookup, local Ollama zero, unknown
+  models unpriced, optional cached-input pricing) with an illustrative configurable default book,
+  and a thread-safe `UsageLedger` producing overall and per-provider/model breakdowns, deterministic
+  nearest-rank p50/p95 latency, unpriced-call count, and cost per successful call.
+- Integrated an optional `recorder` into `ModelGateway`: exactly one record per dispatch for success
+  and failure, written without altering the returned response or the raised error; threaded the
+  ledger through `build_gateway_from_env` and printed a cost summary from the live runner.
+- Added 13 offline accounting tests (74 total). Accounting is deterministic; zero model calls were
+  needed to implement or verify. Live local run recorded 2 calls at $0.000000 with latency
+  percentiles and a per-provider breakdown; cloud calls stayed zero.
+- Inserted tracker row R-009 at Phase_Roadmap row 9 (shifted 9..226 to 10..227, ranges extended);
+  verified no ID lost, MVP total 114 / Done 9, chart/styles byte-identical, zip valid.
+- Created implementation checkpoint `f2fc8654c6a5717e292adcdc2abb5da2fd7409c2`.

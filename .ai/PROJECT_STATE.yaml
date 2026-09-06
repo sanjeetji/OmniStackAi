@@ -2,19 +2,19 @@ schema_version: 1
 project: OmniStackAI
 phase: BASIC/MVP
 founder_stage: 0
-current_task: R-009
-current_status: in_progress
+current_task: null
+current_status: ready_for_next_task_definition
 branch: ai/R-009-usage-cost-accounting
 last_completed_task:
-  task_id: R-008
-  title: Cloud API-key ModelProvider adapters (multi-provider, key-activated)
-  implementation_commit: eeade72e84c7f1ebd71dfc8c0f7c2f4db0f79677
-  verification: task verify, 61 agent-engine tests, local gateway run, cloud_calls=0
+  task_id: R-009
+  title: Deterministic usage and cost accounting for the model gateway
+  implementation_commit: f2fc8654c6a5717e292adcdc2abb5da2fd7409c2
+  verification: task verify, 74 agent-engine tests (13 new accounting tests), live gateway cost summary, cloud_calls=0
   result: pass
 control_plane_database: postgresql
 model_routing_mode: balanced
 architecture_contract: R_&_D/OmniStackAI_Implementation_Brief_v6.md
 tracker: R_&_D/OmniStackAI_Execution_Tracker_v6.xlsx
 blockers: []
-next_action: Implement and verify deterministic usage/cost accounting, then record completion evidence.
-last_updated: "2026-09-06T14:00:00+05:30"
+next_action: Reconstruct R-010 with founder confirmation; workbook R-010 (Native iOS Agent) must wait for web/backend stability, so recommend a nearer MVP dependency (true streaming or cross-provider fallback).
+last_updated: "2026-09-06T14:20:00+05:30"
