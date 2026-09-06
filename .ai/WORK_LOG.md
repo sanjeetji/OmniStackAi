@@ -198,3 +198,23 @@
 - Inserted tracker row R-221 at Phase_Roadmap row 9 (rows 9..228 shifted to 10..229, ranges extended);
   no ID lost, backlog intact, MVP total 116 / Done 11, chart/styles byte-identical, zip valid.
 - Created implementation checkpoint `d0ee9f75b0d124fe60f1121b7f2a70d3b73040de`.
+
+## 2026-09-06 — R-222
+
+- Built the first platform console slice (founder-requested second item, part two of two) under
+  apps/console-web.
+- Added Python `overview.py` `platform_overview()` — a deterministic, metadata-only export of the
+  model fabric (routing ladder, providers with active flags from env key presence, price book, usage
+  summary), plus `PriceBook.entries()`; the snapshot never contains a key or secret (active is a
+  boolean). 6 offline tests (92 total), including a no-secret / active-without-key assertion.
+- Authored a full Next.js App-Router app, but this sandbox's network repeatedly timed out fetching
+  Next's native SWC binary, so it cannot be installed/built here and a frozen install would break the
+  offline task bootstrap. Pivoted to a dependency-free static console (index.html/styles.css/app.js)
+  with the identical data contract and design; reverted the bootstrap change so the offline contract
+  is unchanged. Next.js upgrade documented as the next step.
+- Console uses safe DOM APIs (textContent only), a strict CSP meta tag, and same-origin snapshot fetch
+  only. Added task console:snapshot and task console:serve; verified app.js via node --check and the
+  served assets via HTTP (all 200; 6 providers / 5 price rows / 5 ladder steps).
+- Inserted tracker row R-222 at Phase_Roadmap row 9 (rows 9..229 shifted to 10..230, ranges extended);
+  no ID lost, backlog intact, MVP total 117 / Done 12, chart/styles byte-identical, zip valid.
+- Created implementation checkpoint `c07bbcb1b9b8c010c6d64e3a0e09ac0c855102c8`.

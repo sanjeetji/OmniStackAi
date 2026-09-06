@@ -1,7 +1,7 @@
 schema_version: 1
 task_id: R-222
 title: First platform console slice (read-only model & cost overview)
-status: in_progress
+status: done
 phase: BASIC/MVP
 founder_stage: 0
 branch: ai/R-222-console-web
@@ -90,14 +90,41 @@ model_tool_trace:
   cloud_calls: 0
   note: Console and exporter are deterministic; no model call. No cloud key set; cloud_calls zero.
 completion:
-  implementation_commit: null
-  verified_at: null
-  verification: []
-  acceptance_results: []
+  implementation_commit: c07bbcb1b9b8c010c6d64e3a0e09ac0c855102c8
+  verified_at: "2026-09-06T17:20:00+05:30"
+  verification:
+    - command: task verify
+      result: pass
+      evidence: 92 agent-engine tests (6 new overview tests) plus all Stage 0 checks green
+    - command: node --check apps/console-web/app.js
+      result: pass
+    - command: python3 -m http.server (console served on 127.0.0.1) + fetch
+      result: pass
+      evidence: index.html, styles.css, app.js, data/overview.json all return HTTP 200; snapshot has 6 providers, 5 price rows, 5 ladder steps
+    - command: task security:quick
+      result: pass
+    - command: task env:check
+      result: pass
+    - command: docker compose --env-file .env -f infra/environments/local/compose.yaml config --services
+      result: pass
+      evidence: exactly postgres and control-plane; no service added
+  acceptance_results:
+    - criterion: The console renders providers (local + all supported cloud with tier/default-model/active state), the routing ladder, the price book, and the usage/cost dashboard from a metadata-only snapshot.
+      result: pass
+    - criterion: The snapshot contains no key or secret (active is a boolean); the page uses safe DOM APIs and a strict CSP and makes no external requests.
+      result: pass
+    - criterion: The Python exporter has offline tests including a no-secret / active-without-key assertion; app.js passes a JS syntax check.
+      result: pass
+    - criterion: task bootstrap stays offline; task verify is green and independent of the console; console:snapshot and console:serve work.
+      result: pass
+  note: >-
+    Next.js was authored but not buildable in this sandbox (SWC binary download timed out); shipped a
+    dependency-free static console with the same data contract and design. Next.js upgrade deferred.
 blockers:
   - Full Next.js install/build is not possible in this sandbox (SWC binary download times out); the
     Next.js upgrade is deferred to an environment with reliable registry access.
 next_action: >-
-  Verify the static console (exporter tests, JS syntax, HTTP serve), run the gates, then record
-  completion evidence and update state and tracker.
-next_command: task verify
+  Both founder-requested items (R-220 streaming, R-221 fallback) and the console slice (R-222) are
+  done. Next candidates: env-driven fallback wiring in build_gateway_from_env, or the Next.js console
+  upgrade when registry access is reliable. Confirm the next Tracker ID with the founder.
+next_command: task ai:status
