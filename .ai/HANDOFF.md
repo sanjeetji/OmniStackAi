@@ -1,53 +1,56 @@
 # Current Handoff
 
-Task ID: R-220
+Task ID: R-221
 Status: done
 Phase: BASIC/MVP — Founder Stage 0
-Branch: `ai/R-220-cloud-streaming`
-Last verified implementation SHA: `4e31841e730a6466da55843ff352f7144dd763e9`
+Branch: `ai/R-221-cross-provider-fallback`
+Last verified implementation SHA: `d0ee9f75b0d124fe60f1121b7f2a70d3b73040de`
 
 ## Completed
 
-- Replaced the cloud adapters' single-event stream wrapper with true incremental Server-Sent-Events
-  streaming behind the same `ModelProvider` boundary:
-  - Shared SSE transport in the cloud base: bounded stream-line/response sizes, finite timeout,
-    redirect rejection, bounded concurrency, stable platform-owned errors, and the API key is never
-    leaked in errors or events.
-  - OpenAI-compatible (OpenAI/OpenRouter/Groq): incremental delta chunks with usage requested in the
-    final chunk (`stream_options.include_usage`).
-  - Anthropic: `message_start` / `content_block_delta` / `message_delta` / `message_stop`.
-  - Gemini: `:streamGenerateContent?alt=sse`.
-- Ordered `StreamEvent` deltas plus one final event with measured usage; non-streaming `generate` is
-  unchanged. 5 new offline SSE tests (78 total) with injected fake streaming responses; no cloud call.
-
-## ID scheme note (important)
-
-The supplied workbook backlog already assigns **R-010..R-219** (R-010 = "Native iOS Agent", deferred
-until web/backend stability). The genuinely-missing gap IDs R-007/R-008/R-009 were used for the
-gateway/cloud-adapters/accounting. New founder-requested model-fabric tasks therefore take unique IDs
-**after the last existing ID (R-219)** rather than overwriting a planned backlog row: this task is
-**R-220**; the confirmed second item will be **R-221**.
+- Added explicit, allowlist-driven cross-provider fallback plus per-provider circuit breaking to the
+  Balanced gateway:
+  - `RoutingPolicy.fallback` — an optional ordered chain of `ModelDescriptor`. With none configured
+    the gateway behaves exactly as before (single provider).
+  - `generate`/`stream` try the primary then each registered, in-budget, circuit-closed candidate.
+    Fail-over is explicit (chain only) and only on retriable errors (`ProviderUnavailableError`,
+    `ProviderTimeoutError`, `ProviderHTTPError`); non-retriable errors raise immediately. Streaming
+    fails over only before the first event.
+  - `CircuitBreaker` (`resilience.py`): opens after `failure_threshold` consecutive failures, skips
+    for `cooldown_seconds`, half-opens, resets on success; injectable clock, thread-safe.
+  - `AllProvidersFailedError` when the chain is exhausted; a single-provider config surfaces its own
+    error. Every attempt is still recorded by the accounting ledger.
 
 ## Verification
 
-- `task verify` — pass (78 agent-engine tests).
-- `task agent-engine:lint`, `task security:quick`, `task env:check` — pass; key never in source/records.
-- Compose scope — exactly `postgres` and `control-plane`; unchanged.
-- Tracker — R-220 inserted at `Phase_Roadmap!A9:M9` (rows 9..227 shifted to 10..228, ranges extended);
-  no ID lost; backlog R-010 (Native iOS Agent) intact; MVP total 115, Done 10; chart/styles/workbook
-  byte-identical; zip verified.
+- `task verify` — pass (86 agent-engine tests; 8 new).
+- `task agent-engine:gateway:run` — pass live on local Ollama with cost summary; cloud_calls=0.
+- `task security:quick`, `task env:check` — pass. Compose unchanged (`postgres`, `control-plane`).
+- Tracker — R-221 at `Phase_Roadmap!A9:M9` (rows 9..228 shifted to 10..229, ranges extended); no ID
+  lost; backlog intact; MVP total 116, Done 11; chart/styles/workbook byte-identical; zip verified.
+
+## How to configure fallback / circuit breaking
+
+```python
+policy = RoutingPolicy(local_model=ollama_desc, cloud_model=anthropic_desc,
+                       fallback=(anthropic_desc,))          # explicit chain after the primary
+gateway = ModelGateway(registry, policy, recorder=UsageLedger(), breaker=CircuitBreaker())
+```
+
+(The env bootstrap does not yet build a fallback chain automatically — that can be wired later; the
+gateway supports it now.)
 
 ## Blockers and risks
 
-- Cloud streaming is verified with mocked SSE responses; a live cloud stream needs a real key (none
-  configured). Local Ollama streaming remains fully live-verified.
-- Providers vary in whether they emit usage on stream; when absent, the final event carries the best
-  available counts (Anthropic/Gemini accumulate; OpenAI needs include_usage, which is requested).
+- The env bootstrap (`build_gateway_from_env`) still constructs a single-tier policy; wiring an
+  env-driven fallback chain is a small follow-up, not yet done.
+- Fallback/breaker verified with fake providers; live multi-provider fail-over needs real keys.
 
 ## Next action
 
-Start **R-221**, the confirmed second required item. Confirm with the founder whether R-221 is
-cross-provider fallback + circuit breaking (model layer) or a first Next.js console slice (front end).
+Start **R-222** — the first Next.js console slice (the second of the two founder-requested items):
+a minimal visual console under `apps/console-web` surfacing model providers/routing and the R-009
+cost dashboard. Confirm data source (static config render vs. a small read API) at kickoff.
 
 ## Next command
 

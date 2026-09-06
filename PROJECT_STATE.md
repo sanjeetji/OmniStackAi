@@ -5,12 +5,13 @@ Last updated: 2026-09-06T10:46:19+05:30 by Codex (GPT-5)
 Stage 0 (Founder Build Sequence, Brief Section 91) — BASIC/MVP
 
 ## Last Completed Task
-Tracker ID: R-220 — True per-provider streaming for the cloud adapters (SSE) — DONE, implementation
-checkpoint `4e31841e730a6466da55843ff352f7144dd763e9`
+Tracker ID: R-221 — Cross-provider fallback and circuit breaking — DONE, `task verify` and 86
+agent-engine tests (8 new fallback/breaker tests) passing, cloud_calls=0, implementation checkpoint
+`d0ee9f75b0d124fe60f1121b7f2a70d3b73040de`
 
 ## In Progress (if any)
-Tracker ID: R-221 — Cross-provider fallback and circuit breaking
-Files touched so far: `services/agent-engine/src/omnistackai_agent_engine/model_gateway/{resilience.py,gateway.py,errors.py,__init__.py}`, `services/agent-engine/tests/test_fallback.py`, `docs/MODEL_PROVIDER.md`, portable state, and tracker row R-221
+Tracker ID: none
+Files touched so far: none
 Blocker: none
 
 ## ID note

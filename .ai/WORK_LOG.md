@@ -177,3 +177,24 @@
   extended). Verified no ID lost, backlog R-010 intact, MVP total 115 / Done 10, chart/styles
   byte-identical, zip valid.
 - Created implementation checkpoint `4e31841e730a6466da55843ff352f7144dd763e9`.
+
+## 2026-09-06 — R-221
+
+- Added explicit, allowlist-driven cross-provider fallback and per-provider circuit breaking to the
+  Balanced gateway (founder-requested second item, part one of two).
+- `RoutingPolicy` gained an optional ordered `fallback` chain; with none configured the gateway is
+  byte-for-byte behaviourally unchanged (single provider). generate/stream now try the primary then
+  each registered, in-budget, circuit-closed candidate.
+- Fail-over is explicit (only along the chain) and only on retriable errors
+  (unavailable/timeout/http); non-retriable errors raise immediately; streaming fails over only
+  before the first event.
+- Added `resilience.py` `CircuitBreaker`: opens after N consecutive failures, skips for a cooldown,
+  half-opens, resets on success; injectable clock, thread-safe. Every attempt is still accounted.
+- Added `AllProvidersFailedError` for an exhausted chain; a single-provider config still surfaces its
+  own stable error. Refactored resolve() into `_resolve_tier` + `_build_decision` reused by both
+  paths, keeping the existing resolve() behavior identical.
+- Added 8 offline tests (86 total); deterministic, no cloud call. Confirmed the live local gateway
+  still runs on Ollama.
+- Inserted tracker row R-221 at Phase_Roadmap row 9 (rows 9..228 shifted to 10..229, ranges extended);
+  no ID lost, backlog intact, MVP total 116 / Done 11, chart/styles byte-identical, zip valid.
+- Created implementation checkpoint `d0ee9f75b0d124fe60f1121b7f2a70d3b73040de`.

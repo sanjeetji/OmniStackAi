@@ -1,5 +1,6 @@
 # Changelog
 
+2026-09-06  R-221  Added explicit allowlist-driven cross-provider fallback and a per-provider circuit breaker to the gateway: retriable failures fail over along the configured chain (never silent, never on non-retriable errors), the breaker opens/cools-down/half-opens, and every attempt is accounted
 2026-09-06  R-220  Added true per-provider Server-Sent-Events streaming for the cloud adapters (OpenAI-compatible, Anthropic, Gemini): ordered delta events plus a final event with measured usage, reusing the HTTP-safety bounds (new IDs continue after the workbook backlog's R-010..R-219)
 2026-09-06  R-009  Added deterministic usage and cost accounting for the model gateway: immutable metadata-only usage records (no content/secret), a configurable Decimal price book (local Ollama zero, unknown unpriced), and an aggregating ledger with per-provider/model breakdowns, p50/p95 latency, and cost per successful call
 2026-09-06  R-008  Added key-activated cloud ModelProvider adapters (Anthropic, OpenAI, Gemini, OpenRouter, Groq) behind the shared boundary with an env bootstrap; standard-library only, no vendor SDK, keys env-only, local Ollama stays default and no key means no cloud call

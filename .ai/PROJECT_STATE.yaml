@@ -2,23 +2,22 @@ schema_version: 1
 project: OmniStackAI
 phase: BASIC/MVP
 founder_stage: 0
-current_task: R-221
-current_status: in_progress
+current_task: null
+current_status: ready_for_next_task_definition
 branch: ai/R-221-cross-provider-fallback
 last_completed_task:
-  task_id: R-220
-  title: True per-provider streaming for the cloud model adapters
-  implementation_commit: 4e31841e730a6466da55843ff352f7144dd763e9
-  verification: task verify, 78 agent-engine tests, cloud_calls=0
+  task_id: R-221
+  title: Cross-provider fallback and circuit breaking for the model gateway
+  implementation_commit: d0ee9f75b0d124fe60f1121b7f2a70d3b73040de
+  verification: task verify, 86 agent-engine tests (8 new fallback/breaker tests), cloud_calls=0
   result: pass
 control_plane_database: postgresql
 model_routing_mode: balanced
 architecture_contract: R_&_D/OmniStackAI_Implementation_Brief_v6.md
 tracker: R_&_D/OmniStackAI_Execution_Tracker_v6.xlsx
 id_note: >-
-  Workbook backlog owns R-010..R-219. Founder-requested model-fabric tasks use unique IDs after R-219:
-  R-220 = cloud streaming (done); R-221 = cross-provider fallback (in progress); R-222 = Next.js
-  console slice (next).
+  Workbook backlog owns R-010..R-219. Founder-requested model-fabric tasks use IDs after R-219:
+  R-220 streaming (done), R-221 fallback (done), R-222 Next.js console slice (next).
 blockers: []
-next_action: Implement and verify cross-provider fallback and circuit breaking, then start R-222 (Next.js console slice).
-last_updated: "2026-09-06T16:00:00+05:30"
+next_action: Start R-222 (first Next.js console slice) — the second of the two founder-requested items.
+last_updated: "2026-09-06T16:20:00+05:30"

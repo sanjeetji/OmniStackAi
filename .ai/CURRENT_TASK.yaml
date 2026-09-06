@@ -1,7 +1,7 @@
 schema_version: 1
 task_id: R-221
 title: Cross-provider fallback and circuit breaking for the model gateway
-status: in_progress
+status: done
 phase: BASIC/MVP
 founder_stage: 0
 branch: ai/R-221-cross-provider-fallback
@@ -82,12 +82,40 @@ model_tool_trace:
   cloud_calls: 0
   note: Fallback and circuit breaking are deterministic; exercised offline with fake providers. No cloud key set.
 completion:
-  implementation_commit: null
-  verified_at: null
-  verification: []
-  acceptance_results: []
+  implementation_commit: d0ee9f75b0d124fe60f1121b7f2a70d3b73040de
+  verified_at: "2026-09-06T16:20:00+05:30"
+  verification:
+    - command: task verify
+      result: pass
+    - command: task agent-engine:test
+      result: pass
+      evidence: 86 tests passed, including 8 new fallback/circuit-breaker tests (fail-over, non-retriable, all-failed, ordering, accounting, breaker open/skip/recover, reset)
+    - command: task agent-engine:gateway:run
+      result: pass
+      evidence: local gateway still runs on qwen2.5-coder:14b with cost summary; cloud_calls=0
+    - command: task security:quick
+      result: pass
+    - command: task env:check
+      result: pass
+    - command: docker compose --env-file .env -f infra/environments/local/compose.yaml config --services
+      result: pass
+      evidence: exactly postgres and control-plane; no service added
+  acceptance_results:
+    - criterion: RoutingPolicy accepts an optional ordered fallback chain; with none configured the gateway behaves exactly as before.
+      result: pass
+    - criterion: Retriable failures advance to the next allowlisted, registered, circuit-closed candidate; non-retriable errors raise immediately without fallback.
+      result: pass
+    - criterion: The per-provider circuit breaker opens after the threshold, skips until cooldown, half-opens, and resets on success; injectable clock, thread-safe.
+      result: pass
+    - criterion: When every candidate is unavailable/skipped/failing the gateway raises a stable AllProvidersFailedError; a single-provider config surfaces its own error.
+      result: pass
+    - criterion: Each dispatch attempt (success or failure) is recorded by the accounting ledger when configured.
+      result: pass
+    - criterion: Offline tests cover fail-over, non-retriable, circuit open/skip/recover, all-failed, ordering, and accounting; zero network access.
+      result: pass
+    - criterion: Static task verify stays network-independent and green; single-provider behavior unchanged.
+      result: pass
 blockers: []
 next_action: >-
-  Implement the fallback chain and circuit breaker, integrate into the gateway, add offline tests, run
-  the gates, record completion evidence, then start R-222 (Next.js console slice).
-next_command: task agent-engine:test
+  Start R-222, the first Next.js console slice (the second of the two founder-requested items).
+next_command: task ai:status
