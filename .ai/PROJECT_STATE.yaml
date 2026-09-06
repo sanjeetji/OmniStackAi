@@ -2,14 +2,14 @@ schema_version: 1
 project: OmniStackAI
 phase: BASIC/MVP
 founder_stage: 0
-current_task: R-229
-current_status: in_progress
+current_task: null
+current_status: ready_for_next_task_definition
 branch: ai/R-228-git-service
 last_completed_task:
-  task_id: R-228
-  title: Git service v1 — materialize a generated project into a customer-owned repo
-  implementation_commit: 28801ef396f7ead743a1d0cdc68657de23cefe1a
-  verification: task verify (140 agent-engine tests, 6 new); demo IR -> app -> one-commit owned repo
+  task_id: R-229
+  title: Python (FastAPI) backend framework adapter — generate a backend from the IR
+  implementation_commit: 04f1e6ad03ff52522efda81845ea3ee73e736a7d
+  verification: task verify (147 agent-engine tests, 7 new); one IR -> web + backend
   result: pass
 control_plane_database: postgresql
 model_routing_mode: balanced
@@ -23,5 +23,5 @@ id_note: >-
   Workbook backlog owns R-010..R-219. Founder-requested tasks use IDs after R-219: R-220..R-223 done,
   R-224 Next.js deferred (env-blocked), R-225 Application IR (in progress).
 blockers: []
-next_action: First builder slice complete (IR -> app -> owned Git repo). Next slice steps (sandbox/preview/deploy) and R-224 Next.js console upgrade need a cloud/network env; confirm next Tracker ID.
+next_action: Multi-target (web + backend from one IR) done. Next steps (sandbox/preview/deploy, Go backend adapter) — sandbox/preview/deploy need a cloud env; confirm next Tracker ID.
 last_updated: "2026-09-06T19:40:00+05:30"

@@ -1,52 +1,50 @@
 # Current Handoff
 
-Task ID: R-228
-Status: done
+Task ID: R-229
+Status: done (session paused by founder)
 Phase: BASIC/MVP — Founder Stage 0
-Branch: `ai/R-228-git-service`
-Last verified implementation SHA: `28801ef396f7ead743a1d0cdc68657de23cefe1a`
+Branch: `main` (the only branch; per-task branches were deleted; `main` is the GitHub default)
+Last verified implementation SHA: `04f1e6ad03ff52522efda81845ea3ee73e736a7d`
 
-## Milestone — first end-to-end builder slice is complete
+## Repo/workflow state
 
-`Application IR (R-225) → framework adapter contract (R-226) → Next.js code adapter (R-227) → Git
-service (R-228)` turns a structured app spec into a **real Next.js app inside a customer-owned Git
-repo**, fully offline and tested.
+- All work is on `main`. There are NO other branches. Commit new work directly to `main` with the
+  Tracker-ID discipline (contract → tests → gates → tracker → commit tagged `[R-###]` → push).
+- Every commit is authored by `sanjeetji <sk698166@gmail.com>`. Commit messages also carry a
+  `Co-Authored-By: Claude Opus 4.8` trailer (tooling-required attribution); the repo owner may strip
+  it from history if desired.
 
-## Completed (R-228)
+## Completed (R-229)
 
-- `omnistackai_agent_engine.git_service`:
-  - `materialize_project(project, target_dir, *, overwrite=False)` — writes every `GeneratedFile`
-    under the target, refuses path escapes and (unless overwrite) a non-empty target, sets exec bits.
-  - `create_repository(project, target_dir, *, author_name, author_email, commit_message=...)` —
-    `git init` + stage + **one commit** with the customer identity via explicit env (no global git
-    config); returns the commit SHA and file count.
-- Writes only inside the caller's target directory; offline; local `git` only.
-- End-to-end demo: demo IR → 13-file Next.js app → a real one-commit customer-owned repo.
+- `PythonBackendAdapter` (`codegen/backend_python.py`, target `backend-python`): entities → Pydantic
+  models, IR APIs → FastAPI routers grouped by resource (typed `{param}` args, 501 scaffolds),
+  `app/main.py` (routers + `/healthz`), `app/config.py`, `requirements.txt`, README/.gitignore/
+  .env.example. Registered via `AdapterRegistry`.
+- **Multi-target proven:** one Application IR → a 12-file Next.js web app **and** an 11-file FastAPI
+  backend. Pure/offline; no install/build/run/disk write.
 
 ## Verification
 
-- `task verify` — pass (140 agent-engine tests; 6 new). `task agent-engine:lint`, `task security:quick` — pass.
+- `task verify` — pass (147 agent-engine tests; 7 new). `task agent-engine:lint`, `task security:quick` — pass.
 - Compose unchanged; offline `task bootstrap` unchanged.
-- Tracker — R-228 (Product) at `Phase_Roadmap!A9:M9` (rows 9..235 → 10..236, ranges extended); no ID
-  lost; MVP total 123, Done 17; chart/styles/workbook byte-identical; zip verified.
+- Tracker — R-229 (Product) at `Phase_Roadmap!A9:M9`; MVP total 124, Done 18; chart/styles intact.
 
 ## What exists now (product)
 
 - **Model fabric** (R-005..R-223): gateway, local Ollama + 5 cloud adapters (key-activated), streaming,
-  fallback + circuit breaking, usage/cost accounting, a static console + snapshot exporter.
-- **Builder slice** (R-225..R-228): Application IR → adapter contract → Next.js generator → Git service.
+  fallback + circuit breaker, usage/cost accounting, static console + snapshot exporter.
+- **Builder** (R-225..R-229): Application IR → adapter contract → Next.js web adapter + FastAPI backend
+  adapter (multi-target) → Git service (materialize into a customer-owned repo).
 
-## Next action (needs a cloud/network-capable environment)
+## Next action (session paused — resume next time)
 
-The remaining builder-slice steps require real runtime/infra and are the right next tasks once such an
-environment is available:
-1. **Sandbox/runtime provider + instant browser preview** of the generated app (Brief §15/§51).
-2. **Backend (Go/Python) framework adapter** to pair with the Next.js web adapter (multi-target from
-   one IR — the core differentiator).
-3. **R-224 Next.js console upgrade** (needs npm registry access).
+Pick one and continue on `main`:
+1. **R-230 = Go backend framework adapter** — offline-doable now; another target from the same IR
+   (same pattern: emit files, assert contents, register in `AdapterRegistry`). Recommended next.
+2. **Sandbox/runtime provider + instant browser preview + deploy** (Brief §15/§51) — needs a
+   cloud/network-capable environment (this sandbox can't install front-end toolchains).
+3. **R-224 Next.js console upgrade** — needs npm registry access.
 Native mobile / device-cloud stays deferred per Brief §25/§91 until web/backend stability.
-
-Confirm the next Tracker ID with the founder.
 
 ## Next command
 

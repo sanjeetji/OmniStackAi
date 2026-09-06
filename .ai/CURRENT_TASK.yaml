@@ -1,7 +1,7 @@
 schema_version: 1
 task_id: R-229
 title: Python (FastAPI) backend framework adapter — generate a backend from the IR
-status: in_progress
+status: done
 phase: BASIC/MVP
 founder_stage: 0
 branch: main
@@ -78,13 +78,31 @@ model_tool_trace:
   cloud_calls: 0
   note: Deterministic codegen; no model call. No cloud key set; cloud_calls zero.
 completion:
-  implementation_commit: null
-  verified_at: null
-  verification: []
-  acceptance_results: []
+  implementation_commit: 04f1e6ad03ff52522efda81845ea3ee73e736a7d
+  verified_at: "2026-09-06T22:00:00+05:30"
+  verification:
+    - command: task verify
+      result: pass
+      evidence: 147 agent-engine tests (7 new backend-adapter tests) plus all Stage 0 checks
+    - command: task agent-engine:lint
+      result: pass
+    - command: task security:quick
+      result: pass
+  acceptance_results:
+    - criterion: PythonBackendAdapter implements FrameworkAdapter (backend-python) and returns a coherent FastAPI GeneratedProject.
+      result: pass
+    - criterion: Entities -> Pydantic models (optional fields defaulted); IR APIs -> FastAPI routers grouped by segment with typed path params and 501 scaffolds; main includes routers + health.
+      result: pass
+    - criterion: Safe deterministic paths; pure function of the IR; standard-library only; no install/build/run/disk write.
+      result: pass
+    - criterion: Offline tests cover emission, entity->model mapping, route grouping/params, and registry wiring.
+      result: pass
+  note: >-
+    Multi-target proven: one IR -> 12-file Next.js web app + 11-file FastAPI backend. Deterministic;
+    no model call; cloud_calls zero.
 blockers: []
 next_action: >-
-  Implement the FastAPI backend adapter and offline emission tests; run the gates; record completion.
-  Then multi-target generation (web + backend from one IR) is demonstrable; next real steps
-  (sandbox/preview/deploy) need a cloud/network environment.
-next_command: task agent-engine:test
+  Multi-target generation (web + backend from one IR) is done. Next real steps — sandbox run, instant
+  browser preview, deploy, and the deferred Next.js console upgrade — need a cloud/network-capable
+  environment. A Go backend adapter is another offline-doable option. Confirm the next Tracker ID.
+next_command: task ai:status

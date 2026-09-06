@@ -293,6 +293,19 @@
   extended); no ID lost, MVP total 123 / Done 17, chart/styles byte-identical, zip valid.
 - Created implementation checkpoint `28801ef396f7ead743a1d0cdc68657de23cefe1a`.
 
+## 2026-09-06 — repo consolidation + R-229
+
+- Founder merged all work into `main` (fast-forward from the R-001 bootstrap; 34 commits) and set
+  `main` as the GitHub default; deleted all per-task ai/* branches (remote + local). Remote now has
+  only `main`. Added docs/RESUME_PROMPT.md. Going forward, work is committed directly to `main`.
+- R-229: added the Python (FastAPI) backend adapter (PythonBackendAdapter, target backend-python):
+  entities -> Pydantic models, IR APIs -> FastAPI routers grouped by resource with typed path params
+  and 501 scaffolds, app/main.py with routers + health, config, requirements, README/.gitignore/
+  .env.example. Registered via AdapterRegistry. Pure/offline; no install/build/disk.
+- 7 new offline tests (147 total). Proven multi-target: one IR -> 12-file Next.js web + 11-file FastAPI
+  backend. `task verify` green. Tracker row R-229 (Product) inserted at row 9; MVP total 124 / Done 18.
+- Implementation checkpoint `04f1e6ad03ff52522efda81845ea3ee73e736a7d`.
+
 ## 2026-09-06 — R-224 (deferred)
 
 - Attempted the Next.js console upgrade. `pnpm install` for next@15.5.4 timed out fetching the native
