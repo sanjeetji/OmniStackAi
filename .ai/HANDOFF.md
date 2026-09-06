@@ -1,45 +1,51 @@
 # Current Handoff
 
-Task ID: R-005
+Task ID: R-006
 Status: done
 Phase: BASIC/MVP — Founder Stage 0
-Branch: `ai/R-005-model-provider-contract`
-Last verified implementation SHA: `afdc4ba9c14b231dece9533dbdd39e1e79e9ace3`
+Branch: `ai/R-006-ollama-provider-adapter`
+Last verified implementation SHA: `8061ca3b129539ada4b0838d7d70c8acd3df1ea3`
 
 ## Completed
 
-- Added immutable validated model-provider boundary records in the Python agent-engine.
-- Added a runtime-checkable async `ModelProvider` protocol for identity, health, discovery,
-  generation, and streaming without vendor SDK types.
-- Added deterministic registry enumeration and stable platform-owned errors for invalid, duplicate,
-  and unknown providers.
-- Added Python 3.13 compile/policy checks, 13 standard-library tests, and CI-equivalent commands.
-- Added no adapter, external Python dependency, service process, database change, or infrastructure.
+- Added `OllamaProvider` behind the accepted vendor-neutral ModelProvider protocol.
+- Added native loopback version health, explicitly profiled pulled-model discovery, non-stream chat,
+  and NDJSON streaming with vendor-neutral records.
+- Enforced loopback-only URLs, no environment proxy, redirect rejection, explicit timeouts, bounded
+  response/line sizes, concurrency back-pressure, cancellation cleanup, and stable safe errors.
+- Required exact model-digest evidence before a capability may be marked verified; unprofiled pulled
+  models are not eligible by name alone.
+- Added a network-independent test suite and an opt-in live local conformance command.
+- Added no third-party SDK, cloud provider, router, service process, database/Compose change,
+  infrastructure, or native/device work.
 
 ## Verification
 
 - `task verify` — pass.
 - `task agent-engine:lint` — pass.
-- `task agent-engine:test` — pass: 13 tests.
-- Provider SDK/adapter exclusion scan — pass.
-- Secret scan and tracked-file policy — pass; ignored `.env` was not committed.
-- Compose scope — unchanged at exactly `postgres` and `control-plane`.
-- Model trace — two inconclusive local `qwen2.5-coder:14b` attempts; zero cloud calls.
-- Tracker row `Phase_Roadmap!A9:M9` — R-005 completion evidence recorded.
-- Dashboard formulas now include the shifted terminal roadmap row 223; no stale row-222 reference remains.
-- Workbook formula-error scan — zero matches; roadmap and dashboard renders visually reviewed.
+- `task agent-engine:test` — pass: 28 tests.
+- `task agent-engine:ollama:verify` — pass against `qwen2.5-coder:14b`: configured discovery,
+  generation 4 tokens, stream 4 events/4 tokens, cloud calls 0.
+- Compose scope — exactly `postgres` and `control-plane`; unchanged.
+- Provider SDK import and secret-policy checks — pass.
+- Model trace — one inconclusive local design review plus two successful local conformance calls;
+  zero cloud calls and zero paid usage.
+- Tracker row `Phase_Roadmap!A9:M9` — R-006 completion evidence recorded.
+- Dashboard formulas include roadmap row 224; formula-error and stale-reference scans passed.
 
 ## Blockers and risks
 
-- R-006 through R-009 are absent from `Phase_Roadmap`; reconstruct each one at a time from the
-  Stage 0 sequence and anti-overengineering rules.
-- The ModelProvider contract has no production adapter yet. R-006 should add only the local Ollama
-  adapter and prove it against the accepted contract before routing or orchestration exists.
+- R-007 through R-009 are absent from `Phase_Roadmap`; reconstruct only the next permitted task from
+  the Stage 0/MVP dependency order.
+- Tool calls, structured output, vision, embeddings, routing, fallback, and capability promotion are
+  not yet implemented. They require explicit profiles, measured evidence, and separate Tracker IDs.
+- Cancellation closes the response and propagates immediately, while a standard-library worker
+  thread may remain alive only until its bounded socket timeout completes.
 
 ## Next action
 
-Define reconstructed R-006 for the loopback-only Ollama adapter, record its task contract and
-tracker status, then implement it against R-005 without adding cloud providers or routing.
+Define reconstructed R-007 from the next permitted Stage 0/MVP dependency, record its contract and
+tracker status, and do not broaden it into routing, orchestration, cloud providers, or infrastructure.
 
 ## Next command
 

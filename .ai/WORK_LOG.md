@@ -70,3 +70,19 @@
 - Added Python 3.13 compile/policy commands, CI toolchain setup, and 13 standard-library unit tests.
 - Preserved exactly the existing two Compose services and made zero cloud model calls.
 - Created implementation checkpoint `afdc4ba9c14b231dece9533dbdd39e1e79e9ace3`.
+
+## 2026-09-06 — R-006
+
+- Reconstructed R-006 as the early local Ollama adapter required by the V6 MVP sequence.
+- Used local-only Balanced routing: one `qwen3.5:9b` review call was inconclusive; no cloud call was made.
+- Added a Python 3.13 standard-library native Ollama adapter for version health, explicitly profiled
+  model discovery, non-stream chat generation, and NDJSON streaming.
+- Enforced the approved loopback endpoint, disabled proxies, rejected redirects, bounded time,
+  response sizes and concurrency, closed cancelled streams, and mapped failures to stable errors.
+- Required an exact configured model digest before any capability can be marked verified and
+  rejected tool-message requests until a separate evaluated tool-call contract exists.
+- Added 15 adapter/configuration tests, bringing the agent-engine suite to 28 passing tests.
+- Ran the live conformance command against `qwen2.5-coder:14b`: generation produced 4 tokens and
+  streaming produced 4 events/4 tokens; cloud calls remained zero.
+- Ran `task verify` successfully and created implementation checkpoint
+  `8061ca3b129539ada4b0838d7d70c8acd3df1ea3`.

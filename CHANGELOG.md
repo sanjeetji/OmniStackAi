@@ -1,5 +1,6 @@
 # Changelog
 
+2026-09-06  R-006  Added the bounded loopback-only Ollama ModelProvider adapter with conservative model eligibility, offline conformance tests, and live generation/streaming proof
 2026-09-06  R-005  Added the vendor-neutral Python ModelProvider contract, validated model-call records, deterministic registry, and CI-equivalent tests
 2026-09-06  R-004  Added the minimal Go control-plane with typed config, PostgreSQL readiness, structured logs, graceful shutdown, tests, and live Compose verification
 2026-09-06  R-003  Added loopback-only local Ollama configuration, model discovery, lifecycle commands, and live inference verification

@@ -1,7 +1,7 @@
 schema_version: 1
 task_id: R-006
 title: Add the loopback-only Ollama ModelProvider adapter
-status: in_progress
+status: done
 phase: BASIC/MVP
 founder_stage: 0
 branch: ai/R-006-ollama-provider-adapter
@@ -71,10 +71,37 @@ model_tool_trace:
   routing: local_only
   local_provider: ollama
   configured_model: qwen3.5:9b
-  local_calls: 1
+  local_calls: 3
   cloud_calls: 0
-  note: One bounded local design-review call returned no capturable text; deterministic brief, repository, and official Ollama API evidence define the adapter contract.
-completion: null
+  note: One bounded local design-review call returned no capturable text; two live adapter conformance calls passed against qwen2.5-coder:14b. No cloud model was called.
+completion:
+  implementation_commit: 8061ca3b129539ada4b0838d7d70c8acd3df1ea3
+  verified_at: "2026-09-06T10:46:19+05:30"
+  verification:
+    - command: task verify
+      result: pass
+    - command: task agent-engine:lint
+      result: pass
+    - command: task agent-engine:test
+      result: pass
+      evidence: 28 contract, registry, adapter, failure-path, concurrency, and cancellation tests passed
+    - command: task agent-engine:ollama:verify
+      result: pass
+      evidence: qwen2.5-coder:14b discovered; generation 4 tokens; stream 4 events and 4 tokens; cloud calls 0
+    - command: docker compose --env-file .env -f infra/environments/local/compose.yaml config --services
+      result: pass
+      evidence: exactly postgres and control-plane; no service added
+  acceptance_results:
+    - criterion: OllamaProvider satisfies the vendor-neutral identity, health, discovery, generation, and streaming port.
+      result: pass
+    - criterion: Stage 0 endpoint, redirect, proxy, timeout, response-size, concurrency, cancellation, and stable-error boundaries are enforced.
+      result: pass
+    - criterion: Model eligibility is explicitly profiled and verified capability claims require an exact digest.
+      result: pass
+    - criterion: Offline conformance and live loopback health, discovery, generation, and streaming proofs pass.
+      result: pass
+    - criterion: No SDK dependency, cloud call, router, service process, database, Compose, infrastructure, or native change was introduced.
+      result: pass
 blockers: []
-next_action: Mark the reconstructed R-006 tracker row In Progress, then implement the adapter and tests within the recorded blast radius.
-next_command: task agent-engine:test
+next_action: Define reconstructed R-007 from the next permitted Stage 0/MVP dependency before implementation.
+next_command: task ai:status

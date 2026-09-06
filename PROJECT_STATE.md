@@ -1,17 +1,17 @@
 # Project State — OmniStackAI
-Last updated: 2026-09-06T10:34:01+05:30 by Codex (GPT-5)
+Last updated: 2026-09-06T10:46:19+05:30 by Codex (GPT-5)
 
 ## Current Phase
 Stage 0 (Founder Build Sequence, Brief Section 91) — BASIC/MVP
 
 ## Last Completed Task
-Tracker ID: R-005 — ModelProvider contract and registry — DONE, `task verify` and 13 Python
-contract/registry tests passing, implementation checkpoint
-`afdc4ba9c14b231dece9533dbdd39e1e79e9ace3`
+Tracker ID: R-006 — loopback-only Ollama ModelProvider adapter — DONE, `task verify`, 28 Python
+tests, and live health/discovery/generation/streaming conformance passing, implementation checkpoint
+`8061ca3b129539ada4b0838d7d70c8acd3df1ea3`
 
 ## In Progress (if any)
-Tracker ID: R-006 — loopback-only Ollama ModelProvider adapter
-Files touched so far: task contract and portable state only
+Tracker ID: none
+Files touched so far: none
 Blocker: none
 
 ## Next Up (queued, in order)
@@ -53,9 +53,17 @@ Blocker: none
   tests, and an explicit live verifier; routing, cloud adapters, and orchestration remain deferred.
 - Classified R-006 as L2. One bounded local `qwen3.5:9b` review call returned no capturable output;
   deterministic brief/repository evidence and official Ollama API documentation define the task.
+- Added a standard-library-only `OllamaProvider` for native version health, allowlisted discovery,
+  non-stream chat, and NDJSON streaming behind the accepted provider contract.
+- Enforced Stage 0 loopback endpoints, proxy/redirect rejection, stable errors, finite timeouts,
+  bounded bodies and concurrency, cancellation cleanup, output ceilings, and exact-digest evidence
+  before a capability can be marked verified.
+- Proved the adapter with 28 offline tests and two live `qwen2.5-coder:14b` calls: generation and
+  streaming each produced 4 output tokens; no cloud provider was called.
 
 ## Environment / Secrets Status
-- Local Ollama: server 0.33.3 healthy on loopback; `qwen2.5-coder:14b` configured and live-verified; `qwen3.5:9b` also discovered
+- Local Ollama: server 0.33.3 healthy on loopback; `qwen2.5-coder:14b` adapter health, discovery,
+  generation, and streaming live-verified; `qwen3.5:9b` remains pulled but is not implicitly eligible
 - Cloud keys configured: not inspected; no cloud provider API authorized or required for R-006
 - Database: local container healthy via Colima; pgvector 0.8.6 and migration version 1 verified; no cloud database is authorized
 - Control plane: local container healthy on `127.0.0.1:8080`; liveness `ok`, readiness `ready`
