@@ -111,22 +111,6 @@ class OpenAICompatibleTests(TestCase):
         self.assertEqual([m["role"] for m in body["messages"]], ["system", "user"])
         self.assertFalse(body["stream"])
 
-    def test_stream_wraps_generation_into_final_event(self) -> None:
-        opener = FakeOpener({
-            "choices": [{"message": {"content": "streamed"}, "finish_reason": "stop"}],
-            "usage": {"prompt_tokens": 1, "completion_tokens": 1},
-        })
-        provider = self._provider(opener)
-
-        async def collect():
-            return [e async for e in provider.stream(_request("openai", "gpt-4o"))]
-
-        events = asyncio.run(collect())
-        self.assertEqual(len(events), 1)
-        self.assertTrue(events[0].done)
-        self.assertEqual(events[0].delta, "streamed")
-        self.assertIsNotNone(events[0].usage)
-
     def test_http_and_network_errors_are_stable(self) -> None:
         http = self._provider(FakeOpener(error=HTTPError("u", 500, "err", {}, None)))
         with self.assertRaises(ProviderHTTPError):
@@ -242,6 +226,107 @@ class CloudSafetyTests(TestCase):
                 provider_id="openai", api_key=FAKE_KEY, descriptor=_descriptor("openai", "gpt-4o"),
                 base_url="http://api.openai.com/v1",
             )
+
+
+class _FakeStreamResponse:
+    def __init__(self, lines: list[bytes], status: int = 200) -> None:
+        self._lines = list(lines)
+        self.status = status
+        self.closed = False
+
+    def readline(self, _n: int = -1) -> bytes:
+        return self._lines.pop(0) if self._lines else b""
+
+    def close(self) -> None:
+        self.closed = True
+
+
+class FakeStreamOpener:
+    def __init__(self, lines: list[bytes], *, status: int = 200) -> None:
+        self._lines = lines
+        self._status = status
+        self.requests: list = []
+
+    def open(self, request, timeout=None):  # noqa: ANN001
+        self.requests.append(request)
+        return _FakeStreamResponse(self._lines, self._status)
+
+
+def _collect_stream(provider, provider_id: str, model_id: str) -> list:
+    async def run():
+        return [e async for e in provider.stream(_request(provider_id, model_id, include_system=False))]
+    return asyncio.run(run())
+
+
+class StreamingTests(TestCase):
+    def test_openai_streams_incrementally_with_final_usage(self) -> None:
+        lines = [
+            b'data: {"choices":[{"delta":{"role":"assistant"}}]}\n',
+            b'data: {"choices":[{"delta":{"content":"Hel"}}]}\n',
+            b'data: {"choices":[{"delta":{"content":"lo"}}]}\n',
+            b'data: {"choices":[{"finish_reason":"stop","delta":{}}]}\n',
+            b'data: {"choices":[],"usage":{"prompt_tokens":5,"completion_tokens":2}}\n',
+            b'data: [DONE]\n',
+        ]
+        provider = OpenAICompatibleProvider(
+            provider_id="openai", api_key=FAKE_KEY, descriptor=_descriptor("openai", "gpt-4o"),
+            base_url="https://api.openai.com/v1", opener=FakeStreamOpener(lines),
+        )
+        events = _collect_stream(provider, "openai", "gpt-4o")
+        deltas = [e.delta for e in events if not e.done]
+        self.assertEqual("".join(deltas), "Hello")
+        self.assertTrue(events[-1].done)
+        self.assertEqual((events[-1].usage.input_tokens, events[-1].usage.output_tokens), (5, 2))
+        self.assertEqual([e.sequence for e in events], list(range(len(events))))
+
+    def test_anthropic_streams_events_and_usage(self) -> None:
+        lines = [
+            b'event: message_start\n', b'data: {"message":{"usage":{"input_tokens":7}}}\n', b'\n',
+            b'event: content_block_delta\n', b'data: {"delta":{"type":"text_delta","text":"Hi"}}\n', b'\n',
+            b'event: content_block_delta\n', b'data: {"delta":{"type":"text_delta","text":" there"}}\n', b'\n',
+            b'event: message_delta\n', b'data: {"usage":{"output_tokens":3}}\n', b'\n',
+            b'event: message_stop\n', b'data: {}\n',
+        ]
+        provider = AnthropicProvider(
+            provider_id="anthropic", api_key=FAKE_KEY, descriptor=_descriptor("anthropic", "claude-sonnet-5"),
+            base_url="https://api.anthropic.com", opener=FakeStreamOpener(lines),
+        )
+        events = _collect_stream(provider, "anthropic", "claude-sonnet-5")
+        self.assertEqual("".join(e.delta for e in events if not e.done), "Hi there")
+        self.assertEqual((events[-1].usage.input_tokens, events[-1].usage.output_tokens), (7, 3))
+
+    def test_gemini_streams_parts_and_usage(self) -> None:
+        lines = [
+            b'data: {"candidates":[{"content":{"parts":[{"text":"He"}]}}]}\n',
+            b'data: {"candidates":[{"content":{"parts":[{"text":"llo"}]}}],"usageMetadata":{"promptTokenCount":9,"candidatesTokenCount":4}}\n',
+        ]
+        opener = FakeStreamOpener(lines)
+        provider = GeminiProvider(
+            provider_id="google-gemini", api_key=FAKE_KEY,
+            descriptor=_descriptor("google-gemini", "gemini-1.5-pro"),
+            base_url="https://generativelanguage.googleapis.com", opener=opener,
+        )
+        events = _collect_stream(provider, "google-gemini", "gemini-1.5-pro")
+        self.assertEqual("".join(e.delta for e in events if not e.done), "Hello")
+        self.assertEqual((events[-1].usage.input_tokens, events[-1].usage.output_tokens), (9, 4))
+        self.assertIn(":streamGenerateContent?alt=sse", opener.requests[0].full_url)
+
+    def test_malformed_stream_line_is_stable(self) -> None:
+        provider = OpenAICompatibleProvider(
+            provider_id="openai", api_key=FAKE_KEY, descriptor=_descriptor("openai", "gpt-4o"),
+            base_url="https://api.openai.com/v1", opener=FakeStreamOpener([b'data: not-json\n']),
+        )
+        with self.assertRaises(ProviderResponseError):
+            _collect_stream(provider, "openai", "gpt-4o")
+
+    def test_oversized_stream_line_is_rejected(self) -> None:
+        provider = OpenAICompatibleProvider(
+            provider_id="openai", api_key=FAKE_KEY, descriptor=_descriptor("openai", "gpt-4o"),
+            base_url="https://api.openai.com/v1", max_stream_line_bytes=16,
+            opener=FakeStreamOpener([b'data: {"choices":[{"delta":{"content":"' + b'x' * 64 + b'"}}]}\n']),
+        )
+        with self.assertRaises(ProviderResponseTooLargeError):
+            _collect_stream(provider, "openai", "gpt-4o")
 
 
 class CloudFactoryTests(TestCase):

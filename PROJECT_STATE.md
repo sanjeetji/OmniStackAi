@@ -10,12 +10,18 @@ Tracker ID: R-009 — Deterministic usage and cost accounting for the model gate
 implementation checkpoint `f2fc8654c6a5717e292adcdc2abb5da2fd7409c2`
 
 ## In Progress (if any)
-Tracker ID: none
-Files touched so far: none
+Tracker ID: R-220 — True per-provider streaming for the cloud adapters (SSE)
+Files touched so far: `services/agent-engine/src/omnistackai_agent_engine/model_gateway/cloud.py`, `services/agent-engine/tests/test_cloud.py`, `docs/MODEL_PROVIDER.md`, portable state, and tracker row R-220
 Blocker: none
 
+## ID note
+The workbook backlog already assigns R-010..R-219 (R-010 = Native iOS Agent, deferred until web/backend
+stability). Founder-requested model-fabric work uses unique IDs after R-219: R-220 = cloud streaming;
+R-221 reserved for the confirmed second item (cross-provider fallback or the Next.js console slice).
+
 ## Next Up (queued, in order)
-1. R-010 — Native iOS Agent (from `Phase_Roadmap`) — NOT before web/backend stability; recommend reordering to a nearer MVP need (e.g. true per-provider streaming or cross-provider fallback) with founder approval
+1. R-221 — the confirmed second required item (cross-provider fallback/circuit breaking, or a first Next.js console slice)
+2. R-010 — Native iOS Agent (backlog; deferred until web/backend stability)
 
 ## Decisions Made This Session
 - Applied the normative V6 precedence rules and Section 91 Phase 0 sequence.

@@ -122,6 +122,7 @@ class _HttpCloudProvider:
         descriptor: ModelDescriptor,
         base_url: str,
         max_response_bytes: int = _DEFAULT_MAX_RESPONSE_BYTES,
+        max_stream_line_bytes: int = 1024 * 1024,
         max_concurrency: int = 4,
         opener: OpenerDirector | Any | None = None,
     ) -> None:
@@ -135,6 +136,8 @@ class _HttpCloudProvider:
             raise InvalidProviderConfigurationError("cloud base URL must use HTTPS")
         if isinstance(max_response_bytes, bool) or not isinstance(max_response_bytes, int) or max_response_bytes <= 0:
             raise InvalidProviderConfigurationError("max response bytes must be positive")
+        if isinstance(max_stream_line_bytes, bool) or not isinstance(max_stream_line_bytes, int) or max_stream_line_bytes <= 0:
+            raise InvalidProviderConfigurationError("max stream line bytes must be positive")
         if isinstance(max_concurrency, bool) or not isinstance(max_concurrency, int) or max_concurrency <= 0:
             raise InvalidProviderConfigurationError("max concurrency must be positive")
 
@@ -143,6 +146,7 @@ class _HttpCloudProvider:
         self._descriptor = descriptor
         self._base_url = base_url.rstrip("/")
         self._max_response_bytes = max_response_bytes
+        self._max_stream_line_bytes = max_stream_line_bytes
         self._semaphore = asyncio.Semaphore(max_concurrency)
         self._opener = opener or build_opener(ProxyHandler({}), _RejectRedirects())
 
@@ -173,10 +177,97 @@ class _HttpCloudProvider:
         return GenerateResponse(request.request_id, request.model, text, finish_reason, usage, latency_ms)
 
     async def stream(self, request: GenerateRequest) -> AsyncIterator[StreamEvent]:
-        # Stage 0 wraps a non-streaming generation into one final event. Incremental SSE streaming
-        # per provider is deferred to a later Tracker ID; the boundary contract is still satisfied.
-        result = await self.generate(request)
-        yield StreamEvent(request.request_id, 0, result.text, True, result.usage)
+        """Stream tokens incrementally by parsing the provider's Server-Sent-Events response."""
+
+        self._validate_request(request)
+        path, headers, payload = self._build_stream(request)
+        deadline = monotonic() + request.timeout_seconds
+        async with self._semaphore:
+            response = await self._run_blocking(
+                lambda: self._open_post_stream(path, headers, payload, self._remaining(deadline)),
+                self._remaining(deadline),
+            )
+            try:
+                async for event in self._consume_sse(request, self._iter_sse(response, deadline)):
+                    yield event
+            finally:
+                try:
+                    await asyncio.shield(asyncio.to_thread(response.close))
+                except Exception:
+                    pass
+
+    def _build_stream(self, request: GenerateRequest) -> tuple[str, dict[str, str], dict[str, Any]]:
+        raise NotImplementedError
+
+    def _consume_sse(self, request: GenerateRequest, sse: AsyncIterator[tuple[str | None, str]]) -> AsyncIterator[StreamEvent]:
+        raise NotImplementedError
+
+    def _open_post_stream(self, path: str, headers: dict[str, str], payload: dict[str, Any], timeout_seconds: float) -> Any:
+        merged = {"Accept": "text/event-stream", "Content-Type": "application/json", **headers}
+        request = Request(
+            f"{self._base_url}{path}", data=json.dumps(payload).encode("utf-8"), method="POST", headers=merged
+        )
+        try:
+            response = self._opener.open(request, timeout=timeout_seconds)
+            status = getattr(response, "status", 200)
+            if not isinstance(status, int) or not 200 <= status < 300:
+                response.close()
+                raise ProviderHTTPError(f"{self._provider_id} returned a non-success status")
+            return response
+        except HTTPError as error:
+            raise ProviderHTTPError(f"{self._provider_id} returned an HTTP error") from error
+        except (socket.timeout, TimeoutError) as error:
+            raise ProviderTimeoutError(f"{self._provider_id} request timed out") from error
+        except (URLError, OSError) as error:
+            if isinstance(getattr(error, "reason", None), TimeoutError):
+                raise ProviderTimeoutError(f"{self._provider_id} request timed out") from error
+            raise ProviderUnavailableError(f"{self._provider_id} is unavailable") from error
+
+    async def _iter_sse(self, response: Any, deadline: float) -> AsyncIterator[tuple[str | None, str]]:
+        total = 0
+        event_type: str | None = None
+        while True:
+            raw = await self._run_blocking(
+                lambda: response.readline(self._max_stream_line_bytes + 1), self._remaining(deadline)
+            )
+            if not isinstance(raw, bytes):
+                raise ProviderResponseError(f"{self._provider_id} stream bytes are invalid")
+            if not raw:
+                return
+            if len(raw) > self._max_stream_line_bytes:
+                raise ProviderResponseTooLargeError(f"{self._provider_id} stream line exceeded the configured limit")
+            total += len(raw)
+            if total > self._max_response_bytes:
+                raise ProviderResponseTooLargeError(f"{self._provider_id} stream exceeded the configured limit")
+            try:
+                line = raw.decode("utf-8").rstrip("\r\n")
+            except UnicodeDecodeError as error:
+                raise ProviderResponseError(f"{self._provider_id} stream is not valid UTF-8") from error
+            if line == "":
+                event_type = None
+                continue
+            if line.startswith(":"):
+                continue  # SSE comment / keep-alive
+            if line.startswith("event:"):
+                event_type = line[len("event:"):].strip()
+                continue
+            if line.startswith("data:"):
+                yield event_type, line[len("data:"):].strip()
+
+    def _stream_json(self, data: str) -> dict[str, Any]:
+        try:
+            obj = json.loads(data)
+        except json.JSONDecodeError as error:
+            raise ProviderResponseError(f"{self._provider_id} returned malformed stream JSON") from error
+        if not isinstance(obj, dict):
+            raise ProviderResponseError(f"{self._provider_id} stream event must be a JSON object")
+        return obj
+
+    def _remaining(self, deadline: float) -> float:
+        remaining = deadline - monotonic()
+        if remaining <= 0:
+            raise ProviderTimeoutError(f"{self._provider_id} request timed out")
+        return remaining
 
     def _validate_request(self, request: GenerateRequest) -> None:
         if request.model.provider_id != self._provider_id:
@@ -293,6 +384,34 @@ class OpenAICompatibleProvider(_HttpCloudProvider):
         )
 
 
+    def _build_stream(self, request: GenerateRequest) -> tuple[str, dict[str, str], dict[str, Any]]:
+        path, headers, payload = self._build(request)
+        payload = {**payload, "stream": True, "stream_options": {"include_usage": True}}
+        return path, headers, payload
+
+    async def _consume_sse(self, request: GenerateRequest, sse: AsyncIterator[tuple[str | None, str]]) -> AsyncIterator[StreamEvent]:
+        sequence = 0
+        usage: TokenUsage | None = None
+        async for _event_type, data in sse:
+            if data == "[DONE]":
+                break
+            obj = self._stream_json(data)
+            for choice in obj.get("choices") or []:
+                if not isinstance(choice, dict):
+                    continue
+                delta = (choice.get("delta") or {}).get("content")
+                if isinstance(delta, str) and delta:
+                    yield StreamEvent(request.request_id, sequence, delta, False)
+                    sequence += 1
+            reported = obj.get("usage")
+            if isinstance(reported, dict):
+                usage = TokenUsage(
+                    self._require_int(reported.get("prompt_tokens", 0), self._provider_id),
+                    self._require_int(reported.get("completion_tokens", 0), self._provider_id),
+                )
+        yield StreamEvent(request.request_id, sequence, "", True, usage)
+
+
 class AnthropicProvider(_HttpCloudProvider):
     """Adapter for the Anthropic Messages API."""
 
@@ -335,6 +454,35 @@ class AnthropicProvider(_HttpCloudProvider):
                 self._require_int(usage.get("output_tokens"), self._provider_id),
             ),
         )
+
+
+    def _build_stream(self, request: GenerateRequest) -> tuple[str, dict[str, str], dict[str, Any]]:
+        path, headers, payload = self._build(request)
+        payload = {**payload, "stream": True}
+        return path, headers, payload
+
+    async def _consume_sse(self, request: GenerateRequest, sse: AsyncIterator[tuple[str | None, str]]) -> AsyncIterator[StreamEvent]:
+        sequence = 0
+        input_tokens = 0
+        output_tokens = 0
+        async for event_type, data in sse:
+            obj = self._stream_json(data)
+            if event_type == "message_start":
+                usage = (obj.get("message") or {}).get("usage") or {}
+                input_tokens = self._require_int(usage.get("input_tokens", 0), self._provider_id)
+            elif event_type == "content_block_delta":
+                delta = obj.get("delta") or {}
+                text = delta.get("text")
+                if delta.get("type") == "text_delta" and isinstance(text, str) and text:
+                    yield StreamEvent(request.request_id, sequence, text, False)
+                    sequence += 1
+            elif event_type == "message_delta":
+                usage = obj.get("usage") or {}
+                if "output_tokens" in usage:
+                    output_tokens = self._require_int(usage.get("output_tokens", 0), self._provider_id)
+            elif event_type == "message_stop":
+                break
+        yield StreamEvent(request.request_id, sequence, "", True, TokenUsage(input_tokens, output_tokens))
 
 
 class GeminiProvider(_HttpCloudProvider):
@@ -380,6 +528,34 @@ class GeminiProvider(_HttpCloudProvider):
                 self._require_int(usage.get("candidatesTokenCount"), self._provider_id),
             ),
         )
+
+
+    def _build_stream(self, request: GenerateRequest) -> tuple[str, dict[str, str], dict[str, Any]]:
+        path, headers, payload = self._build(request)
+        stream_path = path.replace(":generateContent", ":streamGenerateContent?alt=sse")
+        return stream_path, headers, payload
+
+    async def _consume_sse(self, request: GenerateRequest, sse: AsyncIterator[tuple[str | None, str]]) -> AsyncIterator[StreamEvent]:
+        sequence = 0
+        input_tokens = 0
+        output_tokens = 0
+        async for _event_type, data in sse:
+            obj = self._stream_json(data)
+            for candidate in obj.get("candidates") or []:
+                if not isinstance(candidate, dict):
+                    continue
+                parts = (candidate.get("content") or {}).get("parts") or []
+                text = "".join(
+                    p["text"] for p in parts if isinstance(p, dict) and isinstance(p.get("text"), str)
+                )
+                if text:
+                    yield StreamEvent(request.request_id, sequence, text, False)
+                    sequence += 1
+            usage = obj.get("usageMetadata")
+            if isinstance(usage, dict):
+                input_tokens = self._require_int(usage.get("promptTokenCount", input_tokens), self._provider_id)
+                output_tokens = self._require_int(usage.get("candidatesTokenCount", output_tokens), self._provider_id)
+        yield StreamEvent(request.request_id, sequence, "", True, TokenUsage(input_tokens, output_tokens))
 
 
 _KIND_TO_CLASS: dict[str, type[_HttpCloudProvider]] = {

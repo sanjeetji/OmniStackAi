@@ -82,8 +82,9 @@ Each provider is **key-activated**: it is registered only when its API key is pr
 environment. Keys are read from the environment, sent only as the provider auth header, and never
 placed in logs, errors, records, or a provider's `repr`. Every provider has a documented default
 model (overridable via `OMNISTACKAI_<PROVIDER>_MODEL`) and conservative shared budgets
-(`OMNISTACKAI_CLOUD_*`). Stage 0 `stream()` wraps a non-streaming generation into one final event;
-true per-provider SSE streaming is deferred.
+(`OMNISTACKAI_CLOUD_*`). As of R-010, `stream()` is true incremental Server-Sent-Events streaming for
+every cloud provider (OpenAI-compatible, Anthropic, Gemini), yielding ordered delta events and a final
+event with measured usage — matching the local Ollama adapter's streaming contract.
 
 `build_gateway_from_env()` (`bootstrap.py`) always registers local Ollama, registers each cloud
 provider whose key is set, and selects the L3/L4 cloud tier from `OMNISTACKAI_CLOUD_PROVIDER`
@@ -119,5 +120,5 @@ cost per successful accepted change (Brief 18.4, 68, 92.15).
 ## Deferred work
 
 Cross-provider fallback, circuit breaking, durable/persistent cost storage, benchmark-backed
-capability promotion, true per-provider streaming, richer context management, HTTP serving, and agent
-orchestration remain deferred to their own Tracker IDs.
+capability promotion, richer context management, HTTP serving, and agent orchestration remain deferred
+to their own Tracker IDs.

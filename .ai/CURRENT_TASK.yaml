@@ -1,24 +1,24 @@
 schema_version: 1
-task_id: R-009
-title: Deterministic usage and cost accounting for the model gateway
-status: done
+task_id: R-220
+title: True per-provider streaming for the cloud model adapters
+status: in_progress
 phase: BASIC/MVP
 founder_stage: 0
-branch: ai/R-009-usage-cost-accounting
+branch: ai/R-220-cloud-streaming
 goal: >-
-  Add a deterministic, privacy-safe usage and cost accounting layer for the model gateway. Every
-  gateway dispatch (success or failure) is recorded as an immutable metadata-only record (provider,
-  model, tier, complexity, token usage, latency, finish reason, success/error code) with an estimated
-  monetary cost computed from a configurable price book (local Ollama = zero). A ledger aggregates
-  totals and per-provider/per-model breakdowns, latency percentiles, success/failure counts, and cost
-  per successful call, so the platform can optimize cost per successful accepted change (Brief 18.4,
-  68, 92.15). No prompt content or secret is ever stored.
+  Replace the Stage 0 single-event stream wrapper on the cloud adapters with real incremental
+  Server-Sent-Events streaming for OpenAI-compatible (OpenAI/OpenRouter/Groq), Anthropic Messages,
+  and Google Gemini, so tokens arrive live like the local Ollama adapter. Streaming reuses the same
+  HTTP-safety bounds, maps into the existing vendor-neutral StreamEvent records with usage only on the
+  final event, and keeps API keys out of logs and records. No real cloud call is made (no key set);
+  offline tests drive the SSE parsers with injected fake streaming responses.
 source:
   tracker_sheet: Phase_Roadmap
-  tracker_row: reconstructed because R-009 is absent from the supplied workbook
-  brief_sections: [18, 18.2, 18.4, 23, 25, 26, 27, 68, 74, 84, 85, 90, 91, 92]
+  tracker_row: reconstructed because R-220 streaming scope is not in the supplied workbook
+  brief_sections: [18, 57, 25, 26, 27, 74, 75, 84, 85, 90, 91, 92]
   founder_intent: >-
-    Founder selected usage and cost accounting for R-009 and asked for a best-in-class implementation.
+    Founder asked to complete both true per-provider streaming and a second required item one by one.
+    R-220 delivers streaming; the second item is confirmed after R-220.
 project_profile:
   repository: platform_modular_monorepo
   service: python_agent_engine
@@ -26,11 +26,8 @@ project_profile:
   model_routing: balanced
 complexity: L2
 expected_impact:
-  - services/agent-engine/src/omnistackai_agent_engine/model_gateway/accounting.py
-  - services/agent-engine/src/omnistackai_agent_engine/model_gateway/gateway.py
-  - services/agent-engine/src/omnistackai_agent_engine/model_gateway/__init__.py
-  - services/agent-engine/src/omnistackai_agent_engine/model_gateway/live_gateway.py
-  - services/agent-engine/tests/test_accounting.py
+  - services/agent-engine/src/omnistackai_agent_engine/model_gateway/cloud.py
+  - services/agent-engine/tests/test_cloud.py
   - docs/MODEL_PROVIDER.md
   - portable state, changelog, handoff, task doc, and tracker evidence
 allowed_paths:
@@ -43,31 +40,28 @@ allowed_paths:
   - services/agent-engine/tests/**
 must_not_change:
   - PostgreSQL as the control-plane database or the existing schema
-  - the R-005 records/registry, R-006 Ollama adapter, R-007 gateway routing decisions, or R-008 cloud adapter public behavior
-  - local Compose services or infrastructure (Redis, NATS, object storage, Kubernetes, Temporal)
+  - the R-005 records/registry, R-006 Ollama adapter, R-007 gateway routing, R-008 cloud generate, or R-009 accounting public behavior
+  - local Compose services or infrastructure
   - auth, organizations, billing, Git integration, audit, or business APIs
   - native mobile or device-cloud functionality
   - the Section 74 top-level monorepo contract; no new top-level directory
   - the network-independence of static task verify
 must_not_do:
-  - store prompt/message content, request payloads, responses text, or any secret in accounting records
+  - make any real cloud API call (no key set; tests use injected fake streaming responses)
   - add an external Python dependency or a provider SDK
-  - change existing routing outcomes; accounting is observational and must not alter dispatch results
+  - place any API key value in source, tests, logs, records, or commits
 acceptance:
-  - Usage records are immutable, validated, metadata-only (no message content or secret) and capture provider, model, tier, complexity, token usage, latency, finish reason, success, and error code.
-  - A configurable price book computes estimated USD cost exactly with Decimal arithmetic; local Ollama is zero; unknown models are recorded as unpriced rather than guessed.
-  - The gateway records exactly one accounting record per dispatch for both success and failure, without changing the returned result or the raised error, and only when a recorder is configured.
-  - The ledger aggregates overall and per-provider/per-model totals, token sums, cost, success/failure counts, deterministic p50/p95 latency, unpriced-call count, and cost per successful call.
-  - Recording is safe under concurrent dispatch and adds no network dependency.
-  - Standard-library offline tests cover record validation, pricing (known, provider-default, unknown, cached-input, local-zero), ledger aggregation and percentiles, gateway success/failure recording, and the no-content privacy guarantee.
-  - Static task verify stays network-independent and green; existing gateway/adapter behavior and tests are unchanged.
+  - Each cloud adapter streams incrementally by parsing provider SSE, yielding ordered StreamEvent deltas and one final event with done=True and measured token usage (usage only on the final event).
+  - Streaming reuses bounded line/response sizes, finite timeouts, redirect rejection, bounded concurrency, and maps failures to stable platform-owned errors without leaking the key or raw bodies.
+  - OpenAI-compatible streaming requests usage in the final chunk; Anthropic maps message_start/content_block_delta/message_delta/message_stop; Gemini uses streamGenerateContent with SSE.
+  - The non-streaming generate path and all other adapter behavior are unchanged.
+  - Standard-library offline tests drive each provider's SSE parser with injected fake streaming responses covering multi-chunk deltas, final usage, and malformed/oversized lines, with zero network access.
+  - Static task verify stays network-independent and green.
 required_gates:
   - impact_analysis
   - python_compile_test
-  - accounting_record_and_pricing_tests
-  - ledger_aggregation_and_percentile_tests
-  - gateway_success_and_failure_recording_tests
-  - no_content_or_secret_stored_test
+  - cloud_streaming_parser_tests
+  - stream_failure_and_bound_tests
   - vendor_import_exclusion
   - secret_exclusion_check
   - task_verify
@@ -80,47 +74,15 @@ model_tool_trace:
   local_calls: 0
   cloud_calls: 0
   note: >-
-    Accounting is deterministic and needs no model call to implement or test. Any local live check
-    uses Ollama; no cloud key is configured, so cloud_calls stay zero.
+    SSE parsing is exercised offline with fake streaming responses; no cloud key is set, so no cloud
+    call is made. Any local live check uses Ollama.
 completion:
-  implementation_commit: f2fc8654c6a5717e292adcdc2abb5da2fd7409c2
-  verified_at: "2026-09-06T14:20:00+05:30"
-  verification:
-    - command: task verify
-      result: pass
-    - command: task agent-engine:lint
-      result: pass
-    - command: task agent-engine:test
-      result: pass
-      evidence: 74 tests passed, including 13 new accounting tests (pricing, ledger, percentiles, gateway recording, privacy)
-    - command: task agent-engine:gateway:run
-      result: pass
-      evidence: live local run recorded 2 successful calls, total_cost $0.000000, p50/p95 latency, per-provider breakdown; cloud_calls=0
-    - command: task security:quick
-      result: pass
-    - command: task env:check
-      result: pass
-    - command: docker compose --env-file .env -f infra/environments/local/compose.yaml config --services
-      result: pass
-      evidence: exactly postgres and control-plane; no service added
-  acceptance_results:
-    - criterion: Usage records are immutable, validated, and metadata-only (no content or secret) with provider, model, tier, complexity, tokens, latency, finish reason, success, and error code.
-      result: pass
-    - criterion: A configurable Decimal price book computes cost exactly; local Ollama is zero; unknown models are unpriced; cached input can be priced separately.
-      result: pass
-    - criterion: The gateway records exactly one record per dispatch (success and failure) without changing the returned result or raised error, only when a recorder is configured.
-      result: pass
-    - criterion: The ledger aggregates overall and per-provider/model totals, tokens, cost, success/failure, deterministic p50/p95 latency, unpriced-call count, and cost per successful call.
-      result: pass
-    - criterion: Recording is thread-safe and adds no network dependency.
-      result: pass
-    - criterion: Offline tests cover record validation, pricing paths, ledger aggregation and percentiles, gateway success/failure recording, and the no-content privacy guarantee.
-      result: pass
-    - criterion: Static task verify stays network-independent and green; existing routing/adapter behavior and tests are unchanged.
-      result: pass
+  implementation_commit: null
+  verified_at: null
+  verification: []
+  acceptance_results: []
 blockers: []
 next_action: >-
-  Reconstruct R-010 with founder confirmation. The workbook's R-010 is Native iOS Agent, which must
-  not start before web/backend stability; recommend reordering to a nearer MVP dependency such as
-  true per-provider streaming or cross-provider fallback.
-next_command: task ai:status
+  Implement incremental SSE streaming in the cloud adapters and offline parser tests; run the gates;
+  then record completion evidence and confirm the second required item (fallback or console slice).
+next_command: task agent-engine:test
