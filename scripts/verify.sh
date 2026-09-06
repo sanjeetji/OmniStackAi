@@ -9,5 +9,6 @@ bash "$repo_root/scripts/test.sh"
 bash "$repo_root/scripts/env-check.sh"
 bash "$repo_root/scripts/security-quick.sh"
 bash "$repo_root/scripts/db.sh" config
+bash "$repo_root/scripts/ollama.sh" config
 
 printf 'Stage 0 verification passed.\n'

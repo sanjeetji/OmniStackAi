@@ -29,12 +29,41 @@ for relative_path in "${required_directories[@]}"; do
   fi
 done
 
-for task_name in doctor bootstrap lint test verify ai:status ai:handoff db:config db:up db:status db:verify db:down; do
+for task_name in doctor bootstrap lint test verify ai:status ai:handoff db:config db:up db:status db:verify db:down \
+  ollama:config ollama:serve ollama:status ollama:models ollama:pull ollama:verify; do
   if ! rg -q "^  ${task_name}:" "$repo_root/Taskfile.yml"; then
     printf 'Missing Taskfile command: %s\n' "$task_name"
     exit 1
   fi
 done
+
+ollama_script="$repo_root/scripts/ollama.sh"
+if [[ ! -f "$ollama_script" ]]; then
+  printf 'Missing R-003 local Ollama contract file: %s\n' "$ollama_script"
+  exit 1
+fi
+
+if ! rg -q 'http://127\.0\.0\.1:11434' "$repo_root/.env.example"; then
+  printf 'Stage 0 Ollama endpoint must default to loopback.\n'
+  exit 1
+fi
+
+if ! rg -q '^OMNISTACKAI_OLLAMA_MODEL=' "$repo_root/.env.example"; then
+  printf 'The local model must be selected through environment configuration.\n'
+  exit 1
+fi
+
+for endpoint in api/version api/tags api/generate; do
+  if ! rg -q "$endpoint" "$ollama_script"; then
+    printf 'Missing Ollama API contract endpoint: %s\n' "$endpoint"
+    exit 1
+  fi
+done
+
+if rg -qi 'api\.openai\.com|api\.anthropic\.com|generativelanguage\.googleapis\.com' "$ollama_script"; then
+  printf 'R-003 must not call a cloud model provider.\n'
+  exit 1
+fi
 
 compose_file="$repo_root/infra/environments/local/compose.yaml"
 up_migration="$repo_root/services/control-plane/migrations/000001_platform_foundation.up.sql"

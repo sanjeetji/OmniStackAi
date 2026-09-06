@@ -26,7 +26,7 @@ tasks:
   build:
     desc: Build implemented targets
     cmds:
-      - echo "No application build target exists through R-002."
+      - echo "No application build target exists through R-003."
 
   check:
     desc: Run lint and tests
@@ -35,7 +35,7 @@ tasks:
   preview:
     desc: Start the lowest-cost eligible preview
     cmds:
-      - echo "No preview target exists through R-002. Instant Browser Preview will be added first."
+      - echo "No preview target exists through R-003. Instant Browser Preview will be added first."
 
   db:config:
     desc: Validate the local PostgreSQL Compose configuration
@@ -61,6 +61,36 @@ tasks:
     desc: Stop local PostgreSQL without deleting its data volume
     cmds:
       - bash scripts/db.sh down
+
+  ollama:config:
+    desc: Validate the loopback-only local Ollama configuration
+    cmds:
+      - bash scripts/ollama.sh config
+
+  ollama:serve:
+    desc: Run the configured local Ollama server in the foreground
+    cmds:
+      - bash scripts/ollama.sh serve
+
+  ollama:status:
+    desc: Check local Ollama health and version
+    cmds:
+      - bash scripts/ollama.sh status
+
+  ollama:models:
+    desc: List models discovered from the local Ollama runtime
+    cmds:
+      - bash scripts/ollama.sh models
+
+  ollama:pull:
+    desc: Pull the local model selected in environment configuration
+    cmds:
+      - bash scripts/ollama.sh pull
+
+  ollama:verify:
+    desc: Verify model discovery and one real local inference
+    cmds:
+      - bash scripts/ollama.sh verify
 
   verify:
     desc: Run the CI-equivalent Stage 0 verification
