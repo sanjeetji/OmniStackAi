@@ -13,8 +13,10 @@ builder: describe an app -> it generates a real, owned multi-platform app with v
 REPOSITORY
 - GitHub: https://github.com/sanjeetji/OmniStackAi.git
 - Local:  /Users/sanjeet_kumar/Documents/Projects/Startup/Omnistackai
-- Work on branch `main` (it contains all work, R-001..R-228). Create ai/<task-id>-<slug> branches for
-  new work. Git identity: user.name "sanjeetji", user.email "sk698166@gmail.com".
+- Work on and commit DIRECTLY to branch `main` (it is the ONLY branch and the GitHub default; it
+  contains all work). The founder consolidated onto main and deleted per-task branches — do NOT create
+  new ai/<task-id> branches; keep the Tracker-ID discipline (tag commits [R-###]). Git identity:
+  user.name "sanjeetji", user.email "sk698166@gmail.com" (already the sole author on every commit).
 
 WHAT WE ARE BUILDING (differentiators, from the brief)
 One Application IR -> many targets (web/mobile/backend); verifiable engineering (compile/test/security
@@ -38,22 +40,25 @@ START PROTOCOL
   `task ai:status`, `task ai:handoff`. `task verify` must stay green and network-independent.
 - Confirm git branch/HEAD/clean tree. Then restate: phase, next Tracker ID, objective, blast radius.
 
-WHAT IS ALREADY BUILT (all Python 3.13 stdlib-only, offline, in services/agent-engine; 140 tests pass)
+WHAT IS ALREADY BUILT (all Python 3.13 stdlib-only, offline, in services/agent-engine; 147 tests pass)
 - Model fabric: ModelProvider contract + registry; local Ollama adapter; Balanced ModelGateway
   (deterministic escalation ladder, no silent cloud fallback, context-budget guard); key-activated
   cloud adapters for Anthropic/OpenAI/Gemini/OpenRouter/Groq (no keys set -> zero cloud calls); true
   SSE streaming; usage/cost accounting (Decimal price book); env-driven cross-provider fallback +
   circuit breaker. Run it live: `task agent-engine:gateway:run` (routes to local Ollama qwen).
-- FIRST BUILDER SLICE (the product): Application IR (framework-neutral spec) -> FrameworkAdapter
-  contract + in-memory GeneratedProject -> NextjsWebAdapter (emits a real Next.js app from the IR) ->
-  git_service (materializes it into a customer-owned Git repo with one commit). Proven end-to-end.
+- BUILDER (the product): Application IR (framework-neutral spec) -> FrameworkAdapter contract +
+  in-memory GeneratedProject -> NextjsWebAdapter (real Next.js app from the IR) + PythonBackendAdapter
+  (real FastAPI backend from the IR) -> git_service (materialize into a customer-owned Git repo with
+  one commit). MULTI-TARGET proven: one IR -> a 12-file Next.js web app + an 11-file FastAPI backend,
+  then a real owned repo. All offline/deterministic (emit files, assert contents; no install/build).
 - Console: apps/console-web is a dependency-free static console (model/cost overview) +
   a Python snapshot exporter; `task console:serve`.
 
 ID SCHEME (important): the workbook backlog already owns R-010..R-219 (planned agents/features). New
-work this project added uses IDs AFTER R-219: R-220 streaming, R-221 fallback, R-222 console,
-R-223 env-fallback, R-224 Next.js console upgrade (DEFERRED), R-225 IR, R-226 adapter contract,
-R-227 Next.js adapter, R-228 git service. Do NOT overwrite backlog rows; continue from R-229.
+work uses IDs AFTER R-219: R-220 streaming, R-221 fallback, R-222 console, R-223 env-fallback,
+R-224 Next.js console upgrade (DEFERRED), R-225 IR, R-226 adapter contract, R-227 Next.js adapter,
+R-228 git service, R-229 Python/FastAPI backend adapter. Do NOT overwrite backlog rows; continue
+from R-230.
 
 ENVIRONMENT LIMITS discovered here
 - npm front-end bundlers (Next.js SWC, Vite/esbuild) FAIL to install (native-binary downloads time
@@ -79,14 +84,13 @@ RULES (non-negotiable)
   .ai/HANDOFF.md, PROJECT_STATE.md, CHANGELOG.md, and the tracker row. Push the branch; verify remote
   SHA == local HEAD. Never claim unexecuted tests.
 
-WHAT TO DO NEXT (pick with the founder; all continue the builder slice)
-- Offline-doable now: R-229 = a backend framework adapter (Go OR Python) so ONE IR emits web + backend
-  together (the multi-target differentiator), same pattern as the Next.js adapter (emit files, assert
-  contents, register in AdapterRegistry).
+WHAT TO DO NEXT (pick with the founder; all continue the builder)
+- Offline-doable now: R-230 = a Go backend framework adapter (another target from the same IR; same
+  pattern as R-227/R-229 — emit files, assert contents, register in AdapterRegistry).
 - Needs a network/cloud environment: sandbox/runtime provider + instant browser preview of the
   generated app (Brief 15/51); then deploy; and the deferred R-224 Next.js console upgrade.
 - Deferred by governance: native mobile (R-010 etc.) until web/backend stability.
 
 Begin by reading the files above and running the start protocol, then propose the next Tracker ID
-(default R-229 backend adapter) with its task contract before writing code.
+(default R-230 Go backend adapter) with its task contract before writing code. Commit to main.
 ```
