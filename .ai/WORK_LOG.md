@@ -281,6 +281,18 @@
   extended); no ID lost, MVP total 122 / Done 16, chart/styles byte-identical, zip valid.
 - Created implementation checkpoint `1a4f8a9b8cc2ca59be32142bb6c16992cb4dbd40`.
 
+## 2026-09-06 — R-228 (first builder slice complete)
+
+- Added `omnistackai_agent_engine.git_service`: `materialize_project` (writes a GeneratedProject under
+  a target dir, refuses path escapes and non-empty targets, sets exec bits) and `create_repository`
+  (git init + stage + one commit with the customer identity via explicit env, no global git config,
+  returns the commit SHA). Writes only inside the caller's target; offline; local git only.
+- 6 new offline temp-dir tests (140 total). Verified the full slice end-to-end: demo IR -> 13-file
+  Next.js app (NextjsWebAdapter) -> a real one-commit customer-owned Git repo. `task verify` green.
+- Inserted tracker row R-228 (Product) at Phase_Roadmap row 9 (rows 9..235 -> 10..236, ranges
+  extended); no ID lost, MVP total 123 / Done 17, chart/styles byte-identical, zip valid.
+- Created implementation checkpoint `28801ef396f7ead743a1d0cdc68657de23cefe1a`.
+
 ## 2026-09-06 — R-224 (deferred)
 
 - Attempted the Next.js console upgrade. `pnpm install` for next@15.5.4 timed out fetching the native

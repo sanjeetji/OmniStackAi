@@ -1,5 +1,6 @@
 # Changelog
 
+2026-09-06  R-228  Added the git service: materialize a GeneratedProject to disk and initialize a customer-owned Git repository with a first commit (explicit identity, no global config, writes only inside the target, offline) — completes the first end-to-end builder slice (IR -> app -> owned repo)
 2026-09-06  R-227  Added the first framework code adapter (Next.js web): turns an Application IR into a real Next.js App Router TypeScript project (config, TS interfaces from entities, App Router API routes with {param}->[param], a page per screen, overview) as a deterministic in-memory GeneratedProject; no install/build/disk
 2026-09-06  R-226  Added the code-generation boundary: an in-memory generated file-set (GeneratedFile/GeneratedProject, path-safe, deterministic) and the FrameworkAdapter contract + registry that turn an Application IR into a GeneratedProject per target; no disk writes or code execution
 2026-09-06  R-225  Added the framework-neutral Application IR v1 (Brief 9) — the source of truth for code generation: validated, versioned records for application/strategy/roles/entities/APIs/screens/acceptance with cross-reference checks and lossless serialization; first real product primitive

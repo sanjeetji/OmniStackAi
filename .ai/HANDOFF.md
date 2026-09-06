@@ -1,49 +1,52 @@
 # Current Handoff
 
-Task ID: R-227
+Task ID: R-228
 Status: done
 Phase: BASIC/MVP — Founder Stage 0
-Branch: `ai/R-227-nextjs-adapter`
-Last verified implementation SHA: `1a4f8a9b8cc2ca59be32142bb6c16992cb4dbd40`
+Branch: `ai/R-228-git-service`
+Last verified implementation SHA: `28801ef396f7ead743a1d0cdc68657de23cefe1a`
 
-## Completed — the platform now generates a real app
+## Milestone — first end-to-end builder slice is complete
 
-- `NextjsWebAdapter` (`codegen/nextjs.py`, target `nextjs-web`) turns an Application IR into a real
-  Next.js App Router TypeScript project as a `GeneratedProject`:
-  - entities → TypeScript interfaces (`lib/types.ts`; optional fields, typed relations),
-  - IR APIs → App Router `route.ts` handlers, `{param}` → `[param]`, one file per route dir, a handler
-    per method,
-  - screens → `app/<id>/page.tsx`; `app/page.tsx` overview,
-  - `package.json`, `tsconfig.json`, `next.config.mjs` (security headers), `README.md`, `.gitignore`,
-    `.env.example` (placeholders only).
-- Extended the `GeneratedFile` path validator to allow framework route filename chars (`[]()@+`) while
-  still rejecting absolute paths, `..`, backslashes, and control chars.
-- Pure/deterministic; nothing installed/built/run/written to disk. The demo IR emits a **13-file**
-  Next.js project.
+`Application IR (R-225) → framework adapter contract (R-226) → Next.js code adapter (R-227) → Git
+service (R-228)` turns a structured app spec into a **real Next.js app inside a customer-owned Git
+repo**, fully offline and tested.
+
+## Completed (R-228)
+
+- `omnistackai_agent_engine.git_service`:
+  - `materialize_project(project, target_dir, *, overwrite=False)` — writes every `GeneratedFile`
+    under the target, refuses path escapes and (unless overwrite) a non-empty target, sets exec bits.
+  - `create_repository(project, target_dir, *, author_name, author_email, commit_message=...)` —
+    `git init` + stage + **one commit** with the customer identity via explicit env (no global git
+    config); returns the commit SHA and file count.
+- Writes only inside the caller's target directory; offline; local `git` only.
+- End-to-end demo: demo IR → 13-file Next.js app → a real one-commit customer-owned repo.
 
 ## Verification
 
-- `task verify` — pass (134 agent-engine tests; 9 new). `task agent-engine:lint`, `task security:quick` — pass.
+- `task verify` — pass (140 agent-engine tests; 6 new). `task agent-engine:lint`, `task security:quick` — pass.
 - Compose unchanged; offline `task bootstrap` unchanged.
-- Tracker — R-227 (Product) at `Phase_Roadmap!A9:M9` (rows 9..234 shifted to 10..235, ranges extended);
-  no ID lost; MVP total 122, Done 16; chart/styles/workbook byte-identical; zip verified.
+- Tracker — R-228 (Product) at `Phase_Roadmap!A9:M9` (rows 9..235 → 10..236, ranges extended); no ID
+  lost; MVP total 123, Done 17; chart/styles/workbook byte-identical; zip verified.
 
-## Product roadmap (vertical slice toward an Emergent-class builder)
+## What exists now (product)
 
-1. R-225 Application IR — done.
-2. R-226 framework adapter contract + file-set — done.
-3. R-227 Next.js web adapter (IR → real app) — done.
-4. **R-228 (next)** Git service v1 — materialize a `GeneratedProject` to disk as a customer-owned repo
-   with an initial commit (offline; `git` is available). This completes the first end-to-end builder
-   slice: IR → generated app → owned Git repo.
-5. Later (needs a cloud/network env): sandbox run → instant browser preview → deploy; plus the deferred
-   R-224 Next.js console upgrade.
+- **Model fabric** (R-005..R-223): gateway, local Ollama + 5 cloud adapters (key-activated), streaming,
+  fallback + circuit breaking, usage/cost accounting, a static console + snapshot exporter.
+- **Builder slice** (R-225..R-228): Application IR → adapter contract → Next.js generator → Git service.
 
-## Next action
+## Next action (needs a cloud/network-capable environment)
 
-Proceed to **R-228** — Git service v1: write a `GeneratedProject` to a target directory as a real Git
-repository (init, add, commit) with the customer as owner, verified offline by inspecting the
-materialized tree and commit. Native mobile stays deferred per Brief §25/§91.
+The remaining builder-slice steps require real runtime/infra and are the right next tasks once such an
+environment is available:
+1. **Sandbox/runtime provider + instant browser preview** of the generated app (Brief §15/§51).
+2. **Backend (Go/Python) framework adapter** to pair with the Next.js web adapter (multi-target from
+   one IR — the core differentiator).
+3. **R-224 Next.js console upgrade** (needs npm registry access).
+Native mobile / device-cloud stays deferred per Brief §25/§91 until web/backend stability.
+
+Confirm the next Tracker ID with the founder.
 
 ## Next command
 

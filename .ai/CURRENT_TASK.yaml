@@ -1,7 +1,7 @@
 schema_version: 1
 task_id: R-228
 title: Git service v1 — materialize a generated project into a customer-owned repo
-status: in_progress
+status: done
 phase: BASIC/MVP
 founder_stage: 0
 branch: ai/R-228-git-service
@@ -74,12 +74,33 @@ model_tool_trace:
   cloud_calls: 0
   note: Deterministic file/git operations; no model call. No cloud key set; cloud_calls zero.
 completion:
-  implementation_commit: null
-  verified_at: null
-  verification: []
-  acceptance_results: []
+  implementation_commit: 28801ef396f7ead743a1d0cdc68657de23cefe1a
+  verified_at: "2026-09-06T21:00:00+05:30"
+  verification:
+    - command: task verify
+      result: pass
+      evidence: 140 agent-engine tests (6 new git-service tests) plus all Stage 0 checks
+    - command: task agent-engine:lint
+      result: pass
+    - command: task security:quick
+      result: pass
+  acceptance_results:
+    - criterion: materialize_project writes all files under the target, refuses escapes and (unless overwrite) non-empty targets, sets exec bits.
+      result: pass
+    - criterion: create_repository does git init + stage + one commit with the customer identity via explicit env (no global config), returning the commit SHA and file count.
+      result: pass
+    - criterion: The written tree exactly matches the GeneratedProject and the repo has exactly one commit.
+      result: pass
+    - criterion: Standard library + local git only; deterministic; offline; nothing outside the target is modified.
+      result: pass
+    - criterion: Offline temp-dir tests cover materialization, escape/non-empty refusal, repo init/commit, identity, and tree/commit correctness.
+      result: pass
+  note: >-
+    End-to-end demo: demo IR -> 13-file Next.js app -> a real one-commit customer-owned repo.
+    Deterministic; no model call; cloud_calls zero.
 blockers: []
 next_action: >-
-  Implement the git-service materializer + repo initializer with offline temp-dir tests; run the gates;
-  record completion. This completes the first end-to-end builder slice (IR -> app -> owned Git repo).
-next_command: task agent-engine:test
+  First end-to-end builder slice is complete (IR -> app -> owned Git repo). Remaining slice steps
+  (sandbox run, instant browser preview, deploy) and the deferred R-224 Next.js console upgrade need a
+  cloud/network-capable environment. Confirm the next Tracker ID with the founder.
+next_command: task ai:status
