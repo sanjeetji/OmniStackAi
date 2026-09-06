@@ -1,19 +1,24 @@
 schema_version: 1
-task_id: R-228
-title: Git service v1 — materialize a generated project into a customer-owned repo
-status: done
+task_id: R-229
+title: Python (FastAPI) backend framework adapter — generate a backend from the IR
+status: in_progress
 phase: BASIC/MVP
 founder_stage: 0
-branch: ai/R-228-git-service
+branch: main
 goal: >-
-  Complete the first end-to-end builder slice: safely write a GeneratedProject to a target directory
-  and initialize it as a real Git repository owned by the customer, with a first commit. Deterministic
-  and offline (git is available); writes only inside the caller-provided target directory, never the
-  platform repo. This closes the loop IR -> generated app -> owned Git repo.
+  Add the second framework adapter: a PythonBackendAdapter that turns an Application IR into a real
+  FastAPI (Python) backend as a GeneratedProject — Pydantic models from entities, FastAPI routers from
+  the IR APIs (grouped by resource), a main app with health, config, requirements.txt, README,
+  .gitignore, .env.example. Paired with the Next.js web adapter, one IR now emits web + backend
+  together (the multi-target differentiator). Deterministic and offline: emitted files are asserted in
+  tests; nothing is installed, built, run, or written to disk. Registered via the AdapterRegistry.
 source:
   tracker_sheet: Phase_Roadmap
   tracker_row: reconstructed; new IDs continue after the workbook backlog's R-010..R-219
-  brief_sections: [6, 20, 34, 71, 74, 75, 77, 91, 92]
+  brief_sections: [9, 16, 17, 42, 43, 46, 47, 74, 77, 91, 92]
+  founder_note: >-
+    Founder consolidated work onto main (branches deleted) and asked to keep progressing. Work is now
+    committed directly to main with the Tracker-ID discipline preserved.
 project_profile:
   repository: platform_modular_monorepo
   service: python_agent_engine
@@ -21,11 +26,10 @@ project_profile:
   model_routing: balanced
 complexity: L2
 expected_impact:
-  - services/agent-engine/src/omnistackai_agent_engine/git_service/__init__.py
-  - services/agent-engine/src/omnistackai_agent_engine/git_service/materialize.py
-  - services/agent-engine/src/omnistackai_agent_engine/git_service/errors.py
-  - services/agent-engine/tests/test_git_service.py
-  - docs/GIT_SERVICE.md
+  - services/agent-engine/src/omnistackai_agent_engine/codegen/backend_python.py
+  - services/agent-engine/src/omnistackai_agent_engine/codegen/__init__.py
+  - services/agent-engine/tests/test_backend_python_adapter.py
+  - docs/CODEGEN.md
   - portable state, changelog, handoff, task doc, and tracker evidence
 allowed_paths:
   - .ai/**
@@ -36,30 +40,30 @@ allowed_paths:
   - services/agent-engine/**
 must_not_change:
   - PostgreSQL as the control-plane database or the existing schema
-  - the model-gateway, Application IR, and codegen public behavior (additive package)
+  - the model-gateway, Application IR, codegen contract, and Next.js adapter public behavior (additive)
   - local Compose services or infrastructure; the Section 74 top-level contract; the offline bootstrap
   - the network-independence of static task verify
 must_not_do:
-  - write anywhere except the caller-provided target directory; never touch the platform repo
-  - depend on global git config; make any network call; store secrets
+  - install, build, or run the generated backend; write generated files to disk in this task
+  - add an external Python dependency to the platform; store secrets (generated .env.example holds placeholders)
 acceptance:
-  - materialize_project writes every GeneratedFile under the target directory, creating parent dirs,
-    refusing any path that would escape the target, and (unless overwrite) refusing a non-empty target;
-    executable files get the executable bit.
-  - create_repository initializes a Git repo in the target, stages all files, and makes one commit with
-    the customer as author/committer via explicit -c identity (no global git config), returning the
-    commit SHA and file count.
-  - The written tree exactly matches the GeneratedProject (paths and contents), and the repo has
-    exactly one commit containing those files.
-  - Standard-library + local git only; deterministic; offline; nothing outside the target is modified.
-  - Standard-library offline tests (in a temp dir) cover materialization, escape refusal, non-empty
-    refusal, repo init/commit, author identity, and tree/commit correctness.
+  - PythonBackendAdapter implements FrameworkAdapter (target backend-python) and returns a
+    GeneratedProject from an ApplicationIR forming a coherent FastAPI app (app/main.py, app/models.py,
+    app/routers/*, app/config.py, requirements.txt, README, .gitignore, .env.example).
+  - Entities become Pydantic models (field types mapped; non-required fields optional with defaults);
+    IR APIs become FastAPI routes grouped into routers by first path segment, with path params typed as
+    function arguments and a 501 not-implemented scaffold body; main includes each router and a health
+    endpoint.
+  - All paths are safe and deterministically ordered; generation is a pure function of the IR;
+    standard-library only; nothing installed/built/run/written to disk.
+  - Standard-library offline tests assert emitted paths and key contents for a representative IR,
+    entity->model mapping, route grouping/params, and registry wiring.
   - task verify stays green and network-independent.
 required_gates:
   - impact_analysis
-  - materialize_and_escape_refusal_tests
-  - repo_init_commit_and_identity_tests
-  - tree_matches_project_test
+  - backend_emission_tests
+  - model_and_route_mapping_tests
+  - registry_wiring_test
   - python_compile_test
   - vendor_import_exclusion
   - secret_exclusion_check
@@ -72,35 +76,15 @@ model_tool_trace:
   configured_model: qwen2.5-coder:14b
   local_calls: 0
   cloud_calls: 0
-  note: Deterministic file/git operations; no model call. No cloud key set; cloud_calls zero.
+  note: Deterministic codegen; no model call. No cloud key set; cloud_calls zero.
 completion:
-  implementation_commit: 28801ef396f7ead743a1d0cdc68657de23cefe1a
-  verified_at: "2026-09-06T21:00:00+05:30"
-  verification:
-    - command: task verify
-      result: pass
-      evidence: 140 agent-engine tests (6 new git-service tests) plus all Stage 0 checks
-    - command: task agent-engine:lint
-      result: pass
-    - command: task security:quick
-      result: pass
-  acceptance_results:
-    - criterion: materialize_project writes all files under the target, refuses escapes and (unless overwrite) non-empty targets, sets exec bits.
-      result: pass
-    - criterion: create_repository does git init + stage + one commit with the customer identity via explicit env (no global config), returning the commit SHA and file count.
-      result: pass
-    - criterion: The written tree exactly matches the GeneratedProject and the repo has exactly one commit.
-      result: pass
-    - criterion: Standard library + local git only; deterministic; offline; nothing outside the target is modified.
-      result: pass
-    - criterion: Offline temp-dir tests cover materialization, escape/non-empty refusal, repo init/commit, identity, and tree/commit correctness.
-      result: pass
-  note: >-
-    End-to-end demo: demo IR -> 13-file Next.js app -> a real one-commit customer-owned repo.
-    Deterministic; no model call; cloud_calls zero.
+  implementation_commit: null
+  verified_at: null
+  verification: []
+  acceptance_results: []
 blockers: []
 next_action: >-
-  First end-to-end builder slice is complete (IR -> app -> owned Git repo). Remaining slice steps
-  (sandbox run, instant browser preview, deploy) and the deferred R-224 Next.js console upgrade need a
-  cloud/network-capable environment. Confirm the next Tracker ID with the founder.
-next_command: task ai:status
+  Implement the FastAPI backend adapter and offline emission tests; run the gates; record completion.
+  Then multi-target generation (web + backend from one IR) is demonstrable; next real steps
+  (sandbox/preview/deploy) need a cloud/network environment.
+next_command: task agent-engine:test

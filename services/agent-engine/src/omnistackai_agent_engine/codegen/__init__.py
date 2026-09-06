@@ -9,6 +9,7 @@ from .errors import (
     InvalidGeneratedFileError,
     UnsupportedTargetError,
 )
+from .backend_python import PythonBackendAdapter
 from .files import GeneratedFile, GeneratedProject
 from .nextjs import NextjsWebAdapter
 
@@ -24,5 +25,6 @@ __all__ = [
     "GenerationTarget",
     "InvalidGeneratedFileError",
     "NextjsWebAdapter",
+    "PythonBackendAdapter",
     "UnsupportedTargetError",
 ]

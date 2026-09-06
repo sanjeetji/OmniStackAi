@@ -47,3 +47,18 @@ The file-path validator (`GeneratedFile`) allows framework route filename charac
 Next.js/Expo route conventions are valid, while still rejecting absolute paths, `..`, backslashes, and
 control characters. The generated project is what a Next.js toolchain would install and build; this
 platform verifies it offline by asserting the emitted files (no install/build here).
+
+## Second adapter: Python backend (R-229)
+
+`PythonBackendAdapter` (target `backend-python`) turns an Application IR into a real FastAPI backend:
+
+- **Models:** each entity → a Pydantic model in `app/models.py` (types mapped; non-required fields
+  become `Optional[...] = None`).
+- **Routes:** IR APIs → FastAPI routes grouped into `app/routers/<segment>.py` by first path segment;
+  `{param}` path params become typed function arguments; scaffold bodies raise `501 not_implemented`.
+- **App:** `app/main.py` includes each router and a `/healthz` endpoint; plus `app/config.py`,
+  `requirements.txt`, `README.md`, `.gitignore`, `.env.example` (placeholders only).
+
+With R-227 (web) and R-229 (backend) registered together, **one Application IR emits web + backend
+together** — the multi-target differentiator. Both are pure/offline: verified by asserting emitted
+files; the Git service (R-228) materializes either into a customer-owned repo.
