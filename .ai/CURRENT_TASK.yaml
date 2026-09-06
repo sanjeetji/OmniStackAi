@@ -1,7 +1,7 @@
 schema_version: 1
 task_id: R-008
 title: Cloud API-key ModelProvider adapters (multi-provider, key-activated) behind the shared boundary
-status: in_progress
+status: done
 phase: BASIC/MVP
 founder_stage: 0
 branch: ai/R-008-cloud-provider-adapters
@@ -95,12 +95,49 @@ model_tool_trace:
     No cloud API key is configured, so no cloud provider is called; cloud adapters are exercised only
     by offline tests with injected fake HTTP openers. Any local live check uses Ollama.
 completion:
-  implementation_commit: null
-  verified_at: null
-  verification: []
-  acceptance_results: []
+  implementation_commit: eeade72e84c7f1ebd71dfc8c0f7c2f4db0f79677
+  verified_at: "2026-09-06T13:20:00+05:30"
+  verification:
+    - command: task verify
+      result: pass
+    - command: task agent-engine:lint
+      result: pass
+      evidence: compileall, no-external-deps contract, and provider-SDK import exclusion passed
+    - command: task agent-engine:test
+      result: pass
+      evidence: 61 tests passed, including 13 cloud-adapter tests and 6 bootstrap tests, all offline
+    - command: task agent-engine:gateway:run
+      result: pass
+      evidence: with no cloud key set, only ollama-local registered; L1/L2 local, L3/L4 refused; live generation and stream on qwen2.5-coder:14b; cloud_calls=0
+    - command: task security:quick
+      result: pass
+    - command: task env:check
+      result: pass
+    - command: docker compose --env-file .env -f infra/environments/local/compose.yaml config --services
+      result: pass
+      evidence: exactly postgres and control-plane; no service added
+  acceptance_results:
+    - criterion: Each cloud adapter implements the ModelProvider boundary using only the standard library over HTTPS; no vendor SDK or external dependency added.
+      result: pass
+    - criterion: OpenAI/OpenRouter/Groq share one OpenAI-compatible adapter; Anthropic and Gemini have their own; each maps messages, output, finish reason, and usage to vendor-neutral records.
+      result: pass
+    - criterion: API keys are read only from the environment, sent only as the provider auth header, and never appear in logs, errors, records, or repr (asserted by tests).
+      result: pass
+    - criterion: Each provider has an overridable default model and conservative per-model budgets.
+      result: pass
+    - criterion: The bootstrap always registers local Ollama and registers each key-present cloud provider; with no key only Ollama is registered and L3/L4 return no_eligible_provider.
+      result: pass
+    - criterion: OMNISTACKAI_CLOUD_PROVIDER selects the active cloud tier; selecting a provider without its key raises a clear configuration error, not a silent local downgrade.
+      result: pass
+    - criterion: Offline tests cover mapping, auth headers, success/error/oversized/timeout paths, key-absent deactivation, and bootstrap selection with injected fake openers and zero network access.
+      result: pass
+    - criterion: The live gateway runner still runs on local Ollama with no keys; static task verify stays network-independent and green.
+      result: pass
+    - criterion: No real cloud call was made; no vendor SDK, external dependency, Compose/DB change, infrastructure, or new top-level folder introduced.
+      result: pass
 blockers: []
 next_action: >-
-  Implement the standard-library cloud adapters, the env bootstrap, and offline tests; run the gates;
-  then record completion evidence and update state, changelog, handoff, task doc, and tracker.
-next_command: task agent-engine:test
+  Reconstruct R-009 (candidate: true per-provider SSE streaming for cloud adapters, or cross-provider
+  fallback and circuit breaking). To exercise a cloud provider live, the founder sets that provider's
+  API key and OMNISTACKAI_CLOUD_PROVIDER in the untracked .env.
+next_command: task ai:status

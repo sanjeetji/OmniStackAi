@@ -116,3 +116,26 @@
 - Live-ran the gateway on both installed models: L0 refused, L1/L2 routed to `ollama-local`, L3/L4
   refused; L2 generation and L1 stream succeeded on `qwen2.5-coder:14b` and `qwen3.5:9b`; cloud
   calls remained zero. Static `task verify` stayed network-independent and green.
+
+## 2026-09-06 — R-008
+
+- Reconstructed R-008 on founder instruction to configure every cloud provider (not just one),
+  activated by API key, while continuing to run locally on Ollama until keys are added.
+- Added standard-library HTTPS cloud adapters (no vendor SDK, no external dependency): one
+  OpenAI-compatible adapter for OpenAI/OpenRouter/Groq, an Anthropic Messages adapter, and a Google
+  Gemini generateContent adapter, each mapping to the vendor-neutral records with the R-006 HTTP
+  safety pattern (bounded response, finite timeout, redirect rejection, stable errors).
+- Kept API keys out of source/logs/records/repr: keys are read only from the environment and sent
+  only as the provider auth header; a provider is registered only when its key is present.
+- Added `build_gateway_from_env()` that always registers local Ollama and each key-present cloud
+  provider and selects the L3/L4 tier from `OMNISTACKAI_CLOUD_PROVIDER` (default none); selecting a
+  provider without its key is a clear configuration error. Refactored the live runner to use it.
+- Added 19 offline tests (61 total) with injected fake HTTP openers; no cloud key set, so cloud
+  calls stayed zero. Confirmed the live local run still works via the bootstrap.
+- Evolved a stale R-005-era guard in `scripts/test.sh` to enforce the durable invariants (no SDK
+  import, gateway/cloud/bootstrap files exist, cloud opt-in defaults to none) now that cloud adapters
+  are sanctioned; added cloud key/model placeholders and shared budgets to `.env.example`.
+- Inserted tracker row R-008 at Phase_Roadmap row 9 (shifted 9..225 to 10..226, ranges extended by
+  one); verified no ID lost, formulas self-reference their rows, MVP total 113 / Done 8, chart/styles
+  byte-identical, zip valid.
+- Created implementation checkpoint `eeade72e84c7f1ebd71dfc8c0f7c2f4db0f79677`.

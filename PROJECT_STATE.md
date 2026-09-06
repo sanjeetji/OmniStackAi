@@ -5,17 +5,17 @@ Last updated: 2026-09-06T10:46:19+05:30 by Codex (GPT-5)
 Stage 0 (Founder Build Sequence, Brief Section 91) — BASIC/MVP
 
 ## Last Completed Task
-Tracker ID: R-007 — Balanced Model Gateway router (deterministic-first escalation, local-default,
-no silent cloud fallback) — DONE, implementation checkpoint
-`9faacd23dc22c6773f9a51dc58087d557c0be391`
+Tracker ID: R-008 — Cloud API-key ModelProvider adapters (multi-provider, key-activated) — DONE,
+`task verify` and 61 agent-engine tests (19 new cloud/bootstrap tests) passing, no cloud key set so
+cloud_calls=0, implementation checkpoint `eeade72e84c7f1ebd71dfc8c0f7c2f4db0f79677`
 
 ## In Progress (if any)
-Tracker ID: R-008 — Cloud API-key ModelProvider adapters (multi-provider, key-activated)
-Files touched so far: `services/agent-engine/src/omnistackai_agent_engine/model_gateway/{cloud.py,bootstrap.py,errors.py,__init__.py,live_gateway.py}`, `services/agent-engine/tests/{test_cloud.py,test_bootstrap.py}`, `scripts/test.sh`, `.env.example`, `docs/MODEL_PROVIDER.md`, portable state, and tracker row R-008
+Tracker ID: none
+Files touched so far: none
 Blocker: none
 
 ## Next Up (queued, in order)
-1. R-009 — task definition missing from `Phase_Roadmap` (candidate: true per-provider streaming or cross-provider fallback)
+1. R-009 — task definition missing from `Phase_Roadmap` (candidate: true per-provider SSE streaming or cross-provider fallback/circuit breaking)
 
 ## Decisions Made This Session
 - Applied the normative V6 precedence rules and Section 91 Phase 0 sequence.
@@ -71,6 +71,16 @@ Blocker: none
 - On founder instruction, added an opt-in live gateway runner (`task agent-engine:gateway:run`) and
   ran the platform locally through the Balanced gateway on both `qwen2.5-coder:14b` and `qwen3.5:9b`;
   added cloud API-key placeholders (names only) to `.env.example` for the R-008 provider decision.
+- R-008: founder chose to configure every cloud provider (not just one), activated by API key, while
+  running locally on Ollama until keys are added. Added standard-library HTTPS adapters (no vendor
+  SDK) for Anthropic, OpenAI, Google Gemini, OpenRouter, and Groq behind the ModelProvider boundary,
+  plus an env bootstrap that registers local Ollama always and each key-present cloud provider.
+- Each cloud provider is key-activated with an overridable default model; keys are read only from the
+  environment and never logged, stored, or shown. With no key, the platform stays local at zero cloud
+  cost; `OMNISTACKAI_CLOUD_PROVIDER` selects the L3/L4 tier when a key is present.
+- Evolved a stale R-005-era guard in `scripts/test.sh` (it forbade any provider adapter) to enforce
+  the durable invariants instead — no vendor SDK import, gateway/cloud/bootstrap files exist, and
+  cloud providers are opt-in defaulting to none — since cloud adapters are the sanctioned R-008 work.
 
 ## Environment / Secrets Status
 - Local Ollama: server 0.33.3 healthy on loopback; `qwen2.5-coder:14b` adapter health, discovery,
