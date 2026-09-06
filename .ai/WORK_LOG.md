@@ -266,6 +266,21 @@
   extended); no ID lost, MVP total 121 / Done 15, chart/styles byte-identical, zip valid.
 - Created implementation checkpoint `f27bf416e99423d281e1c4e6f3eabc363848f95f`.
 
+## 2026-09-06 — R-227
+
+- Implemented the first framework code adapter: `NextjsWebAdapter` turns an Application IR into a real
+  Next.js App Router TypeScript project as a GeneratedProject — entities to TS interfaces, IR APIs to
+  App Router route handlers ({param}->[param], one file per route dir, a handler per method), screens
+  to pages, an overview page, and config (package.json/tsconfig/next.config with security headers/
+  README/.gitignore/.env.example placeholders).
+- Extended the GeneratedFile path validator to allow framework route filename chars ([]()@+) while
+  still rejecting absolute paths, '..', backslashes, control chars.
+- Pure/deterministic; nothing installed/built/run/written to disk. The demo IR emits a 13-file
+  Next.js project. 9 new offline tests (134 total); `task verify` green.
+- Inserted tracker row R-227 (Product) at Phase_Roadmap row 9 (rows 9..234 -> 10..235, ranges
+  extended); no ID lost, MVP total 122 / Done 16, chart/styles byte-identical, zip valid.
+- Created implementation checkpoint `1a4f8a9b8cc2ca59be32142bb6c16992cb4dbd40`.
+
 ## 2026-09-06 — R-224 (deferred)
 
 - Attempted the Next.js console upgrade. `pnpm install` for next@15.5.4 timed out fetching the native

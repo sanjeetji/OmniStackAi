@@ -1,5 +1,6 @@
 # Changelog
 
+2026-09-06  R-227  Added the first framework code adapter (Next.js web): turns an Application IR into a real Next.js App Router TypeScript project (config, TS interfaces from entities, App Router API routes with {param}->[param], a page per screen, overview) as a deterministic in-memory GeneratedProject; no install/build/disk
 2026-09-06  R-226  Added the code-generation boundary: an in-memory generated file-set (GeneratedFile/GeneratedProject, path-safe, deterministic) and the FrameworkAdapter contract + registry that turn an Application IR into a GeneratedProject per target; no disk writes or code execution
 2026-09-06  R-225  Added the framework-neutral Application IR v1 (Brief 9) — the source of truth for code generation: validated, versioned records for application/strategy/roles/entities/APIs/screens/acceptance with cross-reference checks and lossless serialization; first real product primitive
 2026-09-06  R-224  Deferred the Next.js console upgrade — the Next.js SWC binary install times out in this sandbox (attempted 3x); recorded a resume plan; no application code committed; the R-222 static console remains the working slice

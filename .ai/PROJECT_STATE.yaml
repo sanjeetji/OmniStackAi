@@ -2,14 +2,14 @@ schema_version: 1
 project: OmniStackAI
 phase: BASIC/MVP
 founder_stage: 0
-current_task: R-227
-current_status: in_progress
+current_task: null
+current_status: ready_for_next_task_definition
 branch: ai/R-227-nextjs-adapter
 last_completed_task:
-  task_id: R-226
-  title: Framework adapter contract and generated file-set model
-  implementation_commit: f27bf416e99423d281e1c4e6f3eabc363848f95f
-  verification: task verify (125 agent-engine tests, 10 new codegen-contract tests)
+  task_id: R-227
+  title: Next.js web framework adapter — generate a real app from the Application IR
+  implementation_commit: 1a4f8a9b8cc2ca59be32142bb6c16992cb4dbd40
+  verification: task verify (134 agent-engine tests, 9 new); demo IR -> 13-file Next.js app
   result: pass
 control_plane_database: postgresql
 model_routing_mode: balanced
@@ -23,5 +23,5 @@ id_note: >-
   Workbook backlog owns R-010..R-219. Founder-requested tasks use IDs after R-219: R-220..R-223 done,
   R-224 Next.js deferred (env-blocked), R-225 Application IR (in progress).
 blockers: []
-next_action: R-227 — first framework adapter (Next.js web) emitting a real app's source from the IR, verified offline by asserting emitted files.
+next_action: R-228 — Git service v1 to materialize a GeneratedProject into a customer-owned repo with an initial commit (completes the first end-to-end builder slice).
 last_updated: "2026-09-06T19:40:00+05:30"

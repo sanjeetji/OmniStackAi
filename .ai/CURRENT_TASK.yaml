@@ -1,7 +1,7 @@
 schema_version: 1
 task_id: R-227
 title: Next.js web framework adapter — generate a real app from the Application IR
-status: in_progress
+status: done
 phase: BASIC/MVP
 founder_stage: 0
 branch: ai/R-227-nextjs-adapter
@@ -82,12 +82,31 @@ model_tool_trace:
   cloud_calls: 0
   note: Deterministic codegen; no model call. No cloud key set; cloud_calls zero.
 completion:
-  implementation_commit: null
-  verified_at: null
-  verification: []
-  acceptance_results: []
+  implementation_commit: 1a4f8a9b8cc2ca59be32142bb6c16992cb4dbd40
+  verified_at: "2026-09-06T20:30:00+05:30"
+  verification:
+    - command: task verify
+      result: pass
+      evidence: 134 agent-engine tests (9 new adapter/path tests) plus all Stage 0 checks
+    - command: task agent-engine:lint
+      result: pass
+    - command: task security:quick
+      result: pass
+  acceptance_results:
+    - criterion: NextjsWebAdapter implements FrameworkAdapter (nextjs-web) and returns a GeneratedProject with a correct App Router layout.
+      result: pass
+    - criterion: Entities -> TS interfaces; IR APIs -> App Router route handlers with {param}->[param] and a handler per method; screens -> pages; app/page overview.
+      result: pass
+    - criterion: package.json/tsconfig/next.config (security headers)/README/.gitignore/.env.example (placeholders only) emitted; safe deterministic paths.
+      result: pass
+    - criterion: The path validator was extended for framework route filenames while still rejecting absolute paths, '..', backslashes, control chars.
+      result: pass
+    - criterion: Generation is a pure function of the IR; nothing installed/built/run/written to disk; offline tests assert emitted files.
+      result: pass
+  note: Demo IR produced a 13-file Next.js project. Deterministic; no model call; cloud_calls zero.
 blockers: []
 next_action: >-
-  Implement the Next.js adapter and offline emission tests; run the gates; record completion; then
-  R-228 (Git service to materialize a GeneratedProject into a customer-owned repo with a commit).
-next_command: task agent-engine:test
+  R-228 — Git service v1: materialize a GeneratedProject into a customer-owned repo on disk with an
+  initial commit (offline; git is available), completing the first end-to-end builder slice
+  (prompt/IR -> generated app -> owned Git repo).
+next_command: task ai:status

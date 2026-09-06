@@ -1,45 +1,49 @@
 # Current Handoff
 
-Task ID: R-226
+Task ID: R-227
 Status: done
 Phase: BASIC/MVP — Founder Stage 0
-Branch: `ai/R-226-adapter-contract`
-Last verified implementation SHA: `f27bf416e99423d281e1c4e6f3eabc363848f95f`
+Branch: `ai/R-227-nextjs-adapter`
+Last verified implementation SHA: `1a4f8a9b8cc2ca59be32142bb6c16992cb4dbd40`
 
-## Completed
+## Completed — the platform now generates a real app
 
-- Added the **code-generation boundary** in `omnistackai_agent_engine.codegen`:
-  - `GeneratedFile` — one path→content record with a safe relative POSIX path (no absolute, no `..`,
-    no backslashes/control chars, bounded; segments `[A-Za-z0-9._-]`).
-  - `GeneratedProject` — immutable, path-unique, deterministically ordered set for one target; `get`,
-    `paths`, `files`, `__len__`, `merge` (same target only). No disk writes.
-  - `FrameworkAdapter` — runtime-checkable contract (`target` + `generate(ir) -> GeneratedProject`).
-  - `AdapterRegistry` — register/get by target with stable `DuplicateAdapterError`/`UnsupportedTargetError`;
-    `GenerationTarget` enum over the MVP targets. Adapters are chosen only via the registry.
-- Depends on `application_ir`; standard-library only; deterministic; nothing executed.
+- `NextjsWebAdapter` (`codegen/nextjs.py`, target `nextjs-web`) turns an Application IR into a real
+  Next.js App Router TypeScript project as a `GeneratedProject`:
+  - entities → TypeScript interfaces (`lib/types.ts`; optional fields, typed relations),
+  - IR APIs → App Router `route.ts` handlers, `{param}` → `[param]`, one file per route dir, a handler
+    per method,
+  - screens → `app/<id>/page.tsx`; `app/page.tsx` overview,
+  - `package.json`, `tsconfig.json`, `next.config.mjs` (security headers), `README.md`, `.gitignore`,
+    `.env.example` (placeholders only).
+- Extended the `GeneratedFile` path validator to allow framework route filename chars (`[]()@+`) while
+  still rejecting absolute paths, `..`, backslashes, and control chars.
+- Pure/deterministic; nothing installed/built/run/written to disk. The demo IR emits a **13-file**
+  Next.js project.
 
 ## Verification
 
-- `task verify` — pass (125 agent-engine tests; 10 new). `task agent-engine:lint`, `task security:quick` — pass.
+- `task verify` — pass (134 agent-engine tests; 9 new). `task agent-engine:lint`, `task security:quick` — pass.
 - Compose unchanged; offline `task bootstrap` unchanged.
-- Tracker — R-226 (Product) at `Phase_Roadmap!A9:M9` (rows 9..233 shifted to 10..234, ranges extended);
-  no ID lost; MVP total 121, Done 15; chart/styles/workbook byte-identical; zip verified.
+- Tracker — R-227 (Product) at `Phase_Roadmap!A9:M9` (rows 9..234 shifted to 10..235, ranges extended);
+  no ID lost; MVP total 122, Done 16; chart/styles/workbook byte-identical; zip verified.
 
 ## Product roadmap (vertical slice toward an Emergent-class builder)
 
 1. R-225 Application IR — done.
-2. R-226 framework adapter contract + file-set model — done.
-3. **R-227 (next)** Next.js web adapter — emit a real Next.js app *as files* from the IR; verified by
-   asserting emitted file contents (offline, no install/build).
-4. R-228 Git service v1 — materialize the file-set into a customer-owned repo with a commit.
-5. Later (needs a cloud/network env): sandbox run → instant browser preview → deploy; plus the
-   deferred R-224 Next.js console upgrade.
+2. R-226 framework adapter contract + file-set — done.
+3. R-227 Next.js web adapter (IR → real app) — done.
+4. **R-228 (next)** Git service v1 — materialize a `GeneratedProject` to disk as a customer-owned repo
+   with an initial commit (offline; `git` is available). This completes the first end-to-end builder
+   slice: IR → generated app → owned Git repo.
+5. Later (needs a cloud/network env): sandbox run → instant browser preview → deploy; plus the deferred
+   R-224 Next.js console upgrade.
 
 ## Next action
 
-Proceed to **R-227** — the Next.js web `FrameworkAdapter` that turns an Application IR into a real
-Next.js project (pages/components/API routes/config), registered via `AdapterRegistry`, verified
-offline by asserting the emitted `GeneratedProject`. Native mobile stays deferred per Brief §25/§91.
+Proceed to **R-228** — Git service v1: write a `GeneratedProject` to a target directory as a real Git
+repository (init, add, commit) with the customer as owner, verified offline by inspecting the
+materialized tree and commit. Native mobile stays deferred per Brief §25/§91.
 
 ## Next command
 
