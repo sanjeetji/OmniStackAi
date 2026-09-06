@@ -86,3 +86,27 @@
   streaming produced 4 events/4 tokens; cloud calls remained zero.
 - Ran `task verify` successfully and created implementation checkpoint
   `8061ca3b129539ada4b0838d7d70c8acd3df1ea3`.
+
+## 2026-09-06 — R-007
+
+- Reconstructed R-007 as the Balanced Model Gateway router — the smallest next Stage 0/MVP dependency
+  after the R-005 registry and R-006 adapter — from Brief Sections 18, 18.1, 18.2, 18.3, 84, 85, 91,
+  and 92.
+- Restored the declared `pnpm` (corepack, pinned `pnpm@11.19.0`) and `ripgrep` toolchains that had
+  regressed from the environment; added no repository dependency. `task doctor` and `task verify`
+  passed again on the R-006 baseline before any change.
+- Added `ModelGateway` with a deterministic escalation ladder (L0 refused), Balanced routing (sub-L3
+  to the local Ollama provider), L3/L4 escalation-required while cloud is unconfigured, a conservative
+  context-budget guard, and explicit no-silent-cloud-fallback on local provider unavailability.
+- Added `TaskComplexity`, `RoutingMode`, `RoutingTier`, `RoutingPolicy`, `RoutingTask`,
+  `RoutingDecision`, a conservative token estimator, and three stable gateway errors. Standard-library
+  only; no provider SDK, cloud call, service process, DB/Compose change, or new top-level folder.
+- Added 14 offline gateway tests (42 agent-engine tests total). Routing is deterministic and needed
+  zero model calls to implement or test; cloud calls remained zero.
+- Ran `task verify`, `task agent-engine:lint/test`, `task security:quick`, `task env:check`, and the
+  Compose scope check (exactly `postgres` and `control-plane`).
+- Inserted tracker row R-007 at Phase_Roadmap row 9 by shifting rows 9..224 to 10..225 and extending
+  the Dashboard, table, conditional-formatting, and data-validation ranges by one row; verified no
+  ID was lost, formulas self-reference their rows, counts are correct (MVP total 112, Done 7), and
+  the chart/styles/workbook parts stayed byte-identical.
+- Created implementation checkpoint `9faacd23dc22c6773f9a51dc58087d557c0be391`.

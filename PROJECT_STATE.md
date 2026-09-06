@@ -5,13 +5,14 @@ Last updated: 2026-09-06T10:46:19+05:30 by Codex (GPT-5)
 Stage 0 (Founder Build Sequence, Brief Section 91) — BASIC/MVP
 
 ## Last Completed Task
-Tracker ID: R-006 — loopback-only Ollama ModelProvider adapter — DONE, `task verify`, 28 Python
-tests, and live health/discovery/generation/streaming conformance passing, implementation checkpoint
-`8061ca3b129539ada4b0838d7d70c8acd3df1ea3`
+Tracker ID: R-007 — Balanced Model Gateway router (deterministic-first escalation, local-default,
+no silent cloud fallback) — DONE, `task verify` and 42 agent-engine tests (14 new gateway tests)
+passing, routing deterministic with zero model calls, implementation checkpoint
+`9faacd23dc22c6773f9a51dc58087d557c0be391`
 
 ## In Progress (if any)
-Tracker ID: R-007 — Balanced Model Gateway router (deterministic-first, local-default, no silent cloud fallback)
-Files touched so far: `services/agent-engine/src/omnistackai_agent_engine/model_gateway/{gateway.py,errors.py,__init__.py}`, `services/agent-engine/tests/test_gateway.py`, `docs/MODEL_PROVIDER.md`, portable state, and tracker row R-007
+Tracker ID: none
+Files touched so far: none
 Blocker: none
 
 ## Next Up (queued, in order)
@@ -59,6 +60,16 @@ Blocker: none
   before a capability can be marked verified.
 - Proved the adapter with 28 offline tests and two live `qwen2.5-coder:14b` calls: generation and
   streaming each produced 4 output tokens; no cloud provider was called.
+- Reconstructed R-007 as the Balanced Model Gateway router, the third foundational model-boundary
+  piece after the R-005 registry and R-006 adapter and the smallest next Stage 0/MVP dependency.
+- Founder confirmed intent to support both API-key cloud providers and local Ollama, added one
+  Tracker ID at a time; R-007 delivers the routing seam and defers the first cloud adapter to R-008.
+- Router refuses L0 deterministic work, routes sub-L3 to local Ollama, returns escalation-required
+  for L3/L4 (cloud unconfigured), guards a conservative context budget, and never silently falls
+  back to a cloud model when the local provider is unavailable. Routing is deterministic; zero model
+  calls were made to build or test it.
+- Restored the declared `pnpm` (via corepack) and `ripgrep` toolchains that had regressed from the
+  environment; no repository dependency was added. `task doctor` and `task verify` pass again.
 
 ## Environment / Secrets Status
 - Local Ollama: server 0.33.3 healthy on loopback; `qwen2.5-coder:14b` adapter health, discovery,

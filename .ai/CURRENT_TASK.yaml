@@ -1,7 +1,7 @@
 schema_version: 1
 task_id: R-007
 title: Balanced Model Gateway router with deterministic-first escalation and no silent cloud fallback
-status: in_progress
+status: done
 phase: BASIC/MVP
 founder_stage: 0
 branch: ai/R-007-balanced-model-gateway
@@ -83,12 +83,46 @@ model_tool_trace:
     repository evidence define the task. No cloud model is chosen or called; cloud adapters are
     deferred to R-008 under an explicit founder paid-provider decision.
 completion:
-  implementation_commit: null
-  verified_at: null
-  verification: []
-  acceptance_results: []
+  implementation_commit: 9faacd23dc22c6773f9a51dc58087d557c0be391
+  verified_at: "2026-09-06T12:15:00+05:30"
+  verification:
+    - command: task verify
+      result: pass
+    - command: task agent-engine:lint
+      result: pass
+      evidence: python compileall, no-external-deps contract, and provider-SDK import exclusion passed
+    - command: task agent-engine:test
+      result: pass
+      evidence: 42 tests passed, including 14 new offline gateway routing/ladder/budget/no-fallback/dispatch tests
+    - command: task security:quick
+      result: pass
+    - command: task env:check
+      result: pass
+    - command: docker compose --env-file .env -f infra/environments/local/compose.yaml config --services
+      result: pass
+      evidence: exactly postgres and control-plane; no service added
+  acceptance_results:
+    - criterion: The router selects a registered provider purely from deterministic inputs with no provider knowledge in product code.
+      result: pass
+    - criterion: L0 deterministic work is rejected from model dispatch with a stable typed error.
+      result: pass
+    - criterion: Under Balanced routing, L1/L2 work resolves to the local Ollama provider when registered and healthy.
+      result: pass
+    - criterion: L3/L4 work returns a stable escalation-required outcome; high-risk work is never silently downgraded to the local model.
+      result: pass
+    - criterion: An UNAVAILABLE resolved local provider returns a stable provider-unavailable outcome and never silently escalates to a cloud provider.
+      result: pass
+    - criterion: A conservative deterministic budget guard rejects input-over-budget and output-over-budget requests instead of silently truncating.
+      result: pass
+    - criterion: A routable, in-budget decision dispatches to the provider generate/stream and returns the vendor-neutral records unchanged.
+      result: pass
+    - criterion: Offline tests cover ladder, routing, escalation, no-fallback, budget, empty/unknown registry, and successful dispatch without network access.
+      result: pass
+    - criterion: No provider SDK/dependency, cloud call, service process, database or Compose change, infrastructure, new top-level folder, or native/device work was introduced; static task verify stays network-independent.
+      result: pass
 blockers: []
 next_action: >-
-  Implement the deterministic gateway router and its offline test suite, then run the required gates
-  and update all state, changelog, handoff, task doc, and tracker evidence before marking R-007 done.
-next_command: task agent-engine:test
+  Reconstruct R-008 (first cloud API-key ModelProvider adapter behind the same boundary). This
+  requires an explicit founder decision on the specific paid provider and key handling before any
+  implementation.
+next_command: task ai:status
