@@ -10,5 +10,8 @@ bash "$repo_root/scripts/env-check.sh"
 bash "$repo_root/scripts/security-quick.sh"
 bash "$repo_root/scripts/db.sh" config
 bash "$repo_root/scripts/ollama.sh" config
+bash "$repo_root/scripts/control-plane.sh" lint
+bash "$repo_root/scripts/control-plane.sh" test
+bash "$repo_root/scripts/control-plane.sh" build
 
 printf 'Stage 0 verification passed.\n'

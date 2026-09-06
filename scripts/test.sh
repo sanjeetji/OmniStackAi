@@ -30,7 +30,8 @@ for relative_path in "${required_directories[@]}"; do
 done
 
 for task_name in doctor bootstrap lint test verify ai:status ai:handoff db:config db:up db:status db:verify db:down \
-  ollama:config ollama:serve ollama:status ollama:models ollama:pull ollama:verify; do
+  ollama:config ollama:serve ollama:status ollama:models ollama:pull ollama:verify \
+  control-plane:lint control-plane:test control-plane:build control-plane:verify; do
   if ! rg -q "^  ${task_name}:" "$repo_root/Taskfile.yml"; then
     printf 'Missing Taskfile command: %s\n' "$task_name"
     exit 1
@@ -82,10 +83,17 @@ service_count="$(awk '
   in_services && /^  [a-zA-Z0-9_-]+:$/ { count += 1 }
   END { print count + 0 }
 ' "$compose_file")"
-if [[ "$service_count" != "1" ]]; then
-  printf 'R-002 Compose file must define exactly one service.\n'
+if [[ "$service_count" != "2" ]]; then
+  printf 'R-004 Compose file must define exactly PostgreSQL and control-plane.\n'
   exit 1
 fi
+
+for service_name in postgres control-plane; do
+  if ! rg -q "^  ${service_name}:$" "$compose_file"; then
+    printf 'Missing approved Stage 0 Compose service: %s\n' "$service_name"
+    exit 1
+  fi
+done
 
 if ! rg -q 'pgvector/pgvector:0\.8\.6-pg18-trixie' "$compose_file"; then
   printf 'R-002 must pin the approved pgvector image.\n'
@@ -102,10 +110,36 @@ if ! rg -q 'omnistackai-postgres-data:/var/lib/postgresql$' "$compose_file"; the
   exit 1
 fi
 
-if rg -qi '^  (redis|control-plane|agent-engine|temporal|kubernetes):' "$compose_file"; then
-  printf 'R-002 Compose scope contains an unapproved service.\n'
+if rg -qi '^  (redis|agent-engine|runner-manager|nats|temporal|kubernetes):' "$compose_file"; then
+  printf 'R-004 Compose scope contains an unapproved service.\n'
   exit 1
 fi
+
+if ! rg -q '127\.0\.0\.1:\$\{OMNISTACKAI_CONTROL_PLANE_PORT:-8080\}:8080' "$compose_file"; then
+  printf 'The control-plane must publish only on loopback.\n'
+  exit 1
+fi
+
+control_plane_root="$repo_root/services/control-plane"
+for required_file in go.mod go.sum Dockerfile cmd/control-plane/main.go internal/config/config.go internal/health/handler.go; do
+  if [[ ! -f "$control_plane_root/$required_file" ]]; then
+    printf 'Missing R-004 control-plane contract file: %s\n' "$required_file"
+    exit 1
+  fi
+done
+
+if ! rg -q '^FROM golang:1\.27\.1-alpine3\.24 AS build$' "$control_plane_root/Dockerfile" \
+  || ! rg -q '^FROM alpine:3\.24\.1$' "$control_plane_root/Dockerfile"; then
+  printf 'Control-plane build and runtime images must use approved exact tags.\n'
+  exit 1
+fi
+
+for route in /healthz /readyz; do
+  if ! rg -q "$route" "$control_plane_root/internal/health/handler.go"; then
+    printf 'Missing control-plane health route: %s\n' "$route"
+    exit 1
+  fi
+done
 
 if ! rg -q '^BEGIN;$' "$up_migration" || ! rg -q '^COMMIT;$' "$up_migration"; then
   printf 'Initial migration must be transactional.\n'

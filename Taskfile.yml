@@ -92,6 +92,26 @@ tasks:
     cmds:
       - bash scripts/ollama.sh verify
 
+  control-plane:lint:
+    desc: Check formatting and vet the Go control-plane
+    cmds:
+      - bash scripts/control-plane.sh lint
+
+  control-plane:test:
+    desc: Run Go control-plane unit tests
+    cmds:
+      - bash scripts/control-plane.sh test
+
+  control-plane:build:
+    desc: Compile the Go control-plane locally
+    cmds:
+      - bash scripts/control-plane.sh build
+
+  control-plane:verify:
+    desc: Build and verify control-plane liveness and PostgreSQL readiness in Compose
+    cmds:
+      - bash scripts/control-plane.sh verify
+
   verify:
     desc: Run the CI-equivalent Stage 0 verification
     cmds:

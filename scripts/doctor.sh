@@ -16,8 +16,8 @@ required_files=(
   pnpm-workspace.yaml
 )
 
-required_commands=(git node pnpm python3 docker)
-optional_commands=(go uv ollama)
+required_commands=(git node pnpm python3 docker go)
+optional_commands=(uv ollama)
 
 for relative_path in "${required_files[@]}"; do
   if [[ ! -f "$repo_root/$relative_path" ]]; then

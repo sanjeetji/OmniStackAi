@@ -1,35 +1,38 @@
 schema_version: 1
-task_id: R-003
-title: Bootstrap the local Ollama Stage 0 runtime
-status: done
+task_id: R-004
+title: Add the minimal Go control-plane foundation
+status: in_progress
 phase: BASIC/MVP
 founder_stage: 0
-branch: ai/R-003-local-ollama-bootstrap
+branch: ai/R-004-control-plane-foundation
 goal: >-
-  Make the existing local Ollama runtime and coder model deterministic, configurable,
-  loopback-only, discoverable, and verifiable without any cloud provider call.
+  Add the Stage 0 Go modular-monolith control-plane process with typed configuration,
+  liveness, PostgreSQL-backed readiness, structured logs, and graceful shutdown.
 source:
   tracker_sheet: Phase_Roadmap
-  tracker_row: reconstructed because R-003 through R-009 are absent from the supplied workbook
-  brief_sections: [25, 26, 27, 74, 77, 79, 80.4, 83, 84.1]
+  tracker_row: reconstructed because R-004 through R-009 are absent from the supplied workbook
+  brief_sections: [25, 26, 27, 33, 63.1, 74, 77, 83, 84.1]
 project_profile:
   repository: platform_modular_monorepo
   control_plane_database: postgresql
   model_routing: balanced
 complexity: L2
 expected_impact:
-  - scripts/ollama.sh
+  - services/control-plane/**
+  - infra/environments/local/compose.yaml
   - Taskfile.yml
   - .env.example
-  - docs/DEVELOPMENT.md
-  - docs/LOCAL_MODELS.md
-  - README.md
+  - scripts/doctor.sh
+  - scripts/bootstrap.sh
   - scripts/test.sh
-  - scripts/env-check.sh
   - scripts/verify.sh
+  - .github/workflows/ci.yml
+  - docs/DEVELOPMENT.md
+  - docs/ENVIRONMENTS.md
   - portable state, changelog, handoff, and tracker evidence
 allowed_paths:
   - .ai/**
+  - .github/workflows/ci.yml
   - .env.example
   - CHANGELOG.md
   - PROJECT_STATE.md
@@ -37,28 +40,31 @@ allowed_paths:
   - R_&_D/OmniStackAI_Execution_Tracker_v6.xlsx
   - Taskfile.yml
   - docs/**
+  - infra/environments/local/compose.yaml
   - scripts/**
+  - services/control-plane/**
 must_not_change:
-  - model provider boundary or implement a product-side provider adapter
-  - cloud provider configuration or API keys
-  - control-plane database choice or schema
-  - Docker Compose services
-  - Redis, Kubernetes, Temporal, or deployed infrastructure
+  - PostgreSQL as the control-plane database
+  - database schema beyond the completed R-002 migration
+  - agent-engine, runner-manager, modules, workers, or web console implementations
+  - Redis, NATS, object storage, Kubernetes, Temporal, or cloud infrastructure
+  - auth, organizations, billing, Git integration, audit, or business APIs
   - native mobile or device-cloud functionality
   - source documents other than the authorized execution tracker status and evidence
 acceptance:
-  - The Ollama endpoint is configurable but restricted to loopback for Stage 0.
-  - The configured coder model is environment-selected and discovered from Ollama at runtime.
-  - Stable task commands validate configuration, show health/models, pull the selected model,
-    serve locally, and run a real inference smoke test.
-  - The live smoke test succeeds with an already-pulled coding model and records zero cloud calls.
-  - Repository verification passes without requiring Ollama to be running.
-  - No cloud provider, extra service, product provider adapter, or native work is introduced.
+  - A minimal Go modular-monolith process starts from typed environment configuration.
+  - GET /healthz returns a stable JSON liveness response without requiring PostgreSQL.
+  - GET /readyz queries PostgreSQL with a bounded timeout and returns 200 or 503 JSON without leaking errors.
+  - The process uses structured logs, bounded HTTP timeouts, and graceful SIGINT/SIGTERM shutdown.
+  - Unit tests cover configuration and both health states; live Compose verifies health and readiness.
+  - Exactly PostgreSQL and control-plane run in local Compose; no additional service is introduced.
 required_gates:
   - impact_analysis
-  - local_endpoint_policy_test
-  - model_discovery_test
-  - live_local_inference_verification
+  - go_format_vet_test
+  - typed_config_tests
+  - health_readiness_tests
+  - compose_build_config
+  - live_service_verification
   - secret_exclusion_check
   - task_verify
   - blast_radius_check
@@ -69,38 +75,8 @@ model_tool_trace:
   configured_model: qwen2.5-coder:14b
   local_calls: 1
   cloud_calls: 0
-  note: One local inference smoke test is required; no cloud API is authorized or needed.
-completion:
-  implementation_commit: 822db27aa9c9e6ab836c28abba10f41dc27918d7
-  verified_at: "2026-09-06T09:38:08+05:30"
-  verification:
-    - command: task verify
-      result: pass
-    - command: task ollama:status
-      result: pass
-      evidence: Ollama 0.33.3 healthy on http://127.0.0.1:11434
-    - command: task ollama:models
-      result: pass
-      evidence: qwen2.5-coder:14b and qwen3.5:9b discovered
-    - command: task ollama:verify
-      result: pass
-      evidence: qwen2.5-coder:14b generated 6 tokens; cloud_calls=0
-    - command: non-loopback configuration rejection
-      result: pass
-  acceptance_results:
-    - criterion: The Stage 0 endpoint is configurable and restricted to loopback.
-      result: pass
-    - criterion: The configured coder model is selected through environment configuration and discovered at runtime.
-      result: pass
-    - criterion: Stable local Ollama lifecycle, discovery, pull, health, and inference commands exist.
-      result: pass
-    - criterion: One live local inference succeeds with zero cloud provider calls.
-      result: pass
-    - criterion: Repository verification passes without requiring a running Ollama server.
-      result: pass
-    - criterion: No cloud provider, extra service, product adapter, or native work was introduced.
-      result: pass
-blockers:
-  - R-004 through R-009 remain absent from Phase_Roadmap.
-next_action: Select the next Stage 0 prerequisite for reconstructed R-004 without adding speculative infrastructure.
-next_command: task ai:status
+  note: Local Ollama provided a bounded layout and acceptance-check review; deterministic tools decide and verify the implementation.
+completion: null
+blockers: []
+next_action: Install the free Go toolchain and implement the bounded control-plane service.
+next_command: task control-plane:test
