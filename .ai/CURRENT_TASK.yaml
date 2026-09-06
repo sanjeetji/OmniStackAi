@@ -1,24 +1,25 @@
 schema_version: 1
-task_id: R-007
-title: Balanced Model Gateway router with deterministic-first escalation and no silent cloud fallback
-status: done
+task_id: R-008
+title: Cloud API-key ModelProvider adapters (multi-provider, key-activated) behind the shared boundary
+status: in_progress
 phase: BASIC/MVP
 founder_stage: 0
-branch: ai/R-007-balanced-model-gateway
+branch: ai/R-008-cloud-provider-adapters
 goal: >-
-  Add a deterministic, platform-owned Model Gateway router that resolves which registered
-  ModelProvider handles a request under Balanced routing: reject L0 deterministic work from model
-  dispatch, route sub-L3 work to the local Ollama provider, escalate L3/L4 to a cloud provider only
-  when one is registered (none yet), enforce a conservative context/token budget, and never silently
-  fall back to a cloud model when the local provider is unavailable.
+  Add key-activated cloud ModelProvider adapters for multiple providers (Anthropic, OpenAI, Google
+  Gemini, OpenRouter, Groq) behind the existing vendor-neutral boundary, each with a sensible default
+  model that the operator can override. A provider is registered only when its API key is present in
+  the environment, so with no keys the platform keeps running on local Ollama and makes zero cloud
+  calls. An env-driven bootstrap wires local Ollama plus any key-present cloud providers into the
+  Balanced gateway so L3/L4 work can escalate to the selected cloud tier once a key is supplied.
 source:
   tracker_sheet: Phase_Roadmap
-  tracker_row: reconstructed because R-007 through R-009 are absent from the supplied workbook
-  brief_sections: [18, 18.1, 18.2, 18.3, 25, 26, 27, 74, 75, 77, 83, 84, 85, 91, 92]
+  tracker_row: reconstructed because R-008 is absent from the supplied workbook
+  brief_sections: [18, 18.1, 18.3, 25, 26, 27, 74, 75, 77, 84, 85, 87, 90, 91, 92]
   founder_intent: >-
-    Founder wants both API-key cloud LLM providers and local Ollama, added one Tracker ID at a time.
-    R-007 delivers the routing seam; the first cloud adapter is deferred to R-008 and requires an
-    explicit founder decision on the specific paid provider before implementation.
+    Founder asked to configure each cloud provider (not just one) so that adding any provider's API
+    key makes that LLM work with a default model that the user can change, while the platform keeps
+    running on local Ollama with qwen when no keys are set. No keys are configured yet.
 project_profile:
   repository: platform_modular_monorepo
   service: python_agent_engine
@@ -26,14 +27,14 @@ project_profile:
   model_routing: balanced
 complexity: L2
 expected_impact:
-  - services/agent-engine/src/omnistackai_agent_engine/model_gateway/gateway.py
+  - services/agent-engine/src/omnistackai_agent_engine/model_gateway/cloud.py
+  - services/agent-engine/src/omnistackai_agent_engine/model_gateway/bootstrap.py
   - services/agent-engine/src/omnistackai_agent_engine/model_gateway/errors.py
   - services/agent-engine/src/omnistackai_agent_engine/model_gateway/__init__.py
   - services/agent-engine/src/omnistackai_agent_engine/model_gateway/live_gateway.py
-  - services/agent-engine/tests/test_gateway.py
+  - services/agent-engine/tests/test_cloud.py
+  - services/agent-engine/tests/test_bootstrap.py
   - docs/MODEL_PROVIDER.md
-  - scripts/agent-engine.sh
-  - Taskfile.yml
   - .env.example
   - portable state, changelog, handoff, task doc, and tracker evidence
 allowed_paths:
@@ -42,44 +43,43 @@ allowed_paths:
   - CHANGELOG.md
   - PROJECT_STATE.md
   - R_&_D/OmniStackAI_Execution_Tracker_v6.xlsx
-  - Taskfile.yml
   - docs/MODEL_PROVIDER.md
-  - scripts/agent-engine.sh
+  - scripts/test.sh
   - services/agent-engine/src/omnistackai_agent_engine/model_gateway/**
   - services/agent-engine/tests/**
 scope_note: >-
-  The live gateway runner (live_gateway.py), its task command (Taskfile.yml, scripts/agent-engine.sh),
-  and cloud-provider key placeholders (.env.example, names only, no values) were added on founder
-  instruction to run the platform locally on the installed Ollama model and to prepare the R-008 cloud
-  decision. This is the opt-in live gate the R-007 plan left as a founder option; static task verify
-  remains network-independent.
+  scripts/test.sh was updated to evolve a stale R-005-era guard that forbade any provider adapter
+  (it matched cloud hostnames and the word Adapter). Cloud adapters are the sanctioned R-008
+  deliverable, so the guard now enforces the durable invariants instead: no vendor SDK import, the
+  gateway/cloud/bootstrap files exist, and cloud providers are opt-in with OMNISTACKAI_CLOUD_PROVIDER
+  defaulting to none. This was necessary to implement the founder-approved multi-provider adapters.
 must_not_change:
   - PostgreSQL as the control-plane database or the existing schema
-  - the R-005 ModelProvider protocol/records and the R-006 Ollama adapter public behavior
-  - cloud model providers, adapters, SDKs, or any real cloud model call
-  - agent orchestration, product APIs, or a deployable agent-engine process
-  - local Compose services or infrastructure
-  - Redis, NATS, object storage, Kubernetes, Temporal, or cloud resources
+  - the R-005 ModelProvider protocol/records, R-006 Ollama adapter, or R-007 gateway public behavior
+  - local Compose services or infrastructure (Redis, NATS, object storage, Kubernetes, Temporal)
   - auth, organizations, billing, Git integration, audit, or business APIs
   - native mobile or device-cloud functionality
   - the Section 74 top-level monorepo contract; no new top-level directory
-  - source documents other than the authorized execution tracker status and evidence
+  - the network-independence of static task verify
+must_not_do:
+  - make any real cloud API call (no keys are configured; tests use injected fake HTTP openers)
+  - add a third-party provider SDK or any external Python dependency
+  - place any API key value in source, tests, logs, state files, prompts, or commits
 acceptance:
-  - The router selects a registered provider for a task purely from deterministic inputs (complexity, routing mode, registry state, model descriptor) with no provider knowledge in product code.
-  - L0 deterministic work is rejected from model dispatch with a stable typed error; the router never issues a model call for work a deterministic tool should perform.
-  - Under Balanced routing, L1 and L2 work resolves to the local Ollama provider when it is registered and healthy.
-  - L3 and L4 work returns a stable escalation-required outcome because no cloud provider is registered; the router never silently downgrades high-risk work to the local model.
-  - When the resolved local provider reports UNAVAILABLE health, the router returns a stable provider-unavailable outcome and never silently escalates to an unregistered or unauthorized cloud provider.
-  - A conservative deterministic budget guard rejects a request whose estimated input exceeds the model safe-input budget or whose requested output exceeds the model max-output budget, rather than silently truncating.
-  - On a routable, in-budget decision the router dispatches to the provider generate/stream and returns the existing vendor-neutral records unchanged.
-  - Standard-library tests cover L0 rejection, L1/L2 local routing, L3/L4 escalation-required, unavailable-provider no-fallback, budget overflow, empty/unknown registry, and a successful dispatch through a fake provider, all without network access.
-  - No provider SDK/dependency, cloud provider/call, service process, database or Compose change, infrastructure, new top-level folder, or native/device work is introduced; static task verify stays network-independent.
+  - Each cloud adapter implements the ModelProvider boundary using only the Python standard library over HTTPS; no vendor SDK and no external dependency are added.
+  - OpenAI, OpenRouter, and Groq share one OpenAI-compatible chat-completions adapter; Anthropic uses its Messages API; Google uses its generateContent API. Each maps messages, output, finish reason, and token usage into the existing vendor-neutral records.
+  - Every adapter reads its API key only from the environment, sends it only as the provider auth header, and never includes it in logs, errors, or records.
+  - Each provider has a documented default model that the operator can override by environment variable, plus conservative per-model context and output budgets.
+  - An env bootstrap always registers local Ollama and registers each cloud provider whose key is present; when no cloud key is set only Ollama is registered and L3/L4 return the stable no-eligible-provider outcome.
+  - The bootstrap selects the active L3/L4 cloud tier from OMNISTACKAI_CLOUD_PROVIDER and builds a Balanced gateway; a selected provider without a key is a clear configuration error, not a silent local downgrade.
+  - Standard-library offline tests cover request mapping, auth-header construction, success and error responses, response-size and timeout bounds, key-absent deactivation, and bootstrap registration/selection, all with injected fake openers and zero network access.
+  - The live gateway runner still runs on local Ollama with no keys, and static task verify stays network-independent and green.
 required_gates:
   - impact_analysis
   - python_compile_test
-  - gateway_routing_ladder_tests
-  - no_silent_cloud_fallback_and_unavailable_provider_tests
-  - context_budget_guard_tests
+  - cloud_adapter_mapping_and_error_tests
+  - secret_never_logged_or_stored_tests
+  - key_activation_and_bootstrap_selection_tests
   - vendor_import_exclusion
   - secret_exclusion_check
   - task_verify
@@ -89,59 +89,18 @@ model_tool_trace:
   routing: local_only
   local_provider: ollama
   configured_model: qwen2.5-coder:14b
-  local_calls: 4
+  local_calls: 0
   cloud_calls: 0
   note: >-
-    Routing is deterministic and needs no model call to implement or test. The optional live gate
-    dispatched through the gateway to local Ollama: two generations and two streams across
-    qwen2.5-coder:14b and qwen3.5:9b (4 local calls). No cloud model was chosen or called; cloud
-    adapters are deferred to R-008 under an explicit founder paid-provider decision.
+    No cloud API key is configured, so no cloud provider is called; cloud adapters are exercised only
+    by offline tests with injected fake HTTP openers. Any local live check uses Ollama.
 completion:
-  implementation_commit: 9faacd23dc22c6773f9a51dc58087d557c0be391
-  verified_at: "2026-09-06T12:15:00+05:30"
-  verification:
-    - command: task verify
-      result: pass
-    - command: task agent-engine:lint
-      result: pass
-      evidence: python compileall, no-external-deps contract, and provider-SDK import exclusion passed
-    - command: task agent-engine:test
-      result: pass
-      evidence: 42 tests passed, including 14 new offline gateway routing/ladder/budget/no-fallback/dispatch tests
-    - command: task security:quick
-      result: pass
-    - command: task env:check
-      result: pass
-    - command: docker compose --env-file .env -f infra/environments/local/compose.yaml config --services
-      result: pass
-      evidence: exactly postgres and control-plane; no service added
-    - command: task agent-engine:gateway:run
-      result: pass
-      evidence: >-
-        Balanced gateway routed L1/L2 to ollama-local and refused L0/L3/L4; live L2 generation and L1
-        stream succeeded on qwen2.5-coder:14b and again on qwen3.5:9b; cloud_calls=0
-  acceptance_results:
-    - criterion: The router selects a registered provider purely from deterministic inputs with no provider knowledge in product code.
-      result: pass
-    - criterion: L0 deterministic work is rejected from model dispatch with a stable typed error.
-      result: pass
-    - criterion: Under Balanced routing, L1/L2 work resolves to the local Ollama provider when registered and healthy.
-      result: pass
-    - criterion: L3/L4 work returns a stable escalation-required outcome; high-risk work is never silently downgraded to the local model.
-      result: pass
-    - criterion: An UNAVAILABLE resolved local provider returns a stable provider-unavailable outcome and never silently escalates to a cloud provider.
-      result: pass
-    - criterion: A conservative deterministic budget guard rejects input-over-budget and output-over-budget requests instead of silently truncating.
-      result: pass
-    - criterion: A routable, in-budget decision dispatches to the provider generate/stream and returns the vendor-neutral records unchanged.
-      result: pass
-    - criterion: Offline tests cover ladder, routing, escalation, no-fallback, budget, empty/unknown registry, and successful dispatch without network access.
-      result: pass
-    - criterion: No provider SDK/dependency, cloud call, service process, database or Compose change, infrastructure, new top-level folder, or native/device work was introduced; static task verify stays network-independent.
-      result: pass
+  implementation_commit: null
+  verified_at: null
+  verification: []
+  acceptance_results: []
 blockers: []
 next_action: >-
-  Reconstruct R-008 (first cloud API-key ModelProvider adapter behind the same boundary). This
-  requires an explicit founder decision on the specific paid provider and key handling before any
-  implementation.
-next_command: task ai:status
+  Implement the standard-library cloud adapters, the env bootstrap, and offline tests; run the gates;
+  then record completion evidence and update state, changelog, handoff, task doc, and tracker.
+next_command: task agent-engine:test

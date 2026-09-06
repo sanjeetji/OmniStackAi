@@ -6,18 +6,16 @@ Stage 0 (Founder Build Sequence, Brief Section 91) — BASIC/MVP
 
 ## Last Completed Task
 Tracker ID: R-007 — Balanced Model Gateway router (deterministic-first escalation, local-default,
-no silent cloud fallback) — DONE, `task verify` and 42 agent-engine tests (14 new gateway tests)
-passing, routing deterministic with zero model calls, implementation checkpoint
+no silent cloud fallback) — DONE, implementation checkpoint
 `9faacd23dc22c6773f9a51dc58087d557c0be391`
 
 ## In Progress (if any)
-Tracker ID: none
-Files touched so far: none
+Tracker ID: R-008 — Cloud API-key ModelProvider adapters (multi-provider, key-activated)
+Files touched so far: `services/agent-engine/src/omnistackai_agent_engine/model_gateway/{cloud.py,bootstrap.py,errors.py,__init__.py,live_gateway.py}`, `services/agent-engine/tests/{test_cloud.py,test_bootstrap.py}`, `scripts/test.sh`, `.env.example`, `docs/MODEL_PROVIDER.md`, portable state, and tracker row R-008
 Blocker: none
 
 ## Next Up (queued, in order)
-1. R-008 — first cloud API-key ModelProvider adapter behind the same boundary (requires an explicit founder decision on the paid provider before implementation)
-2. R-009 — task definition missing from `Phase_Roadmap`
+1. R-009 — task definition missing from `Phase_Roadmap` (candidate: true per-provider streaming or cross-provider fallback)
 
 ## Decisions Made This Session
 - Applied the normative V6 precedence rules and Section 91 Phase 0 sequence.

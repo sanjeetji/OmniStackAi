@@ -16,13 +16,24 @@ from .contracts import (
     StreamEvent,
     TokenUsage,
 )
+from .bootstrap import GatewayBootstrap, build_gateway_from_env
+from .cloud import (
+    AnthropicProvider,
+    CloudProviderSpec,
+    GeminiProvider,
+    OpenAICompatibleProvider,
+    PROVIDER_SPECS,
+    create_cloud_provider,
+)
 from .errors import (
+    CloudProviderSelectionError,
     ContextBudgetExceededError,
     DeterministicWorkNotRoutableError,
     DuplicateProviderError,
     InvalidProviderError,
     InvalidProviderConfigurationError,
     InvalidRoutingTaskError,
+    MissingCredentialError,
     ModelGatewayError,
     ModelProfileMismatchError,
     ModelProviderError,
@@ -51,12 +62,17 @@ from .ollama import OLLAMA_PROVIDER_ID, OllamaModelProfile, OllamaProvider
 from .registry import ProviderRegistry
 
 __all__ = [
+    "AnthropicProvider",
     "CapabilityStatus",
     "ChatRole",
+    "CloudProviderSelectionError",
+    "CloudProviderSpec",
     "ContextBudgetExceededError",
     "DeterministicWorkNotRoutableError",
     "DuplicateProviderError",
     "FinishReason",
+    "GatewayBootstrap",
+    "GeminiProvider",
     "GenerateRequest",
     "GenerateResponse",
     "HealthStatus",
@@ -64,6 +80,7 @@ __all__ = [
     "InvalidProviderConfigurationError",
     "InvalidRoutingTaskError",
     "Message",
+    "MissingCredentialError",
     "ModelCapabilities",
     "ModelDescriptor",
     "ModelGateway",
@@ -76,6 +93,8 @@ __all__ = [
     "OLLAMA_PROVIDER_ID",
     "OllamaModelProfile",
     "OllamaProvider",
+    "OpenAICompatibleProvider",
+    "PROVIDER_SPECS",
     "ProviderHealth",
     "ProviderHTTPError",
     "ProviderRegistry",
@@ -95,5 +114,7 @@ __all__ = [
     "UnknownModelError",
     "UnknownProviderError",
     "UnsupportedModelRequestError",
+    "build_gateway_from_env",
+    "create_cloud_provider",
     "estimate_input_tokens",
 ]

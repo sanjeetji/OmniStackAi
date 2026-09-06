@@ -69,8 +69,38 @@ dispatches one L2 generation and one L1 stream through `ModelGateway` to the loc
 It makes local inference calls and zero cloud calls, and is excluded from static `task verify`.
 Select the model with `OMNISTACKAI_OLLAMA_MODEL`; override the prompt with `OMNISTACKAI_GATEWAY_PROMPT`.
 
+## R-008 Cloud API-key adapters (multi-provider, key-activated)
+
+Cloud adapters live behind the same `ModelProvider` boundary and are built on the Python standard
+library over HTTPS — no vendor SDK, no external dependency:
+
+- **OpenAI-compatible** (`OpenAICompatibleProvider`) serves `openai`, `openrouter`, and `groq`.
+- **Anthropic** (`AnthropicProvider`) uses the Messages API.
+- **Google Gemini** (`GeminiProvider`) uses `generateContent`.
+
+Each provider is **key-activated**: it is registered only when its API key is present in the
+environment. Keys are read from the environment, sent only as the provider auth header, and never
+placed in logs, errors, records, or a provider's `repr`. Every provider has a documented default
+model (overridable via `OMNISTACKAI_<PROVIDER>_MODEL`) and conservative shared budgets
+(`OMNISTACKAI_CLOUD_*`). Stage 0 `stream()` wraps a non-streaming generation into one final event;
+true per-provider SSE streaming is deferred.
+
+`build_gateway_from_env()` (`bootstrap.py`) always registers local Ollama, registers each cloud
+provider whose key is set, and selects the L3/L4 cloud tier from `OMNISTACKAI_CLOUD_PROVIDER`
+(`none` by default). Selecting a provider whose key is absent is a configuration error, never a
+silent local downgrade. To enable a cloud tier, set that provider's key and the selector in the
+untracked `.env`:
+
+```
+ANTHROPIC_API_KEY=...              # only the provider you use
+OMNISTACKAI_CLOUD_PROVIDER=anthropic
+```
+
+Then `task agent-engine:gateway:run` shows the cloud provider registered and L3/L4 routing to it,
+while L1/L2 stay on local Ollama. With no key set, everything runs locally at zero cloud cost.
+
 ## Deferred work
 
-Cloud API-key adapters, fallback across providers, circuit breaking, durable cost accounting,
-benchmark-backed capability promotion, richer context management, HTTP serving, and agent
+Cross-provider fallback, circuit breaking, durable cost accounting, benchmark-backed capability
+promotion, true per-provider streaming, richer context management, HTTP serving, and agent
 orchestration remain deferred to their own Tracker IDs.

@@ -59,6 +59,10 @@ class ModelProfileMismatchError(ModelProviderError):
     code = "model_profile_mismatch"
 
 
+class MissingCredentialError(ModelProviderError):
+    code = "missing_credential"
+
+
 class ModelGatewayError(Exception):
     """Base error safe to expose at the platform model-gateway routing boundary."""
 
@@ -79,3 +83,7 @@ class NoEligibleProviderError(ModelGatewayError):
 
 class ContextBudgetExceededError(ModelGatewayError):
     code = "context_budget_exceeded"
+
+
+class CloudProviderSelectionError(ModelGatewayError):
+    code = "cloud_provider_selection_error"

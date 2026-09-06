@@ -162,9 +162,21 @@ if rg -n --glob '*.py' '^\s*(from|import)\s+(anthropic|google|ollama|openai)(\.|
   exit 1
 fi
 
-if rg -qi --glob '*.py' '(class .*Adapter|api\.openai\.com|api\.anthropic\.com|/api/generate)' \
-  "$agent_engine_root/src"; then
-  printf 'R-005 must not implement a provider adapter.\n'
+# Provider adapters behind the ModelProvider boundary are sanctioned from R-006 (local Ollama) and
+# R-008 (cloud) onward. The durable invariants are the SDK-import exclusion above plus: the gateway,
+# cloud adapters, and env bootstrap exist, and cloud providers are opt-in and default to local-only.
+for required_file in \
+  src/omnistackai_agent_engine/model_gateway/gateway.py \
+  src/omnistackai_agent_engine/model_gateway/cloud.py \
+  src/omnistackai_agent_engine/model_gateway/bootstrap.py; do
+  if [[ ! -f "$agent_engine_root/$required_file" ]]; then
+    printf 'Missing R-007/R-008 model-gateway contract file: %s\n' "$required_file"
+    exit 1
+  fi
+done
+
+if ! rg -q '^OMNISTACKAI_CLOUD_PROVIDER=none$' "$repo_root/.env.example"; then
+  printf 'Cloud model providers must be opt-in and default to none.\n'
   exit 1
 fi
 
