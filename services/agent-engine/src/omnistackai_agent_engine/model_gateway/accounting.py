@@ -105,6 +105,12 @@ DEFAULT_PRICE_BOOK = PriceBook(
         ("openai", "gpt-4o"): ModelPrice("2.5", "10"),
         ("google-gemini", "gemini-1.5-pro"): ModelPrice("1.25", "5"),
         ("groq", "llama-3.3-70b-versatile"): ModelPrice("0.59", "0.79"),
+        ("deepseek", "deepseek-chat"): ModelPrice("0.27", "1.10"),
+        ("xai", "grok-2-latest"): ModelPrice("2", "10"),
+        ("mistral", "mistral-large-latest"): ModelPrice("2", "6"),
+        ("together", "meta-llama/Llama-3.3-70B-Instruct-Turbo"): ModelPrice("0.88", "0.88"),
+        ("fireworks", "accounts/fireworks/models/llama-v3p3-70b-instruct"): ModelPrice("0.9", "0.9"),
+        # openrouter and custom providers are intentionally unpriced (they vary by model).
     }
 )
 

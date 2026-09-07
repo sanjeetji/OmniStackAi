@@ -33,6 +33,8 @@ from .cloud import (
     OpenAICompatibleProvider,
     PROVIDER_SPECS,
     create_cloud_provider,
+    custom_provider_specs_from_env,
+    resolve_provider_specs,
 )
 from .errors import (
     AllProvidersFailedError,
@@ -137,6 +139,8 @@ __all__ = [
     "UnsupportedModelRequestError",
     "build_gateway_from_env",
     "create_cloud_provider",
+    "custom_provider_specs_from_env",
+    "resolve_provider_specs",
     "estimate_input_tokens",
     "fallback_provider_ids_from_env",
     "platform_overview",

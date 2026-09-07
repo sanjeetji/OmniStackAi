@@ -12,6 +12,8 @@ from __future__ import annotations
 
 import asyncio
 import json
+import os
+import re
 import socket
 from collections.abc import AsyncIterator, Callable
 from dataclasses import dataclass
@@ -106,7 +108,88 @@ PROVIDER_SPECS: dict[str, CloudProviderSpec] = {
         "groq", "openai", "https://api.groq.com/openai/v1",
         "GROQ_API_KEY", "OMNISTACKAI_GROQ_MODEL", "llama-3.3-70b-versatile",
     ),
+    "deepseek": CloudProviderSpec(
+        "deepseek", "openai", "https://api.deepseek.com/v1",
+        "DEEPSEEK_API_KEY", "OMNISTACKAI_DEEPSEEK_MODEL", "deepseek-chat",
+    ),
+    "xai": CloudProviderSpec(
+        "xai", "openai", "https://api.x.ai/v1",
+        "XAI_API_KEY", "OMNISTACKAI_XAI_MODEL", "grok-2-latest",
+    ),
+    "mistral": CloudProviderSpec(
+        "mistral", "openai", "https://api.mistral.ai/v1",
+        "MISTRAL_API_KEY", "OMNISTACKAI_MISTRAL_MODEL", "mistral-large-latest",
+    ),
+    "together": CloudProviderSpec(
+        "together", "openai", "https://api.together.xyz/v1",
+        "TOGETHER_API_KEY", "OMNISTACKAI_TOGETHER_MODEL", "meta-llama/Llama-3.3-70B-Instruct-Turbo",
+    ),
+    "fireworks": CloudProviderSpec(
+        "fireworks", "openai", "https://api.fireworks.ai/inference/v1",
+        "FIREWORKS_API_KEY", "OMNISTACKAI_FIREWORKS_MODEL", "accounts/fireworks/models/llama-v3p3-70b-instruct",
+    ),
 }
+
+# Custom (bring-your-own OpenAI-compatible endpoint) providers, declared entirely from the environment
+# so a user can plug in any endpoint with no code change. Selection list:
+#   OMNISTACKAI_CUSTOM_PROVIDERS=myco,internal
+# and per provider <id> (uppercased, '-' -> '_'):
+#   OMNISTACKAI_CUSTOM_<ID>_BASE_URL   (required, HTTPS)
+#   OMNISTACKAI_CUSTOM_<ID>_MODEL      (required, the default model id)
+#   OMNISTACKAI_CUSTOM_<ID>_API_KEY    (the key; the provider is inactive until this is set)
+_CUSTOM_ID = re.compile(r"^[a-z][a-z0-9-]{0,63}$")
+_CUSTOM_PREFIX = "OMNISTACKAI_CUSTOM_"
+
+
+def _custom_env_slug(provider_id: str) -> str:
+    return provider_id.upper().replace("-", "_")
+
+
+def custom_provider_specs_from_env(env: dict[str, str] | None = None) -> dict[str, CloudProviderSpec]:
+    """Build CloudProviderSpecs for every provider named in OMNISTACKAI_CUSTOM_PROVIDERS.
+
+    Each becomes an OpenAI-compatible provider. Raises InvalidProviderConfigurationError on an invalid
+    id, a missing/non-HTTPS base URL, a missing model, or a collision with a built-in provider id. No
+    key value is read here — only the *name* of the key env is recorded on the spec.
+    """
+
+    source = os.environ if env is None else env
+    raw = source.get("OMNISTACKAI_CUSTOM_PROVIDERS", "") or ""
+    specs: dict[str, CloudProviderSpec] = {}
+    for provider_id in (part.strip().lower() for part in raw.split(",")):
+        if not provider_id:
+            continue
+        if not _CUSTOM_ID.match(provider_id):
+            raise InvalidProviderConfigurationError(
+                f"custom provider id {provider_id!r} must match {_CUSTOM_ID.pattern}"
+            )
+        if provider_id in PROVIDER_SPECS:
+            raise InvalidProviderConfigurationError(
+                f"custom provider id {provider_id!r} collides with a built-in provider"
+            )
+        if provider_id in specs:
+            raise InvalidProviderConfigurationError(f"custom provider id {provider_id!r} is declared twice")
+        slug = _custom_env_slug(provider_id)
+        base_url = (source.get(f"{_CUSTOM_PREFIX}{slug}_BASE_URL", "") or "").strip()
+        if not base_url.startswith("https://"):
+            raise InvalidProviderConfigurationError(
+                f"custom provider {provider_id!r} requires {_CUSTOM_PREFIX}{slug}_BASE_URL to be an HTTPS URL"
+            )
+        model = (source.get(f"{_CUSTOM_PREFIX}{slug}_MODEL", "") or "").strip()
+        if not model:
+            raise InvalidProviderConfigurationError(
+                f"custom provider {provider_id!r} requires {_CUSTOM_PREFIX}{slug}_MODEL"
+            )
+        key_env = f"{_CUSTOM_PREFIX}{slug}_API_KEY"
+        model_env = f"{_CUSTOM_PREFIX}{slug}_MODEL"
+        specs[provider_id] = CloudProviderSpec(provider_id, "openai", base_url, key_env, model_env, model)
+    return specs
+
+
+def resolve_provider_specs(env: dict[str, str] | None = None) -> dict[str, CloudProviderSpec]:
+    """The effective provider catalog: built-in specs plus any environment-declared custom providers."""
+
+    return {**PROVIDER_SPECS, **custom_provider_specs_from_env(env)}
 
 
 class _HttpCloudProvider:

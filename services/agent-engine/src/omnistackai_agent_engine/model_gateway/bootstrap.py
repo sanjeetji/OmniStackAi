@@ -13,7 +13,7 @@ import os
 from dataclasses import dataclass
 
 from .accounting import UsageLedger
-from .cloud import PROVIDER_SPECS, create_cloud_provider
+from .cloud import create_cloud_provider, resolve_provider_specs
 from .contracts import CapabilityStatus, ModelCapabilities, ModelDescriptor, ModelRef
 from .errors import CloudProviderSelectionError
 from .gateway import ModelGateway, RoutingPolicy
@@ -40,6 +40,7 @@ class GatewayBootstrap:
 def fallback_provider_ids_from_env() -> tuple[str, ...]:
     """Parse OMNISTACKAI_FALLBACK_PROVIDERS into normalized provider ids (metadata-only helper)."""
 
+    specs = resolve_provider_specs()
     raw = os.environ.get("OMNISTACKAI_FALLBACK_PROVIDERS", "") or ""
     ids: list[str] = []
     for name in (part.strip().lower() for part in raw.split(",")):
@@ -47,11 +48,11 @@ def fallback_provider_ids_from_env() -> tuple[str, ...]:
             continue
         if name in _LOCAL_ALIASES:
             ids.append(OLLAMA_PROVIDER_ID)
-        elif name in PROVIDER_SPECS:
-            ids.append(PROVIDER_SPECS[name].provider_id)
+        elif name in specs:
+            ids.append(specs[name].provider_id)
         else:
             raise CloudProviderSelectionError(
-                f"unknown fallback provider {name!r}; expected ollama or one of {', '.join(sorted(PROVIDER_SPECS))}"
+                f"unknown fallback provider {name!r}; expected ollama or one of {', '.join(sorted(specs))}"
             )
     return tuple(ids)
 
@@ -131,8 +132,9 @@ def build_gateway_from_env(recorder: UsageLedger | None = None) -> GatewayBootst
         )
     )
 
+    provider_specs = resolve_provider_specs()
     cloud_descriptors: dict[str, ModelDescriptor] = {}
-    for name, spec in PROVIDER_SPECS.items():
+    for name, spec in provider_specs.items():
         api_key = os.environ.get(spec.key_env, "")
         if not api_key.strip():
             continue  # provider stays inactive until its key is supplied
@@ -147,13 +149,13 @@ def build_gateway_from_env(recorder: UsageLedger | None = None) -> GatewayBootst
     cloud_model: ModelDescriptor | None = None
     cloud_tier_provider_id: str | None = None
     if selection not in ("", "none"):
-        if selection not in PROVIDER_SPECS:
+        if selection not in provider_specs:
             raise CloudProviderSelectionError(
-                f"OMNISTACKAI_CLOUD_PROVIDER must be one of none, {', '.join(sorted(PROVIDER_SPECS))}"
+                f"OMNISTACKAI_CLOUD_PROVIDER must be one of none, {', '.join(sorted(provider_specs))}"
             )
         if selection not in cloud_descriptors:
             raise CloudProviderSelectionError(
-                f"cloud provider {selection!r} is selected but {PROVIDER_SPECS[selection].key_env} is not set"
+                f"cloud provider {selection!r} is selected but {provider_specs[selection].key_env} is not set"
             )
         cloud_model = cloud_descriptors[selection]
         cloud_tier_provider_id = cloud_model.model.provider_id
@@ -167,15 +169,15 @@ def build_gateway_from_env(recorder: UsageLedger | None = None) -> GatewayBootst
             continue
         if name in _LOCAL_ALIASES:
             descriptor = ollama_descriptor
-        elif name in PROVIDER_SPECS:
+        elif name in provider_specs:
             if name not in cloud_descriptors:
                 raise CloudProviderSelectionError(
-                    f"fallback provider {name!r} needs {PROVIDER_SPECS[name].key_env} to be set"
+                    f"fallback provider {name!r} needs {provider_specs[name].key_env} to be set"
                 )
             descriptor = cloud_descriptors[name]
         else:
             raise CloudProviderSelectionError(
-                f"unknown fallback provider {name!r}; expected ollama or one of {', '.join(sorted(PROVIDER_SPECS))}"
+                f"unknown fallback provider {name!r}; expected ollama or one of {', '.join(sorted(provider_specs))}"
             )
         fallback_descriptors.append(descriptor)
         fallback_ids.append(descriptor.model.provider_id)

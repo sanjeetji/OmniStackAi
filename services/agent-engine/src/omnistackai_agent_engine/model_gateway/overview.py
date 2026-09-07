@@ -14,7 +14,7 @@ import sys
 from pathlib import Path
 
 from .accounting import DEFAULT_PRICE_BOOK, PriceBook, UsageLedger
-from .cloud import PROVIDER_SPECS
+from .cloud import resolve_provider_specs
 from .ollama import OLLAMA_PROVIDER_ID
 
 _DEFAULT_OUTPUT = "apps/console-web/data/overview.json"
@@ -87,7 +87,7 @@ def platform_overview(
             "keyEnv": None,
         }
     ]
-    for spec in PROVIDER_SPECS.values():
+    for spec in resolve_provider_specs().values():
         providers.append(
             {
                 "providerId": spec.provider_id,

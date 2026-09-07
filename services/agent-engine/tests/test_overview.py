@@ -7,6 +7,7 @@ from omnistackai_agent_engine.model_gateway import (
     FinishReason,
     Message,
     ModelRef,
+    PROVIDER_SPECS,
     TokenUsage,
     UsageLedger,
     platform_overview,
@@ -19,10 +20,11 @@ class OverviewTests(TestCase):
             overview = platform_overview()
         provider_ids = {p["providerId"] for p in overview["providers"]}
         self.assertIn("ollama-local", provider_ids)
-        self.assertEqual(
-            provider_ids,
-            {"ollama-local", "anthropic", "openai", "google-gemini", "openrouter", "groq"},
-        )
+        # Local plus every built-in cloud provider spec (the catalog grows over time; derive it).
+        expected = {"ollama-local", *(spec.provider_id for spec in PROVIDER_SPECS.values())}
+        self.assertEqual(provider_ids, expected)
+        # The expanded catalog includes the newer OpenAI-compatible providers.
+        self.assertTrue({"deepseek", "xai", "mistral", "together", "fireworks"} <= provider_ids)
         local = next(p for p in overview["providers"] if p["providerId"] == "ollama-local")
         self.assertEqual(local["tier"], "local")
         self.assertTrue(local["active"])

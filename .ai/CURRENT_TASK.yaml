@@ -1,27 +1,28 @@
 schema_version: 1
-task_id: R-235
-title: Verifiable-engineering verify plans (per-target gate ladders + IR/monorepo mapping)
-status: done
+task_id: R-236
+title: Expand the model-provider catalog + custom OpenAI-compatible providers
+status: in_progress
 phase: BASIC/MVP
 founder_stage: 0
 branch: main
 goal: >-
-  Give the platform the "verifiable engineering" backbone (Brief 26/27/77): a deterministic verify plan
-  per generation target — the ordered ladder of gate commands (install, typecheck, lint, test, build)
-  that the generated code for that target is engineered to pass. A verify plan is pure data (validated
-  command descriptions classified by gate kind), mirroring the runtime preview/deploy plan pattern.
-  Map an Application IR to the verify plans for its assembled monorepo apps (apps/web, services/api),
-  and add an opt-in run_verify executor that runs a plan fail-fast and returns a structured report.
-  Deterministic and offline: plans are asserted; nothing is installed, built, or run by task verify
-  (execution is opt-in on a machine with the toolchain).
+  Grow the cloud model fabric to match a competitive provider picker: add first-class
+  OpenAI-compatible adapters for DeepSeek, xAI (Grok), Mistral, Together, and Fireworks alongside the
+  existing OpenAI/Anthropic/Google/OpenRouter/Groq, and add a generic env-driven "custom provider" path
+  (any OpenAI-compatible base URL + key) so a user can plug in an endpoint with no code change — the
+  platform's advanced equivalent of Dyad's "Add custom provider". Each provider stays key-activated:
+  no key means it is inactive and no cloud call is made; local Ollama remains the always-on sub-L3 tier
+  and the default. Every new provider flows through registration, cloud-tier/fallback selection, the
+  metadata-only overview, and the price book automatically. Standard-library only; deterministic and
+  offline; no key value is ever logged, stored, or returned.
 source:
   tracker_sheet: Phase_Roadmap
   tracker_row: reconstructed; new IDs continue after the workbook backlog's R-010..R-219
-  brief_sections: [26, 27, 42, 44, 74, 77, 83, 84, 85, 92]
+  brief_sections: [10, 11, 12, 13, 55, 64, 69, 70, 74, 77, 90, 92]
   founder_note: >-
-    Founder said "Continue". Continues the builder toward the brief's core differentiator (verifiable
-    engineering). Committed directly to main; author solely sanjeetji; tooling adds a Co-Authored-By
-    trailer.
+    Founder asked (with Dyad screenshots for reference) to add more LLMs — DeepSeek, Groq, Grok, etc. —
+    and a local-Ollama/custom path, done the platform's more advanced/optimised way. Committed directly
+    to main; author solely sanjeetji; tooling adds a Co-Authored-By trailer.
 project_profile:
   repository: platform_modular_monorepo
   service: python_agent_engine
@@ -29,53 +30,53 @@ project_profile:
   model_routing: balanced
 complexity: L2
 expected_impact:
-  - services/agent-engine/src/omnistackai_agent_engine/verify/__init__.py
-  - services/agent-engine/src/omnistackai_agent_engine/verify/plans.py
-  - services/agent-engine/src/omnistackai_agent_engine/verify/gates.py
-  - services/agent-engine/src/omnistackai_agent_engine/verify/errors.py
-  - services/agent-engine/src/omnistackai_agent_engine/codegen/assembler.py
-  - services/agent-engine/src/omnistackai_agent_engine/codegen/__init__.py
-  - services/agent-engine/tests/test_verify_plans.py
-  - Taskfile.yml
-  - scripts/agent-engine.sh
-  - docs/VERIFY.md
+  - services/agent-engine/src/omnistackai_agent_engine/model_gateway/cloud.py
+  - services/agent-engine/src/omnistackai_agent_engine/model_gateway/bootstrap.py
+  - services/agent-engine/src/omnistackai_agent_engine/model_gateway/overview.py
+  - services/agent-engine/src/omnistackai_agent_engine/model_gateway/accounting.py
+  - services/agent-engine/src/omnistackai_agent_engine/model_gateway/__init__.py
+  - services/agent-engine/tests/test_provider_catalog.py
+  - .env.example
+  - docs/MODEL_PROVIDER.md
   - portable state, changelog, handoff, task doc, and tracker evidence
 allowed_paths:
   - .ai/**
+  - .env.example
   - CHANGELOG.md
   - PROJECT_STATE.md
   - R_&_D/OmniStackAI_Execution_Tracker_v6.xlsx
-  - Taskfile.yml
   - docs/**
-  - scripts/**
   - services/agent-engine/**
 must_not_change:
   - PostgreSQL as the control-plane database or the existing schema
-  - the model-gateway, IR, runtime, git-service public behavior (additive)
-  - assemble_project's output (refactor is behavior-preserving; covered by existing tests)
-  - local Compose services or infrastructure; the Section 74 top-level contract; the offline bootstrap
-  - the network-independence of static task verify
+  - the ModelProvider contract, gateway routing policy, or the runtime/verify/codegen behavior (additive)
+  - local Ollama as the always-on sub-L3 default; no silent cloud fallback
+  - the network-independence of static task verify; the Section 74 top-level contract; offline bootstrap
 must_not_do:
-  - install, run, build, or test any generated code in task verify (execution is opt-in)
-  - add an external Python dependency; import a vendor SDK; put a secret anywhere
+  - make any network call in bootstrap/overview or tests; add an external Python dependency; import a vendor SDK
+  - place an API key in a command, log, error, record, repr, or the overview snapshot
 acceptance:
-  - verify_plan(target, app_dir) returns a VerifyPlan for each supported target (nextjs-web, nextjs-admin,
-    backend-python, backend-go); an unknown target raises a clear UnsupportedVerifyTargetError.
-  - A VerifyPlan is validated, ordered, and classifies each step by gate kind (install/typecheck/lint/
-    test/build); plan.gates() reports the kinds present; every command is control-free and secret-free.
-  - verify_plans_for_ir(ir) returns the verify plans for the IR's assembled apps, each bound to its
-    monorepo directory (apps/web, services/api), consistent with the assembler.
-  - run_verify(plan) executes a plan fail-fast and returns a VerifyReport (per-step status + return code);
-    it is opt-in and never run by tests or task verify.
-  - task agent-engine:verify-plan prints a target's plan; task verify stays green and network-independent.
-  - Standard-library offline tests cover per-target plans, gate classification, unknown-target error,
-    IR->plans mapping, and no-secret/plan validity.
+  - New built-in specs (deepseek, xai, mistral, together, fireworks) exist as OpenAI-compatible
+    providers with an HTTPS base URL, a distinct key env, a model env, and a default model; each
+    registers only when its key is present and stays inactive otherwise.
+  - A custom provider can be declared from the environment (OMNISTACKAI_CUSTOM_PROVIDERS + per-provider
+    base URL / key / model) and becomes a first-class OpenAI-compatible provider with no code change;
+    invalid config (bad id, missing/invalid base URL, collision with a built-in) raises a clear error.
+  - resolve_provider_specs() merges built-ins + custom; bootstrap registers, selects (cloud tier), and
+    chains (fallback) any built-in or custom provider by its key; the overview lists every provider with
+    active reflecting only key presence (never the value).
+  - The price book has illustrative, operator-overridable defaults for the priced new providers;
+    unknown/custom models are recorded as unpriced, not guessed.
+  - Standard-library offline tests cover the new specs, adapter construction/dispatch shape, custom-spec
+    parsing + error cases, spec resolution/merge, bootstrap registration + selection + fallback, and
+    no-key-leak. task verify stays green and network-independent.
 required_gates:
   - impact_analysis
-  - per_target_verify_plan_tests
-  - gate_classification_tests
-  - ir_to_plans_mapping_tests
-  - unsupported_target_error_test
+  - new_provider_spec_tests
+  - custom_provider_parse_and_error_tests
+  - spec_resolution_merge_tests
+  - bootstrap_registration_selection_fallback_tests
+  - no_key_leak_test
   - python_compile_test
   - vendor_import_exclusion
   - secret_exclusion_check
@@ -88,22 +89,14 @@ model_tool_trace:
   configured_model: qwen2.5-coder:14b
   local_calls: 0
   cloud_calls: 0
-  note: Deterministic; no model call, no install/build/run. No cloud key set; cloud_calls zero.
+  note: Deterministic; no model call, no network. No cloud key set; cloud_calls zero.
 completion:
-  implementation_commit: cb74d0c
-  verified_at: "2026-09-07T00:00:00+05:30"
-  verification:
-    - "task verify — pass (203 agent-engine tests; 9 new)"
-    - "task security:quick — pass; task env:check — pass"
-    - "task agent-engine:verify-plan demoed backend-go (vet/test/build) and rejects unknown targets"
-  acceptance_results:
-    - "verify_plan(target, app_dir) returns a VerifyPlan for nextjs-web/nextjs-admin/backend-python/backend-go; unknown target raises UnsupportedVerifyTargetError (tests)"
-    - "VerifyPlan is validated + ladder-ordered; each step classified by kind; plan.gates() reports kinds; commands control-free/secret-free (tests)"
-    - "verify_plans_for_ir(ir) returns plans for the IR's assembled apps bound to apps/web + services/api, matching assembled_targets (tests over rideshare + blog fixtures)"
-    - "run_verify present (opt-in fail-fast executor returning VerifyReport); never run by tests/verify"
-    - "task agent-engine:verify-plan prints the ladder; task verify stays green and network-independent"
+  implementation_commit: null
+  verified_at: null
+  verification: []
+  acceptance_results: []
 blockers: []
 next_action: >-
-  Implement the verify-plan layer + IR mapping + opt-in executor with offline tests; run the gates;
-  record completion. Live-verify a generated project's plan once run on a toolchain machine.
+  Add the new provider specs + custom-provider resolution, wire bootstrap/overview/accounting, add
+  offline tests, run the gates, record completion. Live-verify a new provider once its key is supplied.
 next_command: task agent-engine:test

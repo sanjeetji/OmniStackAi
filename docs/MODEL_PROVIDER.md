@@ -100,6 +100,42 @@ OMNISTACKAI_CLOUD_PROVIDER=anthropic
 Then `task agent-engine:gateway:run` shows the cloud provider registered and L3/L4 routing to it,
 while L1/L2 stay on local Ollama. With no key set, everything runs locally at zero cloud cost.
 
+## R-236 Provider catalog + custom OpenAI-compatible providers
+
+The catalog is **spec-driven**: a `CloudProviderSpec` (id, kind, HTTPS base URL, key env, model env,
+default model) is all a provider needs — it then flows through registration, cloud-tier/fallback
+selection, the metadata-only overview, and the price book automatically.
+
+- **Built-in cloud providers**: `anthropic`, `openai`, `google`, `openrouter`, `groq`, and (R-236)
+  `deepseek`, `xai` (Grok), `mistral`, `together`, `fireworks`. All the new ones are OpenAI-compatible,
+  so they reuse `OpenAICompatibleProvider` — no new adapter code. Set the provider's key
+  (`DEEPSEEK_API_KEY`, `XAI_API_KEY`, `MISTRAL_API_KEY`, `TOGETHER_API_KEY`, `FIREWORKS_API_KEY`) and,
+  to route the cloud tier to it, `OMNISTACKAI_CLOUD_PROVIDER=<id>`. Each stays inactive until its key is
+  present; the model is overridable via `OMNISTACKAI_<PROVIDER>_MODEL`.
+- **Custom (bring-your-own) providers**: declare any OpenAI-compatible endpoint from the environment —
+  no code change. Name the ids, then give each a base URL, model, and key:
+
+  ```
+  OMNISTACKAI_CUSTOM_PROVIDERS=myco
+  OMNISTACKAI_CUSTOM_MYCO_BASE_URL=https://llm.myco.internal/v1   # HTTPS required
+  OMNISTACKAI_CUSTOM_MYCO_MODEL=myco-large
+  OMNISTACKAI_CUSTOM_MYCO_API_KEY=...
+  ```
+
+  A custom id becomes a first-class provider selectable as the cloud tier or a fallback by its id.
+  `custom_provider_specs_from_env()` validates the id (`^[a-z][a-z0-9-]{0,63}$`), requires an HTTPS base
+  URL and a model, and rejects collisions with a built-in; `resolve_provider_specs()` is the effective
+  catalog (built-ins ∪ custom) that the bootstrap and overview consume.
+
+- **Local models (Ollama)**: the always-on sub-L3 tier runs whatever model you have installed — point
+  `OMNISTACKAI_OLLAMA_MODEL` at any pulled model (e.g. `qwen2.5-coder:14b`) and, if needed,
+  `OMNISTACKAI_OLLAMA_BASE_URL` at your loopback endpoint. No key, no cloud call.
+
+Pricing: `DEFAULT_PRICE_BOOK` carries illustrative, operator-overridable USD rates for the priced
+providers; `openrouter` and custom providers are intentionally unpriced (they vary by model) and are
+recorded as unpriced rather than guessed. Keys are never logged, stored, returned, or
+placed in the overview — `active` reflects only whether a key is present.
+
 ## R-009 Usage & cost accounting
 
 `ModelGateway` accepts an optional `recorder=UsageLedger()`. When set, every dispatch writes exactly
