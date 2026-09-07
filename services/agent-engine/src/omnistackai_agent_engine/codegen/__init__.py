@@ -9,6 +9,7 @@ from .errors import (
     InvalidGeneratedFileError,
     UnsupportedTargetError,
 )
+from .assembler import MONOREPO_TARGET, AssembledApp, assemble_project, default_registry
 from .backend_go import GoBackendAdapter
 from .backend_python import PythonBackendAdapter
 from .files import GeneratedFile, GeneratedProject
@@ -16,6 +17,7 @@ from .nextjs import NextjsWebAdapter
 
 __all__ = [
     "AdapterRegistry",
+    "AssembledApp",
     "CodegenError",
     "DuplicateAdapterError",
     "DuplicateFileError",
@@ -26,7 +28,10 @@ __all__ = [
     "GenerationTarget",
     "GoBackendAdapter",
     "InvalidGeneratedFileError",
+    "MONOREPO_TARGET",
     "NextjsWebAdapter",
     "PythonBackendAdapter",
     "UnsupportedTargetError",
+    "assemble_project",
+    "default_registry",
 ]

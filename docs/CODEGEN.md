@@ -77,3 +77,18 @@ With R-227 (Next.js web), R-229 (FastAPI) and R-230 (Go) registered together, **
 emits web + Python + Go from a single source of truth** — the multi-target differentiator across
 languages. All three are pure/offline: verified by asserting emitted files; the Git service (R-228)
 materializes any of them into a customer-owned repo.
+
+## Customer project assembler (R-232)
+
+`assemble_project(ir, registry=None)` turns one IR into a **complete customer monorepo** (Brief
+§6/§34/§35): it selects the adapters implied by `project_strategy` (`web_strategy == nextjs` →
+`apps/web`; `backend_strategy` go/python → `services/api`), generates each, re-paths its files under
+the monorepo layout, and returns a single `GeneratedProject` (target `customer-monorepo`) with a root
+`README.md` (listing the assembled apps and anything not yet assembled — node backend, admin, mobile)
+and a root `.gitignore`. `default_registry()` provides an `AdapterRegistry` pre-loaded with all three
+adapters.
+
+End to end, **one Application IR becomes one customer-owned monorepo repository**: `assemble_project`
+→ `git_service.create_repository` produces, e.g., a 24-file repo with `apps/web/` (Next.js) and
+`services/api/` (Go) and a single commit authored by the customer. Pure/offline; nothing is installed,
+built, run, or written to disk except by the Git service into the caller's target directory.
