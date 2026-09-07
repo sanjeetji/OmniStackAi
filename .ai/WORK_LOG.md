@@ -600,3 +600,23 @@
   existing builders, so no runtime/verify/codegen behavior changed.
 - Committed directly to main (only branch). Tracker row R-245 (Runtime) inserted at row 9; MVP total
   140 / Done 34. Implementation checkpoint `891144d`. 0 local / 0 cloud model calls; nothing executed.
+
+## 2026-09-07 — R-246
+
+- Added hunk-level edit diffs + rename detection on top of the R-237 file-level ProjectDiff. New
+  `edit/patch.py`: `DiffKind`, `FileDiff`, `diff_report(old, new)`, `unified_patch(old, new)` — using
+  standard-library `difflib.unified_diff`.
+- `diff_report` classifies each path as added/modified/deleted/renamed and attaches a git-style unified
+  (hunk) diff for content changes. Rename detection pairs a deleted path with an added path of identical
+  content (greedy, sorted for determinism) and reports a single RENAMED record (old_path -> path)
+  instead of delete+add. Records are deterministically ordered (kind, then path).
+- `unified_patch` concatenates the reports into one byte-stable git-style patch string, with
+  `rename from`/`rename to` headers for renames — so an edit reads as a focused review-ready patch.
+- Additive only: `diff_projects` / `apply_diff` / `plan_edit` are unchanged; exported the new names from
+  `edit/__init__.py`. Pure/deterministic — no disk write, no run, no network.
+- 6 new stdlib offline tests (297 total) in `test_edit_patch.py`: modified-file unified hunk (context +
+  -/+ lines), exact-content rename as one record + rename header, one-sided add/delete, empty report
+  for identical projects, and byte-stable determinism. `task verify` + `security:quick` + `env:check`
+  pass. `docs/EDIT_LOOP.md` + `docs/PROGRESS.md` refreshed (also fixed stale test-count/% notes).
+- Committed directly to main (only branch). Tracker row R-246 (Builder) inserted at row 9; MVP total
+  141 / Done 35. Implementation checkpoint `eebab68`. 0 local / 0 cloud model calls; nothing executed.

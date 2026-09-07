@@ -1,12 +1,12 @@
-# OmniStackAI — implementation progress (as of R-245)
+# OmniStackAI — implementation progress (as of R-246)
 
 A living summary of what is built, what is pending, and how to see results. Numbers come from the
 execution tracker (`R_&_D/OmniStackAI_Execution_Tracker_v6.xlsx`, `Phase_Roadmap`).
 
 ## Headline
 
-- **291 automated tests pass**, fully offline and network-independent (`task verify`).
-- **34 tracker tasks Done, 1 Deferred, 210 Not Started** across 245 rows.
+- **297 automated tests pass**, fully offline and network-independent (`task verify`).
+- **35 tracker tasks Done, 1 Deferred, 210 Not Started** across 246 rows.
 - The offline builder loop is complete end to end: **describe (IR) → generate (web + API with working
   CRUD incl. sub-collections + DB schema + data-access + JWT-verified auth & per-endpoint roles) →
   verify → edit → commit to an owned Git repo.**
@@ -15,16 +15,16 @@ execution tracker (`R_&_D/OmniStackAI_Execution_Tracker_v6.xlsx`, `Phase_Roadmap
 
 | Phase | Done | Total | % complete |
 |-------|------|-------|-----------|
-| **MVP** (current milestone) | 34 | 140 | **24.3%** |
+| **MVP** (current milestone) | 35 | 141 | **24.8%** |
 | MID | 0 | 47 | 0% |
 | ADVANCED | 0 | 29 | 0% |
 | PRODUCTION | 0 | 29 | 0% |
-| **Overall program** | **34** | **245** | **13.9%** |
+| **Overall program** | **35** | **246** | **14.2%** |
 
 > The 210 "Not Started" rows are the pre-existing backlog catalogue (R-010..R-219 — many are individual
 > specialized agents and later-phase features). Capability-wise the platform is further along than the
-> raw 11% suggests, because the work done so far is the **core engine + builder**, which everything
-> else builds on. The MVP figure (20%) is the truest near-term measure.
+> raw ~14% suggests, because the work done so far is the **core engine + builder**, which everything
+> else builds on. The MVP figure (~25%) is the truest near-term measure.
 
 ## Capabilities — completed vs pending
 
@@ -56,9 +56,9 @@ execution tracker (`R_&_D/OmniStackAI_Execution_Tracker_v6.xlsx`, `Phase_Roadmap
 | Per-endpoint role enforcement (IR `required_roles` → 403) | ✅ Done | R-243 |
 | Sub-collection route wiring (parent-scoped lists) | ✅ Done | R-244 |
 | Combined build/verify/preview plan surface | ✅ Done | R-245 (`task plan:show`) |
+| Richer edit-loop diff (hunk-level + rename detection) | ✅ Done | R-246 |
 | Next.js console upgrade (rich UI) | ⏸ Deferred | R-224 — needs npm registry access |
 | Seed/fixture data | ⛔ Pending | needs an IR fixtures field (no values to emit today) |
-| Richer edit-loop diff (rename/hunk-level) | ⛔ Pending | on top of the R-237 ProjectDiff |
 | Live sandbox preview + real deploy (Tier 2) | ⛔ Pending | needs a network machine + provider keys |
 | Native mobile agents | ⛔ Deferred (governance) | until web/backend stability (Brief §25/§91) |
 | MID / ADVANCED / PRODUCTION phase work | ⛔ Not started | 105 rows |
@@ -69,7 +69,7 @@ Everything below runs with **no cloud keys** and no internet (except where noted
 
 1. **See the whole engine is real and green:**
    ```
-   task verify            # 237 tests pass
+   task verify            # 297 tests pass
    ```
 2. **Generate a real app from a spec and inspect it** (the headline result):
    ```
@@ -113,7 +113,7 @@ the live run needs the key + a network machine.
 
 ## What's next
 
-Near-term MVP candidates (all offline-doable): richer edit-loop diffs (rename/hunk-level) on the R-237
-ProjectDiff; an IR fixtures field to seed data honestly; or rendering the R-245 project plan in the
-static console. Then, on a network machine: live Tier-2 preview and deploy. This file is refreshed as
-tasks land.
+Near-term MVP candidates (all offline-doable): an IR fixtures field to seed data honestly; rendering the
+R-245 project plan / R-246 patch in the static console; or deepening IR coverage (indexes, validation
+rules). Then, on a network machine: live Tier-2 preview and deploy. This file is refreshed as tasks
+land.

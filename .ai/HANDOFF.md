@@ -1,10 +1,10 @@
 # Current Handoff
 
-Task ID: R-245
+Task ID: R-246
 Status: done
 Phase: BASIC/MVP — Founder Stage 0
 Branch: `main` (the only branch; the GitHub default)
-Last verified implementation SHA: `891144d`
+Last verified implementation SHA: `eebab68`
 
 ## Repo/workflow state
 
@@ -13,23 +13,21 @@ Last verified implementation SHA: `891144d`
 - Every commit is authored solely by `sanjeetji <sk698166@gmail.com>`. Commit messages also carry a
   tooling-required `Co-Authored-By: Claude Opus 4.8` trailer; the owner may strip it from history.
 
-## Completed (R-245) — combined project-plan surface
+## Completed (R-246) — richer edit-loop diffs (hunk-level + rename detection)
 
-- New `omnistackai_agent_engine.projectplan`: `build_project_plan(ir, *, deploy=None)` composes existing
-  builders — `codegen.assembled_targets` (layout), `runtime.LocalRuntimeProvider.preview_plan`,
-  `verify.verify_plan`, and an optional `DeploymentProvider.deploy_plan` — into one `ProjectPlan` whose
-  `AppPlan` entries pair each assembled app with its preview + verify (+ deploy) plans.
-- `ProjectPlan.to_dict()` is JSON-serializable and secret-free; `render()` is a readable summary;
-  `task plan:show -- <example>` prints it. A deploy plan appears only when a key-activated provider is
-  passed. Pure/data-only — nothing installed, run, verified, or deployed.
+- New `edit/patch.py`: `diff_report(old, new)` classifies each path as added/modified/deleted/renamed
+  and attaches a git-style unified (hunk) diff for content changes; an exact-content delete+add
+  collapses to one `RENAMED` record (old_path → path). `unified_patch(old, new)` concatenates them into
+  one byte-stable git-style patch string (with rename headers).
+- Standard-library `difflib` only; additive — `diff_projects` / `apply_diff` / `plan_edit` are
+  unchanged. Pure/deterministic — no disk write, no run, no network.
 
 ## Verification
 
-- `task verify` — pass (291 agent-engine tests; 6 new). `task plan:show -- rideshare-favourites` renders
-  apps/web (nextjs-web, preview :3000, gates install/typecheck/lint/build) and services/api (backend-go,
-  preview :8080, gates lint/test/build). `to_dict` JSON-serializes with no key value (fake
-  `VERCEL_TOKEN`). `task security:quick`, `task env:check` — pass. No network.
-- Tracker — R-245 (Runtime) at `Phase_Roadmap!A9:M9`; MVP total 140, Done 34; chart/styles intact.
+- `task verify` — pass (297 agent-engine tests; 6 new). Demo: a modified file yields a unified hunk
+  (context + `-`/`+` lines); `old_name.txt`→`new_name.txt` (identical content) is one `RENAMED` record;
+  add/delete render as one-sided `/dev/null` diffs. `task security:quick`, `task env:check` — pass.
+- Tracker — R-246 (Builder) at `Phase_Roadmap!A9:M9`; MVP total 141, Done 35; chart/styles intact.
 
 ## Product state
 
@@ -44,10 +42,11 @@ ladders and one-IR→monorepo verify plans), the **edit loop** (plan_edit → di
 unambiguous CRUD endpoints call the repositories), **JWT-verified authentication guards** (each
 `auth=true` endpoint verifies an HS256 token with the secret from the env), **per-endpoint role
 enforcement** (IR `required_roles` → 403), **sub-collection lists** (`GET /parents/{id}/children` →
-FK-filtered list), and a **combined project-plan surface** (`build_project_plan` / `task plan:show` —
-preview + verify + optional deploy per app). The builder is generate (web/api with full CRUD + JWT auth
-+ roles + DB schema + data access) → plan → verify → edit → commit, fully offline. 34 tracker tasks
-Done; 0 cloud calls; the platform's own PostgreSQL/Compose untouched.
+FK-filtered list), a **combined project-plan surface** (`build_project_plan` / `task plan:show`), and
+**hunk-level edit patches + rename detection** (`diff_report` / `unified_patch`). The builder is
+generate (web/api with full CRUD + JWT auth + roles + DB schema + data access) → plan → verify → edit
+(patch/rename-aware) → commit, fully offline. 35 tracker tasks Done; 0 cloud calls; the platform's own
+PostgreSQL/Compose untouched.
 
 ## Free-tier note (for the founder, verify before relying)
 
@@ -55,14 +54,21 @@ Recurring monthly free: local (forever), GitHub Codespaces, Vercel Hobby, Render
 One-time trials: E2B/Daytona credits, Fly credit, Railway credit, AWS/GCP/Azure. Prefer the recurring
 ones for ongoing free use.
 
-## Next action (R-246, pick with the founder — all offline-doable)
+## Blockers and risks
 
-1. **Richer edit-loop diff**: rename detection or hunk-level (line) diffs on the R-237 `ProjectDiff`,
-   so edits read as focused patches rather than whole-file rewrites.
-2. **IR fixtures + seed data**: add an optional fixtures field to the IR so seed rows can be emitted
-   honestly (no fabricated values).
-3. **Render the R-245 plan in the static console** (apps/console-web) so the plan surface is visible in
-   the UI, not just the CLI.
+- No blocker for the offline R-247 candidates. R-224 and live preview/deploy remain environment-gated;
+  no cloud key or paid service is authorized.
+
+## Next action
+
+R-247 (pick with the founder — all offline-doable):
+
+1. **IR fixtures + seed data**: add an optional fixtures field to the IR so seed rows can be emitted
+   honestly (no fabricated values) as a `migrations/0002_seed.sql`.
+2. **Render the R-245 plan / R-246 patch in the static console** (apps/console-web) so they're visible
+   in the UI, not just the CLI.
+3. **Deepen IR + adapter coverage**: entity indexes / unique constraints, richer field validation into
+   the schema and models.
 Cloud-gated (need a network machine or keys): run a Tier-0 preview end-to-end
 (`task agent-engine:preview-plan`), live-verify a cloud driver (`OMNISTACKAI_TIER=2` + key), and the
 deferred R-224 Next.js console upgrade. Native mobile stays deferred per Brief §25/§91.

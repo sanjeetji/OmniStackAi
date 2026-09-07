@@ -1,7 +1,7 @@
 schema_version: 1
 task_id: R-246
 title: Richer edit-loop diffs (hunk-level unified diffs + rename detection)
-status: in_progress
+status: done
 phase: BASIC/MVP
 founder_stage: 0
 branch: main
@@ -80,12 +80,20 @@ model_tool_trace:
   cloud_calls: 0
   note: Deterministic; no model call, no network, no disk write. cloud_calls zero.
 completion:
-  implementation_commit: null
-  verified_at: null
-  verification: []
-  acceptance_results: []
+  implementation_commit: eebab68
+  verified_at: "2026-09-07T23:37:30+05:30"
+  verification:
+    - "task verify — pass (297 agent-engine tests; 6 new)"
+    - "task security:quick — pass; task env:check — pass"
+    - "demo: modified file -> unified hunk (-line2/+CHANGED); old_name.txt->new_name.txt detected as one RENAMED; add/delete one-sided"
+  acceptance_results:
+    - "diff_report classifies added/modified/deleted/renamed; exact-content delete+add collapses to a single RENAMED record (tests)"
+    - "modified files carry a git-style unified hunk with -/+ and context lines; report deterministically ordered (tests)"
+    - "unified_patch returns one byte-stable git-style patch with rename headers; identical projects -> empty (tests)"
+    - "additive: diff_projects/apply_diff/plan_edit outputs unchanged; standard-library difflib only"
+    - "pure/deterministic; no disk write, no run, no network; task verify network-independent"
 blockers: []
 next_action: >-
-  Implement edit/patch.py + tests; run the gates; record completion. Later continue with an IR fixtures
-  field for seed data or rendering the project plan in the console.
-next_command: task agent-engine:test
+  R-246 is complete. Continue from R-247 with an IR fixtures field for honest seed-data emission,
+  a static-console view of the R-245 plan / R-246 patch, or deeper IR + adapter coverage.
+next_command: task ai:status
