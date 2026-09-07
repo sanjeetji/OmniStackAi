@@ -529,3 +529,27 @@
   refreshed.
 - Committed directly to main (only branch). Tracker row R-242 (Builder) inserted at row 9; MVP total
   137 / Done 31. Implementation checkpoint `e0d8af3`. 0 local / 0 cloud model calls; nothing executed.
+
+## 2026-09-07 — R-243
+
+- Added per-endpoint role enforcement on top of the R-242 JWT auth — the first additive change to the
+  IR itself. `ir.py`: `ApiEndpoint` gains `required_roles: tuple[str, ...] = ()` (validated with
+  `_str_tuple`; a non-empty value requires `auth=true`), added to `to_dict`/`from_dict`. `validate.py`:
+  each required role must be a declared `Role` (ERROR `unknown_role_reference` otherwise). `normalize_ir`
+  unchanged (it reuses the ApiEndpoint objects). Default `()` → existing IRs unaffected, schema version
+  unchanged.
+- `auth_guard.py`: Python `require_roles(*required)` dependency factory (verify via `require_auth`, then
+  require the `roles` claim to intersect `required`, else 403). Go refactored to a shared `verifyToken`
+  (returns `jwt.MapClaims`) plus `RequireAuth`, `RequireRoles(next, required...)`, and `hasAnyRole`
+  (403 when the claim has no required role).
+- `backend_python._router_file`: role-gated routes declare `dependencies=[Depends(require_roles("..."))]`
+  and import only the auth names they use; `backend_go._main_file`: role-gated endpoints register as
+  `handlers.RequireRoles(target, "...")`. Endpoints without roles keep `require_auth`/`RequireAuth`.
+- 6 new stdlib offline tests (274 total) in `test_role_enforcement.py`: IR required_roles serialize +
+  auth-implication (`InvalidIRError`) + unknown-role `validate_ir` error + known-role clean; Python
+  route uses `require_roles` (valid Python) with a 403 guard; Go `main` uses `RequireRoles` and `auth.go`
+  has `RequireRoles`/`StatusForbidden`. Updated the R-242 Go assertion (`jwt.Parse` → `jwt.ParseWithClaims`).
+  `task verify` + `security:quick` + `env:check` pass. `docs/APPLICATION_IR.md` + `docs/CODEGEN.md` +
+  `docs/PROGRESS.md` refreshed.
+- Committed directly to main (only branch). Tracker row R-243 (Builder) inserted at row 9; MVP total
+  138 / Done 32. Implementation checkpoint `1faea2c`. 0 local / 0 cloud model calls; nothing executed.

@@ -1,10 +1,10 @@
 # Current Handoff
 
-Task ID: R-242
+Task ID: R-243
 Status: done
 Phase: BASIC/MVP — Founder Stage 0
 Branch: `main` (the only branch; the GitHub default)
-Last verified implementation SHA: `e0d8af3`
+Last verified implementation SHA: `1faea2c`
 
 ## Repo/workflow state
 
@@ -13,26 +13,26 @@ Last verified implementation SHA: `e0d8af3`
 - Every commit is authored solely by `sanjeetji <sk698166@gmail.com>`. Commit messages also carry a
   tooling-required `Co-Authored-By: Claude Opus 4.8` trailer; the owner may strip it from history.
 
-## Completed (R-242) — real JWT verification in the auth guard
+## Completed (R-243) — per-endpoint role enforcement
 
-- `codegen/auth_guard.py` now generates a guard that **verifies a JWT (HS256)** using `JWT_SECRET` from
-  the environment — `401` on a missing/invalid/expired token, `500` when the secret is unset, never a
-  fabricated default.
-- Python (`app/auth.py`): `require_auth` imports PyJWT, `jwt.decode(.., algorithms=["HS256"])`, returns
-  the verified claims; `requirements.txt` gains `PyJWT`, `.env.example` gains an empty `JWT_SECRET`. Go
-  (`internal/handlers/auth.go`): `RequireAuth` uses `github.com/golang-jwt/jwt/v5`, `jwt.Parse` with an
-  HMAC-only keyfunc; `go.mod` gains the golang-jwt `require`, `.env.example` gains `JWT_SECRET`.
-- Route placement is unchanged from R-241 (auth routes guarded, public untouched). Platform code stays
-  standard-library only — the JWT dependency lives in the generated project. The IR roles constant is
-  retained for future per-endpoint authorization (needs an IR field).
+- **IR change (additive):** `ApiEndpoint` gains optional `required_roles` (role ids) — a non-empty value
+  implies `auth`, each must be a declared `Role` (`validate_ir` errors otherwise), round-trips through
+  `to_dict`/`from_dict`. Default `()`, schema version unchanged; `normalize_ir` unchanged.
+- **Guard:** returns **403** when the R-242-verified token's `roles` claim includes no required role.
+  Python (`app/auth.py`): `require_roles(*required)` dependency factory; role-gated routes declare
+  `dependencies=[Depends(require_roles("..."))]`. Go (`internal/handlers/auth.go`): refactored to a
+  shared `verifyToken` + `RequireAuth` + `RequireRoles(next, required...)` + `hasAnyRole`; `main.go`
+  wraps role-gated endpoints with `handlers.RequireRoles(target, "...")`.
+- Endpoints without `required_roles` keep the R-241/R-242 auth guard. Deterministic; nothing runs.
 
 ## Verification
 
-- `task verify` — pass (268 agent-engine tests; 3 new). `minimal-blog` `app/auth.py` parses as valid
-  Python and reads `JWT_SECRET` from `os.environ` only; `rideshare-favourites` `auth.go` uses golang-jwt
-  with an HMAC keyfunc; deps + `JWT_SECRET` placeholder added. `task security:quick`, `task env:check` —
-  pass. No token signed/verified at generation time, no network.
-- Tracker — R-242 (Builder) at `Phase_Roadmap!A9:M9`; MVP total 137, Done 31; chart/styles intact.
+- `task verify` — pass (274 agent-engine tests; 6 new). Demo (blog IR, `POST /posts` requires
+  `author`): Python route uses `Depends(require_roles("author"))` and `app/auth.py` has a 403 path; Go
+  `main.go` uses `handlers.RequireRoles(h.PostPosts, "author")`. `validate_ir` errors on an unknown
+  role; a public endpoint with roles raises `InvalidIRError`. `task security:quick`, `task env:check` —
+  pass. No handler executed, no network.
+- Tracker — R-243 (Builder) at `Phase_Roadmap!A9:M9`; MVP total 138, Done 32; chart/styles intact.
 
 ## Product state
 
@@ -44,10 +44,11 @@ tier switch + a driver for every provider), the **verifiable-engineering layer**
 ladders and one-IR→monorepo verify plans), the **edit loop** (plan_edit → diff → apply → commit), a
 **generated PostgreSQL schema** (migrations/0001_init.sql from IR entities + relations), a
 **data-access layer** (Python repositories + Go store) over that schema, **wired handlers** (the
-unambiguous CRUD endpoints call the repositories), and now **JWT-verified authentication guards** (each
-`auth=true` endpoint verifies an HS256 token with the secret from the env). The builder is generate
-(web/api with working CRUD + JWT auth + DB schema + data access) → verify → edit → commit, fully
-offline. 31 tracker tasks Done; 0 cloud calls; the platform's own PostgreSQL/Compose untouched.
+unambiguous CRUD endpoints call the repositories), **JWT-verified authentication guards** (each
+`auth=true` endpoint verifies an HS256 token with the secret from the env), and now **per-endpoint role
+enforcement** (IR `required_roles` → 403). The builder is generate (web/api with working CRUD + JWT
+auth + roles + DB schema + data access) → verify → edit → commit, fully offline. 32 tracker tasks Done;
+0 cloud calls; the platform's own PostgreSQL/Compose untouched.
 
 ## Free-tier note (for the founder, verify before relying)
 
@@ -55,14 +56,13 @@ Recurring monthly free: local (forever), GitHub Codespaces, Vercel Hobby, Render
 One-time trials: E2B/Daytona credits, Fly credit, Railway credit, AWS/GCP/Azure. Prefer the recurring
 ones for ongoing free use.
 
-## Next action (R-243, pick with the founder — all offline-doable)
+## Next action (R-244, pick with the founder — all offline-doable)
 
-1. **Per-endpoint role enforcement**: extend the IR `ApiEndpoint` with optional `required_roles` and
-   check them against the R-242-verified token claims (the roles constant is already generated).
-2. **Seed data + ambiguous routes**: generate seed/fixture rows and handle the endpoints still left as
+1. **Seed data + ambiguous routes**: generate seed/fixture rows and handle the endpoints still left as
    `501` (sub-collections like `/posts/{postId}/comments`, custom/multi-param routes).
-3. **Combined build/verify/preview plan surface**: a single per-target plan set the console/CLI can
+2. **Combined build/verify/preview plan surface**: a single per-target plan set the console/CLI can
    render, tying R-233/234/235 together.
+3. **Richer edit-loop diff**: rename detection or hunk-level diffs on the R-237 `ProjectDiff`.
 Cloud-gated (need a network machine or keys): run a Tier-0 preview end-to-end
 (`task agent-engine:preview-plan`), live-verify a cloud driver (`OMNISTACKAI_TIER=2` + key), and the
 deferred R-224 Next.js console upgrade. Native mobile stays deferred per Brief §25/§91.

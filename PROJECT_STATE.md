@@ -5,12 +5,13 @@ Last updated: 2026-09-06T10:46:19+05:30 by Codex (GPT-5)
 Stage 0 (Founder Build Sequence, Brief Section 91) — BASIC/MVP
 
 ## Last Completed Task
-Tracker ID: R-242 — Real JWT verification in the generated auth guard — DONE, `task verify` (268
-agent-engine tests, 3 new) passing; the R-241 guard now performs real token verification — it decodes
-and verifies a JWT (HS256) using `JWT_SECRET` from the environment (401 on invalid, 500 when unset,
-never a fabricated default). Python `require_auth` uses PyJWT, Go `RequireAuth` uses golang-jwt; the
-generated project gains the JWT dependency and an empty `JWT_SECRET` in `.env.example`. Implementation
-checkpoint `e0d8af3` (R-224 Next.js console upgrade deferred — env-blocked)
+Tracker ID: R-243 — Per-endpoint role enforcement — DONE, `task verify` (274 agent-engine tests, 6
+new) passing; the Application IR `ApiEndpoint` gains an optional `required_roles` (validated — a
+non-empty value implies `auth`, each must be a declared role, `validate_ir` errors otherwise), and the
+generated guard returns **403** when the R-242-verified token's `roles` claim includes no required role
+(Python `require_roles(*roles)` dependency factory, Go `RequireRoles` on a shared `verifyToken`). First
+additive change to the IR (default `()`, no schema bump). Implementation checkpoint `1faea2c`
+(R-224 Next.js console upgrade deferred — env-blocked)
 
 ## Workflow note
 Founder consolidated all work onto `main` (per-task branches deleted; `main` is the default). Continue
