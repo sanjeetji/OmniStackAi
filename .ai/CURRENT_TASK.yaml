@@ -1,7 +1,7 @@
 schema_version: 1
 task_id: R-244
 title: Sub-collection route wiring (parent-scoped lists via the FK relation)
-status: in_progress
+status: done
 phase: BASIC/MVP
 founder_stage: 0
 branch: main
@@ -88,10 +88,18 @@ model_tool_trace:
   cloud_calls: 0
   note: Deterministic; no model call, no network, no DB connection, no handler executed. cloud_calls zero.
 completion:
-  implementation_commit: null
-  verified_at: null
-  verification: []
-  acceptance_results: []
+  implementation_commit: b886d72
+  verified_at: "2026-09-07T00:00:00+05:30"
+  verification:
+    - "task verify — pass (285 agent-engine tests; 11 new)"
+    - "task security:quick — pass; task env:check — pass"
+    - "GET /posts/{postId}/comments wired to list_comment_by_post (Python) / ListCommentByPost (Go); generated routers parse as valid Python"
+  acceptance_results:
+    - "wire_endpoint maps GET /<parents>/{parentId}/<children> to LIST_BY when the child entity has exactly one FK relation; None (501) otherwise, incl. no fk map / multiple FK / unknown entity (tests)"
+    - "data-access emits list_<table>_by_<rel> (Python) and List<Entity>By<Rel> (Go), filtering WHERE <rel>_id = parameter (value parameterized, column fixed identifier) (tests)"
+    - "Python router calls the filtered list (valid Python); Go handler calls store.List<Entity>By<Rel> with r.PathValue (tests)"
+    - "genuinely-ambiguous endpoints (POST without request_schema, etc.) stay 501; byte-stable; nothing runs"
+    - "no DB connection, no handler executed, no network; task verify network-independent"
 blockers: []
 next_action: >-
   Implement LIST_BY wiring + filtered repositories + tests; run the gates; record completion. Follow-up:

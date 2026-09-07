@@ -6,10 +6,10 @@ current_task: null
 current_status: ready_for_next_task_definition
 branch: main
 last_completed_task:
-  task_id: R-243
-  title: Per-endpoint role enforcement (IR required_roles -> 403 in the generated guard)
-  implementation_commit: 1faea2c
-  verification: task verify (274 agent-engine tests, 6 new); IR ApiEndpoint gains required_roles (validated, implies auth, validate_ir errors on unknown role); generated guard returns 403 when the verified token lacks a required role (Python require_roles factory, Go RequireRoles on a shared verifyToken); deterministic/offline, nothing runs
+  task_id: R-244
+  title: Sub-collection route wiring (parent-scoped lists via the FK relation)
+  implementation_commit: b886d72
+  verification: task verify (285 agent-engine tests, 11 new); GET /<parents>/{parentId}/<children> wires to a parent-scoped list when the child has exactly one FK relation (Python list_<table>_by_<rel>, Go List<Entity>By<Rel>, WHERE <rel>_id = parameter); ambiguous endpoints stay 501; deterministic/offline, nothing runs
   result: pass
 control_plane_database: postgresql
 model_routing_mode: balanced
@@ -23,5 +23,5 @@ id_note: >-
   Workbook backlog owns R-010..R-219. Founder-requested tasks use IDs after R-219: R-220..R-223 done,
   R-224 Next.js deferred (env-blocked), R-225 Application IR (in progress).
 blockers: []
-next_action: Generated backends now enforce per-endpoint roles (IR required_roles -> 403) on top of JWT-verified auth. The builder loop is describe -> generate (web + secured API with CRUD/auth/roles + DB schema + data-access) -> verify -> edit -> commit, fully offline. Next (R-244, offline-doable): seed/fixture data + handling the currently-ambiguous routes (sub-collections/custom endpoints still 501); or a combined build/verify/preview plan surface for the console/CLI; or richer edit-loop diffs. Cloud items (Tier-0 preview end-to-end, live provider/deploy driver) need a network machine/keys. Confirm next Tracker ID.
+next_action: Generated backends now wire sub-collection lists (GET /parents/{id}/children -> filtered list) on top of CRUD + JWT auth + roles. The builder loop is describe -> generate (web + secured API with full CRUD incl. sub-collections + DB schema + data-access) -> verify -> edit -> commit, fully offline. Next (R-245, offline-doable): a combined build/verify/preview plan surface for the console/CLI (ties runtime R-233/234 + verify R-235 + edit R-237); or richer edit-loop diffs (rename/hunk-level); or an IR fixtures field to seed data honestly. Cloud items (Tier-0 preview end-to-end, live provider/deploy driver) need a network machine/keys. Confirm next Tracker ID.
 last_updated: "2026-09-07T00:00:00+05:30"

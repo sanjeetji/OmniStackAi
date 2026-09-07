@@ -5,13 +5,13 @@ Last updated: 2026-09-06T10:46:19+05:30 by Codex (GPT-5)
 Stage 0 (Founder Build Sequence, Brief Section 91) — BASIC/MVP
 
 ## Last Completed Task
-Tracker ID: R-243 — Per-endpoint role enforcement — DONE, `task verify` (274 agent-engine tests, 6
-new) passing; the Application IR `ApiEndpoint` gains an optional `required_roles` (validated — a
-non-empty value implies `auth`, each must be a declared role, `validate_ir` errors otherwise), and the
-generated guard returns **403** when the R-242-verified token's `roles` claim includes no required role
-(Python `require_roles(*roles)` dependency factory, Go `RequireRoles` on a shared `verifyToken`). First
-additive change to the IR (default `()`, no schema bump). Implementation checkpoint `1faea2c`
-(R-224 Next.js console upgrade deferred — env-blocked)
+Tracker ID: R-244 — Sub-collection route wiring — DONE, `task verify` (285 agent-engine tests, 11 new)
+passing; the sub-collection GET pattern `GET /<parents>/{parentId}/<children>` now wires to a
+parent-scoped list when the child entity has exactly one FK relation — Python
+`await <table>.list_<table>_by_<rel>(parentId)`, Go `store.List<Entity>By<Rel>(...)`, filtering
+`WHERE <rel>_id = <param>` (value parameterized). Ambiguous endpoints (0/>1 FK relations, multi-param)
+stay labelled `501`. Implementation checkpoint `b886d72` (R-224 Next.js console upgrade deferred —
+env-blocked)
 
 ## Workflow note
 Founder consolidated all work onto `main` (per-task branches deleted; `main` is the default). Continue

@@ -553,3 +553,28 @@
   `docs/PROGRESS.md` refreshed.
 - Committed directly to main (only branch). Tracker row R-243 (Builder) inserted at row 9; MVP total
   138 / Done 32. Implementation checkpoint `1faea2c`. 0 local / 0 cloud model calls; nothing executed.
+
+## 2026-09-07 — R-244
+
+- Wired the sub-collection GET pattern `/<parents>/{parentId}/<children>` to a parent-scoped list,
+  clearing the main class of remaining 501 stubs. `route_wiring.py`: added `Op.LIST_BY`, a `relation`
+  field on `Wiring`, an `fk_relations(ir)` helper, and an `fk_by_entity` argument to `wire_endpoint`.
+  A GET whose last segment is a collection (not a param) with exactly one path param wires to LIST_BY
+  only when the child entity (response_schema) has exactly one many_to_one/one_to_one relation;
+  otherwise it stays a labelled 501.
+- `data_access.py`: emit a filtered list per FK relation — Python `list_<table>_by_<rel>(<rel>_id)`
+  (`WHERE <rel>_id = %s`) and Go `List<Entity>By<Rel>(ctx, db, <rel>ID, limit)` (`WHERE <rel>_id = $1`).
+  The value is parameterized; the FK column is a fixed IR-derived identifier.
+- `backend_python._router_file` and `backend_go._handlers_file_wired` gained an `fk_by_entity` arg
+  (passed from `generate` when has_db) and a LIST_BY branch: Python
+  `await <table>.list_<table>_by_<rel>(<param>)`; Go
+  `store.List<Entity>By<Rel>(r.Context(), h.DB, r.PathValue("<param>"), 100)`.
+- Demo (minimal-blog): `GET /posts/{postId}/comments` now returns `comment.list_comment_by_post(postId)`
+  (Py) / `store.ListCommentByPost(...)` (Go). Repointed the R-240 `test_ambiguous_endpoint_stays_501`
+  to rideshare's `POST /favourites/drivers/{driverId}` (no request_schema -> still 501).
+- 11 new stdlib offline tests (285 total) in `test_subcollection_wiring.py`: LIST_BY mapping + None
+  cases (no fk map, multiple FK, get-by-id wins), fk_relations helper, filtered-repository emission
+  (Py/Go), router/handler wiring, and value-parameterization. `task verify` + `security:quick` +
+  `env:check` pass. `docs/CODEGEN.md` + `docs/PROGRESS.md` refreshed. Seed data deferred (no IR values).
+- Committed directly to main (only branch). Tracker row R-244 (Builder) inserted at row 9; MVP total
+  139 / Done 33. Implementation checkpoint `b886d72`. 0 local / 0 cloud model calls; nothing executed.
