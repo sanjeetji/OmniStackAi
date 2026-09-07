@@ -5,13 +5,13 @@ Last updated: 2026-09-06T10:46:19+05:30 by Codex (GPT-5)
 Stage 0 (Founder Build Sequence, Brief Section 91) — BASIC/MVP
 
 ## Last Completed Task
-Tracker ID: R-239 — Data-access/repository layer for the generated backends — DONE, `task verify` (244
-agent-engine tests, 7 new) passing; the FastAPI backend emits `app/db.py` (async psycopg) +
-`app/repositories/<entity>.py` (list/get/create/delete) and the Go backend emits
-`internal/store/store.go` + `internal/store/<entity>.go` (scanning the generated model structs), so the
-generated code reads/writes the R-238 tables with parameterized SQL. Emitted when entities+postgres;
-nothing connects to or queries a database; implementation checkpoint `f6792fa`
-(R-224 Next.js console upgrade deferred — env-blocked)
+Tracker ID: R-241 — Authentication guards from the IR — DONE, `task verify` (265 agent-engine tests,
+9 new) passing; every `auth=true` endpoint now enforces a bearer-credential guard (401 without one) —
+Python emits `app/auth.py` and auth routes declare `dependencies=[Depends(require_auth)]`, Go emits
+`internal/handlers/auth.go` and `main` wraps the auth endpoints with `handlers.RequireAuth(...)`; the IR
+roles are surfaced as a generated constant and real token verification is a documented TODO. (Builds on
+R-240 route wiring: handlers call the R-239 repositories for the unambiguous CRUD shapes.)
+Implementation checkpoint `4db716b` (R-224 Next.js console upgrade deferred — env-blocked)
 
 ## Workflow note
 Founder consolidated all work onto `main` (per-task branches deleted; `main` is the default). Continue

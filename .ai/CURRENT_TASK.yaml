@@ -1,7 +1,7 @@
 schema_version: 1
 task_id: R-241
 title: Authentication guards from the IR (enforce the endpoint auth flag; surface roles)
-status: in_progress
+status: done
 phase: BASIC/MVP
 founder_stage: 0
 branch: main
@@ -90,10 +90,18 @@ model_tool_trace:
   cloud_calls: 0
   note: Deterministic; no model call, no network, no handler executed. cloud_calls zero.
 completion:
-  implementation_commit: null
-  verified_at: null
-  verification: []
-  acceptance_results: []
+  implementation_commit: 4db716b
+  verified_at: "2026-09-07T00:00:00+05:30"
+  verification:
+    - "task verify — pass (265 agent-engine tests; 9 new in test_auth_guard.py)"
+    - "task security:quick — pass; task env:check — pass"
+    - "minimal-blog: POST /posts guarded via Depends(require_auth), GET /posts public; rideshare: RequireAuth wraps the 3 auth endpoints, GET /drivers direct"
+  acceptance_results:
+    - "Python emits app/auth.py (require_auth -> 401 without a Bearer token, valid Python); auth=true routes declare dependencies=[Depends(require_auth)]; public routes unchanged (tests)"
+    - "Go emits internal/handlers/auth.go (RequireAuth middleware -> 401); main wraps only auth=true endpoints with handlers.RequireAuth(...) (tests)"
+    - "IR roles surfaced as ROLES tuple (Python) / Roles slice (Go); token verification is a documented TODO, no secret fabricated (tests)"
+    - "nothing emitted when all endpoints are public; byte-stable; nothing runs (tests)"
+    - "no handler executed, no network; task verify network-independent"
 blockers: []
 next_action: >-
   Implement auth_guard.py + wire both backends + tests; run the gates; record completion. Later continue

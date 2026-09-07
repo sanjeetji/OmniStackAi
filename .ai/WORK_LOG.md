@@ -482,3 +482,26 @@
   pass. `docs/CODEGEN.md` documents the wiring table; `docs/PROGRESS.md` refreshed.
 - Committed directly to main (only branch). Tracker row R-240 (Builder) inserted at row 9; MVP total
   135 / Done 29. Implementation checkpoint `013dfc4`. 0 local / 0 cloud model calls; nothing executed.
+
+## 2026-09-07 — R-241
+
+- Made the IR's per-endpoint `auth` flag real (it was previously only a comment). New
+  `codegen/auth_guard.py`: `needs_auth(ir)`, `python_auth_file(ir)`, `go_auth_file(ir)`. Every
+  `auth=true` endpoint now enforces a guard that rejects a request with no `Authorization: Bearer`
+  credential (HTTP 401) before the handler runs.
+- Python (`backend_python.py`): emits `app/auth.py` with a `require_auth` FastAPI dependency; `_router_file`
+  adds `Depends`/`require_auth` imports and `dependencies=[Depends(require_auth)]` on `auth=true` routes;
+  public routes unchanged. Go (`backend_go.py`): emits `internal/handlers/auth.go` with a
+  `RequireAuth(next)` middleware; `_main_file` wraps exactly the `auth=true` registrations with
+  `handlers.RequireAuth(...)`. Works for both DB and non-DB backends.
+- IR roles surfaced as a generated constant (Python `ROLES` tuple, Go `Roles` slice, from `role.id`).
+  The guard only requires a credential; token verification (signature/expiry/roles) is a documented
+  TODO — no secret fabricated, no verification faked.
+- Gated on `needs_auth(ir)`; deterministic and byte-stable; nothing runs. Updated two existing adapter
+  tests (Python decorator substring, Go registration substring) to the guarded form.
+- 9 new stdlib offline tests (265 total) in `test_auth_guard.py`: needs_auth true/false, Python
+  auth module + per-route dependency (auth vs public) + no-module-when-all-public, Go middleware + roles
+  + main wraps only auth endpoints + no-file-when-all-public, and determinism. `task verify` +
+  `security:quick` + `env:check` pass. `docs/CODEGEN.md` documents the guard; `docs/PROGRESS.md` refreshed.
+- Committed directly to main (only branch). Tracker row R-241 (Builder) inserted at row 9; MVP total
+  136 / Done 30. Implementation checkpoint `4db716b`. 0 local / 0 cloud model calls; nothing executed.
