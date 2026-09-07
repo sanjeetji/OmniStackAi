@@ -2,8 +2,8 @@ schema_version: 1
 project: OmniStackAI
 phase: BASIC/MVP
 founder_stage: 0
-current_task: null
-current_status: ready_for_next_task_definition
+current_task: R-231
+current_status: in_progress
 branch: main
 last_completed_task:
   task_id: R-230

@@ -50,8 +50,24 @@ doc = ir.to_dict()            # JSON/YAML-friendly
 ApplicationIR.from_dict(doc)  # validated round-trip
 ```
 
+## Validation, normalization, and examples (R-231)
+
+Beyond per-record construction validation, the package adds cross-cutting helpers:
+
+- `validate_ir(ir) -> tuple[Issue, ...]` — semantic checks that are integrity- or advisory-level:
+  an API `request/response/error_schema` that references an **undeclared entity** is an `error`
+  (`unknown_schema_reference`); a web/admin/mobile strategy set without its platform (or a platform
+  listed without its strategy) is a `warning` (`platform_strategy_mismatch`). Each `Issue` has a
+  `severity` (`error`/`warning`), stable `code`, `message`, and `location`. `has_errors(issues)` is a
+  convenience. A clean IR yields no errors. The validator never weakens the hard construction checks.
+- `normalize_ir(ir) -> ApplicationIR` — a canonical form: platforms in enum order; roles, entities,
+  apis, screens, and acceptance criteria sorted by a stable key (entity **field order preserved**).
+  Idempotent and lossless through `to_dict` — useful for stable diffs and reproducible output.
+- `example_ir(name)` / `EXAMPLES` — realistic, construction-valid sample IRs (`rideshare-favourites`,
+  `minimal-blog`) that pass `validate_ir` with no errors and generate via all three adapters.
+
 ## Scope
 
 v1 covers the Brief §9 minimum model. Flows, integrations, architecture rules, repo modules, and the
 build matrix are extension points for later Tracker IDs. Code generation is a separate concern: the
-framework adapter contract and the first adapter (Next.js) consume this IR in following tasks.
+framework adapter contract and the Next.js / FastAPI / Go adapters consume this IR.

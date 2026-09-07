@@ -1,24 +1,20 @@
 schema_version: 1
-task_id: R-230
-title: Go backend framework adapter — generate a Go net/http service from the IR
-status: done
+task_id: R-231
+title: Application IR validator/normalizer + example IR fixtures
+status: in_progress
 phase: BASIC/MVP
 founder_stage: 0
 branch: main
 goal: >-
-  Add a third framework adapter: a GoBackendAdapter that turns an Application IR into a real,
-  idiomatic Go standard-library net/http service as a GeneratedProject — go.mod, main.go (Go 1.22
-  method+pattern routing + health), internal/models structs from entities, internal/handlers grouped
-  by resource with 501 scaffolds and r.PathValue params, README/.gitignore/.env.example. Proves the
-  one-IR -> many-targets differentiator (Next.js web + FastAPI + Go). Deterministic and offline;
-  nothing installed, built, run, or written to disk. Registered via the AdapterRegistry.
+  Harden the Application IR with a semantic validator (checks beyond per-record construction: API
+  schema references must name declared entities; project-strategy/platform consistency), a
+  deterministic normalizer that returns a canonical (sorted) IR for stable diffs, and a small set of
+  realistic example IR fixtures that drive the adapters. Standard-library only, deterministic, offline.
 source:
   tracker_sheet: Phase_Roadmap
   tracker_row: reconstructed; new IDs continue after the workbook backlog's R-010..R-219
-  brief_sections: [9, 16, 17, 42, 43, 46, 47, 74, 77, 91, 92]
-  founder_note: >-
-    Work committed directly to main (only branch). Author solely sanjeetji; a Co-Authored-By trailer
-    is added by tooling and may be stripped by the owner.
+  brief_sections: [9, 12, 19, 26, 27, 66, 74, 77, 91, 92]
+  founder_note: Committed directly to main (only branch). Author solely sanjeetji; tooling adds a Co-Authored-By trailer.
 project_profile:
   repository: platform_modular_monorepo
   service: python_agent_engine
@@ -26,10 +22,11 @@ project_profile:
   model_routing: balanced
 complexity: L2
 expected_impact:
-  - services/agent-engine/src/omnistackai_agent_engine/codegen/backend_go.py
-  - services/agent-engine/src/omnistackai_agent_engine/codegen/__init__.py
-  - services/agent-engine/tests/test_backend_go_adapter.py
-  - docs/CODEGEN.md
+  - services/agent-engine/src/omnistackai_agent_engine/application_ir/validate.py
+  - services/agent-engine/src/omnistackai_agent_engine/application_ir/examples.py
+  - services/agent-engine/src/omnistackai_agent_engine/application_ir/__init__.py
+  - services/agent-engine/tests/test_ir_validate.py
+  - docs/APPLICATION_IR.md
   - portable state, changelog, handoff, task doc, and tracker evidence
 allowed_paths:
   - .ai/**
@@ -40,31 +37,30 @@ allowed_paths:
   - services/agent-engine/**
 must_not_change:
   - PostgreSQL as the control-plane database or the existing schema
-  - the model-gateway, Application IR, codegen contract, and Next.js/Python adapter public behavior (additive)
+  - the ApplicationIR record construction/validation behavior (the validator is additive; it does not
+    weaken or replace the hard construction checks); the codegen adapters' public behavior
   - local Compose services or infrastructure; the Section 74 top-level contract; the offline bootstrap
   - the network-independence of static task verify
 must_not_do:
-  - install, build, or run the generated Go service; write generated files to disk in this task
-  - add an external Python dependency to the platform; use any non-stdlib import in the generated Go
-  - store secrets (generated .env.example holds placeholders only)
+  - add an external Python dependency; store secrets; make any network or model call
 acceptance:
-  - GoBackendAdapter implements FrameworkAdapter (target backend-go) and returns a GeneratedProject
-    forming a coherent Go net/http service (go.mod, main.go, internal/models/models.go,
-    internal/handlers/<segment>.go, README, .gitignore, .env.example).
-  - Entities become Go structs (field types mapped; exported fields with json tags; non-required
-    fields are pointers with ,omitempty). IR APIs become Go 1.22 mux routes ("METHOD /path" with
-    {param}); handlers are grouped by first path segment, return 501, and read params via r.PathValue.
-    main registers each route and a GET /healthz.
-  - All paths are safe and deterministically ordered; generation is a pure function of the IR;
-    standard-library only (platform + generated Go); nothing installed/built/run/written to disk.
-  - Standard-library offline tests assert emitted paths and key contents for a representative IR,
-    entity->struct mapping, route registration/params, and registry wiring.
-  - task verify stays green and network-independent.
+  - validate_ir(ir) returns a deterministic, ordered tuple of typed Issues (severity error|warning,
+    stable code, message, location) for semantic problems: an API request/response/error schema that
+    references an undeclared entity is an error; a web/admin/mobile strategy set without the matching
+    platform (or vice-versa) is a warning. A clean IR yields no errors.
+  - normalize_ir(ir) returns a new ApplicationIR with platforms in enum order and roles/entities/apis/
+    screens/acceptance sorted canonically (entity field order preserved); it is idempotent and
+    round-trips losslessly through to_dict.
+  - example_ir(name) provides at least two realistic, construction-valid ApplicationIRs that pass
+    validate_ir with no errors and can be generated by the web/Python/Go adapters.
+  - Standard-library only; deterministic; no network/model call; task verify stays green.
+  - Standard-library offline tests cover each validation rule (error + warning), a clean IR, normalize
+    sorting + idempotency + round-trip, and example validity.
 required_gates:
   - impact_analysis
-  - go_emission_tests
-  - struct_and_route_mapping_tests
-  - registry_wiring_test
+  - validator_rule_tests
+  - normalizer_sorting_idempotency_roundtrip_tests
+  - example_fixture_validity_tests
   - python_compile_test
   - vendor_import_exclusion
   - secret_exclusion_check
@@ -77,33 +73,14 @@ model_tool_trace:
   configured_model: qwen2.5-coder:14b
   local_calls: 0
   cloud_calls: 0
-  note: Deterministic codegen; no model call. No cloud key set; cloud_calls zero.
+  note: Deterministic; no model call. No cloud key set; cloud_calls zero.
 completion:
-  implementation_commit: e2515a8f1b0314ec287a02cdaf25e72a17b9da3f
-  verified_at: "2026-09-06T22:40:00+05:30"
-  verification:
-    - command: task verify
-      result: pass
-      evidence: 154 agent-engine tests (7 new go-adapter tests) plus all Stage 0 checks
-    - command: task agent-engine:lint
-      result: pass
-    - command: task security:quick
-      result: pass
-  acceptance_results:
-    - criterion: GoBackendAdapter implements FrameworkAdapter (backend-go) and returns a coherent Go net/http GeneratedProject.
-      result: pass
-    - criterion: Entities -> Go structs (json tags, optional pointers); IR APIs -> Go 1.22 method+pattern routes grouped by segment with r.PathValue params and 501 scaffolds; main registers routes + health.
-      result: pass
-    - criterion: Safe deterministic paths; pure function of the IR; standard-library only (platform + generated Go); no install/build/run/disk write.
-      result: pass
-    - criterion: Offline tests cover emission, entity->struct mapping, route registration/params, and registry wiring.
-      result: pass
-  note: >-
-    Tri-target proven: one IR -> 12-file Next.js + 11-file FastAPI + 8-file Go service. Deterministic;
-    no model call; cloud_calls zero.
+  implementation_commit: null
+  verified_at: null
+  verification: []
+  acceptance_results: []
 blockers: []
 next_action: >-
-  One IR now emits web + Python + Go. Next real steps — sandbox run, instant browser preview, deploy,
-  and the deferred Next.js console upgrade — need a cloud/network-capable environment. An IR
-  validator/normalizer + example fixtures is another offline-doable option. Confirm the next Tracker ID.
-next_command: task ai:status
+  Implement the validator, normalizer, and example fixtures with offline tests; run the gates; record
+  completion. Next real steps (sandbox/preview/deploy) need a cloud/network environment.
+next_command: task agent-engine:test

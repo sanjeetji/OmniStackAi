@@ -1,6 +1,8 @@
 """Framework-neutral Application IR — the source of truth for code generation (Brief 9)."""
 
 from .errors import ApplicationIRError, InvalidIRError, UnsupportedIRVersionError
+from .examples import EXAMPLES, example_ir
+from .validate import Issue, Severity, has_errors, normalize_ir, validate_ir
 from .ir import (
     IR_SCHEMA_VERSION,
     AcceptanceCriterion,
@@ -32,12 +34,14 @@ __all__ = [
     "ApplicationIRError",
     "BackendStrategy",
     "DatabaseStrategy",
+    "EXAMPLES",
     "Entity",
     "Field",
     "FieldType",
     "HttpMethod",
     "IR_SCHEMA_VERSION",
     "InvalidIRError",
+    "Issue",
     "MobileProfile",
     "Platform",
     "ProjectStrategy",
@@ -46,6 +50,11 @@ __all__ = [
     "RepoStrategy",
     "Role",
     "Screen",
+    "Severity",
     "UnsupportedIRVersionError",
     "WebStrategy",
+    "example_ir",
+    "has_errors",
+    "normalize_ir",
+    "validate_ir",
 ]
