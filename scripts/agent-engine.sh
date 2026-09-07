@@ -96,6 +96,25 @@ print(f"Then open: {plan.url}")
 print("Run these in the generated project on a machine with the toolchain + internet.")
 PY
     ;;
+  verify-plan)
+    configure_python
+    target="${2:-nextjs-web}"
+    PYTHONPATH="$source_root" python3 - "$target" <<'PY'
+import sys
+from omnistackai_agent_engine.verify import supported_targets, verify_plan
+
+target = sys.argv[1]
+app_dir = "apps/web" if target.startswith("nextjs") else "services/api"
+try:
+    plan = verify_plan(target, app_dir)
+except Exception as error:  # noqa: BLE001 (surface a friendly CLI message)
+    print(f"{error}\nSupported: {', '.join(supported_targets())}")
+    raise SystemExit(2)
+print(plan.display())
+print("Gates:", ", ".join(kind.value for kind in plan.gates()))
+print("Run these in the generated project on a machine with the toolchain (opt-in; not run by task verify).")
+PY
+    ;;
   platform-status)
     configure_python
     export OMNISTACKAI_TIER="$(config_value OMNISTACKAI_TIER 0)"
@@ -107,7 +126,7 @@ PY
     PYTHONPATH="$source_root" python3 -c "from omnistackai_agent_engine.runtime import format_status; print(format_status())"
     ;;
   *)
-    printf 'Usage: %s {lint|test|ollama-verify|gateway-run|preview-plan [target]|platform-status}\n' "$0"
+    printf 'Usage: %s {lint|test|ollama-verify|gateway-run|preview-plan [target]|verify-plan [target]|platform-status}\n' "$0"
     exit 2
     ;;
 esac

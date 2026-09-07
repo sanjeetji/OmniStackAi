@@ -1,25 +1,27 @@
 schema_version: 1
-task_id: R-234
-title: Tier switch + cloud provider drivers (Tier 0/1 local run; Tier 2 all providers)
-status: done
+task_id: R-235
+title: Verifiable-engineering verify plans (per-target gate ladders + IR/monorepo mapping)
+status: in_progress
 phase: BASIC/MVP
 founder_stage: 0
 branch: main
 goal: >-
-  Make the runtime/deploy layer switchable by a single OMNISTACKAI_TIER knob and give every declared
-  provider a driver that produces a real command plan: Tier 0/1 run/preview a generated app locally
-  (executor included), Tier 2 deploy to vercel/render/netlify/fly and run in an e2b/daytona/fly-machines
-  sandbox — each activated by its key. Add task commands (platform:status, preview, deploy) so changing
-  the tier/selection reflects in behavior. Deterministic and offline: plans are asserted; no key value
-  ever appears in a plan/log; nothing is run or deployed by task verify (execution is opt-in on a
-  network machine with the provider CLI + key).
+  Give the platform the "verifiable engineering" backbone (Brief 26/27/77): a deterministic verify plan
+  per generation target — the ordered ladder of gate commands (install, typecheck, lint, test, build)
+  that the generated code for that target is engineered to pass. A verify plan is pure data (validated
+  command descriptions classified by gate kind), mirroring the runtime preview/deploy plan pattern.
+  Map an Application IR to the verify plans for its assembled monorepo apps (apps/web, services/api),
+  and add an opt-in run_verify executor that runs a plan fail-fast and returns a structured report.
+  Deterministic and offline: plans are asserted; nothing is installed, built, or run by task verify
+  (execution is opt-in on a machine with the toolchain).
 source:
   tracker_sheet: Phase_Roadmap
   tracker_row: reconstructed; new IDs continue after the workbook backlog's R-010..R-219
-  brief_sections: [15, 44, 51, 55, 64, 69, 70, 75, 87, 74, 77, 91, 92]
+  brief_sections: [26, 27, 42, 44, 74, 77, 83, 84, 85, 92]
   founder_note: >-
-    Founder chose to implement all cloud providers and a single tier switch. Committed directly to main.
-    Author solely sanjeetji; tooling adds a Co-Authored-By trailer.
+    Founder said "Continue". Continues the builder toward the brief's core differentiator (verifiable
+    engineering). Committed directly to main; author solely sanjeetji; tooling adds a Co-Authored-By
+    trailer.
 project_profile:
   repository: platform_modular_monorepo
   service: python_agent_engine
@@ -27,20 +29,19 @@ project_profile:
   model_routing: balanced
 complexity: L2
 expected_impact:
-  - services/agent-engine/src/omnistackai_agent_engine/runtime/drivers.py
-  - services/agent-engine/src/omnistackai_agent_engine/runtime/tier.py
-  - services/agent-engine/src/omnistackai_agent_engine/runtime/bootstrap.py
-  - services/agent-engine/src/omnistackai_agent_engine/runtime/local.py
-  - services/agent-engine/src/omnistackai_agent_engine/runtime/__init__.py
-  - services/agent-engine/tests/test_tier_drivers.py
-  - .env.example
+  - services/agent-engine/src/omnistackai_agent_engine/verify/__init__.py
+  - services/agent-engine/src/omnistackai_agent_engine/verify/plans.py
+  - services/agent-engine/src/omnistackai_agent_engine/verify/gates.py
+  - services/agent-engine/src/omnistackai_agent_engine/verify/errors.py
+  - services/agent-engine/src/omnistackai_agent_engine/codegen/assembler.py
+  - services/agent-engine/src/omnistackai_agent_engine/codegen/__init__.py
+  - services/agent-engine/tests/test_verify_plans.py
   - Taskfile.yml
   - scripts/agent-engine.sh
-  - docs/RUNTIME.md
+  - docs/VERIFY.md
   - portable state, changelog, handoff, task doc, and tracker evidence
 allowed_paths:
   - .ai/**
-  - .env.example
   - CHANGELOG.md
   - PROJECT_STATE.md
   - R_&_D/OmniStackAI_Execution_Tracker_v6.xlsx
@@ -50,32 +51,31 @@ allowed_paths:
   - services/agent-engine/**
 must_not_change:
   - PostgreSQL as the control-plane database or the existing schema
-  - the model-gateway, IR, codegen, git-service public behavior (additive)
+  - the model-gateway, IR, runtime, git-service public behavior (additive)
+  - assemble_project's output (refactor is behavior-preserving; covered by existing tests)
   - local Compose services or infrastructure; the Section 74 top-level contract; the offline bootstrap
   - the network-independence of static task verify
 must_not_do:
-  - install, run, or deploy anything in task verify (execution is opt-in on a network machine)
-  - put a key value into any command/plan/log; add an external Python dependency; choose a paid service
+  - install, run, build, or test any generated code in task verify (execution is opt-in)
+  - add an external Python dependency; import a vendor SDK; put a secret anywhere
 acceptance:
-  - OMNISTACKAI_TIER (0/1/2) resolves default runtime/deploy selections; explicit
-    OMNISTACKAI_RUNTIME_PROVIDER / OMNISTACKAI_DEPLOY_PROVIDER override; tier 0/1 force local runtime and
-    no deploy; tier 2 permits the cloud selections that have keys.
-  - Every declared provider has a driver: deploy providers (vercel/render/netlify/fly) produce a
-    DeployPlan of their official-CLI commands; sandbox providers (e2b/daytona/fly-machines) produce a
-    PreviewPlan; the key is read from env and NEVER placed in a command or shown in a plan.
-  - resolve_platform() returns the active runtime + deploy providers and a platform_status() summary
-    (tier, selected providers, which providers have keys, what is missing); selecting a cloud provider
-    without its key or at the wrong tier raises a clear error.
-  - run_preview / run_deploy executors run a plan (opt-in). task platform:status, task preview, and task
-    deploy expose this; task verify stays green and network-independent.
-  - Standard-library offline tests cover tier resolution, per-provider driver plans, no-key-in-plan,
-    activation/selection errors, and the status summary.
+  - verify_plan(target, app_dir) returns a VerifyPlan for each supported target (nextjs-web, nextjs-admin,
+    backend-python, backend-go); an unknown target raises a clear UnsupportedVerifyTargetError.
+  - A VerifyPlan is validated, ordered, and classifies each step by gate kind (install/typecheck/lint/
+    test/build); plan.gates() reports the kinds present; every command is control-free and secret-free.
+  - verify_plans_for_ir(ir) returns the verify plans for the IR's assembled apps, each bound to its
+    monorepo directory (apps/web, services/api), consistent with the assembler.
+  - run_verify(plan) executes a plan fail-fast and returns a VerifyReport (per-step status + return code);
+    it is opt-in and never run by tests or task verify.
+  - task agent-engine:verify-plan prints a target's plan; task verify stays green and network-independent.
+  - Standard-library offline tests cover per-target plans, gate classification, unknown-target error,
+    IR->plans mapping, and no-secret/plan validity.
 required_gates:
   - impact_analysis
-  - tier_resolution_tests
-  - per_provider_driver_plan_tests
-  - no_key_in_plan_test
-  - status_and_selection_error_tests
+  - per_target_verify_plan_tests
+  - gate_classification_tests
+  - ir_to_plans_mapping_tests
+  - unsupported_target_error_test
   - python_compile_test
   - vendor_import_exclusion
   - secret_exclusion_check
@@ -88,21 +88,14 @@ model_tool_trace:
   configured_model: qwen2.5-coder:14b
   local_calls: 0
   cloud_calls: 0
-  note: Deterministic; no model call, no run/deploy. No cloud key set; cloud_calls zero.
+  note: Deterministic; no model call, no install/build/run. No cloud key set; cloud_calls zero.
 completion:
-  implementation_commit: dcb7d2d
-  verified_at: "2026-09-07T00:00:00+05:30"
-  verification:
-    - "task verify — pass (194 agent-engine tests; 13 new)"
-    - "task security:quick — pass; task env:check — pass"
-    - "task platform:status demoed tier 0 (local/none) and tier 2 (e2b/vercel)"
-  acceptance_results:
-    - "OMNISTACKAI_TIER 0/1 force local runtime + no deploy; tier 2 permits keyed cloud selections; invalid tier and keyless/wrong-tier selection raise clear errors (tests)"
-    - "Every declared provider has a driver: deploy (vercel/netlify/render/fly) emits a DeployPlan of official-CLI commands; sandbox (e2b/daytona/fly-machines) emits a PreviewPlan; no key value appears in any plan (test asserts across all providers)"
-    - "resolve_platform() returns active runtime + deploy providers; platform_status()/format_status() summarize tier, selection, and key presence"
-    - "run_deploy executor present (opt-in, not run by verify); task platform:status exposes the switch; task verify stays network-independent"
+  implementation_commit: null
+  verified_at: null
+  verification: []
+  acceptance_results: []
 blockers: []
 next_action: >-
-  Implement the tier switch, per-provider drivers, executors, and commands with offline tests; run the
-  gates; record completion. Live-verify a cloud provider once its key is supplied.
+  Implement the verify-plan layer + IR mapping + opt-in executor with offline tests; run the gates;
+  record completion. Live-verify a generated project's plan once run on a toolchain machine.
 next_command: task agent-engine:test

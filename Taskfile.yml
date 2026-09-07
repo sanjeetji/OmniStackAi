@@ -137,6 +137,11 @@ tasks:
     cmds:
       - bash scripts/agent-engine.sh preview-plan {{.CLI_ARGS}}
 
+  agent-engine:verify-plan:
+    desc: Print the verifiable-engineering gate ladder for a generated target (default nextjs-web)
+    cmds:
+      - bash scripts/agent-engine.sh verify-plan {{.CLI_ARGS}}
+
   platform:status:
     desc: Show the active tier and resolved runtime/deploy providers (reads .env)
     cmds:

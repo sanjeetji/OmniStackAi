@@ -9,7 +9,13 @@ from .errors import (
     InvalidGeneratedFileError,
     UnsupportedTargetError,
 )
-from .assembler import MONOREPO_TARGET, AssembledApp, assemble_project, default_registry
+from .assembler import (
+    MONOREPO_TARGET,
+    AssembledApp,
+    assemble_project,
+    assembled_targets,
+    default_registry,
+)
 from .backend_go import GoBackendAdapter
 from .backend_python import PythonBackendAdapter
 from .files import GeneratedFile, GeneratedProject
@@ -33,5 +39,6 @@ __all__ = [
     "PythonBackendAdapter",
     "UnsupportedTargetError",
     "assemble_project",
+    "assembled_targets",
     "default_registry",
 ]

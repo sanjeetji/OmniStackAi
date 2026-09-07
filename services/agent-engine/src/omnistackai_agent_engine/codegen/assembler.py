@@ -70,29 +70,20 @@ def _root_readme(ir: ApplicationIR, apps: list[AssembledApp], skipped: list[str]
     return "\n".join(lines) + "\n"
 
 
-def assemble_project(ir: ApplicationIR, registry: AdapterRegistry | None = None) -> GeneratedProject:
-    """Assemble one customer monorepo GeneratedProject from an Application IR."""
+def _plan_assembly(ir: ApplicationIR) -> tuple[list[AssembledApp], list[str]]:
+    """Decide which apps the IR assembles and where — the single source of the monorepo layout."""
 
-    if not isinstance(ir, ApplicationIR):
-        raise TypeError("assemble_project expects an ApplicationIR")
-    registry = registry if registry is not None else default_registry()
-
-    files: list[GeneratedFile] = []
     apps: list[AssembledApp] = []
     skipped: list[str] = []
     strategy = ir.project_strategy
 
     if strategy.web_strategy is WebStrategy.NEXTJS:
-        web = registry.get(GenerationTarget.NEXTJS_WEB).generate(ir)
-        files += _prefixed(web, "apps/web")
         apps.append(AssembledApp("web (Next.js)", "apps/web", GenerationTarget.NEXTJS_WEB.value))
     elif strategy.web_strategy is not WebStrategy.NONE:
         skipped.append(f"web_strategy {strategy.web_strategy.value!r} has no adapter yet")
 
     backend_target = _BACKEND_TARGET.get(strategy.backend_strategy)
     if backend_target is not None:
-        backend = registry.get(backend_target).generate(ir)
-        files += _prefixed(backend, "services/api")
         apps.append(AssembledApp(f"backend ({strategy.backend_strategy.value})", "services/api", backend_target.value))
     else:
         skipped.append(f"backend_strategy {strategy.backend_strategy.value!r} has no adapter yet")
@@ -101,6 +92,34 @@ def assemble_project(ir: ApplicationIR, registry: AdapterRegistry | None = None)
         skipped.append(f"admin_strategy {strategy.admin_strategy.value!r} is not assembled yet")
     if strategy.mobile_profile.value != "none":
         skipped.append(f"mobile_profile {strategy.mobile_profile.value!r} is not assembled yet")
+    return apps, skipped
+
+
+def assembled_targets(ir: ApplicationIR, registry: AdapterRegistry | None = None) -> tuple[AssembledApp, ...]:
+    """The apps an IR assembles (label, directory, target) — without generating any files.
+
+    `registry` is accepted for signature symmetry with `assemble_project` (the layout does not depend
+    on it); passing one lets a caller reason about a custom adapter set.
+    """
+
+    if not isinstance(ir, ApplicationIR):
+        raise TypeError("assembled_targets expects an ApplicationIR")
+    apps, _ = _plan_assembly(ir)
+    return tuple(apps)
+
+
+def assemble_project(ir: ApplicationIR, registry: AdapterRegistry | None = None) -> GeneratedProject:
+    """Assemble one customer monorepo GeneratedProject from an Application IR."""
+
+    if not isinstance(ir, ApplicationIR):
+        raise TypeError("assemble_project expects an ApplicationIR")
+    registry = registry if registry is not None else default_registry()
+
+    apps, skipped = _plan_assembly(ir)
+    files: list[GeneratedFile] = []
+    for app in apps:
+        project = registry.get(app.target).generate(ir)
+        files += _prefixed(project, app.directory)
 
     files.append(GeneratedFile("README.md", _root_readme(ir, apps, skipped)))
     files.append(GeneratedFile(".gitignore", "node_modules/\n.next/\n.venv/\n__pycache__/\nbin/\n.env\n"))
