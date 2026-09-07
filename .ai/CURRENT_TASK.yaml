@@ -1,26 +1,25 @@
 schema_version: 1
-task_id: R-245
-title: Combined project-plan surface (preview + verify + deploy per generated app)
-status: done
+task_id: R-246
+title: Richer edit-loop diffs (hunk-level unified diffs + rename detection)
+status: in_progress
 phase: BASIC/MVP
 founder_stage: 0
 branch: main
 goal: >-
-  Compose the existing plan builders into one per-app view a console/CLI can render (Brief 15/26/27/51):
-  for an Application IR, build a ProjectPlan whose AppPlan entries pair each assembled app (label,
-  directory, target from R-232 assembled_targets) with its local preview plan (R-233 LocalRuntimeProvider),
-  its verify gate ladder (R-235 verify_plan), and, when a key-activated deploy provider is supplied, its
-  deploy plan (R-234). Provide a JSON-serializable to_dict and a readable render() summary, plus a
-  task plan:show that prints the plan for an example IR. Pure and deterministic — it only builds plans;
-  nothing is installed, run, verified, or deployed.
+  Make an IR edit read as a focused patch instead of whole-file churn (Brief 6/27): on top of the R-237
+  file-level ProjectDiff, add a line-level report that produces git-style unified (hunk) diffs for
+  modified files and detects exact-content renames (a deleted file whose content matches an added file
+  is reported as a rename, not delete+add). Provide diff_report(old, new) returning structured FileDiff
+  records (kind added/modified/deleted/renamed, path, old_path, unified patch) and unified_patch(old,
+  new) returning one git-style patch string. Pure and deterministic, standard-library difflib only;
+  additive — diff_projects / apply_diff / plan_edit are unchanged; nothing is run or written to disk.
 source:
   tracker_sheet: Phase_Roadmap
   tracker_row: reconstructed; new IDs continue after the workbook backlog's R-010..R-219
-  brief_sections: [15, 26, 27, 51, 74, 75, 77, 83, 84, 85, 92]
+  brief_sections: [6, 9, 27, 34, 74, 77, 83, 84, 85, 92]
   founder_note: >-
-    Founder approved continuing after R-244. R-245 ties runtime + verify + assembler plans into one
-    surface for the console/CLI. Committed directly to main; author solely sanjeetji; tooling adds a
-    Co-Authored-By trailer.
+    Founder approved continuing after R-245. R-246 makes edits legible as patches. Committed directly to
+    main; author solely sanjeetji; tooling adds a Co-Authored-By trailer.
 project_profile:
   repository: platform_modular_monorepo
   service: python_agent_engine
@@ -28,11 +27,10 @@ project_profile:
   model_routing: balanced
 complexity: L2
 expected_impact:
-  - services/agent-engine/src/omnistackai_agent_engine/projectplan.py
-  - services/agent-engine/tests/test_projectplan.py
-  - scripts/agent-engine.sh
-  - Taskfile.yml
-  - docs/RUNTIME.md
+  - services/agent-engine/src/omnistackai_agent_engine/edit/patch.py
+  - services/agent-engine/src/omnistackai_agent_engine/edit/__init__.py
+  - services/agent-engine/tests/test_edit_patch.py
+  - docs/EDIT_LOOP.md
   - docs/PROGRESS.md
   - portable state, changelog, handoff, task doc, and tracker evidence
 allowed_paths:
@@ -40,34 +38,33 @@ allowed_paths:
   - CHANGELOG.md
   - PROJECT_STATE.md
   - R_&_D/OmniStackAI_Execution_Tracker_v6.xlsx
-  - Taskfile.yml
   - docs/**
-  - scripts/**
   - services/agent-engine/**
 must_not_change:
   - PostgreSQL as the control-plane database or the platform's own schema/migrations
-  - the runtime/verify/codegen public behavior (this only composes existing builders; additive)
+  - the R-237 ProjectDiff / diff_projects / apply_diff / plan_edit public behavior (this is additive)
+  - the model-gateway, IR, runtime, verify, codegen public behavior (additive)
   - local Compose services or infrastructure; the Section 74 top-level contract; the offline bootstrap
   - the network-independence of static task verify
 must_not_do:
-  - install/run/verify/deploy anything; make a network call; require a key (deploy plan only when a
-    provider is passed in)
-  - add a platform Python dependency; import a vendor SDK; put a secret anywhere
+  - write to disk, run anything, or make a network call (this is a pure diff/report layer)
+  - add a platform Python dependency (standard-library difflib only); import a vendor SDK; put a secret anywhere
 acceptance:
-  - build_project_plan(ir) returns a ProjectPlan whose AppPlan entries pair each assembled app with its
-    preview plan (when the target is runnable locally) and its verify plan (when the target is
-    supported); a deploy plan is included only when a DeploymentProvider is passed.
-  - ProjectPlan.to_dict is JSON-serializable and contains no secret; render() is a readable multi-app
-    summary (dir/target, preview url + commands, verify gates, deploy steps when present).
-  - task plan:show -- <example> prints the combined plan for an example IR; task verify stays green and
-    network-independent.
-  - Standard-library offline tests cover the composition (preview + verify present per app), the deploy
-    opt-in, JSON-serializability + no-secret, and determinism.
+  - diff_report(old, new) returns FileDiff records classifying each path as added / modified / deleted /
+    renamed; a deleted file whose content exactly matches an added file is a single RENAMED record
+    (old_path -> path), not a delete + add.
+  - modified files carry a git-style unified (hunk) diff with -/+ lines; added/deleted carry the
+    corresponding one-sided unified diff; the report is deterministically ordered.
+  - unified_patch(old, new) returns one git-style patch string (rename headers for renames) that is
+    byte-stable across runs.
+  - Additive only: diff_projects / apply_diff / plan_edit outputs are unchanged.
+  - Standard-library offline tests cover modified-hunk content, rename detection, add/delete, empty diff
+    for identical projects, and determinism.
 required_gates:
   - impact_analysis
-  - build_project_plan_composition_tests
-  - deploy_opt_in_test
-  - json_serializable_no_secret_test
+  - unified_hunk_tests
+  - rename_detection_tests
+  - add_delete_and_empty_tests
   - determinism_test
   - python_compile_test
   - vendor_import_exclusion
@@ -81,22 +78,14 @@ model_tool_trace:
   configured_model: qwen2.5-coder:14b
   local_calls: 0
   cloud_calls: 0
-  note: Deterministic; no model call, no network, nothing run/verified/deployed. cloud_calls zero.
+  note: Deterministic; no model call, no network, no disk write. cloud_calls zero.
 completion:
-  implementation_commit: 891144d
-  verified_at: "2026-09-07T00:00:00+05:30"
-  verification:
-    - "task verify — pass (291 agent-engine tests; 6 new)"
-    - "task security:quick — pass; task env:check — pass"
-    - "task plan:show -- rideshare-favourites renders both apps' preview URLs + run commands + verify gates"
-  acceptance_results:
-    - "build_project_plan(ir) yields one AppPlan per assembled app, each with preview + verify plans; deploy plan only when a DeploymentProvider is passed (tests)"
-    - "ProjectPlan.to_dict is JSON-serializable and contains no key value (asserted with a fake VERCEL_TOKEN); render() lists each app with dir/target, preview url + commands, and verify gates (tests)"
-    - "task plan:show prints the combined plan for an example IR; task verify stays network-independent"
-    - "deterministic (to_dict equal across runs); nothing installed/run/verified/deployed"
-    - "composes existing builders only; no runtime/verify/codegen behavior changed"
+  implementation_commit: null
+  verified_at: null
+  verification: []
+  acceptance_results: []
 blockers: []
 next_action: >-
-  Implement projectplan.py + task plan:show + tests; run the gates; record completion. Later continue
-  with richer edit-loop diffs or an IR fixtures field for seed data.
+  Implement edit/patch.py + tests; run the gates; record completion. Later continue with an IR fixtures
+  field for seed data or rendering the project plan in the console.
 next_command: task agent-engine:test

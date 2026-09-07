@@ -43,3 +43,13 @@ new_ir → plan_edit(old_ir, new_ir) → ProjectDiff → commit_edit → repo (c
 
 Everything is deterministic and offline: no model call, no network, no build or run of generated code,
 and no write outside the caller's target directory.
+
+## Hunk-level diffs & rename detection (R-246)
+
+On top of the file-level `ProjectDiff`, `diff_report(old, new)` produces a line-level view: each
+`FileDiff` classifies a path as `added` / `modified` / `deleted` / `renamed` and carries a **git-style
+unified (hunk) diff**. A deleted file whose content exactly matches an added file is reported as a
+single `RENAMED` record (`old_path → path`), not a delete + add. `unified_patch(old, new)` concatenates
+them into one byte-stable patch string (with `rename from`/`rename to` headers), so an edit reads as a
+focused review-ready patch rather than whole-file churn. Pure/`difflib`-only; additive to the edit
+package (`diff_projects` / `apply_diff` / `plan_edit` are unchanged).
