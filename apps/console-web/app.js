@@ -48,9 +48,128 @@ function panel(title, body) {
   return el("section", { class: "panel" }, [el("h2", { text: title }), body]);
 }
 
+function sectionTitle(kicker, title, description) {
+  return el("header", { class: "section-title" }, [
+    el("p", { class: "eyebrow", text: kicker }),
+    el("h2", { text: title }),
+    el("p", { text: description }),
+  ]);
+}
+
+function commandList(items) {
+  return el(
+    "ul",
+    { class: "commands" },
+    items.map((item) => el("li", null, [el("code", { text: item })]))
+  );
+}
+
+function renderBuilderShowcase(showcase) {
+  const section = el("section", { class: "product-section" });
+  section.appendChild(
+    sectionTitle(
+      "Builder proof",
+      "From intent to an engineering-ready project",
+      "This view is produced from the real planner and edit engine. Commands are plans only; nothing is executed."
+    )
+  );
+
+  const plan = showcase.projectPlan;
+  const planBody = el("div", null, [
+    el("div", { class: "panel-head" }, [
+      el("div", null, [
+        el("p", { class: "overline", text: "R-245 · combined project plan" }),
+        el("h3", { text: plan.appName }),
+      ]),
+      badge("on", plan.apps.length + " generated apps"),
+    ]),
+  ]);
+
+  planBody.appendChild(
+    el(
+      "div",
+      { class: "app-grid" },
+      plan.apps.map((app) => {
+        const preview = app.preview || { url: "not available", steps: [] };
+        const verify = app.verify || { gates: [], steps: [] };
+        return el("article", { class: "app-card" }, [
+          el("div", { class: "app-title" }, [
+            el("div", null, [
+              el("h4", { text: app.label }),
+              el("p", { class: "mono muted", text: app.appDir }),
+            ]),
+            badge("target", app.target),
+          ]),
+          el("div", { class: "preview-url" }, [
+            el("span", { text: "Preview" }),
+            el("code", { text: preview.url }),
+          ]),
+          el(
+            "div",
+            { class: "gate-row" },
+            verify.gates.map((gate) => badge("gate", gate))
+          ),
+          el("div", { class: "step-group" }, [
+            el("p", { class: "overline", text: "Preview commands" }),
+            commandList(preview.steps),
+          ]),
+          el("div", { class: "step-group" }, [
+            el("p", { class: "overline", text: "Verification ladder" }),
+            commandList(verify.steps.map((step) => step.kind + " · " + step.command)),
+          ]),
+        ]);
+      })
+    )
+  );
+  section.appendChild(el("section", { class: "panel builder-panel" }, [planBody]));
+
+  const edit = showcase.editPreview;
+  section.appendChild(
+    el("section", { class: "panel patch-panel" }, [
+      el("div", { class: "panel-head" }, [
+        el("div", null, [
+          el("p", { class: "overline", text: "R-246 · review-ready edit" }),
+          el("h3", { text: edit.requestedChange }),
+          el("p", { class: "muted", text: "Base example: " + edit.baseExample }),
+        ]),
+        badge("local", edit.changes.length + " files changed"),
+      ]),
+      el(
+        "div",
+        { class: "change-list" },
+        edit.changes.map((change) =>
+          el("div", { class: "change" }, [
+            badge(change.kind === "renamed" ? "cloud" : "gate", change.kind),
+            el("code", { text: change.oldPath ? change.oldPath + " → " + change.path : change.path }),
+          ])
+        )
+      ),
+      el("pre", { class: "patch", text: edit.unifiedPatch }),
+    ])
+  );
+  section.appendChild(el("p", { class: "note", text: showcase.note }));
+  return section;
+}
+
+function requireSnapshot(overview) {
+  if (!overview || !Array.isArray(overview.providers) || !overview.builderShowcase) {
+    throw new Error("Snapshot is missing required console data");
+  }
+}
+
 function render(overview) {
+  requireSnapshot(overview);
   const content = document.getElementById("content");
   content.textContent = "";
+
+  content.appendChild(renderBuilderShowcase(overview.builderShowcase));
+  content.appendChild(
+    sectionTitle(
+      "Model fabric",
+      "Balanced routing with cost visibility",
+      "Local Ollama is the default below L3; every cloud provider stays inactive until its key is configured."
+    )
+  );
 
   const activeCloud = overview.providers.filter((p) => p.tier === "cloud" && p.active).length;
   content.appendChild(

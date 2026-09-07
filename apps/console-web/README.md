@@ -1,8 +1,11 @@
 # OmniStackAI Console (`apps/console-web`)
 
-The first slice of the visual platform console: a read-only overview of the model fabric —
-providers (local + all supported cloud, with active/key state), the Balanced routing ladder, the
-price book, and the usage/cost dashboard from the accounting ledger.
+The dependency-free Stage 0 visual console. It now shows both halves of the platform:
+
+- a real builder proof — the combined preview/verify project plan for a bundled Application IR and a
+  hunk-level unified edit patch produced from an actual old/new IR assembly; and
+- the model fabric — providers (local + all supported cloud, with active/key state), Balanced routing,
+  price book, resilience, and usage/cost accounting.
 
 ## Run it
 
@@ -15,9 +18,10 @@ Then open <http://127.0.0.1:4321>.
 
 ## How it works
 
-- `data/overview.json` is a **metadata-only** snapshot exported by the Python gateway
-  (`omnistackai_agent_engine.model_gateway.overview`). It never contains an API key or secret — a
-  provider's key state is a boolean only.
+- `data/overview.json` is a **metadata-only** snapshot composed by
+  `omnistackai_agent_engine.console_snapshot`. It calls the existing model overview, project planner,
+  IR assembler, and edit-diff contracts; it never installs/runs/verifies/deploys generated code or
+  connects to a database. It never contains an API key or secret — provider key state is a boolean.
 - `index.html` + `styles.css` + `app.js` render that snapshot with safe DOM APIs (`textContent`
   only, never `innerHTML`). The page makes **no external network requests** (same-origin fetch of the
   snapshot only) and sets a strict `Content-Security-Policy` meta tag.

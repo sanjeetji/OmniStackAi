@@ -21,11 +21,11 @@ import json
 import pathlib
 import sys
 
-from omnistackai_agent_engine.model_gateway.overview import platform_overview
+from omnistackai_agent_engine.console_snapshot import platform_console_snapshot
 
 out = pathlib.Path(sys.argv[1])
 out.parent.mkdir(parents=True, exist_ok=True)
-out.write_text(json.dumps(platform_overview(), indent=2) + "\n", encoding="utf-8")
+out.write_text(json.dumps(platform_console_snapshot(), indent=2) + "\n", encoding="utf-8")
 print(f"Wrote console overview snapshot to {out}")
 PY
 }

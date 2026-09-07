@@ -1,5 +1,5 @@
 {
-  "note": "Static, metadata-only snapshot exported from the model gateway. Contains no API keys or secrets.",
+  "note": "Static metadata-only snapshot: model-fabric status plus a deterministic builder proof. Contains no API keys or secret values.",
   "routingMode": "balanced",
   "cloudTierSelected": null,
   "routingLadder": [
@@ -77,6 +77,46 @@
       "defaultModel": "llama-3.3-70b-versatile",
       "active": false,
       "keyEnv": "GROQ_API_KEY"
+    },
+    {
+      "providerId": "deepseek",
+      "tier": "cloud",
+      "kind": "openai",
+      "defaultModel": "deepseek-chat",
+      "active": false,
+      "keyEnv": "DEEPSEEK_API_KEY"
+    },
+    {
+      "providerId": "xai",
+      "tier": "cloud",
+      "kind": "openai",
+      "defaultModel": "grok-2-latest",
+      "active": false,
+      "keyEnv": "XAI_API_KEY"
+    },
+    {
+      "providerId": "mistral",
+      "tier": "cloud",
+      "kind": "openai",
+      "defaultModel": "mistral-large-latest",
+      "active": false,
+      "keyEnv": "MISTRAL_API_KEY"
+    },
+    {
+      "providerId": "together",
+      "tier": "cloud",
+      "kind": "openai",
+      "defaultModel": "meta-llama/Llama-3.3-70B-Instruct-Turbo",
+      "active": false,
+      "keyEnv": "TOGETHER_API_KEY"
+    },
+    {
+      "providerId": "fireworks",
+      "tier": "cloud",
+      "kind": "openai",
+      "defaultModel": "accounts/fireworks/models/llama-v3p3-70b-instruct",
+      "active": false,
+      "keyEnv": "FIREWORKS_API_KEY"
     }
   ],
   "priceBook": [
@@ -85,6 +125,18 @@
       "modelId": "claude-sonnet-5",
       "inputPerMTokUsd": "3",
       "outputPerMTokUsd": "15"
+    },
+    {
+      "providerId": "deepseek",
+      "modelId": "deepseek-chat",
+      "inputPerMTokUsd": "0.27",
+      "outputPerMTokUsd": "1.10"
+    },
+    {
+      "providerId": "fireworks",
+      "modelId": "accounts/fireworks/models/llama-v3p3-70b-instruct",
+      "inputPerMTokUsd": "0.9",
+      "outputPerMTokUsd": "0.9"
     },
     {
       "providerId": "google-gemini",
@@ -99,6 +151,12 @@
       "outputPerMTokUsd": "0.79"
     },
     {
+      "providerId": "mistral",
+      "modelId": "mistral-large-latest",
+      "inputPerMTokUsd": "2",
+      "outputPerMTokUsd": "6"
+    },
+    {
       "providerId": "ollama-local",
       "modelId": "*",
       "inputPerMTokUsd": "0",
@@ -108,6 +166,18 @@
       "providerId": "openai",
       "modelId": "gpt-4o",
       "inputPerMTokUsd": "2.5",
+      "outputPerMTokUsd": "10"
+    },
+    {
+      "providerId": "together",
+      "modelId": "meta-llama/Llama-3.3-70B-Instruct-Turbo",
+      "inputPerMTokUsd": "0.88",
+      "outputPerMTokUsd": "0.88"
+    },
+    {
+      "providerId": "xai",
+      "modelId": "grok-2-latest",
+      "inputPerMTokUsd": "2",
       "outputPerMTokUsd": "10"
     }
   ],
@@ -131,5 +201,119 @@
     "latencyP50Ms": 0,
     "latencyP95Ms": 0,
     "breakdowns": []
+  },
+  "snapshotVersion": 2,
+  "builderShowcase": {
+    "note": "Deterministic read-only proof assembled from bundled IR examples. Commands shown are plans only; no generated app was installed, run, verified, or deployed.",
+    "planExample": "rideshare-favourites",
+    "projectPlan": {
+      "appName": "Rideshare Favourites",
+      "apps": [
+        {
+          "label": "web (Next.js)",
+          "appDir": "apps/web",
+          "target": "nextjs-web",
+          "preview": {
+            "url": "http://127.0.0.1:3000",
+            "steps": [
+              "pnpm install",
+              "pnpm dev"
+            ]
+          },
+          "verify": {
+            "gates": [
+              "install",
+              "typecheck",
+              "lint",
+              "build"
+            ],
+            "steps": [
+              {
+                "kind": "install",
+                "command": "pnpm install"
+              },
+              {
+                "kind": "typecheck",
+                "command": "pnpm exec tsc --noEmit"
+              },
+              {
+                "kind": "lint",
+                "command": "pnpm run lint"
+              },
+              {
+                "kind": "build",
+                "command": "pnpm run build"
+              }
+            ]
+          },
+          "deploy": null
+        },
+        {
+          "label": "backend (go)",
+          "appDir": "services/api",
+          "target": "backend-go",
+          "preview": {
+            "url": "http://127.0.0.1:8080",
+            "steps": [
+              "go run ."
+            ]
+          },
+          "verify": {
+            "gates": [
+              "lint",
+              "test",
+              "build"
+            ],
+            "steps": [
+              {
+                "kind": "lint",
+                "command": "go vet ./..."
+              },
+              {
+                "kind": "test",
+                "command": "go test ./..."
+              },
+              {
+                "kind": "build",
+                "command": "go build ./..."
+              }
+            ]
+          },
+          "deploy": null
+        }
+      ]
+    },
+    "editPreview": {
+      "baseExample": "minimal-blog",
+      "requestedChange": "Add an offline-first promise to the generated project description.",
+      "changes": [
+        {
+          "kind": "modified",
+          "path": "README.md",
+          "oldPath": null
+        },
+        {
+          "kind": "modified",
+          "path": "apps/web/README.md",
+          "oldPath": null
+        },
+        {
+          "kind": "modified",
+          "path": "apps/web/app/layout.tsx",
+          "oldPath": null
+        },
+        {
+          "kind": "modified",
+          "path": "apps/web/app/page.tsx",
+          "oldPath": null
+        },
+        {
+          "kind": "modified",
+          "path": "services/api/README.md",
+          "oldPath": null
+        }
+      ],
+      "unifiedPatch": "--- a/README.md\n+++ b/README.md\n@@ -1,6 +1,6 @@\n # Minimal Blog\n \n-A tiny blog with posts and comments.\n+A tiny blog with posts and comments. It is designed to stay useful during an internet outage.\n \n Customer monorepo generated by OmniStackAI from a single Application IR.\n \n--- a/apps/web/README.md\n+++ b/apps/web/README.md\n@@ -1,6 +1,6 @@\n # Minimal Blog\n \n-A tiny blog with posts and comments.\n+A tiny blog with posts and comments. It is designed to stay useful during an internet outage.\n \n Generated by OmniStackAI from the Application IR.\n \n--- a/apps/web/app/layout.tsx\n+++ b/apps/web/app/layout.tsx\n@@ -2,7 +2,7 @@\n \n export const metadata: Metadata = {\n   title: \"Minimal Blog\",\n-  description: \"A tiny blog with posts and comments.\",\n+  description: \"A tiny blog with posts and comments. It is designed to stay useful during an internet outage.\",\n };\n \n export default function RootLayout({ children }: { children: React.ReactNode }) {\n--- a/apps/web/app/page.tsx\n+++ b/apps/web/app/page.tsx\n@@ -2,7 +2,7 @@\n   return (\n     <main style={{ padding: 24, maxWidth: 720, margin: \"0 auto\" }}>\n       <h1>Minimal Blog</h1>\n-      <p>A tiny blog with posts and comments.</p>\n+      <p>A tiny blog with posts and comments. It is designed to stay useful during an internet outage.</p>\n       <p>Platforms: web, admin, backend</p>\n       <h2>Entities</h2>\n       <ul>\n--- a/services/api/README.md\n+++ b/services/api/README.md\n@@ -1,6 +1,6 @@\n # Minimal Blog \u2014 backend\n \n-A tiny blog with posts and comments.\n+A tiny blog with posts and comments. It is designed to stay useful during an internet outage.\n \n Generated by OmniStackAI from the Application IR.\n \n"
+    }
   }
 }
