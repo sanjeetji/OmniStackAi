@@ -40,12 +40,15 @@ START PROTOCOL
   `task ai:status`, `task ai:handoff`. `task verify` must stay green and network-independent.
 - Confirm git branch/HEAD/clean tree. Then restate: phase, next Tracker ID, objective, blast radius.
 
-WHAT IS ALREADY BUILT (all Python 3.13 stdlib-only, offline, in services/agent-engine; 203 tests pass)
-- Model fabric: ModelProvider contract + registry; local Ollama adapter; Balanced ModelGateway
-  (deterministic escalation ladder, no silent cloud fallback, context-budget guard); key-activated
-  cloud adapters for Anthropic/OpenAI/Gemini/OpenRouter/Groq (no keys set -> zero cloud calls); true
-  SSE streaming; usage/cost accounting (Decimal price book); env-driven cross-provider fallback +
-  circuit breaker. Run it live: `task agent-engine:gateway:run` (routes to local Ollama qwen).
+WHAT IS ALREADY BUILT (all Python 3.13 stdlib-only, offline, in services/agent-engine; 217 tests pass)
+- Model fabric: ModelProvider contract + registry; local Ollama adapter (runs any installed model via
+  OMNISTACKAI_OLLAMA_MODEL); Balanced ModelGateway (deterministic escalation ladder, no silent cloud
+  fallback, context-budget guard); key-activated cloud catalog — Anthropic/OpenAI/Google-Gemini/
+  OpenRouter/Groq/DeepSeek/xAI(Grok)/Mistral/Together/Fireworks PLUS bring-your-own custom
+  OpenAI-compatible endpoints (OMNISTACKAI_CUSTOM_PROVIDERS, no code change); spec-driven so each flows
+  through registration/selection/fallback/overview/pricing; no keys set -> zero cloud calls; true SSE
+  streaming; usage/cost accounting (Decimal price book); env-driven cross-provider fallback + circuit
+  breaker. Run it live: `task agent-engine:gateway:run` (routes to local Ollama qwen).
 - BUILDER (the product): Application IR (framework-neutral spec) + semantic validator/canonical
   normalizer + example fixtures -> FrameworkAdapter contract + in-memory GeneratedProject ->
   NextjsWebAdapter (Next.js) + PythonBackendAdapter (FastAPI) + GoBackendAdapter (Go net/http) ->
@@ -71,8 +74,8 @@ work uses IDs AFTER R-219: R-220 streaming, R-221 fallback, R-222 console, R-223
 R-224 Next.js console upgrade (DEFERRED), R-225 IR, R-226 adapter contract, R-227 Next.js adapter,
 R-228 git service, R-229 Python/FastAPI backend adapter, R-230 Go backend adapter, R-231 IR
 validator/normalizer + fixtures, R-232 project assembler, R-233 runtime/deploy provider layer,
-R-234 tier switch + cloud provider drivers, R-235 verifiable-engineering verify plans. Do NOT
-overwrite backlog rows; continue from R-236.
+R-234 tier switch + cloud provider drivers, R-235 verifiable-engineering verify plans, R-236 expanded
+model-provider catalog + custom providers. Do NOT overwrite backlog rows; continue from R-237.
 
 ENVIRONMENT LIMITS discovered here
 - npm front-end bundlers (Next.js SWC, Vite/esbuild) FAIL to install (native-binary downloads time
@@ -98,17 +101,17 @@ RULES (non-negotiable)
   .ai/HANDOFF.md, PROJECT_STATE.md, CHANGELOG.md, and the tracker row. Push the branch; verify remote
   SHA == local HEAD. Never claim unexecuted tests.
 
-WHAT TO DO NEXT (pick with the founder; all continue the builder), continue from R-236
+WHAT TO DO NEXT (pick with the founder; all continue the builder), continue from R-237
 - Offline-doable now: an IR-diff -> patch-apply edit loop (compute changed generated files from an IR
   change and apply them to an existing project — the "edit an app" motion), or expanding IR + adapter
   coverage (auth/roles, entity relations, DB migrations), or a combined build+verify plan surface that
   ties the runtime (R-233/234) and verify (R-235) plans together for the console/CLI.
-- Needs a network/cloud environment: run a Tier-0 preview end-to-end (materialize -> pnpm dev), then
-  live-verify one cloud driver (Vercel deploy or E2B sandbox) once a key is supplied (set the key +
-  OMNISTACKAI_TIER=2, select the provider, run run_deploy/run_preview); and the deferred R-224 Next.js
-  console upgrade (npm registry access).
+- Needs a network/cloud environment: run a Tier-0 preview end-to-end (materialize -> pnpm dev);
+  live-verify a cloud LLM provider (set its key + OMNISTACKAI_CLOUD_PROVIDER=<id>, run
+  `task agent-engine:gateway:run`) or a deploy/sandbox driver (OMNISTACKAI_TIER=2 + key); and the
+  deferred R-224 Next.js console upgrade (npm registry access).
 - Deferred by governance: native mobile (R-010 etc.) until web/backend stability.
 
 Begin by reading the files above and running the start protocol, then propose the next Tracker ID
-(R-236) with its task contract before writing code. Commit to main.
+(R-237) with its task contract before writing code. Commit to main.
 ```

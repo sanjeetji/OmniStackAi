@@ -366,3 +366,29 @@
   safety. `task verify`, `task security:quick`, `task env:check` all pass; verify-plan demoed.
 - Committed directly to main (only branch). Tracker row R-235 (Verify) inserted at row 9; MVP total
   130 / Done 24. Implementation checkpoint `cb74d0c`. 0 local / 0 cloud model calls; nothing installed/built/run.
+
+## 2026-09-07 — R-236
+
+- Expanded the cloud model fabric (founder request, with Dyad screenshots for reference). Added
+  first-class OpenAI-compatible `CloudProviderSpec` entries for DeepSeek, xAI (Grok), Mistral, Together,
+  and Fireworks alongside the existing OpenAI/Anthropic/Google/OpenRouter/Groq — all reuse
+  `OpenAICompatibleProvider`, no new adapter code.
+- Added a generic env-driven custom-provider path: `custom_provider_specs_from_env` reads
+  `OMNISTACKAI_CUSTOM_PROVIDERS` + per-id `OMNISTACKAI_CUSTOM_<ID>_{BASE_URL,MODEL,API_KEY}` and builds
+  a first-class provider with no code change; validates the id, requires an HTTPS base URL + model, and
+  rejects built-in collisions. `resolve_provider_specs()` = built-ins ∪ custom.
+- Made the catalog spec-driven end to end: `bootstrap.py` and `overview.py` iterate
+  `resolve_provider_specs()`, so custom + new built-in providers are registered (key-activated),
+  selectable as the L3/L4 cloud tier or a fallback, and listed in the metadata-only overview with
+  `active` = key presence only. `accounting.py` gained illustrative default prices for the priced new
+  providers (openrouter/custom stay unpriced).
+- `.env.example`: new keys + model overrides + a documented custom-provider template; updated the
+  `OMNISTACKAI_CLOUD_PROVIDER` allowed list. `docs/MODEL_PROVIDER.md`: R-236 catalog + custom + local
+  Ollama section. Keys stay env-only — never logged, stored, returned, or placed in the overview.
+- 14 new stdlib offline tests (217 total): new specs, adapter dispatch shape (key only in the auth
+  header, never the URL), custom-spec parse + 4 error cases, spec merge, bootstrap registration/
+  selection/fallback for built-in and custom, overview/no-key-leak, and pricing. Updated `test_overview`
+  to derive the expected catalog from the spec table. `task verify` + `security:quick` + `env:check`
+  pass; `platform_overview` demoed a 12-provider catalog including custom `myco`.
+- Committed directly to main (only branch). Tracker row R-236 (Model Fabric) inserted at row 9; MVP
+  total 131 / Done 25. Implementation checkpoint `e6326bf`. 0 local / 0 cloud model calls; no network.

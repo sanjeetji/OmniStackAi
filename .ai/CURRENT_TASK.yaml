@@ -1,7 +1,7 @@
 schema_version: 1
 task_id: R-236
 title: Expand the model-provider catalog + custom OpenAI-compatible providers
-status: in_progress
+status: done
 phase: BASIC/MVP
 founder_stage: 0
 branch: main
@@ -91,10 +91,18 @@ model_tool_trace:
   cloud_calls: 0
   note: Deterministic; no model call, no network. No cloud key set; cloud_calls zero.
 completion:
-  implementation_commit: null
-  verified_at: null
-  verification: []
-  acceptance_results: []
+  implementation_commit: e6326bf
+  verified_at: "2026-09-07T00:00:00+05:30"
+  verification:
+    - "task verify — pass (217 agent-engine tests; 14 new)"
+    - "task security:quick — pass; task env:check — pass"
+    - "platform_overview demoed a 12-provider catalog (5 new built-ins + custom myco); active reflects key presence only; no key value in the snapshot"
+  acceptance_results:
+    - "deepseek/xai/mistral/together/fireworks exist as OpenAI-compatible specs with HTTPS base URLs, distinct key envs, model envs, defaults; register only when keyed (tests)"
+    - "custom_provider_specs_from_env builds a first-class provider from OMNISTACKAI_CUSTOM_* with no code change; bad id / non-HTTPS / missing model / built-in collision raise InvalidProviderConfigurationError (tests)"
+    - "resolve_provider_specs merges built-ins + custom; bootstrap registers, selects (cloud tier), and chains (fallback) built-in and custom providers by key; overview lists all with active = key presence (tests)"
+    - "price book has illustrative defaults for the priced new providers; openrouter/custom unpriced (tests)"
+    - "no key value appears in any request URL, log, overview, or repr; no network call in bootstrap/overview/tests; task verify network-independent"
 blockers: []
 next_action: >-
   Add the new provider specs + custom-provider resolution, wire bootstrap/overview/accounting, add

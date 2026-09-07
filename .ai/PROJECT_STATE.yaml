@@ -6,10 +6,10 @@ current_task: null
 current_status: ready_for_next_task_definition
 branch: main
 last_completed_task:
-  task_id: R-235
-  title: Verifiable-engineering verify plans (per-target gate ladders + IR/monorepo mapping)
-  implementation_commit: cb74d0c
-  verification: task verify (203 agent-engine tests, 9 new); per-target verify plans (install/typecheck/lint/test/build) classified by gate kind, IR->plans mapping over apps/web + services/api, opt-in run_verify executor
+  task_id: R-236
+  title: Expand the model-provider catalog + custom OpenAI-compatible providers
+  implementation_commit: e6326bf
+  verification: task verify (217 agent-engine tests, 14 new); added DeepSeek/xAI/Mistral/Together/Fireworks + env-driven custom providers; spec-driven registration/selection/fallback/overview/pricing; keys env-only, never shown
   result: pass
 control_plane_database: postgresql
 model_routing_mode: balanced
@@ -23,5 +23,5 @@ id_note: >-
   Workbook backlog owns R-010..R-219. Founder-requested tasks use IDs after R-219: R-220..R-223 done,
   R-224 Next.js deferred (env-blocked), R-225 Application IR (in progress).
 blockers: []
-next_action: Verifiable-engineering verify plans wired (per-target gate ladders; task agent-engine:verify-plan; IR->plans over the monorepo; opt-in run_verify). Next (R-236, offline-doable): an IR-diff -> patch-apply edit loop, or expand IR/adapter coverage (auth/relations/migrations), or a combined "build+verify" plan surface. Cloud items (Tier-0 preview end-to-end, live cloud driver) need a network machine/keys. Confirm next Tracker ID.
+next_action: Model-provider catalog expanded (DeepSeek/xAI/Mistral/Together/Fireworks + env-driven custom providers; spec-driven, key-activated). Next (R-237, offline-doable): an IR-diff -> patch-apply edit loop, or expand IR/adapter coverage (auth/relations/migrations), or a combined "build+verify" plan surface. Cloud items (Tier-0 preview end-to-end, live provider/cloud driver) need a network machine/keys. Confirm next Tracker ID.
 last_updated: "2026-09-07T00:00:00+05:30"

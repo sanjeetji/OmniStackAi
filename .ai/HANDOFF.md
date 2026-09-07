@@ -1,10 +1,10 @@
 # Current Handoff
 
-Task ID: R-235
+Task ID: R-236
 Status: done
 Phase: BASIC/MVP — Founder Stage 0
 Branch: `main` (the only branch; the GitHub default)
-Last verified implementation SHA: `cb74d0c`
+Last verified implementation SHA: `e6326bf`
 
 ## Repo/workflow state
 
@@ -13,35 +13,36 @@ Last verified implementation SHA: `cb74d0c`
 - Every commit is authored solely by `sanjeetji <sk698166@gmail.com>`. Commit messages also carry a
   tooling-required `Co-Authored-By: Claude Opus 4.8` trailer; the owner may strip it from history.
 
-## Completed (R-235) — verifiable-engineering verify plans
+## Completed (R-236) — expanded model-provider catalog + custom providers
 
-- New `omnistackai_agent_engine.verify` package. `verify_plan(target, app_dir)` returns a deterministic
-  gate ladder — `install → typecheck → lint → test → build` — as pure validated data, each step
-  classified by `VerifyStepKind`. Ladders: nextjs-web/admin (pnpm install/tsc --noEmit/lint/build),
-  backend-python (pip install/compileall/pytest), backend-go (go vet/test/build). Unknown target →
-  `UnsupportedVerifyTargetError`.
-- `verify_plans_for_ir(ir)` maps one Application IR to the verify plans for its assembled monorepo apps
-  (`apps/web`, `services/api`) via a new additive `assembled_targets(ir)` in the assembler
-  (`assemble_project` refactored to share `_plan_assembly`; output byte-identical).
-- `run_verify(plan)` is the only executor — opt-in, fail-fast, returns a `VerifyReport`; never run by
-  tests or `task verify`. `task agent-engine:verify-plan` prints a ladder; `docs/VERIFY.md` added.
+- Added first-class OpenAI-compatible providers `deepseek`, `xai` (Grok), `mistral`, `together`,
+  `fireworks` alongside `openai`/`anthropic`/`google`/`openrouter`/`groq` — all reuse
+  `OpenAICompatibleProvider`, no new adapter code. Each is key-activated (its `*_API_KEY` env).
+- Added a generic **custom provider** path: `OMNISTACKAI_CUSTOM_PROVIDERS` + per-id
+  `OMNISTACKAI_CUSTOM_<ID>_{BASE_URL,MODEL,API_KEY}` → a first-class provider with no code change
+  (`custom_provider_specs_from_env`, validated). `resolve_provider_specs()` = built-ins ∪ custom, and
+  `bootstrap.py`/`overview.py` iterate it, so any provider is registered, selectable as the cloud tier
+  or a fallback, and listed in the overview (`active` = key presence only). Price-book defaults added
+  for the priced new providers; openrouter/custom unpriced.
+- The local Ollama tier already runs any installed model via `OMNISTACKAI_OLLAMA_MODEL` /
+  `OMNISTACKAI_OLLAMA_BASE_URL`. `.env.example` + `docs/MODEL_PROVIDER.md` document the whole catalog.
 
 ## Verification
 
-- `task verify` — pass (203 agent-engine tests; 9 new). `task agent-engine:verify-plan -- backend-go`
-  printed the ladder; unknown target exits 2 with the supported list. `task security:quick`,
-  `task env:check` — pass.
-- Compose unchanged; offline `task bootstrap` unchanged. Nothing installed/built/run; `run_verify` is
-  opt-in. No secret referenced.
-- Tracker — R-235 (Verify) at `Phase_Roadmap!A9:M9`; MVP total 130, Done 24; chart/styles intact.
+- `task verify` — pass (217 agent-engine tests; 14 new). `platform_overview` demoed a 12-provider
+  catalog including a custom `myco` provider; no key value in the snapshot. `task security:quick`,
+  `task env:check` — pass. No network call anywhere; no external dependency; no vendor SDK.
+- Tracker — R-236 (Model Fabric) at `Phase_Roadmap!A9:M9`; MVP total 131, Done 25; chart/styles intact.
 
 ## Product state
 
 Offline builder complete (spec → IR + validate/normalize/fixtures → Next.js/FastAPI/Go adapters →
-assembler → Git service → owned monorepo), plus the model fabric, the **Tier 0-3 runtime/deploy layer**
-(single tier switch + a driver for every provider), and now the **verifiable-engineering layer** —
-per-target gate ladders and one-IR→monorepo verify plans (`task agent-engine:verify-plan`). 24 tracker
-tasks Done; 0 cloud calls; PostgreSQL/Compose untouched.
+assembler → Git service → owned monorepo), plus the model fabric (now an **11-provider cloud catalog** —
+OpenAI/Anthropic/Google/OpenRouter/Groq/DeepSeek/xAI/Mistral/Together/Fireworks + bring-your-own custom
+endpoints, all key-activated, local Ollama always-on), the **Tier 0-3 runtime/deploy layer** (single
+tier switch + a driver for every provider), and the **verifiable-engineering layer** (per-target gate
+ladders and one-IR→monorepo verify plans). 25 tracker tasks Done; 0 cloud calls;
+PostgreSQL/Compose untouched.
 
 ## Free-tier note (for the founder, verify before relying)
 
@@ -49,7 +50,7 @@ Recurring monthly free: local (forever), GitHub Codespaces, Vercel Hobby, Render
 One-time trials: E2B/Daytona credits, Fly credit, Railway credit, AWS/GCP/Azure. Prefer the recurring
 ones for ongoing free use.
 
-## Next action (R-236, pick with the founder — all offline-doable)
+## Next action (R-237, pick with the founder — all offline-doable)
 
 1. **IR-diff → patch-apply edit loop**: given an IR change, compute the changed generated files and
    apply them to an existing generated project (the "edit an app" motion, still deterministic/offline).

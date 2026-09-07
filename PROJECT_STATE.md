@@ -5,11 +5,12 @@ Last updated: 2026-09-06T10:46:19+05:30 by Codex (GPT-5)
 Stage 0 (Founder Build Sequence, Brief Section 91) — BASIC/MVP
 
 ## Last Completed Task
-Tracker ID: R-235 — Verifiable-engineering verify plans — DONE, `task verify` (203 agent-engine
-tests, 9 new) passing; a deterministic per-target gate ladder (install/typecheck/lint/test/build)
-classified by gate kind, one Application IR mapped to the verify plans for its assembled monorepo apps
-(apps/web + services/api), and an opt-in `run_verify` executor; `task agent-engine:verify-plan` prints
-a ladder; implementation checkpoint `cb74d0c`
+Tracker ID: R-236 — Expand the model-provider catalog + custom providers — DONE, `task verify` (217
+agent-engine tests, 14 new) passing; added first-class OpenAI-compatible adapters for DeepSeek, xAI
+(Grok), Mistral, Together, and Fireworks alongside OpenAI/Anthropic/Google/OpenRouter/Groq, plus an
+env-driven custom-provider path (any OpenAI-compatible endpoint, no code change); spec-driven so each
+flows through registration/selection/fallback/overview/pricing, key-activated, keys never shown;
+implementation checkpoint `e6326bf`
 (R-224 Next.js console upgrade deferred — env-blocked)
 
 ## Workflow note
