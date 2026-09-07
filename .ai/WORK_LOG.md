@@ -457,3 +457,28 @@
 - Nothing connects to or queries a database; no network. `docs/CODEGEN.md` + `docs/PROGRESS.md` updated.
 - Committed directly to main (only branch). Tracker row R-239 (Builder) inserted at row 9; MVP total
   134 / Done 28. Implementation checkpoint `f6792fa`. 0 local / 0 cloud model calls.
+
+## 2026-09-07 — R-240
+
+- Wired the generated backends' HTTP handlers to the R-239 repository layer for the unambiguous CRUD
+  shapes. New `codegen/route_wiring.py`: `wire_endpoint(api, repo_entities)` -> LIST/GET/CREATE/DELETE
+  from method + path shape (entity from `response_schema` else `request_schema`); anything ambiguous
+  (sub-collections, multi-param, custom, POST without a request_schema, unknown entity) returns None and
+  stays a labelled 501 scaffold — so the platform never emits plausible-but-wrong behaviour.
+- Python (`backend_python.py`): `_router_file` now takes `repo_entities`, imports the used
+  repositories/models, and emits wired bodies — list -> `await <t>.list_<t>()`, get -> 404-aware, create
+  -> `await <t>.create_<t>(payload.model_dump())` with a Pydantic body, delete -> 404-aware; unwired
+  keep `raise HTTPException(status_code=501, ...)`.
+- Go (`backend_go.py`): handlers became methods on a `Handlers` struct holding `*sql.DB`; added
+  `internal/handlers/handlers.go` (struct + `New` + `writeJSON`); `_main_file` gained a `has_db` branch
+  that opens `store.Open()`, builds `handlers.New(db)`, and registers `h.<Handler>`; wired methods call
+  the `store` and decode `models.<Entity>` for create. Non-DB Go backends keep the free-function
+  scaffolds unchanged (README stack note switches to pgx only when a DB is present).
+- Gated on entities + `database_strategy=postgres`; deterministic and byte-stable; nothing runs. Updated
+  `test_backend_go_adapter` assertions free-function -> method form (that test uses rideshare, has DB).
+- 12 new stdlib offline tests (256 total) in `test_route_wiring.py`: the wiring map + its None cases,
+  Python wired router (valid Python via ast) + ambiguous-stays-501, Go shared handlers + DB wiring +
+  list-calls-store, and a non-DB backend left unchanged. `task verify` + `security:quick` + `env:check`
+  pass. `docs/CODEGEN.md` documents the wiring table; `docs/PROGRESS.md` refreshed.
+- Committed directly to main (only branch). Tracker row R-240 (Builder) inserted at row 9; MVP total
+  135 / Done 29. Implementation checkpoint `013dfc4`. 0 local / 0 cloud model calls; nothing executed.
