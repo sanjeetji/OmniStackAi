@@ -1,28 +1,29 @@
 schema_version: 1
-task_id: R-240
-title: Route wiring — generated handlers call the repository layer (real CRUD)
-status: done
+task_id: R-241
+title: Authentication guards from the IR (enforce the endpoint auth flag; surface roles)
+status: in_progress
 phase: BASIC/MVP
 founder_stage: 0
 branch: main
 goal: >-
-  Turn the generated backends' 501 stub handlers into working CRUD over the R-239 data-access layer
-  (Brief 9/27/34/42), but only for the unambiguous endpoint shapes so the platform never emits
-  plausible-but-wrong behavior. An endpoint's entity is taken from response_schema (else request_schema);
-  the operation is inferred from method + path: GET collection -> list, GET /x/{id} (single param) ->
-  get, POST with a request_schema (no param) -> create, DELETE /x/{id} -> delete; everything else stays
-  a labelled 501 scaffold. Python routers import the repository/model and await the call (create takes a
-  Pydantic body); Go handlers become methods on a Handlers struct holding *sql.DB, main opens
-  store.Open(), and wired methods call the store. Emitted only when the IR has entities and
-  database_strategy=postgres; non-DB backends keep the plain scaffolds unchanged. Deterministic and
-  offline; nothing runs; the R-237 edit loop diffs the wiring when the IR changes.
+  Make the IR's per-endpoint auth flag real (Brief 9/27/34/55): generate an authentication guard that
+  every endpoint with auth=true enforces, rejecting a request with no bearer credential (HTTP 401)
+  before the handler runs. Python (FastAPI) gets app/auth.py with a require_auth dependency and wired
+  routes declare dependencies=[Depends(require_auth)]; Go gets internal/handlers/auth.go with a
+  RequireAuth(next) middleware and main wraps the auth endpoints with handlers.RequireAuth(...). The IR
+  roles are surfaced as a generated ROLES/Roles constant (a documented anchor for future per-endpoint
+  authorization; token signature/expiry/role checks are an explicit TODO in the generated code, not
+  faked). Emitted only when the IR declares at least one auth=true endpoint; applies to both DB and
+  non-DB backends. Deterministic and offline; nothing runs; the R-237 edit loop diffs the guards when
+  the IR changes.
 source:
   tracker_sheet: Phase_Roadmap
   tracker_row: reconstructed; new IDs continue after the workbook backlog's R-010..R-219
-  brief_sections: [9, 27, 34, 35, 42, 74, 77, 83, 84, 85, 92]
+  brief_sections: [9, 27, 34, 35, 55, 64, 74, 77, 83, 84, 85, 92]
   founder_note: >-
-    Founder approved continuing after R-239; wiring the handlers makes the generated API actually serve
-    the tables. Committed directly to main; author solely sanjeetji; tooling adds a Co-Authored-By trailer.
+    Founder approved continuing after R-240; enforcing auth is a core real-app feature and the IR auth
+    flag was previously only a comment. Committed directly to main; author solely sanjeetji; tooling
+    adds a Co-Authored-By trailer.
 project_profile:
   repository: platform_modular_monorepo
   service: python_agent_engine
@@ -30,10 +31,11 @@ project_profile:
   model_routing: balanced
 complexity: L2
 expected_impact:
-  - services/agent-engine/src/omnistackai_agent_engine/codegen/route_wiring.py
+  - services/agent-engine/src/omnistackai_agent_engine/codegen/auth_guard.py
   - services/agent-engine/src/omnistackai_agent_engine/codegen/backend_python.py
   - services/agent-engine/src/omnistackai_agent_engine/codegen/backend_go.py
-  - services/agent-engine/tests/test_route_wiring.py
+  - services/agent-engine/tests/test_auth_guard.py
+  - services/agent-engine/tests/test_backend_python_adapter.py
   - services/agent-engine/tests/test_backend_go_adapter.py
   - docs/CODEGEN.md
   - docs/PROGRESS.md
@@ -47,33 +49,33 @@ allowed_paths:
   - services/agent-engine/**
 must_not_change:
   - PostgreSQL as the control-plane database or the platform's own schema/migrations
-  - the ModelProvider/gateway, IR, runtime, verify, edit, data-access public behavior (additive)
-  - non-DB backend output (free-function scaffold handlers stay unchanged)
+  - the ModelProvider/gateway, IR, runtime, verify, edit, data-access, route-wiring public behavior (additive)
+  - endpoints with auth=false (no guard added); the public behavior of routes stays otherwise identical
   - local Compose services or infrastructure; the Section 74 top-level contract; the offline bootstrap
   - the network-independence of static task verify
 must_not_do:
-  - connect to or query any database; execute a handler; make a network call
-  - wire an ambiguous endpoint (sub-collection / multi-param / custom) — leave those as 501
-  - add a platform Python dependency; import a vendor SDK; put a secret anywhere
+  - claim real token verification (signature/expiry/roles) — the generated guard only requires a bearer
+    credential and marks verification as a TODO; do not fabricate a JWT secret or key
+  - execute a handler or make a network call; add a platform Python dependency; import a vendor SDK; put a secret anywhere
 acceptance:
-  - wire_endpoint maps only the unambiguous CRUD shapes (list/get/create/delete) and returns None for
-    everything else; the entity comes from response_schema (else request_schema) and must be a known
-    repository entity.
-  - Python wired routes import the repository (and the model for create) and await the repository call;
-    create uses payload.model_dump(); unwired routes keep status_code=501. Generated routers parse as
-    valid Python.
-  - Go handlers become methods on a Handlers struct with *sql.DB (internal/handlers/handlers.go with New
-    + writeJSON); main.go opens store.Open() and registers h.<Handler>; wired methods call the store and
-    decode models.<Entity> for create; unwired stay 501. Non-DB Go backends keep free-function scaffolds.
-  - Only emitted when entities + postgres; deterministic and byte-stable; nothing runs.
-  - Standard-library offline tests cover the wiring map + its None cases, Python/Go wired emission, and
-    that a non-DB backend is unchanged.
+  - When the IR has at least one auth=true endpoint, the Python backend emits app/auth.py (require_auth
+    dependency that 401s without an Authorization: Bearer token) and every auth=true route declares
+    dependencies=[Depends(require_auth)]; auth=false routes are unchanged.
+  - The Go backend emits internal/handlers/auth.go (RequireAuth middleware that 401s without a bearer
+    token) and main wraps exactly the auth=true endpoints with handlers.RequireAuth(...); auth=false
+    endpoints are registered directly.
+  - The IR roles are surfaced as a generated constant (Python ROLES tuple, Go Roles slice) listing the
+    role names; the generated code documents that per-endpoint role enforcement is future work.
+  - Nothing is emitted when no endpoint requires auth; generated Python parses as valid Python; output
+    is byte-stable; nothing runs.
+  - Standard-library offline tests cover the guard emission + gating, per-route dependency/middleware
+    wrapping for auth vs public endpoints, and the roles constant.
 required_gates:
   - impact_analysis
-  - wire_endpoint_mapping_tests
-  - python_wiring_tests
-  - go_wiring_tests
-  - non_db_backend_unchanged_test
+  - auth_guard_emission_and_gating_tests
+  - python_dependency_wrapping_tests
+  - go_middleware_wrapping_tests
+  - roles_surfaced_test
   - python_compile_test
   - vendor_import_exclusion
   - secret_exclusion_check
@@ -86,22 +88,14 @@ model_tool_trace:
   configured_model: qwen2.5-coder:14b
   local_calls: 0
   cloud_calls: 0
-  note: Deterministic; no model call, no network, no DB connection, no handler executed. cloud_calls zero.
+  note: Deterministic; no model call, no network, no handler executed. cloud_calls zero.
 completion:
-  implementation_commit: 013dfc4
-  verified_at: "2026-09-07T00:00:00+05:30"
-  verification:
-    - "task verify — pass (256 agent-engine tests; 12 new in test_route_wiring.py)"
-    - "task security:quick — pass; task env:check — pass"
-    - "generated routers parse as valid Python; Go main opens store.Open() and registers method handlers"
-  acceptance_results:
-    - "wire_endpoint wires list/get/create/delete only; sub-collections, multi-param, unknown-entity and POST-without-request_schema return None (tests)"
-    - "Python posts.py calls post.list_post()/post.create_post(payload.model_dump()); ambiguous GET /posts/{postId}/comments stays 501 (tests)"
-    - "Go emits internal/handlers/handlers.go (Handlers struct + New + writeJSON); main opens store.Open()+handlers.New(db); drivers.go calls store.ListDriver (tests)"
-    - "a non-DB Go backend emits no handlers.go and no pgx require (test)"
-    - "no DB connection, no handler executed, no network; task verify network-independent"
+  implementation_commit: null
+  verified_at: null
+  verification: []
+  acceptance_results: []
 blockers: []
 next_action: >-
-  R-240 shipped. Next: seed data + ambiguous-route handling, or auth/roles through the adapters, or a
-  combined build/verify/preview plan surface.
+  Implement auth_guard.py + wire both backends + tests; run the gates; record completion. Later continue
+  with real token verification / per-endpoint roles / seed data.
 next_command: task agent-engine:test

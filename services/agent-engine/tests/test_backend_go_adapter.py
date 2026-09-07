@@ -95,7 +95,7 @@ class GoBackendAdapterTests(TestCase):
         self.assertIn("func (h *Handlers) PostFavouritesDriversDriverId(w http.ResponseWriter, r *http.Request)", fav)
         self.assertIn("http.StatusNotImplemented", fav)
         main = self.project.get("main.go").content
-        self.assertIn('mux.HandleFunc("POST /favourites/drivers/{driverId}", h.PostFavouritesDriversDriverId)', main)
+        self.assertIn('mux.HandleFunc("POST /favourites/drivers/{driverId}", handlers.RequireAuth(h.PostFavouritesDriversDriverId))', main)
         self.assertIn('mux.HandleFunc("GET /healthz"', main)
         self.assertIn('"rideshare-favourites/internal/handlers"', main)
 

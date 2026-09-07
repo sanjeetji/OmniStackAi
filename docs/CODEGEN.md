@@ -152,3 +152,19 @@ endpoint's entity comes from its `response_schema` (else `request_schema`); the 
 
 Emitted only when the IR has entities and `database_strategy == postgres` (otherwise backends keep the
 plain scaffold handlers, unchanged). Deterministic and offline — nothing runs.
+
+## Authentication guards (R-241)
+
+`codegen/auth_guard.py` makes the IR's per-endpoint `auth` flag real: every endpoint with `auth: true`
+enforces a guard that rejects a request with no bearer credential (`401`) before the handler runs. The
+guard is honest — it only checks that an `Authorization: Bearer <token>` header is present and marks
+real verification (signature, expiry, roles) as a `TODO`; it never fabricates a secret.
+
+- **Python (FastAPI):** emits `app/auth.py` with a `require_auth` dependency; each `auth: true` route
+  declares `dependencies=[Depends(require_auth)]`. Public routes are untouched.
+- **Go:** emits `internal/handlers/auth.go` with a `RequireAuth(next)` middleware; `main.go` wraps
+  exactly the `auth: true` registrations with `handlers.RequireAuth(...)`.
+
+The IR `roles` are surfaced as a generated constant (Python `ROLES` tuple, Go `Roles` slice) — an anchor
+for future per-endpoint authorization. Emitted only when the IR declares at least one `auth: true`
+endpoint (both DB and non-DB backends); deterministic and offline.

@@ -86,7 +86,7 @@ class PythonBackendAdapterTests(TestCase):
         self.assertIn("app/routers/favourites.py", paths)   # /favourites/* grouped
         self.assertIn("app/routers/drivers.py", paths)      # /drivers grouped
         fav = self.project.get("app/routers/favourites.py").content
-        self.assertIn('@router.post("/favourites/drivers/{driverId}")', fav)
+        self.assertIn('@router.post("/favourites/drivers/{driverId}"', fav)  # auth guard may follow
         self.assertIn("driverId: str", fav)                 # path param typed
         self.assertIn("status_code=501", fav)               # scaffold body
 
