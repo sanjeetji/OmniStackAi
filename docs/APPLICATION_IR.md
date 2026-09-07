@@ -14,7 +14,9 @@ Package: `omnistackai_agent_engine.application_ir` (Python 3.13 standard library
 - `ProjectStrategy` — mobile/web/admin/backend/database/repo strategy enums.
 - `Entity` — `name`, `fields` (`Field`: name, type, required, validation), `relations`
   (`Relation`: name, target entity, kind).
-- `ApiEndpoint` — method, path, auth, request/response/error schema references.
+- `ApiEndpoint` — method, path, auth, request/response/error schema references, and optional
+  `required_roles` (R-243: role ids that gate the endpoint; a non-empty value implies `auth=true`, and
+  each role must be a declared `Role` — `validate_ir` errors otherwise).
 - `Role`, `Screen`, `AcceptanceCriterion`.
 
 ## Guarantees

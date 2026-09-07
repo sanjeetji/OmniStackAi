@@ -169,7 +169,20 @@ hard-coded or defaulted; it only ever comes from the environment.
   registrations with `handlers.RequireAuth(...)`. `go.mod` gains the golang-jwt `require`, `.env.example`
   gains `JWT_SECRET`.
 
-The IR `roles` are surfaced as a generated constant (Python `ROLES` tuple, Go `Roles` slice) — an anchor
-for per-endpoint authorization, which lands once the IR carries required roles per endpoint. Emitted
-only when the IR declares at least one `auth: true` endpoint (both DB and non-DB backends);
-deterministic and offline — no token is signed or verified at generation time.
+The IR `roles` are surfaced as a generated constant (Python `ROLES` tuple, Go `Roles` slice). Emitted
+only when the IR declares at least one `auth: true` endpoint (both DB and non-DB backends); deterministic
+and offline — no token is signed or verified at generation time.
+
+### Per-endpoint role enforcement (R-243)
+
+An `ApiEndpoint` may declare `required_roles` (role ids). The guard then enforces that the verified
+token carries at least one of them, else **403**:
+
+- **Python:** `app/auth.py` gains a `require_roles(*required)` dependency factory (verify the token via
+  `require_auth`, then require the `roles` claim to intersect `required`); routes with roles declare
+  `dependencies=[Depends(require_roles("author"))]`.
+- **Go:** `RequireRoles(next, required...)` verifies the token (shared `verifyToken`) then checks the
+  `roles` claim via `hasAnyRole`; `main.go` wraps those endpoints with `handlers.RequireRoles(h, "…")`.
+
+`required_roles` implies `auth: true`, and each role must be a declared `Role` (`validate_ir` errors on
+an unknown role). Endpoints without roles keep the plain `require_auth`/`RequireAuth` guard.

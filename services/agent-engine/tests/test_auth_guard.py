@@ -72,7 +72,7 @@ class GoAuthTests(TestCase):
     def test_jwt_verification_and_dependency(self) -> None:
         auth = self.project.get("internal/handlers/auth.go").content
         self.assertIn('"github.com/golang-jwt/jwt/v5"', auth)
-        self.assertIn("jwt.Parse(tokenStr", auth)
+        self.assertIn("jwt.ParseWithClaims(", auth)
         self.assertIn('os.Getenv("JWT_SECRET")', auth)
         self.assertIn("SigningMethodHMAC", auth)  # reject non-HMAC tokens
         self.assertIn("github.com/golang-jwt/jwt/v5 v5.2.1", self.project.get("go.mod").content)

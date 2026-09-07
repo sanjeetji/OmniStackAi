@@ -36,8 +36,9 @@ def validate_ir(ir: ApplicationIR) -> tuple[Issue, ...]:
 
     issues: list[Issue] = []
     declared = {entity.name for entity in ir.entities}
+    role_ids = {role.id for role in ir.roles}
 
-    # Integrity: an API schema reference must name a declared entity.
+    # Integrity: an API schema reference must name a declared entity; a required role must be declared.
     for api in ir.apis:
         location = f"{api.method.value} {api.path}"
         for attribute, label in (
@@ -51,6 +52,16 @@ def validate_ir(ir: ApplicationIR) -> tuple[Issue, ...]:
                         Severity.ERROR,
                         "unknown_schema_reference",
                         f"{label} references undeclared entity {attribute!r}",
+                        location,
+                    )
+                )
+        for role in api.required_roles:
+            if role not in role_ids:
+                issues.append(
+                    Issue(
+                        Severity.ERROR,
+                        "unknown_role_reference",
+                        f"required_roles references undeclared role {role!r}",
                         location,
                     )
                 )

@@ -84,11 +84,14 @@ def _router_file(segment: str, apis: list[ApiEndpoint], repo_entities: frozenset
     models_used = sorted({w.entity for _, w in wirings if w is not None and w.op is Op.CREATE})
 
     seg_needs_auth = any(api.auth for api in apis)
+    uses_roles = any(api.required_roles for api in apis)
+    uses_auth_only = any(api.auth and not api.required_roles for api in apis)
     fastapi_import = "from fastapi import APIRouter, Depends, HTTPException" if seg_needs_auth else "from fastapi import APIRouter, HTTPException"
     header = [fastapi_import]
     if seg_needs_auth:
+        auth_names = [n for n, use in (("require_auth", uses_auth_only), ("require_roles", uses_roles)) if use]
         header.append("")
-        header.append("from app.auth import require_auth")
+        header.append(f"from app.auth import {', '.join(auth_names)}")
     if models_used:
         header.append("")
         header += [f"from app.models import {name}" for name in models_used]
@@ -101,7 +104,13 @@ def _router_file(segment: str, apis: list[ApiEndpoint], repo_entities: frozenset
         params = _path_params(api.path)
         auth = "required" if api.auth else "public"
         fn = _fn_name(api.method.value, api.path)
-        guard = ", dependencies=[Depends(require_auth)]" if api.auth else ""
+        if api.required_roles:
+            role_args = ", ".join(f'"{role}"' for role in api.required_roles)
+            guard = f", dependencies=[Depends(require_roles({role_args}))]"
+        elif api.auth:
+            guard = ", dependencies=[Depends(require_auth)]"
+        else:
+            guard = ""
         lines.append("")
         lines.append(f'@router.{api.method.value.lower()}("{api.path}"{guard})')
         if wiring is None:

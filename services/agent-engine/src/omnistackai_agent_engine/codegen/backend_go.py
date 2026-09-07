@@ -207,7 +207,10 @@ def _main_file(slug: str, apis: list[ApiEndpoint], *, has_db: bool = False) -> s
     lines.append("\t})")
     for api in apis:
         target = f"h.{_handler_name(api.method.value, api.path)}" if has_db else f"handlers.{_handler_name(api.method.value, api.path)}"
-        if api.auth:
+        if api.required_roles:
+            role_args = ", ".join(f'"{role}"' for role in api.required_roles)
+            target = f"handlers.RequireRoles({target}, {role_args})"
+        elif api.auth:
             target = f"handlers.RequireAuth({target})"
         lines.append(f'\tmux.HandleFunc("{api.method.value} {api.path}", {target})')
     lines.append('\taddr := ":8080"')

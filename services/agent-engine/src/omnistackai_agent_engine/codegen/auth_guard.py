@@ -55,7 +55,16 @@ def python_auth_file(ir: ApplicationIR) -> str:
         "    try:\n"
         "        return jwt.decode(token, _secret(), algorithms=[JWT_ALGORITHM])\n"
         "    except jwt.PyJWTError as error:\n"
-        '        raise HTTPException(status_code=401, detail="invalid_token") from error\n'
+        '        raise HTTPException(status_code=401, detail="invalid_token") from error\n\n\n'
+        "def require_roles(*required: str):\n"
+        '    """Dependency factory: verify the token, then require any one of `required` in its roles claim."""\n\n'
+        "    async def _guard(authorization: str | None = Header(default=None)) -> dict[str, Any]:\n"
+        "        claims = await require_auth(authorization)\n"
+        '        held = claims.get("roles") or []\n'
+        "        if not isinstance(held, list) or not set(held) & set(required):\n"
+        '            raise HTTPException(status_code=403, detail="forbidden")\n'
+        "        return claims\n\n"
+        "    return _guard\n"
     )
 
 
@@ -72,32 +81,71 @@ def go_auth_file(ir: ApplicationIR) -> str:
         "// Roles from the Application IR. Per-endpoint role enforcement can build on these and the\n"
         "// verified token claims.\n"
         f"var Roles = []string{{{roles}}}\n\n"
-        "// RequireAuth verifies a JWT (HS256) using JWT_SECRET from the environment: 401 on a missing\n"
-        "// or invalid token, 500 when JWT_SECRET is unset. The secret is never hard-coded.\n"
+        "// verifyToken verifies a JWT (HS256) using JWT_SECRET from the environment and returns its\n"
+        "// claims. On failure it returns the HTTP status and message to send (msg == \"\" means ok).\n"
+        "// The secret is never hard-coded.\n"
+        "func verifyToken(r *http.Request) (jwt.MapClaims, int, string) {\n"
+        '\tauth := r.Header.Get("Authorization")\n'
+        '\tif !strings.HasPrefix(auth, "Bearer ") {\n'
+        '\t\treturn nil, http.StatusUnauthorized, "unauthorized"\n'
+        "\t}\n"
+        '\tsecret := os.Getenv("JWT_SECRET")\n'
+        '\tif secret == "" {\n'
+        '\t\treturn nil, http.StatusInternalServerError, "auth_not_configured"\n'
+        "\t}\n"
+        "\tclaims := jwt.MapClaims{}\n"
+        '\t_, err := jwt.ParseWithClaims(strings.TrimPrefix(auth, "Bearer "), claims, func(t *jwt.Token) (any, error) {\n'
+        "\t\tif _, ok := t.Method.(*jwt.SigningMethodHMAC); !ok {\n"
+        "\t\t\treturn nil, jwt.ErrSignatureInvalid\n"
+        "\t\t}\n"
+        "\t\treturn []byte(secret), nil\n"
+        "\t})\n"
+        "\tif err != nil {\n"
+        '\t\treturn nil, http.StatusUnauthorized, "invalid_token"\n'
+        "\t}\n"
+        '\treturn claims, http.StatusOK, ""\n'
+        "}\n\n"
+        "// RequireAuth rejects a request whose JWT is missing or invalid.\n"
         "func RequireAuth(next http.HandlerFunc) http.HandlerFunc {\n"
         "\treturn func(w http.ResponseWriter, r *http.Request) {\n"
-        '\t\tauth := r.Header.Get("Authorization")\n'
-        '\t\tif !strings.HasPrefix(auth, "Bearer ") {\n'
-        '\t\t\thttp.Error(w, "unauthorized", http.StatusUnauthorized)\n'
-        "\t\t\treturn\n"
-        "\t\t}\n"
-        '\t\tsecret := os.Getenv("JWT_SECRET")\n'
-        '\t\tif secret == "" {\n'
-        '\t\t\thttp.Error(w, "auth_not_configured", http.StatusInternalServerError)\n'
-        "\t\t\treturn\n"
-        "\t\t}\n"
-        '\t\ttokenStr := strings.TrimPrefix(auth, "Bearer ")\n'
-        "\t\t_, err := jwt.Parse(tokenStr, func(t *jwt.Token) (any, error) {\n"
-        "\t\t\tif _, ok := t.Method.(*jwt.SigningMethodHMAC); !ok {\n"
-        "\t\t\t\treturn nil, jwt.ErrSignatureInvalid\n"
-        "\t\t\t}\n"
-        "\t\t\treturn []byte(secret), nil\n"
-        "\t\t})\n"
-        "\t\tif err != nil {\n"
-        '\t\t\thttp.Error(w, "invalid_token", http.StatusUnauthorized)\n'
+        "\t\tif _, status, msg := verifyToken(r); msg != \"\" {\n"
+        "\t\t\thttp.Error(w, msg, status)\n"
         "\t\t\treturn\n"
         "\t\t}\n"
         "\t\tnext(w, r)\n"
         "\t}\n"
+        "}\n\n"
+        "// RequireRoles verifies the JWT and requires any one of the given roles in its \"roles\" claim.\n"
+        "func RequireRoles(next http.HandlerFunc, required ...string) http.HandlerFunc {\n"
+        "\treturn func(w http.ResponseWriter, r *http.Request) {\n"
+        "\t\tclaims, status, msg := verifyToken(r)\n"
+        '\t\tif msg != "" {\n'
+        "\t\t\thttp.Error(w, msg, status)\n"
+        "\t\t\treturn\n"
+        "\t\t}\n"
+        "\t\tif !hasAnyRole(claims, required) {\n"
+        '\t\t\thttp.Error(w, "forbidden", http.StatusForbidden)\n'
+        "\t\t\treturn\n"
+        "\t\t}\n"
+        "\t\tnext(w, r)\n"
+        "\t}\n"
+        "}\n\n"
+        "func hasAnyRole(claims jwt.MapClaims, required []string) bool {\n"
+        '\traw, ok := claims["roles"].([]any)\n'
+        "\tif !ok {\n"
+        "\t\treturn false\n"
+        "\t}\n"
+        "\theld := map[string]bool{}\n"
+        "\tfor _, v := range raw {\n"
+        "\t\tif s, ok := v.(string); ok {\n"
+        "\t\t\theld[s] = true\n"
+        "\t\t}\n"
+        "\t}\n"
+        "\tfor _, want := range required {\n"
+        "\t\tif held[want] {\n"
+        "\t\t\treturn true\n"
+        "\t\t}\n"
+        "\t}\n"
+        "\treturn false\n"
         "}\n"
     )

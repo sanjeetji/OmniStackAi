@@ -247,6 +247,7 @@ class ApiEndpoint:
     request_schema: str | None = None
     response_schema: str | None = None
     error_schema: str | None = None
+    required_roles: tuple[str, ...] = ()
 
     def __post_init__(self) -> None:
         object.__setattr__(self, "method", _enum(self.method, HttpMethod, "api method"))
@@ -258,12 +259,15 @@ class ApiEndpoint:
             value = getattr(self, schema_name)
             if value is not None:
                 _entity_name(value, f"api {schema_name}")
+        object.__setattr__(self, "required_roles", _str_tuple(self.required_roles, "api required_roles"))
+        if self.required_roles and not self.auth:
+            raise InvalidIRError("an api endpoint with required_roles must require auth")
 
     def to_dict(self) -> dict[str, Any]:
         return {
             "method": self.method.value, "path": self.path, "auth": self.auth,
             "request_schema": self.request_schema, "response_schema": self.response_schema,
-            "error_schema": self.error_schema,
+            "error_schema": self.error_schema, "required_roles": list(self.required_roles),
         }
 
 
@@ -414,6 +418,7 @@ class ApplicationIR:
                     ApiEndpoint(
                         a["method"], a["path"], a.get("auth", True),
                         a.get("request_schema"), a.get("response_schema"), a.get("error_schema"),
+                        tuple(a.get("required_roles", ())),
                     )
                     for a in data.get("apis", ())
                 ),
