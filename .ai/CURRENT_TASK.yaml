@@ -1,7 +1,7 @@
 schema_version: 1
 task_id: R-232
 title: Customer project assembler — one IR into a customer-owned monorepo
-status: in_progress
+status: done
 phase: BASIC/MVP
 founder_stage: 0
 branch: main
@@ -75,13 +75,31 @@ model_tool_trace:
   cloud_calls: 0
   note: Deterministic; no model call. No cloud key set; cloud_calls zero.
 completion:
-  implementation_commit: null
-  verified_at: null
-  verification: []
-  acceptance_results: []
+  implementation_commit: cf28cb0f46ae1f66b9f87b59232eceb2a113b508
+  verified_at: "2026-09-06T23:45:00+05:30"
+  verification:
+    - command: task verify
+      result: pass
+      evidence: 169 agent-engine tests (6 new assembler tests incl. end-to-end materialize) plus all Stage 0 checks
+    - command: task agent-engine:lint
+      result: pass
+    - command: task security:quick
+      result: pass
+  acceptance_results:
+    - criterion: default_registry() returns an AdapterRegistry with the Next.js, Python, and Go adapters.
+      result: pass
+    - criterion: assemble_project selects targets from project_strategy, places web under apps/web and backend under services/api, documents unsupported targets, and returns one customer-monorepo GeneratedProject with root README/.gitignore.
+      result: pass
+    - criterion: Safe unique deterministic paths; pure function of the IR; standard-library only; no install/build/run/disk write.
+      result: pass
+    - criterion: The assembled project materializes via the Git service into one customer-owned repo with a single commit (verified in a temp dir).
+      result: pass
+  note: >-
+    End-to-end: one IR -> a 24-file customer monorepo (apps/web Next.js + services/api Go) -> an owned
+    Git repo, one commit. Deterministic; no model call; cloud_calls zero.
 blockers: []
 next_action: >-
-  Implement the assembler + default registry with offline tests (including end-to-end materialize via
-  the Git service); run the gates; record completion. Next real steps (sandbox/preview/deploy) need a
-  cloud/network environment.
-next_command: task agent-engine:test
+  One IR now becomes a complete customer-owned monorepo. Next real steps — sandbox run, instant browser
+  preview, deploy — need a cloud/network-capable environment (Tier 0: normal internet unlocks local
+  preview). Confirm the next Tracker ID / environment.
+next_command: task ai:status

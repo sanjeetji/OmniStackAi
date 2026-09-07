@@ -1,10 +1,10 @@
 # Current Handoff
 
-Task ID: R-231
+Task ID: R-232
 Status: done
 Phase: BASIC/MVP — Founder Stage 0
 Branch: `main` (the only branch; the GitHub default)
-Last verified implementation SHA: `f2027a6a7bc6bae37b14226838519c86657f8ff3`
+Last verified implementation SHA: `cf28cb0f46ae1f66b9f87b59232eceb2a113b508`
 
 ## Repo/workflow state
 
@@ -13,40 +13,42 @@ Last verified implementation SHA: `f2027a6a7bc6bae37b14226838519c86657f8ff3`
 - Every commit is authored solely by `sanjeetji <sk698166@gmail.com>`. Commit messages also carry a
   tooling-required `Co-Authored-By: Claude Opus 4.8` trailer; the owner may strip it from history.
 
-## Completed (R-231)
+## Completed (R-232) — one IR → a complete customer-owned monorepo
 
-- `application_ir.validate_ir(ir)` — semantic `Issue`s: unknown API schema reference = error;
-  web/admin/mobile strategy vs platform mismatch = warning; `has_errors()` helper. Construction checks
-  in `ir.py` are unchanged (this is additive).
-- `application_ir.normalize_ir(ir)` — canonical IR (platforms in enum order; roles/entities/apis/
-  screens/acceptance sorted; entity field order preserved); idempotent and lossless through `to_dict`.
-- `application_ir.example_ir(name)` / `EXAMPLES` — `rideshare-favourites`, `minimal-blog`; both
-  validate clean and generate via all three adapters.
+- `codegen.assemble_project(ir, registry=None)` assembles one Application IR into a single
+  `customer-monorepo` `GeneratedProject`: web (`web_strategy == nextjs`) under `apps/web`, backend
+  (`backend_strategy` go/python) under `services/api`, a root `README.md` (lists assembled apps and
+  anything not yet assembled — node backend, admin, mobile) and a root `.gitignore`.
+- `codegen.default_registry()` preloads the Next.js/Python/Go adapters.
+- **End-to-end proven:** one IR → `assemble_project` → `git_service.create_repository` produces a
+  24-file customer-owned monorepo repo (`apps/web` Next.js + `services/api` Go) in one commit.
 
 ## Verification
 
-- `task verify` — pass (163 agent-engine tests; 9 new). `task agent-engine:lint`, `task security:quick` — pass.
+- `task verify` — pass (169 agent-engine tests; 6 new). `task agent-engine:lint`, `task security:quick` — pass.
 - Compose unchanged; offline `task bootstrap` unchanged.
-- Tracker — R-231 (Product) at `Phase_Roadmap!A9:M9`; MVP total 126, Done 20; chart/styles intact.
+- Tracker — R-232 (Product) at `Phase_Roadmap!A9:M9`; MVP total 127, Done 21; chart/styles intact.
 
-## What exists now (product) — near-term offline builder pieces are COMPLETE
+## Product state — the full offline builder is complete
 
-- **Model fabric** (R-005..R-223): gateway, local Ollama + 5 cloud adapters, streaming, fallback +
-  circuit breaker, usage/cost accounting, static console + snapshot exporter.
-- **Builder** (R-225..R-231): Application IR (+ validator/normalizer/fixtures) → adapter contract →
-  Next.js + FastAPI + Go adapters (tri-target from one IR) → Git service (materialize to an owned repo).
+`prompt/spec → Application IR (+ validate/normalize/fixtures) → adapters (Next.js web + FastAPI + Go)
+→ customer-project assembler → Git service → a customer-owned monorepo repository.` Plus the model
+fabric (gateway, local + 5 cloud adapters, streaming, fallback+breaker, cost accounting, console).
+21 tracker tasks Done; 0 cloud calls; PostgreSQL/Compose untouched.
 
-## Next action (needs a cloud/network-capable environment)
+## Next action — the next leap needs a network/cloud-capable environment
 
-The remaining builder steps require real runtime/infra and cannot be done in this offline sandbox:
-1. **Sandbox/runtime provider + instant browser preview** of a generated app (Brief §15/§51), then
-   **deploy**. This is the next big UX leap and the point where generated apps actually run.
+Everything buildable/verifiable offline is done. The next real steps require running generated code:
+1. **Sandbox/runtime + instant browser preview** of a generated app (Brief §15/§51), then **deploy**.
+   - **Tier 0 (free):** normal internet (this Mac in a real Terminal, or the sandbox network unblocked)
+     → install a generated Next.js app and preview locally at `http://127.0.0.1:3000`.
+   - **Tier 2 (paid, productized):** a sandbox provider (E2B/Daytona/Fly) + a host (Vercel/Fly) + API
+     tokens (as secret references) for hosted preview/deploy.
 2. **R-224 Next.js console upgrade** — needs npm registry access.
 Native mobile / device-cloud stays deferred per Brief §25/§91 until web/backend stability.
 
-To continue offline instead, options include: an admin (Next.js) adapter, a React Native/Expo web
-adapter, richer IR (flows/integrations/build_matrix), or a customer-repo scaffolder that assembles
-multiple targets into one monorepo via the Git service.
+Offline alternatives if preferred: admin (Next.js) adapter, richer IR (flows/integrations/build
+matrix), or a Node/Express backend adapter.
 
 ## Next command
 
