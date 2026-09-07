@@ -5,9 +5,9 @@ Last updated: 2026-09-06T10:46:19+05:30 by Codex (GPT-5)
 Stage 0 (Founder Build Sequence, Brief Section 91) — BASIC/MVP
 
 ## Last Completed Task
-Tracker ID: R-229 — Python (FastAPI) backend adapter (IR -> backend) — DONE, `task verify` (147
-agent-engine tests, 7 new) passing; one IR now emits web + backend together; implementation checkpoint
-`04f1e6ad03ff52522efda81845ea3ee73e736a7d` (R-224 Next.js console upgrade deferred — env-blocked)
+Tracker ID: R-230 — Go backend adapter (IR -> Go net/http service) — DONE, `task verify` (154
+agent-engine tests, 7 new) passing; one IR now emits web + Python + Go; implementation checkpoint
+`e2515a8f1b0314ec287a02cdaf25e72a17b9da3f` (R-224 Next.js console upgrade deferred — env-blocked)
 
 ## Workflow note
 Founder consolidated all work onto `main` (per-task branches deleted; `main` is the default). Continue
@@ -37,7 +37,7 @@ R-221 = cross-provider fallback (done); R-222 = platform console slice (done); R
 fallback wiring (done); R-224 = Next.js console upgrade (deferred — environment-blocked).
 
 ## Next Up (queued, in order)
-1. R-230 — Go backend framework adapter (offline-doable; another target from the same IR), OR
+1. R-231 — IR validator/normalizer + example IR fixtures (offline-doable), OR
 2. Sandbox/runtime provider + instant browser preview + deploy (need a cloud/network environment)
 3. R-224 — Next.js console upgrade — resume in an environment with reliable npm registry access
 4. R-010 — Native iOS Agent (backlog; deferred until web/backend stability per Brief 25/91)

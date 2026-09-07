@@ -1,7 +1,7 @@
 schema_version: 1
 task_id: R-230
 title: Go backend framework adapter — generate a Go net/http service from the IR
-status: in_progress
+status: done
 phase: BASIC/MVP
 founder_stage: 0
 branch: main
@@ -79,12 +79,31 @@ model_tool_trace:
   cloud_calls: 0
   note: Deterministic codegen; no model call. No cloud key set; cloud_calls zero.
 completion:
-  implementation_commit: null
-  verified_at: null
-  verification: []
-  acceptance_results: []
+  implementation_commit: e2515a8f1b0314ec287a02cdaf25e72a17b9da3f
+  verified_at: "2026-09-06T22:40:00+05:30"
+  verification:
+    - command: task verify
+      result: pass
+      evidence: 154 agent-engine tests (7 new go-adapter tests) plus all Stage 0 checks
+    - command: task agent-engine:lint
+      result: pass
+    - command: task security:quick
+      result: pass
+  acceptance_results:
+    - criterion: GoBackendAdapter implements FrameworkAdapter (backend-go) and returns a coherent Go net/http GeneratedProject.
+      result: pass
+    - criterion: Entities -> Go structs (json tags, optional pointers); IR APIs -> Go 1.22 method+pattern routes grouped by segment with r.PathValue params and 501 scaffolds; main registers routes + health.
+      result: pass
+    - criterion: Safe deterministic paths; pure function of the IR; standard-library only (platform + generated Go); no install/build/run/disk write.
+      result: pass
+    - criterion: Offline tests cover emission, entity->struct mapping, route registration/params, and registry wiring.
+      result: pass
+  note: >-
+    Tri-target proven: one IR -> 12-file Next.js + 11-file FastAPI + 8-file Go service. Deterministic;
+    no model call; cloud_calls zero.
 blockers: []
 next_action: >-
-  Implement the Go backend adapter and offline emission tests; run the gates; record completion. Then
-  one IR emits web + Python + Go. Next real steps (sandbox/preview/deploy) need a cloud/network env.
-next_command: task agent-engine:test
+  One IR now emits web + Python + Go. Next real steps — sandbox run, instant browser preview, deploy,
+  and the deferred Next.js console upgrade — need a cloud/network-capable environment. An IR
+  validator/normalizer + example fixtures is another offline-doable option. Confirm the next Tracker ID.
+next_command: task ai:status

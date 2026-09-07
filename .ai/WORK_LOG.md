@@ -306,6 +306,17 @@
   backend. `task verify` green. Tracker row R-229 (Product) inserted at row 9; MVP total 124 / Done 18.
 - Implementation checkpoint `04f1e6ad03ff52522efda81845ea3ee73e736a7d`.
 
+## 2026-09-06 — R-230
+
+- Added the Go backend adapter (GoBackendAdapter, target backend-go): entities -> Go structs (json
+  tags, optional pointers), IR APIs -> Go 1.22 method+pattern routes grouped by resource with
+  r.PathValue params and 501 scaffolds, main.go with routes + /healthz + ListenAndServe, go.mod
+  (go 1.22), README/.gitignore/.env.example. Generated Go and platform side are standard-library only.
+- Registered via AdapterRegistry. 7 new offline tests (154 total). Proven tri-target: one IR ->
+  12-file Next.js + 11-file FastAPI + 8-file Go service. `task verify` green.
+- Committed directly to main (only branch). Tracker row R-230 (Product) inserted at row 9; MVP total
+  125 / Done 19. Implementation checkpoint `e2515a8f1b0314ec287a02cdaf25e72a17b9da3f`.
+
 ## 2026-09-06 — R-224 (deferred)
 
 - Attempted the Next.js console upgrade. `pnpm install` for next@15.5.4 timed out fetching the native
