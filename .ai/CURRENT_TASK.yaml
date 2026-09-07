@@ -1,25 +1,25 @@
 schema_version: 1
-task_id: R-233
-title: Runtime & deployment provider layer (Tier 0/1 local now; Tier 2/3 add-keys)
-status: done
+task_id: R-234
+title: Tier switch + cloud provider drivers (Tier 0/1 local run; Tier 2 all providers)
+status: in_progress
 phase: BASIC/MVP
 founder_stage: 0
 branch: main
 goal: >-
-  Wire the preview/deploy system behind platform-owned provider contracts (Brief 51 SandboxProvider,
-  75 RuntimeProvider/DeploymentProvider) so it works locally now (Tier 0/1, no keys) and cloud
-  providers plug in by adding a key (Tier 2/3). Add a LocalRuntimeProvider that produces deterministic
-  preview plans per target (Next.js/FastAPI/Go: install + run command + local URL), an env-driven
-  registry that registers local always and each key-present cloud sandbox/deploy provider, and env
-  placeholders + docs. Deterministic and offline: plans are constructed and asserted; nothing is
-  installed, run, or deployed here (execution is an opt-in Tier-0 step on a network machine).
+  Make the runtime/deploy layer switchable by a single OMNISTACKAI_TIER knob and give every declared
+  provider a driver that produces a real command plan: Tier 0/1 run/preview a generated app locally
+  (executor included), Tier 2 deploy to vercel/render/netlify/fly and run in an e2b/daytona/fly-machines
+  sandbox — each activated by its key. Add task commands (platform:status, preview, deploy) so changing
+  the tier/selection reflects in behavior. Deterministic and offline: plans are asserted; no key value
+  ever appears in a plan/log; nothing is run or deployed by task verify (execution is opt-in on a
+  network machine with the provider CLI + key).
 source:
   tracker_sheet: Phase_Roadmap
   tracker_row: reconstructed; new IDs continue after the workbook backlog's R-010..R-219
-  brief_sections: [15, 51, 55, 64, 75, 87, 74, 77, 91, 92]
+  brief_sections: [15, 44, 51, 55, 64, 69, 70, 75, 87, 74, 77, 91, 92]
   founder_note: >-
-    Founder asked to wire Tier 0-3 so keys just plug in, with Tier 0/1 (local) working now. Committed
-    directly to main. Author solely sanjeetji; tooling adds a Co-Authored-By trailer.
+    Founder chose to implement all cloud providers and a single tier switch. Committed directly to main.
+    Author solely sanjeetji; tooling adds a Co-Authored-By trailer.
 project_profile:
   repository: platform_modular_monorepo
   service: python_agent_engine
@@ -27,8 +27,12 @@ project_profile:
   model_routing: balanced
 complexity: L2
 expected_impact:
-  - services/agent-engine/src/omnistackai_agent_engine/runtime/** (new package)
-  - services/agent-engine/tests/test_runtime.py
+  - services/agent-engine/src/omnistackai_agent_engine/runtime/drivers.py
+  - services/agent-engine/src/omnistackai_agent_engine/runtime/tier.py
+  - services/agent-engine/src/omnistackai_agent_engine/runtime/bootstrap.py
+  - services/agent-engine/src/omnistackai_agent_engine/runtime/local.py
+  - services/agent-engine/src/omnistackai_agent_engine/runtime/__init__.py
+  - services/agent-engine/tests/test_tier_drivers.py
   - .env.example
   - Taskfile.yml
   - scripts/agent-engine.sh
@@ -46,31 +50,32 @@ allowed_paths:
   - services/agent-engine/**
 must_not_change:
   - PostgreSQL as the control-plane database or the existing schema
-  - the model-gateway, IR, codegen, and git-service public behavior (additive package)
+  - the model-gateway, IR, codegen, git-service public behavior (additive)
   - local Compose services or infrastructure; the Section 74 top-level contract; the offline bootstrap
   - the network-independence of static task verify
 must_not_do:
-  - install, run, or deploy anything in this task or in task verify (execution is an opt-in Tier-0 step)
-  - add an external Python dependency; choose or call any paid cloud service; store secrets
-    (keys are read from env only, never logged/stored/shown; .env.example holds placeholders only)
+  - install, run, or deploy anything in task verify (execution is opt-in on a network machine)
+  - put a key value into any command/plan/log; add an external Python dependency; choose a paid service
 acceptance:
-  - RuntimeProvider and DeploymentProvider are runtime-checkable contracts; a LocalRuntimeProvider
-    (id "local") returns deterministic PreviewPlans (install + run Command + local URL) for the
-    nextjs-web, backend-python, and backend-go targets, and raises a stable error for unsupported ones.
-  - Cloud sandbox providers (e2b, daytona, fly-machines) and deploy providers (vercel, fly, render,
-    netlify) are declared with a key env var; build_runtime_from_env / build_deploy_from_env register
-    local always and mark each cloud provider active only when its key is present; selecting a cloud
-    provider without its key raises a clear error; default runtime selection is local, default deploy
-    is none.
-  - No key is ever logged/stored/shown; .env.example gains placeholders (names only) and tier/selector
-    docs; task verify stays green and network-independent.
-  - Standard-library offline tests cover local plans per target, unsupported-target error, env
-    registration with/without keys, unknown-selector errors, and the no-secret guarantee.
+  - OMNISTACKAI_TIER (0/1/2) resolves default runtime/deploy selections; explicit
+    OMNISTACKAI_RUNTIME_PROVIDER / OMNISTACKAI_DEPLOY_PROVIDER override; tier 0/1 force local runtime and
+    no deploy; tier 2 permits the cloud selections that have keys.
+  - Every declared provider has a driver: deploy providers (vercel/render/netlify/fly) produce a
+    DeployPlan of their official-CLI commands; sandbox providers (e2b/daytona/fly-machines) produce a
+    PreviewPlan; the key is read from env and NEVER placed in a command or shown in a plan.
+  - resolve_platform() returns the active runtime + deploy providers and a platform_status() summary
+    (tier, selected providers, which providers have keys, what is missing); selecting a cloud provider
+    without its key or at the wrong tier raises a clear error.
+  - run_preview / run_deploy executors run a plan (opt-in). task platform:status, task preview, and task
+    deploy expose this; task verify stays green and network-independent.
+  - Standard-library offline tests cover tier resolution, per-provider driver plans, no-key-in-plan,
+    activation/selection errors, and the status summary.
 required_gates:
   - impact_analysis
-  - local_preview_plan_tests
-  - env_registration_and_selection_tests
-  - no_secret_leak_test
+  - tier_resolution_tests
+  - per_provider_driver_plan_tests
+  - no_key_in_plan_test
+  - status_and_selection_error_tests
   - python_compile_test
   - vendor_import_exclusion
   - secret_exclusion_check
@@ -85,36 +90,12 @@ model_tool_trace:
   cloud_calls: 0
   note: Deterministic; no model call, no run/deploy. No cloud key set; cloud_calls zero.
 completion:
-  implementation_commit: ae11bac55fb9d865dbc6281c26f7df260edc3477
-  verified_at: "2026-09-07T00:10:00+05:30"
-  verification:
-    - command: task verify
-      result: pass
-      evidence: 181 agent-engine tests (12 new runtime/deploy tests) plus all Stage 0 checks
-    - command: task agent-engine:preview-plan -- nextjs-web
-      result: pass
-      evidence: printed the local Tier-0 plan (pnpm install; pnpm dev; http://127.0.0.1:3000)
-    - command: task agent-engine:lint
-      result: pass
-    - command: task security:quick
-      result: pass
-    - command: task env:check
-      result: pass
-  acceptance_results:
-    - criterion: RuntimeProvider/DeploymentProvider contracts; LocalRuntimeProvider returns deterministic preview plans per target and errors on unsupported ones.
-      result: pass
-    - criterion: Cloud sandbox/deploy providers declared with a key env; build_*_from_env register local always, activate cloud by key presence, default runtime=local/deploy=none, and error on selecting a keyless provider.
-      result: pass
-    - criterion: No key is logged/stored/shown; .env.example placeholders + tier selectors added; task verify stays green and network-independent.
-      result: pass
-    - criterion: Offline tests cover local plans, unsupported target, env registration with/without keys, unknown selectors, and no-secret guarantee.
-      result: pass
-  note: >-
-    Tier 0/1 (local) works now; Tier 2/3 activate by adding a key. No run/deploy performed; no model
-    call; cloud_calls zero.
+  implementation_commit: null
+  verified_at: null
+  verification: []
+  acceptance_results: []
 blockers: []
 next_action: >-
-  The runtime/deploy layer is wired (Tier 0/1 local works; Tier 2/3 add-keys). Next: actually run a
-  Tier-0 preview of a generated app (needs a network-capable machine), or build a concrete cloud
-  provider driver (e.g. Vercel deploy) once a key is provided. Confirm environment / next Tracker ID.
-next_command: task ai:status
+  Implement the tier switch, per-provider drivers, executors, and commands with offline tests; run the
+  gates; record completion. Live-verify a cloud provider once its key is supplied.
+next_command: task agent-engine:test

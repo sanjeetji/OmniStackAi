@@ -137,6 +137,11 @@ tasks:
     cmds:
       - bash scripts/agent-engine.sh preview-plan {{.CLI_ARGS}}
 
+  platform:status:
+    desc: Show the active tier and resolved runtime/deploy providers (reads .env)
+    cmds:
+      - bash scripts/agent-engine.sh platform-status
+
   console:snapshot:
     desc: Refresh the console's metadata-only model/cost overview snapshot
     cmds:

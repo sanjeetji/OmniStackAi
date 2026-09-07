@@ -96,8 +96,18 @@ print(f"Then open: {plan.url}")
 print("Run these in the generated project on a machine with the toolchain + internet.")
 PY
     ;;
+  platform-status)
+    configure_python
+    export OMNISTACKAI_TIER="$(config_value OMNISTACKAI_TIER 0)"
+    export OMNISTACKAI_RUNTIME_PROVIDER="$(config_value OMNISTACKAI_RUNTIME_PROVIDER local)"
+    export OMNISTACKAI_DEPLOY_PROVIDER="$(config_value OMNISTACKAI_DEPLOY_PROVIDER none)"
+    for key_name in E2B_API_KEY DAYTONA_API_KEY FLY_API_TOKEN VERCEL_TOKEN RENDER_API_KEY NETLIFY_AUTH_TOKEN; do
+      export "$key_name"="$(config_value "$key_name" '')"
+    done
+    PYTHONPATH="$source_root" python3 -c "from omnistackai_agent_engine.runtime import format_status; print(format_status())"
+    ;;
   *)
-    printf 'Usage: %s {lint|test|ollama-verify|gateway-run|preview-plan [target]}\n' "$0"
+    printf 'Usage: %s {lint|test|ollama-verify|gateway-run|preview-plan [target]|platform-status}\n' "$0"
     exit 2
     ;;
 esac

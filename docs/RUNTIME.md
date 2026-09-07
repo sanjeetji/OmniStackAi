@@ -37,15 +37,42 @@ task agent-engine:preview-plan -- nextjs-web
 cd apps/web && pnpm install && pnpm dev     # -> http://127.0.0.1:3000
 ```
 
-## Turn on a cloud tier later (Tier 2/3)
+## Switching tiers — one knob (R-234)
 
-1. Put the key in your environment (e.g. `E2B_API_KEY=...` or `VERCEL_TOKEN=...`) — `.env.example`
-   lists the names.
-2. Select it: `OMNISTACKAI_RUNTIME_PROVIDER=e2b` and/or `OMNISTACKAI_DEPLOY_PROVIDER=vercel`.
+`OMNISTACKAI_TIER` is the single switch; change it in `.env` and the resolved providers change:
 
-That is all — the platform picks the provider up through the registry. The provider *drivers*
-(actually calling E2B/Vercel/etc.) are the next Tracker IDs; this task wires the contracts, the local
-tier, and the key-activated selection so nothing else needs to change when a driver lands.
+- `OMNISTACKAI_TIER=0` or `1` → runtime `local`, no deploy (free; runs on your Mac / a Codespace).
+- `OMNISTACKAI_TIER=2` → uses the cloud selections `OMNISTACKAI_RUNTIME_PROVIDER` (sandbox) and
+  `OMNISTACKAI_DEPLOY_PROVIDER` (host), each of which must have its key set.
+
+See what's active at any time:
+
+```
+task platform:status
+# Tier:         2
+# Runtime:      e2b
+# Deploy:       vercel
+# Sandbox keys: e2b
+# Deploy keys:  vercel
+```
+
+`resolve_platform()` returns the resolved runtime + deploy provider objects; selecting a cloud provider
+without its key (or at tier 0/1) raises a clear error.
+
+## Provider drivers (R-234)
+
+Every provider has a driver that produces a real command plan; the key is read from the environment by
+the CLI at run time and never appears in a plan:
+
+- **Deploy** (`DeployPlan` via `run_deploy`): `vercel` (`vercel deploy --prod`), `netlify`
+  (`netlify deploy --build --prod`), `render` (`render deploys create --wait`), `fly`
+  (`fly launch` + `fly deploy`).
+- **Sandbox** (`PreviewPlan`): `e2b`, `daytona`, `fly-machines` — reuse the target's run commands and
+  report the provider's URL; the provider CLI/SDK provisions the sandbox and syncs files at run time.
+
+Turn a cloud tier on: (1) put the key in `.env` (`VERCEL_TOKEN=…`, `E2B_API_KEY=…`, …); (2) set
+`OMNISTACKAI_TIER=2` and the selection(s). The exact CLI flags follow each provider's current CLI —
+confirm on first live run (`run_preview`/`run_deploy` execute the plan on a machine with the CLI + key).
 
 > Free-tier note: local is free forever; Codespaces/Vercel/Render/Netlify/Neon have **recurring
 > monthly** free tiers; E2B/Fly/Railway/cloud credits are typically **one-time** trials. Terms change —

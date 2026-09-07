@@ -18,11 +18,28 @@ from .errors import (
     RuntimeSelectionError,
     UnsupportedRuntimeTargetError,
 )
+from .drivers import (
+    CloudDeployProvider,
+    CloudSandboxProvider,
+    deploy_driver,
+    run_deploy,
+    sandbox_driver,
+)
 from .local import LOCAL_PROVIDER_ID, LocalRuntimeProvider, run_preview
 from .providers import DEPLOY_SPECS, RUNTIME_SPECS, ProviderSpec
+from .tier import (
+    VALID_TIERS,
+    PlatformSetup,
+    format_status,
+    platform_status,
+    resolve_platform,
+    resolve_tier,
+)
 
 __all__ = [
     "Command",
+    "CloudDeployProvider",
+    "CloudSandboxProvider",
     "DEPLOY_SPECS",
     "DeployPlan",
     "DeploySelectionError",
@@ -30,6 +47,7 @@ __all__ = [
     "DeploymentProvider",
     "LOCAL_PROVIDER_ID",
     "LocalRuntimeProvider",
+    "PlatformSetup",
     "PreviewPlan",
     "PreviewStep",
     "ProviderSpec",
@@ -39,7 +57,15 @@ __all__ = [
     "RuntimeSelectionError",
     "RuntimeSetup",
     "UnsupportedRuntimeTargetError",
+    "VALID_TIERS",
     "build_deploy_from_env",
     "build_runtime_from_env",
+    "deploy_driver",
+    "format_status",
+    "platform_status",
+    "resolve_platform",
+    "resolve_tier",
+    "run_deploy",
     "run_preview",
+    "sandbox_driver",
 ]

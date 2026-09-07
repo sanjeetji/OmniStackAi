@@ -33,9 +33,11 @@ class DeploySetup:
     local: LocalRuntimeProvider = field(default_factory=LocalRuntimeProvider)
 
 
-def build_runtime_from_env() -> RuntimeSetup:
+def build_runtime_from_env(selection: str | None = None) -> RuntimeSetup:
     active = tuple(name for name, spec in sorted(RUNTIME_SPECS.items()) if _key_present(spec.key_env))
-    selection = (os.environ.get("OMNISTACKAI_RUNTIME_PROVIDER", "local") or "local").strip().lower()
+    if selection is None:
+        selection = os.environ.get("OMNISTACKAI_RUNTIME_PROVIDER", "local")
+    selection = (selection or "local").strip().lower()
     if selection in ("", LOCAL_PROVIDER_ID):
         selected = LOCAL_PROVIDER_ID
     elif selection in RUNTIME_SPECS:
@@ -51,9 +53,11 @@ def build_runtime_from_env() -> RuntimeSetup:
     return RuntimeSetup(LocalRuntimeProvider(), active, selected)
 
 
-def build_deploy_from_env() -> DeploySetup:
+def build_deploy_from_env(selection: str | None = None) -> DeploySetup:
     active = tuple(name for name, spec in sorted(DEPLOY_SPECS.items()) if _key_present(spec.key_env))
-    selection = (os.environ.get("OMNISTACKAI_DEPLOY_PROVIDER", "none") or "none").strip().lower()
+    if selection is None:
+        selection = os.environ.get("OMNISTACKAI_DEPLOY_PROVIDER", "none")
+    selection = (selection or "none").strip().lower()
     if selection in ("", "none"):
         selected: str | None = None
     elif selection in DEPLOY_SPECS:
