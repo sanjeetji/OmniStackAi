@@ -147,6 +147,11 @@ tasks:
     cmds:
       - bash scripts/agent-engine.sh platform-status
 
+  builder:demo:
+    desc: Generate a real customer app+repo from an example IR and show the result (CLI_ARGS - example [out-dir])
+    cmds:
+      - bash scripts/builder-demo.sh {{.CLI_ARGS}}
+
   console:snapshot:
     desc: Refresh the console's metadata-only model/cost overview snapshot
     cmds:
