@@ -128,3 +128,27 @@ Every query **value** is parameterized (`%s` for psycopg, `$N` for pgx) — no v
 string-interpolated into SQL; only fixed IR-derived table/column identifiers appear inline. An entity
 with only an `id` column creates via `DEFAULT VALUES`. Pure and deterministic — nothing connects to or
 queries a database. The R-237 edit loop diffs the repositories when the IR entities change.
+
+## Route wiring — handlers call the repositories (R-240)
+
+`codegen/route_wiring.py` connects the generated HTTP handlers to the R-239 data-access layer, but only
+for the **unambiguous CRUD shapes** — so the platform never emits plausible-but-wrong behaviour. An
+endpoint's entity comes from its `response_schema` (else `request_schema`); the operation is inferred:
+
+| Endpoint shape | Wired to |
+|----------------|----------|
+| `GET /things` (no path param), entity known | `list_*` → 200 JSON array |
+| `GET /things/{id}` (single param) | `get_*` → 200, or 404 |
+| `POST /things` with a `request_schema` (no param) | `create_*` from the body → 201 |
+| `DELETE /things/{id}` (single param) | `delete_*` → 204, or 404 |
+| anything else (sub-collections, multi-param, custom) | left as a labelled `501` scaffold |
+
+- **Python (FastAPI):** wired routes `import` the repository/model and `await` the repository call;
+  create takes a Pydantic body (`payload.model_dump()`). Unwired routes keep the `501` scaffold.
+- **Go:** handlers become methods on a `Handlers` struct holding a `*sql.DB` (`internal/handlers/
+  handlers.go` with a `New` constructor and a `writeJSON` helper); `main.go` calls `store.Open()` and
+  registers `h.<Handler>`. Wired methods call the `store`, decode the body into `models.<Entity>` for
+  create, and return the right status; unwired ones stay `501`.
+
+Emitted only when the IR has entities and `database_strategy == postgres` (otherwise backends keep the
+plain scaffold handlers, unchanged). Deterministic and offline — nothing runs.

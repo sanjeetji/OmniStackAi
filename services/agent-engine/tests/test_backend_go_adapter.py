@@ -91,11 +91,11 @@ class GoBackendAdapterTests(TestCase):
         self.assertIn("internal/handlers/favourites.go", paths)
         self.assertIn("internal/handlers/drivers.go", paths)
         fav = self.project.get("internal/handlers/favourites.go").content
-        self.assertIn("func PostFavouritesDriversDriverId(w http.ResponseWriter, r *http.Request)", fav)
-        self.assertIn('r.PathValue("driverId")', fav)
+        # POST /favourites/drivers/{driverId} has no unambiguous entity mapping -> stays a 501 method scaffold
+        self.assertIn("func (h *Handlers) PostFavouritesDriversDriverId(w http.ResponseWriter, r *http.Request)", fav)
         self.assertIn("http.StatusNotImplemented", fav)
         main = self.project.get("main.go").content
-        self.assertIn('mux.HandleFunc("POST /favourites/drivers/{driverId}", handlers.PostFavouritesDriversDriverId)', main)
+        self.assertIn('mux.HandleFunc("POST /favourites/drivers/{driverId}", h.PostFavouritesDriversDriverId)', main)
         self.assertIn('mux.HandleFunc("GET /healthz"', main)
         self.assertIn('"rideshare-favourites/internal/handlers"', main)
 

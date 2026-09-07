@@ -1,29 +1,28 @@
 schema_version: 1
-task_id: R-239
-title: Data-access/repository layer for the generated backends (reads/writes the IR tables)
+task_id: R-240
+title: Route wiring — generated handlers call the repository layer (real CRUD)
 status: done
 phase: BASIC/MVP
 founder_stage: 0
 branch: main
 goal: >-
-  Turn the R-238 schema into a usable persistence layer (Brief 9/34/42): generate a per-entity
-  data-access layer for both backends so the generated code can read and write the tables. Python
-  (FastAPI) gets app/db.py (an async psycopg connection helper reading DATABASE_URL) plus
-  app/repositories/<entity>.py with list/get/create/delete using parameterized SQL; Go gets
-  internal/store/store.go (a database/sql opener) plus internal/store/<entity>.go with
-  List/Get/Create/Delete scanning into the generated model structs. Values are always parameterized
-  (never string-interpolated); table/column identifiers come from the IR. Emitted only when the IR has
-  entities and database_strategy=postgres, alongside the migration. Pure, deterministic, offline (emit
-  files, assert contents) — no DB connection, no query executed, no network. The R-237 edit loop diffs
-  the repositories when the IR entities change.
+  Turn the generated backends' 501 stub handlers into working CRUD over the R-239 data-access layer
+  (Brief 9/27/34/42), but only for the unambiguous endpoint shapes so the platform never emits
+  plausible-but-wrong behavior. An endpoint's entity is taken from response_schema (else request_schema);
+  the operation is inferred from method + path: GET collection -> list, GET /x/{id} (single param) ->
+  get, POST with a request_schema (no param) -> create, DELETE /x/{id} -> delete; everything else stays
+  a labelled 501 scaffold. Python routers import the repository/model and await the call (create takes a
+  Pydantic body); Go handlers become methods on a Handlers struct holding *sql.DB, main opens
+  store.Open(), and wired methods call the store. Emitted only when the IR has entities and
+  database_strategy=postgres; non-DB backends keep the plain scaffolds unchanged. Deterministic and
+  offline; nothing runs; the R-237 edit loop diffs the wiring when the IR changes.
 source:
   tracker_sheet: Phase_Roadmap
   tracker_row: reconstructed; new IDs continue after the workbook backlog's R-010..R-219
-  brief_sections: [9, 34, 35, 42, 74, 77, 83, 84, 85, 90, 92]
+  brief_sections: [9, 27, 34, 35, 42, 74, 77, 83, 84, 85, 92]
   founder_note: >-
-    Founder approved continuing after R-238; the data-access layer makes the generated backend actually
-    use the schema. Committed directly to main; author solely sanjeetji; tooling adds a Co-Authored-By
-    trailer.
+    Founder approved continuing after R-239; wiring the handlers makes the generated API actually serve
+    the tables. Committed directly to main; author solely sanjeetji; tooling adds a Co-Authored-By trailer.
 project_profile:
   repository: platform_modular_monorepo
   service: python_agent_engine
@@ -31,13 +30,13 @@ project_profile:
   model_routing: balanced
 complexity: L2
 expected_impact:
-  - services/agent-engine/src/omnistackai_agent_engine/codegen/data_access.py
-  - services/agent-engine/src/omnistackai_agent_engine/codegen/schema_sql.py
+  - services/agent-engine/src/omnistackai_agent_engine/codegen/route_wiring.py
   - services/agent-engine/src/omnistackai_agent_engine/codegen/backend_python.py
   - services/agent-engine/src/omnistackai_agent_engine/codegen/backend_go.py
-  - services/agent-engine/src/omnistackai_agent_engine/codegen/__init__.py
-  - services/agent-engine/tests/test_data_access.py
+  - services/agent-engine/tests/test_route_wiring.py
+  - services/agent-engine/tests/test_backend_go_adapter.py
   - docs/CODEGEN.md
+  - docs/PROGRESS.md
   - portable state, changelog, handoff, task doc, and tracker evidence
 allowed_paths:
   - .ai/**
@@ -48,34 +47,33 @@ allowed_paths:
   - services/agent-engine/**
 must_not_change:
   - PostgreSQL as the control-plane database or the platform's own schema/migrations
-  - the ModelProvider/gateway, IR, runtime, verify, edit public behavior (additive)
-  - previously emitted backend files other than requirements.txt / go.mod (which gain a DB dependency)
+  - the ModelProvider/gateway, IR, runtime, verify, edit, data-access public behavior (additive)
+  - non-DB backend output (free-function scaffold handlers stay unchanged)
   - local Compose services or infrastructure; the Section 74 top-level contract; the offline bootstrap
   - the network-independence of static task verify
 must_not_do:
-  - connect to or query any database; execute SQL; make a network call
-  - string-interpolate a query VALUE (values must be parameterized); add a platform Python dependency;
-    import a vendor SDK; put a secret anywhere (DATABASE_URL default is a local placeholder)
+  - connect to or query any database; execute a handler; make a network call
+  - wire an ambiguous endpoint (sub-collection / multi-param / custom) — leave those as 501
+  - add a platform Python dependency; import a vendor SDK; put a secret anywhere
 acceptance:
-  - For an IR with entities + postgres, the Python backend emits app/db.py and
-    app/repositories/<entity>.py per entity (list/get/create/delete), and requirements.txt gains psycopg;
-    the Go backend emits internal/store/store.go and internal/store/<entity>.go per entity, and go.mod
-    gains the pgx require.
-  - Repository SQL uses parameterized placeholders for all values (%s / $N); the table name and column
-    names are fixed identifiers derived from the IR; an entity with only an id column still creates via
-    DEFAULT VALUES.
-  - Go store functions scan into the generated model struct fields (matching the model field names);
-    the module import path matches go.mod.
-  - Nothing is emitted when the IR has no entities or database_strategy != postgres; no previously
-    emitted file (other than requirements.txt / go.mod) changes; output is byte-stable.
-  - Standard-library offline tests cover emission + gating, parameterization (no value interpolation),
-    per-entity files, the id-only DEFAULT VALUES case, and the dependency additions.
+  - wire_endpoint maps only the unambiguous CRUD shapes (list/get/create/delete) and returns None for
+    everything else; the entity comes from response_schema (else request_schema) and must be a known
+    repository entity.
+  - Python wired routes import the repository (and the model for create) and await the repository call;
+    create uses payload.model_dump(); unwired routes keep status_code=501. Generated routers parse as
+    valid Python.
+  - Go handlers become methods on a Handlers struct with *sql.DB (internal/handlers/handlers.go with New
+    + writeJSON); main.go opens store.Open() and registers h.<Handler>; wired methods call the store and
+    decode models.<Entity> for create; unwired stay 501. Non-DB Go backends keep free-function scaffolds.
+  - Only emitted when entities + postgres; deterministic and byte-stable; nothing runs.
+  - Standard-library offline tests cover the wiring map + its None cases, Python/Go wired emission, and
+    that a non-DB backend is unchanged.
 required_gates:
   - impact_analysis
-  - python_repository_emission_tests
-  - go_store_emission_tests
-  - parameterization_no_value_interpolation_test
-  - gating_and_dependency_tests
+  - wire_endpoint_mapping_tests
+  - python_wiring_tests
+  - go_wiring_tests
+  - non_db_backend_unchanged_test
   - python_compile_test
   - vendor_import_exclusion
   - secret_exclusion_check
@@ -88,22 +86,22 @@ model_tool_trace:
   configured_model: qwen2.5-coder:14b
   local_calls: 0
   cloud_calls: 0
-  note: Deterministic; no model call, no network, no DB connection. cloud_calls zero.
+  note: Deterministic; no model call, no network, no DB connection, no handler executed. cloud_calls zero.
 completion:
-  implementation_commit: f6792fa
+  implementation_commit: PENDING
   verified_at: "2026-09-07T00:00:00+05:30"
   verification:
-    - "task verify — pass (244 agent-engine tests; 7 new)"
+    - "task verify — pass (256 agent-engine tests; 12 new in test_route_wiring.py)"
     - "task security:quick — pass; task env:check — pass"
-    - "generated app/db.py + repositories parse as valid Python (ast); Go store scans into models.<Entity>"
+    - "generated routers parse as valid Python; Go main opens store.Open() and registers method handlers"
   acceptance_results:
-    - "Python backend (entities+postgres) emits app/db.py + app/repositories/<entity>.py per entity; requirements.txt gains psycopg (tests)"
-    - "Go backend emits internal/store/store.go + internal/store/<entity>.go per entity scanning the model structs; go.mod gains pgx; import path matches module (tests)"
-    - "all query values parameterized (%s / $N); identifiers fixed IR-derived strings; id-only entity creates via DEFAULT VALUES (tests)"
-    - "nothing emitted without entities or without postgres; no previously emitted file other than requirements.txt/go.mod changed; output byte-stable (tests, full suite green)"
-    - "no DB connection, no query executed, no network; task verify network-independent"
+    - "wire_endpoint wires list/get/create/delete only; sub-collections, multi-param, unknown-entity and POST-without-request_schema return None (tests)"
+    - "Python posts.py calls post.list_post()/post.create_post(payload.model_dump()); ambiguous GET /posts/{postId}/comments stays 501 (tests)"
+    - "Go emits internal/handlers/handlers.go (Handlers struct + New + writeJSON); main opens store.Open()+handlers.New(db); drivers.go calls store.ListDriver (tests)"
+    - "a non-DB Go backend emits no handlers.go and no pgx require (test)"
+    - "no DB connection, no handler executed, no network; task verify network-independent"
 blockers: []
 next_action: >-
-  Implement data_access.py + wire both backends + tests; run the gates; record completion. Later
-  continue with route wiring / auth-roles / the combined plan surface.
+  R-240 shipped. Next: seed data + ambiguous-route handling, or auth/roles through the adapters, or a
+  combined build/verify/preview plan surface.
 next_command: task agent-engine:test
