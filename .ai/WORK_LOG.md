@@ -327,3 +327,22 @@
   static console remains the working slice.
 - Recorded tracker row R-224 at Phase_Roadmap row 9 with status Deferred (completion 0); rows
   contiguous, ranges extended, no ID lost; MVP total 119, Done 13, Deferred 1.
+
+## 2026-09-07 — R-234
+
+- Added a single `OMNISTACKAI_TIER` switch (0/1 local, 2 cloud). `runtime/tier.py` resolves the runtime
+  and deploy providers from the tier + explicit selectors: tier 0/1 force local runtime and no deploy;
+  tier 2 permits keyed cloud selections. `resolve_platform()` returns the active providers;
+  `platform_status()`/`format_status()` summarize tier, selection, and which keys are present.
+- Added `runtime/drivers.py`: `CloudDeployProvider` (vercel/netlify/render/fly) emits a `DeployPlan` of
+  the provider's official-CLI commands; `CloudSandboxProvider` (e2b/daytona/fly-machines) emits a
+  `PreviewPlan` reusing the target's run commands. The key is read from env at run time and NEVER placed
+  in a command or logged. `run_deploy(plan)` executes a plan opt-in (never run by verify).
+- `bootstrap.py` gained an optional `selection` override; new exports in `runtime/__init__.py`.
+  `task platform:status` (scripts/agent-engine.sh + Taskfile) prints the active tier and key presence;
+  `.env.example` gained `OMNISTACKAI_TIER=0`; `docs/RUNTIME.md` documents the knob + drivers.
+- 13 new stdlib offline tests (194 total): tier resolution, per-provider driver plans, no-key-in-plan
+  across all providers, activation/selection errors, and the status summary. `task verify`,
+  `task security:quick`, `task env:check` all pass; `task platform:status` demoed tier 0 and tier 2.
+- Committed directly to main (only branch). Tracker row R-234 (Runtime) inserted at row 9; MVP total
+  129 / Done 23. Implementation checkpoint `dcb7d2d`. 0 local / 0 cloud model calls; nothing run/deployed.

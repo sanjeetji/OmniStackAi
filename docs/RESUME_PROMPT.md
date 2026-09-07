@@ -40,25 +40,33 @@ START PROTOCOL
   `task ai:status`, `task ai:handoff`. `task verify` must stay green and network-independent.
 - Confirm git branch/HEAD/clean tree. Then restate: phase, next Tracker ID, objective, blast radius.
 
-WHAT IS ALREADY BUILT (all Python 3.13 stdlib-only, offline, in services/agent-engine; 147 tests pass)
+WHAT IS ALREADY BUILT (all Python 3.13 stdlib-only, offline, in services/agent-engine; 194 tests pass)
 - Model fabric: ModelProvider contract + registry; local Ollama adapter; Balanced ModelGateway
   (deterministic escalation ladder, no silent cloud fallback, context-budget guard); key-activated
   cloud adapters for Anthropic/OpenAI/Gemini/OpenRouter/Groq (no keys set -> zero cloud calls); true
   SSE streaming; usage/cost accounting (Decimal price book); env-driven cross-provider fallback +
   circuit breaker. Run it live: `task agent-engine:gateway:run` (routes to local Ollama qwen).
-- BUILDER (the product): Application IR (framework-neutral spec) -> FrameworkAdapter contract +
-  in-memory GeneratedProject -> NextjsWebAdapter (real Next.js app from the IR) + PythonBackendAdapter
-  (real FastAPI backend from the IR) -> git_service (materialize into a customer-owned Git repo with
-  one commit). MULTI-TARGET proven: one IR -> a 12-file Next.js web app + an 11-file FastAPI backend,
-  then a real owned repo. All offline/deterministic (emit files, assert contents; no install/build).
+- BUILDER (the product): Application IR (framework-neutral spec) + semantic validator/canonical
+  normalizer + example fixtures -> FrameworkAdapter contract + in-memory GeneratedProject ->
+  NextjsWebAdapter (Next.js) + PythonBackendAdapter (FastAPI) + GoBackendAdapter (Go net/http) ->
+  project assembler (one IR -> a full customer monorepo: apps/web + services/api) -> git_service
+  (materialize into a customer-owned Git repo with one commit). TRI-TARGET proven from ONE IR; all
+  offline/deterministic (emit files, assert contents; no install/build).
+- RUNTIME/DEPLOY layer (Brief 15/51/75): RuntimeProvider/DeploymentProvider contracts;
+  LocalRuntimeProvider (Tier 0/1, no keys) yields deterministic per-target preview plans + opt-in
+  run_preview; key-activated cloud sandbox (e2b/daytona/fly-machines) + deploy (vercel/netlify/render/
+  fly) drivers that emit real command plans (key read from env, never in a plan) + opt-in run_deploy.
+  A SINGLE `OMNISTACKAI_TIER` knob (0/1 local, 2 cloud) resolves the active providers;
+  `task platform:status` shows the active tier + which keys are present.
 - Console: apps/console-web is a dependency-free static console (model/cost overview) +
   a Python snapshot exporter; `task console:serve`.
 
 ID SCHEME (important): the workbook backlog already owns R-010..R-219 (planned agents/features). New
 work uses IDs AFTER R-219: R-220 streaming, R-221 fallback, R-222 console, R-223 env-fallback,
 R-224 Next.js console upgrade (DEFERRED), R-225 IR, R-226 adapter contract, R-227 Next.js adapter,
-R-228 git service, R-229 Python/FastAPI backend adapter. Do NOT overwrite backlog rows; continue
-from R-230.
+R-228 git service, R-229 Python/FastAPI backend adapter, R-230 Go backend adapter, R-231 IR
+validator/normalizer + fixtures, R-232 project assembler, R-233 runtime/deploy provider layer,
+R-234 tier switch + cloud provider drivers. Do NOT overwrite backlog rows; continue from R-235.
 
 ENVIRONMENT LIMITS discovered here
 - npm front-end bundlers (Next.js SWC, Vite/esbuild) FAIL to install (native-binary downloads time
@@ -84,13 +92,16 @@ RULES (non-negotiable)
   .ai/HANDOFF.md, PROJECT_STATE.md, CHANGELOG.md, and the tracker row. Push the branch; verify remote
   SHA == local HEAD. Never claim unexecuted tests.
 
-WHAT TO DO NEXT (pick with the founder; all continue the builder)
-- Offline-doable now: R-230 = a Go backend framework adapter (another target from the same IR; same
-  pattern as R-227/R-229 — emit files, assert contents, register in AdapterRegistry).
-- Needs a network/cloud environment: sandbox/runtime provider + instant browser preview of the
-  generated app (Brief 15/51); then deploy; and the deferred R-224 Next.js console upgrade.
+WHAT TO DO NEXT (pick with the founder; all continue the builder), continue from R-235
+- Offline-doable now: verifiable-engineering gates on generated projects (e.g. a per-target "verify
+  plan" — typecheck/test/build commands the IR implies), or a diff/patch-apply loop that edits an
+  existing generated project from an IR change, or expanding IR coverage (auth, relations, migrations).
+- Needs a network/cloud environment: run a Tier-0 preview end-to-end (materialize -> pnpm dev), then
+  live-verify one cloud driver (Vercel deploy or E2B sandbox) once a key is supplied (set the key +
+  OMNISTACKAI_TIER=2, select the provider, run run_deploy/run_preview); and the deferred R-224 Next.js
+  console upgrade (npm registry access).
 - Deferred by governance: native mobile (R-010 etc.) until web/backend stability.
 
 Begin by reading the files above and running the start protocol, then propose the next Tracker ID
-(default R-230 Go backend adapter) with its task contract before writing code. Commit to main.
+(R-235) with its task contract before writing code. Commit to main.
 ```

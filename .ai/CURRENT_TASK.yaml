@@ -1,7 +1,7 @@
 schema_version: 1
 task_id: R-234
 title: Tier switch + cloud provider drivers (Tier 0/1 local run; Tier 2 all providers)
-status: in_progress
+status: done
 phase: BASIC/MVP
 founder_stage: 0
 branch: main
@@ -90,10 +90,17 @@ model_tool_trace:
   cloud_calls: 0
   note: Deterministic; no model call, no run/deploy. No cloud key set; cloud_calls zero.
 completion:
-  implementation_commit: null
-  verified_at: null
-  verification: []
-  acceptance_results: []
+  implementation_commit: dcb7d2d
+  verified_at: "2026-09-07T00:00:00+05:30"
+  verification:
+    - "task verify — pass (194 agent-engine tests; 13 new)"
+    - "task security:quick — pass; task env:check — pass"
+    - "task platform:status demoed tier 0 (local/none) and tier 2 (e2b/vercel)"
+  acceptance_results:
+    - "OMNISTACKAI_TIER 0/1 force local runtime + no deploy; tier 2 permits keyed cloud selections; invalid tier and keyless/wrong-tier selection raise clear errors (tests)"
+    - "Every declared provider has a driver: deploy (vercel/netlify/render/fly) emits a DeployPlan of official-CLI commands; sandbox (e2b/daytona/fly-machines) emits a PreviewPlan; no key value appears in any plan (test asserts across all providers)"
+    - "resolve_platform() returns active runtime + deploy providers; platform_status()/format_status() summarize tier, selection, and key presence"
+    - "run_deploy executor present (opt-in, not run by verify); task platform:status exposes the switch; task verify stays network-independent"
 blockers: []
 next_action: >-
   Implement the tier switch, per-provider drivers, executors, and commands with offline tests; run the

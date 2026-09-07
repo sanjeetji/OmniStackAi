@@ -6,10 +6,10 @@ current_task: null
 current_status: ready_for_next_task_definition
 branch: main
 last_completed_task:
-  task_id: R-233
-  title: Runtime & deployment provider layer (Tier 0/1 local; Tier 2/3 add-keys)
-  implementation_commit: ae11bac55fb9d865dbc6281c26f7df260edc3477
-  verification: task verify (181 agent-engine tests, 12 new); local preview plans + key-activated cloud registry
+  task_id: R-234
+  title: Tier switch + cloud provider drivers (Tier 0/1 local run; Tier 2 all providers)
+  implementation_commit: dcb7d2d
+  verification: task verify (194 agent-engine tests, 13 new); one OMNISTACKAI_TIER knob resolves runtime/deploy; every provider has a driver emitting a real command plan (no key in any plan)
   result: pass
 control_plane_database: postgresql
 model_routing_mode: balanced
@@ -23,5 +23,5 @@ id_note: >-
   Workbook backlog owns R-010..R-219. Founder-requested tasks use IDs after R-219: R-220..R-223 done,
   R-224 Next.js deferred (env-blocked), R-225 Application IR (in progress).
 blockers: []
-next_action: Runtime/deploy layer wired (Tier 0/1 local works; Tier 2/3 add-keys). Next: run a Tier-0 preview (needs network machine) or a concrete cloud driver once a key is provided. Confirm environment / next Tracker ID.
-last_updated: "2026-09-06T19:40:00+05:30"
+next_action: Tier switch + all provider drivers wired (one OMNISTACKAI_TIER knob; task platform:status). Next: run a Tier-0 preview end-to-end (needs a network machine) or live-verify one cloud driver (e.g. Vercel deploy / E2B sandbox) once its key is supplied. Confirm environment / next Tracker ID.
+last_updated: "2026-09-07T00:00:00+05:30"

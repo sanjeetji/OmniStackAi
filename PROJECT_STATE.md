@@ -5,9 +5,10 @@ Last updated: 2026-09-06T10:46:19+05:30 by Codex (GPT-5)
 Stage 0 (Founder Build Sequence, Brief Section 91) — BASIC/MVP
 
 ## Last Completed Task
-Tracker ID: R-233 — Runtime & deploy provider layer (Tier 0/1 local; Tier 2/3 add-keys) — DONE,
-`task verify` (181 agent-engine tests, 12 new) passing; local preview works now, cloud sandbox/deploy
-providers activate by key; implementation checkpoint `ae11bac55fb9d865dbc6281c26f7df260edc3477`
+Tracker ID: R-234 — Tier switch + cloud provider drivers — DONE, `task verify` (194 agent-engine
+tests, 13 new) passing; one `OMNISTACKAI_TIER` knob (0/1 local, 2 cloud) resolves the runtime/deploy
+providers and every provider has a driver that emits a real command plan (no key in any plan);
+`task platform:status` shows the active tier; implementation checkpoint `dcb7d2d`
 (R-224 Next.js console upgrade deferred — env-blocked)
 
 ## Workflow note
