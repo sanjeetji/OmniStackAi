@@ -142,6 +142,11 @@ tasks:
     cmds:
       - bash scripts/agent-engine.sh verify-plan {{.CLI_ARGS}}
 
+  plan:show:
+    desc: Print the combined preview+verify(+deploy) project plan for an example IR (default rideshare-favourites)
+    cmds:
+      - bash scripts/agent-engine.sh plan-show {{.CLI_ARGS}}
+
   platform:status:
     desc: Show the active tier and resolved runtime/deploy providers (reads .env)
     cmds:

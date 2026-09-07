@@ -115,6 +115,23 @@ print("Gates:", ", ".join(kind.value for kind in plan.gates()))
 print("Run these in the generated project on a machine with the toolchain (opt-in; not run by task verify).")
 PY
     ;;
+  plan-show)
+    configure_python
+    example="${2:-rideshare-favourites}"
+    PYTHONPATH="$source_root" python3 - "$example" <<'PY'
+import sys
+from omnistackai_agent_engine.application_ir import example_ir
+from omnistackai_agent_engine.projectplan import build_project_plan
+
+try:
+    ir = example_ir(sys.argv[1])
+except Exception as error:  # noqa: BLE001 (surface a friendly CLI message)
+    print(f"unknown example {sys.argv[1]!r}: {error}")
+    raise SystemExit(2)
+print(build_project_plan(ir).render())
+print("\nData-only plan (nothing installed/run/verified/deployed).")
+PY
+    ;;
   platform-status)
     configure_python
     export OMNISTACKAI_TIER="$(config_value OMNISTACKAI_TIER 0)"
@@ -126,7 +143,7 @@ PY
     PYTHONPATH="$source_root" python3 -c "from omnistackai_agent_engine.runtime import format_status; print(format_status())"
     ;;
   *)
-    printf 'Usage: %s {lint|test|ollama-verify|gateway-run|preview-plan [target]|verify-plan [target]|platform-status}\n' "$0"
+    printf 'Usage: %s {lint|test|ollama-verify|gateway-run|preview-plan [target]|verify-plan [target]|plan-show [example]|platform-status}\n' "$0"
     exit 2
     ;;
 esac

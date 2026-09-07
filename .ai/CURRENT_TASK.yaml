@@ -1,28 +1,26 @@
 schema_version: 1
-task_id: R-244
-title: Sub-collection route wiring (parent-scoped lists via the FK relation)
-status: done
+task_id: R-245
+title: Combined project-plan surface (preview + verify + deploy per generated app)
+status: in_progress
 phase: BASIC/MVP
 founder_stage: 0
 branch: main
 goal: >-
-  Clear the main class of remaining 501 stubs (Brief 9/27/34): wire the sub-collection GET pattern
-  `GET /<parents>/{parentId}/<children>` to a parent-scoped list. The child entity (the endpoint's
-  response_schema) must be a repository entity with exactly one foreign-key relation (many_to_one or
-  one_to_one); the endpoint then lists that entity filtered by the relation's FK column = the path
-  parameter. The data-access layer gains a filtered-list function per FK relation (Python
-  list_<table>_by_<rel>, Go List<Entity>By<Rel>) using parameterized values; route wiring gains a
-  LIST_BY operation; Python routers and Go handlers call it. Endpoints that do not match the pattern (no
-  entity, not exactly one FK relation, multi-param) stay labelled 501 scaffolds. Deterministic and
-  offline; nothing runs. Seed/fixture data is deferred (the IR carries no seed values to emit honestly).
+  Compose the existing plan builders into one per-app view a console/CLI can render (Brief 15/26/27/51):
+  for an Application IR, build a ProjectPlan whose AppPlan entries pair each assembled app (label,
+  directory, target from R-232 assembled_targets) with its local preview plan (R-233 LocalRuntimeProvider),
+  its verify gate ladder (R-235 verify_plan), and, when a key-activated deploy provider is supplied, its
+  deploy plan (R-234). Provide a JSON-serializable to_dict and a readable render() summary, plus a
+  task plan:show that prints the plan for an example IR. Pure and deterministic — it only builds plans;
+  nothing is installed, run, verified, or deployed.
 source:
   tracker_sheet: Phase_Roadmap
   tracker_row: reconstructed; new IDs continue after the workbook backlog's R-010..R-219
-  brief_sections: [9, 27, 34, 35, 42, 74, 77, 83, 84, 85, 92]
+  brief_sections: [15, 26, 27, 51, 74, 75, 77, 83, 84, 85, 92]
   founder_note: >-
-    Founder approved continuing after R-243. R-244 finishes the CRUD story by wiring sub-collection
-    lists; seed data deferred honestly. Committed directly to main; author solely sanjeetji; tooling
-    adds a Co-Authored-By trailer.
+    Founder approved continuing after R-244. R-245 ties runtime + verify + assembler plans into one
+    surface for the console/CLI. Committed directly to main; author solely sanjeetji; tooling adds a
+    Co-Authored-By trailer.
 project_profile:
   repository: platform_modular_monorepo
   service: python_agent_engine
@@ -30,13 +28,11 @@ project_profile:
   model_routing: balanced
 complexity: L2
 expected_impact:
-  - services/agent-engine/src/omnistackai_agent_engine/codegen/route_wiring.py
-  - services/agent-engine/src/omnistackai_agent_engine/codegen/data_access.py
-  - services/agent-engine/src/omnistackai_agent_engine/codegen/backend_python.py
-  - services/agent-engine/src/omnistackai_agent_engine/codegen/backend_go.py
-  - services/agent-engine/tests/test_route_wiring.py
-  - services/agent-engine/tests/test_data_access.py
-  - docs/CODEGEN.md
+  - services/agent-engine/src/omnistackai_agent_engine/projectplan.py
+  - services/agent-engine/tests/test_projectplan.py
+  - scripts/agent-engine.sh
+  - Taskfile.yml
+  - docs/RUNTIME.md
   - docs/PROGRESS.md
   - portable state, changelog, handoff, task doc, and tracker evidence
 allowed_paths:
@@ -44,36 +40,35 @@ allowed_paths:
   - CHANGELOG.md
   - PROJECT_STATE.md
   - R_&_D/OmniStackAI_Execution_Tracker_v6.xlsx
+  - Taskfile.yml
   - docs/**
+  - scripts/**
   - services/agent-engine/**
 must_not_change:
   - PostgreSQL as the control-plane database or the platform's own schema/migrations
-  - the IR, model-gateway, runtime, verify, edit, auth public behavior (additive)
-  - the existing LIST/GET/CREATE/DELETE wiring and the auth/role guards (only ADD LIST_BY)
-  - endpoints that do not match the sub-collection pattern (they stay 501)
+  - the runtime/verify/codegen public behavior (this only composes existing builders; additive)
   - local Compose services or infrastructure; the Section 74 top-level contract; the offline bootstrap
   - the network-independence of static task verify
 must_not_do:
-  - connect to or query a database; execute a handler; make a network call
-  - string-interpolate a query VALUE (the FK filter value is parameterized; the column is a fixed IR-derived identifier)
-  - wire a sub-collection when the child has zero or more than one FK relation (ambiguous -> stay 501)
+  - install/run/verify/deploy anything; make a network call; require a key (deploy plan only when a
+    provider is passed in)
   - add a platform Python dependency; import a vendor SDK; put a secret anywhere
 acceptance:
-  - wire_endpoint recognizes GET /<parents>/{parentId}/<children> as LIST_BY when the response entity is
-    a repo entity with exactly one many_to_one/one_to_one relation; otherwise returns None (stays 501).
-  - The data-access layer emits a filtered-list per FK relation: Python list_<table>_by_<rel>(<rel>_id)
-    and Go List<Entity>By<Rel>(ctx, db, <rel>Id, limit), filtering WHERE <rel>_id = parameter.
-  - Python routers call the filtered list and parse as valid Python; Go handlers call the store function;
-    the value is always parameterized, the FK column is a fixed identifier.
-  - Non-matching sub-collection endpoints (zero/multiple FK relations, unknown entity) stay 501; output
-    is byte-stable; nothing runs.
-  - Standard-library offline tests cover the LIST_BY mapping + its None cases, the filtered-list
-    emission, and the Python/Go wiring.
+  - build_project_plan(ir) returns a ProjectPlan whose AppPlan entries pair each assembled app with its
+    preview plan (when the target is runnable locally) and its verify plan (when the target is
+    supported); a deploy plan is included only when a DeploymentProvider is passed.
+  - ProjectPlan.to_dict is JSON-serializable and contains no secret; render() is a readable multi-app
+    summary (dir/target, preview url + commands, verify gates, deploy steps when present).
+  - task plan:show -- <example> prints the combined plan for an example IR; task verify stays green and
+    network-independent.
+  - Standard-library offline tests cover the composition (preview + verify present per app), the deploy
+    opt-in, JSON-serializability + no-secret, and determinism.
 required_gates:
   - impact_analysis
-  - list_by_mapping_tests
-  - filtered_repository_emission_tests
-  - python_go_subcollection_wiring_tests
+  - build_project_plan_composition_tests
+  - deploy_opt_in_test
+  - json_serializable_no_secret_test
+  - determinism_test
   - python_compile_test
   - vendor_import_exclusion
   - secret_exclusion_check
@@ -86,22 +81,14 @@ model_tool_trace:
   configured_model: qwen2.5-coder:14b
   local_calls: 0
   cloud_calls: 0
-  note: Deterministic; no model call, no network, no DB connection, no handler executed. cloud_calls zero.
+  note: Deterministic; no model call, no network, nothing run/verified/deployed. cloud_calls zero.
 completion:
-  implementation_commit: b886d72
-  verified_at: "2026-09-07T00:00:00+05:30"
-  verification:
-    - "task verify — pass (285 agent-engine tests; 11 new)"
-    - "task security:quick — pass; task env:check — pass"
-    - "GET /posts/{postId}/comments wired to list_comment_by_post (Python) / ListCommentByPost (Go); generated routers parse as valid Python"
-  acceptance_results:
-    - "wire_endpoint maps GET /<parents>/{parentId}/<children> to LIST_BY when the child entity has exactly one FK relation; None (501) otherwise, incl. no fk map / multiple FK / unknown entity (tests)"
-    - "data-access emits list_<table>_by_<rel> (Python) and List<Entity>By<Rel> (Go), filtering WHERE <rel>_id = parameter (value parameterized, column fixed identifier) (tests)"
-    - "Python router calls the filtered list (valid Python); Go handler calls store.List<Entity>By<Rel> with r.PathValue (tests)"
-    - "genuinely-ambiguous endpoints (POST without request_schema, etc.) stay 501; byte-stable; nothing runs"
-    - "no DB connection, no handler executed, no network; task verify network-independent"
+  implementation_commit: null
+  verified_at: null
+  verification: []
+  acceptance_results: []
 blockers: []
 next_action: >-
-  Implement LIST_BY wiring + filtered repositories + tests; run the gates; record completion. Follow-up:
-  seed/fixture data (needs an IR fixtures field) and a combined build/verify/preview plan surface.
+  Implement projectplan.py + task plan:show + tests; run the gates; record completion. Later continue
+  with richer edit-loop diffs or an IR fixtures field for seed data.
 next_command: task agent-engine:test

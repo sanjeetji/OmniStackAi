@@ -59,6 +59,26 @@ task platform:status
 `resolve_platform()` returns the resolved runtime + deploy provider objects; selecting a cloud provider
 without its key (or at tier 0/1) raises a clear error.
 
+## Combined project plan (R-245)
+
+`projectplan.build_project_plan(ir)` composes one per-app view for the whole assembled monorepo: each
+`AppPlan` pairs an assembled app (label / directory / target) with its **preview** plan (how to run it
+locally), its **verify** gate ladder, and — only when a key-activated `DeploymentProvider` is passed —
+its **deploy** plan. `ProjectPlan.to_dict()` is JSON-serializable (secret-free) for the console;
+`render()` is a readable summary. See it:
+
+```
+task plan:show -- rideshare-favourites
+# - web (Next.js)  [nextjs-web]  (apps/web)
+#     preview -> http://127.0.0.1:3000   (pnpm install / pnpm dev)
+#     verify gates: install, typecheck, lint, build
+# - backend (go)   [backend-go]  (services/api)
+#     preview -> http://127.0.0.1:8080   (go run .)
+#     verify gates: lint, test, build
+```
+
+It only builds plans — nothing is installed, run, verified, or deployed, and no key value is included.
+
 ## Provider drivers (R-234)
 
 Every provider has a driver that produces a real command plan; the key is read from the environment by
