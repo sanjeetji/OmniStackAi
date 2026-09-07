@@ -59,6 +59,21 @@ platform verifies it offline by asserting the emitted files (no install/build he
 - **App:** `app/main.py` includes each router and a `/healthz` endpoint; plus `app/config.py`,
   `requirements.txt`, `README.md`, `.gitignore`, `.env.example` (placeholders only).
 
-With R-227 (web) and R-229 (backend) registered together, **one Application IR emits web + backend
-together** — the multi-target differentiator. Both are pure/offline: verified by asserting emitted
-files; the Git service (R-228) materializes either into a customer-owned repo.
+## Third adapter: Go backend (R-230)
+
+`GoBackendAdapter` (target `backend-go`) turns an Application IR into a real Go standard-library
+`net/http` service (no third-party deps):
+
+- **Models:** each entity → a Go struct in `internal/models/models.go` (types mapped; exported fields
+  with `json` tags; non-required fields become pointers with `,omitempty`).
+- **Routes:** IR APIs → Go 1.22 method+pattern registrations in `main.go`
+  (`mux.HandleFunc("POST /favourites/drivers/{driverId}", handlers.PostFavouritesDriversDriverId)`);
+  handlers grouped into `internal/handlers/<segment>.go`, returning `501 not implemented`, with path
+  params available via `r.PathValue(...)`.
+- **App:** `main.go` registers each route + a `GET /healthz` and serves on a configurable addr; plus
+  `go.mod` (`go 1.22`), `README.md`, `.gitignore`, `.env.example` (placeholders only).
+
+With R-227 (Next.js web), R-229 (FastAPI) and R-230 (Go) registered together, **one Application IR
+emits web + Python + Go from a single source of truth** — the multi-target differentiator across
+languages. All three are pure/offline: verified by asserting emitted files; the Git service (R-228)
+materializes any of them into a customer-owned repo.
