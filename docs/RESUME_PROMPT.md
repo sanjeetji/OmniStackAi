@@ -40,7 +40,7 @@ START PROTOCOL
   `task ai:status`, `task ai:handoff`. `task verify` must stay green and network-independent.
 - Confirm git branch/HEAD/clean tree. Then restate: phase, next Tracker ID, objective, blast radius.
 
-WHAT IS ALREADY BUILT (all Python 3.13 stdlib-only, offline, in services/agent-engine; 217 tests pass)
+WHAT IS ALREADY BUILT (all Python 3.13 stdlib-only, offline, in services/agent-engine; 226 tests pass)
 - Model fabric: ModelProvider contract + registry; local Ollama adapter (runs any installed model via
   OMNISTACKAI_OLLAMA_MODEL); Balanced ModelGateway (deterministic escalation ladder, no silent cloud
   fallback, context-budget guard); key-activated cloud catalog — Anthropic/OpenAI/Google-Gemini/
@@ -61,6 +61,10 @@ WHAT IS ALREADY BUILT (all Python 3.13 stdlib-only, offline, in services/agent-e
   fly) drivers that emit real command plans (key read from env, never in a plan) + opt-in run_deploy.
   A SINGLE `OMNISTACKAI_TIER` knob (0/1 local, 2 cloud) resolves the active providers;
   `task platform:status` shows the active tier + which keys are present.
+- EDIT LOOP (omnistackai_agent_engine.edit): plan_edit(old_ir, new_ir) assembles both IRs and diffs
+  them into a ProjectDiff (added/modified/deleted); apply_diff writes only the delta inside a path-safe
+  target; commit_edit records it as a new commit on the owned repo (via git_service.commit_all). The
+  builder is generate -> verify -> edit -> commit, all offline.
 - VERIFIABLE ENGINEERING (Brief 26/27/77): omnistackai_agent_engine.verify — a deterministic
   per-target verify plan (gate ladder install/typecheck/lint/test/build) the generated code is
   engineered to pass, classified by gate kind; verify_plans_for_ir maps one IR to the plans for its
@@ -75,7 +79,8 @@ R-224 Next.js console upgrade (DEFERRED), R-225 IR, R-226 adapter contract, R-22
 R-228 git service, R-229 Python/FastAPI backend adapter, R-230 Go backend adapter, R-231 IR
 validator/normalizer + fixtures, R-232 project assembler, R-233 runtime/deploy provider layer,
 R-234 tier switch + cloud provider drivers, R-235 verifiable-engineering verify plans, R-236 expanded
-model-provider catalog + custom providers. Do NOT overwrite backlog rows; continue from R-237.
+model-provider catalog + custom providers, R-237 IR-diff -> patch-apply edit loop. Do NOT overwrite
+backlog rows; continue from R-238.
 
 ENVIRONMENT LIMITS discovered here
 - npm front-end bundlers (Next.js SWC, Vite/esbuild) FAIL to install (native-binary downloads time
@@ -101,11 +106,11 @@ RULES (non-negotiable)
   .ai/HANDOFF.md, PROJECT_STATE.md, CHANGELOG.md, and the tracker row. Push the branch; verify remote
   SHA == local HEAD. Never claim unexecuted tests.
 
-WHAT TO DO NEXT (pick with the founder; all continue the builder), continue from R-237
-- Offline-doable now: an IR-diff -> patch-apply edit loop (compute changed generated files from an IR
-  change and apply them to an existing project — the "edit an app" motion), or expanding IR + adapter
-  coverage (auth/roles, entity relations, DB migrations), or a combined build+verify plan surface that
-  ties the runtime (R-233/234) and verify (R-235) plans together for the console/CLI.
+WHAT TO DO NEXT (pick with the founder; all continue the builder), continue from R-238
+- Offline-doable now: expand IR + adapter coverage (auth/roles, entity relations, DB migrations); a
+  combined build/verify/preview plan surface tying the runtime (R-233/234), verify (R-235), and edit
+  (R-237) together for the console/CLI; or a richer diff (rename detection / hunk-level) on the R-237
+  file-level ProjectDiff.
 - Needs a network/cloud environment: run a Tier-0 preview end-to-end (materialize -> pnpm dev);
   live-verify a cloud LLM provider (set its key + OMNISTACKAI_CLOUD_PROVIDER=<id>, run
   `task agent-engine:gateway:run`) or a deploy/sandbox driver (OMNISTACKAI_TIER=2 + key); and the
@@ -113,5 +118,5 @@ WHAT TO DO NEXT (pick with the founder; all continue the builder), continue from
 - Deferred by governance: native mobile (R-010 etc.) until web/backend stability.
 
 Begin by reading the files above and running the start protocol, then propose the next Tracker ID
-(R-237) with its task contract before writing code. Commit to main.
+(R-238) with its task contract before writing code. Commit to main.
 ```

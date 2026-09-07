@@ -1,7 +1,7 @@
 schema_version: 1
 task_id: R-237
 title: IR-diff -> patch-apply edit loop (edit an existing generated app)
-status: in_progress
+status: done
 phase: BASIC/MVP
 founder_stage: 0
 branch: main
@@ -85,10 +85,18 @@ model_tool_trace:
   cloud_calls: 0
   note: Deterministic; no model call, no network, no code execution. cloud_calls zero.
 completion:
-  implementation_commit: null
-  verified_at: null
-  verification: []
-  acceptance_results: []
+  implementation_commit: a0a494a
+  verified_at: "2026-09-07T00:00:00+05:30"
+  verification:
+    - "task verify — pass (226 agent-engine tests; 9 new)"
+    - "task security:quick — pass; task env:check — pass"
+    - "apply round-trip (old tree -> new) and commit_edit two-commit history proven in tests using tempdirs"
+  acceptance_results:
+    - "diff_projects classifies added/modified/deleted/unchanged; modified on content OR executable change; identical projects diff empty (tests)"
+    - "plan_edit(old_ir, new_ir) assembles both and diffs; a description change yields README.md modified with nothing added/deleted (tests)"
+    - "apply_diff writes added/modified + removes deleted inside a path-safe target, refuses '..' escapes and a missing target, returns ApplyReport, leaves dir == new project (tests)"
+    - "commit_edit applies + commits one commit as the customer identity via additive git_service.commit_all; prior history preserved (git log == 2)"
+    - "no network call, no code execution, no write outside the caller target; task verify network-independent"
 blockers: []
 next_action: >-
   Implement the edit package (diff/apply/plan_edit/commit_edit) + additive git commit_all with offline

@@ -392,3 +392,25 @@
   pass; `platform_overview` demoed a 12-provider catalog including custom `myco`.
 - Committed directly to main (only branch). Tracker row R-236 (Model Fabric) inserted at row 9; MVP
   total 131 / Done 25. Implementation checkpoint `e6326bf`. 0 local / 0 cloud model calls; no network.
+
+## 2026-09-07 — R-237
+
+- Added the "edit an existing app" motion — the builder step after generate + verify. New
+  `omnistackai_agent_engine.edit` package: `diff.py` (`ChangeKind`, `FileChange`, `ProjectDiff`,
+  `diff_projects`, `plan_edit`) and `apply.py` (`ApplyReport`, `apply_diff`, `commit_edit`).
+- `diff_projects(old, new)` classifies every path as added/modified/deleted/unchanged (modified on
+  content OR executable change); `plan_edit(old_ir, new_ir)` assembles both IRs via the assembler and
+  diffs them, so an IR change becomes exactly the set of files to rewrite.
+- `apply_diff(diff, target_dir)` writes added/modified and removes deleted files strictly inside the
+  target (path escapes refused like `materialize_project`; emptied dirs pruned, never past the root),
+  returns an `ApplyReport`, and leaves the directory equal to the new project. `commit_edit` applies +
+  commits one commit as the customer identity via a new additive `git_service.commit_all` (git add -A
+  + commit); previous history is preserved.
+- 9 new stdlib offline tests (226 total): diff classification + empty diff + executable-flag change,
+  plan_edit no-op and description-change (README.md modified, nothing added/deleted), apply round-trip
+  (old tree -> new), path-safety refusal (`..` + missing target), and commit_edit two-commit history.
+  Tests use tempdirs and the local git CLI (same pattern as the R-228 git-service tests).
+- `git_service.create_repository`/`materialize_project` unchanged (additive `commit_all` only). No
+  network call, no code execution, no write outside the target. `docs/EDIT_LOOP.md` added.
+- Committed directly to main (only branch). Tracker row R-237 (Builder) inserted at row 9; MVP total
+  132 / Done 26. Implementation checkpoint `a0a494a`. 0 local / 0 cloud model calls.

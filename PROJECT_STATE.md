@@ -5,13 +5,12 @@ Last updated: 2026-09-06T10:46:19+05:30 by Codex (GPT-5)
 Stage 0 (Founder Build Sequence, Brief Section 91) — BASIC/MVP
 
 ## Last Completed Task
-Tracker ID: R-236 — Expand the model-provider catalog + custom providers — DONE, `task verify` (217
-agent-engine tests, 14 new) passing; added first-class OpenAI-compatible adapters for DeepSeek, xAI
-(Grok), Mistral, Together, and Fireworks alongside OpenAI/Anthropic/Google/OpenRouter/Groq, plus an
-env-driven custom-provider path (any OpenAI-compatible endpoint, no code change); spec-driven so each
-flows through registration/selection/fallback/overview/pricing, key-activated, keys never shown;
-implementation checkpoint `e6326bf`
-(R-224 Next.js console upgrade deferred — env-blocked)
+Tracker ID: R-237 — IR-diff -> patch-apply edit loop — DONE, `task verify` (226 agent-engine tests,
+9 new) passing; the builder now edits an existing app: `plan_edit(old_ir, new_ir)` assembles both and
+diffs them into a ProjectDiff (added/modified/deleted), `apply_diff` writes only the delta inside a
+path-safe target, and `commit_edit` records it as a new commit on the customer-owned repo (history
+preserved). Diffing pure, applying a bounded disk step, no network/exec; implementation checkpoint
+`a0a494a` (R-224 Next.js console upgrade deferred — env-blocked)
 
 ## Workflow note
 Founder consolidated all work onto `main` (per-task branches deleted; `main` is the default). Continue
