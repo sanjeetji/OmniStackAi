@@ -5,9 +5,9 @@ Last updated: 2026-09-06T10:46:19+05:30 by Codex (GPT-5)
 Stage 0 (Founder Build Sequence, Brief Section 91) — BASIC/MVP
 
 ## Last Completed Task
-Tracker ID: R-232 — Customer project assembler (one IR -> customer-owned monorepo) — DONE, `task verify`
-(169 agent-engine tests, 6 new) passing; one IR -> a 24-file monorepo (apps/web + services/api) -> an
-owned Git repo; implementation checkpoint `cf28cb0f46ae1f66b9f87b59232eceb2a113b508`
+Tracker ID: R-233 — Runtime & deploy provider layer (Tier 0/1 local; Tier 2/3 add-keys) — DONE,
+`task verify` (181 agent-engine tests, 12 new) passing; local preview works now, cloud sandbox/deploy
+providers activate by key; implementation checkpoint `ae11bac55fb9d865dbc6281c26f7df260edc3477`
 (R-224 Next.js console upgrade deferred — env-blocked)
 
 ## Workflow note
@@ -37,13 +37,15 @@ stability). Founder-requested work uses unique IDs after R-219: R-220 = cloud st
 R-221 = cross-provider fallback (done); R-222 = platform console slice (done); R-223 = env-driven
 fallback wiring (done); R-224 = Next.js console upgrade (deferred — environment-blocked).
 
-## Next Up (queued, in order — need a cloud/network-capable environment)
-1. Sandbox/runtime provider + instant browser preview of a generated app (Brief 15/51), then deploy
-2. R-224 — Next.js console upgrade — resume in an environment with reliable npm registry access
-3. R-010 — Native iOS Agent (backlog; deferred until web/backend stability per Brief 25/91)
-(All near-term offline-doable builder pieces — IR + validator/normalizer/fixtures, adapter contract,
-web/Python/Go adapters, Git service, and the customer-project assembler — are now complete. One IR
-becomes a complete customer-owned monorepo repository.)
+## Next Up (queued, in order)
+1. Run a Tier-0 preview of a generated app end-to-end (needs a network-capable machine: this Mac in a
+   real Terminal, or a Codespace) — the runtime layer + `task agent-engine:preview-plan` are ready
+2. Build a concrete cloud provider driver (e.g. Vercel deploy or E2B sandbox) once a key is provided
+3. R-224 — Next.js console upgrade — resume in an environment with reliable npm registry access
+4. R-010 — Native iOS Agent (backlog; deferred until web/backend stability per Brief 25/91)
+(The full offline builder AND the Tier 0-3 runtime/deploy wiring are complete: one IR ->
+web+backend monorepo -> owned Git repo, plus a local preview provider and key-activated cloud
+sandbox/deploy providers.)
 
 ## Decisions Made This Session
 - Applied the normative V6 precedence rules and Section 91 Phase 0 sequence.

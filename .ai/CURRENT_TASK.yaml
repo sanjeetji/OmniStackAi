@@ -1,7 +1,7 @@
 schema_version: 1
 task_id: R-233
 title: Runtime & deployment provider layer (Tier 0/1 local now; Tier 2/3 add-keys)
-status: in_progress
+status: done
 phase: BASIC/MVP
 founder_stage: 0
 branch: main
@@ -85,13 +85,36 @@ model_tool_trace:
   cloud_calls: 0
   note: Deterministic; no model call, no run/deploy. No cloud key set; cloud_calls zero.
 completion:
-  implementation_commit: null
-  verified_at: null
-  verification: []
-  acceptance_results: []
+  implementation_commit: ae11bac55fb9d865dbc6281c26f7df260edc3477
+  verified_at: "2026-09-07T00:10:00+05:30"
+  verification:
+    - command: task verify
+      result: pass
+      evidence: 181 agent-engine tests (12 new runtime/deploy tests) plus all Stage 0 checks
+    - command: task agent-engine:preview-plan -- nextjs-web
+      result: pass
+      evidence: printed the local Tier-0 plan (pnpm install; pnpm dev; http://127.0.0.1:3000)
+    - command: task agent-engine:lint
+      result: pass
+    - command: task security:quick
+      result: pass
+    - command: task env:check
+      result: pass
+  acceptance_results:
+    - criterion: RuntimeProvider/DeploymentProvider contracts; LocalRuntimeProvider returns deterministic preview plans per target and errors on unsupported ones.
+      result: pass
+    - criterion: Cloud sandbox/deploy providers declared with a key env; build_*_from_env register local always, activate cloud by key presence, default runtime=local/deploy=none, and error on selecting a keyless provider.
+      result: pass
+    - criterion: No key is logged/stored/shown; .env.example placeholders + tier selectors added; task verify stays green and network-independent.
+      result: pass
+    - criterion: Offline tests cover local plans, unsupported target, env registration with/without keys, unknown selectors, and no-secret guarantee.
+      result: pass
+  note: >-
+    Tier 0/1 (local) works now; Tier 2/3 activate by adding a key. No run/deploy performed; no model
+    call; cloud_calls zero.
 blockers: []
 next_action: >-
-  Implement the runtime/deploy contracts, local provider, cloud specs + env bootstrap, env
-  placeholders, and offline tests; run the gates; record completion. Tier 0 execution (actually running
-  a preview) then works on a network-capable machine by running the printed plan.
-next_command: task agent-engine:test
+  The runtime/deploy layer is wired (Tier 0/1 local works; Tier 2/3 add-keys). Next: actually run a
+  Tier-0 preview of a generated app (needs a network-capable machine), or build a concrete cloud
+  provider driver (e.g. Vercel deploy) once a key is provided. Confirm environment / next Tracker ID.
+next_command: task ai:status

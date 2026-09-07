@@ -2,14 +2,14 @@ schema_version: 1
 project: OmniStackAI
 phase: BASIC/MVP
 founder_stage: 0
-current_task: R-233
-current_status: in_progress
+current_task: null
+current_status: ready_for_next_task_definition
 branch: main
 last_completed_task:
-  task_id: R-232
-  title: Customer project assembler — one IR into a customer-owned monorepo
-  implementation_commit: cf28cb0f46ae1f66b9f87b59232eceb2a113b508
-  verification: task verify (169 agent-engine tests, 6 new); one IR -> customer monorepo -> owned repo
+  task_id: R-233
+  title: Runtime & deployment provider layer (Tier 0/1 local; Tier 2/3 add-keys)
+  implementation_commit: ae11bac55fb9d865dbc6281c26f7df260edc3477
+  verification: task verify (181 agent-engine tests, 12 new); local preview plans + key-activated cloud registry
   result: pass
 control_plane_database: postgresql
 model_routing_mode: balanced
@@ -23,5 +23,5 @@ id_note: >-
   Workbook backlog owns R-010..R-219. Founder-requested tasks use IDs after R-219: R-220..R-223 done,
   R-224 Next.js deferred (env-blocked), R-225 Application IR (in progress).
 blockers: []
-next_action: One IR -> a complete customer-owned monorepo is done. Next: sandbox/preview/deploy (needs cloud env; Tier 0 = normal internet enables local preview). Confirm environment / next Tracker ID.
+next_action: Runtime/deploy layer wired (Tier 0/1 local works; Tier 2/3 add-keys). Next: run a Tier-0 preview (needs network machine) or a concrete cloud driver once a key is provided. Confirm environment / next Tracker ID.
 last_updated: "2026-09-06T19:40:00+05:30"
