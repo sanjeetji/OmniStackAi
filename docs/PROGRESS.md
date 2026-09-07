@@ -1,24 +1,25 @@
-# OmniStackAI — implementation progress (as of R-241)
+# OmniStackAI — implementation progress (as of R-242)
 
 A living summary of what is built, what is pending, and how to see results. Numbers come from the
 execution tracker (`R_&_D/OmniStackAI_Execution_Tracker_v6.xlsx`, `Phase_Roadmap`).
 
 ## Headline
 
-- **265 automated tests pass**, fully offline and network-independent (`task verify`).
-- **30 tracker tasks Done, 1 Deferred, 210 Not Started** across 241 rows.
+- **268 automated tests pass**, fully offline and network-independent (`task verify`).
+- **31 tracker tasks Done, 1 Deferred, 210 Not Started** across 242 rows.
 - The offline builder loop is complete end to end: **describe (IR) → generate (web + API with working
-  CRUD + DB schema + data-access + auth guards) → verify → edit → commit to an owned Git repo.**
+  CRUD + DB schema + data-access + JWT-verified auth guards) → verify → edit → commit to an owned Git
+  repo.**
 
 ## Completion by phase
 
 | Phase | Done | Total | % complete |
 |-------|------|-------|-----------|
-| **MVP** (current milestone) | 30 | 136 | **22.1%** |
+| **MVP** (current milestone) | 31 | 137 | **22.6%** |
 | MID | 0 | 47 | 0% |
 | ADVANCED | 0 | 29 | 0% |
 | PRODUCTION | 0 | 29 | 0% |
-| **Overall program** | **30** | **241** | **12.4%** |
+| **Overall program** | **31** | **242** | **12.8%** |
 
 > The 210 "Not Started" rows are the pre-existing backlog catalogue (R-010..R-219 — many are individual
 > specialized agents and later-phase features). Capability-wise the platform is further along than the
@@ -51,9 +52,10 @@ execution tracker (`R_&_D/OmniStackAI_Execution_Tracker_v6.xlsx`, `Phase_Roadmap
 | Data-access/repository layer (Python + Go) | ✅ Done | R-239 |
 | Route wiring — handlers → repositories (real CRUD) | ✅ Done | R-240 |
 | Authentication guards (enforce IR `auth` flag) | ✅ Done | R-241 |
+| JWT verification (HS256, secret from env) | ✅ Done | R-242 |
 | Next.js console upgrade (rich UI) | ⏸ Deferred | R-224 — needs npm registry access |
-| Real token verification + per-endpoint roles | ⛔ Pending | R-241 surfaces roles; verification is a TODO |
-| Seed data + ambiguous-route handling | ⛔ Pending | next candidates (R-242+) |
+| Per-endpoint role enforcement | ⛔ Pending | needs an IR `required_roles` field; roles surfaced |
+| Seed data + ambiguous-route handling | ⛔ Pending | next candidates (R-243+) |
 | Live sandbox preview + real deploy (Tier 2) | ⛔ Pending | needs a network machine + provider keys |
 | Native mobile agents | ⛔ Deferred (governance) | until web/backend stability (Brief §25/§91) |
 | MID / ADVANCED / PRODUCTION phase work | ⛔ Not started | 105 rows |
@@ -108,7 +110,8 @@ the live run needs the key + a network machine.
 
 ## What's next
 
-Near-term MVP candidates (all offline-doable): real token verification (JWT) + per-endpoint role checks
-building on the R-241 guard; seed data + handling the currently-ambiguous routes (sub-collections /
-custom endpoints still `501`); a combined build/verify/preview plan surface for the console. Then, on a
-network machine: live Tier-2 preview and deploy. This file is refreshed as tasks land.
+Near-term MVP candidates (all offline-doable): per-endpoint role enforcement (extend the IR with
+`required_roles` and check them in the R-242-verified token); seed data + handling the currently-
+ambiguous routes (sub-collections / custom endpoints still `501`); a combined build/verify/preview plan
+surface for the console. Then, on a network machine: live Tier-2 preview and deploy. This file is
+refreshed as tasks land.

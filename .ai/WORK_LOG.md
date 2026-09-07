@@ -505,3 +505,27 @@
   `security:quick` + `env:check` pass. `docs/CODEGEN.md` documents the guard; `docs/PROGRESS.md` refreshed.
 - Committed directly to main (only branch). Tracker row R-241 (Builder) inserted at row 9; MVP total
   136 / Done 30. Implementation checkpoint `4db716b`. 0 local / 0 cloud model calls; nothing executed.
+
+## 2026-09-07 — R-242
+
+- Upgraded the R-241 auth guard from a bearer-presence check to real JWT verification. `auth_guard.py`:
+  the generated guard decodes and verifies a JWT (HS256) using `JWT_SECRET` read from the environment —
+  401 on a missing/invalid/expired token, 500 when the secret is unset — and never hard-codes or
+  defaults the secret.
+- Python (`python_auth_file`): `app/auth.py` imports PyJWT, `require_auth` calls
+  `jwt.decode(token, _secret(), algorithms=["HS256"])` and returns the verified claims; `_secret()`
+  reads `JWT_SECRET` from `os.environ`. `backend_python.py` adds `PyJWT==2.9.0` to `requirements.txt`
+  and an empty `JWT_SECRET` to `.env.example` when the IR needs auth.
+- Go (`go_auth_file`): `internal/handlers/auth.go` imports `github.com/golang-jwt/jwt/v5`; `RequireAuth`
+  reads `os.Getenv("JWT_SECRET")` (500 when empty) and `jwt.Parse`s the token with an HMAC-only keyfunc
+  (rejecting non-HMAC). `backend_go.py` appends the golang-jwt `require` to `go.mod` and `JWT_SECRET=` to
+  `.env.example` when the IR needs auth.
+- Platform code stays standard-library only — the JWT dependency lives only in the generated project.
+  IR roles constant retained for future per-endpoint authorization (needs an IR field). Nothing signed
+  or verified at generation time; nothing runs; no network.
+- 3 new stdlib offline tests (268 total): Python JWT verification + PyJWT/JWT_SECRET additions +
+  no-fabricated-secret; Go JWT verification + golang-jwt/JWT_SECRET additions. Existing R-241 auth tests
+  still pass. `task verify` + `security:quick` + `env:check` pass. `docs/CODEGEN.md` + `docs/PROGRESS.md`
+  refreshed.
+- Committed directly to main (only branch). Tracker row R-242 (Builder) inserted at row 9; MVP total
+  137 / Done 31. Implementation checkpoint `e0d8af3`. 0 local / 0 cloud model calls; nothing executed.

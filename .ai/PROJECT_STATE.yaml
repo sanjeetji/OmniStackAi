@@ -6,10 +6,10 @@ current_task: null
 current_status: ready_for_next_task_definition
 branch: main
 last_completed_task:
-  task_id: R-241
-  title: Authentication guards from the IR (enforce the endpoint auth flag; surface roles)
-  implementation_commit: 4db716b
-  verification: task verify (265 agent-engine tests, 9 new); auth=true endpoints enforce a bearer-credential guard (Python app/auth.py + Depends(require_auth); Go internal/handlers/auth.go + RequireAuth middleware wrapped in main); IR roles surfaced as a constant; token verification is a documented TODO; deterministic/offline, nothing runs
+  task_id: R-242
+  title: Real JWT verification in the generated auth guard (HS256, secret from env)
+  implementation_commit: e0d8af3
+  verification: task verify (268 agent-engine tests, 3 new); the guard now verifies a JWT (HS256) using JWT_SECRET from the env (401 invalid, 500 unset, never a fabricated default) — Python require_auth via PyJWT, Go RequireAuth via golang-jwt; JWT dep added to the generated project; deterministic/offline, nothing runs
   result: pass
 control_plane_database: postgresql
 model_routing_mode: balanced
@@ -23,5 +23,5 @@ id_note: >-
   Workbook backlog owns R-010..R-219. Founder-requested tasks use IDs after R-219: R-220..R-223 done,
   R-224 Next.js deferred (env-blocked), R-225 Application IR (in progress).
 blockers: []
-next_action: Generated backends now enforce authentication (the IR auth flag guards each endpoint). The builder loop is describe -> generate (web + working API with auth guards + DB schema + data-access) -> verify -> edit -> commit, fully offline. Next (R-242, offline-doable): real token verification (JWT) + per-endpoint role checks building on the R-241 guard; or seed data + handling the currently-ambiguous routes (sub-collections/custom endpoints still 501); or a combined build/verify/preview plan surface for the console/CLI. Cloud items (Tier-0 preview end-to-end, live provider/deploy driver) need a network machine/keys. Confirm next Tracker ID.
+next_action: Generated backends now verify a real JWT (HS256, JWT_SECRET from env) on each auth=true endpoint. The builder loop is describe -> generate (web + working API with JWT-verified auth + DB schema + data-access) -> verify -> edit -> commit, fully offline. Next (R-243, offline-doable): per-endpoint role enforcement (extend the IR with required_roles and check them in the verified token); or seed data + handling the currently-ambiguous routes (sub-collections/custom endpoints still 501); or a combined build/verify/preview plan surface for the console/CLI. Cloud items (Tier-0 preview end-to-end, live provider/deploy driver) need a network machine/keys. Confirm next Tracker ID.
 last_updated: "2026-09-07T00:00:00+05:30"

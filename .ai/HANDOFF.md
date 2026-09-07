@@ -1,10 +1,10 @@
 # Current Handoff
 
-Task ID: R-241
+Task ID: R-242
 Status: done
 Phase: BASIC/MVP — Founder Stage 0
 Branch: `main` (the only branch; the GitHub default)
-Last verified implementation SHA: `4db716b`
+Last verified implementation SHA: `e0d8af3`
 
 ## Repo/workflow state
 
@@ -13,26 +13,26 @@ Last verified implementation SHA: `4db716b`
 - Every commit is authored solely by `sanjeetji <sk698166@gmail.com>`. Commit messages also carry a
   tooling-required `Co-Authored-By: Claude Opus 4.8` trailer; the owner may strip it from history.
 
-## Completed (R-241) — authentication guards from the IR
+## Completed (R-242) — real JWT verification in the auth guard
 
-- New `codegen/auth_guard.py`: `needs_auth`, `python_auth_file`, `go_auth_file`. Every `auth=true`
-  endpoint enforces a guard that rejects a request with no `Authorization: Bearer` credential (`401`).
-- Python (`backend_python.py`): emits `app/auth.py` (`require_auth` dependency); `auth=true` routes
-  declare `dependencies=[Depends(require_auth)]`, public routes unchanged. Go (`backend_go.py`): emits
-  `internal/handlers/auth.go` (`RequireAuth(next)` middleware); `main.go` wraps exactly the `auth=true`
-  registrations with `handlers.RequireAuth(...)`. Both DB and non-DB backends.
-- IR roles surfaced as a generated constant (Python `ROLES`, Go `Roles`, from `role.id`). The guard only
-  requires a credential; token verification (signature/expiry/roles) is a documented TODO — no secret
-  fabricated. Emitted only when the IR has an `auth=true` endpoint; deterministic; nothing runs.
+- `codegen/auth_guard.py` now generates a guard that **verifies a JWT (HS256)** using `JWT_SECRET` from
+  the environment — `401` on a missing/invalid/expired token, `500` when the secret is unset, never a
+  fabricated default.
+- Python (`app/auth.py`): `require_auth` imports PyJWT, `jwt.decode(.., algorithms=["HS256"])`, returns
+  the verified claims; `requirements.txt` gains `PyJWT`, `.env.example` gains an empty `JWT_SECRET`. Go
+  (`internal/handlers/auth.go`): `RequireAuth` uses `github.com/golang-jwt/jwt/v5`, `jwt.Parse` with an
+  HMAC-only keyfunc; `go.mod` gains the golang-jwt `require`, `.env.example` gains `JWT_SECRET`.
+- Route placement is unchanged from R-241 (auth routes guarded, public untouched). Platform code stays
+  standard-library only — the JWT dependency lives in the generated project. The IR roles constant is
+  retained for future per-endpoint authorization (needs an IR field).
 
 ## Verification
 
-- `task verify` — pass (265 agent-engine tests; 9 new in `test_auth_guard.py`). `minimal-blog`:
-  `POST /posts` guarded via `Depends(require_auth)`, `GET /posts` public; `app/auth.py` parses as valid
-  Python with `ROLES = ("author", "reader")`. `rideshare-favourites`: `main.go` wraps the 3 auth
-  endpoints with `handlers.RequireAuth(...)`, `GET /drivers` direct. `task security:quick`, `task
-  env:check` — pass. No handler executed, no network.
-- Tracker — R-241 (Builder) at `Phase_Roadmap!A9:M9`; MVP total 136, Done 30; chart/styles intact.
+- `task verify` — pass (268 agent-engine tests; 3 new). `minimal-blog` `app/auth.py` parses as valid
+  Python and reads `JWT_SECRET` from `os.environ` only; `rideshare-favourites` `auth.go` uses golang-jwt
+  with an HMAC keyfunc; deps + `JWT_SECRET` placeholder added. `task security:quick`, `task env:check` —
+  pass. No token signed/verified at generation time, no network.
+- Tracker — R-242 (Builder) at `Phase_Roadmap!A9:M9`; MVP total 137, Done 31; chart/styles intact.
 
 ## Product state
 
@@ -44,10 +44,10 @@ tier switch + a driver for every provider), the **verifiable-engineering layer**
 ladders and one-IR→monorepo verify plans), the **edit loop** (plan_edit → diff → apply → commit), a
 **generated PostgreSQL schema** (migrations/0001_init.sql from IR entities + relations), a
 **data-access layer** (Python repositories + Go store) over that schema, **wired handlers** (the
-unambiguous CRUD endpoints call the repositories), and now **authentication guards** (each `auth=true`
-endpoint enforces a bearer credential). The builder is generate (web/api with working CRUD + auth
-guards + DB schema + data access) → verify → edit → commit, fully offline. 30 tracker tasks Done;
-0 cloud calls; the platform's own PostgreSQL/Compose untouched.
+unambiguous CRUD endpoints call the repositories), and now **JWT-verified authentication guards** (each
+`auth=true` endpoint verifies an HS256 token with the secret from the env). The builder is generate
+(web/api with working CRUD + JWT auth + DB schema + data access) → verify → edit → commit, fully
+offline. 31 tracker tasks Done; 0 cloud calls; the platform's own PostgreSQL/Compose untouched.
 
 ## Free-tier note (for the founder, verify before relying)
 
@@ -55,10 +55,10 @@ Recurring monthly free: local (forever), GitHub Codespaces, Vercel Hobby, Render
 One-time trials: E2B/Daytona credits, Fly credit, Railway credit, AWS/GCP/Azure. Prefer the recurring
 ones for ongoing free use.
 
-## Next action (R-242, pick with the founder — all offline-doable)
+## Next action (R-243, pick with the founder — all offline-doable)
 
-1. **Real token verification + per-endpoint roles**: build on the R-241 guard — verify a JWT
-   (signature/expiry) and enforce roles per endpoint (the IR `roles` are already surfaced as a constant).
+1. **Per-endpoint role enforcement**: extend the IR `ApiEndpoint` with optional `required_roles` and
+   check them against the R-242-verified token claims (the roles constant is already generated).
 2. **Seed data + ambiguous routes**: generate seed/fixture rows and handle the endpoints still left as
    `501` (sub-collections like `/posts/{postId}/comments`, custom/multi-param routes).
 3. **Combined build/verify/preview plan surface**: a single per-target plan set the console/CLI can

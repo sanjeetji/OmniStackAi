@@ -1,7 +1,7 @@
 schema_version: 1
 task_id: R-242
 title: Real JWT verification in the generated auth guard (HS256, secret from env)
-status: in_progress
+status: done
 phase: BASIC/MVP
 founder_stage: 0
 branch: main
@@ -86,10 +86,18 @@ model_tool_trace:
   cloud_calls: 0
   note: Deterministic; no model call, no network, no token signed/verified at generation time. cloud_calls zero.
 completion:
-  implementation_commit: null
-  verified_at: null
-  verification: []
-  acceptance_results: []
+  implementation_commit: e0d8af3
+  verified_at: "2026-09-07T00:00:00+05:30"
+  verification:
+    - "task verify — pass (268 agent-engine tests; 3 new)"
+    - "task security:quick — pass; task env:check — pass"
+    - "app/auth.py parses as valid Python; JWT_SECRET is read from env only (no fabricated default)"
+  acceptance_results:
+    - "Python guard imports PyJWT, verifies with HS256, 401s on missing/invalid, 500s when JWT_SECRET unset; requirements.txt gains PyJWT and .env.example gains an empty JWT_SECRET (tests)"
+    - "Go guard imports golang-jwt, jwt.Parse rejects non-HMAC, 401s on invalid; go.mod gains the golang-jwt require and .env.example gains JWT_SECRET (tests)"
+    - "no fabricated secret anywhere — secret only from os.environ/os.Getenv; IR roles constant retained (tests)"
+    - "emitted only when the IR has an auth=true endpoint; byte-stable; nothing runs"
+    - "platform code standard-library only (JWT dep is in the generated project); no token signed/verified at generation time; no network"
 blockers: []
 next_action: >-
   Implement JWT verification in auth_guard + dependency/env additions + tests; run the gates; record

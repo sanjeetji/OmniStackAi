@@ -40,7 +40,7 @@ START PROTOCOL
   `task ai:status`, `task ai:handoff`. `task verify` must stay green and network-independent.
 - Confirm git branch/HEAD/clean tree. Then restate: phase, next Tracker ID, objective, blast radius.
 
-WHAT IS ALREADY BUILT (all Python 3.13 stdlib-only, offline, in services/agent-engine; 265 tests pass)
+WHAT IS ALREADY BUILT (all Python 3.13 stdlib-only, offline, in services/agent-engine; 268 tests pass)
 - Model fabric: ModelProvider contract + registry; local Ollama adapter (runs any installed model via
   OMNISTACKAI_OLLAMA_MODEL); Balanced ModelGateway (deterministic escalation ladder, no silent cloud
   fallback, context-budget guard); key-activated cloud catalog — Anthropic/OpenAI/Google-Gemini/
@@ -61,8 +61,9 @@ WHAT IS ALREADY BUILT (all Python 3.13 stdlib-only, offline, in services/agent-e
   them, Go handlers are methods on a Handlers struct with *sql.DB, main opens store.Open(); ambiguous
   routes stay 501), when the IR has entities + database_strategy=postgres. Auth guards (auth_guard.py):
   each auth=true endpoint enforces a bearer-credential guard (Python app/auth.py + Depends(require_auth);
-  Go internal/handlers/auth.go + RequireAuth middleware), IR roles surfaced as a constant, token
-  verification a documented TODO. TRI-TARGET proven from ONE IR; all offline/deterministic (emit
+  Go internal/handlers/auth.go + RequireAuth middleware) that VERIFIES a JWT (HS256) with JWT_SECRET
+  from the env (Python PyJWT, Go golang-jwt; 401 invalid / 500 unset; secret never hard-coded), IR roles
+  surfaced as a constant. TRI-TARGET proven from ONE IR; all offline/deterministic (emit
   files, assert contents; no install/build/DB).
 - RUNTIME/DEPLOY layer (Brief 15/51/75): RuntimeProvider/DeploymentProvider contracts;
   LocalRuntimeProvider (Tier 0/1, no keys) yields deterministic per-target preview plans + opt-in
@@ -90,8 +91,8 @@ validator/normalizer + fixtures, R-232 project assembler, R-233 runtime/deploy p
 R-234 tier switch + cloud provider drivers, R-235 verifiable-engineering verify plans, R-236 expanded
 model-provider catalog + custom providers, R-237 IR-diff -> patch-apply edit loop, R-238
 PostgreSQL schema/migration from the IR, R-239 data-access/repository layer, R-240 route wiring
-(handlers call the repositories), R-241 authentication guards (enforce the IR auth flag). Do NOT
-overwrite backlog rows; continue from R-242.
+(handlers call the repositories), R-241 authentication guards (enforce the IR auth flag), R-242 real JWT verification (HS256). Do NOT
+overwrite backlog rows; continue from R-243.
 
 ENVIRONMENT LIMITS discovered here
 - npm front-end bundlers (Next.js SWC, Vite/esbuild) FAIL to install (native-binary downloads time
@@ -117,12 +118,12 @@ RULES (non-negotiable)
   .ai/HANDOFF.md, PROJECT_STATE.md, CHANGELOG.md, and the tracker row. Push the branch; verify remote
   SHA == local HEAD. Never claim unexecuted tests.
 
-WHAT TO DO NEXT (pick with the founder; all continue the builder), continue from R-242
-- Offline-doable now: real token verification (JWT signature/expiry) + per-endpoint role enforcement on
-  top of the R-241 guard (IR roles already surfaced); seed/fixture data + handling the endpoints still
-  left as 501 (sub-collections like /posts/{postId}/comments, custom/multi-param routes); a combined
-  build/verify/preview plan surface tying runtime (R-233/234), verify (R-235), and edit (R-237) together
-  for the console/CLI; or a richer diff (rename/hunk-level) on the R-237 ProjectDiff.
+WHAT TO DO NEXT (pick with the founder; all continue the builder), continue from R-243
+- Offline-doable now: per-endpoint role enforcement (extend the IR ApiEndpoint with required_roles and
+  check them against the R-242-verified token claims; roles already surfaced); seed/fixture data +
+  handling the endpoints still left as 501 (sub-collections like /posts/{postId}/comments,
+  custom/multi-param routes); a combined build/verify/preview plan surface tying runtime (R-233/234),
+  verify (R-235), and edit (R-237) together for the console/CLI; or a richer diff (rename/hunk-level).
 - Needs a network/cloud environment: run a Tier-0 preview end-to-end (materialize -> pnpm dev);
   live-verify a cloud LLM provider (set its key + OMNISTACKAI_CLOUD_PROVIDER=<id>, run
   `task agent-engine:gateway:run`) or a deploy/sandbox driver (OMNISTACKAI_TIER=2 + key); and the
@@ -130,5 +131,5 @@ WHAT TO DO NEXT (pick with the founder; all continue the builder), continue from
 - Deferred by governance: native mobile (R-010 etc.) until web/backend stability.
 
 Begin by reading the files above and running the start protocol, then propose the next Tracker ID
-(R-242) with its task contract before writing code. Commit to main.
+(R-243) with its task contract before writing code. Commit to main.
 ```
