@@ -346,3 +346,23 @@
   `task security:quick`, `task env:check` all pass; `task platform:status` demoed tier 0 and tier 2.
 - Committed directly to main (only branch). Tracker row R-234 (Runtime) inserted at row 9; MVP total
   129 / Done 23. Implementation checkpoint `dcb7d2d`. 0 local / 0 cloud model calls; nothing run/deployed.
+
+## 2026-09-07 — R-235
+
+- Added the verifiable-engineering verify-plan layer (`omnistackai_agent_engine.verify`): `plans.py`
+  (`VerifyStepKind` install/typecheck/lint/test/build, `VerifyStep`, `VerifyPlan` — validated,
+  ladder-ordered, `gates()`, reusing the vetted `Command` primitive from runtime.contracts); `gates.py`
+  (the per-target recipe table, `verify_plan`, `verify_plans_for_ir`, `run_verify`, `VerifyReport`).
+- Per-target ladders: nextjs-web/nextjs-admin (pnpm install → tsc --noEmit → lint → build);
+  backend-python (pip install → compileall app → pytest); backend-go (go vet → go test → go build).
+  Each step classified by gate kind; commands control-free/secret-free by construction.
+- Mapped one Application IR to the verify plans for its assembled monorepo apps via a new additive,
+  behavior-preserving `assembled_targets(ir)` in the assembler (`assemble_project` refactored to share
+  the `_plan_assembly` layout decision; output byte-identical, existing tests green).
+- `run_verify(plan)` is the only executor — opt-in, fail-fast, returns a `VerifyReport` (per-step
+  status + return code); never run by tests or `task verify`. Added `task agent-engine:verify-plan`.
+- Docs: `docs/VERIFY.md`. 9 new stdlib offline tests (203 total): per-target plans, ladder order, gate
+  classification, unknown-target error, IR→plans mapping over the rideshare + blog fixtures, plan
+  safety. `task verify`, `task security:quick`, `task env:check` all pass; verify-plan demoed.
+- Committed directly to main (only branch). Tracker row R-235 (Verify) inserted at row 9; MVP total
+  130 / Done 24. Implementation checkpoint `cb74d0c`. 0 local / 0 cloud model calls; nothing installed/built/run.

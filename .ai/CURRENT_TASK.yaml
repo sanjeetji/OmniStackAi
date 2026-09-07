@@ -1,7 +1,7 @@
 schema_version: 1
 task_id: R-235
 title: Verifiable-engineering verify plans (per-target gate ladders + IR/monorepo mapping)
-status: in_progress
+status: done
 phase: BASIC/MVP
 founder_stage: 0
 branch: main
@@ -90,10 +90,18 @@ model_tool_trace:
   cloud_calls: 0
   note: Deterministic; no model call, no install/build/run. No cloud key set; cloud_calls zero.
 completion:
-  implementation_commit: null
-  verified_at: null
-  verification: []
-  acceptance_results: []
+  implementation_commit: cb74d0c
+  verified_at: "2026-09-07T00:00:00+05:30"
+  verification:
+    - "task verify — pass (203 agent-engine tests; 9 new)"
+    - "task security:quick — pass; task env:check — pass"
+    - "task agent-engine:verify-plan demoed backend-go (vet/test/build) and rejects unknown targets"
+  acceptance_results:
+    - "verify_plan(target, app_dir) returns a VerifyPlan for nextjs-web/nextjs-admin/backend-python/backend-go; unknown target raises UnsupportedVerifyTargetError (tests)"
+    - "VerifyPlan is validated + ladder-ordered; each step classified by kind; plan.gates() reports kinds; commands control-free/secret-free (tests)"
+    - "verify_plans_for_ir(ir) returns plans for the IR's assembled apps bound to apps/web + services/api, matching assembled_targets (tests over rideshare + blog fixtures)"
+    - "run_verify present (opt-in fail-fast executor returning VerifyReport); never run by tests/verify"
+    - "task agent-engine:verify-plan prints the ladder; task verify stays green and network-independent"
 blockers: []
 next_action: >-
   Implement the verify-plan layer + IR mapping + opt-in executor with offline tests; run the gates;

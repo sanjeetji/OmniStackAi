@@ -5,10 +5,11 @@ Last updated: 2026-09-06T10:46:19+05:30 by Codex (GPT-5)
 Stage 0 (Founder Build Sequence, Brief Section 91) — BASIC/MVP
 
 ## Last Completed Task
-Tracker ID: R-234 — Tier switch + cloud provider drivers — DONE, `task verify` (194 agent-engine
-tests, 13 new) passing; one `OMNISTACKAI_TIER` knob (0/1 local, 2 cloud) resolves the runtime/deploy
-providers and every provider has a driver that emits a real command plan (no key in any plan);
-`task platform:status` shows the active tier; implementation checkpoint `dcb7d2d`
+Tracker ID: R-235 — Verifiable-engineering verify plans — DONE, `task verify` (203 agent-engine
+tests, 9 new) passing; a deterministic per-target gate ladder (install/typecheck/lint/test/build)
+classified by gate kind, one Application IR mapped to the verify plans for its assembled monorepo apps
+(apps/web + services/api), and an opt-in `run_verify` executor; `task agent-engine:verify-plan` prints
+a ladder; implementation checkpoint `cb74d0c`
 (R-224 Next.js console upgrade deferred — env-blocked)
 
 ## Workflow note

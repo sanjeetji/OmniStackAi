@@ -6,10 +6,10 @@ current_task: null
 current_status: ready_for_next_task_definition
 branch: main
 last_completed_task:
-  task_id: R-234
-  title: Tier switch + cloud provider drivers (Tier 0/1 local run; Tier 2 all providers)
-  implementation_commit: dcb7d2d
-  verification: task verify (194 agent-engine tests, 13 new); one OMNISTACKAI_TIER knob resolves runtime/deploy; every provider has a driver emitting a real command plan (no key in any plan)
+  task_id: R-235
+  title: Verifiable-engineering verify plans (per-target gate ladders + IR/monorepo mapping)
+  implementation_commit: cb74d0c
+  verification: task verify (203 agent-engine tests, 9 new); per-target verify plans (install/typecheck/lint/test/build) classified by gate kind, IR->plans mapping over apps/web + services/api, opt-in run_verify executor
   result: pass
 control_plane_database: postgresql
 model_routing_mode: balanced
@@ -23,5 +23,5 @@ id_note: >-
   Workbook backlog owns R-010..R-219. Founder-requested tasks use IDs after R-219: R-220..R-223 done,
   R-224 Next.js deferred (env-blocked), R-225 Application IR (in progress).
 blockers: []
-next_action: Tier switch + all provider drivers wired (one OMNISTACKAI_TIER knob; task platform:status). Next: run a Tier-0 preview end-to-end (needs a network machine) or live-verify one cloud driver (e.g. Vercel deploy / E2B sandbox) once its key is supplied. Confirm environment / next Tracker ID.
+next_action: Verifiable-engineering verify plans wired (per-target gate ladders; task agent-engine:verify-plan; IR->plans over the monorepo; opt-in run_verify). Next (R-236, offline-doable): an IR-diff -> patch-apply edit loop, or expand IR/adapter coverage (auth/relations/migrations), or a combined "build+verify" plan surface. Cloud items (Tier-0 preview end-to-end, live cloud driver) need a network machine/keys. Confirm next Tracker ID.
 last_updated: "2026-09-07T00:00:00+05:30"
