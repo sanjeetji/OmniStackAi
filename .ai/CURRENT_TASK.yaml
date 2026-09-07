@@ -1,7 +1,7 @@
 schema_version: 1
 task_id: R-231
 title: Application IR validator/normalizer + example IR fixtures
-status: in_progress
+status: done
 phase: BASIC/MVP
 founder_stage: 0
 branch: main
@@ -75,12 +75,28 @@ model_tool_trace:
   cloud_calls: 0
   note: Deterministic; no model call. No cloud key set; cloud_calls zero.
 completion:
-  implementation_commit: null
-  verified_at: null
-  verification: []
-  acceptance_results: []
+  implementation_commit: f2027a6a7bc6bae37b14226838519c86657f8ff3
+  verified_at: "2026-09-06T23:10:00+05:30"
+  verification:
+    - command: task verify
+      result: pass
+      evidence: 163 agent-engine tests (9 new validator/normalizer/example tests) plus all Stage 0 checks
+    - command: task agent-engine:lint
+      result: pass
+    - command: task security:quick
+      result: pass
+  acceptance_results:
+    - criterion: validate_ir returns typed Issues; unknown API schema reference is an error; strategy/platform mismatch is a warning; clean IR has no errors.
+      result: pass
+    - criterion: normalize_ir returns a canonical IR (platforms in enum order; collections sorted; field order preserved); idempotent and lossless through to_dict.
+      result: pass
+    - criterion: example_ir provides two realistic IRs that validate clean and generate via the web/Python/Go adapters.
+      result: pass
+    - criterion: Standard-library only; deterministic; no network/model call; construction checks unchanged.
+      result: pass
+  note: Deterministic; no model call; cloud_calls zero.
 blockers: []
 next_action: >-
-  Implement the validator, normalizer, and example fixtures with offline tests; run the gates; record
-  completion. Next real steps (sandbox/preview/deploy) need a cloud/network environment.
-next_command: task agent-engine:test
+  IR hardening + fixtures done. Next real steps — sandbox run, instant browser preview, deploy, and
+  the deferred Next.js console upgrade — need a cloud/network-capable environment. Confirm next Tracker ID.
+next_command: task ai:status

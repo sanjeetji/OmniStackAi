@@ -1,5 +1,6 @@
 # Changelog
 
+2026-09-06  R-231  Added an Application IR semantic validator (unknown API schema references = error; strategy/platform mismatch = warning), a deterministic canonical normalizer (idempotent, lossless), and example IR fixtures (rideshare-favourites, minimal-blog) that validate clean and generate via all three adapters
 2026-09-06  R-230  Added the Go backend framework adapter: one Application IR now emits web (Next.js) + Python (FastAPI) + Go (net/http) — Go structs from entities, Go 1.22 method+pattern routes grouped by resource with r.PathValue params, main + health; standard-library only, deterministic, offline, no install/build/disk
 2026-09-06  R-229  Added the Python (FastAPI) backend framework adapter: one Application IR now emits web (Next.js) + backend (FastAPI) together — Pydantic models from entities, routers from APIs grouped by resource with typed path params, main app + health; deterministic, offline, no install/build/disk
 2026-09-06  R-228  Added the git service: materialize a GeneratedProject to disk and initialize a customer-owned Git repository with a first commit (explicit identity, no global config, writes only inside the target, offline) — completes the first end-to-end builder slice (IR -> app -> owned repo)

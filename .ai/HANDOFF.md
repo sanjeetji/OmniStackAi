@@ -1,10 +1,10 @@
 # Current Handoff
 
-Task ID: R-230
+Task ID: R-231
 Status: done
 Phase: BASIC/MVP — Founder Stage 0
 Branch: `main` (the only branch; the GitHub default)
-Last verified implementation SHA: `e2515a8f1b0314ec287a02cdaf25e72a17b9da3f`
+Last verified implementation SHA: `f2027a6a7bc6bae37b14226838519c86657f8ff3`
 
 ## Repo/workflow state
 
@@ -13,39 +13,40 @@ Last verified implementation SHA: `e2515a8f1b0314ec287a02cdaf25e72a17b9da3f`
 - Every commit is authored solely by `sanjeetji <sk698166@gmail.com>`. Commit messages also carry a
   tooling-required `Co-Authored-By: Claude Opus 4.8` trailer; the owner may strip it from history.
 
-## Completed (R-230) — tri-target from one IR
+## Completed (R-231)
 
-- `GoBackendAdapter` (`codegen/backend_go.py`, target `backend-go`): entities → Go structs (json tags,
-  optional pointers); IR APIs → Go 1.22 method+pattern routes grouped by resource
-  (`internal/handlers/<segment>.go`, `r.PathValue` params, 501 scaffolds); `main.go` registers routes
-  + `GET /healthz` and serves; `go.mod` (`go 1.22`); README/.gitignore/.env.example. Generated Go and
-  the platform side are standard-library only.
-- **One Application IR now emits three targets:** a 12-file Next.js web app (R-227), an 11-file FastAPI
-  backend (R-229), and an 8-file Go net/http service (R-230). Any can be materialized into a
-  customer-owned Git repo (R-228).
+- `application_ir.validate_ir(ir)` — semantic `Issue`s: unknown API schema reference = error;
+  web/admin/mobile strategy vs platform mismatch = warning; `has_errors()` helper. Construction checks
+  in `ir.py` are unchanged (this is additive).
+- `application_ir.normalize_ir(ir)` — canonical IR (platforms in enum order; roles/entities/apis/
+  screens/acceptance sorted; entity field order preserved); idempotent and lossless through `to_dict`.
+- `application_ir.example_ir(name)` / `EXAMPLES` — `rideshare-favourites`, `minimal-blog`; both
+  validate clean and generate via all three adapters.
 
 ## Verification
 
-- `task verify` — pass (154 agent-engine tests; 7 new). `task agent-engine:lint`, `task security:quick` — pass.
+- `task verify` — pass (163 agent-engine tests; 9 new). `task agent-engine:lint`, `task security:quick` — pass.
 - Compose unchanged; offline `task bootstrap` unchanged.
-- Tracker — R-230 (Product) at `Phase_Roadmap!A9:M9`; MVP total 125, Done 19; chart/styles intact.
+- Tracker — R-231 (Product) at `Phase_Roadmap!A9:M9`; MVP total 126, Done 20; chart/styles intact.
 
-## What exists now (product)
+## What exists now (product) — near-term offline builder pieces are COMPLETE
 
-- **Model fabric** (R-005..R-223): gateway, local Ollama + 5 cloud adapters (key-activated), streaming,
-  fallback + circuit breaker, usage/cost accounting, static console + snapshot exporter.
-- **Builder** (R-225..R-230): Application IR → adapter contract → Next.js + FastAPI + Go adapters
-  (multi-target) → Git service (materialize into a customer-owned repo).
+- **Model fabric** (R-005..R-223): gateway, local Ollama + 5 cloud adapters, streaming, fallback +
+  circuit breaker, usage/cost accounting, static console + snapshot exporter.
+- **Builder** (R-225..R-231): Application IR (+ validator/normalizer/fixtures) → adapter contract →
+  Next.js + FastAPI + Go adapters (tri-target from one IR) → Git service (materialize to an owned repo).
 
-## Next action (resume here)
+## Next action (needs a cloud/network-capable environment)
 
-Pick one and continue on `main`:
-1. **R-231 = IR validator/normalizer + example IR fixtures** — offline-doable now; hardens the IR and
-   gives realistic sample specs to drive the adapters.
-2. **Sandbox/runtime provider + instant browser preview + deploy** (Brief §15/§51) — needs a
-   cloud/network-capable environment (this sandbox can't install front-end toolchains or run apps).
-3. **R-224 Next.js console upgrade** — needs npm registry access.
+The remaining builder steps require real runtime/infra and cannot be done in this offline sandbox:
+1. **Sandbox/runtime provider + instant browser preview** of a generated app (Brief §15/§51), then
+   **deploy**. This is the next big UX leap and the point where generated apps actually run.
+2. **R-224 Next.js console upgrade** — needs npm registry access.
 Native mobile / device-cloud stays deferred per Brief §25/§91 until web/backend stability.
+
+To continue offline instead, options include: an admin (Next.js) adapter, a React Native/Expo web
+adapter, richer IR (flows/integrations/build_matrix), or a customer-repo scaffolder that assembles
+multiple targets into one monorepo via the Git service.
 
 ## Next command
 

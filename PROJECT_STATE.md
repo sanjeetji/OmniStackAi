@@ -5,9 +5,9 @@ Last updated: 2026-09-06T10:46:19+05:30 by Codex (GPT-5)
 Stage 0 (Founder Build Sequence, Brief Section 91) — BASIC/MVP
 
 ## Last Completed Task
-Tracker ID: R-230 — Go backend adapter (IR -> Go net/http service) — DONE, `task verify` (154
-agent-engine tests, 7 new) passing; one IR now emits web + Python + Go; implementation checkpoint
-`e2515a8f1b0314ec287a02cdaf25e72a17b9da3f` (R-224 Next.js console upgrade deferred — env-blocked)
+Tracker ID: R-231 — Application IR validator/normalizer + example fixtures — DONE, `task verify` (163
+agent-engine tests, 9 new) passing; implementation checkpoint
+`f2027a6a7bc6bae37b14226838519c86657f8ff3` (R-224 Next.js console upgrade deferred — env-blocked)
 
 ## Workflow note
 Founder consolidated all work onto `main` (per-task branches deleted; `main` is the default). Continue
@@ -36,11 +36,12 @@ stability). Founder-requested work uses unique IDs after R-219: R-220 = cloud st
 R-221 = cross-provider fallback (done); R-222 = platform console slice (done); R-223 = env-driven
 fallback wiring (done); R-224 = Next.js console upgrade (deferred — environment-blocked).
 
-## Next Up (queued, in order)
-1. R-231 — IR validator/normalizer + example IR fixtures (offline-doable), OR
-2. Sandbox/runtime provider + instant browser preview + deploy (need a cloud/network environment)
-3. R-224 — Next.js console upgrade — resume in an environment with reliable npm registry access
-4. R-010 — Native iOS Agent (backlog; deferred until web/backend stability per Brief 25/91)
+## Next Up (queued, in order — need a cloud/network-capable environment)
+1. Sandbox/runtime provider + instant browser preview of a generated app (Brief 15/51), then deploy
+2. R-224 — Next.js console upgrade — resume in an environment with reliable npm registry access
+3. R-010 — Native iOS Agent (backlog; deferred until web/backend stability per Brief 25/91)
+(All near-term offline-doable builder pieces — IR, adapter contract, web/Python/Go adapters, Git
+service, IR validator/normalizer/fixtures — are now complete.)
 
 ## Decisions Made This Session
 - Applied the normative V6 precedence rules and Section 91 Phase 0 sequence.
