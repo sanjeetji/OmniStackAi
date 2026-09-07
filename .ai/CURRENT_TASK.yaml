@@ -1,29 +1,29 @@
 schema_version: 1
-task_id: R-241
-title: Authentication guards from the IR (enforce the endpoint auth flag; surface roles)
-status: done
+task_id: R-242
+title: Real JWT verification in the generated auth guard (HS256, secret from env)
+status: in_progress
 phase: BASIC/MVP
 founder_stage: 0
 branch: main
 goal: >-
-  Make the IR's per-endpoint auth flag real (Brief 9/27/34/55): generate an authentication guard that
-  every endpoint with auth=true enforces, rejecting a request with no bearer credential (HTTP 401)
-  before the handler runs. Python (FastAPI) gets app/auth.py with a require_auth dependency and wired
-  routes declare dependencies=[Depends(require_auth)]; Go gets internal/handlers/auth.go with a
-  RequireAuth(next) middleware and main wraps the auth endpoints with handlers.RequireAuth(...). The IR
-  roles are surfaced as a generated ROLES/Roles constant (a documented anchor for future per-endpoint
-  authorization; token signature/expiry/role checks are an explicit TODO in the generated code, not
-  faked). Emitted only when the IR declares at least one auth=true endpoint; applies to both DB and
-  non-DB backends. Deterministic and offline; nothing runs; the R-237 edit loop diffs the guards when
-  the IR changes.
+  Upgrade the R-241 authentication guard from a bearer-presence check to real token verification
+  (Brief 9/27/55/64): the generated guard decodes and verifies a JWT (HS256) using a JWT_SECRET read
+  from the environment, returning 401 on a missing/invalid/expired token and 500 when the secret is not
+  configured (never a fabricated default). Python (FastAPI) require_auth uses PyJWT and returns the
+  verified claims; Go RequireAuth uses github.com/golang-jwt/jwt/v5 and rejects a non-HMAC/invalid
+  token. The generated projects gain the JWT dependency (requirements.txt / go.mod) and a JWT_SECRET
+  placeholder in .env.example (empty — no secret committed). The IR roles stay surfaced as a constant;
+  per-endpoint role ENFORCEMENT needs an IR field and is a follow-up. Emitted only when the IR declares
+  an auth=true endpoint. Deterministic and offline (emit files, assert contents) — no token is signed or
+  verified at generation time, nothing runs, no network.
 source:
   tracker_sheet: Phase_Roadmap
   tracker_row: reconstructed; new IDs continue after the workbook backlog's R-010..R-219
-  brief_sections: [9, 27, 34, 35, 55, 64, 74, 77, 83, 84, 85, 92]
+  brief_sections: [9, 27, 34, 55, 64, 74, 77, 83, 84, 85, 90, 92]
   founder_note: >-
-    Founder approved continuing after R-240; enforcing auth is a core real-app feature and the IR auth
-    flag was previously only a comment. Committed directly to main; author solely sanjeetji; tooling
-    adds a Co-Authored-By trailer.
+    Founder approved continuing after R-241 toward real token verification + roles. R-242 delivers real
+    JWT verification; per-endpoint roles follow once the IR carries required roles. Committed directly to
+    main; author solely sanjeetji; tooling adds a Co-Authored-By trailer.
 project_profile:
   repository: platform_modular_monorepo
   service: python_agent_engine
@@ -35,8 +35,6 @@ expected_impact:
   - services/agent-engine/src/omnistackai_agent_engine/codegen/backend_python.py
   - services/agent-engine/src/omnistackai_agent_engine/codegen/backend_go.py
   - services/agent-engine/tests/test_auth_guard.py
-  - services/agent-engine/tests/test_backend_python_adapter.py
-  - services/agent-engine/tests/test_backend_go_adapter.py
   - docs/CODEGEN.md
   - docs/PROGRESS.md
   - portable state, changelog, handoff, task doc, and tracker evidence
@@ -50,32 +48,30 @@ allowed_paths:
 must_not_change:
   - PostgreSQL as the control-plane database or the platform's own schema/migrations
   - the ModelProvider/gateway, IR, runtime, verify, edit, data-access, route-wiring public behavior (additive)
-  - endpoints with auth=false (no guard added); the public behavior of routes stays otherwise identical
+  - the route-wiring guard placement from R-241 (auth=true routes stay guarded; public routes untouched)
   - local Compose services or infrastructure; the Section 74 top-level contract; the offline bootstrap
   - the network-independence of static task verify
 must_not_do:
-  - claim real token verification (signature/expiry/roles) — the generated guard only requires a bearer
-    credential and marks verification as a TODO; do not fabricate a JWT secret or key
-  - execute a handler or make a network call; add a platform Python dependency; import a vendor SDK; put a secret anywhere
+  - fabricate or hard-code a JWT secret/default — the secret is read from JWT_SECRET (env), empty in .env.example
+  - sign or verify a token at generation time; execute a handler; make a network call
+  - add a platform Python dependency or import a vendor SDK in the platform code (the JWT dep is in the
+    GENERATED project only)
 acceptance:
-  - When the IR has at least one auth=true endpoint, the Python backend emits app/auth.py (require_auth
-    dependency that 401s without an Authorization: Bearer token) and every auth=true route declares
-    dependencies=[Depends(require_auth)]; auth=false routes are unchanged.
-  - The Go backend emits internal/handlers/auth.go (RequireAuth middleware that 401s without a bearer
-    token) and main wraps exactly the auth=true endpoints with handlers.RequireAuth(...); auth=false
-    endpoints are registered directly.
-  - The IR roles are surfaced as a generated constant (Python ROLES tuple, Go Roles slice) listing the
-    role names; the generated code documents that per-endpoint role enforcement is future work.
-  - Nothing is emitted when no endpoint requires auth; generated Python parses as valid Python; output
-    is byte-stable; nothing runs.
-  - Standard-library offline tests cover the guard emission + gating, per-route dependency/middleware
-    wrapping for auth vs public endpoints, and the roles constant.
+  - The generated Python guard imports PyJWT, reads JWT_SECRET from env, verifies the token with HS256,
+    401s on missing/invalid, 500s when the secret is unset; requirements.txt gains PyJWT and .env.example
+    gains an empty JWT_SECRET. app/auth.py parses as valid Python.
+  - The generated Go guard imports github.com/golang-jwt/jwt/v5, reads JWT_SECRET, parses+verifies the
+    token (HMAC only), 401s on invalid; go.mod gains the golang-jwt require and .env.example gains JWT_SECRET.
+  - No fabricated secret anywhere; the secret only ever comes from the env. The IR roles constant is
+    retained. Emitted only when the IR has an auth=true endpoint; output is byte-stable; nothing runs.
+  - Standard-library offline tests cover the JWT verification code + dependency/env additions, the
+    no-fabricated-secret property, and that all-public IRs still emit no auth artifacts.
 required_gates:
   - impact_analysis
-  - auth_guard_emission_and_gating_tests
-  - python_dependency_wrapping_tests
-  - go_middleware_wrapping_tests
-  - roles_surfaced_test
+  - jwt_verification_emission_tests
+  - dependency_and_env_additions_tests
+  - no_fabricated_secret_test
+  - gating_and_determinism_tests
   - python_compile_test
   - vendor_import_exclusion
   - secret_exclusion_check
@@ -88,22 +84,14 @@ model_tool_trace:
   configured_model: qwen2.5-coder:14b
   local_calls: 0
   cloud_calls: 0
-  note: Deterministic; no model call, no network, no handler executed. cloud_calls zero.
+  note: Deterministic; no model call, no network, no token signed/verified at generation time. cloud_calls zero.
 completion:
-  implementation_commit: 4db716b
-  verified_at: "2026-09-07T00:00:00+05:30"
-  verification:
-    - "task verify — pass (265 agent-engine tests; 9 new in test_auth_guard.py)"
-    - "task security:quick — pass; task env:check — pass"
-    - "minimal-blog: POST /posts guarded via Depends(require_auth), GET /posts public; rideshare: RequireAuth wraps the 3 auth endpoints, GET /drivers direct"
-  acceptance_results:
-    - "Python emits app/auth.py (require_auth -> 401 without a Bearer token, valid Python); auth=true routes declare dependencies=[Depends(require_auth)]; public routes unchanged (tests)"
-    - "Go emits internal/handlers/auth.go (RequireAuth middleware -> 401); main wraps only auth=true endpoints with handlers.RequireAuth(...) (tests)"
-    - "IR roles surfaced as ROLES tuple (Python) / Roles slice (Go); token verification is a documented TODO, no secret fabricated (tests)"
-    - "nothing emitted when all endpoints are public; byte-stable; nothing runs (tests)"
-    - "no handler executed, no network; task verify network-independent"
+  implementation_commit: null
+  verified_at: null
+  verification: []
+  acceptance_results: []
 blockers: []
 next_action: >-
-  Implement auth_guard.py + wire both backends + tests; run the gates; record completion. Later continue
-  with real token verification / per-endpoint roles / seed data.
+  Implement JWT verification in auth_guard + dependency/env additions + tests; run the gates; record
+  completion. Follow-up: per-endpoint required_roles (needs an IR field) then enforcement.
 next_command: task agent-engine:test

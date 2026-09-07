@@ -153,18 +153,23 @@ endpoint's entity comes from its `response_schema` (else `request_schema`); the 
 Emitted only when the IR has entities and `database_strategy == postgres` (otherwise backends keep the
 plain scaffold handlers, unchanged). Deterministic and offline — nothing runs.
 
-## Authentication guards (R-241)
+## Authentication guards (R-241) + JWT verification (R-242)
 
 `codegen/auth_guard.py` makes the IR's per-endpoint `auth` flag real: every endpoint with `auth: true`
-enforces a guard that rejects a request with no bearer credential (`401`) before the handler runs. The
-guard is honest — it only checks that an `Authorization: Bearer <token>` header is present and marks
-real verification (signature, expiry, roles) as a `TODO`; it never fabricates a secret.
+enforces a guard that **verifies a JWT (HS256)** using a `JWT_SECRET` read from the environment —
+`401` on a missing/invalid/expired token, `500` when `JWT_SECRET` is unset. The secret is **never**
+hard-coded or defaulted; it only ever comes from the environment.
 
-- **Python (FastAPI):** emits `app/auth.py` with a `require_auth` dependency; each `auth: true` route
-  declares `dependencies=[Depends(require_auth)]`. Public routes are untouched.
-- **Go:** emits `internal/handlers/auth.go` with a `RequireAuth(next)` middleware; `main.go` wraps
-  exactly the `auth: true` registrations with `handlers.RequireAuth(...)`.
+- **Python (FastAPI):** emits `app/auth.py` — `require_auth` uses PyJWT (`jwt.decode(..,
+  algorithms=["HS256"])`) and returns the verified claims; each `auth: true` route declares
+  `dependencies=[Depends(require_auth)]`. `requirements.txt` gains `PyJWT`, `.env.example` gains an empty
+  `JWT_SECRET`.
+- **Go:** emits `internal/handlers/auth.go` — `RequireAuth(next)` parses the token with
+  `github.com/golang-jwt/jwt/v5`, rejecting non-HMAC tokens; `main.go` wraps exactly the `auth: true`
+  registrations with `handlers.RequireAuth(...)`. `go.mod` gains the golang-jwt `require`, `.env.example`
+  gains `JWT_SECRET`.
 
 The IR `roles` are surfaced as a generated constant (Python `ROLES` tuple, Go `Roles` slice) — an anchor
-for future per-endpoint authorization. Emitted only when the IR declares at least one `auth: true`
-endpoint (both DB and non-DB backends); deterministic and offline.
+for per-endpoint authorization, which lands once the IR carries required roles per endpoint. Emitted
+only when the IR declares at least one `auth: true` endpoint (both DB and non-DB backends);
+deterministic and offline — no token is signed or verified at generation time.

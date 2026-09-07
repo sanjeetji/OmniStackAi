@@ -28,6 +28,21 @@ class PythonAuthTests(TestCase):
         self.assertIn("status_code=401", auth)
         self.assertIn('ROLES = ("author", "reader")', auth)
 
+    def test_jwt_verification_and_dependency(self) -> None:
+        auth = self.project.get("app/auth.py").content
+        self.assertIn("import jwt", auth)
+        self.assertIn('jwt.decode(token, _secret(), algorithms=[JWT_ALGORITHM])', auth)
+        self.assertIn('os.environ.get("JWT_SECRET", "")', auth)
+        self.assertIn("status_code=500", auth)  # secret not configured
+        self.assertIn("PyJWT==2.9.0", self.project.get("requirements.txt").content)
+        self.assertIn("JWT_SECRET=", self.project.get(".env.example").content)
+
+    def test_no_fabricated_secret(self) -> None:
+        auth = self.project.get("app/auth.py").content
+        # the secret only ever comes from the environment; no default value is baked in
+        self.assertNotIn('JWT_SECRET", "some', auth)
+        self.assertIn('os.environ.get("JWT_SECRET", "")', auth)
+
     def test_auth_route_declares_dependency_public_does_not(self) -> None:
         posts = self.project.get("app/routers/posts.py").content
         self.assertIn("from app.auth import require_auth", posts)
@@ -53,6 +68,15 @@ class GoAuthTests(TestCase):
         self.assertIn("func RequireAuth(next http.HandlerFunc) http.HandlerFunc", auth)
         self.assertIn("http.StatusUnauthorized", auth)
         self.assertIn('var Roles = []string{"customer", "admin"}', auth)
+
+    def test_jwt_verification_and_dependency(self) -> None:
+        auth = self.project.get("internal/handlers/auth.go").content
+        self.assertIn('"github.com/golang-jwt/jwt/v5"', auth)
+        self.assertIn("jwt.Parse(tokenStr", auth)
+        self.assertIn('os.Getenv("JWT_SECRET")', auth)
+        self.assertIn("SigningMethodHMAC", auth)  # reject non-HMAC tokens
+        self.assertIn("github.com/golang-jwt/jwt/v5 v5.2.1", self.project.get("go.mod").content)
+        self.assertIn("JWT_SECRET=", self.project.get(".env.example").content)
 
     def test_main_wraps_auth_endpoints_only(self) -> None:
         main = self.project.get("main.go").content
