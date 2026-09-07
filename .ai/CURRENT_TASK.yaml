@@ -1,22 +1,25 @@
 schema_version: 1
-task_id: R-232
-title: Customer project assembler — one IR into a customer-owned monorepo
-status: done
+task_id: R-233
+title: Runtime & deployment provider layer (Tier 0/1 local now; Tier 2/3 add-keys)
+status: in_progress
 phase: BASIC/MVP
 founder_stage: 0
 branch: main
 goal: >-
-  Assemble a complete customer project from one Application IR: select the framework adapters implied
-  by the IR project strategy, generate each target, place it under the customer monorepo layout
-  (apps/web for the Next.js web app, services/api for the Go/Python backend), and merge into a single
-  GeneratedProject with root README/.gitignore. Combined with the Git service, one IR becomes one
-  customer-owned monorepo repository (Brief 6/34/35). Deterministic and offline; nothing installed,
-  built, run, or written to disk in the assembler.
+  Wire the preview/deploy system behind platform-owned provider contracts (Brief 51 SandboxProvider,
+  75 RuntimeProvider/DeploymentProvider) so it works locally now (Tier 0/1, no keys) and cloud
+  providers plug in by adding a key (Tier 2/3). Add a LocalRuntimeProvider that produces deterministic
+  preview plans per target (Next.js/FastAPI/Go: install + run command + local URL), an env-driven
+  registry that registers local always and each key-present cloud sandbox/deploy provider, and env
+  placeholders + docs. Deterministic and offline: plans are constructed and asserted; nothing is
+  installed, run, or deployed here (execution is an opt-in Tier-0 step on a network machine).
 source:
   tracker_sheet: Phase_Roadmap
   tracker_row: reconstructed; new IDs continue after the workbook backlog's R-010..R-219
-  brief_sections: [6, 34, 35, 16, 46, 74, 77, 91, 92]
-  founder_note: Committed directly to main (only branch). Author solely sanjeetji; tooling adds a Co-Authored-By trailer.
+  brief_sections: [15, 51, 55, 64, 75, 87, 74, 77, 91, 92]
+  founder_note: >-
+    Founder asked to wire Tier 0-3 so keys just plug in, with Tier 0/1 (local) working now. Committed
+    directly to main. Author solely sanjeetji; tooling adds a Co-Authored-By trailer.
 project_profile:
   repository: platform_modular_monorepo
   service: python_agent_engine
@@ -24,43 +27,50 @@ project_profile:
   model_routing: balanced
 complexity: L2
 expected_impact:
-  - services/agent-engine/src/omnistackai_agent_engine/codegen/assembler.py
-  - services/agent-engine/src/omnistackai_agent_engine/codegen/__init__.py
-  - services/agent-engine/tests/test_assembler.py
-  - docs/CODEGEN.md
+  - services/agent-engine/src/omnistackai_agent_engine/runtime/** (new package)
+  - services/agent-engine/tests/test_runtime.py
+  - .env.example
+  - Taskfile.yml
+  - scripts/agent-engine.sh
+  - docs/RUNTIME.md
   - portable state, changelog, handoff, task doc, and tracker evidence
 allowed_paths:
   - .ai/**
+  - .env.example
   - CHANGELOG.md
   - PROJECT_STATE.md
   - R_&_D/OmniStackAI_Execution_Tracker_v6.xlsx
+  - Taskfile.yml
   - docs/**
+  - scripts/**
   - services/agent-engine/**
 must_not_change:
   - PostgreSQL as the control-plane database or the existing schema
-  - the model-gateway, Application IR, codegen contract, adapters, and git-service public behavior (additive)
+  - the model-gateway, IR, codegen, and git-service public behavior (additive package)
   - local Compose services or infrastructure; the Section 74 top-level contract; the offline bootstrap
   - the network-independence of static task verify
 must_not_do:
-  - install, build, or run the generated project; write generated files to disk in the assembler
-  - add an external Python dependency; store secrets (generated files hold placeholders only)
+  - install, run, or deploy anything in this task or in task verify (execution is an opt-in Tier-0 step)
+  - add an external Python dependency; choose or call any paid cloud service; store secrets
+    (keys are read from env only, never logged/stored/shown; .env.example holds placeholders only)
 acceptance:
-  - default_registry() returns an AdapterRegistry with the Next.js, Python, and Go adapters registered.
-  - assemble_project(ir) selects targets from ir.project_strategy (web_strategy nextjs -> apps/web;
-    backend_strategy go/python -> services/api; unsupported strategies are skipped, node backend and
-    admin/mobile are documented as not yet assembled), generates each, re-paths its files under the
-    monorepo layout, and returns a single GeneratedProject (target "customer-monorepo") plus a root
-    README listing the assembled apps and a root .gitignore.
-  - All paths are safe, unique, and deterministically ordered; generation is a pure function of the IR;
-    standard-library only; nothing installed/built/run/written to disk.
-  - The assembled project can be materialized by the Git service into one customer-owned repo with a
-    single commit (verified offline in a temp dir).
-  - task verify stays green and network-independent.
+  - RuntimeProvider and DeploymentProvider are runtime-checkable contracts; a LocalRuntimeProvider
+    (id "local") returns deterministic PreviewPlans (install + run Command + local URL) for the
+    nextjs-web, backend-python, and backend-go targets, and raises a stable error for unsupported ones.
+  - Cloud sandbox providers (e2b, daytona, fly-machines) and deploy providers (vercel, fly, render,
+    netlify) are declared with a key env var; build_runtime_from_env / build_deploy_from_env register
+    local always and mark each cloud provider active only when its key is present; selecting a cloud
+    provider without its key raises a clear error; default runtime selection is local, default deploy
+    is none.
+  - No key is ever logged/stored/shown; .env.example gains placeholders (names only) and tier/selector
+    docs; task verify stays green and network-independent.
+  - Standard-library offline tests cover local plans per target, unsupported-target error, env
+    registration with/without keys, unknown-selector errors, and the no-secret guarantee.
 required_gates:
   - impact_analysis
-  - assembler_layout_and_selection_tests
-  - default_registry_test
-  - end_to_end_materialize_test
+  - local_preview_plan_tests
+  - env_registration_and_selection_tests
+  - no_secret_leak_test
   - python_compile_test
   - vendor_import_exclusion
   - secret_exclusion_check
@@ -73,33 +83,15 @@ model_tool_trace:
   configured_model: qwen2.5-coder:14b
   local_calls: 0
   cloud_calls: 0
-  note: Deterministic; no model call. No cloud key set; cloud_calls zero.
+  note: Deterministic; no model call, no run/deploy. No cloud key set; cloud_calls zero.
 completion:
-  implementation_commit: cf28cb0f46ae1f66b9f87b59232eceb2a113b508
-  verified_at: "2026-09-06T23:45:00+05:30"
-  verification:
-    - command: task verify
-      result: pass
-      evidence: 169 agent-engine tests (6 new assembler tests incl. end-to-end materialize) plus all Stage 0 checks
-    - command: task agent-engine:lint
-      result: pass
-    - command: task security:quick
-      result: pass
-  acceptance_results:
-    - criterion: default_registry() returns an AdapterRegistry with the Next.js, Python, and Go adapters.
-      result: pass
-    - criterion: assemble_project selects targets from project_strategy, places web under apps/web and backend under services/api, documents unsupported targets, and returns one customer-monorepo GeneratedProject with root README/.gitignore.
-      result: pass
-    - criterion: Safe unique deterministic paths; pure function of the IR; standard-library only; no install/build/run/disk write.
-      result: pass
-    - criterion: The assembled project materializes via the Git service into one customer-owned repo with a single commit (verified in a temp dir).
-      result: pass
-  note: >-
-    End-to-end: one IR -> a 24-file customer monorepo (apps/web Next.js + services/api Go) -> an owned
-    Git repo, one commit. Deterministic; no model call; cloud_calls zero.
+  implementation_commit: null
+  verified_at: null
+  verification: []
+  acceptance_results: []
 blockers: []
 next_action: >-
-  One IR now becomes a complete customer-owned monorepo. Next real steps — sandbox run, instant browser
-  preview, deploy — need a cloud/network-capable environment (Tier 0: normal internet unlocks local
-  preview). Confirm the next Tracker ID / environment.
-next_command: task ai:status
+  Implement the runtime/deploy contracts, local provider, cloud specs + env bootstrap, env
+  placeholders, and offline tests; run the gates; record completion. Tier 0 execution (actually running
+  a preview) then works on a network-capable machine by running the printed plan.
+next_command: task agent-engine:test

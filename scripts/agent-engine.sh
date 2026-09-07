@@ -79,8 +79,25 @@ if project["project"]["requires-python"] != ">=3.13,<3.14":
       python3 -m omnistackai_agent_engine.model_gateway.live_gateway
     fi
     ;;
+  preview-plan)
+    configure_python
+    target="${2:-nextjs-web}"
+    PYTHONPATH="$source_root" python3 - "$target" <<'PY'
+import sys
+from omnistackai_agent_engine.runtime import LocalRuntimeProvider
+
+target = sys.argv[1]
+app_dir = "apps/web" if target.startswith("nextjs") else "services/api"
+plan = LocalRuntimeProvider().preview_plan(app_dir, target)
+print(f"Local preview plan for '{plan.target}' (Tier 0/1):")
+for step in plan.steps:
+    print(f"  {step.label}: {step.command.display()}   (run in {plan.app_dir})")
+print(f"Then open: {plan.url}")
+print("Run these in the generated project on a machine with the toolchain + internet.")
+PY
+    ;;
   *)
-    printf 'Usage: %s {lint|test|ollama-verify|gateway-run}\n' "$0"
+    printf 'Usage: %s {lint|test|ollama-verify|gateway-run|preview-plan [target]}\n' "$0"
     exit 2
     ;;
 esac
