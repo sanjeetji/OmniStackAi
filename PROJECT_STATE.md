@@ -5,12 +5,13 @@ Last updated: 2026-09-06T10:46:19+05:30 by Codex (GPT-5)
 Stage 0 (Founder Build Sequence, Brief Section 91) — BASIC/MVP
 
 ## Last Completed Task
-Tracker ID: R-237 — IR-diff -> patch-apply edit loop — DONE, `task verify` (226 agent-engine tests,
-9 new) passing; the builder now edits an existing app: `plan_edit(old_ir, new_ir)` assembles both and
-diffs them into a ProjectDiff (added/modified/deleted), `apply_diff` writes only the delta inside a
-path-safe target, and `commit_edit` records it as a new commit on the customer-owned repo (history
-preserved). Diffing pure, applying a bounded disk step, no network/exec; implementation checkpoint
-`a0a494a` (R-224 Next.js console upgrade deferred — env-blocked)
+Tracker ID: R-238 — PostgreSQL schema/migration generation from the IR — DONE, `task verify` (237
+agent-engine tests, 11 new) passing; `render_postgres_schema(ir)` turns entities + relations into a
+deterministic SQL DDL (typed columns, NOT NULL, UUID PK, foreign keys, many-to-many join tables), and
+the FastAPI + Go backends emit it as `migrations/0001_init.sql` when the IR has entities and
+`database_strategy=postgres` (no other emitted file changes). Byte-stable so the R-237 edit loop diffs
+it; nothing connects to or runs a database; implementation checkpoint `c6a4c6e`
+(R-224 Next.js console upgrade deferred — env-blocked)
 
 ## Workflow note
 Founder consolidated all work onto `main` (per-task branches deleted; `main` is the default). Continue

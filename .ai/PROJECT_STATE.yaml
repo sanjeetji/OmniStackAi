@@ -6,10 +6,10 @@ current_task: null
 current_status: ready_for_next_task_definition
 branch: main
 last_completed_task:
-  task_id: R-237
-  title: IR-diff -> patch-apply edit loop (edit an existing generated app)
-  implementation_commit: a0a494a
-  verification: task verify (226 agent-engine tests, 9 new); diff_projects + plan_edit (added/modified/deleted), path-safe apply_diff, commit_edit as customer identity; diffing pure, applying a bounded disk step, no network/exec
+  task_id: R-238
+  title: PostgreSQL schema/migration generation from the Application IR
+  implementation_commit: c6a4c6e
+  verification: task verify (237 agent-engine tests, 11 new); render_postgres_schema (typed columns, PK, FKs, join tables) emitted as migrations/0001_init.sql by the FastAPI + Go backends when entities+postgres; deterministic/offline, no DB connection
   result: pass
 control_plane_database: postgresql
 model_routing_mode: balanced
@@ -23,5 +23,5 @@ id_note: >-
   Workbook backlog owns R-010..R-219. Founder-requested tasks use IDs after R-219: R-220..R-223 done,
   R-224 Next.js deferred (env-blocked), R-225 Application IR (in progress).
 blockers: []
-next_action: Edit loop wired (plan_edit -> ProjectDiff -> apply_diff/commit_edit). The builder now does generate -> verify -> edit -> commit, fully offline. Next (R-238, offline-doable): expand IR + adapter coverage (auth/roles, entity relations, DB migrations), or a combined build+verify+preview plan surface for the console/CLI, or richer diff (rename detection / hunk-level). Cloud items (Tier-0 preview end-to-end, live provider/deploy driver) need a network machine/keys. Confirm next Tracker ID.
+next_action: Generated backends now ship a real PostgreSQL schema (migrations/0001_init.sql from IR entities + relations). The builder does generate (web/api + DB schema) -> verify -> edit -> commit, fully offline. Next (R-239, offline-doable): wire the models to the schema (ORM/repository layer + seed data), or a combined build/verify/preview plan surface for the console/CLI, or auth/roles flowing through the adapters. Cloud items (Tier-0 preview end-to-end, live provider/deploy driver) need a network machine/keys. Confirm next Tracker ID.
 last_updated: "2026-09-07T00:00:00+05:30"

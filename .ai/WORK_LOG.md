@@ -414,3 +414,24 @@
   network call, no code execution, no write outside the target. `docs/EDIT_LOOP.md` added.
 - Committed directly to main (only branch). Tracker row R-237 (Builder) inserted at row 9; MVP total
   132 / Done 26. Implementation checkpoint `a0a494a`. 0 local / 0 cloud model calls.
+
+## 2026-09-07 — R-238
+
+- Gave the generated backend a real persistence layer. New `codegen/schema_sql.py`:
+  `render_postgres_schema(ir)` renders deterministic PostgreSQL DDL from the IR entities + relations —
+  one `CREATE TABLE` per entity (snake_case name), columns typed from `FieldType` (STRING/TEXT->TEXT,
+  INT->BIGINT, FLOAT->DOUBLE PRECISION, BOOL->BOOLEAN, DATETIME->TIMESTAMPTZ, UUID->UUID, JSON->JSONB),
+  `NOT NULL` for required fields, a UUID primary key (the entity's own `id` field if present, else a
+  surrogate `id UUID PRIMARY KEY DEFAULT gen_random_uuid()`), `<name>_id UUID REFERENCES <target>(id)`
+  for many_to_one/one_to_one relations, and one deterministic join table per many_to_many pair.
+- Wired both backend adapters (FastAPI and Go) to emit `migrations/0001_init.sql` exactly when the IR
+  has entities and `database_strategy is DatabaseStrategy.POSTGRES` — no previously emitted file
+  changes. Output is byte-stable, so the R-237 edit loop diffs the migration when the IR entities
+  change. Exported `render_postgres_schema` from the codegen package.
+- 11 new stdlib offline tests (237 total): type map + required->NOT NULL, surrogate vs declared PK,
+  many_to_one FK column, single many_to_many join table with composite PK, determinism, the
+  postgres/entities gate, and adapter emission (python + go emit; OTHER db and no-entities do not).
+  No existing adapter/assembler test broke. `task verify` + `security:quick` + `env:check` pass.
+- Nothing connects to or runs a database; no network. `docs/CODEGEN.md` documents the schema section.
+- Committed directly to main (only branch). Tracker row R-238 (Builder) inserted at row 9; MVP total
+  133 / Done 27. Implementation checkpoint `c6a4c6e`. 0 local / 0 cloud model calls.

@@ -1,7 +1,7 @@
 schema_version: 1
 task_id: R-238
 title: PostgreSQL schema/migration generation from the Application IR
-status: in_progress
+status: done
 phase: BASIC/MVP
 founder_stage: 0
 branch: main
@@ -86,10 +86,18 @@ model_tool_trace:
   cloud_calls: 0
   note: Deterministic; no model call, no network, no DB connection. cloud_calls zero.
 completion:
-  implementation_commit: null
-  verified_at: null
-  verification: []
-  acceptance_results: []
+  implementation_commit: c6a4c6e
+  verified_at: "2026-09-07T00:00:00+05:30"
+  verification:
+    - "task verify — pass (237 agent-engine tests; 11 new)"
+    - "task security:quick — pass; task env:check — pass"
+    - "render_postgres_schema demoed for rideshare-favourites: driver + favourite_driver with a driver_id FK"
+  acceptance_results:
+    - "render_postgres_schema emits one CREATE TABLE per entity, snake_case names, FieldType->PG types, NOT NULL for required, UUID PK (entity id or surrogate) (tests)"
+    - "many_to_one/one_to_one -> <name>_id UUID REFERENCES target(id); many_to_many -> one deterministic join table with a composite PK; empty string for no entities (tests)"
+    - "FastAPI and Go backends emit migrations/0001_init.sql exactly when entities present and database_strategy=postgres; no other emitted file changed (tests, and full suite green)"
+    - "output byte-stable across runs; the R-237 edit loop diffs the migration when entities change"
+    - "no DB connection, no migration execution, no network; task verify network-independent"
 blockers: []
 next_action: >-
   Implement schema_sql + wire both backends with offline tests; run the gates; record completion. Later
