@@ -5,13 +5,12 @@ Last updated: 2026-09-06T10:46:19+05:30 by Codex (GPT-5)
 Stage 0 (Founder Build Sequence, Brief Section 91) — BASIC/MVP
 
 ## Last Completed Task
-Tracker ID: R-244 — Sub-collection route wiring — DONE, `task verify` (285 agent-engine tests, 11 new)
-passing; the sub-collection GET pattern `GET /<parents>/{parentId}/<children>` now wires to a
-parent-scoped list when the child entity has exactly one FK relation — Python
-`await <table>.list_<table>_by_<rel>(parentId)`, Go `store.List<Entity>By<Rel>(...)`, filtering
-`WHERE <rel>_id = <param>` (value parameterized). Ambiguous endpoints (0/>1 FK relations, multi-param)
-stay labelled `501`. Implementation checkpoint `b886d72` (R-224 Next.js console upgrade deferred —
-env-blocked)
+Tracker ID: R-245 — Combined project-plan surface — DONE, `task verify` (291 agent-engine tests, 6 new)
+passing; `build_project_plan(ir)` composes the assembler layout + runtime preview plans + verify gate
+ladders (+ an optional deploy plan when a key-activated provider is passed) into one per-app
+`ProjectPlan` — `to_dict()` is JSON-serializable and secret-free, `render()` is a readable summary, and
+`task plan:show -- <example>` prints it. Pure/data-only (nothing run/verified/deployed). Implementation
+checkpoint `891144d` (R-224 Next.js console upgrade deferred — env-blocked)
 
 ## Workflow note
 Founder consolidated all work onto `main` (per-task branches deleted; `main` is the default). Continue

@@ -578,3 +578,25 @@
   `env:check` pass. `docs/CODEGEN.md` + `docs/PROGRESS.md` refreshed. Seed data deferred (no IR values).
 - Committed directly to main (only branch). Tracker row R-244 (Builder) inserted at row 9; MVP total
   139 / Done 33. Implementation checkpoint `b886d72`. 0 local / 0 cloud model calls; nothing executed.
+
+## 2026-09-07 — R-245
+
+- Added the combined project-plan surface. New `omnistackai_agent_engine.projectplan`: `AppPlan`,
+  `ProjectPlan`, `build_project_plan(ir, *, deploy=None)`. It composes existing builders only —
+  `codegen.assembled_targets` (app layout), `runtime.LocalRuntimeProvider.preview_plan` (guarded by
+  `.supports`), `verify.verify_plan` (guarded by `verify.supported_targets`), and an optional
+  `DeploymentProvider.deploy_plan` — into one per-app view.
+- `ProjectPlan.to_dict()` is JSON-serializable and secret-free (preview url + command strings, verify
+  gate kinds + step commands, deploy provider id + step commands); `render()` is a readable multi-app
+  summary. A deploy plan is included only when a key-activated provider is passed in.
+- CLI: `plan-show` in `scripts/agent-engine.sh` + `task plan:show -- <example>`. Demoed
+  rideshare-favourites: apps/web (nextjs-web, preview :3000, gates install/typecheck/lint/build) and
+  services/api (backend-go, preview :8080, gates lint/test/build). `docs/RUNTIME.md` documents it.
+- 6 new stdlib offline tests (291 total) in `test_projectplan.py`: one AppPlan per assembled app,
+  preview+verify present with no deploy by default, render() lists each app, deploy opt-in via
+  deploy_driver("vercel"), to_dict JSON-serializable + no key value (fake VERCEL_TOKEN), determinism.
+  `task verify` + `security:quick` + `env:check` pass.
+- Pure/data-only — nothing installed, run, verified, or deployed; no key value included. Composes
+  existing builders, so no runtime/verify/codegen behavior changed.
+- Committed directly to main (only branch). Tracker row R-245 (Runtime) inserted at row 9; MVP total
+  140 / Done 34. Implementation checkpoint `891144d`. 0 local / 0 cloud model calls; nothing executed.

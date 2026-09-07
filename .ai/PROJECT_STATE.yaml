@@ -6,10 +6,10 @@ current_task: null
 current_status: ready_for_next_task_definition
 branch: main
 last_completed_task:
-  task_id: R-244
-  title: Sub-collection route wiring (parent-scoped lists via the FK relation)
-  implementation_commit: b886d72
-  verification: task verify (285 agent-engine tests, 11 new); GET /<parents>/{parentId}/<children> wires to a parent-scoped list when the child has exactly one FK relation (Python list_<table>_by_<rel>, Go List<Entity>By<Rel>, WHERE <rel>_id = parameter); ambiguous endpoints stay 501; deterministic/offline, nothing runs
+  task_id: R-245
+  title: Combined project-plan surface (preview + verify + deploy per generated app)
+  implementation_commit: 891144d
+  verification: task verify (291 agent-engine tests, 6 new); build_project_plan(ir) composes assembler layout + runtime preview + verify gate ladders (+ optional deploy) into one per-app ProjectPlan (JSON-serializable, secret-free, render()); task plan:show prints it; deterministic/offline, nothing run/deployed
   result: pass
 control_plane_database: postgresql
 model_routing_mode: balanced
@@ -23,5 +23,5 @@ id_note: >-
   Workbook backlog owns R-010..R-219. Founder-requested tasks use IDs after R-219: R-220..R-223 done,
   R-224 Next.js deferred (env-blocked), R-225 Application IR (in progress).
 blockers: []
-next_action: Generated backends now wire sub-collection lists (GET /parents/{id}/children -> filtered list) on top of CRUD + JWT auth + roles. The builder loop is describe -> generate (web + secured API with full CRUD incl. sub-collections + DB schema + data-access) -> verify -> edit -> commit, fully offline. Next (R-245, offline-doable): a combined build/verify/preview plan surface for the console/CLI (ties runtime R-233/234 + verify R-235 + edit R-237); or richer edit-loop diffs (rename/hunk-level); or an IR fixtures field to seed data honestly. Cloud items (Tier-0 preview end-to-end, live provider/deploy driver) need a network machine/keys. Confirm next Tracker ID.
+next_action: build_project_plan(ir) now gives one per-app surface (preview + verify + optional deploy); task plan:show renders it. The builder covers describe -> generate (secured full-CRUD app + DB schema + data-access) -> plan (preview/verify/deploy) -> verify -> edit -> commit, fully offline. Next (R-246, offline-doable): richer edit-loop diffs (rename/hunk-level) on the R-237 ProjectDiff; an IR fixtures field to seed data honestly; or render the R-245 plan in the static console. Cloud items (Tier-0 preview end-to-end, live provider/deploy driver) need a network machine/keys. Confirm next Tracker ID.
 last_updated: "2026-09-07T00:00:00+05:30"

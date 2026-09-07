@@ -1,7 +1,7 @@
 schema_version: 1
 task_id: R-245
 title: Combined project-plan surface (preview + verify + deploy per generated app)
-status: in_progress
+status: done
 phase: BASIC/MVP
 founder_stage: 0
 branch: main
@@ -83,10 +83,18 @@ model_tool_trace:
   cloud_calls: 0
   note: Deterministic; no model call, no network, nothing run/verified/deployed. cloud_calls zero.
 completion:
-  implementation_commit: null
-  verified_at: null
-  verification: []
-  acceptance_results: []
+  implementation_commit: 891144d
+  verified_at: "2026-09-07T00:00:00+05:30"
+  verification:
+    - "task verify — pass (291 agent-engine tests; 6 new)"
+    - "task security:quick — pass; task env:check — pass"
+    - "task plan:show -- rideshare-favourites renders both apps' preview URLs + run commands + verify gates"
+  acceptance_results:
+    - "build_project_plan(ir) yields one AppPlan per assembled app, each with preview + verify plans; deploy plan only when a DeploymentProvider is passed (tests)"
+    - "ProjectPlan.to_dict is JSON-serializable and contains no key value (asserted with a fake VERCEL_TOKEN); render() lists each app with dir/target, preview url + commands, and verify gates (tests)"
+    - "task plan:show prints the combined plan for an example IR; task verify stays network-independent"
+    - "deterministic (to_dict equal across runs); nothing installed/run/verified/deployed"
+    - "composes existing builders only; no runtime/verify/codegen behavior changed"
 blockers: []
 next_action: >-
   Implement projectplan.py + task plan:show + tests; run the gates; record completion. Later continue
