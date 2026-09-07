@@ -1,0 +1,183 @@
+"""Generate a per-entity data-access layer for the backends (reads/writes the R-238 tables).
+
+Both renderers are pure and deterministic — they return (path, content) pairs; nothing connects to or
+queries a database. Every query VALUE is parameterized (psycopg ``%s`` / pgx ``$N``); the table and
+column identifiers are fixed strings derived from the IR (validated entity/field names), so no value is
+ever string-interpolated into SQL.
+"""
+
+from __future__ import annotations
+
+import re
+
+from ..application_ir import ApplicationIR, Entity
+from .schema_sql import table_name
+
+# Generated-project dependency pins (only added when the data-access layer is emitted).
+PSYCOPG_REQUIREMENT = "psycopg[binary]==3.2.3"
+PGX_REQUIRE = "github.com/jackc/pgx/v5 v5.7.1"
+
+
+def _pascal(value: str) -> str:
+    return "".join(part[:1].upper() + part[1:] for part in re.split(r"[^A-Za-z0-9]+", value) if part)
+
+
+def _insert_columns(entity: Entity) -> list[str]:
+    return [field.name for field in entity.fields if field.name != "id"]
+
+
+# --------------------------------------------------------------------------- Python (FastAPI)
+
+def _python_db(slug: str) -> str:
+    return (
+        "from __future__ import annotations\n\n"
+        "import os\n\n"
+        "import psycopg\n"
+        "from psycopg.rows import dict_row\n\n"
+        f'DATABASE_URL = os.environ.get("DATABASE_URL", "postgresql://localhost:5432/{slug}")\n\n\n'
+        "async def connect() -> psycopg.AsyncConnection:\n"
+        '    """Open an autocommit async connection that returns dict rows. Use via ``async with``."""\n\n'
+        "    return await psycopg.AsyncConnection.connect(\n"
+        "        DATABASE_URL, row_factory=dict_row, autocommit=True\n"
+        "    )\n"
+    )
+
+
+def _python_repository(entity: Entity) -> str:
+    table = table_name(entity.name)
+    insert_cols = _insert_columns(entity)
+    if insert_cols:
+        create_body = (
+            f"    columns = [c for c in {insert_cols!r} if c in data]\n"
+            "    if not columns:\n"
+            '        sql = f"INSERT INTO {TABLE} DEFAULT VALUES RETURNING *"\n'
+            "        values: list = []\n"
+            "    else:\n"
+            '        placeholders = ", ".join(["%s"] * len(columns))\n'
+            '        sql = f"INSERT INTO {TABLE} ({\', \'.join(columns)}) VALUES ({placeholders}) RETURNING *"\n'
+            "        values = [data[c] for c in columns]\n"
+        )
+    else:
+        create_body = (
+            '    sql = f"INSERT INTO {TABLE} DEFAULT VALUES RETURNING *"\n'
+            "    values: list = []\n"
+        )
+    return (
+        f'"""Data access for {entity.name} (table "{table}"). '
+        'Values are parameterized; identifiers are fixed."""\n'
+        "from __future__ import annotations\n\n"
+        "from typing import Any\n\n"
+        "from app.db import connect\n\n"
+        f'TABLE = "{table}"\n\n\n'
+        f"async def list_{table}(limit: int = 100, offset: int = 0) -> list[dict[str, Any]]:\n"
+        "    async with await connect() as conn, conn.cursor() as cur:\n"
+        '        await cur.execute(f"SELECT * FROM {TABLE} ORDER BY id LIMIT %s OFFSET %s", (limit, offset))\n'
+        "        return await cur.fetchall()\n\n\n"
+        f"async def get_{table}(id: str) -> dict[str, Any] | None:\n"
+        "    async with await connect() as conn, conn.cursor() as cur:\n"
+        '        await cur.execute(f"SELECT * FROM {TABLE} WHERE id = %s", (id,))\n'
+        "        return await cur.fetchone()\n\n\n"
+        f"async def create_{table}(data: dict[str, Any]) -> dict[str, Any]:\n"
+        f"{create_body}"
+        "    async with await connect() as conn, conn.cursor() as cur:\n"
+        "        await cur.execute(sql, values)\n"
+        "        return await cur.fetchone()\n\n\n"
+        f"async def delete_{table}(id: str) -> bool:\n"
+        "    async with await connect() as conn, conn.cursor() as cur:\n"
+        '        await cur.execute(f"DELETE FROM {TABLE} WHERE id = %s", (id,))\n'
+        "        return cur.rowcount > 0\n"
+    )
+
+
+def python_data_access_files(ir: ApplicationIR, slug: str) -> list[tuple[str, str]]:
+    files: list[tuple[str, str]] = [
+        ("app/db.py", _python_db(slug)),
+        ("app/repositories/__init__.py", ""),
+    ]
+    for entity in ir.entities:
+        files.append((f"app/repositories/{table_name(entity.name)}.py", _python_repository(entity)))
+    return files
+
+
+# --------------------------------------------------------------------------- Go (database/sql)
+
+def _go_store(slug: str) -> str:
+    return (
+        "package store\n\n"
+        "import (\n"
+        '\t"database/sql"\n'
+        '\t"os"\n\n'
+        '\t_ "github.com/jackc/pgx/v5/stdlib"\n'
+        ")\n\n"
+        "// Open connects to PostgreSQL using DATABASE_URL via the pgx database/sql driver.\n"
+        "func Open() (*sql.DB, error) {\n"
+        '\tdsn := os.Getenv("DATABASE_URL")\n'
+        "\tif dsn == \"\" {\n"
+        f'\t\tdsn = "postgres://localhost:5432/{slug}"\n'
+        "\t}\n"
+        '\treturn sql.Open("pgx", dsn)\n'
+        "}\n"
+    )
+
+
+def _go_entity_store(entity: Entity, slug: str) -> str:
+    table = table_name(entity.name)
+    pascal = entity.name
+    cols = [field.name for field in entity.fields]
+    col_list = ", ".join(cols)
+    scan_targets = ", ".join(f"&m.{_pascal(c)}" for c in cols)
+    insert_cols = _insert_columns(entity)
+
+    if insert_cols:
+        insert_col_list = ", ".join(insert_cols)
+        placeholders = ", ".join(f"${i + 1}" for i in range(len(insert_cols)))
+        insert_args = ", ".join(f"m.{_pascal(c)}" for c in insert_cols)
+        create_sql = f"`INSERT INTO {table} ({insert_col_list}) VALUES ({placeholders}) RETURNING id`, {insert_args}"
+    else:
+        create_sql = f"`INSERT INTO {table} DEFAULT VALUES RETURNING id`"
+
+    return (
+        "package store\n\n"
+        "import (\n"
+        '\t"context"\n'
+        '\t"database/sql"\n\n'
+        f'\t"{slug}/internal/models"\n'
+        ")\n\n"
+        f"func List{pascal}(ctx context.Context, db *sql.DB, limit int) ([]models.{pascal}, error) {{\n"
+        f"\trows, err := db.QueryContext(ctx, `SELECT {col_list} FROM {table} ORDER BY id LIMIT $1`, limit)\n"
+        "\tif err != nil {\n\t\treturn nil, err\n\t}\n"
+        "\tdefer rows.Close()\n"
+        f"\tvar out []models.{pascal}\n"
+        "\tfor rows.Next() {\n"
+        f"\t\tvar m models.{pascal}\n"
+        f"\t\tif err := rows.Scan({scan_targets}); err != nil {{\n\t\t\treturn nil, err\n\t\t}}\n"
+        "\t\tout = append(out, m)\n"
+        "\t}\n"
+        "\treturn out, rows.Err()\n"
+        "}\n\n"
+        f"func Get{pascal}(ctx context.Context, db *sql.DB, id string) (*models.{pascal}, error) {{\n"
+        f"\tvar m models.{pascal}\n"
+        f"\terr := db.QueryRowContext(ctx, `SELECT {col_list} FROM {table} WHERE id = $1`, id).Scan({scan_targets})\n"
+        "\tif err == sql.ErrNoRows {\n\t\treturn nil, nil\n\t}\n"
+        "\tif err != nil {\n\t\treturn nil, err\n\t}\n"
+        "\treturn &m, nil\n"
+        "}\n\n"
+        f"func Create{pascal}(ctx context.Context, db *sql.DB, m models.{pascal}) (string, error) {{\n"
+        "\tvar id string\n"
+        f"\terr := db.QueryRowContext(ctx, {create_sql}).Scan(&id)\n"
+        "\treturn id, err\n"
+        "}\n\n"
+        f"func Delete{pascal}(ctx context.Context, db *sql.DB, id string) (bool, error) {{\n"
+        f"\tres, err := db.ExecContext(ctx, `DELETE FROM {table} WHERE id = $1`, id)\n"
+        "\tif err != nil {\n\t\treturn false, err\n\t}\n"
+        "\tn, _ := res.RowsAffected()\n"
+        "\treturn n > 0, nil\n"
+        "}\n"
+    )
+
+
+def go_data_access_files(ir: ApplicationIR, slug: str) -> list[tuple[str, str]]:
+    files: list[tuple[str, str]] = [("internal/store/store.go", _go_store(slug))]
+    for entity in ir.entities:
+        files.append((f"internal/store/{table_name(entity.name)}.go", _go_entity_store(entity, slug)))
+    return files

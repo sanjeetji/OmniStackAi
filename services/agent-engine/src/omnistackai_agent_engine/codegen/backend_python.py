@@ -12,6 +12,7 @@ import re
 
 from ..application_ir import ApplicationIR, ApiEndpoint, DatabaseStrategy, Entity, FieldType
 from .adapter import GenerationTarget
+from .data_access import PSYCOPG_REQUIREMENT, python_data_access_files
 from .errors import GenerationError
 from .files import GeneratedFile, GeneratedProject
 from .schema_sql import render_postgres_schema
@@ -124,8 +125,13 @@ class PythonBackendAdapter:
             by_segment.setdefault(_segment(api.path), []).append(api)
         segments = sorted(by_segment)
 
+        has_db = bool(ir.entities) and ir.project_strategy.database_strategy is DatabaseStrategy.POSTGRES
+        requirements = "fastapi==0.115.0\nuvicorn[standard]==0.30.6\npydantic==2.9.2\n"
+        if has_db:
+            requirements += f"{PSYCOPG_REQUIREMENT}\n"
+
         files: list[GeneratedFile] = [
-            GeneratedFile("requirements.txt", "fastapi==0.115.0\nuvicorn[standard]==0.30.6\npydantic==2.9.2\n"),
+            GeneratedFile("requirements.txt", requirements),
             GeneratedFile("app/__init__.py", ""),
             GeneratedFile("app/config.py", _CONFIG % (_escape(ir.name),)),
             GeneratedFile("app/models.py", _models_file(ir)),
@@ -138,8 +144,10 @@ class PythonBackendAdapter:
         for segment in segments:
             files.append(GeneratedFile(f"app/routers/{segment}.py", _router_file(segment, by_segment[segment])))
 
-        if ir.entities and ir.project_strategy.database_strategy is DatabaseStrategy.POSTGRES:
+        if has_db:
             files.append(GeneratedFile("migrations/0001_init.sql", render_postgres_schema(ir)))
+            for path, content in python_data_access_files(ir, _slug(ir.name)):
+                files.append(GeneratedFile(path, content))
 
         return GeneratedProject(self.target.value, tuple(files))
 

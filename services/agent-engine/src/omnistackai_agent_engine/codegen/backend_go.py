@@ -12,6 +12,7 @@ import re
 
 from ..application_ir import ApplicationIR, ApiEndpoint, DatabaseStrategy, FieldType
 from .adapter import GenerationTarget
+from .data_access import PGX_REQUIRE, go_data_access_files
 from .errors import GenerationError
 from .files import GeneratedFile, GeneratedProject
 from .schema_sql import render_postgres_schema
@@ -139,8 +140,13 @@ class GoBackendAdapter:
         for api in apis:
             by_segment.setdefault(_segment(api.path), []).append(api)
 
+        has_db = bool(ir.entities) and ir.project_strategy.database_strategy is DatabaseStrategy.POSTGRES
+        go_mod = f"module {slug}\n\ngo 1.22\n"
+        if has_db:
+            go_mod += f"\nrequire {PGX_REQUIRE}\n"
+
         files: list[GeneratedFile] = [
-            GeneratedFile("go.mod", f"module {slug}\n\ngo 1.22\n"),
+            GeneratedFile("go.mod", go_mod),
             GeneratedFile("main.go", _main_file(slug, apis)),
             GeneratedFile("internal/models/models.go", _models_file(ir)),
             GeneratedFile(".gitignore", "/bin/\n*.exe\n.env\n"),
@@ -150,7 +156,9 @@ class GoBackendAdapter:
         for segment in sorted(by_segment):
             files.append(GeneratedFile(f"internal/handlers/{segment}.go", _handlers_file(by_segment[segment])))
 
-        if ir.entities and ir.project_strategy.database_strategy is DatabaseStrategy.POSTGRES:
+        if has_db:
             files.append(GeneratedFile("migrations/0001_init.sql", render_postgres_schema(ir)))
+            for path, content in go_data_access_files(ir, slug):
+                files.append(GeneratedFile(path, content))
 
         return GeneratedProject(self.target.value, tuple(files))

@@ -1,27 +1,29 @@
 schema_version: 1
-task_id: R-238
-title: PostgreSQL schema/migration generation from the Application IR
-status: done
+task_id: R-239
+title: Data-access/repository layer for the generated backends (reads/writes the IR tables)
+status: in_progress
 phase: BASIC/MVP
 founder_stage: 0
 branch: main
 goal: >-
-  Give the generated backend a real persistence layer (Brief 9/34/42): deterministically render a
-  PostgreSQL schema from the IR entities + relations and emit it as migrations/0001_init.sql in the
-  backend target. Columns are typed from FieldType, required fields are NOT NULL, each table gets a UUID
-  primary key (the entity's own id field if present, else a surrogate), many_to_one/one_to_one relations
-  become foreign-key columns REFERENCES the target table, and many_to_many relations become a join table
-  with a composite key. Emitted only when the IR declares entities and database_strategy=postgres. Pure,
-  deterministic, offline (emit files, assert contents) — no DB connection, no migration is run, no
-  network. The R-237 edit loop diffs the migration for free when the IR changes.
+  Turn the R-238 schema into a usable persistence layer (Brief 9/34/42): generate a per-entity
+  data-access layer for both backends so the generated code can read and write the tables. Python
+  (FastAPI) gets app/db.py (an async psycopg connection helper reading DATABASE_URL) plus
+  app/repositories/<entity>.py with list/get/create/delete using parameterized SQL; Go gets
+  internal/store/store.go (a database/sql opener) plus internal/store/<entity>.go with
+  List/Get/Create/Delete scanning into the generated model structs. Values are always parameterized
+  (never string-interpolated); table/column identifiers come from the IR. Emitted only when the IR has
+  entities and database_strategy=postgres, alongside the migration. Pure, deterministic, offline (emit
+  files, assert contents) — no DB connection, no query executed, no network. The R-237 edit loop diffs
+  the repositories when the IR entities change.
 source:
   tracker_sheet: Phase_Roadmap
   tracker_row: reconstructed; new IDs continue after the workbook backlog's R-010..R-219
-  brief_sections: [9, 34, 35, 42, 74, 77, 83, 84, 85, 92]
+  brief_sections: [9, 34, 35, 42, 74, 77, 83, 84, 85, 90, 92]
   founder_note: >-
-    Founder said "Do which is required for now and later continue for the remaining tasks." A real DB
-    schema is the missing persistence layer after generate/verify/edit. Committed directly to main;
-    author solely sanjeetji; tooling adds a Co-Authored-By trailer.
+    Founder approved continuing after R-238; the data-access layer makes the generated backend actually
+    use the schema. Committed directly to main; author solely sanjeetji; tooling adds a Co-Authored-By
+    trailer.
 project_profile:
   repository: platform_modular_monorepo
   service: python_agent_engine
@@ -29,11 +31,12 @@ project_profile:
   model_routing: balanced
 complexity: L2
 expected_impact:
+  - services/agent-engine/src/omnistackai_agent_engine/codegen/data_access.py
   - services/agent-engine/src/omnistackai_agent_engine/codegen/schema_sql.py
   - services/agent-engine/src/omnistackai_agent_engine/codegen/backend_python.py
   - services/agent-engine/src/omnistackai_agent_engine/codegen/backend_go.py
   - services/agent-engine/src/omnistackai_agent_engine/codegen/__init__.py
-  - services/agent-engine/tests/test_schema_sql.py
+  - services/agent-engine/tests/test_data_access.py
   - docs/CODEGEN.md
   - portable state, changelog, handoff, task doc, and tracker evidence
 allowed_paths:
@@ -46,32 +49,33 @@ allowed_paths:
 must_not_change:
   - PostgreSQL as the control-plane database or the platform's own schema/migrations
   - the ModelProvider/gateway, IR, runtime, verify, edit public behavior (additive)
-  - the Next.js/Python/Go adapters' existing emitted files (only ADD the migration file)
+  - previously emitted backend files other than requirements.txt / go.mod (which gain a DB dependency)
   - local Compose services or infrastructure; the Section 74 top-level contract; the offline bootstrap
   - the network-independence of static task verify
 must_not_do:
-  - connect to or run any database; execute a migration; make a network call
-  - add an external Python dependency; import a vendor SDK; put a secret anywhere
+  - connect to or query any database; execute SQL; make a network call
+  - string-interpolate a query VALUE (values must be parameterized); add a platform Python dependency;
+    import a vendor SDK; put a secret anywhere (DATABASE_URL default is a local placeholder)
 acceptance:
-  - render_postgres_schema(ir) returns deterministic SQL DDL: one CREATE TABLE per entity, snake_case
-    table names, FieldType->PostgreSQL column types, NOT NULL for required fields, a UUID primary key
-    (entity id field if present else a surrogate id).
-  - many_to_one / one_to_one relations emit a <name>_id UUID column REFERENCES the target table(id);
-    many_to_many relations emit a single deterministic join table with a composite primary key; empty on
-    an IR with no entities.
-  - The Python (FastAPI) and Go backend adapters emit migrations/0001_init.sql exactly when the IR has
-    entities and database_strategy=postgres, without changing any previously emitted file.
-  - Output is byte-stable across runs; the edit loop (plan_edit) picks up a migration change when the IR
-    entities change.
-  - Standard-library offline tests cover the type map, required->NOT NULL, PK selection, FK columns,
-    many_to_many join table, determinism, the postgres/entities gate, and adapter emission.
+  - For an IR with entities + postgres, the Python backend emits app/db.py and
+    app/repositories/<entity>.py per entity (list/get/create/delete), and requirements.txt gains psycopg;
+    the Go backend emits internal/store/store.go and internal/store/<entity>.go per entity, and go.mod
+    gains the pgx require.
+  - Repository SQL uses parameterized placeholders for all values (%s / $N); the table name and column
+    names are fixed identifiers derived from the IR; an entity with only an id column still creates via
+    DEFAULT VALUES.
+  - Go store functions scan into the generated model struct fields (matching the model field names);
+    the module import path matches go.mod.
+  - Nothing is emitted when the IR has no entities or database_strategy != postgres; no previously
+    emitted file (other than requirements.txt / go.mod) changes; output is byte-stable.
+  - Standard-library offline tests cover emission + gating, parameterization (no value interpolation),
+    per-entity files, the id-only DEFAULT VALUES case, and the dependency additions.
 required_gates:
   - impact_analysis
-  - type_map_and_notnull_tests
-  - primary_key_and_fk_tests
-  - many_to_many_join_table_test
-  - determinism_and_gate_tests
-  - adapter_emission_tests
+  - python_repository_emission_tests
+  - go_store_emission_tests
+  - parameterization_no_value_interpolation_test
+  - gating_and_dependency_tests
   - python_compile_test
   - vendor_import_exclusion
   - secret_exclusion_check
@@ -86,20 +90,12 @@ model_tool_trace:
   cloud_calls: 0
   note: Deterministic; no model call, no network, no DB connection. cloud_calls zero.
 completion:
-  implementation_commit: c6a4c6e
-  verified_at: "2026-09-07T00:00:00+05:30"
-  verification:
-    - "task verify — pass (237 agent-engine tests; 11 new)"
-    - "task security:quick — pass; task env:check — pass"
-    - "render_postgres_schema demoed for rideshare-favourites: driver + favourite_driver with a driver_id FK"
-  acceptance_results:
-    - "render_postgres_schema emits one CREATE TABLE per entity, snake_case names, FieldType->PG types, NOT NULL for required, UUID PK (entity id or surrogate) (tests)"
-    - "many_to_one/one_to_one -> <name>_id UUID REFERENCES target(id); many_to_many -> one deterministic join table with a composite PK; empty string for no entities (tests)"
-    - "FastAPI and Go backends emit migrations/0001_init.sql exactly when entities present and database_strategy=postgres; no other emitted file changed (tests, and full suite green)"
-    - "output byte-stable across runs; the R-237 edit loop diffs the migration when entities change"
-    - "no DB connection, no migration execution, no network; task verify network-independent"
+  implementation_commit: null
+  verified_at: null
+  verification: []
+  acceptance_results: []
 blockers: []
 next_action: >-
-  Implement schema_sql + wire both backends with offline tests; run the gates; record completion. Later
-  continue with remaining builder tasks (adapter ORM wiring, seed data, or the plan surface).
+  Implement data_access.py + wire both backends + tests; run the gates; record completion. Later
+  continue with route wiring / auth-roles / the combined plan surface.
 next_command: task agent-engine:test

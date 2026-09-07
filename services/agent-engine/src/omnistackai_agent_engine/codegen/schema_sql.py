@@ -39,6 +39,12 @@ def _table(entity_name: str) -> str:
     return _snake(entity_name)
 
 
+def table_name(entity_name: str) -> str:
+    """Public: the PostgreSQL table name for an entity (snake_case). Shared with the data-access layer."""
+
+    return _snake(entity_name)
+
+
 def _column_lines(entity: Entity) -> list[str]:
     lines: list[str] = []
     has_id = any(field.name == "id" for field in entity.fields)

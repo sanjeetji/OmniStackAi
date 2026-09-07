@@ -18,9 +18,10 @@ from .assembler import (
 )
 from .backend_go import GoBackendAdapter
 from .backend_python import PythonBackendAdapter
+from .data_access import go_data_access_files, python_data_access_files
 from .files import GeneratedFile, GeneratedProject
 from .nextjs import NextjsWebAdapter
-from .schema_sql import render_postgres_schema
+from .schema_sql import render_postgres_schema, table_name
 
 __all__ = [
     "AdapterRegistry",
@@ -42,5 +43,8 @@ __all__ = [
     "assemble_project",
     "assembled_targets",
     "default_registry",
+    "go_data_access_files",
+    "python_data_access_files",
     "render_postgres_schema",
+    "table_name",
 ]

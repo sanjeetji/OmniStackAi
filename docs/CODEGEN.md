@@ -111,3 +111,20 @@ Both backend adapters (FastAPI and Go) emit it as `migrations/0001_init.sql` exa
 entities and `database_strategy == postgres` — no previously emitted file changes. Output is byte-stable,
 so the R-237 edit loop diffs the migration automatically when the IR entities change. Nothing connects
 to or runs a database; this only emits SQL text.
+
+## Data-access / repository layer (R-239)
+
+`codegen/data_access.py` gives the generated backend a real persistence layer over the R-238 tables,
+emitted (alongside the migration) when the IR has entities and `database_strategy == postgres`:
+
+- **Python (FastAPI):** `app/db.py` (an async `psycopg` connection helper reading `DATABASE_URL`, dict
+  rows) and `app/repositories/<entity>.py` per entity with `list/get/create/delete`. `requirements.txt`
+  gains `psycopg`.
+- **Go:** `internal/store/store.go` (a `database/sql` opener using the pgx driver) and
+  `internal/store/<entity>.go` per entity with `List/Get/Create/Delete` scanning into the generated
+  `models.<Entity>` structs. `go.mod` gains the pgx `require`; the model import path matches the module.
+
+Every query **value** is parameterized (`%s` for psycopg, `$N` for pgx) — no value is ever
+string-interpolated into SQL; only fixed IR-derived table/column identifiers appear inline. An entity
+with only an `id` column creates via `DEFAULT VALUES`. Pure and deterministic — nothing connects to or
+queries a database. The R-237 edit loop diffs the repositories when the IR entities change.
