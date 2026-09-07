@@ -620,3 +620,22 @@
   pass. `docs/EDIT_LOOP.md` + `docs/PROGRESS.md` refreshed (also fixed stale test-count/% notes).
 - Committed directly to main (only branch). Tracker row R-246 (Builder) inserted at row 9; MVP total
   141 / Done 35. Implementation checkpoint `eebab68`. 0 local / 0 cloud model calls; nothing executed.
+
+## 2026-09-08 — R-247
+
+- Added `console_snapshot.platform_console_snapshot()`, a metadata-only composition of accepted public
+  contracts: the existing model overview, the R-245 ProjectPlan for `rideshare-favourites`, and the
+  R-246 diff report/unified patch for an actual old/new `minimal-blog` IR assembly.
+- The builder proof exposes two generated apps (`apps/web`, `services/api`) with preview URLs and
+  verification gate/command ladders; deploy remains absent by default. The edit preview contains five
+  genuinely modified generated paths and a bounded 1,661-character hunk-level patch.
+- Upgraded the dependency-free static console with responsive plan cards, gate badges, changed-file
+  metadata, and a scrollable code patch. All content is assigned with `textContent`; the browser makes
+  only the existing same-origin snapshot fetch under the strict CSP.
+- 5 new offline stdlib tests (302 total) cover plan/patch shape, deterministic JSON serialization,
+  existing model-overview preservation, and secret exclusion. `node --check`, repeated snapshot
+  SHA-256, `task verify`, `task security:quick`, and `task env:check` pass. Live local visual review
+  confirmed the builder proof and model dashboard render without a page error state.
+- Implementation checkpoint `6a82056`. Tracker row R-247 inserted at row 9; 247 unique IDs, MVP total
+  142 / Done 36. One bounded local `qwen2.5-coder:14b` review; 0 cloud calls. No generated app was
+  installed/run/verified/deployed; no DB connection, external request, service, dependency, or infra.

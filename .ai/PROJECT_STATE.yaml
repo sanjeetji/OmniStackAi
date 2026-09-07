@@ -6,10 +6,10 @@ current_task: null
 current_status: ready_for_next_task_definition
 branch: main
 last_completed_task:
-  task_id: R-246
-  title: Richer edit-loop diffs (hunk-level unified diffs + rename detection)
-  implementation_commit: eebab68
-  verification: task verify (297 agent-engine tests, 6 new); diff_report(old, new) gives git-style unified hunk diffs for modified files + exact-content rename detection; unified_patch(old, new) is one byte-stable patch string; standard-library difflib only, additive to R-237; deterministic/offline, nothing run
+  task_id: R-247
+  title: Render the project plan and unified edit patch in the static console
+  implementation_commit: 6a82056
+  verification: task verify (302 agent-engine tests, 5 new); deterministic metadata-only builderShowcase composes a real two-app ProjectPlan + a five-file hunk-level unified patch and renders both in the safe dependency-free console; node --check, repeated snapshot SHA-256, security:quick, env:check, and live local visual review pass
   result: pass
 control_plane_database: postgresql
 model_routing_mode: balanced
@@ -21,7 +21,7 @@ product_direction: >-
   framework adapter contract -> Next.js adapter -> Git service -> preview/sandbox (needs cloud env).
 id_note: >-
   Workbook backlog owns R-010..R-219. Founder-requested tasks use IDs after R-219: R-220..R-223 done,
-  R-224 Next.js deferred (env-blocked), R-225..R-246 done. Continue from R-247.
+  R-224 Next.js deferred (env-blocked), R-225..R-247 done. Continue from R-248.
 blockers: []
-next_action: The edit loop now produces hunk-level unified patches + rename detection (diff_report / unified_patch) on top of R-237. The builder covers describe -> generate (secured full-CRUD app + DB) -> plan -> verify -> edit (patch/rename-aware) -> commit, fully offline. Next (R-247, offline-doable): an IR fixtures field to seed data honestly; rendering the R-245 plan / R-246 patch in the static console; or deepening IR coverage (indexes, validation rules). Cloud items (Tier-0 preview end-to-end, live provider/deploy driver) need a network machine/keys. Confirm next Tracker ID.
-last_updated: "2026-09-07T23:37:30+05:30"
+next_action: R-247 is complete — the static console now visibly proves the real project plan and edit patch alongside the model fabric. Continue from R-248 with honest IR fixtures + migrations/0002_seed.sql or deeper IR/adapter coverage (indexes, unique constraints, richer field validation). Cloud-gated preview/deploy and R-224 still require a network-capable environment/keys.
+last_updated: "2026-09-08T00:06:26+05:30"

@@ -1,17 +1,16 @@
 # Project State — OmniStackAI
-Last updated: 2026-09-07T23:37:30+05:30 by Codex (GPT-5)
+Last updated: 2026-09-08T00:06:26+05:30 by Codex (GPT-5)
 
 ## Current Phase
 Stage 0 (Founder Build Sequence, Brief Section 91) — BASIC/MVP
 
 ## Last Completed Task
-Tracker ID: R-246 — Richer edit-loop diffs — DONE, `task verify` (297 agent-engine tests, 6 new)
-passing; on top of the R-237 file-level `ProjectDiff`, `diff_report(old, new)` produces git-style
-unified (hunk) diffs for modified files and detects exact-content renames (delete+add of identical
-content collapses to one `RENAMED` record), and `unified_patch(old, new)` returns one byte-stable
-git-style patch string. Standard-library `difflib` only; additive (diff_projects/apply_diff/plan_edit
-unchanged); pure/offline. Implementation checkpoint `eebab68` (R-224 Next.js console upgrade deferred —
-env-blocked)
+Tracker ID: R-247 — Builder proof in the static console — DONE, `task verify` (302 agent-engine tests,
+5 new) passing. The metadata-only console snapshot now composes the real R-245 two-app project plan
+and an R-246 five-file hunk-level unified patch produced from actual old/new IR assemblies; the
+dependency-free UI renders preview URLs, verification ladders, changed files, and patch safely beside
+the model-fabric dashboard. Deterministic, offline, and secret-free; implementation checkpoint
+`6a82056` (R-224 Next.js console upgrade remains deferred — environment-blocked).
 
 ## Workflow note
 Founder consolidated all work onto `main` (per-task branches deleted; `main` is the default). Continue
@@ -41,11 +40,10 @@ R-221 = cross-provider fallback (done); R-222 = platform console slice (done); R
 fallback wiring (done); R-224 = Next.js console upgrade (deferred — environment-blocked).
 
 ## Next Up (queued, in order)
-1. Run a Tier-0 preview of a generated app end-to-end (needs a network-capable machine: this Mac in a
-   real Terminal, or a Codespace) — the runtime layer + `task agent-engine:preview-plan` are ready
-2. Build a concrete cloud provider driver (e.g. Vercel deploy or E2B sandbox) once a key is provided
-3. R-224 — Next.js console upgrade — resume in an environment with reliable npm registry access
-4. R-010 — Native iOS Agent (backlog; deferred until web/backend stability per Brief 25/91)
+1. R-248 offline candidate — add explicit IR fixtures and emit honest `migrations/0002_seed.sql`
+2. R-248 alternative — deepen IR/adapters with indexes, unique constraints, and field validation
+3. Run a Tier-0 preview end to end on a network-capable machine; then live-verify an authorized driver
+4. R-224 Next.js console upgrade and R-010 native iOS remain deferred under their existing gates
 (The full offline builder AND the Tier 0-3 runtime/deploy wiring are complete: one IR ->
 web+backend monorepo -> owned Git repo, plus a local preview provider and key-activated cloud
 sandbox/deploy providers.)

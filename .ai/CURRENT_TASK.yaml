@@ -1,36 +1,38 @@
 schema_version: 1
-task_id: R-246
-title: Richer edit-loop diffs (hunk-level unified diffs + rename detection)
+task_id: R-247
+title: Render the project plan and unified edit patch in the static console
 status: done
 phase: BASIC/MVP
 founder_stage: 0
 branch: main
 goal: >-
-  Make an IR edit read as a focused patch instead of whole-file churn (Brief 6/27): on top of the R-237
-  file-level ProjectDiff, add a line-level report that produces git-style unified (hunk) diffs for
-  modified files and detects exact-content renames (a deleted file whose content matches an added file
-  is reported as a rename, not delete+add). Provide diff_report(old, new) returning structured FileDiff
-  records (kind added/modified/deleted/renamed, path, old_path, unified patch) and unified_patch(old,
-  new) returning one git-style patch string. Pure and deterministic, standard-library difflib only;
-  additive — diff_projects / apply_diff / plan_edit are unchanged; nothing is run or written to disk.
+  Make the existing offline builder proof visible in the dependency-free Stage 0 console. Extend the
+  metadata-only console snapshot with (1) the R-245 combined project plan for a real bundled IR example
+  and (2) an R-246 hunk-level unified patch produced from an actual old/new IR assembly. Render both
+  with safe DOM APIs alongside the model-fabric overview. This is a read-only demonstration surface:
+  no generated app is installed, run, verified, deployed, or connected to a database.
 source:
   tracker_sheet: Phase_Roadmap
   tracker_row: reconstructed; new IDs continue after the workbook backlog's R-010..R-219
-  brief_sections: [6, 9, 27, 34, 74, 77, 83, 84, 85, 92]
+  brief_sections: [6, 9, 15, 25, 26, 27, 34, 51, 74, 77, 83, 84, 85, 92]
   founder_note: >-
-    Founder approved continuing after R-245. R-246 makes edits legible as patches. Committed directly to
-    main; author solely sanjeetji; tooling adds a Co-Authored-By trailer.
+    Founder instructed continuation from R-247 and wants the advanced platform built. The visible
+    console option is the smallest offline-doable next slice and uses only existing Stage 0 surfaces.
 project_profile:
   repository: platform_modular_monorepo
-  service: python_agent_engine
+  service: python_agent_engine_and_static_console
   control_plane_database: postgresql
   model_routing: balanced
 complexity: L2
 expected_impact:
-  - services/agent-engine/src/omnistackai_agent_engine/edit/patch.py
-  - services/agent-engine/src/omnistackai_agent_engine/edit/__init__.py
-  - services/agent-engine/tests/test_edit_patch.py
-  - docs/EDIT_LOOP.md
+  - services/agent-engine/src/omnistackai_agent_engine/console_snapshot.py
+  - services/agent-engine/tests/test_console_snapshot.py
+  - scripts/console.sh
+  - apps/console-web/index.html
+  - apps/console-web/app.js
+  - apps/console-web/styles.css
+  - apps/console-web/README.md
+  - apps/console-web/data/overview.json
   - docs/PROGRESS.md
   - portable state, changelog, handoff, task doc, and tracker evidence
 allowed_paths:
@@ -38,62 +40,68 @@ allowed_paths:
   - CHANGELOG.md
   - PROJECT_STATE.md
   - R_&_D/OmniStackAI_Execution_Tracker_v6.xlsx
+  - apps/console-web/**
   - docs/**
+  - scripts/console.sh
   - services/agent-engine/**
 must_not_change:
   - PostgreSQL as the control-plane database or the platform's own schema/migrations
-  - the R-237 ProjectDiff / diff_projects / apply_diff / plan_edit public behavior (this is additive)
-  - the model-gateway, IR, runtime, verify, codegen public behavior (additive)
+  - the Application IR, adapters, project-plan, edit-loop, runtime, verify, or model-provider contracts
   - local Compose services or infrastructure; the Section 74 top-level contract; the offline bootstrap
   - the network-independence of static task verify
 must_not_do:
-  - write to disk, run anything, or make a network call (this is a pure diff/report layer)
-  - add a platform Python dependency (standard-library difflib only); import a vendor SDK; put a secret anywhere
+  - install, run, verify, or deploy a generated app; connect to a database; make an external request
+  - add a platform dependency, front-end bundler, service, top-level folder, or vendor SDK
+  - include an API key, secret value, user prompt, repository content outside the bounded demo, or HTML injection
 acceptance:
-  - diff_report(old, new) returns FileDiff records classifying each path as added / modified / deleted /
-    renamed; a deleted file whose content exactly matches an added file is a single RENAMED record
-    (old_path -> path), not a delete + add.
-  - modified files carry a git-style unified (hunk) diff with -/+ lines; added/deleted carry the
-    corresponding one-sided unified diff; the report is deterministically ordered.
-  - unified_patch(old, new) returns one git-style patch string (rename headers for renames) that is
-    byte-stable across runs.
-  - Additive only: diff_projects / apply_diff / plan_edit outputs are unchanged.
-  - Standard-library offline tests cover modified-hunk content, rename detection, add/delete, empty diff
-    for identical projects, and determinism.
+  - The console snapshot contains a JSON-serializable, deterministic builderShowcase object with an
+    R-245 ProjectPlan for a bundled IR example; apps/web and services/api expose preview + verify
+    details and no deploy plan unless explicitly supplied.
+  - The snapshot contains an R-246 edit preview built from two actual assembled Application IR values,
+    including structured changed-file metadata and a non-empty hunk-level unifiedPatch.
+  - The committed snapshot contains no secret values; environment state is represented only by the
+    existing provider booleans/metadata.
+  - The static console renders the plan, gate ladders, preview URLs, requested change, changed files,
+    and unified patch using textContent-only DOM construction with no external requests.
+  - Offline standard-library tests cover snapshot shape, real plan/patch content, determinism, and
+    secret exclusion; node --check validates app.js; task console:snapshot reproduces the committed JSON.
 required_gates:
   - impact_analysis
-  - unified_hunk_tests
-  - rename_detection_tests
-  - add_delete_and_empty_tests
-  - determinism_test
-  - python_compile_test
-  - vendor_import_exclusion
+  - console_snapshot_tests
+  - static_javascript_syntax_check
+  - deterministic_snapshot_check
   - secret_exclusion_check
   - task_verify
+  - task_security_quick
+  - task_env_check
+  - visual_console_review
   - blast_radius_check
   - tracker_evidence
 model_tool_trace:
   routing: local_only
   local_provider: ollama
   configured_model: qwen2.5-coder:14b
-  local_calls: 0
+  local_calls: 1
   cloud_calls: 0
-  note: Deterministic; no model call, no network, no disk write. cloud_calls zero.
+  note: >-
+    One bounded qwen2.5-coder:14b design review completed. It reinforced textContent-only rendering,
+    deterministic snapshot tests, bounded demo output, and non-sensitive error handling. No cloud call.
 completion:
-  implementation_commit: eebab68
-  verified_at: "2026-09-07T23:37:30+05:30"
+  implementation_commit: 6a82056
+  verified_at: "2026-09-08T00:06:26+05:30"
   verification:
-    - "task verify — pass (297 agent-engine tests; 6 new)"
-    - "task security:quick — pass; task env:check — pass"
-    - "demo: modified file -> unified hunk (-line2/+CHANGED); old_name.txt->new_name.txt detected as one RENAMED; add/delete one-sided"
+    - "task verify — pass (302 agent-engine tests; 5 new)"
+    - "task security:quick — pass; task env:check — pass; node --check apps/console-web/app.js — pass"
+    - "task console:snapshot — deterministic (identical SHA-256 on two exports)"
+    - "live local visual review — 2-app project plan, preview/verify commands, 5-file unified patch, model dashboard visible"
   acceptance_results:
-    - "diff_report classifies added/modified/deleted/renamed; exact-content delete+add collapses to a single RENAMED record (tests)"
-    - "modified files carry a git-style unified hunk with -/+ and context lines; report deterministically ordered (tests)"
-    - "unified_patch returns one byte-stable git-style patch with rename headers; identical projects -> empty (tests)"
-    - "additive: diff_projects/apply_diff/plan_edit outputs unchanged; standard-library difflib only"
-    - "pure/deterministic; no disk write, no run, no network; task verify network-independent"
+    - "builderShowcase contains the real Rideshare Favourites ProjectPlan for apps/web + services/api; preview + verify present, deploy absent"
+    - "editPreview assembles old/new minimal-blog IRs and emits five modified paths + a 1,661-character hunk-level unified patch"
+    - "snapshot JSON is deterministic/serializable and excludes configured provider secret values (tests)"
+    - "static UI uses textContent-only construction, same-origin fetch, strict CSP, responsive cards, and bounded scrollable patch"
+    - "read-only/offline: no generated app install/run/verify/deploy, DB connection, external request, service, or dependency"
 blockers: []
 next_action: >-
-  R-246 is complete. Continue from R-247 with an IR fixtures field for honest seed-data emission,
-  a static-console view of the R-245 plan / R-246 patch, or deeper IR + adapter coverage.
+  R-247 is complete. Continue from R-248 with honest IR fixtures + migrations/0002_seed.sql or deeper
+  IR/adapter coverage (entity indexes, unique constraints, richer field validation).
 next_command: task ai:status

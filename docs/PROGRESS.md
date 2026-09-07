@@ -1,12 +1,12 @@
-# OmniStackAI — implementation progress (as of R-246)
+# OmniStackAI — implementation progress (as of R-247)
 
 A living summary of what is built, what is pending, and how to see results. Numbers come from the
 execution tracker (`R_&_D/OmniStackAI_Execution_Tracker_v6.xlsx`, `Phase_Roadmap`).
 
 ## Headline
 
-- **297 automated tests pass**, fully offline and network-independent (`task verify`).
-- **35 tracker tasks Done, 1 Deferred, 210 Not Started** across 246 rows.
+- **302 automated tests pass**, fully offline and network-independent (`task verify`).
+- **36 tracker tasks Done, 1 Deferred, 210 Not Started** across 247 rows.
 - The offline builder loop is complete end to end: **describe (IR) → generate (web + API with working
   CRUD incl. sub-collections + DB schema + data-access + JWT-verified auth & per-endpoint roles) →
   verify → edit → commit to an owned Git repo.**
@@ -15,11 +15,11 @@ execution tracker (`R_&_D/OmniStackAI_Execution_Tracker_v6.xlsx`, `Phase_Roadmap
 
 | Phase | Done | Total | % complete |
 |-------|------|-------|-----------|
-| **MVP** (current milestone) | 35 | 141 | **24.8%** |
+| **MVP** (current milestone) | 36 | 142 | **25.4%** |
 | MID | 0 | 47 | 0% |
 | ADVANCED | 0 | 29 | 0% |
 | PRODUCTION | 0 | 29 | 0% |
-| **Overall program** | **35** | **246** | **14.2%** |
+| **Overall program** | **36** | **247** | **14.6%** |
 
 > The 210 "Not Started" rows are the pre-existing backlog catalogue (R-010..R-219 — many are individual
 > specialized agents and later-phase features). Capability-wise the platform is further along than the
@@ -57,6 +57,7 @@ execution tracker (`R_&_D/OmniStackAI_Execution_Tracker_v6.xlsx`, `Phase_Roadmap
 | Sub-collection route wiring (parent-scoped lists) | ✅ Done | R-244 |
 | Combined build/verify/preview plan surface | ✅ Done | R-245 (`task plan:show`) |
 | Richer edit-loop diff (hunk-level + rename detection) | ✅ Done | R-246 |
+| Static-console builder proof (real plan + unified patch) | ✅ Done | R-247 (`task console:serve`) |
 | Next.js console upgrade (rich UI) | ⏸ Deferred | R-224 — needs npm registry access |
 | Seed/fixture data | ⛔ Pending | needs an IR fixtures field (no values to emit today) |
 | Live sandbox preview + real deploy (Tier 2) | ⛔ Pending | needs a network machine + provider keys |
@@ -69,7 +70,7 @@ Everything below runs with **no cloud keys** and no internet (except where noted
 
 1. **See the whole engine is real and green:**
    ```
-   task verify            # 297 tests pass
+   task verify            # 302 tests pass
    ```
 2. **Generate a real app from a spec and inspect it** (the headline result):
    ```
@@ -83,7 +84,7 @@ Everything below runs with **no cloud keys** and no internet (except where noted
    ```
    task platform:status                      # active tier + which provider keys are present
    task agent-engine:verify-plan -- backend-go
-   task console:serve                         # http://127.0.0.1:4321  (model + cost overview)
+   task console:serve                         # http://127.0.0.1:4321  (builder proof + model fabric)
    ```
 4. **Run a real AI generation locally through the gateway** (uses your installed Ollama
    `qwen2.5-coder:14b`, zero cloud cost):
@@ -113,7 +114,6 @@ the live run needs the key + a network machine.
 
 ## What's next
 
-Near-term MVP candidates (all offline-doable): an IR fixtures field to seed data honestly; rendering the
-R-245 project plan / R-246 patch in the static console; or deepening IR coverage (indexes, validation
-rules). Then, on a network machine: live Tier-2 preview and deploy. This file is refreshed as tasks
-land.
+Near-term MVP candidates (all offline-doable): an IR fixtures field to emit seed data honestly, or
+deeper IR/adapter coverage (indexes, unique constraints, richer field validation). Then, on a network
+machine: live Tier-2 preview and deploy. This file is refreshed as tasks land.

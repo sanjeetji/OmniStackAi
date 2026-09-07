@@ -40,7 +40,7 @@ START PROTOCOL
   `task ai:status`, `task ai:handoff`. `task verify` must stay green and network-independent.
 - Confirm git branch/HEAD/clean tree. Then restate: phase, next Tracker ID, objective, blast radius.
 
-WHAT IS ALREADY BUILT (all Python 3.13 stdlib-only, offline, in services/agent-engine; 297 tests pass)
+WHAT IS ALREADY BUILT (all Python 3.13 stdlib-only, offline, in services/agent-engine; 302 tests pass)
 - Model fabric: ModelProvider contract + registry; local Ollama adapter (runs any installed model via
   OMNISTACKAI_OLLAMA_MODEL); Balanced ModelGateway (deterministic escalation ladder, no silent cloud
   fallback, context-budget guard); key-activated cloud catalog — Anthropic/OpenAI/Google-Gemini/
@@ -90,8 +90,9 @@ WHAT IS ALREADY BUILT (all Python 3.13 stdlib-only, offline, in services/agent-e
   layout + preview plans + verify gate ladders (+ optional deploy plan when a key-activated provider is
   passed) into one per-app ProjectPlan; to_dict is JSON-serializable + secret-free, render() summarizes,
   `task plan:show -- <example>` prints it. Data-only (nothing run/verified/deployed).
-- Console: apps/console-web is a dependency-free static console (model/cost overview) +
-  a Python snapshot exporter; `task console:serve`.
+- Console: apps/console-web is a dependency-free static console + Python snapshot exporter. It visibly
+  renders the real R-245 two-app project plan (preview + verify ladders), an R-246 five-file hunk-level
+  patch produced from actual IR assemblies, and the model/cost/routing overview; `task console:serve`.
 
 ID SCHEME (important): the workbook backlog already owns R-010..R-219 (planned agents/features). New
 work uses IDs AFTER R-219: R-220 streaming, R-221 fallback, R-222 console, R-223 env-fallback,
@@ -103,8 +104,8 @@ model-provider catalog + custom providers, R-237 IR-diff -> patch-apply edit loo
 PostgreSQL schema/migration from the IR, R-239 data-access/repository layer, R-240 route wiring
 (handlers call the repositories), R-241 authentication guards (enforce the IR auth flag), R-242 real JWT verification (HS256), R-243
 per-endpoint role enforcement (IR required_roles), R-244 sub-collection route wiring, R-245 combined
-project-plan surface, R-246 hunk-level edit diffs + rename detection. Do NOT overwrite backlog rows;
-continue from R-247.
+project-plan surface, R-246 hunk-level edit diffs + rename detection, R-247 static-console builder
+proof. Do NOT overwrite backlog rows; continue from R-248.
 
 ENVIRONMENT LIMITS discovered here
 - npm front-end bundlers (Next.js SWC, Vite/esbuild) FAIL to install (native-binary downloads time
@@ -130,12 +131,11 @@ RULES (non-negotiable)
   .ai/HANDOFF.md, PROJECT_STATE.md, CHANGELOG.md, and the tracker row. Push the branch; verify remote
   SHA == local HEAD. Never claim unexecuted tests.
 
-WHAT TO DO NEXT (pick with the founder; all continue the builder), continue from R-247
-- Offline-doable now: an IR fixtures field so seed data can be emitted honestly (no fabricated values);
-  render the R-245 project plan / R-246 unified patch in the static console (apps/console-web); or
-  deepen IR + adapter coverage (entity indexes / unique constraints and richer field validation into
-  schemas + models). Remaining 501s are only genuinely-ambiguous endpoints (multi-param, no schema,
-  >1 FK).
+WHAT TO DO NEXT (pick with the founder; all continue the builder), continue from R-248
+- Offline-doable now: an IR fixtures field so seed data can be emitted honestly (no fabricated values)
+  as `migrations/0002_seed.sql`; or deepen IR + adapter coverage (entity indexes / unique constraints
+  and richer field validation into schemas + models). Remaining 501s are only genuinely-ambiguous
+  endpoints (multi-param, no schema, >1 FK).
 - Needs a network/cloud environment: run a Tier-0 preview end-to-end (materialize -> pnpm dev);
   live-verify a cloud LLM provider (set its key + OMNISTACKAI_CLOUD_PROVIDER=<id>, run
   `task agent-engine:gateway:run`) or a deploy/sandbox driver (OMNISTACKAI_TIER=2 + key); and the
@@ -143,5 +143,5 @@ WHAT TO DO NEXT (pick with the founder; all continue the builder), continue from
 - Deferred by governance: native mobile (R-010 etc.) until web/backend stability.
 
 Begin by reading the files above and running the start protocol, then propose the next Tracker ID
-(R-247) with its task contract before writing code. Commit to main.
+(R-248) with its task contract before writing code. Commit to main.
 ```
