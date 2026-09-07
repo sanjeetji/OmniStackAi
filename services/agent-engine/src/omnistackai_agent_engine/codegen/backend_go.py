@@ -10,10 +10,11 @@ from __future__ import annotations
 
 import re
 
-from ..application_ir import ApplicationIR, ApiEndpoint, FieldType
+from ..application_ir import ApplicationIR, ApiEndpoint, DatabaseStrategy, FieldType
 from .adapter import GenerationTarget
 from .errors import GenerationError
 from .files import GeneratedFile, GeneratedProject
+from .schema_sql import render_postgres_schema
 
 _GO_TYPE: dict[FieldType, str] = {
     FieldType.STRING: "string",
@@ -148,5 +149,8 @@ class GoBackendAdapter:
         ]
         for segment in sorted(by_segment):
             files.append(GeneratedFile(f"internal/handlers/{segment}.go", _handlers_file(by_segment[segment])))
+
+        if ir.entities and ir.project_strategy.database_strategy is DatabaseStrategy.POSTGRES:
+            files.append(GeneratedFile("migrations/0001_init.sql", render_postgres_schema(ir)))
 
         return GeneratedProject(self.target.value, tuple(files))

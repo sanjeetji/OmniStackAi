@@ -20,6 +20,7 @@ from .backend_go import GoBackendAdapter
 from .backend_python import PythonBackendAdapter
 from .files import GeneratedFile, GeneratedProject
 from .nextjs import NextjsWebAdapter
+from .schema_sql import render_postgres_schema
 
 __all__ = [
     "AdapterRegistry",
@@ -41,4 +42,5 @@ __all__ = [
     "assemble_project",
     "assembled_targets",
     "default_registry",
+    "render_postgres_schema",
 ]

@@ -1,26 +1,26 @@
 schema_version: 1
-task_id: R-237
-title: IR-diff -> patch-apply edit loop (edit an existing generated app)
-status: done
+task_id: R-238
+title: PostgreSQL schema/migration generation from the Application IR
+status: in_progress
 phase: BASIC/MVP
 founder_stage: 0
 branch: main
 goal: >-
-  Add the "edit an existing app" motion (Brief 6/27/34): compute the minimal file-level change set
-  between two generated projects and apply only that delta to an existing project on disk, then record
-  it as a new commit on the customer-owned repo. plan_edit(old_ir, new_ir) regenerates both via the
-  assembler and diffs them into a ProjectDiff (added/modified/deleted, classified deterministically);
-  apply_diff writes/removes exactly those files inside a path-safe target; commit_edit applies and
-  commits as the customer identity. Diffing is pure and offline; applying/committing is a bounded,
-  path-safe disk step (like the R-228 git service) — no network, no code execution, no platform-repo
-  writes.
+  Give the generated backend a real persistence layer (Brief 9/34/42): deterministically render a
+  PostgreSQL schema from the IR entities + relations and emit it as migrations/0001_init.sql in the
+  backend target. Columns are typed from FieldType, required fields are NOT NULL, each table gets a UUID
+  primary key (the entity's own id field if present, else a surrogate), many_to_one/one_to_one relations
+  become foreign-key columns REFERENCES the target table, and many_to_many relations become a join table
+  with a composite key. Emitted only when the IR declares entities and database_strategy=postgres. Pure,
+  deterministic, offline (emit files, assert contents) — no DB connection, no migration is run, no
+  network. The R-237 edit loop diffs the migration for free when the IR changes.
 source:
   tracker_sheet: Phase_Roadmap
   tracker_row: reconstructed; new IDs continue after the workbook backlog's R-010..R-219
-  brief_sections: [6, 9, 27, 34, 35, 74, 77, 83, 84, 85, 92]
+  brief_sections: [9, 34, 35, 42, 74, 77, 83, 84, 85, 92]
   founder_note: >-
-    Founder said "Do which is required for now and later continue for the remaining tasks." The
-    edit-an-app loop is the core builder motion after generate + verify. Committed directly to main;
+    Founder said "Do which is required for now and later continue for the remaining tasks." A real DB
+    schema is the missing persistence layer after generate/verify/edit. Committed directly to main;
     author solely sanjeetji; tooling adds a Co-Authored-By trailer.
 project_profile:
   repository: platform_modular_monorepo
@@ -29,14 +29,12 @@ project_profile:
   model_routing: balanced
 complexity: L2
 expected_impact:
-  - services/agent-engine/src/omnistackai_agent_engine/edit/__init__.py
-  - services/agent-engine/src/omnistackai_agent_engine/edit/diff.py
-  - services/agent-engine/src/omnistackai_agent_engine/edit/apply.py
-  - services/agent-engine/src/omnistackai_agent_engine/edit/errors.py
-  - services/agent-engine/src/omnistackai_agent_engine/git_service/materialize.py
-  - services/agent-engine/src/omnistackai_agent_engine/git_service/__init__.py
-  - services/agent-engine/tests/test_edit_loop.py
-  - docs/EDIT_LOOP.md
+  - services/agent-engine/src/omnistackai_agent_engine/codegen/schema_sql.py
+  - services/agent-engine/src/omnistackai_agent_engine/codegen/backend_python.py
+  - services/agent-engine/src/omnistackai_agent_engine/codegen/backend_go.py
+  - services/agent-engine/src/omnistackai_agent_engine/codegen/__init__.py
+  - services/agent-engine/tests/test_schema_sql.py
+  - docs/CODEGEN.md
   - portable state, changelog, handoff, task doc, and tracker evidence
 allowed_paths:
   - .ai/**
@@ -46,31 +44,34 @@ allowed_paths:
   - docs/**
   - services/agent-engine/**
 must_not_change:
-  - PostgreSQL as the control-plane database or the existing schema
-  - the ModelProvider/gateway, Application IR, codegen adapters, runtime, verify public behavior (additive)
-  - git_service.create_repository/materialize_project behavior (only additive commit_all helper)
+  - PostgreSQL as the control-plane database or the platform's own schema/migrations
+  - the ModelProvider/gateway, IR, runtime, verify, edit public behavior (additive)
+  - the Next.js/Python/Go adapters' existing emitted files (only ADD the migration file)
   - local Compose services or infrastructure; the Section 74 top-level contract; the offline bootstrap
   - the network-independence of static task verify
 must_not_do:
-  - make any network call; run or build generated code; add an external Python dependency; import a vendor SDK
-  - write outside the caller-provided target directory; put a secret anywhere
+  - connect to or run any database; execute a migration; make a network call
+  - add an external Python dependency; import a vendor SDK; put a secret anywhere
 acceptance:
-  - diff_projects(old, new) returns a ProjectDiff classifying every path as added, modified (content or
-    executable differs), deleted, or unchanged; identical projects diff to an empty change set.
-  - plan_edit(old_ir, new_ir, registry=None) assembles both IRs and returns their ProjectDiff; a changed
-    IR (e.g. a new description or entity) yields the expected modified/added files.
-  - apply_diff(diff, target_dir) writes added/modified files and removes deleted ones inside a path-safe
-    target (refuses escapes), returns an ApplyReport, and leaves the directory equal to the new project.
-  - commit_edit applies a diff and records one commit as the given customer identity on the repo
-    (reusing an additive git_service.commit_all); the previous history is preserved.
-  - Standard-library offline tests cover diff classification, empty diff, plan_edit over a changed IR,
-    apply round-trip (old -> new), path-safety refusal, and the commit_edit history.
+  - render_postgres_schema(ir) returns deterministic SQL DDL: one CREATE TABLE per entity, snake_case
+    table names, FieldType->PostgreSQL column types, NOT NULL for required fields, a UUID primary key
+    (entity id field if present else a surrogate id).
+  - many_to_one / one_to_one relations emit a <name>_id UUID column REFERENCES the target table(id);
+    many_to_many relations emit a single deterministic join table with a composite primary key; empty on
+    an IR with no entities.
+  - The Python (FastAPI) and Go backend adapters emit migrations/0001_init.sql exactly when the IR has
+    entities and database_strategy=postgres, without changing any previously emitted file.
+  - Output is byte-stable across runs; the edit loop (plan_edit) picks up a migration change when the IR
+    entities change.
+  - Standard-library offline tests cover the type map, required->NOT NULL, PK selection, FK columns,
+    many_to_many join table, determinism, the postgres/entities gate, and adapter emission.
 required_gates:
   - impact_analysis
-  - diff_classification_tests
-  - plan_edit_tests
-  - apply_roundtrip_and_path_safety_tests
-  - commit_edit_history_test
+  - type_map_and_notnull_tests
+  - primary_key_and_fk_tests
+  - many_to_many_join_table_test
+  - determinism_and_gate_tests
+  - adapter_emission_tests
   - python_compile_test
   - vendor_import_exclusion
   - secret_exclusion_check
@@ -83,22 +84,14 @@ model_tool_trace:
   configured_model: qwen2.5-coder:14b
   local_calls: 0
   cloud_calls: 0
-  note: Deterministic; no model call, no network, no code execution. cloud_calls zero.
+  note: Deterministic; no model call, no network, no DB connection. cloud_calls zero.
 completion:
-  implementation_commit: a0a494a
-  verified_at: "2026-09-07T00:00:00+05:30"
-  verification:
-    - "task verify — pass (226 agent-engine tests; 9 new)"
-    - "task security:quick — pass; task env:check — pass"
-    - "apply round-trip (old tree -> new) and commit_edit two-commit history proven in tests using tempdirs"
-  acceptance_results:
-    - "diff_projects classifies added/modified/deleted/unchanged; modified on content OR executable change; identical projects diff empty (tests)"
-    - "plan_edit(old_ir, new_ir) assembles both and diffs; a description change yields README.md modified with nothing added/deleted (tests)"
-    - "apply_diff writes added/modified + removes deleted inside a path-safe target, refuses '..' escapes and a missing target, returns ApplyReport, leaves dir == new project (tests)"
-    - "commit_edit applies + commits one commit as the customer identity via additive git_service.commit_all; prior history preserved (git log == 2)"
-    - "no network call, no code execution, no write outside the caller target; task verify network-independent"
+  implementation_commit: null
+  verified_at: null
+  verification: []
+  acceptance_results: []
 blockers: []
 next_action: >-
-  Implement the edit package (diff/apply/plan_edit/commit_edit) + additive git commit_all with offline
-  tests; run the gates; record completion. Later continue with remaining builder tasks.
+  Implement schema_sql + wire both backends with offline tests; run the gates; record completion. Later
+  continue with remaining builder tasks (adapter ORM wiring, seed data, or the plan surface).
 next_command: task agent-engine:test

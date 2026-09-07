@@ -10,10 +10,11 @@ from __future__ import annotations
 
 import re
 
-from ..application_ir import ApplicationIR, ApiEndpoint, Entity, FieldType
+from ..application_ir import ApplicationIR, ApiEndpoint, DatabaseStrategy, Entity, FieldType
 from .adapter import GenerationTarget
 from .errors import GenerationError
 from .files import GeneratedFile, GeneratedProject
+from .schema_sql import render_postgres_schema
 
 _PY_TYPE: dict[FieldType, str] = {
     FieldType.STRING: "str",
@@ -136,6 +137,9 @@ class PythonBackendAdapter:
         ]
         for segment in segments:
             files.append(GeneratedFile(f"app/routers/{segment}.py", _router_file(segment, by_segment[segment])))
+
+        if ir.entities and ir.project_strategy.database_strategy is DatabaseStrategy.POSTGRES:
+            files.append(GeneratedFile("migrations/0001_init.sql", render_postgres_schema(ir)))
 
         return GeneratedProject(self.target.value, tuple(files))
 

@@ -92,3 +92,22 @@ End to end, **one Application IR becomes one customer-owned monorepo repository*
 → `git_service.create_repository` produces, e.g., a 24-file repo with `apps/web/` (Next.js) and
 `services/api/` (Go) and a single commit authored by the customer. Pure/offline; nothing is installed,
 built, run, or written to disk except by the Git service into the caller's target directory.
+
+## PostgreSQL schema / migration (R-238)
+
+`render_postgres_schema(ir)` (in `codegen/schema_sql.py`) turns the IR entities + relations into a
+deterministic SQL DDL migration — the generated backend's persistence layer:
+
+- **Tables:** one `CREATE TABLE` per entity, snake_cased table name (`FavouriteDriver` → `favourite_driver`).
+- **Columns:** each field → a column typed from `FieldType` (STRING/TEXT→`TEXT`, INT→`BIGINT`,
+  FLOAT→`DOUBLE PRECISION`, BOOL→`BOOLEAN`, DATETIME→`TIMESTAMPTZ`, UUID→`UUID`, JSON→`JSONB`); required
+  fields get `NOT NULL`.
+- **Primary key:** the entity's own `id` field if it declares one (UUID gets `DEFAULT gen_random_uuid()`),
+  else a prepended surrogate `id UUID PRIMARY KEY DEFAULT gen_random_uuid()`.
+- **Foreign keys:** `many_to_one`/`one_to_one` relations → a `<name>_id UUID REFERENCES <target>(id)`
+  column; `many_to_many` → one deterministic join table with a composite primary key.
+
+Both backend adapters (FastAPI and Go) emit it as `migrations/0001_init.sql` exactly when the IR has
+entities and `database_strategy == postgres` — no previously emitted file changes. Output is byte-stable,
+so the R-237 edit loop diffs the migration automatically when the IR entities change. Nothing connects
+to or runs a database; this only emits SQL text.
