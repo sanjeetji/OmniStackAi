@@ -1,7 +1,7 @@
 schema_version: 1
 task_id: R-239
 title: Data-access/repository layer for the generated backends (reads/writes the IR tables)
-status: in_progress
+status: done
 phase: BASIC/MVP
 founder_stage: 0
 branch: main
@@ -90,10 +90,18 @@ model_tool_trace:
   cloud_calls: 0
   note: Deterministic; no model call, no network, no DB connection. cloud_calls zero.
 completion:
-  implementation_commit: null
-  verified_at: null
-  verification: []
-  acceptance_results: []
+  implementation_commit: f6792fa
+  verified_at: "2026-09-07T00:00:00+05:30"
+  verification:
+    - "task verify — pass (244 agent-engine tests; 7 new)"
+    - "task security:quick — pass; task env:check — pass"
+    - "generated app/db.py + repositories parse as valid Python (ast); Go store scans into models.<Entity>"
+  acceptance_results:
+    - "Python backend (entities+postgres) emits app/db.py + app/repositories/<entity>.py per entity; requirements.txt gains psycopg (tests)"
+    - "Go backend emits internal/store/store.go + internal/store/<entity>.go per entity scanning the model structs; go.mod gains pgx; import path matches module (tests)"
+    - "all query values parameterized (%s / $N); identifiers fixed IR-derived strings; id-only entity creates via DEFAULT VALUES (tests)"
+    - "nothing emitted without entities or without postgres; no previously emitted file other than requirements.txt/go.mod changed; output byte-stable (tests, full suite green)"
+    - "no DB connection, no query executed, no network; task verify network-independent"
 blockers: []
 next_action: >-
   Implement data_access.py + wire both backends + tests; run the gates; record completion. Later

@@ -40,7 +40,7 @@ START PROTOCOL
   `task ai:status`, `task ai:handoff`. `task verify` must stay green and network-independent.
 - Confirm git branch/HEAD/clean tree. Then restate: phase, next Tracker ID, objective, blast radius.
 
-WHAT IS ALREADY BUILT (all Python 3.13 stdlib-only, offline, in services/agent-engine; 237 tests pass)
+WHAT IS ALREADY BUILT (all Python 3.13 stdlib-only, offline, in services/agent-engine; 244 tests pass)
 - Model fabric: ModelProvider contract + registry; local Ollama adapter (runs any installed model via
   OMNISTACKAI_OLLAMA_MODEL); Balanced ModelGateway (deterministic escalation ladder, no silent cloud
   fallback, context-budget guard); key-activated cloud catalog — Anthropic/OpenAI/Google-Gemini/
@@ -55,8 +55,10 @@ WHAT IS ALREADY BUILT (all Python 3.13 stdlib-only, offline, in services/agent-e
   project assembler (one IR -> a full customer monorepo: apps/web + services/api) -> git_service
   (materialize into a customer-owned Git repo with one commit). The backends also emit a real
   PostgreSQL schema (migrations/0001_init.sql via render_postgres_schema: typed columns, PK, FKs,
-  many-to-many join tables) when the IR has entities + database_strategy=postgres. TRI-TARGET proven
-  from ONE IR; all offline/deterministic (emit files, assert contents; no install/build/DB).
+  many-to-many join tables) AND a data-access layer (Python app/db.py + app/repositories/<entity>.py;
+  Go internal/store/<entity>.go) reading/writing those tables with parameterized SQL, when the IR has
+  entities + database_strategy=postgres. TRI-TARGET proven from ONE IR; all offline/deterministic (emit
+  files, assert contents; no install/build/DB).
 - RUNTIME/DEPLOY layer (Brief 15/51/75): RuntimeProvider/DeploymentProvider contracts;
   LocalRuntimeProvider (Tier 0/1, no keys) yields deterministic per-target preview plans + opt-in
   run_preview; key-activated cloud sandbox (e2b/daytona/fly-machines) + deploy (vercel/netlify/render/
@@ -82,7 +84,8 @@ R-228 git service, R-229 Python/FastAPI backend adapter, R-230 Go backend adapte
 validator/normalizer + fixtures, R-232 project assembler, R-233 runtime/deploy provider layer,
 R-234 tier switch + cloud provider drivers, R-235 verifiable-engineering verify plans, R-236 expanded
 model-provider catalog + custom providers, R-237 IR-diff -> patch-apply edit loop, R-238
-PostgreSQL schema/migration from the IR. Do NOT overwrite backlog rows; continue from R-239.
+PostgreSQL schema/migration from the IR, R-239 data-access/repository layer. Do NOT overwrite backlog
+rows; continue from R-240.
 
 ENVIRONMENT LIMITS discovered here
 - npm front-end bundlers (Next.js SWC, Vite/esbuild) FAIL to install (native-binary downloads time
@@ -108,11 +111,11 @@ RULES (non-negotiable)
   .ai/HANDOFF.md, PROJECT_STATE.md, CHANGELOG.md, and the tracker row. Push the branch; verify remote
   SHA == local HEAD. Never claim unexecuted tests.
 
-WHAT TO DO NEXT (pick with the founder; all continue the builder), continue from R-239
-- Offline-doable now: wire the generated models to the R-238 schema (repository/ORM layer + seed data)
-  so the backend reads/writes the tables; flow IR roles into auth/route guards + a users/roles schema;
-  a combined build/verify/preview plan surface tying runtime (R-233/234), verify (R-235), and edit
-  (R-237) together for the console/CLI; or a richer diff (rename/hunk-level) on the R-237 ProjectDiff.
+WHAT TO DO NEXT (pick with the founder; all continue the builder), continue from R-240
+- Offline-doable now: wire the route handlers to the R-239 repositories (turn 501 stubs into real CRUD)
+  + seed data; flow IR roles into auth/route guards + a users/roles schema; a combined
+  build/verify/preview plan surface tying runtime (R-233/234), verify (R-235), and edit (R-237) together
+  for the console/CLI; or a richer diff (rename/hunk-level) on the R-237 ProjectDiff.
 - Needs a network/cloud environment: run a Tier-0 preview end-to-end (materialize -> pnpm dev);
   live-verify a cloud LLM provider (set its key + OMNISTACKAI_CLOUD_PROVIDER=<id>, run
   `task agent-engine:gateway:run`) or a deploy/sandbox driver (OMNISTACKAI_TIER=2 + key); and the
@@ -120,5 +123,5 @@ WHAT TO DO NEXT (pick with the founder; all continue the builder), continue from
 - Deferred by governance: native mobile (R-010 etc.) until web/backend stability.
 
 Begin by reading the files above and running the start protocol, then propose the next Tracker ID
-(R-239) with its task contract before writing code. Commit to main.
+(R-240) with its task contract before writing code. Commit to main.
 ```

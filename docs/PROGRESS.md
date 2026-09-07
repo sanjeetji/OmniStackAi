@@ -1,24 +1,24 @@
-# OmniStackAI — implementation progress (as of R-238)
+# OmniStackAI — implementation progress (as of R-239)
 
 A living summary of what is built, what is pending, and how to see results. Numbers come from the
 execution tracker (`R_&_D/OmniStackAI_Execution_Tracker_v6.xlsx`, `Phase_Roadmap`).
 
 ## Headline
 
-- **237 automated tests pass**, fully offline and network-independent (`task verify`).
-- **27 tracker tasks Done, 1 Deferred, 210 Not Started** across 238 rows.
-- The offline builder loop is complete end to end: **describe (IR) → generate (web + API + DB schema) →
-  verify → edit → commit to an owned Git repo.**
+- **244 automated tests pass**, fully offline and network-independent (`task verify`).
+- **28 tracker tasks Done, 1 Deferred, 210 Not Started** across 239 rows.
+- The offline builder loop is complete end to end: **describe (IR) → generate (web + API + DB schema +
+  data-access layer) → verify → edit → commit to an owned Git repo.**
 
 ## Completion by phase
 
 | Phase | Done | Total | % complete |
 |-------|------|-------|-----------|
-| **MVP** (current milestone) | 27 | 133 | **20.3%** |
+| **MVP** (current milestone) | 28 | 134 | **20.9%** |
 | MID | 0 | 47 | 0% |
 | ADVANCED | 0 | 29 | 0% |
 | PRODUCTION | 0 | 29 | 0% |
-| **Overall program** | **27** | **238** | **11.3%** |
+| **Overall program** | **28** | **239** | **11.7%** |
 
 > The 210 "Not Started" rows are the pre-existing backlog catalogue (R-010..R-219 — many are individual
 > specialized agents and later-phase features). Capability-wise the platform is further along than the
@@ -48,8 +48,9 @@ execution tracker (`R_&_D/OmniStackAI_Execution_Tracker_v6.xlsx`, `Phase_Roadmap
 | Verifiable-engineering verify plans | ✅ Done | R-235 |
 | Edit loop (IR-diff → patch-apply → commit) | ✅ Done | R-237 |
 | PostgreSQL schema/migration from the IR | ✅ Done | R-238 |
+| Data-access/repository layer (Python + Go) | ✅ Done | R-239 |
 | Next.js console upgrade (rich UI) | ⏸ Deferred | R-224 — needs npm registry access |
-| Data-access/ORM layer + seed data | ⛔ Pending | next candidates (R-239+) |
+| Route wiring (handlers → repositories) + seed data | ⛔ Pending | next candidates (R-240+) |
 | Auth/roles through the adapters | ⛔ Pending | IR already models roles |
 | Live sandbox preview + real deploy (Tier 2) | ⛔ Pending | needs a network machine + provider keys |
 | Native mobile agents | ⛔ Deferred (governance) | until web/backend stability (Brief §25/§91) |
@@ -105,7 +106,7 @@ the live run needs the key + a network machine.
 
 ## What's next
 
-Near-term MVP candidates (all offline-doable): a data-access/ORM layer + seed data so the generated
-backend reads/writes the R-238 tables; auth/roles flowing through the adapters; a combined
+Near-term MVP candidates (all offline-doable): wire the route handlers to the R-239 repositories (so
+CRUD endpoints actually run) + seed data; auth/roles flowing through the adapters; a combined
 build/verify/preview plan surface for the console. Then, on a network machine: live Tier-2 preview and
 deploy. This file is refreshed as tasks land.

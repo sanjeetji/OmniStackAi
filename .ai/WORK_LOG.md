@@ -435,3 +435,25 @@
 - Nothing connects to or runs a database; no network. `docs/CODEGEN.md` documents the schema section.
 - Committed directly to main (only branch). Tracker row R-238 (Builder) inserted at row 9; MVP total
   133 / Done 27. Implementation checkpoint `c6a4c6e`. 0 local / 0 cloud model calls.
+
+## 2026-09-07 — R-239
+
+- Gave the generated backends a real data-access layer over the R-238 schema. New
+  `codegen/data_access.py`: `python_data_access_files(ir, slug)` emits `app/db.py` (an async psycopg
+  connection helper reading DATABASE_URL, dict rows) + `app/repositories/<entity>.py` per entity with
+  `list/get/create/delete`; `go_data_access_files(ir, slug)` emits `internal/store/store.go` (a
+  database/sql opener via the pgx driver) + `internal/store/<entity>.go` per entity with
+  `List/Get/Create/Delete` scanning into the generated `models.<Entity>` structs.
+- Every query value is parameterized (`%s` for psycopg, `$N` for pgx); only fixed IR-derived table/
+  column identifiers appear inline (no value interpolation). An id-only entity creates via
+  `DEFAULT VALUES`. `schema_sql` gained a public `table_name`.
+- Wired both backends to append the data-access files and the DB dependency (psycopg in
+  requirements.txt / pgx require in go.mod) exactly when `ir.entities and database_strategy is POSTGRES`
+  — same gate as the migration; no previously emitted file (other than requirements.txt / go.mod)
+  changed. The R-237 edit loop diffs the repositories when entities change.
+- 7 new stdlib offline tests (244 total): python emission + valid-Python parse + parameterization, go
+  emission + module import path + struct scan, gating (no db / no entities), id-only DEFAULT VALUES, and
+  determinism. No existing test broke. `task verify` + `security:quick` + `env:check` pass.
+- Nothing connects to or queries a database; no network. `docs/CODEGEN.md` + `docs/PROGRESS.md` updated.
+- Committed directly to main (only branch). Tracker row R-239 (Builder) inserted at row 9; MVP total
+  134 / Done 28. Implementation checkpoint `f6792fa`. 0 local / 0 cloud model calls.

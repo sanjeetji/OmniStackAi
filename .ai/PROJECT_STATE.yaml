@@ -6,10 +6,10 @@ current_task: null
 current_status: ready_for_next_task_definition
 branch: main
 last_completed_task:
-  task_id: R-238
-  title: PostgreSQL schema/migration generation from the Application IR
-  implementation_commit: c6a4c6e
-  verification: task verify (237 agent-engine tests, 11 new); render_postgres_schema (typed columns, PK, FKs, join tables) emitted as migrations/0001_init.sql by the FastAPI + Go backends when entities+postgres; deterministic/offline, no DB connection
+  task_id: R-239
+  title: Data-access/repository layer for the generated backends
+  implementation_commit: f6792fa
+  verification: task verify (244 agent-engine tests, 7 new); per-entity data-access layer (Python app/db.py + repositories, Go internal/store) reading/writing the R-238 tables with parameterized SQL; emitted when entities+postgres; deterministic/offline, no DB connection
   result: pass
 control_plane_database: postgresql
 model_routing_mode: balanced
@@ -23,5 +23,5 @@ id_note: >-
   Workbook backlog owns R-010..R-219. Founder-requested tasks use IDs after R-219: R-220..R-223 done,
   R-224 Next.js deferred (env-blocked), R-225 Application IR (in progress).
 blockers: []
-next_action: Generated backends now ship a real PostgreSQL schema (migrations/0001_init.sql from IR entities + relations). The builder does generate (web/api + DB schema) -> verify -> edit -> commit, fully offline. Next (R-239, offline-doable): wire the models to the schema (ORM/repository layer + seed data), or a combined build/verify/preview plan surface for the console/CLI, or auth/roles flowing through the adapters. Cloud items (Tier-0 preview end-to-end, live provider/deploy driver) need a network machine/keys. Confirm next Tracker ID.
+next_action: Generated backends now ship a data-access layer (Python repositories + Go store) over the R-238 schema. Next (R-240, offline-doable): wire the route handlers to the repositories so CRUD endpoints actually run + seed data; or auth/roles through the adapters; or a combined build/verify/preview plan surface for the console/CLI. Cloud items (Tier-0 preview end-to-end, live provider/deploy driver) need a network machine/keys. Confirm next Tracker ID.
 last_updated: "2026-09-07T00:00:00+05:30"
