@@ -4,6 +4,7 @@ from .errors import GitServiceError, MaterializeError, RepositoryError, TargetNo
 from .materialize import (
     MaterializeResult,
     RepositoryResult,
+    commit_all,
     create_repository,
     materialize_project,
 )
@@ -15,6 +16,7 @@ __all__ = [
     "RepositoryError",
     "RepositoryResult",
     "TargetNotEmptyError",
+    "commit_all",
     "create_repository",
     "materialize_project",
 ]

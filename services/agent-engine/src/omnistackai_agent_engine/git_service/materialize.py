@@ -83,6 +83,35 @@ def create_repository(
     return RepositoryResult(str(target), commit_sha, result.file_count)
 
 
+def commit_all(
+    target_dir: str | os.PathLike[str],
+    *,
+    author_name: str,
+    author_email: str,
+    message: str,
+) -> RepositoryResult:
+    """Stage every change under an existing repo and record one commit as the given identity.
+
+    Used to record an applied edit (see the edit loop). The working tree must already contain the
+    changes; this only `git add -A` + `git commit`. No network call is made.
+    """
+
+    if not author_name or not author_email:
+        raise RepositoryError("author_name and author_email are required")
+    if not message:
+        raise RepositoryError("a commit message is required")
+    target = Path(target_dir).resolve()
+    if not (target / ".git").exists():
+        raise RepositoryError("target is not a git repository")
+
+    identity = (author_name, author_email)
+    _git(target, ["add", "-A"])
+    _git(target, ["commit", "-q", "-m", message], identity=identity)
+    commit_sha = _git(target, ["rev-parse", "HEAD"], identity=identity).strip()
+    tracked = _git(target, ["ls-files"]).splitlines()
+    return RepositoryResult(str(target), commit_sha, len(tracked))
+
+
 def _git(cwd: Path, args: list[str], *, identity: tuple[str, str] | None = None) -> str:
     env = dict(os.environ)
     env["GIT_TERMINAL_PROMPT"] = "0"
