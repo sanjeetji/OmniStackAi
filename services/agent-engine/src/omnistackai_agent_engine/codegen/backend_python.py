@@ -16,7 +16,7 @@ from .auth_guard import PYJWT_REQUIREMENT, needs_auth, python_auth_file
 from .data_access import PSYCOPG_REQUIREMENT, python_data_access_files
 from .errors import GenerationError
 from .files import GeneratedFile, GeneratedProject
-from .route_wiring import Op, wire_endpoint
+from .route_wiring import Op, fk_relations, wire_endpoint
 from .schema_sql import render_postgres_schema
 
 _PY_TYPE: dict[FieldType, str] = {
@@ -78,8 +78,13 @@ def _models_file(ir: ApplicationIR) -> str:
     return "\n".join(lines) + "\n"
 
 
-def _router_file(segment: str, apis: list[ApiEndpoint], repo_entities: frozenset[str]) -> str:
-    wirings = [(api, wire_endpoint(api, repo_entities)) for api in apis]
+def _router_file(
+    segment: str,
+    apis: list[ApiEndpoint],
+    repo_entities: frozenset[str],
+    fk_by_entity: dict[str, tuple[str, ...]] | None = None,
+) -> str:
+    wirings = [(api, wire_endpoint(api, repo_entities, fk_by_entity)) for api in apis]
     tables = sorted({w.table for _, w in wirings if w is not None})
     models_used = sorted({w.entity for _, w in wirings if w is not None and w.op is Op.CREATE})
 
@@ -121,6 +126,9 @@ def _router_file(segment: str, apis: list[ApiEndpoint], repo_entities: frozenset
         elif wiring.op is Op.LIST:
             lines.append(f"async def {fn}() -> list[dict]:")
             lines.append(f"    return await {wiring.table}.list_{wiring.table}()")
+        elif wiring.op is Op.LIST_BY:
+            lines.append(f"async def {fn}({wiring.id_param}: str) -> list[dict]:")
+            lines.append(f"    return await {wiring.table}.list_{wiring.table}_by_{wiring.relation}({wiring.id_param})")
         elif wiring.op is Op.GET:
             lines.append(f"async def {fn}({wiring.id_param}: str) -> dict:")
             lines.append(f"    row = await {wiring.table}.get_{wiring.table}({wiring.id_param})")
@@ -201,9 +209,13 @@ class PythonBackendAdapter:
             files.append(GeneratedFile("app/auth.py", python_auth_file(ir)))
 
         repo_entities = frozenset(entity.name for entity in ir.entities) if has_db else frozenset()
+        fk_by_entity = fk_relations(ir) if has_db else None
         for segment in segments:
             files.append(
-                GeneratedFile(f"app/routers/{segment}.py", _router_file(segment, by_segment[segment], repo_entities))
+                GeneratedFile(
+                    f"app/routers/{segment}.py",
+                    _router_file(segment, by_segment[segment], repo_entities, fk_by_entity),
+                )
             )
 
         if has_db:

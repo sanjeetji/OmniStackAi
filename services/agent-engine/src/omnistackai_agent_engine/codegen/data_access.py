@@ -10,12 +10,14 @@ from __future__ import annotations
 
 import re
 
-from ..application_ir import ApplicationIR, Entity
+from ..application_ir import ApplicationIR, Entity, RelationKind
 from .schema_sql import table_name
 
 # Generated-project dependency pins (only added when the data-access layer is emitted).
 PSYCOPG_REQUIREMENT = "psycopg[binary]==3.2.3"
 PGX_REQUIRE = "github.com/jackc/pgx/v5 v5.7.1"
+
+_FK_KINDS = frozenset({RelationKind.MANY_TO_ONE, RelationKind.ONE_TO_ONE})
 
 
 def _pascal(value: str) -> str:
@@ -24,6 +26,10 @@ def _pascal(value: str) -> str:
 
 def _insert_columns(entity: Entity) -> list[str]:
     return [field.name for field in entity.fields if field.name != "id"]
+
+
+def _fk_relation_names(entity: Entity) -> list[str]:
+    return [relation.name for relation in entity.relations if relation.kind in _FK_KINDS]
 
 
 # --------------------------------------------------------------------------- Python (FastAPI)
@@ -86,7 +92,21 @@ def _python_repository(entity: Entity) -> str:
         "    async with await connect() as conn, conn.cursor() as cur:\n"
         '        await cur.execute(f"DELETE FROM {TABLE} WHERE id = %s", (id,))\n'
         "        return cur.rowcount > 0\n"
+        + _python_filtered_lists(entity, table)
     )
+
+
+def _python_filtered_lists(entity: Entity, table: str) -> str:
+    parts = []
+    for relation in _fk_relation_names(entity):
+        parts.append(
+            "\n\n"
+            f"async def list_{table}_by_{relation}({relation}_id: str, limit: int = 100, offset: int = 0) -> list[dict[str, Any]]:\n"
+            "    async with await connect() as conn, conn.cursor() as cur:\n"
+            f'        await cur.execute(f"SELECT * FROM {{TABLE}} WHERE {relation}_id = %s ORDER BY id LIMIT %s OFFSET %s", ({relation}_id, limit, offset))\n'
+            "        return await cur.fetchall()\n"
+        )
+    return "".join(parts)
 
 
 def python_data_access_files(ir: ApplicationIR, slug: str) -> list[tuple[str, str]]:
@@ -173,7 +193,31 @@ def _go_entity_store(entity: Entity, slug: str) -> str:
         "\tn, _ := res.RowsAffected()\n"
         "\treturn n > 0, nil\n"
         "}\n"
+        + _go_filtered_lists(entity, table, col_list, scan_targets)
     )
+
+
+def _go_filtered_lists(entity: Entity, table: str, col_list: str, scan_targets: str) -> str:
+    pascal = entity.name
+    parts = []
+    for relation in _fk_relation_names(entity):
+        rel_pascal = _pascal(relation)
+        parts.append(
+            "\n"
+            f"func List{pascal}By{rel_pascal}(ctx context.Context, db *sql.DB, {relation}ID string, limit int) ([]models.{pascal}, error) {{\n"
+            f"\trows, err := db.QueryContext(ctx, `SELECT {col_list} FROM {table} WHERE {relation}_id = $1 ORDER BY id LIMIT $2`, {relation}ID, limit)\n"
+            "\tif err != nil {\n\t\treturn nil, err\n\t}\n"
+            "\tdefer rows.Close()\n"
+            f"\tvar out []models.{pascal}\n"
+            "\tfor rows.Next() {\n"
+            f"\t\tvar m models.{pascal}\n"
+            f"\t\tif err := rows.Scan({scan_targets}); err != nil {{\n\t\t\treturn nil, err\n\t\t}}\n"
+            "\t\tout = append(out, m)\n"
+            "\t}\n"
+            "\treturn out, rows.Err()\n"
+            "}\n"
+        )
+    return "".join(parts)
 
 
 def go_data_access_files(ir: ApplicationIR, slug: str) -> list[tuple[str, str]]:

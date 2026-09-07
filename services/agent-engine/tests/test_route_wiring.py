@@ -54,9 +54,15 @@ class PythonWiringTests(TestCase):
         self.assertIn("from app.models import Post", posts)
         self.assertIn("await post.create_post(payload.model_dump())", posts)
 
-    def test_ambiguous_endpoint_stays_501(self) -> None:
+    def test_subcollection_wired_to_filtered_list(self) -> None:
+        # R-244: GET /posts/{postId}/comments -> parent-scoped list via the FK relation
         posts = self.project.get("app/routers/posts.py").content
-        self.assertIn("status_code=501", posts)  # GET /posts/{postId}/comments
+        self.assertIn("await comment.list_comment_by_post(postId)", posts)
+
+    def test_ambiguous_endpoint_stays_501(self) -> None:
+        # POST /favourites/drivers/{driverId} has no request_schema -> genuinely ambiguous -> 501
+        fav = PythonBackendAdapter().generate(example_ir("rideshare-favourites")).get("app/routers/favourites.py").content
+        self.assertIn("status_code=501", fav)
 
 
 class GoWiringTests(TestCase):

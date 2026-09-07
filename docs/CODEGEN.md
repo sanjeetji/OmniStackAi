@@ -141,7 +141,14 @@ endpoint's entity comes from its `response_schema` (else `request_schema`); the 
 | `GET /things/{id}` (single param) | `get_*` → 200, or 404 |
 | `POST /things` with a `request_schema` (no param) | `create_*` from the body → 201 |
 | `DELETE /things/{id}` (single param) | `delete_*` → 204, or 404 |
-| anything else (sub-collections, multi-param, custom) | left as a labelled `501` scaffold |
+| `GET /parents/{id}/children` — child has exactly one FK relation (R-244) | `list_*_by_<rel>(id)` → parent-scoped list |
+| anything else (multi-param, custom, ambiguous FK) | left as a labelled `501` scaffold |
+
+The sub-collection case (R-244) filters the child table by the relation's FK column
+(`WHERE <rel>_id = <param>`, value parameterized). The data-access layer emits a matching filtered list
+per FK relation — Python `list_<table>_by_<rel>`, Go `List<Entity>By<Rel>`. It wires only when the child
+entity has **exactly one** many_to_one/one_to_one relation (otherwise the target is ambiguous and the
+endpoint stays `501`).
 
 - **Python (FastAPI):** wired routes `import` the repository/model and `await` the repository call;
   create takes a Pydantic body (`payload.model_dump()`). Unwired routes keep the `501` scaffold.

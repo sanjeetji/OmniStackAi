@@ -19,8 +19,10 @@ import re
 from dataclasses import dataclass
 from enum import StrEnum
 
-from ..application_ir import ApiEndpoint
+from ..application_ir import ApplicationIR, ApiEndpoint, RelationKind
 from .schema_sql import table_name
+
+_FK_KINDS = frozenset({RelationKind.MANY_TO_ONE, RelationKind.ONE_TO_ONE})
 
 
 class Op(StrEnum):
@@ -28,6 +30,7 @@ class Op(StrEnum):
     GET = "get"
     CREATE = "create"
     DELETE = "delete"
+    LIST_BY = "list_by"  # parent-scoped list: a sub-collection filtered by a foreign-key relation
 
 
 @dataclass(frozen=True, slots=True)
@@ -35,10 +38,24 @@ class Wiring:
     op: Op
     entity: str          # entity name (PascalCase, as in the IR / model)
     table: str           # snake_case table + repository/module name
-    id_param: str | None  # path parameter used by GET/DELETE
+    id_param: str | None  # path parameter used by GET/DELETE/LIST_BY
+    relation: str | None = None  # FK relation name used by LIST_BY (filters <relation>_id)
 
 
-def wire_endpoint(api: ApiEndpoint, repo_entities: frozenset[str]) -> Wiring | None:
+def fk_relations(ir: ApplicationIR) -> dict[str, tuple[str, ...]]:
+    """Map each entity name to the names of its foreign-key relations (many_to_one / one_to_one)."""
+
+    return {
+        entity.name: tuple(rel.name for rel in entity.relations if rel.kind in _FK_KINDS)
+        for entity in ir.entities
+    }
+
+
+def wire_endpoint(
+    api: ApiEndpoint,
+    repo_entities: frozenset[str],
+    fk_by_entity: dict[str, tuple[str, ...]] | None = None,
+) -> Wiring | None:
     entity = api.response_schema or api.request_schema
     if not entity or entity not in repo_entities:
         return None
@@ -57,4 +74,9 @@ def wire_endpoint(api: ApiEndpoint, repo_entities: frozenset[str]) -> Wiring | N
         return Wiring(Op.CREATE, entity, table, None)
     if method == "DELETE" and last_is_param and len(params) == 1:
         return Wiring(Op.DELETE, entity, table, params[0])
+    # Sub-collection list: GET /<parents>/{parentId}/<children>, child has exactly one FK relation.
+    if method == "GET" and not last_is_param and len(params) == 1 and fk_by_entity is not None:
+        relations = fk_by_entity.get(entity, ())
+        if len(relations) == 1:
+            return Wiring(Op.LIST_BY, entity, table, params[0], relation=relations[0])
     return None

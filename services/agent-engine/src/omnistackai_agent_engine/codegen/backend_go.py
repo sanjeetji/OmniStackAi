@@ -16,7 +16,7 @@ from .auth_guard import GOLANG_JWT_REQUIRE, go_auth_file, needs_auth
 from .data_access import PGX_REQUIRE, go_data_access_files
 from .errors import GenerationError
 from .files import GeneratedFile, GeneratedProject
-from .route_wiring import Op, wire_endpoint
+from .route_wiring import Op, fk_relations, wire_endpoint
 from .schema_sql import render_postgres_schema
 
 _GO_TYPE: dict[FieldType, str] = {
@@ -121,10 +121,15 @@ def _handlers_file(apis: list[ApiEndpoint]) -> str:
     return "\n".join(lines) + "\n"
 
 
-def _handlers_file_wired(apis: list[ApiEndpoint], repo_entities: frozenset[str], slug: str) -> str:
+def _handlers_file_wired(
+    apis: list[ApiEndpoint],
+    repo_entities: frozenset[str],
+    slug: str,
+    fk_by_entity: dict[str, tuple[str, ...]] | None = None,
+) -> str:
     """Handlers as methods on *Handlers; unambiguous CRUD calls the store, the rest stay 501."""
 
-    wirings = [(api, wire_endpoint(api, repo_entities)) for api in apis]
+    wirings = [(api, wire_endpoint(api, repo_entities, fk_by_entity)) for api in apis]
     uses_store = any(w is not None for _, w in wirings)
     uses_models = any(w is not None and w.op is Op.CREATE for _, w in wirings)
 
@@ -155,6 +160,11 @@ def _handlers_file_wired(apis: list[ApiEndpoint], repo_entities: frozenset[str],
             lines.append('\thttp.Error(w, "not implemented", http.StatusNotImplemented)')
         elif wiring.op is Op.LIST:
             lines.append(f"\titems, err := store.List{wiring.entity}(r.Context(), h.DB, 100)")
+            lines.append("\tif err != nil {\n\t\thttp.Error(w, err.Error(), http.StatusInternalServerError)\n\t\treturn\n\t}")
+            lines.append("\twriteJSON(w, http.StatusOK, items)")
+        elif wiring.op is Op.LIST_BY:
+            rel_pascal = _pascal(wiring.relation)
+            lines.append(f'\titems, err := store.List{wiring.entity}By{rel_pascal}(r.Context(), h.DB, r.PathValue("{wiring.id_param}"), 100)')
             lines.append("\tif err != nil {\n\t\thttp.Error(w, err.Error(), http.StatusInternalServerError)\n\t\treturn\n\t}")
             lines.append("\twriteJSON(w, http.StatusOK, items)")
         elif wiring.op is Op.GET:
@@ -267,11 +277,12 @@ class GoBackendAdapter:
             files.append(GeneratedFile("internal/handlers/auth.go", go_auth_file(ir)))
 
         repo_entities = frozenset(entity.name for entity in ir.entities) if has_db else frozenset()
+        fk_by_entity = fk_relations(ir) if has_db else None
         if has_db:
             files.append(GeneratedFile("internal/handlers/handlers.go", _handlers_shared_file()))
         for segment in sorted(by_segment):
             content = (
-                _handlers_file_wired(by_segment[segment], repo_entities, slug)
+                _handlers_file_wired(by_segment[segment], repo_entities, slug, fk_by_entity)
                 if has_db
                 else _handlers_file(by_segment[segment])
             )
