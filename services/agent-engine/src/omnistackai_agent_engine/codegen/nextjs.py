@@ -1882,14 +1882,18 @@ def _form_screen_page(screen: Screen, entity: Entity, ir: ApplicationIR, ops: se
     page_name = f"{_pascal(screen.id)}Page"
     title = _title_case(screen.id)
 
-    # Check for a complementary list screen in ir.screens
+    # Check for complementary list and detail screens in ir.screens
     list_screen: Screen | None = None
+    detail_screen: Screen | None = None
     for s in ir.screens:
         if s.id != screen.id:
             s_entity = _match_entity(s, ir)
-            if s_entity and s_entity.name == entity.name and _screen_intent(s) == "collection":
-                list_screen = s
-                break
+            if s_entity and s_entity.name == entity.name:
+                intent = _screen_intent(s)
+                if intent == "collection" and list_screen is None:
+                    list_screen = s
+                elif intent == "detail" and detail_screen is None:
+                    detail_screen = s
 
     # Fields to include in form
     editable_fields = [f for f in entity.fields if f.name not in ("id", "created_at", "updated_at")]
@@ -1997,6 +2001,7 @@ def _form_screen_page(screen: Screen, entity: Entity, ir: ApplicationIR, ops: se
         f"  const [formData, setFormData] = useState<Partial<{name}>>({initial_obj});",
         '  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});',
         "  const [success, setSuccess] = useState(false);",
+        "  const [lastSavedId, setLastSavedId] = useState<string | null>(null);",
         "",
     ])
 
@@ -2118,8 +2123,12 @@ def _form_screen_page(screen: Screen, entity: Entity, ir: ApplicationIR, ops: se
         lines.extend([
             "      if (isEdit && editId) {",
             "        await update(editId, formData);",
+            "        setLastSavedId(editId);",
             "      } else {",
-            "        await create(formData);",
+            "        const res = await create(formData);",
+            "        if (res && (res as any).id) {",
+            "          setLastSavedId(String((res as any).id));",
+            "        }",
             f"        setFormData({initial_obj});",
             "      }",
         ])
@@ -2127,11 +2136,15 @@ def _form_screen_page(screen: Screen, entity: Entity, ir: ApplicationIR, ops: se
         lines.extend([
             "      if (editId) {",
             "        await update(editId, formData);",
+            "        setLastSavedId(editId);",
             "      }",
         ])
     else:
         lines.extend([
-            "      await create(formData);",
+            "      const res = await create(formData);",
+            "      if (res && (res as any).id) {",
+            "        setLastSavedId(String((res as any).id));",
+            "      }",
             f"      setFormData({initial_obj});",
         ])
     lines.extend([
@@ -2173,22 +2186,79 @@ def _form_screen_page(screen: Screen, entity: Entity, ir: ApplicationIR, ops: se
         "",
     ])
 
-    if can_update:
-        lines.extend([
-            "      {success && (",
-            '        <div style={{ padding: "12px 16px", background: "#f0fdf4", border: "1px solid #bbf7d0", color: "#166534", borderRadius: 8, marginBottom: 20 }}>',
-            f'          {{isEdit ? "{name} updated successfully!" : "{name} saved successfully!"}}',
-            "        </div>",
-            "      )}",
-        ])
-    else:
-        lines.extend([
-            "      {success && (",
-            '        <div style={{ padding: "12px 16px", background: "#f0fdf4", border: "1px solid #bbf7d0", color: "#166534", borderRadius: 8, marginBottom: 20 }}>',
-            f"          {name} saved successfully!",
-            "        </div>",
-            "      )}",
-        ])
+    # Build contextual actions for success banner
+    success_actions_jsx: list[str] = []
+    if detail_screen:
+        id_expr = "lastSavedId || (isEdit ? editId : null)" if can_update else "lastSavedId"
+        success_actions_jsx.append(
+            f'          {{{id_expr} && (\n'
+            f'            <Link\n'
+            f'              href={{`/{detail_screen.id}?id=${{{id_expr}}}`}}\n'
+            '              style={{ display: "inline-flex", alignItems: "center", gap: 4, padding: "5px 12px", background: "#166534", color: "#ffffff", borderRadius: 6, fontSize: 13, fontWeight: 500, textDecoration: "none" }}\n'
+            '            >\n'
+            f'              View {name} &rarr;\n'
+            '            </Link>\n'
+            '          )}}'
+        )
+    if list_screen:
+        success_actions_jsx.append(
+            f'          <Link\n'
+            f'            href="/{list_screen.id}"\n'
+            '            style={{ display: "inline-flex", alignItems: "center", gap: 4, padding: "5px 12px", background: "#ffffff", border: "1px solid #bbf7d0", color: "#166534", borderRadius: 6, fontSize: 13, fontWeight: 500, textDecoration: "none" }}\n'
+            '          >\n'
+            f'            &larr; Back to {plural}\n'
+            '          </Link>'
+        )
+    if can_create and can_update:
+        success_actions_jsx.append(
+            '          {!isEdit && (\n'
+            '            <button\n'
+            '              type="button"\n'
+            '              onClick={() => { setSuccess(false); setLastSavedId(null); }}\n'
+            '              style={{ padding: "5px 12px", background: "#ffffff", border: "1px solid #bbf7d0", color: "#166534", borderRadius: 6, fontSize: 13, fontWeight: 500, cursor: "pointer" }}\n'
+            '            >\n'
+            f'              + Create another {name}\n'
+            '            </button>\n'
+            '          )}'
+        )
+    elif can_create:
+        success_actions_jsx.append(
+            '          <button\n'
+            '            type="button"\n'
+            '            onClick={() => { setSuccess(false); setLastSavedId(null); }}\n'
+            '            style={{ padding: "5px 12px", background: "#ffffff", border: "1px solid #bbf7d0", color: "#166534", borderRadius: 6, fontSize: 13, fontWeight: 500, cursor: "pointer" }}\n'
+            '            >\n'
+            f'            + Create another {name}\n'
+            '          </button>'
+        )
+
+    actions_block = ""
+    if success_actions_jsx:
+        actions_block = (
+            '\n          <div style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 10, flexWrap: "wrap" }}>\n'
+            + "\n".join(success_actions_jsx)
+            + "\n          </div>"
+        )
+
+    msg_jsx = f'{{isEdit ? "{name} updated successfully!" : "{name} saved successfully!"}}' if can_update else f'{name} saved successfully!'
+
+    lines.extend([
+        "      {success && (",
+        '        <div style={{ padding: "14px 18px", background: "#f0fdf4", border: "1px solid #bbf7d0", color: "#166534", borderRadius: 8, marginBottom: 20 }}>',
+        '          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8 }}>',
+        f'            <span>{msg_jsx}</span>',
+        '            <button',
+        '              type="button"',
+        '              onClick={() => setSuccess(false)}',
+        '              style={{ background: "transparent", border: "none", color: "#166534", cursor: "pointer", fontSize: 18, lineHeight: 1, padding: "0 4px" }}',
+        '              aria-label="Dismiss"',
+        '            >',
+        '              &times;',
+        '            </button>',
+        '          </div>' + actions_block,
+        "        </div>",
+        "      )}",
+    ])
 
     if can_update:
         lines.extend([
@@ -2376,12 +2446,19 @@ def _form_screen_page(screen: Screen, entity: Entity, ir: ApplicationIR, ops: se
         btn_label = f'(submitting ? "Saving..." : "Save {name}")'
 
     reset_call = f"setFormData(isEdit && initialData ? initialData : {initial_obj})" if (can_update and has_get) else f"setFormData({initial_obj})"
+    cancel_href = f"/{list_screen.id}" if list_screen else "/"
 
     lines.extend([
         '        <div style={{ display: "flex", gap: 12, justifyContent: "flex-end", marginTop: 24, paddingTop: 16, borderTop: "1px solid #f1f5f9" }}>',
+        '          <Link',
+        f'            href="{cancel_href}"',
+        '            style={{ padding: "8px 16px", border: "1px solid #cbd5e1", background: "#fff", color: "#475569", borderRadius: 6, fontSize: 14, textDecoration: "none", display: "inline-flex", alignItems: "center" }}',
+        '          >',
+        '            Cancel',
+        '          </Link>',
         '          <button',
         '            type="button"',
-        f'            onClick={{() => {{ reset(); {reset_call}; setFieldErrors({{}}); setSuccess(false); }}}}',
+        f'            onClick={{() => {{ reset(); {reset_call}; setFieldErrors({{}}); setSuccess(false); setLastSavedId(null); }}}}',
         '            style={{ padding: "8px 16px", border: "1px solid #cbd5e1", background: "#fff", color: "#475569", borderRadius: 6, fontSize: 14, cursor: "pointer" }}',
         '          >',
         '            Reset',
