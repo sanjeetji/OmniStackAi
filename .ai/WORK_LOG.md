@@ -1,5 +1,22 @@
 # Work Log
 
+## 2026-09-09 — R-279
+
+- Recorded contract in `.ai/CURRENT_TASK.yaml` and `.ai/tasks/R-279.md`.
+- `nextjs.py`:
+  - Added `_TOAST_COMPONENT` template and `render_toast_component()` generating `apps/web/components/toast.tsx` exporting `ToastProvider`, `useToast`, and typed helper interfaces.
+  - Floating viewport container fixed at bottom-right with auto-dismiss timers, manual dismiss `×` buttons, and distinct status color accents (emerald success, red error, blue info).
+  - Updated `_LAYOUT` in `apps/web/app/layout.tsx` to import `ToastProvider` and wrap `{children}` and `<Navbar />`.
+  - Added `GeneratedFile("components/toast.tsx", _TOAST_COMPONENT)` in `NextjsWebAdapter.generate()`.
+  - Wired real-time action feedback into `_collection_screen_page`: CSV export (`toast.info`), single delete (`toast.success` / `toast.error`), batch delete (`toast.success` with count / `toast.error`), and subcollection delete (`toast.success` / `toast.error`).
+  - Wired real-time action feedback into `_detail_screen_page`: JSON export (`toast.info`), main delete (`toast.success` / `toast.error`), and subcollection delete (`toast.success` / `toast.error`).
+  - Wired real-time action feedback into `_form_screen_page`: create/update submit (`toast.success` / `toast.error`) and Reset button (`toast.info`).
+  - Exported `render_toast_component` in `omnistackai_agent_engine.codegen`.
+  - Strict diff invariance maintained across `ir.description`.
+- Added `services/agent-engine/tests/test_toast_notifications.py` with 14 comprehensive unit tests.
+- `task verify` — 756 tests pass (14 new), 0 failures. `task lint`, `task security:quick` pass. `builder:demo minimal-blog` and `builder:demo rideshare-favourites` pass. 0 network calls, 0 cloud model calls.
+- Updated CURRENT_TASK.yaml, tasks/R-279.md, PROJECT_STATE.yaml, PROJECT_STATE.md, CHANGELOG.md, docs/CODEGEN.md, docs/PROGRESS.md.
+
 ## 2026-09-09 — R-278
 
 - Recorded contract in `.ai/CURRENT_TASK.yaml` and `.ai/tasks/R-278.md`.

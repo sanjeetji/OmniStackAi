@@ -1,42 +1,38 @@
 schema_version: 1
-task_id: R-278
-title: Collection Screen Boolean & Enum Field Filtering, Segmented Pill Controls & Filter Empty States in Generated Next.js Web App
+task_id: R-279
+title: Global Notification Toast System & Action Feedback in Generated Next.js Web App
 status: done
 phase: BASIC/MVP
 founder_stage: 0
 branch: main
 goal: >-
-  Enhance generated Next.js collection screens (apps/web/app/<screen>/page.tsx) with interactive,
-  deterministic client-side filtering for boolean fields and enum fields, complete with segmented pill
-  controls, enum dropdowns, active filter indicators, and dedicated empty states.
-tracker_ref: "R-278"
+  Implement a lightweight, dependency-free global notification toast system in the generated Next.js web application
+  (apps/web/components/toast.tsx, apps/web/app/layout.tsx), and wire real-time toast feedback into generated
+  collection screens, detail screens, and form screens.
+tracker_ref: "R-279"
 requirements:
-  - Detect filterable fields on the entity (boolean fields and enum validation rules).
-  - Manage filter state via filterValues (Record<string, string>).
-  - Compute filteredData via useMemo comparing items against active filters.
-  - Connect filteredData to table rows, bulk selection (allCurrentIds), and CSV export.
-  - Render an accessible filter toolbar with segmented pill buttons for boolean fields and select dropdowns for enum fields.
-  - Render active filter count badge and reset button when filters are active.
-  - Dedicated empty filter state when records exist in data but none match active filters.
-  - Clean fallback when entity has zero boolean or enum fields (zero filter code emitted).
+  - Implement apps/web/components/toast.tsx exporting ToastProvider and useToast hook with typed helpers (success, error, info).
+  - Floating viewport at fixed bottom-right with auto-dismiss, dismiss button, and status color accents.
+  - Wrap apps/web/app/layout.tsx with <ToastProvider>.
+  - Wire toast feedback into collection screens (single delete, bulk delete, CSV export).
+  - Wire toast feedback into detail screens (delete, JSON export).
+  - Wire toast feedback into form screens (create and update success).
   - 100% offline, zero new external npm dependencies, zero new IR fields, strict diff invariance.
 acceptance_criteria:
-  - Collection screens import useMemo from "react" when filterable fields exist.
-  - Segmented pill controls are rendered for boolean fields with active/inactive states.
-  - Dropdown selects are rendered for enum fields with active/inactive states.
-  - Active filter count badge and reset button are rendered when filters are active.
-  - Table rows, bulk selection IDs, and CSV export reflect filteredData.
-  - Dedicated empty filter state is displayed when data.length > 0 && filteredData.length === 0.
-  - Clean fallback: entities without boolean or enum fields omit filter code.
-  - Strict diff invariance: changing only ir.description produces byte-identical output.
-  - task verify passes (expect 740+ tests passing, 0 failures).
+  - apps/web/components/toast.tsx is generated as a client component exporting ToastProvider and useToast.
+  - apps/web/app/layout.tsx imports and renders <ToastProvider>.
+  - Collection screens import useToast and emit toasts for delete and CSV export.
+  - Detail screens import useToast and emit toasts for delete and JSON export.
+  - Form screens import useToast and emit toasts on create/update success.
+  - Strict diff invariance: changing only ir.description produces byte-identical output across toast components.
+  - task verify passes (expect 755+ tests passing, 0 failures).
   - task lint and task security:quick pass.
   - builder:demo passes for minimal-blog and rideshare-favourites.
 allowed_paths:
   - services/agent-engine/src/omnistackai_agent_engine/codegen/nextjs.py
-  - services/agent-engine/tests/test_collection_field_filters.py
+  - services/agent-engine/tests/test_toast_notifications.py
   - .ai/CURRENT_TASK.yaml
-  - .ai/tasks/R-278.md
+  - .ai/tasks/R-279.md
 forbidden_paths:
   - services/agent-engine/src/omnistackai_agent_engine/application_ir/**
   - package.json
@@ -48,10 +44,9 @@ gates:
   - task builder:demo -- minimal-blog
   - task builder:demo -- rideshare-favourites
 evidence:
-  - "task verify: 742 tests passed (0 failures, 15 new unit tests in test_collection_field_filters.py)"
+  - "task verify: 756 tests passed (0 failures, 14 new unit tests in test_toast_notifications.py)"
   - "task lint: passed"
   - "task security:quick: passed"
-  - "task builder:demo -- minimal-blog: passed (38 files generated)"
-  - "task builder:demo -- rideshare-favourites: passed (35 files generated)"
-  - "commit: 599df7d feat(codegen): collection screen boolean & enum field filtering with segmented controls [R-278]"
-
+  - "task builder:demo -- minimal-blog: passed (39 files generated)"
+  - "task builder:demo -- rideshare-favourites: passed (36 files generated)"
+  - "commit: d28fc1a feat(codegen): global notification toast system & action feedback [R-279]"

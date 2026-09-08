@@ -868,6 +868,39 @@ Upgrades generated Next.js collection screens (`apps/web/app/<screen>/page.tsx`)
   - Clean fallback: entities without boolean or enum fields emit zero filter code.
   - 100% offline, zero external npm dependencies, zero new IR fields, strict diff invariance.
 
+### Global Notification Toast System & Action Feedback (R-279)
+
+Adds a lightweight, accessible, and self-contained client-side toast notification system to generated Next.js web applications:
+
+- **`ToastProvider` & `useToast` Hook (`apps/web/components/toast.tsx`)**:
+  - Client component (`"use client";`) with zero external dependencies.
+  - Implements `createContext`, `useContext`, `useState`, `useCallback`, and `useEffect`.
+  - Exports `ToastProvider`, `useToast`, `ToastType = "success" | "error" | "info"`, `ToastItem`, and `ToastContextValue`.
+  - Methods: `addToast(message, type, duration)`, `removeToast(id)`, and typed convenience helpers: `toast.success()`, `toast.error()`, and `toast.info()`.
+  - Viewport: fixed bottom-right container (`position: "fixed"`, `bottom: 24`, `right: 24`, `zIndex: 9999`, `aria-live="polite"`).
+  - Floating toast cards with auto-dismiss timers (default 4000ms), manual dismiss `×` button, and distinct status color accents:
+    - Success: Emerald accent (`#a7f3d0`/`#15803d`/`✓`).
+    - Error: Rose/Red accent (`#fecaca`/`#b91c1c`/`✕`).
+    - Info: Blue accent (`#bfdbfe`/`#1d4ed8`/`ℹ`).
+- **RootLayout Integration (`apps/web/app/layout.tsx`)**:
+  - Imports `ToastProvider` from `../components/toast` and wraps the layout shell (`<Navbar />` and `{children}`).
+- **Screen Action Feedback Wiring**:
+  - **Collection screens**:
+    - CSV export: emits `toast.info("Exporting {plural} to CSV...")`.
+    - Single delete: emits `toast.success("Deleted {entity} successfully")` / `toast.error(err.message)`.
+    - Batch delete: emits `toast.success("Successfully deleted {count} {plural}")` / `toast.error(err.message)`.
+    - Subcollection delete: emits `toast.success("Deleted {child} successfully")` / `toast.error(err.message)`.
+  - **Detail screens**:
+    - JSON export: emits `toast.info("Exporting {entity} record to JSON...")`.
+    - Main delete: emits `toast.success("Deleted {entity} successfully")` / `toast.error(err.message)`.
+    - Subcollection delete: emits `toast.success("Deleted {child} successfully")` / `toast.error(err.message)`.
+  - **Form screens**:
+    - Submit create/update: emits `toast.success("{Entity} {created|updated} successfully")` / `toast.error(err.message)`.
+    - Reset button: emits `toast.info("Form values reset to initial state")`.
+- **Quality & Safety**:
+  - 100% offline, zero external npm dependencies, zero new IR fields, strict diff invariance across `ir.description`.
+
+
 
 
 

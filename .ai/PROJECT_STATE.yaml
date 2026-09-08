@@ -2,22 +2,21 @@ schema_version: 1
 project: OmniStackAI
 phase: BASIC/MVP
 founder_stage: 0
-current_task: R-278
+current_task: R-279
 current_status: done
 branch: main
 last_completed_task:
-  task_id: R-278
-  title: Collection Screen Boolean & Enum Field Filtering, Segmented Pill Controls & Filter Empty States in Generated Next.js Web App
+  task_id: R-279
+  title: Global Notification Toast System & Action Feedback in Generated Next.js Web App
   verification: >-
-    task verify (742 agent-engine tests, 15 new in test_collection_field_filters.py); _collection_screen_page
-    enhanced with _filterable_fields_for_entity helper detecting FieldType.BOOL and enum validation rules;
-    imports useMemo alongside useState; filterValues state tracking active field filters; handleFilterChange
-    and handleClearFilters helpers; activeFilterCount computation; filteredData useMemo filtering loaded data;
-    displayData connected to row mapping and empty states; filter toolbar with segmented pill controls for
-    booleans (All, Yes, No) and select dropdowns for enums; active filter count badge and Reset button;
-    dedicated empty filter state with "Clear all filters" CTA; clean fallback for entities without boolean/enum
-    fields; task lint and task security:quick pass; builder:demo minimal-blog and rideshare-favourites pass;
-    0 network, no DB
+    task verify (756 agent-engine tests, 14 new in test_toast_notifications.py); apps/web/components/toast.tsx
+    generated with client-side ToastProvider and useToast hook; fixed floating viewport container with auto-dismiss
+    timers, manual dismiss, and distinct status color accents (emerald success, red error, blue info); RootLayout in
+    apps/web/app/layout.tsx wrapped in <ToastProvider>; real-time action feedback wired into collection screens (CSV export,
+    single delete, batch delete), detail screens (JSON export, delete, subcollection delete), and form screens (create/update
+    success, error feedback, reset notice); 100% offline, zero new external npm dependencies, zero new IR fields, strict
+    diff invariance across ir.description; task lint and task security:quick pass; builder:demo minimal-blog and rideshare-favourites
+    pass; 0 network, no DB
   result: pass
 control_plane_database: postgresql
 model_routing_mode: balanced
@@ -29,9 +28,7 @@ product_direction: >-
   framework adapter contract -> Next.js adapter -> Git service -> preview/sandbox (needs cloud env).
 id_note: >-
   Workbook backlog owns R-010..R-219. Founder-requested tasks use IDs after R-219: R-220..R-223 done,
-  R-224 Next.js deferred (env-blocked), R-225..R-278 done. Continue from R-279.
+  R-224 Next.js deferred (env-blocked), R-225..R-279 done. Continue from R-280.
 blockers: []
-next_action: Task R-278 (Collection Screen Boolean & Enum Field Filtering) is implemented, verified, and complete (742 tests pass). Ready for Task R-279.
-last_updated: "2026-09-09T01:05:00+05:30"
-
-
+next_action: Task R-279 (Global Notification Toast System & Action Feedback) is implemented, verified, and complete (756 tests pass). Ready for Task R-280.
+last_updated: "2026-09-09T01:21:00+05:30"
