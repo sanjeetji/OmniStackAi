@@ -1,89 +1,66 @@
 schema_version: 1
-task_id: R-275
-title: Rich App Dashboard Overview Page in Generated Next.js Web App
+task_id: R-276
+title: Record Selector Dropdown, Prev/Next Record Navigation & Deep-Link Sync in Generated Next.js Detail Screens
 status: done
 phase: BASIC/MVP
 founder_stage: 0
 branch: main
 goal: >-
-  Upgrade the generated Next.js app home page (app/page.tsx) from a static bare-bones HTML list
-  into a rich, entity-aware dashboard overview page:
-  - Make app/page.tsx a client component ("use client") to enable live React hooks.
-  - Call useList<Entity>({ limit: 1 }) for each entity with Op.LIST wired, display .total as a
-    live count badge in entity summary cards.
-  - Render screen navigation cards for each primary screen (collection + form); exclude detail
-    screens to keep navigation focused.
-  - Render a "Quick Actions" section listing "+ Create {Entity}" CTAs to form screens.
-  - Remove ir.description from the page body (it already appears in README.md) — fixes the
-    existing diff-invariance violation in the old overview page.
-  - Fall back cleanly when ir.entities is empty (no hook calls, no cards).
-  - 100% offline, zero new IR fields, zero new npm dependencies.
-source:
-  tracker_sheet: Phase_Roadmap
-  brief_sections: [43, 50, 74, 77, 91, 92]
-  founder_note: >-
-    Founder approved implementation plan for Task R-275 (Rich App Dashboard Overview Page).
-project_profile:
-  repository: platform_modular_monorepo
-  service: python_agent_engine
-  control_plane_database: postgresql
-  model_routing: balanced
-complexity: L2
-expected_impact:
-  - services/agent-engine/src/omnistackai_agent_engine/codegen/nextjs.py
-  - services/agent-engine/tests/test_overview_dashboard.py
-  - services/agent-engine/tests/test_console_snapshot.py
-  - docs/CODEGEN.md, docs/PROGRESS.md
-  - portable state, changelog, handoff, task doc, tracker evidence
+  Enhance generated Next.js detail screens (apps/web/app/<screen>/page.tsx) with an interactive
+  record selector dropdown, sequential previous/next navigation buttons, automatic URL query param
+  sync (?id=...), and a quick-pick recent records grid in the empty state.
+tracker_ref: "R-276"
+requirements:
+  - When Op.LIST is wired for the entity, detail screens import useList<Plural> from ../lib/hooks.
+  - Detail screens render a styled <select> dropdown in the ID selection section offering "-- Choose {name} --"
+    followed by existing items labeled with the best descriptive field (e.g. title, name, label, email, or id).
+  - Selecting an item from the dropdown or clicking a recent record updates selectedId, idInput, and synchronizes
+    the URL search params (?id=<id>) using window.history.replaceState.
+  - When an entity record is displayed and list data is available, render contextual "< Prev" and "Next >"
+    navigation buttons allowing users to cycle through records sequentially.
+  - In the empty state (when no record is selected), render a "Recent {plural}" grid of clickable card tiles
+    so users can immediately inspect a record with one click instead of needing to know a UUID.
+  - Fall back cleanly when Op.LIST is not available (keeps manual ID input, no hook import, no broken code).
+  - 100% offline, zero new external npm dependencies, zero new IR fields, strict diff invariance.
+acceptance_criteria:
+  - Detail screen imports useList<Plural> when Op.LIST is wired.
+  - Detail screen does not import useList<Plural> when Op.LIST is not wired.
+  - Dropdown <select> is rendered with placeholder and options when Op.LIST is wired.
+  - Prev and Next buttons are rendered and properly disabled at boundary indices.
+  - Empty state displays recent records card grid when list items exist.
+  - URL synchronization logic via searchParams / history.replaceState is emitted.
+  - Strict diff invariance: changing only ir.description produces byte-identical output.
+  - task verify passes (expect 705+ tests passing, 0 failures).
+  - task lint and task security:quick pass.
+  - builder:demo passes for minimal-blog and rideshare-favourites.
 allowed_paths:
-  - .ai/**
-  - CHANGELOG.md
-  - PROJECT_STATE.md
-  - R_&_D/OmniStackAI_Execution_Tracker_v6.xlsx
-  - docs/**
-  - services/agent-engine/**
-must_not_change:
-  - the IR schema; no new IR field
-  - network-independence of task verify
-must_not_do:
-  - add a platform Python dependency
-  - break existing codegen contracts
-  - connect to or run a database; make a network call; put a secret anywhere
-acceptance:
-  - app/page.tsx starts with "use client";
-  - Imports useList<Entity> hook for each entity with Op.LIST wired.
-  - Calls useList<Entity>({ limit: 1 }) and displays .total in entity summary card.
-  - Screen navigation cards render for collection and form screens with correct href (/{screen.id}).
-  - Detail screens are excluded from the navigation card grid.
-  - Quick Actions section renders "+ Create {Entity}" link for each form screen.
-  - ir.description is NOT present in the generated app/page.tsx output.
-  - Page renders cleanly with no entities (no hook calls emitted, no broken imports).
-  - Role badge rendered for non-public screens in nav cards.
-  - Strict diff invariance: identical app/page.tsx output for different ir.description values.
-  - Stage 0 verification (task verify), task lint, task security:quick, task doctor, and builder demos pass.
+  - services/agent-engine/src/omnistackai_agent_engine/codegen/nextjs.py
+  - services/agent-engine/tests/test_detail_record_selector.py
+  - .ai/CURRENT_TASK.yaml
+  - .ai/tasks/R-276.md
+forbidden_paths:
+  - services/agent-engine/src/omnistackai_agent_engine/application_ir/**
+  - package.json
+  - pnpm-lock.yaml
+gates:
+  - task verify
+  - task lint
+  - task security:quick
+  - task builder:demo -- minimal-blog
+  - task builder:demo -- rideshare-favourites
 evidence:
-  verify: "task verify: 695 tests passing in 0.901s"
-  tests: "test_overview_dashboard.py: 16/16 tests passing; 695 total tests across all test files"
-  coverage: >-
-    16 test cases covering client component declaration, useList hook imports, entity count cards,
-    screen nav links, quick actions with + Create CTA, diff invariance (no ir.description in output),
-    .total reference for live counts, no-entities fallback, no-screens fallback, collection screen
-    card, form screen in quick actions, role badge for restricted screens, no hook for un-listed
-    entity, full project generation, and detail screen exclusion from nav.
-  lint: "task lint: Lint passed"
-  security: "task security:quick: Stage 0 secret-policy check passed"
-  demos: "task builder:demo -- minimal-blog and task builder:demo -- rideshare-favourites both passed"
-  snapshot_fix: "test_console_snapshot.py updated — apps/web/app/page.tsx removed from expected edit-diff set (description no longer embedded in overview page, so the page is now diff-stable across description changes)"
-required_gates:
-  - overview_dashboard_test
-  - task_verify
-  - task_lint
-  - task_security_quick
-model_tool_trace:
-  routing: local_only
-  local_calls: 0
-  cloud_calls: 0
-  note: Deterministic codegen; no model call, no network, no DB. cloud_calls zero.
-blockers: []
-next_action: Task R-275 complete. Ready to commit and push. Continue from R-276.
-next_command: task verify
+  - gate: task verify
+    result: pass
+    details: "711 agent-engine unit tests pass (16 new in test_detail_record_selector.py), 0 failures."
+  - gate: task lint
+    result: pass
+    details: "Ruff and project lint passed with 0 errors."
+  - gate: task security:quick
+    result: pass
+    details: "Stage 0 secret-policy check passed."
+  - gate: task builder:demo -- minimal-blog
+    result: pass
+    details: "Assembled project and initialized git repository successfully."
+  - gate: task builder:demo -- rideshare-favourites
+    result: pass
+    details: "Assembled project and initialized git repository successfully."

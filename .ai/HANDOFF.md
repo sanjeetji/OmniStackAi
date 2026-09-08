@@ -1,6 +1,6 @@
 # Current Handoff
 
-Task ID: R-275
+Task ID: R-276
 Status: done
 Phase: BASIC/MVP — Founder Stage 0
 Branch: `main` (the only branch; the GitHub default)
@@ -12,62 +12,58 @@ Branch: `main` (the only branch; the GitHub default)
 - Commits use `sanjeetji <sk698166@gmail.com>` as author.
 - User permission is required prior to committing or pushing code.
 
-## Completed (R-275) — Rich App Dashboard Overview Page in Generated Next.js Web App
+## Completed (R-276) — Record Selector Dropdown, Prev/Next Record Navigation & Deep-Link Sync in Generated Next.js Detail Screens
 
-- **Rich Entity-Aware Overview Page**:
-  - `_overview_page(ir)` upgraded from a static 20-line bare HTML list to a full client component.
-  - `"use client";` at top — matches pattern of all other generated screen pages.
-  - Imports `useList<Plural>` for each entity with `Op.LIST` wired (via `_get_ops_by_entity`).
-  - Calls `useList<Entity>({ limit: 1 })` per listable entity for live count; displays `.total`
-    with loading fallback (`"…"`) and error fallback (`"—"`).
+- **Interactive Record Selector Dropdown**:
+  - `_detail_screen_page(screen, entity, ir, ops)` detects `can_list = Op.LIST in ops`.
+  - When `can_list` is true, imports `useList<Plural>` hook and invokes `useList<Plural>()` to fetch available items.
+  - Top ID selection section renders an interactive `<select aria-label="Select {name}">` dropdown with
+    `"-- Choose {name} --"` placeholder and `<option>` elements mapped to records displaying the best title field
+    (`title`, `name`, `label`, `email`, or `id`).
+  - Selecting an option calls `handleSelectId(e.target.value || null)`.
 
-- **Entity Summary Cards**:
-  - CSS Grid (`minmax(220px, 1fr)`) of white cards with box-shadow and border.
-  - 32px `#0f172a` count, uppercase `#64748b` entity label, `#94a3b8` plural subtitle.
-  - Only shown for entities with `Op.LIST` wired.
+- **Deep-Link URL Synchronization (`handleSelectId`)**:
+  - Emits `handleSelectId(newId)` helper function that updates `selectedId`, `idInput`, and synchronizes
+    the browser URL search parameters (`?id=<id>` or removes `id` when cleared) via `window.history.replaceState`.
+  - Manual "Load {name}" button and interactive "Clear" button both use `handleSelectId`.
+  - `handleDelete` removes the `id` search parameter from the URL upon deletion.
 
-- **Screen Navigation Cards**:
-  - CSS Grid (`minmax(240px, 1fr)`) of styled `<Link>` tiles.
-  - Detail screens excluded via `_screen_intent` — keeps navigation clean.
-  - Intent label badge (`Collection`, `Form`, `Screen`); role badge for non-public screens
-    (`#eff6ff`/`#1d4ed8` pill with role ID).
+- **Sequential Record Navigation (Prev / Next)**:
+  - Item card header renders contextual `&larr; Prev` and `Next &rarr;` navigation buttons.
+  - Bound to `disabled={!prevItem}` and `disabled={!nextItem}` at boundary indices.
+  - Allows cycling through records sequentially without having to return to the collection list.
 
-- **Quick Actions Section**:
-  - `+ Create {Entity}` blue CTAs (`#2563eb`) for each form screen, using `_match_entity` to
-    resolve entity name.
+- **Recent Records Quick-Pick Empty State**:
+  - When `!selectedId`, empty state renders a "Recent {plural}" grid of clickable card tiles displaying title
+    and truncated ID, allowing one-click record selection instead of needing to know a UUID.
 
-- **Diff Invariance Fix**:
-  - `ir.description` removed from `app/page.tsx` — was an existing violation (page changed when
-    only description changed). Description already in `README.md`.
-  - `test_console_snapshot.py` updated: `apps/web/app/page.tsx` removed from the expected edit-diff
-    path set — the page is now stable across description-only changes.
+- **Quality & Safety**:
+  - Clean fallback when `Op.LIST` is absent or entity contains only an `id` field.
+  - 100% offline, zero external npm dependencies, zero new IR fields, strict diff invariance.
+  - `# noqa: PLR0912` for branch count.
 
-- **Quality**:
-  - Clean fallback when no entities (no hook calls/imports) and when no screens (no nav section).
-  - 100% offline, zero external npm dependencies, zero new IR fields.
-  - `# noqa: PLR0912` on function (high branch count justified).
+## Test Coverage (R-276)
 
-## Test Coverage (R-275)
-
-`services/agent-engine/tests/test_overview_dashboard.py` — 16 new tests:
-1. `test_overview_page_is_client_component`
-2. `test_overview_page_imports_uselist_hooks`
-3. `test_overview_page_has_entity_cards`
-4. `test_overview_page_has_screen_nav_links`
-5. `test_overview_page_has_quick_actions`
-6. `test_overview_page_no_ir_description`
-7. `test_overview_page_shows_total_count`
-8. `test_overview_page_no_entities_fallback`
-9. `test_overview_page_no_screens_fallback`
-10. `test_overview_page_diff_invariance`
-11. `test_overview_page_link_to_collection_screen`
-12. `test_overview_page_link_to_form_screen`
-13. `test_overview_page_role_badge_on_restricted_screen`
-14. `test_overview_page_entity_without_list_op_no_hook`
-15. `test_full_project_overview_page_present`
-16. `test_overview_page_no_detail_screens_in_nav`
+`services/agent-engine/tests/test_detail_record_selector.py` — 16 new tests:
+1. `test_detail_screen_imports_uselist_when_list_op_wired`
+2. `test_detail_screen_omits_uselist_when_list_op_absent`
+3. `test_detail_screen_declares_uselist_hook_call`
+4. `test_detail_screen_renders_select_dropdown`
+5. `test_detail_screen_select_options_use_best_title_field`
+6. `test_detail_screen_renders_prev_and_next_buttons`
+7. `test_detail_screen_prev_next_buttons_disabled_states`
+8. `test_detail_screen_emits_url_replace_state_logic`
+9. `test_detail_screen_clear_button`
+10. `test_detail_screen_empty_state_recent_records`
+11. `test_detail_screen_delete_cleans_up_url`
+12. `test_detail_screen_diff_invariance`
+13. `test_detail_screen_fallback_when_only_id_field`
+14. `test_detail_screen_omits_prev_next_when_list_op_absent`
+15. `test_rideshare_favourites_detail_screen_valid`
+16. `test_minimal_blog_full_adapter_generate`
 
 ## Preceded by:
+- **R-275**: Rich App Dashboard Overview Page in Generated Next.js Web App.
 - **R-274**: Form Screen Post-Submit Contextual CTAs, Record Navigation & Cancel Actions.
 - **R-273**: Global Responsive Navigation Shell & Header Navbar in Generated Next.js Web App.
 - **R-272**: Deep-Linking & Entity Lifecycle in Next.js Detail Screens.
@@ -82,7 +78,7 @@ Branch: `main` (the only branch; the GitHub default)
 
 ## Verification
 
-- `task verify` — pass (695 agent-engine tests; 16 new in `test_overview_dashboard.py`).
+- `task verify` — pass (711 agent-engine tests; 16 new in `test_detail_record_selector.py`).
 - `task lint`, `task security:quick` — all pass.
 - `task builder:demo -- minimal-blog` and `task builder:demo -- rideshare-favourites` — both pass.
 - 0 local model calls, 0 cloud calls. Offline and deterministic.

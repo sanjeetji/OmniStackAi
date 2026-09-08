@@ -794,6 +794,32 @@ HTML list into a rich, entity-aware dashboard client component:
   - `# noqa: PLR0912` on `_overview_page` (high branch count justified by inline card/section rendering logic).
   - All styles are inline — no changes to `app/globals.css`.
 
+### Detail Screen Record Selector, Prev/Next Navigation & Deep-Link Sync (R-276)
+
+Enhances generated Next.js detail screens (`apps/web/app/<screen>/page.tsx`) with interactive record discovery, sequential navigation, and browser URL synchronization:
+
+- **Interactive Record Selector Dropdown**:
+  - When `Op.LIST` is wired for the entity, `_detail_screen_page` imports `useList<Plural>` and invokes `useList<Plural>()`.
+  - In the top ID selection bar, renders a styled `<select aria-label="Select {name}">` dropdown with `"-- Choose {name} --"` placeholder and `<option>` elements mapped to loaded records, displaying the best descriptive title field (`title`, `name`, `label`, `email`, or `id`).
+  - Selecting an option updates `selectedId`, `idInput`, and synchronizes the URL search parameter.
+
+- **URL Search Param Synchronization (`handleSelectId`)**:
+  - Emits `handleSelectId(newId: string | null)` helper that sets `selectedId`, updates `idInput`, and synchronizes `?id=<id>` via `window.history.replaceState` (or deletes `id` when cleared).
+  - Both manual "Load {name}" submission and "Clear" button call `handleSelectId`.
+  - `handleDelete` removes the `id` search param upon successful record deletion.
+
+- **Sequential Record Navigation (Prev / Next)**:
+  - When list data is available and an item is displayed, the card header renders contextual `&larr; Prev` and `Next &rarr;` navigation buttons.
+  - Correctly disabled at list boundaries (`disabled={!prevItem}` and `disabled={!nextItem}`) with informative hover tooltips.
+
+- **Recent Records Quick-Pick Empty State**:
+  - When `!selectedId`, empty state renders a "Recent {plural}" grid of clickable card tiles displaying title and truncated ID, allowing one-click record selection instead of requiring a manual UUID.
+
+- **Quality & Safety**:
+  - Clean fallback when `Op.LIST` is absent or entity contains only an `id` field.
+  - 100% offline, zero external npm dependencies, zero new IR fields, strict diff invariance.
+
+
 
 
 

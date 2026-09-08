@@ -2,21 +2,19 @@ schema_version: 1
 project: OmniStackAI
 phase: BASIC/MVP
 founder_stage: 0
-current_task: R-275
+current_task: R-276
 current_status: done
 branch: main
 last_completed_task:
-  task_id: R-275
-  title: Rich App Dashboard Overview Page in Generated Next.js Web App
+  task_id: R-276
+  title: Record Selector Dropdown, Prev/Next Record Navigation & Deep-Link Sync in Generated Next.js Detail Screens
   verification: >-
-    task verify (695 agent-engine tests, 16 new in test_overview_dashboard.py); _overview_page
-    upgraded to rich client component ("use client") with useList<Entity>({ limit: 1 }) hooks
-    for each entity with Op.LIST wired; entity count cards display .loading/error/.total;
-    screen navigation cards render for collection and form screens (detail screens excluded);
-    Quick Actions section renders + Create {Entity} CTAs to form screens; role badges for
-    non-public screens; ir.description removed from page body (diff-invariance fix;
-    description stays in README.md); clean fallback when no entities/screens; test_console_snapshot
-    updated (apps/web/app/page.tsx removed from expected edit-diff set — page now diff-stable);
+    task verify (711 agent-engine tests, 16 new in test_detail_record_selector.py); _detail_screen_page
+    enhanced with useList<Plural>() hook wiring when Op.LIST in ops; interactive <select> dropdown
+    with "-- Choose {name} --" and best descriptive title field; sequential "< Prev" and "Next >"
+    record navigation buttons in item card header; handleSelectId helper synchronizing query params
+    via window.history.replaceState; empty state "Recent {plural}" card grid when !selectedId;
+    URL cleanup in handleDelete; clean fallback when Op.LIST absent or only id field;
     task lint and task security:quick green; builder:demo minimal-blog and rideshare-favourites pass;
     0 network, no DB
   result: pass
@@ -30,7 +28,7 @@ product_direction: >-
   framework adapter contract -> Next.js adapter -> Git service -> preview/sandbox (needs cloud env).
 id_note: >-
   Workbook backlog owns R-010..R-219. Founder-requested tasks use IDs after R-219: R-220..R-223 done,
-  R-224 Next.js deferred (env-blocked), R-225..R-275 done. Continue from R-276.
+  R-224 Next.js deferred (env-blocked), R-225..R-276 done. Continue from R-277.
 blockers: []
-next_action: Task R-275 (Rich App Dashboard Overview Page) is implemented, verified, and complete (695 tests pass). Ready for user commit decision.
-last_updated: "2026-09-09T00:20:00+05:30"
+next_action: Task R-276 (Detail Screen Record Selector & Prev/Next Navigation) is implemented, verified, and complete (711 tests pass). Ready for user commit decision.
+last_updated: "2026-09-09T00:36:00+05:30"

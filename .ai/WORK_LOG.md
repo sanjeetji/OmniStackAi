@@ -1,5 +1,23 @@
 # Work Log
 
+## 2026-09-09 — R-276
+
+- Recorded contract in `.ai/CURRENT_TASK.yaml` and `.ai/tasks/R-276.md`.
+- `nextjs.py` (`_detail_screen_page`):
+  - Added `can_list = Op.LIST in ops` check.
+  - Added `useList<Plural>` to `hooks_to_import` when `can_list` is true.
+  - Emitted `useList<Plural>()` call, computing `listItems`, `loadingList`, `currentIndex`, `prevItem`, and `nextItem`.
+  - Added `handleSelectId(newId)` helper function that updates `selectedId`, `idInput`, and updates browser search params (`?id=...`) via `window.history.replaceState`.
+  - Added `<select aria-label="Select {name}">` dropdown in top ID selection section with `"-- Choose {name} --"` placeholder and options mapped to existing records with best descriptive field or id fallback.
+  - Added "Clear" button in ID bar when `selectedId` is active.
+  - Added contextual `&larr; Prev` and `Next &rarr;` navigation buttons in the item card header with boundary disabled attributes.
+  - Added "Recent {plural}" card grid in the empty state (when `!selectedId`) allowing one-click record selection.
+  - Updated `handleDelete` to clean up the `id` search parameter from the URL upon record deletion.
+  - `# noqa: PLR0912` added for branch count; clean fallback when `Op.LIST` is absent or only id field.
+- Added `services/agent-engine/tests/test_detail_record_selector.py` with 16 comprehensive unit tests.
+- `task verify` — 711 tests pass (16 new), 0 failures. `task lint`, `task security:quick` pass. `builder:demo minimal-blog` and `builder:demo rideshare-favourites` pass. 0 network calls, 0 cloud model calls.
+- Updated CURRENT_TASK.yaml, tasks/R-276.md, PROJECT_STATE.yaml, PROJECT_STATE.md, CHANGELOG.md, docs/CODEGEN.md, docs/PROGRESS.md.
+
 ## 2026-09-09 — R-275
 
 - Recorded contract in `.ai/CURRENT_TASK.yaml` and `.ai/tasks/R-275.md`.

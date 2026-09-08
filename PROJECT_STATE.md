@@ -1,22 +1,22 @@
 # Project State — OmniStackAI
-Last updated: 2026-09-09T00:23:00+05:30
+Last updated: 2026-09-09T00:38:00+05:30
 
 ## Current Phase
 Stage 0 (Founder Build Sequence, Brief Section 91) — BASIC/MVP
 
 ## Last Completed Task
-Tracker ID: R-275 — Rich App Dashboard Overview Page in Generated Next.js Web App — DONE,
-`task verify` (695 agent-engine tests, 16 new in `test_overview_dashboard.py`) passing. Upgrades
-the generated Next.js app's home page (`app/page.tsx`) from a static bare-bones HTML list into a
-rich entity-aware dashboard: `"use client";` directive enables React hooks; calls
-`useList<Entity>({ limit: 1 })` for each entity with `Op.LIST` wired, displaying live `.total`
-count (loading: `"…"`, error: `"—"`) in white-card entity summary panels; screen navigation
-`<Link>` tiles for collection and form screens with intent badge and role badge for restricted
-screens (detail screens excluded); Quick Actions `+ Create {Entity}` blue CTA buttons for form
-screens; `ir.description` removed from page body (diff-invariance fix — description in README.md);
-`test_console_snapshot.py` updated (page no longer in edit-diff set); clean fallback when no
-entities/screens; 100% offline, zero new IR fields, zero npm dependencies.
-Preceded by R-225 through R-274.
+Tracker ID: R-276 — Record Selector Dropdown, Prev/Next Record Navigation & Deep-Link Sync in Generated Next.js Detail Screens — DONE,
+`task verify` (711 agent-engine tests, 16 new in `test_detail_record_selector.py`) passing. Upgrades
+the generated Next.js detail screens (`apps/web/app/<screen>/page.tsx`): wires `useList<Plural>()`
+hook when `Op.LIST` is available; adds interactive `<select aria-label="Select {name}">` dropdown
+in the ID selection section offering `"-- Choose {name} --"` and existing records labeled with
+best descriptive title field (`title`, `name`, `label`, `email`, or `id`); emits `handleSelectId(newId)`
+helper synchronizing URL query parameters (`?id=<id>`) using `window.history.replaceState`; adds
+Clear button; renders contextual `"&larr; Prev"` and `"Next &rarr;"` record navigation buttons in
+the item card header allowing sequential record cycling; renders "Recent {plural}" card grid in
+empty state (when `!selectedId`) allowing one-click record inspection; cleans up URL on delete;
+100% offline, zero new IR fields, zero npm dependencies.
+Preceded by R-225 through R-275.
 Additive, offline, 0 network, no DB connection.
 
 
