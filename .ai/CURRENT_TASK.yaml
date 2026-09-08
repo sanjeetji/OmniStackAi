@@ -1,26 +1,26 @@
 schema_version: 1
-task_id: R-250
-title: Richer field validation (max_length + enum) into the schema and FastAPI models
+task_id: R-251
+title: Field validation for Go + numeric min/max (all three schema/model targets)
 status: done
 phase: BASIC/MVP
 founder_stage: 0
 branch: main
 goal: >-
-  Make the IR Field.validation tuple meaningful (Brief 9/26/27): define a small deterministic rule
-  syntax (max_length:<int>, enum:<a>|<b>|<c>) and thread it into two generated targets. The PostgreSQL
-  schema renders a STRING field with max_length as VARCHAR(n) (else TEXT) and an enum as a
-  CHECK (<col> IN ('a','b')) constraint; the FastAPI Pydantic models render max_length via
-  Field(max_length=n) and enum as a Literal[...] type. Unknown rules are ignored (forward-compatible).
-  Go request-validation tags are deferred to a follow-up (the schema already constrains Go writes at the
-  DB). Additive and offline; nothing connects to or runs a database; examples are unchanged so existing
-  outputs stay stable (feature is exercised by constructed-IR tests).
+  Extend R-250 field validation to the Go backend and add numeric bounds (Brief 9/26/27). Two additions
+  to the existing field_validation parser: numeric min:<n> / max:<n> rules, and a go_validate_tag helper.
+  The rules now flow into all three targets — schema (VARCHAR / CHECK enum / CHECK numeric bounds),
+  FastAPI Pydantic (Field(max_length=, ge=, le=) + Literal), and Go models (a go-playground
+  validate:"max=,oneof=,gte=,lte=" struct tag on each field with rules; rule-free fields keep a plain
+  json tag). Go tags are declarative (enforcement wiring — validator.Struct + go.mod dep — is a
+  follow-up); the schema already enforces for both backends at the DB. Additive/offline; examples
+  unchanged; nothing connects to or runs a database.
 source:
   tracker_sheet: Phase_Roadmap
   tracker_row: reconstructed; new IDs continue after the workbook backlog's R-010..R-219
   brief_sections: [9, 26, 27, 34, 42, 74, 77, 83, 84, 85, 92]
   founder_note: >-
-    Founder said "go for it" after R-249; R-250 is the approved field-validation option. Committed
-    directly to main; author solely sanjeetji; tooling adds a Co-Authored-By trailer.
+    Founder said "go ahead" after R-250; R-251 is the approved extension (Go tags + numeric min/max).
+    Committed directly to main; author solely sanjeetji; tooling adds a Co-Authored-By trailer.
 project_profile:
   repository: platform_modular_monorepo
   service: python_agent_engine
@@ -31,8 +31,8 @@ expected_impact:
   - services/agent-engine/src/omnistackai_agent_engine/codegen/field_validation.py
   - services/agent-engine/src/omnistackai_agent_engine/codegen/schema_sql.py
   - services/agent-engine/src/omnistackai_agent_engine/codegen/backend_python.py
-  - services/agent-engine/src/omnistackai_agent_engine/codegen/__init__.py
-  - services/agent-engine/tests/test_field_validation.py
+  - services/agent-engine/src/omnistackai_agent_engine/codegen/backend_go.py
+  - services/agent-engine/tests/test_field_validation_numeric.py
   - docs/APPLICATION_IR.md, docs/CODEGEN.md, docs/PROGRESS.md
   - portable state, changelog, handoff, task doc, and tracker evidence
 allowed_paths:
@@ -44,32 +44,32 @@ allowed_paths:
   - services/agent-engine/**
 must_not_change:
   - PostgreSQL as the control-plane database or the platform's own schema/migrations
-  - the IR schema (Field.validation already exists; this task only interprets it — no new IR field)
+  - the IR schema (no new IR field; only Field.validation is interpreted further)
+  - the R-250 max_length/enum behavior; rule-free Go structs stay byte-identical (plain json tag)
   - the model-gateway, runtime, verify, edit, data-access, auth, seed, index public behavior (additive)
-  - example IRs / existing generated outputs (feature tested via constructed IRs to avoid churn)
   - local Compose services or infrastructure; the Section 74 top-level contract; the offline bootstrap
   - the network-independence of static task verify
 must_not_do:
-  - apply max_length to a non-string field or emit invalid Pydantic; fabricate a rule the IR didn't declare
-  - connect to or run a database; make a network call
-  - add a platform Python dependency; import a vendor SDK; put a secret anywhere
+  - add a go.mod dependency or wire validator.Struct enforcement in this task (declarative tags only)
+  - apply numeric bounds to non-numeric fields; fabricate a rule the IR didn't declare
+  - connect to or run a database; make a network call; add a platform Python dependency; put a secret anywhere
 acceptance:
-  - parse_field_rules(field) parses max_length:<int> and enum:<a>|<b>|... from Field.validation; unknown
-    rules are ignored; deterministic.
-  - schema: a STRING field with max_length -> VARCHAR(n) (else TEXT); an enum -> CHECK (<col> IN ('...'))
-    appended after NOT NULL/UNIQUE; enum values single-quote-escaped; the id PK is unaffected.
-  - Pydantic models: max_length (STRING/TEXT) -> Field(max_length=n) (Field(default=None, max_length=n)
-    when optional); enum -> Literal["a","b"] type; imports added only when used; models parse as valid
-    Python.
-  - No change when a field declares no rules; example IR outputs are unchanged; nothing runs.
-  - Standard-library offline tests cover the parser, schema VARCHAR/CHECK, Pydantic Field/Literal, the
-    no-rules pass-through, and that examples are unaffected.
+  - parse_field_rules also reads min:<number> / max:<number> (kept as raw literals; non-numeric ignored).
+  - schema: numeric INT/FLOAT fields render CHECK (col >= n) / CHECK (col <= n) (combined with enum
+    CHECK if present); string fields never get a numeric check.
+  - Pydantic: numeric fields render Field(ge=n, le=n); string max_length still renders Field(max_length=n).
+  - Go models: go_validate_tag builds max=/oneof=/gte=/lte= and each field with rules gets
+    `validate:"..."` inside its struct tag; rule-free fields keep the plain json tag; example IRs emit no
+    validate tags.
+  - Standard-library offline tests cover the numeric parser, schema numeric CHECK, Pydantic ge/le, the
+    go_validate_tag helper + emitted struct tags, and examples-unaffected.
 required_gates:
   - impact_analysis
-  - parse_rules_tests
-  - schema_varchar_check_tests
-  - pydantic_field_literal_tests
-  - examples_unchanged_test
+  - numeric_parser_tests
+  - schema_numeric_check_tests
+  - pydantic_ge_le_tests
+  - go_validate_tag_tests
+  - examples_unaffected_test
   - python_compile_test
   - vendor_import_exclusion
   - secret_exclusion_check
@@ -84,20 +84,20 @@ model_tool_trace:
   cloud_calls: 0
   note: Deterministic; no model call, no network, no DB connection. cloud_calls zero.
 completion:
-  implementation_commit: 1eed171
+  implementation_commit: PENDING
   verified_at: "2026-09-08T00:00:00+05:30"
   verification:
-    - "task verify — pass (337 agent-engine tests; 10 new)"
+    - "task verify — pass (345 agent-engine tests; 8 new)"
     - "task security:quick — pass; task env:check — pass"
-    - "demo: title VARCHAR(120) NOT NULL; status ... CHECK (status IN ('draft','published','archived')); Pydantic title=Field(max_length=120), status: Literal[...]"
+    - "demo: schema CHECK (rating >= 0) CHECK (rating <= 5); Pydantic Field(ge=0, le=5); Go validate:\"max=80\" / gte=0,lte=5 / oneof=new used"
   acceptance_results:
-    - "parse_field_rules reads max_length:<int> + enum:<a>|<b>; unknown/non-digit rules ignored (tests)"
-    - "schema: STRING max_length -> VARCHAR(n) else TEXT; enum -> CHECK (col IN ('...')) single-quote-escaped; id PK unaffected (tests)"
-    - "Pydantic: Field(max_length=n) / Field(default=None, max_length=n) + Literal[...]; Field/Literal imported only when used; models parse (tests)"
-    - "no rules -> plain model (no Field import), examples emit no VARCHAR/CHECK/Literal (tests)"
-    - "additive, examples/outputs otherwise unchanged; no DB connection; task verify network-independent"
+    - "parse_field_rules reads min/max as raw numeric literals; non-numeric ignored (tests)"
+    - "schema emits numeric CHECK for INT/FLOAT (combined with enum CHECK); strings get no numeric check (tests)"
+    - "Pydantic numeric fields get Field(ge=, le=); go_validate_tag builds max/oneof/gte/lte; struct tags emitted; rule-free fields keep plain json tag (tests)"
+    - "example IRs emit no validate tags / no VARCHAR/CHECK (tests); no go.mod dependency added"
+    - "no DB connection, no network; task verify network-independent"
 blockers: []
 next_action: >-
-  Implement field_validation parser + schema + Pydantic emission + tests; run gates; record completion.
-  Follow-up R-251: Go request-validation tags + numeric min/max rules.
+  R-251 shipped. Next: wire go-playground enforcement (go.mod dep + validator.Struct on create), or
+  render seed/indexes/validation in the static console.
 next_command: task agent-engine:test

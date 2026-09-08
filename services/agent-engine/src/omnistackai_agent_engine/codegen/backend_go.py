@@ -13,6 +13,7 @@ import re
 from ..application_ir import ApplicationIR, ApiEndpoint, DatabaseStrategy, FieldType
 from .adapter import GenerationTarget
 from .auth_guard import GOLANG_JWT_REQUIRE, go_auth_file, needs_auth
+from .field_validation import go_validate_tag, parse_field_rules
 from .data_access import PGX_REQUIRE, go_data_access_files
 from .errors import GenerationError
 from .files import GeneratedFile, GeneratedProject
@@ -78,10 +79,12 @@ def _models_file(ir: ApplicationIR) -> str:
         for field in entity.fields:
             go = _GO_TYPE[field.type]
             go_name = _pascal(field.name)
+            tag = go_validate_tag(field, parse_field_rules(field))
+            validate = f' validate:"{tag}"' if tag else ""
             if field.required:
-                lines.append(f'\t{go_name} {go} `json:"{field.name}"`')
+                lines.append(f'\t{go_name} {go} `json:"{field.name}"{validate}`')
             else:
-                lines.append(f'\t{go_name} *{go} `json:"{field.name},omitempty"`')
+                lines.append(f'\t{go_name} *{go} `json:"{field.name},omitempty"{validate}`')
         lines.append("}")
         lines.append("")
     return "\n".join(lines) + "\n"

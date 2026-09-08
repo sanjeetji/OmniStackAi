@@ -110,11 +110,14 @@ deterministic SQL DDL migration — the generated backend's persistence layer:
   column constraint; each `Entity.indexes` entry renders one `CREATE [UNIQUE] INDEX <name> ON <table>
   (<cols>);` after the tables, with a deterministic default name (`<table>_<cols>_idx`, or `_key` when
   unique) when the index is unnamed.
-- **Field validation (R-250):** `Field.validation` rules (`codegen/field_validation.py`) flow into two
-  targets — a STRING with `max_length:n` becomes `VARCHAR(n)` and an `enum:a|b|c` becomes a
-  `CHECK (col IN ('a','b','c'))` in the schema; in the FastAPI models the same rules render
-  `Field(max_length=n)` and a `Literal[...]` type. Unknown rules are ignored. (Go request-validation
-  tags are a later task; the schema already constrains Go writes at the DB.)
+- **Field validation (R-250/R-251):** `Field.validation` rules (`codegen/field_validation.py`) flow into
+  all three model/schema targets. Schema: a STRING with `max_length:n` → `VARCHAR(n)`, an `enum:a|b|c` →
+  `CHECK (col IN ('a','b','c'))`, and numeric `min:n`/`max:n` → `CHECK (col >= n)`/`CHECK (col <= n)`.
+  FastAPI Pydantic: `Field(max_length=n, ge=…, le=…)` and a `Literal[...]` type. Go models: a
+  go-playground `validate:"max=…,oneof=… …,gte=…,lte=…"` struct tag on each field with rules (rule-free
+  fields keep a plain `json` tag). Go tags are declarative — wire a `validator.Struct(...)` call (or a
+  follow-up task) to enforce them at request time; the schema already enforces at the DB for both
+  backends. Unknown rules are ignored.
 
 Both backend adapters (FastAPI and Go) emit it as `migrations/0001_init.sql` exactly when the IR has
 entities and `database_strategy == postgres` — no previously emitted file changes. Output is byte-stable,

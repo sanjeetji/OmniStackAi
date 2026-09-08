@@ -59,6 +59,11 @@ def _py_field_line(field, rules) -> str:
     constraints: list[str] = []
     if rules.max_length is not None and field.type in (FieldType.STRING, FieldType.TEXT):
         constraints.append(f"max_length={rules.max_length}")
+    if field.type in (FieldType.INT, FieldType.FLOAT):
+        if rules.minimum is not None:
+            constraints.append(f"ge={rules.minimum}")
+        if rules.maximum is not None:
+            constraints.append(f"le={rules.maximum}")
     if field.required:
         if constraints:
             return f"    {field.name}: {typ} = Field({', '.join(constraints)})"

@@ -63,10 +63,16 @@ def _column_lines(entity: Entity) -> list[str]:
                 pg = f"VARCHAR({rules.max_length})"
             null = " NOT NULL" if field.required else ""
             unique = " UNIQUE" if field.unique else ""
-            check = ""
+            checks: list[str] = []
             if rules.enum:
                 allowed = ", ".join("'" + value.replace("'", "''") + "'" for value in rules.enum)
-                check = f" CHECK ({field.name} IN ({allowed}))"
+                checks.append(f"{field.name} IN ({allowed})")
+            if field.type in (FieldType.INT, FieldType.FLOAT):
+                if rules.minimum is not None:
+                    checks.append(f"{field.name} >= {rules.minimum}")
+                if rules.maximum is not None:
+                    checks.append(f"{field.name} <= {rules.maximum}")
+            check = "".join(f" CHECK ({clause})" for clause in checks)
             lines.append(f"    {field.name} {pg}{null}{unique}{check}")
 
     for relation in entity.relations:
