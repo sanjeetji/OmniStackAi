@@ -759,25 +759,614 @@ def _route_file(apis: list[ApiEndpoint]) -> str:
     return "\n".join(lines)
 
 
-def _screen_page(screen: Screen) -> str:
-    components = ", ".join(screen.components) or "none"
-    actions = ", ".join(screen.actions) or "none"
-    return (
-        f"export default function {_pascal(screen.id)}Page() {{\n"
-        f"  return (\n"
-        f'    <main style={{{{ padding: 24 }}}}>\n'
-        f"      <h1>{screen.id}</h1>\n"
-        f"      <p>Role: {screen.role}</p>\n"
-        f"      <p>Components: {components}</p>\n"
-        f"      <p>Actions: {actions}</p>\n"
-        f"    </main>\n"
-        f"  );\n"
-        f"}}\n"
-    )
+def _title_case(value: str) -> str:
+    return " ".join(part.capitalize() for part in re.split(r"[_-]+", value)) or "Page"
 
 
 def _pascal(value: str) -> str:
     return "".join(part.capitalize() for part in re.split(r"[_-]+", value)) or "Screen"
+
+
+def _match_entity(screen: Screen, ir: ApplicationIR) -> Entity | None:
+    if not ir.entities:
+        return None
+
+    sid = screen.id.lower()
+    sid_tokens = set(re.split(r"[_\-]+", sid))
+    sid_stem = sid.rstrip("s")
+    cmp_tokens: set[str] = set()
+    for c in screen.components:
+        cmp_tokens.update(re.split(r"[_\-]+", c.lower()))
+
+    best_entity: Entity | None = None
+    best_score = -1
+
+    for entity in ir.entities:
+        ename = entity.name.lower()
+        eplural = (entity.name if entity.name.endswith("s") else f"{entity.name}s").lower()
+        estem = ename.rstrip("s")
+
+        score = 0
+        if sid == ename or sid == eplural:
+            score += 100
+        elif ename in sid or eplural in sid:
+            score += 60
+        elif estem in sid or sid_stem in ename or sid_stem in eplural:
+            score += 50
+        elif sid in ename or sid in eplural:
+            score += 40
+
+        if ename in sid_tokens or eplural in sid_tokens or estem in sid_tokens:
+            score += 30
+
+        for token in cmp_tokens:
+            if token in (ename, eplural, estem):
+                score += 20
+            elif token in ename or ename in token:
+                score += 10
+
+        for act in screen.actions:
+            act_lower = act.lower()
+            if act_lower in (ename, eplural, estem):
+                score += 15
+
+        if score > best_score:
+            best_score = score
+            best_entity = entity
+
+    if best_score > 0 and best_entity is not None:
+        return best_entity
+    return ir.entities[0]
+
+
+def _screen_intent(screen: Screen) -> str:
+    sid = screen.id.lower()
+    cmps = [c.lower() for c in screen.components]
+    acts = [a.lower() for a in screen.actions]
+
+    is_form = (
+        "form" in cmps
+        or any(term in sid for term in ("editor", "create", "edit", "new", "compose"))
+        or any(term in acts for term in ("save", "submit", "publish", "create"))
+    )
+    is_collection = (
+        "list" in cmps
+        or "table" in cmps
+        or "grid" in cmps
+        or any(term in sid for term in ("list", "catalog", "browse", "index", "all", "collection"))
+    )
+    is_detail = (
+        "detail" in cmps
+        or "view" in cmps
+        or any(term in sid for term in ("detail", "view", "item"))
+    )
+
+    if any(term in sid for term in ("editor", "create", "edit", "new")):
+        return "form"
+    if "list" in sid:
+        return "collection"
+    if is_collection:
+        return "collection"
+    if is_form:
+        return "form"
+    if is_detail:
+        return "detail"
+    return "generic"
+
+
+def _get_ops_by_entity(ir: ApplicationIR) -> dict[str, set[Op]]:
+    repo_entities = {e.name: [f.name for f in e.fields] for e in ir.entities}
+    fk_by_entity = fk_relations(ir)
+    ops_by_entity: dict[str, set[Op]] = {}
+    for api_endpoint in ir.apis:
+        wiring = wire_endpoint(api_endpoint, repo_entities, fk_by_entity)
+        if wiring is not None:
+            ops_by_entity.setdefault(wiring.entity, set()).add(wiring.op)
+    return ops_by_entity
+
+
+def _collection_screen_page(screen: Screen, entity: Entity, ir: ApplicationIR, ops: set[Op]) -> str:
+    name = entity.name
+    plural = name if name.endswith("s") else f"{name}s"
+    can_delete = Op.DELETE in ops
+    page_name = f"{_pascal(screen.id)}Page"
+    title = _title_case(screen.id)
+
+    # Check for a complementary form/editor screen in ir.screens
+    form_screen: Screen | None = None
+    for s in ir.screens:
+        if s.id != screen.id:
+            s_entity = _match_entity(s, ir)
+            if s_entity and s_entity.name == entity.name and _screen_intent(s) == "form":
+                form_screen = s
+                break
+
+    # Select fields to display in table columns (skip 'id' unless it's the only field, limit to 5)
+    display_fields = [f for f in entity.fields if f.name != "id"]
+    if not display_fields:
+        display_fields = list(entity.fields[:1])
+    display_fields = display_fields[:5]
+
+    hooks_import = f"useList{plural}"
+    if can_delete:
+        hooks_import += f", useDelete{name}"
+
+    lines: list[str] = [
+        '"use client";',
+        "",
+        'import { useState } from "react";',
+        'import Link from "next/link";',
+        f'import {{ {hooks_import} }} from "../lib/hooks";',
+        f'import type {{ {name} }} from "../lib/types";',
+        "",
+        f"export default function {page_name}() {{",
+        f"  const {{",
+        "    data,",
+        "    total,",
+        "    loading,",
+        "    error,",
+        "    page,",
+        "    totalPages,",
+        "    params,",
+        "    setPage,",
+        "    setSearch,",
+        "    setSort,",
+        "    refetch,",
+        f"  }} = useList{plural}();",
+    ]
+
+    if can_delete:
+        lines.extend([
+            f"  const {{ remove }} = useDelete{name}();",
+            "  const handleDelete = async (id: string) => {",
+            f'    if (confirm("Are you sure you want to delete this {name}?")) {{',
+            "      await remove(id);",
+            "      refetch();",
+            "    }",
+            "  };",
+        ])
+
+    lines.extend([
+        '  const [searchInput, setSearchInput] = useState(params.q ?? "");',
+        "",
+        "  return (",
+        '    <main style={{ maxWidth: 960, margin: "0 auto", padding: "32px 16px", fontFamily: "system-ui, -apple-system, sans-serif" }}>',
+        '      <header style={{ marginBottom: 24, display: "flex", justifyContent: "space-between", alignItems: "flex-start", flexWrap: "wrap", gap: 16 }}>',
+        "        <div>",
+        '          <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 6 }}>',
+        '            <Link href="/" style={{ color: "#2563eb", textDecoration: "none", fontSize: 13, fontWeight: 500 }}>&larr; Overview</Link>',
+        '            <span style={{ color: "#94a3b8" }}>/</span>',
+        f'            <span style={{ fontSize: 12, padding: "2px 8px", background: "#f1f5f9", color: "#475569", borderRadius: 4, fontWeight: 600 }}>{screen.role}</span>',
+        "          </div>",
+        f'          <h1 style={{ margin: 0, fontSize: 26, fontWeight: 700, color: "#0f172a" }}>{title}</h1>',
+        "        </div>",
+        '        <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>',
+    ])
+
+    if form_screen:
+        lines.append(
+            f'          <Link href="/{form_screen.id}" style={{{{ padding: "8px 16px", background: "#2563eb", color: "#fff", borderRadius: 6, textDecoration: "none", fontSize: 14, fontWeight: 500 }}}}>+ New {name}</Link>'
+        )
+
+    for nav in screen.navigation:
+        if not form_screen or nav != form_screen.id:
+            lines.append(
+                f'          <Link href="/{nav}" style={{{{ padding: "8px 14px", border: "1px solid #cbd5e1", background: "#fff", color: "#334155", borderRadius: 6, textDecoration: "none", fontSize: 14 }}}}>{_pascal(nav)}</Link>'
+            )
+
+    lines.extend([
+        "        </div>",
+        "      </header>",
+        "",
+        '      <section style={{ marginBottom: 20, display: "flex", gap: 12, alignItems: "center", flexWrap: "wrap" }}>',
+        "        <form",
+        "          onSubmit={(e) => {",
+        "            e.preventDefault();",
+        "            setSearch(searchInput);",
+        "          }}",
+        '          style={{ display: "flex", gap: 8, flex: 1, minWidth: 260 }}',
+        "        >",
+        "          <input",
+        '            type="search"',
+        "            value={searchInput}",
+        "            onChange={(e) => {",
+        "              setSearchInput(e.target.value);",
+        "              setSearch(e.target.value);",
+        "            }}",
+        f'            placeholder="Search {plural}..."',
+        '            style={{ flex: 1, padding: "8px 12px", border: "1px solid #cbd5e1", borderRadius: 6, fontSize: 14, outline: "none" }}',
+        "          />",
+        '          <button type="submit" style={{ padding: "8px 16px", background: "#2563eb", color: "#fff", border: "none", borderRadius: 6, fontSize: 14, fontWeight: 500, cursor: "pointer" }}>',
+        "            Search",
+        "          </button>",
+        "        </form>",
+        "        <button",
+        "          onClick={() => refetch()}",
+        "          disabled={loading}",
+        '          style={{ padding: "8px 14px", border: "1px solid #cbd5e1", background: "#fff", color: "#334155", borderRadius: 6, fontSize: 14, cursor: loading ? "default" : "pointer" }}',
+        "        >",
+        '          {loading ? "Loading..." : "Refresh"}',
+        "        </button>",
+        "      </section>",
+        "",
+        "      {error && (",
+        '        <div style={{ padding: "12px 16px", background: "#fef2f2", border: "1px solid #fecaca", borderRadius: 8, color: "#991b1b", marginBottom: 20, display: "flex", justifyContent: "space-between", alignItems: "center" }}>',
+        "          <span>Error: {error.message}</span>",
+        '          <button onClick={() => refetch()} style={{ padding: "4px 8px", background: "#991b1b", color: "#fff", border: "none", borderRadius: 4, cursor: "pointer", fontSize: 12 }}>Retry</button>',
+        "        </div>",
+        "      )}",
+        "",
+        '      <div style={{ border: "1px solid #e2e8f0", borderRadius: 8, overflow: "hidden", background: "#fff", boxShadow: "0 1px 3px rgba(0,0,0,0.05)" }}>',
+        '        <table style={{ width: "100%", borderCollapse: "collapse", textAlign: "left", fontSize: 14 }}>',
+        '          <thead style={{ background: "#f8fafc", borderBottom: "1px solid #e2e8f0" }}>',
+        "            <tr>",
+    ])
+
+    for f in display_fields:
+        col_label = _title_case(f.name)
+        lines.extend([
+            '              <th onClick={() => setSort("' + f.name + '")} style={{ padding: "12px 16px", fontWeight: 600, color: "#475569", cursor: "pointer", userSelect: "none" }}>',
+            '                ' + col_label + ' {params.sort === "' + f.name + '" ? (params.order === "desc" ? "↓" : "↑") : ""}',
+            "              </th>",
+        ])
+
+    if can_delete:
+        lines.append(
+            '              <th style={{ padding: "12px 16px", textAlign: "right", fontWeight: 600, color: "#475569" }}>Actions</th>'
+        )
+
+    lines.extend([
+        "            </tr>",
+        "          </thead>",
+        "          <tbody>",
+        "            {loading && !data && (",
+        "              <tr>",
+        f'                <td colSpan={{{len(display_fields) + (1 if can_delete else 0)}}} style={{{{ padding: 32, textAlign: "center", color: "#64748b" }}}}>',
+        f"                  Loading {plural}... ",
+        "                </td>",
+        "              </tr>",
+        "            )}",
+        "            {data && data.length === 0 && (",
+        "              <tr>",
+        f'                <td colSpan={{{len(display_fields) + (1 if can_delete else 0)}}} style={{{{ padding: 32, textAlign: "center", color: "#64748b" }}}}>',
+        f"                  No {plural} found.",
+        "                </td>",
+        "              </tr>",
+        "            )}",
+        "            {data && data.map((item, idx) => (",
+        '              <tr key={(item as any).id ?? idx} style={{ borderBottom: "1px solid #f1f5f9" }}>',
+    ])
+
+    for f in display_fields:
+        if f.type == FieldType.BOOL:
+            val_expr = (
+                '<span style={{ padding: "2px 8px", borderRadius: 4, fontSize: 12, fontWeight: 600, '
+                'background: (item as any).' + f.name + ' ? "#dcfce7" : "#f1f5f9", '
+                'color: (item as any).' + f.name + ' ? "#166534" : "#64748b" }}>'
+                '{(item as any).' + f.name + ' ? "Yes" : "No"}</span>'
+            )
+        elif f.type == FieldType.DATETIME:
+            val_expr = '{(item as any).' + f.name + ' ? new Date((item as any).' + f.name + ').toLocaleDateString() : "-"}'
+        elif f.type == FieldType.TEXT:
+            val_expr = (
+                '{(item as any).' + f.name + ' ? (String((item as any).' + f.name + ').length > 60 ? '
+                'String((item as any).' + f.name + ').slice(0, 60) + "..." : String((item as any).' + f.name + ')) : "-"}'
+            )
+        elif f.type in (FieldType.INT, FieldType.FLOAT):
+            val_expr = '{(item as any).' + f.name + ' !== undefined && (item as any).' + f.name + ' !== null ? String((item as any).' + f.name + ') : "-"}'
+        else:
+            val_expr = '{(item as any).' + f.name + ' !== undefined ? String((item as any).' + f.name + ') : "-"}'
+
+        lines.append('                <td style={{ padding: "12px 16px", color: "#1e293b" }}>' + val_expr + '</td>')
+
+    if can_delete:
+        lines.extend([
+            '                <td style={{ padding: "12px 16px", textAlign: "right" }}>',
+            '                  <button onClick={() => handleDelete((item as any).id)} style={{ padding: "4px 8px", border: "1px solid #fecaca", background: "#fff", color: "#dc2626", borderRadius: 4, fontSize: 12, cursor: "pointer" }}>Delete</button>',
+            "                </td>",
+        ])
+
+    lines.extend([
+        "              </tr>",
+        "            ))}",
+        "          </tbody>",
+        "        </table>",
+        "      </div>",
+        "",
+        '      <footer style={{ marginTop: 20, display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 12 }}>',
+        '        <span style={{ fontSize: 14, color: "#64748b" }}>',
+        '          Page {page} of {totalPages} ({total} total)',
+        "        </span>",
+        '        <div style={{ display: "flex", gap: 8 }}>',
+        "          <button",
+        "            onClick={() => setPage(page - 1)}",
+        "            disabled={page <= 1 || loading}",
+        '            style={{ padding: "6px 12px", border: "1px solid #cbd5e1", borderRadius: 6, background: page <= 1 ? "#f1f5f9" : "#fff", color: page <= 1 ? "#94a3b8" : "#0f172a", fontSize: 14, cursor: page <= 1 ? "default" : "pointer" }}',
+        "          >",
+        "            Previous",
+        "          </button>",
+        "          <button",
+        "            onClick={() => setPage(page + 1)}",
+        "            disabled={page >= totalPages || loading}",
+        '            style={{ padding: "6px 12px", border: "1px solid #cbd5e1", borderRadius: 6, background: page >= totalPages ? "#f1f5f9" : "#fff", color: page >= totalPages ? "#94a3b8" : "#0f172a", fontSize: 14, cursor: page >= totalPages ? "default" : "pointer" }}',
+        "          >",
+        "            Next",
+        "          </button>",
+        "        </div>",
+        "      </footer>",
+        "    </main>",
+        "  );",
+        "}",
+        "",
+    ])
+
+    return "\n".join(lines)
+
+
+def _form_screen_page(screen: Screen, entity: Entity, ir: ApplicationIR, ops: set[Op]) -> str:
+    name = entity.name
+    plural = name if name.endswith("s") else f"{name}s"
+    page_name = f"{_pascal(screen.id)}Page"
+    title = _title_case(screen.id)
+
+    # Check for a complementary list screen in ir.screens
+    list_screen: Screen | None = None
+    for s in ir.screens:
+        if s.id != screen.id:
+            s_entity = _match_entity(s, ir)
+            if s_entity and s_entity.name == entity.name and _screen_intent(s) == "collection":
+                list_screen = s
+                break
+
+    # Fields to include in form
+    editable_fields = [f for f in entity.fields if f.name not in ("id", "created_at", "updated_at")]
+    if not editable_fields:
+        editable_fields = list(entity.fields)
+
+    # Build initial form state dict
+    defaults: list[str] = []
+    for f in editable_fields:
+        if f.type == FieldType.BOOL:
+            defaults.append(f"{f.name}: false")
+        elif f.type in (FieldType.INT, FieldType.FLOAT):
+            defaults.append(f"{f.name}: undefined")
+        else:
+            defaults.append(f'{f.name}: ""')
+    initial_obj = "{" + ", ".join(defaults) + "}"
+
+    lines: list[str] = [
+        '"use client";',
+        "",
+        'import { useState } from "react";',
+        'import Link from "next/link";',
+        f'import {{ useCreate{name} }} from "../lib/hooks";',
+        f'import type {{ {name} }} from "../lib/types";',
+        "",
+        f"export default function {page_name}() {{",
+        f"  const {{ create, loading: submitting, error: submitError, reset }} = useCreate{name}();",
+        f"  const [formData, setFormData] = useState<Partial<{name}>>({initial_obj});",
+        "  const [success, setSuccess] = useState(false);",
+        "",
+        "  const handleSubmit = async (e: React.FormEvent) => {",
+        "    e.preventDefault();",
+        "    setSuccess(false);",
+        "    try {",
+        "      await create(formData);",
+        "      setSuccess(true);",
+        "      setFormData(" + initial_obj + ");",
+        "    } catch {",
+        "      // error captured in submitError",
+        "    }",
+        "  };",
+        "",
+        "  return (",
+        '    <main style={{ maxWidth: 640, margin: "0 auto", padding: "32px 16px", fontFamily: "system-ui, -apple-system, sans-serif" }}>',
+        '      <header style={{ marginBottom: 24 }}>',
+        '        <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 6 }}>',
+    ]
+
+    if list_screen:
+        lines.append(
+            f'          <Link href="/{list_screen.id}" style={{{{ color: "#2563eb", textDecoration: "none", fontSize: 13, fontWeight: 500 }}}}>&larr; Back to {plural}</Link>'
+        )
+    else:
+        lines.append(
+            '          <Link href="/" style={{ color: "#2563eb", textDecoration: "none", fontSize: 13, fontWeight: 500 }}>&larr; Overview</Link>'
+        )
+
+    lines.extend([
+        '          <span style={{ color: "#94a3b8" }}>/</span>',
+        f'          <span style={{ fontSize: 12, padding: "2px 8px", background: "#f1f5f9", color: "#475569", borderRadius: 4, fontWeight: 600 }}>{screen.role}</span>',
+        "        </div>",
+        f'        <h1 style={{ margin: 0, fontSize: 26, fontWeight: 700, color: "#0f172a" }}>{title}</h1>',
+        "      </header>",
+        "",
+        "      {success && (",
+        '        <div style={{ padding: "12px 16px", background: "#f0fdf4", border: "1px solid #bbf7d0", color: "#166534", borderRadius: 8, marginBottom: 20 }}>',
+        f"          {name} saved successfully!",
+        "        </div>",
+        "      )}",
+        "",
+        "      {submitError && (",
+        '        <div style={{ padding: "12px 16px", background: "#fef2f2", border: "1px solid #fecaca", color: "#991b1b", borderRadius: 8, marginBottom: 20 }}>',
+        "          Error: {submitError.message}",
+        "        </div>",
+        "      )}",
+        "",
+        "      <form",
+        "        onSubmit={handleSubmit}",
+        '        style={{ background: "#fff", border: "1px solid #e2e8f0", borderRadius: 8, padding: 24, boxShadow: "0 1px 3px rgba(0,0,0,0.05)" }}',
+        "      >",
+    ])
+
+    for f in editable_fields:
+        label = _title_case(f.name)
+        req_star = ' <span style={{ color: "#dc2626" }}>*</span>' if f.required else ""
+        req_attr = " required" if f.required else ""
+
+        if f.type == FieldType.BOOL:
+            lines.extend([
+                '        <div style={{ marginBottom: 16 }}>',
+                '          <label style={{ display: "flex", alignItems: "center", gap: 8, cursor: "pointer", fontSize: 14, fontWeight: 500, color: "#334155" }}>',
+                '            <input',
+                '              type="checkbox"',
+                '              checked={Boolean((formData as any).' + f.name + ')}',
+                '              onChange={(e) => setFormData((prev) => ({ ...prev, ' + f.name + ': e.target.checked }))}',
+                '              style={{ width: 16, height: 16, cursor: "pointer" }}',
+                '            />',
+                '            <span>' + label + '</span>',
+                '          </label>',
+                '        </div>',
+            ])
+        elif f.type == FieldType.TEXT:
+            lines.extend([
+                '        <div style={{ marginBottom: 16 }}>',
+                '          <label style={{ display: "block", marginBottom: 6, fontSize: 14, fontWeight: 500, color: "#334155" }}>' + label + req_star + '</label>',
+                '          <textarea',
+                '            rows={4}',
+                '            value={String((formData as any).' + f.name + ' ?? "")}',
+                '            onChange={(e) => setFormData((prev) => ({ ...prev, ' + f.name + ': e.target.value }))}',
+                '            placeholder="Enter ' + label.lower() + '..."' + req_attr,
+                '            style={{ width: "100%", padding: "8px 12px", border: "1px solid #cbd5e1", borderRadius: 6, fontSize: 14, boxSizing: "border-box", outline: "none" }}',
+                '          />',
+                '        </div>',
+            ])
+        elif f.type in (FieldType.INT, FieldType.FLOAT):
+            step = "any" if f.type == FieldType.FLOAT else "1"
+            lines.extend([
+                '        <div style={{ marginBottom: 16 }}>',
+                '          <label style={{ display: "block", marginBottom: 6, fontSize: 14, fontWeight: 500, color: "#334155" }}>' + label + req_star + '</label>',
+                '          <input',
+                '            type="number"',
+                '            step="' + step + '"',
+                '            value={(formData as any).' + f.name + ' !== undefined ? String((formData as any).' + f.name + ') : ""}',
+                '            onChange={(e) => setFormData((prev) => ({ ...prev, ' + f.name + ': e.target.value === "" ? undefined : Number(e.target.value) }))}',
+                '            placeholder="Enter ' + label.lower() + '..."' + req_attr,
+                '            style={{ width: "100%", padding: "8px 12px", border: "1px solid #cbd5e1", borderRadius: 6, fontSize: 14, boxSizing: "border-box", outline: "none" }}',
+                '          />',
+                '        </div>',
+            ])
+        elif f.type == FieldType.DATETIME:
+            lines.extend([
+                '        <div style={{ marginBottom: 16 }}>',
+                '          <label style={{ display: "block", marginBottom: 6, fontSize: 14, fontWeight: 500, color: "#334155" }}>' + label + req_star + '</label>',
+                '          <input',
+                '            type="datetime-local"',
+                '            value={String((formData as any).' + f.name + ' ?? "")}',
+                '            onChange={(e) => setFormData((prev) => ({ ...prev, ' + f.name + ': e.target.value }))}' + req_attr,
+                '            style={{ width: "100%", padding: "8px 12px", border: "1px solid #cbd5e1", borderRadius: 6, fontSize: 14, boxSizing: "border-box", outline: "none" }}',
+                '          />',
+                '        </div>',
+            ])
+        else:
+            lines.extend([
+                '        <div style={{ marginBottom: 16 }}>',
+                '          <label style={{ display: "block", marginBottom: 6, fontSize: 14, fontWeight: 500, color: "#334155" }}>' + label + req_star + '</label>',
+                '          <input',
+                '            type="text"',
+                '            value={String((formData as any).' + f.name + ' ?? "")}',
+                '            onChange={(e) => setFormData((prev) => ({ ...prev, ' + f.name + ': e.target.value }))}',
+                '            placeholder="Enter ' + label.lower() + '..."' + req_attr,
+                '            style={{ width: "100%", padding: "8px 12px", border: "1px solid #cbd5e1", borderRadius: 6, fontSize: 14, boxSizing: "border-box", outline: "none" }}',
+                '          />',
+                '        </div>',
+            ])
+
+    lines.extend([
+        '        <div style={{ display: "flex", gap: 12, justifyContent: "flex-end", marginTop: 24, paddingTop: 16, borderTop: "1px solid #f1f5f9" }}>',
+        '          <button',
+        '            type="button"',
+        '            onClick={() => { reset(); setFormData(' + initial_obj + '); setSuccess(false); }}',
+        '            style={{ padding: "8px 16px", border: "1px solid #cbd5e1", background: "#fff", color: "#475569", borderRadius: 6, fontSize: 14, cursor: "pointer" }}',
+        '          >',
+        '            Reset',
+        '          </button>',
+        '          <button',
+        '            type="submit"',
+        '            disabled={submitting}',
+        '            style={{ padding: "8px 20px", background: submitting ? "#93c5fd" : "#2563eb", color: "#fff", border: "none", borderRadius: 6, fontSize: 14, fontWeight: 500, cursor: submitting ? "default" : "pointer" }}',
+        '          >',
+        '            {submitting ? "Saving..." : "Save ' + name + '"}',
+        '          </button>',
+        '        </div>',
+        '      </form>',
+        '    </main>',
+        '  );',
+        '}',
+        '',
+    ])
+
+    return "\n".join(lines)
+
+
+def _fallback_screen_page(screen: Screen, ir: ApplicationIR, entity: Entity | None = None) -> str:
+    page_name = f"{_pascal(screen.id)}Page"
+    title = _title_case(screen.id)
+    components = ", ".join(screen.components) or "none"
+    actions = ", ".join(screen.actions) or "none"
+
+    lines: list[str] = [
+        '"use client";',
+        "",
+        'import Link from "next/link";',
+        "",
+        f"export default function {page_name}() {{",
+        "  return (",
+        '    <main style={{ maxWidth: 720, margin: "0 auto", padding: "32px 16px", fontFamily: "system-ui, -apple-system, sans-serif" }}>',
+        '      <header style={{ marginBottom: 24 }}>',
+        '        <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 6 }}>',
+        '          <Link href="/" style={{ color: "#2563eb", textDecoration: "none", fontSize: 13, fontWeight: 500 }}>&larr; Overview</Link>',
+        '          <span style={{ color: "#94a3b8" }}>/</span>',
+        f'          <span style={{ fontSize: 12, padding: "2px 8px", background: "#f1f5f9", color: "#475569", borderRadius: 4, fontWeight: 600 }}>{screen.role}</span>',
+        "        </div>",
+        f'        <h1 style={{ margin: 0, fontSize: 26, fontWeight: 700, color: "#0f172a" }}>{title}</h1>',
+        "      </header>",
+        '      <div style={{ background: "#fff", border: "1px solid #e2e8f0", borderRadius: 8, padding: 24, boxShadow: "0 1px 3px rgba(0,0,0,0.05)" }}>',
+        f'        <p style={{ margin: "0 0 12px 0", color: "#475569" }}><strong>Role:</strong> {screen.role}</p>',
+        f'        <p style={{ margin: "0 0 12px 0", color: "#475569" }}><strong>Components:</strong> {components}</p>',
+        f'        <p style={{ margin: "0 0 16px 0", color: "#475569" }}><strong>Actions:</strong> {actions}</p>',
+    ]
+
+    if screen.navigation:
+        lines.append('        <div style={{ marginTop: 20, paddingTop: 16, borderTop: "1px solid #f1f5f9", display: "flex", gap: 8, flexWrap: "wrap" }}>')
+        for nav in screen.navigation:
+            lines.append(
+                f'          <Link href="/{nav}" style={{{{ padding: "6px 12px", border: "1px solid #cbd5e1", background: "#f8fafc", color: "#334155", borderRadius: 6, textDecoration: "none", fontSize: 13 }}}}>{_pascal(nav)}</Link>'
+            )
+        lines.append("        </div>")
+
+    lines.extend([
+        "      </div>",
+        "    </main>",
+        "  );",
+        "}",
+        "",
+    ])
+
+    return "\n".join(lines)
+
+
+def _screen_page(screen: Screen, ir: ApplicationIR) -> str:
+    entity = _match_entity(screen, ir)
+    if entity is None:
+        return _fallback_screen_page(screen, ir, None)
+
+    intent = _screen_intent(screen)
+    ops_by_entity = _get_ops_by_entity(ir)
+    ops = ops_by_entity.get(entity.name, set())
+
+    if intent == "collection" and Op.LIST in ops:
+        return _collection_screen_page(screen, entity, ir, ops)
+    elif intent == "form" and Op.CREATE in ops:
+        return _form_screen_page(screen, entity, ir, ops)
+    else:
+        return _fallback_screen_page(screen, ir, entity)
+
+
+def render_screen_page(screen: Screen, ir: ApplicationIR) -> str:
+    """Public helper to render a single screen page."""
+    return _screen_page(screen, ir)
+
 
 
 def _overview_page(ir: ApplicationIR) -> str:
@@ -889,7 +1478,7 @@ class NextjsWebAdapter:
         ]
 
         for screen in ir.screens:
-            files.append(GeneratedFile(f"app/{screen.id}/page.tsx", _screen_page(screen)))
+            files.append(GeneratedFile(f"app/{screen.id}/page.tsx", _screen_page(screen, ir)))
 
         by_dir: dict[str, list[ApiEndpoint]] = {}
         for api in ir.apis:

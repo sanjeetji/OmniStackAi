@@ -421,6 +421,39 @@ Added strongly-typed, idiomatic React hooks (`apps/web/lib/hooks.ts`) in the gen
 - **Unified Export**:
   - Aggregates all emitted entity and subcollection hooks into an exported `hooks` namespace object (`export const hooks = { ... };`).
 
+### Interactive Screen Component Generator with Real Data Binding (R-263)
 
+Upgraded generated Next.js screen pages (`apps/web/app/<screen.id>/page.tsx`) into real, interactive, strongly-typed React client components:
 
-
+- **Client Directive & Standard React (`codegen/nextjs.py`)**:
+  - Every screen page emits `"use client";` at the top, enabling interactive state and browser event handling.
+  - Built purely with standard React built-in hooks (`useState`) and Next.js `<Link>` components — introduces zero external styling or component framework dependencies.
+  - Emits clean, accessible Vanilla CSS inline styling with modern typography, subtle borders, and responsive card/table layouts.
+- **Screen Intent & Entity Detection**:
+  - `_match_entity(screen, ir)` maps screens to their corresponding IR entities using multi-token score matching across screen IDs, component tags, and actions, with graceful fallback.
+  - `_screen_intent(screen)` classifies screens as `"collection"`, `"form"`, or `"generic"` based on component tags (`list`, `table`, `form`) and screen ID semantics (`editor`, `create`, `list`).
+  - `_get_ops_by_entity(ir)` identifies available operations for the matched entity, ensuring screens only import and invoke hooks that are actually wired and exported.
+- **Collection Screens (`_collection_screen_page`)**:
+  - Connects to `useList<Entities>()` hook from `../lib/hooks`.
+  - Renders a live search input bound directly to `setSearch` with form submission and input synchronization.
+  - Renders sortable table headers with ascending/descending visual indicators bound to `setSort`.
+  - Renders pagination controls (`Previous`, `Next`, `Page X of Y`) bound to `setPage`, with automatic disabled states during loading or boundary pages.
+  - Renders loading banners, error alert banners with retry buttons, and empty-state indicators.
+  - Renders delete action buttons calling `useDelete<Entity>()` when `Op.DELETE` is wired for the entity.
+  - Automatically renders navigation links (e.g. `+ New <Entity>` linking to complementary editor screens).
+- **Form / Editor Screens (`_form_screen_page`)**:
+  - Connects to `useCreate<Entity>()` hook from `../lib/hooks`.
+  - Schema-derived form inputs matching each entity field type:
+    - `BOOL` → interactive checkbox input.
+    - `TEXT` → multi-line `<textarea>`.
+    - `INT` / `FLOAT` → typed `<input type="number">` with appropriate step attributes.
+    - `DATETIME` → `<input type="datetime-local">`.
+    - `STRING` / other → `<input type="text">`.
+  - Schema-driven required field markers (`*`) and HTML validation attributes (`required`).
+  - Submission handler with loading state (`Saving...`), error capture banner, and success banner.
+  - Reset and cancel navigation controls linking back to complementary list screens or the overview.
+- **Graceful Fallback Screens (`_fallback_screen_page`)**:
+  - When screens have no matching entities or unwired operations, renders a clean, structured UI displaying role badges, component tags, actions, and navigation links without generating broken imports.
+- **Diff Predictability & Verification**:
+  - `_screen_page` avoids referencing `ir.description`, keeping screen pages byte-identical across description modifications to ensure hunk-level diff tests (`test_console_snapshot.py`) remain completely green.
+  - Public `render_screen_page(screen, ir) -> str` exported in `omnistackai_agent_engine.codegen`.

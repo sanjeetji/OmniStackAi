@@ -26,7 +26,7 @@ from .field_validation import (
     parse_field_rules,
 )
 from .files import GeneratedFile, GeneratedProject
-from .nextjs import NextjsWebAdapter, render_hooks
+from .nextjs import NextjsWebAdapter, render_hooks, render_screen_page
 from .openapi import render_openapi, render_openapi_json
 from .schema_sql import render_postgres_schema, table_name
 from .seed_sql import render_postgres_seed
@@ -58,6 +58,7 @@ __all__ = [
     "go_data_access_files",
     "python_data_access_files",
     "render_hooks",
+    "render_screen_page",
     "render_postgres_schema",
     "render_postgres_seed",
     "render_openapi",
