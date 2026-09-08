@@ -1876,7 +1876,7 @@ def _collection_screen_page(screen: Screen, entity: Entity, ir: ApplicationIR, o
     return "\n".join(lines)
 
 
-def _form_screen_page(screen: Screen, entity: Entity, ir: ApplicationIR, ops: set[Op]) -> str:
+def _form_screen_page(screen: Screen, entity: Entity, ir: ApplicationIR, ops: set[Op]) -> str:  # noqa: PLR0912
     name = entity.name
     plural = name if name.endswith("s") else f"{name}s"
     page_name = f"{_pascal(screen.id)}Page"
@@ -1933,12 +1933,10 @@ def _form_screen_page(screen: Screen, entity: Entity, ir: ApplicationIR, ops: se
     lines: list[str] = [
         '"use client";',
         "",
+        'import { useEffect, useMemo, useState } from "react";',
     ]
     if uses_search_params:
-        lines.append('import { useEffect, useState } from "react";')
         lines.append('import { useSearchParams } from "next/navigation";')
-    else:
-        lines.append('import { useState } from "react";')
 
     lines.append('import Link from "next/link";')
     imported_hooks: set[str] = set()
@@ -1997,8 +1995,10 @@ def _form_screen_page(screen: Screen, entity: Entity, ir: ApplicationIR, ops: se
             "  const editId = null;",
         ])
 
+    initial_values_expr = f"const initialValues: Partial<{name}> = {initial_obj};"
     lines.extend([
-        f"  const [formData, setFormData] = useState<Partial<{name}>>({initial_obj});",
+        f"  {initial_values_expr}",
+        f"  const [formData, setFormData] = useState<Partial<{name}>>(initialValues);",
         '  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});',
         "  const [success, setSuccess] = useState(false);",
         "  const [lastSavedId, setLastSavedId] = useState<string | null>(null);",
@@ -2007,6 +2007,10 @@ def _form_screen_page(screen: Screen, entity: Entity, ir: ApplicationIR, ops: se
 
     if can_update and has_get:
         lines.extend([
+            "  const baselineData = useMemo(() => {",
+            "    return (isEdit && initialData) ? initialData : initialValues;",
+            "  }, [isEdit, initialData]);",
+            "",
             "  useEffect(() => {",
             "    if (initialData) {",
             "      setFormData(initialData);",
@@ -2014,6 +2018,35 @@ def _form_screen_page(screen: Screen, entity: Entity, ir: ApplicationIR, ops: se
             "  }, [initialData]);",
             "",
         ])
+    else:
+        lines.extend([
+            "  const baselineData = initialValues;",
+            "",
+        ])
+
+    lines.extend([
+        "  const isDirty = useMemo(() => {",
+        "    return Object.keys(formData).some((key) => {",
+        "      const cur = (formData as any)[key];",
+        "      const base = (baselineData as any)[key];",
+        '      if (cur === undefined && (base === undefined || base === "")) return false;',
+        '      if (cur === "" && (base === undefined || base === "")) return false;',
+        "      return cur !== base;",
+        "    });",
+        "  }, [formData, baselineData]);",
+        "",
+        "  useEffect(() => {",
+        "    const handleBeforeUnload = (e: BeforeUnloadEvent) => {",
+        "      if (isDirty && !submitting && !success) {",
+        "        e.preventDefault();",
+        '        e.returnValue = "";',
+        "      }",
+        "    };",
+        '    window.addEventListener("beforeunload", handleBeforeUnload);',
+        '    return () => window.removeEventListener("beforeunload", handleBeforeUnload);',
+        "  }, [isDirty, submitting, success]);",
+        "",
+    ])
 
     if uses_search_params:
         lines.extend([
@@ -2176,12 +2209,19 @@ def _form_screen_page(screen: Screen, entity: Entity, ir: ApplicationIR, ops: se
         '          <span style={{ color: "#94a3b8" }}>/</span>',
         f'          <span style={{ fontSize: 12, padding: "2px 8px", background: "#f1f5f9", color: "#475569", borderRadius: 4, fontWeight: 600 }}>{screen.role}</span>',
         "        </div>",
+        '        <div style={{ display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap" }}>',
     ])
     if can_update:
-        lines.append(f'        <h1 style={{{{ margin: 0, fontSize: 26, fontWeight: 700, color: "#0f172a" }}}}>{{isEdit ? "Edit {name}" : "{title}"}}</h1>')
+        lines.append(f'          <h1 style={{{{ margin: 0, fontSize: 26, fontWeight: 700, color: "#0f172a" }}}}>{{isEdit ? "Edit {name}" : "{title}"}}</h1>')
     else:
-        lines.append(f'        <h1 style={{{{ margin: 0, fontSize: 26, fontWeight: 700, color: "#0f172a" }}}}>{title}</h1>')
+        lines.append(f'          <h1 style={{{{ margin: 0, fontSize: 26, fontWeight: 700, color: "#0f172a" }}}}>{title}</h1>')
     lines.extend([
+        "          {isDirty && !success && (",
+        '            <span style={{ fontSize: 12, padding: "3px 8px", background: "#fef3c7", color: "#92400e", borderRadius: 4, fontWeight: 600 }}>',
+        "              Unsaved changes",
+        "            </span>",
+        "          )}",
+        "        </div>",
         "      </header>",
         "",
     ])
@@ -2445,20 +2485,30 @@ def _form_screen_page(screen: Screen, entity: Entity, ir: ApplicationIR, ops: se
         submitting_expr = "submitting"
         btn_label = f'(submitting ? "Saving..." : "Save {name}")'
 
-    reset_call = f"setFormData(isEdit && initialData ? initialData : {initial_obj})" if (can_update and has_get) else f"setFormData({initial_obj})"
+    reset_call = f"setFormData(isEdit && initialData ? initialData : initialValues)" if (can_update and has_get) else "setFormData(initialValues)"
     cancel_href = f"/{list_screen.id}" if list_screen else "/"
 
     lines.extend([
-        '        <div style={{ display: "flex", gap: 12, justifyContent: "flex-end", marginTop: 24, paddingTop: 16, borderTop: "1px solid #f1f5f9" }}>',
+        '        <div style={{ display: "flex", gap: 12, justifyContent: "flex-end", alignItems: "center", marginTop: 24, paddingTop: 16, borderTop: "1px solid #f1f5f9", flexWrap: "wrap" }}>',
+        "          {isDirty && !success && (",
+        '            <span style={{ fontSize: 12, color: "#b45309", marginRight: "auto", fontWeight: 500 }}>',
+        "              &bull; You have unsaved changes",
+        "            </span>",
+        "          )}",
         '          <Link',
         f'            href="{cancel_href}"',
+        '            onClick={(e) => {',
+        '              if (isDirty && !confirm("You have unsaved changes. Discard them and leave?")) {',
+        "                e.preventDefault();",
+        "              }",
+        "            }}",
         '            style={{ padding: "8px 16px", border: "1px solid #cbd5e1", background: "#fff", color: "#475569", borderRadius: 6, fontSize: 14, textDecoration: "none", display: "inline-flex", alignItems: "center" }}',
         '          >',
         '            Cancel',
         '          </Link>',
         '          <button',
         '            type="button"',
-        f'            onClick={{() => {{ reset(); {reset_call}; setFieldErrors({{}}); setSuccess(false); setLastSavedId(null); }}}}',
+        f'            onClick={{() => {{ if (!isDirty || confirm("Discard all changes and reset form?")) {{ reset(); {reset_call}; setFieldErrors({{}}); setSuccess(false); setLastSavedId(null); }} }}}}',
         '            style={{ padding: "8px 16px", border: "1px solid #cbd5e1", background: "#fff", color: "#475569", borderRadius: 6, fontSize: 14, cursor: "pointer" }}',
         '          >',
         '            Reset',
