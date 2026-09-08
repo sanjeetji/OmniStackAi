@@ -1,21 +1,14 @@
 # Project State — OmniStackAI
-Last updated: 2026-09-08T00:06:26+05:30 by Codex (GPT-5)
+Last updated: 2026-09-08T17:00:00+05:30
 
 ## Current Phase
 Stage 0 (Founder Build Sequence, Brief Section 91) — BASIC/MVP
 
 ## Last Completed Task
-Tracker ID: R-252 — Enforce go-playground validation in the generated Go create handlers — DONE,
-`task verify` (350 agent-engine tests, 5 new) passing. The R-251 Go `validate:"..."` struct tags are now
-enforced at request time: when a wired CREATE handler's entity carries validation rules, the Go backend
-declares `github.com/go-playground/validator/v10 v10.22.1` in its own `go.mod`, emits
-`internal/handlers/validate.go` (a shared `validator.New()` + a `validateStruct` helper returning
-`400`/`"validation_failed"` on a tag violation), and calls `validateStruct(m)` right after the JSON
-decode and before the `store.Create…` call, `400`-ing on failure. Rule-free projects and both example
-IRs emit none of it (byte-identical to R-251); FastAPI already enforced via Pydantic. Validation now
-holds at three layers — request model, request handler, and DB. The validator dependency lives only in
-the generated project; no platform Python dependency; no DB connection. Additive, offline; implementation
-checkpoint `f4fc828` (R-224 Next.js console upgrade remains deferred — environment-blocked).
+Tracker ID: R-258 — Query Parameter Sorting (`sort` & `order=asc|desc`) on LIST Endpoints with SQL Injection Whitelist Protection — DONE,
+`task verify` (446 agent-engine tests, 14 new) passing. Go store whitelists sort column against entity fields via switch statement and validates order (ASC/DESC); Go handlers parse sort and order query parameters alongside pagination; FastAPI routers declare sort/order params; FastAPI repositories whitelist sort column and order; Next.js lib/api.ts includes sort and order in params typing.
+Preceded by R-254 (structured validation errors), R-255 (pagination limit/offset), R-256 (PUT handlers), and R-257 (typed Next.js API client + CORS middleware).
+Additive, offline, 0 network, no DB connection.
 
 ## Workflow note
 Founder consolidated all work onto `main` (per-task branches deleted; `main` is the default). Continue
@@ -45,8 +38,8 @@ R-221 = cross-provider fallback (done); R-222 = platform console slice (done); R
 fallback wiring (done); R-224 = Next.js console upgrade (deferred — environment-blocked).
 
 ## Next Up (queued, in order)
-1. R-253 offline candidate — validating PATCH/update handlers (validate + persist partial updates)
-2. R-253 alternative — field-level validation error bodies (JSON detail) instead of a flat message
+1. R-255 candidate — PUT handlers (full-replace update) in Go and FastAPI backends
+2. R-255 candidate — Pagination / query filtering on LIST endpoints (limit/offset)
 3. Run a Tier-0 preview end to end on a network-capable machine; then live-verify an authorized driver
 4. R-224 Next.js console upgrade and R-010 native iOS remain deferred under their existing gates
 (The full offline builder AND the Tier 0-3 runtime/deploy wiring are complete: one IR ->

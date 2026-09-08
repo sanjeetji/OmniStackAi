@@ -6,10 +6,10 @@ current_task: null
 current_status: ready_for_next_task_definition
 branch: main
 last_completed_task:
-  task_id: R-253
-  title: Wire PATCH/update handlers with validation in Go and FastAPI backends
-  implementation_commit: TBD (pre-commit)
-  verification: task verify (374 agent-engine tests, 24 new); PATCH /entities/{id} + matching request_schema -> Op.UPDATE wired in Go and FastAPI; Go store emits Update<Entity> parameterized UPDATE...RETURNING; Go handler decode->validateStruct(if rules)->store.Update->404/200; FastAPI repo emits update_<table> parameterized UPDATE RETURNING *; router emits @router.patch->404/200; rule-free no validateStruct; example IRs unchanged; no DB/network
+  task_id: R-258
+  title: Query Parameter Sorting (sort & order) on LIST Endpoints with SQL Injection Whitelist Protection
+  implementation_commit: 34b6d44
+  verification: task verify (446 agent-engine tests, 14 new); Go store whitelists sort column against entity fields via switch statement and validates order (ASC/DESC); Go handlers parse sort and order query parameters alongside pagination; FastAPI routers declare sort/order params; FastAPI repositories whitelist sort column and order; Next.js lib/api.ts includes sort and order in params typing; example IRs unchanged; 0 network; no DB
   result: pass
 control_plane_database: postgresql
 model_routing_mode: balanced
@@ -21,7 +21,7 @@ product_direction: >-
   framework adapter contract -> Next.js adapter -> Git service -> preview/sandbox (needs cloud env).
 id_note: >-
   Workbook backlog owns R-010..R-219. Founder-requested tasks use IDs after R-219: R-220..R-223 done,
-  R-224 Next.js deferred (env-blocked), R-225..R-253 done. Continue from R-254.
+  R-224 Next.js deferred (env-blocked), R-225..R-258 done. Continue from R-259.
 blockers: []
-next_action: R-253 complete — PATCH/update handlers wired in both backends (Go store.Update<Entity> + FastAPI update_<table>) with full validation chain (validateStruct reuse, 404/200); 374 tests pass. Continue from R-254 (offline-doable, founder to pick): field-level validation error bodies (structured JSON errors instead of flat "validation_failed"); or another real CRUD/behaviour gap. Cloud-gated preview/deploy and R-224 still require a network-capable environment/keys.
-last_updated: "2026-09-08T14:22:00+05:30"
+next_action: Tasks R-254 (structured validation errors), R-255 (pagination), R-256 (PUT handlers), R-257 (frontend typed API client + CORS middleware), and R-258 (query parameter sorting) are implemented, verified, and complete (446 tests pass). Ready for founder review and commit approval.
+last_updated: "2026-09-08T17:00:00+05:30"

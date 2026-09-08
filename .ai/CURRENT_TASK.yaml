@@ -1,40 +1,40 @@
 schema_version: 1
-task_id: R-253
-title: Wire PATCH/update handlers with validation in Go and FastAPI backends
+task_id: R-258
+title: Query Parameter Sorting (sort & order) on LIST Endpoints with SQL Injection Whitelist Protection
 status: done
 phase: BASIC/MVP
 founder_stage: 0
 branch: main
 goal: >-
-  Close the missing PATCH/update CRUD verb in the generated backends. When an IR contains a
-  PATCH endpoint whose request_schema names a known repo entity and whose path ends in exactly
-  one path parameter (PATCH /entities/{id}), both the Go and FastAPI adapters must emit a real,
-  wired update handler + repository function — not the 501 scaffold. The handler decodes the
-  body, calls validateStruct (reusing the R-252 helper) if the entity carries validation rules,
-  calls store.Update<Entity> / update_<table>, and returns 404 when the id is not found or 200
-  with the updated row. Unambiguous shape only; everything else stays 501. Additive/offline;
-  no platform dep; no install/build/run/DB connection.
+  Add query parameter sorting (sort field and order=asc|desc) to GET list and parent-scoped list endpoints
+  across Go and FastAPI backends, with strict whitelist validation against entity fields to prevent SQL injection:
+  - backend_go / data_access: parse sort and order, validate against known entity fields in Go store,
+    emit ORDER BY <col> ASC|DESC LIMIT $1 OFFSET $2.
+  - backend_python / data_access: add sort and order query params to FastAPI router, validate against
+    whitelisted fields in repository, emit safe ORDER BY {col} {dir} LIMIT %s OFFSET %s.
+  - nextjs: reflect sort and order options in lib/api.ts.
+  - pure codegen change; no new platform dep, no install/build/run/DB.
 source:
   tracker_sheet: Phase_Roadmap
-  tracker_row: reconstructed; new IDs continue after the workbook backlog's R-010..R-219
-  brief_sections: [9, 26, 27, 34, 42, 74, 77, 83, 84, 85, 92]
+  brief_sections: [9, 26, 27, 40, 74, 77, 83, 84, 85, 92]
   founder_note: >-
-    Founder approved after R-252: "do what is best — no static or half work." PATCH/update
-    handlers are the missing CRUD verb; closes real enforced runtime behaviour in both backends.
+    Founder requested to proceed with the best option (Option A: Query Parameter Sorting).
 project_profile:
   repository: platform_modular_monorepo
   service: python_agent_engine
   control_plane_database: postgresql
   model_routing: balanced
-complexity: L3
+complexity: L2
 expected_impact:
-  - services/agent-engine/src/omnistackai_agent_engine/codegen/route_wiring.py
-  - services/agent-engine/src/omnistackai_agent_engine/codegen/data_access.py
   - services/agent-engine/src/omnistackai_agent_engine/codegen/backend_go.py
   - services/agent-engine/src/omnistackai_agent_engine/codegen/backend_python.py
-  - services/agent-engine/tests/test_patch_update_handlers.py
+  - services/agent-engine/src/omnistackai_agent_engine/codegen/data_access.py
+  - services/agent-engine/src/omnistackai_agent_engine/codegen/nextjs.py
+  - services/agent-engine/tests/test_sorting.py
+  - services/agent-engine/tests/test_pagination.py
+  - services/agent-engine/tests/test_subcollection_wiring.py
   - docs/CODEGEN.md, docs/PROGRESS.md
-  - portable state, changelog, handoff, task doc, and tracker evidence
+  - portable state, changelog, handoff, task doc, tracker evidence
 allowed_paths:
   - .ai/**
   - CHANGELOG.md
@@ -43,75 +43,39 @@ allowed_paths:
   - docs/**
   - services/agent-engine/**
 must_not_change:
-  - PostgreSQL as the control-plane database or the platform's own schema/migrations
-  - the IR schema (no new IR field; PATCH HttpMethod already exists in the enum)
-  - the R-250/R-251/R-252 CREATE/DELETE/GET/LIST wiring behaviour; rule-free Go structs byte-identical
-  - the model-gateway, runtime, verify, edit, data-access public behaviour for existing ops
-  - local Compose services or infrastructure; the Section 74 top-level contract; the offline bootstrap
-  - the network-independence of static task verify
-  - the validator dep / validate.go gate: has_validation must also cover UPDATE handlers (not only CREATE)
+  - the IR schema; no new IR field
+  - the R-250..R-257 validation, pagination, PUT, and full-stack connectivity behaviour
+  - network-independence of task verify
 must_not_do:
-  - add a platform Python dependency or a vendor SDK to the agent-engine
-  - emit the validator dep or validateStruct for a project with zero rules-bearing entities
-  - connect to or run a database; make a network call; install/build/run Go; put a secret anywhere
-  - change the IR schema, add IR fields, or change how existing ops are wired
+  - add a platform Python dependency
+  - allow un-whitelisted sort fields (must reject/fallback to prevent SQL injection)
+  - connect to or run a database; make a network call; put a secret anywhere
 acceptance:
-  - PATCH /entities/{id} with matching request_schema entity -> Op.UPDATE wired (not 501).
-  - Go store: Update<Entity>(ctx, db, id, m) emitted — parameterized UPDATE...SET...WHERE id=$N RETURNING <cols>; scans into *models.<Entity>, returns nil on not-found.
-  - Go handler: decode body -> validateStruct (if entity has rules) -> store.Update -> 404 if nil, 200+writeJSON otherwise; ordering assertable by string position.
-  - FastAPI repo: update_<table>(id, data) emitted — UPDATE...SET...WHERE id=%s RETURNING *; columns from data keys (excluding id); returns None on no rows.
-  - FastAPI router: @router.patch route with id_param+entity payload -> update_<table> -> 404 on None.
-  - No wiring: PATCH without path param, PATCH without request_schema entity, GET/POST/DELETE same shape.
-  - Rule-bearing entity in update: validateStruct called BEFORE store.Update (string-position test).
-  - Rule-free entity: no validateStruct call in the update handler.
-  - Example IRs (minimal-blog, rideshare-favourites) unchanged — no PATCH endpoints present.
-  - task verify green; 350 -> >=360 tests pass; 0 network calls.
+  - Go handler parses sort and order query params alongside limit and offset.
+  - Go store method validates sort against entity fields and applies safe ORDER BY <col> ASC|DESC.
+  - FastAPI router declares sort and order query parameters.
+  - FastAPI repository validates sort against entity fields and applies safe ORDER BY.
+  - Next.js lib/api.ts includes sort and order in params typing.
+  - Invalid sort fields safely fall back to "id" default; order defaults to "asc".
+  - Example IRs continue to pass unchanged.
+  - task verify green; 0 network calls.
+evidence:
+  task_verify: 446 tests passed in 0.897s
+  sorting_tests: 14 new dedicated unit tests in test_sorting.py passed
+  regressions: test_pagination.py, test_route_wiring.py, test_subcollection_wiring.py, test_nextjs_api_client.py all green
+  cloud_calls: 0
+  network_calls: 0
 required_gates:
-  - impact_analysis
-  - update_store_emitted_tests
-  - update_handler_wired_tests
-  - validate_ordering_test
-  - rule_free_no_validate_test
-  - no_wiring_negative_tests
-  - examples_unchanged_test
-  - python_compile_test
-  - vendor_import_exclusion
-  - secret_exclusion_check
+  - sorting_test
+  - pagination_regression_test
+  - sql_injection_safety_test
+  - example_ir_regression_test
   - task_verify
-  - blast_radius_check
-  - tracker_evidence
 model_tool_trace:
   routing: local_only
-  local_provider: ollama
-  configured_model: qwen2.5-coder:14b
   local_calls: 0
   cloud_calls: 0
-  note: Deterministic codegen; no model call, no network, no DB connection. cloud_calls zero.
-completion:
-  implementation_commit: TBD (pre-commit)
-  verified_at: "2026-09-08T14:20:35+05:30"
-  verification:
-    - "task verify — pass (374 agent-engine tests; 24 new in test_patch_update_handlers.py)"
-    - "task security:quick — pass; task env:check — pass"
-    - "demo: PATCH /listings/{listingId} with Listing request_schema -> store.UpdateListing emitted in Go,
-      update_listing in Python; validated entity -> validateStruct called before store.Update; rule-free ->
-      no validateStruct; example IRs unchanged"
-  acceptance_results:
-    - "PATCH /entities/{id} + matching request_schema -> Op.UPDATE wired (not 501); tests confirm"
-    - "Go store: UpdateListing emitted with parameterized UPDATE...SET...WHERE id=$N RETURNING, nil on ErrNoRows"
-    - "Go handler: decode -> validateStruct (if rules) -> store.Update -> 404/200; ordering asserted by string position"
-    - "FastAPI repo: update_listing with parameterized UPDATE...RETURNING *; fetchone() None on miss"
-    - "FastAPI router: @router.patch -> update_listing -> 404 on None"
-    - "Negative wiring: PATCH without param stays 501; GET/DELETE same shape not wired as update"
-    - "Rule-free entity: no validateStruct in update handler"
-    - "Rule-bearing entity: validator dep + validate.go emitted (has_validation now covers UPDATE+CREATE)"
-    - "Example IRs: minimal-blog and rideshare-favourites unchanged, no store.Update or @router.patch"
-    - "No platform Python dependency; no DB connection; no network call"
+  note: Deterministic codegen; no model call, no network, no DB. cloud_calls zero.
 blockers: []
-next_action: >-
-  R-253 shipped: PATCH/update handlers wired in both Go and FastAPI backends with validation.
-  Next (offline-doable, founder to pick): field-level validation error bodies (structured JSON
-  {errors:[{field,rule,value}]} instead of flat "validation_failed"); or PUT handlers (full
-  replace, same wiring shape as PATCH but no partial-update semantics). Cloud-gated preview/deploy
-  and R-224 still need a network environment/keys.
-next_command: task agent-engine:test
+next_action: None. R-258 completed. Ready for next task or user review.
+next_command: task verify

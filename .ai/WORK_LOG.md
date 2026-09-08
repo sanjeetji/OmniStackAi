@@ -1,5 +1,94 @@
 # Work Log
 
+## 2026-09-08 — R-258
+
+- Recorded contract in `.ai/CURRENT_TASK.yaml` and `.ai/tasks/R-258.md`.
+- `data_access.py`:
+  - Python repository: declared `ALLOWED_SORT_FIELDS = [field.name for field in entity.fields]`; `list_<table>` and `list_<table>_by_<rel>` validate `sort` against whitelist (falling back to `"id"`) and `order` (falling back to `"ASC"`), emitting `ORDER BY {sort_col} {sort_dir} LIMIT %s OFFSET %s`.
+  - Go store: `List<Entity>` and `List<Entity>By<Rel>` accept `limit, offset int, sort, order string`; emit switch statement mapping declared entity columns to whitelisted identifier (falling back to `"id"`) and case-insensitive check for `"desc"` (falling back to `"ASC"`), formatting `ORDER BY %s %s LIMIT $1 OFFSET $2`.
+- `backend_go.py`:
+  - `_handlers_shared_file`: emitted `parseSort(r *http.Request) (string, string)` helper extracting `sort` and `order`.
+  - `_handlers_file_wired`: parsed `sort, order := parseSort(r)` on `Op.LIST` and `Op.LIST_BY` and passed them to store methods.
+- `backend_python.py`:
+  - `_router_file`: updated `Op.LIST` and `Op.LIST_BY` to declare `limit: int = 100, offset: int = 0, sort: str = "id", order: str = "asc"` and pass all parameters to data access repository functions.
+- `nextjs.py`:
+  - `_api_client_file`: updated `Op.LIST` and `Op.LIST_BY` client method signatures to type `params?: { limit?: number; offset?: number; sort?: string; order?: "asc" | "desc" }`.
+- Added `services/agent-engine/tests/test_sorting.py` with 14 unit tests covering Go store, Go handlers, Python repos, Python routers, and Next.js client.
+- Updated regression tests in `test_pagination.py`, `test_route_wiring.py`, `test_subcollection_wiring.py`, and `test_nextjs_api_client.py`.
+- `task verify` — 446 tests pass (14 new), 0 failures. 0 network calls, 0 cloud model calls.
+- Updated docs/CODEGEN.md, docs/PROGRESS.md, CHANGELOG.md, CURRENT_TASK.yaml, PROJECT_STATE.yaml, tasks/R-258.md.
+
+## 2026-09-08 — R-257
+
+- Recorded contract in `.ai/CURRENT_TASK.yaml` and `.ai/tasks/R-257.md`.
+- `nextjs.py`: added `_slug_to_pascal` and `_api_client_file(ir: ApplicationIR)` emitting `apps/web/lib/api.ts`.
+  - Emits `BASE_URL = process.env.NEXT_PUBLIC_API_URL || ""`.
+  - Emits `ApiOptions` (with `token?: string` for Bearer auth and `params?: Record<...>` for query strings).
+  - Emits `ApiError` with HTTP status and structured payload.
+  - Emits generic `request<T>(path, options, body)` handling headers, query params, JSON, errors, and 204.
+  - Emits strongly-typed methods for all endpoints: `list<Entity>(options?: { params?: { limit?: number, offset?: number } })`, `get<Entity>(id)`, `create<Entity>(data)`, `update<Entity>(id, data)`, `delete<Entity>(id)`, `list<Entity>sBy<Rel>(parentId, options)`, and custom endpoint fallbacks.
+  - Exports combined `api` object namespace.
+  - Added `lib/api.ts` to `NextjsWebAdapter.generate` file list and added `NEXT_PUBLIC_API_URL` to `.env.example`.
+- `backend_go.py`: added `corsMiddleware` in `_main_file` wrapping `mux` with `Access-Control-Allow-*` and `OPTIONS` 204 preflight; updated `.env.example` with `CORS_ALLOWED_ORIGIN=*`.
+- `backend_python.py`: configured `CORSMiddleware` in `_main_file` with `allow_origins`, `allow_credentials=True`, `allow_methods=["*"]`, `allow_headers=["*"]`; updated `.env.example`.
+- Added `test_nextjs_api_client.py` with 9 tests; updated `test_nextjs_adapter.py`.
+- `task verify` — 432 tests pass (9 new), 0 failures. `task lint`, `task security:quick`, `task env:check` pass.
+- Updated docs/CODEGEN.md, docs/PROGRESS.md, CHANGELOG.md, CURRENT_TASK.yaml, PROJECT_STATE.yaml, tasks/R-257.md.
+
+## 2026-09-08 — R-256
+
+- Recorded contract in `.ai/CURRENT_TASK.yaml` and `.ai/tasks/R-256.md`.
+- `route_wiring.py`: extended `wire_endpoint` to map `method in ("PATCH", "PUT")` with trailing id parameter
+  and matching `request_schema` to `Op.UPDATE`.
+- `backend_go.py`: `Put<Entities><Id>` handler wired (decodes body -> `validateStruct` if entity has rules ->
+  `store.Update<Entity>` -> 404 on nil / 200 on success).
+- `backend_python.py`: `@router.put` route handler wired (validates payload -> `update_<table>` -> 404 on None / 200).
+- Negative wiring: PUT without path param, with mismatched schema, etc. stays 501 scaffold.
+- Rule-free entities emit no `validateStruct` call in Go PUT handler.
+- Example IRs (`minimal-blog`, `rideshare-favourites`) unchanged.
+- Added `test_put_update_handlers.py` with 14 new tests; all pass.
+- `task verify` — 423 tests pass (14 new), 0 failures. `task security:quick`, `task env:check` pass.
+- Updated docs/CODEGEN.md, docs/PROGRESS.md, CHANGELOG.md, CURRENT_TASK.yaml, tasks/R-256.md.
+
+
+- Founder requested to complete both tasks before committing or pushing.
+- Recorded contract in `.ai/CURRENT_TASK.yaml` and `.ai/tasks/R-255.md`.
+- `backend_go.py`: `_handlers_shared_file` emits `parsePagination(r *http.Request) (int, int)` returning
+  limit (default 100, parsed if >0) and offset (default 0, parsed if >=0) using `strconv.Atoi`;
+  `_handlers_file_wired` calls `limit, offset := parsePagination(r)` for `Op.LIST` and `Op.LIST_BY`
+  and passes them to `store.List<Entity>` and `store.List<Entity>By<Rel>`.
+- `data_access.py`: Go `List<Entity>` and `List<Entity>By<Rel>` updated to accept `limit, offset int`
+  and emit `LIMIT $1 OFFSET $2` and `LIMIT $2 OFFSET $3`.
+- `backend_python.py`: `Op.LIST` and `Op.LIST_BY` route handlers updated to declare `limit: int = 100, offset: int = 0`
+  query parameters and pass them to `list_<entity>(limit=limit, offset=offset)`.
+- Added `test_pagination.py` with 11 new tests; updated existing assertions in `test_route_wiring.py`
+  and `test_subcollection_wiring.py`.
+- `task verify` — 409 tests pass (11 new), 0 failures. `task security:quick`, `task env:check` pass.
+- Updated docs/CODEGEN.md, docs/PROGRESS.md, CHANGELOG.md, CURRENT_TASK.yaml, tasks/R-255.md.
+
+
+- R-253 committed and pushed (99c2fae). Founder approved R-254: "go for the next task."
+- Founder confirmed Tier 0 / Ollama stays active; Groq key added to .env for later.
+- Recorded task contract in `.ai/CURRENT_TASK.yaml` and `.ai/tasks/R-254.md` before code.
+- `field_validation.py` `go_validate_file()`: replaced flat `"validation_failed"` with a
+  `validationError struct {Field/Rule/Message}` and a new `validateStruct(w, v) bool` that
+  iterates `validator.ValidationErrors`, builds per-field entries, and writes the structured JSON
+  body `{"errors":[...]}` via `writeJSON`; returns `false` on error, `true` on success; added
+  `"fmt"` import for `fmt.Sprintf` message construction.
+- `backend_go.py`: updated both CREATE and UPDATE call-sites from the old two-line
+  `if status, msg := validateStruct(m); msg != "" { http.Error(...) }` pattern to the single-line
+  `if !validateStruct(w, m) { return }` guard.
+- Updated existing R-252 tests (`test_go_validation_enforcement.py`) to assert the new signature
+  and structured body instead of the old flat string.
+- Updated existing R-253 tests (`test_patch_update_handlers.py`) to assert `validateStruct(w, m)`.
+- `test_validation_error_bodies.py`: 24 new tests covering struct type, all 3 JSON keys
+  (field/rule/message), "errors" wrapper, fmt.Sprintf, no "validation_failed", writeJSON usage,
+  new bool signature, handler call-site pattern, ordering, rule-free gate, example IRs.
+- FastAPI/Pydantic: no change needed — Pydantic already returns structured 422 errors by default.
+- `task verify` — 398 tests pass (24 new), 0 failures. `task security:quick`, `task env:check` —
+  pass. 0 local model calls, 0 cloud calls.
+- Updated CHANGELOG, PROGRESS.md, CURRENT_TASK, PROJECT_STATE, HANDOFF, WORK_LOG, R-254.md.
+
 ## 2026-09-08 — R-253
 
 - Read AGENTS.md, START_HERE.md, PROJECT_STATE.yaml, CURRENT_TASK.yaml, HANDOFF.md; confirmed

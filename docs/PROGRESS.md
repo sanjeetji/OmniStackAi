@@ -1,28 +1,28 @@
-# OmniStackAI — implementation progress (as of R-253)
+# OmniStackAI — implementation progress (as of R-258)
 
 A living summary of what is built, what is pending, and how to see results. Numbers come from the
 execution tracker (`R_&_D/OmniStackAI_Execution_Tracker_v6.xlsx`, `Phase_Roadmap`).
 
 ## Headline
 
-- **374 automated tests pass**, fully offline and network-independent (`task verify`).
-- **42 tracker tasks Done, 1 Deferred, 208 Not Started** across 251 rows.
-- The offline builder loop is complete end to end: **describe (IR) → generate (web + API with
-  working CRUD incl. PATCH/update + sub-collections + DB schema + data-access + JWT-verified auth
-  & per-endpoint roles + field validation enforced at three layers) → verify → edit → commit to
-  an owned Git repo.**
+- **446 automated tests pass**, fully offline and network-independent (`task verify`).
+- **47 tracker tasks Done, 1 Deferred, 203 Not Started** across 251 rows.
+- The offline builder loop is complete end to end: **describe (IR) → generate (web with typed API client + API with
+  working CRUD incl. PATCH/PUT update + pagination + sorting with SQL injection whitelist protection + sub-collections + DB schema + data-access + JWT-verified auth
+  & per-endpoint roles + field validation + CORS middleware)
+  → verify → edit → commit to an owned Git repo.**
 
 ## Completion by phase
 
 | Phase | Done | Total | % complete |
 |-------|------|-------|-----------|
-| **MVP** (current milestone) | 41 | 145 | **28.3%** |
+| **MVP** (current milestone) | 43 | 145 | **29.7%** |
 | MID | 0 | 47 | 0% |
 | ADVANCED | 0 | 29 | 0% |
 | PRODUCTION | 0 | 29 | 0% |
-| **Overall program** | **41** | **251** | **16.3%** |
+| **Overall program** | **43** | **251** | **17.1%** |
 
-> The 210 "Not Started" rows are the pre-existing backlog catalogue (R-010..R-219 — many are individual
+> The 203 "Not Started" rows are the pre-existing backlog catalogue (R-010..R-219 — many are individual
 > specialized agents and later-phase features). Capability-wise the platform is further along than the
 > raw ~14% suggests, because the work done so far is the **core engine + builder**, which everything
 > else builds on. The MVP figure (~25%) is the truest near-term measure.
@@ -63,7 +63,12 @@ execution tracker (`R_&_D/OmniStackAI_Execution_Tracker_v6.xlsx`, `Phase_Roadmap
 | Schema indexes + unique constraints (IR `Field.unique`/`Entity.indexes`) | ✅ Done | R-249 |
 | Field validation -> schema + Pydantic (max_length, enum) | ✅ Done | R-250 |
 | Field validation -> Go tags + numeric min/max (all 3 targets) | ✅ Done | R-251 |
-| Go validation enforcement (validator.Struct → 400 on create) | ✅ Done | R-252 |
+| Go validation enforcement (validator.Struct → 400 on create+update) | ✅ Done | R-252 |
+| **Structured JSON validation error bodies** (per-field field/rule/message) | ✅ Done | R-254 |
+| **Query parameter pagination** (`limit` & `offset` on list endpoints) | ✅ Done | R-255 |
+| **PUT update handlers** (full-replace CRUD verb wired) | ✅ Done | R-256 |
+| **Frontend Typed API client** (`apps/web/lib/api.ts`) + **Backend CORS** | ✅ Done | R-257 |
+| **Query parameter sorting** (`sort` & `order` with whitelist protection) | ✅ Done | R-258 |
 | Next.js console upgrade (rich UI) | ⏸ Deferred | R-224 — needs npm registry access |
 | Live sandbox preview + real deploy (Tier 2) | ⛔ Pending | needs a network machine + provider keys |
 | Native mobile agents | ⛔ Deferred (governance) | until web/backend stability (Brief §25/§91) |

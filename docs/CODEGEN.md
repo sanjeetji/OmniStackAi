@@ -253,3 +253,87 @@ with `id_param: str` + `payload: <Entity>` → `await update_<table>(id_param, p
 
 All SQL values are parameterized (`$N` / `%s`); identifiers are fixed IR-derived strings. Additive
 and offline — no platform dependency, nothing installed, built, run, or connected to a database.
+
+### Structured validation error bodies (R-254)
+
+Replaced the flat `"validation_failed"` string with structured JSON error bodies in the generated Go backend:
+
+- `field_validation.go_validate_file()` emits a `validationError` struct:
+  ```go
+  type validationError struct {
+  	Field   string `json:"field"`
+  	Rule    string `json:"rule"`
+  	Message string `json:"message"`
+  }
+  ```
+- Emits `validateStruct(w http.ResponseWriter, v any) bool`:
+  - On validation error, iterates `validator.ValidationErrors`, constructs `[]validationError` entries with `Field: fe.Field()`, `Rule: fe.Tag()`, and a clear message, and sends `{"errors": [...]}` via `writeJSON(w, http.StatusBadRequest, ...)`, returning `false`.
+  - On success, returns `true`.
+- Wired CREATE and UPDATE handlers in `backend_go.py` guard with `if !validateStruct(w, m) { return }`.
+- Imports `"fmt"` in `internal/handlers/validate.go` for `fmt.Sprintf`.
+- Rule-free entities and example IRs remain unchanged (no `validate.go` emitted).
+- FastAPI backends with Pydantic already provide structured 422 field error details by default.
+
+### Query parameter pagination on LIST endpoints (R-255)
+
+Added query parameter pagination (`limit` & `offset`) to `GET` list and parent-scoped `LIST_BY` subcollection routes across both Go and FastAPI backends:
+
+- **Go shared handlers (`internal/handlers/handlers.go`)**: emits `parsePagination(r *http.Request) (int, int)` returning `limit` (default `100`, parsed if `>0`) and `offset` (default `0`, parsed if `>=0`) using `strconv.Atoi`.
+- **Go wired handlers (`internal/handlers/*.go`)**: `Op.LIST` and `Op.LIST_BY` handlers call `limit, offset := parsePagination(r)` and pass both to `store.List<Entity>` / `store.List<Entity>By<Rel>`.
+- **Go store (`internal/store/*.go`)**:
+  - `List<Entity>(ctx, db, limit, offset int)`: `SELECT ... ORDER BY id LIMIT $1 OFFSET $2`.
+  - `List<Entity>By<Rel>(ctx, db, <rel>ID, limit, offset int)`: `SELECT ... WHERE <rel>_id = $1 ORDER BY id LIMIT $2 OFFSET $3`.
+- **FastAPI routers (`app/routers/*.py`)**:
+  - `Op.LIST`: `async def get_<entities>(limit: int = 100, offset: int = 0) -> list[dict]:` calling `await <entity>.list_<entity>(limit=limit, offset=offset)`.
+  - `Op.LIST_BY`: `async def get_<parents>_<id>_<children>(<id>: str, limit: int = 100, offset: int = 0) -> list[dict]:` calling `await <child>.list_<child>_by_<parent>(<id>, limit=limit, offset=offset)`.
+- **FastAPI repositories (`app/repositories/*.py`)**: parameterized `LIMIT %s OFFSET %s` using `(limit, offset)` with defaults 100 and 0.
+- All query parameters are optional: clients omitting them get the sensible defaults (100 items starting at offset 0).
+
+### PUT / full-replace update handlers (R-256)
+
+Extended `route_wiring` to recognize `PUT /entities/{id}` alongside `PATCH /entities/{id}`:
+
+- **Route wiring (`route_wiring.py`)**: when `method in ("PATCH", "PUT")`, the path ends in one path parameter, and `request_schema` matches a known entity, maps to `Op.UPDATE`.
+- **Go backend (`backend_go.py`)**: emits `func (h *Handlers) Put<Entities><Id>(w http.ResponseWriter, r *http.Request)` which decodes body into `models.<Entity>`, guards with `if !validateStruct(w, m) { return }` if entity has validation rules, calls `store.Update<Entity>`, writes 404 if nil, or 200 + `writeJSON` on success.
+- **FastAPI backend (`backend_python.py`)**: emits `@router.put` route handler taking `id_param` and validated `payload: <Entity>`, calling `update_<table>`, raising 404 on not-found or returning row on success.
+- Rule-free entities emit no `validateStruct` in PUT handlers. Non-matching shapes stay 501 scaffold. Example IRs unchanged.
+
+### Frontend Typed API Client & Backend CORS Middleware (R-257)
+
+Bridged the generated Next.js frontend (`apps/web`) with Go and FastAPI backend services (`services/api`) for complete full-stack connectivity:
+
+- **Next.js Typed API Client (`apps/web/lib/api.ts`)**:
+  - `_api_client_file(ir: ApplicationIR)` emits a type-safe TypeScript client using standard `fetch`.
+  - Configurable `BASE_URL = process.env.NEXT_PUBLIC_API_URL || ""`.
+  - `ApiOptions`: extends `RequestInit`, adding `token?: string` (Bearer auth) and `params?: Record<string, string | number | boolean | undefined>` (query strings).
+  - `ApiError`: carries HTTP `status` and `data` (for structured error bodies).
+  - `request<T>(path, options, body)`: encapsulates URL parameter encoding, JSON headers, error handling, and 204 No Content.
+  - Generates strongly-typed SDK functions for each IR endpoint:
+    - Wired CRUD: `list<Entity>(options?: { params?: { limit?: number, offset?: number } })`, `get<Entity>(id)`, `create<Entity>(data: Partial<Entity>)`, `update<Entity>(id, data: Partial<Entity>)`, `delete<Entity>(id)`, and parent-scoped `list<Entity>sBy<Rel>(parentId, options)`.
+    - Custom / unwired endpoints: deterministic camelCase function names with typed path parameters, body, and return types.
+    - Exported `api` namespace object bundling all client methods.
+  - Updates Next.js `.env.example` to include `NEXT_PUBLIC_API_URL=http://localhost:8080`.
+- **Backend CORS Middleware (`services/api`)**:
+  - **Go Backend (`main.go`)**: wraps `mux` in `corsMiddleware(next http.Handler)` returning `Access-Control-Allow-Origin`, `Access-Control-Allow-Methods` (`GET, POST, PUT, PATCH, DELETE, OPTIONS`), `Access-Control-Allow-Headers` (`Content-Type, Authorization`), and handles `OPTIONS` preflight with 204 No Content.
+  - **FastAPI Backend (`app/main.py`)**: adds `CORSMiddleware` with `allow_origins`, `allow_credentials=True`, `allow_methods=["*"]`, `allow_headers=["*"]`.
+  - Both backends support `CORS_ALLOWED_ORIGIN` env var (defaulting to `*` in development) and add placeholder to `.env.example`.
+
+### Query Parameter Sorting with SQL Injection Whitelist Protection (R-258)
+
+Added safe, type-checked query parameter sorting across Go, FastAPI, and Next.js targets:
+
+- **Go Store (`internal/store/*.go`)**:
+  - `List<Entity>` and `List<Entity>By<Rel>` accept `(ctx, db, limit, offset int, sort, order string)`.
+  - Column identifiers cannot be parameterized with `$1`, so the store strictly whitelists `sort` against known entity fields using a Go `switch` statement, safely falling back to `"id"` if invalid or unrecognized.
+  - Sort direction defaults to `"ASC"`, matching case-insensitive `"desc"` to `"DESC"`.
+  - Emits `fmt.Sprintf("SELECT ... ORDER BY %s %s LIMIT $1 OFFSET $2", col, dir)` (or `LIMIT $2 OFFSET $3` for subcollection lists).
+- **Go Handlers (`internal/handlers/*.go`)**:
+  - `handlers.go` emits `parseSort(r *http.Request) (string, string)` helper extracting `sort` (default `"id"`) and `order` (default `"asc"`).
+  - Wired `Op.LIST` and `Op.LIST_BY` handlers extract `sort, order := parseSort(r)` and pass to the store methods.
+- **FastAPI Backend (`services/api`)**:
+  - `app/routers/*.py`: `@router.get` list and subcollection routes declare `limit: int = 100, offset: int = 0, sort: str = "id", order: str = "asc"` query parameters and forward them to data access repositories.
+  - `app/repositories/*.py`: declares module-level `ALLOWED_SORT_FIELDS = [...]`, validates `sort_col = sort if sort in ALLOWED_SORT_FIELDS else "id"`, validates `sort_dir = "DESC" if order.lower() == "desc" else "ASC"`, and executes `SELECT * FROM {TABLE} ORDER BY {sort_col} {sort_dir} LIMIT %s OFFSET %s`.
+- **Next.js Client (`apps/web/lib/api.ts`)**:
+  - Updates list methods to type `params?: { limit?: number; offset?: number; sort?: string; order?: "asc" | "desc" }`.
+  - Built-in URLSearchParams serialization automatically encodes `?sort=...&order=...`.
+
