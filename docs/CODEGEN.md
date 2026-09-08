@@ -570,5 +570,28 @@ Eliminates manual UUID copy-pasting and closes the parent-child navigation loop 
   - Independent entities without relations (e.g. `minimal-blog` Post) emit zero relation hooks, dropdowns, or badges.
   - Generated screen code contains no references to `ir.description`, preserving snapshot diff stability.
 
+### Subcollection Child Item Deletion & Mutation Feedback in Master-Detail Views (R-268)
+
+Completes the child management cycle in master-detail views by enabling child item deletion with confirmation prompts, loading/disabled states, error feedback alerts, and automatic list refetching:
+
+- **Subcollection Deletion Detection (`SubcollectionInfo.can_delete`)**:
+  - Automatically identifies whether a child entity supports `Op.DELETE` via `_get_ops_by_entity(ir)`.
+  - Supports fallback entity resolution for `DELETE` endpoints lacking explicit `response_schema` (e.g. `ApiEndpoint(HttpMethod.DELETE, "/comments/{id}")`).
+  - Sets `can_delete = True` on `SubcollectionInfo` dataclass instances.
+- **Hook Integration in Master-Detail Views**:
+  - In `_collection_screen_page` and `_detail_screen_page`, conditionally imports `useDelete<Child>` hooks from `"../lib/hooks"`.
+  - Avoids duplicate imports when the parent entity already imported `useDelete<Parent>`.
+  - Instantiates delete hooks at component level: `const { remove: remove<Child>, loading: deleting<Child>, error: delete<Child>Error } = useDelete<Child>();`.
+- **Mutation Handlers & Refetching**:
+  - Emits `handleDelete<Child>` handler with confirmation prompt (`confirm("Are you sure you want to delete this <Child>?")`).
+  - Wraps removal in try/catch to capture errors into hook state without uncaught promise rejections.
+  - Automatically triggers child subcollection refetch (`<subcol>.refetch()`) upon deletion.
+- **Card-Level Delete Action & Mutation Feedback**:
+  - Renders an accessible, styled Delete button on each child card with `e.stopPropagation()`, disabled state during mutation (`disabled={deleting<Child>}`), and dynamic label `{deleting<Child> ? "Deleting..." : "Delete"}`.
+  - Renders mutation error alert banner (`{delete<Child>Error && ...}`) directly above child items if deletion fails.
+- **Clean Fallback & Invariance**:
+  - Subcollections whose child entity lacks `Op.DELETE` omit delete hooks and buttons.
+  - Strict diff invariance: zero references to `ir.description`, preventing diff drift in `test_console_snapshot.py`.
+
 
 

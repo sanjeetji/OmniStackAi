@@ -11,7 +11,7 @@ from dataclasses import dataclass
 import json
 import re
 
-from ..application_ir import ApplicationIR, ApiEndpoint, Entity, Field, FieldType, RelationKind, Screen
+from ..application_ir import ApiEndpoint, ApplicationIR, Entity, Field, FieldType, HttpMethod, RelationKind, Screen
 from .adapter import GenerationTarget
 from .errors import GenerationError
 from .field_validation import parse_field_rules
@@ -221,7 +221,20 @@ def _api_client_file(ir: ApplicationIR) -> str:
             else:
                 fn_name = f"{method.lower()}{_slug_to_pascal(api.path)}"
         else:
-            fn_name = f"{method.lower()}{_slug_to_pascal(api.path)}"
+            # Fallback: if DELETE /<entity_plural>/{id} or /<entity>/{id} without response_schema
+            matched_del_ent: Entity | None = None
+            if api.method == HttpMethod.DELETE and len(path_params) == 1:
+                segments = [seg for seg in api.path.strip("/").split("/") if seg]
+                if len(segments) == 2 and segments[1].startswith("{") and segments[1].endswith("}"):
+                    entity_seg = segments[0].lower()
+                    matched_del_ent = next(
+                        (e for e in ir.entities if e.name.lower() == entity_seg or f"{e.name.lower()}s" == entity_seg),
+                        None,
+                    )
+            if matched_del_ent is not None:
+                fn_name = f"delete{matched_del_ent.name}"
+            else:
+                fn_name = f"{method.lower()}{_slug_to_pascal(api.path)}"
 
         if fn_name in seen_names:
             fn_name = f"{method.lower()}{_slug_to_pascal(api.path)}"
@@ -414,14 +427,13 @@ def _hooks_file(ir: ApplicationIR) -> str:
     repo_entities = frozenset(e.name for e in ir.entities)
     fk_by_entity = fk_relations(ir)
 
-    ops_by_entity: dict[str, set[Op]] = {e.name: set() for e in ir.entities}
+    ops_by_entity = _get_ops_by_entity(ir)
     subcollections: list[tuple[str, str, str]] = []
     seen_subcols: set[tuple[str, str]] = set()
 
     for api_endpoint in ir.apis:
         wiring = wire_endpoint(api_endpoint, repo_entities, fk_by_entity)
         if wiring is not None:
-            ops_by_entity.setdefault(wiring.entity, set()).add(wiring.op)
             if wiring.op is Op.LIST_BY and wiring.relation:
                 key = (wiring.entity, wiring.relation)
                 if key not in seen_subcols:
@@ -907,6 +919,14 @@ def _get_ops_by_entity(ir: ApplicationIR) -> dict[str, set[Op]]:
         wiring = wire_endpoint(api_endpoint, repo_entities, fk_by_entity)
         if wiring is not None:
             ops_by_entity.setdefault(wiring.entity, set()).add(wiring.op)
+        elif api_endpoint.method == HttpMethod.DELETE:
+            segments = [seg for seg in api_endpoint.path.strip("/").split("/") if seg]
+            if len(segments) == 2 and segments[1].startswith("{") and segments[1].endswith("}"):
+                entity_seg = segments[0].lower()
+                for ent_name in repo_entities:
+                    if ent_name.lower() == entity_seg or f"{ent_name.lower()}s" == entity_seg:
+                        ops_by_entity.setdefault(ent_name, set()).add(Op.DELETE)
+                        break
     return ops_by_entity
 
 
@@ -918,12 +938,14 @@ class SubcollectionInfo:
     hook_name: str
     child_plural: str
     display_fields: tuple[Field, ...]
+    can_delete: bool = False
 
 
 def _subcollections_for_parent(parent_name: str, ir: ApplicationIR) -> list[SubcollectionInfo]:
     repo_entities = frozenset(e.name for e in ir.entities)
     fk_by_entity = fk_relations(ir)
     entities_by_name = {e.name: e for e in ir.entities}
+    ops_by_entity = _get_ops_by_entity(ir)
 
     seen: set[tuple[str, str]] = set()
     result: list[SubcollectionInfo] = []
@@ -964,6 +986,8 @@ def _subcollections_for_parent(parent_name: str, ir: ApplicationIR) -> list[Subc
                 display_fields = child_ent.fields[:1]
             display_fields = display_fields[:4]
 
+            can_delete = Op.DELETE in ops_by_entity.get(child_name, set())
+
             result.append(
                 SubcollectionInfo(
                     child_entity=child_ent,
@@ -972,6 +996,7 @@ def _subcollections_for_parent(parent_name: str, ir: ApplicationIR) -> list[Subc
                     hook_name=hook_name,
                     child_plural=child_plural,
                     display_fields=display_fields,
+                    can_delete=can_delete,
                 )
             )
     return result
@@ -1114,6 +1139,11 @@ def _collection_screen_page(screen: Screen, entity: Entity, ir: ApplicationIR, o
 
     if has_subcollections:
         subcol_hook_names = [sub.hook_name for sub in subcollections]
+        for sub in subcollections:
+            if sub.can_delete:
+                del_hook = f"useDelete{sub.child_entity.name}"
+                if del_hook not in subcol_hook_names and (not can_delete or del_hook != f"useDelete{name}"):
+                    subcol_hook_names.append(del_hook)
         lines.append(f'import {{ {", ".join(subcol_hook_names)} }} from "../lib/hooks";')
 
     lines.append(f'import type {{ {name} }} from "../lib/types";')
@@ -1161,6 +1191,39 @@ def _collection_screen_page(screen: Screen, entity: Entity, ir: ApplicationIR, o
         for sub in subcollections:
             s_var = f"{sub.child_entity.name.lower()}sSubcol"
             lines.append(f"  const {s_var} = {sub.hook_name}(selectedId);")
+
+        child_entities_with_delete = list(dict.fromkeys(
+            sub.child_entity.name for sub in subcollections if sub.can_delete
+        ))
+        for c_name in child_entities_with_delete:
+            lines.append(
+                f"  const {{ remove: remove{c_name}, loading: deleting{c_name}, error: delete{c_name}Error }} = useDelete{c_name}();"
+            )
+
+        c_names = [sub.child_entity.name for sub in subcollections]
+        def _col_del_handler_name(sub: SubcollectionInfo) -> str:
+            if c_names.count(sub.child_entity.name) > 1:
+                return f"handleDelete{_pascal(sub.relation)}{sub.child_entity.name}"
+            return f"handleDelete{sub.child_entity.name}"
+
+        for sub in subcollections:
+            if sub.can_delete:
+                h_name = _col_del_handler_name(sub)
+                c_name = sub.child_entity.name
+                s_var = f"{sub.child_entity.name.lower()}sSubcol"
+                lines.extend([
+                    f"  const {h_name} = async (id: string) => {{",
+                    f'    if (confirm("Are you sure you want to delete this {c_name}?")) {{',
+                    "      try {",
+                    f"        await remove{c_name}(id);",
+                    f"        {s_var}.refetch();",
+                    "      } catch {",
+                    "        // deletion error captured in hook state",
+                    "      }",
+                    "    }",
+                    "  };",
+                ])
+
         best_title_f = next((f.name for f in entity.fields if f.name in ("title", "name", "label", "email")), None)
         if not best_title_f:
             best_title_f = next((f.name for f in entity.fields if f.name != "id"), "id")
@@ -1478,21 +1541,56 @@ def _collection_screen_page(screen: Screen, entity: Entity, ir: ApplicationIR, o
                 f"                {{{s_var}.error && (",
                 f'                  <div style={{{{ padding: "8px 12px", background: "#fef2f2", border: "1px solid #fecaca", borderRadius: 6, color: "#991b1b", fontSize: 13, marginBottom: 12 }}}}>Error: {{{s_var}.error.message}}</div>',
                 "                )}",
+            ])
+            if sub.can_delete:
+                c_name = sub.child_entity.name
+                lines.extend([
+                    f"                {{delete{c_name}Error && (",
+                    f'                  <div style={{{{ padding: "8px 12px", background: "#fef2f2", border: "1px solid #fecaca", borderRadius: 6, color: "#991b1b", fontSize: 13, marginBottom: 12 }}}}>Error deleting {c_name.lower()}: {{delete{c_name}Error.message}}</div>',
+                    "                )}",
+                ])
+            lines.extend([
                 f"                {{{s_var}.data && {s_var}.data.length === 0 && (",
                 f'                  <div style={{{{ padding: 16, textAlign: "center", color: "#64748b", fontSize: 14, background: "#f8fafc", borderRadius: 6 }}}}>No {sub.child_plural.lower()} found for this {name.lower()}.</div>',
                 "                )}",
                 f"                {{{s_var}.data && {s_var}.data.length > 0 && (",
                 '                  <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>',
                 f"                    {{{s_var}.data.map((child, cIdx) => (",
-                '                      <div key={(child as any).id ?? cIdx} style={{ padding: 12, background: "#f8fafc", border: "1px solid #e2e8f0", borderRadius: 6, fontSize: 14 }}>',
             ])
-            for df in sub.display_fields:
-                df_label = _title_case(df.name)
+            if sub.can_delete:
+                h_name = _col_del_handler_name(sub)
+                c_name = sub.child_entity.name
+                lines.extend([
+                    '                      <div key={(child as any).id ?? cIdx} style={{ padding: 12, background: "#f8fafc", border: "1px solid #e2e8f0", borderRadius: 6, fontSize: 14, display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 12 }}>',
+                    '                        <div style={{ flex: 1 }}>',
+                ])
+                for df in sub.display_fields:
+                    df_label = _title_case(df.name)
+                    lines.append(
+                        f'                          <div style={{{{ color: "#334155" }}}}><strong>{df_label}:</strong> {{String((child as any).{df.name} ?? "-")}}</div>'
+                    )
+                lines.extend([
+                    '                        </div>',
+                    '                        <button',
+                    f'                          onClick={{(e) => {{ e.stopPropagation(); {h_name}((child as any).id); }}}}',
+                    f'                          disabled={{deleting{c_name}}}',
+                    f'                          style={{{{ padding: "4px 8px", background: "#fee2e2", color: "#b91c1c", border: "1px solid #fca5a5", borderRadius: 4, fontSize: 12, fontWeight: 500, cursor: deleting{c_name} ? "default" : "pointer" }}}}',
+                    '                        >',
+                    f'                          {{deleting{c_name} ? "Deleting..." : "Delete"}}',
+                    '                        </button>',
+                    '                      </div>',
+                ])
+            else:
                 lines.append(
-                    f'                        <div style={{{{ color: "#334155" }}}}><strong>{df_label}:</strong> {{String((child as any).{df.name} ?? "-")}}</div>'
+                    '                      <div key={(child as any).id ?? cIdx} style={{ padding: 12, background: "#f8fafc", border: "1px solid #e2e8f0", borderRadius: 6, fontSize: 14 }}>'
                 )
+                for df in sub.display_fields:
+                    df_label = _title_case(df.name)
+                    lines.append(
+                        f'                        <div style={{{{ color: "#334155" }}}}><strong>{df_label}:</strong> {{String((child as any).{df.name} ?? "-")}}</div>'
+                    )
+                lines.append('                      </div>')
             lines.extend([
-                "                      </div>",
                 "                    ))}",
                 "                  </div>",
                 "                )}",
@@ -2067,6 +2165,11 @@ def _detail_screen_page(screen: Screen, entity: Entity, ir: ApplicationIR, ops: 
         lines.append(f'import {{ {", ".join(hooks_to_import)} }} from "../lib/hooks";')
     if has_subcollections:
         subcol_hook_names = [sub.hook_name for sub in subcollections]
+        for sub in subcollections:
+            if sub.can_delete:
+                del_hook = f"useDelete{sub.child_entity.name}"
+                if del_hook not in subcol_hook_names:
+                    subcol_hook_names.append(del_hook)
         lines.append(f'import {{ {", ".join(subcol_hook_names)} }} from "../lib/hooks";')
 
     lines.append(f'import type {{ {name} }} from "../lib/types";')
@@ -2096,6 +2199,38 @@ def _detail_screen_page(screen: Screen, entity: Entity, ir: ApplicationIR, ops: 
         for sub in subcollections:
             s_var = f"{sub.child_entity.name.lower()}sSubcol"
             lines.append(f"  const {s_var} = {sub.hook_name}(selectedId);")
+
+        child_entities_with_delete = list(dict.fromkeys(
+            sub.child_entity.name for sub in subcollections if sub.can_delete
+        ))
+        for c_name in child_entities_with_delete:
+            lines.append(
+                f"  const {{ remove: remove{c_name}, loading: deleting{c_name}, error: delete{c_name}Error }} = useDelete{c_name}();"
+            )
+
+        c_names = [sub.child_entity.name for sub in subcollections]
+        def _detail_del_handler_name(sub: SubcollectionInfo) -> str:
+            if c_names.count(sub.child_entity.name) > 1:
+                return f"handleDelete{_pascal(sub.relation)}{sub.child_entity.name}"
+            return f"handleDelete{sub.child_entity.name}"
+
+        for sub in subcollections:
+            if sub.can_delete:
+                h_name = _detail_del_handler_name(sub)
+                c_name = sub.child_entity.name
+                s_var = f"{sub.child_entity.name.lower()}sSubcol"
+                lines.extend([
+                    f"  const {h_name} = async (id: string) => {{",
+                    f'    if (confirm("Are you sure you want to delete this {c_name}?")) {{',
+                    "      try {",
+                    f"        await remove{c_name}(id);",
+                    f"        {s_var}.refetch();",
+                    "      } catch {",
+                    "        // deletion error captured in hook state",
+                    "      }",
+                    "    }",
+                    "  };",
+                ])
 
     lines.extend([
         "",
@@ -2237,21 +2372,56 @@ def _detail_screen_page(screen: Screen, entity: Entity, ir: ApplicationIR, ops: 
                 f"                {{{s_var}.error && (",
                 f'                  <div style={{{{ padding: "8px 12px", background: "#fef2f2", border: "1px solid #fecaca", borderRadius: 6, color: "#991b1b", fontSize: 13, marginBottom: 12 }}}}>Error: {{{s_var}.error.message}}</div>',
                 "                )}",
+            ])
+            if sub.can_delete:
+                c_name = sub.child_entity.name
+                lines.extend([
+                    f"                {{delete{c_name}Error && (",
+                    f'                  <div style={{{{ padding: "8px 12px", background: "#fef2f2", border: "1px solid #fecaca", borderRadius: 6, color: "#991b1b", fontSize: 13, marginBottom: 12 }}}}>Error deleting {c_name.lower()}: {{delete{c_name}Error.message}}</div>',
+                    "                )}",
+                ])
+            lines.extend([
                 f"                {{{s_var}.data && {s_var}.data.length === 0 && (",
                 f'                  <div style={{{{ padding: 16, textAlign: "center", color: "#64748b", fontSize: 14, background: "#f8fafc", borderRadius: 6 }}}}>No {sub.child_plural.lower()} found for this {name.lower()}.</div>',
                 "                )}",
                 f"                {{{s_var}.data && {s_var}.data.length > 0 && (",
                 '                  <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>',
                 f"                    {{{s_var}.data.map((child, cIdx) => (",
-                '                      <div key={(child as any).id ?? cIdx} style={{ padding: 12, background: "#f8fafc", border: "1px solid #e2e8f0", borderRadius: 6, fontSize: 14 }}>',
             ])
-            for df in sub.display_fields:
-                df_label = _title_case(df.name)
+            if sub.can_delete:
+                h_name = _detail_del_handler_name(sub)
+                c_name = sub.child_entity.name
+                lines.extend([
+                    '                      <div key={(child as any).id ?? cIdx} style={{ padding: 12, background: "#f8fafc", border: "1px solid #e2e8f0", borderRadius: 6, fontSize: 14, display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 12 }}>',
+                    '                        <div style={{ flex: 1 }}>',
+                ])
+                for df in sub.display_fields:
+                    df_label = _title_case(df.name)
+                    lines.append(
+                        f'                          <div style={{{{ color: "#334155" }}}}><strong>{df_label}:</strong> {{String((child as any).{df.name} ?? "-")}}</div>'
+                    )
+                lines.extend([
+                    '                        </div>',
+                    '                        <button',
+                    f'                          onClick={{(e) => {{ e.stopPropagation(); {h_name}((child as any).id); }}}}',
+                    f'                          disabled={{deleting{c_name}}}',
+                    f'                          style={{{{ padding: "4px 8px", background: "#fee2e2", color: "#b91c1c", border: "1px solid #fca5a5", borderRadius: 4, fontSize: 12, fontWeight: 500, cursor: deleting{c_name} ? "default" : "pointer" }}}}',
+                    '                        >',
+                    f'                          {{deleting{c_name} ? "Deleting..." : "Delete"}}',
+                    '                        </button>',
+                    '                      </div>',
+                ])
+            else:
                 lines.append(
-                    f'                        <div style={{{{ color: "#334155" }}}}><strong>{df_label}:</strong> {{String((child as any).{df.name} ?? "-")}}</div>'
+                    '                      <div key={(child as any).id ?? cIdx} style={{ padding: 12, background: "#f8fafc", border: "1px solid #e2e8f0", borderRadius: 6, fontSize: 14 }}>'
                 )
+                for df in sub.display_fields:
+                    df_label = _title_case(df.name)
+                    lines.append(
+                        f'                        <div style={{{{ color: "#334155" }}}}><strong>{df_label}:</strong> {{String((child as any).{df.name} ?? "-")}}</div>'
+                    )
+                lines.append('                      </div>')
             lines.extend([
-                "                      </div>",
                 "                    ))}",
                 "                  </div>",
                 "                )}",
