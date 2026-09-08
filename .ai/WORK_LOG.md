@@ -1,5 +1,34 @@
 # Work Log
 
+## 2026-09-08 — R-265
+
+- Recorded contract in `.ai/CURRENT_TASK.yaml` and `.ai/tasks/R-265.md`.
+- `nextjs.py`:
+  - Added `SubcollectionInfo` dataclass and `_subcollections_for_parent(parent_name: str, ir: ApplicationIR) -> list[SubcollectionInfo]` helper:
+    - Scans `ir.relations` where `rel.target_entity == parent_name` and foreign key relation is wired with `Op.LIST_BY`.
+    - Resolves child entity, relation name, capitalized names, list hook name (`useList<Children>By<Rel>`), and display fields.
+  - Enhanced `_collection_screen_page`:
+    - Checks for subcollections using `_subcollections_for_parent(entity.name, ir)`.
+    - Imports subcollection hooks (e.g. `import { useListCommentsByPost } from "../lib/hooks";`) and child entity types (e.g. `import type { Comment } from "../lib/types";`) on dedicated lines preserving exact substring matches for parent imports.
+    - Adds `selectedId` state (`const [selectedId, setSelectedId] = useState<string | null>(null);`) and active subcollection tab state for multi-subcollection entities.
+    - Wires subcollection hooks at top level scoped to `selectedId` (e.g. `const commentsSubcol = useListCommentsByPost(selectedId);`).
+    - Enriches master table with interactive row selection (`onClick={() => setSelectedId(selectedId === item.id ? null : item.id)}`), visual row selection highlight, and action column button (`"View Details"` / `"Hide Details"`).
+    - Renders master-detail subcollection section below table when an item is selected:
+      - Parent entity header banner with "Close Details" action.
+      - Tab bar for multi-subcollection entities with interactive switching and live total count badges (`{subcol.total}`).
+      - Child items list rendering loading state, error state with retry, empty state, and child item cards displaying key scalar attributes.
+      - Subcollection refresh action button.
+  - Implemented `_detail_screen_page`:
+    - Dedicated screen for screens with `intent == "detail"`.
+    - Renders parent entity detail view fetching with `use<Entity>(id)`.
+    - Renders parent attribute grid, back navigation to collection screen, and nested child subcollections section.
+  - Updated `_screen_page` routing to dispatch `intent == "detail"` to `_detail_screen_page`.
+  - Maintained fallback safety: entities without subcollections (e.g. `rideshare-favourites`) emit zero subcollection code, state, or hooks.
+  - Preserved diff invariance: generated screens do not reference `ir.description`, preventing diff drift in `test_console_snapshot.py`.
+- Added `services/agent-engine/tests/test_subcollection_screens.py` with 19 unit tests covering subcollection detection, hook and type imports, selection state, scoped invocation, total count badges, child items and states, master table row click interaction, fallback cleanliness, multi-subcollection tabs, detail screens, diff invariance, and project generation.
+- `task verify` — 546 tests pass (19 new), 0 failures. `task lint`, `task security:quick` pass. 0 network calls, 0 cloud model calls.
+- Updated CURRENT_TASK.yaml, tasks/R-265.md, PROJECT_STATE.yaml, docs/CODEGEN.md, docs/PROGRESS.md.
+
 ## 2026-09-08 — R-264
 
 - Recorded contract in `.ai/CURRENT_TASK.yaml` and `.ai/tasks/R-264.md`.

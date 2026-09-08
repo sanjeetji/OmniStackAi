@@ -1,6 +1,6 @@
 # Current Handoff
 
-Task ID: R-264
+Task ID: R-265
 Status: done
 Phase: BASIC/MVP — Founder Stage 0
 Branch: `main` (the only branch; the GitHub default)
@@ -12,25 +12,30 @@ Branch: `main` (the only branch; the GitHub default)
 - Commits use `sanjeetji <sk698166@gmail.com>` as author.
 - User permission is required prior to committing or pushing code.
 
-## Completed (R-264) — Field-Level Validation & Error Feedback in Generated Next.js Forms
+## Completed (R-265) — Subcollection Navigation & Master-Detail Views in Generated Screens
 
-- **API Client Error Extraction (`codegen/nextjs.py`)**:
-  - Emits `extractFieldErrors(error: unknown): Record<string, string>` export in `apps/web/lib/api.ts`.
-  - Normalizes Go backend validation error payloads (`{"errors": [{"field": "...", "rule": "...", "message": "..."}]}`).
-  - Normalizes FastAPI/Pydantic validation error payloads (`{"detail": [{"loc": ["body", "..."], "msg": "..."}]}`).
-  - Gracefully returns empty object for network or non-validation errors.
-- **Form Screen Validation & Error States (`_form_screen_page`)**:
-  - Imports `extractFieldErrors` from `../lib/api`.
-  - Declares `fieldErrors` state (`const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});`).
-  - Client-side pre-validation inside `handleSubmit`: validates required fields, string `max_length`, numeric `min`/`max` constraints, and enum values prior to network requests.
-  - Server-side error mapping: catches submission errors, extracts per-field messages via `extractFieldErrors(err)`, and populates `fieldErrors`.
-  - Dynamic input styling: red borders (`fieldErrors[f.name] ? "1px solid #ef4444" : "1px solid #cbd5e1"`) and accessibility attributes (`aria-invalid={!!fieldErrors[f.name]}`).
-  - Per-field error messages rendered directly beneath inputs (`<span style={{ color: "#ef4444", fontSize: 12, marginTop: 4, display: "block" }}>`).
-  - Interactive error clearing: edits to an input reactively clear its field error (`onChange`).
-  - Interactive `<select>` dropdown rendering with declared options for enum fields.
-  - Reset button resets `fieldErrors` and form data.
-  - Warning alert banner shown when field errors are present; hides generic `submitError` to prioritize specific field feedback.
-  - Byte-identical diff invariance maintained across IR description changes.
+- **Subcollection Detection & Resolution (`codegen/nextjs.py`)**:
+  - Emits `SubcollectionInfo` dataclass and `_subcollections_for_parent(parent_name: str, ir: ApplicationIR) -> list[SubcollectionInfo]`.
+  - Discovers relations where `rel.target_entity == parent_name` and an `Op.LIST_BY` endpoint exists.
+  - Automatically derives hook name `useList<Children>By<Rel>`, child type name, relation name, and display fields.
+- **Collection Screen Master-Detail Layout (`_collection_screen_page`)**:
+  - Conditionally imports subcollection hooks and child entity types when subcollections exist on dedicated lines, preserving exact substring matches for parent imports.
+  - Declares `selectedId` state (`string | null`) and subcollection tab state for multi-subcollection parent entities.
+  - Wires subcollection hooks at the component top level scoped to `selectedId` (e.g. `const commentsSubcol = useListCommentsByPost(selectedId);`), taking advantage of safe idle behavior when `selectedId === null`.
+  - Enriches the master table with interactive row selection (`onClick={() => setSelectedId(selectedId === item.id ? null : item.id)}`), visual selection indicator, and an action column button ("View Details" / "Hide Details").
+  - Renders master-detail subcollection section below table when an item is selected:
+    - Selected item header banner with "Close Details" action.
+    - Tab bar for multi-subcollection entities with interactive switching and live total count badges (`{subcol.total}`).
+    - Child items list rendering loading state, error state with retry, empty state, and child item cards displaying key scalar attributes.
+    - Subcollection refresh action button.
+- **Dedicated Detail Screen Implementation (`_detail_screen_page`)**:
+  - Implements screen generation for screens with `intent == "detail"`.
+  - Fetches parent entity details by ID via `use<Entity>(id)`.
+  - Renders parent attribute grid, back navigation link, and nested child subcollections section.
+  - Updated `_screen_page` routing to dispatch `intent == "detail"` to `_detail_screen_page`.
+- **Safety & Diff Invariance**:
+  - Clean fallback safety: entities without subcollections (e.g. `rideshare-favourites`) emit zero subcollection code, state, or hooks.
+  - Preserved diff invariance: generated screens do not reference `ir.description`, preventing diff drift in `test_console_snapshot.py`.
 
 ## Preceded by:
 - **R-254**: Structured JSON validation error bodies in Go (`{"errors": [...]}`).
@@ -43,10 +48,11 @@ Branch: `main` (the only branch; the GitHub default)
 - **R-261**: Full-text / keyword search filtering (`q` query param) on LIST endpoints.
 - **R-262**: React data-fetching & mutation hooks generation (`apps/web/lib/hooks.ts`).
 - **R-263**: Interactive Screen Component Generator with Real Data Binding (`apps/web/app/<screen>/page.tsx`).
+- **R-264**: Field-Level Validation & Error Feedback in Generated Next.js Forms (`apps/web/app/<screen>/page.tsx`).
 
 ## Verification
 
-- `task verify` — pass (527 agent-engine tests; 12 new in `test_form_validation_screens.py`).
+- `task verify` — pass (546 agent-engine tests; 19 new in `test_subcollection_screens.py`).
 - `task lint`, `task security:quick`, `task env:check` — all pass.
 - 0 local model calls, 0 cloud calls. Offline and deterministic.
 

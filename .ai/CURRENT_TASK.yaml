@@ -1,27 +1,26 @@
 schema_version: 1
-task_id: R-264
-title: Field-Level Validation & Error Feedback in Generated Next.js Forms
+task_id: R-265
+title: Subcollection Navigation & Master-Detail Views in Generated Screens
 status: done
 phase: BASIC/MVP
 founder_stage: 0
 branch: main
 goal: >-
-  Enhance generated Next.js form screens (apps/web/app/<screen.id>/page.tsx) and API client
-  (apps/web/lib/api.ts) with real-time and server-side field-level validation feedback:
-  - Add extractFieldErrors helper in lib/api.ts normalizing Go backend {"errors": [...]}
-    and FastAPI {"detail": [...]} payloads to a Record<string, string> map.
-  - Track fieldErrors state in generated form screens, binding server and client validation
-    errors to individual input elements.
-  - Render accessible field error messages and red borders (#ef4444) on invalid inputs with
-    aria-invalid attributes.
-  - Automatically clear field errors when the user edits the input.
-  - Perform client-side pre-validation for required fields and min/max constraints.
+  Connect parent entity views (e.g. Post in minimal-blog) to nested child subcollections
+  (e.g. Comments) using already-generated useList<Entities>By<Rel>() hooks and API endpoints:
+  - Detect foreign-key relations for entities on collection/detail screens.
+  - For parent entities with subcollections, render an interactive nested detail view / tabbed
+    subcollection section displaying child items scoped to the parent ID (useList<Entities>By<Rel>(parentId)).
+  - Render subcollection total count badges and child item lists.
+  - Support dedicated detail screens (intent == 'detail') with parent attributes and subcollections.
+  - Ensure fallback safety for entities without subcollections.
+  - Maintain diff invariance across ir.description changes.
   - Additive, offline, 0 network, 0 external deps.
 source:
   tracker_sheet: Phase_Roadmap
   brief_sections: [43, 50, 74, 77, 91, 92]
   founder_note: >-
-    Founder approved Option A for R-264 (Field-level validation & error feedback).
+    Founder approved R-265 (Subcollection Navigation & Master-Detail Views).
 project_profile:
   repository: platform_modular_monorepo
   service: python_agent_engine
@@ -30,7 +29,7 @@ project_profile:
 complexity: L2
 expected_impact:
   - services/agent-engine/src/omnistackai_agent_engine/codegen/nextjs.py
-  - services/agent-engine/tests/test_form_validation_screens.py
+  - services/agent-engine/tests/test_subcollection_screens.py
   - docs/CODEGEN.md, docs/PROGRESS.md
   - portable state, changelog, handoff, task doc, tracker evidence
 allowed_paths:
@@ -49,17 +48,19 @@ must_not_do:
   - break existing codegen contracts
   - connect to or run a database; make a network call; put a secret anywhere
 acceptance:
-  - lib/api.ts exports extractFieldErrors helper normalizing Go and FastAPI validation errors. (VERIFIED)
-  - Form screen imports extractFieldErrors from ../lib/api. (VERIFIED)
-  - Form screen declares fieldErrors state (Record<string, string>). (VERIFIED)
-  - Form inputs display error message below input when fieldErrors has an entry for the field. (VERIFIED)
-  - Form inputs show red border (#ef4444) and aria-invalid="true" when field error exists. (VERIFIED)
-  - Editing an input clears its corresponding fieldError. (VERIFIED)
-  - Client-side pre-validation catches required fields without backend roundtrip. (VERIFIED)
-  - Screen generator remains diff-invariant with respect to ir.description. (VERIFIED)
-  - task verify green; 0 network calls (527 tests pass). (VERIFIED)
+  - Parent entities with wired Op.LIST_BY endpoints detect subcollection relations.
+  - Collection screen imports subcollection hooks and child types when subcollections exist.
+  - Collection screen manages selectedId state and row selection interaction in master table.
+  - Subcollection section renders child items scoped to selectedId (useList<Entities>By<Rel>(selectedId)).
+  - Subcollection count badge displays total count.
+  - Child item list renders loading, error, empty, and data states.
+  - Entities without subcollections remain clean with no subcollection code emitted.
+  - Multi-subcollection support with tabbed navigation.
+  - Detail screen intent renders parent details and subcollections.
+  - Diff invariance maintained across ir.description modifications.
+  - task verify green; 0 network calls.
 required_gates:
-  - form_validation_test
+  - subcollection_screens_test
   - task_verify
 model_tool_trace:
   routing: local_only
@@ -67,6 +68,7 @@ model_tool_trace:
   cloud_calls: 0
   note: Deterministic codegen; no model call, no network, no DB. cloud_calls zero.
 blockers: []
-next_action: Task R-264 completed and verified. Ready for user commit decision.
+next_action: Task R-265 (Subcollection Navigation & Master-Detail Views in Generated Screens) is implemented, verified, and complete (546 tests pass). Ready for user commit decision.
 next_command: task verify
+
 

@@ -1,13 +1,13 @@
 # Project State — OmniStackAI
-Last updated: 2026-09-08T19:00:00+05:30
+Last updated: 2026-09-08T20:38:00+05:30
 
 ## Current Phase
 Stage 0 (Founder Build Sequence, Brief Section 91) — BASIC/MVP
 
 ## Last Completed Task
-Tracker ID: R-264 — Field-Level Validation & Error Feedback in Generated Next.js Forms (`apps/web/app/<screen>/page.tsx` & `apps/web/lib/api.ts`) — DONE,
-`task verify` (527 agent-engine tests, 12 new in `test_form_validation_screens.py`) passing. Emits `extractFieldErrors(error: unknown): Record<string, string>` in `apps/web/lib/api.ts` normalizing Go backend structured errors (`{"errors": [...]}`) and FastAPI structured errors (`{"detail": [...]}`); form screens import `extractFieldErrors` and track `fieldErrors` state (`Record<string, string>`); client-side pre-validation validates required fields, string `max_length`, numeric `min`/`max` constraints, and enum options before network requests, halting and setting `fieldErrors` on failure; submission failure extracts server errors via `extractFieldErrors(err)` and highlights inputs; inputs render red borders (`#ef4444`), `aria-invalid="true"`, and per-field error messages below inputs; reactive error clearing clears field errors on input edit (`onChange`); enum fields render interactive `<select>` dropdowns with options; reset button clears `fieldErrors` and form data; warning banner rendered when field errors exist; diff-invariant with respect to `ir.description`.
-Preceded by R-254 (structured validation errors), R-255 (pagination limit/offset), R-256 (PUT handlers), R-257 (typed Next.js API client + CORS middleware), R-258 (query parameter sorting), R-259 (total count queries & headers), R-260 (OpenAPI 3.1 specification), R-261 (keyword search filtering), R-262 (React data-fetching & mutation hooks), and R-263 (interactive screen generator).
+Tracker ID: R-265 — Subcollection Navigation & Master-Detail Views in Generated Screens (`apps/web/app/<screen>/page.tsx`) — DONE,
+`task verify` (546 agent-engine tests, 19 new in `test_subcollection_screens.py`) passing. Connects parent entity collection screens to nested child subcollections: `_subcollections_for_parent` identifies child relations with `Op.LIST_BY` endpoints; collection screens conditionally import subcollection hooks (`useList<Children>By<Rel>`) and child entity types (`import type { <Child> }`); manages `selectedId` state with table row click selection and "View Details" action buttons; renders master-detail subcollection section with live count badges (`{subcol.total}`), tabbed navigation for multi-subcollection parent entities, child item lists with key fields, loading/error/empty states, and refetch; dedicated detail screen generator (`_detail_screen_page`) for `intent == "detail"`; fallback safety for entities without subcollections (zero subcollection code emitted); diff-invariant with respect to `ir.description`.
+Preceded by R-254 (structured validation errors), R-255 (pagination limit/offset), R-256 (PUT handlers), R-257 (typed Next.js API client + CORS middleware), R-258 (query parameter sorting), R-259 (total count queries & headers), R-260 (OpenAPI 3.1 specification), R-261 (keyword search filtering), R-262 (React data-fetching & mutation hooks), R-263 (interactive screen generator), and R-264 (field-level validation & error feedback).
 Additive, offline, 0 network, no DB connection.
 
 

@@ -1,13 +1,13 @@
-# OmniStackAI — implementation progress (as of R-264)
+# OmniStackAI — implementation progress (as of R-265)
 
 A living summary of what is built, what is pending, and how to see results. Numbers come from the
 execution tracker (`R_&_D/OmniStackAI_Execution_Tracker_v6.xlsx`, `Phase_Roadmap`).
 
 ## Headline
 
-- **527 automated tests pass**, fully offline and network-independent (`task verify`).
-- **53 tracker tasks Done, 1 Deferred, 197 Not Started** across 251 rows.
-- The offline builder loop is complete end to end: **describe (IR) → generate (web with typed API client, React hooks & interactive client screen components with field validation + API with
+- **546 automated tests pass**, fully offline and network-independent (`task verify`).
+- **54 tracker tasks Done, 1 Deferred, 196 Not Started** across 251 rows.
+- The offline builder loop is complete end to end: **describe (IR) → generate (web with typed API client, React hooks, interactive master-detail screen components with field validation & subcollection navigation + API with
   working CRUD incl. PATCH/PUT update + pagination + sorting + total count header + keyword search + sub-collections + DB schema + data-access + JWT-verified auth
   & per-endpoint roles + field validation + CORS middleware + OpenAPI 3.1 contract)
   → verify → edit → commit to an owned Git repo.**
@@ -16,11 +16,11 @@ execution tracker (`R_&_D/OmniStackAI_Execution_Tracker_v6.xlsx`, `Phase_Roadmap
 
 | Phase | Done | Total | % complete |
 |-------|------|-------|-----------|
-| **MVP** (current milestone) | 49 | 145 | **33.8%** |
+| **MVP** (current milestone) | 50 | 145 | **34.5%** |
 | MID | 0 | 47 | 0% |
 | ADVANCED | 0 | 29 | 0% |
 | PRODUCTION | 0 | 29 | 0% |
-| **Overall program** | **49** | **251** | **19.5%** |
+| **Overall program** | **50** | **251** | **19.9%** |
 
 
 > The 203 "Not Started" rows are the pre-existing backlog catalogue (R-010..R-219 — many are individual
@@ -75,6 +75,8 @@ execution tracker (`R_&_D/OmniStackAI_Execution_Tracker_v6.xlsx`, `Phase_Roadmap
 | **Full-text & keyword search filtering** (`q` query param across Go, FastAPI, Next.js, OpenAPI) | ✅ Done | R-261 |
 | **React data-fetching & mutation hooks** (`apps/web/lib/hooks.ts` for Next.js web client) | ✅ Done | R-262 |
 | **Interactive Screen Component Generator** (live React client components, search, pagination, forms in `apps/web/app/<screen>/page.tsx`) | ✅ Done | R-263 |
+| **Field-level validation & error feedback** (per-field errors, accessible borders, client pre-validation) | ✅ Done | R-264 |
+| **Subcollection navigation & master-detail views** (nested detail views, total count badges, child lists) | ✅ Done | R-265 |
 | Next.js console upgrade (rich UI) | ⏸ Deferred | R-224 — needs npm registry access |
 | Live sandbox preview + real deploy (Tier 2) | ⛔ Pending | needs a network machine + provider keys |
 | Native mobile agents | ⛔ Deferred (governance) | until web/backend stability (Brief §25/§91) |
