@@ -1,13 +1,13 @@
-# OmniStackAI — implementation progress (as of R-263)
+# OmniStackAI — implementation progress (as of R-264)
 
 A living summary of what is built, what is pending, and how to see results. Numbers come from the
 execution tracker (`R_&_D/OmniStackAI_Execution_Tracker_v6.xlsx`, `Phase_Roadmap`).
 
 ## Headline
 
-- **515 automated tests pass**, fully offline and network-independent (`task verify`).
-- **52 tracker tasks Done, 1 Deferred, 198 Not Started** across 251 rows.
-- The offline builder loop is complete end to end: **describe (IR) → generate (web with typed API client, React hooks & interactive client screen components + API with
+- **527 automated tests pass**, fully offline and network-independent (`task verify`).
+- **53 tracker tasks Done, 1 Deferred, 197 Not Started** across 251 rows.
+- The offline builder loop is complete end to end: **describe (IR) → generate (web with typed API client, React hooks & interactive client screen components with field validation + API with
   working CRUD incl. PATCH/PUT update + pagination + sorting + total count header + keyword search + sub-collections + DB schema + data-access + JWT-verified auth
   & per-endpoint roles + field validation + CORS middleware + OpenAPI 3.1 contract)
   → verify → edit → commit to an owned Git repo.**
@@ -16,11 +16,11 @@ execution tracker (`R_&_D/OmniStackAI_Execution_Tracker_v6.xlsx`, `Phase_Roadmap
 
 | Phase | Done | Total | % complete |
 |-------|------|-------|-----------|
-| **MVP** (current milestone) | 48 | 145 | **33.1%** |
+| **MVP** (current milestone) | 49 | 145 | **33.8%** |
 | MID | 0 | 47 | 0% |
 | ADVANCED | 0 | 29 | 0% |
 | PRODUCTION | 0 | 29 | 0% |
-| **Overall program** | **48** | **251** | **19.1%** |
+| **Overall program** | **49** | **251** | **19.5%** |
 
 
 > The 203 "Not Started" rows are the pre-existing backlog catalogue (R-010..R-219 — many are individual

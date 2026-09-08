@@ -1,6 +1,6 @@
 # Current Handoff
 
-Task ID: R-263
+Task ID: R-264
 Status: done
 Phase: BASIC/MVP — Founder Stage 0
 Branch: `main` (the only branch; the GitHub default)
@@ -12,26 +12,25 @@ Branch: `main` (the only branch; the GitHub default)
 - Commits use `sanjeetji <sk698166@gmail.com>` as author.
 - User permission is required prior to committing or pushing code.
 
-## Completed (R-263) — Interactive Screen Component Generator with Real Data Binding (apps/web/app/<screen>/page.tsx)
+## Completed (R-264) — Field-Level Validation & Error Feedback in Generated Next.js Forms
 
-- **Interactive Screen Component Generator (`codegen/nextjs.py`)**:
-  - Emits `apps/web/app/<screen.id>/page.tsx` as an interactive React client component with `"use client"` directive.
-  - Automatically matches screens to IR entities using multi-token score matching across screen IDs, component tags, and actions (`_match_entity`).
-  - Classifies screen intent as collection, form, or generic (`_screen_intent`).
-  - Emits collection screens binding to `useList<Entities>()`:
-    - Live search input bound directly to `setSearch` with form submission.
-    - Sortable table headers bound to `setSort` with `↓`/`↑` indicators.
-    - Pagination controls (`Previous`, `Next`, `Page X of Y`) bound to `setPage`.
-    - Loading states, error alerts with retry button, and empty state cards.
-    - Delete button calling `useDelete<Entity>()` when `Op.DELETE` is wired for the entity.
-    - Top header with role badge, overview link, and navigation to complementary editor screens (`+ New <Entity>`).
-  - Emits form/editor screens binding to `useCreate<Entity>()`:
-    - Schema-derived inputs for each entity field: checkbox for `BOOL`, textarea for `TEXT`, number input for `INT`/`FLOAT`, datetime-local for `DATETIME`, text for `STRING`.
-    - Required indicators (`*`) and HTML `required` attributes.
-    - Submit handler calling `create(formData)`, success feedback banner, error capture banner, and reset/cancel controls.
-  - Emits clean fallback screens without broken imports when entities or operations are unwired.
-  - Preserves byte-identical screen output across IR description changes, keeping `test_console_snapshot.py` diff invariance intact.
-  - Public `render_screen_page(screen, ir) -> str` exported in `codegen/__init__.py`.
+- **API Client Error Extraction (`codegen/nextjs.py`)**:
+  - Emits `extractFieldErrors(error: unknown): Record<string, string>` export in `apps/web/lib/api.ts`.
+  - Normalizes Go backend validation error payloads (`{"errors": [{"field": "...", "rule": "...", "message": "..."}]}`).
+  - Normalizes FastAPI/Pydantic validation error payloads (`{"detail": [{"loc": ["body", "..."], "msg": "..."}]}`).
+  - Gracefully returns empty object for network or non-validation errors.
+- **Form Screen Validation & Error States (`_form_screen_page`)**:
+  - Imports `extractFieldErrors` from `../lib/api`.
+  - Declares `fieldErrors` state (`const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});`).
+  - Client-side pre-validation inside `handleSubmit`: validates required fields, string `max_length`, numeric `min`/`max` constraints, and enum values prior to network requests.
+  - Server-side error mapping: catches submission errors, extracts per-field messages via `extractFieldErrors(err)`, and populates `fieldErrors`.
+  - Dynamic input styling: red borders (`fieldErrors[f.name] ? "1px solid #ef4444" : "1px solid #cbd5e1"`) and accessibility attributes (`aria-invalid={!!fieldErrors[f.name]}`).
+  - Per-field error messages rendered directly beneath inputs (`<span style={{ color: "#ef4444", fontSize: 12, marginTop: 4, display: "block" }}>`).
+  - Interactive error clearing: edits to an input reactively clear its field error (`onChange`).
+  - Interactive `<select>` dropdown rendering with declared options for enum fields.
+  - Reset button resets `fieldErrors` and form data.
+  - Warning alert banner shown when field errors are present; hides generic `submitError` to prioritize specific field feedback.
+  - Byte-identical diff invariance maintained across IR description changes.
 
 ## Preceded by:
 - **R-254**: Structured JSON validation error bodies in Go (`{"errors": [...]}`).
@@ -43,10 +42,11 @@ Branch: `main` (the only branch; the GitHub default)
 - **R-260**: OpenAPI 3.1 specification generation from Application IR.
 - **R-261**: Full-text / keyword search filtering (`q` query param) on LIST endpoints.
 - **R-262**: React data-fetching & mutation hooks generation (`apps/web/lib/hooks.ts`).
+- **R-263**: Interactive Screen Component Generator with Real Data Binding (`apps/web/app/<screen>/page.tsx`).
 
 ## Verification
 
-- `task verify` — pass (515 agent-engine tests; 9 new in `test_screen_generation.py`).
+- `task verify` — pass (527 agent-engine tests; 12 new in `test_form_validation_screens.py`).
 - `task lint`, `task security:quick`, `task env:check` — all pass.
 - 0 local model calls, 0 cloud calls. Offline and deterministic.
 

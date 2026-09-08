@@ -1,23 +1,27 @@
 schema_version: 1
-task_id: R-263
-title: Interactive Screen Component Generator with Real Data Binding (apps/web/app/<screen>/page.tsx)
+task_id: R-264
+title: Field-Level Validation & Error Feedback in Generated Next.js Forms
 status: done
 phase: BASIC/MVP
 founder_stage: 0
 branch: main
 goal: >-
-  Upgrade generated Next.js screen pages (apps/web/app/<screen.id>/page.tsx) into real, interactive,
-  strongly-typed React client components:
-  - Connects screens to matching entities and generated lib/hooks.ts (useList, useCreate, etc.).
-  - Renders live collection views with search input, sort headers, loading/error states, and pagination controls.
-  - Renders creation form with schema-derived inputs, validation, and submission handlers.
-  - Uses "use client" directive and standard React without external styling/component libraries.
-  - pure codegen change; no new platform dep, no install/build/run/DB.
+  Enhance generated Next.js form screens (apps/web/app/<screen.id>/page.tsx) and API client
+  (apps/web/lib/api.ts) with real-time and server-side field-level validation feedback:
+  - Add extractFieldErrors helper in lib/api.ts normalizing Go backend {"errors": [...]}
+    and FastAPI {"detail": [...]} payloads to a Record<string, string> map.
+  - Track fieldErrors state in generated form screens, binding server and client validation
+    errors to individual input elements.
+  - Render accessible field error messages and red borders (#ef4444) on invalid inputs with
+    aria-invalid attributes.
+  - Automatically clear field errors when the user edits the input.
+  - Perform client-side pre-validation for required fields and min/max constraints.
+  - Additive, offline, 0 network, 0 external deps.
 source:
   tracker_sheet: Phase_Roadmap
   brief_sections: [43, 50, 74, 77, 91, 92]
   founder_note: >-
-    Founder approved implementation plan for R-263.
+    Founder approved Option A for R-264 (Field-level validation & error feedback).
 project_profile:
   repository: platform_modular_monorepo
   service: python_agent_engine
@@ -26,7 +30,7 @@ project_profile:
 complexity: L2
 expected_impact:
   - services/agent-engine/src/omnistackai_agent_engine/codegen/nextjs.py
-  - services/agent-engine/tests/test_screen_generation.py
+  - services/agent-engine/tests/test_form_validation_screens.py
   - docs/CODEGEN.md, docs/PROGRESS.md
   - portable state, changelog, handoff, task doc, tracker evidence
 allowed_paths:
@@ -39,19 +43,23 @@ allowed_paths:
 must_not_change:
   - the IR schema; no new IR field
   - network-independence of task verify
+  - diff invariance for ir.description
 must_not_do:
   - add a platform Python dependency
   - break existing codegen contracts
   - connect to or run a database; make a network call; put a secret anywhere
 acceptance:
-  - Screen pages emit "use client" directive at top. (VERIFIED)
-  - Screen pages import and use appropriate hooks from ../lib/hooks. (VERIFIED)
-  - Collection screens render live search input bound to setSearch. (VERIFIED)
-  - Collection screens render pagination controls (Previous, Next, page indicator) bound to setPage. (VERIFIED)
-  - Form/editor screens render interactive creation form using useCreate hook. (VERIFIED)
-  - task verify green; 0 network calls (515 tests pass). (VERIFIED)
+  - lib/api.ts exports extractFieldErrors helper normalizing Go and FastAPI validation errors. (VERIFIED)
+  - Form screen imports extractFieldErrors from ../lib/api. (VERIFIED)
+  - Form screen declares fieldErrors state (Record<string, string>). (VERIFIED)
+  - Form inputs display error message below input when fieldErrors has an entry for the field. (VERIFIED)
+  - Form inputs show red border (#ef4444) and aria-invalid="true" when field error exists. (VERIFIED)
+  - Editing an input clears its corresponding fieldError. (VERIFIED)
+  - Client-side pre-validation catches required fields without backend roundtrip. (VERIFIED)
+  - Screen generator remains diff-invariant with respect to ir.description. (VERIFIED)
+  - task verify green; 0 network calls (527 tests pass). (VERIFIED)
 required_gates:
-  - screen_generation_test
+  - form_validation_test
   - task_verify
 model_tool_trace:
   routing: local_only
@@ -59,6 +67,6 @@ model_tool_trace:
   cloud_calls: 0
   note: Deterministic codegen; no model call, no network, no DB. cloud_calls zero.
 blockers: []
-next_action: Task R-263 completed and verified. Ready for next task or commit.
+next_action: Task R-264 completed and verified. Ready for user commit decision.
 next_command: task verify
 

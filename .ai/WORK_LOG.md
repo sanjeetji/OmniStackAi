@@ -1,5 +1,29 @@
 # Work Log
 
+## 2026-09-08 — R-264
+
+- Recorded contract in `.ai/CURRENT_TASK.yaml` and `.ai/tasks/R-264.md`.
+- `nextjs.py`:
+  - Added `extractFieldErrors(error: unknown): Record<string, string>` export in `apps/web/lib/api.ts`:
+    - Normalizes Go backend structured errors (`{"errors": [{"field": "...", "rule": "...", "message": "..."}]}`).
+    - Normalizes FastAPI structured errors (`{"detail": [{"loc": ["body", "..."], "msg": "..."}]}`).
+    - Safely falls back to empty map for non-validation errors.
+  - Enhanced `_form_screen_page`:
+    - Imported `extractFieldErrors` from `../lib/api`.
+    - Added `fieldErrors` state (`const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});`).
+    - Implemented client-side pre-validation inside `handleSubmit`: checks `required` fields, string `max_length`, numeric `min`/`max`, and enum options before network requests, setting `fieldErrors` and halting on failure.
+    - Updated submission error handling to call `extractFieldErrors(err)` and populate `fieldErrors` with server-side validation failures.
+    - Conditionally styled inputs with red borders (`fieldErrors[f.name] ? "1px solid #ef4444" : "1px solid #cbd5e1"`) and accessibility attributes (`aria-invalid={!!fieldErrors[f.name]}`).
+    - Rendered dedicated field error message spans directly beneath invalid inputs.
+    - Added reactive error clearing on input edit (`onChange`).
+    - Rendered interactive `<select>` dropdowns with declared options for enum fields.
+    - Reset button clears `fieldErrors` alongside form data.
+    - Added warning banner (`"Please correct the highlighted errors below before submitting."`) when field errors exist.
+    - Preserved diff invariance by avoiding references to `ir.description`.
+- Added `services/agent-engine/tests/test_form_validation_screens.py` with 12 unit tests covering `extractFieldErrors`, form screen error imports, client-side pre-validation, server error extraction, input styling, error spans, clear-on-change, enum dropdowns, reset button, and diff invariance.
+- `task verify` — 527 tests pass (12 new), 0 failures. `task lint`, `task security:quick`, `task env:check` pass. 0 network calls, 0 cloud model calls.
+- Updated CURRENT_TASK.yaml, tasks/R-264.md, PROJECT_STATE.yaml, docs/CODEGEN.md, docs/PROGRESS.md.
+
 ## 2026-09-08 — R-263
 
 - Recorded contract in `.ai/CURRENT_TASK.yaml` and `.ai/tasks/R-263.md`.

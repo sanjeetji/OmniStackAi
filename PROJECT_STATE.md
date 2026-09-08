@@ -1,13 +1,13 @@
 # Project State — OmniStackAI
-Last updated: 2026-09-08T18:50:00+05:30
+Last updated: 2026-09-08T19:00:00+05:30
 
 ## Current Phase
 Stage 0 (Founder Build Sequence, Brief Section 91) — BASIC/MVP
 
 ## Last Completed Task
-Tracker ID: R-263 — Interactive Screen Component Generator with Real Data Binding (`apps/web/app/<screen>/page.tsx`) — DONE,
-`task verify` (515 agent-engine tests, 9 new in `test_screen_generation.py`) passing. Emits interactive Next.js React client components (`apps/web/app/<screen.id>/page.tsx`) using `"use client"` directive and built-in React hooks (`useState`): automatically matches screens to IR entities via multi-token scoring (`_match_entity`); detects screen intent (`_screen_intent`) as collection, form, or generic; collection screens bind to `useList<Entities>()` with live search input (`setSearch`), sortable headers (`setSort`), pagination controls (`setPage`, Previous/Next), loading/error/empty states, delete action (`useDelete<Entity>`) when `Op.DELETE` is wired, and navigation to complementary editor screens; form screens bind to `useCreate<Entity>()` with schema-derived inputs (checkbox for bool, textarea for text, number input for int/float, datetime-local for datetime, text for string), required indicators/attributes, submit handling (`create(formData)`), success banner, and reset/cancel controls; graceful fallback screen without broken imports when unwired; byte-identical output across IR description changes preserving diff stability; public `render_screen_page` exported in `codegen`.
-Preceded by R-254 (structured validation errors), R-255 (pagination limit/offset), R-256 (PUT handlers), R-257 (typed Next.js API client + CORS middleware), R-258 (query parameter sorting), R-259 (total count queries & headers), R-260 (OpenAPI 3.1 specification), R-261 (keyword search filtering), and R-262 (React data-fetching & mutation hooks).
+Tracker ID: R-264 — Field-Level Validation & Error Feedback in Generated Next.js Forms (`apps/web/app/<screen>/page.tsx` & `apps/web/lib/api.ts`) — DONE,
+`task verify` (527 agent-engine tests, 12 new in `test_form_validation_screens.py`) passing. Emits `extractFieldErrors(error: unknown): Record<string, string>` in `apps/web/lib/api.ts` normalizing Go backend structured errors (`{"errors": [...]}`) and FastAPI structured errors (`{"detail": [...]}`); form screens import `extractFieldErrors` and track `fieldErrors` state (`Record<string, string>`); client-side pre-validation validates required fields, string `max_length`, numeric `min`/`max` constraints, and enum options before network requests, halting and setting `fieldErrors` on failure; submission failure extracts server errors via `extractFieldErrors(err)` and highlights inputs; inputs render red borders (`#ef4444`), `aria-invalid="true"`, and per-field error messages below inputs; reactive error clearing clears field errors on input edit (`onChange`); enum fields render interactive `<select>` dropdowns with options; reset button clears `fieldErrors` and form data; warning banner rendered when field errors exist; diff-invariant with respect to `ir.description`.
+Preceded by R-254 (structured validation errors), R-255 (pagination limit/offset), R-256 (PUT handlers), R-257 (typed Next.js API client + CORS middleware), R-258 (query parameter sorting), R-259 (total count queries & headers), R-260 (OpenAPI 3.1 specification), R-261 (keyword search filtering), R-262 (React data-fetching & mutation hooks), and R-263 (interactive screen generator).
 Additive, offline, 0 network, no DB connection.
 
 
