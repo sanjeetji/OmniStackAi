@@ -1145,9 +1145,10 @@ def _collection_screen_page(screen: Screen, entity: Entity, ir: ApplicationIR, o
             "              </th>",
         ])
 
-    has_actions_col = can_delete or has_subcollections
+    can_edit = (Op.UPDATE in ops) and (form_screen is not None)
+    has_actions_col = can_delete or has_subcollections or can_edit
     if has_actions_col:
-        actions_header = "Actions" if can_delete else "Details"
+        actions_header = "Actions" if (can_delete or can_edit) else "Details"
         lines.append(
             f'              <th style={{{{ padding: "12px 16px", textAlign: "right", fontWeight: 600, color: "#475569" }}}}>{actions_header}</th>'
         )
@@ -1203,7 +1204,7 @@ def _collection_screen_page(screen: Screen, entity: Entity, ir: ApplicationIR, o
     if has_actions_col:
         lines.append('                <td style={{ padding: "12px 16px", textAlign: "right", whiteSpace: "nowrap" }}>')
         if has_subcollections:
-            margin_style = " marginRight: 8," if can_delete else ""
+            margin_style = " marginRight: 8," if (can_edit or can_delete) else ""
             lines.extend([
                 '                  <button',
                 '                    onClick={(e) => {',
@@ -1214,6 +1215,17 @@ def _collection_screen_page(screen: Screen, entity: Entity, ir: ApplicationIR, o
                 '                  >',
                 '                    {selectedId === (item as any).id ? "Hide Details" : "View Details"}',
                 '                  </button>',
+            ])
+        if can_edit and form_screen:
+            margin_style = " marginRight: 8," if can_delete else ""
+            lines.extend([
+                '                  <Link',
+                f"                    href={{`/{form_screen.id}?id=${{(item as any).id}}`}}",
+                '                    onClick={(e) => e.stopPropagation()}',
+                f'                    style={{{{ padding: "4px 8px", border: "1px solid #cbd5e1", background: "#fff", color: "#2563eb", borderRadius: 4, fontSize: 12, textDecoration: "none", display: "inline-block",{margin_style} }}}}',
+                '                  >',
+                '                    Edit',
+                '                  </Link>',
             ])
         if can_delete:
             lines.append('                  <button onClick={(e) => { e.stopPropagation(); handleDelete((item as any).id); }} style={{ padding: "4px 8px", border: "1px solid #fecaca", background: "#fff", color: "#dc2626", borderRadius: 4, fontSize: 12, cursor: "pointer" }}>Delete</button>')
@@ -1310,6 +1322,10 @@ def _collection_screen_page(screen: Screen, entity: Entity, ir: ApplicationIR, o
         for idx, sub in enumerate(subcollections):
             s_var = f"{sub.child_entity.name.lower()}sSubcol"
             tab_guard = f"activeTab === {idx}" if len(subcollections) > 1 else "true"
+            child_form = next(
+                (s for s in ir.screens if _screen_intent(s) == "form" and (_match_entity(s, ir) and _match_entity(s, ir).name == sub.child_entity.name)),
+                None,
+            )
             lines.extend([
                 f"            {{{tab_guard} && (",
                 "              <div>",
@@ -1320,14 +1336,38 @@ def _collection_screen_page(screen: Screen, entity: Entity, ir: ApplicationIR, o
                 f"                      {{{s_var}.total}}",
                 "                    </span>",
                 "                  </div>",
-                "                  <button",
-                f"                    onClick={{() => {s_var}.refetch()}}",
-                f"                    disabled={{{s_var}.loading}}",
-                f'                    style={{{{ padding: "4px 8px", border: "1px solid #cbd5e1", background: "#fff", color: "#334155", borderRadius: 4, fontSize: 12, cursor: {s_var}.loading ? "default" : "pointer" }}}}',
-                "                  >",
-                f'                    {{{s_var}.loading ? "Loading..." : "Refresh"}}',
-                "                  </button>",
-                "                </div>",
+            ])
+            if child_form:
+                lines.extend([
+                    '                  <div style={{ display: "flex", gap: 8, alignItems: "center" }}>',
+                    '                    <Link',
+                    f"                      href={{`/{child_form.id}?{sub.id_param}=${{selectedId}}`}}",
+                    '                      style={{ padding: "4px 8px", background: "#2563eb", color: "#fff", borderRadius: 4, fontSize: 12, textDecoration: "none", fontWeight: 500 }}',
+                    '                    >',
+                    f'                      + New {sub.child_entity.name}',
+                    '                    </Link>',
+                    "                    <button",
+                    f"                      onClick={{() => {s_var}.refetch()}}",
+                    f"                      disabled={{{s_var}.loading}}",
+                    f'                      style={{{{ padding: "4px 8px", border: "1px solid #cbd5e1", background: "#fff", color: "#334155", borderRadius: 4, fontSize: 12, cursor: {s_var}.loading ? "default" : "pointer" }}}}',
+                    "                    >",
+                    f'                      {{{s_var}.loading ? "Loading..." : "Refresh"}}',
+                    "                    </button>",
+                    "                  </div>",
+                    "                </div>",
+                ])
+            else:
+                lines.extend([
+                    "                  <button",
+                    f"                    onClick={{() => {s_var}.refetch()}}",
+                    f"                    disabled={{{s_var}.loading}}",
+                    f'                    style={{{{ padding: "4px 8px", border: "1px solid #cbd5e1", background: "#fff", color: "#334155", borderRadius: 4, fontSize: 12, cursor: {s_var}.loading ? "default" : "pointer" }}}}',
+                    "                  >",
+                    f'                    {{{s_var}.loading ? "Loading..." : "Refresh"}}',
+                    "                  </button>",
+                    "                </div>",
+                ])
+            lines.extend([
                 f"                {{{s_var}.loading && !{s_var}.data && (",
                 f'                  <div style={{{{ padding: 16, textAlign: "center", color: "#64748b", fontSize: 14 }}}}>Loading {sub.child_plural.lower()}...</div>',
                 "                )}",
@@ -1403,27 +1443,104 @@ def _form_screen_page(screen: Screen, entity: Entity, ir: ApplicationIR, ops: se
             defaults.append(f'{f.name}: ""')
     initial_obj = "{" + ", ".join(defaults) + "}"
 
+    can_create = Op.CREATE in ops
+    can_update = Op.UPDATE in ops
+    has_get = Op.GET in ops
+
+    fk_fields = [f.name for f in entity.fields if f.name.endswith("_id")]
+    for rel in getattr(entity, "relations", ()):
+        fk_fields.append(f"{rel.name}_id")
+        fk_fields.append(f"{rel.name}Id")
+    uses_search_params = can_update or bool(fk_fields)
+
     lines: list[str] = [
         '"use client";',
         "",
-        'import { useState } from "react";',
-        'import Link from "next/link";',
-        f'import {{ useCreate{name} }} from "../lib/hooks";',
+    ]
+    if uses_search_params:
+        lines.append('import { useEffect, useState } from "react";')
+        lines.append('import { useSearchParams } from "next/navigation";')
+    else:
+        lines.append('import { useState } from "react";')
+
+    lines.append('import Link from "next/link";')
+    if can_create:
+        lines.append(f'import {{ useCreate{name} }} from "../lib/hooks";')
+    if can_update:
+        update_hooks = []
+        if has_get:
+            update_hooks.append(f"use{name}")
+        update_hooks.append(f"useUpdate{name}")
+        lines.append(f'import {{ {", ".join(update_hooks)} }} from "../lib/hooks";')
+
+    lines.extend([
         'import { extractFieldErrors } from "../lib/api";',
         f'import type {{ {name} }} from "../lib/types";',
         "",
         f"export default function {page_name}() {{",
-        f"  const {{ create, loading: submitting, error: submitError, reset }} = useCreate{name}();",
+    ])
+
+    if can_create:
+        lines.append(f"  const {{ create, loading: submitting, error: submitError, reset }} = useCreate{name}();")
+    else:
+        lines.append("  const submitting = false, submitError = null, reset = () => {};")
+
+    if can_update:
+        lines.extend([
+            f"  const {{ update, loading: updating, error: updateError }} = useUpdate{name}();",
+            "  const searchParams = useSearchParams();",
+            '  const editId = searchParams.get("id");',
+            "  const isEdit = Boolean(editId);",
+        ])
+        if has_get:
+            lines.append(f"  const {{ data: initialData, loading: fetchingInitial }} = use{name}(editId);")
+    elif uses_search_params:
+        lines.extend([
+            "  const searchParams = useSearchParams();",
+            "  const isEdit = false;",
+            "  const editId = null;",
+        ])
+
+    lines.extend([
         f"  const [formData, setFormData] = useState<Partial<{name}>>({initial_obj});",
         '  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});',
         "  const [success, setSuccess] = useState(false);",
         "",
+    ])
+
+    if can_update and has_get:
+        lines.extend([
+            "  useEffect(() => {",
+            "    if (initialData) {",
+            "      setFormData(initialData);",
+            "    }",
+            "  }, [initialData]);",
+            "",
+        ])
+
+    if uses_search_params:
+        lines.extend([
+            "  useEffect(() => {",
+            "    if (!isEdit) {",
+            "      const updates: Record<string, any> = {};",
+            "      searchParams.forEach((val, key) => {",
+            "        if (val) updates[key] = val;",
+            "      });",
+            "      if (Object.keys(updates).length > 0) {",
+            "        setFormData((prev) => ({ ...prev, ...updates }));",
+            "      }",
+            "    }",
+            "  }, [searchParams, isEdit]);",
+            "",
+        ])
+
+    lines.extend([
         "  const handleSubmit = async (e: React.FormEvent) => {",
         "    e.preventDefault();",
         "    setSuccess(false);",
         "",
         "    const clientErrors: Record<string, string> = {};",
-    ]
+    ])
 
     for f in editable_fields:
         rules = parse_field_rules(f)
@@ -1483,9 +1600,29 @@ def _form_screen_page(screen: Screen, entity: Entity, ir: ApplicationIR, ops: se
         "",
         "    setFieldErrors({});",
         "    try {",
-        "      await create(formData);",
+    ])
+    if can_create and can_update:
+        lines.extend([
+            "      if (isEdit && editId) {",
+            "        await update(editId, formData);",
+            "      } else {",
+            "        await create(formData);",
+            f"        setFormData({initial_obj});",
+            "      }",
+        ])
+    elif can_update:
+        lines.extend([
+            "      if (editId) {",
+            "        await update(editId, formData);",
+            "      }",
+        ])
+    else:
+        lines.extend([
+            "      await create(formData);",
+            f"      setFormData({initial_obj});",
+        ])
+    lines.extend([
         "      setSuccess(true);",
-        f"      setFormData({initial_obj});",
         "    } catch (err) {",
         "      const serverErrors = extractFieldErrors(err);",
         "      if (Object.keys(serverErrors).length > 0) {",
@@ -1513,21 +1650,60 @@ def _form_screen_page(screen: Screen, entity: Entity, ir: ApplicationIR, ops: se
         '          <span style={{ color: "#94a3b8" }}>/</span>',
         f'          <span style={{ fontSize: 12, padding: "2px 8px", background: "#f1f5f9", color: "#475569", borderRadius: 4, fontWeight: 600 }}>{screen.role}</span>',
         "        </div>",
-        f'        <h1 style={{ margin: 0, fontSize: 26, fontWeight: 700, color: "#0f172a" }}>{title}</h1>',
+    ])
+    if can_update:
+        lines.append(f'        <h1 style={{{{ margin: 0, fontSize: 26, fontWeight: 700, color: "#0f172a" }}}}>{{isEdit ? "Edit {name}" : "{title}"}}</h1>')
+    else:
+        lines.append(f'        <h1 style={{{{ margin: 0, fontSize: 26, fontWeight: 700, color: "#0f172a" }}}}>{title}</h1>')
+    lines.extend([
         "      </header>",
         "",
-        "      {success && (",
-        '        <div style={{ padding: "12px 16px", background: "#f0fdf4", border: "1px solid #bbf7d0", color: "#166534", borderRadius: 8, marginBottom: 20 }}>',
-        f"          {name} saved successfully!",
-        "        </div>",
-        "      )}",
-        "",
-        "      {submitError && Object.keys(fieldErrors).length === 0 && (",
-        '        <div style={{ padding: "12px 16px", background: "#fef2f2", border: "1px solid #fecaca", color: "#991b1b", borderRadius: 8, marginBottom: 20 }}>',
-        "          Error: {submitError.message}",
-        "        </div>",
-        "      )}",
-        "",
+    ])
+
+    if can_update:
+        lines.extend([
+            "      {success && (",
+            '        <div style={{ padding: "12px 16px", background: "#f0fdf4", border: "1px solid #bbf7d0", color: "#166534", borderRadius: 8, marginBottom: 20 }}>',
+            f'          {{isEdit ? "{name} updated successfully!" : "{name} saved successfully!"}}',
+            "        </div>",
+            "      )}",
+        ])
+    else:
+        lines.extend([
+            "      {success && (",
+            '        <div style={{ padding: "12px 16px", background: "#f0fdf4", border: "1px solid #bbf7d0", color: "#166534", borderRadius: 8, marginBottom: 20 }}>',
+            f"          {name} saved successfully!",
+            "        </div>",
+            "      )}",
+        ])
+
+    if can_update:
+        lines.extend([
+            "      {(submitError || (isEdit && updateError)) && Object.keys(fieldErrors).length === 0 && (",
+            '        <div style={{ padding: "12px 16px", background: "#fef2f2", border: "1px solid #fecaca", color: "#991b1b", borderRadius: 8, marginBottom: 20 }}>',
+            "          Error: {((isEdit ? updateError : submitError) || submitError)?.message}",
+            "        </div>",
+            "      )}",
+        ])
+    else:
+        lines.extend([
+            "      {submitError && Object.keys(fieldErrors).length === 0 && (",
+            '        <div style={{ padding: "12px 16px", background: "#fef2f2", border: "1px solid #fecaca", color: "#991b1b", borderRadius: 8, marginBottom: 20 }}>',
+            "          Error: {submitError.message}",
+            "        </div>",
+            "      )}",
+        ])
+
+    if can_update and has_get:
+        lines.extend([
+            "      {isEdit && fetchingInitial && (",
+            '        <div style={{ padding: "12px 16px", background: "#f8fafc", border: "1px solid #e2e8f0", color: "#64748b", borderRadius: 8, marginBottom: 20, fontSize: 14 }}>',
+            f'          Loading {name.lower()} details...',
+            "        </div>",
+            "      )}",
+        ])
+
+    lines.extend([
         "      {Object.keys(fieldErrors).length > 0 && (",
         '        <div style={{ padding: "12px 16px", background: "#fff7ed", border: "1px solid #fed7aa", color: "#9a3412", borderRadius: 8, marginBottom: 20, fontSize: 14 }}>',
         "          Please correct the highlighted errors below before submitting.",
@@ -1585,8 +1761,8 @@ def _form_screen_page(screen: Screen, entity: Entity, ir: ApplicationIR, ops: se
                 '          <input',
                 '            type="number"',
                 '            step="' + step + '"',
-                '            value={(formData as any).' + f.name + ' !== undefined ? String((formData as any).' + f.name + ') : ""}',
-                '            onChange={(e) => { setFormData((prev) => ({ ...prev, ' + f.name + ': e.target.value === "" ? undefined : Number(e.target.value) })); if (fieldErrors.' + f.name + ') setFieldErrors((prev) => ({ ...prev, ' + f.name + ': "" })); }}',
+                '            value={(formData as any).' + f.name + ' !== undefined && (formData as any).' + f.name + ' !== null ? String((formData as any).' + f.name + ') : ""}',
+                '            onChange={(e) => { const v = e.target.value; setFormData((prev) => ({ ...prev, ' + f.name + ': v === "" ? undefined : Number(v) })); if (fieldErrors.' + f.name + ') setFieldErrors((prev) => ({ ...prev, ' + f.name + ': "" })); }}',
                 '            placeholder="Enter ' + label.lower() + '..."' + req_attr,
                 '            style={{ width: "100%", padding: "8px 12px", border: fieldErrors.' + f.name + ' ? "1px solid #ef4444" : "1px solid #cbd5e1", borderRadius: 6, fontSize: 14, boxSizing: "border-box", outline: "none" }}',
                 '            aria-invalid={!!fieldErrors.' + f.name + '}',
@@ -1608,9 +1784,10 @@ def _form_screen_page(screen: Screen, entity: Entity, ir: ApplicationIR, ops: se
                 '          {fieldErrors.' + f.name + ' && <span style={{ color: "#ef4444", fontSize: 12, marginTop: 4, display: "block" }}>{fieldErrors.' + f.name + '}</span>}',
                 '        </div>',
             ])
-        elif rules.enum:
+        elif rules.enum and f.type in (FieldType.STRING, FieldType.TEXT):
             opt_lines = "\n".join(
-                f'            <option value="{opt}">{opt}</option>' for opt in rules.enum
+                f'            <option value="{opt}">{opt}</option>'
+                for opt in rules.enum
             )
             lines.extend([
                 '        <div style={{ marginBottom: 16 }}>',
@@ -1643,21 +1820,33 @@ def _form_screen_page(screen: Screen, entity: Entity, ir: ApplicationIR, ops: se
                 '        </div>',
             ])
 
+    if can_create and can_update:
+        submitting_expr = "(submitting || updating)"
+        btn_label = f'({submitting_expr} ? "Saving..." : (isEdit ? "Update {name}" : "Save {name}"))'
+    elif can_update:
+        submitting_expr = "updating"
+        btn_label = f'(updating ? "Saving..." : "Update {name}")'
+    else:
+        submitting_expr = "submitting"
+        btn_label = f'(submitting ? "Saving..." : "Save {name}")'
+
+    reset_call = f"setFormData(isEdit && initialData ? initialData : {initial_obj})" if (can_update and has_get) else f"setFormData({initial_obj})"
+
     lines.extend([
         '        <div style={{ display: "flex", gap: 12, justifyContent: "flex-end", marginTop: 24, paddingTop: 16, borderTop: "1px solid #f1f5f9" }}>',
         '          <button',
         '            type="button"',
-        '            onClick={() => { reset(); setFormData(' + initial_obj + '); setFieldErrors({}); setSuccess(false); }}',
+        f'            onClick={{() => {{ reset(); {reset_call}; setFieldErrors({{}}); setSuccess(false); }}}}',
         '            style={{ padding: "8px 16px", border: "1px solid #cbd5e1", background: "#fff", color: "#475569", borderRadius: 6, fontSize: 14, cursor: "pointer" }}',
         '          >',
         '            Reset',
         '          </button>',
         '          <button',
         '            type="submit"',
-        '            disabled={submitting}',
-        '            style={{ padding: "8px 20px", background: submitting ? "#93c5fd" : "#2563eb", color: "#fff", border: "none", borderRadius: 6, fontSize: 14, fontWeight: 500, cursor: submitting ? "default" : "pointer" }}',
+        f'            disabled={{{submitting_expr}}}',
+        f'            style={{{{ padding: "8px 20px", background: {submitting_expr} ? "#93c5fd" : "#2563eb", color: "#fff", border: "none", borderRadius: 6, fontSize: 14, fontWeight: 500, cursor: {submitting_expr} ? "default" : "pointer" }}}}',
         '          >',
-        '            {submitting ? "Saving..." : "Save ' + name + '"}',
+        f'            {{{btn_label}}}',
         '          </button>',
         '        </div>',
         '      </form>',
@@ -1959,7 +2148,7 @@ def _screen_page(screen: Screen, ir: ApplicationIR) -> str:
 
     if intent == "collection" and Op.LIST in ops:
         return _collection_screen_page(screen, entity, ir, ops)
-    elif intent == "form" and Op.CREATE in ops:
+    elif intent == "form" and (Op.CREATE in ops or Op.UPDATE in ops):
         return _form_screen_page(screen, entity, ir, ops)
     elif intent == "detail" and (Op.GET in ops or Op.LIST in ops):
         return _detail_screen_page(screen, entity, ir, ops)
