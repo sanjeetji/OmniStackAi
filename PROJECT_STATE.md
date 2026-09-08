@@ -1,13 +1,13 @@
 # Project State — OmniStackAI
-Last updated: 2026-09-08T21:57:00+05:30
+Last updated: 2026-09-08T22:15:00+05:30
 
 ## Current Phase
 Stage 0 (Founder Build Sequence, Brief Section 91) — BASIC/MVP
 
 ## Last Completed Task
-Tracker ID: R-269 — Page Size Selector & Contextual Empty State CTAs in Generated Next.js Screens (`apps/web/app/<screen>/page.tsx`, `apps/web/lib/hooks.ts`) — DONE,
-`task verify` (598 agent-engine tests, 15 new in `test_collection_pagination_empty_states.py`) passing. Adds configurable page size selection and contextual empty state CTAs: `UseListState<T>` declares `setPageSize: (size: number) => void;`; `useList<Entities>` and `useList<Children>By<Rel>` implement `setPageSize` with `Math.max(1, newPageSize)` and `offset: 0`; collection screens destructure `pageSize` and `setPageSize` and render an accessible `<select>` dropdown (10, 25, 50, 100 per page) next to pagination buttons in footer; collection screen table empty state renders search mismatch message with `Clear search` CTA button when search is active, and `+ Create first <Entity>` CTA link when `form_screen` is available; subcollection empty states render `+ Add first <Child>` CTA link when `child_form` is available; diff-invariant with respect to `ir.description`.
-Preceded by R-254 through R-268.
+Tracker ID: R-270 — Bulk Selection & Batch Deletion in Generated Next.js Collection Screens (`apps/web/app/<screen>/page.tsx`) — DONE,
+`task verify` (614 agent-engine tests, 16 new in `test_collection_bulk_actions.py`) passing. Adds multi-record bulk selection and batch deletion workflows: collection screens declare `checkedIds` state, `isAllChecked`, `handleCheckAll`, `handleToggleRow`, and `handleClearSelection`; table header `<thead>` renders master checkbox with `aria-label="Select all"`; table body `<tbody>` rows render selection checkbox with `e.stopPropagation()`; loading and empty state `colSpan` values account for checkbox column (+1); contextual bulk actions bar conditionally renders when `checkedIds.length > 0` displaying selection count, 'Clear selection' button, and 'Delete Selected' button when `Op.DELETE` is wired; batch delete executes with confirmation prompt, loading indicator, and dismissible error banner; individual `handleDelete` cleans up deleted ID from `checkedIds`; diff-invariant with respect to `ir.description`.
+Preceded by R-254 through R-269.
 Additive, offline, 0 network, no DB connection.
 
 

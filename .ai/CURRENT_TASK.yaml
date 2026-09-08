@@ -1,30 +1,35 @@
 schema_version: 1
-task_id: R-269
-title: Page Size Selector & Contextual Empty State CTAs in Generated Next.js Screens
+task_id: R-270
+title: Bulk Selection & Batch Deletion in Generated Next.js Collection Screens
 status: done
 phase: BASIC/MVP
 founder_stage: 0
 branch: main
 goal: >-
-  Add page size selection and contextual empty state CTAs to generated Next.js screens:
-  - Add setPageSize: (size: number) => void; to UseListState<T> interface.
-  - Implement setPageSize in useList<Entities> and useList<Children>By<Rel> resetting offset to 0.
-  - Return pageSize and setPageSize in both list hook implementations.
-  - In _collection_screen_page, destructure pageSize and setPageSize and render an accessible
-    page size selector dropdown (10, 25, 50, 100 per page) next to pagination buttons in the footer.
-  - In _collection_screen_page table empty state (when data.length === 0):
-    * If search is active (searchInput.trim()): render "No <plural> matching '<searchInput>'." with a "Clear search" CTA button.
-    * If no search is active and form_screen exists: render "No <plural> found yet." with a "+ Create first <Entity>" CTA link.
-    * Fallback if no form_screen: render "No <plural> found.".
-  - In subcollection panels (_collection_screen_page and _detail_screen_page), when child data is empty and child_form exists,
-    render a "+ Add first <Child>" CTA link pointing to the child form screen.
+  Add multi-record bulk selection and batch deletion workflows to generated Next.js collection screens:
+  - Add row selection state (checkedIds: string[]) with select-all, clear-selection, and individual row toggle handlers.
+  - Render a master checkbox in table <thead> with aria-label="Select all", checked={isAllChecked}, and onChange={handleCheckAll}.
+  - Render an item checkbox in each <tbody> table row with aria-label, checked={checkedIds.includes((item as any).id)}, and onClick={(e) => e.stopPropagation()}.
+  - Update table loading and empty state colSpan to account for the checkbox column (+1).
+  - Highlight selected rows with an active background color.
+  - When checkedIds.length > 0, render a contextual Bulk Actions toolbar above the table:
+    * Displays "{checkedIds.length} {name/plural} selected".
+    * Includes a "Clear selection" button to clear current selection.
+    * When Op.DELETE is wired, includes a "Delete Selected ({checkedIds.length})" button.
+  - In handleBatchDelete:
+    * Confirm via window.confirm("Are you sure you want to delete {count} {name/plural}?").
+    * Track batchDeleting loading state and batchDeleteError error state.
+    * Perform concurrent deletion via Promise.all(checkedIds.map(id => remove(id))).
+    * Clear checkedIds, trigger refetch(), and reset loading state.
+    * Display batch delete error alert if deletion fails.
+  - Clean up checkedIds when an individual row is deleted via handleDelete(id).
   - Maintain strict diff invariance across ir.description modifications.
   - Fully offline, 0 network, 0 external dependencies.
 source:
   tracker_sheet: Phase_Roadmap
   brief_sections: [43, 50, 74, 77, 91, 92]
   founder_note: >-
-    Founder requested next task: R-269 (Page Size Selector & Contextual Empty State CTAs in Generated Next.js Screens).
+    Founder requested next task: R-270 (Bulk Selection & Batch Deletion in Generated Next.js Collection Screens).
 project_profile:
   repository: platform_modular_monorepo
   service: python_agent_engine
@@ -33,7 +38,7 @@ project_profile:
 complexity: L2
 expected_impact:
   - services/agent-engine/src/omnistackai_agent_engine/codegen/nextjs.py
-  - services/agent-engine/tests/test_collection_pagination_empty_states.py
+  - services/agent-engine/tests/test_collection_bulk_actions.py
   - docs/CODEGEN.md, docs/PROGRESS.md
   - portable state, changelog, handoff, task doc, tracker evidence
 allowed_paths:
@@ -52,24 +57,27 @@ must_not_do:
   - break existing codegen contracts
   - connect to or run a database; make a network call; put a secret anywhere
 acceptance:
-  - UseListState declares setPageSize: (size: number) => void;.
-  - useList<Entities> implements setPageSize resetting offset to 0 and returning pageSize and setPageSize.
-  - useList<Children>By<Rel> implements setPageSize resetting offset to 0 and returning pageSize and setPageSize.
-  - Collection screens destructure pageSize and setPageSize and render an accessible page size selector dropdown (10, 25, 50, 100).
-  - Collection screen table empty state renders search mismatch message and 'Clear search' button when search is active.
-  - Collection screen table empty state renders '+ Create first <Entity>' CTA link when form_screen is available.
-  - Subcollection empty states render '+ Add first <Child>' CTA link when child_form is available.
-  - Existing string assertions (Previous, Next, Page {page} of {totalPages}, No comments found for this post.) remain satisfied.
-  - Diff invariance maintained across ir.description modifications.
-  - task verify green; 0 network calls.
+  - Collection screens declare checkedIds state, check all handler, and row toggle handler.
+  - Table header <thead> renders master checkbox with aria-label="Select all".
+  - Each table body <tbody> row renders a row selection checkbox with stopPropagation on click.
+  - Table loading and empty state colSpan accounts for the checkbox column.
+  - Contextual Bulk Actions Bar is conditionally rendered when checkedIds.length > 0.
+  - Contextual Bulk Actions Bar renders selection count badge and 'Clear selection' button.
+  - Contextual Bulk Actions Bar renders 'Delete Selected' button when Op.DELETE is wired.
+  - Batch delete executes with confirmation prompt, loading indicator, and error capture.
+  - Individual handleDelete(id) removes the deleted ID from checkedIds.
+  - Diff invariance maintained across ir.description changes.
+  - 100% offline, Stage 0 verification passes (task verify).
 evidence:
-  task_verify: "Ran 598 tests in 0.960s — OK (Stage 0 verification passed)"
+  task_verify: "Ran 614 tests in 0.930s — OK (Stage 0 verification passed)"
   task_lint: "Lint passed."
   task_security_quick: "Stage 0 secret-policy check passed."
-  test_suite: "services/agent-engine/tests/test_collection_pagination_empty_states.py (15/15 passing)"
+  test_suite: "services/agent-engine/tests/test_collection_bulk_actions.py (16/16 passing)"
 required_gates:
-  - collection_pagination_empty_states_test
+  - collection_bulk_actions_test
   - task_verify
+  - task_lint
+  - task_security_quick
 model_tool_trace:
   routing: local_only
   local_calls: 0

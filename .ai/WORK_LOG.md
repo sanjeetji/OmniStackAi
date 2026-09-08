@@ -1,5 +1,36 @@
 # Work Log
 
+## 2026-09-08 — R-270
+
+- Recorded contract in `.ai/CURRENT_TASK.yaml` and `.ai/tasks/R-270.md`.
+- `nextjs.py`:
+  - Added multi-record row selection state to `_collection_screen_page`:
+    * `const [checkedIds, setCheckedIds] = useState<string[]>([]);`
+    * `const allCurrentIds = (data ?? []).map((item: any) => item.id).filter(Boolean);`
+    * `const isAllChecked = allCurrentIds.length > 0 && allCurrentIds.every((id: string) => checkedIds.includes(id));`
+    * `const handleCheckAll = () => { if (isAllChecked) { setCheckedIds((prev) => prev.filter((id) => !allCurrentIds.includes(id))); } else { setCheckedIds((prev) => Array.from(new Set([...prev, ...allCurrentIds]))); } };`
+    * `const handleToggleRow = (id: string) => { setCheckedIds((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id])); };`
+    * `const handleClearSelection = () => { setCheckedIds([]); };`
+  - In `handleDelete(id)`: automatically cleaned up deleted ID from selection via `setCheckedIds((prev) => prev.filter((x) => x !== id));`.
+  - When `can_delete` is True:
+    * Declared `batchDeleting` loading state and `batchDeleteError` error state.
+    * Implemented `handleBatchDelete` with confirmation prompt (`confirm("Are you sure you want to delete {count} {name/plural}?")`), concurrent execution (`await Promise.all(checkedIds.map(id => remove(id)))`), selection clearing, automatic `refetch()`, and error capture.
+    * Rendered dismissible `batchDeleteError` alert banner with retry/dismiss button.
+  - Rendered contextual floating/inline Bulk Actions Bar above the table when `checkedIds.length > 0`:
+    * Shows selection count badge: `{checkedIds.length} {name/plural} selected`.
+    * Includes `Clear selection` button bound to `handleClearSelection`.
+    * When `can_delete` is True, renders `Delete Selected ({checkedIds.length})` button with loading state `{batchDeleting ? "Deleting..." : ...}`.
+  - Table header `<thead>`:
+    * Rendered master checkbox column with `aria-label="Select all"`, `checked={isAllChecked}`, and `onChange={handleCheckAll}`.
+  - Table body `<tbody>`:
+    * Adjusted loading and empty state `colSpan` to account for checkbox column (`1 + len(display_fields) + (1 if has_actions_col else 0)`).
+    * Rendered row selection checkbox in each data row with `e.stopPropagation()` so selecting checkboxes does not toggle subcollection detail panels.
+    * Highlighted selected rows with `#f8fafc` background.
+  - Maintained strict diff invariance across `ir.description` modifications.
+- Added `services/agent-engine/tests/test_collection_bulk_actions.py` with 16 comprehensive unit tests.
+- `task verify` — 614 tests pass (16 new), 0 failures. `task lint`, `task security:quick` pass. 0 network calls, 0 cloud model calls.
+- Updated CURRENT_TASK.yaml, tasks/R-270.md, PROJECT_STATE.yaml, PROJECT_STATE.md, CHANGELOG.md, docs/CODEGEN.md, docs/PROGRESS.md.
+
 ## 2026-09-08 — R-269
 
 - Recorded contract in `.ai/CURRENT_TASK.yaml` and `.ai/tasks/R-269.md`.

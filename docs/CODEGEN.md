@@ -618,5 +618,35 @@ Enriches pagination and zero-state UX in generated Next.js screens with interact
   - 100% standard-library Python, 0 external dependencies, 0 network calls.
   - Zero references to `ir.description`, strictly maintaining snapshot diff invariance.
 
+### Bulk Selection & Batch Deletion in Generated Next.js Collection Screens (R-270)
+
+Enables enterprise-grade multi-record selection and batch operations in generated Next.js master collection screens (`apps/web/app/<screen>/page.tsx`):
+
+- **Multi-Record Selection State & Interactions**:
+  - Declares `checkedIds: string[]` state alongside current page ID tracking: `const allCurrentIds = (data ?? []).map((item: any) => item.id).filter(Boolean);`.
+  - Calculates select-all status: `const isAllChecked = allCurrentIds.length > 0 && allCurrentIds.every((id: string) => checkedIds.includes(id));`.
+  - Implements `handleCheckAll` to batch toggle all items on the active page, `handleToggleRow(id)` to toggle individual rows, and `handleClearSelection()` to reset selection.
+  - Individual `handleDelete(id)` cleans up deleted records from selection: `setCheckedIds((prev) => prev.filter((x) => x !== id));`.
+- **Contextual Bulk Actions Toolbar**:
+  - Rendered dynamically above the table when `checkedIds.length > 0`:
+    - Displays selection count badge: `{checkedIds.length} {name/plural} selected`.
+    - Renders `Clear selection` button bound to `handleClearSelection`.
+    - When `Op.DELETE` is wired, renders `Delete Selected ({checkedIds.length})` action button with progress indicator `{batchDeleting ? "Deleting..." : ...}`.
+- **Batch Deletion Lifecycle & Error Handling**:
+  - Executes confirmation prompt: `confirm("Are you sure you want to delete " + checkedIds.length + " " + (checkedIds.length === 1 ? name : plural) + "?")`.
+  - Manages `batchDeleting: boolean` loading state.
+  - Performs concurrent deletion across selected IDs via `Promise.all(checkedIds.map(id => remove(id)))`.
+  - On completion: clears `checkedIds`, triggers `refetch()`, and resets loading state.
+  - Catches mutation failures into `batchDeleteError: string | null` and renders a dismissible alert banner.
+- **Table Header & Row Checkboxes**:
+  - `<thead>`: renders master checkbox with `aria-label="Select all"`, `checked={isAllChecked}`, and `onChange={handleCheckAll}`.
+  - `<tbody>`: renders row checkbox with `checked={checkedIds.includes((item as any).id)}`, `onChange={() => handleToggleRow((item as any).id)}`, and `e.stopPropagation()` so checking a row doesn't open/close subcollection detail panels.
+  - Selected rows highlight with `#f8fafc` background.
+  - Table loading and empty state `colSpan` values account for the checkbox column (`+1`).
+- **Diff Invariance & Fallback Cleanliness**:
+  - Completely non-intrusive: entities lacking `Op.DELETE` cleanly omit the batch delete button while selection remains functional.
+  - Zero substring collisions with subcollection selection state (`selectedId`) or controls (`Deselect`).
+  - Strict diff invariance: zero references to `ir.description`.
+
 
 
