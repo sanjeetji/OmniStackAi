@@ -1192,13 +1192,53 @@ def _collection_screen_page(screen: Screen, entity: Entity, ir: ApplicationIR, o
         f"  }} = useList{plural}();",
     ])
 
+    lines.extend([
+        "  const [checkedIds, setCheckedIds] = useState<string[]>([]);",
+        "  const allCurrentIds = (data ?? []).map((item: any) => item.id).filter(Boolean);",
+        "  const isAllChecked = allCurrentIds.length > 0 && allCurrentIds.every((id: string) => checkedIds.includes(id));",
+        "  const handleCheckAll = () => {",
+        "    if (isAllChecked) {",
+        "      setCheckedIds((prev) => prev.filter((id) => !allCurrentIds.includes(id)));",
+        "    } else {",
+        "      setCheckedIds((prev) => Array.from(new Set([...prev, ...allCurrentIds])));",
+        "    }",
+        "  };",
+        "  const handleToggleRow = (id: string) => {",
+        "    setCheckedIds((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]));",
+        "  };",
+        "  const handleClearSelection = () => {",
+        "    setCheckedIds([]);",
+        "  };",
+    ])
+
     if can_delete:
         lines.extend([
             f"  const {{ remove }} = useDelete{name}();",
+            "  const [batchDeleting, setBatchDeleting] = useState<boolean>(false);",
+            "  const [batchDeleteError, setBatchDeleteError] = useState<string | null>(null);",
+            "",
             "  const handleDelete = async (id: string) => {",
             f'    if (confirm("Are you sure you want to delete this {name}?")) {{',
             "      await remove(id);",
+            "      setCheckedIds((prev) => prev.filter((x) => x !== id));",
             "      refetch();",
+            "    }",
+            "  };",
+            "",
+            "  const handleBatchDelete = async () => {",
+            "    if (checkedIds.length === 0) return;",
+            f'    const confirmMsg = `Are you sure you want to delete ${{checkedIds.length}} ${{checkedIds.length === 1 ? "{name}" : "{plural}"}}?`;',
+            "    if (!confirm(confirmMsg)) return;",
+            "    setBatchDeleting(true);",
+            "    setBatchDeleteError(null);",
+            "    try {",
+            "      await Promise.all(checkedIds.map((id) => remove(id)));",
+            "      setCheckedIds([]);",
+            "      refetch();",
+            "    } catch (err) {",
+            '      setBatchDeleteError(err instanceof Error ? err.message : "Failed to delete selected items");',
+            "    } finally {",
+            "      setBatchDeleting(false);",
             "    }",
             "  };",
         ])
@@ -1319,10 +1359,67 @@ def _collection_screen_page(screen: Screen, entity: Entity, ir: ApplicationIR, o
         "        </div>",
         "      )}",
         "",
+        "      {checkedIds.length > 0 && (",
+        '        <div style={{ marginBottom: 16, padding: "10px 16px", background: "#eff6ff", border: "1px solid #bfdbfe", borderRadius: 8, display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "gap", gap: 12 }}>',
+        '          <div style={{ display: "flex", alignItems: "center", gap: 12 }}>',
+        '            <span style={{ fontSize: 14, fontWeight: 600, color: "#1e40af" }}>',
+        f'              {{checkedIds.length}} {{checkedIds.length === 1 ? "{name}" : "{plural}"}} selected',
+        "            </span>",
+        "            <button",
+        '              type="button"',
+        "              onClick={handleClearSelection}",
+        '              style={{ padding: "4px 8px", background: "none", border: "1px solid #93c5fd", color: "#1d4ed8", borderRadius: 4, fontSize: 12, cursor: "pointer" }}',
+        "            >",
+        "              Clear selection",
+        "            </button>",
+        "          </div>",
+    ])
+
+    if can_delete:
+        lines.extend([
+            '          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>',
+            "            <button",
+            '              type="button"',
+            "              onClick={handleBatchDelete}",
+            "              disabled={batchDeleting}",
+            '              style={{ padding: "6px 14px", background: "#dc2626", color: "#fff", border: "none", borderRadius: 6, fontSize: 13, fontWeight: 500, cursor: batchDeleting ? "default" : "pointer" }}',
+            "            >",
+            f'              {{batchDeleting ? "Deleting..." : `Delete Selected (${{checkedIds.length}})`}}',
+            "            </button>",
+            "          </div>",
+        ])
+
+    lines.extend([
+        "        </div>",
+        "      )}",
+    ])
+
+    if can_delete:
+        lines.extend([
+            "",
+            "      {batchDeleteError && (",
+            '        <div style={{ padding: "12px 16px", background: "#fef2f2", border: "1px solid #fecaca", borderRadius: 8, color: "#991b1b", marginBottom: 16, display: "flex", justifyContent: "space-between", alignItems: "center" }}>',
+            "          <span>Error deleting selected items: {batchDeleteError}</span>",
+            '          <button onClick={() => setBatchDeleteError(null)} style={{ padding: "4px 8px", background: "#991b1b", color: "#fff", border: "none", borderRadius: 4, cursor: "pointer", fontSize: 12 }}>Dismiss</button>',
+            "        </div>",
+            "      )}",
+        ])
+
+    lines.extend([
+        "",
         '      <div style={{ border: "1px solid #e2e8f0", borderRadius: 8, overflow: "hidden", background: "#fff", boxShadow: "0 1px 3px rgba(0,0,0,0.05)" }}>',
         '        <table style={{ width: "100%", borderCollapse: "collapse", textAlign: "left", fontSize: 14 }}>',
         '          <thead style={{ background: "#f8fafc", borderBottom: "1px solid #e2e8f0" }}>',
         "            <tr>",
+        '              <th style={{ padding: "12px 16px", width: 40, textAlign: "center" }}>',
+        '                <input',
+        '                  type="checkbox"',
+        '                  aria-label="Select all"',
+        '                  checked={isAllChecked}',
+        '                  onChange={handleCheckAll}',
+        '                  style={{ cursor: "pointer" }}',
+        '                />',
+        '              </th>',
     ])
 
     for f in display_fields:
@@ -1347,14 +1444,14 @@ def _collection_screen_page(screen: Screen, entity: Entity, ir: ApplicationIR, o
         "          <tbody>",
         "            {loading && !data && (",
         "              <tr>",
-        f'                <td colSpan={{{len(display_fields) + (1 if has_actions_col else 0)}}} style={{{{ padding: 32, textAlign: "center", color: "#64748b" }}}}>',
+        f'                <td colSpan={{{1 + len(display_fields) + (1 if has_actions_col else 0)}}} style={{{{ padding: 32, textAlign: "center", color: "#64748b" }}}}>',
         f"                  Loading {plural}... ",
         "                </td>",
         "              </tr>",
         "            )}",
         "            {data && data.length === 0 && (",
         "              <tr>",
-        f'                <td colSpan={{{len(display_fields) + (1 if has_actions_col else 0)}}} style={{{{ padding: 32, textAlign: "center", color: "#64748b" }}}}>',
+        f'                <td colSpan={{{1 + len(display_fields) + (1 if has_actions_col else 0)}}} style={{{{ padding: 32, textAlign: "center", color: "#64748b" }}}}>',
         "                  {searchInput.trim() ? (",
         '                    <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 12 }}>',
         f"                      <div>No {plural} matching &ldquo;{{searchInput}}&rdquo;.</div>",
@@ -1400,9 +1497,21 @@ def _collection_screen_page(screen: Screen, entity: Entity, ir: ApplicationIR, o
     ])
 
     if has_subcollections:
-        lines.append('              <tr key={(item as any).id ?? idx} onClick={() => setSelectedId(selectedId === (item as any).id ? null : (item as any).id)} style={{ borderBottom: "1px solid #f1f5f9", cursor: "pointer", background: selectedId === (item as any).id ? "#eff6ff" : undefined }}>')
+        lines.append('              <tr key={(item as any).id ?? idx} onClick={() => setSelectedId(selectedId === (item as any).id ? null : (item as any).id)} style={{ borderBottom: "1px solid #f1f5f9", cursor: "pointer", background: selectedId === (item as any).id ? "#eff6ff" : (checkedIds.includes((item as any).id) ? "#f8fafc" : undefined) }}>')
     else:
-        lines.append('              <tr key={(item as any).id ?? idx} style={{ borderBottom: "1px solid #f1f5f9" }}>')
+        lines.append('              <tr key={(item as any).id ?? idx} style={{ borderBottom: "1px solid #f1f5f9", background: checkedIds.includes((item as any).id) ? "#f8fafc" : undefined }}>')
+
+    lines.extend([
+        '                <td style={{ padding: "12px 16px", textAlign: "center", width: 40 }} onClick={(e) => e.stopPropagation()}>',
+        '                  <input',
+        '                    type="checkbox"',
+        '                    aria-label={`Select ${(item as any).id ?? idx}`}',
+        '                    checked={checkedIds.includes((item as any).id)}',
+        '                    onChange={() => handleToggleRow((item as any).id)}',
+        '                    style={{ cursor: "pointer" }}',
+        '                  />',
+        '                </td>',
+    ])
 
     for f in display_fields:
         if f.type == FieldType.BOOL:
