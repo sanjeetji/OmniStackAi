@@ -1,6 +1,6 @@
 # Current Handoff
 
-Task ID: R-265
+Task ID: R-266
 Status: done
 Phase: BASIC/MVP — Founder Stage 0
 Branch: `main` (the only branch; the GitHub default)
@@ -12,32 +12,27 @@ Branch: `main` (the only branch; the GitHub default)
 - Commits use `sanjeetji <sk698166@gmail.com>` as author.
 - User permission is required prior to committing or pushing code.
 
-## Completed (R-265) — Subcollection Navigation & Master-Detail Views in Generated Screens
+## Completed (R-266) — Update/Edit Mode in Generated Next.js Forms & Collection Screen Edit Actions
 
-- **Subcollection Detection & Resolution (`codegen/nextjs.py`)**:
-  - Emits `SubcollectionInfo` dataclass and `_subcollections_for_parent(parent_name: str, ir: ApplicationIR) -> list[SubcollectionInfo]`.
-  - Discovers relations where `rel.target_entity == parent_name` and an `Op.LIST_BY` endpoint exists.
-  - Automatically derives hook name `useList<Children>By<Rel>`, child type name, relation name, and display fields.
-- **Collection Screen Master-Detail Layout (`_collection_screen_page`)**:
-  - Conditionally imports subcollection hooks and child entity types when subcollections exist on dedicated lines, preserving exact substring matches for parent imports.
-  - Declares `selectedId` state (`string | null`) and subcollection tab state for multi-subcollection parent entities.
-  - Wires subcollection hooks at the component top level scoped to `selectedId` (e.g. `const commentsSubcol = useListCommentsByPost(selectedId);`), taking advantage of safe idle behavior when `selectedId === null`.
-  - Enriches the master table with interactive row selection (`onClick={() => setSelectedId(selectedId === item.id ? null : item.id)}`), visual selection indicator, and an action column button ("View Details" / "Hide Details").
-  - Renders master-detail subcollection section below table when an item is selected:
-    - Selected item header banner with "Close Details" action.
-    - Tab bar for multi-subcollection entities with interactive switching and live total count badges (`{subcol.total}`).
-    - Child items list rendering loading state, error state with retry, empty state, and child item cards displaying key scalar attributes.
-    - Subcollection refresh action button.
-- **Dedicated Detail Screen Implementation (`_detail_screen_page`)**:
-  - Implements screen generation for screens with `intent == "detail"`.
-  - Fetches parent entity details by ID via `use<Entity>(id)`.
-  - Renders parent attribute grid, back navigation link, and nested child subcollections section.
-  - Updated `_screen_page` routing to dispatch `intent == "detail"` to `_detail_screen_page`.
-- **Safety & Diff Invariance**:
-  - Clean fallback safety: entities without subcollections (e.g. `rideshare-favourites`) emit zero subcollection code, state, or hooks.
-  - Preserved diff invariance: generated screens do not reference `ir.description`, preventing diff drift in `test_console_snapshot.py`.
+- **Dual-Mode Form Screen Generation (`_form_screen_page`)**:
+  - Detects `can_update = Op.UPDATE in ops` and `can_create = Op.CREATE in ops`.
+  - When `can_update` is enabled, imports `use<Entity>`, `useUpdate<Entity>`, and `useSearchParams` from `"next/navigation"`.
+  - Reads `editId = searchParams.get("id")` and sets `isEdit = Boolean(editId)`.
+  - Wires mutation hook `const { update, loading: updating, error: updateError } = useUpdate<Entity>();` and fetch hook `const { data: initialData, loading: fetchingInitial } = use<Entity>(editId);`.
+  - Declares `useEffect` to prefill `formData` when `initialData` arrives in edit mode.
+  - Submits via `update(editId, formData)` when in edit mode, falling back to `create(formData)` when in create mode.
+  - Dynamically switches header title (`{isEdit ? "Edit " + name : screen.name}`), submit button label (`{((submitting || updating) ? "Saving..." : (isEdit ? "Update " + name : "Save " + name))}`), initial loading banner, and success banner.
+- **Collection Screen Edit Actions (`_collection_screen_page`)**:
+  - When `Op.UPDATE in ops` and a form screen exists, renders an "Edit" action `<Link>` in the table row pointing to `/{form_screen.id}?id=${(item as any).id}`.
+  - Includes `onClick={(e) => e.stopPropagation()}` on the Edit link to avoid accidentally triggering row selection.
+- **Subcollection New Child Creation Link**:
+  - In subcollection master-detail view, renders `+ New <Child>` link (`/{child_form.id}?{foreign_key_param}=${selectedId}`) when a form screen exists for the child entity.
+- **Safety & Invariance**:
+  - Clean fallback safety: entities without `Op.UPDATE` (e.g. `minimal-blog` Post) emit zero update code, state, or hooks.
+  - Strict diff invariance: no references to `ir.description`, preventing diff drift.
 
 ## Preceded by:
+- **R-265**: Subcollection Navigation & Master-Detail Views in Generated Screens.
 - **R-254**: Structured JSON validation error bodies in Go (`{"errors": [...]}`).
 - **R-255**: Query parameter pagination (`limit` & `offset`) on LIST and LIST_BY in Go and FastAPI backends.
 - **R-256**: Wired PUT handlers (full-replace update) in Go and FastAPI backends.
@@ -52,7 +47,7 @@ Branch: `main` (the only branch; the GitHub default)
 
 ## Verification
 
-- `task verify` — pass (546 agent-engine tests; 19 new in `test_subcollection_screens.py`).
+- `task verify` — pass (558 agent-engine tests; 12 new in `test_form_update_screens.py`).
 - `task lint`, `task security:quick`, `task env:check` — all pass.
 - 0 local model calls, 0 cloud calls. Offline and deterministic.
 

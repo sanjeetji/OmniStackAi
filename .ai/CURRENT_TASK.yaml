@@ -1,26 +1,29 @@
 schema_version: 1
-task_id: R-265
-title: Subcollection Navigation & Master-Detail Views in Generated Screens
+task_id: R-266
+title: Update/Edit Mode in Generated Next.js Forms & Collection Screen Edit Actions
 status: done
 phase: BASIC/MVP
 founder_stage: 0
 branch: main
 goal: >-
-  Connect parent entity views (e.g. Post in minimal-blog) to nested child subcollections
-  (e.g. Comments) using already-generated useList<Entities>By<Rel>() hooks and API endpoints:
-  - Detect foreign-key relations for entities on collection/detail screens.
-  - For parent entities with subcollections, render an interactive nested detail view / tabbed
-    subcollection section displaying child items scoped to the parent ID (useList<Entities>By<Rel>(parentId)).
-  - Render subcollection total count badges and child item lists.
-  - Support dedicated detail screens (intent == 'detail') with parent attributes and subcollections.
-  - Ensure fallback safety for entities without subcollections.
+  Connect the generated Next.js frontend to the existing backend update handlers (PUT/PATCH)
+  and typed React mutation hooks (useUpdate<Entity> and use<Entity>(id)), closing the complete
+  full-stack CRUD editing cycle:
+  - In form screens (_form_screen_page), support dual-mode (Create & Edit) when Op.UPDATE is wired.
+  - Read edit ID from searchParams (?id=...), fetch existing item with use<Entity>(id), and prefill formData.
+  - Submit using update(editId, formData) in edit mode vs create(formData) in create mode.
+  - Dynamically adapt header, submit button, and success feedback.
+  - In collection screens (_collection_screen_page), render an "Edit" action link in the master table
+    pointing to the form screen with ?id=${item.id} when Op.UPDATE is wired and form screen exists.
+  - In subcollection master-detail view, render "+ New <Child>" link with parent foreign key prepopulated.
+  - Fallback safety for entities without Op.UPDATE (clean create-only form).
   - Maintain diff invariance across ir.description changes.
   - Additive, offline, 0 network, 0 external deps.
 source:
   tracker_sheet: Phase_Roadmap
   brief_sections: [43, 50, 74, 77, 91, 92]
   founder_note: >-
-    Founder approved R-265 (Subcollection Navigation & Master-Detail Views).
+    Founder approved R-266 (Update/Edit Mode in Generated Next.js Forms & Collection Screen Edit Actions).
 project_profile:
   repository: platform_modular_monorepo
   service: python_agent_engine
@@ -29,7 +32,7 @@ project_profile:
 complexity: L2
 expected_impact:
   - services/agent-engine/src/omnistackai_agent_engine/codegen/nextjs.py
-  - services/agent-engine/tests/test_subcollection_screens.py
+  - services/agent-engine/tests/test_form_update_screens.py
   - docs/CODEGEN.md, docs/PROGRESS.md
   - portable state, changelog, handoff, task doc, tracker evidence
 allowed_paths:
@@ -48,19 +51,19 @@ must_not_do:
   - break existing codegen contracts
   - connect to or run a database; make a network call; put a secret anywhere
 acceptance:
-  - Parent entities with wired Op.LIST_BY endpoints detect subcollection relations.
-  - Collection screen imports subcollection hooks and child types when subcollections exist.
-  - Collection screen manages selectedId state and row selection interaction in master table.
-  - Subcollection section renders child items scoped to selectedId (useList<Entities>By<Rel>(selectedId)).
-  - Subcollection count badge displays total count.
-  - Child item list renders loading, error, empty, and data states.
-  - Entities without subcollections remain clean with no subcollection code emitted.
-  - Multi-subcollection support with tabbed navigation.
-  - Detail screen intent renders parent details and subcollections.
+  - Form screen imports useUpdate<Entity>, use<Entity>, and useSearchParams when Op.UPDATE is wired.
+  - Form screen reads editId from searchParams and invokes use<Entity>(editId).
+  - Form screen synchronizes initialData into formData when loaded.
+  - Form screen branches submission to update(editId, formData) when in edit mode.
+  - Form screen renders dynamic labels (Edit vs New, Update vs Create, update success banner).
+  - Entities without Op.UPDATE remain clean create-only forms without update hooks.
+  - Collection screen renders "Edit" action link in master table when Op.UPDATE is wired.
+  - Subcollection master-detail view renders "+ New <Child>" link with parent FK query parameter.
+  - Child form screen pre-populates FK field from searchParams.
   - Diff invariance maintained across ir.description modifications.
   - task verify green; 0 network calls.
 required_gates:
-  - subcollection_screens_test
+  - form_update_screens_test
   - task_verify
 model_tool_trace:
   routing: local_only
@@ -68,7 +71,5 @@ model_tool_trace:
   cloud_calls: 0
   note: Deterministic codegen; no model call, no network, no DB. cloud_calls zero.
 blockers: []
-next_action: Task R-265 (Subcollection Navigation & Master-Detail Views in Generated Screens) is implemented, verified, and complete (546 tests pass). Ready for user commit decision.
-next_command: task verify
-
-
+next_action: Task R-266 verified and completed. Ready for commit review.
+next_command: git status

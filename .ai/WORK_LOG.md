@@ -1,5 +1,28 @@
 # Work Log
 
+## 2026-09-08 — R-266
+
+- Recorded contract in `.ai/CURRENT_TASK.yaml` and `.ai/tasks/R-266.md`.
+- `nextjs.py`:
+  - Updated `_collection_screen_page`:
+    - Computed `can_edit = (Op.UPDATE in ops) and (form_screen is not None)`.
+    - Rendered an "Edit" action `<Link>` in the master table pointing to `/{form_screen.id}?id=${(item as any).id}` with `onClick={(e) => e.stopPropagation()}` to avoid toggling table row selection.
+    - Updated subcollection master-detail view to render `+ New <Child>` link (`/{child_form.id}?{sub.id_param}=${selectedId}`) when complementary form screen exists for the child entity.
+  - Enhanced `_form_screen_page`:
+    - Computed `can_update = Op.UPDATE in ops` and `can_create = Op.CREATE in ops`.
+    - When `can_update` is True, imported `useUpdate<Entity>`, `use<Entity>`, and `useSearchParams` from `"next/navigation"`.
+    - Read `editId = searchParams.get("id")` and `isEdit = Boolean(editId)`.
+    - Wired `const { update, loading: updating, error: updateError } = useUpdateArticle();` and `const { data: initialData, loading: fetchingInitial } = use<Entity>(editId);`.
+    - Added `useEffect` to prefill `formData` when `initialData` changes in edit mode.
+    - Branched `handleSubmit` to call `await update(editId, formData)` when in edit mode vs `await create(formData)` when in create mode.
+    - Dynamically adapted headers (`{isEdit ? "Edit " + name : screen.name}`), submit button label (`{((submitting || updating) ? "Saving..." : (isEdit ? "Update " + name : "Save " + name))}`), loading indicator, and success alert banner.
+    - Maintained clean fallback safety for entities without `Op.UPDATE` (e.g. `minimal-blog` Post), emitting zero edit/update code.
+    - Preserved byte-for-byte diff invariance across `ir.description` modifications.
+  - Updated `_screen_page` routing to dispatch to form screens when `Op.CREATE in ops or Op.UPDATE in ops`.
+- Added `services/agent-engine/tests/test_form_update_screens.py` with 12 unit tests covering hook imports, search params, editId extraction, initialData prefill, update submission branching, dynamic labels, create-only fallback, collection screen edit action with stopPropagation, subcollection + New child link, diff invariance, and NextjsWebAdapter project generation.
+- `task verify` — 558 tests pass (12 new), 0 failures. `task lint`, `task security:quick` pass. 0 network calls, 0 cloud model calls.
+- Updated CURRENT_TASK.yaml, tasks/R-266.md, PROJECT_STATE.yaml, docs/CODEGEN.md, docs/PROGRESS.md.
+
 ## 2026-09-08 — R-265
 
 - Recorded contract in `.ai/CURRENT_TASK.yaml` and `.ai/tasks/R-265.md`.

@@ -1,13 +1,13 @@
 # Project State — OmniStackAI
-Last updated: 2026-09-08T20:38:00+05:30
+Last updated: 2026-09-08T21:05:00+05:30
 
 ## Current Phase
 Stage 0 (Founder Build Sequence, Brief Section 91) — BASIC/MVP
 
 ## Last Completed Task
-Tracker ID: R-265 — Subcollection Navigation & Master-Detail Views in Generated Screens (`apps/web/app/<screen>/page.tsx`) — DONE,
-`task verify` (546 agent-engine tests, 19 new in `test_subcollection_screens.py`) passing. Connects parent entity collection screens to nested child subcollections: `_subcollections_for_parent` identifies child relations with `Op.LIST_BY` endpoints; collection screens conditionally import subcollection hooks (`useList<Children>By<Rel>`) and child entity types (`import type { <Child> }`); manages `selectedId` state with table row click selection and "View Details" action buttons; renders master-detail subcollection section with live count badges (`{subcol.total}`), tabbed navigation for multi-subcollection parent entities, child item lists with key fields, loading/error/empty states, and refetch; dedicated detail screen generator (`_detail_screen_page`) for `intent == "detail"`; fallback safety for entities without subcollections (zero subcollection code emitted); diff-invariant with respect to `ir.description`.
-Preceded by R-254 (structured validation errors), R-255 (pagination limit/offset), R-256 (PUT handlers), R-257 (typed Next.js API client + CORS middleware), R-258 (query parameter sorting), R-259 (total count queries & headers), R-260 (OpenAPI 3.1 specification), R-261 (keyword search filtering), R-262 (React data-fetching & mutation hooks), R-263 (interactive screen generator), and R-264 (field-level validation & error feedback).
+Tracker ID: R-266 — Update/Edit Mode in Generated Next.js Forms & Collection Screen Edit Actions (`apps/web/app/<screen>/page.tsx`) — DONE,
+`task verify` (558 agent-engine tests, 12 new in `test_form_update_screens.py`) passing. Connects generated Next.js screens to existing backend update handlers (`PUT`/`PATCH`) and typed React mutation hooks (`useUpdate<Entity>` and `use<Entity>(id)`): form screen (`_form_screen_page`) operates in dual Create & Edit mode when `Op.UPDATE` is wired, reading `editId` from `searchParams.get("id")`, prefilling `formData` via `useEffect` on `initialData`, submitting via `update(editId, formData)` in edit mode vs `create(formData)` in create mode, with dynamic headers, buttons, loading indicator, and alert banners; collection screens (`_collection_screen_page`) render an "Edit" action link (`/{form_screen.id}?id=${item.id}`) with `e.stopPropagation()` in table rows when `Op.UPDATE` is wired; subcollection master-detail view renders `+ New <Child>` link with foreign key parameter; clean fallback safety for entities without `Op.UPDATE` (e.g. `minimal-blog` Post); diff-invariant with respect to `ir.description`.
+Preceded by R-254 through R-265.
 Additive, offline, 0 network, no DB connection.
 
 

@@ -516,3 +516,32 @@ Connects parent entity views (e.g. `Post` in `minimal-blog`) to nested child sub
 - **Strict Diff Invariance**:
   - Neither `_collection_screen_page` nor `_detail_screen_page` references `ir.description`, keeping generated screen files byte-identical across description modifications to ensure patch stability in `test_console_snapshot.py`.
 
+### Update/Edit Mode in Generated Next.js Forms & Collection Screen Edit Actions (R-266)
+
+Closes the full-stack CRUD editing cycle by connecting generated Next.js screens to existing backend update handlers (`PUT`/`PATCH`) and typed React mutation hooks (`useUpdate<Entity>` and `use<Entity>(id)`):
+
+- **Dual-Mode Form Screens (`_form_screen_page`)**:
+  - Automatically identifies whether an entity supports updates (`can_update = Op.UPDATE in ops`) and creation (`can_create = Op.CREATE in ops`).
+  - When `can_update` is enabled, imports `use<Entity>`, `useUpdate<Entity>`, and `useSearchParams` from `"next/navigation"`.
+  - Reads the entity identifier from URL search parameters: `const editId = searchParams.get("id"); const isEdit = Boolean(editId);`.
+  - Wires mutation hook `const { update, loading: updating, error: updateError } = useUpdate<Entity>();` and data fetching hook `const { data: initialData, loading: fetchingInitial } = use<Entity>(editId);`.
+  - Declares `useEffect` to synchronize fetched `initialData` into `formData` state when loaded in edit mode.
+  - Branches `handleSubmit` submission:
+    - In edit mode: calls `await update(editId, formData);` and displays update success message.
+    - In create mode: calls `await create(formData);`, resets form fields to initial values, and displays create success message.
+  - Dynamically adapts UI elements:
+    - Page Title: `{isEdit ? "Edit " + name : screen.name}`.
+    - Submit Button: `{((submitting || updating) ? "Saving..." : (isEdit ? "Update " + name : "Save " + name))}`.
+    - Success Banner: `{isEdit ? name + " updated successfully!" : name + " saved successfully!"}`.
+    - Loading Indicator: Displays dedicated "Loading <entity> details..." banner while fetching initial data in edit mode.
+- **Collection Screen Edit Actions (`_collection_screen_page`)**:
+  - When `Op.UPDATE` is wired and a complementary form screen exists, adds an "Edit" action `<Link>` in the table row pointing to `/{form_screen.id}?id=${(item as any).id}`.
+  - Attaches `onClick={(e) => e.stopPropagation()}` to prevent row selection toggling when clicking the Edit link.
+  - Preserves delete buttons alongside Edit links when `Op.DELETE` is also wired.
+- **Subcollection New Child Link**:
+  - Master-detail subcollection panel renders a `+ New <Child>` button pointing to `/{child_form.id}?{foreign_key}=${selectedId}` when a form screen exists for the child entity.
+- **Diff Invariance & Fallback Cleanliness**:
+  - Entities without `Op.UPDATE` (e.g. `minimal-blog` Post) emit zero update hooks, zero search parameter parsing, and pure create-only forms, maintaining byte-for-byte diff stability.
+  - Generated code contains no references to `ir.description`.
+
+
