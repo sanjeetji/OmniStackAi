@@ -736,3 +736,33 @@
 - Tracker: general row-insertion `tracker_edit_r251.py` (baseline `9315dcb`, LAST=258) — R-251 (Builder)
   at row 9; rows 1..259 contiguous, table `A4:M259`, sheet1 ranges to 259, XML well-formed. MVP total
   145 / Done 40. Implementation checkpoint `2060a21`. 0 local / 0 cloud model calls; no DB connection.
+
+## 2026-09-08 — R-252
+
+- Founder chose option 1 after R-251 ("Go with option 1 ... bcoz we do not want anything static or seeds
+  data in our platform"): wire go-playground enforcement in the generated Go create handlers rather than
+  render seed/indexes/validation in the static console. Made the R-251 Go `validate:"..."` tags actually
+  enforced at request time. (FastAPI already enforces at construction via Pydantic — Go was the gap.)
+- `field_validation.py`: added `VALIDATOR_REQUIRE = "github.com/go-playground/validator/v10 v10.22.1"`
+  and `go_validate_file()` — the `internal/handlers/validate.go` source (a shared `var validate =
+  validator.New()` + a `validateStruct(v any) (int, string)` helper returning
+  `http.StatusBadRequest`/`"validation_failed"` on a tag violation, `""` when valid). Mirrors
+  `auth_guard.GOLANG_JWT_REQUIRE` / `go_auth_file`. Both exported from `codegen/__init__.py`.
+- `backend_go.py`: compute `repo_entities`/`fk_by_entity` up front; new `_validated_entities(ir)` =
+  entity names with a non-empty `go_validate_tag`; `has_validation` = any wired CREATE whose entity is in
+  that set. `go.mod` gains `require VALIDATOR_REQUIRE` and `internal/handlers/validate.go` is emitted only
+  when `has_validation`. `_handlers_file_wired` takes `validated_entities`; the CREATE branch emits
+  `if status, msg := validateStruct(m); msg != "" { http.Error(w, msg, status); return }` between the
+  JSON decode block and the `store.Create…` call — but only for entities carrying rules.
+- Rule-free projects and both example IRs stay byte-identical to R-251 (no dep, no `validate.go`, no
+  call); the validator dependency lives only in the generated project's `go.mod` (no platform dep). No
+  Python/FastAPI change — Pydantic already enforced. Validation now holds at three layers: request model,
+  request handler, and the DB schema.
+- 5 new stdlib offline tests (350 total) in `test_go_validation_enforcement.py`: enforcement emitted for
+  a rules+create IR (go.mod require, validate.go contents), handler call ordering (decode < validateStruct
+  < store.Create), enforcement absent for a rule-free IR and for a rules-without-create IR (tags still
+  present), and both example IRs emit none. `task verify` + `security:quick` + `env:check` pass; no
+  existing test broke.
+- Tracker: general row-insertion `tracker_edit_r252.py` (baseline `842819e`, LAST=259) — R-252 (Builder)
+  at row 9, R-251 shifted to row 10; rows 1..260 contiguous, table `A4:M260`, sheet1 ranges to 260, XML
+  well-formed. Done 41. Implementation checkpoint `f4fc828`. 0 local / 0 cloud model calls; no DB.

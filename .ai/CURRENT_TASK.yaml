@@ -1,7 +1,7 @@
 schema_version: 1
 task_id: R-252
 title: Enforce go-playground validation in the generated Go create handlers
-status: in_progress
+status: done
 phase: BASIC/MVP
 founder_stage: 0
 branch: main
@@ -93,12 +93,22 @@ model_tool_trace:
   cloud_calls: 0
   note: Deterministic codegen; no model call, no network, no DB connection. cloud_calls zero.
 completion:
-  implementation_commit: pending
-  verified_at: null
-  verification: []
-  acceptance_results: []
+  implementation_commit: f4fc828
+  verified_at: "2026-09-08T00:00:00+05:30"
+  verification:
+    - "task verify — pass (350 agent-engine tests; 5 new in test_go_validation_enforcement.py)"
+    - "task security:quick — pass; task env:check — pass"
+    - "demo: rules+create IR -> go.mod require validator/v10 v10.22.1, internal/handlers/validate.go with validator.New()+validateStruct, create handler calls validateStruct(m) after decode / before store.Create; rule-free IR + examples emit none"
+  acceptance_results:
+    - "rules+create IR: go.mod requires github.com/go-playground/validator/v10 v10.22.1; validate.go emitted with var validate = validator.New() and validateStruct returning 400/validation_failed (tests)"
+    - "each such CREATE handler calls validateStruct(m) after the json decode block and before store.Create, 400-ing on failure; ordering asserted (tests)"
+    - "rule-free IR (fixture/minimal-blog/rideshare-favourites): no validator require, no validate.go, no validateStruct call — CREATE handler byte-identical (tests)"
+    - "rules-without-create IR: no validate.go/dep; models still carry the R-251 tags (tests)"
+    - "no platform Python dependency added; dep lives only in the generated go.mod; no DB connection, no network"
 blockers: []
 next_action: >-
-  Implement field_validation.go emitter + go.mod dep gating in backend_go, add tests, run gates, update
-  tracker + docs, two commits [R-252], push, verify origin/main == HEAD.
+  R-252 shipped: Go validation is now enforced (validator.Struct -> 400 on create) where a wired create
+  entity has rules. Next (offline-doable, founder to pick): PATCH/update handlers that validate + persist
+  partial updates; or surface validation failures with field-level detail (JSON error body) instead of a
+  flat "validation_failed". Cloud-gated preview/deploy and R-224 still need a network environment/keys.
 next_command: task agent-engine:test

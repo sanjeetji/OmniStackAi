@@ -5,14 +5,17 @@ Last updated: 2026-09-08T00:06:26+05:30 by Codex (GPT-5)
 Stage 0 (Founder Build Sequence, Brief Section 91) — BASIC/MVP
 
 ## Last Completed Task
-Tracker ID: R-251 — Field validation for Go + numeric min/max — DONE, `task verify` (345 agent-engine
-tests, 8 new) passing. Field validation now spans all three targets: numeric `min`/`max` rules render
-as `CHECK (col >= n)`/`CHECK (col <= n)` in the schema and `Field(ge=n, le=n)` in the FastAPI models,
-and the Go models carry a go-playground `validate:"max=,oneof=,gte=,lte="` struct tag on each field
-with rules (rule-free fields keep a plain `json` tag). Go tags are declarative — enforcement wiring
-(validator.Struct + go.mod dep) is a follow-up; the schema already enforces at the DB for both backends.
-Additive, offline, examples unchanged, no DB connection; implementation checkpoint `2060a21` (R-224
-Next.js console upgrade remains deferred — environment-blocked).
+Tracker ID: R-252 — Enforce go-playground validation in the generated Go create handlers — DONE,
+`task verify` (350 agent-engine tests, 5 new) passing. The R-251 Go `validate:"..."` struct tags are now
+enforced at request time: when a wired CREATE handler's entity carries validation rules, the Go backend
+declares `github.com/go-playground/validator/v10 v10.22.1` in its own `go.mod`, emits
+`internal/handlers/validate.go` (a shared `validator.New()` + a `validateStruct` helper returning
+`400`/`"validation_failed"` on a tag violation), and calls `validateStruct(m)` right after the JSON
+decode and before the `store.Create…` call, `400`-ing on failure. Rule-free projects and both example
+IRs emit none of it (byte-identical to R-251); FastAPI already enforced via Pydantic. Validation now
+holds at three layers — request model, request handler, and DB. The validator dependency lives only in
+the generated project; no platform Python dependency; no DB connection. Additive, offline; implementation
+checkpoint `f4fc828` (R-224 Next.js console upgrade remains deferred — environment-blocked).
 
 ## Workflow note
 Founder consolidated all work onto `main` (per-task branches deleted; `main` is the default). Continue
@@ -42,8 +45,8 @@ R-221 = cross-provider fallback (done); R-222 = platform console slice (done); R
 fallback wiring (done); R-224 = Next.js console upgrade (deferred — environment-blocked).
 
 ## Next Up (queued, in order)
-1. R-248 offline candidate — add explicit IR fixtures and emit honest `migrations/0002_seed.sql`
-2. R-248 alternative — deepen IR/adapters with indexes, unique constraints, and field validation
+1. R-253 offline candidate — validating PATCH/update handlers (validate + persist partial updates)
+2. R-253 alternative — field-level validation error bodies (JSON detail) instead of a flat message
 3. Run a Tier-0 preview end to end on a network-capable machine; then live-verify an authorized driver
 4. R-224 Next.js console upgrade and R-010 native iOS remain deferred under their existing gates
 (The full offline builder AND the Tier 0-3 runtime/deploy wiring are complete: one IR ->

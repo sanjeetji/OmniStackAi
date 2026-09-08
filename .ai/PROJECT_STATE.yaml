@@ -6,10 +6,10 @@ current_task: null
 current_status: ready_for_next_task_definition
 branch: main
 last_completed_task:
-  task_id: R-251
-  title: Field validation for Go + numeric min/max (all three schema/model targets)
-  implementation_commit: 2060a21
-  verification: task verify (345 agent-engine tests, 8 new); numeric min/max rules -> schema CHECK + Pydantic ge/le; go-playground validate:"..." struct tags on the Go models (declarative); rule-free fields unchanged; examples unaffected; no go.mod dep; no DB connection
+  task_id: R-252
+  title: Enforce go-playground validation in the generated Go create handlers
+  implementation_commit: f4fc828
+  verification: task verify (350 agent-engine tests, 5 new); when a wired CREATE entity has rules, the Go backend declares validator/v10 in its go.mod, emits internal/handlers/validate.go (validator.New()+validateStruct), and calls validateStruct(m) after decode / before store.Create (400 on failure); rule-free projects + examples emit none; FastAPI already enforces via Pydantic; dep lives only in the generated project; no platform dep; no DB connection
   result: pass
 control_plane_database: postgresql
 model_routing_mode: balanced
@@ -21,7 +21,7 @@ product_direction: >-
   framework adapter contract -> Next.js adapter -> Git service -> preview/sandbox (needs cloud env).
 id_note: >-
   Workbook backlog owns R-010..R-219. Founder-requested tasks use IDs after R-219: R-220..R-223 done,
-  R-224 Next.js deferred (env-blocked), R-225..R-247 done. Continue from R-248.
+  R-224 Next.js deferred (env-blocked), R-225..R-251 done. Continue from R-252.
 blockers: []
-next_action: R-251 is complete — field validation now spans all three targets (schema CHECK/VARCHAR, Pydantic Field(ge/le/max_length)+Literal, Go go-playground validate tags) incl. numeric min/max. Continue from R-252 (offline-doable): wire go-playground enforcement in the Go handlers (go.mod dep + validator.Struct on create), or render the R-248 seed / R-249 indexes / R-250-251 validation in the static-console builder proof. Cloud-gated preview/deploy and R-224 still require a network-capable environment/keys.
+next_action: R-252 is complete — the generated Go backend now enforces the R-251 validate tags at request time (validator.Struct -> 400 on create) whenever a wired create entity carries rules; the validator dep lives only in the generated go.mod, rule-free projects + examples are byte-identical, and FastAPI already enforced via Pydantic. Continue from R-253 (offline-doable, founder to pick): validating PATCH/update handlers, or field-level validation error bodies instead of a flat "validation_failed". Cloud-gated preview/deploy and R-224 still require a network-capable environment/keys.
 last_updated: "2026-09-08T00:06:26+05:30"
