@@ -1,22 +1,23 @@
 schema_version: 1
-task_id: R-262
-title: React Data-Fetching & Mutation Hooks Generator (apps/web/lib/hooks.ts)
+task_id: R-263
+title: Interactive Screen Component Generator with Real Data Binding (apps/web/app/<screen>/page.tsx)
 status: done
 phase: BASIC/MVP
 founder_stage: 0
 branch: main
 goal: >-
-  Generate strongly-typed, idiomatic React hooks (apps/web/lib/hooks.ts) in the generated Next.js web application:
-  - useList<Entities>: loading, error, data, total count, pagination math (page, pageSize, totalPages, setPage), sorting (sort, order, setSort), search (q, setSearch), refetch.
-  - use<Entity>(id): detail fetching hook with loading, error, refetch.
-  - useCreate<Entity>, useUpdate<Entity>, useDelete<Entity>: mutation hooks with loading, error, and async execution.
-  - useList<Entities>By<Rel>: subcollection list hook scoped by parent relation.
+  Upgrade generated Next.js screen pages (apps/web/app/<screen.id>/page.tsx) into real, interactive,
+  strongly-typed React client components:
+  - Connects screens to matching entities and generated lib/hooks.ts (useList, useCreate, etc.).
+  - Renders live collection views with search input, sort headers, loading/error states, and pagination controls.
+  - Renders creation form with schema-derived inputs, validation, and submission handlers.
+  - Uses "use client" directive and standard React without external styling/component libraries.
   - pure codegen change; no new platform dep, no install/build/run/DB.
 source:
   tracker_sheet: Phase_Roadmap
   brief_sections: [43, 50, 74, 77, 91, 92]
   founder_note: >-
-    Founder approved implementation plan for R-262.
+    Founder approved implementation plan for R-263.
 project_profile:
   repository: platform_modular_monorepo
   service: python_agent_engine
@@ -25,7 +26,7 @@ project_profile:
 complexity: L2
 expected_impact:
   - services/agent-engine/src/omnistackai_agent_engine/codegen/nextjs.py
-  - services/agent-engine/tests/test_nextjs_hooks.py
+  - services/agent-engine/tests/test_screen_generation.py
   - docs/CODEGEN.md, docs/PROGRESS.md
   - portable state, changelog, handoff, task doc, tracker evidence
 allowed_paths:
@@ -43,15 +44,14 @@ must_not_do:
   - break existing codegen contracts
   - connect to or run a database; make a network call; put a secret anywhere
 acceptance:
-  - NextjsWebAdapter emits apps/web/lib/hooks.ts with "use client" directive.
-  - useList<Entities> manages data, total, loading, error, page, pageSize, totalPages, setPage, setSearch, setSort, refetch.
-  - use<Entity>(id) fetches entity detail when id is provided.
-  - useCreate<Entity>, useUpdate<Entity>, useDelete<Entity> provide mutation triggers with loading and error states.
-  - useList<Entities>By<Rel> provides scoped subcollection data fetching.
-  - React imports use standard useState, useEffect, useCallback without external state libraries.
-  - task verify green; 0 network calls.
+  - Screen pages emit "use client" directive at top. (VERIFIED)
+  - Screen pages import and use appropriate hooks from ../lib/hooks. (VERIFIED)
+  - Collection screens render live search input bound to setSearch. (VERIFIED)
+  - Collection screens render pagination controls (Previous, Next, page indicator) bound to setPage. (VERIFIED)
+  - Form/editor screens render interactive creation form using useCreate hook. (VERIFIED)
+  - task verify green; 0 network calls (515 tests pass). (VERIFIED)
 required_gates:
-  - nextjs_hooks_test
+  - screen_generation_test
   - task_verify
 model_tool_trace:
   routing: local_only
@@ -59,5 +59,6 @@ model_tool_trace:
   cloud_calls: 0
   note: Deterministic codegen; no model call, no network, no DB. cloud_calls zero.
 blockers: []
-next_action: Implement _hooks_file in codegen/nextjs.py and write test_nextjs_hooks.py.
+next_action: Task R-263 completed and verified. Ready for next task or commit.
 next_command: task verify
+

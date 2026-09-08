@@ -1,5 +1,33 @@
 # Work Log
 
+## 2026-09-08 — R-263
+
+- Recorded contract in `.ai/CURRENT_TASK.yaml` and `.ai/tasks/R-263.md`.
+- `nextjs.py`:
+  - Implemented `_match_entity(screen: Screen, ir: ApplicationIR) -> Entity | None` using multi-token score matching across screen IDs, component tags, and actions.
+  - Implemented `_screen_intent(screen: Screen) -> str` classifying screens as `"collection"`, `"form"`, or `"generic"`.
+  - Implemented `_get_ops_by_entity(ir: ApplicationIR) -> dict[str, set[Op]]` mapping available operations to avoid generating broken imports.
+  - Implemented `_collection_screen_page`:
+    - Emits `"use client";` directive at top.
+    - Imports `useList<Entities>` (and `useDelete<Entity>` if `Op.DELETE` wired) from `../lib/hooks` and entity type from `../lib/types`.
+    - Live search input bound to `setSearch` and form submission.
+    - Sortable table headers bound to `setSort` with order indicators (`↓`/`↑`).
+    - Pagination controls (`Previous`, `Next`, `Page X of Y`) bound to `setPage`.
+    - Loading, error with retry button, and empty state cards.
+    - Header with role badge, overview link, and navigation to complementary form screen (`+ New <Entity>`).
+  - Implemented `_form_screen_page`:
+    - Emits `"use client";` directive at top.
+    - Imports `useCreate<Entity>` from `../lib/hooks` and entity type from `../lib/types`.
+    - Schema-derived inputs for each entity field: checkbox for `BOOL`, textarea for `TEXT`, number for `INT`/`FLOAT`, datetime-local for `DATETIME`, text for `STRING`.
+    - Required indicators (`*`) and HTML `required` attributes.
+    - Submission handling with `create(formData)`, success feedback banner, error capture banner, and reset/cancel navigation.
+  - Implemented `_fallback_screen_page` rendering clean role badge, component tags, actions, and navigation links.
+  - Preserved diff invariance by avoiding any reference to `ir.description` in generated screen pages.
+  - Exported public `render_screen_page(screen: Screen, ir: ApplicationIR) -> str` and added to `omnistackai_agent_engine.codegen`.
+- Created `services/agent-engine/tests/test_screen_generation.py` with 9 unit tests covering `"use client"`, collection screen data binding (search, pagination, sort, delete), form screen schema inputs and submission, fallback screens, full project generation, and diff invariance.
+- `task verify` — 515 tests pass (9 new), 0 failures. `task lint`, `task security:quick`, `task env:check` pass. 0 network calls, 0 cloud model calls.
+- Updated CURRENT_TASK.yaml, tasks/R-263.md, PROJECT_STATE.yaml, docs/CODEGEN.md, docs/PROGRESS.md.
+
 ## 2026-09-08 — R-262
 
 - Recorded contract in `.ai/CURRENT_TASK.yaml` and `.ai/tasks/R-262.md`.
