@@ -1,25 +1,27 @@
 schema_version: 1
-task_id: R-273
-title: Global Responsive Navigation Shell & Header Navbar in Generated Next.js Web App
+task_id: R-274
+title: Form Screen Post-Submit Contextual CTAs, Record Navigation & Cancel Actions
 status: done
 phase: BASIC/MVP
 founder_stage: 0
 branch: main
 goal: >-
-  Deliver a global, responsive navigation shell and header navbar for generated Next.js web applications (apps/web):
-  - Emit components/navbar.tsx as a client component ("use client") using Next.js usePathname for route detection.
-  - Render application branding (ir.name) with an avatar logo badge linking to the home overview page (/).
-  - Render navigation links for all collection and form screens in ir.screens, indicating the active route via dynamic path comparison.
-  - Render role badges for screens with non-default roles (e.g. admin, moderator).
-  - Render a prominent + New {Entity} / + Create quick-action CTA button on the right side of the navbar when a create form screen exists in the IR.
-  - Integrate <Navbar /> into app/layout.tsx above {children}, wrapping all pages in a cohesive layout with typography and background tokens.
+  Deliver post-submission contextual navigation and form cancellation actions in generated Next.js form screens (apps/web/app/<screen>/page.tsx):
+  - Capture newly created or updated record ID (lastSavedId) upon form submission in React state.
+  - Upgrade the success banner into an interactive action panel:
+    * Preserve exact success message ({isEdit ? "{name} updated successfully!" : "{name} saved successfully!"}).
+    * Render "View {name} &rarr;" link button navigating to /{detail_screen.id}?id=${lastSavedId || editId} when a detail screen exists for the entity.
+    * Render "&larr; Back to {plural}" link button navigating to /{list_screen.id} when a collection screen exists for the entity.
+    * Render "+ Create another {name}" action button in create mode resetting form state and success banner for rapid data entry.
+    * Render "&times;" dismiss button allowing manual closure of the success alert.
+  - Add a styled "Cancel" link button in the form card footer next to "Reset", navigating to /{list_screen.id} (or / if no list screen exists).
   - Maintain strict diff invariance across ir.description modifications.
   - Fully offline, 0 network, 0 external dependencies.
 source:
   tracker_sheet: Phase_Roadmap
   brief_sections: [43, 50, 74, 77, 91, 92]
   founder_note: >-
-    Founder approved implementation plan for Task R-273 (Global Responsive Navigation Shell & Header Navbar in Generated Next.js Web App).
+    Founder approved implementation plan for Task R-274 (Form Screen Post-Submit Contextual CTAs, Record Navigation & Cancel Actions).
 project_profile:
   repository: platform_modular_monorepo
   service: python_agent_engine
@@ -28,7 +30,7 @@ project_profile:
 complexity: L2
 expected_impact:
   - services/agent-engine/src/omnistackai_agent_engine/codegen/nextjs.py
-  - services/agent-engine/tests/test_navbar_navigation.py
+  - services/agent-engine/tests/test_form_navigation_ctas.py
   - docs/CODEGEN.md, docs/PROGRESS.md
   - portable state, changelog, handoff, task doc, tracker evidence
 allowed_paths:
@@ -47,25 +49,32 @@ must_not_do:
   - break existing codegen contracts
   - connect to or run a database; make a network call; put a secret anywhere
 acceptance:
-  - NextjsWebAdapter generates components/navbar.tsx in apps/web.
-  - app/layout.tsx imports and renders <Navbar /> above {children}.
-  - components/navbar.tsx has "use client"; at the top and imports usePathname from "next/navigation".
-  - Header renders brand name (ir.name) and logo badge linking to /.
-  - Header renders "Overview" navigation link pointing to /.
-  - Header renders navigation links for all collection and form screens with correct href (/{screen.id}).
-  - Detail screens (ScreenType.DETAIL) are excluded from horizontal top nav to keep navigation focused.
-  - Active navigation link is visually distinguished based on pathname.
-  - Non-default screen roles render a badge adjacent to the screen link.
-  - Renders a + {Entity} or + Create button linking to the first create form screen when available.
-  - Clean fallback when ir.screens is empty.
-  - Strict diff invariance across ir.description modifications.
+  - Form screen declares lastSavedId state (useState<string | null>(null)).
+  - Form submission captures created record ID (res.id) into setLastSavedId in create mode.
+  - Form submission sets setLastSavedId(editId) in edit mode.
+  - Success banner preserves exact text {isEdit ? "{name} updated successfully!" : "{name} saved successfully!"} (or {name} saved successfully!).
+  - Success banner renders "View {name}" link navigating to /{detail_screen.id}?id=${lastSavedId || editId} when a detail screen exists.
+  - Success banner renders "&larr; Back to {plural}" link navigating to /{list_screen.id} when a collection screen exists.
+  - Success banner renders "+ Create another {name}" action button in create mode.
+  - Success banner renders dismiss button calling setSuccess(false).
+  - Form footer renders "Cancel" link button navigating to /{list_screen.id} (or /).
+  - Reset button resets lastSavedId (setLastSavedId(null)).
+  - Strict diff invariance across ir.description changes.
   - Stage 0 verification (task verify), task lint, task security:quick, task doctor, and builder demos pass.
 evidence:
-  verify: "task verify: 663 tests passing in 0.994s"
-  tests: "test_navbar_navigation.py: 17/17 tests passing"
-  coverage: "17 test cases covering navbar generation, RootLayout import, usePathname route detection, active link styling, brand avatar, collection/form links, detail screen exclusion, role badges, quick create CTA button, empty screens fallback, diff invariance, and full monorepo generation"
+  verify: "task verify: 679 tests passing in 0.861s"
+  tests: "test_form_navigation_ctas.py: 16/16 tests passing; 679 total tests across all test files"
+  coverage: >-
+    16 test cases covering lastSavedId state declaration, create/update ID capture,
+    success banner message preservation, View record link (with/without detail screen),
+    Back to collection link, Create another button, dismiss button, Cancel button (list screen
+    and root fallback), Reset clearing lastSavedId, diff invariance, full project generation,
+    and create-only form screens.
+  lint: "task lint: Lint passed"
+  security: "task security:quick: Stage 0 secret-policy check passed"
+  demos: "task builder:demo -- minimal-blog and task builder:demo -- rideshare-favourites both passed"
 required_gates:
-  - navbar_navigation_test
+  - form_navigation_ctas_test
   - task_verify
   - task_lint
   - task_security_quick
@@ -75,5 +84,5 @@ model_tool_trace:
   cloud_calls: 0
   note: Deterministic codegen; no model call, no network, no DB. cloud_calls zero.
 blockers: []
-next_action: Commit and push Task R-272 changes upon user approval and proceed to next task
+next_action: Task R-274 complete. Ready to commit and push. Continue from R-275.
 next_command: task verify

@@ -729,6 +729,32 @@ Generates a unified, persistent application navigation header shell (`apps/web/c
   - 100% offline, zero external npm dependencies, pure React/Next.js client/server separation.
   - Strict diff invariance across `ir.description` changes.
 
+### Form Screen Post-Submit Contextual CTAs, Record Navigation & Cancel Actions (R-274)
+
+Upgrades generated Next.js form screens (`apps/web/app/<screen>/page.tsx`) with post-submission contextual navigation links and a Cancel action in the form footer:
+
+- **`lastSavedId` State & ID Capture**:
+  - `_form_screen_page` declares `const [lastSavedId, setLastSavedId] = useState<string | null>(null);`.
+  - Create branch (both create-only and dual create/update): `const res = await create(formData);` followed by `if (res && (res as any).id) { setLastSavedId(String((res as any).id)); }`.
+  - Update branch: `setLastSavedId(editId);` is called after `await update(editId, formData);`.
+- **Interactive Success Banner**:
+  - Success banner upgraded from a static `<div>` to an interactive action panel.
+  - Exact message text (`{isEdit ? "{name} updated successfully!" : "{name} saved successfully!"}`) is preserved in a `<span>` child, keeping existing test assertions invariant.
+  - Dismiss button (`&times;`) with `aria-label="Dismiss"` calls `setSuccess(false)`.
+  - Contextual "View {name} →" Next.js `Link` rendered to `/{detail_screen.id}?id=${lastSavedId || (isEdit ? editId : null)}` when a detail screen exists for the entity (guarded by id expression truthiness).
+  - "← Back to {plural}" Next.js `Link` rendered to `/{list_screen.id}` when a collection screen exists for the entity.
+  - "+ Create another {name}" action button (create mode only) calls `setSuccess(false); setLastSavedId(null);` for rapid sequential data entry.
+- **Form Footer Cancel Button**:
+  - A styled `Cancel` Next.js `Link` button is inserted before the Reset button in the form card footer.
+  - Links to `/{list_screen.id}` when a collection screen exists for the entity, or `/` as a safe fallback.
+  - Reset `onClick` is extended with `setLastSavedId(null);` to clear saved ID on reset.
+- **Detection Logic**:
+  - `detail_screen` and `list_screen` are detected from `ir.screens` using `_screen_intent(s)` and entity token matching (`_match_entity`).
+- **Quality & Offline Independence**:
+  - 100% offline, zero external npm dependencies, no new IR fields.
+  - Strict diff invariance across `ir.description` changes.
+
+
 
 
 

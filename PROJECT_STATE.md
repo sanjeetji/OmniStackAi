@@ -1,13 +1,13 @@
 # Project State — OmniStackAI
-Last updated: 2026-09-08T23:22:00+05:30
+Last updated: 2026-09-08T23:38:00+05:30
 
 ## Current Phase
 Stage 0 (Founder Build Sequence, Brief Section 91) — BASIC/MVP
 
 ## Last Completed Task
-Tracker ID: R-273 — Global Responsive Navigation Shell & Header Navbar in Generated Next.js Web App (`apps/web/components/navbar.tsx`, `apps/web/app/layout.tsx`) — DONE,
-`task verify` (663 agent-engine tests, 17 new in `test_navbar_navigation.py`) passing. Delivers a persistent, accessible application navigation shell: generates `components/navbar.tsx` as a client component utilizing Next.js `usePathname` for route detection; renders application branding (`ir.name`) with avatar logo badge and overview link (`/`); dynamically generates navigation links for all collection and form screens in `ir.screens`, applying active visual highlights (`#eff6ff` background, `#1d4ed8` text, `1px solid #bfdbfe` border); cleanly excludes parameter-dependent detail screens to keep top nav focused; renders role pill badges for non-public screens; renders prominent `+ New {Entity}` / `+ Create` quick-action CTA button on the right when create form screen exists; integrates `<Navbar />` into `app/layout.tsx` above `{children}` with global typography and background tokens; diff-invariant with respect to `ir.description`.
-Preceded by R-254 through R-272.
+Tracker ID: R-274 — Form Screen Post-Submit Contextual CTAs, Record Navigation & Cancel Actions — DONE,
+`task verify` (679 agent-engine tests, 16 new in `test_form_navigation_ctas.py`) passing. Delivers post-submission contextual navigation and cancellation actions in generated Next.js form screens: `_form_screen_page` declares `lastSavedId` state (`useState<string | null>(null)`); captures created record ID from `create(formData)` response (`res.id`) via `setLastSavedId`; captures `editId` into `setLastSavedId` in update branch; success banner upgraded to interactive action panel preserving exact message text in `<span>`; dismiss button (`&times;`) calling `setSuccess(false)`; "View {name} &rarr;" `Link` to `/{detail_screen.id}?id=${lastSavedId || editId}` rendered when detail screen exists; "&larr; Back to {plural}" `Link` to `/{list_screen.id}` rendered when list screen exists; "+ Create another {name}" button in create mode resetting form and banner state; `Cancel` `Link` button in form footer navigating to `/{list_screen.id}` (or `/` when no list screen); Reset clears `lastSavedId`; diff-invariant across `ir.description`.
+Preceded by R-225 through R-273.
 Additive, offline, 0 network, no DB connection.
 
 

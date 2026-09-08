@@ -1,6 +1,26 @@
 # Work Log
 
+## 2026-09-08 — R-274
+
+- Recorded contract in `.ai/CURRENT_TASK.yaml` and `.ai/tasks/R-274.md`.
+- `nextjs.py` (`_form_screen_page`):
+  - Detected `detail_screen` and `list_screen` for the entity in `ir.screens` using `_screen_intent`.
+  - Added `lastSavedId` state: `const [lastSavedId, setLastSavedId] = useState<string | null>(null);`.
+  - `handleSubmit` create branch: `const res = await create(formData);` + `if (res && (res as any).id) { setLastSavedId(String((res as any).id)); }`.
+  - `handleSubmit` update branch: `setLastSavedId(editId);` after `await update(editId, formData);`.
+  - Success banner upgraded to interactive action panel:
+    * Preserved exact message text wrapped in `<span>{msg_jsx}</span>` for existing test invariance.
+    * Dismiss button (`&times;`) with `aria-label="Dismiss"` calling `setSuccess(false)`.
+    * "View {name} &rarr;" `Link` to `/{detail_screen.id}?id=${lastSavedId || editId}` (guarded by id expression check), when `detail_screen` exists.
+    * "&larr; Back to {plural}" `Link` to `/{list_screen.id}`, when `list_screen` exists.
+    * "+ Create another {name}" button (in create mode) calling `setSuccess(false); setLastSavedId(null);`.
+  - Form footer: added `Cancel` `Link` button to `/{list_screen.id}` (or `/`); Reset `onClick` now includes `setLastSavedId(null);`.
+- Added `services/agent-engine/tests/test_form_navigation_ctas.py` with 16 comprehensive unit tests.
+- `task verify` — 679 tests pass (16 new), 0 failures. `task lint`, `task security:quick` pass. `builder:demo minimal-blog` and `builder:demo rideshare-favourites` pass. 0 network calls, 0 cloud model calls.
+- Updated CURRENT_TASK.yaml, tasks/R-274.md, PROJECT_STATE.yaml, PROJECT_STATE.md, CHANGELOG.md, docs/CODEGEN.md, docs/PROGRESS.md.
+
 ## 2026-09-08 — R-273
+
 
 - Recorded contract in `.ai/CURRENT_TASK.yaml` and `.ai/tasks/R-273.md`.
 - `nextjs.py`:
