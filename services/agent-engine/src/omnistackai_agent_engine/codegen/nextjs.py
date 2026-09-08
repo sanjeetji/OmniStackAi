@@ -2481,7 +2481,7 @@ def _form_screen_page(screen: Screen, entity: Entity, ir: ApplicationIR, ops: se
     return "\n".join(lines)
 
 
-def _detail_screen_page(screen: Screen, entity: Entity, ir: ApplicationIR, ops: set[Op]) -> str:
+def _detail_screen_page(screen: Screen, entity: Entity, ir: ApplicationIR, ops: set[Op]) -> str:  # noqa: PLR0912
     name = entity.name
     plural = name if name.endswith("s") else f"{name}s"
     page_name = f"{_pascal(screen.id)}Page"
@@ -2503,10 +2503,13 @@ def _detail_screen_page(screen: Screen, entity: Entity, ir: ApplicationIR, ops: 
 
     can_edit = (Op.UPDATE in ops) and (form_screen is not None)
     can_delete = Op.DELETE in ops
+    can_list = Op.LIST in ops
 
     hooks_to_import: list[str] = []
     if Op.GET in ops:
         hooks_to_import.append(f"use{name}")
+    if can_list:
+        hooks_to_import.append(f"useList{plural}")
     if can_delete:
         hooks_to_import.append(f"useDelete{name}")
 
@@ -2554,7 +2557,33 @@ def _detail_screen_page(screen: Screen, entity: Entity, ir: ApplicationIR, ops: 
         "      setIdInput(queryId);",
         "    }",
         "  }, [queryId]);",
+        "",
+        "  const handleSelectId = (newId: string | null) => {",
+        "    setSelectedId(newId);",
+        '    setIdInput(newId ?? "");',
+        '    if (typeof window !== "undefined") {',
+        "      const url = new URL(window.location.href);",
+        "      if (newId) {",
+        '        url.searchParams.set("id", newId);',
+        "      } else {",
+        '        url.searchParams.delete("id");',
+        "      }",
+        '      window.history.replaceState({}, "", url.toString());',
+        "    }",
+        "  };",
     ])
+
+    if can_list:
+        lines.extend([
+            f"  const {{ data: listItems, loading: loadingList }} = useList{plural}();",
+            "  const currentIndex = (listItems && selectedId)",
+            "    ? listItems.findIndex((x: any) => String(x.id) === String(selectedId))",
+            "    : -1;",
+            "  const prevItem = (listItems && currentIndex > 0) ? listItems[currentIndex - 1] : null;",
+            "  const nextItem = (listItems && currentIndex >= 0 && currentIndex < listItems.length - 1)",
+            "    ? listItems[currentIndex + 1]",
+            "    : null;",
+        ])
 
     if Op.GET in ops:
         lines.append(f"  const {{ data: item, loading, error, refetch }} = use{name}(selectedId);")
@@ -2569,6 +2598,11 @@ def _detail_screen_page(screen: Screen, entity: Entity, ir: ApplicationIR, ops: 
             "        await removeMain(selectedId);",
             "        setSelectedId(null);",
             '        setIdInput("");',
+            '        if (typeof window !== "undefined") {',
+            "          const url = new URL(window.location.href);",
+            '          url.searchParams.delete("id");',
+            '          window.history.replaceState({}, "", url.toString());',
+            "        }",
             "      } catch {",
             "        // deletion error captured in hook state",
             "      }",
@@ -2666,23 +2700,81 @@ def _detail_screen_page(screen: Screen, entity: Entity, ir: ApplicationIR, ops: 
         "        </div>",
         "      </header>",
         "",
-        '      <section style={{ marginBottom: 24, padding: 16, background: "#fff", border: "1px solid #e2e8f0", borderRadius: 8, display: "flex", gap: 8, alignItems: "center" }}>',
+        '      <section style={{ marginBottom: 24, padding: 16, background: "#fff", border: "1px solid #e2e8f0", borderRadius: 8, display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>',
         "        <input",
         '          type="text"',
         "          value={idInput}",
         "          onChange={(e) => setIdInput(e.target.value)}",
         f'          placeholder="Enter {name} ID..."',
-        '          style={{ flex: 1, padding: "8px 12px", border: "1px solid #cbd5e1", borderRadius: 6, fontSize: 14, outline: "none" }}',
+        '          style={{ flex: 1, minWidth: 180, padding: "8px 12px", border: "1px solid #cbd5e1", borderRadius: 6, fontSize: 14, outline: "none" }}',
         "        />",
         "        <button",
-        "          onClick={() => setSelectedId(idInput.trim() || null)}",
+        "          onClick={() => handleSelectId(idInput.trim() || null)}",
         '          style={{ padding: "8px 16px", background: "#2563eb", color: "#fff", border: "none", borderRadius: 6, fontSize: 14, fontWeight: 500, cursor: "pointer" }}',
         "        >",
         f"          Load {name}",
         "        </button>",
+    ])
+
+    if can_list:
+        lines.extend([
+            '        <span style={{ color: "#94a3b8", fontSize: 13 }}>or</span>',
+            "        <select",
+            f'          aria-label="Select {name}"',
+            '          value={selectedId ?? ""}',
+            "          onChange={(e) => handleSelectId(e.target.value || null)}",
+            '          style={{ padding: "8px 12px", border: "1px solid #cbd5e1", borderRadius: 6, fontSize: 14, background: "#fff", color: "#334155", outline: "none", cursor: "pointer", maxWidth: 220 }}',
+            "        >",
+            f'          <option value="">-- Choose {name} --</option>',
+            "          {listItems?.map((it: any) => (",
+            '            <option key={it.id} value={it.id}>',
+            f"              {{String((it as any).{best_title_f} ?? it.id)}}",
+            "            </option>",
+            "          ))}",
+            "        </select>",
+        ])
+
+    lines.extend([
+        "        {selectedId && (",
+        "          <button",
+        '            type="button"',
+        "            onClick={() => handleSelectId(null)}",
+        '            style={{ padding: "8px 12px", border: "1px solid #cbd5e1", background: "#f8fafc", color: "#64748b", borderRadius: 6, fontSize: 13, cursor: "pointer" }}',
+        "          >",
+        "            Clear",
+        "          </button>",
+        "        )}",
         "      </section>",
         "",
     ])
+
+    if can_list:
+        lines.extend([
+            "      {!selectedId && (",
+            '        <div style={{ background: "#fff", border: "1px solid #e2e8f0", borderRadius: 8, padding: 24, textAlign: "center", boxShadow: "0 1px 3px rgba(0,0,0,0.05)", marginBottom: 24 }}>',
+            f'          <p style={{{{ margin: "0 0 16px 0", color: "#64748b", fontSize: 14 }}}}>Select a {name} above or pick from recent records:</p>',
+            f'          {{loadingList && <p style={{{{ color: "#94a3b8", fontSize: 13 }}}}>Loading {plural}...</p>}}',
+            "          {listItems && listItems.length > 0 ? (",
+            '            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(220px, 1fr))", gap: 12, textAlign: "left" }}>',
+            "              {listItems.slice(0, 6).map((rec: any) => (",
+            "                <button",
+            "                  key={rec.id}",
+            '                  type="button"',
+            "                  onClick={() => handleSelectId(rec.id)}",
+            '                  style={{ padding: "12px 14px", background: "#f8fafc", border: "1px solid #e2e8f0", borderRadius: 6, cursor: "pointer", display: "flex", flexDirection: "column", gap: 4, textAlign: "left" }}',
+            "                >",
+            f'                  <span style={{{{ fontWeight: 600, fontSize: 14, color: "#1e293b", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}}}>{{String((rec as any).{best_title_f} ?? rec.id)}}</span>',
+            '                  <span style={{ fontSize: 12, color: "#64748b" }}>ID: {String(rec.id).slice(0, 8)}...</span>',
+            "                </button>",
+            "              ))}",
+            "            </div>",
+            "          ) : (",
+            f'            !loadingList && <p style={{{{ margin: 0, color: "#94a3b8", fontSize: 13 }}}}>No {plural} found.</p>',
+            "          )}",
+            "        </div>",
+            "      )}",
+            "",
+        ])
 
     if Op.GET in ops:
         lines.extend([
@@ -2701,6 +2793,33 @@ def _detail_screen_page(screen: Screen, entity: Entity, ir: ApplicationIR, ops: 
             f"              {{String((item as any).{best_title_f} ?? (item as any).id)}}",
             "            </h2>",
             '            <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>',
+        ])
+
+        if can_list:
+            lines.extend([
+                '              <div style={{ display: "flex", gap: 4, alignItems: "center", marginRight: 4 }}>',
+                "                <button",
+                '                  type="button"',
+                "                  onClick={() => prevItem && handleSelectId(prevItem.id)}",
+                "                  disabled={!prevItem}",
+                f'                  title={{prevItem ? `Previous: ${{String((prevItem as any).{best_title_f} ?? prevItem.id)}}` : "No previous record"}}',
+                '                  style={{ padding: "6px 10px", border: "1px solid #cbd5e1", background: "#fff", color: prevItem ? "#334155" : "#94a3b8", borderRadius: 6, fontSize: 13, cursor: prevItem ? "pointer" : "default" }}',
+                "                >",
+                "                  &larr; Prev",
+                "                </button>",
+                "                <button",
+                '                  type="button"',
+                "                  onClick={() => nextItem && handleSelectId(nextItem.id)}",
+                "                  disabled={!nextItem}",
+                f'                  title={{nextItem ? `Next: ${{String((nextItem as any).{best_title_f} ?? nextItem.id)}}` : "No next record"}}',
+                '                  style={{ padding: "6px 10px", border: "1px solid #cbd5e1", background: "#fff", color: nextItem ? "#334155" : "#94a3b8", borderRadius: 6, fontSize: 13, cursor: nextItem ? "pointer" : "default" }}',
+                "                >",
+                "                  Next &rarr;",
+                "                </button>",
+                "              </div>",
+            ])
+
+        lines.extend([
             "              <button",
             '                type="button"',
             "                onClick={handleExportJson}",
