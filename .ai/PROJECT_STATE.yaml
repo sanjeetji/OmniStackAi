@@ -2,13 +2,13 @@ schema_version: 1
 project: OmniStackAI
 phase: BASIC/MVP
 founder_stage: 0
-current_task: R-266
+current_task: R-267
 current_status: done
 branch: main
 last_completed_task:
-  task_id: R-266
-  title: Update/Edit Mode in Generated Next.js Forms & Collection Screen Edit Actions
-  verification: task verify (558 agent-engine tests, 12 new in test_form_update_screens.py); form screen imports use<Entity>, useUpdate<Entity>, useSearchParams when Op.UPDATE wired; reads editId and computes isEdit; pre-populates formData via useEffect on initialData; branches submit to update(editId, formData) in edit mode vs create(formData) in create mode; dynamic header, submit button, and success banners; collection screen renders Edit link with stopPropagation; subcollection view renders + New <Child> link; fallback safety for entities without Op.UPDATE; diff-invariant across ir.description; 0 network; no DB
+  task_id: R-267
+  title: Foreign-Key Relation Selectors & Parent Auto-Population in Generated Next.js Forms
+  verification: task verify (570 agent-engine tests, 12 new in test_form_relation_screens.py); child form screen imports and calls useList<ParentPlural> when MANY_TO_ONE relation exists with Op.LIST; foreign key fields render as accessible <select> dropdowns showing parent title/name; searchParams pre-populates foreign keys supporting parameter aliases (e.g. article_id, articleId, article); contextual parent linkage badge displayed; client-side required validation and fieldErrors display; independent entities omit relation list hooks and render clean inputs; diff-invariant across ir.description; task lint and task security:quick green; 0 network; no DB
   result: pass
 control_plane_database: postgresql
 model_routing_mode: balanced
@@ -20,10 +20,10 @@ product_direction: >-
   framework adapter contract -> Next.js adapter -> Git service -> preview/sandbox (needs cloud env).
 id_note: >-
   Workbook backlog owns R-010..R-219. Founder-requested tasks use IDs after R-219: R-220..R-223 done,
-  R-224 Next.js deferred (env-blocked), R-225..R-266 done. Continue from R-267.
+  R-224 Next.js deferred (env-blocked), R-225..R-267 done. Continue from R-268.
 blockers: []
-next_action: Task R-266 (Update/Edit Mode in Generated Next.js Forms & Collection Screen Edit Actions) is implemented, verified, and complete (558 tests pass). Ready for user commit decision.
-last_updated: "2026-09-08T21:05:00+05:30"
+next_action: Task R-267 (Foreign-Key Relation Selectors & Parent Auto-Population in Generated Next.js Forms) is implemented, verified, and complete (570 tests pass). Ready for user commit decision.
+last_updated: "2026-09-08T21:30:00+05:30"
 
 
 

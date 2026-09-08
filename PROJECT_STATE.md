@@ -1,13 +1,13 @@
 # Project State — OmniStackAI
-Last updated: 2026-09-08T21:05:00+05:30
+Last updated: 2026-09-08T21:30:00+05:30
 
 ## Current Phase
 Stage 0 (Founder Build Sequence, Brief Section 91) — BASIC/MVP
 
 ## Last Completed Task
-Tracker ID: R-266 — Update/Edit Mode in Generated Next.js Forms & Collection Screen Edit Actions (`apps/web/app/<screen>/page.tsx`) — DONE,
-`task verify` (558 agent-engine tests, 12 new in `test_form_update_screens.py`) passing. Connects generated Next.js screens to existing backend update handlers (`PUT`/`PATCH`) and typed React mutation hooks (`useUpdate<Entity>` and `use<Entity>(id)`): form screen (`_form_screen_page`) operates in dual Create & Edit mode when `Op.UPDATE` is wired, reading `editId` from `searchParams.get("id")`, prefilling `formData` via `useEffect` on `initialData`, submitting via `update(editId, formData)` in edit mode vs `create(formData)` in create mode, with dynamic headers, buttons, loading indicator, and alert banners; collection screens (`_collection_screen_page`) render an "Edit" action link (`/{form_screen.id}?id=${item.id}`) with `e.stopPropagation()` in table rows when `Op.UPDATE` is wired; subcollection master-detail view renders `+ New <Child>` link with foreign key parameter; clean fallback safety for entities without `Op.UPDATE` (e.g. `minimal-blog` Post); diff-invariant with respect to `ir.description`.
-Preceded by R-254 through R-265.
+Tracker ID: R-267 — Foreign-Key Relation Selectors & Parent Auto-Population in Generated Next.js Forms (`apps/web/app/<screen>/page.tsx`) — DONE,
+`task verify` (570 agent-engine tests, 12 new in `test_form_relation_screens.py`) passing. Replaces raw foreign key text inputs with typed parent relation selectors (`<select>` dropdowns) and automatic query parameter pre-population in generated Next.js forms: detects `RelationKind.MANY_TO_ONE` relations and foreign key fields on child entities; imports and wires `useList<ParentPlural>()` when parent has `Op.LIST`; replaces raw text inputs with accessible `<select>` dropdowns displaying parent title/name, loading state, and required HTML5/ARIA validation; displays contextual parent linkage badge (`&bull; Selected <Parent> linked`) when foreign key is selected; pre-populates foreign keys from `searchParams` supporting parameter aliases (`<field>`, `<rel>_id`, `<rel>Id`, `<rel>`); validates required foreign key fields client-side; clean fallback safety for entities without relations (e.g. `minimal-blog` Post); diff-invariant with respect to `ir.description`.
+Preceded by R-254 through R-266.
 Additive, offline, 0 network, no DB connection.
 
 

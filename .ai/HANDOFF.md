@@ -1,6 +1,6 @@
 # Current Handoff
 
-Task ID: R-266
+Task ID: R-267
 Status: done
 Phase: BASIC/MVP — Founder Stage 0
 Branch: `main` (the only branch; the GitHub default)
@@ -12,26 +12,32 @@ Branch: `main` (the only branch; the GitHub default)
 - Commits use `sanjeetji <sk698166@gmail.com>` as author.
 - User permission is required prior to committing or pushing code.
 
-## Completed (R-266) — Update/Edit Mode in Generated Next.js Forms & Collection Screen Edit Actions
+## Completed (R-267) — Foreign-Key Relation Selectors & Parent Auto-Population in Generated Next.js Forms
 
-- **Dual-Mode Form Screen Generation (`_form_screen_page`)**:
-  - Detects `can_update = Op.UPDATE in ops` and `can_create = Op.CREATE in ops`.
-  - When `can_update` is enabled, imports `use<Entity>`, `useUpdate<Entity>`, and `useSearchParams` from `"next/navigation"`.
-  - Reads `editId = searchParams.get("id")` and sets `isEdit = Boolean(editId)`.
-  - Wires mutation hook `const { update, loading: updating, error: updateError } = useUpdate<Entity>();` and fetch hook `const { data: initialData, loading: fetchingInitial } = use<Entity>(editId);`.
-  - Declares `useEffect` to prefill `formData` when `initialData` arrives in edit mode.
-  - Submits via `update(editId, formData)` when in edit mode, falling back to `create(formData)` when in create mode.
-  - Dynamically switches header title (`{isEdit ? "Edit " + name : screen.name}`), submit button label (`{((submitting || updating) ? "Saving..." : (isEdit ? "Update " + name : "Save " + name))}`), initial loading banner, and success banner.
-- **Collection Screen Edit Actions (`_collection_screen_page`)**:
-  - When `Op.UPDATE in ops` and a form screen exists, renders an "Edit" action `<Link>` in the table row pointing to `/{form_screen.id}?id=${(item as any).id}`.
-  - Includes `onClick={(e) => e.stopPropagation()}` on the Edit link to avoid accidentally triggering row selection.
-- **Subcollection New Child Creation Link**:
-  - In subcollection master-detail view, renders `+ New <Child>` link (`/{child_form.id}?{foreign_key_param}=${selectedId}`) when a form screen exists for the child entity.
+- **Foreign-Key Relation Detection (`_parent_relations_for_entity`)**:
+  - Automatically identifies `RelationKind.MANY_TO_ONE` relations and foreign key fields on child entities.
+  - Matches parent entity in `ir.entities` and checks for `Op.LIST` support.
+  - Resolves hook name (`useList<ParentPlural>`), primary display field (`title`/`name`/`id`), and human-friendly label.
+- **Parent List Hook Integration**:
+  - Automatically imports `useList<ParentPlural>` from `"../lib/hooks"`.
+  - Wires hooks at component top level (`const <parents>List = useList<Parents>();`).
+- **Accessible `<select>` Dropdown Selectors**:
+  - Replaces raw text inputs for foreign key fields with accessible `<select>` dropdowns.
+  - Renders loading placeholder (`Loading <parents>...` vs `Select <parent>...`).
+  - Maps parent items to `<option>` tags displaying parent primary title/name.
+  - Displays contextual parent linkage badge (`&bull; Selected <Parent> linked`) when an item is selected.
+  - Integrated with `fieldErrors` display and `aria-invalid` attribute.
+- **Parent Auto-Population via Query Parameters**:
+  - Detects foreign key query parameters on form mount via `searchParams`, supporting aliases (`<field>`, `<rel>_id`, `<rel>Id`, `<rel>`).
+  - Automatically sets `formData[fk]` when navigating from parent master-detail views (`+ New <Child>` links).
+- **Client-Side Validation**:
+  - Validates required foreign key fields in `handleSubmit`, reporting `{field} is required` when unselected.
 - **Safety & Invariance**:
-  - Clean fallback safety: entities without `Op.UPDATE` (e.g. `minimal-blog` Post) emit zero update code, state, or hooks.
-  - Strict diff invariance: no references to `ir.description`, preventing diff drift.
+  - Independent entities without relations (e.g. `minimal-blog` Post) omit relation list hooks and dropdowns.
+  - Strict diff invariance: zero references to `ir.description`, preventing diff drift.
 
 ## Preceded by:
+- **R-266**: Update/Edit Mode in Generated Next.js Forms & Collection Screen Edit Actions.
 - **R-265**: Subcollection Navigation & Master-Detail Views in Generated Screens.
 - **R-254**: Structured JSON validation error bodies in Go (`{"errors": [...]}`).
 - **R-255**: Query parameter pagination (`limit` & `offset`) on LIST and LIST_BY in Go and FastAPI backends.
@@ -47,7 +53,7 @@ Branch: `main` (the only branch; the GitHub default)
 
 ## Verification
 
-- `task verify` — pass (558 agent-engine tests; 12 new in `test_form_update_screens.py`).
+- `task verify` — pass (570 agent-engine tests; 12 new in `test_form_relation_screens.py`).
 - `task lint`, `task security:quick`, `task env:check` — all pass.
 - 0 local model calls, 0 cloud calls. Offline and deterministic.
 

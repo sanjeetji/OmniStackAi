@@ -1,5 +1,32 @@
 # Work Log
 
+## 2026-09-08 — R-267
+
+- Recorded contract in `.ai/CURRENT_TASK.yaml` and `.ai/tasks/R-267.md`.
+- `nextjs.py`:
+  - Imported `RelationKind` from `..application_ir`.
+  - Added `_snake(value: str) -> str` string conversion helper.
+  - Added `ParentRelationInfo` dataclass and `_parent_relations_for_entity(entity: Entity, ir: ApplicationIR) -> list[ParentRelationInfo]` helper:
+    - Detects `RelationKind.MANY_TO_ONE` relations and fields ending in `_id` on child entities where the parent entity has `Op.LIST`.
+    - Resolves parent entity, pluralized name, hook name (`useList<ParentPlural>`), primary display field (`title`/`name`/`id`), and display label.
+  - Enhanced `_form_screen_page`:
+    - Collects parent relations via `_parent_relations_for_entity(entity, ir)` and maps them by `field_name`.
+    - Appends any missing foreign key fields from parent relations to `editable_fields`.
+    - Automatically imports parent list hooks (`useList<ParentPlural>`) from `"../lib/hooks"`.
+    - Wires parent list hooks at component top level (`const <parents>List = useList<Parents>();`).
+    - Enriches `searchParams` prefilling effect with alias resolution (`<field>`, `<relation>_id`, `<relation>Id`, `<relation>`), ensuring child forms opened from `+ New <Child>` links pre-populate the parent foreign key in `formData`.
+    - Enhances `handleSubmit` client-side error checking to validate required UUID / relation fields, displaying field-level errors when unselected.
+    - Replaces raw text inputs for foreign key fields with accessible `<select>` dropdowns:
+      - Default option showing loading state: `<option value="">{<parents>List.loading ? "Loading <parents>..." : "Select <parent>..."}</option>`.
+      - Mapped options from parent list items displaying primary title/name: `<option key={item.id} value={item.id}>{String(item.title ?? item.name ?? item.id)}</option>`.
+      - Visual parent linkage badge displayed when foreign key is selected: `&bull; Selected <Parent> linked`.
+      - Integrated with `fieldErrors` display and `aria-invalid` attribute.
+    - Preserved fallback safety: independent entities without relations (e.g. `minimal-blog` Post) omit relation list hooks, dropdowns, and badges.
+    - Preserved byte-for-byte diff invariance across `ir.description` modifications.
+- Added `services/agent-engine/tests/test_form_relation_screens.py` with 12 unit tests covering helper detection, independent entity omission, hook import and invocation, select dropdown rendering, visual badge display, searchParams alias prefill, client-side required validation, minimal-blog clean fallback, diff invariance, and project generation.
+- `task verify` — 570 tests pass (12 new), 0 failures. `task lint`, `task security:quick` pass. 0 network calls, 0 cloud model calls.
+- Updated CURRENT_TASK.yaml, tasks/R-267.md, PROJECT_STATE.yaml, docs/CODEGEN.md, docs/PROGRESS.md.
+
 ## 2026-09-08 — R-266
 
 - Recorded contract in `.ai/CURRENT_TASK.yaml` and `.ai/tasks/R-266.md`.

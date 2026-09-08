@@ -544,4 +544,31 @@ Closes the full-stack CRUD editing cycle by connecting generated Next.js screens
   - Entities without `Op.UPDATE` (e.g. `minimal-blog` Post) emit zero update hooks, zero search parameter parsing, and pure create-only forms, maintaining byte-for-byte diff stability.
   - Generated code contains no references to `ir.description`.
 
+### Foreign-Key Relation Selectors & Parent Auto-Population in Generated Next.js Forms (R-267)
+
+Eliminates manual UUID copy-pasting and closes the parent-child navigation loop in generated Next.js form screens (`_form_screen_page`):
+
+- **Foreign-Key Relation Detection (`_parent_relations_for_entity`)**:
+  - Scans `entity.relations` for `RelationKind.MANY_TO_ONE` target relations and child fields ending in `_id`.
+  - Matches the parent entity in `ir.entities` and checks if it supports `Op.LIST`.
+  - Resolves parent entity metadata: pluralized name, hook name (`useList<ParentPlural>`), primary display field (`title`/`name`/`id`), and display label.
+  - Appends any missing foreign key fields from parent relations to `editable_fields`.
+- **Parent List Hook Integration**:
+  - Automatically imports unique parent list hooks (`useList<ParentPlural>`) from `"../lib/hooks"`.
+  - Wires parent list hooks at component top level: `const <parents>List = useList<Parents>();`.
+- **Accessible `<select>` Dropdown Selectors**:
+  - Replaces raw text inputs for foreign key fields with accessible `<select>` dropdowns.
+  - Displays dynamic placeholder indicating loading state: `{<parents>List.loading ? "Loading <parents>..." : "Select <parent>..."}`.
+  - Populates `<option>` tags from `(<parents>List.data || [])` showing parent primary display field (`{String(item.title ?? item.name ?? item.id)}`).
+  - Displays visual parent link badge when a parent is selected: `&bull; Selected <Parent> linked`.
+  - Wires client-side required validation and per-field error messages (`fieldErrors[fk_field]`) with `aria-invalid` styling.
+- **URL Query Parameter Pre-Population**:
+  - Automatically reads URL query parameters via `useSearchParams` on form mount.
+  - Resolves parameter aliases: `<field_name>`, `<relation>_id`, `<relation>Id`, `<relation>`.
+  - Automatically pre-populates `formData[fk]` when navigating from parent master-detail views (`+ New <Child>` links).
+- **Diff Invariance & Fallback Cleanliness**:
+  - Independent entities without relations (e.g. `minimal-blog` Post) emit zero relation hooks, dropdowns, or badges.
+  - Generated screen code contains no references to `ir.description`, preserving snapshot diff stability.
+
+
 
