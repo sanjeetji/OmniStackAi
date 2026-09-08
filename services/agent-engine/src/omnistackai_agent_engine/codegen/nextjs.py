@@ -7,10 +7,11 @@ overview page. Pure and deterministic — nothing is installed, built, run, or w
 
 from __future__ import annotations
 
+from dataclasses import dataclass
 import json
 import re
 
-from ..application_ir import ApplicationIR, ApiEndpoint, Entity, FieldType, Screen
+from ..application_ir import ApplicationIR, ApiEndpoint, Entity, Field, FieldType, Screen
 from .adapter import GenerationTarget
 from .errors import GenerationError
 from .field_validation import parse_field_rules
@@ -903,12 +904,82 @@ def _get_ops_by_entity(ir: ApplicationIR) -> dict[str, set[Op]]:
     return ops_by_entity
 
 
+@dataclass(frozen=True)
+class SubcollectionInfo:
+    child_entity: Entity
+    relation: str
+    id_param: str
+    hook_name: str
+    child_plural: str
+    display_fields: tuple[Field, ...]
+
+
+def _subcollections_for_parent(parent_name: str, ir: ApplicationIR) -> list[SubcollectionInfo]:
+    repo_entities = frozenset(e.name for e in ir.entities)
+    fk_by_entity = fk_relations(ir)
+    entities_by_name = {e.name: e for e in ir.entities}
+
+    seen: set[tuple[str, str]] = set()
+    result: list[SubcollectionInfo] = []
+
+    for api_endpoint in ir.apis:
+        wiring = wire_endpoint(api_endpoint, repo_entities, fk_by_entity)
+        if wiring is not None and wiring.op is Op.LIST_BY and wiring.relation:
+            child_name = wiring.entity
+            key = (child_name, wiring.relation)
+            if key in seen:
+                continue
+            seen.add(key)
+
+            child_ent = entities_by_name.get(child_name)
+            if child_ent is None:
+                continue
+
+            rel = next((r for r in child_ent.relations if r.name == wiring.relation), None)
+            if rel is None or rel.target_entity != parent_name:
+                continue
+
+            child_plural = child_name if child_name.endswith("s") else f"{child_name}s"
+            rel_pascal = _pascal(wiring.relation)
+            hook_name = f"useList{child_plural}By{rel_pascal}"
+
+            fk_field_names = {
+                f"{wiring.relation}_id",
+                f"{wiring.relation}Id",
+                wiring.relation.lower() + "_id",
+            }
+            display_fields = tuple(
+                f for f in child_ent.fields
+                if f.name != "id" and f.name not in fk_field_names
+            )
+            if not display_fields:
+                display_fields = tuple(f for f in child_ent.fields if f.name != "id")
+            if not display_fields:
+                display_fields = child_ent.fields[:1]
+            display_fields = display_fields[:4]
+
+            result.append(
+                SubcollectionInfo(
+                    child_entity=child_ent,
+                    relation=wiring.relation,
+                    id_param=wiring.id_param or "id",
+                    hook_name=hook_name,
+                    child_plural=child_plural,
+                    display_fields=display_fields,
+                )
+            )
+    return result
+
+
 def _collection_screen_page(screen: Screen, entity: Entity, ir: ApplicationIR, ops: set[Op]) -> str:
     name = entity.name
     plural = name if name.endswith("s") else f"{name}s"
     can_delete = Op.DELETE in ops
     page_name = f"{_pascal(screen.id)}Page"
     title = _title_case(screen.id)
+
+    subcollections = _subcollections_for_parent(name, ir)
+    has_subcollections = bool(subcollections)
 
     # Check for a complementary form/editor screen in ir.screens
     form_screen: Screen | None = None
@@ -935,7 +1006,20 @@ def _collection_screen_page(screen: Screen, entity: Entity, ir: ApplicationIR, o
         'import { useState } from "react";',
         'import Link from "next/link";',
         f'import {{ {hooks_import} }} from "../lib/hooks";',
-        f'import type {{ {name} }} from "../lib/types";',
+    ]
+
+    if has_subcollections:
+        subcol_hook_names = [sub.hook_name for sub in subcollections]
+        lines.append(f'import {{ {", ".join(subcol_hook_names)} }} from "../lib/hooks";')
+
+    lines.append(f'import type {{ {name} }} from "../lib/types";')
+
+    if has_subcollections:
+        child_type_names = list(dict.fromkeys(sub.child_entity.name for sub in subcollections if sub.child_entity.name != name))
+        if child_type_names:
+            lines.append(f'import type {{ {", ".join(child_type_names)} }} from "../lib/types";')
+
+    lines.extend([
         "",
         f"export default function {page_name}() {{",
         f"  const {{",
@@ -951,7 +1035,7 @@ def _collection_screen_page(screen: Screen, entity: Entity, ir: ApplicationIR, o
         "    setSort,",
         "    refetch,",
         f"  }} = useList{plural}();",
-    ]
+    ])
 
     if can_delete:
         lines.extend([
@@ -964,8 +1048,21 @@ def _collection_screen_page(screen: Screen, entity: Entity, ir: ApplicationIR, o
             "  };",
         ])
 
+    lines.append('  const [searchInput, setSearchInput] = useState(params.q ?? "");')
+
+    if has_subcollections:
+        lines.append('  const [selectedId, setSelectedId] = useState<string | null>(null);')
+        if len(subcollections) > 1:
+            lines.append('  const [activeTab, setActiveTab] = useState<number>(0);')
+        for sub in subcollections:
+            s_var = f"{sub.child_entity.name.lower()}sSubcol"
+            lines.append(f"  const {s_var} = {sub.hook_name}(selectedId);")
+        best_title_f = next((f.name for f in entity.fields if f.name in ("title", "name", "label", "email")), None)
+        if not best_title_f:
+            best_title_f = next((f.name for f in entity.fields if f.name != "id"), "id")
+        lines.append("  const selectedItem = data?.find((item) => (item as any).id === selectedId);")
+
     lines.extend([
-        '  const [searchInput, setSearchInput] = useState(params.q ?? "");',
         "",
         "  return (",
         '    <main style={{ maxWidth: 960, margin: "0 auto", padding: "32px 16px", fontFamily: "system-ui, -apple-system, sans-serif" }}>',
@@ -1048,9 +1145,11 @@ def _collection_screen_page(screen: Screen, entity: Entity, ir: ApplicationIR, o
             "              </th>",
         ])
 
-    if can_delete:
+    has_actions_col = can_delete or has_subcollections
+    if has_actions_col:
+        actions_header = "Actions" if can_delete else "Details"
         lines.append(
-            '              <th style={{ padding: "12px 16px", textAlign: "right", fontWeight: 600, color: "#475569" }}>Actions</th>'
+            f'              <th style={{{{ padding: "12px 16px", textAlign: "right", fontWeight: 600, color: "#475569" }}}}>{actions_header}</th>'
         )
 
     lines.extend([
@@ -1059,21 +1158,25 @@ def _collection_screen_page(screen: Screen, entity: Entity, ir: ApplicationIR, o
         "          <tbody>",
         "            {loading && !data && (",
         "              <tr>",
-        f'                <td colSpan={{{len(display_fields) + (1 if can_delete else 0)}}} style={{{{ padding: 32, textAlign: "center", color: "#64748b" }}}}>',
+        f'                <td colSpan={{{len(display_fields) + (1 if has_actions_col else 0)}}} style={{{{ padding: 32, textAlign: "center", color: "#64748b" }}}}>',
         f"                  Loading {plural}... ",
         "                </td>",
         "              </tr>",
         "            )}",
         "            {data && data.length === 0 && (",
         "              <tr>",
-        f'                <td colSpan={{{len(display_fields) + (1 if can_delete else 0)}}} style={{{{ padding: 32, textAlign: "center", color: "#64748b" }}}}>',
+        f'                <td colSpan={{{len(display_fields) + (1 if has_actions_col else 0)}}} style={{{{ padding: 32, textAlign: "center", color: "#64748b" }}}}>',
         f"                  No {plural} found.",
         "                </td>",
         "              </tr>",
         "            )}",
         "            {data && data.map((item, idx) => (",
-        '              <tr key={(item as any).id ?? idx} style={{ borderBottom: "1px solid #f1f5f9" }}>',
     ])
+
+    if has_subcollections:
+        lines.append('              <tr key={(item as any).id ?? idx} onClick={() => setSelectedId(selectedId === (item as any).id ? null : (item as any).id)} style={{ borderBottom: "1px solid #f1f5f9", cursor: "pointer", background: selectedId === (item as any).id ? "#eff6ff" : undefined }}>')
+    else:
+        lines.append('              <tr key={(item as any).id ?? idx} style={{ borderBottom: "1px solid #f1f5f9" }}>')
 
     for f in display_fields:
         if f.type == FieldType.BOOL:
@@ -1097,12 +1200,24 @@ def _collection_screen_page(screen: Screen, entity: Entity, ir: ApplicationIR, o
 
         lines.append('                <td style={{ padding: "12px 16px", color: "#1e293b" }}>' + val_expr + '</td>')
 
-    if can_delete:
-        lines.extend([
-            '                <td style={{ padding: "12px 16px", textAlign: "right" }}>',
-            '                  <button onClick={() => handleDelete((item as any).id)} style={{ padding: "4px 8px", border: "1px solid #fecaca", background: "#fff", color: "#dc2626", borderRadius: 4, fontSize: 12, cursor: "pointer" }}>Delete</button>',
-            "                </td>",
-        ])
+    if has_actions_col:
+        lines.append('                <td style={{ padding: "12px 16px", textAlign: "right", whiteSpace: "nowrap" }}>')
+        if has_subcollections:
+            margin_style = " marginRight: 8," if can_delete else ""
+            lines.extend([
+                '                  <button',
+                '                    onClick={(e) => {',
+                '                      e.stopPropagation();',
+                '                      setSelectedId(selectedId === (item as any).id ? null : (item as any).id);',
+                '                    }}',
+                f'                    style={{{{ padding: "4px 8px", border: "1px solid #cbd5e1", background: selectedId === (item as any).id ? "#2563eb" : "#fff", color: selectedId === (item as any).id ? "#fff" : "#334155", borderRadius: 4, fontSize: 12, cursor: "pointer",{margin_style} }}}}',
+                '                  >',
+                '                    {selectedId === (item as any).id ? "Hide Details" : "View Details"}',
+                '                  </button>',
+            ])
+        if can_delete:
+            lines.append('                  <button onClick={(e) => { e.stopPropagation(); handleDelete((item as any).id); }} style={{ padding: "4px 8px", border: "1px solid #fecaca", background: "#fff", color: "#dc2626", borderRadius: 4, fontSize: 12, cursor: "pointer" }}>Delete</button>')
+        lines.append('                </td>')
 
     lines.extend([
         "              </tr>",
@@ -1132,6 +1247,122 @@ def _collection_screen_page(screen: Screen, entity: Entity, ir: ApplicationIR, o
         "          </button>",
         "        </div>",
         "      </footer>",
+    ])
+
+    if has_subcollections:
+        sub_labels = ", ".join(sub.child_plural for sub in subcollections)
+        lines.extend([
+            "",
+            '      <section style={{ marginTop: 24, border: "1px solid #e2e8f0", borderRadius: 8, background: "#fff", padding: 20, boxShadow: "0 1px 3px rgba(0,0,0,0.05)" }}>',
+            "        {!selectedId ? (",
+            '          <div style={{ textAlign: "center", padding: "20px 16px", color: "#64748b" }}>',
+            f'            <p style={{{{ margin: 0, fontSize: 14 }}}}>Select a {name} from the table above to view associated {sub_labels}.</p>',
+            "          </div>",
+            "        ) : (",
+            "          <div>",
+            '            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16, paddingBottom: 12, borderBottom: "1px solid #e2e8f0", flexWrap: "wrap", gap: 8 }}>',
+            "              <div>",
+            '                <span style={{ fontSize: 11, fontWeight: 700, color: "#64748b", textTransform: "uppercase", letterSpacing: "0.05em" }}>',
+            f"                  Selected {name}",
+            "                </span>",
+            '                <h3 style={{ margin: "2px 0 0 0", fontSize: 18, fontWeight: 700, color: "#0f172a" }}>',
+            f"                  {{selectedItem ? String((selectedItem as any).{best_title_f} ?? selectedId) : selectedId}}",
+            "                </h3>",
+            "              </div>",
+            "              <button",
+            "                onClick={() => setSelectedId(null)}",
+            '                style={{ padding: "4px 10px", border: "1px solid #cbd5e1", background: "#f8fafc", color: "#475569", borderRadius: 4, fontSize: 12, cursor: "pointer" }}',
+            "              >",
+            "                Deselect",
+            "              </button>",
+            "            </div>",
+        ])
+
+        if len(subcollections) > 1:
+            lines.append('            <div style={{ display: "flex", gap: 8, marginBottom: 16, borderBottom: "1px solid #e2e8f0", paddingBottom: 8 }}>')
+            for idx, sub in enumerate(subcollections):
+                s_var = f"{sub.child_entity.name.lower()}sSubcol"
+                lines.extend([
+                    "              <button",
+                    f"                onClick={{() => setActiveTab({idx})}}",
+                    "                style={{",
+                    '                  padding: "6px 12px",',
+                    '                  border: "none",',
+                    f'                  background: activeTab === {idx} ? "#2563eb" : "#f1f5f9",',
+                    f'                  color: activeTab === {idx} ? "#fff" : "#475569",',
+                    '                  borderRadius: 6,',
+                    '                  fontSize: 13,',
+                    '                  fontWeight: 500,',
+                    '                  cursor: "pointer",',
+                    '                  display: "flex",',
+                    '                  alignItems: "center",',
+                    '                  gap: 6,',
+                    "                }}",
+                    "              >",
+                    f"                <span>{sub.child_plural}</span>",
+                    f'                <span style={{{{ padding: "2px 6px", background: activeTab === {idx} ? "rgba(255,255,255,0.2)" : "#e2e8f0", color: activeTab === {idx} ? "#fff" : "#475569", borderRadius: 10, fontSize: 11, fontWeight: 600 }}}}>',
+                    f"                  {{{s_var}.total}}",
+                    "                </span>",
+                    "              </button>",
+                ])
+            lines.append("            </div>")
+
+        for idx, sub in enumerate(subcollections):
+            s_var = f"{sub.child_entity.name.lower()}sSubcol"
+            tab_guard = f"activeTab === {idx}" if len(subcollections) > 1 else "true"
+            lines.extend([
+                f"            {{{tab_guard} && (",
+                "              <div>",
+                '                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 12 }}>',
+                '                  <div style={{ display: "flex", alignItems: "center", gap: 8 }}>',
+                f'                    <h4 style={{{{ margin: 0, fontSize: 16, fontWeight: 600, color: "#1e293b" }}}}>{sub.child_plural}</h4>',
+                f'                    <span style={{{{ padding: "2px 8px", background: "#e0e7ff", color: "#3730a3", borderRadius: 12, fontSize: 12, fontWeight: 600 }}}}>',
+                f"                      {{{s_var}.total}}",
+                "                    </span>",
+                "                  </div>",
+                "                  <button",
+                f"                    onClick={{() => {s_var}.refetch()}}",
+                f"                    disabled={{{s_var}.loading}}",
+                f'                    style={{{{ padding: "4px 8px", border: "1px solid #cbd5e1", background: "#fff", color: "#334155", borderRadius: 4, fontSize: 12, cursor: {s_var}.loading ? "default" : "pointer" }}}}',
+                "                  >",
+                f'                    {{{s_var}.loading ? "Loading..." : "Refresh"}}',
+                "                  </button>",
+                "                </div>",
+                f"                {{{s_var}.loading && !{s_var}.data && (",
+                f'                  <div style={{{{ padding: 16, textAlign: "center", color: "#64748b", fontSize: 14 }}}}>Loading {sub.child_plural.lower()}...</div>',
+                "                )}",
+                f"                {{{s_var}.error && (",
+                f'                  <div style={{{{ padding: "8px 12px", background: "#fef2f2", border: "1px solid #fecaca", borderRadius: 6, color: "#991b1b", fontSize: 13, marginBottom: 12 }}}}>Error: {{{s_var}.error.message}}</div>',
+                "                )}",
+                f"                {{{s_var}.data && {s_var}.data.length === 0 && (",
+                f'                  <div style={{{{ padding: 16, textAlign: "center", color: "#64748b", fontSize: 14, background: "#f8fafc", borderRadius: 6 }}}}>No {sub.child_plural.lower()} found for this {name.lower()}.</div>',
+                "                )}",
+                f"                {{{s_var}.data && {s_var}.data.length > 0 && (",
+                '                  <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>',
+                f"                    {{{s_var}.data.map((child, cIdx) => (",
+                '                      <div key={(child as any).id ?? cIdx} style={{ padding: 12, background: "#f8fafc", border: "1px solid #e2e8f0", borderRadius: 6, fontSize: 14 }}>',
+            ])
+            for df in sub.display_fields:
+                df_label = _title_case(df.name)
+                lines.append(
+                    f'                        <div style={{{{ color: "#334155" }}}}><strong>{df_label}:</strong> {{String((child as any).{df.name} ?? "-")}}</div>'
+                )
+            lines.extend([
+                "                      </div>",
+                "                    ))}",
+                "                  </div>",
+                "                )}",
+                "              </div>",
+                "            )}",
+            ])
+
+        lines.extend([
+            "          </div>",
+            "        )}",
+            "      </section>",
+        ])
+
+    lines.extend([
         "    </main>",
         "  );",
         "}",
@@ -1439,6 +1670,237 @@ def _form_screen_page(screen: Screen, entity: Entity, ir: ApplicationIR, ops: se
     return "\n".join(lines)
 
 
+def _detail_screen_page(screen: Screen, entity: Entity, ir: ApplicationIR, ops: set[Op]) -> str:
+    name = entity.name
+    plural = name if name.endswith("s") else f"{name}s"
+    page_name = f"{_pascal(screen.id)}Page"
+    title = _title_case(screen.id)
+    subcollections = _subcollections_for_parent(name, ir)
+    has_subcollections = bool(subcollections)
+
+    hooks_to_import: list[str] = []
+    if Op.GET in ops:
+        hooks_to_import.append(f"use{name}")
+
+    lines: list[str] = [
+        '"use client";',
+        "",
+        'import { useState } from "react";',
+        'import Link from "next/link";',
+    ]
+
+    if hooks_to_import:
+        lines.append(f'import {{ {", ".join(hooks_to_import)} }} from "../lib/hooks";')
+    if has_subcollections:
+        subcol_hook_names = [sub.hook_name for sub in subcollections]
+        lines.append(f'import {{ {", ".join(subcol_hook_names)} }} from "../lib/hooks";')
+
+    lines.append(f'import type {{ {name} }} from "../lib/types";')
+
+    if has_subcollections:
+        child_type_names = list(dict.fromkeys(sub.child_entity.name for sub in subcollections if sub.child_entity.name != name))
+        if child_type_names:
+            lines.append(f'import type {{ {", ".join(child_type_names)} }} from "../lib/types";')
+
+    best_title_f = next((f.name for f in entity.fields if f.name in ("title", "name", "label", "email")), None)
+    if not best_title_f:
+        best_title_f = next((f.name for f in entity.fields if f.name != "id"), "id")
+
+    lines.extend([
+        "",
+        f"export default function {page_name}() {{",
+        '  const [idInput, setIdInput] = useState<string>("");',
+        '  const [selectedId, setSelectedId] = useState<string | null>(null);',
+    ])
+
+    if Op.GET in ops:
+        lines.append(f"  const {{ data: item, loading, error, refetch }} = use{name}(selectedId);")
+
+    if has_subcollections:
+        if len(subcollections) > 1:
+            lines.append('  const [activeTab, setActiveTab] = useState<number>(0);')
+        for sub in subcollections:
+            s_var = f"{sub.child_entity.name.lower()}sSubcol"
+            lines.append(f"  const {s_var} = {sub.hook_name}(selectedId);")
+
+    lines.extend([
+        "",
+        "  return (",
+        '    <main style={{ maxWidth: 840, margin: "0 auto", padding: "32px 16px", fontFamily: "system-ui, -apple-system, sans-serif" }}>',
+        '      <header style={{ marginBottom: 24, display: "flex", justifyContent: "space-between", alignItems: "flex-start", flexWrap: "wrap", gap: 16 }}>',
+        "        <div>",
+        '          <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 6 }}>',
+        '            <Link href="/" style={{ color: "#2563eb", textDecoration: "none", fontSize: 13, fontWeight: 500 }}>&larr; Overview</Link>',
+        '            <span style={{ color: "#94a3b8" }}>/</span>',
+        f'            <span style={{ fontSize: 12, padding: "2px 8px", background: "#f1f5f9", color: "#475569", borderRadius: 4, fontWeight: 600 }}>{screen.role}</span>',
+        "          </div>",
+        f'          <h1 style={{ margin: 0, fontSize: 26, fontWeight: 700, color: "#0f172a" }}>{title}</h1>',
+        "        </div>",
+        '        <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>',
+    ])
+
+    for nav in screen.navigation:
+        lines.append(
+            f'          <Link href="/{nav}" style={{{{ padding: "8px 14px", border: "1px solid #cbd5e1", background: "#fff", color: "#334155", borderRadius: 6, textDecoration: "none", fontSize: 14 }}}}>{_pascal(nav)}</Link>'
+        )
+
+    lines.extend([
+        "        </div>",
+        "      </header>",
+        "",
+        '      <section style={{ marginBottom: 24, padding: 16, background: "#fff", border: "1px solid #e2e8f0", borderRadius: 8, display: "flex", gap: 8, alignItems: "center" }}>',
+        "        <input",
+        '          type="text"',
+        "          value={idInput}",
+        "          onChange={(e) => setIdInput(e.target.value)}",
+        f'          placeholder="Enter {name} ID..."',
+        '          style={{ flex: 1, padding: "8px 12px", border: "1px solid #cbd5e1", borderRadius: 6, fontSize: 14, outline: "none" }}',
+        "        />",
+        "        <button",
+        "          onClick={() => setSelectedId(idInput.trim() || null)}",
+        '          style={{ padding: "8px 16px", background: "#2563eb", color: "#fff", border: "none", borderRadius: 6, fontSize: 14, fontWeight: 500, cursor: "pointer" }}',
+        "        >",
+        f"          Load {name}",
+        "        </button>",
+        "      </section>",
+        "",
+    ])
+
+    if Op.GET in ops:
+        lines.extend([
+            "      {loading && (",
+            f'        <div style={{ padding: 24, textAlign: "center", color: "#64748b" }}>Loading {name}...</div>',
+            "      )}",
+            "      {error && (",
+            '        <div style={{ padding: "12px 16px", background: "#fef2f2", border: "1px solid #fecaca", borderRadius: 8, color: "#991b1b", marginBottom: 20 }}>',
+            f"          Error loading {name}: {{error.message}}",
+            "        </div>",
+            "      )}",
+            "      {item && (",
+            '        <div style={{ background: "#fff", border: "1px solid #e2e8f0", borderRadius: 8, padding: 24, marginBottom: 24, boxShadow: "0 1px 3px rgba(0,0,0,0.05)" }}>',
+            f'          <h2 style={{ margin: "0 0 16px 0", fontSize: 20, fontWeight: 700, color: "#0f172a" }}>',
+            f"            {{String((item as any).{best_title_f} ?? (item as any).id)}}",
+            "          </h2>",
+            '          <dl style={{ margin: 0, display: "grid", gridTemplateColumns: "140px 1fr", gap: "8px 16px", fontSize: 14 }}>',
+        ])
+        for f in entity.fields:
+            flabel = _title_case(f.name)
+            lines.extend([
+                f'            <dt style={{ fontWeight: 600, color: "#475569" }}>{flabel}:</dt>',
+                f'            <dd style={{ margin: 0, color: "#1e293b" }}>{{String((item as any).{f.name} ?? "-")}}</dd>',
+            ])
+        lines.extend([
+            "          </dl>",
+            "        </div>",
+            "      )}",
+        ])
+
+    if has_subcollections:
+        sub_labels = ", ".join(sub.child_plural for sub in subcollections)
+        lines.extend([
+            '      <section style={{ border: "1px solid #e2e8f0", borderRadius: 8, background: "#fff", padding: 20, boxShadow: "0 1px 3px rgba(0,0,0,0.05)" }}>',
+            "        {!selectedId ? (",
+            '          <div style={{ textAlign: "center", padding: "20px 16px", color: "#64748b" }}>',
+            f'            <p style={{{{ margin: 0, fontSize: 14 }}}}>Enter a {name} ID above to view associated {sub_labels}.</p>',
+            "          </div>",
+        ])
+        lines.append("        ) : (")
+        lines.append("          <div>")
+
+        if len(subcollections) > 1:
+            lines.append('            <div style={{ display: "flex", gap: 8, marginBottom: 16, borderBottom: "1px solid #e2e8f0", paddingBottom: 8 }}>')
+            for idx, sub in enumerate(subcollections):
+                s_var = f"{sub.child_entity.name.lower()}sSubcol"
+                lines.extend([
+                    "              <button",
+                    f"                onClick={{() => setActiveTab({idx})}}",
+                    "                style={{",
+                    '                  padding: "6px 12px",',
+                    '                  border: "none",',
+                    f'                  background: activeTab === {idx} ? "#2563eb" : "#f1f5f9",',
+                    f'                  color: activeTab === {idx} ? "#fff" : "#475569",',
+                    '                  borderRadius: 6,',
+                    '                  fontSize: 13,',
+                    '                  fontWeight: 500,',
+                    '                  cursor: "pointer",',
+                    '                  display: "flex",',
+                    '                  alignItems: "center",',
+                    '                  gap: 6,',
+                    "                }}",
+                    "              >",
+                    f"                <span>{sub.child_plural}</span>",
+                    f'                <span style={{{{ padding: "2px 6px", background: activeTab === {idx} ? "rgba(255,255,255,0.2)" : "#e2e8f0", color: activeTab === {idx} ? "#fff" : "#475569", borderRadius: 10, fontSize: 11, fontWeight: 600 }}}}>',
+                    f"                  {{{s_var}.total}}",
+                    "                </span>",
+                    "              </button>",
+                ])
+            lines.append("            </div>")
+
+        for idx, sub in enumerate(subcollections):
+            s_var = f"{sub.child_entity.name.lower()}sSubcol"
+            tab_guard = f"activeTab === {idx}" if len(subcollections) > 1 else "true"
+            lines.extend([
+                f"            {{{tab_guard} && (",
+                "              <div>",
+                '                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 12 }}>',
+                '                  <div style={{ display: "flex", alignItems: "center", gap: 8 }}>',
+                f'                    <h4 style={{{{ margin: 0, fontSize: 16, fontWeight: 600, color: "#1e293b" }}}}>{sub.child_plural}</h4>',
+                f'                    <span style={{{{ padding: "2px 8px", background: "#e0e7ff", color: "#3730a3", borderRadius: 12, fontSize: 12, fontWeight: 600 }}}}>',
+                f"                      {{{s_var}.total}}",
+                "                    </span>",
+                "                  </div>",
+                "                  <button",
+                f"                    onClick={{() => {s_var}.refetch()}}",
+                f"                    disabled={{{s_var}.loading}}",
+                f'                    style={{{{ padding: "4px 8px", border: "1px solid #cbd5e1", background: "#fff", color: "#334155", borderRadius: 4, fontSize: 12, cursor: {s_var}.loading ? "default" : "pointer" }}}}',
+                "                  >",
+                f'                    {{{s_var}.loading ? "Loading..." : "Refresh"}}',
+                "                  </button>",
+                "                </div>",
+                f"                {{{s_var}.loading && !{s_var}.data && (",
+                f'                  <div style={{{{ padding: 16, textAlign: "center", color: "#64748b", fontSize: 14 }}}}>Loading {sub.child_plural.lower()}...</div>',
+                "                )}",
+                f"                {{{s_var}.error && (",
+                f'                  <div style={{{{ padding: "8px 12px", background: "#fef2f2", border: "1px solid #fecaca", borderRadius: 6, color: "#991b1b", fontSize: 13, marginBottom: 12 }}}}>Error: {{{s_var}.error.message}}</div>',
+                "                )}",
+                f"                {{{s_var}.data && {s_var}.data.length === 0 && (",
+                f'                  <div style={{{{ padding: 16, textAlign: "center", color: "#64748b", fontSize: 14, background: "#f8fafc", borderRadius: 6 }}}}>No {sub.child_plural.lower()} found for this {name.lower()}.</div>',
+                "                )}",
+                f"                {{{s_var}.data && {s_var}.data.length > 0 && (",
+                '                  <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>',
+                f"                    {{{s_var}.data.map((child, cIdx) => (",
+                '                      <div key={(child as any).id ?? cIdx} style={{ padding: 12, background: "#f8fafc", border: "1px solid #e2e8f0", borderRadius: 6, fontSize: 14 }}>',
+            ])
+            for df in sub.display_fields:
+                df_label = _title_case(df.name)
+                lines.append(
+                    f'                        <div style={{{{ color: "#334155" }}}}><strong>{df_label}:</strong> {{String((child as any).{df.name} ?? "-")}}</div>'
+                )
+            lines.extend([
+                "                      </div>",
+                "                    ))}",
+                "                  </div>",
+                "                )}",
+                "              </div>",
+                "            )}",
+            ])
+
+        lines.extend([
+            "          </div>",
+            "        )}",
+            "      </section>",
+        ])
+
+    lines.extend([
+        "    </main>",
+        "  );",
+        "}",
+        "",
+    ])
+
+    return "\n".join(lines)
+
+
 def _fallback_screen_page(screen: Screen, ir: ApplicationIR, entity: Entity | None = None) -> str:
     page_name = f"{_pascal(screen.id)}Page"
     title = _title_case(screen.id)
@@ -1499,6 +1961,8 @@ def _screen_page(screen: Screen, ir: ApplicationIR) -> str:
         return _collection_screen_page(screen, entity, ir, ops)
     elif intent == "form" and Op.CREATE in ops:
         return _form_screen_page(screen, entity, ir, ops)
+    elif intent == "detail" and (Op.GET in ops or Op.LIST in ops):
+        return _detail_screen_page(screen, entity, ir, ops)
     else:
         return _fallback_screen_page(screen, ir, entity)
 

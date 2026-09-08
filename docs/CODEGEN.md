@@ -484,3 +484,35 @@ Enhanced generated form screens and the API client with real-time and server-sid
   - **Reset Control**: Reset button clears `fieldErrors` alongside form state and success banners.
   - **Error Banners**: Displays warning banner when field errors are present, while suppressing generic `submitError` banners to keep focus on field-specific feedback.
 
+### Subcollection Navigation & Master-Detail Views in Generated Screens (R-265)
+
+Connects parent entity views (e.g. `Post` in `minimal-blog`) to nested child subcollections (e.g. `Comments`) using typed React hooks and interactive master-detail layouts:
+
+- **Subcollection Relation Detection (`_subcollections_for_parent`)**:
+  - Scans `ir.apis` for endpoints wired with `Op.LIST_BY` and associated foreign-key relations (`many_to_one`).
+  - Matches the child entity's relation `target_entity` to the parent entity name.
+  - Extracts structured metadata: child entity, relation name, `id_param` (e.g. `postId`), hook name (`useList<Entities>By<Rel>`), child plural, and non-FK display fields.
+  - Returns empty list for entities without subcollections (e.g. `rideshare-favourites`), ensuring zero overhead or unused imports on leaf entity screens.
+- **Collection Screens with Master-Detail (`_collection_screen_page`)**:
+  - Automatically imports subcollection hooks (`useList<Children>By<Rel>`) and child types (`import type { <Child> }`) when subcollections exist.
+  - Declares selection state: `const [selectedId, setSelectedId] = useState<string | null>(null);`.
+  - Wires subcollection hooks at the top level scoped to `selectedId`:
+    - When `selectedId` is `null`, hooks idle cleanly with 0 network calls.
+    - When a parent row is selected, hooks automatically fetch child items for that parent ID.
+  - **Interactive Table Selection**:
+    - Master table rows support click-to-select with visual highlight (`background: #eff6ff`).
+    - Dedicated "View Details" / "Hide Details" toggle button with `e.stopPropagation()`.
+    - Preserves delete operations (`useDelete<Entity>()`) alongside selection controls.
+  - **Master-Detail Subcollection Panel**:
+    - Unselected prompt: invites user to select a parent row from the table above.
+    - Selected header: displays the parent entity name, primary title, and "Deselect" action.
+    - **Total Count Badges**: renders live total count badges (`<span style={{ ... }}>{subcol.total}</span>`).
+    - **Tabbed Subcollections**: multi-subcollection parent entities render tab buttons with per-collection count badges to switch active child views.
+    - **Child Items List**: renders child items with formatted display fields, loading spinners, error alerts, empty states, and manual "Refresh" button.
+- **Dedicated Detail Screens (`_detail_screen_page`)**:
+  - Handles screens with `intent == "detail"` (`components=("detail",)` or `actions=("view",)`).
+  - Wires `use<Entity>(selectedId)` to load parent entity attributes into a structured `<dl>` definition list.
+  - Renders the interactive subcollections section scoped to the parent ID with count badges and child items.
+- **Strict Diff Invariance**:
+  - Neither `_collection_screen_page` nor `_detail_screen_page` references `ir.description`, keeping generated screen files byte-identical across description modifications to ensure patch stability in `test_console_snapshot.py`.
+
