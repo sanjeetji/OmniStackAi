@@ -11,7 +11,7 @@ from dataclasses import dataclass
 import json
 import re
 
-from ..application_ir import ApplicationIR, ApiEndpoint, Entity, Field, FieldType, Screen
+from ..application_ir import ApplicationIR, ApiEndpoint, Entity, Field, FieldType, RelationKind, Screen
 from .adapter import GenerationTarget
 from .errors import GenerationError
 from .field_validation import parse_field_rules
@@ -806,6 +806,12 @@ def _pascal(value: str) -> str:
     return "".join(part.capitalize() for part in re.split(r"[_-]+", value)) or "Screen"
 
 
+def _snake(value: str) -> str:
+    stepped = re.sub(r"(.)([A-Z][a-z]+)", r"\1_\2", value)
+    stepped = re.sub(r"([a-z0-9])([A-Z])", r"\1_\2", stepped)
+    return stepped.lower()
+
+
 def _match_entity(screen: Screen, ir: ApplicationIR) -> Entity | None:
     if not ir.entities:
         return None
@@ -968,6 +974,104 @@ def _subcollections_for_parent(parent_name: str, ir: ApplicationIR) -> list[Subc
                     display_fields=display_fields,
                 )
             )
+    return result
+
+
+@dataclass(frozen=True)
+class ParentRelationInfo:
+    field_name: str
+    relation_name: str
+    parent_entity: Entity
+    parent_plural: str
+    hook_name: str
+    title_field: str
+    label: str
+
+
+def _parent_relations_for_entity(entity: Entity, ir: ApplicationIR) -> list[ParentRelationInfo]:
+    entities_by_name = {e.name: e for e in ir.entities}
+    ops_by_entity = _get_ops_by_entity(ir)
+
+    existing_field_names = {f.name for f in entity.fields}
+    result: list[ParentRelationInfo] = []
+    seen_fields: set[str] = set()
+
+    for rel in getattr(entity, "relations", ()):
+        if rel.kind is not RelationKind.MANY_TO_ONE:
+            continue
+        parent = entities_by_name.get(rel.target_entity)
+        if parent is None:
+            continue
+        parent_ops = ops_by_entity.get(parent.name, set())
+        if Op.LIST not in parent_ops:
+            continue
+
+        fk_field: str | None = None
+        for candidate in (
+            f"{rel.name}_id",
+            f"{rel.name}Id",
+            rel.name,
+            f"{parent.name.lower()}_id",
+            f"{_snake(parent.name)}_id",
+        ):
+            if candidate in existing_field_names:
+                fk_field = candidate
+                break
+        if fk_field is None:
+            fk_field = f"{rel.name}_id"
+
+        if fk_field in seen_fields:
+            continue
+        seen_fields.add(fk_field)
+
+        parent_plural = parent.name if parent.name.endswith("s") else f"{parent.name}s"
+        hook_name = f"useList{parent_plural}"
+        best_title_f = next((f.name for f in parent.fields if f.name in ("title", "name", "label", "email")), None)
+        if not best_title_f:
+            best_title_f = next((f.name for f in parent.fields if f.name != "id"), "id")
+
+        label = _title_case(rel.name)
+        result.append(
+            ParentRelationInfo(
+                field_name=fk_field,
+                relation_name=rel.name,
+                parent_entity=parent,
+                parent_plural=parent_plural,
+                hook_name=hook_name,
+                title_field=best_title_f,
+                label=label,
+            )
+        )
+
+    for f in entity.fields:
+        if f.name.endswith("_id") and f.name not in seen_fields:
+            stem = f.name[:-3]
+            parent = next(
+                (
+                    e for e in ir.entities
+                    if e.name.lower() == stem.lower() or _snake(e.name) == stem.lower()
+                ),
+                None,
+            )
+            if parent is not None and Op.LIST in ops_by_entity.get(parent.name, set()):
+                parent_plural = parent.name if parent.name.endswith("s") else f"{parent.name}s"
+                hook_name = f"useList{parent_plural}"
+                best_title_f = next((f.name for f in parent.fields if f.name in ("title", "name", "label", "email")), None)
+                if not best_title_f:
+                    best_title_f = next((f.name for f in parent.fields if f.name != "id"), "id")
+                seen_fields.add(f.name)
+                result.append(
+                    ParentRelationInfo(
+                        field_name=f.name,
+                        relation_name=stem,
+                        parent_entity=parent,
+                        parent_plural=parent_plural,
+                        hook_name=hook_name,
+                        title_field=best_title_f,
+                        label=_title_case(stem),
+                    )
+                )
+
     return result
 
 
@@ -1432,6 +1536,15 @@ def _form_screen_page(screen: Screen, entity: Entity, ir: ApplicationIR, ops: se
     if not editable_fields:
         editable_fields = list(entity.fields)
 
+    parent_relations = _parent_relations_for_entity(entity, ir)
+    parent_rel_by_field: dict[str, ParentRelationInfo] = {r.field_name: r for r in parent_relations}
+
+    # Ensure any parent relation foreign key not yet in editable_fields is appended
+    existing_field_names = {f.name for f in entity.fields}
+    for r in parent_relations:
+        if r.field_name not in existing_field_names:
+            editable_fields.append(Field(name=r.field_name, type=FieldType.UUID, required=True))
+
     # Build initial form state dict
     defaults: list[str] = []
     for f in editable_fields:
@@ -1451,7 +1564,7 @@ def _form_screen_page(screen: Screen, entity: Entity, ir: ApplicationIR, ops: se
     for rel in getattr(entity, "relations", ()):
         fk_fields.append(f"{rel.name}_id")
         fk_fields.append(f"{rel.name}Id")
-    uses_search_params = can_update or bool(fk_fields)
+    uses_search_params = can_update or bool(fk_fields) or bool(parent_relations)
 
     lines: list[str] = [
         '"use client";',
@@ -1464,14 +1577,22 @@ def _form_screen_page(screen: Screen, entity: Entity, ir: ApplicationIR, ops: se
         lines.append('import { useState } from "react";')
 
     lines.append('import Link from "next/link";')
+    imported_hooks: set[str] = set()
     if can_create:
+        imported_hooks.add(f"useCreate{name}")
         lines.append(f'import {{ useCreate{name} }} from "../lib/hooks";')
     if can_update:
         update_hooks = []
         if has_get:
             update_hooks.append(f"use{name}")
+            imported_hooks.add(f"use{name}")
         update_hooks.append(f"useUpdate{name}")
+        imported_hooks.add(f"useUpdate{name}")
         lines.append(f'import {{ {", ".join(update_hooks)} }} from "../lib/hooks";')
+
+    parent_hooks = sorted({r.hook_name for r in parent_relations if r.hook_name not in imported_hooks})
+    if parent_hooks:
+        lines.append(f'import {{ {", ".join(parent_hooks)} }} from "../lib/hooks";')
 
     lines.extend([
         'import { extractFieldErrors } from "../lib/api";',
@@ -1484,6 +1605,17 @@ def _form_screen_page(screen: Screen, entity: Entity, ir: ApplicationIR, ops: se
         lines.append(f"  const {{ create, loading: submitting, error: submitError, reset }} = useCreate{name}();")
     else:
         lines.append("  const submitting = false, submitError = null, reset = () => {};")
+
+    # Parent list hooks for relation dropdowns
+    unique_parents: dict[str, tuple[str, str]] = {}
+    for r in parent_relations:
+        if r.parent_entity.name not in unique_parents:
+            unique_parents[r.parent_entity.name] = (
+                r.hook_name,
+                r.parent_plural[:1].lower() + r.parent_plural[1:] + "List",
+            )
+    for hook_name, list_var in unique_parents.values():
+        lines.append(f"  const {list_var} = {hook_name}();")
 
     if can_update:
         lines.extend([
@@ -1526,6 +1658,20 @@ def _form_screen_page(screen: Screen, entity: Entity, ir: ApplicationIR, ops: se
             "      searchParams.forEach((val, key) => {",
             "        if (val) updates[key] = val;",
             "      });",
+        ])
+        for r in parent_relations:
+            base = r.relation_name
+            aliases = [f'"{r.field_name}"', f'"{base}_id"', f'"{base}Id"', f'"{base}"']
+            seen_a: set[str] = set()
+            unique_aliases = [a for a in aliases if not (a in seen_a or seen_a.add(a))]
+            expr = " || ".join(f"searchParams.get({a})" for a in unique_aliases)
+            lines.extend([
+                f'      const {base}Param = {expr};',
+                f'      if ({base}Param && !updates["{r.field_name}"]) {{',
+                f'        updates["{r.field_name}"] = {base}Param;',
+                '      }',
+            ])
+        lines.extend([
             "      if (Object.keys(updates).length > 0) {",
             "        setFormData((prev) => ({ ...prev, ...updates }));",
             "      }",
@@ -1544,7 +1690,8 @@ def _form_screen_page(screen: Screen, entity: Entity, ir: ApplicationIR, ops: se
 
     for f in editable_fields:
         rules = parse_field_rules(f)
-        flabel = _title_case(f.name)
+        rel = parent_rel_by_field.get(f.name)
+        flabel = _title_case(rel.relation_name) if rel else _title_case(f.name)
         val_access = f"(formData as any).{f.name}"
         if f.required:
             if f.type in (FieldType.STRING, FieldType.TEXT):
@@ -1562,6 +1709,12 @@ def _form_screen_page(screen: Screen, entity: Entity, ir: ApplicationIR, ops: se
             elif f.type == FieldType.DATETIME:
                 lines.extend([
                     f"    if (!{val_access}) {{",
+                    f'      clientErrors.{f.name} = "{flabel} is required";',
+                    "    }",
+                ])
+            else:
+                lines.extend([
+                    f"    if (!{val_access} || !String({val_access}).trim()) {{",
                     f'      clientErrors.{f.name} = "{flabel} is required";',
                     "    }",
                 ])
@@ -1722,7 +1875,39 @@ def _form_screen_page(screen: Screen, entity: Entity, ir: ApplicationIR, ops: se
         req_star = ' <span style={{ color: "#dc2626" }}>*</span>' if f.required else ""
         req_attr = " required" if f.required else ""
 
-        if f.type == FieldType.BOOL:
+        if f.name in parent_rel_by_field:
+            rel = parent_rel_by_field[f.name]
+            p_var = unique_parents[rel.parent_entity.name][1]
+            p_name = rel.parent_entity.name
+            p_title = rel.title_field
+            rel_label = _title_case(rel.relation_name)
+            loading_text = f"Loading {p_name.lower()}s..."
+            select_text = f"Select {p_name.lower()}..."
+            lines.extend([
+                '        <div style={{ marginBottom: 16 }}>',
+                f'          <label style={{{{ display: "block", marginBottom: 6, fontSize: 14, fontWeight: 500, color: "#334155" }}}}>{rel_label}{req_star}</label>',
+                '          <select',
+                f'            value={{String((formData as any).{f.name} ?? "")}}',
+                f'            onChange={{(e) => {{{{ setFormData((prev) => ({{{{ ...prev, {f.name}: e.target.value }}}})); if (fieldErrors.{f.name}) setFieldErrors((prev) => ({{{{ ...prev, {f.name}: "" }}}})); }}}}',
+                f'            style={{{{ width: "100%", padding: "8px 12px", border: fieldErrors.{f.name} ? "1px solid #ef4444" : "1px solid #cbd5e1", borderRadius: 6, fontSize: 14, boxSizing: "border-box", outline: "none", background: "#fff" }}}}',
+                f'            aria-invalid={{!!fieldErrors.{f.name}}}' + req_attr,
+                '          >',
+                f'            <option value="">{{{p_var}.loading ? "{loading_text}" : "{select_text}"}}</option>',
+                f'            {{({p_var}.data || []).map((item) => (',
+                '              <option key={item.id} value={item.id}>',
+                f'                {{String((item as any).{p_title} ?? (item as any).name ?? item.id)}}',
+                '              </option>',
+                '            ))}',
+                '          </select>',
+                f'          {{Boolean((formData as any).{f.name}) && (',
+                f'            <span style={{{{ fontSize: 12, color: "#059669", marginTop: 4, display: "block", fontWeight: 500 }}}}>',
+                f'              &bull; Selected {rel_label} linked',
+                '            </span>',
+                '          )}',
+                f'          {{fieldErrors.{f.name} && <span style={{{{ color: "#ef4444", fontSize: 12, marginTop: 4, display: "block" }}}}>{{fieldErrors.{f.name}}}</span>}}',
+                '        </div>',
+            ])
+        elif f.type == FieldType.BOOL:
             lines.extend([
                 '        <div style={{ marginBottom: 16 }}>',
                 '          <label style={{ display: "flex", alignItems: "center", gap: 8, cursor: "pointer", fontSize: 14, fontWeight: 500, color: "#334155" }}>',
