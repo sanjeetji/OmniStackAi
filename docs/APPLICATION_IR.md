@@ -20,6 +20,10 @@ Package: `omnistackai_agent_engine.application_ir` (Python 3.13 standard library
 - `Field` also carries `unique` (R-249: a single-column `UNIQUE` constraint in the schema), and
   `Entity` carries `indexes` — `Index(fields, unique=False, name=None)` records for composite/named
   indexes (each field must be a declared field of the entity; `validate`/construction errors otherwise).
+- `Field.validation` (R-250) carries small deterministic rule strings the generators honour:
+  `max_length:<int>` (schema `VARCHAR(n)` + Pydantic `Field(max_length=n)`) and `enum:<a>|<b>|<c>`
+  (schema `CHECK (col IN (...))` + Pydantic `Literal[...]`). Unknown rules are ignored
+  (forward-compatible).
 - `Fixture` (R-248) — explicit seed rows for one entity: `entity` (a declared entity) + `rows` (a
   non-empty tuple of dicts mapping a column — a declared field or a `<relation>_id` FK — to an explicit
   JSON value). `validate_ir` errors on an unknown entity or column and warns when a required column is

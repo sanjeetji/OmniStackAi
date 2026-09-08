@@ -12,6 +12,7 @@ from __future__ import annotations
 import re
 
 from ..application_ir import ApplicationIR, Entity, FieldType, RelationKind
+from .field_validation import parse_field_rules
 
 _PG_TYPE: dict[FieldType, str] = {
     FieldType.STRING: "TEXT",
@@ -57,9 +58,16 @@ def _column_lines(entity: Entity) -> list[str]:
             default = " DEFAULT gen_random_uuid()" if field.type is FieldType.UUID else ""
             lines.append(f"    {field.name} {pg} PRIMARY KEY{default}")
         else:
+            rules = parse_field_rules(field)
+            if field.type is FieldType.STRING and rules.max_length is not None:
+                pg = f"VARCHAR({rules.max_length})"
             null = " NOT NULL" if field.required else ""
             unique = " UNIQUE" if field.unique else ""
-            lines.append(f"    {field.name} {pg}{null}{unique}")
+            check = ""
+            if rules.enum:
+                allowed = ", ".join("'" + value.replace("'", "''") + "'" for value in rules.enum)
+                check = f" CHECK ({field.name} IN ({allowed}))"
+            lines.append(f"    {field.name} {pg}{null}{unique}{check}")
 
     for relation in entity.relations:
         if relation.kind in _FK_KINDS:

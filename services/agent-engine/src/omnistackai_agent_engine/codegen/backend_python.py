@@ -15,6 +15,7 @@ from .adapter import GenerationTarget
 from .auth_guard import PYJWT_REQUIREMENT, needs_auth, python_auth_file
 from .data_access import PSYCOPG_REQUIREMENT, python_data_access_files
 from .errors import GenerationError
+from .field_validation import parse_field_rules
 from .files import GeneratedFile, GeneratedProject
 from .route_wiring import Op, fk_relations, wire_endpoint
 from .schema_sql import render_postgres_schema
@@ -51,15 +52,36 @@ def _path_params(path: str) -> list[str]:
     return re.findall(r"\{(\w+)\}", path)
 
 
+def _py_field_line(field, rules) -> str:
+    typ = _PY_TYPE[field.type]
+    if rules.enum:
+        typ = "Literal[" + ", ".join(repr(value) for value in rules.enum) + "]"
+    constraints: list[str] = []
+    if rules.max_length is not None and field.type in (FieldType.STRING, FieldType.TEXT):
+        constraints.append(f"max_length={rules.max_length}")
+    if field.required:
+        if constraints:
+            return f"    {field.name}: {typ} = Field({', '.join(constraints)})"
+        return f"    {field.name}: {typ}"
+    if constraints:
+        return f"    {field.name}: Optional[{typ}] = Field(default=None, {', '.join(constraints)})"
+    return f"    {field.name}: Optional[{typ}] = None"
+
+
 def _models_file(ir: ApplicationIR) -> str:
+    rules_by_field = {id(f): parse_field_rules(f) for e in ir.entities for f in e.fields}
     needs_datetime = any(f.type is FieldType.DATETIME for e in ir.entities for f in e.fields)
     needs_optional = any(not f.required for e in ir.entities for f in e.fields)
+    needs_field = any(r.max_length is not None for r in rules_by_field.values())
+    needs_literal = any(r.enum for r in rules_by_field.values())
+
     lines = ["from __future__ import annotations", ""]
     if needs_datetime:
         lines.append("from datetime import datetime")
-    if needs_optional:
-        lines.append("from typing import Optional")
-    lines.append("from pydantic import BaseModel")
+    typing_imports = [name for name, use in (("Literal", needs_literal), ("Optional", needs_optional)) if use]
+    if typing_imports:
+        lines.append(f"from typing import {', '.join(typing_imports)}")
+    lines.append("from pydantic import BaseModel, Field" if needs_field else "from pydantic import BaseModel")
     lines.append("")
     if not ir.entities:
         lines.append("# No entities in the IR.")
@@ -68,11 +90,7 @@ def _models_file(ir: ApplicationIR) -> str:
         lines.append("")
         lines.append(f"class {entity.name}(BaseModel):")
         for field in entity.fields:
-            py = _PY_TYPE[field.type]
-            if field.required:
-                lines.append(f"    {field.name}: {py}")
-            else:
-                lines.append(f"    {field.name}: Optional[{py}] = None")
+            lines.append(_py_field_line(field, rules_by_field[id(field)]))
         if entity.relations:
             rels = ", ".join(f"{r.name}->{r.target_entity}" for r in entity.relations)
             lines.append(f"    # relations: {rels}")

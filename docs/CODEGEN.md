@@ -110,6 +110,11 @@ deterministic SQL DDL migration — the generated backend's persistence layer:
   column constraint; each `Entity.indexes` entry renders one `CREATE [UNIQUE] INDEX <name> ON <table>
   (<cols>);` after the tables, with a deterministic default name (`<table>_<cols>_idx`, or `_key` when
   unique) when the index is unnamed.
+- **Field validation (R-250):** `Field.validation` rules (`codegen/field_validation.py`) flow into two
+  targets — a STRING with `max_length:n` becomes `VARCHAR(n)` and an `enum:a|b|c` becomes a
+  `CHECK (col IN ('a','b','c'))` in the schema; in the FastAPI models the same rules render
+  `Field(max_length=n)` and a `Literal[...]` type. Unknown rules are ignored. (Go request-validation
+  tags are a later task; the schema already constrains Go writes at the DB.)
 
 Both backend adapters (FastAPI and Go) emit it as `migrations/0001_init.sql` exactly when the IR has
 entities and `database_strategy == postgres` — no previously emitted file changes. Output is byte-stable,

@@ -1,27 +1,26 @@
 schema_version: 1
-task_id: R-249
-title: IR indexes + unique constraints in the generated PostgreSQL schema
-status: done
+task_id: R-250
+title: Richer field validation (max_length + enum) into the schema and FastAPI models
+status: in_progress
 phase: BASIC/MVP
 founder_stage: 0
 branch: main
 goal: >-
-  Deepen the persistence layer (Brief 9/34/42): let the Application IR express column uniqueness and
-  entity indexes, and render them in the generated schema. Add Field.unique (a single-column UNIQUE
-  constraint) and a new Index record on Entity (fields + unique + optional name) for composite/named
-  indexes. schema_sql emits `UNIQUE` on unique non-PK columns and `CREATE [UNIQUE] INDEX <name> ON
-  <table> (<cols>);` per entity index (deterministic default name when unnamed). Additive IR fields
-  (empty/false defaults, no schema-version bump); index field references are validated against the
-  entity's own fields at construction. Pure/deterministic/offline — schema text only; nothing connects
-  to or runs a database.
+  Make the IR Field.validation tuple meaningful (Brief 9/26/27): define a small deterministic rule
+  syntax (max_length:<int>, enum:<a>|<b>|<c>) and thread it into two generated targets. The PostgreSQL
+  schema renders a STRING field with max_length as VARCHAR(n) (else TEXT) and an enum as a
+  CHECK (<col> IN ('a','b')) constraint; the FastAPI Pydantic models render max_length via
+  Field(max_length=n) and enum as a Literal[...] type. Unknown rules are ignored (forward-compatible).
+  Go request-validation tags are deferred to a follow-up (the schema already constrains Go writes at the
+  DB). Additive and offline; nothing connects to or runs a database; examples are unchanged so existing
+  outputs stay stable (feature is exercised by constructed-IR tests).
 source:
   tracker_sheet: Phase_Roadmap
   tracker_row: reconstructed; new IDs continue after the workbook backlog's R-010..R-219
-  brief_sections: [9, 34, 35, 42, 74, 77, 83, 84, 85, 92]
+  brief_sections: [9, 26, 27, 34, 42, 74, 77, 83, 84, 85, 92]
   founder_note: >-
-    Founder said "Continue for the next task" after R-248; R-249 is the approved next candidate (deeper
-    IR/adapter coverage — indexes + unique constraints). Committed directly to main; author solely
-    sanjeetji; tooling adds a Co-Authored-By trailer.
+    Founder said "go for it" after R-249; R-250 is the approved field-validation option. Committed
+    directly to main; author solely sanjeetji; tooling adds a Co-Authored-By trailer.
 project_profile:
   repository: platform_modular_monorepo
   service: python_agent_engine
@@ -29,11 +28,11 @@ project_profile:
   model_routing: balanced
 complexity: L2
 expected_impact:
-  - services/agent-engine/src/omnistackai_agent_engine/application_ir/ir.py
-  - services/agent-engine/src/omnistackai_agent_engine/application_ir/__init__.py
-  - services/agent-engine/src/omnistackai_agent_engine/application_ir/examples.py
+  - services/agent-engine/src/omnistackai_agent_engine/codegen/field_validation.py
   - services/agent-engine/src/omnistackai_agent_engine/codegen/schema_sql.py
-  - services/agent-engine/tests/test_schema_sql.py (or a new test_schema_indexes.py)
+  - services/agent-engine/src/omnistackai_agent_engine/codegen/backend_python.py
+  - services/agent-engine/src/omnistackai_agent_engine/codegen/__init__.py
+  - services/agent-engine/tests/test_field_validation.py
   - docs/APPLICATION_IR.md, docs/CODEGEN.md, docs/PROGRESS.md
   - portable state, changelog, handoff, task doc, and tracker evidence
 allowed_paths:
@@ -45,32 +44,32 @@ allowed_paths:
   - services/agent-engine/**
 must_not_change:
   - PostgreSQL as the control-plane database or the platform's own schema/migrations
-  - the IR schema version or existing IR fields (Field.unique / Entity.indexes are additive defaults)
-  - the model-gateway, runtime, verify, edit, data-access, auth, seed public behavior (additive)
-  - the 0002_seed emission; the data-access/route/auth code (schema-only change)
+  - the IR schema (Field.validation already exists; this task only interprets it — no new IR field)
+  - the model-gateway, runtime, verify, edit, data-access, auth, seed, index public behavior (additive)
+  - example IRs / existing generated outputs (feature tested via constructed IRs to avoid churn)
   - local Compose services or infrastructure; the Section 74 top-level contract; the offline bootstrap
   - the network-independence of static task verify
 must_not_do:
-  - connect to or run a database; execute DDL; make a network call
+  - apply max_length to a non-string field or emit invalid Pydantic; fabricate a rule the IR didn't declare
+  - connect to or run a database; make a network call
   - add a platform Python dependency; import a vendor SDK; put a secret anywhere
 acceptance:
-  - Field gains unique: bool = False (validated, serialized). Entity gains indexes: tuple[Index, ...] = ()
-    where Index(fields, unique=False, name=None); each index field must be a declared field of the
-    entity (construction error otherwise). Both round-trip via to_dict/from_dict; normalize_ir preserves
-    them (entities pass through as objects).
-  - render_postgres_schema emits `UNIQUE` on unique non-id columns (never on the PK id) and one
-    `CREATE [UNIQUE] INDEX <name> ON <table> (<cols>);` per entity index, with a deterministic default
-    name (<table>_<cols>_idx / _key) when unnamed; ordered deterministically; byte-stable.
-  - No index/unique output when none declared; 0001_init.sql for a fixture-free IR is otherwise
-    unchanged; nothing connects to or runs a database.
-  - Standard-library offline tests cover the unique column, single + composite indexes (named/unnamed,
-    unique/non-unique), the id-never-unique rule, the bad-index-field construction error, and round-trip.
+  - parse_field_rules(field) parses max_length:<int> and enum:<a>|<b>|... from Field.validation; unknown
+    rules are ignored; deterministic.
+  - schema: a STRING field with max_length -> VARCHAR(n) (else TEXT); an enum -> CHECK (<col> IN ('...'))
+    appended after NOT NULL/UNIQUE; enum values single-quote-escaped; the id PK is unaffected.
+  - Pydantic models: max_length (STRING/TEXT) -> Field(max_length=n) (Field(default=None, max_length=n)
+    when optional); enum -> Literal["a","b"] type; imports added only when used; models parse as valid
+    Python.
+  - No change when a field declares no rules; example IR outputs are unchanged; nothing runs.
+  - Standard-library offline tests cover the parser, schema VARCHAR/CHECK, Pydantic Field/Literal, the
+    no-rules pass-through, and that examples are unaffected.
 required_gates:
   - impact_analysis
-  - unique_column_tests
-  - index_emission_tests
-  - bad_index_field_error_test
-  - ir_roundtrip_tests
+  - parse_rules_tests
+  - schema_varchar_check_tests
+  - pydantic_field_literal_tests
+  - examples_unchanged_test
   - python_compile_test
   - vendor_import_exclusion
   - secret_exclusion_check
@@ -85,20 +84,12 @@ model_tool_trace:
   cloud_calls: 0
   note: Deterministic; no model call, no network, no DB connection. cloud_calls zero.
 completion:
-  implementation_commit: 28e7cd5
-  verified_at: "2026-09-08T00:00:00+05:30"
-  verification:
-    - "task verify — pass (327 agent-engine tests; 11 new)"
-    - "task security:quick — pass; task env:check — pass"
-    - "demo: unique column -> 'email TEXT NOT NULL UNIQUE'; composite unique index -> 'CREATE UNIQUE INDEX account_tenant_handle_key'; rideshare emits 'CREATE INDEX driver_name_idx'"
-  acceptance_results:
-    - "Field.unique + Index/Entity.indexes added, validated (index fields must be declared entity fields), and round-trip via to_dict/from_dict (tests)"
-    - "render_postgres_schema emits UNIQUE on unique non-id columns (never the PK) and CREATE [UNIQUE] INDEX per entity index with deterministic default names; ordered/byte-stable (tests)"
-    - "bad index field raises InvalidIRError at construction; empty index fields rejected (tests)"
-    - "no index/unique output when none declared; nothing connects to or runs a database"
-    - "additive IR (defaults false/empty); normalize_ir preserves via object pass-through; task verify network-independent"
+  implementation_commit: null
+  verified_at: null
+  verification: []
+  acceptance_results: []
 blockers: []
 next_action: >-
-  Implement Field.unique + Index/Entity.indexes + schema emission + tests; run gates; record completion.
-  Later continue with richer field validation into models (length/enum) or console rendering.
+  Implement field_validation parser + schema + Pydantic emission + tests; run gates; record completion.
+  Follow-up R-251: Go request-validation tags + numeric min/max rules.
 next_command: task agent-engine:test
