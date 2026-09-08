@@ -1,26 +1,26 @@
-# OmniStackAI — implementation progress (as of R-259)
+# OmniStackAI — implementation progress (as of R-262)
 
 A living summary of what is built, what is pending, and how to see results. Numbers come from the
 execution tracker (`R_&_D/OmniStackAI_Execution_Tracker_v6.xlsx`, `Phase_Roadmap`).
 
 ## Headline
 
-- **461 automated tests pass**, fully offline and network-independent (`task verify`).
-- **48 tracker tasks Done, 1 Deferred, 202 Not Started** across 251 rows.
-- The offline builder loop is complete end to end: **describe (IR) → generate (web with typed API client + API with
-  working CRUD incl. PATCH/PUT update + pagination + sorting + total count header + sub-collections + DB schema + data-access + JWT-verified auth
-  & per-endpoint roles + field validation + CORS middleware)
+- **506 automated tests pass**, fully offline and network-independent (`task verify`).
+- **51 tracker tasks Done, 1 Deferred, 199 Not Started** across 251 rows.
+- The offline builder loop is complete end to end: **describe (IR) → generate (web with typed API client & React hooks + API with
+  working CRUD incl. PATCH/PUT update + pagination + sorting + total count header + keyword search + sub-collections + DB schema + data-access + JWT-verified auth
+  & per-endpoint roles + field validation + CORS middleware + OpenAPI 3.1 contract)
   → verify → edit → commit to an owned Git repo.**
 
 ## Completion by phase
 
 | Phase | Done | Total | % complete |
 |-------|------|-------|-----------|
-| **MVP** (current milestone) | 44 | 145 | **30.3%** |
+| **MVP** (current milestone) | 47 | 145 | **32.4%** |
 | MID | 0 | 47 | 0% |
 | ADVANCED | 0 | 29 | 0% |
 | PRODUCTION | 0 | 29 | 0% |
-| **Overall program** | **44** | **251** | **17.5%** |
+| **Overall program** | **47** | **251** | **18.7%** |
 
 > The 203 "Not Started" rows are the pre-existing backlog catalogue (R-010..R-219 — many are individual
 > specialized agents and later-phase features). Capability-wise the platform is further along than the
@@ -70,6 +70,9 @@ execution tracker (`R_&_D/OmniStackAI_Execution_Tracker_v6.xlsx`, `Phase_Roadmap
 | **Frontend Typed API client** (`apps/web/lib/api.ts`) + **Backend CORS** | ✅ Done | R-257 |
 | **Query parameter sorting** (`sort` & `order` with whitelist protection) | ✅ Done | R-258 |
 | **Total count queries & `X-Total-Count` header** (Go, FastAPI, Next.js) | ✅ Done | R-259 |
+| **OpenAPI 3.1 specification generation** (`render_openapi`, `contracts/openapi.json`) | ✅ Done | R-260 |
+| **Full-text & keyword search filtering** (`q` query param across Go, FastAPI, Next.js, OpenAPI) | ✅ Done | R-261 |
+| **React data-fetching & mutation hooks** (`apps/web/lib/hooks.ts` for Next.js web client) | ✅ Done | R-262 |
 | Next.js console upgrade (rich UI) | ⏸ Deferred | R-224 — needs npm registry access |
 | Live sandbox preview + real deploy (Tier 2) | ⛔ Pending | needs a network machine + provider keys |
 | Native mobile agents | ⛔ Deferred (governance) | until web/backend stability (Brief §25/§91) |

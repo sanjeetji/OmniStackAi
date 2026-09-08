@@ -1,23 +1,22 @@
 schema_version: 1
-task_id: R-259
-title: Total Count Queries and X-Total-Count Header on LIST Endpoints
+task_id: R-262
+title: React Data-Fetching & Mutation Hooks Generator (apps/web/lib/hooks.ts)
 status: done
 phase: BASIC/MVP
 founder_stage: 0
 branch: main
 goal: >-
-  Add total count queries and X-Total-Count HTTP response header to Op.LIST and Op.LIST_BY endpoints
-  across Go and FastAPI backends, with CORS header exposure and Next.js client integration:
-  - data_access: emit Count<Entity> and Count<Entity>By<Rel> in Go store; emit count_<table> and count_<table>_by_<rel> in Python repositories.
-  - backend_go: in wired LIST and LIST_BY handlers, query count and set w.Header().Set("X-Total-Count", strconv.Itoa(total)); expose in corsMiddleware.
-  - backend_python: in LIST and LIST_BY routes, inject Response, query count, and set response.headers["X-Total-Count"] = str(total); expose in CORSMiddleware.
-  - nextjs: support X-Total-Count in lib/api.ts.
+  Generate strongly-typed, idiomatic React hooks (apps/web/lib/hooks.ts) in the generated Next.js web application:
+  - useList<Entities>: loading, error, data, total count, pagination math (page, pageSize, totalPages, setPage), sorting (sort, order, setSort), search (q, setSearch), refetch.
+  - use<Entity>(id): detail fetching hook with loading, error, refetch.
+  - useCreate<Entity>, useUpdate<Entity>, useDelete<Entity>: mutation hooks with loading, error, and async execution.
+  - useList<Entities>By<Rel>: subcollection list hook scoped by parent relation.
   - pure codegen change; no new platform dep, no install/build/run/DB.
 source:
   tracker_sheet: Phase_Roadmap
-  brief_sections: [9, 26, 27, 40, 74, 77, 83, 84, 85, 92]
+  brief_sections: [43, 50, 74, 77, 91, 92]
   founder_note: >-
-    Founder approved implementation plan for R-259.
+    Founder approved implementation plan for R-262.
 project_profile:
   repository: platform_modular_monorepo
   service: python_agent_engine
@@ -25,13 +24,8 @@ project_profile:
   model_routing: balanced
 complexity: L2
 expected_impact:
-  - services/agent-engine/src/omnistackai_agent_engine/codegen/backend_go.py
-  - services/agent-engine/src/omnistackai_agent_engine/codegen/backend_python.py
-  - services/agent-engine/src/omnistackai_agent_engine/codegen/data_access.py
   - services/agent-engine/src/omnistackai_agent_engine/codegen/nextjs.py
-  - services/agent-engine/tests/test_total_count.py
-  - services/agent-engine/tests/test_pagination.py
-  - services/agent-engine/tests/test_sorting.py
+  - services/agent-engine/tests/test_nextjs_hooks.py
   - docs/CODEGEN.md, docs/PROGRESS.md
   - portable state, changelog, handoff, task doc, tracker evidence
 allowed_paths:
@@ -43,28 +37,21 @@ allowed_paths:
   - services/agent-engine/**
 must_not_change:
   - the IR schema; no new IR field
-  - the JSON array payload of LIST and LIST_BY endpoints (body remains Entity[])
   - network-independence of task verify
 must_not_do:
   - add a platform Python dependency
-  - break existing pagination (limit/offset) or sorting (sort/order)
+  - break existing codegen contracts
   - connect to or run a database; make a network call; put a secret anywhere
 acceptance:
-  - Go store emits Count<Entity> and Count<Entity>By<Rel> queries.
-  - Go handler sets X-Total-Count header on LIST and LIST_BY responses.
-  - Go corsMiddleware includes Access-Control-Expose-Headers: X-Total-Count.
-  - FastAPI repository emits count_<table> and count_<table>_by_<rel> queries.
-  - FastAPI router sets X-Total-Count header on LIST and LIST_BY responses.
-  - FastAPI CORSMiddleware includes expose_headers=["X-Total-Count"].
-  - Next.js lib/api.ts supports reading total count or paginated response metadata.
-  - Response body remains Entity[] (array payload preserved).
+  - NextjsWebAdapter emits apps/web/lib/hooks.ts with "use client" directive.
+  - useList<Entities> manages data, total, loading, error, page, pageSize, totalPages, setPage, setSearch, setSort, refetch.
+  - use<Entity>(id) fetches entity detail when id is provided.
+  - useCreate<Entity>, useUpdate<Entity>, useDelete<Entity> provide mutation triggers with loading and error states.
+  - useList<Entities>By<Rel> provides scoped subcollection data fetching.
+  - React imports use standard useState, useEffect, useCallback without external state libraries.
   - task verify green; 0 network calls.
 required_gates:
-  - count_store_test
-  - count_handler_test
-  - count_repo_test
-  - count_router_test
-  - cors_expose_test
+  - nextjs_hooks_test
   - task_verify
 model_tool_trace:
   routing: local_only
@@ -72,5 +59,5 @@ model_tool_trace:
   cloud_calls: 0
   note: Deterministic codegen; no model call, no network, no DB. cloud_calls zero.
 blockers: []
-next_action: Implement total count queries and X-Total-Count headers in codegen modules.
+next_action: Implement _hooks_file in codegen/nextjs.py and write test_nextjs_hooks.py.
 next_command: task verify

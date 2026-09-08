@@ -5,9 +5,9 @@ Last updated: 2026-09-08T17:00:00+05:30
 Stage 0 (Founder Build Sequence, Brief Section 91) — BASIC/MVP
 
 ## Last Completed Task
-Tracker ID: R-259 — Total Count Queries & `X-Total-Count` Header on LIST Endpoints — DONE,
-`task verify` (461 agent-engine tests, 15 new in `test_total_count.py`) passing. Go store Count<Entity> / Count<Entity>By<Rel>; Go handlers set X-Total-Count header on Op.LIST/Op.LIST_BY and expose in CORS; FastAPI repo count_<table> / count_<table>_by_<rel>; FastAPI routers set X-Total-Count header and expose in CORS; Next.js lib/api.ts exports PaginatedResult, requestWithMeta, and list*WithCount helpers, keeping standard list* methods backward-compatible.
-Preceded by R-254 (structured validation errors), R-255 (pagination limit/offset), R-256 (PUT handlers), R-257 (typed Next.js API client + CORS middleware), and R-258 (query parameter sorting).
+Tracker ID: R-262 — React Data-Fetching & Mutation Hooks Generator (`apps/web/lib/hooks.ts`) — DONE,
+`task verify` (506 agent-engine tests, 15 new in `test_nextjs_hooks.py`) passing. Emits strongly-typed React hooks (`apps/web/lib/hooks.ts`) using `"use client"` directive and built-in React hooks (`useState`, `useEffect`, `useCallback`): `useList<Entities>` with pagination (`page`, `pageSize`, `totalPages`, `setPage`), sorting (`sort`, `order`, `setSort`), search (`q`, `setSearch`), total count, and refetch; `use<Entity>` detail fetching; `useCreate<Entity>`, `useUpdate<Entity>`, and `useDelete<Entity>` mutation hooks; and `useList<Entities>By<Rel>` subcollection hooks.
+Preceded by R-254 (structured validation errors), R-255 (pagination limit/offset), R-256 (PUT handlers), R-257 (typed Next.js API client + CORS middleware), R-258 (query parameter sorting), R-259 (total count queries & headers), R-260 (OpenAPI 3.1 specification), and R-261 (keyword search filtering).
 Additive, offline, 0 network, no DB connection.
 
 ## Workflow note

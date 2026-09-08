@@ -1,5 +1,69 @@
 # Work Log
 
+## 2026-09-08 — R-262
+
+- Recorded contract in `.ai/CURRENT_TASK.yaml` and `.ai/tasks/R-262.md`.
+- `nextjs.py`:
+  - Implemented `_hooks_file(ir: ApplicationIR) -> str` emitting strongly-typed React hooks in `apps/web/lib/hooks.ts`.
+  - Added `"use client"` directive, React built-in imports (`useCallback`, `useEffect`, `useState`, `type Dispatch`, `type SetStateAction`), types from `./types`, and API client helpers from `./api`.
+  - Defined shared interfaces: `UseListParams`, `UseListState<T>`, `UseDetailState<T>`, `UseMutationState<TData, TResult = TData>`.
+  - For each entity in `ir.entities`:
+    - `useList<Entities>`: manages `params` state (`limit`, `offset`, `sort`, `order`, `q`), computes pagination (`page`, `pageSize`, `totalPages`), provides `setPage`, `setSearch`, `setSort`, `refetch`, and fetches with `api.list<Entities>WithCount`.
+    - `use<Entity>`: detail hook fetching entity by ID via `api.get<Entity>`.
+    - `useCreate<Entity>`: mutation hook with `create`, `mutate`, `loading`, `error`, `reset`.
+    - `useUpdate<Entity>`: mutation hook with `update`, `mutate`, `loading`, `error`, `reset`.
+    - `useDelete<Entity>`: mutation hook with `remove`, `mutate`, `loading`, `error`, `reset`.
+  - For subcollections: `useList<Entities>By<Rel>` with scoped relation ID, pagination, search, and sorting.
+  - Exported unified `hooks` object.
+  - Added public `render_hooks(ir: ApplicationIR) -> str` and wired `GeneratedFile("lib/hooks.ts", _hooks_file(ir))` into `NextjsWebAdapter.generate`.
+  - Exported `render_hooks` in `omnistackai_agent_engine/codegen/__init__.py`.
+- Created `services/agent-engine/tests/test_nextjs_hooks.py` with 15 unit tests covering `"use client"`, imports, interfaces, list hook pagination/search/sorting, detail hook, mutation hooks, subcollection hooks, empty IR, unwired operations, and example IRs.
+- `task verify` — 506 tests pass (15 new), 0 failures. `task lint`, `task security:quick`, `task env:check` pass. 0 network calls, 0 cloud model calls.
+- Updated CURRENT_TASK.yaml, tasks/R-262.md, PROJECT_STATE.yaml.
+
+## 2026-09-08 — R-261
+
+- Recorded contract in `.ai/CURRENT_TASK.yaml` and `.ai/tasks/R-261.md`.
+- `data_access.py`:
+  - Added `_searchable_fields(entity: Entity) -> list[str]` selecting `FieldType.STRING` and `FieldType.TEXT` fields.
+  - Python repository: `list_<table>` and `count_<table>` accept `q: str | None = None`. When `q` is provided and searchable fields exist, emits parameterized `WHERE (field1 ILIKE %s OR field2 ILIKE %s)` passing `f"%{q}%"` for each field.
+  - Subcollections `list_<table>_by_<rel>` and `count_<table>_by_<rel>` scope queries with relation ID and search pattern.
+  - Go store: `List<Entity>` and `Count<Entity>` accept `q string`. When `q != ""` and searchable fields exist, emits parameterized `WHERE (field1 ILIKE $1 OR field2 ILIKE $1)` with argument `"%"+q+"%"`.
+  - Subcollections `List<Entity>By<Rel>` and `Count<Entity>By<Rel>` accept `q string` and scope queries with relation ID and search pattern.
+  - Non-text entities gracefully omit search clauses with zero SQL errors.
+- `backend_go.py`:
+  - `_helpers_block`: added `parseSearch(r *http.Request) string` helper trimming `r.URL.Query().Get("q")`.
+  - `_handlers_file_wired`: parsed `q := parseSearch(r)` on `Op.LIST` and `Op.LIST_BY` and passed `q` to store `Count...` and `List...` methods.
+- `backend_python.py`:
+  - Router generation: added `q: str | None = None` to `Op.LIST` and `Op.LIST_BY` endpoints and passed `q=q` to repository `count_...` and `list_...` functions.
+- `nextjs.py`:
+  - `_api_client_file`: updated `options.params` types in `list<Entities>`, `list<Entities>WithCount`, `list<Entities>By<Rel>`, and `list<Entities>By<Rel>WithCount` to include `q?: string`.
+- `openapi.py`:
+  - Added `q` query parameter descriptor to `Op.LIST` and `Op.LIST_BY` operations.
+- Added `services/agent-engine/tests/test_search.py` with 16 unit tests covering Go store, Go handlers, Python repo, Python routers, Next.js client, OpenAPI 3.1 parameter declaration, and non-text entity handling.
+- Updated existing assertions in `test_nextjs_api_client.py`, `test_sorting.py`, `test_pagination.py`, `test_total_count.py`, `test_route_wiring.py`, and `test_subcollection_wiring.py`.
+- `task verify` — 491 tests pass (16 new), 0 failures. `task lint`, `task security:quick`, `task env:check` pass. 0 network calls, 0 cloud model calls.
+- Updated docs/CODEGEN.md, docs/PROGRESS.md, CHANGELOG.md, CURRENT_TASK.yaml, PROJECT_STATE.yaml, tasks/R-261.md.
+
+## 2026-09-08 — R-260
+
+- Recorded contract in `.ai/CURRENT_TASK.yaml` and `.ai/tasks/R-260.md`.
+- `openapi.py`:
+  - Created `render_openapi(ir: ApplicationIR) -> dict[str, Any]` and `render_openapi_json(ir: ApplicationIR, indent: int = 2) -> str`.
+  - Emitted OpenAPI 3.1.0 specification with `info` (name, description, version).
+  - Emitted `components.schemas` converting all entities to JSON Schema properties with validation metadata (`maxLength`, `enum`, `minimum`, `maximum`, `required`), plus standard error schemas.
+  - Emitted `components.securitySchemes` with `BearerAuth` (JWT).
+  - Emitted `paths` mapping all endpoints with path parameters, query parameters (`limit`, `offset`, `sort`, `order` on LIST endpoints), request bodies, and responses with `X-Total-Count` header.
+  - Mapped operation security requirements (`BearerAuth` + roles) based on `api.auth` and `api.required_roles`.
+- `codegen/__init__.py`: exported `render_openapi` and `render_openapi_json`.
+- `assembler.py`: emitted `contracts/openapi.json` in customer monorepo assembly and documented in root `README.md`.
+- `backend_go.py`: emitted `openapi.json` at root of generated Go backend project.
+- `backend_python.py`: emitted `openapi.json` at root of generated FastAPI backend project.
+- Updated `test_console_snapshot.py` to expect `contracts/openapi.json` and `services/api/openapi.json` in showcase diff.
+- Added `services/agent-engine/tests/test_openapi.py` with 14 unit tests covering OpenAPI 3.1 structure, schemas, validation rules, paths/parameters, auth/roles security, monorepo assembly, Go/FastAPI adapter emission, and determinism.
+- `task verify` — 475 tests pass (14 new), 0 failures. `task lint`, `task security:quick`, `task env:check` pass. 0 network calls, 0 cloud model calls.
+- Updated docs/CODEGEN.md, docs/PROGRESS.md, CHANGELOG.md, CURRENT_TASK.yaml, PROJECT_STATE.yaml, tasks/R-260.md.
+
 ## 2026-09-08 — R-259
 
 - Recorded contract in `.ai/CURRENT_TASK.yaml` and `.ai/tasks/R-259.md`.
