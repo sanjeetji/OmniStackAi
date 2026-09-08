@@ -1,13 +1,13 @@
-# OmniStackAI — implementation progress (as of R-270)
+# OmniStackAI — implementation progress (as of R-271)
 
 A living summary of what is built, what is pending, and how to see results. Numbers come from the
 execution tracker (`R_&_D/OmniStackAI_Execution_Tracker_v6.xlsx`, `Phase_Roadmap`).
 
 ## Headline
 
-- **614 automated tests pass**, fully offline and network-independent (`task verify`).
-- **59 tracker tasks Done, 1 Deferred, 191 Not Started** across 251 rows.
-- The offline builder loop is complete end to end: **describe (IR) → generate (web with typed API client, React hooks, interactive master-detail screen components with field validation, page size selector & contextual empty states, bulk selection & batch deletion, subcollection navigation, child item deletion & mutation feedback, full-stack update/edit actions, foreign-key relation selectors & parent auto-population + API with
+- **630 automated tests pass**, fully offline and network-independent (`task verify`).
+- **60 tracker tasks Done, 1 Deferred, 190 Not Started** across 251 rows.
+- The offline builder loop is complete end to end: **describe (IR) → generate (web with typed API client, React hooks, interactive master-detail screen components with field validation, page size selector & contextual empty states, bulk selection & batch deletion, CSV data export & bulk export, subcollection navigation, child item deletion & mutation feedback, full-stack update/edit actions, foreign-key relation selectors & parent auto-population + API with
   working CRUD incl. PATCH/PUT update + pagination + sorting + total count header + keyword search + sub-collections + DB schema + data-access + JWT-verified auth
   & per-endpoint roles + field validation + CORS middleware + OpenAPI 3.1 contract)
   → verify → edit → commit to an owned Git repo.**
@@ -16,11 +16,11 @@ execution tracker (`R_&_D/OmniStackAI_Execution_Tracker_v6.xlsx`, `Phase_Roadmap
 
 | Phase | Done | Total | % complete |
 |-------|------|-------|-----------|
-| **MVP** (current milestone) | 54 | 145 | **37.2%** |
+| **MVP** (current milestone) | 55 | 145 | **37.9%** |
 | MID | 0 | 47 | 0% |
 | ADVANCED | 0 | 29 | 0% |
 | PRODUCTION | 0 | 29 | 0% |
-| **Overall program** | **54** | **251** | **21.5%** |
+| **Overall program** | **55** | **251** | **21.9%** |
 
 
 > The 203 "Not Started" rows are the pre-existing backlog catalogue (R-010..R-219 — many are individual
@@ -82,6 +82,7 @@ execution tracker (`R_&_D/OmniStackAI_Execution_Tracker_v6.xlsx`, `Phase_Roadmap
 | **Subcollection child item deletion & mutation feedback** (child deletion, confirm prompt, error alert, refetch) | ✅ Done | R-268 |
 | **Page size selector & contextual empty state CTAs** (configurable page size, Clear search, + Create first, + Add first child) | ✅ Done | R-269 |
 | **Bulk selection & batch deletion in collection screens** (multi-row checkboxes, contextual toolbar, batch delete, confirmation prompt, mutation progress & errors) | ✅ Done | R-270 |
+| **CSV data export & bulk export in collection screens** (client-side RFC 4180 export, full-page Export CSV button, contextual Bulk Actions Export Selected, Blob URL lifecycle) | ✅ Done | R-271 |
 | Next.js console upgrade (rich UI) | ⏸ Deferred | R-224 — needs npm registry access |
 | Live sandbox preview + real deploy (Tier 2) | ⛔ Pending | needs a network machine + provider keys |
 | Native mobile agents | ⛔ Deferred (governance) | until web/backend stability (Brief §25/§91) |

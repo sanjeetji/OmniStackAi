@@ -648,5 +648,36 @@ Enables enterprise-grade multi-record selection and batch operations in generate
   - Zero substring collisions with subcollection selection state (`selectedId`) or controls (`Deselect`).
   - Strict diff invariance: zero references to `ir.description`.
 
+### CSV Data Export & Bulk Export in Generated Next.js Collection Screens (R-271)
+
+Enables client-side RFC 4180 CSV data export and bulk selection export in generated Next.js master collection screens (`apps/web/app/<screen>/page.tsx`):
+
+- **handleExportCsv Helper Function**:
+  - Emitted directly in `_collection_screen_page` accepting an optional `selectedOnly: boolean = false` parameter.
+  - Filters loaded items against `checkedIds` when `selectedOnly=true`, or exports all loaded records (`data ?? []`).
+  - Safely early-returns when `itemsToExport.length === 0`.
+- **Strict RFC 4180 CSV Serializer**:
+  - Serializes values via inline `toCsvVal(val: unknown)`:
+    * Returns empty quotes `""` for `null` and `undefined`.
+    * Serializes objects via `JSON.stringify(val)` for clean presentation.
+    * Escapes internal double quotes `"` to `""`.
+    * Wraps every serialized field in double quotes `"${str.replace(/"/g, '""')}"`.
+  - Emits all declared entity fields (`entity.fields`) across both header row and row data mappings.
+  - Joins rows using newline characters (`\n`).
+- **Browser Download Lifecycle**:
+  - Constructs `new Blob([csvContent], { type: "text/csv;charset=utf-8;" })`.
+  - Generates object URL via `URL.createObjectURL(blob)`.
+  - Dynamically creates an anchor element (`<a>`) with `download` attribute set to `{plural.lower()}_export.csv`.
+  - Appends anchor to `document.body`, triggers programmatic `link.click()`, and removes anchor from DOM.
+  - Cleans up allocated memory via `URL.revokeObjectURL(url)`.
+- **Top Controls Toolbar & Contextual Bulk Bar Integration**:
+  - Top controls bar: renders "Export CSV" button alongside Search and Refresh (`disabled={!data || data.length === 0}`).
+  - Contextual Bulk Actions Bar: renders "Export Selected ({checkedIds.length})" button when `checkedIds.length > 0`.
+  - Symmetrical layout: Export Selected is available whether or not the entity supports DELETE; Delete Selected coexists when deletion is enabled.
+- **Diff Invariance & Fallback Cleanliness**:
+  - Pure standard-library Python codegen, 100% offline, 0 network, 0 external dependencies.
+  - Zero references to `ir.description`, strictly preserving snapshot diff invariance.
+
+
 
 

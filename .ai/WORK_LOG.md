@@ -1,5 +1,25 @@
 # Work Log
 
+## 2026-09-08 — R-271
+
+- Recorded contract in `.ai/CURRENT_TASK.yaml` and `.ai/tasks/R-271.md`.
+- `nextjs.py`:
+  - Added `handleExportCsv(selectedOnly: boolean = false)` helper function to `_collection_screen_page`:
+    * Filters items by `checkedIds` when `selectedOnly` is true (`(data ?? []).filter((item: any) => checkedIds.includes(item.id))`), or exports all items (`data ?? []`).
+    * Early return when no items are available for export.
+    * Implemented strict RFC 4180 value serialization helper `toCsvVal`: formats `null`/`undefined` as `""`, safely serializes objects via `JSON.stringify`, escapes internal double quotes (`"`) as `""`, and wraps all values in double quotes.
+    * Included all declared entity fields (`entity.fields`) in both headers and row mapping.
+    * Managed browser download lifecycle using `Blob([csvContent], { type: "text/csv;charset=utf-8;" })`, `URL.createObjectURL(blob)`, temporary `<a>` element with `download="{plural.lower()}_export.csv"`, automated trigger `link.click()`, DOM removal, and memory cleanup with `URL.revokeObjectURL(url)`.
+  - Top toolbar:
+    * Added "Export CSV" button in the table controls section alongside Search and Refresh (`disabled={!data || data.length === 0}`).
+  - Contextual Bulk Actions Bar:
+    * Added "Export Selected ({checkedIds.length})" button calling `handleExportCsv(true)` inside `{checkedIds.length > 0 && ...}`.
+    * Ensured Export Selected button is present whether or not the entity has delete capability; coexists with "Delete Selected" when deletion is enabled.
+  - Maintained strict diff invariance across `ir.description` modifications.
+- Added `services/agent-engine/tests/test_collection_csv_export.py` with 16 comprehensive unit tests.
+- `task verify` — 630 tests pass (16 new), 0 failures. `task lint`, `task security:quick` pass. 0 network calls, 0 cloud model calls.
+- Updated CURRENT_TASK.yaml, tasks/R-271.md, PROJECT_STATE.yaml, PROJECT_STATE.md, CHANGELOG.md, docs/CODEGEN.md, docs/PROGRESS.md.
+
 ## 2026-09-08 — R-270
 
 - Recorded contract in `.ai/CURRENT_TASK.yaml` and `.ai/tasks/R-270.md`.
