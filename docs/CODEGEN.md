@@ -106,6 +106,10 @@ deterministic SQL DDL migration — the generated backend's persistence layer:
   else a prepended surrogate `id UUID PRIMARY KEY DEFAULT gen_random_uuid()`.
 - **Foreign keys:** `many_to_one`/`one_to_one` relations → a `<name>_id UUID REFERENCES <target>(id)`
   column; `many_to_many` → one deterministic join table with a composite primary key.
+- **Uniqueness & indexes (R-249):** a `Field` with `unique=True` (never the `id` PK) renders a `UNIQUE`
+  column constraint; each `Entity.indexes` entry renders one `CREATE [UNIQUE] INDEX <name> ON <table>
+  (<cols>);` after the tables, with a deterministic default name (`<table>_<cols>_idx`, or `_key` when
+  unique) when the index is unnamed.
 
 Both backend adapters (FastAPI and Go) emit it as `migrations/0001_init.sql` exactly when the IR has
 entities and `database_strategy == postgres` — no previously emitted file changes. Output is byte-stable,

@@ -58,7 +58,8 @@ def _column_lines(entity: Entity) -> list[str]:
             lines.append(f"    {field.name} {pg} PRIMARY KEY{default}")
         else:
             null = " NOT NULL" if field.required else ""
-            lines.append(f"    {field.name} {pg}{null}")
+            unique = " UNIQUE" if field.unique else ""
+            lines.append(f"    {field.name} {pg}{null}{unique}")
 
     for relation in entity.relations:
         if relation.kind in _FK_KINDS:
@@ -91,6 +92,21 @@ def _join_tables(ir: ApplicationIR) -> list[str]:
     return [seen[key] for key in sorted(seen)]
 
 
+def _index_statements(ir: ApplicationIR) -> list[str]:
+    """One CREATE [UNIQUE] INDEX per entity index; deterministic default name when unnamed."""
+
+    statements: list[str] = []
+    for entity in ir.entities:
+        table = _table(entity.name)
+        for index in entity.indexes:
+            columns = ", ".join(index.fields)
+            default_name = f"{table}_{'_'.join(index.fields)}_{'key' if index.unique else 'idx'}"
+            name = index.name or default_name
+            unique = "UNIQUE " if index.unique else ""
+            statements.append(f"CREATE {unique}INDEX {name} ON {table} ({columns});")
+    return statements
+
+
 def render_postgres_schema(ir: ApplicationIR) -> str:
     """Deterministic PostgreSQL DDL for the IR's entities and relations (empty if no entities)."""
 
@@ -115,5 +131,11 @@ def render_postgres_schema(ir: ApplicationIR) -> str:
         for table in join_tables:
             blocks.append(table)
             blocks.append("")
+
+    index_statements = _index_statements(ir)
+    if index_statements:
+        blocks.append("-- Indexes")
+        blocks.extend(index_statements)
+        blocks.append("")
 
     return "\n".join(blocks).rstrip("\n") + "\n"

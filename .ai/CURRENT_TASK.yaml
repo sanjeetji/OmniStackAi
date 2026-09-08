@@ -1,26 +1,27 @@
 schema_version: 1
-task_id: R-248
-title: Application IR fixtures + honest migrations/0002_seed.sql
-status: done
+task_id: R-249
+title: IR indexes + unique constraints in the generated PostgreSQL schema
+status: in_progress
 phase: BASIC/MVP
 founder_stage: 0
 branch: main
 goal: >-
-  Close the seed-data gap honestly (Brief 26/27): the founder declares explicit seed rows in the
-  Application IR (a new Fixture record: entity + rows of column->JSON value) and the platform emits a
-  deterministic migrations/0002_seed.sql containing exactly those values — never inventing, defaulting,
-  or guessing. Fixtures are validated (entity + columns must be declared; a required column missing from
-  a row is a WARNING) and round-trip through to_dict/from_dict/normalize_ir. The seed emitter owns SQL
-  literal quoting (single quotes doubled; bool->TRUE/FALSE; None->NULL; dict/list->jsonb). Both backends
-  emit the file only when the IR has fixtures and database_strategy=postgres, next to 0001_init.sql.
-  Pure/deterministic/offline; nothing connects to or runs a database.
+  Deepen the persistence layer (Brief 9/34/42): let the Application IR express column uniqueness and
+  entity indexes, and render them in the generated schema. Add Field.unique (a single-column UNIQUE
+  constraint) and a new Index record on Entity (fields + unique + optional name) for composite/named
+  indexes. schema_sql emits `UNIQUE` on unique non-PK columns and `CREATE [UNIQUE] INDEX <name> ON
+  <table> (<cols>);` per entity index (deterministic default name when unnamed). Additive IR fields
+  (empty/false defaults, no schema-version bump); index field references are validated against the
+  entity's own fields at construction. Pure/deterministic/offline — schema text only; nothing connects
+  to or runs a database.
 source:
   tracker_sheet: Phase_Roadmap
   tracker_row: reconstructed; new IDs continue after the workbook backlog's R-010..R-219
-  brief_sections: [9, 26, 27, 34, 35, 42, 74, 77, 83, 84, 85, 92]
+  brief_sections: [9, 34, 35, 42, 74, 77, 83, 84, 85, 92]
   founder_note: >-
-    Founder chose the fixtures/seed option for R-248 (honest seed, no fabricated values). Committed
-    directly to main; author solely sanjeetji; tooling adds a Co-Authored-By trailer.
+    Founder said "Continue for the next task" after R-248; R-249 is the approved next candidate (deeper
+    IR/adapter coverage — indexes + unique constraints). Committed directly to main; author solely
+    sanjeetji; tooling adds a Co-Authored-By trailer.
 project_profile:
   repository: platform_modular_monorepo
   service: python_agent_engine
@@ -30,14 +31,9 @@ complexity: L2
 expected_impact:
   - services/agent-engine/src/omnistackai_agent_engine/application_ir/ir.py
   - services/agent-engine/src/omnistackai_agent_engine/application_ir/__init__.py
-  - services/agent-engine/src/omnistackai_agent_engine/application_ir/validate.py
   - services/agent-engine/src/omnistackai_agent_engine/application_ir/examples.py
-  - services/agent-engine/src/omnistackai_agent_engine/codegen/seed_sql.py
-  - services/agent-engine/src/omnistackai_agent_engine/codegen/__init__.py
-  - services/agent-engine/src/omnistackai_agent_engine/codegen/backend_python.py
-  - services/agent-engine/src/omnistackai_agent_engine/codegen/backend_go.py
-  - services/agent-engine/tests/test_seed_sql.py
-  - scripts/builder-demo.sh
+  - services/agent-engine/src/omnistackai_agent_engine/codegen/schema_sql.py
+  - services/agent-engine/tests/test_schema_sql.py (or a new test_schema_indexes.py)
   - docs/APPLICATION_IR.md, docs/CODEGEN.md, docs/PROGRESS.md
   - portable state, changelog, handoff, task doc, and tracker evidence
 allowed_paths:
@@ -46,37 +42,35 @@ allowed_paths:
   - PROJECT_STATE.md
   - R_&_D/OmniStackAI_Execution_Tracker_v6.xlsx
   - docs/**
-  - scripts/**
   - services/agent-engine/**
 must_not_change:
   - PostgreSQL as the control-plane database or the platform's own schema/migrations
-  - the IR schema version or existing IR fields (fixtures is additive with an empty default)
-  - the model-gateway, runtime, verify, edit, data-access, auth public behavior (additive)
-  - the R-238 0001_init.sql output; only ADD 0002_seed.sql
+  - the IR schema version or existing IR fields (Field.unique / Entity.indexes are additive defaults)
+  - the model-gateway, runtime, verify, edit, data-access, auth, seed public behavior (additive)
+  - the 0002_seed emission; the data-access/route/auth code (schema-only change)
   - local Compose services or infrastructure; the Section 74 top-level contract; the offline bootstrap
   - the network-independence of static task verify
 must_not_do:
-  - invent, default, or guess a seed value; emit a column not present in a fixture row
-  - connect to or run a database; execute a migration; make a network call
+  - connect to or run a database; execute DDL; make a network call
   - add a platform Python dependency; import a vendor SDK; put a secret anywhere
 acceptance:
-  - ApplicationIR gains a Fixture collection (entity + rows of column->JSON value), validated in
-    __post_init__ (entity name, non-empty rows/dicts, identifier columns, JSON/control-free values) and
-    round-tripped through to_dict/from_dict; normalize_ir preserves (sorts) fixtures.
-  - validate_ir errors on an unknown fixture entity or unknown row column; warns (not errors) on a
-    required column missing from a row.
-  - render_postgres_seed(ir) emits deterministic INSERTs using only the declared columns/values, with
-    correct SQL literal quoting; empty string when no fixtures.
-  - Both backends emit migrations/0002_seed.sql exactly when the IR has fixtures and postgres; no seed
-    file for a fixture-free or non-postgres IR; 0001_init.sql is unchanged.
-  - Standard-library offline tests cover literal rendering, INSERT shape + column ordering + FK column,
-    gating, validation errors/warnings, and IR round-trip/normalize.
+  - Field gains unique: bool = False (validated, serialized). Entity gains indexes: tuple[Index, ...] = ()
+    where Index(fields, unique=False, name=None); each index field must be a declared field of the
+    entity (construction error otherwise). Both round-trip via to_dict/from_dict; normalize_ir preserves
+    them (entities pass through as objects).
+  - render_postgres_schema emits `UNIQUE` on unique non-id columns (never on the PK id) and one
+    `CREATE [UNIQUE] INDEX <name> ON <table> (<cols>);` per entity index, with a deterministic default
+    name (<table>_<cols>_idx / _key) when unnamed; ordered deterministically; byte-stable.
+  - No index/unique output when none declared; 0001_init.sql for a fixture-free IR is otherwise
+    unchanged; nothing connects to or runs a database.
+  - Standard-library offline tests cover the unique column, single + composite indexes (named/unnamed,
+    unique/non-unique), the id-never-unique rule, the bad-index-field construction error, and round-trip.
 required_gates:
   - impact_analysis
-  - sql_literal_tests
-  - render_seed_and_gating_tests
-  - fixture_validation_tests
-  - ir_roundtrip_normalize_tests
+  - unique_column_tests
+  - index_emission_tests
+  - bad_index_field_error_test
+  - ir_roundtrip_tests
   - python_compile_test
   - vendor_import_exclusion
   - secret_exclusion_check
@@ -91,20 +85,12 @@ model_tool_trace:
   cloud_calls: 0
   note: Deterministic; no model call, no network, no DB connection. cloud_calls zero.
 completion:
-  implementation_commit: 9d34720
-  verified_at: "2026-09-08T00:00:00+05:30"
-  verification:
-    - "task verify — pass (316 agent-engine tests; 14 new)"
-    - "task security:quick — pass; task env:check — pass"
-    - "task builder:demo -- minimal-blog prints migrations/0002_seed.sql with authored INSERTs (post/comment, escaped quotes, FK post_id)"
-  acceptance_results:
-    - "ApplicationIR gains Fixture (entity + rows); validated in __post_init__; round-trips via to_dict/from_dict; normalize_ir preserves+sorts fixtures (tests)"
-    - "validate_ir ERRORs on unknown_fixture_entity / unknown_fixture_column; WARNING fixture_missing_required (has_errors false) (tests)"
-    - "render_postgres_seed emits deterministic INSERTs of only declared columns/values; _sql_literal quotes correctly (quotes doubled, bool/None, jsonb); empty when no fixtures (tests)"
-    - "Python + Go emit migrations/0002_seed.sql iff fixtures+postgres; rideshare (no fixtures) and OTHER db emit none; 0001_init.sql unchanged (tests)"
-    - "no DB connection, no migration run, no network, no fabricated value; task verify network-independent"
+  implementation_commit: null
+  verified_at: null
+  verification: []
+  acceptance_results: []
 blockers: []
 next_action: >-
-  Implement Fixture + seed emitter + adapter wiring + tests; run gates; record completion. Later
-  continue with deeper IR/adapter coverage (indexes/unique/validation).
+  Implement Field.unique + Index/Entity.indexes + schema emission + tests; run gates; record completion.
+  Later continue with richer field validation into models (length/enum) or console rendering.
 next_command: task agent-engine:test

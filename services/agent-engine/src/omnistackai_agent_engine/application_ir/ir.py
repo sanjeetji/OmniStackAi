@@ -187,6 +187,7 @@ class Field:
     type: FieldType
     required: bool = True
     validation: tuple[str, ...] = ()
+    unique: bool = False
 
     def __post_init__(self) -> None:
         _ident(self.name, "field name")
@@ -194,9 +195,14 @@ class Field:
         if not isinstance(self.required, bool):
             raise InvalidIRError("field required must be a boolean")
         _str_tuple(self.validation, "field validation")
+        if not isinstance(self.unique, bool):
+            raise InvalidIRError("field unique must be a boolean")
 
     def to_dict(self) -> dict[str, Any]:
-        return {"name": self.name, "type": self.type.value, "required": self.required, "validation": list(self.validation)}
+        return {
+            "name": self.name, "type": self.type.value, "required": self.required,
+            "validation": list(self.validation), "unique": self.unique,
+        }
 
 
 @dataclass(frozen=True, slots=True)
@@ -215,10 +221,31 @@ class Relation:
 
 
 @dataclass(frozen=True, slots=True)
+class Index:
+    fields: tuple[str, ...]
+    unique: bool = False
+    name: str | None = None
+
+    def __post_init__(self) -> None:
+        if not isinstance(self.fields, tuple) or not self.fields:
+            raise InvalidIRError("index fields must be a non-empty tuple")
+        for field_name in self.fields:
+            _ident(field_name, "index field")
+        if not isinstance(self.unique, bool):
+            raise InvalidIRError("index unique must be a boolean")
+        if self.name is not None:
+            _ident(self.name, "index name")
+
+    def to_dict(self) -> dict[str, Any]:
+        return {"fields": list(self.fields), "unique": self.unique, "name": self.name}
+
+
+@dataclass(frozen=True, slots=True)
 class Entity:
     name: str
     fields: tuple[Field, ...]
     relations: tuple[Relation, ...] = ()
+    indexes: tuple[Index, ...] = ()
 
     def __post_init__(self) -> None:
         _entity_name(self.name)
@@ -230,12 +257,20 @@ class Entity:
         if any(not isinstance(item, Relation) for item in self.relations):
             raise InvalidIRError("entity relations must be Relation records")
         _require_unique((r.name for r in self.relations), f"entity {self.name} relation names")
+        if any(not isinstance(item, Index) for item in self.indexes):
+            raise InvalidIRError("entity indexes must be Index records")
+        field_names = {f.name for f in self.fields}
+        for index in self.indexes:
+            missing = [name for name in index.fields if name not in field_names]
+            if missing:
+                raise InvalidIRError(f"entity {self.name} index references unknown field(s): {missing}")
 
     def to_dict(self) -> dict[str, Any]:
         return {
             "name": self.name,
             "fields": [f.to_dict() for f in self.fields],
             "relations": [r.to_dict() for r in self.relations],
+            "indexes": [i.to_dict() for i in self.indexes],
         }
 
 
@@ -447,12 +482,19 @@ class ApplicationIR:
                     Entity(
                         name=e["name"],
                         fields=tuple(
-                            Field(f["name"], f["type"], f.get("required", True), tuple(f.get("validation", ())))
+                            Field(
+                                f["name"], f["type"], f.get("required", True),
+                                tuple(f.get("validation", ())), f.get("unique", False),
+                            )
                             for f in e.get("fields", ())
                         ),
                         relations=tuple(
                             Relation(rel["name"], rel["target_entity"], rel["kind"])
                             for rel in e.get("relations", ())
+                        ),
+                        indexes=tuple(
+                            Index(tuple(ix.get("fields", ())), ix.get("unique", False), ix.get("name"))
+                            for ix in e.get("indexes", ())
                         ),
                     )
                     for e in data.get("entities", ())

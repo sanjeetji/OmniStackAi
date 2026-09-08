@@ -18,6 +18,7 @@ from .ir import (
     FieldType,
     Fixture,
     HttpMethod,
+    Index,
     MobileProfile,
     Platform,
     ProjectStrategy,
@@ -42,8 +43,12 @@ def rideshare_favourites() -> ApplicationIR:
         ),
         roles=(Role("customer", ("read", "write")), Role("admin", ("read",))),
         entities=(
-            Entity("Driver", (Field("id", FieldType.UUID), Field("name", FieldType.STRING),
-                              Field("rating", FieldType.FLOAT, required=False))),
+            Entity(
+                "Driver",
+                (Field("id", FieldType.UUID), Field("name", FieldType.STRING),
+                 Field("rating", FieldType.FLOAT, required=False)),
+                indexes=(Index(("name",)),),
+            ),
             Entity(
                 "FavouriteDriver",
                 (Field("id", FieldType.UUID), Field("created_at", FieldType.DATETIME, required=False)),
