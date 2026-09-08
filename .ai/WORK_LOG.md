@@ -714,3 +714,25 @@
 - Tracker: general row-insertion `tracker_edit_r250.py` (baseline `5e4d72f`, LAST=257) — R-250 (Builder)
   at row 9; rows 1..258 contiguous, table `A4:M258`, sheet1 ranges to 258, XML well-formed. MVP total
   144 / Done 39. Implementation checkpoint `1eed171`. 0 local / 0 cloud model calls; no DB connection.
+
+## 2026-09-08 — R-251
+
+- Extended R-250 field validation to the Go backend and added numeric bounds — validation now spans all
+  three targets. `field_validation.py`: `FieldRules` gained `minimum`/`maximum` (raw numeric literals,
+  `_NUMBER`-validated, non-numeric ignored); `parse_field_rules` reads `min:<n>`/`max:<n>`; new
+  `go_validate_tag(field, rules)` builds `max=`/`oneof=`/`gte=`/`lte=`.
+- `schema_sql`: numeric INT/FLOAT fields append `CHECK (col >= n)` / `CHECK (col <= n)` (combined with an
+  enum CHECK when present); strings never get a numeric check. `backend_python`: numeric fields add
+  `ge=`/`le=` to the Pydantic `Field(...)`. `backend_go._models_file`: append ` validate:"..."` inside
+  the struct tag when the tag body is non-empty; rule-free fields keep the exact plain `json` tag
+  (so the existing rideshare adapter assertions stay green).
+- Go tags are declarative this task — no `go.mod` dependency and no `validator.Struct` call (that
+  enforcement is the R-252 follow-up); the schema already enforces at the DB for both backends.
+- 8 new stdlib offline tests (345 total) in `test_field_validation_numeric.py`: numeric parser
+  (raw tokens, non-numeric ignored), schema numeric CHECK + string-not-numeric, Pydantic ge/le, the
+  `go_validate_tag` helper + emitted struct tags (max/gte-lte/oneof, rule-free plain tag), and an
+  examples-have-no-validate-tags guard. `task verify` + `security:quick` + `env:check` pass; no existing
+  test broke (fixed one over-strict new assertion that omitted NOT NULL).
+- Tracker: general row-insertion `tracker_edit_r251.py` (baseline `9315dcb`, LAST=258) — R-251 (Builder)
+  at row 9; rows 1..259 contiguous, table `A4:M259`, sheet1 ranges to 259, XML well-formed. MVP total
+  145 / Done 40. Implementation checkpoint `2060a21`. 0 local / 0 cloud model calls; no DB connection.

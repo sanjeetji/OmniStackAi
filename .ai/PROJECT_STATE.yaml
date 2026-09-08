@@ -6,10 +6,10 @@ current_task: null
 current_status: ready_for_next_task_definition
 branch: main
 last_completed_task:
-  task_id: R-250
-  title: Richer field validation (max_length + enum) into the schema and FastAPI models
-  implementation_commit: 1eed171
-  verification: task verify (337 agent-engine tests, 10 new); IR Field.validation rules (max_length/enum) render as VARCHAR(n)/CHECK in the schema and Field(max_length)/Literal in the FastAPI models; unknown rules ignored; examples unchanged; no DB connection
+  task_id: R-251
+  title: Field validation for Go + numeric min/max (all three schema/model targets)
+  implementation_commit: 2060a21
+  verification: task verify (345 agent-engine tests, 8 new); numeric min/max rules -> schema CHECK + Pydantic ge/le; go-playground validate:"..." struct tags on the Go models (declarative); rule-free fields unchanged; examples unaffected; no go.mod dep; no DB connection
   result: pass
 control_plane_database: postgresql
 model_routing_mode: balanced
@@ -23,5 +23,5 @@ id_note: >-
   Workbook backlog owns R-010..R-219. Founder-requested tasks use IDs after R-219: R-220..R-223 done,
   R-224 Next.js deferred (env-blocked), R-225..R-247 done. Continue from R-248.
 blockers: []
-next_action: R-250 is complete — IR field validation (max_length/enum) now renders as VARCHAR(n)/CHECK in the schema and Field(max_length)/Literal in the FastAPI models. Continue from R-251 (offline-doable): Go request-validation struct tags + numeric min/max rules (extending R-250), or render the R-248 seed / R-249 indexes / R-250 validation in the static-console builder proof. Cloud-gated preview/deploy and R-224 still require a network-capable environment/keys.
+next_action: R-251 is complete — field validation now spans all three targets (schema CHECK/VARCHAR, Pydantic Field(ge/le/max_length)+Literal, Go go-playground validate tags) incl. numeric min/max. Continue from R-252 (offline-doable): wire go-playground enforcement in the Go handlers (go.mod dep + validator.Struct on create), or render the R-248 seed / R-249 indexes / R-250-251 validation in the static-console builder proof. Cloud-gated preview/deploy and R-224 still require a network-capable environment/keys.
 last_updated: "2026-09-08T00:06:26+05:30"

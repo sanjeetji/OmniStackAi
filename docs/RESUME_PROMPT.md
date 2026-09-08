@@ -40,7 +40,7 @@ START PROTOCOL
   `task ai:status`, `task ai:handoff`. `task verify` must stay green and network-independent.
 - Confirm git branch/HEAD/clean tree. Then restate: phase, next Tracker ID, objective, blast radius.
 
-WHAT IS ALREADY BUILT (all Python 3.13 stdlib-only, offline, in services/agent-engine; 337 tests pass)
+WHAT IS ALREADY BUILT (all Python 3.13 stdlib-only, offline, in services/agent-engine; 345 tests pass)
 - Model fabric: ModelProvider contract + registry; local Ollama adapter (runs any installed model via
   OMNISTACKAI_OLLAMA_MODEL); Balanced ModelGateway (deterministic escalation ladder, no silent cloud
   fallback, context-budget guard); key-activated cloud catalog — Anthropic/OpenAI/Google-Gemini/
@@ -56,7 +56,8 @@ WHAT IS ALREADY BUILT (all Python 3.13 stdlib-only, offline, in services/agent-e
   (materialize into a customer-owned Git repo with one commit). The backends also emit a real
   PostgreSQL schema (migrations/0001_init.sql via render_postgres_schema: typed columns, PK, FKs,
   many-to-many join tables, Field.unique UNIQUE columns, Entity.indexes CREATE [UNIQUE] INDEX
-  statements, and Field.validation max_length->VARCHAR(n)/enum->CHECK), honest seed data
+  statements, and Field.validation max_length->VARCHAR(n)/enum->CHECK/numeric min->CHECK(col>=n)/
+  max->CHECK(col<=n)), honest seed data
   (migrations/0002_seed.sql via render_postgres_seed from
   explicit IR Fixtures — authored INSERTs, never fabricated, emitted only when fixtures present), a
   data-access layer (Python app/db.py + app/repositories/<entity>.py;
@@ -110,8 +111,9 @@ PostgreSQL schema/migration from the IR, R-239 data-access/repository layer, R-2
 per-endpoint role enforcement (IR required_roles), R-244 sub-collection route wiring, R-245 combined
 project-plan surface, R-246 hunk-level edit diffs + rename detection, R-247 static-console builder
 proof, R-248 IR fixtures -> honest migrations/0002_seed.sql, R-249 schema indexes + unique constraints,
-R-250 field validation (max_length/enum) -> schema + Pydantic. Do NOT overwrite backlog rows; continue
-from R-251.
+R-250 field validation (max_length/enum) -> schema + Pydantic, R-251 field validation for Go
+(go-playground validate:"..." struct tags) + numeric min/max -> schema CHECK + Pydantic ge/le. Do NOT
+overwrite backlog rows; continue from R-252.
 
 ENVIRONMENT LIMITS discovered here
 - npm front-end bundlers (Next.js SWC, Vite/esbuild) FAIL to install (native-binary downloads time
@@ -137,11 +139,12 @@ RULES (non-negotiable)
   .ai/HANDOFF.md, PROJECT_STATE.md, CHANGELOG.md, and the tracker row. Push the branch; verify remote
   SHA == local HEAD. Never claim unexecuted tests.
 
-WHAT TO DO NEXT (pick with the founder; all continue the builder), continue from R-251
-- Offline-doable now: extend R-250 to the Go backend (go-playground validate:"..." struct tags) +
-  numeric min/max rules (schema CHECK + Pydantic ge/le); or render the R-248 seed / R-249 indexes /
-  R-250 validation in the static-console builder proof. Remaining 501s are only
-  genuinely-ambiguous endpoints (multi-param, no schema, >1 FK).
+WHAT TO DO NEXT (pick with the founder; all continue the builder), continue from R-252
+- Offline-doable now: wire go-playground enforcement in the Go backend (add
+  github.com/go-playground/validator/v10 to go.mod, a validator instance + helper, and a
+  validate.Struct call returning 400 in the create handlers — making the R-251 struct tags actually
+  enforced); or render the R-248 seed / R-249 indexes / R-250-251 validation in the static-console
+  builder proof. Remaining 501s are only genuinely-ambiguous endpoints (multi-param, no schema, >1 FK).
 - Needs a network/cloud environment: run a Tier-0 preview end-to-end (materialize -> pnpm dev);
   live-verify a cloud LLM provider (set its key + OMNISTACKAI_CLOUD_PROVIDER=<id>, run
   `task agent-engine:gateway:run`) or a deploy/sandbox driver (OMNISTACKAI_TIER=2 + key); and the
@@ -149,5 +152,5 @@ WHAT TO DO NEXT (pick with the founder; all continue the builder), continue from
 - Deferred by governance: native mobile (R-010 etc.) until web/backend stability.
 
 Begin by reading the files above and running the start protocol, then propose the next Tracker ID
-(R-251) with its task contract before writing code. Commit to main.
+(R-252) with its task contract before writing code. Commit to main.
 ```

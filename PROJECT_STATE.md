@@ -5,14 +5,14 @@ Last updated: 2026-09-08T00:06:26+05:30 by Codex (GPT-5)
 Stage 0 (Founder Build Sequence, Brief Section 91) — BASIC/MVP
 
 ## Last Completed Task
-Tracker ID: R-250 — Richer field validation into the schema + FastAPI models — DONE, `task verify` (337
-agent-engine tests, 10 new) passing. The IR `Field.validation` rules `max_length:<int>` and
-`enum:<a>|<b>|<c>` now render in two targets: the PostgreSQL schema emits `VARCHAR(n)` for a
-length-capped STRING and a `CHECK (<col> IN (...))` for an enum; the FastAPI Pydantic models emit
-`Field(max_length=n)` and a `Literal[...]` type. Unknown rules are ignored (forward-compatible); Go
-request-validation tags are deferred (the schema already constrains Go writes at the DB). Additive,
-offline, examples unchanged, no DB connection; implementation checkpoint `1eed171` (R-224 Next.js
-console upgrade remains deferred — environment-blocked).
+Tracker ID: R-251 — Field validation for Go + numeric min/max — DONE, `task verify` (345 agent-engine
+tests, 8 new) passing. Field validation now spans all three targets: numeric `min`/`max` rules render
+as `CHECK (col >= n)`/`CHECK (col <= n)` in the schema and `Field(ge=n, le=n)` in the FastAPI models,
+and the Go models carry a go-playground `validate:"max=,oneof=,gte=,lte="` struct tag on each field
+with rules (rule-free fields keep a plain `json` tag). Go tags are declarative — enforcement wiring
+(validator.Struct + go.mod dep) is a follow-up; the schema already enforces at the DB for both backends.
+Additive, offline, examples unchanged, no DB connection; implementation checkpoint `2060a21` (R-224
+Next.js console upgrade remains deferred — environment-blocked).
 
 ## Workflow note
 Founder consolidated all work onto `main` (per-task branches deleted; `main` is the default). Continue

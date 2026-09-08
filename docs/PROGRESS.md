@@ -1,12 +1,12 @@
-# OmniStackAI — implementation progress (as of R-250)
+# OmniStackAI — implementation progress (as of R-251)
 
 A living summary of what is built, what is pending, and how to see results. Numbers come from the
 execution tracker (`R_&_D/OmniStackAI_Execution_Tracker_v6.xlsx`, `Phase_Roadmap`).
 
 ## Headline
 
-- **337 automated tests pass**, fully offline and network-independent (`task verify`).
-- **39 tracker tasks Done, 1 Deferred, 210 Not Started** across 250 rows.
+- **345 automated tests pass**, fully offline and network-independent (`task verify`).
+- **40 tracker tasks Done, 1 Deferred, 210 Not Started** across 251 rows.
 - The offline builder loop is complete end to end: **describe (IR) → generate (web + API with working
   CRUD incl. sub-collections + DB schema + data-access + JWT-verified auth & per-endpoint roles) →
   verify → edit → commit to an owned Git repo.**
@@ -15,11 +15,11 @@ execution tracker (`R_&_D/OmniStackAI_Execution_Tracker_v6.xlsx`, `Phase_Roadmap
 
 | Phase | Done | Total | % complete |
 |-------|------|-------|-----------|
-| **MVP** (current milestone) | 39 | 144 | **27.1%** |
+| **MVP** (current milestone) | 40 | 145 | **27.6%** |
 | MID | 0 | 47 | 0% |
 | ADVANCED | 0 | 29 | 0% |
 | PRODUCTION | 0 | 29 | 0% |
-| **Overall program** | **39** | **250** | **15.6%** |
+| **Overall program** | **40** | **251** | **15.9%** |
 
 > The 210 "Not Started" rows are the pre-existing backlog catalogue (R-010..R-219 — many are individual
 > specialized agents and later-phase features). Capability-wise the platform is further along than the
@@ -61,6 +61,7 @@ execution tracker (`R_&_D/OmniStackAI_Execution_Tracker_v6.xlsx`, `Phase_Roadmap
 | Seed data from explicit IR fixtures (`migrations/0002_seed.sql`) | ✅ Done | R-248 |
 | Schema indexes + unique constraints (IR `Field.unique`/`Entity.indexes`) | ✅ Done | R-249 |
 | Field validation -> schema + Pydantic (max_length, enum) | ✅ Done | R-250 |
+| Field validation -> Go tags + numeric min/max (all 3 targets) | ✅ Done | R-251 |
 | Next.js console upgrade (rich UI) | ⏸ Deferred | R-224 — needs npm registry access |
 | Live sandbox preview + real deploy (Tier 2) | ⛔ Pending | needs a network machine + provider keys |
 | Native mobile agents | ⛔ Deferred (governance) | until web/backend stability (Brief §25/§91) |
@@ -72,7 +73,7 @@ Everything below runs with **no cloud keys** and no internet (except where noted
 
 1. **See the whole engine is real and green:**
    ```
-   task verify            # 337 tests pass
+   task verify            # 345 tests pass
    ```
 2. **Generate a real app from a spec and inspect it** (the headline result):
    ```
@@ -116,7 +117,7 @@ the live run needs the key + a network machine.
 
 ## What's next
 
-Near-term MVP candidates (all offline-doable): Go request-validation tags + numeric min/max rules
-(extending R-250), or rendering the R-248 seed / R-249 indexes / R-250 validation in the static-console
-builder proof. Then, on a network machine: live Tier-2 preview and deploy. This file is refreshed as
-tasks land.
+Near-term MVP candidates (all offline-doable): wire go-playground enforcement in the Go handlers
+(validator.Struct on create, plus the go.mod dependency), or render the R-248 seed / R-249 indexes /
+R-250-251 validation in the static-console builder proof. Then, on a network machine: live Tier-2
+preview and deploy. This file is refreshed as tasks land.
