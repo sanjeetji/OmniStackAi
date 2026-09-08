@@ -74,21 +74,27 @@ class GoValidationEnforcementTests(TestCase):
         validate = project.get("internal/handlers/validate.go").content
         self.assertIn('"github.com/go-playground/validator/v10"', validate)
         self.assertIn("var validate = validator.New()", validate)
-        self.assertIn("func validateStruct(v any) (int, string)", validate)
+        # R-254: structured JSON body — new signature
+        self.assertIn("func validateStruct(w http.ResponseWriter, v any) bool", validate)
         self.assertIn("http.StatusBadRequest", validate)
-        self.assertIn('"validation_failed"', validate)
+        self.assertIn('"errors"', validate)              # structured key, not flat string
+        self.assertIn("fe.Field()", validate)             # per-field info
+        self.assertIn("fe.Tag()", validate)               # rule name
+        self.assertNotIn('"validation_failed"', validate) # old flat string gone
 
     def test_create_handler_validates_after_decode_before_store(self) -> None:
         project = GoBackendAdapter().generate(_ir(_VALIDATED_LISTING, _CREATE))
         handler = project.get("internal/handlers/listings.go").content
-        self.assertIn("validateStruct(m)", handler)
-        decode_at = handler.index("json.NewDecoder(r.Body).Decode(&m)")
-        validate_at = handler.index("validateStruct(m)")
-        create_at = handler.index("store.CreateListing(")
+        # R-254: new call is validateStruct(w, m) returning bool
+        self.assertIn("validateStruct(w, m)", handler)
+        decode_at   = handler.index("json.NewDecoder(r.Body).Decode(&m)")
+        validate_at = handler.index("validateStruct(w, m)")
+        create_at   = handler.index("store.CreateListing(")
         self.assertLess(decode_at, validate_at)
         self.assertLess(validate_at, create_at)
-        # On failure the handler returns the helper's status + message.
-        self.assertIn("http.Error(w, msg, status)", handler)
+        # On failure handler returns immediately (no http.Error — body already written by helper).
+        self.assertIn("if !validateStruct(w, m)", handler)
+        self.assertNotIn("http.Error(w, msg", handler)
 
     def test_rule_free_project_emits_no_enforcement(self) -> None:
         project = GoBackendAdapter().generate(_ir(_RULE_FREE_LISTING, _CREATE))

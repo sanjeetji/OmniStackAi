@@ -77,29 +77,50 @@ def go_validate_tag(field: Field, rules: FieldRules) -> str:
 
 
 def go_validate_file() -> str:
-    """The `internal/handlers/validate.go` source that enforces the `validate` struct tags (R-252).
+    """The `internal/handlers/validate.go` source that enforces the `validate` struct tags (R-252/R-254).
 
     A single shared validator instance evaluates the go-playground tags the models carry
-    (``max=`` / ``oneof=`` / ``gte=`` / ``lte=``). ``validateStruct`` returns the HTTP status and
-    message to send back — ``msg == ""`` means the payload is valid. The validator dependency lives only
-    in the generated project's go.mod; nothing here runs a validation at generation time.
+    (``max=`` / ``oneof=`` / ``gte=`` / ``lte=``). ``validateStruct`` returns a structured JSON
+    error body — ``{"errors":[{"field":"...","rule":"...","message":"..."}]}`` — with one entry per
+    violated field/rule pair, so clients can highlight exactly which field failed. Returns
+    ``(http.StatusOK, nil)`` when the payload is valid. The validator dependency lives only in the
+    generated project's go.mod; nothing here runs a validation at generation time.
     """
 
     return (
         "package handlers\n\n"
         "import (\n"
+        '\t"fmt"\n'
         '\t"net/http"\n\n'
         '\t"github.com/go-playground/validator/v10"\n'
         ")\n\n"
         "// validate is the shared request validator, driven by the `validate` struct tags the models\n"
         "// carry (max=, oneof=, gte=, lte=), so payloads are checked before they reach the store.\n"
         "var validate = validator.New()\n\n"
-        "// validateStruct validates v against its `validate` struct tags. It returns the HTTP status and\n"
-        '// message to send back (msg == "" means the payload is valid).\n'
-        "func validateStruct(v any) (int, string) {\n"
-        "\tif err := validate.Struct(v); err != nil {\n"
-        '\t\treturn http.StatusBadRequest, "validation_failed"\n'
+        "// validationError is one field-level violation returned in the 400 body.\n"
+        "type validationError struct {\n"
+        '\tField   string `json:"field"`\n'
+        '\tRule    string `json:"rule"`\n'
+        '\tMessage string `json:"message"`\n'
+        "}\n\n"
+        "// validateStruct validates v against its `validate` struct tags. On success it returns\n"
+        "// (http.StatusOK, nil). On failure it writes a 400 JSON body\n"
+        '// {"errors":[{"field":"...","rule":"...","message":"..."}]} and returns\n'
+        "// (http.StatusBadRequest, non-nil) so the caller can return immediately.\n"
+        "func validateStruct(w http.ResponseWriter, v any) bool {\n"
+        "\terr := validate.Struct(v)\n"
+        "\tif err == nil {\n"
+        "\t\treturn true\n"
         "\t}\n"
-        '\treturn http.StatusOK, ""\n'
+        "\tvar errs []validationError\n"
+        "\tfor _, fe := range err.(validator.ValidationErrors) {\n"
+        '\t\terrs = append(errs, validationError{\n'
+        '\t\t\tField:   fe.Field(),\n'
+        '\t\t\tRule:    fe.Tag(),\n'
+        '\t\t\tMessage: fmt.Sprintf("%s failed %s validation", fe.Field(), fe.Tag()),\n'
+        '\t\t})\n'
+        "\t}\n"
+        '\twriteJSON(w, http.StatusBadRequest, map[string]any{"errors": errs})\n'
+        "\treturn false\n"
         "}\n"
     )

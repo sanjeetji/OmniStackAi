@@ -8,6 +8,7 @@ and path shape:
 - GET with no path params, entity known           -> LIST
 - GET whose last path segment is a param           -> GET (by that id)
 - POST with a request_schema entity and no params  -> CREATE
+- PATCH / PUT whose last path segment is a param    -> UPDATE (by that id)
 - DELETE whose last path segment is a param         -> DELETE (by that id)
 
 Everything else returns None (leave the handler as a scaffold).
@@ -29,7 +30,7 @@ class Op(StrEnum):
     LIST = "list"
     GET = "get"
     CREATE = "create"
-    UPDATE = "update"  # PATCH /entities/{id} — partial update (R-253)
+    UPDATE = "update"  # PATCH / PUT /entities/{id} — update/replace (R-253, R-256)
     DELETE = "delete"
     LIST_BY = "list_by"  # parent-scoped list: a sub-collection filtered by a foreign-key relation
 
@@ -73,7 +74,7 @@ def wire_endpoint(
         return Wiring(Op.GET, entity, table, params[0])
     if method == "POST" and api.request_schema == entity and not params:
         return Wiring(Op.CREATE, entity, table, None)
-    if method == "PATCH" and api.request_schema == entity and last_is_param and len(params) == 1:
+    if method in ("PATCH", "PUT") and api.request_schema == entity and last_is_param and len(params) == 1:
         return Wiring(Op.UPDATE, entity, table, params[0])
     if method == "DELETE" and last_is_param and len(params) == 1:
         return Wiring(Op.DELETE, entity, table, params[0])

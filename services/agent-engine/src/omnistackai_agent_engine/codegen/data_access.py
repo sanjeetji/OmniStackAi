@@ -68,16 +68,20 @@ def _python_repository(entity: Entity) -> str:
             '    sql = f"INSERT INTO {TABLE} DEFAULT VALUES RETURNING *"\n'
             "    values: list = []\n"
         )
+    cols = [field.name for field in entity.fields]
     return (
         f'"""Data access for {entity.name} (table "{table}"). '
         'Values are parameterized; identifiers are fixed."""\n'
         "from __future__ import annotations\n\n"
         "from typing import Any\n\n"
         "from app.db import connect\n\n"
-        f'TABLE = "{table}"\n\n\n'
-        f"async def list_{table}(limit: int = 100, offset: int = 0) -> list[dict[str, Any]]:\n"
+        f'TABLE = "{table}"\n'
+        f"ALLOWED_SORT_FIELDS = {cols!r}\n\n\n"
+        f'async def list_{table}(limit: int = 100, offset: int = 0, sort: str = "id", order: str = "asc") -> list[dict[str, Any]]:\n'
+        '    sort_col = sort if sort in ALLOWED_SORT_FIELDS else "id"\n'
+        '    sort_dir = "DESC" if order.lower() == "desc" else "ASC"\n'
         "    async with await connect() as conn, conn.cursor() as cur:\n"
-        '        await cur.execute(f"SELECT * FROM {TABLE} ORDER BY id LIMIT %s OFFSET %s", (limit, offset))\n'
+        '        await cur.execute(f"SELECT * FROM {TABLE} ORDER BY {sort_col} {sort_dir} LIMIT %s OFFSET %s", (limit, offset))\n'
         "        return await cur.fetchall()\n\n\n"
         f"async def get_{table}(id: str) -> dict[str, Any] | None:\n"
         "    async with await connect() as conn, conn.cursor() as cur:\n"
@@ -93,7 +97,7 @@ def _python_repository(entity: Entity) -> str:
         '        await cur.execute(f"DELETE FROM {TABLE} WHERE id = %s", (id,))\n'
         "        return cur.rowcount > 0\n"
         + _python_update(entity, table)
-        + _python_filtered_lists(entity, table)
+        + _python_filtered_lists(entity, table, cols)
     )
 
 
@@ -122,14 +126,16 @@ def _python_update(entity: Entity, table: str) -> str:
     )
 
 
-def _python_filtered_lists(entity: Entity, table: str) -> str:
+def _python_filtered_lists(entity: Entity, table: str, cols: list[str] | None = None) -> str:
     parts = []
     for relation in _fk_relation_names(entity):
         parts.append(
             "\n\n"
-            f"async def list_{table}_by_{relation}({relation}_id: str, limit: int = 100, offset: int = 0) -> list[dict[str, Any]]:\n"
+            f'async def list_{table}_by_{relation}({relation}_id: str, limit: int = 100, offset: int = 0, sort: str = "id", order: str = "asc") -> list[dict[str, Any]]:\n'
+            '    sort_col = sort if sort in ALLOWED_SORT_FIELDS else "id"\n'
+            '    sort_dir = "DESC" if order.lower() == "desc" else "ASC"\n'
             "    async with await connect() as conn, conn.cursor() as cur:\n"
-            f'        await cur.execute(f"SELECT * FROM {{TABLE}} WHERE {relation}_id = %s ORDER BY id LIMIT %s OFFSET %s", ({relation}_id, limit, offset))\n'
+            f'        await cur.execute(f"SELECT * FROM {{TABLE}} WHERE {relation}_id = %s ORDER BY {{sort_col}} {{sort_dir}} LIMIT %s OFFSET %s", ({relation}_id, limit, offset))\n'
             "        return await cur.fetchall()\n"
         )
     return "".join(parts)
@@ -166,6 +172,20 @@ def _go_store(slug: str) -> str:
     )
 
 
+def _go_sort_whitelist_block(cols: list[str]) -> str:
+    cases = "".join(f'\tcase "{c}":\n\t\tcol = "{c}"\n' for c in cols)
+    return (
+        '\tcol := "id"\n'
+        "\tswitch sort {\n"
+        f"{cases}"
+        "\t}\n"
+        '\tdir := "ASC"\n'
+        '\tif strings.ToLower(order) == "desc" {\n'
+        '\t\tdir = "DESC"\n'
+        "\t}\n"
+    )
+
+
 def _go_entity_store(entity: Entity, slug: str) -> str:
     table = table_name(entity.name)
     pascal = entity.name
@@ -182,15 +202,21 @@ def _go_entity_store(entity: Entity, slug: str) -> str:
     else:
         create_sql = f"`INSERT INTO {table} DEFAULT VALUES RETURNING id`"
 
+    sort_block = _go_sort_whitelist_block(cols)
+
     return (
         "package store\n\n"
         "import (\n"
         '\t"context"\n'
-        '\t"database/sql"\n\n'
+        '\t"database/sql"\n'
+        '\t"fmt"\n'
+        '\t"strings"\n\n'
         f'\t"{slug}/internal/models"\n'
         ")\n\n"
-        f"func List{pascal}(ctx context.Context, db *sql.DB, limit int) ([]models.{pascal}, error) {{\n"
-        f"\trows, err := db.QueryContext(ctx, `SELECT {col_list} FROM {table} ORDER BY id LIMIT $1`, limit)\n"
+        f"func List{pascal}(ctx context.Context, db *sql.DB, limit, offset int, sort, order string) ([]models.{pascal}, error) {{\n"
+        f"{sort_block}"
+        f'\tquery := fmt.Sprintf("SELECT {col_list} FROM {table} ORDER BY %s %s LIMIT $1 OFFSET $2", col, dir)\n'
+        f"\trows, err := db.QueryContext(ctx, query, limit, offset)\n"
         "\tif err != nil {\n\t\treturn nil, err\n\t}\n"
         "\tdefer rows.Close()\n"
         f"\tvar out []models.{pascal}\n"
@@ -220,7 +246,7 @@ def _go_entity_store(entity: Entity, slug: str) -> str:
         "\tn, _ := res.RowsAffected()\n"
         "\treturn n > 0, nil\n"
         "}\n"
-        + _go_filtered_lists(entity, table, col_list, scan_targets)
+        + _go_filtered_lists(entity, table, col_list, scan_targets, cols)
     )
 
 
@@ -247,15 +273,20 @@ def _go_update(entity: Entity, table: str, pascal: str, col_list: str, scan_targ
     )
 
 
-def _go_filtered_lists(entity: Entity, table: str, col_list: str, scan_targets: str) -> str:
+def _go_filtered_lists(entity: Entity, table: str, col_list: str, scan_targets: str, cols: list[str] | None = None) -> str:
     pascal = entity.name
+    if cols is None:
+        cols = [field.name for field in entity.fields]
+    sort_block = _go_sort_whitelist_block(cols)
     parts = []
     for relation in _fk_relation_names(entity):
         rel_pascal = _pascal(relation)
         parts.append(
             "\n"
-            f"func List{pascal}By{rel_pascal}(ctx context.Context, db *sql.DB, {relation}ID string, limit int) ([]models.{pascal}, error) {{\n"
-            f"\trows, err := db.QueryContext(ctx, `SELECT {col_list} FROM {table} WHERE {relation}_id = $1 ORDER BY id LIMIT $2`, {relation}ID, limit)\n"
+            f"func List{pascal}By{rel_pascal}(ctx context.Context, db *sql.DB, {relation}ID string, limit, offset int, sort, order string) ([]models.{pascal}, error) {{\n"
+            f"{sort_block}"
+            f'\tquery := fmt.Sprintf("SELECT {col_list} FROM {table} WHERE {relation}_id = $1 ORDER BY %s %s LIMIT $2 OFFSET $3", col, dir)\n'
+            f"\trows, err := db.QueryContext(ctx, query, {relation}ID, limit, offset)\n"
             "\tif err != nil {\n\t\treturn nil, err\n\t}\n"
             "\tdefer rows.Close()\n"
             f"\tvar out []models.{pascal}\n"

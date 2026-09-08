@@ -107,6 +107,8 @@ def _handlers_shared_file() -> str:
         '\t"database/sql"\n'
         '\t"encoding/json"\n'
         '\t"net/http"\n'
+        '\t"strconv"\n'
+        '\t"strings"\n'
         ")\n\n"
         "// Handlers carries the shared dependencies for the HTTP handlers.\n"
         "type Handlers struct {\n\tDB *sql.DB\n}\n\n"
@@ -115,6 +117,34 @@ def _handlers_shared_file() -> str:
         '\tw.Header().Set("Content-Type", "application/json")\n'
         "\tw.WriteHeader(status)\n"
         "\t_ = json.NewEncoder(w).Encode(v)\n"
+        "}\n\n"
+        "func parsePagination(r *http.Request) (int, int) {\n"
+        "\tlimit := 100\n"
+        "\toffset := 0\n"
+        '\tif v := r.URL.Query().Get("limit"); v != "" {\n'
+        "\t\tif n, err := strconv.Atoi(v); err == nil && n > 0 {\n"
+        "\t\t\tlimit = n\n"
+        "\t\t}\n"
+        "\t}\n"
+        '\tif v := r.URL.Query().Get("offset"); v != "" {\n'
+        "\t\tif n, err := strconv.Atoi(v); err == nil && n >= 0 {\n"
+        "\t\t\toffset = n\n"
+        "\t\t}\n"
+        "\t}\n"
+        "\treturn limit, offset\n"
+        "}\n\n"
+        "func parseSort(r *http.Request) (string, string) {\n"
+        '\tsort := r.URL.Query().Get("sort")\n'
+        '\tif sort == "" {\n'
+        '\t\tsort = "id"\n'
+        "\t}\n"
+        '\torder := r.URL.Query().Get("order")\n'
+        '\tif strings.ToLower(order) == "desc" {\n'
+        '\t\torder = "desc"\n'
+        "\t} else {\n"
+        '\t\torder = "asc"\n'
+        "\t}\n"
+        "\treturn sort, order\n"
         "}\n"
     )
 
@@ -174,12 +204,16 @@ def _handlers_file_wired(
             lines.append(f"\t// {api.method.value} {api.path} (auth: {auth}) — scaffold; no unambiguous entity mapping.")
             lines.append('\thttp.Error(w, "not implemented", http.StatusNotImplemented)')
         elif wiring.op is Op.LIST:
-            lines.append(f"\titems, err := store.List{wiring.entity}(r.Context(), h.DB, 100)")
+            lines.append("\tlimit, offset := parsePagination(r)")
+            lines.append("\tsort, order := parseSort(r)")
+            lines.append(f"\titems, err := store.List{wiring.entity}(r.Context(), h.DB, limit, offset, sort, order)")
             lines.append("\tif err != nil {\n\t\thttp.Error(w, err.Error(), http.StatusInternalServerError)\n\t\treturn\n\t}")
             lines.append("\twriteJSON(w, http.StatusOK, items)")
         elif wiring.op is Op.LIST_BY:
             rel_pascal = _pascal(wiring.relation)
-            lines.append(f'\titems, err := store.List{wiring.entity}By{rel_pascal}(r.Context(), h.DB, r.PathValue("{wiring.id_param}"), 100)')
+            lines.append("\tlimit, offset := parsePagination(r)")
+            lines.append("\tsort, order := parseSort(r)")
+            lines.append(f'\titems, err := store.List{wiring.entity}By{rel_pascal}(r.Context(), h.DB, r.PathValue("{wiring.id_param}"), limit, offset, sort, order)')
             lines.append("\tif err != nil {\n\t\thttp.Error(w, err.Error(), http.StatusInternalServerError)\n\t\treturn\n\t}")
             lines.append("\twriteJSON(w, http.StatusOK, items)")
         elif wiring.op is Op.GET:
@@ -192,8 +226,7 @@ def _handlers_file_wired(
             lines.append("\tif err := json.NewDecoder(r.Body).Decode(&m); err != nil {")
             lines.append('\t\thttp.Error(w, "invalid body", http.StatusBadRequest)\n\t\treturn\n\t}')
             if wiring.entity in validated_entities:
-                lines.append("\tif status, msg := validateStruct(m); msg != \"\" {")
-                lines.append("\t\thttp.Error(w, msg, status)\n\t\treturn\n\t}")
+                lines.append("\tif !validateStruct(w, m) {\n\t\treturn\n\t}")
             lines.append(f"\tid, err := store.Create{wiring.entity}(r.Context(), h.DB, m)")
             lines.append("\tif err != nil {\n\t\thttp.Error(w, err.Error(), http.StatusInternalServerError)\n\t\treturn\n\t}")
             lines.append('\twriteJSON(w, http.StatusCreated, map[string]string{"id": id})')
@@ -203,8 +236,7 @@ def _handlers_file_wired(
             lines.append("\tif err := json.NewDecoder(r.Body).Decode(&m); err != nil {")
             lines.append('\t\thttp.Error(w, "invalid body", http.StatusBadRequest)\n\t\treturn\n\t}')
             if wiring.entity in validated_entities:
-                lines.append("\tif status, msg := validateStruct(m); msg != \"\" {")
-                lines.append("\t\thttp.Error(w, msg, status)\n\t\treturn\n\t}")
+                lines.append("\tif !validateStruct(w, m) {\n\t\treturn\n\t}")
             lines.append(f"\tupdated, err := store.Update{wiring.entity}(r.Context(), h.DB, id, m)")
             lines.append("\tif err != nil {\n\t\thttp.Error(w, err.Error(), http.StatusInternalServerError)\n\t\treturn\n\t}")
             lines.append("\tif updated == nil {\n\t\thttp.NotFound(w, r)\n\t\treturn\n\t}")
@@ -223,6 +255,7 @@ def _main_file(slug: str, apis: list[ApiEndpoint], *, has_db: bool = False) -> s
     lines = ["package main", "", "import ("]
     lines.append('\t"log"')
     lines.append('\t"net/http"')
+    lines.append('\t"os"')
     module_imports = []
     if apis:
         module_imports.append(f'\t"{slug}/internal/handlers"')
@@ -232,6 +265,23 @@ def _main_file(slug: str, apis: list[ApiEndpoint], *, has_db: bool = False) -> s
         lines.append("")
         lines += module_imports
     lines.append(")")
+    lines.append("")
+    lines.append("func corsMiddleware(next http.Handler) http.Handler {")
+    lines.append("\treturn http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {")
+    lines.append('\t\torigin := os.Getenv("CORS_ALLOWED_ORIGIN")')
+    lines.append('\t\tif origin == "" {')
+    lines.append('\t\t\torigin = "*"')
+    lines.append("\t\t}")
+    lines.append('\t\tw.Header().Set("Access-Control-Allow-Origin", origin)')
+    lines.append('\t\tw.Header().Set("Access-Control-Allow-Methods", "GET, POST, PUT, PATCH, DELETE, OPTIONS")')
+    lines.append('\t\tw.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization")')
+    lines.append("\t\tif r.Method == http.MethodOptions {")
+    lines.append("\t\t\tw.WriteHeader(http.StatusNoContent)")
+    lines.append("\t\t\treturn")
+    lines.append("\t\t}")
+    lines.append("\t\tnext.ServeHTTP(w, r)")
+    lines.append("\t})")
+    lines.append("}")
     lines.append("")
     lines.append("func main() {")
     if has_db:
@@ -255,7 +305,7 @@ def _main_file(slug: str, apis: list[ApiEndpoint], *, has_db: bool = False) -> s
         lines.append(f'\tmux.HandleFunc("{api.method.value} {api.path}", {target})')
     lines.append('\taddr := ":8080"')
     lines.append('\tlog.Printf("listening on %s", addr)')
-    lines.append("\tlog.Fatal(http.ListenAndServe(addr, mux))")
+    lines.append("\tlog.Fatal(http.ListenAndServe(addr, corsMiddleware(mux)))")
     lines.append("}")
     return "\n".join(lines) + "\n"
 
@@ -305,7 +355,7 @@ class GoBackendAdapter:
             if has_db
             else "Go standard library only."
         )
-        env_example = f"# Backend config placeholders only. Never commit secrets.\nAPP_NAME={ir.name}\nADDR=:8080\nDATABASE_URL=postgres://localhost:5432/{slug}\n"
+        env_example = f"# Backend config placeholders only. Never commit secrets.\nAPP_NAME={ir.name}\nADDR=:8080\nDATABASE_URL=postgres://localhost:5432/{slug}\nCORS_ALLOWED_ORIGIN=*\n"
         if has_auth:
             env_example += "JWT_SECRET=\n"
         files: list[GeneratedFile] = [

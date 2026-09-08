@@ -50,14 +50,14 @@ class PythonWiringTests(TestCase):
         posts = self.project.get("app/routers/posts.py").content
         ast.parse(posts)  # valid Python
         self.assertIn("from app.repositories import post", posts)
-        self.assertIn("return await post.list_post()", posts)
+        self.assertIn("return await post.list_post(limit=limit, offset=offset, sort=sort, order=order)", posts)
         self.assertIn("from app.models import Post", posts)
         self.assertIn("await post.create_post(payload.model_dump())", posts)
 
     def test_subcollection_wired_to_filtered_list(self) -> None:
         # R-244: GET /posts/{postId}/comments -> parent-scoped list via the FK relation
         posts = self.project.get("app/routers/posts.py").content
-        self.assertIn("await comment.list_comment_by_post(postId)", posts)
+        self.assertIn("await comment.list_comment_by_post(postId, limit=limit, offset=offset, sort=sort, order=order)", posts)
 
     def test_ambiguous_endpoint_stays_501(self) -> None:
         # POST /favourites/drivers/{driverId} has no request_schema -> genuinely ambiguous -> 501
@@ -80,7 +80,7 @@ class GoWiringTests(TestCase):
     def test_list_handler_calls_store(self) -> None:
         drivers = self.project.get("internal/handlers/drivers.go").content
         self.assertIn("func (h *Handlers) GetDrivers(", drivers)
-        self.assertIn("store.ListDriver(r.Context(), h.DB, 100)", drivers)
+        self.assertIn("store.ListDriver(r.Context(), h.DB, limit, offset, sort, order)", drivers)
 
 
 class NonDbBackendUnchangedTests(TestCase):

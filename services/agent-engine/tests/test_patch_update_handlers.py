@@ -153,13 +153,14 @@ class GoUpdateValidationTests(TestCase):
     def test_validated_entity_calls_validatestruct_in_update_handler(self) -> None:
         project = GoBackendAdapter().generate(_ir_go(_VALIDATED_LISTING, _PATCH))
         handler = project.get("internal/handlers/listings.go").content
-        self.assertIn("validateStruct(m)", handler)
+        # R-254: new signature validateStruct(w, m)
+        self.assertIn("validateStruct(w, m)", handler)
 
     def test_validate_called_before_store_update(self) -> None:
         project = GoBackendAdapter().generate(_ir_go(_VALIDATED_LISTING, _PATCH))
         handler = project.get("internal/handlers/listings.go").content
         decode_at   = handler.index("json.NewDecoder(r.Body).Decode(&m)")
-        validate_at = handler.index("validateStruct(m)")
+        validate_at = handler.index("validateStruct(w, m)")
         update_at   = handler.index("store.UpdateListing(")
         self.assertLess(decode_at,   validate_at, "validate must come after decode")
         self.assertLess(validate_at, update_at,   "validate must come before store.Update")

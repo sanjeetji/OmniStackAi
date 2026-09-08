@@ -14,6 +14,7 @@ from ..application_ir import ApplicationIR, ApiEndpoint, Entity, FieldType, Scre
 from .adapter import GenerationTarget
 from .errors import GenerationError
 from .files import GeneratedFile, GeneratedProject
+from .route_wiring import Op, fk_relations, wire_endpoint
 
 _FIELD_TS: dict[FieldType, str] = {
     FieldType.STRING: "string",
@@ -58,6 +59,229 @@ def _types_file(ir: ApplicationIR) -> str:
     if not ir.entities:
         return header + "export {};\n"
     return header + "\n\n".join(_entity_interface(e) for e in ir.entities) + "\n"
+
+
+def _slug_to_pascal(path: str) -> str:
+    parts = re.split(r"[{}\-_/]+", path)
+    return "".join(p[:1].upper() + p[1:] for p in parts if p) or "Root"
+
+
+def _api_client_file(ir: ApplicationIR) -> str:
+    """Generate a strongly-typed TypeScript API client (lib/api.ts) from the Application IR."""
+    lines = [
+        "// Generated from the Application IR by OmniStackAI. Do not edit by hand.",
+        "",
+    ]
+    if ir.entities:
+        entity_names = sorted(e.name for e in ir.entities)
+        lines.append(f'import type {{ {", ".join(entity_names)} }} from "./types";')
+        lines.append("")
+
+    lines.extend([
+        'const BASE_URL = process.env.NEXT_PUBLIC_API_URL || "";',
+        "",
+        'export interface ApiOptions extends Omit<RequestInit, "body"> {',
+        "  token?: string;",
+        "  params?: Record<string, string | number | boolean | undefined>;",
+        "}",
+        "",
+        "export class ApiError extends Error {",
+        "  constructor(public status: number, public data: unknown) {",
+        "    super(`API Error ${status}`);",
+        '    this.name = "ApiError";',
+        "  }",
+        "}",
+        "",
+        "async function request<T>(path: string, options: ApiOptions = {}, body?: unknown): Promise<T> {",
+        "  const { token, params, headers: customHeaders, ...init } = options;",
+        "  let url = `${BASE_URL}${path}`;",
+        "  if (params) {",
+        "    const searchParams = new URLSearchParams();",
+        "    for (const [key, val] of Object.entries(params)) {",
+        "      if (val !== undefined) {",
+        "        searchParams.set(key, String(val));",
+        "      }",
+        "    }",
+        "    const qs = searchParams.toString();",
+        "    if (qs) {",
+        '      url += (url.includes("?") ? "&" : "?") + qs;',
+        "    }",
+        "  }",
+        "",
+        "  const headers: Record<string, string> = {",
+        '    ...(body !== undefined ? { "Content-Type": "application/json" } : {}),',
+        "    ...(customHeaders as Record<string, string>),",
+        "  };",
+        "  if (token) {",
+        '    headers["Authorization"] = `Bearer ${token}`;',
+        "  }",
+        "",
+        "  const res = await fetch(url, {",
+        "    ...init,",
+        "    headers,",
+        "    body: body !== undefined ? JSON.stringify(body) : undefined,",
+        "  });",
+        "",
+        "  if (!res.ok) {",
+        "    let errorData: unknown;",
+        "    try {",
+        "      errorData = await res.json();",
+        "    } catch {",
+        "      errorData = await res.text();",
+        "    }",
+        "    throw new ApiError(res.status, errorData);",
+        "  }",
+        "",
+        "  if (res.status === 204) {",
+        "    return undefined as unknown as T;",
+        "  }",
+        "  return res.json() as Promise<T>;",
+        "}",
+        "",
+    ])
+
+    repo_entities = frozenset(e.name for e in ir.entities)
+    fk_by_entity = fk_relations(ir)
+    fn_names: list[str] = []
+    seen_names: set[str] = set()
+
+    for api in ir.apis:
+        wiring = wire_endpoint(api, repo_entities, fk_by_entity)
+        path_params = re.findall(r"\{(\w+)\}", api.path)
+        method = api.method.value
+
+        fn_name: str
+        if wiring is not None:
+            plural = wiring.entity if wiring.entity.endswith("s") else f"{wiring.entity}s"
+            if wiring.op is Op.LIST:
+                fn_name = f"list{plural}"
+            elif wiring.op is Op.GET:
+                fn_name = f"get{wiring.entity}"
+            elif wiring.op is Op.CREATE:
+                fn_name = f"create{wiring.entity}"
+            elif wiring.op is Op.UPDATE:
+                fn_name = f"update{wiring.entity}"
+            elif wiring.op is Op.DELETE:
+                fn_name = f"delete{wiring.entity}"
+            elif wiring.op is Op.LIST_BY:
+                rel = _pascal(wiring.relation or "parent")
+                fn_name = f"list{plural}By{rel}"
+            else:
+                fn_name = f"{method.lower()}{_slug_to_pascal(api.path)}"
+        else:
+            fn_name = f"{method.lower()}{_slug_to_pascal(api.path)}"
+
+        if fn_name in seen_names:
+            fn_name = f"{method.lower()}{_slug_to_pascal(api.path)}"
+            counter = 2
+            orig = fn_name
+            while fn_name in seen_names:
+                fn_name = f"{orig}_{counter}"
+                counter += 1
+
+        seen_names.add(fn_name)
+        fn_names.append(fn_name)
+
+        if path_params:
+            interpolated = re.sub(r"\{(\w+)\}", r"${encodeURIComponent(\1)}", api.path)
+            url_expr = f"`{interpolated}`"
+        else:
+            url_expr = f'"{api.path}"'
+
+        auth_note = " (auth: required)" if api.auth else ""
+        lines.append(f"// {method} {api.path}{auth_note}")
+
+        if wiring is not None and wiring.op is Op.LIST:
+            lines.append(
+                f"export async function {fn_name}("
+                f"options?: ApiOptions & {{ params?: {{ limit?: number; offset?: number; sort?: string; order?: \"asc\" | \"desc\" }} }}"
+                f"): Promise<{wiring.entity}[]> {{"
+            )
+            lines.append(f'  return request<{wiring.entity}[]>({url_expr}, {{ method: "GET", ...options }});')
+            lines.append("}")
+            lines.append("")
+        elif wiring is not None and wiring.op is Op.LIST_BY:
+            id_p = wiring.id_param or "id"
+            lines.append(
+                f"export async function {fn_name}("
+                f"{id_p}: string, "
+                f"options?: ApiOptions & {{ params?: {{ limit?: number; offset?: number; sort?: string; order?: \"asc\" | \"desc\" }} }}"
+                f"): Promise<{wiring.entity}[]> {{"
+            )
+            lines.append(f'  return request<{wiring.entity}[]>({url_expr}, {{ method: "GET", ...options }});')
+            lines.append("}")
+            lines.append("")
+        elif wiring is not None and wiring.op is Op.GET:
+            id_p = wiring.id_param or "id"
+            lines.append(
+                f"export async function {fn_name}("
+                f"{id_p}: string, options?: ApiOptions"
+                f"): Promise<{wiring.entity}> {{"
+            )
+            lines.append(f'  return request<{wiring.entity}>({url_expr}, {{ method: "GET", ...options }});')
+            lines.append("}")
+            lines.append("")
+        elif wiring is not None and wiring.op is Op.CREATE:
+            lines.append(
+                f"export async function {fn_name}("
+                f"data: Partial<{wiring.entity}>, options?: ApiOptions"
+                f"): Promise<{wiring.entity}> {{"
+            )
+            lines.append(f'  return request<{wiring.entity}>({url_expr}, {{ method: "POST", ...options }}, data);')
+            lines.append("}")
+            lines.append("")
+        elif wiring is not None and wiring.op is Op.UPDATE:
+            id_p = wiring.id_param or "id"
+            lines.append(
+                f"export async function {fn_name}("
+                f"{id_p}: string, data: Partial<{wiring.entity}>, options?: ApiOptions"
+                f"): Promise<{wiring.entity}> {{"
+            )
+            lines.append(f'  return request<{wiring.entity}>({url_expr}, {{ method: "{method}", ...options }}, data);')
+            lines.append("}")
+            lines.append("")
+        elif wiring is not None and wiring.op is Op.DELETE:
+            id_p = wiring.id_param or "id"
+            lines.append(
+                f"export async function {fn_name}("
+                f"{id_p}: string, options?: ApiOptions"
+                f"): Promise<void> {{"
+            )
+            lines.append(f'  return request<void>({url_expr}, {{ method: "DELETE", ...options }});')
+            lines.append("}")
+            lines.append("")
+        else:
+            has_body = method in ("POST", "PUT", "PATCH")
+            req_type = f"Partial<{api.request_schema}>" if api.request_schema in repo_entities else "unknown"
+            if api.response_schema in repo_entities:
+                resp_type = api.response_schema
+            elif not api.response_schema and method == "DELETE":
+                resp_type = "void"
+            else:
+                resp_type = "unknown"
+
+            params_decl = [f"{p}: string" for p in path_params]
+            if has_body:
+                params_decl.append(f"data?: {req_type}")
+            params_decl.append("options?: ApiOptions")
+
+            body_arg = ", data" if has_body else ""
+            lines.append(
+                f"export async function {fn_name}({', '.join(params_decl)}): Promise<{resp_type}> {{"
+            )
+            lines.append(
+                f'  return request<{resp_type}>({url_expr}, {{ method: "{method}", ...options }}{body_arg});'
+            )
+            lines.append("}")
+            lines.append("")
+
+    lines.append("export const api = {")
+    for name in fn_names:
+        lines.append(f"  {name},")
+    lines.append("};")
+    lines.append("")
+
+    return "\n".join(lines)
 
 
 def _route_file(apis: list[ApiEndpoint]) -> str:
@@ -192,12 +416,13 @@ class NextjsWebAdapter:
             GeneratedFile("tsconfig.json", json.dumps(_TSCONFIG, indent=2) + "\n"),
             GeneratedFile("next.config.mjs", _NEXT_CONFIG),
             GeneratedFile(".gitignore", "node_modules/\n.next/\nout/\nnext-env.d.ts\n.env*.local\n"),
-            GeneratedFile(".env.example", "# Public env vars only. Never commit secrets.\nNEXT_PUBLIC_APP_NAME=" + ir.name + "\n"),
+            GeneratedFile(".env.example", "# Public env vars only. Never commit secrets.\nNEXT_PUBLIC_APP_NAME=" + ir.name + "\nNEXT_PUBLIC_API_URL=http://localhost:8080\n"),
             GeneratedFile("README.md", f"# {ir.name}\n\n{ir.description}\n\nGenerated by OmniStackAI from the Application IR.\n\n```\npnpm install\npnpm dev\n```\n"),
             GeneratedFile("app/layout.tsx", _LAYOUT % (_escape_ts(ir.name), _escape_ts(ir.description))),
             GeneratedFile("app/globals.css", "body { font-family: system-ui, sans-serif; margin: 0; }\n"),
             GeneratedFile("app/page.tsx", _overview_page(ir)),
             GeneratedFile("lib/types.ts", _types_file(ir)),
+            GeneratedFile("lib/api.ts", _api_client_file(ir)),
         ]
 
         for screen in ir.screens:

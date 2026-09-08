@@ -148,11 +148,11 @@ def _router_file(
             lines.append(f"    # {api.method.value} {api.path} (auth: {auth}) — scaffold; no unambiguous entity mapping.")
             lines.append('    raise HTTPException(status_code=501, detail="not_implemented")')
         elif wiring.op is Op.LIST:
-            lines.append(f"async def {fn}() -> list[dict]:")
-            lines.append(f"    return await {wiring.table}.list_{wiring.table}()")
+            lines.append(f'async def {fn}(limit: int = 100, offset: int = 0, sort: str = "id", order: str = "asc") -> list[dict]:')
+            lines.append(f"    return await {wiring.table}.list_{wiring.table}(limit=limit, offset=offset, sort=sort, order=order)")
         elif wiring.op is Op.LIST_BY:
-            lines.append(f"async def {fn}({wiring.id_param}: str) -> list[dict]:")
-            lines.append(f"    return await {wiring.table}.list_{wiring.table}_by_{wiring.relation}({wiring.id_param})")
+            lines.append(f'async def {fn}({wiring.id_param}: str, limit: int = 100, offset: int = 0, sort: str = "id", order: str = "asc") -> list[dict]:')
+            lines.append(f"    return await {wiring.table}.list_{wiring.table}_by_{wiring.relation}({wiring.id_param}, limit=limit, offset=offset, sort=sort, order=order)")
         elif wiring.op is Op.GET:
             lines.append(f"async def {fn}({wiring.id_param}: str) -> dict:")
             lines.append(f"    row = await {wiring.table}.get_{wiring.table}({wiring.id_param})")
@@ -181,10 +181,20 @@ def _main_file(ir: ApplicationIR, segments: list[str]) -> str:
     imports = "".join(f"from app.routers import {seg}\n" for seg in segments)
     includes = "".join(f"app.include_router({seg}.router)\n" for seg in segments)
     return (
-        "from fastapi import FastAPI\n\n"
+        "import os\n"
+        "from fastapi import FastAPI\n"
+        "from fastapi.middleware.cors import CORSMiddleware\n\n"
         + imports
         + "\n"
         + f'app = FastAPI(title="{_escape(ir.name)}")\n\n'
+        + 'cors_origin = os.getenv("CORS_ALLOWED_ORIGIN", "*")\n'
+        + "app.add_middleware(\n"
+        + "    CORSMiddleware,\n"
+        + '    allow_origins=[cors_origin] if cors_origin != "*" else ["*"],\n'
+        + "    allow_credentials=True,\n"
+        + '    allow_methods=["*"],\n'
+        + '    allow_headers=["*"],\n'
+        + ")\n\n"
         + '@app.get("/healthz")\n'
         + "async def healthz() -> dict:\n"
         + '    return {"status": "ok"}\n\n'
@@ -220,7 +230,7 @@ class PythonBackendAdapter:
         if has_auth:
             requirements += f"{PYJWT_REQUIREMENT}\n"
 
-        env_example = f"# Backend config placeholders only. Never commit secrets.\nAPP_NAME={ir.name}\nDATABASE_URL=postgresql://localhost:5432/{_slug(ir.name)}\n"
+        env_example = f"# Backend config placeholders only. Never commit secrets.\nAPP_NAME={ir.name}\nDATABASE_URL=postgresql://localhost:5432/{_slug(ir.name)}\nCORS_ALLOWED_ORIGIN=*\n"
         if has_auth:
             env_example += "JWT_SECRET=\n"
 
