@@ -1178,6 +1178,7 @@ def _collection_screen_page(screen: Screen, entity: Entity, ir: ApplicationIR, o
         "",
         f'import {{ {react_imports} }} from "react";',
         'import Link from "next/link";',
+        'import { useToast } from "../components/toast";',
         f'import {{ {hooks_import} }} from "../lib/hooks";',
     ]
 
@@ -1215,6 +1216,7 @@ def _collection_screen_page(screen: Screen, entity: Entity, ir: ApplicationIR, o
         "    setSort,",
         "    refetch,",
         f"  }} = useList{plural}();",
+        "  const { toast } = useToast();",
     ])
 
     if filterable_fields:
@@ -1292,6 +1294,7 @@ def _collection_screen_page(screen: Screen, entity: Entity, ir: ApplicationIR, o
         "    link.click();",
         "    document.body.removeChild(link);",
         "    URL.revokeObjectURL(url);",
+        '    toast.info("Exported CSV successfully");',
         "  };",
     ])
 
@@ -1303,9 +1306,14 @@ def _collection_screen_page(screen: Screen, entity: Entity, ir: ApplicationIR, o
             "",
             "  const handleDelete = async (id: string) => {",
             f'    if (confirm("Are you sure you want to delete this {name}?")) {{',
-            "      await remove(id);",
-            "      setCheckedIds((prev) => prev.filter((x) => x !== id));",
-            "      refetch();",
+            "      try {",
+            "        await remove(id);",
+            "        setCheckedIds((prev) => prev.filter((x) => x !== id));",
+            "        refetch();",
+            f'        toast.success("{name} deleted successfully");',
+            "      } catch (err) {",
+            f'        toast.error(err instanceof Error ? err.message : "Failed to delete {name}");',
+            "      }",
             "    }",
             "  };",
             "",
@@ -1317,10 +1325,13 @@ def _collection_screen_page(screen: Screen, entity: Entity, ir: ApplicationIR, o
             "    setBatchDeleteError(null);",
             "    try {",
             "      await Promise.all(checkedIds.map((id) => remove(id)));",
+            "      const count = checkedIds.length;",
             "      setCheckedIds([]);",
             "      refetch();",
+            f'      toast.success(`Deleted ${{count}} ${{count === 1 ? "{name}" : "{plural}"}} successfully`);',
             "    } catch (err) {",
-            '      setBatchDeleteError(err instanceof Error ? err.message : "Failed to delete selected items");',
+            "      setBatchDeleteError(err instanceof Error ? err.message : \"Failed to delete selected items\");",
+            "      toast.error(err instanceof Error ? err.message : \"Failed to delete selected items\");",
             "    } finally {",
             "      setBatchDeleting(false);",
             "    }",
@@ -1362,8 +1373,9 @@ def _collection_screen_page(screen: Screen, entity: Entity, ir: ApplicationIR, o
                     "      try {",
                     f"        await remove{c_name}(id);",
                     f"        {s_var}.refetch();",
-                    "      } catch {",
-                    "        // deletion error captured in hook state",
+                    f'        toast.success("{c_name} deleted successfully");',
+                    "      } catch (err) {",
+                    f'        toast.error(err instanceof Error ? err.message : "Failed to delete {c_name}");',
                     "      }",
                     "    }",
                     "  };",
@@ -2091,6 +2103,7 @@ def _form_screen_page(screen: Screen, entity: Entity, ir: ApplicationIR, ops: se
         lines.append('import { useSearchParams } from "next/navigation";')
 
     lines.append('import Link from "next/link";')
+    lines.append('import { useToast } from "../components/toast";')
     imported_hooks: set[str] = set()
     if can_create:
         imported_hooks.add(f"useCreate{name}")
@@ -2113,6 +2126,7 @@ def _form_screen_page(screen: Screen, entity: Entity, ir: ApplicationIR, ops: se
         f'import type {{ {name} }} from "../lib/types";',
         "",
         f"export default function {page_name}() {{",
+        "  const { toast } = useToast();",
     ])
 
     if can_create:
@@ -2334,11 +2348,23 @@ def _form_screen_page(screen: Screen, entity: Entity, ir: ApplicationIR, ops: se
         ])
     lines.extend([
         "      setSuccess(true);",
+    ])
+    if can_update:
+        lines.append(f'      toast.success(isEdit ? "{name} updated successfully" : "{name} created successfully");')
+    else:
+        lines.append(f'      toast.success("{name} created successfully");')
+    lines.extend([
         "    } catch (err) {",
         "      const serverErrors = extractFieldErrors(err);",
         "      if (Object.keys(serverErrors).length > 0) {",
         "        setFieldErrors(serverErrors);",
         "      }",
+    ])
+    if can_update:
+        lines.append(f'      toast.error(err instanceof Error ? err.message : (isEdit ? "Failed to update {name}" : "Failed to create {name}"));')
+    else:
+        lines.append(f'      toast.error(err instanceof Error ? err.message : "Failed to create {name}");')
+    lines.extend([
         "    }",
         "  };",
         "",
@@ -2660,7 +2686,7 @@ def _form_screen_page(screen: Screen, entity: Entity, ir: ApplicationIR, ops: se
         '          </Link>',
         '          <button',
         '            type="button"',
-        f'            onClick={{() => {{ if (!isDirty || confirm("Discard all changes and reset form?")) {{ reset(); {reset_call}; setFieldErrors({{}}); setSuccess(false); setLastSavedId(null); }} }}}}',
+        f'            onClick={{() => {{ if (!isDirty || confirm("Discard all changes and reset form?")) {{ reset(); {reset_call}; setFieldErrors({{}}); setSuccess(false); setLastSavedId(null); toast.info("Form reset to original values"); }} }}}}',
         '            style={{ padding: "8px 16px", border: "1px solid #cbd5e1", background: "#fff", color: "#475569", borderRadius: 6, fontSize: 14, cursor: "pointer" }}',
         '          >',
         '            Reset',
@@ -2721,6 +2747,7 @@ def _detail_screen_page(screen: Screen, entity: Entity, ir: ApplicationIR, ops: 
         'import { useState, useEffect } from "react";',
         'import { useSearchParams } from "next/navigation";',
         'import Link from "next/link";',
+        'import { useToast } from "../components/toast";',
     ]
 
     if hooks_to_import:
@@ -2748,6 +2775,7 @@ def _detail_screen_page(screen: Screen, entity: Entity, ir: ApplicationIR, ops: 
     lines.extend([
         "",
         f"export default function {page_name}() {{",
+        "  const { toast } = useToast();",
         "  const searchParams = useSearchParams();",
         '  const queryId = searchParams.get("id");',
         '  const [idInput, setIdInput] = useState<string>(queryId ?? "");',
@@ -2805,8 +2833,9 @@ def _detail_screen_page(screen: Screen, entity: Entity, ir: ApplicationIR, ops: 
             '          url.searchParams.delete("id");',
             '          window.history.replaceState({}, "", url.toString());',
             "        }",
-            "      } catch {",
-            "        // deletion error captured in hook state",
+            f'        toast.success("{name} deleted successfully");',
+            "      } catch (err) {",
+            f'        toast.error(err instanceof Error ? err.message : "Failed to delete {name}");',
             "      }",
             "    }",
             "  };",
@@ -2824,6 +2853,7 @@ def _detail_screen_page(screen: Screen, entity: Entity, ir: ApplicationIR, ops: 
         "    link.click();",
         "    document.body.removeChild(link);",
         "    URL.revokeObjectURL(url);",
+        '    toast.info("Exported JSON successfully");',
         "  };",
     ])
 
@@ -2859,8 +2889,9 @@ def _detail_screen_page(screen: Screen, entity: Entity, ir: ApplicationIR, ops: 
                     "      try {",
                     f"        await remove{c_name}(id);",
                     f"        {s_var}.refetch();",
-                    "      } catch {",
-                    "        // deletion error captured in hook state",
+                    f'        toast.success("{c_name} deleted successfully");',
+                    "      } catch (err) {",
+                    f'        toast.error(err instanceof Error ? err.message : "Failed to delete {c_name}");',
                     "      }",
                     "    }",
                     "  };",
@@ -3685,9 +3716,210 @@ def _navbar_component(ir: ApplicationIR) -> str:
     )
 
 
+_TOAST_COMPONENT = (
+    '"use client";\n\n'
+    'import React, { createContext, useContext, useState, useCallback, useEffect } from "react";\n\n'
+    'export type ToastType = "success" | "error" | "info";\n\n'
+    'export interface ToastItem {\n'
+    '  id: string;\n'
+    '  message: string;\n'
+    '  type: ToastType;\n'
+    '  duration?: number;\n'
+    '}\n\n'
+    'export interface ToastContextValue {\n'
+    '  toasts: ToastItem[];\n'
+    '  addToast: (message: string, type?: ToastType, duration?: number) => void;\n'
+    '  removeToast: (id: string) => void;\n'
+    '  toast: {\n'
+    '    success: (message: string, duration?: number) => void;\n'
+    '    error: (message: string, duration?: number) => void;\n'
+    '    info: (message: string, duration?: number) => void;\n'
+    '  };\n'
+    '}\n\n'
+    'const ToastContext = createContext<ToastContextValue | null>(null);\n\n'
+    'function ToastCard({\n'
+    '  item,\n'
+    '  onDismiss,\n'
+    '}: {\n'
+    '  item: ToastItem;\n'
+    '  onDismiss: (id: string) => void;\n'
+    '}) {\n'
+    '  const duration = item.duration ?? 4000;\n\n'
+    '  useEffect(() => {\n'
+    '    if (duration <= 0) return;\n'
+    '    const timer = setTimeout(() => {\n'
+    '      onDismiss(item.id);\n'
+    '    }, duration);\n'
+    '    return () => clearTimeout(timer);\n'
+    '  }, [item.id, duration, onDismiss]);\n\n'
+    '  const typeStyles: Record<\n'
+    '    ToastType,\n'
+    '    { border: string; bg: string; badgeBg: string; badgeColor: string; icon: string }\n'
+    '  > = {\n'
+    '    success: {\n'
+    '      border: "1px solid #a7f3d0",\n'
+    '      bg: "#f0fdf4",\n'
+    '      badgeBg: "#dcfce7",\n'
+    '      badgeColor: "#15803d",\n'
+    '      icon: "✓",\n'
+    '    },\n'
+    '    error: {\n'
+    '      border: "1px solid #fecaca",\n'
+    '      bg: "#fef2f2",\n'
+    '      badgeBg: "#fee2e2",\n'
+    '      badgeColor: "#b91c1c",\n'
+    '      icon: "✕",\n'
+    '    },\n'
+    '    info: {\n'
+    '      border: "1px solid #bfdbfe",\n'
+    '      bg: "#eff6ff",\n'
+    '      badgeBg: "#dbeafe",\n'
+    '      badgeColor: "#1d4ed8",\n'
+    '      icon: "ℹ",\n'
+    '    },\n'
+    '  };\n\n'
+    '  const style = typeStyles[item.type] || typeStyles.info;\n\n'
+    '  return (\n'
+    '    <div\n'
+    '      role="status"\n'
+    '      style={{\n'
+    '        pointerEvents: "auto",\n'
+    '        display: "flex",\n'
+    '        alignItems: "center",\n'
+    '        justifyContent: "space-between",\n'
+    '        gap: 12,\n'
+    '        padding: "10px 14px",\n'
+    '        background: style.bg,\n'
+    '        border: style.border,\n'
+    '        borderRadius: 8,\n'
+    '        boxShadow: "0 4px 12px rgba(0, 0, 0, 0.08)",\n'
+    '        color: "#0f172a",\n'
+    '        fontSize: 13,\n'
+    '        fontWeight: 500,\n'
+    '        lineHeight: 1.4,\n'
+    '      }}\n'
+    '    >\n'
+    '      <div style={{ display: "flex", alignItems: "center", gap: 8 }}>\n'
+    '        <span\n'
+    '          style={{\n'
+    '            display: "inline-flex",\n'
+    '            alignItems: "center",\n'
+    '            justifyContent: "center",\n'
+    '            width: 20,\n'
+    '            height: 20,\n'
+    '            borderRadius: "50%",\n'
+    '            background: style.badgeBg,\n'
+    '            color: style.badgeColor,\n'
+    '            fontSize: 11,\n'
+    '            fontWeight: 700,\n'
+    '            flexShrink: 0,\n'
+    '          }}\n'
+    '        >\n'
+    '          {style.icon}\n'
+    '        </span>\n'
+    '        <span>{item.message}</span>\n'
+    '      </div>\n'
+    '      <button\n'
+    '        type="button"\n'
+    '        onClick={() => onDismiss(item.id)}\n'
+    '        aria-label="Dismiss notification"\n'
+    '        style={{\n'
+    '          border: "none",\n'
+    '          background: "transparent",\n'
+    '          color: "#94a3b8",\n'
+    '          cursor: "pointer",\n'
+    '          padding: 2,\n'
+    '          display: "inline-flex",\n'
+    '          alignItems: "center",\n'
+    '          justifyContent: "center",\n'
+    '          fontSize: 16,\n'
+    '          lineHeight: 1,\n'
+    '        }}\n'
+    '      >\n'
+    '        &times;\n'
+    '      </button>\n'
+    '    </div>\n'
+    '  );\n'
+    '}\n\n'
+    'export function ToastProvider({ children }: { children: React.ReactNode }) {\n'
+    '  const [toasts, setToasts] = useState<ToastItem[]>([]);\n\n'
+    '  const removeToast = useCallback((id: string) => {\n'
+    '    setToasts((prev) => prev.filter((t) => t.id !== id));\n'
+    '  }, []);\n\n'
+    '  const addToast = useCallback(\n'
+    '    (message: string, type: ToastType = "info", duration = 4000) => {\n'
+    '      const id = `${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;\n'
+    '      setToasts((prev) => [...prev, { id, message, type, duration }]);\n'
+    '    },\n'
+    '    []\n'
+    '  );\n\n'
+    '  const toast = {\n'
+    '    success: useCallback(\n'
+    '      (message: string, duration?: number) => addToast(message, "success", duration),\n'
+    '      [addToast]\n'
+    '    ),\n'
+    '    error: useCallback(\n'
+    '      (message: string, duration?: number) => addToast(message, "error", duration),\n'
+    '      [addToast]\n'
+    '    ),\n'
+    '    info: useCallback(\n'
+    '      (message: string, duration?: number) => addToast(message, "info", duration),\n'
+    '      [addToast]\n'
+    '    ),\n'
+    '  };\n\n'
+    '  return (\n'
+    '    <ToastContext.Provider value={{ toasts, addToast, removeToast, toast }}>\n'
+    '      {children}\n'
+    '      <div\n'
+    '        aria-live="polite"\n'
+    '        style={{\n'
+    '          position: "fixed",\n'
+    '          bottom: 24,\n'
+    '          right: 24,\n'
+    '          zIndex: 9999,\n'
+    '          display: "flex",\n'
+    '          flexDirection: "column",\n'
+    '          gap: 8,\n'
+    '          pointerEvents: "none",\n'
+    '          maxWidth: 420,\n'
+    '          width: "calc(100% - 48px)",\n'
+    '        }}\n'
+    '      >\n'
+    '        {toasts.map((t) => (\n'
+    '          <ToastCard key={t.id} item={t} onDismiss={removeToast} />\n'
+    '        ))}\n'
+    '      </div>\n'
+    '    </ToastContext.Provider>\n'
+    '  );\n'
+    '}\n\n'
+    'export function useToast(): ToastContextValue {\n'
+    '  const ctx = useContext(ToastContext);\n'
+    '  if (!ctx) {\n'
+    '    return {\n'
+    '      toasts: [],\n'
+    '      addToast: () => {},\n'
+    '      removeToast: () => {},\n'
+    '      toast: {\n'
+    '        success: () => {},\n'
+    '        error: () => {},\n'
+    '        info: () => {},\n'
+    '      },\n'
+    '    };\n'
+    '  }\n'
+    '  return ctx;\n'
+    '}\n'
+)
+
+
+def render_toast_component() -> str:
+    """Return the static TypeScript implementation of the ToastProvider and useToast hook."""
+    return _TOAST_COMPONENT
+
+
 _LAYOUT = (
     'import type { Metadata } from "next";\n'
-    'import { Navbar } from "../components/navbar";\n\n'
+    'import { Navbar } from "../components/navbar";\n'
+    'import { ToastProvider } from "../components/toast";\n\n'
     "export const metadata: Metadata = {\n"
     '  title: "%s",\n'
     '  description: "%s",\n'
@@ -3696,8 +3928,10 @@ _LAYOUT = (
     "  return (\n"
     '    <html lang="en">\n'
     '      <body style={{ margin: 0, background: "#f8fafc", color: "#0f172a", fontFamily: "system-ui, -apple-system, sans-serif" }}>\n'
-    "        <Navbar />\n"
-    "        {children}\n"
+    "        <ToastProvider>\n"
+    "          <Navbar />\n"
+    "          {children}\n"
+    "        </ToastProvider>\n"
     "      </body>\n"
     "    </html>\n"
     "  );\n"
@@ -3766,6 +4000,7 @@ class NextjsWebAdapter:
             GeneratedFile("README.md", f"# {ir.name}\n\n{ir.description}\n\nGenerated by OmniStackAI from the Application IR.\n\n```\npnpm install\npnpm dev\n```\n"),
             GeneratedFile("app/layout.tsx", _LAYOUT % (_escape_ts(ir.name), _escape_ts(ir.description))),
             GeneratedFile("components/navbar.tsx", _navbar_component(ir)),
+            GeneratedFile("components/toast.tsx", _TOAST_COMPONENT),
             GeneratedFile("app/globals.css", "body { font-family: system-ui, sans-serif; margin: 0; }\n"),
             GeneratedFile("app/page.tsx", _overview_page(ir)),
             GeneratedFile("lib/types.ts", _types_file(ir)),
