@@ -1,5 +1,33 @@
 # Work Log
 
+## 2026-09-08 — R-253
+
+- Read AGENTS.md, START_HERE.md, PROJECT_STATE.yaml, CURRENT_TASK.yaml, HANDOFF.md; confirmed
+  main @ 08a149e, tree clean, 350 tests passing; R-252 done.
+- Ran `task doctor` (all tools present), `task verify` (350 pass), `task ai:status`,
+  `task ai:handoff` — all clean. Proposed R-253 candidates to founder.
+- Founder direction: "do what is best — no static or half work." Selected PATCH/update handlers
+  (Option B) as the missing CRUD verb with real enforced runtime behaviour.
+- Recorded task contract in `.ai/CURRENT_TASK.yaml` and `.ai/tasks/R-253.md` before any code.
+- `route_wiring.py`: added `Op.UPDATE`; `wire_endpoint` now maps `PATCH /entities/{id}` with
+  matching `request_schema` → `Op.UPDATE` (one path param, last segment). Conservative: everything
+  else stays 501.
+- `data_access.py`: added `_go_update` helper → emits `Update<Entity>(ctx, db, id, m)` with
+  parameterized `UPDATE … SET col=$i … WHERE id=$N RETURNING <col_list>`; returns `*models.<Entity>`
+  or `nil` on `ErrNoRows`. Added `_python_update` helper → emits `update_<table>(id, data)` with
+  parameterized `UPDATE … SET col=%s … WHERE id=%s RETURNING *`; `fetchone()` gives `None` on miss.
+- `backend_go.py`: `_handlers_file_wired` handles `Op.UPDATE` — decode body → `validateStruct` (if
+  entity has rules) → `store.Update<Entity>` → 404 on nil / 200 writeJSON. `uses_models` extended
+  for UPDATE. `has_validation` gate extended to cover UPDATE + CREATE.
+- `backend_python.py`: `_router_file` handles `Op.UPDATE` — emits `@router.patch` with `id_param +
+  payload` → `update_<table>` → `HTTPException(404)` on `None`. `models_used` extended for UPDATE.
+- `tests/test_patch_update_handlers.py`: 24 new tests covering Go store/handler/validation-ordering/
+  negative-wiring and Python repo/router; example IR regression; all assertions pass.
+- `task verify` — 374 tests pass (24 new), 0 failures. `task security:quick`, `task env:check` —
+  pass. 0 local model calls, 0 cloud calls.
+- Updated CHANGELOG, PROGRESS, CODEGEN, CURRENT_TASK, PROJECT_STATE, HANDOFF, WORK_LOG.
+- Tracker row R-253 inserted at Phase_Roadmap!A9:M9; Done count = 42.
+
 ## 2026-09-06 — R-001
 
 - Read `OmniStackAI_Implementation_Brief_v6.md` in full and applied the normative V6

@@ -1,42 +1,38 @@
 schema_version: 1
-task_id: R-252
-title: Enforce go-playground validation in the generated Go create handlers
+task_id: R-253
+title: Wire PATCH/update handlers with validation in Go and FastAPI backends
 status: done
 phase: BASIC/MVP
 founder_stage: 0
 branch: main
 goal: >-
-  Make the R-251 Go validate:"..." struct tags actually enforced at request time (Brief 9/26/27).
-  When a wired CREATE handler's entity carries validation rules, the generated Go backend now: (1)
-  declares github.com/go-playground/validator/v10 in its own go.mod; (2) emits
-  internal/handlers/validate.go — a shared validator instance (validator.New()) plus a validateStruct
-  helper that returns 400/"validation_failed" when a payload violates its tags; and (3) calls
-  validateStruct on the decoded body in each such CREATE handler, right after JSON decode and before the
-  store.Create call, returning 400 on failure. Rule-free projects are byte-identical to R-251 (no
-  validator dependency, no validate.go, no call), so the examples and existing Go assertions are
-  unchanged. FastAPI already enforces at construction via Pydantic — this task closes the Go gap only.
-  Additive/offline; the dependency lives ONLY in the generated project's go.mod; nothing is installed,
-  built, run, or connected to a database here.
+  Close the missing PATCH/update CRUD verb in the generated backends. When an IR contains a
+  PATCH endpoint whose request_schema names a known repo entity and whose path ends in exactly
+  one path parameter (PATCH /entities/{id}), both the Go and FastAPI adapters must emit a real,
+  wired update handler + repository function — not the 501 scaffold. The handler decodes the
+  body, calls validateStruct (reusing the R-252 helper) if the entity carries validation rules,
+  calls store.Update<Entity> / update_<table>, and returns 404 when the id is not found or 200
+  with the updated row. Unambiguous shape only; everything else stays 501. Additive/offline;
+  no platform dep; no install/build/run/DB connection.
 source:
   tracker_sheet: Phase_Roadmap
   tracker_row: reconstructed; new IDs continue after the workbook backlog's R-010..R-219
   brief_sections: [9, 26, 27, 34, 42, 74, 77, 83, 84, 85, 92]
   founder_note: >-
-    Founder chose option 1 after R-251 ("Go with option 1 ... bcoz we do not want anything static or
-    seeds data in our platform"): wire go-playground enforcement in the Go handlers rather than render
-    seed/indexes/validation in the static console. Committed directly to main; author solely sanjeetji;
-    tooling adds a Co-Authored-By trailer.
+    Founder approved after R-252: "do what is best — no static or half work." PATCH/update
+    handlers are the missing CRUD verb; closes real enforced runtime behaviour in both backends.
 project_profile:
   repository: platform_modular_monorepo
   service: python_agent_engine
   control_plane_database: postgresql
   model_routing: balanced
-complexity: L2
+complexity: L3
 expected_impact:
-  - services/agent-engine/src/omnistackai_agent_engine/codegen/field_validation.py
+  - services/agent-engine/src/omnistackai_agent_engine/codegen/route_wiring.py
+  - services/agent-engine/src/omnistackai_agent_engine/codegen/data_access.py
   - services/agent-engine/src/omnistackai_agent_engine/codegen/backend_go.py
-  - services/agent-engine/src/omnistackai_agent_engine/codegen/__init__.py
-  - services/agent-engine/tests/test_go_validation_enforcement.py
+  - services/agent-engine/src/omnistackai_agent_engine/codegen/backend_python.py
+  - services/agent-engine/tests/test_patch_update_handlers.py
   - docs/CODEGEN.md, docs/PROGRESS.md
   - portable state, changelog, handoff, task doc, and tracker evidence
 allowed_paths:
@@ -48,37 +44,36 @@ allowed_paths:
   - services/agent-engine/**
 must_not_change:
   - PostgreSQL as the control-plane database or the platform's own schema/migrations
-  - the IR schema (no new IR field; only Field.validation is interpreted further)
-  - the R-250/R-251 max_length/enum/min/max tag behavior; rule-free Go structs stay byte-identical
-  - the model-gateway, runtime, verify, edit, data-access, auth, seed, index public behavior (additive)
+  - the IR schema (no new IR field; PATCH HttpMethod already exists in the enum)
+  - the R-250/R-251/R-252 CREATE/DELETE/GET/LIST wiring behaviour; rule-free Go structs byte-identical
+  - the model-gateway, runtime, verify, edit, data-access public behaviour for existing ops
   - local Compose services or infrastructure; the Section 74 top-level contract; the offline bootstrap
   - the network-independence of static task verify
-  - the Python/FastAPI backend output (Pydantic already enforces; no Python change this task)
+  - the validator dep / validate.go gate: has_validation must also cover UPDATE handlers (not only CREATE)
 must_not_do:
-  - add a platform Python dependency or a vendor SDK to the agent-engine; the validator dep lives only
-    in the GENERATED project's go.mod
-  - emit the validator dependency, validate.go, or a validateStruct call for a rule-free project
+  - add a platform Python dependency or a vendor SDK to the agent-engine
+  - emit the validator dep or validateStruct for a project with zero rules-bearing entities
   - connect to or run a database; make a network call; install/build/run Go; put a secret anywhere
+  - change the IR schema, add IR fields, or change how existing ops are wired
 acceptance:
-  - When at least one wired CREATE endpoint's entity has validation rules, go.mod contains
-    `require github.com/go-playground/validator/v10 v10.22.1`.
-  - internal/handlers/validate.go is emitted with `var validate = validator.New()` and a
-    `func validateStruct(v any) (int, string)` returning http.StatusBadRequest / "validation_failed" on
-    error, and importing github.com/go-playground/validator/v10.
-  - Each such CREATE handler calls `validateStruct(m)` AFTER the json decode block and BEFORE the
-    store.Create call, and writes http.Error(w, msg, status) + return on failure.
-  - A rule-free IR (e.g. the existing Go-adapter fixture, minimal-blog, rideshare-favourites) emits NO
-    validator require, NO validate.go, and NO validateStruct call (byte-identical CREATE handler).
-  - An IR whose entities carry rules but which has no wired CREATE endpoint emits NO validate.go / dep
-    (models still carry the R-251 tags).
-  - Standard-library offline tests cover: enforcement emitted for a rules+create IR (go.mod, validate.go,
-    handler call ordering), absent for rule-free, absent for rules-without-create, and examples-unaffected.
+  - PATCH /entities/{id} with matching request_schema entity -> Op.UPDATE wired (not 501).
+  - Go store: Update<Entity>(ctx, db, id, m) emitted — parameterized UPDATE...SET...WHERE id=$N RETURNING <cols>; scans into *models.<Entity>, returns nil on not-found.
+  - Go handler: decode body -> validateStruct (if entity has rules) -> store.Update -> 404 if nil, 200+writeJSON otherwise; ordering assertable by string position.
+  - FastAPI repo: update_<table>(id, data) emitted — UPDATE...SET...WHERE id=%s RETURNING *; columns from data keys (excluding id); returns None on no rows.
+  - FastAPI router: @router.patch route with id_param+entity payload -> update_<table> -> 404 on None.
+  - No wiring: PATCH without path param, PATCH without request_schema entity, GET/POST/DELETE same shape.
+  - Rule-bearing entity in update: validateStruct called BEFORE store.Update (string-position test).
+  - Rule-free entity: no validateStruct call in the update handler.
+  - Example IRs (minimal-blog, rideshare-favourites) unchanged — no PATCH endpoints present.
+  - task verify green; 350 -> >=360 tests pass; 0 network calls.
 required_gates:
   - impact_analysis
-  - enforcement_emitted_tests
-  - enforcement_absent_tests
-  - handler_call_ordering_test
-  - examples_unaffected_test
+  - update_store_emitted_tests
+  - update_handler_wired_tests
+  - validate_ordering_test
+  - rule_free_no_validate_test
+  - no_wiring_negative_tests
+  - examples_unchanged_test
   - python_compile_test
   - vendor_import_exclusion
   - secret_exclusion_check
@@ -93,22 +88,30 @@ model_tool_trace:
   cloud_calls: 0
   note: Deterministic codegen; no model call, no network, no DB connection. cloud_calls zero.
 completion:
-  implementation_commit: f4fc828
-  verified_at: "2026-09-08T00:00:00+05:30"
+  implementation_commit: TBD (pre-commit)
+  verified_at: "2026-09-08T14:20:35+05:30"
   verification:
-    - "task verify — pass (350 agent-engine tests; 5 new in test_go_validation_enforcement.py)"
+    - "task verify — pass (374 agent-engine tests; 24 new in test_patch_update_handlers.py)"
     - "task security:quick — pass; task env:check — pass"
-    - "demo: rules+create IR -> go.mod require validator/v10 v10.22.1, internal/handlers/validate.go with validator.New()+validateStruct, create handler calls validateStruct(m) after decode / before store.Create; rule-free IR + examples emit none"
+    - "demo: PATCH /listings/{listingId} with Listing request_schema -> store.UpdateListing emitted in Go,
+      update_listing in Python; validated entity -> validateStruct called before store.Update; rule-free ->
+      no validateStruct; example IRs unchanged"
   acceptance_results:
-    - "rules+create IR: go.mod requires github.com/go-playground/validator/v10 v10.22.1; validate.go emitted with var validate = validator.New() and validateStruct returning 400/validation_failed (tests)"
-    - "each such CREATE handler calls validateStruct(m) after the json decode block and before store.Create, 400-ing on failure; ordering asserted (tests)"
-    - "rule-free IR (fixture/minimal-blog/rideshare-favourites): no validator require, no validate.go, no validateStruct call — CREATE handler byte-identical (tests)"
-    - "rules-without-create IR: no validate.go/dep; models still carry the R-251 tags (tests)"
-    - "no platform Python dependency added; dep lives only in the generated go.mod; no DB connection, no network"
+    - "PATCH /entities/{id} + matching request_schema -> Op.UPDATE wired (not 501); tests confirm"
+    - "Go store: UpdateListing emitted with parameterized UPDATE...SET...WHERE id=$N RETURNING, nil on ErrNoRows"
+    - "Go handler: decode -> validateStruct (if rules) -> store.Update -> 404/200; ordering asserted by string position"
+    - "FastAPI repo: update_listing with parameterized UPDATE...RETURNING *; fetchone() None on miss"
+    - "FastAPI router: @router.patch -> update_listing -> 404 on None"
+    - "Negative wiring: PATCH without param stays 501; GET/DELETE same shape not wired as update"
+    - "Rule-free entity: no validateStruct in update handler"
+    - "Rule-bearing entity: validator dep + validate.go emitted (has_validation now covers UPDATE+CREATE)"
+    - "Example IRs: minimal-blog and rideshare-favourites unchanged, no store.Update or @router.patch"
+    - "No platform Python dependency; no DB connection; no network call"
 blockers: []
 next_action: >-
-  R-252 shipped: Go validation is now enforced (validator.Struct -> 400 on create) where a wired create
-  entity has rules. Next (offline-doable, founder to pick): PATCH/update handlers that validate + persist
-  partial updates; or surface validation failures with field-level detail (JSON error body) instead of a
-  flat "validation_failed". Cloud-gated preview/deploy and R-224 still need a network environment/keys.
+  R-253 shipped: PATCH/update handlers wired in both Go and FastAPI backends with validation.
+  Next (offline-doable, founder to pick): field-level validation error bodies (structured JSON
+  {errors:[{field,rule,value}]} instead of flat "validation_failed"); or PUT handlers (full
+  replace, same wiring shape as PATCH but no partial-update semantics). Cloud-gated preview/deploy
+  and R-224 still need a network environment/keys.
 next_command: task agent-engine:test

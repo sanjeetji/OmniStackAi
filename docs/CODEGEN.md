@@ -225,3 +225,31 @@ token carries at least one of them, else **403**:
 
 `required_roles` implies `auth: true`, and each role must be a declared `Role` (`validate_ir` errors on
 an unknown role). Endpoints without roles keep the plain `require_auth`/`RequireAuth` guard.
+
+### PATCH/update handlers (R-253)
+
+`route_wiring` gains `Op.UPDATE`. A `PATCH /entities/{id}` endpoint is wired when:
+
+- HTTP method is `PATCH`
+- The path ends in exactly one path parameter (`{…}`)
+- `request_schema` names a known repo entity
+
+Everything else stays a clearly labelled 501 scaffold (same conservative policy as CREATE/DELETE).
+
+**Go (`net/http`):** `data_access._go_entity_store` emits `Update<Entity>(ctx, db, id string,
+m models.<Entity>) (*models.<Entity>, error)` — a single `UPDATE … SET col=$1, … WHERE id=$N
+RETURNING <col_list>` with a `Scan` into a fresh struct. Returns `nil, nil` on `sql.ErrNoRows`.
+The handler (in `_handlers_file_wired`) decodes the body, calls `validateStruct(m)` if the entity
+has validation rules (reusing the R-252 helper — 400 on failure), calls `store.Update<Entity>`,
+writes 404 if `nil`, or 200 + `writeJSON(updated)` on success. `has_validation` also activates for
+UPDATE handlers — the validator dependency is emitted whenever any wired CREATE or UPDATE handler's
+entity carries rules.
+
+**FastAPI (Python):** `data_access._python_repository` emits `update_<table>(id, data)` — a
+parameterized `UPDATE … SET col=%s, … WHERE id=%s RETURNING *` using only the data keys (excluding
+`id`); returns `None` (via `fetchone()`) when no row matched. The router emits `@router.patch`
+with `id_param: str` + `payload: <Entity>` → `await update_<table>(id_param, payload.model_dump())`
+→ `HTTPException(404)` on `None`.
+
+All SQL values are parameterized (`$N` / `%s`); identifiers are fixed IR-derived strings. Additive
+and offline — no platform dependency, nothing installed, built, run, or connected to a database.

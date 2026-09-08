@@ -1,15 +1,16 @@
-# OmniStackAI — implementation progress (as of R-252)
+# OmniStackAI — implementation progress (as of R-253)
 
 A living summary of what is built, what is pending, and how to see results. Numbers come from the
 execution tracker (`R_&_D/OmniStackAI_Execution_Tracker_v6.xlsx`, `Phase_Roadmap`).
 
 ## Headline
 
-- **350 automated tests pass**, fully offline and network-independent (`task verify`).
-- **41 tracker tasks Done, 1 Deferred, 209 Not Started** across 251 rows.
-- The offline builder loop is complete end to end: **describe (IR) → generate (web + API with working
-  CRUD incl. sub-collections + DB schema + data-access + JWT-verified auth & per-endpoint roles) →
-  verify → edit → commit to an owned Git repo.**
+- **374 automated tests pass**, fully offline and network-independent (`task verify`).
+- **42 tracker tasks Done, 1 Deferred, 208 Not Started** across 251 rows.
+- The offline builder loop is complete end to end: **describe (IR) → generate (web + API with
+  working CRUD incl. PATCH/update + sub-collections + DB schema + data-access + JWT-verified auth
+  & per-endpoint roles + field validation enforced at three layers) → verify → edit → commit to
+  an owned Git repo.**
 
 ## Completion by phase
 

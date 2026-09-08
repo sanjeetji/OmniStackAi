@@ -6,10 +6,10 @@ current_task: null
 current_status: ready_for_next_task_definition
 branch: main
 last_completed_task:
-  task_id: R-252
-  title: Enforce go-playground validation in the generated Go create handlers
-  implementation_commit: f4fc828
-  verification: task verify (350 agent-engine tests, 5 new); when a wired CREATE entity has rules, the Go backend declares validator/v10 in its go.mod, emits internal/handlers/validate.go (validator.New()+validateStruct), and calls validateStruct(m) after decode / before store.Create (400 on failure); rule-free projects + examples emit none; FastAPI already enforces via Pydantic; dep lives only in the generated project; no platform dep; no DB connection
+  task_id: R-253
+  title: Wire PATCH/update handlers with validation in Go and FastAPI backends
+  implementation_commit: TBD (pre-commit)
+  verification: task verify (374 agent-engine tests, 24 new); PATCH /entities/{id} + matching request_schema -> Op.UPDATE wired in Go and FastAPI; Go store emits Update<Entity> parameterized UPDATE...RETURNING; Go handler decode->validateStruct(if rules)->store.Update->404/200; FastAPI repo emits update_<table> parameterized UPDATE RETURNING *; router emits @router.patch->404/200; rule-free no validateStruct; example IRs unchanged; no DB/network
   result: pass
 control_plane_database: postgresql
 model_routing_mode: balanced
@@ -21,7 +21,7 @@ product_direction: >-
   framework adapter contract -> Next.js adapter -> Git service -> preview/sandbox (needs cloud env).
 id_note: >-
   Workbook backlog owns R-010..R-219. Founder-requested tasks use IDs after R-219: R-220..R-223 done,
-  R-224 Next.js deferred (env-blocked), R-225..R-251 done. Continue from R-252.
+  R-224 Next.js deferred (env-blocked), R-225..R-253 done. Continue from R-254.
 blockers: []
-next_action: R-252 is complete — the generated Go backend now enforces the R-251 validate tags at request time (validator.Struct -> 400 on create) whenever a wired create entity carries rules; the validator dep lives only in the generated go.mod, rule-free projects + examples are byte-identical, and FastAPI already enforced via Pydantic. Continue from R-253 (offline-doable, founder to pick): validating PATCH/update handlers, or field-level validation error bodies instead of a flat "validation_failed". Cloud-gated preview/deploy and R-224 still require a network-capable environment/keys.
-last_updated: "2026-09-08T00:06:26+05:30"
+next_action: R-253 complete — PATCH/update handlers wired in both backends (Go store.Update<Entity> + FastAPI update_<table>) with full validation chain (validateStruct reuse, 404/200); 374 tests pass. Continue from R-254 (offline-doable, founder to pick): field-level validation error bodies (structured JSON errors instead of flat "validation_failed"); or another real CRUD/behaviour gap. Cloud-gated preview/deploy and R-224 still require a network-capable environment/keys.
+last_updated: "2026-09-08T14:22:00+05:30"
