@@ -1,6 +1,6 @@
 # Current Handoff
 
-Task ID: R-271
+Task ID: R-272
 Status: done
 Phase: BASIC/MVP — Founder Stage 0
 Branch: `main` (the only branch; the GitHub default)
@@ -12,30 +12,29 @@ Branch: `main` (the only branch; the GitHub default)
 - Commits use `sanjeetji <sk698166@gmail.com>` as author.
 - User permission is required prior to committing or pushing code.
 
-## Completed (R-271) — CSV Data Export & Bulk Export in Generated Next.js Collection Screens
+## Completed (R-272) — Deep-Linking & Entity Lifecycle in Next.js Detail Screens
 
-- **handleExportCsv Helper Function**:
-  - Emitted directly in `_collection_screen_page` accepting `selectedOnly: boolean = false`.
-  - Filters items by `checkedIds` when `selectedOnly=true` or exports all loaded data.
-  - Early-returns safely when no items are available for export.
-- **RFC 4180 Escaping & Field Mapping**:
-  - Strict value serialization via `toCsvVal`: `null`/`undefined` formats to `""`, internal quotes `"` are escaped to `""`, objects serialize cleanly via `JSON.stringify`, and all values are wrapped in double quotes.
-  - Includes all declared entity fields (`entity.fields`) across both header row and data rows.
-- **Client-Side Download Lifecycle**:
-  - Generates `Blob` with MIME type `text/csv;charset=utf-8;`.
-  - Creates object URL via `URL.createObjectURL(blob)`.
-  - Creates dynamic `<a>` anchor element with download attribute formatted as `{plural.lower()}_export.csv`.
-  - Appends to DOM, triggers `link.click()`, removes anchor, and frees memory via `URL.revokeObjectURL(url)`.
-- **Top Toolbar & Bulk Actions Integration**:
-  - Top controls bar includes "Export CSV" button alongside Search and Refresh (`disabled={!data || data.length === 0}`).
-  - Contextual Bulk Actions Bar includes "Export Selected ({checkedIds.length})" button when `checkedIds.length > 0`.
-  - Coexists symmetrically with "Delete Selected" button when delete capability is enabled.
-- **Clean Fallback & Invariance**:
-  - Bulk export is available even when DELETE capability is not wired.
+- **Query Param Auto-Loading**:
+  - `_detail_screen_page` imports `useSearchParams` and `useEffect`.
+  - Extracts `const queryId = searchParams.get("id");` and pre-populates `idInput` and `selectedId`.
+  - Automatically loads the entity via `use<Entity>(selectedId)` on page mount when arriving from deep links or collection views.
+  - Retains manual ID input search box as fallback when `?id=...` is absent.
+- **Entity Lifecycle Actions in Detail View**:
+  - "Export JSON" action button on the loaded item card: exports formatted record via client-side `Blob` (`application/json`) and dynamic anchor element with `URL.revokeObjectURL` cleanup.
+  - "Edit {name}" action link: navigates to `/{form_screen.id}?id=${selectedId}` when `can_edit` and `form_screen` exist.
+  - "Delete {name}" action button: when `can_delete` is True, prompts confirmation dialog, invokes `useDelete<Entity>()` with loading indicator (`deletingMain`), error banner (`deleteMainError`), and state cleanup (`setSelectedId(null); setIdInput("");`).
+- **Breadcrumbs & Cross-Screen Navigation**:
+  - Breadcrumb header links back to collection screen (`&larr; Back to {plural}`) when a complementary collection screen is detected in the IR.
+  - Falls back to `&larr; Overview` when no collection screen is present.
+- **Collection Screen Linkage**:
+  - In `_collection_screen_page`, detects dedicated `detail_screen` for the entity in `ir.screens`.
+  - Renders a styled "View" link button (`/{detail_screen.id}?id=${(item as any).id}`) in the table row actions cell.
+- **Clean Isolation & Invariance**:
   - Zero substring collisions with subcollection selection state or controls.
   - Strict diff invariance maintained across `ir.description` changes.
 
 ## Preceded by:
+- **R-271**: CSV Data Export & Bulk Export in Generated Next.js Collection Screens.
 - **R-270**: Bulk Selection & Batch Deletion in Generated Next.js Collection Screens.
 - **R-269**: Page Size Selector & Contextual Empty State CTAs in Generated Next.js Screens.
 - **R-268**: Subcollection Child Item Deletion & Mutation Feedback in Master-Detail Views.
@@ -46,6 +45,6 @@ Branch: `main` (the only branch; the GitHub default)
 
 ## Verification
 
-- `task verify` — pass (630 agent-engine tests; 16 new in `test_collection_csv_export.py`).
+- `task verify` — pass (646 agent-engine tests; 16 new in `test_detail_screen_lifecycle.py`).
 - `task lint`, `task security:quick`, `task env:check` — all pass.
 - 0 local model calls, 0 cloud calls. Offline and deterministic.

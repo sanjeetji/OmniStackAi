@@ -1,5 +1,24 @@
 # Work Log
 
+## 2026-09-08 — R-272
+
+- Recorded contract in `.ai/CURRENT_TASK.yaml` and `.ai/tasks/R-272.md`.
+- `nextjs.py`:
+  - `_detail_screen_page`:
+    * Imported `useState, useEffect` from `"react"` and `useSearchParams` from `"next/navigation"`.
+    * Implemented query parameter extraction: `const queryId = searchParams.get("id");` initializing `idInput` and `selectedId`, and synchronized with `useEffect` when `queryId` updates.
+    * Added entity deletion: when `can_delete`, imported and wired `useDelete{name}()` with `handleDelete` prompting confirmation dialog, setting loading state (`deletingMain`), error capture (`deleteMainError`), and state cleanup.
+    * Added single-record client-side JSON export: `handleExportJson` formats entity record to formatted JSON via `Blob`, dynamic anchor element, and `URL.revokeObjectURL`.
+    * Added breadcrumb navigation: links back to collection screen (`&larr; Back to {plural}`) when complementary collection screen is detected.
+    * In item card header: rendered action buttons bar with "Export JSON", "Edit {name}" (navigating to `/{form_screen.id}?id=${selectedId}` when editable), and "Delete {name}" (when deletable), with error feedback alert banner.
+  - `_collection_screen_page`:
+    * Detected dedicated `detail_screen` for the entity in `ir.screens`.
+    * When `detail_screen` exists, rendered a styled "View" link button (`/{detail_screen.id}?id=${(item as any).id}`) in the table row actions cell.
+  - Maintained strict diff invariance across `ir.description` modifications.
+- Added `services/agent-engine/tests/test_detail_screen_lifecycle.py` with 16 comprehensive unit tests.
+- `task verify` — 646 tests pass (16 new), 0 failures. `task lint`, `task security:quick` pass. 0 network calls, 0 cloud model calls.
+- Updated CURRENT_TASK.yaml, tasks/R-272.md, PROJECT_STATE.yaml, PROJECT_STATE.md, CHANGELOG.md, docs/CODEGEN.md, docs/PROGRESS.md.
+
 ## 2026-09-08 — R-271
 
 - Recorded contract in `.ai/CURRENT_TASK.yaml` and `.ai/tasks/R-271.md`.

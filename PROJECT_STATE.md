@@ -1,13 +1,13 @@
 # Project State — OmniStackAI
-Last updated: 2026-09-08T22:35:00+05:30
+Last updated: 2026-09-08T22:58:00+05:30
 
 ## Current Phase
 Stage 0 (Founder Build Sequence, Brief Section 91) — BASIC/MVP
 
 ## Last Completed Task
-Tracker ID: R-271 — CSV Data Export & Bulk Export in Generated Next.js Collection Screens (`apps/web/app/<screen>/page.tsx`) — DONE,
-`task verify` (630 agent-engine tests, 16 new in `test_collection_csv_export.py`) passing. Adds client-side RFC 4180 CSV export and bulk selection export: collection screens emit `handleExportCsv` helper accepting `selectedOnly` flag; formats all entity fields with RFC 4180 quote escaping and null/undefined handling; downloads via `Blob` (`text/csv;charset=utf-8;`), dynamic anchor element, and `URL.revokeObjectURL`; top toolbar renders "Export CSV" button disabled when data is empty; contextual Bulk Actions Bar renders "Export Selected ({checkedIds.length})" button when `checkedIds.length > 0`; diff-invariant with respect to `ir.description`.
-Preceded by R-254 through R-270.
+Tracker ID: R-272 — Deep-Linking & Entity Lifecycle in Next.js Detail Screens (`apps/web/app/<screen>/page.tsx`) — DONE,
+`task verify` (646 agent-engine tests, 16 new in `test_detail_screen_lifecycle.py`) passing. Adds deep linking and full entity lifecycle to Next.js detail screens: auto-loads query parameter `?id=...` on mount via `useSearchParams` and `useEffect`; loaded item card renders "Export JSON" button for single-record download, "Edit {name}" link navigating to `/{form_screen.id}?id=${selectedId}` when editable, and "Delete {name}" button with confirmation dialog and state cleanup when deletable; breadcrumb header links back to collection screen (`&larr; Back to {plural}`); collection screen table rows render "View" link button when dedicated detail screen is defined; diff-invariant with respect to `ir.description`.
+Preceded by R-254 through R-271.
 Additive, offline, 0 network, no DB connection.
 
 

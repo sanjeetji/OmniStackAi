@@ -1,27 +1,26 @@
 schema_version: 1
-task_id: R-271
-title: CSV Data Export & Bulk Export in Generated Next.js Collection Screens
+task_id: R-272
+title: Deep-Linking & Entity Lifecycle in Next.js Detail Screens
 status: done
 phase: BASIC/MVP
 founder_stage: 0
 branch: main
 goal: >-
-  Add client-side CSV data export and bulk selection export in generated Next.js collection screens:
-  - Add handleExportCsv helper function in _collection_screen_page accepting selectedOnly boolean flag.
-  - Implement RFC 4180 compliant CSV value formatting (quotes, commas, newlines, null handling).
-  - Export all declared entity fields (header row and row data).
-  - Use Blob([csvContent], { type: "text/csv;charset=utf-8;" }) and URL.createObjectURL for in-browser downloads.
-  - Revoke object URL after download to prevent memory leaks.
-  - Render an "Export CSV" button in the table actions header next to Refresh, disabled when no data is available.
-  - When checkedIds.length > 0, render an "Export Selected ({checkedIds.length})" button in the Bulk Actions Bar.
-  - File download naming: {plural.toLowerCase()}_export.csv.
+  Enhance generated Next.js detail screens and connect collection screens for complete lifecycle navigation:
+  - Add query param auto-loading in _detail_screen_page using useSearchParams to parse searchParams.get("id") on mount.
+  - Wire Edit and Delete action controls on the loaded detail card:
+    * "Edit {name}" link navigating to /{form_screen.id}?id=${selectedId} when can_edit and form_screen exist.
+    * "Delete {name}" button invoking useDelete<Entity>() with confirmation prompt and state cleanup when can_delete.
+  - Add single-record "Export JSON" button with client-side Blob download ({name.lower()}_{id}.json).
+  - Add breadcrumb navigation linking back to collection screen (&larr; Back to {plural}).
+  - In _collection_screen_page, detect dedicated detail_screen and render a "View" link in table row action cells.
   - Maintain strict diff invariance across ir.description modifications.
   - Fully offline, 0 network, 0 external dependencies.
 source:
   tracker_sheet: Phase_Roadmap
   brief_sections: [43, 50, 74, 77, 91, 92]
   founder_note: >-
-    Founder requested next task: R-271 (CSV Data Export & Bulk Export in Generated Next.js Collection Screens).
+    Founder requested continuing to next task: R-272 (Deep-Linking & Entity Lifecycle in Next.js Detail Screens).
 project_profile:
   repository: platform_modular_monorepo
   service: python_agent_engine
@@ -30,7 +29,7 @@ project_profile:
 complexity: L2
 expected_impact:
   - services/agent-engine/src/omnistackai_agent_engine/codegen/nextjs.py
-  - services/agent-engine/tests/test_collection_csv_export.py
+  - services/agent-engine/tests/test_detail_screen_lifecycle.py
   - docs/CODEGEN.md, docs/PROGRESS.md
   - portable state, changelog, handoff, task doc, tracker evidence
 allowed_paths:
@@ -49,21 +48,21 @@ must_not_do:
   - break existing codegen contracts
   - connect to or run a database; make a network call; put a secret anywhere
 acceptance:
-  - Collection screens emit handleExportCsv helper function with selectedOnly argument.
-  - handleExportCsv implements RFC 4180 escaping for special characters.
-  - handleExportCsv includes all entity.fields in CSV headers and rows.
-  - In-browser download uses Blob and temporary anchor element with URL.revokeObjectURL.
-  - Top toolbar renders 'Export CSV' button disabled when !data || data.length === 0.
-  - Contextual Bulk Actions Bar renders 'Export Selected' button when checkedIds.length > 0.
-  - Exported filename follows {plural.toLowerCase()}_export.csv pattern.
+  - Detail screen parses searchParams.get("id") and initializes state on mount.
+  - Detail screen wires use{name}(selectedId) and loads automatically when queryId is present.
+  - Detail screen renders Edit link when can_edit and form_screen exist.
+  - Detail screen renders Delete button when can_delete is True, with confirmation dialog and state cleanup.
+  - Detail screen renders Export JSON button downloading single-record JSON.
+  - Detail screen renders breadcrumb link back to collection screen when present.
+  - Collection screen table rows render View link navigating to dedicated detail screen when one exists.
   - Diff invariance maintained across ir.description changes.
   - 100% offline, Stage 0 verification passes (task verify).
 evidence:
-  verify: "task verify: 630 tests passing in 0.906s"
-  tests: "test_collection_csv_export.py: 16/16 tests passing"
-  coverage: "16 test cases covering RFC 4180 export helper, full export button, bulk export button, escaping, headers, rows, Blob, URL lifecycle, and full project generation"
+  verify: "task verify: 646 tests passing in 0.908s"
+  tests: "test_detail_screen_lifecycle.py: 16/16 tests passing"
+  coverage: "16 test cases covering queryId parsing, useEffect auto-load, Edit action, Delete action, single-record JSON export, collection breadcrumb, collection View link, and full project generation"
 required_gates:
-  - collection_csv_export_test
+  - detail_screen_lifecycle_test
   - task_verify
   - task_lint
   - task_security_quick
@@ -73,5 +72,5 @@ model_tool_trace:
   cloud_calls: 0
   note: Deterministic codegen; no model call, no network, no DB. cloud_calls zero.
 blockers: []
-next_action: Commit and push Task R-271 changes upon user approval and proceed to next task
+next_action: Commit and push Task R-272 changes upon user approval and proceed to next task
 next_command: task verify

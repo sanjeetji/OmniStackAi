@@ -2,13 +2,13 @@ schema_version: 1
 project: OmniStackAI
 phase: BASIC/MVP
 founder_stage: 0
-current_task: R-271
+current_task: R-272
 current_status: done
 branch: main
 last_completed_task:
-  task_id: R-271
-  title: CSV Data Export & Bulk Export in Generated Next.js Collection Screens
-  verification: task verify (630 agent-engine tests, 16 new in test_collection_csv_export.py); collection screens declare handleExportCsv helper with selectedOnly flag; RFC 4180 escaping implemented for null/undefined/quotes/objects; all entity fields included in headers and rows; browser download lifecycle with Blob (text/csv;charset=utf-8;), URL.createObjectURL, dynamic <a> element, download attribute {plural.lower()}_export.csv, and URL.revokeObjectURL; top toolbar renders 'Export CSV' button disabled when !data || data.length === 0; contextual Bulk Actions Bar renders 'Export Selected ({checkedIds.length})' button when checkedIds.length > 0; diff-invariant across ir.description; task lint and task security:quick green; 0 network; no DB
+  task_id: R-272
+  title: Deep-Linking & Entity Lifecycle in Next.js Detail Screens
+  verification: task verify (646 agent-engine tests, 16 new in test_detail_screen_lifecycle.py); detail screens parse searchParams.get("id") on mount via useSearchParams and useEffect; wires use<Entity>(selectedId) for instant data load; item card header renders single-record 'Export JSON' button ({name.lower()}_{id}.json), 'Edit {name}' link to form screen when editable, and 'Delete {name}' button with confirmation prompt, loading indicator, and state cleanup when deletable; breadcrumb header links back to collection screen (&larr; Back to {plural}); collection screens render 'View' link button in table rows when dedicated detail screen is defined; diff-invariant across ir.description; task lint and task security:quick green; 0 network; no DB
   result: pass
 control_plane_database: postgresql
 model_routing_mode: balanced
@@ -20,7 +20,7 @@ product_direction: >-
   framework adapter contract -> Next.js adapter -> Git service -> preview/sandbox (needs cloud env).
 id_note: >-
   Workbook backlog owns R-010..R-219. Founder-requested tasks use IDs after R-219: R-220..R-223 done,
-  R-224 Next.js deferred (env-blocked), R-225..R-271 done. Continue from R-272.
+  R-224 Next.js deferred (env-blocked), R-225..R-272 done. Continue from R-273.
 blockers: []
-next_action: Task R-271 (CSV Data Export & Bulk Export in Generated Next.js Collection Screens) is implemented, verified, and complete (630 tests pass). Ready for user commit decision.
-last_updated: "2026-09-08T22:35:00+05:30"
+next_action: Task R-272 (Deep-Linking & Entity Lifecycle in Next.js Detail Screens) is implemented, verified, and complete (646 tests pass). Ready for user commit decision.
+last_updated: "2026-09-08T22:58:00+05:30"
