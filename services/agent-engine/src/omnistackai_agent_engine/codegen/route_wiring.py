@@ -29,6 +29,7 @@ class Op(StrEnum):
     LIST = "list"
     GET = "get"
     CREATE = "create"
+    UPDATE = "update"  # PATCH /entities/{id} — partial update (R-253)
     DELETE = "delete"
     LIST_BY = "list_by"  # parent-scoped list: a sub-collection filtered by a foreign-key relation
 
@@ -72,6 +73,8 @@ def wire_endpoint(
         return Wiring(Op.GET, entity, table, params[0])
     if method == "POST" and api.request_schema == entity and not params:
         return Wiring(Op.CREATE, entity, table, None)
+    if method == "PATCH" and api.request_schema == entity and last_is_param and len(params) == 1:
+        return Wiring(Op.UPDATE, entity, table, params[0])
     if method == "DELETE" and last_is_param and len(params) == 1:
         return Wiring(Op.DELETE, entity, table, params[0])
     # Sub-collection list: GET /<parents>/{parentId}/<children>, child has exactly one FK relation.

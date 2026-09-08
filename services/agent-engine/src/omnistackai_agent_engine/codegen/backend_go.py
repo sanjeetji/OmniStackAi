@@ -146,7 +146,7 @@ def _handlers_file_wired(
 
     wirings = [(api, wire_endpoint(api, repo_entities, fk_by_entity)) for api in apis]
     uses_store = any(w is not None for _, w in wirings)
-    uses_models = any(w is not None and w.op is Op.CREATE for _, w in wirings)
+    uses_models = any(w is not None and w.op in (Op.CREATE, Op.UPDATE) for _, w in wirings)
 
     imports = ['\t"net/http"']
     if uses_models:
@@ -197,6 +197,18 @@ def _handlers_file_wired(
             lines.append(f"\tid, err := store.Create{wiring.entity}(r.Context(), h.DB, m)")
             lines.append("\tif err != nil {\n\t\thttp.Error(w, err.Error(), http.StatusInternalServerError)\n\t\treturn\n\t}")
             lines.append('\twriteJSON(w, http.StatusCreated, map[string]string{"id": id})')
+        elif wiring.op is Op.UPDATE:
+            lines.append(f'\tid := r.PathValue("{wiring.id_param}")')
+            lines.append(f"\tvar m models.{wiring.entity}")
+            lines.append("\tif err := json.NewDecoder(r.Body).Decode(&m); err != nil {")
+            lines.append('\t\thttp.Error(w, "invalid body", http.StatusBadRequest)\n\t\treturn\n\t}')
+            if wiring.entity in validated_entities:
+                lines.append("\tif status, msg := validateStruct(m); msg != \"\" {")
+                lines.append("\t\thttp.Error(w, msg, status)\n\t\treturn\n\t}")
+            lines.append(f"\tupdated, err := store.Update{wiring.entity}(r.Context(), h.DB, id, m)")
+            lines.append("\tif err != nil {\n\t\thttp.Error(w, err.Error(), http.StatusInternalServerError)\n\t\treturn\n\t}")
+            lines.append("\tif updated == nil {\n\t\thttp.NotFound(w, r)\n\t\treturn\n\t}")
+            lines.append("\twriteJSON(w, http.StatusOK, updated)")
         else:  # Op.DELETE
             lines.append(f'\tok, err := store.Delete{wiring.entity}(r.Context(), h.DB, r.PathValue("{wiring.id_param}"))')
             lines.append("\tif err != nil {\n\t\thttp.Error(w, err.Error(), http.StatusInternalServerError)\n\t\treturn\n\t}")
@@ -275,7 +287,7 @@ class GoBackendAdapter:
         validated_entities = _validated_entities(ir) if has_db else frozenset()
         has_validation = bool(validated_entities) and any(
             (wiring := wire_endpoint(api, repo_entities, fk_by_entity)) is not None
-            and wiring.op is Op.CREATE
+            and wiring.op in (Op.CREATE, Op.UPDATE)
             and wiring.entity in validated_entities
             for api in apis
         )

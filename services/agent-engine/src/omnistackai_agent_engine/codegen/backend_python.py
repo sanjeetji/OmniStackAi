@@ -110,7 +110,7 @@ def _router_file(
 ) -> str:
     wirings = [(api, wire_endpoint(api, repo_entities, fk_by_entity)) for api in apis]
     tables = sorted({w.table for _, w in wirings if w is not None})
-    models_used = sorted({w.entity for _, w in wirings if w is not None and w.op is Op.CREATE})
+    models_used = sorted({w.entity for _, w in wirings if w is not None and w.op in (Op.CREATE, Op.UPDATE)})
 
     seg_needs_auth = any(api.auth for api in apis)
     uses_roles = any(api.required_roles for api in apis)
@@ -162,6 +162,12 @@ def _router_file(
         elif wiring.op is Op.CREATE:
             lines.append(f"async def {fn}(payload: {wiring.entity}) -> dict:")
             lines.append(f"    return await {wiring.table}.create_{wiring.table}(payload.model_dump())")
+        elif wiring.op is Op.UPDATE:
+            lines.append(f"async def {fn}({wiring.id_param}: str, payload: {wiring.entity}) -> dict:")
+            lines.append(f"    row = await {wiring.table}.update_{wiring.table}({wiring.id_param}, payload.model_dump())")
+            lines.append("    if row is None:")
+            lines.append('        raise HTTPException(status_code=404, detail="not_found")')
+            lines.append("    return row")
         else:  # Op.DELETE
             lines.append(f"async def {fn}({wiring.id_param}: str) -> dict:")
             lines.append(f"    deleted = await {wiring.table}.delete_{wiring.table}({wiring.id_param})")

@@ -92,7 +92,33 @@ def _python_repository(entity: Entity) -> str:
         "    async with await connect() as conn, conn.cursor() as cur:\n"
         '        await cur.execute(f"DELETE FROM {TABLE} WHERE id = %s", (id,))\n'
         "        return cur.rowcount > 0\n"
+        + _python_update(entity, table)
         + _python_filtered_lists(entity, table)
+    )
+
+
+def _python_update(entity: Entity, table: str) -> str:
+    """Emit update_<table>(id, data) — parameterized UPDATE RETURNING *."""
+    update_cols = _insert_columns(entity)  # every column except id
+    if update_cols:
+        set_clause = ", ".join(f"{c} = %s" for c in update_cols)
+        values_expr = ", ".join(f"data['{c}']" for c in update_cols)
+        update_body = (
+            f'        sql = f"UPDATE {{TABLE}} SET {set_clause} WHERE id = %s RETURNING *"\n'
+            f"        await cur.execute(sql, ({values_expr}, id))\n"
+        )
+    else:
+        # id-only entity — nothing to update; no-op returns the row if it exists
+        update_body = (
+            '        sql = f"SELECT * FROM {TABLE} WHERE id = %s"\n'
+            "        await cur.execute(sql, (id,))\n"
+        )
+    return (
+        "\n\n"
+        f"async def update_{table}(id: str, data: dict) -> dict | None:\n"
+        "    async with await connect() as conn, conn.cursor() as cur:\n"
+        f"{update_body}"
+        "        return await cur.fetchone()\n"
     )
 
 
@@ -187,13 +213,37 @@ def _go_entity_store(entity: Entity, slug: str) -> str:
         f"\terr := db.QueryRowContext(ctx, {create_sql}).Scan(&id)\n"
         "\treturn id, err\n"
         "}\n\n"
-        f"func Delete{pascal}(ctx context.Context, db *sql.DB, id string) (bool, error) {{\n"
+        + _go_update(entity, table, pascal, col_list, scan_targets)
+        + f"func Delete{pascal}(ctx context.Context, db *sql.DB, id string) (bool, error) {{\n"
         f"\tres, err := db.ExecContext(ctx, `DELETE FROM {table} WHERE id = $1`, id)\n"
         "\tif err != nil {\n\t\treturn false, err\n\t}\n"
         "\tn, _ := res.RowsAffected()\n"
         "\treturn n > 0, nil\n"
         "}\n"
         + _go_filtered_lists(entity, table, col_list, scan_targets)
+    )
+
+
+def _go_update(entity: Entity, table: str, pascal: str, col_list: str, scan_targets: str) -> str:
+    """Emit Update<Entity>(ctx, db, id, m) — parameterized UPDATE RETURNING full row."""
+    update_cols = _insert_columns(entity)  # every column except id
+    if update_cols:
+        set_clause = ", ".join(f"{c} = ${i + 1}" for i, c in enumerate(update_cols))
+        set_args = ", ".join(f"m.{_pascal(c)}" for c in update_cols)
+        id_placeholder = f"${len(update_cols) + 1}"
+        update_sql = f"`UPDATE {table} SET {set_clause} WHERE id = {id_placeholder} RETURNING {col_list}`"
+        scan_call = f"db.QueryRowContext(ctx, {update_sql}, {set_args}, id).Scan({scan_targets})"
+    else:
+        # id-only entity — nothing to set; treat as a GET (returns the row or nil)
+        scan_call = f"db.QueryRowContext(ctx, `SELECT {col_list} FROM {table} WHERE id = $1`, id).Scan({scan_targets})"
+    return (
+        f"func Update{pascal}(ctx context.Context, db *sql.DB, id string, m models.{pascal}) (*models.{pascal}, error) {{\n"
+        f"\tvar out models.{pascal}\n"
+        f"\terr := {scan_call}\n"
+        "\tif err == sql.ErrNoRows {\n\t\treturn nil, nil\n\t}\n"
+        "\tif err != nil {\n\t\treturn nil, err\n\t}\n"
+        "\treturn &out, nil\n"
+        "}\n\n"
     )
 
 
