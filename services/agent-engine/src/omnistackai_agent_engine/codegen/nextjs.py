@@ -403,6 +403,7 @@ def _hooks_file(ir: ApplicationIR) -> str:
         "  params: UseListParams;",
         "  setParams: Dispatch<SetStateAction<UseListParams>>;",
         "  setPage: (page: number) => void;",
+        "  setPageSize: (size: number) => void;",
         "  setSearch: (q: string) => void;",
         '  setSort: (sort: string, order?: "asc" | "desc") => void;',
         "  refetch: () => Promise<void>;",
@@ -482,6 +483,14 @@ def _hooks_file(ir: ApplicationIR) -> str:
                 "    }));",
                 "  }, []);",
                 "",
+                "  const setPageSize = useCallback((newPageSize: number) => {",
+                "    setParams((prev) => ({",
+                "      ...prev,",
+                "      limit: Math.max(1, newPageSize),",
+                "      offset: 0,",
+                "    }));",
+                "  }, []);",
+                "",
                 "  const setSearch = useCallback((q: string) => {",
                 "    setParams((prev) => ({",
                 "      ...prev,",
@@ -528,6 +537,7 @@ def _hooks_file(ir: ApplicationIR) -> str:
                 "    params,",
                 "    setParams,",
                 "    setPage,",
+                "    setPageSize,",
                 "    setSearch,",
                 "    setSort,",
                 "    refetch,",
@@ -722,6 +732,14 @@ def _hooks_file(ir: ApplicationIR) -> str:
             "    }));",
             "  }, []);",
             "",
+            "  const setPageSize = useCallback((newPageSize: number) => {",
+            "    setParams((prev) => ({",
+            "      ...prev,",
+            "      limit: Math.max(1, newPageSize),",
+            "      offset: 0,",
+            "    }));",
+            "  }, []);",
+            "",
             "  const setSearch = useCallback((q: string) => {",
             "    setParams((prev) => ({",
             "      ...prev,",
@@ -774,6 +792,7 @@ def _hooks_file(ir: ApplicationIR) -> str:
             "    params,",
             "    setParams,",
             "    setPage,",
+            "    setPageSize,",
             "    setSearch,",
             "    setSort,",
             "    refetch,",
@@ -1162,9 +1181,11 @@ def _collection_screen_page(screen: Screen, entity: Entity, ir: ApplicationIR, o
         "    loading,",
         "    error,",
         "    page,",
+        "    pageSize,",
         "    totalPages,",
         "    params,",
         "    setPage,",
+        "    setPageSize,",
         "    setSearch,",
         "    setSort,",
         "    refetch,",
@@ -1334,7 +1355,44 @@ def _collection_screen_page(screen: Screen, entity: Entity, ir: ApplicationIR, o
         "            {data && data.length === 0 && (",
         "              <tr>",
         f'                <td colSpan={{{len(display_fields) + (1 if has_actions_col else 0)}}} style={{{{ padding: 32, textAlign: "center", color: "#64748b" }}}}>',
-        f"                  No {plural} found.",
+        "                  {searchInput.trim() ? (",
+        '                    <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 12 }}>',
+        f"                      <div>No {plural} matching &ldquo;{{searchInput}}&rdquo;.</div>",
+        "                      <button",
+        '                        type="button"',
+        "                        onClick={() => {",
+        '                          setSearchInput("");',
+        '                          setSearch("");',
+        "                        }}",
+        '                        style={{ padding: "6px 14px", border: "1px solid #cbd5e1", background: "#fff", color: "#2563eb", borderRadius: 6, fontSize: 13, cursor: "pointer", fontWeight: 500 }}',
+        "                      >",
+        "                        Clear search",
+        "                      </button>",
+        "                    </div>",
+    ])
+
+    if form_screen:
+        lines.extend([
+            "                  ) : (",
+            '                    <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 12 }}>',
+            f"                      <div>No {plural} found yet.</div>",
+            '                      <Link',
+            f'                        href="/{form_screen.id}"',
+            '                        style={{ display: "inline-block", padding: "8px 16px", background: "#2563eb", color: "#fff", borderRadius: 6, fontSize: 14, textDecoration: "none", fontWeight: 500 }}',
+            '                      >',
+            f"                        + Create first {name}",
+            '                      </Link>',
+            "                    </div>",
+            "                  )}",
+        ])
+    else:
+        lines.extend([
+            "                  ) : (",
+            f"                    <div>No {plural} found.</div>",
+            "                  )}",
+        ])
+
+    lines.extend([
         "                </td>",
         "              </tr>",
         "            )}",
@@ -1409,21 +1467,40 @@ def _collection_screen_page(screen: Screen, entity: Entity, ir: ApplicationIR, o
         '        <span style={{ fontSize: 14, color: "#64748b" }}>',
         '          Page {page} of {totalPages} ({total} total)',
         "        </span>",
-        '        <div style={{ display: "flex", gap: 8 }}>',
-        "          <button",
-        "            onClick={() => setPage(page - 1)}",
-        "            disabled={page <= 1 || loading}",
-        '            style={{ padding: "6px 12px", border: "1px solid #cbd5e1", borderRadius: 6, background: page <= 1 ? "#f1f5f9" : "#fff", color: page <= 1 ? "#94a3b8" : "#0f172a", fontSize: 14, cursor: page <= 1 ? "default" : "pointer" }}',
-        "          >",
-        "            Previous",
-        "          </button>",
-        "          <button",
-        "            onClick={() => setPage(page + 1)}",
-        "            disabled={page >= totalPages || loading}",
-        '            style={{ padding: "6px 12px", border: "1px solid #cbd5e1", borderRadius: 6, background: page >= totalPages ? "#f1f5f9" : "#fff", color: page >= totalPages ? "#94a3b8" : "#0f172a", fontSize: 14, cursor: page >= totalPages ? "default" : "pointer" }}',
-        "          >",
-        "            Next",
-        "          </button>",
+        '        <div style={{ display: "flex", alignItems: "center", gap: 12 }}>',
+        '          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>',
+        '            <label htmlFor="pageSizeSelect" style={{ fontSize: 13, color: "#64748b" }}>',
+        "              Per page:",
+        "            </label>",
+        "            <select",
+        '              id="pageSizeSelect"',
+        '              aria-label="Select page size"',
+        "              value={pageSize}",
+        "              onChange={(e) => setPageSize(Number(e.target.value))}",
+        '              style={{ padding: "4px 8px", border: "1px solid #cbd5e1", borderRadius: 6, background: "#fff", fontSize: 13, color: "#334155", cursor: "pointer" }}',
+        "            >",
+        '              <option value={10}>10 per page</option>',
+        '              <option value={25}>25 per page</option>',
+        '              <option value={50}>50 per page</option>',
+        '              <option value={100}>100 per page</option>',
+        "            </select>",
+        "          </div>",
+        '          <div style={{ display: "flex", gap: 8 }}>',
+        "            <button",
+        "              onClick={() => setPage(page - 1)}",
+        "              disabled={page <= 1 || loading}",
+        '              style={{ padding: "6px 12px", border: "1px solid #cbd5e1", borderRadius: 6, background: page <= 1 ? "#f1f5f9" : "#fff", color: page <= 1 ? "#94a3b8" : "#0f172a", fontSize: 14, cursor: page <= 1 ? "default" : "pointer" }}',
+        "            >",
+        "              Previous",
+        "            </button>",
+        "            <button",
+        "              onClick={() => setPage(page + 1)}",
+        "              disabled={page >= totalPages || loading}",
+        '              style={{ padding: "6px 12px", border: "1px solid #cbd5e1", borderRadius: 6, background: page >= totalPages ? "#f1f5f9" : "#fff", color: page >= totalPages ? "#94a3b8" : "#0f172a", fontSize: 14, cursor: page >= totalPages ? "default" : "pointer" }}',
+        "            >",
+        "              Next",
+        "            </button>",
+        "          </div>",
         "        </div>",
         "      </footer>",
     ])
@@ -1551,8 +1628,25 @@ def _collection_screen_page(screen: Screen, entity: Entity, ir: ApplicationIR, o
                 ])
             lines.extend([
                 f"                {{{s_var}.data && {s_var}.data.length === 0 && (",
-                f'                  <div style={{{{ padding: 16, textAlign: "center", color: "#64748b", fontSize: 14, background: "#f8fafc", borderRadius: 6 }}}}>No {sub.child_plural.lower()} found for this {name.lower()}.</div>',
-                "                )}",
+            ])
+            if child_form:
+                lines.extend([
+                    '                  <div style={{ padding: 24, textAlign: "center", color: "#64748b", fontSize: 14, background: "#f8fafc", borderRadius: 6, display: "flex", flexDirection: "column", alignItems: "center", gap: 8 }}>',
+                    f'                    <div>No {sub.child_plural.lower()} found for this {name.lower()}.</div>',
+                    '                    <Link',
+                    f"                      href={{`/{child_form.id}?{sub.id_param}=${{selectedId}}`}}",
+                    '                      style={{ display: "inline-block", padding: "6px 12px", background: "#2563eb", color: "#fff", borderRadius: 4, fontSize: 12, textDecoration: "none", fontWeight: 500 }}',
+                    '                    >',
+                    f"                      + Add first {sub.child_entity.name}",
+                    '                    </Link>',
+                    '                  </div>',
+                ])
+            else:
+                lines.append(
+                    f'                  <div style={{{{ padding: 16, textAlign: "center", color: "#64748b", fontSize: 14, background: "#f8fafc", borderRadius: 6 }}}}>No {sub.child_plural.lower()} found for this {name.lower()}.</div>'
+                )
+            lines.append("                )}")
+            lines.extend([
                 f"                {{{s_var}.data && {s_var}.data.length > 0 && (",
                 '                  <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>',
                 f"                    {{{s_var}.data.map((child, cIdx) => (",
@@ -2348,6 +2442,10 @@ def _detail_screen_page(screen: Screen, entity: Entity, ir: ApplicationIR, ops: 
         for idx, sub in enumerate(subcollections):
             s_var = f"{sub.child_entity.name.lower()}sSubcol"
             tab_guard = f"activeTab === {idx}" if len(subcollections) > 1 else "true"
+            child_form = next(
+                (s for s in ir.screens if _screen_intent(s) == "form" and (_match_entity(s, ir) and _match_entity(s, ir).name == sub.child_entity.name)),
+                None,
+            )
             lines.extend([
                 f"            {{{tab_guard} && (",
                 "              <div>",
@@ -2358,14 +2456,38 @@ def _detail_screen_page(screen: Screen, entity: Entity, ir: ApplicationIR, ops: 
                 f"                      {{{s_var}.total}}",
                 "                    </span>",
                 "                  </div>",
-                "                  <button",
-                f"                    onClick={{() => {s_var}.refetch()}}",
-                f"                    disabled={{{s_var}.loading}}",
-                f'                    style={{{{ padding: "4px 8px", border: "1px solid #cbd5e1", background: "#fff", color: "#334155", borderRadius: 4, fontSize: 12, cursor: {s_var}.loading ? "default" : "pointer" }}}}',
-                "                  >",
-                f'                    {{{s_var}.loading ? "Loading..." : "Refresh"}}',
-                "                  </button>",
-                "                </div>",
+            ])
+            if child_form:
+                lines.extend([
+                    '                  <div style={{ display: "flex", gap: 8, alignItems: "center" }}>',
+                    '                    <Link',
+                    f"                      href={{`/{child_form.id}?{sub.id_param}=${{selectedId}}`}}",
+                    '                      style={{ padding: "4px 8px", background: "#2563eb", color: "#fff", borderRadius: 4, fontSize: 12, textDecoration: "none", fontWeight: 500 }}',
+                    '                    >',
+                    f'                      + New {sub.child_entity.name}',
+                    '                    </Link>',
+                    "                    <button",
+                    f"                      onClick={{() => {s_var}.refetch()}}",
+                    f"                      disabled={{{s_var}.loading}}",
+                    f'                      style={{{{ padding: "4px 8px", border: "1px solid #cbd5e1", background: "#fff", color: "#334155", borderRadius: 4, fontSize: 12, cursor: {s_var}.loading ? "default" : "pointer" }}}}',
+                    "                    >",
+                    f'                      {{{s_var}.loading ? "Loading..." : "Refresh"}}',
+                    "                    </button>",
+                    "                  </div>",
+                    "                </div>",
+                ])
+            else:
+                lines.extend([
+                    "                  <button",
+                    f"                    onClick={{() => {s_var}.refetch()}}",
+                    f"                    disabled={{{s_var}.loading}}",
+                    f'                    style={{{{ padding: "4px 8px", border: "1px solid #cbd5e1", background: "#fff", color: "#334155", borderRadius: 4, fontSize: 12, cursor: {s_var}.loading ? "default" : "pointer" }}}}',
+                    "                  >",
+                    f'                    {{{s_var}.loading ? "Loading..." : "Refresh"}}',
+                    "                  </button>",
+                    "                </div>",
+                ])
+            lines.extend([
                 f"                {{{s_var}.loading && !{s_var}.data && (",
                 f'                  <div style={{{{ padding: 16, textAlign: "center", color: "#64748b", fontSize: 14 }}}}>Loading {sub.child_plural.lower()}...</div>',
                 "                )}",
@@ -2382,8 +2504,25 @@ def _detail_screen_page(screen: Screen, entity: Entity, ir: ApplicationIR, ops: 
                 ])
             lines.extend([
                 f"                {{{s_var}.data && {s_var}.data.length === 0 && (",
-                f'                  <div style={{{{ padding: 16, textAlign: "center", color: "#64748b", fontSize: 14, background: "#f8fafc", borderRadius: 6 }}}}>No {sub.child_plural.lower()} found for this {name.lower()}.</div>',
-                "                )}",
+            ])
+            if child_form:
+                lines.extend([
+                    '                  <div style={{ padding: 24, textAlign: "center", color: "#64748b", fontSize: 14, background: "#f8fafc", borderRadius: 6, display: "flex", flexDirection: "column", alignItems: "center", gap: 8 }}>',
+                    f'                    <div>No {sub.child_plural.lower()} found for this {name.lower()}.</div>',
+                    '                    <Link',
+                    f"                      href={{`/{child_form.id}?{sub.id_param}=${{selectedId}}`}}",
+                    '                      style={{ display: "inline-block", padding: "6px 12px", background: "#2563eb", color: "#fff", borderRadius: 4, fontSize: 12, textDecoration: "none", fontWeight: 500 }}',
+                    '                    >',
+                    f"                      + Add first {sub.child_entity.name}",
+                    '                    </Link>',
+                    '                  </div>',
+                ])
+            else:
+                lines.append(
+                    f'                  <div style={{{{ padding: 16, textAlign: "center", color: "#64748b", fontSize: 14, background: "#f8fafc", borderRadius: 6 }}}}>No {sub.child_plural.lower()} found for this {name.lower()}.</div>'
+                )
+            lines.append("                )}")
+            lines.extend([
                 f"                {{{s_var}.data && {s_var}.data.length > 0 && (",
                 '                  <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>',
                 f"                    {{{s_var}.data.map((child, cIdx) => (",
