@@ -5,14 +5,14 @@ Last updated: 2026-09-08T00:06:26+05:30 by Codex (GPT-5)
 Stage 0 (Founder Build Sequence, Brief Section 91) — BASIC/MVP
 
 ## Last Completed Task
-Tracker ID: R-248 — Application IR fixtures + honest seed migration — DONE, `task verify` (316
-agent-engine tests, 14 new) passing. A new `Fixture` record (entity + rows of column→JSON value) lets
-the founder declare explicit seed rows, and `render_postgres_seed(ir)` deterministically emits
-`migrations/0002_seed.sql` with exactly those authored values — never inventing, defaulting, or
-guessing (only declared columns are inserted; correct SQL literal quoting). Both backends emit it when
-the IR has fixtures + postgres; `validate_ir` cross-references fixtures; the IR round-trips through
-`to_dict`/`from_dict`/`normalize_ir`. Deterministic, offline, no DB connection; implementation
-checkpoint `9d34720` (R-224 Next.js console upgrade remains deferred — environment-blocked).
+Tracker ID: R-249 — IR indexes + unique constraints in the schema — DONE, `task verify` (327
+agent-engine tests, 11 new) passing. `Field.unique` renders a single-column `UNIQUE` constraint (never
+on the `id` PK), and a new `Index` record on `Entity` (fields + unique + optional name) renders one
+`CREATE [UNIQUE] INDEX <name> ON <table> (<cols>);` per index with a deterministic default name.
+Index field references are validated against the entity's own fields at construction; both additions
+round-trip through `to_dict`/`from_dict` (empty/false defaults, no schema-version bump). Deterministic,
+offline, no DB connection; implementation checkpoint `28e7cd5` (R-224 Next.js console upgrade remains
+deferred — environment-blocked).
 
 ## Workflow note
 Founder consolidated all work onto `main` (per-task branches deleted; `main` is the default). Continue

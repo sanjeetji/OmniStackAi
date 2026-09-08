@@ -1,7 +1,7 @@
 schema_version: 1
 task_id: R-249
 title: IR indexes + unique constraints in the generated PostgreSQL schema
-status: in_progress
+status: done
 phase: BASIC/MVP
 founder_stage: 0
 branch: main
@@ -85,10 +85,18 @@ model_tool_trace:
   cloud_calls: 0
   note: Deterministic; no model call, no network, no DB connection. cloud_calls zero.
 completion:
-  implementation_commit: null
-  verified_at: null
-  verification: []
-  acceptance_results: []
+  implementation_commit: 28e7cd5
+  verified_at: "2026-09-08T00:00:00+05:30"
+  verification:
+    - "task verify — pass (327 agent-engine tests; 11 new)"
+    - "task security:quick — pass; task env:check — pass"
+    - "demo: unique column -> 'email TEXT NOT NULL UNIQUE'; composite unique index -> 'CREATE UNIQUE INDEX account_tenant_handle_key'; rideshare emits 'CREATE INDEX driver_name_idx'"
+  acceptance_results:
+    - "Field.unique + Index/Entity.indexes added, validated (index fields must be declared entity fields), and round-trip via to_dict/from_dict (tests)"
+    - "render_postgres_schema emits UNIQUE on unique non-id columns (never the PK) and CREATE [UNIQUE] INDEX per entity index with deterministic default names; ordered/byte-stable (tests)"
+    - "bad index field raises InvalidIRError at construction; empty index fields rejected (tests)"
+    - "no index/unique output when none declared; nothing connects to or runs a database"
+    - "additive IR (defaults false/empty); normalize_ir preserves via object pass-through; task verify network-independent"
 blockers: []
 next_action: >-
   Implement Field.unique + Index/Entity.indexes + schema emission + tests; run gates; record completion.

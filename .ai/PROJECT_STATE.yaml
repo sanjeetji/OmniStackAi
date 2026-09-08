@@ -6,10 +6,10 @@ current_task: null
 current_status: ready_for_next_task_definition
 branch: main
 last_completed_task:
-  task_id: R-248
-  title: Application IR fixtures + honest migrations/0002_seed.sql
-  implementation_commit: 9d34720
-  verification: task verify (316 agent-engine tests, 14 new); a new IR Fixture record + render_postgres_seed emit deterministic INSERTs of only authored values (no fabrication), both backends emit migrations/0002_seed.sql when fixtures+postgres; validate_ir cross-refs fixtures; IR round-trips; no DB connection
+  task_id: R-249
+  title: IR indexes + unique constraints in the generated PostgreSQL schema
+  implementation_commit: 28e7cd5
+  verification: task verify (327 agent-engine tests, 11 new); Field.unique + Entity.indexes (Index record) render UNIQUE columns and CREATE [UNIQUE] INDEX statements in the schema, deterministic default names, id never unique, index fields validated at construction; IR round-trips; no DB connection
   result: pass
 control_plane_database: postgresql
 model_routing_mode: balanced
@@ -23,5 +23,5 @@ id_note: >-
   Workbook backlog owns R-010..R-219. Founder-requested tasks use IDs after R-219: R-220..R-223 done,
   R-224 Next.js deferred (env-blocked), R-225..R-247 done. Continue from R-248.
 blockers: []
-next_action: R-248 is complete — the generated backend now ships honest seed data (migrations/0002_seed.sql) from explicit IR fixtures. Continue from R-249 (offline-doable): deeper IR/adapter coverage — entity indexes, unique constraints, and richer field validation flowing into the schema and models. Cloud-gated preview/deploy and R-224 still require a network-capable environment/keys.
+next_action: R-249 is complete — the generated schema now carries UNIQUE constraints and indexes from the IR. Continue from R-250 (offline-doable): richer field validation (length/enum) into the models (Pydantic/Go) and schema (VARCHAR(n)/CHECK); or render the R-248 seed + R-249 indexes in the static-console builder proof. Cloud-gated preview/deploy and R-224 still require a network-capable environment/keys.
 last_updated: "2026-09-08T00:06:26+05:30"

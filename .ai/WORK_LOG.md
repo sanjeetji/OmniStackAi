@@ -670,3 +670,25 @@
   validated rows 1..256 contiguous, table `A4:M256`, sheet1 `$B$4:$B$256`/`$H$4:$H$256`, XML well-formed.
 - Committed directly to main. Tracker row R-248 (Builder) inserted at row 9; MVP total 142 / Done 37.
   Implementation checkpoint `9d34720`. 0 local / 0 cloud model calls; nothing run/connected.
+
+## 2026-09-08 — R-249
+
+- Deepened the generated persistence layer with uniqueness + indexes from the IR. `ir.py`: `Field`
+  gains `unique: bool = False` (validated, serialized); new `Index` record (fields + unique + optional
+  name, fields validated as idents); `Entity` gains `indexes: tuple[Index, ...] = ()` and validates that
+  each index field is a declared field of the entity. `to_dict`/`from_dict` updated; exported `Index`.
+  `normalize_ir` needs no change (entities pass through as objects, so the new attrs ride along).
+- `schema_sql.py`: `_column_lines` appends ` UNIQUE` to a unique non-`id` column (the `id` PK never gets
+  a redundant UNIQUE); new `_index_statements(ir)` emits `CREATE [UNIQUE] INDEX <name> ON <table>
+  (<cols>);` per entity index under an `-- Indexes` section, with a deterministic default name
+  (`<table>_<cols>_idx`, `_key` when unique) when unnamed.
+- `examples.py`: `rideshare-favourites` `Driver` gained `indexes=(Index(("name",)),)` for a visible demo
+  (`CREATE INDEX driver_name_idx ON driver (name);`).
+- 11 new stdlib offline tests (327 total) in `test_schema_indexes.py`: unique non-id column, id-never-
+  unique, single/composite/named indexes (default naming, unique vs not), no-index-section-when-none,
+  the example driver index, bad-index-field construction error, empty-index-fields error, and IR
+  round-trip + byte-stability. `task verify` + `security:quick` + `env:check` pass; no existing test
+  broke; the `0002_seed` and data-access/route/auth code are untouched (schema-only change).
+- Tracker: reused the general row-insertion script (baseline `1c0072f`, LAST=256) — R-249 (Builder) at
+  row 9; rows 1..257 contiguous, table `A4:M257`, sheet1 ranges to 257, XML well-formed. MVP total
+  143 / Done 38. Implementation checkpoint `28e7cd5`. 0 local / 0 cloud model calls; no DB connection.
