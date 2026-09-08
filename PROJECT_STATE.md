@@ -1,13 +1,13 @@
 # Project State — OmniStackAI
-Last updated: 2026-09-08T21:30:00+05:30
+Last updated: 2026-09-08T21:42:00+05:30
 
 ## Current Phase
 Stage 0 (Founder Build Sequence, Brief Section 91) — BASIC/MVP
 
 ## Last Completed Task
-Tracker ID: R-267 — Foreign-Key Relation Selectors & Parent Auto-Population in Generated Next.js Forms (`apps/web/app/<screen>/page.tsx`) — DONE,
-`task verify` (570 agent-engine tests, 12 new in `test_form_relation_screens.py`) passing. Replaces raw foreign key text inputs with typed parent relation selectors (`<select>` dropdowns) and automatic query parameter pre-population in generated Next.js forms: detects `RelationKind.MANY_TO_ONE` relations and foreign key fields on child entities; imports and wires `useList<ParentPlural>()` when parent has `Op.LIST`; replaces raw text inputs with accessible `<select>` dropdowns displaying parent title/name, loading state, and required HTML5/ARIA validation; displays contextual parent linkage badge (`&bull; Selected <Parent> linked`) when foreign key is selected; pre-populates foreign keys from `searchParams` supporting parameter aliases (`<field>`, `<rel>_id`, `<rel>Id`, `<rel>`); validates required foreign key fields client-side; clean fallback safety for entities without relations (e.g. `minimal-blog` Post); diff-invariant with respect to `ir.description`.
-Preceded by R-254 through R-266.
+Tracker ID: R-268 — Subcollection Child Item Deletion & Mutation Feedback in Master-Detail Views (`apps/web/app/<screen>/page.tsx`) — DONE,
+`task verify` (583 agent-engine tests, 13 new in `test_subcollection_deletion.py`) passing. Adds child item deletion, confirmation dialogs, loading/disabled states, error feedback alerts, and automatic subcollection refetching to master-detail views in generated Next.js screens: `_subcollections_for_parent` sets `can_delete = True` when child supports `Op.DELETE`; collection and detail screens import and wire `useDelete<Child>` hooks; `handleDelete<Child>` handlers prompt confirmation dialog (`confirm("Are you sure you want to delete this <Child>?")`) and trigger `<subcol>.refetch()`; child cards render styled Delete button with disabled state during mutation and `stopPropagation`; mutation error alerts (`{delete<Child>Error && ...}`) render above child items on failure; non-deletable subcollections omit deletion code; diff-invariant with respect to `ir.description`.
+Preceded by R-254 through R-267.
 Additive, offline, 0 network, no DB connection.
 
 

@@ -1,6 +1,6 @@
 # Current Handoff
 
-Task ID: R-267
+Task ID: R-268
 Status: done
 Phase: BASIC/MVP — Founder Stage 0
 Branch: `main` (the only branch; the GitHub default)
@@ -12,31 +12,27 @@ Branch: `main` (the only branch; the GitHub default)
 - Commits use `sanjeetji <sk698166@gmail.com>` as author.
 - User permission is required prior to committing or pushing code.
 
-## Completed (R-267) — Foreign-Key Relation Selectors & Parent Auto-Population in Generated Next.js Forms
+## Completed (R-268) — Subcollection Child Item Deletion & Mutation Feedback in Master-Detail Views
 
-- **Foreign-Key Relation Detection (`_parent_relations_for_entity`)**:
-  - Automatically identifies `RelationKind.MANY_TO_ONE` relations and foreign key fields on child entities.
-  - Matches parent entity in `ir.entities` and checks for `Op.LIST` support.
-  - Resolves hook name (`useList<ParentPlural>`), primary display field (`title`/`name`/`id`), and human-friendly label.
-- **Parent List Hook Integration**:
-  - Automatically imports `useList<ParentPlural>` from `"../lib/hooks"`.
-  - Wires hooks at component top level (`const <parents>List = useList<Parents>();`).
-- **Accessible `<select>` Dropdown Selectors**:
-  - Replaces raw text inputs for foreign key fields with accessible `<select>` dropdowns.
-  - Renders loading placeholder (`Loading <parents>...` vs `Select <parent>...`).
-  - Maps parent items to `<option>` tags displaying parent primary title/name.
-  - Displays contextual parent linkage badge (`&bull; Selected <Parent> linked`) when an item is selected.
-  - Integrated with `fieldErrors` display and `aria-invalid` attribute.
-- **Parent Auto-Population via Query Parameters**:
-  - Detects foreign key query parameters on form mount via `searchParams`, supporting aliases (`<field>`, `<rel>_id`, `<rel>Id`, `<rel>`).
-  - Automatically sets `formData[fk]` when navigating from parent master-detail views (`+ New <Child>` links).
-- **Client-Side Validation**:
-  - Validates required foreign key fields in `handleSubmit`, reporting `{field} is required` when unselected.
-- **Safety & Invariance**:
-  - Independent entities without relations (e.g. `minimal-blog` Post) omit relation list hooks and dropdowns.
-  - Strict diff invariance: zero references to `ir.description`, preventing diff drift.
+- **Subcollection Deletion Detection**:
+  - `SubcollectionInfo.can_delete` populated via `Op.DELETE in ops_by_entity.get(child_name, set())`.
+  - Fallback entity matching for `DELETE` endpoints lacking explicit `response_schema` (e.g. `ApiEndpoint(HttpMethod.DELETE, "/comments/{id}")`).
+- **Hook Integration in Master-Detail Views**:
+  - In `_collection_screen_page` and `_detail_screen_page`, automatically imports `useDelete<Child>` from `"../lib/hooks"`.
+  - Instantiates delete hooks at component level: `const { remove: remove<Child>, loading: deleting<Child>, error: delete<Child>Error } = useDelete<Child>();`.
+- **Mutation Handlers & Refetching**:
+  - Emits `handleDelete<Child>` handler with confirmation dialog (`confirm("Are you sure you want to delete this <Child>?")`).
+  - Safely wrapped in try/catch to capture errors into hook state without uncaught promise rejections.
+  - Automatically triggers child subcollection refetch (`<subcol>.refetch()`) upon completion.
+- **Card-Level Delete Action & Mutation Feedback**:
+  - Renders an accessible, styled Delete button on each child card with `e.stopPropagation()`, disabled state during mutation (`disabled={deleting<Child>}`), and dynamic label `{deleting<Child> ? "Deleting..." : "Delete"}`.
+  - Renders mutation error alert banner (`{delete<Child>Error && ...}`) directly above child items if deletion fails.
+- **Clean Fallback & Invariance**:
+  - Entities and subcollections lacking `Op.DELETE` omit delete hooks and buttons.
+  - Strict diff invariance across `ir.description` changes.
 
 ## Preceded by:
+- **R-267**: Foreign-Key Relation Selectors & Parent Auto-Population in Generated Next.js Forms.
 - **R-266**: Update/Edit Mode in Generated Next.js Forms & Collection Screen Edit Actions.
 - **R-265**: Subcollection Navigation & Master-Detail Views in Generated Screens.
 - **R-254**: Structured JSON validation error bodies in Go (`{"errors": [...]}`).
@@ -53,35 +49,6 @@ Branch: `main` (the only branch; the GitHub default)
 
 ## Verification
 
-- `task verify` — pass (570 agent-engine tests; 12 new in `test_form_relation_screens.py`).
+- `task verify` — pass (583 agent-engine tests; 13 new in `test_subcollection_deletion.py`).
 - `task lint`, `task security:quick`, `task env:check` — all pass.
 - 0 local model calls, 0 cloud calls. Offline and deterministic.
-
-
-## Product state
-
-The offline builder covers Application IR → validation/normalization → Next.js/FastAPI/Go generation
-with PostgreSQL schema (unique constraints, indexes, max_length/enum/min/max validation via
-CHECK/VARCHAR), repositories, wired full CRUD (LIST/GET/CREATE/PATCH/PUT/DELETE) on both backends,
-pagination query parameters (`limit`/`offset`) and sorting query parameters (`sort`/`order`) with
-SQL injection whitelist protection on list endpoints, sub-collections, JWT auth + role enforcement,
-and field validation enforced at every layer: FastAPI (Pydantic, at construction), Go
-(go-playground `validator.Struct` → structured 400 JSON errors in create + update handlers), and the DB schema.
-Typed Next.js API client (`lib/api.ts`) and backend CORS middleware are fully connected.
-Seed data only from explicit IR fixtures → owned Git monorepo → preview/deploy plans → verification
-ladders → patch/rename-aware edits. 46 tracker tasks Done; no paid cloud service; platform PostgreSQL/Compose unchanged.
-
-## Blockers and risks
-
-- No blocker for remaining offline tasks. Live generated-app preview/deploy and R-224 Next.js
-  console upgrade still need a reliable network environment and/or authorized provider keys.
-  Native mobile remains deferred per Brief §25/§91.
-
-## Next action
-
-All 5 sequential tasks (R-254, R-255, R-256, R-257, R-258) are implemented, verified, and complete.
-Await founder review and permission to commit/push before proceeding.
-
-## Next command
-
-`task verify`

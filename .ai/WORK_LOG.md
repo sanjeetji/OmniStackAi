@@ -1,5 +1,27 @@
 # Work Log
 
+## 2026-09-08 — R-268
+
+- Recorded contract in `.ai/CURRENT_TASK.yaml` and `.ai/tasks/R-268.md`.
+- `nextjs.py`:
+  - Imported `HttpMethod` from `..application_ir`.
+  - Added fallback entity resolution for `DELETE` endpoints where `response_schema` or `request_schema` was omitted in `_get_ops_by_entity` and `_generate_api_client_ts`.
+  - Updated `_generate_hooks_ts` to source `ops_by_entity` from `_get_ops_by_entity(ir)`, ensuring complete consistency across API client, hooks, and screen pages.
+  - Added `can_delete: bool = False` to `SubcollectionInfo` dataclass and set it in `_subcollections_for_parent` via `Op.DELETE in ops_by_entity.get(child_name, set())`.
+  - In `_collection_screen_page`:
+    - Automatically imported `useDelete<Child>` for each deletable subcollection, avoiding duplicate imports when parent entity shares delete capability.
+    - Instantiated delete hooks at component level: `const { remove: remove<Child>, loading: deleting<Child>, error: delete<Child>Error } = useDelete<Child>();`.
+    - Declared `handleDelete<Child>` handler with confirmation prompt (`confirm("Are you sure you want to delete this <Child>?")`), try/catch guard, and automatic subcollection refetch (`<subcol>.refetch()`).
+    - Rendered mutation error feedback alert banner (`{delete<Child>Error && ...}`) when deletion fails.
+    - Rendered an accessible, styled Delete button on each child item card with `e.stopPropagation()`, disabled state during mutation (`disabled={deleting<Child>}`), and dynamic label `{deleting<Child> ? "Deleting..." : "Delete"}`.
+  - In `_detail_screen_page`:
+    - Mirrored identical child deletion hook imports, hook instantiations, delete handlers, mutation error alert banners, and Delete buttons on child cards.
+  - Clean fallback safety: subcollections whose child entity lacks `Op.DELETE` emit zero deletion code, and entities without subcollections emit zero subcollection code.
+  - Preserved byte-for-byte diff invariance across `ir.description` modifications.
+- Added `services/agent-engine/tests/test_subcollection_deletion.py` with 13 unit tests covering detection, non-delete omission, fallback detection, hook imports, handler declaration with confirm and refetch, button rendering with stopPropagation, error alert display, detail screen wiring, mixed multi-subcollection wiring, diff invariance, and full project generation.
+- `task verify` — 583 tests pass (13 new), 0 failures. `task lint`, `task security:quick` pass. 0 network calls, 0 cloud model calls.
+- Updated CURRENT_TASK.yaml, tasks/R-268.md, PROJECT_STATE.yaml, docs/CODEGEN.md, docs/PROGRESS.md.
+
 ## 2026-09-08 — R-267
 
 - Recorded contract in `.ai/CURRENT_TASK.yaml` and `.ai/tasks/R-267.md`.

@@ -1,26 +1,27 @@
 schema_version: 1
-task_id: R-267
-title: Foreign-Key Relation Selectors & Parent Auto-Population in Generated Next.js Forms
+task_id: R-268
+title: Subcollection Child Item Deletion & Mutation Feedback in Master-Detail Views
 status: done
 phase: BASIC/MVP
 founder_stage: 0
 branch: main
 goal: >-
-  Replace raw foreign key text inputs with typed parent relation selectors (<select> dropdowns)
-  and automatic query parameter pre-population in generated Next.js forms:
-  - In form screens (_form_screen_page), detect MANY_TO_ONE relations and foreign key fields (e.g. article_id, driver_id).
-  - Automatically import parent list hook (useList<ParentPlural>) from ../lib/hooks when parent has Op.LIST.
-  - Fetch parent items and render accessible <select> dropdowns showing parent primary display field (title/name).
-  - Pre-populate foreign key fields from URL query params (searchParams.get(fk_field) or searchParams.get(rel_name + "Id"))
-    when navigating from parent master-detail views (+ New <Child> links).
-  - Provide fallback safety for entities without foreign key relations (clean schema inputs).
-  - Maintain byte-for-byte diff invariance across ir.description changes.
-  - Fully offline, 0 network, 0 external deps.
+  Add child item deletion and mutation feedback to master-detail views in generated Next.js screens:
+  - In subcollection master-detail panels (_collection_screen_page and _detail_screen_page), detect when
+    the child entity supports Op.DELETE (via wire_endpoint or DELETE endpoint matching).
+  - Automatically import and wire useDelete<Child> from ../lib/hooks for each deletable subcollection.
+  - Render an accessible, styled Delete button on each child card with confirmation prompt
+    (confirm("Are you sure you want to delete this <Child>?")), loading/disabled state, and stopPropagation.
+  - Automatically trigger child subcollection refetch (<subcol>.refetch()) upon successful deletion.
+  - Display deletion mutation error feedback ({delete<Child>Error && ...}) if a delete request fails.
+  - Clean fallback safety: subcollections whose child entity lacks Op.DELETE omit delete hooks and buttons.
+  - Preserve byte-for-byte diff invariance across ir.description modifications.
+  - Fully offline, 0 network, 0 external dependencies.
 source:
   tracker_sheet: Phase_Roadmap
   brief_sections: [43, 50, 74, 77, 91, 92]
   founder_note: >-
-    Founder approved R-267 (Foreign-Key Relation Selectors & Parent Auto-Population in Generated Next.js Forms).
+    Founder approved R-268 (Subcollection Child Item Deletion & Mutation Feedback in Master-Detail Views).
 project_profile:
   repository: platform_modular_monorepo
   service: python_agent_engine
@@ -29,7 +30,7 @@ project_profile:
 complexity: L2
 expected_impact:
   - services/agent-engine/src/omnistackai_agent_engine/codegen/nextjs.py
-  - services/agent-engine/tests/test_form_relation_screens.py
+  - services/agent-engine/tests/test_subcollection_deletion.py
   - docs/CODEGEN.md, docs/PROGRESS.md
   - portable state, changelog, handoff, task doc, tracker evidence
 allowed_paths:
@@ -48,21 +49,23 @@ must_not_do:
   - break existing codegen contracts
   - connect to or run a database; make a network call; put a secret anywhere
 acceptance:
-  - Child form screens import parent list hooks (useList<ParentPlural>) when MANY_TO_ONE relations exist with Op.LIST.
-  - Child form screens invoke parent list hooks to fetch parent entity candidates.
-  - Foreign key fields render as accessible <select> dropdowns with parent options displaying parent title/name.
-  - Navigating with parent query parameter (?article_id=... or ?postId=...) pre-populates the foreign key in formData.
-  - Foreign key selectors participate in client-side required validation and fieldErrors display.
-  - Entities without relations omit relation list hooks and render standard inputs without overhead.
+  - Subcollection detection sets can_delete=True on SubcollectionInfo when child entity supports Op.DELETE.
+  - Subcollection detection sets can_delete=False when child entity lacks Op.DELETE.
+  - Collection screens import useDelete<Child> hooks for deletable child subcollections.
+  - Collection screens instantiate delete hooks and handleDelete<Child> handlers with confirmation prompts and refetch.
+  - Collection screens render Delete button on child cards with disabled state during mutation.
+  - Collection screens render deletion error feedback alert banners when delete error occurs.
+  - Dedicated detail screens (_detail_screen_page) mirror deletion hooks, handlers, error feedback, and buttons.
+  - Non-deletable subcollections omit deletion hooks, handlers, error banners, and buttons.
   - Diff invariance maintained across ir.description modifications.
   - task verify green; 0 network calls.
 evidence:
-  task_verify: "Ran 570 tests in 0.975s — OK (Stage 0 verification passed)"
+  task_verify: "Ran 583 tests in 0.909s — OK (Stage 0 verification passed)"
   task_lint: "Lint passed."
   task_security_quick: "Stage 0 secret-policy check passed."
-  test_suite: "services/agent-engine/tests/test_form_relation_screens.py (12/12 passing)"
+  test_suite: "services/agent-engine/tests/test_subcollection_deletion.py (13/13 passing)"
 required_gates:
-  - form_relation_screens_test
+  - subcollection_deletion_test
   - task_verify
 model_tool_trace:
   routing: local_only
