@@ -6,10 +6,10 @@ current_task: null
 current_status: ready_for_next_task_definition
 branch: main
 last_completed_task:
-  task_id: R-247
-  title: Render the project plan and unified edit patch in the static console
-  implementation_commit: 6a82056
-  verification: task verify (302 agent-engine tests, 5 new); deterministic metadata-only builderShowcase composes a real two-app ProjectPlan + a five-file hunk-level unified patch and renders both in the safe dependency-free console; node --check, repeated snapshot SHA-256, security:quick, env:check, and live local visual review pass
+  task_id: R-248
+  title: Application IR fixtures + honest migrations/0002_seed.sql
+  implementation_commit: 9d34720
+  verification: task verify (316 agent-engine tests, 14 new); a new IR Fixture record + render_postgres_seed emit deterministic INSERTs of only authored values (no fabrication), both backends emit migrations/0002_seed.sql when fixtures+postgres; validate_ir cross-refs fixtures; IR round-trips; no DB connection
   result: pass
 control_plane_database: postgresql
 model_routing_mode: balanced
@@ -23,5 +23,5 @@ id_note: >-
   Workbook backlog owns R-010..R-219. Founder-requested tasks use IDs after R-219: R-220..R-223 done,
   R-224 Next.js deferred (env-blocked), R-225..R-247 done. Continue from R-248.
 blockers: []
-next_action: R-247 is complete — the static console now visibly proves the real project plan and edit patch alongside the model fabric. Continue from R-248 with honest IR fixtures + migrations/0002_seed.sql or deeper IR/adapter coverage (indexes, unique constraints, richer field validation). Cloud-gated preview/deploy and R-224 still require a network-capable environment/keys.
+next_action: R-248 is complete — the generated backend now ships honest seed data (migrations/0002_seed.sql) from explicit IR fixtures. Continue from R-249 (offline-doable): deeper IR/adapter coverage — entity indexes, unique constraints, and richer field validation flowing into the schema and models. Cloud-gated preview/deploy and R-224 still require a network-capable environment/keys.
 last_updated: "2026-09-08T00:06:26+05:30"

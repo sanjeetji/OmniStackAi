@@ -40,7 +40,7 @@ START PROTOCOL
   `task ai:status`, `task ai:handoff`. `task verify` must stay green and network-independent.
 - Confirm git branch/HEAD/clean tree. Then restate: phase, next Tracker ID, objective, blast radius.
 
-WHAT IS ALREADY BUILT (all Python 3.13 stdlib-only, offline, in services/agent-engine; 302 tests pass)
+WHAT IS ALREADY BUILT (all Python 3.13 stdlib-only, offline, in services/agent-engine; 316 tests pass)
 - Model fabric: ModelProvider contract + registry; local Ollama adapter (runs any installed model via
   OMNISTACKAI_OLLAMA_MODEL); Balanced ModelGateway (deterministic escalation ladder, no silent cloud
   fallback, context-budget guard); key-activated cloud catalog — Anthropic/OpenAI/Google-Gemini/
@@ -55,7 +55,9 @@ WHAT IS ALREADY BUILT (all Python 3.13 stdlib-only, offline, in services/agent-e
   project assembler (one IR -> a full customer monorepo: apps/web + services/api) -> git_service
   (materialize into a customer-owned Git repo with one commit). The backends also emit a real
   PostgreSQL schema (migrations/0001_init.sql via render_postgres_schema: typed columns, PK, FKs,
-  many-to-many join tables), a data-access layer (Python app/db.py + app/repositories/<entity>.py;
+  many-to-many join tables), honest seed data (migrations/0002_seed.sql via render_postgres_seed from
+  explicit IR Fixtures — authored INSERTs, never fabricated, emitted only when fixtures present), a
+  data-access layer (Python app/db.py + app/repositories/<entity>.py;
   Go internal/store/<entity>.go) reading/writing those tables with parameterized SQL, AND wired route
   handlers (route_wiring.py: the unambiguous CRUD endpoints call the repositories — Python routers await
   them, Go handlers are methods on a Handlers struct with *sql.DB, main opens store.Open(); ambiguous
@@ -105,7 +107,8 @@ PostgreSQL schema/migration from the IR, R-239 data-access/repository layer, R-2
 (handlers call the repositories), R-241 authentication guards (enforce the IR auth flag), R-242 real JWT verification (HS256), R-243
 per-endpoint role enforcement (IR required_roles), R-244 sub-collection route wiring, R-245 combined
 project-plan surface, R-246 hunk-level edit diffs + rename detection, R-247 static-console builder
-proof. Do NOT overwrite backlog rows; continue from R-248.
+proof, R-248 IR fixtures -> honest migrations/0002_seed.sql. Do NOT overwrite backlog rows; continue
+from R-249.
 
 ENVIRONMENT LIMITS discovered here
 - npm front-end bundlers (Next.js SWC, Vite/esbuild) FAIL to install (native-binary downloads time
@@ -131,10 +134,10 @@ RULES (non-negotiable)
   .ai/HANDOFF.md, PROJECT_STATE.md, CHANGELOG.md, and the tracker row. Push the branch; verify remote
   SHA == local HEAD. Never claim unexecuted tests.
 
-WHAT TO DO NEXT (pick with the founder; all continue the builder), continue from R-248
-- Offline-doable now: an IR fixtures field so seed data can be emitted honestly (no fabricated values)
-  as `migrations/0002_seed.sql`; or deepen IR + adapter coverage (entity indexes / unique constraints
-  and richer field validation into schemas + models). Remaining 501s are only genuinely-ambiguous
+WHAT TO DO NEXT (pick with the founder; all continue the builder), continue from R-249
+- Offline-doable now: deepen IR + adapter coverage — entity indexes / unique constraints flowing into
+  the schema (schema_sql), and richer field validation (length/enum) into models + schema; or render
+  the R-248 seed rows in the static-console builder proof. Remaining 501s are only genuinely-ambiguous
   endpoints (multi-param, no schema, >1 FK).
 - Needs a network/cloud environment: run a Tier-0 preview end-to-end (materialize -> pnpm dev);
   live-verify a cloud LLM provider (set its key + OMNISTACKAI_CLOUD_PROVIDER=<id>, run
@@ -143,5 +146,5 @@ WHAT TO DO NEXT (pick with the founder; all continue the builder), continue from
 - Deferred by governance: native mobile (R-010 etc.) until web/backend stability.
 
 Begin by reading the files above and running the start protocol, then propose the next Tracker ID
-(R-248) with its task contract before writing code. Commit to main.
+(R-249) with its task contract before writing code. Commit to main.
 ```

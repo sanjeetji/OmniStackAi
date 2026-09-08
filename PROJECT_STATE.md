@@ -5,12 +5,14 @@ Last updated: 2026-09-08T00:06:26+05:30 by Codex (GPT-5)
 Stage 0 (Founder Build Sequence, Brief Section 91) — BASIC/MVP
 
 ## Last Completed Task
-Tracker ID: R-247 — Builder proof in the static console — DONE, `task verify` (302 agent-engine tests,
-5 new) passing. The metadata-only console snapshot now composes the real R-245 two-app project plan
-and an R-246 five-file hunk-level unified patch produced from actual old/new IR assemblies; the
-dependency-free UI renders preview URLs, verification ladders, changed files, and patch safely beside
-the model-fabric dashboard. Deterministic, offline, and secret-free; implementation checkpoint
-`6a82056` (R-224 Next.js console upgrade remains deferred — environment-blocked).
+Tracker ID: R-248 — Application IR fixtures + honest seed migration — DONE, `task verify` (316
+agent-engine tests, 14 new) passing. A new `Fixture` record (entity + rows of column→JSON value) lets
+the founder declare explicit seed rows, and `render_postgres_seed(ir)` deterministically emits
+`migrations/0002_seed.sql` with exactly those authored values — never inventing, defaulting, or
+guessing (only declared columns are inserted; correct SQL literal quoting). Both backends emit it when
+the IR has fixtures + postgres; `validate_ir` cross-references fixtures; the IR round-trips through
+`to_dict`/`from_dict`/`normalize_ir`. Deterministic, offline, no DB connection; implementation
+checkpoint `9d34720` (R-224 Next.js console upgrade remains deferred — environment-blocked).
 
 ## Workflow note
 Founder consolidated all work onto `main` (per-task branches deleted; `main` is the default). Continue

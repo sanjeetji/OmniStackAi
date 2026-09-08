@@ -1,12 +1,12 @@
-# OmniStackAI — implementation progress (as of R-247)
+# OmniStackAI — implementation progress (as of R-248)
 
 A living summary of what is built, what is pending, and how to see results. Numbers come from the
 execution tracker (`R_&_D/OmniStackAI_Execution_Tracker_v6.xlsx`, `Phase_Roadmap`).
 
 ## Headline
 
-- **302 automated tests pass**, fully offline and network-independent (`task verify`).
-- **36 tracker tasks Done, 1 Deferred, 210 Not Started** across 247 rows.
+- **316 automated tests pass**, fully offline and network-independent (`task verify`).
+- **37 tracker tasks Done, 1 Deferred, 210 Not Started** across 248 rows.
 - The offline builder loop is complete end to end: **describe (IR) → generate (web + API with working
   CRUD incl. sub-collections + DB schema + data-access + JWT-verified auth & per-endpoint roles) →
   verify → edit → commit to an owned Git repo.**
@@ -58,8 +58,8 @@ execution tracker (`R_&_D/OmniStackAI_Execution_Tracker_v6.xlsx`, `Phase_Roadmap
 | Combined build/verify/preview plan surface | ✅ Done | R-245 (`task plan:show`) |
 | Richer edit-loop diff (hunk-level + rename detection) | ✅ Done | R-246 |
 | Static-console builder proof (real plan + unified patch) | ✅ Done | R-247 (`task console:serve`) |
+| Seed data from explicit IR fixtures (`migrations/0002_seed.sql`) | ✅ Done | R-248 |
 | Next.js console upgrade (rich UI) | ⏸ Deferred | R-224 — needs npm registry access |
-| Seed/fixture data | ⛔ Pending | needs an IR fixtures field (no values to emit today) |
 | Live sandbox preview + real deploy (Tier 2) | ⛔ Pending | needs a network machine + provider keys |
 | Native mobile agents | ⛔ Deferred (governance) | until web/backend stability (Brief §25/§91) |
 | MID / ADVANCED / PRODUCTION phase work | ⛔ Not started | 105 rows |
@@ -70,7 +70,7 @@ Everything below runs with **no cloud keys** and no internet (except where noted
 
 1. **See the whole engine is real and green:**
    ```
-   task verify            # 302 tests pass
+   task verify            # 316 tests pass
    ```
 2. **Generate a real app from a spec and inspect it** (the headline result):
    ```
@@ -114,6 +114,6 @@ the live run needs the key + a network machine.
 
 ## What's next
 
-Near-term MVP candidates (all offline-doable): an IR fixtures field to emit seed data honestly, or
-deeper IR/adapter coverage (indexes, unique constraints, richer field validation). Then, on a network
+Near-term MVP candidates (all offline-doable): deeper IR/adapter coverage — entity indexes, unique
+constraints, and richer field validation flowing into the schema and models. Then, on a network
 machine: live Tier-2 preview and deploy. This file is refreshed as tasks land.

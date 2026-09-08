@@ -639,3 +639,34 @@
 - Implementation checkpoint `6a82056`. Tracker row R-247 inserted at row 9; 247 unique IDs, MVP total
   142 / Done 36. One bounded local `qwen2.5-coder:14b` review; 0 cloud calls. No generated app was
   installed/run/verified/deployed; no DB connection, external request, service, dependency, or infra.
+
+## 2026-09-08 — R-248
+
+- Added honest seed data from explicit Application IR fixtures (the deferred seed gap, done the no-
+  fabrication way). `ir.py`: new `Fixture` record (entity + rows of column->JSON value) with a
+  `_check_fixture_value` helper (allow JSON scalars/containers; reject control chars in strings); added
+  `fixtures` to `ApplicationIR` (before schema_version) and wired the validation loop, `to_dict`, and
+  `from_dict`. Exported `Fixture`. Additive field, empty default, no schema-version bump.
+- `validate.py`: fixture cross-references — ERROR `unknown_fixture_entity` / `unknown_fixture_column`
+  (a row column must be a declared field or a `<relation>_id` FK), WARNING `fixture_missing_required`
+  (required column, other than id, absent from a row — advisory, has_errors stays false). CRITICAL:
+  added `fixtures=` to `normalize_ir` so it isn't dropped.
+- New `codegen/seed_sql.py`: `render_postgres_seed(ir)` emits `INSERT INTO <table> (<cols sorted>)
+  VALUES (<literals>);` per row using ONLY the row's declared columns (omitted columns fall to DB
+  default/NULL — the no-fabrication guarantee). `_sql_literal` is the codebase's first SQL-literal
+  quoter (single quotes doubled; bool->TRUE/FALSE before int; None->NULL; numbers bare; dict/list->
+  `'<json sort_keys>'::jsonb`). Exported `render_postgres_seed`.
+- `backend_python.py` / `backend_go.py`: append `migrations/0002_seed.sql` inside the existing
+  `if has_db:` block, only when the seed is non-empty (fixtures present). `examples.py`: `minimal-blog`
+  gains two Post fixtures + a Comment (post_id FK). `builder-demo.sh` prints the seed file when present.
+- 14 new stdlib offline tests (316 total) in `test_seed_sql.py`: `_sql_literal` per type incl.
+  quote-doubling + jsonb sorted keys; INSERT shape + alphabetical columns + FK column + empty-without-
+  fixtures + byte-stable; adapter emission (python+go emit for minimal-blog; none for rideshare/OTHER
+  db); validation errors/warning; IR round-trip + normalize preserves fixtures. `task verify` +
+  `security:quick` + `env:check` pass; no existing test broke.
+- Tracker: the sheet structure had diverged from my hardcoded scripts (table `A4:M255`, split sqref
+  ranges), so R-248 used a GENERAL row-insertion `tracker_edit_r248.py` — insert at row 9, shift 9..255
+  -> 10..256, and bump every row >= 9 across sqrefs, the table ref, and sheet1's Phase_Roadmap ranges;
+  validated rows 1..256 contiguous, table `A4:M256`, sheet1 `$B$4:$B$256`/`$H$4:$H$256`, XML well-formed.
+- Committed directly to main. Tracker row R-248 (Builder) inserted at row 9; MVP total 142 / Done 37.
+  Implementation checkpoint `9d34720`. 0 local / 0 cloud model calls; nothing run/connected.

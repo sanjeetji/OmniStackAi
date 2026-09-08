@@ -1,7 +1,7 @@
 schema_version: 1
 task_id: R-248
 title: Application IR fixtures + honest migrations/0002_seed.sql
-status: in_progress
+status: done
 phase: BASIC/MVP
 founder_stage: 0
 branch: main
@@ -91,10 +91,18 @@ model_tool_trace:
   cloud_calls: 0
   note: Deterministic; no model call, no network, no DB connection. cloud_calls zero.
 completion:
-  implementation_commit: null
-  verified_at: null
-  verification: []
-  acceptance_results: []
+  implementation_commit: 9d34720
+  verified_at: "2026-09-08T00:00:00+05:30"
+  verification:
+    - "task verify — pass (316 agent-engine tests; 14 new)"
+    - "task security:quick — pass; task env:check — pass"
+    - "task builder:demo -- minimal-blog prints migrations/0002_seed.sql with authored INSERTs (post/comment, escaped quotes, FK post_id)"
+  acceptance_results:
+    - "ApplicationIR gains Fixture (entity + rows); validated in __post_init__; round-trips via to_dict/from_dict; normalize_ir preserves+sorts fixtures (tests)"
+    - "validate_ir ERRORs on unknown_fixture_entity / unknown_fixture_column; WARNING fixture_missing_required (has_errors false) (tests)"
+    - "render_postgres_seed emits deterministic INSERTs of only declared columns/values; _sql_literal quotes correctly (quotes doubled, bool/None, jsonb); empty when no fixtures (tests)"
+    - "Python + Go emit migrations/0002_seed.sql iff fixtures+postgres; rideshare (no fixtures) and OTHER db emit none; 0001_init.sql unchanged (tests)"
+    - "no DB connection, no migration run, no network, no fabricated value; task verify network-independent"
 blockers: []
 next_action: >-
   Implement Fixture + seed emitter + adapter wiring + tests; run gates; record completion. Later
