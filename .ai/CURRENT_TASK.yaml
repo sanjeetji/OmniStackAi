@@ -1,42 +1,42 @@
 schema_version: 1
-task_id: R-277
-title: Form Screen Dirty State Tracking, Unsaved Changes Guard & Reset Confirmation in Generated Next.js Forms
+task_id: R-278
+title: Collection Screen Boolean & Enum Field Filtering, Segmented Pill Controls & Filter Empty States in Generated Next.js Web App
 status: done
 phase: BASIC/MVP
 founder_stage: 0
 branch: main
 goal: >-
-  Enhance generated Next.js form screens (apps/web/app/<screen>/page.tsx) with deterministic dirty
-  state tracking (isDirty), an amber "Unsaved changes" visual indicator badge, confirmation-guarded
-  Cancel and Reset actions, and a native browser beforeunload event listener protecting against
-  accidental data loss.
-tracker_ref: "R-277"
+  Enhance generated Next.js collection screens (apps/web/app/<screen>/page.tsx) with interactive,
+  deterministic client-side filtering for boolean fields and enum fields, complete with segmented pill
+  controls, enum dropdowns, active filter indicators, and dedicated empty states.
+tracker_ref: "R-278"
 requirements:
-  - Form screen imports useMemo from "react" (along with useState and useEffect).
-  - Compute baselineData comparing against initialValues in create mode or initialData in edit mode.
-  - Calculate isDirty indicating whether any editable field in formData differs from baselineData.
-  - Render an amber "Unsaved changes" visual badge (#fef3c7 / #92400e) when isDirty && !success.
-  - Cancel button guards against leaving with unsaved changes via confirm() dialog.
-  - Reset button guards against resetting modified fields via confirm() dialog.
-  - Register a native window beforeunload event listener while isDirty && !submitting && !success.
-  - Post-submit success clears dirty state warnings so navigation links execute without prompts.
+  - Detect filterable fields on the entity (boolean fields and enum validation rules).
+  - Manage filter state via filterValues (Record<string, string>).
+  - Compute filteredData via useMemo comparing items against active filters.
+  - Connect filteredData to table rows, bulk selection (allCurrentIds), and CSV export.
+  - Render an accessible filter toolbar with segmented pill buttons for boolean fields and select dropdowns for enum fields.
+  - Render active filter count badge and reset button when filters are active.
+  - Dedicated empty filter state when records exist in data but none match active filters.
+  - Clean fallback when entity has zero boolean or enum fields (zero filter code emitted).
   - 100% offline, zero new external npm dependencies, zero new IR fields, strict diff invariance.
 acceptance_criteria:
-  - Form screen imports useMemo from "react".
-  - isDirty is computed by comparing formData with baselineData.
-  - "Unsaved changes" badge is rendered when isDirty && !success.
-  - Cancel button binds confirmation guard when isDirty is true.
-  - Reset button binds confirmation guard when isDirty is true.
-  - beforeunload event listener is registered and cleaned up via useEffect.
+  - Collection screens import useMemo from "react" when filterable fields exist.
+  - Segmented pill controls are rendered for boolean fields with active/inactive states.
+  - Dropdown selects are rendered for enum fields with active/inactive states.
+  - Active filter count badge and reset button are rendered when filters are active.
+  - Table rows, bulk selection IDs, and CSV export reflect filteredData.
+  - Dedicated empty filter state is displayed when data.length > 0 && filteredData.length === 0.
+  - Clean fallback: entities without boolean or enum fields omit filter code.
   - Strict diff invariance: changing only ir.description produces byte-identical output.
-  - task verify passes (expect 725+ tests passing, 0 failures).
+  - task verify passes (expect 740+ tests passing, 0 failures).
   - task lint and task security:quick pass.
   - builder:demo passes for minimal-blog and rideshare-favourites.
 allowed_paths:
   - services/agent-engine/src/omnistackai_agent_engine/codegen/nextjs.py
-  - services/agent-engine/tests/test_form_unsaved_changes_guard.py
+  - services/agent-engine/tests/test_collection_field_filters.py
   - .ai/CURRENT_TASK.yaml
-  - .ai/tasks/R-277.md
+  - .ai/tasks/R-278.md
 forbidden_paths:
   - services/agent-engine/src/omnistackai_agent_engine/application_ir/**
   - package.json
@@ -48,10 +48,10 @@ gates:
   - task builder:demo -- minimal-blog
   - task builder:demo -- rideshare-favourites
 evidence:
-  - "task verify: 727 tests passed (0 failures, 16 new unit tests)"
+  - "task verify: 742 tests passed (0 failures, 15 new unit tests in test_collection_field_filters.py)"
   - "task lint: passed"
   - "task security:quick: passed"
   - "task builder:demo -- minimal-blog: passed (38 files generated)"
   - "task builder:demo -- rideshare-favourites: passed (35 files generated)"
-  - "commit: 62c2283 feat(codegen): form screen dirty state tracking, unsaved changes guard & reset confirmation [R-277]"
+  - "commit: 599df7d feat(codegen): collection screen boolean & enum field filtering with segmented controls [R-278]"
 

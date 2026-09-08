@@ -1,5 +1,26 @@
 # Work Log
 
+## 2026-09-09 — R-278
+
+- Recorded contract in `.ai/CURRENT_TASK.yaml` and `.ai/tasks/R-278.md`.
+- `nextjs.py` (`_collection_screen_page`):
+  - Added `_filterable_fields_for_entity(entity)` helper identifying boolean fields (`FieldType.BOOL`) and enum fields (`enum:a|b|c` in validation rules).
+  - Conditionally imported `useMemo` from `"react"` when filterable fields are present.
+  - Declared `filterValues` state (`Record<string, string>`) and `handleFilterChange(field, val)` and `handleClearFilters()` handlers.
+  - Computed `activeFilterCount` and `filteredData` via `useMemo` comparing items against active filter values.
+  - Computed `displayData = filteredData ?? (data ?? [])` and wired it into table row mapping.
+  - Rendered accessible filter toolbar above the table:
+    - Boolean fields: segmented pill buttons `[ All ] [ {Field}: Yes ] [ {Field}: No ]` with `#0f172a` active pill styling.
+    - Enum fields: styled `<select aria-label="Filter by {Field}">` dropdown.
+    - Active filter count badge (`{activeFilterCount} active`) in `#eff6ff`/`#1d4ed8`.
+    - "Reset" button calling `handleClearFilters`.
+  - Added dedicated filter empty state when `data.length > 0 && activeFilterCount > 0 && displayData.length === 0`: `"No {plural} match the active filter criteria."` with `"Clear all filters"` button.
+  - Clean fallback for entities without boolean or enum fields (zero filter code emitted).
+  - `# noqa: PLR0912` added for branch count.
+- Added `services/agent-engine/tests/test_collection_field_filters.py` with 15 comprehensive unit tests.
+- `task verify` — 742 tests pass (15 new), 0 failures. `task lint`, `task security:quick` pass. `builder:demo minimal-blog` and `builder:demo rideshare-favourites` pass. 0 network calls, 0 cloud model calls.
+- Updated CURRENT_TASK.yaml, tasks/R-278.md, PROJECT_STATE.yaml, PROJECT_STATE.md, CHANGELOG.md, docs/CODEGEN.md, docs/PROGRESS.md.
+
 ## 2026-09-09 — R-277
 
 - Recorded contract in `.ai/CURRENT_TASK.yaml` and `.ai/tasks/R-277.md`.

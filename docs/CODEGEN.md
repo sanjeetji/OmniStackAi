@@ -843,6 +843,32 @@ Upgrades generated Next.js form screens (`apps/web/app/<screen>/page.tsx`) with 
 - **Quality & Safety**:
   - 100% offline, zero external npm dependencies, zero new IR fields, strict diff invariance.
 
+### Collection Screen Boolean & Enum Field Filtering (R-278)
+
+Upgrades generated Next.js collection screens (`apps/web/app/<screen>/page.tsx`) with interactive, deterministic client-side filtering for boolean and enum fields:
+
+- **Filterable Field Detection (`_filterable_fields_for_entity`)**:
+  - Detects fields of type `FieldType.BOOL` and string fields with `enum:a|b|c` validation rules.
+  - Automatically excludes `id` and relation foreign key fields from filter pills.
+- **Filter State Management**:
+  - Emits `useState<Record<string, string>>({})` to track active filter selections per field.
+  - Emits `handleFilterChange(field, val)` and `handleClearFilters()` handlers.
+  - Computes `activeFilterCount` counting active non-"all" filters.
+  - Computes `filteredData` using `useMemo` comparing item fields against active filter values.
+  - Assigns `displayData = filteredData ?? (data ?? [])` and binds to table row rendering.
+- **Accessible Filter Toolbar**:
+  - Rendered above the table and below the search input.
+  - For boolean fields: renders segmented pill buttons (`[ All ] [ {Field}: Yes ] [ {Field}: No ]`) with dark `#0f172a` active styling and white text.
+  - For enum fields: renders a styled `<select aria-label="Filter by {Field}">` with `-- All {Field}s --` and option values.
+  - Displays an active filter count chip (`{activeFilterCount} active`) in `#eff6ff`/`#1d4ed8` and a "Reset" button when filters are active.
+- **Dedicated Empty Filter State**:
+  - When `data.length > 0 && activeFilterCount > 0 && displayData.length === 0`:
+    displays `"No {plural} match the active filter criteria."` with a `"Clear all filters"` action button that resets filters in one click.
+- **Quality & Safety**:
+  - Clean fallback: entities without boolean or enum fields emit zero filter code.
+  - 100% offline, zero external npm dependencies, zero new IR fields, strict diff invariance.
+
+
 
 
 

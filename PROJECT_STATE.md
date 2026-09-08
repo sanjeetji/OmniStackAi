@@ -1,22 +1,22 @@
 # Project State — OmniStackAI
-Last updated: 2026-09-09T00:53:00+05:30
+Last updated: 2026-09-09T01:06:00+05:30
 
 ## Current Phase
 Stage 0 (Founder Build Sequence, Brief Section 91) — BASIC/MVP
 
 ## Last Completed Task
-Tracker ID: R-277 — Form Screen Dirty State Tracking, Unsaved Changes Guard & Reset Confirmation in Generated Next.js Forms — DONE,
-`task verify` (727 agent-engine tests, 16 new in `test_form_unsaved_changes_guard.py`) passing. Upgrades
-the generated Next.js form screens (`apps/web/app/<screen>/page.tsx`): imports `useMemo` from `"react"`;
-computes `baselineData` from `initialData` or `initialValues`; computes `isDirty` state comparing
-`formData` against `baselineData` (safely treating `undefined` and `""` as equivalent); renders amber
-"Unsaved changes" visual badge (`#fef3c7` / `#92400e`) in header when `isDirty && !success`; renders
-amber warning notice in footer; confirmation-guarded `Cancel` link button (`confirm("You have unsaved changes. Discard them and leave?")`);
-confirmation-guarded `Reset` button (`confirm("Discard all changes and reset form?")`); registers native
-browser `beforeunload` event listener guarding page refresh and tab close; clears warnings and unblocks
-navigation upon submit success; 100% offline, zero new IR fields, zero npm dependencies.
-Preceded by R-225 through R-276.
+Tracker ID: R-278 — Collection Screen Boolean & Enum Field Filtering, Segmented Pill Controls & Filter Empty States in Generated Next.js Web App — DONE,
+`task verify` (742 agent-engine tests, 15 new in `test_collection_field_filters.py`) passing. Upgrades
+the generated Next.js collection screens (`apps/web/app/<screen>/page.tsx`): detects boolean fields (`FieldType.BOOL`)
+and enum fields (`enum:a|b|c`); imports `useMemo` from `"react"`; declares `filterValues` state, `handleFilterChange`,
+and `handleClearFilters`; computes `filteredData` and `activeFilterCount`; renders accessible filter toolbar
+with segmented pill buttons for booleans (`[ All ] [ {Field}: Yes ] [ {Field}: No ]`) and select dropdowns for enums;
+renders active filter count badge and Reset button; connects `displayData` to table row mapping; displays dedicated
+empty filter state (`"No {plural} match the active filter criteria."`) with a `"Clear all filters"` CTA;
+clean fallback when no boolean/enum fields exist; 100% offline, zero new IR fields, zero npm dependencies.
+Preceded by R-225 through R-277.
 Additive, offline, 0 network, no DB connection.
+
 
 
 ## Workflow note

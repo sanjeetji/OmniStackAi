@@ -1,13 +1,13 @@
-# OmniStackAI — implementation progress (as of R-277)
+# OmniStackAI — implementation progress (as of R-278)
 
 A living summary of what is built, what is pending, and how to see results. Numbers come from the
 execution tracker (`R_&_D/OmniStackAI_Execution_Tracker_v6.xlsx`, `Phase_Roadmap`).
 
 ## Headline
 
-- **727 automated tests pass**, fully offline and network-independent (`task verify`).
-- **66 tracker tasks Done, 1 Deferred, 184 Not Started** across 251 rows.
-- The offline builder loop is complete end to end: **describe (IR) → generate (web with typed API client, React hooks, interactive master-detail screen components with field validation, page size selector & contextual empty states, bulk selection & batch deletion, CSV data export & bulk export, deep-linking & entity lifecycle in detail screens, global responsive navigation shell & header navbar with active route detection & quick-create CTA, post-submit contextual CTAs & record navigation with Cancel action in form footer, rich entity-aware dashboard overview page (live count cards, screen nav tiles, quick-create CTAs, diff-stable), record selector dropdown, prev/next record navigation & deep-link sync in detail screens, form screen dirty state tracking, unsaved changes guard & reset confirmation, subcollection navigation, child item deletion & mutation feedback, full-stack update/edit actions, foreign-key relation selectors & parent auto-population + API with
+- **742 automated tests pass**, fully offline and network-independent (`task verify`).
+- **67 tracker tasks Done, 1 Deferred, 183 Not Started** across 251 rows.
+- The offline builder loop is complete end to end: **describe (IR) → generate (web with typed API client, React hooks, interactive master-detail screen components with field validation, page size selector & contextual empty states, bulk selection & batch deletion, CSV data export & bulk export, deep-linking & entity lifecycle in detail screens, global responsive navigation shell & header navbar with active route detection & quick-create CTA, post-submit contextual CTAs & record navigation with Cancel action in form footer, rich entity-aware dashboard overview page (live count cards, screen nav tiles, quick-create CTAs, diff-stable), record selector dropdown, prev/next record navigation & deep-link sync in detail screens, form screen dirty state tracking, unsaved changes guard & reset confirmation, collection screen boolean & enum field filtering with segmented controls, subcollection navigation, child item deletion & mutation feedback, full-stack update/edit actions, foreign-key relation selectors & parent auto-population + API with
   working CRUD incl. PATCH/PUT update + pagination + sorting + total count header + keyword search + sub-collections + DB schema + data-access + JWT-verified auth
   & per-endpoint roles + field validation + CORS middleware + OpenAPI 3.1 contract)
   → verify → edit → commit to an owned Git repo.**
@@ -16,11 +16,11 @@ execution tracker (`R_&_D/OmniStackAI_Execution_Tracker_v6.xlsx`, `Phase_Roadmap
 
 | Phase | Done | Total | % complete |
 |-------|------|-------|-----------|
-| **MVP** (current milestone) | 61 | 145 | **42.1%** |
+| **MVP** (current milestone) | 62 | 145 | **42.8%** |
 | MID | 0 | 47 | 0% |
 | ADVANCED | 0 | 29 | 0% |
 | PRODUCTION | 0 | 29 | 0% |
-| **Overall program** | **61** | **251** | **24.3%** |
+| **Overall program** | **62** | **251** | **24.7%** |
 
 
 > The 203 "Not Started" rows are the pre-existing backlog catalogue (R-010..R-219 — many are individual
@@ -88,6 +88,7 @@ execution tracker (`R_&_D/OmniStackAI_Execution_Tracker_v6.xlsx`, `Phase_Roadmap
 | **Rich entity-aware dashboard overview page** (`"use client"`, `useList<Entity>` live count cards, screen nav tiles, Quick Actions CTAs, diff-stable — no `ir.description` in output) | ✅ Done | R-275 |
 | **Detail screen record selector, prev/next navigation & deep-link sync** (interactive dropdown, sequential record cycling, `window.history.replaceState` sync, recent records grid) | ✅ Done | R-276 |
 | **Form screen dirty state tracking, unsaved changes guard & reset confirmation** (deterministic `isDirty`, header & footer badges, guarded Cancel & Reset, `beforeunload` listener) | ✅ Done | R-277 |
+| **Collection screen boolean & enum field filtering with segmented controls** (FieldType.BOOL, enum dropdowns, active filter indicators, dedicated empty filter state) | ✅ Done | R-278 |
 | Next.js console upgrade (rich UI) | ⏸ Deferred | R-224 — needs npm registry access |
 | Live sandbox preview + real deploy (Tier 2) | ⛔ Pending | needs a network machine + provider keys |
 | Native mobile agents | ⛔ Deferred (governance) | until web/backend stability (Brief §25/§91) |

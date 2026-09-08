@@ -2,20 +2,22 @@ schema_version: 1
 project: OmniStackAI
 phase: BASIC/MVP
 founder_stage: 0
-current_task: R-277
+current_task: R-278
 current_status: done
 branch: main
 last_completed_task:
-  task_id: R-277
-  title: Form Screen Dirty State Tracking, Unsaved Changes Guard & Reset Confirmation in Generated Next.js Forms
+  task_id: R-278
+  title: Collection Screen Boolean & Enum Field Filtering, Segmented Pill Controls & Filter Empty States in Generated Next.js Web App
   verification: >-
-    task verify (727 agent-engine tests, 16 new in test_form_unsaved_changes_guard.py); _form_screen_page
-    enhanced with useMemo import from react; baselineData computed from initialData or initialValues;
-    isDirty comparison tracking changes against baseline values; amber "Unsaved changes" badge (#fef3c7 / #92400e)
-    in header when isDirty && !success; amber footer notice; confirmation-guarded Cancel link (confirm dialog)
-    when isDirty; confirmation-guarded Reset button (confirm dialog) when isDirty; native window beforeunload
-    event listener guarding refresh/tab close when isDirty && !submitting && !success; task lint and
-    task security:quick pass; builder:demo minimal-blog and rideshare-favourites pass; 0 network, no DB
+    task verify (742 agent-engine tests, 15 new in test_collection_field_filters.py); _collection_screen_page
+    enhanced with _filterable_fields_for_entity helper detecting FieldType.BOOL and enum validation rules;
+    imports useMemo alongside useState; filterValues state tracking active field filters; handleFilterChange
+    and handleClearFilters helpers; activeFilterCount computation; filteredData useMemo filtering loaded data;
+    displayData connected to row mapping and empty states; filter toolbar with segmented pill controls for
+    booleans (All, Yes, No) and select dropdowns for enums; active filter count badge and Reset button;
+    dedicated empty filter state with "Clear all filters" CTA; clean fallback for entities without boolean/enum
+    fields; task lint and task security:quick pass; builder:demo minimal-blog and rideshare-favourites pass;
+    0 network, no DB
   result: pass
 control_plane_database: postgresql
 model_routing_mode: balanced
@@ -27,8 +29,9 @@ product_direction: >-
   framework adapter contract -> Next.js adapter -> Git service -> preview/sandbox (needs cloud env).
 id_note: >-
   Workbook backlog owns R-010..R-219. Founder-requested tasks use IDs after R-219: R-220..R-223 done,
-  R-224 Next.js deferred (env-blocked), R-225..R-277 done. Continue from R-278.
+  R-224 Next.js deferred (env-blocked), R-225..R-278 done. Continue from R-279.
 blockers: []
-next_action: Task R-277 (Form Screen Dirty State Tracking, Unsaved Changes Guard & Reset Confirmation) is implemented, verified, and complete (727 tests pass). Ready for Task R-278.
-last_updated: "2026-09-09T00:52:00+05:30"
+next_action: Task R-278 (Collection Screen Boolean & Enum Field Filtering) is implemented, verified, and complete (742 tests pass). Ready for Task R-279.
+last_updated: "2026-09-09T01:05:00+05:30"
+
 
