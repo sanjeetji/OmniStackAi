@@ -12,7 +12,9 @@ from __future__ import annotations
 from dataclasses import dataclass
 from enum import StrEnum
 
-from .ir import AdminStrategy, ApplicationIR, MobileProfile, Platform, WebStrategy
+from .ir import AdminStrategy, ApplicationIR, MobileProfile, Platform, RelationKind, WebStrategy
+
+_FK_KINDS = frozenset({RelationKind.MANY_TO_ONE, RelationKind.ONE_TO_ONE})
 
 
 class Severity(StrEnum):
@@ -63,6 +65,47 @@ def validate_ir(ir: ApplicationIR) -> tuple[Issue, ...]:
                         "unknown_role_reference",
                         f"required_roles references undeclared role {role!r}",
                         location,
+                    )
+                )
+
+    # Integrity: a fixture must target a declared entity and only its known columns (declared fields or
+    # a `<relation>_id` FK); a WARNING flags a required column (other than id) missing from a row.
+    entities_by_name = {entity.name: entity for entity in ir.entities}
+    for fixture in ir.fixtures:
+        location = f"fixture {fixture.entity}"
+        entity = entities_by_name.get(fixture.entity)
+        if entity is None:
+            issues.append(
+                Issue(
+                    Severity.ERROR,
+                    "unknown_fixture_entity",
+                    f"fixture references undeclared entity {fixture.entity!r}",
+                    location,
+                )
+            )
+            continue
+        valid_columns = {field.name for field in entity.fields}
+        valid_columns |= {f"{rel.name}_id" for rel in entity.relations if rel.kind in _FK_KINDS}
+        required_columns = {f.name for f in entity.fields if f.required and f.name != "id"}
+        for index, row in enumerate(fixture.rows):
+            row_location = f"{location} row {index}"
+            for column in row:
+                if column not in valid_columns:
+                    issues.append(
+                        Issue(
+                            Severity.ERROR,
+                            "unknown_fixture_column",
+                            f"row column {column!r} is not a field or FK of {fixture.entity}",
+                            row_location,
+                        )
+                    )
+            for missing in sorted(required_columns - set(row)):
+                issues.append(
+                    Issue(
+                        Severity.WARNING,
+                        "fixture_missing_required",
+                        f"required column {missing!r} is not set (relies on a DB default)",
+                        row_location,
                     )
                 )
 
@@ -124,5 +167,6 @@ def normalize_ir(ir: ApplicationIR) -> ApplicationIR:
         apis=tuple(sorted(ir.apis, key=lambda api: (api.path, api.method.value))),
         screens=tuple(sorted(ir.screens, key=lambda screen: screen.id)),
         acceptance_criteria=tuple(sorted(ir.acceptance_criteria, key=lambda c: c.requirement_id)),
+        fixtures=tuple(sorted(ir.fixtures, key=lambda fixture: fixture.entity)),
         schema_version=ir.schema_version,
     )

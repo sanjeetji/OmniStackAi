@@ -46,6 +46,11 @@ if migration.exists():
     print("\n--- Generated PostgreSQL schema (services/api/migrations/0001_init.sql) ---")
     print(migration.read_text())
 
+seed = root / "services/api/migrations/0002_seed.sql"
+if seed.exists():
+    print("--- Generated seed data (services/api/migrations/0002_seed.sql) ---")
+    print(seed.read_text())
+
 print("--- Verify plans the generated code is engineered to pass ---")
 for plan in verify_plans_for_ir(ir):
     gates = ", ".join(k.value for k in plan.gates())

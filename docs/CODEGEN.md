@@ -112,6 +112,18 @@ entities and `database_strategy == postgres` — no previously emitted file chan
 so the R-237 edit loop diffs the migration automatically when the IR entities change. Nothing connects
 to or runs a database; this only emits SQL text.
 
+### Seed data (R-248)
+
+`render_postgres_seed(ir)` (in `codegen/seed_sql.py`) turns the IR **fixtures** into an honest
+`migrations/0002_seed.sql`: one `INSERT INTO <table> (<cols>) VALUES (<literals>);` per fixture row.
+Columns are the row's keys sorted alphabetically; **only columns present in the row are inserted** — the
+platform never invents, defaults, or guesses a value (omitted columns fall to the schema's DB default /
+NULL). It owns the SQL literal quoting (the only such helper in the codebase): single quotes are
+doubled, `bool → TRUE/FALSE`, `None → NULL`, numbers are bare, and `dict/list → '<json>'::jsonb`. Both
+backends emit it inside the same `has_db` block as `0001_init.sql`, but only when the IR declares
+fixtures — so a fixture-free IR (e.g. `rideshare-favourites`) gets no `0002_seed.sql`. Deterministic and
+offline; nothing connects to or runs a database. `task builder:demo -- minimal-blog` prints it.
+
 ## Data-access / repository layer (R-239)
 
 `codegen/data_access.py` gives the generated backend a real persistence layer over the R-238 tables,

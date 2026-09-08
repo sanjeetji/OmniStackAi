@@ -314,6 +314,46 @@ def _require_unique(values: Any, name: str) -> None:
         seen.add(value)
 
 
+def _check_fixture_value(value: Any, entity: str) -> None:
+    """Allow only explicit JSON values in a fixture row; reject control chars in strings."""
+
+    if value is None or isinstance(value, (bool, int, float)):
+        return
+    if isinstance(value, str):
+        if _CONTROL.search(value):
+            raise InvalidIRError(f"fixture {entity} string value must be control-free")
+        return
+    if isinstance(value, (dict, list)):
+        return  # JSON container -> emitted as a jsonb literal
+    raise InvalidIRError(f"fixture {entity} value type is not allowed: {type(value).__name__}")
+
+
+@dataclass(frozen=True, slots=True)
+class Fixture:
+    """Explicit seed rows for one entity — the source for an honest migrations/0002_seed.sql.
+
+    Each row maps column names (a declared field, or a `<relation>_id` foreign-key column) to explicit
+    JSON values. The platform emits exactly these values and never invents, defaults, or guesses.
+    """
+
+    entity: str
+    rows: tuple[dict[str, Any], ...]
+
+    def __post_init__(self) -> None:
+        _entity_name(self.entity, "fixture entity")
+        if not isinstance(self.rows, tuple) or not self.rows:
+            raise InvalidIRError("fixture rows must be a non-empty tuple")
+        for row in self.rows:
+            if not isinstance(row, dict) or not row:
+                raise InvalidIRError(f"fixture {self.entity} row must be a non-empty mapping")
+            for column, value in row.items():
+                _ident(column, "fixture column")
+                _check_fixture_value(value, self.entity)
+
+    def to_dict(self) -> dict[str, Any]:
+        return {"entity": self.entity, "rows": [dict(row) for row in self.rows]}
+
+
 @dataclass(frozen=True, slots=True)
 class ApplicationIR:
     name: str
@@ -325,6 +365,7 @@ class ApplicationIR:
     apis: tuple[ApiEndpoint, ...] = ()
     screens: tuple[Screen, ...] = ()
     acceptance_criteria: tuple[AcceptanceCriterion, ...] = ()
+    fixtures: tuple[Fixture, ...] = ()
     schema_version: int = IR_SCHEMA_VERSION
 
     def __post_init__(self) -> None:
@@ -348,6 +389,7 @@ class ApplicationIR:
             ("apis", self.apis, ApiEndpoint),
             ("screens", self.screens, Screen),
             ("acceptance_criteria", self.acceptance_criteria, AcceptanceCriterion),
+            ("fixtures", self.fixtures, Fixture),
         ):
             if not isinstance(records, tuple) or any(not isinstance(r, record_type) for r in records):
                 raise InvalidIRError(f"{tuple_name} must be a tuple of {record_type.__name__}")
@@ -382,6 +424,7 @@ class ApplicationIR:
             "apis": [a.to_dict() for a in self.apis],
             "screens": [s.to_dict() for s in self.screens],
             "acceptance_criteria": [c.to_dict() for c in self.acceptance_criteria],
+            "fixtures": [f.to_dict() for f in self.fixtures],
         }
 
     @classmethod
@@ -432,6 +475,10 @@ class ApplicationIR:
                 acceptance_criteria=tuple(
                     AcceptanceCriterion(c["requirement_id"], c["expected_result"])
                     for c in data.get("acceptance_criteria", ())
+                ),
+                fixtures=tuple(
+                    Fixture(fx["entity"], tuple(dict(row) for row in fx.get("rows", ())))
+                    for fx in data.get("fixtures", ())
                 ),
                 schema_version=version,
             )

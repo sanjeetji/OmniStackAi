@@ -22,6 +22,7 @@ from .data_access import go_data_access_files, python_data_access_files
 from .files import GeneratedFile, GeneratedProject
 from .nextjs import NextjsWebAdapter
 from .schema_sql import render_postgres_schema, table_name
+from .seed_sql import render_postgres_seed
 
 __all__ = [
     "AdapterRegistry",
@@ -46,5 +47,6 @@ __all__ = [
     "go_data_access_files",
     "python_data_access_files",
     "render_postgres_schema",
+    "render_postgres_seed",
     "table_name",
 ]

@@ -18,6 +18,7 @@ from .errors import GenerationError
 from .files import GeneratedFile, GeneratedProject
 from .route_wiring import Op, fk_relations, wire_endpoint
 from .schema_sql import render_postgres_schema
+from .seed_sql import render_postgres_seed
 
 _PY_TYPE: dict[FieldType, str] = {
     FieldType.STRING: "str",
@@ -222,6 +223,9 @@ class PythonBackendAdapter:
             files.append(GeneratedFile("migrations/0001_init.sql", render_postgres_schema(ir)))
             for path, content in python_data_access_files(ir, _slug(ir.name)):
                 files.append(GeneratedFile(path, content))
+            seed = render_postgres_seed(ir)
+            if seed:
+                files.append(GeneratedFile("migrations/0002_seed.sql", seed))
 
         return GeneratedProject(self.target.value, tuple(files))
 

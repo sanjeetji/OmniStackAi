@@ -16,6 +16,7 @@ from .ir import (
     Entity,
     Field,
     FieldType,
+    Fixture,
     HttpMethod,
     MobileProfile,
     Platform,
@@ -93,6 +94,35 @@ def minimal_blog() -> ApplicationIR:
         ),
         acceptance_criteria=(
             AcceptanceCriterion("post_publish_toggle", "an author can publish and unpublish a post"),
+        ),
+        fixtures=(
+            Fixture(
+                "Post",
+                (
+                    {
+                        "id": "11111111-1111-1111-1111-111111111111",
+                        "title": "Hello, world",
+                        "body": "The first post.",
+                        "published": True,
+                    },
+                    {
+                        "id": "22222222-2222-2222-2222-222222222222",
+                        "title": "Draft ideas",
+                        "body": "Work in progress — don't ship yet.",
+                        "published": False,
+                    },
+                ),
+            ),
+            Fixture(
+                "Comment",
+                (
+                    {
+                        "id": "33333333-3333-3333-3333-333333333333",
+                        "body": "Nice first post!",
+                        "post_id": "11111111-1111-1111-1111-111111111111",
+                    },
+                ),
+            ),
         ),
     )
 

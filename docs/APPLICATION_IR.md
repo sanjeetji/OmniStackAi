@@ -17,6 +17,11 @@ Package: `omnistackai_agent_engine.application_ir` (Python 3.13 standard library
 - `ApiEndpoint` — method, path, auth, request/response/error schema references, and optional
   `required_roles` (R-243: role ids that gate the endpoint; a non-empty value implies `auth=true`, and
   each role must be a declared `Role` — `validate_ir` errors otherwise).
+- `Fixture` (R-248) — explicit seed rows for one entity: `entity` (a declared entity) + `rows` (a
+  non-empty tuple of dicts mapping a column — a declared field or a `<relation>_id` FK — to an explicit
+  JSON value). `validate_ir` errors on an unknown entity or column and warns when a required column is
+  omitted from a row. Emitted deterministically as `migrations/0002_seed.sql` (see CODEGEN); values are
+  authored, never fabricated.
 - `Role`, `Screen`, `AcceptanceCriterion`.
 
 ## Guarantees
