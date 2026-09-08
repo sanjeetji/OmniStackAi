@@ -1119,7 +1119,26 @@ def _parent_relations_for_entity(entity: Entity, ir: ApplicationIR) -> list[Pare
     return result
 
 
-def _collection_screen_page(screen: Screen, entity: Entity, ir: ApplicationIR, ops: set[Op]) -> str:
+def _filterable_fields_for_entity(entity: Entity) -> list[tuple[Field, str, list[str]]]:
+    """Returns list of (field, kind, options) for boolean and enum fields.
+    kind is 'boolean' (options ['true', 'false']) or 'enum' (options parsed from validation rule).
+    """
+    res: list[tuple[Field, str, list[str]]] = []
+    for f in entity.fields:
+        if f.name == "id":
+            continue
+        if f.type in (FieldType.BOOL, "bool"):
+            res.append((f, "boolean", ["true", "false"]))
+        else:
+            enum_rule = next((r for r in f.validation if r.startswith("enum:")), None)
+            if enum_rule:
+                opts = [o.strip() for o in enum_rule.split(":", 1)[1].split("|") if o.strip()]
+                if opts:
+                    res.append((f, "enum", opts))
+    return res
+
+
+def _collection_screen_page(screen: Screen, entity: Entity, ir: ApplicationIR, ops: set[Op]) -> str:  # noqa: PLR0912
     name = entity.name
     plural = name if name.endswith("s") else f"{name}s"
     can_delete = Op.DELETE in ops
@@ -1128,6 +1147,7 @@ def _collection_screen_page(screen: Screen, entity: Entity, ir: ApplicationIR, o
 
     subcollections = _subcollections_for_parent(name, ir)
     has_subcollections = bool(subcollections)
+    filterable_fields = _filterable_fields_for_entity(entity)
 
     # Check for complementary screens in ir.screens
     form_screen: Screen | None = None
@@ -1152,10 +1172,11 @@ def _collection_screen_page(screen: Screen, entity: Entity, ir: ApplicationIR, o
     if can_delete:
         hooks_import += f", useDelete{name}"
 
+    react_imports = "useMemo, useState" if filterable_fields else "useState"
     lines: list[str] = [
         '"use client";',
         "",
-        'import { useState } from "react";',
+        f'import {{ {react_imports} }} from "react";',
         'import Link from "next/link";',
         f'import {{ {hooks_import} }} from "../lib/hooks";',
     ]
@@ -1195,6 +1216,36 @@ def _collection_screen_page(screen: Screen, entity: Entity, ir: ApplicationIR, o
         "    refetch,",
         f"  }} = useList{plural}();",
     ])
+
+    if filterable_fields:
+        lines.extend([
+            "  const [filterValues, setFilterValues] = useState<Record<string, string>>({});",
+            "  const handleFilterChange = (field: string, val: string) => {",
+            "    setFilterValues((prev) => ({ ...prev, [field]: val }));",
+            "  };",
+            "  const handleClearFilters = () => {",
+            "    setFilterValues({});",
+            "  };",
+            '  const activeFilterCount = Object.values(filterValues).filter((v) => v && v !== "all").length;',
+            "  const filteredData = useMemo(() => {",
+            "    if (!data) return null;",
+            "    return data.filter((item: any) => {",
+            "      for (const [field, val] of Object.entries(filterValues)) {",
+            '        if (!val || val === "all") continue;',
+            '        if (val === "true" && item[field] !== true) return false;',
+            '        if (val === "false" && item[field] !== false) return false;',
+            '        if (val !== "true" && val !== "false" && String(item[field]) !== val) return false;',
+            "      }",
+            "      return true;",
+            "    });",
+            "  }, [data, filterValues]);",
+            "  const displayData = filteredData ?? (data ?? []);",
+        ])
+    else:
+        lines.extend([
+            "  const displayData = data ?? [];",
+        ])
+
 
     lines.extend([
         "  const [checkedIds, setCheckedIds] = useState<string[]>([]);",
@@ -1393,6 +1444,75 @@ def _collection_screen_page(screen: Screen, entity: Entity, ir: ApplicationIR, o
         "        </button>",
         "      </section>",
         "",
+    ])
+
+    if filterable_fields:
+        lines.extend([
+            '      <div style={{ marginBottom: 16, padding: "10px 14px", background: "#f8fafc", border: "1px solid #e2e8f0", borderRadius: 8, display: "flex", gap: 12, alignItems: "center", flexWrap: "wrap" }}>',
+            '        <span style={{ fontSize: 13, fontWeight: 600, color: "#475569" }}>Filters:</span>',
+        ])
+        for f, kind, opts in filterable_fields:
+            f_label = _title_case(f.name)
+            if kind == "boolean":
+                lines.extend([
+                    '        <div style={{ display: "inline-flex", borderRadius: 6, border: "1px solid #cbd5e1", overflow: "hidden", fontSize: 12, fontWeight: 500 }}>',
+                    '          <button',
+                    '            type="button"',
+                    f'            onClick={{() => handleFilterChange("{f.name}", "all")}}',
+                    f'            style={{{{ padding: "4px 10px", border: "none", background: (!filterValues["{f.name}"] || filterValues["{f.name}"] === "all") ? "#0f172a" : "#fff", color: (!filterValues["{f.name}"] || filterValues["{f.name}"] === "all") ? "#fff" : "#475569", cursor: "pointer" }}}}',
+                    '          >',
+                    '            All',
+                    '          </button>',
+                    '          <button',
+                    '            type="button"',
+                    f'            onClick={{() => handleFilterChange("{f.name}", "true")}}',
+                    f'            style={{{{ padding: "4px 10px", border: "none", borderLeft: "1px solid #cbd5e1", background: filterValues["{f.name}"] === "true" ? "#0f172a" : "#fff", color: filterValues["{f.name}"] === "true" ? "#fff" : "#475569", cursor: "pointer" }}}}',
+                    '          >',
+                    f'            {f_label}: Yes',
+                    '          </button>',
+                    '          <button',
+                    '            type="button"',
+                    f'            onClick={{() => handleFilterChange("{f.name}", "false")}}',
+                    f'            style={{{{ padding: "4px 10px", border: "none", borderLeft: "1px solid #cbd5e1", background: filterValues["{f.name}"] === "false" ? "#0f172a" : "#fff", color: filterValues["{f.name}"] === "false" ? "#fff" : "#475569", cursor: "pointer" }}}}',
+                    '          >',
+                    f'            {f_label}: No',
+                    '          </button>',
+                    '        </div>',
+                ])
+            elif kind == "enum":
+                lines.extend([
+                    '        <select',
+                    f'          aria-label="Filter by {f_label}"',
+                    f'          value={{filterValues["{f.name}"] || "all"}}',
+                    f'          onChange={{(e) => handleFilterChange("{f.name}", e.target.value)}}',
+                    f'          style={{{{ padding: "4px 10px", borderRadius: 6, border: "1px solid #cbd5e1", background: "#fff", color: "#334155", fontSize: 12, cursor: "pointer", outline: "none" }}}}',
+                    '        >',
+                    f'          <option value="all">All {f_label}s</option>',
+                ])
+                for opt in opts:
+                    lines.append(f'          <option value="{opt}">{_title_case(opt)}</option>')
+                lines.append('        </select>')
+
+        lines.extend([
+            '        {activeFilterCount > 0 && (',
+            '          <span style={{ fontSize: 12, padding: "2px 8px", background: "#eff6ff", color: "#1d4ed8", borderRadius: 12, fontWeight: 600 }}>',
+            '            {activeFilterCount} active',
+            '          </span>',
+            '        )}',
+            '        {activeFilterCount > 0 && (',
+            '          <button',
+            '            type="button"',
+            '            onClick={handleClearFilters}',
+            '            style={{ background: "none", border: "none", color: "#2563eb", fontSize: 13, cursor: "pointer", padding: "4px 8px", textDecoration: "underline" }}',
+            '          >',
+            '            Reset',
+            '          </button>',
+            '        )}',
+            '      </div>',
+            '',
+        ])
+
+    lines.extend([
         "      {error && (",
         '        <div style={{ padding: "12px 16px", background: "#fef2f2", border: "1px solid #fecaca", borderRadius: 8, color: "#991b1b", marginBottom: 20, display: "flex", justifyContent: "space-between", alignItems: "center" }}>',
         "          <span>Error: {error.message}</span>",
@@ -1400,6 +1520,9 @@ def _collection_screen_page(screen: Screen, entity: Entity, ir: ApplicationIR, o
         "        </div>",
         "      )}",
         "",
+    ])
+
+    lines.extend([
         "      {checkedIds.length > 0 && (",
         '        <div style={{ marginBottom: 16, padding: "10px 16px", background: "#eff6ff", border: "1px solid #bfdbfe", borderRadius: 8, display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 12 }}>',
         '          <div style={{ display: "flex", alignItems: "center", gap: 12 }}>',
@@ -1497,10 +1620,34 @@ def _collection_screen_page(screen: Screen, entity: Entity, ir: ApplicationIR, o
         "                </td>",
         "              </tr>",
         "            )}",
-        "            {data && data.length === 0 && (",
+    ])
+
+    empty_cond = "{data && displayData.length === 0 && (" if filterable_fields else "{data && data.length === 0 && ("
+    lines.extend([
+        f"            {empty_cond}",
         "              <tr>",
         f'                <td colSpan={{{1 + len(display_fields) + (1 if has_actions_col else 0)}}} style={{{{ padding: 32, textAlign: "center", color: "#64748b" }}}}>',
-        "                  {searchInput.trim() ? (",
+    ])
+
+    if filterable_fields:
+        lines.extend([
+            "                  {data.length > 0 && activeFilterCount > 0 ? (",
+            '                    <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 12 }}>',
+            f"                      <div>No {plural} match the active filter criteria.</div>",
+            "                      <button",
+            '                        type="button"',
+            "                        onClick={handleClearFilters}",
+            '                        style={{ padding: "6px 14px", border: "1px solid #cbd5e1", background: "#fff", color: "#2563eb", borderRadius: 6, fontSize: 13, cursor: "pointer", fontWeight: 500 }}',
+            "                      >",
+            "                        Clear all filters",
+            "                      </button>",
+            "                    </div>",
+            "                  ) : searchInput.trim() ? (",
+        ])
+    else:
+        lines.append("                  {searchInput.trim() ? (")
+
+    lines.extend([
         '                    <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 12 }}>',
         f"                      <div>No {plural} matching &ldquo;{{searchInput}}&rdquo;.</div>",
         "                      <button",
@@ -1541,8 +1688,13 @@ def _collection_screen_page(screen: Screen, entity: Entity, ir: ApplicationIR, o
         "                </td>",
         "              </tr>",
         "            )}",
-        "            {data && data.map((item, idx) => (",
     ])
+
+    if filterable_fields:
+        lines.append("            {data && displayData.map((item, idx) => (")
+    else:
+        lines.append("            {data && data.map((item, idx) => (")
+
 
     if has_subcollections:
         lines.append('              <tr key={(item as any).id ?? idx} onClick={() => setSelectedId(selectedId === (item as any).id ? null : (item as any).id)} style={{ borderBottom: "1px solid #f1f5f9", cursor: "pointer", background: selectedId === (item as any).id ? "#eff6ff" : (checkedIds.includes((item as any).id) ? "#f8fafc" : undefined) }}>')
