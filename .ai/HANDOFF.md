@@ -1,6 +1,6 @@
 # Current Handoff
 
-Task ID: R-276
+Task ID: R-277
 Status: done
 Phase: BASIC/MVP — Founder Stage 0
 Branch: `main` (the only branch; the GitHub default)
@@ -12,57 +12,56 @@ Branch: `main` (the only branch; the GitHub default)
 - Commits use `sanjeetji <sk698166@gmail.com>` as author.
 - User permission is required prior to committing or pushing code.
 
-## Completed (R-276) — Record Selector Dropdown, Prev/Next Record Navigation & Deep-Link Sync in Generated Next.js Detail Screens
+## Completed (R-277) — Form Screen Dirty State Tracking, Unsaved Changes Guard & Reset Confirmation in Generated Next.js Forms
 
-- **Interactive Record Selector Dropdown**:
-  - `_detail_screen_page(screen, entity, ir, ops)` detects `can_list = Op.LIST in ops`.
-  - When `can_list` is true, imports `useList<Plural>` hook and invokes `useList<Plural>()` to fetch available items.
-  - Top ID selection section renders an interactive `<select aria-label="Select {name}">` dropdown with
-    `"-- Choose {name} --"` placeholder and `<option>` elements mapped to records displaying the best title field
-    (`title`, `name`, `label`, `email`, or `id`).
-  - Selecting an option calls `handleSelectId(e.target.value || null)`.
+- **Deterministic Dirty State Tracking (`isDirty`)**:
+  - `_form_screen_page` imports `useMemo` from `"react"`.
+  - Computes `baselineData` as `initialData` (in edit mode when loaded) or `initialValues` (in create mode).
+  - Computes `isDirty` by comparing every key in `formData` against `baselineData` via `useMemo`.
+  - Safely treats `undefined` and `""` as equivalent to prevent false dirty states on initial render of optional fields.
 
-- **Deep-Link URL Synchronization (`handleSelectId`)**:
-  - Emits `handleSelectId(newId)` helper function that updates `selectedId`, `idInput`, and synchronizes
-    the browser URL search parameters (`?id=<id>` or removes `id` when cleared) via `window.history.replaceState`.
-  - Manual "Load {name}" button and interactive "Clear" button both use `handleSelectId`.
-  - `handleDelete` removes the `id` search parameter from the URL upon deletion.
+- **Visual Indicators for Unsaved Changes**:
+  - Form header displays amber "Unsaved changes" badge (`#fef3c7` / `#92400e`) next to the screen title when `isDirty && !success`.
+  - Form footer displays amber notice (`&bull; You have unsaved changes`) when `isDirty && !success`.
 
-- **Sequential Record Navigation (Prev / Next)**:
-  - Item card header renders contextual `&larr; Prev` and `Next &rarr;` navigation buttons.
-  - Bound to `disabled={!prevItem}` and `disabled={!nextItem}` at boundary indices.
-  - Allows cycling through records sequentially without having to return to the collection list.
+- **Confirmation-Guarded Actions**:
+  - `Cancel` link button prompts with `confirm("You have unsaved changes. Discard them and leave?")` when `isDirty`.
+  - `Reset` button prompts with `confirm("Discard all changes and reset form?")` when `isDirty`, resetting state cleanly while maintaining `setLastSavedId(null)`.
 
-- **Recent Records Quick-Pick Empty State**:
-  - When `!selectedId`, empty state renders a "Recent {plural}" grid of clickable card tiles displaying title
-    and truncated ID, allowing one-click record selection instead of needing to know a UUID.
+- **Native Browser `beforeunload` Guard**:
+  - Registers window `beforeunload` event listener via `useEffect` while `isDirty && !submitting && !success`.
+  - Protects against accidental tab close, navigation, or page refresh.
+  - Automatically cleaned up on component unmount or state transition.
+
+- **Post-Submit State Cleanup**:
+  - Submission success (`setSuccess(true)`) suppresses dirty state warnings and unblocks all navigation links.
 
 - **Quality & Safety**:
-  - Clean fallback when `Op.LIST` is absent or entity contains only an `id` field.
   - 100% offline, zero external npm dependencies, zero new IR fields, strict diff invariance.
   - `# noqa: PLR0912` for branch count.
 
-## Test Coverage (R-276)
+## Test Coverage (R-277)
 
-`services/agent-engine/tests/test_detail_record_selector.py` — 16 new tests:
-1. `test_detail_screen_imports_uselist_when_list_op_wired`
-2. `test_detail_screen_omits_uselist_when_list_op_absent`
-3. `test_detail_screen_declares_uselist_hook_call`
-4. `test_detail_screen_renders_select_dropdown`
-5. `test_detail_screen_select_options_use_best_title_field`
-6. `test_detail_screen_renders_prev_and_next_buttons`
-7. `test_detail_screen_prev_next_buttons_disabled_states`
-8. `test_detail_screen_emits_url_replace_state_logic`
-9. `test_detail_screen_clear_button`
-10. `test_detail_screen_empty_state_recent_records`
-11. `test_detail_screen_delete_cleans_up_url`
-12. `test_detail_screen_diff_invariance`
-13. `test_detail_screen_fallback_when_only_id_field`
-14. `test_detail_screen_omits_prev_next_when_list_op_absent`
-15. `test_rideshare_favourites_detail_screen_valid`
+`services/agent-engine/tests/test_form_unsaved_changes_guard.py` — 16 new tests:
+1. `test_form_screen_imports_use_memo`
+2. `test_form_screen_declares_initial_values_and_baseline_data`
+3. `test_form_screen_baseline_data_edit_mode`
+4. `test_form_screen_computes_is_dirty`
+5. `test_form_screen_renders_unsaved_changes_badge_in_header`
+6. `test_form_screen_renders_unsaved_changes_notice_in_footer`
+7. `test_form_screen_cancel_button_has_unsaved_changes_guard`
+8. `test_form_screen_reset_button_has_confirmation_guard`
+9. `test_form_screen_registers_beforeunload_listener`
+10. `test_form_screen_beforeunload_cleans_up_listener`
+11. `test_form_screen_success_suppresses_unsaved_changes_badge`
+12. `test_form_screen_diff_invariance`
+13. `test_form_screen_empty_entity_fields_fallback`
+14. `test_form_screen_create_only_baseline_data`
+15. `test_rideshare_favourites_form_screen_valid`
 16. `test_minimal_blog_full_adapter_generate`
 
 ## Preceded by:
+- **R-276**: Record Selector Dropdown, Prev/Next Record Navigation & Deep-Link Sync in Generated Next.js Detail Screens.
 - **R-275**: Rich App Dashboard Overview Page in Generated Next.js Web App.
 - **R-274**: Form Screen Post-Submit Contextual CTAs, Record Navigation & Cancel Actions.
 - **R-273**: Global Responsive Navigation Shell & Header Navbar in Generated Next.js Web App.
@@ -78,7 +77,8 @@ Branch: `main` (the only branch; the GitHub default)
 
 ## Verification
 
-- `task verify` — pass (711 agent-engine tests; 16 new in `test_detail_record_selector.py`).
+- `task verify` — pass (727 agent-engine tests; 16 new in `test_form_unsaved_changes_guard.py`).
 - `task lint`, `task security:quick` — all pass.
 - `task builder:demo -- minimal-blog` and `task builder:demo -- rideshare-favourites` — both pass.
 - 0 local model calls, 0 cloud calls. Offline and deterministic.
+

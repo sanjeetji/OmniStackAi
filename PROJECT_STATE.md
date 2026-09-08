@@ -1,22 +1,21 @@
 # Project State — OmniStackAI
-Last updated: 2026-09-09T00:38:00+05:30
+Last updated: 2026-09-09T00:53:00+05:30
 
 ## Current Phase
 Stage 0 (Founder Build Sequence, Brief Section 91) — BASIC/MVP
 
 ## Last Completed Task
-Tracker ID: R-276 — Record Selector Dropdown, Prev/Next Record Navigation & Deep-Link Sync in Generated Next.js Detail Screens — DONE,
-`task verify` (711 agent-engine tests, 16 new in `test_detail_record_selector.py`) passing. Upgrades
-the generated Next.js detail screens (`apps/web/app/<screen>/page.tsx`): wires `useList<Plural>()`
-hook when `Op.LIST` is available; adds interactive `<select aria-label="Select {name}">` dropdown
-in the ID selection section offering `"-- Choose {name} --"` and existing records labeled with
-best descriptive title field (`title`, `name`, `label`, `email`, or `id`); emits `handleSelectId(newId)`
-helper synchronizing URL query parameters (`?id=<id>`) using `window.history.replaceState`; adds
-Clear button; renders contextual `"&larr; Prev"` and `"Next &rarr;"` record navigation buttons in
-the item card header allowing sequential record cycling; renders "Recent {plural}" card grid in
-empty state (when `!selectedId`) allowing one-click record inspection; cleans up URL on delete;
-100% offline, zero new IR fields, zero npm dependencies.
-Preceded by R-225 through R-275.
+Tracker ID: R-277 — Form Screen Dirty State Tracking, Unsaved Changes Guard & Reset Confirmation in Generated Next.js Forms — DONE,
+`task verify` (727 agent-engine tests, 16 new in `test_form_unsaved_changes_guard.py`) passing. Upgrades
+the generated Next.js form screens (`apps/web/app/<screen>/page.tsx`): imports `useMemo` from `"react"`;
+computes `baselineData` from `initialData` or `initialValues`; computes `isDirty` state comparing
+`formData` against `baselineData` (safely treating `undefined` and `""` as equivalent); renders amber
+"Unsaved changes" visual badge (`#fef3c7` / `#92400e`) in header when `isDirty && !success`; renders
+amber warning notice in footer; confirmation-guarded `Cancel` link button (`confirm("You have unsaved changes. Discard them and leave?")`);
+confirmation-guarded `Reset` button (`confirm("Discard all changes and reset form?")`); registers native
+browser `beforeunload` event listener guarding page refresh and tab close; clears warnings and unblocks
+navigation upon submit success; 100% offline, zero new IR fields, zero npm dependencies.
+Preceded by R-225 through R-276.
 Additive, offline, 0 network, no DB connection.
 
 

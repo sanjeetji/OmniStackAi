@@ -1,5 +1,24 @@
 # Work Log
 
+## 2026-09-09 — R-277
+
+- Recorded contract in `.ai/CURRENT_TASK.yaml` and `.ai/tasks/R-277.md`.
+- `nextjs.py` (`_form_screen_page`):
+  - Added `useMemo` to `"react"` imports alongside `useState` and `useEffect`.
+  - Computed `initialValues` constant partial object.
+  - Computed `baselineData` using `useMemo` comparing against `initialData` (in edit mode when loaded) or `initialValues` (in create mode).
+  - Emitted `isDirty` via `useMemo` comparing every key in `formData` against `baselineData` (gracefully handling `undefined` vs `""` equivalence).
+  - Added native window `beforeunload` event listener via `useEffect` guarding page refresh/close when `isDirty && !submitting && !success`.
+  - Added amber visual "Unsaved changes" badge (`#fef3c7` / `#92400e`) in header next to screen title when `isDirty && !success`.
+  - Added amber warning notice in form footer (`&bull; You have unsaved changes`) when `isDirty && !success`.
+  - Added guarded `onClick` handler on `Cancel` link button: `if (isDirty && !confirm("You have unsaved changes. Discard them and leave?")) { e.preventDefault(); }`.
+  - Added guarded `onClick` handler on `Reset` button: `if (!isDirty || confirm("Discard all changes and reset form?")) { ...; setLastSavedId(null); }`.
+  - Post-submit success (`setSuccess(true)`) naturally suppresses dirty state warnings and unblocks navigation.
+  - Added `# noqa: PLR0912` for branch count.
+- Added `services/agent-engine/tests/test_form_unsaved_changes_guard.py` with 16 comprehensive unit tests.
+- `task verify` — 727 tests pass (16 new), 0 failures. `task lint`, `task security:quick` pass. `builder:demo minimal-blog` and `builder:demo rideshare-favourites` pass. 0 network calls, 0 cloud model calls.
+- Updated CURRENT_TASK.yaml, tasks/R-277.md, PROJECT_STATE.yaml, PROJECT_STATE.md, CHANGELOG.md, docs/CODEGEN.md, docs/PROGRESS.md.
+
 ## 2026-09-09 — R-276
 
 - Recorded contract in `.ai/CURRENT_TASK.yaml` and `.ai/tasks/R-276.md`.

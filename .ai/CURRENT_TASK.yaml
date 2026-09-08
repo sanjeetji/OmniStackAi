@@ -1,43 +1,42 @@
 schema_version: 1
-task_id: R-276
-title: Record Selector Dropdown, Prev/Next Record Navigation & Deep-Link Sync in Generated Next.js Detail Screens
+task_id: R-277
+title: Form Screen Dirty State Tracking, Unsaved Changes Guard & Reset Confirmation in Generated Next.js Forms
 status: done
 phase: BASIC/MVP
 founder_stage: 0
 branch: main
 goal: >-
-  Enhance generated Next.js detail screens (apps/web/app/<screen>/page.tsx) with an interactive
-  record selector dropdown, sequential previous/next navigation buttons, automatic URL query param
-  sync (?id=...), and a quick-pick recent records grid in the empty state.
-tracker_ref: "R-276"
+  Enhance generated Next.js form screens (apps/web/app/<screen>/page.tsx) with deterministic dirty
+  state tracking (isDirty), an amber "Unsaved changes" visual indicator badge, confirmation-guarded
+  Cancel and Reset actions, and a native browser beforeunload event listener protecting against
+  accidental data loss.
+tracker_ref: "R-277"
 requirements:
-  - When Op.LIST is wired for the entity, detail screens import useList<Plural> from ../lib/hooks.
-  - Detail screens render a styled <select> dropdown in the ID selection section offering "-- Choose {name} --"
-    followed by existing items labeled with the best descriptive field (e.g. title, name, label, email, or id).
-  - Selecting an item from the dropdown or clicking a recent record updates selectedId, idInput, and synchronizes
-    the URL search params (?id=<id>) using window.history.replaceState.
-  - When an entity record is displayed and list data is available, render contextual "< Prev" and "Next >"
-    navigation buttons allowing users to cycle through records sequentially.
-  - In the empty state (when no record is selected), render a "Recent {plural}" grid of clickable card tiles
-    so users can immediately inspect a record with one click instead of needing to know a UUID.
-  - Fall back cleanly when Op.LIST is not available (keeps manual ID input, no hook import, no broken code).
+  - Form screen imports useMemo from "react" (along with useState and useEffect).
+  - Compute baselineData comparing against initialValues in create mode or initialData in edit mode.
+  - Calculate isDirty indicating whether any editable field in formData differs from baselineData.
+  - Render an amber "Unsaved changes" visual badge (#fef3c7 / #92400e) when isDirty && !success.
+  - Cancel button guards against leaving with unsaved changes via confirm() dialog.
+  - Reset button guards against resetting modified fields via confirm() dialog.
+  - Register a native window beforeunload event listener while isDirty && !submitting && !success.
+  - Post-submit success clears dirty state warnings so navigation links execute without prompts.
   - 100% offline, zero new external npm dependencies, zero new IR fields, strict diff invariance.
 acceptance_criteria:
-  - Detail screen imports useList<Plural> when Op.LIST is wired.
-  - Detail screen does not import useList<Plural> when Op.LIST is not wired.
-  - Dropdown <select> is rendered with placeholder and options when Op.LIST is wired.
-  - Prev and Next buttons are rendered and properly disabled at boundary indices.
-  - Empty state displays recent records card grid when list items exist.
-  - URL synchronization logic via searchParams / history.replaceState is emitted.
+  - Form screen imports useMemo from "react".
+  - isDirty is computed by comparing formData with baselineData.
+  - "Unsaved changes" badge is rendered when isDirty && !success.
+  - Cancel button binds confirmation guard when isDirty is true.
+  - Reset button binds confirmation guard when isDirty is true.
+  - beforeunload event listener is registered and cleaned up via useEffect.
   - Strict diff invariance: changing only ir.description produces byte-identical output.
-  - task verify passes (expect 705+ tests passing, 0 failures).
+  - task verify passes (expect 725+ tests passing, 0 failures).
   - task lint and task security:quick pass.
   - builder:demo passes for minimal-blog and rideshare-favourites.
 allowed_paths:
   - services/agent-engine/src/omnistackai_agent_engine/codegen/nextjs.py
-  - services/agent-engine/tests/test_detail_record_selector.py
+  - services/agent-engine/tests/test_form_unsaved_changes_guard.py
   - .ai/CURRENT_TASK.yaml
-  - .ai/tasks/R-276.md
+  - .ai/tasks/R-277.md
 forbidden_paths:
   - services/agent-engine/src/omnistackai_agent_engine/application_ir/**
   - package.json
@@ -49,18 +48,10 @@ gates:
   - task builder:demo -- minimal-blog
   - task builder:demo -- rideshare-favourites
 evidence:
-  - gate: task verify
-    result: pass
-    details: "711 agent-engine unit tests pass (16 new in test_detail_record_selector.py), 0 failures."
-  - gate: task lint
-    result: pass
-    details: "Ruff and project lint passed with 0 errors."
-  - gate: task security:quick
-    result: pass
-    details: "Stage 0 secret-policy check passed."
-  - gate: task builder:demo -- minimal-blog
-    result: pass
-    details: "Assembled project and initialized git repository successfully."
-  - gate: task builder:demo -- rideshare-favourites
-    result: pass
-    details: "Assembled project and initialized git repository successfully."
+  - "task verify: 727 tests passed (0 failures, 16 new unit tests)"
+  - "task lint: passed"
+  - "task security:quick: passed"
+  - "task builder:demo -- minimal-blog: passed (38 files generated)"
+  - "task builder:demo -- rideshare-favourites: passed (35 files generated)"
+  - "commit: 62c2283 feat(codegen): form screen dirty state tracking, unsaved changes guard & reset confirmation [R-277]"
+

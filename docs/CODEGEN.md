@@ -819,6 +819,31 @@ Enhances generated Next.js detail screens (`apps/web/app/<screen>/page.tsx`) wit
   - Clean fallback when `Op.LIST` is absent or entity contains only an `id` field.
   - 100% offline, zero external npm dependencies, zero new IR fields, strict diff invariance.
 
+### Form Screen Dirty State Tracking, Unsaved Changes Guard & Reset Confirmation (R-277)
+
+Upgrades generated Next.js form screens (`apps/web/app/<screen>/page.tsx`) with deterministic dirty state tracking (`isDirty`), visual warning indicators, confirmation-guarded actions, and native browser `beforeunload` event listeners protecting against accidental data loss:
+
+- **Deterministic `isDirty` Tracking**:
+  - Form screen imports `useMemo` from `"react"`.
+  - Computes `baselineData` as `initialData` (in edit mode when loaded) or `initialValues` (in create mode).
+  - Computes `isDirty` by comparing every key in `formData` against `baselineData` via `useMemo`.
+  - Gracefully handles empty string and `undefined` equivalence to avoid false dirty states on initial render.
+- **Visual Warnings**:
+  - Form header renders an amber "Unsaved changes" visual badge (`#fef3c7` / `#92400e`) next to the screen title when `isDirty && !success`.
+  - Form footer renders an amber notice (`&bull; You have unsaved changes`) when `isDirty && !success`.
+- **Confirmation-Guarded Actions**:
+  - `Cancel` link button prompts with `confirm("You have unsaved changes. Discard them and leave?")` when `isDirty`.
+  - `Reset` button prompts with `confirm("Discard all changes and reset form?")` when `isDirty`, resetting state cleanly while maintaining `setLastSavedId(null)`.
+- **Native Browser `beforeunload` Guard**:
+  - Emits a `useEffect` hook registering a native window `beforeunload` listener while `isDirty && !submitting && !success`.
+  - Triggers the browser's native unsaved changes prompt on page refresh or tab close.
+  - Automatically cleaned up on unmount or when dirty state clears.
+- **Post-Submit State Cleanup**:
+  - Form submission success (`setSuccess(true)`) naturally suppresses dirty state warnings and allows immediate navigation.
+- **Quality & Safety**:
+  - 100% offline, zero external npm dependencies, zero new IR fields, strict diff invariance.
+
+
 
 
 
