@@ -1211,6 +1211,35 @@ def _collection_screen_page(screen: Screen, entity: Entity, ir: ApplicationIR, o
         "  };",
     ])
 
+    csv_headers_ts = ", ".join(f'"{f.name}"' for f in entity.fields)
+    csv_row_ts = ", ".join(f"toCsvVal((item as any).{f.name})" for f in entity.fields)
+
+    lines.extend([
+        "  const handleExportCsv = (selectedOnly: boolean = false) => {",
+        "    const itemsToExport = selectedOnly",
+        "      ? (data ?? []).filter((item: any) => checkedIds.includes(item.id))",
+        "      : (data ?? []);",
+        "    if (itemsToExport.length === 0) return;",
+        "    const toCsvVal = (val: unknown): string => {",
+        '      if (val === null || val === undefined) return \'""\';',
+        '      const str = typeof val === "object" ? JSON.stringify(val) : String(val);',
+        '      return `"${str.replace(/"/g, \'""\')}"`;',
+        "    };",
+        f"    const headers = [{csv_headers_ts}];",
+        f"    const rows = itemsToExport.map((item: any) => [{csv_row_ts}].join(\",\"));",
+        '    const csvContent = [headers.join(","), ...rows].join("\\n");',
+        '    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });',
+        "    const url = URL.createObjectURL(blob);",
+        '    const link = document.createElement("a");',
+        '    link.setAttribute("href", url);',
+        f'    link.setAttribute("download", "{plural.lower()}_export.csv");',
+        "    document.body.appendChild(link);",
+        "    link.click();",
+        "    document.body.removeChild(link);",
+        "    URL.revokeObjectURL(url);",
+        "  };",
+    ])
+
     if can_delete:
         lines.extend([
             f"  const {{ remove }} = useDelete{name}();",
@@ -1350,6 +1379,14 @@ def _collection_screen_page(screen: Screen, entity: Entity, ir: ApplicationIR, o
         "        >",
         '          {loading ? "Loading..." : "Refresh"}',
         "        </button>",
+        "        <button",
+        '          type="button"',
+        "          onClick={() => handleExportCsv(false)}",
+        "          disabled={!data || data.length === 0}",
+        '          style={{ padding: "8px 14px", border: "1px solid #cbd5e1", background: "#fff", color: "#334155", borderRadius: 6, fontSize: 14, cursor: (!data || data.length === 0) ? "default" : "pointer" }}',
+        "        >",
+        '          Export CSV',
+        "        </button>",
         "      </section>",
         "",
         "      {error && (",
@@ -1360,7 +1397,7 @@ def _collection_screen_page(screen: Screen, entity: Entity, ir: ApplicationIR, o
         "      )}",
         "",
         "      {checkedIds.length > 0 && (",
-        '        <div style={{ marginBottom: 16, padding: "10px 16px", background: "#eff6ff", border: "1px solid #bfdbfe", borderRadius: 8, display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "gap", gap: 12 }}>',
+        '        <div style={{ marginBottom: 16, padding: "10px 16px", background: "#eff6ff", border: "1px solid #bfdbfe", borderRadius: 8, display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 12 }}>',
         '          <div style={{ display: "flex", alignItems: "center", gap: 12 }}>',
         '            <span style={{ fontSize: 14, fontWeight: 600, color: "#1e40af" }}>',
         f'              {{checkedIds.length}} {{checkedIds.length === 1 ? "{name}" : "{plural}"}} selected',
@@ -1373,11 +1410,18 @@ def _collection_screen_page(screen: Screen, entity: Entity, ir: ApplicationIR, o
         "              Clear selection",
         "            </button>",
         "          </div>",
+        '          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>',
+        "            <button",
+        '              type="button"',
+        "              onClick={() => handleExportCsv(true)}",
+        '              style={{ padding: "6px 14px", border: "1px solid #93c5fd", background: "#fff", color: "#1d4ed8", borderRadius: 6, fontSize: 13, fontWeight: 500, cursor: "pointer" }}',
+        "            >",
+        f'              {{`Export Selected (${{checkedIds.length}})`}}',
+        "            </button>",
     ])
 
     if can_delete:
         lines.extend([
-            '          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>',
             "            <button",
             '              type="button"',
             "              onClick={handleBatchDelete}",
@@ -1386,10 +1430,10 @@ def _collection_screen_page(screen: Screen, entity: Entity, ir: ApplicationIR, o
             "            >",
             f'              {{batchDeleting ? "Deleting..." : `Delete Selected (${{checkedIds.length}})`}}',
             "            </button>",
-            "          </div>",
         ])
 
     lines.extend([
+        "          </div>",
         "        </div>",
         "      )}",
     ])
