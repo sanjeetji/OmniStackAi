@@ -1129,14 +1129,18 @@ def _collection_screen_page(screen: Screen, entity: Entity, ir: ApplicationIR, o
     subcollections = _subcollections_for_parent(name, ir)
     has_subcollections = bool(subcollections)
 
-    # Check for a complementary form/editor screen in ir.screens
+    # Check for complementary screens in ir.screens
     form_screen: Screen | None = None
+    detail_screen: Screen | None = None
     for s in ir.screens:
         if s.id != screen.id:
             s_entity = _match_entity(s, ir)
-            if s_entity and s_entity.name == entity.name and _screen_intent(s) == "form":
-                form_screen = s
-                break
+            if s_entity and s_entity.name == entity.name:
+                s_intent = _screen_intent(s)
+                if s_intent == "form" and not form_screen:
+                    form_screen = s
+                elif s_intent == "detail" and not detail_screen:
+                    detail_screen = s
 
     # Select fields to display in table columns (skip 'id' unless it's the only field, limit to 5)
     display_fields = [f for f in entity.fields if f.name != "id"]
@@ -1475,9 +1479,9 @@ def _collection_screen_page(screen: Screen, entity: Entity, ir: ApplicationIR, o
         ])
 
     can_edit = (Op.UPDATE in ops) and (form_screen is not None)
-    has_actions_col = can_delete or has_subcollections or can_edit
+    has_actions_col = can_delete or has_subcollections or can_edit or (detail_screen is not None)
     if has_actions_col:
-        actions_header = "Actions" if (can_delete or can_edit) else "Details"
+        actions_header = "Actions" if (can_delete or can_edit or detail_screen is not None) else "Details"
         lines.append(
             f'              <th style={{{{ padding: "12px 16px", textAlign: "right", fontWeight: 600, color: "#475569" }}}}>{actions_header}</th>'
         )
@@ -1581,6 +1585,17 @@ def _collection_screen_page(screen: Screen, entity: Entity, ir: ApplicationIR, o
 
     if has_actions_col:
         lines.append('                <td style={{ padding: "12px 16px", textAlign: "right", whiteSpace: "nowrap" }}>')
+        if detail_screen:
+            margin_style = " marginRight: 8," if (has_subcollections or can_edit or can_delete) else ""
+            lines.extend([
+                '                  <Link',
+                f"                    href={{`/{detail_screen.id}?id=${{(item as any).id}}`}}",
+                '                    onClick={(e) => e.stopPropagation()}',
+                f'                    style={{{{ padding: "4px 8px", border: "1px solid #cbd5e1", background: "#fff", color: "#2563eb", borderRadius: 4, fontSize: 12, textDecoration: "none", display: "inline-block",{margin_style} }}}}',
+                '                  >',
+                '                    View',
+                '                  </Link>',
+            ])
         if has_subcollections:
             margin_style = " marginRight: 8," if (can_edit or can_delete) else ""
             lines.extend([
@@ -2397,14 +2412,32 @@ def _detail_screen_page(screen: Screen, entity: Entity, ir: ApplicationIR, ops: 
     subcollections = _subcollections_for_parent(name, ir)
     has_subcollections = bool(subcollections)
 
+    collection_screen: Screen | None = None
+    form_screen: Screen | None = None
+    for s in ir.screens:
+        if s.id != screen.id:
+            s_entity = _match_entity(s, ir)
+            if s_entity and s_entity.name == entity.name:
+                s_intent = _screen_intent(s)
+                if s_intent == "collection" and not collection_screen:
+                    collection_screen = s
+                elif s_intent == "form" and not form_screen:
+                    form_screen = s
+
+    can_edit = (Op.UPDATE in ops) and (form_screen is not None)
+    can_delete = Op.DELETE in ops
+
     hooks_to_import: list[str] = []
     if Op.GET in ops:
         hooks_to_import.append(f"use{name}")
+    if can_delete:
+        hooks_to_import.append(f"useDelete{name}")
 
     lines: list[str] = [
         '"use client";',
         "",
-        'import { useState } from "react";',
+        'import { useState, useEffect } from "react";',
+        'import { useSearchParams } from "next/navigation";',
         'import Link from "next/link";',
     ]
 
@@ -2433,12 +2466,53 @@ def _detail_screen_page(screen: Screen, entity: Entity, ir: ApplicationIR, ops: 
     lines.extend([
         "",
         f"export default function {page_name}() {{",
-        '  const [idInput, setIdInput] = useState<string>("");',
-        '  const [selectedId, setSelectedId] = useState<string | null>(null);',
+        "  const searchParams = useSearchParams();",
+        '  const queryId = searchParams.get("id");',
+        '  const [idInput, setIdInput] = useState<string>(queryId ?? "");',
+        "  const [selectedId, setSelectedId] = useState<string | null>(queryId ?? null);",
+        "",
+        "  useEffect(() => {",
+        "    if (queryId) {",
+        "      setSelectedId(queryId);",
+        "      setIdInput(queryId);",
+        "    }",
+        "  }, [queryId]);",
     ])
 
     if Op.GET in ops:
         lines.append(f"  const {{ data: item, loading, error, refetch }} = use{name}(selectedId);")
+
+    if can_delete:
+        lines.extend([
+            f"  const {{ remove: removeMain, loading: deletingMain, error: deleteMainError }} = useDelete{name}();",
+            "  const handleDelete = async () => {",
+            "    if (!selectedId) return;",
+            f'    if (confirm("Are you sure you want to delete this {name}?")) {{',
+            "      try {",
+            "        await removeMain(selectedId);",
+            "        setSelectedId(null);",
+            '        setIdInput("");',
+            "      } catch {",
+            "        // deletion error captured in hook state",
+            "      }",
+            "    }",
+            "  };",
+        ])
+
+    lines.extend([
+        "  const handleExportJson = () => {",
+        "    if (!item) return;",
+        '    const blob = new Blob([JSON.stringify(item, null, 2)], { type: "application/json" });',
+        "    const url = URL.createObjectURL(blob);",
+        '    const link = document.createElement("a");',
+        '    link.setAttribute("href", url);',
+        f'    link.setAttribute("download", `{name.lower()}_${{(item as any).id ?? "detail"}}.json`);',
+        "    document.body.appendChild(link);",
+        "    link.click();",
+        "    document.body.removeChild(link);",
+        "    URL.revokeObjectURL(url);",
+        "  };",
+    ])
 
     if has_subcollections:
         if len(subcollections) > 1:
@@ -2486,7 +2560,18 @@ def _detail_screen_page(screen: Screen, entity: Entity, ir: ApplicationIR, ops: 
         '      <header style={{ marginBottom: 24, display: "flex", justifyContent: "space-between", alignItems: "flex-start", flexWrap: "wrap", gap: 16 }}>',
         "        <div>",
         '          <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 6 }}>',
-        '            <Link href="/" style={{ color: "#2563eb", textDecoration: "none", fontSize: 13, fontWeight: 500 }}>&larr; Overview</Link>',
+    ])
+
+    if collection_screen:
+        lines.append(
+            f'            <Link href="/{collection_screen.id}" style={{{{ color: "#2563eb", textDecoration: "none", fontSize: 13, fontWeight: 500 }}}}>&larr; Back to {plural}</Link>'
+        )
+    else:
+        lines.append(
+            '            <Link href="/" style={{ color: "#2563eb", textDecoration: "none", fontSize: 13, fontWeight: 500 }}>&larr; Overview</Link>'
+        )
+
+    lines.extend([
         '            <span style={{ color: "#94a3b8" }}>/</span>',
         f'            <span style={{ fontSize: 12, padding: "2px 8px", background: "#f1f5f9", color: "#475569", borderRadius: 4, fontWeight: 600 }}>{screen.role}</span>',
         "          </div>",
@@ -2534,11 +2619,57 @@ def _detail_screen_page(screen: Screen, entity: Entity, ir: ApplicationIR, ops: 
             "      )}",
             "      {item && (",
             '        <div style={{ background: "#fff", border: "1px solid #e2e8f0", borderRadius: 8, padding: 24, marginBottom: 24, boxShadow: "0 1px 3px rgba(0,0,0,0.05)" }}>',
-            f'          <h2 style={{ margin: "0 0 16px 0", fontSize: 20, fontWeight: 700, color: "#0f172a" }}>',
-            f"            {{String((item as any).{best_title_f} ?? (item as any).id)}}",
-            "          </h2>",
-            '          <dl style={{ margin: 0, display: "grid", gridTemplateColumns: "140px 1fr", gap: "8px 16px", fontSize: 14 }}>',
+            '          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 16, flexWrap: "wrap", gap: 12 }}>',
+            f'            <h2 style={{ margin: 0, fontSize: 20, fontWeight: 700, color: "#0f172a" }}>',
+            f"              {{String((item as any).{best_title_f} ?? (item as any).id)}}",
+            "            </h2>",
+            '            <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>',
+            "              <button",
+            '                type="button"',
+            "                onClick={handleExportJson}",
+            '                style={{ padding: "6px 12px", border: "1px solid #cbd5e1", background: "#fff", color: "#334155", borderRadius: 6, fontSize: 13, fontWeight: 500, cursor: "pointer" }}',
+            "              >",
+            "                Export JSON",
+            "              </button>",
         ])
+
+        if can_edit and form_screen:
+            lines.extend([
+                "              <Link",
+                f"                href={{`/{form_screen.id}?id=${{selectedId}}`}}",
+                '                style={{ padding: "6px 12px", border: "1px solid #cbd5e1", background: "#fff", color: "#2563eb", borderRadius: 6, fontSize: 13, fontWeight: 500, textDecoration: "none" }}',
+                "              >",
+                f"                Edit {name}",
+                "              </Link>",
+            ])
+
+        if can_delete:
+            lines.extend([
+                "              <button",
+                '                type="button"',
+                "                onClick={handleDelete}",
+                "                disabled={deletingMain}",
+                '                style={{ padding: "6px 12px", background: "#dc2626", color: "#fff", border: "none", borderRadius: 6, fontSize: 13, fontWeight: 500, cursor: deletingMain ? "default" : "pointer" }}',
+                "              >",
+                f'                {{deletingMain ? "Deleting..." : "Delete {name}"}}',
+                "              </button>",
+            ])
+
+        lines.extend([
+            "            </div>",
+            "          </div>",
+        ])
+
+        if can_delete:
+            lines.extend([
+                "          {deleteMainError && (",
+                '            <div style={{ padding: "10px 14px", background: "#fef2f2", border: "1px solid #fecaca", borderRadius: 6, color: "#991b1b", marginBottom: 16, fontSize: 13 }}>',
+                f"              Error deleting {name}: {{deleteMainError.message}}",
+                "            </div>",
+                "          )}",
+            ])
+
+        lines.append('          <dl style={{ margin: 0, display: "grid", gridTemplateColumns: "140px 1fr", gap: "8px 16px", fontSize: 14 }}>')
         for f in entity.fields:
             flabel = _title_case(f.name)
             lines.extend([

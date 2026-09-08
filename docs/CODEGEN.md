@@ -678,6 +678,32 @@ Enables client-side RFC 4180 CSV data export and bulk selection export in genera
   - Pure standard-library Python codegen, 100% offline, 0 network, 0 external dependencies.
   - Zero references to `ir.description`, strictly preserving snapshot diff invariance.
 
+### Deep-Linking & Entity Lifecycle in Next.js Detail Screens (R-272)
+
+Enables full-lifecycle deep linking, automated query param fetching, cross-screen navigation, entity editing, deletion, and single-record JSON export across Next.js detail and collection screens (`apps/web/app/<screen>/page.tsx`):
+
+- **Query Param Auto-Loading**:
+  - `_detail_screen_page` imports `useSearchParams` from `"next/navigation"` and `useEffect` from `"react"`.
+  - Extracts `const queryId = searchParams.get("id");` and initializes `idInput` and `selectedId`.
+  - An automated `useEffect` synchronizes `selectedId` and `idInput` whenever `queryId` updates, immediately triggering `use<Entity>(selectedId)` without requiring manual typing.
+  - Retains the manual ID input box as an intuitive fallback when no query parameter is provided.
+- **Entity Lifecycle Actions in Detail View**:
+  - Loaded item card features a dedicated action toolbar:
+    * **Single-Record JSON Export**: "Export JSON" button invokes `handleExportJson()`, serializing the loaded item via `Blob([JSON.stringify(item, null, 2)], { type: "application/json" })`, dynamic anchor creation, download attribute (`{name.lower()}_{id}.json`), automated click, and `URL.revokeObjectURL(url)` memory cleanup.
+    * **Direct Entity Edit**: When `can_edit` and `form_screen` are present, renders an "Edit {name}" link navigating directly to `/{form_screen.id}?id=${selectedId}`.
+    * **Direct Entity Deletion**: When `can_delete` is True, imports and wires `useDelete<Entity>()` with `handleDelete` executing a confirmation dialog, setting loading state (`deletingMain`), error capture (`deleteMainError`), and state reset (`setSelectedId(null); setIdInput("");`).
+    * **Mutation Feedback**: Renders an alert banner when record deletion fails.
+- **Breadcrumb Navigation**:
+  - Detects complementary `collection_screen` for the entity in `ir.screens`.
+  - In header breadcrumbs: renders `<Link href="/{collection_screen.id}">&larr; Back to {plural}</Link>`, falling back to `&larr; Overview` when no collection screen is present.
+- **Collection Table Integration**:
+  - In `_collection_screen_page`: detects dedicated `detail_screen` for the entity in `ir.screens`.
+  - When present, renders a styled "View" link button (`/{detail_screen.id}?id=${(item as any).id}`) in the table row actions cell.
+- **Diff Invariance & Fallback Cleanliness**:
+  - 100% offline, 0 network, 0 external npm dependencies.
+  - Zero references to `ir.description`, preserving snapshot diff invariance.
+
+
 
 
 
