@@ -19,7 +19,12 @@ from .assembler import (
 from .backend_go import GoBackendAdapter
 from .backend_python import PythonBackendAdapter
 from .data_access import go_data_access_files, python_data_access_files
-from .field_validation import FieldRules, parse_field_rules
+from .field_validation import (
+    VALIDATOR_REQUIRE,
+    FieldRules,
+    go_validate_file,
+    parse_field_rules,
+)
 from .files import GeneratedFile, GeneratedProject
 from .nextjs import NextjsWebAdapter
 from .schema_sql import render_postgres_schema, table_name
@@ -43,9 +48,11 @@ __all__ = [
     "PythonBackendAdapter",
     "UnsupportedTargetError",
     "FieldRules",
+    "VALIDATOR_REQUIRE",
     "assemble_project",
     "assembled_targets",
     "default_registry",
+    "go_validate_file",
     "parse_field_rules",
     "go_data_access_files",
     "python_data_access_files",

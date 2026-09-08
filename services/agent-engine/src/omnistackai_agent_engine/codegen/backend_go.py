@@ -13,7 +13,7 @@ import re
 from ..application_ir import ApplicationIR, ApiEndpoint, DatabaseStrategy, FieldType
 from .adapter import GenerationTarget
 from .auth_guard import GOLANG_JWT_REQUIRE, go_auth_file, needs_auth
-from .field_validation import go_validate_tag, parse_field_rules
+from .field_validation import VALIDATOR_REQUIRE, go_validate_file, go_validate_tag, parse_field_rules
 from .data_access import PGX_REQUIRE, go_data_access_files
 from .errors import GenerationError
 from .files import GeneratedFile, GeneratedProject
@@ -55,6 +55,16 @@ def _handler_name(method: str, path: str) -> str:
 
 def _path_params(path: str) -> list[str]:
     return re.findall(r"\{(\w+)\}", path)
+
+
+def _validated_entities(ir: ApplicationIR) -> frozenset[str]:
+    """Entity names with at least one field carrying go-playground validation rules (R-252)."""
+
+    return frozenset(
+        entity.name
+        for entity in ir.entities
+        if any(go_validate_tag(field, parse_field_rules(field)) for field in entity.fields)
+    )
 
 
 def _models_file(ir: ApplicationIR) -> str:
@@ -130,6 +140,7 @@ def _handlers_file_wired(
     repo_entities: frozenset[str],
     slug: str,
     fk_by_entity: dict[str, tuple[str, ...]] | None = None,
+    validated_entities: frozenset[str] = frozenset(),
 ) -> str:
     """Handlers as methods on *Handlers; unambiguous CRUD calls the store, the rest stay 501."""
 
@@ -180,6 +191,9 @@ def _handlers_file_wired(
             lines.append(f"\tvar m models.{wiring.entity}")
             lines.append("\tif err := json.NewDecoder(r.Body).Decode(&m); err != nil {")
             lines.append('\t\thttp.Error(w, "invalid body", http.StatusBadRequest)\n\t\treturn\n\t}')
+            if wiring.entity in validated_entities:
+                lines.append("\tif status, msg := validateStruct(m); msg != \"\" {")
+                lines.append("\t\thttp.Error(w, msg, status)\n\t\treturn\n\t}")
             lines.append(f"\tid, err := store.Create{wiring.entity}(r.Context(), h.DB, m)")
             lines.append("\tif err != nil {\n\t\thttp.Error(w, err.Error(), http.StatusInternalServerError)\n\t\treturn\n\t}")
             lines.append('\twriteJSON(w, http.StatusCreated, map[string]string{"id": id})')
@@ -254,11 +268,25 @@ class GoBackendAdapter:
 
         has_db = bool(ir.entities) and ir.project_strategy.database_strategy is DatabaseStrategy.POSTGRES
         has_auth = needs_auth(ir)
+
+        repo_entities = frozenset(entity.name for entity in ir.entities) if has_db else frozenset()
+        fk_by_entity = fk_relations(ir) if has_db else None
+        # Validation is enforced only where it can act: a wired CREATE handler whose entity has rules.
+        validated_entities = _validated_entities(ir) if has_db else frozenset()
+        has_validation = bool(validated_entities) and any(
+            (wiring := wire_endpoint(api, repo_entities, fk_by_entity)) is not None
+            and wiring.op is Op.CREATE
+            and wiring.entity in validated_entities
+            for api in apis
+        )
+
         go_mod = f"module {slug}\n\ngo 1.22\n"
         if has_db:
             go_mod += f"\nrequire {PGX_REQUIRE}\n"
         if has_auth:
             go_mod += f"\nrequire {GOLANG_JWT_REQUIRE}\n"
+        if has_validation:
+            go_mod += f"\nrequire {VALIDATOR_REQUIRE}\n"
 
         stack_note = (
             "Go net/http with a PostgreSQL data-access layer (pgx driver)."
@@ -279,14 +307,14 @@ class GoBackendAdapter:
 
         if has_auth:
             files.append(GeneratedFile("internal/handlers/auth.go", go_auth_file(ir)))
+        if has_validation:
+            files.append(GeneratedFile("internal/handlers/validate.go", go_validate_file()))
 
-        repo_entities = frozenset(entity.name for entity in ir.entities) if has_db else frozenset()
-        fk_by_entity = fk_relations(ir) if has_db else None
         if has_db:
             files.append(GeneratedFile("internal/handlers/handlers.go", _handlers_shared_file()))
         for segment in sorted(by_segment):
             content = (
-                _handlers_file_wired(by_segment[segment], repo_entities, slug, fk_by_entity)
+                _handlers_file_wired(by_segment[segment], repo_entities, slug, fk_by_entity, validated_entities)
                 if has_db
                 else _handlers_file(by_segment[segment])
             )

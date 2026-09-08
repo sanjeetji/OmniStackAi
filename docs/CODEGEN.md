@@ -110,14 +110,22 @@ deterministic SQL DDL migration — the generated backend's persistence layer:
   column constraint; each `Entity.indexes` entry renders one `CREATE [UNIQUE] INDEX <name> ON <table>
   (<cols>);` after the tables, with a deterministic default name (`<table>_<cols>_idx`, or `_key` when
   unique) when the index is unnamed.
-- **Field validation (R-250/R-251):** `Field.validation` rules (`codegen/field_validation.py`) flow into
-  all three model/schema targets. Schema: a STRING with `max_length:n` → `VARCHAR(n)`, an `enum:a|b|c` →
-  `CHECK (col IN ('a','b','c'))`, and numeric `min:n`/`max:n` → `CHECK (col >= n)`/`CHECK (col <= n)`.
-  FastAPI Pydantic: `Field(max_length=n, ge=…, le=…)` and a `Literal[...]` type. Go models: a
-  go-playground `validate:"max=…,oneof=… …,gte=…,lte=…"` struct tag on each field with rules (rule-free
-  fields keep a plain `json` tag). Go tags are declarative — wire a `validator.Struct(...)` call (or a
-  follow-up task) to enforce them at request time; the schema already enforces at the DB for both
-  backends. Unknown rules are ignored.
+- **Field validation (R-250/R-251/R-252):** `Field.validation` rules (`codegen/field_validation.py`)
+  flow into all three model/schema targets. Schema: a STRING with `max_length:n` → `VARCHAR(n)`, an
+  `enum:a|b|c` → `CHECK (col IN ('a','b','c'))`, and numeric `min:n`/`max:n` → `CHECK (col >= n)`/
+  `CHECK (col <= n)`. FastAPI Pydantic: `Field(max_length=n, ge=…, le=…)` and a `Literal[...]` type —
+  Pydantic enforces these at request time automatically. Go models: a go-playground
+  `validate:"max=…,oneof=… …,gte=…,lte=…"` struct tag on each field with rules (rule-free fields keep a
+  plain `json` tag).
+- **Go validation enforcement (R-252):** the Go tags are now enforced at request time. When at least one
+  wired CREATE handler's entity carries rules, the Go backend declares
+  `github.com/go-playground/validator/v10` in its own `go.mod`, emits `internal/handlers/validate.go`
+  (`var validate = validator.New()` + a `validateStruct(v any) (int, string)` helper returning
+  `400`/`"validation_failed"` on a tag violation), and calls `validateStruct(m)` in each such CREATE
+  handler — right after the JSON decode and before the `store.Create…` call, `400`-ing on failure. The
+  validator dependency lives only in the generated project; rule-free projects emit none of this and stay
+  byte-identical. The schema still enforces at the DB for both backends, so validation now holds at three
+  layers (request model, request handler, and database). Unknown rules are ignored.
 
 Both backend adapters (FastAPI and Go) emit it as `migrations/0001_init.sql` exactly when the IR has
 entities and `database_strategy == postgres` — no previously emitted file changes. Output is byte-stable,

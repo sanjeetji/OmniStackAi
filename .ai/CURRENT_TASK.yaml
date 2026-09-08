@@ -1,26 +1,31 @@
 schema_version: 1
-task_id: R-251
-title: Field validation for Go + numeric min/max (all three schema/model targets)
-status: done
+task_id: R-252
+title: Enforce go-playground validation in the generated Go create handlers
+status: in_progress
 phase: BASIC/MVP
 founder_stage: 0
 branch: main
 goal: >-
-  Extend R-250 field validation to the Go backend and add numeric bounds (Brief 9/26/27). Two additions
-  to the existing field_validation parser: numeric min:<n> / max:<n> rules, and a go_validate_tag helper.
-  The rules now flow into all three targets — schema (VARCHAR / CHECK enum / CHECK numeric bounds),
-  FastAPI Pydantic (Field(max_length=, ge=, le=) + Literal), and Go models (a go-playground
-  validate:"max=,oneof=,gte=,lte=" struct tag on each field with rules; rule-free fields keep a plain
-  json tag). Go tags are declarative (enforcement wiring — validator.Struct + go.mod dep — is a
-  follow-up); the schema already enforces for both backends at the DB. Additive/offline; examples
-  unchanged; nothing connects to or runs a database.
+  Make the R-251 Go validate:"..." struct tags actually enforced at request time (Brief 9/26/27).
+  When a wired CREATE handler's entity carries validation rules, the generated Go backend now: (1)
+  declares github.com/go-playground/validator/v10 in its own go.mod; (2) emits
+  internal/handlers/validate.go — a shared validator instance (validator.New()) plus a validateStruct
+  helper that returns 400/"validation_failed" when a payload violates its tags; and (3) calls
+  validateStruct on the decoded body in each such CREATE handler, right after JSON decode and before the
+  store.Create call, returning 400 on failure. Rule-free projects are byte-identical to R-251 (no
+  validator dependency, no validate.go, no call), so the examples and existing Go assertions are
+  unchanged. FastAPI already enforces at construction via Pydantic — this task closes the Go gap only.
+  Additive/offline; the dependency lives ONLY in the generated project's go.mod; nothing is installed,
+  built, run, or connected to a database here.
 source:
   tracker_sheet: Phase_Roadmap
   tracker_row: reconstructed; new IDs continue after the workbook backlog's R-010..R-219
   brief_sections: [9, 26, 27, 34, 42, 74, 77, 83, 84, 85, 92]
   founder_note: >-
-    Founder said "go ahead" after R-250; R-251 is the approved extension (Go tags + numeric min/max).
-    Committed directly to main; author solely sanjeetji; tooling adds a Co-Authored-By trailer.
+    Founder chose option 1 after R-251 ("Go with option 1 ... bcoz we do not want anything static or
+    seeds data in our platform"): wire go-playground enforcement in the Go handlers rather than render
+    seed/indexes/validation in the static console. Committed directly to main; author solely sanjeetji;
+    tooling adds a Co-Authored-By trailer.
 project_profile:
   repository: platform_modular_monorepo
   service: python_agent_engine
@@ -29,11 +34,10 @@ project_profile:
 complexity: L2
 expected_impact:
   - services/agent-engine/src/omnistackai_agent_engine/codegen/field_validation.py
-  - services/agent-engine/src/omnistackai_agent_engine/codegen/schema_sql.py
-  - services/agent-engine/src/omnistackai_agent_engine/codegen/backend_python.py
   - services/agent-engine/src/omnistackai_agent_engine/codegen/backend_go.py
-  - services/agent-engine/tests/test_field_validation_numeric.py
-  - docs/APPLICATION_IR.md, docs/CODEGEN.md, docs/PROGRESS.md
+  - services/agent-engine/src/omnistackai_agent_engine/codegen/__init__.py
+  - services/agent-engine/tests/test_go_validation_enforcement.py
+  - docs/CODEGEN.md, docs/PROGRESS.md
   - portable state, changelog, handoff, task doc, and tracker evidence
 allowed_paths:
   - .ai/**
@@ -45,30 +49,35 @@ allowed_paths:
 must_not_change:
   - PostgreSQL as the control-plane database or the platform's own schema/migrations
   - the IR schema (no new IR field; only Field.validation is interpreted further)
-  - the R-250 max_length/enum behavior; rule-free Go structs stay byte-identical (plain json tag)
+  - the R-250/R-251 max_length/enum/min/max tag behavior; rule-free Go structs stay byte-identical
   - the model-gateway, runtime, verify, edit, data-access, auth, seed, index public behavior (additive)
   - local Compose services or infrastructure; the Section 74 top-level contract; the offline bootstrap
   - the network-independence of static task verify
+  - the Python/FastAPI backend output (Pydantic already enforces; no Python change this task)
 must_not_do:
-  - add a go.mod dependency or wire validator.Struct enforcement in this task (declarative tags only)
-  - apply numeric bounds to non-numeric fields; fabricate a rule the IR didn't declare
-  - connect to or run a database; make a network call; add a platform Python dependency; put a secret anywhere
+  - add a platform Python dependency or a vendor SDK to the agent-engine; the validator dep lives only
+    in the GENERATED project's go.mod
+  - emit the validator dependency, validate.go, or a validateStruct call for a rule-free project
+  - connect to or run a database; make a network call; install/build/run Go; put a secret anywhere
 acceptance:
-  - parse_field_rules also reads min:<number> / max:<number> (kept as raw literals; non-numeric ignored).
-  - schema: numeric INT/FLOAT fields render CHECK (col >= n) / CHECK (col <= n) (combined with enum
-    CHECK if present); string fields never get a numeric check.
-  - Pydantic: numeric fields render Field(ge=n, le=n); string max_length still renders Field(max_length=n).
-  - Go models: go_validate_tag builds max=/oneof=/gte=/lte= and each field with rules gets
-    `validate:"..."` inside its struct tag; rule-free fields keep the plain json tag; example IRs emit no
-    validate tags.
-  - Standard-library offline tests cover the numeric parser, schema numeric CHECK, Pydantic ge/le, the
-    go_validate_tag helper + emitted struct tags, and examples-unaffected.
+  - When at least one wired CREATE endpoint's entity has validation rules, go.mod contains
+    `require github.com/go-playground/validator/v10 v10.22.1`.
+  - internal/handlers/validate.go is emitted with `var validate = validator.New()` and a
+    `func validateStruct(v any) (int, string)` returning http.StatusBadRequest / "validation_failed" on
+    error, and importing github.com/go-playground/validator/v10.
+  - Each such CREATE handler calls `validateStruct(m)` AFTER the json decode block and BEFORE the
+    store.Create call, and writes http.Error(w, msg, status) + return on failure.
+  - A rule-free IR (e.g. the existing Go-adapter fixture, minimal-blog, rideshare-favourites) emits NO
+    validator require, NO validate.go, and NO validateStruct call (byte-identical CREATE handler).
+  - An IR whose entities carry rules but which has no wired CREATE endpoint emits NO validate.go / dep
+    (models still carry the R-251 tags).
+  - Standard-library offline tests cover: enforcement emitted for a rules+create IR (go.mod, validate.go,
+    handler call ordering), absent for rule-free, absent for rules-without-create, and examples-unaffected.
 required_gates:
   - impact_analysis
-  - numeric_parser_tests
-  - schema_numeric_check_tests
-  - pydantic_ge_le_tests
-  - go_validate_tag_tests
+  - enforcement_emitted_tests
+  - enforcement_absent_tests
+  - handler_call_ordering_test
   - examples_unaffected_test
   - python_compile_test
   - vendor_import_exclusion
@@ -82,22 +91,14 @@ model_tool_trace:
   configured_model: qwen2.5-coder:14b
   local_calls: 0
   cloud_calls: 0
-  note: Deterministic; no model call, no network, no DB connection. cloud_calls zero.
+  note: Deterministic codegen; no model call, no network, no DB connection. cloud_calls zero.
 completion:
-  implementation_commit: 2060a21
-  verified_at: "2026-09-08T00:00:00+05:30"
-  verification:
-    - "task verify — pass (345 agent-engine tests; 8 new)"
-    - "task security:quick — pass; task env:check — pass"
-    - "demo: schema CHECK (rating >= 0) CHECK (rating <= 5); Pydantic Field(ge=0, le=5); Go validate:\"max=80\" / gte=0,lte=5 / oneof=new used"
-  acceptance_results:
-    - "parse_field_rules reads min/max as raw numeric literals; non-numeric ignored (tests)"
-    - "schema emits numeric CHECK for INT/FLOAT (combined with enum CHECK); strings get no numeric check (tests)"
-    - "Pydantic numeric fields get Field(ge=, le=); go_validate_tag builds max/oneof/gte/lte; struct tags emitted; rule-free fields keep plain json tag (tests)"
-    - "example IRs emit no validate tags / no VARCHAR/CHECK (tests); no go.mod dependency added"
-    - "no DB connection, no network; task verify network-independent"
+  implementation_commit: pending
+  verified_at: null
+  verification: []
+  acceptance_results: []
 blockers: []
 next_action: >-
-  R-251 shipped. Next: wire go-playground enforcement (go.mod dep + validator.Struct on create), or
-  render seed/indexes/validation in the static console.
+  Implement field_validation.go emitter + go.mod dep gating in backend_go, add tests, run gates, update
+  tracker + docs, two commits [R-252], push, verify origin/main == HEAD.
 next_command: task agent-engine:test

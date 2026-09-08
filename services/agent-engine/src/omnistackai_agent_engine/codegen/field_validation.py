@@ -24,6 +24,9 @@ _NUMBER = re.compile(r"^-?\d+(?:\.\d+)?$")
 _NUMERIC_TYPES = frozenset({FieldType.INT, FieldType.FLOAT})
 _STRING_TYPES = frozenset({FieldType.STRING, FieldType.TEXT})
 
+# Generated-project dependency pin (only added when the Go backend enforces validation — R-252).
+VALIDATOR_REQUIRE = "github.com/go-playground/validator/v10 v10.22.1"
+
 
 @dataclass(frozen=True, slots=True)
 class FieldRules:
@@ -71,3 +74,32 @@ def go_validate_tag(field: Field, rules: FieldRules) -> str:
         if rules.maximum is not None:
             parts.append(f"lte={rules.maximum}")
     return ",".join(parts)
+
+
+def go_validate_file() -> str:
+    """The `internal/handlers/validate.go` source that enforces the `validate` struct tags (R-252).
+
+    A single shared validator instance evaluates the go-playground tags the models carry
+    (``max=`` / ``oneof=`` / ``gte=`` / ``lte=``). ``validateStruct`` returns the HTTP status and
+    message to send back — ``msg == ""`` means the payload is valid. The validator dependency lives only
+    in the generated project's go.mod; nothing here runs a validation at generation time.
+    """
+
+    return (
+        "package handlers\n\n"
+        "import (\n"
+        '\t"net/http"\n\n'
+        '\t"github.com/go-playground/validator/v10"\n'
+        ")\n\n"
+        "// validate is the shared request validator, driven by the `validate` struct tags the models\n"
+        "// carry (max=, oneof=, gte=, lte=), so payloads are checked before they reach the store.\n"
+        "var validate = validator.New()\n\n"
+        "// validateStruct validates v against its `validate` struct tags. It returns the HTTP status and\n"
+        '// message to send back (msg == "" means the payload is valid).\n'
+        "func validateStruct(v any) (int, string) {\n"
+        "\tif err := validate.Struct(v); err != nil {\n"
+        '\t\treturn http.StatusBadRequest, "validation_failed"\n'
+        "\t}\n"
+        '\treturn http.StatusOK, ""\n'
+        "}\n"
+    )
