@@ -1,6 +1,6 @@
 # Current Handoff
 
-Task ID: R-272
+Task ID: R-273
 Status: done
 Phase: BASIC/MVP — Founder Stage 0
 Branch: `main` (the only branch; the GitHub default)
@@ -12,28 +12,28 @@ Branch: `main` (the only branch; the GitHub default)
 - Commits use `sanjeetji <sk698166@gmail.com>` as author.
 - User permission is required prior to committing or pushing code.
 
-## Completed (R-272) — Deep-Linking & Entity Lifecycle in Next.js Detail Screens
+## Completed (R-273) — Global Responsive Navigation Shell & Header Navbar in Generated Next.js Web App
 
-- **Query Param Auto-Loading**:
-  - `_detail_screen_page` imports `useSearchParams` and `useEffect`.
-  - Extracts `const queryId = searchParams.get("id");` and pre-populates `idInput` and `selectedId`.
-  - Automatically loads the entity via `use<Entity>(selectedId)` on page mount when arriving from deep links or collection views.
-  - Retains manual ID input search box as fallback when `?id=...` is absent.
-- **Entity Lifecycle Actions in Detail View**:
-  - "Export JSON" action button on the loaded item card: exports formatted record via client-side `Blob` (`application/json`) and dynamic anchor element with `URL.revokeObjectURL` cleanup.
-  - "Edit {name}" action link: navigates to `/{form_screen.id}?id=${selectedId}` when `can_edit` and `form_screen` exist.
-  - "Delete {name}" action button: when `can_delete` is True, prompts confirmation dialog, invokes `useDelete<Entity>()` with loading indicator (`deletingMain`), error banner (`deleteMainError`), and state cleanup (`setSelectedId(null); setIdInput("");`).
-- **Breadcrumbs & Cross-Screen Navigation**:
-  - Breadcrumb header links back to collection screen (`&larr; Back to {plural}`) when a complementary collection screen is detected in the IR.
-  - Falls back to `&larr; Overview` when no collection screen is present.
-- **Collection Screen Linkage**:
-  - In `_collection_screen_page`, detects dedicated `detail_screen` for the entity in `ir.screens`.
-  - Renders a styled "View" link button (`/{detail_screen.id}?id=${(item as any).id}`) in the table row actions cell.
-- **Clean Isolation & Invariance**:
-  - Zero substring collisions with subcollection selection state or controls.
-  - Strict diff invariance maintained across `ir.description` changes.
+- **Navigation Shell Component (`apps/web/components/navbar.tsx`)**:
+  - Emitted as a client component (`"use client";`) importing Next.js `usePathname` from `"next/navigation"`.
+  - Reactive route matching via `isLinkActive(href)` and accessible styling helper `navLinkStyle(active)` applying visual active states (`#eff6ff` background, `#1d4ed8` text, `fontWeight: 600`, `#bfdbfe` border).
+  - App branding with logo initial badge (`ir.name[:1]`) and title linking to `/` (Overview).
+  - "Overview" link to `/`.
+  - Dynamic navigation links for all primary collection and form screens in `ir.screens`.
+  - Exclusion of detail screens (`ScreenType.DETAIL`) from the horizontal top nav bar to maintain focused top-level destinations.
+  - Role pill badges rendered for screens with non-public roles (e.g. `admin`, `member`).
+  - Right-side quick-action CTA button (`+ New {Entity}` / `+ Create`) when a create form screen is defined in the IR.
+  - Empty screens fallback.
+- **RootLayout Integration (`apps/web/app/layout.tsx`)**:
+  - Imports `Navbar` from `../components/navbar` and renders `<Navbar />` inside `<body>` above `{children}`.
+  - RootLayout remains a server component exporting Next.js `Metadata`, ensuring SSR streaming and zero client bundle bloat for the layout shell.
+  - Applies global typography and background tokens (`#f8fafc`, system font stack).
+- **Quality & Diff Invariance**:
+  - 100% offline, zero external npm dependencies, pure React/Next.js client/server separation.
+  - Zero references to `ir.description`, preserving snapshot diff invariance.
 
 ## Preceded by:
+- **R-272**: Deep-Linking & Entity Lifecycle in Next.js Detail Screens.
 - **R-271**: CSV Data Export & Bulk Export in Generated Next.js Collection Screens.
 - **R-270**: Bulk Selection & Batch Deletion in Generated Next.js Collection Screens.
 - **R-269**: Page Size Selector & Contextual Empty State CTAs in Generated Next.js Screens.

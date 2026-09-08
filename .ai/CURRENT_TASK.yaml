@@ -1,26 +1,25 @@
 schema_version: 1
-task_id: R-272
-title: Deep-Linking & Entity Lifecycle in Next.js Detail Screens
+task_id: R-273
+title: Global Responsive Navigation Shell & Header Navbar in Generated Next.js Web App
 status: done
 phase: BASIC/MVP
 founder_stage: 0
 branch: main
 goal: >-
-  Enhance generated Next.js detail screens and connect collection screens for complete lifecycle navigation:
-  - Add query param auto-loading in _detail_screen_page using useSearchParams to parse searchParams.get("id") on mount.
-  - Wire Edit and Delete action controls on the loaded detail card:
-    * "Edit {name}" link navigating to /{form_screen.id}?id=${selectedId} when can_edit and form_screen exist.
-    * "Delete {name}" button invoking useDelete<Entity>() with confirmation prompt and state cleanup when can_delete.
-  - Add single-record "Export JSON" button with client-side Blob download ({name.lower()}_{id}.json).
-  - Add breadcrumb navigation linking back to collection screen (&larr; Back to {plural}).
-  - In _collection_screen_page, detect dedicated detail_screen and render a "View" link in table row action cells.
+  Deliver a global, responsive navigation shell and header navbar for generated Next.js web applications (apps/web):
+  - Emit components/navbar.tsx as a client component ("use client") using Next.js usePathname for route detection.
+  - Render application branding (ir.name) with an avatar logo badge linking to the home overview page (/).
+  - Render navigation links for all collection and form screens in ir.screens, indicating the active route via dynamic path comparison.
+  - Render role badges for screens with non-default roles (e.g. admin, moderator).
+  - Render a prominent + New {Entity} / + Create quick-action CTA button on the right side of the navbar when a create form screen exists in the IR.
+  - Integrate <Navbar /> into app/layout.tsx above {children}, wrapping all pages in a cohesive layout with typography and background tokens.
   - Maintain strict diff invariance across ir.description modifications.
   - Fully offline, 0 network, 0 external dependencies.
 source:
   tracker_sheet: Phase_Roadmap
   brief_sections: [43, 50, 74, 77, 91, 92]
   founder_note: >-
-    Founder requested continuing to next task: R-272 (Deep-Linking & Entity Lifecycle in Next.js Detail Screens).
+    Founder approved implementation plan for Task R-273 (Global Responsive Navigation Shell & Header Navbar in Generated Next.js Web App).
 project_profile:
   repository: platform_modular_monorepo
   service: python_agent_engine
@@ -29,7 +28,7 @@ project_profile:
 complexity: L2
 expected_impact:
   - services/agent-engine/src/omnistackai_agent_engine/codegen/nextjs.py
-  - services/agent-engine/tests/test_detail_screen_lifecycle.py
+  - services/agent-engine/tests/test_navbar_navigation.py
   - docs/CODEGEN.md, docs/PROGRESS.md
   - portable state, changelog, handoff, task doc, tracker evidence
 allowed_paths:
@@ -48,21 +47,25 @@ must_not_do:
   - break existing codegen contracts
   - connect to or run a database; make a network call; put a secret anywhere
 acceptance:
-  - Detail screen parses searchParams.get("id") and initializes state on mount.
-  - Detail screen wires use{name}(selectedId) and loads automatically when queryId is present.
-  - Detail screen renders Edit link when can_edit and form_screen exist.
-  - Detail screen renders Delete button when can_delete is True, with confirmation dialog and state cleanup.
-  - Detail screen renders Export JSON button downloading single-record JSON.
-  - Detail screen renders breadcrumb link back to collection screen when present.
-  - Collection screen table rows render View link navigating to dedicated detail screen when one exists.
-  - Diff invariance maintained across ir.description changes.
-  - 100% offline, Stage 0 verification passes (task verify).
+  - NextjsWebAdapter generates components/navbar.tsx in apps/web.
+  - app/layout.tsx imports and renders <Navbar /> above {children}.
+  - components/navbar.tsx has "use client"; at the top and imports usePathname from "next/navigation".
+  - Header renders brand name (ir.name) and logo badge linking to /.
+  - Header renders "Overview" navigation link pointing to /.
+  - Header renders navigation links for all collection and form screens with correct href (/{screen.id}).
+  - Detail screens (ScreenType.DETAIL) are excluded from horizontal top nav to keep navigation focused.
+  - Active navigation link is visually distinguished based on pathname.
+  - Non-default screen roles render a badge adjacent to the screen link.
+  - Renders a + {Entity} or + Create button linking to the first create form screen when available.
+  - Clean fallback when ir.screens is empty.
+  - Strict diff invariance across ir.description modifications.
+  - Stage 0 verification (task verify), task lint, task security:quick, task doctor, and builder demos pass.
 evidence:
-  verify: "task verify: 646 tests passing in 0.908s"
-  tests: "test_detail_screen_lifecycle.py: 16/16 tests passing"
-  coverage: "16 test cases covering queryId parsing, useEffect auto-load, Edit action, Delete action, single-record JSON export, collection breadcrumb, collection View link, and full project generation"
+  verify: "task verify: 663 tests passing in 0.994s"
+  tests: "test_navbar_navigation.py: 17/17 tests passing"
+  coverage: "17 test cases covering navbar generation, RootLayout import, usePathname route detection, active link styling, brand avatar, collection/form links, detail screen exclusion, role badges, quick create CTA button, empty screens fallback, diff invariance, and full monorepo generation"
 required_gates:
-  - detail_screen_lifecycle_test
+  - navbar_navigation_test
   - task_verify
   - task_lint
   - task_security_quick

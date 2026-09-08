@@ -1,5 +1,28 @@
 # Work Log
 
+## 2026-09-08 — R-273
+
+- Recorded contract in `.ai/CURRENT_TASK.yaml` and `.ai/tasks/R-273.md`.
+- `nextjs.py`:
+  - Implemented `_navbar_component(ir: ApplicationIR) -> str`:
+    * Emitted client component (`"use client";`) with `usePathname` from `"next/navigation"`.
+    * Implemented active route detector `isLinkActive(href)` and visual highlight styling helper `navLinkStyle(active)`.
+    * Rendered app branding with avatar logo badge (first letter of `ir.name`) and title linking to `/`.
+    * Rendered "Overview" link to `/`.
+    * Dynamically rendered screen navigation links for primary collection, form, and generic screens from `ir.screens`, displaying screen title, role pill badges for non-public screens, and active state highlights.
+    * Excluded parameter-dependent `detail` screens from the horizontal nav bar to keep top navigation focused.
+    * Detected first create form screen in `ir.screens` and rendered a prominent `+ New {Entity}` / `+ Create` quick-action CTA button on the right side of the navbar.
+    * Supported empty screens with clean fallback.
+  - Updated `_LAYOUT`:
+    * Imported `Navbar` from `../components/navbar`.
+    * Rendered `<Navbar />` inside `<body>` above `{children}`, wrapping all pages in a cohesive layout with typography and background tokens (`#f8fafc`).
+  - Registered `GeneratedFile("components/navbar.tsx", _navbar_component(ir))` in `NextjsWebAdapter.generate()`.
+  - Maintained strict diff invariance across `ir.description` modifications.
+- Added `services/agent-engine/tests/test_navbar_navigation.py` with 17 comprehensive unit tests.
+- Updated `test_nextjs_adapter.py` to expect `components/navbar.tsx`.
+- `task verify` — 663 tests pass (17 new), 0 failures. `task lint`, `task security:quick`, `task doctor` pass. 0 network calls, 0 cloud model calls.
+- Updated CURRENT_TASK.yaml, tasks/R-273.md, PROJECT_STATE.yaml, PROJECT_STATE.md, CHANGELOG.md, docs/CODEGEN.md, docs/PROGRESS.md.
+
 ## 2026-09-08 — R-272
 
 - Recorded contract in `.ai/CURRENT_TASK.yaml` and `.ai/tasks/R-272.md`.
