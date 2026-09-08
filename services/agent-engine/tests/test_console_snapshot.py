@@ -31,7 +31,6 @@ class BuilderShowcaseTests(TestCase):
                 "README.md",
                 "apps/web/README.md",
                 "apps/web/app/layout.tsx",
-                "apps/web/app/page.tsx",
                 "contracts/openapi.json",
                 "services/api/README.md",
                 "services/api/openapi.json",

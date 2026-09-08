@@ -3017,29 +3017,173 @@ def render_screen_page(screen: Screen, ir: ApplicationIR) -> str:
 
 
 
-def _overview_page(ir: ApplicationIR) -> str:
-    entity_items = "".join(
-        f"        <li>{e.name} ({len(e.fields)} fields)</li>\n" for e in ir.entities
-    ) or "        <li>No entities</li>\n"
-    screen_items = "".join(
-        f'        <li><a href="/{s.id}">{s.id}</a> — {s.role}</li>\n' for s in ir.screens
-    ) or "        <li>No screens</li>\n"
-    return (
-        "export default function HomePage() {\n"
-        "  return (\n"
-        '    <main style={{ padding: 24, maxWidth: 720, margin: "0 auto" }}>\n'
-        f"      <h1>{ir.name}</h1>\n"
-        f"      <p>{ir.description}</p>\n"
-        f"      <p>Platforms: {', '.join(p.value for p in ir.platforms)}</p>\n"
-        "      <h2>Entities</h2>\n"
-        "      <ul>\n" + entity_items + "      </ul>\n"
-        "      <h2>Screens</h2>\n"
-        "      <ul>\n" + screen_items + "      </ul>\n"
-        f"      <p>{len(ir.apis)} API route(s) generated.</p>\n"
-        "    </main>\n"
-        "  );\n"
-        "}\n"
-    )
+def _overview_page(ir: ApplicationIR) -> str:  # noqa: PLR0912
+    """Generate a rich entity-aware dashboard overview page (app/page.tsx).
+
+    The page is a client component so it can call useList hooks for live counts.
+    ir.description is intentionally NOT embedded — it already lives in README.md
+    and its absence preserves byte-for-byte diff invariance across IR description edits.
+    """
+    ops_by_entity = _get_ops_by_entity(ir)
+    escaped_name = _escape_ts(ir.name)
+
+    # Entities with Op.LIST wired — these get live count cards.
+    listable: list[tuple[Entity, str]] = []  # (entity, plural)
+    for entity in ir.entities:
+        if Op.LIST in ops_by_entity.get(entity.name, set()):
+            plural = entity.name if entity.name.endswith("s") else f"{entity.name}s"
+            listable.append((entity, plural))
+
+    # Primary screens (non-detail) for navigation cards.
+    nav_screens: list[Screen] = []
+    form_screens: list[tuple[Screen, Entity | None]] = []
+    for s in ir.screens:
+        intent = _screen_intent(s)
+        if intent == "detail":
+            continue
+        nav_screens.append(s)
+        if intent == "form":
+            entity = _match_entity(s, ir)
+            form_screens.append((s, entity))
+
+    # ── Imports ──────────────────────────────────────────────────────────────
+    lines: list[str] = ['"use client";', ""]
+    if listable or nav_screens:
+        lines.append('import Link from "next/link";')
+    if listable:
+        hook_names = [f"useList{plural}" for _, plural in listable]
+        lines.append(f'import {{ {", ".join(hook_names)} }} from "../lib/hooks";')
+    lines.append("")
+
+    # ── Component open ────────────────────────────────────────────────────────
+    lines.append("export default function HomePage() {")
+
+    # One useList call per listable entity (limit: 1 — we only need the total count).
+    for entity, plural in listable:
+        var = f"{entity.name[0].lower()}{entity.name[1:]}List"
+        lines.append(f'  const {var} = useList{plural}({{ limit: 1 }});')
+
+    lines.append("  return (")
+
+    # ── Page shell ────────────────────────────────────────────────────────────
+    lines.extend([
+        '    <main style={{ minHeight: "100vh", background: "#f8fafc", padding: "32px 24px" }}>',
+        "",
+        "      {/* ── App header ─────────────────────────────────────── */}",
+        '      <section style={{ marginBottom: 40 }}>',
+        f'        <h1 style={{{{ fontSize: 28, fontWeight: 700, color: "#0f172a", margin: "0 0 8px" }}}}>{escaped_name}</h1>',
+        '        <p style={{ color: "#64748b", margin: 0, fontSize: 15 }}>Dashboard overview</p>',
+        "      </section>",
+        "",
+    ])
+
+    # ── Entity count cards ────────────────────────────────────────────────────
+    if listable:
+        lines.extend([
+            "      {/* ── Entity summary cards ───────────────────────────── */}",
+            '      <section style={{ marginBottom: 40 }}>',
+            '        <h2 style={{ fontSize: 18, fontWeight: 600, color: "#1e293b", marginBottom: 16 }}>Entities</h2>',
+            '        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(220px, 1fr))", gap: 16 }}>',
+        ])
+        for entity, plural in listable:
+            var = f"{entity.name[0].lower()}{entity.name[1:]}List"
+            escaped_entity_name = _escape_ts(entity.name)
+            escaped_plural = _escape_ts(plural)
+            lines.extend([
+                "          {/* " + entity.name + " card */}",
+                "          <div style={{",
+                '            background: "#ffffff", borderRadius: 12, padding: "20px 24px",',
+                '            boxShadow: "0 1px 3px rgba(0,0,0,0.08)", border: "1px solid #e2e8f0"',
+                "          }}>",
+                f'            <p style={{{{ fontSize: 13, fontWeight: 600, color: "#64748b", textTransform: "uppercase", letterSpacing: 1, margin: "0 0 8px" }}}}>{escaped_entity_name}</p>',
+                f'            <p style={{{{ fontSize: 32, fontWeight: 700, color: "#0f172a", margin: "0 0 4px" }}}}>',
+                f'              {{{var}.loading ? "…" : {var}.error ? "—" : {var}.total}}',
+                "            </p>",
+                f'            <p style={{{{ fontSize: 13, color: "#94a3b8", margin: 0 }}}}>{escaped_plural}</p>',
+                "          </div>",
+            ])
+        lines.extend([
+            "        </div>",
+            "      </section>",
+            "",
+        ])
+
+    # ── Screen navigation cards ────────────────────────────────────────────────
+    if nav_screens:
+        lines.extend([
+            "      {/* ── Screen navigation ─────────────────────────────── */}",
+            '      <section style={{ marginBottom: 40 }}>',
+            '        <h2 style={{ fontSize: 18, fontWeight: 600, color: "#1e293b", marginBottom: 16 }}>Screens</h2>',
+            '        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(240px, 1fr))", gap: 16 }}>',
+        ])
+        for s in nav_screens:
+            title = _title_case(s.id)
+            intent = _screen_intent(s)
+            intent_label = {"collection": "Collection", "form": "Form", "generic": "Screen"}.get(intent, "Screen")
+            is_public = s.role in ("public", "")
+            escaped_title = _escape_ts(title)
+            escaped_intent_label = _escape_ts(intent_label)
+            lines.extend([
+                "          {/* " + s.id + " */}",
+                f'          <Link href="/{s.id}" style={{{{',
+                '            display: "block", background: "#ffffff", borderRadius: 12,',
+                '            padding: "20px 24px", textDecoration: "none",',
+                '            boxShadow: "0 1px 3px rgba(0,0,0,0.08)", border: "1px solid #e2e8f0"',
+                "          }}>",
+                f'            <p style={{{{ fontSize: 15, fontWeight: 600, color: "#1e293b", margin: "0 0 6px" }}}}>{escaped_title}</p>',
+                f'            <p style={{{{ fontSize: 13, color: "#64748b", margin: 0 }}}}>{escaped_intent_label}',
+            ])
+            if not is_public:
+                escaped_role = _escape_ts(s.role)
+                lines.append(
+                    f'              <span style={{{{ background: "#eff6ff", color: "#1d4ed8", borderRadius: 4,'
+                    f' padding: "2px 6px", fontSize: 11, fontWeight: 600, marginLeft: 8 }}}}>{escaped_role}</span>'
+                )
+            lines.extend([
+                "            </p>",
+                "          </Link>",
+            ])
+        lines.extend([
+            "        </div>",
+            "      </section>",
+            "",
+        ])
+
+    # ── Quick actions ──────────────────────────────────────────────────────────
+    if form_screens:
+        lines.extend([
+            "      {/* ── Quick actions ────────────────────────────────── */}",
+            '      <section>',
+            '        <h2 style={{ fontSize: 18, fontWeight: 600, color: "#1e293b", marginBottom: 16 }}>Quick Actions</h2>',
+            '        <div style={{ display: "flex", flexWrap: "wrap", gap: 12 }}>',
+        ])
+        for s, entity in form_screens:
+            label = f"+ Create {entity.name}" if entity else f"+ {_title_case(s.id)}"
+            escaped_label = _escape_ts(label)
+            lines.extend([
+                f'          <Link href="/{s.id}" style={{{{',
+                '            background: "#2563eb", color: "#ffffff", borderRadius: 8,',
+                '            padding: "10px 20px", textDecoration: "none",',
+                '            fontSize: 14, fontWeight: 600',
+                "          }}>",
+                f'            {escaped_label}',
+                "          </Link>",
+            ])
+        lines.extend([
+            "        </div>",
+            "      </section>",
+            "",
+        ])
+
+    # ── Close ─────────────────────────────────────────────────────────────────
+    lines.extend([
+        "    </main>",
+        "  );",
+        "}",
+        "",
+    ])
+
+    return "\n".join(lines)
 
 
 def _navbar_component(ir: ApplicationIR) -> str:
