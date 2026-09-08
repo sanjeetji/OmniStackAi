@@ -207,7 +207,7 @@ def _api_client_file(ir: ApplicationIR) -> str:
         if wiring is not None and wiring.op is Op.LIST:
             lines.append(
                 f"export async function {fn_name}("
-                f"options?: ApiOptions & {{ params?: {{ limit?: number; offset?: number; sort?: string; order?: \"asc\" | \"desc\" }} }}"
+                f"options?: ApiOptions & {{ params?: {{ limit?: number; offset?: number; sort?: string; order?: \"asc\" | \"desc\"; q?: string }} }}"
                 f"): Promise<{wiring.entity}[]> {{"
             )
             lines.append(f'  return request<{wiring.entity}[]>({url_expr}, {{ method: "GET", ...options }});')
@@ -215,7 +215,7 @@ def _api_client_file(ir: ApplicationIR) -> str:
             lines.append("")
             lines.append(
                 f"export async function {fn_name}WithCount("
-                f"options?: ApiOptions & {{ params?: {{ limit?: number; offset?: number; sort?: string; order?: \"asc\" | \"desc\" }} }}"
+                f"options?: ApiOptions & {{ params?: {{ limit?: number; offset?: number; sort?: string; order?: \"asc\" | \"desc\"; q?: string }} }}"
                 f"): Promise<PaginatedResult<{wiring.entity}[]>> {{"
             )
             lines.append(f'  return requestWithMeta<{wiring.entity}[]>({url_expr}, {{ method: "GET", ...options }});')
@@ -226,7 +226,7 @@ def _api_client_file(ir: ApplicationIR) -> str:
             lines.append(
                 f"export async function {fn_name}("
                 f"{id_p}: string, "
-                f"options?: ApiOptions & {{ params?: {{ limit?: number; offset?: number; sort?: string; order?: \"asc\" | \"desc\" }} }}"
+                f"options?: ApiOptions & {{ params?: {{ limit?: number; offset?: number; sort?: string; order?: \"asc\" | \"desc\"; q?: string }} }}"
                 f"): Promise<{wiring.entity}[]> {{"
             )
             lines.append(f'  return request<{wiring.entity}[]>({url_expr}, {{ method: "GET", ...options }});')
@@ -235,7 +235,7 @@ def _api_client_file(ir: ApplicationIR) -> str:
             lines.append(
                 f"export async function {fn_name}WithCount("
                 f"{id_p}: string, "
-                f"options?: ApiOptions & {{ params?: {{ limit?: number; offset?: number; sort?: string; order?: \"asc\" | \"desc\" }} }}"
+                f"options?: ApiOptions & {{ params?: {{ limit?: number; offset?: number; sort?: string; order?: \"asc\" | \"desc\"; q?: string }} }}"
                 f"): Promise<PaginatedResult<{wiring.entity}[]>> {{"
             )
             lines.append(f'  return requestWithMeta<{wiring.entity}[]>({url_expr}, {{ method: "GET", ...options }});')
@@ -312,6 +312,438 @@ def _api_client_file(ir: ApplicationIR) -> str:
     lines.append("")
 
     return "\n".join(lines)
+
+
+def _hooks_file(ir: ApplicationIR) -> str:
+    """Generate strongly-typed React data-fetching & mutation hooks (lib/hooks.ts)."""
+    lines = [
+        '"use client";',
+        "",
+        "// Generated from the Application IR by OmniStackAI. Do not edit by hand.",
+        "",
+    ]
+    if not ir.entities:
+        lines.append("export {};\n")
+        return "\n".join(lines)
+
+    entity_names = sorted(e.name for e in ir.entities)
+    lines.append('import { useCallback, useEffect, useState, type Dispatch, type SetStateAction } from "react";')
+    lines.append(f'import type {{ {", ".join(entity_names)} }} from "./types";')
+    lines.append('import { api, type ApiOptions } from "./api";')
+    lines.append("")
+    lines.extend([
+        "export interface UseListParams {",
+        "  limit?: number;",
+        "  offset?: number;",
+        "  sort?: string;",
+        '  order?: "asc" | "desc";',
+        "  q?: string;",
+        "}",
+        "",
+        "export interface UseListState<T> {",
+        "  data: T[] | null;",
+        "  total: number;",
+        "  loading: boolean;",
+        "  error: Error | null;",
+        "  page: number;",
+        "  pageSize: number;",
+        "  totalPages: number;",
+        "  params: UseListParams;",
+        "  setParams: Dispatch<SetStateAction<UseListParams>>;",
+        "  setPage: (page: number) => void;",
+        "  setSearch: (q: string) => void;",
+        '  setSort: (sort: string, order?: "asc" | "desc") => void;',
+        "  refetch: () => Promise<void>;",
+        "}",
+        "",
+        "export interface UseDetailState<T> {",
+        "  data: T | null;",
+        "  loading: boolean;",
+        "  error: Error | null;",
+        "  refetch: () => Promise<void>;",
+        "}",
+        "",
+        "export interface UseMutationState<TData, TResult = TData> {",
+        "  loading: boolean;",
+        "  error: Error | null;",
+        "  mutate: (data: TData, options?: ApiOptions) => Promise<TResult>;",
+        "  reset: () => void;",
+        "}",
+        "",
+    ])
+
+    repo_entities = frozenset(e.name for e in ir.entities)
+    fk_by_entity = fk_relations(ir)
+
+    ops_by_entity: dict[str, set[Op]] = {e.name: set() for e in ir.entities}
+    subcollections: list[tuple[str, str, str]] = []
+    seen_subcols: set[tuple[str, str]] = set()
+
+    for api_endpoint in ir.apis:
+        wiring = wire_endpoint(api_endpoint, repo_entities, fk_by_entity)
+        if wiring is not None:
+            ops_by_entity.setdefault(wiring.entity, set()).add(wiring.op)
+            if wiring.op is Op.LIST_BY and wiring.relation:
+                key = (wiring.entity, wiring.relation)
+                if key not in seen_subcols:
+                    seen_subcols.add(key)
+                    subcollections.append((wiring.entity, wiring.relation, wiring.id_param or "id"))
+
+    hook_names: list[str] = []
+
+    for entity in ir.entities:
+        name = entity.name
+        plural = name if name.endswith("s") else f"{name}s"
+        ops = ops_by_entity.get(name, set())
+
+        # 1. useList<Entities>
+        if Op.LIST in ops:
+            hook_name = f"useList{plural}"
+            hook_names.append(hook_name)
+            lines.extend([
+                f"export function {hook_name}(",
+                "  initialParams: UseListParams = {},",
+                "  options?: ApiOptions",
+                f"): UseListState<{name}> {{",
+                "  const [params, setParams] = useState<UseListParams>({",
+                "    limit: 100,",
+                "    offset: 0,",
+                '    sort: "id",',
+                '    order: "asc",',
+                "    ...initialParams,",
+                "  });",
+                f"  const [data, setData] = useState<{name}[] | null>(null);",
+                "  const [total, setTotal] = useState<number>(0);",
+                "  const [loading, setLoading] = useState<boolean>(true);",
+                "  const [error, setError] = useState<Error | null>(null);",
+                "",
+                "  const limit = params.limit ?? 100;",
+                "  const offset = params.offset ?? 0;",
+                "  const page = Math.floor(offset / limit) + 1;",
+                "  const pageSize = limit;",
+                "  const totalPages = Math.max(1, Math.ceil(total / limit));",
+                "",
+                "  const setPage = useCallback((newPage: number) => {",
+                "    const clampedPage = Math.max(1, newPage);",
+                "    setParams((prev) => ({",
+                "      ...prev,",
+                "      offset: (clampedPage - 1) * (prev.limit ?? 100),",
+                "    }));",
+                "  }, []);",
+                "",
+                "  const setSearch = useCallback((q: string) => {",
+                "    setParams((prev) => ({",
+                "      ...prev,",
+                "      q,",
+                "      offset: 0,",
+                "    }));",
+                "  }, []);",
+                "",
+                '  const setSort = useCallback((sort: string, order?: "asc" | "desc") => {',
+                "    setParams((prev) => ({",
+                "      ...prev,",
+                "      sort,",
+                '      order: order ?? (prev.sort === sort && prev.order === "asc" ? "desc" : "asc"),',
+                "      offset: 0,",
+                "    }));",
+                "  }, []);",
+                "",
+                "  const refetch = useCallback(async () => {",
+                "    setLoading(true);",
+                "    setError(null);",
+                "    try {",
+                f"      const res = await api.list{plural}WithCount({{ params, ...options }});",
+                "      setData(res.data);",
+                "      setTotal(res.total);",
+                "    } catch (err) {",
+                "      setError(err instanceof Error ? err : new Error(String(err)));",
+                "    } finally {",
+                "      setLoading(false);",
+                "    }",
+                "  }, [params, options]);",
+                "",
+                "  useEffect(() => {",
+                "    refetch();",
+                "  }, [refetch]);",
+                "",
+                "  return {",
+                "    data,",
+                "    total,",
+                "    loading,",
+                "    error,",
+                "    page,",
+                "    pageSize,",
+                "    totalPages,",
+                "    params,",
+                "    setParams,",
+                "    setPage,",
+                "    setSearch,",
+                "    setSort,",
+                "    refetch,",
+                "  };",
+                "}",
+                "",
+            ])
+
+        # 2. use<Entity>
+        if Op.GET in ops:
+            hook_name = f"use{name}"
+            hook_names.append(hook_name)
+            lines.extend([
+                f"export function {hook_name}(",
+                "  id: string | null | undefined,",
+                "  options?: ApiOptions",
+                f"): UseDetailState<{name}> {{",
+                f"  const [data, setData] = useState<{name} | null>(null);",
+                "  const [loading, setLoading] = useState<boolean>(Boolean(id));",
+                "  const [error, setError] = useState<Error | null>(null);",
+                "",
+                "  const refetch = useCallback(async () => {",
+                "    if (!id) {",
+                "      setData(null);",
+                "      setLoading(false);",
+                "      return;",
+                "    }",
+                "    setLoading(true);",
+                "    setError(null);",
+                "    try {",
+                f"      const item = await api.get{name}(id, options);",
+                "      setData(item);",
+                "    } catch (err) {",
+                "      setError(err instanceof Error ? err : new Error(String(err)));",
+                "    } finally {",
+                "      setLoading(false);",
+                "    }",
+                "  }, [id, options]);",
+                "",
+                "  useEffect(() => {",
+                "    refetch();",
+                "  }, [refetch]);",
+                "",
+                "  return { data, loading, error, refetch };",
+                "}",
+                "",
+            ])
+
+        # 3. useCreate<Entity>
+        if Op.CREATE in ops:
+            hook_name = f"useCreate{name}"
+            hook_names.append(hook_name)
+            lines.extend([
+                f"export function {hook_name}() {{",
+                "  const [loading, setLoading] = useState<boolean>(false);",
+                "  const [error, setError] = useState<Error | null>(null);",
+                "",
+                "  const create = useCallback(",
+                f"    async (data: Partial<{name}>, options?: ApiOptions): Promise<{name}> => {{",
+                "      setLoading(true);",
+                "      setError(null);",
+                "      try {",
+                f"        return await api.create{name}(data, options);",
+                "      } catch (err) {",
+                "        const e = err instanceof Error ? err : new Error(String(err));",
+                "        setError(e);",
+                "        throw e;",
+                "      } finally {",
+                "        setLoading(false);",
+                "      }",
+                "    },",
+                "    []",
+                "  );",
+                "",
+                "  const reset = useCallback(() => {",
+                "    setError(null);",
+                "    setLoading(false);",
+                "  }, []);",
+                "",
+                "  return { create, mutate: create, loading, error, reset };",
+                "}",
+                "",
+            ])
+
+        # 4. useUpdate<Entity>
+        if Op.UPDATE in ops:
+            hook_name = f"useUpdate{name}"
+            hook_names.append(hook_name)
+            lines.extend([
+                f"export function {hook_name}() {{",
+                "  const [loading, setLoading] = useState<boolean>(false);",
+                "  const [error, setError] = useState<Error | null>(null);",
+                "",
+                "  const update = useCallback(",
+                f"    async (id: string, data: Partial<{name}>, options?: ApiOptions): Promise<{name}> => {{",
+                "      setLoading(true);",
+                "      setError(null);",
+                "      try {",
+                f"        return await api.update{name}(id, data, options);",
+                "      } catch (err) {",
+                "        const e = err instanceof Error ? err : new Error(String(err));",
+                "        setError(e);",
+                "        throw e;",
+                "      } finally {",
+                "        setLoading(false);",
+                "      }",
+                "    },",
+                "    []",
+                "  );",
+                "",
+                "  const reset = useCallback(() => {",
+                "    setError(null);",
+                "    setLoading(false);",
+                "  }, []);",
+                "",
+                "  return { update, mutate: update, loading, error, reset };",
+                "}",
+                "",
+            ])
+
+        # 5. useDelete<Entity>
+        if Op.DELETE in ops:
+            hook_name = f"useDelete{name}"
+            hook_names.append(hook_name)
+            lines.extend([
+                f"export function {hook_name}() {{",
+                "  const [loading, setLoading] = useState<boolean>(false);",
+                "  const [error, setError] = useState<Error | null>(null);",
+                "",
+                "  const remove = useCallback(",
+                "    async (id: string, options?: ApiOptions): Promise<void> => {",
+                "      setLoading(true);",
+                "      setError(null);",
+                "      try {",
+                f"        await api.delete{name}(id, options);",
+                "      } catch (err) {",
+                "        const e = err instanceof Error ? err : new Error(String(err));",
+                "        setError(e);",
+                "        throw e;",
+                "      } finally {",
+                "        setLoading(false);",
+                "      }",
+                "    },",
+                "    []",
+                "  );",
+                "",
+                "  const reset = useCallback(() => {",
+                "    setError(null);",
+                "    setLoading(false);",
+                "  }, []);",
+                "",
+                "  return { remove, mutate: remove, loading, error, reset };",
+                "}",
+                "",
+            ])
+
+    # 6. Subcollections
+    for child_entity, relation, id_p in subcollections:
+        plural = child_entity if child_entity.endswith("s") else f"{child_entity}s"
+        rel_pascal = _pascal(relation)
+        hook_name = f"useList{plural}By{rel_pascal}"
+        hook_names.append(hook_name)
+        lines.extend([
+            f"export function {hook_name}(",
+            f"  {id_p}: string | null | undefined,",
+            "  initialParams: UseListParams = {},",
+            "  options?: ApiOptions",
+            f"): UseListState<{child_entity}> {{",
+            "  const [params, setParams] = useState<UseListParams>({",
+            "    limit: 100,",
+            "    offset: 0,",
+            '    sort: "id",',
+            '    order: "asc",',
+            "    ...initialParams,",
+            "  });",
+            f"  const [data, setData] = useState<{child_entity}[] | null>(null);",
+            "  const [total, setTotal] = useState<number>(0);",
+            f"  const [loading, setLoading] = useState<boolean>(Boolean({id_p}));",
+            "  const [error, setError] = useState<Error | null>(null);",
+            "",
+            "  const limit = params.limit ?? 100;",
+            "  const offset = params.offset ?? 0;",
+            "  const page = Math.floor(offset / limit) + 1;",
+            "  const pageSize = limit;",
+            "  const totalPages = Math.max(1, Math.ceil(total / limit));",
+            "",
+            "  const setPage = useCallback((newPage: number) => {",
+            "    const clampedPage = Math.max(1, newPage);",
+            "    setParams((prev) => ({",
+            "      ...prev,",
+            "      offset: (clampedPage - 1) * (prev.limit ?? 100),",
+            "    }));",
+            "  }, []);",
+            "",
+            "  const setSearch = useCallback((q: string) => {",
+            "    setParams((prev) => ({",
+            "      ...prev,",
+            "      q,",
+            "      offset: 0,",
+            "    }));",
+            "  }, []);",
+            "",
+            '  const setSort = useCallback((sort: string, order?: "asc" | "desc") => {',
+            "    setParams((prev) => ({",
+            "      ...prev,",
+            "      sort,",
+            '      order: order ?? (prev.sort === sort && prev.order === "asc" ? "desc" : "asc"),',
+            "      offset: 0,",
+            "    }));",
+            "  }, []);",
+            "",
+            "  const refetch = useCallback(async () => {",
+            f"    if (!{id_p}) {{",
+            "      setData(null);",
+            "      setTotal(0);",
+            "      setLoading(false);",
+            "      return;",
+            "    }",
+            "    setLoading(true);",
+            "    setError(null);",
+            "    try {",
+            f"      const res = await api.list{plural}By{rel_pascal}WithCount({id_p}, {{ params, ...options }});",
+            "      setData(res.data);",
+            "      setTotal(res.total);",
+            "    } catch (err) {",
+            "      setError(err instanceof Error ? err : new Error(String(err)));",
+            "    } finally {",
+            "      setLoading(false);",
+            "    }",
+            f"  }}, [{id_p}, params, options]);",
+            "",
+            "  useEffect(() => {",
+            "    refetch();",
+            "  }, [refetch]);",
+            "",
+            "  return {",
+            "    data,",
+            "    total,",
+            "    loading,",
+            "    error,",
+            "    page,",
+            "    pageSize,",
+            "    totalPages,",
+            "    params,",
+            "    setParams,",
+            "    setPage,",
+            "    setSearch,",
+            "    setSort,",
+            "    refetch,",
+            "  };",
+            "}",
+            "",
+        ])
+
+    if hook_names:
+        lines.append("export const hooks = {")
+        for h in hook_names:
+            lines.append(f"  {h},")
+        lines.append("};")
+        lines.append("")
+
+    return "\n".join(lines)
+
+
+def render_hooks(ir: ApplicationIR) -> str:
+    """Public generator for Next.js React hooks (lib/hooks.ts)."""
+    return _hooks_file(ir)
 
 
 def _route_file(apis: list[ApiEndpoint]) -> str:
@@ -453,6 +885,7 @@ class NextjsWebAdapter:
             GeneratedFile("app/page.tsx", _overview_page(ir)),
             GeneratedFile("lib/types.ts", _types_file(ir)),
             GeneratedFile("lib/api.ts", _api_client_file(ir)),
+            GeneratedFile("lib/hooks.ts", _hooks_file(ir)),
         ]
 
         for screen in ir.screens:

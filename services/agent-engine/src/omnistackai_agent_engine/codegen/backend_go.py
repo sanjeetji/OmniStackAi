@@ -17,6 +17,7 @@ from .field_validation import VALIDATOR_REQUIRE, go_validate_file, go_validate_t
 from .data_access import PGX_REQUIRE, go_data_access_files
 from .errors import GenerationError
 from .files import GeneratedFile, GeneratedProject
+from .openapi import render_openapi_json
 from .route_wiring import Op, fk_relations, wire_endpoint
 from .schema_sql import render_postgres_schema
 from .seed_sql import render_postgres_seed
@@ -145,6 +146,9 @@ def _handlers_shared_file() -> str:
         '\t\torder = "asc"\n'
         "\t}\n"
         "\treturn sort, order\n"
+        "}\n\n"
+        "func parseSearch(r *http.Request) string {\n"
+        '\treturn strings.TrimSpace(r.URL.Query().Get("q"))\n'
         "}\n"
     )
 
@@ -209,9 +213,10 @@ def _handlers_file_wired(
         elif wiring.op is Op.LIST:
             lines.append("\tlimit, offset := parsePagination(r)")
             lines.append("\tsort, order := parseSort(r)")
-            lines.append(f"\ttotal, err := store.Count{wiring.entity}(r.Context(), h.DB)")
+            lines.append("\tq := parseSearch(r)")
+            lines.append(f"\ttotal, err := store.Count{wiring.entity}(r.Context(), h.DB, q)")
             lines.append("\tif err != nil {\n\t\thttp.Error(w, err.Error(), http.StatusInternalServerError)\n\t\treturn\n\t}")
-            lines.append(f"\titems, err := store.List{wiring.entity}(r.Context(), h.DB, limit, offset, sort, order)")
+            lines.append(f"\titems, err := store.List{wiring.entity}(r.Context(), h.DB, limit, offset, sort, order, q)")
             lines.append("\tif err != nil {\n\t\thttp.Error(w, err.Error(), http.StatusInternalServerError)\n\t\treturn\n\t}")
             lines.append('\tw.Header().Set("X-Total-Count", strconv.Itoa(total))')
             lines.append("\twriteJSON(w, http.StatusOK, items)")
@@ -219,9 +224,10 @@ def _handlers_file_wired(
             rel_pascal = _pascal(wiring.relation)
             lines.append("\tlimit, offset := parsePagination(r)")
             lines.append("\tsort, order := parseSort(r)")
-            lines.append(f'\ttotal, err := store.Count{wiring.entity}By{rel_pascal}(r.Context(), h.DB, r.PathValue("{wiring.id_param}"))')
+            lines.append("\tq := parseSearch(r)")
+            lines.append(f'\ttotal, err := store.Count{wiring.entity}By{rel_pascal}(r.Context(), h.DB, r.PathValue("{wiring.id_param}"), q)')
             lines.append("\tif err != nil {\n\t\thttp.Error(w, err.Error(), http.StatusInternalServerError)\n\t\treturn\n\t}")
-            lines.append(f'\titems, err := store.List{wiring.entity}By{rel_pascal}(r.Context(), h.DB, r.PathValue("{wiring.id_param}"), limit, offset, sort, order)')
+            lines.append(f'\titems, err := store.List{wiring.entity}By{rel_pascal}(r.Context(), h.DB, r.PathValue("{wiring.id_param}"), limit, offset, sort, order, q)')
             lines.append("\tif err != nil {\n\t\thttp.Error(w, err.Error(), http.StatusInternalServerError)\n\t\treturn\n\t}")
             lines.append('\tw.Header().Set("X-Total-Count", strconv.Itoa(total))')
             lines.append("\twriteJSON(w, http.StatusOK, items)")
@@ -399,5 +405,8 @@ class GoBackendAdapter:
             seed = render_postgres_seed(ir)
             if seed:
                 files.append(GeneratedFile("migrations/0002_seed.sql", seed))
+
+        if ir.apis:
+            files.append(GeneratedFile("openapi.json", render_openapi_json(ir)))
 
         return GeneratedProject(self.target.value, tuple(files))

@@ -56,8 +56,8 @@ class GoSortingHandlerTests(TestCase):
 
     def test_handlers_parse_sort_and_pass_to_store(self) -> None:
         self.assertIn("sort, order := parseSort(r)", self.posts_handler)
-        self.assertIn("store.ListPost(r.Context(), h.DB, limit, offset, sort, order)", self.posts_handler)
-        self.assertIn('store.ListCommentByPost(r.Context(), h.DB, r.PathValue("postId"), limit, offset, sort, order)', self.posts_handler)
+        self.assertIn("store.ListPost(r.Context(), h.DB, limit, offset, sort, order, q)", self.posts_handler)
+        self.assertIn('store.ListCommentByPost(r.Context(), h.DB, r.PathValue("postId"), limit, offset, sort, order, q)', self.posts_handler)
 
 
 class PythonSortingRepositoryTests(TestCase):
@@ -77,7 +77,8 @@ class PythonSortingRepositoryTests(TestCase):
     def test_subcollection_repository_whitelists_sort_and_order(self) -> None:
         self.assertIn('sort_col = sort if sort in ALLOWED_SORT_FIELDS else "id"', self.comment_repo)
         self.assertIn('sort_dir = "DESC" if order.lower() == "desc" else "ASC"', self.comment_repo)
-        self.assertIn('WHERE post_id = %s ORDER BY {sort_col} {sort_dir} LIMIT %s OFFSET %s', self.comment_repo)
+        self.assertIn('WHERE post_id = %s', self.comment_repo)
+        self.assertIn('ORDER BY {sort_col} {sort_dir} LIMIT %s OFFSET %s', self.comment_repo)
 
 
 class PythonSortingRouterTests(TestCase):
@@ -86,22 +87,22 @@ class PythonSortingRouterTests(TestCase):
         self.posts_router = self.project.get("app/routers/posts.py").content
 
     def test_router_declares_sort_and_order_query_parameters(self) -> None:
-        self.assertIn('async def get_posts(response: Response, limit: int = 100, offset: int = 0, sort: str = "id", order: str = "asc") -> list[dict]:', self.posts_router)
-        self.assertIn("return await post.list_post(limit=limit, offset=offset, sort=sort, order=order)", self.posts_router)
+        self.assertIn('async def get_posts(response: Response, limit: int = 100, offset: int = 0, sort: str = "id", order: str = "asc", q: str | None = None) -> list[dict]:', self.posts_router)
+        self.assertIn("return await post.list_post(limit=limit, offset=offset, sort=sort, order=order, q=q)", self.posts_router)
 
     def test_subcollection_router_passes_sort_and_order(self) -> None:
-        self.assertIn('async def get_posts_postid_comments(postId: str, response: Response, limit: int = 100, offset: int = 0, sort: str = "id", order: str = "asc") -> list[dict]:', self.posts_router)
-        self.assertIn("return await comment.list_comment_by_post(postId, limit=limit, offset=offset, sort=sort, order=order)", self.posts_router)
+        self.assertIn('async def get_posts_postid_comments(postId: str, response: Response, limit: int = 100, offset: int = 0, sort: str = "id", order: str = "asc", q: str | None = None) -> list[dict]:', self.posts_router)
+        self.assertIn("return await comment.list_comment_by_post(postId, limit=limit, offset=offset, sort=sort, order=order, q=q)", self.posts_router)
 
 
 class NextJsSortingClientTests(TestCase):
     def test_list_method_includes_sort_and_order_types(self) -> None:
         project = NextjsWebAdapter().generate(example_ir("rideshare-favourites"))
         api_ts = project.get("lib/api.ts").content
-        self.assertIn('options?: ApiOptions & { params?: { limit?: number; offset?: number; sort?: string; order?: "asc" | "desc" } }', api_ts)
+        self.assertIn('options?: ApiOptions & { params?: { limit?: number; offset?: number; sort?: string; order?: "asc" | "desc"; q?: string } }', api_ts)
 
     def test_subcollection_list_method_includes_sort_and_order_types(self) -> None:
         project = NextjsWebAdapter().generate(example_ir("minimal-blog"))
         api_ts = project.get("lib/api.ts").content
         self.assertIn("export async function listCommentsByPost(postId: string,", api_ts)
-        self.assertIn('options?: ApiOptions & { params?: { limit?: number; offset?: number; sort?: string; order?: "asc" | "desc" } }', api_ts)
+        self.assertIn('options?: ApiOptions & { params?: { limit?: number; offset?: number; sort?: string; order?: "asc" | "desc"; q?: string } }', api_ts)

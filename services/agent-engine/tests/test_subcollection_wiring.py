@@ -52,18 +52,18 @@ class FilteredRepositoryEmissionTests(TestCase):
 
     def test_go_store_has_filtered_list(self) -> None:
         content = GoBackendAdapter().generate(example_ir("minimal-blog")).get("internal/store/comment.go").content
-        self.assertIn("func ListCommentByPost(ctx context.Context, db *sql.DB, postID string, limit, offset int, sort, order string)", content)
+        self.assertIn("func ListCommentByPost(ctx context.Context, db *sql.DB, postID string, limit, offset int, sort, order, q string)", content)
         self.assertIn("WHERE post_id = $1", content)
 
 
 class SubcollectionWiringTests(TestCase):
     def test_python_router_calls_filtered_list(self) -> None:
         posts = PythonBackendAdapter().generate(example_ir("minimal-blog")).get("app/routers/posts.py").content
-        self.assertIn("await comment.list_comment_by_post(postId, limit=limit, offset=offset, sort=sort, order=order)", posts)
+        self.assertIn("await comment.list_comment_by_post(postId, limit=limit, offset=offset, sort=sort, order=order, q=q)", posts)
 
     def test_go_handler_calls_filtered_store(self) -> None:
         handlers = GoBackendAdapter().generate(example_ir("minimal-blog")).get("internal/handlers/posts.go").content
-        self.assertIn('store.ListCommentByPost(r.Context(), h.DB, r.PathValue("postId"), limit, offset, sort, order)', handlers)
+        self.assertIn('store.ListCommentByPost(r.Context(), h.DB, r.PathValue("postId"), limit, offset, sort, order, q)', handlers)
 
 
 class ValueParameterizationTests(TestCase):

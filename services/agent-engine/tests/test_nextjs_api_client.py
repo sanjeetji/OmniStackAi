@@ -86,7 +86,7 @@ class NextjsApiClientTests(TestCase):
     def test_crud_endpoints_typed(self) -> None:
         # LIST drivers with pagination params
         self.assertIn("export async function listDrivers(", self.api_ts)
-        self.assertIn('options?: ApiOptions & { params?: { limit?: number; offset?: number; sort?: string; order?: "asc" | "desc" } }', self.api_ts)
+        self.assertIn('options?: ApiOptions & { params?: { limit?: number; offset?: number; sort?: string; order?: "asc" | "desc"; q?: string } }', self.api_ts)
         self.assertIn("Promise<Driver[]>", self.api_ts)
 
         # GET driver by id
@@ -111,7 +111,7 @@ class NextjsApiClientTests(TestCase):
     def test_subcollection_list_by_typed(self) -> None:
         # GET /companies/{companyId}/drivers -> listDriversByCompany
         self.assertIn("export async function listDriversByCompany(companyId: string,", self.api_ts)
-        self.assertIn('options?: ApiOptions & { params?: { limit?: number; offset?: number; sort?: string; order?: "asc" | "desc" } }', self.api_ts)
+        self.assertIn('options?: ApiOptions & { params?: { limit?: number; offset?: number; sort?: string; order?: "asc" | "desc"; q?: string } }', self.api_ts)
         self.assertIn("Promise<Driver[]>", self.api_ts)
         self.assertIn("`/companies/${encodeURIComponent(companyId)}/drivers`", self.api_ts)
 

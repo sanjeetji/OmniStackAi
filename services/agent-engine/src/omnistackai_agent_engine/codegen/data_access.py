@@ -10,7 +10,7 @@ from __future__ import annotations
 
 import re
 
-from ..application_ir import ApplicationIR, Entity, RelationKind
+from ..application_ir import ApplicationIR, Entity, FieldType, RelationKind
 from .schema_sql import table_name
 
 # Generated-project dependency pins (only added when the data-access layer is emitted).
@@ -30,6 +30,10 @@ def _insert_columns(entity: Entity) -> list[str]:
 
 def _fk_relation_names(entity: Entity) -> list[str]:
     return [relation.name for relation in entity.relations if relation.kind in _FK_KINDS]
+
+
+def _searchable_fields(entity: Entity) -> list[str]:
+    return [field.name for field in entity.fields if field.type in (FieldType.STRING, FieldType.TEXT)]
 
 
 # --------------------------------------------------------------------------- Python (FastAPI)
@@ -69,6 +73,34 @@ def _python_repository(entity: Entity) -> str:
             "    values: list = []\n"
         )
     cols = [field.name for field in entity.fields]
+    searchable = _searchable_fields(entity)
+
+    if searchable:
+        search_or = " OR ".join(f"{f} ILIKE %s" for f in searchable)
+        list_body = (
+            '        if q:\n'
+            '            pattern = f"%{q}%"\n'
+            f'            sql = f"SELECT * FROM {{TABLE}} WHERE ({search_or}) ORDER BY {{sort_col}} {{sort_dir}} LIMIT %s OFFSET %s"\n'
+            f'            await cur.execute(sql, (*([pattern] * {len(searchable)}), limit, offset))\n'
+            '        else:\n'
+            '            await cur.execute(f"SELECT * FROM {TABLE} ORDER BY {sort_col} {sort_dir} LIMIT %s OFFSET %s", (limit, offset))\n'
+        )
+        count_body = (
+            '        if q:\n'
+            '            pattern = f"%{q}%"\n'
+            f'            sql = f"SELECT COUNT(*) AS count FROM {{TABLE}} WHERE ({search_or})"\n'
+            f'            await cur.execute(sql, tuple([pattern] * {len(searchable)}))\n'
+            '        else:\n'
+            '            await cur.execute(f"SELECT COUNT(*) AS count FROM {TABLE}")\n'
+        )
+    else:
+        list_body = (
+            '        await cur.execute(f"SELECT * FROM {TABLE} ORDER BY {sort_col} {sort_dir} LIMIT %s OFFSET %s", (limit, offset))\n'
+        )
+        count_body = (
+            '        await cur.execute(f"SELECT COUNT(*) AS count FROM {TABLE}")\n'
+        )
+
     return (
         f'"""Data access for {entity.name} (table "{table}"). '
         'Values are parameterized; identifiers are fixed."""\n'
@@ -77,11 +109,11 @@ def _python_repository(entity: Entity) -> str:
         "from app.db import connect\n\n"
         f'TABLE = "{table}"\n'
         f"ALLOWED_SORT_FIELDS = {cols!r}\n\n\n"
-        f'async def list_{table}(limit: int = 100, offset: int = 0, sort: str = "id", order: str = "asc") -> list[dict[str, Any]]:\n'
+        f'async def list_{table}(limit: int = 100, offset: int = 0, sort: str = "id", order: str = "asc", q: str | None = None) -> list[dict[str, Any]]:\n'
         '    sort_col = sort if sort in ALLOWED_SORT_FIELDS else "id"\n'
         '    sort_dir = "DESC" if order.lower() == "desc" else "ASC"\n'
         "    async with await connect() as conn, conn.cursor() as cur:\n"
-        '        await cur.execute(f"SELECT * FROM {TABLE} ORDER BY {sort_col} {sort_dir} LIMIT %s OFFSET %s", (limit, offset))\n'
+        f"{list_body}"
         "        return await cur.fetchall()\n\n\n"
         f"async def get_{table}(id: str) -> dict[str, Any] | None:\n"
         "    async with await connect() as conn, conn.cursor() as cur:\n"
@@ -96,9 +128,9 @@ def _python_repository(entity: Entity) -> str:
         "    async with await connect() as conn, conn.cursor() as cur:\n"
         '        await cur.execute(f"DELETE FROM {TABLE} WHERE id = %s", (id,))\n'
         "        return cur.rowcount > 0\n\n\n"
-        f"async def count_{table}() -> int:\n"
+        f"async def count_{table}(q: str | None = None) -> int:\n"
         "    async with await connect() as conn, conn.cursor() as cur:\n"
-        '        await cur.execute(f"SELECT COUNT(*) AS count FROM {TABLE}")\n'
+        f"{count_body}"
         "        row = await cur.fetchone()\n"
         "        return int(row[\"count\"]) if row else 0\n"
         + _python_update(entity, table)
@@ -132,21 +164,47 @@ def _python_update(entity: Entity, table: str) -> str:
 
 
 def _python_filtered_lists(entity: Entity, table: str, cols: list[str] | None = None) -> str:
+    searchable = _searchable_fields(entity)
     parts = []
     for relation in _fk_relation_names(entity):
+        if searchable:
+            search_or = " OR ".join(f"{f} ILIKE %s" for f in searchable)
+            list_exec = (
+                '        if q:\n'
+                '            pattern = f"%{q}%"\n'
+                f'            sql = f"SELECT * FROM {{TABLE}} WHERE {relation}_id = %s AND ({search_or}) ORDER BY {{sort_col}} {{sort_dir}} LIMIT %s OFFSET %s"\n'
+                f'            await cur.execute(sql, ({relation}_id, *([pattern] * {len(searchable)}), limit, offset))\n'
+                '        else:\n'
+                f'            await cur.execute(f"SELECT * FROM {{TABLE}} WHERE {relation}_id = %s ORDER BY {{sort_col}} {{sort_dir}} LIMIT %s OFFSET %s", ({relation}_id, limit, offset))\n'
+            )
+            count_exec = (
+                '        if q:\n'
+                '            pattern = f"%{q}%"\n'
+                f'            sql = f"SELECT COUNT(*) AS count FROM {{TABLE}} WHERE {relation}_id = %s AND ({search_or})"\n'
+                f'            await cur.execute(sql, ({relation}_id, *([pattern] * {len(searchable)})))\n'
+                '        else:\n'
+                f'            await cur.execute(f"SELECT COUNT(*) AS count FROM {{TABLE}} WHERE {relation}_id = %s", ({relation}_id,))\n'
+            )
+        else:
+            list_exec = (
+                f'        await cur.execute(f"SELECT * FROM {{TABLE}} WHERE {relation}_id = %s ORDER BY {{sort_col}} {{sort_dir}} LIMIT %s OFFSET %s", ({relation}_id, limit, offset))\n'
+            )
+            count_exec = (
+                f'        await cur.execute(f"SELECT COUNT(*) AS count FROM {{TABLE}} WHERE {relation}_id = %s", ({relation}_id,))\n'
+            )
         parts.append(
             "\n\n"
-            f'async def list_{table}_by_{relation}({relation}_id: str, limit: int = 100, offset: int = 0, sort: str = "id", order: str = "asc") -> list[dict[str, Any]]:\n'
+            f'async def list_{table}_by_{relation}({relation}_id: str, limit: int = 100, offset: int = 0, sort: str = "id", order: str = "asc", q: str | None = None) -> list[dict[str, Any]]:\n'
             '    sort_col = sort if sort in ALLOWED_SORT_FIELDS else "id"\n'
             '    sort_dir = "DESC" if order.lower() == "desc" else "ASC"\n'
             "    async with await connect() as conn, conn.cursor() as cur:\n"
-            f'        await cur.execute(f"SELECT * FROM {{TABLE}} WHERE {relation}_id = %s ORDER BY {{sort_col}} {{sort_dir}} LIMIT %s OFFSET %s", ({relation}_id, limit, offset))\n'
+            f"{list_exec}"
             "        return await cur.fetchall()\n\n\n"
-            f"async def count_{table}_by_{relation}({relation}_id: str) -> int:\n"
+            f"async def count_{table}_by_{relation}({relation}_id: str, q: str | None = None) -> int:\n"
             "    async with await connect() as conn, conn.cursor() as cur:\n"
-            f'        await cur.execute(f"SELECT COUNT(*) AS count FROM {{TABLE}} WHERE {relation}_id = %s", ({relation}_id,))\n'
+            f"{count_exec}"
             "        row = await cur.fetchone()\n"
-            "        return int(row[\"count\"]) if row else 0\n"
+            '        return int(row["count"]) if row else 0\n'
         )
     return "".join(parts)
 
@@ -213,6 +271,40 @@ def _go_entity_store(entity: Entity, slug: str) -> str:
         create_sql = f"`INSERT INTO {table} DEFAULT VALUES RETURNING id`"
 
     sort_block = _go_sort_whitelist_block(cols)
+    searchable = _searchable_fields(entity)
+
+    if searchable:
+        search_or = " OR ".join(f"{f} ILIKE $1" for f in searchable)
+        go_list_query = (
+            f'\tvar rows *sql.Rows\n'
+            f'\tvar err error\n'
+            f'\tif q != "" {{\n'
+            f'\t\tquery := fmt.Sprintf("SELECT {col_list} FROM {table} WHERE ({search_or}) ORDER BY %s %s LIMIT $2 OFFSET $3", col, dir)\n'
+            f'\t\trows, err = db.QueryContext(ctx, query, "%"+q+"%", limit, offset)\n'
+            f'\t}} else {{\n'
+            f'\t\tquery := fmt.Sprintf("SELECT {col_list} FROM {table} ORDER BY %s %s LIMIT $1 OFFSET $2", col, dir)\n'
+            f'\t\trows, err = db.QueryContext(ctx, query, limit, offset)\n'
+            f'\t}}\n'
+        )
+        go_count_query = (
+            f'\tvar count int\n'
+            f'\tvar err error\n'
+            f'\tif q != "" {{\n'
+            f'\t\tquery := `SELECT COUNT(*) FROM {table} WHERE ({search_or})`\n'
+            f'\t\terr = db.QueryRowContext(ctx, query, "%"+q+"%").Scan(&count)\n'
+            f'\t}} else {{\n'
+            f'\t\terr = db.QueryRowContext(ctx, `SELECT COUNT(*) FROM {table}`).Scan(&count)\n'
+            f'\t}}\n'
+        )
+    else:
+        go_list_query = (
+            f'\tquery := fmt.Sprintf("SELECT {col_list} FROM {table} ORDER BY %s %s LIMIT $1 OFFSET $2", col, dir)\n'
+            f'\trows, err := db.QueryContext(ctx, query, limit, offset)\n'
+        )
+        go_count_query = (
+            f'\tvar count int\n'
+            f'\terr := db.QueryRowContext(ctx, `SELECT COUNT(*) FROM {table}`).Scan(&count)\n'
+        )
 
     return (
         "package store\n\n"
@@ -223,10 +315,9 @@ def _go_entity_store(entity: Entity, slug: str) -> str:
         '\t"strings"\n\n'
         f'\t"{slug}/internal/models"\n'
         ")\n\n"
-        f"func List{pascal}(ctx context.Context, db *sql.DB, limit, offset int, sort, order string) ([]models.{pascal}, error) {{\n"
+        f"func List{pascal}(ctx context.Context, db *sql.DB, limit, offset int, sort, order, q string) ([]models.{pascal}, error) {{\n"
         f"{sort_block}"
-        f'\tquery := fmt.Sprintf("SELECT {col_list} FROM {table} ORDER BY %s %s LIMIT $1 OFFSET $2", col, dir)\n'
-        f"\trows, err := db.QueryContext(ctx, query, limit, offset)\n"
+        f"{go_list_query}"
         "\tif err != nil {\n\t\treturn nil, err\n\t}\n"
         "\tdefer rows.Close()\n"
         f"\tvar out []models.{pascal}\n"
@@ -256,11 +347,10 @@ def _go_entity_store(entity: Entity, slug: str) -> str:
         "\tn, _ := res.RowsAffected()\n"
         "\treturn n > 0, nil\n"
         "}\n\n"
-        f"func Count{pascal}(ctx context.Context, db *sql.DB) (int, error) {{\n"
-        "\tvar count int\n"
-        f"\terr := db.QueryRowContext(ctx, `SELECT COUNT(*) FROM {table}`).Scan(&count)\n"
+        f"func Count{pascal}(ctx context.Context, db *sql.DB, q string) (int, error) {{\n"
+        f"{go_count_query}"
         "\treturn count, err\n"
-        "}\n"
+        "}\n\n"
         + _go_filtered_lists(entity, table, col_list, scan_targets, cols)
     )
 
@@ -293,15 +383,48 @@ def _go_filtered_lists(entity: Entity, table: str, col_list: str, scan_targets: 
     if cols is None:
         cols = [field.name for field in entity.fields]
     sort_block = _go_sort_whitelist_block(cols)
+    searchable = _searchable_fields(entity)
     parts = []
     for relation in _fk_relation_names(entity):
         rel_pascal = _pascal(relation)
+        if searchable:
+            search_or = " OR ".join(f"{f} ILIKE $2" for f in searchable)
+            sub_list_query = (
+                f'\tvar rows *sql.Rows\n'
+                f'\tvar err error\n'
+                f'\tif q != "" {{\n'
+                f'\t\tquery := fmt.Sprintf("SELECT {col_list} FROM {table} WHERE {relation}_id = $1 AND ({search_or}) ORDER BY %s %s LIMIT $3 OFFSET $4", col, dir)\n'
+                f'\t\trows, err = db.QueryContext(ctx, query, {relation}ID, "%"+q+"%", limit, offset)\n'
+                f'\t}} else {{\n'
+                f'\t\tquery := fmt.Sprintf("SELECT {col_list} FROM {table} WHERE {relation}_id = $1 ORDER BY %s %s LIMIT $2 OFFSET $3", col, dir)\n'
+                f'\t\trows, err = db.QueryContext(ctx, query, {relation}ID, limit, offset)\n'
+                f'\t}}\n'
+            )
+            sub_count_query = (
+                f'\tvar count int\n'
+                f'\tvar err error\n'
+                f'\tif q != "" {{\n'
+                f'\t\tquery := `SELECT COUNT(*) FROM {table} WHERE {relation}_id = $1 AND ({search_or})`\n'
+                f'\t\terr = db.QueryRowContext(ctx, query, {relation}ID, "%"+q+"%").Scan(&count)\n'
+                f'\t}} else {{\n'
+                f'\t\terr = db.QueryRowContext(ctx, `SELECT COUNT(*) FROM {table} WHERE {relation}_id = $1`, {relation}ID).Scan(&count)\n'
+                f'\t}}\n'
+            )
+        else:
+            sub_list_query = (
+                f'\tquery := fmt.Sprintf("SELECT {col_list} FROM {table} WHERE {relation}_id = $1 ORDER BY %s %s LIMIT $2 OFFSET $3", col, dir)\n'
+                f'\trows, err := db.QueryContext(ctx, query, {relation}ID, limit, offset)\n'
+            )
+            sub_count_query = (
+                f'\tvar count int\n'
+                f'\terr := db.QueryRowContext(ctx, `SELECT COUNT(*) FROM {table} WHERE {relation}_id = $1`, {relation}ID).Scan(&count)\n'
+            )
+
         parts.append(
             "\n"
-            f"func List{pascal}By{rel_pascal}(ctx context.Context, db *sql.DB, {relation}ID string, limit, offset int, sort, order string) ([]models.{pascal}, error) {{\n"
+            f"func List{pascal}By{rel_pascal}(ctx context.Context, db *sql.DB, {relation}ID string, limit, offset int, sort, order, q string) ([]models.{pascal}, error) {{\n"
             f"{sort_block}"
-            f'\tquery := fmt.Sprintf("SELECT {col_list} FROM {table} WHERE {relation}_id = $1 ORDER BY %s %s LIMIT $2 OFFSET $3", col, dir)\n'
-            f"\trows, err := db.QueryContext(ctx, query, {relation}ID, limit, offset)\n"
+            f"{sub_list_query}"
             "\tif err != nil {\n\t\treturn nil, err\n\t}\n"
             "\tdefer rows.Close()\n"
             f"\tvar out []models.{pascal}\n"
@@ -312,9 +435,8 @@ def _go_filtered_lists(entity: Entity, table: str, col_list: str, scan_targets: 
             "\t}\n"
             "\treturn out, rows.Err()\n"
             "}\n\n"
-            f"func Count{pascal}By{rel_pascal}(ctx context.Context, db *sql.DB, {relation}ID string) (int, error) {{\n"
-            "\tvar count int\n"
-            f"\terr := db.QueryRowContext(ctx, `SELECT COUNT(*) FROM {table} WHERE {relation}_id = $1`, {relation}ID).Scan(&count)\n"
+            f"func Count{pascal}By{rel_pascal}(ctx context.Context, db *sql.DB, {relation}ID string, q string) (int, error) {{\n"
+            f"{sub_count_query}"
             "\treturn count, err\n"
             "}\n"
         )

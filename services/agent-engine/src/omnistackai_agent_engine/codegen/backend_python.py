@@ -17,6 +17,7 @@ from .data_access import PSYCOPG_REQUIREMENT, python_data_access_files
 from .errors import GenerationError
 from .field_validation import parse_field_rules
 from .files import GeneratedFile, GeneratedProject
+from .openapi import render_openapi_json
 from .route_wiring import Op, fk_relations, wire_endpoint
 from .schema_sql import render_postgres_schema
 from .seed_sql import render_postgres_seed
@@ -156,15 +157,15 @@ def _router_file(
             lines.append(f"    # {api.method.value} {api.path} (auth: {auth}) — scaffold; no unambiguous entity mapping.")
             lines.append('    raise HTTPException(status_code=501, detail="not_implemented")')
         elif wiring.op is Op.LIST:
-            lines.append(f'async def {fn}(response: Response, limit: int = 100, offset: int = 0, sort: str = "id", order: str = "asc") -> list[dict]:')
-            lines.append(f"    total = await {wiring.table}.count_{wiring.table}()")
+            lines.append(f'async def {fn}(response: Response, limit: int = 100, offset: int = 0, sort: str = "id", order: str = "asc", q: str | None = None) -> list[dict]:')
+            lines.append(f"    total = await {wiring.table}.count_{wiring.table}(q=q)")
             lines.append('    response.headers["X-Total-Count"] = str(total)')
-            lines.append(f"    return await {wiring.table}.list_{wiring.table}(limit=limit, offset=offset, sort=sort, order=order)")
+            lines.append(f"    return await {wiring.table}.list_{wiring.table}(limit=limit, offset=offset, sort=sort, order=order, q=q)")
         elif wiring.op is Op.LIST_BY:
-            lines.append(f'async def {fn}({wiring.id_param}: str, response: Response, limit: int = 100, offset: int = 0, sort: str = "id", order: str = "asc") -> list[dict]:')
-            lines.append(f"    total = await {wiring.table}.count_{wiring.table}_by_{wiring.relation}({wiring.id_param})")
+            lines.append(f'async def {fn}({wiring.id_param}: str, response: Response, limit: int = 100, offset: int = 0, sort: str = "id", order: str = "asc", q: str | None = None) -> list[dict]:')
+            lines.append(f"    total = await {wiring.table}.count_{wiring.table}_by_{wiring.relation}({wiring.id_param}, q=q)")
             lines.append('    response.headers["X-Total-Count"] = str(total)')
-            lines.append(f"    return await {wiring.table}.list_{wiring.table}_by_{wiring.relation}({wiring.id_param}, limit=limit, offset=offset, sort=sort, order=order)")
+            lines.append(f"    return await {wiring.table}.list_{wiring.table}_by_{wiring.relation}({wiring.id_param}, limit=limit, offset=offset, sort=sort, order=order, q=q)")
         elif wiring.op is Op.GET:
             lines.append(f"async def {fn}({wiring.id_param}: str) -> dict:")
             lines.append(f"    row = await {wiring.table}.get_{wiring.table}({wiring.id_param})")
@@ -278,6 +279,9 @@ class PythonBackendAdapter:
             seed = render_postgres_seed(ir)
             if seed:
                 files.append(GeneratedFile("migrations/0002_seed.sql", seed))
+
+        if ir.apis:
+            files.append(GeneratedFile("openapi.json", render_openapi_json(ir)))
 
         return GeneratedProject(self.target.value, tuple(files))
 

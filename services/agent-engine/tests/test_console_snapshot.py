@@ -32,7 +32,9 @@ class BuilderShowcaseTests(TestCase):
                 "apps/web/README.md",
                 "apps/web/app/layout.tsx",
                 "apps/web/app/page.tsx",
+                "contracts/openapi.json",
                 "services/api/README.md",
+                "services/api/openapi.json",
             },
         )
         self.assertTrue(all(change["kind"] == "modified" for change in edit["changes"]))

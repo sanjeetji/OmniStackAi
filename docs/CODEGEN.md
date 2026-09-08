@@ -357,3 +357,70 @@ Added total count database queries and `X-Total-Count` HTTP response header emis
   - Generates `list<Entity>WithCount(...)` and `list<Entity>sBy<Rel>WithCount(...)` returning `Promise<PaginatedResult<<Entity>[]>>`.
   - Standard `list<Entity>(...)` and `list<Entity>sBy<Rel>(...)` methods are preserved returning `Promise<<Entity>[]>` for full backward compatibility.
 
+### OpenAPI 3.1 Contract Generation from Application IR (R-260)
+
+Added deterministic generation of standard OpenAPI 3.1.0 specifications directly from the `ApplicationIR` (Brief Section 43: *Contracts: OpenAPI + generated clients*, `packages/contracts/openapi/`):
+
+- **Core Generator (`codegen/openapi.py`)**:
+  - `render_openapi(ir: ApplicationIR) -> dict[str, Any]` and `render_openapi_json(ir: ApplicationIR, indent: int = 2) -> str`:
+    - `openapi: "3.1.0"` with title (`ir.name`), description (`ir.description`), and version (`"1.0.0"`).
+    - `components.schemas`: converts every entity into an OpenAPI schema with properties mapped from `FieldType` (string, integer, number, boolean, date-time, uuid, object) and validation constraints (`maxLength`, `enum`, `minimum`, `maximum`, `required`). Includes standard `ValidationError`, `ValidationErrorResponse`, and `ErrorResponse` schemas.
+    - `components.securitySchemes`: declares `BearerAuth` (HTTP Bearer / JWT).
+    - `paths`: maps every `ApiEndpoint` with typed path parameters (`{param}`), query parameters (`limit`, `offset`, `sort`, `order` on LIST endpoints), request bodies referencing entity schemas for CREATE and UPDATE, and standard responses (200, 201, 204, 400, 401, 403, 404).
+    - `headers`: documents `X-Total-Count` (integer) on 200 LIST and LIST_BY collection responses.
+    - `security`: attaches `BearerAuth` security requirement on operations where `api.auth` is true, documenting role requirements.
+- **Customer Monorepo Assembly (`codegen/assembler.py`)**:
+  - Emits `contracts/openapi.json` at the root of the assembled customer monorepo, fulfilling the canonical contract location and documenting it in the root `README.md`.
+- **Backend Services (`codegen/backend_go.py`, `codegen/backend_python.py`)**:
+  - Both Go and FastAPI backend project generators emit `openapi.json` at their project root.
+
+### Full-Text / Keyword Search Filtering on LIST Endpoints (R-261)
+
+Added end-to-end full-text and keyword search filtering via the `q` query parameter across Go, FastAPI, Next.js, and OpenAPI 3.1 targets:
+
+- **Searchable Field Identification (`codegen/data_access.py`)**:
+  - Helper `_searchable_fields(entity)` inspects entity fields, selecting those with `FieldType.STRING` or `FieldType.TEXT`.
+  - Non-text entities (or entities with 0 string/text fields) gracefully omit search clauses, executing standard queries with zero SQL syntax errors.
+- **Go Store (`internal/store/*.go`)**:
+  - `List<Entity>` and `Count<Entity>` accept `q string`. When `q != ""` and searchable fields exist, a parameterized `WHERE (col1 ILIKE $1 OR col2 ILIKE $1 ...)` clause is appended.
+  - Takes advantage of PostgreSQL parameter reuse (`$1`) so only a single wildcard argument `"%"+q+"%"` is passed to `db.QueryContext` or `db.QueryRowContext`.
+  - Subcollections `List<Entity>By<Rel>` and `Count<Entity>By<Rel>` combine relation foreign-key scoping (`WHERE <rel>_id = $1 AND (col1 ILIKE $2 OR ...)`) with search parameterization.
+- **Go Handlers (`internal/handlers/*.go`)**:
+  - Helper `parseSearch(r *http.Request) string` extracts and trims `r.URL.Query().Get("q")`.
+  - Wired `Op.LIST` and `Op.LIST_BY` handlers extract `q := parseSearch(r)` and forward `q` to store `Count...` and `List...` methods.
+- **FastAPI Backend (`services/api`)**:
+  - `app/repositories/*.py`: `list_<table>` and `count_<table>` accept `q: str | None = None`. When `q` is passed, parameterized `WHERE (col1 ILIKE %s OR ...)` is applied using `f"%{q}%"` wildcard patterns.
+  - `app/routers/*.py`: route handlers for `Op.LIST` and `Op.LIST_BY` declare `q: str | None = None` and forward `q=q` to repositories.
+- **Next.js Client (`apps/web/lib/api.ts`)**:
+  - Updates list methods (`list<Entities>`, `list<Entities>WithCount`, `list<Entities>By<Rel>`, `list<Entities>By<Rel>WithCount`) to type `q?: string` in `params`.
+  - URL serialization via `URLSearchParams` automatically URL-encodes search queries.
+- **OpenAPI 3.1 Specification (`codegen/openapi.py`)**:
+  - Documents optional `q` query parameter (`type: "string"`, description: `"Search query to filter records across text fields"`) on all `Op.LIST` and `Op.LIST_BY` operations.
+
+### React Data-Fetching & Mutation Hooks Generation (R-262)
+
+Added strongly-typed, idiomatic React hooks (`apps/web/lib/hooks.ts`) in the generated Next.js web application:
+
+- **Module Structure (`codegen/nextjs.py`)**:
+  - Emitted with `"use client"` directive, enabling direct import by Next.js client components and screens.
+  - Standard React 18 built-ins only (`useState`, `useEffect`, `useCallback`, `Dispatch`, `SetStateAction`) — requires zero additional runtime packages.
+  - Consumes the typed API client (`lib/api.ts`) and TypeScript interfaces (`lib/types.ts`).
+  - Exports public `render_hooks(ir: ApplicationIR) -> str` generator, also registered in `omnistackai_agent_engine.codegen`.
+- **Shared Type Interfaces**:
+  - `UseListParams`: typed `{ limit?: number; offset?: number; sort?: string; order?: "asc" | "desc"; q?: string }`.
+  - `UseListState<T>`: state interface providing `data`, `total`, `loading`, `error`, computed pagination (`page`, `pageSize`, `totalPages`), query updaters (`setParams`, `setPage`, `setSearch`, `setSort`), and `refetch`.
+  - `UseDetailState<T>`: state interface providing `data`, `loading`, `error`, and `refetch`.
+  - `UseMutationState<TData, TResult>`: state interface providing `loading`, `error`, `mutate`, and `reset`.
+- **Generated Hook Types**:
+  - `useList<Entities>(initialParams?, options?)`: collection data fetching hook with automatic pagination math (1-based `page`, `totalPages`), keyword search (`setSearch` resetting offset), sorting (`setSort` toggling or setting order), and automatic `refetch` on parameter changes.
+  - `use<Entity>(id, options?)`: detail data fetching hook that fetches when `id` is non-empty, resetting to idle/null when `id` is unset.
+  - `useCreate<Entity>()`: mutation hook providing `{ create, mutate, loading, error, reset }`.
+  - `useUpdate<Entity>()`: mutation hook providing `{ update, mutate, loading, error, reset }`.
+  - `useDelete<Entity>()`: mutation hook providing `{ remove, mutate, loading, error, reset }`.
+  - `useList<Entities>By<Rel>(parentId, initialParams?, options?)`: subcollection data fetching hook scoped to parent relation foreign key.
+- **Unified Export**:
+  - Aggregates all emitted entity and subcollection hooks into an exported `hooks` namespace object (`export const hooks = { ... };`).
+
+
+
+

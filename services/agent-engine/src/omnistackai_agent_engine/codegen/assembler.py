@@ -17,6 +17,7 @@ from .backend_go import GoBackendAdapter
 from .backend_python import PythonBackendAdapter
 from .files import GeneratedFile, GeneratedProject
 from .nextjs import NextjsWebAdapter
+from .openapi import render_openapi_json
 
 MONOREPO_TARGET = "customer-monorepo"
 
@@ -60,6 +61,11 @@ def _root_readme(ir: ApplicationIR, apps: list[AssembledApp], skipped: list[str]
     ]
     for app in apps:
         lines.append(f"- **{app.label}** — `{app.directory}/` (target `{app.target}`)")
+    if ir.apis:
+        lines.append("")
+        lines.append("## API Contracts")
+        lines.append("")
+        lines.append("- **OpenAPI 3.1** — `contracts/openapi.json`")
     if skipped:
         lines.append("")
         lines.append("## Not yet assembled")
@@ -120,6 +126,9 @@ def assemble_project(ir: ApplicationIR, registry: AdapterRegistry | None = None)
     for app in apps:
         project = registry.get(app.target).generate(ir)
         files += _prefixed(project, app.directory)
+
+    if ir.apis:
+        files.append(GeneratedFile("contracts/openapi.json", render_openapi_json(ir)))
 
     files.append(GeneratedFile("README.md", _root_readme(ir, apps, skipped)))
     files.append(GeneratedFile(".gitignore", "node_modules/\n.next/\n.venv/\n__pycache__/\nbin/\n.env\n"))
