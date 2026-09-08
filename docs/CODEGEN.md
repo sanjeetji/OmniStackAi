@@ -593,5 +593,30 @@ Completes the child management cycle in master-detail views by enabling child it
   - Subcollections whose child entity lacks `Op.DELETE` omit delete hooks and buttons.
   - Strict diff invariance: zero references to `ir.description`, preventing diff drift in `test_console_snapshot.py`.
 
+### Page Size Selector & Contextual Empty State CTAs in Generated Next.js Screens (R-269)
+
+Enriches pagination and zero-state UX in generated Next.js screens with interactive page size selection and contextual call-to-actions:
+
+- **Configurable Page Size in Typed React Hooks (`lib/hooks.ts`)**:
+  - `UseListState<T>` interface declares `setPageSize: (size: number) => void;`.
+  - Both `useList<Entities>()` and `useList<Children>By<Rel>()` implement `setPageSize = useCallback((newPageSize: number) => { setParams((prev) => ({ ...prev, limit: Math.max(1, newPageSize), offset: 0 })); }, []);`.
+  - Automatically returns `pageSize` and `setPageSize` in hook state objects alongside `page`, `totalPages`, and `setPage`.
+- **Accessible Page Size Selector in Collection Screens (`_collection_screen_page`)**:
+  - Destructures `pageSize` and `setPageSize` from `useList<Plural>()`.
+  - Renders a styled, accessible `<select id="pageSizeSelect">` with `aria-label="Select page size"` directly in the table footer alongside pagination buttons.
+  - Exposes standard page size options: `10 per page`, `25 per page`, `50 per page`, `100 per page`.
+  - Changing selection triggers `setPageSize(Number(e.target.value))` which resets `offset: 0` and queries the updated limit.
+- **Contextual Empty States in Table Views**:
+  - When `data && data.length === 0`:
+    - **Search Active**: when search input is non-empty (`searchInput.trim()`), displays `No <plural> matching "<searchInput>".` with a `Clear search` CTA button that resets `searchInput` and calls `setSearch("")`.
+    - **Initial State with Editor**: when no search is active and a complementary `form_screen` exists, displays `No <plural> found yet.` with a styled `+ Create first <Entity>` CTA link pointing to `/{form_screen.id}`.
+    - **Fallback**: when no editor screen exists, displays `No <plural> found.`.
+- **Subcollection Master-Detail Empty States**:
+  - When child data is empty in master-detail panels (`_collection_screen_page` and `_detail_screen_page`):
+    - When a complementary child form screen (`child_form`) is detected, renders `No <children> found for this <entity>.` accompanied by a styled `+ Add first <Child>` link pre-populated with parent foreign key (`/{child_form.id}?{sub.id_param}=${selectedId}`).
+- **Diff Invariance & Fallback Cleanliness**:
+  - 100% standard-library Python, 0 external dependencies, 0 network calls.
+  - Zero references to `ir.description`, strictly maintaining snapshot diff invariance.
+
 
 

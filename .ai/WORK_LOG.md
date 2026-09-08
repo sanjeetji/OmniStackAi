@@ -1,5 +1,26 @@
 # Work Log
 
+## 2026-09-08 — R-269
+
+- Recorded contract in `.ai/CURRENT_TASK.yaml` and `.ai/tasks/R-269.md`.
+- `nextjs.py`:
+  - Added `setPageSize: (size: number) => void;` to `UseListState<T>` interface in `_generate_hooks_ts`.
+  - Implemented `setPageSize = useCallback((newPageSize: number) => { setParams((prev) => ({ ...prev, limit: Math.max(1, newPageSize), offset: 0 })); }, []);` in both `useList<Entities>()` and `useList<Children>By<Rel>()`.
+  - Included `pageSize` and `setPageSize` in returned state objects of both list hooks.
+  - In `_collection_screen_page`:
+    - Destructured `pageSize` and `setPageSize` from `useList<Plural>()`.
+    - Rendered an accessible `<select id="pageSizeSelect">` with `aria-label="Select page size"` directly in the table footer alongside pagination buttons with options: 10, 25, 50, 100 per page.
+    - Updated table body empty state (`data && data.length === 0`):
+      * When search is active (`searchInput.trim()`): renders `No <plural> matching "<searchInput>".` with interactive `Clear search` CTA button (`onClick={() => { setSearchInput(""); setSearch(""); }}`).
+      * When no search is active and `form_screen` exists: renders `No <plural> found yet.` with styled `+ Create first <Entity>` CTA link (`href="/{form_screen.id}"`).
+      * When no `form_screen` exists: renders fallback `No <plural> found.`.
+    - In subcollection panels (`_collection_screen_page` and `_detail_screen_page`):
+      * When child data is empty and `child_form` exists: renders `No <children> found for this <entity>.` alongside a styled `+ Add first <Child>` link (`href="/{child_form.id}?{sub.id_param}=${selectedId}"`).
+  - Preserved byte-for-byte diff invariance across `ir.description` modifications.
+- Added `services/agent-engine/tests/test_collection_pagination_empty_states.py` with 15 unit tests covering interface declaration, hook implementations, return object fields, selector rendering, options, search mismatch empty state with clear search button, form screen empty state CTA link, fallback empty state, subcollection empty state CTAs, diff invariance, and full project generation.
+- `task verify` — 598 tests pass (15 new), 0 failures. `task lint`, `task security:quick` pass. 0 network calls, 0 cloud model calls.
+- Updated CURRENT_TASK.yaml, tasks/R-269.md, PROJECT_STATE.yaml, PROJECT_STATE.md, CHANGELOG.md, docs/CODEGEN.md, docs/PROGRESS.md.
+
 ## 2026-09-08 — R-268
 
 - Recorded contract in `.ai/CURRENT_TASK.yaml` and `.ai/tasks/R-268.md`.

@@ -1,6 +1,6 @@
 # Current Handoff
 
-Task ID: R-268
+Task ID: R-269
 Status: done
 Phase: BASIC/MVP — Founder Stage 0
 Branch: `main` (the only branch; the GitHub default)
@@ -12,43 +12,33 @@ Branch: `main` (the only branch; the GitHub default)
 - Commits use `sanjeetji <sk698166@gmail.com>` as author.
 - User permission is required prior to committing or pushing code.
 
-## Completed (R-268) — Subcollection Child Item Deletion & Mutation Feedback in Master-Detail Views
+## Completed (R-269) — Page Size Selector & Contextual Empty State CTAs in Generated Next.js Screens
 
-- **Subcollection Deletion Detection**:
-  - `SubcollectionInfo.can_delete` populated via `Op.DELETE in ops_by_entity.get(child_name, set())`.
-  - Fallback entity matching for `DELETE` endpoints lacking explicit `response_schema` (e.g. `ApiEndpoint(HttpMethod.DELETE, "/comments/{id}")`).
-- **Hook Integration in Master-Detail Views**:
-  - In `_collection_screen_page` and `_detail_screen_page`, automatically imports `useDelete<Child>` from `"../lib/hooks"`.
-  - Instantiates delete hooks at component level: `const { remove: remove<Child>, loading: deleting<Child>, error: delete<Child>Error } = useDelete<Child>();`.
-- **Mutation Handlers & Refetching**:
-  - Emits `handleDelete<Child>` handler with confirmation dialog (`confirm("Are you sure you want to delete this <Child>?")`).
-  - Safely wrapped in try/catch to capture errors into hook state without uncaught promise rejections.
-  - Automatically triggers child subcollection refetch (`<subcol>.refetch()`) upon completion.
-- **Card-Level Delete Action & Mutation Feedback**:
-  - Renders an accessible, styled Delete button on each child card with `e.stopPropagation()`, disabled state during mutation (`disabled={deleting<Child>}`), and dynamic label `{deleting<Child> ? "Deleting..." : "Delete"}`.
-  - Renders mutation error alert banner (`{delete<Child>Error && ...}`) directly above child items if deletion fails.
+- **Configurable Page Size in Typed React Hooks**:
+  - `UseListState<T>` interface declares `setPageSize: (size: number) => void;`.
+  - `useList<Entities>()` and `useList<Children>By<Rel>()` implement `setPageSize` resetting `offset: 0` and clamping page size to minimum 1.
+  - Returns `pageSize` and `setPageSize` in hook state objects.
+- **Accessible Page Size Selector in Collection Screens**:
+  - Destructures `pageSize` and `setPageSize` in `_collection_screen_page`.
+  - Renders an accessible `<select id="pageSizeSelect">` with options 10, 25, 50, 100 per page in table footer.
+- **Contextual Empty States in Table Views**:
+  - When search is active (`searchInput.trim()`): renders `No <plural> matching "<searchInput>".` with interactive `Clear search` CTA button.
+  - When initial state without search and `form_screen` exists: renders `No <plural> found yet.` with styled `+ Create first <Entity>` CTA link.
+  - Fallback without editor screen: renders `No <plural> found.`.
+- **Subcollection Master-Detail Empty States**:
+  - When child data is empty and `child_form` exists: renders `No <children> found for this <entity>.` alongside a styled `+ Add first <Child>` link pre-populated with parent foreign key (`/{child_form.id}?{sub.id_param}=${selectedId}`).
 - **Clean Fallback & Invariance**:
-  - Entities and subcollections lacking `Op.DELETE` omit delete hooks and buttons.
   - Strict diff invariance across `ir.description` changes.
 
 ## Preceded by:
+- **R-268**: Subcollection Child Item Deletion & Mutation Feedback in Master-Detail Views.
 - **R-267**: Foreign-Key Relation Selectors & Parent Auto-Population in Generated Next.js Forms.
 - **R-266**: Update/Edit Mode in Generated Next.js Forms & Collection Screen Edit Actions.
 - **R-265**: Subcollection Navigation & Master-Detail Views in Generated Screens.
-- **R-254**: Structured JSON validation error bodies in Go (`{"errors": [...]}`).
-- **R-255**: Query parameter pagination (`limit` & `offset`) on LIST and LIST_BY in Go and FastAPI backends.
-- **R-256**: Wired PUT handlers (full-replace update) in Go and FastAPI backends.
-- **R-257**: Full-stack connectivity: Next.js typed API client (`lib/api.ts`) & backend CORS middleware.
-- **R-258**: Query parameter sorting (`sort` & `order`) with SQL injection whitelist protection.
-- **R-259**: Total count database queries and `X-Total-Count` header across Go, Python, and Next.js.
-- **R-260**: OpenAPI 3.1 specification generation from Application IR.
-- **R-261**: Full-text / keyword search filtering (`q` query param) on LIST endpoints.
-- **R-262**: React data-fetching & mutation hooks generation (`apps/web/lib/hooks.ts`).
-- **R-263**: Interactive Screen Component Generator with Real Data Binding (`apps/web/app/<screen>/page.tsx`).
-- **R-264**: Field-Level Validation & Error Feedback in Generated Next.js Forms (`apps/web/app/<screen>/page.tsx`).
+- **R-254** through **R-264**: Full CRUD, validation error bodies, pagination, sorting, total count headers, React hooks, interactive screens, field-level validation.
 
 ## Verification
 
-- `task verify` — pass (583 agent-engine tests; 13 new in `test_subcollection_deletion.py`).
+- `task verify` — pass (598 agent-engine tests; 15 new in `test_collection_pagination_empty_states.py`).
 - `task lint`, `task security:quick`, `task env:check` — all pass.
 - 0 local model calls, 0 cloud calls. Offline and deterministic.

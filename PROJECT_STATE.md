@@ -1,13 +1,13 @@
 # Project State — OmniStackAI
-Last updated: 2026-09-08T21:42:00+05:30
+Last updated: 2026-09-08T21:57:00+05:30
 
 ## Current Phase
 Stage 0 (Founder Build Sequence, Brief Section 91) — BASIC/MVP
 
 ## Last Completed Task
-Tracker ID: R-268 — Subcollection Child Item Deletion & Mutation Feedback in Master-Detail Views (`apps/web/app/<screen>/page.tsx`) — DONE,
-`task verify` (583 agent-engine tests, 13 new in `test_subcollection_deletion.py`) passing. Adds child item deletion, confirmation dialogs, loading/disabled states, error feedback alerts, and automatic subcollection refetching to master-detail views in generated Next.js screens: `_subcollections_for_parent` sets `can_delete = True` when child supports `Op.DELETE`; collection and detail screens import and wire `useDelete<Child>` hooks; `handleDelete<Child>` handlers prompt confirmation dialog (`confirm("Are you sure you want to delete this <Child>?")`) and trigger `<subcol>.refetch()`; child cards render styled Delete button with disabled state during mutation and `stopPropagation`; mutation error alerts (`{delete<Child>Error && ...}`) render above child items on failure; non-deletable subcollections omit deletion code; diff-invariant with respect to `ir.description`.
-Preceded by R-254 through R-267.
+Tracker ID: R-269 — Page Size Selector & Contextual Empty State CTAs in Generated Next.js Screens (`apps/web/app/<screen>/page.tsx`, `apps/web/lib/hooks.ts`) — DONE,
+`task verify` (598 agent-engine tests, 15 new in `test_collection_pagination_empty_states.py`) passing. Adds configurable page size selection and contextual empty state CTAs: `UseListState<T>` declares `setPageSize: (size: number) => void;`; `useList<Entities>` and `useList<Children>By<Rel>` implement `setPageSize` with `Math.max(1, newPageSize)` and `offset: 0`; collection screens destructure `pageSize` and `setPageSize` and render an accessible `<select>` dropdown (10, 25, 50, 100 per page) next to pagination buttons in footer; collection screen table empty state renders search mismatch message with `Clear search` CTA button when search is active, and `+ Create first <Entity>` CTA link when `form_screen` is available; subcollection empty states render `+ Add first <Child>` CTA link when `child_form` is available; diff-invariant with respect to `ir.description`.
+Preceded by R-254 through R-268.
 Additive, offline, 0 network, no DB connection.
 
 
