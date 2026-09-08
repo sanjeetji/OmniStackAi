@@ -703,6 +703,32 @@ Enables full-lifecycle deep linking, automated query param fetching, cross-scree
   - 100% offline, 0 network, 0 external npm dependencies.
   - Zero references to `ir.description`, preserving snapshot diff invariance.
 
+### Global Responsive Navigation Shell & Header Navbar (R-273)
+
+Generates a unified, persistent application navigation header shell (`apps/web/components/navbar.tsx`) and connects it into the root application layout (`apps/web/app/layout.tsx`):
+
+- **Client Component with Reactive Route Detection**:
+  - `components/navbar.tsx` is emitted with `"use client";` at the top and imports Next.js `usePathname` from `"next/navigation"`.
+  - Defines `isLinkActive(href)` comparing current `pathname` against `"/"` or `href` / `href + "/"`.
+  - Dynamically applies active visual cues: active links highlight with `#eff6ff` (blue-50) background, `#1d4ed8` (blue-700) font color, `fontWeight: 600`, and subtle `#bfdbfe` border; inactive links display `#475569` with subtle hover transitions.
+- **Application Branding & Overview Navigation**:
+  - Displays application logo avatar badge (initial letter of `ir.name` inside a rounded gradient container) and brand title linking to the home overview page (`/`).
+  - Includes a dedicated "Overview" link to `/`.
+- **Dynamic Screen Navigation & Role Badges**:
+  - Automatically identifies all primary destination screens (`collection`, `form`, and `generic`) from `ir.screens`.
+  - Parameter-dependent `detail` screens (`_screen_intent(s) == "detail"`) are cleanly excluded from the horizontal top bar, keeping navigation focused.
+  - Non-public screen roles (e.g. `admin`, `member`) render an adjacent pill badge.
+- **Header Quick-Action CTA Button**:
+  - Identifies the first available create form screen in `ir.screens`.
+  - Renders a prominent primary button on the right side of the navbar (e.g. `+ New {Entity}` or `+ Create`) with `#2563eb` styling, enabling 1-click creation from any screen in the application.
+- **RootLayout Integration**:
+  - `app/layout.tsx` imports `<Navbar />` from `../components/navbar` and renders it above `{children}`.
+  - Keeps `RootLayout` as a server component exporting Next.js `Metadata`, ensuring optimal metadata streaming and SSR.
+  - Applies global typography and background tokens (`#f8fafc` background, system font stack).
+- **Quality & Offline Independence**:
+  - 100% offline, zero external npm dependencies, pure React/Next.js client/server separation.
+  - Strict diff invariance across `ir.description` changes.
+
 
 
 

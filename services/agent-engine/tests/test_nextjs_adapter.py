@@ -75,7 +75,7 @@ class NextjsAdapterTests(TestCase):
         for expected in (
             "package.json", "tsconfig.json", "next.config.mjs", ".gitignore", ".env.example",
             "README.md", "app/layout.tsx", "app/page.tsx", "app/globals.css", "lib/types.ts",
-            "lib/api.ts", "app/favourites/page.tsx",
+            "lib/api.ts", "components/navbar.tsx", "app/favourites/page.tsx",
         ):
             self.assertIn(expected, paths)
 

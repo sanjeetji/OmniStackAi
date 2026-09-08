@@ -2965,8 +2965,187 @@ def _overview_page(ir: ApplicationIR) -> str:
     )
 
 
+def _navbar_component(ir: ApplicationIR) -> str:
+    """Generate a responsive application navigation header shell (components/navbar.tsx)."""
+    brand_initial = ir.name[:1].upper() if ir.name else "O"
+    escaped_name = _escape_ts(ir.name)
+
+    primary_screens: list[Screen] = []
+    create_form: Screen | None = None
+
+    for s in ir.screens:
+        intent = _screen_intent(s)
+        if intent == "detail":
+            continue
+        primary_screens.append(s)
+        if intent == "form" and create_form is None:
+            create_form = s
+
+    nav_links_jsx: list[str] = [
+        '            <Link href="/" style={navLinkStyle(isLinkActive("/"))}>',
+        '              Overview',
+        '            </Link>',
+    ]
+
+    for s in primary_screens:
+        s_title = _title_case(s.id)
+        s_role = s.role.strip()
+        role_badge = ""
+        if s_role and s_role.lower() not in ("public", "anon", "anonymous", ""):
+            role_badge = (
+                f' <span style={{{{ fontSize: 10, padding: "1px 5px", background: "#f1f5f9", '
+                f'color: "#64748b", borderRadius: 4, fontWeight: 600 }}}}>{s_role}</span>'
+            )
+        nav_links_jsx.extend([
+            f'            <Link href="/{s.id}" style={{navLinkStyle(isLinkActive("/{s.id}"))}}>',
+            f'              {s_title}{role_badge}',
+            '            </Link>',
+        ])
+
+    nav_links_str = "\n".join(nav_links_jsx)
+
+    cta_jsx = ""
+    if create_form:
+        entity = _match_entity(create_form, ir)
+        if entity:
+            cta_label = f"+ New {entity.name}"
+        else:
+            cta_label = f"+ {_title_case(create_form.id)}"
+        cta_jsx = (
+            '        <div style={{ display: "flex", alignItems: "center", gap: 10, flexShrink: 0 }}>\n'
+            f'          <Link\n'
+            f'            href="/{create_form.id}"\n'
+            '            style={{\n'
+            '              display: "inline-flex",\n'
+            '              alignItems: "center",\n'
+            '              gap: 4,\n'
+            '              padding: "6px 14px",\n'
+            '              background: "#2563eb",\n'
+            '              color: "#ffffff",\n'
+            '              borderRadius: 6,\n'
+            '              fontSize: 13,\n'
+            '              fontWeight: 600,\n'
+            '              textDecoration: "none",\n'
+            '              boxShadow: "0 1px 2px 0 rgba(37, 99, 235, 0.2)",\n'
+            '            }}\n'
+            '          >\n'
+            f'            {cta_label}\n'
+            '          </Link>\n'
+            '        </div>\n'
+        )
+
+    return (
+        '"use client";\n\n'
+        'import Link from "next/link";\n'
+        'import { usePathname } from "next/navigation";\n\n'
+        'export function Navbar() {\n'
+        '  const pathname = usePathname();\n\n'
+        '  const isLinkActive = (href: string) => {\n'
+        '    if (href === "/") {\n'
+        '      return pathname === "/";\n'
+        '    }\n'
+        '    return pathname === href || pathname.startsWith(href + "/");\n'
+        '  };\n\n'
+        '  const navLinkStyle = (active: boolean) => ({\n'
+        '    display: "inline-flex",\n'
+        '    alignItems: "center",\n'
+        '    gap: 6,\n'
+        '    padding: "6px 12px",\n'
+        '    borderRadius: 6,\n'
+        '    fontSize: 13,\n'
+        '    fontWeight: active ? 600 : 500,\n'
+        '    color: active ? "#1d4ed8" : "#475569",\n'
+        '    background: active ? "#eff6ff" : "transparent",\n'
+        '    textDecoration: "none",\n'
+        '    border: active ? "1px solid #bfdbfe" : "1px solid transparent",\n'
+        '    transition: "all 0.15s ease",\n'
+        '  });\n\n'
+        '  return (\n'
+        '    <header\n'
+        '      role="banner"\n'
+        '      style={{\n'
+        '        position: "sticky",\n'
+        '        top: 0,\n'
+        '        zIndex: 50,\n'
+        '        background: "#ffffff",\n'
+        '        borderBottom: "1px solid #e2e8f0",\n'
+        '        boxShadow: "0 1px 2px 0 rgba(0, 0, 0, 0.05)",\n'
+        '      }}\n'
+        '    >\n'
+        '      <div\n'
+        '        style={{\n'
+        '          maxWidth: 1200,\n'
+        '          margin: "0 auto",\n'
+        '          padding: "0 16px",\n'
+        '          height: 56,\n'
+        '          display: "flex",\n'
+        '          alignItems: "center",\n'
+        '          justifyContent: "space-between",\n'
+        '          gap: 16,\n'
+        '        }}\n'
+        '      >\n'
+        '        <div style={{ display: "flex", alignItems: "center", gap: 20, minWidth: 0 }}>\n'
+        '          <Link\n'
+        '            href="/"\n'
+        '            style={{\n'
+        '              display: "inline-flex",\n'
+        '              alignItems: "center",\n'
+        '              gap: 8,\n'
+        '              textDecoration: "none",\n'
+        '              flexShrink: 0,\n'
+        '            }}\n'
+        '          >\n'
+        '            <span\n'
+        '              style={{\n'
+        '                display: "inline-flex",\n'
+        '                alignItems: "center",\n'
+        '                justifyContent: "center",\n'
+        '                width: 28,\n'
+        '                height: 28,\n'
+        '                borderRadius: 6,\n'
+        '                background: "linear-gradient(135deg, #2563eb, #1d4ed8)",\n'
+        '                color: "#ffffff",\n'
+        '                fontWeight: 700,\n'
+        '                fontSize: 14,\n'
+        '              }}\n'
+        '            >\n'
+        f'              {brand_initial}\n'
+        '            </span>\n'
+        '            <span\n'
+        '              style={{\n'
+        '                fontWeight: 700,\n'
+        '                fontSize: 15,\n'
+        '                color: "#0f172a",\n'
+        '                letterSpacing: "-0.01em",\n'
+        '              }}\n'
+        '            >\n'
+        f'              {escaped_name}\n'
+        '            </span>\n'
+        '          </Link>\n\n'
+        '          <nav\n'
+        '            role="navigation"\n'
+        '            aria-label="Main Navigation"\n'
+        '            style={{\n'
+        '              display: "flex",\n'
+        '              alignItems: "center",\n'
+        '              gap: 4,\n'
+        '              overflowX: "auto",\n'
+        '            }}\n'
+        '          >\n'
+        f'{nav_links_str}\n'
+        '          </nav>\n'
+        '        </div>\n\n'
+        f'{cta_jsx}'
+        '      </div>\n'
+        '    </header>\n'
+        '  );\n'
+        '}\n'
+    )
+
+
 _LAYOUT = (
-    'import type { Metadata } from "next";\n\n'
+    'import type { Metadata } from "next";\n'
+    'import { Navbar } from "../components/navbar";\n\n'
     "export const metadata: Metadata = {\n"
     '  title: "%s",\n'
     '  description: "%s",\n'
@@ -2974,7 +3153,10 @@ _LAYOUT = (
     "export default function RootLayout({ children }: { children: React.ReactNode }) {\n"
     "  return (\n"
     '    <html lang="en">\n'
-    "      <body>{children}</body>\n"
+    '      <body style={{ margin: 0, background: "#f8fafc", color: "#0f172a", fontFamily: "system-ui, -apple-system, sans-serif" }}>\n'
+    "        <Navbar />\n"
+    "        {children}\n"
+    "      </body>\n"
     "    </html>\n"
     "  );\n"
     "}\n"
@@ -3041,6 +3223,7 @@ class NextjsWebAdapter:
             GeneratedFile(".env.example", "# Public env vars only. Never commit secrets.\nNEXT_PUBLIC_APP_NAME=" + ir.name + "\nNEXT_PUBLIC_API_URL=http://localhost:8080\n"),
             GeneratedFile("README.md", f"# {ir.name}\n\n{ir.description}\n\nGenerated by OmniStackAI from the Application IR.\n\n```\npnpm install\npnpm dev\n```\n"),
             GeneratedFile("app/layout.tsx", _LAYOUT % (_escape_ts(ir.name), _escape_ts(ir.description))),
+            GeneratedFile("components/navbar.tsx", _navbar_component(ir)),
             GeneratedFile("app/globals.css", "body { font-family: system-ui, sans-serif; margin: 0; }\n"),
             GeneratedFile("app/page.tsx", _overview_page(ir)),
             GeneratedFile("lib/types.ts", _types_file(ir)),
