@@ -457,3 +457,30 @@ Upgraded generated Next.js screen pages (`apps/web/app/<screen.id>/page.tsx`) in
 - **Diff Predictability & Verification**:
   - `_screen_page` avoids referencing `ir.description`, keeping screen pages byte-identical across description modifications to ensure hunk-level diff tests (`test_console_snapshot.py`) remain completely green.
   - Public `render_screen_page(screen, ir) -> str` exported in `omnistackai_agent_engine.codegen`.
+
+### Field-Level Validation & Error Feedback in Generated Next.js Forms (R-264)
+
+Enhanced generated form screens and the API client with real-time and server-side field-level validation feedback:
+
+- **API Client Error Extraction (`codegen/nextjs.py`)**:
+  - Emits `extractFieldErrors(error: unknown): Record<string, string>` in `apps/web/lib/api.ts`.
+  - Normalizes Go backend validation errors (`{"errors": [{"field": "...", "rule": "...", "message": "..."}]}`) into `{ [field]: message }`.
+  - Normalizes FastAPI/Pydantic validation errors (`{"detail": [{"loc": ["body", "..."], "msg": "..."}]}`) into `{ [field]: message }`.
+  - Returns empty record for non-validation or network errors, allowing safe fallbacks.
+- **Form Screen Validation & Error Handling (`_form_screen_page`)**:
+  - Declares `const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});`.
+  - **Client-Side Pre-Validation**: inside `handleSubmit`, evaluates constraints prior to dispatching network requests:
+    - `required`: ensures non-empty string, valid number, or date value.
+    - `max_length`: verifies string length against `rules.max_length`.
+    - `min` / `max`: checks numeric bounds against declared limits.
+    - `enum`: verifies string values against allowed options.
+    - On violation, populates `fieldErrors` and halts submission without network latency.
+  - **Server-Side Error Mapping**: on API error, calls `extractFieldErrors(err)` and maps backend constraint violations to input states.
+  - **Accessible Error Styling**:
+    - Invalid inputs dynamically receive red borders (`fieldErrors[f.name] ? "1px solid #ef4444" : "1px solid #cbd5e1"`) and `aria-invalid={!!fieldErrors[f.name]}`.
+    - Renders dedicated field error message spans directly beneath inputs (`<span style={{ color: "#ef4444", fontSize: 12, marginTop: 4, display: "block" }}>`).
+  - **Reactive Error Clearing**: input edits (`onChange`) clear `fieldErrors[f.name]` immediately as the user begins typing.
+  - **Enum Dropdowns**: fields carrying `enum` validation render `<select>` dropdowns with declared options.
+  - **Reset Control**: Reset button clears `fieldErrors` alongside form state and success banners.
+  - **Error Banners**: Displays warning banner when field errors are present, while suppressing generic `submitError` banners to keep focus on field-specific feedback.
+

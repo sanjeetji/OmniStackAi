@@ -13,6 +13,7 @@ import re
 from ..application_ir import ApplicationIR, ApiEndpoint, Entity, FieldType, Screen
 from .adapter import GenerationTarget
 from .errors import GenerationError
+from .field_validation import parse_field_rules
 from .files import GeneratedFile, GeneratedProject
 from .route_wiring import Op, fk_relations, wire_endpoint
 
@@ -95,6 +96,43 @@ def _api_client_file(ir: ApplicationIR) -> str:
         "    super(`API Error ${status}`);",
         '    this.name = "ApiError";',
         "  }",
+        "}",
+        "",
+        "export function extractFieldErrors(error: unknown): Record<string, string> {",
+        "  const result: Record<string, string> = {};",
+        '  if (!error || typeof error !== "object") return result;',
+        "",
+        '  const data = "data" in error ? (error as { data: unknown }).data : error;',
+        '  if (!data || typeof data !== "object") return result;',
+        "",
+        "  // Go backend format: { errors: [{ field: \"title\", message: \"...\" }] }",
+        '  if ("errors" in data && Array.isArray((data as { errors: unknown[] }).errors)) {',
+        '    for (const item of (data as { errors: unknown[] }).errors) {',
+        '      if (item && typeof item === "object" && "field" in item && "message" in item) {',
+        '        const field = String((item as { field: unknown }).field);',
+        '        const msg = String((item as { message: unknown }).message);',
+        "        if (field && msg) result[field] = msg;",
+        "      }",
+        "    }",
+        "    return result;",
+        "  }",
+        "",
+        "  // FastAPI / Pydantic format: { detail: [{ loc: [\"body\", \"title\"], msg: \"...\" }] }",
+        '  if ("detail" in data && Array.isArray((data as { detail: unknown[] }).detail)) {',
+        '    for (const item of (data as { detail: unknown[] }).detail) {',
+        '      if (item && typeof item === "object") {',
+        '        const loc = (item as { loc?: unknown[] }).loc;',
+        '        const msg = (item as { msg?: unknown }).msg;',
+        '        if (Array.isArray(loc) && loc.length > 0 && typeof msg === "string") {',
+        "          const field = String(loc[loc.length - 1]);",
+        "          if (field) result[field] = msg;",
+        "        }",
+        "      }",
+        "    }",
+        "    return result;",
+        "  }",
+        "",
+        "  return result;",
         "}",
         "",
         "async function requestWithMeta<T>(path: string, options: ApiOptions = {}, body?: unknown): Promise<PaginatedResult<T>> {",
@@ -1140,22 +1178,88 @@ def _form_screen_page(screen: Screen, entity: Entity, ir: ApplicationIR, ops: se
         'import { useState } from "react";',
         'import Link from "next/link";',
         f'import {{ useCreate{name} }} from "../lib/hooks";',
+        'import { extractFieldErrors } from "../lib/api";',
         f'import type {{ {name} }} from "../lib/types";',
         "",
         f"export default function {page_name}() {{",
         f"  const {{ create, loading: submitting, error: submitError, reset }} = useCreate{name}();",
         f"  const [formData, setFormData] = useState<Partial<{name}>>({initial_obj});",
+        '  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});',
         "  const [success, setSuccess] = useState(false);",
         "",
         "  const handleSubmit = async (e: React.FormEvent) => {",
         "    e.preventDefault();",
         "    setSuccess(false);",
+        "",
+        "    const clientErrors: Record<string, string> = {};",
+    ]
+
+    for f in editable_fields:
+        rules = parse_field_rules(f)
+        flabel = _title_case(f.name)
+        val_access = f"(formData as any).{f.name}"
+        if f.required:
+            if f.type in (FieldType.STRING, FieldType.TEXT):
+                lines.extend([
+                    f"    if (!{val_access} || !String({val_access}).trim()) {{",
+                    f'      clientErrors.{f.name} = "{flabel} is required";',
+                    "    }",
+                ])
+            elif f.type in (FieldType.INT, FieldType.FLOAT):
+                lines.extend([
+                    f"    if ({val_access} === undefined || {val_access} === null || isNaN(Number({val_access}))) {{",
+                    f'      clientErrors.{f.name} = "{flabel} is required";',
+                    "    }",
+                ])
+            elif f.type == FieldType.DATETIME:
+                lines.extend([
+                    f"    if (!{val_access}) {{",
+                    f'      clientErrors.{f.name} = "{flabel} is required";',
+                    "    }",
+                ])
+        if rules.max_length and f.type in (FieldType.STRING, FieldType.TEXT):
+            lines.extend([
+                f"    if ({val_access} && String({val_access}).length > {rules.max_length}) {{",
+                f'      clientErrors.{f.name} = "{flabel} must not exceed {rules.max_length} characters";',
+                "    }",
+            ])
+        if rules.minimum and f.type in (FieldType.INT, FieldType.FLOAT):
+            lines.extend([
+                f"    if ({val_access} !== undefined && Number({val_access}) < {rules.minimum}) {{",
+                f'      clientErrors.{f.name} = "{flabel} must be at least {rules.minimum}";',
+                "    }",
+            ])
+        if rules.maximum and f.type in (FieldType.INT, FieldType.FLOAT):
+            lines.extend([
+                f"    if ({val_access} !== undefined && Number({val_access}) > {rules.maximum}) {{",
+                f'      clientErrors.{f.name} = "{flabel} must be at most {rules.maximum}";',
+                "    }",
+            ])
+        if rules.enum and f.type in (FieldType.STRING, FieldType.TEXT):
+            opts_json = json.dumps(list(rules.enum))
+            enum_str = ", ".join(rules.enum)
+            lines.extend([
+                f"    if ({val_access} && !{opts_json}.includes(String({val_access}))) {{",
+                f'      clientErrors.{f.name} = "{flabel} must be one of: {enum_str}";',
+                "    }",
+            ])
+
+    lines.extend([
+        "    if (Object.keys(clientErrors).length > 0) {",
+        "      setFieldErrors(clientErrors);",
+        "      return;",
+        "    }",
+        "",
+        "    setFieldErrors({});",
         "    try {",
         "      await create(formData);",
         "      setSuccess(true);",
-        "      setFormData(" + initial_obj + ");",
-        "    } catch {",
-        "      // error captured in submitError",
+        f"      setFormData({initial_obj});",
+        "    } catch (err) {",
+        "      const serverErrors = extractFieldErrors(err);",
+        "      if (Object.keys(serverErrors).length > 0) {",
+        "        setFieldErrors(serverErrors);",
+        "      }",
         "    }",
         "  };",
         "",
@@ -1163,7 +1267,7 @@ def _form_screen_page(screen: Screen, entity: Entity, ir: ApplicationIR, ops: se
         '    <main style={{ maxWidth: 640, margin: "0 auto", padding: "32px 16px", fontFamily: "system-ui, -apple-system, sans-serif" }}>',
         '      <header style={{ marginBottom: 24 }}>',
         '        <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 6 }}>',
-    ]
+    ])
 
     if list_screen:
         lines.append(
@@ -1187,9 +1291,15 @@ def _form_screen_page(screen: Screen, entity: Entity, ir: ApplicationIR, ops: se
         "        </div>",
         "      )}",
         "",
-        "      {submitError && (",
+        "      {submitError && Object.keys(fieldErrors).length === 0 && (",
         '        <div style={{ padding: "12px 16px", background: "#fef2f2", border: "1px solid #fecaca", color: "#991b1b", borderRadius: 8, marginBottom: 20 }}>',
         "          Error: {submitError.message}",
+        "        </div>",
+        "      )}",
+        "",
+        "      {Object.keys(fieldErrors).length > 0 && (",
+        '        <div style={{ padding: "12px 16px", background: "#fff7ed", border: "1px solid #fed7aa", color: "#9a3412", borderRadius: 8, marginBottom: 20, fontSize: 14 }}>',
+        "          Please correct the highlighted errors below before submitting.",
         "        </div>",
         "      )}",
         "",
@@ -1201,6 +1311,7 @@ def _form_screen_page(screen: Screen, entity: Entity, ir: ApplicationIR, ops: se
 
     for f in editable_fields:
         label = _title_case(f.name)
+        rules = parse_field_rules(f)
         req_star = ' <span style={{ color: "#dc2626" }}>*</span>' if f.required else ""
         req_attr = " required" if f.required else ""
 
@@ -1211,11 +1322,13 @@ def _form_screen_page(screen: Screen, entity: Entity, ir: ApplicationIR, ops: se
                 '            <input',
                 '              type="checkbox"',
                 '              checked={Boolean((formData as any).' + f.name + ')}',
-                '              onChange={(e) => setFormData((prev) => ({ ...prev, ' + f.name + ': e.target.checked }))}',
+                '              onChange={(e) => { setFormData((prev) => ({ ...prev, ' + f.name + ': e.target.checked })); if (fieldErrors.' + f.name + ') setFieldErrors((prev) => ({ ...prev, ' + f.name + ': "" })); }}',
                 '              style={{ width: 16, height: 16, cursor: "pointer" }}',
+                '              aria-invalid={!!fieldErrors.' + f.name + '}',
                 '            />',
                 '            <span>' + label + '</span>',
                 '          </label>',
+                '          {fieldErrors.' + f.name + ' && <span style={{ color: "#ef4444", fontSize: 12, marginTop: 4, display: "block" }}>{fieldErrors.' + f.name + '}</span>}',
                 '        </div>',
             ])
         elif f.type == FieldType.TEXT:
@@ -1225,10 +1338,12 @@ def _form_screen_page(screen: Screen, entity: Entity, ir: ApplicationIR, ops: se
                 '          <textarea',
                 '            rows={4}',
                 '            value={String((formData as any).' + f.name + ' ?? "")}',
-                '            onChange={(e) => setFormData((prev) => ({ ...prev, ' + f.name + ': e.target.value }))}',
+                '            onChange={(e) => { setFormData((prev) => ({ ...prev, ' + f.name + ': e.target.value })); if (fieldErrors.' + f.name + ') setFieldErrors((prev) => ({ ...prev, ' + f.name + ': "" })); }}',
                 '            placeholder="Enter ' + label.lower() + '..."' + req_attr,
-                '            style={{ width: "100%", padding: "8px 12px", border: "1px solid #cbd5e1", borderRadius: 6, fontSize: 14, boxSizing: "border-box", outline: "none" }}',
+                '            style={{ width: "100%", padding: "8px 12px", border: fieldErrors.' + f.name + ' ? "1px solid #ef4444" : "1px solid #cbd5e1", borderRadius: 6, fontSize: 14, boxSizing: "border-box", outline: "none" }}',
+                '            aria-invalid={!!fieldErrors.' + f.name + '}',
                 '          />',
+                '          {fieldErrors.' + f.name + ' && <span style={{ color: "#ef4444", fontSize: 12, marginTop: 4, display: "block" }}>{fieldErrors.' + f.name + '}</span>}',
                 '        </div>',
             ])
         elif f.type in (FieldType.INT, FieldType.FLOAT):
@@ -1240,10 +1355,12 @@ def _form_screen_page(screen: Screen, entity: Entity, ir: ApplicationIR, ops: se
                 '            type="number"',
                 '            step="' + step + '"',
                 '            value={(formData as any).' + f.name + ' !== undefined ? String((formData as any).' + f.name + ') : ""}',
-                '            onChange={(e) => setFormData((prev) => ({ ...prev, ' + f.name + ': e.target.value === "" ? undefined : Number(e.target.value) }))}',
+                '            onChange={(e) => { setFormData((prev) => ({ ...prev, ' + f.name + ': e.target.value === "" ? undefined : Number(e.target.value) })); if (fieldErrors.' + f.name + ') setFieldErrors((prev) => ({ ...prev, ' + f.name + ': "" })); }}',
                 '            placeholder="Enter ' + label.lower() + '..."' + req_attr,
-                '            style={{ width: "100%", padding: "8px 12px", border: "1px solid #cbd5e1", borderRadius: 6, fontSize: 14, boxSizing: "border-box", outline: "none" }}',
+                '            style={{ width: "100%", padding: "8px 12px", border: fieldErrors.' + f.name + ' ? "1px solid #ef4444" : "1px solid #cbd5e1", borderRadius: 6, fontSize: 14, boxSizing: "border-box", outline: "none" }}',
+                '            aria-invalid={!!fieldErrors.' + f.name + '}',
                 '          />',
+                '          {fieldErrors.' + f.name + ' && <span style={{ color: "#ef4444", fontSize: 12, marginTop: 4, display: "block" }}>{fieldErrors.' + f.name + '}</span>}',
                 '        </div>',
             ])
         elif f.type == FieldType.DATETIME:
@@ -1253,9 +1370,30 @@ def _form_screen_page(screen: Screen, entity: Entity, ir: ApplicationIR, ops: se
                 '          <input',
                 '            type="datetime-local"',
                 '            value={String((formData as any).' + f.name + ' ?? "")}',
-                '            onChange={(e) => setFormData((prev) => ({ ...prev, ' + f.name + ': e.target.value }))}' + req_attr,
-                '            style={{ width: "100%", padding: "8px 12px", border: "1px solid #cbd5e1", borderRadius: 6, fontSize: 14, boxSizing: "border-box", outline: "none" }}',
+                '            onChange={(e) => { setFormData((prev) => ({ ...prev, ' + f.name + ': e.target.value })); if (fieldErrors.' + f.name + ') setFieldErrors((prev) => ({ ...prev, ' + f.name + ': "" })); }}' + req_attr,
+                '            style={{ width: "100%", padding: "8px 12px", border: fieldErrors.' + f.name + ' ? "1px solid #ef4444" : "1px solid #cbd5e1", borderRadius: 6, fontSize: 14, boxSizing: "border-box", outline: "none" }}',
+                '            aria-invalid={!!fieldErrors.' + f.name + '}',
                 '          />',
+                '          {fieldErrors.' + f.name + ' && <span style={{ color: "#ef4444", fontSize: 12, marginTop: 4, display: "block" }}>{fieldErrors.' + f.name + '}</span>}',
+                '        </div>',
+            ])
+        elif rules.enum:
+            opt_lines = "\n".join(
+                f'            <option value="{opt}">{opt}</option>' for opt in rules.enum
+            )
+            lines.extend([
+                '        <div style={{ marginBottom: 16 }}>',
+                '          <label style={{ display: "block", marginBottom: 6, fontSize: 14, fontWeight: 500, color: "#334155" }}>' + label + req_star + '</label>',
+                '          <select',
+                '            value={String((formData as any).' + f.name + ' ?? "")}',
+                '            onChange={(e) => { setFormData((prev) => ({ ...prev, ' + f.name + ': e.target.value })); if (fieldErrors.' + f.name + ') setFieldErrors((prev) => ({ ...prev, ' + f.name + ': "" })); }}' + req_attr,
+                '            style={{ width: "100%", padding: "8px 12px", border: fieldErrors.' + f.name + ' ? "1px solid #ef4444" : "1px solid #cbd5e1", borderRadius: 6, fontSize: 14, boxSizing: "border-box", outline: "none", background: "#fff" }}',
+                '            aria-invalid={!!fieldErrors.' + f.name + '}',
+                '          >',
+                '            <option value="">Select ' + label.lower() + '...</option>',
+                opt_lines,
+                '          </select>',
+                '          {fieldErrors.' + f.name + ' && <span style={{ color: "#ef4444", fontSize: 12, marginTop: 4, display: "block" }}>{fieldErrors.' + f.name + '}</span>}',
                 '        </div>',
             ])
         else:
@@ -1265,10 +1403,12 @@ def _form_screen_page(screen: Screen, entity: Entity, ir: ApplicationIR, ops: se
                 '          <input',
                 '            type="text"',
                 '            value={String((formData as any).' + f.name + ' ?? "")}',
-                '            onChange={(e) => setFormData((prev) => ({ ...prev, ' + f.name + ': e.target.value }))}',
+                '            onChange={(e) => { setFormData((prev) => ({ ...prev, ' + f.name + ': e.target.value })); if (fieldErrors.' + f.name + ') setFieldErrors((prev) => ({ ...prev, ' + f.name + ': "" })); }}',
                 '            placeholder="Enter ' + label.lower() + '..."' + req_attr,
-                '            style={{ width: "100%", padding: "8px 12px", border: "1px solid #cbd5e1", borderRadius: 6, fontSize: 14, boxSizing: "border-box", outline: "none" }}',
+                '            style={{ width: "100%", padding: "8px 12px", border: fieldErrors.' + f.name + ' ? "1px solid #ef4444" : "1px solid #cbd5e1", borderRadius: 6, fontSize: 14, boxSizing: "border-box", outline: "none" }}',
+                '            aria-invalid={!!fieldErrors.' + f.name + '}',
                 '          />',
+                '          {fieldErrors.' + f.name + ' && <span style={{ color: "#ef4444", fontSize: 12, marginTop: 4, display: "block" }}>{fieldErrors.' + f.name + '}</span>}',
                 '        </div>',
             ])
 
@@ -1276,7 +1416,7 @@ def _form_screen_page(screen: Screen, entity: Entity, ir: ApplicationIR, ops: se
         '        <div style={{ display: "flex", gap: 12, justifyContent: "flex-end", marginTop: 24, paddingTop: 16, borderTop: "1px solid #f1f5f9" }}>',
         '          <button',
         '            type="button"',
-        '            onClick={() => { reset(); setFormData(' + initial_obj + '); setSuccess(false); }}',
+        '            onClick={() => { reset(); setFormData(' + initial_obj + '); setFieldErrors({}); setSuccess(false); }}',
         '            style={{ padding: "8px 16px", border: "1px solid #cbd5e1", background: "#fff", color: "#475569", borderRadius: 6, fontSize: 14, cursor: "pointer" }}',
         '          >',
         '            Reset',
