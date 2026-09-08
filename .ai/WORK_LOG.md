@@ -1,5 +1,27 @@
 # Work Log
 
+## 2026-09-08 — R-259
+
+- Recorded contract in `.ai/CURRENT_TASK.yaml` and `.ai/tasks/R-259.md`.
+- `data_access.py`:
+  - Python repository: added `count_{table}() -> int` (`SELECT COUNT(*) AS count FROM {TABLE}`) and `count_{table}_by_{relation}({relation}_id: str) -> int` (`SELECT COUNT(*) AS count FROM {TABLE} WHERE {relation}_id = %s`).
+  - Go store: added `Count{pascal}(ctx context.Context, db *sql.DB) (int, error)` (`SELECT COUNT(*) FROM {table}`) and `Count{pascal}By{rel_pascal}(ctx context.Context, db *sql.DB, {relation}ID string) (int, error)` (`SELECT COUNT(*) FROM {table} WHERE {relation}_id = $1`).
+- `backend_go.py`:
+  - `_handlers_file_wired`: imported `"strconv"`. On `Op.LIST` and `Op.LIST_BY`, queries `total, err := store.Count...` prior to listing, and sets `w.Header().Set("X-Total-Count", strconv.Itoa(total))`.
+  - `_main_file`: added `w.Header().Set("Access-Control-Expose-Headers", "X-Total-Count")` to `corsMiddleware`.
+- `backend_python.py`:
+  - `_router_file`: imported `Response` from `fastapi` when `uses_list` is true. Injected `response: Response` into `Op.LIST` and `Op.LIST_BY` handlers, queries `total = await {wiring.table}.count_...()`, and sets `response.headers["X-Total-Count"] = str(total)`.
+  - `_main_file`: added `expose_headers=["X-Total-Count"]` to `CORSMiddleware`.
+- `nextjs.py`:
+  - `_api_client_file`: exported `PaginatedResult<T> { data: T; total: number }`.
+  - Emitted `requestWithMeta<T>` helper extracting `X-Total-Count` from response headers.
+  - Emitted `list<Entity>WithCount` and `list<Entity>sBy<Rel>WithCount` helpers returning `Promise<PaginatedResult<Entity[]>>`.
+  - Preserved standard `list*` methods returning `Promise<Entity[]>` for backwards compatibility.
+- Added `services/agent-engine/tests/test_total_count.py` with 15 unit tests covering Go store, Go handlers, Go CORS, Python repo, FastAPI routers, FastAPI CORS, and Next.js client integration.
+- Updated FastAPI router signature assertions in `test_pagination.py` and `test_sorting.py`.
+- `task verify` — 461 tests pass (15 new), 0 failures. 0 network calls, 0 cloud model calls.
+- Updated docs/CODEGEN.md, docs/PROGRESS.md, CHANGELOG.md, CURRENT_TASK.yaml, PROJECT_STATE.yaml, tasks/R-259.md.
+
 ## 2026-09-08 — R-258
 
 - Recorded contract in `.ai/CURRENT_TASK.yaml` and `.ai/tasks/R-258.md`.

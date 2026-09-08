@@ -1,24 +1,23 @@
 schema_version: 1
-task_id: R-258
-title: Query Parameter Sorting (sort & order) on LIST Endpoints with SQL Injection Whitelist Protection
+task_id: R-259
+title: Total Count Queries and X-Total-Count Header on LIST Endpoints
 status: done
 phase: BASIC/MVP
 founder_stage: 0
 branch: main
 goal: >-
-  Add query parameter sorting (sort field and order=asc|desc) to GET list and parent-scoped list endpoints
-  across Go and FastAPI backends, with strict whitelist validation against entity fields to prevent SQL injection:
-  - backend_go / data_access: parse sort and order, validate against known entity fields in Go store,
-    emit ORDER BY <col> ASC|DESC LIMIT $1 OFFSET $2.
-  - backend_python / data_access: add sort and order query params to FastAPI router, validate against
-    whitelisted fields in repository, emit safe ORDER BY {col} {dir} LIMIT %s OFFSET %s.
-  - nextjs: reflect sort and order options in lib/api.ts.
+  Add total count queries and X-Total-Count HTTP response header to Op.LIST and Op.LIST_BY endpoints
+  across Go and FastAPI backends, with CORS header exposure and Next.js client integration:
+  - data_access: emit Count<Entity> and Count<Entity>By<Rel> in Go store; emit count_<table> and count_<table>_by_<rel> in Python repositories.
+  - backend_go: in wired LIST and LIST_BY handlers, query count and set w.Header().Set("X-Total-Count", strconv.Itoa(total)); expose in corsMiddleware.
+  - backend_python: in LIST and LIST_BY routes, inject Response, query count, and set response.headers["X-Total-Count"] = str(total); expose in CORSMiddleware.
+  - nextjs: support X-Total-Count in lib/api.ts.
   - pure codegen change; no new platform dep, no install/build/run/DB.
 source:
   tracker_sheet: Phase_Roadmap
   brief_sections: [9, 26, 27, 40, 74, 77, 83, 84, 85, 92]
   founder_note: >-
-    Founder requested to proceed with the best option (Option A: Query Parameter Sorting).
+    Founder approved implementation plan for R-259.
 project_profile:
   repository: platform_modular_monorepo
   service: python_agent_engine
@@ -30,9 +29,9 @@ expected_impact:
   - services/agent-engine/src/omnistackai_agent_engine/codegen/backend_python.py
   - services/agent-engine/src/omnistackai_agent_engine/codegen/data_access.py
   - services/agent-engine/src/omnistackai_agent_engine/codegen/nextjs.py
-  - services/agent-engine/tests/test_sorting.py
+  - services/agent-engine/tests/test_total_count.py
   - services/agent-engine/tests/test_pagination.py
-  - services/agent-engine/tests/test_subcollection_wiring.py
+  - services/agent-engine/tests/test_sorting.py
   - docs/CODEGEN.md, docs/PROGRESS.md
   - portable state, changelog, handoff, task doc, tracker evidence
 allowed_paths:
@@ -44,32 +43,28 @@ allowed_paths:
   - services/agent-engine/**
 must_not_change:
   - the IR schema; no new IR field
-  - the R-250..R-257 validation, pagination, PUT, and full-stack connectivity behaviour
+  - the JSON array payload of LIST and LIST_BY endpoints (body remains Entity[])
   - network-independence of task verify
 must_not_do:
   - add a platform Python dependency
-  - allow un-whitelisted sort fields (must reject/fallback to prevent SQL injection)
+  - break existing pagination (limit/offset) or sorting (sort/order)
   - connect to or run a database; make a network call; put a secret anywhere
 acceptance:
-  - Go handler parses sort and order query params alongside limit and offset.
-  - Go store method validates sort against entity fields and applies safe ORDER BY <col> ASC|DESC.
-  - FastAPI router declares sort and order query parameters.
-  - FastAPI repository validates sort against entity fields and applies safe ORDER BY.
-  - Next.js lib/api.ts includes sort and order in params typing.
-  - Invalid sort fields safely fall back to "id" default; order defaults to "asc".
-  - Example IRs continue to pass unchanged.
+  - Go store emits Count<Entity> and Count<Entity>By<Rel> queries.
+  - Go handler sets X-Total-Count header on LIST and LIST_BY responses.
+  - Go corsMiddleware includes Access-Control-Expose-Headers: X-Total-Count.
+  - FastAPI repository emits count_<table> and count_<table>_by_<rel> queries.
+  - FastAPI router sets X-Total-Count header on LIST and LIST_BY responses.
+  - FastAPI CORSMiddleware includes expose_headers=["X-Total-Count"].
+  - Next.js lib/api.ts supports reading total count or paginated response metadata.
+  - Response body remains Entity[] (array payload preserved).
   - task verify green; 0 network calls.
-evidence:
-  task_verify: 446 tests passed in 0.897s
-  sorting_tests: 14 new dedicated unit tests in test_sorting.py passed
-  regressions: test_pagination.py, test_route_wiring.py, test_subcollection_wiring.py, test_nextjs_api_client.py all green
-  cloud_calls: 0
-  network_calls: 0
 required_gates:
-  - sorting_test
-  - pagination_regression_test
-  - sql_injection_safety_test
-  - example_ir_regression_test
+  - count_store_test
+  - count_handler_test
+  - count_repo_test
+  - count_router_test
+  - cors_expose_test
   - task_verify
 model_tool_trace:
   routing: local_only
@@ -77,5 +72,5 @@ model_tool_trace:
   cloud_calls: 0
   note: Deterministic codegen; no model call, no network, no DB. cloud_calls zero.
 blockers: []
-next_action: None. R-258 completed. Ready for next task or user review.
+next_action: Implement total count queries and X-Total-Count headers in codegen modules.
 next_command: task verify

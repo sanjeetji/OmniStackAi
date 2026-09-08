@@ -1,14 +1,14 @@
-# OmniStackAI — implementation progress (as of R-258)
+# OmniStackAI — implementation progress (as of R-259)
 
 A living summary of what is built, what is pending, and how to see results. Numbers come from the
 execution tracker (`R_&_D/OmniStackAI_Execution_Tracker_v6.xlsx`, `Phase_Roadmap`).
 
 ## Headline
 
-- **446 automated tests pass**, fully offline and network-independent (`task verify`).
-- **47 tracker tasks Done, 1 Deferred, 203 Not Started** across 251 rows.
+- **461 automated tests pass**, fully offline and network-independent (`task verify`).
+- **48 tracker tasks Done, 1 Deferred, 202 Not Started** across 251 rows.
 - The offline builder loop is complete end to end: **describe (IR) → generate (web with typed API client + API with
-  working CRUD incl. PATCH/PUT update + pagination + sorting with SQL injection whitelist protection + sub-collections + DB schema + data-access + JWT-verified auth
+  working CRUD incl. PATCH/PUT update + pagination + sorting + total count header + sub-collections + DB schema + data-access + JWT-verified auth
   & per-endpoint roles + field validation + CORS middleware)
   → verify → edit → commit to an owned Git repo.**
 
@@ -16,11 +16,11 @@ execution tracker (`R_&_D/OmniStackAI_Execution_Tracker_v6.xlsx`, `Phase_Roadmap
 
 | Phase | Done | Total | % complete |
 |-------|------|-------|-----------|
-| **MVP** (current milestone) | 43 | 145 | **29.7%** |
+| **MVP** (current milestone) | 44 | 145 | **30.3%** |
 | MID | 0 | 47 | 0% |
 | ADVANCED | 0 | 29 | 0% |
 | PRODUCTION | 0 | 29 | 0% |
-| **Overall program** | **43** | **251** | **17.1%** |
+| **Overall program** | **44** | **251** | **17.5%** |
 
 > The 203 "Not Started" rows are the pre-existing backlog catalogue (R-010..R-219 — many are individual
 > specialized agents and later-phase features). Capability-wise the platform is further along than the
@@ -69,6 +69,7 @@ execution tracker (`R_&_D/OmniStackAI_Execution_Tracker_v6.xlsx`, `Phase_Roadmap
 | **PUT update handlers** (full-replace CRUD verb wired) | ✅ Done | R-256 |
 | **Frontend Typed API client** (`apps/web/lib/api.ts`) + **Backend CORS** | ✅ Done | R-257 |
 | **Query parameter sorting** (`sort` & `order` with whitelist protection) | ✅ Done | R-258 |
+| **Total count queries & `X-Total-Count` header** (Go, FastAPI, Next.js) | ✅ Done | R-259 |
 | Next.js console upgrade (rich UI) | ⏸ Deferred | R-224 — needs npm registry access |
 | Live sandbox preview + real deploy (Tier 2) | ⛔ Pending | needs a network machine + provider keys |
 | Native mobile agents | ⛔ Deferred (governance) | until web/backend stability (Brief §25/§91) |

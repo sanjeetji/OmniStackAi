@@ -5,9 +5,9 @@ Last updated: 2026-09-08T17:00:00+05:30
 Stage 0 (Founder Build Sequence, Brief Section 91) — BASIC/MVP
 
 ## Last Completed Task
-Tracker ID: R-258 — Query Parameter Sorting (`sort` & `order=asc|desc`) on LIST Endpoints with SQL Injection Whitelist Protection — DONE,
-`task verify` (446 agent-engine tests, 14 new) passing. Go store whitelists sort column against entity fields via switch statement and validates order (ASC/DESC); Go handlers parse sort and order query parameters alongside pagination; FastAPI routers declare sort/order params; FastAPI repositories whitelist sort column and order; Next.js lib/api.ts includes sort and order in params typing.
-Preceded by R-254 (structured validation errors), R-255 (pagination limit/offset), R-256 (PUT handlers), and R-257 (typed Next.js API client + CORS middleware).
+Tracker ID: R-259 — Total Count Queries & `X-Total-Count` Header on LIST Endpoints — DONE,
+`task verify` (461 agent-engine tests, 15 new in `test_total_count.py`) passing. Go store Count<Entity> / Count<Entity>By<Rel>; Go handlers set X-Total-Count header on Op.LIST/Op.LIST_BY and expose in CORS; FastAPI repo count_<table> / count_<table>_by_<rel>; FastAPI routers set X-Total-Count header and expose in CORS; Next.js lib/api.ts exports PaginatedResult, requestWithMeta, and list*WithCount helpers, keeping standard list* methods backward-compatible.
+Preceded by R-254 (structured validation errors), R-255 (pagination limit/offset), R-256 (PUT handlers), R-257 (typed Next.js API client + CORS middleware), and R-258 (query parameter sorting).
 Additive, offline, 0 network, no DB connection.
 
 ## Workflow note

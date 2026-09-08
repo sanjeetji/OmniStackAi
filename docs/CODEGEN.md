@@ -337,3 +337,23 @@ Added safe, type-checked query parameter sorting across Go, FastAPI, and Next.js
   - Updates list methods to type `params?: { limit?: number; offset?: number; sort?: string; order?: "asc" | "desc" }`.
   - Built-in URLSearchParams serialization automatically encodes `?sort=...&order=...`.
 
+### Total Count Queries & X-Total-Count Header on LIST Endpoints (R-259)
+
+Added total count database queries and `X-Total-Count` HTTP response header emission on `Op.LIST` and `Op.LIST_BY` endpoints across Go and FastAPI backends, with CORS exposure and typed Next.js client integration:
+
+- **Go Store (`internal/store/*.go`)**:
+  - `Count<Entity>(ctx context.Context, db *sql.DB) (int, error)` executing `SELECT COUNT(*) FROM <table>`.
+  - `Count<Entity>By<Rel>(ctx context.Context, db *sql.DB, <rel>ID string) (int, error)` executing `SELECT COUNT(*) FROM <table> WHERE <rel>_id = $1`.
+- **Go Handlers (`internal/handlers/*.go`)**:
+  - `Op.LIST` and `Op.LIST_BY` handlers query `total, err := store.Count...` prior to listing, and emit `w.Header().Set("X-Total-Count", strconv.Itoa(total))` before JSON response serialization.
+  - `corsMiddleware` in `main.go` emits `w.Header().Set("Access-Control-Expose-Headers", "X-Total-Count")` so browsers expose the header to client applications.
+- **FastAPI Backend (`services/api`)**:
+  - `app/repositories/*.py`: emits `async def count_<table>() -> int` and `async def count_<table>_by_<rel>(<rel>_id: str) -> int`.
+  - `app/routers/*.py`: imports `Response` from `fastapi`, injects `response: Response` into `Op.LIST` and `Op.LIST_BY` route handlers, queries `total = await <table>.count_...()`, and sets `response.headers["X-Total-Count"] = str(total)`.
+  - `app/main.py`: adds `expose_headers=["X-Total-Count"]` to `CORSMiddleware`.
+- **Next.js Client (`apps/web/lib/api.ts`)**:
+  - Exports `PaginatedResult<T> { data: T; total: number }`.
+  - Emits helper `requestWithMeta<T>` which extracts `res.headers.get("X-Total-Count")` (defaulting to 0) and returns `{ data, total }`.
+  - Generates `list<Entity>WithCount(...)` and `list<Entity>sBy<Rel>WithCount(...)` returning `Promise<PaginatedResult<<Entity>[]>>`.
+  - Standard `list<Entity>(...)` and `list<Entity>sBy<Rel>(...)` methods are preserved returning `Promise<<Entity>[]>` for full backward compatibility.
+
