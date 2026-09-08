@@ -1,13 +1,22 @@
 # Project State — OmniStackAI
-Last updated: 2026-09-08T23:38:00+05:30
+Last updated: 2026-09-09T00:23:00+05:30
 
 ## Current Phase
 Stage 0 (Founder Build Sequence, Brief Section 91) — BASIC/MVP
 
 ## Last Completed Task
-Tracker ID: R-274 — Form Screen Post-Submit Contextual CTAs, Record Navigation & Cancel Actions — DONE,
-`task verify` (679 agent-engine tests, 16 new in `test_form_navigation_ctas.py`) passing. Delivers post-submission contextual navigation and cancellation actions in generated Next.js form screens: `_form_screen_page` declares `lastSavedId` state (`useState<string | null>(null)`); captures created record ID from `create(formData)` response (`res.id`) via `setLastSavedId`; captures `editId` into `setLastSavedId` in update branch; success banner upgraded to interactive action panel preserving exact message text in `<span>`; dismiss button (`&times;`) calling `setSuccess(false)`; "View {name} &rarr;" `Link` to `/{detail_screen.id}?id=${lastSavedId || editId}` rendered when detail screen exists; "&larr; Back to {plural}" `Link` to `/{list_screen.id}` rendered when list screen exists; "+ Create another {name}" button in create mode resetting form and banner state; `Cancel` `Link` button in form footer navigating to `/{list_screen.id}` (or `/` when no list screen); Reset clears `lastSavedId`; diff-invariant across `ir.description`.
-Preceded by R-225 through R-273.
+Tracker ID: R-275 — Rich App Dashboard Overview Page in Generated Next.js Web App — DONE,
+`task verify` (695 agent-engine tests, 16 new in `test_overview_dashboard.py`) passing. Upgrades
+the generated Next.js app's home page (`app/page.tsx`) from a static bare-bones HTML list into a
+rich entity-aware dashboard: `"use client";` directive enables React hooks; calls
+`useList<Entity>({ limit: 1 })` for each entity with `Op.LIST` wired, displaying live `.total`
+count (loading: `"…"`, error: `"—"`) in white-card entity summary panels; screen navigation
+`<Link>` tiles for collection and form screens with intent badge and role badge for restricted
+screens (detail screens excluded); Quick Actions `+ Create {Entity}` blue CTA buttons for form
+screens; `ir.description` removed from page body (diff-invariance fix — description in README.md);
+`test_console_snapshot.py` updated (page no longer in edit-diff set); clean fallback when no
+entities/screens; 100% offline, zero new IR fields, zero npm dependencies.
+Preceded by R-225 through R-274.
 Additive, offline, 0 network, no DB connection.
 
 

@@ -2,23 +2,21 @@ schema_version: 1
 project: OmniStackAI
 phase: BASIC/MVP
 founder_stage: 0
-current_task: R-274
+current_task: R-275
 current_status: done
 branch: main
 last_completed_task:
-  task_id: R-274
-  title: Form Screen Post-Submit Contextual CTAs, Record Navigation & Cancel Actions
+  task_id: R-275
+  title: Rich App Dashboard Overview Page in Generated Next.js Web App
   verification: >-
-    task verify (679 agent-engine tests, 16 new in test_form_navigation_ctas.py); _form_screen_page
-    declares lastSavedId state (useState<string | null>(null)); captures created record ID from
-    create(formData) response (res.id) via setLastSavedId; captures editId into setLastSavedId in
-    update branch; success banner upgraded to interactive action panel preserving exact message text
-    wrapped in <span>; dismiss button (&times;) calling setSuccess(false); "View {name} &rarr;" Link
-    to /{detail_screen.id}?id=${lastSavedId || editId} rendered when detail screen exists for entity;
-    "&larr; Back to {plural}" Link to /{list_screen.id} rendered when list screen exists; "+ Create
-    another {name}" button in create mode resetting setSuccess(false) and setLastSavedId(null);
-    Cancel Link button in form footer navigating to /{list_screen.id} (or / when no list screen);
-    Reset button clears lastSavedId via setLastSavedId(null); diff-invariant across ir.description;
+    task verify (695 agent-engine tests, 16 new in test_overview_dashboard.py); _overview_page
+    upgraded to rich client component ("use client") with useList<Entity>({ limit: 1 }) hooks
+    for each entity with Op.LIST wired; entity count cards display .loading/error/.total;
+    screen navigation cards render for collection and form screens (detail screens excluded);
+    Quick Actions section renders + Create {Entity} CTAs to form screens; role badges for
+    non-public screens; ir.description removed from page body (diff-invariance fix;
+    description stays in README.md); clean fallback when no entities/screens; test_console_snapshot
+    updated (apps/web/app/page.tsx removed from expected edit-diff set — page now diff-stable);
     task lint and task security:quick green; builder:demo minimal-blog and rideshare-favourites pass;
     0 network, no DB
   result: pass
@@ -32,7 +30,7 @@ product_direction: >-
   framework adapter contract -> Next.js adapter -> Git service -> preview/sandbox (needs cloud env).
 id_note: >-
   Workbook backlog owns R-010..R-219. Founder-requested tasks use IDs after R-219: R-220..R-223 done,
-  R-224 Next.js deferred (env-blocked), R-225..R-274 done. Continue from R-275.
+  R-224 Next.js deferred (env-blocked), R-225..R-275 done. Continue from R-276.
 blockers: []
-next_action: Task R-274 (Form Screen Post-Submit Contextual CTAs, Record Navigation & Cancel Actions) is implemented, verified, and complete (679 tests pass). Ready for user commit decision.
-last_updated: "2026-09-08T23:38:00+05:30"
+next_action: Task R-275 (Rich App Dashboard Overview Page) is implemented, verified, and complete (695 tests pass). Ready for user commit decision.
+last_updated: "2026-09-09T00:20:00+05:30"

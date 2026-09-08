@@ -1,5 +1,24 @@
 # Work Log
 
+## 2026-09-09 — R-275
+
+- Recorded contract in `.ai/CURRENT_TASK.yaml` and `.ai/tasks/R-275.md`.
+- `nextjs.py` (`_overview_page`):
+  - Replaced static 20-line bare HTML list with a rich entity-aware dashboard client component.
+  - Added `"use client";` directive — overview page is now a client component to enable React hooks.
+  - Imports `Link from "next/link"` for navigation; imports `useList<Plural>` hook for each entity with `Op.LIST` wired (reuses `_get_ops_by_entity`).
+  - Calls `useList<Entity>({ limit: 1 })` per listable entity — `.total` (all records) displayed with loading (`"…"`) and error (`"—"`) fallbacks.
+  - Entity summary cards grid: white card with box-shadow, 32px `#0f172a` count, uppercase entity label, plural subtitle.
+  - Screen navigation cards for each primary screen (collection + form, detail excluded): styled `<Link>` tiles with intent label badge; role badge (`#eff6ff`/`#1d4ed8` pill) for non-public screens (reuses `_screen_intent`, `_title_case`).
+  - Quick Actions section: `+ Create {Entity}` blue CTAs (`#2563eb`) linking to each form screen entity (reuses `_match_entity`).
+  - `ir.description` removed from page body — fixes the existing diff-invariance violation; description already in `README.md`.
+  - Clean fallback when `ir.entities` is empty (no hook imports, no cards) and when `ir.screens` is empty (no nav section).
+  - `# noqa: PLR0912` on function (high branch count justified by inline card/section rendering).
+- `test_console_snapshot.py`: removed `apps/web/app/page.tsx` from expected edit-diff path set — description-stable page no longer changes when only `ir.description` changes.
+- Added `services/agent-engine/tests/test_overview_dashboard.py` with 16 comprehensive unit tests.
+- `task verify` — 695 tests pass (16 new), 0 failures. `task lint`, `task security:quick` pass. `builder:demo minimal-blog` and `builder:demo rideshare-favourites` pass. 0 network calls, 0 cloud model calls.
+- Updated CURRENT_TASK.yaml, tasks/R-275.md, PROJECT_STATE.yaml, PROJECT_STATE.md, CHANGELOG.md, docs/CODEGEN.md, docs/PROGRESS.md.
+
 ## 2026-09-08 — R-274
 
 - Recorded contract in `.ai/CURRENT_TASK.yaml` and `.ai/tasks/R-274.md`.

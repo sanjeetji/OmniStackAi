@@ -1,6 +1,6 @@
 # Current Handoff
 
-Task ID: R-274
+Task ID: R-275
 Status: done
 Phase: BASIC/MVP — Founder Stage 0
 Branch: `main` (the only branch; the GitHub default)
@@ -12,46 +12,63 @@ Branch: `main` (the only branch; the GitHub default)
 - Commits use `sanjeetji <sk698166@gmail.com>` as author.
 - User permission is required prior to committing or pushing code.
 
-## Completed (R-274) — Form Screen Post-Submit Contextual CTAs, Record Navigation & Cancel Actions
+## Completed (R-275) — Rich App Dashboard Overview Page in Generated Next.js Web App
 
-- **`lastSavedId` State & ID Capture**:
-  - `_form_screen_page` declares `const [lastSavedId, setLastSavedId] = useState<string | null>(null);`.
-  - Create branch: `const res = await create(formData);` + `if (res && (res as any).id) { setLastSavedId(String((res as any).id)); }`.
-  - Update branch: `setLastSavedId(editId);` after `await update(editId, formData);`.
-- **Interactive Success Banner**:
-  - Exact message text preserved in `<span>{msg_jsx}</span>` (invariant to existing assertions).
-  - Dismiss button (`&times;`) with `aria-label="Dismiss"` calling `setSuccess(false)`.
-  - "View {name} →" `Link` to `/{detail_screen.id}?id=${lastSavedId || editId}` when `detail_screen` exists for entity.
-  - "← Back to {plural}" `Link` to `/{list_screen.id}` when `list_screen` exists for entity.
-  - "+ Create another {name}" button (create mode only) resetting `setSuccess(false); setLastSavedId(null);`.
-- **Form Footer Cancel Button**:
-  - Styled `Cancel` `Link` button navigating to `/{list_screen.id}` (or `/` when no list screen exists).
-  - Reset `onClick` extended with `setLastSavedId(null);`.
-- **Quality & Diff Invariance**:
+- **Rich Entity-Aware Overview Page**:
+  - `_overview_page(ir)` upgraded from a static 20-line bare HTML list to a full client component.
+  - `"use client";` at top — matches pattern of all other generated screen pages.
+  - Imports `useList<Plural>` for each entity with `Op.LIST` wired (via `_get_ops_by_entity`).
+  - Calls `useList<Entity>({ limit: 1 })` per listable entity for live count; displays `.total`
+    with loading fallback (`"…"`) and error fallback (`"—"`).
+
+- **Entity Summary Cards**:
+  - CSS Grid (`minmax(220px, 1fr)`) of white cards with box-shadow and border.
+  - 32px `#0f172a` count, uppercase `#64748b` entity label, `#94a3b8` plural subtitle.
+  - Only shown for entities with `Op.LIST` wired.
+
+- **Screen Navigation Cards**:
+  - CSS Grid (`minmax(240px, 1fr)`) of styled `<Link>` tiles.
+  - Detail screens excluded via `_screen_intent` — keeps navigation clean.
+  - Intent label badge (`Collection`, `Form`, `Screen`); role badge for non-public screens
+    (`#eff6ff`/`#1d4ed8` pill with role ID).
+
+- **Quick Actions Section**:
+  - `+ Create {Entity}` blue CTAs (`#2563eb`) for each form screen, using `_match_entity` to
+    resolve entity name.
+
+- **Diff Invariance Fix**:
+  - `ir.description` removed from `app/page.tsx` — was an existing violation (page changed when
+    only description changed). Description already in `README.md`.
+  - `test_console_snapshot.py` updated: `apps/web/app/page.tsx` removed from the expected edit-diff
+    path set — the page is now stable across description-only changes.
+
+- **Quality**:
+  - Clean fallback when no entities (no hook calls/imports) and when no screens (no nav section).
   - 100% offline, zero external npm dependencies, zero new IR fields.
-  - Zero references to `ir.description` in new output, preserving snapshot diff invariance.
+  - `# noqa: PLR0912` on function (high branch count justified).
 
-## Test Coverage (R-274)
+## Test Coverage (R-275)
 
-`services/agent-engine/tests/test_form_navigation_ctas.py` — 16 new tests:
-1. `test_form_declares_lastsavedid_state`
-2. `test_form_captures_created_record_id`
-3. `test_form_captures_updated_record_id`
-4. `test_success_banner_preserves_existing_message`
-5. `test_view_record_link_rendered_when_detail_screen_exists`
-6. `test_view_record_link_omitted_when_no_detail_screen`
-7. `test_back_to_collection_link_in_success_banner`
-8. `test_create_another_button_in_create_mode`
-9. `test_dismiss_button_in_success_banner`
-10. `test_cancel_button_rendered_in_footer`
-11. `test_cancel_button_links_to_list_screen`
-12. `test_cancel_button_links_to_root_when_no_list_screen`
-13. `test_form_reset_clears_lastsavedid`
-14. `test_diff_invariance_across_ir_description_changes`
-15. `test_full_project_generation_succeeds`
-16. `test_form_screens_without_update_op`
+`services/agent-engine/tests/test_overview_dashboard.py` — 16 new tests:
+1. `test_overview_page_is_client_component`
+2. `test_overview_page_imports_uselist_hooks`
+3. `test_overview_page_has_entity_cards`
+4. `test_overview_page_has_screen_nav_links`
+5. `test_overview_page_has_quick_actions`
+6. `test_overview_page_no_ir_description`
+7. `test_overview_page_shows_total_count`
+8. `test_overview_page_no_entities_fallback`
+9. `test_overview_page_no_screens_fallback`
+10. `test_overview_page_diff_invariance`
+11. `test_overview_page_link_to_collection_screen`
+12. `test_overview_page_link_to_form_screen`
+13. `test_overview_page_role_badge_on_restricted_screen`
+14. `test_overview_page_entity_without_list_op_no_hook`
+15. `test_full_project_overview_page_present`
+16. `test_overview_page_no_detail_screens_in_nav`
 
 ## Preceded by:
+- **R-274**: Form Screen Post-Submit Contextual CTAs, Record Navigation & Cancel Actions.
 - **R-273**: Global Responsive Navigation Shell & Header Navbar in Generated Next.js Web App.
 - **R-272**: Deep-Linking & Entity Lifecycle in Next.js Detail Screens.
 - **R-271**: CSV Data Export & Bulk Export in Generated Next.js Collection Screens.
@@ -65,7 +82,7 @@ Branch: `main` (the only branch; the GitHub default)
 
 ## Verification
 
-- `task verify` — pass (679 agent-engine tests; 16 new in `test_form_navigation_ctas.py`).
+- `task verify` — pass (695 agent-engine tests; 16 new in `test_overview_dashboard.py`).
 - `task lint`, `task security:quick` — all pass.
 - `task builder:demo -- minimal-blog` and `task builder:demo -- rideshare-favourites` — both pass.
 - 0 local model calls, 0 cloud calls. Offline and deterministic.

@@ -754,6 +754,47 @@ Upgrades generated Next.js form screens (`apps/web/app/<screen>/page.tsx`) with 
   - 100% offline, zero external npm dependencies, no new IR fields.
   - Strict diff invariance across `ir.description` changes.
 
+### Rich Entity-Aware Dashboard Overview Page (R-275)
+
+Upgrades the generated Next.js app's home page (`apps/web/app/page.tsx`) from a static 20-line bare
+HTML list into a rich, entity-aware dashboard client component:
+
+- **Client Component**:
+  - `"use client";` at the top — matches the pattern of all other generated screen pages and enables React hooks.
+  - Imports `Link from "next/link"` for screen navigation.
+
+- **Live Entity Count Cards**:
+  - Imports `useList<Plural>` hook for each entity with `Op.LIST` wired (determined via `_get_ops_by_entity`).
+  - Calls `useList<Entity>({ limit: 1 })` per listable entity — only `total` is needed, so `limit: 1` minimises data transfer.
+  - Displays `.total` as a live 32px count badge with loading fallback (`"…"`) and error fallback (`"—"`).
+  - Card styling: white background, `border-radius: 12`, box-shadow, uppercase entity label in `#64748b`, plural subtitle in `#94a3b8`.
+  - Entities without `Op.LIST` (e.g. create-only) emit no hook and no card.
+
+- **Screen Navigation Cards**:
+  - CSS Grid (`repeat(auto-fill, minmax(240px, 1fr))`) of styled `<Link>` tiles.
+  - Detail screens are excluded via `_screen_intent(s) == "detail"` — keeps top-level navigation clean.
+  - Each tile shows the screen title (via `_title_case`) and an intent badge (`Collection`, `Form`, or `Screen`).
+  - Non-public screens (role not in `("public", "")`) render a role badge pill (`#eff6ff` background, `#1d4ed8` text).
+
+- **Quick Actions Section**:
+  - `+ Create {Entity}` blue CTA buttons (`#2563eb`) for each form screen, using `_match_entity` to resolve the entity name.
+  - Falls back to `+ {screen title}` when no entity can be resolved.
+
+- **Diff Invariance Fix**:
+  - `ir.description` is intentionally NOT embedded in the generated page body (it already appears in `README.md`).
+  - This removes a pre-existing diff-invariance violation where changing only `ir.description` caused `app/page.tsx` to differ.
+  - `test_console_snapshot.py` updated: `apps/web/app/page.tsx` removed from the expected edit-diff path set.
+
+- **Fallbacks**:
+  - When `ir.entities` is empty: no hook imports, no count cards section.
+  - When `ir.screens` is empty: no screen navigation section, no quick actions.
+
+- **Quality**:
+  - 100% offline, zero external npm dependencies, zero new IR fields.
+  - `# noqa: PLR0912` on `_overview_page` (high branch count justified by inline card/section rendering logic).
+  - All styles are inline — no changes to `app/globals.css`.
+
+
 
 
 

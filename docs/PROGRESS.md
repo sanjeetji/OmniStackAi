@@ -1,13 +1,13 @@
-# OmniStackAI — implementation progress (as of R-274)
+# OmniStackAI — implementation progress (as of R-275)
 
 A living summary of what is built, what is pending, and how to see results. Numbers come from the
 execution tracker (`R_&_D/OmniStackAI_Execution_Tracker_v6.xlsx`, `Phase_Roadmap`).
 
 ## Headline
 
-- **679 automated tests pass**, fully offline and network-independent (`task verify`).
-- **63 tracker tasks Done, 1 Deferred, 187 Not Started** across 251 rows.
-- The offline builder loop is complete end to end: **describe (IR) → generate (web with typed API client, React hooks, interactive master-detail screen components with field validation, page size selector & contextual empty states, bulk selection & batch deletion, CSV data export & bulk export, deep-linking & entity lifecycle in detail screens, global responsive navigation shell & header navbar with active route detection & quick-create CTA, post-submit contextual CTAs & record navigation with Cancel action in form footer, subcollection navigation, child item deletion & mutation feedback, full-stack update/edit actions, foreign-key relation selectors & parent auto-population + API with
+- **695 automated tests pass**, fully offline and network-independent (`task verify`).
+- **64 tracker tasks Done, 1 Deferred, 186 Not Started** across 251 rows.
+- The offline builder loop is complete end to end: **describe (IR) → generate (web with typed API client, React hooks, interactive master-detail screen components with field validation, page size selector & contextual empty states, bulk selection & batch deletion, CSV data export & bulk export, deep-linking & entity lifecycle in detail screens, global responsive navigation shell & header navbar with active route detection & quick-create CTA, post-submit contextual CTAs & record navigation with Cancel action in form footer, **rich entity-aware dashboard overview page** (live count cards, screen nav tiles, quick-create CTAs, diff-stable), subcollection navigation, child item deletion & mutation feedback, full-stack update/edit actions, foreign-key relation selectors & parent auto-population + API with
   working CRUD incl. PATCH/PUT update + pagination + sorting + total count header + keyword search + sub-collections + DB schema + data-access + JWT-verified auth
   & per-endpoint roles + field validation + CORS middleware + OpenAPI 3.1 contract)
   → verify → edit → commit to an owned Git repo.**
@@ -16,11 +16,11 @@ execution tracker (`R_&_D/OmniStackAI_Execution_Tracker_v6.xlsx`, `Phase_Roadmap
 
 | Phase | Done | Total | % complete |
 |-------|------|-------|-----------|
-| **MVP** (current milestone) | 58 | 145 | **40.0%** |
+| **MVP** (current milestone) | 59 | 145 | **40.7%** |
 | MID | 0 | 47 | 0% |
 | ADVANCED | 0 | 29 | 0% |
 | PRODUCTION | 0 | 29 | 0% |
-| **Overall program** | **58** | **251** | **23.1%** |
+| **Overall program** | **59** | **251** | **23.5%** |
 
 
 > The 203 "Not Started" rows are the pre-existing backlog catalogue (R-010..R-219 — many are individual
@@ -84,7 +84,8 @@ execution tracker (`R_&_D/OmniStackAI_Execution_Tracker_v6.xlsx`, `Phase_Roadmap
 | **Bulk selection & batch deletion in collection screens** (multi-row checkboxes, contextual toolbar, batch delete, confirmation prompt, mutation progress & errors) | ✅ Done | R-270 |
 | **CSV data export & bulk export in collection screens** (client-side RFC 4180 export, full-page Export CSV button, contextual Bulk Actions Export Selected, Blob URL lifecycle) | ✅ Done | R-271 |
 | **Deep-linking & entity lifecycle in detail screens** (query param auto-load, single-record JSON export, edit/delete actions, collection View link, breadcrumbs) | ✅ Done | R-272 |
-| **Global responsive navigation shell & header navbar** (app branding, route active highlights via usePathname, screen links, role badges, quick-create CTA button) | ✅ Done | R-273 |
+| **Post-submit contextual CTAs, record navigation & Cancel in form screens** (`lastSavedId`, View →, ← Back, + Create another, Dismiss, Cancel link button) | ✅ Done | R-274 |
+| **Rich entity-aware dashboard overview page** (`"use client"`, `useList<Entity>` live count cards, screen nav tiles, Quick Actions CTAs, diff-stable — no `ir.description` in output) | ✅ Done | R-275 |
 | Next.js console upgrade (rich UI) | ⏸ Deferred | R-224 — needs npm registry access |
 | Live sandbox preview + real deploy (Tier 2) | ⛔ Pending | needs a network machine + provider keys |
 | Native mobile agents | ⛔ Deferred (governance) | until web/backend stability (Brief §25/§91) |

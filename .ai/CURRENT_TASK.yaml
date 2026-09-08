@@ -1,27 +1,28 @@
 schema_version: 1
-task_id: R-274
-title: Form Screen Post-Submit Contextual CTAs, Record Navigation & Cancel Actions
+task_id: R-275
+title: Rich App Dashboard Overview Page in Generated Next.js Web App
 status: done
 phase: BASIC/MVP
 founder_stage: 0
 branch: main
 goal: >-
-  Deliver post-submission contextual navigation and form cancellation actions in generated Next.js form screens (apps/web/app/<screen>/page.tsx):
-  - Capture newly created or updated record ID (lastSavedId) upon form submission in React state.
-  - Upgrade the success banner into an interactive action panel:
-    * Preserve exact success message ({isEdit ? "{name} updated successfully!" : "{name} saved successfully!"}).
-    * Render "View {name} &rarr;" link button navigating to /{detail_screen.id}?id=${lastSavedId || editId} when a detail screen exists for the entity.
-    * Render "&larr; Back to {plural}" link button navigating to /{list_screen.id} when a collection screen exists for the entity.
-    * Render "+ Create another {name}" action button in create mode resetting form state and success banner for rapid data entry.
-    * Render "&times;" dismiss button allowing manual closure of the success alert.
-  - Add a styled "Cancel" link button in the form card footer next to "Reset", navigating to /{list_screen.id} (or / if no list screen exists).
-  - Maintain strict diff invariance across ir.description modifications.
-  - Fully offline, 0 network, 0 external dependencies.
+  Upgrade the generated Next.js app home page (app/page.tsx) from a static bare-bones HTML list
+  into a rich, entity-aware dashboard overview page:
+  - Make app/page.tsx a client component ("use client") to enable live React hooks.
+  - Call useList<Entity>({ limit: 1 }) for each entity with Op.LIST wired, display .total as a
+    live count badge in entity summary cards.
+  - Render screen navigation cards for each primary screen (collection + form); exclude detail
+    screens to keep navigation focused.
+  - Render a "Quick Actions" section listing "+ Create {Entity}" CTAs to form screens.
+  - Remove ir.description from the page body (it already appears in README.md) — fixes the
+    existing diff-invariance violation in the old overview page.
+  - Fall back cleanly when ir.entities is empty (no hook calls, no cards).
+  - 100% offline, zero new IR fields, zero new npm dependencies.
 source:
   tracker_sheet: Phase_Roadmap
   brief_sections: [43, 50, 74, 77, 91, 92]
   founder_note: >-
-    Founder approved implementation plan for Task R-274 (Form Screen Post-Submit Contextual CTAs, Record Navigation & Cancel Actions).
+    Founder approved implementation plan for Task R-275 (Rich App Dashboard Overview Page).
 project_profile:
   repository: platform_modular_monorepo
   service: python_agent_engine
@@ -30,7 +31,8 @@ project_profile:
 complexity: L2
 expected_impact:
   - services/agent-engine/src/omnistackai_agent_engine/codegen/nextjs.py
-  - services/agent-engine/tests/test_form_navigation_ctas.py
+  - services/agent-engine/tests/test_overview_dashboard.py
+  - services/agent-engine/tests/test_console_snapshot.py
   - docs/CODEGEN.md, docs/PROGRESS.md
   - portable state, changelog, handoff, task doc, tracker evidence
 allowed_paths:
@@ -43,38 +45,37 @@ allowed_paths:
 must_not_change:
   - the IR schema; no new IR field
   - network-independence of task verify
-  - diff invariance for ir.description
 must_not_do:
   - add a platform Python dependency
   - break existing codegen contracts
   - connect to or run a database; make a network call; put a secret anywhere
 acceptance:
-  - Form screen declares lastSavedId state (useState<string | null>(null)).
-  - Form submission captures created record ID (res.id) into setLastSavedId in create mode.
-  - Form submission sets setLastSavedId(editId) in edit mode.
-  - Success banner preserves exact text {isEdit ? "{name} updated successfully!" : "{name} saved successfully!"} (or {name} saved successfully!).
-  - Success banner renders "View {name}" link navigating to /{detail_screen.id}?id=${lastSavedId || editId} when a detail screen exists.
-  - Success banner renders "&larr; Back to {plural}" link navigating to /{list_screen.id} when a collection screen exists.
-  - Success banner renders "+ Create another {name}" action button in create mode.
-  - Success banner renders dismiss button calling setSuccess(false).
-  - Form footer renders "Cancel" link button navigating to /{list_screen.id} (or /).
-  - Reset button resets lastSavedId (setLastSavedId(null)).
-  - Strict diff invariance across ir.description changes.
+  - app/page.tsx starts with "use client";
+  - Imports useList<Entity> hook for each entity with Op.LIST wired.
+  - Calls useList<Entity>({ limit: 1 }) and displays .total in entity summary card.
+  - Screen navigation cards render for collection and form screens with correct href (/{screen.id}).
+  - Detail screens are excluded from the navigation card grid.
+  - Quick Actions section renders "+ Create {Entity}" link for each form screen.
+  - ir.description is NOT present in the generated app/page.tsx output.
+  - Page renders cleanly with no entities (no hook calls emitted, no broken imports).
+  - Role badge rendered for non-public screens in nav cards.
+  - Strict diff invariance: identical app/page.tsx output for different ir.description values.
   - Stage 0 verification (task verify), task lint, task security:quick, task doctor, and builder demos pass.
 evidence:
-  verify: "task verify: 679 tests passing in 0.861s"
-  tests: "test_form_navigation_ctas.py: 16/16 tests passing; 679 total tests across all test files"
+  verify: "task verify: 695 tests passing in 0.901s"
+  tests: "test_overview_dashboard.py: 16/16 tests passing; 695 total tests across all test files"
   coverage: >-
-    16 test cases covering lastSavedId state declaration, create/update ID capture,
-    success banner message preservation, View record link (with/without detail screen),
-    Back to collection link, Create another button, dismiss button, Cancel button (list screen
-    and root fallback), Reset clearing lastSavedId, diff invariance, full project generation,
-    and create-only form screens.
+    16 test cases covering client component declaration, useList hook imports, entity count cards,
+    screen nav links, quick actions with + Create CTA, diff invariance (no ir.description in output),
+    .total reference for live counts, no-entities fallback, no-screens fallback, collection screen
+    card, form screen in quick actions, role badge for restricted screens, no hook for un-listed
+    entity, full project generation, and detail screen exclusion from nav.
   lint: "task lint: Lint passed"
   security: "task security:quick: Stage 0 secret-policy check passed"
   demos: "task builder:demo -- minimal-blog and task builder:demo -- rideshare-favourites both passed"
+  snapshot_fix: "test_console_snapshot.py updated — apps/web/app/page.tsx removed from expected edit-diff set (description no longer embedded in overview page, so the page is now diff-stable across description changes)"
 required_gates:
-  - form_navigation_ctas_test
+  - overview_dashboard_test
   - task_verify
   - task_lint
   - task_security_quick
@@ -84,5 +85,5 @@ model_tool_trace:
   cloud_calls: 0
   note: Deterministic codegen; no model call, no network, no DB. cloud_calls zero.
 blockers: []
-next_action: Task R-274 complete. Ready to commit and push. Continue from R-275.
+next_action: Task R-275 complete. Ready to commit and push. Continue from R-276.
 next_command: task verify
