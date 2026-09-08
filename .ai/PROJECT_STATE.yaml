@@ -6,10 +6,10 @@ current_task: null
 current_status: ready_for_next_task_definition
 branch: main
 last_completed_task:
-  task_id: R-249
-  title: IR indexes + unique constraints in the generated PostgreSQL schema
-  implementation_commit: 28e7cd5
-  verification: task verify (327 agent-engine tests, 11 new); Field.unique + Entity.indexes (Index record) render UNIQUE columns and CREATE [UNIQUE] INDEX statements in the schema, deterministic default names, id never unique, index fields validated at construction; IR round-trips; no DB connection
+  task_id: R-250
+  title: Richer field validation (max_length + enum) into the schema and FastAPI models
+  implementation_commit: 1eed171
+  verification: task verify (337 agent-engine tests, 10 new); IR Field.validation rules (max_length/enum) render as VARCHAR(n)/CHECK in the schema and Field(max_length)/Literal in the FastAPI models; unknown rules ignored; examples unchanged; no DB connection
   result: pass
 control_plane_database: postgresql
 model_routing_mode: balanced
@@ -23,5 +23,5 @@ id_note: >-
   Workbook backlog owns R-010..R-219. Founder-requested tasks use IDs after R-219: R-220..R-223 done,
   R-224 Next.js deferred (env-blocked), R-225..R-247 done. Continue from R-248.
 blockers: []
-next_action: R-249 is complete — the generated schema now carries UNIQUE constraints and indexes from the IR. Continue from R-250 (offline-doable): richer field validation (length/enum) into the models (Pydantic/Go) and schema (VARCHAR(n)/CHECK); or render the R-248 seed + R-249 indexes in the static-console builder proof. Cloud-gated preview/deploy and R-224 still require a network-capable environment/keys.
+next_action: R-250 is complete — IR field validation (max_length/enum) now renders as VARCHAR(n)/CHECK in the schema and Field(max_length)/Literal in the FastAPI models. Continue from R-251 (offline-doable): Go request-validation struct tags + numeric min/max rules (extending R-250), or render the R-248 seed / R-249 indexes / R-250 validation in the static-console builder proof. Cloud-gated preview/deploy and R-224 still require a network-capable environment/keys.
 last_updated: "2026-09-08T00:06:26+05:30"

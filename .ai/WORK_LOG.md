@@ -692,3 +692,25 @@
 - Tracker: reused the general row-insertion script (baseline `1c0072f`, LAST=256) — R-249 (Builder) at
   row 9; rows 1..257 contiguous, table `A4:M257`, sheet1 ranges to 257, XML well-formed. MVP total
   143 / Done 38. Implementation checkpoint `28e7cd5`. 0 local / 0 cloud model calls; no DB connection.
+
+## 2026-09-08 — R-250
+
+- Made the IR `Field.validation` tuple meaningful. New `codegen/field_validation.py`:
+  `parse_field_rules(field) -> FieldRules(max_length, enum)` parses `max_length:<int>` and
+  `enum:<a>|<b>|<c>`; unknown / non-digit rules are ignored (forward-compatible). Exported from codegen.
+- `schema_sql._column_lines`: a STRING field with `max_length` renders `VARCHAR(n)` (else TEXT); an enum
+  appends `CHECK (<col> IN ('a','b'))` after NOT NULL/UNIQUE with single-quote-escaped values; the `id`
+  PK column is unaffected.
+- `backend_python._models_file`: new `_py_field_line` applies rules — `Field(max_length=n)` (or
+  `Field(default=None, max_length=n)` when optional) and a `Literal[...]` type for enums; `Field` and
+  `Literal` are imported only when actually used, so rule-free models are byte-identical to before.
+- Go request-validation tags deferred (the schema already constrains Go writes at the DB level). Example
+  IRs left unchanged so existing generated outputs stay stable; the feature is exercised by
+  constructed-IR tests.
+- 10 new stdlib offline tests (337 total) in `test_field_validation.py`: parser (max_length/enum,
+  unknown/non-digit ignored), schema VARCHAR + escaped CHECK + text-without-max_length, Pydantic
+  Field/Literal + optional constraint + no-rules-no-Field-import (valid Python via ast), and an
+  examples-unaffected guard. `task verify` + `security:quick` + `env:check` pass; no existing test broke.
+- Tracker: general row-insertion `tracker_edit_r250.py` (baseline `5e4d72f`, LAST=257) — R-250 (Builder)
+  at row 9; rows 1..258 contiguous, table `A4:M258`, sheet1 ranges to 258, XML well-formed. MVP total
+  144 / Done 39. Implementation checkpoint `1eed171`. 0 local / 0 cloud model calls; no DB connection.

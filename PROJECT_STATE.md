@@ -5,14 +5,14 @@ Last updated: 2026-09-08T00:06:26+05:30 by Codex (GPT-5)
 Stage 0 (Founder Build Sequence, Brief Section 91) — BASIC/MVP
 
 ## Last Completed Task
-Tracker ID: R-249 — IR indexes + unique constraints in the schema — DONE, `task verify` (327
-agent-engine tests, 11 new) passing. `Field.unique` renders a single-column `UNIQUE` constraint (never
-on the `id` PK), and a new `Index` record on `Entity` (fields + unique + optional name) renders one
-`CREATE [UNIQUE] INDEX <name> ON <table> (<cols>);` per index with a deterministic default name.
-Index field references are validated against the entity's own fields at construction; both additions
-round-trip through `to_dict`/`from_dict` (empty/false defaults, no schema-version bump). Deterministic,
-offline, no DB connection; implementation checkpoint `28e7cd5` (R-224 Next.js console upgrade remains
-deferred — environment-blocked).
+Tracker ID: R-250 — Richer field validation into the schema + FastAPI models — DONE, `task verify` (337
+agent-engine tests, 10 new) passing. The IR `Field.validation` rules `max_length:<int>` and
+`enum:<a>|<b>|<c>` now render in two targets: the PostgreSQL schema emits `VARCHAR(n)` for a
+length-capped STRING and a `CHECK (<col> IN (...))` for an enum; the FastAPI Pydantic models emit
+`Field(max_length=n)` and a `Literal[...]` type. Unknown rules are ignored (forward-compatible); Go
+request-validation tags are deferred (the schema already constrains Go writes at the DB). Additive,
+offline, examples unchanged, no DB connection; implementation checkpoint `1eed171` (R-224 Next.js
+console upgrade remains deferred — environment-blocked).
 
 ## Workflow note
 Founder consolidated all work onto `main` (per-task branches deleted; `main` is the default). Continue

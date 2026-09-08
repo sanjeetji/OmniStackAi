@@ -1,7 +1,7 @@
 schema_version: 1
 task_id: R-250
 title: Richer field validation (max_length + enum) into the schema and FastAPI models
-status: in_progress
+status: done
 phase: BASIC/MVP
 founder_stage: 0
 branch: main
@@ -84,10 +84,18 @@ model_tool_trace:
   cloud_calls: 0
   note: Deterministic; no model call, no network, no DB connection. cloud_calls zero.
 completion:
-  implementation_commit: null
-  verified_at: null
-  verification: []
-  acceptance_results: []
+  implementation_commit: 1eed171
+  verified_at: "2026-09-08T00:00:00+05:30"
+  verification:
+    - "task verify — pass (337 agent-engine tests; 10 new)"
+    - "task security:quick — pass; task env:check — pass"
+    - "demo: title VARCHAR(120) NOT NULL; status ... CHECK (status IN ('draft','published','archived')); Pydantic title=Field(max_length=120), status: Literal[...]"
+  acceptance_results:
+    - "parse_field_rules reads max_length:<int> + enum:<a>|<b>; unknown/non-digit rules ignored (tests)"
+    - "schema: STRING max_length -> VARCHAR(n) else TEXT; enum -> CHECK (col IN ('...')) single-quote-escaped; id PK unaffected (tests)"
+    - "Pydantic: Field(max_length=n) / Field(default=None, max_length=n) + Literal[...]; Field/Literal imported only when used; models parse (tests)"
+    - "no rules -> plain model (no Field import), examples emit no VARCHAR/CHECK/Literal (tests)"
+    - "additive, examples/outputs otherwise unchanged; no DB connection; task verify network-independent"
 blockers: []
 next_action: >-
   Implement field_validation parser + schema + Pydantic emission + tests; run gates; record completion.
