@@ -95,7 +95,12 @@ def _python_repository(entity: Entity) -> str:
         f"async def delete_{table}(id: str) -> bool:\n"
         "    async with await connect() as conn, conn.cursor() as cur:\n"
         '        await cur.execute(f"DELETE FROM {TABLE} WHERE id = %s", (id,))\n'
-        "        return cur.rowcount > 0\n"
+        "        return cur.rowcount > 0\n\n\n"
+        f"async def count_{table}() -> int:\n"
+        "    async with await connect() as conn, conn.cursor() as cur:\n"
+        '        await cur.execute(f"SELECT COUNT(*) AS count FROM {TABLE}")\n'
+        "        row = await cur.fetchone()\n"
+        "        return int(row[\"count\"]) if row else 0\n"
         + _python_update(entity, table)
         + _python_filtered_lists(entity, table, cols)
     )
@@ -136,7 +141,12 @@ def _python_filtered_lists(entity: Entity, table: str, cols: list[str] | None = 
             '    sort_dir = "DESC" if order.lower() == "desc" else "ASC"\n'
             "    async with await connect() as conn, conn.cursor() as cur:\n"
             f'        await cur.execute(f"SELECT * FROM {{TABLE}} WHERE {relation}_id = %s ORDER BY {{sort_col}} {{sort_dir}} LIMIT %s OFFSET %s", ({relation}_id, limit, offset))\n'
-            "        return await cur.fetchall()\n"
+            "        return await cur.fetchall()\n\n\n"
+            f"async def count_{table}_by_{relation}({relation}_id: str) -> int:\n"
+            "    async with await connect() as conn, conn.cursor() as cur:\n"
+            f'        await cur.execute(f"SELECT COUNT(*) AS count FROM {{TABLE}} WHERE {relation}_id = %s", ({relation}_id,))\n'
+            "        row = await cur.fetchone()\n"
+            "        return int(row[\"count\"]) if row else 0\n"
         )
     return "".join(parts)
 
@@ -245,6 +255,11 @@ def _go_entity_store(entity: Entity, slug: str) -> str:
         "\tif err != nil {\n\t\treturn false, err\n\t}\n"
         "\tn, _ := res.RowsAffected()\n"
         "\treturn n > 0, nil\n"
+        "}\n\n"
+        f"func Count{pascal}(ctx context.Context, db *sql.DB) (int, error) {{\n"
+        "\tvar count int\n"
+        f"\terr := db.QueryRowContext(ctx, `SELECT COUNT(*) FROM {table}`).Scan(&count)\n"
+        "\treturn count, err\n"
         "}\n"
         + _go_filtered_lists(entity, table, col_list, scan_targets, cols)
     )
@@ -296,6 +311,11 @@ def _go_filtered_lists(entity: Entity, table: str, col_list: str, scan_targets: 
             "\t\tout = append(out, m)\n"
             "\t}\n"
             "\treturn out, rows.Err()\n"
+            "}\n\n"
+            f"func Count{pascal}By{rel_pascal}(ctx context.Context, db *sql.DB, {relation}ID string) (int, error) {{\n"
+            "\tvar count int\n"
+            f"\terr := db.QueryRowContext(ctx, `SELECT COUNT(*) FROM {table} WHERE {relation}_id = $1`, {relation}ID).Scan(&count)\n"
+            "\treturn count, err\n"
             "}\n"
         )
     return "".join(parts)

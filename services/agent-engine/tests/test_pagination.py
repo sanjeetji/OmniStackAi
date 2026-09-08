@@ -54,12 +54,12 @@ class PythonPaginationRouterTests(TestCase):
 
     def test_list_endpoint_declares_limit_and_offset(self) -> None:
         posts_router = self.project.get("app/routers/posts.py").content
-        self.assertIn('async def get_posts(limit: int = 100, offset: int = 0, sort: str = "id", order: str = "asc") -> list[dict]:', posts_router)
+        self.assertIn('async def get_posts(response: Response, limit: int = 100, offset: int = 0, sort: str = "id", order: str = "asc") -> list[dict]:', posts_router)
         self.assertIn("return await post.list_post(limit=limit, offset=offset, sort=sort, order=order)", posts_router)
 
     def test_list_by_endpoint_declares_limit_and_offset(self) -> None:
         posts_router = self.project.get("app/routers/posts.py").content
-        self.assertIn('async def get_posts_postid_comments(postId: str, limit: int = 100, offset: int = 0, sort: str = "id", order: str = "asc") -> list[dict]:', posts_router)
+        self.assertIn('async def get_posts_postid_comments(postId: str, response: Response, limit: int = 100, offset: int = 0, sort: str = "id", order: str = "asc") -> list[dict]:', posts_router)
         self.assertIn("return await comment.list_comment_by_post(postId, limit=limit, offset=offset, sort=sort, order=order)", posts_router)
 
 
@@ -90,5 +90,5 @@ class ExampleIrPaginationRegressionTests(TestCase):
     def test_rideshare_favourites_python_pagination(self) -> None:
         project = PythonBackendAdapter().generate(example_ir("rideshare-favourites"))
         drivers = project.get("app/routers/drivers.py").content
-        self.assertIn('async def get_drivers(limit: int = 100, offset: int = 0, sort: str = "id", order: str = "asc") -> list[dict]:', drivers)
+        self.assertIn('async def get_drivers(response: Response, limit: int = 100, offset: int = 0, sort: str = "id", order: str = "asc") -> list[dict]:', drivers)
         self.assertIn("return await driver.list_driver(limit=limit, offset=offset, sort=sort, order=order)", drivers)

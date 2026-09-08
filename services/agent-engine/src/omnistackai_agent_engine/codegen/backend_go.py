@@ -177,8 +177,11 @@ def _handlers_file_wired(
     wirings = [(api, wire_endpoint(api, repo_entities, fk_by_entity)) for api in apis]
     uses_store = any(w is not None for _, w in wirings)
     uses_models = any(w is not None and w.op in (Op.CREATE, Op.UPDATE) for _, w in wirings)
+    uses_lists = any(w is not None and w.op in (Op.LIST, Op.LIST_BY) for _, w in wirings)
 
     imports = ['\t"net/http"']
+    if uses_lists:
+        imports.append('\t"strconv"')
     if uses_models:
         imports.insert(0, '\t"encoding/json"')
     module_imports = []
@@ -206,15 +209,21 @@ def _handlers_file_wired(
         elif wiring.op is Op.LIST:
             lines.append("\tlimit, offset := parsePagination(r)")
             lines.append("\tsort, order := parseSort(r)")
+            lines.append(f"\ttotal, err := store.Count{wiring.entity}(r.Context(), h.DB)")
+            lines.append("\tif err != nil {\n\t\thttp.Error(w, err.Error(), http.StatusInternalServerError)\n\t\treturn\n\t}")
             lines.append(f"\titems, err := store.List{wiring.entity}(r.Context(), h.DB, limit, offset, sort, order)")
             lines.append("\tif err != nil {\n\t\thttp.Error(w, err.Error(), http.StatusInternalServerError)\n\t\treturn\n\t}")
+            lines.append('\tw.Header().Set("X-Total-Count", strconv.Itoa(total))')
             lines.append("\twriteJSON(w, http.StatusOK, items)")
         elif wiring.op is Op.LIST_BY:
             rel_pascal = _pascal(wiring.relation)
             lines.append("\tlimit, offset := parsePagination(r)")
             lines.append("\tsort, order := parseSort(r)")
+            lines.append(f'\ttotal, err := store.Count{wiring.entity}By{rel_pascal}(r.Context(), h.DB, r.PathValue("{wiring.id_param}"))')
+            lines.append("\tif err != nil {\n\t\thttp.Error(w, err.Error(), http.StatusInternalServerError)\n\t\treturn\n\t}")
             lines.append(f'\titems, err := store.List{wiring.entity}By{rel_pascal}(r.Context(), h.DB, r.PathValue("{wiring.id_param}"), limit, offset, sort, order)')
             lines.append("\tif err != nil {\n\t\thttp.Error(w, err.Error(), http.StatusInternalServerError)\n\t\treturn\n\t}")
+            lines.append('\tw.Header().Set("X-Total-Count", strconv.Itoa(total))')
             lines.append("\twriteJSON(w, http.StatusOK, items)")
         elif wiring.op is Op.GET:
             lines.append(f'\titem, err := store.Get{wiring.entity}(r.Context(), h.DB, r.PathValue("{wiring.id_param}"))')
@@ -275,6 +284,7 @@ def _main_file(slug: str, apis: list[ApiEndpoint], *, has_db: bool = False) -> s
     lines.append('\t\tw.Header().Set("Access-Control-Allow-Origin", origin)')
     lines.append('\t\tw.Header().Set("Access-Control-Allow-Methods", "GET, POST, PUT, PATCH, DELETE, OPTIONS")')
     lines.append('\t\tw.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization")')
+    lines.append('\t\tw.Header().Set("Access-Control-Expose-Headers", "X-Total-Count")')
     lines.append("\t\tif r.Method == http.MethodOptions {")
     lines.append("\t\t\tw.WriteHeader(http.StatusNoContent)")
     lines.append("\t\t\treturn")

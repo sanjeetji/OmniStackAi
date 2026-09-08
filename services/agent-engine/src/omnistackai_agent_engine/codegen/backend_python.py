@@ -115,7 +115,15 @@ def _router_file(
     seg_needs_auth = any(api.auth for api in apis)
     uses_roles = any(api.required_roles for api in apis)
     uses_auth_only = any(api.auth and not api.required_roles for api in apis)
-    fastapi_import = "from fastapi import APIRouter, Depends, HTTPException" if seg_needs_auth else "from fastapi import APIRouter, HTTPException"
+    uses_list = any(w is not None and w.op in (Op.LIST, Op.LIST_BY) for _, w in wirings)
+
+    fastapi_imports = ["APIRouter"]
+    if seg_needs_auth:
+        fastapi_imports.append("Depends")
+    fastapi_imports.append("HTTPException")
+    if uses_list:
+        fastapi_imports.append("Response")
+    fastapi_import = f"from fastapi import {', '.join(fastapi_imports)}"
     header = [fastapi_import]
     if seg_needs_auth:
         auth_names = [n for n, use in (("require_auth", uses_auth_only), ("require_roles", uses_roles)) if use]
@@ -148,10 +156,14 @@ def _router_file(
             lines.append(f"    # {api.method.value} {api.path} (auth: {auth}) — scaffold; no unambiguous entity mapping.")
             lines.append('    raise HTTPException(status_code=501, detail="not_implemented")')
         elif wiring.op is Op.LIST:
-            lines.append(f'async def {fn}(limit: int = 100, offset: int = 0, sort: str = "id", order: str = "asc") -> list[dict]:')
+            lines.append(f'async def {fn}(response: Response, limit: int = 100, offset: int = 0, sort: str = "id", order: str = "asc") -> list[dict]:')
+            lines.append(f"    total = await {wiring.table}.count_{wiring.table}()")
+            lines.append('    response.headers["X-Total-Count"] = str(total)')
             lines.append(f"    return await {wiring.table}.list_{wiring.table}(limit=limit, offset=offset, sort=sort, order=order)")
         elif wiring.op is Op.LIST_BY:
-            lines.append(f'async def {fn}({wiring.id_param}: str, limit: int = 100, offset: int = 0, sort: str = "id", order: str = "asc") -> list[dict]:')
+            lines.append(f'async def {fn}({wiring.id_param}: str, response: Response, limit: int = 100, offset: int = 0, sort: str = "id", order: str = "asc") -> list[dict]:')
+            lines.append(f"    total = await {wiring.table}.count_{wiring.table}_by_{wiring.relation}({wiring.id_param})")
+            lines.append('    response.headers["X-Total-Count"] = str(total)')
             lines.append(f"    return await {wiring.table}.list_{wiring.table}_by_{wiring.relation}({wiring.id_param}, limit=limit, offset=offset, sort=sort, order=order)")
         elif wiring.op is Op.GET:
             lines.append(f"async def {fn}({wiring.id_param}: str) -> dict:")
@@ -194,6 +206,7 @@ def _main_file(ir: ApplicationIR, segments: list[str]) -> str:
         + "    allow_credentials=True,\n"
         + '    allow_methods=["*"],\n'
         + '    allow_headers=["*"],\n'
+        + '    expose_headers=["X-Total-Count"],\n'
         + ")\n\n"
         + '@app.get("/healthz")\n'
         + "async def healthz() -> dict:\n"

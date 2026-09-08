@@ -85,6 +85,11 @@ def _api_client_file(ir: ApplicationIR) -> str:
         "  params?: Record<string, string | number | boolean | undefined>;",
         "}",
         "",
+        "export interface PaginatedResult<T> {",
+        "  data: T;",
+        "  total: number;",
+        "}",
+        "",
         "export class ApiError extends Error {",
         "  constructor(public status: number, public data: unknown) {",
         "    super(`API Error ${status}`);",
@@ -92,7 +97,7 @@ def _api_client_file(ir: ApplicationIR) -> str:
         "  }",
         "}",
         "",
-        "async function request<T>(path: string, options: ApiOptions = {}, body?: unknown): Promise<T> {",
+        "async function requestWithMeta<T>(path: string, options: ApiOptions = {}, body?: unknown): Promise<PaginatedResult<T>> {",
         "  const { token, params, headers: customHeaders, ...init } = options;",
         "  let url = `${BASE_URL}${path}`;",
         "  if (params) {",
@@ -132,10 +137,18 @@ def _api_client_file(ir: ApplicationIR) -> str:
         "    throw new ApiError(res.status, errorData);",
         "  }",
         "",
+        '  const totalHeader = res.headers.get("X-Total-Count");',
+        "  const total = totalHeader ? parseInt(totalHeader, 10) : 0;",
         "  if (res.status === 204) {",
-        "    return undefined as unknown as T;",
+        "    return { data: undefined as unknown as T, total };",
         "  }",
-        "  return res.json() as Promise<T>;",
+        "  const data = (await res.json()) as T;",
+        "  return { data, total };",
+        "}",
+        "",
+        "async function request<T>(path: string, options: ApiOptions = {}, body?: unknown): Promise<T> {",
+        "  const res = await requestWithMeta<T>(path, options, body);",
+        "  return res.data;",
         "}",
         "",
     ])
@@ -200,6 +213,14 @@ def _api_client_file(ir: ApplicationIR) -> str:
             lines.append(f'  return request<{wiring.entity}[]>({url_expr}, {{ method: "GET", ...options }});')
             lines.append("}")
             lines.append("")
+            lines.append(
+                f"export async function {fn_name}WithCount("
+                f"options?: ApiOptions & {{ params?: {{ limit?: number; offset?: number; sort?: string; order?: \"asc\" | \"desc\" }} }}"
+                f"): Promise<PaginatedResult<{wiring.entity}[]>> {{"
+            )
+            lines.append(f'  return requestWithMeta<{wiring.entity}[]>({url_expr}, {{ method: "GET", ...options }});')
+            lines.append("}")
+            lines.append("")
         elif wiring is not None and wiring.op is Op.LIST_BY:
             id_p = wiring.id_param or "id"
             lines.append(
@@ -209,6 +230,15 @@ def _api_client_file(ir: ApplicationIR) -> str:
                 f"): Promise<{wiring.entity}[]> {{"
             )
             lines.append(f'  return request<{wiring.entity}[]>({url_expr}, {{ method: "GET", ...options }});')
+            lines.append("}")
+            lines.append("")
+            lines.append(
+                f"export async function {fn_name}WithCount("
+                f"{id_p}: string, "
+                f"options?: ApiOptions & {{ params?: {{ limit?: number; offset?: number; sort?: string; order?: \"asc\" | \"desc\" }} }}"
+                f"): Promise<PaginatedResult<{wiring.entity}[]>> {{"
+            )
+            lines.append(f'  return requestWithMeta<{wiring.entity}[]>({url_expr}, {{ method: "GET", ...options }});')
             lines.append("}")
             lines.append("")
         elif wiring is not None and wiring.op is Op.GET:

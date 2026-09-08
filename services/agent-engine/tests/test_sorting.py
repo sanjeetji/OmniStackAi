@@ -86,11 +86,11 @@ class PythonSortingRouterTests(TestCase):
         self.posts_router = self.project.get("app/routers/posts.py").content
 
     def test_router_declares_sort_and_order_query_parameters(self) -> None:
-        self.assertIn('async def get_posts(limit: int = 100, offset: int = 0, sort: str = "id", order: str = "asc") -> list[dict]:', self.posts_router)
+        self.assertIn('async def get_posts(response: Response, limit: int = 100, offset: int = 0, sort: str = "id", order: str = "asc") -> list[dict]:', self.posts_router)
         self.assertIn("return await post.list_post(limit=limit, offset=offset, sort=sort, order=order)", self.posts_router)
 
     def test_subcollection_router_passes_sort_and_order(self) -> None:
-        self.assertIn('async def get_posts_postid_comments(postId: str, limit: int = 100, offset: int = 0, sort: str = "id", order: str = "asc") -> list[dict]:', self.posts_router)
+        self.assertIn('async def get_posts_postid_comments(postId: str, response: Response, limit: int = 100, offset: int = 0, sort: str = "id", order: str = "asc") -> list[dict]:', self.posts_router)
         self.assertIn("return await comment.list_comment_by_post(postId, limit=limit, offset=offset, sort=sort, order=order)", self.posts_router)
 
 
