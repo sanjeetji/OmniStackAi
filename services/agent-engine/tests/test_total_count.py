@@ -13,7 +13,7 @@ class PythonTotalCountRepositoryTests(TestCase):
         self.comment_repo = self.project.get("app/repositories/comment.py").content
 
     def test_python_repo_declares_count_method(self) -> None:
-        self.assertIn("async def count_post(q: str | None = None) -> int:", self.post_repo)
+        self.assertIn("async def count_post(q: str | None = None, published=None) -> int:", self.post_repo)
         self.assertIn('SELECT COUNT(*) AS count FROM {TABLE}', self.post_repo)
 
     def test_python_repo_declares_count_by_relation_method(self) -> None:
@@ -29,7 +29,7 @@ class PythonTotalCountRouterTests(TestCase):
 
     def test_router_imports_response_and_sets_total_count_header(self) -> None:
         self.assertIn("from fastapi import APIRouter, Depends, HTTPException, Response", self.posts_router)
-        self.assertIn("total = await post.count_post(q=q)", self.posts_router)
+        self.assertIn("total = await post.count_post(q=q, published=published)", self.posts_router)
         self.assertIn('response.headers["X-Total-Count"] = str(total)', self.posts_router)
 
     def test_router_sets_total_count_header_on_subcollection_list(self) -> None:
@@ -47,7 +47,7 @@ class GoTotalCountStoreTests(TestCase):
         self.comment_store = self.project.get("internal/store/comment.go").content
 
     def test_go_store_declares_count_method(self) -> None:
-        self.assertIn("func CountPost(ctx context.Context, db *sql.DB, q string) (int, error)", self.post_store)
+        self.assertIn("func CountPost(ctx context.Context, db *sql.DB, q string, filters map[string]string) (int, error)", self.post_store)
         self.assertIn("SELECT COUNT(*) FROM post", self.post_store)
 
     def test_go_store_declares_count_by_relation_method(self) -> None:
@@ -62,7 +62,7 @@ class GoTotalCountHandlerTests(TestCase):
         self.main_go = self.project.get("main.go").content
 
     def test_handler_sets_x_total_count_header(self) -> None:
-        self.assertIn("total, err := store.CountPost(r.Context(), h.DB, q)", self.posts_handler)
+        self.assertIn("total, err := store.CountPost(r.Context(), h.DB, q, filters)", self.posts_handler)
         self.assertIn('w.Header().Set("X-Total-Count", strconv.Itoa(total))', self.posts_handler)
 
     def test_subcollection_handler_sets_x_total_count_header(self) -> None:

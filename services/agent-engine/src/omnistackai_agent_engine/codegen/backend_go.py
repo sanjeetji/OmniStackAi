@@ -13,7 +13,7 @@ import re
 from ..application_ir import ApplicationIR, ApiEndpoint, DatabaseStrategy, FieldType
 from .adapter import GenerationTarget
 from .auth_guard import GOLANG_JWT_REQUIRE, go_auth_file, needs_auth
-from .field_validation import VALIDATOR_REQUIRE, go_validate_file, go_validate_tag, parse_field_rules
+from .field_validation import VALIDATOR_REQUIRE, filter_fields, go_validate_file, go_validate_tag, parse_field_rules
 from .data_access import PGX_REQUIRE, go_data_access_files
 from .errors import GenerationError
 from .files import GeneratedFile, GeneratedProject
@@ -101,7 +101,22 @@ def _models_file(ir: ApplicationIR) -> str:
     return "\n".join(lines) + "\n"
 
 
-def _handlers_shared_file() -> str:
+def _handlers_shared_file(has_filters: bool = False) -> str:
+    filters_helper = (
+        "\n"
+        "// parseFilters collects the raw query parameters so a store can apply the whitelisted ones\n"
+        "// (per-field equality filters). The store only reads the field keys it declares, so unknown\n"
+        "// query params are ignored and never reach SQL as identifiers.\n"
+        "func parseFilters(r *http.Request) map[string]string {\n"
+        "\tout := map[string]string{}\n"
+        "\tfor k, v := range r.URL.Query() {\n"
+        "\t\tif len(v) > 0 {\n"
+        "\t\t\tout[k] = v[0]\n"
+        "\t\t}\n"
+        "\t}\n"
+        "\treturn out\n"
+        "}\n"
+    ) if has_filters else ""
     return (
         "package handlers\n\n"
         "import (\n"
@@ -150,6 +165,7 @@ def _handlers_shared_file() -> str:
         "func parseSearch(r *http.Request) string {\n"
         '\treturn strings.TrimSpace(r.URL.Query().Get("q"))\n'
         "}\n"
+        + filters_helper
     )
 
 
@@ -175,6 +191,7 @@ def _handlers_file_wired(
     slug: str,
     fk_by_entity: dict[str, tuple[str, ...]] | None = None,
     validated_entities: frozenset[str] = frozenset(),
+    filtered_entities: frozenset[str] = frozenset(),
 ) -> str:
     """Handlers as methods on *Handlers; unambiguous CRUD calls the store, the rest stay 501."""
 
@@ -214,9 +231,16 @@ def _handlers_file_wired(
             lines.append("\tlimit, offset := parsePagination(r)")
             lines.append("\tsort, order := parseSort(r)")
             lines.append("\tq := parseSearch(r)")
-            lines.append(f"\ttotal, err := store.Count{wiring.entity}(r.Context(), h.DB, q)")
+            if wiring.entity in filtered_entities:
+                lines.append("\tfilters := parseFilters(r)")
+                count_call = f"store.Count{wiring.entity}(r.Context(), h.DB, q, filters)"
+                list_call = f"store.List{wiring.entity}(r.Context(), h.DB, limit, offset, sort, order, q, filters)"
+            else:
+                count_call = f"store.Count{wiring.entity}(r.Context(), h.DB, q)"
+                list_call = f"store.List{wiring.entity}(r.Context(), h.DB, limit, offset, sort, order, q)"
+            lines.append(f"\ttotal, err := {count_call}")
             lines.append("\tif err != nil {\n\t\thttp.Error(w, err.Error(), http.StatusInternalServerError)\n\t\treturn\n\t}")
-            lines.append(f"\titems, err := store.List{wiring.entity}(r.Context(), h.DB, limit, offset, sort, order, q)")
+            lines.append(f"\titems, err := {list_call}")
             lines.append("\tif err != nil {\n\t\thttp.Error(w, err.Error(), http.StatusInternalServerError)\n\t\treturn\n\t}")
             lines.append('\tw.Header().Set("X-Total-Count", strconv.Itoa(total))')
             lines.append("\twriteJSON(w, http.StatusOK, items)")
@@ -388,11 +412,15 @@ class GoBackendAdapter:
         if has_validation:
             files.append(GeneratedFile("internal/handlers/validate.go", go_validate_file()))
 
+        filtered_entities = (
+            frozenset(entity.name for entity in ir.entities if filter_fields(entity)) if has_db else frozenset()
+        )
+        has_filters = bool(filtered_entities)
         if has_db:
-            files.append(GeneratedFile("internal/handlers/handlers.go", _handlers_shared_file()))
+            files.append(GeneratedFile("internal/handlers/handlers.go", _handlers_shared_file(has_filters)))
         for segment in sorted(by_segment):
             content = (
-                _handlers_file_wired(by_segment[segment], repo_entities, slug, fk_by_entity, validated_entities)
+                _handlers_file_wired(by_segment[segment], repo_entities, slug, fk_by_entity, validated_entities, filtered_entities)
                 if has_db
                 else _handlers_file(by_segment[segment])
             )

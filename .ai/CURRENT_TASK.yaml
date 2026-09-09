@@ -1,42 +1,45 @@
 schema_version: 1
-task_id: R-281
-title: Pagination, Sort & Search Controls on Subcollection Master-Detail Lists in Generated Next.js Web App
+task_id: R-282
+title: Server-Side Boolean/Enum Field Filters on Top-Level LIST Endpoints (Go + FastAPI + OpenAPI)
 status: done
 phase: BASIC/MVP
 founder_stage: 0
 branch: main
 goal: >-
-  Close the survey-identified gap B: the generated subcollection master-detail lists render only
-  `{sub.data.map(...)}` with no controls, even though the backend subcollection endpoints and the
-  generated `useList<Child>By<Parent>` hook already fully support limit/offset/sort/order/q. Add a search
-  form, a sort <select>, and a Prev/Next pagination footer to the subcollection lists in BOTH render
-  sites (the collection master-detail screen and the dedicated detail screen), all driven by the existing
-  hook setters (setSearch/setSort/setPage). The founder chose this offline option ("R-281 offline only").
-tracker_ref: "R-281"
+  Add real server-side per-field equality filtering to the generated backends: a top-level LIST endpoint
+  now accepts ?<field>=<value> for each boolean field and each enum field (fields with an enum:a|b|c
+  validation rule), composing them into the SQL WHERE alongside the existing q keyword search — with the
+  same whitelist discipline as sorting (column identifiers come only from validated IR field names;
+  filter VALUES are parameterized $N/%s). This is the backend capability that makes R-278's collection
+  filters correct across pagination; wiring the frontend controls to it is a follow-up (R-283). Scoped to
+  Op.LIST (top-level); the FK-scoped LIST_BY subcollection queries are unchanged. Founder said "continue
+  for the next task" and chose the offline candidate; the available Groq key was kept for later.
+tracker_ref: "R-282"
 requirements:
-  - Add a shared `_subcol_controls(sub, s_var)` helper emitting an uncontrolled search <form> (defaultValue + FormData on submit -> setSearch) and a sort <select> (id + display fields, asc/desc -> setSort).
-  - Add a shared `_subcol_pagination(s_var)` helper emitting a Prev / "Page X of Y (N total)" / Next footer driven by page/totalPages/total/setPage, disabled at bounds and while loading.
-  - Wire both helpers into the collection master-detail subcollection block AND the detail-screen subcollection block (identical insertion points).
-  - No new component state (uncontrolled search input); no new IR field; no new npm dependency; "use client" preserved; strict diff invariance across ir.description.
-  - Subcollection hook internals (abort/debounce) intentionally unchanged; submit-based search avoids a per-keystroke fetch storm.
+  - A shared filter_fields(entity) helper (field_validation.py) returns (field, kind) for boolean and enum fields, excluding id; the single source of truth for the backend and OpenAPI.
+  - Python repository (data_access._python_repository) for a filterable entity emits a _list_filters(q, <field>=None...) helper and list_/count_ signatures with the filter kwargs, building WHERE dynamically; non-filterable entities are byte-identical.
+  - Go store (data_access._go_entity_store) for a filterable entity emits a <table>Filters(q, filters map[string]string) helper (bool -> v == "true", enum -> v) with correct $N numbering, and List/Count take a filters map; non-filterable entities are byte-identical.
+  - FastAPI router LIST branch declares typed filter query params (bool -> bool|None, enum -> str|None) and forwards them; Go handler LIST branch calls parseFilters(r) (added to handlers.go only when a filterable entity exists) and threads the map into the store calls.
+  - OpenAPI render_openapi documents each filter param on Op.LIST (boolean schema for bool; string+enum for enum).
+  - No new IR field; no npm dependency; standard-library-only platform code; values always parameterized (never interpolated identifiers from the request); diff-invariant across ir.description.
 acceptance_criteria:
-  - Both the collection master-detail page and the detail page render, per subcollection, the search form, the sort select (id + display-field options in both directions), and the pagination footer, all referencing the `<child>Subcol` hook.
-  - Entities without subcollections (e.g. rideshare-favourites) emit no subcollection controls.
-  - The subcollection search input is uncontrolled (no `useState`-backed sub-search state).
-  - Strict diff invariance: changing only ir.description yields byte-identical list and detail pages.
-  - task verify passes (expect 770+ tests, new test_subcollection_list_controls.py); task lint + security:quick pass; both builder:demo pass.
+  - filter_fields selects bool + enum, excludes id and plain fields.
+  - Python list_item/count_item gain active/status kwargs + _list_filters; conditions parameterized; router declares active: bool|None / status: str|None and forwards.
+  - Go itemFilters helper + List/Count filters map; bool coercion v == "true", enum v; parseFilters in handlers.go; handler passes filters.
+  - OpenAPI /items GET documents active (boolean) and status (string enum new|used|sold).
+  - Non-filterable project (rideshare-favourites) has no _list_filters / <table>Filters / parseFilters / filters map — byte-identical.
+  - task verify passes (expect 780+ tests, new test_field_filters_backend.py); task lint + security:quick pass; both builder:demo pass.
 allowed_paths:
-  - services/agent-engine/src/omnistackai_agent_engine/codegen/nextjs.py
-  - services/agent-engine/tests/test_subcollection_list_controls.py
-  - .ai/CURRENT_TASK.yaml
-  - .ai/tasks/R-281.md
-  - .ai/PROJECT_STATE.yaml
-  - PROJECT_STATE.md
-  - .ai/WORK_LOG.md
-  - .ai/HANDOFF.md
+  - services/agent-engine/src/omnistackai_agent_engine/codegen/field_validation.py
+  - services/agent-engine/src/omnistackai_agent_engine/codegen/data_access.py
+  - services/agent-engine/src/omnistackai_agent_engine/codegen/backend_python.py
+  - services/agent-engine/src/omnistackai_agent_engine/codegen/backend_go.py
+  - services/agent-engine/src/omnistackai_agent_engine/codegen/openapi.py
+  - services/agent-engine/tests/**
+  - .ai/**
   - CHANGELOG.md
-  - docs/PROGRESS.md
-  - docs/RESUME_PROMPT.md
+  - PROJECT_STATE.md
+  - docs/**
   - R_&_D/OmniStackAI_Execution_Tracker_v6.xlsx
 forbidden_paths:
   - services/agent-engine/src/omnistackai_agent_engine/application_ir/**
@@ -49,7 +52,8 @@ gates:
   - task builder:demo -- minimal-blog
   - task builder:demo -- rideshare-favourites
 evidence:
-  - "task verify: 774 tests passed (0 failures, 6 new in test_subcollection_list_controls.py)"
+  - "task verify: 786 tests passed (0 failures, 12 new in test_field_filters_backend.py)"
   - "task lint: passed; task security:quick: passed"
   - "task builder:demo -- minimal-blog: passed; task builder:demo -- rideshare-favourites: passed"
-  - "commit: ad94a72 feat(codegen): pagination/sort/search controls on subcollection lists [R-281]"
+  - "updated existing search/sort/pagination/total-count/wiring assertions for the now-filterable minimal-blog Post"
+  - "commit: <feat sha> feat(codegen): server-side boolean/enum field filters on LIST endpoints [R-282]"

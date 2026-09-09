@@ -50,7 +50,7 @@ class PythonWiringTests(TestCase):
         posts = self.project.get("app/routers/posts.py").content
         ast.parse(posts)  # valid Python
         self.assertIn("from app.repositories import post", posts)
-        self.assertIn("return await post.list_post(limit=limit, offset=offset, sort=sort, order=order, q=q)", posts)
+        self.assertIn("return await post.list_post(limit=limit, offset=offset, sort=sort, order=order, q=q, published=published)", posts)
         self.assertIn("from app.models import Post", posts)
         self.assertIn("await post.create_post(payload.model_dump())", posts)
 

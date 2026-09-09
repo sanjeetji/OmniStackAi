@@ -13,7 +13,7 @@ import re
 from typing import Any
 
 from ..application_ir import ApplicationIR, Entity, Field, FieldType
-from .field_validation import parse_field_rules
+from .field_validation import filter_fields, parse_field_rules
 from .route_wiring import Op, fk_relations, wire_endpoint
 
 
@@ -191,6 +191,21 @@ def render_openapi(ir: ApplicationIR) -> dict[str, Any]:
                     "description": "Search query to filter records across text fields",
                 },
             ])
+
+            # R-282: per-field equality filters (boolean + enum) on top-level LIST endpoints.
+            if wiring.op is Op.LIST and entity_obj is not None:
+                for field, kind in filter_fields(entity_obj):
+                    if kind == "bool":
+                        schema: dict[str, Any] = {"type": "boolean"}
+                    else:
+                        schema = {"type": "string", "enum": list(parse_field_rules(field).enum)}
+                    parameters.append({
+                        "name": field.name,
+                        "in": "query",
+                        "required": False,
+                        "schema": schema,
+                        "description": f"Filter records by {field.name}",
+                    })
 
         operation: dict[str, Any] = {
             "operationId": op_id,

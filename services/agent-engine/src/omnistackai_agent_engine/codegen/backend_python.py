@@ -15,7 +15,7 @@ from .adapter import GenerationTarget
 from .auth_guard import PYJWT_REQUIREMENT, needs_auth, python_auth_file
 from .data_access import PSYCOPG_REQUIREMENT, python_data_access_files
 from .errors import GenerationError
-from .field_validation import parse_field_rules
+from .field_validation import filter_fields, parse_field_rules
 from .files import GeneratedFile, GeneratedProject
 from .openapi import render_openapi_json
 from .route_wiring import Op, fk_relations, wire_endpoint
@@ -108,6 +108,7 @@ def _router_file(
     apis: list[ApiEndpoint],
     repo_entities: frozenset[str],
     fk_by_entity: dict[str, tuple[str, ...]] | None = None,
+    entities_by_name: dict[str, Entity] | None = None,
 ) -> str:
     wirings = [(api, wire_endpoint(api, repo_entities, fk_by_entity)) for api in apis]
     tables = sorted({w.table for _, w in wirings if w is not None})
@@ -157,10 +158,14 @@ def _router_file(
             lines.append(f"    # {api.method.value} {api.path} (auth: {auth}) — scaffold; no unambiguous entity mapping.")
             lines.append('    raise HTTPException(status_code=501, detail="not_implemented")')
         elif wiring.op is Op.LIST:
-            lines.append(f'async def {fn}(response: Response, limit: int = 100, offset: int = 0, sort: str = "id", order: str = "asc", q: str | None = None) -> list[dict]:')
-            lines.append(f"    total = await {wiring.table}.count_{wiring.table}(q=q)")
+            entity_obj = entities_by_name.get(wiring.entity) if entities_by_name else None
+            ffields = filter_fields(entity_obj) if entity_obj else []
+            fsig = "".join(f", {f.name}: {'bool' if kind == 'bool' else 'str'} | None = None" for f, kind in ffields)
+            fcall = "".join(f", {f.name}={f.name}" for f, _ in ffields)
+            lines.append(f'async def {fn}(response: Response, limit: int = 100, offset: int = 0, sort: str = "id", order: str = "asc", q: str | None = None{fsig}) -> list[dict]:')
+            lines.append(f"    total = await {wiring.table}.count_{wiring.table}(q=q{fcall})")
             lines.append('    response.headers["X-Total-Count"] = str(total)')
-            lines.append(f"    return await {wiring.table}.list_{wiring.table}(limit=limit, offset=offset, sort=sort, order=order, q=q)")
+            lines.append(f"    return await {wiring.table}.list_{wiring.table}(limit=limit, offset=offset, sort=sort, order=order, q=q{fcall})")
         elif wiring.op is Op.LIST_BY:
             lines.append(f'async def {fn}({wiring.id_param}: str, response: Response, limit: int = 100, offset: int = 0, sort: str = "id", order: str = "asc", q: str | None = None) -> list[dict]:')
             lines.append(f"    total = await {wiring.table}.count_{wiring.table}_by_{wiring.relation}({wiring.id_param}, q=q)")
@@ -264,11 +269,12 @@ class PythonBackendAdapter:
 
         repo_entities = frozenset(entity.name for entity in ir.entities) if has_db else frozenset()
         fk_by_entity = fk_relations(ir) if has_db else None
+        entities_by_name = {entity.name: entity for entity in ir.entities} if has_db else None
         for segment in segments:
             files.append(
                 GeneratedFile(
                     f"app/routers/{segment}.py",
-                    _router_file(segment, by_segment[segment], repo_entities, fk_by_entity),
+                    _router_file(segment, by_segment[segment], repo_entities, fk_by_entity, entities_by_name),
                 )
             )
 

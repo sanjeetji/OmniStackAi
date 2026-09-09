@@ -25,8 +25,8 @@ class GoPaginationStoreTests(TestCase):
 
     def test_list_entity_store_takes_limit_and_offset(self) -> None:
         post_store = self.project.get("internal/store/post.go").content
-        self.assertIn("func ListPost(ctx context.Context, db *sql.DB, limit, offset int, sort, order, q string) ([]models.Post, error)", post_store)
-        self.assertIn("ORDER BY %s %s LIMIT $1 OFFSET $2", post_store)
+        self.assertIn("func ListPost(ctx context.Context, db *sql.DB, limit, offset int, sort, order, q string, filters map[string]string) ([]models.Post, error)", post_store)
+        self.assertIn("ORDER BY %s %s LIMIT $%d OFFSET $%d", post_store)  # Post filterable (R-282)
 
     def test_list_entity_by_relation_store_takes_limit_and_offset(self) -> None:
         comment_store = self.project.get("internal/store/comment.go").content
@@ -41,7 +41,7 @@ class GoPaginationHandlerTests(TestCase):
     def test_list_handler_parses_pagination_and_passes_to_store(self) -> None:
         posts_handler = self.project.get("internal/handlers/posts.go").content
         self.assertIn("limit, offset := parsePagination(r)", posts_handler)
-        self.assertIn("store.ListPost(r.Context(), h.DB, limit, offset, sort, order, q)", posts_handler)
+        self.assertIn("store.ListPost(r.Context(), h.DB, limit, offset, sort, order, q, filters)", posts_handler)
 
     def test_list_by_handler_parses_pagination_and_passes_to_store(self) -> None:
         posts_handler = self.project.get("internal/handlers/posts.go").content
@@ -54,8 +54,8 @@ class PythonPaginationRouterTests(TestCase):
 
     def test_list_endpoint_declares_limit_and_offset(self) -> None:
         posts_router = self.project.get("app/routers/posts.py").content
-        self.assertIn('async def get_posts(response: Response, limit: int = 100, offset: int = 0, sort: str = "id", order: str = "asc", q: str | None = None) -> list[dict]:', posts_router)
-        self.assertIn("return await post.list_post(limit=limit, offset=offset, sort=sort, order=order, q=q)", posts_router)
+        self.assertIn('async def get_posts(response: Response, limit: int = 100, offset: int = 0, sort: str = "id", order: str = "asc", q: str | None = None, published: bool | None = None) -> list[dict]:', posts_router)
+        self.assertIn("return await post.list_post(limit=limit, offset=offset, sort=sort, order=order, q=q, published=published)", posts_router)
 
     def test_list_by_endpoint_declares_limit_and_offset(self) -> None:
         posts_router = self.project.get("app/routers/posts.py").content
@@ -69,9 +69,9 @@ class PythonPaginationRepositoryTests(TestCase):
 
     def test_repository_list_uses_limit_and_offset_sql(self) -> None:
         post_repo = self.project.get("app/repositories/post.py").content
-        self.assertIn('async def list_post(limit: int = 100, offset: int = 0, sort: str = "id", order: str = "asc", q: str | None = None) -> list[dict[str, Any]]:', post_repo)
+        self.assertIn('async def list_post(limit: int = 100, offset: int = 0, sort: str = "id", order: str = "asc", q: str | None = None, published=None) -> list[dict[str, Any]]:', post_repo)
         self.assertIn("ORDER BY {sort_col} {sort_dir} LIMIT %s OFFSET %s", post_repo)
-        self.assertIn("(limit, offset)", post_repo)
+        self.assertIn("(*params, limit, offset)", post_repo)  # Post filterable (R-282)
 
     def test_repository_list_by_uses_limit_and_offset_sql(self) -> None:
         comment_repo = self.project.get("app/repositories/comment.py").content

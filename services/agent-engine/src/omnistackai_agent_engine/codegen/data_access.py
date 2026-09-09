@@ -11,6 +11,7 @@ from __future__ import annotations
 import re
 
 from ..application_ir import ApplicationIR, Entity, FieldType, RelationKind
+from .field_validation import filter_fields
 from .schema_sql import table_name
 
 # Generated-project dependency pins (only added when the data-access layer is emitted).
@@ -74,8 +75,47 @@ def _python_repository(entity: Entity) -> str:
         )
     cols = [field.name for field in entity.fields]
     searchable = _searchable_fields(entity)
+    filters = filter_fields(entity)
+    filter_names = [f.name for f, _ in filters]
+    filter_kwargs = "".join(f", {name}=None" for name in filter_names)
+    filter_call = "".join(f", {name}={name}" for name in filter_names)
 
-    if searchable:
+    if filters:
+        # R-282: dynamic WHERE builder folding in q (search) + optional per-field equality filters.
+        helper = [
+            f"def _list_filters(q=None{filter_kwargs}):",
+            "    conditions: list[str] = []",
+            "    params: list[Any] = []",
+        ]
+        if searchable:
+            search_or = " OR ".join(f"{f} ILIKE %s" for f in searchable)
+            helper += [
+                "    if q:",
+                f'        conditions.append("({search_or})")',
+                f'        params.extend([f"%{{q}}%"] * {len(searchable)})',
+            ]
+        for name in filter_names:
+            helper += [
+                f"    if {name} is not None:",
+                f'        conditions.append("{name} = %s")',
+                f"        params.append({name})",
+            ]
+        helper += [
+            '    where = (" WHERE " + " AND ".join(conditions)) if conditions else ""',
+            "    return where, params",
+        ]
+        filters_helper = "\n".join(helper) + "\n\n\n"
+        list_body = (
+            f"        where, params = _list_filters(q{filter_call})\n"
+            '        sql = f"SELECT * FROM {TABLE}{where} ORDER BY {sort_col} {sort_dir} LIMIT %s OFFSET %s"\n'
+            "        await cur.execute(sql, (*params, limit, offset))\n"
+        )
+        count_body = (
+            f"        where, params = _list_filters(q{filter_call})\n"
+            '        await cur.execute(f"SELECT COUNT(*) AS count FROM {TABLE}{where}", tuple(params))\n'
+        )
+    elif searchable:
+        filters_helper = ""
         search_or = " OR ".join(f"{f} ILIKE %s" for f in searchable)
         list_body = (
             '        if q:\n'
@@ -94,6 +134,7 @@ def _python_repository(entity: Entity) -> str:
             '            await cur.execute(f"SELECT COUNT(*) AS count FROM {TABLE}")\n'
         )
     else:
+        filters_helper = ""
         list_body = (
             '        await cur.execute(f"SELECT * FROM {TABLE} ORDER BY {sort_col} {sort_dir} LIMIT %s OFFSET %s", (limit, offset))\n'
         )
@@ -109,7 +150,8 @@ def _python_repository(entity: Entity) -> str:
         "from app.db import connect\n\n"
         f'TABLE = "{table}"\n'
         f"ALLOWED_SORT_FIELDS = {cols!r}\n\n\n"
-        f'async def list_{table}(limit: int = 100, offset: int = 0, sort: str = "id", order: str = "asc", q: str | None = None) -> list[dict[str, Any]]:\n'
+        f"{filters_helper}"
+        f'async def list_{table}(limit: int = 100, offset: int = 0, sort: str = "id", order: str = "asc", q: str | None = None{filter_kwargs}) -> list[dict[str, Any]]:\n'
         '    sort_col = sort if sort in ALLOWED_SORT_FIELDS else "id"\n'
         '    sort_dir = "DESC" if order.lower() == "desc" else "ASC"\n'
         "    async with await connect() as conn, conn.cursor() as cur:\n"
@@ -128,7 +170,7 @@ def _python_repository(entity: Entity) -> str:
         "    async with await connect() as conn, conn.cursor() as cur:\n"
         '        await cur.execute(f"DELETE FROM {TABLE} WHERE id = %s", (id,))\n'
         "        return cur.rowcount > 0\n\n\n"
-        f"async def count_{table}(q: str | None = None) -> int:\n"
+        f"async def count_{table}(q: str | None = None{filter_kwargs}) -> int:\n"
         "    async with await connect() as conn, conn.cursor() as cur:\n"
         f"{count_body}"
         "        row = await cur.fetchone()\n"
@@ -272,8 +314,58 @@ def _go_entity_store(entity: Entity, slug: str) -> str:
 
     sort_block = _go_sort_whitelist_block(cols)
     searchable = _searchable_fields(entity)
+    filters = filter_fields(entity)
+    go_filters_helper = ""
+    filters_param = ""
 
-    if searchable:
+    if filters:
+        # R-282: a per-store <table>Filters helper builds the WHERE (q search + per-field equality)
+        # with correct $N numbering; only the whitelisted field keys ever become column identifiers.
+        filter_var = f"{table}Filters"
+        helper_lines = [
+            f"func {filter_var}(q string, filters map[string]string) (string, []any) {{",
+            "\tconds := []string{}",
+            "\targs := []any{}",
+        ]
+        if searchable:
+            search_or = " OR ".join(f"{f} ILIKE $1" for f in searchable)
+            helper_lines += [
+                '\tif q != "" {',
+                f'\t\tconds = append(conds, "({search_or})")',
+                '\t\targs = append(args, "%"+q+"%")',
+                "\t}",
+            ]
+        for field, kind in filters:
+            coerce = 'v == "true"' if kind == "bool" else "v"
+            helper_lines += [
+                f'\tif v, ok := filters["{field.name}"]; ok && v != "" {{',
+                f'\t\tconds = append(conds, fmt.Sprintf("{field.name} = $%d", len(args)+1))',
+                f"\t\targs = append(args, {coerce})",
+                "\t}",
+            ]
+        helper_lines += [
+            "\tif len(conds) == 0 {",
+            '\t\treturn "", args',
+            "\t}",
+            '\treturn " WHERE " + strings.Join(conds, " AND "), args',
+            "}",
+            "",
+            "",
+        ]
+        go_filters_helper = "\n".join(helper_lines) + "\n"
+        filters_param = ", filters map[string]string"
+        go_list_query = (
+            f"\twhere, args := {filter_var}(q, filters)\n"
+            f'\tquery := fmt.Sprintf("SELECT {col_list} FROM {table}%s ORDER BY %s %s LIMIT $%d OFFSET $%d", where, col, dir, len(args)+1, len(args)+2)\n'
+            f"\targs = append(args, limit, offset)\n"
+            f"\trows, err := db.QueryContext(ctx, query, args...)\n"
+        )
+        go_count_query = (
+            f"\twhere, args := {filter_var}(q, filters)\n"
+            f"\tvar count int\n"
+            f'\terr := db.QueryRowContext(ctx, fmt.Sprintf("SELECT COUNT(*) FROM {table}%s", where), args...).Scan(&count)\n'
+        )
+    elif searchable:
         search_or = " OR ".join(f"{f} ILIKE $1" for f in searchable)
         go_list_query = (
             f'\tvar rows *sql.Rows\n'
@@ -315,7 +407,8 @@ def _go_entity_store(entity: Entity, slug: str) -> str:
         '\t"strings"\n\n'
         f'\t"{slug}/internal/models"\n'
         ")\n\n"
-        f"func List{pascal}(ctx context.Context, db *sql.DB, limit, offset int, sort, order, q string) ([]models.{pascal}, error) {{\n"
+        f"{go_filters_helper}"
+        f"func List{pascal}(ctx context.Context, db *sql.DB, limit, offset int, sort, order, q string{filters_param}) ([]models.{pascal}, error) {{\n"
         f"{sort_block}"
         f"{go_list_query}"
         "\tif err != nil {\n\t\treturn nil, err\n\t}\n"
@@ -347,7 +440,7 @@ def _go_entity_store(entity: Entity, slug: str) -> str:
         "\tn, _ := res.RowsAffected()\n"
         "\treturn n > 0, nil\n"
         "}\n\n"
-        f"func Count{pascal}(ctx context.Context, db *sql.DB, q string) (int, error) {{\n"
+        f"func Count{pascal}(ctx context.Context, db *sql.DB, q string{filters_param}) (int, error) {{\n"
         f"{go_count_query}"
         "\treturn count, err\n"
         "}\n\n"

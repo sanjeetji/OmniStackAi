@@ -18,11 +18,31 @@ from __future__ import annotations
 import re
 from dataclasses import dataclass, field as dataclass_field
 
-from ..application_ir import Field, FieldType
+from ..application_ir import Entity, Field, FieldType
 
 _NUMBER = re.compile(r"^-?\d+(?:\.\d+)?$")
 _NUMERIC_TYPES = frozenset({FieldType.INT, FieldType.FLOAT})
 _STRING_TYPES = frozenset({FieldType.STRING, FieldType.TEXT})
+
+
+def filter_fields(entity: Entity) -> list[tuple[Field, str]]:
+    """Fields eligible for server-side equality filtering (R-282): boolean fields and enum fields.
+
+    Returns ``(field, kind)`` pairs where ``kind`` is ``"bool"`` or ``"enum"``, excluding the ``id``
+    primary key. This is the single source of truth the backend generators (data-access, routers/handlers,
+    OpenAPI) share, and it mirrors the frontend's boolean/enum filter selection so the two agree on the
+    same field set. Deterministic, order-preserving.
+    """
+
+    out: list[tuple[Field, str]] = []
+    for field in entity.fields:
+        if field.name == "id":
+            continue
+        if field.type is FieldType.BOOL:
+            out.append((field, "bool"))
+        elif parse_field_rules(field).enum:
+            out.append((field, "enum"))
+    return out
 
 # Generated-project dependency pin (only added when the Go backend enforces validation — R-252).
 VALIDATOR_REQUIRE = "github.com/go-playground/validator/v10 v10.22.1"

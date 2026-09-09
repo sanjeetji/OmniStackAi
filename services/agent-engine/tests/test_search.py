@@ -27,14 +27,15 @@ class GoSearchStoreTests(TestCase):
         self.comment_store = self.project.get("internal/store/comment.go").content
 
     def test_list_entity_store_accepts_q_and_filters_text_fields(self) -> None:
-        self.assertIn("func ListPost(ctx context.Context, db *sql.DB, limit, offset int, sort, order, q string) ([]models.Post, error)", self.post_store)
-        self.assertIn('WHERE (title ILIKE $1 OR body ILIKE $1)', self.post_store)
-        self.assertIn('rows, err = db.QueryContext(ctx, query, "%"+q+"%", limit, offset)', self.post_store)
+        # Post is filterable (published), so search flows through the R-282 postFilters helper.
+        self.assertIn("func ListPost(ctx context.Context, db *sql.DB, limit, offset int, sort, order, q string, filters map[string]string) ([]models.Post, error)", self.post_store)
+        self.assertIn('conds = append(conds, "(title ILIKE $1 OR body ILIKE $1)")', self.post_store)
+        self.assertIn('args = append(args, "%"+q+"%")', self.post_store)
+        self.assertIn("rows, err := db.QueryContext(ctx, query, args...)", self.post_store)
 
     def test_count_entity_store_accepts_q_and_filters_text_fields(self) -> None:
-        self.assertIn("func CountPost(ctx context.Context, db *sql.DB, q string) (int, error)", self.post_store)
-        self.assertIn('SELECT COUNT(*) FROM post WHERE (title ILIKE $1 OR body ILIKE $1)', self.post_store)
-        self.assertIn('err = db.QueryRowContext(ctx, query, "%"+q+"%").Scan(&count)', self.post_store)
+        self.assertIn("func CountPost(ctx context.Context, db *sql.DB, q string, filters map[string]string) (int, error)", self.post_store)
+        self.assertIn('err := db.QueryRowContext(ctx, fmt.Sprintf("SELECT COUNT(*) FROM post%s", where), args...).Scan(&count)', self.post_store)
 
     def test_subcollection_store_accepts_q_and_combines_with_relation(self) -> None:
         self.assertIn("func ListCommentByPost(ctx context.Context, db *sql.DB, postID string, limit, offset int, sort, order, q string) ([]models.Comment, error)", self.comment_store)
@@ -62,7 +63,8 @@ class GoSearchStoreTests(TestCase):
             apis=(ApiEndpoint(HttpMethod.GET, "/counters", response_schema="Counter"),),
         )
         counter_store = GoBackendAdapter().generate(ir).get("internal/store/counter.go").content
-        self.assertIn("func ListCounter(ctx context.Context, db *sql.DB, limit, offset int, sort, order, q string) ([]models.Counter, error)", counter_store)
+        # Counter has no text fields (no ILIKE) but is filterable (active bool) — R-282 filters map present.
+        self.assertIn("func ListCounter(ctx context.Context, db *sql.DB, limit, offset int, sort, order, q string, filters map[string]string) ([]models.Counter, error)", counter_store)
         self.assertNotIn("ILIKE", counter_store)
 
 
@@ -78,8 +80,9 @@ class GoSearchHandlerTests(TestCase):
 
     def test_handlers_extract_q_and_pass_to_store(self) -> None:
         self.assertIn("q := parseSearch(r)", self.posts_handler)
-        self.assertIn("total, err := store.CountPost(r.Context(), h.DB, q)", self.posts_handler)
-        self.assertIn("items, err := store.ListPost(r.Context(), h.DB, limit, offset, sort, order, q)", self.posts_handler)
+        # Post is filterable (published) — R-282 threads a filters map into the store calls.
+        self.assertIn("total, err := store.CountPost(r.Context(), h.DB, q, filters)", self.posts_handler)
+        self.assertIn("items, err := store.ListPost(r.Context(), h.DB, limit, offset, sort, order, q, filters)", self.posts_handler)
 
     def test_subcollection_handlers_pass_q_to_store(self) -> None:
         self.assertIn('total, err := store.CountCommentByPost(r.Context(), h.DB, r.PathValue("postId"), q)', self.posts_handler)
@@ -93,14 +96,15 @@ class PythonSearchRepositoryTests(TestCase):
         self.comment_repo = self.project.get("app/repositories/comment.py").content
 
     def test_list_repo_accepts_q_and_filters_text_fields(self) -> None:
-        self.assertIn('async def list_post(limit: int = 100, offset: int = 0, sort: str = "id", order: str = "asc", q: str | None = None) -> list[dict[str, Any]]:', self.post_repo)
-        self.assertIn('WHERE (title ILIKE %s OR body ILIKE %s)', self.post_repo)
-        self.assertIn('await cur.execute(sql, (*([pattern] * 2), limit, offset))', self.post_repo)
+        # Post is filterable (published), so search flows through the R-282 _list_filters helper.
+        self.assertIn('async def list_post(limit: int = 100, offset: int = 0, sort: str = "id", order: str = "asc", q: str | None = None, published=None) -> list[dict[str, Any]]:', self.post_repo)
+        self.assertIn('conditions.append("(title ILIKE %s OR body ILIKE %s)")', self.post_repo)
+        self.assertIn('params.extend([f"%{q}%"] * 2)', self.post_repo)
+        self.assertIn("await cur.execute(sql, (*params, limit, offset))", self.post_repo)
 
     def test_count_repo_accepts_q_and_filters_text_fields(self) -> None:
-        self.assertIn("async def count_post(q: str | None = None) -> int:", self.post_repo)
-        self.assertIn('SELECT COUNT(*) AS count FROM {TABLE} WHERE (title ILIKE %s OR body ILIKE %s)', self.post_repo)
-        self.assertIn('await cur.execute(sql, tuple([pattern] * 2))', self.post_repo)
+        self.assertIn("async def count_post(q: str | None = None, published=None) -> int:", self.post_repo)
+        self.assertIn('await cur.execute(f"SELECT COUNT(*) AS count FROM {TABLE}{where}", tuple(params))', self.post_repo)
 
     def test_subcollection_repo_accepts_q(self) -> None:
         self.assertIn('async def list_comment_by_post(post_id: str, limit: int = 100, offset: int = 0, sort: str = "id", order: str = "asc", q: str | None = None) -> list[dict[str, Any]]:', self.comment_repo)
@@ -115,9 +119,9 @@ class PythonSearchRouterTests(TestCase):
         self.posts_router = self.project.get("app/routers/posts.py").content
 
     def test_router_accepts_q_and_forwards_to_repo(self) -> None:
-        self.assertIn('async def get_posts(response: Response, limit: int = 100, offset: int = 0, sort: str = "id", order: str = "asc", q: str | None = None) -> list[dict]:', self.posts_router)
-        self.assertIn("total = await post.count_post(q=q)", self.posts_router)
-        self.assertIn("return await post.list_post(limit=limit, offset=offset, sort=sort, order=order, q=q)", self.posts_router)
+        self.assertIn('async def get_posts(response: Response, limit: int = 100, offset: int = 0, sort: str = "id", order: str = "asc", q: str | None = None, published: bool | None = None) -> list[dict]:', self.posts_router)
+        self.assertIn("total = await post.count_post(q=q, published=published)", self.posts_router)
+        self.assertIn("return await post.list_post(limit=limit, offset=offset, sort=sort, order=order, q=q, published=published)", self.posts_router)
 
     def test_subcollection_router_forwards_q(self) -> None:
         self.assertIn('async def get_posts_postid_comments(postId: str, response: Response, limit: int = 100, offset: int = 0, sort: str = "id", order: str = "asc", q: str | None = None) -> list[dict]:', self.posts_router)

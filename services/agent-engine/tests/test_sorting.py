@@ -32,7 +32,8 @@ class GoSortingStoreTests(TestCase):
         self.assertIn('dir = "DESC"', self.post_store)
 
     def test_list_entity_store_formats_validated_query(self) -> None:
-        self.assertIn('fmt.Sprintf("SELECT id, title, body, published FROM post ORDER BY %s %s LIMIT $1 OFFSET $2", col, dir)', self.post_store)
+        # Post is filterable (published), so its list query is the R-282 dynamic builder.
+        self.assertIn('fmt.Sprintf("SELECT id, title, body, published FROM post%s ORDER BY %s %s LIMIT $%d OFFSET $%d", where, col, dir, len(args)+1, len(args)+2)', self.post_store)
 
     def test_subcollection_store_has_sort_whitelist_and_order(self) -> None:
         self.assertIn('col := "id"', self.comment_store)
@@ -56,7 +57,8 @@ class GoSortingHandlerTests(TestCase):
 
     def test_handlers_parse_sort_and_pass_to_store(self) -> None:
         self.assertIn("sort, order := parseSort(r)", self.posts_handler)
-        self.assertIn("store.ListPost(r.Context(), h.DB, limit, offset, sort, order, q)", self.posts_handler)
+        # Post is filterable (published) — R-282 threads a filters map into the store call.
+        self.assertIn("store.ListPost(r.Context(), h.DB, limit, offset, sort, order, q, filters)", self.posts_handler)
         self.assertIn('store.ListCommentByPost(r.Context(), h.DB, r.PathValue("postId"), limit, offset, sort, order, q)', self.posts_handler)
 
 
@@ -87,8 +89,8 @@ class PythonSortingRouterTests(TestCase):
         self.posts_router = self.project.get("app/routers/posts.py").content
 
     def test_router_declares_sort_and_order_query_parameters(self) -> None:
-        self.assertIn('async def get_posts(response: Response, limit: int = 100, offset: int = 0, sort: str = "id", order: str = "asc", q: str | None = None) -> list[dict]:', self.posts_router)
-        self.assertIn("return await post.list_post(limit=limit, offset=offset, sort=sort, order=order, q=q)", self.posts_router)
+        self.assertIn('async def get_posts(response: Response, limit: int = 100, offset: int = 0, sort: str = "id", order: str = "asc", q: str | None = None, published: bool | None = None) -> list[dict]:', self.posts_router)
+        self.assertIn("return await post.list_post(limit=limit, offset=offset, sort=sort, order=order, q=q, published=published)", self.posts_router)
 
     def test_subcollection_router_passes_sort_and_order(self) -> None:
         self.assertIn('async def get_posts_postid_comments(postId: str, response: Response, limit: int = 100, offset: int = 0, sort: str = "id", order: str = "asc", q: str | None = None) -> list[dict]:', self.posts_router)
