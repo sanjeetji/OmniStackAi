@@ -1,71 +1,57 @@
 # Current Handoff
 
-Task ID: R-282
+Task ID: R-283
 Status: done
 Phase: BASIC/MVP — Founder Stage 0
 Branch: `main` (the only branch; the GitHub default)
-Last verified implementation SHA: `198e23e`
+Last verified implementation SHA: `d0c9e84`
 
 ## Repo/workflow state
 
 - All work is on `main`; commit directly with the Tracker-ID discipline (contract → tests → gates →
   tracker → two commits tagged `[R-###]` → push → remote SHA check).
-- Commits use `sanjeetji <sk698166@gmail.com>` as author (with the tooling `Co-Authored-By` trailer).
+- Commits use `sanjeetji <sk698166@gmail.com>` as author (with the permitted tooling
+  `Co-Authored-By: Claude Opus 4.8` trailer).
 
-## Completed (R-282) — Server-Side Boolean/Enum Field Filters on Top-Level LIST Endpoints
+## Completed (R-283) — Server-Side Collection Filter Wiring in Generated Next.js Screens
 
-Following the R-258 sort / R-261 search pattern, a top-level LIST endpoint now accepts `?<field>=<value>`
-for each **boolean** field and each **enum** field (`enum:a|b|c` validation), composed into the SQL
-`WHERE` alongside the existing `q` keyword search. Same whitelist discipline as sorting: **column
-identifiers only ever come from validated IR field names; filter values are always parameterized
-(`$N`/`%s`).**
+R-278's boolean/enum collection controls no longer filter only the currently loaded page. Generated
+filterable top-level `useList` hooks now carry an allowlisted `filters` map and flatten active values into
+the exact R-282 `?<field>=<value>` request parameters before the API client builds the query string.
 
-- **`field_validation.filter_fields(entity)`** — new shared helper (`(field, kind)` for bool/enum, minus
-  `id`) driving Go, FastAPI, and OpenAPI.
-- **data_access** — filterable entities get a dynamic `WHERE` builder: Python `_list_filters(q, …)` helper;
-  Go `<table>Filters(q, filters map[string]string)` helper (bool → `v == "true"`, enum → string) with
-  correct `$N` numbering; `list_`/`List` + `count_`/`Count` take the filter params. Non-filterable
-  entities are byte-identical.
-- **backend_python / backend_go** — FastAPI router declares typed filter params (`bool | None` / `str |
-  None`) and forwards them; Go handler calls `parseFilters(r)` (in `handlers.go` only when a filterable
-  entity exists) and threads the map into the store calls.
-- **openapi** — each filter param documented on `Op.LIST` (boolean / string+enum).
-
-Scoped to `Op.LIST`; the FK-scoped `LIST_BY` subcollection queries are unchanged. No new IR field, no npm
-dependency, standard-library-only platform code, diff-invariant across `ir.description`.
+- `setFilter(field, value)` accepts only generated field/value pairs, removes `all`/empty values, and
+  resets `offset` to zero; `clearFilters()` removes all filters and returns to page one.
+- The R-280 URL flow hydrates and syncs only known filter fields with allowed values, alongside existing
+  `q`/sort/order/page/pageSize state.
+- Collection screens drive those hook setters, render the server-returned `data` directly, and retain the
+  current toolbar, active-count badge, Reset, and filtered no-results CTA.
+- Removed `useMemo` and page-local `data.filter`; non-filterable screens emit no controls/options.
+- Top-level LIST only: subcollection `LIST_BY`, backends, Application IR, dependencies, and infrastructure
+  are unchanged.
 
 ## Verification
 
-- `task verify` — pass (786 agent-engine tests; 12 new in `test_field_filters_backend.py`).
-  `task lint`, `task security:quick` — pass. Both `task builder:demo`s — pass. 0 model calls; no DB.
-- Because `minimal-blog` Post is filterable (`published`), the exact Post assertions in `test_search.py`,
-  `test_sorting.py`, `test_pagination.py`, `test_total_count.py`, and `test_route_wiring.py` were updated
-  to the new dynamic-builder output (Comment/Driver, non-filterable, stayed byte-identical).
-- Tracker — R-282 at `Phase_Roadmap!A9:M9` (R-281 → row 10); rows 1..290 contiguous; table `A4:M290`;
-  Dashboard ranges `B4:B290`/`H4:H290`, no `#REF!`; Done 71.
-
-## Founder note — Groq key available
-
-A Groq API key is available; live model-fabric verification with it is deferred per founder choice. To
-enable: put `GROQ_API_KEY` in the **gitignored `.env`** (never in chat/commits/source), then
-`task agent-engine:gateway:run` with `OMNISTACKAI_CLOUD_PROVIDER=groq`. This AI sandbox may block outbound
-calls to `api.groq.com`, so it may need a real terminal.
+- `task verify` — pass (789 agent-engine tests; 3 new focused server-filter wiring tests).
+- `task lint`, `task security:quick` — pass.
+- `task builder:demo -- minimal-blog`, `task builder:demo -- rideshare-favourites` — pass.
+- Inspected generated minimal-blog `apps/web/app/post_list/page.tsx`, `apps/web/lib/hooks.ts`, and
+  `apps/web/lib/api.ts`; rideshare has no entity filter options.
+- Tracker — R-283 at `Phase_Roadmap!A9:M9`; rows 1..291 contiguous; table `A4:M291`; Dashboard references
+  extended; ZIP/XML valid; 283 unique IDs; Done 72. Artifact-tool render visually checked.
+- 0 local model calls / 0 cloud calls; no generated app installed/run, no DB connection.
 
 ## Blockers and risks
 
-- None for the offline R-283 candidates below. Live preview/deploy and the deferred R-224 Next.js console
-  upgrade still need a network environment / provider keys. Native mobile remains deferred (Brief §25/§91).
+- No blocker for the offline R-284 candidate. Live preview/deploy and R-224 still need a network-capable
+  environment and/or authorized provider keys. Native mobile remains deferred under Brief §25/§91.
+- A Groq key is available for a future live model-fabric verification. Keep it only in gitignored `.env`;
+  never place it in chat, source, state, logs, tests, or commits.
 
 ## Next action
 
-Continue from R-283 with one offline-doable candidate:
-
-1. **Wire the Next.js collection filter controls (R-278) to the new backend `?field=` params** — R-278's
-   boolean/enum filters are currently client-side over the loaded page (wrong across pagination). Point
-   them at the R-282 backend params via the `useList` hook so filtering is server-side and correct. (The
-   user-visible payoff of R-282.) Or
-2. **Extend server-side field filtering to the FK-scoped `LIST_BY` subcollection endpoints** (mind the
-   `$N` renumbering: relation id is `$1`).
+Continue from R-284. Smallest offline candidate: extend R-282 boolean/enum filters to FK-scoped
+`LIST_BY` subcollection endpoints, preserving the relation ID as Go `$1`, search as the next placeholder,
+and parameterizing all filter values. Do not start it until its task contract is recorded.
 
 ## Next command
 

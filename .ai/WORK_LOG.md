@@ -1459,3 +1459,26 @@
 - Tracker: `tracker_edit_r282.py` (baseline `198e23e`) — R-282 (Builder) at row 9, R-281 → row 10; rows
   1..290 contiguous, table `A4:M290`, Dashboard ranges `B4:B290`/`H4:H290`, no `#REF!`, XML well-formed.
   Done 71. Implementation checkpoint `198e23e`. 0 local / 0 cloud model calls; no DB.
+
+## 2026-09-09 — R-283
+
+- Founder supplied the exact R-283 continuation and selected recommended option 1: connect the R-278
+  collection filter controls to R-282's server-side boolean/enum query parameters so filtering happens
+  before pagination. Recorded the contract before implementation; no model call was needed.
+- `nextjs.py` `_hooks_file`: filterable top-level list hooks now use `UseCollectionListParams` with an
+  allowlisted `filters` map and `UseCollectionListState` setters. `setFilter` validates the generated
+  field/value pair, removes `all`/empty values, and resets `offset`; `clearFilters` removes the map and
+  resets pagination. The hook flattens the map into the existing `ApiOptions.params` request so
+  `requestWithMeta` emits exact `?<field>=<value>` parameters. R-280 URL hydrate/sync reads and writes only
+  allowlisted filter values. Non-filterable hooks retain their existing request path; `LIST_BY` unchanged.
+- `_collection_screen_page`: boolean pills and enum selects call `setFilter`; Reset/empty recovery call
+  `clearFilters`; active state comes from `params.filters`; table/empty state use server-returned data.
+  Removed `useMemo` and the client-side `data.filter`, preserving the UI and `"use client"`.
+- Reworked `test_collection_field_filters.py`: old page-local assertions now prove hook/request/UI wiring,
+  allowlisted URL state, no local filtering, non-filterable absence, and description diff invariance.
+  Three net-new tests; 789 total. `task verify`, `task lint`, `task security:quick`, and both builder demos
+  pass. Inspected generated minimal-blog page/hooks/api and the non-filterable rideshare hooks.
+- Tracker: `tracker_edit_r283.py` (baseline `d0c9e84`, LAST=290) — R-283 (Builder) at row 9, R-282 → row
+  10; rows 1..291 contiguous; table `A4:M291`; Dashboard/sqref ranges extended; ZIP/XML valid; 283 unique
+  IDs; Done 72. Artifact-tool before/after render inspected. Implementation checkpoint `d0c9e84`.
+  0 local / 0 cloud model calls; no generated app run, network request, or DB connection.

@@ -1,28 +1,23 @@
 # Project State — OmniStackAI
-Last updated: 2026-09-09T01:23:00+05:30
+Last updated: 2026-09-09T16:36:51+05:30
 
 ## Current Phase
 Stage 0 (Founder Build Sequence, Brief Section 91) — BASIC/MVP
 
 ## Last Completed Task
-Tracker ID: R-282 — Server-Side Boolean/Enum Field Filters on Top-Level LIST Endpoints (Go + FastAPI +
-OpenAPI) — DONE, `task verify` (786 agent-engine tests, 12 new in `test_field_filters_backend.py`) passing.
-A top-level LIST endpoint now accepts `?<field>=<value>` for each boolean field and each enum field
-(`enum:a|b|c` validation), composed into the SQL `WHERE` alongside the existing `q` keyword search with the
-same whitelist discipline as sorting: column identifiers come only from validated IR field names, and
-filter values are always parameterized (`$N`/`%s`). A shared `field_validation.filter_fields` helper drives
-Go, FastAPI, and OpenAPI. Filterable entities use a dynamic `WHERE` builder (Python `_list_filters` helper /
-Go `<table>Filters` helper with correct `$N` numbering; bool → `v == "true"`, enum → string), while
-non-filterable entities stay byte-identical; `parseFilters` is added to Go `handlers.go` only when needed.
-Scoped to `Op.LIST` (FK-scoped `LIST_BY` subcollections unchanged) — this is the backend behind R-278's
-collection filters; wiring the frontend controls to it is R-283. Existing search/sort/pagination assertions
-were updated for the now-filterable `minimal-blog` Post. No new IR field, no npm dependency, strict diff
-invariance; implementation checkpoint `198e23e`. Preceded by R-225 through R-281. Additive, offline, 0
-network, no DB connection.
+Tracker ID: R-283 — Server-Side Collection Filter Wiring in Generated Next.js Screens — DONE,
+`task verify` (789 agent-engine tests, 3 new focused tests) passing. R-278's boolean/enum collection
+controls now drive the R-282 backend `?<field>=<value>` filters through the generated top-level `useList`
+hook, so filtering is correct before pagination. The hook allowlists field/value combinations, resets
+offset on change/clear, flattens filters into the request, and deep-links valid values through the R-280
+URL flow. Collection screens render server-returned data directly while retaining the filter toolbar,
+active count, Reset, and filtered no-results recovery; `useMemo`/page-local filtering is removed.
+`LIST_BY` and the backends are unchanged. No new IR field, npm/platform dependency, model call, network,
+or DB connection; implementation checkpoint `d0c9e84`. Preceded by R-225 through R-282.
 
 **Notes:** (1) this session reconciled the execution tracker, which had drifted (R-253..R-279 shipped in
 code/tests/docs but were never added as XLSX rows) — all 27 backfilled (commit `b4537c7`); the tracker now
-shows 71 Done through R-282. (2) A Groq API key is available; live model-fabric verification with it was kept
+shows 72 Done through R-283. (2) A Groq API key is available; live model-fabric verification with it was kept
 for later per founder choice (set `GROQ_API_KEY` in the gitignored `.env` to enable — never in chat/commits).
 
 
@@ -55,12 +50,11 @@ R-221 = cross-provider fallback (done); R-222 = platform console slice (done); R
 fallback wiring (done); R-224 = Next.js console upgrade (deferred — environment-blocked).
 
 ## Next Up (queued, in order)
-1. R-283 candidate — wire the Next.js collection filter controls (R-278) to the new backend `?field=`
-   params (R-282), replacing the client-side over-the-page filtering so filters hold across pagination
-2. R-283 candidate — extend server-side field filtering to the FK-scoped `LIST_BY` subcollection endpoints
-3. Live-verify the model fabric with the available Groq key (Balanced gateway → groq; real cloud
+1. R-284 candidate — extend boolean/enum server-side field filtering to the FK-scoped `LIST_BY`
+   subcollection endpoints, preserving relation-id `$1` and correctly numbering search/filter values
+2. Live-verify the model fabric with the available Groq key (Balanced gateway → groq; real cloud
    inference + cost accounting) — set `GROQ_API_KEY` in the gitignored `.env`; may need a network machine
-4. R-224 Next.js console upgrade and R-010 native iOS remain deferred under their existing gates
+3. R-224 Next.js console upgrade and R-010 native iOS remain deferred under their existing gates
 (The full offline builder AND the Tier 0-3 runtime/deploy wiring are complete: one IR ->
 web+backend monorepo -> owned Git repo, plus a local preview provider and key-activated cloud
 sandbox/deploy providers.)

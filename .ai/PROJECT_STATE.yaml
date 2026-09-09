@@ -2,24 +2,20 @@ schema_version: 1
 project: OmniStackAI
 phase: BASIC/MVP
 founder_stage: 0
-current_task: R-282
+current_task: R-283
 current_status: done
 branch: main
 last_completed_task:
-  task_id: R-282
-  title: Server-Side Boolean/Enum Field Filters on Top-Level LIST Endpoints (Go + FastAPI + OpenAPI)
+  task_id: R-283
+  title: Server-Side Collection Filter Wiring in Generated Next.js Screens
   verification: >-
-    task verify (786 agent-engine tests, 12 new in test_field_filters_backend.py); a top-level LIST
-    endpoint now accepts ?<field>=<value> for boolean and enum fields, composed into the SQL WHERE
-    alongside the existing q keyword search with the same whitelist discipline as sorting (identifiers from
-    validated IR field names only; values parameterized $N/%s). A shared field_validation.filter_fields
-    helper drives Go, FastAPI, and OpenAPI; filterable entities use a dynamic WHERE builder (Python
-    _list_filters / Go <table>Filters with correct $N numbering; bool -> v=="true", enum -> string) while
-    non-filterable entities stay byte-identical; parseFilters added to Go handlers.go only when needed.
-    Scoped to Op.LIST (LIST_BY subcollections unchanged) — the backend behind R-278's filters; frontend
-    wiring is R-283. Existing search/sort/pagination assertions updated for the now-filterable minimal-blog
-    Post; no new IR field, no npm dep, diff-invariant; task lint + security:quick pass; both builder:demo
-    pass; impl 198e23e; 0 network, no DB
+    task verify (789 agent-engine tests, 3 new focused server-filter wiring tests); generated top-level
+    collection hooks now hold allowlisted boolean/enum filter values, flatten them into R-282 request query
+    parameters, reset offset on change/clear, and hydrate/sync valid filter values through the R-280 URL
+    state. Collection screens call setFilter/clearFilters, render server-returned data directly, and retain
+    the toolbar/count/reset/no-results UX without useMemo or page-local data.filter. LIST_BY and backends
+    unchanged; no new IR field, npm/platform dependency, network, model call, or DB connection. task lint +
+    security:quick and both builder demos pass; generated page/hooks/api inspected; impl d0c9e84
   result: pass
 control_plane_database: postgresql
 model_routing_mode: balanced
@@ -31,14 +27,12 @@ product_direction: >-
   framework adapter contract -> Next.js adapter -> Git service -> preview/sandbox (needs cloud env).
 id_note: >-
   Workbook backlog owns R-010..R-219. Founder-requested tasks use IDs after R-219: R-220..R-223 done,
-  R-224 Next.js deferred (env-blocked), R-225..R-282 done. Continue from R-283.
+  R-224 Next.js deferred (env-blocked), R-225..R-283 done. Continue from R-284.
 blockers: []
 next_action: >-
-  Task R-282 (server-side boolean/enum field filters on top-level LIST endpoints, Go + FastAPI + OpenAPI)
-  is implemented, verified, and complete (786 tests pass; tracker current — 71 Done). Ready for Task
-  R-283: wire the generated Next.js collection filter controls (R-278) to the new backend ?field= params
-  (replacing the client-side over-the-page filtering) so filters are correct across pagination. Also
-  available offline: extend field filtering to the FK-scoped LIST_BY subcollection endpoints. Founder has
-  a Groq API key available for a future live model-fabric verification (set GROQ_API_KEY in the gitignored
-  .env, never in chat/commits; this sandbox may block outbound calls to api.groq.com).
-last_updated: "2026-09-09T03:20:00+05:30"
+  Task R-283 (generated Next.js top-level collection controls -> R-282 server-side ?field= filters) is
+  implemented, verified, and complete (789 tests pass; tracker current — 72 Done). Ready for Task R-284;
+  smallest offline candidate: extend boolean/enum field filtering to FK-scoped LIST_BY subcollection
+  endpoints. A Groq key remains available for a separately authorized future live model-fabric check;
+  keep it only in gitignored .env and never in chat/commits.
+last_updated: "2026-09-09T16:36:51+05:30"

@@ -1,7 +1,7 @@
 schema_version: 1
 task_id: R-283
 title: Server-Side Collection Filter Wiring in Generated Next.js Screens
-status: in_progress
+status: done
 phase: BASIC/MVP
 founder_stage: 0
 branch: main
@@ -64,10 +64,16 @@ model_tool_trace:
   local_calls: 0
   cloud_calls: 0
   note: Pure deterministic code generation and tests; no model call is needed.
-evidence: []
+evidence:
+  - "task verify: 789 tests passed (0 failures; 3 new focused server-filter wiring tests)"
+  - "task lint: passed; task security:quick: passed"
+  - "task builder:demo -- minimal-blog: passed; task builder:demo -- rideshare-favourites: passed"
+  - "generated minimal-blog apps/web/app/post_list/page.tsx, lib/hooks.ts, and lib/api.ts inspected"
+  - "tracker: R-283 at Phase_Roadmap row 9; 283 unique IDs; rows 1..291; table A4:M291; Done 72"
+  - "implementation commit: d0c9e84"
 blockers: []
 next_action: >-
-  Add focused failing assertions for server-side hook/request wiring, then implement the smallest
-  nextjs.py change that satisfies them.
-next_command: >-
-  python3 -m unittest services/agent-engine/tests/test_collection_field_filters.py
+  R-283 is complete. Continue from R-284; the smallest offline candidate is extending the same
+  boolean/enum server-side filters to FK-scoped LIST_BY subcollection endpoints. The live Groq
+  model-fabric verification remains available separately when the founder chooses to use the key.
+next_command: task ai:status
