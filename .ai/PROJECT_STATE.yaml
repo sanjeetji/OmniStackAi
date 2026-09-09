@@ -2,21 +2,21 @@ schema_version: 1
 project: OmniStackAI
 phase: BASIC/MVP
 founder_stage: 0
-current_task: R-279
+current_task: R-280
 current_status: done
 branch: main
 last_completed_task:
-  task_id: R-279
-  title: Global Notification Toast System & Action Feedback in Generated Next.js Web App
+  task_id: R-280
+  title: Deep-Linked Collection List State + Debounced, Race-Safe Search in Generated Next.js Web App
   verification: >-
-    task verify (756 agent-engine tests, 14 new in test_toast_notifications.py); apps/web/components/toast.tsx
-    generated with client-side ToastProvider and useToast hook; fixed floating viewport container with auto-dismiss
-    timers, manual dismiss, and distinct status color accents (emerald success, red error, blue info); RootLayout in
-    apps/web/app/layout.tsx wrapped in <ToastProvider>; real-time action feedback wired into collection screens (CSV export,
-    single delete, batch delete), detail screens (JSON export, delete, subcollection delete), and form screens (create/update
-    success, error feedback, reset notice); 100% offline, zero new external npm dependencies, zero new IR fields, strict
-    diff invariance across ir.description; task lint and task security:quick pass; builder:demo minimal-blog and rideshare-favourites
-    pass; 0 network, no DB
+    task verify (768 agent-engine tests, 12 new in test_collection_deeplink_state.py); the generated
+    useList<Entities> hook syncs sort/order/q/page/pageSize to the URL and hydrates them from the URL on
+    mount (client-only, history.replaceState, only non-defaults written), so refresh/bookmark/share
+    restore the exact list view; refetch aborts the previous in-flight request via AbortController (signal
+    forwarded through the existing ApiOptions) and ignores stale responses; the collection search input is
+    debounced 300ms and no longer fetches on every keystroke; subcollection hook/UI out of scope; no new IR
+    field, no npm dep, diff-invariant across ir.description; task lint + security:quick pass; both
+    builder:demo pass; impl 7a6b9b5; 0 network, no DB
   result: pass
 control_plane_database: postgresql
 model_routing_mode: balanced
@@ -28,7 +28,11 @@ product_direction: >-
   framework adapter contract -> Next.js adapter -> Git service -> preview/sandbox (needs cloud env).
 id_note: >-
   Workbook backlog owns R-010..R-219. Founder-requested tasks use IDs after R-219: R-220..R-223 done,
-  R-224 Next.js deferred (env-blocked), R-225..R-279 done. Continue from R-280.
+  R-224 Next.js deferred (env-blocked), R-225..R-280 done. Continue from R-281.
 blockers: []
-next_action: Task R-279 (Global Notification Toast System & Action Feedback) is implemented, verified, and complete (756 tests pass). Ready for Task R-280.
-last_updated: "2026-09-09T01:21:00+05:30"
+next_action: >-
+  Task R-280 (Deep-Linked Collection List State + Debounced, Race-Safe Search) is implemented, verified,
+  and complete (768 tests pass; tracker reconciled — 69 Done). Ready for Task R-281. Offline candidates:
+  wire pagination/sort/search controls into subcollection master-detail lists (the backend + hook already
+  support it); or promote boolean/enum filters to server-side query params.
+last_updated: "2026-09-09T02:10:00+05:30"

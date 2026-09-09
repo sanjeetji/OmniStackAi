@@ -40,7 +40,7 @@ START PROTOCOL
   `task ai:status`, `task ai:handoff`. `task verify` must stay green and network-independent.
 - Confirm git branch/HEAD/clean tree. Then restate: phase, next Tracker ID, objective, blast radius.
 
-WHAT IS ALREADY BUILT (all Python 3.13 stdlib-only, offline, in services/agent-engine; 350 tests pass)
+WHAT IS ALREADY BUILT (platform generators are Python 3.13 stdlib-only, offline, in services/agent-engine; 768 tests pass)
 - Model fabric: ModelProvider contract + registry; local Ollama adapter (runs any installed model via
   OMNISTACKAI_OLLAMA_MODEL); Balanced ModelGateway (deterministic escalation ladder, no silent cloud
   fallback, context-budget guard); key-activated cloud catalog — Anthropic/OpenAI/Google-Gemini/
@@ -113,9 +113,20 @@ project-plan surface, R-246 hunk-level edit diffs + rename detection, R-247 stat
 proof, R-248 IR fixtures -> honest migrations/0002_seed.sql, R-249 schema indexes + unique constraints,
 R-250 field validation (max_length/enum) -> schema + Pydantic, R-251 field validation for Go
 (go-playground validate:"..." struct tags) + numeric min/max -> schema CHECK + Pydantic ge/le, R-252
-enforce the Go validate tags at request time (validator/v10 in the generated go.mod + validate.go +
-validateStruct -> 400 in the create handlers; rule-free projects emit none). Do NOT overwrite backlog
-rows; continue from R-253.
+enforce the Go validate tags at request time (validator/v10 + validate.go + validateStruct -> 400).
+R-253 PATCH handlers, R-254 structured JSON validation error bodies, R-255 limit/offset pagination,
+R-256 PUT handlers, R-257 typed Next.js API client (lib/api.ts) + backend CORS, R-258 sort/order,
+R-259 X-Total-Count header, R-260 OpenAPI 3.1 spec, R-261 q keyword search, R-262 React hooks
+(lib/hooks.ts). Then the interactive Next.js web-app build-out: R-263 interactive screen components,
+R-264 field-level validation feedback, R-265 subcollection master-detail, R-266 edit mode, R-267 FK
+selectors, R-268 subcollection delete, R-269 page-size + empty-state CTAs, R-270 bulk delete, R-271 CSV
+export, R-272 detail deep-linking, R-273 nav shell/navbar, R-274 form CTAs, R-275 dashboard, R-276
+record selector + prev/next, R-277 dirty-state guard, R-278 boolean/enum filters, R-279 toast system,
+R-280 deep-linked collection list state (URL sync of sort/order/q/page/pageSize) + debounced,
+race-safe search (AbortController refetch). Do NOT overwrite backlog rows; continue from R-281.
+NOTE: the execution tracker was reconciled on 2026-09-09 (R-253..R-279 rows had drifted and were
+backfilled); keep it current going forward. The WHAT-IS-BUILT prose above predates R-253 — trust the
+state files and CHANGELOG for current detail.
 
 ENVIRONMENT LIMITS discovered here
 - npm front-end bundlers (Next.js SWC, Vite/esbuild) FAIL to install (native-binary downloads time
@@ -141,12 +152,12 @@ RULES (non-negotiable)
   .ai/HANDOFF.md, PROJECT_STATE.md, CHANGELOG.md, and the tracker row. Push the branch; verify remote
   SHA == local HEAD. Never claim unexecuted tests.
 
-WHAT TO DO NEXT (pick with the founder; all continue the builder), continue from R-253
-- Offline-doable now: validating PATCH/update handlers (an update repository op + a handler that decodes,
-  reuses validateStruct, and persists a partial update); or field-level validation error bodies (a JSON
-  detail naming which field failed which rule, instead of the flat "validation_failed"). Remaining 501s
-  are only genuinely-ambiguous endpoints (multi-param, no schema, >1 FK). Founder guidance: prefer real
-  enforced runtime behavior over static-console or seed-data work.
+WHAT TO DO NEXT (pick with the founder; all continue the builder), continue from R-281
+- Offline-doable now: wire pagination/sort/search controls into the subcollection master-detail lists
+  (the backend endpoints and the generated useList<Child>By<Parent> hook already support limit/offset/
+  sort/order/q; only the render is inert today); or promote the boolean/enum collection filters to
+  server-side ?field= query params (currently client-side over the loaded page). Founder guidance: prefer
+  real enforced runtime behavior over static-console or seed-data work.
 - Needs a network/cloud environment: run a Tier-0 preview end-to-end (materialize -> pnpm dev);
   live-verify a cloud LLM provider (set its key + OMNISTACKAI_CLOUD_PROVIDER=<id>, run
   `task agent-engine:gateway:run`) or a deploy/sandbox driver (OMNISTACKAI_TIER=2 + key); and the
@@ -154,5 +165,5 @@ WHAT TO DO NEXT (pick with the founder; all continue the builder), continue from
 - Deferred by governance: native mobile (R-010 etc.) until web/backend stability.
 
 Begin by reading the files above and running the start protocol, then propose the next Tracker ID
-(R-253) with its task contract before writing code. Commit to main.
+(R-281) with its task contract before writing code. Commit to main.
 ```

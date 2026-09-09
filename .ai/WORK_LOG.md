@@ -1350,3 +1350,54 @@
 - Tracker: general row-insertion `tracker_edit_r252.py` (baseline `842819e`, LAST=259) — R-252 (Builder)
   at row 9, R-251 shifted to row 10; rows 1..260 contiguous, table `A4:M260`, sheet1 ranges to 260, XML
   well-formed. Done 41. Implementation checkpoint `f4fc828`. 0 local / 0 cloud model calls; no DB.
+
+## 2026-09-08/09 — R-253..R-279 (parallel sessions; logged here in bulk)
+
+- R-253..R-279 were shipped by parallel sessions (backend CRUD expansion + OpenAPI + the interactive
+  Next.js web-app UX build-out), each with its own `.ai/tasks/R-###.md` contract, tests, and CHANGELOG
+  entry, but their WORK_LOG entries and execution-tracker rows were not written at the time. Per-task
+  detail lives in `.ai/tasks/R-253.md`..`R-279.md` and `CHANGELOG.md`. Highlights: R-253 PATCH, R-254
+  structured JSON validation errors, R-255 pagination, R-256 PUT, R-257 typed API client + CORS, R-258
+  sorting, R-259 X-Total-Count, R-260 OpenAPI 3.1, R-261 keyword search, R-262 React hooks, R-263
+  interactive screens, R-264 field validation, R-265 subcollection master-detail, R-266 edit mode, R-267
+  FK selectors, R-268 subcollection delete, R-269 page-size + empty states, R-270 bulk delete, R-271 CSV
+  export, R-272 detail deep-linking, R-273 nav shell/navbar, R-274 form CTAs, R-275 dashboard, R-276
+  record selector + prev/next, R-277 dirty-state guard, R-278 boolean/enum filters, R-279 toast system.
+
+## 2026-09-09 — Tracker reconciliation (R-253..R-279)
+
+- The execution tracker had been maintained only through R-252 (41 Done) while R-253..R-279 shipped.
+  Backfilled all 27 missing rows (Done) via a batch generalization of the row-insertion script
+  (`tracker_backfill_r253_r279.py`, baseline `764c95c`, DELTA=27), sourcing each row's title/description/
+  evidence from `.ai/tasks/R-###.md` + `CHANGELOG.md` and the impl commit SHAs from `git log` (noting the
+  two bundled commits `34b6d44` R-254..258 and `f16f64c` R-260..262). Result: rows 1..287 contiguous,
+  table `A4:M287`, Dashboard ranges `B4:B287`/`H4:H287`, no `#REF!`, Done 68. Synced `docs/PROGRESS.md` to
+  the live tracker figures. Commit `b4537c7`. Founder chose "reconcile, then R-280."
+
+## 2026-09-09 — R-280
+
+- Deep-linked collection list state + debounced, race-safe search in the generated Next.js web app —
+  the founder-chosen "best, optimised, futuristic" combination of two of the survey-identified gaps
+  (URL-as-state + correct/efficient fetching), both on one surface (`nextjs.py` `_collection_screen_page`
+  + `_hooks_file`).
+- `_hooks_file` `useList<Entities>`: added `useRef` to the react import; the `refetch` now creates an
+  `AbortController` per call, aborts the previous request, forwards `signal` through the existing
+  `ApiOptions` (which already extends `RequestInit`, so no `lib/api.ts` change), guards
+  `AbortError`/`signal.aborted` (no state writes on abort), and aborts in-flight on unmount. Added a
+  mount-once URL-hydrate effect (`URLSearchParams` over `window.location.search` → `setParams`) and a
+  URL-sync effect (`new URL(...)` + `history.replaceState`, writing only non-default `sort/order/q/page/
+  pageSize`), mirroring the R-276 detail deep-link pattern; both guarded `typeof window`.
+- `_collection_screen_page`: always import `useEffect`; after the `searchInput` state, a 300ms debounce
+  effect (`setTimeout`/`clearTimeout`, guarded `searchInput !== (params.q ?? "")` so it never clobbers a
+  hydrated page offset) and a sync effect reflecting the hydrated `q` into the input; the input `onChange`
+  no longer calls `setSearch` on every keystroke; the form submit still searches immediately.
+- Subcollection hook (`useList<Child>By<Parent>`) and subcollection UI controls intentionally out of
+  scope (a future R-281 candidate). No new IR field, no npm dependency, diff-invariant across
+  `ir.description`.
+- 12 new stdlib offline tests in `test_collection_deeplink_state.py` (768 total). Updated three existing
+  assertion sets to the new behavior (`test_nextjs_hooks.py` import + refetch signal;
+  `test_screen_generation.py` debounced onChange; `test_collection_field_filters.py` `useEffect` import).
+  `task verify` + `task lint` + `task security:quick` + both `builder:demo`s pass.
+- Tracker: `tracker_edit_r280.py` (baseline `7a6b9b5`) — R-280 (Builder) at row 9, R-279 → row 10; rows
+  1..288 contiguous, table `A4:M288`, XML well-formed. Done 69. Implementation checkpoint `7a6b9b5`. 0
+  local / 0 cloud model calls; no DB.

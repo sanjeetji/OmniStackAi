@@ -1,7 +1,7 @@
 schema_version: 1
 task_id: R-280
 title: Deep-Linked Collection List State + Debounced, Race-Safe Search in Generated Next.js Web App
-status: in_progress
+status: done
 phase: BASIC/MVP
 founder_stage: 0
 branch: main
@@ -52,4 +52,9 @@ gates:
   - task security:quick
   - task builder:demo -- minimal-blog
   - task builder:demo -- rideshare-favourites
-evidence: []
+evidence:
+  - "task verify: 768 tests passed (0 failures, 12 new in test_collection_deeplink_state.py)"
+  - "task lint: passed; task security:quick: passed"
+  - "task builder:demo -- minimal-blog: passed; task builder:demo -- rideshare-favourites: passed"
+  - "updated existing assertions in test_nextjs_hooks.py (useRef import + refetch signal), test_screen_generation.py (debounced onChange), test_collection_field_filters.py (useEffect import)"
+  - "commit: 7a6b9b5 feat(codegen): deep-linked collection list state + debounced, race-safe search [R-280]"

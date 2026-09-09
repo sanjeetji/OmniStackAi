@@ -5,16 +5,21 @@ Last updated: 2026-09-09T01:23:00+05:30
 Stage 0 (Founder Build Sequence, Brief Section 91) — BASIC/MVP
 
 ## Last Completed Task
-Tracker ID: R-279 — Global Notification Toast System & Action Feedback in Generated Next.js Web App — DONE,
-`task verify` (756 agent-engine tests, 14 new in `test_toast_notifications.py`) passing. Emits a client-side
-notification toast system in `apps/web/components/toast.tsx` exporting `ToastProvider` and `useToast` hook;
-renders a fixed bottom-right floating viewport with auto-dismiss timers, close buttons, and status color accents
-(emerald success, red error, blue info); wraps `RootLayout` in `apps/web/app/layout.tsx` with `<ToastProvider>`;
-wires real-time action feedback into collection screens (CSV export, delete, batch delete), detail screens
-(JSON export, delete, subcollection delete), and form screens (create/update success, error feedback, reset notice);
-100% offline, zero new external npm dependencies, zero new IR fields, strict diff invariance across `ir.description`.
-Preceded by R-225 through R-278.
-Additive, offline, 0 network, no DB connection.
+Tracker ID: R-280 — Deep-Linked Collection List State + Debounced, Race-Safe Search in Generated Next.js Web App
+— DONE, `task verify` (768 agent-engine tests, 12 new in `test_collection_deeplink_state.py`) passing. The
+generated `useList<Entities>` hook now syncs `sort/order/q/page/pageSize` to the URL query string and hydrates
+them from the URL on mount (client-only, `history.replaceState`, only non-default values written), so
+refresh/bookmark/share restore the exact list view; `refetch` creates an `AbortController` per request (signal
+forwarded through the existing `ApiOptions`), aborts the previous in-flight request, and ignores aborted/stale
+responses so out-of-order results cannot clobber state; the collection search input is debounced (300ms) and no
+longer fetches on every keystroke, while the form submit still searches immediately and the hydrated `q` is
+reflected back into the input. The subcollection hook and its UI controls are intentionally out of scope. No new
+IR field, no npm dependency, strict diff invariance across `ir.description`; implementation checkpoint `7a6b9b5`.
+Preceded by R-225 through R-279. Additive, offline, 0 network, no DB connection.
+
+**Tracker note:** this session also reconciled the execution tracker, which had drifted — R-253..R-279 shipped in
+code/tests/docs but were never added as XLSX rows. All 27 were backfilled (commit `b4537c7`); the tracker now
+shows 69 Done through R-280.
 
 
 
@@ -46,8 +51,9 @@ R-221 = cross-provider fallback (done); R-222 = platform console slice (done); R
 fallback wiring (done); R-224 = Next.js console upgrade (deferred — environment-blocked).
 
 ## Next Up (queued, in order)
-1. R-255 candidate — PUT handlers (full-replace update) in Go and FastAPI backends
-2. R-255 candidate — Pagination / query filtering on LIST endpoints (limit/offset)
+1. R-281 candidate — wire pagination/sort/search controls into subcollection master-detail lists
+   (backend endpoints + the generated `useList<Child>By<Parent>` hook already support it)
+2. R-281 candidate — promote boolean/enum filters to server-side `?field=` query params (currently client-side only)
 3. Run a Tier-0 preview end to end on a network-capable machine; then live-verify an authorized driver
 4. R-224 Next.js console upgrade and R-010 native iOS remain deferred under their existing gates
 (The full offline builder AND the Tier 0-3 runtime/deploy wiring are complete: one IR ->

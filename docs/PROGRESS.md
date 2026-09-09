@@ -1,12 +1,12 @@
-# OmniStackAI — implementation progress (as of R-279)
+# OmniStackAI — implementation progress (as of R-280)
 
 A living summary of what is built, what is pending, and how to see results. Numbers come from the
 execution tracker (`R_&_D/OmniStackAI_Execution_Tracker_v6.xlsx`, `Phase_Roadmap`).
 
 ## Headline
 
-- **756 automated tests pass**, fully offline and network-independent (`task verify`).
-- **68 tracker tasks Done, 1 Deferred, 210 Not Started** across 279 rows.
+- **768 automated tests pass**, fully offline and network-independent (`task verify`).
+- **69 tracker tasks Done, 1 Deferred, 210 Not Started** across 280 rows.
 - The offline builder loop is complete end to end: **describe (IR) → generate (web with typed API client, React hooks, interactive master-detail screen components with field validation, page size selector & contextual empty states, bulk selection & batch deletion, CSV data export & bulk export, deep-linking & entity lifecycle in detail screens, global responsive navigation shell & header navbar with active route detection & quick-create CTA, post-submit contextual CTAs & record navigation with Cancel action in form footer, rich entity-aware dashboard overview page (live count cards, screen nav tiles, quick-create CTAs, diff-stable), record selector dropdown, prev/next record navigation & deep-link sync in detail screens, form screen dirty state tracking, unsaved changes guard & reset confirmation, collection screen boolean & enum field filtering with segmented controls, global notification toast system & action feedback with ToastProvider & useToast, subcollection navigation, child item deletion & mutation feedback, full-stack update/edit actions, foreign-key relation selectors & parent auto-population + API with
   working CRUD incl. PATCH/PUT update + pagination + sorting + total count header + keyword search + sub-collections + DB schema + data-access + JWT-verified auth
   & per-endpoint roles + field validation + CORS middleware + OpenAPI 3.1 contract)
@@ -16,18 +16,18 @@ execution tracker (`R_&_D/OmniStackAI_Execution_Tracker_v6.xlsx`, `Phase_Roadmap
 
 | Phase | Done | Total | % complete |
 |-------|------|-------|-----------|
-| **MVP** (current milestone) | 68 | 174 | **39.1%** |
+| **MVP** (current milestone) | 69 | 175 | **39.4%** |
 | MID | 0 | 47 | 0% |
 | ADVANCED | 0 | 29 | 0% |
 | PRODUCTION | 0 | 29 | 0% |
-| **Overall program** | **68** | **279** | **24.4%** |
+| **Overall program** | **69** | **280** | **24.6%** |
 
 
 > The 210 "Not Started" rows are largely the pre-existing backlog catalogue (R-010..R-219 — many are
 > individual specialized agents and later-phase features). Capability-wise the platform is further along
-> than the raw ~24% suggests, because the work done so far is the **core engine + builder**, which
+> than the raw ~25% suggests, because the work done so far is the **core engine + builder**, which
 > everything else builds on. The MVP figure (~39%) is the truest near-term measure. (The MVP lane has
-> grown past its original 145-row scope as founder-requested builder tasks R-220..R-279 were added.)
+> grown past its original 145-row scope as founder-requested builder tasks R-220..R-280 were added.)
 
 ## Capabilities — completed vs pending
 
@@ -91,6 +91,7 @@ execution tracker (`R_&_D/OmniStackAI_Execution_Tracker_v6.xlsx`, `Phase_Roadmap
 | **Form screen dirty state tracking, unsaved changes guard & reset confirmation** (deterministic `isDirty`, header & footer badges, guarded Cancel & Reset, `beforeunload` listener) | ✅ Done | R-277 |
 | **Collection screen boolean & enum field filtering with segmented controls** (FieldType.BOOL, enum dropdowns, active filter indicators, dedicated empty filter state) | ✅ Done | R-278 |
 | **Global notification toast system & action feedback** (ToastProvider, useToast hook, fixed bottom-right viewport, auto-dismiss, action feedback in collections, details, forms) | ✅ Done | R-279 |
+| **Deep-linked collection list state + debounced, race-safe search** (URL sync of sort/order/q/page/pageSize, AbortController refetch, 300ms search debounce) | ✅ Done | R-280 |
 | Next.js console upgrade (rich UI) | ⏸ Deferred | R-224 — needs npm registry access |
 | Live sandbox preview + real deploy (Tier 2) | ⛔ Pending | needs a network machine + provider keys |
 | Native mobile agents | ⛔ Deferred (governance) | until web/backend stability (Brief §25/§91) |
@@ -102,7 +103,7 @@ Everything below runs with **no cloud keys** and no internet (except where noted
 
 1. **See the whole engine is real and green:**
    ```
-   task verify            # 756 tests pass
+   task verify            # 768 tests pass
    ```
 2. **Generate a real app from a spec and inspect it** (the headline result):
    ```
@@ -146,7 +147,8 @@ the live run needs the key + a network machine.
 
 ## What's next
 
-Near-term MVP candidates (all offline-doable, in the generated Next.js app): **R-280** = deep-link the
-collection list state (`sort/order/q/page/pageSize`) to the URL + debounced, race-safe search; then
-subcollection list controls, and server-side boolean/enum filters. Then, on a network machine: live
-Tier-2 preview and deploy. This file is refreshed as tasks land.
+Near-term MVP candidates (all offline-doable, in the generated Next.js app): **R-281** = wire
+pagination/sort/search controls into subcollection master-detail lists (the backend endpoints and the
+generated `useList<Child>By<Parent>` hook already support it); then server-side boolean/enum filters
+(`?field=` params). Then, on a network machine: live Tier-2 preview and deploy. This file is refreshed as
+tasks land.

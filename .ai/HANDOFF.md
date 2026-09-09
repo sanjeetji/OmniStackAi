@@ -1,73 +1,69 @@
 # Current Handoff
 
-Task ID: R-279
+Task ID: R-280
 Status: done
 Phase: BASIC/MVP — Founder Stage 0
 Branch: `main` (the only branch; the GitHub default)
+Last verified implementation SHA: `7a6b9b5`
 
 ## Repo/workflow state
 
 - All work is on `main`; commit directly with the Tracker-ID discipline (contract → tests → gates →
   tracker → two commits tagged `[R-###]` → push → remote SHA check).
-- Commits use `sanjeetji <sk698166@gmail.com>` as author.
+- Commits use `sanjeetji <sk698166@gmail.com>` as author (with the tooling `Co-Authored-By` trailer).
 
-## Completed (R-279) — Global Notification Toast System & Action Feedback in Generated Next.js Web App
+## Completed (R-280) — Deep-Linked Collection List State + Debounced, Race-Safe Search
 
-- **`ToastProvider` and `useToast` Hook (`apps/web/components/toast.tsx`)**:
-  - Emits client component (`"use client";`) with `createContext`, `useContext`, `useState`, `useCallback`, and `useEffect`.
-  - Exports `ToastProvider`, `useToast`, `ToastType = "success" | "error" | "info"`, `ToastItem`, and `ToastContextValue`.
-  - Methods: `addToast(message, type, duration)`, `removeToast(id)`, and typed helpers `toast.success()`, `toast.error()`, and `toast.info()`.
-  - Floating viewport container fixed at bottom-right (`position: "fixed"`, `bottom: 24`, `right: 24`, `zIndex: 9999`, `aria-live="polite"`).
-  - Toast cards with auto-dismiss timers (`setTimeout` / `clearTimeout`), manual dismiss `×` buttons, and distinct status color accents:
-    - Emerald (`#a7f3d0`/`#15803d`/`✓`) for success.
-    - Red (`#fecaca`/`#b91c1c`/`✕`) for error.
-    - Blue (`#bfdbfe`/`#1d4ed8`/`ℹ`) for info.
-- **RootLayout Integration (`apps/web/app/layout.tsx`)**:
-  - Imports `ToastProvider` from `../components/toast` and wraps `<Navbar />` and `{children}`.
-- **Screen Action Feedback**:
-  - Collection screens: CSV export (`toast.info`), single delete (`toast.success` / `toast.error`), batch delete (`toast.success` with count / `toast.error`), and subcollection delete (`toast.success` / `toast.error`).
-  - Detail screens: JSON export (`toast.info`), main delete (`toast.success` / `toast.error`), and subcollection delete (`toast.success` / `toast.error`).
-  - Form screens: create and update submit (`toast.success` / `toast.error`) and Reset button (`toast.info`).
-- **Quality & Safety**:
-  - 100% offline, zero new external npm dependencies, zero new IR fields, strict diff invariance across `ir.description`.
+The founder-chosen "best, optimised, futuristic" pairing of two survey-identified gaps, both on one
+surface (`nextjs.py` `_collection_screen_page` + `_hooks_file`):
 
-## Test Coverage (R-279)
-
-`services/agent-engine/tests/test_toast_notifications.py` — 14 new tests:
-1. `test_toast_component_is_client_component`
-2. `test_toast_component_exports_types_and_provider`
-3. `test_toast_component_has_viewport_and_aria_live`
-4. `test_toast_component_has_distinct_status_accents`
-5. `test_toast_component_has_dismiss_button_and_auto_timer`
-6. `test_toast_provider_in_generated_files`
-7. `test_layout_imports_and_wraps_toast_provider`
-8. `test_collection_screen_wires_use_toast`
-9. `test_collection_screen_csv_export_triggers_toast`
-10. `test_collection_screen_delete_actions_trigger_toast`
-11. `test_detail_screen_wires_use_toast_and_feedback`
-12. `test_form_screen_wires_use_toast_and_feedback`
-13. `test_diff_invariance_across_ir_description_changes`
-14. `test_demo_projects_generate_toast_component`
-
-## Preceded by:
-- **R-278**: Collection Screen Boolean & Enum Field Filtering with Segmented Controls.
-- **R-277**: Form Screen Dirty State Tracking, Unsaved Changes Guard & Reset Confirmation in Generated Next.js Forms.
-- **R-276**: Record Selector Dropdown, Prev/Next Record Navigation & Deep-Link Sync in Generated Next.js Detail Screens.
-- **R-275**: Rich App Dashboard Overview Page in Generated Next.js Web App.
-- **R-274**: Form Screen Post-Submit Contextual CTAs, Record Navigation & Cancel Actions.
-- **R-273**: Global Responsive Navigation Shell & Header Navbar in Generated Next.js Web App.
-- **R-272**: Deep-Linking & Entity Lifecycle in Next.js Detail Screens.
-- **R-271**: CSV Data Export & Bulk Export in Generated Next.js Collection Screens.
-- **R-270**: Bulk Selection & Batch Deletion in Generated Next.js Collection Screens.
-- **R-269**: Page Size Selector & Contextual Empty State CTAs in Generated Next.js Screens.
-- **R-268**: Subcollection Child Item Deletion & Mutation Feedback in Master-Detail Views.
-- **R-267**: Foreign-Key Relation Selectors & Parent Auto-Population in Generated Next.js Forms.
-- **R-266**: Update/Edit Mode in Generated Next.js Forms & Collection Screen Edit Actions.
-- **R-265**: Subcollection Navigation & Master-Detail Views in Generated Screens.
+- **Deep-linked list state.** The generated `useList<Entities>` hook hydrates `sort/order/q/page/pageSize`
+  from `window.location.search` once on mount (client-only, guarded `typeof window`) and reflects the
+  current params to the URL via `new URL(...)` + `window.history.replaceState`, writing only non-default
+  values. Refresh / bookmark / share restore the exact list view (mirrors the R-276 detail pattern).
+- **Race-safe fetch.** `refetch` creates an `AbortController` per call (added `useRef` to the import),
+  aborts the previous in-flight request, forwards `signal` through the existing `ApiOptions` (no
+  `lib/api.ts` change), ignores aborted/stale responses, and aborts in-flight on unmount.
+- **Debounced search.** The collection search input debounces its committed query 300ms
+  (`setTimeout`/`clearTimeout`, guarded so it never clobbers a hydrated page offset); `onChange` only
+  updates local state; the form submit still searches immediately; the hydrated `q` is reflected back.
+- Subcollection hook (`useList<Child>By<Parent>`) and subcollection UI controls intentionally out of
+  scope. No new IR field, no npm dependency, `"use client"` preserved, diff-invariant across
+  `ir.description`.
 
 ## Verification
 
-- `task verify` — pass (756 agent-engine tests; 14 new in `test_toast_notifications.py`).
-- `task lint`, `task security:quick` — all pass.
-- `task builder:demo -- minimal-blog` and `task builder:demo -- rideshare-favourites` — both pass.
-- 0 local model calls, 0 cloud calls. Offline and deterministic.
+- `task verify` — pass (768 agent-engine tests; 12 new in `test_collection_deeplink_state.py`).
+  `task lint`, `task security:quick` — pass. Both `task builder:demo`s — pass.
+- Updated three existing assertion sets to the new behavior (`test_nextjs_hooks.py` import + refetch
+  signal; `test_screen_generation.py` debounced `onChange`; `test_collection_field_filters.py` `useEffect`
+  import). 0 local / 0 cloud model calls; no DB.
+- Tracker — R-280 at `Phase_Roadmap!A9:M9` (R-279 → row 10); rows 1..288 contiguous; table `A4:M288`;
+  Done 69.
+
+## Tracker reconciliation (this session, before R-280)
+
+- The execution tracker had drifted: it was maintained only through R-252 while R-253..R-279 shipped in
+  code/tests/docs. All 27 missing rows were backfilled as Done (commit `b4537c7`) from `.ai/tasks/R-###.md`
+  + `CHANGELOG.md`; `docs/PROGRESS.md` was synced to the live tracker figures. The tracker is now current
+  and should be kept so going forward (WORK_LOG.md also carries a bulk bridge note for R-253..R-279).
+
+## Blockers and risks
+
+- None for the offline R-281 candidates below. Live preview/deploy and the deferred R-224 Next.js console
+  upgrade still need a network environment / provider keys. Native mobile remains deferred (Brief §25/§91).
+
+## Next action
+
+Continue from R-281 with one offline-doable candidate:
+
+1. Wire pagination + sortable headers + search into the **subcollection master-detail lists** — the
+   backend endpoints and the generated `useList<Child>By<Parent>` hook already support
+   `limit/offset/sort/order/q`; only the render is inert today. (Direct continuation of R-265/R-280.)
+2. Promote the **boolean/enum collection filters to server-side `?field=` query params** (currently
+   client-side over the loaded page only) — needs a matching backend filter capability, so it is
+   cross-cutting.
+
+## Next command
+
+`task ai:status`
