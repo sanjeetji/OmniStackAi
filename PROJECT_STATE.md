@@ -1,23 +1,22 @@
 # Project State — OmniStackAI
-Last updated: 2026-09-09T18:09:45+05:30
+Last updated: 2026-09-09T18:48:50+05:30
 
 ## Current Phase
 Stage 0 (Founder Build Sequence, Brief Section 91) — BASIC/MVP
 
 ## Last Completed Task
-Tracker ID: R-285 — Server-Side Subcollection Filter Wiring in Generated Next.js Screens — DONE,
-`task verify` (804 agent-engine tests, 7 focused R-285 tests; all 63 subcollection tests) passing.
-Filterable generated `useList<Child>By<Parent>` hooks now expose IR-allowlisted filter state and setters,
-reset pagination when filters change, and flatten active values into R-284 LIST_BY query params while
-keeping the relation ID in the path. Both parent collection and detail screens render boolean/enum
-controls, active count, Reset, and filtered-empty recovery, and render server-returned rows directly.
-Non-filterable output and description-only generation remain byte-stable. No IR, backend, dependency,
-database, infrastructure, network, or model change; implementation checkpoint `92c89b1`. Preceded by
-R-225 through R-284.
+Tracker ID: R-286 — Race-Safe Generated Subcollection Refetches — DONE, `task verify` (810
+agent-engine tests, 6 focused R-286 tests; all 69 subcollection tests) passing. Every generated
+`useList<Child>By<Parent>` hook now aborts superseded LIST_BY requests before empty-parent handling,
+uses an internally owned signal that caller options cannot override, ignores aborted success/error
+completions, lets only the active request clear loading, and aborts on dependency cleanup/unmount.
+Filter flattening, parent scoping, public hook signatures, and description-only generation stability
+remain intact. No IR, backend, dependency, database, infrastructure, network, or model change;
+implementation checkpoint `3eb8bd1`. Preceded by R-225 through R-285.
 
-**Notes:** (1) the tracker is current through R-285: 74 Done, 1 Deferred, 210 Not Started across 285
-tasks; MVP is 74/180 (41.1%). The earlier reported R-251 MVP baseline of 145 was one low: direct recount
-is 146, and R-252..R-285 added 34 rows, producing 180. (2) A Groq API key may be available; live
+**Notes:** (1) the tracker is current through R-286: 75 Done, 1 Deferred, 210 Not Started across 286
+tasks; MVP is 75/181 (41.4%). The earlier reported R-251 MVP baseline of 145 was one low: direct recount
+is 146, and R-252..R-286 added 35 rows, producing 181. (2) A Groq API key may be available; live
 model-fabric verification remains separate (set it only in gitignored `.env`, never chat/commits).
 
 
@@ -50,8 +49,8 @@ R-221 = cross-provider fallback (done); R-222 = platform console slice (done); R
 fallback wiring (done); R-224 = Next.js console upgrade (deferred — environment-blocked).
 
 ## Next Up (queued, in order)
-1. R-286 candidate — make generated `useList<Child>By<Parent>` refetches race-safe with
-   `AbortController` so stale parent/filter requests cannot overwrite current subcollection state
+1. R-287 candidate — make generated `use<Entity>` detail refetches race-safe with `AbortController`
+   so stale record requests cannot overwrite current detail state during rapid navigation
 2. Live-verify the model fabric with the available Groq key (Balanced gateway → groq; real cloud
    inference + cost accounting) — set `GROQ_API_KEY` in the gitignored `.env`; may need a network machine
 3. R-224 Next.js console upgrade and R-010 native iOS remain deferred under their existing gates

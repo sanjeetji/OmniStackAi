@@ -1527,3 +1527,24 @@
   Counts: 74 Done, 1 Deferred, 210 Not Started; MVP 74/180 (41.1%).
 - Deterministic/offline work: 0 local model calls, 0 cloud calls, no generated app installed/run, no DB
   connection, and no IR, backend, dependency, database, infrastructure, or top-level-layout change.
+
+## 2026-09-09 — R-286
+
+- Founder explicitly requested continuation with R-286. Recorded the Standard AI Task Contract in
+  `.ai/CURRENT_TASK.yaml` and `.ai/tasks/R-286.md` before implementation. Scope was limited to generated
+  Next.js LIST_BY hooks and focused/legacy assertions; no model call was needed.
+- Every `useList<Child>By<Parent>` hook now owns an `AbortController` ref and aborts the prior request
+  before its missing-parent early return. A valid request installs a fresh controller and passes the
+  internal signal after caller options so it cannot be overridden.
+- Added guards so aborted successes and `AbortError` failures cannot mutate current data, total, error,
+  or loading; only the active request clears loading, and effect cleanup aborts on dependency change or
+  unmount. Filter flattening, parent path scope, and public hook signatures are preserved.
+- Added 6 focused offline tests in `test_subcollection_request_cancellation.py`; updated three exact
+  generated-call assertions. All 69 subcollection tests pass. Implementation checkpoint `3eb8bd1`.
+  `task verify` passes with 810 tests; `task lint`, `task security:quick`, `task env:check`, and both
+  builder demos pass. Filterable and non-filterable generated hook output was inspected.
+- Tracker updated through artifact-tool with R-286 at row 9: 286 unique IDs, table `A4:M294`, Dashboard
+  formulas through row 294, valid XLSX archive, no formula-error tokens, and consistent visual render.
+  Counts: 75 Done, 1 Deferred, 210 Not Started; MVP 75/181 (41.4%).
+- Deterministic/offline work: 0 local model calls, 0 cloud calls, no generated app installed/run, no DB
+  connection, and no IR, backend, dependency, database, infrastructure, or top-level-layout change.

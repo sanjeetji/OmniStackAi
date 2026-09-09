@@ -913,6 +913,22 @@ filtering a loaded child page in browser memory:
 - Non-filterable child hooks and screens retain their prior output, and description-only IR changes stay
   byte-identical. No Application IR, backend, dependency, or database behavior changed.
 
+### Race-Safe Generated Subcollection Refetches (R-286)
+
+Generated `useList<Child>By<Parent>` hooks now prevent older LIST_BY requests from overwriting state
+after rapid parent, search, sort, pagination, or filter changes:
+
+- Every hook owns an `AbortController` ref and aborts it at the start of the next refetch. This occurs
+  before the missing-parent early return, so deselecting a parent also cancels outstanding work.
+- Valid requests install a fresh controller and pass `signal: controller.signal` after caller options,
+  making the hook's internal cancellation signal authoritative while preserving request params and the
+  parent path argument.
+- A signal check after the response prevents stale data/total writes. Aborted and `AbortError` failures
+  are ignored, only the active request clears loading, and effect cleanup aborts on dependency change or
+  unmount.
+- Filterable hooks retain the R-285 flattened query params; non-filterable hooks retain their public
+  types and state shape. No Application IR, API, backend, dependency, or database behavior changed.
+
 ### Global Notification Toast System & Action Feedback (R-279)
 
 Adds a lightweight, accessible, and self-contained client-side toast notification system to generated Next.js web applications:
@@ -944,7 +960,6 @@ Adds a lightweight, accessible, and self-contained client-side toast notificatio
     - Reset button: emits `toast.info("Form values reset to initial state")`.
 - **Quality & Safety**:
   - 100% offline, zero external npm dependencies, zero new IR fields, strict diff invariance across `ir.description`.
-
 
 
 

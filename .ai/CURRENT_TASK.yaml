@@ -1,7 +1,7 @@
 schema_version: 1
 task_id: R-286
 title: Race-Safe Generated Subcollection Refetches
-status: in_progress
+status: done
 phase: BASIC/MVP
 founder_stage: 0
 branch: main
@@ -70,10 +70,39 @@ model_tool_trace:
   local_calls: 0
   cloud_calls: 0
   note: Pure deterministic code generation and offline tests; no model call is needed.
-evidence: []
+evidence:
+  - command: env PYTHONPATH=services/agent-engine/src python3 -m unittest discover -s services/agent-engine/tests -p 'test_subcollection_request_cancellation.py' -v
+    result: pass
+    detail: 6 focused R-286 cancellation tests pass.
+  - command: env PYTHONPATH=services/agent-engine/src python3 -m unittest discover -s services/agent-engine/tests -p 'test_subcollection*.py' -v
+    result: pass
+    detail: All 69 subcollection tests pass.
+  - command: task verify
+    result: pass
+    detail: 810 agent-engine tests and all Stage 0 offline verification gates pass.
+  - command: task lint
+    result: pass
+  - command: task security:quick
+    result: pass
+  - command: task env:check
+    result: pass
+  - command: task builder:demo -- minimal-blog
+    result: pass
+  - command: task builder:demo -- rideshare-favourites
+    result: pass
+  - command: generated TypeScript artifact inspection
+    result: pass
+    detail: >-
+      Filterable and non-filterable LIST_BY hooks abort before empty-parent handling, pass an internally
+      owned signal after caller options, guard success/error/finally state writes, and abort on cleanup.
+      The tracker contains 286 unique IDs with R-286 Done, table A4:M294, dashboard formulas through
+      row 294, no formula-error tokens, a valid XLSX package, and a visually consistent rendered row.
+  - commit: 3eb8bd1
+    detail: feat(codegen): cancel stale subcollection requests [R-286]
 blockers: []
 next_action: >-
-  Add focused failing assertions for filterable and non-filterable LIST_BY hook cancellation, then
-  implement the smallest shared AbortController sequence in the subcollection hook generator.
+  R-286 is implemented and verified. Prepare a Standard AI Task Contract for R-287 before coding;
+  recommended offline candidate: make generated use<Entity> detail refetches race-safe so rapid record
+  navigation cannot let a stale GET response overwrite the current record.
 next_command: >-
-  env PYTHONPATH=services/agent-engine/src python3 -m unittest discover -s services/agent-engine/tests -p 'test_subcollection_request_cancellation.py' -v
+  task ai:status
