@@ -40,7 +40,7 @@ START PROTOCOL
   `task ai:status`, `task ai:handoff`. `task verify` must stay green and network-independent.
 - Confirm git branch/HEAD/clean tree. Then restate: phase, next Tracker ID, objective, blast radius.
 
-WHAT IS ALREADY BUILT (platform generators are Python 3.13 stdlib-only, offline, in services/agent-engine; 797 tests pass)
+WHAT IS ALREADY BUILT (platform generators are Python 3.13 stdlib-only, offline, in services/agent-engine; 804 tests pass)
 - Model fabric: ModelProvider contract + registry; local Ollama adapter (runs any installed model via
   OMNISTACKAI_OLLAMA_MODEL); Balanced ModelGateway (deterministic escalation ladder, no silent cloud
   fallback, context-budget guard); key-activated cloud catalog — Anthropic/OpenAI/Google-Gemini/
@@ -78,6 +78,10 @@ WHAT IS ALREADY BUILT (platform generators are Python 3.13 stdlib-only, offline,
   FK-scoped LIST_BY endpoints now accept the same allowlisted boolean/enum filters across generated
   FastAPI, Go, and OpenAPI (R-284): relation scope remains mandatory, list/count share predicates, all
   values are parameterized, and Go preserves relation ID as $1 before search/filter/pagination args.
+  Generated Next.js subcollection hooks and both parent collection/detail views now consume those
+  scoped filters (R-285): typed IR-allowlisted filter state is flattened into LIST_BY query params,
+  filter changes reset pagination, boolean/enum controls and filtered-empty recovery are rendered in
+  both views, and server-returned child rows are never page-locally re-filtered.
   TRI-TARGET proven from ONE IR; all offline/deterministic (emit
   files, assert contents; no install/build/DB).
 - RUNTIME/DEPLOY layer (Brief 15/51/75): RuntimeProvider/DeploymentProvider contracts;
@@ -135,12 +139,13 @@ boolean/enum field filters on top-level LIST endpoints (?field= across Go + Fast
 and parameterized like sort/search), R-283 generated Next.js collection controls wired to those server
 filters (allowlisted hook state, pagination reset, URL sync, no page-local filtering), R-284 server-side
 boolean/enum field filters on FK-scoped LIST_BY endpoints (FastAPI + Go + OpenAPI; relation ID first,
-parameterized search/filter values; shared list/count predicates). Do NOT overwrite backlog rows;
-continue from R-285.
+parameterized search/filter values; shared list/count predicates), R-285 generated Next.js subcollection
+controls/hooks wired to scoped server filters (both parent views; no page-local filtering). Do NOT
+overwrite backlog rows; continue from R-286.
 NOTE: the execution tracker was reconciled on 2026-09-09 (R-253..R-279 rows had drifted and were
-backfilled); keep it current going forward. It now has 284 unique rows: 73 Done, 1 Deferred, 210 Not
-Started; MVP is 73/179 (40.8%). The earlier reported R-251 MVP baseline of 145 was one low—direct recount
-is 146, and R-252..R-284 added 33 rows. The summary above is current through R-284; Git, state files,
+backfilled); keep it current going forward. It now has 285 unique rows: 74 Done, 1 Deferred, 210 Not
+Started; MVP is 74/180 (41.1%). The earlier reported R-251 MVP baseline of 145 was one low—direct recount
+is 146, and R-252..R-285 added 34 rows. The summary above is current through R-285; Git, state files,
 tests, and CHANGELOG remain the executable/detail sources of truth.
 
 ENVIRONMENT LIMITS discovered here
@@ -167,11 +172,11 @@ RULES (non-negotiable)
   .ai/HANDOFF.md, PROJECT_STATE.md, CHANGELOG.md, and the tracker row. Push the branch; verify remote
   SHA == local HEAD. Never claim unexecuted tests.
 
-WHAT TO DO NEXT (pick with the founder; all continue the builder), continue from R-285
-- Offline-doable now: wire generated Next.js subcollection filter controls and
-  useList<Child>By<Parent> hook state to R-284's server-side LIST_BY query parameters. Reuse the R-283
-  allowlist/setFilter/clearFilters pattern, reset pagination on change, render server-returned rows
-  directly, and preserve byte-stable output for non-filterable children; do not use page-local filtering.
+WHAT TO DO NEXT (pick with the founder; all continue the builder), continue from R-286
+- Offline-doable now: make generated useList<Child>By<Parent> refetches race-safe with AbortController,
+  so a stale response for an old parent or filter cannot overwrite current subcollection state. Reuse
+  the R-280 request-cancellation pattern where it fits, preserve non-filterable generated behavior, and
+  add focused race/cancellation generation tests before implementation.
 - Now unblocked (a Groq API key is available): live-verify the model fabric end-to-end with Groq through
   the Balanced gateway (real cloud inference + cost accounting). Set GROQ_API_KEY in the gitignored .env
   (NEVER in chat/commits/source) and run `task agent-engine:gateway:run` with OMNISTACKAI_CLOUD_PROVIDER=
@@ -183,5 +188,5 @@ WHAT TO DO NEXT (pick with the founder; all continue the builder), continue from
 - Deferred by governance: native mobile (R-010 etc.) until web/backend stability.
 
 Begin by reading the files above and running the start protocol, then propose the next Tracker ID
-(R-285) with its task contract before writing code. Commit to main.
+(R-286) with its task contract before writing code. Commit to main.
 ```

@@ -1505,3 +1505,25 @@
   previously reported R-251 MVP baseline from 145 to its directly recounted 146; R-252..R-284 add 33.
 - Deterministic/offline work: 0 local model calls, 0 cloud calls, no generated app installed/run, no DB
   connection, and no IR, Next.js, dependency, database, infrastructure, or top-level-layout change.
+
+## 2026-09-09 — R-285
+
+- Founder explicitly requested continuation with R-285. Recorded the Standard AI Task Contract in
+  `.ai/CURRENT_TASK.yaml` and `.ai/tasks/R-285.md` before implementation. Scope was limited to generated
+  Next.js subcollection hooks/controls and focused tests; no model call was needed.
+- Extended filterable `useList<Child>By<Parent>` hooks to use the existing typed collection-list filter
+  state, validate values against IR-derived bool/enum options, expose `setFilter`/`clearFilters`, reset
+  offset, and flatten active filter values into LIST_BY query params while preserving the relation ID as
+  the separate path argument. Non-filterable hooks retain their prior output.
+- Extended both parent collection master-detail and dedicated detail subcollection render sites with
+  boolean pills, enum selects, active-filter count, Reset, and filtered-empty Clear filters recovery.
+  Components map the server-returned child page directly and contain no page-local filtering.
+- Added 7 focused offline tests in `test_subcollection_field_filter_wiring.py`; all 63 subcollection
+  tests pass. Implementation checkpoint `92c89b1`. `task verify` passes with 804 tests; `task lint`,
+  `task security:quick`, `task env:check`, and both builder demos pass. Generated hooks and both screen
+  variants were inspected.
+- Tracker updated through artifact-tool with R-285 at row 9: 285 unique IDs, table `A4:M293`, Dashboard
+  formulas through row 293, valid XLSX archive, no formula-error tokens, and consistent visual render.
+  Counts: 74 Done, 1 Deferred, 210 Not Started; MVP 74/180 (41.1%).
+- Deterministic/offline work: 0 local model calls, 0 cloud calls, no generated app installed/run, no DB
+  connection, and no IR, backend, dependency, database, infrastructure, or top-level-layout change.

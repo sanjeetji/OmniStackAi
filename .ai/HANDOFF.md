@@ -1,10 +1,10 @@
 # Current Handoff
 
-Task ID: R-284
+Task ID: R-285
 Status: done
 Phase: BASIC/MVP — Founder Stage 0
 Branch: `main` (the only branch; the GitHub default)
-Implementation SHA: `0bfb91d`
+Implementation SHA: `92c89b1`
 
 ## Repo/workflow state
 
@@ -13,37 +13,35 @@ Implementation SHA: `0bfb91d`
 - Commits use `sanjeetji <sk698166@gmail.com>` as author. A permitted tooling co-author trailer may be
   added, but the founder remains the primary author.
 
-## Completed (R-284) — Server-Side Field Filters for FK-Scoped Subcollections
+## Completed (R-285) — Server-Side Subcollection Filter Wiring in Generated Next.js Screens
 
-R-282's allowlisted boolean/enum server filters now cover unambiguous foreign-key-scoped `LIST_BY`
-endpoints as well as top-level `LIST` endpoints.
+Generated Next.js subcollection hooks and both parent view variants now consume R-284's allowlisted
+boolean/enum LIST_BY query parameters, so filtering occurs on the backend before pagination.
 
-- Generated Python repositories compose mandatory relation scope, optional `q`, and equality filters in
-  one parameterized predicate shared by list and count calls; FastAPI routes expose typed filter query
-  parameters and forward identical values to both calls.
-- Generated Go stores emit a shared relation-scoped predicate builder. Relation ID remains `$1`, a
-  present `q` uses the next argument, allowlisted bool/enum filters follow, and limit/offset placeholders
-  follow every predicate. Go handlers parse/forward filters only for filterable child entities.
-- Generated OpenAPI documents the matching boolean and enum query schemas on `LIST_BY` operations.
-- Non-filterable subcollections keep their previous output, and description-only IR changes remain
-  byte-stable. Application IR, Next.js behavior, dependencies, PostgreSQL, infrastructure, and the
-  Section 74 layout are unchanged.
+- Filterable `useList<Child>By<Parent>` hooks use typed collection-list filter state, validate values
+  against IR-derived options, expose `setFilter`/`clearFilters`, reset offset, and flatten active filters
+  into query params while preserving the parent relation ID as the path argument.
+- Parent collection master-detail and dedicated detail screens render boolean pills, enum selects,
+  active-filter count, Reset, and a filtered-empty Clear filters action.
+- Screen components render the server-returned child page directly; they do not locally re-filter it.
+- Non-filterable subcollection output and description-only IR generation remain byte-stable. No IR,
+  backend, dependency, PostgreSQL, infrastructure, or Section 74 layout change was made.
 
 ## Verification
 
-- `task verify` — pass (797 agent-engine tests; 8 focused R-284 tests).
+- `task verify` — pass (804 agent-engine tests; 7 focused R-285 tests).
+- All 63 `test_subcollection*.py` tests — pass.
 - `task lint`, `task security:quick`, `task env:check` — pass.
 - `task builder:demo -- minimal-blog`, `task builder:demo -- rideshare-favourites` — pass.
-- Generated FastAPI repository/router output parsed with Python AST; generated Go store/handler output
-  parsed through `gofmt`; OpenAPI filter parameters and SQL placeholder ordering inspected.
-- Tracker — R-284 at `Phase_Roadmap!A9:M9`; table `A4:M292`; Dashboard formulas reach row 292; 284
-  unique IDs; 73 Done, 1 Deferred, 210 Not Started; MVP 73/179 (40.8%); XLSX archive and visual render
+- Generated filterable hooks plus both collection/detail screen variants inspected.
+- Tracker — R-285 at `Phase_Roadmap!A9:M9`; table `A4:M293`; Dashboard formulas reach row 293; 285
+  unique IDs; 74 Done, 1 Deferred, 210 Not Started; MVP 74/180 (41.1%); XLSX archive and visual render
   verified.
 - 0 local model calls / 0 cloud calls; no generated app installed/run, no DB connection.
 
 ## Blockers and risks
 
-- No blocker for the offline R-285 candidate. Live preview/deploy and R-224 still need a
+- No blocker for the offline R-286 candidate. Live preview/deploy and R-224 still need a
   network-capable environment and/or authorized provider keys. Native mobile remains deferred under
   Brief Sections 25 and 91.
 - A Groq key may be available for a future separately authorized live model-fabric verification. Keep
@@ -51,10 +49,10 @@ endpoints as well as top-level `LIST` endpoints.
 
 ## Next action
 
-Continue from R-285. Recommended smallest offline candidate: wire generated Next.js subcollection
-filter controls and `useList<Child>By<Parent>` hook state to R-284's server-side `LIST_BY` query
-parameters. Avoid page-local filtering and preserve byte-stable output for non-filterable children.
-Record the R-285 Standard AI Task Contract before coding.
+Continue from R-286. Recommended smallest offline candidate: make generated
+`useList<Child>By<Parent>` refetches race-safe with `AbortController`, ensuring a stale request for an
+old parent or filter cannot overwrite the current child list. Preserve non-filterable behavior and
+record the R-286 Standard AI Task Contract before coding.
 
 ## Next command
 

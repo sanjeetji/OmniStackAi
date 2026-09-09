@@ -2,20 +2,20 @@ schema_version: 1
 project: OmniStackAI
 phase: BASIC/MVP
 founder_stage: 0
-current_task: R-284
+current_task: R-285
 current_status: done
 branch: main
 last_completed_task:
-  task_id: R-284
-  title: Server-Side Field Filters for FK-Scoped Subcollections
+  task_id: R-285
+  title: Server-Side Subcollection Filter Wiring in Generated Next.js Screens
   verification: >-
-    task verify (797 agent-engine tests, 8 focused R-284 tests); generated FastAPI, Go, and OpenAPI
-    LIST_BY operations accept the same allowlisted boolean/enum filters as top-level LIST while retaining
-    mandatory relation scoping. Python uses parameterized %s values; Go keeps relation ID at $1, places q
-    next when present, and assigns filter/pagination placeholders after existing args. List/count share
-    predicates; handlers forward filters only for filterable children; non-filterable output and
-    description-only generation remain byte-stable. task lint + security:quick + env:check and both builder
-    demos pass; generated Python/Go/OpenAPI inspected; impl 0bfb91d; 0 local/0 cloud model calls
+    task verify (804 agent-engine tests, 7 focused R-285 tests; all 63 subcollection tests); generated
+    Next.js filterable LIST_BY hooks expose allowlisted typed filter state/setters, reset offset on filter
+    changes, and flatten filters into API query params while preserving the relation path ID. Both parent
+    collection and detail views render boolean/enum controls, active count, reset, and filtered-empty
+    recovery while rendering server-returned rows directly. Non-filterable output and description-only
+    generation remain byte-stable. task lint + security:quick + env:check and both builder demos pass;
+    generated TypeScript inspected; impl 92c89b1; 0 local/0 cloud model calls
   result: pass
 control_plane_database: postgresql
 model_routing_mode: balanced
@@ -27,12 +27,13 @@ product_direction: >-
   framework adapter contract -> Next.js adapter -> Git service -> preview/sandbox (needs cloud env).
 id_note: >-
   Workbook backlog owns R-010..R-219. Founder-requested tasks use IDs after R-219: R-220..R-223 done,
-  R-224 Next.js deferred (env-blocked), R-225..R-284 done. Continue from R-285.
+  R-224 Next.js deferred (env-blocked), R-225..R-285 done. Continue from R-286.
 blockers: []
 next_action: >-
-  Task R-284 (server-side boolean/enum filters on FK-scoped LIST_BY endpoints) is implemented, verified,
-  and complete (797 tests pass; tracker current — 73 Done of 284, MVP 73/179 = 40.8%). Ready for Task
-  R-285; smallest offline candidate: wire generated Next.js subcollection controls/hooks to the R-284
-  query parameters without page-local filtering. A Groq key remains available for a separately authorized
-  future live model-fabric check; keep it only in gitignored .env and never in chat/commits.
-last_updated: "2026-09-09T17:44:43+05:30"
+  Task R-285 (generated Next.js subcollection hooks and controls wired to server-side LIST_BY filters) is
+  implemented, verified, and complete (804 tests pass; tracker current — 74 Done of 285, MVP 74/180 =
+  41.1%). Ready for Task R-286; smallest offline candidate: add AbortController race protection to
+  generated useList<Child>By<Parent> refetches so stale parent/filter responses cannot overwrite current
+  state. A Groq key remains available for a separately authorized future live model-fabric check; keep it
+  only in gitignored .env and never in chat/commits.
+last_updated: "2026-09-09T18:09:45+05:30"

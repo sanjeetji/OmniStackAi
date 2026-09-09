@@ -1,7 +1,7 @@
 schema_version: 1
 task_id: R-285
 title: Server-Side Subcollection Filter Wiring in Generated Next.js Screens
-status: in_progress
+status: done
 phase: BASIC/MVP
 founder_stage: 0
 branch: main
@@ -65,10 +65,39 @@ model_tool_trace:
   local_calls: 0
   cloud_calls: 0
   note: Pure deterministic code generation and offline tests; no model call is needed.
-evidence: []
+evidence:
+  - command: env PYTHONPATH=services/agent-engine/src python3 -m unittest discover -s services/agent-engine/tests -p 'test_subcollection_field_filter_wiring.py' -v
+    result: pass
+    detail: 7 focused R-285 tests pass.
+  - command: env PYTHONPATH=services/agent-engine/src python3 -m unittest discover -s services/agent-engine/tests -p 'test_subcollection*.py' -v
+    result: pass
+    detail: 63 subcollection tests pass.
+  - command: task verify
+    result: pass
+    detail: 804 agent-engine tests and all Stage 0 offline verification gates pass.
+  - command: task lint
+    result: pass
+  - command: task security:quick
+    result: pass
+  - command: task env:check
+    result: pass
+  - command: task builder:demo -- minimal-blog
+    result: pass
+  - command: task builder:demo -- rideshare-favourites
+    result: pass
+  - command: generated TypeScript artifact inspection
+    result: pass
+    detail: >-
+      Filterable useListTasksByProject output exposes allowlisted state/setters, flattens filters into
+      request params, and both generated screen variants render controls and filtered-empty recovery.
+      The tracker contains 285 unique IDs with R-285 Done, table A4:M293, dashboard formulas through
+      row 293, no formula-error tokens, a valid XLSX package, and a visually consistent rendered row.
+  - commit: 92c89b1
+    detail: feat(codegen): wire scoped collection filters [R-285]
 blockers: []
 next_action: >-
-  Add focused failing tests for a filterable child hook and both subcollection UI sites, then implement
-  the smallest shared hook/control extension without changing backend, IR, or top-level list behavior.
+  R-285 is implemented and verified. Prepare a Standard AI Task Contract for R-286 before coding;
+  recommended offline candidate: make generated useList<Child>By<Parent> refetches race-safe with
+  AbortController so a stale parent/filter request cannot overwrite the current subcollection state.
 next_command: >-
-  env PYTHONPATH=services/agent-engine/src python3 -m unittest discover -s services/agent-engine/tests -p 'test_subcollection_field_filter_wiring.py' -v
+  task ai:status

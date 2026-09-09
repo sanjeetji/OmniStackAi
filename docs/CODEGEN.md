@@ -896,6 +896,23 @@ top-level `LIST`, while keeping foreign-key scope mandatory:
   byte-identical across description-only IR changes. Generated Next.js subcollection filter state is a
   separate follow-up.
 
+### Generated Next.js Wiring for Scoped Server Filters (R-285)
+
+Generated parent collection and detail views now consume the R-284 `LIST_BY` filter contract instead of
+filtering a loaded child page in browser memory:
+
+- Filterable `useList<Child>By<Parent>` hooks use `UseCollectionListParams` / `UseCollectionListState`,
+  validate values against the same generated boolean/enum option allowlist, and expose `setFilter` and
+  `clearFilters`; both operations reset `offset` to zero.
+- Before calling `list<Children>By<Parent>WithCount(parentId, ...)`, the hook separates its internal
+  `filters` map and flattens active entries into request params. The parent relation ID remains the path
+  argument, while search, sort, limit, offset, and allowlisted filters remain query parameters.
+- Both the parent collection master-detail panel and dedicated parent detail screen render boolean
+  filter pills, enum selects, an active-filter count, Reset, and a filtered-empty Clear filters action.
+  The child rows map the server response directly, so results remain correct across pagination.
+- Non-filterable child hooks and screens retain their prior output, and description-only IR changes stay
+  byte-identical. No Application IR, backend, dependency, or database behavior changed.
+
 ### Global Notification Toast System & Action Feedback (R-279)
 
 Adds a lightweight, accessible, and self-contained client-side toast notification system to generated Next.js web applications:
@@ -927,7 +944,6 @@ Adds a lightweight, accessible, and self-contained client-side toast notificatio
     - Reset button: emits `toast.info("Form values reset to initial state")`.
 - **Quality & Safety**:
   - 100% offline, zero external npm dependencies, zero new IR fields, strict diff invariance across `ir.description`.
-
 
 
 
