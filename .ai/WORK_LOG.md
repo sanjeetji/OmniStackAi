@@ -1482,3 +1482,26 @@
   10; rows 1..291 contiguous; table `A4:M291`; Dashboard/sqref ranges extended; ZIP/XML valid; 283 unique
   IDs; Done 72. Artifact-tool before/after render inspected. Implementation checkpoint `d0c9e84`.
   0 local / 0 cloud model calls; no generated app run, network request, or DB connection.
+
+## 2026-09-09 — R-284
+
+- Recorded the Standard AI Task Contract in `.ai/CURRENT_TASK.yaml` and `.ai/tasks/R-284.md` before
+  implementation. Scope was limited to generated FastAPI/Go/OpenAPI `LIST_BY` filters plus focused tests.
+- Extended Python relation-scoped repositories so mandatory relation scope, optional `q`, and allowlisted
+  boolean/enum predicates share a parameterized filter builder used by both list and count. FastAPI
+  routes declare typed filter query parameters and forward identical values to both calls.
+- Extended Go relation-scoped stores with a shared predicate builder: relation ID stays `$1`, optional
+  search follows, filter values use subsequent `len(args)+1` placeholders, and pagination follows all
+  predicates. Handlers parse and forward filters only for filterable child entities.
+- Extended generated OpenAPI `LIST_BY` operations with the matching boolean/enum query schemas.
+  Non-filterable subcollections and description-only output remain byte-stable.
+- Added 8 focused offline tests in `test_subcollection_field_filters.py`; implementation checkpoint
+  `0bfb91d`. `task verify` passes with 797 tests; `task lint`, `task security:quick`, `task env:check`, and
+  both builder demos pass. Generated FastAPI files parsed with AST; Go output parsed through `gofmt`;
+  OpenAPI and SQL placeholder ordering inspected.
+- Tracker updated with R-284 at row 9 and revalidated through artifact-tool: 284 unique IDs, table
+  `A4:M292`, Dashboard formulas through row 292, valid XLSX archive, no formula-error tokens, visual
+  render consistent. Counts: 73 Done, 1 Deferred, 210 Not Started; MVP 73/179 (40.8%). Corrected the
+  previously reported R-251 MVP baseline from 145 to its directly recounted 146; R-252..R-284 add 33.
+- Deterministic/offline work: 0 local model calls, 0 cloud calls, no generated app installed/run, no DB
+  connection, and no IR, Next.js, dependency, database, infrastructure, or top-level-layout change.

@@ -1,7 +1,7 @@
 schema_version: 1
 task_id: R-284
 title: Server-Side Field Filters for FK-Scoped Subcollections
-status: in_progress
+status: done
 phase: BASIC/MVP
 founder_stage: 0
 branch: main
@@ -66,10 +66,33 @@ model_tool_trace:
   local_calls: 0
   cloud_calls: 0
   note: Pure deterministic code generation and offline tests; no model call is needed.
-evidence: []
+evidence:
+  - command: task verify
+    result: pass
+    detail: 797 agent-engine tests pass, including 8 focused R-284 subcollection-filter tests.
+  - command: task lint
+    result: pass
+  - command: task security:quick
+    result: pass
+  - command: task env:check
+    result: pass
+  - command: task builder:demo -- minimal-blog
+    result: pass
+  - command: task builder:demo -- rideshare-favourites
+    result: pass
+  - command: generated-artifact inspection
+    result: pass
+    detail: >-
+      Generated FastAPI repository/router files parse with Python AST; generated Go store/handler files
+      parse through gofmt; OpenAPI LIST_BY filter parameters and relation/search/filter placeholder order
+      were inspected. Tracker has 284 unique IDs, R-284 Done, table A4:M292, dashboard ranges through row
+      292, no formula-error tokens, a valid XLSX package, and a visually consistent rendered row.
+  - commit: 0bfb91d
+    detail: feat(codegen): filter scoped subcollections [R-284]
 blockers: []
 next_action: >-
-  Add focused failing tests for a filterable child entity, then implement the smallest shared
-  FastAPI/Go/OpenAPI LIST_BY filter extension without changing top-level LIST or Next.js output.
+  R-284 is implemented and verified. Prepare a Standard AI Task Contract for R-285 before coding;
+  recommended offline candidate: wire generated Next.js subcollection filter controls and hook state to
+  the R-284 LIST_BY query parameters, preserving non-filterable output and avoiding page-local filtering.
 next_command: >-
-  python3 -m unittest discover -s services/agent-engine/tests -p 'test_subcollection_field_filters.py' -v
+  task ai:status

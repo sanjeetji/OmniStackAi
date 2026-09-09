@@ -875,6 +875,27 @@ server-side query filtering so results are correct across pagination:
   - Scoped to top-level `Op.LIST`; FK-scoped `LIST_BY` hooks/endpoints are unchanged.
   - 100% offline, zero external npm dependencies, zero new IR fields, strict diff invariance.
 
+### Server-Side Field Filters for FK-Scoped Subcollections (R-284)
+
+Generated `LIST_BY` endpoints now accept the same IR-derived boolean and enum equality filters as
+top-level `LIST`, while keeping foreign-key scope mandatory:
+
+- `field_validation.filter_fields(entity)` remains the single allowlist shared by both backends and
+  OpenAPI. Identifiers come only from validated IR fields; user values are never interpolated into SQL.
+- Python relation-scoped repository helpers begin with `<relation>_id = %s`, append optional keyword
+  search and active equality predicates deterministically, and return the same predicate/parameter list
+  to both `list_*_by_*` and `count_*_by_*`. FastAPI routes expose `bool | None` and `str | None` query
+  parameters and forward identical filters to both calls.
+- Go emits a shared `<table>By<Relation>Filters(relationID, q, filters)` helper. Relation ID is always
+  `$1`; a present `q` uses the next placeholder; allowlisted filter values follow via `len(args)+1`;
+  limit and offset are numbered after all predicates. List and count use the same helper, and handlers
+  call `parseFilters` only for filterable child entities.
+- OpenAPI 3.1 `LIST_BY` operations document boolean schemas for bool fields and string schemas with
+  explicit enum values for enum fields.
+- Non-filterable subcollections retain their previous signatures and SQL, and output remains
+  byte-identical across description-only IR changes. Generated Next.js subcollection filter state is a
+  separate follow-up.
+
 ### Global Notification Toast System & Action Feedback (R-279)
 
 Adds a lightweight, accessible, and self-contained client-side toast notification system to generated Next.js web applications:
@@ -906,7 +927,6 @@ Adds a lightweight, accessible, and self-contained client-side toast notificatio
     - Reset button: emits `toast.info("Form values reset to initial state")`.
 - **Quality & Safety**:
   - 100% offline, zero external npm dependencies, zero new IR fields, strict diff invariance across `ir.description`.
-
 
 
 

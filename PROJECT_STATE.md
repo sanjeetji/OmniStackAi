@@ -1,24 +1,24 @@
 # Project State — OmniStackAI
-Last updated: 2026-09-09T16:36:51+05:30
+Last updated: 2026-09-09T17:44:43+05:30
 
 ## Current Phase
 Stage 0 (Founder Build Sequence, Brief Section 91) — BASIC/MVP
 
 ## Last Completed Task
-Tracker ID: R-283 — Server-Side Collection Filter Wiring in Generated Next.js Screens — DONE,
-`task verify` (789 agent-engine tests, 3 new focused tests) passing. R-278's boolean/enum collection
-controls now drive the R-282 backend `?<field>=<value>` filters through the generated top-level `useList`
-hook, so filtering is correct before pagination. The hook allowlists field/value combinations, resets
-offset on change/clear, flattens filters into the request, and deep-links valid values through the R-280
-URL flow. Collection screens render server-returned data directly while retaining the filter toolbar,
-active count, Reset, and filtered no-results recovery; `useMemo`/page-local filtering is removed.
-`LIST_BY` and the backends are unchanged. No new IR field, npm/platform dependency, model call, network,
-or DB connection; implementation checkpoint `d0c9e84`. Preceded by R-225 through R-282.
+Tracker ID: R-284 — Server-Side Field Filters for FK-Scoped Subcollections — DONE,
+`task verify` (797 agent-engine tests, 8 focused R-284 tests) passing. The R-282 boolean/enum equality
+filter contract now extends to unambiguous FK-scoped `LIST_BY` endpoints across generated FastAPI, Go,
+and OpenAPI. Relation scope stays mandatory; Python keeps every runtime value `%s`-parameterized; Go
+keeps relation ID at `$1`, places optional search next, and numbers allowlisted filter and pagination
+arguments after it. List/count share predicates and handlers forward filters only for filterable child
+entities. Non-filterable output and description-only generation remain byte-stable. No IR, Next.js,
+dependency, database, infrastructure, network, or model change; implementation checkpoint `0bfb91d`.
+Preceded by R-225 through R-283.
 
-**Notes:** (1) this session reconciled the execution tracker, which had drifted (R-253..R-279 shipped in
-code/tests/docs but were never added as XLSX rows) — all 27 backfilled (commit `b4537c7`); the tracker now
-shows 72 Done through R-283. (2) A Groq API key is available; live model-fabric verification with it was kept
-for later per founder choice (set `GROQ_API_KEY` in the gitignored `.env` to enable — never in chat/commits).
+**Notes:** (1) the tracker is current through R-284: 73 Done, 1 Deferred, 210 Not Started across 284
+tasks; MVP is 73/179 (40.8%). The earlier reported R-251 MVP baseline of 145 was one low: direct recount
+is 146, and R-252..R-284 added 33 rows, producing 179. (2) A Groq API key may be available; live
+model-fabric verification remains separate (set it only in gitignored `.env`, never chat/commits).
 
 
 
@@ -50,8 +50,8 @@ R-221 = cross-provider fallback (done); R-222 = platform console slice (done); R
 fallback wiring (done); R-224 = Next.js console upgrade (deferred — environment-blocked).
 
 ## Next Up (queued, in order)
-1. R-284 candidate — extend boolean/enum server-side field filtering to the FK-scoped `LIST_BY`
-   subcollection endpoints, preserving relation-id `$1` and correctly numbering search/filter values
+1. R-285 candidate — wire generated Next.js subcollection controls and `useList<Child>By<Parent>` hook
+   state to the R-284 server-side filters, without page-local filtering
 2. Live-verify the model fabric with the available Groq key (Balanced gateway → groq; real cloud
    inference + cost accounting) — set `GROQ_API_KEY` in the gitignored `.env`; may need a network machine
 3. R-224 Next.js console upgrade and R-010 native iOS remain deferred under their existing gates
