@@ -1,45 +1,38 @@
 schema_version: 1
-task_id: R-287
-title: Race-Safe Generated Detail Refetches
-status: done
+task_id: R-288
+title: Deduplicated In-Flight Generated Mutation Requests
+status: in_progress
 phase: BASIC/MVP
 founder_stage: 0
 branch: main
 goal: >-
-  Make generated use<Entity> detail hooks race-safe so rapid record selection, deep-link, prev/next, or
-  ID changes cannot let an older GET response overwrite the currently selected record's state. Reuse the
-  proven R-286 LIST_BY AbortController design (signal passed after caller options), scoped to the detail
-  hook only.
-tracker_ref: "R-287"
+  Make the generated useCreate<Entity> / useUpdate<Entity> / useDelete<Entity> hooks dedupe concurrent
+  invocations so a rapid double-submit (double-clicked Create/Save/Delete, or a programmatic re-call)
+  cannot fire a duplicate POST/PUT/DELETE. While a mutation is in flight the hook returns the pending
+  promise instead of starting a second request — completing the "no racing requests" story after the
+  R-280/R-286/R-287 fetch cancellation work, now for writes. Reuse the existing hook state/return shape.
+tracker_ref: "R-288"
 requirements:
-  - Each generated use<Entity> detail hook owns an AbortController ref (useRef, already imported).
-  - refetch aborts the previous detail request before handling an empty/missing record ID.
-  - Clearing the ID cancels in-flight work and resets record/loading/error state (setData(null), setError(null), setLoading(false)).
-  - A valid ID creates and registers a new controller.
-  - Pass the internally owned signal after caller-provided options so callers cannot replace it.
-  - An aborted successful response must not update current record state.
-  - AbortError and controller-aborted failures must not surface as user errors.
-  - Only the currently active request may clear loading state.
-  - Effect cleanup aborts the active request on ID change or unmount.
-  - Preserve public hook name, params, return value, and current generated API-client behaviour.
-  - Do not alter top-level list (useList<Entities>) or LIST_BY (useList<Child>By<Parent>) hooks.
+  - Each mutation hook owns a pendingRef (useRef<Promise<...> | null>, useRef already imported).
+  - A mutate call while a request is in flight returns the pending promise (no duplicate network request).
+  - The in-flight request is captured in the ref, cleared in finally, and loading/error still behave as before.
+  - Preserve public hook names, callback signatures, and return shape ({ create|update|remove, mutate, loading, error, reset }).
+  - Errors still set error state and reject; reset() unchanged.
+  - Do not change fetch hooks (useList/useList<Child>By<Parent>/use<Entity>), the API client, backend, or IR.
   - Preserve deterministic generation and description-only IR stability.
 acceptance_criteria:
-  - The use<Entity> hook emits `const abortRef = useRef<AbortController | null>(null);` and `abortRef.current?.abort();` before the `if (!id)` reset.
-  - The missing-ID branch resets setData(null), setError(null), setLoading(false).
-  - The GET call is `api.get<Entity>(id, { ...options, signal: controller.signal })` (signal after options); the old `api.get<Entity>(id, options)` form is gone.
-  - Success guarded by `if (controller.signal.aborted) return;` before setData; catch guarded by the AbortError check; finally clears loading only when not aborted.
-  - Effect cleanup returns `() => abortRef.current?.abort();`.
-  - List and LIST_BY hook output is unchanged; description-only IR changes remain byte-identical.
-  - Focused R-287 tests, relevant detail/hook tests, full offline verification, lint, security, env check, and both builder demos pass.
+  - useCreate/useUpdate/useDelete each emit `const pendingRef = useRef<Promise<...> | null>(null);` and, as the first statement of the callback, `if (pendingRef.current) return pendingRef.current;`.
+  - The request body runs in an IIFE captured as `pendingRef.current = request;` and returned; `finally` sets `setLoading(false)` and `pendingRef.current = null;`.
+  - The underlying `api.create/update/delete<Entity>(...)` call and the return shape are unchanged.
+  - Fetch hooks and the API client are untouched; description-only IR changes remain byte-identical.
+  - Focused tests, relevant hook tests, full offline verification, lint, security, env check, and both builder demos pass.
 expected_impact:
   - services/agent-engine/src/omnistackai_agent_engine/codegen/nextjs.py
-  - services/agent-engine/tests/test_detail_request_cancellation.py
-  - services/agent-engine/tests/test_nextjs_hooks.py
+  - services/agent-engine/tests/test_mutation_inflight_guard.py
   - .ai task/state/handoff/work-log files, PROJECT_STATE.md, CHANGELOG.md, docs/CODEGEN.md, docs/PROGRESS.md, docs/RESUME_PROMPT.md, and execution tracker
 allowed_paths:
   - services/agent-engine/src/omnistackai_agent_engine/codegen/nextjs.py
-  - services/agent-engine/tests/test_detail_request_cancellation.py
+  - services/agent-engine/tests/test_mutation_inflight_guard.py
   - services/agent-engine/tests/test_nextjs_hooks.py
   - .ai/**
   - CHANGELOG.md
@@ -55,13 +48,13 @@ forbidden_paths:
   - package.json
   - pnpm-lock.yaml
 must_not_change:
-  - PostgreSQL, platform schemas/migrations, or backend GET semantics
+  - PostgreSQL, platform schemas/migrations, or backend semantics
   - Section 74 monorepo layout, provider boundaries, infrastructure, or native/mobile scope
-  - Application IR schema, generated API-client behaviour, or public hook signatures
-  - useList<Entities> (R-280) and useList<Child>By<Parent> (R-286) hook behaviour
+  - Application IR schema, generated API-client behaviour, or public hook signatures/return shapes
+  - fetch hook behaviour (useList<Entities> R-280, useList<Child>By<Parent> R-286, use<Entity> R-287)
 gates:
-  - focused detail cancellation tests
-  - test_nextjs_hooks / test_detail_screen_lifecycle / test_detail_record_selector / test_subcollection_screens
+  - focused mutation in-flight guard tests
+  - test_nextjs_hooks
   - task verify
   - task lint
   - task security:quick
@@ -74,38 +67,10 @@ model_tool_trace:
   local_calls: 0
   cloud_calls: 0
   note: Pure deterministic code generation and offline tests; no model call is needed.
-evidence:
-  - command: env PYTHONPATH=services/agent-engine/src python3 -m unittest discover -s services/agent-engine/tests -p 'test_detail_request_cancellation.py'
-    result: pass
-    detail: 13 focused R-287 detail-cancellation tests pass (they failed first against the pre-change hook).
-  - command: task verify
-    result: pass
-    detail: 823 agent-engine tests and all Stage 0 offline verification gates pass.
-  - command: task lint
-    result: pass
-  - command: task security:quick
-    result: pass
-  - command: task env:check
-    result: pass
-  - command: task builder:demo -- minimal-blog
-    result: pass
-  - command: task builder:demo -- rideshare-favourites
-    result: pass
-  - command: generated TypeScript artifact inspection
-    result: pass
-    detail: >-
-      The generated useArticle detail hook owns an abortRef, aborts before the !id reset (which clears
-      data/error/loading), registers a fresh controller for a valid id, calls
-      api.getArticle(id, { ...options, signal: controller.signal }), guards success/catch/finally on
-      controller.signal.aborted, and returns () => abortRef.current?.abort() from its effect. List and
-      LIST_BY hooks unchanged. Tracker: 287 unique IDs, R-287 Done, table A4:M295, dashboard formulas
-      through row 295, no #REF!, valid XLSX; 76 Done / 1 Deferred / 210 Not Started; MVP 76/182 (41.8%).
-  - commit: 793804e
-    detail: feat(codegen)- cancel stale detail requests [R-287]
+evidence: []
 blockers: []
 next_action: >-
-  R-287 is complete and verified. Next unstarted Tracker ID is R-288 (do not begin it). Recommended
-  offline candidate: harden any remaining generated fetch path not yet race-safe/debounced, or a further
-  generated-app UX increment — propose with the founder at R-288 kickoff.
+  Write focused failing tests, apply the smallest generator change to the three mutation hooks, run all
+  gates, then tracker + docs + two commits + push.
 next_command: >-
-  task ai:status
+  env PYTHONPATH=services/agent-engine/src python3 -m unittest discover -s services/agent-engine/tests -p 'test_mutation_inflight_guard.py' -v
