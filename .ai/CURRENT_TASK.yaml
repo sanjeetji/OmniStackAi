@@ -52,4 +52,4 @@ evidence:
   - "task verify: 774 tests passed (0 failures, 6 new in test_subcollection_list_controls.py)"
   - "task lint: passed; task security:quick: passed"
   - "task builder:demo -- minimal-blog: passed; task builder:demo -- rideshare-favourites: passed"
-  - "commit: <feat sha> feat(codegen): pagination/sort/search controls on subcollection lists [R-281]"
+  - "commit: ad94a72 feat(codegen): pagination/sort/search controls on subcollection lists [R-281]"

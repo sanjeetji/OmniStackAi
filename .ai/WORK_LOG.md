@@ -1401,3 +1401,28 @@
 - Tracker: `tracker_edit_r280.py` (baseline `7a6b9b5`) — R-280 (Builder) at row 9, R-279 → row 10; rows
   1..288 contiguous, table `A4:M288`, XML well-formed. Done 69. Implementation checkpoint `7a6b9b5`. 0
   local / 0 cloud model calls; no DB.
+
+## 2026-09-09 — R-281
+
+- Founder: "Continue for 281, do which is best for the two offline options; we have a Groq API key also."
+  Asked how to sequence Groq vs R-281; founder chose "R-281 offline only" (Groq kept for a later live
+  model-fabric verification; documented the safe `.env` enablement, never in chat/commits).
+- Closed survey gap B: subcollection master-detail lists rendered only `{sub.data.map(...)}` despite the
+  backend subcollection endpoints and the generated `useList<Child>By<Parent>` hook already supporting
+  `limit/offset/sort/order/q`. Added two shared helpers in `nextjs.py`: `_subcol_controls(sub, s_var)`
+  (an uncontrolled search `<form>` — `defaultValue` + `FormData` submit → `setSearch`, no new state — and
+  a sort `<select>` of `id` + the subcollection's display fields → `setSort`) and `_subcol_pagination(s_var)`
+  (a Prev / "Page X of Y (N total)" / Next footer → `setPage`, disabled at bounds/while loading).
+- Wired both via `replace_all` into the two byte-identical subcollection render sites (the collection
+  master-detail block in `_collection_screen_page` and the detail-screen block in `_detail_screen_page`),
+  so both views get the same controls. Submit-based search avoids a per-keystroke fetch storm, so the
+  subcollection hook internals are left unchanged (unlike R-280's top-level hook). No new IR field, no npm
+  dependency, `"use client"` preserved, diff-invariant across `ir.description`.
+- 6 new stdlib offline tests in `test_subcollection_list_controls.py` (774 total): controls present on
+  both the collection and detail pages (search form, sort options `id`/`body`/`author` both directions,
+  pagination footer), entities without subcollections emit none, the search input is uncontrolled (no
+  extra state), diff-invariance, and both demos render the controls. `task verify` + `task lint` +
+  `task security:quick` + both `builder:demo`s pass.
+- Tracker: `tracker_edit_r281.py` (baseline `ad94a72`) — R-281 (Builder) at row 9, R-280 → row 10; rows
+  1..289 contiguous, table `A4:M289`, Dashboard ranges `B4:B289`/`H4:H289`, no `#REF!`, XML well-formed.
+  Done 70. Implementation checkpoint `ad94a72`. 0 local / 0 cloud model calls; no DB.

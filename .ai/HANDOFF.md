@@ -1,10 +1,10 @@
 # Current Handoff
 
-Task ID: R-280
+Task ID: R-281
 Status: done
 Phase: BASIC/MVP — Founder Stage 0
 Branch: `main` (the only branch; the GitHub default)
-Last verified implementation SHA: `7a6b9b5`
+Last verified implementation SHA: `ad94a72`
 
 ## Repo/workflow state
 
@@ -12,57 +12,54 @@ Last verified implementation SHA: `7a6b9b5`
   tracker → two commits tagged `[R-###]` → push → remote SHA check).
 - Commits use `sanjeetji <sk698166@gmail.com>` as author (with the tooling `Co-Authored-By` trailer).
 
-## Completed (R-280) — Deep-Linked Collection List State + Debounced, Race-Safe Search
+## Completed (R-281) — Pagination, Sort & Search Controls on Subcollection Master-Detail Lists
 
-The founder-chosen "best, optimised, futuristic" pairing of two survey-identified gaps, both on one
-surface (`nextjs.py` `_collection_screen_page` + `_hooks_file`):
+Closed survey gap B. The generated subcollection master-detail lists rendered only `{sub.data.map(...)}`
+with no controls, though the backend subcollection endpoints and the generated `useList<Child>By<Parent>`
+hook already fully support `limit/offset/sort/order/q`. Added two shared helpers in `nextjs.py`:
 
-- **Deep-linked list state.** The generated `useList<Entities>` hook hydrates `sort/order/q/page/pageSize`
-  from `window.location.search` once on mount (client-only, guarded `typeof window`) and reflects the
-  current params to the URL via `new URL(...)` + `window.history.replaceState`, writing only non-default
-  values. Refresh / bookmark / share restore the exact list view (mirrors the R-276 detail pattern).
-- **Race-safe fetch.** `refetch` creates an `AbortController` per call (added `useRef` to the import),
-  aborts the previous in-flight request, forwards `signal` through the existing `ApiOptions` (no
-  `lib/api.ts` change), ignores aborted/stale responses, and aborts in-flight on unmount.
-- **Debounced search.** The collection search input debounces its committed query 300ms
-  (`setTimeout`/`clearTimeout`, guarded so it never clobbers a hydrated page offset); `onChange` only
-  updates local state; the form submit still searches immediately; the hydrated `q` is reflected back.
-- Subcollection hook (`useList<Child>By<Parent>`) and subcollection UI controls intentionally out of
-  scope. No new IR field, no npm dependency, `"use client"` preserved, diff-invariant across
-  `ir.description`.
+- `_subcol_controls(sub, s_var)` — an **uncontrolled** search `<form>` (`defaultValue={…params.q}` +
+  `new FormData(...).get("q")` on submit → `setSearch`, so no new component state) and a sort `<select>`
+  (`id` + the subcollection's display fields, both directions → `setSort`).
+- `_subcol_pagination(s_var)` — a **Prev / "Page X of Y (N total)" / Next** footer driven by
+  `page`/`totalPages`/`total`/`setPage`, disabled at bounds and while loading.
+
+Wired via `replace_all` into **both** byte-identical subcollection render sites — the collection
+master-detail block (`_collection_screen_page`) and the detail-screen block (`_detail_screen_page`).
+Submit-based search avoids a per-keystroke fetch storm, so the subcollection hook internals are unchanged
+(unlike R-280's top-level hook). No new IR field, no npm dependency, `"use client"` preserved,
+diff-invariant across `ir.description`.
 
 ## Verification
 
-- `task verify` — pass (768 agent-engine tests; 12 new in `test_collection_deeplink_state.py`).
-  `task lint`, `task security:quick` — pass. Both `task builder:demo`s — pass.
-- Updated three existing assertion sets to the new behavior (`test_nextjs_hooks.py` import + refetch
-  signal; `test_screen_generation.py` debounced `onChange`; `test_collection_field_filters.py` `useEffect`
-  import). 0 local / 0 cloud model calls; no DB.
-- Tracker — R-280 at `Phase_Roadmap!A9:M9` (R-279 → row 10); rows 1..288 contiguous; table `A4:M288`;
-  Done 69.
+- `task verify` — pass (774 agent-engine tests; 6 new in `test_subcollection_list_controls.py`).
+  `task lint`, `task security:quick` — pass. Both `task builder:demo`s — pass. 0 model calls; no DB.
+- Tracker — R-281 at `Phase_Roadmap!A9:M9` (R-280 → row 10); rows 1..289 contiguous; table `A4:M289`;
+  Dashboard ranges `B4:B289`/`H4:H289`, no `#REF!`; Done 70.
 
-## Tracker reconciliation (this session, before R-280)
+## Founder note — Groq key available
 
-- The execution tracker had drifted: it was maintained only through R-252 while R-253..R-279 shipped in
-  code/tests/docs. All 27 missing rows were backfilled as Done (commit `b4537c7`) from `.ai/tasks/R-###.md`
-  + `CHANGELOG.md`; `docs/PROGRESS.md` was synced to the live tracker figures. The tracker is now current
-  and should be kept so going forward (WORK_LOG.md also carries a bulk bridge note for R-253..R-279).
+A Groq API key is available. The founder chose to keep this session local-only ("R-281 offline only"), so
+live model-fabric verification with Groq is deferred. To enable later: put `GROQ_API_KEY` in the
+**gitignored `.env`** (never in chat/commits/source), then `task agent-engine:gateway:run` with
+`OMNISTACKAI_CLOUD_PROVIDER=groq`. Note this AI sandbox may block outbound calls to `api.groq.com`, so it
+may need a real terminal.
 
 ## Blockers and risks
 
-- None for the offline R-281 candidates below. Live preview/deploy and the deferred R-224 Next.js console
+- None for the offline R-282 candidate below. Live preview/deploy and the deferred R-224 Next.js console
   upgrade still need a network environment / provider keys. Native mobile remains deferred (Brief §25/§91).
 
 ## Next action
 
-Continue from R-281 with one offline-doable candidate:
+Continue from R-282:
 
-1. Wire pagination + sortable headers + search into the **subcollection master-detail lists** — the
-   backend endpoints and the generated `useList<Child>By<Parent>` hook already support
-   `limit/offset/sort/order/q`; only the render is inert today. (Direct continuation of R-265/R-280.)
-2. Promote the **boolean/enum collection filters to server-side `?field=` query params** (currently
-   client-side over the loaded page only) — needs a matching backend filter capability, so it is
-   cross-cutting.
+1. **Promote the boolean/enum collection filters to server-side `?field=` query params** — R-278's
+   filters are currently client-side over the loaded page only (misleading across pagination). This needs
+   a matching backend filter capability (Go + FastAPI + OpenAPI), so it is cross-cutting — a good
+   full-stack task. Or
+2. **Live-verify the model fabric with Groq** (now unblocked) — Balanced gateway → groq, capture the real
+   result + cost accounting (see the Groq note above).
 
 ## Next command
 

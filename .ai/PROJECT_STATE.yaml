@@ -2,21 +2,21 @@ schema_version: 1
 project: OmniStackAI
 phase: BASIC/MVP
 founder_stage: 0
-current_task: R-280
+current_task: R-281
 current_status: done
 branch: main
 last_completed_task:
-  task_id: R-280
-  title: Deep-Linked Collection List State + Debounced, Race-Safe Search in Generated Next.js Web App
+  task_id: R-281
+  title: Pagination, Sort & Search Controls on Subcollection Master-Detail Lists in Generated Next.js Web App
   verification: >-
-    task verify (768 agent-engine tests, 12 new in test_collection_deeplink_state.py); the generated
-    useList<Entities> hook syncs sort/order/q/page/pageSize to the URL and hydrates them from the URL on
-    mount (client-only, history.replaceState, only non-defaults written), so refresh/bookmark/share
-    restore the exact list view; refetch aborts the previous in-flight request via AbortController (signal
-    forwarded through the existing ApiOptions) and ignores stale responses; the collection search input is
-    debounced 300ms and no longer fetches on every keystroke; subcollection hook/UI out of scope; no new IR
-    field, no npm dep, diff-invariant across ir.description; task lint + security:quick pass; both
-    builder:demo pass; impl 7a6b9b5; 0 network, no DB
+    task verify (774 agent-engine tests, 6 new in test_subcollection_list_controls.py); the generated
+    subcollection master-detail lists (in both the collection master-detail screen and the dedicated detail
+    screen) now render an uncontrolled search form, a sort <select> (id + display fields), and a
+    Prev/Next 'Page X of Y (N total)' pagination footer, all driven by the already-generated
+    useList<Child>By<Parent> hook (setSearch/setSort/setPage) which already supported limit/offset/sort/
+    order/q; submit-based search avoids a per-keystroke fetch storm so hook internals are unchanged; no new
+    IR field, no npm dep, no new component state, diff-invariant across ir.description; task lint +
+    security:quick pass; both builder:demo pass; impl ad94a72; 0 network, no DB
   result: pass
 control_plane_database: postgresql
 model_routing_mode: balanced
@@ -28,11 +28,13 @@ product_direction: >-
   framework adapter contract -> Next.js adapter -> Git service -> preview/sandbox (needs cloud env).
 id_note: >-
   Workbook backlog owns R-010..R-219. Founder-requested tasks use IDs after R-219: R-220..R-223 done,
-  R-224 Next.js deferred (env-blocked), R-225..R-280 done. Continue from R-281.
+  R-224 Next.js deferred (env-blocked), R-225..R-281 done. Continue from R-282.
 blockers: []
 next_action: >-
-  Task R-280 (Deep-Linked Collection List State + Debounced, Race-Safe Search) is implemented, verified,
-  and complete (768 tests pass; tracker reconciled — 69 Done). Ready for Task R-281. Offline candidates:
-  wire pagination/sort/search controls into subcollection master-detail lists (the backend + hook already
-  support it); or promote boolean/enum filters to server-side query params.
-last_updated: "2026-09-09T02:10:00+05:30"
+  Task R-281 (Subcollection list controls — pagination/sort/search) is implemented, verified, and complete
+  (774 tests pass; tracker current — 70 Done). Ready for Task R-282. Offline candidate: promote the
+  boolean/enum collection filters to server-side ?field= query params (currently client-side over the
+  loaded page). Founder has a Groq API key available for a future live model-fabric verification (kept
+  local-only this session per founder choice; set GROQ_API_KEY in the gitignored .env to enable, never in
+  chat/commits; this sandbox may block outbound calls to api.groq.com).
+last_updated: "2026-09-09T02:45:00+05:30"
