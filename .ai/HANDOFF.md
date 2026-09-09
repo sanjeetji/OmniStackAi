@@ -1,10 +1,10 @@
 # Current Handoff
 
-Task ID: R-287
+Task ID: R-288
 Status: done
 Phase: BASIC/MVP — Founder Stage 0
 Branch: `main` (the only branch; the GitHub default)
-Implementation SHA: `793804e`
+Implementation SHA: `3d6eecf`
 
 ## Repo/workflow state
 
@@ -13,39 +13,35 @@ Implementation SHA: `793804e`
 - Commits use `sanjeetji <sk698166@gmail.com>` as author. A permitted tooling co-author trailer may be
   added, but the founder remains the primary author.
 
-## Completed (R-287) — Race-Safe Generated Detail Refetches
+## Completed (R-288) — Deduplicated In-Flight Generated Mutation Requests
 
-The generated `use<Entity>` detail hook now cancels a superseded GET so a stale response cannot
-overwrite the currently selected record during rapid record-selector / prev-next / deep-link / id
-changes. This was the last generated fetch path without cancellation (R-280 covered `useList<Entities>`,
-R-286 covered `useList<Child>By<Parent>`).
+The generated `useCreate<Entity>` / `useUpdate<Entity>` / `useDelete<Entity>` hooks now dedupe concurrent
+invocations, so a double-clicked Create/Save/Delete (or a programmatic re-call) can no longer fire a
+duplicate POST/PUT/DELETE. This extends the race-safety work from fetches (R-280 LIST, R-286 LIST_BY,
+R-287 detail GET) to writes — all generated request paths are now race-safe.
 
-- The hook owns an `AbortController` ref; `refetch` aborts the previous request before the `if (!id)`
-  reset (which now also clears `error`), and a valid id registers a fresh controller.
-- The GET call passes the internal signal AFTER caller options
-  (`api.get<Entity>(id, { ...options, signal: controller.signal })`), so callers cannot replace the
-  cancellation signal. The generated API client already forwards `signal` — no client change.
-- Aborted successes and `AbortError` failures are ignored; only the active request clears loading; the
-  effect returns `() => abortRef.current?.abort()`.
-- Public hook name/params/return, list and LIST_BY hooks, backend, IR, and description-only stability
-  are all preserved.
+- Each hook owns `pendingRef = useRef<Promise<T> | null>(null)`; the callback returns the pending promise
+  when a request is already in flight (a concurrent call awaits the same result — no second request).
+- The try/catch/finally body runs in an IIFE captured as `pendingRef.current = request;` and returned;
+  `finally` keeps `setLoading(false)` and adds `pendingRef.current = null;`.
+- Public hook names, callback signatures, and return shapes (`{ …, mutate, loading, error, reset }`), the
+  underlying `api.create|update|delete<Entity>` calls, the fetch hooks, the API client, backend, and IR
+  are all unchanged; description-only IR generation stays byte-identical.
 
 ## Verification
 
-- `task verify` — pass (823 agent-engine tests; 13 focused R-287 tests in
-  `test_detail_request_cancellation.py`, written test-first).
-- `task lint`, `task security:quick`, `task env:check` — pass.
-- `task builder:demo -- minimal-blog`, `task builder:demo -- rideshare-favourites` — pass.
-- Generated `useArticle` detail hook inspected end-to-end. Only one existing assertion changed
-  (`test_nextjs_hooks.py`, the `getPost` call → signal-bearing form).
-- Tracker — R-287 at `Phase_Roadmap!A9:M9`; table `A4:M295`; Dashboard formulas reach row 295; 287
-  unique IDs (0 dupes); 76 Done, 1 Deferred, 210 Not Started; MVP 76/182 (41.8%); no `#REF!`; XLSX
-  archive validated.
+- `task verify` — pass (829 agent-engine tests; 6 focused R-288 tests in
+  `test_mutation_inflight_guard.py`, written test-first). Existing `test_nextjs_hooks` mutation assertions
+  unchanged (substrings survive inside the IIFE).
+- `task lint`, `task security:quick`, `task env:check` — pass. Both `task builder:demo` — pass.
+- Generated `useCreatePost` inspected end-to-end.
+- Tracker — R-288 at `Phase_Roadmap!A9:M9`; table `A4:M296`; Dashboard formulas reach row 296; 288
+  unique IDs (0 dupes); 77 Done, 1 Deferred, 210 Not Started; MVP 77/183 (42.1%); no `#REF!`; XLSX valid.
 - 0 local model calls / 0 cloud calls; no generated app installed/run, no DB connection.
 
 ## Blockers and risks
 
-- No blocker for the offline R-288 candidate. Live preview/deploy and R-224 still need a
+- No blocker for the offline R-289 candidate. Live preview/deploy and R-224 still need a
   network-capable environment and/or authorized provider keys. Native mobile remains deferred under
   Brief Sections 25 and 91.
 - A Groq key may be available for a future separately authorized live model-fabric verification. Keep
@@ -53,11 +49,11 @@ R-286 covered `useList<Child>By<Parent>`).
 
 ## Next action
 
-Continue from **R-288** (the next unstarted Tracker ID — do not begin it without kickoff). All three
-generated data-fetch paths (LIST, LIST_BY, detail GET) are now race-safe. Recommended offline candidate:
-harden any remaining generated fetch path not yet race-safe/debounced (e.g. debounced subcollection
-search, or mutation in-flight guards), or a further generated-app UX increment. Record the R-288
-Standard AI Task Contract before coding.
+Continue from **R-289** (the next unstarted Tracker ID — do not begin it without kickoff). All generated
+data-fetch (LIST, LIST_BY, detail GET) AND mutation (create/update/delete) request paths are now
+race-safe. Recommended offline candidate: a further generated-app UX or robustness increment (e.g.
+optimistic UI updates with rollback, loading skeletons, or a debounced/live subcollection search).
+Record the R-289 Standard AI Task Contract before coding.
 
 ## Next command
 

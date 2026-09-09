@@ -1,7 +1,7 @@
 schema_version: 1
 task_id: R-288
 title: Deduplicated In-Flight Generated Mutation Requests
-status: in_progress
+status: done
 phase: BASIC/MVP
 founder_stage: 0
 branch: main
@@ -67,10 +67,38 @@ model_tool_trace:
   local_calls: 0
   cloud_calls: 0
   note: Pure deterministic code generation and offline tests; no model call is needed.
-evidence: []
+evidence:
+  - command: env PYTHONPATH=services/agent-engine/src python3 -m unittest discover -s services/agent-engine/tests -p 'test_mutation_inflight_guard.py'
+    result: pass
+    detail: 6 focused R-288 tests pass (they failed first against the pre-change hooks).
+  - command: task verify
+    result: pass
+    detail: 829 agent-engine tests and all Stage 0 offline verification gates pass; existing test_nextjs_hooks mutation assertions unchanged.
+  - command: task lint
+    result: pass
+  - command: task security:quick
+    result: pass
+  - command: task env:check
+    result: pass
+  - command: task builder:demo -- minimal-blog
+    result: pass
+  - command: task builder:demo -- rideshare-favourites
+    result: pass
+  - command: generated TypeScript artifact inspection
+    result: pass
+    detail: >-
+      Generated useCreatePost owns pendingRef, returns the pending promise when in flight, captures the
+      body in an IIFE assigned to pendingRef.current, and clears loading + pendingRef in finally; return
+      shape and api.createPost call preserved. Tracker: 288 unique IDs, R-288 Done, table A4:M296,
+      dashboard formulas through row 296, no #REF!, valid XLSX; 77 Done / 1 Deferred / 210 Not Started;
+      MVP 77/183 (42.1%).
+  - commit: 3d6eecf
+    detail: feat(codegen)- dedupe in-flight mutation requests [R-288]
 blockers: []
 next_action: >-
-  Write focused failing tests, apply the smallest generator change to the three mutation hooks, run all
-  gates, then tracker + docs + two commits + push.
+  R-288 is complete and verified. Next unstarted Tracker ID is R-289 (do not begin it). All generated
+  fetch (LIST/LIST_BY/detail GET) and mutation (create/update/delete) request paths are now race-safe.
+  Recommended offline candidate: a further generated-app UX or robustness increment — propose with the
+  founder at R-289 kickoff.
 next_command: >-
-  env PYTHONPATH=services/agent-engine/src python3 -m unittest discover -s services/agent-engine/tests -p 'test_mutation_inflight_guard.py' -v
+  task ai:status

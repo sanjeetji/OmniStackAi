@@ -947,6 +947,23 @@ last generated data-fetch path without cancellation (LIST is R-280, LIST_BY is R
 - The public hook name/params/return, `useList<Entities>` and `useList<Child>By<Parent>` hooks, backend,
   and Application IR are unchanged; description-only IR generation stays byte-identical.
 
+### Deduplicated In-Flight Generated Mutation Requests (R-288)
+
+The generated `useCreate<Entity>` / `useUpdate<Entity>` / `useDelete<Entity>` hooks now dedupe concurrent
+invocations, extending race-safety from fetches (R-280/R-286/R-287) to writes so a double-clicked
+Create/Save/Delete (or a programmatic re-call) cannot fire a duplicate POST/PUT/DELETE:
+
+- Each hook owns `const pendingRef = useRef<Promise<T> | null>(null)` (T = `<Entity>` for create/update,
+  `void` for delete). The callback's first statement is `if (pendingRef.current) return
+  pendingRef.current;`, so a call arriving while a request is in flight awaits the same promise instead
+  of starting a second request.
+- The existing try/catch/finally body runs inside an IIFE captured as `pendingRef.current = request;` and
+  returned; `finally` keeps `setLoading(false)` and adds `pendingRef.current = null;`.
+- The callback signatures, the underlying `api.create|update|delete<Entity>(...)` calls, and the return
+  shape (`{ create|update|remove, mutate, loading, error, reset }`) are unchanged; errors still set error
+  state and reject. Fetch hooks, the generated API client, backend, and Application IR are untouched, and
+  description-only IR generation stays byte-identical.
+
 ### Global Notification Toast System & Action Feedback (R-279)
 
 Adds a lightweight, accessible, and self-contained client-side toast notification system to generated Next.js web applications:

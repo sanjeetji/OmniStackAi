@@ -5,22 +5,21 @@ Last updated: 2026-09-09T18:48:50+05:30
 Stage 0 (Founder Build Sequence, Brief Section 91) — BASIC/MVP
 
 ## Last Completed Task
-Tracker ID: R-287 — Race-Safe Generated Detail Refetches — DONE, `task verify` (823 agent-engine tests,
-13 focused R-287 tests) passing. The generated `use<Entity>` detail hook now owns an `AbortController`
-ref and cancels a superseded GET so a stale response cannot overwrite the currently selected record
-during rapid record-selector / prev-next / deep-link / id changes. `refetch` aborts the previous request
-before the `if (!id)` reset (which also clears error), a valid id registers a fresh controller, the GET
-passes the internal signal AFTER caller options (`api.get<Entity>(id, { ...options, signal:
-controller.signal })`) so callers cannot replace it, aborted success and `AbortError` completions are
-ignored, only the active request clears loading, and the effect aborts on id change/unmount. The public
-hook shape, the generated API client, list and LIST_BY hooks, backend, IR, and description-only stability
-are all preserved. No IR, backend, dependency, database, infrastructure, network, or model change;
-implementation checkpoint `793804e`. Preceded by R-225 through R-286. This was the last generated
-data-fetch path without cancellation — LIST (R-280), LIST_BY (R-286), and detail GET (R-287) are now all
+Tracker ID: R-288 — Deduplicated In-Flight Generated Mutation Requests — DONE, `task verify` (829
+agent-engine tests, 6 focused R-288 tests) passing. The generated `useCreate<Entity>` /
+`useUpdate<Entity>` / `useDelete<Entity>` hooks now dedupe concurrent invocations: each owns a
+`pendingRef`, returns the pending promise while a request is in flight, runs the try/catch/finally body
+in an IIFE captured as `pendingRef.current`, and clears the ref plus loading in `finally`. A
+double-clicked Create/Save/Delete (or a programmatic re-call) can no longer fire a duplicate
+POST/PUT/DELETE. Public hook names/signatures/return shapes, the underlying api calls, the fetch hooks
+(LIST/LIST_BY/detail), the generated API client, backend, IR, and description-only stability are all
+preserved. No IR, backend, dependency, database, infrastructure, network, or model change; implementation
+checkpoint `3d6eecf`. Preceded by R-225 through R-287. With this, **all** generated request paths —
+fetch (LIST R-280, LIST_BY R-286, detail GET R-287) and mutation (create/update/delete R-288) — are
 race-safe.
 
-**Notes:** (1) the tracker is current through R-287: 76 Done, 1 Deferred, 210 Not Started across 287
-tasks; MVP is 76/182 (41.8%). (2) A Groq API key may be available; live model-fabric verification remains
+**Notes:** (1) the tracker is current through R-288: 77 Done, 1 Deferred, 210 Not Started across 288
+tasks; MVP is 77/183 (42.1%). (2) A Groq API key may be available; live model-fabric verification remains
 separate (set it only in gitignored `.env`, never chat/commits).
 
 
@@ -53,9 +52,9 @@ R-221 = cross-provider fallback (done); R-222 = platform console slice (done); R
 fallback wiring (done); R-224 = Next.js console upgrade (deferred — environment-blocked).
 
 ## Next Up (queued, in order)
-1. R-288 candidate — harden any remaining generated fetch/mutation path not yet race-safe or debounced
-   (e.g. debounced subcollection search input, mutation in-flight guards), or a further generated-app UX
-   increment (all three data-fetch paths — LIST, LIST_BY, detail GET — are now race-safe as of R-287)
+1. R-289 candidate — a further generated-app UX or robustness increment (all fetch AND mutation request
+   paths are now race-safe as of R-288); e.g. optimistic UI updates with rollback, loading skeletons, or
+   a debounced/live subcollection search — propose with the founder at kickoff
 2. Live-verify the model fabric with the available Groq key (Balanced gateway → groq; real cloud
    inference + cost accounting) — set `GROQ_API_KEY` in the gitignored `.env`; may need a network machine
 3. R-224 Next.js console upgrade and R-010 native iOS remain deferred under their existing gates

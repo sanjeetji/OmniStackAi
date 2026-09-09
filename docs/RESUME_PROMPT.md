@@ -40,7 +40,7 @@ START PROTOCOL
   `task ai:status`, `task ai:handoff`. `task verify` must stay green and network-independent.
 - Confirm git branch/HEAD/clean tree. Then restate: phase, next Tracker ID, objective, blast radius.
 
-WHAT IS ALREADY BUILT (platform generators are Python 3.13 stdlib-only, offline, in services/agent-engine; 823 tests pass)
+WHAT IS ALREADY BUILT (platform generators are Python 3.13 stdlib-only, offline, in services/agent-engine; 829 tests pass)
 - Model fabric: ModelProvider contract + registry; local Ollama adapter (runs any installed model via
   OMNISTACKAI_OLLAMA_MODEL); Balanced ModelGateway (deterministic escalation ladder, no silent cloud
   fallback, context-budget guard); key-activated cloud catalog — Anthropic/OpenAI/Google-Gemini/
@@ -85,8 +85,9 @@ WHAT IS ALREADY BUILT (platform generators are Python 3.13 stdlib-only, offline,
   Every generated LIST_BY hook is now race-safe (R-286): superseded requests are aborted before
   missing-parent handling, the internal signal cannot be overridden by caller options, aborted
   completions cannot mutate newer state, and effect cleanup cancels in-flight work. The `use<Entity>`
-  single-record detail hook is likewise race-safe (R-287) — all three generated data-fetch paths (LIST,
-  LIST_BY, detail GET) now abort superseded requests and ignore stale completions.
+  single-record detail hook is likewise race-safe (R-287), and the generated mutation hooks
+  (useCreate/useUpdate/useDelete) dedupe concurrent in-flight submits (R-288) — so ALL generated request
+  paths (LIST, LIST_BY, detail GET, and create/update/delete) resist duplicate/racing requests.
   TRI-TARGET proven from ONE IR; all offline/deterministic (emit
   files, assert contents; no install/build/DB).
 - RUNTIME/DEPLOY layer (Brief 15/51/75): RuntimeProvider/DeploymentProvider contracts;
@@ -151,9 +152,9 @@ generated `use<Entity>` detail GET hooks (AbortController; internal signal after
 success/AbortError/loading writes blocked; id-change/unmount cleanup aborts). Do NOT overwrite
 backlog rows; continue from R-288.
 NOTE: the execution tracker was reconciled on 2026-09-09 (R-253..R-279 rows had drifted and were
-backfilled); keep it current going forward. It now has 287 unique rows: 76 Done, 1 Deferred, 210 Not
-Started; MVP is 76/182 (41.8%). The earlier reported R-251 MVP baseline of 145 was one low—direct recount
-is 146, and R-252..R-287 added 36 rows. The summary above is current through R-287; Git, state files,
+backfilled); keep it current going forward. It now has 288 unique rows: 77 Done, 1 Deferred, 210 Not
+Started; MVP is 77/183 (42.1%). The earlier reported R-251 MVP baseline of 145 was one low—direct recount
+is 146, and R-252..R-288 added 37 rows. The summary above is current through R-288; Git, state files,
 tests, and CHANGELOG remain the executable/detail sources of truth.
 
 ENVIRONMENT LIMITS discovered here
@@ -180,12 +181,11 @@ RULES (non-negotiable)
   .ai/HANDOFF.md, PROJECT_STATE.md, CHANGELOG.md, and the tracker row. Push the branch; verify remote
   SHA == local HEAD. Never claim unexecuted tests.
 
-WHAT TO DO NEXT (pick with the founder; all continue the builder), continue from R-288
-- Offline-doable now: all three generated data-fetch paths (LIST, LIST_BY, detail GET) are now race-safe,
-  so R-288 could harden a remaining path not yet covered — e.g. a debounced subcollection search input,
-  or in-flight guards on generated create/update/delete mutation hooks — or add a further generated-app
-  UX increment. Reuse the proven patterns, preserve public hook signatures, and add focused generation
-  tests first.
+WHAT TO DO NEXT (pick with the founder; all continue the builder), continue from R-289
+- Offline-doable now: all generated fetch (LIST, LIST_BY, detail GET) AND mutation (create/update/delete)
+  request paths are now race-safe, so R-289 could add a further generated-app UX or robustness increment —
+  e.g. optimistic UI updates with rollback, loading skeletons, or a debounced/live subcollection search.
+  Reuse the proven patterns, preserve public hook signatures, and add focused generation tests first.
 - Now unblocked (a Groq API key is available): live-verify the model fabric end-to-end with Groq through
   the Balanced gateway (real cloud inference + cost accounting). Set GROQ_API_KEY in the gitignored .env
   (NEVER in chat/commits/source) and run `task agent-engine:gateway:run` with OMNISTACKAI_CLOUD_PROVIDER=
@@ -197,5 +197,5 @@ WHAT TO DO NEXT (pick with the founder; all continue the builder), continue from
 - Deferred by governance: native mobile (R-010 etc.) until web/backend stability.
 
 Begin by reading the files above and running the start protocol, then propose the next Tracker ID
-(R-288) with its task contract before writing code. Commit to main.
+(R-289) with its task contract before writing code. Commit to main.
 ```

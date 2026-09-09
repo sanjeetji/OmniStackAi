@@ -1577,3 +1577,32 @@
   1..295 contiguous, table `A4:M295`, Dashboard ranges through row 295, no `#REF!`, XLSX valid. Recounted
   from the workbook: 287 unique IDs (0 dupes), 76 Done, 1 Deferred, 210 Not Started; MVP 76/182 (41.8%);
   R-010..R-219 backlog intact.
+
+## 2026-09-10 — R-288
+
+- Deduplicated In-Flight Generated Mutation Requests: extended the race-safety theme from fetches
+  (R-280/R-286/R-287) to writes. The generated `useCreate<Entity>` / `useUpdate<Entity>` /
+  `useDelete<Entity>` hooks previously tracked `loading` but did not prevent a second invocation while
+  one was in flight, so a double-clicked Create/Save/Delete (or a programmatic re-call) fired a duplicate
+  POST/PUT/DELETE — a data-integrity bug (duplicate records / double deletes).
+- Each mutation hook now owns `const pendingRef = useRef<Promise<T> | null>(null)` (T = `<Entity>` for
+  create/update, `void` for delete; `useRef` already imported by R-280). The callback's first statement
+  is `if (pendingRef.current) return pendingRef.current;` (dedupe → a concurrent call awaits the same
+  promise, no second request). The try/catch/finally body runs in an IIFE captured as
+  `pendingRef.current = request;` and returned; `finally` keeps `setLoading(false)` and adds
+  `pendingRef.current = null;`. The callback signatures, the underlying `api.create|update|delete<Entity>`
+  calls, and the return shape (`{ create|update|remove, mutate, loading, error, reset }`) are unchanged.
+- Fetch hooks (`useList<Entities>` R-280, `useList<Child>By<Parent>` R-286, `use<Entity>` R-287), the
+  generated API client, backend, and IR are untouched; description-only IR generation stays byte-stable.
+- Test-first: added `test_mutation_inflight_guard.py` (6 tests — create/update/delete dedupe wiring with
+  guard-before-setLoading ordering, IIFE capture, finally-clears-ref, api-call + return-shape
+  preservation, errors still reject/set-error, fetch-hooks-unchanged, and description-only stability).
+  They failed against the pre-change hooks, pass after the edit. The existing `test_nextjs_hooks.py`
+  mutation assertions needed no change — the api-call and return-shape substrings survive inside the IIFE.
+- Gates: `task verify` 829 tests pass; `task lint`, `task security:quick`, `task env:check` pass; both
+  `task builder:demo` pass; generated `useCreatePost` inspected. Implementation checkpoint `3d6eecf`.
+  0 local / 0 cloud model calls; no generated app installed/run, no DB connection.
+- Tracker: `tracker_edit_r288.py` (baseline `3d6eecf`) — R-288 (Builder) at row 9, R-287 → row 10; rows
+  1..296 contiguous, table `A4:M296`, Dashboard ranges through row 296, no `#REF!`, XLSX valid. Recounted
+  from the workbook: 288 unique IDs (0 dupes), 77 Done, 1 Deferred, 210 Not Started; MVP 77/183 (42.1%);
+  R-010..R-219 backlog intact.
