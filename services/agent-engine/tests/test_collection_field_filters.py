@@ -93,12 +93,12 @@ class CollectionFieldFiltersTests(unittest.TestCase):
     def test_collection_screen_imports_use_memo_when_filterable_fields_present(self) -> None:
         ir = _make_test_ir(with_boolean=True)
         content = render_screen_page(ir.screens[0], ir)
-        self.assertIn('import { useMemo, useState } from "react";', content)
+        self.assertIn('import { useEffect, useMemo, useState } from "react";', content)
 
     def test_collection_screen_omits_use_memo_when_no_filterable_fields(self) -> None:
         ir = _make_test_ir(with_boolean=False, with_enum=False)
         content = render_screen_page(ir.screens[0], ir)
-        self.assertIn('import { useState } from "react";', content)
+        self.assertIn('import { useEffect, useState } from "react";', content)
         self.assertNotIn("useMemo", content)
 
     def test_collection_screen_declares_filter_state_and_handlers(self) -> None:
@@ -181,7 +181,7 @@ class CollectionFieldFiltersTests(unittest.TestCase):
         ir = example_ir("minimal-blog")
         post_list_screen = next(s for s in ir.screens if s.id == "post_list")
         content = render_screen_page(post_list_screen, ir)
-        self.assertIn('import { useMemo, useState } from "react";', content)
+        self.assertIn('import { useEffect, useMemo, useState } from "react";', content)
         self.assertIn("Filters:</span>", content)
         self.assertIn("Published: Yes", content)
         self.assertIn("Published: No", content)

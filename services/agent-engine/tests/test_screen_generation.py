@@ -69,10 +69,12 @@ class ScreenGenerationTests(TestCase):
         self.assertIn("setSort,", content)
         self.assertIn("refetch,", content)
 
-        # 4. Search input bound to setSearch
+        # 4. Search input: debounced commit (R-280) — onChange updates local state only,
+        #    the debounced timer and the form submit commit via setSearch(searchInput).
         self.assertIn('type="search"', content)
         self.assertIn("placeholder=\"Search Posts...\"", content)
-        self.assertIn("setSearch(e.target.value)", content)
+        self.assertIn("setSearchInput(e.target.value)", content)
+        self.assertNotIn("setSearch(e.target.value)", content)
         self.assertIn("setSearch(searchInput)", content)
 
         # 5. Sortable table headers

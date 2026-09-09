@@ -1,38 +1,47 @@
 schema_version: 1
-task_id: R-279
-title: Global Notification Toast System & Action Feedback in Generated Next.js Web App
-status: done
+task_id: R-280
+title: Deep-Linked Collection List State + Debounced, Race-Safe Search in Generated Next.js Web App
+status: in_progress
 phase: BASIC/MVP
 founder_stage: 0
 branch: main
 goal: >-
-  Implement a lightweight, dependency-free global notification toast system in the generated Next.js web application
-  (apps/web/components/toast.tsx, apps/web/app/layout.tsx), and wire real-time toast feedback into generated
-  collection screens, detail screens, and form screens.
-tracker_ref: "R-279"
+  Make the generated Next.js collection list view URL-addressable and its data fetching correct and
+  efficient. (A) The useList<Entities> hook syncs sort/order/q/page/pageSize to the URL query string and
+  hydrates them from the URL on mount, so refresh / bookmark / share restore the exact view. (B) The
+  collection screen search input is debounced (fixed delay) so typing no longer fires one request per
+  keystroke, and useList.refetch aborts the previous in-flight request (AbortController) and ignores
+  stale responses, so rapid typing yields correct, non-flickering results. Backend already exposes
+  sort/order/q/limit/offset (R-255/258/261) and the API client already forwards a fetch signal.
+tracker_ref: "R-280"
 requirements:
-  - Implement apps/web/components/toast.tsx exporting ToastProvider and useToast hook with typed helpers (success, error, info).
-  - Floating viewport at fixed bottom-right with auto-dismiss, dismiss button, and status color accents.
-  - Wrap apps/web/app/layout.tsx with <ToastProvider>.
-  - Wire toast feedback into collection screens (single delete, bulk delete, CSV export).
-  - Wire toast feedback into detail screens (delete, JSON export).
-  - Wire toast feedback into form screens (create and update success).
-  - 100% offline, zero new external npm dependencies, zero new IR fields, strict diff invariance.
+  - useList<Entities> hydrates sort/order/q/page/pageSize from window.location.search once on mount (client-only, no hydration mismatch).
+  - useList<Entities> reflects the current list params in the URL via new URL(...) + window.history.replaceState (only non-default values written), mirroring the R-276 detail-screen deep-link pattern.
+  - useList<Entities>.refetch creates an AbortController per request, aborts the previous request, passes signal to the API call, and ignores aborted/stale responses (no setData/setError/setLoading on abort); aborts in-flight on unmount.
+  - Collection screen search input debounces committing the query to setSearch by a fixed 300ms delay (setTimeout/clearTimeout); onChange only updates the local controlled input; the form submit still searches immediately.
+  - Collection screen reflects the hydrated/deep-linked q back into the search input box.
+  - No new IR fields, no new npm dependencies, "use client" preserved, strict diff invariance across ir.description.
 acceptance_criteria:
-  - apps/web/components/toast.tsx is generated as a client component exporting ToastProvider and useToast.
-  - apps/web/app/layout.tsx imports and renders <ToastProvider>.
-  - Collection screens import useToast and emit toasts for delete and CSV export.
-  - Detail screens import useToast and emit toasts for delete and JSON export.
-  - Form screens import useToast and emit toasts on create/update success.
-  - Strict diff invariance: changing only ir.description produces byte-identical output across toast components.
-  - task verify passes (expect 755+ tests passing, 0 failures).
+  - Generated apps/web/lib/hooks.ts useList<Plural> contains a URL-hydrate useEffect (URLSearchParams over window.location.search) and a URL-sync useEffect calling window.history.replaceState with sort/order/q/page/pageSize.
+  - Generated useList<Plural>.refetch uses an AbortController (abort previous, pass signal, guard AbortError) so out-of-order responses cannot clobber state.
+  - Generated collection page.tsx debounces search (setTimeout + clearTimeout, 300) and no longer calls setSearch on every keystroke; imports useEffect.
+  - Strict diff invariance: changing only ir.description produces byte-identical hooks.ts and collection page.tsx.
+  - task verify passes (expect 760+ tests, 0 failures, new test_collection_deeplink_state.py).
   - task lint and task security:quick pass.
   - builder:demo passes for minimal-blog and rideshare-favourites.
 allowed_paths:
   - services/agent-engine/src/omnistackai_agent_engine/codegen/nextjs.py
-  - services/agent-engine/tests/test_toast_notifications.py
+  - services/agent-engine/tests/test_collection_deeplink_state.py
   - .ai/CURRENT_TASK.yaml
-  - .ai/tasks/R-279.md
+  - .ai/tasks/R-280.md
+  - .ai/PROJECT_STATE.yaml
+  - PROJECT_STATE.md
+  - .ai/WORK_LOG.md
+  - .ai/HANDOFF.md
+  - CHANGELOG.md
+  - docs/PROGRESS.md
+  - docs/RESUME_PROMPT.md
+  - R_&_D/OmniStackAI_Execution_Tracker_v6.xlsx
 forbidden_paths:
   - services/agent-engine/src/omnistackai_agent_engine/application_ir/**
   - package.json
@@ -43,10 +52,4 @@ gates:
   - task security:quick
   - task builder:demo -- minimal-blog
   - task builder:demo -- rideshare-favourites
-evidence:
-  - "task verify: 756 tests passed (0 failures, 14 new unit tests in test_toast_notifications.py)"
-  - "task lint: passed"
-  - "task security:quick: passed"
-  - "task builder:demo -- minimal-blog: passed (39 files generated)"
-  - "task builder:demo -- rideshare-favourites: passed (36 files generated)"
-  - "commit: d28fc1a feat(codegen): global notification toast system & action feedback [R-279]"
+evidence: []

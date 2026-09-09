@@ -379,7 +379,7 @@ def _hooks_file(ir: ApplicationIR) -> str:
         return "\n".join(lines)
 
     entity_names = sorted(e.name for e in ir.entities)
-    lines.append('import { useCallback, useEffect, useState, type Dispatch, type SetStateAction } from "react";')
+    lines.append('import { useCallback, useEffect, useRef, useState, type Dispatch, type SetStateAction } from "react";')
     lines.append(f'import type {{ {", ".join(entity_names)} }} from "./types";')
     lines.append('import { api, type ApiOptions } from "./api";')
     lines.append("")
@@ -508,23 +508,69 @@ def _hooks_file(ir: ApplicationIR) -> str:
                 "    }));",
                 "  }, []);",
                 "",
+                "  // R-280: abort the previous in-flight request so out-of-order responses cannot clobber state.",
+                "  const abortRef = useRef<AbortController | null>(null);",
                 "  const refetch = useCallback(async () => {",
+                "    abortRef.current?.abort();",
+                "    const controller = new AbortController();",
+                "    abortRef.current = controller;",
                 "    setLoading(true);",
                 "    setError(null);",
                 "    try {",
-                f"      const res = await api.list{plural}WithCount({{ params, ...options }});",
+                f"      const res = await api.list{plural}WithCount({{ params, signal: controller.signal, ...options }});",
+                "      if (controller.signal.aborted) return;",
                 "      setData(res.data);",
                 "      setTotal(res.total);",
                 "    } catch (err) {",
+                '      if (controller.signal.aborted || (err instanceof DOMException && err.name === "AbortError")) return;',
                 "      setError(err instanceof Error ? err : new Error(String(err)));",
                 "    } finally {",
-                "      setLoading(false);",
+                "      if (!controller.signal.aborted) setLoading(false);",
                 "    }",
                 "  }, [params, options]);",
                 "",
                 "  useEffect(() => {",
                 "    refetch();",
+                "    return () => abortRef.current?.abort();",
                 "  }, [refetch]);",
+                "",
+                "  // R-280: hydrate list state from the URL once on mount (deep-linkable views).",
+                "  useEffect(() => {",
+                '    if (typeof window === "undefined") return;',
+                "    const sp = new URLSearchParams(window.location.search);",
+                "    const next: UseListParams = {};",
+                '    const qv = sp.get("q");',
+                "    if (qv !== null) next.q = qv;",
+                '    const sortV = sp.get("sort");',
+                "    if (sortV) next.sort = sortV;",
+                '    const orderV = sp.get("order");',
+                '    if (orderV === "asc" || orderV === "desc") next.order = orderV;',
+                '    const sizeV = Number(sp.get("pageSize"));',
+                "    if (Number.isFinite(sizeV) && sizeV > 0) next.limit = sizeV;",
+                '    const pageV = Number(sp.get("page"));',
+                "    if (Number.isFinite(pageV) && pageV > 1) next.offset = (pageV - 1) * (next.limit ?? 100);",
+                "    if (Object.keys(next).length > 0) setParams((prev) => ({ ...prev, ...next }));",
+                "    // eslint-disable-next-line react-hooks/exhaustive-deps",
+                "  }, []);",
+                "",
+                "  // R-280: reflect list state in the URL so refresh/bookmark/share restore the view.",
+                "  useEffect(() => {",
+                '    if (typeof window === "undefined") return;',
+                "    const url = new URL(window.location.href);",
+                "    const limitV = params.limit ?? 100;",
+                "    const offsetV = params.offset ?? 0;",
+                "    const pageV = Math.floor(offsetV / limitV) + 1;",
+                "    const setOrDelete = (k: string, v: string | null) => {",
+                "      if (v) url.searchParams.set(k, v);",
+                "      else url.searchParams.delete(k);",
+                "    };",
+                '    setOrDelete("q", params.q ? params.q : null);',
+                '    setOrDelete("sort", params.sort && params.sort !== "id" ? params.sort : null);',
+                '    setOrDelete("order", params.order && params.order !== "asc" ? params.order : null);',
+                '    setOrDelete("page", pageV > 1 ? String(pageV) : null);',
+                '    setOrDelete("pageSize", limitV !== 100 ? String(limitV) : null);',
+                '    window.history.replaceState({}, "", url.toString());',
+                "  }, [params]);",
                 "",
                 "  return {",
                 "    data,",
@@ -1172,7 +1218,7 @@ def _collection_screen_page(screen: Screen, entity: Entity, ir: ApplicationIR, o
     if can_delete:
         hooks_import += f", useDelete{name}"
 
-    react_imports = "useMemo, useState" if filterable_fields else "useState"
+    react_imports = "useEffect, useMemo, useState" if filterable_fields else "useEffect, useState"
     lines: list[str] = [
         '"use client";',
         "",
@@ -1339,6 +1385,19 @@ def _collection_screen_page(screen: Screen, entity: Entity, ir: ApplicationIR, o
         ])
 
     lines.append('  const [searchInput, setSearchInput] = useState(params.q ?? "");')
+    lines.extend([
+        "  // R-280: debounce committed search so typing does not fetch on every keystroke.",
+        "  useEffect(() => {",
+        "    const timer = setTimeout(() => {",
+        '      if (searchInput !== (params.q ?? "")) setSearch(searchInput);',
+        "    }, 300);",
+        "    return () => clearTimeout(timer);",
+        "  }, [searchInput, params.q, setSearch]);",
+        "  // R-280: reflect the deep-linked / hydrated search term back into the input box.",
+        "  useEffect(() => {",
+        '    setSearchInput(params.q ?? "");',
+        "  }, [params.q]);",
+    ])
 
     if has_subcollections:
         lines.append('  const [selectedId, setSelectedId] = useState<string | null>(null);')
@@ -1430,7 +1489,6 @@ def _collection_screen_page(screen: Screen, entity: Entity, ir: ApplicationIR, o
         "            value={searchInput}",
         "            onChange={(e) => {",
         "              setSearchInput(e.target.value);",
-        "              setSearch(e.target.value);",
         "            }}",
         f'            placeholder="Search {plural}..."',
         '            style={{ flex: 1, padding: "8px 12px", border: "1px solid #cbd5e1", borderRadius: 6, fontSize: 14, outline: "none" }}',

@@ -82,7 +82,7 @@ class NextjsHooksUnitTests(TestCase):
         self.assertTrue(self.hooks_content.startswith('"use client";'))
 
     def test_react_imports(self) -> None:
-        self.assertIn('import { useCallback, useEffect, useState, type Dispatch, type SetStateAction } from "react";', self.hooks_content)
+        self.assertIn('import { useCallback, useEffect, useRef, useState, type Dispatch, type SetStateAction } from "react";', self.hooks_content)
         self.assertIn('import type { Comment, Post } from "./types";', self.hooks_content)
         self.assertIn('import { api, type ApiOptions } from "./api";', self.hooks_content)
 
@@ -107,7 +107,7 @@ class NextjsHooksUnitTests(TestCase):
         self.assertIn("const setPage = useCallback((newPage: number) => {", self.hooks_content)
         self.assertIn("const setSearch = useCallback((q: string) => {", self.hooks_content)
         self.assertIn('const setSort = useCallback((sort: string, order?: "asc" | "desc") => {', self.hooks_content)
-        self.assertIn("const res = await api.listPostsWithCount({ params, ...options });", self.hooks_content)
+        self.assertIn("const res = await api.listPostsWithCount({ params, signal: controller.signal, ...options });", self.hooks_content)
 
     def test_get_detail_hook_generated(self) -> None:
         self.assertIn("export function usePost(", self.hooks_content)
