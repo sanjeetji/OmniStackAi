@@ -87,7 +87,10 @@ class HookWiringTests(TestCase):
         hooks = render_hooks(_ir())
         self.assertIn("const { filters, ...baseParams } = params;", hooks)
         self.assertIn("const requestParams = { ...baseParams, ...(filters ?? {}) };", hooks)
-        self.assertIn("api.listTasksByProjectWithCount(projectId, { params: requestParams, ...options });", hooks)
+        self.assertIn(
+            "api.listTasksByProjectWithCount(projectId, { params: requestParams, ...options, signal: controller.signal });",
+            hooks,
+        )
         self.assertIn("    setFilter,", hooks)
         self.assertIn("    clearFilters,", hooks)
         self.assertGreaterEqual(hooks.count("offset: 0,"), 4)

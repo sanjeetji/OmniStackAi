@@ -1,39 +1,43 @@
 schema_version: 1
-task_id: R-285
-title: Server-Side Subcollection Filter Wiring in Generated Next.js Screens
-status: done
+task_id: R-286
+title: Race-Safe Generated Subcollection Refetches
+status: in_progress
 phase: BASIC/MVP
 founder_stage: 0
 branch: main
 goal: >-
-  Wire generated Next.js subcollection hooks and controls to R-284's allowlisted boolean/enum LIST_BY
-  query parameters so child filtering occurs on the server before pagination in both collection
-  master-detail and dedicated detail views.
-tracker_ref: "R-285"
+  Make generated useList<Child>By<Parent> hooks cancel superseded LIST_BY requests and ignore stale
+  completions so rapid parent, search, sort, pagination, or filter changes cannot overwrite current
+  subcollection state.
+tracker_ref: "R-286"
 requirements:
-  - Reuse _filterable_fields_for_entity as the single Next.js child-field allowlist.
-  - Give filterable useList<Child>By<Parent> hooks typed filter state plus setFilter and clearFilters.
-  - Flatten active filters into LIST_BY ApiOptions.params without changing the relation path parameter.
-  - Reset child offset to zero on filter change or clear.
-  - Render boolean and enum controls in both subcollection view sites using hook state.
-  - Render server-returned child rows directly; never re-filter the loaded page in the component.
-  - Preserve existing generated output for non-filterable subcollections and description-only IR changes.
+  - Give every generated LIST_BY hook its own AbortController ref.
+  - Abort the prior request before handling an empty parent ID so deselection also cancels in-flight work.
+  - Pass the internal controller signal to the typed LIST_BY client after caller options so it cannot be overridden.
+  - Ignore aborted success and AbortError paths without surfacing an error.
+  - Let only the active request clear loading state.
+  - Abort an in-flight request when the hook effect cleans up or unmounts.
+  - Preserve filter flattening, parent path scoping, and all existing public hook state/signatures.
 acceptance_criteria:
-  - A filterable child hook uses UseCollectionListParams/UseCollectionListState and an IR-derived allowlist.
-  - setFilter accepts only declared bool/enum values, clearFilters removes all, and both reset offset.
-  - LIST_BY requests flatten filters into params while preserving search, sort, limit, and offset.
-  - Both parent collection and parent detail screens render bool pills, enum selects, active count, and Reset.
-  - Empty filtered responses offer Clear filters and do not show the create-first empty state.
-  - Non-filterable minimal-blog Comment generation remains byte-compatible with R-284.
-  - Focused tests, full offline verification, lint, security, env check, and both builder demos pass.
+  - Both filterable and non-filterable subcollection hooks emit AbortController race protection.
+  - A parent becoming null aborts the previous request before data, total, and loading reset.
+  - Generated API calls retain params/requestParams and use signal ordering that caller options cannot replace.
+  - Aborted responses cannot set data, total, error, or loading for a newer request.
+  - Effect cleanup aborts the current request and description-only IR changes remain byte-identical.
+  - Focused tests, all subcollection tests, full offline verification, lint, security, env check, and both builder demos pass.
 expected_impact:
   - services/agent-engine/src/omnistackai_agent_engine/codegen/nextjs.py
+  - services/agent-engine/tests/test_subcollection_request_cancellation.py
   - services/agent-engine/tests/test_subcollection_field_filter_wiring.py
-  - focused existing subcollection tests only if exact generated output assertions require updates
+  - services/agent-engine/tests/test_collection_deeplink_state.py
+  - services/agent-engine/tests/test_nextjs_hooks.py
   - .ai task/state/handoff/work-log files, PROJECT_STATE.md, CHANGELOG.md, docs/PROGRESS.md, docs/RESUME_PROMPT.md, docs/CODEGEN.md, and execution tracker
 allowed_paths:
   - services/agent-engine/src/omnistackai_agent_engine/codegen/nextjs.py
-  - services/agent-engine/tests/**
+  - services/agent-engine/tests/test_subcollection_request_cancellation.py
+  - services/agent-engine/tests/test_subcollection_field_filter_wiring.py
+  - services/agent-engine/tests/test_collection_deeplink_state.py
+  - services/agent-engine/tests/test_nextjs_hooks.py
   - .ai/**
   - CHANGELOG.md
   - PROJECT_STATE.md
@@ -48,11 +52,12 @@ forbidden_paths:
   - package.json
   - pnpm-lock.yaml
 must_not_change:
-  - PostgreSQL, platform schemas/migrations, or R-284 backend query semantics
+  - PostgreSQL, platform schemas/migrations, or backend LIST_BY semantics
   - Section 74 monorepo layout, provider boundaries, infrastructure, or native/mobile scope
-  - Application IR schema or top-level collection filter behavior
+  - Application IR schema, top-level collection URL behavior, or public hook signatures
 gates:
-  - focused subcollection filter wiring tests
+  - focused subcollection cancellation tests
+  - all subcollection tests
   - task verify
   - task lint
   - task security:quick
@@ -65,39 +70,10 @@ model_tool_trace:
   local_calls: 0
   cloud_calls: 0
   note: Pure deterministic code generation and offline tests; no model call is needed.
-evidence:
-  - command: env PYTHONPATH=services/agent-engine/src python3 -m unittest discover -s services/agent-engine/tests -p 'test_subcollection_field_filter_wiring.py' -v
-    result: pass
-    detail: 7 focused R-285 tests pass.
-  - command: env PYTHONPATH=services/agent-engine/src python3 -m unittest discover -s services/agent-engine/tests -p 'test_subcollection*.py' -v
-    result: pass
-    detail: 63 subcollection tests pass.
-  - command: task verify
-    result: pass
-    detail: 804 agent-engine tests and all Stage 0 offline verification gates pass.
-  - command: task lint
-    result: pass
-  - command: task security:quick
-    result: pass
-  - command: task env:check
-    result: pass
-  - command: task builder:demo -- minimal-blog
-    result: pass
-  - command: task builder:demo -- rideshare-favourites
-    result: pass
-  - command: generated TypeScript artifact inspection
-    result: pass
-    detail: >-
-      Filterable useListTasksByProject output exposes allowlisted state/setters, flattens filters into
-      request params, and both generated screen variants render controls and filtered-empty recovery.
-      The tracker contains 285 unique IDs with R-285 Done, table A4:M293, dashboard formulas through
-      row 293, no formula-error tokens, a valid XLSX package, and a visually consistent rendered row.
-  - commit: 92c89b1
-    detail: feat(codegen): wire scoped collection filters [R-285]
+evidence: []
 blockers: []
 next_action: >-
-  R-285 is implemented and verified. Prepare a Standard AI Task Contract for R-286 before coding;
-  recommended offline candidate: make generated useList<Child>By<Parent> refetches race-safe with
-  AbortController so a stale parent/filter request cannot overwrite the current subcollection state.
+  Add focused failing assertions for filterable and non-filterable LIST_BY hook cancellation, then
+  implement the smallest shared AbortController sequence in the subcollection hook generator.
 next_command: >-
-  task ai:status
+  env PYTHONPATH=services/agent-engine/src python3 -m unittest discover -s services/agent-engine/tests -p 'test_subcollection_request_cancellation.py' -v

@@ -109,11 +109,14 @@ class UseListDeepLinkTests(unittest.TestCase):
         # aborts any in-flight request on unmount
         self.assertIn("return () => abortRef.current?.abort();", self.hooks)
 
-    def test_subcollection_hook_unchanged_signature(self) -> None:
-        # useList<Child>By<Parent> is intentionally out of R-280 scope: no abort/URL wiring there.
+    def test_subcollection_hook_keeps_params_and_now_uses_internal_signal(self) -> None:
+        # R-286 adds cancellation without changing the public LIST_BY signature or parameter state.
         ir = example_ir("minimal-blog")
         hooks = render_hooks(ir)
-        self.assertIn("const res = await api.listCommentsByPostWithCount(postId, { params, ...options });", hooks)
+        self.assertIn(
+            "const res = await api.listCommentsByPostWithCount(postId, { params, ...options, signal: controller.signal });",
+            hooks,
+        )
 
 
 class CollectionSearchDebounceTests(unittest.TestCase):

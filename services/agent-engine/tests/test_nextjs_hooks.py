@@ -133,7 +133,10 @@ class NextjsHooksUnitTests(TestCase):
     def test_subcollection_list_hook_generated(self) -> None:
         self.assertIn("export function useListCommentsByPost(", self.hooks_content)
         self.assertIn("postId: string | null | undefined,", self.hooks_content)
-        self.assertIn("const res = await api.listCommentsByPostWithCount(postId, { params, ...options });", self.hooks_content)
+        self.assertIn(
+            "const res = await api.listCommentsByPostWithCount(postId, { params, ...options, signal: controller.signal });",
+            self.hooks_content,
+        )
 
     def test_hooks_object_exported(self) -> None:
         self.assertIn("export const hooks = {", self.hooks_content)
