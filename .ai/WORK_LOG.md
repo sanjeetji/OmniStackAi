@@ -1426,3 +1426,36 @@
 - Tracker: `tracker_edit_r281.py` (baseline `ad94a72`) — R-281 (Builder) at row 9, R-280 → row 10; rows
   1..289 contiguous, table `A4:M289`, Dashboard ranges `B4:B289`/`H4:H289`, no `#REF!`, XML well-formed.
   Done 70. Implementation checkpoint `ad94a72`. 0 local / 0 cloud model calls; no DB.
+
+## 2026-09-09 — R-282
+
+- Founder: "continue for next task." Chose the offline candidate (server-side field filters); the Groq key
+  (offered earlier) was kept for a later live model-fabric verification. Followed the R-258 sort / R-261
+  search pattern to add per-field boolean/enum equality filters to the top-level LIST endpoints.
+- New shared `field_validation.filter_fields(entity)` — returns `(field, kind)` for boolean fields and
+  enum fields (`enum:a|b|c` rule), excluding `id`; the single source of truth for both backends and
+  OpenAPI, matching the frontend's boolean/enum selection.
+- `data_access` Python (`_python_repository`): filterable entities emit a `_list_filters(q, <field>=None…)`
+  helper and `list_`/`count_` gain the filter kwargs, building `WHERE` dynamically (q clause + `col = %s`
+  per set filter, all `%s`-parameterized). Go (`_go_entity_store`): filterable entities emit a
+  `<table>Filters(q, filters map[string]string) (string, []any)` helper — q clause `$1`, then each filter
+  `col = $len(args)+1` (bool → `v == "true"`, enum → `v`) — and `List`/`Count` take a `filters` map with
+  dynamic `LIMIT $%d OFFSET $%d`. Non-filterable entities are byte-identical (kept the exact old code paths).
+- `backend_python`: the `Op.LIST` router branch declares typed filter query params (bool → `bool | None`,
+  enum → `str | None`) and forwards them (needed threading an `entities_by_name` map into `_router_file`).
+  `backend_go`: `parseFilters(r)` added to `handlers.go` only when a filterable entity exists (via a
+  `has_filters` flag), and the `Op.LIST` handler branch calls it and threads the map into the store calls
+  (via a `filtered_entities` frozenset). `openapi.render_openapi`: filter params documented on `Op.LIST`
+  (boolean schema for bool; string + `enum` for enum).
+- Scoped to `Op.LIST`; FK-scoped `LIST_BY` subcollection queries unchanged (the trickiest `$N`
+  renumbering with the relation id is thereby avoided). No new IR field; no npm dependency;
+  standard-library-only; values never interpolated as identifiers; diff-invariant across `ir.description`.
+- 12 new stdlib offline tests in `test_field_filters_backend.py` (786 total): the helper, Python
+  repo/router, Go store/handler, OpenAPI, non-filterable-unchanged, and diff-invariance. Because
+  `minimal-blog` Post is filterable (`published` bool), updated the exact Post assertions in
+  `test_search.py`, `test_sorting.py`, `test_pagination.py`, `test_total_count.py`, and `test_route_wiring.py`
+  to the new dynamic-builder output (Comment/Driver, being non-filterable, stayed byte-identical).
+  `task verify` + `task lint` + `task security:quick` + both `builder:demo`s pass.
+- Tracker: `tracker_edit_r282.py` (baseline `198e23e`) — R-282 (Builder) at row 9, R-281 → row 10; rows
+  1..290 contiguous, table `A4:M290`, Dashboard ranges `B4:B290`/`H4:H290`, no `#REF!`, XML well-formed.
+  Done 71. Implementation checkpoint `198e23e`. 0 local / 0 cloud model calls; no DB.

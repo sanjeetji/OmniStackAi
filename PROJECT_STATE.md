@@ -5,22 +5,24 @@ Last updated: 2026-09-09T01:23:00+05:30
 Stage 0 (Founder Build Sequence, Brief Section 91) — BASIC/MVP
 
 ## Last Completed Task
-Tracker ID: R-281 — Pagination, Sort & Search Controls on Subcollection Master-Detail Lists in Generated
-Next.js Web App — DONE, `task verify` (774 agent-engine tests, 6 new in
-`test_subcollection_list_controls.py`) passing. The generated subcollection master-detail lists — in both the
-collection master-detail screen and the dedicated detail screen — now render an uncontrolled search form
-(`defaultValue` + `FormData` submit → `setSearch`), a sort `<select>` (`id` + display fields, asc/desc →
-`setSort`), and a Prev / "Page X of Y (N total)" / Next pagination footer (`setPage`/`page`/`totalPages`,
-disabled at bounds and while loading) — all driven by the already-generated `useList<Child>By<Parent>` hook,
-which already supported `limit/offset/sort/order/q` (only the render was inert). Two shared helpers
-(`_subcol_controls`, `_subcol_pagination`) wired into both render sites. Submit-based search avoids a
-per-keystroke fetch storm, so the hook internals are unchanged. No new IR field, no npm dependency, no new
-component state, strict diff invariance across `ir.description`; implementation checkpoint `ad94a72`.
-Preceded by R-225 through R-280. Additive, offline, 0 network, no DB connection.
+Tracker ID: R-282 — Server-Side Boolean/Enum Field Filters on Top-Level LIST Endpoints (Go + FastAPI +
+OpenAPI) — DONE, `task verify` (786 agent-engine tests, 12 new in `test_field_filters_backend.py`) passing.
+A top-level LIST endpoint now accepts `?<field>=<value>` for each boolean field and each enum field
+(`enum:a|b|c` validation), composed into the SQL `WHERE` alongside the existing `q` keyword search with the
+same whitelist discipline as sorting: column identifiers come only from validated IR field names, and
+filter values are always parameterized (`$N`/`%s`). A shared `field_validation.filter_fields` helper drives
+Go, FastAPI, and OpenAPI. Filterable entities use a dynamic `WHERE` builder (Python `_list_filters` helper /
+Go `<table>Filters` helper with correct `$N` numbering; bool → `v == "true"`, enum → string), while
+non-filterable entities stay byte-identical; `parseFilters` is added to Go `handlers.go` only when needed.
+Scoped to `Op.LIST` (FK-scoped `LIST_BY` subcollections unchanged) — this is the backend behind R-278's
+collection filters; wiring the frontend controls to it is R-283. Existing search/sort/pagination assertions
+were updated for the now-filterable `minimal-blog` Post. No new IR field, no npm dependency, strict diff
+invariance; implementation checkpoint `198e23e`. Preceded by R-225 through R-281. Additive, offline, 0
+network, no DB connection.
 
 **Notes:** (1) this session reconciled the execution tracker, which had drifted (R-253..R-279 shipped in
 code/tests/docs but were never added as XLSX rows) — all 27 backfilled (commit `b4537c7`); the tracker now
-shows 70 Done through R-281. (2) A Groq API key is available; live model-fabric verification with it was kept
+shows 71 Done through R-282. (2) A Groq API key is available; live model-fabric verification with it was kept
 for later per founder choice (set `GROQ_API_KEY` in the gitignored `.env` to enable — never in chat/commits).
 
 
@@ -53,11 +55,11 @@ R-221 = cross-provider fallback (done); R-222 = platform console slice (done); R
 fallback wiring (done); R-224 = Next.js console upgrade (deferred — environment-blocked).
 
 ## Next Up (queued, in order)
-1. R-282 candidate — promote boolean/enum collection filters to server-side `?field=` query params
-   (currently client-side over the loaded page only; needs a matching backend filter capability)
-2. Live-verify the model fabric with the available Groq key (Balanced gateway → groq; real cloud
+1. R-283 candidate — wire the Next.js collection filter controls (R-278) to the new backend `?field=`
+   params (R-282), replacing the client-side over-the-page filtering so filters hold across pagination
+2. R-283 candidate — extend server-side field filtering to the FK-scoped `LIST_BY` subcollection endpoints
+3. Live-verify the model fabric with the available Groq key (Balanced gateway → groq; real cloud
    inference + cost accounting) — set `GROQ_API_KEY` in the gitignored `.env`; may need a network machine
-3. Run a Tier-0 preview end to end on a network-capable machine; then live-verify an authorized driver
 4. R-224 Next.js console upgrade and R-010 native iOS remain deferred under their existing gates
 (The full offline builder AND the Tier 0-3 runtime/deploy wiring are complete: one IR ->
 web+backend monorepo -> owned Git repo, plus a local preview provider and key-activated cloud

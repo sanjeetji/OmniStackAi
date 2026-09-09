@@ -2,21 +2,24 @@ schema_version: 1
 project: OmniStackAI
 phase: BASIC/MVP
 founder_stage: 0
-current_task: R-281
+current_task: R-282
 current_status: done
 branch: main
 last_completed_task:
-  task_id: R-281
-  title: Pagination, Sort & Search Controls on Subcollection Master-Detail Lists in Generated Next.js Web App
+  task_id: R-282
+  title: Server-Side Boolean/Enum Field Filters on Top-Level LIST Endpoints (Go + FastAPI + OpenAPI)
   verification: >-
-    task verify (774 agent-engine tests, 6 new in test_subcollection_list_controls.py); the generated
-    subcollection master-detail lists (in both the collection master-detail screen and the dedicated detail
-    screen) now render an uncontrolled search form, a sort <select> (id + display fields), and a
-    Prev/Next 'Page X of Y (N total)' pagination footer, all driven by the already-generated
-    useList<Child>By<Parent> hook (setSearch/setSort/setPage) which already supported limit/offset/sort/
-    order/q; submit-based search avoids a per-keystroke fetch storm so hook internals are unchanged; no new
-    IR field, no npm dep, no new component state, diff-invariant across ir.description; task lint +
-    security:quick pass; both builder:demo pass; impl ad94a72; 0 network, no DB
+    task verify (786 agent-engine tests, 12 new in test_field_filters_backend.py); a top-level LIST
+    endpoint now accepts ?<field>=<value> for boolean and enum fields, composed into the SQL WHERE
+    alongside the existing q keyword search with the same whitelist discipline as sorting (identifiers from
+    validated IR field names only; values parameterized $N/%s). A shared field_validation.filter_fields
+    helper drives Go, FastAPI, and OpenAPI; filterable entities use a dynamic WHERE builder (Python
+    _list_filters / Go <table>Filters with correct $N numbering; bool -> v=="true", enum -> string) while
+    non-filterable entities stay byte-identical; parseFilters added to Go handlers.go only when needed.
+    Scoped to Op.LIST (LIST_BY subcollections unchanged) — the backend behind R-278's filters; frontend
+    wiring is R-283. Existing search/sort/pagination assertions updated for the now-filterable minimal-blog
+    Post; no new IR field, no npm dep, diff-invariant; task lint + security:quick pass; both builder:demo
+    pass; impl 198e23e; 0 network, no DB
   result: pass
 control_plane_database: postgresql
 model_routing_mode: balanced
@@ -28,13 +31,14 @@ product_direction: >-
   framework adapter contract -> Next.js adapter -> Git service -> preview/sandbox (needs cloud env).
 id_note: >-
   Workbook backlog owns R-010..R-219. Founder-requested tasks use IDs after R-219: R-220..R-223 done,
-  R-224 Next.js deferred (env-blocked), R-225..R-281 done. Continue from R-282.
+  R-224 Next.js deferred (env-blocked), R-225..R-282 done. Continue from R-283.
 blockers: []
 next_action: >-
-  Task R-281 (Subcollection list controls — pagination/sort/search) is implemented, verified, and complete
-  (774 tests pass; tracker current — 70 Done). Ready for Task R-282. Offline candidate: promote the
-  boolean/enum collection filters to server-side ?field= query params (currently client-side over the
-  loaded page). Founder has a Groq API key available for a future live model-fabric verification (kept
-  local-only this session per founder choice; set GROQ_API_KEY in the gitignored .env to enable, never in
-  chat/commits; this sandbox may block outbound calls to api.groq.com).
-last_updated: "2026-09-09T02:45:00+05:30"
+  Task R-282 (server-side boolean/enum field filters on top-level LIST endpoints, Go + FastAPI + OpenAPI)
+  is implemented, verified, and complete (786 tests pass; tracker current — 71 Done). Ready for Task
+  R-283: wire the generated Next.js collection filter controls (R-278) to the new backend ?field= params
+  (replacing the client-side over-the-page filtering) so filters are correct across pagination. Also
+  available offline: extend field filtering to the FK-scoped LIST_BY subcollection endpoints. Founder has
+  a Groq API key available for a future live model-fabric verification (set GROQ_API_KEY in the gitignored
+  .env, never in chat/commits; this sandbox may block outbound calls to api.groq.com).
+last_updated: "2026-09-09T03:20:00+05:30"

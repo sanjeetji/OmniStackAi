@@ -56,4 +56,4 @@ evidence:
   - "task lint: passed; task security:quick: passed"
   - "task builder:demo -- minimal-blog: passed; task builder:demo -- rideshare-favourites: passed"
   - "updated existing search/sort/pagination/total-count/wiring assertions for the now-filterable minimal-blog Post"
-  - "commit: <feat sha> feat(codegen): server-side boolean/enum field filters on LIST endpoints [R-282]"
+  - "commit: 198e23e feat(codegen): server-side boolean/enum field filters on LIST endpoints [R-282]"

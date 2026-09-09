@@ -40,7 +40,7 @@ START PROTOCOL
   `task ai:status`, `task ai:handoff`. `task verify` must stay green and network-independent.
 - Confirm git branch/HEAD/clean tree. Then restate: phase, next Tracker ID, objective, blast radius.
 
-WHAT IS ALREADY BUILT (platform generators are Python 3.13 stdlib-only, offline, in services/agent-engine; 774 tests pass)
+WHAT IS ALREADY BUILT (platform generators are Python 3.13 stdlib-only, offline, in services/agent-engine; 786 tests pass)
 - Model fabric: ModelProvider contract + registry; local Ollama adapter (runs any installed model via
   OMNISTACKAI_OLLAMA_MODEL); Balanced ModelGateway (deterministic escalation ladder, no silent cloud
   fallback, context-budget guard); key-activated cloud catalog — Anthropic/OpenAI/Google-Gemini/
@@ -124,8 +124,10 @@ export, R-272 detail deep-linking, R-273 nav shell/navbar, R-274 form CTAs, R-27
 record selector + prev/next, R-277 dirty-state guard, R-278 boolean/enum filters, R-279 toast system,
 R-280 deep-linked collection list state (URL sync of sort/order/q/page/pageSize) + debounced,
 race-safe search (AbortController refetch), R-281 pagination/sort/search controls on the subcollection
-master-detail lists (driven by the existing useList<Child>By<Parent> hook). Do NOT overwrite backlog
-rows; continue from R-282.
+master-detail lists (driven by the existing useList<Child>By<Parent> hook), R-282 server-side
+boolean/enum field filters on top-level LIST endpoints (?field= across Go + FastAPI + OpenAPI, whitelisted
+and parameterized like sort/search; frontend wiring is R-283). Do NOT overwrite backlog rows; continue
+from R-283.
 NOTE: the execution tracker was reconciled on 2026-09-09 (R-253..R-279 rows had drifted and were
 backfilled); keep it current going forward. The WHAT-IS-BUILT prose above predates R-253 — trust the
 state files and CHANGELOG for current detail.
@@ -169,5 +171,5 @@ WHAT TO DO NEXT (pick with the founder; all continue the builder), continue from
 - Deferred by governance: native mobile (R-010 etc.) until web/backend stability.
 
 Begin by reading the files above and running the start protocol, then propose the next Tracker ID
-(R-282) with its task contract before writing code. Commit to main.
+(R-283) with its task contract before writing code. Commit to main.
 ```
