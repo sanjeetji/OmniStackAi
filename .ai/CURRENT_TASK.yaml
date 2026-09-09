@@ -1,42 +1,45 @@
 schema_version: 1
-task_id: R-286
-title: Race-Safe Generated Subcollection Refetches
-status: done
+task_id: R-287
+title: Race-Safe Generated Detail Refetches
+status: in_progress
 phase: BASIC/MVP
 founder_stage: 0
 branch: main
 goal: >-
-  Make generated useList<Child>By<Parent> hooks cancel superseded LIST_BY requests and ignore stale
-  completions so rapid parent, search, sort, pagination, or filter changes cannot overwrite current
-  subcollection state.
-tracker_ref: "R-286"
+  Make generated use<Entity> detail hooks race-safe so rapid record selection, deep-link, prev/next, or
+  ID changes cannot let an older GET response overwrite the currently selected record's state. Reuse the
+  proven R-286 LIST_BY AbortController design (signal passed after caller options), scoped to the detail
+  hook only.
+tracker_ref: "R-287"
 requirements:
-  - Give every generated LIST_BY hook its own AbortController ref.
-  - Abort the prior request before handling an empty parent ID so deselection also cancels in-flight work.
-  - Pass the internal controller signal to the typed LIST_BY client after caller options so it cannot be overridden.
-  - Ignore aborted success and AbortError paths without surfacing an error.
-  - Let only the active request clear loading state.
-  - Abort an in-flight request when the hook effect cleans up or unmounts.
-  - Preserve filter flattening, parent path scoping, and all existing public hook state/signatures.
+  - Each generated use<Entity> detail hook owns an AbortController ref (useRef, already imported).
+  - refetch aborts the previous detail request before handling an empty/missing record ID.
+  - Clearing the ID cancels in-flight work and resets record/loading/error state (setData(null), setError(null), setLoading(false)).
+  - A valid ID creates and registers a new controller.
+  - Pass the internally owned signal after caller-provided options so callers cannot replace it.
+  - An aborted successful response must not update current record state.
+  - AbortError and controller-aborted failures must not surface as user errors.
+  - Only the currently active request may clear loading state.
+  - Effect cleanup aborts the active request on ID change or unmount.
+  - Preserve public hook name, params, return value, and current generated API-client behaviour.
+  - Do not alter top-level list (useList<Entities>) or LIST_BY (useList<Child>By<Parent>) hooks.
+  - Preserve deterministic generation and description-only IR stability.
 acceptance_criteria:
-  - Both filterable and non-filterable subcollection hooks emit AbortController race protection.
-  - A parent becoming null aborts the previous request before data, total, and loading reset.
-  - Generated API calls retain params/requestParams and use signal ordering that caller options cannot replace.
-  - Aborted responses cannot set data, total, error, or loading for a newer request.
-  - Effect cleanup aborts the current request and description-only IR changes remain byte-identical.
-  - Focused tests, all subcollection tests, full offline verification, lint, security, env check, and both builder demos pass.
+  - The use<Entity> hook emits `const abortRef = useRef<AbortController | null>(null);` and `abortRef.current?.abort();` before the `if (!id)` reset.
+  - The missing-ID branch resets setData(null), setError(null), setLoading(false).
+  - The GET call is `api.get<Entity>(id, { ...options, signal: controller.signal })` (signal after options); the old `api.get<Entity>(id, options)` form is gone.
+  - Success guarded by `if (controller.signal.aborted) return;` before setData; catch guarded by the AbortError check; finally clears loading only when not aborted.
+  - Effect cleanup returns `() => abortRef.current?.abort();`.
+  - List and LIST_BY hook output is unchanged; description-only IR changes remain byte-identical.
+  - Focused R-287 tests, relevant detail/hook tests, full offline verification, lint, security, env check, and both builder demos pass.
 expected_impact:
   - services/agent-engine/src/omnistackai_agent_engine/codegen/nextjs.py
-  - services/agent-engine/tests/test_subcollection_request_cancellation.py
-  - services/agent-engine/tests/test_subcollection_field_filter_wiring.py
-  - services/agent-engine/tests/test_collection_deeplink_state.py
+  - services/agent-engine/tests/test_detail_request_cancellation.py
   - services/agent-engine/tests/test_nextjs_hooks.py
-  - .ai task/state/handoff/work-log files, PROJECT_STATE.md, CHANGELOG.md, docs/PROGRESS.md, docs/RESUME_PROMPT.md, docs/CODEGEN.md, and execution tracker
+  - .ai task/state/handoff/work-log files, PROJECT_STATE.md, CHANGELOG.md, docs/CODEGEN.md, docs/PROGRESS.md, docs/RESUME_PROMPT.md, and execution tracker
 allowed_paths:
   - services/agent-engine/src/omnistackai_agent_engine/codegen/nextjs.py
-  - services/agent-engine/tests/test_subcollection_request_cancellation.py
-  - services/agent-engine/tests/test_subcollection_field_filter_wiring.py
-  - services/agent-engine/tests/test_collection_deeplink_state.py
+  - services/agent-engine/tests/test_detail_request_cancellation.py
   - services/agent-engine/tests/test_nextjs_hooks.py
   - .ai/**
   - CHANGELOG.md
@@ -52,12 +55,13 @@ forbidden_paths:
   - package.json
   - pnpm-lock.yaml
 must_not_change:
-  - PostgreSQL, platform schemas/migrations, or backend LIST_BY semantics
+  - PostgreSQL, platform schemas/migrations, or backend GET semantics
   - Section 74 monorepo layout, provider boundaries, infrastructure, or native/mobile scope
-  - Application IR schema, top-level collection URL behavior, or public hook signatures
+  - Application IR schema, generated API-client behaviour, or public hook signatures
+  - useList<Entities> (R-280) and useList<Child>By<Parent> (R-286) hook behaviour
 gates:
-  - focused subcollection cancellation tests
-  - all subcollection tests
+  - focused detail cancellation tests
+  - test_nextjs_hooks / test_detail_screen_lifecycle / test_detail_record_selector / test_subcollection_screens
   - task verify
   - task lint
   - task security:quick
@@ -70,39 +74,10 @@ model_tool_trace:
   local_calls: 0
   cloud_calls: 0
   note: Pure deterministic code generation and offline tests; no model call is needed.
-evidence:
-  - command: env PYTHONPATH=services/agent-engine/src python3 -m unittest discover -s services/agent-engine/tests -p 'test_subcollection_request_cancellation.py' -v
-    result: pass
-    detail: 6 focused R-286 cancellation tests pass.
-  - command: env PYTHONPATH=services/agent-engine/src python3 -m unittest discover -s services/agent-engine/tests -p 'test_subcollection*.py' -v
-    result: pass
-    detail: All 69 subcollection tests pass.
-  - command: task verify
-    result: pass
-    detail: 810 agent-engine tests and all Stage 0 offline verification gates pass.
-  - command: task lint
-    result: pass
-  - command: task security:quick
-    result: pass
-  - command: task env:check
-    result: pass
-  - command: task builder:demo -- minimal-blog
-    result: pass
-  - command: task builder:demo -- rideshare-favourites
-    result: pass
-  - command: generated TypeScript artifact inspection
-    result: pass
-    detail: >-
-      Filterable and non-filterable LIST_BY hooks abort before empty-parent handling, pass an internally
-      owned signal after caller options, guard success/error/finally state writes, and abort on cleanup.
-      The tracker contains 286 unique IDs with R-286 Done, table A4:M294, dashboard formulas through
-      row 294, no formula-error tokens, a valid XLSX package, and a visually consistent rendered row.
-  - commit: 3eb8bd1
-    detail: feat(codegen): cancel stale subcollection requests [R-286]
+evidence: []
 blockers: []
 next_action: >-
-  R-286 is implemented and verified. Prepare a Standard AI Task Contract for R-287 before coding;
-  recommended offline candidate: make generated use<Entity> detail refetches race-safe so rapid record
-  navigation cannot let a stale GET response overwrite the current record.
+  Write focused failing tests, apply the smallest generator change to the use<Entity> block, run all
+  gates, update the one existing detail-hook assertion, then tracker + docs + two commits + push.
 next_command: >-
-  task ai:status
+  env PYTHONPATH=services/agent-engine/src python3 -m unittest discover -s services/agent-engine/tests -p 'test_detail_request_cancellation.py' -v

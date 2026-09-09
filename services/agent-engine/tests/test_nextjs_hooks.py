@@ -112,7 +112,7 @@ class NextjsHooksUnitTests(TestCase):
     def test_get_detail_hook_generated(self) -> None:
         self.assertIn("export function usePost(", self.hooks_content)
         self.assertIn("id: string | null | undefined,", self.hooks_content)
-        self.assertIn("const item = await api.getPost(id, options);", self.hooks_content)
+        self.assertIn("const item = await api.getPost(id, { ...options, signal: controller.signal });", self.hooks_content)
         self.assertIn("setData(item);", self.hooks_content)
 
     def test_create_mutation_hook_generated(self) -> None:
