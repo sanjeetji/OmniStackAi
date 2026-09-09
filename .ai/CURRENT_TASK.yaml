@@ -1,44 +1,38 @@
 schema_version: 1
-task_id: R-284
-title: Server-Side Field Filters for FK-Scoped Subcollections
-status: done
+task_id: R-285
+title: Server-Side Subcollection Filter Wiring in Generated Next.js Screens
+status: in_progress
 phase: BASIC/MVP
 founder_stage: 0
 branch: main
 goal: >-
-  Extend the existing R-282 boolean/enum equality-filter contract from top-level LIST endpoints to
-  unambiguous FK-scoped LIST_BY subcollection endpoints. Preserve the parent relation ID as the first
-  SQL parameter, compose optional search and field filters deterministically, and keep count/list query
-  semantics aligned across generated FastAPI, Go, and OpenAPI output.
-tracker_ref: "R-284"
+  Wire generated Next.js subcollection hooks and controls to R-284's allowlisted boolean/enum LIST_BY
+  query parameters so child filtering occurs on the server before pagination in both collection
+  master-detail and dedicated detail views.
+tracker_ref: "R-285"
 requirements:
-  - Reuse field_validation.filter_fields as the single allowlist for boolean and enum fields.
-  - Add optional typed filter query parameters to generated FastAPI LIST_BY routes and forward them to both count and list repository calls.
-  - Extend generated Python LIST_BY repository methods so relation scope, q search, and equality filters share one parameterized WHERE clause.
-  - Extend generated Go LIST_BY stores and handlers with a filter map while preserving relation ID as $1, q as the next argument when present, and filter values after q.
-  - Document the same boolean/enum query parameters on LIST_BY operations in generated OpenAPI 3.1 output.
-  - Preserve byte-stable output for non-filterable subcollection entities and description-only IR changes.
+  - Reuse _filterable_fields_for_entity as the single Next.js child-field allowlist.
+  - Give filterable useList<Child>By<Parent> hooks typed filter state plus setFilter and clearFilters.
+  - Flatten active filters into LIST_BY ApiOptions.params without changing the relation path parameter.
+  - Reset child offset to zero on filter change or clear.
+  - Render boolean and enum controls in both subcollection view sites using hook state.
+  - Render server-returned child rows directly; never re-filter the loaded page in the component.
+  - Preserve existing generated output for non-filterable subcollections and description-only IR changes.
 acceptance_criteria:
-  - Python list_<table>_by_<relation> and count_<table>_by_<relation> accept each allowlisted filter and use only %s-bound values.
-  - FastAPI LIST_BY handlers declare bool | None or str | None filter parameters and forward identical filters to count and list calls.
-  - Go List<Entity>By<Relation> and Count<Entity>By<Relation> accept filters map[string]string and use a shared relation-scoped builder for matching list/count predicates.
-  - Go relation ID remains $1; a present q search uses the next placeholder; active filter placeholders follow len(args)+1; pagination placeholders follow all predicates.
-  - Go LIST_BY handlers parse and pass filters only for filterable child entities.
-  - OpenAPI LIST_BY operations expose boolean and enum filter schemas identical to top-level LIST.
-  - Existing non-filterable minimal-blog Comment LIST_BY output remains compatible and all offline gates pass.
+  - A filterable child hook uses UseCollectionListParams/UseCollectionListState and an IR-derived allowlist.
+  - setFilter accepts only declared bool/enum values, clearFilters removes all, and both reset offset.
+  - LIST_BY requests flatten filters into params while preserving search, sort, limit, and offset.
+  - Both parent collection and parent detail screens render bool pills, enum selects, active count, and Reset.
+  - Empty filtered responses offer Clear filters and do not show the create-first empty state.
+  - Non-filterable minimal-blog Comment generation remains byte-compatible with R-284.
+  - Focused tests, full offline verification, lint, security, env check, and both builder demos pass.
 expected_impact:
-  - services/agent-engine/src/omnistackai_agent_engine/codegen/data_access.py
-  - services/agent-engine/src/omnistackai_agent_engine/codegen/backend_python.py
-  - services/agent-engine/src/omnistackai_agent_engine/codegen/backend_go.py
-  - services/agent-engine/src/omnistackai_agent_engine/codegen/openapi.py
-  - services/agent-engine/tests/test_subcollection_field_filters.py
-  - focused existing codegen tests only if exact generated signatures require updates
+  - services/agent-engine/src/omnistackai_agent_engine/codegen/nextjs.py
+  - services/agent-engine/tests/test_subcollection_field_filter_wiring.py
+  - focused existing subcollection tests only if exact generated output assertions require updates
   - .ai task/state/handoff/work-log files, PROJECT_STATE.md, CHANGELOG.md, docs/PROGRESS.md, docs/RESUME_PROMPT.md, docs/CODEGEN.md, and execution tracker
 allowed_paths:
-  - services/agent-engine/src/omnistackai_agent_engine/codegen/data_access.py
-  - services/agent-engine/src/omnistackai_agent_engine/codegen/backend_python.py
-  - services/agent-engine/src/omnistackai_agent_engine/codegen/backend_go.py
-  - services/agent-engine/src/omnistackai_agent_engine/codegen/openapi.py
+  - services/agent-engine/src/omnistackai_agent_engine/codegen/nextjs.py
   - services/agent-engine/tests/**
   - .ai/**
   - CHANGELOG.md
@@ -47,52 +41,34 @@ allowed_paths:
   - R_&_D/OmniStackAI_Execution_Tracker_v6.xlsx
 forbidden_paths:
   - services/agent-engine/src/omnistackai_agent_engine/application_ir/**
-  - services/agent-engine/src/omnistackai_agent_engine/codegen/nextjs.py
+  - services/agent-engine/src/omnistackai_agent_engine/codegen/data_access.py
+  - services/agent-engine/src/omnistackai_agent_engine/codegen/backend_python.py
+  - services/agent-engine/src/omnistackai_agent_engine/codegen/backend_go.py
+  - services/agent-engine/src/omnistackai_agent_engine/codegen/openapi.py
   - package.json
   - pnpm-lock.yaml
 must_not_change:
-  - PostgreSQL or platform schemas/migrations
+  - PostgreSQL, platform schemas/migrations, or R-284 backend query semantics
   - Section 74 monorepo layout, provider boundaries, infrastructure, or native/mobile scope
-  - Application IR schema, top-level LIST behavior, or Next.js client/UI behavior
+  - Application IR schema or top-level collection filter behavior
 gates:
+  - focused subcollection filter wiring tests
   - task verify
   - task lint
   - task security:quick
+  - task env:check
   - task builder:demo -- minimal-blog
   - task builder:demo -- rideshare-favourites
-  - generated-artifact inspection
+  - generated TypeScript artifact inspection
 model_tool_trace:
   routing: deterministic_only
   local_calls: 0
   cloud_calls: 0
   note: Pure deterministic code generation and offline tests; no model call is needed.
-evidence:
-  - command: task verify
-    result: pass
-    detail: 797 agent-engine tests pass, including 8 focused R-284 subcollection-filter tests.
-  - command: task lint
-    result: pass
-  - command: task security:quick
-    result: pass
-  - command: task env:check
-    result: pass
-  - command: task builder:demo -- minimal-blog
-    result: pass
-  - command: task builder:demo -- rideshare-favourites
-    result: pass
-  - command: generated-artifact inspection
-    result: pass
-    detail: >-
-      Generated FastAPI repository/router files parse with Python AST; generated Go store/handler files
-      parse through gofmt; OpenAPI LIST_BY filter parameters and relation/search/filter placeholder order
-      were inspected. Tracker has 284 unique IDs, R-284 Done, table A4:M292, dashboard ranges through row
-      292, no formula-error tokens, a valid XLSX package, and a visually consistent rendered row.
-  - commit: 0bfb91d
-    detail: feat(codegen): filter scoped subcollections [R-284]
+evidence: []
 blockers: []
 next_action: >-
-  R-284 is implemented and verified. Prepare a Standard AI Task Contract for R-285 before coding;
-  recommended offline candidate: wire generated Next.js subcollection filter controls and hook state to
-  the R-284 LIST_BY query parameters, preserving non-filterable output and avoiding page-local filtering.
+  Add focused failing tests for a filterable child hook and both subcollection UI sites, then implement
+  the smallest shared hook/control extension without changing backend, IR, or top-level list behavior.
 next_command: >-
-  task ai:status
+  env PYTHONPATH=services/agent-engine/src python3 -m unittest discover -s services/agent-engine/tests -p 'test_subcollection_field_filter_wiring.py' -v

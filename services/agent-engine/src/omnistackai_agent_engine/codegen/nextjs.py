@@ -437,6 +437,7 @@ def _hooks_file(ir: ApplicationIR) -> str:
     ])
 
     repo_entities = frozenset(e.name for e in ir.entities)
+    entities_by_name = {e.name: e for e in ir.entities}
     fk_by_entity = fk_relations(ir)
 
     ops_by_entity = _get_ops_by_entity(ir)
@@ -453,6 +454,7 @@ def _hooks_file(ir: ApplicationIR) -> str:
                     subcollections.append((wiring.entity, wiring.relation, wiring.id_param or "id"))
 
     hook_names: list[str] = []
+    emitted_filter_options: set[str] = set()
 
     for entity in ir.entities:
         name = entity.name
@@ -473,6 +475,7 @@ def _hooks_file(ir: ApplicationIR) -> str:
                     f"const {filter_options_name}: Record<string, readonly string[]> = {json.dumps(filter_options, sort_keys=True)};",
                     "",
                 ])
+                emitted_filter_options.add(filter_options_name)
             lines.extend([
                 f"export function {hook_name}(",
                 f"  initialParams: {params_type} = {{}},",
@@ -807,13 +810,25 @@ def _hooks_file(ir: ApplicationIR) -> str:
         rel_pascal = _pascal(relation)
         hook_name = f"useList{plural}By{rel_pascal}"
         hook_names.append(hook_name)
+        child_model = entities_by_name[child_entity]
+        filterable_fields = _filterable_fields_for_entity(child_model)
+        params_type = "UseCollectionListParams" if filterable_fields else "UseListParams"
+        state_type = "UseCollectionListState" if filterable_fields else "UseListState"
+        filter_options_name = f"{child_entity[:1].lower() + child_entity[1:]}FilterOptions"
+        if filterable_fields and filter_options_name not in emitted_filter_options:
+            filter_options = {field.name: options for field, _, options in filterable_fields}
+            lines.extend([
+                f"const {filter_options_name}: Record<string, readonly string[]> = {json.dumps(filter_options, sort_keys=True)};",
+                "",
+            ])
+            emitted_filter_options.add(filter_options_name)
         lines.extend([
             f"export function {hook_name}(",
             f"  {id_p}: string | null | undefined,",
-            "  initialParams: UseListParams = {},",
+            f"  initialParams: {params_type} = {{}},",
             "  options?: ApiOptions",
-            f"): UseListState<{child_entity}> {{",
-            "  const [params, setParams] = useState<UseListParams>({",
+            f"): {state_type}<{child_entity}> {{",
+            f"  const [params, setParams] = useState<{params_type}>({{",
             "    limit: 100,",
             "    offset: 0,",
             '    sort: "id",',
@@ -864,6 +879,24 @@ def _hooks_file(ir: ApplicationIR) -> str:
             "    }));",
             "  }, []);",
             "",
+            *([
+                "  const setFilter = useCallback((field: string, value: string) => {",
+                "    setParams((prev) => {",
+                "      const filters = { ...(prev.filters ?? {}) };",
+                f'      if (value && value !== "all" && {filter_options_name}[field]?.includes(value)) {{',
+                "        filters[field] = value;",
+                "      } else {",
+                "        delete filters[field];",
+                "      }",
+                "      return { ...prev, filters: Object.keys(filters).length > 0 ? filters : undefined, offset: 0 };",
+                "    });",
+                "  }, []);",
+                "",
+                "  const clearFilters = useCallback(() => {",
+                "    setParams((prev) => ({ ...prev, filters: undefined, offset: 0 }));",
+                "  }, []);",
+                "",
+            ] if filterable_fields else []),
             "  const refetch = useCallback(async () => {",
             f"    if (!{id_p}) {{",
             "      setData(null);",
@@ -873,8 +906,12 @@ def _hooks_file(ir: ApplicationIR) -> str:
             "    }",
             "    setLoading(true);",
             "    setError(null);",
+            *([
+                "    const { filters, ...baseParams } = params;",
+                "    const requestParams = { ...baseParams, ...(filters ?? {}) };",
+            ] if filterable_fields else []),
             "    try {",
-            f"      const res = await api.list{plural}By{rel_pascal}WithCount({id_p}, {{ params, ...options }});",
+            f"      const res = await api.list{plural}By{rel_pascal}WithCount({id_p}, {{ {'params: requestParams' if filterable_fields else 'params'}, ...options }});",
             "      setData(res.data);",
             "      setTotal(res.total);",
             "    } catch (err) {",
@@ -902,6 +939,7 @@ def _hooks_file(ir: ApplicationIR) -> str:
             "    setPageSize,",
             "    setSearch,",
             "    setSort,",
+            *(["    setFilter,", "    clearFilters,"] if filterable_fields else []),
             "    refetch,",
             "  };",
             "}",
@@ -1133,6 +1171,7 @@ def _subcol_controls(sub: "SubcollectionInfo", s_var: str) -> list[str]:
     already-exposed useList<Child>By<Parent> setters (setSearch / setSort). No new component state."""
     child_lower = sub.child_plural.lower()
     sort_fields = ["id"] + [f.name for f in sub.display_fields if f.name != "id"]
+    filterable_fields = _filterable_fields_for_entity(sub.child_entity)
     lines = [
         f"                {{{s_var}.data && (",
         '                  <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap", marginBottom: 12 }}>',
@@ -1163,9 +1202,58 @@ def _subcol_controls(sub: "SubcollectionInfo", s_var: str) -> list[str]:
     lines.extend([
         "                    </select>",
         "                  </div>",
-        "                )}",
     ])
+    if filterable_fields:
+        lines.extend([
+            '                  <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap", marginBottom: 12, padding: "8px 10px", background: "#f8fafc", borderRadius: 6 }}>',
+            '                    <span style={{ fontSize: 12, fontWeight: 600, color: "#475569" }}>Filters:</span>',
+        ])
+        for field, kind, options in filterable_fields:
+            label = _title_case(field.name)
+            if kind == "boolean":
+                lines.extend([
+                    f'                    <button type="button" onClick={{() => {s_var}.setFilter("{field.name}", "all")}} style={{{{ padding: "3px 8px", border: "1px solid #cbd5e1", borderRadius: 12, fontSize: 12, cursor: "pointer", background: !{s_var}.params.filters?.{field.name} ? "#0f172a" : "#fff", color: !{s_var}.params.filters?.{field.name} ? "#fff" : "#475569" }}}}>All</button>',
+                    f'                    <button type="button" onClick={{() => {s_var}.setFilter("{field.name}", "true")}} style={{{{ padding: "3px 8px", border: "1px solid #cbd5e1", borderRadius: 12, fontSize: 12, cursor: "pointer", background: {s_var}.params.filters?.{field.name} === "true" ? "#0f172a" : "#fff", color: {s_var}.params.filters?.{field.name} === "true" ? "#fff" : "#475569" }}}}>{label}: Yes</button>',
+                    f'                    <button type="button" onClick={{() => {s_var}.setFilter("{field.name}", "false")}} style={{{{ padding: "3px 8px", border: "1px solid #cbd5e1", borderRadius: 12, fontSize: 12, cursor: "pointer", background: {s_var}.params.filters?.{field.name} === "false" ? "#0f172a" : "#fff", color: {s_var}.params.filters?.{field.name} === "false" ? "#fff" : "#475569" }}}}>{label}: No</button>',
+                ])
+            else:
+                lines.extend([
+                    "                    <select",
+                    f'                      aria-label="Filter {child_lower} by {label}"',
+                    f'                      value={{{s_var}.params.filters?.{field.name} ?? "all"}}',
+                    f'                      onChange={{(e) => {s_var}.setFilter("{field.name}", e.target.value)}}',
+                    '                      style={{ padding: "4px 8px", border: "1px solid #cbd5e1", borderRadius: 4, fontSize: 12, background: "#fff" }}',
+                    "                    >",
+                    f'                      <option value="all">All {label}s</option>',
+                ])
+                for option in options:
+                    lines.append(f'                      <option value="{option}">{_title_case(option)}</option>')
+                lines.append("                    </select>")
+        lines.extend([
+            f"                    {{Object.keys({s_var}.params.filters ?? {{}}).length > 0 && (",
+            '                      <span style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 12, color: "#1d4ed8" }}>',
+            f"                        {{Object.keys({s_var}.params.filters ?? {{}}).length}} active",
+            f'                        <button type="button" onClick={{{s_var}.clearFilters}} style={{{{ padding: "3px 7px", border: "1px solid #93c5fd", background: "#fff", color: "#1d4ed8", borderRadius: 4, fontSize: 12, cursor: "pointer" }}}}>Reset</button>',
+            "                      </span>",
+            "                    )}",
+            "                  </div>",
+        ])
+    lines.append("                )}")
     return lines
+
+
+def _subcol_filtered_empty(sub: "SubcollectionInfo", s_var: str) -> list[str]:
+    """R-285: recovery state when a server-filtered subcollection returns no rows."""
+    if not _filterable_fields_for_entity(sub.child_entity):
+        return []
+    return [
+        f"                {{{s_var}.data && {s_var}.data.length === 0 && Object.keys({s_var}.params.filters ?? {{}}).length > 0 && (",
+        '                  <div style={{ padding: 18, textAlign: "center", color: "#64748b", fontSize: 14, background: "#f8fafc", borderRadius: 6, display: "flex", flexDirection: "column", alignItems: "center", gap: 8 }}>',
+        f"                    <div>No {sub.child_plural} match the active filter criteria.</div>",
+        f'                    <button type="button" onClick={{{s_var}.clearFilters}} style={{{{ padding: "5px 10px", border: "1px solid #cbd5e1", background: "#fff", color: "#2563eb", borderRadius: 4, fontSize: 12, cursor: "pointer" }}}}>Clear filters</button>',
+        "                  </div>",
+        "                )}",
+    ]
 
 
 def _subcol_pagination(s_var: str) -> list[str]:
@@ -2127,8 +2215,12 @@ def _collection_screen_page(screen: Screen, entity: Entity, ir: ApplicationIR, o
                     "                )}",
                 ])
             lines.extend(_subcol_controls(sub, s_var))
+            lines.extend(_subcol_filtered_empty(sub, s_var))
+            empty_guard = f"{s_var}.data && {s_var}.data.length === 0"
+            if _filterable_fields_for_entity(sub.child_entity):
+                empty_guard += f" && Object.keys({s_var}.params.filters ?? {{}}).length === 0"
             lines.extend([
-                f"                {{{s_var}.data && {s_var}.data.length === 0 && (",
+                f"                {{{empty_guard} && (",
             ])
             if child_form:
                 lines.extend([
@@ -3388,8 +3480,12 @@ def _detail_screen_page(screen: Screen, entity: Entity, ir: ApplicationIR, ops: 
                     "                )}",
                 ])
             lines.extend(_subcol_controls(sub, s_var))
+            lines.extend(_subcol_filtered_empty(sub, s_var))
+            empty_guard = f"{s_var}.data && {s_var}.data.length === 0"
+            if _filterable_fields_for_entity(sub.child_entity):
+                empty_guard += f" && Object.keys({s_var}.params.filters ?? {{}}).length === 0"
             lines.extend([
-                f"                {{{s_var}.data && {s_var}.data.length === 0 && (",
+                f"                {{{empty_guard} && (",
             ])
             if child_form:
                 lines.extend([
