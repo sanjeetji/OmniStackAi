@@ -1067,6 +1067,72 @@ def _subcollections_for_parent(parent_name: str, ir: ApplicationIR) -> list[Subc
     return result
 
 
+def _subcol_controls(sub: "SubcollectionInfo", s_var: str) -> list[str]:
+    """R-281: an uncontrolled search form + a sort <select> for a subcollection list, driven by the
+    already-exposed useList<Child>By<Parent> setters (setSearch / setSort). No new component state."""
+    child_lower = sub.child_plural.lower()
+    sort_fields = ["id"] + [f.name for f in sub.display_fields if f.name != "id"]
+    lines = [
+        f"                {{{s_var}.data && (",
+        '                  <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap", marginBottom: 12 }}>',
+        "                    <form",
+        f'                      onSubmit={{(e) => {{ e.preventDefault(); {s_var}.setSearch(((new FormData(e.currentTarget).get("q") as string) ?? "").trim()); }}}}',
+        '                      style={{ display: "flex", gap: 6, flex: 1, minWidth: 200 }}',
+        "                    >",
+        "                      <input",
+        '                        type="search"',
+        '                        name="q"',
+        f'                        defaultValue={{{s_var}.params.q ?? ""}}',
+        f'                        placeholder="Search {child_lower}..."',
+        '                        style={{ flex: 1, padding: "6px 10px", border: "1px solid #cbd5e1", borderRadius: 4, fontSize: 13 }}',
+        "                      />",
+        '                      <button type="submit" style={{ padding: "6px 12px", background: "#2563eb", color: "#fff", border: "none", borderRadius: 4, fontSize: 13, fontWeight: 500, cursor: "pointer" }}>Search</button>',
+        "                    </form>",
+        "                    <select",
+        f'                      aria-label="Sort {child_lower}"',
+        f'                      value={{`${{{s_var}.params.sort ?? "id"}}:${{{s_var}.params.order ?? "asc"}}`}}',
+        f'                      onChange={{(e) => {{ const [sf, so] = e.target.value.split(":"); {s_var}.setSort(sf, so as "asc" | "desc"); }}}}',
+        '                      style={{ padding: "6px 10px", border: "1px solid #cbd5e1", borderRadius: 4, fontSize: 13, background: "#fff" }}',
+        "                    >",
+    ]
+    for f_name in sort_fields:
+        label = _title_case(f_name)
+        lines.append(f'                      <option value="{f_name}:asc">{label} ↑</option>')
+        lines.append(f'                      <option value="{f_name}:desc">{label} ↓</option>')
+    lines.extend([
+        "                    </select>",
+        "                  </div>",
+        "                )}",
+    ])
+    return lines
+
+
+def _subcol_pagination(s_var: str) -> list[str]:
+    """R-281: a Prev / Page X of Y (N total) / Next footer for a subcollection list, driven by the
+    already-exposed useList<Child>By<Parent> setPage / page / totalPages / total."""
+    return [
+        f"                {{{s_var}.totalPages > 1 && (",
+        '                  <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginTop: 12, gap: 8 }}>',
+        "                    <button",
+        f"                      onClick={{() => {s_var}.setPage({s_var}.page - 1)}}",
+        f"                      disabled={{{s_var}.page <= 1 || {s_var}.loading}}",
+        f'                      style={{{{ padding: "4px 10px", border: "1px solid #cbd5e1", background: "#fff", color: "#334155", borderRadius: 4, fontSize: 12, cursor: ({s_var}.page <= 1 || {s_var}.loading) ? "default" : "pointer" }}}}',
+        "                    >",
+        "                      Previous",
+        "                    </button>",
+        f'                    <span style={{{{ fontSize: 12, color: "#64748b" }}}}>Page {{{s_var}.page}} of {{{s_var}.totalPages}} ({{{s_var}.total}} total)</span>',
+        "                    <button",
+        f"                      onClick={{() => {s_var}.setPage({s_var}.page + 1)}}",
+        f"                      disabled={{{s_var}.page >= {s_var}.totalPages || {s_var}.loading}}",
+        f'                      style={{{{ padding: "4px 10px", border: "1px solid #cbd5e1", background: "#fff", color: "#334155", borderRadius: 4, fontSize: 12, cursor: ({s_var}.page >= {s_var}.totalPages || {s_var}.loading) ? "default" : "pointer" }}}}',
+        "                    >",
+        "                      Next",
+        "                    </button>",
+        "                  </div>",
+        "                )}",
+    ]
+
+
 @dataclass(frozen=True)
 class ParentRelationInfo:
     field_name: str
@@ -2016,6 +2082,7 @@ def _collection_screen_page(screen: Screen, entity: Entity, ir: ApplicationIR, o
                     f'                  <div style={{{{ padding: "8px 12px", background: "#fef2f2", border: "1px solid #fecaca", borderRadius: 6, color: "#991b1b", fontSize: 13, marginBottom: 12 }}}}>Error deleting {c_name.lower()}: {{delete{c_name}Error.message}}</div>',
                     "                )}",
                 ])
+            lines.extend(_subcol_controls(sub, s_var))
             lines.extend([
                 f"                {{{s_var}.data && {s_var}.data.length === 0 && (",
             ])
@@ -2078,6 +2145,9 @@ def _collection_screen_page(screen: Screen, entity: Entity, ir: ApplicationIR, o
                 "                    ))}",
                 "                  </div>",
                 "                )}",
+            ])
+            lines.extend(_subcol_pagination(s_var))
+            lines.extend([
                 "              </div>",
                 "            )}",
             ])
@@ -3273,6 +3343,7 @@ def _detail_screen_page(screen: Screen, entity: Entity, ir: ApplicationIR, ops: 
                     f'                  <div style={{{{ padding: "8px 12px", background: "#fef2f2", border: "1px solid #fecaca", borderRadius: 6, color: "#991b1b", fontSize: 13, marginBottom: 12 }}}}>Error deleting {c_name.lower()}: {{delete{c_name}Error.message}}</div>',
                     "                )}",
                 ])
+            lines.extend(_subcol_controls(sub, s_var))
             lines.extend([
                 f"                {{{s_var}.data && {s_var}.data.length === 0 && (",
             ])
@@ -3335,6 +3406,9 @@ def _detail_screen_page(screen: Screen, entity: Entity, ir: ApplicationIR, ops: 
                 "                    ))}",
                 "                  </div>",
                 "                )}",
+            ])
+            lines.extend(_subcol_pagination(s_var))
+            lines.extend([
                 "              </div>",
                 "            )}",
             ])

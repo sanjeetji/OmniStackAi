@@ -1,39 +1,35 @@
 schema_version: 1
-task_id: R-280
-title: Deep-Linked Collection List State + Debounced, Race-Safe Search in Generated Next.js Web App
+task_id: R-281
+title: Pagination, Sort & Search Controls on Subcollection Master-Detail Lists in Generated Next.js Web App
 status: done
 phase: BASIC/MVP
 founder_stage: 0
 branch: main
 goal: >-
-  Make the generated Next.js collection list view URL-addressable and its data fetching correct and
-  efficient. (A) The useList<Entities> hook syncs sort/order/q/page/pageSize to the URL query string and
-  hydrates them from the URL on mount, so refresh / bookmark / share restore the exact view. (B) The
-  collection screen search input is debounced (fixed delay) so typing no longer fires one request per
-  keystroke, and useList.refetch aborts the previous in-flight request (AbortController) and ignores
-  stale responses, so rapid typing yields correct, non-flickering results. Backend already exposes
-  sort/order/q/limit/offset (R-255/258/261) and the API client already forwards a fetch signal.
-tracker_ref: "R-280"
+  Close the survey-identified gap B: the generated subcollection master-detail lists render only
+  `{sub.data.map(...)}` with no controls, even though the backend subcollection endpoints and the
+  generated `useList<Child>By<Parent>` hook already fully support limit/offset/sort/order/q. Add a search
+  form, a sort <select>, and a Prev/Next pagination footer to the subcollection lists in BOTH render
+  sites (the collection master-detail screen and the dedicated detail screen), all driven by the existing
+  hook setters (setSearch/setSort/setPage). The founder chose this offline option ("R-281 offline only").
+tracker_ref: "R-281"
 requirements:
-  - useList<Entities> hydrates sort/order/q/page/pageSize from window.location.search once on mount (client-only, no hydration mismatch).
-  - useList<Entities> reflects the current list params in the URL via new URL(...) + window.history.replaceState (only non-default values written), mirroring the R-276 detail-screen deep-link pattern.
-  - useList<Entities>.refetch creates an AbortController per request, aborts the previous request, passes signal to the API call, and ignores aborted/stale responses (no setData/setError/setLoading on abort); aborts in-flight on unmount.
-  - Collection screen search input debounces committing the query to setSearch by a fixed 300ms delay (setTimeout/clearTimeout); onChange only updates the local controlled input; the form submit still searches immediately.
-  - Collection screen reflects the hydrated/deep-linked q back into the search input box.
-  - No new IR fields, no new npm dependencies, "use client" preserved, strict diff invariance across ir.description.
+  - Add a shared `_subcol_controls(sub, s_var)` helper emitting an uncontrolled search <form> (defaultValue + FormData on submit -> setSearch) and a sort <select> (id + display fields, asc/desc -> setSort).
+  - Add a shared `_subcol_pagination(s_var)` helper emitting a Prev / "Page X of Y (N total)" / Next footer driven by page/totalPages/total/setPage, disabled at bounds and while loading.
+  - Wire both helpers into the collection master-detail subcollection block AND the detail-screen subcollection block (identical insertion points).
+  - No new component state (uncontrolled search input); no new IR field; no new npm dependency; "use client" preserved; strict diff invariance across ir.description.
+  - Subcollection hook internals (abort/debounce) intentionally unchanged; submit-based search avoids a per-keystroke fetch storm.
 acceptance_criteria:
-  - Generated apps/web/lib/hooks.ts useList<Plural> contains a URL-hydrate useEffect (URLSearchParams over window.location.search) and a URL-sync useEffect calling window.history.replaceState with sort/order/q/page/pageSize.
-  - Generated useList<Plural>.refetch uses an AbortController (abort previous, pass signal, guard AbortError) so out-of-order responses cannot clobber state.
-  - Generated collection page.tsx debounces search (setTimeout + clearTimeout, 300) and no longer calls setSearch on every keystroke; imports useEffect.
-  - Strict diff invariance: changing only ir.description produces byte-identical hooks.ts and collection page.tsx.
-  - task verify passes (expect 760+ tests, 0 failures, new test_collection_deeplink_state.py).
-  - task lint and task security:quick pass.
-  - builder:demo passes for minimal-blog and rideshare-favourites.
+  - Both the collection master-detail page and the detail page render, per subcollection, the search form, the sort select (id + display-field options in both directions), and the pagination footer, all referencing the `<child>Subcol` hook.
+  - Entities without subcollections (e.g. rideshare-favourites) emit no subcollection controls.
+  - The subcollection search input is uncontrolled (no `useState`-backed sub-search state).
+  - Strict diff invariance: changing only ir.description yields byte-identical list and detail pages.
+  - task verify passes (expect 770+ tests, new test_subcollection_list_controls.py); task lint + security:quick pass; both builder:demo pass.
 allowed_paths:
   - services/agent-engine/src/omnistackai_agent_engine/codegen/nextjs.py
-  - services/agent-engine/tests/test_collection_deeplink_state.py
+  - services/agent-engine/tests/test_subcollection_list_controls.py
   - .ai/CURRENT_TASK.yaml
-  - .ai/tasks/R-280.md
+  - .ai/tasks/R-281.md
   - .ai/PROJECT_STATE.yaml
   - PROJECT_STATE.md
   - .ai/WORK_LOG.md
@@ -53,8 +49,7 @@ gates:
   - task builder:demo -- minimal-blog
   - task builder:demo -- rideshare-favourites
 evidence:
-  - "task verify: 768 tests passed (0 failures, 12 new in test_collection_deeplink_state.py)"
+  - "task verify: 774 tests passed (0 failures, 6 new in test_subcollection_list_controls.py)"
   - "task lint: passed; task security:quick: passed"
   - "task builder:demo -- minimal-blog: passed; task builder:demo -- rideshare-favourites: passed"
-  - "updated existing assertions in test_nextjs_hooks.py (useRef import + refetch signal), test_screen_generation.py (debounced onChange), test_collection_field_filters.py (useEffect import)"
-  - "commit: 7a6b9b5 feat(codegen): deep-linked collection list state + debounced, race-safe search [R-280]"
+  - "commit: <feat sha> feat(codegen): pagination/sort/search controls on subcollection lists [R-281]"
