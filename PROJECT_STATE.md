@@ -5,19 +5,23 @@ Last updated: 2026-09-09T18:48:50+05:30
 Stage 0 (Founder Build Sequence, Brief Section 91) — BASIC/MVP
 
 ## Last Completed Task
-Tracker ID: R-286 — Race-Safe Generated Subcollection Refetches — DONE, `task verify` (810
-agent-engine tests, 6 focused R-286 tests; all 69 subcollection tests) passing. Every generated
-`useList<Child>By<Parent>` hook now aborts superseded LIST_BY requests before empty-parent handling,
-uses an internally owned signal that caller options cannot override, ignores aborted success/error
-completions, lets only the active request clear loading, and aborts on dependency cleanup/unmount.
-Filter flattening, parent scoping, public hook signatures, and description-only generation stability
-remain intact. No IR, backend, dependency, database, infrastructure, network, or model change;
-implementation checkpoint `3eb8bd1`. Preceded by R-225 through R-285.
+Tracker ID: R-287 — Race-Safe Generated Detail Refetches — DONE, `task verify` (823 agent-engine tests,
+13 focused R-287 tests) passing. The generated `use<Entity>` detail hook now owns an `AbortController`
+ref and cancels a superseded GET so a stale response cannot overwrite the currently selected record
+during rapid record-selector / prev-next / deep-link / id changes. `refetch` aborts the previous request
+before the `if (!id)` reset (which also clears error), a valid id registers a fresh controller, the GET
+passes the internal signal AFTER caller options (`api.get<Entity>(id, { ...options, signal:
+controller.signal })`) so callers cannot replace it, aborted success and `AbortError` completions are
+ignored, only the active request clears loading, and the effect aborts on id change/unmount. The public
+hook shape, the generated API client, list and LIST_BY hooks, backend, IR, and description-only stability
+are all preserved. No IR, backend, dependency, database, infrastructure, network, or model change;
+implementation checkpoint `793804e`. Preceded by R-225 through R-286. This was the last generated
+data-fetch path without cancellation — LIST (R-280), LIST_BY (R-286), and detail GET (R-287) are now all
+race-safe.
 
-**Notes:** (1) the tracker is current through R-286: 75 Done, 1 Deferred, 210 Not Started across 286
-tasks; MVP is 75/181 (41.4%). The earlier reported R-251 MVP baseline of 145 was one low: direct recount
-is 146, and R-252..R-286 added 35 rows, producing 181. (2) A Groq API key may be available; live
-model-fabric verification remains separate (set it only in gitignored `.env`, never chat/commits).
+**Notes:** (1) the tracker is current through R-287: 76 Done, 1 Deferred, 210 Not Started across 287
+tasks; MVP is 76/182 (41.8%). (2) A Groq API key may be available; live model-fabric verification remains
+separate (set it only in gitignored `.env`, never chat/commits).
 
 
 
@@ -49,8 +53,9 @@ R-221 = cross-provider fallback (done); R-222 = platform console slice (done); R
 fallback wiring (done); R-224 = Next.js console upgrade (deferred — environment-blocked).
 
 ## Next Up (queued, in order)
-1. R-287 candidate — make generated `use<Entity>` detail refetches race-safe with `AbortController`
-   so stale record requests cannot overwrite current detail state during rapid navigation
+1. R-288 candidate — harden any remaining generated fetch/mutation path not yet race-safe or debounced
+   (e.g. debounced subcollection search input, mutation in-flight guards), or a further generated-app UX
+   increment (all three data-fetch paths — LIST, LIST_BY, detail GET — are now race-safe as of R-287)
 2. Live-verify the model fabric with the available Groq key (Balanced gateway → groq; real cloud
    inference + cost accounting) — set `GROQ_API_KEY` in the gitignored `.env`; may need a network machine
 3. R-224 Next.js console upgrade and R-010 native iOS remain deferred under their existing gates

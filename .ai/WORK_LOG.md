@@ -1548,3 +1548,32 @@
   Counts: 75 Done, 1 Deferred, 210 Not Started; MVP 75/181 (41.4%).
 - Deterministic/offline work: 0 local model calls, 0 cloud calls, no generated app installed/run, no DB
   connection, and no IR, backend, dependency, database, infrastructure, or top-level-layout change.
+
+## 2026-09-10 — R-287
+
+- Race-Safe Generated Detail Refetches: closed the last un-cancelled generated fetch path. The
+  `use<Entity>` detail hook (`nextjs.py` `_hooks_file`, the `# 2. use<Entity>` block) previously awaited
+  `api.get<Entity>(id, options)` and unconditionally `setData(item)`, so a stale GET could overwrite the
+  currently selected record during rapid record-selector / prev-next / deep-link / id changes. R-280
+  (LIST) and R-286 (LIST_BY) were already race-safe; this brings the detail hook to parity.
+- Applied the R-286 template: the hook owns `const abortRef = useRef<AbortController | null>(null)`
+  (`useRef` already imported by R-280); `refetch` calls `abortRef.current?.abort()` BEFORE the `if (!id)`
+  reset (which now also `setError(null)` alongside `setData(null)`/`setLoading(false)`); a valid id
+  registers a fresh controller; the GET call passes the internal signal AFTER caller options
+  (`api.get<Entity>(id, { ...options, signal: controller.signal })`) so callers cannot replace it;
+  success/catch/finally are guarded on `controller.signal.aborted` (+ the `AbortError` check); and the
+  effect returns `() => abortRef.current?.abort()`. The generated API client forwards `signal` through
+  `request(...)`'s `...init` spread, so no api-client change was needed.
+- Test-first: added `test_detail_request_cancellation.py` (13 tests — abort-before-missing-ID ordering,
+  missing-ID resets data/error/loading, signal-after-options, stale-success guard, AbortError ignored,
+  active-only loading clear, effect-cleanup abort, public-shape preservation, description-only
+  byte-stability, and an adapter-level generated-project check). They failed against the pre-change hook,
+  pass after the edit. Updated the one existing exact-output assertion in `test_nextjs_hooks.py`
+  (`getPost` call → signal-bearing form). List, LIST_BY, backend, API client, and IR unchanged.
+- Gates: `task verify` 823 tests pass; `task lint`, `task security:quick`, `task env:check` pass; both
+  `task builder:demo` pass; generated `useArticle` detail hook inspected. Implementation checkpoint
+  `793804e`. 0 local / 0 cloud model calls; no generated app installed/run, no DB connection.
+- Tracker: `tracker_edit_r287.py` (baseline `793804e`) — R-287 (Builder) at row 9, R-286 → row 10; rows
+  1..295 contiguous, table `A4:M295`, Dashboard ranges through row 295, no `#REF!`, XLSX valid. Recounted
+  from the workbook: 287 unique IDs (0 dupes), 76 Done, 1 Deferred, 210 Not Started; MVP 76/182 (41.8%);
+  R-010..R-219 backlog intact.

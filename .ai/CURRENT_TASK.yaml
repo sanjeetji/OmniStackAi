@@ -1,7 +1,7 @@
 schema_version: 1
 task_id: R-287
 title: Race-Safe Generated Detail Refetches
-status: in_progress
+status: done
 phase: BASIC/MVP
 founder_stage: 0
 branch: main
@@ -74,10 +74,38 @@ model_tool_trace:
   local_calls: 0
   cloud_calls: 0
   note: Pure deterministic code generation and offline tests; no model call is needed.
-evidence: []
+evidence:
+  - command: env PYTHONPATH=services/agent-engine/src python3 -m unittest discover -s services/agent-engine/tests -p 'test_detail_request_cancellation.py'
+    result: pass
+    detail: 13 focused R-287 detail-cancellation tests pass (they failed first against the pre-change hook).
+  - command: task verify
+    result: pass
+    detail: 823 agent-engine tests and all Stage 0 offline verification gates pass.
+  - command: task lint
+    result: pass
+  - command: task security:quick
+    result: pass
+  - command: task env:check
+    result: pass
+  - command: task builder:demo -- minimal-blog
+    result: pass
+  - command: task builder:demo -- rideshare-favourites
+    result: pass
+  - command: generated TypeScript artifact inspection
+    result: pass
+    detail: >-
+      The generated useArticle detail hook owns an abortRef, aborts before the !id reset (which clears
+      data/error/loading), registers a fresh controller for a valid id, calls
+      api.getArticle(id, { ...options, signal: controller.signal }), guards success/catch/finally on
+      controller.signal.aborted, and returns () => abortRef.current?.abort() from its effect. List and
+      LIST_BY hooks unchanged. Tracker: 287 unique IDs, R-287 Done, table A4:M295, dashboard formulas
+      through row 295, no #REF!, valid XLSX; 76 Done / 1 Deferred / 210 Not Started; MVP 76/182 (41.8%).
+  - commit: 793804e
+    detail: feat(codegen)- cancel stale detail requests [R-287]
 blockers: []
 next_action: >-
-  Write focused failing tests, apply the smallest generator change to the use<Entity> block, run all
-  gates, update the one existing detail-hook assertion, then tracker + docs + two commits + push.
+  R-287 is complete and verified. Next unstarted Tracker ID is R-288 (do not begin it). Recommended
+  offline candidate: harden any remaining generated fetch path not yet race-safe/debounced, or a further
+  generated-app UX increment — propose with the founder at R-288 kickoff.
 next_command: >-
-  env PYTHONPATH=services/agent-engine/src python3 -m unittest discover -s services/agent-engine/tests -p 'test_detail_request_cancellation.py' -v
+  task ai:status

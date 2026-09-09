@@ -1,10 +1,10 @@
 # Current Handoff
 
-Task ID: R-286
+Task ID: R-287
 Status: done
 Phase: BASIC/MVP — Founder Stage 0
 Branch: `main` (the only branch; the GitHub default)
-Implementation SHA: `3eb8bd1`
+Implementation SHA: `793804e`
 
 ## Repo/workflow state
 
@@ -13,35 +13,39 @@ Implementation SHA: `3eb8bd1`
 - Commits use `sanjeetji <sk698166@gmail.com>` as author. A permitted tooling co-author trailer may be
   added, but the founder remains the primary author.
 
-## Completed (R-286) — Race-Safe Generated Subcollection Refetches
+## Completed (R-287) — Race-Safe Generated Detail Refetches
 
-Every generated `useList<Child>By<Parent>` hook now prevents superseded LIST_BY responses from
-overwriting the current child state during rapid parent or query changes.
+The generated `use<Entity>` detail hook now cancels a superseded GET so a stale response cannot
+overwrite the currently selected record during rapid record-selector / prev-next / deep-link / id
+changes. This was the last generated fetch path without cancellation (R-280 covered `useList<Entities>`,
+R-286 covered `useList<Child>By<Parent>`).
 
-- Each subcollection hook owns an `AbortController` ref and aborts the prior request before checking
-  for a missing parent ID, so deselection also cancels in-flight work.
-- Valid requests install a fresh controller and pass its signal after caller options, preventing the
-  internal race-safety signal from being replaced.
-- Aborted successes and `AbortError` failures do not update data, total, error, or loading. Only the
-  active request clears loading, and effect cleanup aborts on dependency change or unmount.
-- Filterable hooks preserve flattened R-285 query params; non-filterable hooks preserve public state
-  and signatures. No IR, backend, dependency, PostgreSQL, infrastructure, or layout change was made.
+- The hook owns an `AbortController` ref; `refetch` aborts the previous request before the `if (!id)`
+  reset (which now also clears `error`), and a valid id registers a fresh controller.
+- The GET call passes the internal signal AFTER caller options
+  (`api.get<Entity>(id, { ...options, signal: controller.signal })`), so callers cannot replace the
+  cancellation signal. The generated API client already forwards `signal` — no client change.
+- Aborted successes and `AbortError` failures are ignored; only the active request clears loading; the
+  effect returns `() => abortRef.current?.abort()`.
+- Public hook name/params/return, list and LIST_BY hooks, backend, IR, and description-only stability
+  are all preserved.
 
 ## Verification
 
-- `task verify` — pass (810 agent-engine tests; 6 focused R-286 tests).
-- All 69 `test_subcollection*.py` tests — pass.
+- `task verify` — pass (823 agent-engine tests; 13 focused R-287 tests in
+  `test_detail_request_cancellation.py`, written test-first).
 - `task lint`, `task security:quick`, `task env:check` — pass.
 - `task builder:demo -- minimal-blog`, `task builder:demo -- rideshare-favourites` — pass.
-- Generated filterable and non-filterable LIST_BY hook output inspected.
-- Tracker — R-286 at `Phase_Roadmap!A9:M9`; table `A4:M294`; Dashboard formulas reach row 294; 286
-  unique IDs; 75 Done, 1 Deferred, 210 Not Started; MVP 75/181 (41.4%); XLSX archive and visual render
-  verified.
+- Generated `useArticle` detail hook inspected end-to-end. Only one existing assertion changed
+  (`test_nextjs_hooks.py`, the `getPost` call → signal-bearing form).
+- Tracker — R-287 at `Phase_Roadmap!A9:M9`; table `A4:M295`; Dashboard formulas reach row 295; 287
+  unique IDs (0 dupes); 76 Done, 1 Deferred, 210 Not Started; MVP 76/182 (41.8%); no `#REF!`; XLSX
+  archive validated.
 - 0 local model calls / 0 cloud calls; no generated app installed/run, no DB connection.
 
 ## Blockers and risks
 
-- No blocker for the offline R-287 candidate. Live preview/deploy and R-224 still need a
+- No blocker for the offline R-288 candidate. Live preview/deploy and R-224 still need a
   network-capable environment and/or authorized provider keys. Native mobile remains deferred under
   Brief Sections 25 and 91.
 - A Groq key may be available for a future separately authorized live model-fabric verification. Keep
@@ -49,10 +53,11 @@ overwriting the current child state during rapid parent or query changes.
 
 ## Next action
 
-Continue from R-287. Recommended smallest offline candidate: make generated `use<Entity>` detail
-refetches race-safe with `AbortController`, ensuring rapid record selector/prev-next navigation cannot
-let an older GET response overwrite the currently selected record. Record the R-287 Standard AI Task
-Contract before coding.
+Continue from **R-288** (the next unstarted Tracker ID — do not begin it without kickoff). All three
+generated data-fetch paths (LIST, LIST_BY, detail GET) are now race-safe. Recommended offline candidate:
+harden any remaining generated fetch path not yet race-safe/debounced (e.g. debounced subcollection
+search, or mutation in-flight guards), or a further generated-app UX increment. Record the R-288
+Standard AI Task Contract before coding.
 
 ## Next command
 

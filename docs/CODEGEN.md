@@ -929,6 +929,24 @@ after rapid parent, search, sort, pagination, or filter changes:
 - Filterable hooks retain the R-285 flattened query params; non-filterable hooks retain their public
   types and state shape. No Application IR, API, backend, dependency, or database behavior changed.
 
+### Race-Safe Generated Detail Refetches (R-287)
+
+The generated `use<Entity>` single-record detail hook now prevents an older GET from overwriting the
+currently selected record during rapid record-selector / prev-next / deep-link / id changes — closing the
+last generated data-fetch path without cancellation (LIST is R-280, LIST_BY is R-286):
+
+- The hook owns an `AbortController` ref; `refetch` calls `abortRef.current?.abort()` before the
+  `if (!id)` reset, so clearing the selection also cancels in-flight work. The missing-id branch resets
+  `data`, `error`, and `loading`.
+- A valid id installs a fresh controller and issues
+  `api.get<Entity>(id, { ...options, signal: controller.signal })` — the internal signal is passed AFTER
+  caller options so a caller cannot replace the hook's cancellation signal. (The generated API client
+  already forwards `signal` through `request(...)`'s `...init` spread, so no client change was needed.)
+- A `controller.signal.aborted` check guards the success write, the `catch` ignores aborted/`AbortError`
+  failures, only the active request clears loading, and effect cleanup aborts on id change or unmount.
+- The public hook name/params/return, `useList<Entities>` and `useList<Child>By<Parent>` hooks, backend,
+  and Application IR are unchanged; description-only IR generation stays byte-identical.
+
 ### Global Notification Toast System & Action Feedback (R-279)
 
 Adds a lightweight, accessible, and self-contained client-side toast notification system to generated Next.js web applications:
