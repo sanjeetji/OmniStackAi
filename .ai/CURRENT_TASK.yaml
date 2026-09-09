@@ -1,39 +1,44 @@
 schema_version: 1
-task_id: R-283
-title: Server-Side Collection Filter Wiring in Generated Next.js Screens
-status: done
+task_id: R-284
+title: Server-Side Field Filters for FK-Scoped Subcollections
+status: in_progress
 phase: BASIC/MVP
 founder_stage: 0
 branch: main
 goal: >-
-  Replace R-278's client-side boolean/enum filtering over the currently loaded page with request-level
-  filters in the generated top-level useList hook. Existing collection controls must send the exact
-  R-282 backend query keys and option values, reset pagination, refetch through the existing race-safe
-  request path, render server-returned data directly, and preserve the existing toolbar and empty-state
-  experience. Scope is top-level collection screens only.
-tracker_ref: "R-283"
+  Extend the existing R-282 boolean/enum equality-filter contract from top-level LIST endpoints to
+  unambiguous FK-scoped LIST_BY subcollection endpoints. Preserve the parent relation ID as the first
+  SQL parameter, compose optional search and field filters deterministically, and keep count/list query
+  semantics aligned across generated FastAPI, Go, and OpenAPI output.
+tracker_ref: "R-284"
 requirements:
-  - Extend generated top-level list state with optional string filters and deterministic filter setters; changing or clearing filters resets offset to zero.
-  - Merge active filters into the list API request query params so R-282 boolean/enum backend filters apply before pagination.
-  - Wire generated boolean pills and enum selects to the hook filter setters using the exact IR field name and option value; all/empty removes the parameter.
-  - Remove page-local useMemo/data.filter filtering and render the server-returned list directly while retaining active-filter counts, Reset, and no-results recovery.
-  - Keep URL deep-linking coherent by hydrating and syncing only the known filterable field keys for each top-level list hook.
-  - Entities without boolean/enum fields emit no filter controls; no IR schema field, backend change, npm dependency, platform dependency, or model call.
+  - Reuse field_validation.filter_fields as the single allowlist for boolean and enum fields.
+  - Add optional typed filter query parameters to generated FastAPI LIST_BY routes and forward them to both count and list repository calls.
+  - Extend generated Python LIST_BY repository methods so relation scope, q search, and equality filters share one parameterized WHERE clause.
+  - Extend generated Go LIST_BY stores and handlers with a filter map while preserving relation ID as $1, q as the next argument when present, and filter values after q.
+  - Document the same boolean/enum query parameters on LIST_BY operations in generated OpenAPI 3.1 output.
+  - Preserve byte-stable output for non-filterable subcollection entities and description-only IR changes.
 acceptance_criteria:
-  - UseCollectionListParams exposes filters as Record<string, string>; filterable top-level list state exposes setFilter and clearFilters without changing LIST_BY hooks.
-  - setFilter omits empty/all values, clearFilters removes every filter, and both reset offset to page one.
-  - The top-level list request forwards filters as ordinary query parameters together with pagination, search, and sort parameters.
-  - Collection controls call setFilter with field.name keys; Clear/Reset call clearFilters; displayData is data ?? [] and no generated useMemo/data.filter block remains.
-  - URL hydration/sync accepts only generated allowlisted filter field names and writes only active values.
-  - Description-only IR changes produce byte-identical hooks, API client, and collection screen output; non-filterable entities emit no filter UI.
-  - task verify, task lint, task security:quick, and both builder demos pass with real output; generated page.tsx, lib/hooks.ts, and lib/api.ts are inspected.
+  - Python list_<table>_by_<relation> and count_<table>_by_<relation> accept each allowlisted filter and use only %s-bound values.
+  - FastAPI LIST_BY handlers declare bool | None or str | None filter parameters and forward identical filters to count and list calls.
+  - Go List<Entity>By<Relation> and Count<Entity>By<Relation> accept filters map[string]string and use a shared relation-scoped builder for matching list/count predicates.
+  - Go relation ID remains $1; a present q search uses the next placeholder; active filter placeholders follow len(args)+1; pagination placeholders follow all predicates.
+  - Go LIST_BY handlers parse and pass filters only for filterable child entities.
+  - OpenAPI LIST_BY operations expose boolean and enum filter schemas identical to top-level LIST.
+  - Existing non-filterable minimal-blog Comment LIST_BY output remains compatible and all offline gates pass.
 expected_impact:
-  - services/agent-engine/src/omnistackai_agent_engine/codegen/nextjs.py
-  - services/agent-engine/tests/test_collection_field_filters.py
-  - focused existing Next.js codegen tests if exact generated assertions require updates
+  - services/agent-engine/src/omnistackai_agent_engine/codegen/data_access.py
+  - services/agent-engine/src/omnistackai_agent_engine/codegen/backend_python.py
+  - services/agent-engine/src/omnistackai_agent_engine/codegen/backend_go.py
+  - services/agent-engine/src/omnistackai_agent_engine/codegen/openapi.py
+  - services/agent-engine/tests/test_subcollection_field_filters.py
+  - focused existing codegen tests only if exact generated signatures require updates
   - .ai task/state/handoff/work-log files, PROJECT_STATE.md, CHANGELOG.md, docs/PROGRESS.md, docs/RESUME_PROMPT.md, docs/CODEGEN.md, and execution tracker
 allowed_paths:
-  - services/agent-engine/src/omnistackai_agent_engine/codegen/nextjs.py
+  - services/agent-engine/src/omnistackai_agent_engine/codegen/data_access.py
+  - services/agent-engine/src/omnistackai_agent_engine/codegen/backend_python.py
+  - services/agent-engine/src/omnistackai_agent_engine/codegen/backend_go.py
+  - services/agent-engine/src/omnistackai_agent_engine/codegen/openapi.py
   - services/agent-engine/tests/**
   - .ai/**
   - CHANGELOG.md
@@ -42,16 +47,13 @@ allowed_paths:
   - R_&_D/OmniStackAI_Execution_Tracker_v6.xlsx
 forbidden_paths:
   - services/agent-engine/src/omnistackai_agent_engine/application_ir/**
-  - services/agent-engine/src/omnistackai_agent_engine/codegen/backend_python.py
-  - services/agent-engine/src/omnistackai_agent_engine/codegen/backend_go.py
-  - services/agent-engine/src/omnistackai_agent_engine/codegen/data_access.py
-  - services/agent-engine/src/omnistackai_agent_engine/codegen/openapi.py
+  - services/agent-engine/src/omnistackai_agent_engine/codegen/nextjs.py
   - package.json
   - pnpm-lock.yaml
 must_not_change:
   - PostgreSQL or platform schemas/migrations
   - Section 74 monorepo layout, provider boundaries, infrastructure, or native/mobile scope
-  - Application IR schema or R-282 backend filter contract
+  - Application IR schema, top-level LIST behavior, or Next.js client/UI behavior
 gates:
   - task verify
   - task lint
@@ -63,17 +65,11 @@ model_tool_trace:
   routing: deterministic_only
   local_calls: 0
   cloud_calls: 0
-  note: Pure deterministic code generation and tests; no model call is needed.
-evidence:
-  - "task verify: 789 tests passed (0 failures; 3 new focused server-filter wiring tests)"
-  - "task lint: passed; task security:quick: passed"
-  - "task builder:demo -- minimal-blog: passed; task builder:demo -- rideshare-favourites: passed"
-  - "generated minimal-blog apps/web/app/post_list/page.tsx, lib/hooks.ts, and lib/api.ts inspected"
-  - "tracker: R-283 at Phase_Roadmap row 9; 283 unique IDs; rows 1..291; table A4:M291; Done 72"
-  - "implementation commit: d0c9e84"
+  note: Pure deterministic code generation and offline tests; no model call is needed.
+evidence: []
 blockers: []
 next_action: >-
-  R-283 is complete. Continue from R-284; the smallest offline candidate is extending the same
-  boolean/enum server-side filters to FK-scoped LIST_BY subcollection endpoints. The live Groq
-  model-fabric verification remains available separately when the founder chooses to use the key.
-next_command: task ai:status
+  Add focused failing tests for a filterable child entity, then implement the smallest shared
+  FastAPI/Go/OpenAPI LIST_BY filter extension without changing top-level LIST or Next.js output.
+next_command: >-
+  python3 -m unittest discover -s services/agent-engine/tests -p 'test_subcollection_field_filters.py' -v

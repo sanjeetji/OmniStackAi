@@ -192,8 +192,8 @@ def render_openapi(ir: ApplicationIR) -> dict[str, Any]:
                 },
             ])
 
-            # R-282: per-field equality filters (boolean + enum) on top-level LIST endpoints.
-            if wiring.op is Op.LIST and entity_obj is not None:
+            # R-282/R-284: equality filters on top-level and FK-scoped list endpoints.
+            if entity_obj is not None:
                 for field, kind in filter_fields(entity_obj):
                     if kind == "bool":
                         schema: dict[str, Any] = {"type": "boolean"}

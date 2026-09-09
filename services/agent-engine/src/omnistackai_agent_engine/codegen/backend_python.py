@@ -167,10 +167,14 @@ def _router_file(
             lines.append('    response.headers["X-Total-Count"] = str(total)')
             lines.append(f"    return await {wiring.table}.list_{wiring.table}(limit=limit, offset=offset, sort=sort, order=order, q=q{fcall})")
         elif wiring.op is Op.LIST_BY:
-            lines.append(f'async def {fn}({wiring.id_param}: str, response: Response, limit: int = 100, offset: int = 0, sort: str = "id", order: str = "asc", q: str | None = None) -> list[dict]:')
-            lines.append(f"    total = await {wiring.table}.count_{wiring.table}_by_{wiring.relation}({wiring.id_param}, q=q)")
+            entity_obj = entities_by_name.get(wiring.entity) if entities_by_name else None
+            ffields = filter_fields(entity_obj) if entity_obj else []
+            fsig = "".join(f", {f.name}: {'bool' if kind == 'bool' else 'str'} | None = None" for f, kind in ffields)
+            fcall = "".join(f", {f.name}={f.name}" for f, _ in ffields)
+            lines.append(f'async def {fn}({wiring.id_param}: str, response: Response, limit: int = 100, offset: int = 0, sort: str = "id", order: str = "asc", q: str | None = None{fsig}) -> list[dict]:')
+            lines.append(f"    total = await {wiring.table}.count_{wiring.table}_by_{wiring.relation}({wiring.id_param}, q=q{fcall})")
             lines.append('    response.headers["X-Total-Count"] = str(total)')
-            lines.append(f"    return await {wiring.table}.list_{wiring.table}_by_{wiring.relation}({wiring.id_param}, limit=limit, offset=offset, sort=sort, order=order, q=q)")
+            lines.append(f"    return await {wiring.table}.list_{wiring.table}_by_{wiring.relation}({wiring.id_param}, limit=limit, offset=offset, sort=sort, order=order, q=q{fcall})")
         elif wiring.op is Op.GET:
             lines.append(f"async def {fn}({wiring.id_param}: str) -> dict:")
             lines.append(f"    row = await {wiring.table}.get_{wiring.table}({wiring.id_param})")

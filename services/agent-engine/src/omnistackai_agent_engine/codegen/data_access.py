@@ -207,9 +207,49 @@ def _python_update(entity: Entity, table: str) -> str:
 
 def _python_filtered_lists(entity: Entity, table: str, cols: list[str] | None = None) -> str:
     searchable = _searchable_fields(entity)
+    filters = filter_fields(entity)
+    filter_names = [field.name for field, _ in filters]
+    filter_kwargs = "".join(f", {name}=None" for name in filter_names)
+    filter_call = "".join(f", {name}={name}" for name in filter_names)
     parts = []
     for relation in _fk_relation_names(entity):
-        if searchable:
+        filters_helper = ""
+        if filters:
+            helper_name = f"_list_by_{relation}_filters"
+            helper = [
+                f"def {helper_name}({relation}_id, q=None{filter_kwargs}):",
+                f'    conditions: list[str] = ["{relation}_id = %s"]',
+                f"    params: list[Any] = [{relation}_id]",
+            ]
+            if searchable:
+                search_or = " OR ".join(f"{field} ILIKE %s" for field in searchable)
+                helper += [
+                    "    if q:",
+                    f'        conditions.append("({search_or})")',
+                    f'        params.extend([f"%{{q}}%"] * {len(searchable)})',
+                ]
+            for name in filter_names:
+                helper += [
+                    f"    if {name} is not None:",
+                    f'        conditions.append("{name} = %s")',
+                    f"        params.append({name})",
+                ]
+            helper += [
+                '    return " WHERE " + " AND ".join(conditions), params',
+                "",
+                "",
+            ]
+            filters_helper = "\n".join(helper)
+            list_exec = (
+                f"        where, params = {helper_name}({relation}_id, q{filter_call})\n"
+                '        sql = f"SELECT * FROM {TABLE}{where} ORDER BY {sort_col} {sort_dir} LIMIT %s OFFSET %s"\n'
+                "        await cur.execute(sql, (*params, limit, offset))\n"
+            )
+            count_exec = (
+                f"        where, params = {helper_name}({relation}_id, q{filter_call})\n"
+                '        await cur.execute(f"SELECT COUNT(*) AS count FROM {TABLE}{where}", tuple(params))\n'
+            )
+        elif searchable:
             search_or = " OR ".join(f"{f} ILIKE %s" for f in searchable)
             list_exec = (
                 '        if q:\n'
@@ -236,13 +276,14 @@ def _python_filtered_lists(entity: Entity, table: str, cols: list[str] | None = 
             )
         parts.append(
             "\n\n"
-            f'async def list_{table}_by_{relation}({relation}_id: str, limit: int = 100, offset: int = 0, sort: str = "id", order: str = "asc", q: str | None = None) -> list[dict[str, Any]]:\n'
+            f"{filters_helper}"
+            f'async def list_{table}_by_{relation}({relation}_id: str, limit: int = 100, offset: int = 0, sort: str = "id", order: str = "asc", q: str | None = None{filter_kwargs}) -> list[dict[str, Any]]:\n'
             '    sort_col = sort if sort in ALLOWED_SORT_FIELDS else "id"\n'
             '    sort_dir = "DESC" if order.lower() == "desc" else "ASC"\n'
             "    async with await connect() as conn, conn.cursor() as cur:\n"
             f"{list_exec}"
             "        return await cur.fetchall()\n\n\n"
-            f"async def count_{table}_by_{relation}({relation}_id: str, q: str | None = None) -> int:\n"
+            f"async def count_{table}_by_{relation}({relation}_id: str, q: str | None = None{filter_kwargs}) -> int:\n"
             "    async with await connect() as conn, conn.cursor() as cur:\n"
             f"{count_exec}"
             "        row = await cur.fetchone()\n"
@@ -477,10 +518,55 @@ def _go_filtered_lists(entity: Entity, table: str, col_list: str, scan_targets: 
         cols = [field.name for field in entity.fields]
     sort_block = _go_sort_whitelist_block(cols)
     searchable = _searchable_fields(entity)
+    filters = filter_fields(entity)
+    filters_param = ", filters map[string]string" if filters else ""
     parts = []
     for relation in _fk_relation_names(entity):
         rel_pascal = _pascal(relation)
-        if searchable:
+        filters_helper = ""
+        if filters:
+            helper_name = f"{table}By{rel_pascal}Filters"
+            helper_lines = [
+                f"func {helper_name}({relation}ID, q string, filters map[string]string) (string, []any) {{",
+                f'\tconds := []string{{"{relation}_id = $1"}}',
+                f"\targs := []any{{{relation}ID}}",
+            ]
+            if searchable:
+                search_or = " OR ".join(f"{field} ILIKE $%[1]d" for field in searchable)
+                helper_lines += [
+                    '\tif q != "" {',
+                    f'\t\tconds = append(conds, fmt.Sprintf("({search_or})", len(args)+1))',
+                    '\t\targs = append(args, "%"+q+"%")',
+                    "\t}",
+                ]
+            for field, kind in filters:
+                coerce = 'v == "true"' if kind == "bool" else "v"
+                helper_lines += [
+                    f'\tif v, ok := filters["{field.name}"]; ok && v != "" {{',
+                    f'\t\tconds = append(conds, fmt.Sprintf("{field.name} = $%d", len(args)+1))',
+                    f"\t\targs = append(args, {coerce})",
+                    "\t}",
+                ]
+            helper_lines += [
+                '\treturn " WHERE " + strings.Join(conds, " AND "), args',
+                "}",
+                "",
+                "",
+            ]
+            filters_helper = "\n".join(helper_lines)
+            sub_list_query = (
+                f"\twhere, args := {helper_name}({relation}ID, q, filters)\n"
+                f'\tquery := fmt.Sprintf("SELECT {col_list} FROM {table}%s ORDER BY %s %s LIMIT $%d OFFSET $%d", where, col, dir, len(args)+1, len(args)+2)\n'
+                "\targs = append(args, limit, offset)\n"
+                "\trows, err := db.QueryContext(ctx, query, args...)\n"
+            )
+            sub_count_query = (
+                f"\twhere, args := {helper_name}({relation}ID, q, filters)\n"
+                "\tvar count int\n"
+                f'\tquery := fmt.Sprintf("SELECT COUNT(*) FROM {table}%s", where)\n'
+                "\terr := db.QueryRowContext(ctx, query, args...).Scan(&count)\n"
+            )
+        elif searchable:
             search_or = " OR ".join(f"{f} ILIKE $2" for f in searchable)
             sub_list_query = (
                 f'\tvar rows *sql.Rows\n'
@@ -515,7 +601,8 @@ def _go_filtered_lists(entity: Entity, table: str, col_list: str, scan_targets: 
 
         parts.append(
             "\n"
-            f"func List{pascal}By{rel_pascal}(ctx context.Context, db *sql.DB, {relation}ID string, limit, offset int, sort, order, q string) ([]models.{pascal}, error) {{\n"
+            f"{filters_helper}"
+            f"func List{pascal}By{rel_pascal}(ctx context.Context, db *sql.DB, {relation}ID string, limit, offset int, sort, order, q string{filters_param}) ([]models.{pascal}, error) {{\n"
             f"{sort_block}"
             f"{sub_list_query}"
             "\tif err != nil {\n\t\treturn nil, err\n\t}\n"
@@ -528,7 +615,7 @@ def _go_filtered_lists(entity: Entity, table: str, col_list: str, scan_targets: 
             "\t}\n"
             "\treturn out, rows.Err()\n"
             "}\n\n"
-            f"func Count{pascal}By{rel_pascal}(ctx context.Context, db *sql.DB, {relation}ID string, q string) (int, error) {{\n"
+            f"func Count{pascal}By{rel_pascal}(ctx context.Context, db *sql.DB, {relation}ID string, q string{filters_param}) (int, error) {{\n"
             f"{sub_count_query}"
             "\treturn count, err\n"
             "}\n"

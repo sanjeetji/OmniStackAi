@@ -249,9 +249,16 @@ def _handlers_file_wired(
             lines.append("\tlimit, offset := parsePagination(r)")
             lines.append("\tsort, order := parseSort(r)")
             lines.append("\tq := parseSearch(r)")
-            lines.append(f'\ttotal, err := store.Count{wiring.entity}By{rel_pascal}(r.Context(), h.DB, r.PathValue("{wiring.id_param}"), q)')
+            if wiring.entity in filtered_entities:
+                lines.append("\tfilters := parseFilters(r)")
+                count_call = f'store.Count{wiring.entity}By{rel_pascal}(r.Context(), h.DB, r.PathValue("{wiring.id_param}"), q, filters)'
+                list_call = f'store.List{wiring.entity}By{rel_pascal}(r.Context(), h.DB, r.PathValue("{wiring.id_param}"), limit, offset, sort, order, q, filters)'
+            else:
+                count_call = f'store.Count{wiring.entity}By{rel_pascal}(r.Context(), h.DB, r.PathValue("{wiring.id_param}"), q)'
+                list_call = f'store.List{wiring.entity}By{rel_pascal}(r.Context(), h.DB, r.PathValue("{wiring.id_param}"), limit, offset, sort, order, q)'
+            lines.append(f"\ttotal, err := {count_call}")
             lines.append("\tif err != nil {\n\t\thttp.Error(w, err.Error(), http.StatusInternalServerError)\n\t\treturn\n\t}")
-            lines.append(f'\titems, err := store.List{wiring.entity}By{rel_pascal}(r.Context(), h.DB, r.PathValue("{wiring.id_param}"), limit, offset, sort, order, q)')
+            lines.append(f"\titems, err := {list_call}")
             lines.append("\tif err != nil {\n\t\thttp.Error(w, err.Error(), http.StatusInternalServerError)\n\t\treturn\n\t}")
             lines.append('\tw.Header().Set("X-Total-Count", strconv.Itoa(total))')
             lines.append("\twriteJSON(w, http.StatusOK, items)")
