@@ -1,7 +1,7 @@
 schema_version: 1
 task_id: R-289
 title: Debounced Live Subcollection Search in Generated Next.js Web App
-status: in_progress
+status: done
 phase: BASIC/MVP
 founder_stage: 0
 branch: main
@@ -68,10 +68,38 @@ model_tool_trace:
   local_calls: 0
   cloud_calls: 0
   note: Pure deterministic code generation and offline tests; no model call is needed.
-evidence: []
+evidence:
+  - command: env PYTHONPATH=services/agent-engine/src python3 -m unittest discover -s services/agent-engine/tests -p 'test_subcollection_search_debounce.py'
+    result: pass
+    detail: 5 focused R-289 tests pass (they failed first against the pre-change submit-only form).
+  - command: task verify
+    result: pass
+    detail: 834 agent-engine tests and all Stage 0 offline verification gates pass; R-281 subcollection-controls search assertions updated to the controlled form.
+  - command: task lint
+    result: pass
+  - command: task security:quick
+    result: pass
+  - command: task env:check
+    result: pass
+  - command: task builder:demo -- minimal-blog
+    result: pass
+  - command: task builder:demo -- rideshare-favourites
+    result: pass
+  - command: generated TypeScript artifact inspection
+    result: pass
+    detail: >-
+      Generated post_list subcollection carries `const [commentsSubcolSearch, setCommentsSubcolSearch] =
+      useState("")` plus a 300ms setTimeout/clearTimeout debounce committing to commentsSubcol.setSearch
+      (guarded against redundant recommit), and the search input is controlled (value/onChange). Tracker:
+      289 unique IDs, R-289 Done, table A4:M297, dashboard formulas through row 297, no #REF!, valid XLSX;
+      78 Done / 1 Deferred / 210 Not Started; MVP 78/184 (42.4%).
+  - commit: b6a1af4
+    detail: feat(codegen)- debounced live subcollection search [R-289]
 blockers: []
 next_action: >-
-  Write focused failing tests, add per-subcollection search state + debounce and make _subcol_controls
-  controlled, update the R-281 search assertions, run all gates, then tracker + docs + two commits + push.
+  R-289 is complete and verified. Next unstarted Tracker ID is R-290 (do not begin it). Generated-app
+  search is now consistent (top-level + subcollection both live/debounced) and all request paths are
+  race-safe. Recommended offline candidate: a further generated-app UX or robustness increment (e.g.
+  optimistic UI updates with rollback, or loading skeletons) — propose with the founder at R-290 kickoff.
 next_command: >-
-  env PYTHONPATH=services/agent-engine/src python3 -m unittest discover -s services/agent-engine/tests -p 'test_subcollection_search_debounce.py' -v
+  task ai:status

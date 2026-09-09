@@ -5,21 +5,21 @@ Last updated: 2026-09-09T18:48:50+05:30
 Stage 0 (Founder Build Sequence, Brief Section 91) — BASIC/MVP
 
 ## Last Completed Task
-Tracker ID: R-288 — Deduplicated In-Flight Generated Mutation Requests — DONE, `task verify` (829
-agent-engine tests, 6 focused R-288 tests) passing. The generated `useCreate<Entity>` /
-`useUpdate<Entity>` / `useDelete<Entity>` hooks now dedupe concurrent invocations: each owns a
-`pendingRef`, returns the pending promise while a request is in flight, runs the try/catch/finally body
-in an IIFE captured as `pendingRef.current`, and clears the ref plus loading in `finally`. A
-double-clicked Create/Save/Delete (or a programmatic re-call) can no longer fire a duplicate
-POST/PUT/DELETE. Public hook names/signatures/return shapes, the underlying api calls, the fetch hooks
-(LIST/LIST_BY/detail), the generated API client, backend, IR, and description-only stability are all
-preserved. No IR, backend, dependency, database, infrastructure, network, or model change; implementation
-checkpoint `3d6eecf`. Preceded by R-225 through R-287. With this, **all** generated request paths —
-fetch (LIST R-280, LIST_BY R-286, detail GET R-287) and mutation (create/update/delete R-288) — are
-race-safe.
+Tracker ID: R-289 — Debounced Live Subcollection Search — DONE, `task verify` (834 agent-engine tests, 5
+focused R-289 tests) passing. The generated subcollection (master-detail) search is now live + debounced
+(300ms), matching the top-level collection search (R-280); R-281 had shipped it submit-only. Each
+subcollection gets a controlled search input backed by component state and a `setTimeout`/`clearTimeout`
+debounce effect that commits the trimmed value to the race-safe R-286 `useList<Child>By<Parent>` hook's
+`setSearch` (guarded against redundant recommit); the form submit still commits immediately. Wired into
+both the collection master-detail and detail screens via shared helpers
+(`_subcol_search_names`/`_subcol_search_state`); entities without a subcollection emit none. The hook,
+generated API client, backend, IR, and the sort/filter/pagination controls are unchanged. No IR, backend,
+dependency, database, infrastructure, network, or model change; implementation checkpoint `b6a1af4`.
+Preceded by R-225 through R-288. Generated-app search is now consistent (top-level + subcollection both
+live/debounced), and all request paths (fetch R-280/286/287 and mutation R-288) are race-safe.
 
-**Notes:** (1) the tracker is current through R-288: 77 Done, 1 Deferred, 210 Not Started across 288
-tasks; MVP is 77/183 (42.1%). (2) A Groq API key may be available; live model-fabric verification remains
+**Notes:** (1) the tracker is current through R-289: 78 Done, 1 Deferred, 210 Not Started across 289
+tasks; MVP is 78/184 (42.4%). (2) A Groq API key may be available; live model-fabric verification remains
 separate (set it only in gitignored `.env`, never chat/commits).
 
 
@@ -52,9 +52,9 @@ R-221 = cross-provider fallback (done); R-222 = platform console slice (done); R
 fallback wiring (done); R-224 = Next.js console upgrade (deferred — environment-blocked).
 
 ## Next Up (queued, in order)
-1. R-289 candidate — a further generated-app UX or robustness increment (all fetch AND mutation request
-   paths are now race-safe as of R-288); e.g. optimistic UI updates with rollback, loading skeletons, or
-   a debounced/live subcollection search — propose with the founder at kickoff
+1. R-290 candidate — a further generated-app UX or robustness increment (search is now consistent and all
+   request paths are race-safe as of R-289); e.g. optimistic UI updates with rollback, or loading
+   skeletons for the collection/detail/subcollection loading states — propose with the founder at kickoff
 2. Live-verify the model fabric with the available Groq key (Balanced gateway → groq; real cloud
    inference + cost accounting) — set `GROQ_API_KEY` in the gitignored `.env`; may need a network machine
 3. R-224 Next.js console upgrade and R-010 native iOS remain deferred under their existing gates

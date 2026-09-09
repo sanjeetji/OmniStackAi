@@ -964,6 +964,24 @@ Create/Save/Delete (or a programmatic re-call) cannot fire a duplicate POST/PUT/
   state and reject. Fetch hooks, the generated API client, backend, and Application IR are untouched, and
   description-only IR generation stays byte-identical.
 
+### Debounced Live Subcollection Search (R-289)
+
+The generated subcollection (master-detail) search is now live and debounced (300ms), matching the
+top-level collection search (R-280). R-281 shipped it submit-only; making it live is safe now that R-286
+made the `useList<Child>By<Parent>` hook race-safe (superseded LIST_BY requests are aborted):
+
+- `_subcol_search_names(s_var)` derives the state/setter names (`<s_var>Search` / `set<S_var>Search`);
+  `_subcol_search_state(s_var)` emits, next to each subcollection hook declaration, a controlled
+  `const [<state>, <setter>] = useState("")` plus a `setTimeout`/`clearTimeout` 300ms debounce
+  `useEffect` that commits `<state>.trim()` to `<s_var>.setSearch`, guarded by `<state> !== (params.q ??
+  "")` so an unchanged value is not recommitted.
+- `_subcol_controls`'s search input is now controlled (`value`/`onChange`) instead of uncontrolled
+  `defaultValue`+`FormData`; the form submit still commits immediately (Enter). Both the collection
+  master-detail and detail screens carry it (both already import `useState`+`useEffect`); entities
+  without a subcollection emit none.
+- The `useList<Child>By<Parent>` hook, generated API client, backend, Application IR, and the
+  sort/filter/pagination controls are unchanged; description-only IR generation stays byte-identical.
+
 ### Global Notification Toast System & Action Feedback (R-279)
 
 Adds a lightweight, accessible, and self-contained client-side toast notification system to generated Next.js web applications:

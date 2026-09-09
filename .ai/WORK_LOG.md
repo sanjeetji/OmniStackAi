@@ -1606,3 +1606,33 @@
   1..296 contiguous, table `A4:M296`, Dashboard ranges through row 296, no `#REF!`, XLSX valid. Recounted
   from the workbook: 288 unique IDs (0 dupes), 77 Done, 1 Deferred, 210 Not Started; MVP 77/183 (42.1%);
   R-010..R-219 backlog intact.
+
+## 2026-09-10 — R-289
+
+- Debounced Live Subcollection Search: brought the generated subcollection (master-detail) search to
+  parity with the top-level collection search (R-280). R-281 shipped a submit-only subcollection form to
+  avoid per-subcollection state; now that R-286 made the `useList<Child>By<Parent>` hook race-safe
+  (superseded LIST_BY requests aborted), a live search-as-you-type is safe.
+- Added `_subcol_search_names(s_var)` (derives `<s_var>Search` / `set<S_var>Search`) and
+  `_subcol_search_state(s_var)` (emits the `useState("")` + a 300ms `setTimeout`/`clearTimeout` debounce
+  `useEffect` that commits `<state>.trim()` to `<s_var>.setSearch`, guarded by `<state> !== (params.q ??
+  "")`). `_subcol_controls`'s search input is now controlled (`value`/`onChange`) instead of
+  uncontrolled+`FormData`; the form `onSubmit` still commits immediately (Enter). Both helpers derive
+  their names from `s_var`, so no extra args are threaded.
+- Wired `_subcol_search_state(s_var)` into both subcollection hook-declaration sites (the collection
+  master-detail `_collection_screen_page` and the detail `_detail_screen_page`) via `replace_all`; both
+  screens already import `useState` + `useEffect`. Entities without a subcollection emit none of it. The
+  hook, API client, backend, IR, and the sort/filter/pagination controls are unchanged; description-only
+  IR generation stays byte-stable.
+- Test-first: added `test_subcollection_search_debounce.py` (5 tests — controlled search state + 300ms
+  debounce with the redundant-recommit guard, controlled input replacing defaultValue/FormData, both
+  render sites, no-subcollection emits none, and description-only stability). They failed against the
+  submit-only form, pass after the change. Updated the R-281 `test_subcollection_list_controls.py` search
+  assertions to the controlled form.
+- Gates: `task verify` 834 tests pass; `task lint`, `task security:quick`, `task env:check` pass; both
+  `task builder:demo` pass; generated `post_list` subcollection search inspected. Implementation
+  checkpoint `b6a1af4`. 0 local / 0 cloud model calls; no generated app installed/run, no DB connection.
+- Tracker: `tracker_edit_r289.py` (baseline `b6a1af4`) — R-289 (Builder) at row 9, R-288 → row 10; rows
+  1..297 contiguous, table `A4:M297`, Dashboard ranges through row 297, no `#REF!`, XLSX valid. Recounted
+  from the workbook: 289 unique IDs (0 dupes), 78 Done, 1 Deferred, 210 Not Started; MVP 78/184 (42.4%);
+  R-010..R-219 backlog intact.
