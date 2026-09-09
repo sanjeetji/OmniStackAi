@@ -1,39 +1,40 @@
 schema_version: 1
-task_id: R-288
-title: Deduplicated In-Flight Generated Mutation Requests
-status: done
+task_id: R-289
+title: Debounced Live Subcollection Search in Generated Next.js Web App
+status: in_progress
 phase: BASIC/MVP
 founder_stage: 0
 branch: main
 goal: >-
-  Make the generated useCreate<Entity> / useUpdate<Entity> / useDelete<Entity> hooks dedupe concurrent
-  invocations so a rapid double-submit (double-clicked Create/Save/Delete, or a programmatic re-call)
-  cannot fire a duplicate POST/PUT/DELETE. While a mutation is in flight the hook returns the pending
-  promise instead of starting a second request — completing the "no racing requests" story after the
-  R-280/R-286/R-287 fetch cancellation work, now for writes. Reuse the existing hook state/return shape.
-tracker_ref: "R-288"
+  Make the generated subcollection (master-detail) search live and debounced, matching the top-level
+  collection search (R-280). R-281 shipped a submit-only subcollection search form; now that R-286 made
+  the useList<Child>By<Parent> hook race-safe (superseded LIST_BY requests are aborted), a live
+  search-as-you-type is safe. Each subcollection gets a controlled search input backed by component state
+  that commits to the hook's setSearch after a fixed 300ms debounce; the form submit still searches
+  immediately. Applies to both subcollection render sites (collection master-detail and detail screen).
+tracker_ref: "R-289"
 requirements:
-  - Each mutation hook owns a pendingRef (useRef<Promise<...> | null>, useRef already imported).
-  - A mutate call while a request is in flight returns the pending promise (no duplicate network request).
-  - The in-flight request is captured in the ref, cleared in finally, and loading/error still behave as before.
-  - Preserve public hook names, callback signatures, and return shape ({ create|update|remove, mutate, loading, error, reset }).
-  - Errors still set error state and reject; reset() unchanged.
-  - Do not change fetch hooks (useList/useList<Child>By<Parent>/use<Entity>), the API client, backend, or IR.
-  - Preserve deterministic generation and description-only IR stability.
+  - Each subcollection owns a controlled search input state (useState) declared next to its hook.
+  - A 300ms debounce useEffect commits the trimmed input to <hook>.setSearch, guarded so it does not recommit an unchanged value.
+  - The subcollection search input is controlled (value + onChange); the form onSubmit still commits immediately (Enter to search now).
+  - Applies in both the collection master-detail screen and the dedicated detail screen.
+  - Reuse the R-280 debounce pattern and the race-safe R-286 LIST_BY hook; no hook, IR, backend, or API-client change.
+  - Preserve the sort select, filter controls (R-285), and pagination; preserve description-only IR stability.
 acceptance_criteria:
-  - useCreate/useUpdate/useDelete each emit `const pendingRef = useRef<Promise<...> | null>(null);` and, as the first statement of the callback, `if (pendingRef.current) return pendingRef.current;`.
-  - The request body runs in an IIFE captured as `pendingRef.current = request;` and returned; `finally` sets `setLoading(false)` and `pendingRef.current = null;`.
-  - The underlying `api.create/update/delete<Entity>(...)` call and the return shape are unchanged.
-  - Fetch hooks and the API client are untouched; description-only IR changes remain byte-identical.
-  - Focused tests, relevant hook tests, full offline verification, lint, security, env check, and both builder demos pass.
+  - Each subcollection emits `const <s_var>Search, set<...>Search = useState("")` and a `setTimeout(..., 300)` debounce useEffect committing to `<s_var>.setSearch`.
+  - The subcollection search input uses `value={<s_var>Search}` + `onChange`, no longer `defaultValue` + FormData; the form onSubmit calls `<s_var>.setSearch(<s_var>Search.trim())`.
+  - Both the collection master-detail and detail screens carry the debounced search per subcollection.
+  - Entities without a subcollection emit no such state/effect; description-only IR changes remain byte-identical.
+  - Focused tests, R-281 subcollection-controls tests (updated), full offline verification, lint, security, env check, and both builder demos pass.
 expected_impact:
   - services/agent-engine/src/omnistackai_agent_engine/codegen/nextjs.py
-  - services/agent-engine/tests/test_mutation_inflight_guard.py
+  - services/agent-engine/tests/test_subcollection_search_debounce.py
+  - services/agent-engine/tests/test_subcollection_list_controls.py
   - .ai task/state/handoff/work-log files, PROJECT_STATE.md, CHANGELOG.md, docs/CODEGEN.md, docs/PROGRESS.md, docs/RESUME_PROMPT.md, and execution tracker
 allowed_paths:
   - services/agent-engine/src/omnistackai_agent_engine/codegen/nextjs.py
-  - services/agent-engine/tests/test_mutation_inflight_guard.py
-  - services/agent-engine/tests/test_nextjs_hooks.py
+  - services/agent-engine/tests/test_subcollection_search_debounce.py
+  - services/agent-engine/tests/test_subcollection_list_controls.py
   - .ai/**
   - CHANGELOG.md
   - PROJECT_STATE.md
@@ -50,11 +51,11 @@ forbidden_paths:
 must_not_change:
   - PostgreSQL, platform schemas/migrations, or backend semantics
   - Section 74 monorepo layout, provider boundaries, infrastructure, or native/mobile scope
-  - Application IR schema, generated API-client behaviour, or public hook signatures/return shapes
-  - fetch hook behaviour (useList<Entities> R-280, useList<Child>By<Parent> R-286, use<Entity> R-287)
+  - Application IR schema, generated API-client behaviour, or the useList<Child>By<Parent> hook (R-286)
+  - top-level collection search (R-280), sort, subcollection filters (R-285), and pagination behaviour
 gates:
-  - focused mutation in-flight guard tests
-  - test_nextjs_hooks
+  - focused subcollection search debounce tests
+  - test_subcollection_list_controls (updated) + all subcollection tests
   - task verify
   - task lint
   - task security:quick
@@ -67,38 +68,10 @@ model_tool_trace:
   local_calls: 0
   cloud_calls: 0
   note: Pure deterministic code generation and offline tests; no model call is needed.
-evidence:
-  - command: env PYTHONPATH=services/agent-engine/src python3 -m unittest discover -s services/agent-engine/tests -p 'test_mutation_inflight_guard.py'
-    result: pass
-    detail: 6 focused R-288 tests pass (they failed first against the pre-change hooks).
-  - command: task verify
-    result: pass
-    detail: 829 agent-engine tests and all Stage 0 offline verification gates pass; existing test_nextjs_hooks mutation assertions unchanged.
-  - command: task lint
-    result: pass
-  - command: task security:quick
-    result: pass
-  - command: task env:check
-    result: pass
-  - command: task builder:demo -- minimal-blog
-    result: pass
-  - command: task builder:demo -- rideshare-favourites
-    result: pass
-  - command: generated TypeScript artifact inspection
-    result: pass
-    detail: >-
-      Generated useCreatePost owns pendingRef, returns the pending promise when in flight, captures the
-      body in an IIFE assigned to pendingRef.current, and clears loading + pendingRef in finally; return
-      shape and api.createPost call preserved. Tracker: 288 unique IDs, R-288 Done, table A4:M296,
-      dashboard formulas through row 296, no #REF!, valid XLSX; 77 Done / 1 Deferred / 210 Not Started;
-      MVP 77/183 (42.1%).
-  - commit: 3d6eecf
-    detail: feat(codegen)- dedupe in-flight mutation requests [R-288]
+evidence: []
 blockers: []
 next_action: >-
-  R-288 is complete and verified. Next unstarted Tracker ID is R-289 (do not begin it). All generated
-  fetch (LIST/LIST_BY/detail GET) and mutation (create/update/delete) request paths are now race-safe.
-  Recommended offline candidate: a further generated-app UX or robustness increment — propose with the
-  founder at R-289 kickoff.
+  Write focused failing tests, add per-subcollection search state + debounce and make _subcol_controls
+  controlled, update the R-281 search assertions, run all gates, then tracker + docs + two commits + push.
 next_command: >-
-  task ai:status
+  env PYTHONPATH=services/agent-engine/src python3 -m unittest discover -s services/agent-engine/tests -p 'test_subcollection_search_debounce.py' -v

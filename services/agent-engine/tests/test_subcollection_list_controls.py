@@ -88,12 +88,13 @@ class SubcollectionControlsSharedChecks:
     """Assertions that must hold on any page rendering the Post->Comment subcollection."""
 
     def _check(self, page: str) -> None:
-        # Search form: uncontrolled (defaultValue + FormData on submit) — no new component state.
+        # Search form: controlled + debounced (R-289). Submit still commits immediately (Enter).
         self.assertIn(
-            'onSubmit={(e) => { e.preventDefault(); commentsSubcol.setSearch(((new FormData(e.currentTarget).get("q") as string) ?? "").trim()); }}',
+            "onSubmit={(e) => { e.preventDefault(); commentsSubcol.setSearch(commentsSubcolSearch.trim()); }}",
             page,
         )
-        self.assertIn('defaultValue={commentsSubcol.params.q ?? ""}', page)
+        self.assertIn("value={commentsSubcolSearch}", page)
+        self.assertIn("onChange={(e) => setCommentsSubcolSearch(e.target.value)}", page)
         self.assertIn('placeholder="Search comments..."', page)
         # Sort select driven by setSort, showing id + display fields (body, author), both directions.
         self.assertIn('aria-label="Sort comments"', page)

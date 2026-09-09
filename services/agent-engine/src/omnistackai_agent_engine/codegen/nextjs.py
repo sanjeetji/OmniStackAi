@@ -1207,23 +1207,47 @@ def _subcollections_for_parent(parent_name: str, ir: ApplicationIR) -> list[Subc
     return result
 
 
+def _subcol_search_names(s_var: str) -> tuple[str, str]:
+    """R-289: the controlled search state + setter names for a subcollection (derived from its hook var)."""
+    return f"{s_var}Search", "set" + s_var[0].upper() + s_var[1:] + "Search"
+
+
+def _subcol_search_state(s_var: str) -> list[str]:
+    """R-289: component-level controlled search state + a fixed 300ms debounce committing to the
+    subcollection hook's setSearch. Safe now that R-286 made LIST_BY refetches race-safe; mirrors the
+    top-level R-280 debounce. Emitted once per subcollection, next to its hook declaration."""
+    state, setter = _subcol_search_names(s_var)
+    return [
+        f'  const [{state}, {setter}] = useState("");',
+        "  useEffect(() => {",
+        "    const timer = setTimeout(() => {",
+        f'      if ({state} !== ({s_var}.params.q ?? "")) {s_var}.setSearch({state}.trim());',
+        "    }, 300);",
+        "    return () => clearTimeout(timer);",
+        "    // eslint-disable-next-line react-hooks/exhaustive-deps",
+        f"  }}, [{state}, {s_var}.params.q]);",
+    ]
+
+
 def _subcol_controls(sub: "SubcollectionInfo", s_var: str) -> list[str]:
-    """R-281: an uncontrolled search form + a sort <select> for a subcollection list, driven by the
-    already-exposed useList<Child>By<Parent> setters (setSearch / setSort). No new component state."""
+    """R-281/R-289: a debounced controlled search form + a sort <select> for a subcollection list, driven
+    by the already-exposed useList<Child>By<Parent> setters (setSearch / setSort). The search input is
+    controlled by the R-289 per-subcollection state; the form submit commits immediately (Enter)."""
     child_lower = sub.child_plural.lower()
+    search_state, search_setter = _subcol_search_names(s_var)
     sort_fields = ["id"] + [f.name for f in sub.display_fields if f.name != "id"]
     filterable_fields = _filterable_fields_for_entity(sub.child_entity)
     lines = [
         f"                {{{s_var}.data && (",
         '                  <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap", marginBottom: 12 }}>',
         "                    <form",
-        f'                      onSubmit={{(e) => {{ e.preventDefault(); {s_var}.setSearch(((new FormData(e.currentTarget).get("q") as string) ?? "").trim()); }}}}',
+        f'                      onSubmit={{(e) => {{ e.preventDefault(); {s_var}.setSearch({search_state}.trim()); }}}}',
         '                      style={{ display: "flex", gap: 6, flex: 1, minWidth: 200 }}',
         "                    >",
         "                      <input",
         '                        type="search"',
-        '                        name="q"',
-        f'                        defaultValue={{{s_var}.params.q ?? ""}}',
+        f'                        value={{{search_state}}}',
+        f'                        onChange={{(e) => {search_setter}(e.target.value)}}',
         f'                        placeholder="Search {child_lower}..."',
         '                        style={{ flex: 1, padding: "6px 10px", border: "1px solid #cbd5e1", borderRadius: 4, fontSize: 13 }}',
         "                      />",
@@ -1645,6 +1669,7 @@ def _collection_screen_page(screen: Screen, entity: Entity, ir: ApplicationIR, o
         for sub in subcollections:
             s_var = f"{sub.child_entity.name.lower()}sSubcol"
             lines.append(f"  const {s_var} = {sub.hook_name}(selectedId);")
+            lines.extend(_subcol_search_state(s_var))
 
         child_entities_with_delete = list(dict.fromkeys(
             sub.child_entity.name for sub in subcollections if sub.can_delete
@@ -3168,6 +3193,7 @@ def _detail_screen_page(screen: Screen, entity: Entity, ir: ApplicationIR, ops: 
         for sub in subcollections:
             s_var = f"{sub.child_entity.name.lower()}sSubcol"
             lines.append(f"  const {s_var} = {sub.hook_name}(selectedId);")
+            lines.extend(_subcol_search_state(s_var))
 
         child_entities_with_delete = list(dict.fromkeys(
             sub.child_entity.name for sub in subcollections if sub.can_delete
