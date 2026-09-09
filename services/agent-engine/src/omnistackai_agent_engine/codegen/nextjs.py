@@ -392,6 +392,10 @@ def _hooks_file(ir: ApplicationIR) -> str:
         "  q?: string;",
         "}",
         "",
+        "export interface UseCollectionListParams extends UseListParams {",
+        "  filters?: Record<string, string>;",
+        "}",
+        "",
         "export interface UseListState<T> {",
         "  data: T[] | null;",
         "  total: number;",
@@ -407,6 +411,13 @@ def _hooks_file(ir: ApplicationIR) -> str:
         "  setSearch: (q: string) => void;",
         '  setSort: (sort: string, order?: "asc" | "desc") => void;',
         "  refetch: () => Promise<void>;",
+        "}",
+        "",
+        'export interface UseCollectionListState<T> extends Omit<UseListState<T>, "params" | "setParams"> {',
+        "  params: UseCollectionListParams;",
+        "  setParams: Dispatch<SetStateAction<UseCollectionListParams>>;",
+        "  setFilter: (field: string, value: string) => void;",
+        "  clearFilters: () => void;",
         "}",
         "",
         "export interface UseDetailState<T> {",
@@ -447,17 +458,27 @@ def _hooks_file(ir: ApplicationIR) -> str:
         name = entity.name
         plural = name if name.endswith("s") else f"{name}s"
         ops = ops_by_entity.get(name, set())
+        filterable_fields = _filterable_fields_for_entity(entity)
 
         # 1. useList<Entities>
         if Op.LIST in ops:
             hook_name = f"useList{plural}"
             hook_names.append(hook_name)
+            params_type = "UseCollectionListParams" if filterable_fields else "UseListParams"
+            state_type = "UseCollectionListState" if filterable_fields else "UseListState"
+            filter_options_name = f"{name[:1].lower() + name[1:]}FilterOptions"
+            if filterable_fields:
+                filter_options = {field.name: options for field, _, options in filterable_fields}
+                lines.extend([
+                    f"const {filter_options_name}: Record<string, readonly string[]> = {json.dumps(filter_options, sort_keys=True)};",
+                    "",
+                ])
             lines.extend([
                 f"export function {hook_name}(",
-                "  initialParams: UseListParams = {},",
+                f"  initialParams: {params_type} = {{}},",
                 "  options?: ApiOptions",
-                f"): UseListState<{name}> {{",
-                "  const [params, setParams] = useState<UseListParams>({",
+                f"): {state_type}<{name}> {{",
+                f"  const [params, setParams] = useState<{params_type}>({{",
                 "    limit: 100,",
                 "    offset: 0,",
                 '    sort: "id",',
@@ -508,6 +529,28 @@ def _hooks_file(ir: ApplicationIR) -> str:
                 "    }));",
                 "  }, []);",
                 "",
+                *([
+                    "  const setFilter = useCallback((field: string, value: string) => {",
+                    "    setParams((prev) => {",
+                    "      const filters = { ...(prev.filters ?? {}) };",
+                    f'      if (value && value !== "all" && {filter_options_name}[field]?.includes(value)) {{',
+                    "        filters[field] = value;",
+                    "      } else {",
+                    "        delete filters[field];",
+                    "      }",
+                    "      return {",
+                    "        ...prev,",
+                    "        filters: Object.keys(filters).length > 0 ? filters : undefined,",
+                    "        offset: 0,",
+                    "      };",
+                    "    });",
+                    "  }, []);",
+                    "",
+                    "  const clearFilters = useCallback(() => {",
+                    "    setParams((prev) => ({ ...prev, filters: undefined, offset: 0 }));",
+                    "  }, []);",
+                    "",
+                ] if filterable_fields else []),
                 "  // R-280: abort the previous in-flight request so out-of-order responses cannot clobber state.",
                 "  const abortRef = useRef<AbortController | null>(null);",
                 "  const refetch = useCallback(async () => {",
@@ -516,8 +559,12 @@ def _hooks_file(ir: ApplicationIR) -> str:
                 "    abortRef.current = controller;",
                 "    setLoading(true);",
                 "    setError(null);",
+                *([
+                    "    const { filters, ...baseParams } = params;",
+                    "    const requestParams = { ...baseParams, ...(filters ?? {}) };",
+                ] if filterable_fields else []),
                 "    try {",
-                f"      const res = await api.list{plural}WithCount({{ params, signal: controller.signal, ...options }});",
+                f"      const res = await api.list{plural}WithCount({{ {'params: requestParams' if filterable_fields else 'params'}, signal: controller.signal, ...options }});",
                 "      if (controller.signal.aborted) return;",
                 "      setData(res.data);",
                 "      setTotal(res.total);",
@@ -538,7 +585,7 @@ def _hooks_file(ir: ApplicationIR) -> str:
                 "  useEffect(() => {",
                 '    if (typeof window === "undefined") return;',
                 "    const sp = new URLSearchParams(window.location.search);",
-                "    const next: UseListParams = {};",
+                f"    const next: {params_type} = {{}};",
                 '    const qv = sp.get("q");',
                 "    if (qv !== null) next.q = qv;",
                 '    const sortV = sp.get("sort");',
@@ -549,6 +596,14 @@ def _hooks_file(ir: ApplicationIR) -> str:
                 "    if (Number.isFinite(sizeV) && sizeV > 0) next.limit = sizeV;",
                 '    const pageV = Number(sp.get("page"));',
                 "    if (Number.isFinite(pageV) && pageV > 1) next.offset = (pageV - 1) * (next.limit ?? 100);",
+                *([
+                    "    const filters: Record<string, string> = {};",
+                    f"    for (const [field, allowed] of Object.entries({filter_options_name})) {{",
+                    "      const value = sp.get(field);",
+                    "      if (value && allowed.includes(value)) filters[field] = value;",
+                    "    }",
+                    "    if (Object.keys(filters).length > 0) next.filters = filters;",
+                ] if filterable_fields else []),
                 "    if (Object.keys(next).length > 0) setParams((prev) => ({ ...prev, ...next }));",
                 "    // eslint-disable-next-line react-hooks/exhaustive-deps",
                 "  }, []);",
@@ -569,6 +624,11 @@ def _hooks_file(ir: ApplicationIR) -> str:
                 '    setOrDelete("order", params.order && params.order !== "asc" ? params.order : null);',
                 '    setOrDelete("page", pageV > 1 ? String(pageV) : null);',
                 '    setOrDelete("pageSize", limitV !== 100 ? String(limitV) : null);',
+                *([
+                    f"    for (const field of Object.keys({filter_options_name})) {{",
+                    "      setOrDelete(field, params.filters?.[field] ?? null);",
+                    "    }",
+                ] if filterable_fields else []),
                 '    window.history.replaceState({}, "", url.toString());',
                 "  }, [params]);",
                 "",
@@ -586,6 +646,7 @@ def _hooks_file(ir: ApplicationIR) -> str:
                 "    setPageSize,",
                 "    setSearch,",
                 "    setSort,",
+                *(["    setFilter,", "    clearFilters,"] if filterable_fields else []),
                 "    refetch,",
                 "  };",
                 "}",
@@ -1284,7 +1345,7 @@ def _collection_screen_page(screen: Screen, entity: Entity, ir: ApplicationIR, o
     if can_delete:
         hooks_import += f", useDelete{name}"
 
-    react_imports = "useEffect, useMemo, useState" if filterable_fields else "useEffect, useState"
+    react_imports = "useEffect, useState"
     lines: list[str] = [
         '"use client";',
         "",
@@ -1326,6 +1387,7 @@ def _collection_screen_page(screen: Screen, entity: Entity, ir: ApplicationIR, o
         "    setPageSize,",
         "    setSearch,",
         "    setSort,",
+        *(["    setFilter,", "    clearFilters,"] if filterable_fields else []),
         "    refetch,",
         f"  }} = useList{plural}();",
         "  const { toast } = useToast();",
@@ -1333,27 +1395,9 @@ def _collection_screen_page(screen: Screen, entity: Entity, ir: ApplicationIR, o
 
     if filterable_fields:
         lines.extend([
-            "  const [filterValues, setFilterValues] = useState<Record<string, string>>({});",
-            "  const handleFilterChange = (field: string, val: string) => {",
-            "    setFilterValues((prev) => ({ ...prev, [field]: val }));",
-            "  };",
-            "  const handleClearFilters = () => {",
-            "    setFilterValues({});",
-            "  };",
-            '  const activeFilterCount = Object.values(filterValues).filter((v) => v && v !== "all").length;',
-            "  const filteredData = useMemo(() => {",
-            "    if (!data) return null;",
-            "    return data.filter((item: any) => {",
-            "      for (const [field, val] of Object.entries(filterValues)) {",
-            '        if (!val || val === "all") continue;',
-            '        if (val === "true" && item[field] !== true) return false;',
-            '        if (val === "false" && item[field] !== false) return false;',
-            '        if (val !== "true" && val !== "false" && String(item[field]) !== val) return false;',
-            "      }",
-            "      return true;",
-            "    });",
-            "  }, [data, filterValues]);",
-            "  const displayData = filteredData ?? (data ?? []);",
+            "  const filterValues = params.filters ?? {};",
+            "  const activeFilterCount = Object.keys(filterValues).length;",
+            "  const displayData = data ?? [];",
         ])
     else:
         lines.extend([
@@ -1594,21 +1638,21 @@ def _collection_screen_page(screen: Screen, entity: Entity, ir: ApplicationIR, o
                     '        <div style={{ display: "inline-flex", borderRadius: 6, border: "1px solid #cbd5e1", overflow: "hidden", fontSize: 12, fontWeight: 500 }}>',
                     '          <button',
                     '            type="button"',
-                    f'            onClick={{() => handleFilterChange("{f.name}", "all")}}',
+                    f'            onClick={{() => setFilter("{f.name}", "all")}}',
                     f'            style={{{{ padding: "4px 10px", border: "none", background: (!filterValues["{f.name}"] || filterValues["{f.name}"] === "all") ? "#0f172a" : "#fff", color: (!filterValues["{f.name}"] || filterValues["{f.name}"] === "all") ? "#fff" : "#475569", cursor: "pointer" }}}}',
                     '          >',
                     '            All',
                     '          </button>',
                     '          <button',
                     '            type="button"',
-                    f'            onClick={{() => handleFilterChange("{f.name}", "true")}}',
+                    f'            onClick={{() => setFilter("{f.name}", "true")}}',
                     f'            style={{{{ padding: "4px 10px", border: "none", borderLeft: "1px solid #cbd5e1", background: filterValues["{f.name}"] === "true" ? "#0f172a" : "#fff", color: filterValues["{f.name}"] === "true" ? "#fff" : "#475569", cursor: "pointer" }}}}',
                     '          >',
                     f'            {f_label}: Yes',
                     '          </button>',
                     '          <button',
                     '            type="button"',
-                    f'            onClick={{() => handleFilterChange("{f.name}", "false")}}',
+                    f'            onClick={{() => setFilter("{f.name}", "false")}}',
                     f'            style={{{{ padding: "4px 10px", border: "none", borderLeft: "1px solid #cbd5e1", background: filterValues["{f.name}"] === "false" ? "#0f172a" : "#fff", color: filterValues["{f.name}"] === "false" ? "#fff" : "#475569", cursor: "pointer" }}}}',
                     '          >',
                     f'            {f_label}: No',
@@ -1620,7 +1664,7 @@ def _collection_screen_page(screen: Screen, entity: Entity, ir: ApplicationIR, o
                     '        <select',
                     f'          aria-label="Filter by {f_label}"',
                     f'          value={{filterValues["{f.name}"] || "all"}}',
-                    f'          onChange={{(e) => handleFilterChange("{f.name}", e.target.value)}}',
+                    f'          onChange={{(e) => setFilter("{f.name}", e.target.value)}}',
                     f'          style={{{{ padding: "4px 10px", borderRadius: 6, border: "1px solid #cbd5e1", background: "#fff", color: "#334155", fontSize: 12, cursor: "pointer", outline: "none" }}}}',
                     '        >',
                     f'          <option value="all">All {f_label}s</option>',
@@ -1638,7 +1682,7 @@ def _collection_screen_page(screen: Screen, entity: Entity, ir: ApplicationIR, o
             '        {activeFilterCount > 0 && (',
             '          <button',
             '            type="button"',
-            '            onClick={handleClearFilters}',
+            '            onClick={clearFilters}',
             '            style={{ background: "none", border: "none", color: "#2563eb", fontSize: 13, cursor: "pointer", padding: "4px 8px", textDecoration: "underline" }}',
             '          >',
             '            Reset',
@@ -1767,12 +1811,12 @@ def _collection_screen_page(screen: Screen, entity: Entity, ir: ApplicationIR, o
 
     if filterable_fields:
         lines.extend([
-            "                  {data.length > 0 && activeFilterCount > 0 ? (",
+            "                  {activeFilterCount > 0 ? (",
             '                    <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 12 }}>',
             f"                      <div>No {plural} match the active filter criteria.</div>",
             "                      <button",
             '                        type="button"',
-            "                        onClick={handleClearFilters}",
+            "                        onClick={clearFilters}",
             '                        style={{ padding: "6px 14px", border: "1px solid #cbd5e1", background: "#fff", color: "#2563eb", borderRadius: 6, fontSize: 13, cursor: "pointer", fontWeight: 500 }}',
             "                      >",
             "                        Clear all filters",

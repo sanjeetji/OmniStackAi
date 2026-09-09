@@ -23,7 +23,7 @@ from omnistackai_agent_engine.application_ir.ir import (
     RepoStrategy,
 )
 from omnistackai_agent_engine.application_ir.examples import example_ir
-from omnistackai_agent_engine.codegen import NextjsWebAdapter, render_screen_page
+from omnistackai_agent_engine.codegen import NextjsWebAdapter, render_hooks, render_screen_page
 
 
 def _make_test_ir(
@@ -90,10 +90,11 @@ def _make_test_ir(
 class CollectionFieldFiltersTests(unittest.TestCase):
     """Test suite for collection screen boolean & enum field filtering."""
 
-    def test_collection_screen_imports_use_memo_when_filterable_fields_present(self) -> None:
+    def test_collection_screen_does_not_import_use_memo_for_server_filters(self) -> None:
         ir = _make_test_ir(with_boolean=True)
         content = render_screen_page(ir.screens[0], ir)
-        self.assertIn('import { useEffect, useMemo, useState } from "react";', content)
+        self.assertIn('import { useEffect, useState } from "react";', content)
+        self.assertNotIn("useMemo", content)
 
     def test_collection_screen_omits_use_memo_when_no_filterable_fields(self) -> None:
         ir = _make_test_ir(with_boolean=False, with_enum=False)
@@ -101,32 +102,31 @@ class CollectionFieldFiltersTests(unittest.TestCase):
         self.assertIn('import { useEffect, useState } from "react";', content)
         self.assertNotIn("useMemo", content)
 
-    def test_collection_screen_declares_filter_state_and_handlers(self) -> None:
+    def test_collection_screen_uses_hook_filter_state_and_setters(self) -> None:
         ir = _make_test_ir(with_boolean=True)
         content = render_screen_page(ir.screens[0], ir)
-        self.assertIn("const [filterValues, setFilterValues] = useState<Record<string, string>>({});", content)
-        self.assertIn("const handleFilterChange = (field: string, val: string) => {", content)
-        self.assertIn("setFilterValues((prev) => ({ ...prev, [field]: val }));", content)
-        self.assertIn("const handleClearFilters = () => {", content)
-        self.assertIn("setFilterValues({});", content)
+        self.assertIn("    setFilter,", content)
+        self.assertIn("    clearFilters,", content)
+        self.assertIn("const filterValues = params.filters ?? {};", content)
+        self.assertNotIn("setFilterValues", content)
+        self.assertNotIn("handleFilterChange", content)
+        self.assertNotIn("handleClearFilters", content)
 
-    def test_collection_screen_computes_filtered_data_and_active_count(self) -> None:
+    def test_collection_screen_renders_server_data_without_local_filtering(self) -> None:
         ir = _make_test_ir(with_boolean=True)
         content = render_screen_page(ir.screens[0], ir)
-        self.assertIn('const activeFilterCount = Object.values(filterValues).filter((v) => v && v !== "all").length;', content)
-        self.assertIn("const filteredData = useMemo(() => {", content)
-        self.assertIn("if (!data) return null;", content)
-        self.assertIn('if (val === "true" && item[field] !== true) return false;', content)
-        self.assertIn('if (val === "false" && item[field] !== false) return false;', content)
-        self.assertIn("const displayData = filteredData ?? (data ?? []);", content)
+        self.assertIn("const activeFilterCount = Object.keys(filterValues).length;", content)
+        self.assertIn("const displayData = data ?? [];", content)
+        self.assertNotIn("const filteredData", content)
+        self.assertNotIn("data.filter", content)
 
     def test_collection_screen_renders_segmented_pill_for_boolean_field(self) -> None:
         ir = _make_test_ir(with_boolean=True)
         content = render_screen_page(ir.screens[0], ir)
         self.assertIn("Filters:</span>", content)
-        self.assertIn('handleFilterChange("published", "all")', content)
-        self.assertIn('handleFilterChange("published", "true")', content)
-        self.assertIn('handleFilterChange("published", "false")', content)
+        self.assertIn('setFilter("published", "all")', content)
+        self.assertIn('setFilter("published", "true")', content)
+        self.assertIn('setFilter("published", "false")', content)
         self.assertIn("Published: Yes", content)
         self.assertIn("Published: No", content)
 
@@ -135,6 +135,7 @@ class CollectionFieldFiltersTests(unittest.TestCase):
         content = render_screen_page(ir.screens[0], ir)
         self.assertIn("Filters:</span>", content)
         self.assertIn('aria-label="Filter by Status"', content)
+        self.assertIn('onChange={(e) => setFilter("status", e.target.value)}', content)
         self.assertIn('<option value="all">All Statuss</option>', content)
         self.assertIn('<option value="draft">Draft</option>', content)
         self.assertIn('<option value="in_review">In Review</option>', content)
@@ -145,13 +146,13 @@ class CollectionFieldFiltersTests(unittest.TestCase):
         content = render_screen_page(ir.screens[0], ir)
         self.assertIn("{activeFilterCount > 0 && (", content)
         self.assertIn("{activeFilterCount} active", content)
-        self.assertIn("onClick={handleClearFilters}", content)
+        self.assertIn("onClick={clearFilters}", content)
         self.assertIn("Reset", content)
 
     def test_collection_screen_renders_dedicated_empty_filter_state(self) -> None:
         ir = _make_test_ir(with_boolean=True)
         content = render_screen_page(ir.screens[0], ir)
-        self.assertIn("{data.length > 0 && activeFilterCount > 0 ? (", content)
+        self.assertIn("{activeFilterCount > 0 ? (", content)
         self.assertIn("No Articles match the active filter criteria.", content)
         self.assertIn("Clear all filters", content)
 
@@ -164,7 +165,8 @@ class CollectionFieldFiltersTests(unittest.TestCase):
         ir = _make_test_ir(with_boolean=False, with_enum=False)
         content = render_screen_page(ir.screens[0], ir)
         self.assertNotIn("filterValues", content)
-        self.assertNotIn("handleFilterChange", content)
+        self.assertNotIn("setFilter,", content)
+        self.assertNotIn("clearFilters,", content)
         self.assertNotIn("activeFilterCount", content)
         self.assertNotIn("Filters:</span>", content)
         self.assertIn("{data && data.map((item, idx) => (", content)
@@ -176,12 +178,46 @@ class CollectionFieldFiltersTests(unittest.TestCase):
             render_screen_page(ir_a.screens[0], ir_a),
             render_screen_page(ir_b.screens[0], ir_b),
         )
+        self.assertEqual(render_hooks(ir_a), render_hooks(ir_b))
+
+    def test_filterable_list_hook_flattens_filters_into_request_params(self) -> None:
+        hooks = render_hooks(_make_test_ir(with_boolean=True, with_enum=True))
+        self.assertIn("export interface UseCollectionListParams extends UseListParams {", hooks)
+        self.assertIn("  filters?: Record<string, string>;", hooks)
+        self.assertIn("const articleFilterOptions: Record<string, readonly string[]> =", hooks)
+        self.assertIn('"published": ["true", "false"]', hooks)
+        self.assertIn('"status": ["draft", "in_review", "published"]', hooks)
+        self.assertIn("const setFilter = useCallback((field: string, value: string) => {", hooks)
+        self.assertIn('if (value && value !== "all" && articleFilterOptions[field]?.includes(value))', hooks)
+        self.assertIn("const clearFilters = useCallback(() => {", hooks)
+        self.assertGreaterEqual(hooks.count("offset: 0,"), 4)
+        self.assertIn("const { filters, ...baseParams } = params;", hooks)
+        self.assertIn("const requestParams = { ...baseParams, ...(filters ?? {}) };", hooks)
+        self.assertIn(
+            "api.listArticlesWithCount({ params: requestParams, signal: controller.signal, ...options });",
+            hooks,
+        )
+
+    def test_filterable_list_hook_deep_links_only_allowlisted_values(self) -> None:
+        hooks = render_hooks(_make_test_ir(with_boolean=True, with_enum=True))
+        self.assertIn("for (const [field, allowed] of Object.entries(articleFilterOptions))", hooks)
+        self.assertIn("if (value && allowed.includes(value)) filters[field] = value;", hooks)
+        self.assertIn("if (Object.keys(filters).length > 0) next.filters = filters;", hooks)
+        self.assertIn("for (const field of Object.keys(articleFilterOptions))", hooks)
+        self.assertIn("setOrDelete(field, params.filters?.[field] ?? null);", hooks)
+
+    def test_non_filterable_list_hook_has_no_filter_options_or_setters(self) -> None:
+        hooks = render_hooks(_make_test_ir(with_boolean=False, with_enum=False))
+        self.assertNotIn("articleFilterOptions", hooks)
+        self.assertNotIn("const setFilter =", hooks)
+        self.assertNotIn("const clearFilters =", hooks)
 
     def test_minimal_blog_post_list_has_published_filter(self) -> None:
         ir = example_ir("minimal-blog")
         post_list_screen = next(s for s in ir.screens if s.id == "post_list")
         content = render_screen_page(post_list_screen, ir)
-        self.assertIn('import { useEffect, useMemo, useState } from "react";', content)
+        self.assertIn('import { useEffect, useState } from "react";', content)
+        self.assertNotIn("useMemo", content)
         self.assertIn("Filters:</span>", content)
         self.assertIn("Published: Yes", content)
         self.assertIn("Published: No", content)

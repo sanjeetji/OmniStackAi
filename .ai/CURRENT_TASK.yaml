@@ -1,40 +1,39 @@
 schema_version: 1
-task_id: R-282
-title: Server-Side Boolean/Enum Field Filters on Top-Level LIST Endpoints (Go + FastAPI + OpenAPI)
-status: done
+task_id: R-283
+title: Server-Side Collection Filter Wiring in Generated Next.js Screens
+status: in_progress
 phase: BASIC/MVP
 founder_stage: 0
 branch: main
 goal: >-
-  Add real server-side per-field equality filtering to the generated backends: a top-level LIST endpoint
-  now accepts ?<field>=<value> for each boolean field and each enum field (fields with an enum:a|b|c
-  validation rule), composing them into the SQL WHERE alongside the existing q keyword search — with the
-  same whitelist discipline as sorting (column identifiers come only from validated IR field names;
-  filter VALUES are parameterized $N/%s). This is the backend capability that makes R-278's collection
-  filters correct across pagination; wiring the frontend controls to it is a follow-up (R-283). Scoped to
-  Op.LIST (top-level); the FK-scoped LIST_BY subcollection queries are unchanged. Founder said "continue
-  for the next task" and chose the offline candidate; the available Groq key was kept for later.
-tracker_ref: "R-282"
+  Replace R-278's client-side boolean/enum filtering over the currently loaded page with request-level
+  filters in the generated top-level useList hook. Existing collection controls must send the exact
+  R-282 backend query keys and option values, reset pagination, refetch through the existing race-safe
+  request path, render server-returned data directly, and preserve the existing toolbar and empty-state
+  experience. Scope is top-level collection screens only.
+tracker_ref: "R-283"
 requirements:
-  - A shared filter_fields(entity) helper (field_validation.py) returns (field, kind) for boolean and enum fields, excluding id; the single source of truth for the backend and OpenAPI.
-  - Python repository (data_access._python_repository) for a filterable entity emits a _list_filters(q, <field>=None...) helper and list_/count_ signatures with the filter kwargs, building WHERE dynamically; non-filterable entities are byte-identical.
-  - Go store (data_access._go_entity_store) for a filterable entity emits a <table>Filters(q, filters map[string]string) helper (bool -> v == "true", enum -> v) with correct $N numbering, and List/Count take a filters map; non-filterable entities are byte-identical.
-  - FastAPI router LIST branch declares typed filter query params (bool -> bool|None, enum -> str|None) and forwards them; Go handler LIST branch calls parseFilters(r) (added to handlers.go only when a filterable entity exists) and threads the map into the store calls.
-  - OpenAPI render_openapi documents each filter param on Op.LIST (boolean schema for bool; string+enum for enum).
-  - No new IR field; no npm dependency; standard-library-only platform code; values always parameterized (never interpolated identifiers from the request); diff-invariant across ir.description.
+  - Extend generated top-level list state with optional string filters and deterministic filter setters; changing or clearing filters resets offset to zero.
+  - Merge active filters into the list API request query params so R-282 boolean/enum backend filters apply before pagination.
+  - Wire generated boolean pills and enum selects to the hook filter setters using the exact IR field name and option value; all/empty removes the parameter.
+  - Remove page-local useMemo/data.filter filtering and render the server-returned list directly while retaining active-filter counts, Reset, and no-results recovery.
+  - Keep URL deep-linking coherent by hydrating and syncing only the known filterable field keys for each top-level list hook.
+  - Entities without boolean/enum fields emit no filter controls; no IR schema field, backend change, npm dependency, platform dependency, or model call.
 acceptance_criteria:
-  - filter_fields selects bool + enum, excludes id and plain fields.
-  - Python list_item/count_item gain active/status kwargs + _list_filters; conditions parameterized; router declares active: bool|None / status: str|None and forwards.
-  - Go itemFilters helper + List/Count filters map; bool coercion v == "true", enum v; parseFilters in handlers.go; handler passes filters.
-  - OpenAPI /items GET documents active (boolean) and status (string enum new|used|sold).
-  - Non-filterable project (rideshare-favourites) has no _list_filters / <table>Filters / parseFilters / filters map — byte-identical.
-  - task verify passes (expect 780+ tests, new test_field_filters_backend.py); task lint + security:quick pass; both builder:demo pass.
+  - UseCollectionListParams exposes filters as Record<string, string>; filterable top-level list state exposes setFilter and clearFilters without changing LIST_BY hooks.
+  - setFilter omits empty/all values, clearFilters removes every filter, and both reset offset to page one.
+  - The top-level list request forwards filters as ordinary query parameters together with pagination, search, and sort parameters.
+  - Collection controls call setFilter with field.name keys; Clear/Reset call clearFilters; displayData is data ?? [] and no generated useMemo/data.filter block remains.
+  - URL hydration/sync accepts only generated allowlisted filter field names and writes only active values.
+  - Description-only IR changes produce byte-identical hooks, API client, and collection screen output; non-filterable entities emit no filter UI.
+  - task verify, task lint, task security:quick, and both builder demos pass with real output; generated page.tsx, lib/hooks.ts, and lib/api.ts are inspected.
+expected_impact:
+  - services/agent-engine/src/omnistackai_agent_engine/codegen/nextjs.py
+  - services/agent-engine/tests/test_collection_field_filters.py
+  - focused existing Next.js codegen tests if exact generated assertions require updates
+  - .ai task/state/handoff/work-log files, PROJECT_STATE.md, CHANGELOG.md, docs/PROGRESS.md, docs/RESUME_PROMPT.md, docs/CODEGEN.md, and execution tracker
 allowed_paths:
-  - services/agent-engine/src/omnistackai_agent_engine/codegen/field_validation.py
-  - services/agent-engine/src/omnistackai_agent_engine/codegen/data_access.py
-  - services/agent-engine/src/omnistackai_agent_engine/codegen/backend_python.py
-  - services/agent-engine/src/omnistackai_agent_engine/codegen/backend_go.py
-  - services/agent-engine/src/omnistackai_agent_engine/codegen/openapi.py
+  - services/agent-engine/src/omnistackai_agent_engine/codegen/nextjs.py
   - services/agent-engine/tests/**
   - .ai/**
   - CHANGELOG.md
@@ -43,17 +42,32 @@ allowed_paths:
   - R_&_D/OmniStackAI_Execution_Tracker_v6.xlsx
 forbidden_paths:
   - services/agent-engine/src/omnistackai_agent_engine/application_ir/**
+  - services/agent-engine/src/omnistackai_agent_engine/codegen/backend_python.py
+  - services/agent-engine/src/omnistackai_agent_engine/codegen/backend_go.py
+  - services/agent-engine/src/omnistackai_agent_engine/codegen/data_access.py
+  - services/agent-engine/src/omnistackai_agent_engine/codegen/openapi.py
   - package.json
   - pnpm-lock.yaml
+must_not_change:
+  - PostgreSQL or platform schemas/migrations
+  - Section 74 monorepo layout, provider boundaries, infrastructure, or native/mobile scope
+  - Application IR schema or R-282 backend filter contract
 gates:
   - task verify
   - task lint
   - task security:quick
   - task builder:demo -- minimal-blog
   - task builder:demo -- rideshare-favourites
-evidence:
-  - "task verify: 786 tests passed (0 failures, 12 new in test_field_filters_backend.py)"
-  - "task lint: passed; task security:quick: passed"
-  - "task builder:demo -- minimal-blog: passed; task builder:demo -- rideshare-favourites: passed"
-  - "updated existing search/sort/pagination/total-count/wiring assertions for the now-filterable minimal-blog Post"
-  - "commit: 198e23e feat(codegen): server-side boolean/enum field filters on LIST endpoints [R-282]"
+  - generated-artifact inspection
+model_tool_trace:
+  routing: deterministic_only
+  local_calls: 0
+  cloud_calls: 0
+  note: Pure deterministic code generation and tests; no model call is needed.
+evidence: []
+blockers: []
+next_action: >-
+  Add focused failing assertions for server-side hook/request wiring, then implement the smallest
+  nextjs.py change that satisfies them.
+next_command: >-
+  python3 -m unittest services/agent-engine/tests/test_collection_field_filters.py
