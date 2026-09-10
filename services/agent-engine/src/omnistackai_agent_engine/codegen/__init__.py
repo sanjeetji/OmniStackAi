@@ -28,6 +28,7 @@ from .field_validation import (
 from .files import GeneratedFile, GeneratedProject
 from .nextjs import (
     NextjsWebAdapter,
+    render_breadcrumbs_component,
     render_error_page,
     render_global_error_page,
     render_hooks,
@@ -67,6 +68,7 @@ __all__ = [
     "parse_field_rules",
     "go_data_access_files",
     "python_data_access_files",
+    "render_breadcrumbs_component",
     "render_error_page",
     "render_global_error_page",
     "render_hooks",

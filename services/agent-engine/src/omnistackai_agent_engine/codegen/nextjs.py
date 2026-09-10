@@ -2589,6 +2589,7 @@ def _form_screen_page(screen: Screen, entity: Entity, ir: ApplicationIR, ops: se
 
     lines.append('import Link from "next/link";')
     lines.append('import { useToast } from "../components/toast";')
+    lines.append('import { Breadcrumbs } from "../components/breadcrumbs";')
     imported_hooks: set[str] = set()
     if can_create:
         imported_hooks.add(f"useCreate{name}")
@@ -2648,6 +2649,16 @@ def _form_screen_page(screen: Screen, entity: Entity, ir: ApplicationIR, ops: se
             "  const editId = null;",
         ])
 
+    breadcrumbs_items = [
+        '    { label: "Overview", href: "/" },',
+    ]
+    if list_screen:
+        breadcrumbs_items.append(f'    {{ label: "{plural}", href: "/{list_screen.id}" }},')
+    if can_update:
+        breadcrumbs_items.append(f'    {{ label: isEdit ? "Edit {name}" : "New {name}" }},')
+    else:
+        breadcrumbs_items.append(f'    {{ label: "New {name}" }},')
+
     initial_values_expr = f"const initialValues: Partial<{name}> = {initial_obj};"
     lines.extend([
         f"  {initial_values_expr}",
@@ -2655,6 +2666,10 @@ def _form_screen_page(screen: Screen, entity: Entity, ir: ApplicationIR, ops: se
         '  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});',
         "  const [success, setSuccess] = useState(false);",
         "  const [lastSavedId, setLastSavedId] = useState<string | null>(null);",
+        "",
+        "  const breadcrumbs = [",
+        *breadcrumbs_items,
+        "  ];",
         "",
     ])
 
@@ -2903,6 +2918,7 @@ def _form_screen_page(screen: Screen, entity: Entity, ir: ApplicationIR, ops: se
         "",
         "  return (",
         '    <main style={{ maxWidth: 640, margin: "0 auto", padding: "32px 16px", fontFamily: "system-ui, -apple-system, sans-serif" }}>',
+        "      <Breadcrumbs items={breadcrumbs} />",
         '      <header style={{ marginBottom: 24 }}>',
         '        <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 6 }}>',
     ])
@@ -3328,6 +3344,7 @@ def _detail_screen_page(screen: Screen, entity: Entity, ir: ApplicationIR, ops: 
         'import { useSearchParams } from "next/navigation";',
         'import Link from "next/link";',
         'import { useToast } from "../components/toast";',
+        'import { Breadcrumbs } from "../components/breadcrumbs";',
         *([
             'import { useConfirm, ConfirmDialog } from "../components/confirm-dialog";',
         ] if uses_confirm_detail else []),
@@ -3363,6 +3380,16 @@ def _detail_screen_page(screen: Screen, entity: Entity, ir: ApplicationIR, ops: 
         '  const queryId = searchParams.get("id");',
         '  const [idInput, setIdInput] = useState<string>(queryId ?? "");',
         "  const [selectedId, setSelectedId] = useState<string | null>(queryId ?? null);",
+        "",
+        "  const breadcrumbs = [",
+        '    { label: "Overview", href: "/" },',
+        *(
+            [f'    {{ label: "{plural}", href: "/{collection_screen.id}" }},']
+            if collection_screen
+            else []
+        ),
+        f'    {{ label: selectedId ? `{name} #${{selectedId}}` : "{name} Details" }},',
+        "  ];",
         "",
         "  useEffect(() => {",
         "    if (queryId) {",
@@ -3556,6 +3583,7 @@ def _detail_screen_page(screen: Screen, entity: Entity, ir: ApplicationIR, ops: 
         "",
         "  return (",
         '    <main style={{ maxWidth: 840, margin: "0 auto", padding: "32px 16px", fontFamily: "system-ui, -apple-system, sans-serif" }}>',
+        "      <Breadcrumbs items={breadcrumbs} />",
         '      <header style={{ marginBottom: 24, display: "flex", justifyContent: "space-between", alignItems: "flex-start", flexWrap: "wrap", gap: 16 }}>',
         "        <div>",
         '          <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 6 }}>',
@@ -5102,6 +5130,98 @@ def render_shortcuts_dialog_component() -> str:
     return _SHORTCUTS_DIALOG_COMPONENT
 
 
+# --- Breadcrumbs navigation component (R-306) --------------------------------------------------
+# Reusable, accessible breadcrumbs trail conforming to WAI-ARIA 1.2 breadcrumb design pattern.
+# Emits <nav aria-label="Breadcrumb">, <ol>, <li>, separator (/), and aria-current="page".
+# Purely static and 100% diff-invariant across ir.description.
+
+_BREADCRUMBS_COMPONENT = (
+    '"use client";\n\n'
+    'import React from "react";\n'
+    'import Link from "next/link";\n\n'
+    "export interface BreadcrumbItem {\n"
+    "  label: string;\n"
+    "  href?: string;\n"
+    "}\n\n"
+    "export interface BreadcrumbsProps {\n"
+    "  items: BreadcrumbItem[];\n"
+    "}\n\n"
+    "export function Breadcrumbs({ items }: BreadcrumbsProps) {\n"
+    "  if (!items || items.length === 0) return null;\n\n"
+    "  return (\n"
+    '    <nav aria-label="Breadcrumb" style={{ marginBottom: 16 }}>\n'
+    "      <ol\n"
+    "        style={{\n"
+    '          display: "flex",\n'
+    '          alignItems: "center",\n'
+    '          flexWrap: "wrap",\n'
+    '          listStyle: "none",\n'
+    "          margin: 0,\n"
+    "          padding: 0,\n"
+    "          fontSize: 13,\n"
+    "        }}\n"
+    "      >\n"
+    "        {items.map((item, index) => {\n"
+    "          const isLast = index === items.length - 1;\n"
+    "          return (\n"
+    "            <li\n"
+    "              key={index}\n"
+    "              style={{\n"
+    '                display: "inline-flex",\n'
+    '                alignItems: "center",\n'
+    "              }}\n"
+    "            >\n"
+    "              {index > 0 && (\n"
+    "                <span\n"
+    '                  aria-hidden="true"\n'
+    "                  style={{\n"
+    '                    margin: "0 8px",\n'
+    '                    color: "#94a3b8",\n'
+    '                    userSelect: "none",\n'
+    "                  }}\n"
+    "                >\n"
+    "                  /\n"
+    "                </span>\n"
+    "              )}\n"
+    "              {isLast || !item.href ? (\n"
+    "                <span\n"
+    '                  aria-current={isLast ? "page" : undefined}\n'
+    "                  style={{\n"
+    '                    color: isLast ? "#0f172a" : "#64748b",\n'
+    "                    fontWeight: isLast ? 600 : 400,\n"
+    "                  }}\n"
+    "                >\n"
+    "                  {item.label}\n"
+    "                </span>\n"
+    "              ) : (\n"
+    "                <Link\n"
+    "                  href={item.href}\n"
+    "                  style={{\n"
+    '                    color: "#64748b",\n'
+    '                    textDecoration: "none",\n'
+    "                    fontWeight: 500,\n"
+    '                    transition: "color 0.15s ease",\n'
+    "                  }}\n"
+    "                >\n"
+    "                  {item.label}\n"
+    "                </Link>\n"
+    "              )}\n"
+    "            </li>\n"
+    "          );\n"
+    "        })}\n"
+    "      </ol>\n"
+    "    </nav>\n"
+    "  );\n"
+    "}\n"
+)
+
+
+def render_breadcrumbs_component() -> str:
+    """Return the static TypeScript implementation of the Breadcrumbs component."""
+    return _BREADCRUMBS_COMPONENT
+
+
+
 # --- App Router resilience special files (R-294) -----------------------------------------------
 # Static, inline-styled, dependency-free. They never reference ir.name/ir.description, so generation
 # stays deterministic and description-only-stable, and they never enter the console-snapshot edit diff.
@@ -5290,6 +5410,7 @@ class NextjsWebAdapter:
             GeneratedFile("components/toast.tsx", _TOAST_COMPONENT),
             GeneratedFile("components/confirm-dialog.tsx", _CONFIRM_DIALOG_COMPONENT),
             GeneratedFile("components/shortcuts-dialog.tsx", _SHORTCUTS_DIALOG_COMPONENT),
+            GeneratedFile("components/breadcrumbs.tsx", _BREADCRUMBS_COMPONENT),
             GeneratedFile("app/globals.css", "body { font-family: system-ui, sans-serif; margin: 0; }\n"),
             GeneratedFile("app/error.tsx", _ERROR_PAGE),
             GeneratedFile("app/global-error.tsx", _GLOBAL_ERROR_PAGE),
