@@ -1075,6 +1075,25 @@ with `render_error_page`/`render_global_error_page`/`render_not_found_page`/`ren
 accessors exported from `codegen`, mirroring `render_toast_component`. No existing generated file, hook,
 API client, backend, or Application-IR change.
 
+### Consistent Error + Retry Affordance Across Fetch States (R-295)
+
+The generated collection list already rendered a "Retry" button (calling `refetch()`) in its error
+banner. R-295 brings the remaining data-fetch error states to parity, so every failed load offers
+recovery — no hook/API-client/backend/IR change is needed because `refetch` already exists on every
+affected hook (`use<Entity>` and `useList<Child>By<Parent>`):
+
+- **Detail-screen main error** (`_detail_screen_page`): renders `Error loading <name>: {error.message}`
+  inside a `<span>` beside a `<button onClick={() => refetch()}>Retry</button>` in a flex row (`refetch`
+  is destructured from `use<Entity>(selectedId)`).
+- **Both subcollection (master-detail) error banners** (the collection master-detail block in
+  `_collection_screen_page` and the detail block in `_detail_screen_page`, byte-identical → updated via
+  `replace_all`): render `Error: {<s_var>.error.message}` inside a `<span>` beside a
+  `<button onClick={() => <s_var>.refetch()}>Retry</button>`.
+
+Retry buttons reuse the collection error banner's flex layout and dark-red (`#991b1b`) styling. The
+collection top-level error banner is unchanged, as are loading/empty/data-render states, delete-error
+toasts, and form field errors; description-only IR generation stays byte-identical.
+
 ### Global Notification Toast System & Action Feedback (R-279)
 
 Adds a lightweight, accessible, and self-contained client-side toast notification system to generated Next.js web applications:

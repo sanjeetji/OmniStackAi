@@ -40,7 +40,7 @@ START PROTOCOL
   `task ai:status`, `task ai:handoff`. `task verify` must stay green and network-independent.
 - Confirm git branch/HEAD/clean tree. Then restate: phase, next Tracker ID, objective, blast radius.
 
-WHAT IS ALREADY BUILT (platform generators are Python 3.13 stdlib-only, offline, in services/agent-engine; 873 tests pass)
+WHAT IS ALREADY BUILT (platform generators are Python 3.13 stdlib-only, offline, in services/agent-engine; 881 tests pass)
 - Model fabric: ModelProvider contract + registry; local Ollama adapter (runs any installed model via
   OMNISTACKAI_OLLAMA_MODEL); Balanced ModelGateway (deterministic escalation ladder, no silent cloud
   fallback, context-budget guard); key-activated cloud catalog — Anthropic/OpenAI/Google-Gemini/
@@ -95,7 +95,9 @@ WHAT IS ALREADY BUILT (platform generators are Python 3.13 stdlib-only, offline,
   placeholders instead of plain "Loading..." text (R-292: collection table, subcollection lists, detail
   main; R-293: form edit-mode initial load + detail record-selector list). The generated app also ships
   the Next.js App Router resilience quartet (R-294): app/error.tsx + app/global-error.tsx error boundaries
-  with reset(), app/not-found.tsx 404, and app/loading.tsx route-level Suspense skeleton fallback.
+  with reset(), app/not-found.tsx 404, and app/loading.tsx route-level Suspense skeleton fallback. And
+  every data-fetch error state now offers recovery: the collection list, the detail main, and both
+  subcollection lists each render a "Retry" button that calls the relevant refetch() (R-280 + R-295).
   TRI-TARGET proven from ONE IR; all offline/deterministic (emit
   files, assert contents; no install/build/DB).
 - RUNTIME/DEPLOY layer (Brief 15/51/75): RuntimeProvider/DeploymentProvider contracts;
@@ -160,9 +162,9 @@ generated `use<Entity>` detail GET hooks (AbortController; internal signal after
 success/AbortError/loading writes blocked; id-change/unmount cleanup aborts). Do NOT overwrite
 backlog rows; continue from R-288.
 NOTE: the execution tracker was reconciled on 2026-09-09 (R-253..R-279 rows had drifted and were
-backfilled); keep it current going forward. It now has 294 unique rows: 83 Done, 1 Deferred, 210 Not
-Started; MVP is 83/189 (43.9%). The earlier reported R-251 MVP baseline of 145 was one low—direct recount
-is 146, and R-252..R-294 added 43 rows. The summary above is current through R-294; Git, state files,
+backfilled); keep it current going forward. It now has 295 unique rows: 84 Done, 1 Deferred, 210 Not
+Started; MVP is 84/190 (44.2%). The earlier reported R-251 MVP baseline of 145 was one low—direct recount
+is 146, and R-252..R-295 added 44 rows. The summary above is current through R-295; Git, state files,
 tests, and CHANGELOG remain the executable/detail sources of truth.
 
 ENVIRONMENT LIMITS discovered here
@@ -189,13 +191,14 @@ RULES (non-negotiable)
   .ai/HANDOFF.md, PROJECT_STATE.md, CHANGELOG.md, and the tracker row. Push the branch; verify remote
   SHA == local HEAD. Never claim unexecuted tests.
 
-WHAT TO DO NEXT (pick with the founder; all continue the builder), continue from R-295
-- Offline-doable now: loading skeletons cover EVERY generated data-loading state (R-292 + R-293) and the
-  generated app now ships the Next.js App Router resilience quartet — error boundary, global error
-  boundary, not-found, and a route-level loading fallback (R-294). So R-295 should add another
-  generated-app UX/robustness increment — e.g. an error+retry affordance in the collection/detail
-  data-fetch states, or a reusable EmptyState/error component to DRY the inline states. Reuse the proven
-  patterns, preserve public hook signatures, and add focused generation tests first.
+WHAT TO DO NEXT (pick with the founder; all continue the builder), continue from R-296
+- Offline-doable now: the generated app now has full loading-skeleton coverage (R-292 + R-293), the
+  Next.js App Router resilience quartet — error boundary, global error boundary, not-found, and a
+  route-level loading fallback (R-294) — and consistent Error + Retry across every fetch state (R-295).
+  So R-296 should add another generated-app UX/robustness increment — e.g. a reusable EmptyState/error
+  inline-state component to DRY the screens, an accessibility pass (aria roles/labels/focus management),
+  or optimistic create/update reflected in the collection list. Reuse the proven patterns, preserve
+  public hook signatures, and add focused generation tests first.
 - Now unblocked (a Groq API key is available): live-verify the model fabric end-to-end with Groq through
   the Balanced gateway (real cloud inference + cost accounting). Set GROQ_API_KEY in the gitignored .env
   (NEVER in chat/commits/source) and run `task agent-engine:gateway:run` with OMNISTACKAI_CLOUD_PROVIDER=
@@ -207,5 +210,5 @@ WHAT TO DO NEXT (pick with the founder; all continue the builder), continue from
 - Deferred by governance: native mobile (R-010 etc.) until web/backend stability.
 
 Begin by reading the files above and running the start protocol, then propose the next Tracker ID
-(R-295) with its task contract before writing code. Commit to main.
+(R-296) with its task contract before writing code. Commit to main.
 ```

@@ -1,42 +1,41 @@
 schema_version: 1
-task_id: R-294
-title: Generated Next.js App Router Resilience — Error Boundary, Global Error, Not-Found & Loading Fallback
+task_id: R-295
+title: Consistent Error + Retry Affordance Across Every Generated Fetch State
 status: done
 phase: BASIC/MVP
 founder_stage: 0
 branch: main
 goal: >-
-  Add the four Next.js App Router "special files" the generated web app currently lacks, giving every
-  generated app real runtime resilience: app/error.tsx (route-segment error boundary with a reset()
-  "Try again" recovery), app/global-error.tsx (root-layout error boundary that renders its own
-  <html>/<body>), app/not-found.tsx (friendly 404 with a link back to the overview), and app/loading.tsx
-  (route-level Suspense fallback that reuses the R-292/293 skeleton visual language). All four are static,
-  inline-styled to match the app aesthetic, dependency-free, and never reference ir.description or ir.name
-  so generation stays deterministic and description-only-stable.
-tracker_ref: "R-294"
+  Bring every generated data-fetch error state to parity with the collection list, which already renders
+  a "Retry" button that calls refetch(). Today the detail-screen main error state (`{error && ...}` in
+  `_detail_screen_page`) and both subcollection (master-detail) error states (the collection master-detail
+  block in `_collection_screen_page` and the detail block in `_detail_screen_page`, byte-identical) show
+  only an "Error: ..." text banner with no recovery. Add a "Retry" button that calls the relevant refetch
+  (the detail main `refetch()`; the subcollection `<s_var>.refetch()`), matching the collection error
+  banner's flex layout and styling. This completes the error side to match the R-292/293 loading-skeleton
+  completeness. Real runtime behavior; deterministic; description-only-stable.
+tracker_ref: "R-295"
 requirements:
-  - NextjsWebAdapter emits app/error.tsx as a client component ("use client") default-exporting a component that receives { error, reset } and renders a recovery card with a "Try again" button calling reset() and a "Back to overview" link to "/", logging the error via useEffect.
-  - NextjsWebAdapter emits app/global-error.tsx as a client component ("use client") that renders its own <html lang="en"><body ...> and a reset() "Try again" recovery (root-layout error boundary contract).
-  - NextjsWebAdapter emits app/not-found.tsx (server component) rendering a "Page not found" 404 with a Link to "/".
-  - NextjsWebAdapter emits app/loading.tsx (server component) rendering layout-preserving skeleton blocks (reusing the R-292/293 gray-rounded-div palette, #e2e8f0 / #f1f5f9 / opacity ramp) as a route-level Suspense fallback.
-  - The four files are static (no ir.description and no ir.name usage), inline-styled, no new npm/platform dependency; existing files, hooks, API client, backend, and IR are unchanged.
+  - Detail-screen main error banner renders a "Retry" button calling refetch(), in a flex row alongside the message span; the "Error loading <name>: <message>" text is preserved inside a span.
+  - Both subcollection (master-detail) error banners (collection and detail render sites) render a "Retry" button calling `<s_var>.refetch()`, in a flex row alongside the message span; the "Error: <message>" text is preserved inside a span (the `<s_var>.error.message` expression stays present).
+  - Retry buttons reuse the collection error banner's styling (dark-red `#991b1b` button, white text, small).
+  - The collection top-level error banner (already has Retry) is unchanged; loading/empty/data-render states, delete-error toasts, and form errors are unchanged.
+  - No hook/API-client/backend/IR change (refetch already exists on every affected hook); deterministic; description-only IR stability preserved.
 acceptance_criteria:
-  - A generated project contains app/error.tsx, app/global-error.tsx, app/not-found.tsx, and app/loading.tsx.
-  - error.tsx and global-error.tsx are "use client" and wire reset(); global-error.tsx renders its own <html>/<body>.
-  - not-found.tsx and loading.tsx are server components (no "use client"); loading.tsx maps skeleton divs.
-  - Output is byte-identical across ir.description changes; the console-snapshot description-edit diff set is unchanged (the new files never appear in it); both example projects still generate.
-  - Focused tests, related adapter/console-snapshot tests, full offline verification, lint, security, env check, and both builder demos pass.
+  - The detail main error banner emits `onClick={() => refetch()}` and a "Retry" label.
+  - Each subcollection error banner emits `onClick={() => <s_var>.refetch()}` and a "Retry" label, and still contains `<s_var>.error.message`.
+  - The collection top-level error banner still emits exactly one Retry (unchanged).
+  - Description-only IR changes remain byte-identical; both example projects still generate.
+  - Focused tests, related detail/subcollection tests, full offline verification, lint, security, env check, and both builder demos pass.
 expected_impact:
   - services/agent-engine/src/omnistackai_agent_engine/codegen/nextjs.py
-  - services/agent-engine/src/omnistackai_agent_engine/codegen/__init__.py
-  - services/agent-engine/tests/test_app_router_resilience.py
+  - services/agent-engine/tests/test_fetch_error_retry.py
   - .ai task/state/handoff/work-log files, PROJECT_STATE.md, CHANGELOG.md, docs/CODEGEN.md, docs/PROGRESS.md, docs/RESUME_PROMPT.md, and execution tracker
 allowed_paths:
   - services/agent-engine/src/omnistackai_agent_engine/codegen/nextjs.py
-  - services/agent-engine/src/omnistackai_agent_engine/codegen/__init__.py
-  - services/agent-engine/tests/test_app_router_resilience.py
-  - services/agent-engine/tests/test_nextjs_adapter.py
-  - services/agent-engine/tests/test_console_snapshot.py
+  - services/agent-engine/tests/test_fetch_error_retry.py
+  - services/agent-engine/tests/test_subcollection_screens.py
+  - services/agent-engine/tests/test_detail_screen_lifecycle.py
   - .ai/**
   - CHANGELOG.md
   - PROJECT_STATE.md
@@ -54,10 +53,10 @@ must_not_change:
   - PostgreSQL, platform schemas/migrations, or backend semantics
   - Section 74 monorepo layout, provider boundaries, infrastructure, or native/mobile scope
   - Application IR schema, generated API-client behaviour, or the hooks
-  - existing generated files (layout, navbar, toast, overview, screens, api/hooks/types), the R-292/293 skeletons, and the console-snapshot description-edit diff set
+  - the collection top-level error banner (already has Retry), loading/empty/data-render states, delete-error toasts, and form field errors
 gates:
-  - focused app-router-resilience tests
-  - test_nextjs_adapter / test_console_snapshot
+  - focused fetch-error-retry tests
+  - test_subcollection_screens / test_detail_screen_lifecycle
   - task verify
   - task lint
   - task security:quick
@@ -71,16 +70,16 @@ model_tool_trace:
   cloud_calls: 0
   note: Pure deterministic code generation and offline tests; no model call is needed.
 evidence:
-  - "task verify: 873 agent-engine tests pass (9 new in test_app_router_resilience.py; no existing assertion changed; console-snapshot description-edit diff set unchanged)."
+  - "task verify: 881 agent-engine tests pass (8 new in test_fetch_error_retry.py; subcollection error banner updated via replace_all at both render sites; existing commentsSubcol.error.message assertion preserved)."
   - "task lint, task security:quick, task env:check: pass."
   - "task builder:demo -- minimal-blog and -- rideshare-favourites: pass."
-  - "Generated TypeScript inspected: app/error.tsx and app/global-error.tsx are 'use client' with reset() wiring (global-error renders its own <html>/<body>); app/not-found.tsx is a server 404 with a link to '/'; app/loading.tsx is a server Suspense fallback mapping skeleton divs (#e2e8f0 / #f1f5f9, opacity ramp)."
-  - "Feat commit c49bc5c; docs commit to follow."
-  - "Tracker: R-294 Done row at Phase_Roadmap!A9; table A4:M302; 294 unique IDs (0 dupes); 83 Done, 1 Deferred, 210 Not Started; MVP 83/189 (43.9%); no #REF!; XLSX valid."
+  - "Generated TypeScript inspected: detail-main error banner shows 'Error loading <name>: <message>' in a span beside a Retry button calling refetch(); both subcollection error banners show 'Error: <message>' beside a Retry button calling <s_var>.refetch(); collection top-level Retry unchanged."
+  - "Feat commit 2454a43; docs commit to follow."
+  - "Tracker: R-295 Done row at Phase_Roadmap!A9; table A4:M303; 295 unique IDs (0 dupes); 84 Done, 1 Deferred, 210 Not Started; MVP 84/190 (44.2%); no #REF!; XLSX valid."
   - "0 local model calls / 0 cloud calls; no generated app installed/run; no DB connection."
 blockers: []
 next_action: >-
-  R-294 complete. Continue autonomously to R-295 (next unstarted Tracker ID) per the founder's standing
-  authorization — record its contract before coding.
+  R-295 complete. Founder requested a stop after this task. Next unstarted Tracker ID is R-296 (resume via
+  the paste-anywhere prompt in docs/RESUME_PROMPT.md).
 next_command: >-
   task ai:status

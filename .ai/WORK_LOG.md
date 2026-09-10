@@ -1,5 +1,32 @@
 # Work Log
 
+## 2026-09-10 — R-295
+
+- Recorded contract in `.ai/CURRENT_TASK.yaml` and `.ai/tasks/R-295.md` (status in_progress → done).
+- `nextjs.py`:
+  - `_detail_screen_page` main error banner: wrapped `Error loading <name>: {error.message}` in a
+    `<span>` and added a `<button onClick={() => refetch()}>Retry</button>` in a flex row (matching the
+    collection banner's `#991b1b` styling); `refetch` is already destructured from `use<Entity>(selectedId)`.
+  - Both subcollection (master-detail) error banners (the collection master-detail block in
+    `_collection_screen_page` and the detail block in `_detail_screen_page`, byte-identical → updated via
+    `replace_all`): wrapped `Error: {<s_var>.error.message}` in a `<span>` and added a
+    `<button onClick={() => <s_var>.refetch()}>Retry</button>` in a flex row.
+  - The collection top-level error banner (already had Retry) is unchanged; loading/empty/data-render
+    states, delete-error toasts, and form field errors are unchanged. Strict diff invariance across
+    `ir.description` preserved.
+- Added `services/agent-engine/tests/test_fetch_error_retry.py` with 8 focused tests (detail-main retry,
+  detail-main message preserved, collection master-detail subcol retry, detail subcol retry, Retry-button
+  counts on both screens, description diff invariance, example projects still generate), written test-first.
+- `task verify` — 881 tests pass (8 new), 0 failures; the existing `test_subcollection_screens.py`
+  `commentsSubcol.error.message` assertion is preserved. `task lint`, `task security:quick`, `task
+  env:check` pass. `builder:demo minimal-blog` + `rideshare-favourites` pass. Generated TypeScript
+  inspected. 0 network, 0 cloud model calls.
+- Tracker: inserted R-295 Done row at `Phase_Roadmap!A9`; table `A4:M303`; 295 unique IDs (0 dupes);
+  84 Done, 1 Deferred, 210 Not Started; MVP 84/190 (44.2%); no `#REF!`; XLSX valid.
+- Updated CURRENT_TASK.yaml, tasks/R-295.md, PROJECT_STATE.yaml, HANDOFF.md, PROJECT_STATE.md,
+  CHANGELOG.md, docs/CODEGEN.md, docs/PROGRESS.md, docs/RESUME_PROMPT.md.
+- Founder asked to STOP after R-295 and provide a paste-anywhere resume prompt for R-296.
+
 ## 2026-09-10 — R-294
 
 - Recorded contract in `.ai/CURRENT_TASK.yaml` and `.ai/tasks/R-294.md` (status in_progress → done).

@@ -1,26 +1,27 @@
 # Project State — OmniStackAI
-Last updated: 2026-09-10T17:15:00+05:30
+Last updated: 2026-09-10T17:40:00+05:30
 
 ## Current Phase
 Stage 0 (Founder Build Sequence, Brief Section 91) — BASIC/MVP
 
 ## Last Completed Task
-Tracker ID: R-294 — Generated Next.js App Router Resilience: Error Boundary, Global Error, Not-Found &
-Loading Fallback — DONE, `task verify` (873 agent-engine tests, 9 focused R-294 tests) passing. Emits the
-four Next.js App Router "special files" the generated web app was missing: `app/error.tsx` (route-segment
-error boundary, client component, with a `reset()` "Try again" recovery and a "Back to overview" link),
-`app/global-error.tsx` (root-layout error boundary, client component, rendering its own `<html>`/`<body>`
-and a `reset()` recovery), `app/not-found.tsx` (server-component 404 linking to `/`), and `app/loading.tsx`
-(server-component route-level Suspense fallback reusing the R-292/293 skeleton palette). All four are
-static, inline-styled, dependency-free, and never reference `ir.name`/`ir.description` — deterministic,
-description-only-stable, and never in the console-snapshot edit diff. No IR, backend, dependency, database,
-infrastructure, network, or model change; implementation checkpoint `c49bc5c`. Preceded by R-225 through
-R-293.
+Tracker ID: R-295 — Consistent Error + Retry Affordance Across Every Generated Fetch State — DONE,
+`task verify` (881 agent-engine tests, 8 focused R-295 tests) passing. The generated collection list
+already rendered a "Retry" button (calling `refetch()`) in its error banner; R-295 brings the remaining
+fetch error states to parity: the detail-screen main error banner now shows "Error loading `<name>`:
+`<message>`" in a `<span>` beside a Retry button calling `refetch()`, and both subcollection
+(master-detail) error banners now show "Error: `<message>`" beside a Retry button calling
+`<s_var>.refetch()`. Retry buttons reuse the collection banner's flex layout and dark-red (`#991b1b`)
+styling; the collection top-level banner, loading/empty/data-render states, delete-error toasts, and form
+field errors are unchanged. No IR, backend, dependency, database, infrastructure, network, or model change
+(`refetch` already exists on every affected hook); implementation checkpoint `2454a43`. Preceded by R-225
+through R-294.
 
-**Notes:** (1) the tracker is current through R-294: 83 Done, 1 Deferred, 210 Not Started across 294
-tasks; MVP is 83/189 (43.9%). (2) The founder authorized autonomous continuation of Tracker IDs until
-manually stopped. (3) A Groq API key may be available; live model-fabric verification remains separate
-(set it only in gitignored `.env`, never chat/commits).
+**Notes:** (1) the tracker is current through R-295: 84 Done, 1 Deferred, 210 Not Started across 295
+tasks; MVP is 84/190 (44.2%). (2) The founder authorized autonomous continuation of Tracker IDs until
+manually stopped, and asked to STOP after R-295 — resume from R-296 via `docs/RESUME_PROMPT.md`. (3) A
+Groq API key may be available; live model-fabric verification remains separate (set it only in gitignored
+`.env`, never chat/commits).
 
 
 
