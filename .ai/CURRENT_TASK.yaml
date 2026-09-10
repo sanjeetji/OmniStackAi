@@ -1,22 +1,23 @@
-id: R-306
-title: "Generated Accessible Breadcrumb Navigation Component & Screen Hierarchy in Next.js web app"
+id: R-314
+title: "Generated Accessible Reusable Tooltip Component (components/tooltip.tsx)"
 status: DONE
 phase: MVP
 tracker_row: 9
-total_tests: 998
+total_tests: 1082
 owner: sanjeetji
-started_at: 2026-09-10T15:50:00+05:30
-completed_at: 2026-09-10T15:54:30+05:30
+started_at: 2026-09-10T18:53:55+05:30
+completed_at: 2026-09-10T18:55:30+05:30
 objectives:
-  - Create reusable WAI-ARIA compliant Breadcrumbs component in `apps/web/components/breadcrumbs.tsx`.
-  - Wire Breadcrumbs into generated detail screens (`_detail_screen_page`) with Overview, Collection, and Record hierarchy.
-  - Wire Breadcrumbs into generated form screens (`_form_screen_page`) with Overview, Collection, and Action (New/Edit) hierarchy.
-  - Export `render_breadcrumbs_component` from `omnistackai_agent_engine.codegen` and register in `NextjsWebAdapter.generate()`.
-  - Maintain 100% diff-invariance across `ir.description` changes.
-  - Verify all unit tests pass, gates pass, and demo generates clean 46-file monorepo.
+  - Create reusable, accessible Tooltip component at components/tooltip.tsx in generated Next.js web applications.
+  - Implement TooltipPosition ("top" | "bottom" | "left" | "right") and TooltipProps interfaces.
+  - Support WAI-ARIA role="tooltip", dynamic useId, and aria-describedby trigger linkage.
+  - Support hover (mouseEnter/Leave), keyboard focus (focus/blur), and Escape key dismiss.
+  - Export render_tooltip_component in omnistackai_agent_engine.codegen and register in NextjsWebAdapter.generate().
+  - Maintain 100% diff-invariance across ir.description changes.
+  - Verify all unit tests, gates, and demo projects pass cleanly without committing or pushing.
 evidence:
-  verify: "task verify passes 998 tests (9 new in test_breadcrumbs.py)"
+  verify: "task verify passes 1082 tests (8 new in test_tooltip_component.py)"
   lint: "task lint passes"
   security: "task security:quick passes"
   env: "task env:check passes"
-  demo: "task builder:demo passes (46 files generated for minimal-blog, 43 for rideshare-favourites)"
+  demo: "task builder:demo passes (51 files generated for minimal-blog, 48 for rideshare-favourites)"

@@ -41,7 +41,7 @@ START PROTOCOL
   `task ai:status`, `task ai:handoff`. `task verify` must stay green and network-independent.
 - Confirm git branch/HEAD/clean tree. Then restate: phase, next Tracker ID, objective, blast radius.
 
-WHAT IS ALREADY BUILT (platform generators are Python 3.13 stdlib-only, offline, in services/agent-engine; 998 tests pass)
+WHAT IS ALREADY BUILT (platform generators are Python 3.13 stdlib-only, offline, in services/agent-engine; 1,082 tests pass)
 - Model fabric: ModelProvider contract + registry; local Ollama adapter (runs any installed model via
 
 
@@ -184,11 +184,16 @@ HTML validation & live character counters, R-301 search input clear affordances 
 autofocus, R-302 collection status badges & detail copy affordances, R-303 overview interactive entity links &
 health badge, R-304 accessible modal confirmation dialog (replacing window.confirm()), R-305
 accessible keyboard shortcuts help modal & global discovery affordance (`?` hotkey, `<kbd>` cheatsheet),
-and R-306 accessible breadcrumb navigation component & screen hierarchy (WAI-ARIA 1.2 breadcrumbs).
-Do NOT overwrite backlog rows; continue from R-307.
+R-306 accessible breadcrumb navigation component & screen hierarchy (WAI-ARIA 1.2 breadcrumbs),
+R-307 accessible EmptyState component & screen zero-state integrations, R-308 collection screen JSON data
+export & bulk selection export controls, R-309 accessible reusable Pagination component (components/pagination.tsx),
+R-310 accessible reusable Tabs component (components/tabs.tsx), R-311 generated collection table display density toggle,
+R-312 accessible reusable Badge component (components/badge.tsx), R-313 collection table column visibility dropdown & selector controls,
+and R-314 accessible reusable Tooltip component (components/tooltip.tsx).
+Do NOT overwrite backlog rows; continue from R-315.
 NOTE: the execution tracker was reconciled on 2026-09-09 (R-253..R-279 rows had drifted and were
-backfilled); keep it current going forward. It now has 306 unique rows: 95 Done, 1 Deferred, 210 Not
-Started; MVP is 95/201 (47.3%). The summary above is current through R-306; Git, state files,
+backfilled); keep it current going forward. It now has 314 unique rows: 103 Done, 1 Deferred, 210 Not
+Started; MVP is 103/209 (49.3%). The summary above is current through R-314; Git, state files,
 tests, and CHANGELOG remain the executable/detail sources of truth.
 
 ENVIRONMENT LIMITS discovered here
@@ -215,10 +220,9 @@ RULES (non-negotiable)
   .ai/HANDOFF.md, PROJECT_STATE.md, CHANGELOG.md, and the tracker row. Push the branch; verify remote
   SHA == local HEAD. Never claim unexecuted tests.
 
-WHAT TO DO NEXT (pick with the founder; all continue the builder), continue from R-307
+WHAT TO DO NEXT (pick with the founder; all continue the builder), continue from R-313
 - Offline-doable now: continue the generated Next.js web application robustness/UX increments —
-  e.g. optimistic create/update reflection in the collection list, or a reusable EmptyState/error component to
-  DRY the screens, or form field character counters and live validation hints.
+  e.g. column visibility toggles in collection tables, status badge integration in collection/detail screens, or quick status filter tabs.
   Reuse the proven patterns, preserve public hook signatures, and add focused generation tests first.
 - Now unblocked (a Groq API key is available): live-verify the model fabric end-to-end with Groq through
   the Balanced gateway (real cloud inference + cost accounting). Set GROQ_API_KEY in the gitignored .env
@@ -231,7 +235,8 @@ WHAT TO DO NEXT (pick with the founder; all continue the builder), continue from
 - Deferred by governance: native mobile (R-010 etc.) until web/backend stability.
 
 Begin by reading the files above and running the start protocol, then propose the next Tracker ID
-(R-307) with its task contract before writing code. Commit to main.
+(R-313) with its task contract before writing code.
 ```
+
 
 

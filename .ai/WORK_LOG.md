@@ -1,5 +1,155 @@
 # Work Log
 
+## 2026-09-10 — R-314
+
+- Recorded contract in `.ai/CURRENT_TASK.yaml` and `.ai/tasks/R-314.md` (status in_progress → done).
+- `nextjs.py`:
+  - Added `_TOOLTIP_COMPONENT` static template implementing accessible, reusable Tooltip component (`apps/web/components/tooltip.tsx`).
+  - Conforms to WAI-ARIA 1.2 Tooltip design pattern: `<span id={tooltipId} role="tooltip">` with dynamic `useId()` and `React.cloneElement(children, { "aria-describedby": visible ? tooltipId : undefined })`.
+  - Implemented `TooltipPosition` (`"top"` | `"bottom"` | `"left"` | `"right"`), `TooltipProps` (`content`, `children`, `position`, `delayMs`, `className`, `style`), and position styling map.
+  - Implemented triggers: `onMouseEnter`, `onMouseLeave`, `onFocus`, `onBlur`, with configurable `delayMs` timer (default 200ms).
+  - Implemented `Escape` key dismiss listener: closes active tooltip immediately when Escape is pressed.
+  - Exported `render_tooltip_component` in `omnistackai_agent_engine.codegen` and registered in `NextjsWebAdapter.generate()`.
+  - Maintained 100% diff-invariance across `ir.description`.
+- Added `services/agent-engine/tests/test_tooltip_component.py` with 8 comprehensive tests covering types, tooltip role, useId/describedby linkage, hover/focus triggers, escape dismiss, position styles, adapter registration, and example IR project generation.
+- `task verify` — 1,082 tests pass (8 new), 0 failures. `task lint`, `task security:quick`, `task env:check` pass.
+  `builder:demo minimal-blog` passes (51 files generated). `builder:demo rideshare-favourites` passes (48 files generated). 0 model calls.
+- Tracker: inserted R-314 Done row at `Phase_Roadmap!A9`; table `A4:M322`; 314 unique IDs (0 dupes);
+  103 Done, 1 Deferred, 210 Not Started; MVP 103/209 (49.3%); no `#REF!`; XLSX valid.
+- Updated CURRENT_TASK.yaml, tasks/R-314.md, PROJECT_STATE.yaml, HANDOFF.md, PROJECT_STATE.md,
+  CHANGELOG.md, docs/CODEGEN.md, docs/PROGRESS.md, docs/RESUME_PROMPT.md.
+
+## 2026-09-10 — R-313
+
+- Recorded contract in `.ai/CURRENT_TASK.yaml` and `.ai/tasks/R-313.md` (status in_progress → done).
+- `nextjs.py`:
+  - Enhanced generated Next.js collection screens (`_collection_screen_page`) with an interactive, accessible column visibility dropdown ("Columns ▾") in the collection toolbar.
+  - Emitted `visibleColumns` state initialized to `true` for all display fields (`useState<Record<string, boolean>>({ ... })`) and `showColumnPicker` boolean state.
+  - Implemented `toggleColumn` handler with minimum 1 visible column safety guard (`currentVisible.length <= 1`).
+  - Added accessible dropdown button with `aria-haspopup="true"`, `aria-expanded={showColumnPicker}`, and `aria-label="Toggle column visibility"`.
+  - Added dropdown menu with `role="menu"` and `aria-label="Column visibility options"`, containing checkbox toggle controls for each display column.
+  - Conditionally rendered table `<th>` headers and row `<td>` cells according to `visibleColumns[field.name] !== false`.
+  - Preserved row selection checkboxes, Actions/Details column, and full backwards compatibility with colSpan.
+  - Maintained 100% diff-invariance across `ir.description`.
+- Added `services/agent-engine/tests/test_column_visibility.py` with 11 comprehensive tests covering state declaration, dropdown button/menu accessibility, checkbox toggles, conditional headers/cells rendering, guard behavior, diff invariance, and example IR project generation.
+- `task verify` — 1,074 tests pass (11 new), 0 failures. `task lint`, `task security:quick`, `task env:check` pass.
+  `builder:demo minimal-blog` passes (50 files generated). `builder:demo rideshare-favourites` passes (47 files generated). 0 model calls.
+- Tracker: inserted R-313 Done row at `Phase_Roadmap!A9`; table `A4:M321`; 313 unique IDs (0 dupes);
+  102 Done, 1 Deferred, 210 Not Started; MVP 102/208 (49.0%); no `#REF!`; XLSX valid.
+- Updated CURRENT_TASK.yaml, tasks/R-313.md, PROJECT_STATE.yaml, HANDOFF.md, PROJECT_STATE.md,
+  CHANGELOG.md, docs/CODEGEN.md, docs/PROGRESS.md, docs/RESUME_PROMPT.md.
+
+## 2026-09-10 — R-312
+
+- Recorded contract in `.ai/CURRENT_TASK.yaml` and `.ai/tasks/R-312.md` (status in_progress → done).
+- `nextjs.py`:
+  - Added `_BADGE_COMPONENT` static template implementing accessible, reusable Badge and Status Pill component (`apps/web/components/badge.tsx`).
+  - Conforms to WAI-ARIA status semantics: `<span role="status" aria-label={ariaLabel}>`.
+  - Implemented `BadgeVariant` (`"success"` | `"warning"` | `"error"` | `"info"` | `"neutral"`), `BadgeSize` (`"sm"` | `"md"`), and `BadgeProps` (`children`, `variant`, `size`, `dot`, `pulse`, `style`, `className`, `ariaLabel`).
+  - Added built-in status dot indicator with `aria-hidden="true"` and optional pulse opacity.
+  - Exported `render_badge_component` in `omnistackai_agent_engine.codegen` and registered in `NextjsWebAdapter.generate()`.
+  - Maintained 100% diff-invariance across `ir.description`.
+- Added `services/agent-engine/tests/test_badge_component.py` with 12 comprehensive tests covering types, status role, variant colors, sizing, dot indicator, adapter registration, and example IR project generation.
+- `task verify` — 1,063 tests pass (12 new), 0 failures. `task lint`, `task security:quick`, `task env:check` pass.
+  `builder:demo minimal-blog` passes (50 files generated). `builder:demo rideshare-favourites` passes (47 files generated). 0 model calls.
+- Tracker: inserted R-312 Done row at `Phase_Roadmap!A9`; table `A4:M320`; 312 unique IDs (0 dupes);
+  101 Done, 1 Deferred, 210 Not Started; MVP 101/207 (48.8%); no `#REF!`; XLSX valid.
+- Updated CURRENT_TASK.yaml, tasks/R-312.md, PROJECT_STATE.yaml, HANDOFF.md, PROJECT_STATE.md,
+  CHANGELOG.md, docs/CODEGEN.md, docs/PROGRESS.md, docs/RESUME_PROMPT.md.
+
+## 2026-09-10 — R-311
+
+- Recorded contract in `.ai/CURRENT_TASK.yaml` and `.ai/tasks/R-311.md` (status in_progress → done).
+- `nextjs.py`:
+  - Enhanced generated Next.js collection screens (`_collection_screen_page`) with an interactive, accessible table display density toggle (`"compact"` | `"comfortable"` | `"spacious"`).
+  - Emitted `density` state initialized to `"comfortable"`, computing dynamic cell padding (`densityPadding = density === "compact" ? "6px 12px" : density === "spacious" ? "16px 20px" : "12px 16px"`) and table font size (`densityFontSize = density === "compact" ? 13 : 14`).
+  - Added accessible segmented controls in the collection toolbar with `role="group"`, `aria-label="Table display density"`, and `aria-pressed={density === ...}` attributes.
+  - Added `data-density={density}` and `fontSize: densityFontSize` to `<table>`, applying `padding: densityPadding` to table row data cells (`<td>`) across checkboxes, data fields, and action buttons.
+  - Preserved backward compatibility for Actions header (`<th style={{ padding: "12px 16px", textAlign: "right", fontWeight: 600, color: "#475569" }}>Actions</th>`).
+  - Maintained 100% diff-invariance across `ir.description`.
+- Added `services/agent-engine/tests/test_table_density.py` with 10 comprehensive tests covering state declaration, computed padding/font-size, toolbar group & button attributes, table data-density attribute, td cell padding, diff invariance, and example IR project generation.
+- `task verify` — 1,051 tests pass (10 new), 0 failures. `task lint`, `task security:quick`, `task env:check` pass.
+  `builder:demo minimal-blog` passes (49 files generated). `builder:demo rideshare-favourites` passes (46 files generated). 0 model calls.
+- Tracker: inserted R-311 Done row at `Phase_Roadmap!A9`; table `A4:M319`; 311 unique IDs (0 dupes);
+  100 Done, 1 Deferred, 210 Not Started; MVP 100/206 (48.5%); no `#REF!`; XLSX valid.
+- Updated CURRENT_TASK.yaml, tasks/R-311.md, PROJECT_STATE.yaml, HANDOFF.md, PROJECT_STATE.md,
+  CHANGELOG.md, docs/CODEGEN.md, docs/PROGRESS.md, docs/RESUME_PROMPT.md.
+
+## 2026-09-10 — R-310
+
+- Recorded contract in `.ai/CURRENT_TASK.yaml` and `.ai/tasks/R-310.md` (status in_progress → done).
+- `nextjs.py`:
+  - Added `_TABS_COMPONENT` static template implementing accessible, reusable Tabs and TabPanel components (`apps/web/components/tabs.tsx`).
+  - Conforms to WAI-ARIA 1.2 Tabs design pattern: `<div role="tablist" aria-label="...">`, `<button role="tab" id={"tab-" + id} aria-selected={isActive} aria-controls={"tabpanel-" + id} tabIndex={isActive ? 0 : -1}>`, and `<div role="tabpanel" id={"tabpanel-" + id} aria-labelledby={"tab-" + id} tabIndex={0} hidden={activeTab !== id}>`.
+  - Implemented `TabItem`, `TabsProps`, and `TabPanelProps` interfaces with `id`, `label`, `count`, `disabled`, `activeTab`, `onChange`, `ariaLabel`, and `variant` (`"line"` | `"pills"`).
+  - Added keyboard accessibility handlers: `ArrowRight` (selects next enabled tab), `ArrowLeft` (selects previous enabled tab), `Home` (selects first enabled tab), `End` (selects last enabled tab) with automatic DOM focus management.
+  - Added badge count display when `count !== undefined`.
+  - Exported `render_tabs_component` in `omnistackai_agent_engine.codegen` and registered in `NextjsWebAdapter.generate()`.
+  - Maintained 100% diff-invariance across `ir.description`.
+- Added `services/agent-engine/tests/test_tabs_component.py` with 12 comprehensive tests covering props interfaces, WAI-ARIA compliance, roving tabindex, keyboard navigation, line/pills variants, adapter registration, diff invariance, and example IR project generation.
+- `task verify` — 1,041 tests pass (12 new), 0 failures. `task lint`, `task security:quick`, `task env:check` pass.
+  `builder:demo minimal-blog` passes (49 files generated). `builder:demo rideshare-favourites` passes (46 files generated). 0 model calls.
+- Tracker: inserted R-310 Done row at `Phase_Roadmap!A9`; table `A4:M318`; 310 unique IDs (0 dupes);
+  99 Done, 1 Deferred, 210 Not Started; MVP 99/205 (48.3%); no `#REF!`; XLSX valid.
+- Updated CURRENT_TASK.yaml, tasks/R-310.md, PROJECT_STATE.yaml, HANDOFF.md, PROJECT_STATE.md,
+  CHANGELOG.md, docs/CODEGEN.md, docs/PROGRESS.md, docs/RESUME_PROMPT.md.
+
+## 2026-09-10 — R-309
+
+- Recorded contract in `.ai/CURRENT_TASK.yaml` and `.ai/tasks/R-309.md` (status in_progress → done).
+- `nextjs.py`:
+  - Added `_PAGINATION_COMPONENT` static template implementing accessible, reusable Pagination component (`apps/web/components/pagination.tsx`).
+  - Conforms to WAI-ARIA 1.2 pagination structure: `<nav aria-label="Pagination">`, labeled Previous/Next buttons, `aria-current="page"` on current active page button, and `<label htmlFor="pageSizeSelect">` with `<select id="pageSizeSelect" aria-label="Select page size">`.
+  - Implemented `PaginationProps` interface: `page`, `pageSize`, `total`, `totalPages`, `onPageChange`, `onPageSizeChange`, `pageSizeOptions`, `disabled`, `compact`, and `itemLabel`.
+  - Added direct page number button rendering with dynamic ellipsis calculation (`getPageNumbers`) in standard mode.
+  - Added `compact` mode support for narrow/constrained viewports (drawers, detail subcollections, cards).
+  - Exported `render_pagination_component` in `omnistackai_agent_engine.codegen` and registered in `NextjsWebAdapter.generate()`.
+  - Maintained 100% diff-invariance across `ir.description`.
+- Added `services/agent-engine/tests/test_pagination_component.py` with 12 comprehensive tests covering props interface, WAI-ARIA compliance, page number calculations, compact mode, disabled states, adapter registration, diff invariance, and example IR project generation.
+- `task verify` — 1,029 tests pass (12 new), 0 failures. `task lint`, `task security:quick`, `task env:check` pass.
+  `builder:demo minimal-blog` passes (48 files generated). `builder:demo rideshare-favourites` passes (45 files generated). 0 model calls.
+- Tracker: inserted R-309 Done row at `Phase_Roadmap!A9`; table `A4:M317`; 309 unique IDs (0 dupes);
+  98 Done, 1 Deferred, 210 Not Started; MVP 98/204 (48.0%); no `#REF!`; XLSX valid.
+- Updated CURRENT_TASK.yaml, tasks/R-309.md, PROJECT_STATE.yaml, HANDOFF.md, PROJECT_STATE.md,
+  CHANGELOG.md, docs/CODEGEN.md, docs/PROGRESS.md, docs/RESUME_PROMPT.md.
+
+## 2026-09-10 — R-308
+
+- Recorded contract in `.ai/CURRENT_TASK.yaml` and `.ai/tasks/R-308.md` (status in_progress → done).
+- `nextjs.py`:
+  - Added `handleExportJson(selectedOnly)` helper function in generated collection screens (`_collection_screen_page`).
+  - Added accessible `Export JSON` button to top toolbar calling `handleExportJson(false)`, disabled when `!data || data.length === 0`.
+  - Added accessible `Export JSON ({checkedIds.length})` button to bulk action bar calling `handleExportJson(true)`.
+  - JSON blob created with `application/json;charset=utf-8;` MIME type and formatted with 2-space indentation (`JSON.stringify(itemsToExport, null, 2)`).
+  - Download filename formatted as `{plural.lower()}_export.json`.
+  - Object URL lifecycle properly revoked via `URL.revokeObjectURL(url)`.
+  - User feedback via `toast.info("Exported JSON successfully")`.
+  - Maintained 100% diff-invariance across `ir.description`.
+- Added `services/agent-engine/tests/test_collection_json_export.py` with 8 comprehensive unit and integration tests.
+- `task verify` — 1,017 tests pass (8 new), 0 failures. `task lint`, `task security:quick`, `task env:check` pass.
+  `builder:demo minimal-blog` passes (47 files generated). `builder:demo rideshare-favourites` passes (44 files generated). 0 model calls.
+- Tracker: inserted R-308 Done row at `Phase_Roadmap!A9`; table `A4:M316`; 308 unique IDs (0 dupes);
+  97 Done, 1 Deferred, 210 Not Started; MVP 97/203 (47.8%); no `#REF!`; XLSX valid.
+- Updated CURRENT_TASK.yaml, tasks/R-308.md, PROJECT_STATE.yaml, HANDOFF.md, PROJECT_STATE.md,
+  CHANGELOG.md, docs/CODEGEN.md, docs/PROGRESS.md, docs/RESUME_PROMPT.md.
+
+## 2026-09-10 — R-307
+
+- Recorded contract in `.ai/CURRENT_TASK.yaml` and `.ai/tasks/R-307.md` (status in_progress → done).
+- `nextjs.py`:
+  - Added `_EMPTY_STATE_COMPONENT` template implementing WAI-ARIA `role="status"` and `aria-live="polite"`.
+  - Built-in accessible vector SVG icons: `"folder"`, `"search"`, `"document"`, `"inbox"` with `aria-hidden="true"`.
+  - Added primary and secondary action dispatch supporting Link (when `href` provided) or button (when `onClick` provided).
+  - Exported `render_empty_state_component` in `omnistackai_agent_engine.codegen` and registered `components/empty-state.tsx` in `NextjsWebAdapter.generate()`.
+  - Maintained 100% diff-invariance across `ir.description`.
+- Added `services/agent-engine/tests/test_empty_state.py` with 11 comprehensive tests covering component structure, ARIA compliance, icon variants, action dispatch, adapter registration, diff invariance, and example IR project generation.
+- `task verify` — 1,009 tests pass (11 new), 0 failures. `task lint`, `task security:quick`, `task env:check` pass.
+  `builder:demo minimal-blog` passes (47 files generated). Generated TypeScript inspected. 0 network, 0 cloud model calls.
+- Tracker: inserted R-307 Done row at `Phase_Roadmap!A9`; table `A4:M315`; 307 unique IDs (0 dupes);
+  96 Done, 1 Deferred, 210 Not Started; MVP 96/202 (47.5%); no `#REF!`; XLSX valid.
+- Updated CURRENT_TASK.yaml, tasks/R-307.md, PROJECT_STATE.yaml, HANDOFF.md, PROJECT_STATE.md,
+  CHANGELOG.md, docs/CODEGEN.md, docs/PROGRESS.md, docs/RESUME_PROMPT.md.
+
 ## 2026-09-10 — R-306
 
 - Recorded contract in `.ai/CURRENT_TASK.yaml` and `.ai/tasks/R-306.md` (status in_progress → done).

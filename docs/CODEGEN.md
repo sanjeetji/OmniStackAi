@@ -1307,19 +1307,206 @@ Emits a reusable Breadcrumbs component and integrates hierarchical wayfinding in
   - 100% diff-invariant across `ir.description` changes.
   - Registered in `NextjsWebAdapter.generate()` as a `GeneratedFile` and exported in `codegen.__init__` as `render_breadcrumbs_component`.
 
+## Generated Accessible EmptyState Component & Screen Zero-State Integrations (R-307)
 
+`NextjsWebAdapter` provides a standardized, accessible empty state presentation across generated Next.js web applications:
 
+- **Reusable EmptyState Component (`apps/web/components/empty-state.tsx`)**:
+  - Conforms to WAI-ARIA with `role="status"` and `aria-live="polite"` on the container.
+  - Built-in accessible vector SVG icons (`"folder"`, `"search"`, `"document"`, `"inbox"`) with `aria-hidden="true"` and `#94a3b8` stroke color, plus custom `React.ReactNode` support.
+  - Action button/link dispatch:
+    - Primary action renders `<Link>` when `href` is supplied, or `<button>` when `onClick` is supplied (styled with `#2563eb` accent).
+    - Secondary action renders `<Link>` or `<button>` with outline styling (`#ffffff` background, `1px solid #cbd5e1`).
+  - Exports typed interfaces `EmptyStateAction` and `EmptyStateProps`.
+  - Inline styled using platform design tokens (`#0f172a`, `#64748b`, `#2563eb`, `#cbd5e1`, `#ffffff`).
+- **Diff Predictability & Safety**:
+  - 100% diff-invariant across `ir.description` changes.
+  - Registered in `NextjsWebAdapter.generate()` as a `GeneratedFile` and exported in `codegen.__init__` as `render_empty_state_component`.
 
+## Generated Collection Screen JSON Data Export & Bulk Selection Export Controls (R-308)
 
+`NextjsWebAdapter` adds formatted JSON data export controls across generated collection screens:
 
+- **JSON Data Export Helper (`handleExportJson`)**:
+  - Emits `handleExportJson(selectedOnly: boolean = false)` in `_collection_screen_page`.
+  - Filters loaded records against `checkedIds` when `selectedOnly=true`, or exports all loaded records (`data ?? []`).
+  - Formats JSON payload via `JSON.stringify(itemsToExport, null, 2)` with 2-space indentation.
+  - Generates download blob using `application/json;charset=utf-8;` MIME type.
+  - Triggers browser download with filename formatted as `{plural.lower()}_export.json`.
+  - Cleans up Object URL memory lifecycle via `URL.revokeObjectURL(url)`.
+  - Dispatches feedback toast notification via `toast.info("Exported JSON successfully")`.
+- **Top Toolbar & Contextual Bulk Action Bar Integration**:
+  - Top toolbar renders an accessible `Export JSON` button beside `Export CSV` (`disabled={!data || data.length === 0}`).
+  - Bulk action bar renders an accessible `Export JSON ({checkedIds.length})` button when items are selected.
+- **Diff Predictability & Safety**:
+  - 100% diff-invariant across `ir.description` changes.
 
+## Generated Accessible Reusable Pagination Component (R-309)
 
+`NextjsWebAdapter` emits a standalone, accessible, reusable Pagination component (`apps/web/components/pagination.tsx`):
 
+- **Component Architecture & TypeScript Interfaces**:
+  - Emitted with `"use client"` directive.
+  - Exports `PaginationProps` interface:
+    - `page: number`: Current active page index (1-based).
+    - `pageSize: number`: Items per page.
+    - `total: number`: Total number of records across all pages.
+    - `totalPages: number`: Calculated total number of pages.
+    - `onPageChange: (page: number) => void`: Callback for page navigation.
+    - `onPageSizeChange?: (pageSize: number) => void`: Optional callback for page size changes.
+    - `pageSizeOptions?: number[]`: Array of selectable page sizes (defaults to `[10, 25, 50, 100]`).
+    - `disabled?: boolean`: Disables all controls when loading or performing mutations.
+    - `compact?: boolean`: Compact mode for constrained spaces (drawers, cards, subcollections).
+    - `itemLabel?: string`: Custom label for item counts (e.g. "records", "posts").
+- **WAI-ARIA 1.2 Compliance & Keyboard Usability**:
+  - Outer container is `<nav aria-label="Pagination">`.
+  - Previous and Next buttons have explicit `aria-label="Previous page"` and `aria-label="Next page"`.
+  - Active page number button receives `aria-current="page"`.
+  - Page size select is labelled by `<label htmlFor="pageSizeSelect">` with `aria-label="Select page size"`.
+  - Dynamic ellipsis calculation (`getPageNumbers`) shows direct jump buttons for reachable pages and `...` indicators for large page counts.
+- **Diff Predictability & Safety**:
+  - 100% diff-invariant across `ir.description` changes.
+  - Registered in `NextjsWebAdapter.generate()` as a `GeneratedFile` at `components/pagination.tsx` and exported in `codegen.__init__` as `render_pagination_component`.
 
+## Generated Accessible Reusable Tabs Component (R-310)
 
+`NextjsWebAdapter` emits a standalone, accessible, reusable Tabs component (`apps/web/components/tabs.tsx`):
 
+- **Component Architecture & TypeScript Interfaces**:
+  - Emitted with `"use client"` directive.
+  - Exports `TabItem` interface:
+    - `id: string`: Unique identifier for the tab.
+    - `label: string`: Human-readable label displayed on the tab button.
+    - `badge?: string | number`: Optional count badge displayed alongside tab label.
+    - `disabled?: boolean`: Disables selection and keyboard focus for this tab.
+  - Exports `TabsProps` interface:
+    - `tabs: TabItem[]`: List of tab items.
+    - `activeTab: string`: Currently active tab ID.
+    - `onChange: (tabId: string) => void`: Callback when tab is changed.
+    - `variant?: "line" | "pills"`: Visual styling variant (defaults to `"line"`).
+    - `ariaLabel?: string`: Accessible label for the `<nav role="tablist">` container (defaults to `"Tabs"`).
+    - `className?: string`: Optional custom CSS class name.
+  - Exports `TabPanelProps` interface:
+    - `id: string`: Matching tab ID corresponding to `TabItem.id`.
+    - `activeTab: string`: Currently active tab ID.
+    - `children: React.ReactNode`: Tab panel body content.
+    - `className?: string`: Optional custom CSS class name.
+- **WAI-ARIA 1.2 Tabs Compliance & Keyboard Usability**:
+  - Tablist container: `<nav role="tablist" aria-orientation="horizontal">`.
+  - Tab buttons: `<button role="tab" id={`tab-${tab.id}`} aria-controls={`tabpanel-${tab.id}`} aria-selected={isActive} tabIndex={isActive ? 0 : -1}>`.
+  - Tab panel container: `<div role="tabpanel" id={`tabpanel-${id}`} aria-labelledby={`tab-${id}`} hidden={activeTab !== id}>`.
+  - Full keyboard navigation:
+    - `ArrowRight`: Focuses and activates next non-disabled tab (loops to first).
+    - `ArrowLeft`: Focuses and activates previous non-disabled tab (loops to last).
+    - `Home`: Focuses and activates first non-disabled tab.
+    - `End`: Focuses and activates last non-disabled tab.
+    - DOM focus synchronised automatically via `tabRefs.current[nextTab.id]?.focus()`.
+- **Styling & Visual Design**:
+  - `"line"` variant: Bottom border line indicator (`borderBottom: 2px solid #2563eb` when active, transparent when inactive).
+  - `"pills"` variant: Rounded pill background (`background: #2563eb`, `color: #ffffff` when active; hover/slate background when inactive).
+  - Badge counter pills with variant-aware color contrast.
+- **Diff Predictability & Safety**:
+  - 100% diff-invariant across `ir.description` changes.
+  - Registered in `NextjsWebAdapter.generate()` as a `GeneratedFile` at `components/tabs.tsx` and exported in `codegen.__init__` as `render_tabs_component`.
 
+## Generated Collection Table Display Density Toggle (R-311)
 
+`NextjsWebAdapter` enhances generated Next.js collection screens (`_collection_screen_page`) with interactive, accessible table display density controls:
 
+- **Density State & Calculation**:
+  - Emits `const [density, setDensity] = useState<"compact" | "comfortable" | "spacious">("comfortable");`
+  - Computes `densityPadding`:
+    - `"compact"`: `"6px 12px"`
+    - `"spacious"`: `"16px 20px"`
+    - `"comfortable"` (default): `"12px 16px"`
+  - Computes `densityFontSize`:
+    - `"compact"`: `13`
+    - `"comfortable"` / `"spacious"`: `14`
+- **Accessible Toolbar Segmented Control**:
+  - Emits an accessible button group in the collection toolbar: `<div role="group" aria-label="Table display density">`.
+  - Three toggle buttons: `Compact`, `Comfortable`, `Spacious`.
+  - Each button provides `type="button"`, `aria-label="{Density} density"`, and dynamic `aria-pressed={density === ...}`.
+  - Active button rendered with dark fill (`#0f172a`, `#ffffff`), inactive with clean border and hover.
+- **Table & Row Presentation**:
+  - Table element emits `data-density={density}` and `fontSize: densityFontSize`.
+  - Table row data cells (`<td>`) dynamically apply `padding: densityPadding` across checkbox, data fields, and action buttons.
+  - Strictly preserves backward compatibility for Actions header (`<th style={{ padding: "12px 16px", textAlign: "right", fontWeight: 600, color: "#475569" }}>Actions</th>`).
+- **Diff Predictability & Safety**:
+  - 100% diff-invariant across `ir.description` changes.
 
+## Generated Accessible Reusable Badge Component (R-312)
+
+`NextjsWebAdapter` emits a standalone, accessible, reusable Badge & Status Pill component (`apps/web/components/badge.tsx`):
+
+- **Component Architecture & TypeScript Interfaces**:
+  - Emitted with `"use client"` directive.
+  - Exports `BadgeVariant = "success" | "warning" | "error" | "info" | "neutral"`.
+  - Exports `BadgeSize = "sm" | "md"`.
+  - Exports `BadgeProps` interface:
+    - `children: React.ReactNode`: Content displayed inside the badge.
+    - `variant?: BadgeVariant`: Semantic visual variant (defaults to `"neutral"`).
+    - `size?: BadgeSize`: Display size (defaults to `"md"`).
+    - `dot?: boolean`: Whether to render a leading status dot indicator (defaults to `false`).
+    - `pulse?: boolean`: Whether to add a subtle pulse opacity to the dot (defaults to `false`).
+    - `style?: React.CSSProperties`: Optional custom styles.
+    - `className?: string`: Optional custom CSS class name.
+    - `ariaLabel?: string`: Accessible label for assistive technology.
+- **WAI-ARIA Status Semantics & Design**:
+  - Renders `<span role="status" aria-label={ariaLabel}>`.
+  - Leading status dot rendered with `aria-hidden="true"` and matching variant color.
+  - Sizing profiles:
+    - `"sm"`: `11px` font size, `1px 6px` padding, `5px` dot.
+    - `"md"`: `12px` font size, `2px 8px` padding, `6px` dot.
+  - High-contrast enterprise color tokens:
+    - `success`: `#dcfce7` bg, `#166534` text, `#bbf7d0` border, `#22c55e` dot.
+    - `warning`: `#fef3c7` bg, `#92400e` text, `#fde68a` border, `#f59e0b` dot.
+    - `error`: `#fee2e2` bg, `#991b1b` text, `#fecaca` border, `#ef4444` dot.
+    - `info`: `#eff6ff` bg, `#1d4ed8` text, `#bfdbfe` border, `#3b82f6` dot.
+    - `neutral`: `#f1f5f9` bg, `#475569` text, `#e2e8f0` border, `#94a3b8` dot.
+- **Diff Predictability & Safety**:
+  - 100% diff-invariant across `ir.description` changes.
+  - Registered in `NextjsWebAdapter.generate()` as a `GeneratedFile` at `components/badge.tsx` and exported in `codegen.__init__` as `render_badge_component`.
+
+## Generated Collection Table Column Visibility Dropdown (R-313)
+
+`NextjsWebAdapter` enhances generated Next.js collection screens (`_collection_screen_page`) with interactive, accessible column visibility dropdown controls:
+
+- **State Management & Minimum Column Guard**:
+  - Emits `visibleColumns` state initialized to `true` for all display fields (`useState<Record<string, boolean>>({ ... })`).
+  - Emits `showColumnPicker` boolean state.
+  - Implements `toggleColumn(colName: string)` with safety guard: prevents hiding the last remaining column if `currentVisible.length <= 1`.
+- **Accessible Toolbar Menu**:
+  - Emits dropdown trigger button: `<button type="button" aria-haspopup="true" aria-expanded={showColumnPicker} aria-label="Toggle column visibility">`.
+  - Dropdown container: `<div role="menu" aria-label="Column visibility options">`.
+  - Accessible checkbox label per column: `<input type="checkbox" aria-label="Toggle {Column} column" checked={visibleColumns[col] !== false} onChange={() => toggleColumn(col)} />`.
+- **Dynamic Table Rendering**:
+  - Conditionally renders `<th>` table headers and `<td>` data cells wrapped in `{visibleColumns[field.name] !== false && (...)}`.
+  - Preserves row selection checkboxes, Actions/Details column, and `colSpan` integrity for loading skeletons and empty states.
+- **Diff Predictability & Safety**:
+  - 100% diff-invariant across `ir.description` changes.
+
+## Generated Accessible Reusable Tooltip Component (R-314)
+
+`NextjsWebAdapter` emits a standalone, accessible, reusable Tooltip component (`apps/web/components/tooltip.tsx`):
+
+- **Component Architecture & TypeScript Interfaces**:
+  - Emitted with `"use client"` directive.
+  - Exports `TooltipPosition = "top" | "bottom" | "left" | "right"`.
+  - Exports `TooltipProps` interface:
+    - `content: React.ReactNode`: Content displayed in the floating tooltip popup.
+    - `children: React.ReactElement`: Trigger element wrapped by the tooltip.
+    - `position?: TooltipPosition`: Placement direction (defaults to `"top"`).
+    - `delayMs?: number`: Hover delay before showing (defaults to `200ms`).
+    - `className?: string`: Optional custom CSS class name.
+    - `style?: React.CSSProperties`: Optional container custom styling.
+- **WAI-ARIA 1.2 Tooltip Semantics**:
+  - Generates dynamic unique ID via `useId()`.
+  - Clones trigger child element with `aria-describedby={visible ? tooltipId : undefined}`.
+  - Tooltip container renders `<span id={tooltipId} role="tooltip">`.
+  - Handles both mouse hover (`onMouseEnter`/`onMouseLeave`) and keyboard focus (`onFocus`/`onBlur`).
+  - Dismisses on `Escape` keydown when tooltip is visible.
+  - Position styling offsets for `"top"`, `"bottom"`, `"left"`, and `"right"`.
+- **Diff Predictability & Safety**:
+  - 100% diff-invariant across `ir.description` changes.
+  - Registered in `NextjsWebAdapter.generate()` as a `GeneratedFile` at `components/tooltip.tsx` and exported in `codegen.__init__` as `render_tooltip_component`.
 

@@ -1644,6 +1644,20 @@ def _collection_screen_page(screen: Screen, entity: Entity, ir: ApplicationIR, o
         "  const handleClearSelection = () => {",
         "    setCheckedIds([]);",
         "  };",
+        '  const [density, setDensity] = useState<"compact" | "comfortable" | "spacious">("comfortable");',
+        '  const densityPadding = density === "compact" ? "6px 12px" : density === "spacious" ? "16px 20px" : "12px 16px";',
+        '  const densityFontSize = density === "compact" ? 13 : 14;',
+        '  const [visibleColumns, setVisibleColumns] = useState<Record<string, boolean>>({ ' + ", ".join(f'"{f.name}": true' for f in display_fields) + ' });',
+        '  const [showColumnPicker, setShowColumnPicker] = useState<boolean>(false);',
+        '  const toggleColumn = (colName: string) => {',
+        '    setVisibleColumns((prev) => {',
+        '      const currentVisible = Object.keys(prev).filter((k) => prev[k]);',
+        '      if (prev[colName] && currentVisible.length <= 1) {',
+        '        return prev;',
+        '      }',
+        '      return { ...prev, [colName]: !prev[colName] };',
+        '    });',
+        '  };',
     ])
 
     csv_headers_ts = ", ".join(f'"{f.name}"' for f in entity.fields)
@@ -1673,6 +1687,24 @@ def _collection_screen_page(screen: Screen, entity: Entity, ir: ApplicationIR, o
         "    document.body.removeChild(link);",
         "    URL.revokeObjectURL(url);",
         '    toast.info("Exported CSV successfully");',
+        "  };",
+        "",
+        "  const handleExportJson = (selectedOnly: boolean = false) => {",
+        "    const itemsToExport = selectedOnly",
+        "      ? (data ?? []).filter((item: any) => checkedIds.includes(item.id))",
+        "      : (data ?? []);",
+        "    if (itemsToExport.length === 0) return;",
+        '    const jsonContent = JSON.stringify(itemsToExport, null, 2);',
+        '    const blob = new Blob([jsonContent], { type: "application/json;charset=utf-8;" });',
+        "    const url = URL.createObjectURL(blob);",
+        '    const link = document.createElement("a");',
+        '    link.setAttribute("href", url);',
+        f'    link.setAttribute("download", "{plural.lower()}_export.json");',
+        "    document.body.appendChild(link);",
+        "    link.click();",
+        "    document.body.removeChild(link);",
+        "    URL.revokeObjectURL(url);",
+        '    toast.info("Exported JSON successfully");',
         "  };",
     ])
 
@@ -1899,6 +1931,79 @@ def _collection_screen_page(screen: Screen, entity: Entity, ir: ApplicationIR, o
         "        >",
         '          Export CSV',
         "        </button>",
+        "        <button",
+        '          type="button"',
+        "          onClick={() => handleExportJson(false)}",
+        "          disabled={!data || data.length === 0}",
+        '          style={{ padding: "8px 14px", border: "1px solid #cbd5e1", background: "#fff", color: "#334155", borderRadius: 6, fontSize: 14, cursor: (!data || data.length === 0) ? "default" : "pointer" }}',
+        "        >",
+        '          Export JSON',
+        "        </button>",
+        '        <div style={{ position: "relative", display: "inline-block" }}>',
+        '          <button',
+        '            type="button"',
+        '            aria-haspopup="true"',
+        '            aria-expanded={showColumnPicker}',
+        '            aria-label="Toggle column visibility"',
+        '            onClick={() => setShowColumnPicker((prev) => !prev)}',
+        '            style={{ padding: "8px 14px", border: "1px solid #cbd5e1", background: "#fff", color: "#334155", borderRadius: 6, fontSize: 14, cursor: "pointer", display: "inline-flex", alignItems: "center", gap: 6 }}',
+        '          >',
+        '            Columns &#9662;',
+        '          </button>',
+        '          {showColumnPicker && (',
+        '            <div',
+        '              role="menu"',
+        '              aria-label="Column visibility options"',
+        '              style={{ position: "absolute", right: 0, top: "100%", marginTop: 4, background: "#fff", border: "1px solid #cbd5e1", borderRadius: 8, boxShadow: "0 4px 12px rgba(0,0,0,0.1)", padding: "8px 0", minWidth: 160, zIndex: 20 }}',
+        '            >',
+        *([
+            item
+            for f in display_fields
+            for item in [
+                '              <label style={{ display: "flex", alignItems: "center", gap: 8, padding: "6px 14px", cursor: "pointer", fontSize: 13, color: "#334155" }}>',
+                '                <input',
+                '                  type="checkbox"',
+                f'                  aria-label="Toggle {_title_case(f.name)} column"',
+                f'                  checked={{visibleColumns["{f.name}"] !== false}}',
+                f'                  onChange={{() => toggleColumn("{f.name}")}}',
+                '                  style={{ cursor: "pointer" }}',
+                '                />',
+                f'                <span>{_title_case(f.name)}</span>',
+                '              </label>',
+            ]
+        ]),
+        '            </div>',
+        '          )}',
+        '        </div>',
+        '        <div role="group" aria-label="Table display density" style={{ display: "inline-flex", borderRadius: 6, border: "1px solid #cbd5e1", overflow: "hidden", fontSize: 12, fontWeight: 500, marginLeft: "auto" }}>',
+        '          <button',
+        '            type="button"',
+        '            aria-label="Compact density"',
+        '            aria-pressed={density === "compact"}',
+        '            onClick={() => setDensity("compact")}',
+        '            style={{ padding: "6px 10px", border: "none", background: density === "compact" ? "#0f172a" : "#fff", color: density === "compact" ? "#fff" : "#475569", cursor: "pointer" }}',
+        '          >',
+        '            Compact',
+        '          </button>',
+        '          <button',
+        '            type="button"',
+        '            aria-label="Comfortable density"',
+        '            aria-pressed={density === "comfortable"}',
+        '            onClick={() => setDensity("comfortable")}',
+        '            style={{ padding: "6px 10px", border: "none", borderLeft: "1px solid #cbd5e1", background: density === "comfortable" ? "#0f172a" : "#fff", color: density === "comfortable" ? "#fff" : "#475569", cursor: "pointer" }}',
+        '          >',
+        '            Comfortable',
+        '          </button>',
+        '          <button',
+        '            type="button"',
+        '            aria-label="Spacious density"',
+        '            aria-pressed={density === "spacious"}',
+        '            onClick={() => setDensity("spacious")}',
+        '            style={{ padding: "6px 10px", border: "none", borderLeft: "1px solid #cbd5e1", background: density === "spacious" ? "#0f172a" : "#fff", color: density === "spacious" ? "#fff" : "#475569", cursor: "pointer" }}',
+        '          >',
+        '            Spacious',
+        '          </button>',
+        '        </div>',
         "      </section>",
         "",
     ])
@@ -2002,6 +2107,13 @@ def _collection_screen_page(screen: Screen, entity: Entity, ir: ApplicationIR, o
         "            >",
         f'              {{`Export Selected (${{checkedIds.length}})`}}',
         "            </button>",
+            "            <button",
+            '              type="button"',
+            "              onClick={() => handleExportJson(true)}",
+            '              style={{ padding: "6px 14px", border: "1px solid #93c5fd", background: "#fff", color: "#1d4ed8", borderRadius: 6, fontSize: 13, fontWeight: 500, cursor: "pointer" }}',
+            "            >",
+            f'              {{`Export JSON (${{checkedIds.length}})`}}',
+            "            </button>",
     ])
 
     if can_delete:
@@ -2027,7 +2139,7 @@ def _collection_screen_page(screen: Screen, entity: Entity, ir: ApplicationIR, o
             "",
             "      {batchDeleteError && (",
             '        <div style={{ padding: "12px 16px", background: "#fef2f2", border: "1px solid #fecaca", borderRadius: 8, color: "#991b1b", marginBottom: 16, display: "flex", justifyContent: "space-between", alignItems: "center" }}>',
-            "          <span>Error deleting selected items: {batchDeleteError}</span>",
+            '          <span>Error deleting selected items: {batchDeleteError}</span>',
             '          <button onClick={() => setBatchDeleteError(null)} style={{ padding: "4px 8px", background: "#991b1b", color: "#fff", border: "none", borderRadius: 4, cursor: "pointer", fontSize: 12 }}>Dismiss</button>',
             "        </div>",
             "      )}",
@@ -2036,7 +2148,7 @@ def _collection_screen_page(screen: Screen, entity: Entity, ir: ApplicationIR, o
     lines.extend([
         "",
         '      <div style={{ border: "1px solid #e2e8f0", borderRadius: 8, overflow: "hidden", background: "#fff", boxShadow: "0 1px 3px rgba(0,0,0,0.05)" }}>',
-        '        <table style={{ width: "100%", borderCollapse: "collapse", textAlign: "left", fontSize: 14 }}>',
+        '        <table data-density={density} style={{ width: "100%", borderCollapse: "collapse", textAlign: "left", fontSize: densityFontSize }}>',
         '          <thead style={{ background: "#f8fafc", borderBottom: "1px solid #e2e8f0" }}>',
         "            <tr>",
         '              <th style={{ padding: "12px 16px", width: 40, textAlign: "center" }}>',
@@ -2053,9 +2165,11 @@ def _collection_screen_page(screen: Screen, entity: Entity, ir: ApplicationIR, o
     for f in display_fields:
         col_label = _title_case(f.name)
         lines.extend([
-            '              <th onClick={() => setSort("' + f.name + '")} aria-sort={params.sort === "' + f.name + '" ? (params.order === "desc" ? "descending" : "ascending") : "none"} style={{ padding: "12px 16px", fontWeight: 600, color: "#475569", cursor: "pointer", userSelect: "none" }}>',
-            '                ' + col_label + ' {params.sort === "' + f.name + '" ? (params.order === "desc" ? "↓" : "↑") : ""}',
-            "              </th>",
+            '              {visibleColumns["' + f.name + '"] !== false && (',
+            '                <th onClick={() => setSort("' + f.name + '")} aria-sort={params.sort === "' + f.name + '" ? (params.order === "desc" ? "descending" : "ascending") : "none"} style={{ padding: "12px 16px", fontWeight: 600, color: "#475569", cursor: "pointer", userSelect: "none" }}>',
+            '                  ' + col_label + ' {params.sort === "' + f.name + '" ? (params.order === "desc" ? "↓" : "↑") : ""}',
+            "                </th>",
+            "              )}",
         ])
 
     can_edit = (Op.UPDATE in ops) and (form_screen is not None)
@@ -2160,7 +2274,7 @@ def _collection_screen_page(screen: Screen, entity: Entity, ir: ApplicationIR, o
         lines.append('              <tr key={(item as any).id ?? idx} style={{ borderBottom: "1px solid #f1f5f9", background: checkedIds.includes((item as any).id) ? "#f8fafc" : undefined }}>')
 
     lines.extend([
-        '                <td style={{ padding: "12px 16px", textAlign: "center", width: 40 }} onClick={(e) => e.stopPropagation()}>',
+        '                <td style={{ padding: densityPadding, textAlign: "center", width: 40 }} onClick={(e) => e.stopPropagation()}>',
         '                  <input',
         '                    type="checkbox"',
         '                    aria-label={`Select ${(item as any).id ?? idx}`}',
@@ -2200,10 +2314,14 @@ def _collection_screen_page(screen: Screen, entity: Entity, ir: ApplicationIR, o
         else:
             val_expr = '{(item as any).' + f.name + ' !== undefined ? String((item as any).' + f.name + ') : "-"}'
 
-        lines.append('                <td style={{ padding: "12px 16px", color: "#1e293b" }}>' + val_expr + '</td>')
+        lines.extend([
+            '                {visibleColumns["' + f.name + '"] !== false && (',
+            '                  <td style={{ padding: densityPadding, color: "#1e293b" }}>' + val_expr + '</td>',
+            '                )}',
+        ])
 
     if has_actions_col:
-        lines.append('                <td style={{ padding: "12px 16px", textAlign: "right", whiteSpace: "nowrap" }}>')
+        lines.append('                <td style={{ padding: densityPadding, textAlign: "right", whiteSpace: "nowrap" }}>')
         if detail_screen:
             margin_style = " marginRight: 8," if (has_subcollections or can_edit or can_delete) else ""
             lines.extend([
@@ -5221,6 +5339,814 @@ def render_breadcrumbs_component() -> str:
     return _BREADCRUMBS_COMPONENT
 
 
+# --- Reusable accessible empty state component (R-307) -------------------------------------------
+# Static, inline-styled, zero-dependency zero-state illustration and action card.
+# Conforms to WAI-ARIA with role="status" and aria-live="polite".
+# Never references ir.name/ir.description to guarantee diff invariance.
+
+_EMPTY_STATE_COMPONENT = (
+    '"use client";\n\n'
+    'import React from "react";\n'
+    'import Link from "next/link";\n\n'
+    "export interface EmptyStateAction {\n"
+    "  label: string;\n"
+    "  href?: string;\n"
+    "  onClick?: () => void;\n"
+    "}\n\n"
+    "export interface EmptyStateProps {\n"
+    "  title: string;\n"
+    "  description?: string;\n"
+    '  icon?: "folder" | "search" | "document" | "inbox" | React.ReactNode;\n'
+    "  action?: EmptyStateAction;\n"
+    "  secondaryAction?: EmptyStateAction;\n"
+    "  style?: React.CSSProperties;\n"
+    "  className?: string;\n"
+    "}\n\n"
+    "function renderIcon(icon: EmptyStateProps[\"icon\"]) {\n"
+    '  if (!icon || icon === "folder") {\n'
+    "    return (\n"
+    "      <svg\n"
+    '        aria-hidden="true"\n'
+    '        width="48"\n'
+    '        height="48"\n'
+    '        viewBox="0 0 24 24"\n'
+    '        fill="none"\n'
+    '        stroke="#94a3b8"\n'
+    '        strokeWidth="1.5"\n'
+    '        strokeLinecap="round"\n'
+    '        strokeLinejoin="round"\n'
+    "      >\n"
+    '        <path d="M4 20h16a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.93a2 2 0 0 1-1.66-.9l-.82-1.2A2 2 0 0 0 7.93 3H4a2 2 0 0 0-2 2v13c0 1.1.9 2 2 2Z" />\n'
+    "      </svg>\n"
+    "    );\n"
+    "  }\n"
+    '  if (icon === "search") {\n'
+    "    return (\n"
+    "      <svg\n"
+    '        aria-hidden="true"\n'
+    '        width="48"\n'
+    '        height="48"\n'
+    '        viewBox="0 0 24 24"\n'
+    '        fill="none"\n'
+    '        stroke="#94a3b8"\n'
+    '        strokeWidth="1.5"\n'
+    '        strokeLinecap="round"\n'
+    '        strokeLinejoin="round"\n'
+    "      >\n"
+    '        <circle cx="11" cy="11" r="8" />\n'
+    '        <path d="m21 21-4.3-4.3" />\n'
+    "      </svg>\n"
+    "    );\n"
+    "  }\n"
+    '  if (icon === "document") {\n'
+    "    return (\n"
+    "      <svg\n"
+    '        aria-hidden="true"\n'
+    '        width="48"\n'
+    '        height="48"\n'
+    '        viewBox="0 0 24 24"\n'
+    '        fill="none"\n'
+    '        stroke="#94a3b8"\n'
+    '        strokeWidth="1.5"\n'
+    '        strokeLinecap="round"\n'
+    '        strokeLinejoin="round"\n'
+    "      >\n"
+    '        <path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z" />\n'
+    '        <polyline points="14 2 14 8 20 8" />\n'
+    '        <line x1="16" x2="8" y1="13" y2="13" />\n'
+    '        <line x1="16" x2="8" y1="17" y2="17" />\n'
+    '        <line x1="10" x2="8" y1="9" y2="9" />\n'
+    "      </svg>\n"
+    "    );\n"
+    "  }\n"
+    '  if (icon === "inbox") {\n'
+    "    return (\n"
+    "      <svg\n"
+    '        aria-hidden="true"\n'
+    '        width="48"\n'
+    '        height="48"\n'
+    '        viewBox="0 0 24 24"\n'
+    '        fill="none"\n'
+    '        stroke="#94a3b8"\n'
+    '        strokeWidth="1.5"\n'
+    '        strokeLinecap="round"\n'
+    '        strokeLinejoin="round"\n'
+    "      >\n"
+    '        <polyline points="22 12 16 12 14 15 10 15 8 12 2 12" />\n'
+    '        <path d="M5.45 5.11 2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.45-6.89A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11z" />\n'
+    "      </svg>\n"
+    "    );\n"
+    "  }\n"
+    "  return <span aria-hidden=\"true\">{icon}</span>;\n"
+    "}\n\n"
+    "export function EmptyState({\n"
+    "  title,\n"
+    "  description,\n"
+    '  icon = "folder",\n'
+    "  action,\n"
+    "  secondaryAction,\n"
+    "  style,\n"
+    "  className,\n"
+    "}: EmptyStateProps) {\n"
+    "  return (\n"
+    "    <div\n"
+    '      role="status"\n'
+    '      aria-live="polite"\n'
+    "      className={className}\n"
+    "      style={{\n"
+    '        display: "flex",\n'
+    '        flexDirection: "column",\n'
+    '        alignItems: "center",\n'
+    '        justifyContent: "center",\n'
+    '        textAlign: "center",\n'
+    '        padding: "40px 24px",\n'
+    '        background: "#ffffff",\n'
+    '        border: "1px dashed #cbd5e1",\n'
+    "        borderRadius: 12,\n"
+    "        maxWidth: 520,\n"
+    '        margin: "24px auto",\n'
+    "        boxSizing: \"border-box\",\n"
+    "        ...style,\n"
+    "      }}\n"
+    "    >\n"
+    '      <div style={{ marginBottom: 16 }}>{renderIcon(icon)}</div>\n'
+    '      <h3 style={{ fontSize: 16, fontWeight: 600, color: "#0f172a", margin: "0 0 8px" }}>\n'
+    "        {title}\n"
+    "      </h3>\n"
+    "      {description && (\n"
+    '        <p style={{ fontSize: 14, color: "#64748b", margin: "0 0 20px", maxWidth: 400, lineHeight: 1.5 }}>\n'
+    "          {description}\n"
+    "        </p>\n"
+    "      )}\n"
+    "      {(action || secondaryAction) && (\n"
+    '        <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap", justifyContent: "center", marginTop: description ? 0 : 16 }}>\n'
+    "          {action && (\n"
+    "            action.href ? (\n"
+    "              <Link\n"
+    "                href={action.href}\n"
+    "                style={{\n"
+    '                  display: "inline-flex",\n'
+    '                  alignItems: "center",\n'
+    '                  padding: "8px 16px",\n'
+    '                  background: "#2563eb",\n'
+    '                  color: "#ffffff",\n'
+    "                  borderRadius: 6,\n"
+    "                  fontSize: 13,\n"
+    "                  fontWeight: 500,\n"
+    '                  textDecoration: "none",\n'
+    '                  transition: "background 0.15s ease",\n'
+    "                }}\n"
+    "              >\n"
+    "                {action.label}\n"
+    "              </Link>\n"
+    "            ) : (\n"
+    "              <button\n"
+    '                type="button"\n'
+    "                onClick={action.onClick}\n"
+    "                style={{\n"
+    '                  padding: "8px 16px",\n'
+    '                  background: "#2563eb",\n'
+    '                  color: "#ffffff",\n'
+    '                  border: "none",\n'
+    "                  borderRadius: 6,\n"
+    "                  fontSize: 13,\n"
+    "                  fontWeight: 500,\n"
+    '                  cursor: "pointer",\n'
+    "                }}\n"
+    "              >\n"
+    "                {action.label}\n"
+    "              </button>\n"
+    "            )\n"
+    "          )}\n"
+    "          {secondaryAction && (\n"
+    "            secondaryAction.href ? (\n"
+    "              <Link\n"
+    "                href={secondaryAction.href}\n"
+    "                style={{\n"
+    '                  display: "inline-flex",\n'
+    '                  alignItems: "center",\n'
+    '                  padding: "8px 16px",\n'
+    '                  background: "#ffffff",\n'
+    '                  color: "#475569",\n'
+    '                  border: "1px solid #cbd5e1",\n'
+    "                  borderRadius: 6,\n"
+    "                  fontSize: 13,\n"
+    "                  fontWeight: 500,\n"
+    '                  textDecoration: "none",\n'
+    "                }}\n"
+    "              >\n"
+    "                {secondaryAction.label}\n"
+    "              </Link>\n"
+    "            ) : (\n"
+    "              <button\n"
+    '                type="button"\n'
+    "                onClick={secondaryAction.onClick}\n"
+    "                style={{\n"
+    '                  padding: "8px 16px",\n'
+    '                  background: "#ffffff",\n'
+    '                  color: "#475569",\n'
+    '                  border: "1px solid #cbd5e1",\n'
+    "                  borderRadius: 6,\n"
+    "                  fontSize: 13,\n"
+    "                  fontWeight: 500,\n"
+    '                  cursor: "pointer",\n'
+    "                }}\n"
+    "              >\n"
+    "                {secondaryAction.label}\n"
+    "              </button>\n"
+    "            )\n"
+    "          )}\n"
+    "        </div>\n"
+    "      )}\n"
+    "    </div>\n"
+    "  );\n"
+    "}\n"
+)
+
+
+def render_empty_state_component() -> str:
+    """Return the static TypeScript implementation of the EmptyState component."""
+    return _EMPTY_STATE_COMPONENT
+
+
+_PAGINATION_COMPONENT = (
+    '"use client";\n\n'
+    'import React from "react";\n\n'
+    "export interface PaginationProps {\n"
+    "  page: number;\n"
+    "  pageSize: number;\n"
+    "  total: number;\n"
+    "  totalPages: number;\n"
+    "  onPageChange: (page: number) => void;\n"
+    "  onPageSizeChange?: (pageSize: number) => void;\n"
+    "  pageSizeOptions?: number[];\n"
+    "  disabled?: boolean;\n"
+    "  compact?: boolean;\n"
+    "  itemLabel?: string;\n"
+    "}\n\n"
+    'function getPageNumbers(currentPage: number, totalPages: number): (number | "ellipsis")[] {\n'
+    "  if (totalPages <= 7) {\n"
+    "    return Array.from({ length: totalPages }, (_, i) => i + 1);\n"
+    "  }\n"
+    '  const pages: (number | "ellipsis")[] = [1];\n'
+    "  if (currentPage > 3) {\n"
+    '    pages.push("ellipsis");\n'
+    "  }\n"
+    "  const start = Math.max(2, currentPage - 1);\n"
+    "  const end = Math.min(totalPages - 1, currentPage + 1);\n"
+    "  for (let i = start; i <= end; i++) {\n"
+    "    pages.push(i);\n"
+    "  }\n"
+    "  if (currentPage < totalPages - 2) {\n"
+    '    pages.push("ellipsis");\n'
+    "  }\n"
+    "  pages.push(totalPages);\n"
+    "  return pages;\n"
+    "}\n\n"
+    "export function Pagination({\n"
+    "  page,\n"
+    "  pageSize,\n"
+    "  total,\n"
+    "  totalPages,\n"
+    "  onPageChange,\n"
+    "  onPageSizeChange,\n"
+    "  pageSizeOptions = [10, 25, 50, 100],\n"
+    "  disabled = false,\n"
+    "  compact = false,\n"
+    "  itemLabel,\n"
+    "}: PaginationProps) {\n"
+    "  const pageNumbers = !compact && totalPages > 1 ? getPageNumbers(page, totalPages) : [];\n\n"
+    "  return (\n"
+    '    <nav aria-label="Pagination"\n'
+    "      style={{\n"
+    '        display: "flex",\n'
+    '        justifyContent: "space-between",\n'
+    '        alignItems: "center",\n'
+    '        flexWrap: "wrap",\n'
+    "        gap: 12,\n"
+    '        padding: "12px 0",\n'
+    "      }}\n"
+    "    >\n"
+    '      <div style={{ display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap" }}>\n'
+    '        <span style={{ fontSize: 13, color: "#64748b" }}>\n'
+    '          Page {page} of {Math.max(1, totalPages)} ({total} {itemLabel || "total"})\n'
+    "        </span>\n"
+    "        {onPageSizeChange && !compact && (\n"
+    '          <div style={{ display: "flex", alignItems: "center", gap: 6 }}>\n'
+    '            <label htmlFor="pageSizeSelect" style={{ fontSize: 13, color: "#64748b" }}>\n'
+    "              Per page:\n"
+    "            </label>\n"
+    "            <select\n"
+    '              id="pageSizeSelect"\n'
+    '              aria-label="Select page size"\n'
+    "              value={pageSize}\n"
+    "              onChange={(e) => onPageSizeChange(Number(e.target.value))}\n"
+    "              disabled={disabled}\n"
+    "              style={{\n"
+    '                padding: "4px 8px",\n'
+    '                border: "1px solid #cbd5e1",\n'
+    "                borderRadius: 6,\n"
+    '                background: "#fff",\n'
+    "                fontSize: 13,\n"
+    '                color: "#334155",\n'
+    '                cursor: disabled ? "not-allowed" : "pointer",\n'
+    '                outline: "none",\n'
+    "              }}\n"
+    "            >\n"
+    "              {pageSizeOptions.map((opt) => (\n"
+    "                <option key={opt} value={opt}>\n"
+    "                  {opt} per page\n"
+    "                </option>\n"
+    "              ))}\n"
+    "            </select>\n"
+    "          </div>\n"
+    "        )}\n"
+    "      </div>\n\n"
+    '      <div style={{ display: "flex", alignItems: "center", gap: 6 }}>\n'
+    "        <button\n"
+    '          type="button"\n'
+    "          onClick={() => onPageChange(page - 1)}\n"
+    "          disabled={page <= 1 || disabled}\n"
+    '          aria-label="Previous page"\n'
+    "          style={{\n"
+    '            padding: compact ? "4px 8px" : "6px 12px",\n'
+    '            border: "1px solid #cbd5e1",\n'
+    "            borderRadius: 6,\n"
+    '            background: page <= 1 || disabled ? "#f1f5f9" : "#fff",\n'
+    '            color: page <= 1 || disabled ? "#94a3b8" : "#0f172a",\n'
+    "            fontSize: compact ? 12 : 13,\n"
+    "            fontWeight: 500,\n"
+    '            cursor: page <= 1 || disabled ? "not-allowed" : "pointer",\n'
+    '            transition: "all 0.15s ease",\n'
+    "          }}\n"
+    "        >\n"
+    "          Previous\n"
+    "        </button>\n\n"
+    "        {!compact &&\n"
+    "          pageNumbers.map((p, idx) => {\n"
+    '            if (p === "ellipsis") {\n'
+    "              return (\n"
+    "                <span\n"
+    '                  key={`ellipsis-${idx}`}\n'
+    '                  style={{ padding: "0 4px", color: "#94a3b8", fontSize: 13 }}\n'
+    '                  aria-hidden="true"\n'
+    "                >\n"
+    "                  &hellip;\n"
+    "                </span>\n"
+    "              );\n"
+    "            }\n"
+    "            const isCurrent = p === page;\n"
+    "            return (\n"
+    "              <button\n"
+    "                key={p}\n"
+    '                type="button"\n'
+    "                onClick={() => onPageChange(p)}\n"
+    "                disabled={disabled}\n"
+    '                aria-label={`Page ${p}`}\n'
+    '                aria-current={isCurrent ? "page" : undefined}\n'
+    "                style={{\n"
+    "                  minWidth: 32,\n"
+    "                  height: 32,\n"
+    '                  padding: "0 6px",\n'
+    '                  border: isCurrent ? "1px solid #2563eb" : "1px solid #cbd5e1",\n'
+    "                  borderRadius: 6,\n"
+    '                  background: isCurrent ? "#2563eb" : "#fff",\n'
+    '                  color: isCurrent ? "#fff" : "#334155",\n'
+    "                  fontSize: 13,\n"
+    "                  fontWeight: isCurrent ? 600 : 400,\n"
+    '                  cursor: disabled ? "not-allowed" : "pointer",\n'
+    '                  transition: "all 0.15s ease",\n'
+    "                }}\n"
+    "              >\n"
+    "                {p}\n"
+    "              </button>\n"
+    "            );\n"
+    "          })}\n\n"
+    "        <button\n"
+    '          type="button"\n'
+    "          onClick={() => onPageChange(page + 1)}\n"
+    "          disabled={page >= totalPages || disabled}\n"
+    '          aria-label="Next page"\n'
+    "          style={{\n"
+    '            padding: compact ? "4px 8px" : "6px 12px",\n'
+    '            border: "1px solid #cbd5e1",\n'
+    "            borderRadius: 6,\n"
+    '            background: page >= totalPages || disabled ? "#f1f5f9" : "#fff",\n'
+    '            color: page >= totalPages || disabled ? "#94a3b8" : "#0f172a",\n'
+    "            fontSize: compact ? 12 : 13,\n"
+    "            fontWeight: 500,\n"
+    '            cursor: page >= totalPages || disabled ? "not-allowed" : "pointer",\n'
+    '            transition: "all 0.15s ease",\n'
+    "          }}\n"
+    "        >\n"
+    "          Next\n"
+    "        </button>\n"
+    "      </div>\n"
+    "    </nav>\n"
+    "  );\n"
+    "}\n"
+)
+
+
+def render_pagination_component() -> str:
+    """Return the static TypeScript implementation of the Pagination component."""
+    return _PAGINATION_COMPONENT
+
+
+_TABS_COMPONENT = (
+    '"use client";\n\n'
+    'import React, { useRef } from "react";\n\n'
+    "export interface TabItem {\n"
+    "  id: string;\n"
+    "  label: string;\n"
+    "  count?: number;\n"
+    "  disabled?: boolean;\n"
+    "}\n\n"
+    "export interface TabsProps {\n"
+    "  tabs: TabItem[];\n"
+    "  activeTab: string;\n"
+    "  onChange: (id: string) => void;\n"
+    "  ariaLabel?: string;\n"
+    '  variant?: "line" | "pills";\n'
+    "}\n\n"
+    "export interface TabPanelProps {\n"
+    "  id: string;\n"
+    "  activeTab: string;\n"
+    "  children: React.ReactNode;\n"
+    "  className?: string;\n"
+    "  style?: React.CSSProperties;\n"
+    "}\n\n"
+    "export function Tabs({\n"
+    "  tabs,\n"
+    "  activeTab,\n"
+    "  onChange,\n"
+    '  ariaLabel = "Tabs",\n'
+    '  variant = "line",\n'
+    "}: TabsProps) {\n"
+    "  const tabListRef = useRef<HTMLDivElement>(null);\n\n"
+    "  const enabledTabs = tabs.filter((t) => !t.disabled);\n\n"
+    "  const handleKeyDown = (e: React.KeyboardEvent) => {\n"
+    "    if (enabledTabs.length === 0) return;\n"
+    "    const currentIndex = enabledTabs.findIndex((t) => t.id === activeTab);\n"
+    "    if (currentIndex === -1) return;\n\n"
+    "    let nextIndex = -1;\n"
+    '    if (e.key === "ArrowRight") {\n'
+    "      e.preventDefault();\n"
+    "      nextIndex = (currentIndex + 1) % enabledTabs.length;\n"
+    '    } else if (e.key === "ArrowLeft") {\n'
+    "      e.preventDefault();\n"
+    "      nextIndex = (currentIndex - 1 + enabledTabs.length) % enabledTabs.length;\n"
+    '    } else if (e.key === "Home") {\n'
+    "      e.preventDefault();\n"
+    "      nextIndex = 0;\n"
+    '    } else if (e.key === "End") {\n'
+    "      e.preventDefault();\n"
+    "      nextIndex = enabledTabs.length - 1;\n"
+    "    }\n\n"
+    "    if (nextIndex !== -1) {\n"
+    "      const targetTab = enabledTabs[nextIndex];\n"
+    "      onChange(targetTab.id);\n"
+    "      const tabElement = tabListRef.current?.querySelector<HTMLButtonElement>(`#tab-${targetTab.id}`);\n"
+    "      tabElement?.focus();\n"
+    "    }\n"
+    "  };\n\n"
+    '  const isPills = variant === "pills";\n'
+    '  const isLine = !isPills;\n\n'
+    "  return (\n"
+    "    <div\n"
+    "      ref={tabListRef}\n"
+    '      role="tablist"\n'
+    "      aria-label={ariaLabel}\n"
+    "      onKeyDown={handleKeyDown}\n"
+    "      style={{\n"
+    '        display: "flex",\n'
+    "        gap: isLine ? 24 : 8,\n"
+    '        borderBottom: isLine ? "1px solid #e2e8f0" : "none",\n'
+    '        padding: isLine ? "0 0 2px" : "4px 0",\n'
+    '        alignItems: "center",\n'
+    '        flexWrap: "wrap",\n'
+    "      }}\n"
+    "    >\n"
+    "      {tabs.map((tab) => {\n"
+    "        const isActive = tab.id === activeTab;\n"
+    "        return (\n"
+    "          <button\n"
+    "            key={tab.id}\n"
+    '            role="tab"\n'
+    "            id={`tab-${tab.id}`}\n"
+    "            aria-selected={isActive}\n"
+    "            aria-controls={`tabpanel-${tab.id}`}\n"
+    "            tabIndex={isActive ? 0 : -1}\n"
+    "            disabled={tab.disabled}\n"
+    "            onClick={() => !tab.disabled && onChange(tab.id)}\n"
+    "            style={{\n"
+    '              display: "inline-flex",\n'
+    '              alignItems: "center",\n'
+    "              gap: 8,\n"
+    '              padding: isLine ? "8px 4px" : "6px 14px",\n'
+    '              border: "none",\n'
+    '              borderBottom: isLine && isActive ? "2px solid #2563eb" : (isLine ? "2px solid transparent" : "none"),\n'
+    "              borderRadius: isLine ? 0 : 6,\n"
+    '              background: !isLine && isActive ? "#2563eb" : (!isLine ? "#f1f5f9" : "transparent"),\n'
+    '              color: isActive ? (isLine ? "#2563eb" : "#ffffff") : (tab.disabled ? "#cbd5e1" : "#64748b"),\n'
+    "              fontSize: 14,\n"
+    "              fontWeight: isActive ? 600 : 500,\n"
+    '              cursor: tab.disabled ? "not-allowed" : "pointer",\n'
+    '              transition: "all 0.15s ease",\n'
+    '              outline: "none",\n'
+    "            }}\n"
+    "          >\n"
+    "            <span>{tab.label}</span>\n"
+    "            {tab.count !== undefined && (\n"
+    "              <span\n"
+    "                style={{\n"
+    "                  fontSize: 11,\n"
+    '                  padding: "1px 6px",\n'
+    "                  borderRadius: 10,\n"
+    "                  fontWeight: 600,\n"
+    "                  background: isActive\n"
+    '                    ? (isLine ? "#eff6ff" : "rgba(255, 255, 255, 0.25)")\n'
+    '                    : "#e2e8f0",\n'
+    "                  color: isActive\n"
+    '                    ? (isLine ? "#1d4ed8" : "#ffffff")\n'
+    '                    : "#475569",\n'
+    "                }}\n"
+    "              >\n"
+    "                {tab.count}\n"
+    "              </span>\n"
+    "            )}\n"
+    "          </button>\n"
+    "        );\n"
+    "      })}\n"
+    "    </div>\n"
+    "  );\n"
+    "}\n\n"
+    "export function TabPanel({\n"
+    "  id,\n"
+    "  activeTab,\n"
+    "  children,\n"
+    "  className,\n"
+    "  style,\n"
+    "}: TabPanelProps) {\n"
+    "  return (\n"
+    "    <div\n"
+    '      role="tabpanel"\n'
+    "      id={`tabpanel-${id}`}\n"
+    "      aria-labelledby={`tab-${id}`}\n"
+    "      tabIndex={0}\n"
+    "      hidden={activeTab !== id}\n"
+    "      className={className}\n"
+    "      style={{\n"
+    "        paddingTop: 16,\n"
+    '        outline: "none",\n'
+    "        ...style,\n"
+    "      }}\n"
+    "    >\n"
+    "      {activeTab === id && children}\n"
+    "    </div>\n"
+    "  );\n"
+    "}\n"
+)
+
+
+def render_tabs_component() -> str:
+    """Return the static TypeScript implementation of the Tabs component."""
+    return _TABS_COMPONENT
+
+
+_BADGE_COMPONENT = (
+    '"use client";\n\n'
+    'import React from "react";\n\n'
+    'export type BadgeVariant = "success" | "warning" | "error" | "info" | "neutral";\n'
+    'export type BadgeSize = "sm" | "md";\n\n'
+    "export interface BadgeProps {\n"
+    "  children: React.ReactNode;\n"
+    "  variant?: BadgeVariant;\n"
+    "  size?: BadgeSize;\n"
+    "  dot?: boolean;\n"
+    "  pulse?: boolean;\n"
+    "  style?: React.CSSProperties;\n"
+    "  className?: string;\n"
+    "  ariaLabel?: string;\n"
+    "}\n\n"
+    "const VARIANT_STYLES: Record<BadgeVariant, { bg: string; text: string; border: string; dot: string }> = {\n"
+    "  success: {\n"
+    '    bg: "#dcfce7",\n'
+    '    text: "#166534",\n'
+    '    border: "#bbf7d0",\n'
+    '    dot: "#22c55e",\n'
+    "  },\n"
+    "  warning: {\n"
+    '    bg: "#fef3c7",\n'
+    '    text: "#92400e",\n'
+    '    border: "#fde68a",\n'
+    '    dot: "#f59e0b",\n'
+    "  },\n"
+    "  error: {\n"
+    '    bg: "#fee2e2",\n'
+    '    text: "#991b1b",\n'
+    '    border: "#fecaca",\n'
+    '    dot: "#ef4444",\n'
+    "  },\n"
+    "  info: {\n"
+    '    bg: "#eff6ff",\n'
+    '    text: "#1d4ed8",\n'
+    '    border: "#bfdbfe",\n'
+    '    dot: "#3b82f6",\n'
+    "  },\n"
+    "  neutral: {\n"
+    '    bg: "#f1f5f9",\n'
+    '    text: "#475569",\n'
+    '    border: "#e2e8f0",\n'
+    '    dot: "#94a3b8",\n'
+    "  },\n"
+    "};\n\n"
+    "export function Badge({\n"
+    "  children,\n"
+    '  variant = "neutral",\n'
+    '  size = "md",\n'
+    "  dot = false,\n"
+    "  pulse = false,\n"
+    "  style,\n"
+    "  className,\n"
+    "  ariaLabel,\n"
+    "}: BadgeProps) {\n"
+    "  const config = VARIANT_STYLES[variant] || VARIANT_STYLES.neutral;\n"
+    '  const isSm = size === "sm";\n\n'
+    "  return (\n"
+    "    <span\n"
+    '      role="status"\n'
+    "      aria-label={ariaLabel}\n"
+    "      className={className}\n"
+    "      style={{\n"
+    '        display: "inline-flex",\n'
+    '        alignItems: "center",\n'
+    "        gap: isSm ? 4 : 6,\n"
+    '        padding: isSm ? "1px 6px" : "2px 8px",\n'
+    "        borderRadius: 9999,\n"
+    "        fontSize: isSm ? 11 : 12,\n"
+    "        fontWeight: 600,\n"
+    "        lineHeight: 1.25,\n"
+    "        background: config.bg,\n"
+    "        color: config.text,\n"
+    "        border: `1px solid ${config.border}`,\n"
+    '        userSelect: "none",\n'
+    "        ...style,\n"
+    "      }}\n"
+    "    >\n"
+    "      {dot && (\n"
+    "        <span\n"
+    '          aria-hidden="true"\n'
+    "          style={{\n"
+    "            width: isSm ? 5 : 6,\n"
+    "            height: isSm ? 5 : 6,\n"
+    '            borderRadius: "50%",\n'
+    "            background: config.dot,\n"
+    '            display: "inline-block",\n'
+    "            flexShrink: 0,\n"
+    "            opacity: pulse ? 0.9 : 1,\n"
+    "          }}\n"
+    "        />\n"
+    "      )}\n"
+    "      {children}\n"
+    "    </span>\n"
+    "  );\n"
+    "}\n\n"
+    "export default Badge;\n"
+)
+
+
+def render_badge_component() -> str:
+    """Return the static TypeScript implementation of the Badge component."""
+    return _BADGE_COMPONENT
+
+
+_TOOLTIP_COMPONENT = (
+    '"use client";\n\n'
+    'import React, { useState, useRef, useEffect, useId } from "react";\n\n'
+    'export type TooltipPosition = "top" | "bottom" | "left" | "right";\n\n'
+    "export interface TooltipProps {\n"
+    "  content: React.ReactNode;\n"
+    "  children: React.ReactElement;\n"
+    "  position?: TooltipPosition;\n"
+    "  delayMs?: number;\n"
+    "  className?: string;\n"
+    "  style?: React.CSSProperties;\n"
+    "}\n\n"
+    "export function Tooltip({\n"
+    "  content,\n"
+    "  children,\n"
+    '  position = "top",\n'
+    "  delayMs = 200,\n"
+    "  className,\n"
+    "  style,\n"
+    "}: TooltipProps) {\n"
+    "  const [visible, setVisible] = useState(false);\n"
+    "  const timerRef = useRef<NodeJS.Timeout | null>(null);\n"
+    "  const tooltipId = useId();\n\n"
+    "  const show = () => {\n"
+    "    timerRef.current = setTimeout(() => {\n"
+    "      setVisible(true);\n"
+    "    }, delayMs);\n"
+    "  };\n\n"
+    "  const hide = () => {\n"
+    "    if (timerRef.current) {\n"
+    "      clearTimeout(timerRef.current);\n"
+    "      timerRef.current = null;\n"
+    "    }\n"
+    "    setVisible(false);\n"
+    "  };\n\n"
+    "  useEffect(() => {\n"
+    "    return () => {\n"
+    "      if (timerRef.current) {\n"
+    "        clearTimeout(timerRef.current);\n"
+    "      }\n"
+    "    };\n"
+    "  }, []);\n\n"
+    "  useEffect(() => {\n"
+    "    const handleKeyDown = (e: KeyboardEvent) => {\n"
+    '      if (e.key === "Escape" && visible) {\n'
+    "        hide();\n"
+    "      }\n"
+    "    };\n"
+    '    window.addEventListener("keydown", handleKeyDown);\n'
+    '    return () => window.removeEventListener("keydown", handleKeyDown);\n'
+    "  }, [visible]);\n\n"
+    "  const positionStyles: Record<TooltipPosition, React.CSSProperties> = {\n"
+    "    top: {\n"
+    '      bottom: "100%",\n'
+    '      left: "50%",\n'
+    '      transform: "translateX(-50%)",\n'
+    "      marginBottom: 6,\n"
+    "    },\n"
+    "    bottom: {\n"
+    '      top: "100%",\n'
+    '      left: "50%",\n'
+    '      transform: "translateX(-50%)",\n'
+    "      marginTop: 6,\n"
+    "    },\n"
+    "    left: {\n"
+    '      right: "100%",\n'
+    '      top: "50%",\n'
+    '      transform: "translateY(-50%)",\n'
+    "      marginRight: 6,\n"
+    "    },\n"
+    "    right: {\n"
+    '      left: "100%",\n'
+    '      top: "50%",\n'
+    '      transform: "translateY(-50%)",\n'
+    "      marginLeft: 6,\n"
+    "    },\n"
+    "  };\n\n"
+    "  return (\n"
+    "    <span\n"
+    '      style={{ position: "relative", display: "inline-flex", ...style }}\n'
+    "      className={className}\n"
+    "      onMouseEnter={show}\n"
+    "      onMouseLeave={hide}\n"
+    "      onFocus={show}\n"
+    "      onBlur={hide}\n"
+    "    >\n"
+    "      {React.cloneElement(children, {\n"
+    '        "aria-describedby": visible ? tooltipId : undefined,\n'
+    "      })}\n"
+    "      {visible && (\n"
+    "        <span\n"
+    "          id={tooltipId}\n"
+    '          role="tooltip"\n'
+    "          style={{\n"
+    '            position: "absolute",\n'
+    "            zIndex: 50,\n"
+    '            padding: "4px 8px",\n'
+    "            fontSize: 12,\n"
+    '            lineHeight: "16px",\n'
+    '            color: "#ffffff",\n'
+    '            backgroundColor: "#0f172a",\n'
+    "            borderRadius: 4,\n"
+    '            whiteSpace: "nowrap",\n'
+    '            boxShadow: "0 2px 8px rgba(0,0,0,0.15)",\n'
+    '            pointerEvents: "none",\n'
+    "            ...positionStyles[position],\n"
+    "          }}\n"
+    "        >\n"
+    "          {content}\n"
+    "        </span>\n"
+    "      )}\n"
+    "    </span>\n"
+    "  );\n"
+    "}\n\n"
+    "export default Tooltip;\n"
+)
+
+
+def render_tooltip_component() -> str:
+    """Return the static TypeScript implementation of the Tooltip component."""
+    return _TOOLTIP_COMPONENT
+
+
+
+
+
 
 # --- App Router resilience special files (R-294) -----------------------------------------------
 # Static, inline-styled, dependency-free. They never reference ir.name/ir.description, so generation
@@ -5411,6 +6337,11 @@ class NextjsWebAdapter:
             GeneratedFile("components/confirm-dialog.tsx", _CONFIRM_DIALOG_COMPONENT),
             GeneratedFile("components/shortcuts-dialog.tsx", _SHORTCUTS_DIALOG_COMPONENT),
             GeneratedFile("components/breadcrumbs.tsx", _BREADCRUMBS_COMPONENT),
+            GeneratedFile("components/empty-state.tsx", _EMPTY_STATE_COMPONENT),
+            GeneratedFile("components/pagination.tsx", _PAGINATION_COMPONENT),
+            GeneratedFile("components/tabs.tsx", _TABS_COMPONENT),
+            GeneratedFile("components/badge.tsx", _BADGE_COMPONENT),
+            GeneratedFile("components/tooltip.tsx", _TOOLTIP_COMPONENT),
             GeneratedFile("app/globals.css", "body { font-family: system-ui, sans-serif; margin: 0; }\n"),
             GeneratedFile("app/error.tsx", _ERROR_PAGE),
             GeneratedFile("app/global-error.tsx", _GLOBAL_ERROR_PAGE),
