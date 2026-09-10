@@ -1,5 +1,5 @@
-tracker_id: R-297
-title: Generated Collection Keyboard Navigation & Shortcuts
+tracker_id: R-298
+title: Generated Detail Screen Keyboard Navigation & Shortcuts
 phase: Phase 3 — Emergent Feature Parity
 track: Web Frontend
 module: apps/web (Next.js codegen)
@@ -7,23 +7,48 @@ status: DONE
 owner: sanjeetji <sk698166@gmail.com>
 
 requirements:
-  - Pressing "/" anywhere outside form inputs/selects/textareas focuses the collection search input and prevents "/" keystroke insertion.
-  - Pressing "Escape" when focused inside the collection search input resets the search query and blurs the input.
-  - Pressing "Escape" outside text inputs when active filters are present clears all collection filters.
+  - Pressing ArrowLeft or "[" outside text inputs navigates to the previous record when available.
+  - Pressing ArrowRight or "]" outside text inputs navigates to the next record when available.
+  - Pressing "e" / "E" outside text inputs opens edit mode when can_edit and a form screen exist.
+  - Pressing "Escape" outside text inputs deselects the current record.
   - Backward-compatible, offline, deterministic (0 model calls), and diff-invariant across ir.description.
 
 acceptance_criteria:
-  - Focused test suite in services/agent-engine/tests/test_collection_keyboard_navigation.py passes (8 tests).
-  - All 902 unit tests in task verify remain green.
-  - Generated collection screen includes keyboard event listener with proper cleanup and input target guards.
+  - Focused test suite in services/agent-engine/tests/test_detail_keyboard_navigation.py passes.
+  - All existing 902 unit tests in task verify remain green.
+  - Generated detail screen includes keyboard event listener with proper cleanup and input target guards.
   - Task verify, task lint, task security:quick, and task env:check pass.
-  - R_&_D/OmniStackAI_Execution_Tracker_v6.xlsx updated with R-297 Done at row 9, 297 unique IDs, 0 #REF!.
+  - R_&_D/OmniStackAI_Execution_Tracker_v6.xlsx updated with R-298 Done at row 9, 298 unique IDs, 0 #REF!.
 
 evidence:
-  task_verify: 902 tests pass in 1.023s
-  task_lint: pass
-  task_security_quick: pass
-  task_env_check: pass
-  task_builder_demos: minimal-blog and rideshare-favourites pass
-  tracker_status: 86 Done / 1 Deferred / 210 Not Started of 297 rows; MVP 86/192 (44.8%); 0 #REF!
-  model_calls: 0 local / 0 cloud
+  - test_detail_keyboard_navigation.py: 7/7 tests pass in 0.003s.
+  - task verify: 909 tests pass in 1.187s (7 new, 0 failures).
+  - task lint: clean (ruff passed).
+  - task security:quick: passed (Stage 0 secret-policy clean).
+  - task env:check: passed.
+  - task builder:demo -- minimal-blog: generated 43 files cleanly into owned repo.
+  - task builder:demo -- rideshare-favourites: generated 40 files cleanly into owned repo.
+  - tracker: row 9 in Phase_Roadmap, table A4:M306, Dashboard to row 306, 0 #REF!, 87/193 MVP tasks Done (45.1%).
+
+allowed_paths:
+  - services/agent-engine/src/omnistackai_agent_engine/codegen/nextjs.py
+  - services/agent-engine/tests/test_detail_keyboard_navigation.py
+  - .ai/CURRENT_TASK.yaml
+  - .ai/tasks/R-298.md
+  - .ai/PROJECT_STATE.yaml
+  - .ai/WORK_LOG.md
+  - .ai/HANDOFF.md
+  - PROJECT_STATE.md
+  - CHANGELOG.md
+  - docs/CODEGEN.md
+  - docs/PROGRESS.md
+  - docs/RESUME_PROMPT.md
+  - R_&_D/OmniStackAI_Execution_Tracker_v6.xlsx
+
+forbidden_changes:
+  - No IR schema changes
+  - No backend or database changes
+  - No breaking changes to existing public hooks or components
+  - No network dependencies or cloud calls
+  - No secrets in commits or logs
+

@@ -1,5 +1,27 @@
 # Work Log
 
+## 2026-09-10 — R-298
+
+- Recorded contract in `.ai/CURRENT_TASK.yaml` and `.ai/tasks/R-298.md` (status in_progress → done).
+- `nextjs.py`:
+  - Added a window `keydown` event listener in `_detail_screen_page` for power-user shortcuts:
+    - Pressing `ArrowLeft` or `[` navigates to the previous record when `prevItem` exists (`prevItem && handleSelectId(prevItem.id)`).
+    - Pressing `ArrowRight` or `]` navigates to the next record when `nextItem` exists (`nextItem && handleSelectId(nextItem.id)`).
+    - Pressing `e` or `E` switches to edit mode when `can_edit && form_screen && selectedId` is true.
+    - Pressing `Escape` deselects the current record (`handleSelectId(null)`).
+    - Keystrokes are ignored when focused within editable targets (`INPUT`, `TEXTAREA`, `SELECT`, `contentEditable`).
+    - Full event listener cleanup on unmount with dependency array.
+  - Maintained strict diff invariance across `ir.description`.
+- Added `services/agent-engine/tests/test_detail_keyboard_navigation.py` with 7 focused tests (listener attachment,
+  prev/next arrow and bracket navigation, edit mode shortcut, escape deselect, editable target guard, diff invariance,
+  example projects generation).
+- `task verify` — 909 tests pass (7 new), 0 failures. `task lint`, `task security:quick`, `task env:check` pass.
+  `builder:demo minimal-blog` + `rideshare-favourites` pass. Generated TypeScript inspected. 0 network, 0 cloud model calls.
+- Tracker: inserted R-298 Done row at `Phase_Roadmap!A9`; table `A4:M306`; 298 unique IDs (0 dupes);
+  87 Done, 1 Deferred, 210 Not Started; MVP 87/193 (45.1%); no `#REF!`; XLSX valid.
+- Updated CURRENT_TASK.yaml, tasks/R-298.md, PROJECT_STATE.yaml, HANDOFF.md, PROJECT_STATE.md,
+  CHANGELOG.md, docs/CODEGEN.md, docs/PROGRESS.md, docs/RESUME_PROMPT.md.
+
 ## 2026-09-10 — R-297
 
 - Recorded contract in `.ai/CURRENT_TASK.yaml` and `.ai/tasks/R-297.md` (status in_progress → done).

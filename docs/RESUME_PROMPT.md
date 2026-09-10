@@ -40,8 +40,9 @@ START PROTOCOL
   `task ai:status`, `task ai:handoff`. `task verify` must stay green and network-independent.
 - Confirm git branch/HEAD/clean tree. Then restate: phase, next Tracker ID, objective, blast radius.
 
-WHAT IS ALREADY BUILT (platform generators are Python 3.13 stdlib-only, offline, in services/agent-engine; 902 tests pass)
+WHAT IS ALREADY BUILT (platform generators are Python 3.13 stdlib-only, offline, in services/agent-engine; 909 tests pass)
 - Model fabric: ModelProvider contract + registry; local Ollama adapter (runs any installed model via
+
   OMNISTACKAI_OLLAMA_MODEL); Balanced ModelGateway (deterministic escalation ladder, no silent cloud
   fallback, context-budget guard); key-activated cloud catalog — Anthropic/OpenAI/Google-Gemini/
   OpenRouter/Groq/DeepSeek/xAI(Grok)/Mistral/Together/Fireworks PLUS bring-your-own custom
@@ -206,10 +207,10 @@ RULES (non-negotiable)
   .ai/HANDOFF.md, PROJECT_STATE.md, CHANGELOG.md, and the tracker row. Push the branch; verify remote
   SHA == local HEAD. Never claim unexecuted tests.
 
-WHAT TO DO NEXT (pick with the founder; all continue the builder), continue from R-298
+WHAT TO DO NEXT (pick with the founder; all continue the builder), continue from R-299
 - Offline-doable now: continue the generated Next.js web application robustness/UX increments —
   e.g. optimistic create/update reflection in the collection list, a reusable EmptyState/error component to
-  DRY the screens, or keyboard shortcut navigation in detail screens (e.g. 'e' to edit, 'Backspace'/'Esc' to back).
+  DRY the screens, or form screen keyboard shortcut submission / cancel (Ctrl+Enter to save, Esc to cancel).
   Reuse the proven patterns, preserve public hook signatures, and add focused generation tests first.
 - Now unblocked (a Groq API key is available): live-verify the model fabric end-to-end with Groq through
   the Balanced gateway (real cloud inference + cost accounting). Set GROQ_API_KEY in the gitignored .env
@@ -222,5 +223,6 @@ WHAT TO DO NEXT (pick with the founder; all continue the builder), continue from
 - Deferred by governance: native mobile (R-010 etc.) until web/backend stability.
 
 Begin by reading the files above and running the start protocol, then propose the next Tracker ID
-(R-298) with its task contract before writing code. Commit to main.
+(R-299) with its task contract before writing code. Commit to main.
 ```
+

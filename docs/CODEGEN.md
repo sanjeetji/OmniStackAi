@@ -1142,15 +1142,24 @@ Adds a lightweight, accessible, and self-contained client-side toast notificatio
     - Subcollection delete: emits `toast.success("Deleted {child} successfully")` / `toast.error(err.message)`.
   - **Form screens**:
     - Submit create/update: emits `toast.success("{Entity} {created|updated} successfully")` / `toast.error(err.message)`.
-## Keyboard navigation & shortcuts (R-297)
+## Keyboard navigation & shortcuts (R-297, R-298)
 
-Generated Next.js collection screens support power-user keyboard navigation and shortcuts without adding external dependencies:
+Generated Next.js collection and detail screens support power-user keyboard navigation and shortcuts without adding external dependencies:
 
-- **Search focus (`/`)**: Pressing `/` outside editable elements (`INPUT`, `TEXTAREA`, `SELECT`, `contentEditable`) focuses the search input via `searchInputRef = useRef<HTMLInputElement>(null)` and prevents default character insertion.
-- **Search reset (`Escape`)**: Pressing `Escape` when focused inside the search input resets `searchInput`, calls `setSearch("")` to clear committed filter state, and blurs the input.
-- **Filter reset (`Escape`)**: Pressing `Escape` outside editable elements when active filters are present (`activeFilterCount > 0`) calls `clearFilters()`.
-- **Event listener lifecycle**: Attached to `window` with proper cleanup on unmount, correctly listing dependencies (`[setSearch, activeFilterCount, clearFilters]`).
+- **Collection screens (R-297)**:
+  - **Search focus (`/`)**: Pressing `/` outside editable elements (`INPUT`, `TEXTAREA`, `SELECT`, `contentEditable`) focuses the search input via `searchInputRef = useRef<HTMLInputElement>(null)` and prevents default character insertion.
+  - **Search reset (`Escape`)**: Pressing `Escape` when focused inside the search input resets `searchInput`, calls `setSearch("")` to clear committed filter state, and blurs the input.
+  - **Filter reset (`Escape`)**: Pressing `Escape` outside editable elements when active filters are present (`activeFilterCount > 0`) calls `clearFilters()`.
+  - **Event listener lifecycle**: Attached to `window` with proper cleanup on unmount, correctly listing dependencies (`[setSearch, activeFilterCount, clearFilters]`).
+
+- **Detail screens (R-298)**:
+  - **Record navigation (`ArrowLeft` / `[` and `ArrowRight` / `]`)**: Pressing `ArrowLeft` or `[` navigates to the previous record when available (`prevItem && handleSelectId(prevItem.id)`); pressing `ArrowRight` or `]` navigates to the next record when available (`nextItem && handleSelectId(nextItem.id)`).
+  - **Edit mode shortcut (`e` / `E`)**: Pressing `e` or `E` jumps directly to edit mode when record update capability and an associated form screen exist (`can_edit && form_screen && selectedId`).
+  - **Deselection (`Escape`)**: Pressing `Escape` outside editable elements deselects the current record (`handleSelectId(null)`).
+  - **Input guards**: Keystrokes are ignored when focused inside editable elements (`INPUT`, `TEXTAREA`, `SELECT`, `contentEditable`).
+  - **Event listener lifecycle**: Attached to `window` with proper cleanup on unmount, with comprehensive dependency arrays.
 - **Safety & Quality**: 100% offline, standard-library-only platform code, zero new IR fields, byte-identical diff invariance across `ir.description`.
+
 
 
 

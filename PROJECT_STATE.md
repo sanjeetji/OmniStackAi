@@ -5,20 +5,22 @@ Last updated: 2026-09-10T17:40:00+05:30
 Stage 0 (Founder Build Sequence, Brief Section 91) — BASIC/MVP
 
 ## Last Completed Task
-Tracker ID: R-297 — Generated Collection Keyboard Navigation & Shortcuts — DONE,
-`task verify` (902 agent-engine tests, 8 focused R-297 tests) passing. Wires power-user keyboard
-navigation and shortcuts into generated Next.js collection screens: pressing `/` outside form inputs
-focuses the collection search input and prevents `/` insertion; pressing `Escape` when focused inside
-the search input clears the search query, resets active search state (`setSearch("")`), and blurs the
-input; pressing `Escape` outside text inputs when active filters are present clears all collection filters
-(`clearFilters()`). All existing text labels, retry buttons, skeletons, and hook signatures are strictly
-preserved; 100% diff-invariant across ir.description; implementation checkpoint `[R-297]`. Preceded by
-R-225 through R-296.
+Tracker ID: R-298 — Generated Detail Screen Keyboard Navigation & Shortcuts — DONE,
+`task verify` (909 agent-engine tests, 7 focused R-298 tests) passing. Wires power-user keyboard
+navigation and shortcuts into generated Next.js detail screens: pressing `ArrowLeft` or `[` outside
+form inputs navigates to the previous record when available (`prevItem && handleSelectId(prevItem.id)`);
+pressing `ArrowRight` or `]` outside form inputs navigates to the next record when available
+(`nextItem && handleSelectId(nextItem.id)`); pressing `e` or `E` outside form inputs switches to edit mode
+for the active record when edit capability and form screen exist (`can_edit && form_screen && selectedId`);
+pressing `Escape` outside form inputs deselects the active record (`handleSelectId(null)`). All existing
+text labels, retry buttons, skeletons, and hook signatures are strictly preserved; 100% diff-invariant
+across ir.description; implementation checkpoint `[R-298]`. Preceded by R-225 through R-297.
 
-**Notes:** (1) the tracker is current through R-297: 86 Done, 1 Deferred, 210 Not Started across 297
-tasks; MVP is 86/192 (44.8%). (2) The founder authorized autonomous continuation of Tracker IDs until
-manually stopped — next unstarted Tracker ID: R-298. (3) A Groq API key may be available; live model-fabric
+**Notes:** (1) the tracker is current through R-298: 87 Done, 1 Deferred, 210 Not Started across 298
+tasks; MVP is 87/193 (45.1%). (2) The founder authorized autonomous continuation of Tracker IDs until
+manually stopped — next unstarted Tracker ID: R-299. (3) A Groq API key may be available; live model-fabric
 verification remains separate (set it only in gitignored `.env`, never chat/commits).
+
 
 
 
