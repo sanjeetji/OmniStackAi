@@ -1,7 +1,7 @@
 schema_version: 1
 task_id: R-292
 title: Loading Skeletons for Generated Next.js Screens
-status: in_progress
+status: done
 phase: BASIC/MVP
 founder_stage: 0
 branch: main
@@ -69,10 +69,37 @@ model_tool_trace:
   local_calls: 0
   cloud_calls: 0
   note: Pure deterministic code generation and offline tests; no model call is needed.
-evidence: []
+evidence:
+  - command: env PYTHONPATH=services/agent-engine/src python3 -m unittest discover -s services/agent-engine/tests -p 'test_loading_skeletons.py'
+    result: pass
+    detail: 9 focused R-292 tests pass (they failed first against the pre-change loading text).
+  - command: task verify
+    result: pass
+    detail: 858 agent-engine tests and all Stage 0 offline verification gates pass; two test_subcollection_screens loading assertions updated to the skeleton markup.
+  - command: task lint
+    result: pass
+  - command: task security:quick
+    result: pass
+  - command: task env:check
+    result: pass
+  - command: task builder:demo -- minimal-blog
+    result: pass
+  - command: task builder:demo -- rideshare-favourites
+    result: pass
+  - command: generated TypeScript artifact inspection
+    result: pass
+    detail: >-
+      Collection loading cell maps 5 skeleton bars (background #e2e8f0); subcollection loading maps 3
+      skeleton blocks (background #f1f5f9); detail main loading maps 4 skeleton lines of varying width.
+      Refresh-button labels/empty/error/data rendering unchanged. Tracker: 292 unique IDs, R-292 Done,
+      table A4:M300, dashboard formulas through row 300, no #REF!, valid XLSX; 81 Done / 1 Deferred / 210
+      Not Started; MVP 81/187 (43.3%).
+  - commit: 16d6c52
+    detail: feat(codegen)- loading skeletons for generated Next.js screens [R-292]
 blockers: []
 next_action: >-
-  Write focused failing tests, replace the collection/subcollection/detail loading text with skeleton
-  markup, update any pinned "Loading..." assertions, run all gates, then tracker + docs + two commits + push.
+  R-292 is complete and verified. Next unstarted Tracker ID is R-293 (autonomous continuation authorized).
+  Recommended offline candidate: loading skeletons for the form initial-load / detail record-selector list
+  (the two remaining "Loading..." spots), or another generated-app UX/robustness increment.
 next_command: >-
-  env PYTHONPATH=services/agent-engine/src python3 -m unittest discover -s services/agent-engine/tests -p 'test_loading_skeletons.py' -v
+  task ai:status

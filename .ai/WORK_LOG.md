@@ -1697,3 +1697,31 @@
   1..299 contiguous, table `A4:M299`, Dashboard ranges through row 299, no `#REF!`, XLSX valid. Recounted
   from the workbook: 291 unique IDs (0 dupes), 80 Done, 1 Deferred, 210 Not Started; MVP 80/186 (43.0%);
   R-010..R-219 backlog intact.
+
+## 2026-09-10 — R-292
+
+- Loading Skeletons: replaced the plain "Loading..." text in the generated screens' data-loading states
+  with layout-preserving skeleton placeholders (static inline-styled gray rounded bars). Rolled straight
+  on from R-291 per the founder's autonomous-continuation authorization; a fresh UX-quality theme now
+  that the delete/fetch robustness arc is complete.
+- Collection table (`_collection_screen_page`): the `{loading && !data}` cell (colSpan-spanning) now maps
+  `[0..4]` skeleton bars (`height: 14, background: "#e2e8f0", borderRadius: 4, margin: "10px 0", opacity:
+  1 - i * 0.15`) instead of "Loading <plural>...". Subcollection lists (both the collection master-detail
+  and detail sites — one `replace_all`): the `{<s_var>.loading && !<s_var>.data}` block maps `[0..2]`
+  skeleton blocks (`height: 44, background: "#f1f5f9"`). Detail main (`_detail_screen_page`): the
+  `{loading}` block maps `[0..3]` skeleton lines of varying width (`width: \`${88 - i * 14}%\``).
+- Static skeletons only (no CSS `@keyframes`, no new file/component, no dependency) — the generated app
+  uses inline styles throughout and has no CSS-injection point. Refresh-button "Loading..." labels,
+  empty/error states, and data rendering are unchanged. No hook/API-client/backend/IR change;
+  description-only IR generation stays byte-stable.
+- Test-first: added `test_loading_skeletons.py` (9 tests — collection skeleton bars + text removed +
+  refresh label kept, subcollection skeleton blocks both sites, detail skeleton lines + text removed,
+  description-only stability, examples still generate). They failed against the plain-text loading, pass
+  after. Updated two `test_subcollection_screens.py` loading assertions to the skeleton markup.
+- Gates: `task verify` 858 tests pass; `task lint`, `task security:quick`, `task env:check` pass; both
+  `task builder:demo` pass; generated collection skeleton inspected. Implementation checkpoint `16d6c52`.
+  0 local / 0 cloud model calls; no generated app installed/run, no DB connection.
+- Tracker: `tracker_edit_r292.py` (baseline `16d6c52`) — R-292 (Builder) at row 9, R-291 → row 10; rows
+  1..300 contiguous, table `A4:M300`, Dashboard ranges through row 300, no `#REF!`, XLSX valid. Recounted
+  from the workbook: 292 unique IDs (0 dupes), 81 Done, 1 Deferred, 210 Not Started; MVP 81/187 (43.3%);
+  R-010..R-219 backlog intact.

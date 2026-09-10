@@ -1019,6 +1019,20 @@ existing error toast) only if the server rejects:
   Non-deletable subcollections, the hooks, the generated API client, backend, and Application IR are
   unchanged; description-only IR generation stays byte-identical.
 
+### Loading Skeletons for Generated Screens (R-292)
+
+The data-loading states render layout-preserving skeleton placeholders (static inline-styled gray rounded
+bars) instead of a plain "Loading..." line — no CSS `@keyframes`, no new component/file, no dependency:
+
+- Collection table: the `{loading && !data}` spanning cell maps `[0..4]` skeleton bars
+  (`height: 14, background: "#e2e8f0", borderRadius: 4, margin: "10px 0", opacity: 1 - i * 0.15`).
+- Subcollection (master-detail) lists (both render sites): the `{<s_var>.loading && !<s_var>.data}` block
+  maps `[0..2]` skeleton blocks (`height: 44, background: "#f1f5f9"`).
+- Detail-screen main: the `{loading}` block maps `[0..3]` skeleton lines of varying width
+  (`width: `${88 - i * 14}%``).
+- The refresh-button "Loading..." labels, empty/error states, and data rendering are unchanged; no
+  hook/API-client/backend/Application-IR change; description-only IR generation stays byte-identical.
+
 ### Global Notification Toast System & Action Feedback (R-279)
 
 Adds a lightweight, accessible, and self-contained client-side toast notification system to generated Next.js web applications:

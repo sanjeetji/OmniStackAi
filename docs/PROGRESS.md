@@ -1,12 +1,12 @@
-# OmniStackAI — implementation progress (as of R-291)
+# OmniStackAI — implementation progress (as of R-292)
 
 A living summary of what is built, what is pending, and how to see results. Numbers come from the
 execution tracker (`R_&_D/OmniStackAI_Execution_Tracker_v6.xlsx`, `Phase_Roadmap`).
 
 ## Headline
 
-- **849 automated tests pass**, fully offline and network-independent (`task verify`).
-- **80 tracker tasks Done, 1 Deferred, 210 Not Started** across 291 task rows.
+- **858 automated tests pass**, fully offline and network-independent (`task verify`).
+- **81 tracker tasks Done, 1 Deferred, 210 Not Started** across 292 task rows.
 - The offline builder loop is complete end to end: **describe (IR) → generate (web with typed API client, React hooks, interactive master-detail screen components with field validation, page size selector & contextual empty states, bulk selection & batch deletion, CSV data export & bulk export, deep-linking & entity lifecycle in detail screens, global responsive navigation shell & header navbar with active route detection & quick-create CTA, post-submit contextual CTAs & record navigation with Cancel action in form footer, rich entity-aware dashboard overview page (live count cards, screen nav tiles, quick-create CTAs, diff-stable), record selector dropdown, prev/next record navigation & deep-link sync in detail screens, form screen dirty state tracking, unsaved changes guard & reset confirmation, collection screen boolean & enum field filtering with segmented controls, global notification toast system & action feedback with ToastProvider & useToast, subcollection navigation, child item deletion & mutation feedback, full-stack update/edit actions, foreign-key relation selectors & parent auto-population + API with
   working CRUD incl. PATCH/PUT update + pagination + sorting + total count header + keyword search + sub-collections + DB schema + data-access + JWT-verified auth
   & per-endpoint roles + field validation + CORS middleware + OpenAPI 3.1 contract)
@@ -16,11 +16,11 @@ execution tracker (`R_&_D/OmniStackAI_Execution_Tracker_v6.xlsx`, `Phase_Roadmap
 
 | Phase | Done | Total | % complete |
 |-------|------|-------|-----------|
-| **MVP** (current milestone) | 80 | 186 | **43.0%** |
+| **MVP** (current milestone) | 81 | 187 | **43.3%** |
 | MID | 0 | 47 | 0% |
 | ADVANCED | 0 | 29 | 0% |
 | PRODUCTION | 0 | 29 | 0% |
-| **Overall program** | **80** | **291** | **27.5%** |
+| **Overall program** | **81** | **292** | **27.7%** |
 
 
 > The 210 "Not Started" rows are largely the pre-existing backlog catalogue (R-010..R-219 — many are
@@ -29,8 +29,8 @@ execution tracker (`R_&_D/OmniStackAI_Execution_Tracker_v6.xlsx`, `Phase_Roadmap
 > everything else builds on. The MVP figure (~40%) is the truest near-term measure. (The MVP lane has
 > grown as founder-requested builder work was split into explicit implementation rows. The previously
 > reported "145 MVP tasks at R-251" was one low: direct recount of that workbook is 146. R-252..R-289
-> added 40 rows, producing the current 186. Equivalently, current MVP contains 114 rows from R-001..R-219
-> and 72 founder-requested rows from R-220..R-291.)
+> added 41 rows, producing the current 187. Equivalently, current MVP contains 114 rows from R-001..R-219
+> and 73 founder-requested rows from R-220..R-292.)
 
 ## Capabilities — completed vs pending
 
@@ -106,6 +106,7 @@ execution tracker (`R_&_D/OmniStackAI_Execution_Tracker_v6.xlsx`, `Phase_Roadmap
 | **Debounced live subcollection search** (subcollection search-as-you-type, 300ms debounce → race-safe LIST_BY hook; parity with top-level search) | ✅ Done | R-289 |
 | **Optimistic delete with rollback** (collection rows vanish instantly on single/batch delete; reappear + error toast on failure; reconcile-on-refetch) | ✅ Done | R-290 |
 | **Optimistic subcollection child delete** (child rows vanish instantly on delete; reappear + error toast on failure; per-subcollection reconcile) | ✅ Done | R-291 |
+| **Loading skeletons** (layout-preserving skeleton placeholders for collection table, subcollection lists, and detail-main loading states) | ✅ Done | R-292 |
 | Next.js console upgrade (rich UI) | ⏸ Deferred | R-224 — needs npm registry access |
 | Live sandbox preview + real deploy (Tier 2) | ⛔ Pending | needs a network machine + provider keys |
 | Native mobile agents | ⛔ Deferred (governance) | until web/backend stability (Brief §25/§91) |
@@ -117,7 +118,7 @@ Everything below runs with **no cloud keys** and no internet (except where noted
 
 1. **See the whole engine is real and green:**
    ```
-   task verify            # 849 tests pass
+   task verify            # 858 tests pass
    ```
 2. **Generate a real app from a spec and inspect it** (the headline result):
    ```
@@ -161,10 +162,9 @@ the live run needs the key + a network machine.
 
 ## What's next
 
-Near-term MVP candidate: **R-292** = loading skeletons for the collection/detail/subcollection loading
-states (replace the plain "Loading..." text with layout-preserving skeleton placeholders), or another
-generated-app UX/robustness increment (optimistic delete now spans the collection screen R-290 and
-subcollection child lists R-291). A Groq API key may
+Near-term MVP candidate: **R-293** = extend loading skeletons to the two remaining "Loading..." spots
+(form edit-mode initial load, detail record-selector list), or another generated-app UX/robustness
+increment (skeletons now cover the collection table, subcollection lists, and detail main — R-292). A Groq API key may
 be available for a separately chosen live model-fabric verification (Balanced gateway → Groq, real cloud
 inference + cost accounting); keep it only in gitignored `.env`. Then, on a network machine: live Tier-2
 preview and deploy. This file is refreshed as tasks land.

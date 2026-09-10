@@ -1,10 +1,10 @@
 # Current Handoff
 
-Task ID: R-291
+Task ID: R-292
 Status: done
 Phase: BASIC/MVP — Founder Stage 0
 Branch: `main` (the only branch; the GitHub default)
-Implementation SHA: `51f33c8`
+Implementation SHA: `16d6c52`
 
 ## Repo/workflow state
 
@@ -15,34 +15,31 @@ Implementation SHA: `51f33c8`
   manually stopped (still stop-and-ask only for paid cloud / DB engine / new infra / native-mobile / a
   materially different architecture decision).
 
-## Completed (R-291) — Optimistic Subcollection Child Delete with Rollback
+## Completed (R-292) — Loading Skeletons for Generated Next.js Screens
 
-Extends R-290's optimistic delete to the subcollection (master-detail) child lists in both the collection
-master-detail and detail screens: deleting a child row hides it immediately and reappears (with the
-existing error toast) only if the server rejects. The optimistic-delete story now spans the collection
-screen (R-290) and subcollection child lists (R-291).
+Replaced the plain "Loading..." text in the generated screens' data-loading states with
+layout-preserving skeleton placeholders (static inline-styled gray rounded bars):
 
-- Each deletable subcollection gets a `<s_var>Deleting` overlay (`useState<string[]>`) + a reconcile
-  `useEffect(... , [<s_var>.data])`; the child delete handler adds the id before `await remove<Child>(id)`
-  and rolls it back in `catch` before `toast.error`; the child row map iterates the deleting-filtered
-  list. Non-deletable subcollections are byte-identical to before.
-- Safe on the deduped mutation hooks (R-288) and the race-safe R-286 `useList<Child>By<Parent>` hook. The
-  mutation/list hooks, generated API client, backend, and IR are unchanged; description-only IR generation
-  stays byte-identical.
+- Collection table loading cell maps ~5 skeleton bars (`#e2e8f0`); subcollection (master-detail) list
+  loading maps ~3 skeleton blocks (`#f1f5f9`, both render sites); detail-screen main loading maps ~4
+  skeleton field lines of varying width.
+- Static skeletons only — no CSS `@keyframes`, no new file/component, no dependency. Refresh-button
+  "Loading..." labels, empty/error states, and data rendering are unchanged. No hook/API-client/backend/
+  IR change; description-only IR generation stays byte-identical.
 
 ## Verification
 
-- `task verify` — pass (849 agent-engine tests; 6 focused R-291 tests in
-  `test_subcollection_optimistic_delete.py`, written test-first). No existing assertion needed changing.
+- `task verify` — pass (858 agent-engine tests; 9 focused R-292 tests in `test_loading_skeletons.py`,
+  written test-first). Two `test_subcollection_screens.py` loading assertions updated to the skeletons.
 - `task lint`, `task security:quick`, `task env:check` — pass. Both `task builder:demo` — pass.
-- Generated deletable subcollection inspected end-to-end.
-- Tracker — R-291 at `Phase_Roadmap!A9:M9`; table `A4:M299`; Dashboard formulas reach row 299; 291
-  unique IDs (0 dupes); 80 Done, 1 Deferred, 210 Not Started; MVP 80/186 (43.0%); no `#REF!`; XLSX valid.
+- Generated collection/detail/subcollection loading states inspected.
+- Tracker — R-292 at `Phase_Roadmap!A9:M9`; table `A4:M300`; Dashboard formulas reach row 300; 292
+  unique IDs (0 dupes); 81 Done, 1 Deferred, 210 Not Started; MVP 81/187 (43.3%); no `#REF!`; XLSX valid.
 - 0 local model calls / 0 cloud calls; no generated app installed/run, no DB connection.
 
 ## Blockers and risks
 
-- No blocker for the offline R-292 candidate. Live preview/deploy and R-224 still need a
+- No blocker for the offline R-293 candidate. Live preview/deploy and R-224 still need a
   network-capable environment and/or authorized provider keys. Native mobile remains deferred under
   Brief Sections 25 and 91.
 - A Groq key may be available for a future separately authorized live model-fabric verification. Keep
@@ -50,10 +47,10 @@ screen (R-290) and subcollection child lists (R-291).
 
 ## Next action
 
-Continue from **R-292** (autonomously, per the founder's standing authorization). Recommended offline
-candidate: loading skeletons for the collection/detail/subcollection loading states (replace the plain
-"Loading..." text with layout-preserving skeleton placeholders), or another generated-app UX/robustness
-increment. Record the R-292 Standard AI Task Contract before coding.
+Continue from **R-293** (autonomously, per the founder's standing authorization). Recommended offline
+candidate: extend loading skeletons to the two remaining "Loading..." spots (the form edit-mode initial
+load and the detail record-selector "recent records" list), or another generated-app UX/robustness
+increment. Record the R-293 Standard AI Task Contract before coding.
 
 ## Next command
 

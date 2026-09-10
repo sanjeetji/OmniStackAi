@@ -5,20 +5,18 @@ Last updated: 2026-09-09T18:48:50+05:30
 Stage 0 (Founder Build Sequence, Brief Section 91) — BASIC/MVP
 
 ## Last Completed Task
-Tracker ID: R-291 — Optimistic Subcollection Child Delete with Rollback in Generated Next.js Screens —
-DONE, `task verify` (849 agent-engine tests, 6 focused R-291 tests) passing. Extends R-290's optimistic
-delete to the subcollection (master-detail) child lists in both the collection master-detail and detail
-screens: each deletable subcollection gets a `<s_var>Deleting` overlay + a reconcile `useEffect` on
-`[<s_var>.data]`, the child delete handler adds the id before `await remove<Child>(id)` and rolls it back
-in `catch` before the existing error toast, and the child row map iterates the deleting-filtered list.
-Non-deletable subcollections are unchanged. Safe on the deduped mutation hooks (R-288) and race-safe R-286
-`useList<Child>By<Parent>` hook; the hooks, API client, backend, and IR are unchanged. No IR, backend,
-dependency, database, infrastructure, network, or model change; implementation checkpoint `51f33c8`.
-Preceded by R-225 through R-290. The optimistic-delete story now spans the collection screen (R-290) and
-subcollection child lists (R-291).
+Tracker ID: R-292 — Loading Skeletons for Generated Next.js Screens — DONE, `task verify` (858
+agent-engine tests, 9 focused R-292 tests) passing. Replaced the plain "Loading..." text in the
+data-loading states with layout-preserving skeleton placeholders (static inline-styled gray rounded
+bars): the collection table loading cell maps ~5 skeleton bars, the subcollection (master-detail) list
+loading maps ~3 skeleton blocks (both render sites), and the detail-screen main loading maps ~4 skeleton
+field lines of varying width. No CSS `@keyframes`, no new file/component, no dependency; refresh-button
+labels, empty/error states, and data rendering are unchanged. No IR, backend, dependency, database,
+infrastructure, network, or model change; implementation checkpoint `16d6c52`. Preceded by R-225 through
+R-291.
 
-**Notes:** (1) the tracker is current through R-291: 80 Done, 1 Deferred, 210 Not Started across 291
-tasks; MVP is 80/186 (43.0%). (2) The founder authorized autonomous continuation of Tracker IDs until
+**Notes:** (1) the tracker is current through R-292: 81 Done, 1 Deferred, 210 Not Started across 292
+tasks; MVP is 81/187 (43.3%). (2) The founder authorized autonomous continuation of Tracker IDs until
 manually stopped. (3) A Groq API key may be available; live model-fabric verification remains separate
 (set it only in gitignored `.env`, never chat/commits).
 
@@ -52,9 +50,9 @@ R-221 = cross-provider fallback (done); R-222 = platform console slice (done); R
 fallback wiring (done); R-224 = Next.js console upgrade (deferred — environment-blocked).
 
 ## Next Up (queued, in order)
-1. R-292 candidate — loading skeletons for the collection/detail/subcollection loading states (replace
-   the plain "Loading..." text with layout-preserving skeleton placeholders), or another generated-app
-   UX/robustness increment (optimistic delete now spans the collection screen R-290 + subcollections R-291)
+1. R-293 candidate — extend loading skeletons to the two remaining "Loading..." spots (form edit-mode
+   initial load, detail record-selector "recent records" list), or another generated-app UX/robustness
+   increment (skeletons now cover the collection table, subcollection lists, and detail main — R-292)
 2. Live-verify the model fabric with the available Groq key (Balanced gateway → groq; real cloud
    inference + cost accounting) — set `GROQ_API_KEY` in the gitignored `.env`; may need a network machine
 3. R-224 Next.js console upgrade and R-010 native iOS remain deferred under their existing gates
