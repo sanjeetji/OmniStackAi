@@ -159,7 +159,9 @@ class CollectionFieldFiltersTests(unittest.TestCase):
     def test_collection_screen_table_maps_display_data(self) -> None:
         ir = _make_test_ir(with_boolean=True)
         content = render_screen_page(ir.screens[0], ir)
-        self.assertIn("{data && displayData.map((item, idx) => (", content)
+        # R-290: rows are mapped from visibleRows (displayData minus optimistically-deleted ids).
+        self.assertIn("{data && visibleRows.map((item, idx) => (", content)
+        self.assertIn("const visibleRows = displayData.filter((item: any) => !pendingDeleteIds.includes(String((item as any).id)));", content)
 
     def test_collection_screen_empty_fallback_when_no_filters_present(self) -> None:
         ir = _make_test_ir(with_boolean=False, with_enum=False)
@@ -169,7 +171,8 @@ class CollectionFieldFiltersTests(unittest.TestCase):
         self.assertNotIn("clearFilters,", content)
         self.assertNotIn("activeFilterCount", content)
         self.assertNotIn("Filters:</span>", content)
-        self.assertIn("{data && data.map((item, idx) => (", content)
+        # R-290: rows map from visibleRows regardless of filterable fields.
+        self.assertIn("{data && visibleRows.map((item, idx) => (", content)
 
     def test_collection_screen_diff_invariance(self) -> None:
         ir_a = _make_test_ir(with_boolean=True, with_enum=True, description="Description Alpha")

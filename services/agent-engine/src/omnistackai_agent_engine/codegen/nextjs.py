@@ -1560,6 +1560,12 @@ def _collection_screen_page(screen: Screen, entity: Entity, ir: ApplicationIR, o
 
     lines.extend([
         "  const [checkedIds, setCheckedIds] = useState<string[]>([]);",
+        "  // R-290: optimistically hide rows being deleted; the reconcile effect prunes ids once refetch removes them.",
+        "  const [pendingDeleteIds, setPendingDeleteIds] = useState<string[]>([]);",
+        "  useEffect(() => {",
+        "    setPendingDeleteIds((prev) => prev.filter((id) => (data ?? []).some((x: any) => String(x.id) === id)));",
+        "  }, [data]);",
+        "  const visibleRows = displayData.filter((item: any) => !pendingDeleteIds.includes(String((item as any).id)));",
         "  const allCurrentIds = (data ?? []).map((item: any) => item.id).filter(Boolean);",
         "  const isAllChecked = allCurrentIds.length > 0 && allCurrentIds.every((id: string) => checkedIds.includes(id));",
         "  const handleCheckAll = () => {",
@@ -1615,12 +1621,14 @@ def _collection_screen_page(screen: Screen, entity: Entity, ir: ApplicationIR, o
             "",
             "  const handleDelete = async (id: string) => {",
             f'    if (confirm("Are you sure you want to delete this {name}?")) {{',
+            "      setPendingDeleteIds((prev) => [...prev, String(id)]);",
             "      try {",
             "        await remove(id);",
             "        setCheckedIds((prev) => prev.filter((x) => x !== id));",
             "        refetch();",
             f'        toast.success("{name} deleted successfully");',
             "      } catch (err) {",
+            "        setPendingDeleteIds((prev) => prev.filter((x) => x !== String(id)));",
             f'        toast.error(err instanceof Error ? err.message : "Failed to delete {name}");',
             "      }",
             "    }",
@@ -1630,8 +1638,10 @@ def _collection_screen_page(screen: Screen, entity: Entity, ir: ApplicationIR, o
             "    if (checkedIds.length === 0) return;",
             f'    const confirmMsg = `Are you sure you want to delete ${{checkedIds.length}} ${{checkedIds.length === 1 ? "{name}" : "{plural}"}}?`;',
             "    if (!confirm(confirmMsg)) return;",
+            "    const ids = checkedIds.map(String);",
             "    setBatchDeleting(true);",
             "    setBatchDeleteError(null);",
+            "    setPendingDeleteIds((prev) => [...prev, ...ids]);",
             "    try {",
             "      await Promise.all(checkedIds.map((id) => remove(id)));",
             "      const count = checkedIds.length;",
@@ -1639,6 +1649,7 @@ def _collection_screen_page(screen: Screen, entity: Entity, ir: ApplicationIR, o
             "      refetch();",
             f'      toast.success(`Deleted ${{count}} ${{count === 1 ? "{name}" : "{plural}"}} successfully`);',
             "    } catch (err) {",
+            "      setPendingDeleteIds((prev) => prev.filter((x) => !ids.includes(x)));",
             "      setBatchDeleteError(err instanceof Error ? err.message : \"Failed to delete selected items\");",
             "      toast.error(err instanceof Error ? err.message : \"Failed to delete selected items\");",
             "    } finally {",
@@ -2024,10 +2035,8 @@ def _collection_screen_page(screen: Screen, entity: Entity, ir: ApplicationIR, o
         "            )}",
     ])
 
-    if filterable_fields:
-        lines.append("            {data && displayData.map((item, idx) => (")
-    else:
-        lines.append("            {data && data.map((item, idx) => (")
+    # R-290: render the pending-delete-filtered rows (visibleRows) so optimistically removed rows vanish.
+    lines.append("            {data && visibleRows.map((item, idx) => (")
 
 
     if has_subcollections:
