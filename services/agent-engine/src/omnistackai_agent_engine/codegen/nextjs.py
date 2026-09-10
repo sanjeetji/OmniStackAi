@@ -4077,6 +4077,7 @@ def _overview_page(ir: ApplicationIR) -> str:  # noqa: PLR0912
     # Primary screens (non-detail) for navigation cards.
     nav_screens: list[Screen] = []
     form_screens: list[tuple[Screen, Entity | None]] = []
+    col_screens_by_entity: dict[str, Screen] = {}
     for s in ir.screens:
         intent = _screen_intent(s)
         if intent == "detail":
@@ -4085,10 +4086,15 @@ def _overview_page(ir: ApplicationIR) -> str:  # noqa: PLR0912
         if intent == "form":
             entity = _match_entity(s, ir)
             form_screens.append((s, entity))
+        elif intent == "collection":
+            s_entity = _match_entity(s, ir)
+            if s_entity and s_entity.name not in col_screens_by_entity:
+                col_screens_by_entity[s_entity.name] = s
 
     # ── Imports ──────────────────────────────────────────────────────────────
     lines: list[str] = ['"use client";', ""]
-    if listable or nav_screens:
+    has_links = bool(nav_screens or col_screens_by_entity or form_screens)
+    if has_links:
         lines.append('import Link from "next/link";')
     if listable:
         hook_names = [f"useList{plural}" for _, plural in listable]
@@ -4106,16 +4112,42 @@ def _overview_page(ir: ApplicationIR) -> str:  # noqa: PLR0912
     lines.append("  return (")
 
     # ── Page shell ────────────────────────────────────────────────────────────
+    listable_count = len(listable)
+    screen_count = len(ir.screens)
+    entity_label = f"{listable_count} {'Entity' if listable_count == 1 else 'Entities'}"
+    screen_label = f"{screen_count} {'Screen' if screen_count == 1 else 'Screens'}"
+
     lines.extend([
         '    <main style={{ minHeight: "100vh", background: "#f8fafc", padding: "32px 24px" }}>',
         "",
         "      {/* ── App header ─────────────────────────────────────── */}",
-        '      <section style={{ marginBottom: 40 }}>',
-        f'        <h1 style={{{{ fontSize: 28, fontWeight: 700, color: "#0f172a", margin: "0 0 8px" }}}}>{escaped_name}</h1>',
-        '        <p style={{ color: "#64748b", margin: 0, fontSize: 15 }}>Dashboard overview</p>',
+        '      <section style={{ marginBottom: 40, display: "flex", justifyContent: "space-between", alignItems: "flex-start", flexWrap: "wrap", gap: 16 }}>',
+        "        <div>",
+        f'          <h1 style={{{{ fontSize: 28, fontWeight: 700, color: "#0f172a", margin: "0 0 8px" }}}}>{escaped_name}</h1>',
+        '          <p style={{ color: "#64748b", margin: 0, fontSize: 15 }}>Dashboard overview</p>',
+        "        </div>",
+        '        <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>',
+        '          <div style={{ display: "inline-flex", alignItems: "center", gap: 8, padding: "6px 14px", background: "#f0fdf4", border: "1px solid #bbf7d0", borderRadius: 9999, fontSize: 13, fontWeight: 500, color: "#166534" }}>',
+        '            <span style={{ width: 8, height: 8, borderRadius: "50%", background: "#22c55e", display: "inline-block" }} />',
+        "            System Operational",
+        "          </div>",
+        f'          <span style={{{{ fontSize: 12, padding: "6px 12px", background: "#ffffff", border: "1px solid #e2e8f0", color: "#475569", borderRadius: 9999, fontWeight: 600 }}}}>{entity_label}</span>',
+        f'          <span style={{{{ fontSize: 12, padding: "6px 12px", background: "#ffffff", border: "1px solid #e2e8f0", color: "#475569", borderRadius: 9999, fontWeight: 600 }}}}>{screen_label}</span>',
+        "        </div>",
         "      </section>",
         "",
     ])
+
+    # ── Zero state fallback ───────────────────────────────────────────────────
+    if not listable and not nav_screens:
+        lines.extend([
+            "      {/* ── Empty state fallback ───────────────────────────── */}",
+            '      <section style={{ background: "#ffffff", borderRadius: 12, padding: "48px 24px", textAlign: "center", border: "1px dashed #cbd5e1", maxWidth: 540, margin: "40px auto" }}>',
+            f'        <h2 style={{{{ fontSize: 18, fontWeight: 600, color: "#1e293b", margin: "0 0 8px" }}}}>Welcome to {escaped_name}</h2>',
+            '        <p style={{ fontSize: 14, color: "#64748b", margin: 0 }}>No entities or screens configured yet.</p>',
+            "      </section>",
+            "",
+        ])
 
     # ── Entity count cards ────────────────────────────────────────────────────
     if listable:
@@ -4129,19 +4161,42 @@ def _overview_page(ir: ApplicationIR) -> str:  # noqa: PLR0912
             var = f"{entity.name[0].lower()}{entity.name[1:]}List"
             escaped_entity_name = _escape_ts(entity.name)
             escaped_plural = _escape_ts(plural)
-            lines.extend([
-                "          {/* " + entity.name + " card */}",
-                "          <div style={{",
-                '            background: "#ffffff", borderRadius: 12, padding: "20px 24px",',
-                '            boxShadow: "0 1px 3px rgba(0,0,0,0.08)", border: "1px solid #e2e8f0"',
-                "          }}>",
-                f'            <p style={{{{ fontSize: 13, fontWeight: 600, color: "#64748b", textTransform: "uppercase", letterSpacing: 1, margin: "0 0 8px" }}}}>{escaped_entity_name}</p>',
-                f'            <p style={{{{ fontSize: 32, fontWeight: 700, color: "#0f172a", margin: "0 0 4px" }}}}>',
-                f'              {{{var}.loading ? "…" : {var}.error ? "—" : {var}.total}}',
-                "            </p>",
-                f'            <p style={{{{ fontSize: 13, color: "#94a3b8", margin: 0 }}}}>{escaped_plural}</p>',
-                "          </div>",
-            ])
+            col_s = col_screens_by_entity.get(entity.name)
+            if col_s:
+                lines.extend([
+                    "          {/* " + entity.name + " card */}",
+                    f'          <Link href="/{col_s.id}" aria-label="View {escaped_plural} collection" style={{{{',
+                    '            display: "block", background: "#ffffff", borderRadius: 12,',
+                    '            padding: "20px 24px", textDecoration: "none",',
+                    '            boxShadow: "0 1px 3px rgba(0,0,0,0.08)", border: "1px solid #e2e8f0"',
+                    "          }}>",
+                    '            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>',
+                    f'              <p style={{{{ fontSize: 13, fontWeight: 600, color: "#64748b", textTransform: "uppercase", letterSpacing: 1, margin: 0 }}}}>{escaped_entity_name}</p>',
+                    '              <span style={{ fontSize: 12, color: "#94a3b8" }}>&rarr;</span>',
+                    "            </div>",
+                    '            <p style={{ fontSize: 32, fontWeight: 700, color: "#0f172a", margin: "0 0 4px" }}>',
+                    f"              {{{var}.loading ? \"…\" : {var}.error ? \"—\" : {var}.total}}",
+                    "            </p>",
+                    '            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: 4 }}>',
+                    f'              <p style={{{{ fontSize: 13, color: "#94a3b8", margin: 0 }}}}>{escaped_plural}</p>',
+                    '              <span style={{ fontSize: 12, color: "#2563eb", fontWeight: 500 }}>View all &rarr;</span>',
+                    "            </div>",
+                    "          </Link>",
+                ])
+            else:
+                lines.extend([
+                    "          {/* " + entity.name + " card */}",
+                    "          <div style={{",
+                    '            background: "#ffffff", borderRadius: 12, padding: "20px 24px",',
+                    '            boxShadow: "0 1px 3px rgba(0,0,0,0.08)", border: "1px solid #e2e8f0"',
+                    "          }}>",
+                    f'            <p style={{{{ fontSize: 13, fontWeight: 600, color: "#64748b", textTransform: "uppercase", letterSpacing: 1, margin: "0 0 8px" }}}}>{escaped_entity_name}</p>',
+                    f'            <p style={{{{ fontSize: 32, fontWeight: 700, color: "#0f172a", margin: "0 0 4px" }}}}>',
+                    f'              {{{var}.loading ? "…" : {var}.error ? "—" : {var}.total}}',
+                    "            </p>",
+                    f'            <p style={{{{ fontSize: 13, color: "#94a3b8", margin: 0 }}}}>{escaped_plural}</p>',
+                    "          </div>",
+                ])
         lines.extend([
             "        </div>",
             "      </section>",
@@ -4170,7 +4225,10 @@ def _overview_page(ir: ApplicationIR) -> str:  # noqa: PLR0912
                 '            padding: "20px 24px", textDecoration: "none",',
                 '            boxShadow: "0 1px 3px rgba(0,0,0,0.08)", border: "1px solid #e2e8f0"',
                 "          }}>",
-                f'            <p style={{{{ fontSize: 15, fontWeight: 600, color: "#1e293b", margin: "0 0 6px" }}}}>{escaped_title}</p>',
+                '            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>',
+                f'              <p style={{{{ fontSize: 15, fontWeight: 600, color: "#1e293b", margin: 0 }}}}>{escaped_title}</p>',
+                '              <span style={{ fontSize: 14, color: "#94a3b8" }}>&rarr;</span>',
+                "            </div>",
                 f'            <p style={{{{ fontSize: 13, color: "#64748b", margin: 0 }}}}>{escaped_intent_label}',
             ])
             if not is_public:
