@@ -34,6 +34,7 @@ from .nextjs import (
     render_loading_page,
     render_not_found_page,
     render_screen_page,
+    render_shortcuts_dialog_component,
     render_toast_component,
 )
 from .openapi import render_openapi, render_openapi_json
@@ -72,6 +73,7 @@ __all__ = [
     "render_loading_page",
     "render_not_found_page",
     "render_screen_page",
+    "render_shortcuts_dialog_component",
     "render_toast_component",
     "render_postgres_schema",
     "render_postgres_seed",
