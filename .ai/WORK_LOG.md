@@ -1,5 +1,34 @@
 # Work Log
 
+## 2026-09-10 — R-294
+
+- Recorded contract in `.ai/CURRENT_TASK.yaml` and `.ai/tasks/R-294.md` (status in_progress → done).
+- `nextjs.py`: added four static App Router special-file templates + `render_*` accessors and wired them
+  into `NextjsWebAdapter.generate()`:
+  - `app/error.tsx` — `"use client"` route-segment error boundary; typed `{ error, reset }`, logs via
+    `useEffect`, "Try again" button calling `reset()`, "Back to overview" `<Link href="/">`.
+  - `app/global-error.tsx` — `"use client"` root-layout error boundary rendering its own
+    `<html lang="en"><body>` + `reset()` recovery.
+  - `app/not-found.tsx` — server component 404 with a `<Link href="/">` back to the overview.
+  - `app/loading.tsx` — server route-level Suspense fallback mapping `[0..5]` skeleton cards
+    (`height: 96, background: "#f1f5f9", opacity: 1 - i * 0.12`) plus a header bar, reusing the
+    R-292/293 skeleton palette.
+  - All four are static (no `ir.name`/`ir.description`), inline-styled, dependency-free → deterministic,
+    description-only-stable, and never in the console-snapshot edit diff.
+- `codegen/__init__.py`: exported `render_error_page`, `render_global_error_page`, `render_not_found_page`,
+  `render_loading_page`.
+- Added `services/agent-engine/tests/test_app_router_resilience.py` with 9 focused tests (all four files
+  present, client/server split, `reset()` wiring, global-error own html/body, loading skeletons, static/
+  description-invariance, example projects include the files), written test-first.
+- `task verify` — 873 tests pass (9 new), 0 failures; no existing assertion changed; `test_console_snapshot`
+  description-edit diff set unchanged. `task lint`, `task security:quick`, `task env:check` pass.
+  `builder:demo minimal-blog` + `rideshare-favourites` pass. Generated TypeScript inspected. 0 network,
+  0 cloud model calls.
+- Tracker: inserted R-294 Done row at `Phase_Roadmap!A9`; table `A4:M302`; 294 unique IDs (0 dupes);
+  83 Done, 1 Deferred, 210 Not Started; MVP 83/189 (43.9%); no `#REF!`; XLSX valid.
+- Updated CURRENT_TASK.yaml, tasks/R-294.md, PROJECT_STATE.yaml, HANDOFF.md, PROJECT_STATE.md,
+  CHANGELOG.md, docs/CODEGEN.md, docs/PROGRESS.md, docs/RESUME_PROMPT.md.
+
 ## 2026-09-10 — R-293
 
 - Recorded contract in `.ai/CURRENT_TASK.yaml` and `.ai/tasks/R-293.md` (status in_progress → done).

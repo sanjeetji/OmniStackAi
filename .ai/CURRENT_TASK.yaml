@@ -1,38 +1,42 @@
 schema_version: 1
-task_id: R-293
-title: Loading Skeletons for Form Initial Load & Detail Record-Selector List
+task_id: R-294
+title: Generated Next.js App Router Resilience — Error Boundary, Global Error, Not-Found & Loading Fallback
 status: done
 phase: BASIC/MVP
 founder_stage: 0
 branch: main
 goal: >-
-  Complete the loading-skeleton coverage started in R-292 by replacing the two remaining plain
-  "Loading..." text spots with layout-preserving skeleton placeholders: the form edit-mode initial-load
-  banner (`isEdit && fetchingInitial`) and the detail-screen record-selector "recent records" list
-  (`loadingList`). Static inline-styled skeletons — no CSS keyframes, no new file, no dependency.
-  Deterministic and description-only-stable.
-tracker_ref: "R-293"
+  Add the four Next.js App Router "special files" the generated web app currently lacks, giving every
+  generated app real runtime resilience: app/error.tsx (route-segment error boundary with a reset()
+  "Try again" recovery), app/global-error.tsx (root-layout error boundary that renders its own
+  <html>/<body>), app/not-found.tsx (friendly 404 with a link back to the overview), and app/loading.tsx
+  (route-level Suspense fallback that reuses the R-292/293 skeleton visual language). All four are static,
+  inline-styled to match the app aesthetic, dependency-free, and never reference ir.description or ir.name
+  so generation stays deterministic and description-only-stable.
+tracker_ref: "R-294"
 requirements:
-  - Form edit-mode initial-load banner renders ~3 skeleton field blocks instead of "Loading <name> details...".
-  - Detail record-selector list loading renders ~3 skeleton card blocks (matching the recent-records grid) instead of "Loading <plural>...".
-  - Skeletons are inline-styled gray rounded divs; no @keyframes, no new file, no npm/platform dependency.
-  - Other loading states (R-292), empty/error states, and data rendering are unchanged.
-  - No hook/API-client/backend/IR change; deterministic; description-only IR stability preserved.
+  - NextjsWebAdapter emits app/error.tsx as a client component ("use client") default-exporting a component that receives { error, reset } and renders a recovery card with a "Try again" button calling reset() and a "Back to overview" link to "/", logging the error via useEffect.
+  - NextjsWebAdapter emits app/global-error.tsx as a client component ("use client") that renders its own <html lang="en"><body ...> and a reset() "Try again" recovery (root-layout error boundary contract).
+  - NextjsWebAdapter emits app/not-found.tsx (server component) rendering a "Page not found" 404 with a Link to "/".
+  - NextjsWebAdapter emits app/loading.tsx (server component) rendering layout-preserving skeleton blocks (reusing the R-292/293 gray-rounded-div palette, #e2e8f0 / #f1f5f9 / opacity ramp) as a route-level Suspense fallback.
+  - The four files are static (no ir.description and no ir.name usage), inline-styled, no new npm/platform dependency; existing files, hooks, API client, backend, and IR are unchanged.
 acceptance_criteria:
-  - The form initial-load state maps skeleton blocks and no longer emits "Loading <name> details...".
-  - The detail record-selector list loading maps skeleton cards and no longer emits its "Loading <plural>..." text.
-  - Description-only IR changes remain byte-identical; both example projects still generate.
-  - Focused tests, related form/detail tests, full offline verification, lint, security, env check, and both builder demos pass.
+  - A generated project contains app/error.tsx, app/global-error.tsx, app/not-found.tsx, and app/loading.tsx.
+  - error.tsx and global-error.tsx are "use client" and wire reset(); global-error.tsx renders its own <html>/<body>.
+  - not-found.tsx and loading.tsx are server components (no "use client"); loading.tsx maps skeleton divs.
+  - Output is byte-identical across ir.description changes; the console-snapshot description-edit diff set is unchanged (the new files never appear in it); both example projects still generate.
+  - Focused tests, related adapter/console-snapshot tests, full offline verification, lint, security, env check, and both builder demos pass.
 expected_impact:
   - services/agent-engine/src/omnistackai_agent_engine/codegen/nextjs.py
-  - services/agent-engine/tests/test_loading_skeletons_extra.py
+  - services/agent-engine/src/omnistackai_agent_engine/codegen/__init__.py
+  - services/agent-engine/tests/test_app_router_resilience.py
   - .ai task/state/handoff/work-log files, PROJECT_STATE.md, CHANGELOG.md, docs/CODEGEN.md, docs/PROGRESS.md, docs/RESUME_PROMPT.md, and execution tracker
 allowed_paths:
   - services/agent-engine/src/omnistackai_agent_engine/codegen/nextjs.py
-  - services/agent-engine/tests/test_loading_skeletons_extra.py
-  - services/agent-engine/tests/test_detail_record_selector.py
-  - services/agent-engine/tests/test_form_navigation_ctas.py
-  - services/agent-engine/tests/test_update_mode_forms.py
+  - services/agent-engine/src/omnistackai_agent_engine/codegen/__init__.py
+  - services/agent-engine/tests/test_app_router_resilience.py
+  - services/agent-engine/tests/test_nextjs_adapter.py
+  - services/agent-engine/tests/test_console_snapshot.py
   - .ai/**
   - CHANGELOG.md
   - PROJECT_STATE.md
@@ -50,10 +54,10 @@ must_not_change:
   - PostgreSQL, platform schemas/migrations, or backend semantics
   - Section 74 monorepo layout, provider boundaries, infrastructure, or native/mobile scope
   - Application IR schema, generated API-client behaviour, or the hooks
-  - the R-292 collection/subcollection/detail-main skeletons, empty/error states, and data rendering
+  - existing generated files (layout, navbar, toast, overview, screens, api/hooks/types), the R-292/293 skeletons, and the console-snapshot description-edit diff set
 gates:
-  - focused loading-skeleton-extra tests
-  - test_detail_record_selector / test_form_navigation_ctas / test_update_mode_forms
+  - focused app-router-resilience tests
+  - test_nextjs_adapter / test_console_snapshot
   - task verify
   - task lint
   - task security:quick
@@ -67,16 +71,16 @@ model_tool_trace:
   cloud_calls: 0
   note: Pure deterministic code generation and offline tests; no model call is needed.
 evidence:
-  - "task verify: 864 agent-engine tests pass (6 new in test_loading_skeletons_extra.py; one test_form_update_screens.py initial-load assertion updated to the skeleton markup)."
+  - "task verify: 873 agent-engine tests pass (9 new in test_app_router_resilience.py; no existing assertion changed; console-snapshot description-edit diff set unchanged)."
   - "task lint, task security:quick, task env:check: pass."
   - "task builder:demo -- minimal-blog and -- rideshare-favourites: pass."
-  - "Generated form initial-load banner and detail record-selector loading states inspected — both render three inline-styled skeleton divs (form height 34 #e2e8f0; record-selector height 56 #f1f5f9 in the auto-fill grid)."
-  - "Feat commit 9796f4a; docs commit to follow."
-  - "Tracker: R-293 Done row at Phase_Roadmap!A9; table A4:M301; 293 unique IDs (0 dupes); 82 Done, 1 Deferred, 210 Not Started; MVP 82/188 (43.6%); no #REF!; XLSX valid."
+  - "Generated TypeScript inspected: app/error.tsx and app/global-error.tsx are 'use client' with reset() wiring (global-error renders its own <html>/<body>); app/not-found.tsx is a server 404 with a link to '/'; app/loading.tsx is a server Suspense fallback mapping skeleton divs (#e2e8f0 / #f1f5f9, opacity ramp)."
+  - "Feat commit c49bc5c; docs commit to follow."
+  - "Tracker: R-294 Done row at Phase_Roadmap!A9; table A4:M302; 294 unique IDs (0 dupes); 83 Done, 1 Deferred, 210 Not Started; MVP 83/189 (43.9%); no #REF!; XLSX valid."
   - "0 local model calls / 0 cloud calls; no generated app installed/run; no DB connection."
 blockers: []
 next_action: >-
-  R-293 complete. Continue autonomously to R-294 (next unstarted Tracker ID) per the founder's standing
+  R-294 complete. Continue autonomously to R-295 (next unstarted Tracker ID) per the founder's standing
   authorization — record its contract before coding.
 next_command: >-
   task ai:status

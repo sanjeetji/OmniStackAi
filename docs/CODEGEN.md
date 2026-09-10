@@ -1049,6 +1049,32 @@ layout-preserving skeleton placeholders (no CSS `@keyframes`, no new component/f
   and data rendering are unchanged; no hook/API-client/backend/Application-IR change; description-only IR
   generation stays byte-identical. Loading skeletons now cover every generated data-loading state.
 
+### App Router Resilience Special Files (R-294)
+
+`NextjsWebAdapter.generate()` emits the four Next.js App Router "special files" — the framework wires them
+automatically, so no route/IR/hook change is needed. All four are static, inline-styled to match the app
+aesthetic, dependency-free, and never reference `ir.name`/`ir.description` (so generation stays
+deterministic, description-only-stable, and they never enter the console-snapshot description-edit diff):
+
+- **`app/error.tsx`** (`"use client"`): route-segment error boundary
+  `Error({ error, reset }: { error: Error & { digest?: string }; reset: () => void })` that logs via
+  `useEffect(() => console.error(error), [error])` and renders a recovery card — an optional
+  `error.digest` reference line, a `reset()`-bound "Try again" button, and a "Back to overview"
+  `<Link href="/">`.
+- **`app/global-error.tsx`** (`"use client"`): root-layout error boundary that renders its OWN
+  `<html lang="en"><body>` (required — it replaces the root layout) with the same `reset()` recovery.
+- **`app/not-found.tsx`** (server component): a "404 / Page not found" page with a `<Link href="/">` back
+  to the overview.
+- **`app/loading.tsx`** (server component): a route-level Suspense fallback mapping `[0..5]` skeleton
+  cards (`height: 96, background: "#f1f5f9", opacity: 1 - i * 0.12`) in a
+  `repeat(auto-fill, minmax(220px, 1fr))` grid plus a header bar (`height: 32, background: "#e2e8f0"`),
+  reusing the R-292/293 skeleton palette.
+
+Templates are module constants (`_ERROR_PAGE`, `_GLOBAL_ERROR_PAGE`, `_NOT_FOUND_PAGE`, `_LOADING_PAGE`)
+with `render_error_page`/`render_global_error_page`/`render_not_found_page`/`render_loading_page`
+accessors exported from `codegen`, mirroring `render_toast_component`. No existing generated file, hook,
+API client, backend, or Application-IR change.
+
 ### Global Notification Toast System & Action Feedback (R-279)
 
 Adds a lightweight, accessible, and self-contained client-side toast notification system to generated Next.js web applications:

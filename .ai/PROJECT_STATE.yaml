@@ -2,22 +2,22 @@ schema_version: 1
 project: OmniStackAI
 phase: BASIC/MVP
 founder_stage: 0
-current_task: R-293
+current_task: R-294
 current_status: done
 branch: main
 last_completed_task:
-  task_id: R-293
-  title: Loading Skeletons for Form Initial Load & Detail Record-Selector List
+  task_id: R-294
+  title: Generated Next.js App Router Resilience — Error Boundary, Global Error, Not-Found & Loading Fallback
   verification: >-
-    task verify (864 agent-engine tests, 6 focused R-293 tests); completed the R-292 skeleton coverage by
-    replacing the two remaining plain "Loading..." text spots with layout-preserving skeleton
-    placeholders — the form edit-mode initial-load banner (isEdit && fetchingInitial) maps three gray
-    field bars (height 34), and the detail record-selector "recent records" list (loadingList) maps three
-    gray skeleton cards (height 56) in the same auto-fill grid as the cards. Static inline-styled
-    skeletons; no CSS @keyframes, no new file/component, no dependency; the R-292 skeletons, other
-    loading states, empty/error states, and data rendering are unchanged. No hook/API-client/backend/IR
-    change; description-only stability preserved. task lint + security:quick + env:check and both builder
-    demos pass; generated TypeScript inspected; impl 9796f4a; 0 local/0 cloud model calls
+    task verify (873 agent-engine tests, 9 focused R-294 tests); emits the four Next.js App Router
+    "special files" the generated web app was missing — app/error.tsx (route-segment error boundary,
+    client, with reset() recovery + "Back to overview" link), app/global-error.tsx (root-layout error
+    boundary, client, rendering its own <html>/<body> + reset()), app/not-found.tsx (server 404 linking
+    to "/"), and app/loading.tsx (server route-level Suspense fallback reusing the R-292/293 skeleton
+    palette). All four are static, inline-styled, dependency-free, and never reference ir.name/ir.description
+    — deterministic, description-only-stable, and never in the console-snapshot edit diff. No existing
+    file/hook/API-client/backend/IR change. task lint + security:quick + env:check and both builder demos
+    pass; generated TypeScript inspected; impl c49bc5c; 0 local/0 cloud model calls
   result: pass
 control_plane_database: postgresql
 model_routing_mode: balanced
@@ -29,15 +29,16 @@ product_direction: >-
   framework adapter contract -> Next.js adapter -> Git service -> preview/sandbox (needs cloud env).
 id_note: >-
   Workbook backlog owns R-010..R-219. Founder-requested tasks use IDs after R-219: R-220..R-223 done,
-  R-224 Next.js deferred (env-blocked), R-225..R-293 done. Continue from R-294.
+  R-224 Next.js deferred (env-blocked), R-225..R-294 done. Continue from R-295.
 blockers: []
 next_action: >-
-  Task R-293 (loading skeletons for the form initial-load banner and detail record-selector list) is
-  implemented, verified, and complete (864 tests pass; tracker current — 82 Done of 293, MVP 82/188 =
-  43.6%). Loading skeletons now cover every generated data-loading state: collection table, subcollection
-  lists, detail main, form initial-load, and the detail record-selector. Next unstarted Tracker ID is
-  R-294 (autonomous continuation authorized); recommended offline candidate: another generated-app
-  UX/robustness increment (e.g. optimistic create/update reflected in the collection list, or an
-  error-boundary/retry affordance for failed loads). A Groq key remains available for a separately
-  authorized future live model-fabric check; keep it only in gitignored .env and never in chat/commits.
-last_updated: "2026-09-10T16:45:00+05:30"
+  Task R-294 (Next.js App Router resilience special files) is implemented, verified, and complete (873
+  tests pass; tracker current — 83 Done of 294, MVP 83/189 = 43.9%). Every generated app now ships
+  app/error.tsx, app/global-error.tsx, app/not-found.tsx, and app/loading.tsx (error boundaries + 404 +
+  route-level loading fallback), alongside full loading-skeleton coverage (R-292/293). Next unstarted
+  Tracker ID is R-295 (autonomous continuation authorized); recommended offline candidate: another
+  generated-app UX/robustness increment (e.g. an error+retry affordance in the collection/detail data
+  fetch states, or a reusable EmptyState/error component to DRY the inline states). A Groq key remains
+  available for a separately authorized future live model-fabric check; keep it only in gitignored .env
+  and never in chat/commits.
+last_updated: "2026-09-10T17:15:00+05:30"
