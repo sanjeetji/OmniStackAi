@@ -4319,6 +4319,107 @@ def render_toast_component() -> str:
     return _TOAST_COMPONENT
 
 
+# --- App Router resilience special files (R-294) -----------------------------------------------
+# Static, inline-styled, dependency-free. They never reference ir.name/ir.description, so generation
+# stays deterministic and description-only-stable, and they never enter the console-snapshot edit diff.
+
+_ERROR_PAGE = (
+    '"use client";\n\n'
+    'import { useEffect } from "react";\n'
+    'import Link from "next/link";\n\n'
+    "export default function Error({ error, reset }: { error: Error & { digest?: string }; reset: () => void }) {\n"
+    "  useEffect(() => {\n"
+    "    console.error(error);\n"
+    "  }, [error]);\n\n"
+    "  return (\n"
+    '    <main style={{ maxWidth: 560, margin: "80px auto", padding: "0 24px", textAlign: "center", fontFamily: "system-ui, -apple-system, sans-serif" }}>\n'
+    '      <p style={{ fontSize: 13, fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase", color: "#b91c1c", margin: "0 0 12px" }}>Error</p>\n'
+    '      <h1 style={{ fontSize: 26, fontWeight: 700, color: "#0f172a", margin: "0 0 8px" }}>Something went wrong</h1>\n'
+    '      <p style={{ color: "#64748b", margin: "0 0 24px", lineHeight: 1.6 }}>An unexpected error occurred while rendering this page. You can try again, or return to the overview.</p>\n'
+    "      {error?.digest ? (\n"
+    '        <p style={{ color: "#94a3b8", fontSize: 12, margin: "0 0 24px" }}>Reference: {error.digest}</p>\n'
+    "      ) : null}\n"
+    '      <div style={{ display: "flex", gap: 12, justifyContent: "center", flexWrap: "wrap" }}>\n'
+    '        <button onClick={() => reset()} style={{ padding: "10px 20px", background: "#2563eb", color: "#fff", border: "none", borderRadius: 8, fontWeight: 600, cursor: "pointer" }}>Try again</button>\n'
+    '        <Link href="/" style={{ padding: "10px 20px", background: "#fff", color: "#0f172a", border: "1px solid #e2e8f0", borderRadius: 8, fontWeight: 600, textDecoration: "none" }}>Back to overview</Link>\n'
+    "      </div>\n"
+    "    </main>\n"
+    "  );\n"
+    "}\n"
+)
+
+_GLOBAL_ERROR_PAGE = (
+    '"use client";\n\n'
+    'import { useEffect } from "react";\n\n'
+    "export default function GlobalError({ error, reset }: { error: Error & { digest?: string }; reset: () => void }) {\n"
+    "  useEffect(() => {\n"
+    "    console.error(error);\n"
+    "  }, [error]);\n\n"
+    "  return (\n"
+    '    <html lang="en">\n'
+    '      <body style={{ margin: 0, background: "#f8fafc", color: "#0f172a", fontFamily: "system-ui, -apple-system, sans-serif" }}>\n'
+    '        <main style={{ maxWidth: 560, margin: "80px auto", padding: "0 24px", textAlign: "center" }}>\n'
+    '          <p style={{ fontSize: 13, fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase", color: "#b91c1c", margin: "0 0 12px" }}>Application error</p>\n'
+    '          <h1 style={{ fontSize: 26, fontWeight: 700, margin: "0 0 8px" }}>Something went wrong</h1>\n'
+    '          <p style={{ color: "#64748b", margin: "0 0 24px", lineHeight: 1.6 }}>A critical error occurred. Please try again.</p>\n'
+    '          <button onClick={() => reset()} style={{ padding: "10px 20px", background: "#2563eb", color: "#fff", border: "none", borderRadius: 8, fontWeight: 600, cursor: "pointer" }}>Try again</button>\n'
+    "        </main>\n"
+    "      </body>\n"
+    "    </html>\n"
+    "  );\n"
+    "}\n"
+)
+
+_NOT_FOUND_PAGE = (
+    'import Link from "next/link";\n\n'
+    "export default function NotFound() {\n"
+    "  return (\n"
+    '    <main style={{ maxWidth: 560, margin: "80px auto", padding: "0 24px", textAlign: "center", fontFamily: "system-ui, -apple-system, sans-serif" }}>\n'
+    '      <p style={{ fontSize: 48, fontWeight: 800, color: "#cbd5e1", margin: "0 0 8px" }}>404</p>\n'
+    '      <h1 style={{ fontSize: 26, fontWeight: 700, color: "#0f172a", margin: "0 0 8px" }}>Page not found</h1>\n'
+    '      <p style={{ color: "#64748b", margin: "0 0 24px", lineHeight: 1.6 }}>The page you are looking for does not exist or may have been moved.</p>\n'
+    '      <Link href="/" style={{ padding: "10px 20px", background: "#2563eb", color: "#fff", border: "none", borderRadius: 8, fontWeight: 600, textDecoration: "none" }}>Back to overview</Link>\n'
+    "    </main>\n"
+    "  );\n"
+    "}\n"
+)
+
+_LOADING_PAGE = (
+    "export default function Loading() {\n"
+    "  return (\n"
+    '    <main style={{ maxWidth: 960, margin: "0 auto", padding: 24 }} aria-busy="true" aria-live="polite">\n'
+    '      <div style={{ height: 32, width: "40%", background: "#e2e8f0", borderRadius: 6, marginBottom: 20 }} />\n'
+    '      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(220px, 1fr))", gap: 16 }}>\n'
+    "        {[0, 1, 2, 3, 4, 5].map((i) => (\n"
+    '          <div key={i} style={{ height: 96, background: "#f1f5f9", borderRadius: 8, opacity: 1 - i * 0.12 }} />\n'
+    "        ))}\n"
+    "      </div>\n"
+    "    </main>\n"
+    "  );\n"
+    "}\n"
+)
+
+
+def render_error_page() -> str:
+    """Return the static app/error.tsx route-segment error boundary (client component)."""
+    return _ERROR_PAGE
+
+
+def render_global_error_page() -> str:
+    """Return the static app/global-error.tsx root-layout error boundary (client component)."""
+    return _GLOBAL_ERROR_PAGE
+
+
+def render_not_found_page() -> str:
+    """Return the static app/not-found.tsx 404 page (server component)."""
+    return _NOT_FOUND_PAGE
+
+
+def render_loading_page() -> str:
+    """Return the static app/loading.tsx route-level Suspense skeleton fallback (server component)."""
+    return _LOADING_PAGE
+
+
 _LAYOUT = (
     'import type { Metadata } from "next";\n'
     'import { Navbar } from "../components/navbar";\n'
@@ -4405,6 +4506,10 @@ class NextjsWebAdapter:
             GeneratedFile("components/navbar.tsx", _navbar_component(ir)),
             GeneratedFile("components/toast.tsx", _TOAST_COMPONENT),
             GeneratedFile("app/globals.css", "body { font-family: system-ui, sans-serif; margin: 0; }\n"),
+            GeneratedFile("app/error.tsx", _ERROR_PAGE),
+            GeneratedFile("app/global-error.tsx", _GLOBAL_ERROR_PAGE),
+            GeneratedFile("app/not-found.tsx", _NOT_FOUND_PAGE),
+            GeneratedFile("app/loading.tsx", _LOADING_PAGE),
             GeneratedFile("app/page.tsx", _overview_page(ir)),
             GeneratedFile("lib/types.ts", _types_file(ir)),
             GeneratedFile("lib/api.ts", _api_client_file(ir)),
