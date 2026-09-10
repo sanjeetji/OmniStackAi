@@ -1484,6 +1484,44 @@ def _filterable_fields_for_entity(entity: Entity) -> list[tuple[Field, str, list
     return res
 
 
+def _field_value_jsx(field: Field, expr: str) -> str:
+    """R-302: renders an accessible formatted value or badge for a field expression.
+
+    - Boolean fields render an emerald/slate status pill badge.
+    - Enum fields render a blue categorical pill badge.
+    - Datetime fields format to local date string.
+    - Long text fields truncate gracefully at 60 chars.
+    - Numeric fields format numbers with fallback to '-'.
+    - Other string fields format text with fallback to '-'.
+    """
+    enum_rules = parse_field_rules(field)
+    if field.type in (FieldType.BOOL, "bool"):
+        return (
+            '<span style={{ padding: "2px 8px", borderRadius: 4, fontSize: 12, fontWeight: 600, '
+            f'background: {expr} ? "#dcfce7" : "#f1f5f9", '
+            f'color: {expr} ? "#166534" : "#64748b" }}>'
+            f'{{{expr} ? "Yes" : "No"}}</span>'
+        )
+    if enum_rules.enum:
+        return (
+            f'{{{expr} !== undefined && {expr} !== null ? ('
+            '<span style={{ padding: "2px 8px", borderRadius: 4, fontSize: 12, fontWeight: 600, '
+            'background: "#eff6ff", color: "#1d4ed8", border: "1px solid #bfdbfe" }}>'
+            f'{{String({expr})}}</span>'
+            ') : "-"}'
+        )
+    if field.type == FieldType.DATETIME:
+        return f'{{{expr} ? new Date({expr}).toLocaleDateString() : "-"}}'
+    if field.type == FieldType.TEXT:
+        return (
+            f'{{{expr} ? (String({expr}).length > 60 ? '
+            f'String({expr}).slice(0, 60) + "..." : String({expr})) : "-"}}'
+        )
+    if field.type in (FieldType.INT, FieldType.FLOAT):
+        return f'{{{expr} !== undefined && {expr} !== null ? String({expr}) : "-"}}'
+    return f'{{{expr} !== undefined ? String({expr}) : "-"}}'
+
+
 def _collection_screen_page(screen: Screen, entity: Entity, ir: ApplicationIR, ops: set[Op]) -> str:  # noqa: PLR0912
     name = entity.name
     plural = name if name.endswith("s") else f"{name}s"
@@ -2126,12 +2164,21 @@ def _collection_screen_page(screen: Screen, entity: Entity, ir: ApplicationIR, o
     ])
 
     for f in display_fields:
+        enum_rules = parse_field_rules(f)
         if f.type == FieldType.BOOL:
             val_expr = (
                 '<span style={{ padding: "2px 8px", borderRadius: 4, fontSize: 12, fontWeight: 600, '
                 'background: (item as any).' + f.name + ' ? "#dcfce7" : "#f1f5f9", '
                 'color: (item as any).' + f.name + ' ? "#166534" : "#64748b" }}>'
                 '{(item as any).' + f.name + ' ? "Yes" : "No"}</span>'
+            )
+        elif enum_rules.enum:
+            val_expr = (
+                '{(item as any).' + f.name + ' !== undefined && (item as any).' + f.name + ' !== null ? ('
+                '<span style={{ padding: "2px 8px", borderRadius: 4, fontSize: 12, fontWeight: 600, '
+                'background: "#eff6ff", color: "#1d4ed8", border: "1px solid #bfdbfe" }}>'
+                '{String((item as any).' + f.name + ')}</span>'
+                ') : "-"}'
             )
         elif f.type == FieldType.DATETIME:
             val_expr = '{(item as any).' + f.name + ' ? new Date((item as any).' + f.name + ').toLocaleDateString() : "-"}'
@@ -2411,8 +2458,9 @@ def _collection_screen_page(screen: Screen, entity: Entity, ir: ApplicationIR, o
                 ])
                 for df in sub.display_fields:
                     df_label = _title_case(df.name)
+                    df_val = _field_value_jsx(df, f"(child as any).{df.name}")
                     lines.append(
-                        f'                          <div style={{{{ color: "#334155" }}}}><strong>{df_label}:</strong> {{String((child as any).{df.name} ?? "-")}}</div>'
+                        f'                          <div style={{{{ color: "#334155" }}}}><strong>{df_label}:</strong> {df_val}</div>'
                     )
                 lines.extend([
                     '                        </div>',
@@ -2431,8 +2479,9 @@ def _collection_screen_page(screen: Screen, entity: Entity, ir: ApplicationIR, o
                 )
                 for df in sub.display_fields:
                     df_label = _title_case(df.name)
+                    df_val = _field_value_jsx(df, f"(child as any).{df.name}")
                     lines.append(
-                        f'                        <div style={{{{ color: "#334155" }}}}><strong>{df_label}:</strong> {{String((child as any).{df.name} ?? "-")}}</div>'
+                        f'                        <div style={{{{ color: "#334155" }}}}><strong>{df_label}:</strong> {df_val}</div>'
                     )
                 lines.append('                      </div>')
             lines.extend([
@@ -3343,6 +3392,23 @@ def _detail_screen_page(screen: Screen, entity: Entity, ir: ApplicationIR, ops: 
         ])
 
     lines.extend([
+        "  const handleCopy = async (text: string, label: string) => {",
+        "    try {",
+        '      if (navigator?.clipboard?.writeText) {',
+        "        await navigator.clipboard.writeText(text);",
+        "      } else {",
+        '        const textarea = document.createElement("textarea");',
+        "        textarea.value = text;",
+        "        document.body.appendChild(textarea);",
+        "        textarea.select();",
+        '        document.execCommand("copy");',
+        "        document.body.removeChild(textarea);",
+        "      }",
+        '      toast.success(`Copied ${label} to clipboard`);',
+        "    } catch {",
+        '      toast.error(`Failed to copy ${label} to clipboard`);',
+        "    }",
+        "  };",
         "  const handleExportJson = () => {",
         "    if (!item) return;",
         '    const blob = new Blob([JSON.stringify(item, null, 2)], { type: "application/json" });',
@@ -3587,9 +3653,20 @@ def _detail_screen_page(screen: Screen, entity: Entity, ir: ApplicationIR, ops: 
             "      {item && (",
             '        <div style={{ background: "#fff", border: "1px solid #e2e8f0", borderRadius: 8, padding: 24, marginBottom: 24, boxShadow: "0 1px 3px rgba(0,0,0,0.05)" }}>',
             '          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 16, flexWrap: "wrap", gap: 12 }}>',
-            f'            <h2 style={{ margin: 0, fontSize: 20, fontWeight: 700, color: "#0f172a" }}>',
-            f"              {{String((item as any).{best_title_f} ?? (item as any).id)}}",
-            "            </h2>",
+            '            <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>',
+            f'              <h2 style={{ margin: 0, fontSize: 20, fontWeight: 700, color: "#0f172a" }}>',
+            f"                {{String((item as any).{best_title_f} ?? (item as any).id)}}",
+            "              </h2>",
+            "              <button",
+            '                type="button"',
+            '                onClick={() => handleCopy(String((item as any).id), "ID")}',
+            '                aria-label="Copy ID to clipboard"',
+            '                title="Copy ID to clipboard"',
+            '                style={{ padding: "3px 8px", background: "#f1f5f9", border: "1px solid #cbd5e1", borderRadius: 4, fontSize: 12, color: "#475569", cursor: "pointer", display: "inline-flex", alignItems: "center", gap: 4 }}',
+            "              >",
+            "                <span>📋</span> Copy ID",
+            "              </button>",
+            "            </div>",
             '            <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>',
         ])
 
@@ -3666,10 +3743,34 @@ def _detail_screen_page(screen: Screen, entity: Entity, ir: ApplicationIR, ops: 
         lines.append('          <dl style={{ margin: 0, display: "grid", gridTemplateColumns: "140px 1fr", gap: "8px 16px", fontSize: 14 }}>')
         for f in entity.fields:
             flabel = _title_case(f.name)
-            lines.extend([
-                f'            <dt style={{ fontWeight: 600, color: "#475569" }}>{flabel}:</dt>',
-                f'            <dd style={{ margin: 0, color: "#1e293b" }}>{{String((item as any).{f.name} ?? "-")}}</dd>',
-            ])
+            is_id_field = f.name == "id" or f.type == FieldType.UUID or f.name.endswith("_id")
+            val_jsx = _field_value_jsx(f, f"(item as any).{f.name}")
+            if is_id_field:
+                dd_content = (
+                    f'            <dd style={{{{ margin: 0, color: "#1e293b", display: "flex", alignItems: "center", gap: 8 }}}}>'
+                    f'              <span>{val_jsx}</span>'
+                    f'              {{(item as any).{f.name} && ('
+                    f'                <button'
+                    f'                  type="button"'
+                    f'                  onClick={{() => handleCopy(String((item as any).{f.name}), "{flabel}")}}'
+                    f'                  aria-label="Copy {flabel} to clipboard"'
+                    f'                  title="Copy {flabel} to clipboard"'
+                    f'                  style={{{{ padding: "2px 6px", background: "transparent", border: "1px solid #cbd5e1", borderRadius: 4, fontSize: 11, color: "#64748b", cursor: "pointer" }}}}'
+                    f'                >'
+                    f'                  Copy'
+                    f'                </button>'
+                    f'              )}}'
+                    f'            </dd>'
+                )
+                lines.extend([
+                    f'            <dt style={{ fontWeight: 600, color: "#475569" }}>{flabel}:</dt>',
+                    dd_content,
+                ])
+            else:
+                lines.extend([
+                    f'            <dt style={{ fontWeight: 600, color: "#475569" }}>{flabel}:</dt>',
+                    f'            <dd style={{ margin: 0, color: "#1e293b" }}>{val_jsx}</dd>',
+                ])
         lines.extend([
             "          </dl>",
             "        </div>",
@@ -3831,8 +3932,9 @@ def _detail_screen_page(screen: Screen, entity: Entity, ir: ApplicationIR, ops: 
                 ])
                 for df in sub.display_fields:
                     df_label = _title_case(df.name)
+                    df_val = _field_value_jsx(df, f"(child as any).{df.name}")
                     lines.append(
-                        f'                          <div style={{{{ color: "#334155" }}}}><strong>{df_label}:</strong> {{String((child as any).{df.name} ?? "-")}}</div>'
+                        f'                          <div style={{{{ color: "#334155" }}}}><strong>{df_label}:</strong> {df_val}</div>'
                     )
                 lines.extend([
                     '                        </div>',
@@ -3851,8 +3953,9 @@ def _detail_screen_page(screen: Screen, entity: Entity, ir: ApplicationIR, ops: 
                 )
                 for df in sub.display_fields:
                     df_label = _title_case(df.name)
+                    df_val = _field_value_jsx(df, f"(child as any).{df.name}")
                     lines.append(
-                        f'                        <div style={{{{ color: "#334155" }}}}><strong>{df_label}:</strong> {{String((child as any).{df.name} ?? "-")}}</div>'
+                        f'                        <div style={{{{ color: "#334155" }}}}><strong>{df_label}:</strong> {df_val}</div>'
                     )
                 lines.append('                      </div>')
             lines.extend([
