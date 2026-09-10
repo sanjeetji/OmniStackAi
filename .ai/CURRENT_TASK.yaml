@@ -1,85 +1,29 @@
-schema_version: 1
-task_id: R-296
-title: "Generated Web App Accessibility Pass: Semantic ARIA Roles, Live Regions, Table Sort State, and Accessible Search/Pagination Controls"
-status: done
-phase: BASIC/MVP
-founder_stage: 0
-branch: main
-goal: >-
-  Bring the generated Next.js web application to enterprise accessibility standards (WCAG 2.1 AA / WAI-ARIA)
-  across all screen types without changing public hook APIs or backend semantics. Add role="alert" and
-  aria-live="assertive" to every error banner (collection top-level, detail main, subcollections, form submit);
-  add aria-label to collection and subcollection search inputs; add WAI-ARIA aria-sort state to sortable table
-  column headers in collection screens; wrap collection pagination in a <nav aria-label="Pagination"> container
-  with aria-labels on Previous/Next buttons (and subcollection pagination); and add role="status" to empty-state
-  messages so screen readers announce list conditions. Fully deterministic, offline, and description-only stable.
-tracker_ref: "R-296"
+tracker_id: R-297
+title: Generated Collection Keyboard Navigation & Shortcuts
+phase: Phase 3 — Emergent Feature Parity
+track: Web Frontend
+module: apps/web (Next.js codegen)
+status: DONE
+owner: sanjeetji <sk698166@gmail.com>
+
 requirements:
-  - Error banners across collection list, detail screen, subcollections (both collection and detail views), and form submission emit role="alert" and aria-live="assertive" so assistive technologies announce errors immediately.
-  - Collection search input emits aria-label="Search <plural>" and subcollection search input emits aria-label="Search <child_plural>".
-  - Sortable table headers in the collection screen emit aria-sort with "ascending", "descending", or "none" matching current params.sort and params.order.
-  - Collection pagination footer is wrapped in <nav aria-label="Pagination"> and its Previous/Next buttons emit aria-label="Previous page" and aria-label="Next page".
-  - Subcollection pagination buttons emit aria-label="Previous page" and aria-label="Next page".
-  - Empty-state message containers in collection and subcollection lists emit role="status" for polite announcement.
-  - All existing text strings, retry buttons, skeletons, and hook contracts are strictly preserved; diff-invariant across ir.description.
+  - Pressing "/" anywhere outside form inputs/selects/textareas focuses the collection search input and prevents "/" keystroke insertion.
+  - Pressing "Escape" when focused inside the collection search input resets the search query and blurs the input.
+  - Pressing "Escape" outside text inputs when active filters are present clears all collection filters.
+  - Backward-compatible, offline, deterministic (0 model calls), and diff-invariant across ir.description.
+
 acceptance_criteria:
-  - Collection, detail, subcollection, and form error banners emit role="alert" and aria-live="assertive".
-  - Collection and subcollection search inputs emit the expected aria-label attributes.
-  - Table header <th> elements emit aria-sort matching params.sort and params.order.
-  - Collection pagination renders inside <nav aria-label="Pagination"> and has accessible button labels.
-  - Subcollection pagination buttons have aria-label="Previous page" and aria-label="Next page".
-  - Empty state messages include role="status".
-  - Description-only IR changes remain byte-identical; both example projects generate cleanly.
-  - Focused tests, full offline verification, lint, security check, env check, and both builder demos pass.
-expected_impact:
-  - services/agent-engine/src/omnistackai_agent_engine/codegen/nextjs.py
-  - services/agent-engine/tests/test_screen_accessibility.py
-  - .ai task/state/handoff/work-log files, PROJECT_STATE.md, CHANGELOG.md, docs/CODEGEN.md, docs/PROGRESS.md, docs/RESUME_PROMPT.md, and execution tracker
-allowed_paths:
-  - services/agent-engine/src/omnistackai_agent_engine/codegen/nextjs.py
-  - services/agent-engine/tests/test_screen_accessibility.py
-  - .ai/**
-  - CHANGELOG.md
-  - PROJECT_STATE.md
-  - docs/**
-  - R_&_D/OmniStackAI_Execution_Tracker_v6.xlsx
-forbidden_paths:
-  - services/agent-engine/src/omnistackai_agent_engine/application_ir/**
-  - services/agent-engine/src/omnistackai_agent_engine/codegen/data_access.py
-  - services/agent-engine/src/omnistackai_agent_engine/codegen/backend_python.py
-  - services/agent-engine/src/omnistackai_agent_engine/codegen/backend_go.py
-  - services/agent-engine/src/omnistackai_agent_engine/codegen/openapi.py
-  - package.json
-  - pnpm-lock.yaml
-must_not_change:
-  - PostgreSQL, platform schemas/migrations, or backend semantics
-  - Section 74 monorepo layout, provider boundaries, infrastructure, or native/mobile scope
-  - Application IR schema, generated API-client behaviour, or the hooks
-  - Existing text labels, retry button functionality, or loading skeleton structures
-gates:
-  - focused screen-accessibility tests
-  - task verify
-  - task lint
-  - task security:quick
-  - task env:check
-  - task builder:demo -- minimal-blog
-  - task builder:demo -- rideshare-favourites
-  - generated TypeScript artifact inspection
-model_tool_trace:
-  routing: deterministic_only
-  local_calls: 0
-  cloud_calls: 0
-  note: Pure deterministic code generation and offline tests; no model call is needed.
+  - Focused test suite in services/agent-engine/tests/test_collection_keyboard_navigation.py passes (8 tests).
+  - All 902 unit tests in task verify remain green.
+  - Generated collection screen includes keyboard event listener with proper cleanup and input target guards.
+  - Task verify, task lint, task security:quick, and task env:check pass.
+  - R_&_D/OmniStackAI_Execution_Tracker_v6.xlsx updated with R-297 Done at row 9, 297 unique IDs, 0 #REF!.
+
 evidence:
-  - "task verify: 894 agent-engine tests pass (13 new in test_screen_accessibility.py, test-first)."
-  - "task lint, task security:quick, task env:check: pass."
-  - "task builder:demo -- minimal-blog and -- rideshare-favourites: pass."
-  - "Generated TypeScript inspected: collection/detail/subcollection/form error banners have role='alert' and aria-live='assertive'; search inputs have aria-label; sortable table headers have aria-sort; pagination wrapped in <nav aria-label='Pagination'> with Previous/Next button labels; empty states have role='status'."
-  - "Feat commit 002e90a; docs commit to follow."
-  - "Tracker: R-296 Done row at Phase_Roadmap!A9; table A4:M304; 296 unique IDs (0 dupes); 85 Done, 1 Deferred, 210 Not Started; MVP 85/191 (44.5%); no #REF!; XLSX valid."
-  - "0 local model calls / 0 cloud calls; no generated app installed/run; no DB connection."
-blockers: []
-next_action: >-
-  R-296 complete. Next unstarted Tracker ID is R-297.
-next_command: >-
-  task ai:status
+  task_verify: 902 tests pass in 1.023s
+  task_lint: pass
+  task_security_quick: pass
+  task_env_check: pass
+  task_builder_demos: minimal-blog and rideshare-favourites pass
+  tracker_status: 86 Done / 1 Deferred / 210 Not Started of 297 rows; MVP 86/192 (44.8%); 0 #REF!
+  model_calls: 0 local / 0 cloud

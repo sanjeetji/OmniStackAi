@@ -1,5 +1,31 @@
 # Work Log
 
+## 2026-09-10 — R-297
+
+- Recorded contract in `.ai/CURRENT_TASK.yaml` and `.ai/tasks/R-297.md` (status in_progress → done).
+- `nextjs.py`:
+  - Added `searchInputRef = useRef<HTMLInputElement>(null)` and attached `ref={searchInputRef}` to the
+    collection search input.
+  - Added a window `keydown` event listener for power-user shortcuts:
+    - Pressing `/` outside existing editable elements (INPUT, TEXTAREA, SELECT, contentEditable)
+      focuses `searchInputRef` and prevents default `/` keypress character insertion.
+    - Pressing `Escape` when focused inside the collection search input clears `searchInput`, calls
+      `setSearch("")` to reset committed search state, and blurs the input.
+    - Pressing `Escape` outside editable elements when active filters exist (`activeFilterCount > 0`)
+      calls `clearFilters()`.
+    - Proper event listener cleanup on unmount with dependency array `[setSearch, activeFilterCount, clearFilters]`.
+  - Maintained strict diff invariance across `ir.description`.
+- Added `services/agent-engine/tests/test_collection_keyboard_navigation.py` with 8 focused tests (search ref
+  attachment, slash shortcut listener, editable target guard, escape clearing search, escape clearing filters,
+  screen without filters, diff invariance, example projects generation).
+- `task verify` — 902 tests pass (8 new), 0 failures. `task lint`, `task security:quick`, `task env:check`
+  pass. `builder:demo minimal-blog` + `rideshare-favourites` pass. Generated TypeScript inspected.
+  0 network, 0 cloud model calls.
+- Tracker: inserted R-297 Done row at `Phase_Roadmap!A9`; table `A4:M305`; 297 unique IDs (0 dupes);
+  86 Done, 1 Deferred, 210 Not Started; MVP 86/192 (44.8%); no `#REF!`; XLSX valid.
+- Updated CURRENT_TASK.yaml, tasks/R-297.md, PROJECT_STATE.yaml, HANDOFF.md, PROJECT_STATE.md,
+  CHANGELOG.md, docs/CODEGEN.md, docs/PROGRESS.md, docs/RESUME_PROMPT.md.
+
 ## 2026-09-10 — R-296
 
 - Recorded contract in `.ai/CURRENT_TASK.yaml` and `.ai/tasks/R-296.md` (status in_progress → done).

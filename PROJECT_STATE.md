@@ -5,20 +5,19 @@ Last updated: 2026-09-10T17:40:00+05:30
 Stage 0 (Founder Build Sequence, Brief Section 91) — BASIC/MVP
 
 ## Last Completed Task
-Tracker ID: R-296 — Generated Web App Accessibility Pass: Semantic ARIA Roles, Live Regions, Table Sort State & Accessible Controls — DONE,
-`task verify` (894 agent-engine tests, 13 focused R-296 tests) passing. Brings the generated Next.js web
-application to enterprise accessibility standards (WCAG 2.1 AA / WAI-ARIA best practices) across all
-screen types: error banners (collection top-level, detail main, subcollections in both views, form submit)
-emit role="alert" and aria-live="assertive" for immediate assistive announcement; search inputs emit
-aria-label="Search <plural>" and aria-label="Search <child_plural>"; sortable table headers emit dynamic
-aria-sort state matching active params; pagination footers are wrapped in <nav aria-label="Pagination">
-with accessible Previous/Next button labels; and empty-state list messages emit role="status". All existing
-text labels, retry buttons, skeletons, and hook signatures are strictly preserved; 100% diff-invariant across
-ir.description; implementation checkpoint `002e90a`. Preceded by R-225 through R-295.
+Tracker ID: R-297 — Generated Collection Keyboard Navigation & Shortcuts — DONE,
+`task verify` (902 agent-engine tests, 8 focused R-297 tests) passing. Wires power-user keyboard
+navigation and shortcuts into generated Next.js collection screens: pressing `/` outside form inputs
+focuses the collection search input and prevents `/` insertion; pressing `Escape` when focused inside
+the search input clears the search query, resets active search state (`setSearch("")`), and blurs the
+input; pressing `Escape` outside text inputs when active filters are present clears all collection filters
+(`clearFilters()`). All existing text labels, retry buttons, skeletons, and hook signatures are strictly
+preserved; 100% diff-invariant across ir.description; implementation checkpoint `[R-297]`. Preceded by
+R-225 through R-296.
 
-**Notes:** (1) the tracker is current through R-296: 85 Done, 1 Deferred, 210 Not Started across 296
-tasks; MVP is 85/191 (44.5%). (2) The founder authorized autonomous continuation of Tracker IDs until
-manually stopped — next unstarted Tracker ID: R-297. (3) A Groq API key may be available; live model-fabric
+**Notes:** (1) the tracker is current through R-297: 86 Done, 1 Deferred, 210 Not Started across 297
+tasks; MVP is 86/192 (44.8%). (2) The founder authorized autonomous continuation of Tracker IDs until
+manually stopped — next unstarted Tracker ID: R-298. (3) A Groq API key may be available; live model-fabric
 verification remains separate (set it only in gitignored `.env`, never chat/commits).
 
 

@@ -1142,9 +1142,16 @@ Adds a lightweight, accessible, and self-contained client-side toast notificatio
     - Subcollection delete: emits `toast.success("Deleted {child} successfully")` / `toast.error(err.message)`.
   - **Form screens**:
     - Submit create/update: emits `toast.success("{Entity} {created|updated} successfully")` / `toast.error(err.message)`.
-    - Reset button: emits `toast.info("Form values reset to initial state")`.
-- **Quality & Safety**:
-  - 100% offline, zero external npm dependencies, zero new IR fields, strict diff invariance across `ir.description`.
+## Keyboard navigation & shortcuts (R-297)
+
+Generated Next.js collection screens support power-user keyboard navigation and shortcuts without adding external dependencies:
+
+- **Search focus (`/`)**: Pressing `/` outside editable elements (`INPUT`, `TEXTAREA`, `SELECT`, `contentEditable`) focuses the search input via `searchInputRef = useRef<HTMLInputElement>(null)` and prevents default character insertion.
+- **Search reset (`Escape`)**: Pressing `Escape` when focused inside the search input resets `searchInput`, calls `setSearch("")` to clear committed filter state, and blurs the input.
+- **Filter reset (`Escape`)**: Pressing `Escape` outside editable elements when active filters are present (`activeFilterCount > 0`) calls `clearFilters()`.
+- **Event listener lifecycle**: Attached to `window` with proper cleanup on unmount, correctly listing dependencies (`[setSearch, activeFilterCount, clearFilters]`).
+- **Safety & Quality**: 100% offline, standard-library-only platform code, zero new IR fields, byte-identical diff invariance across `ir.description`.
+
 
 
 

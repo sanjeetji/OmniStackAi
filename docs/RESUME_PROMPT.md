@@ -40,7 +40,7 @@ START PROTOCOL
   `task ai:status`, `task ai:handoff`. `task verify` must stay green and network-independent.
 - Confirm git branch/HEAD/clean tree. Then restate: phase, next Tracker ID, objective, blast radius.
 
-WHAT IS ALREADY BUILT (platform generators are Python 3.13 stdlib-only, offline, in services/agent-engine; 894 tests pass)
+WHAT IS ALREADY BUILT (platform generators are Python 3.13 stdlib-only, offline, in services/agent-engine; 902 tests pass)
 - Model fabric: ModelProvider contract + registry; local Ollama adapter (runs any installed model via
   OMNISTACKAI_OLLAMA_MODEL); Balanced ModelGateway (deterministic escalation ladder, no silent cloud
   fallback, context-budget guard); key-activated cloud catalog — Anthropic/OpenAI/Google-Gemini/
@@ -102,6 +102,10 @@ WHAT IS ALREADY BUILT (platform generators are Python 3.13 stdlib-only, offline,
   `aria-live="assertive"` on error banners, `aria-label="Search <plural>"` on collection/subcollection search
   inputs, `aria-sort="ascending|descending|none"` on sortable table headers, `<nav aria-label="Pagination">`
   and labelled Previous/Next buttons for page controls, and `role="status"` on empty states.
+  Collection screens also provide power-user keyboard navigation and shortcuts (R-297): pressing `/`
+  outside input/textarea/select/contenteditable focuses the collection search input and prevents character
+  insertion, pressing `Escape` in search clears active search state and blurs, and pressing `Escape` outside
+  text inputs clears all active filters.
   TRI-TARGET proven from ONE IR; all offline/deterministic (emit
   files, assert contents; no install/build/DB).
 - RUNTIME/DEPLOY layer (Brief 15/51/75): RuntimeProvider/DeploymentProvider contracts;
@@ -168,13 +172,14 @@ generated mutation hooks (useCreate/useUpdate/useDelete concurrent submission gu
 subcollection search, R-290 optimistic collection delete, R-291 optimistic subcollection child delete,
 R-292 generated collection/subcollection/detail loading skeleton placeholders, R-293 form edit-mode and
 record-selector loading skeletons, R-294 App Router resilience quartet (error.tsx, global-error.tsx,
-not-found.tsx, loading.tsx), R-295 consistent error retry across all generated data-fetching views, and
+not-found.tsx, loading.tsx), R-295 consistent error retry across all generated data-fetching views,
 R-296 generated web app accessibility pass (semantic ARIA roles, live regions, table sort state, and
-accessible search/pagination controls). Do NOT overwrite backlog rows; continue from R-297.
+accessible search/pagination controls), and R-297 collection keyboard navigation & shortcuts ('/' to focus,
+'Escape' to clear). Do NOT overwrite backlog rows; continue from R-298.
 NOTE: the execution tracker was reconciled on 2026-09-09 (R-253..R-279 rows had drifted and were
-backfilled); keep it current going forward. It now has 296 unique rows: 85 Done, 1 Deferred, 210 Not
-Started; MVP is 85/191 (44.5%). The earlier reported R-251 MVP baseline of 145 was one low—direct recount
-is 146, and R-252..R-296 added 45 rows. The summary above is current through R-296; Git, state files,
+backfilled); keep it current going forward. It now has 297 unique rows: 86 Done, 1 Deferred, 210 Not
+Started; MVP is 86/192 (44.8%). The earlier reported R-251 MVP baseline of 145 was one low—direct recount
+is 146, and R-252..R-297 added 46 rows. The summary above is current through R-297; Git, state files,
 tests, and CHANGELOG remain the executable/detail sources of truth.
 
 ENVIRONMENT LIMITS discovered here
@@ -201,11 +206,10 @@ RULES (non-negotiable)
   .ai/HANDOFF.md, PROJECT_STATE.md, CHANGELOG.md, and the tracker row. Push the branch; verify remote
   SHA == local HEAD. Never claim unexecuted tests.
 
-WHAT TO DO NEXT (pick with the founder; all continue the builder), continue from R-297
-- Offline-doable now: the generated Next.js web application has complete loading skeletons, error boundaries,
-  retry mechanics, and accessibility semantics. R-297 can build the next generated UX/robustness increment —
-  e.g. optimistic create/update reflected in the collection list, a reusable EmptyState/error component to
-  DRY the screens, or keyboard shortcut navigation (e.g. '/' to focus search, 'Esc' to clear filters).
+WHAT TO DO NEXT (pick with the founder; all continue the builder), continue from R-298
+- Offline-doable now: continue the generated Next.js web application robustness/UX increments —
+  e.g. optimistic create/update reflection in the collection list, a reusable EmptyState/error component to
+  DRY the screens, or keyboard shortcut navigation in detail screens (e.g. 'e' to edit, 'Backspace'/'Esc' to back).
   Reuse the proven patterns, preserve public hook signatures, and add focused generation tests first.
 - Now unblocked (a Groq API key is available): live-verify the model fabric end-to-end with Groq through
   the Balanced gateway (real cloud inference + cost accounting). Set GROQ_API_KEY in the gitignored .env
@@ -218,5 +222,5 @@ WHAT TO DO NEXT (pick with the founder; all continue the builder), continue from
 - Deferred by governance: native mobile (R-010 etc.) until web/backend stability.
 
 Begin by reading the files above and running the start protocol, then propose the next Tracker ID
-(R-297) with its task contract before writing code. Commit to main.
+(R-298) with its task contract before writing code. Commit to main.
 ```
