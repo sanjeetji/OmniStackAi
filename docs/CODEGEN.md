@@ -533,7 +533,7 @@ Closes the full-stack CRUD editing cycle by connecting generated Next.js screens
     - Page Title: `{isEdit ? "Edit " + name : screen.name}`.
     - Submit Button: `{((submitting || updating) ? "Saving..." : (isEdit ? "Update " + name : "Save " + name))}`.
     - Success Banner: `{isEdit ? name + " updated successfully!" : name + " saved successfully!"}`.
-    - Loading Indicator: Displays dedicated "Loading <entity> details..." banner while fetching initial data in edit mode.
+    - Loading Indicator: While fetching initial data in edit mode, the banner renders layout-preserving skeleton field bars (R-293) instead of a "Loading <entity> details..." line.
 - **Collection Screen Edit Actions (`_collection_screen_page`)**:
   - When `Op.UPDATE` is wired and a complementary form screen exists, adds an "Edit" action `<Link>` in the table row pointing to `/{form_screen.id}?id=${(item as any).id}`.
   - Attaches `onClick={(e) => e.stopPropagation()}` to prevent row selection toggling when clicking the Edit link.
@@ -1032,6 +1032,22 @@ bars) instead of a plain "Loading..." line — no CSS `@keyframes`, no new compo
   (`width: `${88 - i * 14}%``).
 - The refresh-button "Loading..." labels, empty/error states, and data rendering are unchanged; no
   hook/API-client/backend/Application-IR change; description-only IR generation stays byte-identical.
+
+### Loading Skeletons for Form Initial Load & Detail Record-Selector (R-293)
+
+Completes the R-292 coverage by replacing the two remaining plain "Loading..." text spots with the same
+layout-preserving skeleton placeholders (no CSS `@keyframes`, no new component/file, no dependency):
+
+- Form edit-mode initial load (`_form_screen_page`): the `{isEdit && fetchingInitial && (…)}` banner
+  maps `[0, 1, 2]` skeleton field bars (`height: 34, background: "#e2e8f0", borderRadius: 6, opacity:
+  1 - i * 0.2`) inside its existing flex-column banner, instead of "Loading `<name>` details...".
+- Detail record-selector list (`_detail_screen_page`): the `{loadingList && (…)}` block maps `[0, 1, 2]`
+  skeleton cards (`height: 56, background: "#f1f5f9", borderRadius: 6, opacity: 1 - i * 0.2`) in the same
+  `repeat(auto-fill, minmax(220px, 1fr))` grid as the "recent records" cards, instead of
+  "Loading `<plural>`...".
+- The R-292 collection/subcollection/detail-main skeletons, all other loading states, empty/error states,
+  and data rendering are unchanged; no hook/API-client/backend/Application-IR change; description-only IR
+  generation stays byte-identical. Loading skeletons now cover every generated data-loading state.
 
 ### Global Notification Toast System & Action Feedback (R-279)
 

@@ -1,5 +1,28 @@
 # Work Log
 
+## 2026-09-10 — R-293
+
+- Recorded contract in `.ai/CURRENT_TASK.yaml` and `.ai/tasks/R-293.md` (status in_progress → done).
+- `nextjs.py`:
+  - `_form_screen_page`: replaced the edit-mode initial-load banner text `Loading <name> details...`
+    with `{[0, 1, 2].map((i) => (<div key={i} style={{ height: 34, background: "#e2e8f0", borderRadius: 6, opacity: 1 - i * 0.2 }} />))}` inside the existing flex-column banner.
+  - `_detail_screen_page`: replaced the record-selector `{loadingList && <p>Loading <plural>...</p>}`
+    with `{loadingList && (<div grid>{[0, 1, 2].map((i) => (<div key={i} style={{ height: 56, background: "#f1f5f9", borderRadius: 6, opacity: 1 - i * 0.2 }} />))}</div>)}` using the same `repeat(auto-fill, minmax(220px, 1fr))` grid as the recent-records cards.
+  - Static inline-styled skeletons only; no CSS `@keyframes`, no new file/component, no dependency.
+    Completes the R-292 skeleton coverage. Strict diff invariance across `ir.description` preserved.
+- Added `services/agent-engine/tests/test_loading_skeletons_extra.py` with 6 focused tests (form
+  skeleton present + text removed, record-selector skeleton cards present + text removed, description-only
+  diff invariance, both example projects still generate), written test-first.
+- Updated one `test_form_update_screens.py` initial-load assertion (`Loading article details...` →
+  the skeleton `<div>` markup).
+- `task verify` — 864 tests pass (6 new), 0 failures. `task lint`, `task security:quick`, `task env:check`
+  pass. `builder:demo minimal-blog` and `builder:demo rideshare-favourites` pass. Generated form
+  initial-load and detail record-selector loading states inspected. 0 network calls, 0 cloud model calls.
+- Tracker: inserted R-293 Done row at `Phase_Roadmap!A9`; table `A4:M301`; 293 unique IDs (0 dupes);
+  82 Done, 1 Deferred, 210 Not Started; MVP 82/188 (43.6%); no `#REF!`; XLSX valid.
+- Updated CURRENT_TASK.yaml, tasks/R-293.md, PROJECT_STATE.yaml, HANDOFF.md, PROJECT_STATE.md,
+  CHANGELOG.md, docs/CODEGEN.md, docs/PROGRESS.md, docs/RESUME_PROMPT.md.
+
 ## 2026-09-09 — R-279
 
 - Recorded contract in `.ai/CURRENT_TASK.yaml` and `.ai/tasks/R-279.md`.

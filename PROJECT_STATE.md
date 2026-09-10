@@ -1,22 +1,23 @@
 # Project State — OmniStackAI
-Last updated: 2026-09-09T18:48:50+05:30
+Last updated: 2026-09-10T16:45:00+05:30
 
 ## Current Phase
 Stage 0 (Founder Build Sequence, Brief Section 91) — BASIC/MVP
 
 ## Last Completed Task
-Tracker ID: R-292 — Loading Skeletons for Generated Next.js Screens — DONE, `task verify` (858
-agent-engine tests, 9 focused R-292 tests) passing. Replaced the plain "Loading..." text in the
-data-loading states with layout-preserving skeleton placeholders (static inline-styled gray rounded
-bars): the collection table loading cell maps ~5 skeleton bars, the subcollection (master-detail) list
-loading maps ~3 skeleton blocks (both render sites), and the detail-screen main loading maps ~4 skeleton
-field lines of varying width. No CSS `@keyframes`, no new file/component, no dependency; refresh-button
-labels, empty/error states, and data rendering are unchanged. No IR, backend, dependency, database,
-infrastructure, network, or model change; implementation checkpoint `16d6c52`. Preceded by R-225 through
-R-291.
+Tracker ID: R-293 — Loading Skeletons for Form Initial Load & Detail Record-Selector List — DONE,
+`task verify` (864 agent-engine tests, 6 focused R-293 tests) passing. Completes the R-292 skeleton
+coverage by replacing the two remaining plain "Loading..." text spots with layout-preserving skeleton
+placeholders: the form edit-mode initial-load banner (`isEdit && fetchingInitial`) now maps three gray
+field bars (`height 34`) instead of "Loading <name> details...", and the detail record-selector "recent
+records" list (`loadingList`) now maps three gray skeleton cards (`height 56`) in the same auto-fill grid
+as the cards instead of "Loading <plural>...". Static inline-styled skeletons — no CSS `@keyframes`, no
+new file/component, no dependency; other loading states (R-292), empty/error states, and data rendering
+are unchanged. No IR, backend, dependency, database, infrastructure, network, or model change;
+implementation checkpoint `9796f4a`. Preceded by R-225 through R-292.
 
-**Notes:** (1) the tracker is current through R-292: 81 Done, 1 Deferred, 210 Not Started across 292
-tasks; MVP is 81/187 (43.3%). (2) The founder authorized autonomous continuation of Tracker IDs until
+**Notes:** (1) the tracker is current through R-293: 82 Done, 1 Deferred, 210 Not Started across 293
+tasks; MVP is 82/188 (43.6%). (2) The founder authorized autonomous continuation of Tracker IDs until
 manually stopped. (3) A Groq API key may be available; live model-fabric verification remains separate
 (set it only in gitignored `.env`, never chat/commits).
 

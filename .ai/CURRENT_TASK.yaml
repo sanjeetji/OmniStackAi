@@ -1,41 +1,38 @@
 schema_version: 1
-task_id: R-292
-title: Loading Skeletons for Generated Next.js Screens
+task_id: R-293
+title: Loading Skeletons for Form Initial Load & Detail Record-Selector List
 status: done
 phase: BASIC/MVP
 founder_stage: 0
 branch: main
 goal: >-
-  Replace the plain "Loading..." text in the generated screens' data-loading states with
-  layout-preserving skeleton placeholders (gray rounded bars), so a loading screen shows the shape of
-  content instead of a single centered line — a perceived-performance UX improvement. Scope: the
-  collection table loading state, the subcollection (master-detail) list loading state (both render
-  sites), and the detail-screen main loading state. Static inline-styled skeletons — no CSS keyframes, no
-  new component/file, no dependency. Deterministic and description-only-stable.
-tracker_ref: "R-292"
+  Complete the loading-skeleton coverage started in R-292 by replacing the two remaining plain
+  "Loading..." text spots with layout-preserving skeleton placeholders: the form edit-mode initial-load
+  banner (`isEdit && fetchingInitial`) and the detail-screen record-selector "recent records" list
+  (`loadingList`). Static inline-styled skeletons — no CSS keyframes, no new file, no dependency.
+  Deterministic and description-only-stable.
+tracker_ref: "R-293"
 requirements:
-  - Collection table loading cell renders a stack of ~5 skeleton bars instead of "Loading <plural>...".
-  - Subcollection list loading renders ~3 skeleton item blocks instead of "Loading <child plural>..." (both the collection master-detail and detail render sites).
-  - Detail-screen main loading renders ~4 skeleton field lines instead of "Loading <name>...".
+  - Form edit-mode initial-load banner renders ~3 skeleton field blocks instead of "Loading <name> details...".
+  - Detail record-selector list loading renders ~3 skeleton card blocks (matching the recent-records grid) instead of "Loading <plural>...".
   - Skeletons are inline-styled gray rounded divs; no @keyframes, no new file, no npm/platform dependency.
-  - Refresh-button "Loading..." labels and other non-data-loading text are unchanged.
+  - Other loading states (R-292), empty/error states, and data rendering are unchanged.
   - No hook/API-client/backend/IR change; deterministic; description-only IR stability preserved.
 acceptance_criteria:
-  - The collection loading state no longer emits "Loading <plural>... " text and instead maps skeleton bars.
-  - The subcollection loading state (both sites) no longer emits "Loading <child>..." and instead maps skeleton blocks.
-  - The detail main loading state no longer emits "Loading <name>..." and instead maps skeleton lines.
+  - The form initial-load state maps skeleton blocks and no longer emits "Loading <name> details...".
+  - The detail record-selector list loading maps skeleton cards and no longer emits its "Loading <plural>..." text.
   - Description-only IR changes remain byte-identical; both example projects still generate.
-  - Focused tests, related screen tests, full offline verification, lint, security, env check, and both builder demos pass.
+  - Focused tests, related form/detail tests, full offline verification, lint, security, env check, and both builder demos pass.
 expected_impact:
   - services/agent-engine/src/omnistackai_agent_engine/codegen/nextjs.py
-  - services/agent-engine/tests/test_loading_skeletons.py
+  - services/agent-engine/tests/test_loading_skeletons_extra.py
   - .ai task/state/handoff/work-log files, PROJECT_STATE.md, CHANGELOG.md, docs/CODEGEN.md, docs/PROGRESS.md, docs/RESUME_PROMPT.md, and execution tracker
 allowed_paths:
   - services/agent-engine/src/omnistackai_agent_engine/codegen/nextjs.py
-  - services/agent-engine/tests/test_loading_skeletons.py
-  - services/agent-engine/tests/test_screen_generation.py
-  - services/agent-engine/tests/test_subcollection_screens.py
-  - services/agent-engine/tests/test_detail_screen_lifecycle.py
+  - services/agent-engine/tests/test_loading_skeletons_extra.py
+  - services/agent-engine/tests/test_detail_record_selector.py
+  - services/agent-engine/tests/test_form_navigation_ctas.py
+  - services/agent-engine/tests/test_update_mode_forms.py
   - .ai/**
   - CHANGELOG.md
   - PROJECT_STATE.md
@@ -53,10 +50,10 @@ must_not_change:
   - PostgreSQL, platform schemas/migrations, or backend semantics
   - Section 74 monorepo layout, provider boundaries, infrastructure, or native/mobile scope
   - Application IR schema, generated API-client behaviour, or the hooks
-  - the empty-state / error / refresh-button / data-render behaviour of the screens
+  - the R-292 collection/subcollection/detail-main skeletons, empty/error states, and data rendering
 gates:
-  - focused loading-skeleton tests
-  - test_screen_generation / test_subcollection_screens / test_detail_screen_lifecycle
+  - focused loading-skeleton-extra tests
+  - test_detail_record_selector / test_form_navigation_ctas / test_update_mode_forms
   - task verify
   - task lint
   - task security:quick
@@ -70,36 +67,16 @@ model_tool_trace:
   cloud_calls: 0
   note: Pure deterministic code generation and offline tests; no model call is needed.
 evidence:
-  - command: env PYTHONPATH=services/agent-engine/src python3 -m unittest discover -s services/agent-engine/tests -p 'test_loading_skeletons.py'
-    result: pass
-    detail: 9 focused R-292 tests pass (they failed first against the pre-change loading text).
-  - command: task verify
-    result: pass
-    detail: 858 agent-engine tests and all Stage 0 offline verification gates pass; two test_subcollection_screens loading assertions updated to the skeleton markup.
-  - command: task lint
-    result: pass
-  - command: task security:quick
-    result: pass
-  - command: task env:check
-    result: pass
-  - command: task builder:demo -- minimal-blog
-    result: pass
-  - command: task builder:demo -- rideshare-favourites
-    result: pass
-  - command: generated TypeScript artifact inspection
-    result: pass
-    detail: >-
-      Collection loading cell maps 5 skeleton bars (background #e2e8f0); subcollection loading maps 3
-      skeleton blocks (background #f1f5f9); detail main loading maps 4 skeleton lines of varying width.
-      Refresh-button labels/empty/error/data rendering unchanged. Tracker: 292 unique IDs, R-292 Done,
-      table A4:M300, dashboard formulas through row 300, no #REF!, valid XLSX; 81 Done / 1 Deferred / 210
-      Not Started; MVP 81/187 (43.3%).
-  - commit: 16d6c52
-    detail: feat(codegen)- loading skeletons for generated Next.js screens [R-292]
+  - "task verify: 864 agent-engine tests pass (6 new in test_loading_skeletons_extra.py; one test_form_update_screens.py initial-load assertion updated to the skeleton markup)."
+  - "task lint, task security:quick, task env:check: pass."
+  - "task builder:demo -- minimal-blog and -- rideshare-favourites: pass."
+  - "Generated form initial-load banner and detail record-selector loading states inspected — both render three inline-styled skeleton divs (form height 34 #e2e8f0; record-selector height 56 #f1f5f9 in the auto-fill grid)."
+  - "Feat commit 9796f4a; docs commit to follow."
+  - "Tracker: R-293 Done row at Phase_Roadmap!A9; table A4:M301; 293 unique IDs (0 dupes); 82 Done, 1 Deferred, 210 Not Started; MVP 82/188 (43.6%); no #REF!; XLSX valid."
+  - "0 local model calls / 0 cloud calls; no generated app installed/run; no DB connection."
 blockers: []
 next_action: >-
-  R-292 is complete and verified. Next unstarted Tracker ID is R-293 (autonomous continuation authorized).
-  Recommended offline candidate: loading skeletons for the form initial-load / detail record-selector list
-  (the two remaining "Loading..." spots), or another generated-app UX/robustness increment.
+  R-293 complete. Continue autonomously to R-294 (next unstarted Tracker ID) per the founder's standing
+  authorization — record its contract before coding.
 next_command: >-
   task ai:status

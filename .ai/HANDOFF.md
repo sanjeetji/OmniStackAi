@@ -1,10 +1,10 @@
 # Current Handoff
 
-Task ID: R-292
+Task ID: R-293
 Status: done
 Phase: BASIC/MVP — Founder Stage 0
 Branch: `main` (the only branch; the GitHub default)
-Implementation SHA: `16d6c52`
+Implementation SHA: `9796f4a`
 
 ## Repo/workflow state
 
@@ -15,31 +15,38 @@ Implementation SHA: `16d6c52`
   manually stopped (still stop-and-ask only for paid cloud / DB engine / new infra / native-mobile / a
   materially different architecture decision).
 
-## Completed (R-292) — Loading Skeletons for Generated Next.js Screens
+## Completed (R-293) — Loading Skeletons for Form Initial Load & Detail Record-Selector List
 
-Replaced the plain "Loading..." text in the generated screens' data-loading states with
-layout-preserving skeleton placeholders (static inline-styled gray rounded bars):
+Completed the R-292 skeleton coverage by replacing the two remaining plain "Loading..." text spots in
+the generated Next.js app with layout-preserving skeleton placeholders (the same static inline-styled
+gray rounded divs):
 
-- Collection table loading cell maps ~5 skeleton bars (`#e2e8f0`); subcollection (master-detail) list
-  loading maps ~3 skeleton blocks (`#f1f5f9`, both render sites); detail-screen main loading maps ~4
-  skeleton field lines of varying width.
-- Static skeletons only — no CSS `@keyframes`, no new file/component, no dependency. Refresh-button
-  "Loading..." labels, empty/error states, and data rendering are unchanged. No hook/API-client/backend/
-  IR change; description-only IR generation stays byte-identical.
+- Form edit-mode initial-load banner (`{isEdit && fetchingInitial && (…)}` in `_form_screen_page`) now
+  maps `[0, 1, 2]` skeleton field bars (`height: 34, background: "#e2e8f0", borderRadius: 6, opacity:
+  1 - i * 0.2`) inside its existing flex-column banner, instead of "Loading `<name>` details...".
+- Detail record-selector "recent records" list (`{loadingList && (…)}` in `_detail_screen_page`) now
+  maps `[0, 1, 2]` skeleton cards (`height: 56, background: "#f1f5f9", borderRadius: 6, opacity:
+  1 - i * 0.2`) in the same `repeat(auto-fill, minmax(220px, 1fr))` grid as the record cards, instead of
+  "Loading `<plural>`...".
+- Static skeletons only — no CSS `@keyframes`, no new file/component, no dependency. The R-292
+  collection/subcollection/detail-main skeletons, all other loading states, empty/error states, and data
+  rendering are unchanged. No hook/API-client/backend/IR change; description-only IR generation stays
+  byte-identical.
 
 ## Verification
 
-- `task verify` — pass (858 agent-engine tests; 9 focused R-292 tests in `test_loading_skeletons.py`,
-  written test-first). Two `test_subcollection_screens.py` loading assertions updated to the skeletons.
+- `task verify` — pass (864 agent-engine tests; 6 focused R-293 tests in `test_loading_skeletons_extra.py`,
+  written test-first). One `test_form_update_screens.py` initial-load assertion updated to the skeleton
+  markup.
 - `task lint`, `task security:quick`, `task env:check` — pass. Both `task builder:demo` — pass.
-- Generated collection/detail/subcollection loading states inspected.
-- Tracker — R-292 at `Phase_Roadmap!A9:M9`; table `A4:M300`; Dashboard formulas reach row 300; 292
-  unique IDs (0 dupes); 81 Done, 1 Deferred, 210 Not Started; MVP 81/187 (43.3%); no `#REF!`; XLSX valid.
+- Generated form initial-load and detail record-selector loading states inspected.
+- Tracker — R-293 at `Phase_Roadmap!A9:M9`; table `A4:M301`; Dashboard formulas reach row 301; 293
+  unique IDs (0 dupes); 82 Done, 1 Deferred, 210 Not Started; MVP 82/188 (43.6%); no `#REF!`; XLSX valid.
 - 0 local model calls / 0 cloud calls; no generated app installed/run, no DB connection.
 
 ## Blockers and risks
 
-- No blocker for the offline R-293 candidate. Live preview/deploy and R-224 still need a
+- No blocker for the offline R-294 candidate. Live preview/deploy and R-224 still need a
   network-capable environment and/or authorized provider keys. Native mobile remains deferred under
   Brief Sections 25 and 91.
 - A Groq key may be available for a future separately authorized live model-fabric verification. Keep
@@ -47,10 +54,11 @@ layout-preserving skeleton placeholders (static inline-styled gray rounded bars)
 
 ## Next action
 
-Continue from **R-293** (autonomously, per the founder's standing authorization). Recommended offline
-candidate: extend loading skeletons to the two remaining "Loading..." spots (the form edit-mode initial
-load and the detail record-selector "recent records" list), or another generated-app UX/robustness
-increment. Record the R-293 Standard AI Task Contract before coding.
+Continue from **R-294** (autonomously, per the founder's standing authorization). Loading skeletons now
+cover every generated data-loading state (collection, subcollection, detail-main, form initial-load,
+record-selector). Recommended offline candidate: another generated-app UX/robustness increment — e.g.
+optimistic create/update reflected in the collection list, or an error-boundary/retry affordance for
+failed loads. Record the R-294 Standard AI Task Contract before coding.
 
 ## Next command
 
