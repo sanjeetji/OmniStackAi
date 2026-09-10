@@ -1142,9 +1142,9 @@ Adds a lightweight, accessible, and self-contained client-side toast notificatio
     - Subcollection delete: emits `toast.success("Deleted {child} successfully")` / `toast.error(err.message)`.
   - **Form screens**:
     - Submit create/update: emits `toast.success("{Entity} {created|updated} successfully")` / `toast.error(err.message)`.
-## Keyboard navigation & shortcuts (R-297, R-298)
+## Keyboard navigation & shortcuts (R-297, R-298, R-299)
 
-Generated Next.js collection and detail screens support power-user keyboard navigation and shortcuts without adding external dependencies:
+Generated Next.js collection, detail, and form screens support power-user keyboard navigation and shortcuts without adding external dependencies:
 
 - **Collection screens (R-297)**:
   - **Search focus (`/`)**: Pressing `/` outside editable elements (`INPUT`, `TEXTAREA`, `SELECT`, `contentEditable`) focuses the search input via `searchInputRef = useRef<HTMLInputElement>(null)` and prevents default character insertion.
@@ -1158,7 +1158,15 @@ Generated Next.js collection and detail screens support power-user keyboard navi
   - **Deselection (`Escape`)**: Pressing `Escape` outside editable elements deselects the current record (`handleSelectId(null)`).
   - **Input guards**: Keystrokes are ignored when focused inside editable elements (`INPUT`, `TEXTAREA`, `SELECT`, `contentEditable`).
   - **Event listener lifecycle**: Attached to `window` with proper cleanup on unmount, with comprehensive dependency arrays.
+
+- **Form screens (R-299)**:
+  - **Save shortcuts (`Cmd+Enter` / `Ctrl+Enter` & `Cmd+S` / `Ctrl+S`)**: Pressing `Cmd+Enter` or `Ctrl+Enter` triggers `form.requestSubmit()` across inputs and textareas; pressing `Cmd+S` or `Ctrl+S` triggers `form.requestSubmit()` and suppresses browser "Save Page As..." dialogs.
+  - **Input blur (`Escape`)**: Pressing `Escape` while focused inside an editable control (`INPUT`, `TEXTAREA`, `SELECT`) blurs the field.
+  - **Cancel navigation (`Escape`)**: Pressing `Escape` outside editable controls prompts to discard unsaved changes (if `isDirty`) and navigates back to `cancel_href`.
+  - **Submission guards**: Prevents duplicate trigger if already saving (`!submitting` / `!(submitting || updating)`).
+  - **Event listener lifecycle**: Attached to `window` with proper cleanup on unmount with dependencies (`[isDirty, submitting, updating]`).
 - **Safety & Quality**: 100% offline, standard-library-only platform code, zero new IR fields, byte-identical diff invariance across `ir.description`.
+
 
 
 

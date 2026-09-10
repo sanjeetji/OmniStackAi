@@ -1,5 +1,5 @@
-tracker_id: R-298
-title: Generated Detail Screen Keyboard Navigation & Shortcuts
+tracker_id: R-299
+title: Generated Form Screen Keyboard Shortcuts: Cmd/Ctrl+Enter, Cmd/Ctrl+S & Escape Cancel
 phase: Phase 3 — Emergent Feature Parity
 track: Web Frontend
 module: apps/web (Next.js codegen)
@@ -7,34 +7,34 @@ status: DONE
 owner: sanjeetji <sk698166@gmail.com>
 
 requirements:
-  - Pressing ArrowLeft or "[" outside text inputs navigates to the previous record when available.
-  - Pressing ArrowRight or "]" outside text inputs navigates to the next record when available.
-  - Pressing "e" / "E" outside text inputs opens edit mode when can_edit and a form screen exist.
-  - Pressing "Escape" outside text inputs deselects the current record.
+  - Pressing Cmd+Enter or Ctrl+Enter triggers form submission (requestSubmit).
+  - Pressing Cmd+S or Ctrl+S triggers form submission and prevents browser save dialog.
+  - Pressing Escape while focused in editable inputs (INPUT, TEXTAREA, SELECT) blurs the active field.
+  - Pressing Escape outside editable inputs triggers Cancel navigation to parent list/overview, with unsaved changes confirmation if isDirty.
   - Backward-compatible, offline, deterministic (0 model calls), and diff-invariant across ir.description.
 
 acceptance_criteria:
-  - Focused test suite in services/agent-engine/tests/test_detail_keyboard_navigation.py passes.
-  - All existing 902 unit tests in task verify remain green.
-  - Generated detail screen includes keyboard event listener with proper cleanup and input target guards.
+  - Focused test suite in services/agent-engine/tests/test_form_keyboard_shortcuts.py passes.
+  - All existing 909 unit tests in task verify remain green.
+  - Generated form screen includes window keydown event listener with proper cleanup and guards.
   - Task verify, task lint, task security:quick, and task env:check pass.
-  - R_&_D/OmniStackAI_Execution_Tracker_v6.xlsx updated with R-298 Done at row 9, 298 unique IDs, 0 #REF!.
+  - R_&_D/OmniStackAI_Execution_Tracker_v6.xlsx updated with R-299 Done at row 9, 299 unique IDs, 0 #REF!.
 
 evidence:
-  - test_detail_keyboard_navigation.py: 7/7 tests pass in 0.003s.
-  - task verify: 909 tests pass in 1.187s (7 new, 0 failures).
+  - test_form_keyboard_shortcuts.py: 7/7 tests pass in 0.002s.
+  - task verify: 916 tests pass in 1.030s (7 new, 0 failures).
   - task lint: clean (ruff passed).
   - task security:quick: passed (Stage 0 secret-policy clean).
   - task env:check: passed.
   - task builder:demo -- minimal-blog: generated 43 files cleanly into owned repo.
   - task builder:demo -- rideshare-favourites: generated 40 files cleanly into owned repo.
-  - tracker: row 9 in Phase_Roadmap, table A4:M306, Dashboard to row 306, 0 #REF!, 87/193 MVP tasks Done (45.1%).
+  - tracker: row 9 in Phase_Roadmap, table A4:M307, Dashboard to row 307, 0 #REF!, 88/194 MVP tasks Done (45.4%).
 
 allowed_paths:
   - services/agent-engine/src/omnistackai_agent_engine/codegen/nextjs.py
-  - services/agent-engine/tests/test_detail_keyboard_navigation.py
+  - services/agent-engine/tests/test_form_keyboard_shortcuts.py
   - .ai/CURRENT_TASK.yaml
-  - .ai/tasks/R-298.md
+  - .ai/tasks/R-299.md
   - .ai/PROJECT_STATE.yaml
   - .ai/WORK_LOG.md
   - .ai/HANDOFF.md

@@ -5,21 +5,22 @@ Last updated: 2026-09-10T17:40:00+05:30
 Stage 0 (Founder Build Sequence, Brief Section 91) — BASIC/MVP
 
 ## Last Completed Task
-Tracker ID: R-298 — Generated Detail Screen Keyboard Navigation & Shortcuts — DONE,
-`task verify` (909 agent-engine tests, 7 focused R-298 tests) passing. Wires power-user keyboard
-navigation and shortcuts into generated Next.js detail screens: pressing `ArrowLeft` or `[` outside
-form inputs navigates to the previous record when available (`prevItem && handleSelectId(prevItem.id)`);
-pressing `ArrowRight` or `]` outside form inputs navigates to the next record when available
-(`nextItem && handleSelectId(nextItem.id)`); pressing `e` or `E` outside form inputs switches to edit mode
-for the active record when edit capability and form screen exist (`can_edit && form_screen && selectedId`);
-pressing `Escape` outside form inputs deselects the active record (`handleSelectId(null)`). All existing
-text labels, retry buttons, skeletons, and hook signatures are strictly preserved; 100% diff-invariant
-across ir.description; implementation checkpoint `[R-298]`. Preceded by R-225 through R-297.
+Tracker ID: R-299 — Generated Form Screen Keyboard Shortcuts: Cmd/Ctrl+Enter, Cmd/Ctrl+S & Escape Cancel — DONE,
+`task verify` (916 agent-engine tests, 7 focused R-299 tests) passing. Wires power-user keyboard
+shortcuts into generated Next.js form screens: pressing `Cmd+Enter` or `Ctrl+Enter` triggers form
+submission via `form.requestSubmit()`; pressing `Cmd+S` or `Ctrl+S` triggers form submission and
+prevents the browser's native Save Page As dialog; pressing `Escape` while focused inside editable fields
+(`INPUT`, `TEXTAREA`, `SELECT`) blurs the active field; pressing `Escape` outside text inputs triggers
+Cancel navigation to parent list/overview with unsaved changes confirmation when dirty; submitting guards
+prevent duplicate concurrent submissions. All existing text labels, retry buttons, skeletons, and hook
+signatures are strictly preserved; 100% diff-invariant across ir.description; implementation checkpoint `[R-299]`.
+Preceded by R-225 through R-298.
 
-**Notes:** (1) the tracker is current through R-298: 87 Done, 1 Deferred, 210 Not Started across 298
-tasks; MVP is 87/193 (45.1%). (2) The founder authorized autonomous continuation of Tracker IDs until
-manually stopped — next unstarted Tracker ID: R-299. (3) A Groq API key may be available; live model-fabric
+**Notes:** (1) the tracker is current through R-299: 88 Done, 1 Deferred, 210 Not Started across 299
+tasks; MVP is 88/194 (45.4%). (2) The founder authorized autonomous continuation of Tracker IDs until
+manually stopped — next unstarted Tracker ID: R-300. (3) A Groq API key may be available; live model-fabric
 verification remains separate (set it only in gitignored `.env`, never chat/commits).
+
 
 
 

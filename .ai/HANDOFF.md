@@ -1,10 +1,10 @@
 # Current Handoff
 
-Task ID: R-298
+Task ID: R-299
 Status: done
 Phase: BASIC/MVP — Founder Stage 0
 Branch: `main` (the only branch; the GitHub default)
-Implementation SHA: `1df3a01`
+Implementation SHA: `0f2ade6`
 
 
 ## Repo/workflow state
@@ -12,32 +12,33 @@ Implementation SHA: `1df3a01`
 - All work is on `main`; commit directly with the Tracker-ID discipline (contract → tests → gates →
   tracker → two commits tagged `[R-###]` → push → remote SHA check).
 - Commits use `sanjeetji <sk698166@gmail.com>` as author (with a permitted tooling co-author trailer).
-- **Founder authorized autonomous continuation**. Resume from **R-299** when ready. Still
+- **Founder authorized autonomous continuation**. Resume from **R-300** when ready. Still
   stop-and-ask only for paid cloud / DB engine / new infra / native-mobile / a materially different
   architecture decision.
 
-## Completed (R-298) — Generated Detail Screen Keyboard Navigation & Shortcuts
+## Completed (R-299) — Generated Form Screen Keyboard Shortcuts: Cmd/Ctrl+Enter, Cmd/Ctrl+S & Escape Cancel
 
-Wires power-user keyboard navigation and shortcuts into generated Next.js detail screens:
+Wires power-user keyboard shortcuts into generated Next.js form screens:
 
-- **ArrowLeft / `[` navigation**: Pressing `ArrowLeft` or `[` outside form inputs navigates to the previous
-  record when available (`prevItem && handleSelectId(prevItem.id)`).
-- **ArrowRight / `]` navigation**: Pressing `ArrowRight` or `]` outside form inputs navigates to the next
-  record when available (`nextItem && handleSelectId(nextItem.id)`).
-- **`e` / `E` edit mode**: Pressing `e` or `E` outside form inputs switches to edit mode for the current record
-  when edit capability and a form screen exist (`can_edit && form_screen && selectedId`).
-- **`Escape` deselect**: Pressing `Escape` outside form inputs deselects the current record (`handleSelectId(null)`).
+- **`Cmd+Enter` / `Ctrl+Enter` save shortcut**: Pressing `Cmd+Enter` or `Ctrl+Enter` anywhere in the form
+  (including text inputs and multiline textareas) triggers form submission via `form.requestSubmit()`.
+- **`Cmd+S` / `Ctrl+S` save shortcut**: Pressing `Cmd+S` or `Ctrl+S` triggers form submission and prevents
+  the browser's native "Save Page As..." dialog.
+- **`Escape` blur / cancel shortcut**: Pressing `Escape` while focused in an editable field (`INPUT`,
+  `TEXTAREA`, `SELECT`) blurs the active field; pressing `Escape` outside inputs prompts for confirmation
+  if `isDirty` and navigates back to `cancel_href`.
+- Submitting guards prevent duplicate concurrent submissions while saving.
 - All existing text labels, retry buttons, skeletons, and hook signatures are strictly preserved; 100% diff-invariant
   across `ir.description`.
 
 ## Verification
 
-- `task verify` — pass (**909** agent-engine tests; 7 focused R-298 tests in `test_detail_keyboard_navigation.py`,
+- `task verify` — pass (**916** agent-engine tests; 7 focused R-299 tests in `test_form_keyboard_shortcuts.py`,
   written test-first).
 - `task lint`, `task security:quick`, `task env:check` — pass. Both `task builder:demo` — pass.
-- Generated detail screen TypeScript inspected.
-- Tracker — R-298 at `Phase_Roadmap!A9:M9`; table `A4:M306`; Dashboard formulas reach row 306; 298
-  unique IDs (0 dupes); 87 Done, 1 Deferred, 210 Not Started; MVP 87/193 (45.1%); no `#REF!`; XLSX valid.
+- Generated form screen TypeScript inspected.
+- Tracker — R-299 at `Phase_Roadmap!A9:M9`; table `A4:M307`; Dashboard formulas reach row 307; 299
+  unique IDs (0 dupes); 88 Done, 1 Deferred, 210 Not Started; MVP 88/194 (45.4%); no `#REF!`; XLSX valid.
 - 0 local model calls / 0 cloud calls; no generated app installed/run, no DB connection.
 
 ## Blockers and risks
@@ -49,9 +50,10 @@ Wires power-user keyboard navigation and shortcuts into generated Next.js detail
 
 ## Next action
 
-Resume from **R-299**. Record the R-299 Standard AI Task Contract before coding.
+Resume from **R-300**. Record the R-300 Standard AI Task Contract before coding.
 
 ## Next command
 
 `task ai:status`
+
 

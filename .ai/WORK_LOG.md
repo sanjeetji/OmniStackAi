@@ -1,5 +1,26 @@
 # Work Log
 
+## 2026-09-10 — R-299
+
+- Recorded contract in `.ai/CURRENT_TASK.yaml` and `.ai/tasks/R-299.md` (status in_progress → done).
+- `nextjs.py`:
+  - Added a window `keydown` event listener in `_form_screen_page` for power-user shortcuts:
+    - Pressing `Cmd+Enter` or `Ctrl+Enter` triggers form submission (`form.requestSubmit()`) and prevents default event.
+    - Pressing `Cmd+S` or `Ctrl+S` triggers form submission (`form.requestSubmit()`) and prevents browser "Save Page As..." dialog.
+    - Pressing `Escape` while focused in an editable field (`INPUT`, `TEXTAREA`, `SELECT`) blurs the active field.
+    - Pressing `Escape` outside editable inputs triggers Cancel navigation to `cancel_href`, prompting confirmation if `isDirty`.
+    - Submitting guards (`!submitting` or `!(submitting || updating)`) prevent duplicate submissions.
+    - Full event listener cleanup on unmount with dependency array (`[isDirty, submitting, updating]`).
+  - Maintained strict diff invariance across `ir.description`.
+- Added `services/agent-engine/tests/test_form_keyboard_shortcuts.py` with 7 focused tests (save shortcuts, escape shortcut,
+  submitting guard, event listener cleanup, create-only form guard, diff invariance, example projects generation).
+- `task verify` — 916 tests pass (7 new), 0 failures. `task lint`, `task security:quick`, `task env:check` pass.
+  `builder:demo minimal-blog` + `rideshare-favourites` pass. Generated TypeScript inspected. 0 network, 0 cloud model calls.
+- Tracker: inserted R-299 Done row at `Phase_Roadmap!A9`; table `A4:M307`; 299 unique IDs (0 dupes);
+  88 Done, 1 Deferred, 210 Not Started; MVP 88/194 (45.4%); no `#REF!`; XLSX valid.
+- Updated CURRENT_TASK.yaml, tasks/R-299.md, PROJECT_STATE.yaml, HANDOFF.md, PROJECT_STATE.md,
+  CHANGELOG.md, docs/CODEGEN.md, docs/PROGRESS.md, docs/RESUME_PROMPT.md.
+
 ## 2026-09-10 — R-298
 
 - Recorded contract in `.ai/CURRENT_TASK.yaml` and `.ai/tasks/R-298.md` (status in_progress → done).
