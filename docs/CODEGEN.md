@@ -1533,4 +1533,713 @@ Emits a reusable Breadcrumbs component and integrates hierarchical wayfinding in
   - 100% diff-invariant across `ir.description` changes.
   - Registered in `NextjsWebAdapter.generate()` as a `GeneratedFile` at `components/card.tsx` and exported in `codegen.__init__` as `render_card_component`.
 
+### 16. Accessible Reusable Alert Component (`components/alert.tsx`, R-316)
+
+`NextjsWebAdapter` emits a standalone, accessible, reusable compound Alert component (`apps/web/components/alert.tsx`):
+
+- **Component Architecture & TypeScript Interfaces**:
+  - Emitted with `"use client"` directive.
+  - Exports `AlertVariant = "info" | "success" | "warning" | "error"`.
+  - Compound components exported: `Alert`, `AlertTitle`, `AlertDescription`.
+  - Exports `AlertProps`, `AlertTitleProps`, and `AlertDescriptionProps` interfaces.
+- **WAI-ARIA Alert & Status Semantics**:
+  - Applies `role="alert"` and `aria-live="assertive"` for `"error"` variant.
+  - Applies `role="status"` and `aria-live="polite"` for `"info"`, `"success"`, and `"warning"` variants.
+- **Built-in Accessible Vector Icons**:
+  - SVG icons with `aria-hidden="true"` rendered automatically matching the active variant color.
+- **Dismissible Behavior & Action Slots**:
+  - `dismissible` boolean with accessible close button (`aria-label="Dismiss alert"`) and `onDismiss` callback.
+  - `action` slot for contextual buttons or links.
+- **Diff Predictability & Safety**:
+  - 100% diff-invariant across `ir.description` changes.
+  - Registered in `NextjsWebAdapter.generate()` as a `GeneratedFile` at `components/alert.tsx` and exported in `codegen.__init__` as `render_alert_component`.
+
+### 17. Accessible Reusable Skeleton Loader Component (`components/skeleton.tsx`, R-317)
+
+`NextjsWebAdapter` emits a standalone, accessible, reusable compound Skeleton component (`apps/web/components/skeleton.tsx`):
+
+- **Component Architecture & TypeScript Interfaces**:
+  - Emitted with `"use client"` directive.
+  - Exports `SkeletonVariant = "text" | "circular" | "rectangular" | "rounded"`.
+  - Exports `SkeletonAnimation = "pulse" | "wave" | "none"`.
+  - Compound components exported: `Skeleton`, `SkeletonText`, `SkeletonCard`, `SkeletonTable`.
+  - Exports `SkeletonProps`, `SkeletonTextProps`, `SkeletonCardProps`, and `SkeletonTableProps` interfaces.
+- **WAI-ARIA Loading & Status Semantics**:
+  - Applies `role="status"`, `aria-busy="true"`, and `aria-live="polite"` to loader containers.
+  - Emits visually-hidden screen reader announcement (`<span style={srOnlyStyle}>{ariaLabel}</span>`) with customizable or default `"Loading..."` text.
+- **Visual Shapes & Animations**:
+  - Supports shapes with tailored border-radius styling (circular 50%, text 4px, rounded 8px, rectangular 0px).
+  - Configurable animations (`pulse`, `wave`, `none`) with embedded keyframes.
+  - Includes `@media (prefers-reduced-motion: reduce)` media query handling to disable animation for motion-sensitive users.
+- **Diff Predictability & Safety**:
+  - 100% diff-invariant across `ir.description` changes.
+  - Registered in `NextjsWebAdapter.generate()` as a `GeneratedFile` at `components/skeleton.tsx` and exported in `codegen.__init__` as `render_skeleton_component`.
+
+### 18. Accessible Reusable Drawer / Sheet Component (`components/drawer.tsx`, R-318)
+
+`NextjsWebAdapter` emits a standalone, accessible, reusable compound Drawer / Sheet component (`apps/web/components/drawer.tsx`):
+
+- **Component Architecture & TypeScript Interfaces**:
+  - Emitted with `"use client"` directive.
+  - Exports `DrawerPosition = "left" | "right" | "top" | "bottom"`.
+  - Exports `DrawerSize = "sm" | "md" | "lg" | "xl" | "full"`.
+  - Compound components exported: `Drawer`, `DrawerHeader`, `DrawerTitle`, `DrawerDescription`, `DrawerContent`, `DrawerFooter`.
+  - Exports `DrawerProps`, `DrawerHeaderProps`, `DrawerTitleProps`, `DrawerDescriptionProps`, `DrawerContentProps`, and `DrawerFooterProps` interfaces.
+- **WAI-ARIA 1.2 Modal Dialog Semantics**:
+  - Emits `role="dialog"` and `aria-modal="true"` on root backdrop container.
+  - Dynamically binds `aria-labelledby` and `aria-describedby` via `useId()`.
+  - Includes accessible close button with `aria-label="Close drawer"`.
+- **Keyboard & Interaction Handling**:
+  - Dismisses on `Escape` keydown when open (`closeOnEscape`).
+  - Dismisses on backdrop overlay click (`closeOnBackdropClick`).
+  - Locks background scroll (`document.body.style.overflow = "hidden"`) during visibility.
+- **Diff Predictability & Safety**:
+  - 100% diff-invariant across `ir.description` changes.
+### 19. Accessible Reusable Avatar Component (`components/avatar.tsx`, R-319)
+
+`NextjsWebAdapter` emits a standalone, accessible, reusable compound Avatar component (`apps/web/components/avatar.tsx`):
+
+- **Component Architecture & TypeScript Interfaces**:
+  - Emitted with `"use client"` directive.
+  - Exports `AvatarShape = "circle" | "rounded" | "square"`.
+  - Exports `AvatarSize = "xs" | "sm" | "md" | "lg" | "xl"`.
+  - Exports `AvatarStatus = "online" | "offline" | "busy" | "away"`.
+  - Compound components exported: `Avatar`, `AvatarGroup`.
+  - Exports `AvatarProps` and `AvatarGroupProps` interfaces.
+- **WAI-ARIA Image & Status Semantics**:
+  - Root container emits `role="img"` with descriptive `aria-label` derived from `alt`, `name`, or status.
+  - Presence indicator dot emits decorative or semantic status info with high-contrast borders.
+  - Fallback silhouettes include `aria-hidden="true"` SVG graphics.
+- **3-Tier Fallback Cascade**:
+  - Image element with native `onError` transition to fallback on network error or broken source.
+  - Initials fallback with deterministic background color hashing from `name` prop.
+  - Generic vector silhouette fallback for anonymous users when no `name` or `src` is provided.
+- **Compound AvatarGroup**:
+  - Supports overlapping negative margins (`marginLeft: -8px` to `-12px` according to size).
+  - Configurable `max` limit with `+N` excess overflow badge.
+- **Diff Predictability & Safety**:
+  - 100% diff-invariant across `ir.description` changes.
+  - Registered in `NextjsWebAdapter.generate()` as a `GeneratedFile` at `components/avatar.tsx` and exported in `codegen.__init__` as `render_avatar_component`.
+
+### 20. Accessible Reusable Toggle Switch Component (`components/toggle.tsx`, R-320)
+
+`NextjsWebAdapter` emits a standalone, accessible, reusable Toggle Switch component (`apps/web/components/toggle.tsx`):
+
+- **Component Architecture & TypeScript Interfaces**:
+  - Emitted with `"use client"` directive.
+  - Exports `ToggleSize = "sm" | "md" | "lg"`.
+  - Exports `ToggleProps` interface supporting controlled (`checked`, `onChange`) and uncontrolled (`defaultChecked`) operation modes.
+  - Exports `Toggle` component and `ToggleSwitch` alias.
+- **WAI-ARIA 1.2 Switch Semantics & Keyboard Navigation**:
+  - Track emits `role="switch"`, `aria-checked={isChecked}`, `aria-disabled={disabled}`, `tabIndex={disabled ? -1 : 0}`.
+  - Full keyboard accessibility: handles `Space` and `Enter` key presses with `e.preventDefault()`.
+  - Binds optional `label` and `description` slots with `useId()` (`aria-labelledby`, `aria-describedby`).
+- **Visual Design & Sizes**:
+  - Standardized size configurations:
+    - `sm`: 32x18px track, 14px thumb, 14px translate.
+    - `md`: 44x24px track, 20px thumb, 20px translate.
+    - `lg`: 56x30px track, 26px thumb, 26px translate.
+  - Smooth CSS transitions (`0.2s ease`) on track background color and thumb translation.
+  - Accessible focus outline and disabled states.
+- **HTML Form Integration**:
+  - Hidden `<input type="hidden" name={name} value={isChecked ? "true" : "false"} />` rendered when `name` prop is provided.
+- **Diff Predictability & Safety**:
+  - 100% diff-invariant across `ir.description` changes.
+  - Registered in `NextjsWebAdapter.generate()` as a `GeneratedFile` at `components/toggle.tsx` and exported in `codegen.__init__` as `render_toggle_component`.
+
+### 21. Accessible Reusable Accordion Component (`components/accordion.tsx`, R-321)
+
+`NextjsWebAdapter` emits a standalone, accessible, reusable compound Accordion component (`apps/web/components/accordion.tsx`):
+
+- **Component Architecture & TypeScript Interfaces**:
+  - Emitted with `"use client"` directive.
+  - Compound components exported: `Accordion`, `AccordionItem`, `AccordionTrigger`, `AccordionContent`.
+  - Exports `AccordionType = "single" | "multiple"`.
+  - Exports `AccordionVariant = "default" | "bordered" | "separated"`.
+  - Exports `AccordionProps`, `AccordionItemProps`, `AccordionTriggerProps`, `AccordionContentProps` interfaces.
+  - Supported controlled (`value`, `onValueChange`) and uncontrolled (`defaultValue`) operation modes.
+- **WAI-ARIA 1.2 Accordion Semantics & Interactions**:
+  - Trigger button emits `aria-expanded={isOpen}`, `aria-controls={contentId}`, and dynamic `id`.
+  - Content panel emits `role="region"`, `id={contentId}`, `aria-labelledby={triggerId}`, and `hidden={!isOpen}`.
+  - Animated chevron indicator emits `aria-hidden="true"` with CSS transform `rotate(180deg)` when open.
+  - Supports collapsible configuration in single mode (allowing all sections to be collapsed).
+  - Supports disabled items with proper `disabled` and `aria-disabled` handling.
+- **Visual Styling & Variants**:
+  - `default`: Clean bottom border divider between items.
+  - `bordered`: Enclosing border around the accordion with internal separators.
+  - `separated`: Distinct floating card-style items separated by vertical gaps.
+- **Diff Predictability & Safety**:
+  - 100% diff-invariant across `ir.description` changes.
+  - Registered in `NextjsWebAdapter.generate()` as a `GeneratedFile` at `components/accordion.tsx` and exported in `codegen.__init__` as `render_accordion_component`.
+
+### 22. Accessible Reusable Dropdown Menu Component (`components/dropdown-menu.tsx`, R-322)
+
+`NextjsWebAdapter` emits a standalone, accessible, reusable compound Dropdown Menu component (`apps/web/components/dropdown-menu.tsx`):
+
+- **Component Architecture & TypeScript Interfaces**:
+  - Emitted with `"use client"` directive.
+  - Compound components exported: `DropdownMenu`, `DropdownMenuTrigger`, `DropdownMenuContent`, `DropdownMenuItem`, `DropdownMenuSeparator`, `DropdownMenuLabel`.
+  - Exports `DropdownMenuAlign = "start" | "end" | "center"`.
+  - Exports `DropdownMenuSide = "top" | "bottom" | "left" | "right"`.
+  - Exports `DropdownMenuProps`, `DropdownMenuTriggerProps`, `DropdownMenuContentProps`, `DropdownMenuItemProps`, `DropdownMenuSeparatorProps`, `DropdownMenuLabelProps`.
+- **WAI-ARIA 1.2 Menu Semantics & Interactions**:
+  - Trigger emits `aria-haspopup="menu"`, `aria-expanded={isOpen}`, `aria-controls={contentId}`.
+  - Content container emits `role="menu"`, `id={contentId}`, `aria-labelledby={triggerId}`, `tabIndex={-1}`.
+  - Items emit `role="menuitem"`, `aria-disabled={disabled ? "true" : undefined}`, `tabIndex={disabled ? -1 : 0}`.
+  - Separators emit `role="separator"`.
+  - Full keyboard navigation: `ArrowDown` and `ArrowUp` cycle through enabled items, `Home` moves to first, `End` to last, `Escape` closes menu and restores trigger focus, `Enter`/`Space` activates item action.
+  - Outside click dismiss listener via `document.addEventListener("mousedown")`.
+- **Styling, Actions & Variants**:
+  - Positions calculated for all `side` and `align` combinations with customizable `sideOffset`.
+  - Supports `disabled` states with visual cursor/color changes and keyboard skipping.
+  - Supports `destructive` action styling (red text and light-red hover backgrounds).
+  - Supports optional `shortcut` monospace badge and `icon` slots.
+- **Diff Predictability & Safety**:
+  - 100% diff-invariant across `ir.description` changes.
+  - Registered in `NextjsWebAdapter.generate()` as a `GeneratedFile` at `components/dropdown-menu.tsx` and exported in `codegen.__init__` as `render_dropdown_menu_component`.
+
+### 23. Accessible Reusable Popover Component (`components/popover.tsx`, R-323)
+
+`NextjsWebAdapter` emits a standalone, accessible, reusable compound Popover component (`apps/web/components/popover.tsx`):
+
+- **Component Architecture & TypeScript Interfaces**:
+  - Emitted with `"use client"` directive.
+  - Compound components exported: `Popover`, `PopoverTrigger`, `PopoverContent`, `PopoverClose`, `PopoverArrow`.
+  - Exports `PopoverAlign = "start" | "end" | "center"`.
+  - Exports `PopoverSide = "top" | "bottom" | "left" | "right"`.
+  - Exports `PopoverProps`, `PopoverTriggerProps`, `PopoverContentProps`, `PopoverCloseProps`, `PopoverArrowProps`.
+  - Supports controlled (`open`, `onOpenChange`) and uncontrolled (`defaultOpen`) operation modes.
+- **WAI-ARIA Dialog Semantics & Interactions**:
+  - Trigger emits `aria-haspopup="dialog"`, `aria-expanded={isOpen}`, `aria-controls={contentId}`.
+  - Content container emits `role="dialog"`, `aria-modal="true"`, `id={contentId}`, `aria-labelledby={triggerId}`.
+  - Outside click dismiss listener via `document.addEventListener("mousedown")`.
+  - Escape key dismiss listener with focus restoration to trigger button.
+  - `PopoverClose` button emits accessible `aria-label="Close popover"`.
+  - `PopoverArrow` decorative pointing indicator emits `aria-hidden="true"`.
+- **Diff Predictability & Safety**:
+  - 100% diff-invariant across `ir.description` changes.
+  - Registered in `NextjsWebAdapter.generate()` as a `GeneratedFile` at `components/popover.tsx` and exported in `codegen.__init__` as `render_popover_component`.
+
+### 24. Design Tokens & CSS Custom Properties Theming Engine (`styles/tokens.css`, R-324)
+
+`NextjsWebAdapter` emits a standalone, production-grade Design Tokens and CSS custom properties theming engine (`apps/web/styles/tokens.css`):
+
+- **Color Palettes (Light & Dark Themes)**:
+  - Default Light Mode (`:root`): semantic colors for Brand/Primary (`--color-primary`, `--color-primary-hover`, `--color-primary-focus`, `--color-primary-subtle`, `--color-primary-foreground`), Secondary, Accent, Neutral Scale (50 to 900), Surfaces & Backgrounds (`--color-background`, `--color-surface`, `--color-surface-subtle`, `--color-surface-elevated`), Typography (`--color-text`, `--color-text-muted`, `--color-text-subtle`, `--color-text-inverse`), Borders, and Status Feedback (Success, Warning, Danger/Error, Info).
+  - Dark Mode Overrides: activated via `[data-theme="dark"]`, `:root.dark`, `body.dark`, and `@media (prefers-color-scheme: dark)` with `:root:not([data-theme="light"])` user override support.
+- **Scale Tokens**:
+  - Spacing scale: `--space-0` through `--space-24` (0 to 6rem / 96px).
+  - Typography scale: `--font-sans`, `--font-mono`, `--font-size-xs` through `--font-size-4xl`, weights light to bold, line heights none to loose.
+  - Border Radii: `--radius-none` through `--radius-full`.
+  - Elevation Shadows: `--shadow-none` through `--shadow-xl`, plus `--shadow-inner`.
+  - Z-Index Scale: `--z-hide` (-1) through `--z-tooltip` (1700).
+  - Motion & Transitions: `--transition-fast`, `--transition-normal`, `--transition-slow`.
+- **Accessibility & Reduced Motion**:
+  - Automatically resets animation and transition durations to `0ms` under `@media (prefers-reduced-motion: reduce)`.
+- **Global Integration**:
+  - Imported into `apps/web/app/globals.css` (`@import "../styles/tokens.css";`) with unified root typography and box-sizing rules.
+  - Loaded via `app/layout.tsx`.
+- **Diff Predictability & Safety**:
+  - 100% diff-invariant across `ir.description` changes; zero runtime npm dependencies.
+  - Registered in `NextjsWebAdapter.generate()` and exported in `codegen.__init__` as `render_design_tokens` and `render_globals_css`.
+
+### 25. Theme Switcher & Mode Toggle Component (`components/theme-toggle.tsx`, R-325)
+
+`NextjsWebAdapter` emits a standalone, accessible, reusable compound Theme Switcher component (`apps/web/components/theme-toggle.tsx`):
+
+- **Architecture & State Management**:
+  - Emitted with `"use client"` directive.
+  - Exports `ThemeMode = "light" | "dark" | "system"` and `ResolvedTheme = "light" | "dark"`.
+  - `ThemeProvider` context provider coordinates `theme` mode, resolved active theme, `localStorage` persistence, and listens to `window.matchMedia("(prefers-color-scheme: dark)")` for dynamic system shifts.
+  - `useTheme()` hook provides `{ theme, resolvedTheme, setTheme, toggleTheme }`.
+- **Components & Accessibility**:
+  - `ThemeToggle`: Compact button component with built-in vector SVG Sun / Moon icons (`aria-hidden="true"`), size presets (`"sm"` | `"md"` | `"lg"`), accessible dynamic `aria-label`, and keyboard activation.
+  - `ThemeSelect`: Accessible segmented radio control with WAI-ARIA `role="radiogroup"`, `role="radio"`, and `aria-checked` semantics.
+  - `ThemeScript`: Head injection script component executing before DOM hydration to eliminate Flash of Unstyled Content (FOUC).
+- **Diff Predictability & Safety**:
+  - 100% diff-invariant across `ir.description` changes; zero external npm packages.
+  - Registered in `NextjsWebAdapter.generate()` as a `GeneratedFile` at `components/theme-toggle.tsx` and exported in `codegen.__init__` as `render_theme_toggle_component`.
+
+### 26. Accessible Reusable Dialog / Modal Component (`components/dialog.tsx`, R-326)
+
+`NextjsWebAdapter` emits a standalone, accessible, reusable compound Dialog / Modal component (`apps/web/components/dialog.tsx`):
+
+- **Architecture & Compound Subcomponents**:
+  - Emitted with `"use client"` directive.
+  - Compound parts: `Dialog` (root provider), `DialogTrigger`, `DialogPortal`, `DialogOverlay`, `DialogContent`, `DialogHeader`, `DialogTitle`, `DialogDescription`, `DialogBody`, `DialogFooter`, `DialogClose`.
+  - Supports both controlled (`open`, `onOpenChange`) and uncontrolled (`defaultOpen`) usage.
+  - `useDialog()` hook exposes `{ open, setOpen, titleId, descriptionId, closeOnEscape, closeOnBackdropClick, triggerRef }`.
+- **WAI-ARIA Semantics & Accessibility**:
+  - Modal container features `role="dialog"`, `aria-modal="true"`, `tabIndex={-1}`, and dynamic `aria-labelledby` / `aria-describedby` wiring.
+  - Listens for `Escape` keydown to dismiss with configurable `closeOnEscape` (default `true`).
+  - Backdrop overlay click dismiss with configurable `closeOnBackdropClick` (default `true`).
+  - Focus restoration returns DOM focus to `triggerRef` when closed.
+  - Background document body scroll lock prevents scrolling while modal is active.
+  - Includes optional accessible close button (`aria-label="Close dialog"`) with SVG 'X' icon.
+- **Size Presets & Styling**:
+  - `sizeMap` presets: `"sm"` (400px), `"md"` (500px), `"lg"` (640px), `"xl"` (768px), `"full"` (min(95vw, 1200px)).
+  - Clean elevation styling with smooth backdrop blur (`rgba(15, 23, 42, 0.5)`).
+- **Diff Predictability & Safety**:
+  - 100% diff-invariant across `ir.description` changes; zero external npm packages.
+  - Registered in `NextjsWebAdapter.generate()` as a `GeneratedFile` at `components/dialog.tsx` and exported in `codegen.__init__` as `render_dialog_component`.
+
+### 27. Accessible Reusable Form Controls & Input Primitives (`components/form-controls.tsx`, R-327)
+
+`NextjsWebAdapter` emits a standalone, accessible, reusable Form Controls and Input primitives suite (`apps/web/components/form-controls.tsx`):
+
+- **Architecture & Compound Subcomponents**:
+  - Emitted with `"use client"` directive.
+  - Subcomponents: `Input` (`forwardRef`), `Textarea` (`forwardRef`), `Select` (`forwardRef`), `Checkbox` (`forwardRef`), `RadioGroup`, `Radio`, `Label`, `FormField`, `FormMessage`, `FormHelperText`.
+  - Size variants: `InputSize = "sm" | "md" | "lg"`.
+- **Input & Textarea Features**:
+  - `Input` supports size presets, left `prefix` slot, right `suffix` slot, and optional clear button (`onClear` with `aria-label="Clear input"`).
+  - `Textarea` supports auto/custom rows and live character counter (`showCount`, `maxLength`) with amber warning indicator at 90% threshold.
+- **Select, Checkbox, & Radio Group**:
+  - `Select` supports options array rendering, placeholder support (`disabled hidden`), custom SVG chevron indicator, and disabled states.
+  - `Checkbox` supports checked, unchecked, and indeterminate (`el.indeterminate`) states with focus rings.
+  - `RadioGroup` and `Radio` coordinate via `RadioGroupContext`, providing WAI-ARIA `role="radiogroup"`, `role="radio"`, `aria-checked`, and full keyboard arrow navigation (`ArrowDown`, `ArrowUp`, `ArrowRight`, `ArrowLeft`).
+- **Form Layout, Validation, & WAI-ARIA**:
+  - `Label` supports required asterisk indicator (`*`, `aria-hidden="true"`).
+  - `FormField` coordinates automated ID generation via `useId()`, linking `htmlFor` on `Label` and passing `aria-invalid` and `aria-describedby` to children.
+  - `FormMessage` renders validation errors with `role="alert"` and `aria-live="polite"`.
+  - `FormHelperText` renders descriptive hints.
+- **Diff Predictability & Safety**:
+  - 100% diff-invariant across `ir.description` changes; zero external npm packages.
+  - Registered in `NextjsWebAdapter.generate()` as a `GeneratedFile` at `components/form-controls.tsx` and exported in `codegen.__init__` as `render_form_controls_component`.
+
+### 28. Accessible Reusable Date Picker Component (`components/date-picker.tsx`, R-328)
+
+`NextjsWebAdapter` emits a standalone, accessible, reusable Date Picker and Calendar component suite (`apps/web/components/date-picker.tsx`):
+
+- **Architecture & Components**:
+  - Emitted with `"use client"` directive.
+  - Exports `DatePicker` (`forwardRef`), `Calendar`, `formatDate`, `isSameDay`, `isToday`.
+  - Type definitions: `DateFormatter`, `CalendarProps`, `DatePickerProps`.
+- **Calendar Month Grid & Traversal**:
+  - Month and year navigation header with previous/next month (`<`, `>`) and year (`<<`, `>>`) controls with accessible `aria-label`s.
+  - Weekday headers with `<abbr>` and accessible full day labels (`Su` - `Sa`).
+  - Calendar day grid with WAI-ARIA `role="grid"`, `role="row"`, `role="gridcell"`, `aria-selected`, `aria-current="date"`, and `aria-disabled`.
+  - Full keyboard navigation: Left/Right Arrow (+/- 1 day), Up/Down Arrow (+/- 7 days), PageUp/PageDown (+/- 1 month or year with Shift), Home/End (start/end of week), Enter/Space (select date).
+  - Quick-select "Today" action and optional "Clear" button.
+- **DatePicker Trigger & Floating Popover**:
+  - Accessible trigger button styled as input field with calendar SVG icon, `aria-haspopup="dialog"`, `aria-expanded`, formatted date text, and placeholder fallback.
+  - Clearable button affordance (`clearable` with `aria-label="Clear date"`).
+  - Floating popover container with `role="dialog"`, `aria-modal="false"`, `aria-label="Choose date"`, dismiss on outside click, and dismiss on Escape with focus restoration.
+  - Placement styling (`bottom-start`, `bottom-end`, `top-start`, `top-end`).
+  - Error and helper text rendering with `role="alert"` and `aria-describedby` wiring.
+- **Diff Predictability & Safety**:
+  - 100% diff-invariant across `ir.description` changes; zero external npm packages (pure React, TypeScript, and CSS custom properties).
+  - Registered in `NextjsWebAdapter.generate()` as a `GeneratedFile` at `components/date-picker.tsx` and exported in `codegen.__init__` as `render_date_picker_component`.
+
+### 29. Accessible Reusable Data Grid / Table Component (`components/data-grid.tsx`, R-329)
+
+`NextjsWebAdapter` emits a standalone, accessible, reusable Data Grid and Table component suite (`apps/web/components/data-grid.tsx`):
+
+- **Architecture & Generic Typing**:
+  - Emitted with `"use client"` directive.
+  - Exports `DataGrid` component with generic row type `<T extends Record<string, any>>`.
+  - Type definitions: `ColumnDef<T>`, `DataGridProps<T>`, `SortDirection`, `SortState`, `DataGridDensity`.
+- **Sortable Column Headers**:
+  - Column headers support interactive sort toggling with cycle (`asc` -> `desc` -> `none`).
+  - WAI-ARIA `aria-sort` semantics (`"ascending"`, `"descending"`, or `"none"`).
+  - Visual sort indicator SVGs (up arrow, down arrow, and dual arrows for unsorted sortable state).
+  - Full keyboard trigger support (`Enter` and `Space` keys).
+- **Row Selection & Checkboxes**:
+  - Select-all header checkbox with indeterminate state tracking via `ref.indeterminate`.
+  - Row selection checkboxes with `aria-label="Select row N"`.
+  - Selected rows receive `aria-selected={true}` and brand-tinted background highlight.
+  - `onSelectionChange` callback returning `selectedKeys` and `selectedRows`.
+- **Display Density & Layout Modes**:
+  - Three display density presets: `"compact"` (6px 12px padding, 13px font), `"comfortable"` (12px 16px padding, 14px font), and `"spacious"` (16px 20px padding, 15px font).
+  - Sticky header support (`stickyHeader = true`) with fixed position `<thead>` and border preservation.
+  - Striped rows support (`striped = true`) for alternating row readability.
+  - Hover highlight transitions on rows (`hoverable = true`).
+- **Loading Skeleton & Empty States**:
+  - Integrated loading skeleton state with animated pulsing rows, `role="status"`, and `aria-busy="true"`.
+  - Fallback empty state rendering when data array is empty.
+- **Diff Predictability & Safety**:
+  - 100% diff-invariant across `ir.description` changes; zero external npm packages (pure React, TypeScript, and CSS custom properties).
+  - Registered in `NextjsWebAdapter.generate()` as a `GeneratedFile` at `components/data-grid.tsx` and exported in `codegen.__init__` as `render_data_grid_component`.
+
+### 30. Accessible Command Palette / Search Menu Component (`components/command-palette.tsx`, R-330)
+
+`NextjsWebAdapter` emits a standalone, accessible, reusable Command Palette and Search Menu component suite (`apps/web/components/command-palette.tsx`):
+
+- **Architecture & Component Exports**:
+  - Emitted with `"use client"` directive.
+  - Exports `CommandPalette` component and default export.
+  - Type definitions: `CommandItem`, `CommandGroup`, `CommandPaletteProps`.
+- **Global Shortcut & Search Filtering**:
+  - Global `Cmd+K` / `Ctrl+K` keyboard shortcut listener (`triggerShortcut?: boolean`, default `true`) to toggle palette visibility.
+  - Instant query filtering across item `label`, `description`, `group`, and `keywords`.
+  - Search input with clear button affordance and ESC badge.
+- **Keyboard Navigation & Traversal**:
+  - Full keyboard traversal: `ArrowDown`/`ArrowUp` (with boundary wrapping and disabled item skipping), `Home`/`End` (jump to first/last selectable item), `Enter` (select active item), `Escape` (dismiss and restore previous focus).
+  - Automated list scrolling via `scrollIntoView({ block: "nearest" })`.
+- **WAI-ARIA Combobox Semantics**:
+  - Modal overlay: `role="dialog"`, `aria-modal="true"`, `aria-label="Command palette"`.
+  - Search input: `role="combobox"`, `aria-autocomplete="list"`, `aria-expanded="true"`, `aria-haspopup="listbox"`, `aria-controls`, `aria-activedescendant`.
+  - Results container: `role="listbox"`, `aria-label="Commands"`.
+  - Items: `role="option"`, unique `id`, `aria-selected`, `aria-disabled`.
+  - Groups: `role="group"` with `aria-labelledby` linking group headings.
+- **Visual Features & Polish**:
+  - Shortcut badges (`<kbd>`) on command items.
+  - Configurable `emptyMessage` fallback when no items match search query.
+  - Modal backdrop with dark tint, `backdropFilter: "blur(4px)"`, and body scroll lock management.
+  - Footer navigation hints (`↑↓ navigate`, `↵ select`, `esc close`).
+- **Diff Predictability & Safety**:
+  - 100% diff-invariant across `ir.description` changes; zero external npm packages (pure React, TypeScript, and CSS custom properties).
+  - Registered in `NextjsWebAdapter.generate()` as a `GeneratedFile` at `components/command-palette.tsx` and exported in `codegen.__init__` as `render_command_palette_component`.
+
+### 31. Accessible Reusable Slider & Range Component (`components/slider.tsx`, R-331)
+
+`NextjsWebAdapter` emits a standalone, accessible, reusable Slider and Range component suite (`apps/web/components/slider.tsx`):
+
+- **Architecture & Component Exports**:
+  - Emitted with `"use client"` directive.
+  - Exports `Slider` component and default export.
+  - Type definitions: `SliderOrientation`, `SliderValue`, `SliderMark`, `SliderProps`.
+- **Single & Range Selection Modes**:
+  - Automatically detects range mode when `value` or `defaultValue` is an array `[min, max]`.
+  - Enforces thumb crossover prevention: Thumb 0 is clamped to never exceed Thumb 1; Thumb 1 is clamped to never fall below Thumb 0.
+- **Pointer Drag & Interactions**:
+  - Pointer events (`onPointerDown`, `pointermove`, `pointerup`) on track and thumbs with `touch-action: none`.
+  - Calculates proportional value from client coordinates matching orientation (`horizontal` or `vertical`).
+- **Keyboard Navigation & Boundary Snapping**:
+  - `ArrowRight` / `ArrowUp`: increments by `step`.
+  - `ArrowLeft` / `ArrowDown`: decrements by `step`.
+  - `PageUp`: increments by large step (10x step).
+  - `PageDown`: decrements by large step (10x step).
+  - `Home`: snaps to minimum valid value.
+  - `End`: snaps to maximum valid value.
+- **WAI-ARIA Slider Semantics**:
+  - Thumbs: `role="slider"`, `tabIndex={disabled ? -1 : 0}`.
+  - `aria-valuenow`, `aria-valuemin`, `aria-valuemax`.
+  - `aria-orientation="horizontal" | "vertical"`.
+  - `aria-disabled={disabled}`.
+  - `aria-label` and `aria-valuetext` formatting.
+- **Visual Marks & Value Badge**:
+  - Tick mark dots and labels (`marks`) positioned along track.
+  - Formatted value badge (`showValue`, `formatValue`).
+  - Active highlight fill and thumb focus ring.
+- **Diff Predictability & Safety**:
+  - 100% diff-invariant across `ir.description` changes; zero external npm packages (pure React, TypeScript, and CSS custom properties).
+  - Registered in `NextjsWebAdapter.generate()` as a `GeneratedFile` at `components/slider.tsx` and exported in `codegen.__init__` as `render_slider_component`.
+
+---
+
+## 32. Generated Accessible Reusable Progress & Spinner Component (R-332)
+
+Next.js web applications generated by OmniStackAI now include a production-grade, accessible Progress indicator and loading animation component suite (`components/progress.tsx`):
+
+- **Architecture & Interfaces**:
+  - Exports `ProgressBar` (and `Progress` alias), `CircularProgress`, and `Spinner`.
+  - Type definitions: `ProgressVariant`, `ProgressSize`, `ProgressBarProps`, `CircularProgressProps`, `SpinnerProps`.
+- **Linear Progress Bar (`ProgressBar`)**:
+  - Determinate mode: numeric `value`, `min`, `max`, `showValue`, `formatValue`.
+  - Indeterminate mode: continuous animated shimmer/pulse bar when `value` is omitted/undefined.
+  - WAI-ARIA progressbar semantics: `role="progressbar"`, `aria-valuenow`, `aria-valuemin`, `aria-valuemax`, `aria-valuetext` (with `aria-valuenow` omitted in indeterminate mode per WAI-ARIA specification).
+  - Striped and animated striped gradients (`striped`, `animated`).
+  - Size presets (`sm`, `md`, `lg`) and semantic color variants (`default`, `primary`, `success`, `warning`, `error`, `info`).
+  - Accessible label support via `label`, `aria-label`, or `aria-labelledby`.
+- **Circular Progress Indicator (`CircularProgress`)**:
+  - SVG circle with exact mathematical circumference and stroke offset calculations (`2 * Math.PI * radius`).
+  - Determinate mode: percentage stroke-dashoffset with smooth CSS transition and `-90deg` start angle.
+  - Indeterminate mode: continuous spinning SVG sweep animation.
+  - Center label / percentage display (`showValue`, `label`).
+- **Accessible Lightweight Spinner (`Spinner`)**:
+  - Ultra-lightweight rotating SVG loader circle with `role="status"` and `aria-live="polite"`.
+  - Visually hidden screen-reader accessible announcement (`sr-only` span, default "Loading...").
+- **Diff Predictability & Safety**:
+  - 100% diff-invariant across `ir.description` changes; zero external npm packages (pure React, TypeScript, and CSS custom properties).
+  - Registered in `NextjsWebAdapter.generate()` as a `GeneratedFile` at `components/progress.tsx` and exported in `codegen.__init__` as `render_progress_component`.
+
+---
+
+## 33. Generated Accessible Reusable Rating & Review Component (R-333)
+
+Next.js web applications generated by OmniStackAI now include a standalone, accessible Rating & Review component suite (`components/rating.tsx`):
+
+- **Architecture & Interfaces**:
+  - Exports `Rating` component and default export.
+  - Type definitions: `RatingSize`, `RatingIcon`, `RatingProps`.
+- **Interactive Rating Selection & Hover Preview**:
+  - Hover preview (`onHover`, temporary score highlight on pointer movement, reset on mouse leave).
+  - Click-to-set rating selection (`onChange`).
+  - Fractional rating support (`allowHalf`) with precise half-increment coordinate detection.
+- **Keyboard Navigation & WAI-ARIA Slider Semantics**:
+  - `ArrowRight` / `ArrowUp`: increments score by step.
+  - `ArrowLeft` / `ArrowDown`: decrements score by step.
+  - `Home`: resets to 0; `End`: jumps to maximum score.
+  - `role="slider"`, `tabIndex`, `aria-valuenow`, `aria-valuemin`, `aria-valuemax`, `aria-valuetext`, `aria-readonly`, `aria-disabled`.
+- **Built-in Vector Icons**:
+  - Inline SVG vector icons (`star`, `heart`, `thumb`) with precise overlay fill clipping for fractional rendering.
+  - Read-only (`readOnly`) and disabled (`disabled`) modes.
+  - Optional score display formatting (`showScore`, `formatScore`).
+- **Diff Predictability & Safety**:
+  - 100% diff-invariant across `ir.description` changes; zero external npm packages.
+  - Registered in `NextjsWebAdapter.generate()` as a `GeneratedFile` at `components/rating.tsx` and exported in `codegen.__init__` as `render_rating_component`.
+
+---
+
+## 34. Generated Accessible Reusable Stepper / Multi-step Wizard Component (R-334)
+
+Next.js web applications generated by OmniStackAI now include a standalone, accessible Stepper / Multi-step Wizard component suite (`components/stepper.tsx`):
+
+- **Architecture & Interfaces**:
+  - Exports `Stepper`, `StepContent`, `useStepperState`, and default export.
+  - Type definitions: `StepperOrientation`, `StepStatus`, `StepperVariant`, `StepDef`, `StepperProps`, `StepContentProps`, `UseStepperStateOptions`, `UseStepperStateReturn`.
+- **Stepper Navigation & Variants**:
+  - `StepperOrientation`: `"horizontal"` | `"vertical"`.
+  - `StepperVariant`: `"default"` | `"dots"` | `"progress"`.
+  - `StepStatus`: `"idle"` | `"active"` | `"completed"` | `"error"`.
+  - Built-in SVG indicator icons for completed (check) and error states.
+  - Step connectors with completion-proportional progress fill.
+  - `useStepperState` hook managing `activeStep`, `goNext`, `goPrev`, `goTo`, `canGoNext`, `canGoPrev`.
+- **WAI-ARIA Tablist / Tabpanel Pattern**:
+  - `role="tablist"`, `role="tab"`, `aria-selected`, `aria-controls`, `role="tabpanel"`, `aria-labelledby`, `aria-disabled`.
+  - Full keyboard navigation: `ArrowRight`/`Left` (horizontal), `ArrowDown`/`Up` (vertical), `Home`, `End`.
+- **Diff Predictability & Safety**:
+  - 100% diff-invariant across `ir.description` changes; zero external npm packages.
+  - Registered in `NextjsWebAdapter.generate()` as a `GeneratedFile` at `components/stepper.tsx` and exported in `codegen.__init__` as `render_stepper_component`.
+
+---
+
+## 35. Generated Accessible Reusable File Upload / Dropzone Component (R-335)
+
+Next.js web applications generated by OmniStackAI now include a standalone, accessible File Upload / Dropzone component suite (`components/file-upload.tsx`):
+
+- **Architecture & Interfaces**:
+  - Exports `FileUpload` and default export.
+  - Type definitions: `FileUploadStatus`, `FileUploadVariant`, `FileEntry`, `FileUploadProps`.
+- **Drag-and-Drop & File Constraints**:
+  - Drag-over visual feedback on drag enter, leave, and drop events.
+  - Click-to-browse file selection via hidden `<input type="file">`.
+  - Keyboard trigger (`Enter`, `Space`) to open native file dialog.
+  - Validation: MIME types/extensions (`accept`), max file size (`maxSize`), max file count (`maxFiles`).
+  - File preview list with formatted file sizes (`formatBytes`), image thumbnail preview, upload progressbar (`role="progressbar"`), and remove button.
+  - Avatar variant with circular crop styling and camera overlay icon.
+- **WAI-ARIA Accessibility**:
+  - `role="button"`, `tabIndex={0}`, `aria-label`, `aria-describedby`, `aria-live="polite"`, `aria-disabled`.
+- **Diff Predictability & Safety**:
+  - 100% diff-invariant across `ir.description` changes; zero external npm packages.
+  - Registered in `NextjsWebAdapter.generate()` as a `GeneratedFile` at `components/file-upload.tsx` and exported in `codegen.__init__` as `render_file_upload_component`.
+
+---
+
+## 36. Generated Accessible Reusable Timeline / Activity Feed Component (R-336)
+
+Next.js web applications generated by OmniStackAI now include a standalone, accessible Timeline / Activity Feed component suite (`components/timeline.tsx`):
+
+- **Architecture & Interfaces**:
+  - Exports `Timeline` and default export.
+  - Type definitions: `TimelineVariant`, `TimelineItemStatus`, `TimelineItem`, `TimelineProps`.
+- **Timeline Variants & Connectors**:
+  - `TimelineVariant`: `"default"` | `"compact"` | `"centered"`.
+  - `TimelineItemStatus`: `"pending"` | `"active"` | `"completed"` | `"error"` | `"warning"`.
+  - Vertical connector lines between entries with status-colored fill (green for completed steps).
+  - Centered variant featuring alternating left and right item placement.
+  - Compact variant with tightened spacing for dense event feeds.
+  - Timestamp rendering inside semantic `<time>` element.
+  - Custom icon slot override (`item.icon`) and action button slot (`item.action`).
+- **Built-in Status Icons & WAI-ARIA Semantics**:
+  - Built-in inline vector status icons: completed (check circle), error (X circle), warning (alert circle), active (pulsing dot), pending (clock).
+  - `role="list"` on timeline container, `role="listitem"` on each item, `aria-label`.
+- **Diff Predictability & Safety**:
+  - 100% diff-invariant across `ir.description` changes; zero external npm packages.
+  - Registered in `NextjsWebAdapter.generate()` as a `GeneratedFile` at `components/timeline.tsx` and exported in `codegen.__init__` as `render_timeline_component`.
+
+---
+
+## 37. Generated Accessible Futuristic Reusable Stat & Metric KPI Card Component (R-337)
+
+Next.js web applications generated by OmniStackAI now include a standalone, accessible, futuristic Stat & Metric KPI Card component suite (`components/stat-card.tsx`):
+
+- **Architecture & Interfaces**:
+  - Exports `StatCard` and default export.
+  - Subcomponents: `StatCard.Group`, `StatCard.TrendDelta`, `StatCard.Sparkline`.
+  - Type definitions: `StatCardVariant`, `StatCardTrend`, `StatCardProps`, `StatCardGroupProps`, `TrendDeltaProps`, `SparklineProps`.
+- **Variants & Visual Hierarchy**:
+  - `StatCardVariant`: `"default"` | `"glass"` | `"outline"` | `"accent"`.
+  - Glassmorphic backdrop blur styling (`backdrop-filter: blur(12px)`), futuristic border highlights, and hover elevation micro-interactions.
+  - Directional trend delta pill (`StatCard.TrendDelta`) supporting `"up"`, `"down"`, and `"neutral"` with customized inline SVG directional arrows and delta pill color accents (emerald, rose, slate).
+- **Pure Mathematical SVG Sparklines (`StatCard.Sparkline`)**:
+  - Standalone zero-dependency SVG sparkline generator using Catmull-Rom cubic bezier (`C`) control point calculation (`computeSplinePath`).
+  - Smooth area fill `<linearGradient>` with gradient fade to transparent.
+  - Interactive pointer hover cursor vertical guide rule and tooltip overlay rendering data coordinates without external charting libraries.
+- **WAI-ARIA Accessibility & Semantic Structure**:
+  - Semantic `<section>` or `<article>` container with `aria-label`, `tabIndex={0}`, role semantics (`role="region"`), and clear keyboard navigation support.
+- **Diff Predictability & Safety**:
+  - 100% diff-invariant across `ir.description` changes; zero external npm packages.
+  - Registered in `NextjsWebAdapter.generate()` as a `GeneratedFile` at `components/stat-card.tsx` and exported in `codegen.__init__` as `render_stat_card_component`.
+
+---
+
+## 38. Generated Accessible Reusable Hierarchical Tree View Component (R-338)
+
+Next.js web applications generated by OmniStackAI now include a standalone, accessible Hierarchical Tree View component suite (`components/tree-view.tsx`):
+
+- **Architecture & Interfaces**:
+  - Exports `TreeView` and default export.
+  - Type definitions: `TreeNode`, `TreeViewVariant`, `TreeViewProps`.
+  - Node schema: `id`, `label`, optional `icon`, recursive `children`, `disabled`, `badge`, and arbitrary `data` payload.
+- **Visual Presentation & Variants**:
+  - `TreeViewVariant`: `"default"` | `"bordered"` | `"ghost"` | `"lines"`.
+  - Hierarchical guide lines (`showLines` or `variant="lines"`): vertical dotted/solid connector lines running through children containers with horizontal L-shaped branch ticks leading to each item.
+  - Smooth Chevron rotation animations on folder toggle (`rotate(90deg)` transition).
+  - Contextual default icons: `FolderClosedIcon` (collapsed folder), `FolderOpenIcon` (expanded folder), and `FileTextIcon` (leaf node).
+- **Search Filtering & Branch Auto-Expansion**:
+  - Built-in search input (`showSearch`) or controlled `filter` prop.
+  - Automatically matches nodes by label and retains matching branches.
+  - Automatically expands ancestor nodes so matching leaf items are immediately visible.
+  - Substring highlight using semantic `<mark>` styling.
+- **Selection Modes**:
+  - Single-select mode: `selectedId` with `onSelect(node)` callback.
+  - Multi-select mode: `multiSelect={true}` with custom high-contrast checkboxes and `onMultiSelect(nodes)` callback.
+- **WAI-ARIA 1.2 Tree View Accessibility & Keyboard Navigation**:
+  - `role="tree"` on container with `aria-label` and `aria-multiselectable`.
+  - `role="treeitem"` on each row with `aria-expanded`, `aria-selected`, `aria-level`, `aria-posinset`, `aria-setsize`, `aria-disabled`.
+  - `role="group"` on recursive child branch containers.
+  - Keyboard navigation:
+    - `ArrowDown` / `ArrowUp`: Traverse visible tree items.
+    - `ArrowRight`: Expand collapsed node or descend into first child.
+    - `ArrowLeft`: Collapse expanded node or ascend to parent.
+    - `Home` / `End`: Jump to first / last visible item.
+    - `Enter` / `Space`: Select active node.
+    - `*`: Expand all siblings at active level.
+- **Diff Predictability & Safety**:
+  - 100% diff-invariant across `ir.description` changes; zero external npm packages.
+  - Registered in `NextjsWebAdapter.generate()` as a `GeneratedFile` at `components/tree-view.tsx` and exported in `codegen.__init__` as `render_tree_view_component`.
+
+---
+
+## 39. Generated Accessible Futuristic Reusable Tag & Chip Input Tokenizer Component (R-339)
+
+Next.js web applications generated by OmniStackAI now include a standalone, accessible, futuristic Tag and Chip Tokenizer component suite (`components/tag-input.tsx`):
+
+- **Architecture & Interfaces**:
+  - Exports `TagInput` and default export.
+  - Subcomponents: `TagInput.Chip`, `TagInput.Suggestions`.
+  - Type definitions: `TagItem`, `TagInputVariant`, `TagInputSize`, `TagInputProps`, `TagChipProps`, `TagSuggestionsProps`.
+  - Tag schema: `id`, `label`, optional `color`, `icon`, `disabled`, and arbitrary `data` payload.
+- **Visual Presentation & Futuristic Variants**:
+  - `TagInputVariant`: `"default"` | `"glass"` | `"neon"` | `"bordered"`.
+  - Glassmorphic backdrop blur styling (`backdrop-filter: blur(12px)`), futuristic border highlights, and neon glow accents (`box-shadow: 0 0 12px rgba(...)`).
+  - Size variants: `"sm"`, `"md"`, `"lg"`.
+  - Tag removal buttons with micro-interaction hover scaling and clear SVG `x` icons.
+- **Tokenizer Mechanics & Delimiter Parsing**:
+  - Automatic delimiter parsing: `Enter`, comma (`,`), and `Tab` tokens input into chips.
+  - Paste handling: pasting comma-separated or newline-separated strings splits and creates multiple tags automatically.
+  - Duplicate detection: rejects duplicate labels (case-insensitive option) with visual shake/border feedback animation.
+  - Tag constraints: `maxTags` enforcement with counter indicator and disabled input when limit is reached.
+  - Validation: optional `validate` function to enforce custom regex / format requirements (e.g. valid email, slug, alphanumeric).
+- **Autocomplete Suggestions & Keyboard Traversal**:
+  - Autocomplete suggestion dropdown filtered dynamically against current input text.
+  - Chip navigation with keyboard: when input is empty, `ArrowLeft` / `ArrowRight` traverses existing tag chips, highlighting the active chip.
+  - `Backspace` / `Delete` removes the highlighted chip (or the last chip if at end of input).
+  - WAI-ARIA 1.2 Combobox / Listbox compliance: `<input role="combobox">`, `aria-autocomplete="list"`, `aria-expanded`, `aria-controls`, suggestions popup with `role="listbox"` and `role="option"`.
+- **Diff Predictability & Safety**:
+  - 100% diff-invariant across `ir.description` changes; zero external npm packages.
+  - Registered in `NextjsWebAdapter.generate()` as a `GeneratedFile` at `components/tag-input.tsx` and exported in `codegen.__init__` as `render_tag_input_component`.
+
+---
+
+## 40. Generated Accessible Futuristic Reusable Code Block & Syntax Presentation Component (R-340)
+
+Next.js web applications generated by OmniStackAI now include a standalone, accessible, futuristic Code Block & Syntax Presentation component suite (`components/code-block.tsx`):
+
+- **Architecture & Interfaces**:
+  - Exports `CodeBlock` compound component and default export.
+  - Subcomponents: `CodeBlock.Header`, `CodeBlock.Content`, `CodeBlock.Line`, `CodeBlock.CopyButton`.
+  - Type definitions: `CodeSnippet`, `CodeBlockVariant`, `CodeBlockSize`, `TokenType`, `CodeToken`, `CodeBlockProps`, `CodeBlockHeaderProps`, `CodeBlockContentProps`, `CodeBlockLineProps`, `CodeBlockCopyButtonProps`.
+- **Zero-Dependency Built-In Lexical Tokenizer**:
+  - Tokenizes keywords, built-in types, strings (single, double, backticks), numbers, comments, booleans, functions, operators, and punctuation.
+  - Language support: TypeScript, JavaScript, Python, JSON, SQL, Bash/Shell, HTML/CSS, YAML, Go, and Git Diff.
+  - Memoized line-by-line token parsing ensuring high performance without third-party heavy dependencies.
+- **Multi-Tab Snippet Switcher & Header Controls**:
+  - Support for single snippet or multiple snippets (`snippets` array) with tab switcher.
+  - Active tab highlighting with cyan glow border and `role="tablist"` / `role="tab"` WAI-ARIA semantics.
+  - macOS/terminal window dots indicator (red, yellow, green) for `"terminal"` variant.
+  - Language badge and file name display.
+- **Line Numbering, Highlighting & Diff Mode**:
+  - Line numbers with customizable starting index (`startLineNumber`) and toggleability (`showLineNumbers`).
+  - Highlighting lines & ranges (`highlightLines={[2, 4, "7-10"]}`) with glowing background and left accent bar.
+  - Git diff mode (`diffMode={true}` or auto-detected `diff` language) rendering additions in emerald green (`+`) and deletions in rose red (`-`).
+- **Interactive Action Toolbar**:
+  - One-click copy-to-clipboard (`navigator.clipboard.writeText`) with micro-animation checkmark feedback and 2-second auto-reset.
+  - Word wrap toggle (`wrapLines`) switching between horizontal pre scroll and wrap.
+  - Expandable/collapsible max-height view (`maxHeight={300}`) with bottom gradient fade mask and expand button with line count.
+- **Futuristic Visual Variants**:
+  - `CodeBlockVariant`: `"terminal"` | `"glass"` | `"neon"` | `"minimal"`.
+  - Glassmorphic backdrop blur styling (`backdrop-filter: blur(16px)`), deep obsidian backgrounds, and neon cyan glow border highlights.
+- **WAI-ARIA Accessibility**:
+  - `role="region"` container with descriptive `aria-label`.
+  - Code viewport `<pre tabIndex={0}>` enabling full keyboard scrolling.
+  - Accessible button announcements and polite live regions.
+- **Diff Predictability & Safety**:
+  - 100% diff-invariant across `ir.description` changes; zero external npm packages.
+  - Registered in `NextjsWebAdapter.generate()` as a `GeneratedFile` at `components/code-block.tsx` and exported in `codegen.__init__` as `render_code_block_component`.
+
+---
+
+## 41. Generated Accessible Futuristic Reusable Radial Gauge & Activity Rings Component (R-341)
+
+Next.js web applications generated by OmniStackAI now include a standalone, accessible, futuristic Radial Gauge & Activity Rings component suite (`components/radial-gauge.tsx`):
+
+- **Architecture & Interfaces**:
+  - Exports `RadialGauge` compound component (with subcomponents `RadialGauge.Rings` and `RadialGauge.Ring`) and default export.
+  - Separate top-level export `ActivityRings`.
+  - Type definitions: `RadialGaugeProps`, `RadialGaugeRing`, `RadialGaugeRingProps`, `ActivityRingsProps`, `RadialGaugeVariant` ("neon" | "glass" | "gradient" | "minimal"), `RadialGaugeSize` ("sm" | "md" | "lg" | "xl"), `RadialThreshold`.
+- **Pure SVG Arc Trigonometry (Zero Dependencies)**:
+  - Polar to Cartesian coordinates helper: `polarToCartesian(centerX, centerY, radius, angleInDegrees)`.
+  - SVG path arc descriptor helper: `describeArc(x, y, radius, startAngle, endAngle)` generating smooth, mathematically exact `A` arc commands with large-arc-flag detection.
+  - Configurable angle sweeps: 240° (standard gauge), 270° (three-quarter gauge), and 360° (full circle ring).
+- **Dynamic Threshold Color Transitions & Goal Markers**:
+  - Threshold transition engine (`resolveThresholdColor`): resolves gauge color according to value breakpoints (e.g. green < 60, amber < 85, red >= 85).
+  - Target goal markers: renders a radial line tick at specified target value angle (`target={80}`) with label indicator.
+  - Glowing endpoint dot: smooth animated glowing coordinate dot positioned at the arc's current tip.
+- **Concentric Multi-Ring Activity Mode (`ActivityRings`)**:
+  - Multiple concentric metric rings (e.g. CPU, Memory, Storage, or Move, Exercise, Stand).
+  - Dynamic radius distribution guaranteeing zero overlap across radii.
+  - Interactive legend with value/max metrics, color swatches, and labels.
+- **Futuristic Visual Variants & Sizing**:
+  - `RadialGaugeVariant`: `"neon"` (vibrant cyan glow with drop-shadow filter), `"glass"` (glassmorphic translucent track with backdrop blur), `"gradient"` (linear/radial SVG gradients), `"minimal"` (clean high-contrast modern line aesthetic).
+  - `RadialGaugeSize`: `"sm"` (120px), `"md"` (180px), `"lg"` (240px), `"xl"` (320px), or custom arbitrary numeric size.
+- **WAI-ARIA Accessibility**:
+  - `role="meter"` semantics on single gauges with `aria-valuenow`, `aria-valuemin`, `aria-valuemax`, and `aria-valuetext`.
+  - Group semantics `role="group"` on multi-ring activity mode with descriptive `aria-label`.
+- **Diff Predictability & Safety**:
+  - 100% diff-invariant across `ir.description` changes; zero external npm packages.
+  - Registered in `NextjsWebAdapter.generate()` as a `GeneratedFile` at `components/radial-gauge.tsx` and exported in `codegen.__init__` as `render_radial_gauge_component`.
+
+---
+
+## 42. Generated Accessible Futuristic Reusable Segmented Control & Mode Switcher Component (R-342)
+
+Next.js web applications generated by OmniStackAI now include a standalone, accessible, futuristic Segmented Control & Mode Switcher component suite (`components/segmented-control.tsx`):
+
+- **Architecture & Interfaces**:
+  - Exports `SegmentedControl` compound component (with subcomponent `SegmentedControl.Option`) and default export.
+  - Type definitions: `SegmentedControlOption`, `SegmentedControlVariant` ("neon" | "glass" | "pills" | "minimal"), `SegmentedControlSize` ("sm" | "md" | "lg"), `SegmentedControlOrientation` ("horizontal" | "vertical"), `SegmentedControlProps`, `SegmentedControlOptionItemProps`.
+- **Animated Sliding Active Pill Indicator**:
+  - Precision bounding rect calculation (`getBoundingClientRect`) tracking active option coordinates relative to container.
+  - Smooth physics-based animation with cubic bezier easing (`cubic-bezier(0.4, 0, 0.2, 1)`).
+  - Window resize listener ensuring indicator remains accurately anchored on viewport dimensions change.
+- **Rich Option Items**:
+  - Support for custom labels, leading icon slots, notification badges, and disabled options.
+  - Native hidden `<input type="hidden">` integration ensuring seamless compatibility with standard form submissions.
+- **Futuristic Visual Variants & Sizing**:
+  - `SegmentedControlVariant`: `"neon"` (deep obsidian track, glowing cyan indicator, subtle cyan ambient shadow), `"glass"` (translucent frosted backdrop blur `12px`), `"pills"` (high-contrast rounded pill tabs), `"minimal"` (clean borderless design).
+  - `SegmentedControlSize`: `"sm"` (28px height, 12px text), `"md"` (36px height, 14px text), `"lg"` (44px height, 16px text).
+  - `SegmentedControlOrientation`: `"horizontal"` or `"vertical"` layouts.
+- **WAI-ARIA Accessibility & Keyboard Navigation**:
+  - `role="radiogroup"` on container with `aria-label`, `aria-labelledby`, and `aria-orientation`.
+  - `role="radio"` on options with `aria-checked`, `aria-disabled`, and roving `tabIndex` (`0` for selected, `-1` for unselected).
+  - Full keyboard cycling: `ArrowLeft`/`ArrowRight` (or `ArrowUp`/`ArrowDown`), `Home`, and `End` keys cycle through enabled options and auto-focus target button.
+- **Diff Predictability & Safety**:
+  - 100% diff-invariant across `ir.description` changes; zero external npm packages.
+  - Registered in `NextjsWebAdapter.generate()` as a `GeneratedFile` at `components/segmented-control.tsx` and exported in `codegen.__init__` as `render_segmented_control_component`.
+
+
+
 

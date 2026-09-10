@@ -1,13 +1,13 @@
-# OmniStackAI — implementation progress (as of R-315)
+# OmniStackAI — implementation progress (as of R-342)
 
 A living summary of what is built, what is pending, and how to see results. Numbers come from the
 execution tracker (`R_&_D/OmniStackAI_Execution_Tracker_v6.xlsx`, `Phase_Roadmap`).
 
 ## Headline
 
-- **1,093 automated tests pass**, fully offline and network-independent (`task verify`).
-- **104 tracker tasks Done, 1 Deferred, 210 Not Started** across 315 task rows.
-- The offline builder loop is complete end to end: **describe (IR) → generate (web with typed API client, React hooks, interactive master-detail screen components with field validation, page size selector & contextual empty states, bulk selection & batch deletion, CSV data export & bulk export, deep-linking & entity lifecycle in detail screens, global responsive navigation shell & header navbar with active route detection & quick-create CTA, post-submit contextual CTAs & record navigation with Cancel action in form footer, rich entity-aware dashboard overview page (live count cards, screen nav tiles, quick-create CTAs, diff-stable), record selector dropdown, prev/next record navigation & deep-link sync in detail screens, form screen dirty state tracking, unsaved changes guard & reset confirmation, collection screen boolean & enum field filtering with segmented controls, global notification toast system & action feedback with ToastProvider & useToast, subcollection navigation, child item deletion & mutation feedback, full-stack update/edit actions, foreign-key relation selectors & parent auto-population, App Router resilience quartet, full loading-skeleton coverage, consistent error & retry recovery, enterprise WAI-ARIA accessibility semantics, power-user collection, detail, and form keyboard navigation & shortcuts, form input constraints & live character counters, search clear affordances & form first-field autofocus, collection status badges & detail copy affordances, overview interactive entity links, health badge & metrics chips, accessible modal confirmation dialog replacing window.confirm(), keyboard shortcuts help modal & global discovery affordance, accessible breadcrumb navigation component & screen hierarchy, accessible EmptyState component & screen zero-state integrations, collection screen JSON data export & bulk selection export controls, accessible reusable Pagination component, accessible reusable Tabs component, collection table display density toggle (Compact, Comfortable, Spacious), accessible reusable Badge component, collection table column visibility dropdown & selector controls, accessible reusable Tooltip component, accessible reusable Card compound component + API with
+- **1,459 automated tests pass**, fully offline and network-independent (`task verify`).
+- **131 tracker tasks Done, 1 Deferred, 210 Not Started** across 342 tasks (350 total spreadsheet rows).
+- The offline builder loop is complete end to end: **describe (IR) → generate (web with typed API client, React hooks, interactive master-detail screen components with field validation, page size selector & contextual empty states, bulk selection & batch deletion, CSV data export & bulk export, deep-linking & entity lifecycle in detail screens, global responsive navigation shell & header navbar with active route detection & quick-create CTA, post-submit contextual CTAs & record navigation with Cancel action in form footer, rich entity-aware dashboard overview page (live count cards, screen nav tiles, quick-create CTAs, diff-stable), record selector dropdown, prev/next record navigation & deep-link sync in detail screens, form screen dirty state tracking, unsaved changes guard & reset confirmation, collection screen boolean & enum field filtering with segmented controls, global notification toast system & action feedback with ToastProvider & useToast, subcollection navigation, child item deletion & mutation feedback, full-stack update/edit actions, foreign-key relation selectors & parent auto-population, App Router resilience quartet, full loading-skeleton coverage, consistent error & retry recovery, enterprise WAI-ARIA accessibility semantics, power-user collection, detail, and form keyboard navigation & shortcuts, form input constraints & live character counters, search clear affordances & form first-field autofocus, collection status badges & detail copy affordances, overview interactive entity links, health badge & metrics chips, accessible modal confirmation dialog replacing window.confirm(), keyboard shortcuts help modal & global discovery affordance, accessible breadcrumb navigation component & screen hierarchy, accessible EmptyState component & screen zero-state integrations, collection screen JSON data export & bulk selection export controls, accessible reusable Pagination component, accessible reusable Tabs component, collection table display density toggle (Compact, Comfortable, Spacious), accessible reusable Badge component, collection table column visibility dropdown & selector controls, accessible reusable Tooltip component, accessible reusable Card compound component, accessible reusable Alert & Notification component, accessible reusable Skeleton loader compound component, accessible reusable Drawer / Sheet compound component, accessible reusable Avatar & AvatarGroup compound component, accessible reusable Toggle Switch component, accessible reusable Accordion compound component, accessible reusable Dropdown Menu compound component, accessible reusable Popover compound component, Design Tokens & CSS Custom Properties Theming Engine (styles/tokens.css), accessible reusable Theme Switcher / Mode Toggle component (components/theme-toggle.tsx), accessible reusable Dialog / Modal component (components/dialog.tsx), accessible reusable Form Controls & Input Primitives suite (components/form-controls.tsx), accessible reusable Date Picker & Calendar component (components/date-picker.tsx), accessible reusable Data Grid / Table component (components/data-grid.tsx), accessible Command Palette / Search Menu component (components/command-palette.tsx), accessible reusable Slider & Range component (components/slider.tsx), accessible reusable Progress & Spinner component (components/progress.tsx), accessible reusable Rating & Review component (components/rating.tsx), accessible reusable Stepper / Multi-step Wizard component (components/stepper.tsx), accessible reusable File Upload / Dropzone component (components/file-upload.tsx), accessible reusable Timeline / Activity Feed component (components/timeline.tsx), accessible futuristic reusable Stat & Metric KPI Card component (components/stat-card.tsx), accessible reusable Hierarchical Tree View component (components/tree-view.tsx), accessible futuristic reusable Tag & Chip Input Tokenizer component (components/tag-input.tsx), accessible futuristic reusable Code Block & Syntax Presentation component (components/code-block.tsx), accessible futuristic reusable Radial Gauge & Activity Rings component (components/radial-gauge.tsx), accessible futuristic reusable Segmented Control & Mode Switcher component (components/segmented-control.tsx) + API with
   working CRUD incl. PATCH/PUT update + pagination + sorting + total count header + keyword search + sub-collections + DB schema + data-access + JWT-verified auth
   & per-endpoint roles + field validation + CORS middleware + OpenAPI 3.1 contract)
   → verify → edit → commit to an owned Git repo.**
@@ -16,11 +16,15 @@ execution tracker (`R_&_D/OmniStackAI_Execution_Tracker_v6.xlsx`, `Phase_Roadmap
 
 | Phase | Done | Total | % complete |
 |-------|------|-------|-----------|
-| **MVP** (current milestone) | 104 | 210 | **49.5%** |
+| **MVP** (current milestone) | 131 | 237 | **55.3%** |
 | MID | 0 | 47 | 0% |
 | ADVANCED | 0 | 29 | 0% |
 | PRODUCTION | 0 | 29 | 0% |
-| **Overall program** | **104** | **315** | **33.0%** |
+| **Overall program** | **131** | **342** | **38.3%** |
+
+
+
+
 
 
 
@@ -121,6 +125,36 @@ execution tracker (`R_&_D/OmniStackAI_Execution_Tracker_v6.xlsx`, `Phase_Roadmap
 | **Accessible reusable Tabs component** (Tabs & TabPanel components, WAI-ARIA tablist/tab/tabpanel, roving tabIndex, keyboard navigation, line/pills variants) | ✅ Done | R-310 |
 | **Collection table display density toggle** (Compact/Comfortable/Spacious density toggle, dynamic cell padding, fontSize, data-density attribute) | ✅ Done | R-311 |
 | **Accessible reusable Badge component** (Badge component, WAI-ARIA status role, 5 semantic variants, dot indicator with pulse, sm/md sizing) | ✅ Done | R-312 |
+| **Collection table column visibility dropdown & selector controls** (Columns ▾ dropdown, checkbox toggles, dynamic th/td rendering) | ✅ Done | R-313 |
+| **Accessible reusable Tooltip component** (Tooltip component, WAI-ARIA tooltip role, 4 placement directions, Escape dismiss) | ✅ Done | R-314 |
+| **Accessible reusable Card compound component** (Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter, 4 variants) | ✅ Done | R-315 |
+| **Accessible reusable Alert & Notification component** (Alert, AlertTitle, AlertDescription, 4 status variants, dismiss button) | ✅ Done | R-316 |
+| **Accessible reusable Skeleton loader compound component** (Skeleton, SkeletonText, SkeletonCard, SkeletonTable, pulse/wave/none animations) | ✅ Done | R-317 |
+| **Accessible reusable Drawer / Sheet compound component** (Drawer compound, left/right/top/bottom placements, backdrop blur, scroll lock) | ✅ Done | R-318 |
+| **Accessible reusable Avatar & AvatarGroup compound component** (Avatar, AvatarGroup, image/initials/icon cascade, status dots, overflow pill) | ✅ Done | R-319 |
+| **Accessible reusable Toggle Switch component** (Toggle component, WAI-ARIA switch role, keyboard Space/Enter, sm/md/lg sizes) | ✅ Done | R-320 |
+| **Accessible reusable Accordion compound component** (Accordion compound, single/multiple modes, collapsible, rotating chevron indicator) | ✅ Done | R-321 |
+| **Accessible reusable Dropdown Menu compound component** (DropdownMenu compound, WAI-ARIA menu/menuitem, Arrow traversal, shortcut slots) | ✅ Done | R-322 |
+| **Accessible reusable Popover compound component** (Popover compound, WAI-ARIA dialog, click-outside and Escape dismiss, orientation arrow) | ✅ Done | R-323 |
+| **Design Tokens & CSS Custom Properties Theming Engine** (tokens.css, semantic colors, light/dark themes, spacing/typography scales) | ✅ Done | R-324 |
+| **Theme Switcher / Mode Toggle component** (ThemeProvider, useTheme, ThemeToggle button, ThemeSelect segmented control, ThemeScript) | ✅ Done | R-325 |
+| **Accessible reusable Dialog / Modal component** (Dialog compound, WAI-ARIA dialog, backdrop overlay, body scroll lock, sm-full sizing) | ✅ Done | R-326 |
+| **Accessible reusable Form Controls & Input Primitives suite** (Input, Textarea, Select, Checkbox, RadioGroup, Label, FormField) | ✅ Done | R-327 |
+| **Accessible reusable Date Picker & Calendar component** (DatePicker, Calendar, month grid traversal, WAI-ARIA grid/dialog, zero dependencies) | ✅ Done | R-328 |
+| **Accessible reusable Data Grid / Table component** (DataGrid, generic ColumnDef<T>, sortable headers, row selection, density presets) | ✅ Done | R-329 |
+| **Accessible Command Palette / Search Menu component** (CommandPalette, Cmd+K listener, query filtering, combobox/listbox pattern) | ✅ Done | R-330 |
+| **Accessible reusable Slider & Range component** (Slider, single/range modes, pointer dragging, keyboard traversal, WAI-ARIA slider) | ✅ Done | R-331 |
+| **Accessible reusable Progress & Spinner component** (ProgressBar, CircularProgress, Spinner, determinate/indeterminate, SVG stroke math, WAI-ARIA progressbar) | ✅ Done | R-332 |
+| **Accessible reusable Rating & Review component** (Rating, fractional star fills, hover preview, interactive & read-only modes, WAI-ARIA slider) | ✅ Done | R-333 |
+| **Accessible reusable Stepper / Multi-step Wizard component** (Stepper, numbered/pill/dot variants, horizontal/vertical orientations, WAI-ARIA list) | ✅ Done | R-334 |
+| **Accessible reusable File Upload / Dropzone component** (FileUpload, drag-and-drop, mime/size validation, file previews, progress simulation) | ✅ Done | R-335 |
+| **Accessible reusable Timeline / Activity Feed component** (Timeline, connected track line, custom status icons, compact/detailed modes) | ✅ Done | R-336 |
+| **Accessible futuristic Stat & Metric KPI Card component** (StatCard, glass/neon styling, trend delta arrows, pure SVG Catmull-Rom sparklines) | ✅ Done | R-337 |
+| **Accessible reusable Hierarchical Tree View component** (TreeView, recursive nodes, connector lines, search filter auto-expansion, WAI-ARIA 1.2) | ✅ Done | R-338 |
+| **Accessible futuristic Tag & Chip Input Tokenizer component** (TagInput, autocomplete suggestions, delimiter parsing, chip traversal, WAI-ARIA combobox) | ✅ Done | R-339 |
+| **Accessible futuristic Code Block & Syntax Presentation component** (CodeBlock, multi-tab snippets, zero-dep tokenizer, line highlighting, animated copy) | ✅ Done | R-340 |
+| **Accessible futuristic Radial Gauge & Activity Rings component** (RadialGauge, ActivityRings, pure SVG arc trigonometry, angle sweeps, threshold colors, WAI-ARIA meter) | ✅ Done | R-341 |
+| **Accessible futuristic Segmented Control & Mode Switcher component** (SegmentedControl, sliding pill indicator animation, option badges, 4 visual variants, WAI-ARIA radiogroup) | ✅ Done | R-342 |
 | Next.js console upgrade (rich UI) | ⏸ Deferred | R-224 — needs npm registry access |
 | Live sandbox preview + real deploy (Tier 2) | ⛔ Pending | needs a network machine + provider keys |
 | Native mobile agents | ⛔ Deferred (governance) | until web/backend stability (Brief §25/§91) |

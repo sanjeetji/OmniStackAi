@@ -1,5 +1,593 @@
 # Work Log
 
+## 2026-09-11 — R-342
+
+- Recorded contract in `.ai/CURRENT_TASK.yaml` and `.ai/tasks/R-342.md` (status in_progress → done).
+- `nextjs.py`:
+  - Added `_SEGMENTED_CONTROL_COMPONENT` static template implementing accessible, futuristic Segmented Control & Mode Switcher component suite (`apps/web/components/segmented-control.tsx`).
+  - Implemented `SegmentedControlOption`, `SegmentedControlVariant` ("neon" | "glass" | "pills" | "minimal"), `SegmentedControlSize` ("sm" | "md" | "lg"), `SegmentedControlOrientation` ("horizontal" | "vertical"), `SegmentedControlProps`, `SegmentedControlOptionItemProps` interfaces.
+  - Implemented sliding pill indicator animation with smooth cubic-bezier transitions (`cubic-bezier(0.4, 0, 0.2, 1)`).
+  - Implemented option labels, icons, disabled states, and notification badges.
+  - Implemented controlled and uncontrolled operation modes (`value`, `defaultValue`, `onChange`).
+  - Implemented full keyboard navigation (`ArrowLeft`/`ArrowRight` horizontal traversal, `ArrowUp`/`ArrowDown` vertical traversal, `Home`/`End` jump).
+  - Implemented full WAI-ARIA radiogroup semantics (`role="radiogroup"`, `role="radio"`, `aria-checked`, `aria-disabled`, `aria-orientation`, `tabIndex`).
+  - Implemented hidden input field integration for native form submissions.
+  - Exported `render_segmented_control_component` in `omnistackai_agent_engine.codegen` and registered in `NextjsWebAdapter.generate()`.
+  - Maintained 100% diff-invariance across `ir.description`.
+- Added `services/agent-engine/tests/test_segmented_control_component.py` with 15 comprehensive unit tests (all passing).
+- `task verify` — 1,459 tests pass (15 new), 0 failures. `task lint`, `task security:quick` pass.
+  `builder:demo minimal-blog` passes (78 files generated). `builder:demo rideshare-favourites` passes (76 files generated). 0 model calls.
+- Tracker: inserted R-342 Done row at `Phase_Roadmap!A9`; table `A4:M350`; 350 total rows;
+  131 Done, 1 Deferred, 210 Not Started; MVP 131/237 (55.3%); no `#REF!`; XLSX valid.
+- Updated CURRENT_TASK.yaml, tasks/R-342.md, PROJECT_STATE.yaml, HANDOFF.md, PROJECT_STATE.md,
+  CHANGELOG.md, docs/CODEGEN.md, docs/PROGRESS.md, docs/RESUME_PROMPT.md.
+
+
+## 2026-09-11 — R-341
+
+- Recorded contract in `.ai/CURRENT_TASK.yaml` and `.ai/tasks/R-341.md` (status in_progress → done).
+- `nextjs.py`:
+  - Added `_RADIAL_GAUGE_COMPONENT` static template implementing accessible, futuristic Radial Gauge & Activity Rings component suite (`apps/web/components/radial-gauge.tsx`).
+  - Implemented `RadialGaugeVariant`, `RadialGaugeSize`, `RadialGaugeThreshold`, `ActivityRingItem`, `RadialGaugeProps`, `ActivityRingsProps`, `RadialGaugeValueProps`, `RadialGaugeLabelProps` interfaces.
+  - Implemented pure mathematical SVG arc trigonometry without external chart libraries (`polarToCartesian`, `describeArc`).
+  - Implemented single radial gauge mode with configurable angle sweeps (240°, 270°, 360°), threshold transitions (`resolveThresholdColor`), target goal marker tick, and glowing endpoint dot.
+  - Implemented concentric multi-ring activity mode (`ActivityRings` / `RadialGauge.Rings`) with nested radius geometry, interactive hover focus, and clickable legend badges.
+  - Implemented 4 futuristic visual variants: `"neon"` (cyberpunk glow filters), `"glass"` (translucent backdrop blur readout), `"gradient"` (smooth multi-stop SVG linear gradients), and `"minimal"`.
+  - Implemented WAI-ARIA accessibility semantics (`role="meter"`, `aria-valuenow`, `aria-valuemin`, `aria-valuemax`, `aria-valuetext`, `aria-label`).
+  - Exported `render_radial_gauge_component` in `omnistackai_agent_engine.codegen` and registered in `NextjsWebAdapter.generate()`.
+  - Maintained 100% diff-invariance across `ir.description`.
+- Added `services/agent-engine/tests/test_radial_gauge_component.py` with 15 comprehensive unit tests (all passing).
+- `task verify` — 1,444 tests pass (15 new), 0 failures. `task lint`, `task security:quick`, `task env:check` pass.
+  `builder:demo minimal-blog` passes (78 files generated). `builder:demo rideshare-favourites` passes (75 files generated). 0 model calls.
+- Tracker: inserted R-341 Done row at `Phase_Roadmap!A9`; table `A4:M349`; 349 total rows;
+  130 Done, 1 Deferred, 210 Not Started; MVP 130/236 (55.1%); no `#REF!`; XLSX valid.
+- Left changes uncommitted in working tree per user instruction.
+- Updated CURRENT_TASK.yaml, tasks/R-341.md, PROJECT_STATE.yaml, HANDOFF.md, PROJECT_STATE.md,
+  CHANGELOG.md, docs/CODEGEN.md, docs/PROGRESS.md, docs/RESUME_PROMPT.md.
+
+## 2026-09-11 — R-340
+
+- Recorded contract in `.ai/CURRENT_TASK.yaml` and `.ai/tasks/R-340.md` (status in_progress → done).
+- `nextjs.py`:
+  - Added `_CODE_BLOCK_COMPONENT` static template implementing accessible, futuristic Code Block & Syntax Presentation component suite (`apps/web/components/code-block.tsx`).
+  - Implemented `CodeSnippet`, `CodeBlockVariant`, `CodeBlockSize`, `TokenType`, `CodeToken`, `CodeBlockProps`, `CodeBlockHeaderProps`, `CodeBlockContentProps`, `CodeBlockLineProps`, `CodeBlockCopyButtonProps` interfaces.
+  - Implemented zero-dependency lexical tokenizer (`tokenizeCodeLine`) supporting TS/JS, Python, JSON, SQL, Bash, Go, Diff.
+  - Implemented multi-tab snippet switcher with keyboard navigation and active tab indicators.
+  - Implemented line numbering (`showLineNumbers`, `startLineNumber`) and line highlighting (`highlightLines`, `parseHighlightLines`).
+  - Implemented git diff mode (`diffMode`, `diff-add` with emerald green background/border, `diff-delete` with rose red background/border).
+  - Implemented one-click copy-to-clipboard with smooth animated checkmark feedback and automatic timer reset.
+  - Implemented line wrap toggle (`wrapLines`) and expandable/collapsible max-height container with gradient fade mask.
+  - Implemented 4 futuristic visual variants: `"terminal"` (macOS dots, deep dark background), `"glass"` (translucent backdrop blur), `"neon"` (cyberpunk glow), and `"minimal"`.
+  - Implemented WAI-ARIA accessibility semantics (`role="region"`, `role="tablist"`, `role="tab"`, keyboard scrollable `<pre tabIndex={0}>`).
+  - Implemented inline SVG vector icons (`TerminalDots`, `CopyIcon`, `CheckIcon`, `WrapIcon`, `ExpandIcon`).
+  - Exported `render_code_block_component` in `omnistackai_agent_engine.codegen` and registered in `NextjsWebAdapter.generate()`.
+  - Maintained 100% diff-invariance across `ir.description`.
+- Added `services/agent-engine/tests/test_code_block_component.py` with 15 comprehensive unit tests (all passing).
+- `task verify` — 1,429 tests pass (15 new), 0 failures. `task lint`, `task security:quick`, `task env:check` pass.
+  `builder:demo minimal-blog` passes (77 files generated). `builder:demo rideshare-favourites` passes (74 files generated). 0 model calls.
+- Tracker: inserted R-340 Done row at `Phase_Roadmap!A9`; table `A4:M348`; 348 total rows;
+  129 Done, 1 Deferred, 210 Not Started; MVP 129/235 (54.9%); no `#REF!`; XLSX valid.
+- Left changes uncommitted in working tree per user instruction.
+- Updated CURRENT_TASK.yaml, tasks/R-340.md, PROJECT_STATE.yaml, HANDOFF.md, PROJECT_STATE.md,
+  CHANGELOG.md, docs/CODEGEN.md, docs/PROGRESS.md, docs/RESUME_PROMPT.md.
+
+## 2026-09-11 — R-339
+
+- Recorded contract in `.ai/CURRENT_TASK.yaml` and `.ai/tasks/R-339.md` (status in_progress → done).
+- `nextjs.py`:
+  - Added `_TAG_INPUT_COMPONENT` static template implementing accessible, futuristic Tag and Chip Tokenizer component suite (`apps/web/components/tag-input.tsx`).
+  - Implemented `TagItem`, `TagValue`, `TagInputVariant`, `TagInputSize`, `TagInputProps` interfaces.
+  - Implemented delimiter parsing on `Enter`, `Comma` (`,`), and `Tab`.
+  - Implemented chip keyboard traversal (`ArrowLeft`/`ArrowRight`) and `Backspace` chip deletion.
+  - Implemented autocomplete suggestions dropdown with keyboard navigation (`ArrowDown`, `ArrowUp`, `Enter`, `Escape`).
+  - Implemented validation: `maxTags` limits, duplicate prevention with visual warning feedback, and custom `validateTag` predicate.
+  - Implemented visual variants: `"default"`, `"glass"` (translucent backdrop blur), `"neon"` (cyberpunk glow), and `"bordered"`.
+  - Implemented WAI-ARIA Combobox / Listbox 1.2 semantics (`role="combobox"`, `role="listbox"`, `role="option"`, `aria-autocomplete="list"`, `aria-expanded`, `aria-activedescendant`).
+  - Implemented inline SVG icons (`TagIcon`, `XIcon`, `ClearIcon`).
+  - Exported `render_tag_input_component` in `omnistackai_agent_engine.codegen` and registered in `NextjsWebAdapter.generate()`.
+  - Maintained 100% diff-invariance across `ir.description`.
+- Added `services/agent-engine/tests/test_tag_input_component.py` with 15 comprehensive unit tests (all passing).
+- `task verify` — 1,414 tests pass (15 new), 0 failures. `task lint`, `task security:quick`, `task env:check` pass.
+  `builder:demo minimal-blog` passes (76 files generated). `builder:demo rideshare-favourites` passes (73 files generated). 0 model calls.
+- Tracker: inserted R-339 Done row at `Phase_Roadmap!A9`; table `A4:M347`; 347 total rows;
+  128 Done, 1 Deferred, 210 Not Started; MVP 128/234 (54.7%); no `#REF!`; XLSX valid.
+- Left changes uncommitted in working tree per user instruction.
+- Updated CURRENT_TASK.yaml, tasks/R-339.md, PROJECT_STATE.yaml, HANDOFF.md, PROJECT_STATE.md,
+  CHANGELOG.md, docs/CODEGEN.md, docs/PROGRESS.md, docs/RESUME_PROMPT.md.
+
+## 2026-09-11 — R-338
+
+- Recorded contract in `.ai/CURRENT_TASK.yaml` and `.ai/tasks/R-338.md` (status in_progress → done).
+- `nextjs.py`:
+  - Added `_TREE_VIEW_COMPONENT` static template implementing accessible, reusable Hierarchical Tree View component suite (`apps/web/components/tree-view.tsx`).
+  - Implemented `TreeNode`, `TreeViewVariant`, `TreeViewProps` interfaces.
+  - Implemented single-select (`selectedId`, `onSelect`) and multi-select (`selectedIds`, `onMultiSelect`, `multiSelect` with accessible checkboxes).
+  - Implemented controlled and uncontrolled expansion control (`expandedIds`, `onToggle`, `defaultExpanded`).
+  - Implemented search filter with automated ancestor branch auto-expansion and match highlighting (`<mark>`).
+  - Implemented visual hierarchy guide lines (`showLines`, `variant="lines"`).
+  - Implemented WAI-ARIA Tree View 1.2 compliance (`role="tree"`, `role="treeitem"`, `role="group"`, `aria-expanded`, `aria-selected`, `aria-level`, `aria-posinset`, `aria-setsize`, `aria-disabled`).
+  - Implemented complete keyboard navigation (`ArrowDown`, `ArrowUp`, `ArrowRight`, `ArrowLeft`, `Home`, `End`, `Enter`, `Space`, `*` to expand all siblings).
+  - Implemented inline SVG icons (`ChevronRightIcon`, `FolderClosedIcon`, `FolderOpenIcon`, `FileTextIcon`, `SearchIcon`).
+  - Exported `render_tree_view_component` in `omnistackai_agent_engine.codegen` and registered in `NextjsWebAdapter.generate()`.
+  - Maintained 100% diff-invariance across `ir.description`.
+- Added `services/agent-engine/tests/test_tree_view_component.py` with 15 comprehensive unit tests (all passing).
+- `task verify` — 1,399 tests pass (15 new), 0 failures. `task lint`, `task security:quick`, `task env:check` pass.
+  `builder:demo minimal-blog` passes (75 files generated). `builder:demo rideshare-favourites` passes (72 files generated). 0 model calls.
+- Tracker: inserted R-338 Done row at `Phase_Roadmap!A9`; table `A4:M346`; 346 total rows;
+  127 Done, 1 Deferred, 210 Not Started; MVP 127/233 (54.5%); no `#REF!`; XLSX valid.
+- Left changes uncommitted in working tree per user instruction.
+- Updated CURRENT_TASK.yaml, tasks/R-338.md, PROJECT_STATE.yaml, HANDOFF.md, PROJECT_STATE.md,
+  CHANGELOG.md, docs/CODEGEN.md, docs/PROGRESS.md, docs/RESUME_PROMPT.md.
+
+## 2026-09-11 — R-337
+
+- Recorded contract in `.ai/CURRENT_TASK.yaml` and `.ai/tasks/R-337.md` (status in_progress → done).
+- `nextjs.py`:
+  - Added `_STAT_CARD_COMPONENT` static template implementing accessible, futuristic Stat & Metric KPI Card component (`apps/web/components/stat-card.tsx`).
+  - Implemented `StatCardVariant`, `StatTrend`, and compound subcomponents (`StatCard`, `StatCardHeader`, `StatCardValue`, `StatCardDelta`, `StatCardSparkline`, `StatCardFooter`).
+  - Implemented pure mathematical SVG spline curve (`computeSplinePath`) generating cubic-bezier `C` control points with `<linearGradient>` area fill and interactive hover highlight.
+  - Implemented directional trend delta badge with directional SVG arrows (`TrendingUpIcon`, `TrendingDownIcon`, `TrendingFlatIcon`) and accessible `aria-label`.
+  - Implemented glassmorphic styling (`backdropFilter: "blur(16px)"`) and ambient glow border styling.
+  - Implemented WAI-ARIA `role="region"` / `role="button"` with keyboard `Enter`/`Space` activation.
+  - Exported `render_stat_card_component` in `omnistackai_agent_engine.codegen` and registered in `NextjsWebAdapter.generate()`.
+  - Maintained 100% diff-invariance across `ir.description`.
+- Added `services/agent-engine/tests/test_stat_card_component.py` with 15 tests.
+- `task verify` — 1,384 tests pass (15 new). `builder:demo minimal-blog` passes (74 files). `builder:demo rideshare-favourites` passes (71 files).
+- Tracker: inserted R-337 at row 9; table `A4:M345`; 126 Done, 1 Deferred, 210 Not Started; MVP 126/232 (54.3%).
+
+## 2026-09-11 — R-336
+
+- Recorded contract in `.ai/CURRENT_TASK.yaml` and `.ai/tasks/R-336.md` (status in_progress → done).
+- Added `_TIMELINE_COMPONENT` static template implementing accessible, reusable Timeline / Activity Feed component (`apps/web/components/timeline.tsx`).
+- Implemented `TimelineVariant`, `TimelineItemStatus`, `TimelineItem`, `TimelineProps`.
+- Implemented built-in vector status icons, vertical connector lines, centered layout, compact layout, semantic `<time>` elements.
+- Exported `render_timeline_component` in `codegen` and registered in `NextjsWebAdapter.generate()`.
+- Added `services/agent-engine/tests/test_timeline_component.py` with 20 tests.
+- `task verify` — 1,369 tests pass. `builder:demo` passes with 73/70 files.
+- Tracker: reconciled R-336 at row 9; table `A4:M344`; 125 Done, 1 Deferred, 210 Not Started; MVP 125/231 (54.1%).
+
+## 2026-09-11 — R-335
+
+- Recorded contract in `.ai/CURRENT_TASK.yaml` and `.ai/tasks/R-335.md` (status in_progress → done).
+- Added `_FILE_UPLOAD_COMPONENT` static template implementing accessible, reusable File Upload / Dropzone component (`apps/web/components/file-upload.tsx`).
+- Implemented drag-and-drop, click browse, keyboard trigger, file preview list with progressbar, and avatar variant.
+- Exported `render_file_upload_component` in `codegen` and registered in `NextjsWebAdapter.generate()`.
+- Added `services/agent-engine/tests/test_file_upload_component.py` with 19 tests.
+- `task verify` — 1,349 tests pass. `builder:demo` passes with 72/69 files.
+
+## 2026-09-11 — R-334
+
+- Recorded contract in `.ai/CURRENT_TASK.yaml` and `.ai/tasks/R-334.md` (status in_progress → done).
+- Added `_STEPPER_COMPONENT` static template implementing accessible, reusable Stepper / Multi-step Wizard component (`apps/web/components/stepper.tsx`).
+- Implemented horizontal/vertical orientations, step status badges, completed icons, step navigation callbacks.
+- Exported `render_stepper_component` in `codegen` and registered in `NextjsWebAdapter.generate()`.
+- Added `services/agent-engine/tests/test_stepper_component.py` with 20 tests.
+- `task verify` — 1,330 tests pass. `builder:demo` passes with 71/68 files.
+
+## 2026-09-11 — R-333
+
+- Recorded contract in `.ai/CURRENT_TASK.yaml` and `.ai/tasks/R-333.md` (status in_progress → done).
+- `nextjs.py`:
+  - Added `_RATING_COMPONENT` static template implementing accessible, reusable Rating & Review component (`apps/web/components/rating.tsx`).
+  - Implemented `RatingSize`, `RatingIcon`, `RatingProps` interfaces.
+  - Implemented interactive hover preview: mouse move across items calculates bounding client coordinates, supporting half-star detection when `allowHalf` is true, and restoring active score on mouse leave.
+  - Implemented click selection: updates controlled or internal state and fires `onChange(score)`.
+  - Implemented full keyboard navigation: `ArrowRight`/`ArrowUp` (+step), `ArrowLeft`/`ArrowDown` (-step), `Home` (0), `End` (max).
+  - Implemented WAI-ARIA slider pattern semantics: `role="slider"`, `tabIndex={disabled || readOnly ? -1 : 0}`, `aria-valuenow`, `aria-valuemin`, `aria-valuemax`, `aria-valuetext`, `aria-readonly`, `aria-disabled`, and `aria-label`.
+  - Implemented built-in inline vector icons (`star`, `heart`, `thumb`) with precise fractional fill rendering via overlay clipping.
+  - Implemented read-only (`readOnly`) and disabled (`disabled`) interaction guards and styling.
+  - Implemented numeric score display formatting (`showScore`, `formatScore`) and size presets (`sm`, `md`, `lg`).
+  - Exported `render_rating_component` in `omnistackai_agent_engine.codegen` and registered in `NextjsWebAdapter.generate()`.
+  - Maintained 100% diff-invariance across `ir.description`.
+- Added `services/agent-engine/tests/test_rating_component.py` with 13 comprehensive tests covering client directive, types and component exports, WAI-ARIA slider semantics, hover preview and click selection, half increments, keyboard navigation, vector icons, read-only/disabled states, score formatting, size presets, codegen export, adapter registration, and diff invariance.
+- `task verify` — 1,310 tests pass (13 new), 0 failures. `task lint`, `task security:quick`, `task env:check` pass.
+  `builder:demo minimal-blog` passes (70 files generated). `builder:demo rideshare-favourites` passes (67 files generated). 0 model calls.
+- Tracker: inserted R-333 Done row at `Phase_Roadmap!A9`; table `A4:M341`; 338 total rows;
+  122 Done, 1 Deferred, 210 Not Started; MVP 122/228 (53.5%); no `#REF!`; XLSX valid.
+- Left changes uncommitted in working tree per user instruction.
+- Updated CURRENT_TASK.yaml, tasks/R-333.md, PROJECT_STATE.yaml, HANDOFF.md, PROJECT_STATE.md,
+  CHANGELOG.md, docs/CODEGEN.md, docs/PROGRESS.md, docs/RESUME_PROMPT.md.
+
+## 2026-09-11 — R-332
+
+- Recorded contract in `.ai/CURRENT_TASK.yaml` and `.ai/tasks/R-332.md` (status in_progress → done).
+- `nextjs.py`:
+  - Added `_PROGRESS_COMPONENT` static template implementing accessible, reusable Progress and Spinner component suite (`apps/web/components/progress.tsx`).
+  - Implemented `ProgressVariant`, `ProgressSize`, `ProgressBarProps`, `CircularProgressProps`, `SpinnerProps` interfaces.
+  - Implemented `ProgressBar` (and `Progress` alias) supporting linear determinate mode (`value`, `min`, `max`, `showValue`, `formatValue`) and indeterminate animated shimmer/pulse mode.
+  - Implemented WAI-ARIA progressbar semantics: `role="progressbar"`, `aria-valuenow`, `aria-valuemin`, `aria-valuemax`, `aria-valuetext` (with `aria-valuenow` correctly omitted in indeterminate mode per WAI-ARIA specification).
+  - Implemented striped gradient pattern and animated stripes (`striped`, `animated`).
+  - Implemented `CircularProgress` with SVG circle stroke-dasharray and stroke-dashoffset mathematical calculations, supporting percentage fill in determinate mode, continuous rotating sweep in indeterminate mode, and center text/label rendering.
+  - Implemented lightweight `Spinner` with SVG loader circle, `role="status"`, `aria-live="polite"`, and screen-reader accessible label (`sr-only` span, defaulting to "Loading...").
+  - Implemented size presets (`sm`, `md`, `lg`) and semantic color variants (`default`, `primary`, `success`, `warning`, `error`, `info`).
+  - Exported `render_progress_component` in `omnistackai_agent_engine.codegen` and registered in `NextjsWebAdapter.generate()`.
+  - Maintained 100% diff-invariance across `ir.description`.
+- Added `services/agent-engine/tests/test_progress_component.py` with 13 comprehensive tests covering client directive, types and component exports, determinate mode ARIA attributes, indeterminate mode omitting valuenow, label and formatting options, striped and animated classes, sizes and variants, circular SVG calculations, circular determinate/indeterminate modes, spinner live regions and sr-only label, codegen export, adapter registration, and diff invariance.
+- `task verify` — 1,297 tests pass (13 new), 0 failures. `task lint`, `task security:quick`, `task env:check` pass.
+  `builder:demo minimal-blog` passes (69 files generated). `builder:demo rideshare-favourites` passes (66 files generated). 0 model calls.
+- Tracker: inserted R-332 Done row at `Phase_Roadmap!A9`; table `A4:M340`; 337 total rows;
+  121 Done, 1 Deferred, 210 Not Started; MVP 121/227 (53.3%); no `#REF!`; XLSX valid.
+- Left changes uncommitted in working tree per user instruction.
+- Updated CURRENT_TASK.yaml, tasks/R-332.md, PROJECT_STATE.yaml, HANDOFF.md, PROJECT_STATE.md,
+  CHANGELOG.md, docs/CODEGEN.md, docs/PROGRESS.md, docs/RESUME_PROMPT.md.
+
+## 2026-09-11 — R-331
+
+- Recorded contract in `.ai/CURRENT_TASK.yaml` and `.ai/tasks/R-331.md` (status in_progress → done).
+- `nextjs.py`:
+  - Added `_SLIDER_COMPONENT` static template implementing accessible, reusable Slider & Range component (`apps/web/components/slider.tsx`).
+  - Implemented `SliderOrientation`, `SliderValue`, `SliderMark`, `SliderProps` interfaces.
+  - Implemented single-value (`number`) and dual-thumb range (`[number, number]`) modes.
+  - Implemented range crossover prevention: clamping thumb values so Thumb 0 cannot exceed Thumb 1 and Thumb 1 cannot drop below Thumb 0.
+  - Implemented interactive dragging on track and thumbs via pointerdown, pointermove, and pointerup events with touch-action none.
+  - Implemented full keyboard navigation for focused thumb: `ArrowRight`/`ArrowUp` (+step), `ArrowLeft`/`ArrowDown` (-step), `PageUp` (+10x step), `PageDown` (-10x step), `Home` (snap to minimum valid value), `End` (snap to maximum valid value).
+  - Implemented WAI-ARIA slider pattern semantics: `role="slider"`, `tabIndex={disabled ? -1 : 0}`, `aria-valuenow`, `aria-valuemin`, `aria-valuemax`, `aria-orientation`, `aria-disabled`, `aria-label`, and `aria-valuetext`.
+  - Implemented tick marks and labels rendering when `marks` is specified.
+  - Implemented value display badge when `showValue` is true with customizable `formatValue`.
+  - Exported `render_slider_component` in `omnistackai_agent_engine.codegen` and registered in `NextjsWebAdapter.generate()`.
+  - Maintained 100% diff-invariance across `ir.description`.
+- Added `services/agent-engine/tests/test_slider_component.py` with 13 comprehensive tests covering client directive, types and component exports, single/range modes, pointer dragging, keyboard navigation (step/page increments, Home/End boundaries), WAI-ARIA slider semantics, crossover prevention, marks/labels, value display formatting, codegen export, adapter registration, and diff invariance.
+- `task verify` — 1,284 tests pass (13 new), 0 failures. `task lint`, `task security:quick`, `task env:check` pass.
+  `builder:demo minimal-blog` passes (68 files generated). `builder:demo rideshare-favourites` passes (65 files generated). 0 model calls.
+- Tracker: inserted R-331 Done row at `Phase_Roadmap!A9`; table `A4:M339`; 331 unique IDs (0 dupes);
+  120 Done, 1 Deferred, 210 Not Started; MVP 120/226 (53.1%); no `#REF!`; XLSX valid.
+- Left changes uncommitted in working tree per user instruction.
+- Updated CURRENT_TASK.yaml, tasks/R-331.md, PROJECT_STATE.yaml, HANDOFF.md, PROJECT_STATE.md,
+  CHANGELOG.md, docs/CODEGEN.md, docs/PROGRESS.md, docs/RESUME_PROMPT.md.
+
+## 2026-09-11 — R-330
+
+- Recorded contract in `.ai/CURRENT_TASK.yaml` and `.ai/tasks/R-330.md` (status in_progress → done).
+- `nextjs.py`:
+  - Added `_COMMAND_PALETTE_COMPONENT` static template implementing accessible, reusable Command Palette and Search Menu component (`apps/web/components/command-palette.tsx`).
+  - Implemented `CommandItem`, `CommandGroup`, `CommandPaletteProps` interfaces.
+  - Implemented global `Cmd+K` / `Ctrl+K` keyboard shortcut listener (`triggerShortcut?: boolean`, default `true`) to toggle palette visibility.
+  - Implemented real-time search filtering across item `label`, `description`, `group`, and `keywords`.
+  - Implemented keyboard navigation: `ArrowDown`/`ArrowUp` traversal (skipping disabled items and wrapping gracefully), `Home`/`End` jump to first/last selectable item, `Enter` execution of selected item callback, and `Escape` dismissal with focus restoration.
+  - Implemented WAI-ARIA combobox pattern: `role="combobox"` input with `aria-autocomplete="list"`, `aria-expanded="true"`, `aria-haspopup="listbox"`, `aria-controls`, and `aria-activedescendant`; results container with `role="listbox"`; items with `role="option"`, unique `id`, `aria-selected`, and `aria-disabled`.
+  - Implemented group headings (`role="group"` with `aria-labelledby`), shortcut badges (`<kbd>`), configurable `emptyMessage`, modal backdrop overlay (`role="dialog"`, `aria-modal="true"`, `backdropFilter: "blur(4px)"`), and body scroll lock management.
+  - Exported `render_command_palette_component` in `omnistackai_agent_engine.codegen` and registered in `NextjsWebAdapter.generate()`.
+  - Maintained 100% diff-invariance across `ir.description`.
+- Added `services/agent-engine/tests/test_command_palette_component.py` with 13 comprehensive tests covering client directive, types and component exports, global shortcut listener, query filtering, keyboard traversal, active descendant / combobox semantics, group headers and sublists, kbd badges, empty search state, dialog backdrop and body scroll lock, codegen export, adapter registration, and diff invariance.
+- `task verify` — 1,271 tests pass (13 new), 0 failures. `task lint`, `task security:quick`, `task env:check` pass.
+  `builder:demo minimal-blog` passes (67 files generated). `builder:demo rideshare-favourites` passes (64 files generated). 0 model calls.
+- Tracker: inserted R-330 Done row at `Phase_Roadmap!A9`; table `A4:M338`; 330 unique IDs (0 dupes);
+  119 Done, 1 Deferred, 210 Not Started; MVP 119/225 (52.9%); no `#REF!`; XLSX valid.
+- Left changes uncommitted in working tree per user instruction.
+- Updated CURRENT_TASK.yaml, tasks/R-330.md, PROJECT_STATE.yaml, HANDOFF.md, PROJECT_STATE.md,
+  CHANGELOG.md, docs/CODEGEN.md, docs/PROGRESS.md, docs/RESUME_PROMPT.md.
+
+## 2026-09-11 — R-329
+
+- Recorded contract in `.ai/CURRENT_TASK.yaml` and `.ai/tasks/R-329.md` (status in_progress → done).
+- `nextjs.py`:
+  - Added `_DATA_GRID_COMPONENT` static template implementing accessible, reusable Data Grid and Table component (`apps/web/components/data-grid.tsx`).
+  - Implemented generic `ColumnDef<T>`, `DataGridProps<T>`, `SortDirection`, `SortState`, `DataGridDensity` interfaces.
+  - Implemented sortable column headers with WAI-ARIA `aria-sort` ("ascending" | "descending" | "none"), sort indicator SVGs (up/down/dual arrows), and keyboard trigger (`Enter` / `Space`).
+  - Implemented row selection checkboxes with header select-all (checked, unchecked, indeterminate states) and `aria-selected` row attribute.
+  - Implemented display density presets (`"compact"`, `"comfortable"`, `"spacious"`) with proportional cell padding and font-size maps.
+  - Implemented `stickyHeader` with fixed position `<thead>` and border preservation.
+  - Implemented `striped` alternating row styling and `hoverable` row hover background transitions.
+  - Implemented loading skeleton placeholder rows with animated pulsing divs, `role="status"`, and `aria-busy="true"`.
+  - Implemented `emptyState` fallback rendering.
+  - Exported `render_data_grid_component` in `omnistackai_agent_engine.codegen` and registered in `NextjsWebAdapter.generate()`.
+  - Maintained 100% diff-invariance across `ir.description`.
+- Added `services/agent-engine/tests/test_data_grid_component.py` with 13 comprehensive tests covering client directive, types and component exports, density presets, sortable columns and aria-sort, row selection checkboxes, row aria-selected, sticky header, striped/hoverable styling, loading skeleton state, empty state, codegen export, adapter registration, and diff invariance.
+- `task verify` — 1,258 tests pass (13 new), 0 failures. `task lint`, `task security:quick`, `task env:check` pass.
+  `builder:demo minimal-blog` passes (66 files generated). `builder:demo rideshare-favourites` passes (63 files generated). 0 model calls.
+- Tracker: inserted R-329 Done row at `Phase_Roadmap!A9`; table `A4:M337`; 329 unique IDs (0 dupes);
+  118 Done, 1 Deferred, 210 Not Started; MVP 118/224 (52.7%); no `#REF!`; XLSX valid.
+- Left changes uncommitted in working tree per user instruction.
+- Updated CURRENT_TASK.yaml, tasks/R-329.md, PROJECT_STATE.yaml, HANDOFF.md, PROJECT_STATE.md,
+  CHANGELOG.md, docs/CODEGEN.md, docs/PROGRESS.md, docs/RESUME_PROMPT.md.
+
+## 2026-09-11 — R-328
+
+- Recorded contract in `.ai/CURRENT_TASK.yaml` and `.ai/tasks/R-328.md` (status in_progress → done).
+- `nextjs.py`:
+  - Added `_DATE_PICKER_COMPONENT` static template implementing accessible, reusable Date Picker and Calendar component suite (`apps/web/components/date-picker.tsx`).
+  - Implemented `DateFormatter`, `CalendarProps`, and `DatePickerProps` interfaces.
+  - Implemented `Calendar` month grid view with:
+    - Month and year navigation header with previous/next month and year controls with accessible `aria-label`s.
+    - Weekday headers with `<abbr>` and accessible full day labels.
+    - Calendar day grid with WAI-ARIA `role="grid"`, `role="row"`, `role="gridcell"`, `aria-selected`, `aria-current="date"`, and `aria-disabled`.
+    - Full keyboard navigation: Left/Right Arrow (+/- 1 day), Up/Down Arrow (+/- 7 days), PageUp/PageDown (+/- 1 month or year with Shift), Home/End (start/end of week), Enter/Space (select date).
+    - Quick-select "Today" action and optional "Clear" button.
+  - Implemented `DatePicker` trigger and floating popover:
+    - Accessible trigger button styled as input field with calendar SVG icon, `aria-haspopup="dialog"`, `aria-expanded`, formatted date text, and placeholder fallback.
+    - Clearable button affordance (`clearable` with `aria-label="Clear date"`).
+    - Floating popover container with `role="dialog"`, `aria-modal="false"`, `aria-label="Choose date"`, dismiss on outside click, and dismiss on Escape with focus restoration.
+    - Placement styling (`bottom-start`, `bottom-end`, `top-start`, `top-end`).
+    - Error and helper text rendering with `role="alert"` and `aria-describedby` wiring.
+  - Implemented zero-dependency date utilities: `formatDate`, `isSameDay`, `isToday`.
+  - Exported `render_date_picker_component` in `omnistackai_agent_engine.codegen` and registered in `NextjsWebAdapter.generate()`.
+  - Maintained 100% diff-invariance across `ir.description`.
+- Added `services/agent-engine/tests/test_date_picker_component.py` with 13 comprehensive tests covering client directive, types and component exports, header controls, weekday headers, grid WAI-ARIA semantics, keyboard navigation, today/clear actions, trigger semantics, clearable affordance, popover dialog and dismiss, codegen export, adapter registration, and diff invariance.
+- `task verify` — 1,245 tests pass (13 new), 0 failures. `task lint`, `task security:quick`, `task env:check` pass.
+  `builder:demo minimal-blog` passes (65 files generated). `builder:demo rideshare-favourites` passes (62 files generated). 0 model calls.
+- Tracker: inserted R-328 Done row at `Phase_Roadmap!A9`; table `A4:M336`; 328 unique IDs (0 dupes);
+  117 Done, 1 Deferred, 210 Not Started; MVP 117/223 (52.5%); no `#REF!`; XLSX valid.
+- Left changes uncommitted in working tree per user instruction.
+- Updated CURRENT_TASK.yaml, tasks/R-328.md, PROJECT_STATE.yaml, HANDOFF.md, PROJECT_STATE.md,
+  CHANGELOG.md, docs/CODEGEN.md, docs/PROGRESS.md, docs/RESUME_PROMPT.md.
+
+## 2026-09-10 — R-327
+
+- Recorded contract in `.ai/CURRENT_TASK.yaml` and `.ai/tasks/R-327.md` (status in_progress → done).
+- `nextjs.py`:
+  - Added `_FORM_CONTROLS_COMPONENT` static template implementing accessible, reusable compound Form Controls and Input primitives suite (`apps/web/components/form-controls.tsx`).
+  - Implemented `InputSize` (`"sm"` | `"md"` | `"lg"`), `sizeMap`, and interfaces for all form elements.
+  - Implemented `Input` with size presets, prefix slot, suffix slot, and optional clear button (`onClear` with `aria-label="Clear input"`).
+  - Implemented `Textarea` with size presets, auto/custom rows, and optional live character counter (`showCount`, `maxLength`) with 90% amber capacity warning.
+  - Implemented `Select` with options array rendering, placeholder support (`disabled hidden`), custom SVG chevron indicator, and disabled states.
+  - Implemented `Checkbox` with checked, unchecked, and indeterminate states (`el.indeterminate`), focus ring, and label/description binding.
+  - Implemented `RadioGroup` and `Radio` with `RadioGroupContext`, WAI-ARIA `role="radiogroup"`, `role="radio"`, `aria-checked`, and full keyboard Arrow navigation (`ArrowDown`, `ArrowUp`, `ArrowRight`, `ArrowLeft`).
+  - Implemented `Label` with optional red asterisk indicator (`*`, `aria-hidden="true"`).
+  - Implemented `FormField` compound container auto-generating unique IDs via `useId()`, linking `htmlFor`, and wiring `aria-invalid` and `aria-describedby` to `FormHelperText` and `FormMessage`.
+  - Implemented `FormMessage` with `role="alert"` and `aria-live="polite"`.
+  - Implemented `FormHelperText` for descriptive hints.
+  - Exported `render_form_controls_component` in `omnistackai_agent_engine.codegen` and registered in `NextjsWebAdapter.generate()`.
+  - Maintained 100% diff-invariance across `ir.description`.
+- Added `services/agent-engine/tests/test_form_controls_component.py` with 13 comprehensive tests covering client directive, types, forwardRef and function exports, size presets, prefix/suffix/clear affordances, character counters, select options, checkbox semantics, radiogroup WAI-ARIA and arrow keyboard navigation, formfield/formmessage semantics, label required indicator, adapter registration, codegen exports, and diff invariance.
+- `task verify` — 1,232 tests pass (13 new), 0 failures. `task lint`, `task security:quick`, `task env:check` pass.
+  `builder:demo minimal-blog` passes (64 files generated). `builder:demo rideshare-favourites` passes (61 files generated). 0 model calls.
+- Tracker: inserted R-327 Done row at `Phase_Roadmap!A9`; table `A4:M335`; 327 unique IDs (0 dupes);
+  116 Done, 1 Deferred, 210 Not Started; MVP 116/222 (52.3%); no `#REF!`; XLSX valid.
+- Left changes uncommitted in working tree per user instruction.
+- Updated CURRENT_TASK.yaml, tasks/R-327.md, PROJECT_STATE.yaml, HANDOFF.md, PROJECT_STATE.md,
+  CHANGELOG.md, docs/CODEGEN.md, docs/PROGRESS.md, docs/RESUME_PROMPT.md.
+
+## 2026-09-10 — R-326
+
+- Recorded contract in `.ai/CURRENT_TASK.yaml` and `.ai/tasks/R-326.md` (status in_progress → done).
+- `nextjs.py`:
+  - Added `_DIALOG_COMPONENT` static template implementing accessible, reusable compound Dialog and Modal component (`apps/web/components/dialog.tsx`).
+  - Implemented `DialogSize` (`"sm"` | `"md"` | `"lg"` | `"xl"` | `"full"`), `sizeMap`, and `DialogContextValue` interfaces.
+  - Implemented `Dialog` root component with controlled (`open`, `onOpenChange`) and uncontrolled (`defaultOpen`) state support, providing `DialogContext`.
+  - Implemented `DialogTrigger` button/wrapper supporting `asChild` delegation, `aria-haspopup="dialog"`, `aria-expanded`, and trigger element ref caching.
+  - Implemented `DialogPortal` rendering top-level dialog elements when active.
+  - Implemented `DialogOverlay` backdrop overlay with dark semi-transparent tint, backdrop blur, fade transitions, and backdrop click dismiss.
+  - Implemented `DialogContent` container with `role="dialog"`, `aria-modal="true"`, dynamic `aria-labelledby` and `aria-describedby` wiring, Escape key dismiss listener, document body scroll lock, focus restoration upon dismiss, and optional accessible close button (`aria-label="Close dialog"` with SVG icon).
+  - Implemented `DialogHeader`, `DialogTitle` (accessible heading), `DialogDescription` (muted caption), `DialogBody` (scrollable content area), `DialogFooter` (actions bar), and `DialogClose` (action trigger).
+  - Implemented `useDialog()` hook.
+  - Exported `render_dialog_component` in `omnistackai_agent_engine.codegen` and registered `components/dialog.tsx` in `NextjsWebAdapter.generate()`.
+  - Maintained 100% diff-invariance across `ir.description`.
+- Added `services/agent-engine/tests/test_dialog_component.py` with 13 comprehensive tests covering client directive, types, compound subcomponents, ARIA dialog semantics, size presets, Escape key listener, backdrop click dismiss, accessible close button, body scroll lock and focus restoration, controlled and uncontrolled state, hook, adapter registration, codegen exports, and diff invariance.
+- `task verify` — 1,219 tests pass (13 new), 0 failures. `task lint`, `task security:quick`, `task env:check` pass.
+  `builder:demo minimal-blog` passes (63 files generated). `builder:demo rideshare-favourites` passes (60 files generated). 0 model calls.
+- Tracker: inserted R-326 Done row at `Phase_Roadmap!A9`; table `A4:M334`; 326 unique IDs (0 dupes);
+  115 Done, 1 Deferred, 210 Not Started; MVP 115/221 (52.0%); no `#REF!`; XLSX valid.
+- Left changes uncommitted in working tree per user instruction.
+- Updated CURRENT_TASK.yaml, tasks/R-326.md, PROJECT_STATE.yaml, HANDOFF.md, PROJECT_STATE.md,
+  CHANGELOG.md, docs/CODEGEN.md, docs/PROGRESS.md, docs/RESUME_PROMPT.md.
+
+## 2026-09-10 — R-325
+
+- Recorded contract in `.ai/CURRENT_TASK.yaml` and `.ai/tasks/R-325.md` (status in_progress → done).
+- `nextjs.py`:
+  - Added `_THEME_TOGGLE_COMPONENT` static template implementing accessible, reusable compound Theme Switcher component (`apps/web/components/theme-toggle.tsx`).
+  - Implemented `ThemeMode` (`"light"` | `"dark"` | `"system"`), `ResolvedTheme` (`"light"` | `"dark"`), and `ThemeContextValue` interfaces.
+  - Implemented `ThemeProvider` context managing active theme mode, localStorage synchronization, and `window.matchMedia("(prefers-color-scheme: dark)")` system preference listening.
+  - Implemented `useTheme` hook with fallback defaults.
+  - Implemented `ThemeToggle` button component with size presets (`"sm"` | `"md"` | `"lg"`), accessible labels, and inline SVG Sun / Moon vector icons.
+  - Implemented `ThemeSelect` segmented control with WAI-ARIA `role="radiogroup"`, `role="radio"`, and `aria-checked` semantics for explicit mode selection.
+  - Implemented `ThemeScript` inline script snippet to prevent Flash of Unstyled Content (FOUC) during initial SSR page loads.
+  - Exported `render_theme_toggle_component` in `omnistackai_agent_engine.codegen` and registered in `NextjsWebAdapter.generate()`.
+  - Maintained 100% diff-invariance across `ir.description`.
+- Added `services/agent-engine/tests/test_theme_toggle_component.py` with 12 comprehensive tests covering client directive, types, provider modes, localStorage handling, system media query handling, ARIA attributes, radiogroup semantics, FOUC script, SVG icons, adapter generation, codegen exports, and diff invariance.
+- `task verify` — 1,206 tests pass (12 new), 0 failures. `task lint`, `task security:quick`, `task env:check` pass.
+  `builder:demo minimal-blog` passes (62 files generated). `builder:demo rideshare-favourites` passes (59 files generated). 0 model calls.
+- Tracker: inserted R-325 Done row at `Phase_Roadmap!A9`; table `A4:M333`; 325 unique IDs (0 dupes);
+  114 Done, 1 Deferred, 210 Not Started; MVP 114/220 (51.8%); no `#REF!`; XLSX valid.
+- Left changes uncommitted in working tree per user instruction.
+- Updated CURRENT_TASK.yaml, tasks/R-325.md, PROJECT_STATE.yaml, HANDOFF.md, PROJECT_STATE.md,
+  CHANGELOG.md, docs/CODEGEN.md, docs/PROGRESS.md, docs/RESUME_PROMPT.md.
+
+## 2026-09-10 — R-324
+
+- Recorded contract in `.ai/CURRENT_TASK.yaml` and `.ai/tasks/R-324.md` (status in_progress → done).
+- `nextjs.py`:
+  - Added `_DESIGN_TOKENS_CSS` static template implementing standalone, production-grade Design Tokens and CSS custom properties theming engine (`apps/web/styles/tokens.css`).
+  - Implemented Light mode palette under `:root` (primary, secondary, accent, neutral scale 50-900, background/surface scales, text hierarchy, borders, ring, and semantic feedback colors: success, warning, danger, info).
+  - Implemented Dark mode palette under `[data-theme="dark"]`, `:root.dark`, `body.dark`, and `@media (prefers-color-scheme: dark)` (with `:root:not([data-theme="light"])` override support).
+  - Implemented scale tokens: spacing scale (`--space-0` through `--space-24`), typography scale (system fonts, mono, sizes xs through 4xl, weights light through bold, line heights), radii (`--radius-none` through `--radius-full`), elevation shadows (`--shadow-none` through `--shadow-xl`), z-indices (`--z-dropdown` through `--z-tooltip`), and motion transitions.
+  - Implemented accessibility reduced-motion media query (`@media (prefers-reduced-motion: reduce)`) resetting transition/animation durations.
+  - Added `_GLOBALS_CSS` importing `@import "../styles/tokens.css";` and establishing unified root base styles and box-sizing rules (`apps/web/app/globals.css`).
+  - Exported `render_design_tokens` and `render_globals_css` in `omnistackai_agent_engine.codegen` and registered in `NextjsWebAdapter.generate()`.
+  - Maintained 100% diff-invariance across `ir.description`.
+- Added `services/agent-engine/tests/test_theming_tokens.py` with 15 comprehensive tests covering tokens CSS, semantic colors, status colors, spacing, typography, radii, shadows, z-indices, transitions, dark theme mappings, reduced motion, globals.css integration, adapter generation, codegen exports, and diff invariance.
+- `task verify` — 1,194 tests pass (15 new), 0 failures. `task lint`, `task security:quick`, `task env:check` pass.
+  `builder:demo minimal-blog` passes (61 files generated). `builder:demo rideshare-favourites` passes (58 files generated). 0 model calls.
+- Tracker: inserted R-324 Done row at `Phase_Roadmap!A9`; table `A4:M332`; 324 unique IDs (0 dupes);
+  113 Done, 1 Deferred, 210 Not Started; MVP 113/219 (51.6%); no `#REF!`; XLSX valid.
+- Left changes uncommitted in working tree per user instruction.
+- Updated CURRENT_TASK.yaml, tasks/R-324.md, PROJECT_STATE.yaml, HANDOFF.md, PROJECT_STATE.md,
+  CHANGELOG.md, docs/CODEGEN.md, docs/PROGRESS.md, docs/RESUME_PROMPT.md.
+
+## 2026-09-10 — R-323
+
+- Recorded contract in `.ai/CURRENT_TASK.yaml` and `.ai/tasks/R-323.md` (status in_progress → done).
+- `nextjs.py`:
+  - Added `_POPOVER_COMPONENT` static template implementing accessible, reusable compound Popover component (`apps/web/components/popover.tsx`).
+  - Implemented `Popover`, `PopoverTrigger`, `PopoverContent`, `PopoverClose`, and `PopoverArrow` compound subcomponents.
+  - Implemented `PopoverAlign` (`"start"` | `"end"` | `"center"`) and `PopoverSide` (`"top"` | `"bottom"` | `"left"` | `"right"`).
+  - Implemented click-outside dismiss (`mousedown`) and Escape key dismiss with trigger focus restoration.
+  - Implemented controlled (`open`, `onOpenChange`) and uncontrolled (`defaultOpen`) operation modes.
+  - Implemented WAI-ARIA Dialog semantics (`role="dialog"`, `aria-modal="true"`, `aria-haspopup="dialog"`, `aria-expanded`, `aria-controls`, `aria-labelledby`).
+  - Implemented `PopoverClose` button with accessible `aria-label="Close popover"`.
+  - Implemented `PopoverArrow` pointing indicator with `aria-hidden="true"`.
+  - Exported `render_popover_component` in `omnistackai_agent_engine.codegen` and registered in `NextjsWebAdapter.generate()`.
+  - Maintained 100% diff-invariance across `ir.description`.
+- Added `services/agent-engine/tests/test_popover_component.py` with 11 comprehensive tests covering client directive, types, compound subcomponents, WAI-ARIA dialog attributes, alignments/placements, controlled/uncontrolled state, click-outside/escape dismiss, close button label, arrow indicator, adapter generation, and diff invariance.
+- `task verify` — 1,179 tests pass (11 new), 0 failures. `task lint`, `task security:quick`, `task env:check` pass.
+  `builder:demo minimal-blog` passes (60 files generated). `builder:demo rideshare-favourites` passes (57 files generated). 0 model calls.
+- Tracker: inserted R-323 Done row at `Phase_Roadmap!A9`; table `A4:M331`; 323 unique IDs (0 dupes);
+  112 Done, 1 Deferred, 210 Not Started; MVP 112/218 (51.4%); no `#REF!`; XLSX valid.
+- Left changes uncommitted in working tree per user instruction.
+- Updated CURRENT_TASK.yaml, tasks/R-323.md, PROJECT_STATE.yaml, HANDOFF.md, PROJECT_STATE.md,
+  CHANGELOG.md, docs/CODEGEN.md, docs/PROGRESS.md, docs/RESUME_PROMPT.md.
+
+## 2026-09-10 — R-322
+
+- Recorded contract in `.ai/CURRENT_TASK.yaml` and `.ai/tasks/R-322.md` (status in_progress → done).
+- `nextjs.py`:
+  - Added `_DROPDOWN_MENU_COMPONENT` static template implementing accessible, reusable compound Dropdown Menu component (`apps/web/components/dropdown-menu.tsx`).
+  - Implemented `DropdownMenu`, `DropdownMenuTrigger`, `DropdownMenuContent`, `DropdownMenuItem`, `DropdownMenuSeparator`, and `DropdownMenuLabel` compound subcomponents.
+  - Implemented `DropdownMenuAlign` (`"start"` | `"end"` | `"center"`) and `DropdownMenuSide` (`"top"` | `"bottom"` | `"left"` | `"right"`).
+  - Implemented click-outside dismiss and Escape key dismiss with trigger focus restoration.
+  - Implemented full keyboard navigation (`ArrowDown`, `ArrowUp`, `Home`, `End`, `Escape`, `Enter`, `Space`) with active index focus cycling.
+  - Implemented WAI-ARIA 1.2 Menu semantics (`role="menu"`, `role="menuitem"`, `aria-haspopup="menu"`, `aria-expanded`, `aria-controls`, `aria-labelledby`, `role="separator"`).
+  - Implemented disabled item handling with `aria-disabled` and keyboard focus skipping.
+  - Implemented `destructive` variant styling for hazardous actions.
+  - Supported optional `shortcut` key badge and `icon` slots.
+  - Exported `render_dropdown_menu_component` in `omnistackai_agent_engine.codegen` and registered in `NextjsWebAdapter.generate()`.
+  - Maintained 100% diff-invariance across `ir.description`.
+- Added `services/agent-engine/tests/test_dropdown_menu_component.py` with 11 comprehensive tests covering client directive, types, compound subcomponents, WAI-ARIA menu attributes, keyboard navigation, alignments/placements, disabled state, destructive items, click-outside/escape dismiss, shortcut/icons, adapter generation, and diff invariance.
+- `task verify` — 1,168 tests pass (11 new), 0 failures. `task lint`, `task security:quick`, `task env:check` pass.
+  `builder:demo minimal-blog` passes (59 files generated). `builder:demo rideshare-favourites` passes (56 files generated). 0 model calls.
+- Tracker: inserted R-322 Done row at `Phase_Roadmap!A9`; table `A4:M330`; 322 unique IDs (0 dupes);
+  111 Done, 1 Deferred, 210 Not Started; MVP 111/217 (51.2%); no `#REF!`; XLSX valid.
+- Left changes uncommitted in working tree per user instruction.
+- Updated CURRENT_TASK.yaml, tasks/R-322.md, PROJECT_STATE.yaml, HANDOFF.md, PROJECT_STATE.md,
+  CHANGELOG.md, docs/CODEGEN.md, docs/PROGRESS.md, docs/RESUME_PROMPT.md.
+
+## 2026-09-10 — R-321
+
+- Recorded contract in `.ai/CURRENT_TASK.yaml` and `.ai/tasks/R-321.md` (status in_progress → done).
+- `nextjs.py`:
+  - Added `_ACCORDION_COMPONENT` static template implementing accessible, reusable compound Accordion component (`apps/web/components/accordion.tsx`).
+  - Implemented `Accordion`, `AccordionItem`, `AccordionTrigger`, and `AccordionContent` compound subcomponents.
+  - Implemented `AccordionType` (`"single"` | `"multiple"`).
+  - Implemented `collapsible` boolean configuration (allows closing all sections in single mode).
+  - Implemented `AccordionVariant` (`"default"` | `"bordered"` | `"separated"`).
+  - Supported controlled (`value`, `onValueChange`) and uncontrolled (`defaultValue`) operation modes.
+  - Implemented WAI-ARIA 1.2 accordion semantics: `aria-expanded={isOpen}`, `aria-controls={contentId}`, dynamic `id`, `role="region"`, `aria-labelledby={triggerId}`, and `hidden={!isOpen}`.
+  - Implemented rotating chevron SVG indicator with `aria-hidden="true"` and `transform: rotate(180deg)`.
+  - Implemented disabled item support (`disabled` prop on `AccordionItem`).
+  - Exported `render_accordion_component` in `omnistackai_agent_engine.codegen` and registered in `NextjsWebAdapter.generate()`.
+  - Maintained 100% diff-invariance across `ir.description`.
+- Added `services/agent-engine/tests/test_accordion_component.py` with 11 comprehensive tests covering client directive, types, compound subcomponents, WAI-ARIA accordion attributes, single and multiple modes, collapsible behavior, animated chevron icon, disabled states, variants, adapter generation, and diff invariance.
+- `task verify` — 1,157 tests pass (11 new), 0 failures. `task lint`, `task security:quick`, `task env:check` pass.
+  `builder:demo minimal-blog` passes (58 files generated). `builder:demo rideshare-favourites` passes (55 files generated). 0 model calls.
+- Tracker: inserted R-321 Done row at `Phase_Roadmap!A9`; table `A4:M329`; 321 unique IDs (0 dupes);
+  110 Done, 1 Deferred, 210 Not Started; MVP 110/216 (50.9%); no `#REF!`; XLSX valid.
+- Left changes uncommitted in working tree per user instruction.
+- Updated CURRENT_TASK.yaml, tasks/R-321.md, PROJECT_STATE.yaml, HANDOFF.md, PROJECT_STATE.md,
+  CHANGELOG.md, docs/CODEGEN.md, docs/PROGRESS.md, docs/RESUME_PROMPT.md.
+
+## 2026-09-10 — R-320
+
+- Recorded contract in `.ai/CURRENT_TASK.yaml` and `.ai/tasks/R-320.md` (status in_progress → done).
+- `nextjs.py`:
+  - Added `_TOGGLE_COMPONENT` static template implementing accessible, reusable Toggle Switch component (`apps/web/components/toggle.tsx`).
+  - Implemented `Toggle` and `ToggleSwitch` alias/compound components.
+  - Implemented `ToggleSize` (`"sm"` | `"md"` | `"lg"`) with standardized track, thumb dimensions, and sliding offset.
+  - Supported controlled (`checked`, `onChange`) and uncontrolled (`defaultChecked`) operation modes.
+  - Supported optional `label` and `description` slots with automated ID binding (`aria-labelledby`, `aria-describedby`).
+  - Supported WAI-ARIA 1.2 switch semantics (`role="switch"`, `aria-checked`, `tabIndex`, focus ring).
+  - Supported full keyboard accessibility (`Space` and `Enter` keydown toggles with `preventDefault`).
+  - Supported hidden input for seamless HTML form submission when `name` prop is provided.
+  - Exported `render_toggle_component` in `omnistackai_agent_engine.codegen` and registered in `NextjsWebAdapter.generate()`.
+  - Maintained 100% diff-invariance across `ir.description`.
+- Added `services/agent-engine/tests/test_toggle_component.py` with 11 comprehensive tests covering client directive, types, subcomponents, WAI-ARIA switch attributes, sizes, keyboard handling, controlled/uncontrolled state, adapter generation, and diff invariance.
+- `task verify` — 1,146 tests pass (11 new), 0 failures. `task lint`, `task security:quick`, `task env:check` pass.
+  `builder:demo minimal-blog` passes (57 files generated). `builder:demo rideshare-favourites` passes (54 files generated). 0 model calls.
+- Tracker: inserted R-320 Done row at `Phase_Roadmap!A9`; table `A4:M328`; 320 unique IDs (0 dupes);
+  109 Done, 1 Deferred, 210 Not Started; MVP 109/215 (50.7%); no `#REF!`; XLSX valid.
+- Left changes uncommitted in working tree per user instruction.
+- Updated CURRENT_TASK.yaml, tasks/R-320.md, PROJECT_STATE.yaml, HANDOFF.md, PROJECT_STATE.md,
+  CHANGELOG.md, docs/CODEGEN.md, docs/PROGRESS.md, docs/RESUME_PROMPT.md.
+
+## 2026-09-10 — R-319
+
+- Recorded contract in `.ai/CURRENT_TASK.yaml` and `.ai/tasks/R-319.md` (status in_progress → done).
+- `nextjs.py`:
+  - Added `_AVATAR_COMPONENT` static template implementing accessible, reusable compound Avatar component (`apps/web/components/avatar.tsx`).
+  - Implemented `Avatar` and `AvatarGroup` compound subcomponents.
+  - Implemented `AvatarShape` (`"circle"` | `"rounded"` | `"square"`).
+  - Implemented `AvatarSize` (`"xs"` | `"sm"` | `"md"` | `"lg"` | `"xl"`).
+  - Implemented `AvatarStatus` (`"online"` | `"offline"` | `"busy"` | `"away"`) with status indicator dot and accessible status label.
+  - Implemented 3-tier fallback cascade: Image (with `onError` fallback) -> Initials (with deterministic background color hashing) -> generic SVG vector silhouette (`aria-hidden="true"`).
+  - Implemented `AvatarGroup` with overlapping negative margins, `max` display limit, and `+N` excess indicator badge.
+  - Exported `render_avatar_component` in `omnistackai_agent_engine.codegen` and registered in `NextjsWebAdapter.generate()`.
+  - Maintained 100% diff-invariance across `ir.description`.
+- Added `services/agent-engine/tests/test_avatar_component.py` with 11 comprehensive tests covering client directive, types, subcomponents, WAI-ARIA image/status attributes, shapes, sizes, presence status indicators, 3-tier fallback cascade, avatar group overflow, adapter registration, and diff invariance.
+- `task verify` — 1,135 tests pass (11 new), 0 failures. `task lint`, `task security:quick`, `task env:check` pass.
+  `builder:demo minimal-blog` passes (56 files generated). `builder:demo rideshare-favourites` passes (53 files generated). 0 model calls.
+- Tracker: inserted R-319 Done row at `Phase_Roadmap!A9`; table `A4:M327`; 319 unique IDs (0 dupes);
+  108 Done, 1 Deferred, 210 Not Started; MVP 108/214 (50.5%); no `#REF!`; XLSX valid.
+- Left changes uncommitted in working tree per user instruction.
+- Updated CURRENT_TASK.yaml, tasks/R-319.md, PROJECT_STATE.yaml, HANDOFF.md, PROJECT_STATE.md,
+  CHANGELOG.md, docs/CODEGEN.md, docs/PROGRESS.md, docs/RESUME_PROMPT.md.
+
+## 2026-09-10 — R-318
+
+- Recorded contract in `.ai/CURRENT_TASK.yaml` and `.ai/tasks/R-318.md` (status in_progress → done).
+- `nextjs.py`:
+  - Added `_DRAWER_COMPONENT` static template implementing accessible, reusable compound Drawer component (`apps/web/components/drawer.tsx`).
+  - Implemented `Drawer`, `DrawerHeader`, `DrawerTitle`, `DrawerDescription`, `DrawerContent`, and `DrawerFooter` compound subcomponents.
+  - Implemented `DrawerPosition` (`"left"` | `"right"` | `"top"` | `"bottom"`) with edge slide-in styling.
+  - Implemented `DrawerSize` (`"sm"` | `"md"` | `"lg"` | `"xl"` | `"full"`) with responsive width/height mappings.
+  - Supported WAI-ARIA modal dialog semantics (`role="dialog"`, `aria-modal="true"`, `aria-labelledby`, `aria-describedby`).
+  - Added backdrop overlay with click dismiss (`closeOnBackdropClick`).
+  - Added `Escape` keydown listener dismiss (`closeOnEscape`).
+  - Added accessible close button (`aria-label="Close drawer"`).
+  - Added body scroll locking (`document.body.style.overflow = "hidden"`).
+  - Exported `render_drawer_component` in `omnistackai_agent_engine.codegen` and registered in `NextjsWebAdapter.generate()`.
+  - Maintained 100% diff-invariance across `ir.description`.
+- Added `services/agent-engine/tests/test_drawer_component.py` with 11 comprehensive tests covering client directive, types, subcomponents, WAI-ARIA dialog attributes, positions, sizes, escape handling, backdrop click, close button, adapter registration, and diff invariance.
+- `task verify` — 1,124 tests pass (11 new), 0 failures. `task lint`, `task security:quick`, `task env:check` pass.
+  `builder:demo minimal-blog` passes (55 files generated). `builder:demo rideshare-favourites` passes (52 files generated). 0 model calls.
+- Tracker: inserted R-318 Done row at `Phase_Roadmap!A9`; table `A4:M326`; 318 unique IDs (0 dupes);
+  107 Done, 1 Deferred, 210 Not Started; MVP 107/213 (50.2%); no `#REF!`; XLSX valid.
+- Left changes uncommitted in working tree per user instruction.
+- Updated CURRENT_TASK.yaml, tasks/R-318.md, PROJECT_STATE.yaml, HANDOFF.md, PROJECT_STATE.md,
+  CHANGELOG.md, docs/CODEGEN.md, docs/PROGRESS.md, docs/RESUME_PROMPT.md.
+
+## 2026-09-10 — R-317
+
+- Recorded contract in `.ai/CURRENT_TASK.yaml` and `.ai/tasks/R-317.md` (status in_progress → done).
+- `nextjs.py`:
+  - Added `_SKELETON_COMPONENT` static template implementing accessible, reusable compound Skeleton component (`apps/web/components/skeleton.tsx`).
+  - Implemented `Skeleton`, `SkeletonText`, `SkeletonCard`, and `SkeletonTable` compound subcomponents.
+  - Implemented `SkeletonVariant` (`"text"` | `"circular"` | `"rectangular"` | `"rounded"`).
+  - Implemented `SkeletonAnimation` (`"pulse"` | `"wave"` | `"none"`).
+  - Supported WAI-ARIA loading semantics (`role="status"`, `aria-busy="true"`, `aria-live="polite"`).
+  - Added accessible visually hidden screen reader loading announcement (`<span style={srOnlyStyle}>{ariaLabel}</span>`).
+  - Added `@media (prefers-reduced-motion: reduce)` motion query handling to disable animation for users sensitive to motion.
+  - Exported `render_skeleton_component` in `omnistackai_agent_engine.codegen` and registered in `NextjsWebAdapter.generate()`.
+  - Maintained 100% diff-invariance across `ir.description`.
+- Added `services/agent-engine/tests/test_skeleton_component.py` with 10 comprehensive tests covering client directive, types, subcomponents, WAI-ARIA status/busy semantics, screen reader announcements, shape variants, dimensions, animation/reduced motion, adapter registration, and diff invariance.
+- `task verify` — 1,113 tests pass (10 new), 0 failures. `task lint`, `task security:quick`, `task env:check` pass.
+  `builder:demo minimal-blog` passes (54 files generated). `builder:demo rideshare-favourites` passes (51 files generated). 0 model calls.
+- Tracker: inserted R-317 Done row at `Phase_Roadmap!A9`; table `A4:M325`; 317 unique IDs (0 dupes);
+  106 Done, 1 Deferred, 210 Not Started; MVP 106/212 (50.0%); no `#REF!`; XLSX valid.
+- Left changes uncommitted in working tree per user instruction.
+- Updated CURRENT_TASK.yaml, tasks/R-317.md, PROJECT_STATE.yaml, HANDOFF.md, PROJECT_STATE.md,
+  CHANGELOG.md, docs/CODEGEN.md, docs/PROGRESS.md, docs/RESUME_PROMPT.md.
+
+## 2026-09-10 — R-316
+
+- Recorded contract in `.ai/CURRENT_TASK.yaml` and `.ai/tasks/R-316.md` (status in_progress → done).
+- `nextjs.py`:
+  - Added `_ALERT_COMPONENT` static template implementing accessible, reusable compound Alert component (`apps/web/components/alert.tsx`).
+  - Implemented `Alert`, `AlertTitle`, and `AlertDescription` subcomponents.
+  - Implemented `AlertVariant` (`"info"` | `"success"` | `"warning"` | `"error"`).
+  - Supported WAI-ARIA alert and status semantics (`role="alert"` for error, `role="status"` for info/success/warning; `aria-live="assertive"` or `"polite"`).
+  - Added accessible SVG vector icons for each variant with `aria-hidden="true"`.
+  - Added dismissible state with accessible close button (`aria-label="Dismiss alert"`) and `onDismiss` callback.
+  - Added optional `action` slot for contextual actions.
+  - Exported `render_alert_component` in `omnistackai_agent_engine.codegen` and registered in `NextjsWebAdapter.generate()`.
+  - Maintained 100% diff-invariance across `ir.description`.
+- Added `services/agent-engine/tests/test_alert_component.py` with 10 comprehensive tests covering types, subcomponents, WAI-ARIA semantics, vector icons, dismissible behavior, variant styling, action slot, adapter registration, diff invariance, and example IR project generation.
+- `task verify` — 1,103 tests pass (10 new), 0 failures. `task lint`, `task security:quick`, `task env:check` pass.
+  `builder:demo minimal-blog` passes (53 files generated). `builder:demo rideshare-favourites` passes (50 files generated). 0 model calls.
+- Tracker: inserted R-316 Done row at `Phase_Roadmap!A9`; table `A4:M324`; 316 unique IDs (0 dupes);
+  105 Done, 1 Deferred, 210 Not Started; MVP 105/210 (50.0%); no `#REF!`; XLSX valid.
+- Left changes uncommitted in working tree per user instruction.
+- Updated CURRENT_TASK.yaml, tasks/R-316.md, PROJECT_STATE.yaml, HANDOFF.md, PROJECT_STATE.md,
+  CHANGELOG.md, docs/CODEGEN.md, docs/PROGRESS.md, docs/RESUME_PROMPT.md.
+
 ## 2026-09-10 — R-315
 
 - Recorded contract in `.ai/CURRENT_TASK.yaml` and `.ai/tasks/R-315.md` (status in_progress → done).
@@ -2253,3 +2841,44 @@
   1..300 contiguous, table `A4:M300`, Dashboard ranges through row 300, no `#REF!`, XLSX valid. Recounted
   from the workbook: 292 unique IDs (0 dupes), 81 Done, 1 Deferred, 210 Not Started; MVP 81/187 (43.3%);
   R-010..R-219 backlog intact.
+
+## R-334 – Generated Accessible Reusable Stepper / Multi-step Wizard Component
+- **Date**: 2026-09-11
+- **Status**: DONE
+- **Tests**: 1329 total (19 new in test_stepper_component.py); all passing
+- **Files changed**:
+  - `services/agent-engine/src/omnistackai_agent_engine/codegen/nextjs.py`: Added `_STEPPER_COMPONENT` template (~540 lines) and `render_stepper_component()` function; registered `components/stepper.tsx` in `NextjsWebAdapter.generate()`.
+  - `services/agent-engine/src/omnistackai_agent_engine/codegen/__init__.py`: Exported `render_stepper_component`.
+  - `services/agent-engine/tests/test_stepper_component.py`: 19 unit tests (NEW).
+- **Gates**: task verify ✓ | task lint ✓ | task security:quick ✓ | builder:demo minimal-blog (71 files) ✓ | builder:demo rideshare-favourites (68 files) ✓
+
+## R-335 – Generated Accessible Reusable File Upload / Dropzone Component
+- **Date**: 2026-09-11
+- **Status**: DONE
+- **Tests**: 1349 total (20 new in test_file_upload_component.py); all passing
+- **Files changed**:
+  - `services/agent-engine/src/omnistackai_agent_engine/codegen/nextjs.py`: Added `_FILE_UPLOAD_COMPONENT` (~670 lines) and `render_file_upload_component()`; registered `components/file-upload.tsx` in `NextjsWebAdapter.generate()`.
+  - `services/agent-engine/src/omnistackai_agent_engine/codegen/__init__.py`: Exported `render_file_upload_component`.
+  - `services/agent-engine/tests/test_file_upload_component.py`: 20 unit tests (NEW).
+- **Gates**: task verify ✓ | task lint ✓ | task security:quick ✓ | builder:demo minimal-blog (72 files) ✓ | builder:demo rideshare-favourites (69 files) ✓
+
+## R-336 – Generated Accessible Reusable Timeline / Activity Feed Component
+- **Date**: 2026-09-11
+- **Status**: DONE
+- **Tests**: 1369 total (20 new in test_timeline_component.py); all passing
+- **Files changed**:
+  - `services/agent-engine/src/omnistackai_agent_engine/codegen/nextjs.py`: Added `_TIMELINE_COMPONENT` template + `render_timeline_component()`; registered `components/timeline.tsx` in `NextjsWebAdapter.generate()`.
+  - `services/agent-engine/src/omnistackai_agent_engine/codegen/__init__.py`: Exported `render_timeline_component`.
+  - `services/agent-engine/tests/test_timeline_component.py`: 20 unit tests (NEW).
+- **Gates**: task verify ✓ | task lint ✓ | task security:quick ✓ | builder:demo minimal-blog (73 files) ✓ | builder:demo rideshare-favourites (70 files) ✓
+
+## R-337 – Generated Accessible Futuristic Reusable Stat & Metric KPI Card Component
+- **Date**: 2026-09-11
+- **Status**: DONE
+- **Tests**: 1384 total (15 new in test_stat_card_component.py); all passing
+- **Files changed**:
+  - `services/agent-engine/src/omnistackai_agent_engine/codegen/nextjs.py`: Added `_STAT_CARD_COMPONENT` static template (~520 lines) and `render_stat_card_component()`; registered `components/stat-card.tsx` in `NextjsWebAdapter.generate()`.
+  - `services/agent-engine/src/omnistackai_agent_engine/codegen/__init__.py`: Exported `render_stat_card_component`.
+  - `services/agent-engine/tests/test_stat_card_component.py`: 15 unit tests (NEW).
+- **Gates**: task verify ✓ | task lint ✓ | task security:quick ✓ | builder:demo minimal-blog (74 files) ✓ | builder:demo rideshare-favourites (71 files) ✓
+
