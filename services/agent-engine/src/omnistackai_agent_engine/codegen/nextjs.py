@@ -1251,6 +1251,7 @@ def _subcol_controls(sub: "SubcollectionInfo", s_var: str) -> list[str]:
         "                    >",
         "                      <input",
         '                        type="search"',
+        f'                        aria-label="Search {child_lower}"',
         f'                        value={{{search_state}}}',
         f'                        onChange={{(e) => {search_setter}(e.target.value)}}',
         f'                        placeholder="Search {child_lower}..."',
@@ -1295,7 +1296,7 @@ def _subcol_controls(sub: "SubcollectionInfo", s_var: str) -> list[str]:
                     '                      style={{ padding: "4px 8px", border: "1px solid #cbd5e1", borderRadius: 4, fontSize: 12, background: "#fff" }}',
                     "                    >",
                     f'                      <option value="all">All {label}s</option>',
-                ])
+                    ])
                 for option in options:
                     lines.append(f'                      <option value="{option}">{_title_case(option)}</option>')
                 lines.append("                    </select>")
@@ -1319,7 +1320,7 @@ def _subcol_filtered_empty(sub: "SubcollectionInfo", s_var: str) -> list[str]:
     return [
         f"                {{{s_var}.data && {s_var}.data.length === 0 && Object.keys({s_var}.params.filters ?? {{}}).length > 0 && (",
         '                  <div style={{ padding: 18, textAlign: "center", color: "#64748b", fontSize: 14, background: "#f8fafc", borderRadius: 6, display: "flex", flexDirection: "column", alignItems: "center", gap: 8 }}>',
-        f"                    <div>No {sub.child_plural} match the active filter criteria.</div>",
+        f"                    <div role=\"status\">No {sub.child_plural} match the active filter criteria.</div>",
         f'                    <button type="button" onClick={{{s_var}.clearFilters}} style={{{{ padding: "5px 10px", border: "1px solid #cbd5e1", background: "#fff", color: "#2563eb", borderRadius: 4, fontSize: 12, cursor: "pointer" }}}}>Clear filters</button>',
         "                  </div>",
         "                )}",
@@ -1335,6 +1336,7 @@ def _subcol_pagination(s_var: str) -> list[str]:
         "                    <button",
         f"                      onClick={{() => {s_var}.setPage({s_var}.page - 1)}}",
         f"                      disabled={{{s_var}.page <= 1 || {s_var}.loading}}",
+        '                      aria-label="Previous page"',
         f'                      style={{{{ padding: "4px 10px", border: "1px solid #cbd5e1", background: "#fff", color: "#334155", borderRadius: 4, fontSize: 12, cursor: ({s_var}.page <= 1 || {s_var}.loading) ? "default" : "pointer" }}}}',
         "                    >",
         "                      Previous",
@@ -1343,6 +1345,7 @@ def _subcol_pagination(s_var: str) -> list[str]:
         "                    <button",
         f"                      onClick={{() => {s_var}.setPage({s_var}.page + 1)}}",
         f"                      disabled={{{s_var}.page >= {s_var}.totalPages || {s_var}.loading}}",
+        '                      aria-label="Next page"',
         f'                      style={{{{ padding: "4px 10px", border: "1px solid #cbd5e1", background: "#fff", color: "#334155", borderRadius: 4, fontSize: 12, cursor: ({s_var}.page >= {s_var}.totalPages || {s_var}.loading) ? "default" : "pointer" }}}}',
         "                    >",
         "                      Next",
@@ -1774,6 +1777,7 @@ def _collection_screen_page(screen: Screen, entity: Entity, ir: ApplicationIR, o
         "        >",
         "          <input",
         '            type="search"',
+        f'            aria-label="Search {plural}"',
         "            value={searchInput}",
         "            onChange={(e) => {",
         "              setSearchInput(e.target.value);",
@@ -1872,7 +1876,7 @@ def _collection_screen_page(screen: Screen, entity: Entity, ir: ApplicationIR, o
 
     lines.extend([
         "      {error && (",
-        '        <div style={{ padding: "12px 16px", background: "#fef2f2", border: "1px solid #fecaca", borderRadius: 8, color: "#991b1b", marginBottom: 20, display: "flex", justifyContent: "space-between", alignItems: "center" }}>',
+        '        <div role="alert" aria-live="assertive" style={{ padding: "12px 16px", background: "#fef2f2", border: "1px solid #fecaca", borderRadius: 8, color: "#991b1b", marginBottom: 20, display: "flex", justifyContent: "space-between", alignItems: "center" }}>',
         "          <span>Error: {error.message}</span>",
         '          <button onClick={() => refetch()} style={{ padding: "4px 8px", background: "#991b1b", color: "#fff", border: "none", borderRadius: 4, cursor: "pointer", fontSize: 12 }}>Retry</button>',
         "        </div>",
@@ -1954,7 +1958,7 @@ def _collection_screen_page(screen: Screen, entity: Entity, ir: ApplicationIR, o
     for f in display_fields:
         col_label = _title_case(f.name)
         lines.extend([
-            '              <th onClick={() => setSort("' + f.name + '")} style={{ padding: "12px 16px", fontWeight: 600, color: "#475569", cursor: "pointer", userSelect: "none" }}>',
+            '              <th onClick={() => setSort("' + f.name + '")} aria-sort={params.sort === "' + f.name + '" ? (params.order === "desc" ? "descending" : "ascending") : "none"} style={{ padding: "12px 16px", fontWeight: 600, color: "#475569", cursor: "pointer", userSelect: "none" }}>',
             '                ' + col_label + ' {params.sort === "' + f.name + '" ? (params.order === "desc" ? "↓" : "↑") : ""}',
             "              </th>",
         ])
@@ -1994,7 +1998,7 @@ def _collection_screen_page(screen: Screen, entity: Entity, ir: ApplicationIR, o
         lines.extend([
             "                  {activeFilterCount > 0 ? (",
             '                    <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 12 }}>',
-            f"                      <div>No {plural} match the active filter criteria.</div>",
+            f"                      <div role=\"status\">No {plural} match the active filter criteria.</div>",
             "                      <button",
             '                        type="button"',
             "                        onClick={clearFilters}",
@@ -2010,7 +2014,7 @@ def _collection_screen_page(screen: Screen, entity: Entity, ir: ApplicationIR, o
 
     lines.extend([
         '                    <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 12 }}>',
-        f"                      <div>No {plural} matching &ldquo;{{searchInput}}&rdquo;.</div>",
+        f"                      <div role=\"status\">No {plural} matching &ldquo;{{searchInput}}&rdquo;.</div>",
         "                      <button",
         '                        type="button"',
         "                        onClick={() => {",
@@ -2028,7 +2032,7 @@ def _collection_screen_page(screen: Screen, entity: Entity, ir: ApplicationIR, o
         lines.extend([
             "                  ) : (",
             '                    <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 12 }}>',
-            f"                      <div>No {plural} found yet.</div>",
+            f"                      <div role=\"status\">No {plural} found yet.</div>",
             '                      <Link',
             f'                        href="/{form_screen.id}"',
             '                        style={{ display: "inline-block", padding: "8px 16px", background: "#2563eb", color: "#fff", borderRadius: 6, fontSize: 14, textDecoration: "none", fontWeight: 500 }}',
@@ -2041,7 +2045,7 @@ def _collection_screen_page(screen: Screen, entity: Entity, ir: ApplicationIR, o
     else:
         lines.extend([
             "                  ) : (",
-            f"                    <div>No {plural} found.</div>",
+            f"                    <div role=\"status\">No {plural} found.</div>",
             "                  )}",
         ])
 
@@ -2146,7 +2150,7 @@ def _collection_screen_page(screen: Screen, entity: Entity, ir: ApplicationIR, o
         '        <span style={{ fontSize: 14, color: "#64748b" }}>',
         '          Page {page} of {totalPages} ({total} total)',
         "        </span>",
-        '        <div style={{ display: "flex", alignItems: "center", gap: 12 }}>',
+        '        <nav aria-label="Pagination" style={{ display: "flex", alignItems: "center", gap: 12 }}>',
         '          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>',
         '            <label htmlFor="pageSizeSelect" style={{ fontSize: 13, color: "#64748b" }}>',
         "              Per page:",
@@ -2168,6 +2172,7 @@ def _collection_screen_page(screen: Screen, entity: Entity, ir: ApplicationIR, o
         "            <button",
         "              onClick={() => setPage(page - 1)}",
         "              disabled={page <= 1 || loading}",
+        '              aria-label="Previous page"',
         '              style={{ padding: "6px 12px", border: "1px solid #cbd5e1", borderRadius: 6, background: page <= 1 ? "#f1f5f9" : "#fff", color: page <= 1 ? "#94a3b8" : "#0f172a", fontSize: 14, cursor: page <= 1 ? "default" : "pointer" }}',
         "            >",
         "              Previous",
@@ -2175,12 +2180,13 @@ def _collection_screen_page(screen: Screen, entity: Entity, ir: ApplicationIR, o
         "            <button",
         "              onClick={() => setPage(page + 1)}",
         "              disabled={page >= totalPages || loading}",
+        '              aria-label="Next page"',
         '              style={{ padding: "6px 12px", border: "1px solid #cbd5e1", borderRadius: 6, background: page >= totalPages ? "#f1f5f9" : "#fff", color: page >= totalPages ? "#94a3b8" : "#0f172a", fontSize: 14, cursor: page >= totalPages ? "default" : "pointer" }}',
         "            >",
         "              Next",
         "            </button>",
         "          </div>",
-        "        </div>",
+        "        </nav>",
         "      </footer>",
     ])
 
@@ -2299,7 +2305,7 @@ def _collection_screen_page(screen: Screen, entity: Entity, ir: ApplicationIR, o
                 "                  </div>",
                 "                )}",
                 f"                {{{s_var}.error && (",
-                f'                  <div style={{{{ padding: "8px 12px", background: "#fef2f2", border: "1px solid #fecaca", borderRadius: 6, color: "#991b1b", fontSize: 13, marginBottom: 12, display: "flex", justifyContent: "space-between", alignItems: "center", gap: 8 }}}}>',
+                f'                  <div role="alert" aria-live="assertive" style={{{{ padding: "8px 12px", background: "#fef2f2", border: "1px solid #fecaca", borderRadius: 6, color: "#991b1b", fontSize: 13, marginBottom: 12, display: "flex", justifyContent: "space-between", alignItems: "center", gap: 8 }}}}>',
                 f"                    <span>Error: {{{s_var}.error.message}}</span>",
                 f'                    <button onClick={{() => {s_var}.refetch()}} style={{{{ padding: "2px 8px", background: "#991b1b", color: "#fff", border: "none", borderRadius: 4, cursor: "pointer", fontSize: 12 }}}}>Retry</button>',
                 "                  </div>",
@@ -2309,7 +2315,7 @@ def _collection_screen_page(screen: Screen, entity: Entity, ir: ApplicationIR, o
                 c_name = sub.child_entity.name
                 lines.extend([
                     f"                {{delete{c_name}Error && (",
-                    f'                  <div style={{{{ padding: "8px 12px", background: "#fef2f2", border: "1px solid #fecaca", borderRadius: 6, color: "#991b1b", fontSize: 13, marginBottom: 12 }}}}>Error deleting {c_name.lower()}: {{delete{c_name}Error.message}}</div>',
+                    f'                  <div role="alert" aria-live="assertive" style={{{{ padding: "8px 12px", background: "#fef2f2", border: "1px solid #fecaca", borderRadius: 6, color: "#991b1b", fontSize: 13, marginBottom: 12 }}}}>Error deleting {c_name.lower()}: {{delete{c_name}Error.message}}</div>',
                     "                )}",
                 ])
             lines.extend(_subcol_controls(sub, s_var))
@@ -2323,7 +2329,7 @@ def _collection_screen_page(screen: Screen, entity: Entity, ir: ApplicationIR, o
             if child_form:
                 lines.extend([
                     '                  <div style={{ padding: 24, textAlign: "center", color: "#64748b", fontSize: 14, background: "#f8fafc", borderRadius: 6, display: "flex", flexDirection: "column", alignItems: "center", gap: 8 }}>',
-                    f'                    <div>No {sub.child_plural.lower()} found for this {name.lower()}.</div>',
+                    f'                    <div role="status">No {sub.child_plural.lower()} found for this {name.lower()}.</div>',
                     '                    <Link',
                     f"                      href={{`/{child_form.id}?{sub.id_param}=${{selectedId}}`}}",
                     '                      style={{ display: "inline-block", padding: "6px 12px", background: "#2563eb", color: "#fff", borderRadius: 4, fontSize: 12, textDecoration: "none", fontWeight: 500 }}',
@@ -2334,7 +2340,7 @@ def _collection_screen_page(screen: Screen, entity: Entity, ir: ApplicationIR, o
                 ])
             else:
                 lines.append(
-                    f'                  <div style={{{{ padding: 16, textAlign: "center", color: "#64748b", fontSize: 14, background: "#f8fafc", borderRadius: 6 }}}}>No {sub.child_plural.lower()} found for this {name.lower()}.</div>'
+                    f'                  <div role="status" style={{{{ padding: 16, textAlign: "center", color: "#64748b", fontSize: 14, background: "#f8fafc", borderRadius: 6 }}}}>No {sub.child_plural.lower()} found for this {name.lower()}.</div>'
                 )
             lines.append("                )}")
             # R-291: deletable subcollections render the optimistic-delete-filtered child list.
@@ -2848,7 +2854,7 @@ def _form_screen_page(screen: Screen, entity: Entity, ir: ApplicationIR, ops: se
     if can_update:
         lines.extend([
             "      {(submitError || (isEdit && updateError)) && Object.keys(fieldErrors).length === 0 && (",
-            '        <div style={{ padding: "12px 16px", background: "#fef2f2", border: "1px solid #fecaca", color: "#991b1b", borderRadius: 8, marginBottom: 20 }}>',
+            '        <div role="alert" aria-live="assertive" style={{ padding: "12px 16px", background: "#fef2f2", border: "1px solid #fecaca", color: "#991b1b", borderRadius: 8, marginBottom: 20 }}>',
             "          Error: {((isEdit ? updateError : submitError) || submitError)?.message}",
             "        </div>",
             "      )}",
@@ -2856,7 +2862,7 @@ def _form_screen_page(screen: Screen, entity: Entity, ir: ApplicationIR, ops: se
     else:
         lines.extend([
             "      {submitError && Object.keys(fieldErrors).length === 0 && (",
-            '        <div style={{ padding: "12px 16px", background: "#fef2f2", border: "1px solid #fecaca", color: "#991b1b", borderRadius: 8, marginBottom: 20 }}>',
+            '        <div role="alert" aria-live="assertive" style={{ padding: "12px 16px", background: "#fef2f2", border: "1px solid #fecaca", color: "#991b1b", borderRadius: 8, marginBottom: 20 }}>',
             "          Error: {submitError.message}",
             "        </div>",
             "      )}",
@@ -3404,7 +3410,7 @@ def _detail_screen_page(screen: Screen, entity: Entity, ir: ApplicationIR, ops: 
             "        </div>",
             "      )}",
             "      {error && (",
-            '        <div style={{ padding: "12px 16px", background: "#fef2f2", border: "1px solid #fecaca", borderRadius: 8, color: "#991b1b", marginBottom: 20, display: "flex", justifyContent: "space-between", alignItems: "center", gap: 12 }}>',
+            '        <div role="alert" aria-live="assertive" style={{ padding: "12px 16px", background: "#fef2f2", border: "1px solid #fecaca", borderRadius: 8, color: "#991b1b", marginBottom: 20, display: "flex", justifyContent: "space-between", alignItems: "center", gap: 12 }}>',
             f"          <span>Error loading {name}: {{error.message}}</span>",
             '          <button onClick={() => refetch()} style={{ padding: "4px 8px", background: "#991b1b", color: "#fff", border: "none", borderRadius: 4, cursor: "pointer", fontSize: 12 }}>Retry</button>',
             "        </div>",
@@ -3599,7 +3605,7 @@ def _detail_screen_page(screen: Screen, entity: Entity, ir: ApplicationIR, ops: 
                 "                  </div>",
                 "                )}",
                 f"                {{{s_var}.error && (",
-                f'                  <div style={{{{ padding: "8px 12px", background: "#fef2f2", border: "1px solid #fecaca", borderRadius: 6, color: "#991b1b", fontSize: 13, marginBottom: 12, display: "flex", justifyContent: "space-between", alignItems: "center", gap: 8 }}}}>',
+                f'                  <div role="alert" aria-live="assertive" style={{{{ padding: "8px 12px", background: "#fef2f2", border: "1px solid #fecaca", borderRadius: 6, color: "#991b1b", fontSize: 13, marginBottom: 12, display: "flex", justifyContent: "space-between", alignItems: "center", gap: 8 }}}}>',
                 f"                    <span>Error: {{{s_var}.error.message}}</span>",
                 f'                    <button onClick={{() => {s_var}.refetch()}} style={{{{ padding: "2px 8px", background: "#991b1b", color: "#fff", border: "none", borderRadius: 4, cursor: "pointer", fontSize: 12 }}}}>Retry</button>',
                 "                  </div>",
@@ -3609,7 +3615,7 @@ def _detail_screen_page(screen: Screen, entity: Entity, ir: ApplicationIR, ops: 
                 c_name = sub.child_entity.name
                 lines.extend([
                     f"                {{delete{c_name}Error && (",
-                    f'                  <div style={{{{ padding: "8px 12px", background: "#fef2f2", border: "1px solid #fecaca", borderRadius: 6, color: "#991b1b", fontSize: 13, marginBottom: 12 }}}}>Error deleting {c_name.lower()}: {{delete{c_name}Error.message}}</div>',
+                    f'                  <div role="alert" aria-live="assertive" style={{{{ padding: "8px 12px", background: "#fef2f2", border: "1px solid #fecaca", borderRadius: 6, color: "#991b1b", fontSize: 13, marginBottom: 12 }}}}>Error deleting {c_name.lower()}: {{delete{c_name}Error.message}}</div>',
                     "                )}",
                 ])
             lines.extend(_subcol_controls(sub, s_var))
@@ -3623,7 +3629,7 @@ def _detail_screen_page(screen: Screen, entity: Entity, ir: ApplicationIR, ops: 
             if child_form:
                 lines.extend([
                     '                  <div style={{ padding: 24, textAlign: "center", color: "#64748b", fontSize: 14, background: "#f8fafc", borderRadius: 6, display: "flex", flexDirection: "column", alignItems: "center", gap: 8 }}>',
-                    f'                    <div>No {sub.child_plural.lower()} found for this {name.lower()}.</div>',
+                    f'                    <div role="status">No {sub.child_plural.lower()} found for this {name.lower()}.</div>',
                     '                    <Link',
                     f"                      href={{`/{child_form.id}?{sub.id_param}=${{selectedId}}`}}",
                     '                      style={{ display: "inline-block", padding: "6px 12px", background: "#2563eb", color: "#fff", borderRadius: 4, fontSize: 12, textDecoration: "none", fontWeight: 500 }}',
@@ -3634,7 +3640,7 @@ def _detail_screen_page(screen: Screen, entity: Entity, ir: ApplicationIR, ops: 
                 ])
             else:
                 lines.append(
-                    f'                  <div style={{{{ padding: 16, textAlign: "center", color: "#64748b", fontSize: 14, background: "#f8fafc", borderRadius: 6 }}}}>No {sub.child_plural.lower()} found for this {name.lower()}.</div>'
+                    f'                  <div role="status" style={{{{ padding: 16, textAlign: "center", color: "#64748b", fontSize: 14, background: "#f8fafc", borderRadius: 6 }}}}>No {sub.child_plural.lower()} found for this {name.lower()}.</div>'
                 )
             lines.append("                )}")
             # R-291: deletable subcollections render the optimistic-delete-filtered child list.
