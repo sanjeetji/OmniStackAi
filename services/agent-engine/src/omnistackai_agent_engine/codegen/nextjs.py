@@ -1506,11 +1506,11 @@ def _collection_screen_page(screen: Screen, entity: Entity, ir: ApplicationIR, o
     if can_delete:
         hooks_import += f", useDelete{name}"
 
-    react_imports = "useEffect, useState"
     lines: list[str] = [
         '"use client";',
         "",
-        f'import {{ {react_imports} }} from "react";',
+        'import { useEffect, useState } from "react";',
+        'import { useRef } from "react";',
         'import Link from "next/link";',
         'import { useToast } from "../components/toast";',
         f'import {{ {hooks_import} }} from "../lib/hooks";',
@@ -1667,6 +1667,7 @@ def _collection_screen_page(screen: Screen, entity: Entity, ir: ApplicationIR, o
         ])
 
     lines.append('  const [searchInput, setSearchInput] = useState(params.q ?? "");')
+    lines.append('  const searchInputRef = useRef<HTMLInputElement>(null);')
     lines.extend([
         "  // R-280: debounce committed search so typing does not fetch on every keystroke.",
         "  useEffect(() => {",
@@ -1679,7 +1680,30 @@ def _collection_screen_page(screen: Screen, entity: Entity, ir: ApplicationIR, o
         "  useEffect(() => {",
         '    setSearchInput(params.q ?? "");',
         "  }, [params.q]);",
+        "  // R-297: collection keyboard navigation & shortcuts ('/' to focus search, 'Escape' to clear).",
+        "  useEffect(() => {",
+        "    const handleKeyDown = (e: KeyboardEvent) => {",
+        '      const target = e.target as HTMLElement | null;',
+        '      const isEditable = target && (target.tagName === "INPUT" || target.tagName === "TEXTAREA" || target.tagName === "SELECT" || target.isContentEditable);',
+        '      if (e.key === "/" && !isEditable) {',
+        "        e.preventDefault();",
+        "        searchInputRef.current?.focus();",
+        '      } else if (e.key === "Escape") {',
+        "        if (document.activeElement === searchInputRef.current) {",
+        '          setSearchInput("");',
+        '          setSearch("");',
+        "          searchInputRef.current?.blur();",
+        *(["        } else if (!isEditable && activeFilterCount > 0) {", "          clearFilters();"] if filterable_fields else []),
+        "        }",
+        "      }",
+        "    };",
+        '    window.addEventListener("keydown", handleKeyDown);',
+        '    return () => window.removeEventListener("keydown", handleKeyDown);',
     ])
+    shortcut_deps = ["setSearch"]
+    if filterable_fields:
+        shortcut_deps.extend(["activeFilterCount", "clearFilters"])
+    lines.append(f'  }}, [{", ".join(shortcut_deps)}]);')
 
     if has_subcollections:
         lines.append('  const [selectedId, setSelectedId] = useState<string | null>(null);')
@@ -1777,6 +1801,7 @@ def _collection_screen_page(screen: Screen, entity: Entity, ir: ApplicationIR, o
         "        >",
         "          <input",
         '            type="search"',
+        "            ref={searchInputRef}",
         f'            aria-label="Search {plural}"',
         "            value={searchInput}",
         "            onChange={(e) => {",
