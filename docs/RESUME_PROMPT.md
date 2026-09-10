@@ -32,8 +32,9 @@ SOURCE OF TRUTH — READ THESE FIRST, IN ORDER (do not trust this prompt over th
 6. .ai/WORK_LOG.md                (chronological history)
 7. R_&_D/OmniStackAI_Implementation_Brief_v6.md  (normative architecture; Sections 77 & 92 are
    NON-NEGOTIABLE; also follow 25, 26, 27, 74, 75, 83, 84, 85, 91)
-8. R_&_D/OmniStackAI_Execution_Tracker_v6.xlsx, sheet `Phase_Roadmap` (task rows + status)
-9. docs/MODEL_PROVIDER.md, docs/APPLICATION_IR.md, docs/CODEGEN.md, docs/GIT_SERVICE.md
+8. R_&_D/OmniStackAI_OS_Master_Architecture_Specification.md (AI Software Creation OS Master Architecture Spec & 3-Plane Model)
+9. R_&_D/OmniStackAI_Execution_Tracker_v6.xlsx, sheet `Phase_Roadmap` (task rows + status)
+10. docs/MODEL_PROVIDER.md, docs/APPLICATION_IR.md, docs/CODEGEN.md, docs/GIT_SERVICE.md
 
 START PROTOCOL
 - Run: `task doctor` (needs pnpm+ripgrep; restore via corepack/brew if missing), `task verify`,

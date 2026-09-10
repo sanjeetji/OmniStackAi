@@ -4065,3 +4065,12 @@ No production label until the blocking production gates have evidence. Add expli
 13. Provider failure/resume cannot duplicate external side effects.
 14. Monorepo remains the default until measured boundaries justify a split.
 15. Optimize **cost per successful accepted verified change**, not tokens alone.
+
+## 93. Evolutionary Addendum — AI Software Creation Operating System Specification
+
+As the platform evolves beyond individual module generation into a comprehensive software creation operating system (competing with and outperforming tools like Bolt, Lovable, v0, Dyad, and Emergent), the system architecture expands across three isolated planes (Control, Execution, Deployment), Product Intelligence ecosystem scoping, Style-DNA design variation, and tiered sandboxing.
+
+The canonical, implementation-grade architectural specification governing this evolution is preserved in:
+`R_&_D/OmniStackAI_OS_Master_Architecture_Specification.md`
+
+All architectural invariants from Sections 77 and 92 remain strictly in effect and normative.
