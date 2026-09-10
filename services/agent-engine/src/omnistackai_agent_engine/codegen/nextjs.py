@@ -3256,7 +3256,51 @@ def _detail_screen_page(screen: Screen, entity: Entity, ir: ApplicationIR, ops: 
         "    URL.revokeObjectURL(url);",
         '    toast.info("Exported JSON successfully");',
         "  };",
+        "  // R-298: detail screen keyboard navigation & shortcuts (prev/next record, edit mode, deselect).",
+        "  useEffect(() => {",
+        "    const handleKeyDown = (e: KeyboardEvent) => {",
+        '      const target = e.target as HTMLElement | null;',
+        '      const isEditable = target && (target.tagName === "INPUT" || target.tagName === "TEXTAREA" || target.tagName === "SELECT" || target.isContentEditable);',
+        "      if (isEditable) return;",
     ])
+    if can_list:
+        lines.extend([
+            '      if (e.key === "ArrowLeft" || e.key === "[") {',
+            "        if (prevItem) {",
+            "          e.preventDefault();",
+            "          handleSelectId(prevItem.id);",
+            "        }",
+            '      } else if (e.key === "ArrowRight" || e.key === "]") {',
+            "        if (nextItem) {",
+            "          e.preventDefault();",
+            "          handleSelectId(nextItem.id);",
+            "        }",
+            "      }",
+        ])
+    if can_edit and form_screen:
+        lines.extend([
+            '      if (e.key === "e" || e.key === "E") {',
+            "        if (selectedId && typeof window !== \"undefined\") {",
+            "          e.preventDefault();",
+            f'          window.location.href = `/{form_screen.id}?id=${{selectedId}}`;',
+            "        }",
+            "      }",
+        ])
+    lines.extend([
+        '      if (e.key === "Escape") {',
+        "        if (selectedId) {",
+        "          e.preventDefault();",
+        "          handleSelectId(null);",
+        "        }",
+        "      }",
+        "    };",
+        '    window.addEventListener("keydown", handleKeyDown);',
+        '    return () => window.removeEventListener("keydown", handleKeyDown);',
+    ])
+    detail_kbd_deps = ["selectedId"]
+    if can_list:
+        detail_kbd_deps.extend(["prevItem", "nextItem"])
+    lines.append(f'  }}, [{", ".join(detail_kbd_deps)}]);')
 
     if has_subcollections:
         if len(subcollections) > 1:
