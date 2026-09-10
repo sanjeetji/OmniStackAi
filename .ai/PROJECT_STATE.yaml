@@ -2,19 +2,21 @@ schema_version: 1
 project: OmniStackAI
 phase: BASIC/MVP
 founder_stage: 0
-current_task: R-302
+current_task: R-303
 current_status: done
 branch: main
 last_completed_task:
-  task_id: R-302
-  title: "Generated Collection Screen Boolean & Enum Visual Status Badges & Detail Screen One-Click Copy-to-Clipboard Affordances"
+  task_id: R-303
+  title: "Generated Dashboard Overview Interactive Entity Links, Operational Health Badge & Metrics Chips"
   verification: >-
-    task verify (935 agent-engine tests, 7 new focused R-302 tests); elevated visual hierarchy, data readability,
-    and operational workflow across generated Next.js web application screens: collection table cells and subcollection
-    cards render styled visual status pill badges for boolean fields (emerald Yes / slate No) and categorical badges for
-    enum fields (blue pill badge with formatted text value); detail screens render an accessible one-click Copy ID button
-    beside the record heading and inline copy affordance on ID fields in definition list with toast feedback and fallback;
-    100% diff-invariant across ir.description; task lint + security:quick + env:check and both builder demos pass; 0 model calls
+    task verify (944 agent-engine tests, 9 new focused R-303 tests); elevated navigation flow, operational trust,
+    and metrics awareness across generated Next.js web application dashboard overview pages (app/page.tsx): listable entity
+    summary cards dynamically link directly to their matching collection screen when available (with uppercase entity tag,
+    live total count, and interactive View all affordance) or render as styled summary cards when unlinked; overview header
+    renders a live operational health badge (System Operational with green indicator dot) alongside summary metrics counters
+    for total entities and total screens; screen nav cards render visual navigation arrow indicators (&rarr;); clean zero-state
+    fallback when neither entities nor screens are configured; 100% diff-invariant across ir.description; task lint + security:quick +
+    env:check and both builder demos pass; 0 model calls
   result: pass
 control_plane_database: postgresql
 model_routing_mode: balanced
@@ -26,9 +28,9 @@ product_direction: >-
   framework adapter contract -> Next.js adapter -> Git service -> preview/sandbox (needs cloud env).
 id_note: >-
   Workbook backlog owns R-010..R-219. Founder-requested tasks use IDs after R-219: R-220..R-223 done,
-  R-224 Next.js deferred (env-blocked), R-225..R-302 done. Continue from R-303.
+  R-224 Next.js deferred (env-blocked), R-225..R-303 done. Continue from R-304.
 blockers: []
 next_action: >-
-  Task R-302 (generated collection screen boolean & enum visual status badges & detail screen one-click copy-to-clipboard affordances)
-  is implemented, verified, and complete (935 tests pass; tracker current — 91 Done of 302, MVP 91/197 = 46.2%). Next unstarted Tracker ID is R-303.
-last_updated: "2026-09-10T13:52:00+05:30"
+  Task R-303 (generated dashboard overview interactive entity links, operational health badge & metrics chips)
+  is implemented, verified, and complete (944 tests pass; tracker current — 92 Done of 303, MVP 92/198 = 46.5%). Next unstarted Tracker ID is R-304.
+last_updated: "2026-09-10T13:58:00+05:30"

@@ -1,5 +1,28 @@
 # Work Log
 
+## 2026-09-10 — R-303
+
+- Recorded contract in `.ai/CURRENT_TASK.yaml` and `.ai/tasks/R-303.md` (status in_progress → done).
+- `nextjs.py`:
+  - Elevated dashboard overview navigation, operational status, and metrics awareness across generated Next.js web applications (`app/page.tsx` via `_overview_page`):
+    - Interactive Entity Summary Cards:
+      - For listable entities with `Op.LIST`, matches the primary collection screen and wraps the summary card in an accessible `<Link href="/{col_screen.id}">` with `aria-label="View {plural} collection"`, uppercase entity label, navigation arrow indicator, prominent live record total, and an interactive `View all &rarr;` affordance.
+      - Unlinked entities without a collection screen render as styled summary `<div>` cards with live count, preserving backward compatibility.
+    - Operational Health Badge & Metrics Counters:
+      - App header section upgraded to a responsive flex layout featuring a live "System Operational" status pill with green status indicator dot (`#22c55e`), alongside summary count badges for total entities (`{count} Entities`) and total screens (`{count} Screens`).
+    - Screen Navigation Cards:
+      - Enhanced screen cards with visual arrow indicator (`&rarr;`) alongside the screen title.
+    - Zero-State Fallback:
+      - Added accessible empty state card when neither entities nor screens are configured.
+  - Maintained strict diff invariance across `ir.description`.
+- Added `services/agent-engine/tests/test_overview_dashboard_links_and_health.py` with 9 focused tests (collection linking, unlinked entity card, mixed cards, operational badge, metrics chips, screen arrow indicator, empty state, diff invariance, and example project generation).
+- `task verify` — 944 tests pass (9 new), 0 failures. `task lint`, `task security:quick`, `task env:check` pass.
+  `builder:demo minimal-blog` + `rideshare-favourites` pass. Generated TypeScript inspected. 0 network, 0 cloud model calls.
+- Tracker: inserted R-303 Done row at `Phase_Roadmap!A9`; table `A4:M311`; 303 unique IDs (0 dupes);
+  92 Done, 1 Deferred, 210 Not Started; MVP 92/198 (46.5%); no `#REF!`; XLSX valid.
+- Updated CURRENT_TASK.yaml, tasks/R-303.md, PROJECT_STATE.yaml, HANDOFF.md, PROJECT_STATE.md,
+  CHANGELOG.md, docs/CODEGEN.md, docs/PROGRESS.md, docs/RESUME_PROMPT.md.
+
 ## 2026-09-10 — R-302
 
 - Recorded contract in `.ai/CURRENT_TASK.yaml` and `.ai/tasks/R-302.md` (status in_progress → done).

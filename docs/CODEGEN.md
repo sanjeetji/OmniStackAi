@@ -1214,6 +1214,24 @@ NextjsWebAdapter elevates visual hierarchy, data readability, and operational wo
 - **Quality & Safety**:
   - 100% offline, stdlib-only Python codegen, zero network or model calls, byte-identical diff invariance across `ir.description`.
 
+### Generated Dashboard Overview Interactive Entity Links, Operational Health Badge & Metrics Chips (R-303)
+
+NextjsWebAdapter elevates developer and user experience across generated Next.js dashboard overview pages (`apps/web/app/page.tsx` via `_overview_page`):
+
+- **Interactive Entity Summary Cards**:
+  - Listable entities with `Op.LIST` dynamically map to their primary collection screen and wrap in accessible `<Link href="/{col_screen.id}">` tiles.
+  - Cards render uppercase entity tag, navigation indicator arrow (`&rarr;`), prominent live record total (`{var}.total`), and interactive `View all &rarr;` affordance.
+  - Unlinked entities without a collection screen render as styled summary `<div>` cards, preserving backward compatibility.
+- **Operational Health Badge & Summary Metrics**:
+  - App header upgraded to a responsive flex layout featuring a live "System Operational" status pill (`#f0fdf4`, `#166534`, border `#bbf7d0`) with pulsing green dot indicator (`#22c55e`).
+  - Summary metric counters display total entity count (`{count} Entities`) and total screen count (`{count} Screens`).
+- **Screen Navigation & Empty States**:
+  - Screen navigation cards render navigation indicator arrows (`&rarr;`) alongside screen titles.
+  - Accessible zero-state fallback card rendered when neither entities nor screens are configured.
+- **Quality & Safety**:
+  - 100% offline, stdlib-only Python codegen, zero network or model calls, byte-identical diff invariance across `ir.description`.
+
+
 
 
 

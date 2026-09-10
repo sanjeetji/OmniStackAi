@@ -1,43 +1,43 @@
 # Current Handoff
 
-Task ID: R-302
+Task ID: R-303
 Status: done
 Phase: BASIC/MVP — Founder Stage 0
 Branch: `main` (the only branch; the GitHub default)
-Implementation SHA: `d15d905`
+Implementation SHA: `d5fcb38`
 
 ## Repo/workflow state
 
 - All work is on `main`; commit directly with the Tracker-ID discipline (contract → tests → gates →
   tracker → two commits tagged `[R-###]` → push → remote SHA check).
 - Commits use `sanjeetji <sk698166@gmail.com>` as author (with a permitted tooling co-author trailer).
-- **Founder authorized autonomous continuation**. Resume from **R-303** when ready. Still
+- **Founder authorized autonomous continuation**. Resume from **R-304** when ready. Still
   stop-and-ask only for paid cloud / DB engine / new infra / native-mobile / a materially different
   architecture decision.
 
-## Completed (R-302) — Generated Collection Screen Boolean & Enum Visual Status Badges & Detail Screen One-Click Copy-to-Clipboard Affordances
+## Completed (R-303) — Generated Dashboard Overview Interactive Entity Links, Operational Health Badge & Metrics Chips
 
-Elevates visual hierarchy, data readability, and operational workflow in generated Next.js web applications:
+Elevates navigation flow, operational trust, and metrics awareness across generated Next.js web application dashboard overview pages (`app/page.tsx` via `_overview_page` in `nextjs.py`):
 
-- **Collection Screen Visual Status Badges**:
-  - Boolean fields (`FieldType.BOOL`) render styled status pill badges: emerald background (`#dcfce7`), emerald text (`#166534`), and text "Yes" if truthy; slate background (`#f1f5f9`), slate text (`#64748b`), and text "No" if falsy.
-  - Enum fields (with validation rule `enum:a|b|c`) render blue categorical pill badges (`#eff6ff` background, `#1d4ed8` text, `1px solid #bfdbfe` border).
-  - Applied consistently across collection table cells, master-detail subcollection cards, and detail screen subcollection tabs.
-- **Detail Screen One-Click Copy Affordances**:
-  - In record card header, renders an accessible "Copy ID" button beside the record title (`aria-label="Copy ID to clipboard"`).
-  - In definition list (`<dl>`), renders inline "Copy" affordance on `id` and UUID foreign key fields (`aria-label="Copy <field_label> to clipboard"`), and renders status badges for boolean and enum fields.
-  - Implemented robust `handleCopy(text, label)` using `navigator?.clipboard?.writeText` with graceful `document.execCommand("copy")` fallback and toast feedback (`toast.success` / `toast.error`).
-- All existing table actions, sorting, filters, pagination, and keyboard navigation are strictly preserved; 100% diff-invariant
-  across `ir.description`.
+- **Interactive Entity Summary Cards**:
+  - For listable entities with `Op.LIST`, matches the primary collection screen and wraps the summary card in an accessible `<Link href="/{col_screen.id}">` with `aria-label="View {plural} collection"`, uppercase entity label, navigation arrow indicator, prominent live record total, and an interactive `View all &rarr;` affordance.
+  - Unlinked entities without a matching collection screen render as styled summary `<div>` cards with live record total, preserving backward compatibility.
+- **Operational Health Badge & Metrics Counters**:
+  - App header section upgraded to a responsive flex layout featuring a live "System Operational" status pill with green status indicator dot (`#22c55e`), alongside summary count badges for total entities (`{count} Entities`) and total screens (`{count} Screens`).
+- **Screen Navigation Cards**:
+  - Enhanced screen cards with visual arrow indicator (`&rarr;`) alongside the screen title.
+- **Zero-State Fallback**:
+  - Added accessible empty state card when neither entities nor screens are configured.
+- All existing live hooks, screen nav cards, and quick actions are strictly preserved; 100% diff-invariant across `ir.description`.
 
 ## Verification
 
-- `task verify` — pass (**935** agent-engine tests; 7 focused R-302 tests in `test_status_badges_and_copy_clipboard.py`,
+- `task verify` — pass (**944** agent-engine tests; 9 focused R-303 tests in `test_overview_dashboard_links_and_health.py`,
   written test-first).
 - `task lint`, `task security:quick`, `task env:check` — pass. Both `task builder:demo` — pass.
-- Generated status badges and detail copy affordances inspected.
-- Tracker — R-302 at `Phase_Roadmap!A9:M9`; table `A4:M310`; Dashboard formulas reach row 310; 302
-  unique IDs (0 dupes); 91 Done, 1 Deferred, 210 Not Started; MVP 91/197 (46.2%); no `#REF!`; XLSX valid.
+- Generated interactive entity cards, health badge, and metrics inspected.
+- Tracker — R-303 at `Phase_Roadmap!A9:M9`; table `A4:M311`; Dashboard formulas reach row 311; 303
+  unique IDs (0 dupes); 92 Done, 1 Deferred, 210 Not Started; MVP 92/198 (46.5%); no `#REF!`; XLSX valid.
 - 0 local model calls / 0 cloud calls; no generated app installed/run, no DB connection.
 
 ## Blockers and risks
@@ -47,4 +47,4 @@ Elevates visual hierarchy, data readability, and operational workflow in generat
 
 ## Next task
 
-- **R-303**: Next builder task in autonomous continuation sequence.
+- **R-304**: Next builder task in autonomous continuation sequence.
