@@ -3013,6 +3013,7 @@ def _form_screen_page(screen: Screen, entity: Entity, ir: ApplicationIR, ops: se
                 '        </div>',
             ])
         elif f.type == FieldType.TEXT:
+            max_attr = f" maxLength={{{rules.max_length}}}" if rules.max_length else ""
             lines.extend([
                 '        <div style={{ marginBottom: 16 }}>',
                 '          <label style={{ display: "block", marginBottom: 6, fontSize: 14, fontWeight: 500, color: "#334155" }}>' + label + req_star + '</label>',
@@ -3020,15 +3021,27 @@ def _form_screen_page(screen: Screen, entity: Entity, ir: ApplicationIR, ops: se
                 '            rows={4}',
                 '            value={String((formData as any).' + f.name + ' ?? "")}',
                 '            onChange={(e) => { setFormData((prev) => ({ ...prev, ' + f.name + ': e.target.value })); if (fieldErrors.' + f.name + ') setFieldErrors((prev) => ({ ...prev, ' + f.name + ': "" })); }}',
-                '            placeholder="Enter ' + label.lower() + '..."' + req_attr,
+                '            placeholder="Enter ' + label.lower() + '..."' + req_attr + max_attr,
                 '            style={{ width: "100%", padding: "8px 12px", border: fieldErrors.' + f.name + ' ? "1px solid #ef4444" : "1px solid #cbd5e1", borderRadius: 6, fontSize: 14, boxSizing: "border-box", outline: "none" }}',
                 '            aria-invalid={!!fieldErrors.' + f.name + '}',
                 '          />',
                 '          {fieldErrors.' + f.name + ' && <span style={{ color: "#ef4444", fontSize: 12, marginTop: 4, display: "block" }}>{fieldErrors.' + f.name + '}</span>}',
-                '        </div>',
             ])
+            if rules.max_length:
+                amber_threshold = int(rules.max_length * 0.9)
+                lines.extend([
+                    '          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: 4 }}>',
+                    '            <span style={{ fontSize: 12, color: "#94a3b8" }}>Max ' + str(rules.max_length) + ' characters</span>',
+                    '            <span style={{ fontSize: 12, color: String((formData as any).' + f.name + ' ?? "").length >= ' + str(amber_threshold) + ' ? "#b45309" : "#94a3b8", marginLeft: "auto" }}>',
+                    '              {String((formData as any).' + f.name + ' ?? "").length} / ' + str(rules.max_length),
+                    '            </span>',
+                    '          </div>',
+                ])
+            lines.append('        </div>')
         elif f.type in (FieldType.INT, FieldType.FLOAT):
             step = "any" if f.type == FieldType.FLOAT else "1"
+            min_attr = f" min={{{rules.minimum}}}" if rules.minimum is not None else ""
+            max_attr = f" max={{{rules.maximum}}}" if rules.maximum is not None else ""
             lines.extend([
                 '        <div style={{ marginBottom: 16 }}>',
                 '          <label style={{ display: "block", marginBottom: 6, fontSize: 14, fontWeight: 500, color: "#334155" }}>' + label + req_star + '</label>',
@@ -3037,13 +3050,22 @@ def _form_screen_page(screen: Screen, entity: Entity, ir: ApplicationIR, ops: se
                 '            step="' + step + '"',
                 '            value={(formData as any).' + f.name + ' !== undefined && (formData as any).' + f.name + ' !== null ? String((formData as any).' + f.name + ') : ""}',
                 '            onChange={(e) => { const v = e.target.value; setFormData((prev) => ({ ...prev, ' + f.name + ': v === "" ? undefined : Number(v) })); if (fieldErrors.' + f.name + ') setFieldErrors((prev) => ({ ...prev, ' + f.name + ': "" })); }}',
-                '            placeholder="Enter ' + label.lower() + '..."' + req_attr,
+                '            placeholder="Enter ' + label.lower() + '..."' + req_attr + min_attr + max_attr,
                 '            style={{ width: "100%", padding: "8px 12px", border: fieldErrors.' + f.name + ' ? "1px solid #ef4444" : "1px solid #cbd5e1", borderRadius: 6, fontSize: 14, boxSizing: "border-box", outline: "none" }}',
                 '            aria-invalid={!!fieldErrors.' + f.name + '}',
                 '          />',
                 '          {fieldErrors.' + f.name + ' && <span style={{ color: "#ef4444", fontSize: 12, marginTop: 4, display: "block" }}>{fieldErrors.' + f.name + '}</span>}',
-                '        </div>',
             ])
+            has_range = rules.minimum is not None or rules.maximum is not None
+            if has_range:
+                min_label = str(rules.minimum) if rules.minimum is not None else "-\u221e"
+                max_label = str(rules.maximum) if rules.maximum is not None else "+\u221e"
+                lines.extend([
+                    '          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: 4 }}>',
+                    '            <span style={{ fontSize: 12, color: "#94a3b8" }}>Range: ' + min_label + ' to ' + max_label + '</span>',
+                    '          </div>',
+                ])
+            lines.append('        </div>')
         elif f.type == FieldType.DATETIME:
             lines.extend([
                 '        <div style={{ marginBottom: 16 }}>',
@@ -3079,6 +3101,7 @@ def _form_screen_page(screen: Screen, entity: Entity, ir: ApplicationIR, ops: se
                 '        </div>',
             ])
         else:
+            max_attr = f" maxLength={{{rules.max_length}}}" if rules.max_length else ""
             lines.extend([
                 '        <div style={{ marginBottom: 16 }}>',
                 '          <label style={{ display: "block", marginBottom: 6, fontSize: 14, fontWeight: 500, color: "#334155" }}>' + label + req_star + '</label>',
@@ -3086,13 +3109,25 @@ def _form_screen_page(screen: Screen, entity: Entity, ir: ApplicationIR, ops: se
                 '            type="text"',
                 '            value={String((formData as any).' + f.name + ' ?? "")}',
                 '            onChange={(e) => { setFormData((prev) => ({ ...prev, ' + f.name + ': e.target.value })); if (fieldErrors.' + f.name + ') setFieldErrors((prev) => ({ ...prev, ' + f.name + ': "" })); }}',
-                '            placeholder="Enter ' + label.lower() + '..."' + req_attr,
+                '            placeholder="Enter ' + label.lower() + '..."' + req_attr + max_attr,
                 '            style={{ width: "100%", padding: "8px 12px", border: fieldErrors.' + f.name + ' ? "1px solid #ef4444" : "1px solid #cbd5e1", borderRadius: 6, fontSize: 14, boxSizing: "border-box", outline: "none" }}',
                 '            aria-invalid={!!fieldErrors.' + f.name + '}',
                 '          />',
                 '          {fieldErrors.' + f.name + ' && <span style={{ color: "#ef4444", fontSize: 12, marginTop: 4, display: "block" }}>{fieldErrors.' + f.name + '}</span>}',
-                '        </div>',
             ])
+            if rules.max_length:
+                amber_threshold = int(rules.max_length * 0.9)
+                lines.extend([
+                    '          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: 4 }}>',
+                    '            <span style={{ fontSize: 12, color: "#94a3b8" }}>Max ' + str(rules.max_length) + ' characters</span>',
+                    '            <span style={{ fontSize: 12, color: String((formData as any).' + f.name + ' ?? "").length >= ' + str(amber_threshold) + ' ? "#b45309" : "#94a3b8", marginLeft: "auto" }}>',
+                    '              {String((formData as any).' + f.name + ' ?? "").length} / ' + str(rules.max_length),
+                    '            </span>',
+                    '          </div>',
+                ])
+            lines.append('        </div>')
+
+
 
     if can_create and can_update:
         submitting_expr = "(submitting || updating)"
