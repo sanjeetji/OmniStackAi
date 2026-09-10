@@ -1,43 +1,40 @@
 schema_version: 1
-task_id: R-290
-title: Optimistic Delete with Rollback in the Generated Collection Screen
-status: done
+task_id: R-291
+title: Optimistic Subcollection Child Delete with Rollback in Generated Next.js Screens
+status: in_progress
 phase: BASIC/MVP
 founder_stage: 0
 branch: main
 goal: >-
-  Make the generated Next.js collection screen's deletes optimistic: single (handleDelete) and batch
-  (handleBatchDelete) removals hide the affected rows immediately and reappear (with the existing error
-  toast) only if the server rejects, instead of waiting for the round-trip. Safe on the deduped mutation
-  hooks (R-288) and race-safe list fetch (R-280). Self-contained in the collection screen; no hook, API
-  client, backend, or IR change.
-tracker_ref: "R-290"
+  Extend R-290's optimistic delete to the subcollection (master-detail) child lists, completing the
+  optimistic-delete story. In both the collection master-detail screen and the dedicated detail screen,
+  deleting a child row hides it immediately (per-subcollection deleting overlay) and rolls it back (row
+  reappears + existing error toast) if the server rejects; a reconcile effect prunes ids once the
+  subcollection refetch removes them. Safe on the deduped mutation hooks (R-288) and the race-safe
+  R-286 LIST_BY hook. No hook/API-client/backend/IR change.
+tracker_ref: "R-291"
 requirements:
-  - Add a per-screen pendingDeleteIds state (useState<string[]>) next to checkedIds.
-  - A reconcile useEffect on [data] prunes pending ids no longer present after refetch (no unbounded growth, no flash-back).
-  - handleDelete optimistically adds the id to pending before await remove(id); on error it rolls the id back before the existing toast.error.
-  - handleBatchDelete snapshots the checked ids, optimistically adds them; on error it rolls those ids back.
-  - The row map iterates a visibleRows list that filters out pendingDeleteIds; the empty-state condition is unchanged.
-  - No detail-screen/subcollection delete change; no mutation/list hook, API client, backend, or IR change.
-  - Preserve deterministic generation and description-only IR stability.
+  - Each deletable subcollection gets a per-subcollection deleting state (useState<string[]>) + a reconcile useEffect on [<s_var>.data].
+  - The child delete handler adds String(id) to the deleting overlay before await remove<Child>(id) and rolls it back in catch before the existing toast.error.
+  - The child row map iterates the deleting-filtered list (only when the subcollection is deletable; non-deletable subcollections map <s_var>.data unchanged).
+  - Applies in both the collection master-detail and detail screens; existing success path (refetch + success toast) preserved.
+  - No mutation/list hook, API client, backend, or IR change; deterministic; description-only IR stability preserved.
 acceptance_criteria:
-  - Generated collection page emits `const [pendingDeleteIds, setPendingDeleteIds] = useState<string[]>([]);` and a reconcile `useEffect(... , [data]);` pruning ids not in data.
-  - handleDelete adds `setPendingDeleteIds((prev) => [...prev, String(id)])` before `await remove(id)`, and its catch calls `setPendingDeleteIds((prev) => prev.filter((x) => x !== String(id)));` before `toast.error`.
-  - handleBatchDelete adds the checked ids optimistically and rolls them back in catch.
-  - The row map iterates `visibleRows` (displayData filtered by pendingDeleteIds); existing success toasts/refetch/checked clearing preserved.
-  - Entities without delete emit no pendingDeleteIds; description-only IR changes remain byte-identical.
-  - Focused tests, related collection tests, full offline verification, lint, security, env check, and both builder demos pass.
+  - Generated deletable subcollection emits `const [<s_var>Deleting, set<S_var>Deleting] = useState<string[]>([]);` and a reconcile `useEffect(... , [<s_var>.data]);`.
+  - The child delete handler adds the id before `await remove<Child>(id)` and removes it in catch before `toast.error`.
+  - The child row map source is `(<s_var>.data ?? []).filter((child: any) => !<s_var>Deleting.includes(String((child as any).id)))` for deletable subcollections.
+  - Non-deletable subcollections emit no deleting state and map `<s_var>.data` unchanged.
+  - Both render sites carry it; description-only IR changes remain byte-identical.
+  - Focused tests, related subcollection tests, full offline verification, lint, security, env check, and both builder demos pass.
 expected_impact:
   - services/agent-engine/src/omnistackai_agent_engine/codegen/nextjs.py
-  - services/agent-engine/tests/test_collection_optimistic_delete.py
-  - services/agent-engine/tests/test_collection_bulk_actions.py
-  - services/agent-engine/tests/test_screen_generation.py
+  - services/agent-engine/tests/test_subcollection_optimistic_delete.py
   - .ai task/state/handoff/work-log files, PROJECT_STATE.md, CHANGELOG.md, docs/CODEGEN.md, docs/PROGRESS.md, docs/RESUME_PROMPT.md, and execution tracker
 allowed_paths:
   - services/agent-engine/src/omnistackai_agent_engine/codegen/nextjs.py
-  - services/agent-engine/tests/test_collection_optimistic_delete.py
-  - services/agent-engine/tests/test_collection_bulk_actions.py
-  - services/agent-engine/tests/test_screen_generation.py
+  - services/agent-engine/tests/test_subcollection_optimistic_delete.py
+  - services/agent-engine/tests/test_subcollection_screens.py
+  - services/agent-engine/tests/test_subcollection_child_deletion.py
   - .ai/**
   - CHANGELOG.md
   - PROJECT_STATE.md
@@ -55,10 +52,10 @@ must_not_change:
   - PostgreSQL, platform schemas/migrations, or backend semantics
   - Section 74 monorepo layout, provider boundaries, infrastructure, or native/mobile scope
   - Application IR schema, generated API-client behaviour, or the mutation/list hooks
-  - detail-screen/subcollection delete, top-level list/search/filter/pagination behaviour
+  - top-level collection delete (R-290), subcollection search/sort/pagination/filter behaviour
 gates:
-  - focused optimistic-delete tests
-  - test_collection_bulk_actions / test_screen_generation / test_collection_field_filters / test_collection_deeplink_state
+  - focused subcollection optimistic-delete tests
+  - test_subcollection_screens / test_subcollection_child_deletion / test_subcollection_list_controls
   - task verify
   - task lint
   - task security:quick
@@ -71,38 +68,11 @@ model_tool_trace:
   local_calls: 0
   cloud_calls: 0
   note: Pure deterministic code generation and offline tests; no model call is needed.
-evidence:
-  - command: env PYTHONPATH=services/agent-engine/src python3 -m unittest discover -s services/agent-engine/tests -p 'test_collection_optimistic_delete.py'
-    result: pass
-    detail: 9 focused R-290 tests pass (they failed first against the pre-change delete handlers).
-  - command: task verify
-    result: pass
-    detail: 843 agent-engine tests and all Stage 0 offline verification gates pass; two test_collection_field_filters row-map assertions updated to visibleRows.
-  - command: task lint
-    result: pass
-  - command: task security:quick
-    result: pass
-  - command: task env:check
-    result: pass
-  - command: task builder:demo -- minimal-blog
-    result: pass
-  - command: task builder:demo -- rideshare-favourites
-    result: pass
-  - command: generated TypeScript artifact inspection
-    result: pass
-    detail: >-
-      Generated collection page carries pendingDeleteIds state, a reconcile useEffect on [data], a
-      visibleRows filter, optimistic add before await remove(id) + rollback in catch (single and batch),
-      and the row map iterates visibleRows. Tracker: 290 unique IDs, R-290 Done, table A4:M298, dashboard
-      formulas through row 298, no #REF!, valid XLSX; 79 Done / 1 Deferred / 210 Not Started; MVP 79/185
-      (42.7%).
-  - commit: 1ed88b6
-    detail: feat(codegen)- optimistic delete with rollback in collection screen [R-290]
+evidence: []
 blockers: []
 next_action: >-
-  R-290 is complete and verified. Next unstarted Tracker ID is R-291 (do not begin it). Recommended
-  offline candidate: extend optimistic delete to the detail-screen and subcollection deletes for
-  consistency, or loading skeletons for the collection/detail/subcollection loading states — propose with
-  the founder at R-291 kickoff.
+  Write focused failing tests, add per-subcollection deleting state + reconcile + optimistic handler +
+  filtered child map (both sites), update any pinned assertions, run all gates, then tracker + docs +
+  two commits + push.
 next_command: >-
-  task ai:status
+  env PYTHONPATH=services/agent-engine/src python3 -m unittest discover -s services/agent-engine/tests -p 'test_subcollection_optimistic_delete.py' -v

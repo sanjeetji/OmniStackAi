@@ -1212,6 +1212,11 @@ def _subcol_search_names(s_var: str) -> tuple[str, str]:
     return f"{s_var}Search", "set" + s_var[0].upper() + s_var[1:] + "Search"
 
 
+def _subcol_delete_names(s_var: str) -> tuple[str, str]:
+    """R-291: the optimistic-delete overlay state + setter names for a subcollection (from its hook var)."""
+    return f"{s_var}Deleting", "set" + s_var[0].upper() + s_var[1:] + "Deleting"
+
+
 def _subcol_search_state(s_var: str) -> list[str]:
     """R-289: component-level controlled search state + a fixed 300ms debounce committing to the
     subcollection hook's setSearch. Safe now that R-286 made LIST_BY refetches race-safe; mirrors the
@@ -1701,14 +1706,22 @@ def _collection_screen_page(screen: Screen, entity: Entity, ir: ApplicationIR, o
                 h_name = _col_del_handler_name(sub)
                 c_name = sub.child_entity.name
                 s_var = f"{sub.child_entity.name.lower()}sSubcol"
+                _del_state, _del_setter = _subcol_delete_names(s_var)
                 lines.extend([
+                    # R-291: optimistic child delete — hide the row immediately, roll back on error.
+                    f"  const [{_del_state}, {_del_setter}] = useState<string[]>([]);",
+                    "  useEffect(() => {",
+                    f"    {_del_setter}((prev) => prev.filter((did) => ({s_var}.data ?? []).some((x: any) => String(x.id) === did)));",
+                    f"  }}, [{s_var}.data]);",
                     f"  const {h_name} = async (id: string) => {{",
                     f'    if (confirm("Are you sure you want to delete this {c_name}?")) {{',
+                    f"      {_del_setter}((prev) => [...prev, String(id)]);",
                     "      try {",
                     f"        await remove{c_name}(id);",
                     f"        {s_var}.refetch();",
                     f'        toast.success("{c_name} deleted successfully");',
                     "      } catch (err) {",
+                    f"        {_del_setter}((prev) => prev.filter((x) => x !== String(id)));",
                     f'        toast.error(err instanceof Error ? err.message : "Failed to delete {c_name}");',
                     "      }",
                     "    }",
@@ -2314,10 +2327,15 @@ def _collection_screen_page(screen: Screen, entity: Entity, ir: ApplicationIR, o
                     f'                  <div style={{{{ padding: 16, textAlign: "center", color: "#64748b", fontSize: 14, background: "#f8fafc", borderRadius: 6 }}}}>No {sub.child_plural.lower()} found for this {name.lower()}.</div>'
                 )
             lines.append("                )}")
+            # R-291: deletable subcollections render the optimistic-delete-filtered child list.
+            _child_map_src = (
+                f"({s_var}.data ?? []).filter((child: any) => !{_subcol_delete_names(s_var)[0]}.includes(String((child as any).id)))"
+                if sub.can_delete else f"{s_var}.data"
+            )
             lines.extend([
                 f"                {{{s_var}.data && {s_var}.data.length > 0 && (",
                 '                  <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>',
-                f"                    {{{s_var}.data.map((child, cIdx) => (",
+                f"                    {{{_child_map_src}.map((child, cIdx) => (",
             ])
             if sub.can_delete:
                 h_name = _col_del_handler_name(sub)
@@ -3223,14 +3241,22 @@ def _detail_screen_page(screen: Screen, entity: Entity, ir: ApplicationIR, ops: 
                 h_name = _detail_del_handler_name(sub)
                 c_name = sub.child_entity.name
                 s_var = f"{sub.child_entity.name.lower()}sSubcol"
+                _del_state, _del_setter = _subcol_delete_names(s_var)
                 lines.extend([
+                    # R-291: optimistic child delete — hide the row immediately, roll back on error.
+                    f"  const [{_del_state}, {_del_setter}] = useState<string[]>([]);",
+                    "  useEffect(() => {",
+                    f"    {_del_setter}((prev) => prev.filter((did) => ({s_var}.data ?? []).some((x: any) => String(x.id) === did)));",
+                    f"  }}, [{s_var}.data]);",
                     f"  const {h_name} = async (id: string) => {{",
                     f'    if (confirm("Are you sure you want to delete this {c_name}?")) {{',
+                    f"      {_del_setter}((prev) => [...prev, String(id)]);",
                     "      try {",
                     f"        await remove{c_name}(id);",
                     f"        {s_var}.refetch();",
                     f'        toast.success("{c_name} deleted successfully");',
                     "      } catch (err) {",
+                    f"        {_del_setter}((prev) => prev.filter((x) => x !== String(id)));",
                     f'        toast.error(err instanceof Error ? err.message : "Failed to delete {c_name}");',
                     "      }",
                     "    }",
@@ -3580,10 +3606,15 @@ def _detail_screen_page(screen: Screen, entity: Entity, ir: ApplicationIR, ops: 
                     f'                  <div style={{{{ padding: 16, textAlign: "center", color: "#64748b", fontSize: 14, background: "#f8fafc", borderRadius: 6 }}}}>No {sub.child_plural.lower()} found for this {name.lower()}.</div>'
                 )
             lines.append("                )}")
+            # R-291: deletable subcollections render the optimistic-delete-filtered child list.
+            _child_map_src = (
+                f"({s_var}.data ?? []).filter((child: any) => !{_subcol_delete_names(s_var)[0]}.includes(String((child as any).id)))"
+                if sub.can_delete else f"{s_var}.data"
+            )
             lines.extend([
                 f"                {{{s_var}.data && {s_var}.data.length > 0 && (",
                 '                  <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>',
-                f"                    {{{s_var}.data.map((child, cIdx) => (",
+                f"                    {{{_child_map_src}.map((child, cIdx) => (",
             ])
             if sub.can_delete:
                 h_name = _detail_del_handler_name(sub)
