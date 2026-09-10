@@ -5,18 +5,19 @@ Last updated: 2026-09-10T18:00:00+05:30
 Stage 0 (Founder Build Sequence, Brief Section 91) — BASIC/MVP
 
 ## Last Completed Task
-Tracker ID: R-304 — Generated Accessible Confirmation Dialog — Replace window.confirm() with ConfirmDialog Component — DONE,
-`task verify` (975 agent-engine tests, 31 new focused R-304 tests) passing. Replaced crude, blocking `window.confirm()`
-browser dialogs with an accessible, styled modal confirmation dialog component (`components/confirm-dialog.tsx`) and
-`useConfirm` hook across all generated Next.js web application screens: collection screens (single item delete and batch delete),
-detail screens (record delete and subcollection item delete), and form screens (unsaved-changes guard on Cancel, Escape key,
-and Reset). Full keyboard accessibility (FocusTrap, Escape dismiss, autoFocus confirm button), WAI-ARIA modal dialog compliance,
-danger/neutral intent variants, and asynchronous Promise<boolean> resolution. 100% diff-invariant across ir.description;
-implementation checkpoint `[R-304]`. Preceded by R-225 through R-303.
+Tracker ID: R-305 — Generated Keyboard Shortcuts Help Modal & Global Discovery Affordance — DONE,
+`task verify` (989 agent-engine tests, 14 new focused R-305 tests) passing. Elevated keyboard discoverability
+and power-user accessibility across generated Next.js web applications: emitted a reusable ShortcutsDialog
+component (`components/shortcuts-dialog.tsx`) rendering an accessible WAI-ARIA modal dialog (`role="dialog"`,
+`aria-modal="true"`, Escape dismiss, backdrop dismiss) with styled `<kbd>` badges grouping shortcuts across
+Global Navigation, Collection Screens, Record Detail Screens, and Form Editor Screens; wired a global `?`
+hotkey listener in the application navbar shell (active outside text inputs) and rendered an accessible
+`Shortcuts (?)` trigger button in the navbar header next to the quick-create CTA. 100% diff-invariant across
+ir.description; implementation checkpoint `[R-305]`. Preceded by R-225 through R-304.
 
-**Notes:** (1) the tracker is current through R-304: 93 Done, 1 Deferred, 210 Not Started across 304
-tasks; MVP is 93/199 (46.7%). (2) The founder authorized autonomous continuation of Tracker IDs until
-manually stopped — next unstarted Tracker ID: R-305. (3) A Groq API key may be available; live model-fabric
+**Notes:** (1) the tracker is current through R-305: 94 Done, 1 Deferred, 210 Not Started across 305
+tasks; MVP is 94/200 (47.0%). (2) The founder authorized autonomous continuation of Tracker IDs until
+manually stopped — next unstarted Tracker ID: R-306. (3) A Groq API key may be available; live model-fabric
 verification remains separate (set it only in gitignored `.env`, never chat/commits).
 
 

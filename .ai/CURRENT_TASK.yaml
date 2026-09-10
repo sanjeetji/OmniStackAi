@@ -1,32 +1,28 @@
-task_id: "R-304"
-title: "Generated Accessible Confirmation Dialog — Replace window.confirm() with ConfirmDialog Component"
+task_id: "R-305"
+title: "Generated Keyboard Shortcuts Help Modal & Global Discovery Affordance"
 milestone: "MVP"
 category: "Builder / Codegen"
 status: "DONE"
 author: "sanjeetji <sk698166@gmail.com>"
-created_at: "2026-09-10T14:10:00+05:30"
-updated_at: "2026-09-10T14:34:00+05:30"
+created_at: "2026-09-10T15:45:00+05:30"
+updated_at: "2026-09-10T15:46:00+05:30"
 
 requirements:
-  - "Generate a reusable ConfirmDialog React component (components/confirm-dialog.tsx) with useConfirm hook that returns a Promise<boolean> via confirmAsync(title, message)."
-  - "ConfirmDialog is a proper modal overlay with ARIA role=dialog, aria-modal=true, aria-labelledby, aria-describedby, focus-trapped Confirm/Cancel buttons, and Escape key handler."
-  - "All window.confirm() calls in generated collection screens (_collection_screen_page) are replaced with async confirmAsync() calls from useConfirm."
-  - "All window.confirm() calls in generated detail screens (_detail_screen_page) are replaced with async confirmAsync() calls from useConfirm."
-  - "All window.confirm() calls in generated form screens (_form_screen_page) are replaced with async confirmAsync() calls from useConfirm."
-  - "Each screen that uses confirmAsync imports useConfirm from '../components/confirm-dialog' and renders <ConfirmDialog {...confirmProps} /> at the bottom of its JSX tree."
-  - "components/confirm-dialog.tsx is registered as a GeneratedFile in NextjsWebAdapter.generate()."
+  - "Generate a reusable ShortcutsDialog React component (components/shortcuts-dialog.tsx) displaying a cheat sheet of keyboard shortcuts for the application."
+  - "ShortcutsDialog is an accessible modal overlay with WAI-ARIA role=dialog, aria-modal=true, aria-labelledby, close button, Escape dismiss, and backdrop dismiss."
+  - "ShortcutsDialog displays styled <kbd> badges grouped by context: Global Navigation, Collection Screens, Record Detail Screens, and Form Editor Screens."
+  - "Navbar (components/navbar.tsx) imports and mounts ShortcutsDialog with state and wires a global '?' keydown listener (outside text inputs) to toggle the modal."
+  - "Navbar renders an accessible 'Shortcuts (?)' trigger button in its header action area beside the quick-create CTA."
+  - "components/shortcuts-dialog.tsx is registered as a GeneratedFile in NextjsWebAdapter.generate()."
   - "Diff invariance across ir.description is strictly preserved byte-for-byte."
   - "Stdlib-only, 100% offline codegen with zero external runtime npm dependencies."
 
 allowed_paths:
   - "services/agent-engine/src/omnistackai_agent_engine/codegen/nextjs.py"
-  - "services/agent-engine/tests/test_confirm_dialog.py"
-  - "services/agent-engine/tests/test_collection_bulk_actions.py"
-  - "services/agent-engine/tests/test_detail_screen_lifecycle.py"
-  - "services/agent-engine/tests/test_form_unsaved_changes_guard.py"
-  - "services/agent-engine/tests/test_subcollection_deletion.py"
+  - "services/agent-engine/src/omnistackai_agent_engine/codegen/__init__.py"
+  - "services/agent-engine/tests/test_shortcuts_dialog.py"
   - ".ai/CURRENT_TASK.yaml"
-  - ".ai/tasks/R-304.md"
+  - ".ai/tasks/R-305.md"
   - ".ai/PROJECT_STATE.yaml"
   - ".ai/WORK_LOG.md"
   - ".ai/HANDOFF.md"
@@ -40,12 +36,12 @@ allowed_paths:
 forbidden_changes:
   - "No changes to control plane DB or external cloud dependencies."
   - "No changes to mobile codegen before MVP web/backend stability."
-  - "No embedding ir.description into confirm-dialog.tsx (it is static; ir.name is not used)."
+  - "No embedding ir.description into shortcuts-dialog.tsx (it is static)."
 
 evidence_and_gates:
-  unit_test_suite: "services/agent-engine/tests/test_confirm_dialog.py (31 tests pass)"
+  unit_test_suite: "services/agent-engine/tests/test_shortcuts_dialog.py (14 tests pass)"
   task_verify: true
-  total_tests: 975
+  total_tests: 989
   task_lint: true
   task_security_quick: true
   task_env_check: true

@@ -1,5 +1,34 @@
 # Work Log
 
+## 2026-09-10 — R-305
+
+- Recorded contract in `.ai/CURRENT_TASK.yaml` and `.ai/tasks/R-305.md` (status in_progress → done).
+- `nextjs.py`:
+  - Elevated keyboard discoverability and power-user accessibility across generated Next.js web applications:
+    - Generated Reusable ShortcutsDialog Component (`apps/web/components/shortcuts-dialog.tsx`):
+      - `ShortcutsDialog` modal component: backdrop overlay with backdrop filter, dialog card, header with keyboard icon (`⌨`), title, close button, and organized shortcut groups.
+      - WAI-ARIA compliance: `role="dialog"`, `aria-modal="true"`, `aria-labelledby="shortcuts-dialog-title"`.
+      - Keyboard interaction: closes on `Escape` key press; clicking backdrop closes dialog.
+      - Styled `<kbd>` badges with monospace font, subtle border, white background, and drop shadow.
+      - Shortcut groups:
+        - Global Navigation: `?` (Show / hide shortcuts), `Esc` (Close modal / dismiss / clear).
+        - Collection Screens: `/` (Focus search input), `Esc` (Clear active search or filter criteria).
+        - Record Detail Screens: `[` / `]` or `←` / `→` (Navigate previous / next record), `e` (Edit current record), `Esc` (Deselect active record).
+        - Form Editor Screens: `Cmd+Enter` / `Ctrl+Enter` (Submit / save form), `Cmd+S` / `Ctrl+S` (Save form changes), `Esc` (Blur active input or discard changes).
+    - Navbar Header Integration (`apps/web/components/navbar.tsx`):
+      - Imports and mounts `ShortcutsDialog` component with local `isOpen` state.
+      - Registers a global `keydown` event listener for `?` (outside editable form elements like INPUT, TEXTAREA, SELECT, contentEditable) to toggle the modal.
+      - Renders an accessible `Shortcuts (?)` trigger button with keyboard icon (`⌨`), text label, and `?` shortcut badge in the navbar header next to the quick-create CTA.
+    - Exported `render_shortcuts_dialog_component` in `omnistackai_agent_engine.codegen` and registered in `NextjsWebAdapter.generate()`.
+  - Maintained strict diff invariance across `ir.description`.
+- Added `services/agent-engine/tests/test_shortcuts_dialog.py` with 14 comprehensive tests covering component structure, ARIA compliance, grouped shortcuts, `<kbd>` styling, Navbar integration, global keydown listener, diff invariance, and full-project integration.
+- `task verify` — 989 tests pass (14 new), 0 failures. `task lint`, `task security:quick`, `task env:check` pass.
+  `builder:demo minimal-blog` passes (45 files generated). Generated TypeScript inspected. 0 network, 0 cloud model calls.
+- Tracker: inserted R-305 Done row at `Phase_Roadmap!A9`; table `A4:M313`; 305 unique IDs (0 dupes);
+  94 Done, 1 Deferred, 210 Not Started; MVP 94/200 (47.0%); no `#REF!`; XLSX valid.
+- Updated CURRENT_TASK.yaml, tasks/R-305.md, PROJECT_STATE.yaml, HANDOFF.md, PROJECT_STATE.md,
+  CHANGELOG.md, docs/CODEGEN.md, docs/PROGRESS.md, docs/RESUME_PROMPT.md.
+
 ## 2026-09-10 — R-304
 
 - Recorded contract in `.ai/CURRENT_TASK.yaml` and `.ai/tasks/R-304.md` (status in_progress → done).

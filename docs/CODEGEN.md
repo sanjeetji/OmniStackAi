@@ -1260,6 +1260,28 @@ NextjsWebAdapter replaces crude, blocking `window.confirm()` browser dialogs wit
 - **Quality & Safety**:
   - 100% offline, stdlib-only Python codegen, zero runtime npm dependencies, zero network or model calls, byte-identical diff invariance across `ir.description`.
 
+### Generated Keyboard Shortcuts Help Modal & Global Discovery Affordance (R-305)
+
+Emits a dedicated keyboard shortcuts cheat sheet modal dialog and wires global discoverability into the application navigation bar:
+
+- **Component Generation (`apps/web/components/shortcuts-dialog.tsx`)**:
+  - Emits client component (`"use client";`) with zero external dependencies.
+  - Categorized shortcut reference:
+    - **Global**: `?` (Open keyboard shortcuts help), `Esc` (Dismiss dialog / modal).
+    - **Collection Screens**: `/` (Focus search input), `Esc` (Clear active search & reset filters).
+    - **Detail Screens**: `[` or `←` (Navigate to previous record), `]` or `→` (Navigate to next record), `e` (Edit current record), `Esc` (Deselect record / close detail).
+    - **Form Screens**: `Cmd + Enter` / `Ctrl + Enter` (Save & Submit form), `Cmd + S` / `Ctrl + S` (Save & Submit form), `Esc` (Blur active field / Cancel form).
+  - Clean modal styling with backdrop overlay (`rgba(15, 23, 42, 0.45)`, `backdropFilter: "blur(2px)"`), card container (`maxWidth: 580`), styled `<kbd>` key badges (`#f1f5f9` bg, `#334155` text, border `#cbd5e1`, box-shadow `0 1px 0 #94a3b8`), and responsive grid layout.
+  - Accessible semantics: `role="dialog"`, `aria-modal="true"`, `aria-labelledby="shortcuts-dialog-title"`, `Escape` key dismissal, backdrop click dismissal, and header close button (`&times;`).
+- **Global Header Discoverability (`apps/web/components/navbar.tsx`)**:
+  - Mounts `<ShortcutsDialog open={shortcutsOpen} onClose={() => setShortcutsOpen(false)} />`.
+  - Wires global `keydown` event listener for `?` (Shift + `/`), ignoring events triggered inside editable elements (`INPUT`, `TEXTAREA`, `SELECT`, `contentEditable`).
+  - Renders a visible, styled `Shortcuts (?)` trigger button with keyboard icon (`aria-label="Keyboard shortcuts"`) in the top navigation actions bar.
+- **Diff Predictability & Safety**:
+  - Completely static modal template; zero references to `ir.description` ensuring hunk-level diff invariance.
+  - Registered in `NextjsWebAdapter.generate()` as a `GeneratedFile` and exported in `codegen.__init__` as `render_shortcuts_dialog_component`.
+
+
 
 
 
