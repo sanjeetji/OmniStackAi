@@ -1281,6 +1281,33 @@ Emits a dedicated keyboard shortcuts cheat sheet modal dialog and wires global d
   - Completely static modal template; zero references to `ir.description` ensuring hunk-level diff invariance.
   - Registered in `NextjsWebAdapter.generate()` as a `GeneratedFile` and exported in `codegen.__init__` as `render_shortcuts_dialog_component`.
 
+### Generated Accessible Breadcrumb Navigation Component & Screen Hierarchy (R-306)
+
+Emits a reusable Breadcrumbs component and integrates hierarchical wayfinding in generated detail and form screens:
+
+- **Component Generation (`apps/web/components/breadcrumbs.tsx`)**:
+  - Emits client component (`"use client";`) with zero external dependencies.
+  - Conforms to WAI-ARIA 1.2 breadcrumb design pattern:
+    - `<nav aria-label="Breadcrumb">` wrapper with subtle bottom margin.
+    - `<ol>` flex container with `listStyle: "none"`, removing default list margins/padding.
+    - `<li>` items with inline flex alignment.
+    - Separator (`/`) with `aria-hidden="true"` and muted color (`#94a3b8`).
+    - Terminal/current page marked with `aria-current="page"`, dark slate font (`#0f172a`), and semi-bold weight (`600`).
+    - Ancestor pages render as accessible Next.js `<Link>` elements (`#64748b` text with hover transition).
+  - Exports typed interfaces `BreadcrumbItem` (`label: string; href?: string`) and `BreadcrumbsProps` (`items: BreadcrumbItem[]`).
+- **Detail Screen Integration (`_detail_screen_page`)**:
+  - Mounts `<Breadcrumbs items={breadcrumbs} />` at the top of detail screens.
+  - Composes hierarchical path: Overview (`/`) &rarr; Collection (`/{col_screen.id}` when available) &rarr; Current record (`{name} #{selectedId}` or `{name} Details`).
+  - Preserves existing `&larr; Back to {plural}` link for backwards compatibility with prior contracts.
+- **Form Screen Integration (`_form_screen_page`)**:
+  - Mounts `<Breadcrumbs items={breadcrumbs} />` at the top of form screens.
+  - Composes hierarchical path: Overview (`/`) &rarr; Collection (`/{list_screen.id}` when available) &rarr; Action (`Edit {name}` or `New {name}`).
+  - Preserves existing `&larr; Back to {plural}` link.
+- **Diff Predictability & Safety**:
+  - 100% diff-invariant across `ir.description` changes.
+  - Registered in `NextjsWebAdapter.generate()` as a `GeneratedFile` and exported in `codegen.__init__` as `render_breadcrumbs_component`.
+
+
 
 
 

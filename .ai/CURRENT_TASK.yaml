@@ -1,49 +1,22 @@
-task_id: "R-305"
-title: "Generated Keyboard Shortcuts Help Modal & Global Discovery Affordance"
-milestone: "MVP"
-category: "Builder / Codegen"
-status: "DONE"
-author: "sanjeetji <sk698166@gmail.com>"
-created_at: "2026-09-10T15:45:00+05:30"
-updated_at: "2026-09-10T15:46:00+05:30"
-
-requirements:
-  - "Generate a reusable ShortcutsDialog React component (components/shortcuts-dialog.tsx) displaying a cheat sheet of keyboard shortcuts for the application."
-  - "ShortcutsDialog is an accessible modal overlay with WAI-ARIA role=dialog, aria-modal=true, aria-labelledby, close button, Escape dismiss, and backdrop dismiss."
-  - "ShortcutsDialog displays styled <kbd> badges grouped by context: Global Navigation, Collection Screens, Record Detail Screens, and Form Editor Screens."
-  - "Navbar (components/navbar.tsx) imports and mounts ShortcutsDialog with state and wires a global '?' keydown listener (outside text inputs) to toggle the modal."
-  - "Navbar renders an accessible 'Shortcuts (?)' trigger button in its header action area beside the quick-create CTA."
-  - "components/shortcuts-dialog.tsx is registered as a GeneratedFile in NextjsWebAdapter.generate()."
-  - "Diff invariance across ir.description is strictly preserved byte-for-byte."
-  - "Stdlib-only, 100% offline codegen with zero external runtime npm dependencies."
-
-allowed_paths:
-  - "services/agent-engine/src/omnistackai_agent_engine/codegen/nextjs.py"
-  - "services/agent-engine/src/omnistackai_agent_engine/codegen/__init__.py"
-  - "services/agent-engine/tests/test_shortcuts_dialog.py"
-  - ".ai/CURRENT_TASK.yaml"
-  - ".ai/tasks/R-305.md"
-  - ".ai/PROJECT_STATE.yaml"
-  - ".ai/WORK_LOG.md"
-  - ".ai/HANDOFF.md"
-  - "PROJECT_STATE.md"
-  - "CHANGELOG.md"
-  - "R_&_D/OmniStackAI_Execution_Tracker_v6.xlsx"
-  - "docs/CODEGEN.md"
-  - "docs/PROGRESS.md"
-  - "docs/RESUME_PROMPT.md"
-
-forbidden_changes:
-  - "No changes to control plane DB or external cloud dependencies."
-  - "No changes to mobile codegen before MVP web/backend stability."
-  - "No embedding ir.description into shortcuts-dialog.tsx (it is static)."
-
-evidence_and_gates:
-  unit_test_suite: "services/agent-engine/tests/test_shortcuts_dialog.py (14 tests pass)"
-  task_verify: true
-  total_tests: 989
-  task_lint: true
-  task_security_quick: true
-  task_env_check: true
-  builder_demo: true
-  tracker_updated: true
+id: R-306
+title: "Generated Accessible Breadcrumb Navigation Component & Screen Hierarchy in Next.js web app"
+status: DONE
+phase: MVP
+tracker_row: 9
+total_tests: 998
+owner: sanjeetji
+started_at: 2026-09-10T15:50:00+05:30
+completed_at: 2026-09-10T15:54:30+05:30
+objectives:
+  - Create reusable WAI-ARIA compliant Breadcrumbs component in `apps/web/components/breadcrumbs.tsx`.
+  - Wire Breadcrumbs into generated detail screens (`_detail_screen_page`) with Overview, Collection, and Record hierarchy.
+  - Wire Breadcrumbs into generated form screens (`_form_screen_page`) with Overview, Collection, and Action (New/Edit) hierarchy.
+  - Export `render_breadcrumbs_component` from `omnistackai_agent_engine.codegen` and register in `NextjsWebAdapter.generate()`.
+  - Maintain 100% diff-invariance across `ir.description` changes.
+  - Verify all unit tests pass, gates pass, and demo generates clean 46-file monorepo.
+evidence:
+  verify: "task verify passes 998 tests (9 new in test_breadcrumbs.py)"
+  lint: "task lint passes"
+  security: "task security:quick passes"
+  env: "task env:check passes"
+  demo: "task builder:demo passes (46 files generated for minimal-blog, 43 for rideshare-favourites)"

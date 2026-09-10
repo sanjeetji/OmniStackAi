@@ -1,13 +1,13 @@
-# OmniStackAI — implementation progress (as of R-305)
+# OmniStackAI — implementation progress (as of R-306)
 
 A living summary of what is built, what is pending, and how to see results. Numbers come from the
 execution tracker (`R_&_D/OmniStackAI_Execution_Tracker_v6.xlsx`, `Phase_Roadmap`).
 
 ## Headline
 
-- **989 automated tests pass**, fully offline and network-independent (`task verify`).
-- **94 tracker tasks Done, 1 Deferred, 210 Not Started** across 305 task rows.
-- The offline builder loop is complete end to end: **describe (IR) → generate (web with typed API client, React hooks, interactive master-detail screen components with field validation, page size selector & contextual empty states, bulk selection & batch deletion, CSV data export & bulk export, deep-linking & entity lifecycle in detail screens, global responsive navigation shell & header navbar with active route detection & quick-create CTA, post-submit contextual CTAs & record navigation with Cancel action in form footer, rich entity-aware dashboard overview page (live count cards, screen nav tiles, quick-create CTAs, diff-stable), record selector dropdown, prev/next record navigation & deep-link sync in detail screens, form screen dirty state tracking, unsaved changes guard & reset confirmation, collection screen boolean & enum field filtering with segmented controls, global notification toast system & action feedback with ToastProvider & useToast, subcollection navigation, child item deletion & mutation feedback, full-stack update/edit actions, foreign-key relation selectors & parent auto-population, App Router resilience quartet, full loading-skeleton coverage, consistent error & retry recovery, enterprise WAI-ARIA accessibility semantics, power-user collection, detail, and form keyboard navigation & shortcuts, form input constraints & live character counters, search clear affordances & form first-field autofocus, collection status badges & detail copy affordances, overview interactive entity links, health badge & metrics chips, accessible modal confirmation dialog replacing window.confirm(), keyboard shortcuts help modal & global discovery affordance + API with
+- **998 automated tests pass**, fully offline and network-independent (`task verify`).
+- **95 tracker tasks Done, 1 Deferred, 210 Not Started** across 306 task rows.
+- The offline builder loop is complete end to end: **describe (IR) → generate (web with typed API client, React hooks, interactive master-detail screen components with field validation, page size selector & contextual empty states, bulk selection & batch deletion, CSV data export & bulk export, deep-linking & entity lifecycle in detail screens, global responsive navigation shell & header navbar with active route detection & quick-create CTA, post-submit contextual CTAs & record navigation with Cancel action in form footer, rich entity-aware dashboard overview page (live count cards, screen nav tiles, quick-create CTAs, diff-stable), record selector dropdown, prev/next record navigation & deep-link sync in detail screens, form screen dirty state tracking, unsaved changes guard & reset confirmation, collection screen boolean & enum field filtering with segmented controls, global notification toast system & action feedback with ToastProvider & useToast, subcollection navigation, child item deletion & mutation feedback, full-stack update/edit actions, foreign-key relation selectors & parent auto-population, App Router resilience quartet, full loading-skeleton coverage, consistent error & retry recovery, enterprise WAI-ARIA accessibility semantics, power-user collection, detail, and form keyboard navigation & shortcuts, form input constraints & live character counters, search clear affordances & form first-field autofocus, collection status badges & detail copy affordances, overview interactive entity links, health badge & metrics chips, accessible modal confirmation dialog replacing window.confirm(), keyboard shortcuts help modal & global discovery affordance, accessible breadcrumb navigation component & screen hierarchy + API with
   working CRUD incl. PATCH/PUT update + pagination + sorting + total count header + keyword search + sub-collections + DB schema + data-access + JWT-verified auth
   & per-endpoint roles + field validation + CORS middleware + OpenAPI 3.1 contract)
   → verify → edit → commit to an owned Git repo.**
@@ -16,11 +16,11 @@ execution tracker (`R_&_D/OmniStackAI_Execution_Tracker_v6.xlsx`, `Phase_Roadmap
 
 | Phase | Done | Total | % complete |
 |-------|------|-------|-----------|
-| **MVP** (current milestone) | 94 | 200 | **47.0%** |
+| **MVP** (current milestone) | 95 | 201 | **47.3%** |
 | MID | 0 | 47 | 0% |
 | ADVANCED | 0 | 29 | 0% |
 | PRODUCTION | 0 | 29 | 0% |
-| **Overall program** | **94** | **305** | **30.8%** |
+| **Overall program** | **95** | **306** | **31.0%** |
 
 
 
@@ -113,6 +113,7 @@ execution tracker (`R_&_D/OmniStackAI_Execution_Tracker_v6.xlsx`, `Phase_Roadmap
 | **Error + Retry across every fetch state** (collection list, detail main, and both subcollection lists each render a Retry button that calls the relevant `refetch()`) | ✅ Done | R-280, R-295 |
 | **Accessible confirmation dialog replacing window.confirm** (ConfirmDialog component, useConfirm hook, focus trapping, Escape dismiss, backdrop dismiss, danger/primary variants) | ✅ Done | R-304 |
 | **Keyboard shortcuts help modal & global discovery affordance** (ShortcutsDialog modal component, ? hotkey listener in navbar, Shortcuts (?) trigger button, <kbd> cheatsheet) | ✅ Done | R-305 |
+| **Accessible breadcrumb navigation component & screen hierarchy** (Breadcrumbs component, WAI-ARIA 1.2 breadcrumb trail, detail and form screen wayfinding) | ✅ Done | R-306 |
 | Next.js console upgrade (rich UI) | ⏸ Deferred | R-224 — needs npm registry access |
 | Live sandbox preview + real deploy (Tier 2) | ⛔ Pending | needs a network machine + provider keys |
 | Native mobile agents | ⛔ Deferred (governance) | until web/backend stability (Brief §25/§91) |
@@ -124,7 +125,7 @@ Everything below runs with **no cloud keys** and no internet (except where noted
 
 1. **See the whole engine is real and green:**
    ```
-   task verify            # 989 tests pass
+   task verify            # 998 tests pass
    ```
 2. **Generate a real app from a spec and inspect it** (the headline result):
    ```

@@ -1,5 +1,30 @@
 # Work Log
 
+## 2026-09-10 — R-306
+
+- Recorded contract in `.ai/CURRENT_TASK.yaml` and `.ai/tasks/R-306.md` (status in_progress → done).
+- `nextjs.py`:
+  - Elevated navigation wayfinding and hierarchy across generated Next.js web applications:
+    - Generated Reusable Breadcrumbs Component (`apps/web/components/breadcrumbs.tsx`):
+      - `Breadcrumbs` component conforming to WAI-ARIA 1.2 breadcrumb design pattern: `<nav aria-label="Breadcrumb">`, `<ol>`, `<li>`, separator (`/`), `aria-current="page"`.
+      - Exported `BreadcrumbItem` and `BreadcrumbsProps` interfaces.
+      - Accessible rendering: links for ancestor levels, non-link bold text with `aria-current="page"` for terminal level.
+    - Detail Screen Hierarchy Integration (`_detail_screen_page`):
+      - Imported and mounted `<Breadcrumbs items={breadcrumbs} />` at the top of detail screens (Overview -> Collection [if present] -> Record item / Details).
+      - Preserved existing `&larr; Back to {plural}` link for backwards compatibility with existing assertions.
+    - Form Screen Hierarchy Integration (`_form_screen_page`):
+      - Imported and mounted `<Breadcrumbs items={breadcrumbs} />` at the top of form screens (Overview -> Collection [if present] -> New/Edit item).
+      - Preserved existing `&larr; Back to {plural}` link.
+    - Exported `render_breadcrumbs_component` in `omnistackai_agent_engine.codegen` and registered in `NextjsWebAdapter.generate()`.
+  - Maintained strict diff invariance across `ir.description`.
+- Added `services/agent-engine/tests/test_breadcrumbs.py` with 9 comprehensive tests covering component structure, ARIA compliance, detail screen breadcrumbs, form screen breadcrumbs, collection fallback, diff invariance, and full-project integration.
+- `task verify` — 998 tests pass (9 new), 0 failures. `task lint`, `task security:quick`, `task env:check` pass.
+  `builder:demo minimal-blog` passes (46 files generated). Generated TypeScript inspected. 0 network, 0 cloud model calls.
+- Tracker: inserted R-306 Done row at `Phase_Roadmap!A9`; table `A4:M314`; 306 unique IDs (0 dupes);
+  95 Done, 1 Deferred, 210 Not Started; MVP 95/201 (47.3%); no `#REF!`; XLSX valid.
+- Updated CURRENT_TASK.yaml, tasks/R-306.md, PROJECT_STATE.yaml, HANDOFF.md, PROJECT_STATE.md,
+  CHANGELOG.md, docs/CODEGEN.md, docs/PROGRESS.md, docs/RESUME_PROMPT.md.
+
 ## 2026-09-10 — R-305
 
 - Recorded contract in `.ai/CURRENT_TASK.yaml` and `.ai/tasks/R-305.md` (status in_progress → done).
