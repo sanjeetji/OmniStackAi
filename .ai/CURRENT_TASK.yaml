@@ -1,7 +1,7 @@
 schema_version: 1
 task_id: R-290
 title: Optimistic Delete with Rollback in the Generated Collection Screen
-status: in_progress
+status: done
 phase: BASIC/MVP
 founder_stage: 0
 branch: main
@@ -71,11 +71,38 @@ model_tool_trace:
   local_calls: 0
   cloud_calls: 0
   note: Pure deterministic code generation and offline tests; no model call is needed.
-evidence: []
+evidence:
+  - command: env PYTHONPATH=services/agent-engine/src python3 -m unittest discover -s services/agent-engine/tests -p 'test_collection_optimistic_delete.py'
+    result: pass
+    detail: 9 focused R-290 tests pass (they failed first against the pre-change delete handlers).
+  - command: task verify
+    result: pass
+    detail: 843 agent-engine tests and all Stage 0 offline verification gates pass; two test_collection_field_filters row-map assertions updated to visibleRows.
+  - command: task lint
+    result: pass
+  - command: task security:quick
+    result: pass
+  - command: task env:check
+    result: pass
+  - command: task builder:demo -- minimal-blog
+    result: pass
+  - command: task builder:demo -- rideshare-favourites
+    result: pass
+  - command: generated TypeScript artifact inspection
+    result: pass
+    detail: >-
+      Generated collection page carries pendingDeleteIds state, a reconcile useEffect on [data], a
+      visibleRows filter, optimistic add before await remove(id) + rollback in catch (single and batch),
+      and the row map iterates visibleRows. Tracker: 290 unique IDs, R-290 Done, table A4:M298, dashboard
+      formulas through row 298, no #REF!, valid XLSX; 79 Done / 1 Deferred / 210 Not Started; MVP 79/185
+      (42.7%).
+  - commit: 1ed88b6
+    detail: feat(codegen)- optimistic delete with rollback in collection screen [R-290]
 blockers: []
 next_action: >-
-  Write focused failing tests, add pendingDeleteIds + reconcile effect + visibleRows and optimistic
-  single/batch delete, update any pinned collection assertions, run all gates, then tracker + docs +
-  two commits + push.
+  R-290 is complete and verified. Next unstarted Tracker ID is R-291 (do not begin it). Recommended
+  offline candidate: extend optimistic delete to the detail-screen and subcollection deletes for
+  consistency, or loading skeletons for the collection/detail/subcollection loading states — propose with
+  the founder at R-291 kickoff.
 next_command: >-
-  env PYTHONPATH=services/agent-engine/src python3 -m unittest discover -s services/agent-engine/tests -p 'test_collection_optimistic_delete.py' -v
+  task ai:status

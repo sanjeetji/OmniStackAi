@@ -2,23 +2,22 @@ schema_version: 1
 project: OmniStackAI
 phase: BASIC/MVP
 founder_stage: 0
-current_task: R-289
+current_task: R-290
 current_status: done
 branch: main
 last_completed_task:
-  task_id: R-289
-  title: Debounced Live Subcollection Search in Generated Next.js Web App
+  task_id: R-290
+  title: Optimistic Delete with Rollback in the Generated Collection Screen
   verification: >-
-    task verify (834 agent-engine tests, 5 focused R-289 tests); the generated subcollection
-    (master-detail) search is now live and debounced (300ms) — matching the top-level collection search
-    (R-280) — instead of the submit-only form from R-281. Each subcollection gets a controlled search
-    input backed by component state and a setTimeout/clearTimeout debounce effect that commits the trimmed
-    value to the race-safe R-286 useList<Child>By<Parent> hook's setSearch (guarded against redundant
-    recommit); the form submit still commits immediately. Wired into both the collection master-detail and
-    detail screens via shared helpers; entities without a subcollection emit none. The hook, API client,
-    backend, IR, sort/filter/pagination, and description-only stability are all preserved. task lint +
-    security:quick + env:check and both builder demos pass; generated TypeScript inspected; impl b6a1af4;
-    0 local/0 cloud model calls
+    task verify (843 agent-engine tests, 9 focused R-290 tests); the generated collection screen's deletes
+    are now optimistic — single (handleDelete) and batch (handleBatchDelete) removals add the affected ids
+    to a pendingDeleteIds overlay so the rows vanish immediately, roll them back (rows reappear) before the
+    existing error toast on server failure, and a reconcile useEffect on [data] prunes ids once refetch
+    removes them; the row map iterates a visibleRows list filtered by pendingDeleteIds. Safe on the deduped
+    mutation hooks (R-288) and race-safe list fetch (R-280); self-contained in _collection_screen_page.
+    Detail/subcollection delete, the mutation/list hooks, the API client, backend, IR, and description-only
+    stability are all preserved. task lint + security:quick + env:check and both builder demos pass;
+    generated TypeScript inspected; impl 1ed88b6; 0 local/0 cloud model calls
   result: pass
 control_plane_database: postgresql
 model_routing_mode: balanced
@@ -30,14 +29,13 @@ product_direction: >-
   framework adapter contract -> Next.js adapter -> Git service -> preview/sandbox (needs cloud env).
 id_note: >-
   Workbook backlog owns R-010..R-219. Founder-requested tasks use IDs after R-219: R-220..R-223 done,
-  R-224 Next.js deferred (env-blocked), R-225..R-289 done. Continue from R-290.
+  R-224 Next.js deferred (env-blocked), R-225..R-290 done. Continue from R-291.
 blockers: []
 next_action: >-
-  Task R-289 (debounced live subcollection search) is implemented, verified, and complete (834 tests
-  pass; tracker current — 78 Done of 289, MVP 78/184 = 42.4%). Generated-app search is now consistent
-  (top-level + subcollection both live/debounced) and all request paths are race-safe. Next unstarted
-  Tracker ID is R-290 (do not begin it); propose a further generated-app UX or robustness increment (e.g.
-  optimistic UI updates with rollback, or loading skeletons) with the founder at kickoff. A Groq key
-  remains available for a separately authorized future live model-fabric check; keep it only in
-  gitignored .env and never in chat/commits.
-last_updated: "2026-09-10T13:00:00+05:30"
+  Task R-290 (optimistic delete with rollback in the collection screen) is implemented, verified, and
+  complete (843 tests pass; tracker current — 79 Done of 290, MVP 79/185 = 42.7%). Next unstarted Tracker
+  ID is R-291 (do not begin it); recommended offline candidate: extend optimistic delete to the
+  detail-screen and subcollection deletes for consistency, or loading skeletons for the loading states —
+  propose with the founder at kickoff. A Groq key remains available for a separately authorized future
+  live model-fabric check; keep it only in gitignored .env and never in chat/commits.
+last_updated: "2026-09-10T14:00:00+05:30"

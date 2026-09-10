@@ -1636,3 +1636,34 @@
   1..297 contiguous, table `A4:M297`, Dashboard ranges through row 297, no `#REF!`, XLSX valid. Recounted
   from the workbook: 289 unique IDs (0 dupes), 78 Done, 1 Deferred, 210 Not Started; MVP 78/184 (42.4%);
   R-010..R-219 backlog intact.
+
+## 2026-09-10 — R-290
+
+- Optimistic Delete with Rollback: the generated collection screen previously waited for the delete
+  round-trip before the row disappeared. R-290 makes both single (`handleDelete`) and batch
+  (`handleBatchDelete`) deletes optimistic — the affected rows vanish immediately and reappear (with the
+  existing error toast) only if the server rejects. Founder chose this over loading skeletons.
+- Added, in `_collection_screen_page`: `const [pendingDeleteIds, setPendingDeleteIds] = useState<string[]
+  >([]);` (next to `checkedIds`); a reconcile `useEffect(() => { setPendingDeleteIds((prev) => prev
+  .filter((id) => (data ?? []).some((x: any) => String(x.id) === id))); }, [data]);` (prunes ids once
+  refetch removes them — no flash-back, no unbounded growth); and `const visibleRows = displayData.filter
+  ((item: any) => !pendingDeleteIds.includes(String((item as any).id)));`. `handleDelete` adds
+  `String(id)` to pending before `await remove(id)` and rolls it back in `catch` before `toast.error`;
+  `handleBatchDelete` snapshots `const ids = checkedIds.map(String)`, adds them, and rolls them back in
+  `catch`. The row map now iterates `visibleRows`.
+- `pendingDeleteIds`/`visibleRows` are emitted unconditionally (like the existing `checkedIds` selection
+  state; all referenced, so no unused-var), but the delete handlers only exist when delete is wired, so a
+  no-delete screen has no optimistic-delete handler. Detail-screen/subcollection delete, the mutation/list
+  hooks, the API client, backend, and IR are unchanged; description-only IR generation stays byte-stable.
+- Test-first: added `test_collection_optimistic_delete.py` (9 tests — pending state, reconcile effect,
+  visibleRows filter + map, single optimistic+rollback ordering, batch optimistic+rollback, success path
+  preserved, no-delete emits no handler, description-only stability, demo generation). They failed against
+  the pre-change handlers, pass after. Updated two `test_collection_field_filters.py` row-map assertions
+  (`displayData.map`/`data.map` → `visibleRows.map`).
+- Gates: `task verify` 843 tests pass; `task lint`, `task security:quick`, `task env:check` pass; both
+  `task builder:demo` pass; generated collection page inspected. Implementation checkpoint `1ed88b6`.
+  0 local / 0 cloud model calls; no generated app installed/run, no DB connection.
+- Tracker: `tracker_edit_r290.py` (baseline `1ed88b6`) — R-290 (Builder) at row 9, R-289 → row 10; rows
+  1..298 contiguous, table `A4:M298`, Dashboard ranges through row 298, no `#REF!`, XLSX valid. Recounted
+  from the workbook: 290 unique IDs (0 dupes), 79 Done, 1 Deferred, 210 Not Started; MVP 79/185 (42.7%);
+  R-010..R-219 backlog intact.

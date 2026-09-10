@@ -982,6 +982,25 @@ made the `useList<Child>By<Parent>` hook race-safe (superseded LIST_BY requests 
 - The `useList<Child>By<Parent>` hook, generated API client, backend, Application IR, and the
   sort/filter/pagination controls are unchanged; description-only IR generation stays byte-identical.
 
+### Optimistic Delete with Rollback in the Collection Screen (R-290)
+
+Generated collection deletes are optimistic — the affected rows vanish immediately and reappear only if
+the server rejects, instead of waiting for the round-trip. Safe because mutation hooks are deduped
+(R-288) and the list fetch is race-safe (R-280):
+
+- The screen owns `const [pendingDeleteIds, setPendingDeleteIds] = useState<string[]>([]);` (emitted like
+  the existing `checkedIds` selection state) and computes `const visibleRows = displayData.filter((item:
+  any) => !pendingDeleteIds.includes(String((item as any).id)));`, which the table row map iterates.
+- `handleDelete(id)` adds `String(id)` to `pendingDeleteIds` before `await remove(id)` and, in `catch`,
+  removes it (row reappears) before the existing `toast.error`. `handleBatchDelete()` snapshots
+  `const ids = checkedIds.map(String)`, adds them, and rolls them back in `catch`.
+- A reconcile `useEffect(() => { setPendingDeleteIds((prev) => prev.filter((id) => (data ?? []).some((x:
+  any) => String(x.id) === id))); }, [data]);` prunes ids once `refetch` has removed them — the row stays
+  hidden through the round-trip, then the id is pruned when it is already gone from `data` (no flash-back,
+  no unbounded growth).
+- Detail-screen/subcollection delete, the mutation/list hooks, the generated API client, backend, and
+  Application IR are unchanged; description-only IR generation stays byte-identical.
+
 ### Global Notification Toast System & Action Feedback (R-279)
 
 Adds a lightweight, accessible, and self-contained client-side toast notification system to generated Next.js web applications:

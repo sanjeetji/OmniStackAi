@@ -1,10 +1,10 @@
 # Current Handoff
 
-Task ID: R-289
+Task ID: R-290
 Status: done
 Phase: BASIC/MVP — Founder Stage 0
 Branch: `main` (the only branch; the GitHub default)
-Implementation SHA: `b6a1af4`
+Implementation SHA: `1ed88b6`
 
 ## Repo/workflow state
 
@@ -13,35 +13,36 @@ Implementation SHA: `b6a1af4`
 - Commits use `sanjeetji <sk698166@gmail.com>` as author. A permitted tooling co-author trailer may be
   added, but the founder remains the primary author.
 
-## Completed (R-289) — Debounced Live Subcollection Search
+## Completed (R-290) — Optimistic Delete with Rollback in the Collection Screen
 
-The generated subcollection (master-detail) search is now live + debounced (300ms), matching the
-top-level collection search (R-280). R-281 shipped a submit-only subcollection form; now that R-286 made
-the `useList<Child>By<Parent>` hook race-safe, a live search-as-you-type is safe.
+The generated collection screen's deletes are now optimistic: single (`handleDelete`) and batch
+(`handleBatchDelete`) removals hide the affected rows immediately and reappear (with the existing error
+toast) only if the server rejects — instead of waiting for the round-trip. Founder chose this over
+loading skeletons.
 
-- New helpers `_subcol_search_names(s_var)` and `_subcol_search_state(s_var)` emit a per-subcollection
-  controlled search `useState("")` plus a `setTimeout`/`clearTimeout` 300ms debounce `useEffect` that
-  commits the trimmed value to `<s_var>.setSearch` (guarded by `!== (params.q ?? "")`).
-- `_subcol_controls`'s search input is now controlled (`value`/`onChange`) instead of
-  uncontrolled+`FormData`; the form submit still commits immediately (Enter). Wired into both the
-  collection master-detail and detail screens; entities without a subcollection emit none.
-- The `useList<Child>By<Parent>` hook, generated API client, backend, IR, and the sort/filter/pagination
-  controls are unchanged; description-only IR generation stays byte-identical.
+- A `pendingDeleteIds` overlay is added to via the delete handlers before `await remove(...)`, rolled
+  back in `catch`, and pruned by a reconcile `useEffect(... , [data])` once `refetch` removes the ids (no
+  flash-back). The row map iterates a `visibleRows` list filtered by `pendingDeleteIds`.
+- `pendingDeleteIds`/`visibleRows` are emitted unconditionally (like the existing `checkedIds` selection
+  state); the delete handlers only exist when delete is wired. Safe on the deduped mutation hooks (R-288)
+  and race-safe list fetch (R-280). Self-contained in `_collection_screen_page`; detail/subcollection
+  delete, the mutation/list hooks, the API client, backend, and IR are unchanged; description-only IR
+  generation stays byte-identical.
 
 ## Verification
 
-- `task verify` — pass (834 agent-engine tests; 5 focused R-289 tests in
-  `test_subcollection_search_debounce.py`, written test-first). R-281
-  `test_subcollection_list_controls.py` search assertions updated to the controlled form.
+- `task verify` — pass (843 agent-engine tests; 9 focused R-290 tests in
+  `test_collection_optimistic_delete.py`, written test-first). Two `test_collection_field_filters.py`
+  row-map assertions updated to `visibleRows`.
 - `task lint`, `task security:quick`, `task env:check` — pass. Both `task builder:demo` — pass.
-- Generated `post_list` subcollection search inspected end-to-end.
-- Tracker — R-289 at `Phase_Roadmap!A9:M9`; table `A4:M297`; Dashboard formulas reach row 297; 289
-  unique IDs (0 dupes); 78 Done, 1 Deferred, 210 Not Started; MVP 78/184 (42.4%); no `#REF!`; XLSX valid.
+- Generated collection page inspected end-to-end.
+- Tracker — R-290 at `Phase_Roadmap!A9:M9`; table `A4:M298`; Dashboard formulas reach row 298; 290
+  unique IDs (0 dupes); 79 Done, 1 Deferred, 210 Not Started; MVP 79/185 (42.7%); no `#REF!`; XLSX valid.
 - 0 local model calls / 0 cloud calls; no generated app installed/run, no DB connection.
 
 ## Blockers and risks
 
-- No blocker for the offline R-290 candidate. Live preview/deploy and R-224 still need a
+- No blocker for the offline R-291 candidate. Live preview/deploy and R-224 still need a
   network-capable environment and/or authorized provider keys. Native mobile remains deferred under
   Brief Sections 25 and 91.
 - A Groq key may be available for a future separately authorized live model-fabric verification. Keep
@@ -49,11 +50,10 @@ the `useList<Child>By<Parent>` hook race-safe, a live search-as-you-type is safe
 
 ## Next action
 
-Continue from **R-290** (the next unstarted Tracker ID — do not begin it without kickoff). Generated-app
-search is now consistent (top-level + subcollection both live/debounced) and all request paths (fetch and
-mutation) are race-safe. Recommended offline candidate: a further generated-app UX or robustness
-increment — e.g. optimistic UI updates with rollback, or loading skeletons for the collection/detail/
-subcollection loading states. Record the R-290 Standard AI Task Contract before coding.
+Continue from **R-291** (the next unstarted Tracker ID — do not begin it without kickoff). Recommended
+offline candidate: extend optimistic delete to the detail-screen and subcollection deletes for
+consistency (currently collection-only), or loading skeletons for the collection/detail/subcollection
+loading states. Record the R-291 Standard AI Task Contract before coding.
 
 ## Next command
 
