@@ -2,18 +2,18 @@ schema_version: 1
 project: OmniStackAI
 phase: BASIC/MVP
 founder_stage: 0
-current_task: R-299
+current_task: R-300
 current_status: done
 branch: main
 last_completed_task:
-  task_id: R-299
-  title: "Generated Form Screen Keyboard Shortcuts: Cmd/Ctrl+Enter, Cmd/Ctrl+S & Escape Cancel"
+  task_id: R-300
+  title: "Generated Form Screen Input Constraints, Native HTML Validation & Live Character Counters"
   verification: >-
-    task verify (916 agent-engine tests, 7 new focused R-299 tests); wired power-user keyboard shortcuts
-    into generated Next.js form screens: Cmd+Enter / Ctrl+Enter triggers form submission (requestSubmit);
-    Cmd+S / Ctrl+S triggers form submission and prevents browser Save Page As dialog; Escape blurs active
-    inputs/textareas/selects and when outside inputs prompts to discard unsaved changes and navigates back;
-    submitting guards prevent duplicate submissions; 100% diff-invariant across ir.description;
+    task verify (922 agent-engine tests, 6 new focused R-300 tests); enforced schema-derived field validation
+    rules natively in Next.js form screens: string and text fields with max_length emit maxLength HTML attributes,
+    max-character helper hints, and live character counters ({length}/{max_length}) with amber warning coloring
+    when exceeding 90% threshold; numeric fields with min/max rules emit min and max HTML attributes and range
+    badges; unconstrained fields preserve existing markup byte-identically; 100% diff-invariant across ir.description;
     task lint + security:quick + env:check and both builder demos pass; 0 local/0 cloud model calls
   result: pass
 control_plane_database: postgresql
@@ -26,11 +26,12 @@ product_direction: >-
   framework adapter contract -> Next.js adapter -> Git service -> preview/sandbox (needs cloud env).
 id_note: >-
   Workbook backlog owns R-010..R-219. Founder-requested tasks use IDs after R-219: R-220..R-223 done,
-  R-224 Next.js deferred (env-blocked), R-225..R-299 done. Continue from R-300.
+  R-224 Next.js deferred (env-blocked), R-225..R-300 done. Continue from R-301.
 blockers: []
 next_action: >-
-  Task R-299 (generated form screen keyboard shortcuts) is implemented, verified, and complete
-  (916 tests pass; tracker current — 88 Done of 299, MVP 88/194 = 45.4%). Next unstarted Tracker ID is R-300.
-last_updated: "2026-09-10T13:25:00+05:30"
+  Task R-300 (generated form screen input constraints & live character counters) is implemented, verified,
+  and complete (922 tests pass; tracker current — 89 Done of 300, MVP 89/195 = 45.6%). Next unstarted Tracker ID is R-301.
+last_updated: "2026-09-10T13:30:00+05:30"
+
 
 

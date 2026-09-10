@@ -1,5 +1,31 @@
 # Work Log
 
+## 2026-09-10 — R-300
+
+- Recorded contract in `.ai/CURRENT_TASK.yaml` and `.ai/tasks/R-300.md` (status in_progress → done).
+- `nextjs.py`:
+  - Enforced schema-derived validation rules natively in Next.js form screens (`_form_screen_page`):
+    - Text and String fields with `rules.max_length`:
+      - Emits `maxLength={rules.max_length}` HTML attribute on `<textarea>` and `<input>`.
+      - Renders helper hint `Max {rules.max_length} characters`.
+      - Renders live character counter (`{length} / {rules.max_length}`) dynamically turning amber warning
+        when input length reaches 90% of the limit.
+    - Numeric fields with `rules.minimum` / `rules.maximum`:
+      - Emits `min={rules.minimum}` when specified.
+      - Emits `max={rules.maximum}` when specified.
+      - Displays range badge `Range: {min} to {max}`.
+    - Fields without constraints remain byte-identical to existing output.
+  - Maintained strict diff invariance across `ir.description`.
+- Added `services/agent-engine/tests/test_form_input_constraints.py` with 6 focused tests (string maxLength
+  and counter, textarea maxLength and counter, numeric min/max and range hint, unconstrained field stability,
+  diff invariance, example projects generation).
+- `task verify` — 922 tests pass (6 new), 0 failures. `task lint`, `task security:quick`, `task env:check` pass.
+  `builder:demo minimal-blog` + `rideshare-favourites` pass. Generated TypeScript inspected. 0 network, 0 cloud model calls.
+- Tracker: inserted R-300 Done row at `Phase_Roadmap!A9`; table `A4:M308`; 300 unique IDs (0 dupes);
+  89 Done, 1 Deferred, 210 Not Started; MVP 89/195 (45.6%); no `#REF!`; XLSX valid.
+- Updated CURRENT_TASK.yaml, tasks/R-300.md, PROJECT_STATE.yaml, HANDOFF.md, PROJECT_STATE.md,
+  CHANGELOG.md, docs/CODEGEN.md, docs/PROGRESS.md, docs/RESUME_PROMPT.md.
+
 ## 2026-09-10 — R-299
 
 - Recorded contract in `.ai/CURRENT_TASK.yaml` and `.ai/tasks/R-299.md` (status in_progress → done).

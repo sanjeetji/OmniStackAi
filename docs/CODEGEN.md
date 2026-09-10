@@ -1167,6 +1167,25 @@ Generated Next.js collection, detail, and form screens support power-user keyboa
   - **Event listener lifecycle**: Attached to `window` with proper cleanup on unmount with dependencies (`[isDirty, submitting, updating]`).
 - **Safety & Quality**: 100% offline, standard-library-only platform code, zero new IR fields, byte-identical diff invariance across `ir.description`.
 
+### Generated Form Screen Input Constraints, Native HTML Validation & Live Character Counters (R-300)
+
+NextjsWebAdapter derives native HTML constraints from entity field validation rules (`parse_field_rules(f)`) for generated form screens (`apps/web/app/<screen>/page.tsx`):
+
+- **Native HTML Input Constraints**:
+  - String and text fields with `max_length` rules emit native `maxLength={rules.max_length}` on `<input>` and `<textarea>` elements.
+  - Numeric fields (integer and float) with `minimum` and/or `maximum` rules emit native `min={rules.minimum}` and `max={rules.maximum}` attributes on `<input type="number">`.
+- **Live Character Counters**:
+  - Text fields and textareas with `max_length` render a dynamic character counter below the field: `{String(formData["<name>"] ?? "").length} / {rules.max_length}`.
+  - Adaptive warning threshold: the counter text turns amber (`#b45309`) when input length reaches or exceeds 90% of `max_length`.
+  - Helper hint displays `Max {rules.max_length} characters` alongside the counter.
+- **Range Badges**:
+  - Numeric inputs with validation bounds display a styled range badge `Range: {min} to {max}` (or `Min: {min}` / `Max: {max}`) in the field helper container.
+- **Test Compatibility & Diff Invariance**:
+  - Preserves the exact `{fieldErrors.<name> && <span style={{ color: "#ef4444", fontSize: 12, marginTop: 4, display: "block" }}>{fieldErrors.<name>}</span>}` error span, rendering constraints and counters in a complementary container below.
+  - Fields without constraints remain 100% byte-identical.
+  - 100% offline, stdlib-only Python codegen, zero network or model calls, byte-identical diff invariance across `ir.description`.
+
+
 
 
 
