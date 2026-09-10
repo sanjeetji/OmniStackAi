@@ -1,40 +1,41 @@
 schema_version: 1
-task_id: R-291
-title: Optimistic Subcollection Child Delete with Rollback in Generated Next.js Screens
-status: done
+task_id: R-292
+title: Loading Skeletons for Generated Next.js Screens
+status: in_progress
 phase: BASIC/MVP
 founder_stage: 0
 branch: main
 goal: >-
-  Extend R-290's optimistic delete to the subcollection (master-detail) child lists, completing the
-  optimistic-delete story. In both the collection master-detail screen and the dedicated detail screen,
-  deleting a child row hides it immediately (per-subcollection deleting overlay) and rolls it back (row
-  reappears + existing error toast) if the server rejects; a reconcile effect prunes ids once the
-  subcollection refetch removes them. Safe on the deduped mutation hooks (R-288) and the race-safe
-  R-286 LIST_BY hook. No hook/API-client/backend/IR change.
-tracker_ref: "R-291"
+  Replace the plain "Loading..." text in the generated screens' data-loading states with
+  layout-preserving skeleton placeholders (gray rounded bars), so a loading screen shows the shape of
+  content instead of a single centered line — a perceived-performance UX improvement. Scope: the
+  collection table loading state, the subcollection (master-detail) list loading state (both render
+  sites), and the detail-screen main loading state. Static inline-styled skeletons — no CSS keyframes, no
+  new component/file, no dependency. Deterministic and description-only-stable.
+tracker_ref: "R-292"
 requirements:
-  - Each deletable subcollection gets a per-subcollection deleting state (useState<string[]>) + a reconcile useEffect on [<s_var>.data].
-  - The child delete handler adds String(id) to the deleting overlay before await remove<Child>(id) and rolls it back in catch before the existing toast.error.
-  - The child row map iterates the deleting-filtered list (only when the subcollection is deletable; non-deletable subcollections map <s_var>.data unchanged).
-  - Applies in both the collection master-detail and detail screens; existing success path (refetch + success toast) preserved.
-  - No mutation/list hook, API client, backend, or IR change; deterministic; description-only IR stability preserved.
+  - Collection table loading cell renders a stack of ~5 skeleton bars instead of "Loading <plural>...".
+  - Subcollection list loading renders ~3 skeleton item blocks instead of "Loading <child plural>..." (both the collection master-detail and detail render sites).
+  - Detail-screen main loading renders ~4 skeleton field lines instead of "Loading <name>...".
+  - Skeletons are inline-styled gray rounded divs; no @keyframes, no new file, no npm/platform dependency.
+  - Refresh-button "Loading..." labels and other non-data-loading text are unchanged.
+  - No hook/API-client/backend/IR change; deterministic; description-only IR stability preserved.
 acceptance_criteria:
-  - Generated deletable subcollection emits `const [<s_var>Deleting, set<S_var>Deleting] = useState<string[]>([]);` and a reconcile `useEffect(... , [<s_var>.data]);`.
-  - The child delete handler adds the id before `await remove<Child>(id)` and removes it in catch before `toast.error`.
-  - The child row map source is `(<s_var>.data ?? []).filter((child: any) => !<s_var>Deleting.includes(String((child as any).id)))` for deletable subcollections.
-  - Non-deletable subcollections emit no deleting state and map `<s_var>.data` unchanged.
-  - Both render sites carry it; description-only IR changes remain byte-identical.
-  - Focused tests, related subcollection tests, full offline verification, lint, security, env check, and both builder demos pass.
+  - The collection loading state no longer emits "Loading <plural>... " text and instead maps skeleton bars.
+  - The subcollection loading state (both sites) no longer emits "Loading <child>..." and instead maps skeleton blocks.
+  - The detail main loading state no longer emits "Loading <name>..." and instead maps skeleton lines.
+  - Description-only IR changes remain byte-identical; both example projects still generate.
+  - Focused tests, related screen tests, full offline verification, lint, security, env check, and both builder demos pass.
 expected_impact:
   - services/agent-engine/src/omnistackai_agent_engine/codegen/nextjs.py
-  - services/agent-engine/tests/test_subcollection_optimistic_delete.py
+  - services/agent-engine/tests/test_loading_skeletons.py
   - .ai task/state/handoff/work-log files, PROJECT_STATE.md, CHANGELOG.md, docs/CODEGEN.md, docs/PROGRESS.md, docs/RESUME_PROMPT.md, and execution tracker
 allowed_paths:
   - services/agent-engine/src/omnistackai_agent_engine/codegen/nextjs.py
-  - services/agent-engine/tests/test_subcollection_optimistic_delete.py
+  - services/agent-engine/tests/test_loading_skeletons.py
+  - services/agent-engine/tests/test_screen_generation.py
   - services/agent-engine/tests/test_subcollection_screens.py
-  - services/agent-engine/tests/test_subcollection_child_deletion.py
+  - services/agent-engine/tests/test_detail_screen_lifecycle.py
   - .ai/**
   - CHANGELOG.md
   - PROJECT_STATE.md
@@ -51,11 +52,11 @@ forbidden_paths:
 must_not_change:
   - PostgreSQL, platform schemas/migrations, or backend semantics
   - Section 74 monorepo layout, provider boundaries, infrastructure, or native/mobile scope
-  - Application IR schema, generated API-client behaviour, or the mutation/list hooks
-  - top-level collection delete (R-290), subcollection search/sort/pagination/filter behaviour
+  - Application IR schema, generated API-client behaviour, or the hooks
+  - the empty-state / error / refresh-button / data-render behaviour of the screens
 gates:
-  - focused subcollection optimistic-delete tests
-  - test_subcollection_screens / test_subcollection_child_deletion / test_subcollection_list_controls
+  - focused loading-skeleton tests
+  - test_screen_generation / test_subcollection_screens / test_detail_screen_lifecycle
   - task verify
   - task lint
   - task security:quick
@@ -68,38 +69,10 @@ model_tool_trace:
   local_calls: 0
   cloud_calls: 0
   note: Pure deterministic code generation and offline tests; no model call is needed.
-evidence:
-  - command: env PYTHONPATH=services/agent-engine/src python3 -m unittest discover -s services/agent-engine/tests -p 'test_subcollection_optimistic_delete.py'
-    result: pass
-    detail: 6 focused R-291 tests pass (they failed first against the pre-change child handlers).
-  - command: task verify
-    result: pass
-    detail: 849 agent-engine tests and all Stage 0 offline verification gates pass; no existing assertion needed changing.
-  - command: task lint
-    result: pass
-  - command: task security:quick
-    result: pass
-  - command: task env:check
-    result: pass
-  - command: task builder:demo -- minimal-blog
-    result: pass
-  - command: task builder:demo -- rideshare-favourites
-    result: pass
-  - command: generated TypeScript artifact inspection
-    result: pass
-    detail: >-
-      Generated deletable subcollection carries a commentsSubcolDeleting overlay + reconcile useEffect on
-      [commentsSubcol.data], optimistic add before await removeComment(id) + rollback in catch, and the
-      child map iterates the deleting-filtered list. Non-deletable subcollections unchanged. Tracker: 291
-      unique IDs, R-291 Done, table A4:M299, dashboard formulas through row 299, no #REF!, valid XLSX;
-      80 Done / 1 Deferred / 210 Not Started; MVP 80/186 (43.0%).
-  - commit: 51f33c8
-    detail: feat(codegen)- optimistic subcollection child delete with rollback [R-291]
+evidence: []
 blockers: []
 next_action: >-
-  R-291 is complete and verified. Next unstarted Tracker ID is R-292 (do not begin it). The
-  optimistic-delete story now spans the collection screen (R-290) and subcollection child lists (R-291).
-  Recommended offline candidate: loading skeletons for the collection/detail/subcollection loading states,
-  or another generated-app UX/robustness increment.
+  Write focused failing tests, replace the collection/subcollection/detail loading text with skeleton
+  markup, update any pinned "Loading..." assertions, run all gates, then tracker + docs + two commits + push.
 next_command: >-
-  task ai:status
+  env PYTHONPATH=services/agent-engine/src python3 -m unittest discover -s services/agent-engine/tests -p 'test_loading_skeletons.py' -v

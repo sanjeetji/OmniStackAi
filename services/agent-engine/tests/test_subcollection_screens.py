@@ -156,8 +156,9 @@ class SubcollectionCollectionScreenTests(TestCase):
         self.assertIn("{commentsSubcol.total}", self.page)
 
     def test_post_list_screen_renders_child_items_and_states(self) -> None:
-        # Loading state
-        self.assertIn("Loading comments...", self.page)
+        # Loading state — R-292 renders skeleton blocks in place of the "Loading comments..." text.
+        self.assertIn("{commentsSubcol.loading && !commentsSubcol.data && (", self.page)
+        self.assertIn('<div key={i} style={{ height: 44, background: "#f1f5f9"', self.page)
         # Error state
         self.assertIn("commentsSubcol.error", self.page)
         self.assertIn("commentsSubcol.error.message", self.page)
@@ -231,7 +232,9 @@ class DedicatedDetailScreenTests(TestCase):
         self.assertIn("usePost(selectedId)", self.page)
 
     def test_detail_screen_parent_attributes_and_subcollections(self) -> None:
-        self.assertIn("Loading Post...", self.page)
+        # R-292 renders skeleton lines in place of the "Loading Post..." text.
+        self.assertIn("{loading && (", self.page)
+        self.assertIn('<div key={i} style={{ height: 14, background: "#e2e8f0", borderRadius: 4, width: `${88 - i * 14}%` }} />', self.page)
         self.assertIn("Title:", self.page)
         self.assertIn("Content:", self.page)
         self.assertIn("Comments", self.page)

@@ -1973,8 +1973,11 @@ def _collection_screen_page(screen: Screen, entity: Entity, ir: ApplicationIR, o
         "          <tbody>",
         "            {loading && !data && (",
         "              <tr>",
-        f'                <td colSpan={{{1 + len(display_fields) + (1 if has_actions_col else 0)}}} style={{{{ padding: 32, textAlign: "center", color: "#64748b" }}}}>',
-        f"                  Loading {plural}... ",
+        f'                <td colSpan={{{1 + len(display_fields) + (1 if has_actions_col else 0)}}} style={{{{ padding: 16 }}}}>',
+        "                  {/* R-292: loading skeleton rows */}",
+        "                  {[0, 1, 2, 3, 4].map((i) => (",
+        '                    <div key={i} style={{ height: 14, background: "#e2e8f0", borderRadius: 4, margin: "10px 0", opacity: 1 - i * 0.15 }} />',
+        "                  ))}",
         "                </td>",
         "              </tr>",
         "            )}",
@@ -2289,7 +2292,11 @@ def _collection_screen_page(screen: Screen, entity: Entity, ir: ApplicationIR, o
                 ])
             lines.extend([
                 f"                {{{s_var}.loading && !{s_var}.data && (",
-                f'                  <div style={{{{ padding: 16, textAlign: "center", color: "#64748b", fontSize: 14 }}}}>Loading {sub.child_plural.lower()}...</div>',
+                '                  <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>',
+                "                    {[0, 1, 2].map((i) => (",
+                '                      <div key={i} style={{ height: 44, background: "#f1f5f9", borderRadius: 6, opacity: 1 - i * 0.2 }} />',
+                "                    ))}",
+                "                  </div>",
                 "                )}",
                 f"                {{{s_var}.error && (",
                 f'                  <div style={{{{ padding: "8px 12px", background: "#fef2f2", border: "1px solid #fecaca", borderRadius: 6, color: "#991b1b", fontSize: 13, marginBottom: 12 }}}}>Error: {{{s_var}.error.message}}</div>',
@@ -3378,7 +3385,11 @@ def _detail_screen_page(screen: Screen, entity: Entity, ir: ApplicationIR, ops: 
     if Op.GET in ops:
         lines.extend([
             "      {loading && (",
-            f'        <div style={{ padding: 24, textAlign: "center", color: "#64748b" }}>Loading {name}...</div>',
+            '        <div style={{ padding: 24, display: "flex", flexDirection: "column", gap: 12 }}>',
+            "          {[0, 1, 2, 3].map((i) => (",
+            '            <div key={i} style={{ height: 14, background: "#e2e8f0", borderRadius: 4, width: `${88 - i * 14}%` }} />',
+            "          ))}",
+            "        </div>",
             "      )}",
             "      {error && (",
             '        <div style={{ padding: "12px 16px", background: "#fef2f2", border: "1px solid #fecaca", borderRadius: 8, color: "#991b1b", marginBottom: 20 }}>',
@@ -3568,7 +3579,11 @@ def _detail_screen_page(screen: Screen, entity: Entity, ir: ApplicationIR, ops: 
                 ])
             lines.extend([
                 f"                {{{s_var}.loading && !{s_var}.data && (",
-                f'                  <div style={{{{ padding: 16, textAlign: "center", color: "#64748b", fontSize: 14 }}}}>Loading {sub.child_plural.lower()}...</div>',
+                '                  <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>',
+                "                    {[0, 1, 2].map((i) => (",
+                '                      <div key={i} style={{ height: 44, background: "#f1f5f9", borderRadius: 6, opacity: 1 - i * 0.2 }} />',
+                "                    ))}",
+                "                  </div>",
                 "                )}",
                 f"                {{{s_var}.error && (",
                 f'                  <div style={{{{ padding: "8px 12px", background: "#fef2f2", border: "1px solid #fecaca", borderRadius: 6, color: "#991b1b", fontSize: 13, marginBottom: 12 }}}}>Error: {{{s_var}.error.message}}</div>',
