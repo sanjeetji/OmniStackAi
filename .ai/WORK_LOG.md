@@ -1,5 +1,33 @@
 # Work Log
 
+## 2026-09-10 — R-296
+
+- Recorded contract in `.ai/CURRENT_TASK.yaml` and `.ai/tasks/R-296.md` (status in_progress → done).
+- `nextjs.py`:
+  - Error banners across collection list, detail screen, subcollections (both collection and detail views),
+    and form submission now emit `role="alert"` and `aria-live="assertive"` for immediate assistive announcement.
+  - Search inputs now emit `aria-label="Search <plural>"` (collection) and `aria-label="Search <child_plural>"`
+    (subcollections).
+  - Sortable table headers in `_collection_screen_page` now emit dynamic WAI-ARIA `aria-sort` reflecting
+    current `params.sort` and `params.order` ("ascending", "descending", or "none").
+  - Collection pagination controls are enclosed in `<nav aria-label="Pagination">` and Previous/Next buttons
+    emit `aria-label="Previous page"` and `aria-label="Next page"`; subcollection pagination Previous/Next
+    buttons emit `aria-label="Previous page"` and `aria-label="Next page"` as well.
+  - Contextual empty-state text containers in collection and subcollection lists emit `role="status"`.
+  - All existing text labels, retry buttons, skeletons, and hook signatures are strictly preserved;
+    strict diff invariance across `ir.description` preserved.
+- Added `services/agent-engine/tests/test_screen_accessibility.py` with 13 focused tests (error banner alert
+  role and assertive live regions across all 4 screens/views, search aria-labels, sortable header aria-sort,
+  collection and subcollection pagination nav and button labels, empty state status roles, description diff
+  invariance, example projects generation), written test-first.
+- `task verify` — 894 tests pass (13 new), 0 failures. `task lint`, `task security:quick`, `task env:check`
+  pass. `builder:demo minimal-blog` + `rideshare-favourites` pass. Generated TypeScript inspected.
+  0 network, 0 cloud model calls.
+- Tracker: inserted R-296 Done row at `Phase_Roadmap!A9`; table `A4:M304`; 296 unique IDs (0 dupes);
+  85 Done, 1 Deferred, 210 Not Started; MVP 85/191 (44.5%); no `#REF!`; XLSX valid.
+- Updated CURRENT_TASK.yaml, tasks/R-296.md, PROJECT_STATE.yaml, HANDOFF.md, PROJECT_STATE.md,
+  CHANGELOG.md, docs/CODEGEN.md, docs/PROGRESS.md, docs/RESUME_PROMPT.md.
+
 ## 2026-09-10 — R-295
 
 - Recorded contract in `.ai/CURRENT_TASK.yaml` and `.ai/tasks/R-295.md` (status in_progress → done).

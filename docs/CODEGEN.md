@@ -1094,6 +1094,26 @@ Retry buttons reuse the collection error banner's flex layout and dark-red (`#99
 collection top-level error banner is unchanged, as are loading/empty/data-render states, delete-error
 toasts, and form field errors; description-only IR generation stays byte-identical.
 
+### Generated Web App Accessibility Pass (R-296)
+
+Elevates the generated Next.js web application to enterprise accessibility standards (WCAG 2.1 AA / WAI-ARIA best practices) across all screen types without changing public hook APIs, generated API client, or backend semantics:
+
+- **Error Banners (Live Regions & Alert Roles)**:
+  - Collection top-level fetch error banner, detail screen main error banner, subcollection (master-detail) error banners in both views, and form submission error banner emit `role="alert"` and `aria-live="assertive"`, ensuring that assistive technologies announce errors immediately upon occurrence.
+- **Accessible Search Inputs**:
+  - Collection list search `<input>` emits `aria-label="Search <plural>"`.
+  - Subcollection list search `<input>` emits `aria-label="Search <child_plural>"`.
+- **Sortable Table Column Headers (WAI-ARIA Sort State)**:
+  - In `_collection_screen_page`, each sortable column `<th>` emits:
+    `aria-sort={params.sort === "<field>" ? (params.order === "desc" ? "descending" : "ascending") : "none"}`.
+- **Accessible Pagination Controls**:
+  - Collection pagination footer is wrapped in `<nav aria-label="Pagination">` with `aria-label="Previous page"` and `aria-label="Next page"` buttons.
+  - Subcollection pagination buttons emit `aria-label="Previous page"` and `aria-label="Next page"`.
+- **Status Announcements for Empty States**:
+  - Contextual empty-state text containers in collection lists and subcollections emit `role="status"` for polite assistive announcements.
+- **Quality & Safety**:
+  - 100% offline, zero dependencies, all existing text strings, retry buttons, skeletons, and hook signatures strictly preserved; strict diff-invariance across `ir.description`.
+
 ### Global Notification Toast System & Action Feedback (R-279)
 
 Adds a lightweight, accessible, and self-contained client-side toast notification system to generated Next.js web applications:

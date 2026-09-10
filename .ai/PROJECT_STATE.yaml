@@ -2,22 +2,22 @@ schema_version: 1
 project: OmniStackAI
 phase: BASIC/MVP
 founder_stage: 0
-current_task: R-295
+current_task: R-296
 current_status: done
 branch: main
 last_completed_task:
-  task_id: R-295
-  title: Consistent Error + Retry Affordance Across Every Generated Fetch State
+  task_id: R-296
+  title: "Generated Web App Accessibility Pass: Semantic ARIA Roles, Live Regions, Table Sort State, and Accessible Search/Pagination Controls"
   verification: >-
-    task verify (881 agent-engine tests, 8 focused R-295 tests); brought every generated data-fetch error
-    state to parity with the collection list (which already had a Retry button): the detail-screen main
-    error banner now shows "Error loading <name>: <message>" in a span beside a Retry button calling
-    refetch(), and both subcollection (master-detail) error banners now show "Error: <message>" beside a
-    Retry button calling <s_var>.refetch(). Retry buttons reuse the collection banner's flex layout and
-    dark-red (#991b1b) styling; the collection top-level banner, loading/empty/data states, delete-error
-    toasts, and form field errors are unchanged. No hook/API-client/backend/IR change (refetch already
-    exists on every affected hook); description-only stability preserved. task lint + security:quick +
-    env:check and both builder demos pass; generated TypeScript inspected; impl 2454a43; 0 local/0 cloud
+    task verify (894 agent-engine tests, 13 new focused R-296 tests); brought generated Next.js screens to
+    enterprise accessibility standards (WCAG 2.1 AA / WAI-ARIA best practices) across all screen types:
+    error banners (collection top-level, detail main, subcollections in both views, form submit) emit
+    role="alert" and aria-live="assertive"; search inputs emit aria-label="Search <plural>" and
+    aria-label="Search <child_plural>"; sortable table column headers emit dynamic aria-sort; pagination
+    footers are wrapped in <nav aria-label="Pagination"> with accessible Previous/Next button labels;
+    and empty-state list messages emit role="status". All existing text labels, retry buttons, skeletons,
+    and hook signatures are preserved; 100% diff-invariant across ir.description. task lint + security:quick +
+    env:check and both builder demos pass; generated TypeScript inspected; impl 002e90a; 0 local/0 cloud
     model calls
   result: pass
 control_plane_database: postgresql
@@ -30,16 +30,11 @@ product_direction: >-
   framework adapter contract -> Next.js adapter -> Git service -> preview/sandbox (needs cloud env).
 id_note: >-
   Workbook backlog owns R-010..R-219. Founder-requested tasks use IDs after R-219: R-220..R-223 done,
-  R-224 Next.js deferred (env-blocked), R-225..R-295 done. Continue from R-296.
+  R-224 Next.js deferred (env-blocked), R-225..R-296 done. Continue from R-297.
 blockers: []
 next_action: >-
-  Task R-295 (consistent error + Retry across every generated fetch state) is implemented, verified, and
-  complete (881 tests pass; tracker current — 84 Done of 295, MVP 84/190 = 44.2%). Every generated
-  data-fetch error state (collection list, detail main, both subcollection lists) now offers a Retry
-  recovery, completing the error side to match the R-292/293 loading-skeleton coverage. The founder asked
-  to STOP after R-295. Next unstarted Tracker ID is R-296; recommended offline candidate: another
-  generated-app UX/robustness increment (e.g. a reusable EmptyState/error inline-state component to DRY
-  the screens, an accessibility pass, or optimistic create/update reflected in the collection list). A
-  Groq key remains available for a separately authorized future live model-fabric check; keep it only in
-  gitignored .env and never in chat/commits.
-last_updated: "2026-09-10T17:40:00+05:30"
+  Task R-296 (generated web app accessibility pass) is implemented, verified, and complete (894 tests pass;
+  tracker current — 85 Done of 296, MVP 85/191 = 44.5%). The generated Next.js app now has full loading-skeleton
+  coverage (R-292/293), App Router resilience files (R-294), Error + Retry across all fetches (R-295), and
+  enterprise WCAG/WAI-ARIA accessibility semantics (R-296). Next unstarted Tracker ID is R-297.
+last_updated: "2026-09-10T12:58:00+05:30"

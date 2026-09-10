@@ -5,23 +5,21 @@ Last updated: 2026-09-10T17:40:00+05:30
 Stage 0 (Founder Build Sequence, Brief Section 91) — BASIC/MVP
 
 ## Last Completed Task
-Tracker ID: R-295 — Consistent Error + Retry Affordance Across Every Generated Fetch State — DONE,
-`task verify` (881 agent-engine tests, 8 focused R-295 tests) passing. The generated collection list
-already rendered a "Retry" button (calling `refetch()`) in its error banner; R-295 brings the remaining
-fetch error states to parity: the detail-screen main error banner now shows "Error loading `<name>`:
-`<message>`" in a `<span>` beside a Retry button calling `refetch()`, and both subcollection
-(master-detail) error banners now show "Error: `<message>`" beside a Retry button calling
-`<s_var>.refetch()`. Retry buttons reuse the collection banner's flex layout and dark-red (`#991b1b`)
-styling; the collection top-level banner, loading/empty/data-render states, delete-error toasts, and form
-field errors are unchanged. No IR, backend, dependency, database, infrastructure, network, or model change
-(`refetch` already exists on every affected hook); implementation checkpoint `2454a43`. Preceded by R-225
-through R-294.
+Tracker ID: R-296 — Generated Web App Accessibility Pass: Semantic ARIA Roles, Live Regions, Table Sort State & Accessible Controls — DONE,
+`task verify` (894 agent-engine tests, 13 focused R-296 tests) passing. Brings the generated Next.js web
+application to enterprise accessibility standards (WCAG 2.1 AA / WAI-ARIA best practices) across all
+screen types: error banners (collection top-level, detail main, subcollections in both views, form submit)
+emit role="alert" and aria-live="assertive" for immediate assistive announcement; search inputs emit
+aria-label="Search <plural>" and aria-label="Search <child_plural>"; sortable table headers emit dynamic
+aria-sort state matching active params; pagination footers are wrapped in <nav aria-label="Pagination">
+with accessible Previous/Next button labels; and empty-state list messages emit role="status". All existing
+text labels, retry buttons, skeletons, and hook signatures are strictly preserved; 100% diff-invariant across
+ir.description; implementation checkpoint `002e90a`. Preceded by R-225 through R-295.
 
-**Notes:** (1) the tracker is current through R-295: 84 Done, 1 Deferred, 210 Not Started across 295
-tasks; MVP is 84/190 (44.2%). (2) The founder authorized autonomous continuation of Tracker IDs until
-manually stopped, and asked to STOP after R-295 — resume from R-296 via `docs/RESUME_PROMPT.md`. (3) A
-Groq API key may be available; live model-fabric verification remains separate (set it only in gitignored
-`.env`, never chat/commits).
+**Notes:** (1) the tracker is current through R-296: 85 Done, 1 Deferred, 210 Not Started across 296
+tasks; MVP is 85/191 (44.5%). (2) The founder authorized autonomous continuation of Tracker IDs until
+manually stopped — next unstarted Tracker ID: R-297. (3) A Groq API key may be available; live model-fabric
+verification remains separate (set it only in gitignored `.env`, never chat/commits).
 
 
 

@@ -1,13 +1,13 @@
-# OmniStackAI — implementation progress (as of R-295)
+# OmniStackAI — implementation progress (as of R-296)
 
 A living summary of what is built, what is pending, and how to see results. Numbers come from the
 execution tracker (`R_&_D/OmniStackAI_Execution_Tracker_v6.xlsx`, `Phase_Roadmap`).
 
 ## Headline
 
-- **881 automated tests pass**, fully offline and network-independent (`task verify`).
-- **84 tracker tasks Done, 1 Deferred, 210 Not Started** across 295 task rows.
-- The offline builder loop is complete end to end: **describe (IR) → generate (web with typed API client, React hooks, interactive master-detail screen components with field validation, page size selector & contextual empty states, bulk selection & batch deletion, CSV data export & bulk export, deep-linking & entity lifecycle in detail screens, global responsive navigation shell & header navbar with active route detection & quick-create CTA, post-submit contextual CTAs & record navigation with Cancel action in form footer, rich entity-aware dashboard overview page (live count cards, screen nav tiles, quick-create CTAs, diff-stable), record selector dropdown, prev/next record navigation & deep-link sync in detail screens, form screen dirty state tracking, unsaved changes guard & reset confirmation, collection screen boolean & enum field filtering with segmented controls, global notification toast system & action feedback with ToastProvider & useToast, subcollection navigation, child item deletion & mutation feedback, full-stack update/edit actions, foreign-key relation selectors & parent auto-population + API with
+- **894 automated tests pass**, fully offline and network-independent (`task verify`).
+- **85 tracker tasks Done, 1 Deferred, 210 Not Started** across 296 task rows.
+- The offline builder loop is complete end to end: **describe (IR) → generate (web with typed API client, React hooks, interactive master-detail screen components with field validation, page size selector & contextual empty states, bulk selection & batch deletion, CSV data export & bulk export, deep-linking & entity lifecycle in detail screens, global responsive navigation shell & header navbar with active route detection & quick-create CTA, post-submit contextual CTAs & record navigation with Cancel action in form footer, rich entity-aware dashboard overview page (live count cards, screen nav tiles, quick-create CTAs, diff-stable), record selector dropdown, prev/next record navigation & deep-link sync in detail screens, form screen dirty state tracking, unsaved changes guard & reset confirmation, collection screen boolean & enum field filtering with segmented controls, global notification toast system & action feedback with ToastProvider & useToast, subcollection navigation, child item deletion & mutation feedback, full-stack update/edit actions, foreign-key relation selectors & parent auto-population, App Router resilience quartet, full loading-skeleton coverage, consistent error & retry recovery, enterprise WAI-ARIA accessibility semantics + API with
   working CRUD incl. PATCH/PUT update + pagination + sorting + total count header + keyword search + sub-collections + DB schema + data-access + JWT-verified auth
   & per-endpoint roles + field validation + CORS middleware + OpenAPI 3.1 contract)
   → verify → edit → commit to an owned Git repo.**
@@ -16,11 +16,11 @@ execution tracker (`R_&_D/OmniStackAI_Execution_Tracker_v6.xlsx`, `Phase_Roadmap
 
 | Phase | Done | Total | % complete |
 |-------|------|-------|-----------|
-| **MVP** (current milestone) | 84 | 190 | **44.2%** |
+| **MVP** (current milestone) | 85 | 191 | **44.5%** |
 | MID | 0 | 47 | 0% |
 | ADVANCED | 0 | 29 | 0% |
 | PRODUCTION | 0 | 29 | 0% |
-| **Overall program** | **84** | **295** | **28.5%** |
+| **Overall program** | **85** | **296** | **28.7%** |
 
 
 > The 210 "Not Started" rows are largely the pre-existing backlog catalogue (R-010..R-219 — many are
@@ -28,9 +28,9 @@ execution tracker (`R_&_D/OmniStackAI_Execution_Tracker_v6.xlsx`, `Phase_Roadmap
 > than the raw ~25% suggests, because the work done so far is the **core engine + builder**, which
 > everything else builds on. The MVP figure (~40%) is the truest near-term measure. (The MVP lane has
 > grown as founder-requested builder work was split into explicit implementation rows. The previously
-> reported "145 MVP tasks at R-251" was one low: direct recount of that workbook is 146. R-252..R-295
-> added 44 rows, producing the current 190. Equivalently, current MVP contains 114 rows from R-001..R-219
-> and 76 founder-requested rows from R-220..R-295.)
+> reported "145 MVP tasks at R-251" was one low: direct recount of that workbook is 146. R-252..R-296
+> added 45 rows, producing the current 191. Equivalently, current MVP contains 114 rows from R-001..R-219
+> and 77 founder-requested rows from R-220..R-296.)
 
 ## Capabilities — completed vs pending
 
