@@ -2612,6 +2612,46 @@ def _form_screen_page(screen: Screen, entity: Entity, ir: ApplicationIR, ops: se
         "",
     ])
 
+    cancel_href = f"/{list_screen.id}" if list_screen else "/"
+    if can_create and can_update:
+        submitting_guard = "!(submitting || updating)"
+        submitting_deps = "submitting, updating"
+    elif can_update:
+        submitting_guard = "!updating"
+        submitting_deps = "updating"
+    else:
+        submitting_guard = "!submitting"
+        submitting_deps = "submitting"
+
+    lines.extend([
+        "  useEffect(() => {",
+        "    const handleKeyDown = (e: KeyboardEvent) => {",
+        '      if ((e.metaKey || e.ctrlKey) && (e.key === "Enter" || e.key === "s" || e.key === "S")) {',
+        "        e.preventDefault();",
+        f"        if ({submitting_guard}) {{",
+        '          const form = document.querySelector("form");',
+        "          if (form) {",
+        '            form.requestSubmit ? form.requestSubmit() : form.dispatchEvent(new Event("submit", { cancelable: true, bubbles: true }));',
+        "          }",
+        "        }",
+        '      } else if (e.key === "Escape") {',
+        "        const active = document.activeElement as HTMLElement | null;",
+        '        if (active && ["INPUT", "TEXTAREA", "SELECT"].includes(active.tagName)) {',
+        "          active.blur();",
+        "          return;",
+        "        }",
+        '        if (!isDirty || confirm("You have unsaved changes. Discard them and leave?")) {',
+        f'          window.location.href = "{cancel_href}";',
+        "        }",
+        "      }",
+        "    };",
+        '    window.addEventListener("keydown", handleKeyDown);',
+        '    return () => window.removeEventListener("keydown", handleKeyDown);',
+        f"  }}, [isDirty, {submitting_deps}]);",
+        "",
+    ])
+
+
     if uses_search_params:
         lines.extend([
             "  useEffect(() => {",
