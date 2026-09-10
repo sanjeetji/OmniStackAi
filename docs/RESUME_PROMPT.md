@@ -40,7 +40,7 @@ START PROTOCOL
   `task ai:status`, `task ai:handoff`. `task verify` must stay green and network-independent.
 - Confirm git branch/HEAD/clean tree. Then restate: phase, next Tracker ID, objective, blast radius.
 
-WHAT IS ALREADY BUILT (platform generators are Python 3.13 stdlib-only, offline, in services/agent-engine; 922 tests pass)
+WHAT IS ALREADY BUILT (platform generators are Python 3.13 stdlib-only, offline, in services/agent-engine; 928 tests pass)
 - Model fabric: ModelProvider contract + registry; local Ollama adapter (runs any installed model via
 
 
@@ -178,12 +178,13 @@ not-found.tsx, loading.tsx), R-295 consistent error retry across all generated d
 R-296 generated web app accessibility pass (semantic ARIA roles, live regions, table sort state, and
 accessible search/pagination controls), R-297 collection keyboard navigation & shortcuts ('/' to focus,
 'Escape' to clear), R-298 detail screen keyboard navigation & shortcuts (ArrowLeft/Right, 'e' edit, Escape),
-R-299 form screen keyboard shortcuts (Cmd+Enter, Cmd+S, Escape), and R-300 form input constraints, native
-HTML validation & live character counters. Do NOT overwrite backlog rows; continue from R-301.
+R-299 form screen keyboard shortcuts (Cmd+Enter, Cmd+S, Escape), R-300 form input constraints, native
+HTML validation & live character counters, and R-301 search input clear affordances & form screen first-field
+autofocus. Do NOT overwrite backlog rows; continue from R-302.
 NOTE: the execution tracker was reconciled on 2026-09-09 (R-253..R-279 rows had drifted and were
-backfilled); keep it current going forward. It now has 300 unique rows: 89 Done, 1 Deferred, 210 Not
-Started; MVP is 89/195 (45.6%). The earlier reported R-251 MVP baseline of 145 was one low—direct recount
-is 146, and R-252..R-300 added 49 rows. The summary above is current through R-300; Git, state files,
+backfilled); keep it current going forward. It now has 301 unique rows: 90 Done, 1 Deferred, 210 Not
+Started; MVP is 90/196 (45.9%). The earlier reported R-251 MVP baseline of 145 was one low—direct recount
+is 146, and R-252..R-301 added 50 rows. The summary above is current through R-301; Git, state files,
 tests, and CHANGELOG remain the executable/detail sources of truth.
 
 ENVIRONMENT LIMITS discovered here

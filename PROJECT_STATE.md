@@ -5,18 +5,19 @@ Last updated: 2026-09-10T17:40:00+05:30
 Stage 0 (Founder Build Sequence, Brief Section 91) — BASIC/MVP
 
 ## Last Completed Task
-Tracker ID: R-300 — Generated Form Screen Input Constraints, Native HTML Validation & Live Character Counters — DONE,
-`task verify` (922 agent-engine tests, 6 new focused R-300 tests) passing. Enforces schema-derived field
-validation rules natively in Next.js form screens: string and text fields with max_length emit maxLength
-HTML attributes, max-character helper hints, and live character counters ({length}/{max_length}) with amber
-warning coloring when exceeding 90% threshold; numeric fields with min/max rules emit min and max HTML attributes
-and range badges; unconstrained fields preserve existing markup byte-identically. All existing text labels,
+Tracker ID: R-301 — Generated Web Search Input Clear Affordances & Form Screen First-Field AutoFocus — DONE,
+`task verify` (928 agent-engine tests, 6 new focused R-301 tests) passing. Enhances user experience and
+keyboard workflow across generated Next.js web application screens: collection search form renders an
+interactive Clear (×) button when searchInput is non-empty, resetting query, committing search, and refocusing
+input on click; subcollection search form renders an interactive Clear (×) button clearing active subcollection search;
+form screens automatically emit autoFocus on the first editable field (text, textarea, number, select, or checkbox)
+to enable immediate keyboard entry upon entering create/edit forms; unconstrained fields preserve existing markup byte-identically. All existing text labels,
 retry buttons, skeletons, and hook signatures are strictly preserved; 100% diff-invariant across ir.description;
-implementation checkpoint `[R-300]`. Preceded by R-225 through R-299.
+implementation checkpoint `[R-301]`. Preceded by R-225 through R-300.
 
-**Notes:** (1) the tracker is current through R-300: 89 Done, 1 Deferred, 210 Not Started across 300
-tasks; MVP is 89/195 (45.6%). (2) The founder authorized autonomous continuation of Tracker IDs until
-manually stopped — next unstarted Tracker ID: R-301. (3) A Groq API key may be available; live model-fabric
+**Notes:** (1) the tracker is current through R-301: 90 Done, 1 Deferred, 210 Not Started across 301
+tasks; MVP is 90/196 (45.9%). (2) The founder authorized autonomous continuation of Tracker IDs until
+manually stopped — next unstarted Tracker ID: R-302. (3) A Groq API key may be available; live model-fabric
 verification remains separate (set it only in gitignored `.env`, never chat/commits).
 
 

@@ -1185,6 +1185,21 @@ NextjsWebAdapter derives native HTML constraints from entity field validation ru
   - Fields without constraints remain 100% byte-identical.
   - 100% offline, stdlib-only Python codegen, zero network or model calls, byte-identical diff invariance across `ir.description`.
 
+### Generated Web Search Input Clear Affordances & Form Screen First-Field AutoFocus (R-301)
+
+NextjsWebAdapter enhances search ergonomics and form input workflow across generated Next.js web application screens (`apps/web/app/<screen>/page.tsx`):
+
+- **Collection Screen Search Clear Button**:
+  - In `_collection_screen_page`, the search input is wrapped in an accessible relative container with an interactive inline Clear (`×`) button rendered when `searchInput` is non-empty (`aria-label="Clear search"`).
+  - Clicking Clear clears local input state (`setSearchInput("")`), commits empty search to the hook (`setSearch("")`), and refocuses the input (`searchInputRef.current?.focus()`).
+- **Subcollection Master-Detail Search Clear Button**:
+  - In `_subcol_controls`, the subcollection search input is wrapped in a relative container with an interactive inline Clear (`×`) button clearing local search state and committing to the hook on click (`aria-label="Clear <child_plural> search"`).
+- **Form Screen First-Field AutoFocus**:
+  - In `_form_screen_page`, the first editable field (`idx == 0` among `editable_fields`) automatically emits `autoFocus` on its interactive control (whether text input, textarea, numeric input, parent relation select, or checkbox), enabling immediate keyboard input upon navigating to create or edit screens. Subsequent fields omit `autoFocus`.
+- **Quality & Safety**:
+  - 100% offline, standard-library-only platform code, zero new IR fields, byte-identical diff invariance across `ir.description`.
+
+
 
 
 

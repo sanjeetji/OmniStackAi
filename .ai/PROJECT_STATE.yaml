@@ -2,19 +2,20 @@ schema_version: 1
 project: OmniStackAI
 phase: BASIC/MVP
 founder_stage: 0
-current_task: R-300
+current_task: R-301
 current_status: done
 branch: main
 last_completed_task:
-  task_id: R-300
-  title: "Generated Form Screen Input Constraints, Native HTML Validation & Live Character Counters"
+  task_id: R-301
+  title: "Generated Web Search Input Clear Affordances & Form Screen First-Field AutoFocus"
   verification: >-
-    task verify (922 agent-engine tests, 6 new focused R-300 tests); enforced schema-derived field validation
-    rules natively in Next.js form screens: string and text fields with max_length emit maxLength HTML attributes,
-    max-character helper hints, and live character counters ({length}/{max_length}) with amber warning coloring
-    when exceeding 90% threshold; numeric fields with min/max rules emit min and max HTML attributes and range
-    badges; unconstrained fields preserve existing markup byte-identically; 100% diff-invariant across ir.description;
-    task lint + security:quick + env:check and both builder demos pass; 0 local/0 cloud model calls
+    task verify (928 agent-engine tests, 6 new focused R-301 tests); enhanced user experience and keyboard workflow
+    across generated Next.js web application screens: collection search form renders an interactive Clear (×) button
+    when searchInput is non-empty, resetting query, committing search, and refocusing input on click; subcollection
+    search form renders an interactive Clear (×) button clearing active subcollection search; form screens automatically
+    emit autoFocus on the first editable field (text, textarea, number, select, or checkbox) to enable immediate
+    keyboard entry upon entering create/edit forms; 100% diff-invariant across ir.description; task lint +
+    security:quick + env:check and both builder demos pass; 0 local/0 cloud model calls
   result: pass
 control_plane_database: postgresql
 model_routing_mode: balanced
@@ -26,12 +27,9 @@ product_direction: >-
   framework adapter contract -> Next.js adapter -> Git service -> preview/sandbox (needs cloud env).
 id_note: >-
   Workbook backlog owns R-010..R-219. Founder-requested tasks use IDs after R-219: R-220..R-223 done,
-  R-224 Next.js deferred (env-blocked), R-225..R-300 done. Continue from R-301.
+  R-224 Next.js deferred (env-blocked), R-225..R-301 done. Continue from R-302.
 blockers: []
 next_action: >-
-  Task R-300 (generated form screen input constraints & live character counters) is implemented, verified,
-  and complete (922 tests pass; tracker current — 89 Done of 300, MVP 89/195 = 45.6%). Next unstarted Tracker ID is R-301.
-last_updated: "2026-09-10T13:30:00+05:30"
-
-
-
+  Task R-301 (generated web search input clear affordances & form screen first-field autofocus) is implemented,
+  verified, and complete (928 tests pass; tracker current — 90 Done of 301, MVP 90/196 = 45.9%). Next unstarted Tracker ID is R-302.
+last_updated: "2026-09-10T13:40:00+05:30"

@@ -1,5 +1,23 @@
 # Work Log
 
+## 2026-09-10 — R-301
+
+- Recorded contract in `.ai/CURRENT_TASK.yaml` and `.ai/tasks/R-301.md` (status in_progress → done).
+- `nextjs.py`:
+  - Enhanced search clear affordances and form entry workflow across generated screens:
+    - Collection search form (`_collection_screen_page`): wraps search input in an accessible relative container with an interactive inline Clear (`×`) button rendered when `searchInput` is non-empty; clicking it clears input (`setSearchInput("")`), commits empty search (`setSearch("")`), and refocuses input (`searchInputRef.current?.focus()`).
+    - Subcollection search form (`_subcol_controls`): wraps subcollection search input in an accessible container with an interactive inline Clear (`×`) button clearing local search state and committing to hook.
+    - Form screens (`_form_screen_page`): automatically emits `autoFocus` on the first editable field (text, textarea, number, select, or checkbox) to enable immediate keyboard input upon navigation.
+    - Preserves all existing debounce, keyboard navigation, and field error behaviors.
+  - Maintained strict diff invariance across `ir.description`.
+- Added `services/agent-engine/tests/test_search_clear_and_form_autofocus.py` with 6 focused tests (collection search clear button, subcollection search clear button, form first-field autofocus, form first-field select autofocus, diff invariance, example projects generation).
+- `task verify` — 928 tests pass (6 new), 0 failures. `task lint`, `task security:quick`, `task env:check` pass.
+  `builder:demo minimal-blog` + `rideshare-favourites` pass. Generated TypeScript inspected. 0 network, 0 cloud model calls.
+- Tracker: inserted R-301 Done row at `Phase_Roadmap!A9`; table `A4:M309`; 301 unique IDs (0 dupes);
+  90 Done, 1 Deferred, 210 Not Started; MVP 90/196 (45.9%); no `#REF!`; XLSX valid.
+- Updated CURRENT_TASK.yaml, tasks/R-301.md, PROJECT_STATE.yaml, HANDOFF.md, PROJECT_STATE.md,
+  CHANGELOG.md, docs/CODEGEN.md, docs/PROGRESS.md, docs/RESUME_PROMPT.md.
+
 ## 2026-09-10 — R-300
 
 - Recorded contract in `.ai/CURRENT_TASK.yaml` and `.ai/tasks/R-300.md` (status in_progress → done).

@@ -1,5 +1,5 @@
-tracker_id: R-300
-title: Generated Form Screen Input Constraints, Native HTML Validation & Live Character Counters
+tracker_id: R-301
+title: Generated Web Search Input Clear Affordances & Form Screen First-Field AutoFocus
 phase: Phase 3 — Emergent Feature Parity
 track: Web Frontend
 module: apps/web (Next.js codegen)
@@ -7,34 +7,35 @@ status: DONE
 owner: sanjeetji <sk698166@gmail.com>
 
 requirements:
-  - String and text inputs with max_length rule emit maxLength attribute and live character count badge ({length}/{max_length}).
-  - Character counter changes color to amber warning when exceeding 90% of max_length limit.
-  - Number inputs with minimum/maximum rules emit min and max HTML attributes and range hint.
-  - Fields without constraints remain byte-identical to existing output.
+  - Collection search input renders an accessible inline Clear button (×) when searchInput is non-empty.
+  - Clicking collection search Clear resets input, commits empty search to hook, and refocuses search input.
+  - Subcollection master-detail search input renders an accessible Clear button (×) when search state is non-empty, clearing query on click.
+  - Form screens automatically emit autoFocus on the first editable field (text, textarea, number, select, or checkbox) to enable immediate keyboard input.
+  - Preserves all existing keyboard navigation, debounce, and error behaviors.
   - Backward-compatible, offline, deterministic (0 model calls), and diff-invariant across ir.description.
 
 acceptance_criteria:
-  - Focused test suite in services/agent-engine/tests/test_form_input_constraints.py passes.
-  - All existing 916 unit tests in task verify remain green.
-  - Generated form screen inputs include native constraint attributes and dynamic counters.
+  - Focused test suite in services/agent-engine/tests/test_search_clear_and_form_autofocus.py passes.
+  - All existing 922 unit tests in task verify remain green (928 total).
   - Task verify, task lint, task security:quick, and task env:check pass.
-  - R_&_D/OmniStackAI_Execution_Tracker_v6.xlsx updated with R-300 Done at row 9, 300 unique IDs, 0 #REF!.
+  - Builder demos minimal-blog and rideshare-favourites pass.
+  - R_&_D/OmniStackAI_Execution_Tracker_v6.xlsx updated with R-301 Done at row 9, 301 unique IDs, 0 #REF!.
 
 evidence:
-  - test_form_input_constraints.py: 6/6 tests pass in 0.002s.
-  - task verify: 922 tests pass in 1.104s (6 new, 0 failures).
+  - test_search_clear_and_form_autofocus.py: 6/6 tests pass in 0.003s.
+  - task verify: 928 tests pass in 1.107s (6 new, 0 failures).
   - task lint: clean (ruff passed).
   - task security:quick: passed (Stage 0 secret-policy clean).
   - task env:check: passed.
   - task builder:demo -- minimal-blog: generated 43 files cleanly into owned repo.
   - task builder:demo -- rideshare-favourites: generated 40 files cleanly into owned repo.
-  - tracker: row 9 in Phase_Roadmap, table A4:M308, Dashboard to row 308, 0 #REF!, 89/195 MVP tasks Done (45.6%).
+  - tracker: row 9 in Phase_Roadmap, table A4:M309, Dashboard to row 309, 0 #REF!, 90/196 MVP tasks Done (45.9%).
 
 allowed_paths:
   - services/agent-engine/src/omnistackai_agent_engine/codegen/nextjs.py
-  - services/agent-engine/tests/test_form_input_constraints.py
+  - services/agent-engine/tests/test_search_clear_and_form_autofocus.py
   - .ai/CURRENT_TASK.yaml
-  - .ai/tasks/R-300.md
+  - .ai/tasks/R-301.md
   - .ai/PROJECT_STATE.yaml
   - .ai/WORK_LOG.md
   - .ai/HANDOFF.md
@@ -48,7 +49,5 @@ allowed_paths:
 forbidden_changes:
   - No IR schema changes
   - No backend or database changes
-  - No breaking changes to existing public hooks or components
-  - No network dependencies or cloud calls
-  - No secrets in commits or logs
-
+  - No external runtime dependencies or npm packages
+  - No paid cloud or model gateway changes
