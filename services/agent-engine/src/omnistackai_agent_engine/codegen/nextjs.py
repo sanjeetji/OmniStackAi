@@ -2299,7 +2299,10 @@ def _collection_screen_page(screen: Screen, entity: Entity, ir: ApplicationIR, o
                 "                  </div>",
                 "                )}",
                 f"                {{{s_var}.error && (",
-                f'                  <div style={{{{ padding: "8px 12px", background: "#fef2f2", border: "1px solid #fecaca", borderRadius: 6, color: "#991b1b", fontSize: 13, marginBottom: 12 }}}}>Error: {{{s_var}.error.message}}</div>',
+                f'                  <div style={{{{ padding: "8px 12px", background: "#fef2f2", border: "1px solid #fecaca", borderRadius: 6, color: "#991b1b", fontSize: 13, marginBottom: 12, display: "flex", justifyContent: "space-between", alignItems: "center", gap: 8 }}}}>',
+                f"                    <span>Error: {{{s_var}.error.message}}</span>",
+                f'                    <button onClick={{() => {s_var}.refetch()}} style={{{{ padding: "2px 8px", background: "#991b1b", color: "#fff", border: "none", borderRadius: 4, cursor: "pointer", fontSize: 12 }}}}>Retry</button>',
+                "                  </div>",
                 "                )}",
             ])
             if sub.can_delete:
@@ -3401,8 +3404,9 @@ def _detail_screen_page(screen: Screen, entity: Entity, ir: ApplicationIR, ops: 
             "        </div>",
             "      )}",
             "      {error && (",
-            '        <div style={{ padding: "12px 16px", background: "#fef2f2", border: "1px solid #fecaca", borderRadius: 8, color: "#991b1b", marginBottom: 20 }}>',
-            f"          Error loading {name}: {{error.message}}",
+            '        <div style={{ padding: "12px 16px", background: "#fef2f2", border: "1px solid #fecaca", borderRadius: 8, color: "#991b1b", marginBottom: 20, display: "flex", justifyContent: "space-between", alignItems: "center", gap: 12 }}>',
+            f"          <span>Error loading {name}: {{error.message}}</span>",
+            '          <button onClick={() => refetch()} style={{ padding: "4px 8px", background: "#991b1b", color: "#fff", border: "none", borderRadius: 4, cursor: "pointer", fontSize: 12 }}>Retry</button>',
             "        </div>",
             "      )}",
             "      {item && (",
@@ -3595,7 +3599,10 @@ def _detail_screen_page(screen: Screen, entity: Entity, ir: ApplicationIR, ops: 
                 "                  </div>",
                 "                )}",
                 f"                {{{s_var}.error && (",
-                f'                  <div style={{{{ padding: "8px 12px", background: "#fef2f2", border: "1px solid #fecaca", borderRadius: 6, color: "#991b1b", fontSize: 13, marginBottom: 12 }}}}>Error: {{{s_var}.error.message}}</div>',
+                f'                  <div style={{{{ padding: "8px 12px", background: "#fef2f2", border: "1px solid #fecaca", borderRadius: 6, color: "#991b1b", fontSize: 13, marginBottom: 12, display: "flex", justifyContent: "space-between", alignItems: "center", gap: 8 }}}}>',
+                f"                    <span>Error: {{{s_var}.error.message}}</span>",
+                f'                    <button onClick={{() => {s_var}.refetch()}} style={{{{ padding: "2px 8px", background: "#991b1b", color: "#fff", border: "none", borderRadius: 4, cursor: "pointer", fontSize: 12 }}}}>Retry</button>',
+                "                  </div>",
                 "                )}",
             ])
             if sub.can_delete:
