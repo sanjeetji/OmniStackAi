@@ -6144,6 +6144,256 @@ def render_tooltip_component() -> str:
     return _TOOLTIP_COMPONENT
 
 
+_CARD_COMPONENT = (
+    '"use client";\n\n'
+    'import React from "react";\n\n'
+    'export type CardVariant = "default" | "bordered" | "flat" | "elevated";\n'
+    'export type CardPadding = "none" | "sm" | "md" | "lg";\n\n'
+    "export interface CardProps {\n"
+    "  children?: React.ReactNode;\n"
+    "  variant?: CardVariant;\n"
+    "  padding?: CardPadding;\n"
+    "  hoverable?: boolean;\n"
+    '  as?: "div" | "article" | "section";\n'
+    "  onClick?: (event: React.MouseEvent<HTMLElement>) => void;\n"
+    "  className?: string;\n"
+    "  style?: React.CSSProperties;\n"
+    "  ariaLabel?: string;\n"
+    "  role?: string;\n"
+    "  tabIndex?: number;\n"
+    "}\n\n"
+    "export interface CardHeaderProps {\n"
+    "  children?: React.ReactNode;\n"
+    "  title?: React.ReactNode;\n"
+    "  description?: React.ReactNode;\n"
+    "  action?: React.ReactNode;\n"
+    "  className?: string;\n"
+    "  style?: React.CSSProperties;\n"
+    "}\n\n"
+    "export interface CardTitleProps {\n"
+    "  children: React.ReactNode;\n"
+    '  as?: "h1" | "h2" | "h3" | "h4" | "h5" | "h6" | "div";\n'
+    "  className?: string;\n"
+    "  style?: React.CSSProperties;\n"
+    "}\n\n"
+    "export interface CardDescriptionProps {\n"
+    "  children: React.ReactNode;\n"
+    "  className?: string;\n"
+    "  style?: React.CSSProperties;\n"
+    "}\n\n"
+    "export interface CardContentProps {\n"
+    "  children?: React.ReactNode;\n"
+    "  className?: string;\n"
+    "  style?: React.CSSProperties;\n"
+    "}\n\n"
+    "export interface CardFooterProps {\n"
+    "  children?: React.ReactNode;\n"
+    '  align?: "left" | "right" | "between" | "center";\n'
+    "  className?: string;\n"
+    "  style?: React.CSSProperties;\n"
+    "}\n\n"
+    "const variantStyles: Record<CardVariant, React.CSSProperties> = {\n"
+    "  default: {\n"
+    '    backgroundColor: "#ffffff",\n'
+    '    border: "1px solid #e2e8f0",\n'
+    '    boxShadow: "0 1px 3px rgba(0, 0, 0, 0.05)",\n'
+    "  },\n"
+    "  bordered: {\n"
+    '    backgroundColor: "#ffffff",\n'
+    '    border: "1px solid #cbd5e1",\n'
+    '    boxShadow: "none",\n'
+    "  },\n"
+    "  flat: {\n"
+    '    backgroundColor: "#f8fafc",\n'
+    '    border: "none",\n'
+    '    boxShadow: "none",\n'
+    "  },\n"
+    "  elevated: {\n"
+    '    backgroundColor: "#ffffff",\n'
+    '    border: "1px solid #e2e8f0",\n'
+    '    boxShadow: "0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -2px rgba(0, 0, 0, 0.05)",\n'
+    "  },\n"
+    "};\n\n"
+    "const paddingStyles: Record<CardPadding, string> = {\n"
+    '  none: "0",\n'
+    '  sm: "12px 16px",\n'
+    '  md: "20px 24px",\n'
+    '  lg: "28px 32px",\n'
+    "};\n\n"
+    "export function Card({\n"
+    "  children,\n"
+    '  variant = "default",\n'
+    '  padding = "md",\n'
+    "  hoverable = false,\n"
+    '  as = "div",\n'
+    "  onClick,\n"
+    "  className,\n"
+    "  style,\n"
+    "  ariaLabel,\n"
+    "  role,\n"
+    "  tabIndex,\n"
+    "}: CardProps) {\n"
+    "  const Component = as;\n"
+    "  const isInteractive = Boolean(onClick);\n\n"
+    "  const handleKeyDown = (e: React.KeyboardEvent<HTMLElement>) => {\n"
+    '    if (isInteractive && (e.key === "Enter" || e.key === " ")) {\n'
+    "      e.preventDefault();\n"
+    "      onClick?.(e as unknown as React.MouseEvent<HTMLElement>);\n"
+    "    }\n"
+    "  };\n\n"
+    "  return (\n"
+    "    <Component\n"
+    "      className={className}\n"
+    '      role={role ?? (isInteractive ? "button" : undefined)}\n'
+    "      tabIndex={tabIndex ?? (isInteractive ? 0 : undefined)}\n"
+    "      aria-label={ariaLabel}\n"
+    "      onClick={onClick}\n"
+    "      onKeyDown={isInteractive ? handleKeyDown : undefined}\n"
+    "      style={{\n"
+    "        borderRadius: 8,\n"
+    "        padding: paddingStyles[padding],\n"
+    '        transition: (isInteractive || hoverable) ? "box-shadow 0.15s ease, transform 0.15s ease" : undefined,\n'
+    '        cursor: isInteractive ? "pointer" : undefined,\n'
+    "        ...variantStyles[variant],\n"
+    "        ...style,\n"
+    "      }}\n"
+    "    >\n"
+    "      {children}\n"
+    "    </Component>\n"
+    "  );\n"
+    "}\n\n"
+    "export function CardHeader({\n"
+    "  children,\n"
+    "  title,\n"
+    "  description,\n"
+    "  action,\n"
+    "  className,\n"
+    "  style,\n"
+    "}: CardHeaderProps) {\n"
+    "  return (\n"
+    "    <div\n"
+    "      className={className}\n"
+    "      style={{\n"
+    '        display: "flex",\n'
+    '        alignItems: "flex-start",\n'
+    '        justifyContent: "space-between",\n'
+    "        gap: 16,\n"
+    "        marginBottom: 16,\n"
+    "        ...style,\n"
+    "      }}\n"
+    "    >\n"
+    "      {(title || description) ? (\n"
+    '        <div style={{ flex: 1 }}>\n'
+    '          {title && (typeof title === "string" ? <CardTitle>{title}</CardTitle> : title)}\n'
+    '          {description && (typeof description === "string" ? <CardDescription>{description}</CardDescription> : description)}\n'
+    "          {children}\n"
+    "        </div>\n"
+    "      ) : (\n"
+    "        children\n"
+    "      )}\n"
+    '      {action && <div style={{ flexShrink: 0 }}>{action}</div>}\n'
+    "    </div>\n"
+    "  );\n"
+    "}\n\n"
+    "export function CardTitle({\n"
+    "  children,\n"
+    '  as = "h3",\n'
+    "  className,\n"
+    "  style,\n"
+    "}: CardTitleProps) {\n"
+    "  const Component = as;\n"
+    "  return (\n"
+    "    <Component\n"
+    "      className={className}\n"
+    "      style={{\n"
+    "        margin: 0,\n"
+    "        fontSize: 18,\n"
+    "        fontWeight: 600,\n"
+    '        color: "#0f172a",\n'
+    "        lineHeight: 1.4,\n"
+    "        ...style,\n"
+    "      }}\n"
+    "    >\n"
+    "      {children}\n"
+    "    </Component>\n"
+    "  );\n"
+    "}\n\n"
+    "export function CardDescription({\n"
+    "  children,\n"
+    "  className,\n"
+    "  style,\n"
+    "}: CardDescriptionProps) {\n"
+    "  return (\n"
+    "    <p\n"
+    "      className={className}\n"
+    "      style={{\n"
+    '        margin: "4px 0 0 0",\n'
+    "        fontSize: 14,\n"
+    '        color: "#64748b",\n'
+    "        lineHeight: 1.5,\n"
+    "        ...style,\n"
+    "      }}\n"
+    "    >\n"
+    "      {children}\n"
+    "    </p>\n"
+    "  );\n"
+    "}\n\n"
+    "export function CardContent({\n"
+    "  children,\n"
+    "  className,\n"
+    "  style,\n"
+    "}: CardContentProps) {\n"
+    "  return (\n"
+    "    <div\n"
+    "      className={className}\n"
+    "      style={{\n"
+    "        ...style,\n"
+    "      }}\n"
+    "    >\n"
+    "      {children}\n"
+    "    </div>\n"
+    "  );\n"
+    "}\n\n"
+    "export function CardFooter({\n"
+    "  children,\n"
+    '  align = "between",\n'
+    "  className,\n"
+    "  style,\n"
+    "}: CardFooterProps) {\n"
+    "  const justifyMap: Record<string, string> = {\n"
+    '    left: "flex-start",\n'
+    '    right: "flex-end",\n'
+    '    between: "space-between",\n'
+    '    center: "center",\n'
+    "  };\n\n"
+    "  return (\n"
+    "    <div\n"
+    "      className={className}\n"
+    "      style={{\n"
+    '        display: "flex",\n'
+    '        alignItems: "center",\n'
+    '        justifyContent: justifyMap[align] || "space-between",\n'
+    "        gap: 12,\n"
+    "        marginTop: 16,\n"
+    "        paddingTop: 16,\n"
+    '        borderTop: "1px solid #f1f5f9",\n'
+    "        ...style,\n"
+    "      }}\n"
+    "    >\n"
+    "      {children}\n"
+    "    </div>\n"
+    "  );\n"
+    "}\n\n"
+    "export default Card;\n"
+)
+
+
+def render_card_component() -> str:
+    """Return the static TypeScript implementation of the Card component."""
+    return _CARD_COMPONENT
+
+
+
 
 
 
@@ -6342,6 +6592,7 @@ class NextjsWebAdapter:
             GeneratedFile("components/tabs.tsx", _TABS_COMPONENT),
             GeneratedFile("components/badge.tsx", _BADGE_COMPONENT),
             GeneratedFile("components/tooltip.tsx", _TOOLTIP_COMPONENT),
+            GeneratedFile("components/card.tsx", _CARD_COMPONENT),
             GeneratedFile("app/globals.css", "body { font-family: system-ui, sans-serif; margin: 0; }\n"),
             GeneratedFile("app/error.tsx", _ERROR_PAGE),
             GeneratedFile("app/global-error.tsx", _GLOBAL_ERROR_PAGE),

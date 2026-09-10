@@ -1,23 +1,26 @@
-id: R-314
-title: "Generated Accessible Reusable Tooltip Component (components/tooltip.tsx)"
+id: R-315
+title: "Generated Accessible Reusable Card Component (components/card.tsx)"
 status: DONE
 phase: MVP
 tracker_row: 9
-total_tests: 1082
+total_tests: 1093
 owner: sanjeetji
-started_at: 2026-09-10T18:53:55+05:30
-completed_at: 2026-09-10T18:55:30+05:30
+started_at: 2026-09-10T20:45:00+05:30
+completed_at: 2026-09-10T20:47:00+05:30
 objectives:
-  - Create reusable, accessible Tooltip component at components/tooltip.tsx in generated Next.js web applications.
-  - Implement TooltipPosition ("top" | "bottom" | "left" | "right") and TooltipProps interfaces.
-  - Support WAI-ARIA role="tooltip", dynamic useId, and aria-describedby trigger linkage.
-  - Support hover (mouseEnter/Leave), keyboard focus (focus/blur), and Escape key dismiss.
-  - Export render_tooltip_component in omnistackai_agent_engine.codegen and register in NextjsWebAdapter.generate().
+  - Create reusable, accessible compound Card component at components/card.tsx in generated Next.js web applications.
+  - Implement Card, CardHeader, CardTitle, CardDescription, CardContent, and CardFooter subcomponents.
+  - Implement CardVariant ("default" | "bordered" | "flat" | "elevated") and CardPadding ("none" | "sm" | "md" | "lg").
+  - Support polymorphic tags via 'as' prop (div, article, section for Card; h1..h6, div for CardTitle).
+  - Support interactive card states (onClick, role="button", tabIndex=0, keyboard Enter/Space activation, hover transitions).
+  - Support CardHeader with title, description, and right-aligned action slot.
+  - Support CardFooter with alignment presets ("left" | "right" | "between" | "center").
+  - Export render_card_component in omnistackai_agent_engine.codegen and register in NextjsWebAdapter.generate().
   - Maintain 100% diff-invariance across ir.description changes.
-  - Verify all unit tests, gates, and demo projects pass cleanly without committing or pushing.
+  - Verify all unit tests, gates, and demo projects pass cleanly offline without external dependencies.
 evidence:
-  verify: "task verify passes 1082 tests (8 new in test_tooltip_component.py)"
+  verify: "task verify passes 1093 tests (11 new in test_card_component.py)"
   lint: "task lint passes"
   security: "task security:quick passes"
   env: "task env:check passes"
-  demo: "task builder:demo passes (51 files generated for minimal-blog, 48 for rideshare-favourites)"
+  demo: "task builder:demo passes (52 files generated for minimal-blog, 49 for rideshare-favourites)"

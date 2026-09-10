@@ -1,13 +1,13 @@
-# OmniStackAI — implementation progress (as of R-314)
+# OmniStackAI — implementation progress (as of R-315)
 
 A living summary of what is built, what is pending, and how to see results. Numbers come from the
 execution tracker (`R_&_D/OmniStackAI_Execution_Tracker_v6.xlsx`, `Phase_Roadmap`).
 
 ## Headline
 
-- **1,082 automated tests pass**, fully offline and network-independent (`task verify`).
-- **103 tracker tasks Done, 1 Deferred, 210 Not Started** across 314 task rows.
-- The offline builder loop is complete end to end: **describe (IR) → generate (web with typed API client, React hooks, interactive master-detail screen components with field validation, page size selector & contextual empty states, bulk selection & batch deletion, CSV data export & bulk export, deep-linking & entity lifecycle in detail screens, global responsive navigation shell & header navbar with active route detection & quick-create CTA, post-submit contextual CTAs & record navigation with Cancel action in form footer, rich entity-aware dashboard overview page (live count cards, screen nav tiles, quick-create CTAs, diff-stable), record selector dropdown, prev/next record navigation & deep-link sync in detail screens, form screen dirty state tracking, unsaved changes guard & reset confirmation, collection screen boolean & enum field filtering with segmented controls, global notification toast system & action feedback with ToastProvider & useToast, subcollection navigation, child item deletion & mutation feedback, full-stack update/edit actions, foreign-key relation selectors & parent auto-population, App Router resilience quartet, full loading-skeleton coverage, consistent error & retry recovery, enterprise WAI-ARIA accessibility semantics, power-user collection, detail, and form keyboard navigation & shortcuts, form input constraints & live character counters, search clear affordances & form first-field autofocus, collection status badges & detail copy affordances, overview interactive entity links, health badge & metrics chips, accessible modal confirmation dialog replacing window.confirm(), keyboard shortcuts help modal & global discovery affordance, accessible breadcrumb navigation component & screen hierarchy, accessible EmptyState component & screen zero-state integrations, collection screen JSON data export & bulk selection export controls, accessible reusable Pagination component, accessible reusable Tabs component, collection table display density toggle (Compact, Comfortable, Spacious), accessible reusable Badge component, collection table column visibility dropdown & selector controls, accessible reusable Tooltip component + API with
+- **1,093 automated tests pass**, fully offline and network-independent (`task verify`).
+- **104 tracker tasks Done, 1 Deferred, 210 Not Started** across 315 task rows.
+- The offline builder loop is complete end to end: **describe (IR) → generate (web with typed API client, React hooks, interactive master-detail screen components with field validation, page size selector & contextual empty states, bulk selection & batch deletion, CSV data export & bulk export, deep-linking & entity lifecycle in detail screens, global responsive navigation shell & header navbar with active route detection & quick-create CTA, post-submit contextual CTAs & record navigation with Cancel action in form footer, rich entity-aware dashboard overview page (live count cards, screen nav tiles, quick-create CTAs, diff-stable), record selector dropdown, prev/next record navigation & deep-link sync in detail screens, form screen dirty state tracking, unsaved changes guard & reset confirmation, collection screen boolean & enum field filtering with segmented controls, global notification toast system & action feedback with ToastProvider & useToast, subcollection navigation, child item deletion & mutation feedback, full-stack update/edit actions, foreign-key relation selectors & parent auto-population, App Router resilience quartet, full loading-skeleton coverage, consistent error & retry recovery, enterprise WAI-ARIA accessibility semantics, power-user collection, detail, and form keyboard navigation & shortcuts, form input constraints & live character counters, search clear affordances & form first-field autofocus, collection status badges & detail copy affordances, overview interactive entity links, health badge & metrics chips, accessible modal confirmation dialog replacing window.confirm(), keyboard shortcuts help modal & global discovery affordance, accessible breadcrumb navigation component & screen hierarchy, accessible EmptyState component & screen zero-state integrations, collection screen JSON data export & bulk selection export controls, accessible reusable Pagination component, accessible reusable Tabs component, collection table display density toggle (Compact, Comfortable, Spacious), accessible reusable Badge component, collection table column visibility dropdown & selector controls, accessible reusable Tooltip component, accessible reusable Card compound component + API with
   working CRUD incl. PATCH/PUT update + pagination + sorting + total count header + keyword search + sub-collections + DB schema + data-access + JWT-verified auth
   & per-endpoint roles + field validation + CORS middleware + OpenAPI 3.1 contract)
   → verify → edit → commit to an owned Git repo.**
@@ -16,11 +16,11 @@ execution tracker (`R_&_D/OmniStackAI_Execution_Tracker_v6.xlsx`, `Phase_Roadmap
 
 | Phase | Done | Total | % complete |
 |-------|------|-------|-----------|
-| **MVP** (current milestone) | 103 | 209 | **49.3%** |
+| **MVP** (current milestone) | 104 | 210 | **49.5%** |
 | MID | 0 | 47 | 0% |
 | ADVANCED | 0 | 29 | 0% |
 | PRODUCTION | 0 | 29 | 0% |
-| **Overall program** | **103** | **314** | **32.8%** |
+| **Overall program** | **104** | **315** | **33.0%** |
 
 
 

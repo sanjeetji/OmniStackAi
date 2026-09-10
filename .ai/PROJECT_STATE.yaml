@@ -2,18 +2,20 @@ schema_version: 1
 project: OmniStackAI
 phase: BASIC/MVP
 founder_stage: 0
-current_task: R-314
+current_task: R-315
 current_status: done
 branch: main
-last_completed_task: R-314
+last_completed_task: R-315
 last_completed_task_summary: >-
-  Generated Accessible Reusable Tooltip Component (components/tooltip.tsx); added reusable, accessible
-  Tooltip component conforming to WAI-ARIA 1.2 Tooltip specifications (role="tooltip", dynamic useId,
-  aria-describedby trigger linkage, Escape key dismiss, hover and focus triggers), supporting position placement
-  ("top" | "bottom" | "left" | "right"), customizable delay (delayMs), 100% diff-invariance across ir.description,
-  and 0 external dependencies; exported render_tooltip_component in codegen; registered in NextjsWebAdapter;
-  1,082 tests pass (8 new tests in test_tooltip_component.py); builder:demo generates 51 files for minimal-blog
-  and 48 for rideshare-favourites; 0 model calls
+  Generated Accessible Reusable Card Component (components/card.tsx); added reusable, accessible
+  compound Card component (Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter)
+  supporting visual variants ("default" | "bordered" | "flat" | "elevated"), padding presets
+  ("none" | "sm" | "md" | "lg"), polymorphic element rendering ('as' prop for Card and CardTitle),
+  interactive keyboard/click affordances (onClick, role="button", tabIndex=0, Enter/Space activation, hover transitions),
+  CardHeader action slots, CardFooter alignment ("left" | "right" | "between" | "center"), 100% diff-invariance
+  across ir.description, and 0 external dependencies; exported render_card_component in codegen; registered in NextjsWebAdapter;
+  1,093 tests pass (11 new tests in test_card_component.py); builder:demo generates 52 files for minimal-blog
+  and 49 for rideshare-favourites; 0 model calls
 control_plane_database: postgresql
 model_routing_mode: balanced
 architecture_contract: R_&_D/OmniStackAI_Implementation_Brief_v6.md
@@ -25,7 +27,7 @@ product_direction: >-
   framework adapter contract -> Next.js adapter -> Git service -> preview/sandbox (needs cloud env).
 id_note: >-
   Workbook backlog owns R-010..R-219. Founder-requested tasks use IDs after R-219: R-220..R-223 done,
-  R-224 Next.js deferred (env-blocked), R-225..R-314 done. Continue from R-315.
+  R-224 Next.js deferred (env-blocked), R-225..R-315 done. Continue from R-316.
 blockers: []
 next_action: >-
-  Task R-314 (generated accessible reusable tooltip component) is complete with 1,082 tests passing. Next task: R-315.
+  Task R-315 (generated accessible reusable card component) is complete with 1,093 tests passing. Next task: R-316.

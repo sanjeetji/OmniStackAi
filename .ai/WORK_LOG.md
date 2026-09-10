@@ -1,5 +1,26 @@
 # Work Log
 
+## 2026-09-10 — R-315
+
+- Recorded contract in `.ai/CURRENT_TASK.yaml` and `.ai/tasks/R-315.md` (status in_progress → done).
+- `nextjs.py`:
+  - Added `_CARD_COMPONENT` static template implementing accessible, reusable compound Card component (`apps/web/components/card.tsx`).
+  - Implemented `Card`, `CardHeader`, `CardTitle`, `CardDescription`, `CardContent`, and `CardFooter` subcomponents.
+  - Implemented `CardVariant` (`"default"` | `"bordered"` | `"flat"` | `"elevated"`) and `CardPadding` (`"none"` | `"sm"` | `"md"` | `"lg"`).
+  - Added polymorphic rendering via `as` prop (`"div" | "article" | "section"` for Card; `"h1".."h6" | "div"` for CardTitle).
+  - Added interactive click and keyboard triggers: `onClick`, `role="button"`, `tabIndex={0}`, `Enter`/`Space` keydown trigger, and hover transitions.
+  - Added `CardHeader` with `title`, `description`, and right-aligned `action` slot.
+  - Added `CardFooter` with flex alignment presets (`"left"` | `"right"` | `"between"` | `"center"`).
+  - Exported `render_card_component` in `omnistackai_agent_engine.codegen` and registered in `NextjsWebAdapter.generate()`.
+  - Maintained 100% diff-invariance across `ir.description`.
+- Added `services/agent-engine/tests/test_card_component.py` with 11 comprehensive tests covering types, subcomponents, variants, padding presets, polymorphic tags, interactive click/keyboard, header action slot, footer alignment, adapter registration, diff invariance, and example IR project generation.
+- `task verify` — 1,093 tests pass (11 new), 0 failures. `task lint`, `task security:quick`, `task env:check` pass.
+  `builder:demo minimal-blog` passes (52 files generated). `builder:demo rideshare-favourites` passes (49 files generated). 0 model calls.
+- Tracker: inserted R-315 Done row at `Phase_Roadmap!A9`; table `A4:M323`; 315 unique IDs (0 dupes);
+  104 Done, 1 Deferred, 210 Not Started; MVP 104/210 (49.5%); no `#REF!`; XLSX valid.
+- Updated CURRENT_TASK.yaml, tasks/R-315.md, PROJECT_STATE.yaml, HANDOFF.md, PROJECT_STATE.md,
+  CHANGELOG.md, docs/CODEGEN.md, docs/PROGRESS.md, docs/RESUME_PROMPT.md.
+
 ## 2026-09-10 — R-314
 
 - Recorded contract in `.ai/CURRENT_TASK.yaml` and `.ai/tasks/R-314.md` (status in_progress → done).

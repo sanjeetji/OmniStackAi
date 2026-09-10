@@ -1510,3 +1510,27 @@ Emits a reusable Breadcrumbs component and integrates hierarchical wayfinding in
   - 100% diff-invariant across `ir.description` changes.
   - Registered in `NextjsWebAdapter.generate()` as a `GeneratedFile` at `components/tooltip.tsx` and exported in `codegen.__init__` as `render_tooltip_component`.
 
+### 15. Accessible Reusable Card Component (`components/card.tsx`, R-315)
+
+`NextjsWebAdapter` emits a standalone, accessible, reusable compound Card component (`apps/web/components/card.tsx`):
+
+- **Component Architecture & TypeScript Interfaces**:
+  - Emitted with `"use client"` directive.
+  - Exports `CardVariant = "default" | "bordered" | "flat" | "elevated"`.
+  - Exports `CardPadding = "none" | "sm" | "md" | "lg"`.
+  - Compound components exported: `Card`, `CardHeader`, `CardTitle`, `CardDescription`, `CardContent`, `CardFooter`.
+  - Exports `CardProps`, `CardHeaderProps`, `CardTitleProps`, `CardDescriptionProps`, `CardContentProps`, and `CardFooterProps` interfaces.
+- **Polymorphic Elements & Semantic HTML**:
+  - `Card` supports `as?: "div" | "article" | "section"` (defaults to `"div"`).
+  - `CardTitle` supports `as?: "h1" | "h2" | "h3" | "h4" | "h5" | "h6" | "div"` (defaults to `"h3"`).
+- **Interactive Click & Keyboard Accessibility**:
+  - When `onClick` is provided, automatically adds `role="button"`, `tabIndex={0}`, hover shadow transitions, and keyboard triggers (`Enter` and `Space`).
+  - Supports `ariaLabel` / `aria-label` pass-through.
+- **Compound Subcomponents & Layout Slots**:
+  - `CardHeader` provides title, description, and right-aligned `action` slot.
+  - `CardFooter` provides alignment presets (`"left" | "right" | "between" | "center"`).
+- **Diff Predictability & Safety**:
+  - 100% diff-invariant across `ir.description` changes.
+  - Registered in `NextjsWebAdapter.generate()` as a `GeneratedFile` at `components/card.tsx` and exported in `codegen.__init__` as `render_card_component`.
+
+
