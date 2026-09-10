@@ -5,19 +5,19 @@ Last updated: 2026-09-10T17:40:00+05:30
 Stage 0 (Founder Build Sequence, Brief Section 91) — BASIC/MVP
 
 ## Last Completed Task
-Tracker ID: R-301 — Generated Web Search Input Clear Affordances & Form Screen First-Field AutoFocus — DONE,
-`task verify` (928 agent-engine tests, 6 new focused R-301 tests) passing. Enhances user experience and
-keyboard workflow across generated Next.js web application screens: collection search form renders an
-interactive Clear (×) button when searchInput is non-empty, resetting query, committing search, and refocusing
-input on click; subcollection search form renders an interactive Clear (×) button clearing active subcollection search;
-form screens automatically emit autoFocus on the first editable field (text, textarea, number, select, or checkbox)
-to enable immediate keyboard entry upon entering create/edit forms; unconstrained fields preserve existing markup byte-identically. All existing text labels,
-retry buttons, skeletons, and hook signatures are strictly preserved; 100% diff-invariant across ir.description;
-implementation checkpoint `[R-301]`. Preceded by R-225 through R-300.
+Tracker ID: R-302 — Generated Collection Screen Boolean & Enum Visual Status Badges & Detail Screen One-Click Copy-to-Clipboard Affordances — DONE,
+`task verify` (935 agent-engine tests, 7 new focused R-302 tests) passing. Elevates visual hierarchy,
+data readability, and operational workflow across generated Next.js web application screens: collection table
+cells and master-detail subcollection cards render styled visual status pill badges for boolean fields (emerald
+Yes / slate No) and categorical pill badges for enum fields (blue border/background with formatted text value);
+detail screens render an accessible one-click Copy ID button beside the record heading and inline copy affordance
+on ID fields in definition list with toast feedback and fallback. All existing table actions, sorting,
+filters, pagination, and keyboard navigation are strictly preserved; 100% diff-invariant across ir.description;
+implementation checkpoint `[R-302]`. Preceded by R-225 through R-301.
 
-**Notes:** (1) the tracker is current through R-301: 90 Done, 1 Deferred, 210 Not Started across 301
-tasks; MVP is 90/196 (45.9%). (2) The founder authorized autonomous continuation of Tracker IDs until
-manually stopped — next unstarted Tracker ID: R-302. (3) A Groq API key may be available; live model-fabric
+**Notes:** (1) the tracker is current through R-302: 91 Done, 1 Deferred, 210 Not Started across 302
+tasks; MVP is 91/197 (46.2%). (2) The founder authorized autonomous continuation of Tracker IDs until
+manually stopped — next unstarted Tracker ID: R-303. (3) A Groq API key may be available; live model-fabric
 verification remains separate (set it only in gitignored `.env`, never chat/commits).
 
 

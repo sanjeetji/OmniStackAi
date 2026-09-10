@@ -1,5 +1,28 @@
 # Work Log
 
+## 2026-09-10 — R-302
+
+- Recorded contract in `.ai/CURRENT_TASK.yaml` and `.ai/tasks/R-302.md` (status in_progress → done).
+- `nextjs.py`:
+  - Elevated visual hierarchy and data affordances across generated Next.js screens:
+    - Added `_field_value_jsx(field, expr)` helper formatting field expressions into accessible JSX:
+      - Boolean fields render styled status pill badges: emerald background (`#dcfce7`), emerald text (`#166534`), and text "Yes" if truthy; slate background (`#f1f5f9`), slate text (`#64748b`), and text "No" if falsy.
+      - Enum fields (with validation rule `enum:a|b|c`) render blue categorical pill badges (`#eff6ff` background, `#1d4ed8` text, `1px solid #bfdbfe` border).
+      - Applied consistently to collection table cells, collection drawer subcollection child cards, and detail screen subcollection tabs.
+    - Detail screens (`_detail_screen_page`):
+      - In record card header, renders an accessible "Copy ID" button beside the record title (`aria-label="Copy ID to clipboard"`).
+      - In record definition list (`<dl>`), renders inline "Copy" affordance on `id` and UUID foreign key fields (`aria-label="Copy <field_label> to clipboard"`), and renders status badges for boolean and enum fields.
+      - Implemented robust `handleCopy(text, label)` using `navigator?.clipboard?.writeText` with graceful `document.execCommand("copy")` fallback and toast feedback (`toast.success` / `toast.error`).
+    - Preserves all existing filters, debounce, optimistic delete, keyboard shortcuts, and pagination.
+  - Maintained strict diff invariance across `ir.description`.
+- Added `services/agent-engine/tests/test_status_badges_and_copy_clipboard.py` with 7 focused tests (boolean and enum badges in collection table cells, subcollection drawer badges, detail card copy ID button, detail dl inline copy, detail dl status badges, diff invariance, example projects generation).
+- `task verify` — 935 tests pass (7 new), 0 failures. `task lint`, `task security:quick`, `task env:check` pass.
+  `builder:demo minimal-blog` + `rideshare-favourites` pass. Generated TypeScript inspected. 0 network, 0 cloud model calls.
+- Tracker: inserted R-302 Done row at `Phase_Roadmap!A9`; table `A4:M310`; 302 unique IDs (0 dupes);
+  91 Done, 1 Deferred, 210 Not Started; MVP 91/197 (46.2%); no `#REF!`; XLSX valid.
+- Updated CURRENT_TASK.yaml, tasks/R-302.md, PROJECT_STATE.yaml, HANDOFF.md, PROJECT_STATE.md,
+  CHANGELOG.md, docs/CODEGEN.md, docs/PROGRESS.md, docs/RESUME_PROMPT.md.
+
 ## 2026-09-10 — R-301
 
 - Recorded contract in `.ai/CURRENT_TASK.yaml` and `.ai/tasks/R-301.md` (status in_progress → done).

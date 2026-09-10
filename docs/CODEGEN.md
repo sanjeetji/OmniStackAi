@@ -1199,6 +1199,22 @@ NextjsWebAdapter enhances search ergonomics and form input workflow across gener
 - **Quality & Safety**:
   - 100% offline, standard-library-only platform code, zero new IR fields, byte-identical diff invariance across `ir.description`.
 
+### Generated Collection Screen Boolean & Enum Visual Status Badges & Detail Screen One-Click Copy-to-Clipboard Affordances (R-302)
+
+NextjsWebAdapter elevates visual hierarchy, data readability, and operational workflow across generated Next.js web application screens (`apps/web/app/<screen>/page.tsx`):
+
+- **Collection Screen Visual Status Badges**:
+  - Boolean fields (`FieldType.BOOL`) render styled status pill badges: emerald background (`#dcfce7`), emerald text (`#166534`), and text "Yes" if truthy; slate background (`#f1f5f9`), slate text (`#64748b`), and text "No" if falsy.
+  - Enum fields (with validation rule `enum:a|b|c`) render blue categorical pill badges (`#eff6ff` background, `#1d4ed8` text, `1px solid #bfdbfe` border).
+  - Applied consistently across collection table cells, master-detail subcollection cards, and detail screen subcollection tabs.
+- **Detail Screen One-Click Copy Affordances**:
+  - In record card header, renders an accessible "Copy ID" button beside the record title (`aria-label="Copy ID to clipboard"`).
+  - In definition list (`<dl>`), renders inline "Copy" affordance on `id` and UUID foreign key fields (`aria-label="Copy <field_label> to clipboard"`), and renders status badges for boolean and enum fields.
+  - Implemented robust `handleCopy(text, label)` using `navigator?.clipboard?.writeText` with graceful `document.execCommand("copy")` fallback and toast feedback (`toast.success` / `toast.error`).
+- **Quality & Safety**:
+  - 100% offline, stdlib-only Python codegen, zero network or model calls, byte-identical diff invariance across `ir.description`.
+
+
 
 
 
