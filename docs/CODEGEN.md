@@ -1229,7 +1229,37 @@ NextjsWebAdapter elevates developer and user experience across generated Next.js
   - Screen navigation cards render navigation indicator arrows (`&rarr;`) alongside screen titles.
   - Accessible zero-state fallback card rendered when neither entities nor screens are configured.
 - **Quality & Safety**:
-  - 100% offline, stdlib-only Python codegen, zero network or model calls, byte-identical diff invariance across `ir.description`.
+### Generated Accessible Confirmation Dialog — Replace window.confirm() with ConfirmDialog Component (R-304)
+
+NextjsWebAdapter replaces crude, blocking `window.confirm()` browser dialogs with an accessible, styled modal confirmation dialog component (`apps/web/components/confirm-dialog.tsx`) and `useConfirm` hook across all generated screens:
+
+- **Reusable Modal Confirmation Component (`components/confirm-dialog.tsx`)**:
+  - `ConfirmDialog` component renders modal backdrop overlay, dialog card container, title header, message body, and Confirm/Cancel action buttons.
+  - WAI-ARIA compliance: `role="dialog"`, `aria-modal="true"`, `aria-labelledby`, `aria-describedby`.
+  - Focus management: traps Tab/Shift+Tab focus within dialog, focuses Confirm button on open, restores focus on close.
+  - Keyboard interaction: closes/cancels dialog on `Escape` key press; clicking backdrop closes/cancels dialog.
+  - Visual variants: supports danger intent (crimson confirm button `#dc2626` for deletes) and neutral/primary intent (`#2563eb`).
+  - `useConfirm` hook: returns `confirmAsync(title, message, options) -> Promise<boolean>` resolving true on Confirm, false on Cancel/Dismiss, and `confirmProps` spread onto `<ConfirmDialog {...confirmProps} />`.
+- **Collection Screens (`_collection_screen_page`)**:
+  - Single item delete handler replaced with `await confirmAsync(...)`.
+  - Batch/bulk delete handler replaced with `await confirmAsync(...)`.
+  - Subcollection child delete handler replaced with `await confirmAsync(...)`.
+  - Conditionally imports `useConfirm` and `ConfirmDialog` when deletable actions exist.
+  - Renders `<ConfirmDialog {...confirmProps} />` in screen JSX.
+- **Detail Screens (`_detail_screen_page`)**:
+  - Record delete handler replaced with `await confirmAsync(...)`.
+  - Master-detail subcollection child delete replaced with `await confirmAsync(...)`.
+  - Conditionally imports `useConfirm` and `ConfirmDialog` when deletable actions exist.
+  - Renders `<ConfirmDialog {...confirmProps} />` in screen JSX.
+- **Form Screens (`_form_screen_page`)**:
+  - Unsaved changes guard on Cancel button navigation replaced with `await confirmAsync(...)`.
+  - Unsaved changes guard on `Escape` key press replaced with `await confirmAsync(...)`.
+  - Form Reset button confirmation prompt replaced with `await confirmAsync(...)`.
+  - Imports `useConfirm` and `ConfirmDialog`.
+  - Renders `<ConfirmDialog {...confirmProps} />` in screen JSX.
+- **Quality & Safety**:
+  - 100% offline, stdlib-only Python codegen, zero runtime npm dependencies, zero network or model calls, byte-identical diff invariance across `ir.description`.
+
 
 
 

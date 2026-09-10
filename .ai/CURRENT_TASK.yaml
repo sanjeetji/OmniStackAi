@@ -1,26 +1,32 @@
-task_id: "R-303"
-title: "Generated Dashboard Overview Interactive Entity Links, Operational Health Badge & Metrics Chips"
+task_id: "R-304"
+title: "Generated Accessible Confirmation Dialog — Replace window.confirm() with ConfirmDialog Component"
 milestone: "MVP"
 category: "Builder / Codegen"
 status: "DONE"
 author: "sanjeetji <sk698166@gmail.com>"
-created_at: "2026-09-10T13:55:00+05:30"
-updated_at: "2026-09-10T13:57:30+05:30"
+created_at: "2026-09-10T14:10:00+05:30"
+updated_at: "2026-09-10T14:34:00+05:30"
 
 requirements:
-  - "In Next.js overview page (_overview_page in app/page.tsx), listable entity summary cards link directly to their matching collection screen when available (href=/{collection_screen.id}) with accessible aria-label and 'View all →' affordance."
-  - "When no matching collection screen exists, entity summary cards render as styled non-link cards with live record count, preserving existing behavior."
-  - "In overview page app header, render a live operational status badge (System Operational with green indicator dot) and summary count chips for total entities and total screens."
-  - "In screen navigation cards, include visual arrow navigation indicator (&rarr;) and clear intent/role chips."
-  - "When neither entities nor screens are configured, render an accessible zero-state status card."
+  - "Generate a reusable ConfirmDialog React component (components/confirm-dialog.tsx) with useConfirm hook that returns a Promise<boolean> via confirmAsync(title, message)."
+  - "ConfirmDialog is a proper modal overlay with ARIA role=dialog, aria-modal=true, aria-labelledby, aria-describedby, focus-trapped Confirm/Cancel buttons, and Escape key handler."
+  - "All window.confirm() calls in generated collection screens (_collection_screen_page) are replaced with async confirmAsync() calls from useConfirm."
+  - "All window.confirm() calls in generated detail screens (_detail_screen_page) are replaced with async confirmAsync() calls from useConfirm."
+  - "All window.confirm() calls in generated form screens (_form_screen_page) are replaced with async confirmAsync() calls from useConfirm."
+  - "Each screen that uses confirmAsync imports useConfirm from '../components/confirm-dialog' and renders <ConfirmDialog {...confirmProps} /> at the bottom of its JSX tree."
+  - "components/confirm-dialog.tsx is registered as a GeneratedFile in NextjsWebAdapter.generate()."
   - "Diff invariance across ir.description is strictly preserved byte-for-byte."
   - "Stdlib-only, 100% offline codegen with zero external runtime npm dependencies."
 
 allowed_paths:
   - "services/agent-engine/src/omnistackai_agent_engine/codegen/nextjs.py"
-  - "services/agent-engine/tests/test_overview_dashboard_links_and_health.py"
+  - "services/agent-engine/tests/test_confirm_dialog.py"
+  - "services/agent-engine/tests/test_collection_bulk_actions.py"
+  - "services/agent-engine/tests/test_detail_screen_lifecycle.py"
+  - "services/agent-engine/tests/test_form_unsaved_changes_guard.py"
+  - "services/agent-engine/tests/test_subcollection_deletion.py"
   - ".ai/CURRENT_TASK.yaml"
-  - ".ai/tasks/R-303.md"
+  - ".ai/tasks/R-304.md"
   - ".ai/PROJECT_STATE.yaml"
   - ".ai/WORK_LOG.md"
   - ".ai/HANDOFF.md"
@@ -34,15 +40,14 @@ allowed_paths:
 forbidden_changes:
   - "No changes to control plane DB or external cloud dependencies."
   - "No changes to mobile codegen before MVP web/backend stability."
-  - "No embedding ir.description into Next.js overview page."
+  - "No embedding ir.description into confirm-dialog.tsx (it is static; ir.name is not used)."
 
 evidence_and_gates:
-  unit_test_suite: "services/agent-engine/tests/test_overview_dashboard_links_and_health.py (9/9 passed in 0.04s)"
+  unit_test_suite: "services/agent-engine/tests/test_confirm_dialog.py (31 tests pass)"
   task_verify: true
-  total_tests: 944
+  total_tests: 975
   task_lint: true
   task_security_quick: true
   task_env_check: true
   builder_demo: true
   tracker_updated: true
-  tracker_metrics: "Row 9, table A4:M311, 303 tasks, 92 Done, MVP 92/198 (46.5%), 0 REF errors"

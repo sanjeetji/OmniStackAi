@@ -2,21 +2,18 @@ schema_version: 1
 project: OmniStackAI
 phase: BASIC/MVP
 founder_stage: 0
-current_task: R-303
+current_task: R-304
 current_status: done
 branch: main
 last_completed_task:
-  task_id: R-303
-  title: "Generated Dashboard Overview Interactive Entity Links, Operational Health Badge & Metrics Chips"
+  task_id: R-304
+  title: "Generated Accessible Confirmation Dialog — Replace window.confirm() with ConfirmDialog Component"
   verification: >-
-    task verify (944 agent-engine tests, 9 new focused R-303 tests); elevated navigation flow, operational trust,
-    and metrics awareness across generated Next.js web application dashboard overview pages (app/page.tsx): listable entity
-    summary cards dynamically link directly to their matching collection screen when available (with uppercase entity tag,
-    live total count, and interactive View all affordance) or render as styled summary cards when unlinked; overview header
-    renders a live operational health badge (System Operational with green indicator dot) alongside summary metrics counters
-    for total entities and total screens; screen nav cards render visual navigation arrow indicators (&rarr;); clean zero-state
-    fallback when neither entities nor screens are configured; 100% diff-invariant across ir.description; task lint + security:quick +
-    env:check and both builder demos pass; 0 model calls
+    task verify (975 agent-engine tests, 31 new focused R-304 tests); replaced crude blocking window.confirm()
+    prompts across generated Next.js web application collection screens, detail screens, and form screens with an
+    accessible, modal ConfirmDialog component (components/confirm-dialog.tsx) and useConfirm hook returning Promise<boolean>;
+    full WAI-ARIA role=dialog, focus trapping, Escape dismiss, autoFocus confirm button, danger/neutral styling; 100% diff-invariant
+    across ir.description; task lint + security:quick + env:check and builder:demo minimal-blog pass; 0 model calls
   result: pass
 control_plane_database: postgresql
 model_routing_mode: balanced
@@ -28,9 +25,9 @@ product_direction: >-
   framework adapter contract -> Next.js adapter -> Git service -> preview/sandbox (needs cloud env).
 id_note: >-
   Workbook backlog owns R-010..R-219. Founder-requested tasks use IDs after R-219: R-220..R-223 done,
-  R-224 Next.js deferred (env-blocked), R-225..R-303 done. Continue from R-304.
+  R-224 Next.js deferred (env-blocked), R-225..R-304 done. Continue from R-305.
 blockers: []
 next_action: >-
-  Task R-303 (generated dashboard overview interactive entity links, operational health badge & metrics chips)
-  is implemented, verified, and complete (944 tests pass; tracker current — 92 Done of 303, MVP 92/198 = 46.5%). Next unstarted Tracker ID is R-304.
-last_updated: "2026-09-10T13:58:00+05:30"
+  Task R-304 (generated accessible confirmation dialog replacing window.confirm())
+  is implemented, verified, and complete (975 tests pass; tracker current — 93 Done of 304, MVP 93/199 = 46.7%). Next unstarted Tracker ID is R-305.
+last_updated: "2026-09-10T14:34:00+05:30"

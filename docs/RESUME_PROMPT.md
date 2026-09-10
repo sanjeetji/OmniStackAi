@@ -179,12 +179,13 @@ R-296 generated web app accessibility pass (semantic ARIA roles, live regions, t
 accessible search/pagination controls), R-297 collection keyboard navigation & shortcuts ('/' to focus,
 'Escape' to clear), R-298 detail screen keyboard navigation & shortcuts (ArrowLeft/Right, 'e' edit, Escape),
 R-299 form screen keyboard shortcuts (Cmd+Enter, Cmd+S, Escape), R-300 form input constraints, native
-HTML validation & live character counters, and R-301 search input clear affordances & form screen first-field
-autofocus. Do NOT overwrite backlog rows; continue from R-302.
+HTML validation & live character counters, R-301 search input clear affordances & form screen first-field
+autofocus, R-302 collection status badges & detail copy affordances, R-303 overview interactive entity links &
+health badge, and R-304 accessible modal confirmation dialog (replacing window.confirm()). Do NOT overwrite
+backlog rows; continue from R-305.
 NOTE: the execution tracker was reconciled on 2026-09-09 (R-253..R-279 rows had drifted and were
-backfilled); keep it current going forward. It now has 301 unique rows: 90 Done, 1 Deferred, 210 Not
-Started; MVP is 90/196 (45.9%). The earlier reported R-251 MVP baseline of 145 was one low—direct recount
-is 146, and R-252..R-301 added 50 rows. The summary above is current through R-301; Git, state files,
+backfilled); keep it current going forward. It now has 304 unique rows: 93 Done, 1 Deferred, 210 Not
+Started; MVP is 93/199 (46.7%). The summary above is current through R-304; Git, state files,
 tests, and CHANGELOG remain the executable/detail sources of truth.
 
 ENVIRONMENT LIMITS discovered here
@@ -211,7 +212,7 @@ RULES (non-negotiable)
   .ai/HANDOFF.md, PROJECT_STATE.md, CHANGELOG.md, and the tracker row. Push the branch; verify remote
   SHA == local HEAD. Never claim unexecuted tests.
 
-WHAT TO DO NEXT (pick with the founder; all continue the builder), continue from R-300
+WHAT TO DO NEXT (pick with the founder; all continue the builder), continue from R-305
 - Offline-doable now: continue the generated Next.js web application robustness/UX increments —
   e.g. optimistic create/update reflection in the collection list, or a reusable EmptyState/error component to
   DRY the screens, or form field character counters and live validation hints.
@@ -227,7 +228,7 @@ WHAT TO DO NEXT (pick with the founder; all continue the builder), continue from
 - Deferred by governance: native mobile (R-010 etc.) until web/backend stability.
 
 Begin by reading the files above and running the start protocol, then propose the next Tracker ID
-(R-300) with its task contract before writing code. Commit to main.
+(R-305) with its task contract before writing code. Commit to main.
 ```
 
 

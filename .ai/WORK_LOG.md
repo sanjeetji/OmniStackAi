@@ -1,5 +1,42 @@
 # Work Log
 
+## 2026-09-10 — R-304
+
+- Recorded contract in `.ai/CURRENT_TASK.yaml` and `.ai/tasks/R-304.md` (status in_progress → done).
+- `nextjs.py`:
+  - Replaced crude, blocking `window.confirm()` browser dialogs with an accessible, styled modal confirmation dialog component (`components/confirm-dialog.tsx`) and `useConfirm` hook across all generated Next.js web application screens:
+    - Generated Reusable Component (`apps/web/components/confirm-dialog.tsx`):
+      - `ConfirmDialog` modal component: backdrop overlay, dialog card, title, message body, Confirm/Cancel buttons with focus management (autoFocus confirm button, focus trapping, Escape dismiss, backdrop click dismiss, WAI-ARIA `role="dialog"`, `aria-modal="true"`, `aria-labelledby`, `aria-describedby`).
+      - Visual intent variants: danger (crimson `#dc2626` for deletes) and neutral/primary (`#2563eb`).
+      - `useConfirm` hook: exports `confirmAsync(title, message, options) -> Promise<boolean>` resolving true on Confirm, false on Cancel/Dismiss.
+    - Collection screens (`_collection_screen_page`):
+      - Single item delete handler replaced with `await confirmAsync(...)`.
+      - Batch/bulk delete handler replaced with `await confirmAsync(...)`.
+      - Subcollection child delete handler replaced with `await confirmAsync(...)`.
+      - Conditionally imports `useConfirm` and `ConfirmDialog` when deletable actions exist.
+      - Renders `<ConfirmDialog {...confirmProps} />` in screen JSX.
+    - Detail screens (`_detail_screen_page`):
+      - Record delete handler replaced with `await confirmAsync(...)`.
+      - Master-detail subcollection child delete replaced with `await confirmAsync(...)`.
+      - Conditionally imports `useConfirm` and `ConfirmDialog` when deletable actions exist.
+      - Renders `<ConfirmDialog {...confirmProps} />` in screen JSX.
+    - Form screens (`_form_screen_page`):
+      - Unsaved changes guard on Cancel button navigation replaced with `await confirmAsync(...)`.
+      - Unsaved changes guard on `Escape` key press replaced with `await confirmAsync(...)`.
+      - Form Reset button confirmation prompt replaced with `await confirmAsync(...)`.
+      - Imports `useConfirm` and `ConfirmDialog`.
+      - Renders `<ConfirmDialog {...confirmProps} />` in screen JSX.
+    - Registered `components/confirm-dialog.tsx` as a static client component in `NextjsWebAdapter.generate()`.
+  - Maintained strict diff invariance across `ir.description`.
+- Added `services/agent-engine/tests/test_confirm_dialog.py` with 31 comprehensive tests covering component structure, ARIA compliance, collection screens, detail screens, form screens, diff invariance, and full-project integration.
+- Updated 4 test files (`test_collection_bulk_actions.py`, `test_detail_screen_lifecycle.py`, `test_form_unsaved_changes_guard.py`, `test_subcollection_deletion.py`) to assert the new `confirmAsync` pattern instead of old raw `confirm()`.
+- `task verify` — 975 tests pass (31 new), 0 failures. `task lint`, `task security:quick`, `task env:check` pass.
+  `builder:demo minimal-blog` passes. Generated TypeScript inspected. 0 network, 0 cloud model calls.
+- Tracker: inserted R-304 Done row at `Phase_Roadmap!A9`; table `A4:M312`; 304 unique IDs (0 dupes);
+  93 Done, 1 Deferred, 210 Not Started; MVP 93/199 (46.7%); no `#REF!`; XLSX valid.
+- Updated CURRENT_TASK.yaml, tasks/R-304.md, PROJECT_STATE.yaml, HANDOFF.md, PROJECT_STATE.md,
+  CHANGELOG.md, docs/CODEGEN.md, docs/PROGRESS.md, docs/RESUME_PROMPT.md.
+
 ## 2026-09-10 — R-303
 
 - Recorded contract in `.ai/CURRENT_TASK.yaml` and `.ai/tasks/R-303.md` (status in_progress → done).
