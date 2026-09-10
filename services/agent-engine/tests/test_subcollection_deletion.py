@@ -219,7 +219,9 @@ class SubcollectionDeletionTests(unittest.TestCase):
         page = render_screen_page(screen, ir)
 
         self.assertIn("const handleDeleteComment = async (id: string) => {", page)
-        self.assertIn('if (confirm("Are you sure you want to delete this Comment?")) {', page)
+        # R-304: subcollection delete now uses accessible async confirmAsync() modal.
+        self.assertIn('confirmAsync("Delete Comment"', page)
+        self.assertNotIn('confirm("Are you sure you want to delete this Comment?")', page)
         self.assertIn("await removeComment(id);", page)
         self.assertIn("commentsSubcol.refetch();", page)
 
@@ -262,7 +264,9 @@ class SubcollectionDeletionTests(unittest.TestCase):
             page,
         )
         self.assertIn("const handleDeleteComment = async (id: string) => {", page)
-        self.assertIn('if (confirm("Are you sure you want to delete this Comment?")) {', page)
+        # R-304: subcollection delete now uses accessible async confirmAsync() modal.
+        self.assertIn('confirmAsync("Delete Comment"', page)
+        self.assertNotIn('confirm("Are you sure you want to delete this Comment?")', page)
         self.assertIn("await removeComment(id);", page)
         self.assertIn("commentsSubcol.refetch();", page)
         self.assertIn("{deleteCommentError && (", page)

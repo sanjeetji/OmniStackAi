@@ -205,11 +205,14 @@ class CollectionBulkActionsTests(unittest.TestCase):
         ir = _make_test_ir(with_delete=True)
         content = render_screen_page(ir.screens[0], ir)
 
+        # R-304: batch delete now uses accessible async confirmAsync() modal instead of window.confirm().
         self.assertIn(
-            'const confirmMsg = `Are you sure you want to delete ${checkedIds.length} ${checkedIds.length === 1 ? "Post" : "Posts"}?`;',
+            'const batchMsg = `Are you sure you want to delete ${checkedIds.length} ${checkedIds.length === 1 ? "Post" : "Posts"}? This action cannot be undone.`;',
             content,
         )
-        self.assertIn("if (!confirm(confirmMsg)) return;", content)
+        self.assertIn("confirmAsync(", content)
+        self.assertIn("batchOk", content)
+        self.assertNotIn("window.confirm", content)
 
     def test_collection_screen_batch_delete_loading_state(self) -> None:
         ir = _make_test_ir(with_delete=True)

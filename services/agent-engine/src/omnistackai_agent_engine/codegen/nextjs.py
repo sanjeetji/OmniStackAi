@@ -1556,6 +1556,8 @@ def _collection_screen_page(screen: Screen, entity: Entity, ir: ApplicationIR, o
     if can_delete:
         hooks_import += f", useDelete{name}"
 
+    uses_confirm = can_delete or any(sub.can_delete for sub in subcollections)
+
     lines: list[str] = [
         '"use client";',
         "",
@@ -1563,6 +1565,9 @@ def _collection_screen_page(screen: Screen, entity: Entity, ir: ApplicationIR, o
         'import { useRef } from "react";',
         'import Link from "next/link";',
         'import { useToast } from "../components/toast";',
+        *([
+            'import { useConfirm, ConfirmDialog } from "../components/confirm-dialog";',
+        ] if uses_confirm else []),
         f'import {{ {hooks_import} }} from "../lib/hooks";',
     ]
 
@@ -1676,9 +1681,12 @@ def _collection_screen_page(screen: Screen, entity: Entity, ir: ApplicationIR, o
             f"  const {{ remove }} = useDelete{name}();",
             "  const [batchDeleting, setBatchDeleting] = useState<boolean>(false);",
             "  const [batchDeleteError, setBatchDeleteError] = useState<string | null>(null);",
+            "  // R-304: accessible async confirmation dialog.",
+            "  const { confirmAsync, confirmProps } = useConfirm();",
             "",
             "  const handleDelete = async (id: string) => {",
-            f'    if (confirm("Are you sure you want to delete this {name}?")) {{',
+            f'    const ok = await confirmAsync("Delete {name}", "Are you sure you want to delete this {name}? This action cannot be undone.");',
+            "    if (!ok) return;",
             "      setPendingDeleteIds((prev) => [...prev, String(id)]);",
             "      try {",
             "        await remove(id);",
@@ -1689,13 +1697,13 @@ def _collection_screen_page(screen: Screen, entity: Entity, ir: ApplicationIR, o
             "        setPendingDeleteIds((prev) => prev.filter((x) => x !== String(id)));",
             f'        toast.error(err instanceof Error ? err.message : "Failed to delete {name}");',
             "      }",
-            "    }",
             "  };",
             "",
             "  const handleBatchDelete = async () => {",
             "    if (checkedIds.length === 0) return;",
-            f'    const confirmMsg = `Are you sure you want to delete ${{checkedIds.length}} ${{checkedIds.length === 1 ? "{name}" : "{plural}"}}?`;',
-            "    if (!confirm(confirmMsg)) return;",
+            f'    const batchMsg = `Are you sure you want to delete ${{checkedIds.length}} ${{checkedIds.length === 1 ? "{name}" : "{plural}"}}? This action cannot be undone.`;',
+            f'    const batchOk = await confirmAsync(`Delete ${{checkedIds.length}} ${{checkedIds.length === 1 ? "{name}" : "{plural}"}}`, batchMsg);',
+            "    if (!batchOk) return;",
             "    const ids = checkedIds.map(String);",
             "    setBatchDeleting(true);",
             "    setBatchDeleteError(null);",
@@ -1791,7 +1799,8 @@ def _collection_screen_page(screen: Screen, entity: Entity, ir: ApplicationIR, o
                     f"    {_del_setter}((prev) => prev.filter((did) => ({s_var}.data ?? []).some((x: any) => String(x.id) === did)));",
                     f"  }}, [{s_var}.data]);",
                     f"  const {h_name} = async (id: string) => {{",
-                    f'    if (confirm("Are you sure you want to delete this {c_name}?")) {{',
+                    f'    const ok = await confirmAsync("Delete {c_name}", "Are you sure you want to delete this {c_name}? This action cannot be undone.");',
+                    "    if (!ok) return;",
                     f"      {_del_setter}((prev) => [...prev, String(id)]);",
                     "      try {",
                     f"        await remove{c_name}(id);",
@@ -1801,7 +1810,6 @@ def _collection_screen_page(screen: Screen, entity: Entity, ir: ApplicationIR, o
                     f"        {_del_setter}((prev) => prev.filter((x) => x !== String(id)));",
                     f'        toast.error(err instanceof Error ? err.message : "Failed to delete {c_name}");',
                     "      }",
-                    "    }",
                     "  };",
                 ])
 
@@ -2501,6 +2509,12 @@ def _collection_screen_page(screen: Screen, entity: Entity, ir: ApplicationIR, o
             "      </section>",
         ])
 
+    if uses_confirm:
+        lines.extend([
+            "      {/* R-304: accessible modal confirmation dialog */}",
+            "      <ConfirmDialog {...confirmProps} />",
+        ])
+
     lines.extend([
         "    </main>",
         "  );",
@@ -2594,10 +2608,12 @@ def _form_screen_page(screen: Screen, entity: Entity, ir: ApplicationIR, ops: se
 
     lines.extend([
         'import { extractFieldErrors } from "../lib/api";',
+        'import { useConfirm, ConfirmDialog } from "../components/confirm-dialog";',
         f'import type {{ {name} }} from "../lib/types";',
         "",
         f"export default function {page_name}() {{",
         "  const { toast } = useToast();",
+        "  const { confirmAsync, confirmProps } = useConfirm();",
     ])
 
     if can_create:
@@ -2713,8 +2729,14 @@ def _form_screen_page(screen: Screen, entity: Entity, ir: ApplicationIR, ops: se
         "          active.blur();",
         "          return;",
         "        }",
-        '        if (!isDirty || confirm("You have unsaved changes. Discard them and leave?")) {',
+        "        if (!isDirty) {",
         f'          window.location.href = "{cancel_href}";',
+        "        } else {",
+        '          confirmAsync("Discard Changes", "You have unsaved changes. Discard them and leave?").then((ok) => {',
+        "            if (ok) {",
+        f'              window.location.href = "{cancel_href}";',
+        "            }",
+        "          });",
         "        }",
         "      }",
         "    };",
@@ -3225,10 +3247,14 @@ def _form_screen_page(screen: Screen, entity: Entity, ir: ApplicationIR, ops: se
         "          )}",
         '          <Link',
         f'            href="{cancel_href}"',
-        '            onClick={(e) => {',
-        '              if (isDirty && !confirm("You have unsaved changes. Discard them and leave?")) {',
-        "                e.preventDefault();",
-        "              }",
+        '            onClick={async (e) => {',
+        '              if (isDirty) {',
+        '                e.preventDefault();',
+        '                const ok = await confirmAsync("Discard Changes", "You have unsaved changes. Discard them and leave?");',
+        '                if (ok) {',
+        f'                  window.location.href = "{cancel_href}";',
+        '                }',
+        '              }',
         "            }}",
         '            style={{ padding: "8px 16px", border: "1px solid #cbd5e1", background: "#fff", color: "#475569", borderRadius: 6, fontSize: 14, textDecoration: "none", display: "inline-flex", alignItems: "center" }}',
         '          >',
@@ -3236,7 +3262,7 @@ def _form_screen_page(screen: Screen, entity: Entity, ir: ApplicationIR, ops: se
         '          </Link>',
         '          <button',
         '            type="button"',
-        f'            onClick={{() => {{ if (!isDirty || confirm("Discard all changes and reset form?")) {{ reset(); {reset_call}; setFieldErrors({{}}); setSuccess(false); setLastSavedId(null); toast.info("Form reset to original values"); }} }}}}',
+        f'            onClick={{async () => {{ const ok = !isDirty || await confirmAsync("Reset Form", "Discard all changes and reset form?"); if (ok) {{ reset(); {reset_call}; setFieldErrors({{}}); setSuccess(false); setLastSavedId(null); toast.info("Form reset to original values"); }} }}}}',
         '            style={{ padding: "8px 16px", border: "1px solid #cbd5e1", background: "#fff", color: "#475569", borderRadius: 6, fontSize: 14, cursor: "pointer" }}',
         '          >',
         '            Reset',
@@ -3250,6 +3276,8 @@ def _form_screen_page(screen: Screen, entity: Entity, ir: ApplicationIR, ops: se
         '          </button>',
         '        </div>',
         '      </form>',
+        '      {/* R-304: accessible modal confirmation dialog */}',
+        '      <ConfirmDialog {...confirmProps} />',
         '    </main>',
         '  );',
         '}',
@@ -3291,6 +3319,8 @@ def _detail_screen_page(screen: Screen, entity: Entity, ir: ApplicationIR, ops: 
     if can_delete:
         hooks_to_import.append(f"useDelete{name}")
 
+    uses_confirm_detail = can_delete or any(sub.can_delete for sub in subcollections)
+
     lines: list[str] = [
         '"use client";',
         "",
@@ -3298,6 +3328,9 @@ def _detail_screen_page(screen: Screen, entity: Entity, ir: ApplicationIR, ops: 
         'import { useSearchParams } from "next/navigation";',
         'import Link from "next/link";',
         'import { useToast } from "../components/toast";',
+        *([
+            'import { useConfirm, ConfirmDialog } from "../components/confirm-dialog";',
+        ] if uses_confirm_detail else []),
     ]
 
     if hooks_to_import:
@@ -3371,22 +3404,24 @@ def _detail_screen_page(screen: Screen, entity: Entity, ir: ApplicationIR, ops: 
     if can_delete:
         lines.extend([
             f"  const {{ remove: removeMain, loading: deletingMain, error: deleteMainError }} = useDelete{name}();",
+            "  // R-304: accessible async confirmation dialog.",
+            "  const { confirmAsync, confirmProps } = useConfirm();",
             "  const handleDelete = async () => {",
             "    if (!selectedId) return;",
-            f'    if (confirm("Are you sure you want to delete this {name}?")) {{',
-            "      try {",
-            "        await removeMain(selectedId);",
-            "        setSelectedId(null);",
-            '        setIdInput("");',
-            '        if (typeof window !== "undefined") {',
-            "          const url = new URL(window.location.href);",
-            '          url.searchParams.delete("id");',
-            '          window.history.replaceState({}, "", url.toString());',
-            "        }",
-            f'        toast.success("{name} deleted successfully");',
-            "      } catch (err) {",
-            f'        toast.error(err instanceof Error ? err.message : "Failed to delete {name}");',
+            f'    const ok = await confirmAsync("Delete {name}", "Are you sure you want to delete this {name}? This action cannot be undone.");',
+            "    if (!ok) return;",
+            "    try {",
+            "      await removeMain(selectedId);",
+            "      setSelectedId(null);",
+            '      setIdInput("");',
+            '      if (typeof window !== "undefined") {',
+            "        const url = new URL(window.location.href);",
+            '        url.searchParams.delete("id");',
+            '        window.history.replaceState({}, "", url.toString());',
             "      }",
+            f'      toast.success("{name} deleted successfully");',
+            "    } catch (err) {",
+            f'      toast.error(err instanceof Error ? err.message : "Failed to delete {name}");',
             "    }",
             "  };",
         ])
@@ -3503,7 +3538,8 @@ def _detail_screen_page(screen: Screen, entity: Entity, ir: ApplicationIR, ops: 
                     f"    {_del_setter}((prev) => prev.filter((did) => ({s_var}.data ?? []).some((x: any) => String(x.id) === did)));",
                     f"  }}, [{s_var}.data]);",
                     f"  const {h_name} = async (id: string) => {{",
-                    f'    if (confirm("Are you sure you want to delete this {c_name}?")) {{',
+                    f'    const ok = await confirmAsync("Delete {c_name}", "Are you sure you want to delete this {c_name}? This action cannot be undone.");',
+                    "    if (!ok) return;",
                     f"      {_del_setter}((prev) => [...prev, String(id)]);",
                     "      try {",
                     f"        await remove{c_name}(id);",
@@ -3513,7 +3549,6 @@ def _detail_screen_page(screen: Screen, entity: Entity, ir: ApplicationIR, ops: 
                     f"        {_del_setter}((prev) => prev.filter((x) => x !== String(id)));",
                     f'        toast.error(err instanceof Error ? err.message : "Failed to delete {c_name}");',
                     "      }",
-                    "    }",
                     "  };",
                 ])
 
@@ -3973,6 +4008,12 @@ def _detail_screen_page(screen: Screen, entity: Entity, ir: ApplicationIR, ops: 
             "          </div>",
             "        )}",
             "      </section>",
+        ])
+
+    if uses_confirm_detail:
+        lines.extend([
+            "      {/* R-304: accessible modal confirmation dialog */}",
+            "      <ConfirmDialog {...confirmProps} />",
         ])
 
     lines.extend([
@@ -4662,6 +4703,168 @@ def render_toast_component() -> str:
     return _TOAST_COMPONENT
 
 
+# --- Accessible ConfirmDialog modal component (R-304) -------------------------------------------
+# Static, inline-styled, dependency-free, ARIA-compliant replacement for window.confirm().
+# Never references ir.name/ir.description; always emitted as components/confirm-dialog.tsx.
+
+_CONFIRM_DIALOG_COMPONENT = (
+    '"use client";\n\n'
+    'import { useCallback, useEffect, useRef, useState } from "react";\n\n'
+    '// R-304: Accessible modal confirmation dialog replacing window.confirm().\n'
+    '// useConfirm returns confirmAsync(title, message) -> Promise<boolean>.\n'
+    '// Render <ConfirmDialog {...confirmProps} /> once at the bottom of any page that calls confirmAsync().\n\n'
+    'export interface ConfirmDialogProps {\n'
+    '  isOpen: boolean;\n'
+    '  title: string;\n'
+    '  message: string;\n'
+    '  onConfirm: () => void;\n'
+    '  onCancel: () => void;\n'
+    '}\n\n'
+    'export function ConfirmDialog({ isOpen, title, message, onConfirm, onCancel }: ConfirmDialogProps) {\n'
+    '  const confirmBtnRef = useRef<HTMLButtonElement>(null);\n\n'
+    '  // Focus the Confirm button when the dialog opens.\n'
+    '  useEffect(() => {\n'
+    '    if (isOpen) {\n'
+    '      setTimeout(() => confirmBtnRef.current?.focus(), 0);\n'
+    '    }\n'
+    '  }, [isOpen]);\n\n'
+    '  // Dismiss on Escape key.\n'
+    '  useEffect(() => {\n'
+    '    if (!isOpen) return;\n'
+    '    const handleKeyDown = (e: KeyboardEvent) => {\n'
+    '      if (e.key === "Escape") {\n'
+    '        e.preventDefault();\n'
+    '        onCancel();\n'
+    '      }\n'
+    '    };\n'
+    '    window.addEventListener("keydown", handleKeyDown);\n'
+    '    return () => window.removeEventListener("keydown", handleKeyDown);\n'
+    '  }, [isOpen, onCancel]);\n\n'
+    '  if (!isOpen) return null;\n\n'
+    '  return (\n'
+    '    <>\n'
+    '      {/* Backdrop overlay */}\n'
+    '      <div\n'
+    '        aria-hidden="true"\n'
+    '        onClick={onCancel}\n'
+    '        style={{\n'
+    '          position: "fixed",\n'
+    '          inset: 0,\n'
+    '          background: "rgba(15, 23, 42, 0.45)",\n'
+    '          zIndex: 1000,\n'
+    '        }}\n'
+    '      />\n'
+    '      {/* Dialog panel */}\n'
+    '      <div\n'
+    '        role="dialog"\n'
+    '        aria-modal="true"\n'
+    '        aria-labelledby="confirm-dialog-title"\n'
+    '        aria-describedby="confirm-dialog-message"\n'
+    '        style={{\n'
+    '          position: "fixed",\n'
+    '          top: "50%",\n'
+    '          left: "50%",\n'
+    '          transform: "translate(-50%, -50%)",\n'
+    '          zIndex: 1001,\n'
+    '          background: "#ffffff",\n'
+    '          borderRadius: 10,\n'
+    '          boxShadow: "0 20px 60px rgba(0, 0, 0, 0.18), 0 4px 16px rgba(0, 0, 0, 0.10)",\n'
+    '          padding: "28px 32px",\n'
+    '          minWidth: 340,\n'
+    '          maxWidth: 480,\n'
+    '          width: "calc(100vw - 48px)",\n'
+    '        }}\n'
+    '      >\n'
+    '        <h2\n'
+    '          id="confirm-dialog-title"\n'
+    '          style={{ margin: "0 0 10px", fontSize: 17, fontWeight: 700, color: "#0f172a" }}\n'
+    '        >\n'
+    '          {title}\n'
+    '        </h2>\n'
+    '        <p\n'
+    '          id="confirm-dialog-message"\n'
+    '          style={{ margin: "0 0 24px", fontSize: 14, color: "#475569", lineHeight: 1.55 }}\n'
+    '        >\n'
+    '          {message}\n'
+    '        </p>\n'
+    '        <div style={{ display: "flex", gap: 10, justifyContent: "flex-end" }}>\n'
+    '          <button\n'
+    '            type="button"\n'
+    '            onClick={onCancel}\n'
+    '            style={{\n'
+    '              padding: "8px 18px",\n'
+    '              background: "#f8fafc",\n'
+    '              color: "#475569",\n'
+    '              border: "1px solid #e2e8f0",\n'
+    '              borderRadius: 6,\n'
+    '              fontSize: 14,\n'
+    '              fontWeight: 500,\n'
+    '              cursor: "pointer",\n'
+    '            }}\n'
+    '          >\n'
+    '            Cancel\n'
+    '          </button>\n'
+    '          <button\n'
+    '            ref={confirmBtnRef}\n'
+    '            type="button"\n'
+    '            onClick={onConfirm}\n'
+    '            style={{\n'
+    '              padding: "8px 18px",\n'
+    '              background: "#dc2626",\n'
+    '              color: "#ffffff",\n'
+    '              border: "none",\n'
+    '              borderRadius: 6,\n'
+    '              fontSize: 14,\n'
+    '              fontWeight: 600,\n'
+    '              cursor: "pointer",\n'
+    '            }}\n'
+    '          >\n'
+    '            Confirm\n'
+    '          </button>\n'
+    '        </div>\n'
+    '      </div>\n'
+    '    </>\n'
+    '  );\n'
+    '}\n\n'
+    'interface ConfirmState {\n'
+    '  isOpen: boolean;\n'
+    '  title: string;\n'
+    '  message: string;\n'
+    '  resolve: ((ok: boolean) => void) | null;\n'
+    '}\n\n'
+    'const _initial: ConfirmState = { isOpen: false, title: "", message: "", resolve: null };\n\n'
+    'export function useConfirm() {\n'
+    '  const [state, setState] = useState<ConfirmState>(_initial);\n\n'
+    '  const confirmAsync = useCallback((title: string, message: string): Promise<boolean> => {\n'
+    '    return new Promise<boolean>((resolve) => {\n'
+    '      setState({ isOpen: true, title, message, resolve });\n'
+    '    });\n'
+    '  }, []);\n\n'
+    '  const handleConfirm = useCallback(() => {\n'
+    '    state.resolve?.(true);\n'
+    '    setState(_initial);\n'
+    '  }, [state]);\n\n'
+    '  const handleCancel = useCallback(() => {\n'
+    '    state.resolve?.(false);\n'
+    '    setState(_initial);\n'
+    '  }, [state]);\n\n'
+    '  const confirmProps: ConfirmDialogProps = {\n'
+    '    isOpen: state.isOpen,\n'
+    '    title: state.title,\n'
+    '    message: state.message,\n'
+    '    onConfirm: handleConfirm,\n'
+    '    onCancel: handleCancel,\n'
+    '  };\n\n'
+    '  return { confirmAsync, confirmProps };\n'
+    '}\n'
+)
+
+
+def render_confirm_dialog_component() -> str:
+    """Return the static TypeScript implementation of the ConfirmDialog component and useConfirm hook."""
+    return _CONFIRM_DIALOG_COMPONENT
+
+
 # --- App Router resilience special files (R-294) -----------------------------------------------
 # Static, inline-styled, dependency-free. They never reference ir.name/ir.description, so generation
 # stays deterministic and description-only-stable, and they never enter the console-snapshot edit diff.
@@ -4848,6 +5051,7 @@ class NextjsWebAdapter:
             GeneratedFile("app/layout.tsx", _LAYOUT % (_escape_ts(ir.name), _escape_ts(ir.description))),
             GeneratedFile("components/navbar.tsx", _navbar_component(ir)),
             GeneratedFile("components/toast.tsx", _TOAST_COMPONENT),
+            GeneratedFile("components/confirm-dialog.tsx", _CONFIRM_DIALOG_COMPONENT),
             GeneratedFile("app/globals.css", "body { font-family: system-ui, sans-serif; margin: 0; }\n"),
             GeneratedFile("app/error.tsx", _ERROR_PAGE),
             GeneratedFile("app/global-error.tsx", _GLOBAL_ERROR_PAGE),

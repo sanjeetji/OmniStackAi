@@ -187,19 +187,23 @@ class FormUnsavedChangesGuardTests(unittest.TestCase):
         self.assertIn("&bull; You have unsaved changes", content)
 
     def test_form_screen_cancel_button_guards_with_confirmation(self) -> None:
-        """Verify Cancel link button prompts confirmation dialog before leaving when isDirty."""
+        """Verify Cancel link uses async confirmAsync dialog before navigating away when isDirty."""
         ir = _make_test_ir()
         form_screen = next(s for s in ir.screens if s.id == "post_form")
         content = render_screen_page(form_screen, ir)
-        self.assertIn('if (isDirty && !confirm("You have unsaved changes. Discard them and leave?")) {', content)
+        # R-304: Cancel now uses accessible async confirmAsync() instead of window.confirm().
+        self.assertIn('confirmAsync("Discard Changes"', content)
         self.assertIn("e.preventDefault();", content)
+        self.assertNotIn('confirm("You have unsaved changes. Discard them and leave?")', content)
 
     def test_form_screen_reset_button_guards_with_confirmation(self) -> None:
-        """Verify Reset button prompts confirmation dialog when form is dirty."""
+        """Verify Reset button uses async confirmAsync dialog when form is dirty."""
         ir = _make_test_ir()
         form_screen = next(s for s in ir.screens if s.id == "post_form")
         content = render_screen_page(form_screen, ir)
-        self.assertIn('if (!isDirty || confirm("Discard all changes and reset form?")) {', content)
+        # R-304: Reset now uses accessible async confirmAsync() instead of window.confirm().
+        self.assertIn('confirmAsync("Reset Form"', content)
+        self.assertNotIn('confirm("Discard all changes and reset form?")', content)
 
     def test_form_screen_edit_mode_baseline_uses_initial_data(self) -> None:
         """Verify edit mode baseline uses initialData."""
@@ -233,7 +237,8 @@ class FormUnsavedChangesGuardTests(unittest.TestCase):
         self.assertIn("isDirty", content)
         self.assertIn("Unsaved changes", content)
         self.assertIn("beforeunload", content)
-        self.assertIn("confirm(", content)
+        # R-304: guard now uses confirmAsync() modal instead of window.confirm().
+        self.assertIn("confirmAsync(", content)
 
     def test_rideshare_favourites_form_screens_have_unsaved_guard(self) -> None:
         """Verify rideshare-favourites form screens contain unsaved changes guard."""

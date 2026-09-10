@@ -188,7 +188,9 @@ class DetailScreenLifecycleTests(unittest.TestCase):
         content = render_screen_page(detail_screen, ir)
         self.assertIn("useDeletePost", content)
         self.assertIn("const handleDelete = async () => {", content)
-        self.assertIn('confirm("Are you sure you want to delete this Post?")', content)
+        # R-304: delete now uses accessible async confirmAsync() modal instead of window.confirm().
+        self.assertIn('confirmAsync("Delete Post"', content)
+        self.assertNotIn('confirm("Are you sure you want to delete this Post?")', content)
         self.assertIn("await removeMain(selectedId);", content)
         self.assertIn("setSelectedId(null);", content)
 
