@@ -2862,8 +2862,11 @@ def _form_screen_page(screen: Screen, entity: Entity, ir: ApplicationIR, ops: se
     if can_update and has_get:
         lines.extend([
             "      {isEdit && fetchingInitial && (",
-            '        <div style={{ padding: "12px 16px", background: "#f8fafc", border: "1px solid #e2e8f0", color: "#64748b", borderRadius: 8, marginBottom: 20, fontSize: 14 }}>',
-            f'          Loading {name.lower()} details...',
+            '        <div style={{ padding: "12px 16px", background: "#f8fafc", border: "1px solid #e2e8f0", borderRadius: 8, marginBottom: 20, display: "flex", flexDirection: "column", gap: 12 }}>',
+            "          {/* R-293: loading skeleton for the edit-mode initial fetch */}",
+            "          {[0, 1, 2].map((i) => (",
+            '            <div key={i} style={{ height: 34, background: "#e2e8f0", borderRadius: 6, opacity: 1 - i * 0.2 }} />',
+            "          ))}",
             "        </div>",
             "      )}",
         ])
@@ -3359,7 +3362,13 @@ def _detail_screen_page(screen: Screen, entity: Entity, ir: ApplicationIR, ops: 
             "      {!selectedId && (",
             '        <div style={{ background: "#fff", border: "1px solid #e2e8f0", borderRadius: 8, padding: 24, textAlign: "center", boxShadow: "0 1px 3px rgba(0,0,0,0.05)", marginBottom: 24 }}>',
             f'          <p style={{{{ margin: "0 0 16px 0", color: "#64748b", fontSize: 14 }}}}>Select a {name} above or pick from recent records:</p>',
-            f'          {{loadingList && <p style={{{{ color: "#94a3b8", fontSize: 13 }}}}>Loading {plural}...</p>}}',
+            "          {loadingList && (",
+            '            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(220px, 1fr))", gap: 12 }}>',
+            "              {[0, 1, 2].map((i) => (",
+            '                <div key={i} style={{ height: 56, background: "#f1f5f9", borderRadius: 6, opacity: 1 - i * 0.2 }} />',
+            "              ))}",
+            "            </div>",
+            "          )}",
             "          {listItems && listItems.length > 0 ? (",
             '            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(220px, 1fr))", gap: 12, textAlign: "left" }}>',
             "              {listItems.slice(0, 6).map((rec: any) => (",

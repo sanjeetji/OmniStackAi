@@ -172,9 +172,9 @@ class FormUpdateScreenTests(TestCase):
         # Dynamic success banner
         self.assertIn('{isEdit ? "Article updated successfully!" : "Article saved successfully!"}', page)
 
-        # Initial loading indicator banner
+        # Initial loading indicator banner — R-293 renders skeleton blocks instead of text.
         self.assertIn('{isEdit && fetchingInitial && (', page)
-        self.assertIn('Loading article details...', page)
+        self.assertIn('<div key={i} style={{ height: 34, background: "#e2e8f0", borderRadius: 6, opacity: 1 - i * 0.2 }} />', page)
 
     def test_form_screen_omits_update_when_no_update_op(self) -> None:
         ir = example_ir("minimal-blog")
