@@ -5,20 +5,22 @@ Last updated: 2026-09-09T18:48:50+05:30
 Stage 0 (Founder Build Sequence, Brief Section 91) — BASIC/MVP
 
 ## Last Completed Task
-Tracker ID: R-290 — Optimistic Delete with Rollback in the Generated Collection Screen — DONE,
-`task verify` (843 agent-engine tests, 9 focused R-290 tests) passing. The generated collection screen's
-deletes are now optimistic: single (`handleDelete`) and batch (`handleBatchDelete`) removals add the
-affected ids to a `pendingDeleteIds` overlay so the rows vanish immediately, roll them back (rows
-reappear) before the existing error toast on server failure, and a reconcile `useEffect` on `[data]`
-prunes ids once `refetch` removes them; the row map iterates a `visibleRows` list filtered by
-`pendingDeleteIds`. Safe on the deduped mutation hooks (R-288) and race-safe list fetch (R-280);
-self-contained in `_collection_screen_page`. Detail/subcollection delete, the mutation/list hooks, the API
-client, backend, and IR are unchanged. No IR, backend, dependency, database, infrastructure, network, or
-model change; implementation checkpoint `1ed88b6`. Preceded by R-225 through R-289.
+Tracker ID: R-291 — Optimistic Subcollection Child Delete with Rollback in Generated Next.js Screens —
+DONE, `task verify` (849 agent-engine tests, 6 focused R-291 tests) passing. Extends R-290's optimistic
+delete to the subcollection (master-detail) child lists in both the collection master-detail and detail
+screens: each deletable subcollection gets a `<s_var>Deleting` overlay + a reconcile `useEffect` on
+`[<s_var>.data]`, the child delete handler adds the id before `await remove<Child>(id)` and rolls it back
+in `catch` before the existing error toast, and the child row map iterates the deleting-filtered list.
+Non-deletable subcollections are unchanged. Safe on the deduped mutation hooks (R-288) and race-safe R-286
+`useList<Child>By<Parent>` hook; the hooks, API client, backend, and IR are unchanged. No IR, backend,
+dependency, database, infrastructure, network, or model change; implementation checkpoint `51f33c8`.
+Preceded by R-225 through R-290. The optimistic-delete story now spans the collection screen (R-290) and
+subcollection child lists (R-291).
 
-**Notes:** (1) the tracker is current through R-290: 79 Done, 1 Deferred, 210 Not Started across 290
-tasks; MVP is 79/185 (42.7%). (2) A Groq API key may be available; live model-fabric verification remains
-separate (set it only in gitignored `.env`, never chat/commits).
+**Notes:** (1) the tracker is current through R-291: 80 Done, 1 Deferred, 210 Not Started across 291
+tasks; MVP is 80/186 (43.0%). (2) The founder authorized autonomous continuation of Tracker IDs until
+manually stopped. (3) A Groq API key may be available; live model-fabric verification remains separate
+(set it only in gitignored `.env`, never chat/commits).
 
 
 
@@ -50,9 +52,9 @@ R-221 = cross-provider fallback (done); R-222 = platform console slice (done); R
 fallback wiring (done); R-224 = Next.js console upgrade (deferred — environment-blocked).
 
 ## Next Up (queued, in order)
-1. R-291 candidate — extend optimistic delete to the detail-screen and subcollection deletes for
-   consistency (R-290 covered the collection screen), or loading skeletons for the collection/detail/
-   subcollection loading states — propose with the founder at kickoff
+1. R-292 candidate — loading skeletons for the collection/detail/subcollection loading states (replace
+   the plain "Loading..." text with layout-preserving skeleton placeholders), or another generated-app
+   UX/robustness increment (optimistic delete now spans the collection screen R-290 + subcollections R-291)
 2. Live-verify the model fabric with the available Groq key (Balanced gateway → groq; real cloud
    inference + cost accounting) — set `GROQ_API_KEY` in the gitignored `.env`; may need a network machine
 3. R-224 Next.js console upgrade and R-010 native iOS remain deferred under their existing gates

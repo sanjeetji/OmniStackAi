@@ -1667,3 +1667,33 @@
   1..298 contiguous, table `A4:M298`, Dashboard ranges through row 298, no `#REF!`, XLSX valid. Recounted
   from the workbook: 290 unique IDs (0 dupes), 79 Done, 1 Deferred, 210 Not Started; MVP 79/185 (42.7%);
   R-010..R-219 backlog intact.
+
+## 2026-09-10 — R-291
+
+- Optimistic Subcollection Child Delete: extended R-290's optimistic delete to the subcollection
+  (master-detail) child lists in both the collection master-detail (`_collection_screen_page`) and detail
+  (`_detail_screen_page`) screens. Founder granted autonomous continuation, so this rolled straight on
+  from R-290 to complete the optimistic-delete story.
+- Added `_subcol_delete_names(s_var)` (derives `<s_var>Deleting` / `set<S_var>Deleting`). In the child
+  delete-handler loop (both sites emit byte-identical handler blocks — one `replace_all`), when
+  `sub.can_delete`: emit `const [<s_var>Deleting, set<S_var>Deleting] = useState<string[]>([]);` + a
+  reconcile `useEffect(() => { set<S_var>Deleting((prev) => prev.filter((did) => (<s_var>.data ?? [])
+  .some((x: any) => String(x.id) === did))); }, [<s_var>.data]);` before the handler; the handler adds
+  `String(id)` before `await remove<Child>(id)` and rolls it back in `catch` before `toast.error`.
+- The child row-map block (both sites — one `replace_all`) now computes `_child_map_src` =
+  `(<s_var>.data ?? []).filter((child: any) => !<s_var>Deleting.includes(String((child as any).id)))`
+  when `sub.can_delete`, else `<s_var>.data`, and maps over it — so a deleted child row vanishes
+  immediately and reappears on failure. Non-deletable subcollections are byte-identical to before. Both
+  screens already import `useState`+`useEffect`.
+- Test-first: added `test_subcollection_optimistic_delete.py` (6 tests — deleting state + reconcile
+  effect, optimistic add-before-await ordering + rollback, filtered child map, both render sites,
+  non-deletable emits none, description-only stability, and adapter-level generation; plus examples still
+  generate). They failed against the pre-change handlers, pass after. No existing assertion needed
+  changing (the full suite stayed green).
+- Gates: `task verify` 849 tests pass; `task lint`, `task security:quick`, `task env:check` pass; both
+  `task builder:demo` pass; generated child handler + filtered map inspected. Implementation checkpoint
+  `51f33c8`. 0 local / 0 cloud model calls; no generated app installed/run, no DB connection.
+- Tracker: `tracker_edit_r291.py` (baseline `51f33c8`) — R-291 (Builder) at row 9, R-290 → row 10; rows
+  1..299 contiguous, table `A4:M299`, Dashboard ranges through row 299, no `#REF!`, XLSX valid. Recounted
+  from the workbook: 291 unique IDs (0 dupes), 80 Done, 1 Deferred, 210 Not Started; MVP 80/186 (43.0%);
+  R-010..R-219 backlog intact.

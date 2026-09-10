@@ -1001,6 +1001,24 @@ the server rejects, instead of waiting for the round-trip. Safe because mutation
 - Detail-screen/subcollection delete, the mutation/list hooks, the generated API client, backend, and
   Application IR are unchanged; description-only IR generation stays byte-identical.
 
+### Optimistic Subcollection Child Delete with Rollback (R-291)
+
+Extends R-290's optimistic delete to the subcollection (master-detail) child lists in both the collection
+master-detail and detail screens — deleting a child row hides it immediately and reappears (with the
+existing error toast) only if the server rejects:
+
+- `_subcol_delete_names(s_var)` derives `<s_var>Deleting` / `set<S_var>Deleting`. For each deletable
+  subcollection, the generated screen emits `const [<s_var>Deleting, set<S_var>Deleting] =
+  useState<string[]>([]);` and a reconcile `useEffect(() => { set<S_var>Deleting((prev) => prev.filter(
+  (did) => (<s_var>.data ?? []).some((x: any) => String(x.id) === did))); }, [<s_var>.data]);`.
+- The child delete handler adds `String(id)` to the overlay before `await remove<Child>(id)` and, in
+  `catch`, removes it (row reappears) before the existing `toast.error`.
+- The child row map source becomes `(<s_var>.data ?? []).filter((child: any) => !<s_var>Deleting.includes(
+  String((child as any).id)))` when the subcollection is deletable, else `<s_var>.data` unchanged.
+- Safe on the deduped mutation hooks (R-288) and the race-safe R-286 `useList<Child>By<Parent>` hook.
+  Non-deletable subcollections, the hooks, the generated API client, backend, and Application IR are
+  unchanged; description-only IR generation stays byte-identical.
+
 ### Global Notification Toast System & Action Feedback (R-279)
 
 Adds a lightweight, accessible, and self-contained client-side toast notification system to generated Next.js web applications:

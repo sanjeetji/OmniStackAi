@@ -1,7 +1,7 @@
 schema_version: 1
 task_id: R-291
 title: Optimistic Subcollection Child Delete with Rollback in Generated Next.js Screens
-status: in_progress
+status: done
 phase: BASIC/MVP
 founder_stage: 0
 branch: main
@@ -68,11 +68,38 @@ model_tool_trace:
   local_calls: 0
   cloud_calls: 0
   note: Pure deterministic code generation and offline tests; no model call is needed.
-evidence: []
+evidence:
+  - command: env PYTHONPATH=services/agent-engine/src python3 -m unittest discover -s services/agent-engine/tests -p 'test_subcollection_optimistic_delete.py'
+    result: pass
+    detail: 6 focused R-291 tests pass (they failed first against the pre-change child handlers).
+  - command: task verify
+    result: pass
+    detail: 849 agent-engine tests and all Stage 0 offline verification gates pass; no existing assertion needed changing.
+  - command: task lint
+    result: pass
+  - command: task security:quick
+    result: pass
+  - command: task env:check
+    result: pass
+  - command: task builder:demo -- minimal-blog
+    result: pass
+  - command: task builder:demo -- rideshare-favourites
+    result: pass
+  - command: generated TypeScript artifact inspection
+    result: pass
+    detail: >-
+      Generated deletable subcollection carries a commentsSubcolDeleting overlay + reconcile useEffect on
+      [commentsSubcol.data], optimistic add before await removeComment(id) + rollback in catch, and the
+      child map iterates the deleting-filtered list. Non-deletable subcollections unchanged. Tracker: 291
+      unique IDs, R-291 Done, table A4:M299, dashboard formulas through row 299, no #REF!, valid XLSX;
+      80 Done / 1 Deferred / 210 Not Started; MVP 80/186 (43.0%).
+  - commit: 51f33c8
+    detail: feat(codegen)- optimistic subcollection child delete with rollback [R-291]
 blockers: []
 next_action: >-
-  Write focused failing tests, add per-subcollection deleting state + reconcile + optimistic handler +
-  filtered child map (both sites), update any pinned assertions, run all gates, then tracker + docs +
-  two commits + push.
+  R-291 is complete and verified. Next unstarted Tracker ID is R-292 (do not begin it). The
+  optimistic-delete story now spans the collection screen (R-290) and subcollection child lists (R-291).
+  Recommended offline candidate: loading skeletons for the collection/detail/subcollection loading states,
+  or another generated-app UX/robustness increment.
 next_command: >-
-  env PYTHONPATH=services/agent-engine/src python3 -m unittest discover -s services/agent-engine/tests -p 'test_subcollection_optimistic_delete.py' -v
+  task ai:status

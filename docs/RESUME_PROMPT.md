@@ -40,7 +40,7 @@ START PROTOCOL
   `task ai:status`, `task ai:handoff`. `task verify` must stay green and network-independent.
 - Confirm git branch/HEAD/clean tree. Then restate: phase, next Tracker ID, objective, blast radius.
 
-WHAT IS ALREADY BUILT (platform generators are Python 3.13 stdlib-only, offline, in services/agent-engine; 843 tests pass)
+WHAT IS ALREADY BUILT (platform generators are Python 3.13 stdlib-only, offline, in services/agent-engine; 849 tests pass)
 - Model fabric: ModelProvider contract + registry; local Ollama adapter (runs any installed model via
   OMNISTACKAI_OLLAMA_MODEL); Balanced ModelGateway (deterministic escalation ladder, no silent cloud
   fallback, context-budget guard); key-activated cloud catalog — Anthropic/OpenAI/Google-Gemini/
@@ -90,7 +90,8 @@ WHAT IS ALREADY BUILT (platform generators are Python 3.13 stdlib-only, offline,
   paths (LIST, LIST_BY, detail GET, and create/update/delete) resist duplicate/racing requests. Generated
   search is consistent too: the subcollection search is now live + debounced (R-289), matching the
   top-level collection search. Collection deletes are optimistic (R-290): single/batch removals hide rows
-  instantly and roll back with an error toast on failure, reconciled on refetch.
+  instantly and roll back with an error toast on failure, reconciled on refetch; subcollection child
+  deletes are optimistic too (R-291).
   TRI-TARGET proven from ONE IR; all offline/deterministic (emit
   files, assert contents; no install/build/DB).
 - RUNTIME/DEPLOY layer (Brief 15/51/75): RuntimeProvider/DeploymentProvider contracts;
@@ -155,9 +156,9 @@ generated `use<Entity>` detail GET hooks (AbortController; internal signal after
 success/AbortError/loading writes blocked; id-change/unmount cleanup aborts). Do NOT overwrite
 backlog rows; continue from R-288.
 NOTE: the execution tracker was reconciled on 2026-09-09 (R-253..R-279 rows had drifted and were
-backfilled); keep it current going forward. It now has 290 unique rows: 79 Done, 1 Deferred, 210 Not
-Started; MVP is 79/185 (42.7%). The earlier reported R-251 MVP baseline of 145 was one low—direct recount
-is 146, and R-252..R-290 added 39 rows. The summary above is current through R-290; Git, state files,
+backfilled); keep it current going forward. It now has 291 unique rows: 80 Done, 1 Deferred, 210 Not
+Started; MVP is 80/186 (43.0%). The earlier reported R-251 MVP baseline of 145 was one low—direct recount
+is 146, and R-252..R-291 added 40 rows. The summary above is current through R-291; Git, state files,
 tests, and CHANGELOG remain the executable/detail sources of truth.
 
 ENVIRONMENT LIMITS discovered here
@@ -184,11 +185,11 @@ RULES (non-negotiable)
   .ai/HANDOFF.md, PROJECT_STATE.md, CHANGELOG.md, and the tracker row. Push the branch; verify remote
   SHA == local HEAD. Never claim unexecuted tests.
 
-WHAT TO DO NEXT (pick with the founder; all continue the builder), continue from R-291
-- Offline-doable now: collection deletes are now optimistic (R-290), so R-291 could extend optimistic
-  delete to the detail-screen and subcollection deletes for consistency, or add loading skeletons for the
-  collection/detail/subcollection loading states. Reuse the proven patterns, preserve public hook
-  signatures, and add focused generation tests first.
+WHAT TO DO NEXT (pick with the founder; all continue the builder), continue from R-292
+- Offline-doable now: optimistic delete now spans the collection screen (R-290) and subcollection child
+  lists (R-291), so R-292 could add loading skeletons for the collection/detail/subcollection loading
+  states, or another generated-app UX/robustness increment. Reuse the proven patterns, preserve public
+  hook signatures, and add focused generation tests first.
 - Now unblocked (a Groq API key is available): live-verify the model fabric end-to-end with Groq through
   the Balanced gateway (real cloud inference + cost accounting). Set GROQ_API_KEY in the gitignored .env
   (NEVER in chat/commits/source) and run `task agent-engine:gateway:run` with OMNISTACKAI_CLOUD_PROVIDER=
@@ -200,5 +201,5 @@ WHAT TO DO NEXT (pick with the founder; all continue the builder), continue from
 - Deferred by governance: native mobile (R-010 etc.) until web/backend stability.
 
 Begin by reading the files above and running the start protocol, then propose the next Tracker ID
-(R-291) with its task contract before writing code. Commit to main.
+(R-292) with its task contract before writing code. Commit to main.
 ```

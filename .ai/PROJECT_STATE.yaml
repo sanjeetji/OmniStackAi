@@ -2,22 +2,22 @@ schema_version: 1
 project: OmniStackAI
 phase: BASIC/MVP
 founder_stage: 0
-current_task: R-290
+current_task: R-291
 current_status: done
 branch: main
 last_completed_task:
-  task_id: R-290
-  title: Optimistic Delete with Rollback in the Generated Collection Screen
+  task_id: R-291
+  title: Optimistic Subcollection Child Delete with Rollback in Generated Next.js Screens
   verification: >-
-    task verify (843 agent-engine tests, 9 focused R-290 tests); the generated collection screen's deletes
-    are now optimistic — single (handleDelete) and batch (handleBatchDelete) removals add the affected ids
-    to a pendingDeleteIds overlay so the rows vanish immediately, roll them back (rows reappear) before the
-    existing error toast on server failure, and a reconcile useEffect on [data] prunes ids once refetch
-    removes them; the row map iterates a visibleRows list filtered by pendingDeleteIds. Safe on the deduped
-    mutation hooks (R-288) and race-safe list fetch (R-280); self-contained in _collection_screen_page.
-    Detail/subcollection delete, the mutation/list hooks, the API client, backend, IR, and description-only
-    stability are all preserved. task lint + security:quick + env:check and both builder demos pass;
-    generated TypeScript inspected; impl 1ed88b6; 0 local/0 cloud model calls
+    task verify (849 agent-engine tests, 6 focused R-291 tests); extends R-290's optimistic delete to the
+    subcollection (master-detail) child lists in both the collection master-detail and detail screens —
+    each deletable subcollection gets a per-subcollection deleting overlay (useState<string[]>) + a
+    reconcile useEffect on [<s_var>.data], the child delete handler adds the id before await
+    remove<Child>(id) and rolls it back in catch before the existing error toast, and the child row map
+    iterates the deleting-filtered list. Non-deletable subcollections unchanged. Safe on the deduped
+    mutation hooks (R-288) and race-safe R-286 LIST_BY hook; the hooks, API client, backend, IR, and
+    description-only stability are all preserved. task lint + security:quick + env:check and both builder
+    demos pass; generated TypeScript inspected; impl 51f33c8; 0 local/0 cloud model calls
   result: pass
 control_plane_database: postgresql
 model_routing_mode: balanced
@@ -29,13 +29,14 @@ product_direction: >-
   framework adapter contract -> Next.js adapter -> Git service -> preview/sandbox (needs cloud env).
 id_note: >-
   Workbook backlog owns R-010..R-219. Founder-requested tasks use IDs after R-219: R-220..R-223 done,
-  R-224 Next.js deferred (env-blocked), R-225..R-290 done. Continue from R-291.
+  R-224 Next.js deferred (env-blocked), R-225..R-291 done. Continue from R-292.
 blockers: []
 next_action: >-
-  Task R-290 (optimistic delete with rollback in the collection screen) is implemented, verified, and
-  complete (843 tests pass; tracker current — 79 Done of 290, MVP 79/185 = 42.7%). Next unstarted Tracker
-  ID is R-291 (do not begin it); recommended offline candidate: extend optimistic delete to the
-  detail-screen and subcollection deletes for consistency, or loading skeletons for the loading states —
-  propose with the founder at kickoff. A Groq key remains available for a separately authorized future
-  live model-fabric check; keep it only in gitignored .env and never in chat/commits.
-last_updated: "2026-09-10T14:00:00+05:30"
+  Task R-291 (optimistic subcollection child delete with rollback) is implemented, verified, and complete
+  (849 tests pass; tracker current — 80 Done of 291, MVP 80/186 = 43.0%). The optimistic-delete story now
+  spans the collection screen (R-290) and subcollection child lists (R-291). Next unstarted Tracker ID is
+  R-292 (do not begin it); recommended offline candidate: loading skeletons for the collection/detail/
+  subcollection loading states, or another generated-app UX/robustness increment. Founder authorized
+  autonomous continuation until manually stopped. A Groq key remains available for a separately authorized
+  future live model-fabric check; keep it only in gitignored .env and never in chat/commits.
+last_updated: "2026-09-10T15:00:00+05:30"
