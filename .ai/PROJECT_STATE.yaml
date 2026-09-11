@@ -2,24 +2,25 @@ schema_version: 1
 project: OmniStackAI
 phase: BASIC/MVP
 founder_stage: 0
-current_task: R-349
+current_task: R-350
 current_status: done
 branch: main
-last_completed_task: R-349
+last_completed_task: R-350
 last_completed_task_summary: >-
-  Generated Accessible Futuristic Reusable Hover Card Suite (components/hover-card.tsx);
-  added standalone, reusable, accessible, futuristic HoverCard compound component suite supporting
-  HoverCardVariant ("neon" | "glass" | "bordered" | "minimal"), HoverCardSize ("sm" | "md" | "lg"),
-  HoverCardSide ("top" | "bottom" | "left" | "right"), HoverCardAlign ("start" | "center" | "end"),
-  HoverCardProps, HoverCardTriggerProps, HoverCardContentProps, HoverCardArrowProps, HoverCardContextValue,
-  compound subcomponents (HoverCard, HoverCard.Trigger, HoverCard.Content, HoverCard.Arrow, useHoverCard),
-  configurable entrance and exit delay timers (openDelay, closeDelay), smooth pointer transit keeping card open,
-  viewport boundary collision prevention and clamping (window.innerWidth / window.innerHeight), directional SVG
-  pointer arrow notch, full WAI-ARIA 1.2 dialog accessibility semantics (role="dialog", aria-haspopup="dialog", etc.),
-  full keyboard navigation (Escape dismiss with trigger focus restoration), 4 futuristic visual variants, 3 size presets,
-  100% diff-invariance across ir.description, and 0 external runtime dependencies; exported render_hover_card_component
-  in codegen; registered in NextjsWebAdapter; 1,567 tests pass (16 new tests in test_hover_card_component.py);
-  builder:demo generates 83 files for minimal-blog and 83 for rideshare-favourites; 0 model calls
+  Generated Accessible Futuristic Reusable Scroll Area Suite (components/scroll-area.tsx);
+  added standalone, reusable, accessible, futuristic ScrollArea compound component suite supporting
+  ScrollAreaVariant ("neon" | "glass" | "bordered" | "minimal"), ScrollAreaSize ("sm" | "md" | "lg"),
+  ScrollAreaType ("auto" | "always" | "scroll" | "hover"), ScrollAreaOrientation ("vertical" | "horizontal" | "both"),
+  ScrollAreaProps, ScrollAreaViewportProps, ScrollAreaScrollbarProps, ScrollAreaThumbProps, ScrollAreaCornerProps,
+  ScrollAreaContextValue, compound subcomponents (ScrollArea, ScrollArea.Viewport, ScrollArea.Scrollbar,
+  ScrollArea.Thumb, ScrollArea.Corner, useScrollArea), hidden native browser scrollbars with cross-browser
+  styling, proportional draggable thumb with mouse/touch drag tracking and pointer capture, direct track-click
+  smooth jump scrolling, 4 visibility modes, full WAI-ARIA 1.2 scrollbar semantics (role="scrollbar",
+  aria-orientation, aria-valuenow, aria-valuemin, aria-valuemax), keyboard viewport navigation (tabIndex={0},
+  ArrowDown/Up, PageDown/Up, Home, End), 4 futuristic visual variants, 3 size presets, 100% diff-invariance
+  across ir.description, and 0 external runtime dependencies; exported render_scroll_area_component in codegen;
+  registered in NextjsWebAdapter; 1,583 tests pass (16 new tests in test_scroll_area_component.py); builder:demo
+  generates 84 files for minimal-blog and 84 for rideshare-favourites; 0 model calls
 control_plane_database: postgresql
 model_routing_mode: balanced
 architecture_contract: R_&_D/OmniStackAI_Implementation_Brief_v6.md
@@ -31,7 +32,7 @@ product_direction: >-
   framework adapter contract -> Next.js adapter -> Git service -> preview/sandbox (needs cloud env).
 id_note: >-
   Workbook backlog owns R-010..R-219. Founder-requested tasks use IDs after R-219: R-220..R-223 done,
-  R-224 Next.js deferred (env-blocked), R-225..R-349 done. Continue from R-350.
+  R-224 Next.js deferred (env-blocked), R-225..R-350 done. Continue from R-351.
 blockers: []
 next_action: >-
-  Task R-349 (generated accessible futuristic reusable hover card suite) is complete with 1,567 tests passing. Next task: R-350.
+  Task R-350 (generated accessible futuristic reusable scroll area suite) is complete with 1,583 tests passing. Next task: R-351.

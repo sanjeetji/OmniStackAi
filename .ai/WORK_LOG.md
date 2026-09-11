@@ -1,5 +1,32 @@
 # Work Log
 
+## 2026-09-11 — R-350
+
+- Recorded contract in `.ai/CURRENT_TASK.yaml` and `.ai/tasks/R-350.md` (status in_progress → done).
+- `nextjs.py`:
+  - Added `_SCROLL_AREA_COMPONENT` static template implementing accessible, desktop-grade, futuristic Scroll Area / Custom Viewport compound component suite (`apps/web/components/scroll-area.tsx`).
+  - Implemented `ScrollAreaType` ("auto" | "always" | "scroll" | "hover"), `ScrollAreaOrientation` ("vertical" | "horizontal" | "both"), `ScrollAreaVariant` ("neon" | "glass" | "bordered" | "minimal"), `ScrollAreaSize` ("sm" | "md" | "lg"), `ScrollAreaProps`, `ScrollAreaViewportProps`, `ScrollAreaScrollbarProps`, `ScrollAreaThumbProps`, `ScrollAreaCornerProps`, `ScrollAreaContextValue` interfaces.
+  - Implemented compound subcomponents: `ScrollArea`, `ScrollArea.Viewport` (`ScrollAreaViewport`), `ScrollArea.Scrollbar` (`ScrollAreaScrollbar`), `ScrollArea.Thumb` (`ScrollAreaThumb`), `ScrollArea.Corner` (`ScrollAreaCorner`), `useScrollArea`.
+  - Implemented cross-browser native scrollbar concealment via CSS (`scrollbarWidth: "none"`, `msOverflowStyle: "none"`, `WebkitOverflowScrolling: "touch"`).
+  - Implemented proportional thumb sizing (`ratio * el.clientHeight` / `ratio * el.clientWidth` clamped to min 18px) and dynamic offset mapping.
+  - Implemented mouse and touch dragging handlers with `setPointerCapture` and `releasePointerCapture` for smooth thumb dragging.
+  - Implemented track click jump scrolling (`handleTrackClick`) with smooth scrolling.
+  - Implemented 4 visibility modes: `"auto"`, `"always"`, `"scroll"`, `"hover"`.
+  - Implemented WAI-ARIA 1.2 scrollbar semantics (`role="scrollbar"`, `aria-orientation`, `aria-valuenow`, `aria-valuemin`, `aria-valuemax`, `aria-controls`).
+  - Implemented viewport keyboard navigation (`tabIndex={0}`, `ArrowDown`/`ArrowUp`, `PageDown`/`PageUp`, `Home`/`End`).
+  - Implemented 4 futuristic visual variants: `"neon"` (cyberpunk glowing thumb with cyan border glow), `"glass"` (translucent frosted track), `"bordered"` (clean slate border frame), and `"minimal"` (unobtrusive micro thumb).
+  - Implemented 3 size presets: `"sm"` (4px), `"md"` (8px), `"lg"` (12px).
+  - Exported `render_scroll_area_component` in `omnistackai_agent_engine.codegen` and registered in `NextjsWebAdapter.generate()`.
+  - Maintained 100% diff-invariance across `ir.description`.
+- Added `services/agent-engine/tests/test_scroll_area_component.py` with 16 comprehensive unit tests (all passing).
+- `task verify` — 1,583 tests pass (16 new), 0 failures. `task lint`, `task security:quick` pass.
+  `builder:demo minimal-blog` passes (84 files generated). `builder:demo rideshare-favourites` passes (84 files generated). 0 model calls.
+- Tracker: inserted R-350 Done row at `Phase_Roadmap!A9`; table `A4:M358`; 358 total rows;
+  139 Done, 1 Deferred, 210 Not Started; MVP 139/245 (56.7%); no `#REF!`; XLSX valid.
+- Updated CURRENT_TASK.yaml, tasks/R-350.md, PROJECT_STATE.yaml, HANDOFF.md, PROJECT_STATE.md,
+  CHANGELOG.md, docs/CODEGEN.md, docs/PROGRESS.md, docs/RESUME_PROMPT.md.
+
+
 ## 2026-09-11 — R-349
 
 - Recorded contract in `.ai/CURRENT_TASK.yaml` and `.ai/tasks/R-349.md` (status in_progress → done).

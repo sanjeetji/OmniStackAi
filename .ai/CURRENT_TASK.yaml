@@ -1,17 +1,17 @@
-task_id: R-349
-id: R-349
-title: "Accessible Futuristic Reusable Hover Card Suite"
+task_id: R-350
+id: R-350
+title: "Accessible Futuristic Reusable Scroll Area Suite"
 status: DONE
 phase: MVP
 tracker_row: 9
 started_at: "2026-09-11"
 completed_at: "2026-09-11"
-objective: "Add accessible, optimized, desktop-grade, and futuristic Hover Card / Preview Card compound component suite (components/hover-card.tsx) with configurable delay timers, viewport collision clamping, compound subcomponents, and WAI-ARIA dialog semantics."
+objective: "Add accessible, optimized, desktop-grade, and futuristic Scroll Area / Custom Viewport compound component suite (components/scroll-area.tsx) with proportional draggable thumbs, auto-hiding visibility modes, corner fills, keyboard scrolling, and WAI-ARIA scrollbar semantics."
 allowed_paths:
   - "services/agent-engine/src/omnistackai_agent_engine/codegen/nextjs.py"
   - "services/agent-engine/src/omnistackai_agent_engine/codegen/__init__.py"
-  - "services/agent-engine/tests/test_hover_card_component.py"
-  - ".ai/tasks/R-349.md"
+  - "services/agent-engine/tests/test_scroll_area_component.py"
+  - ".ai/tasks/R-350.md"
   - ".ai/CURRENT_TASK.yaml"
   - ".ai/PROJECT_STATE.yaml"
   - ".ai/WORK_LOG.md"
@@ -26,9 +26,9 @@ forbidden_changes:
   - "Do not introduce external npm dependencies"
   - "Do not break snapshot diff invariance across ir.description"
 evidence:
-  verify: "task verify: 1,567 tests pass offline (16 in test_hover_card_component.py)"
+  verify: "task verify: 1,583 tests pass offline (16 in test_scroll_area_component.py)"
   lint: "task lint: pass"
   security: "task security:quick: pass"
-  demos: "task builder:demo passes on minimal-blog (83 files) and rideshare-favourites (83 files)"
-  tracker: "R_&_D/OmniStackAI_Execution_Tracker_v6.xlsx row 9 (349 total, 138 Done)"
+  demos: "task builder:demo passes on minimal-blog (84 files) and rideshare-favourites (84 files)"
+  tracker: "R_&_D/OmniStackAI_Execution_Tracker_v6.xlsx row 9 (350 total, 139 Done)"
 next_action: "Ready for next tracker task"

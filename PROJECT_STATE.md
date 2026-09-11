@@ -5,28 +5,29 @@ Last updated: 2026-09-11T00:32:00+05:30
 Stage 0 (Founder Build Sequence, Brief Section 91) — BASIC/MVP
 
 ## Last Completed Task
-Tracker ID: R-349 — Generated Accessible Futuristic Reusable Hover Card Suite (components/hover-card.tsx) — DONE,
-`task verify` (1,567 agent-engine tests, 16 new focused R-349 tests) passing. Enabled accessible, futuristic, zero-dependency
-desktop-grade hover cards and preview cards across generated Next.js web applications:
-added standalone, reusable, accessible, futuristic HoverCard compound component suite (`components/hover-card.tsx`) supporting
-HoverCardVariant ("neon" | "glass" | "bordered" | "minimal"), HoverCardSize ("sm" | "md" | "lg"),
-HoverCardSide ("top" | "bottom" | "left" | "right"), HoverCardAlign ("start" | "center" | "end"),
-HoverCardProps, HoverCardTriggerProps, HoverCardContentProps, HoverCardArrowProps, HoverCardContextValue,
-compound subcomponents (HoverCard, HoverCard.Trigger, HoverCard.Content, HoverCard.Arrow, useHoverCard),
-configurable entrance and exit delay timers (openDelay, closeDelay), smooth pointer transit keeping card open,
-viewport boundary collision prevention and clamping (window.innerWidth / window.innerHeight), directional SVG
-pointer arrow notch, full WAI-ARIA 1.2 dialog accessibility semantics (role="dialog", aria-haspopup="dialog", etc.),
-full keyboard navigation (Escape dismiss with trigger focus restoration), 4 futuristic visual variants, 3 size presets,
+Tracker ID: R-350 — Generated Accessible Futuristic Reusable Scroll Area Suite (components/scroll-area.tsx) — DONE,
+`task verify` (1,583 agent-engine tests, 16 new focused R-350 tests) passing. Enabled accessible, futuristic, zero-dependency
+desktop-grade custom scrollbars and viewport management across generated Next.js web applications:
+added standalone, reusable, accessible, futuristic ScrollArea compound component suite (`components/scroll-area.tsx`) supporting
+ScrollAreaVariant ("neon" | "glass" | "bordered" | "minimal"), ScrollAreaSize ("sm" | "md" | "lg"),
+ScrollAreaVisibility ("auto" | "always" | "scroll" | "hover"), ScrollAreaOrientation ("vertical" | "horizontal" | "both"),
+ScrollAreaProps, ScrollViewportProps, ScrollbarProps, ScrollThumbProps, ScrollCornerProps, ScrollAreaContextValue,
+compound subcomponents (ScrollArea, ScrollArea.Viewport, ScrollArea.Scrollbar, ScrollArea.Thumb, ScrollArea.Corner, useScrollArea),
+cross-browser native scrollbar concealment via CSS (scrollbarWidth: "none", msOverflowStyle: "none", WebkitOverflowScrolling: "touch"),
+proportional thumb sizing and dynamic offset calculation with mouse/touch drag tracking (setPointerCapture / releasePointerCapture),
+direct track-click smooth jump scrolling, 4 visibility modes ("auto", "always", "scroll", "hover"),
+full WAI-ARIA 1.2 scrollbar semantics (role="scrollbar", aria-orientation, aria-valuenow, aria-valuemin, aria-valuemax, aria-controls),
+viewport keyboard navigation (tabIndex={0}, ArrowDown/Up, PageDown/Up, Home, End), 4 futuristic visual variants, 3 size presets,
 100% diff-invariance across `ir.description`, and 0 external dependencies.
-Preceded by R-348 (context menu), R-347 (speed dial), R-346 (pin input), R-345 (color picker), R-344 (resizable), R-343 (carousel), R-342 (segmented control), R-341 (radial gauge), R-340 (code block), R-339 (tag input), R-338 (tree view),
+Preceded by R-349 (hover card), R-348 (context menu), R-347 (speed dial), R-346 (pin input), R-345 (color picker), R-344 (resizable), R-343 (carousel), R-342 (segmented control), R-341 (radial gauge), R-340 (code block), R-339 (tag input), R-338 (tree view),
 R-337 (stat card), R-336 (timeline), R-335 (file upload), R-334 (stepper), R-333 (rating), R-332 (progress), R-331 (slider),
 R-330 (command palette), R-329 (data grid), R-328 (date picker), R-327 (form controls), R-326 (dialog), R-325 (theme toggle),
 R-324 (theming tokens), R-323 (popover), R-322 (dropdown menu), R-321 (accordion), R-320 (toggle), R-319 (avatar), R-318 (drawer),
 R-317 (skeleton), R-316 (alert), R-315 (card), R-314 (tooltip), R-313 (column visibility), R-312 (badge), R-311 (table density),
 R-310 (tabs), R-309 (pagination), and R-308 (JSON export).
 
-**Notes:** (1) the tracker is current through R-349: 138 Done, 1 Deferred, 210 Not Started across 349
-unique tasks; MVP is 138/244 (56.6%). (2) Next unstarted Tracker ID: R-350.
+**Notes:** (1) the tracker is current through R-350: 139 Done, 1 Deferred, 210 Not Started across 350
+unique tasks; MVP is 139/245 (56.7%). (2) Next unstarted Tracker ID: R-351.
 
 
 
