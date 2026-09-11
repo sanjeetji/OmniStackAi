@@ -1,24 +1,24 @@
-task_id: R-376
-id: R-376
-title: "Accessible Futuristic Reusable Media Player Suite"
+task_id: R-377
+id: R-377
+title: "Accessible Futuristic Reusable Pivot Table & Cross-Tabulation Matrix Suite"
 status: DONE
 phase: MVP
-tracker_row: 20
+tracker_row: 21
 started_at: "2026-09-11"
 completed_at: "2026-09-11"
 objective: >-
-  Add accessible, zero-dependency, desktop-and-mobile-grade, and futuristic Media Player & Audio/Video
-  Controller compound component suite (components/media-player.tsx) supporting dual media modes (video and audio),
-  custom controls (play/pause, interactive scrubber with buffered/played progress and time preview tooltip,
-  volume slider with mute toggle, playback rate selector, skip forward/back ±10s, fullscreen, picture-in-picture,
-  captions toggle), comprehensive keyboard navigation (Space/K, Arrow keys, M, F, P), WAI-ARIA media semantics
-  (role="region", role="slider", aria-valuenow), 4 visual variants (default, card, glass, neon with radiant controls),
-  3 size scales (sm, md, lg), React ref forwarding, explicit displayName, and semantic aliases.
+  Add accessible, zero-dependency, desktop-and-mobile-grade, and futuristic Pivot Table & Cross-Tabulation
+  Matrix compound component suite (components/pivot-table.tsx) supporting multi-dimensional row and column grouping,
+  aggregation functions (sum, avg, count, min, max), collapsible/expandable row hierarchies with chevron indicators,
+  automated subtotals and grand totals, interactive column sorting, search filtering, cell selection, CSV export,
+  WAI-ARIA table/grid accessibility semantics (role="table", role="row", role="columnheader", role="rowheader", role="gridcell"),
+  4 visual variants (default, card, glass, neon with glowing totals), 3 size scales (sm, md, lg),
+  React ref forwarding, explicit displayName, and semantic aliases.
 allowed_paths:
   - "services/agent-engine/src/omnistackai_agent_engine/codegen/nextjs.py"
   - "services/agent-engine/src/omnistackai_agent_engine/codegen/__init__.py"
-  - "services/agent-engine/tests/test_media_player_component.py"
-  - ".ai/tasks/R-376.md"
+  - "services/agent-engine/tests/test_pivot_table_component.py"
+  - ".ai/tasks/R-377.md"
   - ".ai/CURRENT_TASK.yaml"
   - ".ai/PROJECT_STATE.yaml"
   - ".ai/WORK_LOG.md"
@@ -33,9 +33,9 @@ forbidden_changes:
   - "Do not introduce external npm dependencies"
   - "Do not break snapshot diff invariance across ir.description"
 evidence:
-  verify: "task verify -> 2074 passed in 1.68s"
+  verify: "task verify -> 2091 passed in 1.75s"
   lint: "task lint -> passed"
   security: "task security:quick -> passed"
-  demos: "task builder:demo -- minimal-blog -> generated 113 files"
+  demos: "task builder:demo -- minimal-blog -> generated 114 files"
   tracker: DONE
-next_action: "Proceed to next tracker task R-377"
+next_action: "Proceed to next tracker task R-378"

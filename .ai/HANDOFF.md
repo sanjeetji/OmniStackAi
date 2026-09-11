@@ -1,6 +1,6 @@
 # Current Handoff
 
-Task ID: R-376
+Task ID: R-377
 Status: done
 Phase: BASIC/MVP — Founder Stage 0
 Branch: `main` (the only branch; the GitHub default)
@@ -24,9 +24,33 @@ Branch: `main` (the only branch; the GitHub default)
   12. **R-374**: Org Chart & Hierarchy Flow Diagram Suite (`components/org-chart.tsx`)
   13. **R-375**: Heatmap & Activity Contribution Matrix Suite (`components/heatmap.tsx`)
   14. **R-376**: Media Player Suite (`components/media-player.tsx`)
-- Resume from **R-377** when ready. Still stop-and-ask only for paid cloud / DB engine / new infra / native-mobile / a materially different architecture decision.
+  15. **R-377**: Pivot Table & Cross-Tabulation Matrix Suite (`components/pivot-table.tsx`)
+- Resume from **R-378** when ready. Still stop-and-ask only for paid cloud / DB engine / new infra / native-mobile / a materially different architecture decision.
 
 ## Completed
+
+### R-377 — Generated Accessible Futuristic Reusable Pivot Table & Cross-Tabulation Matrix Suite (components/pivot-table.tsx)
+
+Enabled accessible, desktop-and-mobile-grade, futuristic Pivot Table & Cross-Tabulation Matrix compound components across generated Next.js web applications:
+
+- **Standalone Pivot Table Suite (`apps/web/components/pivot-table.tsx`)**:
+  - Implemented `PivotAggregator` (`"sum"` | `"avg"` | `"count"` | `"min"` | `"max"`), `PivotVariant` (`"default"` | `"card"` | `"glass"` | `"neon"`), `PivotSize` (`"sm"` | `"md"` | `"lg"`), `PivotValueField`, `PivotCellCoord`, `PivotTableHandle`, `PivotTableProps`, `PivotCellProps`, and `PivotHeaderProps` interfaces.
+  - Implemented compound and semantic alias exports: `PivotTable`, `CrossTab`, `MatrixTable`, `PivotCell`, `PivotHeader`, and default export.
+  - Implemented multi-dimensional hierarchical row grouping and multi-level column dimension grouping.
+  - Implemented aggregation calculations: `sum`, `avg`, `count`, `min`, `max`.
+  - Implemented collapsible and expandable row hierarchies with chevron toggle buttons and indentation depth.
+  - Implemented automatic calculation and rendering of row subtotals and global grand totals for rows and columns.
+  - Implemented interactive sorting on dimension and metric column headers.
+  - Implemented live search filtering input for dimension matching.
+  - Implemented cell click selection callback (`onCellClick`, `selectedCell`).
+  - Implemented CSV export capability via imperative handle (`exportCsv`) and toolbar trigger.
+  - Implemented WAI-ARIA 1.2 table/grid accessibility semantics (`role="table"`, `role="row"`, `role="columnheader"`, `role="rowheader"`, `role="gridcell"`, `aria-expanded`, `aria-sort`).
+  - Implemented 4 futuristic visual styling variants ("default", "card", "glass" with backdropFilter blur, "neon" cyberpunk cyan glow with radiant total rows).
+  - Implemented 3 size presets ("sm", "md", "lg").
+  - Implemented React ref forwarding (`forwardRef`) and explicit `displayName` across all exports.
+  - Exported `render_pivot_table_component` in `omnistackai_agent_engine.codegen` and registered `components/pivot-table.tsx` in `NextjsWebAdapter.generate()`.
+  - Maintained 100% diff-invariance across `ir.description`.
+  - Unit tests: 17 focused tests in `services/agent-engine/tests/test_pivot_table_component.py` (all passing). Total test count: 2,091 tests.
 
 ### R-376 — Generated Accessible Futuristic Reusable Media Player Suite (components/media-player.tsx)
 

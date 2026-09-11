@@ -1,6 +1,28 @@
 # Work Log
 
-## 2026-09-11 — R-376
+## 2026-09-11 — R-377
+
+- Recorded contract in `.ai/CURRENT_TASK.yaml` and `.ai/tasks/R-377.md` (status in_progress → done).
+- `nextjs.py`:
+  - Added `_PIVOT_TABLE_COMPONENT` static template implementing accessible, desktop-and-mobile-grade, futuristic Pivot Table & Cross-Tabulation Matrix compound component suite (`apps/web/components/pivot-table.tsx`).
+  - Implemented `PivotAggregator` ("sum" | "avg" | "count" | "min" | "max"), `PivotVariant` ("default" | "card" | "glass" | "neon"), `PivotSize` ("sm" | "md" | "lg"), `PivotValueField`, `PivotCellCoord`, `PivotTableHandle`, `PivotTableProps`, `PivotCellProps`, `PivotHeaderProps` interfaces.
+  - Implemented compound and semantic alias exports: `PivotTable`, `CrossTab`, `MatrixTable`, `PivotCell`, `PivotHeader`, default export.
+  - Implemented multi-dimensional hierarchical row grouping and multi-level column dimension grouping.
+  - Implemented aggregation calculations: `sum`, `avg`, `count`, `min`, `max`.
+  - Implemented collapsible and expandable row hierarchies with chevron toggle buttons and indentation depth.
+  - Implemented automatic calculation and rendering of row subtotals and global grand totals for rows and columns.
+  - Implemented interactive sorting on dimension and metric column headers.
+  - Implemented live search filtering input for dimension matching.
+  - Implemented cell click selection callback (`onCellClick`, `selectedCell`).
+  - Implemented CSV export capability via imperative handle (`exportCsv`) and toolbar trigger.
+  - Implemented WAI-ARIA 1.2 table/grid accessibility semantics (`role="table"`, `role="row"`, `role="columnheader"`, `role="rowheader"`, `role="gridcell"`, `aria-expanded`, `aria-sort`).
+  - Implemented 4 futuristic visual styling variants ("default", "card", "glass" with backdropFilter blur, "neon" cyberpunk cyan glow with radiant total rows).
+  - Implemented 3 size presets ("sm", "md", "lg").
+  - Implemented React ref forwarding (`forwardRef`) and explicit `displayName` across all exports.
+  - Exported `render_pivot_table_component` in `omnistackai_agent_engine.codegen` and registered `components/pivot-table.tsx` in `NextjsWebAdapter.generate()`.
+  - Maintained 100% diff-invariance across `ir.description`.
+- Added `services/agent-engine/tests/test_pivot_table_component.py` with 17 comprehensive unit tests (all passing).
+- `task verify` — 2,091 tests pass (17 new), 0 failures. `task lint`, `task security:quick`, `task builder:demo -- minimal-blog` pass.
 
 - Recorded contract in `.ai/CURRENT_TASK.yaml` and `.ai/tasks/R-376.md` (status in_progress → done).
 - `nextjs.py`:

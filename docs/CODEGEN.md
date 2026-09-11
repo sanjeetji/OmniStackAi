@@ -3133,3 +3133,36 @@ Accessible, futuristic, desktop-and-mobile-grade media player compound component
   - Full React `forwardRef` and explicit `displayName` across all exports.
   - 100% diff-invariance across `ir.description` changes; zero external runtime npm dependencies.
   - Registered in `NextjsWebAdapter.generate()` as a `GeneratedFile` at `components/media-player.tsx` and exported in `codegen.__init__` as `render_media_player_component`.
+
+### Pivot Table & Cross-Tabulation Matrix Suite (`components/pivot-table.tsx`)
+
+Accessible, futuristic, desktop-and-mobile-grade pivot table compound component suite:
+- **Zero Runtime Dependencies**: Pure React 18+ and native HTML table elements without heavy external grid packages (`ag-grid`, `pivottable.js`).
+- **Multi-Dimensional Grouping**:
+  - Hierarchical multi-level row dimensions with indentation and collapsible/expandable chevron controls.
+  - Multi-level column dimensions cross-tabulated against row hierarchies.
+- **Aggregation Engine**:
+  - In-memory calculation supporting `sum`, `avg`, `count`, `min`, `max` operations across multiple value fields.
+  - Automatic computation and styling of row subtotals and global grand totals for rows and columns.
+- **Search & Interactive Sorting**:
+  - Live search input filtering row hierarchies across dimension values.
+  - Sort toggles on dimension headers and metric columns (ascending / descending).
+- **Cell Selection & CSV Export**:
+  - Cell click selection callback with coordinate payload (`rowKey`, `colKey`, `value`).
+  - Client-side CSV export trigger via imperative handle (`exportCsv`).
+- **WAI-ARIA 1.2 Table Semantics**:
+  - `role="table"`, `role="row"`, `role="columnheader"`, `role="rowheader"`, `role="gridcell"`, `aria-expanded`, `aria-sort`.
+- **4 Visual Variants**:
+  - `"default"`: Clean dark slate container with sharp grid lines.
+  - `"card"`: Elevated solid dark card with rich drop shadow.
+  - `"glass"`: Translucent backdrop blur with frosted glass effect (`backdrop-blur-md`).
+  - `"neon"`: Cyberpunk glowing cyan borders with radiant total rows.
+- **3 Size Scales**:
+  - `"sm"`: Compact cells (py-1.5 px-2.5, text-xs).
+  - `"md"`: Standard cells (py-2.5 px-3.5, text-sm).
+  - `"lg"`: Spacious cells (py-3.5 px-4.5, text-base).
+- **Standards & Composition**:
+  - Exports `PivotTable`, `CrossTab`, `MatrixTable`, `PivotCell`, `PivotHeader`, and default export.
+  - Full React `forwardRef` and explicit `displayName` across all exports.
+  - 100% diff-invariance across `ir.description` changes; zero external runtime npm dependencies.
+  - Registered in `NextjsWebAdapter.generate()` as a `GeneratedFile` at `components/pivot-table.tsx` and exported in `codegen.__init__` as `render_pivot_table_component`.

@@ -2,27 +2,25 @@ schema_version: 1
 project: OmniStackAI
 phase: BASIC/MVP
 founder_stage: 0
-current_task: R-377
+current_task: R-378
 current_status: not_started
 branch: main
-last_completed_task: R-376
+last_completed_task: R-377
 last_completed_task_summary: >-
-  Generated Accessible Futuristic Reusable Media Player Suite (components/media-player.tsx);
-  added standalone, reusable, accessible, desktop-and-mobile-grade media player compound component suite supporting
-  dual media modes (video player with aspect-ratio container, poster image, overlay controls, fullscreen, Picture-in-Picture;
-  and audio player with album cover art, track/artist metadata, and animated equalizer bars),
-  interactive scrubber bar with buffered/played progress indicators and hover timestamp preview tooltip,
-  volume control slider with mute toggle and dynamic volume level icons, playback rate switcher (0.5x to 2x),
-  skip forward/backward controls (±10s), fullscreen and PiP handlers with native fallback,
-  closed captions/subtitles toggle (CC), comprehensive keyboard shortcuts (Space/K, ArrowLeft/Right, ArrowUp/Down, M, F, P),
-  WAI-ARIA media semantics (role="region", role="slider", aria-valuenow, aria-roledescription),
-  4 futuristic visual styling variants ("default", "card", "glass" with backdropFilter blur, "neon" cyberpunk cyan glow with radiant scrubber),
+  Generated Accessible Futuristic Reusable Pivot Table & Cross-Tabulation Matrix Suite (components/pivot-table.tsx);
+  added standalone, reusable, accessible, desktop-and-mobile-grade pivot table compound component suite supporting
+  multi-dimensional hierarchical row grouping and multi-level column groupings, flexible aggregation operations (sum, avg, count, min, max),
+  collapsible and expandable row hierarchy levels with chevron toggles, automatic subtotals and grand totals calculation for rows and columns,
+  interactive column sorting (ascending and descending), built-in search input filtering rows across dimension values,
+  cell click selection handling (onCellClick, selectedCell), CSV export capability via imperative handle (exportCsv),
+  WAI-ARIA 1.2 table/grid accessibility semantics (role="table", role="row", role="columnheader", role="rowheader", role="gridcell", aria-expanded, aria-sort),
+  4 futuristic visual styling variants ("default", "card", "glass" with backdropFilter blur, "neon" cyberpunk cyan glow with glowing total rows),
   3 size presets ("sm", "md", "lg"), React ref forwarding (forwardRef), explicit displayName across all compound exports,
-  MediaType, MediaPlayerVariant, MediaPlayerSize, MediaPlaybackRate, MediaTrackSource, MediaSubtitle, MediaPlayerHandle, MediaPlayerProps,
-  MediaScrubberProps, VolumeSliderProps, compound and semantic alias exports (MediaPlayer, VideoPlayer, AudioPlayer, MediaControls, MediaScrubber, VolumeSlider, default export),
+  PivotAggregator, PivotVariant, PivotSize, PivotValueField, PivotCellCoord, PivotTableHandle, PivotTableProps, PivotCellProps, PivotHeaderProps,
+  compound and semantic alias exports (PivotTable, CrossTab, MatrixTable, PivotCell, PivotHeader, default export),
   100% diff-invariance across ir.description, 0 external runtime dependencies;
-  exported render_media_player_component in codegen; registered components/media-player.tsx in NextjsWebAdapter;
-  2,074 tests pass (17 new tests in test_media_player_component.py); 0 model calls
+  exported render_pivot_table_component in codegen; registered components/pivot-table.tsx in NextjsWebAdapter;
+  2,091 tests pass (17 new tests in test_pivot_table_component.py); 0 model calls
 control_plane_database: postgresql
 model_routing_mode: balanced
 architecture_contract: R_&_D/OmniStackAI_Implementation_Brief_v6.md
@@ -34,8 +32,8 @@ product_direction: >-
   framework adapter contract -> Next.js adapter -> Git service -> preview/sandbox (needs cloud env).
 id_note: >-
   Workbook backlog owns R-010..R-219. Founder-requested tasks use IDs after R-219: R-220..R-223 done,
-  R-224 Next.js deferred (env-blocked), R-225..R-375 done. Continue from R-376.
+  R-224 Next.js deferred (env-blocked), R-225..R-376 done. Continue from R-377.
 blockers: []
 next_action: >-
-  Task R-376 (Media Player Suite) complete with 2,074 tests passing.
-  Next task: R-377.
+  Task R-377 (Pivot Table Suite) complete with 2,091 tests passing.
+  Next task: R-378.
