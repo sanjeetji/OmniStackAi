@@ -1,5 +1,28 @@
 # Work Log
 
+## 2026-09-11 — R-366
+
+- Recorded contract in `.ai/CURRENT_TASK.yaml` and `.ai/tasks/R-366.md` (status in_progress → done).
+- `nextjs.py`:
+  - Added `_CALENDAR_COMPONENT` static template implementing accessible, desktop-and-mobile-grade, futuristic Calendar & Event Scheduler compound component suite (`apps/web/components/calendar.tsx`).
+  - Implemented `CalendarVariant` ("default" | "card" | "glass" | "neon"), `CalendarSize` ("sm" | "md" | "lg"), `CalendarViewMode` ("month" | "week" | "day" | "agenda"), `CalendarEvent`, `CalendarProps` interfaces.
+  - Implemented compound and semantic alias exports: `Calendar`, `Scheduler`, `EventCalendar`, default export.
+  - Implemented pure zero-dependency calendar math helpers (`getMonthMatrix`, `isSameDay`, `isToday`, `isSameMonth`, `getDaysInMonth`, `toISODateString`).
+  - Implemented month grid view with weekday headers, today circular badge, selected date highlight, event pills with custom colors, and `+N more` overflow indicator.
+  - Implemented agenda view with chronological event cards, title, description, date, and time badges.
+  - Implemented header navigation controls (previous month, next month, today quick jump, month/year display) and view mode switcher tabs.
+  - Implemented WAI-ARIA 1.2 Grid pattern compliance (`role="grid"`, `role="row"`, `role="columnheader"`, `role="gridcell"`, `aria-selected`, `aria-current="date"`).
+  - Implemented 4 built-in zero-dependency vector icons (`ChevronLeftIcon`, `ChevronRightIcon`, `CalendarIcon`, `ClockIcon`).
+  - Implemented 4 futuristic visual styling variants ("default", "card", "glass" with backdropFilter blur, "neon" cyberpunk cyan glow).
+  - Implemented 3 size presets ("sm", "md", "lg").
+  - Implemented native HTML form submission integration via hidden input (`name`).
+  - Implemented React ref forwarding (`forwardRef`) and explicit `Calendar.displayName = "Calendar"`.
+  - Exported `render_calendar_component` in `omnistackai_agent_engine.codegen` and registered `components/calendar.tsx` in `NextjsWebAdapter.generate()`.
+  - Maintained 100% diff-invariance across `ir.description`.
+- Added `services/agent-engine/tests/test_calendar_component.py` with 16 comprehensive unit tests (all passing).
+- `task verify` — 1,907 tests pass (16 new), 0 failures. `task lint`, `task security:quick` pass.
+  `builder:demo minimal-blog` passes (103 files generated). 0 model calls.
+
 ## 2026-09-11 — R-365
 
 - Recorded contract in `.ai/CURRENT_TASK.yaml` and `.ai/tasks/R-365.md` (status in_progress → done).
