@@ -1,6 +1,6 @@
 # Current Handoff
 
-Task ID: R-371
+Task ID: R-372
 Status: done
 Phase: BASIC/MVP — Founder Stage 0
 Branch: `main` (the only branch; the GitHub default)
@@ -19,9 +19,35 @@ Branch: `main` (the only branch; the GitHub default)
   7. **R-369**: Query Filter Builder & Dynamic Rule Bar Suite (`components/filter-builder.tsx`)
   8. **R-370**: Data Visualization & SVG Chart Suite (`components/chart.tsx`)
   9. **R-371**: Time Picker & Time Range Suite (`components/time-picker.tsx`)
-- Resume from **R-372** when ready. Still stop-and-ask only for paid cloud / DB engine / new infra / native-mobile / a materially different architecture decision.
+  10. **R-372**: Digital Signature Pad & Drawing Canvas Primitive (`components/signature-pad.tsx`)
+- Resume from **R-373** when ready. Still stop-and-ask only for paid cloud / DB engine / new infra / native-mobile / a materially different architecture decision.
 
 ## Completed
+
+### R-372 — Generated Accessible Futuristic Reusable Digital Signature Pad & Drawing Canvas Primitive (components/signature-pad.tsx)
+
+Enabled accessible, desktop-and-mobile-grade, futuristic Digital Signature Pad & Drawing Canvas compound components across generated Next.js web applications:
+
+- **Standalone Digital Signature Pad Suite (`apps/web/components/signature-pad.tsx`)**:
+  - Implemented `SignaturePadVariant` (`"default"` | `"card"` | `"glass"` | `"neon"`), `SignaturePadSize` (`"sm"` | `"md"` | `"lg"`), `SignaturePoint`, `SignatureStroke`, `SignaturePadHandle`, and `SignaturePadProps` interfaces.
+  - Implemented compound and semantic alias exports: `SignaturePad`, `SignatureCanvas`, `DrawingPad`, and default export.
+  - Implemented zero-dependency HTML5 `<canvas>` rendering with quadratic bezier curve stroke interpolation for silk-smooth lines.
+  - Implemented high-DPI Retina `devicePixelRatio` scaling for razor-sharp rendering on all displays.
+  - Implemented cross-device pointer events (`pointerdown`, `pointermove`, `pointerup`, `pointerleave`, `pointercancel` with `touch-action: none`) supporting stylus pressure, touch, and mouse input.
+  - Implemented multi-level stroke history stack with undo, redo, and clear actions.
+  - Implemented raster PNG dataURL export (`toDataURL()`) and vector SVG export (`toSVG()`) generating crisp scalable vector paths.
+  - Implemented signing guide line with dashed styling, subtle "✕" mark, and configurable text ("Sign on line above").
+  - Implemented pristine placeholder prompt overlay.
+  - Implemented responsive toolbar with stroke counter badge and action buttons (Undo, Redo, Clear, Download).
+  - Implemented native HTML form hidden input synchronization (`name`).
+  - Implemented full WAI-ARIA application semantics (`role="application"`, `aria-label="Signature Pad"`, `aria-roledescription="drawing canvas"`, `aria-label="Signature drawing area"`).
+  - Implemented 5 built-in zero-dependency vector icons (`UndoIcon`, `RedoIcon`, `TrashIcon`, `DownloadIcon`, `PenIcon`).
+  - Implemented 4 futuristic visual styling variants ("default", "card", "glass" with backdropFilter blur, "neon" cyberpunk cyan glow).
+  - Implemented 3 size presets ("sm", "md", "lg").
+  - Implemented React ref forwarding (`forwardRef`) and explicit `displayName` across all exports.
+  - Exported `render_signature_pad_component` in `omnistackai_agent_engine.codegen` and registered `components/signature-pad.tsx` in `NextjsWebAdapter.generate()`.
+  - Maintained 100% diff-invariance across `ir.description`.
+- **Verification**: 2,006 tests passing (17 new focused tests in `test_signature_pad_component.py`). `task verify`, `task lint`, `task security:quick`, `task builder:demo -- minimal-blog` pass.
 
 ### R-371 — Generated Accessible Futuristic Reusable Time Picker & Time Range Suite (components/time-picker.tsx)
 

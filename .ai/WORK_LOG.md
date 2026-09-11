@@ -1,5 +1,31 @@
 # Work Log
 
+## 2026-09-11 — R-372
+
+- Recorded contract in `.ai/CURRENT_TASK.yaml` and `.ai/tasks/R-372.md` (status in_progress → done).
+- `nextjs.py`:
+  - Added `_SIGNATURE_PAD_COMPONENT` static template implementing accessible, desktop-and-mobile-grade, futuristic Digital Signature Pad & Drawing Canvas compound component suite (`apps/web/components/signature-pad.tsx`).
+  - Implemented `SignaturePadVariant` ("default" | "card" | "glass" | "neon"), `SignaturePadSize` ("sm" | "md" | "lg"), `SignaturePoint`, `SignatureStroke`, `SignaturePadHandle`, `SignaturePadProps` interfaces.
+  - Implemented compound and semantic alias exports: `SignaturePad`, `SignatureCanvas`, `DrawingPad`, default export.
+  - Implemented zero-dependency HTML5 `<canvas>` rendering with quadratic bezier curve stroke interpolation for silk-smooth lines.
+  - Implemented high-DPI Retina `devicePixelRatio` scaling for razor-sharp rendering on all displays.
+  - Implemented cross-device pointer events (`pointerdown`, `pointermove`, `pointerup`, `pointerleave`, `pointercancel` with `touch-action: none`) supporting stylus pressure, touch, and mouse input.
+  - Implemented multi-level stroke history stack with undo, redo, and clear actions.
+  - Implemented raster PNG dataURL export (`toDataURL()`) and vector SVG export (`toSVG()`) generating crisp scalable vector paths.
+  - Implemented signing guide line with dashed styling, subtle "✕" mark, and customizable text ("Sign on line above").
+  - Implemented pristine placeholder prompt overlay.
+  - Implemented responsive toolbar with stroke counter badge and action buttons (Undo, Redo, Clear, Download).
+  - Implemented native HTML form hidden input synchronization (`name`).
+  - Implemented full WAI-ARIA application semantics (`role="application"`, `aria-label="Signature Pad"`, `aria-roledescription="drawing canvas"`, `aria-label="Signature drawing area"`).
+  - Implemented 5 built-in zero-dependency vector icons (`UndoIcon`, `RedoIcon`, `TrashIcon`, `DownloadIcon`, `PenIcon`).
+  - Implemented 4 futuristic visual styling variants ("default", "card", "glass" with backdropFilter blur, "neon" cyberpunk cyan glow).
+  - Implemented 3 size presets ("sm", "md", "lg").
+  - Implemented React ref forwarding (`forwardRef`) and explicit `displayName` across all exports.
+  - Exported `render_signature_pad_component` in `omnistackai_agent_engine.codegen` and registered `components/signature-pad.tsx` in `NextjsWebAdapter.generate()`.
+  - Maintained 100% diff-invariance across `ir.description`.
+- Added `services/agent-engine/tests/test_signature_pad_component.py` with 17 comprehensive unit tests (all passing).
+- `task verify` — 2,006 tests pass (17 new), 0 failures. `task lint`, `task security:quick`, `task builder:demo -- minimal-blog` pass.
+
 ## 2026-09-11 — R-371
 
 - Recorded contract in `.ai/CURRENT_TASK.yaml` and `.ai/tasks/R-371.md` (status in_progress → done).
