@@ -5,26 +5,31 @@ Last updated: 2026-09-11T00:32:00+05:30
 Stage 0 (Founder Build Sequence, Brief Section 91) — BASIC/MVP
 
 ## Last Completed Task
-Tracker ID: R-347 — Generated Accessible Futuristic Reusable Speed Dial & Floating Action Button Component (components/speed-dial.tsx) — DONE,
-`task verify` (1,535 agent-engine tests, 16 new focused R-347 tests) passing. Enabled accessible, futuristic, zero-dependency
-speed dials and floating action buttons across generated Next.js web applications:
-added standalone, reusable, accessible, futuristic SpeedDial compound component suite (`components/speed-dial.tsx`) supporting
-SpeedDialDirection ("up" | "down" | "left" | "right"), SpeedDialVariant ("neon" | "glass" | "bordered" | "minimal"),
-SpeedDialSize ("sm" | "md" | "lg"), SpeedDialActionItem, SpeedDialProps, SpeedDialTriggerProps, SpeedDialActionProps,
-SpeedDialContentProps, SpeedDialContextValue, primary FAB with 45° rotation toggle animation, directional action cascade,
-action labels/tooltips with screen-reader support, backdrop overlay option with subtle blur and click-to-dismiss, click-outside
-detection, full WAI-ARIA 1.2 menu semantics (role="menu", role="menuitem", aria-haspopup="menu", aria-expanded), full keyboard
-navigation (Escape, ArrowUp/Down/Left/Right, Home, End, Tab), 4 futuristic visual variants, 3 size presets, 100% diff-invariance
-across `ir.description`, and 0 external dependencies.
-Preceded by R-346 (pin input), R-345 (color picker), R-344 (resizable), R-343 (carousel), R-342 (segmented control), R-341 (radial gauge), R-340 (code block), R-339 (tag input), R-338 (tree view),
+Tracker ID: R-348 — Generated Accessible Futuristic Reusable Context Menu Suite (components/context-menu.tsx) — DONE,
+`task verify` (1,551 agent-engine tests, 16 new focused R-348 tests) passing. Enabled accessible, futuristic, zero-dependency
+desktop-class context menus across generated Next.js web applications:
+added standalone, reusable, accessible, futuristic ContextMenu compound component suite (`components/context-menu.tsx`) supporting
+ContextMenuVariant ("neon" | "glass" | "bordered" | "minimal"), ContextMenuSize ("sm" | "md" | "lg"),
+ContextMenuProps, ContextMenuTriggerProps, ContextMenuContentProps, ContextMenuItemProps, ContextMenuCheckboxItemProps,
+ContextMenuRadioGroupProps, ContextMenuRadioItemProps, ContextMenuSeparatorProps, ContextMenuLabelProps,
+ContextMenuSubProps, ContextMenuSubTriggerProps, ContextMenuSubContentProps, ContextMenuContextValue,
+ContextMenuSubContextValue, compound subcomponents (ContextMenu, ContextMenu.Trigger, ContextMenu.Content,
+ContextMenu.Item, ContextMenu.CheckboxItem, ContextMenu.RadioGroup, ContextMenu.RadioItem, ContextMenu.Separator,
+ContextMenu.Label, ContextMenu.Sub, ContextMenu.SubTrigger, ContextMenu.SubContent), viewport boundary collision
+prevention and clamping (window.innerWidth / window.innerHeight), nested submenus with edge-flipping support,
+checkbox and radio items with vector indicators, keyboard shortcut annotations (<kbd>), destructive item styling,
+click-outside and Escape dismiss with focus restoration, full keyboard navigation (Escape, ArrowDown/Up, ArrowRight/Left,
+Home, End, Tab), 4 futuristic visual variants, 3 size presets, full WAI-ARIA 1.2 menu accessibility semantics
+(role="menu", role="menuitem", etc.), 100% diff-invariance across `ir.description`, and 0 external dependencies.
+Preceded by R-347 (speed dial), R-346 (pin input), R-345 (color picker), R-344 (resizable), R-343 (carousel), R-342 (segmented control), R-341 (radial gauge), R-340 (code block), R-339 (tag input), R-338 (tree view),
 R-337 (stat card), R-336 (timeline), R-335 (file upload), R-334 (stepper), R-333 (rating), R-332 (progress), R-331 (slider),
 R-330 (command palette), R-329 (data grid), R-328 (date picker), R-327 (form controls), R-326 (dialog), R-325 (theme toggle),
 R-324 (theming tokens), R-323 (popover), R-322 (dropdown menu), R-321 (accordion), R-320 (toggle), R-319 (avatar), R-318 (drawer),
 R-317 (skeleton), R-316 (alert), R-315 (card), R-314 (tooltip), R-313 (column visibility), R-312 (badge), R-311 (table density),
 R-310 (tabs), R-309 (pagination), and R-308 (JSON export).
 
-**Notes:** (1) the tracker is current through R-347: 136 Done, 1 Deferred, 210 Not Started across 347
-unique tasks; MVP is 136/242 (56.2%). (2) Next unstarted Tracker ID: R-348.
+**Notes:** (1) the tracker is current through R-348: 137 Done, 1 Deferred, 210 Not Started across 348
+unique tasks; MVP is 137/243 (56.4%). (2) Next unstarted Tracker ID: R-349.
 
 
 

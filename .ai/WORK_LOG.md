@@ -1,5 +1,34 @@
 # Work Log
 
+## 2026-09-11 — R-348
+
+- Recorded contract in `.ai/CURRENT_TASK.yaml` and `.ai/tasks/R-348.md` (status in_progress → done).
+- `nextjs.py`:
+  - Added `_CONTEXT_MENU_COMPONENT` static template implementing accessible, desktop-class, futuristic Context Menu / Right-Click Action Menu compound component suite (`apps/web/components/context-menu.tsx`).
+  - Implemented `ContextMenuVariant` ("neon" | "glass" | "bordered" | "minimal"), `ContextMenuSize` ("sm" | "md" | "lg"), `ContextMenuProps`, `ContextMenuTriggerProps`, `ContextMenuContentProps`, `ContextMenuItemProps`, `ContextMenuCheckboxItemProps`, `ContextMenuRadioGroupProps`, `ContextMenuRadioItemProps`, `ContextMenuSeparatorProps`, `ContextMenuLabelProps`, `ContextMenuSubProps`, `ContextMenuSubTriggerProps`, `ContextMenuSubContentProps`, `ContextMenuContextValue`, `ContextMenuSubContextValue` interfaces.
+  - Implemented compound subcomponents: `ContextMenu`, `ContextMenu.Trigger` (`ContextMenuTrigger`), `ContextMenu.Content` (`ContextMenuContent`), `ContextMenu.Item` (`ContextMenuItem`), `ContextMenu.CheckboxItem` (`ContextMenuCheckboxItem`), `ContextMenu.RadioGroup` (`ContextMenuRadioGroup`), `ContextMenu.RadioItem` (`ContextMenuRadioItem`), `ContextMenu.Separator` (`ContextMenuSeparator`), `ContextMenu.Label` (`ContextMenuLabel`), `ContextMenu.Sub` (`ContextMenuSub`), `ContextMenu.SubTrigger` (`ContextMenuSubTrigger`), `ContextMenu.SubContent` (`ContextMenuSubContent`).
+  - Implemented viewport boundary collision prevention and clamping (`window.innerWidth`, `window.innerHeight`, `Math.min(position.x, window.innerWidth - width)`).
+  - Implemented nested submenus (`ContextMenu.Sub`) with hover and `ArrowRight`/`ArrowLeft` traversal and automatic edge-flipping.
+  - Implemented checkbox items (`ContextMenu.CheckboxItem`) with vector checkmark indicator and toggle callbacks.
+  - Implemented radio groups (`ContextMenu.RadioGroup`, `ContextMenu.RadioItem`) with vector radio dot indicator and single-select value synchronization.
+  - Implemented keyboard shortcut badges (`shortcut?: string`) rendered via `<kbd>` tags.
+  - Implemented destructive item styling (`destructive?: boolean`).
+  - Implemented outside click/scroll/resize dismissal and Escape key dismiss with focus restoration.
+  - Implemented full WAI-ARIA 1.2 Menu pattern semantics (`role="menu"`, `role="menuitem"`, `role="menuitemcheckbox"`, `role="menuitemradio"`, `role="separator"`, `role="group"`, `aria-checked`, `aria-disabled`, `aria-haspopup="menu"`, `aria-expanded`).
+  - Implemented full keyboard navigation (`Escape`, `ArrowDown`/`ArrowUp`, `ArrowRight`/`ArrowLeft`, `Home`/`End`, `Tab`, `Enter`/`Space`).
+  - Implemented 4 futuristic visual variants: `"neon"` (cyberpunk glow borders and cyan hover accents), `"glass"` (translucent frosted backdrop blur `16px`), `"bordered"` (clean slate border frame), and `"minimal"` (clean subtle shadow).
+  - Implemented 3 size presets: `"sm"` (item height 28px), `"md"` (item height 32px), `"lg"` (item height 38px).
+  - Exported `render_context_menu_component` in `omnistackai_agent_engine.codegen` and registered in `NextjsWebAdapter.generate()`.
+  - Maintained 100% diff-invariance across `ir.description`.
+- Added `services/agent-engine/tests/test_context_menu_component.py` with 16 comprehensive unit tests (all passing).
+- `task verify` — 1,551 tests pass (16 new), 0 failures. `task lint`, `task security:quick` pass.
+  `builder:demo minimal-blog` passes (82 files generated). `builder:demo rideshare-favourites` passes (82 files generated). 0 model calls.
+- Tracker: inserted R-348 Done row at `Phase_Roadmap!A9`; table `A4:M356`; 356 total rows;
+  137 Done, 1 Deferred, 210 Not Started; MVP 137/243 (56.4%); no `#REF!`; XLSX valid.
+- Updated CURRENT_TASK.yaml, tasks/R-348.md, PROJECT_STATE.yaml, HANDOFF.md, PROJECT_STATE.md,
+  CHANGELOG.md, docs/CODEGEN.md, docs/PROGRESS.md, docs/RESUME_PROMPT.md.
+
+
 ## 2026-09-11 — R-347
 
 - Recorded contract in `.ai/CURRENT_TASK.yaml` and `.ai/tasks/R-347.md` (status in_progress → done).
