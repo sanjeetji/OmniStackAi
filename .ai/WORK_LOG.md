@@ -1,5 +1,56 @@
 # Work Log
 
+## 2026-09-11 — R-361
+
+- Recorded contract in `.ai/CURRENT_TASK.yaml` and `.ai/tasks/R-361.md` (status in_progress → done).
+- `nextjs.py`:
+  - Added `_NOTIFICATION_CENTER_COMPONENT` static template implementing accessible, desktop-grade, futuristic Notification Center compound component suite (`apps/web/components/notification-center.tsx`).
+  - Implemented `NotificationVariant` ("default" | "card" | "glass" | "neon"), `NotificationSize` ("sm" | "md" | "lg"), `NotificationType` ("info" | "success" | "warning" | "error"), `NotificationItem`, and props interfaces.
+  - Implemented compound subcomponents: `NotificationCenter`, `NotificationTrigger`, `NotificationPanel`, `NotificationList`, `NotificationItemComponent`, `NotificationBadge`, `NotificationEmptyState`.
+  - Implemented bell icon trigger with unread badge counter (boolean dot or numeric badge, capped at 99+).
+  - Implemented animated slide-in / dropdown panel with outside-click and Escape key dismissal.
+  - Implemented individual notification item cards with read/unread visual states, actions ("Mark all as read", "Clear all", individual "Mark as read", custom CTA).
+  - Implemented filter tabs (All / Unread).
+  - Implemented relative time formatting ("just now", "Xm ago", "Xh ago", "Xd ago").
+  - Implemented category / type indicator vector icons.
+  - Implemented WAI-ARIA 1.2 dialog and listbox compliance (`role="dialog"`, `role="listbox"`, `role="option"`, `aria-label`, `aria-expanded`, `aria-haspopup="dialog"`, `aria-live="polite"`).
+  - Implemented full React ref forwarding (`forwardRef`) and explicit `displayName`.
+  - Exported `render_notification_center_component` in `omnistackai_agent_engine.codegen` and registered in `NextjsWebAdapter.generate()`.
+  - Maintained 100% diff-invariance across `ir.description`.
+- Added `services/agent-engine/tests/test_notification_center_component.py` with 44 comprehensive unit tests (all passing).
+- `task verify` — 1,812 tests pass (44 new), 0 failures. `task lint`, `task security:quick` pass.
+  `builder:demo minimal-blog` passes (98 files generated). 0 model calls.
+
+## 2026-09-11 — R-360
+
+- Recorded contract in `.ai/CURRENT_TASK.yaml` and `.ai/tasks/R-360.md` (status in_progress → done).
+- `nextjs.py`:
+  - Added `_NUMBER_INPUT_COMPONENT` static template implementing accessible, desktop-and-mobile-grade Number Input & Numeric Stepper compound component suite (`apps/web/components/number-input.tsx`).
+  - Implemented `NumberInputVariant` ("default" | "card" | "glass" | "neon"), `NumberInputSize` ("sm" 32px | "md" 38px | "lg" 44px), `NumberInputFormat` ("plain" | "currency" | "percentage"), and `NumberInputProps`.
+  - Implemented WAI-ARIA spinbutton: `role="spinbutton"`, `aria-valuenow`, `aria-valuemin`, `aria-valuemax`, `aria-invalid`, `aria-required`, `aria-describedby`.
+  - Implemented full keyboard navigation (`ArrowUp` increments, `ArrowDown` decrements with `e.preventDefault()`).
+  - Implemented stepper buttons (`ChevronUpIcon`/`ChevronDownIcon`, `aria-label="Increment"/"Decrement"`, `tabIndex=-1`, disabled at boundaries).
+  - Implemented `clamp()` helper, `precision`/`step`, 3 format modes via `Intl.NumberFormat`, `hideControls`, `leftSection`/`rightSection` slot nodes.
+  - Implemented controlled and uncontrolled modes, focus/blur raw-vs-formatted display toggle, `inputMode="decimal"`, `fontVariantNumeric="tabular-nums"`, React ref forwarding (`forwardRef`) and explicit `displayName`.
+  - Exported `render_number_input_component` in `omnistackai_agent_engine.codegen` and registered in `NextjsWebAdapter.generate()`.
+  - Maintained 100% diff-invariance across `ir.description`.
+- Added `services/agent-engine/tests/test_number_input_component.py` with 35 comprehensive unit tests (all passing).
+- `task verify` — 1,768 tests pass (35 new), 0 failures. `task lint`, `task security:quick` pass.
+
+## 2026-09-11 — R-359
+
+- Recorded contract in `.ai/CURRENT_TASK.yaml` and `.ai/tasks/R-359.md` (status in_progress → done).
+- `nextjs.py`:
+  - Added `_BOTTOM_NAV_COMPONENT` static template implementing accessible, mobile-first Bottom Navigation Bar compound component suite (`apps/web/components/bottom-nav.tsx`).
+  - Implemented `BottomNavVariant` ("default" | "glass" | "card" | "neon"), `BottomNavSize` ("sm" | "md" | "lg"), `BottomNavItem`, and `BottomNavProps`.
+  - Implemented WAI-ARIA 1.2 Tabs pattern compliance: `role="tablist"`, `role="tab"`, `aria-selected`, `aria-disabled`, `aria-controls`, `aria-orientation="horizontal"`, `aria-label`.
+  - Implemented full keyboard navigation (`ArrowRight`/`ArrowLeft`/`ArrowUp`/`ArrowDown` traversal with wrap-around, `Home`/`End` jump navigation).
+  - Implemented badge notifications (boolean dot or count chip via `BadgeChip`), optional FAB centre gap slot, full-screen backdrop tint.
+  - Exported `render_bottom_nav_component` in `omnistackai_agent_engine.codegen` and registered in `NextjsWebAdapter.generate()`.
+  - Maintained 100% diff-invariance across `ir.description`.
+- Added `services/agent-engine/tests/test_bottom_nav_component.py` with 26 comprehensive unit tests (all passing).
+- `task verify` — 1,733 tests pass (26 new), 0 failures. `task lint`, `task security:quick` pass.
+
 ## 2026-09-11 — R-358
 
 - Recorded contract in `.ai/CURRENT_TASK.yaml` and `.ai/tasks/R-358.md` (status in_progress → done).
