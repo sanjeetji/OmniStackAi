@@ -2,24 +2,23 @@ schema_version: 1
 project: OmniStackAI
 phase: BASIC/MVP
 founder_stage: 0
-current_task: R-355
+current_task: R-356
 current_status: done
 branch: main
-last_completed_task: R-355
+last_completed_task: R-356
 last_completed_task_summary: >-
-  Generated Accessible Futuristic Reusable Radio Group Suite (components/radio-group.tsx);
-  added standalone, reusable, accessible, futuristic Radio Group compound component suite supporting
-  RadioGroupOrientation ("vertical" | "horizontal"), RadioGroupVariant ("default" | "card" | "pill" | "neon"),
-  RadioGroupSize ("sm" | "md" | "lg"), RadioOption, RadioGroupProps, RadioGroupItemProps, RadioGroupContextValue,
-  WAI-ARIA 1.2 Radio Group pattern compliance (role="radiogroup", role="radio", aria-checked, aria-orientation,
-  aria-disabled, roving tabIndex), full keyboard navigation with arrow keys (ArrowDown/Right -> next, ArrowUp/Left -> prev,
-  Space -> select with wrap-around), vertical and horizontal flex layouts, 4 visual styling variants (default circular,
-  card selectable option tiles with title & description, pill segmented toggle buttons, neon cyberpunk glowing cyan/indigo border
-  and glow shadow), 3 size scales, controlled and uncontrolled value management, form integration via hidden inputs,
-  options array convenience prop, subcomponent aliasing (Radio = RadioGroupItem), useRadioGroup context hook,
-  full React ref forwarding (forwardRef), 100% diff-invariance across ir.description, and 0 external runtime dependencies;
-  exported render_radio_group_component in codegen; registered in NextjsWebAdapter; 1,662 tests pass (15 new tests in test_radio_group_component.py);
-  builder:demo generates 92 files for minimal-blog and 89 for rideshare-favourites; 0 model calls
+  Generated Accessible Futuristic Reusable Checkbox & Checkbox Group Primitive (components/checkbox.tsx);
+  added standalone, reusable, accessible, futuristic Checkbox & Checkbox Group compound component suite supporting
+  CheckboxVariant ("default" | "card" | "pill" | "neon"), CheckboxSize ("sm" | "md" | "lg"), CheckedState (boolean | "indeterminate"),
+  CheckboxProps, CheckboxGroupProps, CheckboxGroupContextValue, WAI-ARIA 1.2 Checkbox pattern compliance (role="checkbox", role="group",
+  aria-checked="mixed" / boolean, aria-orientation, aria-disabled, aria-required, tabIndex), full keyboard space toggling (Space key with preventDefault),
+  tri-state / indeterminate support with dedicated SVG minus vector and checkmark vector, vertical and horizontal flex layouts,
+  4 visual styling variants (default rounded square with blue fill, card selectable option tiles with title & description, pill segmented toggle buttons,
+  neon cyberpunk glowing cyan/indigo border and glow shadow), 3 size scales, controlled and uncontrolled state management, multi-select array management
+  in CheckboxGroup, form integration via hidden inputs, options array convenience prop, subcomponent aliasing (CheckboxItem = Checkbox),
+  useCheckboxGroup context hook, full React ref forwarding (forwardRef), 100% diff-invariance across ir.description, and 0 external runtime dependencies;
+  exported render_checkbox_component in codegen; registered in NextjsWebAdapter; 1,677 tests pass (15 new tests in test_checkbox_component.py);
+  builder:demo generates 93 files for minimal-blog and 90 for rideshare-favourites; 0 model calls
 control_plane_database: postgresql
 model_routing_mode: balanced
 architecture_contract: R_&_D/OmniStackAI_Implementation_Brief_v6.md
@@ -31,7 +30,7 @@ product_direction: >-
   framework adapter contract -> Next.js adapter -> Git service -> preview/sandbox (needs cloud env).
 id_note: >-
   Workbook backlog owns R-010..R-219. Founder-requested tasks use IDs after R-219: R-220..R-223 done,
-  R-224 Next.js deferred (env-blocked), R-225..R-355 done. Continue from R-356.
+  R-224 Next.js deferred (env-blocked), R-225..R-356 done. Continue from R-357.
 blockers: []
 next_action: >-
-  Task R-355 (generated accessible futuristic reusable radio group suite) is complete with 1,662 tests passing. Next task: R-356.
+  Task R-356 (generated accessible futuristic reusable checkbox suite) is complete with 1,677 tests passing. Next task: R-357.

@@ -1,5 +1,29 @@
 # Work Log
 
+## 2026-09-11 — R-356
+
+- Recorded contract in `.ai/CURRENT_TASK.yaml` and `.ai/tasks/R-356.md` (status in_progress → done).
+- `nextjs.py`:
+  - Added `_CHECKBOX_COMPONENT` static template implementing accessible, desktop-grade, futuristic Checkbox & Checkbox Group compound component suite (`apps/web/components/checkbox.tsx`).
+  - Implemented `CheckboxVariant` ("default" | "card" | "pill" | "neon"), `CheckboxSize` ("sm" | "md" | "lg"), `CheckedState` (boolean | "indeterminate"), `CheckboxProps`, `CheckboxGroupProps`, and `CheckboxGroupContextValue` interfaces.
+  - Implemented WAI-ARIA 1.2 Checkbox pattern compliance: `role="checkbox"`, `role="group"`, `aria-checked="mixed"` (for indeterminate) / boolean, `aria-orientation`, `aria-disabled`, `aria-required`, and `tabIndex`.
+  - Implemented tri-state / indeterminate support with dedicated SVG minus vector and checkmark vector.
+  - Implemented keyboard space toggling (`Space` key with `e.preventDefault()`).
+  - Implemented 4 futuristic visual variants: `"default"` (minimalist rounded square with blue fill), `"card"` (interactive selection card with title, description, and indicator), `"pill"` (segmented toggle pills), and `"neon"` (cyberpunk glowing cyan/indigo border and ambient glow shadow).
+  - Implemented 3 size scales (`sm`, `md`, `lg`) with proportional box dimensions, icon scales, and typography.
+  - Implemented controlled (`checked`, `onCheckedChange`) and uncontrolled (`defaultChecked`) state management with hidden input form submission (`name`).
+  - Implemented `CheckboxGroup` compound container with multi-select array management (`value: string[]`, `onValueChange`), options array convenience prop mapping alongside custom children, subcomponent alias `CheckboxItem = Checkbox`, and `useCheckboxGroup` context hook.
+  - Implemented full React ref forwarding (`forwardRef<HTMLButtonElement, CheckboxProps>`, `forwardRef<HTMLDivElement, CheckboxGroupProps>`) with `displayName`.
+  - Exported `render_checkbox_component` in `omnistackai_agent_engine.codegen` and registered in `NextjsWebAdapter.generate()`.
+  - Maintained 100% diff-invariance across `ir.description`.
+- Added `services/agent-engine/tests/test_checkbox_component.py` with 15 comprehensive unit tests (all passing).
+- `task verify` — 1,677 tests pass (15 new), 0 failures. `task lint`, `task security:quick` pass.
+  `builder:demo minimal-blog` passes (93 files generated). `builder:demo rideshare-favourites` passes (90 files generated). 0 model calls.
+- Tracker: inserted R-356 Done row at `Phase_Roadmap!A9`; table `A4:M364`; 364 total rows;
+  145 Done, 1 Deferred, 210 Not Started; MVP 145/251 (57.8%); no `#REF!`; XLSX valid.
+- Updated CURRENT_TASK.yaml, tasks/R-356.md, PROJECT_STATE.yaml, HANDOFF.md, PROJECT_STATE.md,
+  CHANGELOG.md, docs/CODEGEN.md, docs/PROGRESS.md, docs/RESUME_PROMPT.md.
+
 ## 2026-09-11 — R-355
 
 - Recorded contract in `.ai/CURRENT_TASK.yaml` and `.ai/tasks/R-355.md` (status in_progress → done).

@@ -5,28 +5,27 @@ Last updated: 2026-09-11T11:25:00+05:30
 Stage 0 (Founder Build Sequence, Brief Section 91) — BASIC/MVP
 
 ## Last Completed Task
-Tracker ID: R-355 — Generated Accessible Futuristic Reusable Radio Group Suite (components/radio-group.tsx) — DONE,
-`task verify` (1,662 agent-engine tests, 15 new focused R-355 tests) passing. Enabled accessible, futuristic, zero-dependency
-desktop-grade radio group compound components across generated Next.js web applications:
-added standalone, reusable, accessible, futuristic Radio Group suite (`components/radio-group.tsx`) supporting
-RadioGroupOrientation ("vertical" | "horizontal"), RadioGroupVariant ("default" | "card" | "pill" | "neon"),
-RadioGroupSize ("sm" | "md" | "lg"), RadioOption, RadioGroupProps, RadioGroupItemProps, RadioGroupContextValue,
-WAI-ARIA 1.2 Radio Group pattern compliance (role="radiogroup", role="radio", aria-checked, aria-orientation,
-aria-disabled, roving tabIndex), full keyboard navigation with arrow keys (ArrowDown/Right -> next, ArrowUp/Left -> prev,
-Space -> select with wrap-around), vertical and horizontal flex layouts, 4 visual styling variants (default circular,
-card selectable option tiles with title & description, pill segmented toggle buttons, neon cyberpunk glowing cyan/indigo border
-and glow shadow), 3 size scales, controlled and uncontrolled value management, form integration via hidden inputs,
-options array convenience prop, subcomponent aliasing (Radio = RadioGroupItem), useRadioGroup context hook,
-full React ref forwarding, 100% diff-invariance across `ir.description`, and 0 external runtime dependencies.
-Preceded by R-354 (kbd), R-353 (separator), R-352 (aspect ratio), R-351 (collapsible), R-350 (scroll area), R-349 (hover card), R-348 (context menu), R-347 (speed dial), R-346 (pin input), R-345 (color picker), R-344 (resizable), R-343 (carousel), R-342 (segmented control), R-341 (radial gauge), R-340 (code block), R-339 (tag input), R-338 (tree view),
+Tracker ID: R-356 — Generated Accessible Futuristic Reusable Checkbox & Checkbox Group Primitive (components/checkbox.tsx) — DONE,
+`task verify` (1,677 agent-engine tests, 15 new focused R-356 tests) passing. Enabled accessible, futuristic, zero-dependency
+desktop-grade checkbox and checkbox group compound components across generated Next.js web applications:
+added standalone, reusable, accessible, futuristic Checkbox suite (`components/checkbox.tsx`) supporting
+CheckboxVariant ("default" | "card" | "pill" | "neon"), CheckboxSize ("sm" | "md" | "lg"), CheckedState (boolean | "indeterminate"),
+CheckboxProps, CheckboxGroupProps, CheckboxGroupContextValue, WAI-ARIA 1.2 Checkbox pattern compliance (role="checkbox", role="group",
+aria-checked="mixed" / boolean, aria-orientation, aria-disabled, aria-required, tabIndex), full keyboard space toggling (Space key with preventDefault),
+tri-state / indeterminate support with dedicated SVG minus vector and checkmark vector, vertical and horizontal flex layouts,
+4 visual styling variants (default rounded square with blue fill, card selectable option tiles with title & description, pill segmented toggle buttons,
+neon cyberpunk glowing cyan/indigo border and glow shadow), 3 size scales, controlled and uncontrolled state management, multi-select array management
+in CheckboxGroup, form integration via hidden inputs, options array convenience prop, subcomponent aliasing (CheckboxItem = Checkbox),
+useCheckboxGroup context hook, full React ref forwarding (forwardRef), 100% diff-invariance across `ir.description`, and 0 external runtime dependencies.
+Preceded by R-355 (radio group), R-354 (kbd), R-353 (separator), R-352 (aspect ratio), R-351 (collapsible), R-350 (scroll area), R-349 (hover card), R-348 (context menu), R-347 (speed dial), R-346 (pin input), R-345 (color picker), R-344 (resizable), R-343 (carousel), R-342 (segmented control), R-341 (radial gauge), R-340 (code block), R-339 (tag input), R-338 (tree view),
 R-337 (stat card), R-336 (timeline), R-335 (file upload), R-334 (stepper), R-333 (rating), R-332 (progress), R-331 (slider),
 R-330 (command palette), R-329 (data grid), R-328 (date picker), R-327 (form controls), R-326 (dialog), R-325 (theme toggle),
 R-324 (theming tokens), R-323 (popover), R-322 (dropdown menu), R-321 (accordion), R-320 (toggle), R-319 (avatar), R-318 (drawer),
 R-317 (skeleton), R-316 (alert), R-315 (card), R-314 (tooltip), R-313 (column visibility), R-312 (badge), R-311 (table density),
 R-310 (tabs), R-309 (pagination), and R-308 (JSON export).
 
-**Notes:** (1) the tracker is current through R-355: 144 Done, 1 Deferred, 210 Not Started across 355
-unique tasks; MVP is 144/250 (57.6%). (2) Next unstarted Tracker ID: R-356.
+**Notes:** (1) the tracker is current through R-356: 145 Done, 1 Deferred, 210 Not Started across 356
+unique tasks; MVP is 145/251 (57.8%). (2) Next unstarted Tracker ID: R-357.
 
 
 

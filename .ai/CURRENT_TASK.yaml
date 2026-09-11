@@ -1,17 +1,17 @@
-task_id: R-355
-id: R-355
-title: "Accessible Futuristic Reusable Radio Group Suite"
+task_id: R-356
+id: R-356
+title: "Accessible Futuristic Reusable Checkbox & Checkbox Group Primitive"
 status: DONE
 phase: MVP
 tracker_row: 9
 started_at: "2026-09-11"
 completed_at: "2026-09-11"
-objective: "Add accessible, zero-dependency, desktop-grade, and futuristic Radio Group compound component suite (components/radio-group.tsx) with WAI-ARIA 1.2 radiogroup pattern, arrow key navigation with roving tabIndex, vertical and horizontal layouts, 4 visual variants (default, card, pill, neon), 3 sizes, form integration, and ref forwarding."
+objective: "Add accessible, zero-dependency, desktop-grade, and futuristic Checkbox & Checkbox Group compound component suite (components/checkbox.tsx) with tri-state/indeterminate support, WAI-ARIA 1.2 checkbox semantics, keyboard space toggle, 4 visual variants (default, card, pill, neon), 3 sizes, form integration, and ref forwarding."
 allowed_paths:
   - "services/agent-engine/src/omnistackai_agent_engine/codegen/nextjs.py"
   - "services/agent-engine/src/omnistackai_agent_engine/codegen/__init__.py"
-  - "services/agent-engine/tests/test_radio_group_component.py"
-  - ".ai/tasks/R-355.md"
+  - "services/agent-engine/tests/test_checkbox_component.py"
+  - ".ai/tasks/R-356.md"
   - ".ai/CURRENT_TASK.yaml"
   - ".ai/PROJECT_STATE.yaml"
   - ".ai/WORK_LOG.md"
@@ -26,9 +26,9 @@ forbidden_changes:
   - "Do not introduce external npm dependencies"
   - "Do not break snapshot diff invariance across ir.description"
 evidence:
-  verify: "task verify: 1,662 tests pass offline (15 in test_radio_group_component.py)"
+  verify: "task verify: 1,677 tests pass offline (15 in test_checkbox_component.py)"
   lint: "task lint: pass"
   security: "task security:quick: pass"
-  demos: "task builder:demo passes on minimal-blog (92 files) and rideshare-favourites (89 files)"
-  tracker: "R_&_D/OmniStackAI_Execution_Tracker_v6.xlsx row 9 (355 total, 144 Done)"
+  demos: "task builder:demo passes on minimal-blog (93 files) and rideshare-favourites (90 files)"
+  tracker: "R_&_D/OmniStackAI_Execution_Tracker_v6.xlsx row 9 (356 total, 145 Done)"
 next_action: "Ready for next tracker task"
