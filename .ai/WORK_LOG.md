@@ -1,5 +1,28 @@
 # Work Log
 
+## 2026-09-11 — R-368
+
+- Recorded contract in `.ai/CURRENT_TASK.yaml` and `.ai/tasks/R-368.md` (status in_progress → done).
+- `nextjs.py`:
+  - Added `_VIRTUAL_LIST_COMPONENT` static template implementing accessible, desktop-and-mobile-grade, futuristic High-Performance Infinite Virtual List & Windowed Scroller compound component suite (`apps/web/components/virtual-list.tsx`).
+  - Implemented `VirtualListVariant` ("default" | "card" | "glass" | "neon"), `VirtualListSize` ("sm" | "md" | "lg"), `VirtualScrollAlignment` ("start" | "center" | "end" | "auto"), `VirtualItemInfo`, `VirtualListHandle`, `VirtualListProps` interfaces.
+  - Implemented compound and semantic alias exports: `VirtualList`, `VirtualScroller`, `WindowedList`, default export.
+  - Implemented mathematical windowing logic with prefix-sum array and binary search for variable item heights or multiplier calculation for fixed heights.
+  - Implemented configurable overscan rendering buffer to eliminate white space flashing during fast kinetic scrolling.
+  - Implemented infinite scroll threshold detection (`onEndReached`, `endReachedThreshold`) with duplicate call guards.
+  - Implemented fast-scrolling detection (`isScrolling`) for lightweight placeholder rendering.
+  - Implemented imperative handle (`scrollTo`, `scrollToIndex`, `scrollToTop`, `scrollToBottom`) via `useImperativeHandle`.
+  - Implemented built-in zero-dependency SVG loading spinner (`SpinnerIcon`).
+  - Implemented full WAI-ARIA 1.2 feed semantics (`role="feed"`, `role="article"`, `aria-posinset`, `aria-setsize`, `aria-busy`).
+  - Implemented 4 futuristic visual styling variants ("default", "card", "glass" with backdropFilter blur, "neon" cyberpunk cyan glow).
+  - Implemented 3 size presets ("sm", "md", "lg").
+  - Implemented React ref forwarding (`forwardRef`) and explicit `VirtualList.displayName = "VirtualList"`.
+  - Exported `render_virtual_list_component` in `omnistackai_agent_engine.codegen` and registered `components/virtual-list.tsx` in `NextjsWebAdapter.generate()`.
+  - Maintained 100% diff-invariance across `ir.description`.
+- Added `services/agent-engine/tests/test_virtual_list_component.py` with 16 comprehensive unit tests (all passing).
+- `task verify` — 1,939 tests pass (16 new), 0 failures. `task lint`, `task security:quick` pass.
+  `builder:demo minimal-blog` passes (105 files generated). 0 model calls.
+
 ## 2026-09-11 — R-367
 
 - Recorded contract in `.ai/CURRENT_TASK.yaml` and `.ai/tasks/R-367.md` (status in_progress → done).

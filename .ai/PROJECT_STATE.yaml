@@ -2,24 +2,25 @@ schema_version: 1
 project: OmniStackAI
 phase: BASIC/MVP
 founder_stage: 0
-current_task: R-368
+current_task: R-369
 current_status: not_started
 branch: main
-last_completed_task: R-367
+last_completed_task: R-368
 last_completed_task_summary: >-
-  Generated Accessible Futuristic Reusable Kanban Board & Task Flow Matrix Suite (components/kanban.tsx);
-  added standalone, reusable, accessible, desktop-and-mobile-grade Kanban compound component suite supporting
-  KanbanVariant ("default" | "card" | "glass" | "neon"), KanbanSize ("sm" | "md" | "lg"),
-  KanbanPriority ("low" | "medium" | "high" | "urgent"), KanbanColumn, KanbanAssignee, KanbanItem, KanbanProps,
-  semantic aliases (Kanban, KanbanBoard, TaskBoard, default export), HTML5 native drag & drop card movement across lanes,
-  column WIP limits with warning indicator when count > limit, column collapsing/expanding, built-in search filtering across
-  tasks, tags, and assignees, priority badges with distinctive colors, assignee avatars, due date pills, quick-add card triggers,
-  WAI-ARIA 1.2 region and listbox pattern semantics (role="region", role="group", role="listbox", role="option"),
+  Generated Accessible Futuristic High-Performance Infinite Virtual List & Windowed Scroller Suite (components/virtual-list.tsx);
+  added standalone, reusable, accessible, desktop-and-mobile-grade Virtual List compound component suite supporting
+  VirtualListVariant ("default" | "card" | "glass" | "neon"), VirtualListSize ("sm" | "md" | "lg"),
+  VirtualScrollAlignment ("start" | "center" | "end" | "auto"), VirtualItemInfo, VirtualListHandle, VirtualListProps,
+  semantic aliases (VirtualList, VirtualScroller, WindowedList, default export), mathematical windowing with prefix sums and binary search
+  for variable/fixed item heights, overscan rendering buffer, total phantom height calculation, infinite scroll trigger (onEndReached)
+  with distance threshold guard, fast-scrolling state detection (isScrolling) for lightweight rendering, imperative scroll handle
+  (scrollTo, scrollToIndex, scrollToTop, scrollToBottom), built-in SVG loading spinner,
+  WAI-ARIA 1.2 feed semantics (role="feed", role="article", aria-posinset, aria-setsize, aria-busy),
   4 futuristic visual variants ("default", "card", "glass" with backdropFilter blur, "neon" cyberpunk cyan glow),
-  3 size presets ("sm", "md", "lg"), native HTML form submission integration (hidden input when name is provided),
-  React ref forwarding (forwardRef), explicit displayName, 100% diff-invariance across ir.description, 0 external runtime dependencies;
-  exported render_kanban_component in codegen; registered components/kanban.tsx in NextjsWebAdapter;
-  1,923 tests pass (16 new tests in test_kanban_component.py); 0 model calls
+  3 size presets ("sm", "md", "lg"), React ref forwarding (forwardRef), explicit displayName,
+  100% diff-invariance across ir.description, 0 external runtime dependencies;
+  exported render_virtual_list_component in codegen; registered components/virtual-list.tsx in NextjsWebAdapter;
+  1,939 tests pass (16 new tests in test_virtual_list_component.py); 0 model calls
 control_plane_database: postgresql
 model_routing_mode: balanced
 architecture_contract: R_&_D/OmniStackAI_Implementation_Brief_v6.md
@@ -31,8 +32,8 @@ product_direction: >-
   framework adapter contract -> Next.js adapter -> Git service -> preview/sandbox (needs cloud env).
 id_note: >-
   Workbook backlog owns R-010..R-219. Founder-requested tasks use IDs after R-219: R-220..R-223 done,
-  R-224 Next.js deferred (env-blocked), R-225..R-367 done. Continue from R-368.
+  R-224 Next.js deferred (env-blocked), R-225..R-368 done. Continue from R-369.
 blockers: []
 next_action: >-
-  Task R-367 (Kanban Board & Task Flow Matrix Suite) complete with 1,923 tests passing.
-  Next task: R-368 (Infinite Virtual List).
+  Task R-368 (Infinite Virtual List & Windowed Scroller Suite) complete with 1,939 tests passing.
+  Next task: R-369 (Query Filter Builder).
