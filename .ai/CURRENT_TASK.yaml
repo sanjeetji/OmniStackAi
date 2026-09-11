@@ -1,17 +1,17 @@
-task_id: R-346
-id: R-346
-title: "Accessible Futuristic Reusable PIN & OTP Code Input Component"
+task_id: R-347
+id: R-347
+title: "Accessible Futuristic Reusable Speed Dial & Floating Action Button Component"
 status: DONE
 phase: MVP
 tracker_row: 9
 started_at: "2026-09-11"
 completed_at: "2026-09-11"
-objective: "Add accessible, optimized, and futuristic PIN & OTP Code Input component suite (components/pin-input.tsx) with discrete slots, auto-advance, backspace retreat, clipboard paste splitting, masking, browser autofill, full keyboard navigation, and WAI-ARIA group semantics."
+objective: "Add accessible, optimized, and futuristic Speed Dial & Floating Action Button component suite (components/speed-dial.tsx) with directional action cascade, animated FAB trigger, backdrop dismiss, full keyboard navigation, and WAI-ARIA menu semantics."
 allowed_paths:
   - "services/agent-engine/src/omnistackai_agent_engine/codegen/nextjs.py"
   - "services/agent-engine/src/omnistackai_agent_engine/codegen/__init__.py"
-  - "services/agent-engine/tests/test_pin_input_component.py"
-  - ".ai/tasks/R-346.md"
+  - "services/agent-engine/tests/test_speed_dial_component.py"
+  - ".ai/tasks/R-347.md"
   - ".ai/CURRENT_TASK.yaml"
   - ".ai/PROJECT_STATE.yaml"
   - ".ai/WORK_LOG.md"
@@ -26,9 +26,9 @@ forbidden_changes:
   - "Do not introduce external npm dependencies"
   - "Do not break snapshot diff invariance across ir.description"
 evidence:
-  verify: "task verify: 1,519 tests passing, Stage 0 verification passed"
-  lint: "task lint: passed cleanly"
-  security: "task security:quick: passed cleanly"
-  demos: "builder:demo minimal-blog (82 files) and rideshare-favourites (80 files) emit components/pin-input.tsx"
-  tracker: "OmniStackAI_Execution_Tracker_v6.xlsx updated to 346 tasks, 135 Done (56.0% MVP)"
-next_action: "Initialize R-347"
+  verify: "task verify: 1,535 tests pass offline (16 in test_speed_dial_component.py)"
+  lint: "task lint: pass"
+  security: "task security:quick: pass"
+  demos: "task builder:demo passes on minimal-blog (81 files) and rideshare-favourites (81 files)"
+  tracker: "R_&_D/OmniStackAI_Execution_Tracker_v6.xlsx row 9 (347 total, 136 Done)"
+next_action: "Ready for next tracker task"

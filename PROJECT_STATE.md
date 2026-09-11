@@ -5,26 +5,26 @@ Last updated: 2026-09-11T00:32:00+05:30
 Stage 0 (Founder Build Sequence, Brief Section 91) — BASIC/MVP
 
 ## Last Completed Task
-Tracker ID: R-346 — Generated Accessible Futuristic Reusable PIN & OTP Code Input Component (components/pin-input.tsx) — DONE,
-`task verify` (1,519 agent-engine tests, 15 new focused R-346 tests) passing. Enabled accessible, futuristic, zero-dependency
-PIN and OTP code inputs across generated Next.js web applications:
-added standalone, reusable, accessible, futuristic PinInput compound component suite (`components/pin-input.tsx`) supporting
-PinInputVariant ("neon" | "glass" | "bordered" | "minimal"), PinInputSize ("sm" | "md" | "lg"),
-PinInputType ("numeric" | "alphanumeric" | "password"), PinInputProps, PinInputGroupProps, PinInputSlotProps,
-PinInputSeparatorProps, PinInputContextValue, multi-slot discrete character entry with auto-advance and
-Backspace auto-retreat, smart clipboard paste auto-distribution across slots, input types and masking/conceal
-support, browser autofill integration (autocomplete="one-time-code"), full keyboard navigation (ArrowLeft/Right,
-Backspace, Delete, Home, End), 4 futuristic visual variants, 3 size presets, full WAI-ARIA 1.2 group semantics
-(role="group", aria-label, slot labeling, aria-hidden separator), 100% diff-invariance across `ir.description`, and 0 external dependencies.
-Preceded by R-345 (color picker), R-344 (resizable), R-343 (carousel), R-342 (segmented control), R-341 (radial gauge), R-340 (code block), R-339 (tag input), R-338 (tree view),
+Tracker ID: R-347 — Generated Accessible Futuristic Reusable Speed Dial & Floating Action Button Component (components/speed-dial.tsx) — DONE,
+`task verify` (1,535 agent-engine tests, 16 new focused R-347 tests) passing. Enabled accessible, futuristic, zero-dependency
+speed dials and floating action buttons across generated Next.js web applications:
+added standalone, reusable, accessible, futuristic SpeedDial compound component suite (`components/speed-dial.tsx`) supporting
+SpeedDialDirection ("up" | "down" | "left" | "right"), SpeedDialVariant ("neon" | "glass" | "bordered" | "minimal"),
+SpeedDialSize ("sm" | "md" | "lg"), SpeedDialActionItem, SpeedDialProps, SpeedDialTriggerProps, SpeedDialActionProps,
+SpeedDialContentProps, SpeedDialContextValue, primary FAB with 45° rotation toggle animation, directional action cascade,
+action labels/tooltips with screen-reader support, backdrop overlay option with subtle blur and click-to-dismiss, click-outside
+detection, full WAI-ARIA 1.2 menu semantics (role="menu", role="menuitem", aria-haspopup="menu", aria-expanded), full keyboard
+navigation (Escape, ArrowUp/Down/Left/Right, Home, End, Tab), 4 futuristic visual variants, 3 size presets, 100% diff-invariance
+across `ir.description`, and 0 external dependencies.
+Preceded by R-346 (pin input), R-345 (color picker), R-344 (resizable), R-343 (carousel), R-342 (segmented control), R-341 (radial gauge), R-340 (code block), R-339 (tag input), R-338 (tree view),
 R-337 (stat card), R-336 (timeline), R-335 (file upload), R-334 (stepper), R-333 (rating), R-332 (progress), R-331 (slider),
 R-330 (command palette), R-329 (data grid), R-328 (date picker), R-327 (form controls), R-326 (dialog), R-325 (theme toggle),
 R-324 (theming tokens), R-323 (popover), R-322 (dropdown menu), R-321 (accordion), R-320 (toggle), R-319 (avatar), R-318 (drawer),
 R-317 (skeleton), R-316 (alert), R-315 (card), R-314 (tooltip), R-313 (column visibility), R-312 (badge), R-311 (table density),
 R-310 (tabs), R-309 (pagination), and R-308 (JSON export).
 
-**Notes:** (1) the tracker is current through R-346: 135 Done, 1 Deferred, 210 Not Started across 346
-unique tasks; MVP is 135/241 (56.0%). (2) Next unstarted Tracker ID: R-347.
+**Notes:** (1) the tracker is current through R-347: 136 Done, 1 Deferred, 210 Not Started across 347
+unique tasks; MVP is 136/242 (56.2%). (2) Next unstarted Tracker ID: R-348.
 
 
 

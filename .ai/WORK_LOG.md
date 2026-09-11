@@ -1,5 +1,33 @@
 # Work Log
 
+## 2026-09-11 — R-347
+
+- Recorded contract in `.ai/CURRENT_TASK.yaml` and `.ai/tasks/R-347.md` (status in_progress → done).
+- `nextjs.py`:
+  - Added `_SPEED_DIAL_COMPONENT` static template implementing accessible, futuristic Speed Dial & Floating Action Button compound component suite (`apps/web/components/speed-dial.tsx`).
+  - Implemented `SpeedDialDirection` ("up" | "down" | "left" | "right"), `SpeedDialVariant` ("neon" | "glass" | "bordered" | "minimal"), `SpeedDialSize` ("sm" | "md" | "lg"), `SpeedDialActionItem`, `SpeedDialProps`, `SpeedDialTriggerProps`, `SpeedDialActionProps`, `SpeedDialContentProps`, `SpeedDialContextValue` interfaces.
+  - Implemented compound subcomponents: `SpeedDial`, `SpeedDial.Trigger` (`SpeedDialTrigger`), `SpeedDial.Action` (`SpeedDialAction`), `SpeedDial.Content` (`SpeedDialContent`).
+  - Implemented primary FAB with smooth 45° rotation toggle animation (`rotate(45deg)`).
+  - Implemented 4 directional action cascades ("up", "down", "left", "right") with absolute coordinate anchoring and staggered entrance/exit transitions.
+  - Implemented action item labels/tooltips with accessible screen-reader support.
+  - Implemented optional backdrop overlay (`backdrop?: boolean`) with subtle blur (`2px`) and click-to-dismiss.
+  - Implemented click-outside detection (`handlePointerDown`) and auto-close when clicking outside.
+  - Implemented controlled and uncontrolled open state management (`open`, `defaultOpen`, `onOpenChange`).
+  - Implemented full WAI-ARIA 1.2 Menu semantics (`role="menu"`, `role="menuitem"`, `aria-haspopup="menu"`, `aria-expanded`, `aria-controls`, `aria-labelledby`, `aria-orientation`).
+  - Implemented full keyboard navigation (`Escape` closes speed dial and returns focus to trigger, `ArrowUp`/`ArrowDown`/`ArrowLeft`/`ArrowRight` cycles through menu items, `Home`/`End` jumps to bounds, `Tab` closes menu).
+  - Implemented 4 futuristic visual variants: `"neon"` (cyberpunk glowing border and cyan pulse glow), `"glass"` (translucent frosted backdrop blur `16px`), `"bordered"` (clean slate border frame), and `"minimal"` (flat circular button).
+  - Implemented 3 size presets: `"sm"` (trigger 40px / action 32px), `"md"` (trigger 48px / action 40px), `"lg"` (trigger 56px / action 48px).
+  - Exported `render_speed_dial_component` in `omnistackai_agent_engine.codegen` and registered in `NextjsWebAdapter.generate()`.
+  - Maintained 100% diff-invariance across `ir.description`.
+- Added `services/agent-engine/tests/test_speed_dial_component.py` with 16 comprehensive unit tests (all passing).
+- `task verify` — 1,535 tests pass (16 new), 0 failures. `task lint`, `task security:quick` pass.
+  `builder:demo minimal-blog` passes (81 files generated). `builder:demo rideshare-favourites` passes (81 files generated). 0 model calls.
+- Tracker: inserted R-347 Done row at `Phase_Roadmap!A9`; table `A4:M355`; 355 total rows;
+  136 Done, 1 Deferred, 210 Not Started; MVP 136/242 (56.2%); no `#REF!`; XLSX valid.
+- Updated CURRENT_TASK.yaml, tasks/R-347.md, PROJECT_STATE.yaml, HANDOFF.md, PROJECT_STATE.md,
+  CHANGELOG.md, docs/CODEGEN.md, docs/PROGRESS.md, docs/RESUME_PROMPT.md.
+
+
 ## 2026-09-11 — R-346
 
 - Recorded contract in `.ai/CURRENT_TASK.yaml` and `.ai/tasks/R-346.md` (status in_progress → done).
