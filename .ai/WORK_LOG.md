@@ -1,5 +1,29 @@
 # Work Log
 
+## 2026-09-11 — R-343
+
+- Recorded contract in `.ai/CURRENT_TASK.yaml` and `.ai/tasks/R-343.md` (status in_progress → done).
+- `nextjs.py`:
+  - Added `_CAROUSEL_COMPONENT` static template implementing accessible, futuristic Carousel & Slider Showcase compound component suite (`apps/web/components/carousel.tsx`).
+  - Implemented `CarouselVariant` ("neon" | "glass" | "cards" | "minimal"), `CarouselTransition` ("slide" | "fade"), `CarouselOrientation` ("horizontal" | "vertical"), `CarouselIndicatorType` ("dots" | "fraction" | "progress" | "none"), `CarouselContextValue`, `CarouselProps`, `CarouselContentProps`, `CarouselSlideProps`, `CarouselPreviousProps`, `CarouselNextProps`, `CarouselIndicatorsProps`, `CarouselProgressProps`, `CarouselAutoplayToggleProps` interfaces.
+  - Implemented compound subcomponents: `Carousel`, `Carousel.Content`, `Carousel.Slide`, `Carousel.Previous`, `Carousel.Next`, `Carousel.Indicators`, `Carousel.Progress`, `Carousel.AutoplayToggle`.
+  - Implemented touch / swipe gesture handling (`onTouchStart`, `onTouchEnd`) with 40px delta threshold.
+  - Implemented configurable autoplay with interval timer, auto-pause on mouse hover and keyboard focus, and accessible play/pause toggle button.
+  - Implemented keyboard navigation per WAI-ARIA Carousel Pattern (`ArrowLeft`/`ArrowRight` or `ArrowUp`/`ArrowDown`, `Home`/`End` jump to first/last slide).
+  - Implemented full WAI-ARIA accessibility semantics (`role="region"`, `aria-roledescription="carousel"`, `role="group"`, `aria-roledescription="slide"`, `aria-label`, `aria-hidden`, `aria-live`).
+  - Implemented indicator modes: dot pills with elongated active indicator, fraction counter (`1 / 5`), and animated progress bar.
+  - Implemented 4 futuristic visual variants: `"neon"` (cyberpunk glow borders and accent pagination dots), `"glass"` (translucent backdrop blur controls), `"cards"` (3D perspective card deck with scaled inactive slides), and `"minimal"`.
+  - Exported `render_carousel_component` in `omnistackai_agent_engine.codegen` and registered in `NextjsWebAdapter.generate()`.
+  - Maintained 100% diff-invariance across `ir.description`.
+- Added `services/agent-engine/tests/test_carousel_component.py` with 15 comprehensive unit tests (all passing).
+- `task verify` — 1,474 tests pass (15 new), 0 failures. `task lint`, `task security:quick` pass.
+  `builder:demo minimal-blog` passes (80 files generated). `builder:demo rideshare-favourites` passes (77 files generated). 0 model calls.
+- Tracker: inserted R-343 Done row at `Phase_Roadmap!A9`; table `A4:M351`; 351 total rows;
+  132 Done, 1 Deferred, 210 Not Started; MVP 132/238 (55.5%); no `#REF!`; XLSX valid.
+- Updated CURRENT_TASK.yaml, tasks/R-343.md, PROJECT_STATE.yaml, HANDOFF.md, PROJECT_STATE.md,
+  CHANGELOG.md, docs/CODEGEN.md, docs/PROGRESS.md, docs/RESUME_PROMPT.md.
+
+
 ## 2026-09-11 — R-342
 
 - Recorded contract in `.ai/CURRENT_TASK.yaml` and `.ai/tasks/R-342.md` (status in_progress → done).

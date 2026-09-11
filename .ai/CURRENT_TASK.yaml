@@ -1,17 +1,17 @@
-task_id: R-342
-id: R-342
-title: "Accessible Futuristic Reusable Segmented Control & Mode Switcher Component"
+task_id: R-343
+id: R-343
+title: "Accessible Futuristic Reusable Carousel & Slider Showcase Component"
 status: DONE
 phase: MVP
 tracker_row: 9
 started_at: "2026-09-11"
 completed_at: "2026-09-11"
-objective: "Add accessible, optimized, and futuristic SegmentedControl compound component (components/segmented-control.tsx) with sliding pill indicator animation, option badges and icons, 4 visual variants (neon, glass, pills, minimal), 3 size presets, full keyboard navigation, and WAI-ARIA radiogroup semantics."
+objective: "Add accessible, optimized, and futuristic Carousel compound component (components/carousel.tsx) with touch swipe gesture support, autoplay with pause-on-hover/focus, 4 visual variants (neon, glass, cards, minimal), slide and fade transitions, keyboard navigation, and WAI-ARIA carousel semantics."
 allowed_paths:
   - "services/agent-engine/src/omnistackai_agent_engine/codegen/nextjs.py"
   - "services/agent-engine/src/omnistackai_agent_engine/codegen/__init__.py"
-  - "services/agent-engine/tests/test_segmented_control_component.py"
-  - ".ai/tasks/R-342.md"
+  - "services/agent-engine/tests/test_carousel_component.py"
+  - ".ai/tasks/R-343.md"
   - ".ai/CURRENT_TASK.yaml"
   - ".ai/PROJECT_STATE.yaml"
   - ".ai/WORK_LOG.md"
@@ -26,9 +26,9 @@ forbidden_changes:
   - "Do not introduce external npm dependencies"
   - "Do not break snapshot diff invariance across ir.description"
 evidence:
-  verify: "task verify (1,459 tests pass in 1.31s)"
+  verify: "task verify (1,474 tests pass in 1.38s)"
   lint: "task lint (clean pass)"
   security: "task security:quick (clean pass)"
-  demos: "minimal-blog generates 78 files, rideshare-favourites generates 76 files (both include apps/web/components/segmented-control.tsx)"
-  tracker: "Phase_Roadmap!A9, 342 unique tasks, 131 Done, MVP at 131/237 (55.3%)"
-next_action: "Initialize R-343"
+  demos: "minimal-blog generates 80 files, rideshare-favourites generates 77 files (both include apps/web/components/carousel.tsx)"
+  tracker: "Phase_Roadmap!A9, 343 unique tasks, 132 Done, MVP at 132/238 (55.5%)"
+next_action: "Initialize R-344"

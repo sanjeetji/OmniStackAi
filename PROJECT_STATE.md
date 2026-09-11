@@ -5,24 +5,24 @@ Last updated: 2026-09-11T00:32:00+05:30
 Stage 0 (Founder Build Sequence, Brief Section 91) — BASIC/MVP
 
 ## Last Completed Task
-Tracker ID: R-342 — Generated Accessible Futuristic Reusable Segmented Control & Mode Switcher Component (components/segmented-control.tsx) — DONE,
-`task verify` (1,459 agent-engine tests, 15 new focused R-342 tests) passing. Enabled accessible, futuristic, zero-dependency
-segmented control and mode switching across generated Next.js web applications:
-added standalone, reusable, accessible, futuristic SegmentedControl compound component suite (`components/segmented-control.tsx`) supporting
-SegmentedControlOption, SegmentedControlVariant ("neon" | "glass" | "pills" | "minimal"), SegmentedControlSize ("sm" | "md" | "lg"),
-SegmentedControlOrientation ("horizontal" | "vertical"), SegmentedControlProps, SegmentedControlOptionItemProps,
-animated sliding active indicator pill with smooth cubic-bezier transitions (`cubic-bezier(0.4, 0, 0.2, 1)`), option labels, icons,
-disabled states, and notification badges, controlled and uncontrolled operation modes, full keyboard navigation (ArrowLeft/ArrowRight cycling,
-Home/End jump), full WAI-ARIA radiogroup semantics (role="radiogroup", role="radio", aria-checked, aria-disabled, aria-orientation, tabIndex),
-hidden input field integration for native form submissions, 100% diff-invariance across `ir.description`, and 0 external dependencies.
-Preceded by R-341 (radial gauge), R-340 (code block), R-339 (tag input), R-338 (tree view), R-337 (stat card), R-336 (timeline),
+Tracker ID: R-343 — Generated Accessible Futuristic Reusable Carousel & Slider Showcase Component (components/carousel.tsx) — DONE,
+`task verify` (1,474 agent-engine tests, 15 new focused R-343 tests) passing. Enabled accessible, futuristic, zero-dependency
+content carousels and sliders across generated Next.js web applications:
+added standalone, reusable, accessible, futuristic Carousel compound component suite (`components/carousel.tsx`) supporting
+CarouselVariant ("neon" | "glass" | "cards" | "minimal"), CarouselTransition ("slide" | "fade"), CarouselOrientation ("horizontal" | "vertical"),
+CarouselIndicatorType ("dots" | "fraction" | "progress" | "none"), compound subcomponents (Carousel, Carousel.Content, Carousel.Slide,
+Carousel.Previous, Carousel.Next, Carousel.Indicators, Carousel.Progress, Carousel.AutoplayToggle), touch/swipe gesture handling with delta threshold,
+configurable autoplay with pause on hover/focus and play/pause toggle, keyboard navigation (ArrowLeft/Right, ArrowUp/Down, Home, End),
+full WAI-ARIA carousel semantics (role="region", aria-roledescription="carousel", role="group", aria-roledescription="slide",
+aria-label, aria-hidden, aria-live), controlled and uncontrolled index management, 100% diff-invariance across `ir.description`, and 0 external dependencies.
+Preceded by R-342 (segmented control), R-341 (radial gauge), R-340 (code block), R-339 (tag input), R-338 (tree view), R-337 (stat card), R-336 (timeline),
 R-335 (file upload), R-334 (stepper), R-333 (rating), R-332 (progress), R-331 (slider), R-330 (command palette), R-329 (data grid),
 R-328 (date picker), R-327 (form controls), R-326 (dialog), R-325 (theme toggle), R-324 (theming tokens), R-323 (popover),
 R-322 (dropdown menu), R-321 (accordion), R-320 (toggle), R-319 (avatar), R-318 (drawer), R-317 (skeleton), R-316 (alert),
 R-315 (card), R-314 (tooltip), R-313 (column visibility), R-312 (badge), R-311 (table density), R-310 (tabs), R-309 (pagination), and R-308 (JSON export).
 
-**Notes:** (1) the tracker is current through R-342: 131 Done, 1 Deferred, 210 Not Started across 342
-unique tasks; MVP is 131/237 (55.3%). (2) Code committed and pushed per user instruction. Next unstarted Tracker ID: R-343.
+**Notes:** (1) the tracker is current through R-343: 132 Done, 1 Deferred, 210 Not Started across 343
+unique tasks; MVP is 132/238 (55.5%). (2) Next unstarted Tracker ID: R-344.
 
 
 
