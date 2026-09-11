@@ -1,24 +1,23 @@
-task_id: R-378
-id: R-378
-title: "Accessible Futuristic Reusable Image Cropper & Canvas Mask Suite"
+task_id: R-379
+id: R-379
+title: "Accessible Futuristic Reusable Gantt Chart & Project Roadmap Suite"
 status: DONE
 phase: MVP
-tracker_row: 22
+tracker_row: 23
 started_at: "2026-09-11"
 completed_at: "2026-09-11"
 objective: >-
-  Add accessible, zero-dependency, desktop-and-mobile-grade, and futuristic Image Cropper & Canvas Mask
-  compound component suite (components/image-cropper.tsx) supporting interactive crop marquee with 8 tactile resize handles,
-  aspect ratio locks (free, 1:1, 4:3, 16:9, circular for avatars), zoom scaling (0.5x to 3x), rotation controls (90° steps and slider),
-  flip horizontal and vertical, real-time canvas export (toDataURL, toBlob, getCroppedCanvas) and live preview thumbnail,
-  keyboard arrow-key nudging, WAI-ARIA accessibility semantics (role="region", aria-roledescription="image cropping canvas"),
-  4 visual variants (default, card, glass, neon with glowing crop marquee), 3 size scales (sm, md, lg),
-  React ref forwarding, explicit displayName, and semantic aliases.
+  Add accessible, zero-dependency, desktop-and-mobile-grade, and futuristic Gantt Chart & Project Roadmap
+  compound component suite (components/gantt-chart.tsx) supporting interactive task duration bars with progress fills,
+  milestone diamond markers, SVG dependency connectors and arrows, multi-scale timescale (day, week, month),
+  synchronized task list sidebar, weekend shading and vertical today marker, task drag/resize scheduling,
+  collapsible group hierarchies, WAI-ARIA grid/treegrid semantics, 4 visual variants (default, card, glass, neon),
+  3 size scales (sm, md, lg), React ref forwarding, explicit displayName across compound exports, and imperative handle.
 allowed_paths:
   - "services/agent-engine/src/omnistackai_agent_engine/codegen/nextjs.py"
   - "services/agent-engine/src/omnistackai_agent_engine/codegen/__init__.py"
-  - "services/agent-engine/tests/test_image_cropper_component.py"
-  - ".ai/tasks/R-378.md"
+  - "services/agent-engine/tests/test_gantt_chart_component.py"
+  - ".ai/tasks/R-379.md"
   - ".ai/CURRENT_TASK.yaml"
   - ".ai/PROJECT_STATE.yaml"
   - ".ai/WORK_LOG.md"
@@ -33,9 +32,9 @@ forbidden_changes:
   - "Do not introduce external npm dependencies"
   - "Do not break snapshot diff invariance across ir.description"
 evidence:
-  verify: "2108 tests passing (17 new tests in test_image_cropper_component.py)"
+  verify: "2125 tests passing (17 new tests in test_gantt_chart_component.py)"
   lint: "Passed with zero warnings"
   security: "Stage 0 secret-policy check passed"
-  demos: "minimal-blog generated 115 files including components/image-cropper.tsx"
+  demos: "minimal-blog generated 116 files including components/gantt-chart.tsx"
   tracker: DONE
-next_action: "Prompt user for R Task 379."
+next_action: "Prompt user for R Task 380."

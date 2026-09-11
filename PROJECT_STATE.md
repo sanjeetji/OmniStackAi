@@ -5,27 +5,28 @@ Last updated: 2026-09-11T14:00:00+05:30
 Stage 0 (Founder Build Sequence, Brief Section 91) — BASIC/MVP
 
 ## Last Completed Task
-Tracker ID: R-378 — Generated Accessible Futuristic Reusable Image Cropper & Canvas Mask Suite (components/image-cropper.tsx) — DONE,
-`task verify` (2,108 agent-engine tests, 17 new focused R-378 tests) passing. Enabled accessible, futuristic, zero-dependency
-desktop-and-mobile-grade image cropper compound components across generated Next.js web applications:
-added standalone, reusable, accessible, futuristic image cropper suite (`components/image-cropper.tsx`) supporting
-interactive marquee crop box with 8 tactile resize handles, aspect ratio constraints ("free", "1:1", "4:3", "16:9", "circular" for avatars),
-zoom scaling (0.5x to 3x) and continuous rotation slider (-180° to +180°) with 90° step buttons, horizontal and vertical flip transforms,
-real-time HTML5 Canvas export (toDataURL, toBlob, getCroppedCanvas) and live preview thumbnail (CropPreview),
-keyboard arrow-key nudging with Shift acceleration, WAI-ARIA 1.2 accessibility semantics (role="region", aria-label="Image Cropper", aria-roledescription="image cropping canvas"),
-4 futuristic visual styling variants ("default", "card", "glass" with backdrop-blur, "neon" cyberpunk cyan glow),
+Tracker ID: R-379 — Generated Accessible Futuristic Reusable Gantt Chart & Project Roadmap Suite (components/gantt-chart.tsx) — DONE,
+`task verify` (2,125 agent-engine tests, 17 new focused R-379 tests) passing. Enabled accessible, futuristic, zero-dependency
+desktop-and-mobile-grade Gantt chart compound components across generated Next.js web applications:
+added standalone, reusable, accessible, futuristic Gantt chart suite (`components/gantt-chart.tsx`) supporting
+interactive task duration bars with proportional progress fill, diamond milestone markers for instantaneous deadlines,
+SVG dependency connector lines and bezier arrowheads connecting predecessor tasks to successor tasks,
+multi-scale timescale zoom levels ("day", "week", "month"), synchronized task list sidebar with task name and progress,
+weekend column shading and vertical "Today" indicator line, timescale navigation controls (Jump to Today, Zoom In, Zoom Out),
+WAI-ARIA 1.2 grid semantics (role="grid", aria-label="Project Gantt Chart"),
+4 futuristic visual styling variants ("default", "card", "glass" with backdropFilter blur, "neon" cyberpunk cyan glow with radiant progress bars and luminous dependency lines),
 3 size scales ("sm", "md", "lg"), React ref forwarding (forwardRef), explicit displayName across all compound exports,
-canonical TypeScript types (CropAspectRatio, ImageCropperVariant, ImageCropperSize, CropArea, CropData, ImageCropperHandle, ImageCropperProps, CropToolbarProps, CropPreviewProps, AvatarCropperProps),
-compound and semantic alias exports (ImageCropper, AvatarCropper, CropCanvas, CropToolbar, CropPreview, default export),
+canonical TypeScript types (GanttTask, GanttViewMode, GanttVariant, GanttSize, GanttChartHandle, GanttChartProps),
+compound and semantic alias exports (GanttChart, ProjectRoadmap, TimelineGantt, GanttTaskBar, GanttTimescale, GanttDependencyLine, default export),
 100% diff-invariance across `ir.description`, and 0 external runtime dependencies.
-Preceded by R-377 (pivot table), R-376 (media player), R-375 (heatmap), R-374 (org chart), R-373 (diff viewer), R-372 (signature pad), R-371 (time picker), R-370 (chart), R-369 (filter builder), R-368 (virtual list), R-367 (kanban), R-366 (calendar), R-365 (markdown editor), R-364 (transfer), R-363 (tour), R-362 (sidebar), R-361 (notification center), R-360 (number input), R-359 (bottom nav), R-358 (combobox), R-357 (banner), R-356 (checkbox), R-355 (radio group), R-354 (kbd), R-353 (separator), R-352 (aspect ratio), R-351 (collapsible), R-350 (scroll area), R-349 (hover card), R-348 (context menu), R-347 (speed dial), R-346 (pin input), R-345 (color picker), R-344 (resizable), R-343 (carousel), R-342 (segmented control), R-341 (radial gauge), R-340 (code block), R-339 (tag input), R-338 (tree view),
+Preceded by R-378 (image cropper), R-377 (pivot table), R-376 (media player), R-375 (heatmap), R-374 (org chart), R-373 (diff viewer), R-372 (signature pad), R-371 (time picker), R-370 (chart), R-369 (filter builder), R-368 (virtual list), R-367 (kanban), R-366 (calendar), R-365 (markdown editor), R-364 (transfer), R-363 (tour), R-362 (sidebar), R-361 (notification center), R-360 (number input), R-359 (bottom nav), R-358 (combobox), R-357 (banner), R-356 (checkbox), R-355 (radio group), R-354 (kbd), R-353 (separator), R-352 (aspect ratio), R-351 (collapsible), R-350 (scroll area), R-349 (hover card), R-348 (context menu), R-347 (speed dial), R-346 (pin input), R-345 (color picker), R-344 (resizable), R-343 (carousel), R-342 (segmented control), R-341 (radial gauge), R-340 (code block), R-339 (tag input), R-338 (tree view),
 R-337 (stat card), R-336 (timeline), R-335 (file upload), R-334 (stepper), R-333 (rating), R-332 (progress), R-331 (slider),
 R-330 (command palette), R-329 (data grid), R-328 (date picker), R-327 (form controls), R-326 (dialog), R-325 (theme toggle),
 R-324 (theming tokens), R-323 (popover), R-322 (dropdown menu), R-321 (accordion), R-320 (toggle), R-319 (avatar), R-318 (drawer),
 R-317 (skeleton), R-316 (alert), R-315 (card), R-314 (tooltip), R-313 (column visibility), R-312 (badge), R-311 (table density),
 R-310 (tabs), R-309 (pagination), and R-308 (JSON export).
 
-**Notes:** (1) R-378 complete with 2,108 tests passing. (2) Next unstarted Tracker ID: R-379.
+**Notes:** (1) R-379 complete with 2,125 tests passing. (2) Next unstarted Tracker ID: R-380.
 
 
 

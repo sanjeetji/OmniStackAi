@@ -1,6 +1,28 @@
 # Work Log
 
-## 2026-09-11 — R-378
+## 2026-09-11 — R-379
+
+- Recorded contract in `.ai/CURRENT_TASK.yaml` and `.ai/tasks/R-379.md` (status in_progress → done).
+- `nextjs.py`:
+  - Added `_GANTT_CHART_COMPONENT` static template implementing accessible, desktop-and-mobile-grade, futuristic Gantt Chart & Project Roadmap compound component suite (`apps/web/components/gantt-chart.tsx`).
+  - Implemented `GanttViewMode` ("day" | "week" | "month"), `GanttVariant` ("default" | "card" | "glass" | "neon"), `GanttSize` ("sm" | "md" | "lg"), `GanttTask`, `GanttChartHandle`, `GanttChartProps` interfaces.
+  - Implemented compound and semantic alias exports: `GanttChart`, `ProjectRoadmap`, `TimelineGantt`, `GanttTaskBar`, `GanttTimescale`, `GanttDependencyLine`, default export.
+  - Implemented interactive task duration bars with proportional progress fill.
+  - Implemented diamond milestone markers for instantaneous deadlines.
+  - Implemented SVG dependency connector lines and bezier arrowheads connecting predecessor tasks to successor tasks.
+  - Implemented multi-scale timescale zoom levels ("day", "week", "month").
+  - Implemented synchronized task list sidebar with task name and progress.
+  - Implemented weekend column shading and vertical "Today" indicator line.
+  - Implemented timescale navigation controls (Jump to Today, Zoom In, Zoom Out).
+  - Implemented WAI-ARIA 1.2 grid semantics (`role="grid"`, `aria-label="Project Gantt Chart"`).
+  - Implemented 4 futuristic visual styling variants ("default", "card", "glass" with backdropFilter blur, "neon" cyberpunk cyan glow with radiant progress bars and luminous dependency lines).
+  - Implemented 3 size scales ("sm", "md", "lg").
+  - Implemented React ref forwarding (`forwardRef`), imperative handle (`GanttChartHandle`), and explicit `displayName` across all exports.
+  - Exported `render_gantt_chart_component` in `omnistackai_agent_engine.codegen` and registered `components/gantt-chart.tsx` in `NextjsWebAdapter.generate()`.
+  - Maintained 100% diff-invariance across `ir.description`.
+- Added `services/agent-engine/tests/test_gantt_chart_component.py` with 17 comprehensive unit tests (all passing).
+- `task verify` — 2,125 tests pass (17 new), 0 failures. `task lint`, `task security:quick`, `task builder:demo -- minimal-blog` pass.
+
 
 - Recorded contract in `.ai/CURRENT_TASK.yaml` and `.ai/tasks/R-378.md` (status in_progress → done).
 - `nextjs.py`:

@@ -1,6 +1,6 @@
 # Current Handoff
 
-Task ID: R-378
+Task ID: R-379
 Status: done
 Phase: BASIC/MVP — Founder Stage 0
 Branch: `main` (the only branch; the GitHub default)
@@ -26,9 +26,31 @@ Branch: `main` (the only branch; the GitHub default)
   14. **R-376**: Media Player Suite (`components/media-player.tsx`)
   15. **R-377**: Pivot Table & Cross-Tabulation Matrix Suite (`components/pivot-table.tsx`)
   16. **R-378**: Image Cropper & Canvas Mask Suite (`components/image-cropper.tsx`)
-- Resume from **R-379** when ready. Still stop-and-ask only for paid cloud / DB engine / new infra / native-mobile / a materially different architecture decision.
+  17. **R-379**: Gantt Chart & Project Roadmap Suite (`components/gantt-chart.tsx`)
+- Resume from **R-380** when ready. Still stop-and-ask only for paid cloud / DB engine / new infra / native-mobile / a materially different architecture decision.
 
 ## Completed
+
+### R-379 — Generated Accessible Futuristic Reusable Gantt Chart & Project Roadmap Suite (components/gantt-chart.tsx)
+
+Enabled accessible, desktop-and-mobile-grade, futuristic Gantt Chart & Project Roadmap compound components across generated Next.js web applications:
+
+- **Standalone Gantt Chart Suite (`apps/web/components/gantt-chart.tsx`)**:
+  - Implemented `GanttViewMode` (`"day"` | `"week"` | `"month"`), `GanttVariant` (`"default"` | `"card"` | `"glass"` | `"neon"`), `GanttSize` (`"sm"` | `"md"` | `"lg"`), `GanttTask`, `GanttChartHandle`, and `GanttChartProps` interfaces.
+  - Implemented compound and semantic alias exports: `GanttChart`, `ProjectRoadmap`, `TimelineGantt`, `GanttTaskBar`, `GanttTimescale`, `GanttDependencyLine`, and default export.
+  - Implemented interactive task duration bars with proportional progress fill.
+  - Implemented diamond milestone markers for instantaneous deadlines.
+  - Implemented SVG dependency connector lines and bezier arrowheads connecting predecessor tasks to successor tasks.
+  - Implemented multi-scale timescale zoom levels ("day", "week", "month").
+  - Implemented synchronized task list sidebar with task name and progress.
+  - Implemented weekend column shading and vertical "Today" indicator line.
+  - Implemented timescale navigation controls (Jump to Today, Zoom In, Zoom Out).
+  - Implemented WAI-ARIA 1.2 grid semantics (`role="grid"`, `aria-label="Project Gantt Chart"`).
+  - Implemented 4 futuristic visual styling variants ("default", "card", "glass" with backdropFilter blur, "neon" cyberpunk cyan glow with radiant progress bars and luminous dependency lines).
+  - Implemented 3 size scales ("sm", "md", "lg").
+  - Implemented React ref forwarding (`forwardRef`), imperative handle (`GanttChartHandle`), and explicit `displayName` across all exports.
+  - Exported `render_gantt_chart_component` in `omnistackai_agent_engine.codegen` and registered `components/gantt-chart.tsx` in `NextjsWebAdapter.generate()`.
+  - Maintained 100% diff-invariance across `ir.description`.
 
 ### R-378 — Generated Accessible Futuristic Reusable Image Cropper & Canvas Mask Suite (components/image-cropper.tsx)
 

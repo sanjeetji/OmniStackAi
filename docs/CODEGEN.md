@@ -3202,3 +3202,37 @@ Accessible, futuristic, desktop-and-mobile-grade image cropper & canvas mask com
   - 100% diff-invariance across `ir.description` changes; zero external runtime npm dependencies.
   - Registered in `NextjsWebAdapter.generate()` as a `GeneratedFile` at `components/image-cropper.tsx` and exported in `codegen.__init__` as `render_image_cropper_component`.
 
+### Gantt Chart & Project Roadmap Suite (`components/gantt-chart.tsx`)
+
+Accessible, futuristic, desktop-and-mobile-grade Gantt chart & project roadmap compound component suite:
+- **Zero Runtime Dependencies**: Pure React 18+ and native SVG math without heavy external scheduling libraries (`frappe-gantt`, `dhtmlx-gantt`).
+- **Interactive Task Duration Bars & Milestones**:
+  - Proportional progress fill percentage with text label overlay.
+  - Milestone diamond markers for zero-duration deadlines and target dates.
+  - SVG cubic bezier dependency connector lines and directional arrowheads connecting predecessor tasks to successor tasks.
+- **Multi-Scale Timescale Grid**:
+  - Zoom levels: `"day"`, `"week"`, and `"month"`.
+  - Day and week columns with weekend shading.
+  - Real-time vertical "Today" indicator line with sticky badge.
+- **Synchronized Task List Sidebar**:
+  - Task name, progress percentage, and detail rows locked to horizontal timeline scrolling.
+- **Navigation Controls**:
+  - Quick buttons for Jump to Today, Zoom In (`+`), and Zoom Out (`−`).
+- **WAI-ARIA 1.2 Grid Semantics**:
+  - `role="grid"`, `aria-label="Project Gantt Chart"`, task-level labels.
+- **4 Visual Variants**:
+  - `"default"`: Slate background with blue progress fills and subtle dividers.
+  - `"card"`: Deep dark card with elevated box shadow.
+  - `"glass"`: Frosted glassmorphic container with backdrop-blur.
+  - `"neon"`: Cyberpunk cyan borders with radiant progress bars and luminous dependency lines.
+- **3 Size Scales**:
+  - `"sm"`: Compact layout (row height 34px).
+  - `"md"`: Standard layout (row height 44px).
+  - `"lg"`: Presentation layout (row height 56px).
+- **Standards & Composition**:
+  - Exports `GanttChart`, `ProjectRoadmap`, `TimelineGantt`, `GanttTaskBar`, `GanttTimescale`, `GanttDependencyLine`, and default export.
+  - Full React `forwardRef`, imperative handle (`GanttChartHandle`), and explicit `displayName` across all exports.
+  - 100% diff-invariance across `ir.description` changes; zero external runtime npm dependencies.
+  - Registered in `NextjsWebAdapter.generate()` as a `GeneratedFile` at `components/gantt-chart.tsx` and exported in `codegen.__init__` as `render_gantt_chart_component`.
+
+
