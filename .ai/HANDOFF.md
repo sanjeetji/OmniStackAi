@@ -1,6 +1,6 @@
 # Current Handoff
 
-Task ID: R-380
+Task ID: R-381
 Status: done
 Phase: BASIC/MVP — Founder Stage 0
 Branch: `main` (the only branch; the GitHub default)
@@ -28,9 +28,31 @@ Branch: `main` (the only branch; the GitHub default)
   16. **R-378**: Image Cropper & Canvas Mask Suite (`components/image-cropper.tsx`)
   17. **R-379**: Gantt Chart & Project Roadmap Suite (`components/gantt-chart.tsx`)
   18. **R-380**: Flowchart & Node-Based Workflow Canvas Suite (`components/flow-canvas.tsx`)
-- Resume from **R-381** when ready. Still stop-and-ask only for paid cloud / DB engine / new infra / native-mobile / a materially different architecture decision.
+  19. **R-381**: Terminal & Command Console Suite (`components/terminal.tsx`)
+- Resume from **R-382** when ready. Still stop-and-ask only for paid cloud / DB engine / new infra / native-mobile / a materially different architecture decision.
 
 ## Completed
+
+### R-381 — Generated Accessible Futuristic Reusable Terminal & Command Console Suite (components/terminal.tsx)
+
+Enabled accessible, desktop-and-mobile-grade, futuristic Terminal & Command Console compound components across generated Next.js web applications:
+
+- **Standalone Terminal Suite (`apps/web/components/terminal.tsx`)**:
+  - Implemented `TerminalVariant` (`"terminal"` | `"neon"` | `"glass"` | `"minimal"`), `TerminalSize` (`"sm"` | `"md"` | `"lg"`), `TerminalLineType` (`"stdout"` | `"stderr"` | `"system"` | `"command"` | `"info"`), `TerminalLine`, `TerminalTab`, `TerminalHandle`, `TerminalProps`, `TerminalHeaderProps`, `TerminalOutputProps`, and `TerminalPromptProps` interfaces.
+  - Implemented compound and semantic alias exports: `Terminal`, `TerminalHeader`, `TerminalTabs`, `TerminalOutput`, `TerminalPrompt`, `ConsoleViewer`, `CommandLine`, and default export.
+  - Implemented ANSI color code parser (`parseAnsi`) supporting standard 16-color ANSI codes (red, green, yellow, blue, magenta, cyan, white), bold, and underline styles.
+  - Implemented interactive CLI command line prompt with user@host:cwd prefix and glowing cursor.
+  - Implemented command history stack navigation using ArrowUp and ArrowDown keys.
+  - Implemented multi-tab terminal session bar (`TerminalTabs`) with tab switching, close buttons, and add tab affordance.
+  - Implemented real-time search filtering across terminal output buffer lines.
+  - Implemented toolbar controls: Auto-scroll toggle, Copy all buffer to clipboard with checkmark feedback, Download as log file, Clear buffer.
+  - Implemented keyboard shortcuts: `Ctrl+L` (clear buffer), `Ctrl+C` (cancel input).
+  - Implemented WAI-ARIA 1.2 log & region accessibility semantics (`role="region"`, `role="log"`, `aria-live="polite"`).
+  - Implemented 4 futuristic visual styling variants ("terminal" retro CRT phosphor green, "neon" cyberpunk glowing cyan, "glass" with backdropFilter blur, "minimal" high-contrast dark).
+  - Implemented 3 size scales ("sm", "md", "lg").
+  - Implemented React ref forwarding (`forwardRef`), imperative handle (`TerminalHandle`), and explicit `displayName` across all exports.
+  - Exported `render_terminal_component` in `omnistackai_agent_engine.codegen` and registered `components/terminal.tsx` in `NextjsWebAdapter.generate()`.
+  - Maintained 100% diff-invariance across `ir.description`.
 
 ### R-380 — Generated Accessible Futuristic Reusable Flowchart & Node-Based Workflow Canvas Suite (components/flow-canvas.tsx)
 

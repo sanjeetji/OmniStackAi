@@ -3276,5 +3276,39 @@ Accessible, futuristic, desktop-and-mobile-grade flowchart & node-based workflow
   - 100% diff-invariance across `ir.description` changes; zero external runtime npm dependencies.
   - Registered in `NextjsWebAdapter.generate()` as a `GeneratedFile` at `components/flow-canvas.tsx` and exported in `codegen.__init__` as `render_flow_canvas_component`.
 
+### Terminal & Command Console Suite (`components/terminal.tsx`)
 
-
+Accessible, futuristic, desktop-and-mobile-grade terminal emulator and interactive command console compound component suite:
+- **Zero Runtime Dependencies**: Pure React 18+ and native regex ANSI escape sequence parser (`parseAnsi`) without heavy third-party terminal emulators (`xterm.js`).
+- **ANSI Color & SGR Escape Parser**:
+  - Full support for 8/16 standard ANSI colors (black, red, green, yellow, blue, magenta, cyan, white, and bright variants).
+  - Handles bold, dim, italic, and underline text formatting spans.
+- **Interactive Command Prompt (`TerminalPrompt`)**:
+  - Live CLI prompt with customizable prompt symbol (default `">"`) and user typing cursor.
+  - Keyboard command history navigation (Up / Down arrow keys cycling through past commands).
+  - Tab-completion support with configurable auto-complete dictionary (`autoCompleteCommands`).
+  - Command submission handling via `onCommand` callback.
+- **Multi-Tab Terminal Sessions (`TerminalTabs`)**:
+  - Tab switching between independent virtual terminal sessions.
+  - Add new tab and close tab triggers with keyboard navigation.
+- **Header & Output Toolbar (`TerminalHeader`)**:
+  - Window controls (close, minimize, maximize buttons).
+  - Integrated search filter input for instant line querying.
+  - Auto-scroll lock toggle, copy entire terminal output to clipboard, download session log file (`.txt` / `.log`), and clear terminal buffer.
+- **WAI-ARIA 1.2 Log Semantics**:
+  - `role="region"`, `role="log"`, `aria-live="polite"`, `aria-label="Terminal output"`.
+  - Accessible announcement of new lines and interactive prompt state.
+- **4 Visual Variants**:
+  - `"default"`: Sleek retro/futuristic dark slate console with crisp typography.
+  - `"card"`: Clean elevated bordered terminal window.
+  - `"glass"`: Frosted glassmorphic terminal with `backdrop-filter: blur()`.
+  - `"neon"`: Cyberpunk phosphor cyan glow with luminous active cursor and radiant text shadows.
+- **3 Size Scales**:
+  - `"sm"`: Compact console for embedded micro-logs.
+  - `"md"`: Standard development console scale.
+  - `"lg"`: Spacious full-featured command console.
+- **Standards & Composition**:
+  - Exports `TerminalVariant`, `TerminalSize`, `TerminalLineType`, `TerminalLine`, `TerminalTab`, `TerminalHandle`, `TerminalProps`, `TerminalHeaderProps`, `TerminalOutputProps`, `TerminalPromptProps`, compound and semantic alias exports (`Terminal`, `TerminalHeader`, `TerminalTabs`, `TerminalOutput`, `TerminalPrompt`, `ConsoleViewer`, `CommandLine`, default export).
+  - Full React `forwardRef`, imperative handle (`TerminalHandle`: `writeLine`, `clear`, `focus`, `scrollToBottom`, `getLines`, `exportLog`), and explicit `displayName` across all exports.
+  - 100% diff-invariance across `ir.description` changes; zero external runtime npm dependencies.
+  - Registered in `NextjsWebAdapter.generate()` as a `GeneratedFile` at `components/terminal.tsx` and exported in `codegen.__init__` as `render_terminal_component`.

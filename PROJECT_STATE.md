@@ -5,27 +5,28 @@ Last updated: 2026-09-11T14:00:00+05:30
 Stage 0 (Founder Build Sequence, Brief Section 91) — BASIC/MVP
 
 ## Last Completed Task
-Tracker ID: R-380 — Generated Accessible Futuristic Reusable Flowchart & Node-Based Workflow Canvas Suite (components/flow-canvas.tsx) — DONE,
-`task verify` (2,142 agent-engine tests, 17 new focused R-380 tests) passing. Enabled accessible, futuristic, zero-dependency
-desktop-and-mobile-grade flowchart and node-based workflow canvas compound components across generated Next.js web applications:
-added standalone, reusable, accessible, futuristic Flowchart and Node-Based Workflow Canvas compound component suite (`components/flow-canvas.tsx`) supporting
-interactive 2D node graphs, draggable nodes with grid snapping (snapToGrid, gridSize),
-SVG cubic bezier edge connectors with directional arrowheads, active animated dataflow pulses,
-real-time minimap with viewport indicator box and click-to-pan, floating zoom/pan controls,
-4 futuristic visual styling variants ("default", "card", "glass" with backdropFilter blur, "neon" cyberpunk cyan glow with radiant node halos and luminous bezier edges),
-3 size scales ("sm", "md", "lg"), WAI-ARIA 1.2 application accessibility semantics (role="application", aria-label="Workflow Canvas"),
+Tracker ID: R-381 — Generated Accessible Futuristic Reusable Terminal & Command Console Suite (components/terminal.tsx) — DONE,
+`task verify` (2,159 agent-engine tests, 17 new focused R-381 tests) passing. Enabled accessible, futuristic, zero-dependency
+desktop-and-mobile-grade terminal and command console compound components across generated Next.js web applications:
+added standalone, reusable, accessible, futuristic Terminal and Command Console compound component suite (`components/terminal.tsx`) supporting
+interactive CLI shell input with command history navigation (ArrowUp/ArrowDown),
+ANSI color code parsing (supporting standard 16-color ANSI codes, bold, and underline),
+multi-tab terminal sessions (TerminalTabs), streaming output buffer with line types (stdout, stderr, command, system, info),
+real-time search filtering, copy and log download toolbar, 4 futuristic visual styling variants ("terminal" retro CRT phosphor green,
+"neon" cyberpunk cyan, "glass" with backdropFilter blur, "minimal" high-contrast dark),
+3 size scales ("sm", "md", "lg"), WAI-ARIA 1.2 log accessibility (role="region", role="log", aria-live="polite"),
 React ref forwarding (forwardRef), explicit displayName across all compound exports,
-canonical TypeScript types (FlowNode, FlowEdge, FlowPort, FlowVariant, FlowSize, FlowNodeType, FlowNodeStatus, FlowEdgeStyle, FlowCanvasHandle, FlowCanvasProps),
-compound and semantic alias exports (FlowCanvas, WorkflowBuilder, NodeGraph, FlowNodeItem, FlowEdgeLine, FlowMinimap, FlowControls, default export),
+canonical TypeScript types (TerminalLine, TerminalTab, TerminalVariant, TerminalSize, TerminalLineType, TerminalHandle, TerminalProps),
+compound and semantic alias exports (Terminal, TerminalHeader, TerminalTabs, TerminalOutput, TerminalPrompt, ConsoleViewer, CommandLine, default export),
 100% diff-invariance across `ir.description`, and 0 external runtime dependencies.
-Preceded by R-379 (gantt chart), R-378 (image cropper), R-377 (pivot table), R-376 (media player), R-375 (heatmap), R-374 (org chart), R-373 (diff viewer), R-372 (signature pad), R-371 (time picker), R-370 (chart), R-369 (filter builder), R-368 (virtual list), R-367 (kanban), R-366 (calendar), R-365 (markdown editor), R-364 (transfer), R-363 (tour), R-362 (sidebar), R-361 (notification center), R-360 (number input), R-359 (bottom nav), R-358 (combobox), R-357 (banner), R-356 (checkbox), R-355 (radio group), R-354 (kbd), R-353 (separator), R-352 (aspect ratio), R-351 (collapsible), R-350 (scroll area), R-349 (hover card), R-348 (context menu), R-347 (speed dial), R-346 (pin input), R-345 (color picker), R-344 (resizable), R-343 (carousel), R-342 (segmented control), R-341 (radial gauge), R-340 (code block), R-339 (tag input), R-338 (tree view),
+Preceded by R-380 (flow canvas), R-379 (gantt chart), R-378 (image cropper), R-377 (pivot table), R-376 (media player), R-375 (heatmap), R-374 (org chart), R-373 (diff viewer), R-372 (signature pad), R-371 (time picker), R-370 (chart), R-369 (filter builder), R-368 (virtual list), R-367 (kanban), R-366 (calendar), R-365 (markdown editor), R-364 (transfer), R-363 (tour), R-362 (sidebar), R-361 (notification center), R-360 (number input), R-359 (bottom nav), R-358 (combobox), R-357 (banner), R-356 (checkbox), R-355 (radio group), R-354 (kbd), R-353 (separator), R-352 (aspect ratio), R-351 (collapsible), R-350 (scroll area), R-349 (hover card), R-348 (context menu), R-347 (speed dial), R-346 (pin input), R-345 (color picker), R-344 (resizable), R-343 (carousel), R-342 (segmented control), R-341 (radial gauge), R-340 (code block), R-339 (tag input), R-338 (tree view),
 R-337 (stat card), R-336 (timeline), R-335 (file upload), R-334 (stepper), R-333 (rating), R-332 (progress), R-331 (slider),
 R-330 (command palette), R-329 (data grid), R-328 (date picker), R-327 (form controls), R-326 (dialog), R-325 (theme toggle),
 R-324 (theming tokens), R-323 (popover), R-322 (dropdown menu), R-321 (accordion), R-320 (toggle), R-319 (avatar), R-318 (drawer),
 R-317 (skeleton), R-316 (alert), R-315 (card), R-314 (tooltip), R-313 (column visibility), R-312 (badge), R-311 (table density),
 R-310 (tabs), R-309 (pagination), and R-308 (JSON export).
 
-**Notes:** (1) R-380 complete with 2,142 tests passing. (2) Next unstarted Tracker ID: R-381.
+**Notes:** (1) R-381 complete with 2,159 tests passing. (2) Next unstarted Tracker ID: R-382.
 
 
 

@@ -2,24 +2,23 @@ schema_version: 1
 project: OmniStackAI
 phase: BASIC/MVP
 founder_stage: 0
-current_task: R-381
+current_task: R-382
 current_status: not_started
 branch: main
-last_completed_task: R-380
+last_completed_task: R-381
 last_completed_task_summary: >-
-  Generated Accessible Futuristic Reusable Flowchart & Node-Based Workflow Canvas Suite (components/flow-canvas.tsx);
-  added standalone, reusable, accessible, desktop-and-mobile-grade Flowchart and Node-Based Workflow Canvas compound
-  component suite supporting interactive 2D node graphs, draggable nodes with grid snapping, SVG cubic bezier edge
-  connectors with directional arrowheads, active dataflow animations, real-time minimap with viewport indicator box,
-  floating zoom/pan controls, 4 visual styling variants ("default", "card", "glass" with backdropFilter blur, "neon"
-  cyberpunk cyan glow with radiant node halos and luminous bezier edges), 3 size scales ("sm", "md", "lg"),
-  WAI-ARIA 1.2 accessibility (role="application", aria-label="Workflow Canvas"), React ref forwarding (forwardRef),
-  explicit displayName across all compound exports, canonical TypeScript types (FlowNode, FlowEdge, FlowPort,
-  FlowVariant, FlowSize, FlowNodeType, FlowNodeStatus, FlowEdgeStyle, FlowCanvasHandle, FlowCanvasProps),
-  compound and semantic alias exports (FlowCanvas, WorkflowBuilder, NodeGraph, FlowNodeItem, FlowEdgeLine, FlowMinimap,
-  FlowControls, default export), 100% diff-invariance across ir.description, 0 external runtime dependencies;
-  exported render_flow_canvas_component in codegen; registered components/flow-canvas.tsx in NextjsWebAdapter;
-  2,142 tests pass (17 new tests in test_flow_canvas_component.py); 0 model calls
+  Generated Accessible Futuristic Reusable Terminal & Command Console Suite (components/terminal.tsx);
+  added standalone, reusable, accessible, desktop-and-mobile-grade Terminal & Command Console compound
+  component suite supporting interactive CLI shell input with command history navigation, ANSI color code parsing,
+  multi-tab terminal sessions, streaming output buffers, search filtering, copy/download toolbar,
+  4 visual styling variants ("terminal" retro CRT phosphor, "neon" cyberpunk cyan, "glass", "minimal"),
+  3 size scales ("sm", "md", "lg"), WAI-ARIA 1.2 log accessibility (role="region", role="log", aria-live="polite"),
+  React ref forwarding (forwardRef), explicit displayName across all compound exports, canonical TypeScript types
+  (TerminalLine, TerminalTab, TerminalVariant, TerminalSize, TerminalLineType, TerminalHandle, TerminalProps),
+  compound and semantic alias exports (Terminal, TerminalHeader, TerminalTabs, TerminalOutput, TerminalPrompt,
+  ConsoleViewer, CommandLine, default export), 100% diff-invariance across ir.description, 0 external runtime dependencies;
+  exported render_terminal_component in codegen; registered components/terminal.tsx in NextjsWebAdapter;
+  2,159 tests pass (17 new tests in test_terminal_component.py); 0 model calls
 control_plane_database: postgresql
 model_routing_mode: balanced
 architecture_contract: R_&_D/OmniStackAI_Implementation_Brief_v6.md
@@ -31,8 +30,8 @@ product_direction: >-
   framework adapter contract -> Next.js adapter -> Git service -> preview/sandbox (needs cloud env).
 id_note: >-
   Workbook backlog owns R-010..R-219. Founder-requested tasks use IDs after R-219: R-220..R-223 done,
-  R-224 Next.js deferred (env-blocked), R-225..R-379 done. Continue from R-380.
+  R-224 Next.js deferred (env-blocked), R-225..R-380 done. Continue from R-381.
 blockers: []
 next_action: >-
-  Task R-380 (Flowchart & Node-Based Workflow Canvas Suite) complete with 2,142 tests passing.
-  Next task: R-381.
+  Task R-381 (Terminal & Command Console Suite) complete with 2,159 tests passing.
+  Next task: R-382.

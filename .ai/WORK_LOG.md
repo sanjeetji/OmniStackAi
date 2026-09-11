@@ -1,5 +1,28 @@
 # Work Log
 
+## 2026-09-11 — R-381
+
+- Recorded contract in `.ai/CURRENT_TASK.yaml` and `.ai/tasks/R-381.md` (status in_progress → done).
+- `nextjs.py`:
+  - Added `_TERMINAL_COMPONENT` static template implementing accessible, desktop-and-mobile-grade, futuristic Terminal & Command Console compound component suite (`apps/web/components/terminal.tsx`).
+  - Implemented `TerminalVariant` ("terminal" | "neon" | "glass" | "minimal"), `TerminalSize` ("sm" | "md" | "lg"), `TerminalLineType` ("stdout" | "stderr" | "system" | "command" | "info"), `TerminalLine`, `TerminalTab`, `TerminalHandle`, `TerminalProps`, `TerminalHeaderProps`, `TerminalOutputProps`, `TerminalPromptProps` interfaces.
+  - Implemented compound and semantic alias exports: `Terminal`, `TerminalHeader`, `TerminalTabs`, `TerminalOutput`, `TerminalPrompt`, `ConsoleViewer`, `CommandLine`, default export.
+  - Implemented ANSI color code parsing (`parseAnsi`) supporting 16-color ANSI codes, bold, and underline styles.
+  - Implemented interactive command line prompt with user@host:cwd prefix and glowing cursor.
+  - Implemented command history stack navigation using ArrowUp and ArrowDown keys.
+  - Implemented multi-tab terminal session bar (`TerminalTabs`) with tab switching, close buttons, and add tab affordance.
+  - Implemented real-time search filtering across terminal output buffer lines.
+  - Implemented toolbar controls: Auto-scroll toggle, Copy all buffer to clipboard with checkmark feedback, Download as log file, Clear buffer.
+  - Implemented keyboard shortcuts: `Ctrl+L` (clear buffer), `Ctrl+C` (cancel input).
+  - Implemented WAI-ARIA 1.2 log & region accessibility semantics (`role="region"`, `role="log"`, `aria-live="polite"`).
+  - Implemented 4 futuristic visual styling variants ("terminal" retro CRT phosphor green, "neon" cyberpunk glowing cyan, "glass" with backdropFilter blur, "minimal" high-contrast dark).
+  - Implemented 3 size scales ("sm", "md", "lg").
+  - Implemented React ref forwarding (`forwardRef`), imperative handle (`TerminalHandle`), and explicit `displayName` across all exports.
+  - Exported `render_terminal_component` in `omnistackai_agent_engine.codegen` and registered `components/terminal.tsx` in `NextjsWebAdapter.generate()`.
+  - Maintained 100% diff-invariance across `ir.description`.
+- Added `services/agent-engine/tests/test_terminal_component.py` with 17 comprehensive unit tests (all passing).
+- `task verify` — 2,159 tests pass (17 new), 0 failures. `task lint`, `task security:quick`, `task builder:demo -- minimal-blog` pass.
+
 ## 2026-09-11 — R-380
 
 - Recorded contract in `.ai/CURRENT_TASK.yaml` and `.ai/tasks/R-380.md` (status in_progress → done).

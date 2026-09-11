@@ -1,22 +1,22 @@
-task_id: R-380
-id: R-380
-title: "Accessible Futuristic Reusable Flowchart & Node-Based Workflow Canvas Suite"
+task_id: R-381
+id: R-381
+title: "Accessible Futuristic Reusable Terminal & Command Console Suite"
 status: DONE
 phase: MVP
-tracker_row: 24
+tracker_row: 25
 started_at: "2026-09-11"
 completed_at: "2026-09-11"
 objective: >-
-  Add accessible, zero-dependency, desktop-and-mobile-grade, and futuristic Flowchart & Node-Based Workflow Canvas
-  compound component suite (components/flow-canvas.tsx) supporting interactive 2D node graphs, draggable nodes with
-  grid snapping, SVG cubic bezier edge connectors with directional arrowheads, active dataflow animations,
-  real-time minimap with viewport indicator, floating zoom/pan controls, 4 visual styling variants (default, card, glass, neon),
-  3 size scales (sm, md, lg), WAI-ARIA 1.2 accessibility, React ref forwarding, and imperative handle.
+  Add accessible, zero-dependency, desktop-and-mobile-grade, and futuristic Terminal & Command Console
+  compound component suite (components/terminal.tsx) supporting interactive CLI shell input with command history navigation,
+  ANSI color code parsing, multi-tab terminal sessions, streaming output buffers, search filtering, copy/download toolbar,
+  4 visual styling variants (terminal retro CRT, neon cyberpunk, glass, minimal), 3 size scales (sm, md, lg),
+  WAI-ARIA 1.2 log accessibility, React ref forwarding, and imperative handle.
 allowed_paths:
   - "services/agent-engine/src/omnistackai_agent_engine/codegen/nextjs.py"
   - "services/agent-engine/src/omnistackai_agent_engine/codegen/__init__.py"
-  - "services/agent-engine/tests/test_flow_canvas_component.py"
-  - ".ai/tasks/R-380.md"
+  - "services/agent-engine/tests/test_terminal_component.py"
+  - ".ai/tasks/R-381.md"
   - ".ai/CURRENT_TASK.yaml"
   - ".ai/PROJECT_STATE.yaml"
   - ".ai/WORK_LOG.md"
@@ -31,9 +31,9 @@ forbidden_changes:
   - "Do not introduce external npm dependencies"
   - "Do not break snapshot diff invariance across ir.description"
 evidence:
-  verify: "2142 tests passing (17 new tests in test_flow_canvas_component.py)"
+  verify: "2159 tests passing (17 new tests in test_terminal_component.py)"
   lint: "Passed with zero warnings"
   security: "Stage 0 secret-policy check passed"
-  demos: "minimal-blog generated 117 files including components/flow-canvas.tsx"
+  demos: "minimal-blog generated 118 files including components/terminal.tsx"
   tracker: DONE
-next_action: "Prompt user for R Task 381."
+next_action: "Prompt user for R Task 382."
