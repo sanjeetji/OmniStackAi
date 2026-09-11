@@ -1,24 +1,24 @@
-task_id: R-375
-id: R-375
-title: "Accessible Futuristic Reusable Heatmap & Activity Contribution Matrix Suite"
+task_id: R-376
+id: R-376
+title: "Accessible Futuristic Reusable Media Player Suite"
 status: DONE
 phase: MVP
-tracker_row: 19
+tracker_row: 20
 started_at: "2026-09-11"
 completed_at: "2026-09-11"
 objective: >-
-  Add accessible, zero-dependency, desktop-and-mobile-grade, and futuristic Heatmap & Activity Contribution
-  Matrix compound component suite (components/heatmap.tsx) supporting dual layout modes (GitHub-style calendar
-  contribution matrix and 24x7/dense coordinate grid), 5 cyberpunk and natural color palettes (emerald, cyan,
-  violet, amber, rose), quantile intensity bucketing (0..4), interactive cell tooltips, keyboard navigation with
-  WAI-ARIA grid semantics (role="grid", role="gridcell"), built-in legend ("Less" -> "More"), cell selection callbacks,
-  4 visual variants (default, card, glass, neon with glowing cell borders), 3 size scales (sm, md, lg),
-  React ref forwarding, explicit displayName, and semantic aliases.
+  Add accessible, zero-dependency, desktop-and-mobile-grade, and futuristic Media Player & Audio/Video
+  Controller compound component suite (components/media-player.tsx) supporting dual media modes (video and audio),
+  custom controls (play/pause, interactive scrubber with buffered/played progress and time preview tooltip,
+  volume slider with mute toggle, playback rate selector, skip forward/back ±10s, fullscreen, picture-in-picture,
+  captions toggle), comprehensive keyboard navigation (Space/K, Arrow keys, M, F, P), WAI-ARIA media semantics
+  (role="region", role="slider", aria-valuenow), 4 visual variants (default, card, glass, neon with radiant controls),
+  3 size scales (sm, md, lg), React ref forwarding, explicit displayName, and semantic aliases.
 allowed_paths:
   - "services/agent-engine/src/omnistackai_agent_engine/codegen/nextjs.py"
   - "services/agent-engine/src/omnistackai_agent_engine/codegen/__init__.py"
-  - "services/agent-engine/tests/test_heatmap_component.py"
-  - ".ai/tasks/R-375.md"
+  - "services/agent-engine/tests/test_media_player_component.py"
+  - ".ai/tasks/R-376.md"
   - ".ai/CURRENT_TASK.yaml"
   - ".ai/PROJECT_STATE.yaml"
   - ".ai/WORK_LOG.md"
@@ -33,9 +33,9 @@ forbidden_changes:
   - "Do not introduce external npm dependencies"
   - "Do not break snapshot diff invariance across ir.description"
 evidence:
-  verify: "task verify -> 2057 passed in 2.14s"
+  verify: "task verify -> 2074 passed in 1.68s"
   lint: "task lint -> passed"
   security: "task security:quick -> passed"
-  demos: "task builder:demo -- minimal-blog -> generated 112 files"
+  demos: "task builder:demo -- minimal-blog -> generated 113 files"
   tracker: DONE
-next_action: "Proceed to next tracker task R-376"
+next_action: "Proceed to next tracker task R-377"

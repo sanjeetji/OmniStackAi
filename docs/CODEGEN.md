@@ -3095,17 +3095,41 @@ Accessible, futuristic, desktop-and-mobile-grade heatmap and activity contributi
   - 100% diff-invariant across `ir.description` changes; zero external runtime npm dependencies.
   - Registered in `NextjsWebAdapter.generate()` as a `GeneratedFile` at `components/heatmap.tsx` and exported in `codegen.__init__` as `render_heatmap_component`.
 
+### Media Player & Audio/Video Controller Suite (`components/media-player.tsx`)
 
-
-
-
-
-
-
-
-
-
-
-
-
-
+Accessible, futuristic, desktop-and-mobile-grade media player compound component suite:
+- **Zero Runtime Dependencies**: Pure React 18+ and native HTML5 `<video>` and `<audio>` APIs without heavy third-party player frameworks (`video.js`, `react-player`).
+- **Dual Media Modes**:
+  - **Video Player**: High-definition video player with configurable aspect ratio container (`16/9`, `4/3`, `1/1`, `21/9`), poster image, video overlay controls, fullscreen toggle, and Picture-in-Picture (PiP).
+  - **Audio Player**: Compact audio card layout with album cover art, track and artist metadata, and animated equalizer bars during playback.
+- **Interactive Scrubber & Seek Controls**:
+  - Progress bar displaying played duration, loaded buffer progress, and floating timestamp preview tooltip on hover.
+  - Smooth seeking on click and drag.
+- **Volume & Playback Controls**:
+  - Volume slider with interactive percentage adjustment, mute/unmute toggle, and dynamic volume icons.
+  - Playback rate switcher with standard speeds (`0.5x`, `0.75x`, `1x`, `1.25x`, `1.5x`, `2x`).
+  - Skip forward and backward buttons (±10s).
+  - Closed captions / subtitle track support (`<track kind="subtitles">`).
+- **Keyboard Navigation**:
+  - `Space` / `K` for play/pause.
+  - `ArrowLeft` / `ArrowRight` to seek (±5s, ±10s with Shift).
+  - `ArrowUp` / `ArrowDown` to adjust volume (±10%).
+  - `M` to toggle mute.
+  - `F` to toggle fullscreen.
+  - `P` to toggle Picture-in-Picture.
+- **WAI-ARIA 1.2 Media Semantics**:
+  - `role="region"`, `role="slider"`, `aria-label="Seek timeline"`, `aria-valuenow`, `aria-roledescription="video player" | "audio player"`.
+- **4 Visual Variants**:
+  - `"default"`: Clean dark slate container with sharp borders.
+  - `"card"`: Elevated solid dark card with deep drop shadow.
+  - `"glass"`: Translucent backdrop blur with frosted glass effect (`backdrop-blur-md`).
+  - `"neon"`: Cyberpunk glowing cyan borders and radiant scrubber track.
+- **3 Size Scales**:
+  - `"sm"`: Compact layout.
+  - `"md"`: Standard layout.
+  - `"lg"`: Cinematic large layout.
+- **Standards & Composition**:
+  - Exports `MediaPlayer`, `VideoPlayer`, `AudioPlayer`, `MediaControls`, `MediaScrubber`, `VolumeSlider`, and default export.
+  - Full React `forwardRef` and explicit `displayName` across all exports.
+  - 100% diff-invariance across `ir.description` changes; zero external runtime npm dependencies.
+  - Registered in `NextjsWebAdapter.generate()` as a `GeneratedFile` at `components/media-player.tsx` and exported in `codegen.__init__` as `render_media_player_component`.

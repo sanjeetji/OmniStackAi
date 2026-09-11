@@ -2,25 +2,27 @@ schema_version: 1
 project: OmniStackAI
 phase: BASIC/MVP
 founder_stage: 0
-current_task: R-376
+current_task: R-377
 current_status: not_started
 branch: main
-last_completed_task: R-375
+last_completed_task: R-376
 last_completed_task_summary: >-
-  Generated Accessible Futuristic Reusable Heatmap & Activity Contribution Matrix Suite (components/heatmap.tsx);
-  added standalone, reusable, accessible, desktop-and-mobile-grade heatmap compound component suite supporting
-  dual layout modes (GitHub-style 52-week calendar contribution matrix and 24x7 / arbitrary 2D dense coordinate grid),
-  5 cyberpunk and natural color palettes (emerald, cyan, violet, amber, rose), dynamic quantile intensity bucketing (levels 0 to 4),
-  interactive cell hover/focus floating tooltips with custom formatter support, keyboard arrow-key navigation and cell selection (onCellClick, selectedCell),
-  WAI-ARIA grid accessibility semantics (role="grid", role="row", role="gridcell", aria-selected),
-  integrated legend sub-component (HeatmapLegend) with configurable labels and intensity markers,
-  4 futuristic visual styling variants ("default", "card", "glass" with backdropFilter blur, "neon" cyberpunk cyan glow with radiant cells),
+  Generated Accessible Futuristic Reusable Media Player Suite (components/media-player.tsx);
+  added standalone, reusable, accessible, desktop-and-mobile-grade media player compound component suite supporting
+  dual media modes (video player with aspect-ratio container, poster image, overlay controls, fullscreen, Picture-in-Picture;
+  and audio player with album cover art, track/artist metadata, and animated equalizer bars),
+  interactive scrubber bar with buffered/played progress indicators and hover timestamp preview tooltip,
+  volume control slider with mute toggle and dynamic volume level icons, playback rate switcher (0.5x to 2x),
+  skip forward/backward controls (±10s), fullscreen and PiP handlers with native fallback,
+  closed captions/subtitles toggle (CC), comprehensive keyboard shortcuts (Space/K, ArrowLeft/Right, ArrowUp/Down, M, F, P),
+  WAI-ARIA media semantics (role="region", role="slider", aria-valuenow, aria-roledescription),
+  4 futuristic visual styling variants ("default", "card", "glass" with backdropFilter blur, "neon" cyberpunk cyan glow with radiant scrubber),
   3 size presets ("sm", "md", "lg"), React ref forwarding (forwardRef), explicit displayName across all compound exports,
-  HeatmapMode, HeatmapColor, HeatmapVariant, HeatmapSize, HeatmapIntensityLevel, HeatmapDatum, HeatmapStats, HeatmapHandle, HeatmapProps,
-  compound and semantic alias exports (Heatmap, ActivityCalendar, ContributionGraph, HeatmapLegend, HeatmapCell, default export),
+  MediaType, MediaPlayerVariant, MediaPlayerSize, MediaPlaybackRate, MediaTrackSource, MediaSubtitle, MediaPlayerHandle, MediaPlayerProps,
+  MediaScrubberProps, VolumeSliderProps, compound and semantic alias exports (MediaPlayer, VideoPlayer, AudioPlayer, MediaControls, MediaScrubber, VolumeSlider, default export),
   100% diff-invariance across ir.description, 0 external runtime dependencies;
-  exported render_heatmap_component in codegen; registered components/heatmap.tsx in NextjsWebAdapter;
-  2,057 tests pass (17 new tests in test_heatmap_component.py); 0 model calls
+  exported render_media_player_component in codegen; registered components/media-player.tsx in NextjsWebAdapter;
+  2,074 tests pass (17 new tests in test_media_player_component.py); 0 model calls
 control_plane_database: postgresql
 model_routing_mode: balanced
 architecture_contract: R_&_D/OmniStackAI_Implementation_Brief_v6.md
@@ -32,8 +34,8 @@ product_direction: >-
   framework adapter contract -> Next.js adapter -> Git service -> preview/sandbox (needs cloud env).
 id_note: >-
   Workbook backlog owns R-010..R-219. Founder-requested tasks use IDs after R-219: R-220..R-223 done,
-  R-224 Next.js deferred (env-blocked), R-225..R-374 done. Continue from R-375.
+  R-224 Next.js deferred (env-blocked), R-225..R-375 done. Continue from R-376.
 blockers: []
 next_action: >-
-  Task R-375 (Heatmap & Activity Contribution Matrix Suite) complete with 2,057 tests passing.
-  Next task: R-376.
+  Task R-376 (Media Player Suite) complete with 2,074 tests passing.
+  Next task: R-377.

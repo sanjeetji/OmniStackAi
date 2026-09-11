@@ -1,6 +1,28 @@
 # Work Log
 
-## 2026-09-11 — R-375
+## 2026-09-11 — R-376
+
+- Recorded contract in `.ai/CURRENT_TASK.yaml` and `.ai/tasks/R-376.md` (status in_progress → done).
+- `nextjs.py`:
+  - Added `_MEDIA_PLAYER_COMPONENT` static template implementing accessible, desktop-and-mobile-grade, futuristic Media Player & Audio/Video Controller compound component suite (`apps/web/components/media-player.tsx`).
+  - Implemented `MediaType` ("video" | "audio"), `MediaPlayerVariant` ("default" | "card" | "glass" | "neon"), `MediaPlayerSize` ("sm" | "md" | "lg"), `MediaPlaybackRate` (0.5 | 0.75 | 1 | 1.25 | 1.5 | 2), `MediaTrackSource`, `MediaSubtitle`, `MediaPlayerHandle`, `MediaPlayerProps`, `MediaScrubberProps`, `VolumeSliderProps` interfaces.
+  - Implemented compound and semantic alias exports: `MediaPlayer`, `VideoPlayer`, `AudioPlayer`, `MediaControls`, `MediaScrubber`, `VolumeSlider`, default export.
+  - Implemented dual media modes: Video player with aspect-ratio container, poster image, overlay controls, fullscreen, and Picture-in-Picture; and Audio player with album cover art, track/artist metadata, and animated equalizer bars.
+  - Implemented interactive scrubber bar with loaded buffer progress, played progress bar, and hover timestamp preview tooltip.
+  - Implemented volume control slider with mute toggle and dynamic volume level icons.
+  - Implemented playback rate selector (0.5x, 0.75x, 1x, 1.25x, 1.5x, 2x).
+  - Implemented skip forward/backward buttons (±10s).
+  - Implemented fullscreen and Picture-in-Picture controls with native API fallback.
+  - Implemented closed captions / subtitles track support (CC).
+  - Implemented comprehensive keyboard navigation shortcuts (`Space`/`K` for play/pause, `ArrowLeft`/`ArrowRight` for seek, `ArrowUp`/`ArrowDown` for volume, `M` for mute, `F` for fullscreen, `P` for PiP).
+  - Implemented WAI-ARIA media semantics (`role="region"`, `role="slider"`, `aria-valuenow`, `aria-roledescription`).
+  - Implemented 4 futuristic visual styling variants ("default", "card", "glass" with backdropFilter blur, "neon" cyberpunk cyan glow with radiant scrubber).
+  - Implemented 3 size presets ("sm", "md", "lg").
+  - Implemented React ref forwarding (`forwardRef`) and explicit `displayName` across all exports.
+  - Exported `render_media_player_component` in `omnistackai_agent_engine.codegen` and registered `components/media-player.tsx` in `NextjsWebAdapter.generate()`.
+  - Maintained 100% diff-invariance across `ir.description`.
+- Added `services/agent-engine/tests/test_media_player_component.py` with 17 comprehensive unit tests (all passing).
+- `task verify` — 2,074 tests pass (17 new), 0 failures. `task lint`, `task security:quick`, `task builder:demo -- minimal-blog` pass.
 
 - Recorded contract in `.ai/CURRENT_TASK.yaml` and `.ai/tasks/R-375.md` (status in_progress → done).
 - `nextjs.py`:
