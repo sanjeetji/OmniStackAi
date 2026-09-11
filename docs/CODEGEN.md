@@ -3235,4 +3235,46 @@ Accessible, futuristic, desktop-and-mobile-grade Gantt chart & project roadmap c
   - 100% diff-invariance across `ir.description` changes; zero external runtime npm dependencies.
   - Registered in `NextjsWebAdapter.generate()` as a `GeneratedFile` at `components/gantt-chart.tsx` and exported in `codegen.__init__` as `render_gantt_chart_component`.
 
+### Flowchart & Node-Based Workflow Canvas Suite (`components/flow-canvas.tsx`)
+
+Accessible, futuristic, desktop-and-mobile-grade flowchart & node-based workflow canvas compound component suite:
+- **Zero Runtime Dependencies**: Pure React 18+ and native SVG trigonometry math without heavy external canvas libraries (`@xyflow/react`, `react-flow-renderer`).
+- **Interactive 2D Workspace**:
+  - Pan & zoom navigation with mouse wheel, click-drag panning, and reset/fit-view controls.
+  - Background dot grid pattern with dynamic zoom scaling and toggle affordance.
+- **Node & Port Model**:
+  - `FlowNode`: `id`, `label`, `type` (`"default"` | `"input"` | `"output"` | `"action"` | `"condition"`), `x`, `y`, `width`, `height`, `selected`, `status` (`"idle"` | `"running"` | `"success"` | `"error"`), `inputs`, `outputs`.
+  - Input & output connection ports with magnetic snapping and color accents.
+  - Drag-and-drop node relocation with optional grid snapping (`snapToGrid`, `gridSize`).
+  - Interactive port-to-port connection dragging with live dashed preview line.
+- **SVG Edge Connectors**:
+  - Smooth cubic bezier, straight, and step orthogonal line paths.
+  - Directional SVG arrowhead markers with theme coloring.
+  - Active dataflow pulse animation with dashed marching strokes (`animated: true`).
+  - Edge midpoint label pill tags.
+- **Interactive Minimap Overview (`FlowMinimap`)**:
+  - Real-time proportional thumbnail rendering of all canvas nodes.
+  - Dynamic viewport indicator rectangle reflecting active pan and zoom.
+  - Click-to-center navigation.
+- **Floating Controls Toolbar (`FlowControls`)**:
+  - Zoom In (`+`), Zoom Out (`−`), Reset View (`1:1`), Fit-to-View (`⛶`), and Grid Toggle (`#`).
+- **WAI-ARIA 1.2 Application Accessibility**:
+  - `role="application"`, `aria-label="Workflow Canvas"`, `tabIndex={0}`.
+  - Keyboard arrow key node nudging (10px, or 50px with Shift), Delete/Backspace node/edge removal, Escape cancellation.
+- **4 Visual Variants**:
+  - `"default"`: Sleek dark slate canvas with subtle grid dots and blue accent ports.
+  - `"card"`: Crisp elevated neutral cards with distinct borders.
+  - `"glass"`: Frosted glassmorphic panels with backdrop-blur.
+  - `"neon"`: Cyberpunk cyan glowing theme with luminous bezier edges and radiant node halos.
+- **3 Size Scales**:
+  - `"sm"`: Compact nodes and ports.
+  - `"md"`: Standard density.
+  - `"lg"`: Spacious presentation scale.
+- **Standards & Composition**:
+  - Exports `FlowCanvas`, `WorkflowBuilder`, `NodeGraph`, `FlowNodeItem`, `FlowEdgeLine`, `FlowMinimap`, `FlowControls`, and default export.
+  - Full React `forwardRef`, imperative handle (`FlowCanvasHandle`), and explicit `displayName` across all exports.
+  - 100% diff-invariance across `ir.description` changes; zero external runtime npm dependencies.
+  - Registered in `NextjsWebAdapter.generate()` as a `GeneratedFile` at `components/flow-canvas.tsx` and exported in `codegen.__init__` as `render_flow_canvas_component`.
+
+
 

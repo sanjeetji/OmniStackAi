@@ -1,6 +1,6 @@
 # Current Handoff
 
-Task ID: R-379
+Task ID: R-380
 Status: done
 Phase: BASIC/MVP — Founder Stage 0
 Branch: `main` (the only branch; the GitHub default)
@@ -27,9 +27,30 @@ Branch: `main` (the only branch; the GitHub default)
   15. **R-377**: Pivot Table & Cross-Tabulation Matrix Suite (`components/pivot-table.tsx`)
   16. **R-378**: Image Cropper & Canvas Mask Suite (`components/image-cropper.tsx`)
   17. **R-379**: Gantt Chart & Project Roadmap Suite (`components/gantt-chart.tsx`)
-- Resume from **R-380** when ready. Still stop-and-ask only for paid cloud / DB engine / new infra / native-mobile / a materially different architecture decision.
+  18. **R-380**: Flowchart & Node-Based Workflow Canvas Suite (`components/flow-canvas.tsx`)
+- Resume from **R-381** when ready. Still stop-and-ask only for paid cloud / DB engine / new infra / native-mobile / a materially different architecture decision.
 
 ## Completed
+
+### R-380 — Generated Accessible Futuristic Reusable Flowchart & Node-Based Workflow Canvas Suite (components/flow-canvas.tsx)
+
+Enabled accessible, desktop-and-mobile-grade, futuristic Flowchart & Node-Based Workflow Canvas compound components across generated Next.js web applications:
+
+- **Standalone Flow Canvas Suite (`apps/web/components/flow-canvas.tsx`)**:
+  - Implemented `FlowVariant` (`"default"` | `"card"` | `"glass"` | `"neon"`), `FlowSize` (`"sm"` | `"md"` | `"lg"`), `FlowNodeType` (`"default"` | `"input"` | `"output"` | `"action"` | `"condition"`), `FlowNodeStatus` (`"idle"` | `"running"` | `"success"` | `"error"`), `FlowEdgeStyle` (`"bezier"` | `"straight"` | `"step"`), `FlowPortPosition` (`"left"` | `"right"` | `"top"` | `"bottom"`), `FlowPort`, `FlowNode`, `FlowEdge`, `FlowCanvasHandle`, `FlowCanvasProps`, `FlowNodeProps`, `FlowEdgeProps`, `FlowMinimapProps`, and `FlowControlsProps` interfaces.
+  - Implemented compound and semantic alias exports: `FlowCanvas`, `WorkflowBuilder`, `NodeGraph`, `FlowNodeItem`, `FlowEdgeLine`, `FlowMinimap`, `FlowControls`, and default export.
+  - Implemented 2D interactive canvas pan and zoom transform with mouse wheel zoom, click-drag panning, and reset/fit-view buttons.
+  - Implemented draggable nodes with grid snapping (`snapToGrid`, `gridSize`).
+  - Implemented SVG cubic bezier curved connection lines with customizable directional arrow markers.
+  - Implemented active animated dataflow pulses along edges (`animated: true`).
+  - Implemented real-time interactive Minimap (`FlowMinimap`) with viewport indicator box and click-to-pan.
+  - Implemented floating canvas toolbar controls (`FlowControls`): Zoom In, Zoom Out, Reset Zoom, Fit to View, Toggle Grid.
+  - Implemented WAI-ARIA 1.2 application accessibility semantics (`role="application"`, `aria-label="Workflow Canvas"`), keyboard arrow keys to nudge selected nodes, Delete to remove, Escape to deselect.
+  - Implemented 4 futuristic visual styling variants ("default", "card", "glass" with backdropFilter blur, "neon" cyberpunk cyan glow with radiant node halos and luminous bezier edges).
+  - Implemented 3 size scales ("sm", "md", "lg").
+  - Implemented React ref forwarding (`forwardRef`), imperative handle (`FlowCanvasHandle`), and explicit `displayName` across all exports.
+  - Exported `render_flow_canvas_component` in `omnistackai_agent_engine.codegen` and registered `components/flow-canvas.tsx` in `NextjsWebAdapter.generate()`.
+  - Maintained 100% diff-invariance across `ir.description`.
 
 ### R-379 — Generated Accessible Futuristic Reusable Gantt Chart & Project Roadmap Suite (components/gantt-chart.tsx)
 

@@ -1,5 +1,27 @@
 # Work Log
 
+## 2026-09-11 — R-380
+
+- Recorded contract in `.ai/CURRENT_TASK.yaml` and `.ai/tasks/R-380.md` (status in_progress → done).
+- `nextjs.py`:
+  - Added `_FLOW_CANVAS_COMPONENT` static template implementing accessible, desktop-and-mobile-grade, futuristic Flowchart & Node-Based Workflow Canvas compound component suite (`apps/web/components/flow-canvas.tsx`).
+  - Implemented `FlowVariant` ("default" | "card" | "glass" | "neon"), `FlowSize` ("sm" | "md" | "lg"), `FlowNodeType` ("default" | "input" | "output" | "action" | "condition"), `FlowNodeStatus` ("idle" | "running" | "success" | "error"), `FlowEdgeStyle` ("bezier" | "straight" | "step"), `FlowPortPosition` ("left" | "right" | "top" | "bottom"), `FlowPort`, `FlowNode`, `FlowEdge`, `FlowCanvasHandle`, `FlowCanvasProps`, `FlowNodeProps`, `FlowEdgeProps`, `FlowMinimapProps`, `FlowControlsProps` interfaces.
+  - Implemented compound and semantic alias exports: `FlowCanvas`, `WorkflowBuilder`, `NodeGraph`, `FlowNodeItem`, `FlowEdgeLine`, `FlowMinimap`, `FlowControls`, default export.
+  - Implemented 2D interactive canvas pan and zoom transform with mouse wheel zoom, click-drag panning, and reset/fit-view buttons.
+  - Implemented draggable nodes with grid snapping (`snapToGrid`, `gridSize`).
+  - Implemented SVG cubic bezier curved connection lines with customizable directional arrow markers.
+  - Implemented active animated dataflow pulses along edges (`animated: true`).
+  - Implemented real-time interactive Minimap (`FlowMinimap`) with viewport indicator box and click-to-pan.
+  - Implemented floating canvas toolbar controls (`FlowControls`): Zoom In, Zoom Out, Reset Zoom, Fit to View, Toggle Grid.
+  - Implemented WAI-ARIA 1.2 application accessibility semantics (`role="application"`, `aria-label="Workflow Canvas"`), keyboard arrow keys to nudge selected nodes, Delete to remove, Escape to deselect.
+  - Implemented 4 futuristic visual styling variants ("default", "card", "glass" with backdropFilter blur, "neon" cyberpunk cyan glow with radiant node halos and luminous bezier edges).
+  - Implemented 3 size scales ("sm", "md", "lg").
+  - Implemented React ref forwarding (`forwardRef`), imperative handle (`FlowCanvasHandle`), and explicit `displayName` across all exports.
+  - Exported `render_flow_canvas_component` in `omnistackai_agent_engine.codegen` and registered `components/flow-canvas.tsx` in `NextjsWebAdapter.generate()`.
+  - Maintained 100% diff-invariance across `ir.description`.
+- Added `services/agent-engine/tests/test_flow_canvas_component.py` with 17 comprehensive unit tests (all passing).
+- `task verify` — 2,142 tests pass (17 new), 0 failures. `task lint`, `task security:quick`, `task builder:demo -- minimal-blog` pass.
+
 ## 2026-09-11 — R-379
 
 - Recorded contract in `.ai/CURRENT_TASK.yaml` and `.ai/tasks/R-379.md` (status in_progress → done).
