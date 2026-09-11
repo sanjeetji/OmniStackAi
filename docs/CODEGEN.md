@@ -2993,6 +2993,39 @@ Accessible, futuristic, desktop-and-mobile-grade HTML5 canvas digital signature 
   - 100% diff-invariant across `ir.description` changes; zero external runtime npm dependencies.
   - Registered in `NextjsWebAdapter.generate()` as a `GeneratedFile` at `components/signature-pad.tsx` and exported in `codegen.__init__` as `render_signature_pad_component`.
 
+### Diff Viewer & Code/Text Comparison Suite (`components/diff-viewer.tsx`)
+
+Accessible, futuristic, desktop-and-mobile-grade text and code comparison compound component suite:
+- **Zero Runtime Dependencies**: Pure mathematical Longest Common Subsequence (LCS) diffing algorithm without third-party packages.
+- **Dual Comparison Modes**:
+  - **Split View**: Side-by-side dual-pane layout with horizontally synchronized lines and filler gaps for additions/deletions.
+  - **Unified View**: Compact single-column layout with dual old/new line numbers and `+` / `-` markers.
+- **Fine-Grained Highlighting**:
+  - Full line difference classification (`added`, `deleted`, `unchanged`).
+  - Word-level intraline character diffing highlighting granular changes within modified lines.
+- **Unchanged Lines Folding**:
+  - Automatically folds large contiguous blocks of unchanged code exceeding `foldThreshold` into expandable banners with configurable leading and trailing `contextLines`.
+- **Statistics & Copy Actions**:
+  - File header displaying filename, addition (`+N`) and deletion (`-N`) counters, and view mode toggles.
+  - Integrated copy buttons for raw patch, original file, and modified file.
+- **WAI-ARIA 1.2 Accessibility**:
+  - `role="region"`, `role="table"`, `role="row"`, `role="cell"`, `aria-label="Code diff viewer"`, `aria-roledescription="diff view"`.
+- **4 Visual Variants**:
+  - `"default"`: Subtle dark slate container with crisp borders.
+  - `"card"`: Elevated solid dark card with deep shadow.
+  - `"glass"`: Translucent backdrop blur with frosted glass effect.
+  - `"neon"`: Cyberpunk glowing borders and cyan/emerald/rose accents.
+- **3 Size Scales**:
+  - `"sm"`: Compact 11px/12px font and tight row padding.
+  - `"md"`: Standard 12px/13px font and comfortable row padding.
+  - `"lg"`: Spacious 14px font and generous row padding.
+- **Standards & Composition**:
+  - Exports `DiffViewer`, `CodeDiff`, `TextDiff`, and default export.
+  - Full React `forwardRef` and explicit `displayName` across all exports.
+  - 100% diff-invariant across `ir.description` changes; zero external runtime npm dependencies.
+  - Registered in `NextjsWebAdapter.generate()` as a `GeneratedFile` at `components/diff-viewer.tsx` and exported in `codegen.__init__` as `render_diff_viewer_component`.
+
+
 
 
 

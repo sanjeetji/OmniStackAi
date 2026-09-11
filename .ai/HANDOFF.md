@@ -1,6 +1,6 @@
 # Current Handoff
 
-Task ID: R-372
+Task ID: R-373
 Status: done
 Phase: BASIC/MVP — Founder Stage 0
 Branch: `main` (the only branch; the GitHub default)
@@ -20,9 +20,32 @@ Branch: `main` (the only branch; the GitHub default)
   8. **R-370**: Data Visualization & SVG Chart Suite (`components/chart.tsx`)
   9. **R-371**: Time Picker & Time Range Suite (`components/time-picker.tsx`)
   10. **R-372**: Digital Signature Pad & Drawing Canvas Primitive (`components/signature-pad.tsx`)
-- Resume from **R-373** when ready. Still stop-and-ask only for paid cloud / DB engine / new infra / native-mobile / a materially different architecture decision.
+  11. **R-373**: Diff Viewer & Code/Text Comparison Suite (`components/diff-viewer.tsx`)
+- Resume from **R-374** when ready. Still stop-and-ask only for paid cloud / DB engine / new infra / native-mobile / a materially different architecture decision.
 
 ## Completed
+
+### R-373 — Generated Accessible Futuristic Reusable Diff Viewer & Code/Text Comparison Suite (components/diff-viewer.tsx)
+
+Enabled accessible, desktop-and-mobile-grade, futuristic Diff Viewer & Code/Text Comparison compound components across generated Next.js web applications:
+
+- **Standalone Diff Viewer Suite (`apps/web/components/diff-viewer.tsx`)**:
+  - Implemented `DiffViewMode` (`"split"` | `"unified"`), `DiffLineType` (`"added"` | `"deleted"` | `"unchanged"`), `DiffViewerVariant` (`"default"` | `"card"` | `"glass"` | `"neon"`), `DiffViewerSize` (`"sm"` | `"md"` | `"lg"`), `DiffWordPart`, `DiffLine`, `SplitDiffRow`, `DiffViewerHandle`, and `DiffViewerProps` interfaces.
+  - Implemented compound and semantic alias exports: `DiffViewer`, `CodeDiff`, `TextDiff`, and default export.
+  - Implemented zero-dependency pure mathematical LCS (Longest Common Subsequence) diff algorithm for line addition, deletion, and unchanged resolution.
+  - Implemented word-level intraline character diffing highlighting specific within-line modifications.
+  - Implemented Split (side-by-side) comparison view mode with synchronized row alignment and gap padding.
+  - Implemented Unified (inline) comparison view mode with dual old and new line number gutters.
+  - Implemented collapsible unchanged lines folding with configurable threshold (`foldThreshold`), context buffers (`contextLines`), and interactive expand trigger banners.
+  - Implemented responsive toolbar with filename badge, addition (`+N`) and deletion (`-N`) counter statistics, view mode toggles, and one-click clipboard copy actions (raw patch, original, modified).
+  - Implemented full WAI-ARIA accessibility semantics (`role="region"`, `role="table"`, `role="row"`, `role="cell"`, `aria-label="Code diff viewer"`, `aria-roledescription="diff view"`).
+  - Implemented 6 built-in zero-dependency vector icons (`SplitIcon`, `UnifiedIcon`, `CopyIcon`, `CheckIcon`, `FileCodeIcon`, `ChevronDownIcon`).
+  - Implemented 4 futuristic visual styling variants ("default", "card", "glass" with backdropFilter blur, "neon" cyberpunk cyan glow with emerald/rose glowing diff gutters).
+  - Implemented 3 size presets ("sm", "md", "lg").
+  - Implemented React ref forwarding (`forwardRef`) and explicit `displayName` across all compound exports.
+  - Exported `render_diff_viewer_component` in `omnistackai_agent_engine.codegen` and registered `components/diff-viewer.tsx` in `NextjsWebAdapter.generate()`.
+  - Maintained 100% diff-invariance across `ir.description`.
+- **Verification**: 2,023 tests passing (17 new focused tests in `test_diff_viewer_component.py`). `task verify`, `task lint`, `task security:quick`, `task builder:demo -- minimal-blog` pass.
 
 ### R-372 — Generated Accessible Futuristic Reusable Digital Signature Pad & Drawing Canvas Primitive (components/signature-pad.tsx)
 

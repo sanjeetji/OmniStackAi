@@ -1,5 +1,28 @@
 # Work Log
 
+## 2026-09-11 — R-373
+
+- Recorded contract in `.ai/CURRENT_TASK.yaml` and `.ai/tasks/R-373.md` (status in_progress → done).
+- `nextjs.py`:
+  - Added `_DIFF_VIEWER_COMPONENT` static template implementing accessible, desktop-and-mobile-grade, futuristic Diff Viewer & Code/Text Comparison compound component suite (`apps/web/components/diff-viewer.tsx`).
+  - Implemented `DiffViewMode` ("split" | "unified"), `DiffLineType` ("added" | "deleted" | "unchanged"), `DiffViewerVariant` ("default" | "card" | "glass" | "neon"), `DiffViewerSize` ("sm" | "md" | "lg"), `DiffWordPart`, `DiffLine`, `SplitDiffRow`, `DiffViewerHandle`, `DiffViewerProps` interfaces.
+  - Implemented compound and semantic alias exports: `DiffViewer`, `CodeDiff`, `TextDiff`, default export.
+  - Implemented pure mathematical LCS (Longest Common Subsequence) diff algorithm for line addition, deletion, and unchanged resolution without third-party dependencies.
+  - Implemented word-level intraline character diffing highlighting specific within-line modifications.
+  - Implemented Split (side-by-side) comparison view mode with synchronized row alignment and gap padding.
+  - Implemented Unified (inline) comparison view mode with dual old and new line number gutters.
+  - Implemented collapsible unchanged lines folding with configurable threshold (`foldThreshold`), context buffers (`contextLines`), and interactive expand trigger banners.
+  - Implemented responsive toolbar with filename badge, addition (`+N`) and deletion (`-N`) counter statistics, view mode toggles, and one-click clipboard copy actions.
+  - Implemented full WAI-ARIA accessibility semantics (`role="region"`, `role="table"`, `role="row"`, `role="cell"`, `aria-label="Code diff viewer"`, `aria-roledescription="diff view"`).
+  - Implemented 6 built-in zero-dependency vector icons (`SplitIcon`, `UnifiedIcon`, `CopyIcon`, `CheckIcon`, `FileCodeIcon`, `ChevronDownIcon`).
+  - Implemented 4 futuristic visual styling variants ("default", "card", "glass" with backdropFilter blur, "neon" cyberpunk cyan glow with emerald/rose glowing diff gutters).
+  - Implemented 3 size presets ("sm", "md", "lg").
+  - Implemented React ref forwarding (`forwardRef`) and explicit `displayName` across all compound exports.
+  - Exported `render_diff_viewer_component` in `omnistackai_agent_engine.codegen` and registered `components/diff-viewer.tsx` in `NextjsWebAdapter.generate()`.
+  - Maintained 100% diff-invariance across `ir.description`.
+- Added `services/agent-engine/tests/test_diff_viewer_component.py` with 17 comprehensive unit tests (all passing).
+- `task verify` — 2,023 tests pass (17 new), 0 failures. `task lint`, `task security:quick`, `task builder:demo -- minimal-blog` pass.
+
 ## 2026-09-11 — R-372
 
 - Recorded contract in `.ai/CURRENT_TASK.yaml` and `.ai/tasks/R-372.md` (status in_progress → done).

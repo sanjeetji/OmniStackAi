@@ -5,28 +5,26 @@ Last updated: 2026-09-11T14:00:00+05:30
 Stage 0 (Founder Build Sequence, Brief Section 91) — BASIC/MVP
 
 ## Last Completed Task
-Tracker ID: R-372 — Generated Accessible Futuristic Reusable Digital Signature Pad & Drawing Canvas Primitive (components/signature-pad.tsx) — DONE,
-`task verify` (2,006 agent-engine tests, 17 new focused R-372 tests) passing. Enabled accessible, futuristic, zero-dependency
-desktop-and-mobile-grade digital signature pad compound components across generated Next.js web applications:
-added standalone, reusable, accessible, futuristic signature pad suite (`components/signature-pad.tsx`) supporting
-zero-dependency HTML5 canvas drawing with quadratic bezier curve stroke interpolation for silk-smooth lines, high-DPI Retina
-devicePixelRatio scaling, cross-device pointer events (mouse, touch, stylus with touch-action: none) supporting stylus pressure, touch, and mouse input,
-multi-level undo/redo stroke stack, clear action, raster PNG dataURL export (toDataURL()), vector SVG export (toSVG()) generating crisp scalable vector paths,
-signing guide line with dashed styling, subtle "✕" mark, and configurable text ("Sign on line above"), pristine placeholder prompt overlay,
-responsive toolbar with stroke counter badge and action buttons (Undo, Redo, Clear, Download), native HTML form hidden input synchronization (name),
-full WAI-ARIA application semantics (role="application", aria-label="Signature Pad", aria-roledescription="drawing canvas", aria-label="Signature drawing area"),
-5 built-in zero-dependency vector icons (UndoIcon, RedoIcon, TrashIcon, DownloadIcon, PenIcon),
-4 futuristic visual styling variants ("default", "card", "glass" with backdropFilter blur, "neon" cyberpunk cyan glow),
-3 size presets ("sm", "md", "lg"), React ref forwarding (forwardRef), explicit displayName across all exports,
+Tracker ID: R-373 — Generated Accessible Futuristic Reusable Diff Viewer & Code/Text Comparison Suite (components/diff-viewer.tsx) — DONE,
+`task verify` (2,023 agent-engine tests, 17 new focused R-373 tests) passing. Enabled accessible, futuristic, zero-dependency
+desktop-and-mobile-grade diff viewer compound components across generated Next.js web applications:
+added standalone, reusable, accessible, futuristic diff viewer suite (`components/diff-viewer.tsx`) supporting
+mathematical LCS line and word-level diff calculation with within-line badge highlighting, split (side-by-side) and
+unified (inline) view modes, collapsible unchanged line folding with expandable markers, synchronized line numbering,
+clipboard copy actions (raw patch, original, modified), statistical addition (+N) and deletion (-N) counter pills,
+WAI-ARIA accessibility semantics (role="region", role="table", role="row", role="cell", aria-label="Code diff viewer",
+aria-roledescription="diff view"), 6 built-in zero-dependency vector icons (SplitIcon, UnifiedIcon, CopyIcon, CheckIcon, FileCodeIcon, ChevronDownIcon),
+4 futuristic visual styling variants ("default", "card", "glass" with backdropFilter blur, "neon" cyberpunk cyan glow with emerald/rose glowing diff gutters),
+3 size presets ("sm", "md", "lg"), React ref forwarding (forwardRef), explicit displayName across all compound exports (DiffViewer, CodeDiff, TextDiff, default export),
 100% diff-invariance across `ir.description`, and 0 external runtime dependencies.
-Preceded by R-371 (time picker), R-370 (chart), R-369 (filter builder), R-368 (virtual list), R-367 (kanban), R-366 (calendar), R-365 (markdown editor), R-364 (transfer), R-363 (tour), R-362 (sidebar), R-361 (notification center), R-360 (number input), R-359 (bottom nav), R-358 (combobox), R-357 (banner), R-356 (checkbox), R-355 (radio group), R-354 (kbd), R-353 (separator), R-352 (aspect ratio), R-351 (collapsible), R-350 (scroll area), R-349 (hover card), R-348 (context menu), R-347 (speed dial), R-346 (pin input), R-345 (color picker), R-344 (resizable), R-343 (carousel), R-342 (segmented control), R-341 (radial gauge), R-340 (code block), R-339 (tag input), R-338 (tree view),
+Preceded by R-372 (signature pad), R-371 (time picker), R-370 (chart), R-369 (filter builder), R-368 (virtual list), R-367 (kanban), R-366 (calendar), R-365 (markdown editor), R-364 (transfer), R-363 (tour), R-362 (sidebar), R-361 (notification center), R-360 (number input), R-359 (bottom nav), R-358 (combobox), R-357 (banner), R-356 (checkbox), R-355 (radio group), R-354 (kbd), R-353 (separator), R-352 (aspect ratio), R-351 (collapsible), R-350 (scroll area), R-349 (hover card), R-348 (context menu), R-347 (speed dial), R-346 (pin input), R-345 (color picker), R-344 (resizable), R-343 (carousel), R-342 (segmented control), R-341 (radial gauge), R-340 (code block), R-339 (tag input), R-338 (tree view),
 R-337 (stat card), R-336 (timeline), R-335 (file upload), R-334 (stepper), R-333 (rating), R-332 (progress), R-331 (slider),
 R-330 (command palette), R-329 (data grid), R-328 (date picker), R-327 (form controls), R-326 (dialog), R-325 (theme toggle),
 R-324 (theming tokens), R-323 (popover), R-322 (dropdown menu), R-321 (accordion), R-320 (toggle), R-319 (avatar), R-318 (drawer),
 R-317 (skeleton), R-316 (alert), R-315 (card), R-314 (tooltip), R-313 (column visibility), R-312 (badge), R-311 (table density),
 R-310 (tabs), R-309 (pagination), and R-308 (JSON export).
 
-**Notes:** (1) R-372 complete with 2,006 tests passing. (2) Next unstarted Tracker ID: R-373.
+**Notes:** (1) R-373 complete with 2,023 tests passing. (2) Next unstarted Tracker ID: R-374.
 
 
 
