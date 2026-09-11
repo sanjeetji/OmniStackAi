@@ -1,5 +1,29 @@
 # Work Log
 
+## 2026-09-11 — R-370
+
+- Recorded contract in `.ai/CURRENT_TASK.yaml` and `.ai/tasks/R-370.md` (status in_progress → done).
+- `nextjs.py`:
+  - Added `_CHART_COMPONENT` static template implementing accessible, desktop-and-mobile-grade, futuristic Data Visualization & SVG Chart compound component suite (`apps/web/components/chart.tsx`).
+  - Implemented `ChartType` ("bar" | "line" | "area" | "donut" | "pie" | "sparkline"), `ChartVariant` ("default" | "card" | "glass" | "neon"), `ChartSize` ("sm" | "md" | "lg"), `ChartCurve` ("linear" | "smooth" | "step"), `ChartDataPoint`, `ChartSeries`, `ChartTooltipData`, `ChartProps` interfaces.
+  - Implemented compound and semantic alias exports: `Chart`, `BarChart`, `LineChart`, `AreaChart`, `DonutChart`, `PieChart`, `Sparkline`, default export.
+  - Implemented native SVG mathematical rendering without external packages: polar-to-cartesian trigonometry for circular arcs, smooth bezier curves and polylines, gradient area fills, and rounded vertical bars.
+  - Implemented interactive floating tooltip with exact values, series indicators, and percentages.
+  - Implemented series visibility toggling via interactive legend items.
+  - Implemented hover crosshairs and expanded point circles on line/area charts.
+  - Implemented center readout metric on Donut charts with hovered or total sum value formatting.
+  - Implemented ultra-compact Sparkline mode without axes or padding.
+  - Implemented WAI-ARIA 1.2 graphics semantics (`role="img"`, `role="region"`, `aria-label`).
+  - Implemented visually hidden accessible HTML data table fallback (`className="sr-only"`).
+  - Implemented 4 futuristic visual styling variants ("default", "card", "glass" with backdropFilter blur, "neon" cyberpunk cyan glow with glowing SVG dropshadows).
+  - Implemented 3 size presets ("sm", "md", "lg").
+  - Implemented React ref forwarding (`forwardRef`) and explicit `displayName` across all exports.
+  - Exported `render_chart_component` in `omnistackai_agent_engine.codegen` and registered `components/chart.tsx` in `NextjsWebAdapter.generate()`.
+  - Maintained 100% diff-invariance across `ir.description`.
+- Added `services/agent-engine/tests/test_chart_component.py` with 17 comprehensive unit tests (all passing).
+- `task verify` — 1,972 tests pass (17 new), 0 failures. `task lint`, `task security:quick` pass.
+  `builder:demo minimal-blog` passes (107 files generated). 0 model calls.
+
 ## 2026-09-11 — R-369
 
 - Recorded contract in `.ai/CURRENT_TASK.yaml` and `.ai/tasks/R-369.md` (status in_progress → done).

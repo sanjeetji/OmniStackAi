@@ -1,6 +1,6 @@
 # Current Handoff
 
-Task ID: R-369
+Task ID: R-370
 Status: done
 Phase: BASIC/MVP — Founder Stage 0
 Branch: `main` (the only branch; the GitHub default)
@@ -17,35 +17,34 @@ Branch: `main` (the only branch; the GitHub default)
   5. **R-367**: Kanban Board & Task Flow Matrix Suite (`components/kanban.tsx`)
   6. **R-368**: Infinite Virtual List & Windowed Scroller Suite (`components/virtual-list.tsx`)
   7. **R-369**: Query Filter Builder & Dynamic Rule Bar Suite (`components/filter-builder.tsx`)
-- Resume from **R-370** when ready. Still stop-and-ask only for paid cloud / DB engine / new infra / native-mobile / a materially different architecture decision.
+  8. **R-370**: Data Visualization & SVG Chart Suite (`components/chart.tsx`)
+- Resume from **R-371** when ready. Still stop-and-ask only for paid cloud / DB engine / new infra / native-mobile / a materially different architecture decision.
 
 ## Completed
 
-### R-369 — Generated Accessible Futuristic Reusable Query Filter Builder & Dynamic Rule Bar Suite (components/filter-builder.tsx)
+### R-370 — Generated Accessible Futuristic Reusable Data Visualization & SVG Chart Suite (components/chart.tsx)
 
-Enabled accessible, desktop-and-mobile-grade, futuristic Query Filter Builder and Dynamic Rule Bar compound components across generated Next.js web applications:
+Enabled accessible, desktop-and-mobile-grade, futuristic Data Visualization and SVG Chart compound components across generated Next.js web applications:
 
-- **Standalone Filter Builder Suite (`apps/web/components/filter-builder.tsx`)**:
-  - Implemented `FilterBuilderVariant` (`"default"` | `"card"` | `"glass"` | `"neon"`), `FilterBuilderSize` (`"sm"` | `"md"` | `"lg"`), `FilterFieldType` (`"string"` | `"number"` | `"boolean"` | `"date"` | `"select"`), `FilterCombinator` (`"and"` | `"or"`), `FilterOperator`, `FilterFieldConfig`, `FilterRule`, `FilterGroup`, and `FilterBuilderProps` interfaces.
-  - Implemented compound and semantic alias exports: `FilterBuilder`, `QueryFilterBuilder`, `RuleBuilder`, and default export.
-  - Implemented nested recursive rule group hierarchy evaluation with dynamic indentation depth styling.
-  - Implemented dynamic operator selection based on field types (equals, not_equals, contains, not_contains, starts_with, ends_with, greater_than, less_than, greater_than_or_equal, less_than_or_equal, is_empty, is_not_empty, is_true, is_false, in).
-  - Implemented AND / OR combinator pill switcher with visual active glow styling.
-  - Implemented add rule and add nested subgroup buttons, plus delete rule/group actions with minimum root rule constraint.
-  - Implemented `maxDepth` guard (default 3) preventing unbounded nesting.
-  - Implemented type-aware value inputs: text input, number input, date picker, select dropdown with options, and boolean labels.
-  - Implemented clear all rules action and rule count badge indicator.
-  - Implemented full WAI-ARIA 1.2 region & group semantics (`role="region"`, `role="group"`, `aria-label`).
-  - Implemented 5 built-in zero-dependency vector icons (`PlusIcon`, `TrashIcon`, `FolderPlusIcon`, `XCircleIcon`, `FilterIcon`).
-  - Implemented 4 futuristic visual styling variants ("default", "card", "glass" with backdropFilter blur, "neon" cyberpunk cyan glow).
+- **Standalone Chart Suite (`apps/web/components/chart.tsx`)**:
+  - Implemented `ChartType` (`"bar"` | `"line"` | `"area"` | `"donut"` | `"pie"` | `"sparkline"`), `ChartVariant` (`"default"` | `"card"` | `"glass"` | `"neon"`), `ChartSize` (`"sm"` | `"md"` | `"lg"`), `ChartCurve` (`"linear"` | `"smooth"` | `"step"`), `ChartDataPoint`, `ChartSeries`, `ChartTooltipData`, and `ChartProps` interfaces.
+  - Implemented compound and semantic alias exports: `Chart`, `BarChart`, `LineChart`, `AreaChart`, `DonutChart`, `PieChart`, `Sparkline`, and default export.
+  - Implemented native SVG mathematical rendering without external packages: polar-to-cartesian trigonometry for circular arcs, smooth bezier curves and polylines, gradient area fills, and rounded vertical bars.
+  - Implemented interactive floating tooltip with exact values, series indicators, and percentages.
+  - Implemented series visibility toggling via interactive legend items.
+  - Implemented hover crosshairs and expanded point circles on line/area charts.
+  - Implemented center readout metric on Donut charts with hovered or total sum value formatting.
+  - Implemented ultra-compact Sparkline mode without axes or padding.
+  - Implemented WAI-ARIA 1.2 graphics semantics (`role="img"`, `role="region"`, `aria-label`).
+  - Implemented visually hidden accessible HTML data table fallback (`className="sr-only"`).
+  - Implemented 4 futuristic visual styling variants ("default", "card", "glass" with backdropFilter blur, "neon" cyberpunk cyan glow with glowing SVG dropshadows).
   - Implemented 3 size presets ("sm", "md", "lg").
-  - Implemented native HTML form submission integration via hidden input (`name`).
-  - Implemented React ref forwarding (`forwardRef`) and explicit `FilterBuilder.displayName = "FilterBuilder"`.
-  - Exported `render_filter_builder_component` in `omnistackai_agent_engine.codegen` and registered `components/filter-builder.tsx` in `NextjsWebAdapter.generate()`.
+  - Implemented React ref forwarding (`forwardRef`) and explicit `displayName` across all exports.
+  - Exported `render_chart_component` in `omnistackai_agent_engine.codegen` and registered `components/chart.tsx` in `NextjsWebAdapter.generate()`.
   - Maintained 100% diff-invariance across `ir.description`.
 
 ## Verification
 
-- `task verify` — pass (**1,955** agent-engine tests; 16 focused R-369 tests in `test_filter_builder_component.py`).
+- `task verify` — pass (**1,972** agent-engine tests; 17 focused R-370 tests in `test_chart_component.py`).
 - `task lint`, `task security:quick` — pass.
-- `task builder:demo minimal-blog` — pass (106 files).
+- `task builder:demo minimal-blog` — pass (107 files).
