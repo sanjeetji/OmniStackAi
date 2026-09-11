@@ -1,6 +1,6 @@
 # Current Handoff
 
-Task ID: R-344
+Task ID: R-345
 Status: done
 Phase: BASIC/MVP — Founder Stage 0
 Branch: `main` (the only branch; the GitHub default)
@@ -9,32 +9,33 @@ Branch: `main` (the only branch; the GitHub default)
 
 - **Code clean and verified on `main`**.
 - Tracker and state files kept fully consistent and verified.
-- Resume from **R-345** when ready. Still stop-and-ask only for paid cloud / DB engine / new infra / native-mobile / a materially different architecture decision.
+- Resume from **R-346** when ready. Still stop-and-ask only for paid cloud / DB engine / new infra / native-mobile / a materially different architecture decision.
 
 ## Completed
 
-### R-344 — Generated Accessible Futuristic Reusable Resizable Panels & Splitter Component (components/resizable.tsx)
+### R-345 — Generated Accessible Futuristic Reusable Color Picker & Palette Swatch Component (components/color-picker.tsx)
 
-Enabled accessible, high-performance resizable panel layouts and splitters across generated Next.js web applications:
+Enabled accessible, high-performance color picker and swatch palette across generated Next.js web applications:
 
-- **Standalone Resizable Compound Component Suite (`apps/web/components/resizable.tsx`)**:
-  - Implemented `ResizableDirection` (`"horizontal"` | `"vertical"`), `ResizableVariant` (`"neon"` | `"glass"` | `"bordered"` | `"minimal"`), `ResizablePanelGroupProps`, `ResizablePanelProps`, `ResizableHandleProps`, `ResizablePanelContextValue` interfaces.
-  - Implemented compound subcomponents: `ResizablePanelGroup` (or `Resizable`), `ResizablePanel`, `ResizableHandle`.
-  - Implemented pointer and touch dragging with live percentage sizing and responsive viewport/container dimension tracking.
-  - Implemented min and max constraints (`minSize`, `maxSize`, `defaultSize`).
-  - Implemented collapsible panel support (`collapsible`, `collapsedSize`, `onCollapse`, `onExpand`).
-  - Implemented keyboard navigation per WAI-ARIA Separator (Window Splitter) Pattern (`ArrowLeft`/`ArrowRight` or `ArrowUp`/`Down` with 1% step, 5% with Shift, `Home` to collapse, `End` to expand to max, `Enter` to toggle collapse).
-  - Implemented full WAI-ARIA separator accessibility semantics (`role="separator"`, `aria-orientation`, `aria-valuenow`, `aria-valuemin`, `aria-valuemax`, `aria-label`, `tabIndex={0}`).
-  - Implemented 4 futuristic visual variants: `"neon"` (cyberpunk glow borders and glowing cyan divider line), `"glass"` (translucent frosted divider with backdrop blur), `"bordered"` (slate border with centered grip dots), and `"minimal"` (clean 1px line with expanded hit-area).
-  - Exported `render_resizable_component` in `omnistackai_agent_engine.codegen` and registered in `NextjsWebAdapter.generate()`.
+- **Standalone ColorPicker Compound Component Suite (`apps/web/components/color-picker.tsx`)**:
+  - Implemented `ColorPickerFormat` (`"hex"` | `"rgb"` | `"hsl"`), `ColorPickerVariant` (`"neon"` | `"glass"` | `"bordered"` | `"minimal"`), `ColorPickerSize` (`"sm"` | `"md"` | `"lg"`), `ColorSwatch`, `ColorPickerProps`, `ColorAreaProps`, `ColorSliderProps`, `ColorSwatchesProps`, `ColorPickerContextValue` interfaces.
+  - Implemented compound subcomponents: `ColorPicker`, `ColorPicker.Area` (`ColorArea`), `ColorPicker.HueSlider` (`HueSlider`), `ColorPicker.AlphaSlider` (`AlphaSlider`), `ColorPicker.Swatches` (`ColorSwatches`), `ColorPicker.Inputs` (`ColorInputs`), `ColorPicker.EyeDropper` (`ColorEyeDropper`).
+  - Implemented pure zero-dependency color mathematics (`hsvToRgb`, `rgbToHsv`, `rgbToHsl`, `parseHexColor`, `toHex`).
+  - Implemented interactive 2D saturation/value area and 1D hue & alpha sliders with pointer and touch drag tracking.
+  - Implemented format switcher toggling between HEX, RGB, and HSL with individual numeric/text controls.
+  - Implemented preset palette swatches with keyboard navigation (`role="listbox"`, `role="option"`, `aria-selected`).
+  - Implemented native browser EyeDropper API integration with fallback graceful degradation.
+  - Implemented full WAI-ARIA slider and listbox accessibility semantics (`role="slider"`, `role="listbox"`, `role="option"`, `aria-valuenow`, `aria-valuemin`, `aria-valuemax`, `aria-valuetext`, `aria-label`).
+  - Implemented 4 futuristic visual variants: `"neon"` (cyberpunk glow borders with active color accent glow), `"glass"` (translucent frosted backdrop blur `12px`), `"bordered"` (clean border frame with slate neutral borders), and `"minimal"`.
+  - Exported `render_color_picker_component` in `omnistackai_agent_engine.codegen` and registered in `NextjsWebAdapter.generate()`.
   - Maintained 100% diff-invariance across `ir.description`.
 
 ## Verification
 
-- `task verify` — pass (**1,489** agent-engine tests; 15 focused R-344 tests in `test_resizable_component.py`).
+- `task verify` — pass (**1,504** agent-engine tests; 15 focused R-345 tests in `test_color_picker_component.py`).
 - `task lint`, `task security:quick` — pass.
-- `task builder:demo minimal-blog` — pass (81 files), `task builder:demo rideshare-favourites` — pass (78 files).
-- Tracker — R-344 at `Phase_Roadmap!A9:M9`; table `A4:M352`; Dashboard formulas reach row 352; 352 total rows; 133 Done, 1 Deferred, 210 Not Started; MVP 133/239 (55.6%); no `#REF!`; XLSX valid.
+- `task builder:demo minimal-blog` — pass (81 files), `task builder:demo rideshare-favourites` — pass (79 files).
+- Tracker — R-345 at `Phase_Roadmap!A9:M9`; table `A4:M353`; Dashboard formulas reach row 353; 353 total rows; 134 Done, 1 Deferred, 210 Not Started; MVP 134/240 (55.8%); no `#REF!`; XLSX valid.
 - 0 local model calls / 0 cloud calls; no generated app installed/run, no DB connection.
 
 ## Blockers and risks
@@ -44,7 +45,7 @@ Enabled accessible, high-performance resizable panel layouts and splitters acros
 
 ## Next action
 
-- Initialize R-345: Next planned UI / Builder task.
+- Initialize R-346: Next planned UI / Builder task.
 
 ## Next command
 
