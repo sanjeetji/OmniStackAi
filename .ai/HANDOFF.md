@@ -1,6 +1,6 @@
 # Current Handoff
 
-Task ID: R-354
+Task ID: R-355
 Status: done
 Phase: BASIC/MVP — Founder Stage 0
 Branch: `main` (the only branch; the GitHub default)
@@ -9,31 +9,33 @@ Branch: `main` (the only branch; the GitHub default)
 
 - **Code clean and verified on `main`**.
 - Tracker and state files kept fully consistent and verified.
-- Resume from **R-355** when ready. Still stop-and-ask only for paid cloud / DB engine / new infra / native-mobile / a materially different architecture decision.
+- Resume from **R-356** when ready. Still stop-and-ask only for paid cloud / DB engine / new infra / native-mobile / a materially different architecture decision.
 
 ## Completed
 
-### R-354 — Generated Accessible Futuristic Reusable Keyboard Keycap & Shortcut Badge Component (components/kbd.tsx)
+### R-355 — Generated Accessible Futuristic Reusable Radio Group Suite (components/radio-group.tsx)
 
-Enabled accessible, desktop-grade, futuristic keyboard keycaps and shortcut badges across generated Next.js web applications:
+Enabled accessible, desktop-grade, futuristic radio group compound components across generated Next.js web applications:
 
-- **Standalone Kbd Component (`apps/web/components/kbd.tsx`)**:
-  - Implemented `KbdVariant` (`"default"` | `"outline"` | `"subtle"` | `"ghost"` | `"neon"`), `KbdSize` (`"xs"` | `"sm"` | `"md"` | `"lg"`), `KbdProps`, `KbdGroupProps`, and `KbdShortcutProps` interfaces.
-  - Implemented semantic `<kbd>` HTML elements with WAI-ARIA compliance (`role="group"` on container, `aria-label`, `aria-keyshortcuts`, `data-variant`, `data-size`).
-  - Implemented automatic modifier key symbol conversion (`"meta"`/`"command"` -> `"⌘"`, `"shift"` -> `"⇧"`, `"ctrl"` -> `"⌃"`, `"alt"`/`"option"` -> `"⌥"`, `"enter"` -> `"↵"`, `"backspace"` -> `"⌫"`, `"tab"` -> `"⇥"`, `"esc"` -> `"Esc"`, arrows, etc.).
-  - Implemented 4 size scales (`xs`, `sm`, `md`, `lg`) with tactile monospace typography, padding, min-width, and border-radius presets.
-  - Implemented 5 futuristic visual variants: `"default"` (tactile 3D keycap with bottom border and shadow), `"outline"`, `"subtle"`, `"ghost"`, and `"neon"` (cyberpunk glowing cyan/indigo).
-  - Implemented composite key combination arrays with configurable separators, composite container `KbdGroup`, and convenience string shortcut parser `KbdShortcut` (e.g. `"⌘+K"`, `"Ctrl+Shift+P"`).
-  - Implemented full React ref forwarding (`forwardRef<HTMLElement, KbdProps>`, `forwardRef<HTMLDivElement, KbdGroupProps>`, `forwardRef<HTMLElement, KbdShortcutProps>`) with `displayName`.
-  - Exported `render_kbd_component` in `omnistackai_agent_engine.codegen` and registered in `NextjsWebAdapter.generate()`.
+- **Standalone Radio Group Suite (`apps/web/components/radio-group.tsx`)**:
+  - Implemented `RadioGroupOrientation` (`"vertical"` | `"horizontal"`), `RadioGroupVariant` (`"default"` | `"card"` | `"pill"` | `"neon"`), `RadioGroupSize` (`"sm"` | `"md"` | `"lg"`), `RadioOption`, `RadioGroupProps`, `RadioGroupItemProps`, and `RadioGroupContextValue` interfaces.
+  - Implemented WAI-ARIA 1.2 Radio Group pattern compliance: `role="radiogroup"`, `role="radio"`, `aria-checked`, `aria-orientation`, `aria-disabled`, `aria-required`, and roving focus management.
+  - Implemented full keyboard arrow key navigation with circular wrap-around (`ArrowDown` / `ArrowRight` -> next, `ArrowUp` / `ArrowLeft` -> prev, `Space` -> select) and programmatic focus transfer.
+  - Implemented vertical and horizontal layout orientations with flex alignment.
+  - Implemented 4 futuristic visual variants: `"default"` (minimalist circular radios with centered indicator dot), `"card"` (interactive selection card with title, description, and indicator), `"pill"` (segmented toggle pills), and `"neon"` (cyberpunk glowing cyan/indigo border and ambient glow shadow).
+  - Implemented 3 size scales (`sm`, `md`, `lg`) with proportional circle diameters, inner dots, and typography.
+  - Implemented controlled (`value`, `onValueChange`) and uncontrolled (`defaultValue`) state management with hidden input form submission (`name`).
+  - Implemented options array convenience prop mapping alongside custom children, subcomponent alias `Radio = RadioGroupItem`, and `useRadioGroup` context hook.
+  - Implemented full React ref forwarding (`forwardRef<HTMLDivElement, RadioGroupProps>`, `forwardRef<HTMLButtonElement, RadioGroupItemProps>`) with `displayName`.
+  - Exported `render_radio_group_component` in `omnistackai_agent_engine.codegen` and registered in `NextjsWebAdapter.generate()`.
   - Maintained 100% diff-invariance across `ir.description`.
 
 ## Verification
 
-- `task verify` — pass (**1,647** agent-engine tests; 16 focused R-354 tests in `test_kbd_component.py`).
+- `task verify` — pass (**1,662** agent-engine tests; 15 focused R-355 tests in `test_radio_group_component.py`).
 - `task lint`, `task security:quick` — pass.
-- `task builder:demo minimal-blog` — pass (91 files), `task builder:demo rideshare-favourites` — pass (88 files).
-- Tracker — R-354 at `Phase_Roadmap!A9:M9`; table `A4:M362`; Dashboard formulas reach row 362; 362 total rows; 143 Done, 1 Deferred, 210 Not Started; MVP 143/249 (57.4%); no `#REF!`; XLSX valid.
+- `task builder:demo minimal-blog` — pass (92 files), `task builder:demo rideshare-favourites` — pass (89 files).
+- Tracker — R-355 at `Phase_Roadmap!A9:M9`; table `A4:M363`; Dashboard formulas reach row 363; 363 total rows; 144 Done, 1 Deferred, 210 Not Started; MVP 144/250 (57.6%); no `#REF!`; XLSX valid.
 - 0 local model calls / 0 cloud calls; no generated app installed/run, no DB connection.
 
 ## Blockers and risks
@@ -43,4 +45,4 @@ Enabled accessible, desktop-grade, futuristic keyboard keycaps and shortcut badg
 
 ## Next action
 
-- Initialize R-355: Next planned UI / Builder task.
+- Initialize R-356: Next planned UI / Builder task.

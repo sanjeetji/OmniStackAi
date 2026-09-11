@@ -1,5 +1,29 @@
 # Work Log
 
+## 2026-09-11 — R-355
+
+- Recorded contract in `.ai/CURRENT_TASK.yaml` and `.ai/tasks/R-355.md` (status in_progress → done).
+- `nextjs.py`:
+  - Added `_RADIO_GROUP_COMPONENT` static template implementing accessible, desktop-grade, futuristic Radio Group compound component suite (`apps/web/components/radio-group.tsx`).
+  - Implemented `RadioGroupOrientation` ("vertical" | "horizontal"), `RadioGroupVariant` ("default" | "card" | "pill" | "neon"), `RadioGroupSize` ("sm" | "md" | "lg"), `RadioOption`, `RadioGroupProps`, `RadioGroupItemProps`, and `RadioGroupContextValue` interfaces.
+  - Implemented WAI-ARIA 1.2 Radio Group pattern compliance: `role="radiogroup"`, `role="radio"`, `aria-checked`, `aria-orientation`, `aria-disabled`, `aria-required`, and roving focus management.
+  - Implemented full keyboard arrow key navigation with circular wrap-around (`ArrowDown` / `ArrowRight` -> next, `ArrowUp` / `ArrowLeft` -> prev, `Space` -> select) and programmatic focus transfer.
+  - Implemented vertical and horizontal layout orientations with flex alignment.
+  - Implemented 4 futuristic visual variants: `"default"` (minimalist circular radios with centered indicator dot), `"card"` (interactive selection card with title, description, and indicator), `"pill"` (segmented toggle pills), and `"neon"` (cyberpunk glowing cyan/indigo border and ambient glow shadow).
+  - Implemented 3 size scales (`sm`, `md`, `lg`) with proportional circle diameters, inner dots, and typography.
+  - Implemented controlled (`value`, `onValueChange`) and uncontrolled (`defaultValue`) state management with hidden input form submission (`name`).
+  - Implemented options array convenience prop mapping alongside custom children, subcomponent alias `Radio = RadioGroupItem`, and `useRadioGroup` context hook.
+  - Implemented full React ref forwarding (`forwardRef<HTMLDivElement, RadioGroupProps>`, `forwardRef<HTMLButtonElement, RadioGroupItemProps>`) with `displayName`.
+  - Exported `render_radio_group_component` in `omnistackai_agent_engine.codegen` and registered in `NextjsWebAdapter.generate()`.
+  - Maintained 100% diff-invariance across `ir.description`.
+- Added `services/agent-engine/tests/test_radio_group_component.py` with 15 comprehensive unit tests (all passing).
+- `task verify` — 1,662 tests pass (15 new), 0 failures. `task lint`, `task security:quick` pass.
+  `builder:demo minimal-blog` passes (92 files generated). `builder:demo rideshare-favourites` passes (89 files generated). 0 model calls.
+- Tracker: inserted R-355 Done row at `Phase_Roadmap!A9`; table `A4:M363`; 363 total rows;
+  144 Done, 1 Deferred, 210 Not Started; MVP 144/250 (57.6%); no `#REF!`; XLSX valid.
+- Updated CURRENT_TASK.yaml, tasks/R-355.md, PROJECT_STATE.yaml, HANDOFF.md, PROJECT_STATE.md,
+  CHANGELOG.md, docs/CODEGEN.md, docs/PROGRESS.md, docs/RESUME_PROMPT.md.
+
 ## 2026-09-11 — R-354
 
 - Recorded contract in `.ai/CURRENT_TASK.yaml` and `.ai/tasks/R-354.md` (status in_progress → done).

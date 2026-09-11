@@ -2,22 +2,24 @@ schema_version: 1
 project: OmniStackAI
 phase: BASIC/MVP
 founder_stage: 0
-current_task: R-354
+current_task: R-355
 current_status: done
 branch: main
-last_completed_task: R-354
+last_completed_task: R-355
 last_completed_task_summary: >-
-  Generated Accessible Futuristic Reusable Keyboard Keycap Component (components/kbd.tsx);
-  added standalone, reusable, accessible, futuristic Keyboard Keycap & Shortcut Badge component supporting
-  KbdVariant ("default" | "outline" | "subtle" | "ghost" | "neon"), KbdSize ("xs" | "sm" | "md" | "lg"),
-  KbdProps, KbdGroupProps, KbdShortcutProps, semantic <kbd> HTML elements with WAI-ARIA compliance
-  (role="group", aria-label, aria-keyshortcuts), automatic modifier key symbol translation ("meta"/"command" -> "⌘",
-  "shift" -> "⇧", "ctrl" -> "⌃", "alt" -> "⌥", "enter" -> "↵", "backspace" -> "⌫"), 4 size scales with
-  tactile typography and padding, 5 futuristic visual styling variants (including 3D elevated keycap and neon cyberpunk glow),
-  key combination arrays with configurable separators, composite container KbdGroup, string shortcut parser KbdShortcut,
+  Generated Accessible Futuristic Reusable Radio Group Suite (components/radio-group.tsx);
+  added standalone, reusable, accessible, futuristic Radio Group compound component suite supporting
+  RadioGroupOrientation ("vertical" | "horizontal"), RadioGroupVariant ("default" | "card" | "pill" | "neon"),
+  RadioGroupSize ("sm" | "md" | "lg"), RadioOption, RadioGroupProps, RadioGroupItemProps, RadioGroupContextValue,
+  WAI-ARIA 1.2 Radio Group pattern compliance (role="radiogroup", role="radio", aria-checked, aria-orientation,
+  aria-disabled, roving tabIndex), full keyboard navigation with arrow keys (ArrowDown/Right -> next, ArrowUp/Left -> prev,
+  Space -> select with wrap-around), vertical and horizontal flex layouts, 4 visual styling variants (default circular,
+  card selectable option tiles with title & description, pill segmented toggle buttons, neon cyberpunk glowing cyan/indigo border
+  and glow shadow), 3 size scales, controlled and uncontrolled value management, form integration via hidden inputs,
+  options array convenience prop, subcomponent aliasing (Radio = RadioGroupItem), useRadioGroup context hook,
   full React ref forwarding (forwardRef), 100% diff-invariance across ir.description, and 0 external runtime dependencies;
-  exported render_kbd_component in codegen; registered in NextjsWebAdapter; 1,647 tests pass (16 new tests in test_kbd_component.py);
-  builder:demo generates 91 files for minimal-blog and 88 for rideshare-favourites; 0 model calls
+  exported render_radio_group_component in codegen; registered in NextjsWebAdapter; 1,662 tests pass (15 new tests in test_radio_group_component.py);
+  builder:demo generates 92 files for minimal-blog and 89 for rideshare-favourites; 0 model calls
 control_plane_database: postgresql
 model_routing_mode: balanced
 architecture_contract: R_&_D/OmniStackAI_Implementation_Brief_v6.md
@@ -29,7 +31,7 @@ product_direction: >-
   framework adapter contract -> Next.js adapter -> Git service -> preview/sandbox (needs cloud env).
 id_note: >-
   Workbook backlog owns R-010..R-219. Founder-requested tasks use IDs after R-219: R-220..R-223 done,
-  R-224 Next.js deferred (env-blocked), R-225..R-354 done. Continue from R-355.
+  R-224 Next.js deferred (env-blocked), R-225..R-355 done. Continue from R-356.
 blockers: []
 next_action: >-
-  Task R-354 (generated accessible futuristic reusable keyboard keycap component) is complete with 1,647 tests passing. Next task: R-355.
+  Task R-355 (generated accessible futuristic reusable radio group suite) is complete with 1,662 tests passing. Next task: R-356.
