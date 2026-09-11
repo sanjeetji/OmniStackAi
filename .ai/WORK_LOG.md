@@ -1,5 +1,30 @@
 # Work Log
 
+## 2026-09-11 — R-367
+
+- Recorded contract in `.ai/CURRENT_TASK.yaml` and `.ai/tasks/R-367.md` (status in_progress → done).
+- `nextjs.py`:
+  - Added `_KANBAN_COMPONENT` static template implementing accessible, desktop-and-mobile-grade, futuristic Kanban Board & Task Flow Matrix compound component suite (`apps/web/components/kanban.tsx`).
+  - Implemented `KanbanVariant` ("default" | "card" | "glass" | "neon"), `KanbanSize` ("sm" | "md" | "lg"), `KanbanPriority` ("low" | "medium" | "high" | "urgent"), `KanbanColumn`, `KanbanAssignee`, `KanbanItem`, `KanbanProps` interfaces.
+  - Implemented compound and semantic alias exports: `Kanban`, `KanbanBoard`, `TaskBoard`, default export.
+  - Implemented HTML5 native drag-and-drop card movement across lanes (`draggable`, `onDragStart`, `onDragOver`, `onDragLeave`, `onDrop`, `onDragEnd`).
+  - Implemented column WIP limits with visual warning badge when count > limit.
+  - Implemented column collapse/expand toggling with smooth width transitions.
+  - Implemented built-in search filtering across task titles, descriptions, tags, and assignees.
+  - Implemented priority badges with distinctive colors (urgent: rose/red, high: amber/orange, medium: blue, low: emerald/green).
+  - Implemented assignee avatars, due date tags, and quick-add card triggers.
+  - Implemented WAI-ARIA 1.2 region & listbox semantics (`role="region"`, `role="group"`, `role="listbox"`, `role="option"`).
+  - Implemented 9 built-in zero-dependency vector icons (`PlusIcon`, `GripVerticalIcon`, `ChevronDownIcon`, `ChevronRightIcon`, `ClockIcon`, `TagIcon`, `AlertCircleIcon`, `UserIcon`, `SearchIcon`).
+  - Implemented 4 futuristic visual styling variants ("default", "card", "glass" with backdropFilter blur, "neon" cyberpunk cyan glow).
+  - Implemented 3 size presets ("sm", "md", "lg").
+  - Implemented native HTML form submission integration via hidden input (`name`).
+  - Implemented React ref forwarding (`forwardRef`) and explicit `Kanban.displayName = "Kanban"`.
+  - Exported `render_kanban_component` in `omnistackai_agent_engine.codegen` and registered `components/kanban.tsx` in `NextjsWebAdapter.generate()`.
+  - Maintained 100% diff-invariance across `ir.description`.
+- Added `services/agent-engine/tests/test_kanban_component.py` with 16 comprehensive unit tests (all passing).
+- `task verify` — 1,923 tests pass (16 new), 0 failures. `task lint`, `task security:quick` pass.
+  `builder:demo minimal-blog` passes (104 files generated). 0 model calls.
+
 ## 2026-09-11 — R-366
 
 - Recorded contract in `.ai/CURRENT_TASK.yaml` and `.ai/tasks/R-366.md` (status in_progress → done).
