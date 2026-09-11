@@ -2,24 +2,21 @@ schema_version: 1
 project: OmniStackAI
 phase: BASIC/MVP
 founder_stage: 0
-current_task: R-351
+current_task: R-352
 current_status: done
 branch: main
-last_completed_task: R-351
+last_completed_task: R-352
 last_completed_task_summary: >-
-  Generated Accessible Futuristic Reusable Collapsible Component (components/collapsible.tsx);
-  added standalone, reusable, accessible, futuristic Collapsible / Disclosure compound component suite supporting
-  CollapsibleVariant ("neon" | "glass" | "bordered" | "minimal"), CollapsibleSize ("sm" | "md" | "lg"),
-  CollapsibleProps, CollapsibleTriggerProps, CollapsibleContentProps, CollapsibleContextValue, compound subcomponents
-  (Collapsible, Collapsible.Trigger, Collapsible.Content, useCollapsible), smooth CSS grid template rows expansion
-  animation (1fr / 0fr) with overflow: hidden, rotating indicator chevron (180deg) with custom indicator slot and
-  hideIndicator option, controlled and uncontrolled open state management (open, defaultOpen, onOpenChange), disabled
-  state management (disabled, aria-disabled), full WAI-ARIA 1.2 disclosure pattern compliance (aria-expanded,
-  aria-controls, role="region", aria-labelledby), full keyboard navigation (Enter and Space trigger activation),
-  4 futuristic visual variants, 3 size presets, 100% diff-invariance across ir.description, and 0 external runtime
-  dependencies; exported render_collapsible_component in codegen; registered in NextjsWebAdapter; 1,599 tests pass
-  (16 new tests in test_collapsible_component.py); builder:demo generates 88 files for minimal-blog and 85 for
-  rideshare-favourites; 0 model calls
+  Generated Accessible Futuristic Reusable Aspect Ratio Viewport Container Component (components/aspect-ratio.tsx);
+  added standalone, reusable, accessible, futuristic Aspect Ratio viewport container component supporting
+  AspectRatioPreset ("16/9" | "4/3" | "1/1" | "21/9" | "9/16" | "3/2" | "2/3"), AspectRatioVariant ("neon" | "glass" |
+  "bordered" | "minimal"), AspectRatioProps, parseRatio for preset strings and direct numeric ratios, zero-CLS space
+  reservation via padding-bottom percentage fallback calculation (paddingBottom: `${(1 / numericRatio) * 100}%`), modern
+  CSS aspectRatio property acceleration, absolute full-bleed child container layout (position: "absolute", inset: 0,
+  width: "100%", height: "100%"), overflow clipping control (overflowHidden), full React ref forwarding (forwardRef),
+  4 futuristic visual variants, 100% diff-invariance across ir.description, and 0 external runtime dependencies; exported
+  render_aspect_ratio_component in codegen; registered in NextjsWebAdapter; 1,615 tests pass (16 new tests in
+  test_aspect_ratio_component.py); builder:demo generates 89 files for minimal-blog and 86 for rideshare-favourites; 0 model calls
 control_plane_database: postgresql
 model_routing_mode: balanced
 architecture_contract: R_&_D/OmniStackAI_Implementation_Brief_v6.md
@@ -31,7 +28,7 @@ product_direction: >-
   framework adapter contract -> Next.js adapter -> Git service -> preview/sandbox (needs cloud env).
 id_note: >-
   Workbook backlog owns R-010..R-219. Founder-requested tasks use IDs after R-219: R-220..R-223 done,
-  R-224 Next.js deferred (env-blocked), R-225..R-351 done. Continue from R-352.
+  R-224 Next.js deferred (env-blocked), R-225..R-352 done. Continue from R-353.
 blockers: []
 next_action: >-
-  Task R-351 (generated accessible futuristic reusable collapsible component) is complete with 1,599 tests passing. Next task: R-352.
+  Task R-352 (generated accessible futuristic reusable aspect ratio component) is complete with 1,615 tests passing. Next task: R-353.

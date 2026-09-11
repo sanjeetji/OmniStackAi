@@ -1,5 +1,28 @@
 # Work Log
 
+## 2026-09-11 — R-352
+
+- Recorded contract in `.ai/CURRENT_TASK.yaml` and `.ai/tasks/R-352.md` (status in_progress → done).
+- `nextjs.py`:
+  - Added `_ASPECT_RATIO_COMPONENT` static template implementing accessible, desktop-grade, futuristic Aspect Ratio Viewport Container component (`apps/web/components/aspect-ratio.tsx`).
+  - Implemented `AspectRatioPreset` ("16/9" | "4/3" | "1/1" | "21/9" | "9/16" | "3/2" | "2/3"), `AspectRatioVariant` ("neon" | "glass" | "bordered" | "minimal"), and `AspectRatioProps` interfaces.
+  - Implemented `parseRatio` supporting both direct numeric ratios (`number`) and preset ratio strings (`AspectRatioPreset`), defaulting to `16 / 9`.
+  - Implemented zero Cumulative Layout Shift (CLS) space reservation via percentage padding-bottom calculation (`paddingBottom = `${(1 / numericRatio) * 100}%``).
+  - Implemented modern CSS `aspectRatio` property inline style acceleration.
+  - Implemented absolute full-bleed child container layout (`position: "absolute"`, `inset: 0`, `width: "100%"`, `height: "100%"`).
+  - Implemented overflow clipping control (`overflowHidden` defaulting to `true`).
+  - Implemented full React ref forwarding (`forwardRef<HTMLDivElement, AspectRatioProps>`).
+  - Implemented 4 futuristic visual variants: `"neon"` (cyan cyberpunk border with glowing cyan aura), `"glass"` (translucent frosted backdrop blur `12px`), `"bordered"` (clean slate frame), and `"minimal"` (clean borderless transparent).
+  - Exported `render_aspect_ratio_component` in `omnistackai_agent_engine.codegen` and registered in `NextjsWebAdapter.generate()`.
+  - Maintained 100% diff-invariance across `ir.description`.
+- Added `services/agent-engine/tests/test_aspect_ratio_component.py` with 16 comprehensive unit tests (all passing).
+- `task verify` — 1,615 tests pass (16 new), 0 failures. `task lint`, `task security:quick` pass.
+  `builder:demo minimal-blog` passes (89 files generated). `builder:demo rideshare-favourites` passes (86 files generated). 0 model calls.
+- Tracker: inserted R-352 Done row at `Phase_Roadmap!A9`; table `A4:M360`; 360 total rows;
+  141 Done, 1 Deferred, 210 Not Started; MVP 141/247 (57.1%); no `#REF!`; XLSX valid.
+- Updated CURRENT_TASK.yaml, tasks/R-352.md, PROJECT_STATE.yaml, HANDOFF.md, PROJECT_STATE.md,
+  CHANGELOG.md, docs/CODEGEN.md, docs/PROGRESS.md, docs/RESUME_PROMPT.md.
+
 ## 2026-09-11 — R-351
 
 - Recorded contract in `.ai/CURRENT_TASK.yaml` and `.ai/tasks/R-351.md` (status in_progress → done).
