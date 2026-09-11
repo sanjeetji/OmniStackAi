@@ -24297,6 +24297,412 @@ def render_scroll_area_component() -> str:
     return _SCROLL_AREA_COMPONENT
 
 
+_COLLAPSIBLE_COMPONENT = (
+    '"use client";\n\n'
+    'import React, { createContext, useContext, useState, useId, forwardRef } from "react";\n\n'
+    'export type CollapsibleVariant = "neon" | "glass" | "bordered" | "minimal";\n'
+    'export type CollapsibleSize = "sm" | "md" | "lg";\n\n'
+    "export interface CollapsibleProps {\n"
+    "  children?: React.ReactNode;\n"
+    "  open?: boolean;\n"
+    "  defaultOpen?: boolean;\n"
+    "  onOpenChange?: (open: boolean) => void;\n"
+    "  disabled?: boolean;\n"
+    "  variant?: CollapsibleVariant;\n"
+    "  size?: CollapsibleSize;\n"
+    "  className?: string;\n"
+    "  style?: React.CSSProperties;\n"
+    "}\n\n"
+    "export interface CollapsibleTriggerProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {\n"
+    "  children?: React.ReactNode;\n"
+    "  hideIndicator?: boolean;\n"
+    "  indicator?: React.ReactNode;\n"
+    "  className?: string;\n"
+    "  style?: React.CSSProperties;\n"
+    "}\n\n"
+    "export interface CollapsibleContentProps extends React.HTMLAttributes<HTMLDivElement> {\n"
+    "  children?: React.ReactNode;\n"
+    "  forceMount?: boolean;\n"
+    "  className?: string;\n"
+    "  style?: React.CSSProperties;\n"
+    "}\n\n"
+    "export interface CollapsibleContextValue {\n"
+    "  open: boolean;\n"
+    "  setOpen: (open: boolean) => void;\n"
+    "  toggle: () => void;\n"
+    "  disabled: boolean;\n"
+    "  variant: CollapsibleVariant;\n"
+    "  size: CollapsibleSize;\n"
+    "  triggerId: string;\n"
+    "  contentId: string;\n"
+    "  isControlled: boolean;\n"
+    "}\n\n"
+    "const CollapsibleContext = createContext<CollapsibleContextValue | null>(null);\n\n"
+    "export function useCollapsible(): CollapsibleContextValue {\n"
+    "  const context = useContext(CollapsibleContext);\n"
+    "  if (!context) {\n"
+    '    throw new Error("useCollapsible must be used within a Collapsible component");\n'
+    "  }\n"
+    "  return context;\n"
+    "}\n\n"
+    "function getVariantContainerStyle(variant: CollapsibleVariant): React.CSSProperties {\n"
+    "  switch (variant) {\n"
+    '    case "neon":\n'
+    "      return {\n"
+    '        border: "1px solid rgba(6, 182, 212, 0.35)",\n'
+    '        backgroundColor: "rgba(8, 20, 36, 0.75)",\n'
+    '        boxShadow: "0 0 15px rgba(6, 182, 212, 0.12)",\n'
+    '        backdropFilter: "blur(8px)",\n'
+    '        WebkitBackdropFilter: "blur(8px)",\n'
+    "      };\n"
+    '    case "glass":\n'
+    "      return {\n"
+    '        border: "1px solid rgba(255, 255, 255, 0.15)",\n'
+    '        backgroundColor: "rgba(15, 23, 42, 0.65)",\n'
+    '        backdropFilter: "blur(12px)",\n'
+    '        WebkitBackdropFilter: "blur(12px)",\n'
+    '        boxShadow: "0 8px 32px rgba(0, 0, 0, 0.2)",\n'
+    "      };\n"
+    '    case "bordered":\n'
+    "      return {\n"
+    '        border: "1px solid #334155",\n'
+    '        backgroundColor: "#0f172a",\n'
+    '        boxShadow: "0 1px 3px rgba(0, 0, 0, 0.1)",\n'
+    "      };\n"
+    '    case "minimal":\n'
+    "    default:\n"
+    "      return {\n"
+    '        border: "1px solid transparent",\n'
+    '        backgroundColor: "transparent",\n'
+    "      };\n"
+    "  }\n"
+    "}\n\n"
+    "function getSizeContainerStyle(size: CollapsibleSize): React.CSSProperties {\n"
+    "  switch (size) {\n"
+    '    case "sm":\n'
+    '      return { borderRadius: "6px", overflow: "hidden" };\n'
+    '    case "lg":\n'
+    '      return { borderRadius: "10px", overflow: "hidden" };\n'
+    '    case "md":\n'
+    "    default:\n"
+    '      return { borderRadius: "8px", overflow: "hidden" };\n'
+    "  }\n"
+    "}\n\n"
+    "function getVariantTriggerStyle(variant: CollapsibleVariant, isHovered: boolean, disabled: boolean): React.CSSProperties {\n"
+    "  if (disabled) {\n"
+    "    return {\n"
+    '      backgroundColor: "transparent",\n'
+    '      color: "#64748b",\n'
+    "      opacity: 0.6,\n"
+    "    };\n"
+    "  }\n"
+    "  switch (variant) {\n"
+    '    case "neon":\n'
+    "      return {\n"
+    '        backgroundColor: isHovered ? "rgba(6, 182, 212, 0.12)" : "transparent",\n'
+    '        color: "#ecfeff",\n'
+    "        fontWeight: 600,\n"
+    "      };\n"
+    '    case "glass":\n'
+    "      return {\n"
+    '        backgroundColor: isHovered ? "rgba(255, 255, 255, 0.08)" : "transparent",\n'
+    '        color: "#f8fafc",\n'
+    "        fontWeight: 600,\n"
+    "      };\n"
+    '    case "bordered":\n'
+    "      return {\n"
+    '        backgroundColor: isHovered ? "#1e293b" : "transparent",\n'
+    '        color: "#f8fafc",\n'
+    "        fontWeight: 600,\n"
+    "      };\n"
+    '    case "minimal":\n'
+    "    default:\n"
+    "      return {\n"
+    '        backgroundColor: isHovered ? "rgba(255, 255, 255, 0.04)" : "transparent",\n'
+    '        color: "inherit",\n'
+    "        fontWeight: 500,\n"
+    "      };\n"
+    "  }\n"
+    "}\n\n"
+    "function getSizeTriggerStyle(size: CollapsibleSize): React.CSSProperties {\n"
+    "  switch (size) {\n"
+    '    case "sm":\n'
+    '      return { padding: "8px 12px", fontSize: "13px" };\n'
+    '    case "lg":\n'
+    '      return { padding: "16px 20px", fontSize: "16px" };\n'
+    '    case "md":\n'
+    "    default:\n"
+    '      return { padding: "12px 16px", fontSize: "14px" };\n'
+    "  }\n"
+    "}\n\n"
+    "function getVariantIndicatorColor(variant: CollapsibleVariant, disabled: boolean): string {\n"
+    '  if (disabled) return "#475569";\n'
+    "  switch (variant) {\n"
+    '    case "neon":\n'
+    '      return "#06b6d4";\n'
+    '    case "glass":\n'
+    '      return "#94a3b8";\n'
+    '    case "bordered":\n'
+    '      return "#64748b";\n'
+    '    case "minimal":\n'
+    "    default:\n"
+    '      return "currentColor";\n'
+    "  }\n"
+    "}\n\n"
+    "function getSizeContentPadding(size: CollapsibleSize): React.CSSProperties {\n"
+    "  switch (size) {\n"
+    '    case "sm":\n'
+    '      return { padding: "6px 12px 12px 12px" };\n'
+    '    case "lg":\n'
+    '      return { padding: "12px 20px 20px 20px" };\n'
+    '    case "md":\n'
+    "    default:\n"
+    '      return { padding: "8px 16px 16px 16px" };\n'
+    "  }\n"
+    "}\n\n"
+    "function getVariantContentColor(variant: CollapsibleVariant): string {\n"
+    "  switch (variant) {\n"
+    '    case "neon":\n'
+    '      return "#cffafe";\n'
+    '    case "glass":\n'
+    '      return "#cbd5e1";\n'
+    '    case "bordered":\n'
+    '      return "#94a3b8";\n'
+    '    case "minimal":\n'
+    "    default:\n"
+    '      return "inherit";\n'
+    "  }\n"
+    "}\n\n"
+    "export const CollapsibleRoot = forwardRef<HTMLDivElement, CollapsibleProps>(function CollapsibleRoot(\n"
+    "  {\n"
+    "    children,\n"
+    "    open: controlledOpen,\n"
+    "    defaultOpen = false,\n"
+    "    onOpenChange,\n"
+    "    disabled = false,\n"
+    '    variant = "minimal",\n'
+    '    size = "md",\n'
+    "    className,\n"
+    "    style,\n"
+    "    ...props\n"
+    "  },\n"
+    "  ref\n"
+    ") {\n"
+    "  const isControlled = controlledOpen !== undefined;\n"
+    "  const [uncontrolledOpen, setUncontrolledOpen] = useState(defaultOpen);\n"
+    "  const open = isControlled ? controlledOpen : uncontrolledOpen;\n"
+    "  const baseId = useId();\n"
+    "  const triggerId = `collapsible-trigger-${baseId}`;\n"
+    "  const contentId = `collapsible-content-${baseId}`;\n\n"
+    "  const setOpen = (next: boolean) => {\n"
+    "    if (!isControlled) {\n"
+    "      setUncontrolledOpen(next);\n"
+    "    }\n"
+    "    onOpenChange?.(next);\n"
+    "  };\n\n"
+    "  const toggle = () => {\n"
+    "    if (!disabled) {\n"
+    "      setOpen(!open);\n"
+    "    }\n"
+    "  };\n\n"
+    "  const contextValue: CollapsibleContextValue = {\n"
+    "    open,\n"
+    "    setOpen,\n"
+    "    toggle,\n"
+    "    disabled,\n"
+    "    variant,\n"
+    "    size,\n"
+    "    triggerId,\n"
+    "    contentId,\n"
+    "    isControlled,\n"
+    "  };\n\n"
+    "  const variantStyles = getVariantContainerStyle(variant);\n"
+    "  const sizeStyles = getSizeContainerStyle(size);\n\n"
+    "  return (\n"
+    "    <CollapsibleContext.Provider value={contextValue}>\n"
+    "      <div\n"
+    "        ref={ref}\n"
+    "        id={baseId}\n"
+    '        data-collapsible=""\n'
+    '        data-state={open ? "open" : "closed"}\n'
+    '        data-disabled={disabled ? "" : undefined}\n'
+    "        className={className}\n"
+    "        style={{\n"
+    "          ...variantStyles,\n"
+    "          ...sizeStyles,\n"
+    "          ...style,\n"
+    "        }}\n"
+    "        {...props}\n"
+    "      >\n"
+    "        {children}\n"
+    "      </div>\n"
+    "    </CollapsibleContext.Provider>\n"
+    "  );\n"
+    "});\n\n"
+    "export const CollapsibleTrigger = forwardRef<HTMLButtonElement, CollapsibleTriggerProps>(function CollapsibleTrigger(\n"
+    "  {\n"
+    "    children,\n"
+    "    hideIndicator = false,\n"
+    "    indicator,\n"
+    "    className,\n"
+    "    style,\n"
+    "    onClick,\n"
+    "    onKeyDown,\n"
+    "    ...props\n"
+    "  },\n"
+    "  ref\n"
+    ") {\n"
+    "  const { open, toggle, disabled, variant, size, triggerId, contentId } = useCollapsible();\n"
+    "  const [isHovered, setIsHovered] = useState(false);\n\n"
+    "  const triggerStyles = getVariantTriggerStyle(variant, isHovered, disabled);\n"
+    "  const sizeStyles = getSizeTriggerStyle(size);\n"
+    "  const indicatorColor = getVariantIndicatorColor(variant, disabled);\n"
+    '  const iconSize = size === "sm" ? 14 : size === "lg" ? 18 : 16;\n\n'
+    "  return (\n"
+    "    <button\n"
+    "      ref={ref}\n"
+    "      id={triggerId}\n"
+    '      type="button"\n'
+    "      aria-expanded={open}\n"
+    "      aria-controls={contentId}\n"
+    "      aria-disabled={disabled}\n"
+    "      disabled={disabled}\n"
+    '      data-state={open ? "open" : "closed"}\n'
+    '      data-disabled={disabled ? "" : undefined}\n'
+    "      onMouseEnter={() => setIsHovered(true)}\n"
+    "      onMouseLeave={() => setIsHovered(false)}\n"
+    "      onClick={(e) => {\n"
+    "        if (disabled) return;\n"
+    "        toggle();\n"
+    "        onClick?.(e);\n"
+    "      }}\n"
+    "      onKeyDown={(e) => {\n"
+    "        if (disabled) return;\n"
+    '        if (e.key === "Enter" || e.key === " ") {\n'
+    "          e.preventDefault();\n"
+    "          toggle();\n"
+    "        }\n"
+    "        onKeyDown?.(e);\n"
+    "      }}\n"
+    "      className={className}\n"
+    "      style={{\n"
+    '        display: "flex",\n'
+    '        alignItems: "center",\n'
+    '        justifyContent: "space-between",\n'
+    '        width: "100%",\n'
+    '        border: "none",\n'
+    '        outline: "none",\n'
+    '        cursor: disabled ? "not-allowed" : "pointer",\n'
+    '        transition: "all 200ms cubic-bezier(0.4, 0, 0.2, 1)",\n'
+    "        ...sizeStyles,\n"
+    "        ...triggerStyles,\n"
+    "        ...style,\n"
+    "      }}\n"
+    "      {...props}\n"
+    "    >\n"
+    '      <span style={{ display: "flex", alignItems: "center", gap: 8, flex: 1, textAlign: "left" }}>\n'
+    "        {children}\n"
+    "      </span>\n"
+    "      {!hideIndicator && (\n"
+    "        indicator ? (\n"
+    "          <span\n"
+    "            style={{\n"
+    '              display: "inline-flex",\n'
+    '              alignItems: "center",\n'
+    '              transform: open ? "rotate(180deg)" : "rotate(0deg)",\n'
+    '              transition: "transform 250ms cubic-bezier(0.4, 0, 0.2, 1)",\n'
+    "              flexShrink: 0,\n"
+    "              marginLeft: 8,\n"
+    "            }}\n"
+    "          >\n"
+    "            {indicator}\n"
+    "          </span>\n"
+    "        ) : (\n"
+    "          <svg\n"
+    "            width={iconSize}\n"
+    "            height={iconSize}\n"
+    '            viewBox="0 0 24 24"\n'
+    '            fill="none"\n'
+    "            stroke={indicatorColor}\n"
+    '            strokeWidth="2"\n'
+    '            strokeLinecap="round"\n'
+    '            strokeLinejoin="round"\n'
+    '            aria-hidden="true"\n'
+    "            style={{\n"
+    '              transform: open ? "rotate(180deg)" : "rotate(0deg)",\n'
+    '              transition: "transform 250ms cubic-bezier(0.4, 0, 0.2, 1)",\n'
+    "              flexShrink: 0,\n"
+    "              marginLeft: 8,\n"
+    "            }}\n"
+    "          >\n"
+    '            <polyline points="6 9 12 15 18 9" />\n'
+    "          </svg>\n"
+    "        )\n"
+    "      )}\n"
+    "    </button>\n"
+    "  );\n"
+    "});\n\n"
+    "export const CollapsibleContent = forwardRef<HTMLDivElement, CollapsibleContentProps>(function CollapsibleContent(\n"
+    "  {\n"
+    "    children,\n"
+    "    forceMount = false,\n"
+    "    className,\n"
+    "    style,\n"
+    "    ...props\n"
+    "  },\n"
+    "  ref\n"
+    ") {\n"
+    "  const { open, contentId, triggerId, variant, size } = useCollapsible();\n"
+    "  const paddingStyle = getSizeContentPadding(size);\n"
+    "  const color = getVariantContentColor(variant);\n\n"
+    "  return (\n"
+    "    <div\n"
+    "      ref={ref}\n"
+    "      id={contentId}\n"
+    '      role="region"\n'
+    "      aria-labelledby={triggerId}\n"
+    "      hidden={!open && !forceMount}\n"
+    '      data-state={open ? "open" : "closed"}\n'
+    "      className={className}\n"
+    "      style={{\n"
+    '        display: "grid",\n'
+    '        gridTemplateRows: open ? "1fr" : "0fr",\n'
+    '        transition: "grid-template-rows 250ms cubic-bezier(0.4, 0, 0.2, 1)",\n'
+    "        ...style,\n"
+    "      }}\n"
+    "      {...props}\n"
+    "    >\n"
+    '      <div style={{ overflow: "hidden" }}>\n'
+    "        <div\n"
+    "          style={{\n"
+    "            ...paddingStyle,\n"
+    "            color,\n"
+    '            fontSize: size === "sm" ? 13 : size === "lg" ? 15 : 14,\n'
+    "            lineHeight: 1.6,\n"
+    "          }}\n"
+    "        >\n"
+    "          {children}\n"
+    "        </div>\n"
+    "      </div>\n"
+    "    </div>\n"
+    "  );\n"
+    "});\n\n"
+    "export interface CollapsibleComponent extends React.ForwardRefExoticComponent<CollapsibleProps & React.RefAttributes<HTMLDivElement>> {\n"
+    "  Trigger: typeof CollapsibleTrigger;\n"
+    "  Content: typeof CollapsibleContent;\n"
+    "}\n\n"
+    "export const Collapsible = CollapsibleRoot as unknown as CollapsibleComponent;\n"
+    "Collapsible.Trigger = CollapsibleTrigger;\n"
+    "Collapsible.Content = CollapsibleContent;\n\n"
+    "export default Collapsible;\n"
+)
+
+
+def render_collapsible_component() -> str:
+    """Return the static TypeScript implementation of the Collapsible component."""
+    return _COLLAPSIBLE_COMPONENT
+
+
 
 
 
@@ -24886,6 +25292,7 @@ class NextjsWebAdapter:
             GeneratedFile("components/context-menu.tsx", _CONTEXT_MENU_COMPONENT),
             GeneratedFile("components/hover-card.tsx", _HOVER_CARD_COMPONENT),
             GeneratedFile("components/scroll-area.tsx", _SCROLL_AREA_COMPONENT),
+            GeneratedFile("components/collapsible.tsx", _COLLAPSIBLE_COMPONENT),
             GeneratedFile("styles/tokens.css", _DESIGN_TOKENS_CSS),
             GeneratedFile("app/globals.css", _GLOBALS_CSS),
             GeneratedFile("app/error.tsx", _ERROR_PAGE),

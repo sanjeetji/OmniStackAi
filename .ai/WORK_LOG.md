@@ -1,5 +1,31 @@
 # Work Log
 
+## 2026-09-11 — R-351
+
+- Recorded contract in `.ai/CURRENT_TASK.yaml` and `.ai/tasks/R-351.md` (status in_progress → done).
+- `nextjs.py`:
+  - Added `_COLLAPSIBLE_COMPONENT` static template implementing accessible, desktop-grade, futuristic Collapsible / Disclosure compound component suite (`apps/web/components/collapsible.tsx`).
+  - Implemented `CollapsibleVariant` ("neon" | "glass" | "bordered" | "minimal"), `CollapsibleSize` ("sm" | "md" | "lg"), `CollapsibleProps`, `CollapsibleTriggerProps`, `CollapsibleContentProps`, `CollapsibleContextValue` interfaces.
+  - Implemented compound subcomponents: `CollapsibleRoot`, `CollapsibleTrigger`, `CollapsibleContent`, `useCollapsible`, and compound bindings `Collapsible.Trigger = CollapsibleTrigger; Collapsible.Content = CollapsibleContent;`.
+  - Implemented smooth CSS grid template rows expansion animation (`gridTemplateRows: open ? "1fr" : "0fr"`) with `overflow: "hidden"` container for layout-jump-free resizing to arbitrary heights.
+  - Implemented built-in rotating vector indicator chevron (`transform: open ? "rotate(180deg)" : "rotate(0deg)"`), custom `indicator` slot, and `hideIndicator` option.
+  - Implemented controlled and uncontrolled open state management (`open`, `defaultOpen`, `onOpenChange`, `isControlled`).
+  - Implemented disabled state management (`disabled`, `aria-disabled`).
+  - Implemented full WAI-ARIA 1.2 disclosure pattern compliance (`aria-expanded={open}`, `aria-controls={contentId}`, `id={triggerId}`, `role="region"`, `aria-labelledby={triggerId}`, `data-state={open ? "open" : "closed"}`).
+  - Implemented full keyboard navigation (`Enter` and `Space` trigger activation).
+  - Implemented 4 futuristic visual variants: `"neon"` (cyan cyberpunk border glow), `"glass"` (translucent frosted backdrop blur `12px`), `"bordered"` (clean slate frame), and `"minimal"` (clean borderless).
+  - Implemented 3 size presets: `"sm"`, `"md"`, `"lg"`.
+  - Implemented `forceMount` prop on `CollapsibleContent`.
+  - Exported `render_collapsible_component` in `omnistackai_agent_engine.codegen` and registered in `NextjsWebAdapter.generate()`.
+  - Maintained 100% diff-invariance across `ir.description`.
+- Added `services/agent-engine/tests/test_collapsible_component.py` with 16 comprehensive unit tests (all passing).
+- `task verify` — 1,599 tests pass (16 new), 0 failures. `task lint`, `task security:quick` pass.
+  `builder:demo minimal-blog` passes (88 files generated). `builder:demo rideshare-favourites` passes (85 files generated). 0 model calls.
+- Tracker: inserted R-351 Done row at `Phase_Roadmap!A9`; table `A4:M359`; 359 total rows;
+  140 Done, 1 Deferred, 210 Not Started; MVP 140/246 (56.9%); no `#REF!`; XLSX valid.
+- Updated CURRENT_TASK.yaml, tasks/R-351.md, PROJECT_STATE.yaml, HANDOFF.md, PROJECT_STATE.md,
+  CHANGELOG.md, docs/CODEGEN.md, docs/PROGRESS.md, docs/RESUME_PROMPT.md.
+
 ## 2026-09-11 — R-350
 
 - Recorded contract in `.ai/CURRENT_TASK.yaml` and `.ai/tasks/R-350.md` (status in_progress → done).

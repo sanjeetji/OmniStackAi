@@ -1,17 +1,17 @@
-task_id: R-350
-id: R-350
-title: "Accessible Futuristic Reusable Scroll Area Suite"
+task_id: R-351
+id: R-351
+title: "Accessible Futuristic Reusable Collapsible / Disclosure Section Component"
 status: DONE
 phase: MVP
 tracker_row: 9
 started_at: "2026-09-11"
 completed_at: "2026-09-11"
-objective: "Add accessible, optimized, desktop-grade, and futuristic Scroll Area / Custom Viewport compound component suite (components/scroll-area.tsx) with proportional draggable thumbs, auto-hiding visibility modes, corner fills, keyboard scrolling, and WAI-ARIA scrollbar semantics."
+objective: "Add accessible, zero-dependency, desktop-grade, and futuristic Collapsible / Disclosure compound component suite (components/collapsible.tsx) with smooth CSS grid row expansion, rotating indicator chevron, full WAI-ARIA 1.2 disclosure pattern compliance, 4 visual variants, and 3 size presets."
 allowed_paths:
   - "services/agent-engine/src/omnistackai_agent_engine/codegen/nextjs.py"
   - "services/agent-engine/src/omnistackai_agent_engine/codegen/__init__.py"
-  - "services/agent-engine/tests/test_scroll_area_component.py"
-  - ".ai/tasks/R-350.md"
+  - "services/agent-engine/tests/test_collapsible_component.py"
+  - ".ai/tasks/R-351.md"
   - ".ai/CURRENT_TASK.yaml"
   - ".ai/PROJECT_STATE.yaml"
   - ".ai/WORK_LOG.md"
@@ -26,9 +26,9 @@ forbidden_changes:
   - "Do not introduce external npm dependencies"
   - "Do not break snapshot diff invariance across ir.description"
 evidence:
-  verify: "task verify: 1,583 tests pass offline (16 in test_scroll_area_component.py)"
+  verify: "task verify: 1,599 tests pass offline (16 in test_collapsible_component.py)"
   lint: "task lint: pass"
   security: "task security:quick: pass"
-  demos: "task builder:demo passes on minimal-blog (84 files) and rideshare-favourites (84 files)"
-  tracker: "R_&_D/OmniStackAI_Execution_Tracker_v6.xlsx row 9 (350 total, 139 Done)"
+  demos: "task builder:demo passes on minimal-blog (88 files) and rideshare-favourites (85 files)"
+  tracker: "R_&_D/OmniStackAI_Execution_Tracker_v6.xlsx row 9 (351 total, 140 Done)"
 next_action: "Ready for next tracker task"
