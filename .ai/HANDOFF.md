@@ -1,6 +1,6 @@
 # Current Handoff
 
-Task ID: R-362
+Task ID: R-363
 Status: done
 Phase: BASIC/MVP — Founder Stage 0
 Branch: `main` (the only branch; the GitHub default)
@@ -9,23 +9,27 @@ Branch: `main` (the only branch; the GitHub default)
 
 - **Code clean and verified on `main`**.
 - Tracker and state files kept fully consistent and verified.
-- Resume from **R-363** when ready. Still stop-and-ask only for paid cloud / DB engine / new infra / native-mobile / a materially different architecture decision.
+- Resume from **R-364** when ready. Still stop-and-ask only for paid cloud / DB engine / new infra / native-mobile / a materially different architecture decision.
 
 ## Completed
 
-### R-362 — Generated Accessible Futuristic Reusable Sidebar & Side Navigation Suite (components/sidebar.tsx)
+### R-363 — Generated Accessible Futuristic Reusable Tour & Onboarding Spotlight Guide Suite (components/tour.tsx)
 
-Enabled accessible, desktop-and-mobile-grade, futuristic sidebar and side navigation compound components across generated Next.js web applications:
+Enabled accessible, desktop-and-mobile-grade, futuristic tour and onboarding spotlight guide compound components across generated Next.js web applications:
 
-- **Standalone Sidebar Suite (`apps/web/components/sidebar.tsx`)**:
-  - Implemented `SidebarVariant` (`"default"` | `"card"` | `"glass"` | `"neon"`), `SidebarSize` (`"sm"` | `"md"` | `"lg"`), `SidebarCollapsible` (`"icon"` | `"offcanvas"` | `"none"`), `SidebarSide` (`"left"` | `"right"`), `SidebarState` (`"expanded"` | `"collapsed"`), `SidebarContextValue`, and props interfaces.
-  - Implemented compound subcomponents: `Sidebar`, `SidebarHeader`, `SidebarContent`, `SidebarFooter`, `SidebarGroup`, `SidebarGroupLabel`, `SidebarGroupContent`, `SidebarMenu`, `SidebarMenuItem`, `SidebarMenuButton`, `SidebarMenuBadge`, `SidebarMenuSub`, `SidebarMenuSubItem`, `SidebarMenuSubButton`, `SidebarRail`, `SidebarTrigger`, `SidebarToggle`, `SideNav`.
-  - Implemented collapsible modes: `"icon"` rail mode (with tooltip fallback), `"offcanvas"` sliding mode (with mobile backdrop blur and outside click dismiss), and `"none"` (fixed width).
-  - Implemented WAI-ARIA 1.2 navigation landmark and menu pattern compliance (`role="navigation"`, `role="menu"`, `role="menuitem"`, `aria-label`, `aria-current="page"`, `aria-expanded`).
-  - Implemented keyboard navigation (`ArrowDown`/`ArrowUp` roving traversal, `Home`/`End` jump navigation).
-  - Implemented 5 built-in vector icons (`PanelLeftIcon`, `ChevronRightIcon`, `ChevronLeftIcon`, `ChevronDownIcon`, `MenuIcon`).
-  - Implemented full React ref forwarding (`forwardRef`) and explicit `displayName`.
-  - Exported `render_sidebar_component` in `omnistackai_agent_engine.codegen` and registered in `NextjsWebAdapter.generate()`.
+- **Standalone Tour Suite (`apps/web/components/tour.tsx`)**:
+  - Implemented `TourVariant` (`"default"` | `"card"` | `"glass"` | `"neon"`), `TourSize` (`"sm"` | `"md"` | `"lg"`), `TourPlacement` (`"top"` | `"bottom"` | `"left"` | `"right"` | `"center"`), `TourStep`, and `TourProps` interfaces.
+  - Implemented compound exports: `Tour`, `TourStepDot`, `TourProgressBadge`, `TourCloseButton`.
+  - Implemented dynamic target element bounding box lookup via `getBoundingClientRect()` with scroll and resize listeners and target scroll-into-view.
+  - Implemented full-screen SVG cutout spotlight mask (`<mask id="...">` with `<rect fill="white"/>` and `<rect fill="black"/>`) over semi-transparent overlay backdrop.
+  - Implemented floating card popover with auto placement resolution, edge clamping against `window.innerWidth`/`innerHeight`, and directional SVG arrow pointer notch.
+  - Implemented step navigation controls: Previous, Next, Finish, Skip, and Close buttons.
+  - Implemented step dots indicators with jump-to-step support and active pill state.
+  - Implemented step counter badge ("X of Y").
+  - Implemented full WAI-ARIA 1.2 dialog semantics (`role="dialog"`, `aria-modal="true"`, `aria-label`, `aria-describedby`).
+  - Implemented full keyboard navigation (`Escape` to dismiss, `ArrowRight`/`Enter` to advance, `ArrowLeft` to go back, Tab trapping).
+  - Implemented full React ref forwarding (`forwardRef`) and explicit `Tour.displayName = "Tour"`.
+  - Exported `render_tour_component` in `omnistackai_agent_engine.codegen` and registered `components/tour.tsx` in `NextjsWebAdapter.generate()`.
   - Maintained 100% diff-invariance across `ir.description`.
 
 ## Verification

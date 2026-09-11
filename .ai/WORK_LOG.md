@@ -1,5 +1,27 @@
 # Work Log
 
+## 2026-09-11 — R-363
+
+- Recorded contract in `.ai/CURRENT_TASK.yaml` and `.ai/tasks/R-363.md` (status in_progress → done).
+- `nextjs.py`:
+  - Added `_TOUR_COMPONENT` static template implementing accessible, desktop-and-mobile-grade, futuristic Tour and Onboarding Spotlight Guide compound component suite (`apps/web/components/tour.tsx`).
+  - Implemented `TourVariant` ("default" | "card" | "glass" | "neon"), `TourSize` ("sm" | "md" | "lg"), `TourPlacement` ("top" | "bottom" | "left" | "right" | "center"), `TourStep`, and `TourProps` interfaces.
+  - Implemented dynamic target element measurement with `getBoundingClientRect()`, window resize/scroll tracking, and target element auto-scrolling into view.
+  - Implemented full-screen SVG cutout spotlight mask (`<mask id="...">` with `<rect fill="white"/>` and `<rect fill="black"/>` over semi-transparent overlay backdrop).
+  - Implemented floating card popover with auto placement resolution, edge clamping against `window.innerWidth`/`innerHeight`, and directional SVG arrow pointer notch.
+  - Implemented step navigation controls: Previous, Next, Finish, Skip, and Close buttons.
+  - Implemented step dots indicators with jump-to-step support and active pill state.
+  - Implemented step counter badge ("X of Y").
+  - Implemented full WAI-ARIA 1.2 dialog semantics (`role="dialog"`, `aria-modal="true"`, `aria-label`, `aria-describedby`).
+  - Implemented full keyboard navigation (`Escape` to dismiss, `ArrowRight`/`Enter` to advance, `ArrowLeft` to go back, Tab trapping).
+  - Implemented compound exports: `Tour`, `TourStepDot`, `TourProgressBadge`, `TourCloseButton`.
+  - Implemented full React ref forwarding (`forwardRef`) and explicit `Tour.displayName = "Tour"`.
+  - Exported `render_tour_component` in `omnistackai_agent_engine.codegen` and registered `components/tour.tsx` in `NextjsWebAdapter.generate()`.
+  - Maintained 100% diff-invariance across `ir.description`.
+- Added `services/agent-engine/tests/test_tour_component.py` with 19 comprehensive unit tests (all passing).
+- `task verify` — 1,857 tests pass (19 new), 0 failures. `task lint`, `task security:quick` pass.
+  `builder:demo minimal-blog` passes (100 files generated). 0 model calls.
+
 ## 2026-09-11 — R-362
 
 - Recorded contract in `.ai/CURRENT_TASK.yaml` and `.ai/tasks/R-362.md` (status in_progress → done).

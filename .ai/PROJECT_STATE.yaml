@@ -2,24 +2,22 @@ schema_version: 1
 project: OmniStackAI
 phase: BASIC/MVP
 founder_stage: 0
-current_task: R-363
+current_task: R-364
 current_status: not_started
 branch: main
-last_completed_task: R-362
+last_completed_task: R-363
 last_completed_task_summary: >-
-  Generated Accessible Futuristic Reusable Sidebar & Side Navigation Suite (components/sidebar.tsx);
-  added standalone, reusable, accessible, desktop-and-mobile-grade Sidebar compound component suite supporting
-  SidebarVariant ("default" | "card" | "glass" | "neon"), SidebarSize ("sm" | "md" | "lg"),
-  SidebarCollapsible ("icon" | "offcanvas" | "none"), SidebarSide ("left" | "right"),
-  SidebarContextValue, SidebarProps, compound subcomponents (Sidebar, SidebarHeader, SidebarContent, SidebarFooter,
-  SidebarGroup, SidebarGroupLabel, SidebarGroupContent, SidebarMenu, SidebarMenuItem, SidebarMenuButton,
-  SidebarMenuBadge, SidebarMenuSub, SidebarMenuSubItem, SidebarMenuSubButton, SidebarRail, SidebarTrigger,
-  SidebarToggle, SideNav), collapsible icon rail and offcanvas sliding panel with mobile backdrop overlay,
-  WAI-ARIA 1.2 navigation landmark and menu semantics (role=navigation, role=menu, role=menuitem, aria-label,
-  aria-current=page, aria-expanded), keyboard navigation (ArrowDown, ArrowUp, Home, End), 5 built-in vector icons,
-  tooltips on collapsed items, React ref forwarding (forwardRef), Sidebar.displayName, 100% diff-invariance across
-  ir.description, 0 external runtime dependencies; exported render_sidebar_component in codegen; registered
-  components/sidebar.tsx in NextjsWebAdapter; 1,838 tests pass (26 new tests in test_sidebar_component.py); 0 model calls
+  Generated Accessible Futuristic Reusable Tour & Onboarding Spotlight Guide Suite (components/tour.tsx);
+  added standalone, reusable, accessible, desktop-and-mobile-grade Tour compound component suite supporting
+  TourVariant ("default" | "card" | "glass" | "neon"), TourSize ("sm" | "md" | "lg"), TourPlacement ("top" |
+  "bottom" | "left" | "right" | "center"), TourStep, TourProps, dynamic target element bounding box lookup,
+  full-screen SVG cutout spotlight mask, floating tooltip card with placement resolution and viewport clamping,
+  step navigation controls (Previous, Next, Finish, Skip, Close), step dots indicator with jump-to-step,
+  step counter badge ("X of Y"), WAI-ARIA 1.2 dialog semantics (role=dialog, aria-modal, aria-label, aria-describedby),
+  full keyboard navigation (Escape to dismiss, ArrowRight/Enter to advance, ArrowLeft to go back, Tab trapping),
+  React ref forwarding (forwardRef), Tour.displayName, 100% diff-invariance across ir.description, 0 external
+  runtime dependencies; exported render_tour_component in codegen; registered components/tour.tsx in NextjsWebAdapter;
+  1,857 tests pass (19 new tests in test_tour_component.py); 0 model calls
 control_plane_database: postgresql
 model_routing_mode: balanced
 architecture_contract: R_&_D/OmniStackAI_Implementation_Brief_v6.md
