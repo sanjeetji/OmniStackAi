@@ -1,5 +1,29 @@
 # Work Log
 
+## 2026-09-11 — R-344
+
+- Recorded contract in `.ai/CURRENT_TASK.yaml` and `.ai/tasks/R-344.md` (status in_progress → done).
+- `nextjs.py`:
+  - Added `_RESIZABLE_COMPONENT` static template implementing accessible, futuristic Resizable Panels & Splitter compound component suite (`apps/web/components/resizable.tsx`).
+  - Implemented `ResizableDirection` ("horizontal" | "vertical"), `ResizableVariant` ("neon" | "glass" | "bordered" | "minimal"), `ResizablePanelGroupProps`, `ResizablePanelProps`, `ResizableHandleProps`, `ResizablePanelContextValue` interfaces.
+  - Implemented compound subcomponents: `ResizablePanelGroup` (or `Resizable`), `ResizablePanel`, `ResizableHandle`.
+  - Implemented pointer and touch dragging with responsive coordinate calculation and live percentage sizing.
+  - Implemented min and max constraints (`minSize`, `maxSize`, `defaultSize`).
+  - Implemented collapsible panel support (`collapsible`, `collapsedSize`, `onCollapse`, `onExpand`).
+  - Implemented keyboard navigation per WAI-ARIA Separator (Window Splitter) Pattern (`ArrowLeft`/`ArrowRight` or `ArrowUp`/`Down` with 1% step, 5% with Shift, `Home` to collapse, `End` to expand to max, `Enter` to toggle collapse).
+  - Implemented full WAI-ARIA separator accessibility semantics (`role="separator"`, `aria-orientation`, `aria-valuenow`, `aria-valuemin`, `aria-valuemax`, `aria-label`, `tabIndex={0}`).
+  - Implemented 4 futuristic visual variants: `"neon"` (cyberpunk glow borders and glowing cyan divider line), `"glass"` (translucent frosted divider with backdrop blur), `"bordered"` (slate border with centered grip dots), and `"minimal"` (clean 1px line with expanded hit-area).
+  - Exported `render_resizable_component` in `omnistackai_agent_engine.codegen` and registered in `NextjsWebAdapter.generate()`.
+  - Maintained 100% diff-invariance across `ir.description`.
+- Added `services/agent-engine/tests/test_resizable_component.py` with 15 comprehensive unit tests (all passing).
+- `task verify` — 1,489 tests pass (15 new), 0 failures. `task lint`, `task security:quick` pass.
+  `builder:demo minimal-blog` passes (81 files generated). `builder:demo rideshare-favourites` passes (78 files generated). 0 model calls.
+- Tracker: inserted R-344 Done row at `Phase_Roadmap!A9`; table `A4:M352`; 352 total rows;
+  133 Done, 1 Deferred, 210 Not Started; MVP 133/239 (55.6%); no `#REF!`; XLSX valid.
+- Updated CURRENT_TASK.yaml, tasks/R-344.md, PROJECT_STATE.yaml, HANDOFF.md, PROJECT_STATE.md,
+  CHANGELOG.md, docs/CODEGEN.md, docs/PROGRESS.md, docs/RESUME_PROMPT.md.
+
+
 ## 2026-09-11 — R-343
 
 - Recorded contract in `.ai/CURRENT_TASK.yaml` and `.ai/tasks/R-343.md` (status in_progress → done).

@@ -1,17 +1,17 @@
-task_id: R-343
-id: R-343
-title: "Accessible Futuristic Reusable Carousel & Slider Showcase Component"
+task_id: R-344
+id: R-344
+title: "Accessible Futuristic Reusable Resizable Panels & Splitter Component"
 status: DONE
 phase: MVP
 tracker_row: 9
 started_at: "2026-09-11"
 completed_at: "2026-09-11"
-objective: "Add accessible, optimized, and futuristic Carousel compound component (components/carousel.tsx) with touch swipe gesture support, autoplay with pause-on-hover/focus, 4 visual variants (neon, glass, cards, minimal), slide and fade transitions, keyboard navigation, and WAI-ARIA carousel semantics."
+objective: "Add accessible, optimized, and futuristic Resizable Panel & Splitter layout compound component suite (components/resizable.tsx) with horizontal/vertical split layouts, pointer/touch drag resizing, min/max constraints, collapsible panels, keyboard adjustments, and WAI-ARIA separator semantics."
 allowed_paths:
   - "services/agent-engine/src/omnistackai_agent_engine/codegen/nextjs.py"
   - "services/agent-engine/src/omnistackai_agent_engine/codegen/__init__.py"
-  - "services/agent-engine/tests/test_carousel_component.py"
-  - ".ai/tasks/R-343.md"
+  - "services/agent-engine/tests/test_resizable_component.py"
+  - ".ai/tasks/R-344.md"
   - ".ai/CURRENT_TASK.yaml"
   - ".ai/PROJECT_STATE.yaml"
   - ".ai/WORK_LOG.md"
@@ -26,9 +26,10 @@ forbidden_changes:
   - "Do not introduce external npm dependencies"
   - "Do not break snapshot diff invariance across ir.description"
 evidence:
-  verify: "task verify (1,474 tests pass in 1.38s)"
-  lint: "task lint (clean pass)"
-  security: "task security:quick (clean pass)"
-  demos: "minimal-blog generates 80 files, rideshare-favourites generates 77 files (both include apps/web/components/carousel.tsx)"
-  tracker: "Phase_Roadmap!A9, 343 unique tasks, 132 Done, MVP at 132/238 (55.5%)"
-next_action: "Initialize R-344"
+  verify: "task verify: 1,489 tests passing, Stage 0 verification passed"
+  lint: "task lint: passed cleanly"
+  security: "task security:quick: passed cleanly"
+  demos: "builder:demo minimal-blog (81 files) and rideshare-favourites (78 files) emit components/resizable.tsx"
+  tracker: "OmniStackAI_Execution_Tracker_v6.xlsx updated to 344 tasks, 133 Done (55.6% MVP)"
+next_action: "Initialize R-345"
+

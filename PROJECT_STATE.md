@@ -5,24 +5,25 @@ Last updated: 2026-09-11T00:32:00+05:30
 Stage 0 (Founder Build Sequence, Brief Section 91) — BASIC/MVP
 
 ## Last Completed Task
-Tracker ID: R-343 — Generated Accessible Futuristic Reusable Carousel & Slider Showcase Component (components/carousel.tsx) — DONE,
-`task verify` (1,474 agent-engine tests, 15 new focused R-343 tests) passing. Enabled accessible, futuristic, zero-dependency
-content carousels and sliders across generated Next.js web applications:
-added standalone, reusable, accessible, futuristic Carousel compound component suite (`components/carousel.tsx`) supporting
-CarouselVariant ("neon" | "glass" | "cards" | "minimal"), CarouselTransition ("slide" | "fade"), CarouselOrientation ("horizontal" | "vertical"),
-CarouselIndicatorType ("dots" | "fraction" | "progress" | "none"), compound subcomponents (Carousel, Carousel.Content, Carousel.Slide,
-Carousel.Previous, Carousel.Next, Carousel.Indicators, Carousel.Progress, Carousel.AutoplayToggle), touch/swipe gesture handling with delta threshold,
-configurable autoplay with pause on hover/focus and play/pause toggle, keyboard navigation (ArrowLeft/Right, ArrowUp/Down, Home, End),
-full WAI-ARIA carousel semantics (role="region", aria-roledescription="carousel", role="group", aria-roledescription="slide",
-aria-label, aria-hidden, aria-live), controlled and uncontrolled index management, 100% diff-invariance across `ir.description`, and 0 external dependencies.
-Preceded by R-342 (segmented control), R-341 (radial gauge), R-340 (code block), R-339 (tag input), R-338 (tree view), R-337 (stat card), R-336 (timeline),
-R-335 (file upload), R-334 (stepper), R-333 (rating), R-332 (progress), R-331 (slider), R-330 (command palette), R-329 (data grid),
-R-328 (date picker), R-327 (form controls), R-326 (dialog), R-325 (theme toggle), R-324 (theming tokens), R-323 (popover),
-R-322 (dropdown menu), R-321 (accordion), R-320 (toggle), R-319 (avatar), R-318 (drawer), R-317 (skeleton), R-316 (alert),
-R-315 (card), R-314 (tooltip), R-313 (column visibility), R-312 (badge), R-311 (table density), R-310 (tabs), R-309 (pagination), and R-308 (JSON export).
+Tracker ID: R-344 — Generated Accessible Futuristic Reusable Resizable Panels & Splitter Component (components/resizable.tsx) — DONE,
+`task verify` (1,489 agent-engine tests, 15 new focused R-344 tests) passing. Enabled accessible, futuristic, zero-dependency
+resizable panel splitters across generated Next.js web applications:
+added standalone, reusable, accessible, futuristic Resizable Panels compound component suite (`components/resizable.tsx`) supporting
+ResizableDirection ("horizontal" | "vertical"), ResizableVariant ("neon" | "glass" | "bordered" | "minimal"),
+ResizablePanelGroupProps, ResizablePanelProps, ResizableHandleProps, pointer and touch dragging with live percentage sizing,
+minSize and maxSize constraints, collapsible panel support with collapsedSize, keyboard navigation per WAI-ARIA Separator (Window Splitter)
+pattern (ArrowLeft/Right, ArrowUp/Down, Home, End, Enter), full WAI-ARIA separator semantics (role="separator", aria-orientation,
+aria-valuenow, aria-valuemin, aria-valuemax, aria-label, tabIndex={0}), 100% diff-invariance across `ir.description`, and 0 external dependencies.
+Preceded by R-343 (carousel), R-342 (segmented control), R-341 (radial gauge), R-340 (code block), R-339 (tag input), R-338 (tree view),
+R-337 (stat card), R-336 (timeline), R-335 (file upload), R-334 (stepper), R-333 (rating), R-332 (progress), R-331 (slider),
+R-330 (command palette), R-329 (data grid), R-328 (date picker), R-327 (form controls), R-326 (dialog), R-325 (theme toggle),
+R-324 (theming tokens), R-323 (popover), R-322 (dropdown menu), R-321 (accordion), R-320 (toggle), R-319 (avatar), R-318 (drawer),
+R-317 (skeleton), R-316 (alert), R-315 (card), R-314 (tooltip), R-313 (column visibility), R-312 (badge), R-311 (table density),
+R-310 (tabs), R-309 (pagination), and R-308 (JSON export).
 
-**Notes:** (1) the tracker is current through R-343: 132 Done, 1 Deferred, 210 Not Started across 343
-unique tasks; MVP is 132/238 (55.5%). (2) Next unstarted Tracker ID: R-344.
+**Notes:** (1) the tracker is current through R-344: 133 Done, 1 Deferred, 210 Not Started across 344
+unique tasks; MVP is 133/239 (55.6%). (2) Next unstarted Tracker ID: R-345.
+
 
 
 

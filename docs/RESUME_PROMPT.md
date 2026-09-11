@@ -41,7 +41,7 @@ START PROTOCOL
   `task ai:status`, `task ai:handoff`. `task verify` must stay green and network-independent.
 - Confirm git branch/HEAD/clean tree. Then restate: phase, next Tracker ID, objective, blast radius.
 
-WHAT IS ALREADY BUILT (platform generators are Python 3.13 stdlib-only, offline, in services/agent-engine; 1,459 tests pass)
+WHAT IS ALREADY BUILT (platform generators are Python 3.13 stdlib-only, offline, in services/agent-engine; 1,489 tests pass)
 - Model fabric: ModelProvider contract + registry; local Ollama adapter (runs any installed model via
 
 
@@ -191,12 +191,13 @@ R-310 accessible reusable Tabs component (components/tabs.tsx), R-311 generated 
 R-312 accessible reusable Badge component (components/badge.tsx), R-313 collection table column visibility dropdown & selector controls,
 R-314 accessible reusable Tooltip component (components/tooltip.tsx), R-315 accessible reusable Card component (components/card.tsx),
 R-316 accessible reusable Alert & Notification component (components/alert.tsx), R-317 accessible reusable
-Skeleton Loader component (components/skeleton.tsx), R-318 accessible reusable Drawer / Sheet component (components/drawer.tsx), R-319 accessible reusable Avatar component (components/avatar.tsx), R-320 accessible reusable Toggle Switch component (components/toggle.tsx), R-321 accessible reusable Accordion component (components/accordion.tsx), R-322 accessible reusable Dropdown Menu component (components/dropdown-menu.tsx), R-323 accessible reusable Popover component (components/popover.tsx), R-324 Design Tokens & CSS Custom Properties theming engine (styles/tokens.css), R-325 Theme Switcher / Mode Toggle component (components/theme-toggle.tsx), R-326 accessible reusable Dialog / Modal component (components/dialog.tsx), R-327 accessible reusable Form Controls & Input Primitives suite (components/form-controls.tsx), R-328 accessible reusable Date Picker & Calendar component (components/date-picker.tsx), R-329 accessible reusable Data Grid / Table component (components/data-grid.tsx), R-330 accessible reusable Command Palette / Search Menu component (components/command-palette.tsx), R-331 accessible reusable Slider & Range component (components/slider.tsx), R-332 accessible reusable Progress & Spinner component (components/progress.tsx), R-333 accessible reusable Rating & Review component (components/rating.tsx), R-334 accessible reusable Stepper / Multi-step Wizard component (components/stepper.tsx), R-335 accessible reusable File Upload / Dropzone component (components/file-upload.tsx), R-336 accessible reusable Timeline / Activity Feed component (components/timeline.tsx), R-337 accessible reusable futuristic Stat & Metric KPI Card component (components/stat-card.tsx), R-338 accessible reusable Hierarchical Tree View component (components/tree-view.tsx), R-339 accessible futuristic Tag & Chip Input Tokenizer component (components/tag-input.tsx), R-340 accessible futuristic Code Block & Syntax Presentation component (components/code-block.tsx), R-341 accessible futuristic Radial Gauge & Activity Rings component (components/radial-gauge.tsx), R-342 accessible futuristic Segmented Control & Mode Switcher component (components/segmented-control.tsx), and R-343 accessible futuristic Carousel & Slider Showcase component (components/carousel.tsx).
-Do NOT overwrite backlog rows; continue from R-344.
+Skeleton Loader component (components/skeleton.tsx), R-318 accessible reusable Drawer / Sheet component (components/drawer.tsx), R-319 accessible reusable Avatar component (components/avatar.tsx), R-320 accessible reusable Toggle Switch component (components/toggle.tsx), R-321 accessible reusable Accordion component (components/accordion.tsx), R-322 accessible reusable Dropdown Menu component (components/dropdown-menu.tsx), R-323 accessible reusable Popover component (components/popover.tsx), R-324 Design Tokens & CSS Custom Properties theming engine (styles/tokens.css), R-325 Theme Switcher / Mode Toggle component (components/theme-toggle.tsx), R-326 accessible reusable Dialog / Modal component (components/dialog.tsx), R-327 accessible reusable Form Controls & Input Primitives suite (components/form-controls.tsx), R-328 accessible reusable Date Picker & Calendar component (components/date-picker.tsx), R-329 accessible reusable Data Grid / Table component (components/data-grid.tsx), R-330 accessible reusable Command Palette / Search Menu component (components/command-palette.tsx), R-331 accessible reusable Slider & Range component (components/slider.tsx), R-332 accessible reusable Progress & Spinner component (components/progress.tsx), R-333 accessible reusable Rating & Review component (components/rating.tsx), R-334 accessible reusable Stepper / Multi-step Wizard component (components/stepper.tsx), R-335 accessible reusable File Upload / Dropzone component (components/file-upload.tsx), R-336 accessible reusable Timeline / Activity Feed component (components/timeline.tsx), R-337 accessible reusable futuristic Stat & Metric KPI Card component (components/stat-card.tsx), R-338 accessible reusable Hierarchical Tree View component (components/tree-view.tsx), R-339 accessible futuristic Tag & Chip Input Tokenizer component (components/tag-input.tsx), R-340 accessible futuristic Code Block & Syntax Presentation component (components/code-block.tsx), R-341 accessible futuristic Radial Gauge & Activity Rings component (components/radial-gauge.tsx), R-342 accessible futuristic Segmented Control & Mode Switcher component (components/segmented-control.tsx), R-343 accessible futuristic Carousel & Slider Showcase component (components/carousel.tsx), and R-344 accessible futuristic Resizable Panels & Splitter component (components/resizable.tsx).
+Do NOT overwrite backlog rows; continue from R-345.
 NOTE: the execution tracker was reconciled on 2026-09-09 (R-253..R-279 rows had drifted and were
-backfilled); keep it current going forward. It now has 343 unique tasks (351 spreadsheet rows): 132 Done, 1 Deferred, 210 Not
-Started; MVP is 132/238 (55.5%). The summary above is current through R-343; Git, state files,
+backfilled); keep it current going forward. It now has 344 unique tasks (352 spreadsheet rows): 133 Done, 1 Deferred, 210 Not
+Started; MVP is 133/239 (55.6%). The summary above is current through R-344; Git, state files,
 tests, and CHANGELOG remain the executable/detail sources of truth.
+
 
 ENVIRONMENT LIMITS discovered here
 - npm front-end bundlers (Next.js SWC, Vite/esbuild) FAIL to install (native-binary downloads time
@@ -222,7 +223,7 @@ RULES (non-negotiable)
   .ai/HANDOFF.md, PROJECT_STATE.md, CHANGELOG.md, and the tracker row. Push the branch; verify remote
   SHA == local HEAD. Never claim unexecuted tests.
 
-WHAT TO DO NEXT (pick with the founder; all continue the builder), continue from R-344
+WHAT TO DO NEXT (pick with the founder; all continue the builder), continue from R-345
 - Offline-doable now: continue the generated Next.js web application robustness/UX increments.
   Reuse the proven patterns, preserve public hook signatures, and add focused generation tests first.
 - Now unblocked (a Groq API key is available): live-verify the model fabric end-to-end with Groq through
@@ -236,7 +237,8 @@ WHAT TO DO NEXT (pick with the founder; all continue the builder), continue from
 - Deferred by governance: native mobile (R-010 etc.) until web/backend stability.
 
 Begin by reading the files above and running the start protocol, then propose the next Tracker ID
-(R-344) with its task contract before writing code.
+(R-345) with its task contract before writing code.
+
 ```
 
 
