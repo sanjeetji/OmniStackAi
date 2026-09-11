@@ -1,5 +1,276 @@
 # Work Log
 
+## 2026-09-11 — R-395
+
+- Recorded contract in `.ai/CURRENT_TASK.yaml` and `.ai/tasks/R-395.md` (status in_progress → done).
+- `nextjs.py`:
+  - Added `_NETWORK_GRAPH_COMPONENT` static template implementing accessible, desktop-and-mobile-grade, futuristic Network Graph & Topology Map compound component suite (`apps/web/components/network-graph.tsx`).
+  - Implemented `NetworkGraphVariant` ("default" | "card" | "glass" | "neon"), `NetworkGraphSize` ("sm" | "md" | "lg"), `GraphNodeType` ("server" | "database" | "client" | "service" | "gateway" | "ai"), `GraphNodeStatus` ("healthy" | "warning" | "error" | "idle"), `GraphNodeMetrics`, `GraphNode`, `GraphEdge`, `NetworkGraphHandle`, `GraphControlsProps`, `NodeDetailsPanelProps`, `NetworkGraphProps` interfaces.
+  - Implemented compound and semantic alias exports: `NetworkGraph`, `TopologyMap`, `ForceGraph`, `GraphVisualizer`, `GraphControls`, `NodeDetailsPanel`, default export.
+  - Implemented force-directed physics layout with Coulomb node repulsion, Hooke spring edge attraction, center gravity, velocity damping, and requestAnimationFrame simulation loop.
+  - Implemented interactive viewport with zoom in/out (0.3x to 3x), zoom reset, pan dragging, and node drag-and-drop repositioning with physics reheating.
+  - Implemented node selection with slide-over inspection drawer displaying node metadata, status badge, live performance metrics (CPU, memory, latency, throughput, uptime), and interactive connected nodes list.
+  - Implemented search input by label, ID, and tags, alongside multiselect type filtering pills ("all", "gateway", "service", "database", "server", "client", "ai").
+  - Implemented export topology to PNG functionality via SVG serialization and canvas rasterization.
+  - Implemented WAI-ARIA 1.2 application semantics (`role="application"`, `aria-label="Network Topology Graph"`, `role="toolbar"`, `role="complementary"`, `role="button"`).
+  - Implemented 4 futuristic visual styling variants ("default", "card", "glass" with backdropFilter blur, "neon" cyberpunk cyan glow).
+  - Implemented 3 size scales ("sm", "md", "lg").
+  - Implemented React ref forwarding (`forwardRef`), imperative handle (`NetworkGraphHandle`), and explicit `displayName` across all compound exports.
+  - Exported `render_network_graph_component` in `omnistackai_agent_engine.codegen` and registered `components/network-graph.tsx` in `NextjsWebAdapter.generate()`.
+  - Maintained 100% diff-invariance across `ir.description`.
+- Added `services/agent-engine/tests/test_network_graph_component.py` with 17 comprehensive unit tests (all passing).
+- `task verify` — 2,397 tests pass (17 new), 0 failures. `task lint`, `task security:quick`, `task builder:demo -- minimal-blog` pass.
+
+## 2026-09-11 — R-394
+
+- Recorded contract in `.ai/CURRENT_TASK.yaml` and `.ai/tasks/R-394.md` (status in_progress → done).
+- `nextjs.py`:
+  - Added `_IMAGE_GALLERY_COMPONENT` static template implementing accessible, desktop-and-mobile-grade, futuristic Image Gallery & Masonry Lightbox compound component suite (`apps/web/components/image-gallery.tsx`).
+  - Implemented `ImageGalleryVariant` ("default" | "card" | "glass" | "neon"), `ImageGallerySize` ("sm" | "md" | "lg"), `GalleryLayout` ("grid" | "masonry"), `GalleryItem`, `ImageGalleryHandle`, `ImageGalleryToolbarProps`, `LightboxModalProps`, `ImageGalleryProps` interfaces.
+  - Implemented compound and semantic alias exports: `ImageGallery`, `PhotoGallery`, `MediaGallery`, `MasonryGallery`, `Lightbox`, `ImageGalleryToolbar`, default export.
+  - Implemented responsive multi-column grid and masonry layouts with auto-fill minmax columns and variable aspect ratios.
+  - Implemented interactive full-screen Lightbox modal with zoom in/out (0.5x to 3x), zoom reset, 90-degree image rotation, previous/next navigation, and backdrop dismissal.
+  - Implemented auto-advancing slideshow presentation mode with play/pause toggling and configurable timer intervals (`slideshowInterval`).
+  - Implemented category filter pills ("All", "Architecture", "Sci-Fi", "Abstract", "Nature") and real-time title/description/tag search filter.
+  - Implemented bottom thumbnail strip navigation inside the lightbox with active thumbnail indicator and click-to-jump.
+  - Implemented image download action and interactive like/favorite toggle with heart counters.
+  - Implemented WAI-ARIA 1.2 dialog and grid semantics (`role="region"`, `role="grid"`, `role="gridcell"`, `role="dialog"`, `aria-modal="true"`, `role="toolbar"`, keyboard navigation).
+  - Implemented 4 futuristic visual styling variants ("default", "card", "glass" with backdropFilter blur, "neon" cyberpunk cyan glow).
+  - Implemented 3 size scales ("sm", "md", "lg").
+  - Implemented React ref forwarding (`forwardRef`), imperative handle (`ImageGalleryHandle`), and explicit `displayName` across all compound exports.
+  - Exported `render_image_gallery_component` in `omnistackai_agent_engine.codegen` and registered `components/image-gallery.tsx` in `NextjsWebAdapter.generate()`.
+  - Maintained 100% diff-invariance across `ir.description`.
+- Added `services/agent-engine/tests/test_image_gallery_component.py` with 17 comprehensive unit tests (all passing).
+- `task verify` — 2,380 tests pass (17 new), 0 failures. `task lint`, `task security:quick`, `task builder:demo -- minimal-blog` pass.
+
+## 2026-09-11 — R-393
+
+- Recorded contract in `.ai/CURRENT_TASK.yaml` and `.ai/tasks/R-393.md` (status in_progress → done).
+- `nextjs.py`:
+  - Added `_JSON_VIEWER_COMPONENT` static template implementing accessible, desktop-and-mobile-grade, futuristic Interactive JSON Viewer & Schema Tree Inspector compound component suite (`apps/web/components/json-viewer.tsx`).
+  - Implemented `JsonViewerVariant` ("default" | "card" | "glass" | "neon"), `JsonViewerSize` ("sm" | "md" | "lg"), `JsonViewMode` ("tree" | "raw"), `JsonValueType` ("string" | "number" | "boolean" | "null" | "undefined" | "object" | "array"), `JsonViewerHandle`, `JsonViewerToolbarProps`, `JsonTreeNodeProps`, `JsonViewerProps` interfaces.
+  - Implemented compound and semantic alias exports: `JsonViewer`, `JsonTree`, `ObjectInspector`, `SchemaViewer`, `JsonViewerToolbar`, default export.
+  - Implemented collapsible and expandable object & array tree nodes (`JsonTreeNode`) with chevron indicators and child counters (`{ N keys }`, `[ N items ]`).
+  - Implemented color-coded type badges (`TYPE_COLORS`) and value syntax highlighting (string, number, boolean, null, undefined, object, array).
+  - Implemented copy path (JSONPath / dot-notation, e.g. `$.users[0].name`) and copy value to clipboard with animated checkmark feedback.
+  - Implemented real-time search filtering across keys and values with match counter badge and highlighted text substrings (`<mark>`).
+  - Implemented depth expansion controls: Expand All, Collapse All, and configurable default expansion depth (`defaultDepth`).
+  - Implemented dual view modes: Interactive Tree view (`tree`) vs Raw Formatted JSON view (`raw`) with syntax formatting.
+  - Implemented inline primitive value editing with live validation, type parsing (`parseInputPrimitive`), and immutable tree updater (`updateAtPath`).
+  - Implemented download/export formatted JSON file and copy entire JSON root to clipboard.
+  - Implemented WAI-ARIA 1.2 tree semantics (`role="tree"`, `role="treeitem"`, `role="group"`, `aria-expanded`, `aria-level`).
+  - Implemented 4 futuristic visual styling variants ("default", "card", "glass" with backdropFilter blur, "neon" cyberpunk cyan glow).
+  - Implemented 3 size scales ("sm", "md", "lg").
+  - Implemented React ref forwarding (`forwardRef`), imperative handle (`JsonViewerHandle`), and explicit `displayName` across all compound exports.
+  - Exported `render_json_viewer_component` in `omnistackai_agent_engine.codegen` and registered `components/json-viewer.tsx` in `NextjsWebAdapter.generate()`.
+  - Maintained 100% diff-invariance across `ir.description`.
+- Added `services/agent-engine/tests/test_json_viewer_component.py` with 17 comprehensive unit tests (all passing).
+- `task verify` — 2,363 tests pass (17 new), 0 failures. `task lint`, `task security:quick`, `task builder:demo -- minimal-blog` pass.
+
+## 2026-09-11 — R-392
+
+- Recorded contract in `.ai/CURRENT_TASK.yaml` and `.ai/tasks/R-392.md` (status in_progress → done).
+- `nextjs.py`:
+  - Added `_MERGE_EDITOR_COMPONENT` static template implementing accessible, desktop-and-mobile-grade, futuristic Code Diff Editor & 3-Way Merge Conflict Resolver compound component suite (`apps/web/components/merge-editor.tsx`).
+  - Implemented `MergeEditorVariant` ("default" | "card" | "glass" | "neon"), `MergeEditorSize` ("sm" | "md" | "lg"), `ConflictStatus` ("unresolved" | "current" | "incoming" | "both"), `MergeConflict`, `MergeEditorHandle`, `MergeEditorToolbarProps`, `MergeEditorProps` interfaces.
+  - Implemented compound and semantic alias exports: `MergeEditor`, `ConflictResolver`, `ThreeWayMerge`, `DiffEditor`, `MergeEditorToolbar`, default export.
+  - Implemented 3-pane synchronized layout: Left ("Current Change / Ours", emerald accent), Center ("Result / Merged View", violet accent), Right ("Incoming Change / Theirs", sky blue accent).
+  - Implemented interactive conflict block resolution actions ("Accept Current", "Accept Incoming", "Accept Both").
+  - Implemented raw conflict marker parser (`parseRawConflicts`) parsing `<<<<<<< HEAD`, `=======`, `>>>>>>> incoming`.
+  - Implemented batch actions: "All Current", "All Incoming", "Reset All".
+  - Implemented conflict navigation jumper bar (Next/Prev conflict jumper, conflict counter, remaining unresolved badge).
+  - Implemented editable merged output buffer with manual edit override and copy to clipboard / file download actions.
+  - Implemented WAI-ARIA 1.2 semantics (`role="region"`, `aria-label="3-Way Merge Editor"`, `role="toolbar"`, `role="status"`).
+  - Implemented 4 futuristic visual styling variants ("default", "card", "glass" with backdropFilter blur, "neon" cyberpunk cyan glow).
+  - Implemented 3 size scales ("sm", "md", "lg").
+  - Implemented React ref forwarding (`forwardRef`), imperative handle (`MergeEditorHandle`), and explicit `displayName` across all compound exports.
+  - Exported `render_merge_editor_component` in `omnistackai_agent_engine.codegen` and registered `components/merge-editor.tsx` in `NextjsWebAdapter.generate()`.
+  - Maintained 100% diff-invariance across `ir.description`.
+- Added `services/agent-engine/tests/test_merge_editor_component.py` with 17 comprehensive unit tests (all passing).
+- `task verify` — 2,346 tests pass (17 new), 0 failures. `task lint`, `task security:quick`, `task builder:demo -- minimal-blog` pass.
+
+## 2026-09-11 — R-391
+
+- Recorded contract in `.ai/CURRENT_TASK.yaml` and `.ai/tasks/R-391.md` (status in_progress → done).
+- `nextjs.py`:
+  - Added `_WHITEBOARD_COMPONENT` static template implementing accessible, desktop-and-mobile-grade, futuristic Whiteboard & Collaborative Canvas compound component suite (`apps/web/components/whiteboard.tsx`).
+  - Implemented `WhiteboardVariant` ("default" | "card" | "glass" | "neon"), `WhiteboardSize` ("sm" | "md" | "lg"), `WhiteboardTool` ("select" | "pencil" | "line" | "arrow" | "rectangle" | "circle" | "text" | "eraser"), `WhiteboardPoint`, `WhiteboardElement`, `WhiteboardHandle`, `WhiteboardToolbarProps`, `WhiteboardProps` interfaces.
+  - Implemented compound and semantic alias exports: `Whiteboard`, `DrawingCanvas`, `SketchBoard`, `CollaborativeCanvas`, `WhiteboardToolbar`, default export.
+  - Implemented vector shape drawing (rectangle, ellipse/circle, arrow, line, freehand pencil with quadratic smoothing, text sticky notes, eraser).
+  - Implemented color palette presets (`PRESET_COLORS`) and stroke width selector (`STROKE_WIDTHS`: 2px to 14px).
+  - Implemented infinite canvas pan & zoom transform with mouse wheel zoom, click-drag panning, and reset zoom button.
+  - Implemented multi-level undo/redo history stack (`pushHistory`, `undo`, `redo`).
+  - Implemented export to PNG (`canvas.toDataURL`), export to standalone vector SVG XML (`exportSvg`), export and import JSON canvas diagrams (`exportJson`, `loadJson`).
+  - Implemented WAI-ARIA 1.2 application semantics (`role="application"`, `aria-label="Whiteboard Canvas"`, `role="toolbar"`).
+  - Implemented 4 futuristic visual styling variants ("default", "card", "glass" with backdropFilter blur, "neon" cyberpunk cyan glow).
+  - Implemented 3 size scales ("sm", "md", "lg").
+  - Implemented React ref forwarding (`forwardRef`), imperative handle (`WhiteboardHandle`), and explicit `displayName` across all compound exports.
+  - Exported `render_whiteboard_component` in `omnistackai_agent_engine.codegen` and registered `components/whiteboard.tsx` in `NextjsWebAdapter.generate()`.
+  - Maintained 100% diff-invariance across `ir.description`.
+- Added `services/agent-engine/tests/test_whiteboard_component.py` with 17 comprehensive unit tests (all passing).
+- `task verify` — 2,329 tests pass (17 new), 0 failures. `task lint`, `task security:quick`, `task builder:demo -- minimal-blog` pass.
+
+## 2026-09-11 — R-390
+
+- Recorded contract in `.ai/CURRENT_TASK.yaml` and `.ai/tasks/R-390.md` (status in_progress → done).
+- `nextjs.py`:
+  - Added `_VIDEO_PLAYER_COMPONENT` static template implementing accessible, desktop-and-mobile-grade, futuristic Video Player & Streaming Theater compound component suite (`apps/web/components/video-player.tsx`).
+  - Implemented `VideoPlayerVariant` ("default" | "card" | "glass" | "neon"), `VideoPlayerSize` ("sm" | "md" | "lg"), `VideoQuality` ("auto" | "1080p" | "720p" | "480p" | "360p"), `VideoChapter`, `VideoCaption`, `VideoSource`, `VideoPlayerHandle`, `VideoControlsProps`, `VideoPlayerProps` interfaces.
+  - Implemented compound and semantic alias exports: `VideoPlayer`, `MoviePlayer`, `TheaterPlayer`, `StreamPlayer`, `VideoControls`, default export.
+  - Implemented video playback controls (play, pause, 10s skip forward/backward, time formatting helper `formatVideoTime`).
+  - Implemented interactive seekable timeline / scrubber with buffered progress bar and visual chapter markers with hover tooltips.
+  - Implemented theater mode layout expansion and native Fullscreen API integration.
+  - Implemented picture-in-picture (PiP) toggle via HTML5 `requestPictureInPicture`.
+  - Implemented closed captions / subtitles overlay with active cue text matching.
+  - Implemented playback speed selector (0.5x to 2x) and video quality selector (Auto, 1080p, 720p, 480p, 360p).
+  - Implemented volume slider with mute toggle and keyboard shortcuts (Space, K, Arrows, F, T, M, C).
+  - Implemented WAI-ARIA 1.2 media semantics (`role="region"`, `aria-label="Video Player"`, `role="toolbar"`, `role="slider"`).
+  - Implemented 4 futuristic visual styling variants ("default", "card", "glass" with backdropFilter blur, "neon" cyberpunk cyan glow).
+  - Implemented 3 size scales ("sm", "md", "lg").
+  - Implemented React ref forwarding (`forwardRef`), imperative handle (`VideoPlayerHandle`), and explicit `displayName` across all compound exports.
+  - Exported `render_video_player_component` in `omnistackai_agent_engine.codegen` and registered `components/video-player.tsx` in `NextjsWebAdapter.generate()`.
+  - Maintained 100% diff-invariance across `ir.description`.
+- Added `services/agent-engine/tests/test_video_player_component.py` with 17 comprehensive unit tests (all passing).
+- `task verify` — 2,312 tests pass (17 new), 0 failures. `task lint`, `task security:quick`, `task builder:demo -- minimal-blog` pass.
+
+## 2026-09-11 — R-389
+
+- Recorded contract in `.ai/CURRENT_TASK.yaml` and `.ai/tasks/R-389.md` (status in_progress → done).
+- `nextjs.py`:
+  - Added `_AUDIO_PLAYER_COMPONENT` static template implementing accessible, desktop-and-mobile-grade, futuristic Audio Player & Frequency Equalizer compound component suite (`apps/web/components/audio-player.tsx`).
+  - Implemented `AudioPlayerVariant` ("default" | "card" | "glass" | "neon"), `AudioPlayerSize` ("sm" | "md" | "lg"), `AudioTrack`, `AudioEqualizerBand`, `AudioEqualizerPreset`, `AudioPlayerHandle`, `AudioPlaylistProps`, `AudioEqualizerProps`, `AudioPlayerProps` interfaces.
+  - Implemented compound and semantic alias exports: `AudioPlayer`, `MusicPlayer`, `SoundPlayer`, `AudioPlaylist`, `AudioEqualizer`, default export.
+  - Implemented audio playback controls (play, pause, previous, next, seek forward/back 10s).
+  - Implemented interactive seekable waveform / scrubber with duration and current time indicators (`MM:SS`).
+  - Implemented multi-band frequency equalizer (`AudioEqualizer`: 60Hz, 250Hz, 1kHz, 4kHz, 16kHz) with presets ("Flat", "Bass Boost", "Vocal", "Electronic", "Rock") and vertical interactive sliders.
+  - Implemented multi-track playlist queue drawer (`AudioPlaylist`) with track selection, active track indicator, and track durations.
+  - Implemented playback speed selector (0.5x, 0.75x, 1x, 1.25x, 1.5x, 2x).
+  - Implemented volume slider with mute toggle, repeat (none, all, one) and shuffle toggles.
+  - Implemented WAI-ARIA 1.2 media semantics (`role="region"`, `aria-label="Audio Player"`).
+  - Implemented 4 futuristic visual styling variants ("default", "card", "glass" with backdropFilter blur, "neon" cyberpunk cyan glow).
+  - Implemented 3 size scales ("sm", "md", "lg").
+  - Implemented React ref forwarding (`forwardRef`), imperative handle (`AudioPlayerHandle`), and explicit `displayName` across all compound exports.
+  - Exported `render_audio_player_component` in `omnistackai_agent_engine.codegen` and registered `components/audio-player.tsx` in `NextjsWebAdapter.generate()`.
+  - Maintained 100% diff-invariance across `ir.description`.
+- Added `services/agent-engine/tests/test_audio_player_component.py` with 17 comprehensive unit tests (all passing).
+- `task verify` — 2,295 tests pass (17 new), 0 failures. `task lint`, `task security:quick`, `task builder:demo -- minimal-blog` pass.
+
+## 2026-09-11 — R-388
+
+- Recorded contract in `.ai/CURRENT_TASK.yaml` and `.ai/tasks/R-388.md` (status in_progress → done).
+- `nextjs.py`:
+  - Added `_PDF_VIEWER_COMPONENT` static template implementing accessible, desktop-and-mobile-grade, futuristic PDF & Document Viewer compound component suite (`apps/web/components/pdf-viewer.tsx`).
+  - Implemented `PdfViewerVariant` ("default" | "card" | "glass" | "neon"), `PdfViewerSize` ("sm" | "md" | "lg"), `PdfViewMode` ("single" | "continuous"), `PdfPage`, `PdfViewerHandle`, `PdfThumbnailProps`, `PdfToolbarProps`, `PdfPageCanvasProps`, `PdfViewerProps` interfaces.
+  - Implemented compound and semantic alias exports: `PdfViewer`, `DocumentViewer`, `FileViewer`, `PdfThumbnails`, `PdfToolbar`, `PdfPageCanvas`, default export.
+  - Implemented multi-page document pagination with page number jumper and page counter indicators (`Page X of Y`).
+  - Implemented interactive page zooming (50% to 300%) with zoom in/out buttons, zoom presets, and smooth scaling.
+  - Implemented page rotation (90° clockwise per trigger).
+  - Implemented slide-over thumbnail navigation drawer (`PdfThumbnails`) with clickable miniature page preview cards.
+  - Implemented in-document text search with live match counter (`Match X of Y`), previous/next match navigation, and `<mark>` highlighted text styling.
+  - Implemented single-page and continuous vertical scroll view modes (`single` vs `continuous`).
+  - Implemented action toolbar with print trigger (`window.print`), download action, and fullscreen presentation toggle.
+  - Implemented WAI-ARIA 1.2 document and toolbar semantics (`role="region"`, `role="toolbar"`, `role="document"`, `aria-label="Document Viewer"`, keyboard shortcuts).
+  - Implemented 4 futuristic visual styling variants ("default", "card", "glass" with backdropFilter blur, "neon" cyberpunk cyan glow).
+  - Implemented 3 size scales ("sm", "md", "lg").
+  - Implemented React ref forwarding (`forwardRef`), imperative handle (`PdfViewerHandle`), and explicit `displayName` across all compound exports.
+  - Exported `render_pdf_viewer_component` in `omnistackai_agent_engine.codegen` and registered `components/pdf-viewer.tsx` in `NextjsWebAdapter.generate()`.
+  - Maintained 100% diff-invariance across `ir.description`.
+- Added `services/agent-engine/tests/test_pdf_viewer_component.py` with 17 comprehensive unit tests (all passing).
+- `task verify` — 2,278 tests pass (17 new), 0 failures. `task lint`, `task security:quick`, `task builder:demo -- minimal-blog` pass.
+
+## 2026-09-11 — R-387
+
+- Recorded contract in `.ai/CURRENT_TASK.yaml` and `.ai/tasks/R-387.md` (status in_progress → done).
+- `nextjs.py`:
+  - Added `_GEO_MAP_COMPONENT` static template implementing accessible, desktop-and-mobile-grade, futuristic Interactive Geo Map & Location Pinpoint compound component suite (`apps/web/components/geo-map.tsx`).
+  - Implemented `GeoMapVariant` ("default" | "card" | "glass" | "neon"), `GeoMapSize` ("sm" | "md" | "lg"), `MarkerStyle` ("pin" | "dot" | "pulse" | "beacon"), `MapMarker`, `MapRoute`, `GeoMapHandle`, `MapCalloutProps`, `MapControlsProps`, `GeoMapProps` interfaces.
+  - Implemented compound and semantic alias exports: `GeoMap`, `InteractiveMap`, `LocationPicker`, `MapPin`, `MapCallout`, `MapControls`, `RouteLine`, default export.
+  - Implemented zero-dependency mathematical vector SVG Equirectangular coordinate projection engine (`lngToX`, `latToY`, `xToLng`, `yToLat`).
+  - Implemented stylized world continent vector paths (North America, South America, Europe, Africa, Asia, Australia, Antarctica) and latitude/longitude graticules.
+  - Implemented interactive pan & zoom transform engine with mouse drag-to-pan, scroll wheel zoom, keyboard arrow navigation, and reset-view controls.
+  - Implemented customizable location marker pins with 4 styles (`pin`, `dot`, `pulse`, `beacon`), pulsating animated radar rings, and selection indicators.
+  - Implemented interactive marker callout popup card (`MapCallout`) showing category badge, title, description, coordinate readout, and action button.
+  - Implemented route polyline visualizer (`RouteLine`) connecting waypoints with glowing animated data flow.
+  - Implemented real-time location search bar and category filter pill buttons.
+  - Implemented coordinate picker crosshair mode capturing exact latitude and longitude on click (`onCoordinateSelect`).
+  - Implemented floating HUD controls (`MapControls`) for zoom in/out, reset, and live cursor coordinate badge.
+  - Implemented WAI-ARIA 1.2 application semantics (`role="application"`, `aria-label="Interactive Map"`, keyboard navigation).
+  - Implemented 4 futuristic visual styling variants ("default", "card", "glass" with backdropFilter blur, "neon" cyberpunk cyan glow).
+  - Implemented 3 size scales ("sm", "md", "lg").
+  - Implemented React ref forwarding (`forwardRef`), imperative handle (`GeoMapHandle`), and explicit `displayName` across all compound exports.
+  - Exported `render_geo_map_component` in `omnistackai_agent_engine.codegen` and registered `components/geo-map.tsx` in `NextjsWebAdapter.generate()`.
+  - Maintained 100% diff-invariance across `ir.description`.
+- Added `services/agent-engine/tests/test_geo_map_component.py` with 17 comprehensive unit tests (all passing).
+- `task verify` — 2,261 tests pass (17 new), 0 failures. `task lint`, `task security:quick`, `task builder:demo -- minimal-blog` pass.
+
+## 2026-09-11 — R-386
+
+- Recorded contract in `.ai/CURRENT_TASK.yaml` and `.ai/tasks/R-386.md` (status in_progress → done).
+- `nextjs.py`:
+  - Added `_FILE_EXPLORER_COMPONENT` static template implementing accessible, desktop-and-mobile-grade, futuristic File Explorer & Storage Browser compound component suite (`apps/web/components/file-explorer.tsx`).
+  - Implemented `FileExplorerVariant` ("default" | "card" | "glass" | "neon"), `FileExplorerSize` ("sm" | "md" | "lg"), `FileExplorerViewMode` ("grid" | "list"), `FileItemType` ("folder" | "file" | "image" | "video" | "audio" | "code" | "pdf" | "archive"), `FileItem`, `FileExplorerHandle`, `FileBreadcrumbsProps`, `FileDetailsProps`, `FileExplorerProps` interfaces.
+  - Implemented compound and semantic alias exports: `FileExplorer`, `FileManager`, `FileBrowser`, `DocumentManager`, `FileGrid`, `FileList`, `FileDetailsPanel`, `FileBreadcrumbs`, default export.
+  - Implemented folder navigation with dynamic path breadcrumbs bar and click-to-traverse hierarchy.
+  - Implemented dual view modes: card grid view with item type badges and list view with tabular columns (Name, Size, Date, Type).
+  - Implemented single and multi-selection modes (`allowMultiSelect`) with checkbox selection and select-all affordance.
+  - Implemented real-time search filtering across item names.
+  - Implemented slide-over file inspector details panel (`FileDetailsPanel`) showing preview icons, formatted file sizes (B, KB, MB, GB), timestamps, and item actions.
+  - Implemented action toolbar with upload button, download action, and delete confirmation trigger.
+  - Implemented WAI-ARIA 1.2 grid and region semantics (`role="region"`, `aria-label="File Explorer"`, `role="grid"`, `role="row"`, `role="gridcell"`, `aria-selected`).
+  - Implemented 4 futuristic visual styling variants ("default", "card", "glass" with backdropFilter blur, "neon" cyberpunk cyan glow).
+  - Implemented 3 size scales ("sm", "md", "lg").
+  - Implemented React ref forwarding (`forwardRef`), imperative handle (`FileExplorerHandle`), and explicit `displayName` across all compound exports.
+  - Exported `render_file_explorer_component` in `omnistackai_agent_engine.codegen` and registered `components/file-explorer.tsx` in `NextjsWebAdapter.generate()`.
+  - Maintained 100% diff-invariance across `ir.description`.
+- Added `services/agent-engine/tests/test_file_explorer_component.py` with 17 comprehensive unit tests (all passing).
+- `task verify` — 2,244 tests pass (17 new), 0 failures. `task lint`, `task security:quick`, `task builder:demo -- minimal-blog` pass.
+
+## 2026-09-11 — R-385
+
+- Recorded contract in `.ai/CURRENT_TASK.yaml` and `.ai/tasks/R-385.md` (status in_progress → done).
+- `nextjs.py`:
+  - Added `_AUDIO_RECORDER_COMPONENT` static template implementing accessible, desktop-and-mobile-grade, futuristic Audio & Voice Recorder compound component suite (`apps/web/components/audio-recorder.tsx`).
+  - Implemented `AudioRecorderVariant` ("default" | "card" | "glass" | "neon"), `AudioRecorderSize` ("sm" | "md" | "lg"), `RecordingState` ("idle" | "recording" | "paused" | "stopped"), `WaveformStyle` ("bars" | "wave" | "mirror"), `AudioRecording`, `AudioRecorderHandle`, `WaveformVisualizerProps`, `AudioPlayerBarProps`, `AudioRecorderProps` interfaces.
+  - Implemented compound and semantic alias exports: `AudioRecorder`, `VoiceRecorder`, `SoundRecorder`, `WaveformVisualizer`, `AudioPlayerBar`, default export.
+  - Implemented real-time sound recording lifecycle state machine (`idle` -> `recording` <-> `paused` -> `stopped`).
+  - Implemented sound waveform canvas visualizer (`WaveformVisualizer`) supporting 3 visual styles: `bars` (frequency bars), `wave` (smooth bezier wave), and `mirror` (symmetrical wave).
+  - Implemented real-time duration timer (`MM:SS`) with animated pulsing live recording indicator dot.
+  - Implemented maximum duration auto-stop guard (`maxDuration`).
+  - Implemented integrated audio playback bar with seekable scrubber, play/pause toggle, and duration readout.
+  - Implemented audio download and delete/discard actions.
+  - Implemented WAI-ARIA 1.2 media semantics (`role="region"`, `aria-label="Audio Recorder"`, `aria-live="polite"`).
+  - Implemented 4 futuristic visual styling variants ("default", "card", "glass" with backdropFilter blur, "neon" cyberpunk cyan glow).
+  - Implemented 3 size scales ("sm", "md", "lg").
+  - Implemented React ref forwarding (`forwardRef`), imperative handle (`AudioRecorderHandle`), and explicit `displayName` across all compound exports.
+  - Exported `render_audio_recorder_component` in `omnistackai_agent_engine.codegen` and registered `components/audio-recorder.tsx` in `NextjsWebAdapter.generate()`.
+  - Maintained 100% diff-invariance across `ir.description`.
+- Added `services/agent-engine/tests/test_audio_recorder_component.py` with 17 comprehensive unit tests (all passing).
+- `task verify` — 2,227 tests pass (17 new), 0 failures. `task lint`, `task security:quick`, `task builder:demo -- minimal-blog` pass.
+
+## 2026-09-11 — R-384
+
+- Recorded contract in `.ai/CURRENT_TASK.yaml` and `.ai/tasks/R-384.md` (status in_progress → done).
+- `nextjs.py`:
+  - Added `_CHAT_COMPONENT` static template implementing accessible, desktop-and-mobile-grade, futuristic Chat & Real-Time Messaging compound component suite (`apps/web/components/chat.tsx`).
+  - Implemented `ChatVariant` ("default" | "card" | "glass" | "neon"), `ChatSize` ("sm" | "md" | "lg"), `MessageSender` ("user" | "bot" | "agent" | "system"), `MessageStatus` ("sending" | "sent" | "delivered" | "read" | "failed"), `ChatAttachment`, `ChatAction`, `ChatMessage`, `ChatConversation`, `ChatHandle`, `ChatHeaderProps`, `ChatMessageProps`, `ChatInputProps`, `ChatSidebarProps`, `ChatMessageListProps`, `ChatProps` interfaces.
+  - Implemented compound and semantic alias exports: `Chat`, `ChatWindow`, `Messenger`, `ChatWidget`, `ChatHeader`, `ChatSidebar`, `ChatMessageItem`, `ChatInput`, `ChatMessageList`, default export.
+  - Implemented conversational message streams with user, bot/agent, and system message bubble styling distinctions.
+  - Implemented sent, delivered, read receipt status indicators and timestamp display.
+  - Implemented typing indicator with pulsing animated dots.
+  - Implemented auto-expanding input bar with Enter-to-send, Shift+Enter for newline, file attachment button, and send button.
+  - Implemented quick action pills / suggestion chips for rapid response.
+  - Implemented media attachment previews (image and file types) with name and type display.
+  - Implemented multi-thread conversation sidebar with search filtering and unread count badges.
+  - Implemented auto-scroll to bottom behavior on new messages.
+  - Implemented WAI-ARIA 1.2 log accessibility semantics (`role="log"`, `aria-live="polite"`, `role="list"`, `role="listitem"`).
+  - Implemented 4 futuristic visual styling variants ("default", "card", "glass" with backdropFilter blur, "neon" cyberpunk cyan glow with luminous halos).
+  - Implemented 3 size scales ("sm", "md", "lg").
+  - Implemented React ref forwarding (`forwardRef`), imperative handle (`ChatHandle`), and explicit `displayName` across all exports.
+  - Exported `render_chat_component` in `omnistackai_agent_engine.codegen` and registered `components/chat.tsx` in `NextjsWebAdapter.generate()`.
+  - Maintained 100% diff-invariance across `ir.description`.
+- Added `services/agent-engine/tests/test_chat_component.py` with 17 comprehensive unit tests (all passing).
+- `task verify` — 2,210 tests pass (17 new), 0 failures. `task lint`, `task security:quick`, `task builder:demo -- minimal-blog` pass.
+
 ## 2026-09-11 — R-383
 
 - Recorded contract in `.ai/CURRENT_TASK.yaml` and `.ai/tasks/R-383.md` (status in_progress → done).

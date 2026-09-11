@@ -49324,6 +49324,12436 @@ def render_spreadsheet_component() -> str:
 
 
 
+
+_CHAT_COMPONENT = (
+    '"use client";\n\n'
+    'import React, {\n'
+    '  useState, useRef, useCallback, useEffect, useImperativeHandle, forwardRef,\n'
+    '} from "react";\n\n'
+    '// ---------------------------------------------------------------------------\n'
+    '// Types & Interfaces\n'
+    '// ---------------------------------------------------------------------------\n'
+    'export type ChatVariant = "default" | "card" | "glass" | "neon";\n'
+    'export type ChatSize = "sm" | "md" | "lg";\n'
+    'export type MessageSender = "user" | "bot" | "agent" | "system";\n'
+    'export type MessageStatus = "sending" | "sent" | "delivered" | "read" | "failed";\n\n'
+    'export interface ChatAttachment {\n'
+    '  id: string;\n'
+    '  name: string;\n'
+    '  url?: string;\n'
+    '  type: "image" | "file" | "audio";\n'
+    '  size?: number;\n'
+    '  mimeType?: string;\n'
+    '}\n\n'
+    'export interface ChatAction {\n'
+    '  label: string;\n'
+    '  value: string;\n'
+    '  variant?: "primary" | "secondary" | "danger";\n'
+    '}\n\n'
+    'export interface ChatMessage {\n'
+    '  id: string;\n'
+    '  sender: MessageSender;\n'
+    '  text: string;\n'
+    '  timestamp: string | number;\n'
+    '  senderName?: string;\n'
+    '  avatarUrl?: string;\n'
+    '  status?: MessageStatus;\n'
+    '  attachments?: ChatAttachment[];\n'
+    '  actions?: ChatAction[];\n'
+    '  isTyping?: boolean;\n'
+    '}\n\n'
+    'export interface ChatConversation {\n'
+    '  id: string;\n'
+    '  title: string;\n'
+    '  subtitle?: string;\n'
+    '  avatarUrl?: string;\n'
+    '  unreadCount?: number;\n'
+    '  lastMessage?: string;\n'
+    '  timestamp?: string | number;\n'
+    '  online?: boolean;\n'
+    '}\n\n'
+    'export interface ChatHandle {\n'
+    '  scrollToBottom: () => void;\n'
+    '  clearInput: () => void;\n'
+    '  focusInput: () => void;\n'
+    '  appendMessage: (msg: ChatMessage) => void;\n'
+    '}\n\n'
+    'export interface ChatHeaderProps {\n'
+    '  title: string;\n'
+    '  subtitle?: string;\n'
+    '  avatarUrl?: string;\n'
+    '  online?: boolean;\n'
+    '  showSidebarToggle?: boolean;\n'
+    '  onToggleSidebar?: () => void;\n'
+    '  variant?: ChatVariant;\n'
+    '  size?: ChatSize;\n'
+    '}\n\n'
+    'export interface ChatMessageProps {\n'
+    '  message: ChatMessage;\n'
+    '  variant?: ChatVariant;\n'
+    '  size?: ChatSize;\n'
+    '  onActionClick?: (action: ChatAction, message: ChatMessage) => void;\n'
+    '}\n\n'
+    'export interface ChatInputProps {\n'
+    '  placeholder?: string;\n'
+    '  disabled?: boolean;\n'
+    '  variant?: ChatVariant;\n'
+    '  size?: ChatSize;\n'
+    '  onSend: (text: string, attachments?: ChatAttachment[]) => void;\n'
+    '  onTyping?: (isTyping: boolean) => void;\n'
+    '}\n\n'
+    'export interface ChatSidebarProps {\n'
+    '  conversations: ChatConversation[];\n'
+    '  activeId?: string;\n'
+    '  onSelect: (conversation: ChatConversation) => void;\n'
+    '  variant?: ChatVariant;\n'
+    '  size?: ChatSize;\n'
+    '  isOpen?: boolean;\n'
+    '  onClose?: () => void;\n'
+    '}\n\n'
+    'export interface ChatMessageListProps {\n'
+    '  messages: ChatMessage[];\n'
+    '  typingUsers?: string[];\n'
+    '  variant?: ChatVariant;\n'
+    '  size?: ChatSize;\n'
+    '  onActionClick?: (action: ChatAction, message: ChatMessage) => void;\n'
+    '}\n\n'
+    'export interface ChatProps {\n'
+    '  messages: ChatMessage[];\n'
+    '  conversations?: ChatConversation[];\n'
+    '  activeConversationId?: string;\n'
+    '  title?: string;\n'
+    '  subtitle?: string;\n'
+    '  avatarUrl?: string;\n'
+    '  online?: boolean;\n'
+    '  variant?: ChatVariant;\n'
+    '  size?: ChatSize;\n'
+    '  placeholder?: string;\n'
+    '  typingUsers?: string[];\n'
+    '  showSidebar?: boolean;\n'
+    '  disabled?: boolean;\n'
+    '  readOnly?: boolean;\n'
+    '  className?: string;\n'
+    '  style?: React.CSSProperties;\n'
+    '  onSendMessage?: (text: string, attachments?: ChatAttachment[]) => void;\n'
+    '  onSelectConversation?: (conversation: ChatConversation) => void;\n'
+    '  onActionClick?: (action: ChatAction, message: ChatMessage) => void;\n'
+    '}\n\n'
+    '// ---------------------------------------------------------------------------\n'
+    '// Styling Helpers & Variants\n'
+    '// ---------------------------------------------------------------------------\n'
+    'function getVariantStyles(variant: ChatVariant) {\n'
+    '  switch (variant) {\n'
+    '    case "card":\n'
+    '      return {\n'
+    '        container: { background: "#ffffff", border: "1px solid #e2e8f0", borderRadius: 14,\n'
+    '          boxShadow: "0 4px 20px rgba(0,0,0,0.06)", color: "#0f172a" },\n'
+    '        header: { background: "#f8fafc", borderBottom: "1px solid #e2e8f0", color: "#0f172a" },\n'
+    '        body: { background: "#ffffff" },\n'
+    '        sidebar: { background: "#f8fafc", borderRight: "1px solid #e2e8f0" },\n'
+    '        sidebarItemActive: { background: "#eff6ff", color: "#1e40af" },\n'
+    '        bubbleUser: { background: "#2563eb", color: "#ffffff", borderRadius: "16px 16px 4px 16px" },\n'
+    '        bubbleBot: { background: "#f1f5f9", color: "#0f172a", border: "1px solid #e2e8f0", borderRadius: "16px 16px 16px 4px" },\n'
+    '        bubbleSystem: { background: "#f8fafc", color: "#64748b", border: "1px solid #e2e8f0" },\n'
+    '        inputContainer: { background: "#f8fafc", borderTop: "1px solid #e2e8f0" },\n'
+    '        input: { background: "#ffffff", border: "1px solid #cbd5e1", color: "#0f172a" },\n'
+    '        sendBtn: { background: "#2563eb", color: "#ffffff", hover: "#1d4ed8" },\n'
+    '        onlineDot: "#22c55e",\n'
+    '        glow: "none",\n'
+    '      };\n'
+    '    case "glass":\n'
+    '      return {\n'
+    '        container: { background: "rgba(15,23,42,0.75)", backdropFilter: "blur(20px)",\n'
+    '          border: "1px solid rgba(148,163,184,0.15)", borderRadius: 16,\n'
+    '          boxShadow: "0 8px 32px rgba(0,0,0,0.37)", color: "#f8fafc" },\n'
+    '        header: { background: "rgba(30,41,59,0.5)", borderBottom: "1px solid rgba(148,163,184,0.15)", color: "#f8fafc" },\n'
+    '        body: { background: "transparent" },\n'
+    '        sidebar: { background: "rgba(15,23,42,0.6)", borderRight: "1px solid rgba(148,163,184,0.12)" },\n'
+    '        sidebarItemActive: { background: "rgba(59,130,246,0.2)", color: "#93c5fd" },\n'
+    '        bubbleUser: { background: "linear-gradient(135deg, #3b82f6, #1d4ed8)", color: "#ffffff", borderRadius: "16px 16px 4px 16px" },\n'
+    '        bubbleBot: { background: "rgba(30,41,59,0.7)", color: "#e2e8f0", border: "1px solid rgba(148,163,184,0.12)", borderRadius: "16px 16px 16px 4px" },\n'
+    '        bubbleSystem: { background: "rgba(30,41,59,0.4)", color: "#94a3b8", border: "1px solid rgba(148,163,184,0.08)" },\n'
+    '        inputContainer: { background: "rgba(30,41,59,0.4)", borderTop: "1px solid rgba(148,163,184,0.15)" },\n'
+    '        input: { background: "rgba(15,23,42,0.6)", border: "1px solid rgba(148,163,184,0.2)", color: "#f8fafc" },\n'
+    '        sendBtn: { background: "#3b82f6", color: "#ffffff", hover: "#2563eb" },\n'
+    '        onlineDot: "#4ade80",\n'
+    '        glow: "0 0 20px rgba(59,130,246,0.2)",\n'
+    '      };\n'
+    '    case "neon":\n'
+    '      return {\n'
+    '        container: { background: "#060b14", border: "1px solid rgba(0,255,200,0.3)", borderRadius: 12,\n'
+    '          boxShadow: "0 0 30px rgba(0,255,200,0.15), inset 0 0 20px rgba(0,255,200,0.03)", color: "#00ffc8" },\n'
+    '        header: { background: "#08101e", borderBottom: "1px solid rgba(0,255,200,0.2)", color: "#00ffc8" },\n'
+    '        body: { background: "#060b14" },\n'
+    '        sidebar: { background: "#08101e", borderRight: "1px solid rgba(0,255,200,0.15)" },\n'
+    '        sidebarItemActive: { background: "rgba(0,255,200,0.12)", color: "#00ffc8", borderLeft: "3px solid #00ffc8" },\n'
+    '        bubbleUser: { background: "linear-gradient(135deg, #00ffc8, #0284c7)", color: "#060b14", fontWeight: 500,\n'
+    '          boxShadow: "0 0 14px rgba(0,255,200,0.35)", borderRadius: "16px 16px 4px 16px" },\n'
+    '        bubbleBot: { background: "rgba(8,16,30,0.9)", color: "#a5f3e0", border: "1px solid rgba(0,255,200,0.25)",\n'
+    '          boxShadow: "0 0 10px rgba(0,255,200,0.1)", borderRadius: "16px 16px 16px 4px" },\n'
+    '        bubbleSystem: { background: "rgba(8,16,30,0.6)", color: "rgba(0,255,200,0.6)", border: "1px dashed rgba(0,255,200,0.2)" },\n'
+    '        inputContainer: { background: "#08101e", borderTop: "1px solid rgba(0,255,200,0.2)" },\n'
+    '        input: { background: "#060b14", border: "1px solid rgba(0,255,200,0.3)", color: "#00ffc8" },\n'
+    '        sendBtn: { background: "#00ffc8", color: "#060b14", hover: "#38bdf8", boxShadow: "0 0 12px rgba(0,255,200,0.4)" },\n'
+    '        onlineDot: "#00ffc8",\n'
+    '        glow: "0 0 25px rgba(0,255,200,0.25)",\n'
+    '      };\n'
+    '    case "default":\n'
+    '    default:\n'
+    '      return {\n'
+    '        container: { background: "#0f172a", border: "1px solid #1e293b", borderRadius: 12,\n'
+    '          boxShadow: "0 4px 24px rgba(0,0,0,0.4)", color: "#f8fafc" },\n'
+    '        header: { background: "#1e293b", borderBottom: "1px solid #334155", color: "#f8fafc" },\n'
+    '        body: { background: "#0f172a" },\n'
+    '        sidebar: { background: "#1e293b", borderRight: "1px solid #334155" },\n'
+    '        sidebarItemActive: { background: "rgba(59,130,246,0.2)", color: "#60a5fa" },\n'
+    '        bubbleUser: { background: "#2563eb", color: "#ffffff", borderRadius: "16px 16px 4px 16px" },\n'
+    '        bubbleBot: { background: "#1e293b", color: "#e2e8f0", border: "1px solid #334155", borderRadius: "16px 16px 16px 4px" },\n'
+    '        bubbleSystem: { background: "#1e293b", color: "#94a3b8", border: "1px solid #334155" },\n'
+    '        inputContainer: { background: "#1e293b", borderTop: "1px solid #334155" },\n'
+    '        input: { background: "#0f172a", border: "1px solid #334155", color: "#f8fafc" },\n'
+    '        sendBtn: { background: "#2563eb", color: "#ffffff", hover: "#1d4ed8" },\n'
+    '        onlineDot: "#22c55e",\n'
+    '        glow: "none",\n'
+    '      };\n'
+    '  }\n'
+    '}\n\n'
+    'function getSizeConfig(size: ChatSize) {\n'
+    '  switch (size) {\n'
+    '    case "sm":\n'
+    '      return { fontSize: 12, headerH: 44, inputH: 36, bubblePad: "6px 10px", avatarSize: 28, iconSize: 14 };\n'
+    '    case "lg":\n'
+    '      return { fontSize: 15, headerH: 64, inputH: 48, bubblePad: "12px 18px", avatarSize: 42, iconSize: 20 };\n'
+    '    case "md":\n'
+    '    default:\n'
+    '      return { fontSize: 14, headerH: 54, inputH: 42, bubblePad: "9px 14px", avatarSize: 34, iconSize: 16 };\n'
+    '  }\n'
+    '}\n\n'
+    '// ---------------------------------------------------------------------------\n'
+    '// Inline Vector Icons\n'
+    '// ---------------------------------------------------------------------------\n'
+    'function SendIcon({ size = 16 }: { size?: number }) {\n'
+    '  return (\n'
+    '    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">\n'
+    '      <line x1="22" y1="2" x2="11" y2="13" />\n'
+    '      <polygon points="22 2 15 22 11 13 2 9 22 2" />\n'
+    '    </svg>\n'
+    '  );\n'
+    '}\n\n'
+    'function PaperclipIcon({ size = 16 }: { size?: number }) {\n'
+    '  return (\n'
+    '    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">\n'
+    '      <path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48" />\n'
+    '    </svg>\n'
+    '  );\n'
+    '}\n\n'
+    'function CheckIcon({ size = 14 }: { size?: number }) {\n'
+    '  return (\n'
+    '    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">\n'
+    '      <polyline points="20 6 9 17 4 12" />\n'
+    '    </svg>\n'
+    '  );\n'
+    '}\n\n'
+    'function DoubleCheckIcon({ size = 14, color }: { size?: number; color?: string }) {\n'
+    '  return (\n'
+    '    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color || "currentColor"} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">\n'
+    '      <polyline points="18 6 9 17 4 12" />\n'
+    '      <polyline points="23 10 14 21 11 18" />\n'
+    '    </svg>\n'
+    '  );\n'
+    '}\n\n'
+    'function ClockIcon({ size = 12 }: { size?: number }) {\n'
+    '  return (\n'
+    '    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">\n'
+    '      <circle cx="12" cy="12" r="10" />\n'
+    '      <polyline points="12 6 12 12 16 14" />\n'
+    '    </svg>\n'
+    '  );\n'
+    '}\n\n'
+    'function SearchIcon({ size = 14 }: { size?: number }) {\n'
+    '  return (\n'
+    '    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">\n'
+    '      <circle cx="11" cy="11" r="8" />\n'
+    '      <line x1="21" y1="21" x2="16.65" y2="16.65" />\n'
+    '    </svg>\n'
+    '  );\n'
+    '}\n\n'
+    'function ImageIcon({ size = 14 }: { size?: number }) {\n'
+    '  return (\n'
+    '    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">\n'
+    '      <rect x="3" y="3" width="18" height="18" rx="2" ry="2" />\n'
+    '      <circle cx="8.5" cy="8.5" r="1.5" />\n'
+    '      <polyline points="21 15 16 10 5 21" />\n'
+    '    </svg>\n'
+    '  );\n'
+    '}\n\n'
+    'function FileIcon({ size = 14 }: { size?: number }) {\n'
+    '  return (\n'
+    '    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">\n'
+    '      <path d="M13 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z" />\n'
+    '      <polyline points="13 2 13 9 20 9" />\n'
+    '    </svg>\n'
+    '  );\n'
+    '}\n\n'
+    '// ---------------------------------------------------------------------------\n'
+    '// Subcomponents\n'
+    '// ---------------------------------------------------------------------------\n'
+    'export const ChatHeaderInner = forwardRef<HTMLDivElement, ChatHeaderProps>(function ChatHeaderInner(\n'
+    '  {\n'
+    '    title,\n'
+    '    subtitle,\n'
+    '    avatarUrl,\n'
+    '    online = true,\n'
+    '    showSidebarToggle = false,\n'
+    '    onToggleSidebar,\n'
+    '    variant = "default",\n'
+    '    size = "md",\n'
+    '  },\n'
+    '  ref\n'
+    ') {\n'
+    '  const vs = getVariantStyles(variant);\n'
+    '  const sc = getSizeConfig(size);\n'
+    '  return (\n'
+    '    <div\n'
+    '      ref={ref}\n'
+    '      style={{\n'
+    '        ...vs.header,\n'
+    '        height: sc.headerH,\n'
+    '        display: "flex",\n'
+    '        alignItems: "center",\n'
+    '        padding: "0 16px",\n'
+    '        gap: 12,\n'
+    '        boxSizing: "border-box",\n'
+    '        flexShrink: 0,\n'
+    '      }}\n'
+    '      role="banner"\n'
+    '    >\n'
+    '      {showSidebarToggle && (\n'
+    '        <button\n'
+    '          type="button"\n'
+    '          onClick={onToggleSidebar}\n'
+    '          style={{\n'
+    '            background: "none",\n'
+    '            border: "none",\n'
+    '            cursor: "pointer",\n'
+    '            color: "inherit",\n'
+    '            padding: 4,\n'
+    '            display: "flex",\n'
+    '            alignItems: "center",\n'
+    '          }}\n'
+    '          aria-label="Toggle conversation list"\n'
+    '        >\n'
+    '          <svg width={18} height={18} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">\n'
+    '            <line x1="3" y1="12" x2="21" y2="12" />\n'
+    '            <line x1="3" y1="6" x2="21" y2="6" />\n'
+    '            <line x1="3" y1="18" x2="21" y2="18" />\n'
+    '          </svg>\n'
+    '        </button>\n'
+    '      )}\n'
+    '      <div style={{ position: "relative", width: sc.avatarSize, height: sc.avatarSize, flexShrink: 0 }}>\n'
+    '        {avatarUrl ? (\n'
+    '          <img\n'
+    '            src={avatarUrl}\n'
+    '            alt={title}\n'
+    '            style={{ width: "100%", height: "100%", borderRadius: "50%", objectFit: "cover" }}\n'
+    '          />\n'
+    '        ) : (\n'
+    '          <div\n'
+    '            style={{\n'
+    '              width: "100%",\n'
+    '              height: "100%",\n'
+    '              borderRadius: "50%",\n'
+    '              background: "rgba(59,130,246,0.2)",\n'
+    '              color: "#3b82f6",\n'
+    '              display: "flex",\n'
+    '              alignItems: "center",\n'
+    '              justifyContent: "center",\n'
+    '              fontWeight: 600,\n'
+    '              fontSize: sc.fontSize,\n'
+    '            }}\n'
+    '          >\n'
+    '            {title.charAt(0).toUpperCase()}\n'
+    '          </div>\n'
+    '        )}\n'
+    '        {online && (\n'
+    '          <span\n'
+    '            style={{\n'
+    '              position: "absolute",\n'
+    '              bottom: 0,\n'
+    '              right: 0,\n'
+    '              width: 9,\n'
+    '              height: 9,\n'
+    '              borderRadius: "50%",\n'
+    '              background: vs.onlineDot,\n'
+    '              border: "2px solid #0f172a",\n'
+    '            }}\n'
+    '            title="Online"\n'
+    '            aria-label="Online"\n'
+    '          />\n'
+    '        )}\n'
+    '      </div>\n'
+    '      <div style={{ flex: 1, minWidth: 0 }}>\n'
+    '        <div style={{ fontWeight: 600, fontSize: sc.fontSize, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>\n'
+    '          {title}\n'
+    '        </div>\n'
+    '        {subtitle && (\n'
+    '          <div style={{ fontSize: sc.fontSize - 2, opacity: 0.7, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>\n'
+    '            {subtitle}\n'
+    '          </div>\n'
+    '        )}\n'
+    '      </div>\n'
+    '    </div>\n'
+    '  );\n'
+    '});\n'
+    'ChatHeaderInner.displayName = "ChatHeader";\n\n'
+    'export const ChatMessageItemInner = forwardRef<HTMLDivElement, ChatMessageProps>(function ChatMessageItemInner(\n'
+    '  { message, variant = "default", size = "md", onActionClick },\n'
+    '  ref\n'
+    ') {\n'
+    '  const vs = getVariantStyles(variant);\n'
+    '  const sc = getSizeConfig(size);\n'
+    '  const isUser = message.sender === "user";\n'
+    '  const isSystem = message.sender === "system";\n\n'
+    '  if (isSystem) {\n'
+    '    return (\n'
+    '      <div\n'
+    '        ref={ref}\n'
+    '        role="listitem"\n'
+    '        style={{\n'
+    '          textAlign: "center",\n'
+    '          margin: "10px 0",\n'
+    '          fontSize: sc.fontSize - 2,\n'
+    '          display: "flex",\n'
+    '          justifyContent: "center",\n'
+    '        }}\n'
+    '      >\n'
+    '        <span style={{ ...vs.bubbleSystem, padding: "4px 12px", borderRadius: 12 }}>\n'
+    '          {message.text}\n'
+    '        </span>\n'
+    '      </div>\n'
+    '    );\n'
+    '  }\n\n'
+    '  return (\n'
+    '    <div\n'
+    '      ref={ref}\n'
+    '      role="listitem"\n'
+    '      style={{\n'
+    '        display: "flex",\n'
+    '        flexDirection: "column",\n'
+    '        alignItems: isUser ? "flex-end" : "flex-start",\n'
+    '        margin: "8px 0",\n'
+    '        padding: "0 16px",\n'
+    '      }}\n'
+    '    >\n'
+    '      {message.senderName && !isUser && (\n'
+    '        <span style={{ fontSize: 11, opacity: 0.6, marginBottom: 2, marginLeft: 4 }}>\n'
+    '          {message.senderName}\n'
+    '        </span>\n'
+    '      )}\n'
+    '      <div\n'
+    '        style={{\n'
+    '          ...(isUser ? vs.bubbleUser : vs.bubbleBot),\n'
+    '          padding: sc.bubblePad,\n'
+    '          maxWidth: "75%",\n'
+    '          wordBreak: "break-word",\n'
+    '          fontSize: sc.fontSize,\n'
+    '          lineHeight: 1.45,\n'
+    '          boxSizing: "border-box",\n'
+    '        }}\n'
+    '      >\n'
+    '        {message.attachments && message.attachments.length > 0 && (\n'
+    '          <div style={{ marginBottom: 8, display: "flex", flexDirection: "column", gap: 6 }}>\n'
+    '            {message.attachments.map(att => (\n'
+    '              <div\n'
+    '                key={att.id}\n'
+    '                style={{\n'
+    '                  padding: "6px 8px",\n'
+    '                  borderRadius: 6,\n'
+    '                  background: "rgba(0,0,0,0.15)",\n'
+    '                  display: "flex",\n'
+    '                  alignItems: "center",\n'
+    '                  gap: 8,\n'
+    '                  fontSize: sc.fontSize - 2,\n'
+    '                }}\n'
+    '              >\n'
+    '                {att.type === "image" ? <ImageIcon size={14} /> : <FileIcon size={14} />}\n'
+    '                <span style={{ flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>\n'
+    '                  {att.name}\n'
+    '                </span>\n'
+    '              </div>\n'
+    '            ))}\n'
+    '          </div>\n'
+    '        )}\n'
+    '        <div>{message.text}</div>\n'
+    '        {message.actions && message.actions.length > 0 && (\n'
+    '          <div style={{ marginTop: 8, display: "flex", flexWrap: "wrap", gap: 6 }}>\n'
+    '            {message.actions.map(act => (\n'
+    '              <button\n'
+    '                key={act.value}\n'
+    '                type="button"\n'
+    '                onClick={() => onActionClick?.(act, message)}\n'
+    '                style={{\n'
+    '                  padding: "4px 10px",\n'
+    '                  borderRadius: 12,\n'
+    '                  fontSize: sc.fontSize - 2,\n'
+    '                  cursor: "pointer",\n'
+    '                  background: isUser ? "rgba(255,255,255,0.2)" : "rgba(59,130,246,0.15)",\n'
+    '                  color: isUser ? "#ffffff" : "#3b82f6",\n'
+    '                  border: "none",\n'
+    '                  fontWeight: 500,\n'
+    '                }}\n'
+    '              >\n'
+    '                {act.label}\n'
+    '              </button>\n'
+    '            ))}\n'
+    '          </div>\n'
+    '        )}\n'
+    '      </div>\n'
+    '      <div\n'
+    '        style={{\n'
+    '          display: "flex",\n'
+    '          alignItems: "center",\n'
+    '          gap: 4,\n'
+    '          marginTop: 2,\n'
+    '          fontSize: 10,\n'
+    '          opacity: 0.6,\n'
+    '        }}\n'
+    '      >\n'
+    '        <span>{typeof message.timestamp === "number" ? new Date(message.timestamp).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) : String(message.timestamp)}</span>\n'
+    '        {isUser && message.status && (\n'
+    '          <span title={message.status} aria-label={message.status}>\n'
+    '            {message.status === "sending" && <ClockIcon size={11} />}\n'
+    '            {message.status === "sent" && <CheckIcon size={12} />}\n'
+    '            {message.status === "delivered" && <DoubleCheckIcon size={12} />}\n'
+    '            {message.status === "read" && <DoubleCheckIcon size={12} color="#38bdf8" />}\n'
+    '            {message.status === "failed" && <span style={{ color: "#ef4444" }}>✕</span>}\n'
+    '          </span>\n'
+    '        )}\n'
+    '      </div>\n'
+    '    </div>\n'
+    '  );\n'
+    '});\n'
+    'ChatMessageItemInner.displayName = "ChatMessageItem";\n\n'
+    'export const ChatInputInner = forwardRef<HTMLDivElement, ChatInputProps>(function ChatInputInner(\n'
+    '  { placeholder = "Type a message...", disabled = false, variant = "default", size = "md", onSend, onTyping },\n'
+    '  ref\n'
+    ') {\n'
+    '  const vs = getVariantStyles(variant);\n'
+    '  const sc = getSizeConfig(size);\n'
+    '  const [text, setText] = useState("");\n'
+    '  const fileInputRef = useRef<HTMLInputElement>(null);\n'
+    '  const textareaRef = useRef<HTMLTextAreaElement>(null);\n\n'
+    '  const handleSend = () => {\n'
+    '    if (!text.trim() || disabled) return;\n'
+    '    onSend(text.trim());\n'
+    '    setText("");\n'
+    '    onTyping?.(false);\n'
+    '    if (textareaRef.current) {\n'
+    '      textareaRef.current.style.height = "auto";\n'
+    '    }\n'
+    '  };\n\n'
+    '  const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {\n'
+    '    if (e.key === "Enter" && !e.shiftKey) {\n'
+    '      e.preventDefault();\n'
+    '      handleSend();\n'
+    '    }\n'
+    '  };\n\n'
+    '  return (\n'
+    '    <div\n'
+    '      ref={ref}\n'
+    '      style={{\n'
+    '        ...vs.inputContainer,\n'
+    '        padding: "10px 16px",\n'
+    '        display: "flex",\n'
+    '        alignItems: "flex-end",\n'
+    '        gap: 8,\n'
+    '        boxSizing: "border-box",\n'
+    '      }}\n'
+    '    >\n'
+    '      <input\n'
+    '        type="file"\n'
+    '        ref={fileInputRef}\n'
+    '        style={{ display: "none" }}\n'
+    '        onChange={e => {\n'
+    '          const f = e.target.files?.[0];\n'
+    '          if (f) {\n'
+    '            onSend("", [{ id: String(Date.now()), name: f.name, type: f.type.startsWith("image/") ? "image" : "file", size: f.size }]);\n'
+    '          }\n'
+    '        }}\n'
+    '      />\n'
+    '      <button\n'
+    '        type="button"\n'
+    '        disabled={disabled}\n'
+    '        onClick={() => fileInputRef.current?.click()}\n'
+    '        style={{\n'
+    '          background: "none",\n'
+    '          border: "none",\n'
+    '          cursor: disabled ? "default" : "pointer",\n'
+    '          color: "inherit",\n'
+    '          opacity: disabled ? 0.4 : 0.7,\n'
+    '          padding: 8,\n'
+    '          display: "flex",\n'
+    '          alignItems: "center",\n'
+    '        }}\n'
+    '        aria-label="Attach file"\n'
+    '      >\n'
+    '        <PaperclipIcon size={sc.iconSize} />\n'
+    '      </button>\n'
+    '      <textarea\n'
+    '        ref={textareaRef}\n'
+    '        value={text}\n'
+    '        disabled={disabled}\n'
+    '        placeholder={placeholder}\n'
+    '        rows={1}\n'
+    '        onChange={e => {\n'
+    '          setText(e.target.value);\n'
+    '          onTyping?.(Boolean(e.target.value.length > 0));\n'
+    '          e.target.style.height = "auto";\n'
+    '          e.target.style.height = `${Math.min(e.target.scrollHeight, 120)}px`;\n'
+    '        }}\n'
+    '        onKeyDown={handleKeyDown}\n'
+    '        style={{\n'
+    '          ...vs.input,\n'
+    '          flex: 1,\n'
+    '          borderRadius: 20,\n'
+    '          padding: "8px 14px",\n'
+    '          fontSize: sc.fontSize,\n'
+    '          resize: "none",\n'
+    '          outline: "none",\n'
+    '          fontFamily: "inherit",\n'
+    '          maxHeight: 120,\n'
+    '          boxSizing: "border-box",\n'
+    '        }}\n'
+    '        aria-label="Type a message"\n'
+    '      />\n'
+    '      <button\n'
+    '        type="button"\n'
+    '        disabled={disabled || !text.trim()}\n'
+    '        onClick={handleSend}\n'
+    '        style={{\n'
+    '          ...vs.sendBtn,\n'
+    '          border: "none",\n'
+    '          borderRadius: "50%",\n'
+    '          width: sc.inputH,\n'
+    '          height: sc.inputH,\n'
+    '          cursor: disabled || !text.trim() ? "default" : "pointer",\n'
+    '          opacity: disabled || !text.trim() ? 0.5 : 1,\n'
+    '          display: "flex",\n'
+    '          alignItems: "center",\n'
+    '          justifyContent: "center",\n'
+    '          flexShrink: 0,\n'
+    '          transition: "transform 0.1s ease",\n'
+    '        }}\n'
+    '        aria-label="Send message"\n'
+    '      >\n'
+    '        <SendIcon size={sc.iconSize} />\n'
+    '      </button>\n'
+    '    </div>\n'
+    '  );\n'
+    '});\n'
+    'ChatInputInner.displayName = "ChatInput";\n\n'
+    'export const ChatSidebarInner = forwardRef<HTMLDivElement, ChatSidebarProps>(function ChatSidebarInner(\n'
+    '  { conversations, activeId, onSelect, variant = "default", size = "md", isOpen = true, onClose },\n'
+    '  ref\n'
+    ') {\n'
+    '  const vs = getVariantStyles(variant);\n'
+    '  const sc = getSizeConfig(size);\n'
+    '  const [filter, setFilter] = useState("");\n'
+    '  const filtered = conversations.filter(c =>\n'
+    '    c.title.toLowerCase().includes(filter.toLowerCase()) ||\n'
+    '    (c.subtitle && c.subtitle.toLowerCase().includes(filter.toLowerCase()))\n'
+    '  );\n\n'
+    '  if (!isOpen) return null;\n\n'
+    '  return (\n'
+    '    <div\n'
+    '      ref={ref}\n'
+    '      style={{\n'
+    '        ...vs.sidebar,\n'
+    '        width: 260,\n'
+    '        display: "flex",\n'
+    '        flexDirection: "column",\n'
+    '        height: "100%",\n'
+    '        boxSizing: "border-box",\n'
+    '      }}\n'
+    '      role="region"\n'
+    '      aria-label="Conversations"\n'
+    '    >\n'
+    '      <div style={{ padding: "12px 14px", borderBottom: "1px solid rgba(148,163,184,0.1)" }}>\n'
+    '        <div style={{ display: "flex", alignItems: "center", gap: 6, ...vs.input, borderRadius: 16, padding: "4px 10px" }}>\n'
+    '          <SearchIcon size={14} />\n'
+    '          <input\n'
+    '            type="text"\n'
+    '            placeholder="Search threads..."\n'
+    '            value={filter}\n'
+    '            onChange={e => setFilter(e.target.value)}\n'
+    '            style={{ background: "none", border: "none", outline: "none", color: "inherit", fontSize: sc.fontSize - 2, width: "100%" }}\n'
+    '            aria-label="Search conversations"\n'
+    '          />\n'
+    '        </div>\n'
+    '      </div>\n'
+    '      <div style={{ flex: 1, overflowY: "auto" }} role="list">\n'
+    '        {filtered.map(c => {\n'
+    '          const isActive = c.id === activeId;\n'
+    '          return (\n'
+    '            <div\n'
+    '              key={c.id}\n'
+    '              role="listitem"\n'
+    '              onClick={() => onSelect(c)}\n'
+    '              style={{\n'
+    '                padding: "10px 14px",\n'
+    '                cursor: "pointer",\n'
+    '                display: "flex",\n'
+    '                alignItems: "center",\n'
+    '                gap: 10,\n'
+    '                ...(isActive ? vs.sidebarItemActive : {}),\n'
+    '                borderBottom: "1px solid rgba(148,163,184,0.06)",\n'
+    '              }}\n'
+    '            >\n'
+    '              <div style={{ position: "relative", width: 32, height: 32, flexShrink: 0 }}>\n'
+    '                <div\n'
+    '                  style={{\n'
+    '                    width: "100%",\n'
+    '                    height: "100%",\n'
+    '                    borderRadius: "50%",\n'
+    '                    background: "rgba(59,130,246,0.2)",\n'
+    '                    color: "#3b82f6",\n'
+    '                    display: "flex",\n'
+    '                    alignItems: "center",\n'
+    '                    justifyContent: "center",\n'
+    '                    fontWeight: 600,\n'
+    '                    fontSize: 12,\n'
+    '                  }}\n'
+    '                >\n'
+    '                  {c.title.charAt(0).toUpperCase()}\n'
+    '                </div>\n'
+    '                {c.online && (\n'
+    '                  <span\n'
+    '                    style={{\n'
+    '                      position: "absolute",\n'
+    '                      bottom: 0,\n'
+    '                      right: 0,\n'
+    '                      width: 8,\n'
+    '                      height: 8,\n'
+    '                      borderRadius: "50%",\n'
+    '                      background: vs.onlineDot,\n'
+    '                      border: "1.5px solid #0f172a",\n'
+    '                    }}\n'
+    '                  />\n'
+    '                )}\n'
+    '              </div>\n'
+    '              <div style={{ flex: 1, minWidth: 0 }}>\n'
+    '                <div style={{ fontWeight: isActive ? 600 : 500, fontSize: sc.fontSize - 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>\n'
+    '                  {c.title}\n'
+    '                </div>\n'
+    '                {c.lastMessage && (\n'
+    '                  <div style={{ fontSize: sc.fontSize - 3, opacity: 0.6, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>\n'
+    '                    {c.lastMessage}\n'
+    '                  </div>\n'
+    '                )}\n'
+    '              </div>\n'
+    '              {Boolean(c.unreadCount && c.unreadCount > 0) && (\n'
+    '                <span\n'
+    '                  style={{\n'
+    '                    background: "#ef4444",\n'
+    '                    color: "#ffffff",\n'
+    '                    fontSize: 10,\n'
+    '                    fontWeight: 700,\n'
+    '                    padding: "2px 6px",\n'
+    '                    borderRadius: 10,\n'
+    '                    flexShrink: 0,\n'
+    '                  }}\n'
+    '                >\n'
+    '                  {c.unreadCount}\n'
+    '                </span>\n'
+    '              )}\n'
+    '            </div>\n'
+    '          );\n'
+    '        })}\n'
+    '      </div>\n'
+    '    </div>\n'
+    '  );\n'
+    '});\n'
+    'ChatSidebarInner.displayName = "ChatSidebar";\n\n'
+    'export const ChatMessageListInner = forwardRef<HTMLDivElement, ChatMessageListProps>(function ChatMessageListInner(\n'
+    '  { messages, typingUsers = [], variant = "default", size = "md", onActionClick },\n'
+    '  ref\n'
+    ') {\n'
+    '  const vs = getVariantStyles(variant);\n'
+    '  const sc = getSizeConfig(size);\n'
+    '  return (\n'
+    '    <div\n'
+    '      ref={ref}\n'
+    '      role="log"\n'
+    '      aria-live="polite"\n'
+    '      aria-label="Chat messages"\n'
+    '      style={{\n'
+    '        ...vs.body,\n'
+    '        flex: 1,\n'
+    '        overflowY: "auto",\n'
+    '        display: "flex",\n'
+    '        flexDirection: "column",\n'
+    '        boxSizing: "border-box",\n'
+    '        padding: "12px 0",\n'
+    '      }}\n'
+    '    >\n'
+    '      <div role="list" style={{ display: "flex", flexDirection: "column" }}>\n'
+    '        {messages.map(msg => (\n'
+    '          <ChatMessageItemInner\n'
+    '            key={msg.id}\n'
+    '            message={msg}\n'
+    '            variant={variant}\n'
+    '            size={size}\n'
+    '            onActionClick={onActionClick}\n'
+    '          />\n'
+    '        ))}\n'
+    '      </div>\n'
+    '      {typingUsers && typingUsers.length > 0 && (\n'
+    '        <div style={{ padding: "6px 20px", display: "flex", alignItems: "center", gap: 8, fontSize: sc.fontSize - 2, opacity: 0.7 }}>\n'
+    '          <span>{typingUsers.join(", ")} is typing...</span>\n'
+    '          <span style={{ display: "inline-flex", gap: 3 }}>\n'
+    '            <span style={{ width: 4, height: 4, borderRadius: "50%", background: "currentColor", animation: "pulse 1s infinite" }} />\n'
+    '            <span style={{ width: 4, height: 4, borderRadius: "50%", background: "currentColor", animation: "pulse 1s infinite 0.2s" }} />\n'
+    '            <span style={{ width: 4, height: 4, borderRadius: "50%", background: "currentColor", animation: "pulse 1s infinite 0.4s" }} />\n'
+    '          </span>\n'
+    '        </div>\n'
+    '      )}\n'
+    '    </div>\n'
+    '  );\n'
+    '});\n'
+    'ChatMessageListInner.displayName = "ChatMessageList";\n\n'
+    '// ---------------------------------------------------------------------------\n'
+    '// Main Compound Chat Component\n'
+    '// ---------------------------------------------------------------------------\n'
+    'const ChatComponent = forwardRef<ChatHandle, ChatProps>(function ChatComponent(\n'
+    '  {\n'
+    '    messages = [],\n'
+    '    conversations,\n'
+    '    activeConversationId,\n'
+    '    title = "Chat",\n'
+    '    subtitle,\n'
+    '    avatarUrl,\n'
+    '    online = true,\n'
+    '    variant = "default",\n'
+    '    size = "md",\n'
+    '    placeholder = "Type a message...",\n'
+    '    typingUsers = [],\n'
+    '    showSidebar = false,\n'
+    '    disabled = false,\n'
+    '    readOnly = false,\n'
+    '    className,\n'
+    '    style,\n'
+    '    onSendMessage,\n'
+    '    onSelectConversation,\n'
+    '    onActionClick,\n'
+    '  },\n'
+    '  ref\n'
+    ') {\n'
+    '  const vs = getVariantStyles(variant);\n'
+    '  const [sidebarOpen, setSidebarOpen] = useState(showSidebar);\n'
+    '  const listRef = useRef<HTMLDivElement>(null);\n'
+    '  const [localMessages, setLocalMessages] = useState<ChatMessage[]>(messages);\n\n'
+    '  useEffect(() => {\n'
+    '    setLocalMessages(messages);\n'
+    '  }, [messages]);\n\n'
+    '  const scrollToBottom = useCallback(() => {\n'
+    '    if (listRef.current) {\n'
+    '      listRef.current.scrollTop = listRef.current.scrollHeight;\n'
+    '    }\n'
+    '  }, []);\n\n'
+    '  useEffect(() => {\n'
+    '    scrollToBottom();\n'
+    '  }, [localMessages.length, scrollToBottom]);\n\n'
+    '  useImperativeHandle(ref, () => ({\n'
+    '    scrollToBottom,\n'
+    '    clearInput: () => {},\n'
+    '    focusInput: () => {},\n'
+    '    appendMessage: (msg: ChatMessage) => {\n'
+    '      setLocalMessages(prev => [...prev, msg]);\n'
+    '    },\n'
+    '  }));\n\n'
+    '  const handleSend = (text: string, attachments?: ChatAttachment[]) => {\n'
+    '    if (onSendMessage) {\n'
+    '      onSendMessage(text, attachments);\n'
+    '    } else {\n'
+    '      const newMsg: ChatMessage = {\n'
+    '        id: String(Date.now()),\n'
+    '        sender: "user",\n'
+    '        text,\n'
+    '        timestamp: Date.now(),\n'
+    '        status: "sent",\n'
+    '        attachments,\n'
+    '      };\n'
+    '      setLocalMessages(prev => [...prev, newMsg]);\n'
+    '    }\n'
+    '  };\n\n'
+    '  return (\n'
+    '    <div\n'
+    '      className={className}\n'
+    '      style={{\n'
+    '        ...vs.container,\n'
+    '        display: "flex",\n'
+    '        height: 600,\n'
+    '        width: "100%",\n'
+    '        maxWidth: 860,\n'
+    '        margin: "0 auto",\n'
+    '        overflow: "hidden",\n'
+    '        boxSizing: "border-box",\n'
+    '        fontFamily: "inherit",\n'
+    '        ...style,\n'
+    '      }}\n'
+    '    >\n'
+    '      {conversations && conversations.length > 0 && (\n'
+    '        <ChatSidebarInner\n'
+    '          conversations={conversations}\n'
+    '          activeId={activeConversationId}\n'
+    '          onSelect={c => onSelectConversation?.(c)}\n'
+    '          variant={variant}\n'
+    '          size={size}\n'
+    '          isOpen={sidebarOpen}\n'
+    '          onClose={() => setSidebarOpen(false)}\n'
+    '        />\n'
+    '      )}\n'
+    '      <div style={{ flex: 1, display: "flex", flexDirection: "column", minWidth: 0, height: "100%" }}>\n'
+    '        <ChatHeaderInner\n'
+    '          title={title}\n'
+    '          subtitle={subtitle}\n'
+    '          avatarUrl={avatarUrl}\n'
+    '          online={online}\n'
+    '          showSidebarToggle={Boolean(conversations && conversations.length > 0)}\n'
+    '          onToggleSidebar={() => setSidebarOpen(prev => !prev)}\n'
+    '          variant={variant}\n'
+    '          size={size}\n'
+    '        />\n'
+    '        <ChatMessageListInner\n'
+    '          ref={listRef}\n'
+    '          messages={localMessages}\n'
+    '          typingUsers={typingUsers}\n'
+    '          variant={variant}\n'
+    '          size={size}\n'
+    '          onActionClick={onActionClick}\n'
+    '        />\n'
+    '        {!readOnly && (\n'
+    '          <ChatInputInner\n'
+    '            placeholder={placeholder}\n'
+    '            disabled={disabled}\n'
+    '            variant={variant}\n'
+    '            size={size}\n'
+    '            onSend={handleSend}\n'
+    '          />\n'
+    '        )}\n'
+    '      </div>\n'
+    '    </div>\n'
+    '  );\n'
+    '});\n'
+    'ChatComponent.displayName = "Chat";\n\n'
+    '// ---------------------------------------------------------------------------\n'
+    '// Exports\n'
+    '// ---------------------------------------------------------------------------\n'
+    'export const Chat = ChatComponent;\n'
+    'export const ChatWindow = ChatComponent;\n'
+    'export const Messenger = ChatComponent;\n'
+    'export const ChatWidget = ChatComponent;\n'
+    'export const ChatHeader = ChatHeaderInner;\n'
+    'export const ChatSidebar = ChatSidebarInner;\n'
+    'export const ChatMessageItem = ChatMessageItemInner;\n'
+    'export const ChatInput = ChatInputInner;\n'
+    'export const ChatMessageList = ChatMessageListInner;\n\n'
+    'Chat.displayName = "Chat";\n'
+    'ChatWindow.displayName = "ChatWindow";\n'
+    'Messenger.displayName = "Messenger";\n'
+    'ChatWidget.displayName = "ChatWidget";\n'
+    'ChatHeader.displayName = "ChatHeader";\n'
+    'ChatSidebar.displayName = "ChatSidebar";\n'
+    'ChatMessageItem.displayName = "ChatMessageItem";\n'
+    'ChatInput.displayName = "ChatInput";\n'
+    'ChatMessageList.displayName = "ChatMessageList";\n\n'
+    'export default ChatComponent;\n'
+)
+
+
+def render_chat_component() -> str:
+    """Return static React implementation of the Chat & Real-Time Messaging Suite."""
+    return _CHAT_COMPONENT
+
+
+_AUDIO_RECORDER_COMPONENT = (
+    '"use client";\n\n'
+    'import React, {\n'
+    '  useState, useRef, useCallback, useEffect, useImperativeHandle, forwardRef,\n'
+    '} from "react";\n\n'
+    '// ---------------------------------------------------------------------------\n'
+    '// Types & Interfaces\n'
+    '// ---------------------------------------------------------------------------\n'
+    'export type AudioRecorderVariant = "default" | "card" | "glass" | "neon";\n'
+    'export type AudioRecorderSize = "sm" | "md" | "lg";\n'
+    'export type RecordingState = "idle" | "recording" | "paused" | "stopped";\n'
+    'export type WaveformStyle = "bars" | "wave" | "mirror";\n\n'
+    'export interface AudioRecording {\n'
+    '  id: string;\n'
+    '  url: string;\n'
+    '  blob?: Blob;\n'
+    '  duration: number;\n'
+    '  timestamp: number;\n'
+    '  name?: string;\n'
+    '  size?: number;\n'
+    '}\n\n'
+    'export interface AudioRecorderHandle {\n'
+    '  startRecording: () => void;\n'
+    '  stopRecording: () => void;\n'
+    '  pauseRecording: () => void;\n'
+    '  resumeRecording: () => void;\n'
+    '  reset: () => void;\n'
+    '  getRecording: () => AudioRecording | null;\n'
+    '}\n\n'
+    'export interface WaveformVisualizerProps {\n'
+    '  audioData?: number[];\n'
+    '  isRecording?: boolean;\n'
+    '  isPlaying?: boolean;\n'
+    '  waveformStyle?: WaveformStyle;\n'
+    '  variant?: AudioRecorderVariant;\n'
+    '  height?: number;\n'
+    '  barWidth?: number;\n'
+    '  barGap?: number;\n'
+    '  className?: string;\n'
+    '  style?: React.CSSProperties;\n'
+    '}\n\n'
+    'export interface AudioPlayerBarProps {\n'
+    '  recording: AudioRecording;\n'
+    '  variant?: AudioRecorderVariant;\n'
+    '  size?: AudioRecorderSize;\n'
+    '  onDelete?: () => void;\n'
+    '  onDownload?: () => void;\n'
+    '  className?: string;\n'
+    '  style?: React.CSSProperties;\n'
+    '}\n\n'
+    'export interface AudioRecorderProps {\n'
+    '  onRecordingComplete?: (recording: AudioRecording) => void;\n'
+    '  maxDuration?: number;\n'
+    '  waveformStyle?: WaveformStyle;\n'
+    '  variant?: AudioRecorderVariant;\n'
+    '  size?: AudioRecorderSize;\n'
+    '  showPlayback?: boolean;\n'
+    '  showWaveform?: boolean;\n'
+    '  title?: string;\n'
+    '  disabled?: boolean;\n'
+    '  className?: string;\n'
+    '  style?: React.CSSProperties;\n'
+    '}\n\n'
+    '// ---------------------------------------------------------------------------\n'
+    '// Helpers & Variant Styles\n'
+    '// ---------------------------------------------------------------------------\n'
+    'function formatTime(seconds: number): string {\n'
+    '  const m = Math.floor(seconds / 60);\n'
+    '  const s = Math.floor(seconds % 60);\n'
+    '  return `${m.toString().padStart(2, "0")}:${s.toString().padStart(2, "0")}`;\n'
+    '}\n\n'
+    'function getVariantStyles(variant: AudioRecorderVariant) {\n'
+    '  switch (variant) {\n'
+    '    case "card":\n'
+    '      return {\n'
+    '        container: { background: "#ffffff", border: "1px solid #e2e8f0", borderRadius: 14,\n'
+    '          boxShadow: "0 4px 20px rgba(0,0,0,0.06)", color: "#0f172a" },\n'
+    '        primaryBtn: { background: "#ef4444", color: "#ffffff", hover: "#dc2626" },\n'
+    '        secondaryBtn: { background: "#f1f5f9", color: "#0f172a", border: "1px solid #cbd5e1" },\n'
+    '        waveColor: "#3b82f6",\n'
+    '        waveBg: "#f8fafc",\n'
+    '        glow: "none",\n'
+    '      };\n'
+    '    case "glass":\n'
+    '      return {\n'
+    '        container: { background: "rgba(15,23,42,0.75)", backdropFilter: "blur(20px)",\n'
+    '          border: "1px solid rgba(148,163,184,0.15)", borderRadius: 16,\n'
+    '          boxShadow: "0 8px 32px rgba(0,0,0,0.37)", color: "#f8fafc" },\n'
+    '        primaryBtn: { background: "#ef4444", color: "#ffffff", hover: "#dc2626" },\n'
+    '        secondaryBtn: { background: "rgba(30,41,59,0.7)", color: "#f8fafc", border: "1px solid rgba(148,163,184,0.2)" },\n'
+    '        waveColor: "#38bdf8",\n'
+    '        waveBg: "rgba(15,23,42,0.5)",\n'
+    '        glow: "0 0 20px rgba(239,68,68,0.25)",\n'
+    '      };\n'
+    '    case "neon":\n'
+    '      return {\n'
+    '        container: { background: "#060b14", border: "1px solid rgba(0,255,200,0.3)", borderRadius: 12,\n'
+    '          boxShadow: "0 0 30px rgba(0,255,200,0.15), inset 0 0 20px rgba(0,255,200,0.03)", color: "#00ffc8" },\n'
+    '        primaryBtn: { background: "#ff0055", color: "#ffffff", boxShadow: "0 0 15px rgba(255,0,85,0.6)" },\n'
+    '        secondaryBtn: { background: "rgba(8,16,30,0.9)", color: "#00ffc8", border: "1px solid rgba(0,255,200,0.3)" },\n'
+    '        waveColor: "#00ffc8",\n'
+    '        waveBg: "rgba(6,11,20,0.8)",\n'
+    '        glow: "0 0 25px rgba(0,255,200,0.3)",\n'
+    '      };\n'
+    '    case "default":\n'
+    '    default:\n'
+    '      return {\n'
+    '        container: { background: "#0f172a", border: "1px solid #1e293b", borderRadius: 12,\n'
+    '          boxShadow: "0 4px 24px rgba(0,0,0,0.4)", color: "#f8fafc" },\n'
+    '        primaryBtn: { background: "#ef4444", color: "#ffffff", hover: "#dc2626" },\n'
+    '        secondaryBtn: { background: "#1e293b", color: "#f8fafc", border: "1px solid #334155" },\n'
+    '        waveColor: "#10b981",\n'
+    '        waveBg: "#090d16",\n'
+    '        glow: "none",\n'
+    '      };\n'
+    '  }\n'
+    '}\n\n'
+    'function getSizeConfig(size: AudioRecorderSize) {\n'
+    '  switch (size) {\n'
+    '    case "sm":\n'
+    '      return { canvasH: 44, btnSize: 36, iconSize: 14, fontSize: 12, padding: 12 };\n'
+    '    case "lg":\n'
+    '      return { canvasH: 80, btnSize: 52, iconSize: 22, fontSize: 16, padding: 22 };\n'
+    '    case "md":\n'
+    '    default:\n'
+    '      return { canvasH: 60, btnSize: 44, iconSize: 18, fontSize: 14, padding: 16 };\n'
+    '  }\n'
+    '}\n\n'
+    '// ---------------------------------------------------------------------------\n'
+    '// Inline Vector SVGs\n'
+    '// ---------------------------------------------------------------------------\n'
+    'function MicIcon({ size = 18 }: { size?: number }) {\n'
+    '  return (\n'
+    '    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">\n'
+    '      <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z" />\n'
+    '      <path d="M19 10v2a7 7 0 0 1-14 0v-2" />\n'
+    '      <line x1="12" y1="19" x2="12" y2="23" />\n'
+    '      <line x1="8" y1="23" x2="16" y2="23" />\n'
+    '    </svg>\n'
+    '  );\n'
+    '}\n\n'
+    'function StopIcon({ size = 18 }: { size?: number }) {\n'
+    '  return (\n'
+    '    <svg width={size} height={size} viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">\n'
+    '      <rect x="6" y="6" width="12" height="12" rx="2" />\n'
+    '    </svg>\n'
+    '  );\n'
+    '}\n\n'
+    'function PauseIcon({ size = 18 }: { size?: number }) {\n'
+    '  return (\n'
+    '    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">\n'
+    '      <rect x="6" y="4" width="4" height="16" rx="1" />\n'
+    '      <rect x="14" y="4" width="4" height="16" rx="1" />\n'
+    '    </svg>\n'
+    '  );\n'
+    '}\n\n'
+    'function PlayIcon({ size = 18 }: { size?: number }) {\n'
+    '  return (\n'
+    '    <svg width={size} height={size} viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">\n'
+    '      <polygon points="5 3 19 12 5 21 5 3" />\n'
+    '    </svg>\n'
+    '  );\n'
+    '}\n\n'
+    'function TrashIcon({ size = 16 }: { size?: number }) {\n'
+    '  return (\n'
+    '    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">\n'
+    '      <polyline points="3 6 5 6 21 6" />\n'
+    '      <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />\n'
+    '    </svg>\n'
+    '  );\n'
+    '}\n\n'
+    'function DownloadIcon({ size = 16 }: { size?: number }) {\n'
+    '  return (\n'
+    '    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">\n'
+    '      <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />\n'
+    '      <polyline points="7 10 12 15 17 10" />\n'
+    '      <line x1="12" y1="15" x2="12" y2="3" />\n'
+    '    </svg>\n'
+    '  );\n'
+    '}\n\n'
+    '// ---------------------------------------------------------------------------\n'
+    '// Waveform Visualizer\n'
+    '// ---------------------------------------------------------------------------\n'
+    'export const WaveformVisualizerInner = forwardRef<HTMLCanvasElement, WaveformVisualizerProps>(function WaveformVisualizerInner(\n'
+    '  {\n'
+    '    audioData,\n'
+    '    isRecording = false,\n'
+    '    isPlaying = false,\n'
+    '    waveformStyle = "bars",\n'
+    '    variant = "default",\n'
+    '    height = 60,\n'
+    '    barWidth = 3,\n'
+    '    barGap = 2,\n'
+    '    className,\n'
+    '    style,\n'
+    '  },\n'
+    '  ref\n'
+    ') {\n'
+    '  const canvasRef = useRef<HTMLCanvasElement | null>(null);\n'
+    '  const vs = getVariantStyles(variant);\n'
+    '  const animRef = useRef<number>(0);\n\n'
+    '  useImperativeHandle(ref, () => canvasRef.current as HTMLCanvasElement);\n\n'
+    '  useEffect(() => {\n'
+    '    const canvas = canvasRef.current;\n'
+    '    if (!canvas) return;\n'
+    '    const ctx = canvas.getContext("2d");\n'
+    '    if (!ctx) return;\n\n'
+    '    let phase = 0;\n'
+    '    let active = true;\n\n'
+    '    const render = () => {\n'
+    '      if (!active) return;\n'
+    '      const w = canvas.width;\n'
+    '      const h = canvas.height;\n'
+    '      ctx.clearRect(0, 0, w, h);\n\n'
+    '      const numBars = Math.floor(w / (barWidth + barGap));\n'
+    '      const live = isRecording || isPlaying;\n\n'
+    '      if (waveformStyle === "wave") {\n'
+    '        ctx.beginPath();\n'
+    '        ctx.strokeStyle = vs.waveColor;\n'
+    '        ctx.lineWidth = 2;\n'
+    '        ctx.moveTo(0, h / 2);\n'
+    '        for (let x = 0; x < w; x += 4) {\n'
+    '          const amp = live ? (Math.sin((x * 0.05) + phase) * Math.cos((x * 0.02) + (phase * 0.5)) * (h * 0.4)) : 0;\n'
+    '          ctx.lineTo(x, (h / 2) + amp);\n'
+    '        }\n'
+    '        ctx.stroke();\n'
+    '      } else if (waveformStyle === "mirror") {\n'
+    '        ctx.fillStyle = vs.waveColor;\n'
+    '        for (let i = 0; i < numBars; i++) {\n'
+    '          const x = i * (barWidth + barGap);\n'
+    '          const raw = audioData && audioData[i] !== undefined\n'
+    '            ? audioData[i]\n'
+    '            : (live ? (Math.abs(Math.sin(phase + (i * 0.2))) * 0.8 + 0.1) : 0.1);\n'
+    '          const barH = Math.max(2, raw * (h * 0.45));\n'
+    '          ctx.fillRect(x, (h / 2) - barH, barWidth, barH * 2);\n'
+    '        }\n'
+    '      } else {\n'
+    '        // default bars\n'
+    '        ctx.fillStyle = vs.waveColor;\n'
+    '        for (let i = 0; i < numBars; i++) {\n'
+    '          const x = i * (barWidth + barGap);\n'
+    '          const raw = audioData && audioData[i] !== undefined\n'
+    '            ? audioData[i]\n'
+    '            : (live ? (Math.abs(Math.sin(phase + (i * 0.25))) * 0.85 + 0.1) : 0.1);\n'
+    '          const barH = Math.max(3, raw * (h * 0.85));\n'
+    '          ctx.fillRect(x, h - barH, barWidth, barH);\n'
+    '        }\n'
+    '      }\n\n'
+    '      if (live) phase += 0.15;\n'
+    '      animRef.current = requestAnimationFrame(render);\n'
+    '    };\n\n'
+    '    render();\n'
+    '    return () => {\n'
+    '      active = false;\n'
+    '      cancelAnimationFrame(animRef.current);\n'
+    '    };\n'
+    '  }, [isRecording, isPlaying, waveformStyle, audioData, barWidth, barGap, vs.waveColor]);\n\n'
+    '  return (\n'
+    '    <canvas\n'
+    '      ref={canvasRef}\n'
+    '      width={400}\n'
+    '      height={height}\n'
+    '      className={className}\n'
+    '      style={{\n'
+    '        width: "100%",\n'
+    '        height,\n'
+    '        background: vs.waveBg,\n'
+    '        borderRadius: 8,\n'
+    '        display: "block",\n'
+    '        ...style,\n'
+    '      }}\n'
+    '      aria-label="Sound Waveform"\n'
+    '    />\n'
+    '  );\n'
+    '});\n'
+    'WaveformVisualizerInner.displayName = "WaveformVisualizer";\n\n'
+    '// ---------------------------------------------------------------------------\n'
+    '// Audio Player Bar\n'
+    '// ---------------------------------------------------------------------------\n'
+    'export const AudioPlayerBarInner = forwardRef<HTMLDivElement, AudioPlayerBarProps>(function AudioPlayerBarInner(\n'
+    '  { recording, variant = "default", size = "md", onDelete, onDownload, className, style },\n'
+    '  ref\n'
+    ') {\n'
+    '  const vs = getVariantStyles(variant);\n'
+    '  const sc = getSizeConfig(size);\n'
+    '  const [isPlaying, setIsPlaying] = useState(false);\n'
+    '  const [currentTime, setCurrentTime] = useState(0);\n'
+    '  const timerRef = useRef<any>(null);\n\n'
+    '  const togglePlay = () => {\n'
+    '    if (isPlaying) {\n'
+    '      setIsPlaying(false);\n'
+    '      clearInterval(timerRef.current);\n'
+    '    } else {\n'
+    '      setIsPlaying(true);\n'
+    '      timerRef.current = setInterval(() => {\n'
+    '        setCurrentTime(prev => {\n'
+    '          if (prev >= recording.duration) {\n'
+    '            clearInterval(timerRef.current);\n'
+    '            setIsPlaying(false);\n'
+    '            return 0;\n'
+    '          }\n'
+    '          return prev + 0.1;\n'
+    '        });\n'
+    '      }, 100);\n'
+    '    }\n'
+    '  };\n\n'
+    '  useEffect(() => {\n'
+    '    return () => clearInterval(timerRef.current);\n'
+    '  }, []);\n\n'
+    '  const handleSeek = (e: React.ChangeEvent<HTMLInputElement>) => {\n'
+    '    setCurrentTime(Number(e.target.value));\n'
+    '  };\n\n'
+    '  const handleDownload = () => {\n'
+    '    if (onDownload) {\n'
+    '      onDownload();\n'
+    '    } else if (recording.url) {\n'
+    '      const a = document.createElement("a");\n'
+    '      a.href = recording.url;\n'
+    '      a.download = recording.name || `recording-${recording.id}.webm`;\n'
+    '      a.click();\n'
+    '    }\n'
+    '  };\n\n'
+    '  return (\n'
+    '    <div\n'
+    '      ref={ref}\n'
+    '      className={className}\n'
+    '      style={{\n'
+    '        display: "flex",\n'
+    '        alignItems: "center",\n'
+    '        gap: 12,\n'
+    '        padding: "8px 14px",\n'
+    '        borderRadius: 10,\n'
+    '        background: vs.secondaryBtn.background,\n'
+    '        border: vs.secondaryBtn.border || "none",\n'
+    '        boxSizing: "border-box",\n'
+    '        width: "100%",\n'
+    '        ...style,\n'
+    '      }}\n'
+    '      role="region"\n'
+    '      aria-label="Audio Player"\n'
+    '    >\n'
+    '      <button\n'
+    '        type="button"\n'
+    '        onClick={togglePlay}\n'
+    '        style={{\n'
+    '          background: vs.primaryBtn.background,\n'
+    '          color: vs.primaryBtn.color,\n'
+    '          border: "none",\n'
+    '          borderRadius: "50%",\n'
+    '          width: 32,\n'
+    '          height: 32,\n'
+    '          display: "flex",\n'
+    '          alignItems: "center",\n'
+    '          justifyContent: "center",\n'
+    '          cursor: "pointer",\n'
+    '          flexShrink: 0,\n'
+    '        }}\n'
+    '        aria-label={isPlaying ? "Pause audio playback" : "Start audio playback"}\n'
+    '      >\n'
+    '        {isPlaying ? <PauseIcon size={14} /> : <PlayIcon size={14} />}\n'
+    '      </button>\n'
+    '      <input\n'
+    '        type="range"\n'
+    '        min={0}\n'
+    '        max={recording.duration || 1}\n'
+    '        step={0.1}\n'
+    '        value={currentTime}\n'
+    '        onChange={handleSeek}\n'
+    '        style={{ flex: 1, cursor: "pointer", accentColor: vs.waveColor }}\n'
+    '        aria-label="Seek audio"\n'
+    '      />\n'
+    '      <span style={{ fontSize: sc.fontSize - 2, fontFamily: "monospace", opacity: 0.8, flexShrink: 0 }}>\n'
+    '        {formatTime(currentTime)} / {formatTime(recording.duration)}\n'
+    '      </span>\n'
+    '      <button\n'
+    '        type="button"\n'
+    '        onClick={handleDownload}\n'
+    '        style={{\n'
+    '          background: "none",\n'
+    '          border: "none",\n'
+    '          cursor: "pointer",\n'
+    '          color: "inherit",\n'
+    '          opacity: 0.8,\n'
+    '          padding: 4,\n'
+    '          display: "flex",\n'
+    '          alignItems: "center",\n'
+    '        }}\n'
+    '        aria-label="Download recording"\n'
+    '      >\n'
+    '        <DownloadIcon size={sc.iconSize} />\n'
+    '      </button>\n'
+    '      {onDelete && (\n'
+    '        <button\n'
+    '          type="button"\n'
+    '          onClick={onDelete}\n'
+    '          style={{\n'
+    '            background: "none",\n'
+    '            border: "none",\n'
+    '            cursor: "pointer",\n'
+    '            color: "#ef4444",\n'
+    '            padding: 4,\n'
+    '            display: "flex",\n'
+    '            alignItems: "center",\n'
+    '          }}\n'
+    '          aria-label="Delete recording"\n'
+    '        >\n'
+    '          <TrashIcon size={sc.iconSize} />\n'
+    '        </button>\n'
+    '      )}\n'
+    '    </div>\n'
+    '  );\n'
+    '});\n'
+    'AudioPlayerBarInner.displayName = "AudioPlayerBar";\n\n'
+    '// ---------------------------------------------------------------------------\n'
+    '// Main Compound AudioRecorder Component\n'
+    '// ---------------------------------------------------------------------------\n'
+    'const AudioRecorderComponent = forwardRef<AudioRecorderHandle, AudioRecorderProps>(function AudioRecorderComponent(\n'
+    '  {\n'
+    '    onRecordingComplete,\n'
+    '    maxDuration = 300,\n'
+    '    waveformStyle = "bars",\n'
+    '    variant = "default",\n'
+    '    size = "md",\n'
+    '    showPlayback = true,\n'
+    '    showWaveform = true,\n'
+    '    title = "Audio Recorder",\n'
+    '    disabled = false,\n'
+    '    className,\n'
+    '    style,\n'
+    '  },\n'
+    '  ref\n'
+    ') {\n'
+    '  const vs = getVariantStyles(variant);\n'
+    '  const sc = getSizeConfig(size);\n'
+    '  const [state, setState] = useState<RecordingState>("idle");\n'
+    '  const [duration, setDuration] = useState(0);\n'
+    '  const [recording, setRecording] = useState<AudioRecording | null>(null);\n'
+    '  const timerRef = useRef<any>(null);\n\n'
+    '  const stopRecording = useCallback(() => {\n'
+    '    clearInterval(timerRef.current);\n'
+    '    setState("stopped");\n'
+    '    const rec: AudioRecording = {\n'
+    '      id: String(Date.now()),\n'
+    '      url: "blob:mock-audio-" + Date.now(),\n'
+    '      duration: duration || 1,\n'
+    '      timestamp: Date.now(),\n'
+    '      name: `voice-note-${Date.now()}.webm`,\n'
+    '    };\n'
+    '    setRecording(rec);\n'
+    '    onRecordingComplete?.(rec);\n'
+    '  }, [duration, onRecordingComplete]);\n\n'
+    '  const startRecording = useCallback(() => {\n'
+    '    if (disabled) return;\n'
+    '    setRecording(null);\n'
+    '    setDuration(0);\n'
+    '    setState("recording");\n'
+    '    timerRef.current = setInterval(() => {\n'
+    '      setDuration(prev => {\n'
+    '        if (prev + 1 >= maxDuration) {\n'
+    '          stopRecording();\n'
+    '          return maxDuration;\n'
+    '        }\n'
+    '        return prev + 1;\n'
+    '      });\n'
+    '    }, 1000);\n'
+    '  }, [disabled, maxDuration, stopRecording]);\n\n'
+    '  const pauseRecording = useCallback(() => {\n'
+    '    if (state !== "recording") return;\n'
+    '    clearInterval(timerRef.current);\n'
+    '    setState("paused");\n'
+    '  }, [state]);\n\n'
+    '  const resumeRecording = useCallback(() => {\n'
+    '    if (state !== "paused") return;\n'
+    '    setState("recording");\n'
+    '    timerRef.current = setInterval(() => {\n'
+    '      setDuration(prev => {\n'
+    '        if (prev + 1 >= maxDuration) {\n'
+    '          stopRecording();\n'
+    '          return maxDuration;\n'
+    '        }\n'
+    '        return prev + 1;\n'
+    '      });\n'
+    '    }, 1000);\n'
+    '  }, [state, maxDuration, stopRecording]);\n\n'
+    '  const reset = useCallback(() => {\n'
+    '    clearInterval(timerRef.current);\n'
+    '    setState("idle");\n'
+    '    setDuration(0);\n'
+    '    setRecording(null);\n'
+    '  }, []);\n\n'
+    '  useImperativeHandle(ref, () => ({\n'
+    '    startRecording,\n'
+    '    stopRecording,\n'
+    '    pauseRecording,\n'
+    '    resumeRecording,\n'
+    '    reset,\n'
+    '    getRecording: () => recording,\n'
+    '  }));\n\n'
+    '  useEffect(() => {\n'
+    '    return () => clearInterval(timerRef.current);\n'
+    '  }, []);\n\n'
+    '  return (\n'
+    '    <div\n'
+    '      className={className}\n'
+    '      style={{\n'
+    '        ...vs.container,\n'
+    '        padding: sc.padding,\n'
+    '        display: "flex",\n'
+    '        flexDirection: "column",\n'
+    '        gap: 14,\n'
+    '        boxSizing: "border-box",\n'
+    '        width: "100%",\n'
+    '        maxWidth: 520,\n'
+    '        margin: "0 auto",\n'
+    '        fontFamily: "inherit",\n'
+    '        ...style,\n'
+    '      }}\n'
+    '      role="region"\n'
+    '      aria-label="Audio Recorder"\n'
+    '      aria-live="polite"\n'
+    '    >\n'
+    '      {/* Header */}\n'
+    '      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>\n'
+    '        <div style={{ display: "flex", alignItems: "center", gap: 8, fontWeight: 600, fontSize: sc.fontSize }}>\n'
+    '          {state === "recording" && (\n'
+    '            <span\n'
+    '              style={{\n'
+    '                width: 10,\n'
+    '                height: 10,\n'
+    '                borderRadius: "50%",\n'
+    '                background: "#ef4444",\n'
+    '                display: "inline-block",\n'
+    '                boxShadow: "0 0 10px #ef4444",\n'
+    '                animation: "pulse 1s infinite",\n'
+    '              }}\n'
+    '              aria-label="Recording in progress"\n'
+    '            />\n'
+    '          )}\n'
+    '          <span>{title}</span>\n'
+    '        </div>\n'
+    '        <span style={{ fontFamily: "monospace", fontWeight: 600, fontSize: sc.fontSize + 2 }}>\n'
+    '          {formatTime(duration)}\n'
+    '        </span>\n'
+    '      </div>\n\n'
+    '      {/* Waveform */}\n'
+    '      {showWaveform && (\n'
+    '        <WaveformVisualizerInner\n'
+    '          isRecording={state === "recording"}\n'
+    '          waveformStyle={waveformStyle}\n'
+    '          variant={variant}\n'
+    '          height={sc.canvasH}\n'
+    '        />\n'
+    '      )}\n\n'
+    '      {/* Controls */}\n'
+    '      <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 16 }}>\n'
+    '        {state === "idle" && (\n'
+    '          <button\n'
+    '            type="button"\n'
+    '            disabled={disabled}\n'
+    '            onClick={startRecording}\n'
+    '            style={{\n'
+    '              ...vs.primaryBtn,\n'
+    '              border: "none",\n'
+    '              borderRadius: "50%",\n'
+    '              width: sc.btnSize,\n'
+    '              height: sc.btnSize,\n'
+    '              cursor: disabled ? "not-allowed" : "pointer",\n'
+    '              opacity: disabled ? 0.5 : 1,\n'
+    '              display: "flex",\n'
+    '              alignItems: "center",\n'
+    '              justifyContent: "center",\n'
+    '              transition: "transform 0.1s ease",\n'
+    '            }}\n'
+    '            aria-label="Start recording"\n'
+    '          >\n'
+    '            <MicIcon size={sc.iconSize + 2} />\n'
+    '          </button>\n'
+    '        )}\n\n'
+    '        {state === "recording" && (\n'
+    '          <>\n'
+    '            <button\n'
+    '              type="button"\n'
+    '              onClick={pauseRecording}\n'
+    '              style={{\n'
+    '                ...vs.secondaryBtn,\n'
+    '                borderRadius: "50%",\n'
+    '                width: sc.btnSize - 8,\n'
+    '                height: sc.btnSize - 8,\n'
+    '                cursor: "pointer",\n'
+    '                display: "flex",\n'
+    '                alignItems: "center",\n'
+    '                justifyContent: "center",\n'
+    '              }}\n'
+    '              aria-label="Pause recording"\n'
+    '            >\n'
+    '              <PauseIcon size={sc.iconSize} />\n'
+    '            </button>\n'
+    '            <button\n'
+    '              type="button"\n'
+    '              onClick={stopRecording}\n'
+    '              style={{\n'
+    '                ...vs.primaryBtn,\n'
+    '                border: "none",\n'
+    '                borderRadius: "50%",\n'
+    '                width: sc.btnSize,\n'
+    '                height: sc.btnSize,\n'
+    '                cursor: "pointer",\n'
+    '                display: "flex",\n'
+    '                alignItems: "center",\n'
+    '                justifyContent: "center",\n'
+    '              }}\n'
+    '              aria-label="Stop recording"\n'
+    '            >\n'
+    '              <StopIcon size={sc.iconSize} />\n'
+    '            </button>\n'
+    '          </>\n'
+    '        )}\n\n'
+    '        {state === "paused" && (\n'
+    '          <>\n'
+    '            <button\n'
+    '              type="button"\n'
+    '              onClick={resumeRecording}\n'
+    '              style={{\n'
+    '                ...vs.secondaryBtn,\n'
+    '                borderRadius: "50%",\n'
+    '                width: sc.btnSize - 8,\n'
+    '                height: sc.btnSize - 8,\n'
+    '                cursor: "pointer",\n'
+    '                display: "flex",\n'
+    '                alignItems: "center",\n'
+    '                justifyContent: "center",\n'
+    '              }}\n'
+    '              aria-label="Resume recording"\n'
+    '            >\n'
+    '              <MicIcon size={sc.iconSize} />\n'
+    '            </button>\n'
+    '            <button\n'
+    '              type="button"\n'
+    '              onClick={stopRecording}\n'
+    '              style={{\n'
+    '                ...vs.primaryBtn,\n'
+    '                border: "none",\n'
+    '                borderRadius: "50%",\n'
+    '                width: sc.btnSize,\n'
+    '                height: sc.btnSize,\n'
+    '                cursor: "pointer",\n'
+    '                display: "flex",\n'
+    '                alignItems: "center",\n'
+    '                justifyContent: "center",\n'
+    '              }}\n'
+    '              aria-label="Stop recording"\n'
+    '            >\n'
+    '              <StopIcon size={sc.iconSize} />\n'
+    '            </button>\n'
+    '          </>\n'
+    '        )}\n\n'
+    '        {state === "stopped" && (\n'
+    '          <button\n'
+    '            type="button"\n'
+    '            onClick={reset}\n'
+    '            style={{\n'
+    '              ...vs.secondaryBtn,\n'
+    '              borderRadius: "50%",\n'
+    '              width: sc.btnSize - 8,\n'
+    '              height: sc.btnSize - 8,\n'
+    '              cursor: "pointer",\n'
+    '              display: "flex",\n'
+    '              alignItems: "center",\n'
+    '              justifyContent: "center",\n'
+    '            }}\n'
+    '            aria-label="Record again"\n'
+    '          >\n'
+    '            <MicIcon size={sc.iconSize} />\n'
+    '          </button>\n'
+    '        )}\n'
+    '      </div>\n\n'
+    '      {/* Playback bar when stopped */}\n'
+    '      {showPlayback && recording && state === "stopped" && (\n'
+    '        <AudioPlayerBarInner\n'
+    '          recording={recording}\n'
+    '          variant={variant}\n'
+    '          size={size}\n'
+    '          onDelete={reset}\n'
+    '        />\n'
+    '      )}\n'
+    '    </div>\n'
+    '  );\n'
+    '});\n'
+    'AudioRecorderComponent.displayName = "AudioRecorder";\n\n'
+    '// ---------------------------------------------------------------------------\n'
+    '// Exports & Aliases\n'
+    '// ---------------------------------------------------------------------------\n'
+    'export const AudioRecorder = AudioRecorderComponent;\n'
+    'export const VoiceRecorder = AudioRecorderComponent;\n'
+    'export const SoundRecorder = AudioRecorderComponent;\n'
+    'export const WaveformVisualizer = WaveformVisualizerInner;\n'
+    'export const AudioPlayerBar = AudioPlayerBarInner;\n\n'
+    'AudioRecorder.displayName = "AudioRecorder";\n'
+    'VoiceRecorder.displayName = "VoiceRecorder";\n'
+    'SoundRecorder.displayName = "SoundRecorder";\n'
+    'WaveformVisualizer.displayName = "WaveformVisualizer";\n'
+    'AudioPlayerBar.displayName = "AudioPlayerBar";\n\n'
+    'export default AudioRecorderComponent;\n'
+)
+
+
+def render_audio_recorder_component() -> str:
+    """Return static React implementation of the Audio & Voice Recorder Suite."""
+    return _AUDIO_RECORDER_COMPONENT
+
+
+_FILE_EXPLORER_COMPONENT = (
+    '"use client";\n\n'
+    'import React, {\n'
+    '  useState, useRef, useCallback, useEffect, useMemo, useImperativeHandle, forwardRef,\n'
+    '} from "react";\n\n'
+    '// ---------------------------------------------------------------------------\n'
+    '// Types & Interfaces\n'
+    '// ---------------------------------------------------------------------------\n'
+    'export type FileExplorerVariant = "default" | "card" | "glass" | "neon";\n'
+    'export type FileExplorerSize = "sm" | "md" | "lg";\n'
+    'export type FileExplorerViewMode = "grid" | "list";\n'
+    'export type FileItemType = "folder" | "file" | "image" | "video" | "audio" | "code" | "archive" | "pdf";\n\n'
+    'export interface FileItem {\n'
+    '  id: string;\n'
+    '  name: string;\n'
+    '  type: FileItemType;\n'
+    '  size?: number;\n'
+    '  lastModified?: string | number;\n'
+    '  parentId?: string | null;\n'
+    '  extension?: string;\n'
+    '  url?: string;\n'
+    '  thumbnail?: string;\n'
+    '  isFavorite?: boolean;\n'
+    '}\n\n'
+    'export interface FileExplorerHandle {\n'
+    '  selectFile: (id: string) => void;\n'
+    '  clearSelection: () => void;\n'
+    '  navigateToFolder: (folderId: string | null) => void;\n'
+    '  getCurrentFolderId: () => string | null;\n'
+    '  getSelectedFiles: () => FileItem[];\n'
+    '}\n\n'
+    'export interface FileBreadcrumbsProps {\n'
+    '  path: Array<{ id: string | null; name: string }>;\n'
+    '  onNavigate: (folderId: string | null) => void;\n'
+    '  size?: FileExplorerSize;\n'
+    '}\n\n'
+    'export interface FileDetailsProps {\n'
+    '  file: FileItem;\n'
+    '  onClose: () => void;\n'
+    '  variant?: FileExplorerVariant;\n'
+    '  size?: FileExplorerSize;\n'
+    '  onDownload?: (file: FileItem) => void;\n'
+    '  onDelete?: (file: FileItem) => void;\n'
+    '}\n\n'
+    'export interface FileExplorerProps {\n'
+    '  items: FileItem[];\n'
+    '  initialFolderId?: string | null;\n'
+    '  initialViewMode?: FileExplorerViewMode;\n'
+    '  variant?: FileExplorerVariant;\n'
+    '  size?: FileExplorerSize;\n'
+    '  title?: string;\n'
+    '  multiSelect?: boolean;\n'
+    '  showBreadcrumbs?: boolean;\n'
+    '  showSearch?: boolean;\n'
+    '  showDetailsPanel?: boolean;\n'
+    '  onFileOpen?: (file: FileItem) => void;\n'
+    '  onFolderChange?: (folderId: string | null) => void;\n'
+    '  onSelectionChange?: (selectedItems: FileItem[]) => void;\n'
+    '  onDeleteItems?: (items: FileItem[]) => void;\n'
+    '  onUpload?: (files: FileList) => void;\n'
+    '  className?: string;\n'
+    '  style?: React.CSSProperties;\n'
+    '}\n\n'
+    '// ---------------------------------------------------------------------------\n'
+    '// Formatting Helpers & Variant Styles\n'
+    '// ---------------------------------------------------------------------------\n'
+    'function formatFileSize(bytes?: number): string {\n'
+    '  if (bytes === undefined || bytes === null || isNaN(bytes)) return "-";\n'
+    '  if (bytes < 1024) return `${bytes} B`;\n'
+    '  const kb = bytes / 1024;\n'
+    '  if (kb < 1024) return `${kb.toFixed(1)} KB`;\n'
+    '  const mb = kb / 1024;\n'
+    '  if (mb < 1024) return `${mb.toFixed(1)} MB`;\n'
+    '  const gb = mb / 1024;\n'
+    '  return `${gb.toFixed(1)} GB`;\n'
+    '}\n\n'
+    'function formatDate(val?: string | number): string {\n'
+    '  if (!val) return "-";\n'
+    '  const d = typeof val === "number" ? new Date(val) : new Date(String(val));\n'
+    '  return isNaN(d.getTime()) ? String(val) : d.toLocaleDateString([], { year: "numeric", month: "short", day: "numeric" });\n'
+    '}\n\n'
+    'function getVariantStyles(variant: FileExplorerVariant) {\n'
+    '  switch (variant) {\n'
+    '    case "card":\n'
+    '      return {\n'
+    '        container: { background: "#ffffff", border: "1px solid #e2e8f0", borderRadius: 14,\n'
+    '          boxShadow: "0 4px 20px rgba(0,0,0,0.06)", color: "#0f172a" },\n'
+    '        header: { background: "#f8fafc", borderBottom: "1px solid #e2e8f0" },\n'
+    '        toolbar: { background: "#ffffff", borderBottom: "1px solid #e2e8f0" },\n'
+    '        itemHover: "#f1f5f9",\n'
+    '        itemActive: "#eff6ff",\n'
+    '        itemActiveBorder: "#3b82f6",\n'
+    '        panel: { background: "#f8fafc", borderLeft: "1px solid #e2e8f0" },\n'
+    '        input: { background: "#ffffff", border: "1px solid #cbd5e1", color: "#0f172a" },\n'
+    '        accent: "#2563eb",\n'
+    '      };\n'
+    '    case "glass":\n'
+    '      return {\n'
+    '        container: { background: "rgba(15,23,42,0.75)", backdropFilter: "blur(20px)",\n'
+    '          border: "1px solid rgba(148,163,184,0.15)", borderRadius: 16,\n'
+    '          boxShadow: "0 8px 32px rgba(0,0,0,0.37)", color: "#f8fafc" },\n'
+    '        header: { background: "rgba(30,41,59,0.5)", borderBottom: "1px solid rgba(148,163,184,0.15)" },\n'
+    '        toolbar: { background: "rgba(15,23,42,0.4)", borderBottom: "1px solid rgba(148,163,184,0.1)" },\n'
+    '        itemHover: "rgba(255,255,255,0.05)",\n'
+    '        itemActive: "rgba(59,130,246,0.25)",\n'
+    '        itemActiveBorder: "#60a5fa",\n'
+    '        panel: { background: "rgba(15,23,42,0.65)", borderLeft: "1px solid rgba(148,163,184,0.15)" },\n'
+    '        input: { background: "rgba(15,23,42,0.6)", border: "1px solid rgba(148,163,184,0.2)", color: "#f8fafc" },\n'
+    '        accent: "#38bdf8",\n'
+    '      };\n'
+    '    case "neon":\n'
+    '      return {\n'
+    '        container: { background: "#060b14", border: "1px solid rgba(0,255,200,0.3)", borderRadius: 12,\n'
+    '          boxShadow: "0 0 30px rgba(0,255,200,0.15), inset 0 0 20px rgba(0,255,200,0.03)", color: "#00ffc8" },\n'
+    '        header: { background: "#08101e", borderBottom: "1px solid rgba(0,255,200,0.2)" },\n'
+    '        toolbar: { background: "#060b14", borderBottom: "1px solid rgba(0,255,200,0.15)" },\n'
+    '        itemHover: "rgba(0,255,200,0.06)",\n'
+    '        itemActive: "rgba(0,255,200,0.16)",\n'
+    '        itemActiveBorder: "#00ffc8",\n'
+    '        panel: { background: "#08101e", borderLeft: "1px solid rgba(0,255,200,0.2)" },\n'
+    '        input: { background: "#060b14", border: "1px solid rgba(0,255,200,0.3)", color: "#00ffc8" },\n'
+    '        accent: "#00ffc8",\n'
+    '      };\n'
+    '    case "default":\n'
+    '    default:\n'
+    '      return {\n'
+    '        container: { background: "#0f172a", border: "1px solid #1e293b", borderRadius: 12,\n'
+    '          boxShadow: "0 4px 24px rgba(0,0,0,0.4)", color: "#f8fafc" },\n'
+    '        header: { background: "#1e293b", borderBottom: "1px solid #334155" },\n'
+    '        toolbar: { background: "#0f172a", borderBottom: "1px solid #1e293b" },\n'
+    '        itemHover: "rgba(255,255,255,0.05)",\n'
+    '        itemActive: "rgba(59,130,246,0.2)",\n'
+    '        itemActiveBorder: "#3b82f6",\n'
+    '        panel: { background: "#1e293b", borderLeft: "1px solid #334155" },\n'
+    '        input: { background: "#0f172a", border: "1px solid #334155", color: "#f8fafc" },\n'
+    '        accent: "#3b82f6",\n'
+    '      };\n'
+    '  }\n'
+    '}\n\n'
+    'function getSizeConfig(size: FileExplorerSize) {\n'
+    '  switch (size) {\n'
+    '    case "sm":\n'
+    '      return { fontSize: 12, headerH: 42, iconSize: 14, itemPad: 8, gridMin: 110 };\n'
+    '    case "lg":\n'
+    '      return { fontSize: 16, headerH: 58, iconSize: 22, itemPad: 16, gridMin: 170 };\n'
+    '    case "md":\n'
+    '    default:\n'
+    '      return { fontSize: 14, headerH: 50, iconSize: 18, itemPad: 12, gridMin: 140 };\n'
+    '  }\n'
+    '}\n\n'
+    '// ---------------------------------------------------------------------------\n'
+    '// Inline Vector Icons\n'
+    '// ---------------------------------------------------------------------------\n'
+    'function FolderIcon({ size = 18, color = "#f59e0b" }: { size?: number; color?: string }) {\n'
+    '  return (\n'
+    '    <svg width={size} height={size} viewBox="0 0 24 24" fill="currentColor" stroke="none" style={{ color }} aria-hidden="true">\n'
+    '      <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z" />\n'
+    '    </svg>\n'
+    '  );\n'
+    '}\n\n'
+    'function FileIcon({ size = 18 }: { size?: number }) {\n'
+    '  return (\n'
+    '    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">\n'
+    '      <path d="M13 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z" />\n'
+    '      <polyline points="13 2 13 9 20 9" />\n'
+    '    </svg>\n'
+    '  );\n'
+    '}\n\n'
+    'function ImageIcon({ size = 18, color = "#3b82f6" }: { size?: number; color?: string }) {\n'
+    '  return (\n'
+    '    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">\n'
+    '      <rect x="3" y="3" width="18" height="18" rx="2" ry="2" />\n'
+    '      <circle cx="8.5" cy="8.5" r="1.5" />\n'
+    '      <polyline points="21 15 16 10 5 21" />\n'
+    '    </svg>\n'
+    '  );\n'
+    '}\n\n'
+    'function VideoIcon({ size = 18, color = "#a855f7" }: { size?: number; color?: string }) {\n'
+    '  return (\n'
+    '    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">\n'
+    '      <polygon points="23 7 16 12 23 17 23 7" />\n'
+    '      <rect x="1" y="5" width="15" height="14" rx="2" ry="2" />\n'
+    '    </svg>\n'
+    '  );\n'
+    '}\n\n'
+    'function AudioIcon({ size = 18, color = "#ec4899" }: { size?: number; color?: string }) {\n'
+    '  return (\n'
+    '    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">\n'
+    '      <path d="M9 18V5l12-2v13" />\n'
+    '      <circle cx="6" cy="18" r="3" />\n'
+    '      <circle cx="18" cy="16" r="3" />\n'
+    '    </svg>\n'
+    '  );\n'
+    '}\n\n'
+    'function CodeIcon({ size = 18, color = "#10b981" }: { size?: number; color?: string }) {\n'
+    '  return (\n'
+    '    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">\n'
+    '      <polyline points="16 18 22 12 16 6" />\n'
+    '      <polyline points="8 6 2 12 8 18" />\n'
+    '    </svg>\n'
+    '  );\n'
+    '}\n\n'
+    'function ArchiveIcon({ size = 18, color = "#f97316" }: { size?: number; color?: string }) {\n'
+    '  return (\n'
+    '    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">\n'
+    '      <polyline points="21 8 21 21 3 21 3 8" />\n'
+    '      <rect x="1" y="3" width="22" height="5" />\n'
+    '      <line x1="10" y1="12" x2="14" y2="12" />\n'
+    '    </svg>\n'
+    '  );\n'
+    '}\n\n'
+    'function PdfIcon({ size = 18, color = "#ef4444" }: { size?: number; color?: string }) {\n'
+    '  return (\n'
+    '    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">\n'
+    '      <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />\n'
+    '      <polyline points="14 2 14 8 20 8" />\n'
+    '      <path d="M9 13h2a1 1 0 0 1 1 1v0a1 1 0 0 1-1 1H9v-3" />\n'
+    '    </svg>\n'
+    '  );\n'
+    '}\n\n'
+    'function GridIcon({ size = 16 }: { size?: number }) {\n'
+    '  return (\n'
+    '    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">\n'
+    '      <rect x="3" y="3" width="7" height="7" />\n'
+    '      <rect x="14" y="3" width="7" height="7" />\n'
+    '      <rect x="14" y="14" width="7" height="7" />\n'
+    '      <rect x="3" y="14" width="7" height="7" />\n'
+    '    </svg>\n'
+    '  );\n'
+    '}\n\n'
+    'function ListIcon({ size = 16 }: { size?: number }) {\n'
+    '  return (\n'
+    '    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">\n'
+    '      <line x1="8" y1="6" x2="21" y2="6" />\n'
+    '      <line x1="8" y1="12" x2="21" y2="12" />\n'
+    '      <line x1="8" y1="18" x2="21" y2="18" />\n'
+    '      <line x1="3" y1="6" x2="3.01" y2="6" />\n'
+    '      <line x1="3" y1="12" x2="3.01" y2="12" />\n'
+    '      <line x1="3" y1="18" x2="3.01" y2="18" />\n'
+    '    </svg>\n'
+    '  );\n'
+    '}\n\n'
+    'function SearchIcon({ size = 16 }: { size?: number }) {\n'
+    '  return (\n'
+    '    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">\n'
+    '      <circle cx="11" cy="11" r="8" />\n'
+    '      <line x1="21" y1="21" x2="16.65" y2="16.65" />\n'
+    '    </svg>\n'
+    '  );\n'
+    '}\n\n'
+    'function DownloadIcon({ size = 16 }: { size?: number }) {\n'
+    '  return (\n'
+    '    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">\n'
+    '      <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />\n'
+    '      <polyline points="7 10 12 15 17 10" />\n'
+    '      <line x1="12" y1="15" x2="12" y2="3" />\n'
+    '    </svg>\n'
+    '  );\n'
+    '}\n\n'
+    'function TrashIcon({ size = 16 }: { size?: number }) {\n'
+    '  return (\n'
+    '    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">\n'
+    '      <polyline points="3 6 5 6 21 6" />\n'
+    '      <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />\n'
+    '    </svg>\n'
+    '  );\n'
+    '}\n\n'
+    'function ChevronRightIcon({ size = 14 }: { size?: number }) {\n'
+    '  return (\n'
+    '    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">\n'
+    '      <polyline points="9 18 15 12 9 6" />\n'
+    '    </svg>\n'
+    '  );\n'
+    '}\n\n'
+    'function XIcon({ size = 14 }: { size?: number }) {\n'
+    '  return (\n'
+    '    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">\n'
+    '      <line x1="18" y1="6" x2="6" y2="18" />\n'
+    '      <line x1="6" y1="6" x2="18" y2="18" />\n'
+    '    </svg>\n'
+    '  );\n'
+    '}\n\n'
+    'function renderFileIcon(type: FileItemType, size = 20) {\n'
+    '  switch (type) {\n'
+    '    case "folder": return <FolderIcon size={size} />;\n'
+    '    case "image": return <ImageIcon size={size} />;\n'
+    '    case "video": return <VideoIcon size={size} />;\n'
+    '    case "audio": return <AudioIcon size={size} />;\n'
+    '    case "code": return <CodeIcon size={size} />;\n'
+    '    case "archive": return <ArchiveIcon size={size} />;\n'
+    '    case "pdf": return <PdfIcon size={size} />;\n'
+    '    case "file":\n'
+    '    default: return <FileIcon size={size} />;\n'
+    '  }\n'
+    '}\n\n'
+    '// ---------------------------------------------------------------------------\n'
+    '// Breadcrumb Subcomponent\n'
+    '// ---------------------------------------------------------------------------\n'
+    'export const FileBreadcrumbsInner = forwardRef<HTMLDivElement, FileBreadcrumbsProps>(function FileBreadcrumbsInner(\n'
+    '  { path, onNavigate, size = "md" },\n'
+    '  ref\n'
+    ') {\n'
+    '  const sc = getSizeConfig(size);\n'
+    '  return (\n'
+    '    <div\n'
+    '      ref={ref}\n'
+    '      style={{\n'
+    '        display: "flex",\n'
+    '        alignItems: "center",\n'
+    '        gap: 6,\n'
+    '        fontSize: sc.fontSize,\n'
+    '        overflowX: "auto",\n'
+    '        padding: "4px 0",\n'
+    '        whiteSpace: "nowrap",\n'
+    '      }}\n'
+    '      aria-label="File path breadcrumbs"\n'
+    '    >\n'
+    '      {path.map((segment, idx) => (\n'
+    '        <React.Fragment key={segment.id || "root"}>\n'
+    '          {idx > 0 && <ChevronRightIcon size={12} />}\n'
+    '          <button\n'
+    '            type="button"\n'
+    '            onClick={() => onNavigate(segment.id)}\n'
+    '            style={{\n'
+    '              background: "none",\n'
+    '              border: "none",\n'
+    '              cursor: "pointer",\n'
+    '              color: "inherit",\n'
+    '              fontWeight: idx === path.length - 1 ? 600 : 400,\n'
+    '              opacity: idx === path.length - 1 ? 1 : 0.7,\n'
+    '              padding: "2px 6px",\n'
+    '              borderRadius: 4,\n'
+    '            }}\n'
+    '          >\n'
+    '            {segment.name}\n'
+    '          </button>\n'
+    '        </React.Fragment>\n'
+    '      ))}\n'
+    '    </div>\n'
+    '  );\n'
+    '});\n'
+    'FileBreadcrumbsInner.displayName = "FileBreadcrumbs";\n\n'
+    '// ---------------------------------------------------------------------------\n'
+    '// File Details Inspector Subcomponent\n'
+    '// ---------------------------------------------------------------------------\n'
+    'export const FileDetailsPanelInner = forwardRef<HTMLDivElement, FileDetailsProps>(function FileDetailsPanelInner(\n'
+    '  { file, onClose, variant = "default", size = "md", onDownload, onDelete },\n'
+    '  ref\n'
+    ') {\n'
+    '  const vs = getVariantStyles(variant);\n'
+    '  const sc = getSizeConfig(size);\n'
+    '  return (\n'
+    '    <div\n'
+    '      ref={ref}\n'
+    '      style={{\n'
+    '        ...vs.panel,\n'
+    '        width: 280,\n'
+    '        display: "flex",\n'
+    '        flexDirection: "column",\n'
+    '        height: "100%",\n'
+    '        padding: 16,\n'
+    '        boxSizing: "border-box",\n'
+    '        flexShrink: 0,\n'
+    '      }}\n'
+    '      role="region"\n'
+    '      aria-label="File details inspector"\n'
+    '    >\n'
+    '      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 16 }}>\n'
+    '        <span style={{ fontWeight: 600, fontSize: sc.fontSize }}>File Details</span>\n'
+    '        <button\n'
+    '          type="button"\n'
+    '          onClick={onClose}\n'
+    '          style={{ background: "none", border: "none", cursor: "pointer", color: "inherit", padding: 4 }}\n'
+    '          aria-label="Close details panel"\n'
+    '        >\n'
+    '          <XIcon size={16} />\n'
+    '        </button>\n'
+    '      </div>\n'
+    '      <div style={{ display: "flex", flexDirection: "column", alignItems: "center", padding: "16px 0", gap: 8 }}>\n'
+    '        {renderFileIcon(file.type, 48)}\n'
+    '        <div style={{ fontWeight: 600, fontSize: sc.fontSize, textAlign: "center", wordBreak: "break-word" }}>\n'
+    '          {file.name}\n'
+    '        </div>\n'
+    '      </div>\n'
+    '      <div style={{ display: "flex", flexDirection: "column", gap: 10, fontSize: sc.fontSize - 1, opacity: 0.85, flex: 1 }}>\n'
+    '        <div><strong>Type:</strong> {file.type}</div>\n'
+    '        <div><strong>Size:</strong> {formatFileSize(file.size)}</div>\n'
+    '        <div><strong>Modified:</strong> {formatDate(file.lastModified)}</div>\n'
+    '        {file.extension && <div><strong>Extension:</strong> {file.extension}</div>}\n'
+    '      </div>\n'
+    '      <div style={{ display: "flex", gap: 8, marginTop: 16 }}>\n'
+    '        {file.url && (\n'
+    '          <button\n'
+    '            type="button"\n'
+    '            onClick={() => onDownload ? onDownload(file) : window.open(file.url, "_blank")}\n'
+    '            style={{\n'
+    '              flex: 1,\n'
+    '              padding: "8px 12px",\n'
+    '              background: vs.accent,\n'
+    '              color: "#ffffff",\n'
+    '              border: "none",\n'
+    '              borderRadius: 8,\n'
+    '              cursor: "pointer",\n'
+    '              display: "flex",\n'
+    '              alignItems: "center",\n'
+    '              justifyContent: "center",\n'
+    '              gap: 6,\n'
+    '              fontSize: sc.fontSize - 1,\n'
+    '            }}\n'
+    '          >\n'
+    '            <DownloadIcon size={14} /> Download\n'
+    '          </button>\n'
+    '        )}\n'
+    '        {onDelete && (\n'
+    '          <button\n'
+    '            type="button"\n'
+    '            onClick={() => onDelete(file)}\n'
+    '            style={{\n'
+    '              padding: "8px 12px",\n'
+    '              background: "rgba(239,68,68,0.15)",\n'
+    '              color: "#ef4444",\n'
+    '              border: "none",\n'
+    '              borderRadius: 8,\n'
+    '              cursor: "pointer",\n'
+    '              display: "flex",\n'
+    '              alignItems: "center",\n'
+    '              justifyContent: "center",\n'
+    '            }}\n'
+    '            aria-label="Delete file"\n'
+    '          >\n'
+    '            <TrashIcon size={14} />\n'
+    '          </button>\n'
+    '        )}\n'
+    '      </div>\n'
+    '    </div>\n'
+    '  );\n'
+    '});\n'
+    'FileDetailsPanelInner.displayName = "FileDetailsPanel";\n\n'
+    '// ---------------------------------------------------------------------------\n'
+    '// Main Compound FileExplorer Component\n'
+    '// ---------------------------------------------------------------------------\n'
+    'const FileExplorerComponent = forwardRef<FileExplorerHandle, FileExplorerProps>(function FileExplorerComponent(\n'
+    '  {\n'
+    '    items = [],\n'
+    '    initialFolderId = null,\n'
+    '    initialViewMode = "grid",\n'
+    '    variant = "default",\n'
+    '    size = "md",\n'
+    '    title = "File Explorer",\n'
+    '    multiSelect = true,\n'
+    '    showBreadcrumbs = true,\n'
+    '    showSearch = true,\n'
+    '    showDetailsPanel = true,\n'
+    '    onFileOpen,\n'
+    '    onFolderChange,\n'
+    '    onSelectionChange,\n'
+    '    onDeleteItems,\n'
+    '    onUpload,\n'
+    '    className,\n'
+    '    style,\n'
+    '  },\n'
+    '  ref\n'
+    ') {\n'
+    '  const vs = getVariantStyles(variant);\n'
+    '  const sc = getSizeConfig(size);\n'
+    '  const [currentFolderId, setCurrentFolderId] = useState<string | null>(initialFolderId);\n'
+    '  const [viewMode, setViewMode] = useState<FileExplorerViewMode>(initialViewMode);\n'
+    '  const [selectedIds, setSelectedIds] = useState<string[]>([]);\n'
+    '  const [searchQuery, setSearchQuery] = useState("");\n'
+    '  const [activeFile, setActiveFile] = useState<FileItem | null>(null);\n'
+    '  const fileInputRef = useRef<HTMLInputElement>(null);\n\n'
+    '  const currentItems = useMemo(() => {\n'
+    '    return items.filter(item => {\n'
+    '      const matchesParent = currentFolderId ? item.parentId === currentFolderId : !item.parentId;\n'
+    '      const matchesSearch = searchQuery\n'
+    '        ? item.name.toLowerCase().includes(searchQuery.toLowerCase())\n'
+    '        : true;\n'
+    '      return searchQuery ? matchesSearch : matchesParent;\n'
+    '    });\n'
+    '  }, [items, currentFolderId, searchQuery]);\n\n'
+    '  const breadcrumbPath = useMemo(() => {\n'
+    '    const path: Array<{ id: string | null; name: string }> = [{ id: null, name: "Home" }];\n'
+    '    let curId = currentFolderId;\n'
+    '    const segments: Array<{ id: string | null; name: string }> = [];\n'
+    '    while (curId) {\n'
+    '      const folder = items.find(i => i.id === curId);\n'
+    '      if (folder) {\n'
+    '        segments.unshift({ id: folder.id, name: folder.name });\n'
+    '        curId = folder.parentId || null;\n'
+    '      } else break;\n'
+    '    }\n'
+    '    return [...path, ...segments];\n'
+    '  }, [items, currentFolderId]);\n\n'
+    '  const handleNavigate = useCallback((folderId: string | null) => {\n'
+    '    setCurrentFolderId(folderId);\n'
+    '    setSelectedIds([]);\n'
+    '    setActiveFile(null);\n'
+    '    onFolderChange?.(folderId);\n'
+    '  }, [onFolderChange]);\n\n'
+    '  const handleItemClick = (item: FileItem, e: React.MouseEvent) => {\n'
+    '    if (item.type === "folder") {\n'
+    '      handleNavigate(item.id);\n'
+    '      return;\n'
+    '    }\n'
+    '    if (multiSelect && (e.ctrlKey || e.metaKey)) {\n'
+    '      setSelectedIds(prev => {\n'
+    '        const next = prev.includes(item.id) ? prev.filter(id => id !== item.id) : [...prev, item.id];\n'
+    '        onSelectionChange?.(items.filter(i => next.includes(i.id)));\n'
+    '        return next;\n'
+    '      });\n'
+    '    } else {\n'
+    '      setSelectedIds([item.id]);\n'
+    '      onSelectionChange?.([item]);\n'
+    '    }\n'
+    '    setActiveFile(item);\n'
+    '    onFileOpen?.(item);\n'
+    '  };\n\n'
+    '  const getSelectedFiles = useCallback(() => {\n'
+    '    return items.filter(i => selectedIds.includes(i.id));\n'
+    '  }, [items, selectedIds]);\n\n'
+    '  useImperativeHandle(ref, () => ({\n'
+    '    selectFile: (id: string) => {\n'
+    '      setSelectedIds([id]);\n'
+    '      const found = items.find(i => i.id === id);\n'
+    '      if (found) setActiveFile(found);\n'
+    '    },\n'
+    '    clearSelection: () => {\n'
+    '      setSelectedIds([]);\n'
+    '      setActiveFile(null);\n'
+    '    },\n'
+    '    navigateToFolder: handleNavigate,\n'
+    '    getCurrentFolderId: () => currentFolderId,\n'
+    '    getSelectedFiles,\n'
+    '  }));\n\n'
+    '  return (\n'
+    '    <div\n'
+    '      className={className}\n'
+    '      style={{\n'
+    '        ...vs.container,\n'
+    '        display: "flex",\n'
+    '        flexDirection: "column",\n'
+    '        height: 600,\n'
+    '        width: "100%",\n'
+    '        maxWidth: 960,\n'
+    '        margin: "0 auto",\n'
+    '        overflow: "hidden",\n'
+    '        boxSizing: "border-box",\n'
+    '        fontFamily: "inherit",\n'
+    '        ...style,\n'
+    '      }}\n'
+    '      role="region"\n'
+    '      aria-label="File Explorer"\n'
+    '    >\n'
+    '      {/* Header */}\n'
+    '      <div\n'
+    '        style={{\n'
+    '          ...vs.header,\n'
+    '          height: sc.headerH,\n'
+    '          padding: "0 16px",\n'
+    '          display: "flex",\n'
+    '          alignItems: "center",\n'
+    '          justifyContent: "space-between",\n'
+    '          flexShrink: 0,\n'
+    '        }}\n'
+    '      >\n'
+    '        <div style={{ fontWeight: 600, fontSize: sc.fontSize }}>{title}</div>\n'
+    '        {showSearch && (\n'
+    '          <div style={{ display: "flex", alignItems: "center", gap: 6, ...vs.input, borderRadius: 18, padding: "4px 10px" }}>\n'
+    '            <SearchIcon size={14} />\n'
+    '            <input\n'
+    '              type="text"\n'
+    '              placeholder="Search files..."\n'
+    '              value={searchQuery}\n'
+    '              onChange={e => setSearchQuery(e.target.value)}\n'
+    '              style={{ background: "none", border: "none", outline: "none", color: "inherit", fontSize: sc.fontSize - 2, width: 140 }}\n'
+    '              aria-label="Search files"\n'
+    '            />\n'
+    '            {searchQuery && (\n'
+    '              <button\n'
+    '                type="button"\n'
+    '                onClick={() => setSearchQuery("")}\n'
+    '                style={{ background: "none", border: "none", cursor: "pointer", color: "inherit", padding: 0 }}\n'
+    '              >\n'
+    '                <XIcon size={12} />\n'
+    '              </button>\n'
+    '            )}\n'
+    '          </div>\n'
+    '        )}\n'
+    '      </div>\n\n'
+    '      {/* Toolbar & Breadcrumbs */}\n'
+    '      <div\n'
+    '        style={{\n'
+    '          ...vs.toolbar,\n'
+    '          padding: "8px 16px",\n'
+    '          display: "flex",\n'
+    '          alignItems: "center",\n'
+    '          justifyContent: "space-between",\n'
+    '          gap: 12,\n'
+    '          flexShrink: 0,\n'
+    '        }}\n'
+    '      >\n'
+    '        {showBreadcrumbs && (\n'
+    '          <FileBreadcrumbsInner\n'
+    '            path={breadcrumbPath}\n'
+    '            onNavigate={handleNavigate}\n'
+    '            size={size}\n'
+    '          />\n'
+    '        )}\n'
+    '        <div style={{ display: "flex", alignItems: "center", gap: 8, flexShrink: 0 }}>\n'
+    '          <input\n'
+    '            type="file"\n'
+    '            ref={fileInputRef}\n'
+    '            multiple\n'
+    '            style={{ display: "none" }}\n'
+    '            onChange={e => e.target.files && onUpload?.(e.target.files)}\n'
+    '          />\n'
+    '          {onUpload && (\n'
+    '            <button\n'
+    '              type="button"\n'
+    '              onClick={() => fileInputRef.current?.click()}\n'
+    '              style={{\n'
+    '                background: vs.accent,\n'
+    '                color: "#ffffff",\n'
+    '                border: "none",\n'
+    '                borderRadius: 6,\n'
+    '                padding: "4px 10px",\n'
+    '                cursor: "pointer",\n'
+    '                fontSize: sc.fontSize - 2,\n'
+    '                fontWeight: 500,\n'
+    '              }}\n'
+    '            >\n'
+    '              Upload\n'
+    '            </button>\n'
+    '          )}\n'
+    '          {selectedIds.length > 0 && onDeleteItems && (\n'
+    '            <button\n'
+    '              type="button"\n'
+    '              onClick={() => onDeleteItems(getSelectedFiles())}\n'
+    '              style={{\n'
+    '                background: "rgba(239,68,68,0.15)",\n'
+    '                color: "#ef4444",\n'
+    '                border: "none",\n'
+    '                borderRadius: 6,\n'
+    '                padding: "4px 10px",\n'
+    '                cursor: "pointer",\n'
+    '                fontSize: sc.fontSize - 2,\n'
+    '              }}\n'
+    '              aria-label="Delete selected items"\n'
+    '            >\n'
+    '              Delete ({selectedIds.length})\n'
+    '            </button>\n'
+    '          )}\n'
+    '          <div style={{ display: "flex", border: "1px solid rgba(148,163,184,0.2)", borderRadius: 6, overflow: "hidden" }}>\n'
+    '            <button\n'
+    '              type="button"\n'
+    '              onClick={() => setViewMode("grid")}\n'
+    '              style={{\n'
+    '                background: viewMode === "grid" ? vs.accent : "transparent",\n'
+    '                color: viewMode === "grid" ? "#ffffff" : "inherit",\n'
+    '                border: "none",\n'
+    '                padding: "4px 8px",\n'
+    '                cursor: "pointer",\n'
+    '                display: "flex",\n'
+    '                alignItems: "center",\n'
+    '              }}\n'
+    '              aria-label="Grid view"\n'
+    '            >\n'
+    '              <GridIcon size={14} />\n'
+    '            </button>\n'
+    '            <button\n'
+    '              type="button"\n'
+    '              onClick={() => setViewMode("list")}\n'
+    '              style={{\n'
+    '                background: viewMode === "list" ? vs.accent : "transparent",\n'
+    '                color: viewMode === "list" ? "#ffffff" : "inherit",\n'
+    '                border: "none",\n'
+    '                padding: "4px 8px",\n'
+    '                cursor: "pointer",\n'
+    '                display: "flex",\n'
+    '                alignItems: "center",\n'
+    '              }}\n'
+    '              aria-label="List view"\n'
+    '            >\n'
+    '              <ListIcon size={14} />\n'
+    '            </button>\n'
+    '          </div>\n'
+    '        </div>\n'
+    '      </div>\n\n'
+    '      {/* Main Content & Details Panel */}\n'
+    '      <div style={{ flex: 1, display: "flex", minHeight: 0 }}>\n'
+    '        <div style={{ flex: 1, overflowY: "auto", padding: 16 }} role="grid" aria-label="Files">\n'
+    '          {currentItems.length === 0 ? (\n'
+    '            <div style={{ textAlign: "center", padding: 40, opacity: 0.6, fontSize: sc.fontSize }}>\n'
+    '              No files or folders found.\n'
+    '            </div>\n'
+    '          ) : viewMode === "grid" ? (\n'
+    '            <div\n'
+    '              style={{\n'
+    '                display: "grid",\n'
+    '                gridTemplateColumns: `repeat(auto-fill, minmax(${sc.gridMin}px, 1fr))`,\n'
+    '                gap: 12,\n'
+    '              }}\n'
+    '            >\n'
+    '              {currentItems.map(item => {\n'
+    '                const isSelected = selectedIds.includes(item.id);\n'
+    '                return (\n'
+    '                  <div\n'
+    '                    key={item.id}\n'
+    '                    role="row"\n'
+    '                    aria-selected={isSelected}\n'
+    '                    onClick={e => handleItemClick(item, e)}\n'
+    '                    style={{\n'
+    '                      padding: sc.itemPad,\n'
+    '                      borderRadius: 10,\n'
+    '                      background: isSelected ? vs.itemActive : "transparent",\n'
+    '                      border: `1px solid ${isSelected ? vs.itemActiveBorder : "rgba(148,163,184,0.1)"}`,\n'
+    '                      display: "flex",\n'
+    '                      flexDirection: "column",\n'
+    '                      alignItems: "center",\n'
+    '                      gap: 8,\n'
+    '                      cursor: "pointer",\n'
+    '                      transition: "background 0.1s ease",\n'
+    '                      textAlign: "center",\n'
+    '                    }}\n'
+    '                  >\n'
+    '                    <div style={{ padding: 8 }}>{renderFileIcon(item.type, sc.iconSize + 16)}</div>\n'
+    '                    <div style={{ fontSize: sc.fontSize - 1, fontWeight: 500, width: "100%", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>\n'
+    '                      {item.name}\n'
+    '                    </div>\n'
+    '                    <div style={{ fontSize: sc.fontSize - 3, opacity: 0.6 }}>\n'
+    '                      {item.type === "folder" ? "Folder" : formatFileSize(item.size)}\n'
+    '                    </div>\n'
+    '                  </div>\n'
+    '                );\n'
+    '              })}\n'
+    '            </div>\n'
+    '          ) : (\n'
+    '            <table style={{ width: "100%", borderCollapse: "collapse", fontSize: sc.fontSize - 1 }}>\n'
+    '              <thead>\n'
+    '                <tr style={{ borderBottom: "1px solid rgba(148,163,184,0.15)", textAlign: "left", opacity: 0.7 }}>\n'
+    '                  <th style={{ padding: "8px 12px" }}>Name</th>\n'
+    '                  <th style={{ padding: "8px 12px" }}>Type</th>\n'
+    '                  <th style={{ padding: "8px 12px" }}>Size</th>\n'
+    '                  <th style={{ padding: "8px 12px" }}>Modified</th>\n'
+    '                </tr>\n'
+    '              </thead>\n'
+    '              <tbody>\n'
+    '                {currentItems.map(item => {\n'
+    '                  const isSelected = selectedIds.includes(item.id);\n'
+    '                  return (\n'
+    '                    <tr\n'
+    '                      key={item.id}\n'
+    '                      role="row"\n'
+    '                      aria-selected={isSelected}\n'
+    '                      onClick={e => handleItemClick(item, e)}\n'
+    '                      style={{\n'
+    '                        cursor: "pointer",\n'
+    '                        background: isSelected ? vs.itemActive : "transparent",\n'
+    '                        borderBottom: "1px solid rgba(148,163,184,0.06)",\n'
+    '                      }}\n'
+    '                    >\n'
+    '                      <td style={{ padding: "8px 12px", display: "flex", alignItems: "center", gap: 8 }}>\n'
+    '                        {renderFileIcon(item.type, 16)}\n'
+    '                        <span style={{ fontWeight: 500 }}>{item.name}</span>\n'
+    '                      </td>\n'
+    '                      <td style={{ padding: "8px 12px", opacity: 0.7 }}>{item.type}</td>\n'
+    '                      <td style={{ padding: "8px 12px", opacity: 0.7 }}>{formatFileSize(item.size)}</td>\n'
+    '                      <td style={{ padding: "8px 12px", opacity: 0.7 }}>{formatDate(item.lastModified)}</td>\n'
+    '                    </tr>\n'
+    '                  );\n'
+    '                })}\n'
+    '              </tbody>\n'
+    '            </table>\n'
+    '          )}\n'
+    '        </div>\n'
+    '        {showDetailsPanel && activeFile && (\n'
+    '          <FileDetailsPanelInner\n'
+    '            file={activeFile}\n'
+    '            onClose={() => setActiveFile(null)}\n'
+    '            variant={variant}\n'
+    '            size={size}\n'
+    '            onDelete={onDeleteItems ? (f) => onDeleteItems([f]) : undefined}\n'
+    '          />\n'
+    '        )}\n'
+    '      </div>\n'
+    '    </div>\n'
+    '  );\n'
+    '});\n'
+    'FileExplorerComponent.displayName = "FileExplorer";\n\n'
+    '// ---------------------------------------------------------------------------\n'
+    '// Exports & Aliases\n'
+    '// ---------------------------------------------------------------------------\n'
+    'export const FileExplorer = FileExplorerComponent;\n'
+    'export const FileManager = FileExplorerComponent;\n'
+    'export const FileBrowser = FileExplorerComponent;\n'
+    'export const DocumentManager = FileExplorerComponent;\n'
+    'export const FileGrid = FileExplorerComponent;\n'
+    'export const FileList = FileExplorerComponent;\n'
+    'export const FileDetailsPanel = FileDetailsPanelInner;\n'
+    'export const FileBreadcrumbs = FileBreadcrumbsInner;\n\n'
+    'FileExplorer.displayName = "FileExplorer";\n'
+    'FileManager.displayName = "FileManager";\n'
+    'FileBrowser.displayName = "FileBrowser";\n'
+    'DocumentManager.displayName = "DocumentManager";\n'
+    'FileGrid.displayName = "FileGrid";\n'
+    'FileList.displayName = "FileList";\n'
+    'FileDetailsPanel.displayName = "FileDetailsPanel";\n'
+    'FileBreadcrumbs.displayName = "FileBreadcrumbs";\n\n'
+    'export default FileExplorerComponent;\n'
+)
+
+
+def render_file_explorer_component() -> str:
+    """Return static React implementation of the File Explorer & Storage Browser Suite."""
+    return _FILE_EXPLORER_COMPONENT
+
+
+
+# ---------------------------------------------------------------------------
+# Task R-387: Accessible Futuristic Reusable Interactive Geo Map & Location Pinpoint Suite (components/geo-map.tsx)
+# ---------------------------------------------------------------------------
+
+_GEO_MAP_COMPONENT = (
+    "'use client';\n\n"
+    "import React, {\n"
+    "  useState,\n"
+    "  useEffect,\n"
+    "  useRef,\n"
+    "  useImperativeHandle,\n"
+    "  forwardRef,\n"
+    "  useMemo,\n"
+    "  useCallback,\n"
+    "} from 'react';\n\n"
+    "// ---------------------------------------------------------------------------\n"
+    "// TypeScript Interfaces & Types\n"
+    "// ---------------------------------------------------------------------------\n"
+    "export type GeoMapVariant = 'default' | 'card' | 'glass' | 'neon';\n"
+    "export type GeoMapSize = 'sm' | 'md' | 'lg';\n"
+    "export type MarkerStyle = 'pin' | 'dot' | 'pulse' | 'beacon';\n\n"
+    "export interface MapMarker {\n"
+    "  id: string;\n"
+    "  lat: number;\n"
+    "  lng: number;\n"
+    "  title: string;\n"
+    "  description?: string;\n"
+    "  category?: string;\n"
+    "  style?: MarkerStyle;\n"
+    "  color?: string;\n"
+    "  data?: any;\n"
+    "}\n\n"
+    "export interface MapRoute {\n"
+    "  id: string;\n"
+    "  points: { lat: number; lng: number }[];\n"
+    "  color?: string;\n"
+    "  dashed?: boolean;\n"
+    "  animated?: boolean;\n"
+    "  label?: string;\n"
+    "}\n\n"
+    "export interface GeoMapHandle {\n"
+    "  zoomIn: () => void;\n"
+    "  zoomOut: () => void;\n"
+    "  resetView: () => void;\n"
+    "  panTo: (lat: number, lng: number, zoom?: number) => void;\n"
+    "  selectMarker: (id: string | null) => void;\n"
+    "  getSelectedMarker: () => MapMarker | null;\n"
+    "  getCoordinates: () => { lat: number; lng: number };\n"
+    "}\n\n"
+    "export interface MapCalloutProps {\n"
+    "  marker: MapMarker;\n"
+    "  onClose: () => void;\n"
+    "  onAction?: (marker: MapMarker) => void;\n"
+    "  actionLabel?: string;\n"
+    "}\n\n"
+    "export interface MapControlsProps {\n"
+    "  onZoomIn: () => void;\n"
+    "  onZoomOut: () => void;\n"
+    "  onReset: () => void;\n"
+    "  zoom: number;\n"
+    "  maxZoom?: number;\n"
+    "  minZoom?: number;\n"
+    "}\n\n"
+    "export interface GeoMapProps {\n"
+    "  markers?: MapMarker[];\n"
+    "  routes?: MapRoute[];\n"
+    "  initialCenter?: { lat: number; lng: number };\n"
+    "  initialZoom?: number;\n"
+    "  minZoom?: number;\n"
+    "  maxZoom?: number;\n"
+    "  variant?: GeoMapVariant;\n"
+    "  size?: GeoMapSize;\n"
+    "  showControls?: boolean;\n"
+    "  showSearch?: boolean;\n"
+    "  showCategories?: boolean;\n"
+    "  allowPinDrop?: boolean;\n"
+    "  selectedMarkerId?: string;\n"
+    "  onMarkerClick?: (marker: MapMarker) => void;\n"
+    "  onCoordinateSelect?: (coords: { lat: number; lng: number }) => void;\n"
+    "  onMarkerSelect?: (marker: MapMarker | null) => void;\n"
+    "  className?: string;\n"
+    "  style?: React.CSSProperties;\n"
+    "}\n\n"
+    "// ---------------------------------------------------------------------------\n"
+    "// Projection Utilities & SVG Geometry\n"
+    "// Equirectangular projection on 1000x500 coordinate space\n"
+    "// ---------------------------------------------------------------------------\n"
+    "const MAP_WIDTH = 1000;\n"
+    "const MAP_HEIGHT = 500;\n\n"
+    "function lngToX(lng: number): number {\n"
+    "  return ((lng + 180) / 360) * MAP_WIDTH;\n"
+    "}\n\n"
+    "function latToY(lat: number): number {\n"
+    "  return ((90 - lat) / 180) * MAP_HEIGHT;\n"
+    "}\n\n"
+    "function xToLng(x: number): number {\n"
+    "  return (x / MAP_WIDTH) * 360 - 180;\n"
+    "}\n\n"
+    "function yToLat(y: number): number {\n"
+    "  return 90 - (y / MAP_HEIGHT) * 180;\n"
+    "}\n\n"
+    "// Simplified stylized world continents SVG paths\n"
+    "const WORLD_PATHS = [\n"
+    "  // North America\n"
+    "  'M 120 70 L 190 60 L 260 80 L 280 120 L 240 160 L 210 200 L 170 230 L 140 210 L 120 160 L 100 110 Z',\n"
+    "  // Greenland\n"
+    "  'M 310 40 L 360 45 L 350 90 L 300 80 Z',\n"
+    "  // South America\n"
+    "  'M 250 250 L 310 260 L 340 310 L 320 380 L 280 430 L 260 380 L 240 300 Z',\n"
+    "  // Europe\n"
+    "  'M 460 80 L 530 85 L 560 120 L 520 150 L 470 140 L 450 110 Z',\n"
+    "  // Africa\n"
+    "  'M 470 170 L 550 180 L 580 240 L 560 330 L 520 370 L 480 320 L 450 240 L 450 190 Z',\n"
+    "  // Asia\n"
+    "  'M 560 70 L 780 80 L 850 130 L 820 200 L 750 240 L 680 230 L 620 180 L 570 150 Z',\n"
+    "  // Australia\n"
+    "  'M 780 320 L 860 330 L 880 390 L 820 410 L 770 370 Z',\n"
+    "  // Antarctica\n"
+    "  'M 150 480 L 850 480 L 800 460 L 200 460 Z',\n"
+    "];\n\n"
+    "// Graticule grid lines\n"
+    "const GRATICULES = [\n"
+    "  // Parallels (Latitudes)\n"
+    "  'M 0 83.3 L 1000 83.3',   // 60° N\n"
+    "  'M 0 166.7 L 1000 166.7', // 30° N\n"
+    "  'M 0 250 L 1000 250',     // Equator (0°)\n"
+    "  'M 0 333.3 L 1000 333.3', // 30° S\n"
+    "  'M 0 416.7 L 1000 416.7', // 60° S\n"
+    "  // Meridians (Longitudes)\n"
+    "  'M 166.7 0 L 166.7 500',  // 120° W\n"
+    "  'M 333.3 0 L 333.3 500',  // 60° W\n"
+    "  'M 500 0 L 500 500',      // Prime Meridian (0°)\n"
+    "  'M 666.7 0 L 666.7 500',  // 60° E\n"
+    "  'M 833.3 0 L 833.3 500',  // 120° E\n"
+    "];\n\n"
+    "// ---------------------------------------------------------------------------\n"
+    "// Inline Vector Icons\n"
+    "// ---------------------------------------------------------------------------\n"
+    "function ZoomInIcon({ size = 16, color = 'currentColor' }: { size?: number; color?: string }) {\n"
+    "  return (\n"
+    "    <svg width={size} height={size} viewBox=\"0 0 24 24\" fill=\"none\" stroke={color} strokeWidth=\"2\" strokeLinecap=\"round\" strokeLinejoin=\"round\">\n"
+    "      <circle cx=\"11\" cy=\"11\" r=\"8\" />\n"
+    "      <line x1=\"21\" y1=\"21\" x2=\"16.65\" y2=\"16.65\" />\n"
+    "      <line x1=\"11\" y1=\"8\" x2=\"11\" y2=\"14\" />\n"
+    "      <line x1=\"8\" y1=\"11\" x2=\"14\" y2=\"11\" />\n"
+    "    </svg>\n"
+    "  );\n"
+    "}\n\n"
+    "function ZoomOutIcon({ size = 16, color = 'currentColor' }: { size?: number; color?: string }) {\n"
+    "  return (\n"
+    "    <svg width={size} height={size} viewBox=\"0 0 24 24\" fill=\"none\" stroke={color} strokeWidth=\"2\" strokeLinecap=\"round\" strokeLinejoin=\"round\">\n"
+    "      <circle cx=\"11\" cy=\"11\" r=\"8\" />\n"
+    "      <line x1=\"21\" y1=\"21\" x2=\"16.65\" y2=\"16.65\" />\n"
+    "      <line x1=\"8\" y1=\"11\" x2=\"14\" y2=\"11\" />\n"
+    "    </svg>\n"
+    "  );\n"
+    "}\n\n"
+    "function ResetIcon({ size = 16, color = 'currentColor' }: { size?: number; color?: string }) {\n"
+    "  return (\n"
+    "    <svg width={size} height={size} viewBox=\"0 0 24 24\" fill=\"none\" stroke={color} strokeWidth=\"2\" strokeLinecap=\"round\" strokeLinejoin=\"round\">\n"
+    "      <path d=\"M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z\" />\n"
+    "      <polyline points=\"9 22 9 12 15 12 15 22\" />\n"
+    "    </svg>\n"
+    "  );\n"
+    "}\n\n"
+    "function SearchIcon({ size = 16, color = 'currentColor' }: { size?: number; color?: string }) {\n"
+    "  return (\n"
+    "    <svg width={size} height={size} viewBox=\"0 0 24 24\" fill=\"none\" stroke={color} strokeWidth=\"2\" strokeLinecap=\"round\" strokeLinejoin=\"round\">\n"
+    "      <circle cx=\"11\" cy=\"11\" r=\"8\" />\n"
+    "      <line x1=\"21\" y1=\"21\" x2=\"16.65\" y2=\"16.65\" />\n"
+    "    </svg>\n"
+    "  );\n"
+    "}\n\n"
+    "function XIcon({ size = 16, color = 'currentColor' }: { size?: number; color?: string }) {\n"
+    "  return (\n"
+    "    <svg width={size} height={size} viewBox=\"0 0 24 24\" fill=\"none\" stroke={color} strokeWidth=\"2\" strokeLinecap=\"round\" strokeLinejoin=\"round\">\n"
+    "      <line x1=\"18\" y1=\"6\" x2=\"6\" y2=\"18\" />\n"
+    "      <line x1=\"6\" y1=\"6\" x2=\"18\" y2=\"18\" />\n"
+    "    </svg>\n"
+    "  );\n"
+    "}\n\n"
+    "function PinIcon({ size = 16, color = 'currentColor' }: { size?: number; color?: string }) {\n"
+    "  return (\n"
+    "    <svg width={size} height={size} viewBox=\"0 0 24 24\" fill=\"none\" stroke={color} strokeWidth=\"2\" strokeLinecap=\"round\" strokeLinejoin=\"round\">\n"
+    "      <path d=\"M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z\" />\n"
+    "      <circle cx=\"12\" cy=\"10\" r=\"3\" />\n"
+    "    </svg>\n"
+    "  );\n"
+    "}\n\n"
+    "// ---------------------------------------------------------------------------\n"
+    "// Subcomponents: MapPin, MapCallout, MapControls, RouteLine\n"
+    "// ---------------------------------------------------------------------------\n"
+    "export function MapPinInner({\n"
+    "  marker,\n"
+    "  isSelected = false,\n"
+    "  onClick,\n"
+    "  color,\n"
+    "}: {\n"
+    "  marker: MapMarker;\n"
+    "  isSelected?: boolean;\n"
+    "  onClick?: () => void;\n"
+    "  color?: string;\n"
+    "}) {\n"
+    "  const x = lngToX(marker.lng);\n"
+    "  const y = latToY(marker.lat);\n"
+    "  const pinColor = color || marker.color || '#3b82f6';\n"
+    "  const style = marker.style || 'pin';\n\n"
+    "  return (\n"
+    "    <g\n"
+    "      transform={`translate(${x}, ${y})`}\n"
+    "      onClick={(e) => {\n"
+    "        e.stopPropagation();\n"
+    "        onClick?.();\n"
+    "      }}\n"
+    "      style={{ cursor: 'pointer' }}\n"
+    "      aria-label={marker.title}\n"
+    "    >\n"
+    "      {/* Selection ring */}\n"
+    "      {isSelected && (\n"
+    "        <circle\n"
+    "          cx=\"0\"\n"
+    "          cy=\"0\"\n"
+    "          r=\"22\"\n"
+    "          fill=\"none\"\n"
+    "          stroke={pinColor}\n"
+    "          strokeWidth=\"2\"\n"
+    "          strokeDasharray=\"4 2\"\n"
+    "          opacity=\"0.85\"\n"
+    "        />\n"
+    "      )}\n\n"
+    "      {/* Render based on marker style */}\n"
+    "      {style === 'pulse' && (\n"
+    "        <>\n"
+    "          <circle cx=\"0\" cy=\"0\" r=\"14\" fill={pinColor} opacity=\"0.25\">\n"
+    "            <animate attributeName=\"r\" values=\"6;18;6\" dur=\"2s\" repeatCount=\"indefinite\" />\n"
+    "            <animate attributeName=\"opacity\" values=\"0.5;0.1;0.5\" dur=\"2s\" repeatCount=\"indefinite\" />\n"
+    "          </circle>\n"
+    "          <circle cx=\"0\" cy=\"0\" r=\"6\" fill={pinColor} />\n"
+    "        </>\n"
+    "      )}\n\n"
+    "      {style === 'beacon' && (\n"
+    "        <>\n"
+    "          <line x1=\"0\" y1=\"0\" x2=\"0\" y2=\"-24\" stroke={pinColor} strokeWidth=\"2\" strokeLinecap=\"round\" />\n"
+    "          <circle cx=\"0\" cy=\"-24\" r=\"5\" fill={pinColor} />\n"
+    "          <circle cx=\"0\" cy=\"0\" r=\"4\" fill={pinColor} opacity=\"0.6\" />\n"
+    "        </>\n"
+    "      )}\n\n"
+    "      {style === 'dot' && (\n"
+    "        <>\n"
+    "          <circle cx=\"0\" cy=\"0\" r=\"8\" fill=\"#ffffff\" opacity=\"0.3\" />\n"
+    "          <circle cx=\"0\" cy=\"0\" r=\"5\" fill={pinColor} />\n"
+    "        </>\n"
+    "      )}\n\n"
+    "      {style === 'pin' && (\n"
+    "        <g transform=\"translate(-10, -24)\">\n"
+    "          <path\n"
+    "            d=\"M10 0 C4.5 0 0 4.5 0 10 C0 17 10 24 10 24 C10 24 20 17 20 10 C20 4.5 15.5 0 10 0 Z\"\n"
+    "            fill={pinColor}\n"
+    "          />\n"
+    "          <circle cx=\"10\" cy=\"9\" r=\"4\" fill=\"#ffffff\" />\n"
+    "        </g>\n"
+    "      )}\n"
+    "    </g>\n"
+    "  );\n"
+    "}\n\n"
+    "export function MapCalloutInner({\n"
+    "  marker,\n"
+    "  onClose,\n"
+    "  onAction,\n"
+    "  actionLabel = 'Inspect',\n"
+    "}: MapCalloutProps) {\n"
+    "  return (\n"
+    "    <div\n"
+    "      style={{\n"
+    "        position: 'absolute',\n"
+    "        bottom: '20px',\n"
+    "        left: '20px',\n"
+    "        maxWidth: '320px',\n"
+    "        width: 'calc(100% - 40px)',\n"
+    "        backgroundColor: '#0f172a',\n"
+    "        border: '1px solid #334155',\n"
+    "        borderRadius: '12px',\n"
+    "        padding: '16px',\n"
+    "        boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.5), 0 8px 10px -6px rgba(0, 0, 0, 0.5)',\n"
+    "        zIndex: 30,\n"
+    "        color: '#f8fafc',\n"
+    "      }}\n"
+    "      role=\"dialog\"\n"
+    "      aria-label={marker.title}\n"
+    "    >\n"
+    "      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '8px' }}>\n"
+    "        <div>\n"
+    "          {marker.category && (\n"
+    "            <span\n"
+    "              style={{\n"
+    "                display: 'inline-block',\n"
+    "                fontSize: '11px',\n"
+    "                fontWeight: 600,\n"
+    "                textTransform: 'uppercase',\n"
+    "                letterSpacing: '0.05em',\n"
+    "                padding: '2px 8px',\n"
+    "                borderRadius: '9999px',\n"
+    "                backgroundColor: 'rgba(59, 130, 246, 0.2)',\n"
+    "                color: '#60a5fa',\n"
+    "                marginBottom: '6px',\n"
+    "              }}\n"
+    "            >\n"
+    "              {marker.category}\n"
+    "            </span>\n"
+    "          )}\n"
+    "          <h4 style={{ margin: 0, fontSize: '15px', fontWeight: 600, color: '#f1f5f9' }}>{marker.title}</h4>\n"
+    "        </div>\n"
+    "        <button\n"
+    "          onClick={onClose}\n"
+    "          style={{\n"
+    "            background: 'none',\n"
+    "            border: 'none',\n"
+    "            color: '#94a3b8',\n"
+    "            cursor: 'pointer',\n"
+    "            padding: '4px',\n"
+    "            borderRadius: '6px',\n"
+    "            display: 'flex',\n"
+    "            alignItems: 'center',\n"
+    "            justifyContent: 'center',\n"
+    "          }}\n"
+    "          aria-label=\"Close callout\"\n"
+    "        >\n"
+    "          <XIcon size={16} />\n"
+    "        </button>\n"
+    "      </div>\n"
+    "      {marker.description && (\n"
+    "        <p style={{ margin: '0 0 12px 0', fontSize: '13px', color: '#94a3b8', lineHeight: 1.5 }}>\n"
+    "          {marker.description}\n"
+    "        </p>\n"
+    "      )}\n"
+    "      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: '12px', color: '#64748b' }}>\n"
+    "        <span>Lat: {marker.lat.toFixed(4)}°, Lng: {marker.lng.toFixed(4)}°</span>\n"
+    "        {onAction && (\n"
+    "          <button\n"
+    "            onClick={() => onAction(marker)}\n"
+    "            style={{\n"
+    "              backgroundColor: '#2563eb',\n"
+    "              color: '#ffffff',\n"
+    "              border: 'none',\n"
+    "              borderRadius: '6px',\n"
+    "              padding: '6px 12px',\n"
+    "              fontSize: '12px',\n"
+    "              fontWeight: 500,\n"
+    "              cursor: 'pointer',\n"
+    "            }}\n"
+    "          >\n"
+    "            {actionLabel}\n"
+    "          </button>\n"
+    "        )}\n"
+    "      </div>\n"
+    "    </div>\n"
+    "  );\n"
+    "}\n\n"
+    "export function MapControlsInner({\n"
+    "  onZoomIn,\n"
+    "  onZoomOut,\n"
+    "  onReset,\n"
+    "  zoom,\n"
+    "  maxZoom = 6,\n"
+    "  minZoom = 0.8,\n"
+    "}: MapControlsProps) {\n"
+    "  return (\n"
+    "    <div\n"
+    "      style={{\n"
+    "        position: 'absolute',\n"
+    "        right: '16px',\n"
+    "        top: '16px',\n"
+    "        display: 'flex',\n"
+    "        flexDirection: 'column',\n"
+    "        gap: '6px',\n"
+    "        zIndex: 20,\n"
+    "      }}\n"
+    "      aria-label=\"Map zoom and pan controls\"\n"
+    "    >\n"
+    "      <button\n"
+    "        onClick={onZoomIn}\n"
+    "        disabled={zoom >= maxZoom}\n"
+    "        style={{\n"
+    "          width: '36px',\n"
+    "          height: '36px',\n"
+    "          backgroundColor: 'rgba(15, 23, 42, 0.85)',\n"
+    "          border: '1px solid #334155',\n"
+    "          borderRadius: '8px',\n"
+    "          color: '#f1f5f9',\n"
+    "          display: 'flex',\n"
+    "          alignItems: 'center',\n"
+    "          justifyContent: 'center',\n"
+    "          cursor: zoom >= maxZoom ? 'not-allowed' : 'pointer',\n"
+    "          opacity: zoom >= maxZoom ? 0.5 : 1,\n"
+    "          backdropFilter: 'blur(8px)',\n"
+    "        }}\n"
+    "        aria-label=\"Zoom in\"\n"
+    "      >\n"
+    "        <ZoomInIcon size={16} />\n"
+    "      </button>\n"
+    "      <button\n"
+    "        onClick={onZoomOut}\n"
+    "        disabled={zoom <= minZoom}\n"
+    "        style={{\n"
+    "          width: '36px',\n"
+    "          height: '36px',\n"
+    "          backgroundColor: 'rgba(15, 23, 42, 0.85)',\n"
+    "          border: '1px solid #334155',\n"
+    "          borderRadius: '8px',\n"
+    "          color: '#f1f5f9',\n"
+    "          display: 'flex',\n"
+    "          alignItems: 'center',\n"
+    "          justifyContent: 'center',\n"
+    "          cursor: zoom <= minZoom ? 'not-allowed' : 'pointer',\n"
+    "          opacity: zoom <= minZoom ? 0.5 : 1,\n"
+    "          backdropFilter: 'blur(8px)',\n"
+    "        }}\n"
+    "        aria-label=\"Zoom out\"\n"
+    "      >\n"
+    "        <ZoomOutIcon size={16} />\n"
+    "      </button>\n"
+    "      <button\n"
+    "        onClick={onReset}\n"
+    "        style={{\n"
+    "          width: '36px',\n"
+    "          height: '36px',\n"
+    "          backgroundColor: 'rgba(15, 23, 42, 0.85)',\n"
+    "          border: '1px solid #334155',\n"
+    "          borderRadius: '8px',\n"
+    "          color: '#f1f5f9',\n"
+    "          display: 'flex',\n"
+    "          alignItems: 'center',\n"
+    "          justifyContent: 'center',\n"
+    "          cursor: 'pointer',\n"
+    "          backdropFilter: 'blur(8px)',\n"
+    "        }}\n"
+    "        aria-label=\"Reset view\"\n"
+    "      >\n"
+    "        <ResetIcon size={16} />\n"
+    "      </button>\n"
+    "    </div>\n"
+    "  );\n"
+    "}\n\n"
+    "export function RouteLineInner({\n"
+    "  route,\n"
+    "}: {\n"
+    "  route: MapRoute;\n"
+    "}) {\n"
+    "  if (!route.points || route.points.length < 2) return null;\n\n"
+    "  const pathData = route.points.reduce((acc, pt, index) => {\n"
+    "    const x = lngToX(pt.lng);\n"
+    "    const y = latToY(pt.lat);\n"
+    "    return index === 0 ? `M ${x} ${y}` : `${acc} L ${x} ${y}`;\n"
+    "  }, '');\n\n"
+    "  const color = route.color || '#38bdf8';\n\n"
+    "  return (\n"
+    "    <g>\n"
+    "      {/* Glow path */}\n"
+    "      <path\n"
+    "        d={pathData}\n"
+    "        fill=\"none\"\n"
+    "        stroke={color}\n"
+    "        strokeWidth=\"5\"\n"
+    "        strokeOpacity=\"0.25\"\n"
+    "        strokeLinecap=\"round\"\n"
+    "        strokeLinejoin=\"round\"\n"
+    "      />\n"
+    "      {/* Core line */}\n"
+    "      <path\n"
+    "        d={pathData}\n"
+    "        fill=\"none\"\n"
+    "        stroke={color}\n"
+    "        strokeWidth=\"2\"\n"
+    "        strokeDasharray={route.dashed ? '6 4' : undefined}\n"
+    "        strokeLinecap=\"round\"\n"
+    "        strokeLinejoin=\"round\"\n"
+    "      >\n"
+    "        {route.animated && (\n"
+    "          <animate\n"
+    "            attributeName=\"stroke-dashoffset\"\n"
+    "            from=\"100\"\n"
+    "            to=\"0\"\n"
+    "            dur=\"3s\"\n"
+    "            repeatCount=\"indefinite\"\n"
+    "          />\n"
+    "        )}\n"
+    "      </path>\n"
+    "    </g>\n"
+    "  );\n"
+    "}\n\n"
+    "// ---------------------------------------------------------------------------\n"
+    "// Main Compound Component: GeoMapComponent\n"
+    "// ---------------------------------------------------------------------------\n"
+    "const GeoMapComponent = forwardRef<GeoMapHandle, GeoMapProps>((\n"
+    "  {\n"
+    "    markers = [],\n"
+    "    routes = [],\n"
+    "    initialCenter = { lat: 20, lng: 0 },\n"
+    "    initialZoom = 1,\n"
+    "    minZoom = 0.8,\n"
+    "    maxZoom = 6,\n"
+    "    variant = 'default',\n"
+    "    size = 'md',\n"
+    "    showControls = true,\n"
+    "    showSearch = true,\n"
+    "    showCategories = true,\n"
+    "    allowPinDrop = false,\n"
+    "    selectedMarkerId,\n"
+    "    onMarkerClick,\n"
+    "    onCoordinateSelect,\n"
+    "    onMarkerSelect,\n"
+    "    className = '',\n"
+    "    style = {},\n"
+    "  },\n"
+    "  ref\n"
+    ") => {\n"
+    "  // Container reference\n"
+    "  const containerRef = useRef<HTMLDivElement>(null);\n\n"
+    "  // Map State\n"
+    "  const [zoom, setZoom] = useState<number>(initialZoom);\n"
+    "  const [pan, setPan] = useState<{ x: number; y: number }>({ x: 0, y: 0 });\n"
+    "  const [isDragging, setIsDragging] = useState<boolean>(false);\n"
+    "  const [dragStart, setDragStart] = useState<{ x: number; y: number }>({ x: 0, y: 0 });\n"
+    "  const [searchQuery, setSearchQuery] = useState<string>('');\n"
+    "  const [selectedCategory, setSelectedCategory] = useState<string>('All');\n"
+    "  const [activeMarkerId, setActiveMarkerId] = useState<string | null>(selectedMarkerId || null);\n"
+    "  const [droppedPin, setDroppedPin] = useState<{ lat: number; lng: number } | null>(null);\n"
+    "  const [cursorCoords, setCursorCoords] = useState<{ lat: number; lng: number }>({ lat: 0, lng: 0 });\n\n"
+    "  // Update selection if prop changes\n"
+    "  useEffect(() => {\n"
+    "    if (selectedMarkerId !== undefined) {\n"
+    "      setActiveMarkerId(selectedMarkerId);\n"
+    "    }\n"
+    "  }, [selectedMarkerId]);\n\n"
+    "  // Distinct categories\n"
+    "  const categories = useMemo(() => {\n"
+    "    const cats = new Set<string>();\n"
+    "    markers.forEach((m) => {\n"
+    "      if (m.category) cats.add(m.category);\n"
+    "    });\n"
+    "    return ['All', ...Array.from(cats)];\n"
+    "  }, [markers]);\n\n"
+    "  // Filtered markers\n"
+    "  const filteredMarkers = useMemo(() => {\n"
+    "    return markers.filter((m) => {\n"
+    "      const matchesSearch =\n"
+    "        searchQuery.trim() === '' ||\n"
+    "        m.title.toLowerCase().includes(searchQuery.toLowerCase()) ||\n"
+    "        (m.description && m.description.toLowerCase().includes(searchQuery.toLowerCase()));\n"
+    "      const matchesCategory =\n"
+    "        selectedCategory === 'All' || m.category === selectedCategory;\n"
+    "      return matchesSearch && matchesCategory;\n"
+    "    });\n"
+    "  }, [markers, searchQuery, selectedCategory]);\n\n"
+    "  // Currently active marker object\n"
+    "  const activeMarker = useMemo(() => {\n"
+    "    return markers.find((m) => m.id === activeMarkerId) || null;\n"
+    "  }, [markers, activeMarkerId]);\n\n"
+    "  // Pan/Zoom Helpers\n"
+    "  const handleZoomIn = useCallback(() => {\n"
+    "    setZoom((z) => Math.min(z + 0.5, maxZoom));\n"
+    "  }, [maxZoom]);\n\n"
+    "  const handleZoomOut = useCallback(() => {\n"
+    "    setZoom((z) => Math.max(z - 0.5, minZoom));\n"
+    "  }, [minZoom]);\n\n"
+    "  const handleResetView = useCallback(() => {\n"
+    "    setZoom(initialZoom);\n"
+    "    setPan({ x: 0, y: 0 });\n"
+    "  }, [initialZoom]);\n\n"
+    "  const panTo = useCallback((lat: number, lng: number, targetZoom?: number) => {\n"
+    "    const x = lngToX(lng);\n"
+    "    const y = latToY(lat);\n"
+    "    const newZoom = targetZoom !== undefined ? targetZoom : zoom;\n"
+    "    setZoom(newZoom);\n"
+    "    setPan({\n"
+    "      x: (MAP_WIDTH / 2 - x) * newZoom,\n"
+    "      y: (MAP_HEIGHT / 2 - y) * newZoom,\n"
+    "    });\n"
+    "  }, [zoom]);\n\n"
+    "  // Forward ref handle\n"
+    "  useImperativeHandle(ref, () => ({\n"
+    "    zoomIn: handleZoomIn,\n"
+    "    zoomOut: handleZoomOut,\n"
+    "    resetView: handleResetView,\n"
+    "    panTo,\n"
+    "    selectMarker: (id: string | null) => {\n"
+    "      setActiveMarkerId(id);\n"
+    "      const found = markers.find((m) => m.id === id) || null;\n"
+    "      onMarkerSelect?.(found);\n"
+    "    },\n"
+    "    getSelectedMarker: () => activeMarker,\n"
+    "    getCoordinates: () => cursorCoords,\n"
+    "  }), [handleZoomIn, handleZoomOut, handleResetView, panTo, markers, activeMarker, cursorCoords, onMarkerSelect]);\n\n"
+    "  // Mouse drag pan handling\n"
+    "  const handleMouseDown = (e: React.MouseEvent) => {\n"
+    "    if (e.button !== 0) return; // Only primary button\n"
+    "    setIsDragging(true);\n"
+    "    setDragStart({ x: e.clientX - pan.x, y: e.clientY - pan.y });\n"
+    "  };\n\n"
+    "  const handleMouseMove = (e: React.MouseEvent) => {\n"
+    "    if (containerRef.current) {\n"
+    "      const rect = containerRef.current.getBoundingClientRect();\n"
+    "      const svgX = (e.clientX - rect.left - pan.x) / zoom;\n"
+    "      const svgY = (e.clientY - rect.top - pan.y) / zoom;\n"
+    "      const lng = xToLng(Math.max(0, Math.min(MAP_WIDTH, svgX)));\n"
+    "      const lat = yToLat(Math.max(0, Math.min(MAP_HEIGHT, svgY)));\n"
+    "      setCursorCoords({ lat, lng });\n"
+    "    }\n"
+    "    if (!isDragging) return;\n"
+    "    setPan({ x: e.clientX - dragStart.x, y: e.clientY - dragStart.y });\n"
+    "  };\n\n"
+    "  const handleMouseUp = () => {\n"
+    "    setIsDragging(false);\n"
+    "  };\n\n"
+    "  // Wheel zoom handling\n"
+    "  const handleWheel = (e: React.WheelEvent) => {\n"
+    "    e.preventDefault();\n"
+    "    const delta = e.deltaY < 0 ? 0.2 : -0.2;\n"
+    "    setZoom((z) => Math.min(maxZoom, Math.max(minZoom, z + delta)));\n"
+    "  };\n\n"
+    "  // Keyboard navigation\n"
+    "  const handleKeyDown = (e: React.KeyboardEvent) => {\n"
+    "    const step = 30;\n"
+    "    if (e.key === 'ArrowUp') {\n"
+    "      setPan((p) => ({ ...p, y: p.y + step }));\n"
+    "    } else if (e.key === 'ArrowDown') {\n"
+    "      setPan((p) => ({ ...p, y: p.y - step }));\n"
+    "    } else if (e.key === 'ArrowLeft') {\n"
+    "      setPan((p) => ({ ...p, x: p.x + step }));\n"
+    "    } else if (e.key === 'ArrowRight') {\n"
+    "      setPan((p) => ({ ...p, x: p.x - step }));\n"
+    "    } else if (e.key === '+' || e.key === '=') {\n"
+    "      handleZoomIn();\n"
+    "    } else if (e.key === '-' || e.key === '_') {\n"
+    "      handleZoomOut();\n"
+    "    } else if (e.key === 'Home') {\n"
+    "      handleResetView();\n"
+    "    }\n"
+    "  };\n\n"
+    "  // Click to drop pin or select\n"
+    "  const handleMapClick = (e: React.MouseEvent) => {\n"
+    "    if (allowPinDrop && containerRef.current) {\n"
+    "      const rect = containerRef.current.getBoundingClientRect();\n"
+    "      const svgX = (e.clientX - rect.left - pan.x) / zoom;\n"
+    "      const svgY = (e.clientY - rect.top - pan.y) / zoom;\n"
+    "      const lng = xToLng(svgX);\n"
+    "      const lat = yToLat(svgY);\n"
+    "      setDroppedPin({ lat, lng });\n"
+    "      onCoordinateSelect?.({ lat, lng });\n"
+    "    } else {\n"
+    "      setActiveMarkerId(null);\n"
+    "      onMarkerSelect?.(null);\n"
+    "    }\n"
+    "  };\n\n"
+    "  // Sizing styles\n"
+    "  const sizeStyles = {\n"
+    "    sm: { height: '360px', fontSize: '12px' },\n"
+    "    md: { height: '500px', fontSize: '13px' },\n"
+    "    lg: { height: '680px', fontSize: '14px' },\n"
+    "  }[size];\n\n"
+    "  // Variant theme tokens\n"
+    "  const variantStyles = {\n"
+    "    default: {\n"
+    "      bg: '#0b0f19',\n"
+    "      border: '1px solid #1e293b',\n"
+    "      land: '#1e293b',\n"
+    "      landBorder: '#334155',\n"
+    "      graticule: '#1e293b',\n"
+    "      water: '#070b14',\n"
+    "      glow: 'none',\n"
+    "    },\n"
+    "    card: {\n"
+    "      bg: '#0f172a',\n"
+    "      border: '1px solid #334155',\n"
+    "      land: '#334155',\n"
+    "      landBorder: '#475569',\n"
+    "      graticule: '#1e293b',\n"
+    "      water: '#090d16',\n"
+    "      glow: '0 4px 20px -2px rgba(0, 0, 0, 0.5)',\n"
+    "    },\n"
+    "    glass: {\n"
+    "      bg: 'rgba(11, 15, 25, 0.85)',\n"
+    "      border: '1px solid rgba(255, 255, 255, 0.1)',\n"
+    "      land: 'rgba(51, 65, 85, 0.6)',\n"
+    "      landBorder: 'rgba(255, 255, 255, 0.2)',\n"
+    "      graticule: 'rgba(255, 255, 255, 0.05)',\n"
+    "      water: 'rgba(7, 11, 20, 0.5)',\n"
+    "      glow: '0 8px 32px 0 rgba(0, 0, 0, 0.37)',\n"
+    "      backdropFilter: 'blur(20px)',\n"
+    "    },\n"
+    "    neon: {\n"
+    "      bg: '#050510',\n"
+    "      border: '1px solid #00f0ff',\n"
+    "      land: '#0a1026',\n"
+    "      landBorder: '#00f0ff',\n"
+    "      graticule: 'rgba(0, 240, 255, 0.15)',\n"
+    "      water: '#020208',\n"
+    "      glow: '0 0 25px rgba(0, 240, 255, 0.3)',\n"
+    "    },\n"
+    "  }[variant];\n\n"
+    "  return (\n"
+    "    <div\n"
+    "      ref={containerRef}\n"
+    "      className={`geo-map-container ${className}`}\n"
+    "      style={{\n"
+    "        position: 'relative',\n"
+    "        width: '100%',\n"
+    "        height: sizeStyles.height,\n"
+    "        backgroundColor: variantStyles.bg,\n"
+    "        border: variantStyles.border,\n"
+    "        borderRadius: '16px',\n"
+    "        overflow: 'hidden',\n"
+    "        boxShadow: variantStyles.glow,\n"
+    "        backdropFilter: (variantStyles as any).backdropFilter,\n"
+    "        userSelect: 'none',\n"
+    "        outline: 'none',\n"
+    "        ...style,\n"
+    "      }}\n"
+    "      onMouseDown={handleMouseDown}\n"
+    "      onMouseMove={handleMouseMove}\n"
+    "      onMouseUp={handleMouseUp}\n"
+    "      onMouseLeave={handleMouseUp}\n"
+    "      onWheel={handleWheel}\n"
+    "      onClick={handleMapClick}\n"
+    "      onKeyDown={handleKeyDown}\n"
+    "      tabIndex={0}\n"
+    "      role=\"application\"\n"
+    "      aria-label=\"Interactive Map\"\n"
+    "    >\n"
+    "      {/* Top HUD: Search bar and category selector */}\n"
+    "      <div\n"
+    "        style={{\n"
+    "          position: 'absolute',\n"
+    "          top: '16px',\n"
+    "          left: '16px',\n"
+    "          display: 'flex',\n"
+    "          flexDirection: 'column',\n"
+    "          gap: '8px',\n"
+    "          zIndex: 20,\n"
+    "          maxWidth: '360px',\n"
+    "          width: 'calc(100% - 100px)',\n"
+    "        }}\n"
+    "        onClick={(e) => e.stopPropagation()}\n"
+    "      >\n"
+    "        {showSearch && (\n"
+    "          <div\n"
+    "            style={{\n"
+    "              display: 'flex',\n"
+    "              alignItems: 'center',\n"
+    "              backgroundColor: 'rgba(15, 23, 42, 0.85)',\n"
+    "              border: '1px solid #334155',\n"
+    "              borderRadius: '8px',\n"
+    "              padding: '6px 12px',\n"
+    "              backdropFilter: 'blur(10px)',\n"
+    "            }}\n"
+    "          >\n"
+    "            <SearchIcon size={14} color=\"#94a3b8\" />\n"
+    "            <input\n"
+    "              type=\"text\"\n"
+    "              placeholder=\"Search locations...\"\n"
+    "              value={searchQuery}\n"
+    "              onChange={(e) => setSearchQuery(e.target.value)}\n"
+    "              style={{\n"
+    "                background: 'none',\n"
+    "                border: 'none',\n"
+    "                color: '#f1f5f9',\n"
+    "                fontSize: '13px',\n"
+    "                marginLeft: '8px',\n"
+    "                outline: 'none',\n"
+    "                width: '100%',\n"
+    "              }}\n"
+    "              aria-label=\"Search map locations\"\n"
+    "            />\n"
+    "            {searchQuery && (\n"
+    "              <button\n"
+    "                onClick={() => setSearchQuery('')}\n"
+    "                style={{\n"
+    "                  background: 'none',\n"
+    "                  border: 'none',\n"
+    "                  color: '#94a3b8',\n"
+    "                  cursor: 'pointer',\n"
+    "                  padding: '2px',\n"
+    "                }}\n"
+    "                aria-label=\"Clear search\"\n"
+    "              >\n"
+    "                <XIcon size={14} />\n"
+    "              </button>\n"
+    "            )}\n"
+    "          </div>\n"
+    "        )}\n\n"
+    "        {showCategories && categories.length > 1 && (\n"
+    "          <div style={{ display: 'flex', gap: '6px', overflowX: 'auto', paddingBottom: '4px' }}>\n"
+    "            {categories.map((cat) => (\n"
+    "              <button\n"
+    "                key={cat}\n"
+    "                onClick={() => setSelectedCategory(cat)}\n"
+    "                style={{\n"
+    "                  backgroundColor: selectedCategory === cat ? '#2563eb' : 'rgba(15, 23, 42, 0.75)',\n"
+    "                  color: selectedCategory === cat ? '#ffffff' : '#94a3b8',\n"
+    "                  border: selectedCategory === cat ? '1px solid #3b82f6' : '1px solid #334155',\n"
+    "                  borderRadius: '9999px',\n"
+    "                  padding: '4px 10px',\n"
+    "                  fontSize: '11px',\n"
+    "                  fontWeight: 500,\n"
+    "                  cursor: 'pointer',\n"
+    "                  whiteSpace: 'nowrap',\n"
+    "                  backdropFilter: 'blur(8px)',\n"
+    "                }}\n"
+    "              >\n"
+    "                {cat}\n"
+    "              </button>\n"
+    "            ))}\n"
+    "          </div>\n"
+    "        )}\n"
+    "      </div>\n\n"
+    "      {/* Floating Controls */}\n"
+    "      {showControls && (\n"
+    "        <MapControlsInner\n"
+    "          onZoomIn={handleZoomIn}\n"
+    "          onZoomOut={handleZoomOut}\n"
+    "          onReset={handleResetView}\n"
+    "          zoom={zoom}\n"
+    "          maxZoom={maxZoom}\n"
+    "          minZoom={minZoom}\n"
+    "        />\n"
+    "      )}\n\n"
+    "      {/* Bottom Coordinates HUD */}\n"
+    "      <div\n"
+    "        style={{\n"
+    "          position: 'absolute',\n"
+    "          bottom: '16px',\n"
+    "          right: '16px',\n"
+    "          backgroundColor: 'rgba(15, 23, 42, 0.85)',\n"
+    "          border: '1px solid #334155',\n"
+    "          borderRadius: '6px',\n"
+    "          padding: '4px 8px',\n"
+    "          fontSize: '11px',\n"
+    "          color: '#94a3b8',\n"
+    "          zIndex: 20,\n"
+    "          backdropFilter: 'blur(8px)',\n"
+    "          fontFamily: 'monospace',\n"
+    "        }}\n"
+    "      >\n"
+    "        {cursorCoords.lat >= 0 ? `${cursorCoords.lat.toFixed(2)}°N` : `${Math.abs(cursorCoords.lat).toFixed(2)}°S`},{' '}\n"
+    "        {cursorCoords.lng >= 0 ? `${cursorCoords.lng.toFixed(2)}°E` : `${Math.abs(cursorCoords.lng).toFixed(2)}°W`}\n"
+    "        {' '}| Zoom: {zoom.toFixed(1)}x\n"
+    "      </div>\n\n"
+    "      {/* SVG Canvas with Transform */}\n"
+    "      <svg\n"
+    "        viewBox={`0 0 ${MAP_WIDTH} ${MAP_HEIGHT}`}\n"
+    "        style={{\n"
+    "          width: '100%',\n"
+    "          height: '100%',\n"
+    "          cursor: allowPinDrop ? 'crosshair' : isDragging ? 'grabbing' : 'grab',\n"
+    "        }}\n"
+    "      >\n"
+    "        {/* Water background */}\n"
+    "        <rect width={MAP_WIDTH} height={MAP_HEIGHT} fill={variantStyles.water} />\n\n"
+    "        {/* Zoomed/panned layer */}\n"
+    "        <g transform={`translate(${pan.x}, ${pan.y}) scale(${zoom})`}>\n"
+    "          {/* Graticule lines */}\n"
+    "          {GRATICULES.map((g, i) => (\n"
+    "            <path\n"
+    "              key={i}\n"
+    "              d={g}\n"
+    "              fill=\"none\"\n"
+    "              stroke={variantStyles.graticule}\n"
+    "              strokeWidth=\"1\"\n"
+    "              strokeDasharray=\"4 4\"\n"
+    "            />\n"
+    "          ))}\n\n"
+    "          {/* World landmasses */}\n"
+    "          {WORLD_PATHS.map((d, i) => (\n"
+    "            <path\n"
+    "              key={i}\n"
+    "              d={d}\n"
+    "              fill={variantStyles.land}\n"
+    "              stroke={variantStyles.landBorder}\n"
+    "              strokeWidth=\"1.5\"\n"
+    "              strokeLinejoin=\"round\"\n"
+    "            />\n"
+    "          ))}\n\n"
+    "          {/* Routes */}\n"
+    "          {routes.map((route) => (\n"
+    "            <RouteLineInner key={route.id} route={route} />\n"
+    "          ))}\n\n"
+    "          {/* Markers */}\n"
+    "          {filteredMarkers.map((marker) => (\n"
+    "            <MapPinInner\n"
+    "              key={marker.id}\n"
+    "              marker={marker}\n"
+    "              isSelected={marker.id === activeMarkerId}\n"
+    "              onClick={() => {\n"
+    "                setActiveMarkerId(marker.id);\n"
+    "                onMarkerClick?.(marker);\n"
+    "                onMarkerSelect?.(marker);\n"
+    "              }}\n"
+    "            />\n"
+    "          ))}\n\n"
+    "          {/* Dropped pin */}\n"
+    "          {droppedPin && (\n"
+    "            <MapPinInner\n"
+    "              marker={{\n"
+    "                id: 'dropped-pin',\n"
+    "                lat: droppedPin.lat,\n"
+    "                lng: droppedPin.lng,\n"
+    "                title: 'Selected Location',\n"
+    "                style: 'pulse',\n"
+    "                color: '#ef4444',\n"
+    "              }}\n"
+    "              isSelected={true}\n"
+    "            />\n"
+    "          )}\n"
+    "        </g>\n"
+    "      </svg>\n\n"
+    "      {/* Active Marker Callout Popup */}\n"
+    "      {activeMarker && (\n"
+    "        <MapCalloutInner\n"
+    "          marker={activeMarker}\n"
+    "          onClose={() => {\n"
+    "            setActiveMarkerId(null);\n"
+    "            onMarkerSelect?.(null);\n"
+    "          }}\n"
+    "          onAction={(m) => onMarkerClick?.(m)}\n"
+    "        />\n"
+    "      )}\n"
+    "    </div>\n"
+    "  );\n"
+    "});\n\n"
+    "GeoMapComponent.displayName = 'GeoMapComponent';\n\n"
+    "// ---------------------------------------------------------------------------\n"
+    "// Exports & Aliases\n"
+    "// ---------------------------------------------------------------------------\n"
+    "export const GeoMap = GeoMapComponent;\n"
+    "export const InteractiveMap = GeoMapComponent;\n"
+    "export const LocationPicker = GeoMapComponent;\n"
+    "export const MapPin = MapPinInner;\n"
+    "export const MapCallout = MapCalloutInner;\n"
+    "export const MapControls = MapControlsInner;\n"
+    "export const RouteLine = RouteLineInner;\n\n"
+    "GeoMap.displayName = 'GeoMap';\n"
+    "InteractiveMap.displayName = 'InteractiveMap';\n"
+    "LocationPicker.displayName = 'LocationPicker';\n"
+    "MapPin.displayName = 'MapPin';\n"
+    "MapCallout.displayName = 'MapCallout';\n"
+    "MapControls.displayName = 'MapControls';\n"
+    "RouteLine.displayName = 'RouteLine';\n\n"
+    "export default GeoMapComponent;\n"
+)
+
+
+def render_geo_map_component() -> str:
+    """Return static React implementation of the Interactive Geo Map & Location Pinpoint Suite."""
+    return _GEO_MAP_COMPONENT
+
+
+
+# ---------------------------------------------------------------------------
+# Task R-388: Accessible Futuristic Reusable PDF & Document Viewer Suite (components/pdf-viewer.tsx)
+# ---------------------------------------------------------------------------
+
+_PDF_VIEWER_COMPONENT = (
+    "'use client';\n\n"
+    "import React, {\n"
+    "  useState,\n"
+    "  useEffect,\n"
+    "  useRef,\n"
+    "  useImperativeHandle,\n"
+    "  forwardRef,\n"
+    "  useMemo,\n"
+    "  useCallback,\n"
+    "} from 'react';\n\n"
+    "// ---------------------------------------------------------------------------\n"
+    "// TypeScript Interfaces & Types\n"
+    "// ---------------------------------------------------------------------------\n"
+    "export type PdfViewerVariant = 'default' | 'card' | 'glass' | 'neon';\n"
+    "export type PdfViewerSize = 'sm' | 'md' | 'lg';\n"
+    "export type PdfViewMode = 'single' | 'continuous';\n\n"
+    "export interface PdfPage {\n"
+    "  pageNumber: number;\n"
+    "  title?: string;\n"
+    "  content?: string;\n"
+    "  textSnippets?: string[];\n"
+    "  imageUrl?: string;\n"
+    "  width?: number;\n"
+    "  height?: number;\n"
+    "}\n\n"
+    "export interface PdfViewerHandle {\n"
+    "  nextPage: () => void;\n"
+    "  prevPage: () => void;\n"
+    "  goToPage: (page: number) => void;\n"
+    "  zoomIn: () => void;\n"
+    "  zoomOut: () => void;\n"
+    "  setZoom: (zoom: number) => void;\n"
+    "  rotate: (deltaDegrees?: number) => void;\n"
+    "  search: (query: string) => void;\n"
+    "  getCurrentPage: () => number;\n"
+    "  getTotalPages: () => number;\n"
+    "}\n\n"
+    "export interface PdfThumbnailProps {\n"
+    "  pages: PdfPage[];\n"
+    "  currentPage: number;\n"
+    "  onSelectPage: (page: number) => void;\n"
+    "  isOpen: boolean;\n"
+    "  onClose: () => void;\n"
+    "}\n\n"
+    "export interface PdfToolbarProps {\n"
+    "  currentPage: number;\n"
+    "  totalPages: number;\n"
+    "  zoom: number;\n"
+    "  rotation: number;\n"
+    "  viewMode: PdfViewMode;\n"
+    "  searchQuery: string;\n"
+    "  matchCount: number;\n"
+    "  currentMatchIndex: number;\n"
+    "  onNextPage: () => void;\n"
+    "  onPrevPage: () => void;\n"
+    "  onPageChange: (page: number) => void;\n"
+    "  onZoomIn: () => void;\n"
+    "  onZoomOut: () => void;\n"
+    "  onZoomChange: (zoom: number) => void;\n"
+    "  onRotate: () => void;\n"
+    "  onViewModeChange: (mode: PdfViewMode) => void;\n"
+    "  onSearchChange: (query: string) => void;\n"
+    "  onNextMatch: () => void;\n"
+    "  onPrevMatch: () => void;\n"
+    "  onToggleThumbnails: () => void;\n"
+    "  onPrint: () => void;\n"
+    "  onDownload?: () => void;\n"
+    "  onToggleFullscreen?: () => void;\n"
+    "  isFullscreen?: boolean;\n"
+    "}\n\n"
+    "export interface PdfPageCanvasProps {\n"
+    "  page: PdfPage;\n"
+    "  zoom: number;\n"
+    "  rotation: number;\n"
+    "  searchQuery?: string;\n"
+    "  isCurrentPage?: boolean;\n"
+    "  variant?: PdfViewerVariant;\n"
+    "}\n\n"
+    "export interface PdfViewerProps {\n"
+    "  documentTitle?: string;\n"
+    "  pages?: PdfPage[];\n"
+    "  initialPage?: number;\n"
+    "  initialZoom?: number;\n"
+    "  minZoom?: number;\n"
+    "  maxZoom?: number;\n"
+    "  variant?: PdfViewerVariant;\n"
+    "  size?: PdfViewerSize;\n"
+    "  defaultViewMode?: PdfViewMode;\n"
+    "  showThumbnails?: boolean;\n"
+    "  enableSearch?: boolean;\n"
+    "  enablePrint?: boolean;\n"
+    "  enableDownload?: boolean;\n"
+    "  onPageChange?: (page: number) => void;\n"
+    "  onDownload?: () => void;\n"
+    "  className?: string;\n"
+    "  style?: React.CSSProperties;\n"
+    "}\n\n"
+    "// ---------------------------------------------------------------------------\n"
+    "// Default Fallback Document Pages\n"
+    "// ---------------------------------------------------------------------------\n"
+    "const DEFAULT_SAMPLE_PAGES: PdfPage[] = [\n"
+    "  {\n"
+    "    pageNumber: 1,\n"
+    "    title: 'OmniStackAI System Architecture Specification',\n"
+    "    content: 'Executive Summary\\n\\nOmniStackAI is an autonomous software engineering operating system engineered to produce complete, verified, enterprise-grade multi-application software ecosystems from high-level intent models. Unlike simple prompt-to-UI tools, OmniStackAI operates on typed contract specifications, relational schema persistence, synchronized state machines, and continuous deterministic verification gates.',\n"
+    "    textSnippets: [\n"
+    "      'Section 1.1: System Principles & High Assurance Guarantees',\n"
+    "      'Section 1.2: Deterministic Compilation Pipeline',\n"
+    "      'Section 1.3: Verification Gate Metrics & Static Analysis',\n"
+    "    ],\n"
+    "  },\n"
+    "  {\n"
+    "    pageNumber: 2,\n"
+    "    title: 'Multi-Target Application Framework Adapter Contracts',\n"
+    "    content: 'Technical Architecture\\n\\nThe core platform abstracts target generation behind FrameworkAdapter boundaries. Every generated project is customer-owned, completely typed, and verified against zero-dependency runtime contracts. Supported target runtimes include Next.js App Router, Go REST/HTTP services, and Python backend services with unified PostgreSQL persistence schemas.',\n"
+    "    textSnippets: [\n"
+    "      'Section 2.1: Zero-Dependency React 18+ Components',\n"
+    "      'Section 2.2: WAI-ARIA 1.2 Enterprise Accessibility Compliance',\n"
+    "      'Section 2.3: Diff-Invariance Across Application IR Descriptions',\n"
+    "    ],\n"
+    "  },\n"
+    "  {\n"
+    "    pageNumber: 3,\n"
+    "    title: 'Verification Gates & Continuous Deployment Appendix',\n"
+    "    content: 'Quality Assurance & Release Protocols\\n\\nEvery code modification executes deterministic verification gates before integration. Static analysis via linters, fast secret detection, and live demo compilation guarantee zero regression and production-ready outputs across all generated artifacts.',\n"
+    "    textSnippets: [\n"
+    "      'Section 3.1: Task Verify & Test Suite Coverage Metrics',\n"
+    "      'Section 3.2: Security Policy Compliance & Zero Leaks',\n"
+    "      'Section 3.3: Sign-Off and Handoff Audit Trails',\n"
+    "    ],\n"
+    "  },\n"
+    "];\n\n"
+    "// ---------------------------------------------------------------------------\n"
+    "// Inline Vector Icons\n"
+    "// ---------------------------------------------------------------------------\n"
+    "function ChevronLeftIcon({ size = 16, color = 'currentColor' }: { size?: number; color?: string }) {\n"
+    "  return (\n"
+    "    <svg width={size} height={size} viewBox=\"0 0 24 24\" fill=\"none\" stroke={color} strokeWidth=\"2\" strokeLinecap=\"round\" strokeLinejoin=\"round\">\n"
+    "      <polyline points=\"15 18 9 12 15 6\" />\n"
+    "    </svg>\n"
+    "  );\n"
+    "}\n\n"
+    "function ChevronRightIcon({ size = 16, color = 'currentColor' }: { size?: number; color?: string }) {\n"
+    "  return (\n"
+    "    <svg width={size} height={size} viewBox=\"0 0 24 24\" fill=\"none\" stroke={color} strokeWidth=\"2\" strokeLinecap=\"round\" strokeLinejoin=\"round\">\n"
+    "      <polyline points=\"9 18 15 12 9 6\" />\n"
+    "    </svg>\n"
+    "  );\n"
+    "}\n\n"
+    "function ZoomInIcon({ size = 16, color = 'currentColor' }: { size?: number; color?: string }) {\n"
+    "  return (\n"
+    "    <svg width={size} height={size} viewBox=\"0 0 24 24\" fill=\"none\" stroke={color} strokeWidth=\"2\" strokeLinecap=\"round\" strokeLinejoin=\"round\">\n"
+    "      <circle cx=\"11\" cy=\"11\" r=\"8\" />\n"
+    "      <line x1=\"21\" y1=\"21\" x2=\"16.65\" y2=\"16.65\" />\n"
+    "      <line x1=\"11\" y1=\"8\" x2=\"11\" y2=\"14\" />\n"
+    "      <line x1=\"8\" y1=\"11\" x2=\"14\" y2=\"11\" />\n"
+    "    </svg>\n"
+    "  );\n"
+    "}\n\n"
+    "function ZoomOutIcon({ size = 16, color = 'currentColor' }: { size?: number; color?: string }) {\n"
+    "  return (\n"
+    "    <svg width={size} height={size} viewBox=\"0 0 24 24\" fill=\"none\" stroke={color} strokeWidth=\"2\" strokeLinecap=\"round\" strokeLinejoin=\"round\">\n"
+    "      <circle cx=\"11\" cy=\"11\" r=\"8\" />\n"
+    "      <line x1=\"21\" y1=\"21\" x2=\"16.65\" y2=\"16.65\" />\n"
+    "      <line x1=\"8\" y1=\"11\" x2=\"14\" y2=\"11\" />\n"
+    "    </svg>\n"
+    "  );\n"
+    "}\n\n"
+    "function RotateCwIcon({ size = 16, color = 'currentColor' }: { size?: number; color?: string }) {\n"
+    "  return (\n"
+    "    <svg width={size} height={size} viewBox=\"0 0 24 24\" fill=\"none\" stroke={color} strokeWidth=\"2\" strokeLinecap=\"round\" strokeLinejoin=\"round\">\n"
+    "      <polyline points=\"23 4 23 10 17 10\" />\n"
+    "      <path d=\"M20.49 15a9 9 0 1 1-2.12-9.36L23 10\" />\n"
+    "    </svg>\n"
+    "  );\n"
+    "}\n\n"
+    "function SearchIcon({ size = 16, color = 'currentColor' }: { size?: number; color?: string }) {\n"
+    "  return (\n"
+    "    <svg width={size} height={size} viewBox=\"0 0 24 24\" fill=\"none\" stroke={color} strokeWidth=\"2\" strokeLinecap=\"round\" strokeLinejoin=\"round\">\n"
+    "      <circle cx=\"11\" cy=\"11\" r=\"8\" />\n"
+    "      <line x1=\"21\" y1=\"21\" x2=\"16.65\" y2=\"16.65\" />\n"
+    "    </svg>\n"
+    "  );\n"
+    "}\n\n"
+    "function ThumbnailsIcon({ size = 16, color = 'currentColor' }: { size?: number; color?: string }) {\n"
+    "  return (\n"
+    "    <svg width={size} height={size} viewBox=\"0 0 24 24\" fill=\"none\" stroke={color} strokeWidth=\"2\" strokeLinecap=\"round\" strokeLinejoin=\"round\">\n"
+    "      <rect x=\"3\" y=\"3\" width=\"7\" height=\"7\" />\n"
+    "      <rect x=\"14\" y=\"3\" width=\"7\" height=\"7\" />\n"
+    "      <rect x=\"14\" y=\"14\" width=\"7\" height=\"7\" />\n"
+    "      <rect x=\"3\" y=\"14\" width=\"7\" height=\"7\" />\n"
+    "    </svg>\n"
+    "  );\n"
+    "}\n\n"
+    "function PrintIcon({ size = 16, color = 'currentColor' }: { size?: number; color?: string }) {\n"
+    "  return (\n"
+    "    <svg width={size} height={size} viewBox=\"0 0 24 24\" fill=\"none\" stroke={color} strokeWidth=\"2\" strokeLinecap=\"round\" strokeLinejoin=\"round\">\n"
+    "      <polyline points=\"6 9 6 2 18 2 18 9\" />\n"
+    "      <path d=\"M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2\" />\n"
+    "      <rect x=\"6\" y=\"14\" width=\"12\" height=\"8\" />\n"
+    "    </svg>\n"
+    "  );\n"
+    "}\n\n"
+    "function DownloadIcon({ size = 16, color = 'currentColor' }: { size?: number; color?: string }) {\n"
+    "  return (\n"
+    "    <svg width={size} height={size} viewBox=\"0 0 24 24\" fill=\"none\" stroke={color} strokeWidth=\"2\" strokeLinecap=\"round\" strokeLinejoin=\"round\">\n"
+    "      <path d=\"M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4\" />\n"
+    "      <polyline points=\"7 10 12 15 17 10\" />\n"
+    "      <line x1=\"12\" y1=\"15\" x2=\"12\" y2=\"3\" />\n"
+    "    </svg>\n"
+    "  );\n"
+    "}\n\n"
+    "function XIcon({ size = 16, color = 'currentColor' }: { size?: number; color?: string }) {\n"
+    "  return (\n"
+    "    <svg width={size} height={size} viewBox=\"0 0 24 24\" fill=\"none\" stroke={color} strokeWidth=\"2\" strokeLinecap=\"round\" strokeLinejoin=\"round\">\n"
+    "      <line x1=\"18\" y1=\"6\" x2=\"6\" y2=\"18\" />\n"
+    "      <line x1=\"6\" y1=\"6\" x2=\"18\" y2=\"18\" />\n"
+    "    </svg>\n"
+    "  );\n"
+    "}\n\n"
+    "// ---------------------------------------------------------------------------\n"
+    "// Subcomponents: PdfToolbar, PdfThumbnails, PdfPageCanvas\n"
+    "// ---------------------------------------------------------------------------\n"
+    "export function PdfToolbarInner({\n"
+    "  currentPage,\n"
+    "  totalPages,\n"
+    "  zoom,\n"
+    "  rotation,\n"
+    "  viewMode,\n"
+    "  searchQuery,\n"
+    "  matchCount,\n"
+    "  currentMatchIndex,\n"
+    "  onNextPage,\n"
+    "  onPrevPage,\n"
+    "  onPageChange,\n"
+    "  onZoomIn,\n"
+    "  onZoomOut,\n"
+    "  onZoomChange,\n"
+    "  onRotate,\n"
+    "  onViewModeChange,\n"
+    "  onSearchChange,\n"
+    "  onNextMatch,\n"
+    "  onPrevMatch,\n"
+    "  onToggleThumbnails,\n"
+    "  onPrint,\n"
+    "  onDownload,\n"
+    "  onToggleFullscreen,\n"
+    "  isFullscreen = false,\n"
+    "}: PdfToolbarProps) {\n"
+    "  const [showSearchInput, setShowSearchInput] = useState<boolean>(false);\n\n"
+    "  return (\n"
+    "    <div\n"
+    "      className=\"pdf-toolbar\"\n"
+    "      style={{\n"
+    "        display: 'flex',\n"
+    "        alignItems: 'center',\n"
+    "        justifyContent: 'space-between',\n"
+    "        padding: '8px 16px',\n"
+    "        backgroundColor: '#0f172a',\n"
+    "        borderBottom: '1px solid #334155',\n"
+    "        color: '#f8fafc',\n"
+    "        flexWrap: 'wrap',\n"
+    "        gap: '8px',\n"
+    "        zIndex: 20,\n"
+    "      }}\n"
+    "      role=\"toolbar\"\n"
+    "      aria-label=\"Document Viewer Toolbar\"\n"
+    "    >\n"
+    "      {/* Left controls: Thumbnails toggle & Pagination */}\n"
+    "      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>\n"
+    "        <button\n"
+    "          onClick={onToggleThumbnails}\n"
+    "          style={{\n"
+    "            backgroundColor: 'transparent',\n"
+    "            border: '1px solid #334155',\n"
+    "            borderRadius: '6px',\n"
+    "            color: '#94a3b8',\n"
+    "            padding: '6px',\n"
+    "            cursor: 'pointer',\n"
+    "            display: 'flex',\n"
+    "            alignItems: 'center',\n"
+    "          }}\n"
+    "          aria-label=\"Toggle page thumbnails\"\n"
+    "        >\n"
+    "          <ThumbnailsIcon size={16} />\n"
+    "        </button>\n\n"
+    "        <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>\n"
+    "          <button\n"
+    "            onClick={onPrevPage}\n"
+    "            disabled={currentPage <= 1}\n"
+    "            style={{\n"
+    "              backgroundColor: 'transparent',\n"
+    "              border: 'none',\n"
+    "              color: currentPage <= 1 ? '#475569' : '#f8fafc',\n"
+    "              cursor: currentPage <= 1 ? 'not-allowed' : 'pointer',\n"
+    "              padding: '4px',\n"
+    "              display: 'flex',\n"
+    "              alignItems: 'center',\n"
+    "            }}\n"
+    "            aria-label=\"Previous page\"\n"
+    "          >\n"
+    "            <ChevronLeftIcon size={16} />\n"
+    "          </button>\n\n"
+    "          <div style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '13px' }}>\n"
+    "            <span>Page</span>\n"
+    "            <input\n"
+    "              type=\"number\"\n"
+    "              min={1}\n"
+    "              max={totalPages}\n"
+    "              value={currentPage}\n"
+    "              onChange={(e) => {\n"
+    "                const val = parseInt(e.target.value, 10);\n"
+    "                if (!isNaN(val) && val >= 1 && val <= totalPages) {\n"
+    "                  onPageChange(val);\n"
+    "                }\n"
+    "              }}\n"
+    "              style={{\n"
+    "                width: '44px',\n"
+    "                backgroundColor: '#1e293b',\n"
+    "                border: '1px solid #475569',\n"
+    "                borderRadius: '4px',\n"
+    "                color: '#f8fafc',\n"
+    "                textAlign: 'center',\n"
+    "                fontSize: '13px',\n"
+    "                padding: '2px 4px',\n"
+    "              }}\n"
+    "              aria-label=\"Current page number\"\n"
+    "            />\n"
+    "            <span>of {totalPages}</span>\n"
+    "          </div>\n\n"
+    "          <button\n"
+    "            onClick={onNextPage}\n"
+    "            disabled={currentPage >= totalPages}\n"
+    "            style={{\n"
+    "              backgroundColor: 'transparent',\n"
+    "              border: 'none',\n"
+    "              color: currentPage >= totalPages ? '#475569' : '#f8fafc',\n"
+    "              cursor: currentPage >= totalPages ? 'not-allowed' : 'pointer',\n"
+    "              padding: '4px',\n"
+    "              display: 'flex',\n"
+    "              alignItems: 'center',\n"
+    "            }}\n"
+    "            aria-label=\"Next page\"\n"
+    "          >\n"
+    "            <ChevronRightIcon size={16} />\n"
+    "          </button>\n"
+    "        </div>\n"
+    "      </div>\n\n"
+    "      {/* Center controls: Zoom & Rotation */}\n"
+    "      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>\n"
+    "        <button\n"
+    "          onClick={onZoomOut}\n"
+    "          disabled={zoom <= 0.5}\n"
+    "          style={{\n"
+    "            backgroundColor: 'transparent',\n"
+    "            border: '1px solid #334155',\n"
+    "            borderRadius: '6px',\n"
+    "            color: zoom <= 0.5 ? '#475569' : '#f8fafc',\n"
+    "            padding: '6px',\n"
+    "            cursor: zoom <= 0.5 ? 'not-allowed' : 'pointer',\n"
+    "            display: 'flex',\n"
+    "            alignItems: 'center',\n"
+    "          }}\n"
+    "          aria-label=\"Zoom out\"\n"
+    "        >\n"
+    "          <ZoomOutIcon size={16} />\n"
+    "        </button>\n\n"
+    "        <span style={{ fontSize: '13px', minWidth: '48px', textAlign: 'center' }}>\n"
+    "          {Math.round(zoom * 100)}%\n"
+    "        </span>\n\n"
+    "        <button\n"
+    "          onClick={onZoomIn}\n"
+    "          disabled={zoom >= 3.0}\n"
+    "          style={{\n"
+    "            backgroundColor: 'transparent',\n"
+    "            border: '1px solid #334155',\n"
+    "            borderRadius: '6px',\n"
+    "            color: zoom >= 3.0 ? '#475569' : '#f8fafc',\n"
+    "            padding: '6px',\n"
+    "            cursor: zoom >= 3.0 ? 'not-allowed' : 'pointer',\n"
+    "            display: 'flex',\n"
+    "            alignItems: 'center',\n"
+    "          }}\n"
+    "          aria-label=\"Zoom in\"\n"
+    "        >\n"
+    "          <ZoomInIcon size={16} />\n"
+    "        </button>\n\n"
+    "        <button\n"
+    "          onClick={onRotate}\n"
+    "          style={{\n"
+    "            backgroundColor: 'transparent',\n"
+    "            border: '1px solid #334155',\n"
+    "            borderRadius: '6px',\n"
+    "            color: '#94a3b8',\n"
+    "            padding: '6px',\n"
+    "            cursor: 'pointer',\n"
+    "            display: 'flex',\n"
+    "            alignItems: 'center',\n"
+    "          }}\n"
+    "          aria-label=\"Rotate 90 degrees\"\n"
+    "        >\n"
+    "          <RotateCwIcon size={16} />\n"
+    "        </button>\n\n"
+    "        {/* View Mode Toggle */}\n"
+    "        <div style={{ display: 'flex', border: '1px solid #334155', borderRadius: '6px', overflow: 'hidden' }}>\n"
+    "          <button\n"
+    "            onClick={() => onViewModeChange('single')}\n"
+    "            style={{\n"
+    "              backgroundColor: viewMode === 'single' ? '#2563eb' : 'transparent',\n"
+    "              color: viewMode === 'single' ? '#ffffff' : '#94a3b8',\n"
+    "              border: 'none',\n"
+    "              padding: '4px 8px',\n"
+    "              fontSize: '12px',\n"
+    "              cursor: 'pointer',\n"
+    "            }}\n"
+    "          >\n"
+    "            Single\n"
+    "          </button>\n"
+    "          <button\n"
+    "            onClick={() => onViewModeChange('continuous')}\n"
+    "            style={{\n"
+    "              backgroundColor: viewMode === 'continuous' ? '#2563eb' : 'transparent',\n"
+    "              color: viewMode === 'continuous' ? '#ffffff' : '#94a3b8',\n"
+    "              border: 'none',\n"
+    "              padding: '4px 8px',\n"
+    "              fontSize: '12px',\n"
+    "              cursor: 'pointer',\n"
+    "            }}\n"
+    "          >\n"
+    "            Continuous\n"
+    "          </button>\n"
+    "        </div>\n"
+    "      </div>\n\n"
+    "      {/* Right controls: Search, Print, Download */}\n"
+    "      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>\n"
+    "        {showSearchInput ? (\n"
+    "          <div style={{ display: 'flex', alignItems: 'center', backgroundColor: '#1e293b', borderRadius: '6px', padding: '2px 8px' }}>\n"
+    "            <SearchIcon size={14} color=\"#94a3b8\" />\n"
+    "            <input\n"
+    "              type=\"text\"\n"
+    "              placeholder=\"Search in doc...\"\n"
+    "              value={searchQuery}\n"
+    "              onChange={(e) => onSearchChange(e.target.value)}\n"
+    "              style={{\n"
+    "                background: 'none',\n"
+    "                border: 'none',\n"
+    "                color: '#f8fafc',\n"
+    "                fontSize: '12px',\n"
+    "                marginLeft: '6px',\n"
+    "                outline: 'none',\n"
+    "                width: '120px',\n"
+    "              }}\n"
+    "              autoFocus\n"
+    "            />\n"
+    "            {matchCount > 0 && (\n"
+    "              <span style={{ fontSize: '11px', color: '#94a3b8', marginRight: '4px' }}>\n"
+    "                {currentMatchIndex + 1}/{matchCount}\n"
+    "              </span>\n"
+    "            )}\n"
+    "            <button\n"
+    "              onClick={() => {\n"
+    "                onSearchChange('');\n"
+    "                setShowSearchInput(false);\n"
+    "              }}\n"
+    "              style={{ background: 'none', border: 'none', color: '#94a3b8', cursor: 'pointer', padding: '2px' }}\n"
+    "            >\n"
+    "              <XIcon size={14} />\n"
+    "            </button>\n"
+    "          </div>\n"
+    "        ) : (\n"
+    "          <button\n"
+    "            onClick={() => setShowSearchInput(true)}\n"
+    "            style={{\n"
+    "              backgroundColor: 'transparent',\n"
+    "              border: '1px solid #334155',\n"
+    "              borderRadius: '6px',\n"
+    "              color: '#94a3b8',\n"
+    "              padding: '6px',\n"
+    "              cursor: 'pointer',\n"
+    "              display: 'flex',\n"
+    "              alignItems: 'center',\n"
+    "            }}\n"
+    "            aria-label=\"Search document\"\n"
+    "          >\n"
+    "            <SearchIcon size={16} />\n"
+    "          </button>\n"
+    "        )}\n\n"
+    "        <button\n"
+    "          onClick={onPrint}\n"
+    "          style={{\n"
+    "            backgroundColor: 'transparent',\n"
+    "            border: '1px solid #334155',\n"
+    "            borderRadius: '6px',\n"
+    "            color: '#94a3b8',\n"
+    "            padding: '6px',\n"
+    "            cursor: 'pointer',\n"
+    "            display: 'flex',\n"
+    "            alignItems: 'center',\n"
+    "          }}\n"
+    "          aria-label=\"Print document\"\n"
+    "        >\n"
+    "          <PrintIcon size={16} />\n"
+    "        </button>\n\n"
+    "        {onDownload && (\n"
+    "          <button\n"
+    "            onClick={onDownload}\n"
+    "            style={{\n"
+    "              backgroundColor: '#2563eb',\n"
+    "              border: 'none',\n"
+    "              borderRadius: '6px',\n"
+    "              color: '#ffffff',\n"
+    "              padding: '6px 12px',\n"
+    "              fontSize: '12px',\n"
+    "              fontWeight: 500,\n"
+    "              cursor: 'pointer',\n"
+    "              display: 'flex',\n"
+    "              alignItems: 'center',\n"
+    "              gap: '4px',\n"
+    "            }}\n"
+    "            aria-label=\"Download document\"\n"
+    "          >\n"
+    "            <DownloadIcon size={14} />\n"
+    "            <span>Download</span>\n"
+    "          </button>\n"
+    "        )}\n"
+    "      </div>\n"
+    "    </div>\n"
+    "  );\n"
+    "}\n\n"
+    "export function PdfThumbnailsInner({\n"
+    "  pages,\n"
+    "  currentPage,\n"
+    "  onSelectPage,\n"
+    "  isOpen,\n"
+    "  onClose,\n"
+    "}: PdfThumbnailProps) {\n"
+    "  if (!isOpen) return null;\n\n"
+    "  return (\n"
+    "    <div\n"
+    "      className=\"pdf-thumbnails-sidebar\"\n"
+    "      style={{\n"
+    "        width: '180px',\n"
+    "        backgroundColor: '#0f172a',\n"
+    "        borderRight: '1px solid #334155',\n"
+    "        overflowY: 'auto',\n"
+    "        padding: '12px',\n"
+    "        display: 'flex',\n"
+    "        flexDirection: 'column',\n"
+    "        gap: '12px',\n"
+    "        zIndex: 10,\n"
+    "      }}\n"
+    "      role=\"navigation\"\n"
+    "      aria-label=\"Page thumbnails\"\n"
+    "    >\n"
+    "      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>\n"
+    "        <span style={{ fontSize: '12px', fontWeight: 600, color: '#94a3b8' }}>Pages</span>\n"
+    "        <button\n"
+    "          onClick={onClose}\n"
+    "          style={{ background: 'none', border: 'none', color: '#64748b', cursor: 'pointer', padding: '2px' }}\n"
+    "          aria-label=\"Close thumbnails\"\n"
+    "        >\n"
+    "          <XIcon size={14} />\n"
+    "        </button>\n"
+    "      </div>\n"
+    "      {pages.map((p) => {\n"
+    "        const isSelected = p.pageNumber === currentPage;\n"
+    "        return (\n"
+    "          <div\n"
+    "            key={p.pageNumber}\n"
+    "            onClick={() => onSelectPage(p.pageNumber)}\n"
+    "            style={{\n"
+    "              display: 'flex',\n"
+    "              flexDirection: 'column',\n"
+    "              alignItems: 'center',\n"
+    "              cursor: 'pointer',\n"
+    "            }}\n"
+    "          >\n"
+    "            <div\n"
+    "              style={{\n"
+    "                width: '120px',\n"
+    "                height: '155px',\n"
+    "                backgroundColor: '#ffffff',\n"
+    "                color: '#1e293b',\n"
+    "                borderRadius: '4px',\n"
+    "                padding: '8px',\n"
+    "                border: isSelected ? '2px solid #3b82f6' : '1px solid #334155',\n"
+    "                boxShadow: isSelected ? '0 0 10px rgba(59, 130, 246, 0.4)' : 'none',\n"
+    "                overflow: 'hidden',\n"
+    "                fontSize: '6px',\n"
+    "                lineHeight: 1.2,\n"
+    "              }}\n"
+    "            >\n"
+    "              <div style={{ fontWeight: 700, marginBottom: '4px' }}>{p.title || `Page ${p.pageNumber}`}</div>\n"
+    "              <div style={{ color: '#64748b' }}>{p.content?.slice(0, 100)}...</div>\n"
+    "            </div>\n"
+    "            <span style={{ fontSize: '11px', marginTop: '4px', color: isSelected ? '#60a5fa' : '#94a3b8' }}>\n"
+    "              {p.pageNumber}\n"
+    "            </span>\n"
+    "          </div>\n"
+    "        );\n"
+    "      })}\n"
+    "    </div>\n"
+    "  );\n"
+    "}\n\n"
+    "export function PdfPageCanvasInner({\n"
+    "  page,\n"
+    "  zoom,\n"
+    "  rotation,\n"
+    "  searchQuery = '',\n"
+    "  isCurrentPage = false,\n"
+    "  variant = 'default',\n"
+    "}: PdfPageCanvasProps) {\n"
+    "  // Render text with highlighted matches if search query is active\n"
+    "  const renderHighlighted = (text: string) => {\n"
+    "    if (!searchQuery.trim()) return text;\n"
+    r"    const regex = new RegExp(`(${searchQuery.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')})`, 'gi');\n"
+    "    const parts = text.split(regex);\n"
+    "    return parts.map((part, i) =>\n"
+    "      regex.test(part) ? (\n"
+    "        <mark key={i} style={{ backgroundColor: '#f59e0b', color: '#000000', borderRadius: '2px', padding: '0 2px' }}>\n"
+    "          {part}\n"
+    "        </mark>\n"
+    "      ) : (\n"
+    "        part\n"
+    "      )\n"
+    "    );\n"
+    "  };\n\n"
+    "  return (\n"
+    "    <div\n"
+    "      className=\"pdf-page-canvas\"\n"
+    "      style={{\n"
+    "        width: `${595 * zoom}px`,\n"
+    "        minHeight: `${842 * zoom}px`,\n"
+    "        backgroundColor: '#ffffff',\n"
+    "        color: '#0f172a',\n"
+    "        boxShadow: '0 10px 25px -5px rgba(0, 0, 0, 0.5), 0 8px 10px -6px rgba(0, 0, 0, 0.5)',\n"
+    "        borderRadius: '4px',\n"
+    "        padding: `${40 * zoom}px`,\n"
+    "        margin: '20px auto',\n"
+    "        transform: `rotate(${rotation}deg)`,\n"
+    "        transformOrigin: 'center center',\n"
+    "        transition: 'transform 0.2s ease, width 0.15s ease, min-height 0.15s ease',\n"
+    "        boxSizing: 'border-box',\n"
+    "        position: 'relative',\n"
+    "      }}\n"
+    "      role=\"document\"\n"
+    "      aria-label={`Page ${page.pageNumber}`}\n"
+    "    >\n"
+    "      {/* Page Header */}\n"
+    "      <div style={{\n"
+    "        display: 'flex',\n"
+    "        justifyContent: 'space-between',\n"
+    "        borderBottom: '1px solid #e2e8f0',\n"
+    "        paddingBottom: `${12 * zoom}px`,\n"
+    "        marginBottom: `${24 * zoom}px`,\n"
+    "        fontSize: `${11 * zoom}px`,\n"
+    "        color: '#64748b',\n"
+    "      }}>\n"
+    "        <span>OmniStackAI Document Runtime</span>\n"
+    "        <span>Page {page.pageNumber}</span>\n"
+    "      </div>\n\n"
+    "      {/* Page Title */}\n"
+    "      {page.title && (\n"
+    "        <h2 style={{\n"
+    "          fontSize: `${20 * zoom}px`,\n"
+    "          fontWeight: 700,\n"
+    "          color: '#0f172a',\n"
+    "          margin: `0 0 ${16 * zoom}px 0`,\n"
+    "        }}>\n"
+    "          {renderHighlighted(page.title)}\n"
+    "        </h2>\n"
+    "      )}\n\n"
+    "      {/* Page Body */}\n"
+    "      {page.content && (\n"
+    "        <div style={{\n"
+    "          fontSize: `${13 * zoom}px`,\n"
+    "          lineHeight: 1.6,\n"
+    "          color: '#334155',\n"
+    "          marginBottom: `${20 * zoom}px`,\n"
+    "          whiteSpace: 'pre-wrap',\n"
+    "        }}>\n"
+    "          {renderHighlighted(page.content)}\n"
+    "        </div>\n"
+    "      )}\n\n"
+    "      {/* Text Snippets / Bulleted sections */}\n"
+    "      {page.textSnippets && page.textSnippets.length > 0 && (\n"
+    "        <div style={{ marginTop: `${16 * zoom}px`, display: 'flex', flexDirection: 'column', gap: `${8 * zoom}px` }}>\n"
+    "          {page.textSnippets.map((snippet, idx) => (\n"
+    "            <div\n"
+    "              key={idx}\n"
+    "              style={{\n"
+    "                fontSize: `${12 * zoom}px`,\n"
+    "                padding: `${8 * zoom}px ${12 * zoom}px`,\n"
+    "                backgroundColor: '#f8fafc',\n"
+    "                borderLeft: '3px solid #3b82f6',\n"
+    "                borderRadius: '2px',\n"
+    "                color: '#1e293b',\n"
+    "              }}\n"
+    "            >\n"
+    "              {renderHighlighted(snippet)}\n"
+    "            </div>\n"
+    "          ))}\n"
+    "        </div>\n"
+    "      )}\n\n"
+    "      {/* Page Footer */}\n"
+    "      <div style={{\n"
+    "        position: 'absolute',\n"
+    "        bottom: `${20 * zoom}px`,\n"
+    "        left: `${40 * zoom}px`,\n"
+    "        right: `${40 * zoom}px`,\n"
+    "        display: 'flex',\n"
+    "        justifyContent: 'space-between',\n"
+    "        borderTop: '1px solid #f1f5f9',\n"
+    "        paddingTop: `${8 * zoom}px`,\n"
+    "        fontSize: `${10 * zoom}px`,\n"
+    "        color: '#94a3b8',\n"
+    "      }}>\n"
+    "        <span>Confidential & Proprietary</span>\n"
+    "        <span>OmniStackAI Engineered</span>\n"
+    "      </div>\n"
+    "    </div>\n"
+    "  );\n"
+    "}\n\n"
+    "// ---------------------------------------------------------------------------\n"
+    "// Main Compound Component: PdfViewerComponent\n"
+    "// ---------------------------------------------------------------------------\n"
+    "const PdfViewerComponent = forwardRef<PdfViewerHandle, PdfViewerProps>((\n"
+    "  {\n"
+    "    documentTitle = 'Document Preview',\n"
+    "    pages = DEFAULT_SAMPLE_PAGES,\n"
+    "    initialPage = 1,\n"
+    "    initialZoom = 1,\n"
+    "    minZoom = 0.5,\n"
+    "    maxZoom = 3.0,\n"
+    "    variant = 'default',\n"
+    "    size = 'md',\n"
+    "    defaultViewMode = 'single',\n"
+    "    showThumbnails = false,\n"
+    "    enableSearch = true,\n"
+    "    enablePrint = true,\n"
+    "    enableDownload = true,\n"
+    "    onPageChange,\n"
+    "    onDownload,\n"
+    "    className = '',\n"
+    "    style = {},\n"
+    "  },\n"
+    "  ref\n"
+    ") => {\n"
+    "  // Container reference\n"
+    "  const containerRef = useRef<HTMLDivElement>(null);\n\n"
+    "  // State\n"
+    "  const [currentPage, setCurrentPage] = useState<number>(Math.max(1, Math.min(initialPage, pages.length)));\n"
+    "  const [zoom, setZoomState] = useState<number>(initialZoom);\n"
+    "  const [rotation, setRotation] = useState<number>(0);\n"
+    "  const [viewMode, setViewMode] = useState<PdfViewMode>(defaultViewMode);\n"
+    "  const [thumbnailsOpen, setThumbnailsOpen] = useState<boolean>(showThumbnails);\n"
+    "  const [searchQuery, setSearchQuery] = useState<string>('');\n"
+    "  const [currentMatchIndex, setCurrentMatchIndex] = useState<number>(0);\n"
+    "  const [isFullscreen, setIsFullscreen] = useState<boolean>(false);\n\n"
+    "  const totalPages = pages.length;\n\n"
+    "  // Navigation helpers\n"
+    "  const goToPage = useCallback((page: number) => {\n"
+    "    const validPage = Math.max(1, Math.min(page, totalPages));\n"
+    "    setCurrentPage(validPage);\n"
+    "    onPageChange?.(validPage);\n"
+    "  }, [totalPages, onPageChange]);\n\n"
+    "  const nextPage = useCallback(() => {\n"
+    "    goToPage(currentPage + 1);\n"
+    "  }, [currentPage, goToPage]);\n\n"
+    "  const prevPage = useCallback(() => {\n"
+    "    goToPage(currentPage - 1);\n"
+    "  }, [currentPage, goToPage]);\n\n"
+    "  // Zoom helpers\n"
+    "  const zoomIn = useCallback(() => {\n"
+    "    setZoomState((z) => Math.min(maxZoom, Math.round((z + 0.25) * 100) / 100));\n"
+    "  }, [maxZoom]);\n\n"
+    "  const zoomOut = useCallback(() => {\n"
+    "    setZoomState((z) => Math.max(minZoom, Math.round((z - 0.25) * 100) / 100));\n"
+    "  }, [minZoom]);\n\n"
+    "  const setZoom = useCallback((newZoom: number) => {\n"
+    "    setZoomState(Math.max(minZoom, Math.min(maxZoom, newZoom)));\n"
+    "  }, [minZoom, maxZoom]);\n\n"
+    "  // Rotation helper\n"
+    "  const rotate = useCallback((deltaDegrees = 90) => {\n"
+    "    setRotation((r) => (r + deltaDegrees) % 360);\n"
+    "  }, []);\n\n"
+    "  // Search calculation\n"
+    "  const matchCount = useMemo(() => {\n"
+    "    if (!searchQuery.trim()) return 0;\n"
+    "    let count = 0;\n"
+    "    const q = searchQuery.toLowerCase();\n"
+    "    pages.forEach((p) => {\n"
+    "      if (p.title?.toLowerCase().includes(q)) count++;\n"
+    "      if (p.content?.toLowerCase().includes(q)) count++;\n"
+    "      p.textSnippets?.forEach((s) => {\n"
+    "        if (s.toLowerCase().includes(q)) count++;\n"
+    "      });\n"
+    "    });\n"
+    "    return count;\n"
+    "  }, [pages, searchQuery]);\n\n"
+    "  // Imperative handle\n"
+    "  useImperativeHandle(ref, () => ({\n"
+    "    nextPage,\n"
+    "    prevPage,\n"
+    "    goToPage,\n"
+    "    zoomIn,\n"
+    "    zoomOut,\n"
+    "    setZoom,\n"
+    "    rotate,\n"
+    "    search: (q: string) => setSearchQuery(q),\n"
+    "    getCurrentPage: () => currentPage,\n"
+    "    getTotalPages: () => totalPages,\n"
+    "  }), [nextPage, prevPage, goToPage, zoomIn, zoomOut, setZoom, rotate, currentPage, totalPages]);\n\n"
+    "  // Keyboard navigation\n"
+    "  const handleKeyDown = (e: React.KeyboardEvent) => {\n"
+    "    if (e.key === 'ArrowRight' || e.key === 'PageDown') {\n"
+    "      nextPage();\n"
+    "    } else if (e.key === 'ArrowLeft' || e.key === 'PageUp') {\n"
+    "      prevPage();\n"
+    "    } else if (e.key === 'Home') {\n"
+    "      goToPage(1);\n"
+    "    } else if (e.key === 'End') {\n"
+    "      goToPage(totalPages);\n"
+    "    } else if (e.key === '+' || e.key === '=') {\n"
+    "      zoomIn();\n"
+    "    } else if (e.key === '-' || e.key === '_') {\n"
+    "      zoomOut();\n"
+    "    } else if (e.key === 'r' || e.key === 'R') {\n"
+    "      rotate(90);\n"
+    "    }\n"
+    "  };\n\n"
+    "  // Print handler\n"
+    "  const handlePrint = () => {\n"
+    "    if (typeof window !== 'undefined') {\n"
+    "      window.print();\n"
+    "    }\n"
+    "  };\n\n"
+    "  // Sizing styles\n"
+    "  const sizeStyles = {\n"
+    "    sm: { height: '420px' },\n"
+    "    md: { height: '600px' },\n"
+    "    lg: { height: '820px' },\n"
+    "  }[size];\n\n"
+    "  // Variant theme tokens\n"
+    "  const variantStyles = {\n"
+    "    default: {\n"
+    "      bg: '#0b0f19',\n"
+    "      border: '1px solid #1e293b',\n"
+    "      glow: 'none',\n"
+    "    },\n"
+    "    card: {\n"
+    "      bg: '#0f172a',\n"
+    "      border: '1px solid #334155',\n"
+    "      glow: '0 4px 20px -2px rgba(0, 0, 0, 0.5)',\n"
+    "    },\n"
+    "    glass: {\n"
+    "      bg: 'rgba(11, 15, 25, 0.85)',\n"
+    "      border: '1px solid rgba(255, 255, 255, 0.1)',\n"
+    "      glow: '0 8px 32px 0 rgba(0, 0, 0, 0.37)',\n"
+    "      backdropFilter: 'blur(20px)',\n"
+    "    },\n"
+    "    neon: {\n"
+    "      bg: '#050510',\n"
+    "      border: '1px solid #00f0ff',\n"
+    "      glow: '0 0 25px rgba(0, 240, 255, 0.3)',\n"
+    "    },\n"
+    "  }[variant];\n\n"
+    "  return (\n"
+    "    <div\n"
+    "      ref={containerRef}\n"
+    "      className={`pdf-viewer-container ${className}`}\n"
+    "      style={{\n"
+    "        display: 'flex',\n"
+    "        flexDirection: 'column',\n"
+    "        width: '100%',\n"
+    "        height: isFullscreen ? '100vh' : sizeStyles.height,\n"
+    "        backgroundColor: variantStyles.bg,\n"
+    "        border: variantStyles.border,\n"
+    "        borderRadius: isFullscreen ? '0' : '16px',\n"
+    "        overflow: 'hidden',\n"
+    "        boxShadow: variantStyles.glow,\n"
+    "        backdropFilter: (variantStyles as any).backdropFilter,\n"
+    "        outline: 'none',\n"
+    "        ...style,\n"
+    "      }}\n"
+    "      onKeyDown={handleKeyDown}\n"
+    "      tabIndex={0}\n"
+    "      role=\"region\"\n"
+    "      aria-label=\"Document Viewer\"\n"
+    "    >\n"
+    "      {/* Top Toolbar */}\n"
+    "      <PdfToolbarInner\n"
+    "        currentPage={currentPage}\n"
+    "        totalPages={totalPages}\n"
+    "        zoom={zoom}\n"
+    "        rotation={rotation}\n"
+    "        viewMode={viewMode}\n"
+    "        searchQuery={searchQuery}\n"
+    "        matchCount={matchCount}\n"
+    "        currentMatchIndex={currentMatchIndex}\n"
+    "        onNextPage={nextPage}\n"
+    "        onPrevPage={prevPage}\n"
+    "        onPageChange={goToPage}\n"
+    "        onZoomIn={zoomIn}\n"
+    "        onZoomOut={zoomOut}\n"
+    "        onZoomChange={setZoom}\n"
+    "        onRotate={() => rotate(90)}\n"
+    "        onViewModeChange={setViewMode}\n"
+    "        onSearchChange={setSearchQuery}\n"
+    "        onNextMatch={() => setCurrentMatchIndex((i) => (i + 1) % (matchCount || 1))}\n"
+    "        onPrevMatch={() => setCurrentMatchIndex((i) => (i - 1 + (matchCount || 1)) % (matchCount || 1))}\n"
+    "        onToggleThumbnails={() => setThumbnailsOpen((v) => !v)}\n"
+    "        onPrint={handlePrint}\n"
+    "        onDownload={enableDownload ? onDownload || handlePrint : undefined}\n"
+    "        onToggleFullscreen={() => setIsFullscreen((v) => !v)}\n"
+    "        isFullscreen={isFullscreen}\n"
+    "      />\n\n"
+    "      {/* Main Document Workspace with Thumbnails Sidebar */}\n"
+    "      <div style={{ display: 'flex', flex: 1, overflow: 'hidden', position: 'relative' }}>\n"
+    "        {/* Thumbnails Drawer */}\n"
+    "        <PdfThumbnailsInner\n"
+    "          pages={pages}\n"
+    "          currentPage={currentPage}\n"
+    "          onSelectPage={(p) => goToPage(p)}\n"
+    "          isOpen={thumbnailsOpen}\n"
+    "          onClose={() => setThumbnailsOpen(false)}\n"
+    "        />\n\n"
+    "        {/* Scrollable Document Canvas Viewport */}\n"
+    "        <div\n"
+    "          style={{\n"
+    "            flex: 1,\n"
+    "            overflow: 'auto',\n"
+    "            padding: '24px',\n"
+    "            backgroundColor: '#070b14',\n"
+    "            display: 'flex',\n"
+    "            flexDirection: 'column',\n"
+    "            alignItems: 'center',\n"
+    "          }}\n"
+    "        >\n"
+    "          {viewMode === 'single' ? (\n"
+    "            <PdfPageCanvasInner\n"
+    "              page={pages[currentPage - 1] || pages[0]}\n"
+    "              zoom={zoom}\n"
+    "              rotation={rotation}\n"
+    "              searchQuery={searchQuery}\n"
+    "              isCurrentPage={true}\n"
+    "              variant={variant}\n"
+    "            />\n"
+    "          ) : (\n"
+    "            pages.map((p) => (\n"
+    "              <PdfPageCanvasInner\n"
+    "                key={p.pageNumber}\n"
+    "                page={p}\n"
+    "                zoom={zoom}\n"
+    "                rotation={rotation}\n"
+    "                searchQuery={searchQuery}\n"
+    "                isCurrentPage={p.pageNumber === currentPage}\n"
+    "                variant={variant}\n"
+    "              />\n"
+    "            ))\n"
+    "          )}\n"
+    "        </div>\n"
+    "      </div>\n"
+    "    </div>\n"
+    "  );\n"
+    "});\n\n"
+    "PdfViewerComponent.displayName = 'PdfViewerComponent';\n\n"
+    "// ---------------------------------------------------------------------------\n"
+    "// Exports & Aliases\n"
+    "// ---------------------------------------------------------------------------\n"
+    "export const PdfViewer = PdfViewerComponent;\n"
+    "export const DocumentViewer = PdfViewerComponent;\n"
+    "export const FileViewer = PdfViewerComponent;\n"
+    "export const PdfThumbnails = PdfThumbnailsInner;\n"
+    "export const PdfToolbar = PdfToolbarInner;\n"
+    "export const PdfPageCanvas = PdfPageCanvasInner;\n\n"
+    "PdfViewer.displayName = 'PdfViewer';\n"
+    "DocumentViewer.displayName = 'DocumentViewer';\n"
+    "FileViewer.displayName = 'FileViewer';\n"
+    "PdfThumbnails.displayName = 'PdfThumbnails';\n"
+    "PdfToolbar.displayName = 'PdfToolbar';\n"
+    "PdfPageCanvas.displayName = 'PdfPageCanvas';\n\n"
+    "export default PdfViewerComponent;\n"
+)
+
+
+def render_pdf_viewer_component() -> str:
+    """Return static React implementation of the Accessible Futuristic PDF & Document Viewer Suite."""
+    return _PDF_VIEWER_COMPONENT
+
+
+
+# ---------------------------------------------------------------------------
+# Task R-389: Accessible Futuristic Reusable Audio Player & Frequency Equalizer Suite (components/audio-player.tsx)
+# ---------------------------------------------------------------------------
+
+_AUDIO_PLAYER_COMPONENT = (
+    "'use client';\n\n"
+    "import React, {\n"
+    "  useState,\n"
+    "  useEffect,\n"
+    "  useRef,\n"
+    "  useImperativeHandle,\n"
+    "  forwardRef,\n"
+    "  useMemo,\n"
+    "  useCallback,\n"
+    "} from 'react';\n\n"
+    "// ---------------------------------------------------------------------------\n"
+    "// TypeScript Interfaces & Types\n"
+    "// ---------------------------------------------------------------------------\n"
+    "export type AudioPlayerVariant = 'default' | 'card' | 'glass' | 'neon';\n"
+    "export type AudioPlayerSize = 'sm' | 'md' | 'lg';\n"
+    "export type AudioEqualizerPreset = 'flat' | 'bass_boost' | 'vocal' | 'electronic' | 'rock';\n\n"
+    "export interface AudioTrack {\n"
+    "  id: string;\n"
+    "  title: string;\n"
+    "  artist?: string;\n"
+    "  album?: string;\n"
+    "  duration: number;\n"
+    "  src?: string;\n"
+    "  coverUrl?: string;\n"
+    "}\n\n"
+    "export interface AudioEqualizerBand {\n"
+    "  frequency: number;\n"
+    "  gain: number;\n"
+    "  label: string;\n"
+    "}\n\n"
+    "export interface AudioPlayerHandle {\n"
+    "  play: () => void;\n"
+    "  pause: () => void;\n"
+    "  togglePlay: () => void;\n"
+    "  nextTrack: () => void;\n"
+    "  prevTrack: () => void;\n"
+    "  seekTo: (seconds: number) => void;\n"
+    "  setVolume: (volume: number) => void;\n"
+    "  setSpeed: (speed: number) => void;\n"
+    "  setEqualizerBand: (freqIndex: number, gain: number) => void;\n"
+    "  getCurrentTrack: () => AudioTrack | null;\n"
+    "  isPlaying: () => boolean;\n"
+    "}\n\n"
+    "export interface AudioPlaylistProps {\n"
+    "  tracks: AudioTrack[];\n"
+    "  currentTrackIndex: number;\n"
+    "  onSelectTrack: (index: number) => void;\n"
+    "  isOpen: boolean;\n"
+    "  onClose: () => void;\n"
+    "}\n\n"
+    "export interface AudioEqualizerProps {\n"
+    "  bands: AudioEqualizerBand[];\n"
+    "  onBandChange: (index: number, gain: number) => void;\n"
+    "  onPresetSelect: (preset: AudioEqualizerPreset) => void;\n"
+    "  isOpen: boolean;\n"
+    "  onClose: () => void;\n"
+    "}\n\n"
+    "export interface AudioPlayerProps {\n"
+    "  tracks?: AudioTrack[];\n"
+    "  initialTrackIndex?: number;\n"
+    "  initialVolume?: number;\n"
+    "  autoPlay?: boolean;\n"
+    "  variant?: AudioPlayerVariant;\n"
+    "  size?: AudioPlayerSize;\n"
+    "  showEqualizer?: boolean;\n"
+    "  showPlaylist?: boolean;\n"
+    "  onTrackChange?: (track: AudioTrack) => void;\n"
+    "  onPlay?: () => void;\n"
+    "  onPause?: () => void;\n"
+    "  onEnded?: () => void;\n"
+    "  className?: string;\n"
+    "  style?: React.CSSProperties;\n"
+    "}\n\n"
+    "// ---------------------------------------------------------------------------\n"
+    "// Default Sample Tracks & Equalizer Bands\n"
+    "// ---------------------------------------------------------------------------\n"
+    "const DEFAULT_TRACKS: AudioTrack[] = [\n"
+    "  {\n"
+    "    id: 'track-1',\n"
+    "    title: 'Cybernetic Pulse',\n"
+    "    artist: 'OmniSynthetics',\n"
+    "    album: 'Synthetic Era',\n"
+    "    duration: 214,\n"
+    "  },\n"
+    "  {\n"
+    "    id: 'track-2',\n"
+    "    title: 'Quantum Drift',\n"
+    "    artist: 'Aura Protocol',\n"
+    "    album: 'Subatomic Resonance',\n"
+    "    duration: 188,\n"
+    "  },\n"
+    "  {\n"
+    "    id: 'track-3',\n"
+    "    title: 'Neon Horizon',\n"
+    "    artist: 'Vektor Soundworks',\n"
+    "    album: 'Cyberpunk Odyssey',\n"
+    "    duration: 256,\n"
+    "  },\n"
+    "];\n\n"
+    "const DEFAULT_EQ_BANDS: AudioEqualizerBand[] = [\n"
+    "  { frequency: 60, gain: 0, label: '60Hz' },\n"
+    "  { frequency: 250, gain: 0, label: '250Hz' },\n"
+    "  { frequency: 1000, gain: 0, label: '1kHz' },\n"
+    "  { frequency: 4000, gain: 0, label: '4kHz' },\n"
+    "  { frequency: 16000, gain: 0, label: '16kHz' },\n"
+    "];\n\n"
+    "const EQ_PRESETS: Record<AudioEqualizerPreset, number[]> = {\n"
+    "  flat: [0, 0, 0, 0, 0],\n"
+    "  bass_boost: [6, 4, 1, 0, 0],\n"
+    "  vocal: [-2, 1, 4, 3, 1],\n"
+    "  electronic: [5, 3, -1, 3, 5],\n"
+    "  rock: [4, 2, -1, 2, 4],\n"
+    "};\n\n"
+    "function formatTime(seconds: number): string {\n"
+    "  const mins = Math.floor(seconds / 60);\n"
+    "  const secs = Math.floor(seconds % 60);\n"
+    "  return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;\n"
+    "}\n\n"
+    "// ---------------------------------------------------------------------------\n"
+    "// Inline Vector Icons\n"
+    "// ---------------------------------------------------------------------------\n"
+    "function PlayIcon({ size = 18, color = 'currentColor' }: { size?: number; color?: string }) {\n"
+    "  return (\n"
+    "    <svg width={size} height={size} viewBox=\"0 0 24 24\" fill=\"none\" stroke={color} strokeWidth=\"2\" strokeLinecap=\"round\" strokeLinejoin=\"round\">\n"
+    "      <polygon points=\"5 3 19 12 5 21 5 3\" fill={color} />\n"
+    "    </svg>\n"
+    "  );\n"
+    "}\n\n"
+    "function PauseIcon({ size = 18, color = 'currentColor' }: { size?: number; color?: string }) {\n"
+    "  return (\n"
+    "    <svg width={size} height={size} viewBox=\"0 0 24 24\" fill=\"none\" stroke={color} strokeWidth=\"2\" strokeLinecap=\"round\" strokeLinejoin=\"round\">\n"
+    "      <rect x=\"6\" y=\"4\" width=\"4\" height=\"16\" fill={color} />\n"
+    "      <rect x=\"14\" y=\"4\" width=\"4\" height=\"16\" fill={color} />\n"
+    "    </svg>\n"
+    "  );\n"
+    "}\n\n"
+    "function SkipBackIcon({ size = 16, color = 'currentColor' }: { size?: number; color?: string }) {\n"
+    "  return (\n"
+    "    <svg width={size} height={size} viewBox=\"0 0 24 24\" fill=\"none\" stroke={color} strokeWidth=\"2\" strokeLinecap=\"round\" strokeLinejoin=\"round\">\n"
+    "      <polygon points=\"19 20 9 12 19 4 19 20\" />\n"
+    "      <line x1=\"5\" y1=\"19\" x2=\"5\" y2=\"5\" />\n"
+    "    </svg>\n"
+    "  );\n"
+    "}\n\n"
+    "function SkipForwardIcon({ size = 16, color = 'currentColor' }: { size?: number; color?: string }) {\n"
+    "  return (\n"
+    "    <svg width={size} height={size} viewBox=\"0 0 24 24\" fill=\"none\" stroke={color} strokeWidth=\"2\" strokeLinecap=\"round\" strokeLinejoin=\"round\">\n"
+    "      <polygon points=\"5 4 15 12 5 20 5 4\" />\n"
+    "      <line x1=\"19\" y1=\"5\" x2=\"19\" y2=\"19\" />\n"
+    "    </svg>\n"
+    "  );\n"
+    "}\n\n"
+    "function ShuffleIcon({ size = 16, color = 'currentColor', active = false }: { size?: number; color?: string; active?: boolean }) {\n"
+    "  return (\n"
+    "    <svg width={size} height={size} viewBox=\"0 0 24 24\" fill=\"none\" stroke={active ? '#38bdf8' : color} strokeWidth=\"2\" strokeLinecap=\"round\" strokeLinejoin=\"round\">\n"
+    "      <polyline points=\"16 3 21 3 21 8\" />\n"
+    "      <line x1=\"4\" y1=\"20\" x2=\"21\" y2=\"3\" />\n"
+    "      <polyline points=\"21 16 21 21 16 21\" />\n"
+    "      <line x1=\"15\" y1=\"15\" x2=\"21\" y2=\"21\" />\n"
+    "      <line x1=\"4\" y1=\"4\" x2=\"9\" y2=\"9\" />\n"
+    "    </svg>\n"
+    "  );\n"
+    "}\n\n"
+    "function RepeatIcon({ size = 16, color = 'currentColor', active = false }: { size?: number; color?: string; active?: boolean }) {\n"
+    "  return (\n"
+    "    <svg width={size} height={size} viewBox=\"0 0 24 24\" fill=\"none\" stroke={active ? '#38bdf8' : color} strokeWidth=\"2\" strokeLinecap=\"round\" strokeLinejoin=\"round\">\n"
+    "      <polyline points=\"17 1 21 5 17 9\" />\n"
+    "      <path d=\"M3 11V9a4 4 0 0 1 4-4h14\" />\n"
+    "      <polyline points=\"7 23 3 19 7 15\" />\n"
+    "      <path d=\"M21 13v2a4 4 0 0 1-4 4H3\" />\n"
+    "    </svg>\n"
+    "  );\n"
+    "}\n\n"
+    "function VolumeIcon({ size = 16, color = 'currentColor', muted = false }: { size?: number; color?: string; muted?: boolean }) {\n"
+    "  if (muted) {\n"
+    "    return (\n"
+    "      <svg width={size} height={size} viewBox=\"0 0 24 24\" fill=\"none\" stroke={color} strokeWidth=\"2\" strokeLinecap=\"round\" strokeLinejoin=\"round\">\n"
+    "        <polygon points=\"11 5 6 9 2 9 2 15 6 15 11 19 11 5\" />\n"
+    "        <line x1=\"23\" y1=\"9\" x2=\"17\" y2=\"15\" />\n"
+    "        <line x1=\"17\" y1=\"9\" x2=\"23\" y2=\"15\" />\n"
+    "      </svg>\n"
+    "    );\n"
+    "  }\n"
+    "  return (\n"
+    "    <svg width={size} height={size} viewBox=\"0 0 24 24\" fill=\"none\" stroke={color} strokeWidth=\"2\" strokeLinecap=\"round\" strokeLinejoin=\"round\">\n"
+    "      <polygon points=\"11 5 6 9 2 9 2 15 6 15 11 19 11 5\" />\n"
+    "      <path d=\"M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07\" />\n"
+    "    </svg>\n"
+    "  );\n"
+    "}\n\n"
+    "function EqualizerIcon({ size = 16, color = 'currentColor' }: { size?: number; color?: string }) {\n"
+    "  return (\n"
+    "    <svg width={size} height={size} viewBox=\"0 0 24 24\" fill=\"none\" stroke={color} strokeWidth=\"2\" strokeLinecap=\"round\" strokeLinejoin=\"round\">\n"
+    "      <line x1=\"4\" y1=\"21\" x2=\"4\" y2=\"14\" />\n"
+    "      <line x1=\"4\" y1=\"10\" x2=\"4\" y2=\"3\" />\n"
+    "      <line x1=\"12\" y1=\"21\" x2=\"12\" y2=\"12\" />\n"
+    "      <line x1=\"12\" y1=\"8\" x2=\"12\" y2=\"3\" />\n"
+    "      <line x1=\"20\" y1=\"21\" x2=\"20\" y2=\"16\" />\n"
+    "      <line x1=\"20\" y1=\"12\" x2=\"20\" y2=\"3\" />\n"
+    "      <circle cx=\"4\" cy=\"12\" r=\"2\" />\n"
+    "      <circle cx=\"12\" cy=\"10\" r=\"2\" />\n"
+    "      <circle cx=\"20\" cy=\"14\" r=\"2\" />\n"
+    "    </svg>\n"
+    "  );\n"
+    "}\n\n"
+    "function ListMusicIcon({ size = 16, color = 'currentColor' }: { size?: number; color?: string }) {\n"
+    "  return (\n"
+    "    <svg width={size} height={size} viewBox=\"0 0 24 24\" fill=\"none\" stroke={color} strokeWidth=\"2\" strokeLinecap=\"round\" strokeLinejoin=\"round\">\n"
+    "      <path d=\"M21 15V6\nM18.5 18a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5z\nM12 12H3\nM16 6H3\nM12 18H3\" />\n"
+    "    </svg>\n"
+    "  );\n"
+    "}\n\n"
+    "function XIcon({ size = 16, color = 'currentColor' }: { size?: number; color?: string }) {\n"
+    "  return (\n"
+    "    <svg width={size} height={size} viewBox=\"0 0 24 24\" fill=\"none\" stroke={color} strokeWidth=\"2\" strokeLinecap=\"round\" strokeLinejoin=\"round\">\n"
+    "      <line x1=\"18\" y1=\"6\" x2=\"6\" y2=\"18\" />\n"
+    "      <line x1=\"6\" y1=\"6\" x2=\"18\" y2=\"18\" />\n"
+    "    </svg>\n"
+    "  );\n"
+    "}\n\n"
+    "// ---------------------------------------------------------------------------\n"
+    "// Subcomponents: AudioPlaylistInner, AudioEqualizerInner\n"
+    "// ---------------------------------------------------------------------------\n"
+    "export function AudioPlaylistInner({\n"
+    "  tracks,\n"
+    "  currentTrackIndex,\n"
+    "  onSelectTrack,\n"
+    "  isOpen,\n"
+    "  onClose,\n"
+    "}: AudioPlaylistProps) {\n"
+    "  if (!isOpen) return null;\n\n"
+    "  return (\n"
+    "    <div\n"
+    "      className=\"audio-playlist-drawer\"\n"
+    "      style={{\n"
+    "        position: 'absolute',\n"
+    "        top: 0,\n"
+    "        right: 0,\n"
+    "        bottom: 0,\n"
+    "        width: '260px',\n"
+    "        backgroundColor: '#0f172a',\n"
+    "        borderLeft: '1px solid #334155',\n"
+    "        padding: '16px',\n"
+    "        display: 'flex',\n"
+    "        flexDirection: 'column',\n"
+    "        zIndex: 30,\n"
+    "        overflowY: 'auto',\n"
+    "        boxShadow: '-10px 0 20px rgba(0, 0, 0, 0.5)',\n"
+    "      }}\n"
+    "      role=\"region\"\n"
+    "      aria-label=\"Playlist Queue\"\n"
+    "    >\n"
+    "      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>\n"
+    "        <span style={{ fontSize: '13px', fontWeight: 600, color: '#f8fafc' }}>Playing Queue</span>\n"
+    "        <button\n"
+    "          onClick={onClose}\n"
+    "          style={{ background: 'none', border: 'none', color: '#94a3b8', cursor: 'pointer', padding: '2px' }}\n"
+    "          aria-label=\"Close playlist\"\n"
+    "        >\n"
+    "          <XIcon size={16} />\n"
+    "        </button>\n"
+    "      </div>\n"
+    "      <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>\n"
+    "        {tracks.map((track, idx) => {\n"
+    "          const isActive = idx === currentTrackIndex;\n"
+    "          return (\n"
+    "            <div\n"
+    "              key={track.id}\n"
+    "              onClick={() => onSelectTrack(idx)}\n"
+    "              style={{\n"
+    "                display: 'flex',\n"
+    "                alignItems: 'center',\n"
+    "                justifyContent: 'space-between',\n"
+    "                padding: '8px 10px',\n"
+    "                borderRadius: '8px',\n"
+    "                backgroundColor: isActive ? '#1e293b' : 'transparent',\n"
+    "                border: isActive ? '1px solid #3b82f6' : '1px solid transparent',\n"
+    "                cursor: 'pointer',\n"
+    "              }}\n"
+    "            >\n"
+    "              <div style={{ display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>\n"
+    "                <span style={{ fontSize: '12px', fontWeight: 600, color: isActive ? '#60a5fa' : '#f1f5f9', whiteSpace: 'nowrap', textOverflow: 'ellipsis', overflow: 'hidden' }}>\n"
+    "                  {track.title}\n"
+    "                </span>\n"
+    "                {track.artist && (\n"
+    "                  <span style={{ fontSize: '11px', color: '#94a3b8' }}>{track.artist}</span>\n"
+    "                )}\n"
+    "              </div>\n"
+    "              <span style={{ fontSize: '11px', color: '#64748b' }}>{formatTime(track.duration)}</span>\n"
+    "            </div>\n"
+    "          );\n"
+    "        })}\n"
+    "      </div>\n"
+    "    </div>\n"
+    "  );\n"
+    "}\n\n"
+    "export function AudioEqualizerInner({\n"
+    "  bands,\n"
+    "  onBandChange,\n"
+    "  onPresetSelect,\n"
+    "  isOpen,\n"
+    "  onClose,\n"
+    "}: AudioEqualizerProps) {\n"
+    "  if (!isOpen) return null;\n\n"
+    "  const presets: { id: AudioEqualizerPreset; name: string }[] = [\n"
+    "    { id: 'flat', name: 'Flat' },\n"
+    "    { id: 'bass_boost', name: 'Bass' },\n"
+    "    { id: 'vocal', name: 'Vocal' },\n"
+    "    { id: 'electronic', name: 'Electro' },\n"
+    "    { id: 'rock', name: 'Rock' },\n"
+    "  ];\n\n"
+    "  return (\n"
+    "    <div\n"
+    "      className=\"audio-equalizer-panel\"\n"
+    "      style={{\n"
+    "        position: 'absolute',\n"
+    "        bottom: '80px',\n"
+    "        left: '16px',\n"
+    "        right: '16px',\n"
+    "        backgroundColor: '#0f172a',\n"
+    "        border: '1px solid #334155',\n"
+    "        borderRadius: '12px',\n"
+    "        padding: '16px',\n"
+    "        zIndex: 30,\n"
+    "        boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.5)',\n"
+    "      }}\n"
+    "      role=\"region\"\n"
+    "      aria-label=\"Frequency Equalizer\"\n"
+    "    >\n"
+    "      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>\n"
+    "        <span style={{ fontSize: '13px', fontWeight: 600, color: '#f8fafc' }}>5-Band Graphic Equalizer</span>\n"
+    "        <button\n"
+    "          onClick={onClose}\n"
+    "          style={{ background: 'none', border: 'none', color: '#94a3b8', cursor: 'pointer', padding: '2px' }}\n"
+    "          aria-label=\"Close equalizer\"\n"
+    "        >\n"
+    "          <XIcon size={16} />\n"
+    "        </button>\n"
+    "      </div>\n\n"
+    "      {/* Presets */}\n"
+    "      <div style={{ display: 'flex', gap: '6px', marginBottom: '16px', overflowX: 'auto' }}>\n"
+    "        {presets.map((p) => (\n"
+    "          <button\n"
+    "            key={p.id}\n"
+    "            onClick={() => onPresetSelect(p.id)}\n"
+    "            style={{\n"
+    "              backgroundColor: '#1e293b',\n"
+    "              border: '1px solid #334155',\n"
+    "              borderRadius: '9999px',\n"
+    "              padding: '4px 10px',\n"
+    "              fontSize: '11px',\n"
+    "              color: '#94a3b8',\n"
+    "              cursor: 'pointer',\n"
+    "            }}\n"
+    "          >\n"
+    "            {p.name}\n"
+    "          </button>\n"
+    "        ))}\n"
+    "      </div>\n\n"
+    "      {/* Vertical Band Sliders */}\n"
+    "      <div style={{ display: 'flex', justifyContent: 'space-around', alignItems: 'center', height: '120px' }}>\n"
+    "        {bands.map((band, idx) => (\n"
+    "          <div key={band.frequency} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', height: '100%' }}>\n"
+    "            <span style={{ fontSize: '10px', color: '#64748b' }}>{band.gain > 0 ? `+${band.gain}` : band.gain}dB</span>\n"
+    "            <input\n"
+    "              type=\"range\"\n"
+    "              min={-12}\n"
+    "              max={12}\n"
+    "              value={band.gain}\n"
+    "              onChange={(e) => onBandChange(idx, parseInt(e.target.value, 10))}\n"
+    "              style={{\n"
+    "                writingMode: 'vertical-lr',\n"
+    "                direction: 'rtl',\n"
+    "                width: '16px',\n"
+    "                height: '70px',\n"
+    "                margin: '8px 0',\n"
+    "                cursor: 'pointer',\n"
+    "              }}\n"
+    "              aria-label={`${band.label} gain`}\n"
+    "            />\n"
+    "            <span style={{ fontSize: '10px', fontWeight: 600, color: '#94a3b8' }}>{band.label}</span>\n"
+    "          </div>\n"
+    "        ))}\n"
+    "      </div>\n"
+    "    </div>\n"
+    "  );\n"
+    "}\n\n"
+    "// ---------------------------------------------------------------------------\n"
+    "// Main Compound Component: AudioPlayerComponent\n"
+    "// ---------------------------------------------------------------------------\n"
+    "const AudioPlayerComponent = forwardRef<AudioPlayerHandle, AudioPlayerProps>((\n"
+    "  {\n"
+    "    tracks = DEFAULT_TRACKS,\n"
+    "    initialTrackIndex = 0,\n"
+    "    initialVolume = 0.8,\n"
+    "    autoPlay = false,\n"
+    "    variant = 'default',\n"
+    "    size = 'md',\n"
+    "    showEqualizer = true,\n"
+    "    showPlaylist = true,\n"
+    "    onTrackChange,\n"
+    "    onPlay,\n"
+    "    onPause,\n"
+    "    onEnded,\n"
+    "    className = '',\n"
+    "    style = {},\n"
+    "  },\n"
+    "  ref\n"
+    ") => {\n"
+    "  // State\n"
+    "  const [currentTrackIndex, setCurrentTrackIndex] = useState<number>(initialTrackIndex);\n"
+    "  const [isPlayingState, setIsPlayingState] = useState<boolean>(autoPlay);\n"
+    "  const [currentTime, setCurrentTime] = useState<number>(0);\n"
+    "  const [volume, setVolumeState] = useState<number>(initialVolume);\n"
+    "  const [isMuted, setIsMuted] = useState<boolean>(false);\n"
+    "  const [speed, setSpeedState] = useState<number>(1.0);\n"
+    "  const [isShuffle, setIsShuffle] = useState<boolean>(false);\n"
+    "  const [repeatMode, setRepeatMode] = useState<'off' | 'all' | 'one'>('off');\n"
+    "  const [playlistOpen, setPlaylistOpen] = useState<boolean>(false);\n"
+    "  const [equalizerOpen, setEqualizerOpen] = useState<boolean>(false);\n"
+    "  const [bands, setBands] = useState<AudioEqualizerBand[]>(DEFAULT_EQ_BANDS);\n\n"
+    "  const currentTrack = tracks[currentTrackIndex] || tracks[0];\n\n"
+    "  // Simulated playback ticker\n"
+    "  useEffect(() => {\n"
+    "    let interval: any = null;\n"
+    "    if (isPlayingState) {\n"
+    "      interval = setInterval(() => {\n"
+    "        setCurrentTime((prev) => {\n"
+    "          if (prev >= currentTrack.duration) {\n"
+    "            if (repeatMode === 'one') {\n"
+    "              return 0;\n"
+    "            } else {\n"
+    "              handleNextTrack();\n"
+    "              return 0;\n"
+    "            }\n"
+    "          }\n"
+    "          return prev + 1 * speed;\n"
+    "        });\n"
+    "      }, 1000);\n"
+    "    }\n"
+    "    return () => clearInterval(interval);\n"
+    "  }, [isPlayingState, currentTrack.duration, speed, repeatMode]);\n\n"
+    "  // Track selection\n"
+    "  const selectTrack = useCallback((index: number) => {\n"
+    "    const validIndex = Math.max(0, Math.min(index, tracks.length - 1));\n"
+    "    setCurrentTrackIndex(validIndex);\n"
+    "    setCurrentTime(0);\n"
+    "    onTrackChange?.(tracks[validIndex]);\n"
+    "  }, [tracks, onTrackChange]);\n\n"
+    "  // Next & Prev track\n"
+    "  const handleNextTrack = useCallback(() => {\n"
+    "    if (isShuffle) {\n"
+    "      const rand = Math.floor(Math.random() * tracks.length);\n"
+    "      selectTrack(rand);\n"
+    "    } else {\n"
+    "      selectTrack((currentTrackIndex + 1) % tracks.length);\n"
+    "    }\n"
+    "  }, [isShuffle, tracks.length, currentTrackIndex, selectTrack]);\n\n"
+    "  const handlePrevTrack = useCallback(() => {\n"
+    "    if (currentTime > 3) {\n"
+    "      setCurrentTime(0);\n"
+    "    } else {\n"
+    "      selectTrack((currentTrackIndex - 1 + tracks.length) % tracks.length);\n"
+    "    }\n"
+    "  }, [currentTime, currentTrackIndex, tracks.length, selectTrack]);\n\n"
+    "  // Playback toggles\n"
+    "  const handlePlay = useCallback(() => {\n"
+    "    setIsPlayingState(true);\n"
+    "    onPlay?.();\n"
+    "  }, [onPlay]);\n\n"
+    "  const handlePause = useCallback(() => {\n"
+    "    setIsPlayingState(false);\n"
+    "    onPause?.();\n"
+    "  }, [onPause]);\n\n"
+    "  const handleTogglePlay = useCallback(() => {\n"
+    "    if (isPlayingState) handlePause();\n"
+    "    else handlePlay();\n"
+    "  }, [isPlayingState, handlePause, handlePlay]);\n\n"
+    "  // Speed cycling\n"
+    "  const speeds = [0.5, 0.75, 1.0, 1.25, 1.5, 2.0];\n"
+    "  const handleCycleSpeed = () => {\n"
+    "    const nextIdx = (speeds.indexOf(speed) + 1) % speeds.length;\n"
+    "    setSpeedState(speeds[nextIdx]);\n"
+    "  };\n\n"
+    "  // Equalizer band updates\n"
+    "  const handleBandChange = (index: number, gain: number) => {\n"
+    "    setBands((prev) => {\n"
+    "      const updated = [...prev];\n"
+    "      updated[index] = { ...updated[index], gain };\n"
+    "      return updated;\n"
+    "    });\n"
+    "  };\n\n"
+    "  const handlePresetSelect = (preset: AudioEqualizerPreset) => {\n"
+    "    const gains = EQ_PRESETS[preset] || EQ_PRESETS.flat;\n"
+    "    setBands((prev) =>\n"
+    "      prev.map((b, i) => ({ ...b, gain: gains[i] !== undefined ? gains[i] : 0 }))\n"
+    "    );\n"
+    "  };\n\n"
+    "  // Imperative handle\n"
+    "  useImperativeHandle(ref, () => ({\n"
+    "    play: handlePlay,\n"
+    "    pause: handlePause,\n"
+    "    togglePlay: handleTogglePlay,\n"
+    "    nextTrack: handleNextTrack,\n"
+    "    prevTrack: handlePrevTrack,\n"
+    "    seekTo: (sec: number) => setCurrentTime(Math.max(0, Math.min(sec, currentTrack.duration))),\n"
+    "    setVolume: (vol: number) => setVolumeState(Math.max(0, Math.min(1, vol))),\n"
+    "    setSpeed: (spd: number) => setSpeedState(spd),\n"
+    "    setEqualizerBand: (idx: number, gain: number) => handleBandChange(idx, gain),\n"
+    "    getCurrentTrack: () => currentTrack,\n"
+    "    isPlaying: () => isPlayingState,\n"
+    "  }), [handlePlay, handlePause, handleTogglePlay, handleNextTrack, handlePrevTrack, currentTrack, isPlayingState]);\n\n"
+    "  // Sizing styles\n"
+    "  const sizeStyles = {\n"
+    "    sm: { height: '140px', padding: '12px' },\n"
+    "    md: { height: '180px', padding: '16px' },\n"
+    "    lg: { height: '220px', padding: '24px' },\n"
+    "  }[size];\n\n"
+    "  // Variant theme tokens\n"
+    "  const variantStyles = {\n"
+    "    default: {\n"
+    "      bg: '#0b0f19',\n"
+    "      border: '1px solid #1e293b',\n"
+    "      scrubberTrack: '#1e293b',\n"
+    "      scrubberFill: '#3b82f6',\n"
+    "      glow: 'none',\n"
+    "    },\n"
+    "    card: {\n"
+    "      bg: '#0f172a',\n"
+    "      border: '1px solid #334155',\n"
+    "      scrubberTrack: '#334155',\n"
+    "      scrubberFill: '#38bdf8',\n"
+    "      glow: '0 4px 20px -2px rgba(0, 0, 0, 0.5)',\n"
+    "    },\n"
+    "    glass: {\n"
+    "      bg: 'rgba(11, 15, 25, 0.85)',\n"
+    "      border: '1px solid rgba(255, 255, 255, 0.1)',\n"
+    "      scrubberTrack: 'rgba(255, 255, 255, 0.15)',\n"
+    "      scrubberFill: '#60a5fa',\n"
+    "      glow: '0 8px 32px 0 rgba(0, 0, 0, 0.37)',\n"
+    "      backdropFilter: 'blur(20px)',\n"
+    "    },\n"
+    "    neon: {\n"
+    "      bg: '#050510',\n"
+    "      border: '1px solid #00f0ff',\n"
+    "      scrubberTrack: '#0a1026',\n"
+    "      scrubberFill: '#00f0ff',\n"
+    "      glow: '0 0 25px rgba(0, 240, 255, 0.35)',\n"
+    "    },\n"
+    "  }[variant];\n\n"
+    "  const progressPercent = Math.min(100, (currentTime / (currentTrack.duration || 1)) * 100);\n\n"
+    "  return (\n"
+    "    <div\n"
+    "      className={`audio-player-container ${className}`}\n"
+    "      style={{\n"
+    "        position: 'relative',\n"
+    "        width: '100%',\n"
+    "        backgroundColor: variantStyles.bg,\n"
+    "        border: variantStyles.border,\n"
+    "        borderRadius: '16px',\n"
+    "        padding: sizeStyles.padding,\n"
+    "        boxShadow: variantStyles.glow,\n"
+    "        backdropFilter: (variantStyles as any).backdropFilter,\n"
+    "        color: '#f8fafc',\n"
+    "        display: 'flex',\n"
+    "        flexDirection: 'column',\n"
+    "        justifyContent: 'space-between',\n"
+    "        boxSizing: 'border-box',\n"
+    "        ...style,\n"
+    "      }}\n"
+    "      role=\"region\"\n"
+    "      aria-label=\"Audio Player\"\n"
+    "    >\n"
+    "      {/* Top row: Track Details & Secondary Controls */}\n"
+    "      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>\n"
+    "        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>\n"
+    "          {/* Album Art Avatar */}\n"
+    "          <div\n"
+    "            style={{\n"
+    "              width: '44px',\n"
+    "              height: '44px',\n"
+    "              borderRadius: '8px',\n"
+    "              backgroundColor: '#1e293b',\n"
+    "              display: 'flex',\n"
+    "              alignItems: 'center',\n"
+    "              justifyContent: 'center',\n"
+    "              border: '1px solid #334155',\n"
+    "            }}\n"
+    "          >\n"
+    "            <ListMusicIcon size={20} color=\"#38bdf8\" />\n"
+    "          </div>\n"
+    "          <div style={{ display: 'flex', flexDirection: 'column' }}>\n"
+    "            <span style={{ fontSize: '14px', fontWeight: 600, color: '#f1f5f9' }}>{currentTrack.title}</span>\n"
+    "            <span style={{ fontSize: '12px', color: '#94a3b8' }}>{currentTrack.artist || 'Unknown Artist'}</span>\n"
+    "          </div>\n"
+    "        </div>\n\n"
+    "        {/* Equalizer & Playlist toggles */}\n"
+    "        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>\n"
+    "          {showEqualizer && (\n"
+    "            <button\n"
+    "              onClick={() => setEqualizerOpen((v) => !v)}\n"
+    "              style={{\n"
+    "                backgroundColor: equalizerOpen ? '#1e293b' : 'transparent',\n"
+    "                border: '1px solid #334155',\n"
+    "                borderRadius: '6px',\n"
+    "                color: equalizerOpen ? '#38bdf8' : '#94a3b8',\n"
+    "                padding: '6px',\n"
+    "                cursor: 'pointer',\n"
+    "                display: 'flex',\n"
+    "                alignItems: 'center',\n"
+    "              }}\n"
+    "              aria-label=\"Toggle frequency equalizer\"\n"
+    "            >\n"
+    "              <EqualizerIcon size={16} />\n"
+    "            </button>\n"
+    "          )}\n\n"
+    "          {showPlaylist && (\n"
+    "            <button\n"
+    "              onClick={() => setPlaylistOpen((v) => !v)}\n"
+    "              style={{\n"
+    "                backgroundColor: playlistOpen ? '#1e293b' : 'transparent',\n"
+    "                border: '1px solid #334155',\n"
+    "                borderRadius: '6px',\n"
+    "                color: playlistOpen ? '#38bdf8' : '#94a3b8',\n"
+    "                padding: '6px',\n"
+    "                cursor: 'pointer',\n"
+    "                display: 'flex',\n"
+    "                alignItems: 'center',\n"
+    "              }}\n"
+    "              aria-label=\"Toggle playlist\"\n"
+    "            >\n"
+    "              <ListMusicIcon size={16} />\n"
+    "            </button>\n"
+    "          )}\n"
+    "        </div>\n"
+    "      </div>\n\n"
+    "      {/* Middle row: Scrubber Slider with Elapsed and Total Readouts */}\n"
+    "      <div style={{ margin: '14px 0 8px 0' }}>\n"
+    "        <div\n"
+    "          onClick={(e) => {\n"
+    "            const rect = e.currentTarget.getBoundingClientRect();\n"
+    "            const clickX = e.clientX - rect.left;\n"
+    "            const pct = Math.max(0, Math.min(1, clickX / rect.width));\n"
+    "            setCurrentTime(pct * currentTrack.duration);\n"
+    "          }}\n"
+    "          style={{\n"
+    "            position: 'relative',\n"
+    "            width: '100%',\n"
+    "            height: '6px',\n"
+    "            backgroundColor: variantStyles.scrubberTrack,\n"
+    "            borderRadius: '3px',\n"
+    "            cursor: 'pointer',\n"
+    "          }}\n"
+    "        >\n"
+    "          <div\n"
+    "            style={{\n"
+    "              width: `${progressPercent}%`,\n"
+    "              height: '100%',\n"
+    "              backgroundColor: variantStyles.scrubberFill,\n"
+    "              borderRadius: '3px',\n"
+    "              transition: 'width 0.1s linear',\n"
+    "            }}\n"
+    "          />\n"
+    "        </div>\n"
+    "        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '11px', color: '#64748b', marginTop: '4px' }}>\n"
+    "          <span>{formatTime(currentTime)}</span>\n"
+    "          <span>{formatTime(currentTrack.duration)}</span>\n"
+    "        </div>\n"
+    "      </div>\n\n"
+    "      {/* Bottom row: Playback Controls & Volume */}\n"
+    "      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>\n"
+    "        {/* Shuffle & Repeat */}\n"
+    "        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>\n"
+    "          <button\n"
+    "            onClick={() => setIsShuffle((v) => !v)}\n"
+    "            style={{ background: 'none', border: 'none', color: isShuffle ? '#38bdf8' : '#64748b', cursor: 'pointer', padding: '4px' }}\n"
+    "            aria-label=\"Toggle shuffle\"\n"
+    "          >\n"
+    "            <ShuffleIcon size={16} active={isShuffle} />\n"
+    "          </button>\n"
+    "          <button\n"
+    "            onClick={() => setRepeatMode((m) => (m === 'off' ? 'all' : m === 'all' ? 'one' : 'off'))}\n"
+    "            style={{ background: 'none', border: 'none', color: repeatMode !== 'off' ? '#38bdf8' : '#64748b', cursor: 'pointer', padding: '4px' }}\n"
+    "            aria-label=\"Toggle repeat\"\n"
+    "          >\n"
+    "            <RepeatIcon size={16} active={repeatMode !== 'off'} />\n"
+    "          </button>\n"
+    "        </div>\n\n"
+    "        {/* Center: Prev, Play/Pause, Next */}\n"
+    "        <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>\n"
+    "          <button\n"
+    "            onClick={handlePrevTrack}\n"
+    "            style={{ background: 'none', border: 'none', color: '#f1f5f9', cursor: 'pointer', display: 'flex', alignItems: 'center' }}\n"
+    "            aria-label=\"Previous track\"\n"
+    "          >\n"
+    "            <SkipBackIcon size={20} />\n"
+    "          </button>\n\n"
+    "          <button\n"
+    "            onClick={handleTogglePlay}\n"
+    "            style={{\n"
+    "              width: '40px',\n"
+    "              height: '40px',\n"
+    "              borderRadius: '50%',\n"
+    "              backgroundColor: '#2563eb',\n"
+    "              border: 'none',\n"
+    "              color: '#ffffff',\n"
+    "              display: 'flex',\n"
+    "              alignItems: 'center',\n"
+    "              justifyContent: 'center',\n"
+    "              cursor: 'pointer',\n"
+    "              boxShadow: '0 0 15px rgba(37, 99, 235, 0.5)',\n"
+    "            }}\n"
+    "            aria-label={isPlayingState ? 'Pause audio' : 'Play audio'}\n"
+    "          >\n"
+    "            {isPlayingState ? <PauseIcon size={18} /> : <PlayIcon size={18} />}\n"
+    "          </button>\n\n"
+    "          <button\n"
+    "            onClick={handleNextTrack}\n"
+    "            style={{ background: 'none', border: 'none', color: '#f1f5f9', cursor: 'pointer', display: 'flex', alignItems: 'center' }}\n"
+    "            aria-label=\"Next track\"\n"
+    "          >\n"
+    "            <SkipForwardIcon size={20} />\n"
+    "          </button>\n"
+    "        </div>\n\n"
+    "        {/* Speed & Volume */}\n"
+    "        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>\n"
+    "          <button\n"
+    "            onClick={handleCycleSpeed}\n"
+    "            style={{\n"
+    "              background: 'none',\n"
+    "              border: '1px solid #334155',\n"
+    "              borderRadius: '4px',\n"
+    "              color: '#94a3b8',\n"
+    "              padding: '2px 6px',\n"
+    "              fontSize: '11px',\n"
+    "              cursor: 'pointer',\n"
+    "            }}\n"
+    "            aria-label=\"Cycle playback speed\"\n"
+    "          >\n"
+    "            {speed}x\n"
+    "          </button>\n\n"
+    "          <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>\n"
+    "            <button\n"
+    "              onClick={() => setIsMuted((v) => !v)}\n"
+    "              style={{ background: 'none', border: 'none', color: '#94a3b8', cursor: 'pointer', padding: '2px' }}\n"
+    "              aria-label={isMuted ? 'Unmute' : 'Mute'}\n"
+    "            >\n"
+    "              <VolumeIcon size={16} muted={isMuted || volume === 0} />\n"
+    "            </button>\n"
+    "            <input\n"
+    "              type=\"range\"\n"
+    "              min={0}\n"
+    "              max={1}\n"
+    "              step={0.05}\n"
+    "              value={isMuted ? 0 : volume}\n"
+    "              onChange={(e) => {\n"
+    "                setVolumeState(parseFloat(e.target.value));\n"
+    "                if (isMuted) setIsMuted(false);\n"
+    "              }}\n"
+    "              style={{ width: '60px', height: '4px', cursor: 'pointer' }}\n"
+    "              aria-label=\"Volume\"\n"
+    "            />\n"
+    "          </div>\n"
+    "        </div>\n"
+    "      </div>\n\n"
+    "      {/* Slide-over Drawers */}\n"
+    "      <AudioPlaylistInner\n"
+    "        tracks={tracks}\n"
+    "        currentTrackIndex={currentTrackIndex}\n"
+    "        onSelectTrack={selectTrack}\n"
+    "        isOpen={playlistOpen}\n"
+    "        onClose={() => setPlaylistOpen(false)}\n"
+    "      />\n\n"
+    "      <AudioEqualizerInner\n"
+    "        bands={bands}\n"
+    "        onBandChange={handleBandChange}\n"
+    "        onPresetSelect={handlePresetSelect}\n"
+    "        isOpen={equalizerOpen}\n"
+    "        onClose={() => setEqualizerOpen(false)}\n"
+    "      />\n"
+    "    </div>\n"
+    "  );\n"
+    "});\n\n"
+    "AudioPlayerComponent.displayName = 'AudioPlayerComponent';\n\n"
+    "// ---------------------------------------------------------------------------\n"
+    "// Exports & Aliases\n"
+    "// ---------------------------------------------------------------------------\n"
+    "export const AudioPlayer = AudioPlayerComponent;\n"
+    "export const MusicPlayer = AudioPlayerComponent;\n"
+    "export const SoundPlayer = AudioPlayerComponent;\n"
+    "export const AudioPlaylist = AudioPlaylistInner;\n"
+    "export const AudioEqualizer = AudioEqualizerInner;\n\n"
+    "AudioPlayer.displayName = 'AudioPlayer';\n"
+    "MusicPlayer.displayName = 'MusicPlayer';\n"
+    "SoundPlayer.displayName = 'SoundPlayer';\n"
+    "AudioPlaylist.displayName = 'AudioPlaylist';\n"
+    "AudioEqualizer.displayName = 'AudioEqualizer';\n\n"
+    "export default AudioPlayerComponent;\n"
+)
+
+
+def render_audio_player_component() -> str:
+    """Return static React implementation of the Accessible Futuristic Audio Player Suite."""
+    return _AUDIO_PLAYER_COMPONENT
+
+
+
+# ---------------------------------------------------------------------------
+# Task R-390: Accessible Futuristic Reusable Video Player & Streaming Theater Suite (components/video-player.tsx)
+# ---------------------------------------------------------------------------
+
+_VIDEO_PLAYER_COMPONENT = (
+    "'use client';\n\n"
+    "import React, {\n"
+    "  useState,\n"
+    "  useEffect,\n"
+    "  useRef,\n"
+    "  useCallback,\n"
+    "  useMemo,\n"
+    "  forwardRef,\n"
+    "  useImperativeHandle,\n"
+    "} from 'react';\n\n"
+    "// ---------------------------------------------------------------------------\n"
+    "// TypeScript Interfaces & Types\n"
+    "// ---------------------------------------------------------------------------\n"
+    "export type VideoPlayerVariant = 'default' | 'card' | 'glass' | 'neon';\n"
+    "export type VideoPlayerSize = 'sm' | 'md' | 'lg';\n"
+    "export type VideoQuality = 'auto' | '1080p' | '720p' | '480p' | '360p';\n\n"
+    "export interface VideoChapter {\n"
+    "  title: string;\n"
+    "  time: number;\n"
+    "  description?: string;\n"
+    "}\n\n"
+    "export interface VideoCaption {\n"
+    "  id: string;\n"
+    "  label: string;\n"
+    "  language: string;\n"
+    "  src?: string;\n"
+    "  cues?: Array<{ start: number; end: number; text: string }>;\n"
+    "}\n\n"
+    "export interface VideoSource {\n"
+    "  src: string;\n"
+    "  type?: string;\n"
+    "  quality?: VideoQuality;\n"
+    "}\n\n"
+    "export interface VideoPlayerHandle {\n"
+    "  play: () => void;\n"
+    "  pause: () => void;\n"
+    "  togglePlay: () => void;\n"
+    "  seekTo: (seconds: number) => void;\n"
+    "  setVolume: (volume: number) => void;\n"
+    "  mute: () => void;\n"
+    "  unmute: () => void;\n"
+    "  toggleMute: () => void;\n"
+    "  toggleFullscreen: () => void;\n"
+    "  togglePiP: () => void;\n"
+    "  toggleTheater: () => void;\n"
+    "  setPlaybackRate: (rate: number) => void;\n"
+    "  setQuality: (quality: VideoQuality) => void;\n"
+    "  getCurrentTime: () => number;\n"
+    "  getDuration: () => number;\n"
+    "  isPlaying: () => boolean;\n"
+    "  getVideoElement: () => HTMLVideoElement | null;\n"
+    "}\n\n"
+    "export interface VideoControlsProps {\n"
+    "  isPlaying: boolean;\n"
+    "  currentTime: number;\n"
+    "  duration: number;\n"
+    "  buffered: number;\n"
+    "  volume: number;\n"
+    "  isMuted: boolean;\n"
+    "  isFullscreen: boolean;\n"
+    "  isPiP: boolean;\n"
+    "  isTheater: boolean;\n"
+    "  playbackRate: number;\n"
+    "  quality: VideoQuality;\n"
+    "  showCaptions: boolean;\n"
+    "  chapters?: VideoChapter[];\n"
+    "  onTogglePlay: () => void;\n"
+    "  onSeek: (seconds: number) => void;\n"
+    "  onVolumeChange: (volume: number) => void;\n"
+    "  onToggleMute: () => void;\n"
+    "  onToggleFullscreen: () => void;\n"
+    "  onTogglePiP: () => void;\n"
+    "  onToggleTheater: () => void;\n"
+    "  onPlaybackRateChange: (rate: number) => void;\n"
+    "  onQualityChange: (quality: VideoQuality) => void;\n"
+    "  onToggleCaptions: () => void;\n"
+    "  variant?: VideoPlayerVariant;\n"
+    "  size?: VideoPlayerSize;\n"
+    "}\n\n"
+    "export interface VideoPlayerProps {\n"
+    "  src?: string;\n"
+    "  sources?: VideoSource[];\n"
+    "  poster?: string;\n"
+    "  title?: string;\n"
+    "  chapters?: VideoChapter[];\n"
+    "  captions?: VideoCaption[];\n"
+    "  autoPlay?: boolean;\n"
+    "  loop?: boolean;\n"
+    "  muted?: boolean;\n"
+    "  preload?: 'none' | 'metadata' | 'auto';\n"
+    "  defaultQuality?: VideoQuality;\n"
+    "  defaultPlaybackRate?: number;\n"
+    "  variant?: VideoPlayerVariant;\n"
+    "  size?: VideoPlayerSize;\n"
+    "  theaterMode?: boolean;\n"
+    "  showControls?: boolean;\n"
+    "  className?: string;\n"
+    "  style?: React.CSSProperties;\n"
+    "  onPlay?: () => void;\n"
+    "  onPause?: () => void;\n"
+    "  onEnded?: () => void;\n"
+    "  onTimeUpdate?: (currentTime: number) => void;\n"
+    "  onVolumeChange?: (volume: number, isMuted: boolean) => void;\n"
+    "  onError?: (error: any) => void;\n"
+    "}\n\n"
+    "// ---------------------------------------------------------------------------\n"
+    "// Format Time Helper (MM:SS or HH:MM:SS)\n"
+    "// ---------------------------------------------------------------------------\n"
+    "function formatVideoTime(seconds: number): string {\n"
+    "  if (isNaN(seconds) || seconds < 0) return '00:00';\n"
+    "  const h = Math.floor(seconds / 3600);\n"
+    "  const m = Math.floor((seconds % 3600) / 60);\n"
+    "  const s = Math.floor(seconds % 60);\n"
+    "  if (h > 0) {\n"
+    "    return `${h}:${m < 10 ? '0' : ''}${m}:${s < 10 ? '0' : ''}${s}`;\n"
+    "  }\n"
+    "  return `${m < 10 ? '0' : ''}${m}:${s < 10 ? '0' : ''}${s}`;\n"
+    "}\n\n"
+    "// ---------------------------------------------------------------------------\n"
+    "// Preset Chapters Demo\n"
+    "// ---------------------------------------------------------------------------\n"
+    "const DEFAULT_CHAPTERS: VideoChapter[] = [\n"
+    "  { title: 'Introduction', time: 0 },\n"
+    "  { title: 'Architecture Overview', time: 60 },\n"
+    "  { title: 'Feature Deep-Dive', time: 180 },\n"
+    "  { title: 'Summary & Wrap-up', time: 300 },\n"
+    "];\n\n"
+    "// ---------------------------------------------------------------------------\n"
+    "// Video Controls Subcomponent\n"
+    "// ---------------------------------------------------------------------------\n"
+    "export const VideoControls: React.FC<VideoControlsProps> = ({\n"
+    "  isPlaying,\n"
+    "  currentTime,\n"
+    "  duration,\n"
+    "  buffered,\n"
+    "  volume,\n"
+    "  isMuted,\n"
+    "  isFullscreen,\n"
+    "  isPiP,\n"
+    "  isTheater,\n"
+    "  playbackRate,\n"
+    "  quality,\n"
+    "  showCaptions,\n"
+    "  chapters = DEFAULT_CHAPTERS,\n"
+    "  onTogglePlay,\n"
+    "  onSeek,\n"
+    "  onVolumeChange,\n"
+    "  onToggleMute,\n"
+    "  onToggleFullscreen,\n"
+    "  onTogglePiP,\n"
+    "  onToggleTheater,\n"
+    "  onPlaybackRateChange,\n"
+    "  onQualityChange,\n"
+    "  onToggleCaptions,\n"
+    "  variant = 'default',\n"
+    "  size = 'md',\n"
+    "}) => {\n"
+    "  const [hoverTime, setHoverTime] = useState<number | null>(null);\n"
+    "  const [hoverPos, setHoverPos] = useState<number>(0);\n"
+    "  const [showSettings, setShowSettings] = useState(false);\n"
+    "  const scrubberRef = useRef<HTMLDivElement>(null);\n\n"
+    "  const handleScrubberMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {\n"
+    "    if (!scrubberRef.current || duration <= 0) return;\n"
+    "    const rect = scrubberRef.current.getBoundingClientRect();\n"
+    "    const x = Math.max(0, Math.min(e.clientX - rect.left, rect.width));\n"
+    "    const pct = x / rect.width;\n"
+    "    setHoverPos(x);\n"
+    "    setHoverTime(pct * duration);\n"
+    "  };\n\n"
+    "  const handleScrubberClick = (e: React.MouseEvent<HTMLDivElement>) => {\n"
+    "    if (!scrubberRef.current || duration <= 0) return;\n"
+    "    const rect = scrubberRef.current.getBoundingClientRect();\n"
+    "    const x = Math.max(0, Math.min(e.clientX - rect.left, rect.width));\n"
+    "    const pct = x / rect.width;\n"
+    "    onSeek(pct * duration);\n"
+    "  };\n\n"
+    "  const progressPct = duration > 0 ? (currentTime / duration) * 100 : 0;\n"
+    "  const bufferedPct = Math.min(100, Math.max(0, buffered * 100));\n\n"
+    "  const isNeon = variant === 'neon';\n"
+    "  const accentColor = isNeon ? '#06b6d4' : '#3b82f6';\n\n"
+    "  return (\n"
+    "    <div\n"
+    "      role=\"toolbar\"\n"
+    "      aria-label=\"Video Controls\"\n"
+    "      style={{\n"
+    "        position: 'absolute',\n"
+    "        bottom: 0,\n"
+    "        left: 0,\n"
+    "        right: 0,\n"
+    "        background: 'linear-gradient(to top, rgba(0,0,0,0.85) 0%, rgba(0,0,0,0.4) 70%, transparent 100%)',\n"
+    "        padding: '16px 16px 12px 16px',\n"
+    "        display: 'flex',\n"
+    "        flexDirection: 'column',\n"
+    "        gap: '8px',\n"
+    "        zIndex: 20,\n"
+    "        transition: 'opacity 0.3s ease',\n"
+    "      }}\n"
+    "    >\n"
+    "      {/* Scrubber / Progress Bar */}\n"
+    "      <div\n"
+    "        ref={scrubberRef}\n"
+    "        role=\"slider\"\n"
+    "        aria-label=\"Video timeline\"\n"
+    "        aria-valuemin={0}\n"
+    "        aria-valuemax={Math.floor(duration)}\n"
+    "        aria-valuenow={Math.floor(currentTime)}\n"
+    "        aria-valuetext={formatVideoTime(currentTime)}\n"
+    "        tabIndex={0}\n"
+    "        onMouseMove={handleScrubberMouseMove}\n"
+    "        onMouseLeave={() => setHoverTime(null)}\n"
+    "        onClick={handleScrubberClick}\n"
+    "        style={{\n"
+    "          position: 'relative',\n"
+    "          height: '8px',\n"
+    "          borderRadius: '4px',\n"
+    "          background: 'rgba(255, 255, 255, 0.25)',\n"
+    "          cursor: 'pointer',\n"
+    "          display: 'flex',\n"
+    "          alignItems: 'center',\n"
+    "        }}\n"
+    "      >\n"
+    "        {/* Buffered Bar */}\n"
+    "        <div\n"
+    "          style={{\n"
+    "            position: 'absolute',\n"
+    "            left: 0,\n"
+    "            top: 0,\n"
+    "            bottom: 0,\n"
+    "            width: `${bufferedPct}%`,\n"
+    "            background: 'rgba(255, 255, 255, 0.4)',\n"
+    "            borderRadius: '4px',\n"
+    "            transition: 'width 0.2s ease',\n"
+    "          }}\n"
+    "        />\n"
+    "        {/* Played Bar */}\n"
+    "        <div\n"
+    "          style={{\n"
+    "            position: 'absolute',\n"
+    "            left: 0,\n"
+    "            top: 0,\n"
+    "            bottom: 0,\n"
+    "            width: `${progressPct}%`,\n"
+    "            background: accentColor,\n"
+    "            borderRadius: '4px',\n"
+    "            boxShadow: isNeon ? '0 0 10px #06b6d4' : undefined,\n"
+    "          }}\n"
+    "        />\n"
+    "        {/* Scrubber Thumb */}\n"
+    "        <div\n"
+    "          style={{\n"
+    "            position: 'absolute',\n"
+    "            left: `${progressPct}%`,\n"
+    "            transform: 'translateX(-50%)',\n"
+    "            width: '14px',\n"
+    "            height: '14px',\n"
+    "            borderRadius: '50%',\n"
+    "            background: '#ffffff',\n"
+    "            boxShadow: '0 2px 4px rgba(0,0,0,0.5)',\n"
+    "            pointerEvents: 'none',\n"
+    "          }}\n"
+    "        />\n"
+    "        {/* Chapter Markers */}\n"
+    "        {chapters.map((ch, idx) => {\n"
+    "          if (duration <= 0 || ch.time > duration) return null;\n"
+    "          const chPct = (ch.time / duration) * 100;\n"
+    "          return (\n"
+    "            <div\n"
+    "              key={idx}\n"
+    "              title={`${ch.title} (${formatVideoTime(ch.time)})`}\n"
+    "              style={{\n"
+    "                position: 'absolute',\n"
+    "                left: `${chPct}%`,\n"
+    "                top: 0,\n"
+    "                bottom: 0,\n"
+    "                width: '3px',\n"
+    "                background: 'rgba(255, 255, 255, 0.9)',\n"
+    "                borderRadius: '1px',\n"
+    "                zIndex: 2,\n"
+    "              }}\n"
+    "            />\n"
+    "          );\n"
+    "        })}\n"
+    "        {/* Hover Time Tooltip */}\n"
+    "        {hoverTime !== null && (\n"
+    "          <div\n"
+    "            style={{\n"
+    "              position: 'absolute',\n"
+    "              left: `${hoverPos}px`,\n"
+    "              bottom: '16px',\n"
+    "              transform: 'translateX(-50%)',\n"
+    "              background: 'rgba(15, 23, 42, 0.95)',\n"
+    "              color: '#ffffff',\n"
+    "              padding: '3px 7px',\n"
+    "              borderRadius: '4px',\n"
+    "              fontSize: '11px',\n"
+    "              fontFamily: 'monospace',\n"
+    "              pointerEvents: 'none',\n"
+    "              whiteSpace: 'nowrap',\n"
+    "              border: '1px solid rgba(255,255,255,0.15)',\n"
+    "            }}\n"
+    "          >\n"
+    "            {formatVideoTime(hoverTime)}\n"
+    "          </div>\n"
+    "        )}\n"
+    "      </div>\n\n"
+    "      {/* Controls Bar */}\n"
+    "      <div\n"
+    "        style={{\n"
+    "          display: 'flex',\n"
+    "          alignItems: 'center',\n"
+    "          justifyContent: 'space-between',\n"
+    "          color: '#ffffff',\n"
+    "          fontSize: '13px',\n"
+    "          fontFamily: 'system-ui, -apple-system, sans-serif',\n"
+    "        }}\n"
+    "      >\n"
+    "        {/* Left: Play/Pause, Rewind, Forward, Volume, Time */}\n"
+    "        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>\n"
+    "          {/* Play/Pause Button */}\n"
+    "          <button\n"
+    "            type=\"button\"\n"
+    "            aria-label={isPlaying ? 'Pause video' : 'Play video'}\n"
+    "            onClick={onTogglePlay}\n"
+    "            style={{\n"
+    "              background: 'none',\n"
+    "              border: 'none',\n"
+    "              color: '#ffffff',\n"
+    "              cursor: 'pointer',\n"
+    "              padding: '6px',\n"
+    "              borderRadius: '6px',\n"
+    "              display: 'flex',\n"
+    "              alignItems: 'center',\n"
+    "              justifyContent: 'center',\n"
+    "            }}\n"
+    "          >\n"
+    "            {isPlaying ? (\n"
+    "              <svg width=\"20\" height=\"20\" viewBox=\"0 0 24 24\" fill=\"currentColor\">\n"
+    "                <rect x=\"6\" y=\"4\" width=\"4\" height=\"16\" rx=\"1\" />\n"
+    "                <rect x=\"14\" y=\"4\" width=\"4\" height=\"16\" rx=\"1\" />\n"
+    "              </svg>\n"
+    "            ) : (\n"
+    "              <svg width=\"20\" height=\"20\" viewBox=\"0 0 24 24\" fill=\"currentColor\">\n"
+    "                <path d=\"M8 5v14l11-7z\" />\n"
+    "              </svg>\n"
+    "            )}\n"
+    "          </button>\n\n"
+    "          {/* Rewind 10s */}\n"
+    "          <button\n"
+    "            type=\"button\"\n"
+    "            aria-label=\"Rewind 10 seconds\"\n"
+    "            onClick={() => onSeek(Math.max(0, currentTime - 10))}\n"
+    "            style={{\n"
+    "              background: 'none',\n"
+    "              border: 'none',\n"
+    "              color: 'rgba(255, 255, 255, 0.85)',\n"
+    "              cursor: 'pointer',\n"
+    "              padding: '6px',\n"
+    "              borderRadius: '6px',\n"
+    "              display: 'flex',\n"
+    "              alignItems: 'center',\n"
+    "              justifyContent: 'center',\n"
+    "            }}\n"
+    "          >\n"
+    "            <svg width=\"18\" height=\"18\" viewBox=\"0 0 24 24\" fill=\"currentColor\">\n"
+    "              <path d=\"M11 18V6l-8.5 6 8.5 6zm.5-6l8.5 6V6l-8.5 6z\" />\n"
+    "            </svg>\n"
+    "          </button>\n\n"
+    "          {/* Fast Forward 10s */}\n"
+    "          <button\n"
+    "            type=\"button\"\n"
+    "            aria-label=\"Forward 10 seconds\"\n"
+    "            onClick={() => onSeek(Math.min(duration, currentTime + 10))}\n"
+    "            style={{\n"
+    "              background: 'none',\n"
+    "              border: 'none',\n"
+    "              color: 'rgba(255, 255, 255, 0.85)',\n"
+    "              cursor: 'pointer',\n"
+    "              padding: '6px',\n"
+    "              borderRadius: '6px',\n"
+    "              display: 'flex',\n"
+    "              alignItems: 'center',\n"
+    "              justifyContent: 'center',\n"
+    "            }}\n"
+    "          >\n"
+    "            <svg width=\"18\" height=\"18\" viewBox=\"0 0 24 24\" fill=\"currentColor\">\n"
+    "              <path d=\"M4 18l8.5-6L4 6v12zm9-12v12l8.5-6L13 6z\" />\n"
+    "            </svg>\n"
+    "          </button>\n\n"
+    "          {/* Volume Button & Slider */}\n"
+    "          <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>\n"
+    "            <button\n"
+    "              type=\"button\"\n"
+    "              aria-label={isMuted ? 'Unmute' : 'Mute'}\n"
+    "              onClick={onToggleMute}\n"
+    "              style={{\n"
+    "                background: 'none',\n"
+    "                border: 'none',\n"
+    "                color: '#ffffff',\n"
+    "                cursor: 'pointer',\n"
+    "                padding: '6px',\n"
+    "                display: 'flex',\n"
+    "                alignItems: 'center',\n"
+    "              }}\n"
+    "            >\n"
+    "              {isMuted || volume === 0 ? (\n"
+    "                <svg width=\"18\" height=\"18\" viewBox=\"0 0 24 24\" fill=\"currentColor\">\n"
+    "                  <path d=\"M16.5 12c0-1.77-1.02-3.29-2.5-4.03v2.21l2.45 2.45c.03-.2.05-.41.05-.63zm2.5 0c0 .94-.2 1.82-.54 2.64l1.51 1.51C20.63 14.91 21 13.5 21 12c0-4.28-2.99-7.86-7-8.77v2.06c2.89.86 5 3.54 5 6.71zM4.27 3L3 4.27 7.73 9H3v6h4l5 5v-6.73l4.25 4.25c-.67.52-1.42.93-2.25 1.18v2.06c1.38-.31 2.63-.95 3.69-1.81L19.73 21 21 19.73l-9-9L4.27 3zM12 4L9.91 6.09 12 8.18V4z\" />\n"
+    "                </svg>\n"
+    "              ) : (\n"
+    "                <svg width=\"18\" height=\"18\" viewBox=\"0 0 24 24\" fill=\"currentColor\">\n"
+    "                  <path d=\"M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02zM14 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4.01-.91 7-4.49 7-8.77s-2.99-7.86-7-8.77z\" />\n"
+    "                </svg>\n"
+    "              )}\n"
+    "            </button>\n"
+    "            <input\n"
+    "              type=\"range\"\n"
+    "              min=\"0\"\n"
+    "              max=\"1\"\n"
+    "              step=\"0.05\"\n"
+    "              value={isMuted ? 0 : volume}\n"
+    "              aria-label=\"Volume\"\n"
+    "              onChange={(e) => onVolumeChange(parseFloat(e.target.value))}\n"
+    "              style={{\n"
+    "                width: '64px',\n"
+    "                accentColor: accentColor,\n"
+    "                cursor: 'pointer',\n"
+    "                height: '4px',\n"
+    "              }}\n"
+    "            />\n"
+    "          </div>\n\n"
+    "          {/* Timestamp Display */}\n"
+    "          <div style={{ color: 'rgba(255, 255, 255, 0.85)', fontSize: '12px', fontFamily: 'monospace' }}>\n"
+    "            <span>{formatVideoTime(currentTime)}</span>\n"
+    "            <span style={{ margin: '0 4px', opacity: 0.5 }}>/</span>\n"
+    "            <span>{formatVideoTime(duration)}</span>\n"
+    "          </div>\n"
+    "        </div>\n\n"
+    "        {/* Right: Captions, Speed, Quality, PiP, Theater, Fullscreen */}\n"
+    "        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', position: 'relative' }}>\n"
+    "          {/* Captions Toggle */}\n"
+    "          <button\n"
+    "            type=\"button\"\n"
+    "            aria-label={showCaptions ? 'Disable captions' : 'Enable captions'}\n"
+    "            onClick={onToggleCaptions}\n"
+    "            style={{\n"
+    "              background: showCaptions ? 'rgba(59, 130, 246, 0.3)' : 'none',\n"
+    "              border: showCaptions ? `1px solid ${accentColor}` : '1px solid transparent',\n"
+    "              color: showCaptions ? accentColor : '#ffffff',\n"
+    "              cursor: 'pointer',\n"
+    "              padding: '4px 8px',\n"
+    "              borderRadius: '4px',\n"
+    "              fontSize: '11px',\n"
+    "              fontWeight: 600,\n"
+    "              letterSpacing: '0.5px',\n"
+    "            }}\n"
+    "          >\n"
+    "            CC\n"
+    "          </button>\n\n"
+    "          {/* Playback Speed Selector */}\n"
+    "          <select\n"
+    "            aria-label=\"Playback speed\"\n"
+    "            value={playbackRate}\n"
+    "            onChange={(e) => onPlaybackRateChange(parseFloat(e.target.value))}\n"
+    "            style={{\n"
+    "              background: 'rgba(15, 23, 42, 0.7)',\n"
+    "              border: '1px solid rgba(255, 255, 255, 0.2)',\n"
+    "              color: '#ffffff',\n"
+    "              fontSize: '11px',\n"
+    "              padding: '3px 6px',\n"
+    "              borderRadius: '4px',\n"
+    "              cursor: 'pointer',\n"
+    "            }}\n"
+    "          >\n"
+    "            <option value=\"0.5\">0.5x</option>\n"
+    "            <option value=\"0.75\">0.75x</option>\n"
+    "            <option value=\"1\">1x</option>\n"
+    "            <option value=\"1.25\">1.25x</option>\n"
+    "            <option value=\"1.5\">1.5x</option>\n"
+    "            <option value=\"2\">2x</option>\n"
+    "          </select>\n\n"
+    "          {/* Quality Selector */}\n"
+    "          <select\n"
+    "            aria-label=\"Video quality\"\n"
+    "            value={quality}\n"
+    "            onChange={(e) => onQualityChange(e.target.value as VideoQuality)}\n"
+    "            style={{\n"
+    "              background: 'rgba(15, 23, 42, 0.7)',\n"
+    "              border: '1px solid rgba(255, 255, 255, 0.2)',\n"
+    "              color: '#ffffff',\n"
+    "              fontSize: '11px',\n"
+    "              padding: '3px 6px',\n"
+    "              borderRadius: '4px',\n"
+    "              cursor: 'pointer',\n"
+    "            }}\n"
+    "          >\n"
+    "            <option value=\"auto\">Auto</option>\n"
+    "            <option value=\"1080p\">1080p</option>\n"
+    "            <option value=\"720p\">720p</option>\n"
+    "            <option value=\"480p\">480p</option>\n"
+    "            <option value=\"360p\">360p</option>\n"
+    "          </select>\n\n"
+    "          {/* Picture-in-Picture Button */}\n"
+    "          <button\n"
+    "            type=\"button\"\n"
+    "            aria-label={isPiP ? 'Exit Picture-in-Picture' : 'Enter Picture-in-Picture'}\n"
+    "            onClick={onTogglePiP}\n"
+    "            style={{\n"
+    "              background: 'none',\n"
+    "              border: 'none',\n"
+    "              color: '#ffffff',\n"
+    "              cursor: 'pointer',\n"
+    "              padding: '6px',\n"
+    "              borderRadius: '6px',\n"
+    "              display: 'flex',\n"
+    "              alignItems: 'center',\n"
+    "            }}\n"
+    "          >\n"
+    "            <svg width=\"18\" height=\"18\" viewBox=\"0 0 24 24\" fill=\"currentColor\">\n"
+    "              <path d=\"M19 7h-8v6h8V7zm2-4H3c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h18c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm0 16.01H3V4.99h18v14.02z\" />\n"
+    "            </svg>\n"
+    "          </button>\n\n"
+    "          {/* Theater Mode Button */}\n"
+    "          <button\n"
+    "            type=\"button\"\n"
+    "            aria-label={isTheater ? 'Exit Theater Mode' : 'Enter Theater Mode'}\n"
+    "            onClick={onToggleTheater}\n"
+    "            style={{\n"
+    "              background: isTheater ? 'rgba(59, 130, 246, 0.3)' : 'none',\n"
+    "              border: 'none',\n"
+    "              color: isTheater ? accentColor : '#ffffff',\n"
+    "              cursor: 'pointer',\n"
+    "              padding: '6px',\n"
+    "              borderRadius: '6px',\n"
+    "              display: 'flex',\n"
+    "              alignItems: 'center',\n"
+    "            }}\n"
+    "          >\n"
+    "            <svg width=\"18\" height=\"18\" viewBox=\"0 0 24 24\" fill=\"currentColor\">\n"
+    "              <path d=\"M19 6H5c-1.1 0-2 .9-2 2v8c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V8c0-1.1-.9-2-2-2zm0 10H5V8h14v8z\" />\n"
+    "            </svg>\n"
+    "          </button>\n\n"
+    "          {/* Fullscreen Button */}\n"
+    "          <button\n"
+    "            type=\"button\"\n"
+    "            aria-label={isFullscreen ? 'Exit Fullscreen' : 'Enter Fullscreen'}\n"
+    "            onClick={onToggleFullscreen}\n"
+    "            style={{\n"
+    "              background: 'none',\n"
+    "              border: 'none',\n"
+    "              color: '#ffffff',\n"
+    "              cursor: 'pointer',\n"
+    "              padding: '6px',\n"
+    "              borderRadius: '6px',\n"
+    "              display: 'flex',\n"
+    "              alignItems: 'center',\n"
+    "            }}\n"
+    "          >\n"
+    "            {isFullscreen ? (\n"
+    "              <svg width=\"18\" height=\"18\" viewBox=\"0 0 24 24\" fill=\"currentColor\">\n"
+    "                <path d=\"M5 16h3v3h2v-5H5v2zm3-8H5v2h5V5H8v3zm6 11h2v-3h3v-2h-5v5zm2-14v3h3v2h-5V5h2z\" />\n"
+    "              </svg>\n"
+    "            ) : (\n"
+    "              <svg width=\"18\" height=\"18\" viewBox=\"0 0 24 24\" fill=\"currentColor\">\n"
+    "                <path d=\"M7 14H5v5h5v-2H7v-3zm-2-4h2V7h3V5H5v5zm12 7h-3v2h5v-5h-2v3zM14 5v2h3v3h2V5h-5z\" />\n"
+    "              </svg>\n"
+    "            )}\n"
+    "          </button>\n"
+    "        </div>\n"
+    "      </div>\n"
+    "    </div>\n"
+    "  );\n"
+    "};\n"
+    "VideoControls.displayName = 'VideoControls';\n\n"
+    "// ---------------------------------------------------------------------------\n"
+    "// Main VideoPlayer Compound Component\n"
+    "// ---------------------------------------------------------------------------\n"
+    "const VideoPlayerComponent = forwardRef<VideoPlayerHandle, VideoPlayerProps>(\n"
+    "  (\n"
+    "    {\n"
+    "      src,\n"
+    "      sources = [],\n"
+    "      poster,\n"
+    "      title,\n"
+    "      chapters = DEFAULT_CHAPTERS,\n"
+    "      captions = [],\n"
+    "      autoPlay = false,\n"
+    "      loop = false,\n"
+    "      muted = false,\n"
+    "      preload = 'metadata',\n"
+    "      defaultQuality = 'auto',\n"
+    "      defaultPlaybackRate = 1,\n"
+    "      variant = 'default',\n"
+    "      size = 'md',\n"
+    "      theaterMode = false,\n"
+    "      showControls = true,\n"
+    "      className = '',\n"
+    "      style,\n"
+    "      onPlay,\n"
+    "      onPause,\n"
+    "      onEnded,\n"
+    "      onTimeUpdate,\n"
+    "      onVolumeChange,\n"
+    "      onError,\n"
+    "    },\n"
+    "    ref\n"
+    "  ) => {\n"
+    "    const containerRef = useRef<HTMLDivElement>(null);\n"
+    "    const videoRef = useRef<HTMLVideoElement>(null);\n\n"
+    "    const [isPlaying, setIsPlaying] = useState<boolean>(false);\n"
+    "    const [currentTime, setCurrentTime] = useState<number>(0);\n"
+    "    const [duration, setDuration] = useState<number>(0);\n"
+    "    const [buffered, setBuffered] = useState<number>(0);\n"
+    "    const [volume, setVolumeState] = useState<number>(1);\n"
+    "    const [isMuted, setIsMuted] = useState<boolean>(muted);\n"
+    "    const [isFullscreen, setIsFullscreen] = useState<boolean>(false);\n"
+    "    const [isPiP, setIsPiP] = useState<boolean>(false);\n"
+    "    const [isTheater, setIsTheater] = useState<boolean>(theaterMode);\n"
+    "    const [playbackRate, setPlaybackRateState] = useState<number>(defaultPlaybackRate);\n"
+    "    const [quality, setQualityState] = useState<VideoQuality>(defaultQuality);\n"
+    "    const [showCaptions, setShowCaptions] = useState<boolean>(false);\n"
+    "    const [activeCaption, setActiveCaption] = useState<string>('');\n"
+    "    const [controlsVisible, setControlsVisible] = useState<boolean>(true);\n"
+    "    const [isBuffering, setIsBuffering] = useState<boolean>(false);\n"
+    "    const [hasStarted, setHasStarted] = useState<boolean>(false);\n\n"
+    "    const hideTimerRef = useRef<NodeJS.Timeout | null>(null);\n\n"
+    "    // Reset auto-hide controls timer\n"
+    "    const resetHideTimer = useCallback(() => {\n"
+    "      setControlsVisible(true);\n"
+    "      if (hideTimerRef.current) {\n"
+    "        clearTimeout(hideTimerRef.current);\n"
+    "      }\n"
+    "      if (isPlaying) {\n"
+    "        hideTimerRef.current = setTimeout(() => {\n"
+    "          setControlsVisible(false);\n"
+    "        }, 3000);\n"
+    "      }\n"
+    "    }, [isPlaying]);\n\n"
+    "    useEffect(() => {\n"
+    "      resetHideTimer();\n"
+    "      return () => {\n"
+    "        if (hideTimerRef.current) clearTimeout(hideTimerRef.current);\n"
+    "      };\n"
+    "    }, [isPlaying, resetHideTimer]);\n\n"
+    "    // Synchronize HTML5 video events\n"
+    "    const handleTimeUpdate = () => {\n"
+    "      if (!videoRef.current) return;\n"
+    "      const curr = videoRef.current.currentTime;\n"
+    "      setCurrentTime(curr);\n"
+    "      onTimeUpdate?.(curr);\n\n"
+    "      // Buffered percentage\n"
+    "      if (videoRef.current.buffered.length > 0) {\n"
+    "        const end = videoRef.current.buffered.end(videoRef.current.buffered.length - 1);\n"
+    "        const dur = videoRef.current.duration || 1;\n"
+    "        setBuffered(end / dur);\n"
+    "      }\n\n"
+    "      // Active caption cue update\n"
+    "      if (showCaptions && captions.length > 0) {\n"
+    "        const track = captions[0];\n"
+    "        if (track.cues) {\n"
+    "          const cue = track.cues.find((c) => curr >= c.start && curr <= c.end);\n"
+    "          setActiveCaption(cue ? cue.text : '');\n"
+    "        }\n"
+    "      } else {\n"
+    "        setActiveCaption('');\n"
+    "      }\n"
+    "    };\n\n"
+    "    const handleLoadedMetadata = () => {\n"
+    "      if (videoRef.current) {\n"
+    "        setDuration(videoRef.current.duration || 0);\n"
+    "      }\n"
+    "    };\n\n"
+    "    const handlePlay = () => {\n"
+    "      setIsPlaying(true);\n"
+    "      setHasStarted(true);\n"
+    "      setIsBuffering(false);\n"
+    "      onPlay?.();\n"
+    "    };\n\n"
+    "    const handlePause = () => {\n"
+    "      setIsPlaying(false);\n"
+    "      setControlsVisible(true);\n"
+    "      onPause?.();\n"
+    "    };\n\n"
+    "    const handleEnded = () => {\n"
+    "      setIsPlaying(false);\n"
+    "      setControlsVisible(true);\n"
+    "      onEnded?.();\n"
+    "    };\n\n"
+    "    const handleWaiting = () => {\n"
+    "      setIsBuffering(true);\n"
+    "    };\n\n"
+    "    const handlePlaying = () => {\n"
+    "      setIsBuffering(false);\n"
+    "    };\n\n"
+    "    // Imperative Control Actions\n"
+    "    const play = useCallback(() => {\n"
+    "      videoRef.current?.play().catch(() => {});\n"
+    "    }, []);\n\n"
+    "    const pause = useCallback(() => {\n"
+    "      videoRef.current?.pause();\n"
+    "    }, []);\n\n"
+    "    const togglePlay = useCallback(() => {\n"
+    "      if (videoRef.current) {\n"
+    "        if (videoRef.current.paused) {\n"
+    "          videoRef.current.play().catch(() => {});\n"
+    "        } else {\n"
+    "          videoRef.current.pause();\n"
+    "        }\n"
+    "      }\n"
+    "    }, []);\n\n"
+    "    const seekTo = useCallback((seconds: number) => {\n"
+    "      if (videoRef.current) {\n"
+    "        videoRef.current.currentTime = seconds;\n"
+    "        setCurrentTime(seconds);\n"
+    "      }\n"
+    "    }, []);\n\n"
+    "    const setVolume = useCallback(\n"
+    "      (vol: number) => {\n"
+    "        const clamped = Math.max(0, Math.min(1, vol));\n"
+    "        if (videoRef.current) {\n"
+    "          videoRef.current.volume = clamped;\n"
+    "          videoRef.current.muted = clamped === 0;\n"
+    "        }\n"
+    "        setVolumeState(clamped);\n"
+    "        setIsMuted(clamped === 0);\n"
+    "        onVolumeChange?.(clamped, clamped === 0);\n"
+    "      },\n"
+    "      [onVolumeChange]\n"
+    "    );\n\n"
+    "    const mute = useCallback(() => {\n"
+    "      if (videoRef.current) {\n"
+    "        videoRef.current.muted = true;\n"
+    "      }\n"
+    "      setIsMuted(true);\n"
+    "      onVolumeChange?.(volume, true);\n"
+    "    }, [volume, onVolumeChange]);\n\n"
+    "    const unmute = useCallback(() => {\n"
+    "      if (videoRef.current) {\n"
+    "        videoRef.current.muted = false;\n"
+    "      }\n"
+    "      setIsMuted(false);\n"
+    "      onVolumeChange?.(volume, false);\n"
+    "    }, [volume, onVolumeChange]);\n\n"
+    "    const toggleMute = useCallback(() => {\n"
+    "      if (isMuted) {\n"
+    "        unmute();\n"
+    "      } else {\n"
+    "        mute();\n"
+    "      }\n"
+    "    }, [isMuted, mute, unmute]);\n\n"
+    "    const toggleFullscreen = useCallback(() => {\n"
+    "      if (!containerRef.current) return;\n"
+    "      if (!document.fullscreenElement) {\n"
+    "        containerRef.current.requestFullscreen?.().then(() => setIsFullscreen(true)).catch(() => {});\n"
+    "      } else {\n"
+    "        document.exitFullscreen?.().then(() => setIsFullscreen(false)).catch(() => {});\n"
+    "      }\n"
+    "    }, []);\n\n"
+    "    const togglePiP = useCallback(async () => {\n"
+    "      if (!videoRef.current) return;\n"
+    "      try {\n"
+    "        if (document.pictureInPictureElement) {\n"
+    "          await document.exitPictureInPicture();\n"
+    "          setIsPiP(false);\n"
+    "        } else if (document.pictureInPictureEnabled) {\n"
+    "          await videoRef.current.requestPictureInPicture();\n"
+    "          setIsPiP(true);\n"
+    "        }\n"
+    "      } catch (err) {\n"
+    "        // PiP not supported or rejected\n"
+    "      }\n"
+    "    }, []);\n\n"
+    "    const toggleTheater = useCallback(() => {\n"
+    "      setIsTheater((prev) => !prev);\n"
+    "    }, []);\n\n"
+    "    const setPlaybackRate = useCallback((rate: number) => {\n"
+    "      if (videoRef.current) {\n"
+    "        videoRef.current.playbackRate = rate;\n"
+    "      }\n"
+    "      setPlaybackRateState(rate);\n"
+    "    }, []);\n\n"
+    "    const setQuality = useCallback((q: VideoQuality) => {\n"
+    "      setQualityState(q);\n"
+    "    }, []);\n\n"
+    "    // Imperative ref handle\n"
+    "    useImperativeHandle(\n"
+    "      ref,\n"
+    "      () => ({\n"
+    "        play,\n"
+    "        pause,\n"
+    "        togglePlay,\n"
+    "        seekTo,\n"
+    "        setVolume,\n"
+    "        mute,\n"
+    "        unmute,\n"
+    "        toggleMute,\n"
+    "        toggleFullscreen,\n"
+    "        togglePiP,\n"
+    "        toggleTheater,\n"
+    "        setPlaybackRate,\n"
+    "        setQuality,\n"
+    "        getCurrentTime: () => currentTime,\n"
+    "        getDuration: () => duration,\n"
+    "        isPlaying: () => isPlaying,\n"
+    "        getVideoElement: () => videoRef.current,\n"
+    "      }),\n"
+    "      [\n"
+    "        play,\n"
+    "        pause,\n"
+    "        togglePlay,\n"
+    "        seekTo,\n"
+    "        setVolume,\n"
+    "        mute,\n"
+    "        unmute,\n"
+    "        toggleMute,\n"
+    "        toggleFullscreen,\n"
+    "        togglePiP,\n"
+    "        toggleTheater,\n"
+    "        setPlaybackRate,\n"
+    "        setQuality,\n"
+    "        currentTime,\n"
+    "        duration,\n"
+    "        isPlaying,\n"
+    "      ]\n"
+    "    );\n\n"
+    "    // Keyboard navigation\n"
+    "    const handleKeyDown = (e: React.KeyboardEvent<HTMLDivElement>) => {\n"
+    "      switch (e.key) {\n"
+    "        case ' ': // Space\n"
+    "        case 'k':\n"
+    "        case 'K':\n"
+    "          e.preventDefault();\n"
+    "          togglePlay();\n"
+    "          break;\n"
+    "        case 'ArrowLeft':\n"
+    "          e.preventDefault();\n"
+    "          seekTo(Math.max(0, currentTime - 5));\n"
+    "          break;\n"
+    "        case 'ArrowRight':\n"
+    "          e.preventDefault();\n"
+    "          seekTo(Math.min(duration, currentTime + 5));\n"
+    "          break;\n"
+    "        case 'ArrowUp':\n"
+    "          e.preventDefault();\n"
+    "          setVolume(Math.min(1, volume + 0.1));\n"
+    "          break;\n"
+    "        case 'ArrowDown':\n"
+    "          e.preventDefault();\n"
+    "          setVolume(Math.max(0, volume - 0.1));\n"
+    "          break;\n"
+    "        case 'f':\n"
+    "        case 'F':\n"
+    "          e.preventDefault();\n"
+    "          toggleFullscreen();\n"
+    "          break;\n"
+    "        case 't':\n"
+    "        case 'T':\n"
+    "          e.preventDefault();\n"
+    "          toggleTheater();\n"
+    "          break;\n"
+    "        case 'm':\n"
+    "        case 'M':\n"
+    "          e.preventDefault();\n"
+    "          toggleMute();\n"
+    "          break;\n"
+    "        case 'c':\n"
+    "        case 'C':\n"
+    "          e.preventDefault();\n"
+    "          setShowCaptions((prev) => !prev);\n"
+    "          break;\n"
+    "        default:\n"
+    "          break;\n"
+    "      }\n"
+    "    };\n\n"
+    "    // Size scale mapping\n"
+    "    const sizeStyles = useMemo(() => {\n"
+    "      if (isTheater) return { maxWidth: '100%', width: '100%' };\n"
+    "      switch (size) {\n"
+    "        case 'sm':\n"
+    "          return { maxWidth: '560px', width: '100%' };\n"
+    "        case 'lg':\n"
+    "          return { maxWidth: '1120px', width: '100%' };\n"
+    "        case 'md':\n"
+    "        default:\n"
+    "          return { maxWidth: '840px', width: '100%' };\n"
+    "      }\n"
+    "    }, [size, isTheater]);\n\n"
+    "    // Visual variant styles\n"
+    "    const variantStyles = useMemo(() => {\n"
+    "      switch (variant) {\n"
+    "        case 'card':\n"
+    "          return {\n"
+    "            backgroundColor: '#0f172a',\n"
+    "            border: '1px solid #1e293b',\n"
+    "            boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.5), 0 8px 10px -6px rgba(0, 0, 0, 0.5)',\n"
+    "            borderRadius: '12px',\n"
+    "          };\n"
+    "        case 'glass':\n"
+    "          return {\n"
+    "            backgroundColor: 'rgba(15, 23, 42, 0.75)',\n"
+    "            backdropFilter: 'blur(20px)',\n"
+    "            WebkitBackdropFilter: 'blur(20px)',\n"
+    "            border: '1px solid rgba(255, 255, 255, 0.12)',\n"
+    "            boxShadow: '0 8px 32px 0 rgba(0, 0, 0, 0.37)',\n"
+    "            borderRadius: '12px',\n"
+    "          };\n"
+    "        case 'neon':\n"
+    "          return {\n"
+    "            backgroundColor: '#090d16',\n"
+    "            border: '1px solid #06b6d4',\n"
+    "            boxShadow: '0 0 24px rgba(6, 182, 212, 0.35), inset 0 0 12px rgba(6, 182, 212, 0.1)',\n"
+    "            borderRadius: '12px',\n"
+    "          };\n"
+    "        case 'default':\n"
+    "        default:\n"
+    "          return {\n"
+    "            backgroundColor: '#020617',\n"
+    "            border: '1px solid #334155',\n"
+    "            boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.3)',\n"
+    "            borderRadius: '8px',\n"
+    "          };\n"
+    "      }\n"
+    "    }, [variant]);\n\n"
+    "    return (\n"
+    "      <div\n"
+    "        ref={containerRef}\n"
+    "        role=\"region\"\n"
+    "        aria-label={title || 'Video Player'}\n"
+    "        tabIndex={0}\n"
+    "        onKeyDown={handleKeyDown}\n"
+    "        onMouseMove={resetHideTimer}\n"
+    "        onMouseLeave={() => isPlaying && setControlsVisible(false)}\n"
+    "        className={className}\n"
+    "        style={{\n"
+    "          position: 'relative',\n"
+    "          overflow: 'hidden',\n"
+    "          outline: 'none',\n"
+    "          aspectRatio: '16 / 9',\n"
+    "          display: 'flex',\n"
+    "          flexDirection: 'column',\n"
+    "          justifyContent: 'center',\n"
+    "          alignItems: 'center',\n"
+    "          margin: '0 auto',\n"
+    "          ...sizeStyles,\n"
+    "          ...variantStyles,\n"
+    "          ...style,\n"
+    "        }}\n"
+    "      >\n"
+    "        {/* HTML5 Video Element */}\n"
+    "        <video\n"
+    "          ref={videoRef}\n"
+    "          src={src}\n"
+    "          poster={poster}\n"
+    "          autoPlay={autoPlay}\n"
+    "          loop={loop}\n"
+    "          muted={muted}\n"
+    "          preload={preload}\n"
+    "          onClick={togglePlay}\n"
+    "          onTimeUpdate={handleTimeUpdate}\n"
+    "          onLoadedMetadata={handleLoadedMetadata}\n"
+    "          onPlay={handlePlay}\n"
+    "          onPause={handlePause}\n"
+    "          onEnded={handleEnded}\n"
+    "          onWaiting={handleWaiting}\n"
+    "          onPlaying={handlePlaying}\n"
+    "          onError={onError}\n"
+    "          style={{\n"
+    "            width: '100%',\n"
+    "            height: '100%',\n"
+    "            objectFit: 'contain',\n"
+    "            cursor: 'pointer',\n"
+    "          }}\n"
+    "        >\n"
+    "          {sources.map((s, idx) => (\n"
+    "            <source key={idx} src={s.src} type={s.type || 'video/mp4'} />\n"
+    "          ))}\n"
+    "          Your browser does not support HTML5 video.\n"
+    "        </video>\n\n"
+    "        {/* Big Center Play Button Overlay (when paused or initial) */}\n"
+    "        {!isPlaying && !isBuffering && (\n"
+    "          <button\n"
+    "            type=\"button\"\n"
+    "            aria-label=\"Play video\"\n"
+    "            onClick={togglePlay}\n"
+    "            style={{\n"
+    "              position: 'absolute',\n"
+    "              top: '50%',\n"
+    "              left: '50%',\n"
+    "              transform: 'translate(-50%, -50%)',\n"
+    "              width: '68px',\n"
+    "              height: '68px',\n"
+    "              borderRadius: '50%',\n"
+    "              background: variant === 'neon' ? 'rgba(6, 182, 212, 0.85)' : 'rgba(15, 23, 42, 0.85)',\n"
+    "              color: '#ffffff',\n"
+    "              border: variant === 'neon' ? '2px solid #06b6d4' : '2px solid rgba(255, 255, 255, 0.3)',\n"
+    "              boxShadow: variant === 'neon' ? '0 0 25px #06b6d4' : '0 8px 24px rgba(0,0,0,0.6)',\n"
+    "              cursor: 'pointer',\n"
+    "              display: 'flex',\n"
+    "              alignItems: 'center',\n"
+    "              justifyContent: 'center',\n"
+    "              zIndex: 10,\n"
+    "              transition: 'transform 0.2s ease, background-color 0.2s ease',\n"
+    "            }}\n"
+    "          >\n"
+    "            <svg width=\"30\" height=\"30\" viewBox=\"0 0 24 24\" fill=\"currentColor\" style={{ marginLeft: '4px' }}>\n"
+    "              <path d=\"M8 5v14l11-7z\" />\n"
+    "            </svg>\n"
+    "          </button>\n"
+    "        )}\n\n"
+    "        {/* Buffering Indicator */}\n"
+    "        {isBuffering && (\n"
+    "          <div\n"
+    "            style={{\n"
+    "              position: 'absolute',\n"
+    "              top: '50%',\n"
+    "              left: '50%',\n"
+    "              transform: 'translate(-50%, -50%)',\n"
+    "              zIndex: 15,\n"
+    "              pointerEvents: 'none',\n"
+    "            }}\n"
+    "          >\n"
+    "            <svg width=\"48\" height=\"48\" viewBox=\"0 0 24 24\" stroke=\"currentColor\" fill=\"none\" style={{ animation: 'spin 1s linear infinite' }}>\n"
+    "              <circle cx=\"12\" cy=\"12\" r=\"10\" strokeWidth=\"3\" stroke=\"rgba(255,255,255,0.2)\" />\n"
+    "              <path d=\"M12 2a10 10 0 0 1 10 10\" strokeWidth=\"3\" stroke={variant === 'neon' ? '#06b6d4' : '#3b82f6'} />\n"
+    "            </svg>\n"
+    "          </div>\n"
+    "        )}\n\n"
+    "        {/* Closed Caption Overlay */}\n"
+    "        {showCaptions && activeCaption && (\n"
+    "          <div\n"
+    "            style={{\n"
+    "              position: 'absolute',\n"
+    "              bottom: controlsVisible ? '64px' : '24px',\n"
+    "              left: '50%',\n"
+    "              transform: 'translateX(-50%)',\n"
+    "              background: 'rgba(0, 0, 0, 0.85)',\n"
+    "              color: '#ffffff',\n"
+    "              padding: '6px 14px',\n"
+    "              borderRadius: '4px',\n"
+    "              fontSize: '14px',\n"
+    "              fontWeight: 500,\n"
+    "              textAlign: 'center',\n"
+    "              maxWidth: '80%',\n"
+    "              pointerEvents: 'none',\n"
+    "              zIndex: 18,\n"
+    "              transition: 'bottom 0.2s ease',\n"
+    "            }}\n"
+    "          >\n"
+    "            {activeCaption}\n"
+    "          </div>\n"
+    "        )}\n\n"
+    "        {/* Title Header Overlay (shown when controls visible) */}\n"
+    "        {title && controlsVisible && (\n"
+    "          <div\n"
+    "            style={{\n"
+    "              position: 'absolute',\n"
+    "              top: 0,\n"
+    "              left: 0,\n"
+    "              right: 0,\n"
+    "              padding: '14px 18px',\n"
+    "              background: 'linear-gradient(to bottom, rgba(0,0,0,0.7) 0%, transparent 100%)',\n"
+    "              color: '#ffffff',\n"
+    "              fontSize: '15px',\n"
+    "              fontWeight: 600,\n"
+    "              letterSpacing: '-0.2px',\n"
+    "              zIndex: 20,\n"
+    "              pointerEvents: 'none',\n"
+    "            }}\n"
+    "          >\n"
+    "            {title}\n"
+    "          </div>\n"
+    "        )}\n\n"
+    "        {/* Controls Overlay */}\n"
+    "        {showControls && (\n"
+    "          <div\n"
+    "            style={{\n"
+    "              opacity: controlsVisible ? 1 : 0,\n"
+    "              pointerEvents: controlsVisible ? 'auto' : 'none',\n"
+    "              transition: 'opacity 0.25s ease',\n"
+    "            }}\n"
+    "          >\n"
+    "            <VideoControls\n"
+    "              isPlaying={isPlaying}\n"
+    "              currentTime={currentTime}\n"
+    "              duration={duration}\n"
+    "              buffered={buffered}\n"
+    "              volume={volume}\n"
+    "              isMuted={isMuted}\n"
+    "              isFullscreen={isFullscreen}\n"
+    "              isPiP={isPiP}\n"
+    "              isTheater={isTheater}\n"
+    "              playbackRate={playbackRate}\n"
+    "              quality={quality}\n"
+    "              showCaptions={showCaptions}\n"
+    "              chapters={chapters}\n"
+    "              onTogglePlay={togglePlay}\n"
+    "              onSeek={seekTo}\n"
+    "              onVolumeChange={setVolume}\n"
+    "              onToggleMute={toggleMute}\n"
+    "              onToggleFullscreen={toggleFullscreen}\n"
+    "              onTogglePiP={togglePiP}\n"
+    "              onToggleTheater={toggleTheater}\n"
+    "              onPlaybackRateChange={setPlaybackRate}\n"
+    "              onQualityChange={setQuality}\n"
+    "              onToggleCaptions={() => setShowCaptions((prev) => !prev)}\n"
+    "              variant={variant}\n"
+    "              size={size}\n"
+    "            />\n"
+    "          </div>\n"
+    "        )}\n"
+    "      </div>\n"
+    "    );\n"
+    "  }\n"
+    ");\n"
+    "VideoPlayerComponent.displayName = 'VideoPlayer';\n\n"
+    "// ---------------------------------------------------------------------------\n"
+    "// Compound & Semantic Alias Exports\n"
+    "// ---------------------------------------------------------------------------\n"
+    "export const VideoPlayer = VideoPlayerComponent;\n"
+    "export const MoviePlayer = VideoPlayerComponent;\n"
+    "export const TheaterPlayer = VideoPlayerComponent;\n"
+    "export const StreamPlayer = VideoPlayerComponent;\n\n"
+    "VideoPlayer.displayName = 'VideoPlayer';\n"
+    "MoviePlayer.displayName = 'MoviePlayer';\n"
+    "TheaterPlayer.displayName = 'TheaterPlayer';\n"
+    "StreamPlayer.displayName = 'StreamPlayer';\n\n"
+    "export default VideoPlayerComponent;\n"
+)
+
+
+def render_video_player_component() -> str:
+    """Return static React implementation of the Accessible Futuristic Video Player Suite."""
+    return _VIDEO_PLAYER_COMPONENT
+
+
+
+# ---------------------------------------------------------------------------
+# Task R-391: Accessible Futuristic Reusable Whiteboard & Collaborative Canvas Suite (components/whiteboard.tsx)
+# ---------------------------------------------------------------------------
+
+_WHITEBOARD_COMPONENT = (
+    "'use client';\n\n"
+    "import React, {\n"
+    "  useState,\n"
+    "  useEffect,\n"
+    "  useRef,\n"
+    "  useCallback,\n"
+    "  useMemo,\n"
+    "  forwardRef,\n"
+    "  useImperativeHandle,\n"
+    "} from 'react';\n\n"
+    "// ---------------------------------------------------------------------------\n"
+    "// TypeScript Interfaces & Types\n"
+    "// ---------------------------------------------------------------------------\n"
+    "export type WhiteboardVariant = 'default' | 'card' | 'glass' | 'neon';\n"
+    "export type WhiteboardSize = 'sm' | 'md' | 'lg';\n"
+    "export type WhiteboardTool = 'select' | 'pencil' | 'line' | 'arrow' | 'rectangle' | 'circle' | 'text' | 'eraser';\n\n"
+    "export interface WhiteboardPoint {\n"
+    "  x: number;\n"
+    "  y: number;\n"
+    "}\n\n"
+    "export interface WhiteboardElement {\n"
+    "  id: string;\n"
+    "  type: WhiteboardTool;\n"
+    "  points: WhiteboardPoint[];\n"
+    "  x: number;\n"
+    "  y: number;\n"
+    "  width: number;\n"
+    "  height: number;\n"
+    "  color: string;\n"
+    "  strokeWidth: number;\n"
+    "  fillColor?: string;\n"
+    "  text?: string;\n"
+    "}\n\n"
+    "export interface WhiteboardHandle {\n"
+    "  undo: () => void;\n"
+    "  redo: () => void;\n"
+    "  clear: () => void;\n"
+    "  exportPng: () => string;\n"
+    "  exportSvg: () => string;\n"
+    "  exportJson: () => string;\n"
+    "  loadJson: (json: string) => boolean;\n"
+    "  setTool: (tool: WhiteboardTool) => void;\n"
+    "  setColor: (color: string) => void;\n"
+    "  setStrokeWidth: (width: number) => void;\n"
+    "  getZoom: () => number;\n"
+    "  resetZoom: () => void;\n"
+    "  getElements: () => WhiteboardElement[];\n"
+    "}\n\n"
+    "export interface WhiteboardToolbarProps {\n"
+    "  tool: WhiteboardTool;\n"
+    "  color: string;\n"
+    "  strokeWidth: number;\n"
+    "  canUndo: boolean;\n"
+    "  canRedo: boolean;\n"
+    "  zoom: number;\n"
+    "  onSelectTool: (tool: WhiteboardTool) => void;\n"
+    "  onSelectColor: (color: string) => void;\n"
+    "  onSelectStrokeWidth: (width: number) => void;\n"
+    "  onUndo: () => void;\n"
+    "  onRedo: () => void;\n"
+    "  onClear: () => void;\n"
+    "  onZoomIn: () => void;\n"
+    "  onZoomOut: () => void;\n"
+    "  onResetZoom: () => void;\n"
+    "  onExportPng: () => void;\n"
+    "  onExportSvg: () => void;\n"
+    "  variant?: WhiteboardVariant;\n"
+    "}\n\n"
+    "export interface WhiteboardProps {\n"
+    "  initialElements?: WhiteboardElement[];\n"
+    "  defaultTool?: WhiteboardTool;\n"
+    "  defaultColor?: string;\n"
+    "  defaultStrokeWidth?: number;\n"
+    "  variant?: WhiteboardVariant;\n"
+    "  size?: WhiteboardSize;\n"
+    "  readOnly?: boolean;\n"
+    "  gridBackground?: boolean;\n"
+    "  className?: string;\n"
+    "  style?: React.CSSProperties;\n"
+    "  onChange?: (elements: WhiteboardElement[]) => void;\n"
+    "}\n\n"
+    "const PRESET_COLORS = [\n"
+    "  '#f8fafc',\n"
+    "  '#94a3b8',\n"
+    "  '#ef4444',\n"
+    "  '#f59e0b',\n"
+    "  '#22c55e',\n"
+    "  '#06b6d4',\n"
+    "  '#3b82f6',\n"
+    "  '#a855f7',\n"
+    "  '#ec4899',\n"
+    "];\n\n"
+    "const STROKE_WIDTHS = [2, 4, 8, 14];\n\n"
+    "// ---------------------------------------------------------------------------\n"
+    "// Toolbar Subcomponent\n"
+    "// ---------------------------------------------------------------------------\n"
+    "export const WhiteboardToolbar: React.FC<WhiteboardToolbarProps> = ({\n"
+    "  tool,\n"
+    "  color,\n"
+    "  strokeWidth,\n"
+    "  canUndo,\n"
+    "  canRedo,\n"
+    "  zoom,\n"
+    "  onSelectTool,\n"
+    "  onSelectColor,\n"
+    "  onSelectStrokeWidth,\n"
+    "  onUndo,\n"
+    "  onRedo,\n"
+    "  onClear,\n"
+    "  onZoomIn,\n"
+    "  onZoomOut,\n"
+    "  onResetZoom,\n"
+    "  onExportPng,\n"
+    "  onExportSvg,\n"
+    "  variant = 'default',\n"
+    "}) => {\n"
+    "  const isNeon = variant === 'neon';\n"
+    "  const activeBg = isNeon ? 'rgba(6, 182, 212, 0.25)' : 'rgba(59, 130, 246, 0.25)';\n"
+    "  const activeBorder = isNeon ? '#06b6d4' : '#3b82f6';\n"
+    "  const activeColor = isNeon ? '#06b6d4' : '#60a5fa';\n\n"
+    "  const tools: { id: WhiteboardTool; label: string; icon: string }[] = [\n"
+    "    { id: 'select', label: 'Select', icon: 'M4 4l7 17 2-6 6-2L4 4z' },\n"
+    "    { id: 'pencil', label: 'Pencil', icon: 'M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z' },\n"
+    "    { id: 'line', label: 'Line', icon: 'M4 20L20 4' },\n"
+    "    { id: 'arrow', label: 'Arrow', icon: 'M5 19L19 5M19 5v8M19 5h-8' },\n"
+    "    { id: 'rectangle', label: 'Rectangle', icon: 'M4 4h16v16H4z' },\n"
+    "    { id: 'circle', label: 'Circle', icon: 'M12 2a10 10 0 100 20 10 10 0 000-20z' },\n"
+    "    { id: 'text', label: 'Text', icon: 'M4 4h16v4H14v12h-4V8H4V4z' },\n"
+    "    { id: 'eraser', label: 'Eraser', icon: 'M16.24 3.56l4.95 4.94c.78.79.78 2.05 0 2.84L12 20.53a4.008 4.008 0 01-5.66 0L2.81 17c-.78-.79-.78-2.05 0-2.84l9.19-9.19c.79-.78 2.05-.78 2.84 0l1.4 1.4z' },\n"
+    "  ];\n\n"
+    "  return (\n"
+    "    <div\n"
+    "      role=\"toolbar\"\n"
+    "      aria-label=\"Whiteboard Tools\"\n"
+    "      style={{\n"
+    "        display: 'flex',\n"
+    "        alignItems: 'center',\n"
+    "        justifyContent: 'space-between',\n"
+    "        flexWrap: 'wrap',\n"
+    "        gap: '8px',\n"
+    "        padding: '10px 14px',\n"
+    "        background: 'rgba(15, 23, 42, 0.9)',\n"
+    "        borderBottom: '1px solid rgba(255, 255, 255, 0.1)',\n"
+    "        color: '#ffffff',\n"
+    "        fontSize: '12px',\n"
+    "        zIndex: 10,\n"
+    "      }}\n"
+    "    >\n"
+    "      {/* Left: Tools */}\n"
+    "      <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>\n"
+    "        {tools.map((t) => {\n"
+    "          const isCurrent = tool === t.id;\n"
+    "          return (\n"
+    "            <button\n"
+    "              key={t.id}\n"
+    "              type=\"button\"\n"
+    "              aria-label={t.label}\n"
+    "              title={t.label}\n"
+    "              onClick={() => onSelectTool(t.id)}\n"
+    "              style={{\n"
+    "                background: isCurrent ? activeBg : 'transparent',\n"
+    "                border: isCurrent ? `1px solid ${activeBorder}` : '1px solid transparent',\n"
+    "                color: isCurrent ? activeColor : '#ffffff',\n"
+    "                cursor: 'pointer',\n"
+    "                padding: '6px 8px',\n"
+    "                borderRadius: '6px',\n"
+    "                display: 'flex',\n"
+    "                alignItems: 'center',\n"
+    "                justifyContent: 'center',\n"
+    "                transition: 'all 0.15s ease',\n"
+    "              }}\n"
+    "            >\n"
+    "              <svg width=\"18\" height=\"18\" viewBox=\"0 0 24 24\" fill={t.id === 'circle' || t.id === 'rectangle' ? 'none' : 'currentColor'} stroke=\"currentColor\" strokeWidth={t.id === 'line' || t.id === 'arrow' || t.id === 'circle' || t.id === 'rectangle' ? '2' : '0'} strokeLinecap=\"round\" strokeLinejoin=\"round\">\n"
+    "                <path d={t.icon} />\n"
+    "              </svg>\n"
+    "            </button>\n"
+    "          );\n"
+    "        })}\n"
+    "      </div>\n\n"
+    "      {/* Center: Color & Stroke */}\n"
+    "      <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>\n"
+    "        {/* Color Palette */}\n"
+    "        <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>\n"
+    "          {PRESET_COLORS.map((c) => (\n"
+    "            <button\n"
+    "              key={c}\n"
+    "              type=\"button\"\n"
+    "              aria-label={`Color ${c}`}\n"
+    "              onClick={() => onSelectColor(c)}\n"
+    "              style={{\n"
+    "                width: '18px',\n"
+    "                height: '18px',\n"
+    "                borderRadius: '50%',\n"
+    "                background: c,\n"
+    "                border: color === c ? '2px solid #ffffff' : '1px solid rgba(0,0,0,0.3)',\n"
+    "                boxShadow: color === c ? `0 0 6px ${c}` : undefined,\n"
+    "                cursor: 'pointer',\n"
+    "                padding: 0,\n"
+    "              }}\n"
+    "            />\n"
+    "          ))}\n"
+    "        </div>\n\n"
+    "        {/* Stroke Width Selector */}\n"
+    "        <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>\n"
+    "          {STROKE_WIDTHS.map((sw) => (\n"
+    "            <button\n"
+    "              key={sw}\n"
+    "              type=\"button\"\n"
+    "              aria-label={`Stroke width ${sw}px`}\n"
+    "              onClick={() => onSelectStrokeWidth(sw)}\n"
+    "              style={{\n"
+    "                width: '24px',\n"
+    "                height: '24px',\n"
+    "                borderRadius: '4px',\n"
+    "                background: strokeWidth === sw ? activeBg : 'transparent',\n"
+    "                border: strokeWidth === sw ? `1px solid ${activeBorder}` : '1px solid transparent',\n"
+    "                display: 'flex',\n"
+    "                alignItems: 'center',\n"
+    "                justifyContent: 'center',\n"
+    "                cursor: 'pointer',\n"
+    "                padding: 0,\n"
+    "              }}\n"
+    "            >\n"
+    "              <div\n"
+    "                style={{\n"
+    "                  width: `${Math.min(14, sw * 2)}px`,\n"
+    "                  height: `${Math.min(14, sw * 2)}px`,\n"
+    "                  borderRadius: '50%',\n"
+    "                  background: '#ffffff',\n"
+    "                }}\n"
+    "              />\n"
+    "            </button>\n"
+    "          ))}\n"
+    "        </div>\n"
+    "      </div>\n\n"
+    "      {/* Right: Undo/Redo, Zoom, Clear, Export */}\n"
+    "      <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>\n"
+    "        {/* Undo */}\n"
+    "        <button\n"
+    "          type=\"button\"\n"
+    "          aria-label=\"Undo\"\n"
+    "          disabled={!canUndo}\n"
+    "          onClick={onUndo}\n"
+    "          style={{\n"
+    "            background: 'none',\n"
+    "            border: 'none',\n"
+    "            color: canUndo ? '#ffffff' : 'rgba(255, 255, 255, 0.3)',\n"
+    "            cursor: canUndo ? 'pointer' : 'default',\n"
+    "            padding: '4px 6px',\n"
+    "            borderRadius: '4px',\n"
+    "          }}\n"
+    "        >\n"
+    "          <svg width=\"16\" height=\"16\" viewBox=\"0 0 24 24\" fill=\"currentColor\">\n"
+    "            <path d=\"M12.5 8c-2.65 0-5.05 1-6.9 2.6L2 7v9h9l-3.62-3.62c1.39-1.16 3.16-1.88 5.12-1.88 3.54 0 6.55 2.31 7.6 5.5l2.37-.78C21.08 11.03 17.15 8 12.5 8z\" />\n"
+    "          </svg>\n"
+    "        </button>\n\n"
+    "        {/* Redo */}\n"
+    "        <button\n"
+    "          type=\"button\"\n"
+    "          aria-label=\"Redo\"\n"
+    "          disabled={!canRedo}\n"
+    "          onClick={onRedo}\n"
+    "          style={{\n"
+    "            background: 'none',\n"
+    "            border: 'none',\n"
+    "            color: canRedo ? '#ffffff' : 'rgba(255, 255, 255, 0.3)',\n"
+    "            cursor: canRedo ? 'pointer' : 'default',\n"
+    "            padding: '4px 6px',\n"
+    "            borderRadius: '4px',\n"
+    "          }}\n"
+    "        >\n"
+    "          <svg width=\"16\" height=\"16\" viewBox=\"0 0 24 24\" fill=\"currentColor\">\n"
+    "            <path d=\"M18.4 10.6C16.55 9 14.15 8 11.5 8c-4.65 0-8.58 3.03-9.96 7.22L3.9 16c1.05-3.19 4.05-5.5 7.6-5.5 1.95 0 3.73.72 5.12 1.88L13 16h9V7l-3.6 3.6z\" />\n"
+    "          </svg>\n"
+    "        </button>\n\n"
+    "        {/* Zoom Controls */}\n"
+    "        <div style={{ display: 'flex', alignItems: 'center', background: 'rgba(255,255,255,0.08)', borderRadius: '4px', padding: '1px' }}>\n"
+    "          <button\n"
+    "            type=\"button\"\n"
+    "            aria-label=\"Zoom out\"\n"
+    "            onClick={onZoomOut}\n"
+    "            style={{ background: 'none', border: 'none', color: '#ffffff', cursor: 'pointer', padding: '3px 6px' }}\n"
+    "          >\n"
+    "            -\n"
+    "          </button>\n"
+    "          <button\n"
+    "            type=\"button\"\n"
+    "            aria-label=\"Reset zoom\"\n"
+    "            onClick={onResetZoom}\n"
+    "            style={{ background: 'none', border: 'none', color: '#ffffff', cursor: 'pointer', padding: '3px 6px', fontSize: '11px', fontFamily: 'monospace' }}\n"
+    "          >\n"
+    "            {Math.round(zoom * 100)}%\n"
+    "          </button>\n"
+    "          <button\n"
+    "            type=\"button\"\n"
+    "            aria-label=\"Zoom in\"\n"
+    "            onClick={onZoomIn}\n"
+    "            style={{ background: 'none', border: 'none', color: '#ffffff', cursor: 'pointer', padding: '3px 6px' }}\n"
+    "          >\n"
+    "            +\n"
+    "          </button>\n"
+    "        </div>\n\n"
+    "        {/* Clear */}\n"
+    "        <button\n"
+    "          type=\"button\"\n"
+    "          aria-label=\"Clear whiteboard\"\n"
+    "          onClick={onClear}\n"
+    "          style={{\n"
+    "            background: 'none',\n"
+    "            border: '1px solid rgba(239, 68, 68, 0.4)',\n"
+    "            color: '#f87171',\n"
+    "            cursor: 'pointer',\n"
+    "            padding: '4px 8px',\n"
+    "            borderRadius: '4px',\n"
+    "            fontSize: '11px',\n"
+    "          }}\n"
+    "        >\n"
+    "          Clear\n"
+    "        </button>\n\n"
+    "        {/* Export PNG */}\n"
+    "        <button\n"
+    "          type=\"button\"\n"
+    "          aria-label=\"Export PNG\"\n"
+    "          onClick={onExportPng}\n"
+    "          style={{\n"
+    "            background: 'rgba(255, 255, 255, 0.1)',\n"
+    "            border: 'none',\n"
+    "            color: '#ffffff',\n"
+    "            cursor: 'pointer',\n"
+    "            padding: '4px 8px',\n"
+    "            borderRadius: '4px',\n"
+    "            fontSize: '11px',\n"
+    "          }}\n"
+    "        >\n"
+    "          PNG\n"
+    "        </button>\n\n"
+    "        {/* Export SVG */}\n"
+    "        <button\n"
+    "          type=\"button\"\n"
+    "          aria-label=\"Export SVG\"\n"
+    "          onClick={onExportSvg}\n"
+    "          style={{\n"
+    "            background: activeBg,\n"
+    "            border: `1px solid ${activeBorder}`,\n"
+    "            color: activeColor,\n"
+    "            cursor: 'pointer',\n"
+    "            padding: '4px 8px',\n"
+    "            borderRadius: '4px',\n"
+    "            fontSize: '11px',\n"
+    "            fontWeight: 600,\n"
+    "          }}\n"
+    "        >\n"
+    "          SVG\n"
+    "        </button>\n"
+    "      </div>\n"
+    "    </div>\n"
+    "  );\n"
+    "};\n"
+    "WhiteboardToolbar.displayName = 'WhiteboardToolbar';\n\n"
+    "// ---------------------------------------------------------------------------\n"
+    "// Main Whiteboard Compound Component\n"
+    "// ---------------------------------------------------------------------------\n"
+    "const WhiteboardComponent = forwardRef<WhiteboardHandle, WhiteboardProps>(\n"
+    "  (\n"
+    "    {\n"
+    "      initialElements = [],\n"
+    "      defaultTool = 'pencil',\n"
+    "      defaultColor = '#f8fafc',\n"
+    "      defaultStrokeWidth = 4,\n"
+    "      variant = 'default',\n"
+    "      size = 'md',\n"
+    "      readOnly = false,\n"
+    "      gridBackground = true,\n"
+    "      className = '',\n"
+    "      style,\n"
+    "      onChange,\n"
+    "    },\n"
+    "    ref\n"
+    "  ) => {\n"
+    "    const containerRef = useRef<HTMLDivElement>(null);\n"
+    "    const canvasRef = useRef<HTMLCanvasElement>(null);\n\n"
+    "    const [elements, setElements] = useState<WhiteboardElement[]>(initialElements);\n"
+    "    const [history, setHistory] = useState<WhiteboardElement[][]>([initialElements]);\n"
+    "    const [historyIndex, setHistoryIndex] = useState<number>(0);\n\n"
+    "    const [tool, setTool] = useState<WhiteboardTool>(defaultTool);\n"
+    "    const [color, setColor] = useState<string>(defaultColor);\n"
+    "    const [strokeWidth, setStrokeWidth] = useState<number>(defaultStrokeWidth);\n"
+    "    const [zoom, setZoom] = useState<number>(1);\n"
+    "    const [pan, setPan] = useState<{ x: number; y: number }>({ x: 0, y: 0 });\n"
+    "    const [isDrawing, setIsDrawing] = useState<boolean>(false);\n"
+    "    const [isPanning, setIsPanning] = useState<boolean>(false);\n"
+    "    const [panStart, setPanStart] = useState<{ x: number; y: number }>({ x: 0, y: 0 });\n\n"
+    "    const currentElementRef = useRef<WhiteboardElement | null>(null);\n\n"
+    "    // Push state to undo/redo history\n"
+    "    const pushHistory = useCallback(\n"
+    "      (newElements: WhiteboardElement[]) => {\n"
+    "        setHistory((prev) => {\n"
+    "          const updated = prev.slice(0, historyIndex + 1);\n"
+    "          return [...updated, newElements];\n"
+    "        });\n"
+    "        setHistoryIndex((prev) => prev + 1);\n"
+    "        setElements(newElements);\n"
+    "        onChange?.(newElements);\n"
+    "      },\n"
+    "      [historyIndex, onChange]\n"
+    "    );\n\n"
+    "    const undo = useCallback(() => {\n"
+    "      if (historyIndex > 0) {\n"
+    "        const newIdx = historyIndex - 1;\n"
+    "        setHistoryIndex(newIdx);\n"
+    "        const previous = history[newIdx] || [];\n"
+    "        setElements(previous);\n"
+    "        onChange?.(previous);\n"
+    "      }\n"
+    "    }, [historyIndex, history, onChange]);\n\n"
+    "    const redo = useCallback(() => {\n"
+    "      if (historyIndex < history.length - 1) {\n"
+    "        const newIdx = historyIndex + 1;\n"
+    "        setHistoryIndex(newIdx);\n"
+    "        const next = history[newIdx] || [];\n"
+    "        setElements(next);\n"
+    "        onChange?.(next);\n"
+    "      }\n"
+    "    }, [historyIndex, history, onChange]);\n\n"
+    "    const clear = useCallback(() => {\n"
+    "      pushHistory([]);\n"
+    "    }, [pushHistory]);\n\n"
+    "    // Render canvas loop\n"
+    "    const redrawCanvas = useCallback(() => {\n"
+    "      const canvas = canvasRef.current;\n"
+    "      if (!canvas) return;\n"
+    "      const ctx = canvas.getContext('2d');\n"
+    "      if (!ctx) return;\n\n"
+    "      const width = canvas.width;\n"
+    "      const height = canvas.height;\n\n"
+    "      ctx.clearRect(0, 0, width, height);\n"
+    "      ctx.save();\n\n"
+    "      // Apply pan & zoom transform\n"
+    "      ctx.translate(pan.x, pan.y);\n"
+    "      ctx.scale(zoom, zoom);\n\n"
+    "      // Draw Grid Background\n"
+    "      if (gridBackground) {\n"
+    "        ctx.strokeStyle = 'rgba(255, 255, 255, 0.05)';\n"
+    "        ctx.lineWidth = 1;\n"
+    "        const gridSize = 24;\n"
+    "        const startX = Math.floor(-pan.x / zoom / gridSize) * gridSize - gridSize;\n"
+    "        const endX = startX + (width / zoom) + gridSize * 2;\n"
+    "        const startY = Math.floor(-pan.y / zoom / gridSize) * gridSize - gridSize;\n"
+    "        const endY = startY + (height / zoom) + gridSize * 2;\n\n"
+    "        ctx.beginPath();\n"
+    "        for (let x = startX; x <= endX; x += gridSize) {\n"
+    "          ctx.moveTo(x, startY);\n"
+    "          ctx.lineTo(x, endY);\n"
+    "        }\n"
+    "        for (let y = startY; y <= endY; y += gridSize) {\n"
+    "          ctx.moveTo(startX, y);\n"
+    "          ctx.lineTo(endX, y);\n"
+    "        }\n"
+    "        ctx.stroke();\n"
+    "      }\n\n"
+    "      // Helper to render an element\n"
+    "      const renderItem = (el: WhiteboardElement) => {\n"
+    "        ctx.strokeStyle = el.color;\n"
+    "        ctx.fillStyle = el.fillColor || 'transparent';\n"
+    "        ctx.lineWidth = el.strokeWidth;\n"
+    "        ctx.lineCap = 'round';\n"
+    "        ctx.lineJoin = 'round';\n\n"
+    "        switch (el.type) {\n"
+    "          case 'pencil': {\n"
+    "            if (el.points.length < 2) return;\n"
+    "            ctx.beginPath();\n"
+    "            ctx.moveTo(el.points[0].x, el.points[0].y);\n"
+    "            for (let i = 1; i < el.points.length; i++) {\n"
+    "              ctx.lineTo(el.points[i].x, el.points[i].y);\n"
+    "            }\n"
+    "            ctx.stroke();\n"
+    "            break;\n"
+    "          }\n"
+    "          case 'line': {\n"
+    "            if (el.points.length < 2) return;\n"
+    "            ctx.beginPath();\n"
+    "            ctx.moveTo(el.points[0].x, el.points[0].y);\n"
+    "            ctx.lineTo(el.points[el.points.length - 1].x, el.points[el.points.length - 1].y);\n"
+    "            ctx.stroke();\n"
+    "            break;\n"
+    "          }\n"
+    "          case 'arrow': {\n"
+    "            if (el.points.length < 2) return;\n"
+    "            const from = el.points[0];\n"
+    "            const to = el.points[el.points.length - 1];\n"
+    "            const headlen = Math.max(10, el.strokeWidth * 3);\n"
+    "            const dx = to.x - from.x;\n"
+    "            const dy = to.y - from.y;\n"
+    "            const angle = Math.atan2(dy, dx);\n"
+    "            ctx.beginPath();\n"
+    "            ctx.moveTo(from.x, from.y);\n"
+    "            ctx.lineTo(to.x, to.y);\n"
+    "            ctx.stroke();\n"
+    "            ctx.beginPath();\n"
+    "            ctx.moveTo(to.x, to.y);\n"
+    "            ctx.lineTo(to.x - headlen * Math.cos(angle - Math.PI / 6), to.y - headlen * Math.sin(angle - Math.PI / 6));\n"
+    "            ctx.lineTo(to.x - headlen * Math.cos(angle + Math.PI / 6), to.y - headlen * Math.sin(angle + Math.PI / 6));\n"
+    "            ctx.closePath();\n"
+    "            ctx.fillStyle = el.color;\n"
+    "            ctx.fill();\n"
+    "            break;\n"
+    "          }\n"
+    "          case 'rectangle': {\n"
+    "            ctx.beginPath();\n"
+    "            ctx.rect(el.x, el.y, el.width, el.height);\n"
+    "            if (el.fillColor) ctx.fill();\n"
+    "            ctx.stroke();\n"
+    "            break;\n"
+    "          }\n"
+    "          case 'circle': {\n"
+    "            ctx.beginPath();\n"
+    "            const rx = Math.abs(el.width) / 2;\n"
+    "            const ry = Math.abs(el.height) / 2;\n"
+    "            const cx = el.x + rx;\n"
+    "            const cy = el.y + ry;\n"
+    "            ctx.ellipse(cx, cy, Math.max(1, rx), Math.max(1, ry), 0, 0, 2 * Math.PI);\n"
+    "            if (el.fillColor) ctx.fill();\n"
+    "            ctx.stroke();\n"
+    "            break;\n"
+    "          }\n"
+    "          case 'text': {\n"
+    "            ctx.font = `${Math.max(12, el.strokeWidth * 4)}px monospace`;\n"
+    "            ctx.fillStyle = el.color;\n"
+    "            ctx.fillText(el.text || 'Text', el.x, el.y);\n"
+    "            break;\n"
+    "          }\n"
+    "          default:\n"
+    "            break;\n"
+    "        }\n"
+    "      };\n\n"
+    "      // Render all committed elements\n"
+    "      elements.forEach(renderItem);\n\n"
+    "      // Render active drawing element\n"
+    "      if (currentElementRef.current) {\n"
+    "        renderItem(currentElementRef.current);\n"
+    "      }\n\n"
+    "      ctx.restore();\n"
+    "    }, [elements, pan, zoom, gridBackground]);\n\n"
+    "    useEffect(() => {\n"
+    "      redrawCanvas();\n"
+    "    }, [redrawCanvas]);\n\n"
+    "    // Coordinate projection (screen to world canvas)\n"
+    "    const screenToCanvas = (clientX: number, clientY: number): WhiteboardPoint => {\n"
+    "      const canvas = canvasRef.current;\n"
+    "      if (!canvas) return { x: 0, y: 0 };\n"
+    "      const rect = canvas.getBoundingClientRect();\n"
+    "      const x = (clientX - rect.left - pan.x) / zoom;\n"
+    "      const y = (clientY - rect.top - pan.y) / zoom;\n"
+    "      return { x, y };\n"
+    "    };\n\n"
+    "    // Mouse / Pointer Event Handlers\n"
+    "    const handleMouseDown = (e: React.MouseEvent<HTMLCanvasElement>) => {\n"
+    "      if (readOnly) return;\n"
+    "      // Middle click or Space key panning\n"
+    "      if (e.button === 1 || tool === 'select') {\n"
+    "        setIsPanning(true);\n"
+    "        setPanStart({ x: e.clientX - pan.x, y: e.clientY - pan.y });\n"
+    "        return;\n"
+    "      }\n\n"
+    "      const pt = screenToCanvas(e.clientX, e.clientY);\n"
+    "      setIsDrawing(true);\n\n"
+    "      if (tool === 'eraser') {\n"
+    "        // Erase nearest element\n"
+    "        const remaining = elements.filter((el) => {\n"
+    "          const dist = Math.hypot(el.x - pt.x, el.y - pt.y);\n"
+    "          return dist > 25;\n"
+    "        });\n"
+    "        if (remaining.length !== elements.length) {\n"
+    "          pushHistory(remaining);\n"
+    "        }\n"
+    "        return;\n"
+    "      }\n\n"
+    "      if (tool === 'text') {\n"
+    "        const input = window.prompt('Enter note text:', 'Note');\n"
+    "        if (input) {\n"
+    "          const newEl: WhiteboardElement = {\n"
+    "            id: `el_${Date.now()}`,\n"
+    "            type: 'text',\n"
+    "            points: [pt],\n"
+    "            x: pt.x,\n"
+    "            y: pt.y,\n"
+    "            width: 100,\n"
+    "            height: 30,\n"
+    "            color,\n"
+    "            strokeWidth,\n"
+    "            text: input,\n"
+    "          };\n"
+    "          pushHistory([...elements, newEl]);\n"
+    "        }\n"
+    "        setIsDrawing(false);\n"
+    "        return;\n"
+    "      }\n\n"
+    "      currentElementRef.current = {\n"
+    "        id: `el_${Date.now()}`,\n"
+    "        type: tool,\n"
+    "        points: [pt],\n"
+    "        x: pt.x,\n"
+    "        y: pt.y,\n"
+    "        width: 0,\n"
+    "        height: 0,\n"
+    "        color,\n"
+    "        strokeWidth,\n"
+    "      };\n"
+    "    };\n\n"
+    "    const handleMouseMove = (e: React.MouseEvent<HTMLCanvasElement>) => {\n"
+    "      if (isPanning) {\n"
+    "        setPan({ x: e.clientX - panStart.x, y: e.clientY - panStart.y });\n"
+    "        return;\n"
+    "      }\n"
+    "      if (!isDrawing || !currentElementRef.current) return;\n\n"
+    "      const pt = screenToCanvas(e.clientX, e.clientY);\n"
+    "      const cur = currentElementRef.current;\n\n"
+    "      if (cur.type === 'pencil') {\n"
+    "        cur.points.push(pt);\n"
+    "      } else {\n"
+    "        cur.points = [cur.points[0], pt];\n"
+    "        cur.width = pt.x - cur.x;\n"
+    "        cur.height = pt.y - cur.y;\n"
+    "      }\n"
+    "      redrawCanvas();\n"
+    "    };\n\n"
+    "    const handleMouseUp = () => {\n"
+    "      if (isPanning) {\n"
+    "        setIsPanning(false);\n"
+    "      }\n"
+    "      if (isDrawing && currentElementRef.current) {\n"
+    "        const finished = currentElementRef.current;\n"
+    "        currentElementRef.current = null;\n"
+    "        setIsDrawing(false);\n"
+    "        pushHistory([...elements, finished]);\n"
+    "      }\n"
+    "    };\n\n"
+    "    // Wheel Zooming\n"
+    "    const handleWheel = (e: React.WheelEvent<HTMLCanvasElement>) => {\n"
+    "      e.preventDefault();\n"
+    "      const zoomDelta = e.deltaY < 0 ? 1.1 : 0.9;\n"
+    "      const newZoom = Math.min(3, Math.max(0.25, zoom * zoomDelta));\n"
+    "      setZoom(newZoom);\n"
+    "    };\n\n"
+    "    // Exports\n"
+    "    const exportPng = useCallback((): string => {\n"
+    "      if (canvasRef.current) {\n"
+    "        return canvasRef.current.toDataURL('image/png');\n"
+    "      }\n"
+    "      return '';\n"
+    "    }, []);\n\n"
+    "    const exportSvg = useCallback((): string => {\n"
+    "      let paths = '';\n"
+    "      elements.forEach((el) => {\n"
+    "        if (el.type === 'pencil' && el.points.length > 1) {\n"
+    "          const d = el.points.map((p, i) => `${i === 0 ? 'M' : 'L'}${p.x},${p.y}`).join(' ');\n"
+    "          paths += `<path d=\"${d}\" stroke=\"${el.color}\" stroke-width=\"${el.strokeWidth}\" fill=\"none\" stroke-linecap=\"round\" stroke-linejoin=\"round\" />\\n`;\n"
+    "        } else if (el.type === 'rectangle') {\n"
+    "          paths += `<rect x=\"${el.x}\" y=\"${el.y}\" width=\"${el.width}\" height=\"${el.height}\" stroke=\"${el.color}\" stroke-width=\"${el.strokeWidth}\" fill=\"${el.fillColor || 'none'}\" />\\n`;\n"
+    "        } else if (el.type === 'circle') {\n"
+    "          const rx = Math.abs(el.width) / 2;\n"
+    "          const ry = Math.abs(el.height) / 2;\n"
+    "          paths += `<ellipse cx=\"${el.x + rx}\" cy=\"${el.y + ry}\" rx=\"${rx}\" ry=\"${ry}\" stroke=\"${el.color}\" stroke-width=\"${el.strokeWidth}\" fill=\"${el.fillColor || 'none'}\" />\\n`;\n"
+    "        } else if (el.type === 'line' && el.points.length > 1) {\n"
+    "          const p1 = el.points[0];\n"
+    "          const p2 = el.points[el.points.length - 1];\n"
+    "          paths += `<line x1=\"${p1.x}\" y1=\"${p1.y}\" x2=\"${p2.x}\" y2=\"${p2.y}\" stroke=\"${el.color}\" stroke-width=\"${el.strokeWidth}\" stroke-linecap=\"round\" />\\n`;\n"
+    "        } else if (el.type === 'text') {\n"
+    "          paths += `<text x=\"${el.x}\" y=\"${el.y}\" fill=\"${el.color}\" font-family=\"monospace\" font-size=\"14\">${el.text || ''}</text>\\n`;\n"
+    "        }\n"
+    "      });\n"
+    "      return `<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 1200 800\" width=\"100%\" height=\"100%\">\\n${paths}</svg>`;\n"
+    "    }, [elements]);\n\n"
+    "    const exportJson = useCallback((): string => {\n"
+    "      return JSON.stringify(elements, null, 2);\n"
+    "    }, [elements]);\n\n"
+    "    const loadJson = useCallback(\n"
+    "      (jsonStr: string): boolean => {\n"
+    "        try {\n"
+    "          const parsed = JSON.parse(jsonStr);\n"
+    "          if (Array.isArray(parsed)) {\n"
+    "            pushHistory(parsed);\n"
+    "            return true;\n"
+    "          }\n"
+    "        } catch (e) {\n"
+    "          // Invalid JSON\n"
+    "        }\n"
+    "        return false;\n"
+    "      },\n"
+    "      [pushHistory]\n"
+    "    );\n\n"
+    "    // Imperative Handle\n"
+    "    useImperativeHandle(\n"
+    "      ref,\n"
+    "      () => ({\n"
+    "        undo,\n"
+    "        redo,\n"
+    "        clear,\n"
+    "        exportPng,\n"
+    "        exportSvg,\n"
+    "        exportJson,\n"
+    "        loadJson,\n"
+    "        setTool,\n"
+    "        setColor,\n"
+    "        setStrokeWidth,\n"
+    "        getZoom: () => zoom,\n"
+    "        resetZoom: () => setZoom(1),\n"
+    "        getElements: () => elements,\n"
+    "      }),\n"
+    "      [undo, redo, clear, exportPng, exportSvg, exportJson, loadJson, zoom, elements]\n"
+    "    );\n\n"
+    "    // Variant styling\n"
+    "    const variantStyles = useMemo(() => {\n"
+    "      switch (variant) {\n"
+    "        case 'card':\n"
+    "          return {\n"
+    "            backgroundColor: '#0f172a',\n"
+    "            border: '1px solid #1e293b',\n"
+    "            boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.5), 0 8px 10px -6px rgba(0, 0, 0, 0.5)',\n"
+    "            borderRadius: '12px',\n"
+    "          };\n"
+    "        case 'glass':\n"
+    "          return {\n"
+    "            backgroundColor: 'rgba(15, 23, 42, 0.8)',\n"
+    "            backdropFilter: 'blur(20px)',\n"
+    "            WebkitBackdropFilter: 'blur(20px)',\n"
+    "            border: '1px solid rgba(255, 255, 255, 0.12)',\n"
+    "            boxShadow: '0 8px 32px 0 rgba(0, 0, 0, 0.37)',\n"
+    "            borderRadius: '12px',\n"
+    "          };\n"
+    "        case 'neon':\n"
+    "          return {\n"
+    "            backgroundColor: '#090d16',\n"
+    "            border: '1px solid #06b6d4',\n"
+    "            boxShadow: '0 0 24px rgba(6, 182, 212, 0.35), inset 0 0 12px rgba(6, 182, 212, 0.1)',\n"
+    "            borderRadius: '12px',\n"
+    "          };\n"
+    "        case 'default':\n"
+    "        default:\n"
+    "          return {\n"
+    "            backgroundColor: '#020617',\n"
+    "            border: '1px solid #334155',\n"
+    "            boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.3)',\n"
+    "            borderRadius: '8px',\n"
+    "          };\n"
+    "      }\n"
+    "    }, [variant]);\n\n"
+    "    // Size styling\n"
+    "    const heightStyle = useMemo(() => {\n"
+    "      switch (size) {\n"
+    "        case 'sm':\n"
+    "          return '540px';\n"
+    "        case 'lg':\n"
+    "          return '840px';\n"
+    "        case 'md':\n"
+    "        default:\n"
+    "          return '680px';\n"
+    "      }\n"
+    "    }, [size]);\n\n"
+    "    return (\n"
+    "      <div\n"
+    "        ref={containerRef}\n"
+    "        role=\"application\"\n"
+    "        aria-label=\"Whiteboard Canvas\"\n"
+    "        className={className}\n"
+    "        style={{\n"
+    "          position: 'relative',\n"
+    "          display: 'flex',\n"
+    "          flexDirection: 'column',\n"
+    "          width: '100%',\n"
+    "          height: heightStyle,\n"
+    "          overflow: 'hidden',\n"
+    "          ...variantStyles,\n"
+    "          ...style,\n"
+    "        }}\n"
+    "      >\n"
+    "        {/* Toolbar */}\n"
+    "        <WhiteboardToolbar\n"
+    "          tool={tool}\n"
+    "          color={color}\n"
+    "          strokeWidth={strokeWidth}\n"
+    "          canUndo={historyIndex > 0}\n"
+    "          canRedo={historyIndex < history.length - 1}\n"
+    "          zoom={zoom}\n"
+    "          onSelectTool={setTool}\n"
+    "          onSelectColor={setColor}\n"
+    "          onSelectStrokeWidth={setStrokeWidth}\n"
+    "          onUndo={undo}\n"
+    "          onRedo={redo}\n"
+    "          onClear={clear}\n"
+    "          onZoomIn={() => setZoom((z) => Math.min(3, z * 1.15))}\n"
+    "          onZoomOut={() => setZoom((z) => Math.max(0.25, z * 0.85))}\n"
+    "          onResetZoom={() => setZoom(1)}\n"
+    "          onExportPng={() => {\n"
+    "            const url = exportPng();\n"
+    "            if (url) {\n"
+    "              const a = document.createElement('a');\n"
+    "              a.href = url;\n"
+    "              a.download = 'whiteboard.png';\n"
+    "              a.click();\n"
+    "            }\n"
+    "          }}\n"
+    "          onExportSvg={() => {\n"
+    "            const svg = exportSvg();\n"
+    "            const blob = new Blob([svg], { type: 'image/svg+xml' });\n"
+    "            const url = URL.createObjectURL(blob);\n"
+    "            const a = document.createElement('a');\n"
+    "            a.href = url;\n"
+    "            a.download = 'whiteboard.svg';\n"
+    "            a.click();\n"
+    "          }}\n"
+    "          variant={variant}\n"
+    "        />\n\n"
+    "        {/* Canvas Area */}\n"
+    "        <div style={{ flex: 1, position: 'relative', overflow: 'hidden' }}>\n"
+    "          <canvas\n"
+    "            ref={canvasRef}\n"
+    "            width={1600}\n"
+    "            height={1000}\n"
+    "            onMouseDown={handleMouseDown}\n"
+    "            onMouseMove={handleMouseMove}\n"
+    "            onMouseUp={handleMouseUp}\n"
+    "            onWheel={handleWheel}\n"
+    "            style={{\n"
+    "              width: '100%',\n"
+    "              height: '100%',\n"
+    "              cursor: tool === 'select' ? (isPanning ? 'grabbing' : 'grab') : 'crosshair',\n"
+    "              touchAction: 'none',\n"
+    "            }}\n"
+    "          />\n"
+    "        </div>\n"
+    "      </div>\n"
+    "    );\n"
+    "  }\n"
+    ");\n"
+    "WhiteboardComponent.displayName = 'Whiteboard';\n\n"
+    "// ---------------------------------------------------------------------------\n"
+    "// Compound & Semantic Alias Exports\n"
+    "// ---------------------------------------------------------------------------\n"
+    "export const Whiteboard = WhiteboardComponent;\n"
+    "export const DrawingCanvas = WhiteboardComponent;\n"
+    "export const SketchBoard = WhiteboardComponent;\n"
+    "export const CollaborativeCanvas = WhiteboardComponent;\n\n"
+    "Whiteboard.displayName = 'Whiteboard';\n"
+    "DrawingCanvas.displayName = 'DrawingCanvas';\n"
+    "SketchBoard.displayName = 'SketchBoard';\n"
+    "CollaborativeCanvas.displayName = 'CollaborativeCanvas';\n\n"
+    "export default WhiteboardComponent;\n"
+)
+
+
+def render_whiteboard_component() -> str:
+    """Return static React implementation of the Accessible Futuristic Whiteboard Suite."""
+    return _WHITEBOARD_COMPONENT
+
+
+
+# ---------------------------------------------------------------------------
+# Task R-392: Accessible Futuristic Reusable Code Diff Editor & 3-Way Merge Conflict Resolver Suite (components/merge-editor.tsx)
+# ---------------------------------------------------------------------------
+
+_MERGE_EDITOR_COMPONENT = (
+    "'use client';\n\n"
+    "import React, {\n"
+    "  useState,\n"
+    "  useEffect,\n"
+    "  useRef,\n"
+    "  useCallback,\n"
+    "  useMemo,\n"
+    "  forwardRef,\n"
+    "  useImperativeHandle,\n"
+    "} from 'react';\n\n"
+    "// ---------------------------------------------------------------------------\n"
+    "// TypeScript Interfaces & Types\n"
+    "// ---------------------------------------------------------------------------\n"
+    "export type MergeEditorVariant = 'default' | 'card' | 'glass' | 'neon';\n"
+    "export type MergeEditorSize = 'sm' | 'md' | 'lg';\n"
+    "export type ConflictStatus = 'unresolved' | 'accepted_current' | 'accepted_incoming' | 'accepted_both';\n\n"
+    "export interface MergeConflict {\n"
+    "  id: string;\n"
+    "  startLine: number;\n"
+    "  currentContent: string[];\n"
+    "  incomingContent: string[];\n"
+    "  currentBranch?: string;\n"
+    "  incomingBranch?: string;\n"
+    "  status: ConflictStatus;\n"
+    "  customContent?: string[];\n"
+    "}\n\n"
+    "export interface MergeEditorHandle {\n"
+    "  acceptCurrent: (conflictId: string) => void;\n"
+    "  acceptIncoming: (conflictId: string) => void;\n"
+    "  acceptBoth: (conflictId: string) => void;\n"
+    "  acceptAllCurrent: () => void;\n"
+    "  acceptAllIncoming: () => void;\n"
+    "  resetAll: () => void;\n"
+    "  nextConflict: () => void;\n"
+    "  prevConflict: () => void;\n"
+    "  getMergedText: () => string;\n"
+    "  isAllResolved: () => boolean;\n"
+    "  getUnresolvedCount: () => number;\n"
+    "  getTotalConflicts: () => number;\n"
+    "}\n\n"
+    "export interface MergeEditorToolbarProps {\n"
+    "  filename?: string;\n"
+    "  totalConflicts: number;\n"
+    "  unresolvedConflicts: number;\n"
+    "  activeConflictIndex: number;\n"
+    "  onNextConflict: () => void;\n"
+    "  onPrevConflict: () => void;\n"
+    "  onAcceptAllCurrent: () => void;\n"
+    "  onAcceptAllIncoming: () => void;\n"
+    "  onResetAll: () => void;\n"
+    "  onCopyMerged: () => void;\n"
+    "  onDownloadMerged: () => void;\n"
+    "  isCopied: boolean;\n"
+    "  variant?: MergeEditorVariant;\n"
+    "}\n\n"
+    "export interface MergeEditorProps {\n"
+    "  rawContent?: string;\n"
+    "  conflicts?: MergeConflict[];\n"
+    "  filename?: string;\n"
+    "  language?: string;\n"
+    "  variant?: MergeEditorVariant;\n"
+    "  size?: MergeEditorSize;\n"
+    "  readOnly?: boolean;\n"
+    "  className?: string;\n"
+    "  style?: React.CSSProperties;\n"
+    "  onResolveChange?: (isAllResolved: boolean, mergedText: string) => void;\n"
+    "}\n\n"
+    "// ---------------------------------------------------------------------------\n"
+    "// Default Sample Conflicts\n"
+    "// ---------------------------------------------------------------------------\n"
+    "const DEFAULT_RAW_CONFLICT = `export function calculateTax(subtotal: number, rate: number): number {\n"
+    "<<<<<<< HEAD (Current Change)\n"
+    "  const discount = subtotal > 100 ? subtotal * 0.05 : 0;\n"
+    "  return (subtotal - discount) * rate;\n"
+    "=======\n"
+    "  const standardTax = subtotal * rate;\n"
+    "  return Math.round(standardTax * 100) / 100;\n"
+    ">>>>>>> main (Incoming Change)\n"
+    "}\n\n"
+    "export function formatCurrency(amount: number): string {\n"
+    "<<<<<<< HEAD (Current Change)\n"
+    "  return '$' + amount.toFixed(2);\n"
+    "=======\n"
+    "  return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(amount);\n"
+    ">>>>>>> main (Incoming Change)\n"
+    "}`;\n\n"
+    "// ---------------------------------------------------------------------------\n"
+    "// Raw Conflict Marker Parser\n"
+    "// ---------------------------------------------------------------------------\n"
+    "function parseRawConflicts(text: string): MergeConflict[] {\n"
+    "  const lines = text.split('\\n');\n"
+    "  const conflicts: MergeConflict[] = [];\n"
+    "  let insideConflict = false;\n"
+    "  let currentLines: string[] = [];\n"
+    "  let incomingLines: string[] = [];\n"
+    "  let inIncoming = false;\n"
+    "  let currentBranch = 'Current Change';\n"
+    "  let incomingBranch = 'Incoming Change';\n"
+    "  let startLine = 0;\n"
+    "  let counter = 1;\n\n"
+    "  lines.forEach((line, idx) => {\n"
+    "    if (line.startsWith('<<<<<<<')) {\n"
+    "      insideConflict = true;\n"
+    "      inIncoming = false;\n"
+    "      currentLines = [];\n"
+    "      incomingLines = [];\n"
+    "      startLine = idx + 1;\n"
+    "      currentBranch = line.replace('<<<<<<<', '').trim() || 'Current Change';\n"
+    "    } else if (insideConflict && line.startsWith('=======')) {\n"
+    "      inIncoming = true;\n"
+    "    } else if (insideConflict && line.startsWith('>>>>>>>')) {\n"
+    "      incomingBranch = line.replace('>>>>>>>', '').trim() || 'Incoming Change';\n"
+    "      conflicts.push({\n"
+    "        id: `conflict_${counter++}`,\n"
+    "        startLine,\n"
+    "        currentContent: [...currentLines],\n"
+    "        incomingContent: [...incomingLines],\n"
+    "        currentBranch,\n"
+    "        incomingBranch,\n"
+    "        status: 'unresolved',\n"
+    "      });\n"
+    "      insideConflict = false;\n"
+    "      inIncoming = false;\n"
+    "    } else if (insideConflict) {\n"
+    "      if (inIncoming) {\n"
+    "        incomingLines.push(line);\n"
+    "      } else {\n"
+    "        currentLines.push(line);\n"
+    "      }\n"
+    "    }\n"
+    "  });\n\n"
+    "  return conflicts;\n"
+    "}\n\n"
+    "// ---------------------------------------------------------------------------\n"
+    "// Toolbar Subcomponent\n"
+    "// ---------------------------------------------------------------------------\n"
+    "export const MergeEditorToolbar: React.FC<MergeEditorToolbarProps> = ({\n"
+    "  filename = 'source-code.ts',\n"
+    "  totalConflicts,\n"
+    "  unresolvedConflicts,\n"
+    "  activeConflictIndex,\n"
+    "  onNextConflict,\n"
+    "  onPrevConflict,\n"
+    "  onAcceptAllCurrent,\n"
+    "  onAcceptAllIncoming,\n"
+    "  onResetAll,\n"
+    "  onCopyMerged,\n"
+    "  onDownloadMerged,\n"
+    "  isCopied,\n"
+    "  variant = 'default',\n"
+    "}) => {\n"
+    "  const isNeon = variant === 'neon';\n"
+    "  const accentColor = isNeon ? '#06b6d4' : '#3b82f6';\n"
+    "  const isResolved = unresolvedConflicts === 0;\n\n"
+    "  return (\n"
+    "    <div\n"
+    "      role=\"toolbar\"\n"
+    "      aria-label=\"Merge Editor Controls\"\n"
+    "      style={{\n"
+    "        display: 'flex',\n"
+    "        alignItems: 'center',\n"
+    "        justifyContent: 'space-between',\n"
+    "        flexWrap: 'wrap',\n"
+    "        gap: '10px',\n"
+    "        padding: '10px 16px',\n"
+    "        background: 'rgba(15, 23, 42, 0.95)',\n"
+    "        borderBottom: '1px solid rgba(255, 255, 255, 0.1)',\n"
+    "        color: '#ffffff',\n"
+    "        fontSize: '12px',\n"
+    "        fontFamily: 'system-ui, -apple-system, sans-serif',\n"
+    "        zIndex: 10,\n"
+    "      }}\n"
+    "    >\n"
+    "      {/* Left: Filename & Status Badge */}\n"
+    "      <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>\n"
+    "        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontWeight: 600 }}>\n"
+    "          <svg width=\"16\" height=\"16\" viewBox=\"0 0 24 24\" fill=\"currentColor\" style={{ color: accentColor }}>\n"
+    "            <path d=\"M14 2H6c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V8l-6-6zm2 16H8v-2h8v2zm0-4H8v-2h8v2zm-3-5V3.5L18.5 9H13z\" />\n"
+    "          </svg>\n"
+    "          <span>{filename}</span>\n"
+    "        </div>\n\n"
+    "        {/* Conflict Resolution Status Badge */}\n"
+    "        <div\n"
+    "          role=\"status\"\n"
+    "          style={{\n"
+    "            padding: '3px 9px',\n"
+    "            borderRadius: '12px',\n"
+    "            fontSize: '11px',\n"
+    "            fontWeight: 600,\n"
+    "            background: isResolved ? 'rgba(34, 197, 94, 0.15)' : 'rgba(239, 68, 68, 0.15)',\n"
+    "            color: isResolved ? '#4ade80' : '#f87171',\n"
+    "            border: `1px solid ${isResolved ? 'rgba(34, 197, 94, 0.3)' : 'rgba(239, 68, 68, 0.3)'}`,\n"
+    "            display: 'flex',\n"
+    "            alignItems: 'center',\n"
+    "            gap: '4px',\n"
+    "          }}\n"
+    "        >\n"
+    "          {isResolved ? (\n"
+    "            <>\n"
+    "              <svg width=\"12\" height=\"12\" viewBox=\"0 0 24 24\" fill=\"currentColor\">\n"
+    "                <path d=\"M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z\" />\n"
+    "              </svg>\n"
+    "              <span>All Conflicts Resolved</span>\n"
+    "            </>\n"
+    "          ) : (\n"
+    "            <>\n"
+    "              <svg width=\"12\" height=\"12\" viewBox=\"0 0 24 24\" fill=\"currentColor\">\n"
+    "                <path d=\"M1 21h22L12 2 1 21zm12-3h-2v-2h2v2zm0-4h-2v-4h2v4z\" />\n"
+    "              </svg>\n"
+    "              <span>{unresolvedConflicts} of {totalConflicts} Conflicts Remaining</span>\n"
+    "            </>\n"
+    "          )}\n"
+    "        </div>\n"
+    "      </div>\n\n"
+    "      {/* Center: Conflict Jumper / Navigation */}\n"
+    "      <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>\n"
+    "        <button\n"
+    "          type=\"button\"\n"
+    "          aria-label=\"Previous conflict\"\n"
+    "          onClick={onPrevConflict}\n"
+    "          disabled={totalConflicts === 0}\n"
+    "          style={{\n"
+    "            background: 'rgba(255, 255, 255, 0.08)',\n"
+    "            border: 'none',\n"
+    "            color: '#ffffff',\n"
+    "            cursor: totalConflicts > 0 ? 'pointer' : 'default',\n"
+    "            padding: '5px 8px',\n"
+    "            borderRadius: '4px',\n"
+    "            display: 'flex',\n"
+    "            alignItems: 'center',\n"
+    "          }}\n"
+    "        >\n"
+    "          <svg width=\"14\" height=\"14\" viewBox=\"0 0 24 24\" fill=\"currentColor\">\n"
+    "            <path d=\"M15.41 7.41L14 6l-6 6 6 6 1.41-1.41L10.83 12z\" />\n"
+    "          </svg>\n"
+    "        </button>\n\n"
+    "        <span style={{ fontSize: '11px', color: 'rgba(255, 255, 255, 0.75)', fontFamily: 'monospace' }}>\n"
+    "          Conflict {totalConflicts > 0 ? activeConflictIndex + 1 : 0} of {totalConflicts}\n"
+    "        </span>\n\n"
+    "        <button\n"
+    "          type=\"button\"\n"
+    "          aria-label=\"Next conflict\"\n"
+    "          onClick={onNextConflict}\n"
+    "          disabled={totalConflicts === 0}\n"
+    "          style={{\n"
+    "            background: 'rgba(255, 255, 255, 0.08)',\n"
+    "            border: 'none',\n"
+    "            color: '#ffffff',\n"
+    "            cursor: totalConflicts > 0 ? 'pointer' : 'default',\n"
+    "            padding: '5px 8px',\n"
+    "            borderRadius: '4px',\n"
+    "            display: 'flex',\n"
+    "            alignItems: 'center',\n"
+    "          }}\n"
+    "        >\n"
+    "          <svg width=\"14\" height=\"14\" viewBox=\"0 0 24 24\" fill=\"currentColor\">\n"
+    "            <path d=\"M10 6L8.59 7.41 13.17 12l-4.58 4.59L10 18l6-6z\" />\n"
+    "          </svg>\n"
+    "        </button>\n"
+    "      </div>\n\n"
+    "      {/* Right: Batch Actions & Merged Export */}\n"
+    "      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>\n"
+    "        {/* Accept All Current */}\n"
+    "        <button\n"
+    "          type=\"button\"\n"
+    "          aria-label=\"Accept all current changes\"\n"
+    "          onClick={onAcceptAllCurrent}\n"
+    "          style={{\n"
+    "            background: 'rgba(34, 197, 94, 0.12)',\n"
+    "            border: '1px solid rgba(34, 197, 94, 0.3)',\n"
+    "            color: '#4ade80',\n"
+    "            cursor: 'pointer',\n"
+    "            padding: '4px 8px',\n"
+    "            borderRadius: '4px',\n"
+    "            fontSize: '11px',\n"
+    "            fontWeight: 500,\n"
+    "          }}\n"
+    "        >\n"
+    "          All Current\n"
+    "        </button>\n\n"
+    "        {/* Accept All Incoming */}\n"
+    "        <button\n"
+    "          type=\"button\"\n"
+    "          aria-label=\"Accept all incoming changes\"\n"
+    "          onClick={onAcceptAllIncoming}\n"
+    "          style={{\n"
+    "            background: 'rgba(59, 130, 246, 0.12)',\n"
+    "            border: '1px solid rgba(59, 130, 246, 0.3)',\n"
+    "            color: '#60a5fa',\n"
+    "            cursor: 'pointer',\n"
+    "            padding: '4px 8px',\n"
+    "            borderRadius: '4px',\n"
+    "            fontSize: '11px',\n"
+    "            fontWeight: 500,\n"
+    "          }}\n"
+    "        >\n"
+    "          All Incoming\n"
+    "        </button>\n\n"
+    "        {/* Reset All */}\n"
+    "        <button\n"
+    "          type=\"button\"\n"
+    "          aria-label=\"Reset all conflict resolutions\"\n"
+    "          onClick={onResetAll}\n"
+    "          style={{\n"
+    "            background: 'none',\n"
+    "            border: '1px solid rgba(255, 255, 255, 0.15)',\n"
+    "            color: 'rgba(255, 255, 255, 0.8)',\n"
+    "            cursor: 'pointer',\n"
+    "            padding: '4px 8px',\n"
+    "            borderRadius: '4px',\n"
+    "            fontSize: '11px',\n"
+    "          }}\n"
+    "        >\n"
+    "          Reset\n"
+    "        </button>\n\n"
+    "        {/* Copy Result */}\n"
+    "        <button\n"
+    "          type=\"button\"\n"
+    "          aria-label=\"Copy merged result\"\n"
+    "          onClick={onCopyMerged}\n"
+    "          style={{\n"
+    "            background: isCopied ? 'rgba(34, 197, 94, 0.2)' : 'rgba(255, 255, 255, 0.1)',\n"
+    "            border: isCopied ? '1px solid #22c55e' : 'none',\n"
+    "            color: isCopied ? '#4ade80' : '#ffffff',\n"
+    "            cursor: 'pointer',\n"
+    "            padding: '4px 8px',\n"
+    "            borderRadius: '4px',\n"
+    "            fontSize: '11px',\n"
+    "            display: 'flex',\n"
+    "            alignItems: 'center',\n"
+    "            gap: '4px',\n"
+    "          }}\n"
+    "        >\n"
+    "          {isCopied ? 'Copied!' : 'Copy'}\n"
+    "        </button>\n\n"
+    "        {/* Download Result */}\n"
+    "        <button\n"
+    "          type=\"button\"\n"
+    "          aria-label=\"Download merged file\"\n"
+    "          onClick={onDownloadMerged}\n"
+    "          style={{\n"
+    "            background: isNeon ? '#06b6d4' : '#3b82f6',\n"
+    "            border: 'none',\n"
+    "            color: '#ffffff',\n"
+    "            cursor: 'pointer',\n"
+    "            padding: '4px 10px',\n"
+    "            borderRadius: '4px',\n"
+    "            fontSize: '11px',\n"
+    "            fontWeight: 600,\n"
+    "            boxShadow: isNeon ? '0 0 10px rgba(6, 182, 212, 0.5)' : undefined,\n"
+    "          }}\n"
+    "        >\n"
+    "          Download\n"
+    "        </button>\n"
+    "      </div>\n"
+    "    </div>\n"
+    "  );\n"
+    "};\n"
+    "MergeEditorToolbar.displayName = 'MergeEditorToolbar';\n\n"
+    "// ---------------------------------------------------------------------------\n"
+    "// Main MergeEditor Compound Component\n"
+    "// ---------------------------------------------------------------------------\n"
+    "const MergeEditorComponent = forwardRef<MergeEditorHandle, MergeEditorProps>(\n"
+    "  (\n"
+    "    {\n"
+    "      rawContent = DEFAULT_RAW_CONFLICT,\n"
+    "      conflicts: propConflicts,\n"
+    "      filename = 'app.ts',\n"
+    "      language = 'typescript',\n"
+    "      variant = 'default',\n"
+    "      size = 'md',\n"
+    "      readOnly = false,\n"
+    "      className = '',\n"
+    "      style,\n"
+    "      onResolveChange,\n"
+    "    },\n"
+    "    ref\n"
+    "  ) => {\n"
+    "    const [conflicts, setConflicts] = useState<MergeConflict[]>(() => {\n"
+    "      return propConflicts || parseRawConflicts(rawContent);\n"
+    "    });\n\n"
+    "    const [activeConflictIndex, setActiveConflictIndex] = useState<number>(0);\n"
+    "    const [isCopied, setIsCopied] = useState<boolean>(false);\n\n"
+    "    // Calculate resolution statistics\n"
+    "    const unresolvedCount = useMemo(() => {\n"
+    "      return conflicts.filter((c) => c.status === 'unresolved').length;\n"
+    "    }, [conflicts]);\n\n"
+    "    const isAllResolved = unresolvedCount === 0;\n\n"
+    "    // Compute merged text representation\n"
+    "    const getMergedText = useCallback((): string => {\n"
+    "      const lines: string[] = [];\n"
+    "      conflicts.forEach((c) => {\n"
+    "        switch (c.status) {\n"
+    "          case 'accepted_current':\n"
+    "            lines.push(...c.currentContent);\n"
+    "            break;\n"
+    "          case 'accepted_incoming':\n"
+    "            lines.push(...c.incomingContent);\n"
+    "            break;\n"
+    "          case 'accepted_both':\n"
+    "            lines.push(...c.currentContent, ...c.incomingContent);\n"
+    "            break;\n"
+    "          case 'unresolved':\n"
+    "          default:\n"
+    "            lines.push(`<<<<<<< ${c.currentBranch || 'HEAD'}`);\n"
+    "            lines.push(...c.currentContent);\n"
+    "            lines.push('=======');\n"
+    "            lines.push(...c.incomingContent);\n"
+    "            lines.push(`>>>>>>> ${c.incomingBranch || 'incoming'}`);\n"
+    "            break;\n"
+    "        }\n"
+    "      });\n"
+    "      return lines.join('\\n');\n"
+    "    }, [conflicts]);\n\n"
+    "    // Trigger onResolveChange callback on updates\n"
+    "    useEffect(() => {\n"
+    "      onResolveChange?.(isAllResolved, getMergedText());\n"
+    "    }, [isAllResolved, getMergedText, onResolveChange]);\n\n"
+    "    // Resolution actions\n"
+    "    const acceptCurrent = useCallback((conflictId: string) => {\n"
+    "      setConflicts((prev) =>\n"
+    "        prev.map((c) => (c.id === conflictId ? { ...c, status: 'accepted_current' } : c))\n"
+    "      );\n"
+    "    }, []);\n\n"
+    "    const acceptIncoming = useCallback((conflictId: string) => {\n"
+    "      setConflicts((prev) =>\n"
+    "        prev.map((c) => (c.id === conflictId ? { ...c, status: 'accepted_incoming' } : c))\n"
+    "      );\n"
+    "    }, []);\n\n"
+    "    const acceptBoth = useCallback((conflictId: string) => {\n"
+    "      setConflicts((prev) =>\n"
+    "        prev.map((c) => (c.id === conflictId ? { ...c, status: 'accepted_both' } : c))\n"
+    "      );\n"
+    "    }, []);\n\n"
+    "    const acceptAllCurrent = useCallback(() => {\n"
+    "      setConflicts((prev) => prev.map((c) => ({ ...c, status: 'accepted_current' })));\n"
+    "    }, []);\n\n"
+    "    const acceptAllIncoming = useCallback(() => {\n"
+    "      setConflicts((prev) => prev.map((c) => ({ ...c, status: 'accepted_incoming' })));\n"
+    "    }, []);\n\n"
+    "    const resetAll = useCallback(() => {\n"
+    "      setConflicts((prev) => prev.map((c) => ({ ...c, status: 'unresolved' })));\n"
+    "    }, []);\n\n"
+    "    const nextConflict = useCallback(() => {\n"
+    "      setActiveConflictIndex((prev) => Math.min(conflicts.length - 1, prev + 1));\n"
+    "    }, [conflicts.length]);\n\n"
+    "    const prevConflict = useCallback(() => {\n"
+    "      setActiveConflictIndex((prev) => Math.max(0, prev - 1));\n"
+    "    }, []);\n\n"
+    "    // Copy and download merged result\n"
+    "    const handleCopyMerged = () => {\n"
+    "      const text = getMergedText();\n"
+    "      if (navigator.clipboard) {\n"
+    "        navigator.clipboard.writeText(text);\n"
+    "        setIsCopied(true);\n"
+    "        setTimeout(() => setIsCopied(false), 2000);\n"
+    "      }\n"
+    "    };\n\n"
+    "    const handleDownloadMerged = () => {\n"
+    "      const text = getMergedText();\n"
+    "      const blob = new Blob([text], { type: 'text/plain;charset=utf-8' });\n"
+    "      const url = URL.createObjectURL(blob);\n"
+    "      const a = document.createElement('a');\n"
+    "      a.href = url;\n"
+    "      a.download = filename;\n"
+    "      a.click();\n"
+    "    };\n\n"
+    "    // Expose imperative handle\n"
+    "    useImperativeHandle(\n"
+    "      ref,\n"
+    "      () => ({\n"
+    "        acceptCurrent,\n"
+    "        acceptIncoming,\n"
+    "        acceptBoth,\n"
+    "        acceptAllCurrent,\n"
+    "        acceptAllIncoming,\n"
+    "        resetAll,\n"
+    "        nextConflict,\n"
+    "        prevConflict,\n"
+    "        getMergedText,\n"
+    "        isAllResolved: () => isAllResolved,\n"
+    "        getUnresolvedCount: () => unresolvedCount,\n"
+    "        getTotalConflicts: () => conflicts.length,\n"
+    "      }),\n"
+    "      [\n"
+    "        acceptCurrent,\n"
+    "        acceptIncoming,\n"
+    "        acceptBoth,\n"
+    "        acceptAllCurrent,\n"
+    "        acceptAllIncoming,\n"
+    "        resetAll,\n"
+    "        nextConflict,\n"
+    "        prevConflict,\n"
+    "        getMergedText,\n"
+    "        isAllResolved,\n"
+    "        unresolvedCount,\n"
+    "        conflicts.length,\n"
+    "      ]\n"
+    "    );\n\n"
+    "    // Visual variants\n"
+    "    const variantStyles = useMemo(() => {\n"
+    "      switch (variant) {\n"
+    "        case 'card':\n"
+    "          return {\n"
+    "            backgroundColor: '#0f172a',\n"
+    "            border: '1px solid #1e293b',\n"
+    "            boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.5), 0 8px 10px -6px rgba(0, 0, 0, 0.5)',\n"
+    "            borderRadius: '12px',\n"
+    "          };\n"
+    "        case 'glass':\n"
+    "          return {\n"
+    "            backgroundColor: 'rgba(15, 23, 42, 0.8)',\n"
+    "            backdropFilter: 'blur(20px)',\n"
+    "            WebkitBackdropFilter: 'blur(20px)',\n"
+    "            border: '1px solid rgba(255, 255, 255, 0.12)',\n"
+    "            boxShadow: '0 8px 32px 0 rgba(0, 0, 0, 0.37)',\n"
+    "            borderRadius: '12px',\n"
+    "          };\n"
+    "        case 'neon':\n"
+    "          return {\n"
+    "            backgroundColor: '#090d16',\n"
+    "            border: '1px solid #06b6d4',\n"
+    "            boxShadow: '0 0 24px rgba(6, 182, 212, 0.35), inset 0 0 12px rgba(6, 182, 212, 0.1)',\n"
+    "            borderRadius: '12px',\n"
+    "          };\n"
+    "        case 'default':\n"
+    "        default:\n"
+    "          return {\n"
+    "            backgroundColor: '#020617',\n"
+    "            border: '1px solid #334155',\n"
+    "            boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.3)',\n"
+    "            borderRadius: '8px',\n"
+    "          };\n"
+    "      }\n"
+    "    }, [variant]);\n\n"
+    "    // Size scales\n"
+    "    const heightStyle = useMemo(() => {\n"
+    "      switch (size) {\n"
+    "        case 'sm':\n"
+    "          return '520px';\n"
+    "        case 'lg':\n"
+    "          return '840px';\n"
+    "        case 'md':\n"
+    "        default:\n"
+    "          return '680px';\n"
+    "      }\n"
+    "    }, [size]);\n\n"
+    "    return (\n"
+    "      <div\n"
+    "        role=\"region\"\n"
+    "        aria-label=\"3-Way Merge Editor\"\n"
+    "        className={className}\n"
+    "        style={{\n"
+    "          display: 'flex',\n"
+    "          flexDirection: 'column',\n"
+    "          width: '100%',\n"
+    "          height: heightStyle,\n"
+    "          overflow: 'hidden',\n"
+    "          ...variantStyles,\n"
+    "          ...style,\n"
+    "        }}\n"
+    "      >\n"
+    "        {/* Controls Toolbar */}\n"
+    "        <MergeEditorToolbar\n"
+    "          filename={filename}\n"
+    "          totalConflicts={conflicts.length}\n"
+    "          unresolvedConflicts={unresolvedCount}\n"
+    "          activeConflictIndex={activeConflictIndex}\n"
+    "          onNextConflict={nextConflict}\n"
+    "          onPrevConflict={prevConflict}\n"
+    "          onAcceptAllCurrent={acceptAllCurrent}\n"
+    "          onAcceptAllIncoming={acceptAllIncoming}\n"
+    "          onResetAll={resetAll}\n"
+    "          onCopyMerged={handleCopyMerged}\n"
+    "          onDownloadMerged={handleDownloadMerged}\n"
+    "          isCopied={isCopied}\n"
+    "          variant={variant}\n"
+    "        />\n\n"
+    "        {/* 3-Pane Conflict Area */}\n"
+    "        <div style={{ flex: 1, display: 'flex', overflow: 'hidden' }}>\n"
+    "          {/* Left Pane: Current / Ours */}\n"
+    "          <div\n"
+    "            style={{\n"
+    "              flex: 1,\n"
+    "              borderRight: '1px solid rgba(255, 255, 255, 0.1)',\n"
+    "              display: 'flex',\n"
+    "              flexDirection: 'column',\n"
+    "              overflowY: 'auto',\n"
+    "              background: 'rgba(15, 23, 42, 0.6)',\n"
+    "            }}\n"
+    "          >\n"
+    "            <div\n"
+    "              style={{\n"
+    "                padding: '8px 12px',\n"
+    "                background: 'rgba(34, 197, 94, 0.12)',\n"
+    "                borderBottom: '1px solid rgba(34, 197, 94, 0.25)',\n"
+    "                color: '#4ade80',\n"
+    "                fontSize: '12px',\n"
+    "                fontWeight: 600,\n"
+    "                display: 'flex',\n"
+    "                alignItems: 'center',\n"
+    "                justifyContent: 'space-between',\n"
+    "              }}\n"
+    "            >\n"
+    "              <span>Current Change (Ours)</span>\n"
+    "              <span style={{ fontSize: '11px', opacity: 0.75 }}>HEAD</span>\n"
+    "            </div>\n\n"
+    "            <div style={{ padding: '12px', fontFamily: 'monospace', fontSize: '12px', lineHeight: 1.6 }}>\n"
+    "              {conflicts.map((c, idx) => (\n"
+    "                <div\n"
+    "                  key={c.id}\n"
+    "                  style={{\n"
+    "                    marginBottom: '16px',\n"
+    "                    padding: '8px',\n"
+    "                    borderRadius: '6px',\n"
+    "                    background: c.status === 'accepted_current' ? 'rgba(34, 197, 94, 0.15)' : 'rgba(255, 255, 255, 0.03)',\n"
+    "                    border: idx === activeConflictIndex ? '1px solid #4ade80' : '1px solid transparent',\n"
+    "                  }}\n"
+    "                >\n"
+    "                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '6px' }}>\n"
+    "                    <span style={{ color: '#4ade80', fontSize: '11px', fontWeight: 600 }}>\n"
+    "                      Conflict #{idx + 1} (Line {c.startLine})\n"
+    "                    </span>\n"
+    "                    <button\n"
+    "                      type=\"button\"\n"
+    "                      aria-label={`Accept current for conflict ${idx + 1}`}\n"
+    "                      onClick={() => acceptCurrent(c.id)}\n"
+    "                      style={{\n"
+    "                        background: c.status === 'accepted_current' ? '#22c55e' : 'rgba(34, 197, 94, 0.2)',\n"
+    "                        border: 'none',\n"
+    "                        color: '#ffffff',\n"
+    "                        borderRadius: '3px',\n"
+    "                        padding: '2px 6px',\n"
+    "                        fontSize: '11px',\n"
+    "                        cursor: 'pointer',\n"
+    "                      }}\n"
+    "                    >\n"
+    "                      {c.status === 'accepted_current' ? 'Accepted' : 'Accept Current'}\n"
+    "                    </button>\n"
+    "                  </div>\n"
+    "                  <pre style={{ margin: 0, color: '#f8fafc', whiteSpace: 'pre-wrap' }}>\n"
+    "                    {c.currentContent.join('\\n')}\n"
+    "                  </pre>\n"
+    "                </div>\n"
+    "              ))}\n"
+    "            </div>\n"
+    "          </div>\n\n"
+    "          {/* Center Pane: Merged Output (Result) */}\n"
+    "          <div\n"
+    "            style={{\n"
+    "              flex: 1.2,\n"
+    "              borderRight: '1px solid rgba(255, 255, 255, 0.1)',\n"
+    "              display: 'flex',\n"
+    "              flexDirection: 'column',\n"
+    "              overflowY: 'auto',\n"
+    "              background: '#090d16',\n"
+    "            }}\n"
+    "          >\n"
+    "            <div\n"
+    "              style={{\n"
+    "                padding: '8px 12px',\n"
+    "                background: 'rgba(255, 255, 255, 0.05)',\n"
+    "                borderBottom: '1px solid rgba(255, 255, 255, 0.1)',\n"
+    "                color: '#ffffff',\n"
+    "                fontSize: '12px',\n"
+    "                fontWeight: 600,\n"
+    "                display: 'flex',\n"
+    "                alignItems: 'center',\n"
+    "                justifyContent: 'space-between',\n"
+    "              }}\n"
+    "            >\n"
+    "              <span>Result (Merged View)</span>\n"
+    "              <span style={{ fontSize: '11px', color: isAllResolved ? '#4ade80' : '#f59e0b' }}>\n"
+    "                {isAllResolved ? 'Ready to commit' : 'Conflicts present'}\n"
+    "              </span>\n"
+    "            </div>\n\n"
+    "            <div style={{ padding: '12px', fontFamily: 'monospace', fontSize: '12px', lineHeight: 1.6 }}>\n"
+    "              {conflicts.map((c, idx) => (\n"
+    "                <div\n"
+    "                  key={c.id}\n"
+    "                  style={{\n"
+    "                    marginBottom: '16px',\n"
+    "                    padding: '8px',\n"
+    "                    borderRadius: '6px',\n"
+    "                    background: c.status === 'unresolved' ? 'rgba(239, 68, 68, 0.12)' : 'rgba(34, 197, 94, 0.1)',\n"
+    "                    border: `1px solid ${c.status === 'unresolved' ? 'rgba(239, 68, 68, 0.3)' : 'rgba(34, 197, 94, 0.3)'}`,\n"
+    "                  }}\n"
+    "                >\n"
+    "                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '4px' }}>\n"
+    "                    <span style={{ fontSize: '11px', fontWeight: 600, color: c.status === 'unresolved' ? '#f87171' : '#4ade80' }}>\n"
+    "                      Conflict #{idx + 1}: {c.status.toUpperCase()}\n"
+    "                    </span>\n"
+    "                    <button\n"
+    "                      type=\"button\"\n"
+    "                      aria-label={`Accept both for conflict ${idx + 1}`}\n"
+    "                      onClick={() => acceptBoth(c.id)}\n"
+    "                      style={{\n"
+    "                        background: c.status === 'accepted_both' ? '#06b6d4' : 'rgba(6, 182, 212, 0.2)',\n"
+    "                        border: 'none',\n"
+    "                        color: '#ffffff',\n"
+    "                        borderRadius: '3px',\n"
+    "                        padding: '2px 6px',\n"
+    "                        fontSize: '11px',\n"
+    "                        cursor: 'pointer',\n"
+    "                      }}\n"
+    "                    >\n"
+    "                      Accept Both\n"
+    "                    </button>\n"
+    "                  </div>\n\n"
+    "                  <pre style={{ margin: 0, color: '#f8fafc', whiteSpace: 'pre-wrap' }}>\n"
+    "                    {c.status === 'accepted_current' && c.currentContent.join('\\n')}\n"
+    "                    {c.status === 'accepted_incoming' && c.incomingContent.join('\\n')}\n"
+    "                    {c.status === 'accepted_both' && [...c.currentContent, ...c.incomingContent].join('\\n')}\n"
+    "                    {c.status === 'unresolved' && (\n"
+    "                      <span style={{ color: '#f87171' }}>\n"
+    "                        {`<<<<<<< ${c.currentBranch || 'HEAD'}\\n${c.currentContent.join('\\n')}\\n=======\\n${c.incomingContent.join('\\n')}\\n>>>>>>> ${c.incomingBranch || 'incoming'}`}\n"
+    "                      </span>\n"
+    "                    )}\n"
+    "                  </pre>\n"
+    "                </div>\n"
+    "              ))}\n"
+    "            </div>\n"
+    "          </div>\n\n"
+    "          {/* Right Pane: Incoming / Theirs */}\n"
+    "          <div\n"
+    "            style={{\n"
+    "              flex: 1,\n"
+    "              display: 'flex',\n"
+    "              flexDirection: 'column',\n"
+    "              overflowY: 'auto',\n"
+    "              background: 'rgba(15, 23, 42, 0.6)',\n"
+    "            }}\n"
+    "          >\n"
+    "            <div\n"
+    "              style={{\n"
+    "                padding: '8px 12px',\n"
+    "                background: 'rgba(59, 130, 246, 0.12)',\n"
+    "                borderBottom: '1px solid rgba(59, 130, 246, 0.25)',\n"
+    "                color: '#60a5fa',\n"
+    "                fontSize: '12px',\n"
+    "                fontWeight: 600,\n"
+    "                display: 'flex',\n"
+    "                alignItems: 'center',\n"
+    "                justifyContent: 'space-between',\n"
+    "              }}\n"
+    "            >\n"
+    "              <span>Incoming Change (Theirs)</span>\n"
+    "              <span style={{ fontSize: '11px', opacity: 0.75 }}>main</span>\n"
+    "            </div>\n\n"
+    "            <div style={{ padding: '12px', fontFamily: 'monospace', fontSize: '12px', lineHeight: 1.6 }}>\n"
+    "              {conflicts.map((c, idx) => (\n"
+    "                <div\n"
+    "                  key={c.id}\n"
+    "                  style={{\n"
+    "                    marginBottom: '16px',\n"
+    "                    padding: '8px',\n"
+    "                    borderRadius: '6px',\n"
+    "                    background: c.status === 'accepted_incoming' ? 'rgba(59, 130, 246, 0.15)' : 'rgba(255, 255, 255, 0.03)',\n"
+    "                    border: idx === activeConflictIndex ? '1px solid #60a5fa' : '1px solid transparent',\n"
+    "                  }}\n"
+    "                >\n"
+    "                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '6px' }}>\n"
+    "                    <span style={{ color: '#60a5fa', fontSize: '11px', fontWeight: 600 }}>\n"
+    "                      Conflict #{idx + 1} (Line {c.startLine})\n"
+    "                    </span>\n"
+    "                    <button\n"
+    "                      type=\"button\"\n"
+    "                      aria-label={`Accept incoming for conflict ${idx + 1}`}\n"
+    "                      onClick={() => acceptIncoming(c.id)}\n"
+    "                      style={{\n"
+    "                        background: c.status === 'accepted_incoming' ? '#3b82f6' : 'rgba(59, 130, 246, 0.2)',\n"
+    "                        border: 'none',\n"
+    "                        color: '#ffffff',\n"
+    "                        borderRadius: '3px',\n"
+    "                        padding: '2px 6px',\n"
+    "                        fontSize: '11px',\n"
+    "                        cursor: 'pointer',\n"
+    "                      }}\n"
+    "                    >\n"
+    "                      {c.status === 'accepted_incoming' ? 'Accepted' : 'Accept Incoming'}\n"
+    "                    </button>\n"
+    "                  </div>\n"
+    "                  <pre style={{ margin: 0, color: '#f8fafc', whiteSpace: 'pre-wrap' }}>\n"
+    "                    {c.incomingContent.join('\\n')}\n"
+    "                  </pre>\n"
+    "                </div>\n"
+    "              ))}\n"
+    "            </div>\n"
+    "          </div>\n"
+    "        </div>\n"
+    "      </div>\n"
+    "    );\n"
+    "  }\n"
+    ");\n"
+    "MergeEditorComponent.displayName = 'MergeEditor';\n\n"
+    "// ---------------------------------------------------------------------------\n"
+    "// Compound & Semantic Alias Exports\n"
+    "// ---------------------------------------------------------------------------\n"
+    "export const MergeEditor = MergeEditorComponent;\n"
+    "export const ConflictResolver = MergeEditorComponent;\n"
+    "export const ThreeWayMerge = MergeEditorComponent;\n"
+    "export const DiffEditor = MergeEditorComponent;\n\n"
+    "MergeEditor.displayName = 'MergeEditor';\n"
+    "ConflictResolver.displayName = 'ConflictResolver';\n"
+    "ThreeWayMerge.displayName = 'ThreeWayMerge';\n"
+    "DiffEditor.displayName = 'DiffEditor';\n\n"
+    "export default MergeEditorComponent;\n"
+)
+
+
+def render_merge_editor_component() -> str:
+    """Return static React implementation of the Accessible Futuristic 3-Way Merge Editor Suite."""
+    return _MERGE_EDITOR_COMPONENT
+
+
+_JSON_VIEWER_COMPONENT = r"""'use client';
+
+import React, {
+  useState,
+  useCallback,
+  useMemo,
+  useRef,
+  useImperativeHandle,
+  forwardRef,
+  useEffect,
+} from 'react';
+
+// ============================================================================
+// Types & Interfaces
+// ============================================================================
+
+export type JsonViewerVariant = 'default' | 'card' | 'glass' | 'neon';
+export type JsonViewerSize = 'sm' | 'md' | 'lg';
+export type JsonViewMode = 'tree' | 'raw';
+export type JsonValueType =
+  | 'string'
+  | 'number'
+  | 'boolean'
+  | 'null'
+  | 'undefined'
+  | 'object'
+  | 'array';
+
+export interface JsonViewerHandle {
+  expandAll: () => void;
+  collapseAll: () => void;
+  setDepth: (depth: number) => void;
+  getJson: () => unknown;
+  setJson: (data: unknown) => void;
+  copyPath: (path: string) => void;
+  exportJson: (filename?: string) => void;
+  copyAll: () => void;
+}
+
+export interface JsonViewerToolbarProps {
+  searchQuery: string;
+  onSearchChange: (q: string) => void;
+  viewMode: JsonViewMode;
+  onViewModeChange: (m: JsonViewMode) => void;
+  onExpandAll: () => void;
+  onCollapseAll: () => void;
+  onCopyAll: () => void;
+  onExport: () => void;
+  copied: boolean;
+  matchCount: number;
+  size: JsonViewerSize;
+  variant: JsonViewerVariant;
+}
+
+export interface JsonTreeNodeProps {
+  keyName?: string | number;
+  value: unknown;
+  path: string;
+  depth: number;
+  expandedPaths: Set<string>;
+  toggleExpand: (path: string) => void;
+  searchQuery: string;
+  editable?: boolean;
+  onValueChange?: (path: string, newVal: unknown) => void;
+  onCopyPath: (path: string) => void;
+  onCopyValue: (val: unknown) => void;
+  size: JsonViewerSize;
+  variant: JsonViewerVariant;
+  isLast?: boolean;
+}
+
+export interface JsonViewerProps {
+  data?: unknown;
+  initialData?: unknown;
+  rootName?: string;
+  defaultDepth?: number;
+  variant?: JsonViewerVariant;
+  size?: JsonViewerSize;
+  editable?: boolean;
+  showToolbar?: boolean;
+  showLineNumbers?: boolean;
+  showTypes?: boolean;
+  showCounters?: boolean;
+  showCopy?: boolean;
+  showDownload?: boolean;
+  onChange?: (newData: unknown) => void;
+  className?: string;
+  style?: React.CSSProperties;
+}
+
+// ============================================================================
+// Helper Utilities
+// ============================================================================
+
+function getJsonType(val: unknown): JsonValueType {
+  if (val === null) return 'null';
+  if (val === undefined) return 'undefined';
+  if (Array.isArray(val)) return 'array';
+  const t = typeof val;
+  if (t === 'string' || t === 'number' || t === 'boolean' || t === 'object') return t;
+  return 'string';
+}
+
+function parseInputPrimitive(val: string): unknown {
+  const trimmed = val.trim();
+  if (trimmed === 'true') return true;
+  if (trimmed === 'false') return false;
+  if (trimmed === 'null') return null;
+  if (trimmed === 'undefined') return undefined;
+  if (!isNaN(Number(trimmed)) && trimmed !== '') {
+    return Number(trimmed);
+  }
+  if ((trimmed.startsWith('"') && trimmed.endsWith('"')) ||
+      (trimmed.startsWith("'") && trimmed.endsWith("'"))) {
+    return trimmed.slice(1, -1);
+  }
+  return val;
+}
+
+function updateAtPath(obj: unknown, pathParts: string[], newVal: unknown): unknown {
+  if (pathParts.length === 0) return newVal;
+  const [head, ...tail] = pathParts;
+  if (Array.isArray(obj)) {
+    const idx = Number(head);
+    const copy = [...obj];
+    copy[idx] = updateAtPath(copy[idx], tail, newVal);
+    return copy;
+  }
+  if (obj && typeof obj === 'object') {
+    const copy: Record<string, unknown> = { ...(obj as Record<string, unknown>) };
+    copy[head] = updateAtPath(copy[head], tail, newVal);
+    return copy;
+  }
+  return newVal;
+}
+
+function countMatches(obj: unknown, query: string): number {
+  if (!query) return 0;
+  let count = 0;
+  const q = query.toLowerCase();
+  function walk(val: unknown, key?: string) {
+    if (key && key.toLowerCase().includes(q)) count++;
+    if (val === null || val === undefined) {
+      if (String(val).toLowerCase().includes(q)) count++;
+    } else if (typeof val === 'object') {
+      if (Array.isArray(val)) {
+        val.forEach((item, idx) => walk(item, String(idx)));
+      } else {
+        Object.entries(val as Record<string, unknown>).forEach(([k, v]) => walk(v, k));
+      }
+    } else {
+      if (String(val).toLowerCase().includes(q)) count++;
+    }
+  }
+  walk(obj);
+  return count;
+}
+
+function collectPathsToDepth(obj: unknown, maxDepth: number, currentDepth = 0, currentPath = '$'): Set<string> {
+  const paths = new Set<string>();
+  if (currentDepth > maxDepth) return paths;
+  paths.add(currentPath);
+  if (obj && typeof obj === 'object') {
+    if (Array.isArray(obj)) {
+      obj.forEach((item, idx) => {
+        const p = `${currentPath}[${idx}]`;
+        const sub = collectPathsToDepth(item, maxDepth, currentDepth + 1, p);
+        sub.forEach((s) => paths.add(s));
+      });
+    } else {
+      Object.entries(obj as Record<string, unknown>).forEach(([k, v]) => {
+        const p = currentPath === '$' ? `$.${k}` : `${currentPath}.${k}`;
+        const sub = collectPathsToDepth(v, maxDepth, currentDepth + 1, p);
+        sub.forEach((s) => paths.add(s));
+      });
+    }
+  }
+  return paths;
+}
+
+function collectAllExpandablePaths(obj: unknown, currentPath = '$'): Set<string> {
+  const paths = new Set<string>();
+  paths.add(currentPath);
+  if (obj && typeof obj === 'object') {
+    if (Array.isArray(obj)) {
+      obj.forEach((item, idx) => {
+        const p = `${currentPath}[${idx}]`;
+        const sub = collectAllExpandablePaths(item, p);
+        sub.forEach((s) => paths.add(s));
+      });
+    } else {
+      Object.entries(obj as Record<string, unknown>).forEach(([k, v]) => {
+        const p = currentPath === '$' ? `$.${k}` : `${currentPath}.${k}`;
+        const sub = collectAllExpandablePaths(v, p);
+        sub.forEach((s) => paths.add(s));
+      });
+    }
+  }
+  return paths;
+}
+
+// ============================================================================
+// Visual Variant & Size Configs
+// ============================================================================
+
+const VARIANT_STYLES: Record<JsonViewerVariant, {
+  container: React.CSSProperties;
+  toolbar: React.CSSProperties;
+  searchBox: React.CSSProperties;
+  codeBlock: React.CSSProperties;
+  badgeBorder: string;
+}> = {
+  default: {
+    container: {
+      backgroundColor: '#0d1117',
+      borderColor: '#30363d',
+      color: '#c9d1d9',
+      boxShadow: '0 4px 16px rgba(0, 0, 0, 0.4)',
+    },
+    toolbar: {
+      backgroundColor: '#161b22',
+      borderBottomColor: '#30363d',
+    },
+    searchBox: {
+      backgroundColor: '#0d1117',
+      borderColor: '#30363d',
+      color: '#e6edf3',
+    },
+    codeBlock: {
+      backgroundColor: '#0d1117',
+      color: '#c9d1d9',
+    },
+    badgeBorder: '#30363d',
+  },
+  card: {
+    container: {
+      backgroundColor: '#161b22',
+      borderColor: '#21262d',
+      color: '#e6edf3',
+      boxShadow: '0 8px 24px rgba(0, 0, 0, 0.5)',
+    },
+    toolbar: {
+      backgroundColor: '#21262d',
+      borderBottomColor: '#30363d',
+    },
+    searchBox: {
+      backgroundColor: '#161b22',
+      borderColor: '#30363d',
+      color: '#ffffff',
+    },
+    codeBlock: {
+      backgroundColor: '#161b22',
+      color: '#e6edf3',
+    },
+    badgeBorder: '#30363d',
+  },
+  glass: {
+    container: {
+      backgroundColor: 'rgba(15, 23, 42, 0.75)',
+      backdropFilter: 'blur(20px)',
+      WebkitBackdropFilter: 'blur(20px)',
+      borderColor: 'rgba(255, 255, 255, 0.12)',
+      color: '#f8fafc',
+      boxShadow: '0 8px 32px rgba(0, 0, 0, 0.37)',
+    },
+    toolbar: {
+      backgroundColor: 'rgba(30, 41, 59, 0.5)',
+      borderBottomColor: 'rgba(255, 255, 255, 0.1)',
+    },
+    searchBox: {
+      backgroundColor: 'rgba(15, 23, 42, 0.6)',
+      borderColor: 'rgba(255, 255, 255, 0.2)',
+      color: '#f8fafc',
+    },
+    codeBlock: {
+      backgroundColor: 'transparent',
+      color: '#f8fafc',
+    },
+    badgeBorder: 'rgba(255, 255, 255, 0.15)',
+  },
+  neon: {
+    container: {
+      backgroundColor: '#090d16',
+      borderColor: '#06b6d4',
+      color: '#e0f2fe',
+      boxShadow: '0 0 24px rgba(6, 182, 212, 0.2)',
+    },
+    toolbar: {
+      backgroundColor: '#0f172a',
+      borderBottomColor: '#06b6d4',
+    },
+    searchBox: {
+      backgroundColor: '#090d16',
+      borderColor: '#06b6d4',
+      color: '#67e8f9',
+    },
+    codeBlock: {
+      backgroundColor: '#090d16',
+      color: '#e0f2fe',
+    },
+    badgeBorder: '#06b6d4',
+  },
+};
+
+const SIZE_STYLES: Record<JsonViewerSize, {
+  fontSize: string;
+  lineHeight: string;
+  padding: string;
+  toolbarPadding: string;
+  iconSize: number;
+  gap: string;
+}> = {
+  sm: {
+    fontSize: '11px',
+    lineHeight: '18px',
+    padding: '8px 12px',
+    toolbarPadding: '6px 12px',
+    iconSize: 12,
+    gap: '4px',
+  },
+  md: {
+    fontSize: '13px',
+    lineHeight: '22px',
+    padding: '12px 16px',
+    toolbarPadding: '8px 16px',
+    iconSize: 14,
+    gap: '6px',
+  },
+  lg: {
+    fontSize: '15px',
+    lineHeight: '26px',
+    padding: '16px 20px',
+    toolbarPadding: '10px 20px',
+    iconSize: 16,
+    gap: '8px',
+  },
+};
+
+const TYPE_COLORS: Record<JsonValueType, { text: string; bg: string }> = {
+  string: { text: '#10b981', bg: 'rgba(16, 185, 129, 0.12)' },
+  number: { text: '#f59e0b', bg: 'rgba(245, 158, 11, 0.12)' },
+  boolean: { text: '#8b5cf6', bg: 'rgba(139, 92, 246, 0.12)' },
+  null: { text: '#94a3b8', bg: 'rgba(148, 163, 184, 0.12)' },
+  undefined: { text: '#64748b', bg: 'rgba(100, 116, 139, 0.12)' },
+  object: { text: '#06b6d4', bg: 'rgba(6, 182, 212, 0.12)' },
+  array: { text: '#ec4899', bg: 'rgba(236, 72, 153, 0.12)' },
+};
+
+// ============================================================================
+// Icons (Pure React Inline SVGs)
+// ============================================================================
+
+function ChevronRightIcon({ size = 12 }: { size?: number }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <polyline points="9 18 15 12 9 6" />
+    </svg>
+  );
+}
+
+function ChevronDownIcon({ size = 12 }: { size?: number }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <polyline points="6 9 12 15 18 9" />
+    </svg>
+  );
+}
+
+function SearchIcon({ size = 14 }: { size?: number }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <circle cx="11" cy="11" r="8" />
+      <line x1="21" y1="21" x2="16.65" y2="16.65" />
+    </svg>
+  );
+}
+
+function CopyIcon({ size = 14 }: { size?: number }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <rect x="9" y="9" width="13" height="13" rx="2" ry="2" />
+      <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" />
+    </svg>
+  );
+}
+
+function CheckIcon({ size = 14 }: { size?: number }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="#10b981" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <polyline points="20 6 9 17 4 12" />
+    </svg>
+  );
+}
+
+function DownloadIcon({ size = 14 }: { size?: number }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+      <polyline points="7 10 12 15 17 10" />
+      <line x1="12" y1="15" x2="12" y2="3" />
+    </svg>
+  );
+}
+
+function TreeIcon({ size = 14 }: { size?: number }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <rect x="3" y="3" width="7" height="7" rx="1" />
+      <rect x="14" y="14" width="7" height="7" rx="1" />
+      <rect x="3" y="14" width="7" height="7" rx="1" />
+      <path d="M6 10v4" />
+      <path d="M6 14h8v-4" />
+    </svg>
+  );
+}
+
+function CodeIcon({ size = 14 }: { size?: number }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <polyline points="16 18 22 12 16 6" />
+      <polyline points="8 6 2 12 8 18" />
+    </svg>
+  );
+}
+
+function EditPenIcon({ size = 12 }: { size?: number }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <path d="M12 20h9" />
+      <path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z" />
+    </svg>
+  );
+}
+
+// ============================================================================
+// Tree Node Component
+// ============================================================================
+
+export const JsonTreeNode: React.FC<JsonTreeNodeProps> = ({
+  keyName,
+  value,
+  path,
+  depth,
+  expandedPaths,
+  toggleExpand,
+  searchQuery,
+  editable,
+  onValueChange,
+  onCopyPath,
+  onCopyValue,
+  size,
+  variant,
+  isLast = false,
+}) => {
+  const [isEditing, setIsEditing] = useState(false);
+  const [editValue, setEditValue] = useState('');
+  const [hovered, setHovered] = useState(false);
+
+  const type = getJsonType(value);
+  const isExpandable = type === 'object' || type === 'array';
+  const isExpanded = expandedPaths.has(path);
+
+  const childCount = useMemo(() => {
+    if (type === 'array') return (value as unknown[]).length;
+    if (type === 'object' && value !== null) return Object.keys(value as Record<string, unknown>).length;
+    return 0;
+  }, [type, value]);
+
+  const sizeStyle = SIZE_STYLES[size];
+
+  const handleStartEdit = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (!editable || isExpandable) return;
+    setIsEditing(true);
+    setEditValue(typeof value === 'string' ? `"${value}"` : String(value));
+  };
+
+  const handleCommitEdit = () => {
+    setIsEditing(false);
+    if (onValueChange) {
+      const parsed = parseInputPrimitive(editValue);
+      onValueChange(path, parsed);
+    }
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter') {
+      handleCommitEdit();
+    } else if (e.key === 'Escape') {
+      setIsEditing(false);
+    }
+  };
+
+  // Search highlighting
+  const renderHighlighted = (text: string) => {
+    if (!searchQuery) return text;
+    const parts = text.split(new RegExp(`(${searchQuery})`, 'gi'));
+    return (
+      <>
+        {parts.map((part, i) =>
+          part.toLowerCase() === searchQuery.toLowerCase() ? (
+            <mark
+              key={i}
+              style={{
+                backgroundColor: 'rgba(234, 179, 8, 0.4)',
+                color: '#ffffff',
+                borderRadius: '2px',
+                padding: '0 2px',
+              }}
+            >
+              {part}
+            </mark>
+          ) : (
+            part
+          )
+        )}
+      </>
+    );
+  };
+
+  const formattedValue = useMemo(() => {
+    if (type === 'string') return `"${value}"`;
+    if (type === 'null') return 'null';
+    if (type === 'undefined') return 'undefined';
+    if (type === 'boolean') return String(value);
+    if (type === 'number') return String(value);
+    return '';
+  }, [type, value]);
+
+  return (
+    <div
+      role="treeitem"
+      aria-expanded={isExpandable ? isExpanded : undefined}
+      aria-level={depth}
+      style={{
+        position: 'relative',
+        display: 'flex',
+        flexDirection: 'column',
+        fontFamily: 'ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace',
+        fontSize: sizeStyle.fontSize,
+        lineHeight: sizeStyle.lineHeight,
+      }}
+    >
+      {/* Node Header Row */}
+      <div
+        onMouseEnter={() => setHovered(true)}
+        onMouseLeave={() => setHovered(false)}
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: sizeStyle.gap,
+          padding: '2px 4px',
+          borderRadius: '4px',
+          backgroundColor: hovered ? 'rgba(255, 255, 255, 0.04)' : 'transparent',
+          cursor: isExpandable ? 'pointer' : 'default',
+          userSelect: 'none',
+        }}
+        onClick={() => {
+          if (isExpandable) toggleExpand(path);
+        }}
+      >
+        {/* Expand / Collapse Icon */}
+        <div
+          style={{
+            width: sizeStyle.iconSize,
+            height: sizeStyle.iconSize,
+            display: 'inline-flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            color: '#64748b',
+          }}
+        >
+          {isExpandable && (
+            isExpanded ? <ChevronDownIcon size={sizeStyle.iconSize} /> : <ChevronRightIcon size={sizeStyle.iconSize} />
+          )}
+        </div>
+
+        {/* Key Name */}
+        {keyName !== undefined && (
+          <span
+            style={{
+              color: typeof keyName === 'number' ? '#94a3b8' : '#38bdf8',
+              fontWeight: 500,
+            }}
+          >
+            {renderHighlighted(String(keyName))}
+            <span style={{ color: '#64748b', marginRight: '4px' }}>:</span>
+          </span>
+        )}
+
+        {/* Expandable Object/Array Summary */}
+        {isExpandable ? (
+          <span style={{ color: '#94a3b8', display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
+            <span>{type === 'array' ? '[' : '{'}</span>
+            {!isExpanded && (
+              <span
+                style={{
+                  fontSize: '11px',
+                  backgroundColor: 'rgba(255, 255, 255, 0.08)',
+                  padding: '1px 6px',
+                  borderRadius: '10px',
+                  color: '#94a3b8',
+                }}
+              >
+                {type === 'array' ? `${childCount} items` : `${childCount} keys`}
+              </span>
+            )}
+            {!isExpanded && <span>{type === 'array' ? ']' : '}'}</span>}
+          </span>
+        ) : isEditing ? (
+          /* Inline Primitive Edit Mode */
+          <input
+            autoFocus
+            type="text"
+            value={editValue}
+            onChange={(e) => setEditValue(e.target.value)}
+            onBlur={handleCommitEdit}
+            onKeyDown={handleKeyDown}
+            style={{
+              backgroundColor: '#030712',
+              border: '1px solid #38bdf8',
+              borderRadius: '3px',
+              color: '#ffffff',
+              padding: '1px 6px',
+              fontSize: sizeStyle.fontSize,
+              fontFamily: 'inherit',
+              outline: 'none',
+            }}
+          />
+        ) : (
+          /* Primitive Value Display */
+          <span
+            onDoubleClick={handleStartEdit}
+            style={{
+              color: TYPE_COLORS[type].text,
+              cursor: editable ? 'text' : 'default',
+            }}
+            title={editable ? 'Double click to edit' : undefined}
+          >
+            {renderHighlighted(formattedValue)}
+          </span>
+        )}
+
+        {/* Trailing comma */}
+        {!isLast && !isExpandable && <span style={{ color: '#64748b' }}>,</span>}
+
+        {/* Type Badge Pill */}
+        {!isExpandable && (
+          <span
+            style={{
+              fontSize: '10px',
+              padding: '0 4px',
+              borderRadius: '4px',
+              backgroundColor: TYPE_COLORS[type].bg,
+              color: TYPE_COLORS[type].text,
+              marginLeft: '4px',
+              opacity: 0.8,
+            }}
+          >
+            {type}
+          </span>
+        )}
+
+        {/* Quick Action Buttons (Hovered) */}
+        {hovered && (
+          <div
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '4px',
+              marginLeft: 'auto',
+              paddingLeft: '8px',
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            {editable && !isExpandable && !isEditing && (
+              <button
+                type="button"
+                aria-label="Edit value"
+                onClick={handleStartEdit}
+                style={{
+                  background: 'none',
+                  border: 'none',
+                  cursor: 'pointer',
+                  color: '#94a3b8',
+                  padding: '2px',
+                  display: 'flex',
+                }}
+              >
+                <EditPenIcon size={sizeStyle.iconSize - 2} />
+              </button>
+            )}
+            <button
+              type="button"
+              aria-label="Copy path"
+              onClick={() => onCopyPath(path)}
+              style={{
+                background: 'none',
+                border: 'none',
+                cursor: 'pointer',
+                color: '#94a3b8',
+                padding: '2px',
+                fontSize: '10px',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '2px',
+              }}
+              title={`Copy path: ${path}`}
+            >
+              <CopyIcon size={sizeStyle.iconSize - 2} />
+              <span>path</span>
+            </button>
+            {!isExpandable && (
+              <button
+                type="button"
+                aria-label="Copy value"
+                onClick={() => onCopyValue(value)}
+                style={{
+                  background: 'none',
+                  border: 'none',
+                  cursor: 'pointer',
+                  color: '#94a3b8',
+                  padding: '2px',
+                  fontSize: '10px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '2px',
+                }}
+                title="Copy value"
+              >
+                <CopyIcon size={sizeStyle.iconSize - 2} />
+                <span>val</span>
+              </button>
+            )}
+          </div>
+        )}
+      </div>
+
+      {/* Children of Expanded Object / Array */}
+      {isExpandable && isExpanded && (
+        <div
+          role="group"
+          style={{
+            position: 'relative',
+            marginLeft: '14px',
+            paddingLeft: '10px',
+            borderLeft: '1px dashed rgba(255, 255, 255, 0.12)',
+          }}
+        >
+          {type === 'array' ? (
+            (value as unknown[]).map((item, idx, arr) => (
+              <JsonTreeNode
+                key={idx}
+                keyName={idx}
+                value={item}
+                path={`${path}[${idx}]`}
+                depth={depth + 1}
+                expandedPaths={expandedPaths}
+                toggleExpand={toggleExpand}
+                searchQuery={searchQuery}
+                editable={editable}
+                onValueChange={onValueChange}
+                onCopyPath={onCopyPath}
+                onCopyValue={onCopyValue}
+                size={size}
+                variant={variant}
+                isLast={idx === arr.length - 1}
+              />
+            ))
+          ) : (
+            Object.entries(value as Record<string, unknown>).map(([k, v], idx, arr) => (
+              <JsonTreeNode
+                key={k}
+                keyName={k}
+                value={v}
+                path={path === '$' ? `$.${k}` : `${path}.${k}`}
+                depth={depth + 1}
+                expandedPaths={expandedPaths}
+                toggleExpand={toggleExpand}
+                searchQuery={searchQuery}
+                editable={editable}
+                onValueChange={onValueChange}
+                onCopyPath={onCopyPath}
+                onCopyValue={onCopyValue}
+                size={size}
+                variant={variant}
+                isLast={idx === arr.length - 1}
+              />
+            ))
+          )}
+
+          {/* Closing Bracket */}
+          <div style={{ color: '#94a3b8', padding: '2px 4px' }}>
+            <span>{type === 'array' ? ']' : '}'}</span>
+            {!isLast && <span style={{ color: '#64748b' }}>,</span>}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};
+JsonTreeNode.displayName = 'JsonTreeNode';
+
+// ============================================================================
+// Toolbar Component
+// ============================================================================
+
+export const JsonViewerToolbar: React.FC<JsonViewerToolbarProps> = ({
+  searchQuery,
+  onSearchChange,
+  viewMode,
+  onViewModeChange,
+  onExpandAll,
+  onCollapseAll,
+  onCopyAll,
+  onExport,
+  copied,
+  matchCount,
+  size,
+  variant,
+}) => {
+  const variantStyle = VARIANT_STYLES[variant];
+  const sizeStyle = SIZE_STYLES[size];
+
+  return (
+    <div
+      role="toolbar"
+      aria-label="JSON Viewer Toolbar"
+      style={{
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        flexWrap: 'wrap',
+        gap: '8px',
+        padding: sizeStyle.toolbarPadding,
+        borderBottom: `1px solid ${variantStyle.toolbar.borderBottomColor}`,
+        backgroundColor: variantStyle.toolbar.backgroundColor,
+      }}
+    >
+      {/* Left section: Search bar */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flex: '1 1 200px', maxWidth: '360px' }}>
+        <div
+          style={{
+            position: 'relative',
+            display: 'flex',
+            alignItems: 'center',
+            width: '100%',
+          }}
+        >
+          <span style={{ position: 'absolute', left: '8px', color: '#64748b', display: 'flex' }}>
+            <SearchIcon size={sizeStyle.iconSize} />
+          </span>
+          <input
+            type="search"
+            role="searchbox"
+            aria-label="Search keys and values"
+            placeholder="Search keys or values..."
+            value={searchQuery}
+            onChange={(e) => onSearchChange(e.target.value)}
+            style={{
+              width: '100%',
+              paddingLeft: '28px',
+              paddingRight: '60px',
+              paddingTop: '4px',
+              paddingBottom: '4px',
+              fontSize: sizeStyle.fontSize,
+              borderRadius: '6px',
+              border: `1px solid ${variantStyle.searchBox.borderColor}`,
+              backgroundColor: variantStyle.searchBox.backgroundColor,
+              color: variantStyle.searchBox.color,
+              outline: 'none',
+              fontFamily: 'inherit',
+            }}
+          />
+          {searchQuery && (
+            <span
+              style={{
+                position: 'absolute',
+                right: '8px',
+                fontSize: '11px',
+                color: matchCount > 0 ? '#10b981' : '#ef4444',
+                fontWeight: 500,
+              }}
+            >
+              {matchCount} match{matchCount !== 1 ? 'es' : ''}
+            </span>
+          )}
+        </div>
+      </div>
+
+      {/* Right section: Action Buttons */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+        {/* Depth Expansion Buttons */}
+        <button
+          type="button"
+          onClick={onExpandAll}
+          aria-label="Expand all nodes"
+          style={{
+            padding: '4px 8px',
+            fontSize: sizeStyle.fontSize,
+            borderRadius: '4px',
+            border: `1px solid ${variantStyle.badgeBorder}`,
+            backgroundColor: 'transparent',
+            color: '#e2e8f0',
+            cursor: 'pointer',
+          }}
+        >
+          Expand All
+        </button>
+        <button
+          type="button"
+          onClick={onCollapseAll}
+          aria-label="Collapse all nodes"
+          style={{
+            padding: '4px 8px',
+            fontSize: sizeStyle.fontSize,
+            borderRadius: '4px',
+            border: `1px solid ${variantStyle.badgeBorder}`,
+            backgroundColor: 'transparent',
+            color: '#e2e8f0',
+            cursor: 'pointer',
+          }}
+        >
+          Collapse All
+        </button>
+
+        {/* View Mode Toggle: Tree vs Raw */}
+        <div
+          style={{
+            display: 'inline-flex',
+            borderRadius: '6px',
+            border: `1px solid ${variantStyle.badgeBorder}`,
+            overflow: 'hidden',
+          }}
+        >
+          <button
+            type="button"
+            aria-label="Tree view mode"
+            aria-pressed={viewMode === 'tree'}
+            onClick={() => onViewModeChange('tree')}
+            style={{
+              padding: '4px 8px',
+              fontSize: sizeStyle.fontSize,
+              border: 'none',
+              backgroundColor: viewMode === 'tree' ? 'rgba(56, 189, 248, 0.2)' : 'transparent',
+              color: viewMode === 'tree' ? '#38bdf8' : '#94a3b8',
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '4px',
+            }}
+          >
+            <TreeIcon size={sizeStyle.iconSize} />
+            <span>Tree</span>
+          </button>
+          <button
+            type="button"
+            aria-label="Raw view mode"
+            aria-pressed={viewMode === 'raw'}
+            onClick={() => onViewModeChange('raw')}
+            style={{
+              padding: '4px 8px',
+              fontSize: sizeStyle.fontSize,
+              border: 'none',
+              backgroundColor: viewMode === 'raw' ? 'rgba(56, 189, 248, 0.2)' : 'transparent',
+              color: viewMode === 'raw' ? '#38bdf8' : '#94a3b8',
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '4px',
+            }}
+          >
+            <CodeIcon size={sizeStyle.iconSize} />
+            <span>Raw</span>
+          </button>
+        </div>
+
+        {/* Copy All */}
+        <button
+          type="button"
+          onClick={onCopyAll}
+          aria-label="Copy entire JSON"
+          style={{
+            padding: '4px 8px',
+            fontSize: sizeStyle.fontSize,
+            borderRadius: '4px',
+            border: `1px solid ${variantStyle.badgeBorder}`,
+            backgroundColor: 'transparent',
+            color: copied ? '#10b981' : '#e2e8f0',
+            cursor: 'pointer',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '4px',
+          }}
+        >
+          {copied ? <CheckIcon size={sizeStyle.iconSize} /> : <CopyIcon size={sizeStyle.iconSize} />}
+          <span>{copied ? 'Copied' : 'Copy'}</span>
+        </button>
+
+        {/* Export JSON */}
+        <button
+          type="button"
+          onClick={onExport}
+          aria-label="Download JSON file"
+          style={{
+            padding: '4px 8px',
+            fontSize: sizeStyle.fontSize,
+            borderRadius: '4px',
+            border: `1px solid ${variantStyle.badgeBorder}`,
+            backgroundColor: 'transparent',
+            color: '#e2e8f0',
+            cursor: 'pointer',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '4px',
+          }}
+        >
+          <DownloadIcon size={sizeStyle.iconSize} />
+          <span>Export</span>
+        </button>
+      </div>
+    </div>
+  );
+};
+JsonViewerToolbar.displayName = 'JsonViewerToolbar';
+
+// ============================================================================
+// Main JsonViewer Compound Component
+// ============================================================================
+
+export const JsonViewerComponent = forwardRef<JsonViewerHandle, JsonViewerProps>(
+  (
+    {
+      data,
+      initialData,
+      rootName = '$',
+      defaultDepth = 2,
+      variant = 'default',
+      size = 'md',
+      editable = true,
+      showToolbar = true,
+      showLineNumbers = true,
+      showTypes = true,
+      showCounters = true,
+      showCopy = true,
+      showDownload = true,
+      onChange,
+      className,
+      style,
+    },
+    ref
+  ) => {
+    // Current JSON State
+    const [jsonData, setJsonData] = useState<unknown>(() => {
+      if (data !== undefined) return data;
+      if (initialData !== undefined) return initialData;
+      return {
+        name: 'OmniStackAI',
+        version: '1.0.0',
+        active: true,
+        features: ['codegen', 'react', 'nextjs', 'zero-dependency'],
+        metrics: {
+          uptime: 99.99,
+          requests: 142000,
+        },
+      };
+    });
+
+    // Update if controlled prop changes
+    useEffect(() => {
+      if (data !== undefined) {
+        setJsonData(data);
+      }
+    }, [data]);
+
+    // View mode and search state
+    const [viewMode, setViewMode] = useState<JsonViewMode>('tree');
+    const [searchQuery, setSearchQuery] = useState('');
+    const [copied, setCopied] = useState(false);
+    const [toastMessage, setToastMessage] = useState<string | null>(null);
+
+    // Expansion Set
+    const [expandedPaths, setExpandedPaths] = useState<Set<string>>(() =>
+      collectPathsToDepth(jsonData, defaultDepth, 0, rootName)
+    );
+
+    const toggleExpand = useCallback((path: string) => {
+      setExpandedPaths((prev) => {
+        const next = new Set(prev);
+        if (next.has(path)) {
+          next.delete(path);
+        } else {
+          next.add(path);
+        }
+        return next;
+      });
+    }, []);
+
+    const expandAll = useCallback(() => {
+      setExpandedPaths(collectAllExpandablePaths(jsonData, rootName));
+    }, [jsonData, rootName]);
+
+    const collapseAll = useCallback(() => {
+      setExpandedPaths(new Set());
+    }, []);
+
+    const setDepth = useCallback(
+      (depth: number) => {
+        setExpandedPaths(collectPathsToDepth(jsonData, depth, 0, rootName));
+      },
+      [jsonData, rootName]
+    );
+
+    // Value mutation
+    const handleValueChange = useCallback(
+      (path: string, newVal: unknown) => {
+        // Path format: $[0].foo or $.foo.bar
+        const clean = path.startsWith(rootName) ? path.slice(rootName.length) : path;
+        const parts = clean
+          .replace(/^\\./, '')
+          .replace(/\[(\w+)\]/g, '.$1')
+          .split('.')
+          .filter(Boolean);
+
+        const updated = updateAtPath(jsonData, parts, newVal);
+        setJsonData(updated);
+        if (onChange) onChange(updated);
+      },
+      [jsonData, rootName, onChange]
+    );
+
+    // Copy utilities
+    const copyToClipboard = useCallback((text: string, label: string) => {
+      if (typeof navigator !== 'undefined' && navigator.clipboard) {
+        navigator.clipboard.writeText(text);
+        setToastMessage(`Copied ${label}`);
+        setCopied(true);
+        setTimeout(() => {
+          setCopied(false);
+          setToastMessage(null);
+        }, 2000);
+      }
+    }, []);
+
+    const handleCopyPath = useCallback(
+      (path: string) => {
+        copyToClipboard(path, 'path to clipboard');
+      },
+      [copyToClipboard]
+    );
+
+    const handleCopyValue = useCallback(
+      (val: unknown) => {
+        const text = typeof val === 'string' ? val : JSON.stringify(val);
+        copyToClipboard(text, 'value to clipboard');
+      },
+      [copyToClipboard]
+    );
+
+    const handleCopyAll = useCallback(() => {
+      copyToClipboard(JSON.stringify(jsonData, null, 2), 'JSON to clipboard');
+    }, [jsonData, copyToClipboard]);
+
+    const handleExport = useCallback(
+      (filename = 'data.json') => {
+        const jsonStr = JSON.stringify(jsonData, null, 2);
+        const blob = new Blob([jsonStr], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = filename;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+        setToastMessage(`Downloaded ${filename}`);
+        setTimeout(() => setToastMessage(null), 2000);
+      },
+      [jsonData]
+    );
+
+    // Match counter
+    const matchCount = useMemo(() => countMatches(jsonData, searchQuery), [jsonData, searchQuery]);
+
+    // Imperative Handle
+    useImperativeHandle(
+      ref,
+      () => ({
+        expandAll,
+        collapseAll,
+        setDepth,
+        getJson: () => jsonData,
+        setJson: (newData: unknown) => {
+          setJsonData(newData);
+          setExpandedPaths(collectPathsToDepth(newData, defaultDepth, 0, rootName));
+        },
+        copyPath: handleCopyPath,
+        exportJson: handleExport,
+        copyAll: handleCopyAll,
+      }),
+      [expandAll, collapseAll, setDepth, jsonData, defaultDepth, rootName, handleCopyPath, handleExport, handleCopyAll]
+    );
+
+    const variantStyle = VARIANT_STYLES[variant];
+    const sizeStyle = SIZE_STYLES[size];
+
+    return (
+      <div
+        className={className}
+        style={{
+          display: 'flex',
+          flexDirection: 'column',
+          borderRadius: '8px',
+          border: `1px solid ${variantStyle.container.borderColor}`,
+          overflow: 'hidden',
+          fontFamily: 'ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace',
+          position: 'relative',
+          ...variantStyle.container,
+          ...style,
+        }}
+      >
+        {/* Toast alert banner */}
+        {toastMessage && (
+          <div
+            role="status"
+            aria-live="polite"
+            style={{
+              position: 'absolute',
+              top: '12px',
+              right: '12px',
+              zIndex: 30,
+              padding: '4px 12px',
+              borderRadius: '4px',
+              backgroundColor: 'rgba(16, 185, 129, 0.95)',
+              color: '#ffffff',
+              fontSize: '12px',
+              fontWeight: 500,
+              boxShadow: '0 4px 12px rgba(0, 0, 0, 0.3)',
+            }}
+          >
+            {toastMessage}
+          </div>
+        )}
+
+        {/* Header Toolbar */}
+        {showToolbar && (
+          <JsonViewerToolbar
+            searchQuery={searchQuery}
+            onSearchChange={setSearchQuery}
+            viewMode={viewMode}
+            onViewModeChange={setViewMode}
+            onExpandAll={expandAll}
+            onCollapseAll={collapseAll}
+            onCopyAll={handleCopyAll}
+            onExport={() => handleExport('data.json')}
+            copied={copied}
+            matchCount={matchCount}
+            size={size}
+            variant={variant}
+          />
+        )}
+
+        {/* Content Viewer Body */}
+        <div
+          style={{
+            padding: sizeStyle.padding,
+            maxHeight: '600px',
+            overflowY: 'auto',
+            overflowX: 'auto',
+          }}
+        >
+          {viewMode === 'tree' ? (
+            /* Interactive Tree View */
+            <div role="tree" aria-label="JSON Tree Viewer">
+              <JsonTreeNode
+                keyName={rootName}
+                value={jsonData}
+                path={rootName}
+                depth={0}
+                expandedPaths={expandedPaths}
+                toggleExpand={toggleExpand}
+                searchQuery={searchQuery}
+                editable={editable}
+                onValueChange={handleValueChange}
+                onCopyPath={handleCopyPath}
+                onCopyValue={handleCopyValue}
+                size={size}
+                variant={variant}
+                isLast={true}
+              />
+            </div>
+          ) : (
+            /* Raw Formatted JSON View */
+            <pre
+              style={{
+                margin: 0,
+                fontSize: sizeStyle.fontSize,
+                lineHeight: sizeStyle.lineHeight,
+                color: variantStyle.codeBlock.color,
+                whiteSpace: 'pre-wrap',
+                wordBreak: 'break-word',
+              }}
+            >
+              {JSON.stringify(jsonData, null, 2)}
+            </pre>
+          )}
+        </div>
+      </div>
+    );
+  }
+);
+JsonViewerComponent.displayName = 'JsonViewer';
+
+// ============================================================================
+// Compound & Semantic Aliases
+// ============================================================================
+
+export const JsonViewer = JsonViewerComponent;
+JsonViewer.displayName = 'JsonViewer';
+
+export const JsonTree = JsonViewerComponent;
+JsonTree.displayName = 'JsonTree';
+
+export const ObjectInspector = JsonViewerComponent;
+ObjectInspector.displayName = 'ObjectInspector';
+
+export const SchemaViewer = JsonViewerComponent;
+SchemaViewer.displayName = 'SchemaViewer';
+
+export default JsonViewerComponent;
+"""
+
+
+def render_json_viewer_component() -> str:
+    """Return the static TypeScript source code for components/json-viewer.tsx."""
+    return _JSON_VIEWER_COMPONENT
+
+
+_IMAGE_GALLERY_COMPONENT = r"""'use client';
+
+import React, {
+  useState,
+  useCallback,
+  useMemo,
+  useRef,
+  useImperativeHandle,
+  forwardRef,
+  useEffect,
+} from 'react';
+
+// ============================================================================
+// Types & Interfaces
+// ============================================================================
+
+export type ImageGalleryVariant = 'default' | 'card' | 'glass' | 'neon';
+export type ImageGallerySize = 'sm' | 'md' | 'lg';
+export type GalleryLayout = 'grid' | 'masonry';
+
+export interface GalleryItem {
+  id: string;
+  src: string;
+  title: string;
+  description?: string;
+  category?: string;
+  aspectRatio?: string;
+  tags?: string[];
+  author?: string;
+  date?: string;
+  likes?: number;
+}
+
+export interface ImageGalleryHandle {
+  openLightbox: (index: number) => void;
+  closeLightbox: () => void;
+  nextImage: () => void;
+  prevImage: () => void;
+  startSlideshow: () => void;
+  stopSlideshow: () => void;
+  getCurrentIndex: () => number;
+  setCategory: (cat: string) => void;
+  downloadCurrentImage: () => void;
+}
+
+export interface ImageGalleryToolbarProps {
+  categories: string[];
+  selectedCategory: string;
+  onSelectCategory: (cat: string) => void;
+  searchQuery: string;
+  onSearchChange: (q: string) => void;
+  layout: GalleryLayout;
+  onLayoutChange: (l: GalleryLayout) => void;
+  itemCount: number;
+  size: ImageGallerySize;
+  variant: ImageGalleryVariant;
+}
+
+export interface LightboxModalProps {
+  isOpen: boolean;
+  items: GalleryItem[];
+  currentIndex: number;
+  onClose: () => void;
+  onNext: () => void;
+  onPrev: () => void;
+  onSelectIndex: (idx: number) => void;
+  isSlideshow: boolean;
+  onToggleSlideshow: () => void;
+  zoomLevel: number;
+  onZoomIn: () => void;
+  onZoomOut: () => void;
+  onResetZoom: () => void;
+  rotation: number;
+  onRotate: () => void;
+  onDownload: () => void;
+  variant: ImageGalleryVariant;
+  size: ImageGallerySize;
+}
+
+export interface ImageGalleryProps {
+  items?: GalleryItem[];
+  initialItems?: GalleryItem[];
+  defaultLayout?: GalleryLayout;
+  defaultCategory?: string;
+  variant?: ImageGalleryVariant;
+  size?: ImageGallerySize;
+  columns?: number;
+  showToolbar?: boolean;
+  showCategories?: boolean;
+  showSearch?: boolean;
+  showLightbox?: boolean;
+  showThumbnails?: boolean;
+  showCaptions?: boolean;
+  slideshowInterval?: number;
+  onItemClick?: (item: GalleryItem, index: number) => void;
+  className?: string;
+  style?: React.CSSProperties;
+}
+
+// ============================================================================
+// Visual Variant & Size Configs
+// ============================================================================
+
+const VARIANT_STYLES: Record<ImageGalleryVariant, {
+  container: React.CSSProperties;
+  toolbar: React.CSSProperties;
+  card: React.CSSProperties;
+  modal: React.CSSProperties;
+  badge: React.CSSProperties;
+  accent: string;
+}> = {
+  default: {
+    container: {
+      backgroundColor: '#0d1117',
+      borderColor: '#30363d',
+      color: '#c9d1d9',
+    },
+    toolbar: {
+      backgroundColor: '#161b22',
+      borderBottomColor: '#30363d',
+    },
+    card: {
+      backgroundColor: '#161b22',
+      borderColor: '#30363d',
+      boxShadow: '0 4px 12px rgba(0, 0, 0, 0.4)',
+    },
+    modal: {
+      backgroundColor: 'rgba(13, 17, 23, 0.95)',
+      borderColor: '#30363d',
+    },
+    badge: {
+      backgroundColor: 'rgba(255, 255, 255, 0.1)',
+      color: '#e6edf3',
+    },
+    accent: '#38bdf8',
+  },
+  card: {
+    container: {
+      backgroundColor: '#161b22',
+      borderColor: '#21262d',
+      color: '#e6edf3',
+    },
+    toolbar: {
+      backgroundColor: '#21262d',
+      borderBottomColor: '#30363d',
+    },
+    card: {
+      backgroundColor: '#21262d',
+      borderColor: '#30363d',
+      boxShadow: '0 8px 24px rgba(0, 0, 0, 0.5)',
+    },
+    modal: {
+      backgroundColor: 'rgba(22, 27, 34, 0.96)',
+      borderColor: '#30363d',
+    },
+    badge: {
+      backgroundColor: '#30363d',
+      color: '#ffffff',
+    },
+    accent: '#60a5fa',
+  },
+  glass: {
+    container: {
+      backgroundColor: 'rgba(15, 23, 42, 0.75)',
+      backdropFilter: 'blur(20px)',
+      WebkitBackdropFilter: 'blur(20px)',
+      borderColor: 'rgba(255, 255, 255, 0.15)',
+      color: '#f8fafc',
+    },
+    toolbar: {
+      backgroundColor: 'rgba(30, 41, 59, 0.5)',
+      borderBottomColor: 'rgba(255, 255, 255, 0.1)',
+    },
+    card: {
+      backgroundColor: 'rgba(30, 41, 59, 0.6)',
+      borderColor: 'rgba(255, 255, 255, 0.12)',
+      boxShadow: '0 8px 32px rgba(0, 0, 0, 0.3)',
+    },
+    modal: {
+      backgroundColor: 'rgba(15, 23, 42, 0.92)',
+      borderColor: 'rgba(255, 255, 255, 0.15)',
+    },
+    badge: {
+      backgroundColor: 'rgba(255, 255, 255, 0.15)',
+      color: '#f8fafc',
+    },
+    accent: '#38bdf8',
+  },
+  neon: {
+    container: {
+      backgroundColor: '#090d16',
+      borderColor: '#06b6d4',
+      color: '#e0f2fe',
+      boxShadow: '0 0 24px rgba(6, 182, 212, 0.15)',
+    },
+    toolbar: {
+      backgroundColor: '#0f172a',
+      borderBottomColor: '#06b6d4',
+    },
+    card: {
+      backgroundColor: '#0f172a',
+      borderColor: '#06b6d4',
+      boxShadow: '0 0 16px rgba(6, 182, 212, 0.25)',
+    },
+    modal: {
+      backgroundColor: 'rgba(9, 13, 22, 0.96)',
+      borderColor: '#06b6d4',
+    },
+    badge: {
+      backgroundColor: 'rgba(6, 182, 212, 0.2)',
+      color: '#67e8f9',
+    },
+    accent: '#06b6d4',
+  },
+};
+
+const SIZE_STYLES: Record<ImageGallerySize, {
+  fontSize: string;
+  titleSize: string;
+  padding: string;
+  gap: string;
+  cardMinHeight: string;
+  iconSize: number;
+}> = {
+  sm: {
+    fontSize: '11px',
+    titleSize: '13px',
+    padding: '8px 12px',
+    gap: '8px',
+    cardMinHeight: '160px',
+    iconSize: 14,
+  },
+  md: {
+    fontSize: '13px',
+    titleSize: '15px',
+    padding: '12px 16px',
+    gap: '12px',
+    cardMinHeight: '220px',
+    iconSize: 16,
+  },
+  lg: {
+    fontSize: '15px',
+    titleSize: '18px',
+    padding: '16px 20px',
+    gap: '16px',
+    cardMinHeight: '280px',
+    iconSize: 20,
+  },
+};
+
+// ============================================================================
+// Sample Items Generator (Pure Inline Scalable SVGs)
+// ============================================================================
+
+function generateSvgPlaceholder(title: string, color: string, w = 600, h = 400): string {
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${w}" height="${h}" viewBox="0 0 ${w} ${h}">
+    <defs>
+      <linearGradient id="g" x1="0%" y1="0%" x2="100%" y2="100%">
+        <stop offset="0%" stop-color="${color}" stop-opacity="0.8"/>
+        <stop offset="100%" stop-color="#0f172a" stop-opacity="0.95"/>
+      </linearGradient>
+    </defs>
+    <rect width="100%" height="100%" fill="url(#g)"/>
+    <circle cx="${w / 2}" cy="${h / 2 - 20}" r="40" fill="none" stroke="rgba(255,255,255,0.4)" stroke-width="3"/>
+    <polygon points="${w / 2 - 15},${h / 2 - 35} ${w / 2 + 20},${h / 2 - 20} ${w / 2 - 15},${h / 2 - 5}" fill="rgba(255,255,255,0.6)"/>
+    <text x="${w / 2}" y="${h / 2 + 50}" fill="#ffffff" font-family="system-ui, sans-serif" font-size="20" font-weight="600" text-anchor="middle">${title}</text>
+  </svg>`;
+  return `data:image/svg+xml;utf8,${encodeURIComponent(svg)}`;
+}
+
+const DEFAULT_ITEMS: GalleryItem[] = [
+  {
+    id: 'gal-1',
+    src: generateSvgPlaceholder('Cyberpunk Skyline', '#06b6d4', 800, 500),
+    title: 'Cyberpunk Skyline',
+    description: 'Luminous neon skyscrapers reflecting against atmospheric digital haze.',
+    category: 'Architecture',
+    aspectRatio: '16/10',
+    tags: ['cyberpunk', 'neon', 'cityscape'],
+    author: 'Elena Vance',
+    date: '2026-04-12',
+    likes: 142,
+  },
+  {
+    id: 'gal-2',
+    src: generateSvgPlaceholder('Quantum Core', '#8b5cf6', 600, 600),
+    title: 'Quantum Core',
+    description: 'Magnetic flux containment field in high-energy plasma matrix.',
+    category: 'Sci-Fi',
+    aspectRatio: '1/1',
+    tags: ['plasma', 'physics', 'energy'],
+    author: 'Dr. K. Aris',
+    date: '2026-05-01',
+    likes: 218,
+  },
+  {
+    id: 'gal-3',
+    src: generateSvgPlaceholder('Neural Synthesis', '#10b981', 800, 450),
+    title: 'Neural Synthesis',
+    description: 'Bioluminescent deep-learning synapses propagating cognitive signals.',
+    category: 'Abstract',
+    aspectRatio: '16/9',
+    tags: ['neural', 'ai', 'synapse'],
+    author: 'Aura Chen',
+    date: '2026-06-18',
+    likes: 384,
+  },
+  {
+    id: 'gal-4',
+    src: generateSvgPlaceholder('Orbital Beacon', '#f59e0b', 600, 800),
+    title: 'Orbital Beacon',
+    description: 'Solar power harvester array positioned in geosynchronous orbit.',
+    category: 'Sci-Fi',
+    aspectRatio: '3/4',
+    tags: ['space', 'solar', 'station'],
+    author: 'Marcus Cole',
+    date: '2026-07-22',
+    likes: 95,
+  },
+  {
+    id: 'gal-5',
+    src: generateSvgPlaceholder('Emerald Valley', '#10b981', 800, 500),
+    title: 'Emerald Valley',
+    description: 'Synthesized terraced landscapes under carbon-neutral bio-domes.',
+    category: 'Nature',
+    aspectRatio: '16/10',
+    tags: ['biodome', 'nature', 'flora'],
+    author: 'Sora Lin',
+    date: '2026-08-05',
+    likes: 267,
+  },
+  {
+    id: 'gal-6',
+    src: generateSvgPlaceholder('Hyperloop Terminal', '#ec4899', 700, 500),
+    title: 'Hyperloop Terminal',
+    description: 'High-speed transit interchange handling intercity maglev capsules.',
+    category: 'Architecture',
+    aspectRatio: '7/5',
+    tags: ['transit', 'mobility', 'infrastructure'],
+    author: 'Elena Vance',
+    date: '2026-09-02',
+    likes: 180,
+  },
+];
+
+// ============================================================================
+// Icons (Pure React Inline SVGs)
+// ============================================================================
+
+function GridIcon({ size = 16 }: { size?: number }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <rect x="3" y="3" width="7" height="7" />
+      <rect x="14" y="3" width="7" height="7" />
+      <rect x="14" y="14" width="7" height="7" />
+      <rect x="3" y="14" width="7" height="7" />
+    </svg>
+  );
+}
+
+function MasonryIcon({ size = 16 }: { size?: number }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <rect x="3" y="3" width="7" height="11" />
+      <rect x="14" y="3" width="7" height="6" />
+      <rect x="14" y="12" width="7" height="9" />
+      <rect x="3" y="17" width="7" height="4" />
+    </svg>
+  );
+}
+
+function SearchIcon({ size = 16 }: { size?: number }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <circle cx="11" cy="11" r="8" />
+      <line x1="21" y1="21" x2="16.65" y2="16.65" />
+    </svg>
+  );
+}
+
+function ZoomInIcon({ size = 16 }: { size?: number }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <circle cx="11" cy="11" r="8" />
+      <line x1="21" y1="21" x2="16.65" y2="16.65" />
+      <line x1="11" y1="8" x2="11" y2="14" />
+      <line x1="8" y1="11" x2="14" y2="11" />
+    </svg>
+  );
+}
+
+function ZoomOutIcon({ size = 16 }: { size?: number }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <circle cx="11" cy="11" r="8" />
+      <line x1="21" y1="21" x2="16.65" y2="16.65" />
+      <line x1="8" y1="11" x2="14" y2="11" />
+    </svg>
+  );
+}
+
+function RotateIcon({ size = 16 }: { size?: number }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <polyline points="23 4 23 10 17 10" />
+      <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10" />
+    </svg>
+  );
+}
+
+function PlayIcon({ size = 16 }: { size?: number }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+      <polygon points="5 3 19 12 5 21 5 3" />
+    </svg>
+  );
+}
+
+function PauseIcon({ size = 16 }: { size?: number }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+      <rect x="6" y="4" width="4" height="16" />
+      <rect x="14" y="4" width="4" height="16" />
+    </svg>
+  );
+}
+
+function ChevronLeftIcon({ size = 20 }: { size?: number }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <polyline points="15 18 9 12 15 6" />
+    </svg>
+  );
+}
+
+function ChevronRightIcon({ size = 20 }: { size?: number }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <polyline points="9 18 15 12 9 6" />
+    </svg>
+  );
+}
+
+function CloseIcon({ size = 18 }: { size?: number }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <line x1="18" y1="6" x2="6" y2="18" />
+      <line x1="6" y1="6" x2="18" y2="18" />
+    </svg>
+  );
+}
+
+function DownloadIcon({ size = 16 }: { size?: number }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+      <polyline points="7 10 12 15 17 10" />
+      <line x1="12" y1="15" x2="12" y2="3" />
+    </svg>
+  );
+}
+
+function HeartIcon({ size = 14, filled = false }: { size?: number; filled?: boolean }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill={filled ? '#ef4444' : 'none'} stroke={filled ? '#ef4444' : 'currentColor'} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z" />
+    </svg>
+  );
+}
+
+// ============================================================================
+// Toolbar Component
+// ============================================================================
+
+export const ImageGalleryToolbar: React.FC<ImageGalleryToolbarProps> = ({
+  categories,
+  selectedCategory,
+  onSelectCategory,
+  searchQuery,
+  onSearchChange,
+  layout,
+  onLayoutChange,
+  itemCount,
+  size,
+  variant,
+}) => {
+  const variantStyle = VARIANT_STYLES[variant];
+  const sizeStyle = SIZE_STYLES[size];
+
+  return (
+    <div
+      role="toolbar"
+      aria-label="Gallery toolbar"
+      style={{
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        flexWrap: 'wrap',
+        gap: sizeStyle.gap,
+        padding: sizeStyle.padding,
+        borderBottom: `1px solid ${variantStyle.toolbar.borderBottomColor}`,
+        backgroundColor: variantStyle.toolbar.backgroundColor,
+      }}
+    >
+      {/* Category Pills */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
+        {categories.map((cat) => {
+          const isSelected = selectedCategory === cat;
+          return (
+            <button
+              key={cat}
+              type="button"
+              onClick={() => onSelectCategory(cat)}
+              style={{
+                padding: '4px 10px',
+                fontSize: sizeStyle.fontSize,
+                borderRadius: '16px',
+                border: isSelected ? `1px solid ${variantStyle.accent}` : '1px solid transparent',
+                backgroundColor: isSelected ? 'rgba(56, 189, 248, 0.15)' : 'rgba(255, 255, 255, 0.05)',
+                color: isSelected ? variantStyle.accent : '#94a3b8',
+                fontWeight: isSelected ? 600 : 400,
+                cursor: 'pointer',
+                transition: 'all 0.15s ease',
+              }}
+            >
+              {cat}
+            </button>
+          );
+        })}
+      </div>
+
+      {/* Right controls: Search & Layout Switcher */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+        {/* Search input */}
+        <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
+          <span style={{ position: 'absolute', left: '8px', color: '#64748b', display: 'flex' }}>
+            <SearchIcon size={sizeStyle.iconSize - 2} />
+          </span>
+          <input
+            type="search"
+            placeholder="Search images..."
+            value={searchQuery}
+            onChange={(e) => onSearchChange(e.target.value)}
+            style={{
+              paddingLeft: '28px',
+              paddingRight: '10px',
+              paddingTop: '4px',
+              paddingBottom: '4px',
+              fontSize: sizeStyle.fontSize,
+              borderRadius: '6px',
+              border: '1px solid rgba(255, 255, 255, 0.15)',
+              backgroundColor: 'rgba(0, 0, 0, 0.2)',
+              color: '#ffffff',
+              outline: 'none',
+              width: '150px',
+            }}
+          />
+        </div>
+
+        {/* Layout Toggle buttons */}
+        <div
+          style={{
+            display: 'inline-flex',
+            borderRadius: '6px',
+            border: '1px solid rgba(255, 255, 255, 0.15)',
+            overflow: 'hidden',
+          }}
+        >
+          <button
+            type="button"
+            aria-label="Grid layout"
+            aria-pressed={layout === 'grid'}
+            onClick={() => onLayoutChange('grid')}
+            style={{
+              padding: '4px 8px',
+              border: 'none',
+              backgroundColor: layout === 'grid' ? 'rgba(56, 189, 248, 0.2)' : 'transparent',
+              color: layout === 'grid' ? variantStyle.accent : '#64748b',
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+            }}
+          >
+            <GridIcon size={sizeStyle.iconSize - 2} />
+          </button>
+          <button
+            type="button"
+            aria-label="Masonry layout"
+            aria-pressed={layout === 'masonry'}
+            onClick={() => onLayoutChange('masonry')}
+            style={{
+              padding: '4px 8px',
+              border: 'none',
+              backgroundColor: layout === 'masonry' ? 'rgba(56, 189, 248, 0.2)' : 'transparent',
+              color: layout === 'masonry' ? variantStyle.accent : '#64748b',
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+            }}
+          >
+            <MasonryIcon size={sizeStyle.iconSize - 2} />
+          </button>
+        </div>
+
+        {/* Item Counter */}
+        <span style={{ fontSize: sizeStyle.fontSize, color: '#64748b' }}>
+          {itemCount} items
+        </span>
+      </div>
+    </div>
+  );
+};
+ImageGalleryToolbar.displayName = 'ImageGalleryToolbar';
+
+// ============================================================================
+// Lightbox Modal Component
+// ============================================================================
+
+export const Lightbox: React.FC<LightboxModalProps> = ({
+  isOpen,
+  items,
+  currentIndex,
+  onClose,
+  onNext,
+  onPrev,
+  onSelectIndex,
+  isSlideshow,
+  onToggleSlideshow,
+  zoomLevel,
+  onZoomIn,
+  onZoomOut,
+  onResetZoom,
+  rotation,
+  onRotate,
+  onDownload,
+  variant,
+  size,
+}) => {
+  if (!isOpen || items.length === 0) return null;
+
+  const currentItem = items[currentIndex];
+  const sizeStyle = SIZE_STYLES[size];
+  const variantStyle = VARIANT_STYLES[variant];
+
+  return (
+    <div
+      role="dialog"
+      aria-modal="true"
+      aria-label="Image Gallery Lightbox"
+      style={{
+        position: 'fixed',
+        top: 0,
+        left: 0,
+        right: 0,
+        bottom: 0,
+        zIndex: 9999,
+        display: 'flex',
+        flexDirection: 'column',
+        backgroundColor: variantStyle.modal.backgroundColor,
+        backdropFilter: 'blur(16px)',
+        WebkitBackdropFilter: 'blur(16px)',
+      }}
+      onClick={onClose}
+    >
+      {/* Lightbox Header Bar */}
+      <div
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          padding: '12px 20px',
+          borderBottom: '1px solid rgba(255, 255, 255, 0.1)',
+          zIndex: 10,
+        }}
+        onClick={(e) => e.stopPropagation()}
+      >
+        {/* Title and Index */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+          <span style={{ fontSize: '14px', fontWeight: 600, color: '#ffffff' }}>
+            {currentItem.title}
+          </span>
+          <span style={{ fontSize: '12px', color: '#94a3b8' }}>
+            {currentIndex + 1} / {items.length}
+          </span>
+        </div>
+
+        {/* Toolbar actions */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+          {/* Slideshow */}
+          <button
+            type="button"
+            aria-label={isSlideshow ? 'Pause slideshow' : 'Play slideshow'}
+            onClick={onToggleSlideshow}
+            style={{
+              padding: '6px 10px',
+              borderRadius: '4px',
+              border: '1px solid rgba(255, 255, 255, 0.15)',
+              backgroundColor: isSlideshow ? 'rgba(56, 189, 248, 0.2)' : 'rgba(255, 255, 255, 0.08)',
+              color: isSlideshow ? '#38bdf8' : '#ffffff',
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '4px',
+              fontSize: '12px',
+            }}
+          >
+            {isSlideshow ? <PauseIcon size={14} /> : <PlayIcon size={14} />}
+            <span>{isSlideshow ? 'Pause' : 'Play'}</span>
+          </button>
+
+          {/* Zoom In */}
+          <button
+            type="button"
+            aria-label="Zoom in"
+            onClick={onZoomIn}
+            style={{
+              padding: '6px',
+              borderRadius: '4px',
+              border: '1px solid rgba(255, 255, 255, 0.15)',
+              backgroundColor: 'rgba(255, 255, 255, 0.08)',
+              color: '#ffffff',
+              cursor: 'pointer',
+              display: 'flex',
+            }}
+          >
+            <ZoomInIcon size={16} />
+          </button>
+
+          {/* Zoom Out */}
+          <button
+            type="button"
+            aria-label="Zoom out"
+            onClick={onZoomOut}
+            style={{
+              padding: '6px',
+              borderRadius: '4px',
+              border: '1px solid rgba(255, 255, 255, 0.15)',
+              backgroundColor: 'rgba(255, 255, 255, 0.08)',
+              color: '#ffffff',
+              cursor: 'pointer',
+              display: 'flex',
+            }}
+          >
+            <ZoomOutIcon size={16} />
+          </button>
+
+          {/* Reset Zoom */}
+          {zoomLevel !== 1 && (
+            <button
+              type="button"
+              aria-label="Reset zoom"
+              onClick={onResetZoom}
+              style={{
+                padding: '6px 8px',
+                borderRadius: '4px',
+                border: '1px solid rgba(255, 255, 255, 0.15)',
+                backgroundColor: 'rgba(255, 255, 255, 0.08)',
+                color: '#38bdf8',
+                cursor: 'pointer',
+                fontSize: '12px',
+              }}
+            >
+              {Math.round(zoomLevel * 100)}%
+            </button>
+          )}
+
+          {/* Rotate */}
+          <button
+            type="button"
+            aria-label="Rotate image"
+            onClick={onRotate}
+            style={{
+              padding: '6px',
+              borderRadius: '4px',
+              border: '1px solid rgba(255, 255, 255, 0.15)',
+              backgroundColor: 'rgba(255, 255, 255, 0.08)',
+              color: '#ffffff',
+              cursor: 'pointer',
+              display: 'flex',
+            }}
+          >
+            <RotateIcon size={16} />
+          </button>
+
+          {/* Download */}
+          <button
+            type="button"
+            aria-label="Download image"
+            onClick={onDownload}
+            style={{
+              padding: '6px',
+              borderRadius: '4px',
+              border: '1px solid rgba(255, 255, 255, 0.15)',
+              backgroundColor: 'rgba(255, 255, 255, 0.08)',
+              color: '#ffffff',
+              cursor: 'pointer',
+              display: 'flex',
+            }}
+          >
+            <DownloadIcon size={16} />
+          </button>
+
+          {/* Close */}
+          <button
+            type="button"
+            aria-label="Close lightbox"
+            onClick={onClose}
+            style={{
+              padding: '6px',
+              borderRadius: '4px',
+              border: '1px solid rgba(255, 255, 255, 0.15)',
+              backgroundColor: 'rgba(239, 68, 68, 0.2)',
+              color: '#ef4444',
+              cursor: 'pointer',
+              display: 'flex',
+            }}
+          >
+            <CloseIcon size={16} />
+          </button>
+        </div>
+      </div>
+
+      {/* Main Viewport */}
+      <div
+        style={{
+          flex: 1,
+          position: 'relative',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          overflow: 'hidden',
+          padding: '20px',
+        }}
+      >
+        {/* Prev Arrow */}
+        <button
+          type="button"
+          aria-label="Previous image"
+          onClick={(e) => {
+            e.stopPropagation();
+            onPrev();
+          }}
+          style={{
+            position: 'absolute',
+            left: '20px',
+            zIndex: 20,
+            padding: '12px',
+            borderRadius: '50%',
+            backgroundColor: 'rgba(0, 0, 0, 0.5)',
+            border: '1px solid rgba(255, 255, 255, 0.2)',
+            color: '#ffffff',
+            cursor: 'pointer',
+            display: 'flex',
+          }}
+        >
+          <ChevronLeftIcon size={24} />
+        </button>
+
+        {/* Display Image with Pan/Zoom/Rotation */}
+        <div
+          style={{
+            maxWidth: '90%',
+            maxHeight: '80vh',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            transition: 'transform 0.2s ease-out',
+            transform: `scale(${zoomLevel}) rotate(${rotation}deg)`,
+          }}
+          onClick={(e) => e.stopPropagation()}
+        >
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src={currentItem.src}
+            alt={currentItem.title}
+            style={{
+              maxWidth: '100%',
+              maxHeight: '75vh',
+              objectFit: 'contain',
+              borderRadius: '8px',
+              boxShadow: '0 20px 50px rgba(0, 0, 0, 0.8)',
+            }}
+          />
+        </div>
+
+        {/* Next Arrow */}
+        <button
+          type="button"
+          aria-label="Next image"
+          onClick={(e) => {
+            e.stopPropagation();
+            onNext();
+          }}
+          style={{
+            position: 'absolute',
+            right: '20px',
+            zIndex: 20,
+            padding: '12px',
+            borderRadius: '50%',
+            backgroundColor: 'rgba(0, 0, 0, 0.5)',
+            border: '1px solid rgba(255, 255, 255, 0.2)',
+            color: '#ffffff',
+            cursor: 'pointer',
+            display: 'flex',
+          }}
+        >
+          <ChevronRightIcon size={24} />
+        </button>
+      </div>
+
+      {/* Caption & Metadata Footer */}
+      <div
+        style={{
+          padding: '10px 20px',
+          backgroundColor: 'rgba(0, 0, 0, 0.6)',
+          borderTop: '1px solid rgba(255, 255, 255, 0.08)',
+          zIndex: 10,
+        }}
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+          <div>
+            <span style={{ fontSize: '13px', color: '#e2e8f0', fontWeight: 500 }}>
+              {currentItem.description}
+            </span>
+            {currentItem.author && (
+              <span style={{ fontSize: '12px', color: '#94a3b8', marginLeft: '8px' }}>
+                by {currentItem.author} • {currentItem.date}
+              </span>
+            )}
+          </div>
+          {currentItem.likes !== undefined && (
+            <div style={{ display: 'flex', alignItems: 'center', gap: '4px', color: '#f87171', fontSize: '12px' }}>
+              <HeartIcon size={14} filled={true} />
+              <span>{currentItem.likes}</span>
+            </div>
+          )}
+        </div>
+
+        {/* Thumbnail Strip */}
+        <div
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: '8px',
+            overflowX: 'auto',
+            paddingBottom: '4px',
+          }}
+        >
+          {items.map((item, idx) => {
+            const isSelected = idx === currentIndex;
+            return (
+              <button
+                key={item.id}
+                type="button"
+                onClick={() => onSelectIndex(idx)}
+                style={{
+                  width: '54px',
+                  height: '40px',
+                  flexShrink: 0,
+                  borderRadius: '4px',
+                  overflow: 'hidden',
+                  border: isSelected ? '2px solid #38bdf8' : '1px solid rgba(255, 255, 255, 0.2)',
+                  opacity: isSelected ? 1 : 0.6,
+                  padding: 0,
+                  background: 'none',
+                  cursor: 'pointer',
+                  transition: 'all 0.15s ease',
+                }}
+              >
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src={item.src}
+                  alt={item.title}
+                  style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                />
+              </button>
+            );
+          })}
+        </div>
+      </div>
+    </div>
+  );
+};
+Lightbox.displayName = 'Lightbox';
+
+// ============================================================================
+// Main ImageGallery Compound Component
+// ============================================================================
+
+export const ImageGalleryComponent = forwardRef<ImageGalleryHandle, ImageGalleryProps>(
+  (
+    {
+      items = DEFAULT_ITEMS,
+      initialItems,
+      defaultLayout = 'grid',
+      defaultCategory = 'All',
+      variant = 'default',
+      size = 'md',
+      columns = 3,
+      showToolbar = true,
+      showCategories = true,
+      showSearch = true,
+      showLightbox = true,
+      showThumbnails = true,
+      showCaptions = true,
+      slideshowInterval = 3500,
+      onItemClick,
+      className,
+      style,
+    },
+    ref
+  ) => {
+    const galleryItems = initialItems || items;
+    const [selectedCategory, setSelectedCategory] = useState(defaultCategory);
+    const [searchQuery, setSearchQuery] = useState('');
+    const [layout, setLayout] = useState<GalleryLayout>(defaultLayout);
+    const [likedMap, setLikedMap] = useState<Record<string, boolean>>({});
+
+    // Lightbox State
+    const [lightboxOpen, setLightboxOpen] = useState(false);
+    const [currentIndex, setCurrentIndex] = useState(0);
+    const [isSlideshow, setIsSlideshow] = useState(false);
+    const [zoomLevel, setZoomLevel] = useState(1);
+    const [rotation, setRotation] = useState(0);
+
+    // Extract categories
+    const categories = useMemo(() => {
+      const set = new Set<string>(['All']);
+      galleryItems.forEach((item) => {
+        if (item.category) set.add(item.category);
+      });
+      return Array.from(set);
+    }, [galleryItems]);
+
+    // Filtered items
+    const filteredItems = useMemo(() => {
+      return galleryItems.filter((item) => {
+        const matchesCat = selectedCategory === 'All' || item.category === selectedCategory;
+        const matchesQuery =
+          !searchQuery ||
+          item.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+          (item.description && item.description.toLowerCase().includes(searchQuery.toLowerCase())) ||
+          (item.tags && item.tags.some((t) => t.toLowerCase().includes(searchQuery.toLowerCase())));
+        return matchesCat && matchesQuery;
+      });
+    }, [galleryItems, selectedCategory, searchQuery]);
+
+    // Navigation callbacks
+    const nextImage = useCallback(() => {
+      if (filteredItems.length === 0) return;
+      setCurrentIndex((prev) => (prev + 1) % filteredItems.length);
+      setZoomLevel(1);
+      setRotation(0);
+    }, [filteredItems.length]);
+
+    const prevImage = useCallback(() => {
+      if (filteredItems.length === 0) return;
+      setCurrentIndex((prev) => (prev - 1 + filteredItems.length) % filteredItems.length);
+      setZoomLevel(1);
+      setRotation(0);
+    }, [filteredItems.length]);
+
+    const openLightbox = useCallback((index: number) => {
+      setCurrentIndex(index);
+      setLightboxOpen(true);
+      setZoomLevel(1);
+      setRotation(0);
+    }, []);
+
+    const closeLightbox = useCallback(() => {
+      setLightboxOpen(false);
+      setIsSlideshow(false);
+      setZoomLevel(1);
+      setRotation(0);
+    }, []);
+
+    const startSlideshow = useCallback(() => setIsSlideshow(true), []);
+    const stopSlideshow = useCallback(() => setIsSlideshow(false), []);
+
+    // Slideshow interval timer
+    useEffect(() => {
+      if (!isSlideshow || !lightboxOpen) return;
+      const timer = setInterval(() => {
+        nextImage();
+      }, slideshowInterval);
+      return () => clearInterval(timer);
+    }, [isSlideshow, lightboxOpen, nextImage, slideshowInterval]);
+
+    // Keyboard navigation
+    useEffect(() => {
+      if (!lightboxOpen) return;
+      const handleKeyDown = (e: KeyboardEvent) => {
+        if (e.key === 'Escape') closeLightbox();
+        else if (e.key === 'ArrowRight') nextImage();
+        else if (e.key === 'ArrowLeft') prevImage();
+        else if (e.key === ' ') {
+          e.preventDefault();
+          setIsSlideshow((prev) => !prev);
+        }
+      };
+      window.addEventListener('keydown', handleKeyDown);
+      return () => window.removeEventListener('keydown', handleKeyDown);
+    }, [lightboxOpen, closeLightbox, nextImage, prevImage]);
+
+    // Zoom and Rotate controls
+    const zoomIn = () => setZoomLevel((z) => Math.min(z + 0.25, 3));
+    const zoomOut = () => setZoomLevel((z) => Math.max(z - 0.25, 0.5));
+    const resetZoom = () => setZoomLevel(1);
+    const rotate = () => setRotation((r) => (r + 90) % 360);
+
+    const downloadCurrentImage = useCallback(() => {
+      if (filteredItems.length === 0) return;
+      const item = filteredItems[currentIndex];
+      const a = document.createElement('a');
+      a.href = item.src;
+      a.download = `${item.title.toLowerCase().replace(/\s+/g, '-')}.png`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+    }, [filteredItems, currentIndex]);
+
+    // Imperative Handle
+    useImperativeHandle(
+      ref,
+      () => ({
+        openLightbox,
+        closeLightbox,
+        nextImage,
+        prevImage,
+        startSlideshow,
+        stopSlideshow,
+        getCurrentIndex: () => currentIndex,
+        setCategory: setSelectedCategory,
+        downloadCurrentImage,
+      }),
+      [openLightbox, closeLightbox, nextImage, prevImage, startSlideshow, stopSlideshow, currentIndex, downloadCurrentImage]
+    );
+
+    const toggleLike = (e: React.MouseEvent, id: string) => {
+      e.stopPropagation();
+      setLikedMap((prev) => ({ ...prev, [id]: !prev[id] }));
+    };
+
+    const variantStyle = VARIANT_STYLES[variant];
+    const sizeStyle = SIZE_STYLES[size];
+
+    return (
+      <div
+        className={className}
+        role="region"
+        aria-label="Image Gallery"
+        style={{
+          display: 'flex',
+          flexDirection: 'column',
+          borderRadius: '10px',
+          border: `1px solid ${variantStyle.container.borderColor}`,
+          overflow: 'hidden',
+          ...variantStyle.container,
+          ...style,
+        }}
+      >
+        {/* Toolbar */}
+        {showToolbar && (
+          <ImageGalleryToolbar
+            categories={categories}
+            selectedCategory={selectedCategory}
+            onSelectCategory={setSelectedCategory}
+            searchQuery={searchQuery}
+            onSearchChange={setSearchQuery}
+            layout={layout}
+            onLayoutChange={setLayout}
+            itemCount={filteredItems.length}
+            size={size}
+            variant={variant}
+          />
+        )}
+
+        {/* Gallery Grid / Masonry View */}
+        <div
+          role="grid"
+          aria-label="Image Grid"
+          style={{
+            display: 'grid',
+            gridTemplateColumns: `repeat(auto-fill, minmax(${layout === 'masonry' ? '240px' : '260px'}, 1fr))`,
+            gap: sizeStyle.gap,
+            padding: sizeStyle.padding,
+          }}
+        >
+          {filteredItems.map((item, idx) => {
+            const isLiked = !!likedMap[item.id];
+            const likeCount = (item.likes || 0) + (isLiked ? 1 : 0);
+
+            return (
+              <div
+                key={item.id}
+                role="gridcell"
+                style={{
+                  position: 'relative',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  borderRadius: '8px',
+                  overflow: 'hidden',
+                  border: `1px solid ${variantStyle.card.borderColor}`,
+                  backgroundColor: variantStyle.card.backgroundColor,
+                  boxShadow: variantStyle.card.boxShadow,
+                  cursor: 'pointer',
+                  transition: 'transform 0.2s ease, box-shadow 0.2s ease',
+                }}
+                onClick={() => {
+                  if (onItemClick) onItemClick(item, idx);
+                  if (showLightbox) openLightbox(idx);
+                }}
+              >
+                {/* Image Container */}
+                <div
+                  style={{
+                    position: 'relative',
+                    width: '100%',
+                    aspectRatio: item.aspectRatio || '16/10',
+                    overflow: 'hidden',
+                    backgroundColor: 'rgba(0, 0, 0, 0.4)',
+                  }}
+                >
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    src={item.src}
+                    alt={item.title}
+                    style={{
+                      width: '100%',
+                      height: '100%',
+                      objectFit: 'cover',
+                      transition: 'transform 0.3s ease',
+                    }}
+                  />
+
+                  {/* Category Pill Tag */}
+                  {item.category && (
+                    <span
+                      style={{
+                        position: 'absolute',
+                        top: '8px',
+                        left: '8px',
+                        fontSize: '11px',
+                        padding: '2px 8px',
+                        borderRadius: '12px',
+                        backgroundColor: 'rgba(0, 0, 0, 0.65)',
+                        color: '#ffffff',
+                        backdropFilter: 'blur(4px)',
+                      }}
+                    >
+                      {item.category}
+                    </span>
+                  )}
+
+                  {/* Like Button */}
+                  <button
+                    type="button"
+                    aria-label={`Like ${item.title}`}
+                    onClick={(e) => toggleLike(e, item.id)}
+                    style={{
+                      position: 'absolute',
+                      top: '8px',
+                      right: '8px',
+                      padding: '6px',
+                      borderRadius: '50%',
+                      backgroundColor: 'rgba(0, 0, 0, 0.6)',
+                      border: 'none',
+                      color: isLiked ? '#ef4444' : '#ffffff',
+                      cursor: 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      backdropFilter: 'blur(4px)',
+                    }}
+                  >
+                    <HeartIcon size={14} filled={isLiked} />
+                  </button>
+                </div>
+
+                {/* Caption Bar */}
+                {showCaptions && (
+                  <div
+                    style={{
+                      padding: '10px 12px',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      gap: '4px',
+                    }}
+                  >
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <span
+                        style={{
+                          fontSize: sizeStyle.titleSize,
+                          fontWeight: 600,
+                          color: '#ffffff',
+                          overflow: 'hidden',
+                          textOverflow: 'ellipsis',
+                          whiteSpace: 'nowrap',
+                        }}
+                      >
+                        {item.title}
+                      </span>
+                      {likeCount > 0 && (
+                        <span style={{ fontSize: '11px', color: '#94a3b8' }}>
+                          {likeCount}
+                        </span>
+                      )}
+                    </div>
+                    {item.description && (
+                      <span
+                        style={{
+                          fontSize: sizeStyle.fontSize,
+                          color: '#94a3b8',
+                          lineHeight: '1.4',
+                          display: '-webkit-box',
+                          WebkitLineClamp: 2,
+                          WebkitBoxOrient: 'vertical',
+                          overflow: 'hidden',
+                        }}
+                      >
+                        {item.description}
+                      </span>
+                    )}
+                  </div>
+                )}
+              </div>
+            );
+          })}
+        </div>
+
+        {/* Lightbox Modal */}
+        {showLightbox && (
+          <Lightbox
+            isOpen={lightboxOpen}
+            items={filteredItems}
+            currentIndex={currentIndex}
+            onClose={closeLightbox}
+            onNext={nextImage}
+            onPrev={prevImage}
+            onSelectIndex={(idx) => {
+              setCurrentIndex(idx);
+              setZoomLevel(1);
+              setRotation(0);
+            }}
+            isSlideshow={isSlideshow}
+            onToggleSlideshow={() => setIsSlideshow((s) => !s)}
+            zoomLevel={zoomLevel}
+            onZoomIn={zoomIn}
+            onZoomOut={zoomOut}
+            onResetZoom={resetZoom}
+            rotation={rotation}
+            onRotate={rotate}
+            onDownload={downloadCurrentImage}
+            variant={variant}
+            size={size}
+          />
+        )}
+      </div>
+    );
+  }
+);
+ImageGalleryComponent.displayName = 'ImageGallery';
+
+// ============================================================================
+// Compound & Semantic Aliases
+// ============================================================================
+
+export const ImageGallery = ImageGalleryComponent;
+ImageGallery.displayName = 'ImageGallery';
+
+export const PhotoGallery = ImageGalleryComponent;
+PhotoGallery.displayName = 'PhotoGallery';
+
+export const MediaGallery = ImageGalleryComponent;
+MediaGallery.displayName = 'MediaGallery';
+
+export const MasonryGallery = ImageGalleryComponent;
+MasonryGallery.displayName = 'MasonryGallery';
+
+export default ImageGalleryComponent;
+"""
+
+
+def render_image_gallery_component() -> str:
+    """Return the static TypeScript source code for components/image-gallery.tsx."""
+    return _IMAGE_GALLERY_COMPONENT
+
+
+_NETWORK_GRAPH_COMPONENT = r"""'use client';
+
+import React, {
+  useState,
+  useCallback,
+  useMemo,
+  useRef,
+  useImperativeHandle,
+  forwardRef,
+  useEffect,
+} from 'react';
+
+// ============================================================================
+// Types & Interfaces
+// ============================================================================
+
+export type NetworkGraphVariant = 'default' | 'card' | 'glass' | 'neon';
+export type NetworkGraphSize = 'sm' | 'md' | 'lg';
+export type GraphNodeType = 'server' | 'database' | 'client' | 'service' | 'gateway' | 'ai';
+export type GraphNodeStatus = 'healthy' | 'warning' | 'error' | 'idle';
+
+export interface GraphNodeMetrics {
+  cpu?: number;
+  memory?: number;
+  latency?: number;
+  requestsPerSec?: number;
+  uptime?: string;
+  [key: string]: string | number | undefined;
+}
+
+export interface GraphNode {
+  id: string;
+  label: string;
+  type: GraphNodeType;
+  status: GraphNodeStatus;
+  x?: number;
+  y?: number;
+  vx?: number;
+  vy?: number;
+  radius?: number;
+  group?: string;
+  tags?: string[];
+  metrics?: GraphNodeMetrics;
+  metadata?: Record<string, unknown>;
+}
+
+export interface GraphEdge {
+  id: string;
+  source: string;
+  target: string;
+  label?: string;
+  weight?: number;
+  animated?: boolean;
+  directional?: boolean;
+  status?: GraphNodeStatus;
+}
+
+export interface NetworkGraphHandle {
+  zoomIn: () => void;
+  zoomOut: () => void;
+  resetZoom: () => void;
+  selectNode: (id: string | null) => void;
+  pauseSimulation: () => void;
+  resumeSimulation: () => void;
+  reheatSimulation: () => void;
+  exportAsPng: () => void;
+  getNodes: () => GraphNode[];
+  getEdges: () => GraphEdge[];
+}
+
+export interface GraphControlsProps {
+  isSimulating: boolean;
+  onToggleSimulation: () => void;
+  onReheatSimulation: () => void;
+  onZoomIn: () => void;
+  onZoomOut: () => void;
+  onResetZoom: () => void;
+  onExportPng: () => void;
+  searchQuery: string;
+  onSearchChange: (query: string) => void;
+  selectedType: string;
+  onSelectType: (type: string) => void;
+  nodeTypes: string[];
+  variant?: NetworkGraphVariant;
+}
+
+export interface NodeDetailsPanelProps {
+  node: GraphNode | null;
+  connectedEdges: GraphEdge[];
+  allNodes: GraphNode[];
+  onClose: () => void;
+  onSelectNode: (id: string) => void;
+  variant?: NetworkGraphVariant;
+}
+
+export interface NetworkGraphProps {
+  nodes?: GraphNode[];
+  edges?: GraphEdge[];
+  initialZoom?: number;
+  variant?: NetworkGraphVariant;
+  size?: NetworkGraphSize;
+  title?: string;
+  subtitle?: string;
+  showControls?: boolean;
+  showDetailsPanel?: boolean;
+  physicsEnabled?: boolean;
+  repulsionForce?: number;
+  linkDistance?: number;
+  width?: number | string;
+  height?: number | string;
+  className?: string;
+  onNodeClick?: (node: GraphNode) => void;
+  onEdgeClick?: (edge: GraphEdge) => void;
+  onSelectionChange?: (node: GraphNode | null) => void;
+}
+
+// ============================================================================
+// Constants & Styling Tokens
+// ============================================================================
+
+const VARIANT_STYLES: Record<NetworkGraphVariant, {
+  container: React.CSSProperties;
+  panel: React.CSSProperties;
+  nodeGlow: string;
+  edgeColor: string;
+  edgeAnimatedColor: string;
+  textColor: string;
+  subtextColor: string;
+  badgeBg: string;
+}> = {
+  default: {
+    container: {
+      backgroundColor: '#0f172a',
+      borderColor: '#1e293b',
+      boxShadow: '0 10px 25px -5px rgba(0, 0, 0, 0.5)',
+    },
+    panel: {
+      backgroundColor: '#1e293b',
+      borderColor: '#334155',
+      color: '#f8fafc',
+    },
+    nodeGlow: 'rgba(56, 189, 248, 0.25)',
+    edgeColor: '#334155',
+    edgeAnimatedColor: '#38bdf8',
+    textColor: '#f8fafc',
+    subtextColor: '#94a3b8',
+    badgeBg: '#334155',
+  },
+  card: {
+    container: {
+      backgroundColor: '#18181b',
+      borderColor: '#27272a',
+      boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.7)',
+    },
+    panel: {
+      backgroundColor: '#27272a',
+      borderColor: '#3f3f46',
+      color: '#fafafa',
+    },
+    nodeGlow: 'rgba(161, 161, 170, 0.2)',
+    edgeColor: '#3f3f46',
+    edgeAnimatedColor: '#a1a1aa',
+    textColor: '#fafafa',
+    subtextColor: '#a1a1aa',
+    badgeBg: '#3f3f46',
+  },
+  glass: {
+    container: {
+      backgroundColor: 'rgba(15, 23, 42, 0.85)',
+      backdropFilter: 'blur(16px)',
+      borderColor: 'rgba(255, 255, 255, 0.1)',
+      boxShadow: '0 8px 32px 0 rgba(0, 0, 0, 0.37)',
+    },
+    panel: {
+      backgroundColor: 'rgba(30, 41, 59, 0.8)',
+      backdropFilter: 'blur(12px)',
+      borderColor: 'rgba(255, 255, 255, 0.15)',
+      color: '#f8fafc',
+    },
+    nodeGlow: 'rgba(125, 211, 252, 0.3)',
+    edgeColor: 'rgba(148, 163, 184, 0.25)',
+    edgeAnimatedColor: '#7dd3fc',
+    textColor: '#f8fafc',
+    subtextColor: '#cbd5e1',
+    badgeBg: 'rgba(255, 255, 255, 0.1)',
+  },
+  neon: {
+    container: {
+      backgroundColor: '#05050f',
+      borderColor: '#00f0ff',
+      boxShadow: '0 0 30px rgba(0, 240, 255, 0.2), inset 0 0 20px rgba(0, 240, 255, 0.05)',
+    },
+    panel: {
+      backgroundColor: '#090919',
+      borderColor: '#00f0ff',
+      color: '#00f0ff',
+      boxShadow: '0 0 15px rgba(0, 240, 255, 0.2)',
+    },
+    nodeGlow: 'rgba(0, 240, 255, 0.5)',
+    edgeColor: '#1e1b4b',
+    edgeAnimatedColor: '#00f0ff',
+    textColor: '#00f0ff',
+    subtextColor: '#818cf8',
+    badgeBg: '#1e1b4b',
+  },
+};
+
+const SIZE_CONFIGS: Record<NetworkGraphSize, {
+  defaultHeight: number;
+  nodeRadius: number;
+  fontSize: number;
+  iconSize: number;
+}> = {
+  sm: {
+    defaultHeight: 440,
+    nodeRadius: 22,
+    fontSize: 11,
+    iconSize: 14,
+  },
+  md: {
+    defaultHeight: 620,
+    nodeRadius: 28,
+    fontSize: 12,
+    iconSize: 18,
+  },
+  lg: {
+    defaultHeight: 800,
+    nodeRadius: 34,
+    fontSize: 13,
+    iconSize: 22,
+  },
+};
+
+const STATUS_COLORS: Record<GraphNodeStatus, {
+  color: string;
+  bg: string;
+  border: string;
+  label: string;
+}> = {
+  healthy: {
+    color: '#10b981',
+    bg: 'rgba(16, 185, 129, 0.15)',
+    border: '#059669',
+    label: 'Healthy',
+  },
+  warning: {
+    color: '#f59e0b',
+    bg: 'rgba(245, 158, 11, 0.15)',
+    border: '#d97706',
+    label: 'Warning',
+  },
+  error: {
+    color: '#f43f5e',
+    bg: 'rgba(244, 63, 94, 0.15)',
+    border: '#e11d48',
+    label: 'Error',
+  },
+  idle: {
+    color: '#94a3b8',
+    bg: 'rgba(148, 163, 184, 0.15)',
+    border: '#64748b',
+    label: 'Idle',
+  },
+};
+
+const TYPE_COLORS: Record<GraphNodeType, {
+  accent: string;
+  bg: string;
+  label: string;
+}> = {
+  gateway: { accent: '#ec4899', bg: 'rgba(236, 72, 153, 0.2)', label: 'Gateway' },
+  service: { accent: '#3b82f6', bg: 'rgba(59, 130, 246, 0.2)', label: 'Service' },
+  database: { accent: '#8b5cf6', bg: 'rgba(139, 92, 246, 0.2)', label: 'Database' },
+  server: { accent: '#10b981', bg: 'rgba(16, 185, 129, 0.2)', label: 'Server' },
+  client: { accent: '#06b6d4', bg: 'rgba(6, 182, 212, 0.2)', label: 'Client' },
+  ai: { accent: '#f59e0b', bg: 'rgba(245, 158, 11, 0.2)', label: 'AI Agent' },
+};
+
+const DEFAULT_NODES: GraphNode[] = [
+  {
+    id: 'gw-1',
+    label: 'API Gateway',
+    type: 'gateway',
+    status: 'healthy',
+    x: 400,
+    y: 120,
+    group: 'edge',
+    tags: ['ingress', 'load-balancer', 'tls'],
+    metrics: { cpu: 28, memory: 45, latency: 4, requestsPerSec: 1420, uptime: '99.99%' },
+  },
+  {
+    id: 'auth-svc',
+    label: 'Auth Service',
+    type: 'service',
+    status: 'healthy',
+    x: 250,
+    y: 260,
+    group: 'core',
+    tags: ['oauth2', 'jwt', 'security'],
+    metrics: { cpu: 42, memory: 60, latency: 12, requestsPerSec: 480, uptime: '99.95%' },
+  },
+  {
+    id: 'user-db',
+    label: 'PostgreSQL DB',
+    type: 'database',
+    status: 'healthy',
+    x: 180,
+    y: 440,
+    group: 'data',
+    tags: ['relational', 'primary', 'acid'],
+    metrics: { cpu: 55, memory: 78, latency: 8, requestsPerSec: 620, uptime: '100%' },
+  },
+  {
+    id: 'cache-1',
+    label: 'Redis Cache',
+    type: 'database',
+    status: 'healthy',
+    x: 340,
+    y: 420,
+    group: 'cache',
+    tags: ['in-memory', 'kv', 'pubsub'],
+    metrics: { cpu: 18, memory: 52, latency: 1, requestsPerSec: 2100, uptime: '99.99%' },
+  },
+  {
+    id: 'ai-engine',
+    label: 'AI Inference Node',
+    type: 'ai',
+    status: 'healthy',
+    x: 550,
+    y: 260,
+    group: 'ai',
+    tags: ['llm', 'rag', 'embeddings'],
+    metrics: { cpu: 85, memory: 92, latency: 120, requestsPerSec: 85, uptime: '99.90%' },
+  },
+  {
+    id: 'worker-pool',
+    label: 'Worker Pool',
+    type: 'server',
+    status: 'idle',
+    x: 620,
+    y: 440,
+    group: 'workers',
+    tags: ['cron', 'background', 'queue'],
+    metrics: { cpu: 8, memory: 30, latency: 15, requestsPerSec: 45, uptime: '99.80%' },
+  },
+  {
+    id: 'client-web',
+    label: 'Web Client',
+    type: 'client',
+    status: 'healthy',
+    x: 220,
+    y: 80,
+    group: 'client',
+    tags: ['react', 'pwa', 'cdn'],
+    metrics: { cpu: 15, memory: 25, latency: 22, requestsPerSec: 320, uptime: '99.99%' },
+  },
+  {
+    id: 'payment-svc',
+    label: 'Payment Gateway',
+    type: 'service',
+    status: 'warning',
+    x: 420,
+    y: 320,
+    group: 'core',
+    tags: ['pci-dss', 'stripe', 'webhooks'],
+    metrics: { cpu: 74, memory: 82, latency: 185, requestsPerSec: 95, uptime: '98.50%' },
+  },
+];
+
+const DEFAULT_EDGES: GraphEdge[] = [
+  { id: 'e-client-gw', source: 'client-web', target: 'gw-1', label: 'HTTPS', animated: true, directional: true },
+  { id: 'e-gw-auth', source: 'gw-1', target: 'auth-svc', label: 'gRPC', animated: true, directional: true },
+  { id: 'e-gw-ai', source: 'gw-1', target: 'ai-engine', label: 'REST', animated: true, directional: true },
+  { id: 'e-gw-pay', source: 'gw-1', target: 'payment-svc', label: 'mTLS', animated: false, directional: true },
+  { id: 'e-auth-db', source: 'auth-svc', target: 'user-db', label: 'TCP 5432', animated: false, directional: true },
+  { id: 'e-auth-cache', source: 'auth-svc', target: 'cache-1', label: 'Redis RESP', animated: true, directional: true },
+  { id: 'e-ai-cache', source: 'ai-engine', target: 'cache-1', label: 'Vector Cache', animated: false, directional: true },
+  { id: 'e-ai-worker', source: 'ai-engine', target: 'worker-pool', label: 'Task Queue', animated: true, directional: true },
+  { id: 'e-pay-db', source: 'payment-svc', target: 'user-db', label: 'Transactions', animated: false, directional: true },
+];
+
+// ============================================================================
+// SVG Icons
+// ============================================================================
+
+const ServerIcon: React.FC<{ size?: number; color?: string }> = ({ size = 16, color = 'currentColor' }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <rect width="20" height="8" x="2" y="2" rx="2" ry="2" />
+    <rect width="20" height="8" x="2" y="14" rx="2" ry="2" />
+    <line x1="6" x2="6.01" y1="6" y2="6" />
+    <line x1="6" x2="6.01" y1="18" y2="18" />
+  </svg>
+);
+
+const DatabaseIcon: React.FC<{ size?: number; color?: string }> = ({ size = 16, color = 'currentColor' }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <ellipse cx="12" cy="5" rx="9" ry="3" />
+    <path d="M3 5V19A9 3 0 0 0 21 19V5" />
+    <path d="M3 12A9 3 0 0 0 21 12" />
+  </svg>
+);
+
+const ClientIcon: React.FC<{ size?: number; color?: string }> = ({ size = 16, color = 'currentColor' }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <rect width="18" height="12" x="3" y="4" rx="2" />
+    <line x1="2" x2="22" y1="20" y2="20" />
+  </svg>
+);
+
+const ServiceIcon: React.FC<{ size?: number; color?: string }> = ({ size = 16, color = 'currentColor' }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <polygon points="12 2 2 7 12 12 22 7 12 2" />
+    <polyline points="2 17 12 22 22 17" />
+    <polyline points="2 12 12 17 22 12" />
+  </svg>
+);
+
+const GatewayIcon: React.FC<{ size?: number; color?: string }> = ({ size = 16, color = 'currentColor' }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <circle cx="12" cy="12" r="10" />
+    <path d="M12 2a14.5 14.5 0 0 0 0 20 14.5 14.5 0 0 0 0-20" />
+    <path d="M2 12h20" />
+  </svg>
+);
+
+const AiIcon: React.FC<{ size?: number; color?: string }> = ({ size = 16, color = 'currentColor' }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M12 2a4 4 0 0 1 4 4v1a4 4 0 0 1-4 4 4 4 0 0 1-4-4V6a4 4 0 0 1 4-4Z" />
+    <path d="M16 14v1a4 4 0 0 1-4 4 4 4 0 0 1-4-4v-1" />
+    <line x1="12" x2="12" y1="19" y2="22" />
+    <line x1="8" x2="16" y1="22" y2="22" />
+  </svg>
+);
+
+const PlayIcon: React.FC<{ size?: number }> = ({ size = 16 }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="currentColor">
+    <polygon points="5 3 19 12 5 21 5 3" />
+  </svg>
+);
+
+const PauseIcon: React.FC<{ size?: number }> = ({ size = 16 }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="currentColor">
+    <rect x="6" y="4" width="4" height="16" rx="1" />
+    <rect x="14" y="4" width="4" height="16" rx="1" />
+  </svg>
+);
+
+const RefreshIcon: React.FC<{ size?: number }> = ({ size = 16 }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8" />
+    <path d="M21 3v5h-5" />
+    <path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16" />
+    <path d="M8 16H3v5" />
+  </svg>
+);
+
+const ZoomInIcon: React.FC<{ size?: number }> = ({ size = 16 }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <circle cx="11" cy="11" r="8" />
+    <line x1="21" x2="16.65" y1="21" y2="16.65" />
+    <line x1="11" x2="11" y1="8" y2="14" />
+    <line x1="8" x2="14" y1="11" y2="11" />
+  </svg>
+);
+
+const ZoomOutIcon: React.FC<{ size?: number }> = ({ size = 16 }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <circle cx="11" cy="11" r="8" />
+    <line x1="21" x2="16.65" y1="21" y2="16.65" />
+    <line x1="8" x2="14" y1="11" y2="11" />
+  </svg>
+);
+
+const ResetZoomIcon: React.FC<{ size?: number }> = ({ size = 16 }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M15 3h6v6" />
+    <path d="M9 21H3v-6" />
+    <path d="M21 3l-7 7" />
+    <path d="M3 21l7-7" />
+  </svg>
+);
+
+const CameraIcon: React.FC<{ size?: number }> = ({ size = 16 }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3z" />
+    <circle cx="12" cy="13" r="3" />
+  </svg>
+);
+
+const SearchIcon: React.FC<{ size?: number }> = ({ size = 16 }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <circle cx="11" cy="11" r="8" />
+    <line x1="21" x2="16.65" y1="21" y2="16.65" />
+  </svg>
+);
+
+const CloseIcon: React.FC<{ size?: number }> = ({ size = 16 }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <line x1="18" y1="6" x2="6" y2="18" />
+    <line x1="6" y1="6" x2="18" y2="18" />
+  </svg>
+);
+
+const getNodeIcon = (type: GraphNodeType, size: number = 18, color: string = '#ffffff') => {
+  switch (type) {
+    case 'server':
+      return <ServerIcon size={size} color={color} />;
+    case 'database':
+      return <DatabaseIcon size={size} color={color} />;
+    case 'client':
+      return <ClientIcon size={size} color={color} />;
+    case 'service':
+      return <ServiceIcon size={size} color={color} />;
+    case 'gateway':
+      return <GatewayIcon size={size} color={color} />;
+    case 'ai':
+      return <AiIcon size={size} color={color} />;
+    default:
+      return <ServerIcon size={size} color={color} />;
+  }
+};
+
+// ============================================================================
+// Compound Component: GraphControls
+// ============================================================================
+
+export const GraphControls: React.FC<GraphControlsProps> = ({
+  isSimulating,
+  onToggleSimulation,
+  onReheatSimulation,
+  onZoomIn,
+  onZoomOut,
+  onResetZoom,
+  onExportPng,
+  searchQuery,
+  onSearchChange,
+  selectedType,
+  onSelectType,
+  nodeTypes,
+  variant = 'default',
+}) => {
+  const styles = VARIANT_STYLES[variant];
+
+  const buttonStyle: React.CSSProperties = {
+    display: 'inline-flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: '6px 10px',
+    borderRadius: '6px',
+    border: '1px solid rgba(255, 255, 255, 0.12)',
+    backgroundColor: 'rgba(255, 255, 255, 0.05)',
+    color: styles.textColor,
+    fontSize: '12px',
+    fontWeight: 500,
+    cursor: 'pointer',
+    transition: 'all 0.15s ease',
+  };
+
+  return (
+    <div
+      style={{
+        display: 'flex',
+        flexWrap: 'wrap',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        gap: '10px',
+        padding: '10px 14px',
+        borderBottom: `1px solid ${styles.panel.borderColor as string}`,
+        backgroundColor: styles.panel.backgroundColor,
+        zIndex: 10,
+      }}
+      role="toolbar"
+      aria-label="Network Graph Controls"
+    >
+      {/* Left: Search & Filter */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+        <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
+          <span style={{ position: 'absolute', left: '8px', color: styles.subtextColor, pointerEvents: 'none', display: 'flex' }}>
+            <SearchIcon size={14} />
+          </span>
+          <input
+            type="text"
+            value={searchQuery}
+            onChange={(e) => onSearchChange(e.target.value)}
+            placeholder="Search nodes or tags..."
+            aria-label="Search nodes"
+            style={{
+              padding: '6px 10px 6px 28px',
+              borderRadius: '6px',
+              border: `1px solid ${styles.panel.borderColor as string}`,
+              backgroundColor: 'rgba(0, 0, 0, 0.25)',
+              color: styles.textColor,
+              fontSize: '12px',
+              outline: 'none',
+              width: '180px',
+            }}
+          />
+        </div>
+
+        {/* Type Filter Pills */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '4px', overflowX: 'auto' }}>
+          {['all', ...nodeTypes].map((type) => {
+            const isSelected = selectedType === type;
+            return (
+              <button
+                key={type}
+                type="button"
+                onClick={() => onSelectType(type)}
+                style={{
+                  ...buttonStyle,
+                  padding: '4px 8px',
+                  fontSize: '11px',
+                  textTransform: 'capitalize',
+                  backgroundColor: isSelected ? 'rgba(56, 189, 248, 0.25)' : 'transparent',
+                  borderColor: isSelected ? '#38bdf8' : 'rgba(255, 255, 255, 0.08)',
+                  color: isSelected ? '#38bdf8' : styles.subtextColor,
+                }}
+              >
+                {type}
+              </button>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* Right: Simulation & Zoom Actions */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+        <button
+          type="button"
+          onClick={onToggleSimulation}
+          title={isSimulating ? 'Pause physics simulation' : 'Resume physics simulation'}
+          aria-label={isSimulating ? 'Pause physics' : 'Resume physics'}
+          style={buttonStyle}
+        >
+          {isSimulating ? <PauseIcon size={13} /> : <PlayIcon size={13} />}
+          <span style={{ marginLeft: '4px' }}>{isSimulating ? 'Pause' : 'Play'}</span>
+        </button>
+
+        <button
+          type="button"
+          onClick={onReheatSimulation}
+          title="Reheat physics / re-layout"
+          aria-label="Reheat physics"
+          style={buttonStyle}
+        >
+          <RefreshIcon size={13} />
+        </button>
+
+        <span style={{ width: '1px', height: '16px', backgroundColor: 'rgba(255, 255, 255, 0.15)', margin: '0 2px' }} />
+
+        <button
+          type="button"
+          onClick={onZoomIn}
+          title="Zoom in"
+          aria-label="Zoom in"
+          style={buttonStyle}
+        >
+          <ZoomInIcon size={14} />
+        </button>
+
+        <button
+          type="button"
+          onClick={onZoomOut}
+          title="Zoom out"
+          aria-label="Zoom out"
+          style={buttonStyle}
+        >
+          <ZoomOutIcon size={14} />
+        </button>
+
+        <button
+          type="button"
+          onClick={onResetZoom}
+          title="Reset zoom and pan"
+          aria-label="Reset zoom"
+          style={buttonStyle}
+        >
+          <ResetZoomIcon size={14} />
+        </button>
+
+        <button
+          type="button"
+          onClick={onExportPng}
+          title="Export topology as PNG"
+          aria-label="Export as PNG"
+          style={{ ...buttonStyle, backgroundColor: 'rgba(56, 189, 248, 0.15)', borderColor: '#0284c7' }}
+        >
+          <CameraIcon size={14} />
+          <span style={{ marginLeft: '4px' }}>Export PNG</span>
+        </button>
+      </div>
+    </div>
+  );
+};
+GraphControls.displayName = 'GraphControls';
+
+// ============================================================================
+// Compound Component: NodeDetailsPanel
+// ============================================================================
+
+export const NodeDetailsPanel: React.FC<NodeDetailsPanelProps> = ({
+  node,
+  connectedEdges,
+  allNodes,
+  onClose,
+  onSelectNode,
+  variant = 'default',
+}) => {
+  if (!node) return null;
+
+  const styles = VARIANT_STYLES[variant];
+  const typeConfig = TYPE_COLORS[node.type] || TYPE_COLORS.server;
+  const statusConfig = STATUS_COLORS[node.status] || STATUS_COLORS.healthy;
+
+  return (
+    <aside
+      style={{
+        position: 'absolute',
+        top: '60px',
+        right: '16px',
+        width: '320px',
+        maxHeight: 'calc(100% - 80px)',
+        overflowY: 'auto',
+        borderRadius: '8px',
+        border: `1px solid ${styles.panel.borderColor as string}`,
+        backgroundColor: styles.panel.backgroundColor,
+        color: styles.textColor,
+        padding: '16px',
+        boxShadow: '0 12px 30px rgba(0, 0, 0, 0.6)',
+        zIndex: 20,
+      }}
+      role="complementary"
+      aria-label={`Details for ${node.label}`}
+    >
+      {/* Header */}
+      <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: '12px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+          <div
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              width: '36px',
+              height: '36px',
+              borderRadius: '8px',
+              backgroundColor: typeConfig.bg,
+              border: `1px solid ${typeConfig.accent}`,
+            }}
+          >
+            {getNodeIcon(node.type, 20, typeConfig.accent)}
+          </div>
+          <div>
+            <h4 style={{ margin: 0, fontSize: '15px', fontWeight: 600 }}>{node.label}</h4>
+            <span style={{ fontSize: '11px', color: styles.subtextColor }}>ID: {node.id}</span>
+          </div>
+        </div>
+        <button
+          type="button"
+          onClick={onClose}
+          aria-label="Close details"
+          style={{
+            background: 'none',
+            border: 'none',
+            color: styles.subtextColor,
+            cursor: 'pointer',
+            padding: '4px',
+            display: 'flex',
+          }}
+        >
+          <CloseIcon size={16} />
+        </button>
+      </div>
+
+      {/* Badges: Type & Status */}
+      <div style={{ display: 'flex', gap: '6px', marginBottom: '14px', flexWrap: 'wrap' }}>
+        <span
+          style={{
+            padding: '2px 8px',
+            borderRadius: '4px',
+            fontSize: '11px',
+            fontWeight: 600,
+            backgroundColor: typeConfig.bg,
+            color: typeConfig.accent,
+            border: `1px solid ${typeConfig.accent}`,
+            textTransform: 'uppercase',
+          }}
+        >
+          {typeConfig.label}
+        </span>
+        <span
+          style={{
+            padding: '2px 8px',
+            borderRadius: '4px',
+            fontSize: '11px',
+            fontWeight: 600,
+            backgroundColor: statusConfig.bg,
+            color: statusConfig.color,
+            border: `1px solid ${statusConfig.border}`,
+          }}
+        >
+          ● {statusConfig.label}
+        </span>
+        {node.group && (
+          <span
+            style={{
+              padding: '2px 8px',
+              borderRadius: '4px',
+              fontSize: '11px',
+              backgroundColor: 'rgba(255, 255, 255, 0.08)',
+              color: styles.subtextColor,
+            }}
+          >
+            grp: {node.group}
+          </span>
+        )}
+      </div>
+
+      {/* Live Metrics */}
+      {node.metrics && (
+        <div style={{ marginBottom: '14px' }}>
+          <div style={{ fontSize: '12px', fontWeight: 600, marginBottom: '8px', color: styles.subtextColor }}>
+            Performance Metrics
+          </div>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
+            {node.metrics.cpu !== undefined && (
+              <div style={{ backgroundColor: 'rgba(0, 0, 0, 0.2)', padding: '8px', borderRadius: '6px' }}>
+                <div style={{ fontSize: '10px', color: styles.subtextColor }}>CPU Load</div>
+                <div style={{ fontSize: '13px', fontWeight: 600, color: node.metrics.cpu > 80 ? '#f43f5e' : '#10b981' }}>
+                  {node.metrics.cpu}%
+                </div>
+                <div style={{ height: '4px', backgroundColor: 'rgba(255, 255, 255, 0.1)', borderRadius: '2px', marginTop: '4px', overflow: 'hidden' }}>
+                  <div style={{ height: '100%', width: `${Math.min(100, node.metrics.cpu)}%`, backgroundColor: node.metrics.cpu > 80 ? '#f43f5e' : '#10b981' }} />
+                </div>
+              </div>
+            )}
+            {node.metrics.memory !== undefined && (
+              <div style={{ backgroundColor: 'rgba(0, 0, 0, 0.2)', padding: '8px', borderRadius: '6px' }}>
+                <div style={{ fontSize: '10px', color: styles.subtextColor }}>Memory</div>
+                <div style={{ fontSize: '13px', fontWeight: 600, color: node.metrics.memory > 85 ? '#f43f5e' : '#38bdf8' }}>
+                  {node.metrics.memory}%
+                </div>
+                <div style={{ height: '4px', backgroundColor: 'rgba(255, 255, 255, 0.1)', borderRadius: '2px', marginTop: '4px', overflow: 'hidden' }}>
+                  <div style={{ height: '100%', width: `${Math.min(100, node.metrics.memory)}%`, backgroundColor: node.metrics.memory > 85 ? '#f43f5e' : '#38bdf8' }} />
+                </div>
+              </div>
+            )}
+            {node.metrics.latency !== undefined && (
+              <div style={{ backgroundColor: 'rgba(0, 0, 0, 0.2)', padding: '8px', borderRadius: '6px' }}>
+                <div style={{ fontSize: '10px', color: styles.subtextColor }}>Latency</div>
+                <div style={{ fontSize: '13px', fontWeight: 600 }}>{node.metrics.latency} ms</div>
+              </div>
+            )}
+            {node.metrics.requestsPerSec !== undefined && (
+              <div style={{ backgroundColor: 'rgba(0, 0, 0, 0.2)', padding: '8px', borderRadius: '6px' }}>
+                <div style={{ fontSize: '10px', color: styles.subtextColor }}>Throughput</div>
+                <div style={{ fontSize: '13px', fontWeight: 600 }}>{node.metrics.requestsPerSec} req/s</div>
+              </div>
+            )}
+            {node.metrics.uptime && (
+              <div style={{ backgroundColor: 'rgba(0, 0, 0, 0.2)', padding: '8px', borderRadius: '6px', gridColumn: 'span 2' }}>
+                <div style={{ fontSize: '10px', color: styles.subtextColor }}>Uptime</div>
+                <div style={{ fontSize: '12px', fontWeight: 600, color: '#10b981' }}>{node.metrics.uptime}</div>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Connected Nodes */}
+      <div style={{ marginBottom: '14px' }}>
+        <div style={{ fontSize: '12px', fontWeight: 600, marginBottom: '6px', color: styles.subtextColor }}>
+          Connections ({connectedEdges.length})
+        </div>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', maxHeight: '140px', overflowY: 'auto' }}>
+          {connectedEdges.map((edge) => {
+            const otherId = edge.source === node.id ? edge.target : edge.source;
+            const otherNode = allNodes.find((n) => n.id === otherId);
+            const isOutbound = edge.source === node.id;
+            return (
+              <button
+                key={edge.id}
+                type="button"
+                onClick={() => onSelectNode(otherId)}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  padding: '6px 8px',
+                  borderRadius: '4px',
+                  backgroundColor: 'rgba(255, 255, 255, 0.04)',
+                  border: '1px solid rgba(255, 255, 255, 0.08)',
+                  color: styles.textColor,
+                  fontSize: '11px',
+                  cursor: 'pointer',
+                  textAlign: 'left',
+                }}
+              >
+                <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  <span style={{ color: isOutbound ? '#38bdf8' : '#a855f7' }}>
+                    {isOutbound ? '➔' : '➔'}
+                  </span>
+                  <span>{otherNode ? otherNode.label : otherId}</span>
+                </div>
+                {edge.label && (
+                  <span style={{ fontSize: '10px', color: styles.subtextColor, backgroundColor: 'rgba(0, 0, 0, 0.3)', padding: '1px 5px', borderRadius: '3px' }}>
+                    {edge.label}
+                  </span>
+                )}
+              </button>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* Tags */}
+      {node.tags && node.tags.length > 0 && (
+        <div>
+          <div style={{ fontSize: '12px', fontWeight: 600, marginBottom: '6px', color: styles.subtextColor }}>
+            Tags
+          </div>
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px' }}>
+            {node.tags.map((tag) => (
+              <span
+                key={tag}
+                style={{
+                  fontSize: '10px',
+                  padding: '2px 6px',
+                  borderRadius: '4px',
+                  backgroundColor: 'rgba(255, 255, 255, 0.06)',
+                  color: styles.subtextColor,
+                }}
+              >
+                #{tag}
+              </span>
+            ))}
+          </div>
+        </div>
+      )}
+    </aside>
+  );
+};
+NodeDetailsPanel.displayName = 'NodeDetailsPanel';
+
+// ============================================================================
+// Main Component: NetworkGraphComponent
+// ============================================================================
+
+const NetworkGraphComponent = forwardRef<NetworkGraphHandle, NetworkGraphProps>(
+  (
+    {
+      nodes: initialNodes = DEFAULT_NODES,
+      edges: initialEdges = DEFAULT_EDGES,
+      initialZoom = 1,
+      variant = 'default',
+      size = 'md',
+      title = 'Network Topology Graph',
+      subtitle = 'Real-time microservices architecture & telemetry map',
+      showControls = true,
+      showDetailsPanel = true,
+      physicsEnabled = true,
+      repulsionForce = 4000,
+      linkDistance = 140,
+      width = '100%',
+      height,
+      className,
+      onNodeClick,
+      onEdgeClick,
+      onSelectionChange,
+    },
+    ref
+  ) => {
+    const sizeConfig = SIZE_CONFIGS[size];
+    const containerHeight = height ?? sizeConfig.defaultHeight;
+    const styles = VARIANT_STYLES[variant];
+
+    // Local mutable state
+    const [nodes, setNodes] = useState<GraphNode[]>(() =>
+      initialNodes.map((n, idx) => ({
+        ...n,
+        x: n.x ?? 200 + (idx % 3) * 200,
+        y: n.y ?? 150 + Math.floor(idx / 3) * 160,
+        vx: 0,
+        vy: 0,
+      }))
+    );
+    const [edges] = useState<GraphEdge[]>(initialEdges);
+
+    // Viewport transforms
+    const [zoom, setZoom] = useState<number>(initialZoom);
+    const [pan, setPan] = useState<{ x: number; y: number }>({ x: 0, y: 0 });
+
+    // Interactive state
+    const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
+    const [searchQuery, setSearchQuery] = useState<string>('');
+    const [selectedType, setSelectedType] = useState<string>('all');
+    const [isSimulating, setIsSimulating] = useState<boolean>(physicsEnabled);
+
+    // Refs for animation and dragging
+    const svgRef = useRef<SVGSVGElement | null>(null);
+    const containerRef = useRef<HTMLDivElement | null>(null);
+    const draggingNodeRef = useRef<{ id: string; startX: number; startY: number } | null>(null);
+    const isPanningRef = useRef<boolean>(false);
+    const panStartRef = useRef<{ x: number; y: number }>({ x: 0, y: 0 });
+    const animFrameRef = useRef<number | null>(null);
+
+    // Node types available
+    const nodeTypes = useMemo(() => {
+      const types = new Set<string>();
+      nodes.forEach((n) => types.add(n.type));
+      return Array.from(types);
+    }, [nodes]);
+
+    // Filtered / Searched nodes
+    const matchesFilter = useCallback(
+      (node: GraphNode) => {
+        if (selectedType !== 'all' && node.type !== selectedType) return false;
+        if (!searchQuery.trim()) return true;
+        const q = searchQuery.toLowerCase();
+        const matchesLabel = node.label.toLowerCase().includes(q);
+        const matchesId = node.id.toLowerCase().includes(q);
+        const matchesTags = node.tags?.some((t) => t.toLowerCase().includes(q)) ?? false;
+        return matchesLabel || matchesId || matchesTags;
+      },
+      [selectedType, searchQuery]
+    );
+
+    // Connected edges for selected node
+    const connectedEdges = useMemo(() => {
+      if (!selectedNodeId) return [];
+      return edges.filter((e) => e.source === selectedNodeId || e.target === selectedNodeId);
+    }, [edges, selectedNodeId]);
+
+    const selectedNode = useMemo(() => {
+      return nodes.find((n) => n.id === selectedNodeId) ?? null;
+    }, [nodes, selectedNodeId]);
+
+    // Handle node selection
+    const handleSelectNode = useCallback(
+      (nodeOrId: GraphNode | string | null) => {
+        const id = typeof nodeOrId === 'string' ? nodeOrId : nodeOrId?.id ?? null;
+        setSelectedNodeId(id);
+        const nodeObj = nodes.find((n) => n.id === id) ?? null;
+        if (onSelectionChange) onSelectionChange(nodeObj);
+        if (nodeObj && onNodeClick) onNodeClick(nodeObj);
+      },
+      [nodes, onSelectionChange, onNodeClick]
+    );
+
+    // Physics Force Simulation loop
+    useEffect(() => {
+      if (!isSimulating) return;
+
+      let lastTime = performance.now();
+
+      const simulate = (currentTime: number) => {
+        const dt = Math.min((currentTime - lastTime) / 1000, 0.05);
+        lastTime = currentTime;
+
+        setNodes((prevNodes) => {
+          const newNodes = prevNodes.map((n) => ({ ...n }));
+          const nodeMap = new Map(newNodes.map((n) => [n.id, n]));
+
+          // Center coordinate
+          const centerX = 400;
+          const centerY = 300;
+          const centerGravity = 0.02;
+
+          // 1. Center gravity
+          for (const node of newNodes) {
+            if (draggingNodeRef.current?.id === node.id) continue;
+            node.vx = (node.vx ?? 0) + (centerX - (node.x ?? centerX)) * centerGravity;
+            node.vy = (node.vy ?? 0) + (centerY - (node.y ?? centerY)) * centerGravity;
+          }
+
+          // 2. Coulomb Repulsion between nodes
+          for (let i = 0; i < newNodes.length; i++) {
+            for (let j = i + 1; j < newNodes.length; j++) {
+              const n1 = newNodes[i];
+              const n2 = newNodes[j];
+              const dx = (n2.x ?? 0) - (n1.x ?? 0);
+              const dy = (n2.y ?? 0) - (n1.y ?? 0);
+              const distSq = dx * dx + dy * dy || 1;
+              const dist = Math.sqrt(distSq);
+
+              if (dist < 500) {
+                const force = repulsionForce / (distSq + 200);
+                const fx = (dx / dist) * force;
+                const fy = (dy / dist) * force;
+
+                if (draggingNodeRef.current?.id !== n1.id) {
+                  n1.vx = (n1.vx ?? 0) - fx;
+                  n1.vy = (n1.vy ?? 0) - fy;
+                }
+                if (draggingNodeRef.current?.id !== n2.id) {
+                  n2.vx = (n2.vx ?? 0) + fx;
+                  n2.vy = (n2.vy ?? 0) + fy;
+                }
+              }
+            }
+          }
+
+          // 3. Hooke's Spring Attraction along edges
+          for (const edge of edges) {
+            const source = nodeMap.get(edge.source);
+            const target = nodeMap.get(edge.target);
+            if (!source || !target) continue;
+
+            const dx = (target.x ?? 0) - (source.x ?? 0);
+            const dy = (target.y ?? 0) - (source.y ?? 0);
+            const dist = Math.sqrt(dx * dx + dy * dy) || 1;
+            const displacement = dist - linkDistance;
+            const springForce = displacement * 0.05;
+
+            const fx = (dx / dist) * springForce;
+            const fy = (dy / dist) * springForce;
+
+            if (draggingNodeRef.current?.id !== source.id) {
+              source.vx = (source.vx ?? 0) + fx;
+              source.vy = (source.vy ?? 0) + fy;
+            }
+            if (draggingNodeRef.current?.id !== target.id) {
+              target.vx = (target.vx ?? 0) - fx;
+              target.vy = (target.vy ?? 0) - fy;
+            }
+          }
+
+          // 4. Update positions with damping
+          const damping = 0.85;
+          for (const node of newNodes) {
+            if (draggingNodeRef.current?.id === node.id) continue;
+            node.vx = (node.vx ?? 0) * damping;
+            node.vy = (node.vy ?? 0) * damping;
+            node.x = (node.x ?? centerX) + (node.vx ?? 0) * dt * 40;
+            node.y = (node.y ?? centerY) + (node.vy ?? 0) * dt * 40;
+          }
+
+          return newNodes;
+        });
+
+        animFrameRef.current = requestAnimationFrame(simulate);
+      };
+
+      animFrameRef.current = requestAnimationFrame(simulate);
+
+      return () => {
+        if (animFrameRef.current) cancelAnimationFrame(animFrameRef.current);
+      };
+    }, [isSimulating, repulsionForce, linkDistance, edges]);
+
+    // Zoom and Pan controls
+    const zoomIn = useCallback(() => setZoom((z) => Math.min(z * 1.25, 3)), []);
+    const zoomOut = useCallback(() => setZoom((z) => Math.max(z / 1.25, 0.3)), []);
+    const resetZoom = useCallback(() => {
+      setZoom(1);
+      setPan({ x: 0, y: 0 });
+    }, []);
+
+    const reheatSimulation = useCallback(() => {
+      setNodes((prev) =>
+        prev.map((n) => ({
+          ...n,
+          vx: (Math.random() - 0.5) * 50,
+          vy: (Math.random() - 0.5) * 50,
+        }))
+      );
+      setIsSimulating(true);
+    }, []);
+
+    // Export SVG as PNG
+    const exportAsPng = useCallback(() => {
+      if (!svgRef.current) return;
+      const svgElement = svgRef.current;
+      const svgString = new XMLSerializer().serializeToString(svgElement);
+      const svgBlob = new Blob([svgString], { type: 'image/svg+xml;charset=utf-8' });
+      const URL = window.URL || window.webkitURL || window;
+      const blobURL = URL.createObjectURL(svgBlob);
+
+      const image = new Image();
+      image.onload = () => {
+        const canvas = document.createElement('canvas');
+        canvas.width = svgElement.clientWidth || 800;
+        canvas.height = svgElement.clientHeight || 600;
+        const ctx = canvas.getContext('2d');
+        if (ctx) {
+          ctx.fillStyle = styles.container.backgroundColor as string;
+          ctx.fillRect(0, 0, canvas.width, canvas.height);
+          ctx.drawImage(image, 0, 0);
+          const pngUrl = canvas.toDataURL('image/png');
+          const downloadLink = document.createElement('a');
+          downloadLink.href = pngUrl;
+          downloadLink.download = 'network-topology.png';
+          document.body.appendChild(downloadLink);
+          downloadLink.click();
+          document.body.removeChild(downloadLink);
+        }
+        URL.revokeObjectURL(blobURL);
+      };
+      image.src = blobURL;
+    }, [styles.container.backgroundColor]);
+
+    // Imperative handle
+    useImperativeHandle(
+      ref,
+      () => ({
+        zoomIn,
+        zoomOut,
+        resetZoom,
+        selectNode: (id) => handleSelectNode(id),
+        pauseSimulation: () => setIsSimulating(false),
+        resumeSimulation: () => setIsSimulating(true),
+        reheatSimulation,
+        exportAsPng,
+        getNodes: () => nodes,
+        getEdges: () => edges,
+      }),
+      [zoomIn, zoomOut, resetZoom, handleSelectNode, reheatSimulation, exportAsPng, nodes, edges]
+    );
+
+    // Mouse drag for node and pan for background
+    const handleMouseDown = (e: React.MouseEvent<SVGSVGElement>) => {
+      if (e.target === svgRef.current || (e.target as HTMLElement).tagName === 'svg') {
+        isPanningRef.current = true;
+        panStartRef.current = { x: e.clientX - pan.x, y: e.clientY - pan.y };
+      }
+    };
+
+    const handleMouseMove = (e: React.MouseEvent<SVGSVGElement>) => {
+      if (isPanningRef.current) {
+        setPan({
+          x: e.clientX - panStartRef.current.x,
+          y: e.clientY - panStartRef.current.y,
+        });
+      } else if (draggingNodeRef.current) {
+        const nodeId = draggingNodeRef.current.id;
+        const rect = svgRef.current?.getBoundingClientRect();
+        if (!rect) return;
+
+        // Invert pan and zoom to get SVG world coordinate
+        const mouseX = (e.clientX - rect.left - pan.x) / zoom;
+        const mouseY = (e.clientY - rect.top - pan.y) / zoom;
+
+        setNodes((prev) =>
+          prev.map((n) =>
+            n.id === nodeId
+              ? { ...n, x: mouseX, y: mouseY, vx: 0, vy: 0 }
+              : n
+          )
+        );
+      }
+    };
+
+    const handleMouseUp = () => {
+      isPanningRef.current = false;
+      draggingNodeRef.current = null;
+    };
+
+    const handleNodeMouseDown = (e: React.MouseEvent, node: GraphNode) => {
+      e.stopPropagation();
+      draggingNodeRef.current = { id: node.id, startX: node.x ?? 0, startY: node.y ?? 0 };
+      handleSelectNode(node);
+    };
+
+    return (
+      <div
+        ref={containerRef}
+        className={className}
+        style={{
+          display: 'flex',
+          flexDirection: 'column',
+          position: 'relative',
+          width,
+          height: containerHeight,
+          borderRadius: '12px',
+          border: '1px solid',
+          overflow: 'hidden',
+          userSelect: 'none',
+          fontFamily: 'Inter, system-ui, -apple-system, sans-serif',
+          ...styles.container,
+        }}
+        role="application"
+        aria-label="Network Topology Graph"
+      >
+        {/* Title Header */}
+        <div
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            padding: '12px 18px',
+            borderBottom: `1px solid ${styles.panel.borderColor as string}`,
+            backgroundColor: 'rgba(0, 0, 0, 0.2)',
+          }}
+        >
+          <div>
+            <h3 style={{ margin: 0, fontSize: '15px', fontWeight: 600, color: styles.textColor }}>
+              {title}
+            </h3>
+            {subtitle && (
+              <p style={{ margin: 0, fontSize: '12px', color: styles.subtextColor, marginTop: '2px' }}>
+                {subtitle}
+              </p>
+            )}
+          </div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <span
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '6px',
+                fontSize: '11px',
+                padding: '4px 8px',
+                borderRadius: '9999px',
+                backgroundColor: isSimulating ? 'rgba(16, 185, 129, 0.15)' : 'rgba(148, 163, 184, 0.15)',
+                color: isSimulating ? '#10b981' : '#94a3b8',
+                border: `1px solid ${isSimulating ? '#059669' : '#64748b'}`,
+              }}
+            >
+              <span
+                style={{
+                  width: '6px',
+                  height: '6px',
+                  borderRadius: '50%',
+                  backgroundColor: isSimulating ? '#10b981' : '#94a3b8',
+                }}
+              />
+              {isSimulating ? 'Live Simulation' : 'Paused'}
+            </span>
+          </div>
+        </div>
+
+        {/* Toolbar Controls */}
+        {showControls && (
+          <GraphControls
+            isSimulating={isSimulating}
+            onToggleSimulation={() => setIsSimulating(!isSimulating)}
+            onReheatSimulation={reheatSimulation}
+            onZoomIn={zoomIn}
+            onZoomOut={zoomOut}
+            onResetZoom={resetZoom}
+            onExportPng={exportAsPng}
+            searchQuery={searchQuery}
+            onSearchChange={setSearchQuery}
+            selectedType={selectedType}
+            onSelectType={setSelectedType}
+            nodeTypes={nodeTypes}
+            variant={variant}
+          />
+        )}
+
+        {/* Main Canvas Viewport */}
+        <div style={{ flex: 1, position: 'relative', width: '100%', height: '100%', overflow: 'hidden' }}>
+          <svg
+            ref={svgRef}
+            width="100%"
+            height="100%"
+            onMouseDown={handleMouseDown}
+            onMouseMove={handleMouseMove}
+            onMouseUp={handleMouseUp}
+            onMouseLeave={handleMouseUp}
+            style={{ cursor: isPanningRef.current ? 'grabbing' : 'grab' }}
+          >
+            <defs>
+              {/* Arrow Marker */}
+              <marker
+                id="graph-arrow"
+                viewBox="0 0 10 10"
+                refX="22"
+                refY="5"
+                markerWidth="6"
+                markerHeight="6"
+                orient="auto-start-reverse"
+              >
+                <path d="M 0 1 L 10 5 L 0 9 z" fill={styles.edgeColor} />
+              </marker>
+
+              {/* Active Arrow Marker */}
+              <marker
+                id="graph-arrow-active"
+                viewBox="0 0 10 10"
+                refX="22"
+                refY="5"
+                markerWidth="6"
+                markerHeight="6"
+                orient="auto-start-reverse"
+              >
+                <path d="M 0 1 L 10 5 L 0 9 z" fill={styles.edgeAnimatedColor} />
+              </marker>
+
+              {/* Grid Background Pattern */}
+              <pattern id="graph-grid" width="40" height="40" patternUnits="userSpaceOnUse">
+                <path
+                  d="M 40 0 L 0 0 0 40"
+                  fill="none"
+                  stroke="rgba(255, 255, 255, 0.03)"
+                  strokeWidth="1"
+                />
+              </pattern>
+            </defs>
+
+            {/* Background Grid */}
+            <rect width="100%" height="100%" fill="url(#graph-grid)" />
+
+            {/* World Container with Pan and Zoom */}
+            <g transform={`translate(${pan.x}, ${pan.y}) scale(${zoom})`}>
+              {/* Edges */}
+              <g className="edges-layer">
+                {edges.map((edge) => {
+                  const source = nodes.find((n) => n.id === edge.source);
+                  const target = nodes.find((n) => n.id === edge.target);
+                  if (!source || !target) return null;
+
+                  const isSelected =
+                    selectedNodeId === source.id || selectedNodeId === target.id;
+                  const strokeColor = isSelected
+                    ? styles.edgeAnimatedColor
+                    : edge.animated
+                    ? styles.edgeAnimatedColor
+                    : styles.edgeColor;
+
+                  const midX = ((source.x ?? 0) + (target.x ?? 0)) / 2;
+                  const midY = ((source.y ?? 0) + (target.y ?? 0)) / 2;
+
+                  return (
+                    <g
+                      key={edge.id}
+                      onClick={() => onEdgeClick && onEdgeClick(edge)}
+                      style={{ cursor: 'pointer' }}
+                    >
+                      <line
+                        x1={source.x}
+                        y1={source.y}
+                        x2={target.x}
+                        y2={target.y}
+                        stroke={strokeColor}
+                        strokeWidth={isSelected ? 2.5 : 1.5}
+                        strokeDasharray={edge.animated ? '5,5' : undefined}
+                        markerEnd={
+                          edge.directional
+                            ? isSelected
+                              ? 'url(#graph-arrow-active)'
+                              : 'url(#graph-arrow)'
+                            : undefined
+                        }
+                        opacity={
+                          searchQuery && (!matchesFilter(source) || !matchesFilter(target))
+                            ? 0.2
+                            : 0.85
+                        }
+                      >
+                        {edge.animated && (
+                          <animate
+                            attributeName="stroke-dashoffset"
+                            from="20"
+                            to="0"
+                            dur="1.5s"
+                            repeatCount="indefinite"
+                          />
+                        )}
+                      </line>
+
+                      {/* Edge Label Pill */}
+                      {edge.label && (
+                        <g transform={`translate(${midX}, ${midY})`}>
+                          <rect
+                            x="-24"
+                            y="-9"
+                            width="48"
+                            height="18"
+                            rx="4"
+                            fill="rgba(15, 23, 42, 0.85)"
+                            stroke={isSelected ? styles.edgeAnimatedColor : 'rgba(255, 255, 255, 0.1)'}
+                            strokeWidth="1"
+                          />
+                          <text
+                            textAnchor="middle"
+                            dy="3.5"
+                            fill={styles.subtextColor}
+                            fontSize="9"
+                            fontWeight="500"
+                          >
+                            {edge.label}
+                          </text>
+                        </g>
+                      )}
+                    </g>
+                  );
+                })}
+              </g>
+
+              {/* Nodes */}
+              <g className="nodes-layer">
+                {nodes.map((node) => {
+                  const isSelected = selectedNodeId === node.id;
+                  const isMatch = matchesFilter(node);
+                  const typeConfig = TYPE_COLORS[node.type] || TYPE_COLORS.server;
+                  const statusConfig = STATUS_COLORS[node.status] || STATUS_COLORS.healthy;
+                  const radius = sizeConfig.nodeRadius;
+
+                  return (
+                    <g
+                      key={node.id}
+                      transform={`translate(${node.x ?? 0}, ${node.y ?? 0})`}
+                      onMouseDown={(e) => handleNodeMouseDown(e, node)}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleSelectNode(node);
+                      }}
+                      style={{ cursor: 'pointer' }}
+                      opacity={isMatch ? 1 : 0.25}
+                      role="button"
+                      aria-label={`Node ${node.label}, status ${node.status}`}
+                    >
+                      {/* Outer Selection / Glow Ring */}
+                      {isSelected && (
+                        <circle
+                          r={radius + 8}
+                          fill="none"
+                          stroke={styles.edgeAnimatedColor}
+                          strokeWidth="2"
+                          strokeDasharray="4,4"
+                          opacity="0.8"
+                        >
+                          <animateTransform
+                            attributeName="transform"
+                            type="rotate"
+                            from="0"
+                            to="360"
+                            dur="10s"
+                            repeatCount="indefinite"
+                          />
+                        </circle>
+                      )}
+
+                      {/* Node Body Circle */}
+                      <circle
+                        r={radius}
+                        fill="#0f172a"
+                        stroke={typeConfig.accent}
+                        strokeWidth={isSelected ? 3 : 2}
+                        filter="drop-shadow(0 4px 10px rgba(0, 0, 0, 0.5))"
+                      />
+
+                      {/* Inner Tint Circle */}
+                      <circle
+                        r={radius - 2}
+                        fill={typeConfig.bg}
+                      />
+
+                      {/* Node Icon */}
+                      <g transform={`translate(-${sizeConfig.iconSize / 2}, -${sizeConfig.iconSize / 2})`}>
+                        {getNodeIcon(node.type, sizeConfig.iconSize, typeConfig.accent)}
+                      </g>
+
+                      {/* Node Status Dot */}
+                      <circle
+                        cx={radius * 0.7}
+                        cy={-radius * 0.7}
+                        r="5"
+                        fill={statusConfig.color}
+                        stroke="#0f172a"
+                        strokeWidth="1.5"
+                      />
+
+                      {/* Node Label Pill */}
+                      <g transform={`translate(0, ${radius + 16})`}>
+                        <text
+                          textAnchor="middle"
+                          fill={styles.textColor}
+                          fontSize={sizeConfig.fontSize}
+                          fontWeight="600"
+                        >
+                          {node.label}
+                        </text>
+                        <text
+                          textAnchor="middle"
+                          dy="13"
+                          fill={styles.subtextColor}
+                          fontSize="9"
+                          fontWeight="400"
+                        >
+                          {node.id}
+                        </text>
+                      </g>
+                    </g>
+                  );
+                })}
+              </g>
+            </g>
+          </svg>
+
+          {/* Slide-over Inspection Panel */}
+          {showDetailsPanel && selectedNode && (
+            <NodeDetailsPanel
+              node={selectedNode}
+              connectedEdges={connectedEdges}
+              allNodes={nodes}
+              onClose={() => setSelectedNodeId(null)}
+              onSelectNode={(id) => handleSelectNode(id)}
+              variant={variant}
+            />
+          )}
+        </div>
+      </div>
+    );
+  }
+);
+
+NetworkGraphComponent.displayName = 'NetworkGraph';
+
+// ============================================================================
+// Compound & Alias Exports
+// ============================================================================
+
+export const NetworkGraph = NetworkGraphComponent;
+NetworkGraph.displayName = 'NetworkGraph';
+
+export const TopologyMap = NetworkGraphComponent;
+TopologyMap.displayName = 'TopologyMap';
+
+export const ForceGraph = NetworkGraphComponent;
+ForceGraph.displayName = 'ForceGraph';
+
+export const GraphVisualizer = NetworkGraphComponent;
+GraphVisualizer.displayName = 'GraphVisualizer';
+
+export default NetworkGraphComponent;
+"""
+
+
+def render_network_graph_component() -> str:
+    """Return the static TypeScript source code for components/network-graph.tsx."""
+    return _NETWORK_GRAPH_COMPONENT
+
+
 _DESIGN_TOKENS_CSS = (
     "/**\n"
     " * OmniStackAI Design Tokens & Theming Engine\n"
@@ -49936,6 +62366,18 @@ class NextjsWebAdapter:
             GeneratedFile("components/terminal.tsx", _TERMINAL_COMPONENT),
             GeneratedFile("components/qr-code.tsx", _QR_CODE_COMPONENT),
             GeneratedFile("components/spreadsheet.tsx", _SPREADSHEET_COMPONENT),
+            GeneratedFile("components/chat.tsx", _CHAT_COMPONENT),
+            GeneratedFile("components/audio-recorder.tsx", _AUDIO_RECORDER_COMPONENT),
+            GeneratedFile("components/file-explorer.tsx", _FILE_EXPLORER_COMPONENT),
+            GeneratedFile("components/geo-map.tsx", _GEO_MAP_COMPONENT),
+            GeneratedFile("components/pdf-viewer.tsx", _PDF_VIEWER_COMPONENT),
+            GeneratedFile("components/audio-player.tsx", _AUDIO_PLAYER_COMPONENT),
+            GeneratedFile("components/video-player.tsx", _VIDEO_PLAYER_COMPONENT),
+            GeneratedFile("components/whiteboard.tsx", _WHITEBOARD_COMPONENT),
+            GeneratedFile("components/merge-editor.tsx", _MERGE_EDITOR_COMPONENT),
+            GeneratedFile("components/json-viewer.tsx", _JSON_VIEWER_COMPONENT),
+            GeneratedFile("components/image-gallery.tsx", _IMAGE_GALLERY_COMPONENT),
+            GeneratedFile("components/network-graph.tsx", _NETWORK_GRAPH_COMPONENT),
             GeneratedFile("styles/tokens.css", _DESIGN_TOKENS_CSS),
             GeneratedFile("app/globals.css", _GLOBALS_CSS),
             GeneratedFile("app/error.tsx", _ERROR_PAGE),
