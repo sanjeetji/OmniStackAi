@@ -1,31 +1,30 @@
 # Project State — OmniStackAI
-Last updated: 2026-09-11T11:25:00+05:30
+Last updated: 2026-09-11T12:07:00+05:30
 
 ## Current Phase
 Stage 0 (Founder Build Sequence, Brief Section 91) — BASIC/MVP
 
 ## Last Completed Task
-Tracker ID: R-356 — Generated Accessible Futuristic Reusable Checkbox & Checkbox Group Primitive (components/checkbox.tsx) — DONE,
-`task verify` (1,677 agent-engine tests, 15 new focused R-356 tests) passing. Enabled accessible, futuristic, zero-dependency
-desktop-grade checkbox and checkbox group compound components across generated Next.js web applications:
-added standalone, reusable, accessible, futuristic Checkbox suite (`components/checkbox.tsx`) supporting
-CheckboxVariant ("default" | "card" | "pill" | "neon"), CheckboxSize ("sm" | "md" | "lg"), CheckedState (boolean | "indeterminate"),
-CheckboxProps, CheckboxGroupProps, CheckboxGroupContextValue, WAI-ARIA 1.2 Checkbox pattern compliance (role="checkbox", role="group",
-aria-checked="mixed" / boolean, aria-orientation, aria-disabled, aria-required, tabIndex), full keyboard space toggling (Space key with preventDefault),
-tri-state / indeterminate support with dedicated SVG minus vector and checkmark vector, vertical and horizontal flex layouts,
-4 visual styling variants (default rounded square with blue fill, card selectable option tiles with title & description, pill segmented toggle buttons,
-neon cyberpunk glowing cyan/indigo border and glow shadow), 3 size scales, controlled and uncontrolled state management, multi-select array management
-in CheckboxGroup, form integration via hidden inputs, options array convenience prop, subcomponent aliasing (CheckboxItem = Checkbox),
-useCheckboxGroup context hook, full React ref forwarding (forwardRef), 100% diff-invariance across `ir.description`, and 0 external runtime dependencies.
-Preceded by R-355 (radio group), R-354 (kbd), R-353 (separator), R-352 (aspect ratio), R-351 (collapsible), R-350 (scroll area), R-349 (hover card), R-348 (context menu), R-347 (speed dial), R-346 (pin input), R-345 (color picker), R-344 (resizable), R-343 (carousel), R-342 (segmented control), R-341 (radial gauge), R-340 (code block), R-339 (tag input), R-338 (tree view),
+Tracker ID: R-357 — Generated Accessible Futuristic Reusable Announcement Banner & Callout Suite (components/banner.tsx) — DONE,
+`task verify` (1,692 agent-engine tests, 15 new focused R-357 tests) passing. Enabled accessible, futuristic, zero-dependency
+desktop-grade announcement banner and callout compound components across generated Next.js web applications:
+added standalone, reusable, accessible, futuristic Announcement Banner suite (`components/banner.tsx`) supporting
+BannerVariant ("info" | "success" | "warning" | "error" | "neon" | "gradient"), BannerPosition ("top" | "bottom" | "inline" | "floating"),
+BannerSize ("sm" | "md" | "lg"), BannerProps, BannerCloseButtonProps, WAI-ARIA live region semantics (role="status" | "alert" | "region",
+aria-live="polite" | "assertive" | "off"), 4 layout positions ("top" sticky header, "bottom" sticky footer, "inline" card banner,
+"floating" center toast callout), 6 visual styling variants ("info", "success", "warning", "error", "neon" cyberpunk cyan glow, "gradient" violet-to-cyan),
+3 size scales, dismissible state with onDismiss callback and accessible close button (aria-label="Dismiss banner"), action CTA slot container (BannerAction),
+icon slot container (BannerIcon) with built-in SVGs, compound exports (Banner, BannerIcon, BannerAction, BannerCloseButton, AnnouncementBanner, Callout),
+React ref forwarding, 100% diff-invariance across `ir.description`, and 0 external runtime dependencies.
+Preceded by R-356 (checkbox), R-355 (radio group), R-354 (kbd), R-353 (separator), R-352 (aspect ratio), R-351 (collapsible), R-350 (scroll area), R-349 (hover card), R-348 (context menu), R-347 (speed dial), R-346 (pin input), R-345 (color picker), R-344 (resizable), R-343 (carousel), R-342 (segmented control), R-341 (radial gauge), R-340 (code block), R-339 (tag input), R-338 (tree view),
 R-337 (stat card), R-336 (timeline), R-335 (file upload), R-334 (stepper), R-333 (rating), R-332 (progress), R-331 (slider),
 R-330 (command palette), R-329 (data grid), R-328 (date picker), R-327 (form controls), R-326 (dialog), R-325 (theme toggle),
 R-324 (theming tokens), R-323 (popover), R-322 (dropdown menu), R-321 (accordion), R-320 (toggle), R-319 (avatar), R-318 (drawer),
 R-317 (skeleton), R-316 (alert), R-315 (card), R-314 (tooltip), R-313 (column visibility), R-312 (badge), R-311 (table density),
 R-310 (tabs), R-309 (pagination), and R-308 (JSON export).
 
-**Notes:** (1) the tracker is current through R-356: 145 Done, 1 Deferred, 210 Not Started across 356
-unique tasks; MVP is 145/251 (57.8%). (2) Next unstarted Tracker ID: R-357.
+**Notes:** (1) the tracker is current through R-357: 146 Done, 1 Deferred, 210 Not Started across 357
+unique tasks; MVP is 146/252 (57.9%). (2) Next unstarted Tracker ID: R-358.
 
 
 

@@ -1,17 +1,17 @@
-task_id: R-356
-id: R-356
-title: "Accessible Futuristic Reusable Checkbox & Checkbox Group Primitive"
+task_id: R-357
+id: R-357
+title: "Accessible Futuristic Reusable Announcement Banner & Callout Suite"
 status: DONE
 phase: MVP
 tracker_row: 9
 started_at: "2026-09-11"
 completed_at: "2026-09-11"
-objective: "Add accessible, zero-dependency, desktop-grade, and futuristic Checkbox & Checkbox Group compound component suite (components/checkbox.tsx) with tri-state/indeterminate support, WAI-ARIA 1.2 checkbox semantics, keyboard space toggle, 4 visual variants (default, card, pill, neon), 3 sizes, form integration, and ref forwarding."
+objective: "Add accessible, zero-dependency, desktop-grade, and futuristic Announcement Banner & Callout compound component suite (components/banner.tsx) with WAI-ARIA live region semantics, 4 layout positions (top, bottom, inline, floating), 6 visual variants (info, success, warning, error, neon, gradient), 3 sizes, action CTA slot, dismissible transitions, and ref forwarding."
 allowed_paths:
   - "services/agent-engine/src/omnistackai_agent_engine/codegen/nextjs.py"
   - "services/agent-engine/src/omnistackai_agent_engine/codegen/__init__.py"
-  - "services/agent-engine/tests/test_checkbox_component.py"
-  - ".ai/tasks/R-356.md"
+  - "services/agent-engine/tests/test_banner_component.py"
+  - ".ai/tasks/R-357.md"
   - ".ai/CURRENT_TASK.yaml"
   - ".ai/PROJECT_STATE.yaml"
   - ".ai/WORK_LOG.md"
@@ -26,9 +26,10 @@ forbidden_changes:
   - "Do not introduce external npm dependencies"
   - "Do not break snapshot diff invariance across ir.description"
 evidence:
-  verify: "task verify: 1,677 tests pass offline (15 in test_checkbox_component.py)"
-  lint: "task lint: pass"
-  security: "task security:quick: pass"
-  demos: "task builder:demo passes on minimal-blog (93 files) and rideshare-favourites (90 files)"
-  tracker: "R_&_D/OmniStackAI_Execution_Tracker_v6.xlsx row 9 (356 total, 145 Done)"
-next_action: "Ready for next tracker task"
+  verify: "1692 tests passing (15 new in test_banner_component.py)"
+  lint: "task lint passed"
+  security: "task security:quick passed"
+  demos: "minimal-blog (94 files), rideshare-favourites (91 files) pass"
+  tracker: "R_&_D/OmniStackAI_Execution_Tracker_v6.xlsx updated at row 9"
+next_action: "Proceed to R-358: Searchable Combobox & Autocomplete Primitive (components/combobox.tsx)"
+

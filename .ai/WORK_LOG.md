@@ -1,5 +1,29 @@
 # Work Log
 
+## 2026-09-11 — R-357
+
+- Recorded contract in `.ai/CURRENT_TASK.yaml` and `.ai/tasks/R-357.md` (status in_progress → done).
+- `nextjs.py`:
+  - Added `_BANNER_COMPONENT` static template implementing accessible, desktop-grade, futuristic Announcement Banner & Callout compound component suite (`apps/web/components/banner.tsx`).
+  - Implemented `BannerVariant` ("info" | "success" | "warning" | "error" | "neon" | "gradient"), `BannerPosition` ("top" | "bottom" | "inline" | "floating"), `BannerSize` ("sm" | "md" | "lg"), `BannerProps`, and `BannerCloseButtonProps` interfaces.
+  - Implemented WAI-ARIA live region semantics: `role="status"` / `role="alert"` (for error/warning) and `aria-live="polite"` / `aria-live="assertive"`.
+  - Implemented 4 layout positions: `"top"` sticky header banner, `"bottom"` sticky footer banner, `"inline"` card banner, and `"floating"` elevated center toast callout.
+  - Implemented 6 visual styling variants: `"info"`, `"success"`, `"warning"`, `"error"`, `"neon"` (cyberpunk glowing cyan/indigo border and glow shadow), and `"gradient"` (futuristic violet-indigo linear gradient).
+  - Implemented 3 size scales (`sm`, `md`, `lg`) with responsive padding, font metrics, and icon dimensions.
+  - Implemented dismissible state with smooth collapse transition (`dismissible?: boolean`, `onDismiss?: () => void`) and accessible close button (`BannerCloseButton`, `aria-label="Dismiss banner"`).
+  - Implemented action CTA slot container (`BannerAction`), icon slot container (`BannerIcon`) with built-in SVGs (`InfoIcon`, `SuccessIcon`, `WarningIcon`, `ErrorIcon`, `NeonIcon`, `CloseIcon`).
+  - Implemented compound subcomponents and semantic aliases: `Banner`, `BannerIcon`, `BannerAction`, `BannerCloseButton`, `AnnouncementBanner`, and `Callout`.
+  - Implemented full React ref forwarding (`forwardRef`) and explicit `displayName` on all subcomponents.
+  - Exported `render_banner_component` in `omnistackai_agent_engine.codegen` and registered in `NextjsWebAdapter.generate()`.
+  - Maintained 100% diff-invariance across `ir.description`.
+- Added `services/agent-engine/tests/test_banner_component.py` with 15 comprehensive unit tests (all passing).
+- `task verify` — 1,692 tests pass (15 new), 0 failures. `task lint`, `task security:quick` pass.
+  `builder:demo minimal-blog` passes (94 files generated). `builder:demo rideshare-favourites` passes (91 files generated). 0 model calls.
+- Tracker: inserted R-357 Done row at `Phase_Roadmap!A9`; table `A4:M365`; 365 total rows;
+  146 Done, 1 Deferred, 210 Not Started; MVP 146/252 (57.9%); no `#REF!`; XLSX valid.
+- Updated CURRENT_TASK.yaml, tasks/R-357.md, PROJECT_STATE.yaml, HANDOFF.md, PROJECT_STATE.md,
+  CHANGELOG.md, docs/CODEGEN.md, docs/PROGRESS.md, docs/RESUME_PROMPT.md.
+
 ## 2026-09-11 — R-356
 
 - Recorded contract in `.ai/CURRENT_TASK.yaml` and `.ai/tasks/R-356.md` (status in_progress → done).

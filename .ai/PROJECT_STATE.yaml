@@ -2,23 +2,21 @@ schema_version: 1
 project: OmniStackAI
 phase: BASIC/MVP
 founder_stage: 0
-current_task: R-356
-current_status: done
+current_task: R-358
+current_status: in_progress
 branch: main
-last_completed_task: R-356
+last_completed_task: R-357
 last_completed_task_summary: >-
-  Generated Accessible Futuristic Reusable Checkbox & Checkbox Group Primitive (components/checkbox.tsx);
-  added standalone, reusable, accessible, futuristic Checkbox & Checkbox Group compound component suite supporting
-  CheckboxVariant ("default" | "card" | "pill" | "neon"), CheckboxSize ("sm" | "md" | "lg"), CheckedState (boolean | "indeterminate"),
-  CheckboxProps, CheckboxGroupProps, CheckboxGroupContextValue, WAI-ARIA 1.2 Checkbox pattern compliance (role="checkbox", role="group",
-  aria-checked="mixed" / boolean, aria-orientation, aria-disabled, aria-required, tabIndex), full keyboard space toggling (Space key with preventDefault),
-  tri-state / indeterminate support with dedicated SVG minus vector and checkmark vector, vertical and horizontal flex layouts,
-  4 visual styling variants (default rounded square with blue fill, card selectable option tiles with title & description, pill segmented toggle buttons,
-  neon cyberpunk glowing cyan/indigo border and glow shadow), 3 size scales, controlled and uncontrolled state management, multi-select array management
-  in CheckboxGroup, form integration via hidden inputs, options array convenience prop, subcomponent aliasing (CheckboxItem = Checkbox),
-  useCheckboxGroup context hook, full React ref forwarding (forwardRef), 100% diff-invariance across ir.description, and 0 external runtime dependencies;
-  exported render_checkbox_component in codegen; registered in NextjsWebAdapter; 1,677 tests pass (15 new tests in test_checkbox_component.py);
-  builder:demo generates 93 files for minimal-blog and 90 for rideshare-favourites; 0 model calls
+  Generated Accessible Futuristic Reusable Announcement Banner & Callout Suite (components/banner.tsx);
+  added standalone, reusable, accessible, futuristic Announcement Banner and Callout compound component suite supporting
+  BannerVariant ("info" | "success" | "warning" | "error" | "neon" | "gradient"), BannerPosition ("top" | "bottom" | "inline" | "floating"),
+  BannerSize ("sm" | "md" | "lg"), BannerProps, BannerCloseButtonProps, WAI-ARIA live region compliance (role="status" | "alert" | "region",
+  aria-live="polite" | "assertive" | "off"), 4 layout positions ("top" sticky header, "bottom" sticky footer, "inline" card banner,
+  "floating" center toast callout), 6 visual styling variants ("info", "success", "warning", "error", "neon" cyberpunk cyan glow, "gradient" violet-to-cyan),
+  3 size scales, dismissible state with onDismiss callback and accessible close button (aria-label="Dismiss banner"), action CTA slot container (BannerAction),
+  icon slot container (BannerIcon) with built-in SVGs, compound exports (Banner, BannerIcon, BannerAction, BannerCloseButton, AnnouncementBanner, Callout),
+  React ref forwarding, 100% diff-invariance across ir.description, and 0 external runtime dependencies; exported render_banner_component in codegen;
+  registered in NextjsWebAdapter; 1,692 tests pass (15 new tests in test_banner_component.py); builder:demo generates 94 files for minimal-blog and 91 for rideshare-favourites; 0 model calls
 control_plane_database: postgresql
 model_routing_mode: balanced
 architecture_contract: R_&_D/OmniStackAI_Implementation_Brief_v6.md
@@ -30,7 +28,7 @@ product_direction: >-
   framework adapter contract -> Next.js adapter -> Git service -> preview/sandbox (needs cloud env).
 id_note: >-
   Workbook backlog owns R-010..R-219. Founder-requested tasks use IDs after R-219: R-220..R-223 done,
-  R-224 Next.js deferred (env-blocked), R-225..R-356 done. Continue from R-357.
+  R-224 Next.js deferred (env-blocked), R-225..R-357 done. Continue from R-358.
 blockers: []
 next_action: >-
-  Task R-356 (generated accessible futuristic reusable checkbox suite) is complete with 1,677 tests passing. Next task: R-357.
+  Task R-357 (generated accessible futuristic reusable announcement banner suite) is complete with 1,692 tests passing. Next task: R-358 (Searchable Combobox & Autocomplete Primitive).
