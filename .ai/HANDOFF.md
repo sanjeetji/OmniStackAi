@@ -1,6 +1,6 @@
 # Current Handoff
 
-Task ID: R-368
+Task ID: R-369
 Status: done
 Phase: BASIC/MVP — Founder Stage 0
 Branch: `main` (the only branch; the GitHub default)
@@ -16,32 +16,36 @@ Branch: `main` (the only branch; the GitHub default)
   4. **R-366**: Calendar & Event Scheduler Suite (`components/calendar.tsx`)
   5. **R-367**: Kanban Board & Task Flow Matrix Suite (`components/kanban.tsx`)
   6. **R-368**: Infinite Virtual List & Windowed Scroller Suite (`components/virtual-list.tsx`)
-- Resume from **R-369** (Query Filter Builder) when ready. Still stop-and-ask only for paid cloud / DB engine / new infra / native-mobile / a materially different architecture decision.
+  7. **R-369**: Query Filter Builder & Dynamic Rule Bar Suite (`components/filter-builder.tsx`)
+- Resume from **R-370** when ready. Still stop-and-ask only for paid cloud / DB engine / new infra / native-mobile / a materially different architecture decision.
 
 ## Completed
 
-### R-368 — Generated Accessible Futuristic High-Performance Infinite Virtual List & Windowed Scroller Suite (components/virtual-list.tsx)
+### R-369 — Generated Accessible Futuristic Reusable Query Filter Builder & Dynamic Rule Bar Suite (components/filter-builder.tsx)
 
-Enabled accessible, desktop-and-mobile-grade, futuristic High-Performance Infinite Virtual List and Windowed Scroller compound components across generated Next.js web applications:
+Enabled accessible, desktop-and-mobile-grade, futuristic Query Filter Builder and Dynamic Rule Bar compound components across generated Next.js web applications:
 
-- **Standalone Virtual List Suite (`apps/web/components/virtual-list.tsx`)**:
-  - Implemented `VirtualListVariant` (`"default"` | `"card"` | `"glass"` | `"neon"`), `VirtualListSize` (`"sm"` | `"md"` | `"lg"`), `VirtualScrollAlignment` (`"start"` | `"center"` | `"end"` | `"auto"`), `VirtualItemInfo`, `VirtualListHandle`, and `VirtualListProps` interfaces.
-  - Implemented compound and semantic alias exports: `VirtualList`, `VirtualScroller`, `WindowedList`, and default export.
-  - Implemented mathematical windowing logic with prefix-sum offsets and binary search for variable item heights or multiplier calculation for fixed heights.
-  - Implemented configurable overscan rendering buffer to eliminate white space flashing during fast kinetic scrolling.
-  - Implemented infinite scroll threshold detection (`onEndReached`, `endReachedThreshold`) with duplicate call guards.
-  - Implemented fast-scrolling detection (`isScrolling`) for lightweight placeholder rendering.
-  - Implemented imperative scroll handle (`scrollTo`, `scrollToIndex`, `scrollToTop`, `scrollToBottom`) via `useImperativeHandle`.
-  - Implemented built-in zero-dependency SVG loading spinner (`SpinnerIcon`).
-  - Implemented full WAI-ARIA 1.2 feed semantics (`role="feed"`, `role="article"`, `aria-posinset`, `aria-setsize`, `aria-busy`).
+- **Standalone Filter Builder Suite (`apps/web/components/filter-builder.tsx`)**:
+  - Implemented `FilterBuilderVariant` (`"default"` | `"card"` | `"glass"` | `"neon"`), `FilterBuilderSize` (`"sm"` | `"md"` | `"lg"`), `FilterFieldType` (`"string"` | `"number"` | `"boolean"` | `"date"` | `"select"`), `FilterCombinator` (`"and"` | `"or"`), `FilterOperator`, `FilterFieldConfig`, `FilterRule`, `FilterGroup`, and `FilterBuilderProps` interfaces.
+  - Implemented compound and semantic alias exports: `FilterBuilder`, `QueryFilterBuilder`, `RuleBuilder`, and default export.
+  - Implemented nested recursive rule group hierarchy evaluation with dynamic indentation depth styling.
+  - Implemented dynamic operator selection based on field types (equals, not_equals, contains, not_contains, starts_with, ends_with, greater_than, less_than, greater_than_or_equal, less_than_or_equal, is_empty, is_not_empty, is_true, is_false, in).
+  - Implemented AND / OR combinator pill switcher with visual active glow styling.
+  - Implemented add rule and add nested subgroup buttons, plus delete rule/group actions with minimum root rule constraint.
+  - Implemented `maxDepth` guard (default 3) preventing unbounded nesting.
+  - Implemented type-aware value inputs: text input, number input, date picker, select dropdown with options, and boolean labels.
+  - Implemented clear all rules action and rule count badge indicator.
+  - Implemented full WAI-ARIA 1.2 region & group semantics (`role="region"`, `role="group"`, `aria-label`).
+  - Implemented 5 built-in zero-dependency vector icons (`PlusIcon`, `TrashIcon`, `FolderPlusIcon`, `XCircleIcon`, `FilterIcon`).
   - Implemented 4 futuristic visual styling variants ("default", "card", "glass" with backdropFilter blur, "neon" cyberpunk cyan glow).
   - Implemented 3 size presets ("sm", "md", "lg").
-  - Implemented React ref forwarding (`forwardRef`) and explicit `VirtualList.displayName = "VirtualList"`.
-  - Exported `render_virtual_list_component` in `omnistackai_agent_engine.codegen` and registered `components/virtual-list.tsx` in `NextjsWebAdapter.generate()`.
+  - Implemented native HTML form submission integration via hidden input (`name`).
+  - Implemented React ref forwarding (`forwardRef`) and explicit `FilterBuilder.displayName = "FilterBuilder"`.
+  - Exported `render_filter_builder_component` in `omnistackai_agent_engine.codegen` and registered `components/filter-builder.tsx` in `NextjsWebAdapter.generate()`.
   - Maintained 100% diff-invariance across `ir.description`.
 
 ## Verification
 
-- `task verify` — pass (**1,939** agent-engine tests; 16 focused R-368 tests in `test_virtual_list_component.py`).
+- `task verify` — pass (**1,955** agent-engine tests; 16 focused R-369 tests in `test_filter_builder_component.py`).
 - `task lint`, `task security:quick` — pass.
-- `task builder:demo minimal-blog` — pass (105 files).
+- `task builder:demo minimal-blog` — pass (106 files).

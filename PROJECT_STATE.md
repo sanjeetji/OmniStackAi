@@ -1,34 +1,36 @@
 # Project State — OmniStackAI
-Last updated: 2026-09-11T12:10:00+05:30
+Last updated: 2026-09-11T13:30:00+05:30
 
 ## Current Phase
 Stage 0 (Founder Build Sequence, Brief Section 91) — BASIC/MVP
 
 ## Last Completed Task
-Tracker ID: R-368 — Generated Accessible Futuristic High-Performance Infinite Virtual List & Windowed Scroller Suite (components/virtual-list.tsx) — DONE,
-`task verify` (1,939 agent-engine tests, 16 new focused R-368 tests) passing. Enabled accessible, futuristic, zero-dependency
-desktop-and-mobile-grade High-Performance Infinite Virtual List and Windowed Scroller compound components across generated Next.js web applications:
-added standalone, reusable, accessible, futuristic Virtual List suite (`components/virtual-list.tsx`) supporting
-VirtualListVariant ("default" | "card" | "glass" | "neon"), VirtualListSize ("sm" | "md" | "lg"),
-VirtualScrollAlignment ("start" | "center" | "end" | "auto"), VirtualItemInfo, VirtualListHandle, VirtualListProps,
-compound and semantic alias exports (VirtualList, VirtualScroller, WindowedList, default export), mathematical windowing
-with prefix sums and binary search for variable item heights or multiplier calculation for fixed heights,
-configurable overscan rendering buffer to eliminate white space flashing during fast kinetic scrolling,
-phantom total height spacer, infinite scrolling threshold detection (onEndReached, endReachedThreshold),
-fast-scrolling state flag (isScrolling) for lightweight rendering, imperative scroll handle
-(scrollTo, scrollToIndex, scrollToTop, scrollToBottom), built-in SVG loading spinner,
-full WAI-ARIA 1.2 feed semantics (role="feed", role="article", aria-posinset, aria-setsize, aria-busy),
+Tracker ID: R-369 — Generated Accessible Futuristic Reusable Query Filter Builder & Dynamic Rule Bar Suite (components/filter-builder.tsx) — DONE,
+`task verify` (1,955 agent-engine tests, 16 new focused R-369 tests) passing. Enabled accessible, futuristic, zero-dependency
+desktop-and-mobile-grade Query Filter Builder and Dynamic Rule Bar compound components across generated Next.js web applications:
+added standalone, reusable, accessible, futuristic Filter Builder suite (`components/filter-builder.tsx`) supporting
+FilterBuilderVariant ("default" | "card" | "glass" | "neon"), FilterBuilderSize ("sm" | "md" | "lg"),
+FilterFieldType ("string" | "number" | "boolean" | "date" | "select"), FilterCombinator ("and" | "or"),
+FilterOperator, FilterFieldConfig, FilterRule, FilterGroup, FilterBuilderProps,
+compound and semantic alias exports (FilterBuilder, QueryFilterBuilder, RuleBuilder, default export),
+nested recursive rule group hierarchy evaluation, dynamic operator resolution based on field types
+(equals, not_equals, contains, not_contains, starts_with, ends_with, greater_than, less_than, greater_than_or_equal, less_than_or_equal, is_empty, is_not_empty, is_true, is_false, in),
+AND/OR combinator toggle with visual pill button indicator, add rule and add nested subgroup buttons,
+delete rule and delete subgroup actions with minimum root rule constraint, maxDepth nesting limit guard,
+value inputs adapted to field type (text input, number input, date picker, select dropdown with options, boolean display),
+clear all rules action, rule count badge indicator, full WAI-ARIA 1.2 region & group semantics (role="region", role="group", aria-label),
+5 built-in zero-dependency vector icons (PlusIcon, TrashIcon, FolderPlusIcon, XCircleIcon, FilterIcon),
 4 futuristic visual styling variants ("default", "card", "glass" with backdropFilter blur, "neon" cyberpunk cyan glow),
-3 size presets ("sm", "md", "lg"), React ref forwarding (forwardRef), explicit displayName,
-100% diff-invariance across `ir.description`, and 0 external runtime dependencies.
-Preceded by R-367 (kanban), R-366 (calendar), R-365 (markdown editor), R-364 (transfer), R-363 (tour), R-362 (sidebar), R-361 (notification center), R-360 (number input), R-359 (bottom nav), R-358 (combobox), R-357 (banner), R-356 (checkbox), R-355 (radio group), R-354 (kbd), R-353 (separator), R-352 (aspect ratio), R-351 (collapsible), R-350 (scroll area), R-349 (hover card), R-348 (context menu), R-347 (speed dial), R-346 (pin input), R-345 (color picker), R-344 (resizable), R-343 (carousel), R-342 (segmented control), R-341 (radial gauge), R-340 (code block), R-339 (tag input), R-338 (tree view),
+3 size presets ("sm", "md", "lg"), native HTML form submission integration via hidden input (`name`),
+React ref forwarding (forwardRef), explicit displayName, 100% diff-invariance across `ir.description`, and 0 external runtime dependencies.
+Preceded by R-368 (virtual list), R-367 (kanban), R-366 (calendar), R-365 (markdown editor), R-364 (transfer), R-363 (tour), R-362 (sidebar), R-361 (notification center), R-360 (number input), R-359 (bottom nav), R-358 (combobox), R-357 (banner), R-356 (checkbox), R-355 (radio group), R-354 (kbd), R-353 (separator), R-352 (aspect ratio), R-351 (collapsible), R-350 (scroll area), R-349 (hover card), R-348 (context menu), R-347 (speed dial), R-346 (pin input), R-345 (color picker), R-344 (resizable), R-343 (carousel), R-342 (segmented control), R-341 (radial gauge), R-340 (code block), R-339 (tag input), R-338 (tree view),
 R-337 (stat card), R-336 (timeline), R-335 (file upload), R-334 (stepper), R-333 (rating), R-332 (progress), R-331 (slider),
 R-330 (command palette), R-329 (data grid), R-328 (date picker), R-327 (form controls), R-326 (dialog), R-325 (theme toggle),
 R-324 (theming tokens), R-323 (popover), R-322 (dropdown menu), R-321 (accordion), R-320 (toggle), R-319 (avatar), R-318 (drawer),
 R-317 (skeleton), R-316 (alert), R-315 (card), R-314 (tooltip), R-313 (column visibility), R-312 (badge), R-311 (table density),
 R-310 (tabs), R-309 (pagination), and R-308 (JSON export).
 
-**Notes:** (1) R-368 complete with 1,939 tests passing. (2) Next unstarted Tracker ID: R-369.
+**Notes:** (1) R-369 complete with 1,955 tests passing. (2) Next unstarted Tracker ID: R-370.
 
 
 

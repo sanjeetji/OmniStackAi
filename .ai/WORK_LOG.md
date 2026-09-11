@@ -1,5 +1,31 @@
 # Work Log
 
+## 2026-09-11 — R-369
+
+- Recorded contract in `.ai/CURRENT_TASK.yaml` and `.ai/tasks/R-369.md` (status in_progress → done).
+- `nextjs.py`:
+  - Added `_FILTER_BUILDER_COMPONENT` static template implementing accessible, desktop-and-mobile-grade, futuristic Query Filter Builder & Dynamic Rule Bar compound component suite (`apps/web/components/filter-builder.tsx`).
+  - Implemented `FilterBuilderVariant` ("default" | "card" | "glass" | "neon"), `FilterBuilderSize` ("sm" | "md" | "lg"), `FilterFieldType` ("string" | "number" | "boolean" | "date" | "select"), `FilterCombinator` ("and" | "or"), `FilterOperator`, `FilterFieldConfig`, `FilterRule`, `FilterGroup`, `FilterBuilderProps` interfaces.
+  - Implemented compound and semantic alias exports: `FilterBuilder`, `QueryFilterBuilder`, `RuleBuilder`, default export.
+  - Implemented recursive nested rule group hierarchy evaluation with dynamic indentation depth styling.
+  - Implemented dynamic operator selection based on field types (equals, not_equals, contains, not_contains, starts_with, ends_with, greater_than, less_than, greater_than_or_equal, less_than_or_equal, is_empty, is_not_empty, is_true, is_false, in).
+  - Implemented AND / OR combinator pill switcher with visual active glow styling.
+  - Implemented add rule and add nested subgroup buttons, plus delete rule/group actions with minimum root rule constraint.
+  - Implemented `maxDepth` guard (default 3) preventing unbounded nesting.
+  - Implemented type-aware value inputs: text input, number input, date picker, select dropdown with options, and boolean labels.
+  - Implemented clear all rules action and rule count badge indicator.
+  - Implemented full WAI-ARIA 1.2 region & group semantics (`role="region"`, `role="group"`, `aria-label`).
+  - Implemented 5 built-in zero-dependency vector icons (`PlusIcon`, `TrashIcon`, `FolderPlusIcon`, `XCircleIcon`, `FilterIcon`).
+  - Implemented 4 futuristic visual styling variants ("default", "card", "glass" with backdropFilter blur, "neon" cyberpunk cyan glow).
+  - Implemented 3 size presets ("sm", "md", "lg").
+  - Implemented native HTML form submission integration via hidden input (`name`).
+  - Implemented React ref forwarding (`forwardRef`) and explicit `FilterBuilder.displayName = "FilterBuilder"`.
+  - Exported `render_filter_builder_component` in `omnistackai_agent_engine.codegen` and registered `components/filter-builder.tsx` in `NextjsWebAdapter.generate()`.
+  - Maintained 100% diff-invariance across `ir.description`.
+- Added `services/agent-engine/tests/test_filter_builder_component.py` with 16 comprehensive unit tests (all passing).
+- `task verify` — 1,955 tests pass (16 new), 0 failures. `task lint`, `task security:quick` pass.
+  `builder:demo minimal-blog` passes (106 files generated). 0 model calls.
+
 ## 2026-09-11 — R-368
 
 - Recorded contract in `.ai/CURRENT_TASK.yaml` and `.ai/tasks/R-368.md` (status in_progress → done).
