@@ -1,6 +1,6 @@
 # Current Handoff
 
-Task ID: R-373
+Task ID: R-374
 Status: done
 Phase: BASIC/MVP — Founder Stage 0
 Branch: `main` (the only branch; the GitHub default)
@@ -21,9 +21,31 @@ Branch: `main` (the only branch; the GitHub default)
   9. **R-371**: Time Picker & Time Range Suite (`components/time-picker.tsx`)
   10. **R-372**: Digital Signature Pad & Drawing Canvas Primitive (`components/signature-pad.tsx`)
   11. **R-373**: Diff Viewer & Code/Text Comparison Suite (`components/diff-viewer.tsx`)
-- Resume from **R-374** when ready. Still stop-and-ask only for paid cloud / DB engine / new infra / native-mobile / a materially different architecture decision.
+  12. **R-374**: Org Chart & Hierarchy Flow Diagram Suite (`components/org-chart.tsx`)
+- Resume from **R-375** when ready. Still stop-and-ask only for paid cloud / DB engine / new infra / native-mobile / a materially different architecture decision.
 
 ## Completed
+
+### R-374 — Generated Accessible Futuristic Reusable Org Chart & Hierarchy Flow Diagram Suite (components/org-chart.tsx)
+
+Enabled accessible, desktop-and-mobile-grade, futuristic Organizational Chart & Hierarchy Flow Diagram compound components across generated Next.js web applications:
+
+- **Standalone Org Chart Suite (`apps/web/components/org-chart.tsx`)**:
+  - Implemented `OrgChartOrientation` (`"vertical"` | `"horizontal"`), `OrgChartVariant` (`"default"` | `"card"` | `"glass"` | `"neon"`), `OrgChartSize` (`"sm"` | `"md"` | `"lg"`), `OrgChartNode`, `OrgChartHandle`, `OrgChartProps`, and `OrgNodeCardProps` interfaces.
+  - Implemented compound and semantic alias exports: `OrgChart`, `HierarchyTree`, `OrgNode`, and default export.
+  - Implemented recursive hierarchical tree layout with SVG/CSS connector stems and crossbars linking parent nodes to child branches without third-party diagramming dependencies.
+  - Implemented collapsible and expandable subtree nodes with direct and indirect report count pill badges.
+  - Implemented dual layout orientations (`vertical` top-to-bottom and `horizontal` left-to-right).
+  - Implemented built-in search filter input matching names, roles, departments, or emails with glowing highlight rings and automatic ancestor expansion.
+  - Implemented interactive node selection (`selectedId`, `onNodeClick`) and optional action menus.
+  - Implemented full WAI-ARIA 1.2 accessibility tree semantics (`role="tree"`, `role="treeitem"`, `aria-expanded`, `aria-selected`).
+  - Implemented 5 built-in zero-dependency vector icons (`SearchIcon`, `ChevronDownIcon`, `ChevronRightIcon`, `UsersIcon`, `MoreVerticalIcon`).
+  - Implemented 4 futuristic visual styling variants ("default", "card", "glass" with backdropFilter blur, "neon" cyberpunk cyan glow with glowing connectors).
+  - Implemented 3 size presets ("sm", "md", "lg").
+  - Implemented React ref forwarding (`forwardRef`) and explicit `displayName` across all exports.
+  - Exported `render_org_chart_component` in `omnistackai_agent_engine.codegen` and registered `components/org-chart.tsx` in `NextjsWebAdapter.generate()`.
+  - Maintained 100% diff-invariance across `ir.description`.
+- **Verification**: 2,040 tests passing (17 new focused tests in `test_org_chart_component.py`). `task verify`, `task lint`, `task security:quick`, `task builder:demo -- minimal-blog` pass.
 
 ### R-373 — Generated Accessible Futuristic Reusable Diff Viewer & Code/Text Comparison Suite (components/diff-viewer.tsx)
 

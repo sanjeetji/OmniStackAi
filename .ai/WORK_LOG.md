@@ -1,5 +1,27 @@
 # Work Log
 
+## 2026-09-11 — R-374
+
+- Recorded contract in `.ai/CURRENT_TASK.yaml` and `.ai/tasks/R-374.md` (status in_progress → done).
+- `nextjs.py`:
+  - Added `_ORG_CHART_COMPONENT` static template implementing accessible, desktop-and-mobile-grade, futuristic Organizational Chart & Hierarchy Flow Diagram compound component suite (`apps/web/components/org-chart.tsx`).
+  - Implemented `OrgChartOrientation` ("vertical" | "horizontal"), `OrgChartVariant` ("default" | "card" | "glass" | "neon"), `OrgChartSize` ("sm" | "md" | "lg"), `OrgChartNode`, `OrgChartHandle`, `OrgChartProps`, `OrgNodeCardProps` interfaces.
+  - Implemented compound and semantic alias exports: `OrgChart`, `HierarchyTree`, `OrgNode`, default export.
+  - Implemented recursive hierarchical tree layout with SVG/CSS connector stems and crossbars linking parent nodes to child branches without third-party diagramming dependencies.
+  - Implemented collapsible and expandable subtree nodes with direct and indirect report count pill badges.
+  - Implemented dual layout orientations (`vertical` top-to-bottom and `horizontal` left-to-right).
+  - Implemented built-in search filter input matching names, roles, departments, or emails with glowing highlight rings and automatic ancestor expansion.
+  - Implemented interactive node selection (`selectedId`, `onNodeClick`) and optional action menus.
+  - Implemented full WAI-ARIA 1.2 accessibility tree semantics (`role="tree"`, `role="treeitem"`, `aria-expanded`, `aria-selected`).
+  - Implemented 5 built-in zero-dependency vector icons (`SearchIcon`, `ChevronDownIcon`, `ChevronRightIcon`, `UsersIcon`, `MoreVerticalIcon`).
+  - Implemented 4 futuristic visual styling variants ("default", "card", "glass" with backdropFilter blur, "neon" cyberpunk cyan glow with glowing connectors).
+  - Implemented 3 size presets ("sm", "md", "lg").
+  - Implemented React ref forwarding (`forwardRef`) and explicit `displayName` across all exports.
+  - Exported `render_org_chart_component` in `omnistackai_agent_engine.codegen` and registered `components/org-chart.tsx` in `NextjsWebAdapter.generate()`.
+  - Maintained 100% diff-invariance across `ir.description`.
+- Added `services/agent-engine/tests/test_org_chart_component.py` with 17 comprehensive unit tests (all passing).
+- `task verify` — 2,040 tests pass (17 new), 0 failures. `task lint`, `task security:quick`, `task builder:demo -- minimal-blog` pass.
+
 ## 2026-09-11 — R-373
 
 - Recorded contract in `.ai/CURRENT_TASK.yaml` and `.ai/tasks/R-373.md` (status in_progress → done).

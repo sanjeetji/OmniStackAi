@@ -3025,6 +3025,40 @@ Accessible, futuristic, desktop-and-mobile-grade text and code comparison compou
   - 100% diff-invariant across `ir.description` changes; zero external runtime npm dependencies.
   - Registered in `NextjsWebAdapter.generate()` as a `GeneratedFile` at `components/diff-viewer.tsx` and exported in `codegen.__init__` as `render_diff_viewer_component`.
 
+### Org Chart & Hierarchy Flow Diagram Suite (`components/org-chart.tsx`)
+
+Accessible, futuristic, desktop-and-mobile-grade organizational chart and hierarchy flow diagram compound component suite:
+- **Zero Runtime Dependencies**: Pure React 18+ and native CSS/SVG connector stems without third-party diagramming packages.
+- **Dual Layout Orientations**:
+  - **Vertical Mode**: Top-to-bottom hierarchy with parent centered above horizontal crossbars and drop stems into child branches.
+  - **Horizontal Mode**: Left-to-right hierarchy with parent on the left, vertical crossbars, and horizontal stems into child cards.
+- **Subtree Collapsing & Report Counts**:
+  - Node cards feature expand/collapse toggle buttons on the connector edge with rotation transitions.
+  - Automatic calculation of direct and total indirect reports displayed in pill badges.
+- **Search & Ancestor Auto-Expansion**:
+  - Built-in search input filtering by employee name, role, department, or email.
+  - Matched nodes receive glowing highlight rings and automatically expand all ancestor path nodes for instant discovery.
+- **Node Selection & Actions**:
+  - Interactive card click selection handler (`onNodeClick`, `selectedId`).
+  - Action menu trigger button (`...`) for custom employee/role workflows.
+- **WAI-ARIA 1.2 Accessibility**:
+  - `role="tree"`, `role="treeitem"`, `aria-label="Organization Chart"`, `aria-expanded`, `aria-selected`.
+- **4 Visual Variants**:
+  - `"default"`: Clean dark slate container with crisp borders.
+  - `"card"`: Elevated solid card with rich shadow.
+  - `"glass"`: Translucent backdrop blur with frosted glass effect.
+  - `"neon"`: Cyberpunk glowing cyan borders and neon-lit connectors.
+- **3 Size Scales**:
+  - `"sm"`: Compact card (180px width, 11px font).
+  - `"md"`: Standard card (220px width, 13px font).
+  - `"lg"`: Spacious card (260px width, 14px font).
+- **Standards & Composition**:
+  - Exports `OrgChart`, `HierarchyTree`, `OrgNode`, and default export.
+  - Full React `forwardRef` and explicit `displayName` across all exports.
+  - 100% diff-invariant across `ir.description` changes; zero external runtime npm dependencies.
+  - Registered in `NextjsWebAdapter.generate()` as a `GeneratedFile` at `components/org-chart.tsx` and exported in `codegen.__init__` as `render_org_chart_component`.
+
+
 
 
 
