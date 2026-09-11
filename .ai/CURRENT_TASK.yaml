@@ -1,17 +1,17 @@
-task_id: R-357
-id: R-357
-title: "Accessible Futuristic Reusable Announcement Banner & Callout Suite"
+task_id: R-358
+id: R-358
+title: "Accessible Futuristic Reusable Searchable Combobox & Autocomplete Primitive"
 status: DONE
 phase: MVP
 tracker_row: 9
 started_at: "2026-09-11"
 completed_at: "2026-09-11"
-objective: "Add accessible, zero-dependency, desktop-grade, and futuristic Announcement Banner & Callout compound component suite (components/banner.tsx) with WAI-ARIA live region semantics, 4 layout positions (top, bottom, inline, floating), 6 visual variants (info, success, warning, error, neon, gradient), 3 sizes, action CTA slot, dismissible transitions, and ref forwarding."
+objective: "Add accessible, zero-dependency, desktop-grade, and futuristic Searchable Combobox & Autocomplete compound component suite (components/combobox.tsx) with WAI-ARIA 1.2 Combobox/Listbox semantics, type-ahead fuzzy filtering, full keyboard navigation (arrows, Enter, Escape, Home, End), single and multi-select chip modes, 4 visual variants (default, card, glass, neon), 3 sizes, group headers, empty state, and ref forwarding."
 allowed_paths:
   - "services/agent-engine/src/omnistackai_agent_engine/codegen/nextjs.py"
   - "services/agent-engine/src/omnistackai_agent_engine/codegen/__init__.py"
-  - "services/agent-engine/tests/test_banner_component.py"
-  - ".ai/tasks/R-357.md"
+  - "services/agent-engine/tests/test_combobox_component.py"
+  - ".ai/tasks/R-358.md"
   - ".ai/CURRENT_TASK.yaml"
   - ".ai/PROJECT_STATE.yaml"
   - ".ai/WORK_LOG.md"
@@ -26,10 +26,11 @@ forbidden_changes:
   - "Do not introduce external npm dependencies"
   - "Do not break snapshot diff invariance across ir.description"
 evidence:
-  verify: "1692 tests passing (15 new in test_banner_component.py)"
+  verify: "1707 tests passing (15 new in test_combobox_component.py)"
   lint: "task lint passed"
   security: "task security:quick passed"
-  demos: "minimal-blog (94 files), rideshare-favourites (91 files) pass"
+  demos: "minimal-blog (95 files), rideshare-favourites (92 files) pass"
   tracker: "R_&_D/OmniStackAI_Execution_Tracker_v6.xlsx updated at row 9"
-next_action: "Proceed to R-358: Searchable Combobox & Autocomplete Primitive (components/combobox.tsx)"
+next_action: "Proceed to R-359: Bottom Navigation Bar Suite (components/bottom-nav.tsx)"
+
 

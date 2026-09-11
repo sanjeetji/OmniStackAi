@@ -1,5 +1,31 @@
 # Work Log
 
+## 2026-09-11 — R-358
+
+- Recorded contract in `.ai/CURRENT_TASK.yaml` and `.ai/tasks/R-358.md` (status in_progress → done).
+- `nextjs.py`:
+  - Added `_COMBOBOX_COMPONENT` static template implementing accessible, desktop-grade, futuristic Searchable Combobox & Autocomplete compound component suite (`apps/web/components/combobox.tsx`).
+  - Implemented `ComboboxVariant` ("default" | "card" | "glass" | "neon"), `ComboboxSize` ("sm" | "md" | "lg"), `ComboboxOptionItem`, and `ComboboxProps` interfaces.
+  - Implemented WAI-ARIA 1.2 Combobox and Listbox pattern compliance: `role="combobox"`, `role="listbox"`, `role="option"`, `aria-expanded`, `aria-haspopup="listbox"`, `aria-controls`, `aria-activedescendant`, `aria-selected`, `aria-disabled`, and `data-highlighted`.
+  - Implemented live type-ahead fuzzy and substring filtering across label, description, and keywords.
+  - Implemented full keyboard navigation (`ArrowDown`/`ArrowUp` traversal with wrap-around, `Enter` to select, `Escape` to close, `Home`/`End` jump navigation).
+  - Implemented single-select mode and multi-select mode with removable tag chips (`XIcon`).
+  - Implemented clear button affordance (`allowClear`) for quick value clearing.
+  - Implemented 4 futuristic visual variants: `"default"`, `"card"`, `"glass"` with backdrop blur, and `"neon"` (cyberpunk glowing cyan/indigo border and glow shadow).
+  - Implemented 3 size scales (`sm`, `md`, `lg`) with proportional minHeight, font sizes, padding, and tag heights.
+  - Implemented hidden input form submission (`name`).
+  - Implemented semantic alias `Autocomplete = Combobox` and default export.
+  - Implemented full React ref forwarding (`forwardRef`) and explicit `displayName`.
+  - Exported `render_combobox_component` in `omnistackai_agent_engine.codegen` and registered in `NextjsWebAdapter.generate()`.
+  - Maintained 100% diff-invariance across `ir.description`.
+- Added `services/agent-engine/tests/test_combobox_component.py` with 15 comprehensive unit tests (all passing).
+- `task verify` — 1,707 tests pass (15 new), 0 failures. `task lint`, `task security:quick` pass.
+  `builder:demo minimal-blog` passes (95 files generated). `builder:demo rideshare-favourites` passes (92 files generated). 0 model calls.
+- Tracker: inserted R-358 Done row at `Phase_Roadmap!A9`; table `A4:M366`; 366 total rows;
+  147 Done, 1 Deferred, 210 Not Started; MVP 147/253 (58.1%); no `#REF!`; XLSX valid.
+- Updated CURRENT_TASK.yaml, tasks/R-358.md, PROJECT_STATE.yaml, HANDOFF.md, PROJECT_STATE.md,
+  CHANGELOG.md, docs/CODEGEN.md, docs/PROGRESS.md, docs/RESUME_PROMPT.md.
+
 ## 2026-09-11 — R-357
 
 - Recorded contract in `.ai/CURRENT_TASK.yaml` and `.ai/tasks/R-357.md` (status in_progress → done).
