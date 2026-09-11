@@ -1,17 +1,17 @@
-task_id: R-345
-id: R-345
-title: "Accessible Futuristic Reusable Color Picker & Palette Swatch Component"
+task_id: R-346
+id: R-346
+title: "Accessible Futuristic Reusable PIN & OTP Code Input Component"
 status: DONE
 phase: MVP
 tracker_row: 9
 started_at: "2026-09-11"
 completed_at: "2026-09-11"
-objective: "Add accessible, optimized, and futuristic Color Picker & Palette Swatch component suite (components/color-picker.tsx) with 2D saturation/value area, 1D hue & alpha sliders, hex/rgb/hsl conversion, preset swatches, EyeDropper API integration, and WAI-ARIA slider/listbox semantics."
+objective: "Add accessible, optimized, and futuristic PIN & OTP Code Input component suite (components/pin-input.tsx) with discrete slots, auto-advance, backspace retreat, clipboard paste splitting, masking, browser autofill, full keyboard navigation, and WAI-ARIA group semantics."
 allowed_paths:
   - "services/agent-engine/src/omnistackai_agent_engine/codegen/nextjs.py"
   - "services/agent-engine/src/omnistackai_agent_engine/codegen/__init__.py"
-  - "services/agent-engine/tests/test_color_picker_component.py"
-  - ".ai/tasks/R-345.md"
+  - "services/agent-engine/tests/test_pin_input_component.py"
+  - ".ai/tasks/R-346.md"
   - ".ai/CURRENT_TASK.yaml"
   - ".ai/PROJECT_STATE.yaml"
   - ".ai/WORK_LOG.md"
@@ -26,10 +26,9 @@ forbidden_changes:
   - "Do not introduce external npm dependencies"
   - "Do not break snapshot diff invariance across ir.description"
 evidence:
-  verify: "task verify: 1,504 tests passing, Stage 0 verification passed"
+  verify: "task verify: 1,519 tests passing, Stage 0 verification passed"
   lint: "task lint: passed cleanly"
   security: "task security:quick: passed cleanly"
-  demos: "builder:demo minimal-blog (81 files) and rideshare-favourites (79 files) emit components/color-picker.tsx"
-  tracker: "OmniStackAI_Execution_Tracker_v6.xlsx updated to 345 tasks, 134 Done (55.8% MVP)"
-next_action: "Initialize R-346"
-
+  demos: "builder:demo minimal-blog (82 files) and rideshare-favourites (80 files) emit components/pin-input.tsx"
+  tracker: "OmniStackAI_Execution_Tracker_v6.xlsx updated to 346 tasks, 135 Done (56.0% MVP)"
+next_action: "Initialize R-347"

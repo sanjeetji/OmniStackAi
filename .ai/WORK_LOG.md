@@ -1,5 +1,32 @@
 # Work Log
 
+## 2026-09-11 — R-346
+
+- Recorded contract in `.ai/CURRENT_TASK.yaml` and `.ai/tasks/R-346.md` (status in_progress → done).
+- `nextjs.py`:
+  - Added `_PIN_INPUT_COMPONENT` static template implementing accessible, futuristic PIN & OTP Code Input compound component suite (`apps/web/components/pin-input.tsx`).
+  - Implemented `PinInputVariant` ("neon" | "glass" | "bordered" | "minimal"), `PinInputSize` ("sm" | "md" | "lg"), `PinInputType` ("numeric" | "alphanumeric" | "password"), `PinInputProps`, `PinInputGroupProps`, `PinInputSlotProps`, `PinInputSeparatorProps`, `PinInputContextValue` interfaces.
+  - Implemented compound subcomponents: `PinInput`, `PinInput.Group` (`PinInputGroup`), `PinInput.Slot` (`PinInputSlot`), `PinInput.Separator` (`PinInputSeparator`).
+  - Implemented multi-slot discrete character entry with auto-advance on input and auto-retreat on Backspace.
+  - Implemented smart clipboard paste auto-distribution across slots (e.g. pasting "849201" populates all 6 slots).
+  - Implemented masking and concealed mode (`mask={true}` or `type="password"`).
+  - Implemented native browser autofill support via `autocomplete="one-time-code"`.
+  - Implemented hidden input field synchronization (`<input type="hidden" name={name} value={fullCode} />`) for native form integration.
+  - Implemented full keyboard navigation (`ArrowLeft`/`ArrowRight`, `Backspace`, `Delete`, `Home`, `End`).
+  - Implemented full WAI-ARIA 1.2 accessibility semantics (`role="group"`, `aria-label`, individual slot labelling with position and total count, `aria-hidden="true"` separator).
+  - Implemented 4 futuristic visual variants: `"neon"` (cyberpunk glowing border with cyan/purple active slot aura), `"glass"` (translucent frosted background with backdrop blur), `"bordered"` (clean slate border frame), and `"minimal"` (bottom-line underline slots).
+  - Implemented 3 size presets: `"sm"` (34x40px), `"md"` (44x50px), `"lg"` (54x60px).
+  - Exported `render_pin_input_component` in `omnistackai_agent_engine.codegen` and registered in `NextjsWebAdapter.generate()`.
+  - Maintained 100% diff-invariance across `ir.description`.
+- Added `services/agent-engine/tests/test_pin_input_component.py` with 15 comprehensive unit tests (all passing).
+- `task verify` — 1,519 tests pass (15 new), 0 failures. `task lint`, `task security:quick` pass.
+  `builder:demo minimal-blog` passes (82 files generated). `builder:demo rideshare-favourites` passes (80 files generated). 0 model calls.
+- Tracker: inserted R-346 Done row at `Phase_Roadmap!A9`; table `A4:M354`; 354 total rows;
+  135 Done, 1 Deferred, 210 Not Started; MVP 135/241 (56.0%); no `#REF!`; XLSX valid.
+- Updated CURRENT_TASK.yaml, tasks/R-346.md, PROJECT_STATE.yaml, HANDOFF.md, PROJECT_STATE.md,
+  CHANGELOG.md, docs/CODEGEN.md, docs/PROGRESS.md, docs/RESUME_PROMPT.md.
+
+
 ## 2026-09-11 — R-345
 
 - Recorded contract in `.ai/CURRENT_TASK.yaml` and `.ai/tasks/R-345.md` (status in_progress → done).
