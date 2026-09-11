@@ -1,5 +1,31 @@
 # Work Log
 
+## 2026-09-11 — R-349
+
+- Recorded contract in `.ai/CURRENT_TASK.yaml` and `.ai/tasks/R-349.md` (status in_progress → done).
+- `nextjs.py`:
+  - Added `_HOVER_CARD_COMPONENT` static template implementing accessible, desktop-grade, futuristic Hover Card / Preview Card compound component suite (`apps/web/components/hover-card.tsx`).
+  - Implemented `HoverCardVariant` ("neon" | "glass" | "bordered" | "minimal"), `HoverCardSize` ("sm" | "md" | "lg"), `HoverCardSide` ("top" | "bottom" | "left" | "right"), `HoverCardAlign` ("start" | "center" | "end"), `HoverCardProps`, `HoverCardTriggerProps`, `HoverCardContentProps`, `HoverCardArrowProps`, `HoverCardContextValue` interfaces.
+  - Implemented compound subcomponents: `HoverCard`, `HoverCard.Trigger` (`HoverCardTrigger`), `HoverCard.Content` (`HoverCardContent`), `HoverCard.Arrow` (`HoverCardArrow`), `useHoverCard`.
+  - Implemented configurable entrance and exit delay timers (`openDelay` default 300ms, `closeDelay` default 200ms) with full timeout cleanup.
+  - Implemented smooth cursor pointer transit between trigger and content without premature card dismissal.
+  - Implemented viewport boundary collision prevention and edge flipping against `window.innerWidth` and `window.innerHeight` with safety padding.
+  - Implemented directional SVG pointer arrow notch (`HoverCard.Arrow`).
+  - Implemented Escape key dismissal with automatic trigger focus restoration.
+  - Implemented full WAI-ARIA 1.2 dialog semantics (`role="dialog"`, `aria-haspopup="dialog"`, `aria-expanded`, `aria-controls`, `aria-labelledby`, `tabIndex={-1}`).
+  - Implemented 4 futuristic visual variants: `"neon"` (cyberpunk glow borders and cyan focus glow), `"glass"` (translucent frosted backdrop blur `16px`), `"bordered"` (clean slate border frame), and `"minimal"` (clean subtle shadow).
+  - Implemented 3 size presets: `"sm"` (maxWidth 260px), `"md"` (maxWidth 320px), `"lg"` (maxWidth 400px).
+  - Exported `render_hover_card_component` in `omnistackai_agent_engine.codegen` and registered in `NextjsWebAdapter.generate()`.
+  - Maintained 100% diff-invariance across `ir.description`.
+- Added `services/agent-engine/tests/test_hover_card_component.py` with 16 comprehensive unit tests (all passing).
+- `task verify` — 1,567 tests pass (16 new), 0 failures. `task lint`, `task security:quick` pass.
+  `builder:demo minimal-blog` passes (83 files generated). `builder:demo rideshare-favourites` passes (83 files generated). 0 model calls.
+- Tracker: inserted R-349 Done row at `Phase_Roadmap!A9`; table `A4:M357`; 357 total rows;
+  138 Done, 1 Deferred, 210 Not Started; MVP 138/244 (56.6%); no `#REF!`; XLSX valid.
+- Updated CURRENT_TASK.yaml, tasks/R-349.md, PROJECT_STATE.yaml, HANDOFF.md, PROJECT_STATE.md,
+  CHANGELOG.md, docs/CODEGEN.md, docs/PROGRESS.md, docs/RESUME_PROMPT.md.
+
+
 ## 2026-09-11 — R-348
 
 - Recorded contract in `.ai/CURRENT_TASK.yaml` and `.ai/tasks/R-348.md` (status in_progress → done).

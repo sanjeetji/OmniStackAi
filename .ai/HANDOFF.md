@@ -1,6 +1,6 @@
 # Current Handoff
 
-Task ID: R-348
+Task ID: R-349
 Status: done
 Phase: BASIC/MVP — Founder Stage 0
 Branch: `main` (the only branch; the GitHub default)
@@ -9,37 +9,34 @@ Branch: `main` (the only branch; the GitHub default)
 
 - **Code clean and verified on `main`**.
 - Tracker and state files kept fully consistent and verified.
-- Resume from **R-349** when ready. Still stop-and-ask only for paid cloud / DB engine / new infra / native-mobile / a materially different architecture decision.
+- Resume from **R-350** when ready. Still stop-and-ask only for paid cloud / DB engine / new infra / native-mobile / a materially different architecture decision.
 
 ## Completed
 
-### R-348 — Generated Accessible Futuristic Reusable Context Menu Suite (components/context-menu.tsx)
+### R-349 — Generated Accessible Futuristic Reusable Hover Card Suite (components/hover-card.tsx)
 
-Enabled accessible, desktop-class, futuristic context menus and right-click contextual action menus across generated Next.js web applications:
+Enabled accessible, desktop-grade, futuristic hover cards and preview cards across generated Next.js web applications:
 
-- **Standalone ContextMenu Compound Component Suite (`apps/web/components/context-menu.tsx`)**:
-  - Implemented `ContextMenuVariant` (`"neon"` | `"glass"` | `"bordered"` | `"minimal"`), `ContextMenuSize` (`"sm"` | `"md"` | `"lg"`), `ContextMenuProps`, `ContextMenuTriggerProps`, `ContextMenuContentProps`, `ContextMenuItemProps`, `ContextMenuCheckboxItemProps`, `ContextMenuRadioGroupProps`, `ContextMenuRadioItemProps`, `ContextMenuSeparatorProps`, `ContextMenuLabelProps`, `ContextMenuSubProps`, `ContextMenuSubTriggerProps`, `ContextMenuSubContentProps`, `ContextMenuContextValue`, `ContextMenuSubContextValue` interfaces.
-  - Implemented compound subcomponents: `ContextMenu`, `ContextMenu.Trigger` (`ContextMenuTrigger`), `ContextMenu.Content` (`ContextMenuContent`), `ContextMenu.Item` (`ContextMenuItem`), `ContextMenu.CheckboxItem` (`ContextMenuCheckboxItem`), `ContextMenu.RadioGroup` (`ContextMenuRadioGroup`), `ContextMenu.RadioItem` (`ContextMenuRadioItem`), `ContextMenu.Separator` (`ContextMenuSeparator`), `ContextMenu.Label` (`ContextMenuLabel`), `ContextMenu.Sub` (`ContextMenuSub`), `ContextMenu.SubTrigger` (`ContextMenuSubTrigger`), `ContextMenu.SubContent` (`ContextMenuSubContent`).
-  - Implemented viewport boundary collision prevention and clamping (`window.innerWidth`, `window.innerHeight`, `Math.min(position.x, window.innerWidth - width)`).
-  - Implemented nested submenus (`ContextMenu.Sub`) with hover and `ArrowRight`/`ArrowLeft` traversal and automatic edge-flipping.
-  - Implemented checkbox items (`ContextMenu.CheckboxItem`) with vector checkmark indicator and toggle callbacks.
-  - Implemented radio groups (`ContextMenu.RadioGroup`, `ContextMenu.RadioItem`) with vector radio dot indicator and single-select value synchronization.
-  - Implemented keyboard shortcut badges (`shortcut?: string`) rendered via `<kbd>` tags.
-  - Implemented destructive item styling (`destructive?: boolean`).
-  - Implemented outside click/scroll/resize dismissal and Escape key dismiss with focus restoration.
-  - Implemented full WAI-ARIA 1.2 Menu pattern semantics (`role="menu"`, `role="menuitem"`, `role="menuitemcheckbox"`, `role="menuitemradio"`, `role="separator"`, `role="group"`, `aria-checked`, `aria-disabled`, `aria-haspopup="menu"`, `aria-expanded`).
-  - Implemented full keyboard navigation (`Escape`, `ArrowDown`/`ArrowUp`, `ArrowRight`/`ArrowLeft`, `Home`/`End`, `Tab`, `Enter`/`Space`).
-  - Implemented 4 futuristic visual variants: `"neon"` (cyberpunk glow borders and cyan hover accents), `"glass"` (translucent frosted backdrop blur `16px`), `"bordered"` (clean slate border frame), and `"minimal"` (clean subtle shadow).
-  - Implemented 3 size presets: `"sm"` (item height 28px), `"md"` (item height 32px), `"lg"` (item height 38px).
-  - Exported `render_context_menu_component` in `omnistackai_agent_engine.codegen` and registered in `NextjsWebAdapter.generate()`.
+- **Standalone HoverCard Compound Component Suite (`apps/web/components/hover-card.tsx`)**:
+  - Implemented `HoverCardVariant` (`"neon"` | `"glass"` | `"bordered"` | `"minimal"`), `HoverCardSize` (`"sm"` | `"md"` | `"lg"`), `HoverCardSide` (`"top"` | `"bottom"` | `"left"` | `"right"`), `HoverCardAlign` (`"start"` | `"center"` | `"end"`), `HoverCardProps`, `HoverCardTriggerProps`, `HoverCardContentProps`, `HoverCardArrowProps`, `HoverCardContextValue` interfaces.
+  - Implemented compound subcomponents: `HoverCard`, `HoverCard.Trigger` (`HoverCardTrigger`), `HoverCard.Content` (`HoverCardContent`), `HoverCard.Arrow` (`HoverCardArrow`), `useHoverCard`.
+  - Implemented configurable entrance and exit delay timers (`openDelay` default 300ms, `closeDelay` default 200ms) with full timeout cleanup.
+  - Implemented smooth cursor pointer transit between trigger and content without premature card dismissal.
+  - Implemented viewport boundary collision prevention and edge flipping against `window.innerWidth` and `window.innerHeight` with safety padding.
+  - Implemented directional SVG pointer arrow notch (`HoverCard.Arrow`).
+  - Implemented Escape key dismissal with automatic trigger focus restoration.
+  - Implemented full WAI-ARIA 1.2 dialog semantics (`role="dialog"`, `aria-haspopup="dialog"`, `aria-expanded`, `aria-controls`, `aria-labelledby`, `tabIndex={-1}`).
+  - Implemented 4 futuristic visual variants: `"neon"` (cyberpunk glow borders and cyan focus glow), `"glass"` (translucent frosted backdrop blur `16px`), `"bordered"` (clean slate border frame), and `"minimal"` (clean subtle shadow).
+  - Implemented 3 size presets: `"sm"` (maxWidth 260px), `"md"` (maxWidth 320px), `"lg"` (maxWidth 400px).
+  - Exported `render_hover_card_component` in `omnistackai_agent_engine.codegen` and registered in `NextjsWebAdapter.generate()`.
   - Maintained 100% diff-invariance across `ir.description`.
 
 ## Verification
 
-- `task verify` — pass (**1,551** agent-engine tests; 16 focused R-348 tests in `test_context_menu_component.py`).
+- `task verify` — pass (**1,567** agent-engine tests; 16 focused R-349 tests in `test_hover_card_component.py`).
 - `task lint`, `task security:quick` — pass.
-- `task builder:demo minimal-blog` — pass (82 files), `task builder:demo rideshare-favourites` — pass (82 files).
-- Tracker — R-348 at `Phase_Roadmap!A9:M9`; table `A4:M356`; Dashboard formulas reach row 356; 356 total rows; 137 Done, 1 Deferred, 210 Not Started; MVP 137/243 (56.4%); no `#REF!`; XLSX valid.
+- `task builder:demo minimal-blog` — pass (83 files), `task builder:demo rideshare-favourites` — pass (83 files).
+- Tracker — R-349 at `Phase_Roadmap!A9:M9`; table `A4:M357`; Dashboard formulas reach row 357; 357 total rows; 138 Done, 1 Deferred, 210 Not Started; MVP 138/244 (56.6%); no `#REF!`; XLSX valid.
 - 0 local model calls / 0 cloud calls; no generated app installed/run, no DB connection.
 
 ## Blockers and risks
@@ -49,7 +46,7 @@ Enabled accessible, desktop-class, futuristic context menus and right-click cont
 
 ## Next action
 
-- Initialize R-349: Next planned UI / Builder task.
+- Initialize R-350: Next planned UI / Builder task.
 
 ## Next command
 

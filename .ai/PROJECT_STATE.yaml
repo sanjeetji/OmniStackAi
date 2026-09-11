@@ -2,27 +2,24 @@ schema_version: 1
 project: OmniStackAI
 phase: BASIC/MVP
 founder_stage: 0
-current_task: R-348
+current_task: R-349
 current_status: done
 branch: main
-last_completed_task: R-348
+last_completed_task: R-349
 last_completed_task_summary: >-
-  Generated Accessible Futuristic Reusable Context Menu Suite (components/context-menu.tsx);
-  added standalone, reusable, accessible, futuristic ContextMenu compound component suite supporting
-  ContextMenuVariant ("neon" | "glass" | "bordered" | "minimal"), ContextMenuSize ("sm" | "md" | "lg"),
-  ContextMenuProps, ContextMenuTriggerProps, ContextMenuContentProps, ContextMenuItemProps, ContextMenuCheckboxItemProps,
-  ContextMenuRadioGroupProps, ContextMenuRadioItemProps, ContextMenuSeparatorProps, ContextMenuLabelProps,
-  ContextMenuSubProps, ContextMenuSubTriggerProps, ContextMenuSubContentProps, ContextMenuContextValue,
-  ContextMenuSubContextValue, compound subcomponents (ContextMenu, ContextMenu.Trigger, ContextMenu.Content,
-  ContextMenu.Item, ContextMenu.CheckboxItem, ContextMenu.RadioGroup, ContextMenu.RadioItem, ContextMenu.Separator,
-  ContextMenu.Label, ContextMenu.Sub, ContextMenu.SubTrigger, ContextMenu.SubContent), viewport boundary collision
-  prevention and clamping (window.innerWidth / window.innerHeight), nested submenus with edge-flipping support,
-  checkbox and radio items with vector indicators, keyboard shortcut annotations (<kbd>), destructive item styling,
-  click-outside and Escape dismiss with focus restoration, full keyboard navigation (Escape, ArrowDown/Up, ArrowRight/Left,
-  Home, End, Tab), 4 futuristic visual variants, 3 size presets, full WAI-ARIA 1.2 menu accessibility semantics
-  (role="menu", role="menuitem", etc.), 100% diff-invariance across ir.description, and 0 external runtime dependencies;
-  exported render_context_menu_component in codegen; registered in NextjsWebAdapter; 1,551 tests pass (16 new tests
-  in test_context_menu_component.py); builder:demo generates 82 files for minimal-blog and 82 for rideshare-favourites; 0 model calls
+  Generated Accessible Futuristic Reusable Hover Card Suite (components/hover-card.tsx);
+  added standalone, reusable, accessible, futuristic HoverCard compound component suite supporting
+  HoverCardVariant ("neon" | "glass" | "bordered" | "minimal"), HoverCardSize ("sm" | "md" | "lg"),
+  HoverCardSide ("top" | "bottom" | "left" | "right"), HoverCardAlign ("start" | "center" | "end"),
+  HoverCardProps, HoverCardTriggerProps, HoverCardContentProps, HoverCardArrowProps, HoverCardContextValue,
+  compound subcomponents (HoverCard, HoverCard.Trigger, HoverCard.Content, HoverCard.Arrow, useHoverCard),
+  configurable entrance and exit delay timers (openDelay, closeDelay), smooth pointer transit keeping card open,
+  viewport boundary collision prevention and clamping (window.innerWidth / window.innerHeight), directional SVG
+  pointer arrow notch, full WAI-ARIA 1.2 dialog accessibility semantics (role="dialog", aria-haspopup="dialog", etc.),
+  full keyboard navigation (Escape dismiss with trigger focus restoration), 4 futuristic visual variants, 3 size presets,
+  100% diff-invariance across ir.description, and 0 external runtime dependencies; exported render_hover_card_component
+  in codegen; registered in NextjsWebAdapter; 1,567 tests pass (16 new tests in test_hover_card_component.py);
+  builder:demo generates 83 files for minimal-blog and 83 for rideshare-favourites; 0 model calls
 control_plane_database: postgresql
 model_routing_mode: balanced
 architecture_contract: R_&_D/OmniStackAI_Implementation_Brief_v6.md
@@ -34,7 +31,7 @@ product_direction: >-
   framework adapter contract -> Next.js adapter -> Git service -> preview/sandbox (needs cloud env).
 id_note: >-
   Workbook backlog owns R-010..R-219. Founder-requested tasks use IDs after R-219: R-220..R-223 done,
-  R-224 Next.js deferred (env-blocked), R-225..R-348 done. Continue from R-349.
+  R-224 Next.js deferred (env-blocked), R-225..R-349 done. Continue from R-350.
 blockers: []
 next_action: >-
-  Task R-348 (generated accessible futuristic reusable context menu suite) is complete with 1,551 tests passing. Next task: R-349.
+  Task R-349 (generated accessible futuristic reusable hover card suite) is complete with 1,567 tests passing. Next task: R-350.

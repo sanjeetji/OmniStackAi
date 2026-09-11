@@ -5,31 +5,28 @@ Last updated: 2026-09-11T00:32:00+05:30
 Stage 0 (Founder Build Sequence, Brief Section 91) — BASIC/MVP
 
 ## Last Completed Task
-Tracker ID: R-348 — Generated Accessible Futuristic Reusable Context Menu Suite (components/context-menu.tsx) — DONE,
-`task verify` (1,551 agent-engine tests, 16 new focused R-348 tests) passing. Enabled accessible, futuristic, zero-dependency
-desktop-class context menus across generated Next.js web applications:
-added standalone, reusable, accessible, futuristic ContextMenu compound component suite (`components/context-menu.tsx`) supporting
-ContextMenuVariant ("neon" | "glass" | "bordered" | "minimal"), ContextMenuSize ("sm" | "md" | "lg"),
-ContextMenuProps, ContextMenuTriggerProps, ContextMenuContentProps, ContextMenuItemProps, ContextMenuCheckboxItemProps,
-ContextMenuRadioGroupProps, ContextMenuRadioItemProps, ContextMenuSeparatorProps, ContextMenuLabelProps,
-ContextMenuSubProps, ContextMenuSubTriggerProps, ContextMenuSubContentProps, ContextMenuContextValue,
-ContextMenuSubContextValue, compound subcomponents (ContextMenu, ContextMenu.Trigger, ContextMenu.Content,
-ContextMenu.Item, ContextMenu.CheckboxItem, ContextMenu.RadioGroup, ContextMenu.RadioItem, ContextMenu.Separator,
-ContextMenu.Label, ContextMenu.Sub, ContextMenu.SubTrigger, ContextMenu.SubContent), viewport boundary collision
-prevention and clamping (window.innerWidth / window.innerHeight), nested submenus with edge-flipping support,
-checkbox and radio items with vector indicators, keyboard shortcut annotations (<kbd>), destructive item styling,
-click-outside and Escape dismiss with focus restoration, full keyboard navigation (Escape, ArrowDown/Up, ArrowRight/Left,
-Home, End, Tab), 4 futuristic visual variants, 3 size presets, full WAI-ARIA 1.2 menu accessibility semantics
-(role="menu", role="menuitem", etc.), 100% diff-invariance across `ir.description`, and 0 external dependencies.
-Preceded by R-347 (speed dial), R-346 (pin input), R-345 (color picker), R-344 (resizable), R-343 (carousel), R-342 (segmented control), R-341 (radial gauge), R-340 (code block), R-339 (tag input), R-338 (tree view),
+Tracker ID: R-349 — Generated Accessible Futuristic Reusable Hover Card Suite (components/hover-card.tsx) — DONE,
+`task verify` (1,567 agent-engine tests, 16 new focused R-349 tests) passing. Enabled accessible, futuristic, zero-dependency
+desktop-grade hover cards and preview cards across generated Next.js web applications:
+added standalone, reusable, accessible, futuristic HoverCard compound component suite (`components/hover-card.tsx`) supporting
+HoverCardVariant ("neon" | "glass" | "bordered" | "minimal"), HoverCardSize ("sm" | "md" | "lg"),
+HoverCardSide ("top" | "bottom" | "left" | "right"), HoverCardAlign ("start" | "center" | "end"),
+HoverCardProps, HoverCardTriggerProps, HoverCardContentProps, HoverCardArrowProps, HoverCardContextValue,
+compound subcomponents (HoverCard, HoverCard.Trigger, HoverCard.Content, HoverCard.Arrow, useHoverCard),
+configurable entrance and exit delay timers (openDelay, closeDelay), smooth pointer transit keeping card open,
+viewport boundary collision prevention and clamping (window.innerWidth / window.innerHeight), directional SVG
+pointer arrow notch, full WAI-ARIA 1.2 dialog accessibility semantics (role="dialog", aria-haspopup="dialog", etc.),
+full keyboard navigation (Escape dismiss with trigger focus restoration), 4 futuristic visual variants, 3 size presets,
+100% diff-invariance across `ir.description`, and 0 external dependencies.
+Preceded by R-348 (context menu), R-347 (speed dial), R-346 (pin input), R-345 (color picker), R-344 (resizable), R-343 (carousel), R-342 (segmented control), R-341 (radial gauge), R-340 (code block), R-339 (tag input), R-338 (tree view),
 R-337 (stat card), R-336 (timeline), R-335 (file upload), R-334 (stepper), R-333 (rating), R-332 (progress), R-331 (slider),
 R-330 (command palette), R-329 (data grid), R-328 (date picker), R-327 (form controls), R-326 (dialog), R-325 (theme toggle),
 R-324 (theming tokens), R-323 (popover), R-322 (dropdown menu), R-321 (accordion), R-320 (toggle), R-319 (avatar), R-318 (drawer),
 R-317 (skeleton), R-316 (alert), R-315 (card), R-314 (tooltip), R-313 (column visibility), R-312 (badge), R-311 (table density),
 R-310 (tabs), R-309 (pagination), and R-308 (JSON export).
 
-**Notes:** (1) the tracker is current through R-348: 137 Done, 1 Deferred, 210 Not Started across 348
-unique tasks; MVP is 137/243 (56.4%). (2) Next unstarted Tracker ID: R-349.
+**Notes:** (1) the tracker is current through R-349: 138 Done, 1 Deferred, 210 Not Started across 349
+unique tasks; MVP is 138/244 (56.6%). (2) Next unstarted Tracker ID: R-350.
 
 
 

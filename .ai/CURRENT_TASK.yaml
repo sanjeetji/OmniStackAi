@@ -1,17 +1,17 @@
-task_id: R-348
-id: R-348
-title: "Accessible Futuristic Reusable Context Menu Suite"
+task_id: R-349
+id: R-349
+title: "Accessible Futuristic Reusable Hover Card Suite"
 status: DONE
 phase: MVP
 tracker_row: 9
 started_at: "2026-09-11"
 completed_at: "2026-09-11"
-objective: "Add accessible, optimized, desktop-class, and futuristic Context Menu compound component suite (components/context-menu.tsx) with viewport boundary clamping, nested submenus, checkbox/radio items, keyboard navigation, and WAI-ARIA menu semantics."
+objective: "Add accessible, optimized, desktop-grade, and futuristic Hover Card / Preview Card compound component suite (components/hover-card.tsx) with configurable delay timers, viewport collision clamping, compound subcomponents, and WAI-ARIA dialog semantics."
 allowed_paths:
   - "services/agent-engine/src/omnistackai_agent_engine/codegen/nextjs.py"
   - "services/agent-engine/src/omnistackai_agent_engine/codegen/__init__.py"
-  - "services/agent-engine/tests/test_context_menu_component.py"
-  - ".ai/tasks/R-348.md"
+  - "services/agent-engine/tests/test_hover_card_component.py"
+  - ".ai/tasks/R-349.md"
   - ".ai/CURRENT_TASK.yaml"
   - ".ai/PROJECT_STATE.yaml"
   - ".ai/WORK_LOG.md"
@@ -26,9 +26,9 @@ forbidden_changes:
   - "Do not introduce external npm dependencies"
   - "Do not break snapshot diff invariance across ir.description"
 evidence:
-  verify: "task verify: 1,551 tests pass offline (16 in test_context_menu_component.py)"
+  verify: "task verify: 1,567 tests pass offline (16 in test_hover_card_component.py)"
   lint: "task lint: pass"
   security: "task security:quick: pass"
-  demos: "task builder:demo passes on minimal-blog (82 files) and rideshare-favourites (82 files)"
-  tracker: "R_&_D/OmniStackAI_Execution_Tracker_v6.xlsx row 9 (348 total, 137 Done)"
+  demos: "task builder:demo passes on minimal-blog (83 files) and rideshare-favourites (83 files)"
+  tracker: "R_&_D/OmniStackAI_Execution_Tracker_v6.xlsx row 9 (349 total, 138 Done)"
 next_action: "Ready for next tracker task"
