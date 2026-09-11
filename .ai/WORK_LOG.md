@@ -1,5 +1,28 @@
 # Work Log
 
+## 2026-09-11 — R-365
+
+- Recorded contract in `.ai/CURRENT_TASK.yaml` and `.ai/tasks/R-365.md` (status in_progress → done).
+- `nextjs.py`:
+  - Added `_MARKDOWN_EDITOR_COMPONENT` static template implementing accessible, desktop-and-mobile-grade, futuristic Markdown & Rich Content Editor compound component suite (`apps/web/components/markdown-editor.tsx`).
+  - Implemented `MarkdownEditorVariant` ("default" | "card" | "glass" | "neon"), `MarkdownEditorSize` ("sm" | "md" | "lg"), `MarkdownEditorViewMode` ("edit" | "preview" | "split"), `MarkdownToolbarAction`, `MarkdownEditorProps`, `MarkdownToolbarProps`, `MarkdownPreviewProps`, `MarkdownStatusBarProps` interfaces.
+  - Implemented compound and alias exports: `MarkdownEditor`, `MarkdownToolbar`, `MarkdownPreview`, `MarkdownStatusBar`, `RichTextEditor`, `ContentEditor`.
+  - Implemented formatting toolbar with 16 rich formatting actions (bold, italic, strikethrough, headings 1-3, blockquote, inline code, fenced code block, bulleted list, numbered list, task list checkbox, link, image, table, horizontal rule).
+  - Implemented live preview tabs & split-view mode with WAI-ARIA tab semantics (`role="tablist"`, `role="tab"`, `aria-selected`).
+  - Implemented built-in zero-dependency Markdown parser and HTML preview renderer (headings, blockquotes, code blocks with syntax tag badges, checklists with toggle indicators, markdown tables with striped headers, external links with security rel tags, images with responsive constraints, inline bold/italic/strike/code formatting).
+  - Implemented status bar live metrics (character count, word count, line count, reading time estimate, tabular numbers).
+  - Implemented keyboard shortcuts (`Ctrl/Cmd+B` for bold, `Ctrl/Cmd+I` for italic, `Ctrl/Cmd+K` for link, `Tab` for 2-space indentation).
+  - Implemented 19 built-in zero-dependency vector icons.
+  - Implemented 4 futuristic visual styling variants ("default", "card", "glass" with backdropFilter blur, "neon" cyberpunk cyan glow).
+  - Implemented 3 size presets ("sm", "md", "lg").
+  - Implemented native HTML form submission integration via hidden inputs (`name`).
+  - Implemented React ref forwarding (`forwardRef`) and explicit `MarkdownEditor.displayName = "MarkdownEditor"`.
+  - Exported `render_markdown_editor_component` in `omnistackai_agent_engine.codegen` and registered `components/markdown-editor.tsx` in `NextjsWebAdapter.generate()`.
+  - Maintained 100% diff-invariance across `ir.description`.
+- Added `services/agent-engine/tests/test_markdown_editor_component.py` with 16 comprehensive unit tests (all passing).
+- `task verify` — 1,891 tests pass (16 new), 0 failures. `task lint`, `task security:quick` pass.
+  `builder:demo minimal-blog` passes (102 files generated). 0 model calls.
+
 ## 2026-09-11 — R-364
 
 - Recorded contract in `.ai/CURRENT_TASK.yaml` and `.ai/tasks/R-364.md` (status in_progress → done).

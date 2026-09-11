@@ -1,6 +1,6 @@
 # Current Handoff
 
-Task ID: R-364
+Task ID: R-365
 Status: done
 Phase: BASIC/MVP — Founder Stage 0
 Branch: `main` (the only branch; the GitHub default)
@@ -9,30 +9,32 @@ Branch: `main` (the only branch; the GitHub default)
 
 - **Code clean and verified on `main`**.
 - Tracker and state files kept fully consistent and verified.
-- Resume from **R-365** when ready. Still stop-and-ask only for paid cloud / DB engine / new infra / native-mobile / a materially different architecture decision.
+- Completed all 3 options requested by the user:
+  1. **R-363**: Tour & Onboarding Spotlight Guide Suite (`components/tour.tsx`)
+  2. **R-364**: Transfer / Dual Listbox Picker Primitive (`components/transfer.tsx`)
+  3. **R-365**: Markdown & Rich Content Editor Suite (`components/markdown-editor.tsx`)
+- Resume from **R-366** when ready. Still stop-and-ask only for paid cloud / DB engine / new infra / native-mobile / a materially different architecture decision.
 
 ## Completed
 
-### R-364 — Generated Accessible Futuristic Reusable Transfer / Dual Listbox Picker Primitive (components/transfer.tsx)
+### R-365 — Generated Accessible Futuristic Reusable Markdown & Rich Content Editor Suite (components/markdown-editor.tsx)
 
-Enabled accessible, desktop-and-mobile-grade, futuristic transfer and dual listbox compound components across generated Next.js web applications:
+Enabled accessible, desktop-and-mobile-grade, futuristic markdown and rich content editor compound components across generated Next.js web applications:
 
-- **Standalone Transfer Suite (`apps/web/components/transfer.tsx`)**:
-  - Implemented `TransferVariant` (`"default"` | `"card"` | `"glass"` | `"neon"`), `TransferSize` (`"sm"` | `"md"` | `"lg"`), `TransferDirection` (`"left"` | `"right"`), `TransferItem`, `TransferProps`, and `TransferListProps` interfaces.
-  - Implemented compound and alias exports: `Transfer`, `TransferList`, `TransferItemComponent`, `DualListbox`, `PickList`.
-  - Implemented dual-column listbox architecture with independent selection, item counts, and live search filtering.
-  - Implemented live search inputs with clear button (`XIcon`) filtering across title, description, and key.
-  - Implemented central move operation buttons ("Move selected right", "Move selected left", "Move all right", "Move all left") with disabled threshold states and customizable labels/tooltips.
-  - Implemented header select-all checkbox with indeterminate state calculation and selection count badge ("X/Y").
-  - Implemented double-click instant item transfer between lists.
-  - Implemented full WAI-ARIA 1.2 dual-listbox compliance (`role="group"`, `role="listbox"`, `role="option"`, `role="checkbox"`, `aria-multiselectable="true"`, `aria-selected`, `aria-disabled`, `aria-checked`).
-  - Implemented full keyboard navigation (`Space` to toggle checkbox, `Enter` to transfer, roving `tabIndex`).
-  - Implemented 8 built-in zero-dependency vector icons (`ChevronRightIcon`, `ChevronLeftIcon`, `ChevronsRightIcon`, `ChevronsLeftIcon`, `SearchIcon`, `XIcon`, `CheckIcon`, `DashIcon`).
+- **Standalone Markdown Editor Suite (`apps/web/components/markdown-editor.tsx`)**:
+  - Implemented `MarkdownEditorVariant` (`"default"` | `"card"` | `"glass"` | `"neon"`), `MarkdownEditorSize` (`"sm"` | `"md"` | `"lg"`), `MarkdownEditorViewMode` (`"edit"` | `"preview"` | `"split"`), `MarkdownToolbarAction`, `MarkdownEditorProps`, `MarkdownToolbarProps`, `MarkdownPreviewProps`, and `MarkdownStatusBarProps` interfaces.
+  - Implemented compound and alias exports: `MarkdownEditor`, `MarkdownToolbar`, `MarkdownPreview`, `MarkdownStatusBar`, `RichTextEditor`, `ContentEditor`.
+  - Implemented formatting toolbar with 16 rich formatting actions (bold, italic, strikethrough, headings 1-3, blockquote, inline code, fenced code block, bulleted list, numbered list, task list checkbox, link, image, table, horizontal rule).
+  - Implemented live preview tabs & split-view mode with WAI-ARIA tab semantics (`role="tablist"`, `role="tab"`, `aria-selected`).
+  - Implemented built-in zero-dependency Markdown parser and HTML preview renderer (headings, blockquotes, code blocks with syntax tag badges, checklists with toggle indicators, markdown tables with striped headers, external links with security rel tags, images with responsive constraints, inline bold/italic/strike/code formatting).
+  - Implemented status bar live metrics (character count, word count, line count, reading time estimate, tabular numbers).
+  - Implemented keyboard shortcuts (`Ctrl/Cmd+B` for bold, `Ctrl/Cmd+I` for italic, `Ctrl/Cmd+K` for link, `Tab` for 2-space indentation).
+  - Implemented 19 built-in zero-dependency vector icons.
   - Implemented 4 futuristic visual styling variants ("default", "card", "glass" with backdropFilter blur, "neon" cyberpunk cyan glow).
   - Implemented 3 size presets ("sm", "md", "lg").
-  - Implemented native HTML form submission integration via hidden input arrays (`name`).
-  - Implemented React ref forwarding (`forwardRef`) and explicit `Transfer.displayName = "Transfer"`.
-  - Exported `render_transfer_component` in `omnistackai_agent_engine.codegen` and registered `components/transfer.tsx` in `NextjsWebAdapter.generate()`.
+  - Implemented native HTML form submission integration via hidden inputs (`name`).
+  - Implemented React ref forwarding (`forwardRef`) and explicit `MarkdownEditor.displayName = "MarkdownEditor"`.
+  - Exported `render_markdown_editor_component` in `omnistackai_agent_engine.codegen` and registered `components/markdown-editor.tsx` in `NextjsWebAdapter.generate()`.
   - Maintained 100% diff-invariance across `ir.description`.
 
 ## Verification

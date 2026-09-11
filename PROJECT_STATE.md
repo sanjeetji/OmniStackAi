@@ -5,27 +5,30 @@ Last updated: 2026-09-11T12:10:00+05:30
 Stage 0 (Founder Build Sequence, Brief Section 91) — BASIC/MVP
 
 ## Last Completed Task
-Tracker ID: R-364 — Generated Accessible Futuristic Reusable Transfer / Dual Listbox Picker Primitive (components/transfer.tsx) — DONE,
-`task verify` (1,875 agent-engine tests, 18 new focused R-364 tests) passing. Enabled accessible, futuristic, zero-dependency
-desktop-and-mobile-grade transfer and dual listbox compound components across generated Next.js web applications:
-added standalone, reusable, accessible, futuristic Transfer suite (`components/transfer.tsx`) supporting
-TransferVariant ("default" | "card" | "glass" | "neon"), TransferSize ("sm" | "md" | "lg"), TransferDirection ("left" | "right"),
-TransferItem, TransferProps, TransferListProps, compound and alias exports (Transfer, TransferList, TransferItemComponent, DualListbox, PickList),
-dual-column listbox architecture, live search filtering with clear button, central move operation buttons (Move right, Move left,
-Move all right, Move all left), header select-all checkbox with indeterminate state calculation and selection count badge ("X/Y"),
-double-click instant item transfer, full WAI-ARIA 1.2 dual-listbox compliance (role="group", role="listbox", role="option", role="checkbox",
-aria-multiselectable="true", aria-selected, aria-disabled, aria-checked), full keyboard navigation (Space to toggle checkbox, Enter to transfer,
-roving tabIndex), 8 built-in vector icons, 4 futuristic visual styling variants ("default", "card", "glass" with backdropFilter blur, "neon"
-cyberpunk cyan glow), 3 size presets ("sm", "md", "lg"), native HTML form submission integration via hidden input arrays (`name`),
-React ref forwarding, 100% diff-invariance across `ir.description`, and 0 external runtime dependencies.
-Preceded by R-363 (tour), R-362 (sidebar), R-361 (notification center), R-360 (number input), R-359 (bottom nav), R-358 (combobox), R-357 (banner), R-356 (checkbox), R-355 (radio group), R-354 (kbd), R-353 (separator), R-352 (aspect ratio), R-351 (collapsible), R-350 (scroll area), R-349 (hover card), R-348 (context menu), R-347 (speed dial), R-346 (pin input), R-345 (color picker), R-344 (resizable), R-343 (carousel), R-342 (segmented control), R-341 (radial gauge), R-340 (code block), R-339 (tag input), R-338 (tree view),
+Tracker ID: R-365 — Generated Accessible Futuristic Reusable Markdown & Rich Content Editor Suite (components/markdown-editor.tsx) — DONE,
+`task verify` (1,891 agent-engine tests, 16 new focused R-365 tests) passing. Enabled accessible, futuristic, zero-dependency
+desktop-and-mobile-grade markdown and rich content editor compound components across generated Next.js web applications:
+added standalone, reusable, accessible, futuristic Markdown Editor suite (`components/markdown-editor.tsx`) supporting
+MarkdownEditorVariant ("default" | "card" | "glass" | "neon"), MarkdownEditorSize ("sm" | "md" | "lg"),
+MarkdownEditorViewMode ("edit" | "preview" | "split"), MarkdownToolbarAction, MarkdownEditorProps, MarkdownToolbarProps,
+MarkdownPreviewProps, MarkdownStatusBarProps, compound and alias exports (MarkdownEditor, MarkdownToolbar, MarkdownPreview,
+MarkdownStatusBar, RichTextEditor, ContentEditor), formatting toolbar with 16 rich formatting actions, live preview tabs & split-view
+mode with WAI-ARIA tab semantics (role="tablist", role="tab", aria-selected), built-in zero-dependency Markdown parser and HTML
+preview renderer (headings, blockquotes, code blocks with syntax tag badges, checklists with toggle indicators, markdown tables,
+external links with security rel tags, images with responsive constraints, inline bold/italic/strike/code formatting),
+status bar live metrics (character count, word count, line count, reading time estimate, tabular numbers), keyboard shortcuts
+(Ctrl/Cmd+B, Ctrl/Cmd+I, Ctrl/Cmd+K, Tab for 2-space indentation), 19 built-in vector icons, 4 futuristic visual styling variants
+("default", "card", "glass" with backdropFilter blur, "neon" cyberpunk cyan glow), 3 size presets ("sm", "md", "lg"), native HTML form
+submission integration via hidden inputs (`name`), React ref forwarding, 100% diff-invariance across `ir.description`, and 0 external
+runtime dependencies.
+Preceded by R-364 (transfer), R-363 (tour), R-362 (sidebar), R-361 (notification center), R-360 (number input), R-359 (bottom nav), R-358 (combobox), R-357 (banner), R-356 (checkbox), R-355 (radio group), R-354 (kbd), R-353 (separator), R-352 (aspect ratio), R-351 (collapsible), R-350 (scroll area), R-349 (hover card), R-348 (context menu), R-347 (speed dial), R-346 (pin input), R-345 (color picker), R-344 (resizable), R-343 (carousel), R-342 (segmented control), R-341 (radial gauge), R-340 (code block), R-339 (tag input), R-338 (tree view),
 R-337 (stat card), R-336 (timeline), R-335 (file upload), R-334 (stepper), R-333 (rating), R-332 (progress), R-331 (slider),
 R-330 (command palette), R-329 (data grid), R-328 (date picker), R-327 (form controls), R-326 (dialog), R-325 (theme toggle),
 R-324 (theming tokens), R-323 (popover), R-322 (dropdown menu), R-321 (accordion), R-320 (toggle), R-319 (avatar), R-318 (drawer),
 R-317 (skeleton), R-316 (alert), R-315 (card), R-314 (tooltip), R-313 (column visibility), R-312 (badge), R-311 (table density),
 R-310 (tabs), R-309 (pagination), and R-308 (JSON export).
 
-**Notes:** (1) R-364 complete with 1,875 tests passing. (2) Next unstarted Tracker ID: R-365.
+**Notes:** (1) R-365 complete with 1,891 tests passing. (2) Next unstarted Tracker ID: R-366.
 
 
 
