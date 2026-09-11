@@ -2,25 +2,24 @@ schema_version: 1
 project: OmniStackAI
 phase: BASIC/MVP
 founder_stage: 0
-current_task: R-378
+current_task: R-379
 current_status: not_started
 branch: main
-last_completed_task: R-377
+last_completed_task: R-378
 last_completed_task_summary: >-
-  Generated Accessible Futuristic Reusable Pivot Table & Cross-Tabulation Matrix Suite (components/pivot-table.tsx);
-  added standalone, reusable, accessible, desktop-and-mobile-grade pivot table compound component suite supporting
-  multi-dimensional hierarchical row grouping and multi-level column groupings, flexible aggregation operations (sum, avg, count, min, max),
-  collapsible and expandable row hierarchy levels with chevron toggles, automatic subtotals and grand totals calculation for rows and columns,
-  interactive column sorting (ascending and descending), built-in search input filtering rows across dimension values,
-  cell click selection handling (onCellClick, selectedCell), CSV export capability via imperative handle (exportCsv),
-  WAI-ARIA 1.2 table/grid accessibility semantics (role="table", role="row", role="columnheader", role="rowheader", role="gridcell", aria-expanded, aria-sort),
-  4 futuristic visual styling variants ("default", "card", "glass" with backdropFilter blur, "neon" cyberpunk cyan glow with glowing total rows),
-  3 size presets ("sm", "md", "lg"), React ref forwarding (forwardRef), explicit displayName across all compound exports,
-  PivotAggregator, PivotVariant, PivotSize, PivotValueField, PivotCellCoord, PivotTableHandle, PivotTableProps, PivotCellProps, PivotHeaderProps,
-  compound and semantic alias exports (PivotTable, CrossTab, MatrixTable, PivotCell, PivotHeader, default export),
+  Generated Accessible Futuristic Reusable Image Cropper & Canvas Mask Suite (components/image-cropper.tsx);
+  added standalone, reusable, accessible, desktop-and-mobile-grade image cropper compound component suite supporting
+  interactive marquee crop box with 8 tactile resize handles, aspect ratio constraints ("free", "1:1", "4:3", "16:9", "circular" for avatars),
+  zoom scaling (0.5x to 3x) and continuous rotation slider (-180° to +180°) with 90° step buttons, horizontal and vertical flip transforms,
+  real-time HTML5 Canvas export (toDataURL, toBlob, getCroppedCanvas) and live preview thumbnail (CropPreview),
+  keyboard arrow-key nudging with Shift acceleration, WAI-ARIA 1.2 accessibility semantics (role="region", aria-label="Image Cropper", aria-roledescription="image cropping canvas"),
+  4 futuristic visual styling variants ("default", "card", "glass" with backdrop-blur, "neon" cyberpunk cyan glow),
+  3 size scales ("sm", "md", "lg"), React ref forwarding (forwardRef), explicit displayName across all compound exports,
+  canonical TypeScript types (CropAspectRatio, ImageCropperVariant, ImageCropperSize, CropArea, CropData, ImageCropperHandle, ImageCropperProps, CropToolbarProps, CropPreviewProps, AvatarCropperProps),
+  compound and semantic alias exports (ImageCropper, AvatarCropper, CropCanvas, CropToolbar, CropPreview, default export),
   100% diff-invariance across ir.description, 0 external runtime dependencies;
-  exported render_pivot_table_component in codegen; registered components/pivot-table.tsx in NextjsWebAdapter;
-  2,091 tests pass (17 new tests in test_pivot_table_component.py); 0 model calls
+  exported render_image_cropper_component in codegen; registered components/image-cropper.tsx in NextjsWebAdapter;
+  2,108 tests pass (17 new tests in test_image_cropper_component.py); 0 model calls
 control_plane_database: postgresql
 model_routing_mode: balanced
 architecture_contract: R_&_D/OmniStackAI_Implementation_Brief_v6.md
@@ -32,8 +31,8 @@ product_direction: >-
   framework adapter contract -> Next.js adapter -> Git service -> preview/sandbox (needs cloud env).
 id_note: >-
   Workbook backlog owns R-010..R-219. Founder-requested tasks use IDs after R-219: R-220..R-223 done,
-  R-224 Next.js deferred (env-blocked), R-225..R-376 done. Continue from R-377.
+  R-224 Next.js deferred (env-blocked), R-225..R-377 done. Continue from R-378.
 blockers: []
 next_action: >-
-  Task R-377 (Pivot Table Suite) complete with 2,091 tests passing.
-  Next task: R-378.
+  Task R-378 (Image Cropper & Canvas Mask Suite) complete with 2,108 tests passing.
+  Next task: R-379.

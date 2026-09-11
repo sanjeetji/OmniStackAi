@@ -3166,3 +3166,39 @@ Accessible, futuristic, desktop-and-mobile-grade pivot table compound component 
   - Full React `forwardRef` and explicit `displayName` across all exports.
   - 100% diff-invariance across `ir.description` changes; zero external runtime npm dependencies.
   - Registered in `NextjsWebAdapter.generate()` as a `GeneratedFile` at `components/pivot-table.tsx` and exported in `codegen.__init__` as `render_pivot_table_component`.
+
+### Image Cropper & Canvas Mask Suite (`components/image-cropper.tsx`)
+
+Accessible, futuristic, desktop-and-mobile-grade image cropper & canvas mask compound component suite:
+- **Zero Runtime Dependencies**: Pure React 18+ and native HTML5 `<canvas>` / pointer APIs without external cropper libraries (`cropperjs`, `react-image-crop`).
+- **Interactive Crop Marquee & Resize Handles**:
+  - Draggable central crop box.
+  - 8 tactile resize handles (`nw`, `n`, `ne`, `e`, `se`, `s`, `sw`, `w`) with pointer capture API tracking.
+- **Aspect Ratio Constraints**:
+  - Supports `"free"`, `"1:1"`, `"4:3"`, `"16:9"`, and `"circular"` (for avatars and profiles).
+- **Transform Controls**:
+  - Continuous zoom scaling slider (0.5x to 3x).
+  - Continuous rotation slider (-180° to +180°) and ±90° step quick buttons.
+  - Horizontal flip and vertical flip transform toggles.
+- **Canvas Rendering & Export**:
+  - High-DPI canvas clipping, rotation, flipping, and scaling.
+  - Asynchronous export via `crop()` and `toDataURL()`.
+  - Real-time thumbnail preview component (`CropPreview`).
+- **Keyboard Navigation & WAI-ARIA 1.2**:
+  - Arrow key nudging (`ArrowLeft`, `ArrowRight`, `ArrowUp`, `ArrowDown`) with Shift multiplier for precision control.
+  - `role="region"`, `aria-label="Image Cropper"`, `aria-roledescription="image cropping canvas"`, `tabIndex={0}`.
+- **4 Visual Variants**:
+  - `"default"`: Slate background with blue crop borders.
+  - `"card"`: Deep navy card with elevated shadow.
+  - `"glass"`: Translucent glassmorphic backdrop filter blur.
+  - `"neon"`: Cyberpunk cyan borders with luminous handles and cyan glow shadow.
+- **3 Size Scales**:
+  - `"sm"`: Compact layout (max height 320px).
+  - `"md"`: Standard layout (max height 460px).
+  - `"lg"`: Studio large layout (max height 600px).
+- **Standards & Composition**:
+  - Exports `ImageCropper`, `AvatarCropper`, `CropCanvas`, `CropToolbar`, `CropPreview`, and default export.
+  - Full React `forwardRef`, imperative handle (`ImageCropperHandle`), and explicit `displayName` across all exports.
+  - 100% diff-invariance across `ir.description` changes; zero external runtime npm dependencies.
+  - Registered in `NextjsWebAdapter.generate()` as a `GeneratedFile` at `components/image-cropper.tsx` and exported in `codegen.__init__` as `render_image_cropper_component`.
+

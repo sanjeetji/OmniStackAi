@@ -1,6 +1,29 @@
 # Work Log
 
-## 2026-09-11 — R-377
+## 2026-09-11 — R-378
+
+- Recorded contract in `.ai/CURRENT_TASK.yaml` and `.ai/tasks/R-378.md` (status in_progress → done).
+- `nextjs.py`:
+  - Added `_IMAGE_CROPPER_COMPONENT` static template implementing accessible, desktop-and-mobile-grade, futuristic Image Cropper & Canvas Mask compound component suite (`apps/web/components/image-cropper.tsx`).
+  - Implemented `CropAspectRatio` ("free" | "1:1" | "4:3" | "16:9" | "circular"), `ImageCropperVariant` ("default" | "card" | "glass" | "neon"), `ImageCropperSize` ("sm" | "md" | "lg"), `CropArea`, `CropData`, `ImageCropperHandle`, `ImageCropperProps`, `CropToolbarProps`, `CropPreviewProps`, `AvatarCropperProps` interfaces.
+  - Implemented compound and semantic alias exports: `ImageCropper`, `AvatarCropper`, `CropCanvas`, `CropToolbar`, `CropPreview`, default export.
+  - Implemented draggable crop marquee bounding box and 8 tactile resize handles (`nw`, `n`, `ne`, `e`, `se`, `s`, `sw`, `w`) with pointer capture APIs.
+  - Implemented aspect ratio constraints: `"free"`, `"1:1"`, `"4:3"`, `"16:9"`, `"circular"` (for avatars and user profiles).
+  - Implemented continuous zoom scaling slider (0.5x to 3x).
+  - Implemented rotation controls (-180° to +180° slider and ±90° step quick buttons).
+  - Implemented horizontal flip and vertical flip transform toggles.
+  - Implemented HTML5 `<canvas>` rendering with circular clipping option and data export (`crop()`, `toDataURL()`).
+  - Implemented real-time thumbnail preview component (`CropPreview`).
+  - Implemented keyboard arrow key nudging (`ArrowLeft`, `ArrowRight`, `ArrowUp`, `ArrowDown`) with Shift multiplier for precision control.
+  - Implemented WAI-ARIA 1.2 accessibility semantics (`role="region"`, `aria-label="Image Cropper"`, `aria-roledescription="image cropping canvas"`, `tabIndex={0}`).
+  - Implemented 4 futuristic visual styling variants ("default", "card", "glass" with backdropFilter blur, "neon" cyberpunk cyan glow with luminous handles).
+  - Implemented 3 size scales ("sm", "md", "lg").
+  - Implemented React ref forwarding (`forwardRef`), imperative handle (`ImageCropperHandle`), and explicit `displayName` across all exports.
+  - Exported `render_image_cropper_component` in `omnistackai_agent_engine.codegen` and registered `components/image-cropper.tsx` in `NextjsWebAdapter.generate()`.
+  - Maintained 100% diff-invariance across `ir.description`.
+- Added `services/agent-engine/tests/test_image_cropper_component.py` with 17 comprehensive unit tests (all passing).
+- `task verify` — 2,108 tests pass (17 new), 0 failures. `task lint`, `task security:quick`, `task builder:demo -- minimal-blog` pass.
+
 
 - Recorded contract in `.ai/CURRENT_TASK.yaml` and `.ai/tasks/R-377.md` (status in_progress → done).
 - `nextjs.py`:

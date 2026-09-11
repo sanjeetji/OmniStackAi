@@ -1,6 +1,6 @@
 # Current Handoff
 
-Task ID: R-377
+Task ID: R-378
 Status: done
 Phase: BASIC/MVP — Founder Stage 0
 Branch: `main` (the only branch; the GitHub default)
@@ -25,9 +25,32 @@ Branch: `main` (the only branch; the GitHub default)
   13. **R-375**: Heatmap & Activity Contribution Matrix Suite (`components/heatmap.tsx`)
   14. **R-376**: Media Player Suite (`components/media-player.tsx`)
   15. **R-377**: Pivot Table & Cross-Tabulation Matrix Suite (`components/pivot-table.tsx`)
-- Resume from **R-378** when ready. Still stop-and-ask only for paid cloud / DB engine / new infra / native-mobile / a materially different architecture decision.
+  16. **R-378**: Image Cropper & Canvas Mask Suite (`components/image-cropper.tsx`)
+- Resume from **R-379** when ready. Still stop-and-ask only for paid cloud / DB engine / new infra / native-mobile / a materially different architecture decision.
 
 ## Completed
+
+### R-378 — Generated Accessible Futuristic Reusable Image Cropper & Canvas Mask Suite (components/image-cropper.tsx)
+
+Enabled accessible, desktop-and-mobile-grade, futuristic Image Cropper & Canvas Mask compound components across generated Next.js web applications:
+
+- **Standalone Image Cropper Suite (`apps/web/components/image-cropper.tsx`)**:
+  - Implemented `CropAspectRatio` (`"free"` | `"1:1"` | `"4:3"` | `"16:9"` | `"circular"`), `ImageCropperVariant` (`"default"` | `"card"` | `"glass"` | `"neon"`), `ImageCropperSize` (`"sm"` | `"md"` | `"lg"`), `CropArea`, `CropData`, `ImageCropperHandle`, `ImageCropperProps`, `CropToolbarProps`, `CropPreviewProps`, and `AvatarCropperProps` interfaces.
+  - Implemented compound and semantic alias exports: `ImageCropper`, `AvatarCropper`, `CropCanvas`, `CropToolbar`, `CropPreview`, and default export.
+  - Implemented draggable crop marquee bounding box and 8 tactile resize handles (`nw`, `n`, `ne`, `e`, `se`, `s`, `sw`, `w`) with pointer capture APIs.
+  - Implemented aspect ratio constraints: `"free"`, `"1:1"`, `"4:3"`, `"16:9"`, `"circular"` (for avatars and user profiles).
+  - Implemented continuous zoom scaling slider (0.5x to 3x).
+  - Implemented rotation controls (-180° to +180° slider and ±90° step quick buttons).
+  - Implemented horizontal flip and vertical flip transform toggles.
+  - Implemented HTML5 `<canvas>` rendering with circular clipping option and data export (`crop()`, `toDataURL()`).
+  - Implemented real-time thumbnail preview component (`CropPreview`).
+  - Implemented keyboard arrow key nudging (`ArrowLeft`, `ArrowRight`, `ArrowUp`, `ArrowDown`) with Shift multiplier for precision control.
+  - Implemented WAI-ARIA 1.2 accessibility semantics (`role="region"`, `aria-label="Image Cropper"`, `aria-roledescription="image cropping canvas"`, `tabIndex={0}`).
+  - Implemented 4 futuristic visual styling variants ("default", "card", "glass" with backdropFilter blur, "neon" cyberpunk cyan glow with luminous handles).
+  - Implemented 3 size scales ("sm", "md", "lg").
+  - Implemented React ref forwarding (`forwardRef`), imperative handle (`ImageCropperHandle`), and explicit `displayName` across all exports.
+  - Exported `render_image_cropper_component` in `omnistackai_agent_engine.codegen` and registered `components/image-cropper.tsx` in `NextjsWebAdapter.generate()`.
+  - Maintained 100% diff-invariance across `ir.description`.
 
 ### R-377 — Generated Accessible Futuristic Reusable Pivot Table & Cross-Tabulation Matrix Suite (components/pivot-table.tsx)
 
