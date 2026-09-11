@@ -1,17 +1,17 @@
-task_id: R-352
-id: R-352
-title: "Accessible Futuristic Reusable Aspect Ratio Viewport Container Component"
+task_id: R-353
+id: R-353
+title: "Accessible Futuristic Reusable Separator / Divider Component"
 status: DONE
 phase: MVP
 tracker_row: 9
 started_at: "2026-09-11"
 completed_at: "2026-09-11"
-objective: "Add accessible, zero-dependency, desktop-grade, and futuristic Aspect Ratio Viewport Container component (components/aspect-ratio.tsx) with zero-CLS space reservation, modern CSS aspectRatio, absolute full-bleed child container, 7 ratio presets, 4 visual variants, and ref forwarding."
+objective: "Add accessible, zero-dependency, desktop-grade, and futuristic Separator / Divider component (components/separator.tsx) with WAI-ARIA 1.2 compliance (decorative and semantic modes), horizontal/vertical orientations, labeled dividers with alignment, 5 visual variants, thickness presets, and ref forwarding."
 allowed_paths:
   - "services/agent-engine/src/omnistackai_agent_engine/codegen/nextjs.py"
   - "services/agent-engine/src/omnistackai_agent_engine/codegen/__init__.py"
-  - "services/agent-engine/tests/test_aspect_ratio_component.py"
-  - ".ai/tasks/R-352.md"
+  - "services/agent-engine/tests/test_separator_component.py"
+  - ".ai/tasks/R-353.md"
   - ".ai/CURRENT_TASK.yaml"
   - ".ai/PROJECT_STATE.yaml"
   - ".ai/WORK_LOG.md"
@@ -26,9 +26,9 @@ forbidden_changes:
   - "Do not introduce external npm dependencies"
   - "Do not break snapshot diff invariance across ir.description"
 evidence:
-  verify: "task verify: 1,615 tests pass offline (16 in test_aspect_ratio_component.py)"
+  verify: "task verify: 1,631 tests pass offline (16 in test_separator_component.py)"
   lint: "task lint: pass"
   security: "task security:quick: pass"
-  demos: "task builder:demo passes on minimal-blog (89 files) and rideshare-favourites (86 files)"
-  tracker: "R_&_D/OmniStackAI_Execution_Tracker_v6.xlsx row 9 (352 total, 141 Done)"
+  demos: "task builder:demo passes on minimal-blog (90 files) and rideshare-favourites (87 files)"
+  tracker: "R_&_D/OmniStackAI_Execution_Tracker_v6.xlsx row 9 (353 total, 142 Done)"
 next_action: "Ready for next tracker task"
