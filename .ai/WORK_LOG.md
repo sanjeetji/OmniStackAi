@@ -1,6 +1,26 @@
 # Work Log
 
-## 2026-09-11 — R-374
+## 2026-09-11 — R-375
+
+- Recorded contract in `.ai/CURRENT_TASK.yaml` and `.ai/tasks/R-375.md` (status in_progress → done).
+- `nextjs.py`:
+  - Added `_HEATMAP_COMPONENT` static template implementing accessible, desktop-and-mobile-grade, futuristic Heatmap & Activity Contribution Matrix compound component suite (`apps/web/components/heatmap.tsx`).
+  - Implemented `HeatmapMode` ("calendar" | "grid"), `HeatmapColor` ("emerald" | "cyan" | "violet" | "amber" | "rose"), `HeatmapVariant` ("default" | "card" | "glass" | "neon"), `HeatmapSize` ("sm" | "md" | "lg"), `HeatmapIntensityLevel` (0 | 1 | 2 | 3 | 4), `HeatmapDatum`, `HeatmapStats`, `HeatmapHandle`, `HeatmapProps`, `HeatmapLegendProps`, `HeatmapCellProps` interfaces.
+  - Implemented compound and semantic alias exports: `Heatmap`, `ActivityCalendar`, `ContributionGraph`, `HeatmapLegend`, `HeatmapCell`, default export.
+  - Implemented dual layout modes: 52-week calendar contribution matrix with month headers and weekday labels, and 24x7 / arbitrary 2D dense coordinate grid with X and Y category labels.
+  - Implemented 5 cyberpunk and natural color palettes: emerald, cyan, violet, amber, rose.
+  - Implemented dynamic quantile intensity bucketing (levels 0 to 4) with threshold customization.
+  - Implemented interactive cell hover/focus floating tooltips with custom formatter support.
+  - Implemented keyboard arrow-key navigation and cell selection (`onCellClick`, `selectedCell`).
+  - Implemented WAI-ARIA grid accessibility semantics (`role="grid"`, `role="row"`, `role="gridcell"`, `aria-selected`).
+  - Implemented integrated legend sub-component (`HeatmapLegend`) with configurable labels and intensity markers.
+  - Implemented 4 futuristic visual styling variants ("default", "card", "glass" with backdropFilter blur, "neon" cyberpunk cyan glow with radiant cells).
+  - Implemented 3 size presets ("sm", "md", "lg").
+  - Implemented React ref forwarding (`forwardRef`) and explicit `displayName` across all exports.
+  - Exported `render_heatmap_component` in `omnistackai_agent_engine.codegen` and registered `components/heatmap.tsx` in `NextjsWebAdapter.generate()`.
+  - Maintained 100% diff-invariance across `ir.description`.
+- Added `services/agent-engine/tests/test_heatmap_component.py` with 17 comprehensive unit tests (all passing).
+- `task verify` — 2,057 tests pass (17 new), 0 failures. `task lint`, `task security:quick`, `task builder:demo -- minimal-blog` pass.
 
 - Recorded contract in `.ai/CURRENT_TASK.yaml` and `.ai/tasks/R-374.md` (status in_progress → done).
 - `nextjs.py`:

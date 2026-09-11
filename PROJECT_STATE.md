@@ -5,26 +5,28 @@ Last updated: 2026-09-11T14:00:00+05:30
 Stage 0 (Founder Build Sequence, Brief Section 91) — BASIC/MVP
 
 ## Last Completed Task
-Tracker ID: R-374 — Generated Accessible Futuristic Reusable Org Chart & Hierarchy Flow Diagram Suite (components/org-chart.tsx) — DONE,
-`task verify` (2,040 agent-engine tests, 17 new focused R-374 tests) passing. Enabled accessible, futuristic, zero-dependency
-desktop-and-mobile-grade organizational chart compound components across generated Next.js web applications:
-added standalone, reusable, accessible, futuristic org chart suite (`components/org-chart.tsx`) supporting
-recursive hierarchical tree layout with SVG and CSS connector stems and horizontal/vertical crossbars linking parents to child branches,
-collapsible and expandable subtree nodes with direct and indirect report count pill badges, dual layout orientations (vertical top-to-bottom and horizontal left-to-right),
-built-in search filter input matching names, roles, departments, or emails with glowing highlight rings and automatic ancestor expansion,
-interactive node selection (selectedId, onNodeClick) and optional action menus, full WAI-ARIA 1.2 accessibility tree semantics (role="tree", role="treeitem", aria-expanded, aria-selected),
-5 built-in zero-dependency vector icons (SearchIcon, ChevronDownIcon, ChevronRightIcon, UsersIcon, MoreVerticalIcon),
-4 futuristic visual styling variants ("default", "card", "glass" with backdropFilter blur, "neon" cyberpunk cyan glow with glowing connectors),
-3 size presets ("sm", "md", "lg"), React ref forwarding (forwardRef), explicit displayName across all exports,
+Tracker ID: R-375 — Generated Accessible Futuristic Reusable Heatmap & Activity Contribution Matrix Suite (components/heatmap.tsx) — DONE,
+`task verify` (2,057 agent-engine tests, 17 new focused R-375 tests) passing. Enabled accessible, futuristic, zero-dependency
+desktop-and-mobile-grade heatmap and activity matrix compound components across generated Next.js web applications:
+added standalone, reusable, accessible, futuristic heatmap suite (`components/heatmap.tsx`) supporting
+dual layout modes (GitHub-style 52-week calendar contribution matrix and 24x7 / arbitrary 2D dense coordinate grid),
+5 cyberpunk and natural color palettes (emerald, cyan, violet, amber, rose), dynamic quantile intensity bucketing (levels 0 to 4),
+interactive cell hover/focus floating tooltips with custom formatter support, keyboard arrow-key navigation and cell selection (onCellClick, selectedCell),
+WAI-ARIA grid accessibility semantics (role="grid", role="row", role="gridcell", aria-selected),
+integrated legend sub-component (HeatmapLegend) with configurable labels and intensity markers,
+4 futuristic visual styling variants ("default", "card", "glass" with backdropFilter blur, "neon" cyberpunk cyan glow with radiant cells),
+3 size presets ("sm", "md", "lg"), React ref forwarding (forwardRef), explicit displayName across all compound exports,
+HeatmapMode, HeatmapColor, HeatmapVariant, HeatmapSize, HeatmapIntensityLevel, HeatmapDatum, HeatmapStats, HeatmapHandle, HeatmapProps,
+compound and semantic alias exports (Heatmap, ActivityCalendar, ContributionGraph, HeatmapLegend, HeatmapCell, default export),
 100% diff-invariance across `ir.description`, and 0 external runtime dependencies.
-Preceded by R-373 (diff viewer), R-372 (signature pad), R-371 (time picker), R-370 (chart), R-369 (filter builder), R-368 (virtual list), R-367 (kanban), R-366 (calendar), R-365 (markdown editor), R-364 (transfer), R-363 (tour), R-362 (sidebar), R-361 (notification center), R-360 (number input), R-359 (bottom nav), R-358 (combobox), R-357 (banner), R-356 (checkbox), R-355 (radio group), R-354 (kbd), R-353 (separator), R-352 (aspect ratio), R-351 (collapsible), R-350 (scroll area), R-349 (hover card), R-348 (context menu), R-347 (speed dial), R-346 (pin input), R-345 (color picker), R-344 (resizable), R-343 (carousel), R-342 (segmented control), R-341 (radial gauge), R-340 (code block), R-339 (tag input), R-338 (tree view),
+Preceded by R-374 (org chart), R-373 (diff viewer), R-372 (signature pad), R-371 (time picker), R-370 (chart), R-369 (filter builder), R-368 (virtual list), R-367 (kanban), R-366 (calendar), R-365 (markdown editor), R-364 (transfer), R-363 (tour), R-362 (sidebar), R-361 (notification center), R-360 (number input), R-359 (bottom nav), R-358 (combobox), R-357 (banner), R-356 (checkbox), R-355 (radio group), R-354 (kbd), R-353 (separator), R-352 (aspect ratio), R-351 (collapsible), R-350 (scroll area), R-349 (hover card), R-348 (context menu), R-347 (speed dial), R-346 (pin input), R-345 (color picker), R-344 (resizable), R-343 (carousel), R-342 (segmented control), R-341 (radial gauge), R-340 (code block), R-339 (tag input), R-338 (tree view),
 R-337 (stat card), R-336 (timeline), R-335 (file upload), R-334 (stepper), R-333 (rating), R-332 (progress), R-331 (slider),
 R-330 (command palette), R-329 (data grid), R-328 (date picker), R-327 (form controls), R-326 (dialog), R-325 (theme toggle),
 R-324 (theming tokens), R-323 (popover), R-322 (dropdown menu), R-321 (accordion), R-320 (toggle), R-319 (avatar), R-318 (drawer),
 R-317 (skeleton), R-316 (alert), R-315 (card), R-314 (tooltip), R-313 (column visibility), R-312 (badge), R-311 (table density),
 R-310 (tabs), R-309 (pagination), and R-308 (JSON export).
 
-**Notes:** (1) R-374 complete with 2,040 tests passing. (2) Next unstarted Tracker ID: R-375.
+**Notes:** (1) R-375 complete with 2,057 tests passing. (2) Next unstarted Tracker ID: R-376.
 
 
 

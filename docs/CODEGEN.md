@@ -3058,6 +3058,43 @@ Accessible, futuristic, desktop-and-mobile-grade organizational chart and hierar
   - 100% diff-invariant across `ir.description` changes; zero external runtime npm dependencies.
   - Registered in `NextjsWebAdapter.generate()` as a `GeneratedFile` at `components/org-chart.tsx` and exported in `codegen.__init__` as `render_org_chart_component`.
 
+### Heatmap & Activity Contribution Matrix Suite (`components/heatmap.tsx`)
+
+Accessible, futuristic, desktop-and-mobile-grade heatmap and activity contribution matrix compound component suite:
+- **Zero Runtime Dependencies**: Pure React 18+ and native HTML/SVG elements without heavy third-party visualization libraries (`d3`, `visx`).
+- **Dual Matrix Layout Modes**:
+  - **Calendar / Activity Matrix**: GitHub-style 52-week activity contribution grid organized by weeks with weekday labels (Mon, Wed, Fri) and dynamic month headers.
+  - **Dense Grid Matrix**: 2D coordinate matrix for 24x7 hourly load, resource utilization, server metrics, or arbitrary categorical dimensions with X and Y labels.
+- **5 Cyberpunk & Natural Color Palettes**:
+  - `emerald`: Classic GitHub green gradient.
+  - `cyan`: Futuristic cyberpunk neon cyan.
+  - `violet`: Cosmic deep purple & indigo.
+  - `amber`: Solar thermal gold & orange.
+  - `rose`: Critical activity crimson & ruby.
+- **Dynamic & Quantile Intensity Bucketing**:
+  - 5 intensity levels (0: empty, 1: low, 2: medium, 3: high, 4: peak) with automatic quantile threshold normalization or explicit custom threshold cutoffs.
+- **Interactive Floating Tooltips & Keyboard Navigation**:
+  - Native floating tooltip on hover/focus displaying formatted date/coordinates, count, and customizable label.
+  - Full keyboard traversal with Arrow keys (`ArrowLeft`, `ArrowRight`, `ArrowUp`, `ArrowDown`) and cell selection (`onCellClick`, `selectedCell`).
+- **WAI-ARIA 1.2 Grid Accessibility**:
+  - `role="grid"`, `role="row"`, `role="gridcell"`, `aria-selected`, `aria-label`.
+- **Integrated Legend**:
+  - Reusable `HeatmapLegend` component displaying "Less" -> "More" gradient scale and count summaries.
+- **4 Visual Variants**:
+  - `"default"`: Clean slate container with sharp grid borders.
+  - `"card"`: Elevated solid dark card with soft drop shadow.
+  - `"glass"`: Translucent backdrop blur with frosted glass effect.
+  - `"neon"`: Cyberpunk glowing cell borders and neon intensity radiance.
+- **3 Size Scales**:
+  - `"sm"`: 10px cells, 2px gap, 10px font.
+  - `"md"`: 14px cells, 3px gap, 12px font.
+  - `"lg"`: 20px cells, 4px gap, 14px font.
+- **Standards & Composition**:
+  - Exports `Heatmap`, `ActivityCalendar`, `ContributionGraph`, `HeatmapLegend`, `HeatmapCell`, and default export.
+  - Full React `forwardRef` and explicit `displayName` across all exports.
+  - 100% diff-invariant across `ir.description` changes; zero external runtime npm dependencies.
+  - Registered in `NextjsWebAdapter.generate()` as a `GeneratedFile` at `components/heatmap.tsx` and exported in `codegen.__init__` as `render_heatmap_component`.
+
 
 
 

@@ -1,6 +1,6 @@
 # Current Handoff
 
-Task ID: R-374
+Task ID: R-375
 Status: done
 Phase: BASIC/MVP — Founder Stage 0
 Branch: `main` (the only branch; the GitHub default)
@@ -22,9 +22,31 @@ Branch: `main` (the only branch; the GitHub default)
   10. **R-372**: Digital Signature Pad & Drawing Canvas Primitive (`components/signature-pad.tsx`)
   11. **R-373**: Diff Viewer & Code/Text Comparison Suite (`components/diff-viewer.tsx`)
   12. **R-374**: Org Chart & Hierarchy Flow Diagram Suite (`components/org-chart.tsx`)
-- Resume from **R-375** when ready. Still stop-and-ask only for paid cloud / DB engine / new infra / native-mobile / a materially different architecture decision.
+  13. **R-375**: Heatmap & Activity Contribution Matrix Suite (`components/heatmap.tsx`)
+- Resume from **R-376** when ready. Still stop-and-ask only for paid cloud / DB engine / new infra / native-mobile / a materially different architecture decision.
 
 ## Completed
+
+### R-375 — Generated Accessible Futuristic Reusable Heatmap & Activity Contribution Matrix Suite (components/heatmap.tsx)
+
+Enabled accessible, desktop-and-mobile-grade, futuristic Heatmap & Activity Contribution Matrix compound components across generated Next.js web applications:
+
+- **Standalone Heatmap Suite (`apps/web/components/heatmap.tsx`)**:
+  - Implemented `HeatmapMode` (`"calendar"` | `"grid"`), `HeatmapColor` (`"emerald"` | `"cyan"` | `"violet"` | `"amber"` | `"rose"`), `HeatmapVariant` (`"default"` | `"card"` | `"glass"` | `"neon"`), `HeatmapSize` (`"sm"` | `"md"` | `"lg"`), `HeatmapIntensityLevel` (0 | 1 | 2 | 3 | 4), `HeatmapDatum`, `HeatmapStats`, `HeatmapHandle`, `HeatmapProps`, `HeatmapLegendProps`, and `HeatmapCellProps` interfaces.
+  - Implemented compound and semantic alias exports: `Heatmap`, `ActivityCalendar`, `ContributionGraph`, `HeatmapLegend`, `HeatmapCell`, and default export.
+  - Implemented dual layout modes: 52-week calendar contribution matrix with month headers and weekday labels, and 24x7 / arbitrary 2D dense coordinate grid with X and Y category labels.
+  - Implemented 5 cyberpunk and natural color palettes: emerald, cyan, violet, amber, rose.
+  - Implemented dynamic quantile intensity bucketing (levels 0 to 4) with threshold customization.
+  - Implemented interactive cell hover/focus floating tooltips with custom formatter support.
+  - Implemented keyboard arrow-key navigation and cell selection (`onCellClick`, `selectedCell`).
+  - Implemented WAI-ARIA grid accessibility semantics (`role="grid"`, `role="row"`, `role="gridcell"`, `aria-selected`).
+  - Implemented integrated legend sub-component (`HeatmapLegend`) with configurable labels and intensity markers.
+  - Implemented 4 futuristic visual styling variants ("default", "card", "glass" with backdropFilter blur, "neon" cyberpunk cyan glow with radiant cells).
+  - Implemented 3 size presets ("sm", "md", "lg").
+  - Implemented React ref forwarding (`forwardRef`) and explicit `displayName` across all exports.
+  - Exported `render_heatmap_component` in `omnistackai_agent_engine.codegen` and registered `components/heatmap.tsx` in `NextjsWebAdapter.generate()`.
+  - Maintained 100% diff-invariance across `ir.description`.
+  - Unit tests: 17 focused tests in `services/agent-engine/tests/test_heatmap_component.py` (all passing). Total test count: 2,057 tests.
 
 ### R-374 — Generated Accessible Futuristic Reusable Org Chart & Hierarchy Flow Diagram Suite (components/org-chart.tsx)
 

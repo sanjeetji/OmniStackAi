@@ -1,23 +1,24 @@
-task_id: R-374
-id: R-374
-title: "Accessible Futuristic Reusable Org Chart & Hierarchy Flow Diagram Suite"
+task_id: R-375
+id: R-375
+title: "Accessible Futuristic Reusable Heatmap & Activity Contribution Matrix Suite"
 status: DONE
 phase: MVP
-tracker_row: 18
+tracker_row: 19
 started_at: "2026-09-11"
 completed_at: "2026-09-11"
 objective: >-
-  Add accessible, zero-dependency, desktop-and-mobile-grade, and futuristic Organizational Chart & Hierarchy Flow
-  Diagram compound component suite (components/org-chart.tsx) supporting recursive hierarchical tree layout,
-  SVG connector paths between nodes, collapsible/expandable branches with report count badges, search filtering,
-  vertical and horizontal layout orientations, node selection, WAI-ARIA 1.2 tree semantics (role="tree", role="treeitem"),
-  4 visual styling variants (default, card, glass, neon with glowing connectors), 3 size scales (sm, md, lg),
+  Add accessible, zero-dependency, desktop-and-mobile-grade, and futuristic Heatmap & Activity Contribution
+  Matrix compound component suite (components/heatmap.tsx) supporting dual layout modes (GitHub-style calendar
+  contribution matrix and 24x7/dense coordinate grid), 5 cyberpunk and natural color palettes (emerald, cyan,
+  violet, amber, rose), quantile intensity bucketing (0..4), interactive cell tooltips, keyboard navigation with
+  WAI-ARIA grid semantics (role="grid", role="gridcell"), built-in legend ("Less" -> "More"), cell selection callbacks,
+  4 visual variants (default, card, glass, neon with glowing cell borders), 3 size scales (sm, md, lg),
   React ref forwarding, explicit displayName, and semantic aliases.
 allowed_paths:
   - "services/agent-engine/src/omnistackai_agent_engine/codegen/nextjs.py"
   - "services/agent-engine/src/omnistackai_agent_engine/codegen/__init__.py"
-  - "services/agent-engine/tests/test_org_chart_component.py"
-  - ".ai/tasks/R-374.md"
+  - "services/agent-engine/tests/test_heatmap_component.py"
+  - ".ai/tasks/R-375.md"
   - ".ai/CURRENT_TASK.yaml"
   - ".ai/PROJECT_STATE.yaml"
   - ".ai/WORK_LOG.md"
@@ -32,9 +33,9 @@ forbidden_changes:
   - "Do not introduce external npm dependencies"
   - "Do not break snapshot diff invariance across ir.description"
 evidence:
-  verify: "task verify -> 2040 passed in 2.36s"
+  verify: "task verify -> 2057 passed in 2.14s"
   lint: "task lint -> passed"
   security: "task security:quick -> passed"
-  demos: "task builder:demo -- minimal-blog -> generated 111 files"
+  demos: "task builder:demo -- minimal-blog -> generated 112 files"
   tracker: DONE
-next_action: "Proceed to next tracker task R-375"
+next_action: "Proceed to next tracker task R-376"

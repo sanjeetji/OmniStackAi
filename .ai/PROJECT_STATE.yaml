@@ -2,25 +2,25 @@ schema_version: 1
 project: OmniStackAI
 phase: BASIC/MVP
 founder_stage: 0
-current_task: R-375
+current_task: R-376
 current_status: not_started
 branch: main
-last_completed_task: R-374
+last_completed_task: R-375
 last_completed_task_summary: >-
-  Generated Accessible Futuristic Reusable Org Chart & Hierarchy Flow Diagram Suite (components/org-chart.tsx);
-  added standalone, reusable, accessible, desktop-and-mobile-grade organizational chart compound component suite supporting
-  recursive hierarchical tree layout with SVG/CSS connector stems and crossbars, collapsible and expandable branches with direct
-  and total report count badges, dual layout orientations (vertical top-to-bottom and horizontal left-to-right),
-  search filtering highlighting matched employees with automatic ancestor branch expansion, node selection handling (onNodeClick, selectedId),
-  OrgChartOrientation ("vertical" | "horizontal"), OrgChartVariant ("default" | "card" | "glass" | "neon"),
-  OrgChartSize ("sm" | "md" | "lg"), OrgChartNode, OrgChartHandle, OrgChartProps, OrgNodeCardProps,
-  compound and semantic alias exports (OrgChart, HierarchyTree, OrgNode, default export),
-  full WAI-ARIA 1.2 accessibility semantics (role="tree", role="treeitem", aria-expanded, aria-selected),
-  4 futuristic visual styling variants ("default", "card", "glass" with backdropFilter blur, "neon" cyberpunk cyan glow with glowing connectors),
+  Generated Accessible Futuristic Reusable Heatmap & Activity Contribution Matrix Suite (components/heatmap.tsx);
+  added standalone, reusable, accessible, desktop-and-mobile-grade heatmap compound component suite supporting
+  dual layout modes (GitHub-style 52-week calendar contribution matrix and 24x7 / arbitrary 2D dense coordinate grid),
+  5 cyberpunk and natural color palettes (emerald, cyan, violet, amber, rose), dynamic quantile intensity bucketing (levels 0 to 4),
+  interactive cell hover/focus floating tooltips with custom formatter support, keyboard arrow-key navigation and cell selection (onCellClick, selectedCell),
+  WAI-ARIA grid accessibility semantics (role="grid", role="row", role="gridcell", aria-selected),
+  integrated legend sub-component (HeatmapLegend) with configurable labels and intensity markers,
+  4 futuristic visual styling variants ("default", "card", "glass" with backdropFilter blur, "neon" cyberpunk cyan glow with radiant cells),
   3 size presets ("sm", "md", "lg"), React ref forwarding (forwardRef), explicit displayName across all compound exports,
+  HeatmapMode, HeatmapColor, HeatmapVariant, HeatmapSize, HeatmapIntensityLevel, HeatmapDatum, HeatmapStats, HeatmapHandle, HeatmapProps,
+  compound and semantic alias exports (Heatmap, ActivityCalendar, ContributionGraph, HeatmapLegend, HeatmapCell, default export),
   100% diff-invariance across ir.description, 0 external runtime dependencies;
-  exported render_org_chart_component in codegen; registered components/org-chart.tsx in NextjsWebAdapter;
-  2,040 tests pass (17 new tests in test_org_chart_component.py); 0 model calls
+  exported render_heatmap_component in codegen; registered components/heatmap.tsx in NextjsWebAdapter;
+  2,057 tests pass (17 new tests in test_heatmap_component.py); 0 model calls
 control_plane_database: postgresql
 model_routing_mode: balanced
 architecture_contract: R_&_D/OmniStackAI_Implementation_Brief_v6.md
@@ -32,8 +32,8 @@ product_direction: >-
   framework adapter contract -> Next.js adapter -> Git service -> preview/sandbox (needs cloud env).
 id_note: >-
   Workbook backlog owns R-010..R-219. Founder-requested tasks use IDs after R-219: R-220..R-223 done,
-  R-224 Next.js deferred (env-blocked), R-225..R-369 done. Continue from R-370.
+  R-224 Next.js deferred (env-blocked), R-225..R-374 done. Continue from R-375.
 blockers: []
 next_action: >-
-  Task R-374 (Org Chart & Hierarchy Flow Diagram Suite) complete with 2,040 tests passing.
-  Next task: R-375.
+  Task R-375 (Heatmap & Activity Contribution Matrix Suite) complete with 2,057 tests passing.
+  Next task: R-376.
