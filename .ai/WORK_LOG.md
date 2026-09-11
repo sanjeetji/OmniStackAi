@@ -1,5 +1,58 @@
 # Work Log
 
+## 2026-09-11 — R-383
+
+- Recorded contract in `.ai/CURRENT_TASK.yaml` and `.ai/tasks/R-383.md` (status in_progress → done).
+- `nextjs.py`:
+  - Added `_SPREADSHEET_COMPONENT` static template implementing accessible, desktop-and-mobile-grade, futuristic Spreadsheet & Inline-Editable Data Sheet compound component suite (`apps/web/components/spreadsheet.tsx`).
+  - Implemented `SpreadsheetVariant` ("default" | "card" | "glass" | "neon"), `SpreadsheetSize` ("sm" | "md" | "lg"), `CellType` ("text" | "number" | "currency" | "percentage" | "date" | "boolean" | "select" | "formula"), `CellValue`, `CellCoord`, `CellRange`, `ColumnDef`, `RowData`, `SpreadsheetHandle`, `SpreadsheetProps`, `SpreadsheetToolbarProps`, `SpreadsheetCellProps` interfaces.
+  - Implemented compound and semantic alias exports: `Spreadsheet`, `DataSheet`, `InlineGrid`, `SpreadsheetToolbar`, `SpreadsheetCell`, default export.
+  - Implemented inline cell editing triggered on double-click, F2, or Enter key, with input commit on Enter/Blur and abort on Escape.
+  - Implemented zero-dependency pure JavaScript formula evaluation engine (`evaluateFormula`) supporting `=SUM`, `=AVG`, `=COUNT`, `=MIN`, `=MAX`, and `=IF(cond, trueVal, falseVal)` formulas with cell reference parsing (e.g. `A1`, `B2`) and range extraction (`A1:A5`).
+  - Implemented comprehensive keyboard navigation: Arrow keys (Up/Down/Left/Right), Tab/Shift+Tab horizontal step, Home/End (row start/end), Ctrl+Home/Ctrl+End (grid start/end), PageUp/PageDown (vertical jump).
+  - Implemented multi-cell rectangular range selection via Shift+Click and Shift+Arrow keys.
+  - Implemented column freeze sticky positioning (`frozen: true`) with horizontal offset accounting for row number gutter.
+  - Implemented column resize handles with drag listener and automatic minimum width constraints.
+  - Implemented row number gutter (#) with row selection on click.
+  - Implemented undo/redo history stack tracking cell changes with `Ctrl+Z` / `Ctrl+Y` shortcuts and toolbar triggers.
+  - Implemented CSV export (`exportCsv`) and CSV text import (`csvToRows`).
+  - Implemented clipboard copy/paste (`Ctrl+C` TSV/CSV format, `Ctrl+V` multi-cell paste).
+  - Implemented right-click custom context menu: Insert row above, Insert row below, Delete row, Clear row.
+  - Implemented Ctrl+F find bar searching cell values with search match highlight tinting.
+  - Implemented interactive column header sorting (ascending/descending) with indicator arrows.
+  - Implemented specialized cell editor controls: checkbox toggle for boolean, select dropdown for choices, number formatting for currency/percentage, text input for generic fields.
+  - Implemented cell validation with error state border highlighting and tooltip error messages.
+  - Implemented WAI-ARIA 1.2 grid semantics (`role="grid"`, `role="row"`, `role="columnheader"`, `role="gridcell"`, `aria-selected`, `aria-sort`, `aria-rowindex`, `aria-colindex`).
+  - Implemented 4 futuristic visual styling variants ("default", "card", "glass" with backdropFilter blur, "neon" cyberpunk cyan glow with radiant outline).
+  - Implemented 3 size scales ("sm", "md", "lg").
+  - Implemented React ref forwarding (`forwardRef`), imperative handle (`SpreadsheetHandle`), and explicit `displayName` across all exports.
+  - Exported `render_spreadsheet_component` in `omnistackai_agent_engine.codegen` and registered `components/spreadsheet.tsx` in `NextjsWebAdapter.generate()`.
+  - Maintained 100% diff-invariance across `ir.description`.
+- Added `services/agent-engine/tests/test_spreadsheet_component.py` with 17 comprehensive unit tests (all passing).
+- `task verify` — 2,193 tests pass (17 new), 0 failures. `task lint`, `task security:quick`, `task builder:demo -- minimal-blog` pass.
+
+## 2026-09-11 — R-382
+
+- Recorded contract in `.ai/CURRENT_TASK.yaml` and `.ai/tasks/R-382.md` (status in_progress → done).
+- `nextjs.py`:
+  - Added `_QR_CODE_COMPONENT` static template implementing accessible, desktop-and-mobile-grade, futuristic QR Code & Barcode compound component suite (`apps/web/components/qr-code.tsx`).
+  - Implemented `QrErrorCorrectionLevel` ("L" | "M" | "Q" | "H"), `QrModuleStyle` ("square" | "rounded" | "dots" | "diamonds"), `QrEyeStyle` ("square" | "rounded" | "circle"), `QrGradientType` ("none" | "linear" | "radial"), `BarcodeFormat` ("code128" | "ean13"), `QrCodeVariant` ("default" | "card" | "glass" | "neon"), `QrCodeSize` ("sm" | "md" | "lg"), `QrCodeHandle`, `QrCodeProps`, `BarcodeProps`, `QrCardProps` interfaces.
+  - Implemented compound and semantic alias exports: `QrCode`, `Barcode`, `QrCard`, default export.
+  - Implemented zero-dependency built-in mathematical QR generator with Galois Field GF(2^8) Reed-Solomon polynomial math and standard error correction levels (L, M, Q, H).
+  - Implemented zero-dependency mathematical 1D barcode generator (Code 128 / EAN-13) rendered directly into SVG.
+  - Implemented module/dot styling options: square, rounded, dots, diamonds, and customizable corner finder eye styling with distinct outer/inner colors.
+  - Implemented center logo slot with quiet zone padding and masking.
+  - Implemented linear and radial gradient fills and cyberpunk neon glow dropshadow filter.
+  - Implemented action toolbar with copy to clipboard (with checkmark feedback), high-res PNG download, vector SVG download, and print affordance.
+  - Implemented WAI-ARIA 1.2 accessibility semantics (`role="img"`, `aria-label`).
+  - Implemented 4 futuristic visual styling variants ("default", "card", "glass" with backdropFilter blur, "neon" cyberpunk cyan glow with radiant halos).
+  - Implemented 3 size scales ("sm", "md", "lg").
+  - Implemented React ref forwarding (`forwardRef`), imperative handle (`QrCodeHandle`), and explicit `displayName` across all compound exports.
+  - Exported `render_qr_code_component` in `omnistackai_agent_engine.codegen` and registered `components/qr-code.tsx` in `NextjsWebAdapter.generate()`.
+  - Maintained 100% diff-invariance across `ir.description`.
+- Added `services/agent-engine/tests/test_qr_code_component.py` with 17 comprehensive unit tests (all passing).
+- `task verify` — 2,176 tests pass (17 new), 0 failures. `task lint`, `task security:quick`, `task builder:demo -- minimal-blog` pass.
+
 ## 2026-09-11 — R-381
 
 - Recorded contract in `.ai/CURRENT_TASK.yaml` and `.ai/tasks/R-381.md` (status in_progress → done).

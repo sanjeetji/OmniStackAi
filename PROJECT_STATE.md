@@ -5,28 +5,29 @@ Last updated: 2026-09-11T14:00:00+05:30
 Stage 0 (Founder Build Sequence, Brief Section 91) — BASIC/MVP
 
 ## Last Completed Task
-Tracker ID: R-381 — Generated Accessible Futuristic Reusable Terminal & Command Console Suite (components/terminal.tsx) — DONE,
-`task verify` (2,159 agent-engine tests, 17 new focused R-381 tests) passing. Enabled accessible, futuristic, zero-dependency
-desktop-and-mobile-grade terminal and command console compound components across generated Next.js web applications:
-added standalone, reusable, accessible, futuristic Terminal and Command Console compound component suite (`components/terminal.tsx`) supporting
-interactive CLI shell input with command history navigation (ArrowUp/ArrowDown),
-ANSI color code parsing (supporting standard 16-color ANSI codes, bold, and underline),
-multi-tab terminal sessions (TerminalTabs), streaming output buffer with line types (stdout, stderr, command, system, info),
-real-time search filtering, copy and log download toolbar, 4 futuristic visual styling variants ("terminal" retro CRT phosphor green,
-"neon" cyberpunk cyan, "glass" with backdropFilter blur, "minimal" high-contrast dark),
-3 size scales ("sm", "md", "lg"), WAI-ARIA 1.2 log accessibility (role="region", role="log", aria-live="polite"),
-React ref forwarding (forwardRef), explicit displayName across all compound exports,
-canonical TypeScript types (TerminalLine, TerminalTab, TerminalVariant, TerminalSize, TerminalLineType, TerminalHandle, TerminalProps),
-compound and semantic alias exports (Terminal, TerminalHeader, TerminalTabs, TerminalOutput, TerminalPrompt, ConsoleViewer, CommandLine, default export),
+Tracker ID: R-383 — Generated Accessible Futuristic Reusable Spreadsheet & Inline-Editable Data Sheet Suite (components/spreadsheet.tsx) — DONE,
+`task verify` (2,193 agent-engine tests, 17 new focused R-383 tests, 17 new R-382 tests) passing. Enabled accessible, futuristic, zero-dependency
+desktop-and-mobile-grade spreadsheet and inline data sheet compound components across generated Next.js web applications:
+added standalone, reusable, accessible, futuristic Spreadsheet & Inline-Editable Data Sheet compound component suite (`components/spreadsheet.tsx`) supporting
+inline cell editing (double-click/F2/Enter), formula engine (=SUM/=AVG/=COUNT/=MIN/=MAX/=IF pure JS),
+keyboard navigation (Arrow/Tab/Home/End/PgUp/PgDn/Ctrl+Home/End), multi-cell range selection (Shift+Click/Arrow),
+column freeze (sticky positioning), column resize handles, row number gutter, undo/redo history stack (Ctrl+Z/Ctrl+Y),
+CSV export/import (exportCsv imperative handle), clipboard copy/paste (Ctrl+C/Ctrl+V), context menu (Insert/Delete row, Clear cells),
+find bar (Ctrl+F), sortable column headers, boolean checkbox cells, select dropdown cells, cell type validation with error highlighting,
+4 futuristic visual styling variants ("default", "card", "glass" with backdropFilter blur, "neon" cyberpunk cyan glow),
+3 size scales ("sm", "md", "lg"), WAI-ARIA 1.2 grid semantics (role="grid", role="row", role="columnheader", role="gridcell", aria-selected, aria-sort),
+React ref forwarding (forwardRef), useImperativeHandle (SpreadsheetHandle), explicit displayName across all compound exports,
+canonical TypeScript types (SpreadsheetVariant, SpreadsheetSize, CellType, CellValue, CellCoord, CellRange, ColumnDef, RowData, SpreadsheetHandle, SpreadsheetProps, SpreadsheetToolbarProps, SpreadsheetCellProps),
+compound and semantic alias exports (Spreadsheet, DataSheet, InlineGrid, SpreadsheetToolbar, SpreadsheetCell, default export),
 100% diff-invariance across `ir.description`, and 0 external runtime dependencies.
-Preceded by R-380 (flow canvas), R-379 (gantt chart), R-378 (image cropper), R-377 (pivot table), R-376 (media player), R-375 (heatmap), R-374 (org chart), R-373 (diff viewer), R-372 (signature pad), R-371 (time picker), R-370 (chart), R-369 (filter builder), R-368 (virtual list), R-367 (kanban), R-366 (calendar), R-365 (markdown editor), R-364 (transfer), R-363 (tour), R-362 (sidebar), R-361 (notification center), R-360 (number input), R-359 (bottom nav), R-358 (combobox), R-357 (banner), R-356 (checkbox), R-355 (radio group), R-354 (kbd), R-353 (separator), R-352 (aspect ratio), R-351 (collapsible), R-350 (scroll area), R-349 (hover card), R-348 (context menu), R-347 (speed dial), R-346 (pin input), R-345 (color picker), R-344 (resizable), R-343 (carousel), R-342 (segmented control), R-341 (radial gauge), R-340 (code block), R-339 (tag input), R-338 (tree view),
+Preceded by R-382 (qr code & barcode suite), R-381 (terminal), R-380 (flow canvas), R-379 (gantt chart), R-378 (image cropper), R-377 (pivot table), R-376 (media player), R-375 (heatmap), R-374 (org chart), R-373 (diff viewer), R-372 (signature pad), R-371 (time picker), R-370 (chart), R-369 (filter builder), R-368 (virtual list), R-367 (kanban), R-366 (calendar), R-365 (markdown editor), R-364 (transfer), R-363 (tour), R-362 (sidebar), R-361 (notification center), R-360 (number input), R-359 (bottom nav), R-358 (combobox), R-357 (banner), R-356 (checkbox), R-355 (radio group), R-354 (kbd), R-353 (separator), R-352 (aspect ratio), R-351 (collapsible), R-350 (scroll area), R-349 (hover card), R-348 (context menu), R-347 (speed dial), R-346 (pin input), R-345 (color picker), R-344 (resizable), R-343 (carousel), R-342 (segmented control), R-341 (radial gauge), R-340 (code block), R-339 (tag input), R-338 (tree view),
 R-337 (stat card), R-336 (timeline), R-335 (file upload), R-334 (stepper), R-333 (rating), R-332 (progress), R-331 (slider),
 R-330 (command palette), R-329 (data grid), R-328 (date picker), R-327 (form controls), R-326 (dialog), R-325 (theme toggle),
 R-324 (theming tokens), R-323 (popover), R-322 (dropdown menu), R-321 (accordion), R-320 (toggle), R-319 (avatar), R-318 (drawer),
 R-317 (skeleton), R-316 (alert), R-315 (card), R-314 (tooltip), R-313 (column visibility), R-312 (badge), R-311 (table density),
 R-310 (tabs), R-309 (pagination), and R-308 (JSON export).
 
-**Notes:** (1) R-381 complete with 2,159 tests passing. (2) Next unstarted Tracker ID: R-382.
+**Notes:** (1) R-383 complete with 2,193 tests passing. (2) Next unstarted Tracker ID.
 
 
 

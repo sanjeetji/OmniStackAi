@@ -81,6 +81,7 @@ from .nextjs import (
     render_pin_input_component,
     render_popover_component,
     render_progress_component,
+    render_qr_code_component,
     render_radial_gauge_component,
     render_radio_group_component,
     render_rating_component,
@@ -110,6 +111,7 @@ from .nextjs import (
     render_tooltip_component,
     render_tree_view_component,
     render_virtual_list_component,
+    render_spreadsheet_component,
 )
 from .openapi import render_openapi, render_openapi_json
 from .schema_sql import render_postgres_schema, table_name
@@ -194,6 +196,7 @@ __all__ = [
     "render_pin_input_component",
     "render_popover_component",
     "render_progress_component",
+    "render_qr_code_component",
     "render_radial_gauge_component",
     "render_radio_group_component",
     "render_rating_component",
@@ -223,6 +226,7 @@ __all__ = [
     "render_tooltip_component",
     "render_tree_view_component",
     "render_virtual_list_component",
+    "render_spreadsheet_component",
     "render_postgres_schema",
     "render_postgres_seed",
     "render_openapi",

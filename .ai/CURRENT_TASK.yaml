@@ -1,22 +1,27 @@
-task_id: R-381
-id: R-381
-title: "Accessible Futuristic Reusable Terminal & Command Console Suite"
+task_id: R-383
+id: R-383
+title: "Accessible Futuristic Reusable Spreadsheet & Inline-Editable Data Sheet Suite"
 status: DONE
 phase: MVP
-tracker_row: 25
+tracker_row: 27
 started_at: "2026-09-11"
 completed_at: "2026-09-11"
 objective: >-
-  Add accessible, zero-dependency, desktop-and-mobile-grade, and futuristic Terminal & Command Console
-  compound component suite (components/terminal.tsx) supporting interactive CLI shell input with command history navigation,
-  ANSI color code parsing, multi-tab terminal sessions, streaming output buffers, search filtering, copy/download toolbar,
-  4 visual styling variants (terminal retro CRT, neon cyberpunk, glass, minimal), 3 size scales (sm, md, lg),
-  WAI-ARIA 1.2 log accessibility, React ref forwarding, and imperative handle.
+  Add accessible, zero-dependency, desktop-and-mobile-grade, and futuristic Spreadsheet &
+  Inline-Editable Data Sheet compound component suite (components/spreadsheet.tsx) supporting
+  inline cell editing (double-click/F2), formula engine (=SUM/=AVG/=COUNT/=MIN/=MAX/=IF pure JS),
+  keyboard navigation (Arrow/Tab/Home/End/PgUp/PgDn/Ctrl+Home/End), multi-cell range selection
+  (Shift+Click/Arrow), column freeze (sticky positioning), column resize handles, row number gutter,
+  undo/redo history stack (Ctrl+Z/Ctrl+Y), CSV export/import (exportCsv imperative handle),
+  clipboard copy/paste (Ctrl+C/Ctrl+V), context menu (Insert/Delete row, Clear cells),
+  find bar (Ctrl+F), sortable column headers, boolean checkbox cells, select dropdown cells,
+  cell type validation with error highlighting, 4 visual variants (default/card/glass/neon),
+  3 size scales (sm/md/lg), WAI-ARIA 1.2 grid semantics, React ref forwarding, imperative handle.
 allowed_paths:
   - "services/agent-engine/src/omnistackai_agent_engine/codegen/nextjs.py"
   - "services/agent-engine/src/omnistackai_agent_engine/codegen/__init__.py"
-  - "services/agent-engine/tests/test_terminal_component.py"
-  - ".ai/tasks/R-381.md"
+  - "services/agent-engine/tests/test_spreadsheet_component.py"
+  - ".ai/tasks/R-383.md"
   - ".ai/CURRENT_TASK.yaml"
   - ".ai/PROJECT_STATE.yaml"
   - ".ai/WORK_LOG.md"
@@ -26,14 +31,13 @@ allowed_paths:
   - "docs/PROGRESS.md"
   - "docs/CODEGEN.md"
   - "docs/RESUME_PROMPT.md"
-  - "R_&_D/OmniStackAI_Execution_Tracker_v6.xlsx"
 forbidden_changes:
   - "Do not introduce external npm dependencies"
   - "Do not break snapshot diff invariance across ir.description"
 evidence:
-  verify: "2159 tests passing (17 new tests in test_terminal_component.py)"
-  lint: "Passed with zero warnings"
-  security: "Stage 0 secret-policy check passed"
-  demos: "minimal-blog generated 118 files including components/terminal.tsx"
+  verify: "Passed (2,193 tests passing, 0 failures, 17 new tests for R-383)"
+  lint: "Passed (task lint clean)"
+  security: "Passed (task security:quick clean)"
+  demos: "Passed (task builder:demo -- minimal-blog generated 120 files including components/spreadsheet.tsx)"
   tracker: DONE
-next_action: "Prompt user for R Task 382."
+next_action: "Task R-383 complete. Next task in sequence."

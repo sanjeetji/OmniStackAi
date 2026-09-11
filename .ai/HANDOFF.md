@@ -1,6 +1,6 @@
 # Current Handoff
 
-Task ID: R-381
+Task ID: R-383
 Status: done
 Phase: BASIC/MVP — Founder Stage 0
 Branch: `main` (the only branch; the GitHub default)
@@ -29,9 +29,45 @@ Branch: `main` (the only branch; the GitHub default)
   17. **R-379**: Gantt Chart & Project Roadmap Suite (`components/gantt-chart.tsx`)
   18. **R-380**: Flowchart & Node-Based Workflow Canvas Suite (`components/flow-canvas.tsx`)
   19. **R-381**: Terminal & Command Console Suite (`components/terminal.tsx`)
-- Resume from **R-382** when ready. Still stop-and-ask only for paid cloud / DB engine / new infra / native-mobile / a materially different architecture decision.
+  20. **R-382**: QR Code & Barcode Suite (`components/qr-code.tsx`)
+  21. **R-383**: Spreadsheet & Inline Data Sheet Suite (`components/spreadsheet.tsx`)
+- Ready for next task. Still stop-and-ask only for paid cloud / DB engine / new infra / native-mobile / a materially different architecture decision.
 
 ## Completed
+
+### R-383 — Generated Accessible Futuristic Reusable Spreadsheet & Inline-Editable Data Sheet Suite (components/spreadsheet.tsx)
+
+Enabled accessible, desktop-and-mobile-grade, futuristic Spreadsheet & Inline-Editable Data Sheet compound components across generated Next.js web applications:
+- **Standalone Spreadsheet Suite (`apps/web/components/spreadsheet.tsx`)**:
+  - Implemented `SpreadsheetVariant`, `SpreadsheetSize`, `CellType`, `CellValue`, `CellCoord`, `CellRange`, `ColumnDef`, `RowData`, `SpreadsheetHandle`, `SpreadsheetProps`, `SpreadsheetToolbarProps`, `SpreadsheetCellProps`.
+  - Implemented compound and semantic alias exports: `Spreadsheet`, `DataSheet`, `InlineGrid`, `SpreadsheetToolbar`, `SpreadsheetCell`, default export.
+  - Inline cell editing on double-click/F2/Enter with commit/abort handling.
+  - Zero-dependency formula engine supporting `=SUM`, `=AVG`, `=COUNT`, `=MIN`, `=MAX`, `=IF`.
+  - Arrow key navigation, Tab, Home/End, PgUp/PgDn, Ctrl+Home/End.
+  - Multi-cell range selection with Shift+Click/Arrow.
+  - Column freeze (`frozen: true`), column resize handles, row numbers gutter.
+  - Undo/redo history stack (Ctrl+Z/Ctrl+Y), CSV export/import, clipboard copy/paste (Ctrl+C/Ctrl+V).
+  - Context menu (Insert/Delete/Clear row), Ctrl+F find bar, column header sorting.
+  - WAI-ARIA 1.2 grid semantics (`role="grid"`, `role="row"`, `role="columnheader"`, `role="gridcell"`, `aria-selected`, `aria-sort`).
+  - 4 futuristic visual variants (default, card, glass, neon), 3 size scales (sm, md, lg).
+  - React ref forwarding (`forwardRef`), `SpreadsheetHandle`, explicit `displayName`.
+  - Exported `render_spreadsheet_component` in `codegen` and registered in `NextjsWebAdapter`.
+  - 17 unit tests in `test_spreadsheet_component.py` (2,193 tests total pass).
+
+### R-382 — Generated Accessible Futuristic Reusable QR Code & Barcode Suite (components/qr-code.tsx)
+
+Enabled accessible, desktop-and-mobile-grade, futuristic QR Code & Barcode compound components across generated Next.js web applications:
+- **Standalone QR Code Suite (`apps/web/components/qr-code.tsx`)**:
+  - Implemented `QrErrorCorrectionLevel`, `QrModuleStyle`, `QrEyeStyle`, `QrGradientType`, `BarcodeFormat`, `QrCodeVariant`, `QrCodeSize`, `QrCodeHandle`, `QrCodeProps`, `BarcodeProps`, `QrCardProps`.
+  - Implemented compound exports: `QrCode`, `Barcode`, `QrCard`, default export.
+  - Zero-dependency mathematical QR encoder with Galois Field GF(2^8) Reed-Solomon polynomial math and error correction levels (L, M, Q, H).
+  - Zero-dependency mathematical 1D barcode generator (Code 128 / EAN-13) in SVG.
+  - Action toolbar: copy to clipboard, high-res PNG download, vector SVG download, print.
+  - Module dot styles (square, rounded, dots, diamonds), customizable eyes styling, center logo slot.
+  - WAI-ARIA 1.2 `role="img"`, 4 visual variants (default, card, glass, neon), 3 size scales (sm, md, lg).
+  - React ref forwarding, imperative handle `QrCodeHandle`, explicit `displayName`.
+  - Exported `render_qr_code_component` in `codegen` and registered in `NextjsWebAdapter`.
+  - 17 unit tests in `test_qr_code_component.py`.
 
 ### R-381 — Generated Accessible Futuristic Reusable Terminal & Command Console Suite (components/terminal.tsx)
 
