@@ -2,24 +2,25 @@ schema_version: 1
 project: OmniStackAI
 phase: BASIC/MVP
 founder_stage: 0
-current_task: R-371
+current_task: R-372
 current_status: not_started
 branch: main
-last_completed_task: R-370
+last_completed_task: R-371
 last_completed_task_summary: >-
-  Generated Accessible Futuristic Reusable Data Visualization & SVG Chart Suite (components/chart.tsx);
-  added standalone, reusable, accessible, desktop-and-mobile-grade Data Visualization compound component suite supporting
-  Bar, Line, Area, Donut, Pie, and Sparkline charts with native SVG geometry and math,
-  ChartVariant ("default" | "card" | "glass" | "neon"), ChartSize ("sm" | "md" | "lg"),
-  ChartDataPoint, ChartSeries, ChartTooltipData, ChartProps,
-  semantic aliases (Chart, BarChart, LineChart, AreaChart, DonutChart, PieChart, Sparkline, default export),
-  interactive hover crosshairs, floating data tooltip card with value and percentage, click-to-toggle series legends,
-  WAI-ARIA 1.2 accessibility semantics (role="img", role="region", aria-label) and screen-reader data table fallback (sr-only),
-  4 futuristic visual variants ("default", "card", "glass" with backdropFilter blur, "neon" cyberpunk cyan glow),
-  3 size presets ("sm", "md", "lg"), React ref forwarding (forwardRef), explicit displayName,
+  Generated Accessible Futuristic Reusable Time Picker & Time Range Suite (components/time-picker.tsx);
+  added standalone, reusable, accessible, desktop-and-mobile-grade Time Picker compound component suite supporting
+  12h and 24h formats, TimePickerVariant ("default" | "card" | "glass" | "neon"), TimePickerSize ("sm" | "md" | "lg"),
+  TimePreset, TimeRangePreset, TimePickerProps, TimeRangePickerProps, TimeInputProps,
+  compound and semantic alias exports (TimePicker, TimeRangePicker, TimeInput, TimeColumn, ClockIcon, default export),
+  hour/minute/second column lists with active item auto-scrolling, AM/PM switcher, clear button (XIcon),
+  quick preset chips (Now, 09:00, 12:00, 17:00), dual-input TimeRangePicker with start & end validation,
+  popover dropdown and direct inline embedding modes, hidden input form submission integration (name),
+  WAI-ARIA 1.2 accessibility semantics (role="combobox", role="listbox", role="option", role="group", aria-haspopup="dialog"),
+  4 futuristic visual styling variants ("default", "card", "glass" with backdropFilter blur, "neon" cyberpunk cyan glow),
+  3 size presets ("sm", "md", "lg"), React ref forwarding (forwardRef), explicit displayName across all exports,
   100% diff-invariance across ir.description, 0 external runtime dependencies;
-  exported render_chart_component in codegen; registered components/chart.tsx in NextjsWebAdapter;
-  1,972 tests pass (17 new tests in test_chart_component.py); 0 model calls
+  exported render_time_picker_component in codegen; registered components/time-picker.tsx in NextjsWebAdapter;
+  1,989 tests pass (17 new tests in test_time_picker_component.py); 0 model calls
 control_plane_database: postgresql
 model_routing_mode: balanced
 architecture_contract: R_&_D/OmniStackAI_Implementation_Brief_v6.md
@@ -34,5 +35,5 @@ id_note: >-
   R-224 Next.js deferred (env-blocked), R-225..R-369 done. Continue from R-370.
 blockers: []
 next_action: >-
-  Task R-370 (Data Visualization & SVG Chart Suite) complete with 1,972 tests passing.
-  Next task: R-371.
+  Task R-371 (Time Picker & Time Range Suite) complete with 1,989 tests passing.
+  Next task: R-372.

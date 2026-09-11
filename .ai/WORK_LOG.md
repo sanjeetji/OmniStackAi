@@ -1,5 +1,30 @@
 # Work Log
 
+## 2026-09-11 — R-371
+
+- Recorded contract in `.ai/CURRENT_TASK.yaml` and `.ai/tasks/R-371.md` (status in_progress → done).
+- `nextjs.py`:
+  - Added `_TIME_PICKER_COMPONENT` static template implementing accessible, desktop-and-mobile-grade, futuristic Time Picker & Time Range compound component suite (`apps/web/components/time-picker.tsx`).
+  - Implemented `TimeFormat` ("12h" | "24h"), `TimePickerVariant` ("default" | "card" | "glass" | "neon"), `TimePickerSize` ("sm" | "md" | "lg"), `TimePreset`, `TimeRangePreset`, `TimePickerProps`, `TimeRangePickerProps`, `TimeInputProps` interfaces.
+  - Implemented compound and semantic alias exports: `TimePicker`, `TimeRangePicker`, `TimeInput`, `TimeColumn`, `ClockIcon`, default export.
+  - Implemented 12h (with AM/PM period selector) and 24h military/international format modes.
+  - Implemented scrollable column lists for hours, minutes, and optional seconds with active item auto-scrolling into view.
+  - Implemented customizable step increments (`stepMinutes`, `stepSeconds`).
+  - Implemented quick-select preset chips ("Now", "09:00 AM", "12:00 PM", "05:00 PM").
+  - Implemented dual-input `TimeRangePicker` with start and end time validation.
+  - Implemented popover dropdown trigger with outside click and Escape key dismissal, alongside direct inline embedding mode (`inline={true}`).
+  - Implemented full WAI-ARIA 1.2 combobox, listbox, and option semantics (`role="combobox"`, `role="listbox"`, `role="option"`, `role="group"`, `aria-haspopup="dialog"`, `aria-selected`).
+  - Implemented 5 built-in zero-dependency vector icons (`ClockIcon`, `ChevronUpIcon`, `ChevronDownIcon`, `XIcon`, `CheckIcon`).
+  - Implemented 4 futuristic visual styling variants ("default", "card", "glass" with backdropFilter blur, "neon" cyberpunk cyan glow).
+  - Implemented 3 size presets ("sm", "md", "lg").
+  - Implemented native HTML form submission integration via hidden inputs (`name`).
+  - Implemented React ref forwarding (`forwardRef`) and explicit `displayName` across all exports.
+  - Exported `render_time_picker_component` in `omnistackai_agent_engine.codegen` and registered `components/time-picker.tsx` in `NextjsWebAdapter.generate()`.
+  - Maintained 100% diff-invariance across `ir.description`.
+- Added `services/agent-engine/tests/test_time_picker_component.py` with 17 comprehensive unit tests (all passing).
+- `task verify` — 1,989 tests pass (17 new), 0 failures. `task lint`, `task security:quick` pass.
+  `builder:demo minimal-blog` passes (108 files generated). 0 model calls.
+
 ## 2026-09-11 — R-370
 
 - Recorded contract in `.ai/CURRENT_TASK.yaml` and `.ai/tasks/R-370.md` (status in_progress → done).
