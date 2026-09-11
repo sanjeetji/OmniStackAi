@@ -5,25 +5,26 @@ Last updated: 2026-09-11T11:25:00+05:30
 Stage 0 (Founder Build Sequence, Brief Section 91) — BASIC/MVP
 
 ## Last Completed Task
-Tracker ID: R-353 — Generated Accessible Futuristic Reusable Separator Component (components/separator.tsx) — DONE,
-`task verify` (1,631 agent-engine tests, 16 new focused R-353 tests) passing. Enabled accessible, futuristic, zero-dependency
-desktop-grade separator divider components across generated Next.js web applications:
-added standalone, reusable, accessible, futuristic Separator / Divider component (`components/separator.tsx`) supporting
-SeparatorOrientation ("horizontal" | "vertical"), SeparatorVariant ("neon" | "glass" | "gradient" | "bordered" | "minimal"),
-SeparatorThickness ("thin" | "md" | "thick" | number), SeparatorLabelAlign ("start" | "center" | "end"), SeparatorProps,
-WAI-ARIA 1.2 Separator pattern compliance (decorative mode: role="none", aria-hidden="true" vs semantic mode: role="separator", aria-orientation),
-content / label slot support along horizontal dividers with flexible alignment, dual flex-grow line segments around styled label badge,
-5 futuristic visual styling variants ("neon", "glass", "gradient", "bordered", "minimal"), thickness presets and custom numbers,
-full React ref forwarding (forwardRef<HTMLDivElement, SeparatorProps>), 100% diff-invariance across `ir.description`, and 0 external runtime dependencies.
-Preceded by R-352 (aspect ratio), R-351 (collapsible), R-350 (scroll area), R-349 (hover card), R-348 (context menu), R-347 (speed dial), R-346 (pin input), R-345 (color picker), R-344 (resizable), R-343 (carousel), R-342 (segmented control), R-341 (radial gauge), R-340 (code block), R-339 (tag input), R-338 (tree view),
+Tracker ID: R-354 — Generated Accessible Futuristic Reusable Keyboard Keycap Component (components/kbd.tsx) — DONE,
+`task verify` (1,647 agent-engine tests, 16 new focused R-354 tests) passing. Enabled accessible, futuristic, zero-dependency
+desktop-grade keyboard keycap and shortcut badge components across generated Next.js web applications:
+added standalone, reusable, accessible, futuristic Keyboard Keycap component (`components/kbd.tsx`) supporting
+KbdVariant ("default" | "outline" | "subtle" | "ghost" | "neon"), KbdSize ("xs" | "sm" | "md" | "lg"),
+KbdProps, KbdGroupProps, KbdShortcutProps, semantic <kbd> HTML elements with WAI-ARIA compliance
+(role="group", aria-label, aria-keyshortcuts), automatic modifier key symbol conversion ("meta"/"command" -> "⌘",
+"shift" -> "⇧", "ctrl" -> "⌃", "alt" -> "⌥", "enter" -> "↵", "backspace" -> "⌫"), 4 size scales, 5 visual variants
+(tactile 3D keycap with bottom border and shadow, neon cyberpunk glow), key combination arrays with configurable separators,
+composite container KbdGroup, string shortcut parser KbdShortcut, full React ref forwarding, 100% diff-invariance across
+`ir.description`, and 0 external runtime dependencies.
+Preceded by R-353 (separator), R-352 (aspect ratio), R-351 (collapsible), R-350 (scroll area), R-349 (hover card), R-348 (context menu), R-347 (speed dial), R-346 (pin input), R-345 (color picker), R-344 (resizable), R-343 (carousel), R-342 (segmented control), R-341 (radial gauge), R-340 (code block), R-339 (tag input), R-338 (tree view),
 R-337 (stat card), R-336 (timeline), R-335 (file upload), R-334 (stepper), R-333 (rating), R-332 (progress), R-331 (slider),
 R-330 (command palette), R-329 (data grid), R-328 (date picker), R-327 (form controls), R-326 (dialog), R-325 (theme toggle),
 R-324 (theming tokens), R-323 (popover), R-322 (dropdown menu), R-321 (accordion), R-320 (toggle), R-319 (avatar), R-318 (drawer),
 R-317 (skeleton), R-316 (alert), R-315 (card), R-314 (tooltip), R-313 (column visibility), R-312 (badge), R-311 (table density),
 R-310 (tabs), R-309 (pagination), and R-308 (JSON export).
 
-**Notes:** (1) the tracker is current through R-353: 142 Done, 1 Deferred, 210 Not Started across 353
-unique tasks; MVP is 142/248 (57.3%). (2) Next unstarted Tracker ID: R-354.
+**Notes:** (1) the tracker is current through R-354: 143 Done, 1 Deferred, 210 Not Started across 354
+unique tasks; MVP is 143/249 (57.4%). (2) Next unstarted Tracker ID: R-355.
 
 
 

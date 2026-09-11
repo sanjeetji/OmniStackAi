@@ -1,5 +1,27 @@
 # Work Log
 
+## 2026-09-11 — R-354
+
+- Recorded contract in `.ai/CURRENT_TASK.yaml` and `.ai/tasks/R-354.md` (status in_progress → done).
+- `nextjs.py`:
+  - Added `_KBD_COMPONENT` static template implementing accessible, desktop-grade, futuristic Keyboard Keycap & Shortcut Badge component (`apps/web/components/kbd.tsx`).
+  - Implemented `KbdVariant` ("default" | "outline" | "subtle" | "ghost" | "neon"), `KbdSize` ("xs" | "sm" | "md" | "lg"), `KbdProps`, `KbdGroupProps`, and `KbdShortcutProps` interfaces.
+  - Implemented semantic `<kbd>` HTML elements with WAI-ARIA compliance (`role="group"` on container, `aria-label`, `aria-keyshortcuts`, `data-variant`, `data-size`).
+  - Implemented automatic modifier key symbol conversion (`"meta"`/`"command"` -> `"⌘"`, `"shift"` -> `"⇧"`, `"ctrl"` -> `"⌃"`, `"alt"`/`"option"` -> `"⌥"`, `"enter"` -> `"↵"`, `"backspace"` -> `"⌫"`, `"tab"` -> `"⇥"`, `"esc"` -> `"Esc"`, arrows, etc.).
+  - Implemented 4 size scales (`xs`, `sm`, `md`, `lg`) with tactile monospace typography, padding, min-width, and border-radius presets.
+  - Implemented 5 futuristic visual variants: `"default"` (tactile 3D keycap with bottom border and shadow), `"outline"`, `"subtle"`, `"ghost"`, and `"neon"` (cyberpunk glowing cyan/indigo).
+  - Implemented composite key combination arrays with configurable separators, composite container `KbdGroup`, and convenience string shortcut parser `KbdShortcut` (e.g. `"⌘+K"`, `"Ctrl+Shift+P"`).
+  - Implemented full React ref forwarding (`forwardRef<HTMLElement, KbdProps>`, `forwardRef<HTMLDivElement, KbdGroupProps>`, `forwardRef<HTMLElement, KbdShortcutProps>`) with `displayName`.
+  - Exported `render_kbd_component` in `omnistackai_agent_engine.codegen` and registered in `NextjsWebAdapter.generate()`.
+  - Maintained 100% diff-invariance across `ir.description`.
+- Added `services/agent-engine/tests/test_kbd_component.py` with 16 comprehensive unit tests (all passing).
+- `task verify` — 1,647 tests pass (16 new), 0 failures. `task lint`, `task security:quick` pass.
+  `builder:demo minimal-blog` passes (91 files generated). `builder:demo rideshare-favourites` passes (88 files generated). 0 model calls.
+- Tracker: inserted R-354 Done row at `Phase_Roadmap!A9`; table `A4:M362`; 362 total rows;
+  143 Done, 1 Deferred, 210 Not Started; MVP 143/249 (57.4%); no `#REF!`; XLSX valid.
+- Updated CURRENT_TASK.yaml, tasks/R-354.md, PROJECT_STATE.yaml, HANDOFF.md, PROJECT_STATE.md,
+  CHANGELOG.md, docs/CODEGEN.md, docs/PROGRESS.md, docs/RESUME_PROMPT.md.
+
 ## 2026-09-11 — R-353
 
 - Recorded contract in `.ai/CURRENT_TASK.yaml` and `.ai/tasks/R-353.md` (status in_progress → done).
