@@ -69538,6 +69538,268 @@ def render_slug_input_component() -> str:
     return _SLUG_INPUT_COMPONENT
 
 
+_CHARACTER_COUNTER_COMPONENT = r"""'use client';
+
+import { forwardRef, useImperativeHandle, useRef, useState } from 'react';
+import type { CSSProperties } from 'react';
+
+export type CharacterCounterVariant = 'default' | 'card' | 'glass' | 'neon';
+export type CharacterCounterSize = 'sm' | 'md' | 'lg';
+
+export interface CharacterCounterStats {
+  characters: number;
+  words: number;
+  remaining: number | null;
+  overLimit: boolean;
+}
+
+export interface CharacterCounterProps {
+  value?: string;
+  defaultValue?: string;
+  maxLength?: number;
+  maxWords?: number;
+  countWords?: boolean;
+  hardLimit?: boolean;
+  warnThreshold?: number;
+  showProgress?: boolean;
+  showWords?: boolean;
+  rows?: number;
+  label?: string;
+  placeholder?: string;
+  name?: string;
+  disabled?: boolean;
+  showLabel?: boolean;
+  variant?: CharacterCounterVariant;
+  size?: CharacterCounterSize;
+  accentColor?: string;
+  ariaLabel?: string;
+  className?: string;
+  style?: CSSProperties;
+  onChange?: (value: string, stats: CharacterCounterStats) => void;
+}
+
+export interface CharacterCounterHandle {
+  getValue: () => string;
+  setValue: (value: string) => void;
+  getStats: () => CharacterCounterStats;
+  clear: () => void;
+  focus: () => void;
+}
+
+interface VariantStyle {
+  wrapper: CSSProperties;
+  labelColor: string;
+  mutedColor: string;
+  inputBg: string;
+  inputColor: string;
+  inputBorder: string;
+  focusBorder: string;
+  trackBg: string;
+  okColor: string;
+  warnColor: string;
+  overColor: string;
+}
+
+const VARIANT_STYLES: Record<CharacterCounterVariant, VariantStyle> = {
+  default: {
+    wrapper: { background: 'transparent' },
+    labelColor: '#0f172a', mutedColor: '#64748b', inputBg: '#ffffff', inputColor: '#0f172a', inputBorder: '#cbd5e1', focusBorder: '#2563eb',
+    trackBg: '#e2e8f0', okColor: '#2563eb', warnColor: '#f59e0b', overColor: '#dc2626',
+  },
+  card: {
+    wrapper: { background: '#ffffff', border: '1px solid #e2e8f0', borderRadius: '12px', boxShadow: '0 4px 16px rgba(0, 0, 0, 0.06)', padding: '16px' },
+    labelColor: '#0f172a', mutedColor: '#64748b', inputBg: '#ffffff', inputColor: '#0f172a', inputBorder: '#cbd5e1', focusBorder: '#2563eb',
+    trackBg: '#e2e8f0', okColor: '#2563eb', warnColor: '#f59e0b', overColor: '#dc2626',
+  },
+  glass: {
+    wrapper: { background: 'rgba(248, 250, 252, 0.6)', border: '1px solid rgba(255, 255, 255, 0.4)', borderRadius: '12px', boxShadow: '0 8px 32px rgba(0, 0, 0, 0.12)', backdropFilter: 'blur(16px)', WebkitBackdropFilter: 'blur(16px)', padding: '16px' },
+    labelColor: '#0f172a', mutedColor: '#475569', inputBg: 'rgba(255, 255, 255, 0.7)', inputColor: '#0f172a', inputBorder: 'rgba(148, 163, 184, 0.6)', focusBorder: '#2563eb',
+    trackBg: 'rgba(148, 163, 184, 0.35)', okColor: '#2563eb', warnColor: '#d97706', overColor: '#dc2626',
+  },
+  neon: {
+    wrapper: { background: '#050811', border: '1px solid rgba(6, 182, 212, 0.4)', borderRadius: '12px', boxShadow: '0 0 24px rgba(6, 182, 212, 0.15)', padding: '16px' },
+    labelColor: '#f8fafc', mutedColor: '#38bdf8', inputBg: 'rgba(6, 182, 212, 0.08)', inputColor: '#e0f2fe', inputBorder: 'rgba(6, 182, 212, 0.5)', focusBorder: '#06b6d4',
+    trackBg: 'rgba(6, 182, 212, 0.12)', okColor: '#06b6d4', warnColor: '#fbbf24', overColor: '#fb7185',
+  },
+};
+
+const SIZE_STYLES: Record<CharacterCounterSize, { font: number; pad: number; bar: number }> = {
+  sm: { font: 13, pad: 8, bar: 4 },
+  md: { font: 15, pad: 10, bar: 6 },
+  lg: { font: 17, pad: 13, bar: 8 },
+};
+
+function countCharacters(text: string): number {
+  return Array.from(text).length;
+}
+
+function countWordsIn(text: string): number {
+  const trimmed = text.trim();
+  if (!trimmed) return 0;
+  return trimmed.split(/\s+/).length;
+}
+
+function computeStats(text: string, maxLength?: number): CharacterCounterStats {
+  const characters = countCharacters(text);
+  const words = countWordsIn(text);
+  const remaining = typeof maxLength === 'number' ? maxLength - characters : null;
+  const overLimit = typeof maxLength === 'number' ? characters > maxLength : false;
+  return { characters: characters, words: words, remaining: remaining, overLimit: overLimit };
+}
+
+const CharacterCounterComponent = forwardRef<CharacterCounterHandle, CharacterCounterProps>(
+  function CharacterCounter(
+    {
+      value,
+      defaultValue = '',
+      maxLength,
+      maxWords,
+      countWords = true,
+      hardLimit = false,
+      warnThreshold = 0.9,
+      showProgress = true,
+      showWords = true,
+      rows = 4,
+      label = 'Message',
+      placeholder = '',
+      name,
+      disabled = false,
+      showLabel = true,
+      variant = 'default',
+      size = 'md',
+      accentColor,
+      ariaLabel = 'Text with character counter',
+      className,
+      style,
+      onChange,
+    }: CharacterCounterProps,
+    ref,
+  ) {
+    const isControlled = typeof value === 'string';
+    const [internal, setInternal] = useState<string>(defaultValue);
+    const textareaRef = useRef<HTMLTextAreaElement | null>(null);
+    const counterId = useRef<string>('char-counter-status').current;
+
+    const current = isControlled ? (value as string) : internal;
+    const stats = computeStats(current, maxLength);
+    const wordsOver = typeof maxWords === 'number' && stats.words > maxWords;
+
+    const emit = (next: string) => {
+      let text = next;
+      if (hardLimit && typeof maxLength === 'number') {
+        const chars = Array.from(text);
+        if (chars.length > maxLength) text = chars.slice(0, maxLength).join('');
+      }
+      if (!isControlled) setInternal(text);
+      if (onChange) onChange(text, computeStats(text, maxLength));
+    };
+
+    useImperativeHandle(
+      ref,
+      () => ({
+        getValue: () => current,
+        setValue: (v: string) => emit(v),
+        getStats: () => computeStats(current, maxLength),
+        clear: () => emit(''),
+        focus: () => {
+          if (textareaRef.current) textareaRef.current.focus();
+        },
+      }),
+      [current, isControlled, maxLength, hardLimit, onChange],
+    );
+
+    const theme = VARIANT_STYLES[variant] || VARIANT_STYLES.default;
+    const sizing = SIZE_STYLES[size] || SIZE_STYLES.md;
+
+    const ratio = typeof maxLength === 'number' && maxLength > 0 ? stats.characters / maxLength : 0;
+    const isWarn = ratio >= warnThreshold && !stats.overLimit;
+    const barColor = stats.overLimit || wordsOver ? theme.overColor : isWarn ? theme.warnColor : (accentColor || theme.okColor);
+    const countColor = stats.overLimit || wordsOver ? theme.overColor : isWarn ? theme.warnColor : theme.mutedColor;
+
+    return (
+      <div
+        className={className}
+        data-variant={variant}
+        data-size={size}
+        style={{ display: 'flex', flexDirection: 'column', gap: '4px', fontFamily: 'system-ui, -apple-system, sans-serif', ...theme.wrapper, ...style }}
+      >
+        {showLabel ? (
+          <label style={{ fontSize: (sizing.font - 2) + 'px', fontWeight: 600, color: theme.labelColor }}>{label}</label>
+        ) : null}
+        <textarea
+          ref={textareaRef}
+          value={current}
+          name={name}
+          rows={rows}
+          disabled={disabled}
+          placeholder={placeholder}
+          aria-label={ariaLabel}
+          aria-describedby={counterId}
+          aria-invalid={stats.overLimit || wordsOver || undefined}
+          onChange={(e) => emit(e.target.value)}
+          style={{
+            width: '100%',
+            boxSizing: 'border-box',
+            fontSize: sizing.font + 'px',
+            padding: sizing.pad + 'px',
+            background: theme.inputBg,
+            color: theme.inputColor,
+            border: '1px solid ' + (stats.overLimit || wordsOver ? theme.overColor : theme.inputBorder),
+            borderRadius: '8px',
+            outline: 'none',
+            resize: 'vertical',
+            fontFamily: 'inherit',
+            lineHeight: 1.5,
+          }}
+        />
+        {showProgress && typeof maxLength === 'number' ? (
+          <div style={{ height: sizing.bar + 'px', borderRadius: '999px', background: theme.trackBg, overflow: 'hidden' }} aria-hidden="true">
+            <div style={{ width: Math.min(100, Math.round(ratio * 100)) + '%', height: '100%', background: barColor, transition: 'width 0.15s ease, background 0.15s ease' }} />
+          </div>
+        ) : null}
+        <div
+          id={counterId}
+          role="status"
+          aria-live="polite"
+          style={{ display: 'flex', justifyContent: 'space-between', gap: '12px', fontSize: (sizing.font - 3) + 'px', color: countColor, fontVariantNumeric: 'tabular-nums' }}
+        >
+          <span>
+            {countWords && showWords ? (stats.words + (stats.words === 1 ? ' word' : ' words') + (typeof maxWords === 'number' ? ' / ' + maxWords : '') + ' · ') : ''}
+            {stats.characters}
+            {typeof maxLength === 'number' ? ' / ' + maxLength : ' characters'}
+          </span>
+          {typeof maxLength === 'number' ? (
+            <span style={{ fontWeight: 600 }}>
+              {stats.overLimit ? Math.abs(stats.remaining as number) + ' over' : (stats.remaining as number) + ' left'}
+            </span>
+          ) : null}
+        </div>
+      </div>
+    );
+  },
+);
+
+CharacterCounterComponent.displayName = 'CharacterCounter';
+
+export const CharacterCounter = CharacterCounterComponent;
+export const CharCounter = CharacterCounterComponent;
+export const WordCounter = CharacterCounterComponent;
+export const TextCounter = CharacterCounterComponent;
+
+CharacterCounter.displayName = 'CharacterCounter';
+CharCounter.displayName = 'CharCounter';
+WordCounter.displayName = 'WordCounter';
+TextCounter.displayName = 'TextCounter';
+
+export default CharacterCounterComponent;
+"""
+
+
+def render_character_counter_component() -> str:
+    """Render the Accessible Futuristic Reusable Character & Word Counter Textarea Suite (R-412)."""
+    return _CHARACTER_COUNTER_COMPONENT
+
+
 _DESIGN_TOKENS_CSS = (
     "/**\n"
     " * OmniStackAI Design Tokens & Theming Engine\n"
@@ -70178,6 +70440,7 @@ class NextjsWebAdapter:
             GeneratedFile("components/currency-input.tsx", _CURRENCY_INPUT_COMPONENT),
             GeneratedFile("components/password-generator.tsx", _PASSWORD_GENERATOR_COMPONENT),
             GeneratedFile("components/slug-input.tsx", _SLUG_INPUT_COMPONENT),
+            GeneratedFile("components/character-counter.tsx", _CHARACTER_COUNTER_COMPONENT),
             GeneratedFile("styles/tokens.css", _DESIGN_TOKENS_CSS),
             GeneratedFile("app/globals.css", _GLOBALS_CSS),
             GeneratedFile("app/error.tsx", _ERROR_PAGE),

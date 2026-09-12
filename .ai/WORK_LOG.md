@@ -1,5 +1,23 @@
 # Work Log
 
+## 2026-09-12 — R-412
+
+- Founder switched to hands-off continuous execution via a self-paced `/loop` (dynamic mode); autonomous advancement until manually stopped.
+- Recorded contract in `.ai/CURRENT_TASK.yaml` and `.ai/tasks/R-412.md` before code (test-first).
+- `nextjs.py`:
+  - Added `_CHARACTER_COUNTER_COMPONENT` static template (raw triple-quoted string) implementing the accessible, desktop-and-mobile-grade, futuristic Character & Word Counter Textarea compound component suite (`apps/web/components/character-counter.tsx`).
+  - Genuinely functional counting: `countCharacters` (Unicode-safe `Array.from(text).length`), `countWordsIn` (trim + `/\s+/` split), and `computeStats` returning `{characters, words, remaining, overLimit}`.
+  - Configurable `maxLength`/`maxWords`; optional `hardLimit` clipping input past maxLength (code-point-safe); `warnThreshold` recolors near the limit; optional progress bar; over-limit border/aria-invalid.
+  - Controlled + uncontrolled `value`; `onChange(value, stats)`; WAI-ARIA (labeled textarea, `aria-describedby` → a `role="status"` `aria-live="polite"` counter region reporting words/characters and remaining/over).
+  - Imperative `CharacterCounterHandle` (`getValue`, `setValue`, `getStats`, `clear`, `focus`) via `useImperativeHandle`.
+  - Implemented `CharacterCounterVariant`/`CharacterCounterSize` types, `CharacterCounterStats`/`CharacterCounterHandle`/`CharacterCounterProps` interfaces, `VARIANT_STYLES`/`SIZE_STYLES` maps.
+  - Compound and semantic alias exports: `CharacterCounter`, `CharCounter`, `WordCounter`, `TextCounter`, default export — each with explicit `displayName`.
+  - Exported `render_character_counter_component` in `omnistackai_agent_engine.codegen` and registered `components/character-counter.tsx` in `NextjsWebAdapter.generate()`.
+  - Maintained 100% diff-invariance across `ir.description` (static module constant); 0 external runtime dependencies.
+- Added `services/agent-engine/tests/test_character_counter_component.py` with 18 tests (file-generated, diff-invariance + accessor byte-equality, `'use client'`, zero-deps imports, forwardRef + useImperativeHandle + 5 handle methods, TS types, alias/default exports, displayNames, 4 variants, 3 sizes, counting logic, limits, word counting, progress + threshold, aria semantics, hard limit, callbacks/controlled, codegen export).
+- Gates: `pytest .../test_character_counter_component.py` (18 passed); `task verify` (2,699 tests passed); `task lint`, `task security:quick`, `task env:check` passed; `task builder:demo -- minimal-blog` generated 149 files including `apps/web/components/character-counter.tsx`. 0 model calls.
+- Static TSX sanity check: `'use client'` first line, balanced braces/parens, react-only imports, no `\"\"\"`/backtick hazards (one benign `·` separator char).
+
 ## 2026-09-12 — R-411
 
 - Recorded contract in `.ai/CURRENT_TASK.yaml` and `.ai/tasks/R-411.md` before code (test-first).

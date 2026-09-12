@@ -140,6 +140,7 @@ from .nextjs import (
     render_currency_input_component,
     render_password_generator_component,
     render_slug_input_component,
+    render_character_counter_component,
 )
 from .openapi import render_openapi, render_openapi_json
 from .schema_sql import render_postgres_schema, table_name
@@ -283,6 +284,7 @@ __all__ = [
     "render_currency_input_component",
     "render_password_generator_component",
     "render_slug_input_component",
+    "render_character_counter_component",
     "render_postgres_schema",
     "render_postgres_seed",
     "render_openapi",
