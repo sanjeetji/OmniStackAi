@@ -2,13 +2,28 @@ schema_version: 1
 project: OmniStackAI
 phase: BASIC/MVP
 founder_stage: 0
-current_task: null
-current_status: ready
+current_task: R-401
+current_status: advancing
 branch: main
-last_completed_task: R-399
+last_completed_task: R-400
 last_completed_task_summary: >-
-  Generated Accessible Futuristic Reusable Particle Network & Interactive Constellation Canvas Suite
-  (components/particle-network.tsx); an ambient, decorative-by-default animated background (distinct from the
+  Generated Accessible Futuristic Reusable Before/After Image Comparison Slider Suite
+  (components/image-comparison.tsx); a genuinely interactive (non-cosmetic) two-layer image comparison
+  revealer: an "after" base layer with a "before" layer clipped via CSS clip-path, a draggable divider with
+  pointer capture, click/tap-to-position on the track, and a role="slider" handle with full keyboard control
+  (Arrow keys by step, Home/End to 0/100, PageUp/PageDown by 10); horizontal and vertical orientations;
+  controlled + uncontrolled position with onChange; optional before/after labels; gradient placeholder layers
+  when no beforeSrc/afterSrc provided; disabled state; WAI-ARIA 1.2 semantics (role="group" container,
+  role="slider" handle with aria-valuemin/max/now/valuetext/orientation); 4 futuristic variants
+  ("default", "card", "glass" with backdropFilter blur, "neon" cyan glow), 3 size scales ("sm", "md", "lg"),
+  React ref forwarding (forwardRef), useImperativeHandle (ImageComparisonHandle: setPosition/getPosition/reset),
+  canonical TypeScript types (ImageComparisonVariant, ImageComparisonSize, ImageComparisonOrientation,
+  ImageComparisonHandle, ImageComparisonProps), compound and semantic alias exports (ImageComparison,
+  BeforeAfterSlider, CompareSlider, ImageReveal, default export) with explicit displayName; 100% diff-invariance
+  across ir.description, 0 external runtime dependencies; exported render_image_comparison_component in codegen;
+  registered components/image-comparison.tsx in NextjsWebAdapter; 2,484 tests pass (18 new tests in
+  test_image_comparison_component.py); 0 model calls. Previously R-399 shipped the Particle Network &
+  Interactive Constellation Canvas Suite (components/particle-network.tsx); an ambient, decorative-by-default animated background (distinct from the
   data-driven network-graph) with NO required data props — particles generated internally from a count/density
   derivation, animated on an HTML5 Canvas 2D requestAnimationFrame loop with edge-bounce motion, proximity link
   lines with distance-proportional globalAlpha, pointer reactivity (attraction + accent-colored cursor links within
@@ -34,8 +49,9 @@ product_direction: >-
   framework adapter contract -> Next.js adapter -> Git service -> preview/sandbox (needs cloud env).
 id_note: >-
   Workbook backlog owns R-010..R-219. Founder-requested tasks use IDs after R-219: R-220..R-223 done,
-  R-224 Next.js deferred (env-blocked), R-225..R-399 done.
+  R-224 Next.js deferred (env-blocked), R-225..R-400 done.
 blockers: []
 next_action: >-
-  Task R-399 (Accessible Futuristic Reusable Particle Network & Interactive Constellation Canvas Suite) complete
-  with 2,466 tests passing. Ready for next task (R-400, next unstarted Tracker ID).
+  Task R-400 (Accessible Futuristic Reusable Before/After Image Comparison Slider Suite) complete with 2,484
+  tests passing. Advancing autonomously to R-401 (next unstarted Tracker ID) — the posture is advancing, not
+  stopped; continue until manually stopped.

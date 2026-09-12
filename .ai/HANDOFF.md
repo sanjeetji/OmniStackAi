@@ -1,6 +1,6 @@
 # Current Handoff
 
-Task ID: R-399
+Task ID: R-400
 Status: done
 Phase: BASIC/MVP — Founder Stage 0
 Branch: `main` (the only branch; the GitHub default)
@@ -47,9 +47,28 @@ Branch: `main` (the only branch; the GitHub default)
   35. **R-397**: Mind Map & Concept Tree Suite (`components/mind-map.tsx`)
   36. **R-398**: Audio Waveform & Spectrum Visualizer Suite (`components/audio-visualizer.tsx`)
   37. **R-399**: Particle Network & Interactive Constellation Canvas Suite (`components/particle-network.tsx`)
-- Ready for next task. Still stop-and-ask only for paid cloud / DB engine / new infra / native-mobile / a materially different architecture decision.
+  38. **R-400**: Before/After Image Comparison Slider Suite (`components/image-comparison.tsx`)
+- Advancing autonomously to the next Tracker ID (posture is advancing, not stopped). Still stop-and-ask only for paid cloud / DB engine / new infra / native-mobile / a materially different architecture decision.
 
 ## Completed
+
+### R-400 — Generated Accessible Futuristic Reusable Before/After Image Comparison Slider Suite (components/image-comparison.tsx)
+
+Enabled a genuinely interactive (non-cosmetic) before/after image comparison revealer across generated Next.js web applications:
+- **Standalone Image Comparison Suite (`apps/web/components/image-comparison.tsx`)**:
+  - Implemented `ImageComparisonVariant`, `ImageComparisonSize`, `ImageComparisonOrientation`, `ImageComparisonHandle`, `ImageComparisonProps`, plus internal `VARIANT_STYLES`/`SIZE_STYLES` hard-coded hex maps.
+  - Compound and semantic alias exports: `ImageComparison`, `BeforeAfterSlider`, `CompareSlider`, `ImageReveal`, default export.
+  - Two layered images ("after" base + "before" clipped via CSS `clip-path`), with gradient placeholder layers when no `beforeSrc`/`afterSrc` is supplied.
+  - Draggable divider with `setPointerCapture` pointer drag, click/tap-to-position on the track, and a `role="slider"` handle with full keyboard control (Arrow keys by `step`, Home/End → 0/100, PageUp/PageDown by 10).
+  - Horizontal and vertical orientations; controlled + uncontrolled `position` with `onChange`; optional before/after labels; `disabled` state.
+  - WAI-ARIA 1.2 semantics: `role="group"` container, `role="slider"` handle with `aria-valuemin`/`aria-valuemax`/`aria-valuenow`/`aria-valuetext`/`aria-orientation`; `aria-hidden` divider; alt text on image layers.
+  - React ref forwarding (`forwardRef`), imperative handle (`ImageComparisonHandle`: `setPosition`/`getPosition`/`reset`), and explicit `displayName` across all exports.
+  - Exported `render_image_comparison_component` in `omnistackai_agent_engine.codegen` and registered `components/image-comparison.tsx` in `NextjsWebAdapter.generate()`.
+  - Maintained 100% diff-invariance across `ir.description`; 0 external runtime dependencies.
+- **Verification**:
+  - 18 unit tests in `services/agent-engine/tests/test_image_comparison_component.py` (all passing).
+  - `task verify` passing: 2,484 tests passed.
+  - `task lint`, `task security:quick`, `task env:check` — pass. `task builder:demo -- minimal-blog` — 137 files (includes `apps/web/components/image-comparison.tsx`).
 
 ### R-399 — Generated Accessible Futuristic Reusable Particle Network & Interactive Constellation Canvas Suite (components/particle-network.tsx)
 
@@ -702,9 +721,9 @@ Enabled accessible, desktop-and-mobile-grade, futuristic Time Picker and Time Ra
 
 ## Verification
 
-- `task verify` — pass (2,466 agent-engine tests; 18 focused R-399 tests in `test_particle_network_component.py`).
+- `task verify` — pass (2,484 agent-engine tests; 18 focused R-400 tests in `test_image_comparison_component.py`).
 - `task lint`, `task security:quick`, `task env:check` — pass.
-- `task builder:demo -- minimal-blog` — pass (136 files, includes `components/particle-network.tsx`).
+- `task builder:demo -- minimal-blog` — pass (137 files, includes `components/image-comparison.tsx`).
 
 ## Blockers and risks
 
@@ -713,7 +732,7 @@ Enabled accessible, desktop-and-mobile-grade, futuristic Time Picker and Time Ra
 
 ## Next action
 
-- Proceed with Task R-400 (next unstarted Tracker ID). Record its contract in `.ai/CURRENT_TASK.yaml` and `.ai/tasks/R-400.md` before code.
+- Advancing autonomously to Task R-401 (next unstarted Tracker ID). Record its contract in `.ai/CURRENT_TASK.yaml` and `.ai/tasks/R-401.md` before code.
 
 ## Next command
 

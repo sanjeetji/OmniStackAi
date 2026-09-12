@@ -1,29 +1,28 @@
-task_id: R-399
-id: R-399
-title: "Accessible Futuristic Reusable Particle Network & Interactive Constellation Canvas Suite"
+task_id: R-400
+id: R-400
+title: "Accessible Futuristic Reusable Before/After Image Comparison Slider Suite"
 status: DONE
 phase: MVP
-tracker_row: 36
+tracker_row: 37
 started_at: "2026-09-12"
 completed_at: "2026-09-12"
 objective: >-
-  Add an accessible, zero-dependency, desktop-and-mobile-grade, futuristic Particle Network & Interactive
-  Constellation Canvas compound component suite (components/particle-network.tsx) — an ambient, decorative-by-default
-  animated background (distinct from the data-driven network-graph): particles generated internally (no required
-  data props) from a count/density derivation, animated on an HTML5 Canvas 2D requestAnimationFrame loop with
-  edge-bounce motion, proximity link lines with distance-proportional globalAlpha, pointer reactivity (attraction +
-  accent-colored cursor links within interactionRadius), device-pixel-ratio-aware sizing, and a JS
-  prefers-reduced-motion guard (single static frame, no rAF, live change listener); imperative
-  ParticleNetworkHandle (pause, resume, toggle, restart, isPaused, getCanvas) via useImperativeHandle; WAI-ARIA
-  decorative semantics (wrapper role="img" + aria-label, aria-hidden="true" canvas, no focus trap); 4 futuristic
-  variants ("default", "card", "glass", "neon"); 3 size scales ("sm", "md", "lg"); React ref forwarding
-  (forwardRef); semantic alias exports (ParticleNetwork, ConstellationCanvas, ParticleField, StarfieldBackground);
-  and explicit displayNames across compound exports. Static module constant — never references ir.name/ir.description.
+  Add an accessible, zero-dependency, desktop-and-mobile-grade, futuristic Before/After Image Comparison
+  Slider compound component suite (components/image-comparison.tsx): two layered images (or gradient
+  placeholders when no src) revealed by a draggable divider using CSS clip-path, pointer drag with pointer
+  capture, click/tap-to-position on the track, full keyboard control on a role="slider" handle
+  (Arrow keys by step, Home/End to 0/100, PageUp/PageDown by 10), horizontal and vertical orientations,
+  optional before/after labels, controlled + uncontrolled position with onChange, disabled state,
+  WAI-ARIA 1.2 semantics (role="group" container, role="slider" handle with aria-valuemin/max/now/valuetext
+  and aria-orientation), 4 futuristic visual styling variants ("default", "card", "glass", "neon"), 3 size
+  scales ("sm", "md", "lg"), React ref forwarding (forwardRef), useImperativeHandle
+  (ImageComparisonHandle: setPosition/getPosition/reset), and explicit displayName across compound and
+  semantic alias exports. Static module constant — never references ir.name/ir.description.
 allowed_paths:
   - "services/agent-engine/src/omnistackai_agent_engine/codegen/nextjs.py"
   - "services/agent-engine/src/omnistackai_agent_engine/codegen/__init__.py"
-  - "services/agent-engine/tests/test_particle_network_component.py"
-  - ".ai/tasks/R-399.md"
+  - "services/agent-engine/tests/test_image_comparison_component.py"
+  - ".ai/tasks/R-400.md"
   - ".ai/CURRENT_TASK.yaml"
   - ".ai/PROJECT_STATE.yaml"
   - ".ai/WORK_LOG.md"
@@ -35,9 +34,9 @@ forbidden_changes:
   - "Do not break snapshot diff invariance across ir.description"
   - "Do not commit or push code to git without verification"
 evidence:
-  verify: "2466 passed (Stage 0 verification passed)"
+  verify: "2484 passed (Stage 0 verification passed)"
   lint: "task lint passed"
   security: "task security:quick passed"
-  demos: "task builder:demo -- minimal-blog generated 136 files (includes apps/web/components/particle-network.tsx)"
+  demos: "task builder:demo -- minimal-blog generated 137 files (includes apps/web/components/image-comparison.tsx)"
   tracker: DONE
-next_action: "Proceed to R-400 (next unstarted Tracker ID)."
+next_action: "Proceed to R-401 (next unstarted Tracker ID), autonomous continuation active."

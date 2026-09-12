@@ -1,5 +1,22 @@
 # Work Log
 
+## 2026-09-12 — R-400
+
+- Recorded contract in `.ai/CURRENT_TASK.yaml` and `.ai/tasks/R-400.md` before code (test-first).
+- `nextjs.py`:
+  - Added `_IMAGE_COMPARISON_COMPONENT` static template (raw triple-quoted string) implementing the accessible, desktop-and-mobile-grade, futuristic Before/After Image Comparison Slider compound component suite (`apps/web/components/image-comparison.tsx`).
+  - Genuinely interactive (not cosmetic): an "after" base layer with a "before" layer revealed via CSS `clip-path` (`inset(...)`), a draggable divider with `setPointerCapture`, click/tap-to-position on the track, and a `role="slider"` handle with full keyboard control (Arrow keys by `step`, Home/End → 0/100, PageUp/PageDown by 10).
+  - Horizontal and vertical orientations; controlled + uncontrolled `position` with `onChange`; optional before/after labels; gradient placeholder layers when no `beforeSrc`/`afterSrc`; `disabled` state.
+  - WAI-ARIA 1.2 semantics: `role="group"` container, `role="slider"` handle with `aria-valuemin`/`aria-valuemax`/`aria-valuenow`/`aria-valuetext`/`aria-orientation`; `aria-hidden` divider; alt text / `role="img"` on image layers and placeholders.
+  - Imperative `ImageComparisonHandle` (`setPosition`, `getPosition`, `reset`) via `useImperativeHandle`.
+  - Implemented `ImageComparisonVariant` ("default" | "card" | "glass" | "neon"), `ImageComparisonSize` ("sm" | "md" | "lg"), `ImageComparisonOrientation` ("horizontal" | "vertical") types; `VARIANT_STYLES` + `SIZE_STYLES` hard-coded hex maps.
+  - Compound and semantic alias exports: `ImageComparison`, `BeforeAfterSlider`, `CompareSlider`, `ImageReveal`, default export — each with explicit `displayName`.
+  - Exported `render_image_comparison_component` in `omnistackai_agent_engine.codegen` and registered `components/image-comparison.tsx` in `NextjsWebAdapter.generate()`.
+  - Maintained 100% diff-invariance across `ir.description` (static module constant); 0 external runtime dependencies.
+- Added `services/agent-engine/tests/test_image_comparison_component.py` with 18 tests (file-generated, diff-invariance + accessor byte-equality, `'use client'`, zero-deps imports, forwardRef + useImperativeHandle + 3 handle methods, TS types, alias/default exports, displayNames, 4 variants, 3 sizes, slider ARIA semantics, group role, pointer drag, keyboard control, clip-path reveal, orientation, labels/images, codegen export).
+- Gates: `pytest .../test_image_comparison_component.py` (18 passed); `task verify` (2,484 tests passed); `task lint`, `task security:quick`, `task env:check` passed; `task builder:demo -- minimal-blog` generated 137 files including `apps/web/components/image-comparison.tsx`. 0 model calls.
+- Static TSX sanity check: `'use client'` first line, balanced braces/parens, react-only imports, no `\"\"\"`/backslash/backtick hazards.
+
 ## 2026-09-12 — R-399
 
 - Recorded contract in `.ai/CURRENT_TASK.yaml` and `.ai/tasks/R-399.md` before code (test-first).

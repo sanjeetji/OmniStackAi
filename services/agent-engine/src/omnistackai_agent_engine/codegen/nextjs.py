@@ -65696,6 +65696,377 @@ def render_particle_network_component() -> str:
     return _PARTICLE_NETWORK_COMPONENT
 
 
+_IMAGE_COMPARISON_COMPONENT = r"""'use client';
+
+import { forwardRef, useCallback, useImperativeHandle, useRef, useState } from 'react';
+import type { CSSProperties, KeyboardEvent as ReactKeyboardEvent, PointerEvent as ReactPointerEvent } from 'react';
+
+export type ImageComparisonVariant = 'default' | 'card' | 'glass' | 'neon';
+export type ImageComparisonSize = 'sm' | 'md' | 'lg';
+export type ImageComparisonOrientation = 'horizontal' | 'vertical';
+
+export interface ImageComparisonProps {
+  beforeSrc?: string;
+  afterSrc?: string;
+  beforeAlt?: string;
+  afterAlt?: string;
+  beforeLabel?: string;
+  afterLabel?: string;
+  showLabels?: boolean;
+  orientation?: ImageComparisonOrientation;
+  variant?: ImageComparisonVariant;
+  size?: ImageComparisonSize;
+  position?: number;
+  defaultPosition?: number;
+  step?: number;
+  width?: number | string;
+  height?: number;
+  disabled?: boolean;
+  accentColor?: string;
+  ariaLabel?: string;
+  className?: string;
+  style?: CSSProperties;
+  onChange?: (position: number) => void;
+}
+
+export interface ImageComparisonHandle {
+  setPosition: (value: number) => void;
+  getPosition: () => number;
+  reset: () => void;
+}
+
+interface VariantStyle {
+  container: CSSProperties;
+  handleColor: string;
+  handleBorder: string;
+  labelBg: string;
+  labelColor: string;
+  beforePlaceholder: string;
+  afterPlaceholder: string;
+}
+
+const VARIANT_STYLES: Record<ImageComparisonVariant, VariantStyle> = {
+  default: {
+    container: { borderRadius: '8px', border: '1px solid #e2e8f0', boxShadow: 'none' },
+    handleColor: '#ffffff',
+    handleBorder: '#2563eb',
+    labelBg: 'rgba(15, 23, 42, 0.72)',
+    labelColor: '#f8fafc',
+    beforePlaceholder: 'linear-gradient(135deg, #e2e8f0, #94a3b8)',
+    afterPlaceholder: 'linear-gradient(135deg, #bfdbfe, #2563eb)',
+  },
+  card: {
+    container: { borderRadius: '12px', border: '1px solid #e2e8f0', boxShadow: '0 4px 16px rgba(0, 0, 0, 0.06)' },
+    handleColor: '#ffffff',
+    handleBorder: '#2563eb',
+    labelBg: 'rgba(15, 23, 42, 0.72)',
+    labelColor: '#f8fafc',
+    beforePlaceholder: 'linear-gradient(135deg, #e2e8f0, #94a3b8)',
+    afterPlaceholder: 'linear-gradient(135deg, #bfdbfe, #2563eb)',
+  },
+  glass: {
+    container: { borderRadius: '12px', border: '1px solid rgba(255, 255, 255, 0.4)', boxShadow: '0 8px 32px rgba(0, 0, 0, 0.12)', backdropFilter: 'blur(16px)', WebkitBackdropFilter: 'blur(16px)' },
+    handleColor: '#ffffff',
+    handleBorder: '#2563eb',
+    labelBg: 'rgba(15, 23, 42, 0.55)',
+    labelColor: '#f8fafc',
+    beforePlaceholder: 'linear-gradient(135deg, #e2e8f0, #94a3b8)',
+    afterPlaceholder: 'linear-gradient(135deg, #bfdbfe, #2563eb)',
+  },
+  neon: {
+    container: { borderRadius: '12px', border: '1px solid rgba(6, 182, 212, 0.5)', boxShadow: '0 0 24px rgba(6, 182, 212, 0.25)' },
+    handleColor: '#050811',
+    handleBorder: '#06b6d4',
+    labelBg: 'rgba(5, 8, 17, 0.8)',
+    labelColor: '#38bdf8',
+    beforePlaceholder: 'linear-gradient(135deg, #0f172a, #334155)',
+    afterPlaceholder: 'linear-gradient(135deg, #0e7490, #06b6d4)',
+  },
+};
+
+const SIZE_STYLES: Record<ImageComparisonSize, { height: number; handleSize: number; labelFont: number }> = {
+  sm: { height: 220, handleSize: 32, labelFont: 11 },
+  md: { height: 360, handleSize: 40, labelFont: 13 },
+  lg: { height: 520, handleSize: 48, labelFont: 15 },
+};
+
+function clampPct(value: number): number {
+  return Math.max(0, Math.min(100, value));
+}
+
+const ImageComparisonComponent = forwardRef<ImageComparisonHandle, ImageComparisonProps>(
+  function ImageComparison(
+    {
+      beforeSrc,
+      afterSrc,
+      beforeAlt = 'Before image',
+      afterAlt = 'After image',
+      beforeLabel = 'Before',
+      afterLabel = 'After',
+      showLabels = true,
+      orientation = 'horizontal',
+      variant = 'default',
+      size = 'md',
+      position,
+      defaultPosition = 50,
+      step = 2,
+      width = '100%',
+      height,
+      disabled = false,
+      accentColor,
+      ariaLabel = 'Before and after image comparison',
+      className,
+      style,
+      onChange,
+    }: ImageComparisonProps,
+    ref,
+  ) {
+    const isControlled = typeof position === 'number';
+    const [internalPos, setInternalPos] = useState<number>(
+      clampPct(isControlled ? (position as number) : defaultPosition),
+    );
+    const pos = isControlled ? clampPct(position as number) : internalPos;
+    const containerRef = useRef<HTMLDivElement | null>(null);
+    const draggingRef = useRef<boolean>(false);
+    const isVertical = orientation === 'vertical';
+
+    const theme = VARIANT_STYLES[variant] || VARIANT_STYLES.default;
+    const sizing = SIZE_STYLES[size] || SIZE_STYLES.md;
+    const resolvedAccent = accentColor || theme.handleBorder;
+    const boxHeight = typeof height === 'number' ? height : sizing.height;
+
+    const commit = useCallback(
+      (next: number) => {
+        const clamped = clampPct(next);
+        if (!isControlled) setInternalPos(clamped);
+        if (onChange) onChange(clamped);
+      },
+      [isControlled, onChange],
+    );
+
+    const positionFromEvent = useCallback(
+      (clientX: number, clientY: number) => {
+        const el = containerRef.current;
+        if (!el) return;
+        const rect = el.getBoundingClientRect();
+        const pct = isVertical
+          ? ((clientY - rect.top) / rect.height) * 100
+          : ((clientX - rect.left) / rect.width) * 100;
+        commit(pct);
+      },
+      [commit, isVertical],
+    );
+
+    const handlePointerDown = (e: ReactPointerEvent<HTMLDivElement>) => {
+      if (disabled) return;
+      draggingRef.current = true;
+      try {
+        (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
+      } catch {
+        // setPointerCapture may be unavailable; dragging still works via the move handler.
+      }
+      positionFromEvent(e.clientX, e.clientY);
+    };
+
+    const handlePointerMove = (e: ReactPointerEvent<HTMLDivElement>) => {
+      if (disabled || !draggingRef.current) return;
+      positionFromEvent(e.clientX, e.clientY);
+    };
+
+    const handlePointerUp = (e: ReactPointerEvent<HTMLDivElement>) => {
+      draggingRef.current = false;
+      try {
+        (e.currentTarget as HTMLElement).releasePointerCapture(e.pointerId);
+      } catch {
+        // ignore
+      }
+    };
+
+    const handleKeyDown = (e: ReactKeyboardEvent<HTMLDivElement>) => {
+      if (disabled) return;
+      let next = pos;
+      switch (e.key) {
+        case 'ArrowLeft':
+        case 'ArrowUp':
+          next = pos - step;
+          break;
+        case 'ArrowRight':
+        case 'ArrowDown':
+          next = pos + step;
+          break;
+        case 'Home':
+          next = 0;
+          break;
+        case 'End':
+          next = 100;
+          break;
+        case 'PageUp':
+          next = pos + 10;
+          break;
+        case 'PageDown':
+          next = pos - 10;
+          break;
+        default:
+          return;
+      }
+      e.preventDefault();
+      commit(next);
+    };
+
+    useImperativeHandle(
+      ref,
+      () => ({
+        setPosition: (value: number) => commit(value),
+        getPosition: () => pos,
+        reset: () => commit(defaultPosition),
+      }),
+      [commit, pos, defaultPosition],
+    );
+
+    const rounded = Math.round(pos);
+    const beforeClip = isVertical ? 'inset(0 0 ' + (100 - pos) + '% 0)' : 'inset(0 ' + (100 - pos) + '% 0 0)';
+    const cursor = disabled ? 'default' : isVertical ? 'ns-resize' : 'ew-resize';
+
+    const containerStyle: CSSProperties = {
+      position: 'relative',
+      width,
+      height: boxHeight,
+      overflow: 'hidden',
+      background: '#0f172a',
+      touchAction: 'none',
+      userSelect: 'none',
+      ...theme.container,
+      ...style,
+    };
+
+    const layerBase: CSSProperties = {
+      position: 'absolute',
+      inset: 0,
+      width: '100%',
+      height: '100%',
+      objectFit: 'cover',
+    };
+
+    const dividerStyle: CSSProperties = isVertical
+      ? { position: 'absolute', left: 0, right: 0, top: rounded + '%', height: '2px', transform: 'translateY(-1px)', background: resolvedAccent, boxShadow: variant === 'neon' ? '0 0 8px ' + resolvedAccent : 'none' }
+      : { position: 'absolute', top: 0, bottom: 0, left: rounded + '%', width: '2px', transform: 'translateX(-1px)', background: resolvedAccent, boxShadow: variant === 'neon' ? '0 0 8px ' + resolvedAccent : 'none' };
+
+    const handleWrapStyle: CSSProperties = isVertical
+      ? { position: 'absolute', top: rounded + '%', left: '50%', transform: 'translate(-50%, -50%)' }
+      : { position: 'absolute', left: rounded + '%', top: '50%', transform: 'translate(-50%, -50%)' };
+
+    const labelStyle = (corner: 'start' | 'end'): CSSProperties => ({
+      position: 'absolute',
+      top: isVertical ? (corner === 'start' ? '10px' : 'auto') : '10px',
+      bottom: isVertical ? (corner === 'end' ? '10px' : 'auto') : 'auto',
+      left: isVertical ? '10px' : corner === 'start' ? '10px' : 'auto',
+      right: isVertical ? 'auto' : corner === 'end' ? '10px' : 'auto',
+      padding: '4px 10px',
+      borderRadius: '999px',
+      fontSize: sizing.labelFont + 'px',
+      fontWeight: 600,
+      background: theme.labelBg,
+      color: theme.labelColor,
+      pointerEvents: 'none',
+    });
+
+    return (
+      <div
+        ref={containerRef}
+        className={className}
+        role="group"
+        aria-label={ariaLabel}
+        data-variant={variant}
+        data-size={size}
+        data-orientation={orientation}
+        style={containerStyle}
+      >
+        {afterSrc ? (
+          <img src={afterSrc} alt={afterAlt} draggable={false} style={layerBase} />
+        ) : (
+          <div role="img" aria-label={afterAlt} style={{ ...layerBase, background: theme.afterPlaceholder }} />
+        )}
+        {beforeSrc ? (
+          <img src={beforeSrc} alt={beforeAlt} draggable={false} style={{ ...layerBase, clipPath: beforeClip }} />
+        ) : (
+          <div role="img" aria-label={beforeAlt} style={{ ...layerBase, background: theme.beforePlaceholder, clipPath: beforeClip }} />
+        )}
+
+        <div
+          onPointerDown={handlePointerDown}
+          onPointerMove={handlePointerMove}
+          onPointerUp={handlePointerUp}
+          onPointerCancel={handlePointerUp}
+          style={{ position: 'absolute', inset: 0, cursor: cursor }}
+        >
+          {showLabels ? (
+            <>
+              <span style={labelStyle('start')}>{beforeLabel}</span>
+              <span style={labelStyle('end')}>{afterLabel}</span>
+            </>
+          ) : null}
+
+          <div style={dividerStyle} aria-hidden="true" />
+
+          <div style={handleWrapStyle}>
+            <div
+              role="slider"
+              tabIndex={disabled ? -1 : 0}
+              aria-label={ariaLabel}
+              aria-valuemin={0}
+              aria-valuemax={100}
+              aria-valuenow={rounded}
+              aria-valuetext={rounded + '%'}
+              aria-orientation={orientation}
+              aria-disabled={disabled || undefined}
+              onKeyDown={handleKeyDown}
+              style={{
+                width: sizing.handleSize + 'px',
+                height: sizing.handleSize + 'px',
+                borderRadius: '50%',
+                background: theme.handleColor,
+                border: '2px solid ' + resolvedAccent,
+                boxShadow: variant === 'neon' ? '0 0 12px ' + resolvedAccent : '0 2px 8px rgba(0, 0, 0, 0.25)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: '3px',
+                cursor: cursor,
+                outline: 'none',
+                flexDirection: isVertical ? 'column' : 'row',
+              }}
+            >
+              <span aria-hidden="true" style={{ width: isVertical ? '12px' : '2px', height: isVertical ? '2px' : '12px', background: resolvedAccent, borderRadius: '1px' }} />
+              <span aria-hidden="true" style={{ width: isVertical ? '12px' : '2px', height: isVertical ? '2px' : '12px', background: resolvedAccent, borderRadius: '1px' }} />
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  },
+);
+
+ImageComparisonComponent.displayName = 'ImageComparison';
+
+export const ImageComparison = ImageComparisonComponent;
+export const BeforeAfterSlider = ImageComparisonComponent;
+export const CompareSlider = ImageComparisonComponent;
+export const ImageReveal = ImageComparisonComponent;
+
+ImageComparison.displayName = 'ImageComparison';
+BeforeAfterSlider.displayName = 'BeforeAfterSlider';
+CompareSlider.displayName = 'CompareSlider';
+ImageReveal.displayName = 'ImageReveal';
+
+export default ImageComparisonComponent;
+"""
+
+
+def render_image_comparison_component() -> str:
+    """Render the Accessible Futuristic Reusable Before/After Image Comparison Slider Suite (R-400)."""
+    return _IMAGE_COMPARISON_COMPONENT
+
+
 _DESIGN_TOKENS_CSS = (
     "/**\n"
     " * OmniStackAI Design Tokens & Theming Engine\n"
@@ -66324,6 +66695,7 @@ class NextjsWebAdapter:
             GeneratedFile("components/audio-visualizer.tsx", _AUDIO_VISUALIZER_COMPONENT),
             GeneratedFile("components/mind-map.tsx", _MIND_MAP_COMPONENT),
             GeneratedFile("components/particle-network.tsx", _PARTICLE_NETWORK_COMPONENT),
+            GeneratedFile("components/image-comparison.tsx", _IMAGE_COMPARISON_COMPONENT),
             GeneratedFile("styles/tokens.css", _DESIGN_TOKENS_CSS),
             GeneratedFile("app/globals.css", _GLOBALS_CSS),
             GeneratedFile("app/error.tsx", _ERROR_PAGE),
