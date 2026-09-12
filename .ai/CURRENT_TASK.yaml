@@ -1,26 +1,26 @@
-task_id: R-396
-id: R-396
-title: "Accessible Futuristic Reusable Live Log Viewer & Event Stream Inspector Suite"
+task_id: R-397
+id: R-397
+title: "Accessible Futuristic Reusable Mind Map & Concept Tree Suite"
 status: DONE
 phase: MVP
 tracker_row: 34
 started_at: "2026-09-12"
 completed_at: "2026-09-12"
 objective: >-
-  Add accessible, zero-dependency, desktop-and-mobile-grade, futuristic Live Log Viewer & Event Stream Inspector
-  compound component suite (components/log-viewer.tsx) supporting real-time tail streaming with auto-scroll lock,
-  severity level filter chips (ALL, TRACE, DEBUG, INFO, WARN, ERROR, FATAL) with counters and color badges,
-  real-time search/filter with match counter and substring highlighting, source/service filtering, expandable
-  structured JSON metadata drawer, line wrap toggle, line numbers gutter, copy log line / JSON to clipboard,
-  log export to TXT and JSON, clear logs action, WAI-ARIA 1.2 log semantics (role="log", aria-live="polite",
-  aria-label="Log stream viewer"), 4 futuristic visual styling variants ("default", "card", "glass", "neon"),
-  3 size scales ("sm", "md", "lg"), React ref forwarding (forwardRef), useImperativeHandle (LogViewerHandle),
+  Add accessible, zero-dependency, desktop-and-mobile-grade, futuristic Mind Map & Concept Tree compound component
+  suite (components/mind-map.tsx) supporting hierarchical multi-layout tree algorithms (radial, tree-horizontal,
+  tree-vertical), smooth SVG bezier curved branches, interactive pan/zoom viewport (0.3x to 3x) with mouse drag,
+  collapsible subtrees with child counter badges, node selection with slide-over inspection & edit panel (label,
+  notes, tags, progress), dynamic node addition and deletion, search query filtering with highlight match tags,
+  export to PNG, vector SVG, and JSON, WAI-ARIA 1.2 application & tree semantics (role="application", role="tree",
+  role="treeitem", aria-expanded), 4 futuristic visual styling variants ("default", "card", "glass", "neon"),
+  3 size scales ("sm", "md", "lg"), React ref forwarding (forwardRef), useImperativeHandle (MindMapHandle),
   and explicit displayNames across compound exports.
 allowed_paths:
   - "services/agent-engine/src/omnistackai_agent_engine/codegen/nextjs.py"
   - "services/agent-engine/src/omnistackai_agent_engine/codegen/__init__.py"
-  - "services/agent-engine/tests/test_log_viewer_component.py"
-  - ".ai/tasks/R-396.md"
+  - "services/agent-engine/tests/test_mind_map_component.py"
+  - ".ai/tasks/R-397.md"
   - ".ai/CURRENT_TASK.yaml"
   - ".ai/PROJECT_STATE.yaml"
   - ".ai/WORK_LOG.md"
@@ -32,10 +32,10 @@ forbidden_changes:
   - "Do not break snapshot diff invariance across ir.description"
   - "Do not commit or push code to git"
 evidence:
-  verify: "Ran 2414 tests in 2.049s (OK)"
-  lint: "Lint passed."
-  security: "Stage 0 secret-policy check passed."
-  demos: "133 files generated including apps/web/components/log-viewer.tsx"
+  verify: "2431 passed in 2.01s (Stage 0 verification passed)"
+  lint: "task lint passed"
+  security: "task security:quick passed"
+  demos: "bash scripts/builder-demo.sh minimal-blog generated 134 files"
   tracker: DONE
-next_action: "Should I proceed R-397"
+next_action: "Proceed to R-398: Audio Waveform & Spectrum Visualizer Suite (components/audio-visualizer.tsx)"
 

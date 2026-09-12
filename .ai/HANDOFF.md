@@ -1,6 +1,6 @@
 # Current Handoff
 
-Task ID: R-396
+Task ID: R-397
 Status: done
 Phase: BASIC/MVP — Founder Stage 0
 Branch: `main` (the only branch; the GitHub default)
@@ -44,9 +44,35 @@ Branch: `main` (the only branch; the GitHub default)
   32. **R-394**: Image Gallery & Masonry Lightbox Suite (`components/image-gallery.tsx`)
   33. **R-395**: Network Graph & Topology Map Suite (`components/network-graph.tsx`)
   34. **R-396**: Live Log Viewer & Event Stream Inspector Suite (`components/log-viewer.tsx`)
+  35. **R-397**: Mind Map & Concept Tree Suite (`components/mind-map.tsx`)
 - Ready for next task. Still stop-and-ask only for paid cloud / DB engine / new infra / native-mobile / a materially different architecture decision.
 
 ## Completed
+
+### R-397 — Generated Accessible Futuristic Reusable Mind Map & Concept Tree Suite (components/mind-map.tsx)
+
+Enabled accessible, desktop-and-mobile-grade, futuristic Mind Map & Concept Tree compound components across generated Next.js web applications:
+- **Standalone Mind Map Suite (`apps/web/components/mind-map.tsx`)**:
+  - Implemented `MindMapVariant`, `MindMapSize`, `MindMapLayout`, `MindMapNode`, `MindMapHandle`, `MindMapControlsProps`, `NodeInspectorProps`, `MindMapProps`.
+  - Implemented compound and semantic alias exports: `MindMap`, `ConceptTree`, `BrainstormMap`, `IdeaGraph`, `MindMapControls`, `NodeInspector`, default export.
+  - Implemented hierarchical multi-layout algorithms: radial layout (center-out balanced distribution), tree-horizontal (left-to-right hierarchy), and tree-vertical (top-to-bottom hierarchy).
+  - Implemented smooth SVG cubic bezier curved branches connecting parent and child concept nodes.
+  - Implemented pan/zoom viewport (0.3x to 3x) with mouse drag panning and wheel zooming.
+  - Implemented collapsible subtrees with interactive expand/collapse toggling and child progress indicators.
+  - Implemented node selection with slide-over Node Inspector editing panel (label, notes/description, theme color palette picker, completion progress slider, add child node, delete branch).
+  - Implemented dynamic node addition and recursive subtree deletion.
+  - Implemented search input by label and notes with glowing match highlighting.
+  - Implemented export to PNG, vector SVG, and JSON formats.
+  - Implemented WAI-ARIA 1.2 application & tree semantics (`role="application"`, `role="tree"`, `role="treeitem"`, `role="toolbar"`, `role="complementary"`, `aria-label="Mind Map Canvas"`).
+  - Implemented 4 futuristic visual styling variants ("default", "card", "glass" with backdropFilter blur, "neon" cyberpunk cyan glow).
+  - Implemented 3 size scales ("sm", "md", "lg").
+  - Implemented React ref forwarding (`forwardRef`), imperative handle (`MindMapHandle`), and explicit `displayName` across all compound exports.
+  - Exported `render_mind_map_component` in `omnistackai_agent_engine.codegen` and registered `components/mind-map.tsx` in `NextjsWebAdapter.generate()`.
+  - Maintained 100% diff-invariance across `ir.description`.
+- **Verification**:
+  - 17 unit tests in `services/agent-engine/tests/test_mind_map_component.py` (all passing).
+  - `task verify` passing: 2,431 tests passed in 2.014s.
+  - `task lint`, `task security:quick`, `task builder:demo -- minimal-blog` all passing (134 files generated).
 
 ### R-396 — Generated Accessible Futuristic Reusable Live Log Viewer & Event Stream Inspector Suite (components/log-viewer.tsx)
 
@@ -631,9 +657,9 @@ Enabled accessible, desktop-and-mobile-grade, futuristic Time Picker and Time Ra
 
 ## Verification
 
-- `task verify` — pass (2,414 agent-engine tests; 17 focused R-396 tests in `test_log_viewer_component.py`).
+- `task verify` — pass (2,431 agent-engine tests; 17 focused R-397 tests in `test_mind_map_component.py`).
 - `task lint`, `task security:quick` — pass.
-- `task builder:demo minimal-blog` — pass (133 files).
+- `task builder:demo minimal-blog` — pass (134 files).
 
 ## Blockers and risks
 
@@ -642,9 +668,10 @@ Enabled accessible, desktop-and-mobile-grade, futuristic Time Picker and Time Ra
 
 ## Next action
 
-- Proceed with Task R-397 (Accessible Futuristic Reusable Mind Map & Concept Tree Suite).
+- Proceed with Task R-398 (Accessible Futuristic Reusable Audio Waveform & Spectrum Visualizer Suite: `components/audio-visualizer.tsx`).
 
 ## Next command
 
-- `pytest services/agent-engine/tests/test_mind_map_component.py`
+- `pytest services/agent-engine/tests/test_audio_visualizer_component.py`
+
 

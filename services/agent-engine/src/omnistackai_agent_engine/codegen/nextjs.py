@@ -63074,6 +63074,1272 @@ def render_log_viewer_component() -> str:
     return _LOG_VIEWER_COMPONENT
 
 
+
+
+_MIND_MAP_COMPONENT = r"""'use client';
+
+import React, {
+  forwardRef,
+  useImperativeHandle,
+  useState,
+  useRef,
+  useEffect,
+  useMemo,
+  useCallback,
+} from 'react';
+
+export type MindMapVariant = 'default' | 'card' | 'glass' | 'neon';
+export type MindMapSize = 'sm' | 'md' | 'lg';
+export type MindMapLayout = 'radial' | 'tree-horizontal' | 'tree-vertical';
+
+export interface MindMapNode {
+  id: string;
+  label: string;
+  notes?: string;
+  color?: string;
+  icon?: string;
+  collapsed?: boolean;
+  children?: MindMapNode[];
+  tags?: string[];
+  progress?: number;
+}
+
+export interface MindMapHandle {
+  zoomIn: () => void;
+  zoomOut: () => void;
+  resetZoom: () => void;
+  fitToView: () => void;
+  selectNode: (id: string | null) => void;
+  expandAll: () => void;
+  collapseAll: () => void;
+  exportAsPng: () => void;
+  exportAsSvg: () => void;
+  exportAsJson: () => void;
+  addNode: (parentId: string, node?: Partial<MindMapNode>) => void;
+  deleteNode: (id: string) => void;
+  getNodes: () => MindMapNode;
+}
+
+export interface MindMapControlsProps {
+  zoom: number;
+  onZoomIn: () => void;
+  onZoomOut: () => void;
+  onResetZoom: () => void;
+  layout: MindMapLayout;
+  onLayoutChange: (layout: MindMapLayout) => void;
+  onExpandAll: () => void;
+  onCollapseAll: () => void;
+  onExportPng: () => void;
+  onExportSvg: () => void;
+  onExportJson: () => void;
+  variant?: MindMapVariant;
+  size?: MindMapSize;
+}
+
+export interface NodeInspectorProps {
+  node: MindMapNode | null;
+  onClose: () => void;
+  onUpdate: (id: string, updates: Partial<MindMapNode>) => void;
+  onAddChild: (parentId: string) => void;
+  onDelete: (id: string) => void;
+  isRoot?: boolean;
+  variant?: MindMapVariant;
+  size?: MindMapSize;
+}
+
+export interface MindMapProps {
+  initialData?: MindMapNode;
+  data?: MindMapNode;
+  layout?: MindMapLayout;
+  variant?: MindMapVariant;
+  size?: MindMapSize;
+  title?: string;
+  allowEdit?: boolean;
+  allowExport?: boolean;
+  allowSearch?: boolean;
+  allowZoom?: boolean;
+  className?: string;
+  style?: React.CSSProperties;
+  onNodeClick?: (node: MindMapNode) => void;
+  onNodeChange?: (root: MindMapNode) => void;
+}
+
+const PALETTE = [
+  '#2563eb', // Blue
+  '#06b6d4', // Cyan
+  '#10b981', // Emerald
+  '#8b5cf6', // Purple
+  '#f59e0b', // Amber
+  '#ec4899', // Pink
+  '#ef4444', // Red
+  '#64748b', // Slate
+];
+
+const DEFAULT_ROOT: MindMapNode = {
+  id: 'root-1',
+  label: 'OmniStackAI Platform',
+  notes: 'Autonomous AI Software Creation Operating System & Unified Monorepo Compiler',
+  color: '#06b6d4',
+  tags: ['core', 'architecture'],
+  progress: 75,
+  children: [
+    {
+      id: 'node-control-plane',
+      label: 'Control Plane',
+      notes: 'PostgreSQL 18 + pgvector, Organization / Project Registry & FinOps',
+      color: '#2563eb',
+      tags: ['backend', 'postgres'],
+      progress: 60,
+      children: [
+        { id: 'sub-db', label: 'PostgreSQL 18 DB', color: '#2563eb', progress: 100 },
+        { id: 'sub-auth', label: 'JWT & RBAC Guards', color: '#2563eb', progress: 85 },
+        { id: 'sub-finops', label: 'FinOps Price Book', color: '#2563eb', progress: 90 },
+      ],
+    },
+    {
+      id: 'node-execution-plane',
+      label: 'Execution Plane',
+      notes: 'Tier 0 In-Engine AST, Tier 1 Local Preview, Tier 2 Managed Sandboxes',
+      color: '#10b981',
+      tags: ['runtime', 'sandboxes'],
+      progress: 50,
+      children: [
+        { id: 'sub-t0', label: 'Tier 0: AST Parsers', color: '#10b981', progress: 100 },
+        { id: 'sub-t1', label: 'Tier 1: Browser Preview', color: '#10b981', progress: 70 },
+        { id: 'sub-t2', label: 'Tier 2: MicroVMs', color: '#10b981', progress: 40 },
+      ],
+    },
+    {
+      id: 'node-model-fabric',
+      label: 'Model Fabric',
+      notes: 'Balanced Model Gateway with local Ollama fallback and 11 cloud providers',
+      color: '#8b5cf6',
+      tags: ['ai', 'gateway'],
+      progress: 90,
+      children: [
+        { id: 'sub-ollama', label: 'Local Ollama (Qwen)', color: '#8b5cf6', progress: 100 },
+        { id: 'sub-cloud', label: 'Cloud HTTPS Adapters', color: '#8b5cf6', progress: 95 },
+        { id: 'sub-circuit', label: 'Circuit Breaker', color: '#8b5cf6', progress: 100 },
+      ],
+    },
+    {
+      id: 'node-ui-suite',
+      label: 'Next.js App Builder',
+      notes: '70+ Accessible Futuristic Compound Components, zero external dependencies',
+      color: '#ec4899',
+      tags: ['frontend', 'components'],
+      progress: 100,
+      children: [
+        { id: 'sub-components', label: '70+ UI Components', color: '#ec4899', progress: 100 },
+        { id: 'sub-tokens', label: 'Design Tokens Engine', color: '#ec4899', progress: 100 },
+        { id: 'sub-resilience', label: 'App Router Resilience', color: '#ec4899', progress: 100 },
+      ],
+    },
+  ],
+};
+
+/* Layout position item */
+interface PositionedNode {
+  node: MindMapNode;
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+  depth: number;
+  parent?: PositionedNode;
+  children: PositionedNode[];
+}
+
+/* Recursive node tree cloning / finding */
+function findNodeById(root: MindMapNode, id: string): MindMapNode | null {
+  if (root.id === id) return root;
+  if (!root.children) return null;
+  for (const child of root.children) {
+    const found = findNodeById(child, id);
+    if (found) return found;
+  }
+  return null;
+}
+
+function updateNodeInTree(root: MindMapNode, id: string, updates: Partial<MindMapNode>): MindMapNode {
+  if (root.id === id) {
+    return { ...root, ...updates };
+  }
+  if (!root.children) return root;
+  return {
+    ...root,
+    children: root.children.map((c) => updateNodeInTree(c, id, updates)),
+  };
+}
+
+function addChildToTree(root: MindMapNode, parentId: string, newNode: MindMapNode): MindMapNode {
+  if (root.id === parentId) {
+    return {
+      ...root,
+      collapsed: false,
+      children: [...(root.children || []), newNode],
+    };
+  }
+  if (!root.children) return root;
+  return {
+    ...root,
+    children: root.children.map((c) => addChildToTree(c, parentId, newNode)),
+  };
+}
+
+function deleteNodeFromTree(root: MindMapNode, id: string): MindMapNode | null {
+  if (root.id === id) return null;
+  if (!root.children) return root;
+  return {
+    ...root,
+    children: root.children
+      .map((c) => deleteNodeFromTree(c, id))
+      .filter((c): c is MindMapNode => c !== null),
+  };
+}
+
+function setCollapseRecursive(root: MindMapNode, collapsed: boolean): MindMapNode {
+  return {
+    ...root,
+    collapsed: root.children && root.children.length > 0 ? collapsed : false,
+    children: root.children?.map((c) => setCollapseRecursive(c, collapsed)),
+  };
+}
+
+/* Multi-layout calculation */
+function computeLayout(
+  root: MindMapNode,
+  layout: MindMapLayout,
+  centerX: number,
+  centerY: number
+): { nodes: PositionedNode[]; bounds: { minX: number; maxX: number; minY: number; maxY: number } } {
+  const nodeWidth = 160;
+  const nodeHeight = 44;
+  const hGap = 70;
+  const vGap = 24;
+
+  let allNodes: PositionedNode[] = [];
+
+  if (layout === 'tree-horizontal') {
+    // Left-to-right tree layout
+    let currentY = centerY;
+
+    function layoutH(node: MindMapNode, depth: number, parent?: PositionedNode): PositionedNode {
+      const isCollapsed = node.collapsed && node.children && node.children.length > 0;
+      const childrenNodes: PositionedNode[] = [];
+
+      const posNode: PositionedNode = {
+        node,
+        x: centerX + depth * (nodeWidth + hGap),
+        y: 0, // set later
+        width: nodeWidth,
+        height: nodeHeight,
+        depth,
+        parent,
+        children: childrenNodes,
+      };
+
+      if (!isCollapsed && node.children && node.children.length > 0) {
+        node.children.forEach((child) => {
+          childrenNodes.push(layoutH(child, depth + 1, posNode));
+        });
+        // Center parent vertically between children
+        const childMinY = childrenNodes[0].y;
+        const childMaxY = childrenNodes[childrenNodes.length - 1].y;
+        posNode.y = (childMinY + childMaxY) / 2;
+      } else {
+        posNode.y = currentY;
+        currentY += nodeHeight + vGap;
+      }
+
+      allNodes.push(posNode);
+      return posNode;
+    }
+
+    const posRoot = layoutH(root, 0);
+    // Center root back around centerY
+    const deltaY = centerY - posRoot.y;
+    allNodes.forEach((n) => (n.y += deltaY));
+  } else if (layout === 'tree-vertical') {
+    // Top-to-bottom tree layout
+    let currentX = centerX;
+
+    function layoutV(node: MindMapNode, depth: number, parent?: PositionedNode): PositionedNode {
+      const isCollapsed = node.collapsed && node.children && node.children.length > 0;
+      const childrenNodes: PositionedNode[] = [];
+
+      const posNode: PositionedNode = {
+        node,
+        x: 0, // set later
+        y: centerY + depth * (nodeHeight + 60),
+        width: nodeWidth,
+        height: nodeHeight,
+        depth,
+        parent,
+        children: childrenNodes,
+      };
+
+      if (!isCollapsed && node.children && node.children.length > 0) {
+        node.children.forEach((child) => {
+          childrenNodes.push(layoutV(child, depth + 1, posNode));
+        });
+        const childMinX = childrenNodes[0].x;
+        const childMaxX = childrenNodes[childrenNodes.length - 1].x;
+        posNode.x = (childMinX + childMaxX) / 2;
+      } else {
+        posNode.x = currentX;
+        currentX += nodeWidth + 30;
+      }
+
+      allNodes.push(posNode);
+      return posNode;
+    }
+
+    const posRoot = layoutV(root, 0);
+    const deltaX = centerX - posRoot.x;
+    allNodes.forEach((n) => (n.x += deltaX));
+  } else {
+    // Radial Layout (Center out)
+    const posRoot: PositionedNode = {
+      node: root,
+      x: centerX,
+      y: centerY,
+      width: nodeWidth + 20,
+      height: nodeHeight + 8,
+      depth: 0,
+      children: [],
+    };
+    allNodes.push(posRoot);
+
+    const children = root.children || [];
+    if (!root.collapsed && children.length > 0) {
+      const leftChildren: MindMapNode[] = [];
+      const rightChildren: MindMapNode[] = [];
+
+      children.forEach((c, i) => {
+        if (i % 2 === 0) rightChildren.push(c);
+        else leftChildren.push(c);
+      });
+
+      // Layout Right side
+      let rightY = centerY - ((rightChildren.length - 1) * (nodeHeight + vGap)) / 2;
+      rightChildren.forEach((child) => {
+        function layoutBranch(cNode: MindMapNode, depth: number, parentP: PositionedNode, yPos: number): PositionedNode {
+          const pNode: PositionedNode = {
+            node: cNode,
+            x: centerX + depth * (nodeWidth + hGap),
+            y: yPos,
+            width: nodeWidth,
+            height: nodeHeight,
+            depth,
+            parent: parentP,
+            children: [],
+          };
+          allNodes.push(pNode);
+
+          if (!cNode.collapsed && cNode.children && cNode.children.length > 0) {
+            let childY = yPos - ((cNode.children.length - 1) * (nodeHeight + vGap)) / 2;
+            cNode.children.forEach((cc) => {
+              pNode.children.push(layoutBranch(cc, depth + 1, pNode, childY));
+              childY += nodeHeight + vGap;
+            });
+          }
+          return pNode;
+        }
+
+        posRoot.children.push(layoutBranch(child, 1, posRoot, rightY));
+        rightY += nodeHeight + vGap;
+      });
+
+      // Layout Left side
+      let leftY = centerY - ((leftChildren.length - 1) * (nodeHeight + vGap)) / 2;
+      leftChildren.forEach((child) => {
+        function layoutBranchLeft(cNode: MindMapNode, depth: number, parentP: PositionedNode, yPos: number): PositionedNode {
+          const pNode: PositionedNode = {
+            node: cNode,
+            x: centerX - depth * (nodeWidth + hGap),
+            y: yPos,
+            width: nodeWidth,
+            height: nodeHeight,
+            depth,
+            parent: parentP,
+            children: [],
+          };
+          allNodes.push(pNode);
+
+          if (!cNode.collapsed && cNode.children && cNode.children.length > 0) {
+            let childY = yPos - ((cNode.children.length - 1) * (nodeHeight + vGap)) / 2;
+            cNode.children.forEach((cc) => {
+              pNode.children.push(layoutBranchLeft(cc, depth + 1, pNode, childY));
+              childY += nodeHeight + vGap;
+            });
+          }
+          return pNode;
+        }
+
+        posRoot.children.push(layoutBranchLeft(child, 1, posRoot, leftY));
+        leftY += nodeHeight + vGap;
+      });
+    }
+  }
+
+  // Calculate bounding box
+  let minX = Infinity,
+    maxX = -Infinity,
+    minY = Infinity,
+    maxY = -Infinity;
+  allNodes.forEach((n) => {
+    minX = Math.min(minX, n.x - n.width / 2);
+    maxX = Math.max(maxX, n.x + n.width / 2);
+    minY = Math.min(minY, n.y - n.height / 2);
+    maxY = Math.max(maxY, n.y + n.height / 2);
+  });
+
+  return {
+    nodes: allNodes,
+    bounds: {
+      minX: isFinite(minX) ? minX : centerX - 200,
+      maxX: isFinite(maxX) ? maxX : centerX + 200,
+      minY: isFinite(minY) ? minY : centerY - 200,
+      maxY: isFinite(maxY) ? maxY : centerY + 200,
+    },
+  };
+}
+
+/* Vector Icons */
+function PlusIcon() {
+  return (
+    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
+      <line x1="12" y1="5" x2="12" y2="19" />
+      <line x1="5" y1="12" x2="19" y2="12" />
+    </svg>
+  );
+}
+
+function MinusIcon() {
+  return (
+    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
+      <line x1="5" y1="12" x2="19" y2="12" />
+    </svg>
+  );
+}
+
+function ResetIcon() {
+  return (
+    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8" />
+      <path d="M3 3v5h5" />
+    </svg>
+  );
+}
+
+function DownloadIcon() {
+  return (
+    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+      <polyline points="7 10 12 15 17 10" />
+      <line x1="12" y1="15" x2="12" y2="3" />
+    </svg>
+  );
+}
+
+function TrashIcon() {
+  return (
+    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <polyline points="3 6 5 6 21 6" />
+      <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
+    </svg>
+  );
+}
+
+function SearchIcon() {
+  return (
+    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+      <circle cx="11" cy="11" r="8" />
+      <line x1="21" y1="21" x2="16.65" y2="16.65" />
+    </svg>
+  );
+}
+
+/* Toolbar Controls */
+export const MindMapControls = forwardRef<HTMLDivElement, MindMapControlsProps>(function MindMapControls(
+  {
+    zoom,
+    onZoomIn,
+    onZoomOut,
+    onResetZoom,
+    layout,
+    onLayoutChange,
+    onExpandAll,
+    onCollapseAll,
+    onExportPng,
+    onExportSvg,
+    onExportJson,
+    variant = 'default',
+    size = 'md',
+  },
+  ref
+) {
+  const isNeon = variant === 'neon';
+  const isGlass = variant === 'glass';
+
+  const barStyle: React.CSSProperties = {
+    display: 'flex',
+    alignItems: 'center',
+    gap: '6px',
+    padding: size === 'sm' ? '4px 8px' : '6px 12px',
+    borderRadius: '8px',
+    backgroundColor: isNeon
+      ? 'rgba(15, 23, 42, 0.9)'
+      : isGlass
+      ? 'rgba(255, 255, 255, 0.8)'
+      : 'var(--color-surface, #ffffff)',
+    border: isNeon ? '1px solid rgba(6, 182, 212, 0.4)' : '1px solid var(--color-border, #e2e8f0)',
+    boxShadow: isNeon ? '0 0 12px rgba(6, 182, 212, 0.2)' : '0 2px 8px rgba(0, 0, 0, 0.08)',
+    backdropFilter: isGlass ? 'blur(12px)' : undefined,
+    fontSize: size === 'sm' ? '12px' : '13px',
+  };
+
+  const btnStyle: React.CSSProperties = {
+    display: 'inline-flex',
+    alignItems: 'center',
+    gap: '4px',
+    padding: size === 'sm' ? '3px 6px' : '4px 8px',
+    borderRadius: '4px',
+    border: isNeon ? '1px solid rgba(255, 255, 255, 0.15)' : '1px solid var(--color-border, #e2e8f0)',
+    backgroundColor: isNeon ? 'rgba(0, 0, 0, 0.3)' : 'transparent',
+    color: isNeon ? '#cbd5e1' : 'var(--color-text, #0f172a)',
+    cursor: 'pointer',
+    fontSize: 'inherit',
+    fontWeight: 500,
+  };
+
+  return (
+    <div ref={ref} style={barStyle} role="toolbar" aria-label="Mind map controls">
+      {/* Zoom Controls */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: '2px' }}>
+        <button type="button" style={btnStyle} onClick={onZoomOut} title="Zoom out" aria-label="Zoom out">
+          <MinusIcon />
+        </button>
+        <span style={{ minWidth: '42px', textAlign: 'center', fontWeight: 600, color: isNeon ? '#38bdf8' : undefined }}>
+          {Math.round(zoom * 100)}%
+        </span>
+        <button type="button" style={btnStyle} onClick={onZoomIn} title="Zoom in" aria-label="Zoom in">
+          <PlusIcon />
+        </button>
+        <button type="button" style={btnStyle} onClick={onResetZoom} title="Reset zoom (100%)" aria-label="Reset zoom">
+          <ResetIcon />
+        </button>
+      </div>
+
+      <div style={{ width: '1px', height: '16px', backgroundColor: isNeon ? '#334155' : '#cbd5e1', margin: '0 4px' }} />
+
+      {/* Layout Selector */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+        {(['radial', 'tree-horizontal', 'tree-vertical'] as MindMapLayout[]).map((l) => (
+          <button
+            key={l}
+            type="button"
+            style={{
+              ...btnStyle,
+              backgroundColor: layout === l ? (isNeon ? '#06b6d4' : '#2563eb') : undefined,
+              color: layout === l ? '#ffffff' : undefined,
+              borderColor: layout === l ? (isNeon ? '#06b6d4' : '#2563eb') : undefined,
+            }}
+            onClick={() => onLayoutChange(l)}
+          >
+            {l === 'radial' ? 'Radial' : l === 'tree-horizontal' ? 'Horizontal' : 'Vertical'}
+          </button>
+        ))}
+      </div>
+
+      <div style={{ width: '1px', height: '16px', backgroundColor: isNeon ? '#334155' : '#cbd5e1', margin: '0 4px' }} />
+
+      {/* Expand / Collapse All */}
+      <button type="button" style={btnStyle} onClick={onExpandAll} title="Expand all branches">
+        Expand
+      </button>
+      <button type="button" style={btnStyle} onClick={onCollapseAll} title="Collapse all branches">
+        Collapse
+      </button>
+
+      <div style={{ width: '1px', height: '16px', backgroundColor: isNeon ? '#334155' : '#cbd5e1', margin: '0 4px' }} />
+
+      {/* Export Options */}
+      <button type="button" style={btnStyle} onClick={onExportPng} title="Export as PNG image">
+        <DownloadIcon /> PNG
+      </button>
+      <button type="button" style={btnStyle} onClick={onExportSvg} title="Export as SVG vector">
+        <DownloadIcon /> SVG
+      </button>
+      <button type="button" style={btnStyle} onClick={onExportJson} title="Export as JSON data">
+        <DownloadIcon /> JSON
+      </button>
+    </div>
+  );
+});
+MindMapControls.displayName = 'MindMapControls';
+
+/* Slide-over Node Inspector */
+export const NodeInspector = forwardRef<HTMLDivElement, NodeInspectorProps>(function NodeInspector(
+  { node, onClose, onUpdate, onAddChild, onDelete, isRoot = false, variant = 'default', size = 'md' },
+  ref
+) {
+  if (!node) return null;
+
+  const isNeon = variant === 'neon';
+  const isGlass = variant === 'glass';
+
+  const panelStyle: React.CSSProperties = {
+    position: 'absolute',
+    top: '12px',
+    right: '12px',
+    width: size === 'sm' ? '260px' : '300px',
+    maxHeight: 'calc(100% - 24px)',
+    overflowY: 'auto',
+    borderRadius: '8px',
+    backgroundColor: isNeon
+      ? 'rgba(15, 23, 42, 0.95)'
+      : isGlass
+      ? 'rgba(255, 255, 255, 0.85)'
+      : 'var(--color-surface, #ffffff)',
+    border: isNeon ? '1px solid rgba(6, 182, 212, 0.4)' : '1px solid var(--color-border, #e2e8f0)',
+    boxShadow: isNeon ? '0 0 20px rgba(6, 182, 212, 0.25)' : '0 4px 16px rgba(0, 0, 0, 0.15)',
+    backdropFilter: isGlass ? 'blur(16px)' : undefined,
+    padding: '14px',
+    zIndex: 20,
+    fontSize: size === 'sm' ? '12px' : '13px',
+    display: 'flex',
+    flexDirection: 'column',
+    gap: '12px',
+  };
+
+  const inputStyle: React.CSSProperties = {
+    width: '100%',
+    padding: '6px 8px',
+    borderRadius: '4px',
+    border: isNeon ? '1px solid #334155' : '1px solid var(--color-border, #cbd5e1)',
+    backgroundColor: isNeon ? '#0f172a' : '#f8fafc',
+    color: isNeon ? '#f8fafc' : '#0f172a',
+    outline: 'none',
+    fontSize: 'inherit',
+  };
+
+  return (
+    <div ref={ref} style={panelStyle} role="complementary" aria-label="Node Inspector">
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <span style={{ fontWeight: 700, color: isNeon ? '#38bdf8' : '#2563eb' }}>
+          {isRoot ? 'Root Concept' : 'Node Details'}
+        </span>
+        <button
+          type="button"
+          onClick={onClose}
+          style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#94a3b8', fontSize: '14px' }}
+        >
+          ✕
+        </button>
+      </div>
+
+      {/* Label Edit */}
+      <div>
+        <label style={{ display: 'block', fontSize: '11px', color: '#94a3b8', marginBottom: '4px' }}>
+          Label
+        </label>
+        <input
+          type="text"
+          value={node.label}
+          onChange={(e) => onUpdate(node.id, { label: e.target.value })}
+          style={inputStyle}
+          aria-label="Node label"
+        />
+      </div>
+
+      {/* Notes */}
+      <div>
+        <label style={{ display: 'block', fontSize: '11px', color: '#94a3b8', marginBottom: '4px' }}>
+          Notes & Description
+        </label>
+        <textarea
+          rows={3}
+          value={node.notes || ''}
+          placeholder="Add concept details..."
+          onChange={(e) => onUpdate(node.id, { notes: e.target.value })}
+          style={{ ...inputStyle, resize: 'vertical' }}
+          aria-label="Node notes"
+        />
+      </div>
+
+      {/* Color Palette */}
+      <div>
+        <label style={{ display: 'block', fontSize: '11px', color: '#94a3b8', marginBottom: '4px' }}>
+          Theme Accent
+        </label>
+        <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
+          {PALETTE.map((c) => (
+            <button
+              key={c}
+              type="button"
+              onClick={() => onUpdate(node.id, { color: c })}
+              style={{
+                width: '20px',
+                height: '20px',
+                borderRadius: '50%',
+                backgroundColor: c,
+                border: node.color === c ? '2px solid #ffffff' : 'none',
+                boxShadow: node.color === c ? '0 0 6px ' + c : undefined,
+                cursor: 'pointer',
+              }}
+              title={c}
+            />
+          ))}
+        </div>
+      </div>
+
+      {/* Progress Slider */}
+      <div>
+        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '11px', color: '#94a3b8' }}>
+          <span>Completion Progress</span>
+          <span>{node.progress || 0}%</span>
+        </div>
+        <input
+          type="range"
+          min={0}
+          max={100}
+          value={node.progress || 0}
+          onChange={(e) => onUpdate(node.id, { progress: Number(e.target.value) })}
+          style={{ width: '100%', marginTop: '4px' }}
+        />
+      </div>
+
+      {/* Actions */}
+      <div style={{ display: 'flex', gap: '8px', marginTop: '6px' }}>
+        <button
+          type="button"
+          onClick={() => onAddChild(node.id)}
+          style={{
+            flex: 1,
+            padding: '6px',
+            borderRadius: '4px',
+            border: isNeon ? '1px solid #06b6d4' : '1px solid #2563eb',
+            backgroundColor: isNeon ? 'rgba(6, 182, 212, 0.2)' : 'rgba(37, 99, 235, 0.1)',
+            color: isNeon ? '#38bdf8' : '#2563eb',
+            cursor: 'pointer',
+            fontWeight: 600,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            gap: '4px',
+          }}
+        >
+          <PlusIcon /> Child Node
+        </button>
+
+        {!isRoot && (
+          <button
+            type="button"
+            onClick={() => onDelete(node.id)}
+            style={{
+              padding: '6px 10px',
+              borderRadius: '4px',
+              border: '1px solid #ef4444',
+              backgroundColor: 'rgba(239, 68, 68, 0.1)',
+              color: '#ef4444',
+              cursor: 'pointer',
+            }}
+            title="Delete this node and its branch"
+          >
+            <TrashIcon />
+          </button>
+        )}
+      </div>
+    </div>
+  );
+});
+NodeInspector.displayName = 'NodeInspector';
+
+/* Main MindMap Component */
+const MindMapComponent = forwardRef<MindMapHandle, MindMapProps>(function MindMap(
+  {
+    initialData,
+    data: controlledData,
+    layout: initialLayout = 'radial',
+    variant = 'default',
+    size = 'md',
+    title = 'Concept Mind Map',
+    allowEdit = true,
+    allowExport = true,
+    allowSearch = true,
+    allowZoom = true,
+    className,
+    style,
+    onNodeClick,
+    onNodeChange,
+  },
+  ref
+) {
+  const [root, setRoot] = useState<MindMapNode>(() => controlledData ?? initialData ?? DEFAULT_ROOT);
+  const [layout, setLayout] = useState<MindMapLayout>(initialLayout);
+  const [zoom, setZoom] = useState(1.0);
+  const [pan, setPan] = useState({ x: 0, y: 0 });
+  const [isPanning, setIsPanning] = useState(false);
+  const [startPan, setStartPan] = useState({ x: 0, y: 0 });
+  const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
+  const [searchQuery, setSearchQuery] = useState('');
+
+  const svgRef = useRef<SVGSVGElement>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  // Sync if controlled data changes
+  useEffect(() => {
+    if (controlledData) setRoot(controlledData);
+  }, [controlledData]);
+
+  // Notify on change
+  const notifyChange = (newRoot: MindMapNode) => {
+    setRoot(newRoot);
+    if (onNodeChange) onNodeChange(newRoot);
+  };
+
+  // Zoom handlers
+  const handleZoomIn = () => setZoom((z) => Math.min(3.0, +(z + 0.15).toFixed(2)));
+  const handleZoomOut = () => setZoom((z) => Math.max(0.3, +(z - 0.15).toFixed(2)));
+  const handleResetZoom = () => {
+    setZoom(1.0);
+    setPan({ x: 0, y: 0 });
+  };
+
+  // Wheel zoom
+  const handleWheel = (e: React.WheelEvent) => {
+    if (!allowZoom) return;
+    e.preventDefault();
+    const delta = e.deltaY > 0 ? -0.08 : 0.08;
+    setZoom((z) => Math.min(3.0, Math.max(0.3, +(z + delta).toFixed(2))));
+  };
+
+  // Mouse pan handlers
+  const handleMouseDown = (e: React.MouseEvent) => {
+    if (e.target !== svgRef.current && (e.target as HTMLElement).tagName !== 'svg') return;
+    setIsPanning(true);
+    setStartPan({ x: e.clientX - pan.x, y: e.clientY - pan.y });
+  };
+
+  const handleMouseMove = (e: React.MouseEvent) => {
+    if (!isPanning) return;
+    setPan({ x: e.clientX - startPan.x, y: e.clientY - startPan.y });
+  };
+
+  const handleMouseUp = () => setIsPanning(false);
+
+  // Collapse toggle
+  const toggleCollapse = (nodeId: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    const target = findNodeById(root, nodeId);
+    if (!target) return;
+    const updated = updateNodeInTree(root, nodeId, { collapsed: !target.collapsed });
+    notifyChange(updated);
+  };
+
+  // Node editing actions
+  const handleUpdateNode = (id: string, updates: Partial<MindMapNode>) => {
+    const updated = updateNodeInTree(root, id, updates);
+    notifyChange(updated);
+  };
+
+  const handleAddChild = (parentId: string, partialNode?: Partial<MindMapNode>) => {
+    const newId = `node-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`;
+    const newNode: MindMapNode = {
+      id: newId,
+      label: partialNode?.label || 'New Concept',
+      color: partialNode?.color || PALETTE[Math.floor(Math.random() * PALETTE.length)],
+      progress: 0,
+      ...partialNode,
+    };
+    const updated = addChildToTree(root, parentId, newNode);
+    notifyChange(updated);
+    setSelectedNodeId(newId);
+  };
+
+  const handleDeleteNode = (id: string) => {
+    if (id === root.id) return; // cannot delete root
+    const updated = deleteNodeFromTree(root, id);
+    if (updated) {
+      notifyChange(updated);
+      setSelectedNodeId(null);
+    }
+  };
+
+  // Expand / collapse all
+  const handleExpandAll = () => notifyChange(setCollapseRecursive(root, false));
+  const handleCollapseAll = () => notifyChange(setCollapseRecursive(root, true));
+
+  // Export handlers
+  const handleExportJson = () => {
+    const content = JSON.stringify(root, null, 2);
+    const blob = new Blob([content], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `mindmap-${root.label.toLowerCase().replace(/\s+/g, '-')}.json`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  };
+
+  const handleExportSvg = () => {
+    if (!svgRef.current) return;
+    const svgData = new XMLSerializer().serializeToString(svgRef.current);
+    const blob = new Blob([svgData], { type: 'image/svg+xml;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `mindmap-${root.label.toLowerCase().replace(/\s+/g, '-')}.svg`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  };
+
+  const handleExportPng = () => {
+    if (!svgRef.current) return;
+    const svgData = new XMLSerializer().serializeToString(svgRef.current);
+    const canvas = document.createElement('canvas');
+    const ctx = canvas.getContext('2d');
+    const img = new Image();
+    const svgBlob = new Blob([svgData], { type: 'image/svg+xml;charset=utf-8' });
+    const url = URL.createObjectURL(svgBlob);
+
+    img.onload = () => {
+      canvas.width = svgRef.current?.clientWidth || 1000;
+      canvas.height = svgRef.current?.clientHeight || 600;
+      if (ctx) {
+        ctx.fillStyle = variant === 'neon' ? '#050811' : '#ffffff';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        ctx.drawImage(img, 0, 0);
+        const pngUrl = canvas.toDataURL('image/png');
+        const a = document.createElement('a');
+        a.href = pngUrl;
+        a.download = `mindmap-${root.label.toLowerCase().replace(/\s+/g, '-')}.png`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+      }
+      URL.revokeObjectURL(url);
+    };
+    img.src = url;
+  };
+
+  // Expose Imperative Handle
+  useImperativeHandle(
+    ref,
+    () => ({
+      zoomIn: handleZoomIn,
+      zoomOut: handleZoomOut,
+      resetZoom: handleResetZoom,
+      fitToView: handleResetZoom,
+      selectNode: setSelectedNodeId,
+      expandAll: handleExpandAll,
+      collapseAll: handleCollapseAll,
+      exportAsPng: handleExportPng,
+      exportAsSvg: handleExportSvg,
+      exportAsJson: handleExportJson,
+      addNode: (parentId, node) => handleAddChild(parentId, node),
+      deleteNode: handleDeleteNode,
+      getNodes: () => root,
+    }),
+    [root]
+  );
+
+  // Compute Layout Positions
+  const { nodes: positionedNodes } = useMemo(() => {
+    return computeLayout(root, layout, 500, 300);
+  }, [root, layout]);
+
+  // Selected node lookup
+  const selectedNode = useMemo(() => {
+    if (!selectedNodeId) return null;
+    return findNodeById(root, selectedNodeId);
+  }, [root, selectedNodeId]);
+
+  const isNeon = variant === 'neon';
+  const isGlass = variant === 'glass';
+  const isCard = variant === 'card';
+
+  return (
+    <div
+      ref={containerRef}
+      className={className}
+      style={{
+        position: 'relative',
+        width: '100%',
+        height: '560px',
+        borderRadius: '10px',
+        border: isNeon ? '1px solid rgba(6, 182, 212, 0.4)' : '1px solid var(--color-border, #e2e8f0)',
+        backgroundColor: isNeon
+          ? '#050811'
+          : isGlass
+          ? 'rgba(255, 255, 255, 0.65)'
+          : isCard
+          ? 'var(--color-surface, #ffffff)'
+          : 'var(--color-surface, #ffffff)',
+        boxShadow: isNeon ? '0 0 24px rgba(6, 182, 212, 0.15)' : '0 2px 8px rgba(0, 0, 0, 0.06)',
+        backdropFilter: isGlass ? 'blur(16px)' : undefined,
+        overflow: 'hidden',
+        userSelect: 'none',
+        ...style,
+      }}
+      role="application"
+      aria-label="Mind Map Canvas"
+      data-variant={variant}
+      data-size={size}
+    >
+      {/* Top Floating Controls Bar */}
+      <div
+        style={{
+          position: 'absolute',
+          top: '12px',
+          left: '12px',
+          zIndex: 10,
+          display: 'flex',
+          alignItems: 'center',
+          gap: '8px',
+        }}
+      >
+        <MindMapControls
+          zoom={zoom}
+          onZoomIn={handleZoomIn}
+          onZoomOut={handleZoomOut}
+          onResetZoom={handleResetZoom}
+          layout={layout}
+          onLayoutChange={setLayout}
+          onExpandAll={handleExpandAll}
+          onCollapseAll={handleCollapseAll}
+          onExportPng={handleExportPng}
+          onExportSvg={handleExportSvg}
+          onExportJson={handleExportJson}
+          variant={variant}
+          size={size}
+        />
+
+        {/* Search Bar */}
+        {allowSearch && (
+          <div
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '6px',
+              padding: size === 'sm' ? '4px 8px' : '6px 10px',
+              borderRadius: '8px',
+              backgroundColor: isNeon ? 'rgba(15, 23, 42, 0.9)' : 'var(--color-surface, #ffffff)',
+              border: isNeon ? '1px solid rgba(6, 182, 212, 0.4)' : '1px solid var(--color-border, #e2e8f0)',
+              color: isNeon ? '#38bdf8' : '#0f172a',
+              fontSize: '12px',
+            }}
+          >
+            <SearchIcon />
+            <input
+              type="text"
+              placeholder="Search concepts..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              style={{
+                background: 'transparent',
+                border: 'none',
+                outline: 'none',
+                color: 'inherit',
+                width: '120px',
+              }}
+              aria-label="Search mind map concepts"
+            />
+          </div>
+        )}
+      </div>
+
+      {/* SVG Canvas Area */}
+      <svg
+        ref={svgRef}
+        width="100%"
+        height="100%"
+        onWheel={handleWheel}
+        onMouseDown={handleMouseDown}
+        onMouseMove={handleMouseMove}
+        onMouseUp={handleMouseUp}
+        style={{
+          cursor: isPanning ? 'grabbing' : 'grab',
+          backgroundColor: isNeon ? '#050811' : '#f8fafc',
+        }}
+        role="tree"
+        aria-label={title}
+      >
+        <g transform={`translate(${pan.x}, ${pan.y}) scale(${zoom})`}>
+          {/* Connecting Curved Lines */}
+          {positionedNodes.map((pNode) => {
+            if (!pNode.parent) return null;
+            const parent = pNode.parent;
+            const isMatch = searchQuery && pNode.node.label.toLowerCase().includes(searchQuery.toLowerCase());
+            const strokeColor = pNode.node.color || parent.node.color || (isNeon ? '#06b6d4' : '#94a3b8');
+
+            // Cubic bezier curve path
+            const startX = parent.x;
+            const startY = parent.y;
+            const endX = pNode.x;
+            const endY = pNode.y;
+            const dx = endX - startX;
+            const dy = endY - startY;
+            const cp1X = startX + dx * 0.5;
+            const cp1Y = startY;
+            const cp2X = startX + dx * 0.5;
+            const cp2Y = endY;
+
+            return (
+              <g key={`edge-${parent.node.id}-${pNode.node.id}`}>
+                <path
+                  d={`M ${startX} ${startY} C ${cp1X} ${cp1Y}, ${cp2X} ${cp2Y}, ${endX} ${endY}`}
+                  fill="none"
+                  stroke={strokeColor}
+                  strokeWidth={isNeon ? 2.5 : 2}
+                  strokeOpacity={isMatch ? 1 : 0.65}
+                  style={{
+                    filter: isNeon ? `drop-shadow(0 0 6px ${strokeColor})` : undefined,
+                    transition: 'all 0.2s ease',
+                  }}
+                />
+              </g>
+            );
+          })}
+
+          {/* Node Cards */}
+          {positionedNodes.map((pNode) => {
+            const isSelected = selectedNodeId === pNode.node.id;
+            const isRoot = pNode.depth === 0;
+            const hasChildren = pNode.node.children && pNode.node.children.length > 0;
+            const isCollapsed = pNode.node.collapsed;
+            const accent = pNode.node.color || '#2563eb';
+            const isMatch = searchQuery && pNode.node.label.toLowerCase().includes(searchQuery.toLowerCase());
+
+            return (
+              <g
+                key={pNode.node.id}
+                transform={`translate(${pNode.x - pNode.width / 2}, ${pNode.y - pNode.height / 2})`}
+                onClick={() => {
+                  setSelectedNodeId(pNode.node.id);
+                  if (onNodeClick) onNodeClick(pNode.node);
+                }}
+                style={{ cursor: 'pointer' }}
+                role="treeitem"
+                aria-expanded={hasChildren ? !isCollapsed : undefined}
+                aria-selected={isSelected}
+              >
+                {/* Node Box */}
+                <rect
+                  width={pNode.width}
+                  height={pNode.height}
+                  rx={isRoot ? 8 : 6}
+                  fill={isNeon ? 'rgba(15, 23, 42, 0.95)' : '#ffffff'}
+                  stroke={
+                    isSelected
+                      ? isNeon
+                        ? '#38bdf8'
+                        : '#2563eb'
+                      : isMatch
+                      ? '#f59e0b'
+                      : accent
+                  }
+                  strokeWidth={isSelected || isMatch ? 2.5 : 1.5}
+                  style={{
+                    filter: isNeon
+                      ? `drop-shadow(0 0 ${isSelected ? '12px' : '6px'} ${accent})`
+                      : 'drop-shadow(0 2px 4px rgba(0,0,0,0.06))',
+                    transition: 'all 0.15s ease',
+                  }}
+                />
+
+                {/* Progress bar background indicator */}
+                {pNode.node.progress !== undefined && pNode.node.progress > 0 && (
+                  <rect
+                    x={2}
+                    y={pNode.height - 4}
+                    width={((pNode.width - 4) * pNode.node.progress) / 100}
+                    height={2}
+                    rx={1}
+                    fill={accent}
+                  />
+                )}
+
+                {/* Node Label */}
+                <text
+                  x={12}
+                  y={pNode.height / 2 + 4}
+                  fill={isNeon ? '#f8fafc' : '#0f172a'}
+                  fontSize={isRoot ? '13px' : '12px'}
+                  fontWeight={isRoot ? 700 : 500}
+                  style={{ pointerEvents: 'none' }}
+                >
+                  {pNode.node.label.length > 18 ? pNode.node.label.slice(0, 16) + '…' : pNode.node.label}
+                </text>
+
+                {/* Collapse / Expand Trigger Circle */}
+                {hasChildren && (
+                  <g
+                    transform={`translate(${pNode.width - 12}, ${pNode.height / 2})`}
+                    onClick={(e) => toggleCollapse(pNode.node.id, e)}
+                  >
+                    <circle
+                      r={7}
+                      fill={accent}
+                      stroke={isNeon ? '#0f172a' : '#ffffff'}
+                      strokeWidth={1.5}
+                    />
+                    <text
+                      x={0}
+                      y={3}
+                      fill="#ffffff"
+                      fontSize="9px"
+                      fontWeight={700}
+                      textAnchor="middle"
+                      style={{ pointerEvents: 'none' }}
+                    >
+                      {isCollapsed ? pNode.node.children!.length : '−'}
+                    </text>
+                  </g>
+                )}
+              </g>
+            );
+          })}
+        </g>
+      </svg>
+
+      {/* Slide-Over Node Inspector */}
+      {allowEdit && selectedNode && (
+        <NodeInspector
+          node={selectedNode}
+          isRoot={selectedNode.id === root.id}
+          onClose={() => setSelectedNodeId(null)}
+          onUpdate={handleUpdateNode}
+          onAddChild={handleAddChild}
+          onDelete={handleDeleteNode}
+          variant={variant}
+          size={size}
+        />
+      )}
+    </div>
+  );
+});
+
+MindMapComponent.displayName = 'MindMap';
+
+export const MindMap = MindMapComponent;
+export const ConceptTree = MindMapComponent;
+export const BrainstormMap = MindMapComponent;
+export const IdeaGraph = MindMapComponent;
+export default MindMapComponent;"""
+
+
+def render_mind_map_component() -> str:
+    """Return the static TypeScript source code for components/mind-map.tsx."""
+    return _MIND_MAP_COMPONENT
+
+
 _DESIGN_TOKENS_CSS = (
     "/**\n"
     " * OmniStackAI Design Tokens & Theming Engine\n"
@@ -63699,6 +64965,7 @@ class NextjsWebAdapter:
             GeneratedFile("components/image-gallery.tsx", _IMAGE_GALLERY_COMPONENT),
             GeneratedFile("components/network-graph.tsx", _NETWORK_GRAPH_COMPONENT),
             GeneratedFile("components/log-viewer.tsx", _LOG_VIEWER_COMPONENT),
+            GeneratedFile("components/mind-map.tsx", _MIND_MAP_COMPONENT),
             GeneratedFile("styles/tokens.css", _DESIGN_TOKENS_CSS),
             GeneratedFile("app/globals.css", _GLOBALS_CSS),
             GeneratedFile("app/error.tsx", _ERROR_PAGE),

@@ -1,5 +1,29 @@
 # Work Log
 
+## 2026-09-12 — R-397
+
+- Recorded contract in `.ai/CURRENT_TASK.yaml` and `.ai/tasks/R-397.md` (status in_progress → done).
+- `nextjs.py`:
+  - Added `_MIND_MAP_COMPONENT` static template implementing accessible, desktop-and-mobile-grade, futuristic Mind Map & Concept Tree compound component suite (`apps/web/components/mind-map.tsx`).
+  - Implemented `MindMapVariant` ("default" | "card" | "glass" | "neon"), `MindMapSize` ("sm" | "md" | "lg"), `MindMapLayout` ("radial" | "tree-horizontal" | "tree-vertical"), `MindMapNode`, `MindMapHandle`, `MindMapControlsProps`, `NodeInspectorProps`, `MindMapProps` interfaces.
+  - Implemented compound and semantic alias exports: `MindMap`, `ConceptTree`, `BrainstormMap`, `IdeaGraph`, `MindMapControls`, `NodeInspector`, default export.
+  - Implemented hierarchical multi-layout algorithms: radial layout (center-out balanced distribution), tree-horizontal (left-to-right hierarchy), and tree-vertical (top-to-bottom hierarchy).
+  - Implemented smooth SVG cubic bezier curved branches connecting parent and child concept nodes.
+  - Implemented pan/zoom viewport (0.3x to 3x) with mouse drag panning and wheel zooming.
+  - Implemented collapsible subtrees with interactive expand/collapse toggling and child progress indicators.
+  - Implemented node selection with slide-over Node Inspector editing panel (label, notes/description, theme color palette picker, completion progress slider, add child node, delete branch).
+  - Implemented dynamic node addition and recursive subtree deletion.
+  - Implemented search input by label and notes with glowing match highlighting.
+  - Implemented export to PNG, vector SVG, and JSON formats.
+  - Implemented WAI-ARIA 1.2 application & tree semantics (`role="application"`, `role="tree"`, `role="treeitem"`, `role="toolbar"`, `role="complementary"`, `aria-label="Mind Map Canvas"`).
+  - Implemented 4 futuristic visual styling variants ("default", "card", "glass" with backdropFilter blur, "neon" cyberpunk cyan glow).
+  - Implemented 3 size scales ("sm", "md", "lg").
+  - Implemented React ref forwarding (`forwardRef`), imperative handle (`MindMapHandle`), and explicit `displayName` across all compound exports.
+  - Exported `render_mind_map_component` in `omnistackai_agent_engine.codegen` and registered `components/mind-map.tsx` in `NextjsWebAdapter.generate()`.
+  - Maintained 100% diff-invariance across `ir.description`.
+- Added `services/agent-engine/tests/test_mind_map_component.py` with 17 comprehensive unit tests (all passing).
+- `task verify` — 2,431 tests pass (17 new), 0 failures. `task lint`, `task security:quick`, `task builder:demo -- minimal-blog` pass (134 files generated).
+
 ## 2026-09-12 — R-396
 
 - Recorded contract in `.ai/CURRENT_TASK.yaml` and `.ai/tasks/R-396.md` (status in_progress → done).
