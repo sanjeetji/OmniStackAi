@@ -132,6 +132,11 @@ tasks:
     cmds:
       - bash scripts/agent-engine.sh gateway-run
 
+  agent-engine:intake:run:
+    desc: 'Compile a plain-English app description into an Application IR via local Ollama (opt-in, live; CLI_ARGS - "description")'
+    cmds:
+      - bash scripts/agent-engine.sh intake-run {{.CLI_ARGS}}
+
   agent-engine:preview-plan:
     desc: Print the local (Tier 0/1) preview plan for a generated target (default nextjs-web)
     cmds:

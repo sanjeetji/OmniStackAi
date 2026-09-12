@@ -1,28 +1,32 @@
-task_id: R-415
-id: R-415
-title: "Accessible Futuristic Reusable Phone Number Input Suite"
+task_id: R-416
+id: R-416
+title: "Prompt -> Application IR intake agent (chat-to-create front door, brick 1)"
 status: done
 phase: MVP
-tracker_row: 52
-started_at: "2026-09-12"
-completed_at: "2026-09-12"
+tracker_row: null
+started_at: "2026-09-13"
+completed_at: "2026-09-13"
 objective: >-
-  Add an accessible, zero-dependency, desktop-and-mobile-grade, futuristic Phone Number Input compound
-  component suite (components/phone-input.tsx): a country selector (ISO2 code + dial code, from a curated
-  DEFAULT_COUNTRIES table, overridable) plus a national-number field that strips non-digits, groups them
-  loosely for display, assembles an E.164 string (dial + digits), and validates by digit length; a computed
-  meta object ({country, national, e164, valid}); controlled + uncontrolled national value; onChange(e164,
-  meta) callback; WAI-ARIA (labeled select + input, aria-label, inputMode="tel", aria-invalid); 4 futuristic
-  visual styling variants ("default", "card", "glass", "neon"); 3 size scales ("sm", "md", "lg"); React ref
-  forwarding (forwardRef); useImperativeHandle (PhoneInputHandle: getValue/getE164/setValue/getCountry/clear/
-  focus); and explicit displayName across compound and semantic alias exports (PhoneInput, PhoneNumberInput,
-  TelInput, PhoneField, default). Static module constant — never references ir.name/ir.description;
-  ASCII-only source (ISO country codes + dial codes, no flag emoji).
+  Build the first brick of the OmniStackAI "chat -> create an app" front door: a local, zero-new-dependency
+  Prompt -> Application IR intake agent (omnistackai_agent_engine/intake/) that turns a plain-English app
+  description into a validated, normalized ApplicationIR. Deterministic core is offline-testable
+  (build_intake_messages: system+user Message tuple, schema-by-example from a real example_ir().to_dict();
+  parse_ir_response: extract JSON from raw model text tolerating ```json fences + prose, inject
+  schema_version, ApplicationIR.from_dict, normalize_ir). generate_ir performs the single I/O step against
+  the vendor-neutral ModelProvider protocol (task verify runs it against an in-memory stub -> 0 model calls,
+  0 network) and raises IntakeResponseError when output cannot be parsed or the IR fails validate_ir. Ships
+  IntakeResult, IntakeError/IntakeResponseError, and an opt-in live runner (intake.live_run) wired as
+  `task agent-engine:intake:run -- "<description>"` that compiles a prompt through local Ollama and prints
+  the IR JSON. This is the pivot away from the paused UI-component series toward the user-facing product.
 allowed_paths:
-  - "services/agent-engine/src/omnistackai_agent_engine/codegen/nextjs.py"
-  - "services/agent-engine/src/omnistackai_agent_engine/codegen/__init__.py"
-  - "services/agent-engine/tests/test_phone_input_component.py"
-  - ".ai/tasks/R-415.md"
+  - "services/agent-engine/src/omnistackai_agent_engine/intake/__init__.py"
+  - "services/agent-engine/src/omnistackai_agent_engine/intake/errors.py"
+  - "services/agent-engine/src/omnistackai_agent_engine/intake/nl_to_ir.py"
+  - "services/agent-engine/src/omnistackai_agent_engine/intake/live_run.py"
+  - "services/agent-engine/tests/test_intake_nl_to_ir.py"
+  - "scripts/agent-engine.sh"
+  - "Taskfile.yml"
+  - ".ai/tasks/R-416.md"
   - ".ai/CURRENT_TASK.yaml"
   - ".ai/PROJECT_STATE.yaml"
   - ".ai/WORK_LOG.md"
@@ -30,14 +34,19 @@ allowed_paths:
   - "PROJECT_STATE.md"
   - "CHANGELOG.md"
 forbidden_changes:
-  - "Do not introduce external npm dependencies"
-  - "Do not break snapshot diff invariance across ir.description"
-  - "Do not commit or push code to git without verification"
+  - "Do not introduce external Python dependencies (stdlib only)"
+  - "Do not make task verify perform a live model call or network I/O (live path is opt-in only)"
+  - "Do not change the Application IR schema, model_gateway contracts, or any code generator"
+  - "Do not put secrets in source/tests/logs/commits"
 evidence:
-  verify: "2,753 passed"
+  verify: "2,771 passed"
   lint: "passed"
   security: "passed"
-  demos: "minimal-blog -> 152 files (components/phone-input.tsx present)"
-  focused_test: "18 passed (test_phone_input_component.py)"
+  env: "passed"
+  demos: "minimal-blog -> 152 files (unchanged)"
+  focused_test: "18 passed (test_intake_nl_to_ir.py)"
+  live_optin: "task agent-engine:intake:run -- 'Build a task tracker...' -> local Ollama returned a VALID IR (verified working end-to-end)"
   tracker: DONE
-next_action: "R-415 done, committed and pushed. /loop stopped at founder request; awaiting confirmation to proceed to R-416."
+next_action: >-
+  R-416 done. Next front-door brick: wire prompt -> IR -> builder so a description produces a generated repo
+  (R-417), then a minimal chat web UI. Await founder direction.

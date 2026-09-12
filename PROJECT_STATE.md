@@ -1,13 +1,23 @@
 # Project State — OmniStackAI
-Last updated: 2026-09-12T21:10:00+05:30
+Last updated: 2026-09-13T00:30:00+05:30
 
 ## Current Phase
 Stage 0 (Founder Build Sequence, Brief Section 91) — BASIC/MVP
 
-> **Loop paused at founder request.** The self-paced `/loop` was stopped after R-415 ("complete the current task and stop"). Next unstarted Tracker ID is **R-416** — awaiting founder confirmation to proceed.
+> **Front-door pivot underway.** The UI-component series is PAUSED at R-415 (110 components, resumable at the next free Tracker ID). **R-416 started the "chat → create an app" front door** — a local Prompt → Application IR intake agent, verified working end-to-end with local Ollama (sentence → valid IR). Next: R-417 wire prompt → IR → builder.
 
 ## Last Completed Task
-Tracker ID: R-415 — Generated Accessible Futuristic Reusable Phone Number Input Suite (components/phone-input.tsx) — DONE,
+Tracker ID: R-416 — Prompt → Application IR intake agent (`omnistackai_agent_engine/intake/`) — DONE,
+`task verify` (2,771 tests, 18 new focused R-416 tests) passing. The first brick of the user-facing "chat →
+create an app" front door: `build_intake_messages` (schema-by-example system prompt + explicit allowed field
+types), `parse_ir_response` (raw model text → validated, normalized `ApplicationIR`; tolerates ```json fences
++ prose), and `async generate_ir(prompt, provider, ...)` (single I/O step via the vendor-neutral
+`ModelProvider` protocol → offline-testable with an in-memory stub, 0 model calls in verify). Ships
+`IntakeResult`, `IntakeError`/`IntakeResponseError`, and an opt-in live runner
+(`task agent-engine:intake:run -- "<description>"`). Verified live on the Mac: local Ollama
+(`qwen2.5-coder:14b`) turned a plain-English task-tracker description into a valid Application IR that feeds
+the existing code generators. All local, no paid cloud. Immediately preceded by R-415 — Generated Accessible
+Futuristic Reusable Phone Number Input Suite (components/phone-input.tsx) — DONE,
 `task verify` (2,753 agent-engine tests, 18 new focused R-415 tests) passing. A genuinely functional international phone field — a country
 selector (ISO2 + dial code from a curated 20-entry `DEFAULT_COUNTRIES` table, overridable via a `countries` prop) paired with a national-number
 input that strips non-digits (`replace(/[^0-9]/g, '')`), groups them loosely for display, assembles an E.164 string (`dial + digits`), and

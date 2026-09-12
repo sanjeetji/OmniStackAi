@@ -1,5 +1,19 @@
 # Work Log
 
+## 2026-09-13 — R-416 (front-door pivot: brick 1)
+
+- **New direction.** With the UI-component series paused at R-415, started the user-facing "chat -> create an app" front door. R-416 = the **Prompt -> Application IR intake agent**.
+- Recorded contract in `.ai/CURRENT_TASK.yaml` and `.ai/tasks/R-416.md` before code (test-first).
+- New package `services/agent-engine/src/omnistackai_agent_engine/intake/`:
+  - `nl_to_ir.py`: `build_intake_messages(prompt)` (system+user `Message` tuple; schema taught BY EXAMPLE via a real `example_ir().to_dict()` template + explicit allowed field types from the `FieldType` enum); `parse_ir_response(text)` (extract JSON from raw model text tolerating ```json fences + prose, inject `schema_version`, `ApplicationIR.from_dict` + `normalize_ir`, raise `IntakeResponseError` on malformed/invalid); `async generate_ir(prompt, provider, *, model_id, ...)` (single I/O step via the vendor-neutral `ModelProvider` protocol; validates with `validate_ir`/`has_errors`; returns `IntakeResult`).
+  - `errors.py`: `IntakeError`, `IntakeResponseError`.
+  - `live_run.py`: opt-in live runner (excluded from `task verify`) that builds an Ollama provider from `OMNISTACKAI_OLLAMA_*` env, compiles a prompt, and prints the IR JSON; clean error (no traceback) on failure.
+  - `__init__.py`: public exports.
+- Wired an opt-in Task: `scripts/agent-engine.sh intake-run` + `Taskfile.yml` `agent-engine:intake:run` (`task agent-engine:intake:run -- "<description>"`).
+- Added `services/agent-engine/tests/test_intake_nl_to_ir.py` (18 tests, deterministic, in-memory stub provider): message building, JSON extraction (bare/fenced/prose), schema-version injection, invalid-input rejection, normalized+valid result, `generate_ir` happy path + request shape + invalid-output raise + **end-to-end IR -> NextjsWebAdapter().generate()**, field-type guidance, package exports.
+- Gates: focused tests 18 passed; `task verify` **2,771** passed; `task lint`/`security:quick`/`env:check` passed; `task builder:demo -- minimal-blog` 152 files (unchanged). **0 model calls in verify.**
+- **Live proof (opt-in, on the Mac):** `task agent-engine:intake:run -- "Build a task tracker where users create projects and each project has tasks with a title, status and due date"` -> local Ollama (`qwen2.5-coder:14b`) returned a **valid Application IR** (Project/Task entities, `/projects` + nested-task APIs, acceptance criteria). First working piece of chat -> create.
+
 ## 2026-09-12 — R-415
 
 - Self-paced `/loop` iteration (hands-off continuous build); **loop stopped at founder's explicit request after this task**.

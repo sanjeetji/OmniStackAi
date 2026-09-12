@@ -2,13 +2,28 @@ schema_version: 1
 project: OmniStackAI
 phase: BASIC/MVP
 founder_stage: 0
-current_task: R-416
-current_status: paused_awaiting_founder_confirmation
+current_task: R-417
+current_status: advancing
 branch: main
-last_completed_task: R-415
+last_completed_task: R-416
 last_completed_task_summary: >-
-  Generated Accessible Futuristic Reusable Phone Number Input Suite (components/phone-input.tsx); a genuinely
-  functional international phone field — a country selector (ISO2 code + dial code from a curated 20-entry
+  Built R-416, the FIRST BRICK of the "chat -> create an app" front door (the pivot away from the paused
+  UI-component series): a local, zero-new-dependency Prompt -> Application IR intake agent
+  (omnistackai_agent_engine/intake/). build_intake_messages() constructs the system+user Message tuple with
+  the schema taught BY EXAMPLE (embedding a real example_ir().to_dict() so it never drifts) plus an explicit
+  allowed-field-types list derived from the FieldType enum; parse_ir_response() turns raw model text into a
+  validated, normalized ApplicationIR (tolerates ```json fences + surrounding prose, injects schema_version,
+  ApplicationIR.from_dict + normalize_ir, raises IntakeResponseError on malformed/invalid output);
+  generate_ir() performs the single I/O step against the vendor-neutral ModelProvider protocol so task verify
+  runs it against an in-memory stub (0 model calls, 0 network) and raises on validation errors. Ships
+  IntakeResult + IntakeError/IntakeResponseError, and an opt-in live runner (intake/live_run.py) wired as
+  `task agent-engine:intake:run -- "<description>"`. VERIFIED WORKING END-TO-END on the founder's Mac: local
+  Ollama (qwen2.5-coder:14b) turned "Build a task tracker where users create projects and each project has
+  tasks with a title, status and due date" into a valid Application IR (Project/Task entities, /projects +
+  nested-task APIs, acceptance criteria) that feeds straight into the existing code generators. 2,771 tests
+  pass (18 new in test_intake_nl_to_ir.py); lint/security/env green; builder:demo unchanged (152 files);
+  0 model calls in verify. Previously R-415 shipped the Accessible Futuristic Reusable Phone Number Input
+  Suite (components/phone-input.tsx); a genuinely functional international phone field — a country selector (ISO2 code + dial code from a curated 20-entry
   DEFAULT_COUNTRIES table, overridable via a countries prop) paired with a national-number input that strips
   non-digits (replace /[^0-9]/g), groups them loosely for display, assembles an E.164 string (dial + digits),
   and validates by digit length (6..14); a computed meta object ({country, dial, national, e164, valid});
@@ -271,15 +286,14 @@ product_direction: >-
   framework adapter contract -> Next.js adapter -> Git service -> preview/sandbox (needs cloud env).
 id_note: >-
   Workbook backlog owns R-010..R-219. Founder-requested tasks use IDs after R-219: R-220..R-223 done,
-  R-224 Next.js deferred (env-blocked), R-225..R-415 done.
+  R-224 Next.js deferred (env-blocked), R-225..R-415 done, R-416 done (first front-door task, not a
+  component). NOTE: the UI-COMPONENT SERIES is PAUSED at R-415 (110 components, resumable at the next free
+  Tracker ID); R-416 began the "chat -> create" front-door pivot instead.
 blockers: []
 next_action: >-
-  Task R-415 (Accessible Futuristic Reusable Phone Number Input Suite) complete with 2,753 tests passing,
-  committed and pushed to origin/main. The self-paced /loop is stopped at the founder's request. The
-  UI-COMPONENT SERIES is PAUSED at R-415 and is fully resumable (each component is independent/additive;
-  resume by assigning R-416 to the next component and following the component-suite contract). Tracking
-  docs reconciled on 2026-09-12 (docs/PROGRESS.md + docs/RESUME_PROMPT.md updated: 2,753 tests, 110
-  components, series-paused/resume record). Awaiting the founder's choice of next direction; recommended
-  pivot is the local "chat -> create an app" front door (prompt->IR agent via Ollama, chat web UI [R-224/
-  R-011], orchestration [R-180], live local preview [R-033/R-034], turnkey `task app:run`) — all MVP
-  phase, all local/offline-buildable, no paid cloud.
+  R-416 (Prompt -> Application IR intake agent) complete: 2,771 tests passing, committed and pushed;
+  verified working live with local Ollama (sentence -> valid IR). Next front-door bricks (all MVP, all
+  local): R-417 = wire prompt -> IR -> builder so a description produces a generated owned repo (reuse
+  intake.generate_ir + the assembler/git_service); then a minimal chat web UI (R-224/R-011), orchestration
+  (R-180), live local preview (R-033/R-034), and the turnkey `task app:run`. Await founder direction on
+  R-417. UI-component series remains paused/resumable.
