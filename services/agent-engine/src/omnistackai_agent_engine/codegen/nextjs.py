@@ -67972,6 +67972,399 @@ def render_marquee_component() -> str:
     return _MARQUEE_COMPONENT
 
 
+_CREDIT_CARD_COMPONENT = r"""'use client';
+
+import { forwardRef, useImperativeHandle, useRef, useState } from 'react';
+import type { CSSProperties } from 'react';
+
+export type CreditCardVariant = 'default' | 'card' | 'glass' | 'neon';
+export type CreditCardSize = 'sm' | 'md' | 'lg';
+export type CardBrand = 'visa' | 'mastercard' | 'amex' | 'discover' | 'unknown';
+
+export interface CreditCardValue {
+  number: string;
+  expiry: string;
+  cvc: string;
+  name: string;
+}
+
+export interface CreditCardMeta {
+  brand: CardBrand;
+  numberValid: boolean;
+  expiryValid: boolean;
+  cvcValid: boolean;
+  complete: boolean;
+}
+
+export interface CreditCardProps {
+  value?: Partial<CreditCardValue>;
+  defaultValue?: Partial<CreditCardValue>;
+  showName?: boolean;
+  showPreview?: boolean;
+  numberLabel?: string;
+  expiryLabel?: string;
+  cvcLabel?: string;
+  nameLabel?: string;
+  disabled?: boolean;
+  variant?: CreditCardVariant;
+  size?: CreditCardSize;
+  accentColor?: string;
+  ariaLabel?: string;
+  className?: string;
+  style?: CSSProperties;
+  onChange?: (value: CreditCardValue, meta: CreditCardMeta) => void;
+  onComplete?: (value: CreditCardValue, meta: CreditCardMeta) => void;
+}
+
+export interface CreditCardHandle {
+  getValue: () => CreditCardValue;
+  getMeta: () => CreditCardMeta;
+  clear: () => void;
+  focus: () => void;
+}
+
+interface VariantStyle {
+  wrapper: CSSProperties;
+  labelColor: string;
+  inputBg: string;
+  inputColor: string;
+  inputBorder: string;
+  focusBorder: string;
+  errorColor: string;
+}
+
+const VARIANT_STYLES: Record<CreditCardVariant, VariantStyle> = {
+  default: {
+    wrapper: { background: 'transparent' },
+    labelColor: '#0f172a', inputBg: '#ffffff', inputColor: '#0f172a', inputBorder: '#cbd5e1', focusBorder: '#2563eb', errorColor: '#dc2626',
+  },
+  card: {
+    wrapper: { background: '#ffffff', border: '1px solid #e2e8f0', borderRadius: '16px', boxShadow: '0 4px 16px rgba(0, 0, 0, 0.06)', padding: '20px' },
+    labelColor: '#0f172a', inputBg: '#ffffff', inputColor: '#0f172a', inputBorder: '#cbd5e1', focusBorder: '#2563eb', errorColor: '#dc2626',
+  },
+  glass: {
+    wrapper: { background: 'rgba(248, 250, 252, 0.6)', border: '1px solid rgba(255, 255, 255, 0.4)', borderRadius: '16px', boxShadow: '0 8px 32px rgba(0, 0, 0, 0.12)', backdropFilter: 'blur(16px)', WebkitBackdropFilter: 'blur(16px)', padding: '20px' },
+    labelColor: '#0f172a', inputBg: 'rgba(255, 255, 255, 0.7)', inputColor: '#0f172a', inputBorder: 'rgba(148, 163, 184, 0.6)', focusBorder: '#2563eb', errorColor: '#dc2626',
+  },
+  neon: {
+    wrapper: { background: '#050811', border: '1px solid rgba(6, 182, 212, 0.4)', borderRadius: '16px', boxShadow: '0 0 24px rgba(6, 182, 212, 0.15)', padding: '20px' },
+    labelColor: '#f8fafc', inputBg: 'rgba(6, 182, 212, 0.08)', inputColor: '#e0f2fe', inputBorder: 'rgba(6, 182, 212, 0.5)', focusBorder: '#06b6d4', errorColor: '#fb7185',
+  },
+};
+
+const SIZE_STYLES: Record<CreditCardSize, { font: number; pad: number; gap: number }> = {
+  sm: { font: 13, pad: 8, gap: 8 },
+  md: { font: 15, pad: 10, gap: 12 },
+  lg: { font: 17, pad: 13, gap: 16 },
+};
+
+const BRAND_META: Record<CardBrand, { label: string; gradient: string }> = {
+  visa: { label: 'VISA', gradient: 'linear-gradient(135deg, #1a1f71, #2563eb)' },
+  mastercard: { label: 'Mastercard', gradient: 'linear-gradient(135deg, #7c2d12, #ea580c)' },
+  amex: { label: 'AMEX', gradient: 'linear-gradient(135deg, #0e7490, #06b6d4)' },
+  discover: { label: 'Discover', gradient: 'linear-gradient(135deg, #7c2d12, #f59e0b)' },
+  unknown: { label: 'CARD', gradient: 'linear-gradient(135deg, #334155, #64748b)' },
+};
+
+function onlyDigits(value: string): string {
+  return value.replace(/[^0-9]/g, '');
+}
+
+function detectBrand(digits: string): CardBrand {
+  if (/^3[47]/.test(digits)) return 'amex';
+  if (/^4/.test(digits)) return 'visa';
+  if (/^(5[1-5]|2[2-7])/.test(digits)) return 'mastercard';
+  if (/^6(011|5)/.test(digits)) return 'discover';
+  return 'unknown';
+}
+
+function formatNumber(digits: string, brand: CardBrand): string {
+  const max = brand === 'amex' ? 15 : 16;
+  const d = digits.slice(0, max);
+  if (brand === 'amex') {
+    return [d.slice(0, 4), d.slice(4, 10), d.slice(10, 15)].filter(Boolean).join(' ');
+  }
+  const groups: string[] = [];
+  for (let i = 0; i < d.length; i += 4) groups.push(d.slice(i, i + 4));
+  return groups.join(' ');
+}
+
+function formatExpiry(digits: string): string {
+  const d = digits.slice(0, 4);
+  if (d.length <= 2) return d;
+  return d.slice(0, 2) + '/' + d.slice(2);
+}
+
+function luhnValid(digits: string): boolean {
+  if (digits.length < 12) return false;
+  let sum = 0;
+  let alt = false;
+  for (let i = digits.length - 1; i >= 0; i--) {
+    let n = parseInt(digits.charAt(i), 10);
+    if (alt) {
+      n *= 2;
+      if (n > 9) n -= 9;
+    }
+    sum += n;
+    alt = !alt;
+  }
+  return sum % 10 === 0;
+}
+
+function expiryValid(expiry: string): boolean {
+  const m = expiry.slice(0, 2);
+  const y = expiry.slice(3, 5);
+  if (m.length < 2 || y.length < 2) return false;
+  const month = parseInt(m, 10);
+  const year = 2000 + parseInt(y, 10);
+  if (isNaN(month) || isNaN(year) || month < 1 || month > 12) return false;
+  const endOfMonth = new Date(year, month, 0, 23, 59, 59);
+  return endOfMonth.getTime() >= Date.now();
+}
+
+const CreditCardComponent = forwardRef<CreditCardHandle, CreditCardProps>(
+  function CreditCard(
+    {
+      value,
+      defaultValue,
+      showName = true,
+      showPreview = true,
+      numberLabel = 'Card number',
+      expiryLabel = 'Expiry',
+      cvcLabel = 'CVC',
+      nameLabel = 'Cardholder name',
+      disabled = false,
+      variant = 'default',
+      size = 'md',
+      accentColor,
+      ariaLabel = 'Credit card payment',
+      className,
+      style,
+      onChange,
+      onComplete,
+    }: CreditCardProps,
+    ref,
+  ) {
+    const buildInitial = (): CreditCardValue => {
+      const src = defaultValue || {};
+      const numDigits = onlyDigits(src.number || '');
+      return {
+        number: formatNumber(numDigits, detectBrand(numDigits)),
+        expiry: formatExpiry(onlyDigits(src.expiry || '')),
+        cvc: onlyDigits(src.cvc || '').slice(0, 4),
+        name: src.name || '',
+      };
+    };
+
+    const isControlled = typeof value === 'object' && value !== null;
+    const [internal, setInternal] = useState<CreditCardValue>(buildInitial);
+    const numberRef = useRef<HTMLInputElement | null>(null);
+
+    const current: CreditCardValue = isControlled
+      ? { number: value!.number || '', expiry: value!.expiry || '', cvc: value!.cvc || '', name: value!.name || '' }
+      : internal;
+
+    const digits = onlyDigits(current.number);
+    const brand = detectBrand(digits);
+
+    const computeMeta = (val: CreditCardValue): CreditCardMeta => {
+      const dg = onlyDigits(val.number);
+      const b = detectBrand(dg);
+      const numberValid = luhnValid(dg);
+      const expOk = expiryValid(val.expiry);
+      const reqCvc = b === 'amex' ? 4 : 3;
+      const cvcValid = onlyDigits(val.cvc).length === reqCvc;
+      const nameOk = showName ? val.name.trim().length > 0 : true;
+      const complete = numberValid && expOk && cvcValid && nameOk;
+      return { brand: b, numberValid: numberValid, expiryValid: expOk, cvcValid: cvcValid, complete: complete };
+    };
+
+    const applyField = (field: keyof CreditCardValue, rawValue: string) => {
+      let formatted = rawValue;
+      if (field === 'number') {
+        const dg = onlyDigits(rawValue);
+        formatted = formatNumber(dg, detectBrand(dg));
+      } else if (field === 'expiry') {
+        formatted = formatExpiry(onlyDigits(rawValue));
+      } else if (field === 'cvc') {
+        formatted = onlyDigits(rawValue).slice(0, 4);
+      }
+      const next: CreditCardValue = { ...current, [field]: formatted };
+      if (!isControlled) setInternal(next);
+      const meta = computeMeta(next);
+      if (onChange) onChange(next, meta);
+      if (meta.complete && onComplete) onComplete(next, meta);
+    };
+
+    useImperativeHandle(
+      ref,
+      () => ({
+        getValue: () => current,
+        getMeta: () => computeMeta(current),
+        clear: () => {
+          const empty: CreditCardValue = { number: '', expiry: '', cvc: '', name: '' };
+          if (!isControlled) setInternal(empty);
+          if (onChange) onChange(empty, computeMeta(empty));
+        },
+        focus: () => {
+          if (numberRef.current) numberRef.current.focus();
+        },
+      }),
+      [current, isControlled, onChange, showName],
+    );
+
+    const theme = VARIANT_STYLES[variant] || VARIANT_STYLES.default;
+    const sizing = SIZE_STYLES[size] || SIZE_STYLES.md;
+    const resolvedAccent = accentColor || theme.focusBorder;
+
+    const numberInvalid = digits.length > 0 && !luhnValid(digits);
+    const expiryInvalid = current.expiry.length === 5 && !expiryValid(current.expiry);
+    const cvcInvalid = current.cvc.length > 0 && onlyDigits(current.cvc).length !== (brand === 'amex' ? 4 : 3);
+
+    const fieldStyle = (invalid: boolean): CSSProperties => ({
+      fontSize: sizing.font + 'px',
+      padding: sizing.pad + 'px',
+      background: theme.inputBg,
+      color: theme.inputColor,
+      border: '1px solid ' + (invalid ? theme.errorColor : theme.inputBorder),
+      borderRadius: '8px',
+      outline: 'none',
+      width: '100%',
+      boxSizing: 'border-box',
+      letterSpacing: '0.03em',
+    });
+    const labelStyle: CSSProperties = { fontSize: (sizing.font - 2) + 'px', fontWeight: 600, color: theme.labelColor, marginBottom: '4px', display: 'block' };
+
+    const numberDisplay = current.number || '•••• •••• •••• ••••';
+
+    return (
+      <div
+        className={className}
+        role="group"
+        aria-label={ariaLabel}
+        data-variant={variant}
+        data-size={size}
+        data-brand={brand}
+        style={{ display: 'flex', flexDirection: 'column', gap: sizing.gap + 'px', fontFamily: 'system-ui, -apple-system, sans-serif', ...theme.wrapper, ...style }}
+      >
+        {showPreview ? (
+          <div
+            aria-hidden="true"
+            style={{
+              background: BRAND_META[brand].gradient,
+              borderRadius: '14px',
+              padding: '18px',
+              color: '#ffffff',
+              minHeight: '150px',
+              display: 'flex',
+              flexDirection: 'column',
+              justifyContent: 'space-between',
+              boxShadow: '0 10px 24px rgba(0, 0, 0, 0.25)',
+            }}
+          >
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <span style={{ width: '38px', height: '28px', borderRadius: '5px', background: 'rgba(255, 255, 255, 0.35)' }} />
+              <span style={{ fontWeight: 700, fontStyle: 'italic', letterSpacing: '0.05em' }}>{BRAND_META[brand].label}</span>
+            </div>
+            <div style={{ fontSize: '18px', letterSpacing: '0.12em', fontFamily: 'monospace' }}>{numberDisplay}</div>
+            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px', textTransform: 'uppercase' }}>
+              <span>{current.name || 'CARDHOLDER NAME'}</span>
+              <span>{current.expiry || 'MM/YY'}</span>
+            </div>
+          </div>
+        ) : null}
+
+        <div>
+          <label style={labelStyle}>{numberLabel}</label>
+          <input
+            ref={numberRef}
+            type="text"
+            inputMode="numeric"
+            autoComplete="cc-number"
+            value={current.number}
+            disabled={disabled}
+            placeholder="1234 5678 9012 3456"
+            aria-label={numberLabel}
+            aria-invalid={numberInvalid}
+            onChange={(e) => applyField('number', e.target.value)}
+            style={fieldStyle(numberInvalid)}
+          />
+        </div>
+
+        <div style={{ display: 'flex', gap: sizing.gap + 'px' }}>
+          <div style={{ flex: 1 }}>
+            <label style={labelStyle}>{expiryLabel}</label>
+            <input
+              type="text"
+              inputMode="numeric"
+              autoComplete="cc-exp"
+              value={current.expiry}
+              disabled={disabled}
+              placeholder="MM/YY"
+              aria-label={expiryLabel}
+              aria-invalid={expiryInvalid}
+              onChange={(e) => applyField('expiry', e.target.value)}
+              style={fieldStyle(expiryInvalid)}
+            />
+          </div>
+          <div style={{ flex: 1 }}>
+            <label style={labelStyle}>{cvcLabel}</label>
+            <input
+              type="text"
+              inputMode="numeric"
+              autoComplete="cc-csc"
+              value={current.cvc}
+              disabled={disabled}
+              placeholder={brand === 'amex' ? '1234' : '123'}
+              aria-label={cvcLabel}
+              aria-invalid={cvcInvalid}
+              onChange={(e) => applyField('cvc', e.target.value)}
+              style={fieldStyle(cvcInvalid)}
+            />
+          </div>
+        </div>
+
+        {showName ? (
+          <div>
+            <label style={labelStyle}>{nameLabel}</label>
+            <input
+              type="text"
+              autoComplete="cc-name"
+              value={current.name}
+              disabled={disabled}
+              placeholder="Jordan Ellis"
+              aria-label={nameLabel}
+              onChange={(e) => applyField('name', e.target.value)}
+              style={fieldStyle(false)}
+            />
+          </div>
+        ) : null}
+      </div>
+    );
+  },
+);
+
+CreditCardComponent.displayName = 'CreditCard';
+
+export const CreditCard = CreditCardComponent;
+export const CreditCardField = CreditCardComponent;
+export const PaymentCardField = CreditCardComponent;
+export const CardInput = CreditCardComponent;
+
+CreditCard.displayName = 'CreditCard';
+CreditCardField.displayName = 'CreditCardField';
+PaymentCardField.displayName = 'PaymentCardField';
+CardInput.displayName = 'CardInput';
+
+export default CreditCardComponent;
+"""
+
+
+def render_credit_card_component() -> str:
+    """Render the Accessible Futuristic Reusable Credit Card Payment Field Suite (R-407)."""
+    return _CREDIT_CARD_COMPONENT
+
+
 _DESIGN_TOKENS_CSS = (
     "/**\n"
     " * OmniStackAI Design Tokens & Theming Engine\n"
@@ -68607,6 +69000,7 @@ class NextjsWebAdapter:
             GeneratedFile("components/masked-input.tsx", _MASKED_INPUT_COMPONENT),
             GeneratedFile("components/mention.tsx", _MENTION_COMPONENT),
             GeneratedFile("components/marquee.tsx", _MARQUEE_COMPONENT),
+            GeneratedFile("components/credit-card.tsx", _CREDIT_CARD_COMPONENT),
             GeneratedFile("styles/tokens.css", _DESIGN_TOKENS_CSS),
             GeneratedFile("app/globals.css", _GLOBALS_CSS),
             GeneratedFile("app/error.tsx", _ERROR_PAGE),

@@ -1,29 +1,29 @@
-task_id: R-406
-id: R-406
-title: "Accessible Futuristic Reusable Marquee / Ticker Suite"
+task_id: R-407
+id: R-407
+title: "Accessible Futuristic Reusable Credit Card Payment Field Suite"
 status: DONE
 phase: MVP
-tracker_row: 43
+tracker_row: 44
 started_at: "2026-09-12"
 completed_at: "2026-09-12"
 objective: >-
-  Add an accessible, zero-dependency, desktop-and-mobile-grade, futuristic Marquee / Ticker compound
-  component suite (components/marquee.tsx): a seamless continuous scroller for arbitrary children (news
-  tickers, logo walls, announcement bars) that duplicates its content once for a seamless -50% loop, driven
-  by CSS @keyframes injected via an inline <style> element (omni-marquee-x / omni-marquee-y with
-  animationDirection for left/right/up/down); configurable durationSeconds, gap, and edge gradient fade via
-  CSS maskImage; pause-on-hover plus a controlled paused prop and an imperative pause/resume/toggle handle
-  (animationPlayState); a CSS prefers-reduced-motion guard that stops the animation; accessibility (the
-  duplicated copy is aria-hidden, the container carries an aria-label); 4 futuristic visual styling variants
-  ("default", "card", "glass", "neon"); 3 size scales ("sm", "md", "lg"); React ref forwarding (forwardRef);
-  useImperativeHandle (MarqueeHandle: pause/resume/toggle/isPaused); and explicit displayName across
-  compound and semantic alias exports (Marquee, MarqueeTicker, ScrollingBanner, NewsTicker, default). Static
-  module constant — never references ir.name/ir.description.
+  Add an accessible, zero-dependency, desktop-and-mobile-grade, futuristic Credit Card Payment Field
+  compound component suite (components/credit-card.tsx): card-number, expiry (MM/YY), CVC, and optional
+  cardholder-name fields with real-time formatting, IIN-prefix brand detection (visa/mastercard/amex/
+  discover/unknown), Luhn checksum validation of the number, expiry validity (valid month + not in the
+  past), and brand-aware CVC length; a computed meta object ({brand, numberValid, expiryValid, cvcValid,
+  complete}); an optional live card preview; controlled + uncontrolled value (Partial); onChange (value,
+  meta) and onComplete callbacks; WAI-ARIA (labeled inputs, aria-invalid, aria-describedby, inputMode
+  numeric); 4 futuristic visual styling variants ("default", "card", "glass", "neon"); 3 size scales
+  ("sm", "md", "lg"); React ref forwarding (forwardRef); useImperativeHandle (CreditCardHandle:
+  getValue/getMeta/clear/focus); and explicit displayName across compound and semantic alias exports
+  (CreditCard, CreditCardField, PaymentCardField, CardInput, default). Static module constant — never
+  references ir.name/ir.description.
 allowed_paths:
   - "services/agent-engine/src/omnistackai_agent_engine/codegen/nextjs.py"
   - "services/agent-engine/src/omnistackai_agent_engine/codegen/__init__.py"
-  - "services/agent-engine/tests/test_marquee_component.py"
-  - ".ai/tasks/R-406.md"
+  - "services/agent-engine/tests/test_credit_card_component.py"
+  - ".ai/tasks/R-407.md"
   - ".ai/CURRENT_TASK.yaml"
   - ".ai/PROJECT_STATE.yaml"
   - ".ai/WORK_LOG.md"
@@ -35,9 +35,9 @@ forbidden_changes:
   - "Do not break snapshot diff invariance across ir.description"
   - "Do not commit or push code to git without verification"
 evidence:
-  verify: "2592 passed (Stage 0 verification passed)"
+  verify: "2610 passed (Stage 0 verification passed)"
   lint: "task lint passed"
   security: "task security:quick passed"
-  demos: "task builder:demo -- minimal-blog generated 143 files (includes apps/web/components/marquee.tsx)"
+  demos: "task builder:demo -- minimal-blog generated 144 files (includes apps/web/components/credit-card.tsx)"
   tracker: DONE
-next_action: "Proceed to R-407 (next unstarted Tracker ID), autonomous continuation active."
+next_action: "Proceed to R-408 (next unstarted Tracker ID), autonomous continuation active."

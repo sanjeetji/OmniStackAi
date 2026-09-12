@@ -1,5 +1,22 @@
 # Work Log
 
+## 2026-09-12 — R-407
+
+- Recorded contract in `.ai/CURRENT_TASK.yaml` and `.ai/tasks/R-407.md` before code (test-first).
+- `nextjs.py`:
+  - Added `_CREDIT_CARD_COMPONENT` static template (raw triple-quoted string) implementing the accessible, desktop-and-mobile-grade, futuristic Credit Card Payment Field compound component suite (`apps/web/components/credit-card.tsx`).
+  - Genuinely functional payment logic: `onlyDigits`, `detectBrand` (IIN prefixes via backslash-free regexes: amex `/^3[47]/`, visa `/^4/`, mastercard `/^(5[1-5]|2[2-7])/`, discover `/^6(011|5)/`), `formatNumber` (amex 4-6-5, others 4-4-4-4), `formatExpiry` (MM/YY), `luhnValid` (Luhn checksum, `sum % 10 === 0`), and `expiryValid` (valid month + not in the past).
+  - Card-number, expiry, CVC, and optional cardholder-name inputs with real-time formatting and per-field `aria-invalid`; a computed `CreditCardMeta` (`{brand, numberValid, expiryValid, cvcValid, complete}`); brand-aware CVC length (4 for amex, else 3); an optional live gradient card preview (brand label, masked number, name, expiry) via `BRAND_META`.
+  - Controlled + uncontrolled `value`/`defaultValue` (Partial); `onChange(value, meta)` + `onComplete(value, meta)`; `inputMode="numeric"` and `autoComplete` cc-* hints for good mobile/autofill UX.
+  - Imperative `CreditCardHandle` (`getValue`, `getMeta`, `clear`, `focus`) via `useImperativeHandle`.
+  - Implemented `CreditCardVariant`/`CreditCardSize`/`CardBrand` types, `CreditCardValue`/`CreditCardMeta`/`CreditCardHandle`/`CreditCardProps` interfaces, `VARIANT_STYLES`/`SIZE_STYLES`/`BRAND_META` maps.
+  - Compound and semantic alias exports: `CreditCard`, `CreditCardField`, `PaymentCardField`, `CardInput`, default export — each with explicit `displayName`.
+  - Exported `render_credit_card_component` in `omnistackai_agent_engine.codegen` and registered `components/credit-card.tsx` in `NextjsWebAdapter.generate()`.
+  - Maintained 100% diff-invariance across `ir.description` (static module constant); 0 external runtime dependencies. Only placeholder card numbers in source (no real PANs/secrets).
+- Added `services/agent-engine/tests/test_credit_card_component.py` with 18 tests (file-generated, diff-invariance + accessor byte-equality, `'use client'`, zero-deps imports, forwardRef + useImperativeHandle + 4 handle methods, TS types, alias/default exports, displayNames, 4 variants, 3 sizes, 5 brands, Luhn validation, brand detection, formatting, validation meta, aria + inputMode, callbacks/controlled, codegen export).
+- Gates: `pytest .../test_credit_card_component.py` (18 passed); `task verify` (2,610 tests passed); `task lint`, `task security:quick`, `task env:check` passed; `task builder:demo -- minimal-blog` generated 144 files including `apps/web/components/credit-card.tsx`. 0 model calls.
+- Static TSX sanity check: `'use client'` first line, balanced braces/parens, react-only imports, no `\"\"\"`/backtick hazards (only intentional `•` bullet escapes in the preview placeholder).
+
 ## 2026-09-12 — R-406
 
 - Recorded contract in `.ai/CURRENT_TASK.yaml` and `.ai/tasks/R-406.md` before code (test-first).

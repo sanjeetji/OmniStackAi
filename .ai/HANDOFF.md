@@ -1,6 +1,6 @@
 # Current Handoff
 
-Task ID: R-406
+Task ID: R-407
 Status: done
 Phase: BASIC/MVP — Founder Stage 0
 Branch: `main` (the only branch; the GitHub default)
@@ -54,9 +54,26 @@ Branch: `main` (the only branch; the GitHub default)
   42. **R-404**: Masked / Pattern Input Suite (`components/masked-input.tsx`)
   43. **R-405**: Mention / @-Autocomplete Textarea Suite (`components/mention.tsx`)
   44. **R-406**: Marquee / Ticker Suite (`components/marquee.tsx`)
+  45. **R-407**: Credit Card Payment Field Suite (`components/credit-card.tsx`)
 - Advancing autonomously to the next Tracker ID (posture is advancing, not stopped). Still stop-and-ask only for paid cloud / DB engine / new infra / native-mobile / a materially different architecture decision.
 
 ## Completed
+
+### R-407 — Generated Accessible Futuristic Reusable Credit Card Payment Field Suite (components/credit-card.tsx)
+
+Enabled a genuinely functional credit-card payment field across generated Next.js web applications:
+- **Standalone Credit Card Suite (`apps/web/components/credit-card.tsx`)**:
+  - Implemented `CreditCardVariant`, `CreditCardSize`, `CardBrand`, `CreditCardValue`, `CreditCardMeta`, `CreditCardHandle`, `CreditCardProps`, plus `VARIANT_STYLES`/`SIZE_STYLES`/`BRAND_META` maps and `onlyDigits`/`detectBrand`/`formatNumber`/`formatExpiry`/`luhnValid`/`expiryValid` helpers.
+  - Compound and semantic alias exports: `CreditCard`, `CreditCardField`, `PaymentCardField`, `CardInput`, default export.
+  - Real-time number formatting + IIN brand detection + Luhn validation; expiry MM/YY validity; brand-aware CVC length; optional cardholder name; computed meta; optional live gradient preview.
+  - Controlled + uncontrolled `value`; `onChange(value, meta)`/`onComplete`; WAI-ARIA labeled inputs with `aria-invalid`, `inputMode="numeric"`, `autoComplete` cc-* hints.
+  - React ref forwarding (`forwardRef`), imperative handle (`CreditCardHandle`: `getValue`/`getMeta`/`clear`/`focus`), explicit `displayName` across all exports.
+  - Exported `render_credit_card_component` in `omnistackai_agent_engine.codegen` and registered `components/credit-card.tsx` in `NextjsWebAdapter.generate()`.
+  - Maintained 100% diff-invariance across `ir.description`; 0 external runtime dependencies; only placeholder card numbers in source.
+- **Verification**:
+  - 18 unit tests in `services/agent-engine/tests/test_credit_card_component.py` (all passing).
+  - `task verify` passing: 2,610 tests passed.
+  - `task lint`, `task security:quick`, `task env:check` — pass. `task builder:demo -- minimal-blog` — 144 files (includes `apps/web/components/credit-card.tsx`).
 
 ### R-406 — Generated Accessible Futuristic Reusable Marquee / Ticker Suite (components/marquee.tsx)
 
@@ -826,9 +843,9 @@ Enabled accessible, desktop-and-mobile-grade, futuristic Time Picker and Time Ra
 
 ## Verification
 
-- `task verify` — pass (2,592 agent-engine tests; 18 focused R-406 tests in `test_marquee_component.py`).
+- `task verify` — pass (2,610 agent-engine tests; 18 focused R-407 tests in `test_credit_card_component.py`).
 - `task lint`, `task security:quick`, `task env:check` — pass.
-- `task builder:demo -- minimal-blog` — pass (143 files, includes `components/marquee.tsx`).
+- `task builder:demo -- minimal-blog` — pass (144 files, includes `components/credit-card.tsx`).
 
 ## Blockers and risks
 
@@ -837,7 +854,7 @@ Enabled accessible, desktop-and-mobile-grade, futuristic Time Picker and Time Ra
 
 ## Next action
 
-- Advancing autonomously to Task R-407 (next unstarted Tracker ID). Record its contract in `.ai/CURRENT_TASK.yaml` and `.ai/tasks/R-407.md` before code.
+- Advancing autonomously to Task R-408 (next unstarted Tracker ID). Record its contract in `.ai/CURRENT_TASK.yaml` and `.ai/tasks/R-408.md` before code.
 
 ## Next command
 
