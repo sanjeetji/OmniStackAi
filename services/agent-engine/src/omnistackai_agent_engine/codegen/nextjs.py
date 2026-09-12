@@ -68365,6 +68365,269 @@ def render_credit_card_component() -> str:
     return _CREDIT_CARD_COMPONENT
 
 
+_COLOR_CONTRAST_COMPONENT = r"""'use client';
+
+import { forwardRef, useImperativeHandle, useState } from 'react';
+import type { CSSProperties } from 'react';
+
+export type ColorContrastVariant = 'default' | 'card' | 'glass' | 'neon';
+export type ColorContrastSize = 'sm' | 'md' | 'lg';
+
+export interface ContrastResult {
+  ratio: number;
+  aaNormal: boolean;
+  aaaNormal: boolean;
+  aaLarge: boolean;
+  aaaLarge: boolean;
+  uiComponent: boolean;
+  rating: string;
+}
+
+export interface ColorContrastProps {
+  foreground?: string;
+  background?: string;
+  defaultForeground?: string;
+  defaultBackground?: string;
+  showInputs?: boolean;
+  showPreview?: boolean;
+  sampleText?: string;
+  variant?: ColorContrastVariant;
+  size?: ColorContrastSize;
+  accentColor?: string;
+  ariaLabel?: string;
+  className?: string;
+  style?: CSSProperties;
+  onChange?: (result: ContrastResult, colors: { foreground: string; background: string }) => void;
+}
+
+export interface ColorContrastHandle {
+  getRatio: () => number;
+  getResult: () => ContrastResult;
+  setColors: (foreground: string, background: string) => void;
+  swap: () => void;
+}
+
+interface VariantStyle {
+  wrapper: CSSProperties;
+  labelColor: string;
+  inputBg: string;
+  inputColor: string;
+  inputBorder: string;
+  mutedColor: string;
+  passColor: string;
+  failColor: string;
+}
+
+const VARIANT_STYLES: Record<ColorContrastVariant, VariantStyle> = {
+  default: {
+    wrapper: { background: 'transparent' },
+    labelColor: '#0f172a', inputBg: '#ffffff', inputColor: '#0f172a', inputBorder: '#cbd5e1', mutedColor: '#64748b', passColor: '#16a34a', failColor: '#dc2626',
+  },
+  card: {
+    wrapper: { background: '#ffffff', border: '1px solid #e2e8f0', borderRadius: '16px', boxShadow: '0 4px 16px rgba(0, 0, 0, 0.06)', padding: '20px' },
+    labelColor: '#0f172a', inputBg: '#ffffff', inputColor: '#0f172a', inputBorder: '#cbd5e1', mutedColor: '#64748b', passColor: '#16a34a', failColor: '#dc2626',
+  },
+  glass: {
+    wrapper: { background: 'rgba(248, 250, 252, 0.6)', border: '1px solid rgba(255, 255, 255, 0.4)', borderRadius: '16px', boxShadow: '0 8px 32px rgba(0, 0, 0, 0.12)', backdropFilter: 'blur(16px)', WebkitBackdropFilter: 'blur(16px)', padding: '20px' },
+    labelColor: '#0f172a', inputBg: 'rgba(255, 255, 255, 0.7)', inputColor: '#0f172a', inputBorder: 'rgba(148, 163, 184, 0.6)', mutedColor: '#475569', passColor: '#16a34a', failColor: '#dc2626',
+  },
+  neon: {
+    wrapper: { background: '#050811', border: '1px solid rgba(6, 182, 212, 0.4)', borderRadius: '16px', boxShadow: '0 0 24px rgba(6, 182, 212, 0.15)', padding: '20px' },
+    labelColor: '#f8fafc', inputBg: 'rgba(6, 182, 212, 0.08)', inputColor: '#e0f2fe', inputBorder: 'rgba(6, 182, 212, 0.5)', mutedColor: '#38bdf8', passColor: '#22d3ee', failColor: '#fb7185',
+  },
+};
+
+const SIZE_STYLES: Record<ColorContrastSize, { font: number; pad: number; gap: number }> = {
+  sm: { font: 12, pad: 8, gap: 8 },
+  md: { font: 14, pad: 10, gap: 12 },
+  lg: { font: 16, pad: 12, gap: 16 },
+};
+
+function parseHex(hex: string): { r: number; g: number; b: number } | null {
+  let h = hex.trim().replace('#', '');
+  if (h.length === 3) h = h.charAt(0) + h.charAt(0) + h.charAt(1) + h.charAt(1) + h.charAt(2) + h.charAt(2);
+  if (h.length !== 6 || /[^0-9a-fA-F]/.test(h)) return null;
+  return { r: parseInt(h.slice(0, 2), 16), g: parseInt(h.slice(2, 4), 16), b: parseInt(h.slice(4, 6), 16) };
+}
+
+function channelLuminance(c: number): number {
+  const s = c / 255;
+  return s <= 0.03928 ? s / 12.92 : Math.pow((s + 0.055) / 1.055, 2.4);
+}
+
+function relativeLuminance(rgb: { r: number; g: number; b: number }): number {
+  return 0.2126 * channelLuminance(rgb.r) + 0.7152 * channelLuminance(rgb.g) + 0.0722 * channelLuminance(rgb.b);
+}
+
+function contrastRatio(foreground: string, background: string): number {
+  const f = parseHex(foreground);
+  const b = parseHex(background);
+  if (!f || !b) return 1;
+  const l1 = relativeLuminance(f);
+  const l2 = relativeLuminance(b);
+  const lighter = Math.max(l1, l2);
+  const darker = Math.min(l1, l2);
+  return (lighter + 0.05) / (darker + 0.05);
+}
+
+function evaluateContrast(foreground: string, background: string): ContrastResult {
+  const raw = contrastRatio(foreground, background);
+  const ratio = Math.round(raw * 100) / 100;
+  const aaNormal = ratio >= 4.5;
+  const aaaNormal = ratio >= 7;
+  const aaLarge = ratio >= 3;
+  const aaaLarge = ratio >= 4.5;
+  const uiComponent = ratio >= 3;
+  let rating = 'Fail';
+  if (aaaNormal) rating = 'AAA';
+  else if (aaNormal) rating = 'AA';
+  else if (aaLarge) rating = 'AA Large';
+  return { ratio: ratio, aaNormal: aaNormal, aaaNormal: aaaNormal, aaLarge: aaLarge, aaaLarge: aaaLarge, uiComponent: uiComponent, rating: rating };
+}
+
+const ColorContrastComponent = forwardRef<ColorContrastHandle, ColorContrastProps>(
+  function ColorContrast(
+    {
+      foreground,
+      background,
+      defaultForeground = '#0f172a',
+      defaultBackground = '#f8fafc',
+      showInputs = true,
+      showPreview = true,
+      sampleText = 'The quick brown fox jumps over the lazy dog',
+      variant = 'default',
+      size = 'md',
+      accentColor,
+      ariaLabel = 'Color contrast checker',
+      className,
+      style,
+      onChange,
+    }: ColorContrastProps,
+    ref,
+  ) {
+    const fgControlled = typeof foreground === 'string';
+    const bgControlled = typeof background === 'string';
+    const [internalFg, setInternalFg] = useState<string>(defaultForeground);
+    const [internalBg, setInternalBg] = useState<string>(defaultBackground);
+
+    const fg = fgControlled ? (foreground as string) : internalFg;
+    const bg = bgControlled ? (background as string) : internalBg;
+    const result = evaluateContrast(fg, bg);
+
+    const emit = (nextFg: string, nextBg: string) => {
+      if (!fgControlled) setInternalFg(nextFg);
+      if (!bgControlled) setInternalBg(nextBg);
+      if (onChange) onChange(evaluateContrast(nextFg, nextBg), { foreground: nextFg, background: nextBg });
+    };
+
+    useImperativeHandle(
+      ref,
+      () => ({
+        getRatio: () => result.ratio,
+        getResult: () => result,
+        setColors: (nextFg: string, nextBg: string) => emit(nextFg, nextBg),
+        swap: () => emit(bg, fg),
+      }),
+      [result, fg, bg],
+    );
+
+    const theme = VARIANT_STYLES[variant] || VARIANT_STYLES.default;
+    const sizing = SIZE_STYLES[size] || SIZE_STYLES.md;
+    const resolvedAccent = accentColor || '#2563eb';
+
+    const labelStyle: CSSProperties = { fontSize: (sizing.font - 1) + 'px', fontWeight: 600, color: theme.labelColor, marginBottom: '4px', display: 'block' };
+    const hexInputStyle: CSSProperties = {
+      fontSize: sizing.font + 'px', padding: sizing.pad + 'px', background: theme.inputBg, color: theme.inputColor,
+      border: '1px solid ' + theme.inputBorder, borderRadius: '8px', outline: 'none', width: '100%', boxSizing: 'border-box', fontFamily: 'monospace',
+    };
+
+    const badge = (label: string, pass: boolean) => (
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px', padding: '6px 10px', borderRadius: '8px', background: pass ? 'rgba(22, 163, 74, 0.1)' : 'rgba(220, 38, 38, 0.1)' }}>
+        <span style={{ fontSize: (sizing.font - 1) + 'px', color: theme.labelColor }}>{label}</span>
+        <span style={{ fontSize: (sizing.font - 1) + 'px', fontWeight: 700, color: pass ? theme.passColor : theme.failColor }}>
+          <span aria-hidden="true">{pass ? '✓ ' : '✗ '}</span>{pass ? 'Pass' : 'Fail'}
+        </span>
+      </div>
+    );
+
+    return (
+      <div
+        className={className}
+        role="group"
+        aria-label={ariaLabel}
+        data-variant={variant}
+        data-size={size}
+        style={{ display: 'flex', flexDirection: 'column', gap: sizing.gap + 'px', fontFamily: 'system-ui, -apple-system, sans-serif', ...theme.wrapper, ...style }}
+      >
+        {showInputs ? (
+          <div style={{ display: 'flex', gap: sizing.gap + 'px', flexWrap: 'wrap' }}>
+            <div style={{ flex: 1, minWidth: '140px' }}>
+              <label style={labelStyle}>Foreground</label>
+              <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                <input type="color" aria-label="Foreground color" value={parseHex(fg) ? fg : '#000000'} onChange={(e) => emit(e.target.value, bg)} style={{ width: '40px', height: '40px', border: 'none', borderRadius: '8px', background: 'none', cursor: 'pointer' }} />
+                <input type="text" aria-label="Foreground hex" value={fg} onChange={(e) => emit(e.target.value, bg)} style={hexInputStyle} />
+              </div>
+            </div>
+            <div style={{ display: 'flex', alignItems: 'flex-end', paddingBottom: '2px' }}>
+              <button type="button" aria-label="Swap colors" onClick={() => emit(bg, fg)} style={{ padding: '8px 10px', background: 'transparent', border: '1px solid ' + theme.inputBorder, borderRadius: '8px', color: theme.labelColor, cursor: 'pointer', fontSize: sizing.font + 'px' }}>
+                <span aria-hidden="true">{'⇄'}</span>
+              </button>
+            </div>
+            <div style={{ flex: 1, minWidth: '140px' }}>
+              <label style={labelStyle}>Background</label>
+              <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                <input type="color" aria-label="Background color" value={parseHex(bg) ? bg : '#ffffff'} onChange={(e) => emit(fg, e.target.value)} style={{ width: '40px', height: '40px', border: 'none', borderRadius: '8px', background: 'none', cursor: 'pointer' }} />
+                <input type="text" aria-label="Background hex" value={bg} onChange={(e) => emit(fg, e.target.value)} style={hexInputStyle} />
+              </div>
+            </div>
+          </div>
+        ) : null}
+
+        {showPreview ? (
+          <div style={{ background: bg, color: fg, borderRadius: '12px', padding: '18px', border: '1px solid ' + theme.inputBorder }}>
+            <div style={{ fontSize: (sizing.font + 4) + 'px', marginBottom: '8px' }}>{sampleText}</div>
+            <div style={{ fontSize: (sizing.font + 12) + 'px', fontWeight: 700 }}>{sampleText}</div>
+          </div>
+        ) : null}
+
+        <div role="status" aria-live="polite" aria-label="Contrast result" style={{ display: 'flex', alignItems: 'baseline', gap: '10px' }}>
+          <span style={{ fontSize: (sizing.font + 14) + 'px', fontWeight: 800, color: resolvedAccent }}>{result.ratio.toFixed(2)}</span>
+          <span style={{ fontSize: sizing.font + 'px', color: theme.mutedColor }}>: 1 contrast &middot; {result.rating}</span>
+        </div>
+
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: '8px' }}>
+          {badge('AA Normal text', result.aaNormal)}
+          {badge('AAA Normal text', result.aaaNormal)}
+          {badge('AA Large text', result.aaLarge)}
+          {badge('AAA Large text', result.aaaLarge)}
+          {badge('UI components', result.uiComponent)}
+        </div>
+      </div>
+    );
+  },
+);
+
+ColorContrastComponent.displayName = 'ColorContrast';
+
+export const ColorContrast = ColorContrastComponent;
+export const ContrastChecker = ColorContrastComponent;
+export const WcagContrast = ColorContrastComponent;
+export const ContrastRatio = ColorContrastComponent;
+
+ColorContrast.displayName = 'ColorContrast';
+ContrastChecker.displayName = 'ContrastChecker';
+WcagContrast.displayName = 'WcagContrast';
+ContrastRatio.displayName = 'ContrastRatio';
+
+export default ColorContrastComponent;
+"""
+
+
+def render_color_contrast_component() -> str:
+    """Render the Accessible Futuristic Reusable Color Contrast Checker Suite (R-408)."""
+    return _COLOR_CONTRAST_COMPONENT
+
+
 _DESIGN_TOKENS_CSS = (
     "/**\n"
     " * OmniStackAI Design Tokens & Theming Engine\n"
@@ -69001,6 +69264,7 @@ class NextjsWebAdapter:
             GeneratedFile("components/mention.tsx", _MENTION_COMPONENT),
             GeneratedFile("components/marquee.tsx", _MARQUEE_COMPONENT),
             GeneratedFile("components/credit-card.tsx", _CREDIT_CARD_COMPONENT),
+            GeneratedFile("components/color-contrast.tsx", _COLOR_CONTRAST_COMPONENT),
             GeneratedFile("styles/tokens.css", _DESIGN_TOKENS_CSS),
             GeneratedFile("app/globals.css", _GLOBALS_CSS),
             GeneratedFile("app/error.tsx", _ERROR_PAGE),

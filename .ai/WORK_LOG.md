@@ -1,5 +1,21 @@
 # Work Log
 
+## 2026-09-12 — R-408
+
+- Recorded contract in `.ai/CURRENT_TASK.yaml` and `.ai/tasks/R-408.md` before code (test-first).
+- `nextjs.py`:
+  - Added `_COLOR_CONTRAST_COMPONENT` static template (raw triple-quoted string) implementing the accessible, desktop-and-mobile-grade, futuristic Color Contrast Checker compound component suite (`apps/web/components/color-contrast.tsx`).
+  - Genuinely functional WCAG math: `parseHex` (#rgb/#rrggbb, backslash-free `/[^0-9a-fA-F]/` guard), `channelLuminance` (sRGB gamma via `Math.pow((s+0.055)/1.055, 2.4)`), `relativeLuminance` (`0.2126`/`0.7152`/`0.0722` weights), `contrastRatio` (`(lighter+0.05)/(darker+0.05)`), and `evaluateContrast` producing a `ContrastResult` with AA/AAA thresholds for normal (>=4.5 / >=7), large (>=3 / >=4.5), and UI (>=3).
+  - Native `<input type="color">` + hex text inputs for foreground/background, a swap action, a live preview swatch (sample text at normal + large sizes on the actual colors), and pass/fail badges; a big rounded ratio readout with the derived rating.
+  - Controlled + uncontrolled colors; `onChange(result, {foreground, background})`; WAI-ARIA (labeled inputs, `role="status"` `aria-live` results region); imperative `ColorContrastHandle` (`getRatio`, `getResult`, `setColors`, `swap`).
+  - Implemented `ColorContrastVariant`/`ColorContrastSize` types, `ContrastResult`/`ColorContrastHandle`/`ColorContrastProps` interfaces, `VARIANT_STYLES`/`SIZE_STYLES` maps.
+  - Compound and semantic alias exports: `ColorContrast`, `ContrastChecker`, `WcagContrast`, `ContrastRatio`, default export — each with explicit `displayName`.
+  - Exported `render_color_contrast_component` in `omnistackai_agent_engine.codegen` and registered `components/color-contrast.tsx` in `NextjsWebAdapter.generate()`.
+  - Maintained 100% diff-invariance across `ir.description` (static module constant); 0 external runtime dependencies.
+- Added `services/agent-engine/tests/test_color_contrast_component.py` with 18 tests (file-generated, diff-invariance + accessor byte-equality, `'use client'`, zero-deps imports, forwardRef + useImperativeHandle + 4 handle methods, TS types, alias/default exports, displayNames, 4 variants, 3 sizes, luminance algorithm, contrast ratio, WCAG thresholds, hex parsing, color inputs, aria status, callbacks/controlled, codegen export).
+- Gates: `pytest .../test_color_contrast_component.py` (18 passed); `task verify` (2,628 tests passed); `task lint`, `task security:quick`, `task env:check` passed; `task builder:demo -- minimal-blog` generated 145 files including `apps/web/components/color-contrast.tsx`. 0 model calls.
+- Static TSX sanity check: `'use client'` first line, balanced braces/parens, react-only imports, no `\"\"\"`/backtick hazards (unicode escapes `✓`/`✗`/`⇄` used inside JS-string expressions, not raw JSX text).
+
 ## 2026-09-12 — R-407
 
 - Recorded contract in `.ai/CURRENT_TASK.yaml` and `.ai/tasks/R-407.md` before code (test-first).

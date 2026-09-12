@@ -1,29 +1,29 @@
-task_id: R-407
-id: R-407
-title: "Accessible Futuristic Reusable Credit Card Payment Field Suite"
+task_id: R-408
+id: R-408
+title: "Accessible Futuristic Reusable Color Contrast Checker Suite"
 status: DONE
 phase: MVP
-tracker_row: 44
+tracker_row: 45
 started_at: "2026-09-12"
 completed_at: "2026-09-12"
 objective: >-
-  Add an accessible, zero-dependency, desktop-and-mobile-grade, futuristic Credit Card Payment Field
-  compound component suite (components/credit-card.tsx): card-number, expiry (MM/YY), CVC, and optional
-  cardholder-name fields with real-time formatting, IIN-prefix brand detection (visa/mastercard/amex/
-  discover/unknown), Luhn checksum validation of the number, expiry validity (valid month + not in the
-  past), and brand-aware CVC length; a computed meta object ({brand, numberValid, expiryValid, cvcValid,
-  complete}); an optional live card preview; controlled + uncontrolled value (Partial); onChange (value,
-  meta) and onComplete callbacks; WAI-ARIA (labeled inputs, aria-invalid, aria-describedby, inputMode
-  numeric); 4 futuristic visual styling variants ("default", "card", "glass", "neon"); 3 size scales
-  ("sm", "md", "lg"); React ref forwarding (forwardRef); useImperativeHandle (CreditCardHandle:
-  getValue/getMeta/clear/focus); and explicit displayName across compound and semantic alias exports
-  (CreditCard, CreditCardField, PaymentCardField, CardInput, default). Static module constant — never
+  Add an accessible, zero-dependency, desktop-and-mobile-grade, futuristic Color Contrast Checker compound
+  component suite (components/color-contrast.tsx): parses foreground/background hex colors (#rgb and
+  #rrggbb), computes WCAG 2.x relative luminance and contrast ratio, and evaluates AA/AAA pass-fail for
+  normal text, large text, and UI components; a computed ContrastResult ({ratio, aaNormal, aaaNormal,
+  aaLarge, aaaLarge, uiComponent, rating}); native color inputs plus hex text inputs, a live preview swatch
+  with sample text at normal and large sizes, and pass/fail badges; controlled + uncontrolled colors; a
+  swap action; onChange callback; WAI-ARIA (labeled inputs, a role="status" aria-live results region);
+  4 futuristic visual styling variants ("default", "card", "glass", "neon"); 3 size scales ("sm", "md",
+  "lg"); React ref forwarding (forwardRef); useImperativeHandle (ColorContrastHandle:
+  getRatio/getResult/setColors/swap); and explicit displayName across compound and semantic alias exports
+  (ColorContrast, ContrastChecker, WcagContrast, ContrastRatio, default). Static module constant — never
   references ir.name/ir.description.
 allowed_paths:
   - "services/agent-engine/src/omnistackai_agent_engine/codegen/nextjs.py"
   - "services/agent-engine/src/omnistackai_agent_engine/codegen/__init__.py"
-  - "services/agent-engine/tests/test_credit_card_component.py"
-  - ".ai/tasks/R-407.md"
+  - "services/agent-engine/tests/test_color_contrast_component.py"
+  - ".ai/tasks/R-408.md"
   - ".ai/CURRENT_TASK.yaml"
   - ".ai/PROJECT_STATE.yaml"
   - ".ai/WORK_LOG.md"
@@ -35,9 +35,9 @@ forbidden_changes:
   - "Do not break snapshot diff invariance across ir.description"
   - "Do not commit or push code to git without verification"
 evidence:
-  verify: "2610 passed (Stage 0 verification passed)"
+  verify: "2628 passed (Stage 0 verification passed)"
   lint: "task lint passed"
   security: "task security:quick passed"
-  demos: "task builder:demo -- minimal-blog generated 144 files (includes apps/web/components/credit-card.tsx)"
+  demos: "task builder:demo -- minimal-blog generated 145 files (includes apps/web/components/color-contrast.tsx)"
   tracker: DONE
-next_action: "Proceed to R-408 (next unstarted Tracker ID), autonomous continuation active."
+next_action: "Proceed to R-409 (next unstarted Tracker ID), autonomous continuation active."
