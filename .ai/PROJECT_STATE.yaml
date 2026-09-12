@@ -2,13 +2,27 @@ schema_version: 1
 project: OmniStackAI
 phase: BASIC/MVP
 founder_stage: 0
-current_task: R-401
+current_task: R-402
 current_status: advancing
 branch: main
-last_completed_task: R-400
+last_completed_task: R-401
 last_completed_task_summary: >-
-  Generated Accessible Futuristic Reusable Before/After Image Comparison Slider Suite
-  (components/image-comparison.tsx); a genuinely interactive (non-cosmetic) two-layer image comparison
+  Generated Accessible Futuristic Reusable Countdown Timer, Stopwatch & Live Clock Suite
+  (components/countdown.tsx); three modes — countdown (to a targetDate or fixed duration), stopwatch, and
+  live clock (12h/24h) — driven by a real setInterval tick with SSR-safe mounting (deterministic first
+  paint via a mounted flag; real time via Date.now() only after mount to avoid hydration mismatch);
+  day/hour/minute/second unit segments with optional labels and configurable separator, autoStart,
+  controlled + uncontrolled paused, onComplete + onTick callbacks, a JS prefers-reduced-motion guard that
+  disables the per-tick transition, WAI-ARIA semantics (role="timer", aria-atomic, visually-hidden
+  aria-live completion announcement), 4 futuristic variants ("default", "card", "glass", "neon"), 3 size
+  scales ("sm", "md", "lg"), React ref forwarding (forwardRef), useImperativeHandle (CountdownHandle:
+  start/pause/reset/restart/getTime/isRunning), canonical TypeScript types (CountdownVariant, CountdownSize,
+  CountdownMode, CountdownHandle, CountdownProps), compound and semantic alias exports (Countdown,
+  CountdownTimer, Stopwatch, LiveClock, default export) with explicit displayName; 100% diff-invariance
+  across ir.description, 0 external runtime dependencies; exported render_countdown_component in codegen;
+  registered components/countdown.tsx in NextjsWebAdapter; 2,502 tests pass (18 new tests in
+  test_countdown_component.py); 0 model calls. Previously R-400 shipped the Before/After Image Comparison
+  Slider Suite (components/image-comparison.tsx); a genuinely interactive (non-cosmetic) two-layer image comparison
   revealer: an "after" base layer with a "before" layer clipped via CSS clip-path, a draggable divider with
   pointer capture, click/tap-to-position on the track, and a role="slider" handle with full keyboard control
   (Arrow keys by step, Home/End to 0/100, PageUp/PageDown by 10); horizontal and vertical orientations;
@@ -49,9 +63,9 @@ product_direction: >-
   framework adapter contract -> Next.js adapter -> Git service -> preview/sandbox (needs cloud env).
 id_note: >-
   Workbook backlog owns R-010..R-219. Founder-requested tasks use IDs after R-219: R-220..R-223 done,
-  R-224 Next.js deferred (env-blocked), R-225..R-400 done.
+  R-224 Next.js deferred (env-blocked), R-225..R-401 done.
 blockers: []
 next_action: >-
-  Task R-400 (Accessible Futuristic Reusable Before/After Image Comparison Slider Suite) complete with 2,484
-  tests passing. Advancing autonomously to R-401 (next unstarted Tracker ID) — the posture is advancing, not
-  stopped; continue until manually stopped.
+  Task R-401 (Accessible Futuristic Reusable Countdown Timer, Stopwatch & Live Clock Suite) complete with
+  2,502 tests passing. Advancing autonomously to R-402 (next unstarted Tracker ID) — the posture is
+  advancing, not stopped; continue until manually stopped.

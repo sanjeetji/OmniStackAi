@@ -129,6 +129,7 @@ from .nextjs import (
     render_audio_visualizer_component,
     render_particle_network_component,
     render_image_comparison_component,
+    render_countdown_component,
 )
 from .openapi import render_openapi, render_openapi_json
 from .schema_sql import render_postgres_schema, table_name
@@ -261,6 +262,7 @@ __all__ = [
     "render_audio_visualizer_component",
     "render_particle_network_component",
     "render_image_comparison_component",
+    "render_countdown_component",
     "render_postgres_schema",
     "render_postgres_seed",
     "render_openapi",

@@ -1,6 +1,6 @@
 # Current Handoff
 
-Task ID: R-400
+Task ID: R-401
 Status: done
 Phase: BASIC/MVP — Founder Stage 0
 Branch: `main` (the only branch; the GitHub default)
@@ -48,9 +48,27 @@ Branch: `main` (the only branch; the GitHub default)
   36. **R-398**: Audio Waveform & Spectrum Visualizer Suite (`components/audio-visualizer.tsx`)
   37. **R-399**: Particle Network & Interactive Constellation Canvas Suite (`components/particle-network.tsx`)
   38. **R-400**: Before/After Image Comparison Slider Suite (`components/image-comparison.tsx`)
+  39. **R-401**: Countdown Timer, Stopwatch & Live Clock Suite (`components/countdown.tsx`)
 - Advancing autonomously to the next Tracker ID (posture is advancing, not stopped). Still stop-and-ask only for paid cloud / DB engine / new infra / native-mobile / a materially different architecture decision.
 
 ## Completed
+
+### R-401 — Generated Accessible Futuristic Reusable Countdown Timer, Stopwatch & Live Clock Suite (components/countdown.tsx)
+
+Enabled a genuinely functional countdown/stopwatch/live-clock timer across generated Next.js web applications:
+- **Standalone Countdown Suite (`apps/web/components/countdown.tsx`)**:
+  - Implemented `CountdownVariant`, `CountdownSize`, `CountdownMode`, `CountdownHandle`, `CountdownProps`, plus internal `VARIANT_STYLES`/`SIZE_STYLES` hard-coded hex maps.
+  - Compound and semantic alias exports: `Countdown`, `CountdownTimer`, `Stopwatch`, `LiveClock`, default export.
+  - Three modes — `countdown` (to `targetDate` or fixed `duration`), `stopwatch`, `clock` (12h/24h) — driven by a real `window.setInterval` tick reading `Date.now()`.
+  - SSR-safe `mounted` flag (deterministic "--" first paint, real time only after mount) to avoid hydration mismatch.
+  - Day/hour/minute/second segments with optional labels + configurable `separator`, `autoStart`, controlled + uncontrolled `paused`, `onComplete`/`onTick` callbacks, JS `prefers-reduced-motion` guard, WAI-ARIA (`role="timer"`, `aria-atomic`, visually-hidden `aria-live` completion announcement).
+  - React ref forwarding (`forwardRef`), imperative handle (`CountdownHandle`: `start`/`pause`/`reset`/`restart`/`getTime`/`isRunning`), explicit `displayName` across all exports.
+  - Exported `render_countdown_component` in `omnistackai_agent_engine.codegen` and registered `components/countdown.tsx` in `NextjsWebAdapter.generate()`.
+  - Maintained 100% diff-invariance across `ir.description`; 0 external runtime dependencies.
+- **Verification**:
+  - 18 unit tests in `services/agent-engine/tests/test_countdown_component.py` (all passing).
+  - `task verify` passing: 2,502 tests passed.
+  - `task lint`, `task security:quick`, `task env:check` — pass. `task builder:demo -- minimal-blog` — 138 files (includes `apps/web/components/countdown.tsx`).
 
 ### R-400 — Generated Accessible Futuristic Reusable Before/After Image Comparison Slider Suite (components/image-comparison.tsx)
 
@@ -721,9 +739,9 @@ Enabled accessible, desktop-and-mobile-grade, futuristic Time Picker and Time Ra
 
 ## Verification
 
-- `task verify` — pass (2,484 agent-engine tests; 18 focused R-400 tests in `test_image_comparison_component.py`).
+- `task verify` — pass (2,502 agent-engine tests; 18 focused R-401 tests in `test_countdown_component.py`).
 - `task lint`, `task security:quick`, `task env:check` — pass.
-- `task builder:demo -- minimal-blog` — pass (137 files, includes `components/image-comparison.tsx`).
+- `task builder:demo -- minimal-blog` — pass (138 files, includes `components/countdown.tsx`).
 
 ## Blockers and risks
 
@@ -732,7 +750,7 @@ Enabled accessible, desktop-and-mobile-grade, futuristic Time Picker and Time Ra
 
 ## Next action
 
-- Advancing autonomously to Task R-401 (next unstarted Tracker ID). Record its contract in `.ai/CURRENT_TASK.yaml` and `.ai/tasks/R-401.md` before code.
+- Advancing autonomously to Task R-402 (next unstarted Tracker ID). Record its contract in `.ai/CURRENT_TASK.yaml` and `.ai/tasks/R-402.md` before code.
 
 ## Next command
 

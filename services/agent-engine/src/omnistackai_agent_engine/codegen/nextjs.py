@@ -66067,6 +66067,361 @@ def render_image_comparison_component() -> str:
     return _IMAGE_COMPARISON_COMPONENT
 
 
+_COUNTDOWN_COMPONENT = r"""'use client';
+
+import { forwardRef, useCallback, useEffect, useImperativeHandle, useRef, useState } from 'react';
+import type { CSSProperties } from 'react';
+
+export type CountdownVariant = 'default' | 'card' | 'glass' | 'neon';
+export type CountdownSize = 'sm' | 'md' | 'lg';
+export type CountdownMode = 'countdown' | 'stopwatch' | 'clock';
+
+export interface CountdownProps {
+  mode?: CountdownMode;
+  targetDate?: string | number;
+  duration?: number;
+  autoStart?: boolean;
+  paused?: boolean;
+  showDays?: boolean;
+  showHours?: boolean;
+  showMinutes?: boolean;
+  showSeconds?: boolean;
+  showLabels?: boolean;
+  separator?: string;
+  clockFormat?: '12h' | '24h';
+  variant?: CountdownVariant;
+  size?: CountdownSize;
+  accentColor?: string;
+  completeText?: string;
+  ariaLabel?: string;
+  className?: string;
+  style?: CSSProperties;
+  onComplete?: () => void;
+  onTick?: (value: number) => void;
+}
+
+export interface CountdownHandle {
+  start: () => void;
+  pause: () => void;
+  reset: () => void;
+  restart: () => void;
+  getTime: () => number;
+  isRunning: () => boolean;
+}
+
+interface VariantStyle {
+  wrapper: CSSProperties;
+  segmentBg: string;
+  digitColor: string;
+  labelColor: string;
+  separatorColor: string;
+}
+
+const VARIANT_STYLES: Record<CountdownVariant, VariantStyle> = {
+  default: {
+    wrapper: { background: 'transparent' },
+    segmentBg: '#f1f5f9', digitColor: '#0f172a', labelColor: '#64748b', separatorColor: '#94a3b8',
+  },
+  card: {
+    wrapper: { background: '#ffffff', border: '1px solid #e2e8f0', borderRadius: '12px', boxShadow: '0 4px 16px rgba(0, 0, 0, 0.06)', padding: '16px' },
+    segmentBg: '#f1f5f9', digitColor: '#0f172a', labelColor: '#64748b', separatorColor: '#94a3b8',
+  },
+  glass: {
+    wrapper: { background: 'rgba(248, 250, 252, 0.6)', border: '1px solid rgba(255, 255, 255, 0.4)', borderRadius: '12px', boxShadow: '0 8px 32px rgba(0, 0, 0, 0.12)', backdropFilter: 'blur(16px)', WebkitBackdropFilter: 'blur(16px)', padding: '16px' },
+    segmentBg: 'rgba(255, 255, 255, 0.5)', digitColor: '#0f172a', labelColor: '#475569', separatorColor: '#64748b',
+  },
+  neon: {
+    wrapper: { background: '#050811', border: '1px solid rgba(6, 182, 212, 0.4)', borderRadius: '12px', boxShadow: '0 0 24px rgba(6, 182, 212, 0.15)', padding: '16px' },
+    segmentBg: 'rgba(6, 182, 212, 0.08)', digitColor: '#38bdf8', labelColor: '#0e7490', separatorColor: '#06b6d4',
+  },
+};
+
+const SIZE_STYLES: Record<CountdownSize, { digit: number; label: number; gap: number; pad: number }> = {
+  sm: { digit: 24, label: 10, gap: 6, pad: 8 },
+  md: { digit: 40, label: 12, gap: 10, pad: 12 },
+  lg: { digit: 60, label: 14, gap: 14, pad: 16 },
+};
+
+function pad2(n: number): string {
+  return String(Math.max(0, Math.floor(n))).padStart(2, '0');
+}
+
+function resolveTargetMs(targetDate?: string | number, durationMs?: number | null): number | null {
+  if (typeof targetDate === 'number') return targetDate;
+  if (typeof targetDate === 'string') {
+    const t = new Date(targetDate).getTime();
+    return isNaN(t) ? null : t;
+  }
+  if (typeof durationMs === 'number') return Date.now() + durationMs;
+  return null;
+}
+
+const CountdownComponent = forwardRef<CountdownHandle, CountdownProps>(
+  function Countdown(
+    {
+      mode = 'countdown',
+      targetDate,
+      duration,
+      autoStart = true,
+      paused,
+      showDays = true,
+      showHours = true,
+      showMinutes = true,
+      showSeconds = true,
+      showLabels = true,
+      separator = ':',
+      clockFormat = '24h',
+      variant = 'default',
+      size = 'md',
+      accentColor,
+      completeText = "Time's up",
+      ariaLabel = 'Countdown timer',
+      className,
+      style,
+      onComplete,
+      onTick,
+    }: CountdownProps,
+    ref,
+  ) {
+    const isControlledPause = typeof paused === 'boolean';
+    const durationMs = typeof duration === 'number' ? duration * 1000 : null;
+
+    const [mounted, setMounted] = useState(false);
+    const [elapsedMs, setElapsedMs] = useState(0);
+    const [nowMs, setNowMs] = useState(0);
+    const [remainingMs, setRemainingMs] = useState<number>(durationMs !== null && mode === 'countdown' ? durationMs : 0);
+    const [complete, setComplete] = useState(false);
+    const [running, setRunning] = useState<boolean>(autoStart && !(isControlledPause && paused === true));
+
+    const intervalRef = useRef<number | null>(null);
+    const startTsRef = useRef<number | null>(null);
+    const accumulatedRef = useRef<number>(0);
+    const targetMsRef = useRef<number | null>(null);
+    const reducedMotionRef = useRef<boolean>(false);
+    const onCompleteRef = useRef<(() => void) | undefined>(onComplete);
+    const onTickRef = useRef<((value: number) => void) | undefined>(onTick);
+    onCompleteRef.current = onComplete;
+    onTickRef.current = onTick;
+
+    const tick = useCallback(() => {
+      const now = Date.now();
+      if (mode === 'clock') {
+        setNowMs(now);
+        if (onTickRef.current) onTickRef.current(now);
+        return;
+      }
+      if (mode === 'stopwatch') {
+        const value = accumulatedRef.current + (startTsRef.current !== null ? now - startTsRef.current : 0);
+        setElapsedMs(value);
+        if (onTickRef.current) onTickRef.current(value);
+        return;
+      }
+      const rem = targetMsRef.current !== null ? Math.max(0, targetMsRef.current - now) : 0;
+      setRemainingMs(rem);
+      if (onTickRef.current) onTickRef.current(rem);
+      if (rem <= 0) {
+        setComplete(true);
+        setRunning(false);
+        if (onCompleteRef.current) onCompleteRef.current();
+      }
+    }, [mode]);
+
+    const start = useCallback(() => {
+      setComplete(false);
+      if (mode === 'stopwatch' && startTsRef.current === null) {
+        startTsRef.current = Date.now();
+      }
+      if (mode === 'countdown' && targetMsRef.current === null) {
+        targetMsRef.current = resolveTargetMs(targetDate, durationMs);
+      }
+      setRunning(true);
+    }, [mode, targetDate, durationMs]);
+
+    const pause = useCallback(() => {
+      if (mode === 'stopwatch' && startTsRef.current !== null) {
+        accumulatedRef.current += Date.now() - startTsRef.current;
+        startTsRef.current = null;
+      }
+      setRunning(false);
+    }, [mode]);
+
+    const reset = useCallback(() => {
+      setComplete(false);
+      accumulatedRef.current = 0;
+      if (mode === 'stopwatch') {
+        startTsRef.current = running ? Date.now() : null;
+        setElapsedMs(0);
+      } else if (mode === 'countdown') {
+        targetMsRef.current = resolveTargetMs(targetDate, durationMs);
+        setRemainingMs(targetMsRef.current !== null ? Math.max(0, targetMsRef.current - Date.now()) : 0);
+      }
+    }, [mode, running, targetDate, durationMs]);
+
+    const restart = useCallback(() => {
+      reset();
+      setRunning(true);
+    }, [reset]);
+
+    useEffect(() => {
+      setMounted(true);
+      try {
+        reducedMotionRef.current = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+      } catch {
+        reducedMotionRef.current = false;
+      }
+      if (mode === 'countdown') {
+        targetMsRef.current = resolveTargetMs(targetDate, durationMs);
+        setRemainingMs(targetMsRef.current !== null ? Math.max(0, targetMsRef.current - Date.now()) : 0);
+      } else if (mode === 'stopwatch') {
+        if (running) startTsRef.current = Date.now();
+      } else {
+        setNowMs(Date.now());
+      }
+      // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, []);
+
+    const pausedActive = isControlledPause ? paused === true : false;
+
+    useEffect(() => {
+      if (!mounted) return;
+      if (!running || pausedActive) return;
+      tick();
+      const id = window.setInterval(tick, mode === 'clock' ? 1000 : 250);
+      intervalRef.current = id;
+      return () => {
+        clearInterval(id);
+        intervalRef.current = null;
+      };
+    }, [mounted, running, pausedActive, mode, tick]);
+
+    useImperativeHandle(
+      ref,
+      () => ({
+        start,
+        pause,
+        reset,
+        restart,
+        getTime: () => (mode === 'stopwatch' ? elapsedMs : mode === 'clock' ? nowMs : remainingMs),
+        isRunning: () => running && !pausedActive,
+      }),
+      [start, pause, reset, restart, mode, elapsedMs, nowMs, remainingMs, running, pausedActive],
+    );
+
+    const theme = VARIANT_STYLES[variant] || VARIANT_STYLES.default;
+    const sizing = SIZE_STYLES[size] || SIZE_STYLES.md;
+    const resolvedAccent = accentColor || theme.separatorColor;
+
+    const totalMs = mode === 'stopwatch' ? elapsedMs : mode === 'clock' ? nowMs : remainingMs;
+    let days = 0;
+    let hours = 0;
+    let minutes = 0;
+    let seconds = 0;
+    let clockSuffix = '';
+    if (mode === 'clock') {
+      const d = new Date(nowMs);
+      hours = d.getHours();
+      minutes = d.getMinutes();
+      seconds = d.getSeconds();
+    } else {
+      const totalSec = Math.floor(totalMs / 1000);
+      days = Math.floor(totalSec / 86400);
+      hours = Math.floor((totalSec % 86400) / 3600);
+      minutes = Math.floor((totalSec % 3600) / 60);
+      seconds = totalSec % 60;
+    }
+    let displayHours = hours;
+    if (mode === 'clock' && clockFormat === '12h') {
+      clockSuffix = hours >= 12 ? 'PM' : 'AM';
+      displayHours = hours % 12 === 0 ? 12 : hours % 12;
+    }
+
+    const segments: { label: string; value: string }[] = [];
+    if (mode !== 'clock' && showDays) segments.push({ label: 'Days', value: pad2(days) });
+    if (mode === 'clock' || showHours) segments.push({ label: 'Hours', value: pad2(mode === 'clock' ? displayHours : hours) });
+    if (mode === 'clock' || showMinutes) segments.push({ label: 'Minutes', value: pad2(minutes) });
+    if (mode === 'clock' || showSeconds) segments.push({ label: 'Seconds', value: pad2(seconds) });
+
+    const srOnly: CSSProperties = {
+      position: 'absolute',
+      width: '1px',
+      height: '1px',
+      overflow: 'hidden',
+      clip: 'rect(0 0 0 0)',
+      clipPath: 'inset(50%)',
+      whiteSpace: 'nowrap',
+    };
+
+    return (
+      <div
+        className={className}
+        role="timer"
+        aria-atomic="true"
+        aria-label={ariaLabel}
+        data-variant={variant}
+        data-size={size}
+        data-mode={mode}
+        style={{ position: 'relative', display: 'inline-flex', alignItems: 'flex-end', gap: sizing.gap + 'px', fontVariantNumeric: 'tabular-nums', ...theme.wrapper, ...style }}
+      >
+        {segments.map((seg, i) => (
+          <div key={seg.label} style={{ display: 'flex', alignItems: 'flex-end', gap: sizing.gap + 'px' }}>
+            {i > 0 ? (
+              <span aria-hidden="true" style={{ fontSize: Math.round(sizing.digit * 0.7) + 'px', color: resolvedAccent, fontWeight: 700, paddingBottom: (sizing.label + 8) + 'px' }}>
+                {separator}
+              </span>
+            ) : null}
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px' }}>
+              <span
+                style={{
+                  fontSize: sizing.digit + 'px',
+                  fontWeight: 700,
+                  lineHeight: 1,
+                  color: theme.digitColor,
+                  background: theme.segmentBg,
+                  borderRadius: '8px',
+                  padding: sizing.pad + 'px',
+                  minWidth: (sizing.digit + sizing.pad) + 'px',
+                  textAlign: 'center',
+                  transition: reducedMotionRef.current ? 'none' : 'transform 0.15s ease',
+                }}
+              >
+                {mounted ? seg.value : '--'}
+              </span>
+              {showLabels ? (
+                <span style={{ fontSize: sizing.label + 'px', color: theme.labelColor, textTransform: 'uppercase', letterSpacing: '0.05em' }}>{seg.label}</span>
+              ) : null}
+            </div>
+          </div>
+        ))}
+        {mode === 'clock' && clockFormat === '12h' ? (
+          <span style={{ fontSize: sizing.label + 'px', color: theme.labelColor, alignSelf: 'center', fontWeight: 600, paddingLeft: '4px' }}>{mounted ? clockSuffix : ''}</span>
+        ) : null}
+        <span aria-live="assertive" style={srOnly}>{complete ? completeText : ''}</span>
+      </div>
+    );
+  },
+);
+
+CountdownComponent.displayName = 'Countdown';
+
+export const Countdown = CountdownComponent;
+export const CountdownTimer = CountdownComponent;
+export const Stopwatch = CountdownComponent;
+export const LiveClock = CountdownComponent;
+
+Countdown.displayName = 'Countdown';
+CountdownTimer.displayName = 'CountdownTimer';
+Stopwatch.displayName = 'Stopwatch';
+LiveClock.displayName = 'LiveClock';
+
+export default CountdownComponent;
+"""
+
+
+def render_countdown_component() -> str:
+    """Render the Accessible Futuristic Reusable Countdown Timer, Stopwatch & Live Clock Suite (R-401)."""
+    return _COUNTDOWN_COMPONENT
+
+
 _DESIGN_TOKENS_CSS = (
     "/**\n"
     " * OmniStackAI Design Tokens & Theming Engine\n"
@@ -66696,6 +67051,7 @@ class NextjsWebAdapter:
             GeneratedFile("components/mind-map.tsx", _MIND_MAP_COMPONENT),
             GeneratedFile("components/particle-network.tsx", _PARTICLE_NETWORK_COMPONENT),
             GeneratedFile("components/image-comparison.tsx", _IMAGE_COMPARISON_COMPONENT),
+            GeneratedFile("components/countdown.tsx", _COUNTDOWN_COMPONENT),
             GeneratedFile("styles/tokens.css", _DESIGN_TOKENS_CSS),
             GeneratedFile("app/globals.css", _GLOBALS_CSS),
             GeneratedFile("app/error.tsx", _ERROR_PAGE),

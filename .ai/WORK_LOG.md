@@ -1,5 +1,23 @@
 # Work Log
 
+## 2026-09-12 — R-401
+
+- Recorded contract in `.ai/CURRENT_TASK.yaml` and `.ai/tasks/R-401.md` before code (test-first).
+- `nextjs.py`:
+  - Added `_COUNTDOWN_COMPONENT` static template (raw triple-quoted string) implementing the accessible, desktop-and-mobile-grade, futuristic Countdown Timer, Stopwatch & Live Clock compound component suite (`apps/web/components/countdown.tsx`).
+  - Three modes: `countdown` (to a `targetDate` or fixed `duration` in seconds), `stopwatch` (elapsed), and `clock` (live current time, 12h/24h), driven by a real `window.setInterval` tick (1s for clock, 250ms otherwise) computing values from `Date.now()` and refs.
+  - SSR-safe: a `mounted` flag gives a deterministic first paint ("--" placeholders); real time is only read after mount, avoiding hydration mismatch.
+  - Day/hour/minute/second segments with optional labels and configurable `separator`; `autoStart`; controlled + uncontrolled `paused`; `onComplete` + `onTick` callbacks (via refs to avoid stale closures).
+  - JS `prefers-reduced-motion` guard disables the per-tick transition; WAI-ARIA semantics (`role="timer"`, `aria-atomic`, visually-hidden `aria-live="assertive"` completion announcement).
+  - Imperative `CountdownHandle` (`start`, `pause`, `reset`, `restart`, `getTime`, `isRunning`) via `useImperativeHandle`; stopwatch pause/resume accumulates elapsed correctly.
+  - Implemented `CountdownVariant` ("default" | "card" | "glass" | "neon"), `CountdownSize` ("sm" | "md" | "lg"), `CountdownMode` ("countdown" | "stopwatch" | "clock") types; `VARIANT_STYLES` + `SIZE_STYLES` hard-coded hex maps.
+  - Compound and semantic alias exports: `Countdown`, `CountdownTimer`, `Stopwatch`, `LiveClock`, default export — each with explicit `displayName`.
+  - Exported `render_countdown_component` in `omnistackai_agent_engine.codegen` and registered `components/countdown.tsx` in `NextjsWebAdapter.generate()`.
+  - Maintained 100% diff-invariance across `ir.description` (static module constant); 0 external runtime dependencies.
+- Added `services/agent-engine/tests/test_countdown_component.py` with 18 tests (file-generated, diff-invariance + accessor byte-equality, `'use client'`, zero-deps imports, forwardRef + useImperativeHandle + 6 handle methods, TS types, alias/default exports, displayNames, 4 variants, 3 sizes, 3 modes, interval ticking, SSR-safe mounting, timer ARIA, prefers-reduced-motion, callbacks, time formatting, codegen export).
+- Gates: `pytest .../test_countdown_component.py` (18 passed); `task verify` (2,502 tests passed); `task lint`, `task security:quick`, `task env:check` passed; `task builder:demo -- minimal-blog` generated 138 files including `apps/web/components/countdown.tsx`. 0 model calls.
+- Static TSX sanity check: `'use client'` first line, balanced braces/parens, react-only imports, no `\"\"\"`/backslash/backtick hazards.
+
 ## 2026-09-12 — R-400
 
 - Recorded contract in `.ai/CURRENT_TASK.yaml` and `.ai/tasks/R-400.md` before code (test-first).
