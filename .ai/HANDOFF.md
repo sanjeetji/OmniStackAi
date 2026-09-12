@@ -1,6 +1,6 @@
 # Current Handoff
 
-Task ID: R-404
+Task ID: R-405
 Status: done
 Phase: BASIC/MVP — Founder Stage 0
 Branch: `main` (the only branch; the GitHub default)
@@ -52,9 +52,26 @@ Branch: `main` (the only branch; the GitHub default)
   40. **R-402**: Cookie Consent & Preferences Manager Suite (`components/cookie-consent.tsx`)
   41. **R-403**: Password Strength Meter & Requirements Suite (`components/password-strength.tsx`)
   42. **R-404**: Masked / Pattern Input Suite (`components/masked-input.tsx`)
+  43. **R-405**: Mention / @-Autocomplete Textarea Suite (`components/mention.tsx`)
 - Advancing autonomously to the next Tracker ID (posture is advancing, not stopped). Still stop-and-ask only for paid cloud / DB engine / new infra / native-mobile / a materially different architecture decision.
 
 ## Completed
+
+### R-405 — Generated Accessible Futuristic Reusable Mention / @-Autocomplete Textarea Suite (components/mention.tsx)
+
+Enabled a genuinely functional @-mention autocomplete textarea across generated Next.js web applications:
+- **Standalone Mention Suite (`apps/web/components/mention.tsx`)**:
+  - Implemented `MentionVariant`, `MentionSize`, `MentionItem`, `MentionHandle`, `MentionProps`, plus internal `VARIANT_STYLES`/`SIZE_STYLES` maps and `detectTrigger()`/`defaultFilter()`/`extractMentions()` helpers.
+  - Compound and semantic alias exports: `Mention`, `MentionInput`, `MentionTextarea`, `AtMention`, default export.
+  - Caret-aware trigger detection (configurable `trigger`, default `@`); filtered suggestion listbox from `items`; keyboard nav (ArrowDown/ArrowUp/Enter/Tab/Escape) + mouse; token insertion with caret repositioning; mention-id extraction.
+  - Controlled + uncontrolled `value`; `onChange(value, mentions)` / `onMention`; ARIA combobox/listbox (`aria-expanded`/`aria-controls`/`aria-activedescendant`/`aria-autocomplete`; `role="listbox"`/`role="option"`/`aria-selected`).
+  - React ref forwarding (`forwardRef`), imperative handle (`MentionHandle`: `getValue`/`setValue`/`getMentions`/`focus`/`clear`), explicit `displayName` across all exports.
+  - Exported `render_mention_component` in `omnistackai_agent_engine.codegen` and registered `components/mention.tsx` in `NextjsWebAdapter.generate()`.
+  - Maintained 100% diff-invariance across `ir.description`; 0 external runtime dependencies.
+- **Verification**:
+  - 18 unit tests in `services/agent-engine/tests/test_mention_component.py` (all passing).
+  - `task verify` passing: 2,574 tests passed.
+  - `task lint`, `task security:quick`, `task env:check` — pass. `task builder:demo -- minimal-blog` — 142 files (includes `apps/web/components/mention.tsx`).
 
 ### R-404 — Generated Accessible Futuristic Reusable Masked / Pattern Input Suite (components/masked-input.tsx)
 
@@ -792,9 +809,9 @@ Enabled accessible, desktop-and-mobile-grade, futuristic Time Picker and Time Ra
 
 ## Verification
 
-- `task verify` — pass (2,556 agent-engine tests; 18 focused R-404 tests in `test_masked_input_component.py`).
+- `task verify` — pass (2,574 agent-engine tests; 18 focused R-405 tests in `test_mention_component.py`).
 - `task lint`, `task security:quick`, `task env:check` — pass.
-- `task builder:demo -- minimal-blog` — pass (141 files, includes `components/masked-input.tsx`).
+- `task builder:demo -- minimal-blog` — pass (142 files, includes `components/mention.tsx`).
 
 ## Blockers and risks
 
@@ -803,7 +820,7 @@ Enabled accessible, desktop-and-mobile-grade, futuristic Time Picker and Time Ra
 
 ## Next action
 
-- Advancing autonomously to Task R-405 (next unstarted Tracker ID). Record its contract in `.ai/CURRENT_TASK.yaml` and `.ai/tasks/R-405.md` before code.
+- Advancing autonomously to Task R-406 (next unstarted Tracker ID). Record its contract in `.ai/CURRENT_TASK.yaml` and `.ai/tasks/R-406.md` before code.
 
 ## Next command
 

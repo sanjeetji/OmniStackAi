@@ -1,5 +1,22 @@
 # Work Log
 
+## 2026-09-12 — R-405
+
+- Recorded contract in `.ai/CURRENT_TASK.yaml` and `.ai/tasks/R-405.md` before code (test-first).
+- `nextjs.py`:
+  - Added `_MENTION_COMPONENT` static template (raw triple-quoted string) implementing the accessible, desktop-and-mobile-grade, futuristic Mention / @-Autocomplete Textarea compound component suite (`apps/web/components/mention.tsx`).
+  - Genuinely functional: a `detectTrigger(text, caret, trigger)` helper scans back from the caret to a whitespace-delimited trigger token; when found, opens a filtered suggestion listbox from the `items` prop (custom `filter` or a default label/description substring match, capped at `maxSuggestions`).
+  - Keyboard nav: ArrowDown/ArrowUp cycle `activeIndex`, Enter/Tab insert the active suggestion, Escape closes; mouse hover/mousedown also select; `selectItem` splices `trigger + label + ' '` into the text and repositions the caret via `requestAnimationFrame` + `setSelectionRange`.
+  - `extractMentions()` derives the set of mentioned ids from the text; controlled + uncontrolled `value`; `onChange(value, mentions)` + `onMention(item)` callbacks; blur closes the popup after a short delay so option mousedown still registers.
+  - ARIA combobox/listbox pattern: textarea `role="combobox"` + `aria-autocomplete="list"` + `aria-expanded` + `aria-controls` + `aria-activedescendant`; `<ul role="listbox">` with `<li role="option" aria-selected>` and stable option ids; empty-state text.
+  - Implemented `MentionVariant`/`MentionSize` types, `MentionItem`/`MentionHandle`/`MentionProps` interfaces, `VARIANT_STYLES`/`SIZE_STYLES` maps; used `import type { ChangeEvent, CSSProperties, KeyboardEvent } from 'react'` (no React namespace).
+  - Compound and semantic alias exports: `Mention`, `MentionInput`, `MentionTextarea`, `AtMention`, default export — each with explicit `displayName`.
+  - Exported `render_mention_component` in `omnistackai_agent_engine.codegen` and registered `components/mention.tsx` in `NextjsWebAdapter.generate()`.
+  - Maintained 100% diff-invariance across `ir.description` (static module constant); 0 external runtime dependencies.
+- Added `services/agent-engine/tests/test_mention_component.py` with 18 tests (file-generated, diff-invariance + accessor byte-equality, `'use client'`, zero-deps imports, forwardRef + useImperativeHandle + 5 handle methods, TS types, alias/default exports, displayNames, 4 variants, 3 sizes, trigger detection, suggestion listbox, keyboard nav, combobox ARIA, callbacks, controlled/uncontrolled, mentions extraction, codegen export).
+- Gates: `pytest .../test_mention_component.py` (18 passed); `task verify` (2,574 tests passed); `task lint`, `task security:quick`, `task env:check` passed; `task builder:demo -- minimal-blog` generated 142 files including `apps/web/components/mention.tsx`. 0 model calls.
+- Static TSX sanity check: `'use client'` first line, balanced braces/parens, react-only imports, no `\"\"\"`/backtick hazards (only intentional `\s` regex escapes).
+
 ## 2026-09-12 — R-404
 
 - Recorded contract in `.ai/CURRENT_TASK.yaml` and `.ai/tasks/R-404.md` before code (test-first).

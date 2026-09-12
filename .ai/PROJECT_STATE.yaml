@@ -2,12 +2,27 @@ schema_version: 1
 project: OmniStackAI
 phase: BASIC/MVP
 founder_stage: 0
-current_task: R-405
+current_task: R-406
 current_status: advancing
 branch: main
-last_completed_task: R-404
+last_completed_task: R-405
 last_completed_task_summary: >-
-  Generated Accessible Futuristic Reusable Masked / Pattern Input Suite (components/masked-input.tsx); a
+  Generated Accessible Futuristic Reusable Mention / @-Autocomplete Textarea Suite (components/mention.tsx);
+  a genuinely functional textarea that detects a configurable trigger char (default "@") at the caret via a
+  detectTrigger() helper, opens a filtered suggestion listbox from an items prop, supports keyboard
+  navigation (ArrowDown/ArrowUp/Enter/Tab to insert, Escape to close), inserts the chosen mention token and
+  keeps typing flowing (caret repositioned via requestAnimationFrame + setSelectionRange), extracts the set
+  of mentioned ids from the text, supports controlled + uncontrolled value, and fires onChange (value,
+  mentions) + onMention callbacks; ARIA combobox/listbox pattern (textarea role="combobox" with
+  aria-autocomplete="list", aria-expanded, aria-controls, aria-activedescendant; listbox role="listbox" with
+  role="option" + aria-selected); 4 futuristic variants ("default", "card", "glass", "neon"); 3 size scales
+  ("sm", "md", "lg"); React ref forwarding (forwardRef); useImperativeHandle (MentionHandle:
+  getValue/setValue/getMentions/focus/clear); canonical TypeScript types (MentionVariant, MentionSize,
+  MentionItem, MentionHandle, MentionProps); compound and semantic alias exports (Mention, MentionInput,
+  MentionTextarea, AtMention, default export) with explicit displayName; 100% diff-invariance across
+  ir.description, 0 external runtime dependencies; exported render_mention_component in codegen; registered
+  components/mention.tsx in NextjsWebAdapter; 2,574 tests pass (18 new tests in test_mention_component.py);
+  0 model calls. Previously R-404 shipped the Masked / Pattern Input Suite (components/masked-input.tsx); a
   genuinely functional token-based masked text input (9=digit, A=letter, *=alphanumeric, other chars =
   literals) applied in real time, with built-in presets (phone/date/card/time/ssn via PRESET_MASKS) and
   custom masks; an applyMask() producing both the formatted display value and the raw (unmasked) value plus
@@ -108,9 +123,9 @@ product_direction: >-
   framework adapter contract -> Next.js adapter -> Git service -> preview/sandbox (needs cloud env).
 id_note: >-
   Workbook backlog owns R-010..R-219. Founder-requested tasks use IDs after R-219: R-220..R-223 done,
-  R-224 Next.js deferred (env-blocked), R-225..R-404 done.
+  R-224 Next.js deferred (env-blocked), R-225..R-405 done.
 blockers: []
 next_action: >-
-  Task R-404 (Accessible Futuristic Reusable Masked / Pattern Input Suite) complete with 2,556 tests
-  passing. Advancing autonomously to R-405 (next unstarted Tracker ID) — the posture is advancing, not
-  stopped; continue until manually stopped.
+  Task R-405 (Accessible Futuristic Reusable Mention / @-Autocomplete Textarea Suite) complete with 2,574
+  tests passing. Advancing autonomously to R-406 (next unstarted Tracker ID) — the posture is advancing,
+  not stopped; continue until manually stopped.

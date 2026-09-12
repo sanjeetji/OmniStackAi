@@ -67416,6 +67416,383 @@ def render_masked_input_component() -> str:
     return _MASKED_INPUT_COMPONENT
 
 
+_MENTION_COMPONENT = r"""'use client';
+
+import { forwardRef, useImperativeHandle, useRef, useState } from 'react';
+import type { ChangeEvent, CSSProperties, KeyboardEvent } from 'react';
+
+export type MentionVariant = 'default' | 'card' | 'glass' | 'neon';
+export type MentionSize = 'sm' | 'md' | 'lg';
+
+export interface MentionItem {
+  id: string;
+  label: string;
+  description?: string;
+}
+
+export interface MentionProps {
+  items?: MentionItem[];
+  trigger?: string;
+  value?: string;
+  defaultValue?: string;
+  label?: string;
+  placeholder?: string;
+  name?: string;
+  rows?: number;
+  disabled?: boolean;
+  showLabel?: boolean;
+  maxSuggestions?: number;
+  variant?: MentionVariant;
+  size?: MentionSize;
+  accentColor?: string;
+  ariaLabel?: string;
+  emptyText?: string;
+  className?: string;
+  style?: CSSProperties;
+  filter?: (item: MentionItem, query: string) => boolean;
+  onChange?: (value: string, mentions: string[]) => void;
+  onMention?: (item: MentionItem) => void;
+}
+
+export interface MentionHandle {
+  getValue: () => string;
+  setValue: (value: string) => void;
+  getMentions: () => string[];
+  focus: () => void;
+  clear: () => void;
+}
+
+interface VariantStyle {
+  wrapper: CSSProperties;
+  labelColor: string;
+  inputBg: string;
+  inputColor: string;
+  inputBorder: string;
+  focusBorder: string;
+  popoverBg: string;
+  popoverBorder: string;
+  optionText: string;
+  optionActiveBg: string;
+  optionDescription: string;
+}
+
+const VARIANT_STYLES: Record<MentionVariant, VariantStyle> = {
+  default: {
+    wrapper: { background: 'transparent' },
+    labelColor: '#0f172a', inputBg: '#ffffff', inputColor: '#0f172a', inputBorder: '#cbd5e1', focusBorder: '#2563eb',
+    popoverBg: '#ffffff', popoverBorder: '#e2e8f0', optionText: '#0f172a', optionActiveBg: '#eff6ff', optionDescription: '#64748b',
+  },
+  card: {
+    wrapper: { background: '#ffffff', border: '1px solid #e2e8f0', borderRadius: '12px', boxShadow: '0 4px 16px rgba(0, 0, 0, 0.06)', padding: '16px' },
+    labelColor: '#0f172a', inputBg: '#ffffff', inputColor: '#0f172a', inputBorder: '#cbd5e1', focusBorder: '#2563eb',
+    popoverBg: '#ffffff', popoverBorder: '#e2e8f0', optionText: '#0f172a', optionActiveBg: '#eff6ff', optionDescription: '#64748b',
+  },
+  glass: {
+    wrapper: { background: 'rgba(248, 250, 252, 0.6)', border: '1px solid rgba(255, 255, 255, 0.4)', borderRadius: '12px', boxShadow: '0 8px 32px rgba(0, 0, 0, 0.12)', backdropFilter: 'blur(16px)', WebkitBackdropFilter: 'blur(16px)', padding: '16px' },
+    labelColor: '#0f172a', inputBg: 'rgba(255, 255, 255, 0.7)', inputColor: '#0f172a', inputBorder: 'rgba(148, 163, 184, 0.6)', focusBorder: '#2563eb',
+    popoverBg: 'rgba(255, 255, 255, 0.92)', popoverBorder: 'rgba(148, 163, 184, 0.5)', optionText: '#0f172a', optionActiveBg: 'rgba(37, 99, 235, 0.12)', optionDescription: '#475569',
+  },
+  neon: {
+    wrapper: { background: '#050811', border: '1px solid rgba(6, 182, 212, 0.4)', borderRadius: '12px', boxShadow: '0 0 24px rgba(6, 182, 212, 0.15)', padding: '16px' },
+    labelColor: '#f8fafc', inputBg: 'rgba(6, 182, 212, 0.08)', inputColor: '#e0f2fe', inputBorder: 'rgba(6, 182, 212, 0.5)', focusBorder: '#06b6d4',
+    popoverBg: '#0b1120', popoverBorder: 'rgba(6, 182, 212, 0.5)', optionText: '#e0f2fe', optionActiveBg: 'rgba(6, 182, 212, 0.18)', optionDescription: '#38bdf8',
+  },
+};
+
+const SIZE_STYLES: Record<MentionSize, { font: number; pad: number }> = {
+  sm: { font: 13, pad: 8 },
+  md: { font: 15, pad: 10 },
+  lg: { font: 17, pad: 13 },
+};
+
+function detectTrigger(text: string, caret: number, trigger: string): { start: number; query: string } | null {
+  let i = caret - 1;
+  while (i >= 0) {
+    const ch = text.charAt(i);
+    if (ch === trigger) {
+      const before = i > 0 ? text.charAt(i - 1) : ' ';
+      if (i === 0 || /\s/.test(before)) {
+        const query = text.slice(i + 1, caret);
+        if (/\s/.test(query)) return null;
+        return { start: i, query: query };
+      }
+      return null;
+    }
+    if (/\s/.test(ch)) return null;
+    i--;
+  }
+  return null;
+}
+
+function defaultFilter(item: MentionItem, query: string): boolean {
+  if (!query) return true;
+  const q = query.toLowerCase();
+  return item.label.toLowerCase().indexOf(q) !== -1 || (item.description ? item.description.toLowerCase().indexOf(q) !== -1 : false);
+}
+
+function extractMentions(text: string, items: MentionItem[], trigger: string): string[] {
+  const ids: string[] = [];
+  for (const it of items) {
+    if (text.indexOf(trigger + it.label) !== -1) ids.push(it.id);
+  }
+  return ids;
+}
+
+const MentionComponent = forwardRef<MentionHandle, MentionProps>(
+  function Mention(
+    {
+      items = [],
+      trigger = '@',
+      value,
+      defaultValue = '',
+      label = 'Message',
+      placeholder = 'Type @ to mention someone...',
+      name,
+      rows = 4,
+      disabled = false,
+      showLabel = true,
+      maxSuggestions = 6,
+      variant = 'default',
+      size = 'md',
+      accentColor,
+      ariaLabel = 'Message with mentions',
+      emptyText = 'No matches',
+      className,
+      style,
+      filter,
+      onChange,
+      onMention,
+    }: MentionProps,
+    ref,
+  ) {
+    const isControlled = typeof value === 'string';
+    const [internalValue, setInternalValue] = useState<string>(defaultValue);
+    const [open, setOpen] = useState(false);
+    const [query, setQuery] = useState('');
+    const [activeIndex, setActiveIndex] = useState(0);
+    const triggerStartRef = useRef<number>(-1);
+    const textareaRef = useRef<HTMLTextAreaElement | null>(null);
+    const listId = 'mention-list';
+
+    const currentValue = isControlled ? (value as string) : internalValue;
+    const activeFilter = filter || defaultFilter;
+    const suggestions = open ? items.filter((it) => activeFilter(it, query)).slice(0, Math.max(1, maxSuggestions)) : [];
+    const safeActive = suggestions.length > 0 ? Math.min(activeIndex, suggestions.length - 1) : 0;
+
+    const emit = (next: string) => {
+      if (!isControlled) setInternalValue(next);
+      if (onChange) onChange(next, extractMentions(next, items, trigger));
+    };
+
+    const syncTrigger = (text: string, caret: number) => {
+      const found = detectTrigger(text, caret, trigger);
+      if (found) {
+        triggerStartRef.current = found.start;
+        setQuery(found.query);
+        setActiveIndex(0);
+        setOpen(true);
+      } else {
+        triggerStartRef.current = -1;
+        setOpen(false);
+      }
+    };
+
+    const handleChange = (e: ChangeEvent<HTMLTextAreaElement>) => {
+      const text = e.target.value;
+      const caret = e.target.selectionStart || text.length;
+      emit(text);
+      syncTrigger(text, caret);
+    };
+
+    const selectItem = (item: MentionItem) => {
+      const start = triggerStartRef.current;
+      if (start < 0) return;
+      const end = start + 1 + query.length;
+      const next = currentValue.slice(0, start) + trigger + item.label + ' ' + currentValue.slice(end);
+      emit(next);
+      setOpen(false);
+      triggerStartRef.current = -1;
+      if (onMention) onMention(item);
+      const caret = start + trigger.length + item.label.length + 1;
+      const el = textareaRef.current;
+      if (el && typeof window !== 'undefined') {
+        window.requestAnimationFrame(() => {
+          el.focus();
+          try {
+            el.setSelectionRange(caret, caret);
+          } catch {
+            // ignore selection errors
+          }
+        });
+      }
+    };
+
+    const handleKeyDown = (e: KeyboardEvent<HTMLTextAreaElement>) => {
+      if (!open || suggestions.length === 0) return;
+      if (e.key === 'ArrowDown') {
+        e.preventDefault();
+        setActiveIndex((i) => (i + 1) % suggestions.length);
+      } else if (e.key === 'ArrowUp') {
+        e.preventDefault();
+        setActiveIndex((i) => (i - 1 + suggestions.length) % suggestions.length);
+      } else if (e.key === 'Enter' || e.key === 'Tab') {
+        e.preventDefault();
+        selectItem(suggestions[safeActive]);
+      } else if (e.key === 'Escape') {
+        e.preventDefault();
+        setOpen(false);
+      }
+    };
+
+    useImperativeHandle(
+      ref,
+      () => ({
+        getValue: () => currentValue,
+        setValue: (v: string) => emit(v),
+        getMentions: () => extractMentions(currentValue, items, trigger),
+        focus: () => {
+          if (textareaRef.current) textareaRef.current.focus();
+        },
+        clear: () => emit(''),
+      }),
+      [currentValue, items, trigger, isControlled, onChange],
+    );
+
+    const theme = VARIANT_STYLES[variant] || VARIANT_STYLES.default;
+    const sizing = SIZE_STYLES[size] || SIZE_STYLES.md;
+    const resolvedAccent = accentColor || theme.focusBorder;
+
+    return (
+      <div
+        className={className}
+        data-variant={variant}
+        data-size={size}
+        style={{ display: 'flex', flexDirection: 'column', gap: '4px', fontFamily: 'system-ui, -apple-system, sans-serif', ...theme.wrapper, ...style }}
+      >
+        {showLabel ? (
+          <span style={{ fontSize: sizing.font + 'px', fontWeight: 600, color: theme.labelColor }}>{label}</span>
+        ) : null}
+        <div style={{ position: 'relative' }}>
+          <textarea
+            ref={textareaRef}
+            value={currentValue}
+            name={name}
+            rows={rows}
+            disabled={disabled}
+            placeholder={placeholder}
+            aria-label={ariaLabel}
+            role="combobox"
+            aria-expanded={open}
+            aria-autocomplete="list"
+            aria-controls={listId}
+            aria-activedescendant={open && suggestions.length > 0 ? listId + '-opt-' + safeActive : undefined}
+            onChange={handleChange}
+            onKeyDown={handleKeyDown}
+            onBlur={() => window.setTimeout(() => setOpen(false), 120)}
+            style={{
+              width: '100%',
+              boxSizing: 'border-box',
+              fontSize: sizing.font + 'px',
+              padding: sizing.pad + 'px',
+              background: theme.inputBg,
+              color: theme.inputColor,
+              border: '1px solid ' + theme.inputBorder,
+              borderRadius: '8px',
+              outline: 'none',
+              resize: 'vertical',
+              fontFamily: 'inherit',
+              lineHeight: 1.5,
+            }}
+          />
+          {open ? (
+            <ul
+              id={listId}
+              role="listbox"
+              aria-label="Mention suggestions"
+              style={{
+                position: 'absolute',
+                top: '100%',
+                left: 0,
+                right: 0,
+                marginTop: '4px',
+                listStyle: 'none',
+                margin: '4px 0 0 0',
+                padding: '4px',
+                maxHeight: '220px',
+                overflowY: 'auto',
+                background: theme.popoverBg,
+                border: '1px solid ' + theme.popoverBorder,
+                borderRadius: '10px',
+                boxShadow: '0 12px 28px rgba(0, 0, 0, 0.16)',
+                zIndex: 40,
+              }}
+            >
+              {suggestions.length === 0 ? (
+                <li style={{ padding: '10px 12px', fontSize: (sizing.font - 2) + 'px', color: theme.optionDescription }}>{emptyText}</li>
+              ) : (
+                suggestions.map((it, i) => {
+                  const active = i === safeActive;
+                  return (
+                    <li
+                      key={it.id}
+                      id={listId + '-opt-' + i}
+                      role="option"
+                      aria-selected={active}
+                      onMouseDown={(e) => {
+                        e.preventDefault();
+                        selectItem(it);
+                      }}
+                      onMouseEnter={() => setActiveIndex(i)}
+                      style={{
+                        display: 'flex',
+                        flexDirection: 'column',
+                        gap: '2px',
+                        padding: '8px 10px',
+                        borderRadius: '6px',
+                        cursor: 'pointer',
+                        background: active ? theme.optionActiveBg : 'transparent',
+                      }}
+                    >
+                      <span style={{ fontSize: sizing.font + 'px', fontWeight: 600, color: theme.optionText }}>
+                        <span aria-hidden="true" style={{ color: resolvedAccent }}>{trigger}</span>
+                        {it.label}
+                      </span>
+                      {it.description ? (
+                        <span style={{ fontSize: (sizing.font - 3) + 'px', color: theme.optionDescription }}>{it.description}</span>
+                      ) : null}
+                    </li>
+                  );
+                })
+              )}
+            </ul>
+          ) : null}
+        </div>
+      </div>
+    );
+  },
+);
+
+MentionComponent.displayName = 'Mention';
+
+export const Mention = MentionComponent;
+export const MentionInput = MentionComponent;
+export const MentionTextarea = MentionComponent;
+export const AtMention = MentionComponent;
+
+Mention.displayName = 'Mention';
+MentionInput.displayName = 'MentionInput';
+MentionTextarea.displayName = 'MentionTextarea';
+AtMention.displayName = 'AtMention';
+
+export default MentionComponent;
+"""
+
+
+def render_mention_component() -> str:
+    """Render the Accessible Futuristic Reusable Mention / @-Autocomplete Textarea Suite (R-405)."""
+    return _MENTION_COMPONENT
+
+
 _DESIGN_TOKENS_CSS = (
     "/**\n"
     " * OmniStackAI Design Tokens & Theming Engine\n"
@@ -68049,6 +68426,7 @@ class NextjsWebAdapter:
             GeneratedFile("components/cookie-consent.tsx", _COOKIE_CONSENT_COMPONENT),
             GeneratedFile("components/password-strength.tsx", _PASSWORD_STRENGTH_COMPONENT),
             GeneratedFile("components/masked-input.tsx", _MASKED_INPUT_COMPONENT),
+            GeneratedFile("components/mention.tsx", _MENTION_COMPONENT),
             GeneratedFile("styles/tokens.css", _DESIGN_TOKENS_CSS),
             GeneratedFile("app/globals.css", _GLOBALS_CSS),
             GeneratedFile("app/error.tsx", _ERROR_PAGE),

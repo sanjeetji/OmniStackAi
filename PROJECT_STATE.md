@@ -1,12 +1,21 @@
 # Project State — OmniStackAI
-Last updated: 2026-09-12T13:55:00+05:30
+Last updated: 2026-09-12T14:35:00+05:30
 
 ## Current Phase
 Stage 0 (Founder Build Sequence, Brief Section 91) — BASIC/MVP
 
 ## Last Completed Task
-Tracker ID: R-404 — Generated Accessible Futuristic Reusable Masked / Pattern Input Suite (components/masked-input.tsx) — DONE,
-`task verify` (2,556 agent-engine tests, 18 new focused R-404 tests) passing. A genuinely functional token-based masked text input
+Tracker ID: R-405 — Generated Accessible Futuristic Reusable Mention / @-Autocomplete Textarea Suite (components/mention.tsx) — DONE,
+`task verify` (2,574 agent-engine tests, 18 new focused R-405 tests) passing. A genuinely functional textarea that detects a configurable
+trigger char (default `@`) at the caret via a `detectTrigger()` helper, opens a filtered suggestion listbox from an `items` prop, supports
+keyboard navigation (ArrowDown/ArrowUp/Enter/Tab to insert, Escape to close) plus mouse, inserts the chosen mention token and repositions the
+caret (`requestAnimationFrame` + `setSelectionRange`), extracts the set of mentioned ids from the text, supports controlled + uncontrolled
+`value`, and fires `onChange(value, mentions)` + `onMention` callbacks; ARIA combobox/listbox pattern (`aria-expanded`/`aria-controls`/
+`aria-activedescendant`/`aria-autocomplete`; `role="listbox"`/`role="option"`/`aria-selected`); 4 variants, 3 sizes, `forwardRef` +
+`useImperativeHandle` (`MentionHandle`: getValue/setValue/getMentions/focus/clear), alias exports (`Mention`, `MentionInput`,
+`MentionTextarea`, `AtMention`, default) with explicit `displayName`; 100% diff-invariance across `ir.description`, 0 external runtime
+dependencies. Immediately preceded by R-404 — Generated Accessible Futuristic Reusable Masked / Pattern Input Suite
+(components/masked-input.tsx) — `task verify` (2,556 agent-engine tests, 18 new focused R-404 tests) passing. A genuinely functional token-based masked text input
 (`9`=digit, `A`=letter, `*`=alphanumeric, other chars = literals) formatting in real time, with built-in presets
 (phone/date/card/time/ssn via `PRESET_MASKS`) and custom masks; an `applyMask()` producing both the formatted display value and the raw
 (unmasked) value plus a completeness flag; the caret kept at end after reformatting (`requestAnimationFrame` + `setSelectionRange`);
@@ -71,7 +80,7 @@ R-324 (theming tokens), R-323 (popover), R-322 (dropdown menu), R-321 (accordion
 R-317 (skeleton), R-316 (alert), R-315 (card), R-314 (tooltip), R-313 (column visibility), R-312 (badge), R-311 (table density),
 R-310 (tabs), R-309 (pagination), and R-308 (JSON export).
 
-**Notes:** (1) R-404 complete with 2,556 tests passing. (2) Advancing autonomously to R-405 (posture is advancing, not stopped).
+**Notes:** (1) R-405 complete with 2,574 tests passing. (2) Advancing autonomously to R-406 (posture is advancing, not stopped).
 
 
 

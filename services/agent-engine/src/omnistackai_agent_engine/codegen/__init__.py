@@ -133,6 +133,7 @@ from .nextjs import (
     render_cookie_consent_component,
     render_password_strength_component,
     render_masked_input_component,
+    render_mention_component,
 )
 from .openapi import render_openapi, render_openapi_json
 from .schema_sql import render_postgres_schema, table_name
@@ -269,6 +270,7 @@ __all__ = [
     "render_cookie_consent_component",
     "render_password_strength_component",
     "render_masked_input_component",
+    "render_mention_component",
     "render_postgres_schema",
     "render_postgres_seed",
     "render_openapi",
