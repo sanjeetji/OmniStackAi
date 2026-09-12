@@ -68901,6 +68901,380 @@ def render_currency_input_component() -> str:
     return _CURRENCY_INPUT_COMPONENT
 
 
+_PASSWORD_GENERATOR_COMPONENT = r"""'use client';
+
+import { forwardRef, useEffect, useImperativeHandle, useState } from 'react';
+import type { CSSProperties } from 'react';
+
+export type PasswordGeneratorVariant = 'default' | 'card' | 'glass' | 'neon';
+export type PasswordGeneratorSize = 'sm' | 'md' | 'lg';
+
+export interface PasswordGeneratorOptions {
+  length: number;
+  uppercase: boolean;
+  lowercase: boolean;
+  numbers: boolean;
+  symbols: boolean;
+  excludeAmbiguous: boolean;
+}
+
+export interface PasswordGeneratorProps {
+  length?: number;
+  uppercase?: boolean;
+  lowercase?: boolean;
+  numbers?: boolean;
+  symbols?: boolean;
+  excludeAmbiguous?: boolean;
+  minLength?: number;
+  maxLength?: number;
+  autoGenerate?: boolean;
+  showOptions?: boolean;
+  showStrength?: boolean;
+  showCopy?: boolean;
+  label?: string;
+  variant?: PasswordGeneratorVariant;
+  size?: PasswordGeneratorSize;
+  accentColor?: string;
+  ariaLabel?: string;
+  className?: string;
+  style?: CSSProperties;
+  onGenerate?: (password: string) => void;
+  onCopy?: (password: string) => void;
+}
+
+export interface PasswordGeneratorHandle {
+  generate: () => string;
+  getValue: () => string;
+  copy: () => void;
+  setLength: (length: number) => void;
+}
+
+interface VariantStyle {
+  wrapper: CSSProperties;
+  labelColor: string;
+  mutedColor: string;
+  outputBg: string;
+  outputColor: string;
+  outputBorder: string;
+  primaryBg: string;
+  primaryColor: string;
+  secondaryBg: string;
+  secondaryBorder: string;
+  trackBg: string;
+}
+
+const VARIANT_STYLES: Record<PasswordGeneratorVariant, VariantStyle> = {
+  default: {
+    wrapper: { background: 'transparent' },
+    labelColor: '#0f172a', mutedColor: '#64748b', outputBg: '#f8fafc', outputColor: '#0f172a', outputBorder: '#cbd5e1',
+    primaryBg: '#2563eb', primaryColor: '#ffffff', secondaryBg: '#ffffff', secondaryBorder: '#cbd5e1', trackBg: '#e2e8f0',
+  },
+  card: {
+    wrapper: { background: '#ffffff', border: '1px solid #e2e8f0', borderRadius: '16px', boxShadow: '0 4px 16px rgba(0, 0, 0, 0.06)', padding: '20px' },
+    labelColor: '#0f172a', mutedColor: '#64748b', outputBg: '#f8fafc', outputColor: '#0f172a', outputBorder: '#cbd5e1',
+    primaryBg: '#2563eb', primaryColor: '#ffffff', secondaryBg: '#ffffff', secondaryBorder: '#cbd5e1', trackBg: '#e2e8f0',
+  },
+  glass: {
+    wrapper: { background: 'rgba(248, 250, 252, 0.6)', border: '1px solid rgba(255, 255, 255, 0.4)', borderRadius: '16px', boxShadow: '0 8px 32px rgba(0, 0, 0, 0.12)', backdropFilter: 'blur(16px)', WebkitBackdropFilter: 'blur(16px)', padding: '20px' },
+    labelColor: '#0f172a', mutedColor: '#475569', outputBg: 'rgba(255, 255, 255, 0.7)', outputColor: '#0f172a', outputBorder: 'rgba(148, 163, 184, 0.6)',
+    primaryBg: '#2563eb', primaryColor: '#ffffff', secondaryBg: 'rgba(255, 255, 255, 0.6)', secondaryBorder: 'rgba(148, 163, 184, 0.6)', trackBg: 'rgba(148, 163, 184, 0.35)',
+  },
+  neon: {
+    wrapper: { background: '#050811', border: '1px solid rgba(6, 182, 212, 0.4)', borderRadius: '16px', boxShadow: '0 0 24px rgba(6, 182, 212, 0.15)', padding: '20px' },
+    labelColor: '#f8fafc', mutedColor: '#38bdf8', outputBg: 'rgba(6, 182, 212, 0.08)', outputColor: '#e0f2fe', outputBorder: 'rgba(6, 182, 212, 0.5)',
+    primaryBg: '#06b6d4', primaryColor: '#050811', secondaryBg: 'transparent', secondaryBorder: 'rgba(6, 182, 212, 0.5)', trackBg: 'rgba(6, 182, 212, 0.12)',
+  },
+};
+
+const SIZE_STYLES: Record<PasswordGeneratorSize, { font: number; pad: number; gap: number }> = {
+  sm: { font: 13, pad: 8, gap: 8 },
+  md: { font: 15, pad: 10, gap: 12 },
+  lg: { font: 17, pad: 12, gap: 16 },
+};
+
+function secureRandomInt(maxExclusive: number): number {
+  if (maxExclusive <= 0) return 0;
+  if (typeof window !== 'undefined' && window.crypto && window.crypto.getRandomValues) {
+    const arr = new Uint32Array(1);
+    window.crypto.getRandomValues(arr);
+    return arr[0] % maxExclusive;
+  }
+  return Math.floor(Math.random() * maxExclusive);
+}
+
+function buildSets(opts: PasswordGeneratorOptions): string[] {
+  let upper = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+  let lower = 'abcdefghijklmnopqrstuvwxyz';
+  let nums = '0123456789';
+  const syms = '!@#$%^&*()-_=+[]{};:,.<>?';
+  if (opts.excludeAmbiguous) {
+    const ambiguous = 'Il1O0o';
+    const strip = (s: string) => s.split('').filter((c) => ambiguous.indexOf(c) === -1).join('');
+    upper = strip(upper);
+    lower = strip(lower);
+    nums = strip(nums);
+  }
+  const sets: string[] = [];
+  if (opts.uppercase) sets.push(upper);
+  if (opts.lowercase) sets.push(lower);
+  if (opts.numbers) sets.push(nums);
+  if (opts.symbols) sets.push(syms);
+  return sets;
+}
+
+function generatePassword(opts: PasswordGeneratorOptions): string {
+  const sets = buildSets(opts);
+  if (sets.length === 0) return '';
+  const pool = sets.join('');
+  const length = Math.max(sets.length, opts.length);
+  const chars: string[] = [];
+  for (const s of sets) chars.push(s.charAt(secureRandomInt(s.length)));
+  while (chars.length < length) chars.push(pool.charAt(secureRandomInt(pool.length)));
+  for (let i = chars.length - 1; i > 0; i--) {
+    const j = secureRandomInt(i + 1);
+    const tmp = chars[i];
+    chars[i] = chars[j];
+    chars[j] = tmp;
+  }
+  return chars.join('');
+}
+
+function strengthOf(password: string, setCount: number): { label: string; pct: number; color: string } {
+  let score = 0;
+  if (password.length >= 8) score += 1;
+  if (password.length >= 12) score += 1;
+  if (password.length >= 16) score += 1;
+  score += Math.max(0, setCount - 1);
+  const pct = Math.min(100, Math.round((score / 6) * 100));
+  if (pct >= 80) return { label: 'Strong', pct: pct, color: '#22c55e' };
+  if (pct >= 55) return { label: 'Good', pct: pct, color: '#3b82f6' };
+  if (pct >= 30) return { label: 'Fair', pct: pct, color: '#f59e0b' };
+  return { label: 'Weak', pct: pct, color: '#ef4444' };
+}
+
+async function writeClipboard(text: string): Promise<void> {
+  try {
+    if (typeof navigator !== 'undefined' && navigator.clipboard && navigator.clipboard.writeText) {
+      await navigator.clipboard.writeText(text);
+      return;
+    }
+  } catch {
+    // fall through to the legacy path
+  }
+  try {
+    const ta = document.createElement('textarea');
+    ta.value = text;
+    ta.style.position = 'fixed';
+    ta.style.opacity = '0';
+    document.body.appendChild(ta);
+    ta.select();
+    document.execCommand('copy');
+    document.body.removeChild(ta);
+  } catch {
+    // clipboard unavailable; silently ignore
+  }
+}
+
+const PasswordGeneratorComponent = forwardRef<PasswordGeneratorHandle, PasswordGeneratorProps>(
+  function PasswordGenerator(
+    {
+      length = 16,
+      uppercase = true,
+      lowercase = true,
+      numbers = true,
+      symbols = true,
+      excludeAmbiguous = false,
+      minLength = 4,
+      maxLength = 64,
+      autoGenerate = true,
+      showOptions = true,
+      showStrength = true,
+      showCopy = true,
+      label = 'Generated password',
+      variant = 'default',
+      size = 'md',
+      accentColor,
+      ariaLabel = 'Password generator',
+      className,
+      style,
+      onGenerate,
+      onCopy,
+    }: PasswordGeneratorProps,
+    ref,
+  ) {
+    const [options, setOptions] = useState<PasswordGeneratorOptions>({
+      length: length,
+      uppercase: uppercase,
+      lowercase: lowercase,
+      numbers: numbers,
+      symbols: symbols,
+      excludeAmbiguous: excludeAmbiguous,
+    });
+    const [password, setPassword] = useState<string>('');
+    const [copied, setCopied] = useState(false);
+
+    const regenerate = (opts: PasswordGeneratorOptions) => {
+      const pw = generatePassword(opts);
+      setPassword(pw);
+      if (onGenerate) onGenerate(pw);
+      return pw;
+    };
+
+    useEffect(() => {
+      if (autoGenerate) regenerate(options);
+      // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, []);
+
+    const updateOption = (patch: Partial<PasswordGeneratorOptions>) => {
+      const next = { ...options, ...patch };
+      setOptions(next);
+      regenerate(next);
+    };
+
+    const doCopy = () => {
+      if (!password) return;
+      writeClipboard(password);
+      setCopied(true);
+      if (onCopy) onCopy(password);
+      window.setTimeout(() => setCopied(false), 1500);
+    };
+
+    useImperativeHandle(
+      ref,
+      () => ({
+        generate: () => regenerate(options),
+        getValue: () => password,
+        copy: () => doCopy(),
+        setLength: (n: number) => updateOption({ length: Math.max(minLength, Math.min(maxLength, n)) }),
+      }),
+      [options, password, minLength, maxLength],
+    );
+
+    const theme = VARIANT_STYLES[variant] || VARIANT_STYLES.default;
+    const sizing = SIZE_STYLES[size] || SIZE_STYLES.md;
+    const resolvedAccent = accentColor || theme.primaryBg;
+    const setCount = buildSets(options).length;
+    const strength = strengthOf(password, setCount);
+
+    const toggle = (key: 'uppercase' | 'lowercase' | 'numbers' | 'symbols' | 'excludeAmbiguous', labelText: string) => (
+      <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: (sizing.font - 1) + 'px', color: theme.labelColor, cursor: 'pointer' }}>
+        <input
+          type="checkbox"
+          checked={options[key]}
+          onChange={(e) => updateOption({ [key]: e.target.checked })}
+          style={{ width: '16px', height: '16px', accentColor: resolvedAccent, cursor: 'pointer' }}
+        />
+        {labelText}
+      </label>
+    );
+
+    return (
+      <div
+        className={className}
+        role="group"
+        aria-label={ariaLabel}
+        data-variant={variant}
+        data-size={size}
+        style={{ display: 'flex', flexDirection: 'column', gap: sizing.gap + 'px', fontFamily: 'system-ui, -apple-system, sans-serif', ...theme.wrapper, ...style }}
+      >
+        <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+          <input
+            readOnly
+            value={password}
+            aria-label={label}
+            style={{
+              flex: 1,
+              fontFamily: 'monospace',
+              fontSize: (sizing.font + 1) + 'px',
+              padding: sizing.pad + 'px',
+              background: theme.outputBg,
+              color: theme.outputColor,
+              border: '1px solid ' + theme.outputBorder,
+              borderRadius: '8px',
+              outline: 'none',
+              boxSizing: 'border-box',
+              letterSpacing: '0.04em',
+            }}
+          />
+          <button type="button" aria-label="Regenerate password" onClick={() => regenerate(options)} style={{ padding: sizing.pad + 'px', background: theme.secondaryBg, color: theme.labelColor, border: '1px solid ' + theme.secondaryBorder, borderRadius: '8px', cursor: 'pointer', fontSize: sizing.font + 'px' }}>
+            <span aria-hidden="true">{'↻'}</span>
+          </button>
+          {showCopy ? (
+            <button type="button" aria-label="Copy password" onClick={doCopy} style={{ padding: sizing.pad + 'px', background: resolvedAccent, color: theme.primaryColor, border: 'none', borderRadius: '8px', cursor: 'pointer', fontSize: sizing.font + 'px', fontWeight: 600, minWidth: '72px' }}>
+              {copied ? 'Copied' : 'Copy'}
+            </button>
+          ) : null}
+        </div>
+
+        <span aria-live="polite" style={{ position: 'absolute', width: '1px', height: '1px', overflow: 'hidden', clip: 'rect(0 0 0 0)', clipPath: 'inset(50%)', whiteSpace: 'nowrap' }}>
+          {copied ? 'Password copied to clipboard' : ''}
+        </span>
+
+        {showStrength ? (
+          <div>
+            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: (sizing.font - 2) + 'px', color: theme.mutedColor, marginBottom: '4px' }}>
+              <span>Strength</span>
+              <span style={{ color: strength.color, fontWeight: 700 }}>{strength.label}</span>
+            </div>
+            <div style={{ height: '6px', borderRadius: '999px', background: theme.trackBg, overflow: 'hidden' }}>
+              <div style={{ width: strength.pct + '%', height: '100%', background: strength.color, transition: 'width 0.2s ease' }} />
+            </div>
+          </div>
+        ) : null}
+
+        {showOptions ? (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: sizing.gap + 'px' }}>
+            <div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: (sizing.font - 1) + 'px', color: theme.labelColor, marginBottom: '4px' }}>
+                <label htmlFor="pwgen-length">Length</label>
+                <span style={{ fontWeight: 700 }}>{options.length}</span>
+              </div>
+              <input
+                id="pwgen-length"
+                type="range"
+                min={minLength}
+                max={maxLength}
+                value={options.length}
+                aria-label="Password length"
+                onChange={(e) => updateOption({ length: parseInt(e.target.value, 10) })}
+                style={{ width: '100%', accentColor: resolvedAccent }}
+              />
+            </div>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: '8px' }}>
+              {toggle('uppercase', 'Uppercase (A-Z)')}
+              {toggle('lowercase', 'Lowercase (a-z)')}
+              {toggle('numbers', 'Numbers (0-9)')}
+              {toggle('symbols', 'Symbols')}
+              {toggle('excludeAmbiguous', 'Exclude ambiguous')}
+            </div>
+          </div>
+        ) : null}
+      </div>
+    );
+  },
+);
+
+PasswordGeneratorComponent.displayName = 'PasswordGenerator';
+
+export const PasswordGenerator = PasswordGeneratorComponent;
+export const PasswordCreator = PasswordGeneratorComponent;
+export const SecurePasswordGenerator = PasswordGeneratorComponent;
+export const PasswordMaker = PasswordGeneratorComponent;
+
+PasswordGenerator.displayName = 'PasswordGenerator';
+PasswordCreator.displayName = 'PasswordCreator';
+SecurePasswordGenerator.displayName = 'SecurePasswordGenerator';
+PasswordMaker.displayName = 'PasswordMaker';
+
+export default PasswordGeneratorComponent;
+"""
+
+
+def render_password_generator_component() -> str:
+    """Render the Accessible Futuristic Reusable Password Generator Suite (R-410)."""
+    return _PASSWORD_GENERATOR_COMPONENT
+
+
 _DESIGN_TOKENS_CSS = (
     "/**\n"
     " * OmniStackAI Design Tokens & Theming Engine\n"
@@ -69539,6 +69913,7 @@ class NextjsWebAdapter:
             GeneratedFile("components/credit-card.tsx", _CREDIT_CARD_COMPONENT),
             GeneratedFile("components/color-contrast.tsx", _COLOR_CONTRAST_COMPONENT),
             GeneratedFile("components/currency-input.tsx", _CURRENCY_INPUT_COMPONENT),
+            GeneratedFile("components/password-generator.tsx", _PASSWORD_GENERATOR_COMPONENT),
             GeneratedFile("styles/tokens.css", _DESIGN_TOKENS_CSS),
             GeneratedFile("app/globals.css", _GLOBALS_CSS),
             GeneratedFile("app/error.tsx", _ERROR_PAGE),

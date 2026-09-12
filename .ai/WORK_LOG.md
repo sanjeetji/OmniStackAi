@@ -1,5 +1,23 @@
 # Work Log
 
+## 2026-09-12 — R-410
+
+- Recorded contract in `.ai/CURRENT_TASK.yaml` and `.ai/tasks/R-410.md` before code (test-first).
+- `nextjs.py`:
+  - Added `_PASSWORD_GENERATOR_COMPONENT` static template (raw triple-quoted string) implementing the accessible, desktop-and-mobile-grade, futuristic Password Generator compound component suite (`apps/web/components/password-generator.tsx`).
+  - Genuinely functional secure generation: `secureRandomInt` (crypto.getRandomValues via Uint32Array, Math.random fallback), `buildSets` (uppercase/lowercase/numbers/symbols with optional `excludeAmbiguous` stripping `Il1O0o`), and `generatePassword` (guarantees one char per enabled set, fills from the pool, then Fisher-Yates shuffles).
+  - Strength meter (`strengthOf` by length + set variety), read-only monospace output, length slider (min/max), set toggles, regenerate action, and copy-to-clipboard (`navigator.clipboard.writeText` with a `document.execCommand('copy')` fallback) + copied feedback.
+  - SSR-safe: crypto/clipboard only touched in handlers/effects; auto-generates on mount via `useEffect`. `onGenerate`/`onCopy` callbacks.
+  - WAI-ARIA: `role="group"` + `aria-label`, labeled controls, a visually-hidden `aria-live="polite"` copied announcement.
+  - Imperative `PasswordGeneratorHandle` (`generate`, `getValue`, `copy`, `setLength`) via `useImperativeHandle`.
+  - Implemented `PasswordGeneratorVariant`/`PasswordGeneratorSize` types, `PasswordGeneratorOptions`/`PasswordGeneratorHandle`/`PasswordGeneratorProps` interfaces, `VARIANT_STYLES`/`SIZE_STYLES` maps.
+  - Compound and semantic alias exports: `PasswordGenerator`, `PasswordCreator`, `SecurePasswordGenerator`, `PasswordMaker`, default export — each with explicit `displayName`.
+  - Exported `render_password_generator_component` in `omnistackai_agent_engine.codegen` and registered `components/password-generator.tsx` in `NextjsWebAdapter.generate()`.
+  - Maintained 100% diff-invariance across `ir.description` (static module constant); 0 external runtime dependencies.
+- Added `services/agent-engine/tests/test_password_generator_component.py` with 18 tests (file-generated, diff-invariance + accessor byte-equality, `'use client'`, zero-deps imports, forwardRef + useImperativeHandle + 4 handle methods, TS types, alias/default exports, displayNames, 4 variants, 3 sizes, secure RNG, charsets, options, generate logic, copy-to-clipboard, aria semantics, callbacks, codegen export).
+- Gates: `pytest .../test_password_generator_component.py` (18 passed); `task verify` (2,663 tests passed); `task lint`, `task security:quick`, `task env:check` passed; `task builder:demo -- minimal-blog` generated 147 files including `apps/web/components/password-generator.tsx`. 0 model calls.
+- Static TSX sanity check: `'use client'` first line, balanced braces/parens, react-only imports, no `\"\"\"`/backtick hazards (unicode `↻` refresh glyph inside a JS-string expression).
+
 ## 2026-09-12 — R-409
 
 - Recorded contract in `.ai/CURRENT_TASK.yaml` and `.ai/tasks/R-409.md` before code (test-first).
