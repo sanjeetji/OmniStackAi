@@ -1,6 +1,6 @@
 # Current Handoff
 
-Task ID: R-395
+Task ID: R-396
 Status: done
 Phase: BASIC/MVP — Founder Stage 0
 Branch: `main` (the only branch; the GitHub default)
@@ -27,7 +27,7 @@ Branch: `main` (the only branch; the GitHub default)
   15. **R-377**: Pivot Table & Cross-Tabulation Matrix Suite (`components/pivot-table.tsx`)
   16. **R-378**: Image Cropper & Canvas Mask Suite (`components/image-cropper.tsx`)
   17. **R-379**: Gantt Chart & Project Roadmap Suite (`components/gantt-chart.tsx`)
-  18. **R-380**: Flowchart & Node-Based Workflow Canvas Suite (`components/flow-canvas.tsx`)
+  18:   18. **R-380**: Flowchart & Node-Based Workflow Canvas Suite (`components/flow-canvas.tsx`)
   19. **R-381**: Terminal & Command Console Suite (`components/terminal.tsx`)
   20. **R-382**: QR Code & Barcode Suite (`components/qr-code.tsx`)
   21. **R-383**: Spreadsheet & Inline Data Sheet Suite (`components/spreadsheet.tsx`)
@@ -43,9 +43,34 @@ Branch: `main` (the only branch; the GitHub default)
   31. **R-393**: Interactive JSON Viewer & Schema Tree Inspector Suite (`components/json-viewer.tsx`)
   32. **R-394**: Image Gallery & Masonry Lightbox Suite (`components/image-gallery.tsx`)
   33. **R-395**: Network Graph & Topology Map Suite (`components/network-graph.tsx`)
+  34. **R-396**: Live Log Viewer & Event Stream Inspector Suite (`components/log-viewer.tsx`)
 - Ready for next task. Still stop-and-ask only for paid cloud / DB engine / new infra / native-mobile / a materially different architecture decision.
 
 ## Completed
+
+### R-396 — Generated Accessible Futuristic Reusable Live Log Viewer & Event Stream Inspector Suite (components/log-viewer.tsx)
+
+Enabled accessible, desktop-and-mobile-grade, futuristic Live Log Viewer and Event Stream Inspector compound components across generated Next.js web applications:
+- **Standalone Log Viewer Suite (`apps/web/components/log-viewer.tsx`)**:
+  - Implemented `LogViewerVariant`, `LogViewerSize`, `LogLevel`, `LogEntry`, `LogViewerHandle`, `LogToolbarProps`, `LogEntryRowProps`, `LogViewerProps`.
+  - Implemented compound and semantic alias exports: `LogViewer`, `LogStream`, `EventViewer`, `ConsoleLogs`, `LogToolbar`, `LogEntryRow`, default export.
+  - Implemented real-time tail streaming with auto-scroll lock toggle, user scroll-up pause detection, and floating resume badge with unread counts.
+  - Implemented severity level filter chips (`ALL`, `TRACE`, `DEBUG`, `INFO`, `WARN`, `ERROR`, `FATAL`) with event counters and color badges.
+  - Implemented real-time search/filter input with match counter badge and highlighted text substrings (`<mark>`).
+  - Implemented service/source filtering dropdown and available sources discovery.
+  - Implemented expandable structured JSON metadata drawer with tag badges and syntax formatting.
+  - Implemented line wrap toggle (`wrapLines`), line numbers gutter, copy log line / JSON to clipboard with checkmark feedback.
+  - Implemented export / download logs to `.txt` and `.json` files, alongside clear logs action.
+  - Implemented WAI-ARIA 1.2 log semantics (`role="log"`, `aria-live="polite"`, `role="region"`, `role="toolbar"`, `aria-label="Log stream viewer"`).
+  - Implemented 4 futuristic visual styling variants ("default", "card", "glass" with backdropFilter blur, "neon" cyberpunk cyan glow with color-coded luminous level badges).
+  - Implemented 3 size scales ("sm", "md", "lg").
+  - Implemented React ref forwarding (`forwardRef`), imperative handle (`LogViewerHandle`), and explicit `displayName` across all compound exports.
+  - Exported `render_log_viewer_component` in `omnistackai_agent_engine.codegen` and registered `components/log-viewer.tsx` in `NextjsWebAdapter.generate()`.
+  - Maintained 100% diff-invariance across `ir.description`.
+- **Verification**:
+  - 17 unit tests in `services/agent-engine/tests/test_log_viewer_component.py` (all passing).
+  - `task verify` passing: 2,414 tests passed in 2.049s.
+  - `task lint`, `task security:quick`, `task builder:demo -- minimal-blog` all passing.
 
 ### R-395 — Generated Accessible Futuristic Reusable Network Graph & Topology Map Suite (components/network-graph.tsx)
 
@@ -606,6 +631,20 @@ Enabled accessible, desktop-and-mobile-grade, futuristic Time Picker and Time Ra
 
 ## Verification
 
-- `task verify` — pass (**1,989** agent-engine tests; 17 focused R-371 tests in `test_time_picker_component.py`).
+- `task verify` — pass (2,414 agent-engine tests; 17 focused R-396 tests in `test_log_viewer_component.py`).
 - `task lint`, `task security:quick` — pass.
-- `task builder:demo minimal-blog` — pass (108 files).
+- `task builder:demo minimal-blog` — pass (133 files).
+
+## Blockers and risks
+
+- None for offline Next.js compound component suites and codegen increments.
+- Deferred R-224 (Next.js console upgrade) remains paused pending network/npm registry access.
+
+## Next action
+
+- Proceed with Task R-397 (Accessible Futuristic Reusable Mind Map & Concept Tree Suite).
+
+## Next command
+
+- `pytest services/agent-engine/tests/test_mind_map_component.py`
+

@@ -61754,6 +61754,1326 @@ def render_network_graph_component() -> str:
     return _NETWORK_GRAPH_COMPONENT
 
 
+
+
+_LOG_VIEWER_COMPONENT = r"""'use client';
+
+import React, {
+  forwardRef,
+  useImperativeHandle,
+  useState,
+  useRef,
+  useEffect,
+  useMemo,
+  useCallback,
+} from 'react';
+
+export type LogViewerVariant = 'default' | 'card' | 'glass' | 'neon';
+export type LogViewerSize = 'sm' | 'md' | 'lg';
+export type LogLevel = 'trace' | 'debug' | 'info' | 'warn' | 'error' | 'fatal';
+
+export interface LogEntry {
+  id: string;
+  timestamp: string;
+  level: LogLevel;
+  message: string;
+  source?: string;
+  metadata?: Record<string, any>;
+  tags?: string[];
+}
+
+export interface LogViewerHandle {
+  scrollToBottom: () => void;
+  scrollToTop: () => void;
+  clear: () => void;
+  exportLogs: (format?: 'json' | 'txt') => void;
+  getLogs: () => LogEntry[];
+  addLog: (entry: Omit<LogEntry, 'id' | 'timestamp'> & { id?: string; timestamp?: string }) => void;
+}
+
+export interface LogToolbarProps {
+  searchQuery: string;
+  onSearchChange: (query: string) => void;
+  selectedLevels: Set<LogLevel>;
+  onToggleLevel: (level: LogLevel) => void;
+  onSelectAllLevels: () => void;
+  onClearLevels: () => void;
+  levelCounts: Record<LogLevel | 'all', number>;
+  autoScroll: boolean;
+  onToggleAutoScroll: () => void;
+  wrapLines: boolean;
+  onToggleWrapLines: () => void;
+  onClear: () => void;
+  onExport: (format: 'json' | 'txt') => void;
+  variant?: LogViewerVariant;
+  size?: LogViewerSize;
+  sourceFilter?: string;
+  onSourceFilterChange?: (source: string) => void;
+  availableSources?: string[];
+  isPaused?: boolean;
+  onResume?: () => void;
+  unreadCount?: number;
+}
+
+export interface LogEntryRowProps {
+  entry: LogEntry;
+  index: number;
+  searchQuery?: string;
+  wrapLines?: boolean;
+  variant?: LogViewerVariant;
+  size?: LogViewerSize;
+  showLineNumbers?: boolean;
+  isExpanded?: boolean;
+  onToggleExpand?: (id: string) => void;
+  onCopy?: (text: string) => void;
+}
+
+export interface LogViewerProps {
+  logs?: LogEntry[];
+  initialLogs?: LogEntry[];
+  variant?: LogViewerVariant;
+  size?: LogViewerSize;
+  title?: string;
+  maxLogs?: number;
+  autoScroll?: boolean;
+  showLineNumbers?: boolean;
+  wrapLines?: boolean;
+  allowClear?: boolean;
+  allowExport?: boolean;
+  allowSearch?: boolean;
+  allowFilter?: boolean;
+  allowSimulatedStream?: boolean;
+  streamIntervalMs?: number;
+  className?: string;
+  style?: React.CSSProperties;
+  onEntryClick?: (entry: LogEntry) => void;
+  onClear?: () => void;
+  onExport?: (format: 'json' | 'txt', count: number) => void;
+}
+
+const LEVEL_COLORS: Record<LogLevel, { bg: string; text: string; border: string; glow: string }> = {
+  trace: {
+    bg: 'rgba(148, 163, 184, 0.12)',
+    text: '#94a3b8',
+    border: 'rgba(148, 163, 184, 0.3)',
+    glow: '0 0 8px rgba(148, 163, 184, 0.4)',
+  },
+  debug: {
+    bg: 'rgba(6, 182, 212, 0.12)',
+    text: '#06b6d4',
+    border: 'rgba(6, 182, 212, 0.3)',
+    glow: '0 0 8px rgba(6, 182, 212, 0.5)',
+  },
+  info: {
+    bg: 'rgba(16, 185, 129, 0.12)',
+    text: '#10b981',
+    border: 'rgba(16, 185, 129, 0.3)',
+    glow: '0 0 8px rgba(16, 185, 129, 0.5)',
+  },
+  warn: {
+    bg: 'rgba(245, 158, 11, 0.12)',
+    text: '#f59e0b',
+    border: 'rgba(245, 158, 11, 0.3)',
+    glow: '0 0 8px rgba(245, 158, 11, 0.5)',
+  },
+  error: {
+    bg: 'rgba(239, 68, 68, 0.12)',
+    text: '#ef4444',
+    border: 'rgba(239, 68, 68, 0.3)',
+    glow: '0 0 8px rgba(239, 68, 68, 0.6)',
+  },
+  fatal: {
+    bg: 'rgba(217, 70, 239, 0.15)',
+    text: '#d946ef',
+    border: 'rgba(217, 70, 239, 0.4)',
+    glow: '0 0 10px rgba(217, 70, 239, 0.7)',
+  },
+};
+
+const ALL_LEVELS: LogLevel[] = ['trace', 'debug', 'info', 'warn', 'error', 'fatal'];
+
+const DEFAULT_LOGS: LogEntry[] = [
+  {
+    id: 'log-1',
+    timestamp: '2026-09-12T08:00:01.124Z',
+    level: 'info',
+    source: 'control-plane',
+    message: 'Control-plane HTTP server listening on 127.0.0.1:8080 with graceful shutdown enabled.',
+    metadata: { host: '127.0.0.1', port: 8080, pid: 1420 },
+    tags: ['startup', 'http'],
+  },
+  {
+    id: 'log-2',
+    timestamp: '2026-09-12T08:00:01.340Z',
+    level: 'info',
+    source: 'db-pool',
+    message: 'PostgreSQL connection pool initialized with 10 max connections (pgvector 0.8.6 ready).',
+    metadata: { pool_size: 10, database: 'omnistackai_platform', extensions: ['vector'] },
+    tags: ['database', 'pgvector'],
+  },
+  {
+    id: 'log-3',
+    timestamp: '2026-09-12T08:00:02.015Z',
+    level: 'debug',
+    source: 'model-gateway',
+    message: 'Registered local Ollama provider at loopback endpoint http://127.0.0.1:11434.',
+    metadata: { model: 'qwen2.5-coder:14b', timeout_ms: 120000, max_context: 32768 },
+    tags: ['gateway', 'ollama'],
+  },
+  {
+    id: 'log-4',
+    timestamp: '2026-09-12T08:00:03.450Z',
+    level: 'trace',
+    source: 'context-engine',
+    message: 'Evaluating repository AST chunk boundaries across 132 files in target workspace.',
+    metadata: { file_count: 132, ast_nodes: 4890, strategy: 'tree-sitter' },
+    tags: ['ast', 'indexing'],
+  },
+  {
+    id: 'log-5',
+    timestamp: '2026-09-12T08:00:04.110Z',
+    level: 'warn',
+    source: 'runtime-tier',
+    message: 'Cloud sandbox key not detected in environment. Execution falling back to Tier 0 in-engine mode.',
+    metadata: { tier: 0, reason: 'OMNISTACKAI_TIER=0' },
+    tags: ['tier', 'sandbox'],
+  },
+  {
+    id: 'log-6',
+    timestamp: '2026-09-12T08:00:05.890Z',
+    level: 'info',
+    source: 'builder-codegen',
+    message: 'Application IR compiled successfully: Next.js 15 App Router + FastAPI API monorepo materialized.',
+    metadata: { app_dir: 'apps/web', service_dir: 'services/api', total_components: 70 },
+    tags: ['codegen', 'build'],
+  },
+  {
+    id: 'log-7',
+    timestamp: '2026-09-12T08:00:06.220Z',
+    level: 'error',
+    source: 'health-check',
+    message: 'Outbound cloud network ping timed out after 3000ms: external host api.groq.com unreachable.',
+    metadata: { endpoint: 'https://api.groq.com/openai/v1', timeout_ms: 3000, code: 'ETIMEDOUT' },
+    tags: ['network', 'connectivity'],
+  },
+];
+
+/* Helper Icons */
+function SearchIcon() {
+  return (
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <circle cx="11" cy="11" r="8" />
+      <line x1="21" y1="21" x2="16.65" y2="16.65" />
+    </svg>
+  );
+}
+
+function DownloadIcon() {
+  return (
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+      <polyline points="7 10 12 15 17 10" />
+      <line x1="12" y1="15" x2="12" y2="3" />
+    </svg>
+  );
+}
+
+function TrashIcon() {
+  return (
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <polyline points="3 6 5 6 21 6" />
+      <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
+    </svg>
+  );
+}
+
+function CopyIcon() {
+  return (
+    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <rect x="9" y="9" width="13" height="13" rx="2" ry="2" />
+      <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" />
+    </svg>
+  );
+}
+
+function CheckIcon() {
+  return (
+    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <polyline points="20 6 9 17 4 12" />
+    </svg>
+  );
+}
+
+function ChevronRightIcon({ isOpen }: { isOpen: boolean }) {
+  return (
+    <svg
+      width="12"
+      height="12"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      style={{
+        transform: isOpen ? 'rotate(90deg)' : 'none',
+        transition: 'transform 0.15s ease',
+      }}
+    >
+      <polyline points="9 18 15 12 9 6" />
+    </svg>
+  );
+}
+
+function ArrowDownIcon() {
+  return (
+    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <line x1="12" y1="5" x2="12" y2="19" />
+      <polyline points="19 12 12 19 5 12" />
+    </svg>
+  );
+}
+
+function PauseIcon() {
+  return (
+    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <rect x="6" y="4" width="4" height="16" />
+      <rect x="14" y="4" width="4" height="16" />
+    </svg>
+  );
+}
+
+function PlayIcon() {
+  return (
+    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <polygon points="5 3 19 12 5 21 5 3" />
+    </svg>
+  );
+}
+
+/* Highlight search matches */
+function HighlightedText({ text, query }: { text: string; query?: string }) {
+  if (!query || !query.trim()) return <span>{text}</span>;
+  const q = query.trim().toLowerCase();
+  const lower = text.toLowerCase();
+  const parts: React.ReactNode[] = [];
+  let lastIndex = 0;
+  let index = lower.indexOf(q);
+
+  while (index !== -1) {
+    if (index > lastIndex) {
+      parts.push(text.substring(lastIndex, index));
+    }
+    parts.push(
+      <mark
+        key={`match-${index}`}
+        style={{
+          backgroundColor: 'rgba(250, 204, 21, 0.4)',
+          color: 'inherit',
+          padding: '0 2px',
+          borderRadius: '2px',
+          fontWeight: 600,
+        }}
+      >
+        {text.substring(index, index + q.length)}
+      </mark>
+    );
+    lastIndex = index + q.length;
+    index = lower.indexOf(q, lastIndex);
+  }
+
+  if (lastIndex < text.length) {
+    parts.push(text.substring(lastIndex));
+  }
+
+  return <span>{parts}</span>;
+}
+
+/* Toolbar Component */
+export const LogToolbar = forwardRef<HTMLDivElement, LogToolbarProps>(function LogToolbar(
+  {
+    searchQuery,
+    onSearchChange,
+    selectedLevels,
+    onToggleLevel,
+    onSelectAllLevels,
+    onClearLevels,
+    levelCounts,
+    autoScroll,
+    onToggleAutoScroll,
+    wrapLines,
+    onToggleWrapLines,
+    onClear,
+    onExport,
+    variant = 'default',
+    size = 'md',
+    sourceFilter = '',
+    onSourceFilterChange,
+    availableSources = [],
+    isPaused = false,
+    onResume,
+    unreadCount = 0,
+  },
+  ref
+) {
+  const isNeon = variant === 'neon';
+  const isGlass = variant === 'glass';
+
+  const toolbarStyle: React.CSSProperties = {
+    display: 'flex',
+    flexWrap: 'wrap',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: '8px',
+    padding: size === 'sm' ? '6px 10px' : size === 'lg' ? '12px 16px' : '8px 12px',
+    borderBottom: isNeon
+      ? '1px solid rgba(6, 182, 212, 0.3)'
+      : '1px solid var(--color-border, #e2e8f0)',
+    backgroundColor: isNeon
+      ? 'rgba(15, 23, 42, 0.85)'
+      : isGlass
+      ? 'rgba(255, 255, 255, 0.65)'
+      : 'var(--color-surface, #ffffff)',
+    backdropFilter: isGlass ? 'blur(12px)' : undefined,
+    fontSize: size === 'sm' ? '12px' : size === 'lg' ? '14px' : '13px',
+  };
+
+  const inputStyle: React.CSSProperties = {
+    display: 'flex',
+    alignItems: 'center',
+    gap: '6px',
+    padding: size === 'sm' ? '4px 8px' : '6px 10px',
+    borderRadius: '6px',
+    border: isNeon ? '1px solid rgba(6, 182, 212, 0.4)' : '1px solid var(--color-border, #cbd5e1)',
+    backgroundColor: isNeon ? 'rgba(0, 0, 0, 0.4)' : 'var(--color-background, #f8fafc)',
+    color: isNeon ? '#38bdf8' : 'var(--color-text, #0f172a)',
+    outline: 'none',
+    minWidth: '180px',
+    fontSize: 'inherit',
+  };
+
+  const btnStyle = (active: boolean = false): React.CSSProperties => ({
+    display: 'inline-flex',
+    alignItems: 'center',
+    gap: '4px',
+    padding: size === 'sm' ? '3px 8px' : '5px 10px',
+    borderRadius: '6px',
+    border: active
+      ? isNeon
+        ? '1px solid #06b6d4'
+        : '1px solid var(--color-primary, #2563eb)'
+      : isNeon
+      ? '1px solid rgba(255, 255, 255, 0.15)'
+      : '1px solid var(--color-border, #e2e8f0)',
+    backgroundColor: active
+      ? isNeon
+        ? 'rgba(6, 182, 212, 0.2)'
+        : 'rgba(37, 99, 235, 0.1)'
+      : 'transparent',
+    color: active
+      ? isNeon
+        ? '#38bdf8'
+        : 'var(--color-primary, #2563eb)'
+      : isNeon
+      ? '#cbd5e1'
+      : 'var(--color-text-muted, #475569)',
+    cursor: 'pointer',
+    fontSize: 'inherit',
+    fontWeight: 500,
+    transition: 'all 0.15s ease',
+  });
+
+  return (
+    <div ref={ref} style={toolbarStyle} role="toolbar" aria-label="Log stream controls">
+      {/* Search and filters */}
+      <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: '8px' }}>
+        <div style={inputStyle}>
+          <SearchIcon />
+          <input
+            type="text"
+            placeholder="Search logs (regex/text)..."
+            value={searchQuery}
+            onChange={(e) => onSearchChange(e.target.value)}
+            style={{
+              background: 'transparent',
+              border: 'none',
+              outline: 'none',
+              color: 'inherit',
+              width: '100%',
+              fontSize: 'inherit',
+            }}
+            aria-label="Filter logs by keyword"
+          />
+          {searchQuery && (
+            <button
+              type="button"
+              onClick={() => onSearchChange('')}
+              style={{
+                background: 'none',
+                border: 'none',
+                cursor: 'pointer',
+                padding: '0 2px',
+                color: 'inherit',
+              }}
+              title="Clear search"
+            >
+              ✕
+            </button>
+          )}
+        </div>
+
+        {/* Source Dropdown */}
+        {availableSources.length > 0 && onSourceFilterChange && (
+          <select
+            value={sourceFilter}
+            onChange={(e) => onSourceFilterChange(e.target.value)}
+            style={{
+              ...inputStyle,
+              minWidth: '120px',
+              cursor: 'pointer',
+            }}
+            aria-label="Filter by service source"
+          >
+            <option value="">All Services ({levelCounts.all})</option>
+            {availableSources.map((src) => (
+              <option key={src} value={src}>
+                {src}
+              </option>
+            ))}
+          </select>
+        )}
+
+        {/* Log Level Pills */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '4px', flexWrap: 'wrap' }}>
+          <button
+            type="button"
+            style={btnStyle(selectedLevels.size === ALL_LEVELS.length)}
+            onClick={selectedLevels.size === ALL_LEVELS.length ? onClearLevels : onSelectAllLevels}
+            title="Toggle all log levels"
+          >
+            ALL <span style={{ opacity: 0.7, fontSize: '0.9em' }}>({levelCounts.all})</span>
+          </button>
+          {ALL_LEVELS.map((lvl) => {
+            const isSel = selectedLevels.has(lvl);
+            const count = levelCounts[lvl] || 0;
+            const c = LEVEL_COLORS[lvl];
+            return (
+              <button
+                key={lvl}
+                type="button"
+                onClick={() => onToggleLevel(lvl)}
+                style={{
+                  ...btnStyle(isSel),
+                  backgroundColor: isSel ? c.bg : 'transparent',
+                  color: isSel ? c.text : 'inherit',
+                  borderColor: isSel ? c.border : undefined,
+                  boxShadow: isSel && isNeon ? c.glow : undefined,
+                }}
+                aria-pressed={isSel}
+                title={`Toggle ${lvl.toUpperCase()} logs`}
+              >
+                <span
+                  style={{
+                    display: 'inline-block',
+                    width: '6px',
+                    height: '6px',
+                    borderRadius: '50%',
+                    backgroundColor: c.text,
+                    marginRight: '3px',
+                  }}
+                />
+                {lvl.toUpperCase()}
+                <span style={{ opacity: 0.7, fontSize: '0.85em', marginLeft: '3px' }}>{count}</span>
+              </button>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* Action controls */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+        {/* Auto Scroll */}
+        <button
+          type="button"
+          style={{
+            ...btnStyle(autoScroll),
+            ...(isPaused
+              ? {
+                  backgroundColor: isNeon ? 'rgba(245, 158, 11, 0.25)' : 'rgba(245, 158, 11, 0.15)',
+                  color: '#f59e0b',
+                  borderColor: '#f59e0b',
+                }
+              : {}),
+          }}
+          onClick={isPaused && onResume ? onResume : onToggleAutoScroll}
+          title={isPaused ? `Scroll paused (${unreadCount} new). Click to resume.` : 'Toggle live auto-scroll'}
+        >
+          {isPaused ? <PauseIcon /> : autoScroll ? <PlayIcon /> : <ArrowDownIcon />}
+          {isPaused ? (
+            <span>Resume ({unreadCount})</span>
+          ) : (
+            <span>{autoScroll ? 'Auto-scroll ON' : 'Auto-scroll OFF'}</span>
+          )}
+        </button>
+
+        {/* Wrap Lines */}
+        <button
+          type="button"
+          style={btnStyle(wrapLines)}
+          onClick={onToggleWrapLines}
+          title="Toggle line wrapping"
+        >
+          <span>{wrapLines ? 'Wrap' : 'No-wrap'}</span>
+        </button>
+
+        {/* Export dropdown / action */}
+        <button
+          type="button"
+          style={btnStyle(false)}
+          onClick={() => onExport('txt')}
+          title="Download plain text log"
+        >
+          <DownloadIcon />
+          <span>TXT</span>
+        </button>
+        <button
+          type="button"
+          style={btnStyle(false)}
+          onClick={() => onExport('json')}
+          title="Download JSON log file"
+        >
+          <DownloadIcon />
+          <span>JSON</span>
+        </button>
+
+        {/* Clear */}
+        <button
+          type="button"
+          style={{ ...btnStyle(false), color: '#ef4444' }}
+          onClick={onClear}
+          title="Clear current log entries"
+        >
+          <TrashIcon />
+          <span>Clear</span>
+        </button>
+      </div>
+    </div>
+  );
+});
+LogToolbar.displayName = 'LogToolbar';
+
+/* Log Entry Row */
+export const LogEntryRow = forwardRef<HTMLDivElement, LogEntryRowProps>(function LogEntryRow(
+  {
+    entry,
+    index,
+    searchQuery,
+    wrapLines = false,
+    variant = 'default',
+    size = 'md',
+    showLineNumbers = true,
+    isExpanded = false,
+    onToggleExpand,
+    onCopy,
+  },
+  ref
+) {
+  const [copied, setCopied] = useState(false);
+  const isNeon = variant === 'neon';
+  const c = LEVEL_COLORS[entry.level];
+  const hasMetadata = entry.metadata && Object.keys(entry.metadata).length > 0;
+
+  const handleCopy = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    const payload = JSON.stringify(entry, null, 2);
+    if (navigator?.clipboard?.writeText) {
+      navigator.clipboard.writeText(payload);
+    }
+    if (onCopy) onCopy(payload);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 1800);
+  };
+
+  const rowStyle: React.CSSProperties = {
+    display: 'flex',
+    flexDirection: 'column',
+    fontFamily: 'ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace',
+    fontSize: size === 'sm' ? '11px' : size === 'lg' ? '13px' : '12px',
+    lineHeight: '1.5',
+    borderBottom: isNeon
+      ? '1px solid rgba(255, 255, 255, 0.05)'
+      : '1px solid var(--color-border-subtle, #f1f5f9)',
+    backgroundColor: isExpanded
+      ? isNeon
+        ? 'rgba(6, 182, 212, 0.08)'
+        : 'rgba(37, 99, 235, 0.04)'
+      : 'transparent',
+    transition: 'background-color 0.1s ease',
+  };
+
+  const mainRowStyle: React.CSSProperties = {
+    display: 'flex',
+    alignItems: 'flex-start',
+    gap: '8px',
+    padding: size === 'sm' ? '2px 8px' : '4px 10px',
+    cursor: hasMetadata ? 'pointer' : 'default',
+  };
+
+  return (
+    <div ref={ref} style={rowStyle} role="row" aria-selected={isExpanded}>
+      <div
+        style={mainRowStyle}
+        onClick={() => hasMetadata && onToggleExpand && onToggleExpand(entry.id)}
+      >
+        {/* Line number */}
+        {showLineNumbers && (
+          <span
+            style={{
+              color: isNeon ? '#475569' : '#94a3b8',
+              userSelect: 'none',
+              textAlign: 'right',
+              minWidth: '32px',
+              flexShrink: 0,
+            }}
+          >
+            {index + 1}
+          </span>
+        )}
+
+        {/* Expand chevron for metadata */}
+        <span style={{ width: '12px', flexShrink: 0, marginTop: '2px', color: '#94a3b8' }}>
+          {hasMetadata && <ChevronRightIcon isOpen={isExpanded} />}
+        </span>
+
+        {/* Timestamp */}
+        <span
+          style={{
+            color: isNeon ? '#64748b' : '#64748b',
+            whiteSpace: 'nowrap',
+            flexShrink: 0,
+          }}
+        >
+          {entry.timestamp.slice(11, 23) || entry.timestamp}
+        </span>
+
+        {/* Level Badge */}
+        <span
+          style={{
+            backgroundColor: c.bg,
+            color: c.text,
+            border: `1px solid ${c.border}`,
+            boxShadow: isNeon ? c.glow : undefined,
+            borderRadius: '4px',
+            padding: '1px 5px',
+            fontWeight: 700,
+            fontSize: '0.85em',
+            letterSpacing: '0.04em',
+            textTransform: 'uppercase',
+            flexShrink: 0,
+            minWidth: '46px',
+            textAlign: 'center',
+          }}
+        >
+          {entry.level}
+        </span>
+
+        {/* Source / Tag */}
+        {entry.source && (
+          <span
+            style={{
+              color: isNeon ? '#38bdf8' : '#2563eb',
+              backgroundColor: isNeon ? 'rgba(56, 189, 248, 0.1)' : '#eff6ff',
+              borderRadius: '3px',
+              padding: '0 4px',
+              fontSize: '0.9em',
+              flexShrink: 0,
+              whiteSpace: 'nowrap',
+            }}
+          >
+            [{entry.source}]
+          </span>
+        )}
+
+        {/* Message */}
+        <span
+          style={{
+            flex: 1,
+            color: isNeon ? '#f1f5f9' : '#0f172a',
+            whiteSpace: wrapLines ? 'pre-wrap' : 'pre',
+            overflowWrap: wrapLines ? 'anywhere' : undefined,
+            wordBreak: wrapLines ? 'break-word' : undefined,
+          }}
+        >
+          <HighlightedText text={entry.message} query={searchQuery} />
+        </span>
+
+        {/* Actions (Copy) */}
+        <button
+          type="button"
+          onClick={handleCopy}
+          style={{
+            background: 'none',
+            border: 'none',
+            cursor: 'pointer',
+            padding: '2px 4px',
+            color: copied ? '#10b981' : isNeon ? '#475569' : '#94a3b8',
+            flexShrink: 0,
+            opacity: 0.8,
+            transition: 'opacity 0.15s ease',
+          }}
+          title="Copy JSON record"
+          aria-label="Copy log record"
+        >
+          {copied ? <CheckIcon /> : <CopyIcon />}
+        </button>
+      </div>
+
+      {/* Expanded Metadata Drawer */}
+      {isExpanded && hasMetadata && (
+        <div
+          style={{
+            margin: '2px 10px 8px 56px',
+            padding: '8px 12px',
+            borderRadius: '6px',
+            backgroundColor: isNeon ? 'rgba(0, 0, 0, 0.5)' : '#f8fafc',
+            border: isNeon ? '1px solid rgba(6, 182, 212, 0.2)' : '1px solid #e2e8f0',
+            fontSize: '11px',
+            color: isNeon ? '#94a3b8' : '#334155',
+          }}
+        >
+          <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '4px' }}>
+            <span style={{ fontWeight: 600, color: isNeon ? '#38bdf8' : '#2563eb' }}>
+              Structured Metadata ({Object.keys(entry.metadata || {}).length} fields)
+            </span>
+            {entry.tags && entry.tags.length > 0 && (
+              <div style={{ display: 'flex', gap: '4px' }}>
+                {entry.tags.map((tag) => (
+                  <span
+                    key={tag}
+                    style={{
+                      padding: '1px 5px',
+                      borderRadius: '3px',
+                      backgroundColor: isNeon ? 'rgba(255, 255, 255, 0.1)' : '#e2e8f0',
+                      fontSize: '10px',
+                    }}
+                  >
+                    #{tag}
+                  </span>
+                ))}
+              </div>
+            )}
+          </div>
+          <pre
+            style={{
+              margin: 0,
+              whiteSpace: 'pre-wrap',
+              wordBreak: 'break-all',
+              fontFamily: 'inherit',
+            }}
+          >
+            {JSON.stringify(entry.metadata, null, 2)}
+          </pre>
+        </div>
+      )}
+    </div>
+  );
+});
+LogEntryRow.displayName = 'LogEntryRow';
+
+/* Main LogViewer Component */
+const LogViewerComponent = forwardRef<LogViewerHandle, LogViewerProps>(function LogViewer(
+  {
+    logs: controlledLogs,
+    initialLogs,
+    variant = 'default',
+    size = 'md',
+    title = 'Real-Time Log Stream',
+    maxLogs = 1000,
+    autoScroll: defaultAutoScroll = true,
+    showLineNumbers = true,
+    wrapLines: defaultWrapLines = false,
+    allowClear = true,
+    allowExport = true,
+    allowSearch = true,
+    allowFilter = true,
+    allowSimulatedStream = false,
+    streamIntervalMs = 2500,
+    className,
+    style,
+    onEntryClick,
+    onClear,
+    onExport,
+  },
+  ref
+) {
+  const [internalLogs, setInternalLogs] = useState<LogEntry[]>(() => {
+    return controlledLogs ?? initialLogs ?? DEFAULT_LOGS;
+  });
+
+  const [searchQuery, setSearchQuery] = useState('');
+  const [selectedLevels, setSelectedLevels] = useState<Set<LogLevel>>(new Set(ALL_LEVELS));
+  const [sourceFilter, setSourceFilter] = useState('');
+  const [autoScroll, setAutoScroll] = useState(defaultAutoScroll);
+  const [isPaused, setIsPaused] = useState(false);
+  const [unreadCount, setUnreadCount] = useState(0);
+  const [wrapLines, setWrapLines] = useState(defaultWrapLines);
+  const [expandedIds, setExpandedIds] = useState<Set<string>>(new Set());
+
+  const viewportRef = useRef<HTMLDivElement>(null);
+  const isAutoScrollingRef = useRef(false);
+
+  // Sync if controlled logs change
+  useEffect(() => {
+    if (controlledLogs) {
+      setInternalLogs(controlledLogs);
+    }
+  }, [controlledLogs]);
+
+  // Optional simulated live log stream
+  useEffect(() => {
+    if (!allowSimulatedStream) return;
+    const interval = setInterval(() => {
+      const mockLevels: LogLevel[] = ['trace', 'debug', 'info', 'warn', 'error'];
+      const mockSources = ['api-gateway', 'worker-queue', 'auth-service', 'pg-replica', 'cache-l2'];
+      const mockMessages = [
+        'Heartbeat verified for replica node us-east-2.',
+        'Processed async webhook event #evt_99214 in 42ms.',
+        'Token refresh rotation completed for session payload.',
+        'Slow query detected on collection posts: latency 182ms.',
+        'Cache hit ratio maintained above 98.4% across L1 memory.',
+      ];
+      const randomLevel = mockLevels[Math.floor(Math.random() * mockLevels.length)];
+      const randomSource = mockSources[Math.floor(Math.random() * mockSources.length)];
+      const randomMsg = mockMessages[Math.floor(Math.random() * mockMessages.length)];
+
+      const newEntry: LogEntry = {
+        id: `sim-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`,
+        timestamp: new Date().toISOString(),
+        level: randomLevel,
+        source: randomSource,
+        message: randomMsg,
+        metadata: { latency_ms: Math.floor(Math.random() * 200) + 10, simulated: true },
+      };
+
+      setInternalLogs((prev) => {
+        const next = [...prev, newEntry];
+        return next.length > maxLogs ? next.slice(next.length - maxLogs) : next;
+      });
+
+      if (isPaused) {
+        setUnreadCount((c) => c + 1);
+      }
+    }, streamIntervalMs);
+
+    return () => clearInterval(interval);
+  }, [allowSimulatedStream, streamIntervalMs, maxLogs, isPaused]);
+
+  // Available sources
+  const availableSources = useMemo(() => {
+    const set = new Set<string>();
+    internalLogs.forEach((l) => {
+      if (l.source) set.add(l.source);
+    });
+    return Array.from(set).sort();
+  }, [internalLogs]);
+
+  // Filtered logs
+  const filteredLogs = useMemo(() => {
+    const q = searchQuery.trim().toLowerCase();
+    return internalLogs.filter((entry) => {
+      if (!selectedLevels.has(entry.level)) return false;
+      if (sourceFilter && entry.source !== sourceFilter) return false;
+      if (q) {
+        const inMsg = entry.message.toLowerCase().includes(q);
+        const inSrc = (entry.source || '').toLowerCase().includes(q);
+        const inMeta = entry.metadata ? JSON.stringify(entry.metadata).toLowerCase().includes(q) : false;
+        if (!inMsg && !inSrc && !inMeta) return false;
+      }
+      return true;
+    });
+  }, [internalLogs, selectedLevels, sourceFilter, searchQuery]);
+
+  // Level counts
+  const levelCounts = useMemo(() => {
+    const counts: Record<LogLevel | 'all', number> = {
+      all: internalLogs.length,
+      trace: 0,
+      debug: 0,
+      info: 0,
+      warn: 0,
+      error: 0,
+      fatal: 0,
+    };
+    internalLogs.forEach((l) => {
+      if (counts[l.level] !== undefined) {
+        counts[l.level]++;
+      }
+    });
+    return counts;
+  }, [internalLogs]);
+
+  // Scroll to bottom helper
+  const scrollToBottom = useCallback(() => {
+    if (!viewportRef.current) return;
+    isAutoScrollingRef.current = true;
+    viewportRef.current.scrollTop = viewportRef.current.scrollHeight;
+    setIsPaused(false);
+    setUnreadCount(0);
+    setTimeout(() => {
+      isAutoScrollingRef.current = false;
+    }, 50);
+  }, []);
+
+  const scrollToTop = useCallback(() => {
+    if (!viewportRef.current) return;
+    viewportRef.current.scrollTop = 0;
+    setIsPaused(true);
+  }, []);
+
+  // Handle user scroll detection
+  const handleScroll = () => {
+    if (isAutoScrollingRef.current) return;
+    if (!viewportRef.current) return;
+    const { scrollTop, scrollHeight, clientHeight } = viewportRef.current;
+    const isAtBottom = scrollHeight - scrollTop - clientHeight < 30;
+
+    if (!isAtBottom && autoScroll) {
+      setIsPaused(true);
+    } else if (isAtBottom && isPaused) {
+      setIsPaused(false);
+      setUnreadCount(0);
+    }
+  };
+
+  // Trigger autoscroll when new logs arrive and autoScroll is active
+  useEffect(() => {
+    if (autoScroll && !isPaused) {
+      scrollToBottom();
+    }
+  }, [filteredLogs.length, autoScroll, isPaused, scrollToBottom]);
+
+  // Clear handler
+  const handleClear = useCallback(() => {
+    setInternalLogs([]);
+    setExpandedIds(new Set());
+    setUnreadCount(0);
+    if (onClear) onClear();
+  }, [onClear]);
+
+  // Export handler
+  const handleExport = useCallback(
+    (format: 'json' | 'txt' = 'txt') => {
+      let content = '';
+      const mime = format === 'json' ? 'application/json' : 'text/plain';
+      const filename = `logs-${new Date().toISOString().slice(0, 19).replace(/[:T]/g, '-')}.${format}`;
+
+      if (format === 'json') {
+        content = JSON.stringify(filteredLogs, null, 2);
+      } else {
+        content = filteredLogs
+          .map(
+            (l) =>
+              `[${l.timestamp}] [${l.level.toUpperCase()}]${l.source ? ` [${l.source}]` : ''} ${l.message}${
+                l.metadata ? ` | metadata: ${JSON.stringify(l.metadata)}` : ''
+              }`
+          )
+          .join('\n');
+      }
+
+      if (typeof window !== 'undefined') {
+        const blob = new Blob([content], { type: mime });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = filename;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+      }
+
+      if (onExport) onExport(format, filteredLogs.length);
+    },
+    [filteredLogs, onExport]
+  );
+
+  // Imperative handle
+  useImperativeHandle(
+    ref,
+    () => ({
+      scrollToBottom,
+      scrollToTop,
+      clear: handleClear,
+      exportLogs: handleExport,
+      getLogs: () => internalLogs,
+      addLog: (entry) => {
+        const newLog: LogEntry = {
+          id: entry.id || `log-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`,
+          timestamp: entry.timestamp || new Date().toISOString(),
+          level: entry.level,
+          message: entry.message,
+          source: entry.source,
+          metadata: entry.metadata,
+          tags: entry.tags,
+        };
+        setInternalLogs((prev) => [...prev, newLog]);
+      },
+    }),
+    [scrollToBottom, scrollToTop, handleClear, handleExport, internalLogs]
+  );
+
+  const toggleLevel = (lvl: LogLevel) => {
+    setSelectedLevels((prev) => {
+      const next = new Set(prev);
+      if (next.has(lvl)) {
+        if (next.size > 1) next.delete(lvl);
+      } else {
+        next.add(lvl);
+      }
+      return next;
+    });
+  };
+
+  const selectAllLevels = () => setSelectedLevels(new Set(ALL_LEVELS));
+  const clearLevels = () => setSelectedLevels(new Set(['error', 'fatal']));
+
+  const toggleExpand = (id: string) => {
+    setExpandedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
+
+  const isNeon = variant === 'neon';
+  const isGlass = variant === 'glass';
+  const isCard = variant === 'card';
+
+  const containerStyle: React.CSSProperties = {
+    display: 'flex',
+    flexDirection: 'column',
+    borderRadius: '10px',
+    border: isNeon
+      ? '1px solid rgba(6, 182, 212, 0.4)'
+      : '1px solid var(--color-border, #e2e8f0)',
+    backgroundColor: isNeon
+      ? '#050811'
+      : isGlass
+      ? 'rgba(255, 255, 255, 0.75)'
+      : isCard
+      ? 'var(--color-surface, #ffffff)'
+      : 'var(--color-surface, #ffffff)',
+    boxShadow: isNeon
+      ? '0 0 24px rgba(6, 182, 212, 0.15), inset 0 0 12px rgba(6, 182, 212, 0.05)'
+      : isCard
+      ? '0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -2px rgba(0, 0, 0, 0.05)'
+      : '0 1px 3px rgba(0, 0, 0, 0.05)',
+    backdropFilter: isGlass ? 'blur(16px)' : undefined,
+    color: isNeon ? '#f8fafc' : 'var(--color-text, #0f172a)',
+    overflow: 'hidden',
+    height: '520px',
+    position: 'relative',
+    ...style,
+  };
+
+  return (
+    <div
+      className={className}
+      style={containerStyle}
+      role="region"
+      aria-label={title}
+      data-variant={variant}
+      data-size={size}
+    >
+      {/* Header bar */}
+      <div
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          padding: size === 'sm' ? '6px 12px' : '10px 16px',
+          borderBottom: isNeon
+            ? '1px solid rgba(6, 182, 212, 0.25)'
+            : '1px solid var(--color-border, #e2e8f0)',
+          backgroundColor: isNeon ? 'rgba(15, 23, 42, 0.6)' : 'var(--color-surface-subtle, #f8fafc)',
+        }}
+      >
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <span
+            style={{
+              display: 'inline-block',
+              width: '8px',
+              height: '8px',
+              borderRadius: '50%',
+              backgroundColor: '#10b981',
+              boxShadow: isNeon ? '0 0 8px #10b981' : undefined,
+            }}
+          />
+          <span style={{ fontWeight: 600, fontSize: size === 'sm' ? '13px' : '15px' }}>
+            {title}
+          </span>
+          <span
+            style={{
+              fontSize: '11px',
+              padding: '1px 6px',
+              borderRadius: '10px',
+              backgroundColor: isNeon ? 'rgba(255, 255, 255, 0.1)' : '#e2e8f0',
+              color: isNeon ? '#94a3b8' : '#475569',
+            }}
+          >
+            {filteredLogs.length} / {internalLogs.length} events
+          </span>
+        </div>
+
+        {/* Quick jump to bottom */}
+        <button
+          type="button"
+          onClick={scrollToBottom}
+          style={{
+            background: 'none',
+            border: 'none',
+            cursor: 'pointer',
+            fontSize: '12px',
+            color: isNeon ? '#38bdf8' : 'var(--color-primary, #2563eb)',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '4px',
+          }}
+          title="Jump to newest log entry"
+        >
+          <ArrowDownIcon />
+          <span>Latest</span>
+        </button>
+      </div>
+
+      {/* Toolbar */}
+      {allowFilter && (
+        <LogToolbar
+          searchQuery={searchQuery}
+          onSearchChange={setSearchQuery}
+          selectedLevels={selectedLevels}
+          onToggleLevel={toggleLevel}
+          onSelectAllLevels={selectAllLevels}
+          onClearLevels={clearLevels}
+          levelCounts={levelCounts}
+          autoScroll={autoScroll}
+          onToggleAutoScroll={() => setAutoScroll((v) => !v)}
+          wrapLines={wrapLines}
+          onToggleWrapLines={() => setWrapLines((v) => !v)}
+          onClear={handleClear}
+          onExport={handleExport}
+          variant={variant}
+          size={size}
+          sourceFilter={sourceFilter}
+          onSourceFilterChange={setSourceFilter}
+          availableSources={availableSources}
+          isPaused={isPaused}
+          onResume={scrollToBottom}
+          unreadCount={unreadCount}
+        />
+      )}
+
+      {/* Log rows scroll area */}
+      <div
+        ref={viewportRef}
+        onScroll={handleScroll}
+        style={{
+          flex: 1,
+          overflowY: 'auto',
+          overflowX: wrapLines ? 'hidden' : 'auto',
+          backgroundColor: isNeon ? '#050811' : 'var(--color-surface, #ffffff)',
+          position: 'relative',
+        }}
+        role="log"
+        aria-live="polite"
+        aria-label="Log stream entries"
+      >
+        {filteredLogs.length === 0 ? (
+          <div
+            style={{
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              justifyContent: 'center',
+              height: '100%',
+              color: isNeon ? '#475569' : '#94a3b8',
+              gap: '6px',
+              padding: '24px',
+            }}
+          >
+            <span style={{ fontSize: '20px' }}>🔍</span>
+            <span style={{ fontWeight: 500 }}>No matching log entries found</span>
+            <span style={{ fontSize: '12px' }}>
+              Try adjusting your search query or log level filters.
+            </span>
+          </div>
+        ) : (
+          filteredLogs.map((entry, idx) => (
+            <LogEntryRow
+              key={entry.id}
+              entry={entry}
+              index={idx}
+              searchQuery={searchQuery}
+              wrapLines={wrapLines}
+              variant={variant}
+              size={size}
+              showLineNumbers={showLineNumbers}
+              isExpanded={expandedIds.has(entry.id)}
+              onToggleExpand={toggleExpand}
+            />
+          ))
+        )}
+      </div>
+
+      {/* Floating unread resume badge when auto-scroll paused */}
+      {isPaused && (
+        <button
+          type="button"
+          onClick={scrollToBottom}
+          style={{
+            position: 'absolute',
+            bottom: '12px',
+            right: '16px',
+            zIndex: 10,
+            display: 'flex',
+            alignItems: 'center',
+            gap: '6px',
+            padding: '6px 12px',
+            borderRadius: '20px',
+            border: isNeon ? '1px solid #06b6d4' : '1px solid #2563eb',
+            backgroundColor: isNeon ? 'rgba(15, 23, 42, 0.95)' : '#ffffff',
+            color: isNeon ? '#38bdf8' : '#2563eb',
+            boxShadow: '0 4px 12px rgba(0, 0, 0, 0.25)',
+            fontSize: '12px',
+            fontWeight: 600,
+            cursor: 'pointer',
+            animation: 'fadeIn 0.2s ease',
+          }}
+          aria-label="Resume auto-scrolling"
+        >
+          <ArrowDownIcon />
+          <span>New logs below {unreadCount > 0 ? `(${unreadCount})` : ''}</span>
+        </button>
+      )}
+    </div>
+  );
+});
+
+LogViewerComponent.displayName = 'LogViewer';
+
+export const LogViewer = LogViewerComponent;
+export const LogStream = LogViewerComponent;
+export const EventViewer = LogViewerComponent;
+export const ConsoleLogs = LogViewerComponent;
+export default LogViewerComponent;"""
+
+
+def render_log_viewer_component() -> str:
+    """Return the static TypeScript source code for components/log-viewer.tsx."""
+    return _LOG_VIEWER_COMPONENT
+
+
 _DESIGN_TOKENS_CSS = (
     "/**\n"
     " * OmniStackAI Design Tokens & Theming Engine\n"
@@ -62378,6 +63698,7 @@ class NextjsWebAdapter:
             GeneratedFile("components/json-viewer.tsx", _JSON_VIEWER_COMPONENT),
             GeneratedFile("components/image-gallery.tsx", _IMAGE_GALLERY_COMPONENT),
             GeneratedFile("components/network-graph.tsx", _NETWORK_GRAPH_COMPONENT),
+            GeneratedFile("components/log-viewer.tsx", _LOG_VIEWER_COMPONENT),
             GeneratedFile("styles/tokens.css", _DESIGN_TOKENS_CSS),
             GeneratedFile("app/globals.css", _GLOBALS_CSS),
             GeneratedFile("app/error.tsx", _ERROR_PAGE),

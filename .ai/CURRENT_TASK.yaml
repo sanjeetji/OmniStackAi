@@ -1,24 +1,26 @@
-task_id: R-395
-id: R-395
-title: "Accessible Futuristic Reusable Network Graph & Topology Map Suite"
+task_id: R-396
+id: R-396
+title: "Accessible Futuristic Reusable Live Log Viewer & Event Stream Inspector Suite"
 status: DONE
 phase: MVP
 tracker_row: 34
-started_at: "2026-09-11"
-completed_at: "2026-09-11"
+started_at: "2026-09-12"
+completed_at: "2026-09-12"
 objective: >-
-  Add accessible, zero-dependency, desktop-and-mobile-grade, futuristic Network Graph & Topology Map compound component
-  suite (components/network-graph.tsx) supporting force-directed network layout, node clustering with health/status pills,
-  animated edge data-flow pulses, interactive drag/pan/zoom viewport, node selection with slide-over inspection details drawer,
-  search/filter by node type & status, physics simulation controls (pause/resume/repulsion), PNG export, WAI-ARIA 1.2 application
-  semantics (role="application", aria-label="Network Topology Graph"), 4 futuristic visual styling variants ("default", "card",
-  "glass", "neon"), 3 size scales ("sm", "md", "lg"), React ref forwarding (forwardRef), useImperativeHandle
-  (NetworkGraphHandle), and explicit displayNames across compound exports.
+  Add accessible, zero-dependency, desktop-and-mobile-grade, futuristic Live Log Viewer & Event Stream Inspector
+  compound component suite (components/log-viewer.tsx) supporting real-time tail streaming with auto-scroll lock,
+  severity level filter chips (ALL, TRACE, DEBUG, INFO, WARN, ERROR, FATAL) with counters and color badges,
+  real-time search/filter with match counter and substring highlighting, source/service filtering, expandable
+  structured JSON metadata drawer, line wrap toggle, line numbers gutter, copy log line / JSON to clipboard,
+  log export to TXT and JSON, clear logs action, WAI-ARIA 1.2 log semantics (role="log", aria-live="polite",
+  aria-label="Log stream viewer"), 4 futuristic visual styling variants ("default", "card", "glass", "neon"),
+  3 size scales ("sm", "md", "lg"), React ref forwarding (forwardRef), useImperativeHandle (LogViewerHandle),
+  and explicit displayNames across compound exports.
 allowed_paths:
   - "services/agent-engine/src/omnistackai_agent_engine/codegen/nextjs.py"
   - "services/agent-engine/src/omnistackai_agent_engine/codegen/__init__.py"
-  - "services/agent-engine/tests/test_network_graph_component.py"
-  - ".ai/tasks/R-395.md"
+  - "services/agent-engine/tests/test_log_viewer_component.py"
+  - ".ai/tasks/R-396.md"
   - ".ai/CURRENT_TASK.yaml"
   - ".ai/PROJECT_STATE.yaml"
   - ".ai/WORK_LOG.md"
@@ -30,9 +32,10 @@ forbidden_changes:
   - "Do not break snapshot diff invariance across ir.description"
   - "Do not commit or push code to git"
 evidence:
-  verify: "Ran 2397 tests in 1.881s (OK)"
+  verify: "Ran 2414 tests in 2.049s (OK)"
   lint: "Lint passed."
   security: "Stage 0 secret-policy check passed."
-  demos: "132 files generated including apps/web/components/network-graph.tsx"
+  demos: "133 files generated including apps/web/components/log-viewer.tsx"
   tracker: DONE
-next_action: "Should I proceed R-396"
+next_action: "Should I proceed R-397"
+

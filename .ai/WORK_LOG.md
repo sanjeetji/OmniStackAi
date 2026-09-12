@@ -1,5 +1,28 @@
 # Work Log
 
+## 2026-09-12 — R-396
+
+- Recorded contract in `.ai/CURRENT_TASK.yaml` and `.ai/tasks/R-396.md` (status in_progress → done).
+- `nextjs.py`:
+  - Added `_LOG_VIEWER_COMPONENT` static template implementing accessible, desktop-and-mobile-grade, futuristic Live Log Viewer & Real-Time Event Stream Inspector compound component suite (`apps/web/components/log-viewer.tsx`).
+  - Implemented `LogViewerVariant` ("default" | "card" | "glass" | "neon"), `LogViewerSize` ("sm" | "md" | "lg"), `LogLevel` ("trace" | "debug" | "info" | "warn" | "error" | "fatal"), `LogEntry`, `LogViewerHandle`, `LogToolbarProps`, `LogEntryRowProps`, `LogViewerProps` interfaces.
+  - Implemented compound and semantic alias exports: `LogViewer`, `LogStream`, `EventViewer`, `ConsoleLogs`, `LogToolbar`, `LogEntryRow`, default export.
+  - Implemented real-time tail streaming with auto-scroll lock toggle, user scroll-up pause detection, and floating resume badge with unread counts.
+  - Implemented severity level filter chips (`ALL`, `TRACE`, `DEBUG`, `INFO`, `WARN`, `ERROR`, `FATAL`) with event counters and color badges.
+  - Implemented real-time search/filter input with match counter badge and highlighted text substrings (`<mark>`).
+  - Implemented service/source filtering dropdown and available sources discovery.
+  - Implemented expandable structured JSON metadata drawer with tag badges and syntax formatting.
+  - Implemented line wrap toggle (`wrapLines`), line numbers gutter, copy log line / JSON to clipboard with checkmark feedback.
+  - Implemented export / download logs to `.txt` and `.json` files, alongside clear logs action.
+  - Implemented WAI-ARIA 1.2 log semantics (`role="log"`, `aria-live="polite"`, `role="region"`, `role="toolbar"`, `aria-label="Log stream viewer"`).
+  - Implemented 4 futuristic visual styling variants ("default", "card", "glass" with backdropFilter blur, "neon" cyberpunk cyan glow with color-coded luminous level badges).
+  - Implemented 3 size scales ("sm", "md", "lg").
+  - Implemented React ref forwarding (`forwardRef`), imperative handle (`LogViewerHandle`), and explicit `displayName` across all compound exports.
+  - Exported `render_log_viewer_component` in `omnistackai_agent_engine.codegen` and registered `components/log-viewer.tsx` in `NextjsWebAdapter.generate()`.
+  - Maintained 100% diff-invariance across `ir.description`.
+- Added `services/agent-engine/tests/test_log_viewer_component.py` with 17 comprehensive unit tests (all passing).
+- `task verify` — 2,414 tests pass (17 new), 0 failures. `task lint`, `task security:quick`, `task builder:demo -- minimal-blog` pass (133 files generated).
+
 ## 2026-09-11 — R-395
 
 - Recorded contract in `.ai/CURRENT_TASK.yaml` and `.ai/tasks/R-395.md` (status in_progress → done).
