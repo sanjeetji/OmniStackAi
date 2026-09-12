@@ -1,31 +1,30 @@
-task_id: R-402
-id: R-402
-title: "Accessible Futuristic Reusable Cookie Consent & Preferences Manager Suite"
+task_id: R-403
+id: R-403
+title: "Accessible Futuristic Reusable Password Strength Meter & Requirements Suite"
 status: DONE
 phase: MVP
-tracker_row: 39
+tracker_row: 40
 started_at: "2026-09-12"
 completed_at: "2026-09-12"
 objective: >-
-  Add an accessible, zero-dependency, desktop-and-mobile-grade, futuristic Cookie Consent & Preferences
-  Manager compound component suite (components/cookie-consent.tsx): a fixed-position consent banner with a
-  compact view (Accept all / Reject all / Customize) and an expandable per-category preferences view with
-  role="switch" toggles (required categories forced on and disabled); localStorage persistence
-  (getItem/setItem under a configurable storageKey, wrapped in try/catch) so returning visitors are not
-  re-prompted; SSR-safe mounting (renders null until mounted, real storage read only after mount to avoid
-  hydration mismatch); configurable categories, title/description, optional privacy policy link, and button
-  labels; forceShow override; onAccept/onReject/onChange callbacks; WAI-ARIA semantics (role="region"
-  container with aria-label, role="switch" category toggles with aria-checked); 5 placements
-  (bottom/top/bottom-left/bottom-right/center); 4 futuristic visual styling variants ("default", "card",
-  "glass", "neon"); 3 size scales ("sm", "md", "lg"); React ref forwarding (forwardRef);
-  useImperativeHandle (CookieConsentHandle: open/close/accept/reject/getConsent/reset); and explicit
-  displayName across compound and semantic alias exports (CookieConsent, ConsentBanner, CookieBanner,
-  ConsentManager, default). Static module constant — never references ir.name/ir.description.
+  Add an accessible, zero-dependency, desktop-and-mobile-grade, futuristic Password Strength Meter &
+  Requirements compound component suite (components/password-strength.tsx): a controlled + uncontrolled
+  password input with a live strength evaluation (rule-based scoring producing empty/weak/fair/good/strong
+  levels), a segmented strength bar, a live requirements checklist (default rules: min length, uppercase,
+  lowercase, number, symbol; overridable), a show/hide password toggle (aria-pressed), an SSR-safe design
+  (deterministic first paint; matchMedia read only after mount), a JS prefers-reduced-motion guard for the
+  bar transition, WAI-ARIA semantics (role="status" + aria-live strength announcement, aria-describedby
+  wiring the input to the requirements + strength, useId for stable ids), onChange + onStrengthChange
+  callbacks, 4 futuristic visual styling variants ("default", "card", "glass", "neon"), 3 size scales
+  ("sm", "md", "lg"), React ref forwarding (forwardRef), useImperativeHandle (PasswordStrengthHandle:
+  getValue/setValue/getStrength/clear/focus), and explicit displayName across compound and semantic alias
+  exports (PasswordStrength, PasswordStrengthMeter, PasswordInput, PasswordField, default). Static module
+  constant — never references ir.name/ir.description.
 allowed_paths:
   - "services/agent-engine/src/omnistackai_agent_engine/codegen/nextjs.py"
   - "services/agent-engine/src/omnistackai_agent_engine/codegen/__init__.py"
-  - "services/agent-engine/tests/test_cookie_consent_component.py"
-  - ".ai/tasks/R-402.md"
+  - "services/agent-engine/tests/test_password_strength_component.py"
+  - ".ai/tasks/R-403.md"
   - ".ai/CURRENT_TASK.yaml"
   - ".ai/PROJECT_STATE.yaml"
   - ".ai/WORK_LOG.md"
@@ -37,9 +36,9 @@ forbidden_changes:
   - "Do not break snapshot diff invariance across ir.description"
   - "Do not commit or push code to git without verification"
 evidence:
-  verify: "2520 passed (Stage 0 verification passed)"
+  verify: "2538 passed (Stage 0 verification passed)"
   lint: "task lint passed"
   security: "task security:quick passed"
-  demos: "task builder:demo -- minimal-blog generated 139 files (includes apps/web/components/cookie-consent.tsx)"
+  demos: "task builder:demo -- minimal-blog generated 140 files (includes apps/web/components/password-strength.tsx)"
   tracker: DONE
-next_action: "Proceed to R-403 (next unstarted Tracker ID), autonomous continuation active."
+next_action: "Proceed to R-404 (next unstarted Tracker ID), autonomous continuation active."

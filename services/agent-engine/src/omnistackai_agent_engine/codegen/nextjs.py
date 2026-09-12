@@ -66818,6 +66818,340 @@ def render_cookie_consent_component() -> str:
     return _COOKIE_CONSENT_COMPONENT
 
 
+_PASSWORD_STRENGTH_COMPONENT = r"""'use client';
+
+import { forwardRef, useEffect, useId, useImperativeHandle, useRef, useState } from 'react';
+import type { CSSProperties } from 'react';
+
+export type PasswordStrengthVariant = 'default' | 'card' | 'glass' | 'neon';
+export type PasswordStrengthSize = 'sm' | 'md' | 'lg';
+export type PasswordStrengthLevel = 'empty' | 'weak' | 'fair' | 'good' | 'strong';
+
+export interface PasswordRule {
+  id: string;
+  label: string;
+  test: (password: string) => boolean;
+}
+
+export interface PasswordStrengthResult {
+  score: number;
+  level: PasswordStrengthLevel;
+  passed: string[];
+}
+
+export interface PasswordStrengthProps {
+  value?: string;
+  defaultValue?: string;
+  rules?: PasswordRule[];
+  minLength?: number;
+  showInput?: boolean;
+  showToggle?: boolean;
+  showRequirements?: boolean;
+  showLabel?: boolean;
+  label?: string;
+  placeholder?: string;
+  name?: string;
+  disabled?: boolean;
+  variant?: PasswordStrengthVariant;
+  size?: PasswordStrengthSize;
+  accentColor?: string;
+  ariaLabel?: string;
+  className?: string;
+  style?: CSSProperties;
+  onChange?: (value: string, result: PasswordStrengthResult) => void;
+  onStrengthChange?: (result: PasswordStrengthResult) => void;
+}
+
+export interface PasswordStrengthHandle {
+  getValue: () => string;
+  setValue: (value: string) => void;
+  getStrength: () => PasswordStrengthResult;
+  clear: () => void;
+  focus: () => void;
+}
+
+interface VariantStyle {
+  wrapper: CSSProperties;
+  labelColor: string;
+  inputBg: string;
+  inputColor: string;
+  inputBorder: string;
+  trackBg: string;
+  metColor: string;
+  unmetColor: string;
+}
+
+const VARIANT_STYLES: Record<PasswordStrengthVariant, VariantStyle> = {
+  default: {
+    wrapper: { background: 'transparent' },
+    labelColor: '#0f172a', inputBg: '#ffffff', inputColor: '#0f172a', inputBorder: '#cbd5e1',
+    trackBg: '#e2e8f0', metColor: '#22c55e', unmetColor: '#94a3b8',
+  },
+  card: {
+    wrapper: { background: '#ffffff', border: '1px solid #e2e8f0', borderRadius: '12px', boxShadow: '0 4px 16px rgba(0, 0, 0, 0.06)', padding: '16px' },
+    labelColor: '#0f172a', inputBg: '#ffffff', inputColor: '#0f172a', inputBorder: '#cbd5e1',
+    trackBg: '#e2e8f0', metColor: '#22c55e', unmetColor: '#94a3b8',
+  },
+  glass: {
+    wrapper: { background: 'rgba(248, 250, 252, 0.6)', border: '1px solid rgba(255, 255, 255, 0.4)', borderRadius: '12px', boxShadow: '0 8px 32px rgba(0, 0, 0, 0.12)', backdropFilter: 'blur(16px)', WebkitBackdropFilter: 'blur(16px)', padding: '16px' },
+    labelColor: '#0f172a', inputBg: 'rgba(255, 255, 255, 0.7)', inputColor: '#0f172a', inputBorder: 'rgba(148, 163, 184, 0.6)',
+    trackBg: 'rgba(148, 163, 184, 0.35)', metColor: '#16a34a', unmetColor: '#64748b',
+  },
+  neon: {
+    wrapper: { background: '#050811', border: '1px solid rgba(6, 182, 212, 0.4)', borderRadius: '12px', boxShadow: '0 0 24px rgba(6, 182, 212, 0.15)', padding: '16px' },
+    labelColor: '#f8fafc', inputBg: 'rgba(6, 182, 212, 0.08)', inputColor: '#e0f2fe', inputBorder: 'rgba(6, 182, 212, 0.5)',
+    trackBg: 'rgba(6, 182, 212, 0.12)', metColor: '#22d3ee', unmetColor: '#0e7490',
+  },
+};
+
+const SIZE_STYLES: Record<PasswordStrengthSize, { font: number; inputPad: number; barHeight: number; gap: number }> = {
+  sm: { font: 12, inputPad: 8, barHeight: 4, gap: 6 },
+  md: { font: 14, inputPad: 10, barHeight: 6, gap: 8 },
+  lg: { font: 16, inputPad: 12, barHeight: 8, gap: 10 },
+};
+
+const LEVEL_META: Record<PasswordStrengthLevel, { label: string; color: string; segments: number }> = {
+  empty: { label: 'Enter a password', color: '#94a3b8', segments: 0 },
+  weak: { label: 'Weak', color: '#ef4444', segments: 1 },
+  fair: { label: 'Fair', color: '#f59e0b', segments: 2 },
+  good: { label: 'Good', color: '#3b82f6', segments: 3 },
+  strong: { label: 'Strong', color: '#22c55e', segments: 4 },
+};
+
+const TOTAL_SEGMENTS = 4;
+
+function defaultRules(minLength: number): PasswordRule[] {
+  return [
+    { id: 'length', label: 'At least ' + minLength + ' characters', test: (pw: string) => pw.length >= minLength },
+    { id: 'uppercase', label: 'An uppercase letter', test: (pw: string) => /[A-Z]/.test(pw) },
+    { id: 'lowercase', label: 'A lowercase letter', test: (pw: string) => /[a-z]/.test(pw) },
+    { id: 'number', label: 'A number', test: (pw: string) => /[0-9]/.test(pw) },
+    { id: 'symbol', label: 'A symbol', test: (pw: string) => /[^A-Za-z0-9]/.test(pw) },
+  ];
+}
+
+function evaluate(pw: string, rules: PasswordRule[]): PasswordStrengthResult {
+  if (!pw) return { score: 0, level: 'empty', passed: [] };
+  const passed = rules.filter((r) => r.test(pw)).map((r) => r.id);
+  const ratio = rules.length > 0 ? passed.length / rules.length : 0;
+  let level: PasswordStrengthLevel = 'weak';
+  if (ratio >= 1) level = 'strong';
+  else if (ratio >= 0.75) level = 'good';
+  else if (ratio >= 0.5) level = 'fair';
+  else level = 'weak';
+  return { score: passed.length, level, passed };
+}
+
+const PasswordStrengthComponent = forwardRef<PasswordStrengthHandle, PasswordStrengthProps>(
+  function PasswordStrength(
+    {
+      value,
+      defaultValue = '',
+      rules,
+      minLength = 8,
+      showInput = true,
+      showToggle = true,
+      showRequirements = true,
+      showLabel = true,
+      label = 'Password',
+      placeholder = 'Enter your password',
+      name,
+      disabled = false,
+      variant = 'default',
+      size = 'md',
+      accentColor,
+      ariaLabel = 'Password',
+      className,
+      style,
+      onChange,
+      onStrengthChange,
+    }: PasswordStrengthProps,
+    ref,
+  ) {
+    const isControlled = typeof value === 'string';
+    const [internalValue, setInternalValue] = useState<string>(defaultValue);
+    const [visible, setVisible] = useState(false);
+    const reducedMotionRef = useRef<boolean>(false);
+    const inputRef = useRef<HTMLInputElement | null>(null);
+    const onChangeRef = useRef<PasswordStrengthProps['onChange']>(onChange);
+    const onStrengthChangeRef = useRef<PasswordStrengthProps['onStrengthChange']>(onStrengthChange);
+    onChangeRef.current = onChange;
+    onStrengthChangeRef.current = onStrengthChange;
+
+    const reqId = useId();
+    const strengthId = useId();
+
+    const activeRules = rules && rules.length > 0 ? rules : defaultRules(minLength);
+    const currentValue = isControlled ? (value as string) : internalValue;
+    const result = evaluate(currentValue, activeRules);
+    const meta = LEVEL_META[result.level];
+
+    useEffect(() => {
+      try {
+        reducedMotionRef.current = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+      } catch {
+        reducedMotionRef.current = false;
+      }
+    }, []);
+
+    const handleChange = (next: string) => {
+      if (!isControlled) setInternalValue(next);
+      const res = evaluate(next, activeRules);
+      if (onChangeRef.current) onChangeRef.current(next, res);
+      if (onStrengthChangeRef.current) onStrengthChangeRef.current(res);
+    };
+
+    useImperativeHandle(
+      ref,
+      () => ({
+        getValue: () => currentValue,
+        setValue: (v: string) => {
+          if (!isControlled) setInternalValue(v);
+          const res = evaluate(v, activeRules);
+          if (onStrengthChangeRef.current) onStrengthChangeRef.current(res);
+        },
+        getStrength: () => evaluate(currentValue, activeRules),
+        clear: () => {
+          if (!isControlled) setInternalValue('');
+        },
+        focus: () => {
+          if (inputRef.current) inputRef.current.focus();
+        },
+      }),
+      [currentValue, isControlled, activeRules],
+    );
+
+    const theme = VARIANT_STYLES[variant] || VARIANT_STYLES.default;
+    const sizing = SIZE_STYLES[size] || SIZE_STYLES.md;
+    const resolvedAccent = accentColor || meta.color;
+
+    return (
+      <div
+        className={className}
+        data-variant={variant}
+        data-size={size}
+        data-level={result.level}
+        style={{ display: 'flex', flexDirection: 'column', gap: sizing.gap + 'px', fontFamily: 'system-ui, -apple-system, sans-serif', ...theme.wrapper, ...style }}
+      >
+        {showInput ? (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+            {showLabel ? (
+              <span style={{ fontSize: sizing.font + 'px', fontWeight: 600, color: theme.labelColor }}>{label}</span>
+            ) : null}
+            <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
+              <input
+                ref={inputRef}
+                type={visible ? 'text' : 'password'}
+                value={currentValue}
+                name={name}
+                disabled={disabled}
+                placeholder={placeholder}
+                aria-label={ariaLabel}
+                aria-describedby={strengthId + ' ' + reqId}
+                onChange={(e) => handleChange(e.target.value)}
+                style={{
+                  flex: 1,
+                  fontSize: sizing.font + 'px',
+                  padding: sizing.inputPad + 'px',
+                  paddingRight: showToggle ? '72px' : sizing.inputPad + 'px',
+                  background: theme.inputBg,
+                  color: theme.inputColor,
+                  border: '1px solid ' + theme.inputBorder,
+                  borderRadius: '8px',
+                  outline: 'none',
+                  width: '100%',
+                  boxSizing: 'border-box',
+                }}
+              />
+              {showToggle ? (
+                <button
+                  type="button"
+                  aria-pressed={visible}
+                  aria-label={visible ? 'Hide password' : 'Show password'}
+                  disabled={disabled}
+                  onClick={() => setVisible((v) => !v)}
+                  style={{
+                    position: 'absolute',
+                    right: '8px',
+                    background: 'transparent',
+                    border: 'none',
+                    color: theme.labelColor,
+                    fontSize: (sizing.font - 1) + 'px',
+                    fontWeight: 600,
+                    cursor: disabled ? 'default' : 'pointer',
+                    padding: '4px 8px',
+                  }}
+                >
+                  {visible ? 'Hide' : 'Show'}
+                </button>
+              ) : null}
+            </div>
+          </div>
+        ) : null}
+
+        <div style={{ display: 'flex', gap: '4px' }} aria-hidden="true">
+          {[0, 1, 2, 3].map((i) => (
+            <div
+              key={i}
+              style={{
+                flex: 1,
+                height: sizing.barHeight + 'px',
+                borderRadius: '999px',
+                background: i < meta.segments ? resolvedAccent : theme.trackBg,
+                transition: reducedMotionRef.current ? 'none' : 'background 0.2s ease',
+              }}
+            />
+          ))}
+        </div>
+
+        {showLabel ? (
+          <div id={strengthId} role="status" aria-live="polite" style={{ fontSize: (sizing.font - 1) + 'px', fontWeight: 600, color: resolvedAccent }}>
+            {meta.label}
+            {result.level !== 'empty' ? ' · ' + result.score + '/' + TOTAL_SEGMENTS : ''}
+          </div>
+        ) : null}
+
+        {showRequirements ? (
+          <ul id={reqId} style={{ listStyle: 'none', margin: 0, padding: 0, display: 'flex', flexDirection: 'column', gap: '3px' }}>
+            {activeRules.map((r) => {
+              const met = result.passed.indexOf(r.id) !== -1;
+              return (
+                <li key={r.id} style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: (sizing.font - 2) + 'px', color: met ? theme.metColor : theme.unmetColor }}>
+                  <span aria-hidden="true" style={{ display: 'inline-flex', width: '14px', height: '14px', borderRadius: '50%', alignItems: 'center', justifyContent: 'center', fontSize: '10px', fontWeight: 700, background: met ? theme.metColor : 'transparent', color: met ? '#ffffff' : theme.unmetColor, border: met ? 'none' : '1px solid ' + theme.unmetColor }}>
+                    {met ? '✓' : ''}
+                  </span>
+                  <span>{r.label}</span>
+                </li>
+              );
+            })}
+          </ul>
+        ) : null}
+      </div>
+    );
+  },
+);
+
+PasswordStrengthComponent.displayName = 'PasswordStrength';
+
+export const PasswordStrength = PasswordStrengthComponent;
+export const PasswordStrengthMeter = PasswordStrengthComponent;
+export const PasswordInput = PasswordStrengthComponent;
+export const PasswordField = PasswordStrengthComponent;
+
+PasswordStrength.displayName = 'PasswordStrength';
+PasswordStrengthMeter.displayName = 'PasswordStrengthMeter';
+PasswordInput.displayName = 'PasswordInput';
+PasswordField.displayName = 'PasswordField';
+
+export default PasswordStrengthComponent;
+"""
+
+
+def render_password_strength_component() -> str:
+    """Render the Accessible Futuristic Reusable Password Strength Meter & Requirements Suite (R-403)."""
+    return _PASSWORD_STRENGTH_COMPONENT
+
+
 _DESIGN_TOKENS_CSS = (
     "/**\n"
     " * OmniStackAI Design Tokens & Theming Engine\n"
@@ -67449,6 +67783,7 @@ class NextjsWebAdapter:
             GeneratedFile("components/image-comparison.tsx", _IMAGE_COMPARISON_COMPONENT),
             GeneratedFile("components/countdown.tsx", _COUNTDOWN_COMPONENT),
             GeneratedFile("components/cookie-consent.tsx", _COOKIE_CONSENT_COMPONENT),
+            GeneratedFile("components/password-strength.tsx", _PASSWORD_STRENGTH_COMPONENT),
             GeneratedFile("styles/tokens.css", _DESIGN_TOKENS_CSS),
             GeneratedFile("app/globals.css", _GLOBALS_CSS),
             GeneratedFile("app/error.tsx", _ERROR_PAGE),
