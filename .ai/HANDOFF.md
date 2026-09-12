@@ -5,7 +5,7 @@ Status: done
 Phase: BASIC/MVP — Founder Stage 0
 Branch: `main` (the only branch; the GitHub default)
 
-> **Loop paused.** The self-paced `/loop` was stopped at the founder's explicit request ("complete the current task and stop"). R-415 is complete, committed, and pushed. Next unstarted Tracker ID is **R-416** — awaiting founder confirmation before proceeding.
+> **UI-component series PAUSED at R-415 (resumable).** The self-paced `/loop` was stopped at the founder's request. R-415 is complete, committed, and pushed. Each component is independent/additive — **resume any time** by assigning **R-416** to the next component and following the component-suite contract; nothing decays. Tracking docs reconciled 2026-09-12 (`docs/PROGRESS.md` + `docs/RESUME_PROMPT.md`: 2,753 tests, 110 components, series-paused/resume record). Founder is choosing the next direction; recommended pivot = the local "chat → create an app" front door (all MVP phase, all local/offline-buildable). See `docs/PROGRESS.md` → "What's next".
 
 ## Repo/workflow state
 

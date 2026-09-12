@@ -1,12 +1,42 @@
-# OmniStackAI — implementation progress (as of R-358)
+# OmniStackAI — implementation progress (as of R-415)
 
 A living summary of what is built, what is pending, and how to see results. Numbers come from the
-execution tracker (`R_&_D/OmniStackAI_Execution_Tracker_v6.xlsx`, `Phase_Roadmap`).
+execution tracker (`R_&_D/OmniStackAI_Execution_Tracker_v6.xlsx`, `Phase_Roadmap`) plus the state
+files (`.ai/`), Git history, and CHANGELOG for work done past the tracker's last row (R-358).
 
 ## Headline
 
-- **1,707 automated tests pass**, fully offline and network-independent (`task verify`).
-- **147 tracker tasks Done, 1 Deferred, 210 Not Started** across 358 tasks (366 total spreadsheet rows).
+- **2,753 automated tests pass**, fully offline and network-independent (`task verify`).
+- **147 tracker tasks Done, 1 Deferred, 210 Not Started** across 358 tasks (the tracker's planned
+  universe ends at R-358).
+- **Plus 57 additional reusable UI-component suites (R-359 → R-415)** built beyond the tracker — the
+  generated Next.js component library is now **110 components**. This is the **UI-component series**,
+  now **PAUSED at R-415** (see the section below); it is fully resumable.
+- The generated app was **run live locally end-to-end this session** (Next.js web on `:3000` +
+  FastAPI on `:8000` + seeded PostgreSQL) — proving the offline builder output actually runs on a Mac.
+
+## UI Component Series — status: PAUSED at R-415 (resumable)
+
+The reusable Next.js component library (each component = a static `_X_COMPONENT` string + `render_x_*`
+accessor in `codegen/nextjs.py`, registered in `NextjsWebAdapter.generate()`, exported from
+`codegen/__init__.py`, with a 1:1 `test_<component>_component.py`) was built one Tracker ID at a time
+from R-309 (Pagination) through **R-415 (Phone Number Input)** — 110 components in total.
+
+**Why paused:** the tracker planned ~120 Builder components for MVP; with 110 built the series is past
+the point of diminishing returns and is *not* on the critical path to a usable product (the chat →
+create front door and the engine are). The founder chose to pivot to higher-value platform work.
+
+**How to resume later (nothing decays — each component is independent and additive):**
+1. Pick the next best non-duplicate component; assign it the next ID **R-416** (continue numbering).
+2. Follow the component-suite contract (see `.ai/HANDOFF.md` / any recent `.ai/tasks/R-4xx.md`):
+   `'use client'`; `forwardRef` + `useImperativeHandle`; 4 variants / 3 sizes; WAI-ARIA; zero deps;
+   100% diff-invariant; ASCII-only source; compound + alias exports with `displayName`; default export.
+3. Test-first (`test_<component>_component.py`), wire `generate()` + `__init__.py`, run all gates
+   (`task verify` / `lint` / `security:quick` / `env:check` / `builder:demo`), update the six state
+   files, one commit `feat(R-###): <Title>`, push.
+
+The full list of 110 registered components lives in `codegen/nextjs.py`
+(`grep 'GeneratedFile("components/'`); the per-task detail is in `CHANGELOG.md` and `.ai/WORK_LOG.md`.
 - The offline builder loop is complete end to end: **describe (IR) → generate (web with typed API client, React hooks, interactive master-detail screen components with field validation, page size selector & contextual empty states, bulk selection & batch deletion, CSV data export & bulk export, deep-linking & entity lifecycle in detail screens, global responsive navigation shell & header navbar with active route detection & quick-create CTA, post-submit contextual CTAs & record navigation with Cancel action in form footer, rich entity-aware dashboard overview page (live count cards, screen nav tiles, quick-create CTAs, diff-stable), record selector dropdown, prev/next record navigation & deep-link sync in detail screens, form screen dirty state tracking, unsaved changes guard & reset confirmation, collection screen boolean & enum field filtering with segmented controls, global notification toast system & action feedback with ToastProvider & useToast, subcollection navigation, child item deletion & mutation feedback, full-stack update/edit actions, foreign-key relation selectors & parent auto-population, App Router resilience quartet, full loading-skeleton coverage, consistent error & retry recovery, enterprise WAI-ARIA accessibility semantics, power-user collection, detail, and form keyboard navigation & shortcuts, form input constraints & live character counters, search clear affordances & form first-field autofocus, collection status badges & detail copy affordances, overview interactive entity links, health badge & metrics chips, accessible modal confirmation dialog replacing window.confirm(), keyboard shortcuts help modal & global discovery affordance, accessible breadcrumb navigation component & screen hierarchy, accessible EmptyState component & screen zero-state integrations, collection screen JSON data export & bulk selection export controls, accessible reusable Pagination component, accessible reusable Tabs component, collection table display density toggle (Compact, Comfortable, Spacious), accessible reusable Badge component, collection table column visibility dropdown & selector controls, accessible reusable Tooltip component, accessible reusable Card compound component, accessible reusable Alert & Notification component, accessible reusable Skeleton loader compound component, accessible reusable Drawer / Sheet compound component, accessible reusable Avatar & AvatarGroup compound component, accessible reusable Toggle Switch component, accessible reusable Accordion compound component, accessible reusable Dropdown Menu compound component, accessible reusable Popover compound component, Design Tokens & CSS Custom Properties Theming Engine (styles/tokens.css), accessible reusable Theme Switcher / Mode Toggle component (components/theme-toggle.tsx), accessible reusable Dialog / Modal component (components/dialog.tsx), accessible reusable Form Controls & Input Primitives suite (components/form-controls.tsx), accessible reusable Date Picker & Calendar component (components/date-picker.tsx), accessible reusable Data Grid / Table component (components/data-grid.tsx), accessible Command Palette / Search Menu component (components/command-palette.tsx), accessible reusable Slider & Range component (components/slider.tsx), accessible reusable Progress & Spinner component (components/progress.tsx), accessible reusable Rating & Review component (components/rating.tsx), accessible reusable Stepper / Multi-step Wizard component (components/stepper.tsx), accessible reusable File Upload / Dropzone component (components/file-upload.tsx), accessible reusable Timeline / Activity Feed component (components/timeline.tsx), accessible futuristic reusable Stat & Metric KPI Card component (components/stat-card.tsx), accessible reusable Hierarchical Tree View component (components/tree-view.tsx), accessible futuristic reusable Tag & Chip Input Tokenizer component (components/tag-input.tsx), accessible futuristic reusable Code Block & Syntax Presentation component (components/code-block.tsx), accessible futuristic reusable Radial Gauge & Activity Rings component (components/radial-gauge.tsx), accessible futuristic reusable Segmented Control & Mode Switcher component (components/segmented-control.tsx), accessible futuristic reusable Carousel & Slider Showcase component (components/carousel.tsx), accessible futuristic reusable Resizable Panels & Splitter component (components/resizable.tsx), accessible futuristic reusable Color Picker & Palette Swatch component (components/color-picker.tsx), accessible futuristic reusable PIN & OTP Code Input component (components/pin-input.tsx), accessible futuristic reusable Speed Dial & Floating Action Button component (components/speed-dial.tsx), accessible futuristic reusable Context Menu suite (components/context-menu.tsx), accessible futuristic reusable Hover Card suite (components/hover-card.tsx), accessible futuristic reusable Scroll Area suite (components/scroll-area.tsx), accessible futuristic reusable Collapsible component (components/collapsible.tsx), accessible futuristic reusable Aspect Ratio component (components/aspect-ratio.tsx), accessible futuristic reusable Separator component (components/separator.tsx), accessible futuristic reusable Keyboard Keycap component (components/kbd.tsx), accessible futuristic reusable Radio Group suite (components/radio-group.tsx), accessible futuristic reusable Checkbox & Checkbox Group primitive (components/checkbox.tsx), accessible futuristic reusable Announcement Banner & Callout suite (components/banner.tsx), accessible futuristic reusable Searchable Combobox & Autocomplete primitive (components/combobox.tsx) + API with
   working CRUD incl. PATCH/PUT update + pagination + sorting + total count header + keyword search + sub-collections + DB schema + data-access + JWT-verified auth
   & per-endpoint roles + field validation + CORS middleware + OpenAPI 3.1 contract)
@@ -220,11 +250,22 @@ the live run needs the key + a network machine.
 
 ## What's next
 
-Near-term MVP candidate: **R-296** = another generated-app UX/robustness increment — e.g. a reusable
-EmptyState/error inline-state component to DRY the screens, an accessibility pass, or optimistic
-create/update reflected in the collection list. The generated app now has full loading-skeleton coverage
-(R-292 + R-293), the App Router resilience quartet (R-294), and consistent Error + Retry across every
-fetch state (R-295). (The founder paused development after R-295; resume from R-296 via
-`docs/RESUME_PROMPT.md`.) A Groq API key may be available for a separately chosen live model-fabric
-verification (Balanced gateway → Groq, real cloud inference + cost accounting); keep it only in gitignored
-`.env`. Then, on a network machine: live Tier-2 preview and deploy. This file is refreshed as tasks land.
+**The UI-component series is PAUSED at R-415** (resumable — see the section above). The founder is
+choosing the next direction; the recommended pivot is the **user-facing "chat → create an app" front
+door**, which is what turns the engine + component library into an actual product. All of it is MVP
+phase and buildable locally (no paid cloud):
+
+1. **Prompt → Application IR agent** (net-new task) — turn a user's sentence into the engine's IR using
+   the **local Ollama** gateway. This is the first brick.
+2. **Platform web app with a chat box** — maps to tracker **R-224** (Next.js console upgrade) + **R-011**
+   (Web/Admin Agent). Previously marked "blocked on npm"; now **unblocked** (local `pnpm` works on the
+   founder's Mac, proven this session).
+3. **Orchestration** (chat → IR → generate → preview) — tracker **R-180** (Orchestrator Adapter).
+4. **Live local preview** of the generated app — tracker **R-033 / R-034**.
+5. **Turnkey local run** (`task app:run -- <dir>`, net-new) — auto-create DB, apply migrations, wire
+   env, boot both servers; removes the 6 manual steps hit when running a generated app by hand.
+
+Later, on a network machine / with keys: live **Tier-2** cloud preview + deploy (E2B, Vercel) and
+cloud-model verification. The plumbing (R-233/234 tier switch) is already built; it is a config flip.
+
+This file is refreshed as tasks land.
