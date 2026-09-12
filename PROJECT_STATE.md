@@ -1,31 +1,33 @@
 # Project State — OmniStackAI
-Last updated: 2026-09-12T08:50:00+05:30
+Last updated: 2026-09-12T10:30:00+05:30
 
 ## Current Phase
 Stage 0 (Founder Build Sequence, Brief Section 91) — BASIC/MVP
 
 ## Last Completed Task
-Tracker ID: R-398 — Generated Accessible Futuristic Reusable Audio Waveform & Spectrum Visualizer Suite (components/audio-visualizer.tsx) — DONE,
-`task verify` (2,448 agent-engine tests, 17 new focused R-398 tests) passing. Enabled accessible, futuristic, zero-dependency
-desktop-and-mobile-grade Audio Waveform & Spectrum Visualizer compound components across generated Next.js web applications:
-added standalone, reusable, accessible, futuristic Audio Waveform & Spectrum Visualizer compound component suite (`components/audio-visualizer.tsx`) supporting
-multi-mode visualization (bars, wave, spectrum, circular), HTML5 canvas rendering with peak indicators and frequency gradients,
-interactive timeline scrubber with hover timestamp tooltip, play/pause playback controls, volume/mute toggle, playback speed selector,
-simulated animation loop with optional HTMLMediaElement / AudioContext integration, WAI-ARIA 1.2 media semantics (`role="region"`, `aria-label="Audio Visualizer"`, `role="toolbar"`, `role="slider"`),
-4 futuristic visual styling variants ("default", "card", "glass" with backdropFilter blur, "neon" cyberpunk cyan/magenta glow),
-3 size scales ("sm", "md", "lg"), React ref forwarding (`forwardRef`), `useImperativeHandle` (`AudioVisualizerHandle`),
-explicit `displayName` across all compound exports, canonical TypeScript types (`AudioVisualizerVariant`, `AudioVisualizerSize`,
-`AudioVisualizerMode`, `AudioVisualizerHandle`, `AudioVisualizerControlsProps`, `AudioVisualizerCanvasProps`, `AudioVisualizerProps`),
-compound and semantic alias exports (`AudioVisualizer`, `WaveformVisualizer`, `SpectrumAnalyzer`, `Oscilloscope`, `AudioVisualizerControls`, `AudioVisualizerCanvas`, default export),
+Tracker ID: R-399 — Generated Accessible Futuristic Reusable Particle Network & Interactive Constellation Canvas Suite (components/particle-network.tsx) — DONE,
+`task verify` (2,466 agent-engine tests, 18 new focused R-399 tests) passing. Enabled an accessible, futuristic, zero-dependency
+desktop-and-mobile-grade ambient particle/constellation canvas background across generated Next.js web applications (distinct from the
+data-driven network-graph — no required data props): added a standalone, reusable Particle Network compound component suite
+(`components/particle-network.tsx`) with internally-seeded particles (count derived from `count`/`density`, clamped 12–200) animated on an
+HTML5 Canvas 2D `requestAnimationFrame` loop with edge-bounce motion, proximity link lines with distance-proportional `globalAlpha`,
+pointer reactivity (gentle cursor attraction + accent-colored cursor links within `interactionRadius`), device-pixel-ratio-aware sizing,
+a JS `prefers-reduced-motion` guard (single static frame, no rAF, live change listener — a net-new pattern since CSS reduced-motion cannot
+stop a canvas loop), imperative `ParticleNetworkHandle` (`pause`, `resume`, `toggle`, `restart`, `isPaused`, `getCanvas`) via
+`useImperativeHandle`, WAI-ARIA decorative semantics (wrapper `role="img"` + `aria-label`, `aria-hidden="true"` canvas, no focus trap),
+4 futuristic visual styling variants ("default", "card", "glass" with backdropFilter blur, "neon" cyan glow),
+3 size scales ("sm", "md", "lg"), React ref forwarding (`forwardRef`),
+canonical TypeScript types (`ParticleNetworkVariant`, `ParticleNetworkSize`, `ParticleNetworkHandle`, `ParticleNetworkProps`),
+compound and semantic alias exports (`ParticleNetwork`, `ConstellationCanvas`, `ParticleField`, `StarfieldBackground`, default export) with explicit `displayName`,
 100% diff-invariance across `ir.description`, and 0 external runtime dependencies.
-Preceded by R-397 (mind map), R-396 (log viewer), R-395 (network graph), R-394 (image gallery), R-393 (json viewer), R-392 (merge editor), R-391 (whiteboard), R-390 (video player), R-389 (audio player), R-388 (pdf viewer), R-387 (geo map), R-386 (file explorer), R-385 (audio recorder), R-384 (chat & real-time messaging suite), R-383 (spreadsheet & inline data sheet suite), R-382 (qr code & barcode suite), R-381 (terminal), R-380 (flow canvas), R-379 (gantt chart), R-378 (image cropper), R-377 (pivot table), R-376 (media player), R-375 (heatmap), R-374 (org chart), R-373 (diff viewer), R-372 (signature pad), R-371 (time picker), R-370 (chart), R-369 (filter builder), R-368 (virtual list), R-367 (kanban), R-366 (calendar), R-365 (markdown editor), R-364 (transfer), R-363 (tour), R-362 (sidebar), R-361 (notification center), R-360 (number input), R-359 (bottom nav), R-358 (combobox), R-357 (banner), R-356 (checkbox), R-355 (radio group), R-354 (kbd), R-353 (separator), R-352 (aspect ratio), R-351 (collapsible), R-350 (scroll area), R-349 (hover card), R-348 (context menu), R-347 (speed dial), R-346 (pin input), R-345 (color picker), R-344 (resizable), R-343 (carousel), R-342 (segmented control), R-341 (radial gauge), R-340 (code block), R-339 (tag input), R-338 (tree view),
+Preceded by R-398 (audio visualizer), R-397 (mind map), R-396 (log viewer), R-395 (network graph), R-394 (image gallery), R-393 (json viewer), R-392 (merge editor), R-391 (whiteboard), R-390 (video player), R-389 (audio player), R-388 (pdf viewer), R-387 (geo map), R-386 (file explorer), R-385 (audio recorder), R-384 (chat & real-time messaging suite), R-383 (spreadsheet & inline data sheet suite), R-382 (qr code & barcode suite), R-381 (terminal), R-380 (flow canvas), R-379 (gantt chart), R-378 (image cropper), R-377 (pivot table), R-376 (media player), R-375 (heatmap), R-374 (org chart), R-373 (diff viewer), R-372 (signature pad), R-371 (time picker), R-370 (chart), R-369 (filter builder), R-368 (virtual list), R-367 (kanban), R-366 (calendar), R-365 (markdown editor), R-364 (transfer), R-363 (tour), R-362 (sidebar), R-361 (notification center), R-360 (number input), R-359 (bottom nav), R-358 (combobox), R-357 (banner), R-356 (checkbox), R-355 (radio group), R-354 (kbd), R-353 (separator), R-352 (aspect ratio), R-351 (collapsible), R-350 (scroll area), R-349 (hover card), R-348 (context menu), R-347 (speed dial), R-346 (pin input), R-345 (color picker), R-344 (resizable), R-343 (carousel), R-342 (segmented control), R-341 (radial gauge), R-340 (code block), R-339 (tag input), R-338 (tree view),
 R-337 (stat card), R-336 (timeline), R-335 (file upload), R-334 (stepper), R-333 (rating), R-332 (progress), R-331 (slider),
 R-330 (command palette), R-329 (data grid), R-328 (date picker), R-327 (form controls), R-326 (dialog), R-325 (theme toggle),
 R-324 (theming tokens), R-323 (popover), R-322 (dropdown menu), R-321 (accordion), R-320 (toggle), R-319 (avatar), R-318 (drawer),
 R-317 (skeleton), R-316 (alert), R-315 (card), R-314 (tooltip), R-313 (column visibility), R-312 (badge), R-311 (table density),
 R-310 (tabs), R-309 (pagination), and R-308 (JSON export).
 
-**Notes:** (1) R-398 complete with 2,448 tests passing. (2) Next unstarted Tracker ID.
+**Notes:** (1) R-399 complete with 2,466 tests passing. (2) Next unstarted Tracker ID.
 
 
 

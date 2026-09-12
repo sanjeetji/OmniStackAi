@@ -1,6 +1,6 @@
 # Current Handoff
 
-Task ID: R-398
+Task ID: R-399
 Status: done
 Phase: BASIC/MVP — Founder Stage 0
 Branch: `main` (the only branch; the GitHub default)
@@ -46,9 +46,31 @@ Branch: `main` (the only branch; the GitHub default)
   34. **R-396**: Live Log Viewer & Event Stream Inspector Suite (`components/log-viewer.tsx`)
   35. **R-397**: Mind Map & Concept Tree Suite (`components/mind-map.tsx`)
   36. **R-398**: Audio Waveform & Spectrum Visualizer Suite (`components/audio-visualizer.tsx`)
+  37. **R-399**: Particle Network & Interactive Constellation Canvas Suite (`components/particle-network.tsx`)
 - Ready for next task. Still stop-and-ask only for paid cloud / DB engine / new infra / native-mobile / a materially different architecture decision.
 
 ## Completed
+
+### R-399 — Generated Accessible Futuristic Reusable Particle Network & Interactive Constellation Canvas Suite (components/particle-network.tsx)
+
+Enabled an accessible, desktop-and-mobile-grade, futuristic ambient particle/constellation canvas background across generated Next.js web applications (distinct from the data-driven `network-graph` — no required data props):
+- **Standalone Particle Network Suite (`apps/web/components/particle-network.tsx`)**:
+  - Implemented `ParticleNetworkVariant`, `ParticleNetworkSize`, `ParticleNetworkHandle`, `ParticleNetworkProps`, plus internal `VARIANT_STYLES`/`SIZE_STYLES` hard-coded hex maps.
+  - Implemented compound and semantic alias exports: `ParticleNetwork`, `ConstellationCanvas`, `ParticleField`, `StarfieldBackground`, default export.
+  - Implemented an HTML5 Canvas 2D `requestAnimationFrame` loop: internally-seeded particles (count derived from `count`/`density`, clamped 12–200), edge-bounce motion, proximity link lines with distance-proportional `globalAlpha`, and neon-variant glow.
+  - Implemented pointer reactivity: gentle attraction toward the cursor and accent-colored cursor links within `interactionRadius` (pointer tracked in a ref — no re-render).
+  - Implemented device-pixel-ratio-aware sizing (`ctx.setTransform` reset + `ctx.scale(dpr, dpr)`) with `window` resize handling.
+  - Implemented a JS `prefers-reduced-motion` guard (net-new pattern): `matchMedia('(prefers-reduced-motion: reduce)')` renders a single static frame and schedules no rAF when reduced, with a live `change` listener (and `addListener` fallback).
+  - Implemented imperative `ParticleNetworkHandle` (`pause`, `resume`, `toggle`, `restart`, `isPaused`, `getCanvas`) via `useImperativeHandle`, plus a controlled `paused` prop.
+  - Implemented WAI-ARIA decorative semantics: wrapper `role="img"` + `aria-label`, `aria-hidden="true"` canvas, no focus trap, not keyboard-interactive.
+  - Implemented 4 futuristic visual styling variants ("default", "card", "glass" with backdropFilter blur, "neon" cyan glow) and 3 size scales ("sm", "md", "lg").
+  - Implemented React ref forwarding (`forwardRef`) and explicit `displayName` across all exports.
+  - Exported `render_particle_network_component` in `omnistackai_agent_engine.codegen` and registered `components/particle-network.tsx` in `NextjsWebAdapter.generate()`.
+  - Maintained 100% diff-invariance across `ir.description`; 0 external runtime dependencies.
+- **Verification**:
+  - 18 unit tests in `services/agent-engine/tests/test_particle_network_component.py` (all passing).
+  - `task verify` passing: 2,466 tests passed.
+  - `task lint`, `task security:quick`, `task env:check` — pass. `task builder:demo -- minimal-blog` — 136 files (includes `apps/web/components/particle-network.tsx`).
 
 ### R-398 — Generated Accessible Futuristic Reusable Audio Waveform & Spectrum Visualizer Suite (components/audio-visualizer.tsx)
 
@@ -680,9 +702,9 @@ Enabled accessible, desktop-and-mobile-grade, futuristic Time Picker and Time Ra
 
 ## Verification
 
-- `task verify` — pass (2,448 agent-engine tests; 17 focused R-398 tests in `test_audio_visualizer_component.py`).
-- `task lint`, `task security:quick` — pass.
-- `task builder:demo minimal-blog` — pass (135 files).
+- `task verify` — pass (2,466 agent-engine tests; 18 focused R-399 tests in `test_particle_network_component.py`).
+- `task lint`, `task security:quick`, `task env:check` — pass.
+- `task builder:demo -- minimal-blog` — pass (136 files, includes `components/particle-network.tsx`).
 
 ## Blockers and risks
 
@@ -691,10 +713,10 @@ Enabled accessible, desktop-and-mobile-grade, futuristic Time Picker and Time Ra
 
 ## Next action
 
-- Proceed with Task R-399 (Accessible Futuristic Reusable Particle Network & Interactive Constellation Canvas Suite: `components/particle-network.tsx`).
+- Proceed with Task R-400 (next unstarted Tracker ID). Record its contract in `.ai/CURRENT_TASK.yaml` and `.ai/tasks/R-400.md` before code.
 
 ## Next command
 
-- `pytest services/agent-engine/tests/test_particle_network_component.py`
+- `task ai:status`
 
 

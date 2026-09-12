@@ -127,6 +127,7 @@ from .nextjs import (
     render_log_viewer_component,
     render_mind_map_component,
     render_audio_visualizer_component,
+    render_particle_network_component,
 )
 from .openapi import render_openapi, render_openapi_json
 from .schema_sql import render_postgres_schema, table_name
@@ -257,6 +258,7 @@ __all__ = [
     "render_log_viewer_component",
     "render_mind_map_component",
     "render_audio_visualizer_component",
+    "render_particle_network_component",
     "render_postgres_schema",
     "render_postgres_seed",
     "render_openapi",

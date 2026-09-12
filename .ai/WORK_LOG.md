@@ -1,5 +1,24 @@
 # Work Log
 
+## 2026-09-12 — R-399
+
+- Recorded contract in `.ai/CURRENT_TASK.yaml` and `.ai/tasks/R-399.md` before code (test-first).
+- `nextjs.py`:
+  - Added `_PARTICLE_NETWORK_COMPONENT` static template (raw triple-quoted string) implementing the accessible, desktop-and-mobile-grade, futuristic Particle Network & Interactive Constellation Canvas compound component suite (`apps/web/components/particle-network.tsx`).
+  - Ambient / decorative-by-default: NO required data props (distinct from the data-driven `network-graph`); particles generated internally from a `count`/`density` derivation (clamped 12–200).
+  - HTML5 Canvas 2D `requestAnimationFrame` loop with edge-bounce motion; proximity link lines between particles with distance-proportional `globalAlpha`; pointer reactivity (gentle attraction + accent-colored cursor links within `interactionRadius`).
+  - Device-pixel-ratio-aware sizing (`ctx.setTransform` reset + `ctx.scale(dpr, dpr)`); `window` resize + `pointermove`/`pointerleave` listeners with full cleanup.
+  - JS `prefers-reduced-motion` guard (net-new pattern): reads `matchMedia('(prefers-reduced-motion: reduce)')`, renders a single static frame and schedules no rAF when reduced, and live-updates via a `change` listener (with `addListener` fallback).
+  - Imperative `ParticleNetworkHandle` (`pause`, `resume`, `toggle`, `restart`, `isPaused`, `getCanvas`) via `useImperativeHandle`; controlled `paused` prop via a secondary effect (no reseed).
+  - WAI-ARIA decorative semantics: wrapper `role="img"` + `aria-label`, `aria-hidden="true"` canvas, no `tabIndex`/focus trap, not keyboard-interactive.
+  - Implemented `ParticleNetworkVariant` ("default" | "card" | "glass" | "neon"), `ParticleNetworkSize` ("sm" | "md" | "lg"), `ParticleNetworkHandle`, `ParticleNetworkProps` interfaces; `VARIANT_STYLES` + `SIZE_STYLES` hard-coded hex maps (canvas cannot resolve CSS vars).
+  - Compound and semantic alias exports: `ParticleNetwork`, `ConstellationCanvas`, `ParticleField`, `StarfieldBackground`, default export — each with explicit `displayName`.
+  - Exported `render_particle_network_component` in `omnistackai_agent_engine.codegen` and registered `components/particle-network.tsx` in `NextjsWebAdapter.generate()`.
+  - Maintained 100% diff-invariance across `ir.description` (static module constant; never references `ir.name`/`ir.description`); 0 external runtime dependencies.
+- Added `services/agent-engine/tests/test_particle_network_component.py` with 18 tests (file-generated, diff-invariance + accessor byte-equality, `'use client'`, zero-deps imports, forwardRef + useImperativeHandle + all 6 handle methods, TS types, alias/default exports, displayNames, 4 variants, 3 sizes, canvas rAF loop, prefers-reduced-motion, pointer interaction, link lines, DPR/resize, WAI-ARIA, ambient/no-required-data, codegen export).
+- Gates: `pytest .../test_particle_network_component.py` (18 passed); `task verify` (2,466 tests passed); `task lint`, `task security:quick`, `task env:check` passed; `task builder:demo -- minimal-blog` generated 136 files including `apps/web/components/particle-network.tsx`. 0 model calls.
+- Static TSX sanity check: `'use client'` first line, balanced braces/parens, react-only imports, no `\"\"\"`/backslash/backtick hazards.
+
 ## 2026-09-12 — R-398
 
 - Recorded contract in `.ai/CURRENT_TASK.yaml` and `.ai/tasks/R-398.md` (status in_progress → done).

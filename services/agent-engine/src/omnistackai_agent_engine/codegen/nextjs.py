@@ -65214,6 +65214,488 @@ def render_mind_map_component() -> str:
     return _MIND_MAP_COMPONENT
 
 
+_PARTICLE_NETWORK_COMPONENT = r"""'use client';
+
+import { forwardRef, useEffect, useImperativeHandle, useRef } from 'react';
+import type { CSSProperties } from 'react';
+
+export type ParticleNetworkVariant = 'default' | 'card' | 'glass' | 'neon';
+export type ParticleNetworkSize = 'sm' | 'md' | 'lg';
+
+export interface ParticleNetworkProps {
+  variant?: ParticleNetworkVariant;
+  size?: ParticleNetworkSize;
+  count?: number;
+  density?: number;
+  width?: number;
+  height?: number;
+  speed?: number;
+  linkDistance?: number;
+  interactive?: boolean;
+  interactionRadius?: number;
+  particleColor?: string;
+  lineColor?: string;
+  accentColor?: string;
+  paused?: boolean;
+  respectReducedMotion?: boolean;
+  ariaLabel?: string;
+  title?: string;
+  subtitle?: string;
+  className?: string;
+  style?: CSSProperties;
+}
+
+export interface ParticleNetworkHandle {
+  pause: () => void;
+  resume: () => void;
+  toggle: () => void;
+  restart: () => void;
+  isPaused: () => boolean;
+  getCanvas: () => HTMLCanvasElement | null;
+}
+
+interface Particle {
+  x: number;
+  y: number;
+  vx: number;
+  vy: number;
+  r: number;
+}
+
+interface VariantStyle {
+  wrapper: CSSProperties;
+  particleColor: string;
+  lineColor: string;
+  accentColor: string;
+  titleColor: string;
+  subtitleColor: string;
+  backgroundFill: string;
+}
+
+const VARIANT_STYLES: Record<ParticleNetworkVariant, VariantStyle> = {
+  default: {
+    wrapper: { backgroundColor: '#f8fafc', border: 'none', borderRadius: '0px', boxShadow: 'none' },
+    particleColor: '#2563eb',
+    lineColor: '#94a3b8',
+    accentColor: '#8b5cf6',
+    titleColor: '#0f172a',
+    subtitleColor: '#64748b',
+    backgroundFill: 'transparent',
+  },
+  card: {
+    wrapper: { backgroundColor: '#ffffff', border: '1px solid #e2e8f0', borderRadius: '12px', boxShadow: '0 4px 16px rgba(0, 0, 0, 0.06)' },
+    particleColor: '#2563eb',
+    lineColor: '#cbd5e1',
+    accentColor: '#8b5cf6',
+    titleColor: '#0f172a',
+    subtitleColor: '#64748b',
+    backgroundFill: 'transparent',
+  },
+  glass: {
+    wrapper: { backgroundColor: 'rgba(248, 250, 252, 0.6)', border: '1px solid rgba(255, 255, 255, 0.4)', borderRadius: '12px', boxShadow: '0 8px 32px rgba(0, 0, 0, 0.12)', backdropFilter: 'blur(16px)', WebkitBackdropFilter: 'blur(16px)' },
+    particleColor: '#2563eb',
+    lineColor: '#94a3b8',
+    accentColor: '#8b5cf6',
+    titleColor: '#0f172a',
+    subtitleColor: '#475569',
+    backgroundFill: 'rgba(248, 250, 252, 0.35)',
+  },
+  neon: {
+    wrapper: { backgroundColor: '#050811', border: '1px solid rgba(6, 182, 212, 0.4)', borderRadius: '12px', boxShadow: '0 0 24px rgba(6, 182, 212, 0.15)' },
+    particleColor: '#06b6d4',
+    lineColor: '#38bdf8',
+    accentColor: '#ec4899',
+    titleColor: '#f8fafc',
+    subtitleColor: '#38bdf8',
+    backgroundFill: '#050811',
+  },
+};
+
+interface SizeStyle {
+  width: number;
+  height: number;
+  baseCount: number;
+  particleRadius: number;
+}
+
+const SIZE_STYLES: Record<ParticleNetworkSize, SizeStyle> = {
+  sm: { width: 360, height: 200, baseCount: 40, particleRadius: 1.6 },
+  md: { width: 640, height: 360, baseCount: 70, particleRadius: 2.0 },
+  lg: { width: 960, height: 540, baseCount: 110, particleRadius: 2.4 },
+};
+
+function clampValue(value: number, min: number, max: number): number {
+  return Math.max(min, Math.min(max, value));
+}
+
+const ParticleNetworkComponent = forwardRef<ParticleNetworkHandle, ParticleNetworkProps>(
+  function ParticleNetwork(
+    {
+      variant = 'default',
+      size = 'md',
+      count,
+      density = 1.2,
+      width,
+      height,
+      speed = 0.4,
+      linkDistance = 120,
+      interactive = true,
+      interactionRadius = 160,
+      particleColor,
+      lineColor,
+      accentColor,
+      paused = false,
+      respectReducedMotion = true,
+      ariaLabel = 'Decorative animated particle network background',
+      title,
+      subtitle,
+      className,
+      style,
+    }: ParticleNetworkProps,
+    ref,
+  ) {
+    const canvasRef = useRef<HTMLCanvasElement | null>(null);
+    const animFrameRef = useRef<number | null>(null);
+    const particlesRef = useRef<Particle[]>([]);
+    const pointerRef = useRef<{ x: number; y: number; active: boolean }>({ x: 0, y: 0, active: false });
+    const reducedMotionRef = useRef<boolean>(false);
+    const pausedRef = useRef<boolean>(paused);
+    const stepRef = useRef<() => void>(() => {});
+    const seedRef = useRef<() => void>(() => {});
+
+    useEffect(() => {
+      const canvas = canvasRef.current;
+      if (!canvas) return;
+      const ctx = canvas.getContext('2d');
+      if (!ctx) return;
+
+      const theme = VARIANT_STYLES[variant] || VARIANT_STYLES.default;
+      const sizing = SIZE_STYLES[size] || SIZE_STYLES.md;
+      const resolvedParticle = particleColor || theme.particleColor;
+      const resolvedLine = lineColor || theme.lineColor;
+      const resolvedAccent = accentColor || theme.accentColor;
+
+      const cssW = typeof width === 'number' ? width : sizing.width;
+      const cssH = typeof height === 'number' ? height : sizing.height;
+
+      const mql = window.matchMedia('(prefers-reduced-motion: reduce)');
+      reducedMotionRef.current = mql.matches;
+
+      const setupCanvas = () => {
+        const dpr = window.devicePixelRatio || 1;
+        canvas.width = Math.round(cssW * dpr);
+        canvas.height = Math.round(cssH * dpr);
+        canvas.style.width = cssW + 'px';
+        canvas.style.height = cssH + 'px';
+        ctx.setTransform(1, 0, 0, 1, 0, 0);
+        ctx.scale(dpr, dpr);
+      };
+
+      const seed = () => {
+        const area = cssW * cssH;
+        const resolvedCount =
+          typeof count === 'number' ? count : clampValue(Math.round((area / 10000) * density), 12, 200);
+        const particles: Particle[] = [];
+        for (let i = 0; i < resolvedCount; i++) {
+          particles.push({
+            x: Math.random() * cssW,
+            y: Math.random() * cssH,
+            vx: (Math.random() - 0.5) * 2 * speed,
+            vy: (Math.random() - 0.5) * 2 * speed,
+            r: sizing.particleRadius * (0.6 + Math.random() * 0.8),
+          });
+        }
+        particlesRef.current = particles;
+      };
+
+      const update = () => {
+        const particles = particlesRef.current;
+        const pointer = pointerRef.current;
+        for (let i = 0; i < particles.length; i++) {
+          const p = particles[i];
+          p.x += p.vx;
+          p.y += p.vy;
+          if (p.x < 0 || p.x > cssW) {
+            p.vx = -p.vx;
+            p.x = clampValue(p.x, 0, cssW);
+          }
+          if (p.y < 0 || p.y > cssH) {
+            p.vy = -p.vy;
+            p.y = clampValue(p.y, 0, cssH);
+          }
+          if (interactive && pointer.active) {
+            const dx = pointer.x - p.x;
+            const dy = pointer.y - p.y;
+            const d = Math.hypot(dx, dy);
+            if (d < interactionRadius && d > 0.01) {
+              const pull = (1 - d / interactionRadius) * 0.02;
+              p.vx += (dx / d) * pull;
+              p.vy += (dy / d) * pull;
+            }
+          }
+        }
+      };
+
+      const drawFrame = () => {
+        const particles = particlesRef.current;
+        const pointer = pointerRef.current;
+        ctx.clearRect(0, 0, cssW, cssH);
+        if (theme.backgroundFill !== 'transparent') {
+          ctx.fillStyle = theme.backgroundFill;
+          ctx.fillRect(0, 0, cssW, cssH);
+        }
+
+        for (let i = 0; i < particles.length; i++) {
+          for (let j = i + 1; j < particles.length; j++) {
+            const a = particles[i];
+            const b = particles[j];
+            const dist = Math.hypot(a.x - b.x, a.y - b.y);
+            if (dist < linkDistance) {
+              ctx.globalAlpha = (1 - dist / linkDistance) * 0.6;
+              ctx.strokeStyle = resolvedLine;
+              ctx.lineWidth = variant === 'neon' ? 1.2 : 1;
+              ctx.beginPath();
+              ctx.moveTo(a.x, a.y);
+              ctx.lineTo(b.x, b.y);
+              ctx.stroke();
+            }
+          }
+        }
+        ctx.globalAlpha = 1;
+
+        if (interactive && pointer.active) {
+          for (let i = 0; i < particles.length; i++) {
+            const p = particles[i];
+            const d = Math.hypot(pointer.x - p.x, pointer.y - p.y);
+            if (d < interactionRadius) {
+              ctx.globalAlpha = (1 - d / interactionRadius) * 0.8;
+              ctx.strokeStyle = resolvedAccent;
+              ctx.lineWidth = 1;
+              ctx.beginPath();
+              ctx.moveTo(p.x, p.y);
+              ctx.lineTo(pointer.x, pointer.y);
+              ctx.stroke();
+            }
+          }
+          ctx.globalAlpha = 1;
+        }
+
+        for (let i = 0; i < particles.length; i++) {
+          const p = particles[i];
+          ctx.beginPath();
+          ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
+          ctx.fillStyle = resolvedParticle;
+          if (variant === 'neon') {
+            ctx.shadowColor = resolvedParticle;
+            ctx.shadowBlur = 8;
+          } else {
+            ctx.shadowBlur = 0;
+          }
+          ctx.fill();
+        }
+        ctx.shadowBlur = 0;
+      };
+
+      const step = () => {
+        update();
+        drawFrame();
+        animFrameRef.current = requestAnimationFrame(stepRef.current);
+      };
+
+      stepRef.current = step;
+      seedRef.current = seed;
+
+      setupCanvas();
+      seed();
+
+      if (respectReducedMotion && reducedMotionRef.current) {
+        drawFrame();
+      } else if (pausedRef.current) {
+        drawFrame();
+      } else {
+        animFrameRef.current = requestAnimationFrame(stepRef.current);
+      }
+
+      const handlePointerMove = (e: PointerEvent) => {
+        const rect = canvas.getBoundingClientRect();
+        pointerRef.current = { x: e.clientX - rect.left, y: e.clientY - rect.top, active: true };
+      };
+      const handlePointerLeave = () => {
+        pointerRef.current.active = false;
+      };
+      const handleResize = () => {
+        setupCanvas();
+        if (animFrameRef.current === null) drawFrame();
+      };
+      const handleMotionChange = (e: MediaQueryListEvent) => {
+        reducedMotionRef.current = e.matches;
+        if (animFrameRef.current !== null) {
+          cancelAnimationFrame(animFrameRef.current);
+          animFrameRef.current = null;
+        }
+        if (e.matches || pausedRef.current) {
+          drawFrame();
+        } else {
+          animFrameRef.current = requestAnimationFrame(stepRef.current);
+        }
+      };
+
+      if (interactive) {
+        canvas.addEventListener('pointermove', handlePointerMove);
+        canvas.addEventListener('pointerleave', handlePointerLeave);
+      }
+      window.addEventListener('resize', handleResize);
+      if (mql.addEventListener) {
+        mql.addEventListener('change', handleMotionChange);
+      } else if (mql.addListener) {
+        mql.addListener(handleMotionChange);
+      }
+
+      return () => {
+        if (animFrameRef.current !== null) {
+          cancelAnimationFrame(animFrameRef.current);
+          animFrameRef.current = null;
+        }
+        if (interactive) {
+          canvas.removeEventListener('pointermove', handlePointerMove);
+          canvas.removeEventListener('pointerleave', handlePointerLeave);
+        }
+        window.removeEventListener('resize', handleResize);
+        if (mql.removeEventListener) {
+          mql.removeEventListener('change', handleMotionChange);
+        } else if (mql.removeListener) {
+          mql.removeListener(handleMotionChange);
+        }
+      };
+    }, [
+      variant,
+      size,
+      count,
+      density,
+      width,
+      height,
+      speed,
+      linkDistance,
+      interactive,
+      interactionRadius,
+      particleColor,
+      lineColor,
+      accentColor,
+      respectReducedMotion,
+    ]);
+
+    useEffect(() => {
+      pausedRef.current = paused;
+      if (paused) {
+        if (animFrameRef.current !== null) {
+          cancelAnimationFrame(animFrameRef.current);
+          animFrameRef.current = null;
+        }
+      } else if (!reducedMotionRef.current && animFrameRef.current === null) {
+        animFrameRef.current = requestAnimationFrame(stepRef.current);
+      }
+    }, [paused]);
+
+    useImperativeHandle(
+      ref,
+      () => ({
+        pause: () => {
+          if (animFrameRef.current !== null) {
+            cancelAnimationFrame(animFrameRef.current);
+            animFrameRef.current = null;
+          }
+        },
+        resume: () => {
+          if (animFrameRef.current === null && !reducedMotionRef.current) {
+            animFrameRef.current = requestAnimationFrame(stepRef.current);
+          }
+        },
+        toggle: () => {
+          if (animFrameRef.current !== null) {
+            cancelAnimationFrame(animFrameRef.current);
+            animFrameRef.current = null;
+          } else if (!reducedMotionRef.current) {
+            animFrameRef.current = requestAnimationFrame(stepRef.current);
+          }
+        },
+        restart: () => {
+          seedRef.current();
+          if (animFrameRef.current === null && !reducedMotionRef.current && !pausedRef.current) {
+            animFrameRef.current = requestAnimationFrame(stepRef.current);
+          }
+        },
+        isPaused: () => animFrameRef.current === null,
+        getCanvas: () => canvasRef.current,
+      }),
+      [],
+    );
+
+    const theme = VARIANT_STYLES[variant] || VARIANT_STYLES.default;
+    const sizing = SIZE_STYLES[size] || SIZE_STYLES.md;
+    const cssHeight = typeof height === 'number' ? height : sizing.height;
+    const framed = Boolean(title || subtitle);
+
+    const wrapperStyle: CSSProperties = {
+      position: 'relative',
+      width: '100%',
+      overflow: 'hidden',
+      padding: framed ? '16px' : '0px',
+      ...theme.wrapper,
+      ...style,
+    };
+
+    return (
+      <div
+        className={className}
+        style={wrapperStyle}
+        role="img"
+        aria-label={ariaLabel}
+        data-variant={variant}
+        data-size={size}
+      >
+        {title ? (
+          <h4 style={{ margin: '0 0 4px 0', fontSize: '16px', fontWeight: 600, color: theme.titleColor, position: 'relative', zIndex: 1 }}>
+            {title}
+          </h4>
+        ) : null}
+        {subtitle ? (
+          <p style={{ margin: '0 0 12px 0', fontSize: '13px', color: theme.subtitleColor, position: 'relative', zIndex: 1 }}>
+            {subtitle}
+          </p>
+        ) : null}
+        <canvas
+          ref={(el) => {
+            canvasRef.current = el;
+          }}
+          aria-hidden="true"
+          style={{ display: 'block', width: '100%', height: cssHeight + 'px' }}
+        />
+      </div>
+    );
+  },
+);
+
+ParticleNetworkComponent.displayName = 'ParticleNetwork';
+
+export const ParticleNetwork = ParticleNetworkComponent;
+export const ConstellationCanvas = ParticleNetworkComponent;
+export const ParticleField = ParticleNetworkComponent;
+export const StarfieldBackground = ParticleNetworkComponent;
+
+ParticleNetwork.displayName = 'ParticleNetwork';
+ConstellationCanvas.displayName = 'ConstellationCanvas';
+ParticleField.displayName = 'ParticleField';
+StarfieldBackground.displayName = 'StarfieldBackground';
+
+export default ParticleNetworkComponent;
+"""
+
+
+def render_particle_network_component() -> str:
+    """Render the Accessible Futuristic Reusable Particle Network & Interactive Constellation Canvas Suite (R-399)."""
+    return _PARTICLE_NETWORK_COMPONENT
+
+
 _DESIGN_TOKENS_CSS = (
     "/**\n"
     " * OmniStackAI Design Tokens & Theming Engine\n"
@@ -65841,6 +66323,7 @@ class NextjsWebAdapter:
             GeneratedFile("components/log-viewer.tsx", _LOG_VIEWER_COMPONENT),
             GeneratedFile("components/audio-visualizer.tsx", _AUDIO_VISUALIZER_COMPONENT),
             GeneratedFile("components/mind-map.tsx", _MIND_MAP_COMPONENT),
+            GeneratedFile("components/particle-network.tsx", _PARTICLE_NETWORK_COMPONENT),
             GeneratedFile("styles/tokens.css", _DESIGN_TOKENS_CSS),
             GeneratedFile("app/globals.css", _GLOBALS_CSS),
             GeneratedFile("app/error.tsx", _ERROR_PAGE),
