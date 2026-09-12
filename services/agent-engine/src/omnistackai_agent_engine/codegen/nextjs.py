@@ -66422,6 +66422,402 @@ def render_countdown_component() -> str:
     return _COUNTDOWN_COMPONENT
 
 
+_COOKIE_CONSENT_COMPONENT = r"""'use client';
+
+import { forwardRef, useCallback, useEffect, useImperativeHandle, useState } from 'react';
+import type { CSSProperties } from 'react';
+
+export type CookieConsentVariant = 'default' | 'card' | 'glass' | 'neon';
+export type CookieConsentSize = 'sm' | 'md' | 'lg';
+export type CookieConsentPosition = 'bottom' | 'top' | 'bottom-left' | 'bottom-right' | 'center';
+
+export interface ConsentCategory {
+  id: string;
+  label: string;
+  description?: string;
+  required?: boolean;
+}
+
+export type ConsentState = Record<string, boolean>;
+
+export interface CookieConsentProps {
+  categories?: ConsentCategory[];
+  storageKey?: string;
+  variant?: CookieConsentVariant;
+  size?: CookieConsentSize;
+  position?: CookieConsentPosition;
+  title?: string;
+  description?: string;
+  policyUrl?: string;
+  policyLabel?: string;
+  acceptAllLabel?: string;
+  rejectAllLabel?: string;
+  savePreferencesLabel?: string;
+  customizeLabel?: string;
+  accentColor?: string;
+  forceShow?: boolean;
+  ariaLabel?: string;
+  className?: string;
+  style?: CSSProperties;
+  onAccept?: (state: ConsentState) => void;
+  onReject?: (state: ConsentState) => void;
+  onChange?: (state: ConsentState) => void;
+}
+
+export interface CookieConsentHandle {
+  open: () => void;
+  close: () => void;
+  accept: () => void;
+  reject: () => void;
+  getConsent: () => ConsentState;
+  reset: () => void;
+}
+
+interface VariantStyle {
+  wrapper: CSSProperties;
+  titleColor: string;
+  textColor: string;
+  primaryBg: string;
+  primaryColor: string;
+  secondaryBg: string;
+  secondaryColor: string;
+  secondaryBorder: string;
+  switchOn: string;
+  switchOff: string;
+}
+
+const VARIANT_STYLES: Record<CookieConsentVariant, VariantStyle> = {
+  default: {
+    wrapper: { background: '#ffffff', border: '1px solid #e2e8f0', borderRadius: '12px', boxShadow: '0 8px 24px rgba(0, 0, 0, 0.12)' },
+    titleColor: '#0f172a', textColor: '#475569',
+    primaryBg: '#2563eb', primaryColor: '#ffffff',
+    secondaryBg: '#ffffff', secondaryColor: '#0f172a', secondaryBorder: '#cbd5e1',
+    switchOn: '#2563eb', switchOff: '#cbd5e1',
+  },
+  card: {
+    wrapper: { background: '#ffffff', border: '1px solid #e2e8f0', borderRadius: '16px', boxShadow: '0 12px 32px rgba(0, 0, 0, 0.14)' },
+    titleColor: '#0f172a', textColor: '#475569',
+    primaryBg: '#2563eb', primaryColor: '#ffffff',
+    secondaryBg: '#f8fafc', secondaryColor: '#0f172a', secondaryBorder: '#cbd5e1',
+    switchOn: '#2563eb', switchOff: '#cbd5e1',
+  },
+  glass: {
+    wrapper: { background: 'rgba(255, 255, 255, 0.72)', border: '1px solid rgba(255, 255, 255, 0.5)', borderRadius: '16px', boxShadow: '0 12px 40px rgba(0, 0, 0, 0.18)', backdropFilter: 'blur(20px)', WebkitBackdropFilter: 'blur(20px)' },
+    titleColor: '#0f172a', textColor: '#334155',
+    primaryBg: '#2563eb', primaryColor: '#ffffff',
+    secondaryBg: 'rgba(255, 255, 255, 0.6)', secondaryColor: '#0f172a', secondaryBorder: 'rgba(148, 163, 184, 0.6)',
+    switchOn: '#2563eb', switchOff: '#94a3b8',
+  },
+  neon: {
+    wrapper: { background: '#050811', border: '1px solid rgba(6, 182, 212, 0.4)', borderRadius: '16px', boxShadow: '0 0 32px rgba(6, 182, 212, 0.25)' },
+    titleColor: '#f8fafc', textColor: '#94a3b8',
+    primaryBg: '#06b6d4', primaryColor: '#050811',
+    secondaryBg: 'transparent', secondaryColor: '#38bdf8', secondaryBorder: 'rgba(6, 182, 212, 0.5)',
+    switchOn: '#06b6d4', switchOff: '#334155',
+  },
+};
+
+const SIZE_STYLES: Record<CookieConsentSize, { pad: number; title: number; text: number; gap: number }> = {
+  sm: { pad: 16, title: 15, text: 12, gap: 8 },
+  md: { pad: 20, title: 17, text: 13, gap: 10 },
+  lg: { pad: 24, title: 19, text: 14, gap: 12 },
+};
+
+const DEFAULT_CATEGORIES: ConsentCategory[] = [
+  { id: 'necessary', label: 'Strictly necessary', description: 'Required for the site to function. Always active.', required: true },
+  { id: 'analytics', label: 'Analytics', description: 'Help us understand how the site is used.' },
+  { id: 'marketing', label: 'Marketing', description: 'Personalized content and measurement.' },
+];
+
+function buildDefaults(cats: ConsentCategory[]): ConsentState {
+  const state: ConsentState = {};
+  for (const c of cats) state[c.id] = c.required === true;
+  return state;
+}
+
+function readStored(key: string): ConsentState | null {
+  try {
+    const raw = window.localStorage.getItem(key);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw);
+    if (parsed && typeof parsed === 'object' && parsed.state && typeof parsed.state === 'object') {
+      return parsed.state as ConsentState;
+    }
+    return null;
+  } catch {
+    return null;
+  }
+}
+
+function writeStored(key: string, state: ConsentState): void {
+  try {
+    window.localStorage.setItem(key, JSON.stringify({ state: state, timestamp: Date.now() }));
+  } catch {
+    // localStorage may be unavailable (private mode / blocked); consent simply is not persisted.
+  }
+}
+
+const CookieConsentComponent = forwardRef<CookieConsentHandle, CookieConsentProps>(
+  function CookieConsent(
+    {
+      categories = DEFAULT_CATEGORIES,
+      storageKey = 'omnistackai_cookie_consent',
+      variant = 'default',
+      size = 'md',
+      position = 'bottom',
+      title = 'We value your privacy',
+      description = 'We use cookies to enhance your browsing experience and analyze site traffic. Choose which categories you allow.',
+      policyUrl,
+      policyLabel = 'Privacy Policy',
+      acceptAllLabel = 'Accept all',
+      rejectAllLabel = 'Reject all',
+      savePreferencesLabel = 'Save preferences',
+      customizeLabel = 'Customize',
+      accentColor,
+      forceShow = false,
+      ariaLabel = 'Cookie consent',
+      className,
+      style,
+      onAccept,
+      onReject,
+      onChange,
+    }: CookieConsentProps,
+    ref,
+  ) {
+    const [mounted, setMounted] = useState(false);
+    const [visible, setVisible] = useState(false);
+    const [expanded, setExpanded] = useState(false);
+    const [consent, setConsent] = useState<ConsentState>(() => buildDefaults(categories));
+
+    useEffect(() => {
+      setMounted(true);
+      const stored = readStored(storageKey);
+      if (stored && !forceShow) {
+        setConsent({ ...buildDefaults(categories), ...stored });
+        setVisible(false);
+      } else {
+        setVisible(true);
+      }
+      // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, []);
+
+    const persist = useCallback(
+      (state: ConsentState, kind: 'accept' | 'reject' | 'save') => {
+        writeStored(storageKey, state);
+        setConsent(state);
+        setVisible(false);
+        setExpanded(false);
+        if (onChange) onChange(state);
+        if (kind === 'accept' && onAccept) onAccept(state);
+        if (kind === 'reject' && onReject) onReject(state);
+      },
+      [storageKey, onAccept, onReject, onChange],
+    );
+
+    const acceptAll = useCallback(() => {
+      const state: ConsentState = {};
+      for (const c of categories) state[c.id] = true;
+      persist(state, 'accept');
+    }, [categories, persist]);
+
+    const rejectAll = useCallback(() => {
+      const state: ConsentState = {};
+      for (const c of categories) state[c.id] = c.required === true;
+      persist(state, 'reject');
+    }, [categories, persist]);
+
+    const savePreferences = useCallback(() => {
+      persist(consent, 'save');
+    }, [consent, persist]);
+
+    const toggleCategory = useCallback((id: string, required?: boolean) => {
+      if (required) return;
+      setConsent((prev) => ({ ...prev, [id]: !prev[id] }));
+    }, []);
+
+    useImperativeHandle(
+      ref,
+      () => ({
+        open: () => setVisible(true),
+        close: () => setVisible(false),
+        accept: () => acceptAll(),
+        reject: () => rejectAll(),
+        getConsent: () => consent,
+        reset: () => {
+          try {
+            window.localStorage.removeItem(storageKey);
+          } catch {
+            // ignore
+          }
+          setConsent(buildDefaults(categories));
+          setExpanded(false);
+          setVisible(true);
+        },
+      }),
+      [acceptAll, rejectAll, consent, storageKey, categories],
+    );
+
+    if (!mounted || !visible) return null;
+
+    const theme = VARIANT_STYLES[variant] || VARIANT_STYLES.default;
+    const sizing = SIZE_STYLES[size] || SIZE_STYLES.md;
+    const resolvedAccent = accentColor || theme.primaryBg;
+
+    const positionStyle: CSSProperties =
+      position === 'top'
+        ? { top: '16px', left: '50%', transform: 'translateX(-50%)' }
+        : position === 'bottom-left'
+        ? { bottom: '16px', left: '16px' }
+        : position === 'bottom-right'
+        ? { bottom: '16px', right: '16px' }
+        : position === 'center'
+        ? { top: '50%', left: '50%', transform: 'translate(-50%, -50%)' }
+        : { bottom: '16px', left: '50%', transform: 'translateX(-50%)' };
+
+    const primaryBtn: CSSProperties = {
+      padding: '9px 16px',
+      background: resolvedAccent,
+      color: theme.primaryColor,
+      border: 'none',
+      borderRadius: '8px',
+      fontSize: sizing.text + 'px',
+      fontWeight: 600,
+      cursor: 'pointer',
+    };
+    const secondaryBtn: CSSProperties = {
+      padding: '9px 16px',
+      background: theme.secondaryBg,
+      color: theme.secondaryColor,
+      border: '1px solid ' + theme.secondaryBorder,
+      borderRadius: '8px',
+      fontSize: sizing.text + 'px',
+      fontWeight: 600,
+      cursor: 'pointer',
+    };
+
+    return (
+      <div
+        className={className}
+        role="region"
+        aria-label={ariaLabel}
+        data-variant={variant}
+        data-size={size}
+        data-position={position}
+        style={{
+          position: 'fixed',
+          zIndex: 1000,
+          maxWidth: '440px',
+          width: 'calc(100% - 32px)',
+          boxSizing: 'border-box',
+          padding: sizing.pad + 'px',
+          fontFamily: 'system-ui, -apple-system, sans-serif',
+          ...positionStyle,
+          ...theme.wrapper,
+          ...style,
+        }}
+      >
+        <h2 style={{ margin: '0 0 8px 0', fontSize: sizing.title + 'px', fontWeight: 700, color: theme.titleColor }}>{title}</h2>
+        <p style={{ margin: '0 0 ' + sizing.gap + 'px 0', fontSize: sizing.text + 'px', lineHeight: 1.5, color: theme.textColor }}>
+          {description}
+          {policyUrl ? (
+            <>
+              {' '}
+              <a href={policyUrl} target="_blank" rel="noopener noreferrer" style={{ color: resolvedAccent, fontWeight: 600 }}>
+                {policyLabel}
+              </a>
+            </>
+          ) : null}
+        </p>
+
+        {expanded ? (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: sizing.gap + 'px', margin: '4px 0 ' + sizing.gap + 'px 0' }}>
+            {categories.map((c) => {
+              const on = consent[c.id] === true;
+              return (
+                <div key={c.id} style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '12px' }}>
+                  <div style={{ flex: 1 }}>
+                    <div style={{ fontSize: sizing.text + 'px', fontWeight: 600, color: theme.titleColor }}>
+                      {c.label}
+                      {c.required ? <span style={{ marginLeft: '6px', fontSize: (sizing.text - 2) + 'px', color: theme.textColor, fontWeight: 500 }}>(required)</span> : null}
+                    </div>
+                    {c.description ? <div style={{ fontSize: (sizing.text - 1) + 'px', color: theme.textColor, marginTop: '2px' }}>{c.description}</div> : null}
+                  </div>
+                  <button
+                    type="button"
+                    role="switch"
+                    aria-checked={on}
+                    aria-label={c.label}
+                    disabled={c.required === true}
+                    onClick={() => toggleCategory(c.id, c.required)}
+                    style={{
+                      flexShrink: 0,
+                      width: '40px',
+                      height: '22px',
+                      borderRadius: '999px',
+                      border: 'none',
+                      background: on ? theme.switchOn : theme.switchOff,
+                      position: 'relative',
+                      cursor: c.required ? 'not-allowed' : 'pointer',
+                      opacity: c.required ? 0.7 : 1,
+                      transition: 'background 0.15s ease',
+                    }}
+                  >
+                    <span
+                      aria-hidden="true"
+                      style={{
+                        position: 'absolute',
+                        top: '2px',
+                        left: on ? '20px' : '2px',
+                        width: '18px',
+                        height: '18px',
+                        borderRadius: '50%',
+                        background: '#ffffff',
+                        transition: 'left 0.15s ease',
+                        boxShadow: '0 1px 2px rgba(0, 0, 0, 0.3)',
+                      }}
+                    />
+                  </button>
+                </div>
+              );
+            })}
+            <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', marginTop: '4px' }}>
+              <button type="button" onClick={savePreferences} style={secondaryBtn}>{savePreferencesLabel}</button>
+              <button type="button" onClick={acceptAll} style={primaryBtn}>{acceptAllLabel}</button>
+            </div>
+          </div>
+        ) : (
+          <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', marginTop: '4px' }}>
+            <button type="button" onClick={() => setExpanded(true)} style={secondaryBtn}>{customizeLabel}</button>
+            <button type="button" onClick={rejectAll} style={secondaryBtn}>{rejectAllLabel}</button>
+            <button type="button" onClick={acceptAll} style={primaryBtn}>{acceptAllLabel}</button>
+          </div>
+        )}
+      </div>
+    );
+  },
+);
+
+CookieConsentComponent.displayName = 'CookieConsent';
+
+export const CookieConsent = CookieConsentComponent;
+export const ConsentBanner = CookieConsentComponent;
+export const CookieBanner = CookieConsentComponent;
+export const ConsentManager = CookieConsentComponent;
+
+CookieConsent.displayName = 'CookieConsent';
+ConsentBanner.displayName = 'ConsentBanner';
+CookieBanner.displayName = 'CookieBanner';
+ConsentManager.displayName = 'ConsentManager';
+
+export default CookieConsentComponent;
+"""
+
+
+def render_cookie_consent_component() -> str:
+    """Render the Accessible Futuristic Reusable Cookie Consent & Preferences Manager Suite (R-402)."""
+    return _COOKIE_CONSENT_COMPONENT
+
+
 _DESIGN_TOKENS_CSS = (
     "/**\n"
     " * OmniStackAI Design Tokens & Theming Engine\n"
@@ -67052,6 +67448,7 @@ class NextjsWebAdapter:
             GeneratedFile("components/particle-network.tsx", _PARTICLE_NETWORK_COMPONENT),
             GeneratedFile("components/image-comparison.tsx", _IMAGE_COMPARISON_COMPONENT),
             GeneratedFile("components/countdown.tsx", _COUNTDOWN_COMPONENT),
+            GeneratedFile("components/cookie-consent.tsx", _COOKIE_CONSENT_COMPONENT),
             GeneratedFile("styles/tokens.css", _DESIGN_TOKENS_CSS),
             GeneratedFile("app/globals.css", _GLOBALS_CSS),
             GeneratedFile("app/error.tsx", _ERROR_PAGE),

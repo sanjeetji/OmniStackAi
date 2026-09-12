@@ -1,5 +1,24 @@
 # Work Log
 
+## 2026-09-12 — R-402
+
+- Recorded contract in `.ai/CURRENT_TASK.yaml` and `.ai/tasks/R-402.md` before code (test-first).
+- `nextjs.py`:
+  - Added `_COOKIE_CONSENT_COMPONENT` static template (raw triple-quoted string) implementing the accessible, desktop-and-mobile-grade, futuristic Cookie Consent & Preferences Manager compound component suite (`apps/web/components/cookie-consent.tsx`).
+  - Genuinely functional (not decorative): a fixed-position banner with a compact view (Accept all / Reject all / Customize) and an expandable per-category preferences view with `role="switch"` toggles; required categories are forced on and disabled.
+  - `localStorage` persistence via `readStored`/`writeStored` helpers (`window.localStorage.getItem`/`setItem` under a configurable `storageKey`, all try/catch-wrapped so private-mode/blocked storage degrades gracefully) — returning visitors are not re-prompted.
+  - SSR-safe: a `mounted` flag renders `null` until after mount, and stored consent is read only in the mount effect, avoiding hydration mismatch and banner flash.
+  - Configurable `categories` (default necessary[required]/analytics/marketing), title/description, optional privacy-policy link (`policyUrl`/`policyLabel`), and button labels; `forceShow` override; `onAccept`/`onReject`/`onChange` callbacks.
+  - WAI-ARIA: `role="region"` + `aria-label` container; `role="switch"` + `aria-checked` category toggles with accessible labels; 5 placements (bottom/top/bottom-left/bottom-right/center).
+  - Imperative `CookieConsentHandle` (`open`, `close`, `accept`, `reject`, `getConsent`, `reset`) via `useImperativeHandle`.
+  - Implemented `CookieConsentVariant`/`CookieConsentSize`/`CookieConsentPosition` types, `ConsentCategory`/`ConsentState`, `VARIANT_STYLES` + `SIZE_STYLES` hard-coded hex maps.
+  - Compound and semantic alias exports: `CookieConsent`, `ConsentBanner`, `CookieBanner`, `ConsentManager`, default export — each with explicit `displayName`.
+  - Exported `render_cookie_consent_component` in `omnistackai_agent_engine.codegen` and registered `components/cookie-consent.tsx` in `NextjsWebAdapter.generate()`.
+  - Maintained 100% diff-invariance across `ir.description` (static module constant); 0 external runtime dependencies.
+- Added `services/agent-engine/tests/test_cookie_consent_component.py` with 18 tests (file-generated, diff-invariance + accessor byte-equality, `'use client'`, zero-deps imports, forwardRef + useImperativeHandle + 6 handle methods, TS types, alias/default exports, displayNames, 4 variants, 3 sizes, 5 positions, localStorage persistence, SSR-safe mounting, categories/required/ConsentState, switch ARIA, callbacks, policy link, codegen export).
+- Gates: `pytest .../test_cookie_consent_component.py` (18 passed); `task verify` (2,520 tests passed); `task lint`, `task security:quick`, `task env:check` passed; `task builder:demo -- minimal-blog` generated 139 files including `apps/web/components/cookie-consent.tsx`. 0 model calls.
+- Static TSX sanity check: `'use client'` first line, balanced braces/parens, react-only imports, no `\"\"\"`/backslash/backtick hazards.
+
 ## 2026-09-12 — R-401
 
 - Recorded contract in `.ai/CURRENT_TASK.yaml` and `.ai/tasks/R-401.md` before code (test-first).

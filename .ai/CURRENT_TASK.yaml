@@ -1,29 +1,31 @@
-task_id: R-401
-id: R-401
-title: "Accessible Futuristic Reusable Countdown Timer, Stopwatch & Live Clock Suite"
+task_id: R-402
+id: R-402
+title: "Accessible Futuristic Reusable Cookie Consent & Preferences Manager Suite"
 status: DONE
 phase: MVP
-tracker_row: 38
+tracker_row: 39
 started_at: "2026-09-12"
 completed_at: "2026-09-12"
 objective: >-
-  Add an accessible, zero-dependency, desktop-and-mobile-grade, futuristic Countdown Timer, Stopwatch &
-  Live Clock compound component suite (components/countdown.tsx): three modes — countdown (to a targetDate
-  or a fixed duration), stopwatch (elapsed), and live clock (current time, 12h/24h) — driven by a real
-  setInterval tick with SSR-safe mounting (deterministic first paint, real time computed after mount to
-  avoid hydration mismatch); day/hour/minute/second unit segments with optional labels and separator,
-  autoStart, controlled + uncontrolled paused, onComplete + onTick callbacks, a JS prefers-reduced-motion
-  guard that disables the per-tick pulse animation, WAI-ARIA semantics (role="timer", aria-atomic, an
-  aria-live completion announcement), 4 futuristic visual styling variants ("default", "card", "glass",
-  "neon"), 3 size scales ("sm", "md", "lg"), React ref forwarding (forwardRef), useImperativeHandle
-  (CountdownHandle: start/pause/reset/restart/getTime/isRunning), and explicit displayName across compound
-  and semantic alias exports (Countdown, CountdownTimer, Stopwatch, LiveClock, default). Static module
-  constant — never references ir.name/ir.description.
+  Add an accessible, zero-dependency, desktop-and-mobile-grade, futuristic Cookie Consent & Preferences
+  Manager compound component suite (components/cookie-consent.tsx): a fixed-position consent banner with a
+  compact view (Accept all / Reject all / Customize) and an expandable per-category preferences view with
+  role="switch" toggles (required categories forced on and disabled); localStorage persistence
+  (getItem/setItem under a configurable storageKey, wrapped in try/catch) so returning visitors are not
+  re-prompted; SSR-safe mounting (renders null until mounted, real storage read only after mount to avoid
+  hydration mismatch); configurable categories, title/description, optional privacy policy link, and button
+  labels; forceShow override; onAccept/onReject/onChange callbacks; WAI-ARIA semantics (role="region"
+  container with aria-label, role="switch" category toggles with aria-checked); 5 placements
+  (bottom/top/bottom-left/bottom-right/center); 4 futuristic visual styling variants ("default", "card",
+  "glass", "neon"); 3 size scales ("sm", "md", "lg"); React ref forwarding (forwardRef);
+  useImperativeHandle (CookieConsentHandle: open/close/accept/reject/getConsent/reset); and explicit
+  displayName across compound and semantic alias exports (CookieConsent, ConsentBanner, CookieBanner,
+  ConsentManager, default). Static module constant — never references ir.name/ir.description.
 allowed_paths:
   - "services/agent-engine/src/omnistackai_agent_engine/codegen/nextjs.py"
   - "services/agent-engine/src/omnistackai_agent_engine/codegen/__init__.py"
-  - "services/agent-engine/tests/test_countdown_component.py"
-  - ".ai/tasks/R-401.md"
+  - "services/agent-engine/tests/test_cookie_consent_component.py"
+  - ".ai/tasks/R-402.md"
   - ".ai/CURRENT_TASK.yaml"
   - ".ai/PROJECT_STATE.yaml"
   - ".ai/WORK_LOG.md"
@@ -35,9 +37,9 @@ forbidden_changes:
   - "Do not break snapshot diff invariance across ir.description"
   - "Do not commit or push code to git without verification"
 evidence:
-  verify: "2502 passed (Stage 0 verification passed)"
+  verify: "2520 passed (Stage 0 verification passed)"
   lint: "task lint passed"
   security: "task security:quick passed"
-  demos: "task builder:demo -- minimal-blog generated 138 files (includes apps/web/components/countdown.tsx)"
+  demos: "task builder:demo -- minimal-blog generated 139 files (includes apps/web/components/cookie-consent.tsx)"
   tracker: DONE
-next_action: "Proceed to R-402 (next unstarted Tracker ID), autonomous continuation active."
+next_action: "Proceed to R-403 (next unstarted Tracker ID), autonomous continuation active."
