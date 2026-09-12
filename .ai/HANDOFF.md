@@ -1,6 +1,6 @@
 # Current Handoff
 
-Task ID: R-408
+Task ID: R-409
 Status: done
 Phase: BASIC/MVP — Founder Stage 0
 Branch: `main` (the only branch; the GitHub default)
@@ -56,9 +56,26 @@ Branch: `main` (the only branch; the GitHub default)
   44. **R-406**: Marquee / Ticker Suite (`components/marquee.tsx`)
   45. **R-407**: Credit Card Payment Field Suite (`components/credit-card.tsx`)
   46. **R-408**: Color Contrast Checker Suite (`components/color-contrast.tsx`)
+  47. **R-409**: Currency / Money Input Suite (`components/currency-input.tsx`)
 - Advancing autonomously to the next Tracker ID (posture is advancing, not stopped). Still stop-and-ask only for paid cloud / DB engine / new infra / native-mobile / a materially different architecture decision.
 
 ## Completed
+
+### R-409 — Generated Accessible Futuristic Reusable Currency / Money Input Suite (components/currency-input.tsx)
+
+Enabled a genuinely functional locale-aware currency input across generated Next.js web applications:
+- **Standalone Currency Input Suite (`apps/web/components/currency-input.tsx`)**:
+  - Implemented `CurrencyInputVariant`, `CurrencyInputSize`, `CurrencyInputHandle`, `CurrencyInputProps`, plus `VARIANT_STYLES`/`SIZE_STYLES` maps and `sanitizeNumeric`/`toNumber`/`formatCurrency` helpers.
+  - Compound and semantic alias exports: `CurrencyInput`, `MoneyInput`, `CurrencyField`, `PriceInput`, default export.
+  - `Intl.NumberFormat` currency formatting on blur, plain numeric on focus; `parseFloat` parsing; min/max clamp; step/allowNegative/currency/locale props.
+  - Controlled + uncontrolled `value`; `onChange(value|null, formatted)`/`onBlur`; WAI-ARIA labeled input, `aria-invalid`, `inputMode="decimal"`.
+  - React ref forwarding (`forwardRef`), imperative handle (`CurrencyInputHandle`: `getValue`/`getFormatted`/`setValue`/`clear`/`focus`), explicit `displayName` across all exports.
+  - Exported `render_currency_input_component` in `omnistackai_agent_engine.codegen` and registered `components/currency-input.tsx` in `NextjsWebAdapter.generate()`.
+  - Maintained 100% diff-invariance across `ir.description`; 0 external runtime dependencies.
+- **Verification**:
+  - 17 unit tests in `services/agent-engine/tests/test_currency_input_component.py` (all passing).
+  - `task verify` passing: 2,645 tests passed.
+  - `task lint`, `task security:quick`, `task env:check` — pass. `task builder:demo -- minimal-blog` — 146 files (includes `apps/web/components/currency-input.tsx`).
 
 ### R-408 — Generated Accessible Futuristic Reusable Color Contrast Checker Suite (components/color-contrast.tsx)
 
@@ -860,9 +877,9 @@ Enabled accessible, desktop-and-mobile-grade, futuristic Time Picker and Time Ra
 
 ## Verification
 
-- `task verify` — pass (2,628 agent-engine tests; 18 focused R-408 tests in `test_color_contrast_component.py`).
+- `task verify` — pass (2,645 agent-engine tests; 17 focused R-409 tests in `test_currency_input_component.py`).
 - `task lint`, `task security:quick`, `task env:check` — pass.
-- `task builder:demo -- minimal-blog` — pass (145 files, includes `components/color-contrast.tsx`).
+- `task builder:demo -- minimal-blog` — pass (146 files, includes `components/currency-input.tsx`).
 
 ## Blockers and risks
 
@@ -871,7 +888,7 @@ Enabled accessible, desktop-and-mobile-grade, futuristic Time Picker and Time Ra
 
 ## Next action
 
-- Advancing autonomously to Task R-409 (next unstarted Tracker ID). Record its contract in `.ai/CURRENT_TASK.yaml` and `.ai/tasks/R-409.md` before code.
+- Advancing autonomously to Task R-410 (next unstarted Tracker ID). Record its contract in `.ai/CURRENT_TASK.yaml` and `.ai/tasks/R-410.md` before code.
 
 ## Next command
 

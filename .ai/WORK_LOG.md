@@ -1,5 +1,22 @@
 # Work Log
 
+## 2026-09-12 — R-409
+
+- Recorded contract in `.ai/CURRENT_TASK.yaml` and `.ai/tasks/R-409.md` before code (test-first).
+- `nextjs.py`:
+  - Added `_CURRENCY_INPUT_COMPONENT` static template (raw triple-quoted string) implementing the accessible, desktop-and-mobile-grade, futuristic Currency / Money Input compound component suite (`apps/web/components/currency-input.tsx`).
+  - Genuinely functional money handling: `sanitizeNumeric` (keeps digits + single dot + optional leading minus, no regex backslashes), `toNumber` (`parseFloat`, null on empty/partial), and `formatCurrency` using the built-in `Intl.NumberFormat(locale, { style: 'currency', currency })` (try/catch fallback to `toFixed(2)`).
+  - Focus/blur display strategy: plain numeric while focused (easy editing), locale-currency formatted when blurred; a `useEffect` syncs the display from a controlled `value` when not focused. Clamps to `min`/`max` on blur; `step`/`allowNegative`/`currency`/`locale` configurable.
+  - Controlled + uncontrolled `value` (number|null); `onChange(value|null, formatted)` + `onBlur(value|null)`; WAI-ARIA (labeled input, `aria-invalid` on out-of-range, `aria-required`, `inputMode="decimal"`, right-aligned tabular-nums); data-* attrs expose currency/min/max/step.
+  - Imperative `CurrencyInputHandle` (`getValue`, `getFormatted`, `setValue`, `clear`, `focus`) via `useImperativeHandle`.
+  - Implemented `CurrencyInputVariant`/`CurrencyInputSize` types, `CurrencyInputHandle`/`CurrencyInputProps` interfaces, `VARIANT_STYLES`/`SIZE_STYLES` maps.
+  - Compound and semantic alias exports: `CurrencyInput`, `MoneyInput`, `CurrencyField`, `PriceInput`, default export — each with explicit `displayName`.
+  - Exported `render_currency_input_component` in `omnistackai_agent_engine.codegen` and registered `components/currency-input.tsx` in `NextjsWebAdapter.generate()`.
+  - Maintained 100% diff-invariance across `ir.description` (static module constant); 0 external runtime dependencies.
+- Added `services/agent-engine/tests/test_currency_input_component.py` with 17 tests (file-generated, diff-invariance + accessor byte-equality, `'use client'`, zero-deps imports, forwardRef + useImperativeHandle + 5 handle methods, TS types, alias/default exports, displayNames, 4 variants, 3 sizes, Intl formatting, locale, parsing, min/max/step, aria + inputMode, callbacks/controlled, codegen export).
+- Gates: `pytest .../test_currency_input_component.py` (17 passed); `task verify` (2,645 tests passed); `task lint`, `task security:quick`, `task env:check` passed; `task builder:demo -- minimal-blog` generated 146 files including `apps/web/components/currency-input.tsx`. 0 model calls.
+- Static TSX sanity check: `'use client'` first line, balanced braces/parens, react-only imports, no `\"\"\"`/backtick hazards.
+
 ## 2026-09-12 — R-408
 
 - Recorded contract in `.ai/CURRENT_TASK.yaml` and `.ai/tasks/R-408.md` before code (test-first).

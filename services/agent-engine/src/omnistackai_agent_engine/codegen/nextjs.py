@@ -68628,6 +68628,279 @@ def render_color_contrast_component() -> str:
     return _COLOR_CONTRAST_COMPONENT
 
 
+_CURRENCY_INPUT_COMPONENT = r"""'use client';
+
+import { forwardRef, useEffect, useImperativeHandle, useRef, useState } from 'react';
+import type { CSSProperties } from 'react';
+
+export type CurrencyInputVariant = 'default' | 'card' | 'glass' | 'neon';
+export type CurrencyInputSize = 'sm' | 'md' | 'lg';
+
+export interface CurrencyInputProps {
+  value?: number | null;
+  defaultValue?: number | null;
+  currency?: string;
+  locale?: string;
+  min?: number;
+  max?: number;
+  step?: number;
+  allowNegative?: boolean;
+  label?: string;
+  placeholder?: string;
+  name?: string;
+  disabled?: boolean;
+  required?: boolean;
+  showLabel?: boolean;
+  variant?: CurrencyInputVariant;
+  size?: CurrencyInputSize;
+  accentColor?: string;
+  ariaLabel?: string;
+  className?: string;
+  style?: CSSProperties;
+  onChange?: (value: number | null, formatted: string) => void;
+  onBlur?: (value: number | null) => void;
+}
+
+export interface CurrencyInputHandle {
+  getValue: () => number | null;
+  getFormatted: () => string;
+  setValue: (value: number | null) => void;
+  clear: () => void;
+  focus: () => void;
+}
+
+interface VariantStyle {
+  wrapper: CSSProperties;
+  labelColor: string;
+  inputBg: string;
+  inputColor: string;
+  inputBorder: string;
+  focusBorder: string;
+  errorColor: string;
+}
+
+const VARIANT_STYLES: Record<CurrencyInputVariant, VariantStyle> = {
+  default: {
+    wrapper: { background: 'transparent' },
+    labelColor: '#0f172a', inputBg: '#ffffff', inputColor: '#0f172a', inputBorder: '#cbd5e1', focusBorder: '#2563eb', errorColor: '#dc2626',
+  },
+  card: {
+    wrapper: { background: '#ffffff', border: '1px solid #e2e8f0', borderRadius: '12px', boxShadow: '0 4px 16px rgba(0, 0, 0, 0.06)', padding: '16px' },
+    labelColor: '#0f172a', inputBg: '#ffffff', inputColor: '#0f172a', inputBorder: '#cbd5e1', focusBorder: '#2563eb', errorColor: '#dc2626',
+  },
+  glass: {
+    wrapper: { background: 'rgba(248, 250, 252, 0.6)', border: '1px solid rgba(255, 255, 255, 0.4)', borderRadius: '12px', boxShadow: '0 8px 32px rgba(0, 0, 0, 0.12)', backdropFilter: 'blur(16px)', WebkitBackdropFilter: 'blur(16px)', padding: '16px' },
+    labelColor: '#0f172a', inputBg: 'rgba(255, 255, 255, 0.7)', inputColor: '#0f172a', inputBorder: 'rgba(148, 163, 184, 0.6)', focusBorder: '#2563eb', errorColor: '#dc2626',
+  },
+  neon: {
+    wrapper: { background: '#050811', border: '1px solid rgba(6, 182, 212, 0.4)', borderRadius: '12px', boxShadow: '0 0 24px rgba(6, 182, 212, 0.15)', padding: '16px' },
+    labelColor: '#f8fafc', inputBg: 'rgba(6, 182, 212, 0.08)', inputColor: '#e0f2fe', inputBorder: 'rgba(6, 182, 212, 0.5)', focusBorder: '#06b6d4', errorColor: '#fb7185',
+  },
+};
+
+const SIZE_STYLES: Record<CurrencyInputSize, { font: number; pad: number }> = {
+  sm: { font: 13, pad: 8 },
+  md: { font: 15, pad: 10 },
+  lg: { font: 18, pad: 13 },
+};
+
+function sanitizeNumeric(raw: string, allowNegative: boolean): string {
+  const negative = allowNegative && raw.trim().charAt(0) === '-';
+  let s = raw.replace(/[^0-9.-]/g, '').split('-').join('');
+  const firstDot = s.indexOf('.');
+  if (firstDot !== -1) {
+    s = s.slice(0, firstDot + 1) + s.slice(firstDot + 1).split('.').join('');
+  }
+  return (negative ? '-' : '') + s;
+}
+
+function toNumber(text: string): number | null {
+  if (!text || text === '-' || text === '.' || text === '-.') return null;
+  const n = parseFloat(text);
+  return isNaN(n) ? null : n;
+}
+
+function formatCurrency(value: number, locale: string, currency: string): string {
+  try {
+    return new Intl.NumberFormat(locale, { style: 'currency', currency: currency }).format(value);
+  } catch {
+    return value.toFixed(2);
+  }
+}
+
+const CurrencyInputComponent = forwardRef<CurrencyInputHandle, CurrencyInputProps>(
+  function CurrencyInput(
+    {
+      value,
+      defaultValue = null,
+      currency = 'USD',
+      locale = 'en-US',
+      min,
+      max,
+      step = 1,
+      allowNegative = false,
+      label = 'Amount',
+      placeholder = '0.00',
+      name,
+      disabled = false,
+      required = false,
+      showLabel = true,
+      variant = 'default',
+      size = 'md',
+      accentColor,
+      ariaLabel = 'Amount',
+      className,
+      style,
+      onChange,
+      onBlur,
+    }: CurrencyInputProps,
+    ref,
+  ) {
+    const isControlled = value !== undefined;
+    const controlledNum = typeof value === 'number' ? value : null;
+    const initialNum = isControlled ? controlledNum : (typeof defaultValue === 'number' ? defaultValue : null);
+    const [text, setText] = useState<string>(initialNum === null ? '' : formatCurrency(initialNum, locale, currency));
+    const [focused, setFocused] = useState(false);
+    const inputRef = useRef<HTMLInputElement | null>(null);
+
+    useEffect(() => {
+      if (isControlled && !focused) {
+        setText(controlledNum === null ? '' : formatCurrency(controlledNum, locale, currency));
+      }
+      // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [controlledNum, isControlled, focused, locale, currency]);
+
+    const clamp = (n: number | null): number | null => {
+      if (n === null) return null;
+      let out = n;
+      if (typeof min === 'number' && out < min) out = min;
+      if (typeof max === 'number' && out > max) out = max;
+      return out;
+    };
+
+    const currentNumber = toNumber(sanitizeNumeric(text, allowNegative));
+    const outOfRange = currentNumber !== null && ((typeof min === 'number' && currentNumber < min) || (typeof max === 'number' && currentNumber > max));
+
+    const handleChange = (raw: string) => {
+      const clean = sanitizeNumeric(raw, allowNegative);
+      setText(clean);
+      const n = toNumber(clean);
+      if (onChange) onChange(n, clean);
+    };
+
+    const handleFocus = () => {
+      setFocused(true);
+      const n = toNumber(sanitizeNumeric(text, allowNegative));
+      setText(n === null ? '' : String(n));
+    };
+
+    const handleBlur = () => {
+      setFocused(false);
+      const n = clamp(toNumber(sanitizeNumeric(text, allowNegative)));
+      const formatted = n === null ? '' : formatCurrency(n, locale, currency);
+      setText(formatted);
+      if (onChange) onChange(n, formatted);
+      if (onBlur) onBlur(n);
+    };
+
+    useImperativeHandle(
+      ref,
+      () => ({
+        getValue: () => clamp(toNumber(sanitizeNumeric(text, allowNegative))),
+        getFormatted: () => text,
+        setValue: (v: number | null) => {
+          const formatted = v === null ? '' : formatCurrency(v, locale, currency);
+          setText(focused && v !== null ? String(v) : formatted);
+          if (onChange) onChange(v, formatted);
+        },
+        clear: () => {
+          setText('');
+          if (onChange) onChange(null, '');
+        },
+        focus: () => {
+          if (inputRef.current) inputRef.current.focus();
+        },
+      }),
+      [text, focused, allowNegative, locale, currency, onChange],
+    );
+
+    const theme = VARIANT_STYLES[variant] || VARIANT_STYLES.default;
+    const sizing = SIZE_STYLES[size] || SIZE_STYLES.md;
+    const resolvedAccent = accentColor || theme.focusBorder;
+
+    return (
+      <div
+        className={className}
+        data-variant={variant}
+        data-size={size}
+        style={{ display: 'flex', flexDirection: 'column', gap: '4px', fontFamily: 'system-ui, -apple-system, sans-serif', ...theme.wrapper, ...style }}
+      >
+        {showLabel ? (
+          <label style={{ fontSize: (sizing.font - 2) + 'px', fontWeight: 600, color: theme.labelColor }}>
+            {label}
+            {required ? <span aria-hidden="true" style={{ color: theme.errorColor, marginLeft: '2px' }}>*</span> : null}
+          </label>
+        ) : null}
+        <input
+          ref={inputRef}
+          type="text"
+          inputMode="decimal"
+          value={text}
+          name={name}
+          disabled={disabled}
+          required={required}
+          placeholder={placeholder}
+          aria-label={ariaLabel}
+          aria-required={required || undefined}
+          aria-invalid={outOfRange || undefined}
+          data-currency={currency}
+          data-min={typeof min === 'number' ? min : undefined}
+          data-max={typeof max === 'number' ? max : undefined}
+          data-step={step}
+          onChange={(e) => handleChange(e.target.value)}
+          onFocus={handleFocus}
+          onBlur={handleBlur}
+          style={{
+            fontSize: sizing.font + 'px',
+            padding: sizing.pad + 'px',
+            background: theme.inputBg,
+            color: theme.inputColor,
+            border: '1px solid ' + (outOfRange ? theme.errorColor : (focused ? resolvedAccent : theme.inputBorder)),
+            borderRadius: '8px',
+            outline: 'none',
+            width: '100%',
+            boxSizing: 'border-box',
+            textAlign: 'right',
+            fontVariantNumeric: 'tabular-nums',
+            transition: 'border-color 0.15s ease',
+          }}
+        />
+      </div>
+    );
+  },
+);
+
+CurrencyInputComponent.displayName = 'CurrencyInput';
+
+export const CurrencyInput = CurrencyInputComponent;
+export const MoneyInput = CurrencyInputComponent;
+export const CurrencyField = CurrencyInputComponent;
+export const PriceInput = CurrencyInputComponent;
+
+CurrencyInput.displayName = 'CurrencyInput';
+MoneyInput.displayName = 'MoneyInput';
+CurrencyField.displayName = 'CurrencyField';
+PriceInput.displayName = 'PriceInput';
+
+export default CurrencyInputComponent;
+"""
+
+
+def render_currency_input_component() -> str:
+    """Render the Accessible Futuristic Reusable Currency / Money Input Suite (R-409)."""
+    return _CURRENCY_INPUT_COMPONENT
+
+
 _DESIGN_TOKENS_CSS = (
     "/**\n"
     " * OmniStackAI Design Tokens & Theming Engine\n"
@@ -69265,6 +69538,7 @@ class NextjsWebAdapter:
             GeneratedFile("components/marquee.tsx", _MARQUEE_COMPONENT),
             GeneratedFile("components/credit-card.tsx", _CREDIT_CARD_COMPONENT),
             GeneratedFile("components/color-contrast.tsx", _COLOR_CONTRAST_COMPONENT),
+            GeneratedFile("components/currency-input.tsx", _CURRENCY_INPUT_COMPONENT),
             GeneratedFile("styles/tokens.css", _DESIGN_TOKENS_CSS),
             GeneratedFile("app/globals.css", _GLOBALS_CSS),
             GeneratedFile("app/error.tsx", _ERROR_PAGE),

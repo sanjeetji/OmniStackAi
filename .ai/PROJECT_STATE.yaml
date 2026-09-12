@@ -2,12 +2,27 @@ schema_version: 1
 project: OmniStackAI
 phase: BASIC/MVP
 founder_stage: 0
-current_task: R-409
+current_task: R-410
 current_status: advancing
 branch: main
-last_completed_task: R-408
+last_completed_task: R-409
 last_completed_task_summary: >-
-  Generated Accessible Futuristic Reusable Color Contrast Checker Suite (components/color-contrast.tsx); a
+  Generated Accessible Futuristic Reusable Currency / Money Input Suite (components/currency-input.tsx); a
+  genuinely functional money field — sanitizes typed input to a clean numeric string, parses it to a number
+  (parseFloat), clamps to min/max on blur, and formats the value as locale-aware currency via the built-in
+  Intl.NumberFormat (style: 'currency') when unfocused (plain numeric while focused for easy editing);
+  configurable currency + locale (default USD / en-US), min/max/step, allowNegative; controlled +
+  uncontrolled value (number|null); onChange (value|null, formatted) + onBlur callbacks; WAI-ARIA (labeled
+  input, aria-invalid on out-of-range, aria-required, inputMode="decimal", right-aligned tabular-nums);
+  4 futuristic variants ("default", "card", "glass", "neon"); 3 size scales ("sm", "md", "lg"); React ref
+  forwarding (forwardRef); useImperativeHandle (CurrencyInputHandle: getValue/getFormatted/setValue/clear/
+  focus); canonical TypeScript types (CurrencyInputVariant, CurrencyInputSize, CurrencyInputHandle,
+  CurrencyInputProps); compound and semantic alias exports (CurrencyInput, MoneyInput, CurrencyField,
+  PriceInput, default export) with explicit displayName; 100% diff-invariance across ir.description, 0
+  external runtime dependencies; exported render_currency_input_component in codegen; registered
+  components/currency-input.tsx in NextjsWebAdapter; 2,645 tests pass (17 new tests in
+  test_currency_input_component.py); 0 model calls. Previously R-408 shipped the Color Contrast Checker
+  Suite (components/color-contrast.tsx); a
   genuinely functional WCAG contrast tool — parses foreground/background hex (#rgb and #rrggbb via parseHex),
   computes WCAG 2.x relative luminance (0.2126/0.7152/0.0722 + Math.pow gamma) and the contrast ratio
   ((lighter+0.05)/(darker+0.05)), and evaluates AA/AAA pass-fail for normal text (>=4.5 / >=7), large text
@@ -168,9 +183,9 @@ product_direction: >-
   framework adapter contract -> Next.js adapter -> Git service -> preview/sandbox (needs cloud env).
 id_note: >-
   Workbook backlog owns R-010..R-219. Founder-requested tasks use IDs after R-219: R-220..R-223 done,
-  R-224 Next.js deferred (env-blocked), R-225..R-408 done.
+  R-224 Next.js deferred (env-blocked), R-225..R-409 done.
 blockers: []
 next_action: >-
-  Task R-408 (Accessible Futuristic Reusable Color Contrast Checker Suite) complete with 2,628 tests
-  passing. Advancing autonomously to R-409 (next unstarted Tracker ID) — the posture is advancing, not
+  Task R-409 (Accessible Futuristic Reusable Currency / Money Input Suite) complete with 2,645 tests
+  passing. Advancing autonomously to R-410 (next unstarted Tracker ID) — the posture is advancing, not
   stopped; continue until manually stopped.

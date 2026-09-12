@@ -1,12 +1,20 @@
 # Project State — OmniStackAI
-Last updated: 2026-09-12T16:35:00+05:30
+Last updated: 2026-09-12T17:15:00+05:30
 
 ## Current Phase
 Stage 0 (Founder Build Sequence, Brief Section 91) — BASIC/MVP
 
 ## Last Completed Task
-Tracker ID: R-408 — Generated Accessible Futuristic Reusable Color Contrast Checker Suite (components/color-contrast.tsx) — DONE,
-`task verify` (2,628 agent-engine tests, 18 new focused R-408 tests) passing. A genuinely functional WCAG contrast tool — parses
+Tracker ID: R-409 — Generated Accessible Futuristic Reusable Currency / Money Input Suite (components/currency-input.tsx) — DONE,
+`task verify` (2,645 agent-engine tests, 17 new focused R-409 tests) passing. A genuinely functional money field — sanitizes typed input to
+a clean numeric string, parses it (`parseFloat`), clamps to `min`/`max` on blur, and formats the value as locale-aware currency via the
+built-in `Intl.NumberFormat` (`style: 'currency'`) when unfocused (plain numeric while focused for easy editing); configurable
+`currency`/`locale` (default USD / en-US), `min`/`max`/`step`, `allowNegative`; controlled + uncontrolled value; `onChange(value|null,
+formatted)` + `onBlur`; WAI-ARIA (labeled input, `aria-invalid`, `aria-required`, `inputMode="decimal"`); 4 variants, 3 sizes, `forwardRef`
++ `useImperativeHandle` (`CurrencyInputHandle`: getValue/getFormatted/setValue/clear/focus), alias exports (`CurrencyInput`, `MoneyInput`,
+`CurrencyField`, `PriceInput`, default) with explicit `displayName`; 100% diff-invariance across `ir.description`, 0 external runtime
+dependencies. Immediately preceded by R-408 — Generated Accessible Futuristic Reusable Color Contrast Checker Suite
+(components/color-contrast.tsx) — `task verify` (2,628 agent-engine tests, 18 new focused R-408 tests) passing. A genuinely functional WCAG contrast tool — parses
 foreground/background hex (`#rgb`/`#rrggbb`), computes WCAG 2.x relative luminance (`0.2126`/`0.7152`/`0.0722` + `Math.pow` gamma) and the
 contrast ratio (`(lighter+0.05)/(darker+0.05)`), and evaluates AA/AAA pass-fail for normal text (>=4.5 / >=7), large text (>=3 / >=4.5), and
 UI components (>=3); a computed `ContrastResult`; native color + hex inputs, a swap action, a live preview swatch, and pass/fail badges;
@@ -104,7 +112,7 @@ R-324 (theming tokens), R-323 (popover), R-322 (dropdown menu), R-321 (accordion
 R-317 (skeleton), R-316 (alert), R-315 (card), R-314 (tooltip), R-313 (column visibility), R-312 (badge), R-311 (table density),
 R-310 (tabs), R-309 (pagination), and R-308 (JSON export).
 
-**Notes:** (1) R-408 complete with 2,628 tests passing. (2) Advancing autonomously to R-409 (posture is advancing, not stopped).
+**Notes:** (1) R-409 complete with 2,645 tests passing. (2) Advancing autonomously to R-410 (posture is advancing, not stopped).
 
 
 

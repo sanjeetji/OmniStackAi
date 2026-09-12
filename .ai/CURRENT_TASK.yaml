@@ -1,29 +1,28 @@
-task_id: R-408
-id: R-408
-title: "Accessible Futuristic Reusable Color Contrast Checker Suite"
+task_id: R-409
+id: R-409
+title: "Accessible Futuristic Reusable Currency / Money Input Suite"
 status: DONE
 phase: MVP
-tracker_row: 45
+tracker_row: 46
 started_at: "2026-09-12"
 completed_at: "2026-09-12"
 objective: >-
-  Add an accessible, zero-dependency, desktop-and-mobile-grade, futuristic Color Contrast Checker compound
-  component suite (components/color-contrast.tsx): parses foreground/background hex colors (#rgb and
-  #rrggbb), computes WCAG 2.x relative luminance and contrast ratio, and evaluates AA/AAA pass-fail for
-  normal text, large text, and UI components; a computed ContrastResult ({ratio, aaNormal, aaaNormal,
-  aaLarge, aaaLarge, uiComponent, rating}); native color inputs plus hex text inputs, a live preview swatch
-  with sample text at normal and large sizes, and pass/fail badges; controlled + uncontrolled colors; a
-  swap action; onChange callback; WAI-ARIA (labeled inputs, a role="status" aria-live results region);
-  4 futuristic visual styling variants ("default", "card", "glass", "neon"); 3 size scales ("sm", "md",
-  "lg"); React ref forwarding (forwardRef); useImperativeHandle (ColorContrastHandle:
-  getRatio/getResult/setColors/swap); and explicit displayName across compound and semantic alias exports
-  (ColorContrast, ContrastChecker, WcagContrast, ContrastRatio, default). Static module constant — never
-  references ir.name/ir.description.
+  Add an accessible, zero-dependency, desktop-and-mobile-grade, futuristic Currency / Money Input compound
+  component suite (components/currency-input.tsx): a numeric money field that sanitizes typed input to a
+  clean numeric string, parses it to a number, clamps to min/max on blur, and formats the value as
+  locale-aware currency via the built-in Intl.NumberFormat (style: 'currency') when unfocused (plain
+  numeric while focused for easy editing); configurable currency + locale, min/max/step, allowNegative;
+  controlled + uncontrolled value (number); onChange (value|null, formatted) and onBlur callbacks; WAI-ARIA
+  (labeled input, aria-invalid, aria-required, inputMode="decimal"); 4 futuristic visual styling variants
+  ("default", "card", "glass", "neon"); 3 size scales ("sm", "md", "lg"); React ref forwarding (forwardRef);
+  useImperativeHandle (CurrencyInputHandle: getValue/getFormatted/setValue/clear/focus); and explicit
+  displayName across compound and semantic alias exports (CurrencyInput, MoneyInput, CurrencyField,
+  PriceInput, default). Static module constant — never references ir.name/ir.description.
 allowed_paths:
   - "services/agent-engine/src/omnistackai_agent_engine/codegen/nextjs.py"
   - "services/agent-engine/src/omnistackai_agent_engine/codegen/__init__.py"
-  - "services/agent-engine/tests/test_color_contrast_component.py"
-  - ".ai/tasks/R-408.md"
+  - "services/agent-engine/tests/test_currency_input_component.py"
+  - ".ai/tasks/R-409.md"
   - ".ai/CURRENT_TASK.yaml"
   - ".ai/PROJECT_STATE.yaml"
   - ".ai/WORK_LOG.md"
@@ -35,9 +34,9 @@ forbidden_changes:
   - "Do not break snapshot diff invariance across ir.description"
   - "Do not commit or push code to git without verification"
 evidence:
-  verify: "2628 passed (Stage 0 verification passed)"
+  verify: "2645 passed (Stage 0 verification passed)"
   lint: "task lint passed"
   security: "task security:quick passed"
-  demos: "task builder:demo -- minimal-blog generated 145 files (includes apps/web/components/color-contrast.tsx)"
+  demos: "task builder:demo -- minimal-blog generated 146 files (includes apps/web/components/currency-input.tsx)"
   tracker: DONE
-next_action: "Proceed to R-409 (next unstarted Tracker ID), autonomous continuation active."
+next_action: "Proceed to R-410 (next unstarted Tracker ID), autonomous continuation active."

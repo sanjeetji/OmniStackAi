@@ -137,6 +137,7 @@ from .nextjs import (
     render_marquee_component,
     render_credit_card_component,
     render_color_contrast_component,
+    render_currency_input_component,
 )
 from .openapi import render_openapi, render_openapi_json
 from .schema_sql import render_postgres_schema, table_name
@@ -277,6 +278,7 @@ __all__ = [
     "render_marquee_component",
     "render_credit_card_component",
     "render_color_contrast_component",
+    "render_currency_input_component",
     "render_postgres_schema",
     "render_postgres_seed",
     "render_openapi",
