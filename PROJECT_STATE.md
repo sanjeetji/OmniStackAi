@@ -1,13 +1,24 @@
 # Project State — OmniStackAI
-Last updated: 2026-09-13T02:30:00+05:30
+Last updated: 2026-09-13T03:30:00+05:30
 
 ## Current Phase
 Stage 0 (Founder Build Sequence, Brief Section 91) — BASIC/MVP
 
-> **Front-door pivot: the local user-facing "chat → create an app" experience works end to end.** UI-component series PAUSED at R-415 (110 components, resumable). Front door: **R-416** intake agent (sentence → IR) · **R-417** builder (IR → owned repo) · **R-418** the chat **web UI** — `task agent-engine:studio:serve` → http://127.0.0.1:4173 → type a description → a real app repo is generated and shown. All local, no paid cloud. Next: **R-419 = turnkey `task app:run`** so a generated repo boots in one command.
+> **Front-door pivot: the local "chat → create → RUN" loop works end to end.** UI-component series PAUSED at R-415 (110 components, resumable). Front door: **R-416** intake (sentence→IR) · **R-417** builder (IR→owned repo) · **R-418** chat **web UI** (`task agent-engine:studio:serve` → http://127.0.0.1:4173) · **R-419** turnkey **run** (`task agent-engine:app:run -- <dir>` → DB+migrations+backend:8000+web:3000 in one command; blog app verified fully booted). Next: **R-420** — fix two schema-generator bugs R-419 exposed (unquoted reserved words like `order`; FK/table ordering) so chat-generated apps run.
 
 ## Last Completed Task
-Tracker ID: R-418 — Chat studio web UI (`omnistackai_agent_engine/studio/`) — DONE, `task verify` (2,789
+Tracker ID: R-419 — Turnkey local run (`omnistackai_agent_engine/localrun/`) — DONE, `task verify` (2,801
+tests, 12 new focused R-419 tests) passing. Brick 4 of the front door: `build_run_plan(repo_dir, ...)`
+inspects a generated repo and composes a deterministic, JSON-safe run plan (recreate a per-app Postgres DB,
+apply migrations, start backend with `DATABASE_URL`/`JWT_SECRET`, start web with `next dev` directly +
+`NEXT_PUBLIC_API_URL`); the opt-in executor `task agent-engine:app:run -- <dir>` (Task deps `db:up`) runs
+setup, launches both servers, polls `/healthz`, prints URLs, cleans up on Ctrl+C. Verified END-TO-END on the
+Mac: one command booted `~/omnistackai-blog-run` — Postgres up, DB recreated, both migrations applied,
+uvicorn on :8000 (`/healthz` 200, `/posts` seeded), Next.js on :3000 (200). Fixed a real bug (`pnpm install`
+→ `pnpm install --ignore-scripts`), and surfaced two pre-existing schema-generator bugs (unquoted
+reserved-word identifiers; FK/table ordering) that only executing real migrations reveals → R-420. All
+local, no paid cloud. Immediately preceded by R-418 — Chat studio web UI
+(`omnistackai_agent_engine/studio/`) — DONE, `task verify` (2,789
 tests, 11 new focused R-418 tests) passing. Brick 3 of the "chat → create an app" front door: a
 dependency-free local web studio (Python 3.13 stdlib `http.server` only — no npm/pnpm). `page.py` serves a
 self-contained HTML page (prompt box + Build button + results panel, inline CSS/JS); `server.py`'s

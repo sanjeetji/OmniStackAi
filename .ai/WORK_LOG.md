@@ -1,5 +1,17 @@
 # Work Log
 
+## 2026-09-13 — R-419 (front-door pivot: brick 4 — turnkey local run)
+
+- Made a generated app repo run locally in one command. New `omnistackai_agent_engine/localrun/` package (Python 3.13 stdlib only), "deterministic plan + opt-in executor" pattern.
+  - `plan.py`: `RunStep`/`RunPlan` dataclasses + `build_run_plan(repo_dir, *, db_*, api_port, web_port, jwt_secret, db_name=None)`. Inspects the repo (backend flavor python via requirements.txt / go via go.mod|main.go; migrations under `services/api/migrations/*.sql`; web via `apps/web/package.json`) and composes an ordered, JSON-safe plan: DROP+CREATE a per-app Postgres DB in the local container, apply each migration (piped on stdin), start the backend (`uvicorn app.main:app` with `DATABASE_URL`/`JWT_SECRET`, or `go run .`), start the web app with `./node_modules/.bin/next dev` (the Next binary directly, never `pnpm dev`) + `NEXT_PUBLIC_API_URL`. `RunPlan.to_dict()` masks the DB password.
+  - `run.py`: opt-in executor (`task agent-engine:app:run -- <dir>`; Task `deps: [db:up]`). Runs setup steps synchronously (skips an existing `.venv`/`node_modules`), launches both servers, polls the backend `/healthz`, prints URLs, and terminates both on Ctrl+C.
+- Wired opt-in Task: `scripts/agent-engine.sh app-run` + `Taskfile.yml` `agent-engine:app:run` (deps db:up).
+- Added `services/agent-engine/tests/test_localrun_plan.py` (12 tests, deterministic — materializes a real repo into a temp dir via git, then asserts the plan): python backend + web detected, URLs, DB drop→create→migrations order (sorted, 0001 first), backend serve env has DATABASE_URL/JWT_SECRET, web uses the Next binary + `--ignore-scripts` and never `pnpm dev`, step order (db→backend→web), `to_dict` JSON-safe + password masked, default db name = repo slug + override, no-backend fallback, migration piped on stdin, package exports.
+- Gates: focused 12 passed; `task verify` **2,801** passed; lint/security/env green; `builder:demo` 152 files (unchanged). **0 model calls in verify.**
+- **Live proof (opt-in, on the Mac):** `task agent-engine:app:run -- ~/omnistackai-blog-run` -> Postgres up, DB recreated, **both migrations applied**, backend venv+install, **uvicorn on :8000** (`/healthz` 200, `/posts` returned the 2 seeded posts), web install, **Next.js on :3000** (HTTP 200). One command, full boot. The manual 6-step dance is gone.
+- **Bug fixed:** a bare `pnpm install` exits 1 on pnpm 11 `ERR_PNPM_IGNORED_BUILDS` (sharp) -> plan uses `pnpm install --ignore-scripts` (sharp's native build isn't needed for `next dev`).
+- **Codegen bugs surfaced (-> R-420):** executing real migrations (which `task verify` never does) exposed two pre-existing schema-generator defects: (1) reserved-word identifiers unquoted — a bookstore "Order" entity emits `CREATE TABLE order (` (Postgres syntax error); (2) FK/table creation order is entity order, not dependency order — a recipe box's `ingredient`→`recipe` FK emits `ingredient` first ("relation recipe does not exist"). R-419's executor is correct and surfaced both cleanly; the fix belongs to codegen (R-420).
+
 ## 2026-09-13 — R-418 (front-door pivot: brick 3 — chat studio web UI)
 
 - Added the user-facing "chat -> create an app" screen. New `omnistackai_agent_engine/studio/` package, Python 3.13 **stdlib only** (`http.server`) — no npm/pnpm, no web framework.

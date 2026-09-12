@@ -147,6 +147,12 @@ tasks:
     cmds:
       - bash scripts/agent-engine.sh studio-serve
 
+  agent-engine:app:run:
+    desc: 'Run a generated app repo locally in one command - DB + migrations + backend :8000 + web :3000 (opt-in, live; CLI_ARGS - <repo-dir>)'
+    deps: [db:up]
+    cmds:
+      - bash scripts/agent-engine.sh app-run {{.CLI_ARGS}}
+
   agent-engine:preview-plan:
     desc: Print the local (Tier 0/1) preview plan for a generated target (default nextjs-web)
     cmds:

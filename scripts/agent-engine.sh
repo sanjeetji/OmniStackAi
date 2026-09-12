@@ -117,6 +117,16 @@ if project["project"]["requires-python"] != ">=3.13,<3.14":
     export OMNISTACKAI_STUDIO_PORT="$(config_value OMNISTACKAI_STUDIO_PORT 4173)"
     PYTHONPATH="$source_root" python3 -m omnistackai_agent_engine.studio.live_serve
     ;;
+  app-run)
+    configure_python
+    export OMNISTACKAI_POSTGRES_CONTAINER="$(config_value OMNISTACKAI_POSTGRES_CONTAINER omnistackai-local-postgres-1)"
+    export OMNISTACKAI_POSTGRES_USER="$(config_value OMNISTACKAI_POSTGRES_USER omnistackai)"
+    export OMNISTACKAI_POSTGRES_PASSWORD="$(config_value OMNISTACKAI_POSTGRES_PASSWORD '')"
+    export OMNISTACKAI_POSTGRES_HOST="$(config_value OMNISTACKAI_POSTGRES_HOST 127.0.0.1)"
+    export OMNISTACKAI_POSTGRES_PORT="$(config_value OMNISTACKAI_POSTGRES_PORT 5432)"
+    export OMNISTACKAI_POSTGRES_DB="$(config_value OMNISTACKAI_POSTGRES_DB omnistackai)"
+    PYTHONPATH="$source_root" python3 -m omnistackai_agent_engine.localrun.run "${2:-}"
+    ;;
   preview-plan)
     configure_python
     target="${2:-nextjs-web}"
@@ -181,7 +191,7 @@ PY
     PYTHONPATH="$source_root" python3 -c "from omnistackai_agent_engine.runtime import format_status; print(format_status())"
     ;;
   *)
-    printf 'Usage: %s {lint|test|ollama-verify|gateway-run|intake-run [description]|app-build [description]|studio-serve|preview-plan [target]|verify-plan [target]|plan-show [example]|platform-status}\n' "$0"
+    printf 'Usage: %s {lint|test|ollama-verify|gateway-run|intake-run [description]|app-build [description]|studio-serve|app-run <repo-dir>|preview-plan [target]|verify-plan [target]|plan-show [example]|platform-status}\n' "$0"
     exit 2
     ;;
 esac

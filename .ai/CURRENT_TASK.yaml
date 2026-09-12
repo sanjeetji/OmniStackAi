@@ -1,33 +1,31 @@
-task_id: R-418
-id: R-418
-title: "Chat studio web UI (chat-to-create front door, brick 3)"
+task_id: R-419
+id: R-419
+title: "Turnkey local run for a generated app (chat-to-create front door, brick 4)"
 status: done
 phase: MVP
 tracker_row: null
 started_at: "2026-09-13"
 completed_at: "2026-09-13"
 objective: >-
-  Add the user-facing "chat -> create an app" screen: a minimal, dependency-free local web studio (Python
-  3.13 stdlib http.server only, no npm/pnpm) where a person types a plain-English description and watches a
-  real app get generated. New omnistackai_agent_engine/studio/ package: page.py (self-contained HTML with a
-  prompt textarea + Build button + results panel, inline CSS/JS, zero external deps), server.py
-  (create_studio_server(build_fn, host, port) ThreadingHTTPServer: GET / serves the page, POST /api/build
-  reads {prompt}, calls the injected build_fn -> dict, returns JSON; 400 empty/invalid, 502 build failure -
-  build_fn injected so task verify tests the HTTP layer against an in-memory stub, 0 model calls),
-  live_serve.py (opt-in real local-Ollama build path on OMNISTACKAI_STUDIO_HOST/PORT, default
-  127.0.0.1:4173). Add app_build_result_to_dict(result) to intake/build_app.py (pure JSON-safe shape).
-  Wire task agent-engine:studio:serve (opt-in, live). Static page is diff-invariant.
+  Make a generated app repo run locally in one command, removing the manual DB/venv/pnpm dance. New
+  omnistackai_agent_engine/localrun/ package (Python 3.13 stdlib only) using the platform's "deterministic
+  plan + opt-in executor" pattern. plan.py: RunStep/RunPlan dataclasses + build_run_plan(repo_dir, *, db_*,
+  api_port, web_port, jwt_secret, db_name=None) inspects the repo (backend flavor python/go, migrations, web)
+  and composes an ordered JSON-safe plan: recreate a per-app Postgres DB (DROP IF EXISTS + CREATE) in the
+  running local container, apply each migration, start the backend (uvicorn or go run with DATABASE_URL/
+  JWT_SECRET), start the web app with next dev (the Next binary directly, NOT pnpm dev) + NEXT_PUBLIC_API_URL;
+  resolves api_url/web_url and RunPlan.to_dict() (masks the DB password). run.py: opt-in executor
+  (task agent-engine:app:run -- <dir>, excluded from verify) - runs setup synchronously (skips existing
+  .venv/node_modules), launches both servers, polls backend /healthz, prints URLs, cleans up on Ctrl+C. Task
+  depends on db:up. Deterministic core is fully offline-testable; the executor is opt-in. No paid cloud.
 allowed_paths:
-  - "services/agent-engine/src/omnistackai_agent_engine/studio/__init__.py"
-  - "services/agent-engine/src/omnistackai_agent_engine/studio/page.py"
-  - "services/agent-engine/src/omnistackai_agent_engine/studio/server.py"
-  - "services/agent-engine/src/omnistackai_agent_engine/studio/live_serve.py"
-  - "services/agent-engine/src/omnistackai_agent_engine/intake/build_app.py"
-  - "services/agent-engine/src/omnistackai_agent_engine/intake/__init__.py"
-  - "services/agent-engine/tests/test_studio_server.py"
+  - "services/agent-engine/src/omnistackai_agent_engine/localrun/__init__.py"
+  - "services/agent-engine/src/omnistackai_agent_engine/localrun/plan.py"
+  - "services/agent-engine/src/omnistackai_agent_engine/localrun/run.py"
+  - "services/agent-engine/tests/test_localrun_plan.py"
   - "scripts/agent-engine.sh"
   - "Taskfile.yml"
-  - ".ai/tasks/R-418.md"
+  - ".ai/tasks/R-419.md"
   - ".ai/CURRENT_TASK.yaml"
   - ".ai/PROJECT_STATE.yaml"
   - ".ai/WORK_LOG.md"
@@ -35,19 +33,23 @@ allowed_paths:
   - "PROJECT_STATE.md"
   - "CHANGELOG.md"
 forbidden_changes:
-  - "Do not introduce external Python dependencies or any npm/pnpm toolchain (stdlib http.server only)"
-  - "Do not make task verify do a live model call or network I/O beyond an ephemeral localhost test server"
-  - "Do not change the Application IR schema, model_gateway contracts, the assembler, or git_service"
-  - "Do not put secrets in source/tests/logs/commits"
+  - "Do not introduce external Python dependencies (stdlib only)"
+  - "Do not make task verify run the executor, docker, pnpm, pip, or any network/subprocess server"
+  - "Do not change the Application IR schema, model_gateway contracts, assembler, git_service, or codegen"
+  - "Do not put secrets in source/tests/logs/commits (DB password from env; masked in printed output)"
 evidence:
-  verify: "2,789 passed"
+  verify: "2,801 passed"
   lint: "passed"
   security: "passed"
   env: "passed"
   demos: "minimal-blog -> 152 files (unchanged)"
-  focused_test: "11 passed (test_studio_server.py)"
-  live_optin: "task agent-engine:studio:serve -> http://127.0.0.1:4173 -> type description -> real repo generated"
+  focused_test: "12 passed (test_localrun_plan.py)"
+  live_optin: "task agent-engine:app:run -- ~/omnistackai-blog-run -> DB+both migrations+uvicorn:8000 (/healthz 200, /posts seeded)+next:3000 (200), one command, verified end-to-end"
+  bug_fixed: "pnpm install -> pnpm install --ignore-scripts (avoids ERR_PNPM_IGNORED_BUILDS exit 1)"
+  codegen_bugs_found: "running real migrations exposed 2 schema-generator defects (unquoted reserved words e.g. 'order'; FK/table ordering) -> next task R-420"
   tracker: DONE
 next_action: >-
-  R-418 done. Next front-door brick: live local preview of the generated app inside the studio (R-033/R-034)
-  and/or the turnkey `task app:run` that boots the generated repo. Await founder direction.
+  R-419 done and verified end-to-end (one-command run of a generated app). HIGH-PRIORITY NEXT: R-420 = fix
+  the two schema-generator bugs that R-419 exposed (quote reserved-word identifiers; order CREATE TABLE by
+  FK dependency) so chat-generated apps (bookstore/recipe/etc.) actually run - with deterministic string
+  tests. Then: embed a live in-browser preview into the studio [R-033/R-034]. Await founder direction.
