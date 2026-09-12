@@ -70003,6 +70003,266 @@ def render_copy_button_component() -> str:
     return _COPY_BUTTON_COMPONENT
 
 
+_DURATION_INPUT_COMPONENT = r"""'use client';
+
+import { forwardRef, useImperativeHandle, useRef, useState } from 'react';
+import type { CSSProperties } from 'react';
+
+export type DurationInputVariant = 'default' | 'card' | 'glass' | 'neon';
+export type DurationInputSize = 'sm' | 'md' | 'lg';
+export type DurationUnit = 'days' | 'hours' | 'minutes' | 'seconds';
+
+export interface DurationInputProps {
+  value?: number;
+  defaultValue?: number;
+  units?: DurationUnit[];
+  min?: number;
+  max?: number;
+  label?: string;
+  name?: string;
+  disabled?: boolean;
+  showLabel?: boolean;
+  showSummary?: boolean;
+  variant?: DurationInputVariant;
+  size?: DurationInputSize;
+  accentColor?: string;
+  ariaLabel?: string;
+  className?: string;
+  style?: CSSProperties;
+  onChange?: (totalSeconds: number) => void;
+}
+
+export interface DurationInputHandle {
+  getValue: () => number;
+  setValue: (totalSeconds: number) => void;
+  getFormatted: () => string;
+  clear: () => void;
+  focus: () => void;
+}
+
+interface VariantStyle {
+  wrapper: CSSProperties;
+  labelColor: string;
+  mutedColor: string;
+  inputBg: string;
+  inputColor: string;
+  inputBorder: string;
+  focusBorder: string;
+}
+
+const VARIANT_STYLES: Record<DurationInputVariant, VariantStyle> = {
+  default: {
+    wrapper: { background: 'transparent' },
+    labelColor: '#0f172a', mutedColor: '#64748b', inputBg: '#ffffff', inputColor: '#0f172a', inputBorder: '#cbd5e1', focusBorder: '#2563eb',
+  },
+  card: {
+    wrapper: { background: '#ffffff', border: '1px solid #e2e8f0', borderRadius: '12px', boxShadow: '0 4px 16px rgba(0, 0, 0, 0.06)', padding: '16px' },
+    labelColor: '#0f172a', mutedColor: '#64748b', inputBg: '#ffffff', inputColor: '#0f172a', inputBorder: '#cbd5e1', focusBorder: '#2563eb',
+  },
+  glass: {
+    wrapper: { background: 'rgba(248, 250, 252, 0.6)', border: '1px solid rgba(255, 255, 255, 0.4)', borderRadius: '12px', boxShadow: '0 8px 32px rgba(0, 0, 0, 0.12)', backdropFilter: 'blur(16px)', WebkitBackdropFilter: 'blur(16px)', padding: '16px' },
+    labelColor: '#0f172a', mutedColor: '#475569', inputBg: 'rgba(255, 255, 255, 0.7)', inputColor: '#0f172a', inputBorder: 'rgba(148, 163, 184, 0.6)', focusBorder: '#2563eb',
+  },
+  neon: {
+    wrapper: { background: '#050811', border: '1px solid rgba(6, 182, 212, 0.4)', borderRadius: '12px', boxShadow: '0 0 24px rgba(6, 182, 212, 0.15)', padding: '16px' },
+    labelColor: '#f8fafc', mutedColor: '#38bdf8', inputBg: 'rgba(6, 182, 212, 0.08)', inputColor: '#e0f2fe', inputBorder: 'rgba(6, 182, 212, 0.5)', focusBorder: '#06b6d4',
+  },
+};
+
+const SIZE_STYLES: Record<DurationInputSize, { font: number; pad: number; box: number }> = {
+  sm: { font: 13, pad: 6, box: 52 },
+  md: { font: 15, pad: 8, box: 64 },
+  lg: { font: 17, pad: 11, box: 76 },
+};
+
+const CANONICAL_UNITS: DurationUnit[] = ['days', 'hours', 'minutes', 'seconds'];
+const UNIT_SECONDS: Record<DurationUnit, number> = { days: 86400, hours: 3600, minutes: 60, seconds: 1 };
+const UNIT_LABEL: Record<DurationUnit, string> = { days: 'Days', hours: 'Hours', minutes: 'Minutes', seconds: 'Seconds' };
+const UNIT_SUFFIX: Record<DurationUnit, string> = { days: 'd', hours: 'h', minutes: 'm', seconds: 's' };
+
+function orderedUnits(units: DurationUnit[]): DurationUnit[] {
+  return CANONICAL_UNITS.filter((u) => units.indexOf(u) !== -1);
+}
+
+function toSegments(total: number, units: DurationUnit[]): Record<DurationUnit, number> {
+  const ordered = orderedUnits(units);
+  const seg: Record<DurationUnit, number> = { days: 0, hours: 0, minutes: 0, seconds: 0 };
+  let remaining = Math.max(0, Math.floor(total));
+  for (let i = 0; i < ordered.length; i++) {
+    const u = ordered[i];
+    seg[u] = Math.floor(remaining / UNIT_SECONDS[u]);
+    remaining -= seg[u] * UNIT_SECONDS[u];
+  }
+  return seg;
+}
+
+function fromSegments(seg: Record<DurationUnit, number>, units: DurationUnit[]): number {
+  return orderedUnits(units).reduce((sum, u) => sum + (seg[u] || 0) * UNIT_SECONDS[u], 0);
+}
+
+function formatDuration(total: number): string {
+  let remaining = Math.max(0, Math.floor(total));
+  const parts: string[] = [];
+  for (let i = 0; i < CANONICAL_UNITS.length; i++) {
+    const u = CANONICAL_UNITS[i];
+    const v = Math.floor(remaining / UNIT_SECONDS[u]);
+    remaining -= v * UNIT_SECONDS[u];
+    if (v > 0) parts.push(v + UNIT_SUFFIX[u]);
+  }
+  return parts.length > 0 ? parts.join(' ') : '0s';
+}
+
+const DurationInputComponent = forwardRef<DurationInputHandle, DurationInputProps>(
+  function DurationInput(
+    {
+      value,
+      defaultValue = 0,
+      units = ['hours', 'minutes', 'seconds'],
+      min,
+      max,
+      label = 'Duration',
+      name,
+      disabled = false,
+      showLabel = true,
+      showSummary = true,
+      variant = 'default',
+      size = 'md',
+      accentColor,
+      ariaLabel = 'Duration',
+      className,
+      style,
+      onChange,
+    }: DurationInputProps,
+    ref,
+  ) {
+    const isControlled = typeof value === 'number';
+    const ordered = orderedUnits(units);
+
+    const clampTotal = (t: number): number => {
+      let out = Math.max(0, Math.floor(t));
+      if (typeof min === 'number' && out < min) out = min;
+      if (typeof max === 'number' && out > max) out = max;
+      return out;
+    };
+
+    const [internal, setInternal] = useState<Record<DurationUnit, number>>(() => toSegments(clampTotal(defaultValue), units));
+    const inputRefs = useRef<Record<string, HTMLInputElement | null>>({});
+    const [focusedUnit, setFocusedUnit] = useState<string | null>(null);
+
+    const segments = isControlled ? toSegments(clampTotal(value as number), units) : internal;
+    const total = fromSegments(segments, units);
+
+    const emit = (segs: Record<DurationUnit, number>) => {
+      const raw = fromSegments(segs, units);
+      const clamped = clampTotal(raw);
+      const finalSegs = clamped !== raw ? toSegments(clamped, units) : segs;
+      if (!isControlled) setInternal(finalSegs);
+      if (onChange) onChange(clamped);
+    };
+
+    const setUnit = (u: DurationUnit, raw: string) => {
+      const parsed = parseInt(raw, 10);
+      const next = isNaN(parsed) ? 0 : Math.max(0, parsed);
+      emit({ ...segments, [u]: next });
+    };
+
+    useImperativeHandle(
+      ref,
+      () => ({
+        getValue: () => fromSegments(segments, units),
+        setValue: (secs: number) => emit(toSegments(clampTotal(secs), units)),
+        getFormatted: () => formatDuration(fromSegments(segments, units)),
+        clear: () => emit({ days: 0, hours: 0, minutes: 0, seconds: 0 }),
+        focus: () => {
+          const first = ordered[0];
+          const el = first ? inputRefs.current[first] : null;
+          if (el) el.focus();
+        },
+      }),
+      [segments, units, min, max, isControlled, onChange],
+    );
+
+    const theme = VARIANT_STYLES[variant] || VARIANT_STYLES.default;
+    const sizing = SIZE_STYLES[size] || SIZE_STYLES.md;
+    const resolvedAccent = accentColor || theme.focusBorder;
+
+    return (
+      <div
+        className={className}
+        role="group"
+        aria-label={ariaLabel}
+        data-variant={variant}
+        data-size={size}
+        style={{ display: 'flex', flexDirection: 'column', gap: '6px', fontFamily: 'system-ui, -apple-system, sans-serif', ...theme.wrapper, ...style }}
+      >
+        {showLabel ? (
+          <span style={{ fontSize: (sizing.font - 2) + 'px', fontWeight: 600, color: theme.labelColor }}>{label}</span>
+        ) : null}
+        <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+          {ordered.map((u) => (
+            <div key={u} style={{ display: 'flex', flexDirection: 'column', gap: '2px', width: sizing.box + 'px' }}>
+              <input
+                ref={(el) => {
+                  inputRefs.current[u] = el;
+                }}
+                type="text"
+                inputMode="numeric"
+                value={String(segments[u])}
+                name={name ? name + '-' + u : undefined}
+                disabled={disabled}
+                aria-label={UNIT_LABEL[u]}
+                onFocus={() => setFocusedUnit(u)}
+                onBlur={() => setFocusedUnit(null)}
+                onChange={(e) => setUnit(u, e.target.value)}
+                style={{
+                  width: '100%',
+                  boxSizing: 'border-box',
+                  fontSize: sizing.font + 'px',
+                  padding: sizing.pad + 'px',
+                  background: theme.inputBg,
+                  color: theme.inputColor,
+                  border: '1px solid ' + (focusedUnit === u ? resolvedAccent : theme.inputBorder),
+                  borderRadius: '8px',
+                  outline: 'none',
+                  textAlign: 'center',
+                  fontVariantNumeric: 'tabular-nums',
+                }}
+              />
+              <span style={{ fontSize: (sizing.font - 4) + 'px', color: theme.mutedColor, textAlign: 'center', textTransform: 'uppercase', letterSpacing: '0.04em' }}>{UNIT_LABEL[u]}</span>
+            </div>
+          ))}
+        </div>
+        {showSummary ? (
+          <span role="status" aria-live="polite" style={{ fontSize: (sizing.font - 3) + 'px', color: theme.mutedColor }}>
+            {formatDuration(total)} ({total}s)
+          </span>
+        ) : null}
+      </div>
+    );
+  },
+);
+
+DurationInputComponent.displayName = 'DurationInput';
+
+export const DurationInput = DurationInputComponent;
+export const DurationField = DurationInputComponent;
+export const TimeSpanInput = DurationInputComponent;
+export const IntervalInput = DurationInputComponent;
+
+DurationInput.displayName = 'DurationInput';
+DurationField.displayName = 'DurationField';
+TimeSpanInput.displayName = 'TimeSpanInput';
+IntervalInput.displayName = 'IntervalInput';
+
+export default DurationInputComponent;
+"""
+
+
+def render_duration_input_component() -> str:
+    """Render the Accessible Futuristic Reusable Duration Input Suite (R-414)."""
+    return _DURATION_INPUT_COMPONENT
+
+
 _DESIGN_TOKENS_CSS = (
     "/**\n"
     " * OmniStackAI Design Tokens & Theming Engine\n"
@@ -70645,6 +70905,7 @@ class NextjsWebAdapter:
             GeneratedFile("components/slug-input.tsx", _SLUG_INPUT_COMPONENT),
             GeneratedFile("components/character-counter.tsx", _CHARACTER_COUNTER_COMPONENT),
             GeneratedFile("components/copy-button.tsx", _COPY_BUTTON_COMPONENT),
+            GeneratedFile("components/duration-input.tsx", _DURATION_INPUT_COMPONENT),
             GeneratedFile("styles/tokens.css", _DESIGN_TOKENS_CSS),
             GeneratedFile("app/globals.css", _GLOBALS_CSS),
             GeneratedFile("app/error.tsx", _ERROR_PAGE),

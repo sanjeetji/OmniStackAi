@@ -1,12 +1,19 @@
 # Project State — OmniStackAI
-Last updated: 2026-09-12T19:55:00+05:30
+Last updated: 2026-09-12T20:35:00+05:30
 
 ## Current Phase
 Stage 0 (Founder Build Sequence, Brief Section 91) — BASIC/MVP
 
 ## Last Completed Task
-Tracker ID: R-413 — Generated Accessible Futuristic Reusable Copy-to-Clipboard Button Suite (components/copy-button.tsx) — DONE,
-`task verify` (2,717 agent-engine tests, 18 new focused R-413 tests) passing. A genuinely functional copy button — copies a given value via
+Tracker ID: R-414 — Generated Accessible Futuristic Reusable Duration Input Suite (components/duration-input.tsx) — DONE,
+`task verify` (2,735 agent-engine tests, 18 new focused R-414 tests) passing. A genuinely functional duration field — segmented
+days/hours/minutes/seconds inputs (configurable `units` via a `UNIT_SECONDS` table) converting to/from a single total-seconds value
+(`toSegments`/`fromSegments`), with `min`/`max` clamping (normalizing on clamp), a `formatDuration` helper + live summary, controlled +
+uncontrolled value (seconds), `onChange(totalSeconds)`, and WAI-ARIA (`role="group"` + per-segment `aria-label` + `inputMode="numeric"`); 4
+variants, 3 sizes, `forwardRef` + `useImperativeHandle` (`DurationInputHandle`: getValue/setValue/getFormatted/clear/focus), alias exports
+(`DurationInput`, `DurationField`, `TimeSpanInput`, `IntervalInput`, default) with explicit `displayName`; 100% diff-invariance across
+`ir.description`, ASCII-only source, 0 external runtime dependencies. Immediately preceded by R-413 — Generated Accessible Futuristic Reusable
+Copy-to-Clipboard Button Suite (components/copy-button.tsx) — `task verify` (2,717 agent-engine tests, 18 new focused R-413 tests) passing. A genuinely functional copy button — copies a given value via
 `navigator.clipboard.writeText` with a `document.execCommand('copy')` textarea fallback, shows a transient "Copied" state (configurable
 `timeout`) with a swapped inline SVG icon (copy -> check) and an `aria-live` announcement, disables when there is nothing to copy, and exposes
 `onCopy`/`onError`; WAI-ARIA (button `aria-label` + visually-hidden `aria-live` status); 4 variants, 3 sizes, `forwardRef` +
@@ -142,7 +149,7 @@ R-324 (theming tokens), R-323 (popover), R-322 (dropdown menu), R-321 (accordion
 R-317 (skeleton), R-316 (alert), R-315 (card), R-314 (tooltip), R-313 (column visibility), R-312 (badge), R-311 (table density),
 R-310 (tabs), R-309 (pagination), and R-308 (JSON export).
 
-**Notes:** (1) R-413 complete with 2,717 tests passing. (2) Advancing autonomously to R-414 via a self-paced /loop (posture is advancing, not stopped).
+**Notes:** (1) R-414 complete with 2,735 tests passing. (2) Advancing autonomously to R-415 via a self-paced /loop (posture is advancing, not stopped).
 
 
 

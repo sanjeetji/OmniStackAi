@@ -1,5 +1,23 @@
 # Work Log
 
+## 2026-09-12 — R-414
+
+- Self-paced `/loop` iteration (hands-off continuous build).
+- Recorded contract in `.ai/CURRENT_TASK.yaml` and `.ai/tasks/R-414.md` before code (test-first).
+- `nextjs.py`:
+  - Added `_DURATION_INPUT_COMPONENT` static template (raw triple-quoted string) implementing the accessible, desktop-and-mobile-grade, futuristic Duration Input compound component suite (`apps/web/components/duration-input.tsx`).
+  - Genuinely functional duration math: `UNIT_SECONDS` (days 86400 / hours 3600 / minutes 60 / seconds 1), `toSegments`/`fromSegments` to convert to/from a single total-seconds value, and a `formatDuration` helper (e.g. `1d 2h 3m`).
+  - Segmented numeric inputs for a configurable `units` set; `min`/`max` clamping with segment normalization on clamp; controlled + uncontrolled `value` (seconds); `onChange(totalSeconds)`; live summary (`role="status"` `aria-live`).
+  - WAI-ARIA: `role="group"` + `aria-label`; per-segment `aria-label` (Days/Hours/Minutes/Seconds) + `inputMode="numeric"`; focus-driven accent border.
+  - Imperative `DurationInputHandle` (`getValue`, `setValue`, `getFormatted`, `clear`, `focus`) via `useImperativeHandle`.
+  - Implemented `DurationInputVariant`/`DurationInputSize`/`DurationUnit` types, `DurationInputHandle`/`DurationInputProps` interfaces, `VARIANT_STYLES`/`SIZE_STYLES` maps.
+  - Compound and semantic alias exports: `DurationInput`, `DurationField`, `TimeSpanInput`, `IntervalInput`, default export — each with explicit `displayName`.
+  - Exported `render_duration_input_component` in `omnistackai_agent_engine.codegen` and registered `components/duration-input.tsx` in `NextjsWebAdapter.generate()`.
+  - Maintained 100% diff-invariance across `ir.description` (static module constant); 0 external runtime dependencies; ASCII-only source.
+- Added `services/agent-engine/tests/test_duration_input_component.py` with 18 tests (file-generated, diff-invariance + accessor byte-equality, `'use client'`, zero-deps imports, ASCII-only source, forwardRef + useImperativeHandle + 5 handle methods, TS types, alias/default exports, displayNames, 4 variants, 3 sizes, units + UNIT_SECONDS, conversion (86400/3600/toSegments/fromSegments), formatting, min/max, aria + inputMode, callbacks/controlled, codegen export).
+- Gates: `pytest .../test_duration_input_component.py` (18 passed); `task verify` (2,735 tests passed); `task lint`, `task security:quick`, `task env:check` passed; `task builder:demo -- minimal-blog` generated 151 files including `apps/web/components/duration-input.tsx`. 0 model calls.
+- Static TSX sanity check: `'use client'` first line, balanced braces/parens, react-only imports, 0 non-ASCII chars, no `\"\"\"`/backtick hazards.
+
 ## 2026-09-12 — R-413
 
 - Self-paced `/loop` iteration (hands-off continuous build).

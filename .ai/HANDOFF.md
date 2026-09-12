@@ -1,6 +1,6 @@
 # Current Handoff
 
-Task ID: R-413
+Task ID: R-414
 Status: done
 Phase: BASIC/MVP — Founder Stage 0
 Branch: `main` (the only branch; the GitHub default)
@@ -61,9 +61,26 @@ Branch: `main` (the only branch; the GitHub default)
   49. **R-411**: Slug / URL Input Suite (`components/slug-input.tsx`)
   50. **R-412**: Character & Word Counter Textarea Suite (`components/character-counter.tsx`)
   51. **R-413**: Copy-to-Clipboard Button Suite (`components/copy-button.tsx`)
+  52. **R-414**: Duration Input Suite (`components/duration-input.tsx`)
 - Advancing autonomously (hands-off self-paced `/loop`) to the next Tracker ID (posture is advancing, not stopped). Still stop-and-ask only for paid cloud / DB engine / new infra / native-mobile / a materially different architecture decision.
 
 ## Completed
+
+### R-414 — Generated Accessible Futuristic Reusable Duration Input Suite (components/duration-input.tsx)
+
+Enabled a genuinely functional duration input across generated Next.js web applications:
+- **Standalone Duration Input Suite (`apps/web/components/duration-input.tsx`)**:
+  - Implemented `DurationInputVariant`, `DurationInputSize`, `DurationUnit`, `DurationInputHandle`, `DurationInputProps`, plus `VARIANT_STYLES`/`SIZE_STYLES` maps, `UNIT_SECONDS`/`UNIT_LABEL`/`UNIT_SUFFIX` tables, and `toSegments`/`fromSegments`/`formatDuration` helpers.
+  - Compound and semantic alias exports: `DurationInput`, `DurationField`, `TimeSpanInput`, `IntervalInput`, default export.
+  - Segmented days/hours/minutes/seconds inputs converting to/from total seconds; min/max clamp with normalization; live formatted summary; controlled + uncontrolled `value`.
+  - `onChange(totalSeconds)`; WAI-ARIA `role="group"` + per-segment `aria-label` + `inputMode="numeric"`.
+  - React ref forwarding (`forwardRef`), imperative handle (`DurationInputHandle`: `getValue`/`setValue`/`getFormatted`/`clear`/`focus`), explicit `displayName` across all exports.
+  - Exported `render_duration_input_component` in `omnistackai_agent_engine.codegen` and registered `components/duration-input.tsx` in `NextjsWebAdapter.generate()`.
+  - Maintained 100% diff-invariance across `ir.description`; ASCII-only; 0 external runtime dependencies.
+- **Verification**:
+  - 18 unit tests in `services/agent-engine/tests/test_duration_input_component.py` (all passing).
+  - `task verify` passing: 2,735 tests passed.
+  - `task lint`, `task security:quick`, `task env:check` — pass. `task builder:demo -- minimal-blog` — 151 files (includes `apps/web/components/duration-input.tsx`).
 
 ### R-413 — Generated Accessible Futuristic Reusable Copy-to-Clipboard Button Suite (components/copy-button.tsx)
 
@@ -945,9 +962,9 @@ Enabled accessible, desktop-and-mobile-grade, futuristic Time Picker and Time Ra
 
 ## Verification
 
-- `task verify` — pass (2,717 agent-engine tests; 18 focused R-413 tests in `test_copy_button_component.py`).
+- `task verify` — pass (2,735 agent-engine tests; 18 focused R-414 tests in `test_duration_input_component.py`).
 - `task lint`, `task security:quick`, `task env:check` — pass.
-- `task builder:demo -- minimal-blog` — pass (150 files, includes `components/copy-button.tsx`).
+- `task builder:demo -- minimal-blog` — pass (151 files, includes `components/duration-input.tsx`).
 
 ## Blockers and risks
 
@@ -956,7 +973,7 @@ Enabled accessible, desktop-and-mobile-grade, futuristic Time Picker and Time Ra
 
 ## Next action
 
-- Advancing autonomously (self-paced `/loop`) to Task R-414 (next unstarted Tracker ID). Record its contract in `.ai/CURRENT_TASK.yaml` and `.ai/tasks/R-414.md` before code.
+- Advancing autonomously (self-paced `/loop`) to Task R-415 (next unstarted Tracker ID). Record its contract in `.ai/CURRENT_TASK.yaml` and `.ai/tasks/R-415.md` before code.
 
 ## Next command
 
