@@ -1,5 +1,19 @@
 # Work Log
 
+## 2026-09-13 — R-417 (front-door pivot: brick 2 — prompt -> app repo)
+
+- Chained the R-416 intake agent into the existing builder so a plain-English description produces a real, customer-owned Git repository.
+- `intake/build_app.py`:
+  - `build_app_from_ir(ir, target_dir, *, author_name, author_email, prompt="", overwrite=False)` -> `assemble_project(ir)` -> `create_repository(...)` -> `AppBuildResult(prompt, ir, target_dir, file_count, commit_sha)`.
+  - `async build_app_from_prompt(prompt, provider, target_dir, *, model_id, author_name, author_email, ...)` -> `generate_ir` then `build_app_from_ir`. Depends only on the vendor-neutral `ModelProvider` protocol.
+- `intake/_ollama.py`: extracted `build_ollama_provider_from_env()` (shared local-Ollama construction); `live_run.py` refactored to use it.
+- `intake/build_run.py`: opt-in live builder CLI (out dir from `OMNISTACKAI_APP_OUT_DIR` or a temp dir); prints app name, entities, file count, repo path, first commit, and the file tree.
+- Wired opt-in Task: `scripts/agent-engine.sh app-build` + `Taskfile.yml` `agent-engine:app:build` (`task agent-engine:app:build -- "<description>"`).
+- `intake/__init__.py`: exported `AppBuildResult`, `build_app_from_ir`, `build_app_from_prompt`.
+- Added `services/agent-engine/tests/test_build_app.py` (7 tests, deterministic — in-memory stub provider + temp-dir git materialization): IR -> owned repo on disk (.git present, commit sha), expected web/backend files written, commit message names the app, prompt -> repo end-to-end, result carries ir+prompt, invalid model output raises + writes nothing, package exports.
+- Gates: focused 7 passed; `task verify` **2,778** passed; lint/security/env green; `builder:demo` 152 files (unchanged). **0 model calls in verify.**
+- **Live proof (opt-in, on the Mac):** `OMNISTACKAI_APP_OUT_DIR=~/omnistackai-chat-demo task agent-engine:app:build -- "Build a recipe box where users save recipes, each recipe has ingredients and cooking steps"` -> local Ollama compiled it to IR "Recipe Box" (entities Ingredient/Recipe) and materialized a **154-file owned Git repo** with recipe-specific routes/screens, first commit authored sanjeetji. The offline "chat -> real owned app" pipeline now works end to end (chat UI still to come).
+
 ## 2026-09-13 — R-416 (front-door pivot: brick 1)
 
 - **New direction.** With the UI-component series paused at R-415, started the user-facing "chat -> create an app" front door. R-416 = the **Prompt -> Application IR intake agent**.

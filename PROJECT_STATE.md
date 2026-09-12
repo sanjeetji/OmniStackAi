@@ -1,13 +1,23 @@
 # Project State — OmniStackAI
-Last updated: 2026-09-13T00:30:00+05:30
+Last updated: 2026-09-13T01:30:00+05:30
 
 ## Current Phase
 Stage 0 (Founder Build Sequence, Brief Section 91) — BASIC/MVP
 
-> **Front-door pivot underway.** The UI-component series is PAUSED at R-415 (110 components, resumable at the next free Tracker ID). **R-416 started the "chat → create an app" front door** — a local Prompt → Application IR intake agent, verified working end-to-end with local Ollama (sentence → valid IR). Next: R-417 wire prompt → IR → builder.
+> **Front-door pivot: the offline "chat → real owned app" pipeline works end to end.** The UI-component series is PAUSED at R-415 (110 components, resumable). **R-416** = Prompt → Application IR intake agent; **R-417** = Prompt → generated owned Git repo. Verified live: a sentence → local Ollama → a real materialized repo (`task agent-engine:app:build -- "<description>"`). Next: **R-418 = a minimal chat WEB UI**.
 
 ## Last Completed Task
-Tracker ID: R-416 — Prompt → Application IR intake agent (`omnistackai_agent_engine/intake/`) — DONE,
+Tracker ID: R-417 — Prompt → generated app repo (`omnistackai_agent_engine/intake/build_app.py`) — DONE,
+`task verify` (2,778 tests, 7 new focused R-417 tests) passing. Brick 2 of the "chat → create an app" front
+door: `build_app_from_ir(ir, target_dir, ...)` composes `assemble_project` + `create_repository` into an
+`AppBuildResult`, and `async build_app_from_prompt(prompt, provider, target_dir, ...)` chains the R-416
+intake agent so a plain-English sentence → validated IR → assembled monorepo → real owned Git repo (depends
+only on the vendor-neutral `ModelProvider` protocol; verify runs it against an in-memory stub into a temp dir,
+0 model calls). Shared local-Ollama construction refactored into `intake/_ollama.py`; opt-in live builder
+`task agent-engine:app:build -- "<description>"`. Verified live on the Mac: a "recipe box" description →
+local Ollama (`qwen2.5-coder:14b`) → IR "Recipe Box" (Ingredient/Recipe) → a 154-file owned Git repo with
+recipe-specific routes/screens. All local, no paid cloud. Immediately preceded by R-416 — Prompt →
+Application IR intake agent (`omnistackai_agent_engine/intake/`) — DONE,
 `task verify` (2,771 tests, 18 new focused R-416 tests) passing. The first brick of the user-facing "chat →
 create an app" front door: `build_intake_messages` (schema-by-example system prompt + explicit allowed field
 types), `parse_ir_response` (raw model text → validated, normalized `ApplicationIR`; tolerates ```json fences

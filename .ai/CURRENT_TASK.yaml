@@ -1,32 +1,32 @@
-task_id: R-416
-id: R-416
-title: "Prompt -> Application IR intake agent (chat-to-create front door, brick 1)"
+task_id: R-417
+id: R-417
+title: "Prompt -> generated app repo (chat-to-create front door, brick 2)"
 status: done
 phase: MVP
 tracker_row: null
 started_at: "2026-09-13"
 completed_at: "2026-09-13"
 objective: >-
-  Build the first brick of the OmniStackAI "chat -> create an app" front door: a local, zero-new-dependency
-  Prompt -> Application IR intake agent (omnistackai_agent_engine/intake/) that turns a plain-English app
-  description into a validated, normalized ApplicationIR. Deterministic core is offline-testable
-  (build_intake_messages: system+user Message tuple, schema-by-example from a real example_ir().to_dict();
-  parse_ir_response: extract JSON from raw model text tolerating ```json fences + prose, inject
-  schema_version, ApplicationIR.from_dict, normalize_ir). generate_ir performs the single I/O step against
-  the vendor-neutral ModelProvider protocol (task verify runs it against an in-memory stub -> 0 model calls,
-  0 network) and raises IntakeResponseError when output cannot be parsed or the IR fails validate_ir. Ships
-  IntakeResult, IntakeError/IntakeResponseError, and an opt-in live runner (intake.live_run) wired as
-  `task agent-engine:intake:run -- "<description>"` that compiles a prompt through local Ollama and prints
-  the IR JSON. This is the pivot away from the paused UI-component series toward the user-facing product.
+  Extend the "chat -> create an app" front door so a single plain-English description produces a real,
+  customer-owned Git repository. Add intake/build_app.py: build_app_from_ir(ir, target_dir, ...) composes
+  assemble_project + create_repository into a materialized owned repo returning AppBuildResult (prompt, ir,
+  target_dir, file_count, commit_sha); async build_app_from_prompt(prompt, provider, target_dir, *, model_id,
+  ...) chains the R-416 intake agent (generate_ir) into build_app_from_ir (sentence -> IR -> monorepo -> owned
+  Git repo) depending only on the vendor-neutral ModelProvider protocol so task verify runs it against an
+  in-memory stub (0 model calls, 0 network). Refactor local-Ollama provider construction into intake/_ollama.py
+  (build_ollama_provider_from_env), shared by live_run.py (R-416) and a new opt-in build_run.py wired as
+  `task agent-engine:app:build -- "<description>"` (out dir via OMNISTACKAI_APP_OUT_DIR or a temp dir) that
+  compiles a description through local Ollama and materializes the repo, printing path/file-count/commit.
 allowed_paths:
-  - "services/agent-engine/src/omnistackai_agent_engine/intake/__init__.py"
-  - "services/agent-engine/src/omnistackai_agent_engine/intake/errors.py"
-  - "services/agent-engine/src/omnistackai_agent_engine/intake/nl_to_ir.py"
+  - "services/agent-engine/src/omnistackai_agent_engine/intake/build_app.py"
+  - "services/agent-engine/src/omnistackai_agent_engine/intake/build_run.py"
+  - "services/agent-engine/src/omnistackai_agent_engine/intake/_ollama.py"
   - "services/agent-engine/src/omnistackai_agent_engine/intake/live_run.py"
-  - "services/agent-engine/tests/test_intake_nl_to_ir.py"
+  - "services/agent-engine/src/omnistackai_agent_engine/intake/__init__.py"
+  - "services/agent-engine/tests/test_build_app.py"
   - "scripts/agent-engine.sh"
   - "Taskfile.yml"
-  - ".ai/tasks/R-416.md"
+  - ".ai/tasks/R-417.md"
   - ".ai/CURRENT_TASK.yaml"
   - ".ai/PROJECT_STATE.yaml"
   - ".ai/WORK_LOG.md"
@@ -36,17 +36,17 @@ allowed_paths:
 forbidden_changes:
   - "Do not introduce external Python dependencies (stdlib only)"
   - "Do not make task verify perform a live model call or network I/O (live path is opt-in only)"
-  - "Do not change the Application IR schema, model_gateway contracts, or any code generator"
+  - "Do not change the Application IR schema, model_gateway contracts, the assembler, or git_service"
   - "Do not put secrets in source/tests/logs/commits"
 evidence:
-  verify: "2,771 passed"
+  verify: "2,778 passed"
   lint: "passed"
   security: "passed"
   env: "passed"
   demos: "minimal-blog -> 152 files (unchanged)"
-  focused_test: "18 passed (test_intake_nl_to_ir.py)"
-  live_optin: "task agent-engine:intake:run -- 'Build a task tracker...' -> local Ollama returned a VALID IR (verified working end-to-end)"
+  focused_test: "7 passed (test_build_app.py)"
+  live_optin: "app:build -- 'Build a recipe box...' -> local Ollama -> owned Git repo (Recipe Box, 154 files, verified)"
   tracker: DONE
 next_action: >-
-  R-416 done. Next front-door brick: wire prompt -> IR -> builder so a description produces a generated repo
-  (R-417), then a minimal chat web UI. Await founder direction.
+  R-417 done. Next front-door brick: a minimal chat web UI (R-224/R-011) that calls this build path, then
+  orchestration (R-180) and live local preview (R-033/R-034). Await founder direction.

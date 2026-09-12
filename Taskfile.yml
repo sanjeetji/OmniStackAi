@@ -137,6 +137,11 @@ tasks:
     cmds:
       - bash scripts/agent-engine.sh intake-run {{.CLI_ARGS}}
 
+  agent-engine:app:build:
+    desc: 'Compile a description into a real owned Git repo via local Ollama (opt-in, live; out dir via OMNISTACKAI_APP_OUT_DIR; CLI_ARGS - "description")'
+    cmds:
+      - bash scripts/agent-engine.sh app-build {{.CLI_ARGS}}
+
   agent-engine:preview-plan:
     desc: Print the local (Tier 0/1) preview plan for a generated target (default nextjs-web)
     cmds:

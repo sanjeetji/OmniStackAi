@@ -2,13 +2,27 @@ schema_version: 1
 project: OmniStackAI
 phase: BASIC/MVP
 founder_stage: 0
-current_task: R-417
+current_task: R-418
 current_status: advancing
 branch: main
-last_completed_task: R-416
+last_completed_task: R-417
 last_completed_task_summary: >-
-  Built R-416, the FIRST BRICK of the "chat -> create an app" front door (the pivot away from the paused
-  UI-component series): a local, zero-new-dependency Prompt -> Application IR intake agent
+  Built R-417, BRICK 2 of the "chat -> create an app" front door: prompt -> generated app repo.
+  intake/build_app.py adds build_app_from_ir(ir, target_dir, ...) (assemble_project -> create_repository ->
+  AppBuildResult{prompt, ir, target_dir, file_count, commit_sha}) and async build_app_from_prompt(prompt,
+  provider, target_dir, *, model_id, ...) which chains the R-416 intake agent so a sentence -> validated IR
+  -> assembled monorepo -> real owned Git repo, depending only on the vendor-neutral ModelProvider protocol
+  (task verify runs it against an in-memory stub into a temp dir via the local git CLI -> 0 model calls, 0
+  network). Refactored the local-Ollama provider construction into intake/_ollama.py
+  (build_ollama_provider_from_env), now shared by live_run.py and the new opt-in build_run.py wired as
+  `task agent-engine:app:build -- "<description>"` (out dir via OMNISTACKAI_APP_OUT_DIR or a temp dir).
+  VERIFIED END-TO-END on the founder's Mac: "Build a recipe box where users save recipes, each recipe has
+  ingredients and cooking steps" -> local Ollama (qwen2.5-coder:14b) -> IR "Recipe Box" (entities
+  Ingredient/Recipe) -> a materialized owned Git repo of 154 files with recipe-specific routes/screens,
+  first commit authored sanjeetji. 2,778 tests pass (7 new in test_build_app.py); lint/security/env green;
+  builder:demo unchanged; 0 model calls in verify. This completes the offline "chat -> real owned app"
+  pipeline (minus the chat UI). Previously R-416 shipped the Prompt -> Application IR intake agent
+  (omnistackai_agent_engine/intake/): a local, zero-new-dependency Prompt -> Application IR intake agent
   (omnistackai_agent_engine/intake/). build_intake_messages() constructs the system+user Message tuple with
   the schema taught BY EXAMPLE (embedding a real example_ir().to_dict() so it never drifts) plus an explicit
   allowed-field-types list derived from the FieldType enum; parse_ir_response() turns raw model text into a
@@ -286,14 +300,15 @@ product_direction: >-
   framework adapter contract -> Next.js adapter -> Git service -> preview/sandbox (needs cloud env).
 id_note: >-
   Workbook backlog owns R-010..R-219. Founder-requested tasks use IDs after R-219: R-220..R-223 done,
-  R-224 Next.js deferred (env-blocked), R-225..R-415 done, R-416 done (first front-door task, not a
-  component). NOTE: the UI-COMPONENT SERIES is PAUSED at R-415 (110 components, resumable at the next free
-  Tracker ID); R-416 began the "chat -> create" front-door pivot instead.
+  R-224 Next.js deferred (env-blocked), R-225..R-415 done, R-416 + R-417 done (front-door bricks 1-2, not
+  components). NOTE: the UI-COMPONENT SERIES is PAUSED at R-415 (110 components, resumable at the next free
+  Tracker ID); R-416/R-417 built the "chat -> create" front-door pivot instead.
 blockers: []
 next_action: >-
-  R-416 (Prompt -> Application IR intake agent) complete: 2,771 tests passing, committed and pushed;
-  verified working live with local Ollama (sentence -> valid IR). Next front-door bricks (all MVP, all
-  local): R-417 = wire prompt -> IR -> builder so a description produces a generated owned repo (reuse
-  intake.generate_ir + the assembler/git_service); then a minimal chat web UI (R-224/R-011), orchestration
-  (R-180), live local preview (R-033/R-034), and the turnkey `task app:run`. Await founder direction on
-  R-417. UI-component series remains paused/resumable.
+  R-417 (prompt -> generated app repo) complete: 2,778 tests passing, committed and pushed; verified live on
+  the Mac (sentence -> local Ollama -> owned Git repo of 154 files). The offline "chat -> real owned app"
+  pipeline now works end to end via `task agent-engine:app:build -- "<description>"`. Next front-door bricks
+  (all MVP, all local): R-418 = a minimal chat WEB UI (a Next.js/simple page with a prompt box that calls
+  the build path and shows the generated repo/result) [R-224/R-011]; then orchestration (R-180) and live
+  local preview of the generated app (R-033/R-034), and the turnkey `task app:run`. Await founder direction
+  on R-418. UI-component series remains paused/resumable.

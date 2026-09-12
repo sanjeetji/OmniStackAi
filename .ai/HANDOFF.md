@@ -1,15 +1,16 @@
 # Current Handoff
 
-Task ID: R-416
+Task ID: R-417
 Status: done
 Phase: BASIC/MVP — Founder Stage 0
 Branch: `main` (the only branch; the GitHub default)
 
-> **Front-door pivot underway.** The UI-component series is PAUSED at R-415 (110 components, resumable at the next free Tracker ID — nothing decays). **R-416 started the user-facing "chat → create an app" front door**: a local **Prompt → Application IR intake agent** (`omnistackai_agent_engine/intake/`). Verified working end-to-end on the founder's Mac — local Ollama turns a plain-English sentence into a valid Application IR that feeds the existing code generators. Next bricks (all MVP, all local): **R-417** wire prompt → IR → builder (description → generated repo); then a chat web UI (R-224/R-011), orchestration (R-180), live local preview (R-033/R-034), turnkey `task app:run`.
+> **Front-door pivot: the offline "chat → real owned app" pipeline now works end to end.** The UI-component series is PAUSED at R-415 (110 components, resumable at the next free Tracker ID). **R-416** = Prompt → Application IR intake agent; **R-417** = Prompt → generated owned Git repo (`build_app_from_prompt`). Verified live on the Mac: a plain-English sentence → local Ollama → a real materialized repo (`task agent-engine:app:build -- "<description>"`). **Next: R-418 = a minimal chat WEB UI** (prompt box → build path → show result), then orchestration (R-180) and live local preview (R-033/R-034), and turnkey `task app:run`.
 
 ## Repo/workflow state
 
-- **R-416 (Prompt → Application IR intake agent)** shipped: new `intake/` package (`nl_to_ir.py`, `errors.py`, `live_run.py`) + opt-in `task agent-engine:intake:run`. 18 focused tests, `task verify` **2,771** passing (0 model calls), lint/security/env green, demo 152 files (unchanged). Live opt-in proof against Ollama returned a valid IR. Single commit authored `sanjeetji <sk698166@gmail.com>`, pushed to `origin/main`.
+- **R-417 (Prompt → generated app repo)** shipped: `intake/build_app.py` (`build_app_from_ir`, `build_app_from_prompt`, `AppBuildResult`), `intake/_ollama.py` (shared provider builder), `intake/build_run.py` + opt-in `task agent-engine:app:build`. 7 focused tests, `task verify` **2,778** passing (0 model calls), lint/security/env green, demo 152 files (unchanged). Live proof: "recipe box" description → 154-file owned repo. Single commit authored `sanjeetji <sk698166@gmail.com>`, pushed.
+- **R-416 (Prompt → Application IR intake agent)** shipped (front-door brick 1): `intake/` package + opt-in `task agent-engine:intake:run`.
 - **R-415 (Phone Number Input Suite)** was the last UI-component-series task (110 components; paused/resumable).
 - **Code clean and verified on `main`**.
 - Tracker and state files kept fully consistent and verified.
