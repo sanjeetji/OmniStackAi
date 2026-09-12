@@ -70263,6 +70263,294 @@ def render_duration_input_component() -> str:
     return _DURATION_INPUT_COMPONENT
 
 
+_PHONE_INPUT_COMPONENT = r"""'use client';
+
+import { forwardRef, useImperativeHandle, useRef, useState } from 'react';
+import type { CSSProperties } from 'react';
+
+export type PhoneInputVariant = 'default' | 'card' | 'glass' | 'neon';
+export type PhoneInputSize = 'sm' | 'md' | 'lg';
+
+export interface PhoneCountry {
+  code: string;
+  name: string;
+  dial: string;
+}
+
+export interface PhoneInputMeta {
+  country: string;
+  dial: string;
+  national: string;
+  e164: string;
+  valid: boolean;
+}
+
+export interface PhoneInputProps {
+  value?: string;
+  defaultValue?: string;
+  defaultCountry?: string;
+  countries?: PhoneCountry[];
+  label?: string;
+  placeholder?: string;
+  name?: string;
+  disabled?: boolean;
+  required?: boolean;
+  showLabel?: boolean;
+  variant?: PhoneInputVariant;
+  size?: PhoneInputSize;
+  accentColor?: string;
+  ariaLabel?: string;
+  className?: string;
+  style?: CSSProperties;
+  onChange?: (e164: string, meta: PhoneInputMeta) => void;
+}
+
+export interface PhoneInputHandle {
+  getValue: () => string;
+  getE164: () => string;
+  setValue: (national: string) => void;
+  getCountry: () => string;
+  clear: () => void;
+  focus: () => void;
+}
+
+interface VariantStyle {
+  wrapper: CSSProperties;
+  labelColor: string;
+  inputBg: string;
+  inputColor: string;
+  inputBorder: string;
+  focusBorder: string;
+  errorColor: string;
+}
+
+const VARIANT_STYLES: Record<PhoneInputVariant, VariantStyle> = {
+  default: {
+    wrapper: { background: 'transparent' },
+    labelColor: '#0f172a', inputBg: '#ffffff', inputColor: '#0f172a', inputBorder: '#cbd5e1', focusBorder: '#2563eb', errorColor: '#dc2626',
+  },
+  card: {
+    wrapper: { background: '#ffffff', border: '1px solid #e2e8f0', borderRadius: '12px', boxShadow: '0 4px 16px rgba(0, 0, 0, 0.06)', padding: '16px' },
+    labelColor: '#0f172a', inputBg: '#ffffff', inputColor: '#0f172a', inputBorder: '#cbd5e1', focusBorder: '#2563eb', errorColor: '#dc2626',
+  },
+  glass: {
+    wrapper: { background: 'rgba(248, 250, 252, 0.6)', border: '1px solid rgba(255, 255, 255, 0.4)', borderRadius: '12px', boxShadow: '0 8px 32px rgba(0, 0, 0, 0.12)', backdropFilter: 'blur(16px)', WebkitBackdropFilter: 'blur(16px)', padding: '16px' },
+    labelColor: '#0f172a', inputBg: 'rgba(255, 255, 255, 0.7)', inputColor: '#0f172a', inputBorder: 'rgba(148, 163, 184, 0.6)', focusBorder: '#2563eb', errorColor: '#dc2626',
+  },
+  neon: {
+    wrapper: { background: '#050811', border: '1px solid rgba(6, 182, 212, 0.4)', borderRadius: '12px', boxShadow: '0 0 24px rgba(6, 182, 212, 0.15)', padding: '16px' },
+    labelColor: '#f8fafc', inputBg: 'rgba(6, 182, 212, 0.08)', inputColor: '#e0f2fe', inputBorder: 'rgba(6, 182, 212, 0.5)', focusBorder: '#06b6d4', errorColor: '#fb7185',
+  },
+};
+
+const SIZE_STYLES: Record<PhoneInputSize, { font: number; pad: number }> = {
+  sm: { font: 13, pad: 8 },
+  md: { font: 15, pad: 10 },
+  lg: { font: 17, pad: 13 },
+};
+
+const DEFAULT_COUNTRIES: PhoneCountry[] = [
+  { code: 'US', name: 'United States', dial: '+1' },
+  { code: 'CA', name: 'Canada', dial: '+1' },
+  { code: 'GB', name: 'United Kingdom', dial: '+44' },
+  { code: 'IN', name: 'India', dial: '+91' },
+  { code: 'AU', name: 'Australia', dial: '+61' },
+  { code: 'DE', name: 'Germany', dial: '+49' },
+  { code: 'FR', name: 'France', dial: '+33' },
+  { code: 'ES', name: 'Spain', dial: '+34' },
+  { code: 'IT', name: 'Italy', dial: '+39' },
+  { code: 'NL', name: 'Netherlands', dial: '+31' },
+  { code: 'SE', name: 'Sweden', dial: '+46' },
+  { code: 'BR', name: 'Brazil', dial: '+55' },
+  { code: 'MX', name: 'Mexico', dial: '+52' },
+  { code: 'JP', name: 'Japan', dial: '+81' },
+  { code: 'CN', name: 'China', dial: '+86' },
+  { code: 'SG', name: 'Singapore', dial: '+65' },
+  { code: 'AE', name: 'United Arab Emirates', dial: '+971' },
+  { code: 'ZA', name: 'South Africa', dial: '+27' },
+  { code: 'NG', name: 'Nigeria', dial: '+234' },
+  { code: 'KE', name: 'Kenya', dial: '+254' },
+];
+
+function onlyDigits(text: string): string {
+  return text.replace(/[^0-9]/g, '');
+}
+
+function groupNational(digits: string): string {
+  const groups: string[] = [];
+  for (let i = 0; i < digits.length; i += 3) groups.push(digits.slice(i, i + 3));
+  return groups.join(' ');
+}
+
+const PhoneInputComponent = forwardRef<PhoneInputHandle, PhoneInputProps>(
+  function PhoneInput(
+    {
+      value,
+      defaultValue = '',
+      defaultCountry = 'US',
+      countries = DEFAULT_COUNTRIES,
+      label = 'Phone number',
+      placeholder = '',
+      name,
+      disabled = false,
+      required = false,
+      showLabel = true,
+      variant = 'default',
+      size = 'md',
+      accentColor,
+      ariaLabel = 'Phone number',
+      className,
+      style,
+      onChange,
+    }: PhoneInputProps,
+    ref,
+  ) {
+    const list = countries && countries.length > 0 ? countries : DEFAULT_COUNTRIES;
+    const isControlled = typeof value === 'string';
+    const [countryCode, setCountryCode] = useState<string>(defaultCountry);
+    const [internalNational, setInternalNational] = useState<string>(onlyDigits(defaultValue));
+    const [focused, setFocused] = useState(false);
+    const inputRef = useRef<HTMLInputElement | null>(null);
+
+    const currentDigits = onlyDigits(isControlled ? (value as string) : internalNational);
+    const country = list.find((c) => c.code === countryCode) || list[0];
+    const dial = country ? country.dial : '+1';
+    const e164 = dial + currentDigits;
+    const valid = currentDigits.length >= 6 && currentDigits.length <= 14;
+
+    const buildMeta = (code: string, digits: string): PhoneInputMeta => {
+      const c = list.find((x) => x.code === code) || list[0];
+      const d = c ? c.dial : '+1';
+      return { country: code, dial: d, national: digits, e164: d + digits, valid: digits.length >= 6 && digits.length <= 14 };
+    };
+
+    const emit = (code: string, digits: string) => {
+      const meta = buildMeta(code, digits);
+      if (onChange) onChange(meta.e164, meta);
+    };
+
+    const handleNational = (raw: string) => {
+      const digits = onlyDigits(raw);
+      if (!isControlled) setInternalNational(digits);
+      emit(countryCode, digits);
+    };
+
+    const handleCountry = (code: string) => {
+      setCountryCode(code);
+      emit(code, currentDigits);
+    };
+
+    useImperativeHandle(
+      ref,
+      () => ({
+        getValue: () => currentDigits,
+        getE164: () => e164,
+        setValue: (national: string) => {
+          const digits = onlyDigits(national);
+          if (!isControlled) setInternalNational(digits);
+          emit(countryCode, digits);
+        },
+        getCountry: () => countryCode,
+        clear: () => {
+          if (!isControlled) setInternalNational('');
+          emit(countryCode, '');
+        },
+        focus: () => {
+          if (inputRef.current) inputRef.current.focus();
+        },
+      }),
+      [currentDigits, e164, countryCode, isControlled, onChange],
+    );
+
+    const theme = VARIANT_STYLES[variant] || VARIANT_STYLES.default;
+    const sizing = SIZE_STYLES[size] || SIZE_STYLES.md;
+    const resolvedAccent = accentColor || theme.focusBorder;
+    const invalid = currentDigits.length > 0 && !valid;
+
+    const controlStyle: CSSProperties = {
+      fontSize: sizing.font + 'px',
+      padding: sizing.pad + 'px',
+      background: theme.inputBg,
+      color: theme.inputColor,
+      border: '1px solid ' + (invalid ? theme.errorColor : (focused ? resolvedAccent : theme.inputBorder)),
+      borderRadius: '8px',
+      outline: 'none',
+      boxSizing: 'border-box',
+    };
+
+    return (
+      <div
+        className={className}
+        role="group"
+        aria-label={ariaLabel}
+        data-variant={variant}
+        data-size={size}
+        style={{ display: 'flex', flexDirection: 'column', gap: '4px', fontFamily: 'system-ui, -apple-system, sans-serif', ...theme.wrapper, ...style }}
+      >
+        {showLabel ? (
+          <label style={{ fontSize: (sizing.font - 2) + 'px', fontWeight: 600, color: theme.labelColor }}>
+            {label}
+            {required ? <span aria-hidden="true" style={{ color: theme.errorColor, marginLeft: '2px' }}>*</span> : null}
+          </label>
+        ) : null}
+        <div style={{ display: 'flex', gap: '8px' }}>
+          <select
+            aria-label="Country"
+            value={countryCode}
+            disabled={disabled}
+            onChange={(e) => handleCountry(e.target.value)}
+            style={{ ...controlStyle, flexShrink: 0, maxWidth: '130px', cursor: disabled ? 'default' : 'pointer' }}
+          >
+            {list.map((c) => (
+              <option key={c.code} value={c.code}>{c.code} {c.dial}</option>
+            ))}
+          </select>
+          <input
+            ref={inputRef}
+            type="tel"
+            inputMode="tel"
+            autoComplete="tel-national"
+            value={groupNational(currentDigits)}
+            name={name}
+            disabled={disabled}
+            required={required}
+            placeholder={placeholder}
+            aria-label={ariaLabel}
+            aria-required={required || undefined}
+            aria-invalid={invalid || undefined}
+            data-e164={e164}
+            onFocus={() => setFocused(true)}
+            onBlur={() => setFocused(false)}
+            onChange={(e) => handleNational(e.target.value)}
+            style={{ ...controlStyle, flex: 1, letterSpacing: '0.04em' }}
+          />
+        </div>
+      </div>
+    );
+  },
+);
+
+PhoneInputComponent.displayName = 'PhoneInput';
+
+export const PhoneInput = PhoneInputComponent;
+export const PhoneNumberInput = PhoneInputComponent;
+export const TelInput = PhoneInputComponent;
+export const PhoneField = PhoneInputComponent;
+
+PhoneInput.displayName = 'PhoneInput';
+PhoneNumberInput.displayName = 'PhoneNumberInput';
+TelInput.displayName = 'TelInput';
+PhoneField.displayName = 'PhoneField';
+
+export default PhoneInputComponent;
+"""
+
+
+def render_phone_input_component() -> str:
+    """Render the Accessible Futuristic Reusable Phone Number Input Suite (R-415)."""
+    return _PHONE_INPUT_COMPONENT
+
+
 _DESIGN_TOKENS_CSS = (
     "/**\n"
     " * OmniStackAI Design Tokens & Theming Engine\n"
@@ -70906,6 +71194,7 @@ class NextjsWebAdapter:
             GeneratedFile("components/character-counter.tsx", _CHARACTER_COUNTER_COMPONENT),
             GeneratedFile("components/copy-button.tsx", _COPY_BUTTON_COMPONENT),
             GeneratedFile("components/duration-input.tsx", _DURATION_INPUT_COMPONENT),
+            GeneratedFile("components/phone-input.tsx", _PHONE_INPUT_COMPONENT),
             GeneratedFile("styles/tokens.css", _DESIGN_TOKENS_CSS),
             GeneratedFile("app/globals.css", _GLOBALS_CSS),
             GeneratedFile("app/error.tsx", _ERROR_PAGE),

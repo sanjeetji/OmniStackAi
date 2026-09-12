@@ -1,5 +1,23 @@
 # Work Log
 
+## 2026-09-12 — R-415
+
+- Self-paced `/loop` iteration (hands-off continuous build); **loop stopped at founder's explicit request after this task**.
+- Recorded contract in `.ai/CURRENT_TASK.yaml` and `.ai/tasks/R-415.md` before code (test-first).
+- `nextjs.py`:
+  - Added `_PHONE_INPUT_COMPONENT` static template (raw triple-quoted string) implementing the accessible, desktop-and-mobile-grade, futuristic Phone Number Input compound component suite (`apps/web/components/phone-input.tsx`).
+  - Genuinely functional international phone handling: a curated 20-entry `DEFAULT_COUNTRIES` table (`{code, name, dial}`, ISO2 + dial codes, no flag emoji for ASCII safety, overridable via a `countries` prop), `onlyDigits` (strip via `replace /[^0-9]/g`), `groupNational` loose display grouping, E.164 assembly (`dial + digits`), and length-based validation (6..14 digits).
+  - Computed `PhoneInputMeta` (`{country, dial, national, e164, valid}`); controlled + uncontrolled national `value`; `defaultCountry`; `onChange(e164, meta)`.
+  - WAI-ARIA: labeled country `<select>` (`aria-label="Country"`) + `<input type="tel" inputMode="tel" autoComplete="tel-national">` with `aria-label`, `aria-invalid` (on invalid), `aria-required`; `role="group"` wrapper + `aria-label`; focus-driven accent border; `data-e164` on the input.
+  - Imperative `PhoneInputHandle` (`getValue`, `getE164`, `setValue`, `getCountry`, `clear`, `focus`) via `useImperativeHandle`.
+  - Implemented `PhoneInputVariant`/`PhoneInputSize` types, `PhoneCountry`/`PhoneInputMeta`/`PhoneInputHandle`/`PhoneInputProps` interfaces, `VARIANT_STYLES`/`SIZE_STYLES` maps.
+  - Compound and semantic alias exports: `PhoneInput`, `PhoneNumberInput`, `TelInput`, `PhoneField`, default export — each with explicit `displayName`.
+  - Exported `render_phone_input_component` in `omnistackai_agent_engine.codegen` and registered `components/phone-input.tsx` in `NextjsWebAdapter.generate()`.
+  - Maintained 100% diff-invariance across `ir.description` (static module constant); 0 external runtime dependencies; ASCII-only source.
+- Added `services/agent-engine/tests/test_phone_input_component.py` with 18 tests (file-generated, diff-invariance + accessor byte-equality, `'use client'`, zero-deps imports, ASCII-only source, forwardRef + useImperativeHandle + 6 handle methods, TS types, alias/default exports, displayNames, 4 variants, 3 sizes, DEFAULT_COUNTRIES/dial/+1, e164, national digits (replace), validation, aria + inputMode="tel", callbacks/controlled, codegen export).
+- Gates: `pytest .../test_phone_input_component.py` (18 passed); `task verify` (2,753 tests passed); `task lint`, `task security:quick`, `task env:check` passed; `task builder:demo -- minimal-blog` generated 152 files including `apps/web/components/phone-input.tsx`. 0 model calls.
+- Static TSX sanity check: `'use client'` first line, react-only imports, 0 non-ASCII chars, no `"""`/backtick hazards.
+
 ## 2026-09-12 — R-414
 
 - Self-paced `/loop` iteration (hands-off continuous build).

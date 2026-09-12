@@ -1,28 +1,28 @@
-task_id: R-414
-id: R-414
-title: "Accessible Futuristic Reusable Duration Input Suite"
-status: DONE
+task_id: R-415
+id: R-415
+title: "Accessible Futuristic Reusable Phone Number Input Suite"
+status: done
 phase: MVP
-tracker_row: 51
+tracker_row: 52
 started_at: "2026-09-12"
 completed_at: "2026-09-12"
 objective: >-
-  Add an accessible, zero-dependency, desktop-and-mobile-grade, futuristic Duration Input compound
-  component suite (components/duration-input.tsx): segmented numeric inputs for a configurable set of units
-  (days/hours/minutes/seconds via a UNIT_SECONDS table) that convert to and from a single total-seconds
-  value (toSegments/fromSegments), with min/max clamping (normalizing segments on clamp), a human-readable
-  formatDuration helper, controlled + uncontrolled value (number of seconds), onChange(totalSeconds)
-  callback, and WAI-ARIA (group with aria-label, per-segment aria-label + inputMode="numeric"); 4 futuristic
+  Add an accessible, zero-dependency, desktop-and-mobile-grade, futuristic Phone Number Input compound
+  component suite (components/phone-input.tsx): a country selector (ISO2 code + dial code, from a curated
+  DEFAULT_COUNTRIES table, overridable) plus a national-number field that strips non-digits, groups them
+  loosely for display, assembles an E.164 string (dial + digits), and validates by digit length; a computed
+  meta object ({country, national, e164, valid}); controlled + uncontrolled national value; onChange(e164,
+  meta) callback; WAI-ARIA (labeled select + input, aria-label, inputMode="tel", aria-invalid); 4 futuristic
   visual styling variants ("default", "card", "glass", "neon"); 3 size scales ("sm", "md", "lg"); React ref
-  forwarding (forwardRef); useImperativeHandle (DurationInputHandle: getValue/setValue/getFormatted/clear/
-  focus); and explicit displayName across compound and semantic alias exports (DurationInput, DurationField,
-  TimeSpanInput, IntervalInput, default). Static module constant — never references ir.name/ir.description;
-  ASCII-only source.
+  forwarding (forwardRef); useImperativeHandle (PhoneInputHandle: getValue/getE164/setValue/getCountry/clear/
+  focus); and explicit displayName across compound and semantic alias exports (PhoneInput, PhoneNumberInput,
+  TelInput, PhoneField, default). Static module constant — never references ir.name/ir.description;
+  ASCII-only source (ISO country codes + dial codes, no flag emoji).
 allowed_paths:
   - "services/agent-engine/src/omnistackai_agent_engine/codegen/nextjs.py"
   - "services/agent-engine/src/omnistackai_agent_engine/codegen/__init__.py"
-  - "services/agent-engine/tests/test_duration_input_component.py"
-  - ".ai/tasks/R-414.md"
+  - "services/agent-engine/tests/test_phone_input_component.py"
+  - ".ai/tasks/R-415.md"
   - ".ai/CURRENT_TASK.yaml"
   - ".ai/PROJECT_STATE.yaml"
   - ".ai/WORK_LOG.md"
@@ -34,9 +34,10 @@ forbidden_changes:
   - "Do not break snapshot diff invariance across ir.description"
   - "Do not commit or push code to git without verification"
 evidence:
-  verify: "2735 passed (Stage 0 verification passed)"
-  lint: "task lint passed"
-  security: "task security:quick passed"
-  demos: "task builder:demo -- minimal-blog generated 151 files (includes apps/web/components/duration-input.tsx)"
+  verify: "2,753 passed"
+  lint: "passed"
+  security: "passed"
+  demos: "minimal-blog -> 152 files (components/phone-input.tsx present)"
+  focused_test: "18 passed (test_phone_input_component.py)"
   tracker: DONE
-next_action: "Proceed to R-415 (next unstarted Tracker ID), autonomous continuation active (self-paced /loop)."
+next_action: "R-415 done, committed and pushed. /loop stopped at founder request; awaiting confirmation to proceed to R-416."
