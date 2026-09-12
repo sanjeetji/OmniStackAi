@@ -1,5 +1,22 @@
 # Work Log
 
+## 2026-09-12 — R-413
+
+- Self-paced `/loop` iteration (hands-off continuous build).
+- Recorded contract in `.ai/CURRENT_TASK.yaml` and `.ai/tasks/R-413.md` before code (test-first).
+- `nextjs.py`:
+  - Added `_COPY_BUTTON_COMPONENT` static template (raw triple-quoted string) implementing the accessible, desktop-and-mobile-grade, futuristic Copy-to-Clipboard Button compound component suite (`apps/web/components/copy-button.tsx`).
+  - Genuinely functional: `writeClipboard(text)` uses `navigator.clipboard.writeText` and falls back to a hidden-textarea + `document.execCommand('copy')`; the button shows a transient "Copied" state (configurable `timeout`) with a swapped inline SVG icon (`CopyGlyph` -> `CheckGlyph`) and a visually-hidden `aria-live="polite"` announcement; disables when there's nothing to copy; `onCopy`/`onError` callbacks.
+  - ASCII-only source (inline SVG icons, no unicode glyphs) — added a dedicated `test_ascii_only_source` guard to lock this in.
+  - Imperative `CopyButtonHandle` (`copy`, `isCopied`, `reset`, `focus`) via `useImperativeHandle`.
+  - Implemented `CopyButtonVariant`/`CopyButtonSize` types, `CopyButtonHandle`/`CopyButtonProps` interfaces, `VARIANT_STYLES`/`SIZE_STYLES` maps.
+  - Compound and semantic alias exports: `CopyButton`, `CopyToClipboard`, `ClipboardButton`, `CopyIconButton`, default export — each with explicit `displayName`.
+  - Exported `render_copy_button_component` in `omnistackai_agent_engine.codegen` and registered `components/copy-button.tsx` in `NextjsWebAdapter.generate()`.
+  - Maintained 100% diff-invariance across `ir.description` (static module constant); 0 external runtime dependencies.
+- Added `services/agent-engine/tests/test_copy_button_component.py` with 18 tests (file-generated, diff-invariance + accessor byte-equality, `'use client'`, zero-deps imports, ASCII-only source, forwardRef + useImperativeHandle + 4 handle methods, TS types, alias/default exports, displayNames, 4 variants, 3 sizes, clipboard write + fallback, feedback, aria, icon/svg, callbacks, value/disabled, codegen export).
+- Gates: `pytest .../test_copy_button_component.py` (18 passed); `task verify` (2,717 tests passed); `task lint`, `task security:quick`, `task env:check` passed; `task builder:demo -- minimal-blog` generated 150 files including `apps/web/components/copy-button.tsx`. 0 model calls.
+- Static TSX sanity check: `'use client'` first line, balanced braces/parens, react-only imports, **0 non-ASCII chars**, no `\"\"\"`/backtick hazards.
+
 ## 2026-09-12 — R-412
 
 - Founder switched to hands-off continuous execution via a self-paced `/loop` (dynamic mode); autonomous advancement until manually stopped.

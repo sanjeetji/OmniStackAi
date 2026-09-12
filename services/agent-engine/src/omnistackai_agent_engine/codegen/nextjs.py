@@ -69800,6 +69800,209 @@ def render_character_counter_component() -> str:
     return _CHARACTER_COUNTER_COMPONENT
 
 
+_COPY_BUTTON_COMPONENT = r"""'use client';
+
+import { forwardRef, useImperativeHandle, useRef, useState } from 'react';
+import type { CSSProperties, ReactNode } from 'react';
+
+export type CopyButtonVariant = 'default' | 'card' | 'glass' | 'neon';
+export type CopyButtonSize = 'sm' | 'md' | 'lg';
+
+export interface CopyButtonProps {
+  value: string;
+  label?: string;
+  copiedLabel?: string;
+  showLabel?: boolean;
+  showIcon?: boolean;
+  timeout?: number;
+  disabled?: boolean;
+  variant?: CopyButtonVariant;
+  size?: CopyButtonSize;
+  accentColor?: string;
+  ariaLabel?: string;
+  className?: string;
+  style?: CSSProperties;
+  onCopy?: (value: string) => void;
+  onError?: (error: unknown) => void;
+}
+
+export interface CopyButtonHandle {
+  copy: () => void;
+  isCopied: () => boolean;
+  reset: () => void;
+  focus: () => void;
+}
+
+interface VariantStyle {
+  base: CSSProperties;
+  color: string;
+  copiedColor: string;
+}
+
+const VARIANT_STYLES: Record<CopyButtonVariant, VariantStyle> = {
+  default: { base: { background: '#ffffff', border: '1px solid #cbd5e1' }, color: '#0f172a', copiedColor: '#16a34a' },
+  card: { base: { background: '#f8fafc', border: '1px solid #e2e8f0', boxShadow: '0 1px 2px rgba(0, 0, 0, 0.05)' }, color: '#0f172a', copiedColor: '#16a34a' },
+  glass: { base: { background: 'rgba(255, 255, 255, 0.6)', border: '1px solid rgba(255, 255, 255, 0.5)', backdropFilter: 'blur(12px)', WebkitBackdropFilter: 'blur(12px)' }, color: '#0f172a', copiedColor: '#16a34a' },
+  neon: { base: { background: '#050811', border: '1px solid rgba(6, 182, 212, 0.5)', boxShadow: '0 0 16px rgba(6, 182, 212, 0.2)' }, color: '#38bdf8', copiedColor: '#22d3ee' },
+};
+
+const SIZE_STYLES: Record<CopyButtonSize, { font: number; pad: string; icon: number; gap: number }> = {
+  sm: { font: 12, pad: '5px 10px', icon: 14, gap: 6 },
+  md: { font: 14, pad: '7px 14px', icon: 16, gap: 8 },
+  lg: { font: 16, pad: '9px 18px', icon: 18, gap: 10 },
+};
+
+async function writeClipboard(text: string): Promise<void> {
+  if (typeof navigator !== 'undefined' && navigator.clipboard && navigator.clipboard.writeText) {
+    await navigator.clipboard.writeText(text);
+    return;
+  }
+  const ta = document.createElement('textarea');
+  ta.value = text;
+  ta.style.position = 'fixed';
+  ta.style.opacity = '0';
+  document.body.appendChild(ta);
+  ta.select();
+  const ok = document.execCommand('copy');
+  document.body.removeChild(ta);
+  if (!ok) throw new Error('copy command was rejected');
+}
+
+function CopyGlyph({ size }: { size: number }): ReactNode {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <rect x="9" y="9" width="13" height="13" rx="2" ry="2" />
+      <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" />
+    </svg>
+  );
+}
+
+function CheckGlyph({ size }: { size: number }): ReactNode {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <path d="M20 6 9 17l-5-5" />
+    </svg>
+  );
+}
+
+const CopyButtonComponent = forwardRef<CopyButtonHandle, CopyButtonProps>(
+  function CopyButton(
+    {
+      value,
+      label = 'Copy',
+      copiedLabel = 'Copied',
+      showLabel = true,
+      showIcon = true,
+      timeout = 1500,
+      disabled = false,
+      variant = 'default',
+      size = 'md',
+      accentColor,
+      ariaLabel,
+      className,
+      style,
+      onCopy,
+      onError,
+    }: CopyButtonProps,
+    ref,
+  ) {
+    const [copied, setCopied] = useState(false);
+    const buttonRef = useRef<HTMLButtonElement | null>(null);
+    const timerRef = useRef<number | null>(null);
+
+    const isDisabled = disabled || !value;
+
+    const runCopy = () => {
+      if (isDisabled) return;
+      writeClipboard(value)
+        .then(() => {
+          setCopied(true);
+          if (onCopy) onCopy(value);
+          if (timerRef.current !== null) window.clearTimeout(timerRef.current);
+          timerRef.current = window.setTimeout(() => setCopied(false), timeout);
+        })
+        .catch((error) => {
+          if (onError) onError(error);
+        });
+    };
+
+    useImperativeHandle(
+      ref,
+      () => ({
+        copy: () => runCopy(),
+        isCopied: () => copied,
+        reset: () => setCopied(false),
+        focus: () => {
+          if (buttonRef.current) buttonRef.current.focus();
+        },
+      }),
+      [copied, value, isDisabled, timeout],
+    );
+
+    const theme = VARIANT_STYLES[variant] || VARIANT_STYLES.default;
+    const sizing = SIZE_STYLES[size] || SIZE_STYLES.md;
+    const currentColor = copied ? theme.copiedColor : (accentColor || theme.color);
+    const text = copied ? copiedLabel : label;
+
+    return (
+      <button
+        ref={buttonRef}
+        type="button"
+        onClick={runCopy}
+        disabled={isDisabled}
+        aria-label={ariaLabel || label}
+        data-variant={variant}
+        data-size={size}
+        data-copied={copied ? 'true' : 'false'}
+        style={{
+          display: 'inline-flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          gap: sizing.gap + 'px',
+          padding: sizing.pad,
+          fontSize: sizing.font + 'px',
+          fontFamily: 'system-ui, -apple-system, sans-serif',
+          fontWeight: 600,
+          color: currentColor,
+          borderRadius: '8px',
+          cursor: isDisabled ? 'default' : 'pointer',
+          opacity: isDisabled ? 0.55 : 1,
+          transition: 'color 0.15s ease',
+          ...theme.base,
+          ...style,
+        }}
+      >
+        {showIcon ? (copied ? <CheckGlyph size={sizing.icon} /> : <CopyGlyph size={sizing.icon} />) : null}
+        {showLabel ? <span>{text}</span> : null}
+        <span aria-live="polite" style={{ position: 'absolute', width: '1px', height: '1px', overflow: 'hidden', clip: 'rect(0 0 0 0)', clipPath: 'inset(50%)', whiteSpace: 'nowrap' }}>
+          {copied ? copiedLabel : ''}
+        </span>
+      </button>
+    );
+  },
+);
+
+CopyButtonComponent.displayName = 'CopyButton';
+
+export const CopyButton = CopyButtonComponent;
+export const CopyToClipboard = CopyButtonComponent;
+export const ClipboardButton = CopyButtonComponent;
+export const CopyIconButton = CopyButtonComponent;
+
+CopyButton.displayName = 'CopyButton';
+CopyToClipboard.displayName = 'CopyToClipboard';
+ClipboardButton.displayName = 'ClipboardButton';
+CopyIconButton.displayName = 'CopyIconButton';
+
+export default CopyButtonComponent;
+"""
+
+
+def render_copy_button_component() -> str:
+    """Render the Accessible Futuristic Reusable Copy-to-Clipboard Button Suite (R-413)."""
+    return _COPY_BUTTON_COMPONENT
+
+
 _DESIGN_TOKENS_CSS = (
     "/**\n"
     " * OmniStackAI Design Tokens & Theming Engine\n"
@@ -70441,6 +70644,7 @@ class NextjsWebAdapter:
             GeneratedFile("components/password-generator.tsx", _PASSWORD_GENERATOR_COMPONENT),
             GeneratedFile("components/slug-input.tsx", _SLUG_INPUT_COMPONENT),
             GeneratedFile("components/character-counter.tsx", _CHARACTER_COUNTER_COMPONENT),
+            GeneratedFile("components/copy-button.tsx", _COPY_BUTTON_COMPONENT),
             GeneratedFile("styles/tokens.css", _DESIGN_TOKENS_CSS),
             GeneratedFile("app/globals.css", _GLOBALS_CSS),
             GeneratedFile("app/error.tsx", _ERROR_PAGE),

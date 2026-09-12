@@ -1,6 +1,6 @@
 # Current Handoff
 
-Task ID: R-412
+Task ID: R-413
 Status: done
 Phase: BASIC/MVP — Founder Stage 0
 Branch: `main` (the only branch; the GitHub default)
@@ -60,9 +60,26 @@ Branch: `main` (the only branch; the GitHub default)
   48. **R-410**: Password Generator Suite (`components/password-generator.tsx`)
   49. **R-411**: Slug / URL Input Suite (`components/slug-input.tsx`)
   50. **R-412**: Character & Word Counter Textarea Suite (`components/character-counter.tsx`)
+  51. **R-413**: Copy-to-Clipboard Button Suite (`components/copy-button.tsx`)
 - Advancing autonomously (hands-off self-paced `/loop`) to the next Tracker ID (posture is advancing, not stopped). Still stop-and-ask only for paid cloud / DB engine / new infra / native-mobile / a materially different architecture decision.
 
 ## Completed
+
+### R-413 — Generated Accessible Futuristic Reusable Copy-to-Clipboard Button Suite (components/copy-button.tsx)
+
+Enabled a genuinely functional copy-to-clipboard button across generated Next.js web applications:
+- **Standalone Copy Button Suite (`apps/web/components/copy-button.tsx`)**:
+  - Implemented `CopyButtonVariant`, `CopyButtonSize`, `CopyButtonHandle`, `CopyButtonProps`, plus `VARIANT_STYLES`/`SIZE_STYLES` maps, `writeClipboard` helper, and inline `CopyGlyph`/`CheckGlyph` SVG icons.
+  - Compound and semantic alias exports: `CopyButton`, `CopyToClipboard`, `ClipboardButton`, `CopyIconButton`, default export.
+  - `navigator.clipboard.writeText` with `execCommand` fallback; transient "Copied" state (timeout) with icon swap + `aria-live`; disabled when nothing to copy; `onCopy`/`onError`.
+  - ASCII-only source (inline SVG); WAI-ARIA button `aria-label` + visually-hidden `aria-live` status.
+  - React ref forwarding (`forwardRef`), imperative handle (`CopyButtonHandle`: `copy`/`isCopied`/`reset`/`focus`), explicit `displayName` across all exports.
+  - Exported `render_copy_button_component` in `omnistackai_agent_engine.codegen` and registered `components/copy-button.tsx` in `NextjsWebAdapter.generate()`.
+  - Maintained 100% diff-invariance across `ir.description`; 0 external runtime dependencies.
+- **Verification**:
+  - 18 unit tests in `services/agent-engine/tests/test_copy_button_component.py` (all passing).
+  - `task verify` passing: 2,717 tests passed.
+  - `task lint`, `task security:quick`, `task env:check` — pass. `task builder:demo -- minimal-blog` — 150 files (includes `apps/web/components/copy-button.tsx`).
 
 ### R-412 — Generated Accessible Futuristic Reusable Character & Word Counter Textarea Suite (components/character-counter.tsx)
 
@@ -928,9 +945,9 @@ Enabled accessible, desktop-and-mobile-grade, futuristic Time Picker and Time Ra
 
 ## Verification
 
-- `task verify` — pass (2,699 agent-engine tests; 18 focused R-412 tests in `test_character_counter_component.py`).
+- `task verify` — pass (2,717 agent-engine tests; 18 focused R-413 tests in `test_copy_button_component.py`).
 - `task lint`, `task security:quick`, `task env:check` — pass.
-- `task builder:demo -- minimal-blog` — pass (149 files, includes `components/character-counter.tsx`).
+- `task builder:demo -- minimal-blog` — pass (150 files, includes `components/copy-button.tsx`).
 
 ## Blockers and risks
 
@@ -939,7 +956,7 @@ Enabled accessible, desktop-and-mobile-grade, futuristic Time Picker and Time Ra
 
 ## Next action
 
-- Advancing autonomously (self-paced `/loop`) to Task R-413 (next unstarted Tracker ID). Record its contract in `.ai/CURRENT_TASK.yaml` and `.ai/tasks/R-413.md` before code.
+- Advancing autonomously (self-paced `/loop`) to Task R-414 (next unstarted Tracker ID). Record its contract in `.ai/CURRENT_TASK.yaml` and `.ai/tasks/R-414.md` before code.
 
 ## Next command
 

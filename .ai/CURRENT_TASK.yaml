@@ -1,29 +1,28 @@
-task_id: R-412
-id: R-412
-title: "Accessible Futuristic Reusable Character & Word Counter Textarea Suite"
+task_id: R-413
+id: R-413
+title: "Accessible Futuristic Reusable Copy-to-Clipboard Button Suite"
 status: DONE
 phase: MVP
-tracker_row: 49
+tracker_row: 50
 started_at: "2026-09-12"
 completed_at: "2026-09-12"
 objective: >-
-  Add an accessible, zero-dependency, desktop-and-mobile-grade, futuristic Character & Word Counter
-  Textarea compound component suite (components/character-counter.tsx): a textarea with live Unicode-safe
-  character counting (Array.from code points) and word counting (trim + whitespace split), configurable
-  maxLength / maxWords with a computed stats object ({characters, words, remaining, overLimit}), an
-  optional hard limit that blocks input past maxLength, a warn threshold that recolors near the limit, an
-  optional progress bar, controlled + uncontrolled value, onChange (value, stats) callback, and WAI-ARIA
-  (labeled textarea, aria-describedby wiring to a role="status" aria-live counter region); 4 futuristic
-  visual styling variants ("default", "card", "glass", "neon"); 3 size scales ("sm", "md", "lg"); React
-  ref forwarding (forwardRef); useImperativeHandle (CharacterCounterHandle:
-  getValue/setValue/getStats/clear/focus); and explicit displayName across compound and semantic alias
-  exports (CharacterCounter, CharCounter, WordCounter, TextCounter, default). Static module constant —
-  never references ir.name/ir.description.
+  Add an accessible, zero-dependency, desktop-and-mobile-grade, futuristic Copy-to-Clipboard Button
+  compound component suite (components/copy-button.tsx): copies a given value to the clipboard via
+  navigator.clipboard.writeText with a document.execCommand('copy') textarea fallback, shows a transient
+  "Copied" state (configurable timeout) with a swapped inline SVG icon (copy -> check) and an aria-live
+  announcement, disables when there is nothing to copy, and exposes onCopy/onError callbacks; WAI-ARIA
+  (button with aria-label, visually-hidden aria-live status); 4 futuristic visual styling variants
+  ("default", "card", "glass", "neon"); 3 size scales ("sm", "md", "lg"); React ref forwarding (forwardRef);
+  useImperativeHandle (CopyButtonHandle: copy/isCopied/reset/focus); and explicit displayName across
+  compound and semantic alias exports (CopyButton, CopyToClipboard, ClipboardButton, CopyIconButton,
+  default). Static module constant — never references ir.name/ir.description; ASCII-only source (inline SVG,
+  no unicode glyphs).
 allowed_paths:
   - "services/agent-engine/src/omnistackai_agent_engine/codegen/nextjs.py"
   - "services/agent-engine/src/omnistackai_agent_engine/codegen/__init__.py"
-  - "services/agent-engine/tests/test_character_counter_component.py"
-  - ".ai/tasks/R-412.md"
+  - "services/agent-engine/tests/test_copy_button_component.py"
+  - ".ai/tasks/R-413.md"
   - ".ai/CURRENT_TASK.yaml"
   - ".ai/PROJECT_STATE.yaml"
   - ".ai/WORK_LOG.md"
@@ -35,9 +34,9 @@ forbidden_changes:
   - "Do not break snapshot diff invariance across ir.description"
   - "Do not commit or push code to git without verification"
 evidence:
-  verify: "2699 passed (Stage 0 verification passed)"
+  verify: "2717 passed (Stage 0 verification passed)"
   lint: "task lint passed"
   security: "task security:quick passed"
-  demos: "task builder:demo -- minimal-blog generated 149 files (includes apps/web/components/character-counter.tsx)"
+  demos: "task builder:demo -- minimal-blog generated 150 files (includes apps/web/components/copy-button.tsx)"
   tracker: DONE
-next_action: "Proceed to R-413 (next unstarted Tracker ID), autonomous continuation active (self-paced /loop)."
+next_action: "Proceed to R-414 (next unstarted Tracker ID), autonomous continuation active (self-paced /loop)."

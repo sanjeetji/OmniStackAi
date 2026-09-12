@@ -2,13 +2,25 @@ schema_version: 1
 project: OmniStackAI
 phase: BASIC/MVP
 founder_stage: 0
-current_task: R-413
+current_task: R-414
 current_status: advancing
 branch: main
-last_completed_task: R-412
+last_completed_task: R-413
 last_completed_task_summary: >-
-  Generated Accessible Futuristic Reusable Character & Word Counter Textarea Suite
-  (components/character-counter.tsx); a genuinely functional counting textarea — live Unicode-safe character
+  Generated Accessible Futuristic Reusable Copy-to-Clipboard Button Suite (components/copy-button.tsx); a
+  genuinely functional copy button — copies a given value via navigator.clipboard.writeText with a
+  document.execCommand('copy') textarea fallback, shows a transient "Copied" state (configurable timeout)
+  with a swapped inline SVG icon (copy -> check) and an aria-live announcement, disables when there is
+  nothing to copy, and exposes onCopy/onError callbacks; WAI-ARIA (button aria-label + visually-hidden
+  aria-live status); 4 futuristic variants ("default", "card", "glass", "neon"); 3 size scales ("sm", "md",
+  "lg"); React ref forwarding (forwardRef); useImperativeHandle (CopyButtonHandle: copy/isCopied/reset/focus);
+  canonical TypeScript types (CopyButtonVariant, CopyButtonSize, CopyButtonHandle, CopyButtonProps); compound
+  and semantic alias exports (CopyButton, CopyToClipboard, ClipboardButton, CopyIconButton, default export)
+  with explicit displayName; 100% diff-invariance across ir.description, ASCII-only source (inline SVG icons),
+  0 external runtime dependencies; exported render_copy_button_component in codegen; registered
+  components/copy-button.tsx in NextjsWebAdapter; 2,717 tests pass (18 new tests in
+  test_copy_button_component.py); 0 model calls. Previously R-412 shipped the Character & Word Counter
+  Textarea Suite (components/character-counter.tsx); a genuinely functional counting textarea — live Unicode-safe character
   counting (Array.from code points) and word counting (trim + whitespace split), configurable maxLength /
   maxWords with a computed stats object ({characters, words, remaining, overLimit}), an optional hard limit
   that blocks input past maxLength, a warn threshold that recolors near the limit, an optional progress bar,
@@ -229,9 +241,9 @@ product_direction: >-
   framework adapter contract -> Next.js adapter -> Git service -> preview/sandbox (needs cloud env).
 id_note: >-
   Workbook backlog owns R-010..R-219. Founder-requested tasks use IDs after R-219: R-220..R-223 done,
-  R-224 Next.js deferred (env-blocked), R-225..R-412 done.
+  R-224 Next.js deferred (env-blocked), R-225..R-413 done.
 blockers: []
 next_action: >-
-  Task R-412 (Accessible Futuristic Reusable Character & Word Counter Textarea Suite) complete with 2,699
-  tests passing. Advancing autonomously to R-413 (next unstarted Tracker ID) via a self-paced /loop — the
-  posture is advancing, not stopped; continue until manually stopped.
+  Task R-413 (Accessible Futuristic Reusable Copy-to-Clipboard Button Suite) complete with 2,717 tests
+  passing. Advancing autonomously to R-414 (next unstarted Tracker ID) via a self-paced /loop — the posture
+  is advancing, not stopped; continue until manually stopped.

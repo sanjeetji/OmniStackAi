@@ -1,12 +1,19 @@
 # Project State — OmniStackAI
-Last updated: 2026-09-12T19:15:00+05:30
+Last updated: 2026-09-12T19:55:00+05:30
 
 ## Current Phase
 Stage 0 (Founder Build Sequence, Brief Section 91) — BASIC/MVP
 
 ## Last Completed Task
-Tracker ID: R-412 — Generated Accessible Futuristic Reusable Character & Word Counter Textarea Suite (components/character-counter.tsx) — DONE,
-`task verify` (2,699 agent-engine tests, 18 new focused R-412 tests) passing. A genuinely functional counting textarea — live Unicode-safe
+Tracker ID: R-413 — Generated Accessible Futuristic Reusable Copy-to-Clipboard Button Suite (components/copy-button.tsx) — DONE,
+`task verify` (2,717 agent-engine tests, 18 new focused R-413 tests) passing. A genuinely functional copy button — copies a given value via
+`navigator.clipboard.writeText` with a `document.execCommand('copy')` textarea fallback, shows a transient "Copied" state (configurable
+`timeout`) with a swapped inline SVG icon (copy -> check) and an `aria-live` announcement, disables when there is nothing to copy, and exposes
+`onCopy`/`onError`; WAI-ARIA (button `aria-label` + visually-hidden `aria-live` status); 4 variants, 3 sizes, `forwardRef` +
+`useImperativeHandle` (`CopyButtonHandle`: copy/isCopied/reset/focus), alias exports (`CopyButton`, `CopyToClipboard`, `ClipboardButton`,
+`CopyIconButton`, default) with explicit `displayName`; 100% diff-invariance across `ir.description`, ASCII-only source, 0 external runtime
+dependencies. Immediately preceded by R-412 — Generated Accessible Futuristic Reusable Character & Word Counter Textarea Suite
+(components/character-counter.tsx) — `task verify` (2,699 agent-engine tests, 18 new focused R-412 tests) passing. A genuinely functional counting textarea — live Unicode-safe
 character counting (`Array.from` code points) and word counting (trim + whitespace split), configurable `maxLength`/`maxWords` with a computed
 stats object (`{characters, words, remaining, overLimit}`), an optional hard limit that blocks input past maxLength, a warn threshold that
 recolors near the limit, an optional progress bar, controlled + uncontrolled value, `onChange(value, stats)`, and WAI-ARIA (labeled textarea,
@@ -135,7 +142,7 @@ R-324 (theming tokens), R-323 (popover), R-322 (dropdown menu), R-321 (accordion
 R-317 (skeleton), R-316 (alert), R-315 (card), R-314 (tooltip), R-313 (column visibility), R-312 (badge), R-311 (table density),
 R-310 (tabs), R-309 (pagination), and R-308 (JSON export).
 
-**Notes:** (1) R-412 complete with 2,699 tests passing. (2) Advancing autonomously to R-413 via a self-paced /loop (posture is advancing, not stopped).
+**Notes:** (1) R-413 complete with 2,717 tests passing. (2) Advancing autonomously to R-414 via a self-paced /loop (posture is advancing, not stopped).
 
 
 
