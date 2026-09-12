@@ -1,30 +1,29 @@
-task_id: R-403
-id: R-403
-title: "Accessible Futuristic Reusable Password Strength Meter & Requirements Suite"
+task_id: R-404
+id: R-404
+title: "Accessible Futuristic Reusable Masked / Pattern Input Suite"
 status: DONE
 phase: MVP
-tracker_row: 40
+tracker_row: 41
 started_at: "2026-09-12"
 completed_at: "2026-09-12"
 objective: >-
-  Add an accessible, zero-dependency, desktop-and-mobile-grade, futuristic Password Strength Meter &
-  Requirements compound component suite (components/password-strength.tsx): a controlled + uncontrolled
-  password input with a live strength evaluation (rule-based scoring producing empty/weak/fair/good/strong
-  levels), a segmented strength bar, a live requirements checklist (default rules: min length, uppercase,
-  lowercase, number, symbol; overridable), a show/hide password toggle (aria-pressed), an SSR-safe design
-  (deterministic first paint; matchMedia read only after mount), a JS prefers-reduced-motion guard for the
-  bar transition, WAI-ARIA semantics (role="status" + aria-live strength announcement, aria-describedby
-  wiring the input to the requirements + strength, useId for stable ids), onChange + onStrengthChange
-  callbacks, 4 futuristic visual styling variants ("default", "card", "glass", "neon"), 3 size scales
-  ("sm", "md", "lg"), React ref forwarding (forwardRef), useImperativeHandle (PasswordStrengthHandle:
-  getValue/setValue/getStrength/clear/focus), and explicit displayName across compound and semantic alias
-  exports (PasswordStrength, PasswordStrengthMeter, PasswordInput, PasswordField, default). Static module
-  constant — never references ir.name/ir.description.
+  Add an accessible, zero-dependency, desktop-and-mobile-grade, futuristic Masked / Pattern Input compound
+  component suite (components/masked-input.tsx): token-based input masking (9=digit, A=letter, *=alphanumeric,
+  other chars = literals) applied in real time as the user types, with built-in presets
+  (phone/date/card/time/ssn) and custom masks; an applyMask() that produces both the formatted display value
+  and the raw (unmasked) value plus a completeness flag; caret kept at the end of input after reformatting
+  (requestAnimationFrame + setSelectionRange); controlled + uncontrolled value; onChange (formatted, raw)
+  and onComplete callbacks; inputMode pass-through for mobile keyboards; WAI-ARIA (aria-label, aria-required
+  when required); 4 futuristic visual styling variants ("default", "card", "glass", "neon"); 3 size scales
+  ("sm", "md", "lg"); React ref forwarding (forwardRef); useImperativeHandle (MaskedInputHandle:
+  getValue/getRawValue/setValue/clear/focus); and explicit displayName across compound and semantic alias
+  exports (MaskedInput, InputMask, PatternInput, FormattedInput, default). Static module constant — never
+  references ir.name/ir.description.
 allowed_paths:
   - "services/agent-engine/src/omnistackai_agent_engine/codegen/nextjs.py"
   - "services/agent-engine/src/omnistackai_agent_engine/codegen/__init__.py"
-  - "services/agent-engine/tests/test_password_strength_component.py"
-  - ".ai/tasks/R-403.md"
+  - "services/agent-engine/tests/test_masked_input_component.py"
+  - ".ai/tasks/R-404.md"
   - ".ai/CURRENT_TASK.yaml"
   - ".ai/PROJECT_STATE.yaml"
   - ".ai/WORK_LOG.md"
@@ -36,9 +35,9 @@ forbidden_changes:
   - "Do not break snapshot diff invariance across ir.description"
   - "Do not commit or push code to git without verification"
 evidence:
-  verify: "2538 passed (Stage 0 verification passed)"
+  verify: "2556 passed (Stage 0 verification passed)"
   lint: "task lint passed"
   security: "task security:quick passed"
-  demos: "task builder:demo -- minimal-blog generated 140 files (includes apps/web/components/password-strength.tsx)"
+  demos: "task builder:demo -- minimal-blog generated 141 files (includes apps/web/components/masked-input.tsx)"
   tracker: DONE
-next_action: "Proceed to R-404 (next unstarted Tracker ID), autonomous continuation active."
+next_action: "Proceed to R-405 (next unstarted Tracker ID), autonomous continuation active."

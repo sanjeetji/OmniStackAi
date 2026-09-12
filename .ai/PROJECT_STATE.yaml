@@ -2,13 +2,27 @@ schema_version: 1
 project: OmniStackAI
 phase: BASIC/MVP
 founder_stage: 0
-current_task: R-404
+current_task: R-405
 current_status: advancing
 branch: main
-last_completed_task: R-403
+last_completed_task: R-404
 last_completed_task_summary: >-
-  Generated Accessible Futuristic Reusable Password Strength Meter & Requirements Suite
-  (components/password-strength.tsx); a genuinely functional password field with live rule-based strength
+  Generated Accessible Futuristic Reusable Masked / Pattern Input Suite (components/masked-input.tsx); a
+  genuinely functional token-based masked text input (9=digit, A=letter, *=alphanumeric, other chars =
+  literals) applied in real time, with built-in presets (phone/date/card/time/ssn via PRESET_MASKS) and
+  custom masks; an applyMask() producing both the formatted display value and the raw (unmasked) value plus
+  a completeness flag; caret kept at end after reformat (requestAnimationFrame + setSelectionRange);
+  controlled + uncontrolled value; onChange (formatted, raw) and onComplete callbacks; inputMode pass-through
+  for mobile keyboards; WAI-ARIA (aria-label, aria-required when required); 4 futuristic variants ("default",
+  "card", "glass", "neon"); 3 size scales ("sm", "md", "lg"); React ref forwarding (forwardRef);
+  useImperativeHandle (MaskedInputHandle: getValue/getRawValue/setValue/clear/focus); canonical TypeScript
+  types (MaskedInputVariant, MaskedInputSize, MaskedInputPreset, MaskedInputResult, MaskedInputHandle,
+  MaskedInputProps); compound and semantic alias exports (MaskedInput, InputMask, PatternInput,
+  FormattedInput, default export) with explicit displayName; 100% diff-invariance across ir.description, 0
+  external runtime dependencies; exported render_masked_input_component in codegen; registered
+  components/masked-input.tsx in NextjsWebAdapter; 2,556 tests pass (18 new tests in
+  test_masked_input_component.py); 0 model calls. Previously R-403 shipped the Password Strength Meter &
+  Requirements Suite (components/password-strength.tsx); a genuinely functional password field with live rule-based strength
   evaluation (empty/weak/fair/good/strong levels from passed-rule ratio), a 4-segment strength bar, a live
   requirements checklist (default rules: min length, uppercase, lowercase, number, symbol — overridable via
   a rules prop of {id,label,test}), a show/hide password toggle (aria-pressed), controlled + uncontrolled
@@ -94,9 +108,9 @@ product_direction: >-
   framework adapter contract -> Next.js adapter -> Git service -> preview/sandbox (needs cloud env).
 id_note: >-
   Workbook backlog owns R-010..R-219. Founder-requested tasks use IDs after R-219: R-220..R-223 done,
-  R-224 Next.js deferred (env-blocked), R-225..R-403 done.
+  R-224 Next.js deferred (env-blocked), R-225..R-404 done.
 blockers: []
 next_action: >-
-  Task R-403 (Accessible Futuristic Reusable Password Strength Meter & Requirements Suite) complete with
-  2,538 tests passing. Advancing autonomously to R-404 (next unstarted Tracker ID) — the posture is
-  advancing, not stopped; continue until manually stopped.
+  Task R-404 (Accessible Futuristic Reusable Masked / Pattern Input Suite) complete with 2,556 tests
+  passing. Advancing autonomously to R-405 (next unstarted Tracker ID) — the posture is advancing, not
+  stopped; continue until manually stopped.

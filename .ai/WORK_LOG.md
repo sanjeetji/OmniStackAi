@@ -1,5 +1,23 @@
 # Work Log
 
+## 2026-09-12 — R-404
+
+- Recorded contract in `.ai/CURRENT_TASK.yaml` and `.ai/tasks/R-404.md` before code (test-first).
+- `nextjs.py`:
+  - Added `_MASKED_INPUT_COMPONENT` static template (raw triple-quoted string) implementing the accessible, desktop-and-mobile-grade, futuristic Masked / Pattern Input compound component suite (`apps/web/components/masked-input.tsx`).
+  - Genuinely functional: a token-based `applyMask(input, mask)` (`TOKENS` — `9`=digit `/[0-9]/`, `A`=letter, `*`=alphanumeric; other chars are literals) that formats as the user types and returns `{formatted, raw, complete}` (raw = unmasked chars, complete = all token slots filled).
+  - Built-in `PRESET_MASKS` (phone/date/card/time/ssn) selectable via `preset`, plus custom `mask`; if neither given the input passes through unmasked.
+  - Caret kept at the end after reformatting via `window.requestAnimationFrame` + `el.setSelectionRange` (try/catch, since some input types disallow it); controlled + uncontrolled `value`; `onChange(formatted, raw)` + `onComplete(formatted, raw)`; `inputMode` pass-through for mobile keyboards; focus-driven accent border.
+  - WAI-ARIA: `aria-label`, `aria-required` when `required`; the mask doubles as the placeholder when none supplied.
+  - Imperative `MaskedInputHandle` (`getValue`, `getRawValue`, `setValue`, `clear`, `focus`) via `useImperativeHandle`.
+  - Implemented `MaskedInputVariant`/`MaskedInputSize`/`MaskedInputPreset` types, `MaskedInputResult`/`MaskedInputHandle`/`MaskedInputProps` interfaces, `VARIANT_STYLES`/`SIZE_STYLES` maps.
+  - Compound and semantic alias exports: `MaskedInput`, `InputMask`, `PatternInput`, `FormattedInput`, default export — each with explicit `displayName`.
+  - Exported `render_masked_input_component` in `omnistackai_agent_engine.codegen` and registered `components/masked-input.tsx` in `NextjsWebAdapter.generate()`.
+  - Maintained 100% diff-invariance across `ir.description` (static module constant); 0 external runtime dependencies.
+- Added `services/agent-engine/tests/test_masked_input_component.py` with 18 tests (file-generated, diff-invariance + accessor byte-equality, `'use client'`, zero-deps imports, forwardRef + useImperativeHandle + 5 handle methods, TS types, alias/default exports, displayNames, 4 variants, 3 sizes, 5 presets + PRESET_MASKS, masking logic, raw/formatted/complete, caret handling, aria + inputMode, callbacks, controlled/uncontrolled, codegen export).
+- Gates: `pytest .../test_masked_input_component.py` (18 passed); `task verify` (2,556 tests passed); `task lint`, `task security:quick`, `task env:check` passed; `task builder:demo -- minimal-blog` generated 141 files including `apps/web/components/masked-input.tsx`. 0 model calls.
+- Static TSX sanity check: `'use client'` first line, balanced braces/parens, react-only imports, no `\"\"\"`/backtick hazards.
+
 ## 2026-09-12 — R-403
 
 - Recorded contract in `.ai/CURRENT_TASK.yaml` and `.ai/tasks/R-403.md` before code (test-first).

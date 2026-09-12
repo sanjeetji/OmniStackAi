@@ -67152,6 +67152,270 @@ def render_password_strength_component() -> str:
     return _PASSWORD_STRENGTH_COMPONENT
 
 
+_MASKED_INPUT_COMPONENT = r"""'use client';
+
+import { forwardRef, useImperativeHandle, useRef, useState } from 'react';
+import type { CSSProperties } from 'react';
+
+export type MaskedInputVariant = 'default' | 'card' | 'glass' | 'neon';
+export type MaskedInputSize = 'sm' | 'md' | 'lg';
+export type MaskedInputPreset = 'phone' | 'date' | 'card' | 'time' | 'ssn';
+
+export interface MaskedInputResult {
+  formatted: string;
+  raw: string;
+  complete: boolean;
+}
+
+export interface MaskedInputProps {
+  mask?: string;
+  preset?: MaskedInputPreset;
+  value?: string;
+  defaultValue?: string;
+  label?: string;
+  placeholder?: string;
+  name?: string;
+  disabled?: boolean;
+  required?: boolean;
+  showLabel?: boolean;
+  inputMode?: 'text' | 'numeric' | 'decimal' | 'tel' | 'email' | 'url' | 'search';
+  variant?: MaskedInputVariant;
+  size?: MaskedInputSize;
+  accentColor?: string;
+  ariaLabel?: string;
+  className?: string;
+  style?: CSSProperties;
+  onChange?: (formatted: string, raw: string) => void;
+  onComplete?: (formatted: string, raw: string) => void;
+}
+
+export interface MaskedInputHandle {
+  getValue: () => string;
+  getRawValue: () => string;
+  setValue: (value: string) => void;
+  clear: () => void;
+  focus: () => void;
+}
+
+interface VariantStyle {
+  wrapper: CSSProperties;
+  labelColor: string;
+  inputBg: string;
+  inputColor: string;
+  inputBorder: string;
+  focusBorder: string;
+}
+
+const VARIANT_STYLES: Record<MaskedInputVariant, VariantStyle> = {
+  default: {
+    wrapper: { background: 'transparent' },
+    labelColor: '#0f172a', inputBg: '#ffffff', inputColor: '#0f172a', inputBorder: '#cbd5e1', focusBorder: '#2563eb',
+  },
+  card: {
+    wrapper: { background: '#ffffff', border: '1px solid #e2e8f0', borderRadius: '12px', boxShadow: '0 4px 16px rgba(0, 0, 0, 0.06)', padding: '16px' },
+    labelColor: '#0f172a', inputBg: '#ffffff', inputColor: '#0f172a', inputBorder: '#cbd5e1', focusBorder: '#2563eb',
+  },
+  glass: {
+    wrapper: { background: 'rgba(248, 250, 252, 0.6)', border: '1px solid rgba(255, 255, 255, 0.4)', borderRadius: '12px', boxShadow: '0 8px 32px rgba(0, 0, 0, 0.12)', backdropFilter: 'blur(16px)', WebkitBackdropFilter: 'blur(16px)', padding: '16px' },
+    labelColor: '#0f172a', inputBg: 'rgba(255, 255, 255, 0.7)', inputColor: '#0f172a', inputBorder: 'rgba(148, 163, 184, 0.6)', focusBorder: '#2563eb',
+  },
+  neon: {
+    wrapper: { background: '#050811', border: '1px solid rgba(6, 182, 212, 0.4)', borderRadius: '12px', boxShadow: '0 0 24px rgba(6, 182, 212, 0.15)', padding: '16px' },
+    labelColor: '#f8fafc', inputBg: 'rgba(6, 182, 212, 0.08)', inputColor: '#e0f2fe', inputBorder: 'rgba(6, 182, 212, 0.5)', focusBorder: '#06b6d4',
+  },
+};
+
+const SIZE_STYLES: Record<MaskedInputSize, { font: number; pad: number }> = {
+  sm: { font: 13, pad: 8 },
+  md: { font: 15, pad: 10 },
+  lg: { font: 17, pad: 13 },
+};
+
+const PRESET_MASKS: Record<MaskedInputPreset, string> = {
+  phone: '(999) 999-9999',
+  date: '9999-99-99',
+  card: '9999 9999 9999 9999',
+  time: '99:99',
+  ssn: '999-99-9999',
+};
+
+const TOKENS: Record<string, (c: string) => boolean> = {
+  '9': (c: string) => /[0-9]/.test(c),
+  'A': (c: string) => /[A-Za-z]/.test(c),
+  '*': (c: string) => /[A-Za-z0-9]/.test(c),
+};
+
+function applyMask(input: string, mask: string): MaskedInputResult {
+  if (!mask) return { formatted: input, raw: input, complete: false };
+  const chars = input.split('');
+  let formatted = '';
+  let raw = '';
+  let vi = 0;
+  for (let mi = 0; mi < mask.length; mi++) {
+    const token = mask.charAt(mi);
+    const matcher = TOKENS[token];
+    if (matcher) {
+      while (vi < chars.length && !matcher(chars[vi])) vi++;
+      if (vi < chars.length) {
+        formatted += chars[vi];
+        raw += chars[vi];
+        vi++;
+      }
+    } else if (raw.length > 0 || formatted.length > 0) {
+      formatted += token;
+      if (vi < chars.length && chars[vi] === token) vi++;
+    } else if (vi < chars.length && chars[vi] === token) {
+      vi++;
+    }
+  }
+  const totalNeeded = mask.split('').filter((c) => TOKENS[c] !== undefined).length;
+  const complete = totalNeeded > 0 && raw.length >= totalNeeded;
+  return { formatted, raw, complete };
+}
+
+const MaskedInputComponent = forwardRef<MaskedInputHandle, MaskedInputProps>(
+  function MaskedInput(
+    {
+      mask,
+      preset,
+      value,
+      defaultValue = '',
+      label = 'Input',
+      placeholder,
+      name,
+      disabled = false,
+      required = false,
+      showLabel = true,
+      inputMode = 'text',
+      variant = 'default',
+      size = 'md',
+      accentColor,
+      ariaLabel = 'Masked input',
+      className,
+      style,
+      onChange,
+      onComplete,
+    }: MaskedInputProps,
+    ref,
+  ) {
+    const resolvedMask = mask || (preset ? PRESET_MASKS[preset] : '') || '';
+    const isControlled = typeof value === 'string';
+    const [internalValue, setInternalValue] = useState<string>(() => applyMask(defaultValue, resolvedMask).formatted);
+    const inputRef = useRef<HTMLInputElement | null>(null);
+    const [focused, setFocused] = useState(false);
+
+    const currentFormatted = isControlled ? applyMask(value as string, resolvedMask).formatted : internalValue;
+
+    const commit = (rawInput: string) => {
+      const res = applyMask(rawInput, resolvedMask);
+      if (!isControlled) setInternalValue(res.formatted);
+      if (onChange) onChange(res.formatted, res.raw);
+      if (res.complete && onComplete) onComplete(res.formatted, res.raw);
+      const el = inputRef.current;
+      if (el && typeof window !== 'undefined') {
+        window.requestAnimationFrame(() => {
+          try {
+            el.setSelectionRange(res.formatted.length, res.formatted.length);
+          } catch {
+            // setSelectionRange is unsupported on some input types; safe to ignore.
+          }
+        });
+      }
+    };
+
+    useImperativeHandle(
+      ref,
+      () => ({
+        getValue: () => currentFormatted,
+        getRawValue: () => applyMask(currentFormatted, resolvedMask).raw,
+        setValue: (v: string) => {
+          const res = applyMask(v, resolvedMask);
+          if (!isControlled) setInternalValue(res.formatted);
+          if (onChange) onChange(res.formatted, res.raw);
+        },
+        clear: () => {
+          if (!isControlled) setInternalValue('');
+          if (onChange) onChange('', '');
+        },
+        focus: () => {
+          if (inputRef.current) inputRef.current.focus();
+        },
+      }),
+      [currentFormatted, isControlled, resolvedMask, onChange],
+    );
+
+    const theme = VARIANT_STYLES[variant] || VARIANT_STYLES.default;
+    const sizing = SIZE_STYLES[size] || SIZE_STYLES.md;
+    const resolvedAccent = accentColor || theme.focusBorder;
+
+    return (
+      <div
+        className={className}
+        data-variant={variant}
+        data-size={size}
+        style={{ display: 'flex', flexDirection: 'column', gap: '4px', fontFamily: 'system-ui, -apple-system, sans-serif', ...theme.wrapper, ...style }}
+      >
+        {showLabel ? (
+          <span style={{ fontSize: sizing.font + 'px', fontWeight: 600, color: theme.labelColor }}>
+            {label}
+            {required ? <span aria-hidden="true" style={{ color: '#ef4444', marginLeft: '2px' }}>*</span> : null}
+          </span>
+        ) : null}
+        <input
+          ref={inputRef}
+          type="text"
+          value={currentFormatted}
+          name={name}
+          disabled={disabled}
+          required={required}
+          placeholder={placeholder || resolvedMask}
+          inputMode={inputMode}
+          aria-label={ariaLabel}
+          aria-required={required || undefined}
+          autoComplete="off"
+          onFocus={() => setFocused(true)}
+          onBlur={() => setFocused(false)}
+          onChange={(e) => commit(e.target.value)}
+          style={{
+            fontSize: sizing.font + 'px',
+            padding: sizing.pad + 'px',
+            background: theme.inputBg,
+            color: theme.inputColor,
+            border: '1px solid ' + (focused ? resolvedAccent : theme.inputBorder),
+            borderRadius: '8px',
+            outline: 'none',
+            width: '100%',
+            boxSizing: 'border-box',
+            letterSpacing: '0.02em',
+            transition: 'border-color 0.15s ease',
+          }}
+        />
+      </div>
+    );
+  },
+);
+
+MaskedInputComponent.displayName = 'MaskedInput';
+
+export const MaskedInput = MaskedInputComponent;
+export const InputMask = MaskedInputComponent;
+export const PatternInput = MaskedInputComponent;
+export const FormattedInput = MaskedInputComponent;
+
+MaskedInput.displayName = 'MaskedInput';
+InputMask.displayName = 'InputMask';
+PatternInput.displayName = 'PatternInput';
+FormattedInput.displayName = 'FormattedInput';
+
+export default MaskedInputComponent;
+"""
+
+
+def render_masked_input_component() -> str:
+    """Render the Accessible Futuristic Reusable Masked / Pattern Input Suite (R-404)."""
+    return _MASKED_INPUT_COMPONENT
+
+
 _DESIGN_TOKENS_CSS = (
     "/**\n"
     " * OmniStackAI Design Tokens & Theming Engine\n"
@@ -67784,6 +68048,7 @@ class NextjsWebAdapter:
             GeneratedFile("components/countdown.tsx", _COUNTDOWN_COMPONENT),
             GeneratedFile("components/cookie-consent.tsx", _COOKIE_CONSENT_COMPONENT),
             GeneratedFile("components/password-strength.tsx", _PASSWORD_STRENGTH_COMPONENT),
+            GeneratedFile("components/masked-input.tsx", _MASKED_INPUT_COMPONENT),
             GeneratedFile("styles/tokens.css", _DESIGN_TOKENS_CSS),
             GeneratedFile("app/globals.css", _GLOBALS_CSS),
             GeneratedFile("app/error.tsx", _ERROR_PAGE),

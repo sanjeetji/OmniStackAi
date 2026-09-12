@@ -1,6 +1,6 @@
 # Current Handoff
 
-Task ID: R-403
+Task ID: R-404
 Status: done
 Phase: BASIC/MVP — Founder Stage 0
 Branch: `main` (the only branch; the GitHub default)
@@ -51,9 +51,26 @@ Branch: `main` (the only branch; the GitHub default)
   39. **R-401**: Countdown Timer, Stopwatch & Live Clock Suite (`components/countdown.tsx`)
   40. **R-402**: Cookie Consent & Preferences Manager Suite (`components/cookie-consent.tsx`)
   41. **R-403**: Password Strength Meter & Requirements Suite (`components/password-strength.tsx`)
+  42. **R-404**: Masked / Pattern Input Suite (`components/masked-input.tsx`)
 - Advancing autonomously to the next Tracker ID (posture is advancing, not stopped). Still stop-and-ask only for paid cloud / DB engine / new infra / native-mobile / a materially different architecture decision.
 
 ## Completed
+
+### R-404 — Generated Accessible Futuristic Reusable Masked / Pattern Input Suite (components/masked-input.tsx)
+
+Enabled a genuinely functional masked/pattern text input across generated Next.js web applications:
+- **Standalone Masked Input Suite (`apps/web/components/masked-input.tsx`)**:
+  - Implemented `MaskedInputVariant`, `MaskedInputSize`, `MaskedInputPreset`, `MaskedInputResult`, `MaskedInputHandle`, `MaskedInputProps`, plus internal `VARIANT_STYLES`/`SIZE_STYLES` maps, `PRESET_MASKS`, `TOKENS`, and the `applyMask()` helper.
+  - Compound and semantic alias exports: `MaskedInput`, `InputMask`, `PatternInput`, `FormattedInput`, default export.
+  - Token-based masking (`9`/`A`/`*` + literals) formatting in real time; returns `{formatted, raw, complete}`; presets (phone/date/card/time/ssn) + custom masks.
+  - Caret kept at end via `requestAnimationFrame` + `setSelectionRange`; controlled + uncontrolled `value`; `onChange`/`onComplete`; `inputMode` pass-through; WAI-ARIA `aria-label`/`aria-required`.
+  - React ref forwarding (`forwardRef`), imperative handle (`MaskedInputHandle`: `getValue`/`getRawValue`/`setValue`/`clear`/`focus`), explicit `displayName` across all exports.
+  - Exported `render_masked_input_component` in `omnistackai_agent_engine.codegen` and registered `components/masked-input.tsx` in `NextjsWebAdapter.generate()`.
+  - Maintained 100% diff-invariance across `ir.description`; 0 external runtime dependencies.
+- **Verification**:
+  - 18 unit tests in `services/agent-engine/tests/test_masked_input_component.py` (all passing).
+  - `task verify` passing: 2,556 tests passed.
+  - `task lint`, `task security:quick`, `task env:check` — pass. `task builder:demo -- minimal-blog` — 141 files (includes `apps/web/components/masked-input.tsx`).
 
 ### R-403 — Generated Accessible Futuristic Reusable Password Strength Meter & Requirements Suite (components/password-strength.tsx)
 
@@ -775,9 +792,9 @@ Enabled accessible, desktop-and-mobile-grade, futuristic Time Picker and Time Ra
 
 ## Verification
 
-- `task verify` — pass (2,538 agent-engine tests; 18 focused R-403 tests in `test_password_strength_component.py`).
+- `task verify` — pass (2,556 agent-engine tests; 18 focused R-404 tests in `test_masked_input_component.py`).
 - `task lint`, `task security:quick`, `task env:check` — pass.
-- `task builder:demo -- minimal-blog` — pass (140 files, includes `components/password-strength.tsx`).
+- `task builder:demo -- minimal-blog` — pass (141 files, includes `components/masked-input.tsx`).
 
 ## Blockers and risks
 
@@ -786,7 +803,7 @@ Enabled accessible, desktop-and-mobile-grade, futuristic Time Picker and Time Ra
 
 ## Next action
 
-- Advancing autonomously to Task R-404 (next unstarted Tracker ID). Record its contract in `.ai/CURRENT_TASK.yaml` and `.ai/tasks/R-404.md` before code.
+- Advancing autonomously to Task R-405 (next unstarted Tracker ID). Record its contract in `.ai/CURRENT_TASK.yaml` and `.ai/tasks/R-405.md` before code.
 
 ## Next command
 
