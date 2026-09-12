@@ -1,32 +1,33 @@
-task_id: R-417
-id: R-417
-title: "Prompt -> generated app repo (chat-to-create front door, brick 2)"
+task_id: R-418
+id: R-418
+title: "Chat studio web UI (chat-to-create front door, brick 3)"
 status: done
 phase: MVP
 tracker_row: null
 started_at: "2026-09-13"
 completed_at: "2026-09-13"
 objective: >-
-  Extend the "chat -> create an app" front door so a single plain-English description produces a real,
-  customer-owned Git repository. Add intake/build_app.py: build_app_from_ir(ir, target_dir, ...) composes
-  assemble_project + create_repository into a materialized owned repo returning AppBuildResult (prompt, ir,
-  target_dir, file_count, commit_sha); async build_app_from_prompt(prompt, provider, target_dir, *, model_id,
-  ...) chains the R-416 intake agent (generate_ir) into build_app_from_ir (sentence -> IR -> monorepo -> owned
-  Git repo) depending only on the vendor-neutral ModelProvider protocol so task verify runs it against an
-  in-memory stub (0 model calls, 0 network). Refactor local-Ollama provider construction into intake/_ollama.py
-  (build_ollama_provider_from_env), shared by live_run.py (R-416) and a new opt-in build_run.py wired as
-  `task agent-engine:app:build -- "<description>"` (out dir via OMNISTACKAI_APP_OUT_DIR or a temp dir) that
-  compiles a description through local Ollama and materializes the repo, printing path/file-count/commit.
+  Add the user-facing "chat -> create an app" screen: a minimal, dependency-free local web studio (Python
+  3.13 stdlib http.server only, no npm/pnpm) where a person types a plain-English description and watches a
+  real app get generated. New omnistackai_agent_engine/studio/ package: page.py (self-contained HTML with a
+  prompt textarea + Build button + results panel, inline CSS/JS, zero external deps), server.py
+  (create_studio_server(build_fn, host, port) ThreadingHTTPServer: GET / serves the page, POST /api/build
+  reads {prompt}, calls the injected build_fn -> dict, returns JSON; 400 empty/invalid, 502 build failure -
+  build_fn injected so task verify tests the HTTP layer against an in-memory stub, 0 model calls),
+  live_serve.py (opt-in real local-Ollama build path on OMNISTACKAI_STUDIO_HOST/PORT, default
+  127.0.0.1:4173). Add app_build_result_to_dict(result) to intake/build_app.py (pure JSON-safe shape).
+  Wire task agent-engine:studio:serve (opt-in, live). Static page is diff-invariant.
 allowed_paths:
+  - "services/agent-engine/src/omnistackai_agent_engine/studio/__init__.py"
+  - "services/agent-engine/src/omnistackai_agent_engine/studio/page.py"
+  - "services/agent-engine/src/omnistackai_agent_engine/studio/server.py"
+  - "services/agent-engine/src/omnistackai_agent_engine/studio/live_serve.py"
   - "services/agent-engine/src/omnistackai_agent_engine/intake/build_app.py"
-  - "services/agent-engine/src/omnistackai_agent_engine/intake/build_run.py"
-  - "services/agent-engine/src/omnistackai_agent_engine/intake/_ollama.py"
-  - "services/agent-engine/src/omnistackai_agent_engine/intake/live_run.py"
   - "services/agent-engine/src/omnistackai_agent_engine/intake/__init__.py"
-  - "services/agent-engine/tests/test_build_app.py"
+  - "services/agent-engine/tests/test_studio_server.py"
   - "scripts/agent-engine.sh"
   - "Taskfile.yml"
-  - ".ai/tasks/R-417.md"
+  - ".ai/tasks/R-418.md"
   - ".ai/CURRENT_TASK.yaml"
   - ".ai/PROJECT_STATE.yaml"
   - ".ai/WORK_LOG.md"
@@ -34,19 +35,19 @@ allowed_paths:
   - "PROJECT_STATE.md"
   - "CHANGELOG.md"
 forbidden_changes:
-  - "Do not introduce external Python dependencies (stdlib only)"
-  - "Do not make task verify perform a live model call or network I/O (live path is opt-in only)"
+  - "Do not introduce external Python dependencies or any npm/pnpm toolchain (stdlib http.server only)"
+  - "Do not make task verify do a live model call or network I/O beyond an ephemeral localhost test server"
   - "Do not change the Application IR schema, model_gateway contracts, the assembler, or git_service"
   - "Do not put secrets in source/tests/logs/commits"
 evidence:
-  verify: "2,778 passed"
+  verify: "2,789 passed"
   lint: "passed"
   security: "passed"
   env: "passed"
   demos: "minimal-blog -> 152 files (unchanged)"
-  focused_test: "7 passed (test_build_app.py)"
-  live_optin: "app:build -- 'Build a recipe box...' -> local Ollama -> owned Git repo (Recipe Box, 154 files, verified)"
+  focused_test: "11 passed (test_studio_server.py)"
+  live_optin: "task agent-engine:studio:serve -> http://127.0.0.1:4173 -> type description -> real repo generated"
   tracker: DONE
 next_action: >-
-  R-417 done. Next front-door brick: a minimal chat web UI (R-224/R-011) that calls this build path, then
-  orchestration (R-180) and live local preview (R-033/R-034). Await founder direction.
+  R-418 done. Next front-door brick: live local preview of the generated app inside the studio (R-033/R-034)
+  and/or the turnkey `task app:run` that boots the generated repo. Await founder direction.

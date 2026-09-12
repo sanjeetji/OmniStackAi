@@ -103,6 +103,20 @@ if project["project"]["requires-python"] != ">=3.13,<3.14":
     export OMNISTACKAI_OLLAMA_MAX_CONCURRENCY="$(config_value OMNISTACKAI_OLLAMA_MAX_CONCURRENCY 1)"
     PYTHONPATH="$source_root" python3 -m omnistackai_agent_engine.intake.build_run "${OMNISTACKAI_APP_OUT_DIR:-}" "${@:2}"
     ;;
+  studio-serve)
+    configure_python
+    export OMNISTACKAI_OLLAMA_BASE_URL="$(config_value OMNISTACKAI_OLLAMA_BASE_URL http://127.0.0.1:11434)"
+    export OMNISTACKAI_OLLAMA_MODEL="$(config_value OMNISTACKAI_OLLAMA_MODEL qwen2.5-coder:14b)"
+    export OMNISTACKAI_OLLAMA_CONTEXT_WINDOW_TOKENS="$(config_value OMNISTACKAI_OLLAMA_CONTEXT_WINDOW_TOKENS 8192)"
+    export OMNISTACKAI_OLLAMA_SAFE_INPUT_TOKENS="$(config_value OMNISTACKAI_OLLAMA_SAFE_INPUT_TOKENS 6144)"
+    export OMNISTACKAI_OLLAMA_MAX_OUTPUT_TOKENS="$(config_value OMNISTACKAI_OLLAMA_MAX_OUTPUT_TOKENS 2048)"
+    export OMNISTACKAI_OLLAMA_REQUEST_TIMEOUT_SECONDS="$(config_value OMNISTACKAI_OLLAMA_REQUEST_TIMEOUT_SECONDS 300)"
+    export OMNISTACKAI_OLLAMA_HEALTH_TIMEOUT_SECONDS="$(config_value OMNISTACKAI_OLLAMA_HEALTH_TIMEOUT_SECONDS 5)"
+    export OMNISTACKAI_OLLAMA_MAX_CONCURRENCY="$(config_value OMNISTACKAI_OLLAMA_MAX_CONCURRENCY 1)"
+    export OMNISTACKAI_STUDIO_HOST="$(config_value OMNISTACKAI_STUDIO_HOST 127.0.0.1)"
+    export OMNISTACKAI_STUDIO_PORT="$(config_value OMNISTACKAI_STUDIO_PORT 4173)"
+    PYTHONPATH="$source_root" python3 -m omnistackai_agent_engine.studio.live_serve
+    ;;
   preview-plan)
     configure_python
     target="${2:-nextjs-web}"
@@ -167,7 +181,7 @@ PY
     PYTHONPATH="$source_root" python3 -c "from omnistackai_agent_engine.runtime import format_status; print(format_status())"
     ;;
   *)
-    printf 'Usage: %s {lint|test|ollama-verify|gateway-run|intake-run [description]|app-build [description]|preview-plan [target]|verify-plan [target]|plan-show [example]|platform-status}\n' "$0"
+    printf 'Usage: %s {lint|test|ollama-verify|gateway-run|intake-run [description]|app-build [description]|studio-serve|preview-plan [target]|verify-plan [target]|plan-show [example]|platform-status}\n' "$0"
     exit 2
     ;;
 esac

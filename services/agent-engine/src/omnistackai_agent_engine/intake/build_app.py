@@ -16,6 +16,7 @@ from __future__ import annotations
 
 import os
 from dataclasses import dataclass
+from pathlib import Path
 
 from ..application_ir import ApplicationIR
 from ..codegen import assemble_project
@@ -66,6 +67,32 @@ def build_app_from_ir(
         file_count=repo.file_count,
         commit_sha=repo.commit_sha,
     )
+
+
+def app_build_result_to_dict(result: AppBuildResult, *, max_files: int = 500) -> dict:
+    """A JSON-safe view of an AppBuildResult for the studio/API (no secrets)."""
+    root = Path(result.target_dir)
+    files: list[str] = []
+    if root.is_dir():
+        for path in sorted(root.rglob("*")):
+            if not path.is_file():
+                continue
+            rel = path.relative_to(root)
+            if ".git" in rel.parts:
+                continue
+            files.append(str(rel))
+            if len(files) >= max_files:
+                break
+    return {
+        "prompt": result.prompt,
+        "name": result.ir.name,
+        "description": result.ir.description,
+        "entities": [entity.name for entity in result.ir.entities],
+        "file_count": result.file_count,
+        "target_dir": result.target_dir,
+        "commit_sha": result.commit_sha,
+        "files": files,
+    }
 
 
 async def build_app_from_prompt(

@@ -1,16 +1,17 @@
 # Current Handoff
 
-Task ID: R-417
+Task ID: R-418
 Status: done
 Phase: BASIC/MVP — Founder Stage 0
 Branch: `main` (the only branch; the GitHub default)
 
-> **Front-door pivot: the offline "chat → real owned app" pipeline now works end to end.** The UI-component series is PAUSED at R-415 (110 components, resumable at the next free Tracker ID). **R-416** = Prompt → Application IR intake agent; **R-417** = Prompt → generated owned Git repo (`build_app_from_prompt`). Verified live on the Mac: a plain-English sentence → local Ollama → a real materialized repo (`task agent-engine:app:build -- "<description>"`). **Next: R-418 = a minimal chat WEB UI** (prompt box → build path → show result), then orchestration (R-180) and live local preview (R-033/R-034), and turnkey `task app:run`.
+> **Front-door pivot: the local user-facing "chat → create an app" experience now works end to end.** UI-component series PAUSED at R-415 (110 components, resumable). Front door: **R-416** intake agent (sentence → IR) · **R-417** builder (IR → owned repo) · **R-418** the chat **web UI** (`task agent-engine:studio:serve` → http://127.0.0.1:4173 → type a description → a real app repo is generated, shown in the page). All local, no paid cloud, stdlib-only. **Next: R-419 = turnkey `task app:run -- <dir>`** (auto DB + migrations + env + boot web/backend) so a generated repo runs in one command; then a live in-browser preview inside the studio (R-033/R-034).
 
 ## Repo/workflow state
 
-- **R-417 (Prompt → generated app repo)** shipped: `intake/build_app.py` (`build_app_from_ir`, `build_app_from_prompt`, `AppBuildResult`), `intake/_ollama.py` (shared provider builder), `intake/build_run.py` + opt-in `task agent-engine:app:build`. 7 focused tests, `task verify` **2,778** passing (0 model calls), lint/security/env green, demo 152 files (unchanged). Live proof: "recipe box" description → 154-file owned repo. Single commit authored `sanjeetji <sk698166@gmail.com>`, pushed.
-- **R-416 (Prompt → Application IR intake agent)** shipped (front-door brick 1): `intake/` package + opt-in `task agent-engine:intake:run`.
+- **R-418 (chat studio web UI)** shipped: new `studio/` package (`page.py` self-contained HTML, `server.py` stdlib `http.server`, `live_serve.py`) + `app_build_result_to_dict` in `intake/build_app.py` + opt-in `task agent-engine:studio:serve`. 11 focused tests, `task verify` **2,789** passing (0 model calls), lint/security/env green, demo unchanged. Live proof: studio POST /api/build → "Bookstore" 154-file repo. Single commit authored `sanjeetji <sk698166@gmail.com>`, pushed.
+- **R-417 (Prompt → generated app repo)** shipped (brick 2): `intake/build_app.py` + opt-in `task agent-engine:app:build`.
+- **R-416 (Prompt → Application IR intake agent)** shipped (brick 1): `intake/` package + opt-in `task agent-engine:intake:run`.
 - **R-415 (Phone Number Input Suite)** was the last UI-component-series task (110 components; paused/resumable).
 - **Code clean and verified on `main`**.
 - Tracker and state files kept fully consistent and verified.

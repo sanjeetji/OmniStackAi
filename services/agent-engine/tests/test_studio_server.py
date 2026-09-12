@@ -1,0 +1,166 @@
+"""Tests for the OmniStackAI Studio web server (studio/, R-418).
+
+Deterministic and offline: the server is started on an ephemeral localhost port with an
+in-memory stub build function (0 model calls, 0 external network); real HTTP requests are
+made against it with stdlib urllib.
+"""
+
+from __future__ import annotations
+
+import json
+import tempfile
+import threading
+import unittest
+import urllib.error
+import urllib.request
+from contextlib import contextmanager
+from pathlib import Path
+
+from omnistackai_agent_engine.application_ir import example_ir
+from omnistackai_agent_engine.intake import app_build_result_to_dict, build_app_from_ir
+from omnistackai_agent_engine.studio import STUDIO_HTML, create_studio_server
+
+STUB_RESULT = {
+    "prompt": "Build a recipe box",
+    "name": "Recipe Box",
+    "description": "A recipe box.",
+    "entities": ["Recipe", "Ingredient"],
+    "file_count": 154,
+    "target_dir": "/tmp/recipe-box",
+    "commit_sha": "abc123def4567890",
+    "files": ["apps/web/app/page.tsx", "services/api/app/main.py"],
+}
+
+AUTHOR = {"author_name": "sanjeetji", "author_email": "sk698166@gmail.com"}
+
+
+class RecordingBuild:
+    def __init__(self, result: dict) -> None:
+        self.result = result
+        self.prompts: list[str] = []
+
+    def __call__(self, prompt: str) -> dict:
+        self.prompts.append(prompt)
+        return self.result
+
+
+@contextmanager
+def running_server(build_fn):
+    server = create_studio_server(build_fn, host="127.0.0.1", port=0)
+    thread = threading.Thread(target=server.serve_forever, daemon=True)
+    thread.start()
+    try:
+        port = server.server_address[1]
+        yield f"http://127.0.0.1:{port}"
+    finally:
+        server.shutdown()
+        server.server_close()
+        thread.join(timeout=5)
+
+
+def _get(url: str):
+    try:
+        with urllib.request.urlopen(url, timeout=5) as resp:
+            return resp.status, resp.read()
+    except urllib.error.HTTPError as error:
+        return error.code, error.read()
+
+
+def _post(url: str, *, obj=None, raw: bytes | None = None):
+    body = raw if raw is not None else json.dumps(obj or {}).encode("utf-8")
+    req = urllib.request.Request(
+        url, data=body, headers={"Content-Type": "application/json"}, method="POST"
+    )
+    try:
+        with urllib.request.urlopen(req, timeout=5) as resp:
+            return resp.status, json.loads(resp.read())
+    except urllib.error.HTTPError as error:
+        return error.code, json.loads(error.read())
+
+
+class TestStudioPage(unittest.TestCase):
+    def test_page_is_self_contained_html(self) -> None:
+        self.assertTrue(STUDIO_HTML.lstrip().startswith("<!doctype html>"))
+        for token in ('id="prompt"', "/api/build", "Build app", "OmniStackAI Studio"):
+            self.assertIn(token, STUDIO_HTML)
+
+    def test_page_has_no_external_resources(self) -> None:
+        # No CDN/script/style/img pulling from the network — fully local.
+        for bad in ("http://", "https://", "src=", "<link"):
+            self.assertNotIn(bad, STUDIO_HTML)
+
+
+class TestStudioServer(unittest.TestCase):
+    def test_get_serves_page(self) -> None:
+        with running_server(RecordingBuild(STUB_RESULT)) as base:
+            status, body = _get(base + "/")
+            self.assertEqual(status, 200)
+            self.assertIn(b"OmniStackAI Studio", body)
+
+    def test_healthz(self) -> None:
+        with running_server(RecordingBuild(STUB_RESULT)) as base:
+            status, body = _get(base + "/healthz")
+            self.assertEqual(status, 200)
+            self.assertEqual(json.loads(body)["status"], "ok")
+
+    def test_unknown_get_is_404(self) -> None:
+        with running_server(RecordingBuild(STUB_RESULT)) as base:
+            status, _ = _get(base + "/nope")
+            self.assertEqual(status, 404)
+
+    def test_post_build_success(self) -> None:
+        build = RecordingBuild(STUB_RESULT)
+        with running_server(build) as base:
+            status, data = _post(base + "/api/build", obj={"prompt": "Build a recipe box"})
+            self.assertEqual(status, 200)
+            self.assertEqual(data["name"], "Recipe Box")
+            self.assertEqual(data["file_count"], 154)
+            self.assertEqual(build.prompts, ["Build a recipe box"])
+
+    def test_post_empty_prompt_is_400(self) -> None:
+        with running_server(RecordingBuild(STUB_RESULT)) as base:
+            status, data = _post(base + "/api/build", obj={"prompt": "   "})
+            self.assertEqual(status, 400)
+            self.assertIn("error", data)
+
+    def test_post_invalid_json_is_400(self) -> None:
+        with running_server(RecordingBuild(STUB_RESULT)) as base:
+            status, data = _post(base + "/api/build", raw=b"not json{")
+            self.assertEqual(status, 400)
+            self.assertIn("error", data)
+
+    def test_post_build_failure_is_502(self) -> None:
+        def failing(prompt: str) -> dict:
+            raise RuntimeError("model produced no valid IR")
+
+        with running_server(failing) as base:
+            status, data = _post(base + "/api/build", obj={"prompt": "Build a blog"})
+            self.assertEqual(status, 502)
+            self.assertIn("model produced no valid IR", data["error"])
+
+    def test_unknown_post_is_404(self) -> None:
+        with running_server(RecordingBuild(STUB_RESULT)) as base:
+            status, _ = _post(base + "/api/other", obj={"prompt": "x"})
+            self.assertEqual(status, 404)
+
+
+class TestResultDict(unittest.TestCase):
+    def test_app_build_result_to_dict_shape(self) -> None:
+        ir = example_ir("minimal-blog")
+        with tempfile.TemporaryDirectory() as tmp:
+            result = build_app_from_ir(ir, str(Path(tmp) / "app"), prompt="Build a blog", **AUTHOR)
+            payload = app_build_result_to_dict(result)
+            self.assertEqual(payload["prompt"], "Build a blog")
+            self.assertEqual(payload["name"], ir.name)
+            self.assertEqual(payload["file_count"], result.file_count)
+            self.assertGreater(len(payload["files"]), 0)
+            self.assertIn("apps/web/app/page.tsx", payload["files"])
+            # No file lives inside the .git directory (".gitignore" is fine — it's a real file).
+            self.assertTrue(
+                all(part != ".git" for f in payload["files"] for part in f.split("/"))
+            )
+            json.dumps(payload)  # must be JSON-serializable
+
+
+if __name__ == "__main__":
+    unittest.main()

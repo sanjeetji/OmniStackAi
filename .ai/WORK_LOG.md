@@ -1,5 +1,17 @@
 # Work Log
 
+## 2026-09-13 — R-418 (front-door pivot: brick 3 — chat studio web UI)
+
+- Added the user-facing "chat -> create an app" screen. New `omnistackai_agent_engine/studio/` package, Python 3.13 **stdlib only** (`http.server`) — no npm/pnpm, no web framework.
+  - `page.py`: self-contained `STUDIO_HTML` (inline CSS/JS, zero external requests) — prompt textarea, example chips, Build button, building state, and a results panel (app name, description, entity chips, file count, repo path, commit, file list). Diff-invariant static content.
+  - `server.py`: `create_studio_server(build_fn, *, host, port)` -> `ThreadingHTTPServer`. `GET /` serves the page, `GET /healthz` returns ok, `POST /api/build` reads `{prompt}` and calls the **injected** `build_fn(prompt) -> dict` (400 on empty/invalid, 502 on build failure, 413 on oversize). The build function is injected so the HTTP layer is fully testable offline.
+  - `live_serve.py`: opt-in entrypoint wiring the real local-Ollama `build_app_from_prompt` path; per-build output dir (slug of the prompt under `OMNISTACKAI_APP_OUT_DIR` or a temp dir); serves on `OMNISTACKAI_STUDIO_HOST`/`PORT` (default 127.0.0.1:4173).
+- `intake/build_app.py`: added `app_build_result_to_dict(result)` (pure, JSON-safe: name/description/entities/file_count/target_dir/commit_sha/files, excludes `.git`), exported from `intake`.
+- Wired opt-in Task: `scripts/agent-engine.sh studio-serve` + `Taskfile.yml` `agent-engine:studio:serve`.
+- Added `services/agent-engine/tests/test_studio_server.py` (11 tests, deterministic — ephemeral localhost server + in-memory stub build, real urllib requests): page is self-contained + no external resources, GET serves the page, healthz, unknown GET 404, POST build success (+ records the prompt), empty-prompt 400, invalid-JSON 400, build-failure 502, unknown POST 404, `app_build_result_to_dict` shape.
+- Gates: focused 11 passed; `task verify` **2,789** passed; lint/security/env green; `builder:demo` 152 files (unchanged). **0 model calls in verify.**
+- **Live proof (opt-in, on the Mac):** started `task agent-engine:studio:serve`; `GET /` served the 7,513-byte page; `POST /api/build` with "Build a bookstore where users browse books, each book has an author, and users can place orders" -> local Ollama -> IR "Bookstore" (Book/Order) -> a 154-file owned Git repo. The local user-facing chat-to-create experience now works end to end.
+
 ## 2026-09-13 — R-417 (front-door pivot: brick 2 — prompt -> app repo)
 
 - Chained the R-416 intake agent into the existing builder so a plain-English description produces a real, customer-owned Git repository.
