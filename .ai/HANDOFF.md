@@ -1,6 +1,6 @@
 # Current Handoff
 
-Task ID: R-410
+Task ID: R-411
 Status: done
 Phase: BASIC/MVP — Founder Stage 0
 Branch: `main` (the only branch; the GitHub default)
@@ -58,9 +58,26 @@ Branch: `main` (the only branch; the GitHub default)
   46. **R-408**: Color Contrast Checker Suite (`components/color-contrast.tsx`)
   47. **R-409**: Currency / Money Input Suite (`components/currency-input.tsx`)
   48. **R-410**: Password Generator Suite (`components/password-generator.tsx`)
+  49. **R-411**: Slug / URL Input Suite (`components/slug-input.tsx`)
 - Advancing autonomously to the next Tracker ID (posture is advancing, not stopped). Still stop-and-ask only for paid cloud / DB engine / new infra / native-mobile / a materially different architecture decision.
 
 ## Completed
+
+### R-411 — Generated Accessible Futuristic Reusable Slug / URL Input Suite (components/slug-input.tsx)
+
+Enabled a genuinely functional URL-slug field across generated Next.js web applications:
+- **Standalone Slug Input Suite (`apps/web/components/slug-input.tsx`)**:
+  - Implemented `SlugInputVariant`, `SlugInputSize`, `SlugInputHandle`, `SlugInputProps`, plus `VARIANT_STYLES`/`SIZE_STYLES` maps and a `slugify()` helper.
+  - Compound and semantic alias exports: `SlugInput`, `Slugify`, `UrlSlugInput`, `PermalinkInput`, default export.
+  - Real-time slugify (NFKD + charCodeAt diacritic strip, lowercase, non-alphanumeric→separator, trim/collapse); auto-sync from `source` until manually edited; prefix + full URL; copy-to-clipboard.
+  - Controlled + uncontrolled `value`; `maxLength`; `onChange`/`onCopy`; WAI-ARIA labeled input + `aria-live` copied announcement; ASCII-only generated source.
+  - React ref forwarding (`forwardRef`), imperative handle (`SlugInputHandle`: `getValue`/`getFullUrl`/`setValue`/`slugify`/`clear`/`focus`), explicit `displayName` across all exports.
+  - Exported `render_slug_input_component` in `omnistackai_agent_engine.codegen` and registered `components/slug-input.tsx` in `NextjsWebAdapter.generate()`.
+  - Maintained 100% diff-invariance across `ir.description`; 0 external runtime dependencies.
+- **Verification**:
+  - 18 unit tests in `services/agent-engine/tests/test_slug_input_component.py` (all passing).
+  - `task verify` passing: 2,681 tests passed.
+  - `task lint`, `task security:quick`, `task env:check` — pass. `task builder:demo -- minimal-blog` — 148 files (includes `apps/web/components/slug-input.tsx`).
 
 ### R-410 — Generated Accessible Futuristic Reusable Password Generator Suite (components/password-generator.tsx)
 
@@ -894,9 +911,9 @@ Enabled accessible, desktop-and-mobile-grade, futuristic Time Picker and Time Ra
 
 ## Verification
 
-- `task verify` — pass (2,663 agent-engine tests; 18 focused R-410 tests in `test_password_generator_component.py`).
+- `task verify` — pass (2,681 agent-engine tests; 18 focused R-411 tests in `test_slug_input_component.py`).
 - `task lint`, `task security:quick`, `task env:check` — pass.
-- `task builder:demo -- minimal-blog` — pass (147 files, includes `components/password-generator.tsx`).
+- `task builder:demo -- minimal-blog` — pass (148 files, includes `components/slug-input.tsx`).
 
 ## Blockers and risks
 
@@ -905,7 +922,7 @@ Enabled accessible, desktop-and-mobile-grade, futuristic Time Picker and Time Ra
 
 ## Next action
 
-- Advancing autonomously to Task R-411 (next unstarted Tracker ID). Record its contract in `.ai/CURRENT_TASK.yaml` and `.ai/tasks/R-411.md` before code.
+- Advancing autonomously to Task R-412 (next unstarted Tracker ID). Record its contract in `.ai/CURRENT_TASK.yaml` and `.ai/tasks/R-412.md` before code.
 
 ## Next command
 

@@ -1,30 +1,29 @@
-task_id: R-410
-id: R-410
-title: "Accessible Futuristic Reusable Password Generator Suite"
+task_id: R-411
+id: R-411
+title: "Accessible Futuristic Reusable Slug / URL Input Suite"
 status: DONE
 phase: MVP
-tracker_row: 47
+tracker_row: 48
 started_at: "2026-09-12"
 completed_at: "2026-09-12"
 objective: >-
-  Add an accessible, zero-dependency, desktop-and-mobile-grade, futuristic Password Generator compound
-  component suite (components/password-generator.tsx): generates a secure random password using
-  crypto.getRandomValues (with a Math.random fallback) from configurable character sets (uppercase,
-  lowercase, numbers, symbols) with an optional exclude-ambiguous filter, guaranteeing at least one
-  character from each enabled set and shuffling with Fisher-Yates; a length slider (min/max), set toggles,
-  a strength meter, a read-only output, copy-to-clipboard (navigator.clipboard with execCommand fallback)
-  with copied feedback, and a regenerate action; SSR-safe (crypto only accessed in handlers/effects;
-  auto-generates on mount); controlled length/options via props; onGenerate + onCopy callbacks; WAI-ARIA
-  (role="group", labeled controls, aria-live copied announcement); 4 futuristic visual styling variants
-  ("default", "card", "glass", "neon"); 3 size scales ("sm", "md", "lg"); React ref forwarding (forwardRef);
-  useImperativeHandle (PasswordGeneratorHandle: generate/getValue/copy/setLength); and explicit displayName
-  across compound and semantic alias exports (PasswordGenerator, PasswordCreator, SecurePasswordGenerator,
-  PasswordMaker, default). Static module constant — never references ir.name/ir.description.
+  Add an accessible, zero-dependency, desktop-and-mobile-grade, futuristic Slug / URL Input compound
+  component suite (components/slug-input.tsx): a slugify() helper that converts arbitrary text into a
+  URL-safe slug in real time (Unicode NFKD normalization to strip diacritics, lowercase, non-alphanumeric
+  runs collapsed to a configurable separator, leading/trailing separators trimmed); auto-sync from an
+  optional source prop (e.g. a title) until the user manually edits the slug; an optional prefix / base URL
+  with a computed full URL; copy-to-clipboard (navigator.clipboard with copied feedback); controlled +
+  uncontrolled value; maxLength; onChange (slug) and onCopy (fullUrl) callbacks; WAI-ARIA (labeled input,
+  aria-label, aria-live copied announcement); 4 futuristic visual styling variants ("default", "card",
+  "glass", "neon"); 3 size scales ("sm", "md", "lg"); React ref forwarding (forwardRef);
+  useImperativeHandle (SlugInputHandle: getValue/getFullUrl/setValue/slugify/clear/focus); and explicit
+  displayName across compound and semantic alias exports (SlugInput, Slugify, UrlSlugInput, PermalinkInput,
+  default). Static module constant — never references ir.name/ir.description.
 allowed_paths:
   - "services/agent-engine/src/omnistackai_agent_engine/codegen/nextjs.py"
   - "services/agent-engine/src/omnistackai_agent_engine/codegen/__init__.py"
-  - "services/agent-engine/tests/test_password_generator_component.py"
-  - ".ai/tasks/R-410.md"
+  - "services/agent-engine/tests/test_slug_input_component.py"
+  - ".ai/tasks/R-411.md"
   - ".ai/CURRENT_TASK.yaml"
   - ".ai/PROJECT_STATE.yaml"
   - ".ai/WORK_LOG.md"
@@ -36,9 +35,9 @@ forbidden_changes:
   - "Do not break snapshot diff invariance across ir.description"
   - "Do not commit or push code to git without verification"
 evidence:
-  verify: "2663 passed (Stage 0 verification passed)"
+  verify: "2681 passed (Stage 0 verification passed)"
   lint: "task lint passed"
   security: "task security:quick passed"
-  demos: "task builder:demo -- minimal-blog generated 147 files (includes apps/web/components/password-generator.tsx)"
+  demos: "task builder:demo -- minimal-blog generated 148 files (includes apps/web/components/slug-input.tsx)"
   tracker: DONE
-next_action: "Proceed to R-411 (next unstarted Tracker ID), autonomous continuation active."
+next_action: "Proceed to R-412 (next unstarted Tracker ID), autonomous continuation active."

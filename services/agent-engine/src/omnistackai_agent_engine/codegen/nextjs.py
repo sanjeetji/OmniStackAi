@@ -69275,6 +69275,269 @@ def render_password_generator_component() -> str:
     return _PASSWORD_GENERATOR_COMPONENT
 
 
+_SLUG_INPUT_COMPONENT = r"""'use client';
+
+import { forwardRef, useEffect, useImperativeHandle, useRef, useState } from 'react';
+import type { CSSProperties } from 'react';
+
+export type SlugInputVariant = 'default' | 'card' | 'glass' | 'neon';
+export type SlugInputSize = 'sm' | 'md' | 'lg';
+
+export interface SlugInputProps {
+  value?: string;
+  defaultValue?: string;
+  source?: string;
+  autoSyncFromSource?: boolean;
+  prefix?: string;
+  separator?: string;
+  maxLength?: number;
+  label?: string;
+  placeholder?: string;
+  name?: string;
+  disabled?: boolean;
+  showLabel?: boolean;
+  showPrefix?: boolean;
+  showCopy?: boolean;
+  variant?: SlugInputVariant;
+  size?: SlugInputSize;
+  accentColor?: string;
+  ariaLabel?: string;
+  className?: string;
+  style?: CSSProperties;
+  onChange?: (slug: string) => void;
+  onCopy?: (fullUrl: string) => void;
+}
+
+export interface SlugInputHandle {
+  getValue: () => string;
+  getFullUrl: () => string;
+  setValue: (value: string) => void;
+  slugify: (text: string) => string;
+  clear: () => void;
+  focus: () => void;
+}
+
+interface VariantStyle {
+  wrapper: CSSProperties;
+  labelColor: string;
+  mutedColor: string;
+  inputBg: string;
+  inputColor: string;
+  inputBorder: string;
+  focusBorder: string;
+  prefixBg: string;
+}
+
+const VARIANT_STYLES: Record<SlugInputVariant, VariantStyle> = {
+  default: {
+    wrapper: { background: 'transparent' },
+    labelColor: '#0f172a', mutedColor: '#64748b', inputBg: '#ffffff', inputColor: '#0f172a', inputBorder: '#cbd5e1', focusBorder: '#2563eb', prefixBg: '#f1f5f9',
+  },
+  card: {
+    wrapper: { background: '#ffffff', border: '1px solid #e2e8f0', borderRadius: '12px', boxShadow: '0 4px 16px rgba(0, 0, 0, 0.06)', padding: '16px' },
+    labelColor: '#0f172a', mutedColor: '#64748b', inputBg: '#ffffff', inputColor: '#0f172a', inputBorder: '#cbd5e1', focusBorder: '#2563eb', prefixBg: '#f1f5f9',
+  },
+  glass: {
+    wrapper: { background: 'rgba(248, 250, 252, 0.6)', border: '1px solid rgba(255, 255, 255, 0.4)', borderRadius: '12px', boxShadow: '0 8px 32px rgba(0, 0, 0, 0.12)', backdropFilter: 'blur(16px)', WebkitBackdropFilter: 'blur(16px)', padding: '16px' },
+    labelColor: '#0f172a', mutedColor: '#475569', inputBg: 'rgba(255, 255, 255, 0.7)', inputColor: '#0f172a', inputBorder: 'rgba(148, 163, 184, 0.6)', focusBorder: '#2563eb', prefixBg: 'rgba(241, 245, 249, 0.7)',
+  },
+  neon: {
+    wrapper: { background: '#050811', border: '1px solid rgba(6, 182, 212, 0.4)', borderRadius: '12px', boxShadow: '0 0 24px rgba(6, 182, 212, 0.15)', padding: '16px' },
+    labelColor: '#f8fafc', mutedColor: '#38bdf8', inputBg: 'rgba(6, 182, 212, 0.08)', inputColor: '#e0f2fe', inputBorder: 'rgba(6, 182, 212, 0.5)', focusBorder: '#06b6d4', prefixBg: 'rgba(6, 182, 212, 0.12)',
+  },
+};
+
+const SIZE_STYLES: Record<SlugInputSize, { font: number; pad: number }> = {
+  sm: { font: 13, pad: 8 },
+  md: { font: 15, pad: 10 },
+  lg: { font: 17, pad: 13 },
+};
+
+function slugify(text: string, separator: string): string {
+  const sep = separator || '-';
+  let s = text.normalize('NFKD').split('').filter((c) => { const code = c.charCodeAt(0); return code < 0x300 || code > 0x36f; }).join('');
+  s = s.toLowerCase().replace(/[^a-z0-9]+/g, sep);
+  while (s.length > 0 && s.slice(0, sep.length) === sep) s = s.slice(sep.length);
+  while (s.length > 0 && s.slice(s.length - sep.length) === sep) s = s.slice(0, s.length - sep.length);
+  return s;
+}
+
+const SlugInputComponent = forwardRef<SlugInputHandle, SlugInputProps>(
+  function SlugInput(
+    {
+      value,
+      defaultValue = '',
+      source,
+      autoSyncFromSource = true,
+      prefix = '',
+      separator = '-',
+      maxLength,
+      label = 'Slug',
+      placeholder = 'my-page-slug',
+      name,
+      disabled = false,
+      showLabel = true,
+      showPrefix = true,
+      showCopy = true,
+      variant = 'default',
+      size = 'md',
+      accentColor,
+      ariaLabel = 'URL slug',
+      className,
+      style,
+      onChange,
+      onCopy,
+    }: SlugInputProps,
+    ref,
+  ) {
+    const isControlled = typeof value === 'string';
+    const [internal, setInternal] = useState<string>(() => slugify(defaultValue, separator));
+    const [copied, setCopied] = useState(false);
+    const [focused, setFocused] = useState(false);
+    const editedRef = useRef<boolean>(Boolean(defaultValue));
+    const inputRef = useRef<HTMLInputElement | null>(null);
+
+    const currentSlug = isControlled ? (value as string) : internal;
+    const clip = (s: string) => (typeof maxLength === 'number' ? s.slice(0, maxLength) : s);
+    const fullUrl = prefix + currentSlug;
+
+    const emit = (nextSlug: string) => {
+      const clipped = clip(nextSlug);
+      if (!isControlled) setInternal(clipped);
+      if (onChange) onChange(clipped);
+    };
+
+    useEffect(() => {
+      if (autoSyncFromSource && !editedRef.current && typeof source === 'string') {
+        const derived = clip(slugify(source, separator));
+        if (!isControlled) setInternal(derived);
+        if (onChange) onChange(derived);
+      }
+      // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [source, autoSyncFromSource, separator]);
+
+    const handleChange = (raw: string) => {
+      editedRef.current = true;
+      emit(slugify(raw, separator));
+    };
+
+    const doCopy = () => {
+      if (typeof navigator !== 'undefined' && navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(fullUrl).catch(() => undefined);
+      }
+      setCopied(true);
+      if (onCopy) onCopy(fullUrl);
+      window.setTimeout(() => setCopied(false), 1500);
+    };
+
+    useImperativeHandle(
+      ref,
+      () => ({
+        getValue: () => currentSlug,
+        getFullUrl: () => fullUrl,
+        setValue: (v: string) => {
+          editedRef.current = true;
+          emit(slugify(v, separator));
+        },
+        slugify: (text: string) => slugify(text, separator),
+        clear: () => {
+          editedRef.current = false;
+          if (!isControlled) setInternal('');
+          if (onChange) onChange('');
+        },
+        focus: () => {
+          if (inputRef.current) inputRef.current.focus();
+        },
+      }),
+      [currentSlug, fullUrl, isControlled, separator, onChange],
+    );
+
+    const theme = VARIANT_STYLES[variant] || VARIANT_STYLES.default;
+    const sizing = SIZE_STYLES[size] || SIZE_STYLES.md;
+    const resolvedAccent = accentColor || theme.focusBorder;
+
+    return (
+      <div
+        className={className}
+        data-variant={variant}
+        data-size={size}
+        style={{ display: 'flex', flexDirection: 'column', gap: '4px', fontFamily: 'system-ui, -apple-system, sans-serif', ...theme.wrapper, ...style }}
+      >
+        {showLabel ? (
+          <label style={{ fontSize: (sizing.font - 2) + 'px', fontWeight: 600, color: theme.labelColor }}>{label}</label>
+        ) : null}
+        <div style={{ display: 'flex', alignItems: 'stretch', border: '1px solid ' + (focused ? resolvedAccent : theme.inputBorder), borderRadius: '8px', overflow: 'hidden', background: theme.inputBg }}>
+          {showPrefix && prefix ? (
+            <span style={{ display: 'flex', alignItems: 'center', padding: '0 ' + sizing.pad + 'px', background: theme.prefixBg, color: theme.mutedColor, fontSize: (sizing.font - 1) + 'px', fontFamily: 'monospace', whiteSpace: 'nowrap' }}>
+              {prefix}
+            </span>
+          ) : null}
+          <input
+            ref={inputRef}
+            type="text"
+            value={currentSlug}
+            name={name}
+            disabled={disabled}
+            placeholder={placeholder}
+            aria-label={ariaLabel}
+            spellCheck={false}
+            autoComplete="off"
+            onChange={(e) => handleChange(e.target.value)}
+            onFocus={() => setFocused(true)}
+            onBlur={() => setFocused(false)}
+            style={{
+              flex: 1,
+              fontSize: sizing.font + 'px',
+              padding: sizing.pad + 'px',
+              background: 'transparent',
+              color: theme.inputColor,
+              border: 'none',
+              outline: 'none',
+              fontFamily: 'monospace',
+              minWidth: 0,
+            }}
+          />
+          {showCopy ? (
+            <button
+              type="button"
+              aria-label="Copy URL"
+              onClick={doCopy}
+              disabled={disabled}
+              style={{ padding: '0 ' + sizing.pad + 'px', background: 'transparent', border: 'none', borderLeft: '1px solid ' + theme.inputBorder, color: resolvedAccent, cursor: disabled ? 'default' : 'pointer', fontSize: (sizing.font - 1) + 'px', fontWeight: 600, whiteSpace: 'nowrap' }}
+            >
+              {copied ? 'Copied' : 'Copy'}
+            </button>
+          ) : null}
+        </div>
+        <span aria-live="polite" style={{ position: 'absolute', width: '1px', height: '1px', overflow: 'hidden', clip: 'rect(0 0 0 0)', clipPath: 'inset(50%)', whiteSpace: 'nowrap' }}>
+          {copied ? 'URL copied to clipboard' : ''}
+        </span>
+      </div>
+    );
+  },
+);
+
+SlugInputComponent.displayName = 'SlugInput';
+
+export const SlugInput = SlugInputComponent;
+export const Slugify = SlugInputComponent;
+export const UrlSlugInput = SlugInputComponent;
+export const PermalinkInput = SlugInputComponent;
+
+SlugInput.displayName = 'SlugInput';
+Slugify.displayName = 'Slugify';
+UrlSlugInput.displayName = 'UrlSlugInput';
+PermalinkInput.displayName = 'PermalinkInput';
+
+export default SlugInputComponent;
+"""
+
+
+def render_slug_input_component() -> str:
+    """Render the Accessible Futuristic Reusable Slug / URL Input Suite (R-411)."""
+    return _SLUG_INPUT_COMPONENT
+
+
 _DESIGN_TOKENS_CSS = (
     "/**\n"
     " * OmniStackAI Design Tokens & Theming Engine\n"
@@ -69914,6 +70177,7 @@ class NextjsWebAdapter:
             GeneratedFile("components/color-contrast.tsx", _COLOR_CONTRAST_COMPONENT),
             GeneratedFile("components/currency-input.tsx", _CURRENCY_INPUT_COMPONENT),
             GeneratedFile("components/password-generator.tsx", _PASSWORD_GENERATOR_COMPONENT),
+            GeneratedFile("components/slug-input.tsx", _SLUG_INPUT_COMPONENT),
             GeneratedFile("styles/tokens.css", _DESIGN_TOKENS_CSS),
             GeneratedFile("app/globals.css", _GLOBALS_CSS),
             GeneratedFile("app/error.tsx", _ERROR_PAGE),

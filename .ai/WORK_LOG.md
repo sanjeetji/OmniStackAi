@@ -1,5 +1,23 @@
 # Work Log
 
+## 2026-09-12 — R-411
+
+- Recorded contract in `.ai/CURRENT_TASK.yaml` and `.ai/tasks/R-411.md` before code (test-first).
+- `nextjs.py`:
+  - Added `_SLUG_INPUT_COMPONENT` static template (raw triple-quoted string) implementing the accessible, desktop-and-mobile-grade, futuristic Slug / URL Input compound component suite (`apps/web/components/slug-input.tsx`).
+  - Genuinely functional `slugify(text, separator)`: `String.normalize('NFKD')` + a `charCodeAt` filter stripping combining diacritics (0x300-0x36f), `toLowerCase`, non-alphanumeric runs collapsed to the separator, and leading/trailing separators trimmed (ASCII-only source — no unicode escapes embedded).
+  - Auto-sync from an optional `source` prop until the user manually edits (`editedRef`); optional `prefix`/base URL with a computed full URL; copy-to-clipboard (`navigator.clipboard.writeText`) with copied feedback; controlled + uncontrolled `value`; `maxLength` clipping.
+  - `onChange(slug)` + `onCopy(fullUrl)`; WAI-ARIA (labeled input, `aria-label`, visually-hidden `aria-live` copied announcement); focus-driven accent border; monospace input with a joined prefix chip and inline copy button.
+  - Imperative `SlugInputHandle` (`getValue`, `getFullUrl`, `setValue`, `slugify`, `clear`, `focus`) via `useImperativeHandle`.
+  - Implemented `SlugInputVariant`/`SlugInputSize` types, `SlugInputHandle`/`SlugInputProps` interfaces, `VARIANT_STYLES`/`SIZE_STYLES` maps.
+  - Compound and semantic alias exports: `SlugInput`, `Slugify`, `UrlSlugInput`, `PermalinkInput`, default export — each with explicit `displayName`.
+  - Exported `render_slug_input_component` in `omnistackai_agent_engine.codegen` and registered `components/slug-input.tsx` in `NextjsWebAdapter.generate()`.
+  - Maintained 100% diff-invariance across `ir.description` (static module constant); 0 external runtime dependencies.
+  - Note: initial diacritic strip was authored with `̀-ͯ` but the JSON tool layer converted those escapes to literal combining-mark characters; rewrote to a `charCodeAt`/`0x300`-`0x36f` filter so the generated source stays ASCII-only and robust.
+- Added `services/agent-engine/tests/test_slug_input_component.py` with 18 tests (file-generated, diff-invariance + accessor byte-equality, `'use client'`, zero-deps imports, forwardRef + useImperativeHandle + 6 handle methods, TS types, alias/default exports, displayNames, 4 variants, 3 sizes, slugify logic, diacritics/NFKD + charCodeAt, source sync, prefix, copy-to-clipboard, aria, callbacks/controlled, codegen export).
+- Gates: `pytest .../test_slug_input_component.py` (18 passed); `task verify` (2,681 tests passed); `task lint`, `task security:quick`, `task env:check` passed; `task builder:demo -- minimal-blog` generated 148 files including `apps/web/components/slug-input.tsx`. 0 model calls.
+- Static TSX sanity check: `'use client'` first line, balanced braces/parens, react-only imports, ASCII-only, no `\"\"\"`/backtick hazards.
+
 ## 2026-09-12 — R-410
 
 - Recorded contract in `.ai/CURRENT_TASK.yaml` and `.ai/tasks/R-410.md` before code (test-first).

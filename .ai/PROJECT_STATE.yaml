@@ -2,12 +2,27 @@ schema_version: 1
 project: OmniStackAI
 phase: BASIC/MVP
 founder_stage: 0
-current_task: R-411
+current_task: R-412
 current_status: advancing
 branch: main
-last_completed_task: R-410
+last_completed_task: R-411
 last_completed_task_summary: >-
-  Generated Accessible Futuristic Reusable Password Generator Suite (components/password-generator.tsx); a
+  Generated Accessible Futuristic Reusable Slug / URL Input Suite (components/slug-input.tsx); a genuinely
+  functional slug field — a slugify() helper converts arbitrary text to a URL-safe slug in real time
+  (Unicode NFKD normalization + charCodeAt filter to strip combining diacritics 0x300-0x36f, lowercase,
+  non-alphanumeric runs collapsed to a configurable separator, leading/trailing separators trimmed);
+  auto-sync from an optional source prop (e.g. a title) until the user manually edits; an optional prefix /
+  base URL with a computed full URL; copy-to-clipboard (navigator.clipboard.writeText) with copied feedback;
+  controlled + uncontrolled value; maxLength; onChange (slug) + onCopy (fullUrl) callbacks; WAI-ARIA (labeled
+  input, aria-label, aria-live copied announcement); 4 futuristic variants ("default", "card", "glass",
+  "neon"); 3 size scales ("sm", "md", "lg"); React ref forwarding (forwardRef); useImperativeHandle
+  (SlugInputHandle: getValue/getFullUrl/setValue/slugify/clear/focus); canonical TypeScript types
+  (SlugInputVariant, SlugInputSize, SlugInputHandle, SlugInputProps); compound and semantic alias exports
+  (SlugInput, Slugify, UrlSlugInput, PermalinkInput, default export) with explicit displayName; 100%
+  diff-invariance across ir.description, ASCII-only generated source, 0 external runtime dependencies;
+  exported render_slug_input_component in codegen; registered components/slug-input.tsx in NextjsWebAdapter;
+  2,681 tests pass (18 new tests in test_slug_input_component.py); 0 model calls. Previously R-410 shipped the
+  Password Generator Suite (components/password-generator.tsx); a
   genuinely functional secure password generator — builds a password from configurable character sets
   (uppercase/lowercase/numbers/symbols, optional exclude-ambiguous) using crypto.getRandomValues (Uint32Array,
   Math.random fallback), guaranteeing at least one char from each enabled set and shuffling with Fisher-Yates;
@@ -199,9 +214,9 @@ product_direction: >-
   framework adapter contract -> Next.js adapter -> Git service -> preview/sandbox (needs cloud env).
 id_note: >-
   Workbook backlog owns R-010..R-219. Founder-requested tasks use IDs after R-219: R-220..R-223 done,
-  R-224 Next.js deferred (env-blocked), R-225..R-410 done.
+  R-224 Next.js deferred (env-blocked), R-225..R-411 done.
 blockers: []
 next_action: >-
-  Task R-410 (Accessible Futuristic Reusable Password Generator Suite) complete with 2,663 tests passing.
-  Advancing autonomously to R-411 (next unstarted Tracker ID) — the posture is advancing, not stopped;
+  Task R-411 (Accessible Futuristic Reusable Slug / URL Input Suite) complete with 2,681 tests passing.
+  Advancing autonomously to R-412 (next unstarted Tracker ID) — the posture is advancing, not stopped;
   continue until manually stopped.
