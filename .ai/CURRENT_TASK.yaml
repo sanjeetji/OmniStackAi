@@ -1,30 +1,29 @@
-task_id: R-405
-id: R-405
-title: "Accessible Futuristic Reusable Mention / @-Autocomplete Textarea Suite"
+task_id: R-406
+id: R-406
+title: "Accessible Futuristic Reusable Marquee / Ticker Suite"
 status: DONE
 phase: MVP
-tracker_row: 42
+tracker_row: 43
 started_at: "2026-09-12"
 completed_at: "2026-09-12"
 objective: >-
-  Add an accessible, zero-dependency, desktop-and-mobile-grade, futuristic Mention / @-Autocomplete Textarea
-  compound component suite (components/mention.tsx): a textarea that detects a configurable trigger
-  character (default "@") at the caret, opens a filtered suggestion listbox from an items prop, supports
-  full keyboard navigation (ArrowDown/ArrowUp to move, Enter/Tab to insert, Escape to close), inserts the
-  chosen mention token and keeps typing flowing, extracts the set of mentioned ids from the text, supports
-  controlled + uncontrolled value, and fires onChange (value, mentions) and onMention callbacks; a
-  detectTrigger() helper scans back from the caret to find a whitespace-delimited trigger token; ARIA
-  combobox/listbox pattern (textarea with aria-autocomplete="list", aria-expanded, aria-controls,
-  aria-activedescendant; listbox role="listbox" with role="option" + aria-selected); 4 futuristic visual
-  styling variants ("default", "card", "glass", "neon"); 3 size scales ("sm", "md", "lg"); React ref
-  forwarding (forwardRef); useImperativeHandle (MentionHandle: getValue/setValue/getMentions/focus/clear);
-  and explicit displayName across compound and semantic alias exports (Mention, MentionInput,
-  MentionTextarea, AtMention, default). Static module constant — never references ir.name/ir.description.
+  Add an accessible, zero-dependency, desktop-and-mobile-grade, futuristic Marquee / Ticker compound
+  component suite (components/marquee.tsx): a seamless continuous scroller for arbitrary children (news
+  tickers, logo walls, announcement bars) that duplicates its content once for a seamless -50% loop, driven
+  by CSS @keyframes injected via an inline <style> element (omni-marquee-x / omni-marquee-y with
+  animationDirection for left/right/up/down); configurable durationSeconds, gap, and edge gradient fade via
+  CSS maskImage; pause-on-hover plus a controlled paused prop and an imperative pause/resume/toggle handle
+  (animationPlayState); a CSS prefers-reduced-motion guard that stops the animation; accessibility (the
+  duplicated copy is aria-hidden, the container carries an aria-label); 4 futuristic visual styling variants
+  ("default", "card", "glass", "neon"); 3 size scales ("sm", "md", "lg"); React ref forwarding (forwardRef);
+  useImperativeHandle (MarqueeHandle: pause/resume/toggle/isPaused); and explicit displayName across
+  compound and semantic alias exports (Marquee, MarqueeTicker, ScrollingBanner, NewsTicker, default). Static
+  module constant — never references ir.name/ir.description.
 allowed_paths:
   - "services/agent-engine/src/omnistackai_agent_engine/codegen/nextjs.py"
   - "services/agent-engine/src/omnistackai_agent_engine/codegen/__init__.py"
-  - "services/agent-engine/tests/test_mention_component.py"
-  - ".ai/tasks/R-405.md"
+  - "services/agent-engine/tests/test_marquee_component.py"
+  - ".ai/tasks/R-406.md"
   - ".ai/CURRENT_TASK.yaml"
   - ".ai/PROJECT_STATE.yaml"
   - ".ai/WORK_LOG.md"
@@ -36,9 +35,9 @@ forbidden_changes:
   - "Do not break snapshot diff invariance across ir.description"
   - "Do not commit or push code to git without verification"
 evidence:
-  verify: "2574 passed (Stage 0 verification passed)"
+  verify: "2592 passed (Stage 0 verification passed)"
   lint: "task lint passed"
   security: "task security:quick passed"
-  demos: "task builder:demo -- minimal-blog generated 142 files (includes apps/web/components/mention.tsx)"
+  demos: "task builder:demo -- minimal-blog generated 143 files (includes apps/web/components/marquee.tsx)"
   tracker: DONE
-next_action: "Proceed to R-406 (next unstarted Tracker ID), autonomous continuation active."
+next_action: "Proceed to R-407 (next unstarted Tracker ID), autonomous continuation active."

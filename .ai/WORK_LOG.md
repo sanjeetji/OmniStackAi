@@ -1,5 +1,22 @@
 # Work Log
 
+## 2026-09-12 — R-406
+
+- Recorded contract in `.ai/CURRENT_TASK.yaml` and `.ai/tasks/R-406.md` before code (test-first).
+- `nextjs.py`:
+  - Added `_MARQUEE_COMPONENT` static template (raw triple-quoted string) implementing the accessible, desktop-and-mobile-grade, futuristic Marquee / Ticker compound component suite (`apps/web/components/marquee.tsx`).
+  - Seamless continuous scroller for arbitrary `children`: duplicates the content once (second copy `aria-hidden`) for a seamless `-50%` loop, driven by CSS `@keyframes` injected via an inline `<style>{MARQUEE_CSS}</style>` (`omni-marquee-x` / `omni-marquee-y`, with `animationDirection` handling left/right/up/down).
+  - Configurable `direction`, `durationSeconds`, `gap`, and edge gradient fade via CSS `maskImage`/`WebkitMaskImage`; `pauseOnHover` (via `onMouseEnter`/`onMouseLeave` + `animationPlayState`), a controlled `paused` prop, and an imperative `pause`/`resume`/`toggle`/`isPaused` handle.
+  - A CSS `@media (prefers-reduced-motion: reduce)` rule in the injected style stops the animation (`.omni-marquee-track { animation: none !important }`), in addition to the app's global reduced-motion tokens.
+  - Accessibility: container `role="group"` + `aria-label`; the duplicated visual copy is `aria-hidden="true"` so screen readers read the content once.
+  - Implemented `MarqueeVariant`/`MarqueeSize`/`MarqueeDirection` types, `MarqueeHandle`/`MarqueeProps` interfaces, `VARIANT_STYLES`/`SIZE_STYLES` maps; `import type { CSSProperties, ReactNode } from 'react'`.
+  - Compound and semantic alias exports: `Marquee`, `MarqueeTicker`, `ScrollingBanner`, `NewsTicker`, default export — each with explicit `displayName`.
+  - Exported `render_marquee_component` in `omnistackai_agent_engine.codegen` and registered `components/marquee.tsx` in `NextjsWebAdapter.generate()`.
+  - Maintained 100% diff-invariance across `ir.description` (static module constant); 0 external runtime dependencies.
+- Added `services/agent-engine/tests/test_marquee_component.py` with 18 tests (file-generated, diff-invariance + accessor byte-equality, `'use client'`, zero-deps imports, forwardRef + useImperativeHandle + 4 handle methods, TS types, alias/default exports, displayNames, 4 variants, 3 sizes, 4 directions, keyframes injection + `<style`, prefers-reduced-motion, pause-on-hover + animationPlayState, seamless duplicate aria-hidden, edge maskImage, controlled pause + durationSeconds, codegen export).
+- Gates: `pytest .../test_marquee_component.py` (18 passed); `task verify` (2,592 tests passed); `task lint`, `task security:quick`, `task env:check` passed; `task builder:demo -- minimal-blog` generated 143 files including `apps/web/components/marquee.tsx`. 0 model calls.
+- Static TSX sanity check: `'use client'` first line, balanced braces/parens (CSS keyframes braces balanced within the JS string), react-only imports, no `\"\"\"`/backtick hazards.
+
 ## 2026-09-12 — R-405
 
 - Recorded contract in `.ai/CURRENT_TASK.yaml` and `.ai/tasks/R-405.md` before code (test-first).

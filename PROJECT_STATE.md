@@ -1,12 +1,20 @@
 # Project State — OmniStackAI
-Last updated: 2026-09-12T14:35:00+05:30
+Last updated: 2026-09-12T15:15:00+05:30
 
 ## Current Phase
 Stage 0 (Founder Build Sequence, Brief Section 91) — BASIC/MVP
 
 ## Last Completed Task
-Tracker ID: R-405 — Generated Accessible Futuristic Reusable Mention / @-Autocomplete Textarea Suite (components/mention.tsx) — DONE,
-`task verify` (2,574 agent-engine tests, 18 new focused R-405 tests) passing. A genuinely functional textarea that detects a configurable
+Tracker ID: R-406 — Generated Accessible Futuristic Reusable Marquee / Ticker Suite (components/marquee.tsx) — DONE,
+`task verify` (2,592 agent-engine tests, 18 new focused R-406 tests) passing. A seamless continuous scroller for arbitrary children
+(news tickers, logo walls, announcement bars) that duplicates its content once for a seamless `-50%` loop, driven by CSS `@keyframes`
+injected via an inline `<style>` (`omni-marquee-x`/`omni-marquee-y` with `animationDirection` for left/right/up/down); configurable
+`durationSeconds`/`gap`/edge gradient fade (CSS `maskImage`); pause-on-hover plus a controlled `paused` prop and an imperative
+pause/resume/toggle handle (`animationPlayState`); a CSS `prefers-reduced-motion` guard that stops the animation; accessibility (duplicated
+copy `aria-hidden`, container `role="group"` + `aria-label`); 4 variants, 3 sizes, `forwardRef` + `useImperativeHandle` (`MarqueeHandle`:
+pause/resume/toggle/isPaused), alias exports (`Marquee`, `MarqueeTicker`, `ScrollingBanner`, `NewsTicker`, default) with explicit
+`displayName`; 100% diff-invariance across `ir.description`, 0 external runtime dependencies. Immediately preceded by R-405 — Generated
+Accessible Futuristic Reusable Mention / @-Autocomplete Textarea Suite (components/mention.tsx) — `task verify` (2,574 agent-engine tests, 18 new focused R-405 tests) passing. A genuinely functional textarea that detects a configurable
 trigger char (default `@`) at the caret via a `detectTrigger()` helper, opens a filtered suggestion listbox from an `items` prop, supports
 keyboard navigation (ArrowDown/ArrowUp/Enter/Tab to insert, Escape to close) plus mouse, inserts the chosen mention token and repositions the
 caret (`requestAnimationFrame` + `setSelectionRange`), extracts the set of mentioned ids from the text, supports controlled + uncontrolled
@@ -80,7 +88,7 @@ R-324 (theming tokens), R-323 (popover), R-322 (dropdown menu), R-321 (accordion
 R-317 (skeleton), R-316 (alert), R-315 (card), R-314 (tooltip), R-313 (column visibility), R-312 (badge), R-311 (table density),
 R-310 (tabs), R-309 (pagination), and R-308 (JSON export).
 
-**Notes:** (1) R-405 complete with 2,574 tests passing. (2) Advancing autonomously to R-406 (posture is advancing, not stopped).
+**Notes:** (1) R-406 complete with 2,592 tests passing. (2) Advancing autonomously to R-407 (posture is advancing, not stopped).
 
 
 

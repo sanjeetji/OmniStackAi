@@ -1,6 +1,6 @@
 # Current Handoff
 
-Task ID: R-405
+Task ID: R-406
 Status: done
 Phase: BASIC/MVP — Founder Stage 0
 Branch: `main` (the only branch; the GitHub default)
@@ -53,9 +53,26 @@ Branch: `main` (the only branch; the GitHub default)
   41. **R-403**: Password Strength Meter & Requirements Suite (`components/password-strength.tsx`)
   42. **R-404**: Masked / Pattern Input Suite (`components/masked-input.tsx`)
   43. **R-405**: Mention / @-Autocomplete Textarea Suite (`components/mention.tsx`)
+  44. **R-406**: Marquee / Ticker Suite (`components/marquee.tsx`)
 - Advancing autonomously to the next Tracker ID (posture is advancing, not stopped). Still stop-and-ask only for paid cloud / DB engine / new infra / native-mobile / a materially different architecture decision.
 
 ## Completed
+
+### R-406 — Generated Accessible Futuristic Reusable Marquee / Ticker Suite (components/marquee.tsx)
+
+Enabled a genuinely functional continuous ticker/marquee across generated Next.js web applications:
+- **Standalone Marquee Suite (`apps/web/components/marquee.tsx`)**:
+  - Implemented `MarqueeVariant`, `MarqueeSize`, `MarqueeDirection`, `MarqueeHandle`, `MarqueeProps`, plus internal `VARIANT_STYLES`/`SIZE_STYLES` maps and a `MARQUEE_CSS` keyframes string.
+  - Compound and semantic alias exports: `Marquee`, `MarqueeTicker`, `ScrollingBanner`, `NewsTicker`, default export.
+  - Seamless `-50%` loop via a duplicated (aria-hidden) content copy; CSS `@keyframes` (`omni-marquee-x`/`omni-marquee-y`) injected in an inline `<style>`; `animationDirection` handles left/right/up/down.
+  - Configurable `durationSeconds`/`gap`/`gradientEdges` (CSS `maskImage`); `pauseOnHover` + controlled `paused` + imperative pause/resume/toggle (`animationPlayState`); CSS `prefers-reduced-motion` guard stops the scroll.
+  - React ref forwarding (`forwardRef`), imperative handle (`MarqueeHandle`: `pause`/`resume`/`toggle`/`isPaused`), explicit `displayName` across all exports.
+  - Exported `render_marquee_component` in `omnistackai_agent_engine.codegen` and registered `components/marquee.tsx` in `NextjsWebAdapter.generate()`.
+  - Maintained 100% diff-invariance across `ir.description`; 0 external runtime dependencies.
+- **Verification**:
+  - 18 unit tests in `services/agent-engine/tests/test_marquee_component.py` (all passing).
+  - `task verify` passing: 2,592 tests passed.
+  - `task lint`, `task security:quick`, `task env:check` — pass. `task builder:demo -- minimal-blog` — 143 files (includes `apps/web/components/marquee.tsx`).
 
 ### R-405 — Generated Accessible Futuristic Reusable Mention / @-Autocomplete Textarea Suite (components/mention.tsx)
 
@@ -809,9 +826,9 @@ Enabled accessible, desktop-and-mobile-grade, futuristic Time Picker and Time Ra
 
 ## Verification
 
-- `task verify` — pass (2,574 agent-engine tests; 18 focused R-405 tests in `test_mention_component.py`).
+- `task verify` — pass (2,592 agent-engine tests; 18 focused R-406 tests in `test_marquee_component.py`).
 - `task lint`, `task security:quick`, `task env:check` — pass.
-- `task builder:demo -- minimal-blog` — pass (142 files, includes `components/mention.tsx`).
+- `task builder:demo -- minimal-blog` — pass (143 files, includes `components/marquee.tsx`).
 
 ## Blockers and risks
 
@@ -820,7 +837,7 @@ Enabled accessible, desktop-and-mobile-grade, futuristic Time Picker and Time Ra
 
 ## Next action
 
-- Advancing autonomously to Task R-406 (next unstarted Tracker ID). Record its contract in `.ai/CURRENT_TASK.yaml` and `.ai/tasks/R-406.md` before code.
+- Advancing autonomously to Task R-407 (next unstarted Tracker ID). Record its contract in `.ai/CURRENT_TASK.yaml` and `.ai/tasks/R-407.md` before code.
 
 ## Next command
 

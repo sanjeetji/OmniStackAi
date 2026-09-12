@@ -2,12 +2,26 @@ schema_version: 1
 project: OmniStackAI
 phase: BASIC/MVP
 founder_stage: 0
-current_task: R-406
+current_task: R-407
 current_status: advancing
 branch: main
-last_completed_task: R-405
+last_completed_task: R-406
 last_completed_task_summary: >-
-  Generated Accessible Futuristic Reusable Mention / @-Autocomplete Textarea Suite (components/mention.tsx);
+  Generated Accessible Futuristic Reusable Marquee / Ticker Suite (components/marquee.tsx); a seamless
+  continuous scroller for arbitrary children (news tickers, logo walls, announcement bars) that duplicates
+  its content once for a seamless -50% loop, driven by CSS @keyframes injected via an inline <style> element
+  (omni-marquee-x / omni-marquee-y with animationDirection for left/right/up/down); configurable
+  durationSeconds, gap, and edge gradient fade via CSS maskImage; pause-on-hover plus a controlled paused
+  prop and an imperative pause/resume/toggle handle (animationPlayState); a CSS prefers-reduced-motion guard
+  (in the injected style) that stops the animation; accessibility (the duplicated copy is aria-hidden, the
+  container carries role="group" + aria-label); 4 futuristic variants ("default", "card", "glass", "neon");
+  3 size scales ("sm", "md", "lg"); React ref forwarding (forwardRef); useImperativeHandle (MarqueeHandle:
+  pause/resume/toggle/isPaused); canonical TypeScript types (MarqueeVariant, MarqueeSize, MarqueeDirection,
+  MarqueeHandle, MarqueeProps); compound and semantic alias exports (Marquee, MarqueeTicker, ScrollingBanner,
+  NewsTicker, default export) with explicit displayName; 100% diff-invariance across ir.description, 0
+  external runtime dependencies; exported render_marquee_component in codegen; registered
+  components/marquee.tsx in NextjsWebAdapter; 2,592 tests pass (18 new tests in test_marquee_component.py);
+  0 model calls. Previously R-405 shipped the Mention / @-Autocomplete Textarea Suite (components/mention.tsx);
   a genuinely functional textarea that detects a configurable trigger char (default "@") at the caret via a
   detectTrigger() helper, opens a filtered suggestion listbox from an items prop, supports keyboard
   navigation (ArrowDown/ArrowUp/Enter/Tab to insert, Escape to close), inserts the chosen mention token and
@@ -123,9 +137,9 @@ product_direction: >-
   framework adapter contract -> Next.js adapter -> Git service -> preview/sandbox (needs cloud env).
 id_note: >-
   Workbook backlog owns R-010..R-219. Founder-requested tasks use IDs after R-219: R-220..R-223 done,
-  R-224 Next.js deferred (env-blocked), R-225..R-405 done.
+  R-224 Next.js deferred (env-blocked), R-225..R-406 done.
 blockers: []
 next_action: >-
-  Task R-405 (Accessible Futuristic Reusable Mention / @-Autocomplete Textarea Suite) complete with 2,574
-  tests passing. Advancing autonomously to R-406 (next unstarted Tracker ID) — the posture is advancing,
-  not stopped; continue until manually stopped.
+  Task R-406 (Accessible Futuristic Reusable Marquee / Ticker Suite) complete with 2,592 tests passing.
+  Advancing autonomously to R-407 (next unstarted Tracker ID) — the posture is advancing, not stopped;
+  continue until manually stopped.

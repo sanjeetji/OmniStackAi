@@ -67793,6 +67793,185 @@ def render_mention_component() -> str:
     return _MENTION_COMPONENT
 
 
+_MARQUEE_COMPONENT = r"""'use client';
+
+import { forwardRef, useImperativeHandle, useState } from 'react';
+import type { CSSProperties, ReactNode } from 'react';
+
+export type MarqueeVariant = 'default' | 'card' | 'glass' | 'neon';
+export type MarqueeSize = 'sm' | 'md' | 'lg';
+export type MarqueeDirection = 'left' | 'right' | 'up' | 'down';
+
+export interface MarqueeProps {
+  children?: ReactNode;
+  direction?: MarqueeDirection;
+  durationSeconds?: number;
+  gap?: number;
+  pauseOnHover?: boolean;
+  paused?: boolean;
+  gradientEdges?: boolean;
+  variant?: MarqueeVariant;
+  size?: MarqueeSize;
+  ariaLabel?: string;
+  className?: string;
+  style?: CSSProperties;
+}
+
+export interface MarqueeHandle {
+  pause: () => void;
+  resume: () => void;
+  toggle: () => void;
+  isPaused: () => boolean;
+}
+
+interface VariantStyle {
+  wrapper: CSSProperties;
+  color: string;
+}
+
+const VARIANT_STYLES: Record<MarqueeVariant, VariantStyle> = {
+  default: { wrapper: { background: 'transparent', color: '#0f172a' }, color: '#0f172a' },
+  card: { wrapper: { background: '#ffffff', color: '#0f172a', border: '1px solid #e2e8f0', borderRadius: '12px', boxShadow: '0 4px 16px rgba(0, 0, 0, 0.06)' }, color: '#0f172a' },
+  glass: { wrapper: { background: 'rgba(248, 250, 252, 0.6)', color: '#0f172a', border: '1px solid rgba(255, 255, 255, 0.4)', borderRadius: '12px', boxShadow: '0 8px 32px rgba(0, 0, 0, 0.12)', backdropFilter: 'blur(16px)', WebkitBackdropFilter: 'blur(16px)' }, color: '#0f172a' },
+  neon: { wrapper: { background: '#050811', color: '#38bdf8', border: '1px solid rgba(6, 182, 212, 0.4)', borderRadius: '12px', boxShadow: '0 0 24px rgba(6, 182, 212, 0.15)' }, color: '#38bdf8' },
+};
+
+const SIZE_STYLES: Record<MarqueeSize, { height: number; font: number; pad: number }> = {
+  sm: { height: 120, font: 13, pad: 6 },
+  md: { height: 180, font: 15, pad: 10 },
+  lg: { height: 260, font: 17, pad: 14 },
+};
+
+const MARQUEE_CSS =
+  '@keyframes omni-marquee-x { from { transform: translateX(0); } to { transform: translateX(-50%); } } ' +
+  '@keyframes omni-marquee-y { from { transform: translateY(0); } to { transform: translateY(-50%); } } ' +
+  '@media (prefers-reduced-motion: reduce) { .omni-marquee-track { animation: none !important; transform: none !important; } }';
+
+const MarqueeComponent = forwardRef<MarqueeHandle, MarqueeProps>(
+  function Marquee(
+    {
+      children,
+      direction = 'left',
+      durationSeconds = 20,
+      gap = 40,
+      pauseOnHover = true,
+      paused,
+      gradientEdges = true,
+      variant = 'default',
+      size = 'md',
+      ariaLabel = 'Scrolling content',
+      className,
+      style,
+    }: MarqueeProps,
+    ref,
+  ) {
+    const isControlled = typeof paused === 'boolean';
+    const [internalPaused, setInternalPaused] = useState(false);
+    const [hoverPaused, setHoverPaused] = useState(false);
+
+    const isVertical = direction === 'up' || direction === 'down';
+    const reverse = direction === 'right' || direction === 'down';
+    const basePaused = isControlled ? (paused as boolean) : internalPaused;
+    const effectivePaused = basePaused || (pauseOnHover && hoverPaused);
+
+    useImperativeHandle(
+      ref,
+      () => ({
+        pause: () => setInternalPaused(true),
+        resume: () => setInternalPaused(false),
+        toggle: () => setInternalPaused((p) => !p),
+        isPaused: () => effectivePaused,
+      }),
+      [effectivePaused],
+    );
+
+    const theme = VARIANT_STYLES[variant] || VARIANT_STYLES.default;
+    const sizing = SIZE_STYLES[size] || SIZE_STYLES.md;
+
+    const maskValue = isVertical
+      ? 'linear-gradient(to bottom, transparent, #000 8%, #000 92%, transparent)'
+      : 'linear-gradient(to right, transparent, #000 8%, #000 92%, transparent)';
+
+    const trackStyle: CSSProperties = {
+      display: 'flex',
+      flexDirection: isVertical ? 'column' : 'row',
+      gap: gap + 'px',
+      width: isVertical ? '100%' : 'max-content',
+      height: isVertical ? 'max-content' : 'auto',
+      animationName: isVertical ? 'omni-marquee-y' : 'omni-marquee-x',
+      animationDuration: durationSeconds + 's',
+      animationTimingFunction: 'linear',
+      animationIterationCount: 'infinite',
+      animationDirection: reverse ? 'reverse' : 'normal',
+      animationPlayState: effectivePaused ? 'paused' : 'running',
+      willChange: 'transform',
+    };
+
+    const groupStyle: CSSProperties = {
+      display: 'flex',
+      flexDirection: isVertical ? 'column' : 'row',
+      gap: gap + 'px',
+      flexShrink: 0,
+      alignItems: 'center',
+    };
+
+    const outerStyle: CSSProperties = {
+      position: 'relative',
+      overflow: 'hidden',
+      display: 'block',
+      padding: sizing.pad + 'px',
+      fontSize: sizing.font + 'px',
+      fontFamily: 'system-ui, -apple-system, sans-serif',
+      height: isVertical ? sizing.height + 'px' : undefined,
+      maskImage: gradientEdges ? maskValue : undefined,
+      WebkitMaskImage: gradientEdges ? maskValue : undefined,
+      ...theme.wrapper,
+      ...style,
+    };
+
+    return (
+      <div
+        className={className}
+        role="group"
+        aria-label={ariaLabel}
+        data-variant={variant}
+        data-size={size}
+        data-direction={direction}
+        style={outerStyle}
+        onMouseEnter={() => setHoverPaused(true)}
+        onMouseLeave={() => setHoverPaused(false)}
+      >
+        <style>{MARQUEE_CSS}</style>
+        <div className="omni-marquee-track" style={trackStyle}>
+          <div style={groupStyle}>{children}</div>
+          <div style={groupStyle} aria-hidden="true">{children}</div>
+        </div>
+      </div>
+    );
+  },
+);
+
+MarqueeComponent.displayName = 'Marquee';
+
+export const Marquee = MarqueeComponent;
+export const MarqueeTicker = MarqueeComponent;
+export const ScrollingBanner = MarqueeComponent;
+export const NewsTicker = MarqueeComponent;
+
+Marquee.displayName = 'Marquee';
+MarqueeTicker.displayName = 'MarqueeTicker';
+ScrollingBanner.displayName = 'ScrollingBanner';
+NewsTicker.displayName = 'NewsTicker';
+
+export default MarqueeComponent;
+"""
+
+
+def render_marquee_component() -> str:
+    """Render the Accessible Futuristic Reusable Marquee / Ticker Suite (R-406)."""
+    return _MARQUEE_COMPONENT
+
+
 _DESIGN_TOKENS_CSS = (
     "/**\n"
     " * OmniStackAI Design Tokens & Theming Engine\n"
@@ -68427,6 +68606,7 @@ class NextjsWebAdapter:
             GeneratedFile("components/password-strength.tsx", _PASSWORD_STRENGTH_COMPONENT),
             GeneratedFile("components/masked-input.tsx", _MASKED_INPUT_COMPONENT),
             GeneratedFile("components/mention.tsx", _MENTION_COMPONENT),
+            GeneratedFile("components/marquee.tsx", _MARQUEE_COMPONENT),
             GeneratedFile("styles/tokens.css", _DESIGN_TOKENS_CSS),
             GeneratedFile("app/globals.css", _GLOBALS_CSS),
             GeneratedFile("app/error.tsx", _ERROR_PAGE),
