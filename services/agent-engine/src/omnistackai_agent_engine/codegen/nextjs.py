@@ -64335,6 +64335,880 @@ export const IdeaGraph = MindMapComponent;
 export default MindMapComponent;"""
 
 
+
+_AUDIO_VISUALIZER_COMPONENT = """'use client';
+
+import React, {
+  forwardRef,
+  useState,
+  useEffect,
+  useRef,
+  useImperativeHandle,
+  useCallback,
+} from 'react';
+
+export type AudioVisualizerVariant = 'default' | 'card' | 'glass' | 'neon';
+export type AudioVisualizerSize = 'sm' | 'md' | 'lg';
+export type AudioVisualizerMode = 'bars' | 'wave' | 'spectrum' | 'circular';
+
+export interface AudioVisualizerHandle {
+  play: () => void;
+  pause: () => void;
+  togglePlay: () => void;
+  seek: (time: number) => void;
+  setVolume: (volume: number) => void;
+  setMode: (mode: AudioVisualizerMode) => void;
+  getCurrentTime: () => number;
+  getDuration: () => number;
+  isPlaying: () => boolean;
+}
+
+export interface AudioVisualizerControlsProps {
+  isPlaying: boolean;
+  onTogglePlay: () => void;
+  currentTime: number;
+  duration: number;
+  onSeek: (time: number) => void;
+  volume: number;
+  onVolumeChange: (volume: number) => void;
+  isMuted: boolean;
+  onToggleMute: () => void;
+  playbackRate: number;
+  onPlaybackRateChange: (rate: number) => void;
+  mode: AudioVisualizerMode;
+  onModeChange: (mode: AudioVisualizerMode) => void;
+  variant?: AudioVisualizerVariant;
+  size?: AudioVisualizerSize;
+  showModeSelector?: boolean;
+}
+
+export interface AudioVisualizerCanvasProps {
+  mode: AudioVisualizerMode;
+  isPlaying: boolean;
+  frequencyData?: Uint8Array;
+  variant?: AudioVisualizerVariant;
+  size?: AudioVisualizerSize;
+  accentColor?: string;
+  className?: string;
+  style?: React.CSSProperties;
+}
+
+export interface AudioVisualizerProps {
+  src?: string;
+  audioElement?: HTMLMediaElement | null;
+  mode?: AudioVisualizerMode;
+  variant?: AudioVisualizerVariant;
+  size?: AudioVisualizerSize;
+  title?: string;
+  artist?: string;
+  autoPlay?: boolean;
+  showControls?: boolean;
+  showModeSelector?: boolean;
+  showTime?: boolean;
+  accentColor?: string;
+  className?: string;
+  style?: React.CSSProperties;
+  onPlay?: () => void;
+  onPause?: () => void;
+  onEnded?: () => void;
+  onTimeUpdate?: (currentTime: number) => void;
+}
+
+function formatAudioTime(seconds: number): string {
+  if (!isFinite(seconds) || seconds < 0) return '0:00';
+  const m = Math.floor(seconds / 60);
+  const s = Math.floor(seconds % 60);
+  return `${m}:${s < 10 ? '0' : ''}${s}`;
+}
+
+/* Vector Icons */
+function PlayIcon() {
+  return (
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
+      <polygon points="5 3 19 12 5 21 5 3" />
+    </svg>
+  );
+}
+
+function PauseIcon() {
+  return (
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
+      <rect x="6" y="4" width="4" height="16" />
+      <rect x="14" y="4" width="4" height="16" />
+    </svg>
+  );
+}
+
+function VolumeHighIcon() {
+  return (
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5" />
+      <path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07" />
+    </svg>
+  );
+}
+
+function VolumeMuteIcon() {
+  return (
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5" />
+      <line x1="23" y1="9" x2="17" y2="15" />
+      <line x1="17" y1="9" x2="23" y2="15" />
+    </svg>
+  );
+}
+
+/* Audio Visualizer Canvas Component */
+export const AudioVisualizerCanvas = forwardRef<HTMLCanvasElement, AudioVisualizerCanvasProps>(
+  function AudioVisualizerCanvas(
+    {
+      mode = 'bars',
+      isPlaying = false,
+      frequencyData,
+      variant = 'default',
+      size = 'md',
+      accentColor,
+      className,
+      style,
+    },
+    ref
+  ) {
+    const internalCanvasRef = useRef<HTMLCanvasElement | null>(null);
+    const animFrameRef = useRef<number | null>(null);
+    const peaksRef = useRef<number[]>([]);
+
+    const isNeon = variant === 'neon';
+    const isGlass = variant === 'glass';
+
+    const defaultAccent = isNeon ? '#06b6d4' : '#2563eb';
+    const primaryColor = accentColor || defaultAccent;
+
+    // Height based on size scale
+    const canvasHeight = size === 'sm' ? 120 : size === 'lg' ? 260 : 180;
+
+    useEffect(() => {
+      const canvas = internalCanvasRef.current;
+      if (!canvas) return;
+      const ctx = canvas.getContext('2d');
+      if (!ctx) return;
+
+      let step = 0;
+
+      const render = () => {
+        step++;
+        const width = canvas.width;
+        const height = canvas.height;
+
+        // Clear canvas
+        ctx.clearRect(0, 0, width, height);
+
+        // Background
+        ctx.fillStyle = isNeon ? '#050811' : isGlass ? 'rgba(248, 250, 252, 0.2)' : 'transparent';
+        ctx.fillRect(0, 0, width, height);
+
+        // Data source: frequencyData or harmonic synthetic oscillator
+        const binCount = 64;
+        const data = new Array(binCount);
+
+        for (let i = 0; i < binCount; i++) {
+          if (frequencyData && frequencyData.length > i) {
+            data[i] = frequencyData[i] / 255;
+          } else if (isPlaying) {
+            // Synthetic organic audio wave calculation
+            const wave1 = Math.sin((step * 0.05) + (i * 0.15));
+            const wave2 = Math.cos((step * 0.03) + (i * 0.08));
+            const bassBoost = i < 12 ? (1 - i / 12) * 0.4 : 0;
+            data[i] = Math.max(0.05, Math.min(1.0, (Math.abs(wave1 * wave2) * 0.8 + bassBoost)));
+          } else {
+            data[i] = 0.03; // idle baseline
+          }
+        }
+
+        // Keep peaks updated
+        if (peaksRef.current.length !== binCount) {
+          peaksRef.current = new Array(binCount).fill(0);
+        }
+        for (let i = 0; i < binCount; i++) {
+          if (data[i] > peaksRef.current[i]) {
+            peaksRef.current[i] = data[i];
+          } else {
+            peaksRef.current[i] = Math.max(0, peaksRef.current[i] - 0.015);
+          }
+        }
+
+        // Render based on mode
+        if (mode === 'bars') {
+          // Vertical Frequency Bars Mode
+          const barWidth = Math.max(2, (width / binCount) - 3);
+          const gap = 3;
+
+          for (let i = 0; i < binCount; i++) {
+            const x = i * (barWidth + gap) + 4;
+            const barH = Math.max(4, data[i] * (height - 20));
+            const y = height - barH - 8;
+
+            // Bar Gradient
+            const gradient = ctx.createLinearGradient(x, y, x, height);
+            if (isNeon) {
+              gradient.addColorStop(0, '#ec4899');
+              gradient.addColorStop(0.5, '#38bdf8');
+              gradient.addColorStop(1, '#06b6d4');
+            } else {
+              gradient.addColorStop(0, primaryColor);
+              gradient.addColorStop(1, '#93c5fd');
+            }
+
+            ctx.fillStyle = gradient;
+            if (isNeon) {
+              ctx.shadowColor = '#06b6d4';
+              ctx.shadowBlur = 8;
+            } else {
+              ctx.shadowBlur = 0;
+            }
+
+            // Rounded top bar
+            ctx.beginPath();
+            ctx.roundRect(x, y, barWidth, barH, [4, 4, 0, 0]);
+            ctx.fill();
+
+            // Peak indicator line
+            const peakY = height - (peaksRef.current[i] * (height - 20)) - 10;
+            ctx.fillStyle = isNeon ? '#f43f5e' : '#1d4ed8';
+            ctx.fillRect(x, peakY, barWidth, 2);
+          }
+        } else if (mode === 'wave') {
+          // Continuous Oscilloscope Wave Mode
+          ctx.beginPath();
+          const sliceWidth = width / (binCount - 1);
+          let currentX = 0;
+
+          for (let i = 0; i < binCount; i++) {
+            const val = data[i];
+            const y = (height / 2) + ((val - 0.5) * (height * 0.7));
+
+            if (i === 0) {
+              ctx.moveTo(currentX, y);
+            } else {
+              ctx.lineTo(currentX, y);
+            }
+            currentX += sliceWidth;
+          }
+
+          ctx.strokeStyle = isNeon ? '#38bdf8' : primaryColor;
+          ctx.lineWidth = isNeon ? 3 : 2;
+          if (isNeon) {
+            ctx.shadowColor = '#38bdf8';
+            ctx.shadowBlur = 12;
+          } else {
+            ctx.shadowBlur = 0;
+          }
+          ctx.stroke();
+        } else if (mode === 'spectrum') {
+          // Shaded Frequency Area Spectrum Mode
+          ctx.beginPath();
+          ctx.moveTo(0, height);
+
+          const sliceWidth = width / (binCount - 1);
+          let currentX = 0;
+
+          for (let i = 0; i < binCount; i++) {
+            const val = data[i];
+            const y = height - (val * (height - 16));
+            ctx.lineTo(currentX, y);
+            currentX += sliceWidth;
+          }
+
+          ctx.lineTo(width, height);
+          ctx.closePath();
+
+          const areaGradient = ctx.createLinearGradient(0, 0, 0, height);
+          if (isNeon) {
+            areaGradient.addColorStop(0, 'rgba(236, 72, 153, 0.8)');
+            areaGradient.addColorStop(0.5, 'rgba(56, 189, 248, 0.4)');
+            areaGradient.addColorStop(1, 'rgba(6, 182, 212, 0.05)');
+          } else {
+            areaGradient.addColorStop(0, 'rgba(37, 99, 235, 0.6)');
+            areaGradient.addColorStop(1, 'rgba(37, 99, 235, 0.02)');
+          }
+
+          ctx.fillStyle = areaGradient;
+          ctx.fill();
+
+          // Stroke crest line
+          ctx.beginPath();
+          currentX = 0;
+          for (let i = 0; i < binCount; i++) {
+            const val = data[i];
+            const y = height - (val * (height - 16));
+            if (i === 0) ctx.moveTo(currentX, y);
+            else ctx.lineTo(currentX, y);
+            currentX += sliceWidth;
+          }
+          ctx.strokeStyle = isNeon ? '#38bdf8' : primaryColor;
+          ctx.lineWidth = 2;
+          ctx.stroke();
+        } else if (mode === 'circular') {
+          // 360-degree Radial Circular Spectrum Mode
+          const centerX = width / 2;
+          const centerY = height / 2;
+          const baseRadius = Math.min(centerX, centerY) * 0.45;
+
+          // Pulsing center core
+          const bassEnergy = data[2] || 0.1;
+          const coreRadius = baseRadius * (0.8 + bassEnergy * 0.2);
+
+          ctx.beginPath();
+          ctx.arc(centerX, centerY, coreRadius, 0, 2 * Math.PI);
+          ctx.fillStyle = isNeon ? 'rgba(6, 182, 212, 0.15)' : 'rgba(37, 99, 235, 0.1)';
+          ctx.fill();
+          ctx.strokeStyle = isNeon ? '#06b6d4' : primaryColor;
+          ctx.lineWidth = 1.5;
+          ctx.stroke();
+
+          // Radial ray bars
+          const radialCount = 48;
+          const angleStep = (2 * Math.PI) / radialCount;
+
+          for (let i = 0; i < radialCount; i++) {
+            const angle = i * angleStep;
+            const sampleIdx = Math.floor((i / radialCount) * binCount);
+            const val = data[sampleIdx] || 0.05;
+            const barLength = val * (Math.min(centerX, centerY) * 0.5);
+
+            const x1 = centerX + Math.cos(angle) * coreRadius;
+            const y1 = centerY + Math.sin(angle) * coreRadius;
+            const x2 = centerX + Math.cos(angle) * (coreRadius + barLength);
+            const y2 = centerY + Math.sin(angle) * (coreRadius + barLength);
+
+            ctx.beginPath();
+            ctx.moveTo(x1, y1);
+            ctx.lineTo(x2, y2);
+            ctx.strokeStyle = isNeon ? (i % 2 === 0 ? '#38bdf8' : '#ec4899') : primaryColor;
+            ctx.lineWidth = 2.5;
+            if (isNeon) {
+              ctx.shadowColor = '#38bdf8';
+              ctx.shadowBlur = 6;
+            }
+            ctx.stroke();
+          }
+        }
+
+        animFrameRef.current = requestAnimationFrame(render);
+      };
+
+      animFrameRef.current = requestAnimationFrame(render);
+
+      return () => {
+        if (animFrameRef.current) cancelAnimationFrame(animFrameRef.current);
+      };
+    }, [mode, isPlaying, frequencyData, isNeon, isGlass, primaryColor]);
+
+    return (
+      <canvas
+        ref={(el) => {
+          internalCanvasRef.current = el;
+          if (typeof ref === 'function') ref(el);
+          else if (ref) ref.current = el;
+        }}
+        width={720}
+        height={canvasHeight}
+        className={className}
+        style={{
+          width: '100%',
+          height: `${canvasHeight}px`,
+          display: 'block',
+          borderRadius: '6px',
+          ...style,
+        }}
+      />
+    );
+  }
+);
+AudioVisualizerCanvas.displayName = 'AudioVisualizerCanvas';
+
+/* Audio Visualizer Controls Component */
+export const AudioVisualizerControls = forwardRef<HTMLDivElement, AudioVisualizerControlsProps>(
+  function AudioVisualizerControls(
+    {
+      isPlaying,
+      onTogglePlay,
+      currentTime,
+      duration,
+      onSeek,
+      volume,
+      onVolumeChange,
+      isMuted,
+      onToggleMute,
+      playbackRate,
+      onPlaybackRateChange,
+      mode,
+      onModeChange,
+      variant = 'default',
+      size = 'md',
+      showModeSelector = true,
+    },
+    ref
+  ) {
+    const isNeon = variant === 'neon';
+    const isGlass = variant === 'glass';
+
+    const btnStyle: React.CSSProperties = {
+      display: 'inline-flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+      padding: size === 'sm' ? '4px 8px' : '6px 12px',
+      borderRadius: '6px',
+      border: isNeon ? '1px solid rgba(6, 182, 212, 0.4)' : '1px solid var(--color-border, #cbd5e1)',
+      backgroundColor: isNeon ? 'rgba(15, 23, 42, 0.8)' : 'var(--color-surface, #ffffff)',
+      color: isNeon ? '#38bdf8' : 'var(--color-text, #0f172a)',
+      cursor: 'pointer',
+      fontSize: size === 'sm' ? '11px' : '13px',
+      fontWeight: 600,
+      transition: 'all 0.15s ease',
+    };
+
+    return (
+      <div
+        ref={ref}
+        style={{
+          display: 'flex',
+          flexDirection: 'column',
+          gap: '10px',
+          width: '100%',
+          marginTop: '12px',
+        }}
+        role="toolbar"
+        aria-label="Audio player controls"
+      >
+        {/* Timeline Scrubber */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', width: '100%' }}>
+          <span style={{ fontSize: '11px', color: '#64748b', minWidth: '36px', textAlign: 'right' }}>
+            {formatAudioTime(currentTime)}
+          </span>
+          <input
+            type="range"
+            min={0}
+            max={duration || 100}
+            step={0.1}
+            value={currentTime}
+            onChange={(e) => onSeek(Number(e.target.value))}
+            style={{
+              flex: 1,
+              accentColor: isNeon ? '#06b6d4' : '#2563eb',
+              cursor: 'pointer',
+            }}
+            role="slider"
+            aria-label="Audio position scrubber"
+            aria-valuemin={0}
+            aria-valuemax={duration || 100}
+            aria-valuenow={currentTime}
+            aria-valuetext={formatAudioTime(currentTime)}
+          />
+          <span style={{ fontSize: '11px', color: '#64748b', minWidth: '36px' }}>
+            {formatAudioTime(duration)}
+          </span>
+        </div>
+
+        {/* Buttons and Mode Switcher */}
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '8px' }}>
+          {/* Play / Pause & Volume */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <button
+              type="button"
+              onClick={onTogglePlay}
+              style={{
+                ...btnStyle,
+                backgroundColor: isNeon ? '#06b6d4' : '#2563eb',
+                color: '#ffffff',
+                borderColor: isNeon ? '#38bdf8' : '#2563eb',
+              }}
+              aria-label={isPlaying ? 'Pause audio' : 'Play audio'}
+            >
+              {isPlaying ? <PauseIcon /> : <PlayIcon />}
+              <span style={{ marginLeft: '6px' }}>{isPlaying ? 'Pause' : 'Play'}</span>
+            </button>
+
+            {/* Mute / Volume */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+              <button
+                type="button"
+                onClick={onToggleMute}
+                style={btnStyle}
+                aria-label={isMuted ? 'Unmute volume' : 'Mute volume'}
+              >
+                {isMuted || volume === 0 ? <VolumeMuteIcon /> : <VolumeHighIcon />}
+              </button>
+              <input
+                type="range"
+                min={0}
+                max={1}
+                step={0.05}
+                value={isMuted ? 0 : volume}
+                onChange={(e) => onVolumeChange(Number(e.target.value))}
+                style={{ width: '60px', accentColor: isNeon ? '#06b6d4' : '#2563eb' }}
+                aria-label="Audio volume"
+              />
+            </div>
+
+            {/* Playback Speed */}
+            <select
+              value={playbackRate}
+              onChange={(e) => onPlaybackRateChange(Number(e.target.value))}
+              style={{
+                ...btnStyle,
+                outline: 'none',
+                cursor: 'pointer',
+              }}
+              aria-label="Playback speed"
+            >
+              <option value={0.5}>0.5x</option>
+              <option value={1.0}>1.0x</option>
+              <option value={1.5}>1.5x</option>
+              <option value={2.0}>2.0x</option>
+            </select>
+          </div>
+
+          {/* Visualization Modes */}
+          {showModeSelector && (
+            <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+              {(['bars', 'wave', 'spectrum', 'circular'] as AudioVisualizerMode[]).map((m) => (
+                <button
+                  key={m}
+                  type="button"
+                  onClick={() => onModeChange(m)}
+                  style={{
+                    ...btnStyle,
+                    backgroundColor: mode === m ? (isNeon ? '#06b6d4' : '#2563eb') : undefined,
+                    color: mode === m ? '#ffffff' : undefined,
+                    borderColor: mode === m ? (isNeon ? '#06b6d4' : '#2563eb') : undefined,
+                  }}
+                  aria-pressed={mode === m}
+                >
+                  {m.charAt(0).toUpperCase() + m.slice(1)}
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
+    );
+  }
+);
+AudioVisualizerControls.displayName = 'AudioVisualizerControls';
+
+/* Main AudioVisualizer Compound Component */
+const AudioVisualizerComponent = forwardRef<AudioVisualizerHandle, AudioVisualizerProps>(
+  function AudioVisualizer(
+    {
+      src,
+      audioElement: propAudioElement,
+      mode: initialMode = 'bars',
+      variant = 'default',
+      size = 'md',
+      title = 'Master Audio Track',
+      artist = 'Sound Waveform Stream',
+      autoPlay = false,
+      showControls = true,
+      showModeSelector = true,
+      showTime = true,
+      accentColor,
+      className,
+      style,
+      onPlay,
+      onPause,
+      onEnded,
+      onTimeUpdate,
+    },
+    ref
+  ) {
+    const [mode, setMode] = useState<AudioVisualizerMode>(initialMode);
+    const [isPlaying, setIsPlaying] = useState(false);
+    const [currentTime, setCurrentTime] = useState(0);
+    const [duration, setDuration] = useState(180); // 3 mins default simulated
+    const [volume, setVolume] = useState(0.85);
+    const [isMuted, setIsMuted] = useState(false);
+    const [playbackRate, setPlaybackRate] = useState(1.0);
+
+    const audioRef = useRef<HTMLAudioElement | null>(null);
+
+    // Audio element setup if src provided
+    useEffect(() => {
+      if (src && !propAudioElement) {
+        const audio = new Audio(src);
+        audio.preload = 'metadata';
+        audioRef.current = audio;
+
+        audio.onloadedmetadata = () => {
+          if (isFinite(audio.duration)) setDuration(audio.duration);
+        };
+        audio.ontimeupdate = () => {
+          setCurrentTime(audio.currentTime);
+          if (onTimeUpdate) onTimeUpdate(audio.currentTime);
+        };
+        audio.onplay = () => {
+          setIsPlaying(true);
+          if (onPlay) onPlay();
+        };
+        audio.onpause = () => {
+          setIsPlaying(false);
+          if (onPause) onPause();
+        };
+        audio.onended = () => {
+          setIsPlaying(false);
+          if (onEnded) onEnded();
+        };
+
+        if (autoPlay) {
+          audio.play().catch(() => {});
+        }
+
+        return () => {
+          audio.pause();
+          audio.src = '';
+        };
+      }
+    }, [src, propAudioElement, autoPlay, onPlay, onPause, onEnded, onTimeUpdate]);
+
+    // Simulated playback loop if no real audio src
+    useEffect(() => {
+      if (!src && !propAudioElement && isPlaying) {
+        const interval = setInterval(() => {
+          setCurrentTime((prev) => {
+            const next = prev + 0.1 * playbackRate;
+            if (next >= duration) {
+              setIsPlaying(false);
+              return 0;
+            }
+            return next;
+          });
+        }, 100);
+        return () => clearInterval(interval);
+      }
+    }, [src, propAudioElement, isPlaying, duration, playbackRate]);
+
+    const activeAudio = propAudioElement || audioRef.current;
+
+    const handlePlay = useCallback(() => {
+      if (activeAudio) {
+        activeAudio.play().catch(() => {});
+      } else {
+        setIsPlaying(true);
+      }
+    }, [activeAudio]);
+
+    const handlePause = useCallback(() => {
+      if (activeAudio) {
+        activeAudio.pause();
+      } else {
+        setIsPlaying(false);
+      }
+    }, [activeAudio]);
+
+    const handleTogglePlay = useCallback(() => {
+      if (isPlaying) handlePause();
+      else handlePlay();
+    }, [isPlaying, handlePause, handlePlay]);
+
+    const handleSeek = useCallback(
+      (time: number) => {
+        setCurrentTime(time);
+        if (activeAudio) {
+          activeAudio.currentTime = time;
+        }
+      },
+      [activeAudio]
+    );
+
+    const handleVolumeChange = useCallback(
+      (val: number) => {
+        setVolume(val);
+        setIsMuted(val === 0);
+        if (activeAudio) activeAudio.volume = val;
+      },
+      [activeAudio]
+    );
+
+    const handleToggleMute = useCallback(() => {
+      setIsMuted((prev) => {
+        const next = !prev;
+        if (activeAudio) activeAudio.muted = next;
+        return next;
+      });
+    }, [activeAudio]);
+
+    const handlePlaybackRateChange = useCallback(
+      (rate: number) => {
+        setPlaybackRate(rate);
+        if (activeAudio) activeAudio.playbackRate = rate;
+      },
+      [activeAudio]
+    );
+
+    // Keyboard controls
+    useEffect(() => {
+      const handleKeyDown = (e: KeyboardEvent) => {
+        if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) return;
+        if (e.code === 'Space') {
+          e.preventDefault();
+          handleTogglePlay();
+        } else if (e.code === 'KeyM') {
+          handleToggleMute();
+        } else if (e.code === 'ArrowRight') {
+          e.preventDefault();
+          handleSeek(Math.min(duration, currentTime + 5));
+        } else if (e.code === 'ArrowLeft') {
+          e.preventDefault();
+          handleSeek(Math.max(0, currentTime - 5));
+        }
+      };
+
+      window.addEventListener('keydown', handleKeyDown);
+      return () => window.removeEventListener('keydown', handleKeyDown);
+    }, [handleTogglePlay, handleToggleMute, handleSeek, currentTime, duration]);
+
+    // Expose Imperative Handle
+    useImperativeHandle(
+      ref,
+      () => ({
+        play: handlePlay,
+        pause: handlePause,
+        togglePlay: handleTogglePlay,
+        seek: handleSeek,
+        setVolume: handleVolumeChange,
+        setMode: setMode,
+        getCurrentTime: () => currentTime,
+        getDuration: () => duration,
+        isPlaying: () => isPlaying,
+      }),
+      [handlePlay, handlePause, handleTogglePlay, handleSeek, handleVolumeChange, currentTime, duration, isPlaying]
+    );
+
+    const isNeon = variant === 'neon';
+    const isGlass = variant === 'glass';
+    const isCard = variant === 'card';
+
+    return (
+      <div
+        className={className}
+        style={{
+          position: 'relative',
+          display: 'flex',
+          flexDirection: 'column',
+          width: '100%',
+          padding: size === 'sm' ? '12px' : size === 'lg' ? '20px' : '16px',
+          borderRadius: '12px',
+          border: isNeon ? '1px solid rgba(6, 182, 212, 0.4)' : '1px solid var(--color-border, #e2e8f0)',
+          backgroundColor: isNeon
+            ? '#050811'
+            : isGlass
+            ? 'rgba(255, 255, 255, 0.7)'
+            : isCard
+            ? 'var(--color-surface, #ffffff)'
+            : 'var(--color-surface, #ffffff)',
+          boxShadow: isNeon
+            ? '0 0 24px rgba(6, 182, 212, 0.15)'
+            : '0 4px 16px rgba(0, 0, 0, 0.06)',
+          backdropFilter: isGlass ? 'blur(16px)' : undefined,
+          userSelect: 'none',
+          ...style,
+        }}
+        role="region"
+        aria-label="Audio Visualizer"
+        data-variant={variant}
+        data-size={size}
+      >
+        {/* Track Title & Artist Info Header */}
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
+          <div>
+            <h4
+              style={{
+                margin: 0,
+                fontSize: size === 'sm' ? '13px' : '15px',
+                fontWeight: 700,
+                color: isNeon ? '#f8fafc' : 'var(--color-text, #0f172a)',
+              }}
+            >
+              {title}
+            </h4>
+            {artist && (
+              <p style={{ margin: 0, fontSize: '11px', color: isNeon ? '#38bdf8' : '#64748b' }}>
+                {artist}
+              </p>
+            )}
+          </div>
+
+          {showTime && (
+            <div
+              style={{
+                fontSize: '12px',
+                fontWeight: 600,
+                padding: '3px 8px',
+                borderRadius: '4px',
+                backgroundColor: isNeon ? 'rgba(6, 182, 212, 0.15)' : '#f1f5f9',
+                color: isNeon ? '#38bdf8' : '#334155',
+              }}
+            >
+              {formatAudioTime(currentTime)} / {formatAudioTime(duration)}
+            </div>
+          )}
+        </div>
+
+        {/* Dynamic Visualizer Canvas */}
+        <AudioVisualizerCanvas
+          mode={mode}
+          isPlaying={isPlaying}
+          variant={variant}
+          size={size}
+          accentColor={accentColor}
+        />
+
+        {/* Controls Toolbar */}
+        {showControls && (
+          <AudioVisualizerControls
+            isPlaying={isPlaying}
+            onTogglePlay={handleTogglePlay}
+            currentTime={currentTime}
+            duration={duration}
+            onSeek={handleSeek}
+            volume={volume}
+            onVolumeChange={handleVolumeChange}
+            isMuted={isMuted}
+            onToggleMute={handleToggleMute}
+            playbackRate={playbackRate}
+            onPlaybackRateChange={handlePlaybackRateChange}
+            mode={mode}
+            onModeChange={setMode}
+            variant={variant}
+            size={size}
+            showModeSelector={showModeSelector}
+          />
+        )}
+      </div>
+    );
+  }
+);
+
+// Compound & Semantic Alias Exports
+export const AudioVisualizer = AudioVisualizerComponent;
+export const WaveformVisualizer = AudioVisualizerComponent;
+export const SpectrumAnalyzer = AudioVisualizerComponent;
+export const Oscilloscope = AudioVisualizerComponent;
+
+AudioVisualizer.displayName = 'AudioVisualizer';
+WaveformVisualizer.displayName = 'WaveformVisualizer';
+SpectrumAnalyzer.displayName = 'SpectrumAnalyzer';
+Oscilloscope.displayName = 'Oscilloscope';
+AudioVisualizerComponent.displayName = 'AudioVisualizer';
+
+export default AudioVisualizerComponent;
+"""
+
+
+def render_audio_visualizer_component() -> str:
+    """Render the Accessible Futuristic Reusable Audio Waveform & Spectrum Visualizer Suite (R-398)."""
+    return _AUDIO_VISUALIZER_COMPONENT
+
+
 def render_mind_map_component() -> str:
     """Return the static TypeScript source code for components/mind-map.tsx."""
     return _MIND_MAP_COMPONENT
@@ -64965,6 +65839,7 @@ class NextjsWebAdapter:
             GeneratedFile("components/image-gallery.tsx", _IMAGE_GALLERY_COMPONENT),
             GeneratedFile("components/network-graph.tsx", _NETWORK_GRAPH_COMPONENT),
             GeneratedFile("components/log-viewer.tsx", _LOG_VIEWER_COMPONENT),
+            GeneratedFile("components/audio-visualizer.tsx", _AUDIO_VISUALIZER_COMPONENT),
             GeneratedFile("components/mind-map.tsx", _MIND_MAP_COMPONENT),
             GeneratedFile("styles/tokens.css", _DESIGN_TOKENS_CSS),
             GeneratedFile("app/globals.css", _GLOBALS_CSS),

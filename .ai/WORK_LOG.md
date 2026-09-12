@@ -1,5 +1,26 @@
 # Work Log
 
+## 2026-09-12 — R-398
+
+- Recorded contract in `.ai/CURRENT_TASK.yaml` and `.ai/tasks/R-398.md` (status in_progress → done).
+- `nextjs.py`:
+  - Added `_AUDIO_VISUALIZER_COMPONENT` static template implementing accessible, desktop-and-mobile-grade, futuristic Audio Waveform & Spectrum Visualizer compound component suite (`apps/web/components/audio-visualizer.tsx`).
+  - Implemented `AudioVisualizerVariant` ("default" | "card" | "glass" | "neon"), `AudioVisualizerSize` ("sm" | "md" | "lg"), `AudioVisualizerMode` ("bars" | "wave" | "spectrum" | "circular"), `AudioVisualizerHandle`, `AudioVisualizerControlsProps`, `AudioVisualizerCanvasProps`, `AudioVisualizerProps` interfaces.
+  - Implemented compound and semantic alias exports: `AudioVisualizer`, `WaveformVisualizer`, `SpectrumAnalyzer`, `Oscilloscope`, `AudioVisualizerControls`, `AudioVisualizerCanvas`, default export.
+  - Implemented 4 dynamic visualization modes on HTML5 `<canvas>`: vertical frequency bars with peak hold indicators, continuous oscilloscope waveform line, area frequency spectrum with gradient fill, and 360-degree radial circular spectrum with pulsating bass core.
+  - Implemented simulated harmonic audio oscillation loop alongside optional real `HTMLMediaElement` / Web Audio API connection.
+  - Implemented interactive timeline scrubber slider with current/total time display (`MM:SS`) and keyboard seek controls.
+  - Implemented play/pause toggling, volume slider, mute/unmute toggle, and playback speed selector (0.5x, 1x, 1.5x, 2x).
+  - Implemented accessible keyboard shortcuts (Space to play/pause, M to mute, Left/Right arrow keys to seek ±5s).
+  - Implemented WAI-ARIA 1.2 media semantics (`role="region"`, `aria-label="Audio Visualizer"`, `role="toolbar"`, `role="slider"`, `aria-valuemin`, `aria-valuemax`, `aria-valuenow`).
+  - Implemented 4 futuristic visual styling variants ("default", "card", "glass" with backdropFilter blur, "neon" cyberpunk cyan/magenta glow).
+  - Implemented 3 size scales ("sm", "md", "lg").
+  - Implemented React ref forwarding (`forwardRef`), imperative handle (`AudioVisualizerHandle`), and explicit `displayName` across all compound exports.
+  - Exported `render_audio_visualizer_component` in `omnistackai_agent_engine.codegen` and registered `components/audio-visualizer.tsx` in `NextjsWebAdapter.generate()`.
+  - Maintained 100% diff-invariance across `ir.description`.
+- Added `services/agent-engine/tests/test_audio_visualizer_component.py` with 17 comprehensive unit tests (all passing).
+- `task verify` — 2,448 tests pass (17 new), 0 failures. `task lint`, `task security:quick`, `task builder:demo -- minimal-blog` pass (135 files generated).
+
 ## 2026-09-12 — R-397
 
 - Recorded contract in `.ai/CURRENT_TASK.yaml` and `.ai/tasks/R-397.md` (status in_progress → done).

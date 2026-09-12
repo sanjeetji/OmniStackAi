@@ -1,6 +1,6 @@
 # Current Handoff
 
-Task ID: R-397
+Task ID: R-398
 Status: done
 Phase: BASIC/MVP — Founder Stage 0
 Branch: `main` (the only branch; the GitHub default)
@@ -45,9 +45,32 @@ Branch: `main` (the only branch; the GitHub default)
   33. **R-395**: Network Graph & Topology Map Suite (`components/network-graph.tsx`)
   34. **R-396**: Live Log Viewer & Event Stream Inspector Suite (`components/log-viewer.tsx`)
   35. **R-397**: Mind Map & Concept Tree Suite (`components/mind-map.tsx`)
+  36. **R-398**: Audio Waveform & Spectrum Visualizer Suite (`components/audio-visualizer.tsx`)
 - Ready for next task. Still stop-and-ask only for paid cloud / DB engine / new infra / native-mobile / a materially different architecture decision.
 
 ## Completed
+
+### R-398 — Generated Accessible Futuristic Reusable Audio Waveform & Spectrum Visualizer Suite (components/audio-visualizer.tsx)
+
+Enabled accessible, desktop-and-mobile-grade, futuristic Audio Waveform & Spectrum Visualizer compound components across generated Next.js web applications:
+- **Standalone Audio Visualizer Suite (`apps/web/components/audio-visualizer.tsx`)**:
+  - Implemented `AudioVisualizerVariant`, `AudioVisualizerSize`, `AudioVisualizerMode`, `AudioVisualizerHandle`, `AudioVisualizerControlsProps`, `AudioVisualizerCanvasProps`, `AudioVisualizerProps`.
+  - Implemented compound and semantic alias exports: `AudioVisualizer`, `WaveformVisualizer`, `SpectrumAnalyzer`, `Oscilloscope`, `AudioVisualizerControls`, `AudioVisualizerCanvas`, default export.
+  - Implemented 4 dynamic visualization modes on HTML5 `<canvas>`: vertical frequency bars with peak hold indicators, continuous oscilloscope waveform line, area frequency spectrum with gradient fill, and 360-degree radial circular spectrum with pulsating bass core.
+  - Implemented simulated harmonic audio oscillation loop alongside optional real `HTMLMediaElement` / Web Audio API connection.
+  - Implemented interactive timeline scrubber slider with current/total time display (`MM:SS`) and keyboard seek controls.
+  - Implemented play/pause toggling, volume slider, mute/unmute toggle, and playback speed selector (0.5x, 1x, 1.5x, 2x).
+  - Implemented accessible keyboard shortcuts (Space to play/pause, M to mute, Left/Right arrow keys to seek ±5s).
+  - Implemented WAI-ARIA 1.2 media semantics (`role="region"`, `aria-label="Audio Visualizer"`, `role="toolbar"`, `role="slider"`, `aria-valuemin`, `aria-valuemax`, `aria-valuenow`).
+  - Implemented 4 futuristic visual styling variants ("default", "card", "glass" with backdropFilter blur, "neon" cyberpunk cyan/magenta glow).
+  - Implemented 3 size scales ("sm", "md", "lg").
+  - Implemented React ref forwarding (`forwardRef`), imperative handle (`AudioVisualizerHandle`), and explicit `displayName` across all compound exports.
+  - Exported `render_audio_visualizer_component` in `omnistackai_agent_engine.codegen` and registered `components/audio-visualizer.tsx` in `NextjsWebAdapter.generate()`.
+  - Maintained 100% diff-invariance across `ir.description`.
+- **Verification**:
+  - 17 unit tests in `services/agent-engine/tests/test_audio_visualizer_component.py` (all passing).
+  - `task verify` passing: 2,448 tests passed in 2.020s.
+  - `task lint`, `task security:quick`, `task builder:demo -- minimal-blog` all passing (135 files generated).
 
 ### R-397 — Generated Accessible Futuristic Reusable Mind Map & Concept Tree Suite (components/mind-map.tsx)
 
@@ -657,9 +680,9 @@ Enabled accessible, desktop-and-mobile-grade, futuristic Time Picker and Time Ra
 
 ## Verification
 
-- `task verify` — pass (2,431 agent-engine tests; 17 focused R-397 tests in `test_mind_map_component.py`).
+- `task verify` — pass (2,448 agent-engine tests; 17 focused R-398 tests in `test_audio_visualizer_component.py`).
 - `task lint`, `task security:quick` — pass.
-- `task builder:demo minimal-blog` — pass (134 files).
+- `task builder:demo minimal-blog` — pass (135 files).
 
 ## Blockers and risks
 
@@ -668,10 +691,10 @@ Enabled accessible, desktop-and-mobile-grade, futuristic Time Picker and Time Ra
 
 ## Next action
 
-- Proceed with Task R-398 (Accessible Futuristic Reusable Audio Waveform & Spectrum Visualizer Suite: `components/audio-visualizer.tsx`).
+- Proceed with Task R-399 (Accessible Futuristic Reusable Particle Network & Interactive Constellation Canvas Suite: `components/particle-network.tsx`).
 
 ## Next command
 
-- `pytest services/agent-engine/tests/test_audio_visualizer_component.py`
+- `pytest services/agent-engine/tests/test_particle_network_component.py`
 
 
