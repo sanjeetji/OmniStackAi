@@ -3321,3 +3321,18 @@ Accessible, futuristic, desktop-and-mobile-grade terminal emulator and interacti
   - Full React `forwardRef`, imperative handle (`TerminalHandle`: `writeLine`, `clear`, `focus`, `scrollToBottom`, `getLines`, `exportLog`), and explicit `displayName` across all exports.
   - 100% diff-invariance across `ir.description` changes; zero external runtime npm dependencies.
   - Registered in `NextjsWebAdapter.generate()` as a `GeneratedFile` at `components/terminal.tsx` and exported in `codegen.__init__` as `render_terminal_component`.
+
+## Generated JSX inline styles — brace convention (R-427)
+
+A JSX inline style is `style={{ ... }}` — the outer `{}` is the JSX expression container and the inner `{}`
+is the object literal. When emitting a screen from a **Python f-string**, remember that f-strings collapse
+`{{` → `{` and `}}` → `}`, so a JSX double-brace style must be written as **quadruple braces**:
+
+- f-string:            `f'<span style={{{{ fontSize: 12 }}}}>{role}</span>'`   → emits `style={{ fontSize: 12 }}` ✓
+- regular / raw string: `'<span style={{ fontSize: 12 }}>...'`                  → emits `style={{ fontSize: 12 }}` ✓
+
+Writing `style={{ ... }}` inside an f-string emits single-brace `style={ ... }`, which is invalid JSX and
+makes the generated app fail to compile (HTTP 500). `tests/test_generated_screen_styles.py` generates real
+projects and forbids any single-brace object-literal inline style in the output, so this cannot regress.
+(Note: `task verify` asserts generated code as strings and does not compile the TSX — keep emitted TSX correct
+by construction.)

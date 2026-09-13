@@ -1,43 +1,34 @@
-task_id: R-426
-id: R-426
-title: "Remove a build from the Studio history"
+task_id: R-427
+id: R-427
+title: "Fix malformed single-brace inline styles in generated Next.js screens"
 status: done
 phase: MVP
 tracker_row: null
 started_at: "2026-09-13"
 completed_at: "2026-09-13"
 objective: >-
-  Let the operator clear a recorded build from the Studio's in-session Recent builds list. Add
-  StudioBuildHistory.remove(build_id) -> bool (thread-safe; removes by id, returns whether it existed).
-  Expose it over the stdlib server as POST /api/history/delete {id} via an injected delete_build_fn(build_id)
-  -> dict (reusing the generic id-body reader); unset -> 404, missing id -> 400. Because removing an entry
-  only edits the bounded in-memory list (never executes generated code, touches the DB, or deletes on disk),
-  the delete handler is wired in both Studio modes (alongside history listing) and returns the refreshed,
-  bounded, secret-free history ({removed, builds}) so the page re-renders in one call. The Studio page adds a
-  per-build Remove action, DOM-only. No change to build/preview/re-preview/open-folder/live status/status/
-  stop/restart, collision-free ports, single-session cleanup, PostgreSQL, or studio:serve/studio:preview.
+  Fix a real generated-code bug: several f-string templates in codegen/nextjs.py write style={{ ... }},
+  which Python collapses to single-brace style={ ... } in the emitted TSX (JSX requires double braces). This
+  is a syntax error, so any generated web app with the affected form/list/detail screen headers and
+  definition lists fails to compile and returns HTTP 500 - the Studio preview shows a blank/500 page even
+  though the backend runs. task verify never caught it because it asserts generated code as strings and never
+  compiles the TSX. Fix every affected f-string to emit proper double-brace JSX (quadruple braces in the
+  f-string), and add a deterministic regression test that generates real projects and asserts no single-brace
+  style={ appears in any generated .tsx. Do not change any component template, screen layout, styling value,
+  or logic - only correct the brace escaping.
 requirements:
-  - StudioBuildHistory.remove(build_id) -> bool (thread-safe): removes by id, reports presence; unknown id safe no-op False.
-  - POST /api/history/delete {id} via injected delete_build_fn (reuse generic id-body reader); unset 404, missing id 400, errors 502.
-  - Wire delete in both Studio modes (in-memory only); handler returns refreshed bounded secret-free history {removed, builds}.
-  - Per-build Remove button on the page wired to /api/history/delete, re-renders the list, DOM-only.
-  - Secret-free payloads/logs; nothing deleted on disk or in the DB.
-  - Deterministic/offline verify via injected fakes.
+  - Fix all f-string inline styles emitting single-brace style={ ... } in codegen/nextjs.py to double-brace; do not touch correct regular/raw templates.
+  - Add a regression test generating both example IRs asserting no generated .tsx has a single-brace inline style.
+  - No change to component templates, screen structure, styling values, diff-invariance, or other behavior.
 acceptance_criteria:
-  - remove True drops the entry (gone from list/get); unknown id -> False, no error.
-  - POST /api/history/delete {id} returns handler payload when wired, 404 when not, 400 on missing id; handler gets the id.
-  - Delete route available in build-only and preview modes (in-memory only).
-  - Studio page exposes per-build Remove wired to /api/history/delete and re-renders the list.
-  - Existing contracts compatible; focused + full verify + lint + security + env + both demos pass; 0 model calls in verify.
+  - No f-string in codegen/nextjs.py emits style={ <non-brace>; every generated .tsx across both examples is free of single-brace inline styles.
+  - The regression test fails before the fix and passes after.
+  - Existing generation/screen/diff-invariance tests green; focused + full verify + lint + security + env + both demos pass; 0 model calls in verify.
 allowed_paths:
-  - "services/agent-engine/src/omnistackai_agent_engine/studio/history.py"
-  - "services/agent-engine/src/omnistackai_agent_engine/studio/server.py"
-  - "services/agent-engine/src/omnistackai_agent_engine/studio/live_serve.py"
-  - "services/agent-engine/src/omnistackai_agent_engine/studio/page.py"
-  - "services/agent-engine/tests/test_studio_history.py"
-  - "services/agent-engine/tests/test_studio_server.py"
-  - "docs/RUNTIME.md"
-  - ".ai/tasks/R-426.md"
+  - "services/agent-engine/src/omnistackai_agent_engine/codegen/nextjs.py"
+  - "services/agent-engine/tests/test_generated_screen_styles.py"
+  - "docs/CODEGEN.md"
+  - ".ai/tasks/R-427.md"
   - ".ai/CURRENT_TASK.yaml"
   - ".ai/PROJECT_STATE.yaml"
   - ".ai/WORK_LOG.md"
@@ -48,14 +39,12 @@ allowed_paths:
   - "docs/RESUME_PROMPT.md"
 forbidden_changes:
   - "Do not modify or include the unrelated untracked .claude directory"
-  - "Do not add a service, top-level directory, platform/generated dependency, queue, sandbox vendor, database, or infrastructure"
-  - "Do not delete anything on disk or in the database; the action only edits the in-memory history"
-  - "Do not make generated-code execution implicit in task verify or the build-only Studio command"
-  - "Do not change studio:serve/studio:preview semantics, collision-free ports, live status, re-preview/open-folder, or single-session cleanup"
-  - "Do not change RuntimeProvider/ModelProvider/Application IR/database engine/assembler/Git-service/deployment/generated contracts; PostgreSQL stays"
-  - "Do not expose secrets, DB credentials, process environments, or raw tracebacks in payloads or logs"
+  - "Do not change component templates, screen layout/structure, styling values, or generated logic - only the brace escaping"
+  - "Do not change the Application IR, adapters' behavior, database engine, assembler, Git-service, or generated-project contracts; PostgreSQL stays"
+  - "Do not add a service, top-level directory, dependency, or infrastructure"
+  - "Do not break snapshot diff-invariance across ir.description"
 required_gates:
-  - focused studio-history, studio-server, studio-preview, and local-run session tests
+  - focused generated-screen-styles test + existing nextjs/screen/console tests
   - task lint
   - task verify
   - task security:quick
@@ -67,17 +56,19 @@ model_tool_trace:
   local_calls: 0
   cloud_calls: 0
   note: >-
-    L2 local UX work. Deterministic in-memory history + server boundaries and injected fakes are sufficient;
-    no local or cloud model call is needed for implementation or verify.
+    Pure codegen bugfix. Deterministic string generation + a brace-correctness regression test are
+    sufficient; no local or cloud model call is needed.
 evidence:
   baseline: >-
-    Start protocol passed at R-425: task verify 2,861 tests pass; local == origin/main at 62686da before
-    coding; only the untracked .claude/ present.
-  verify: "2,867 passed"
+    Found while running a generated app via the Studio preview: backend healthy (/posts 200) but the Next.js
+    web app returns HTTP 500 with "Expected '</', got ':'" - a single-brace JSX style in app/post_editor and
+    app/post_list. 14 f-string lines in nextjs.py emit style={ ... }. task verify was 2,867 at R-426.
+  verify: "2,870 passed"
   lint: "passed"
   security: "passed"
   env: "passed"
   demos: "minimal-blog 152 files; rideshare-favourites 149 files"
-  focused_test: "70 passed (test_studio_history + test_studio_server + test_studio_preview + test_localrun_session); 6 net-new R-426 tests (2 history.remove, 4 delete-route/page)"
-  delete_inspection: "history.remove True drops entry / False for unknown no-op; delete payload {removed, builds} bounded and secret-free; 0 model calls"
-next_action: "R-426 done. Next: R-427 (candidates: a build-in-progress state in the preview surface, or a 'clear all history' action)."
+  focused_test: "3 passed (test_generated_screen_styles.py) - RED before fix (caught favourites/page.tsx + blog screens), GREEN after"
+  fix: "14 f-string style={{ ... }} lines in nextjs.py -> {{{{ ... }}}} (screen headers/role badges/detail definition lists); regular/raw templates untouched"
+  root_cause: "found via Studio preview: generated Next.js web returned HTTP 500 (SWC 'Expected </ got :') on single-brace JSX style; backend was healthy"
+next_action: "R-427 done. Restart studio:preview so it loads the fixed generator, then a fresh build's web app compiles and the preview renders. Next: R-428 per recommendation (build-in-progress state / clear-all-history)."

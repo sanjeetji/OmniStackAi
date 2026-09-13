@@ -2,12 +2,25 @@ schema_version: 1
 project: OmniStackAI
 phase: BASIC/MVP
 founder_stage: 0
-current_task: R-426
+current_task: R-427
 current_status: done
 branch: main
-last_completed_task: R-426
+last_completed_task: R-427
 last_completed_task_summary: >-
-  Built R-426: remove a build from the Studio's in-session Recent builds list. StudioBuildHistory.remove(
+  Built R-427: fixed a real generated-code bug that made generated Next.js web apps fail to compile. Found via
+  the Studio live preview - the backend ran fine (/posts 200) but the web app returned HTTP 500 with an SWC
+  syntax error ("Expected '</', got ':'") on a single-brace JSX inline style in the generated form/list/detail
+  screens. Root cause: 14 f-string templates in codegen/nextjs.py wrote style={{ ... }}, which Python collapses
+  to single-brace style={ ... } in the emitted TSX (JSX requires double braces); the fix rewrites those to
+  quadruple braces style={{{{ ... }}}} so they emit valid style={{ ... }}. Only f-string lines were changed
+  (regular/raw component templates already correct were left untouched); no component template, screen layout,
+  styling value, or logic changed. Added a deterministic regression test (test_generated_screen_styles.py) that
+  generates both example IRs and forbids any single-brace object-literal inline style in the generated .tsx -
+  RED before the fix (caught app/favourites/page.tsx and the blog screens), GREEN after - so this class of bug
+  cannot recur. task verify never caught it before because it asserts generated code as strings and never
+  compiles the TSX. 3 focused tests and task verify's 2,870 tests pass; lint/security/env and both builder
+  demos (152 / 149 files) pass; diff-invariance/snapshot unaffected; 0 local/cloud model calls. Previously
+  built R-426: remove a build from the Studio's in-session Recent builds list. StudioBuildHistory.remove(
   build_id) -> bool (thread-safe; drops the entry by id, returns whether it was present; unknown id is a safe
   no-op returning False). The stdlib Studio server gained POST /api/history/delete {id} via a new injected
   delete_build_fn(build_id) -> dict (reusing the generic _run_id_control body reader shared with re-preview/
@@ -421,16 +434,19 @@ product_direction: >-
   framework adapter contract -> Next.js adapter -> Git service -> preview/sandbox (needs cloud env).
 id_note: >-
   Workbook backlog owns R-010..R-219. Founder-requested tasks use IDs after R-219: R-220..R-223 done,
-  R-224 Next.js deferred (env-blocked), R-225..R-415 done, and R-416..R-426 done (front-door bricks 1-4,
+  R-224 Next.js deferred (env-blocked), R-225..R-415 done, and R-416..R-427 done (front-door bricks 1-4,
   generated-SQL hardening, embedded trusted-local preview, collision-free preview ports + controls, build
-  history + re-preview, live preview status, per-build repo actions, and remove-from-history, not
-  components). NOTE: the UI-COMPONENT SERIES is PAUSED at R-415 (110 components, resumable at a future free
-  Tracker ID); R-416..R-426 built, hardened, and made robust the "chat -> create -> run -> preview"
-  front-door pivot instead.
+  history + re-preview, live preview status, per-build repo actions, remove-from-history, and generated-JSX
+  inline-style fix, not components). NOTE: the UI-COMPONENT SERIES is PAUSED at R-415 (110 components,
+  resumable at a future free Tracker ID); R-416..R-427 built, hardened, and made robust the "chat -> create ->
+  run -> preview" front-door pivot instead.
 blockers: []
 next_action: >-
-  R-426 is complete: the Studio's Recent builds list has a per-build "Remove" action (POST /api/history/delete
-  {id}, in-memory only, both modes) that re-renders the list. Recommended next: propose R-427 and record its
-  contract before coding - candidates are a build-in-progress state in the preview surface, or a "clear all
-  history" action. Keep execution trusted-local/opt-in and task verify deterministic and network/DB/model
-  independent. The UI-component series remains paused/resumable.
+  R-427 is complete: fixed the single-brace JSX inline-style bug (14 f-string lines in codegen/nextjs.py) that
+  made generated web apps return HTTP 500, plus a regression test that forbids it. IMPORTANT: the running
+  studio:preview holds the OLD generator in memory - restart `task agent-engine:studio:preview` so a fresh
+  build's web app compiles and the embedded preview renders. Recommended next: propose R-428 - candidates are
+  a build-in-progress state in the preview surface, or a "clear all history" action; consider a broader
+  generated-TSX compile/lint gate to catch this class of bug automatically. Keep execution trusted-local/opt-in
+  and task verify deterministic and network/DB/model independent. The UI-component series remains
+  paused/resumable.

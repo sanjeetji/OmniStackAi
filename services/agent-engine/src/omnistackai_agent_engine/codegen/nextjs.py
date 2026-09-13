@@ -1859,9 +1859,9 @@ def _collection_screen_page(screen: Screen, entity: Entity, ir: ApplicationIR, o
         '          <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 6 }}>',
         '            <Link href="/" style={{ color: "#2563eb", textDecoration: "none", fontSize: 13, fontWeight: 500 }}>&larr; Overview</Link>',
         '            <span style={{ color: "#94a3b8" }}>/</span>',
-        f'            <span style={{ fontSize: 12, padding: "2px 8px", background: "#f1f5f9", color: "#475569", borderRadius: 4, fontWeight: 600 }}>{screen.role}</span>',
+        f'            <span style={{{{ fontSize: 12, padding: "2px 8px", background: "#f1f5f9", color: "#475569", borderRadius: 4, fontWeight: 600 }}}}>{screen.role}</span>',
         "          </div>",
-        f'          <h1 style={{ margin: 0, fontSize: 26, fontWeight: 700, color: "#0f172a" }}>{title}</h1>',
+        f'          <h1 style={{{{ margin: 0, fontSize: 26, fontWeight: 700, color: "#0f172a" }}}}>{title}</h1>',
         "        </div>",
         '        <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>',
     ])
@@ -3052,7 +3052,7 @@ def _form_screen_page(screen: Screen, entity: Entity, ir: ApplicationIR, ops: se
 
     lines.extend([
         '          <span style={{ color: "#94a3b8" }}>/</span>',
-        f'          <span style={{ fontSize: 12, padding: "2px 8px", background: "#f1f5f9", color: "#475569", borderRadius: 4, fontWeight: 600 }}>{screen.role}</span>',
+        f'          <span style={{{{ fontSize: 12, padding: "2px 8px", background: "#f1f5f9", color: "#475569", borderRadius: 4, fontWeight: 600 }}}}>{screen.role}</span>',
         "        </div>",
         '        <div style={{ display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap" }}>',
     ])
@@ -3718,9 +3718,9 @@ def _detail_screen_page(screen: Screen, entity: Entity, ir: ApplicationIR, ops: 
 
     lines.extend([
         '            <span style={{ color: "#94a3b8" }}>/</span>',
-        f'            <span style={{ fontSize: 12, padding: "2px 8px", background: "#f1f5f9", color: "#475569", borderRadius: 4, fontWeight: 600 }}>{screen.role}</span>',
+        f'            <span style={{{{ fontSize: 12, padding: "2px 8px", background: "#f1f5f9", color: "#475569", borderRadius: 4, fontWeight: 600 }}}}>{screen.role}</span>',
         "          </div>",
-        f'          <h1 style={{ margin: 0, fontSize: 26, fontWeight: 700, color: "#0f172a" }}>{title}</h1>',
+        f'          <h1 style={{{{ margin: 0, fontSize: 26, fontWeight: 700, color: "#0f172a" }}}}>{title}</h1>',
         "        </div>",
         '        <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>',
     ])
@@ -3835,7 +3835,7 @@ def _detail_screen_page(screen: Screen, entity: Entity, ir: ApplicationIR, ops: 
             '        <div style={{ background: "#fff", border: "1px solid #e2e8f0", borderRadius: 8, padding: 24, marginBottom: 24, boxShadow: "0 1px 3px rgba(0,0,0,0.05)" }}>',
             '          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 16, flexWrap: "wrap", gap: 12 }}>',
             '            <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>',
-            f'              <h2 style={{ margin: 0, fontSize: 20, fontWeight: 700, color: "#0f172a" }}>',
+            f'              <h2 style={{{{ margin: 0, fontSize: 20, fontWeight: 700, color: "#0f172a" }}}}>',
             f"                {{String((item as any).{best_title_f} ?? (item as any).id)}}",
             "              </h2>",
             "              <button",
@@ -3944,13 +3944,13 @@ def _detail_screen_page(screen: Screen, entity: Entity, ir: ApplicationIR, ops: 
                     f'            </dd>'
                 )
                 lines.extend([
-                    f'            <dt style={{ fontWeight: 600, color: "#475569" }}>{flabel}:</dt>',
+                    f'            <dt style={{{{ fontWeight: 600, color: "#475569" }}}}>{flabel}:</dt>',
                     dd_content,
                 ])
             else:
                 lines.extend([
-                    f'            <dt style={{ fontWeight: 600, color: "#475569" }}>{flabel}:</dt>',
-                    f'            <dd style={{ margin: 0, color: "#1e293b" }}>{val_jsx}</dd>',
+                    f'            <dt style={{{{ fontWeight: 600, color: "#475569" }}}}>{flabel}:</dt>',
+                    f'            <dd style={{{{ margin: 0, color: "#1e293b" }}}}>{val_jsx}</dd>',
                 ])
         lines.extend([
             "          </dl>",
@@ -4190,14 +4190,14 @@ def _fallback_screen_page(screen: Screen, ir: ApplicationIR, entity: Entity | No
         '        <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 6 }}>',
         '          <Link href="/" style={{ color: "#2563eb", textDecoration: "none", fontSize: 13, fontWeight: 500 }}>&larr; Overview</Link>',
         '          <span style={{ color: "#94a3b8" }}>/</span>',
-        f'          <span style={{ fontSize: 12, padding: "2px 8px", background: "#f1f5f9", color: "#475569", borderRadius: 4, fontWeight: 600 }}>{screen.role}</span>',
+        f'          <span style={{{{ fontSize: 12, padding: "2px 8px", background: "#f1f5f9", color: "#475569", borderRadius: 4, fontWeight: 600 }}}}>{screen.role}</span>',
         "        </div>",
-        f'        <h1 style={{ margin: 0, fontSize: 26, fontWeight: 700, color: "#0f172a" }}>{title}</h1>',
+        f'        <h1 style={{{{ margin: 0, fontSize: 26, fontWeight: 700, color: "#0f172a" }}}}>{title}</h1>',
         "      </header>",
         '      <div style={{ background: "#fff", border: "1px solid #e2e8f0", borderRadius: 8, padding: 24, boxShadow: "0 1px 3px rgba(0,0,0,0.05)" }}>',
-        f'        <p style={{ margin: "0 0 12px 0", color: "#475569" }}><strong>Role:</strong> {screen.role}</p>',
-        f'        <p style={{ margin: "0 0 12px 0", color: "#475569" }}><strong>Components:</strong> {components}</p>',
-        f'        <p style={{ margin: "0 0 16px 0", color: "#475569" }}><strong>Actions:</strong> {actions}</p>',
+        f'        <p style={{{{ margin: "0 0 12px 0", color: "#475569" }}}}><strong>Role:</strong> {screen.role}</p>',
+        f'        <p style={{{{ margin: "0 0 12px 0", color: "#475569" }}}}><strong>Components:</strong> {components}</p>',
+        f'        <p style={{{{ margin: "0 0 16px 0", color: "#475569" }}}}><strong>Actions:</strong> {actions}</p>',
     ]
 
     if screen.navigation:

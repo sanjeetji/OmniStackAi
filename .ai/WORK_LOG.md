@@ -1,5 +1,14 @@
 # Work Log
 
+## 2026-09-13 — R-427 (fix malformed single-brace inline styles in generated Next.js screens)
+
+- **Found while running a generated app via the Studio preview:** the backend was healthy (`/posts` 200) but the generated Next.js web app returned HTTP 500 with an SWC syntax error `Expected '</', got ':'` at `app/post_editor/page.tsx` — a single-brace JSX inline style `style={ fontSize: 12, ... }` (JSX requires double braces). Scanning a generated app found 3 offenders in 2 files; scanning the generator found the root cause.
+- **Root cause:** 14 f-string templates in `codegen/nextjs.py` (screen header role badges, `<h1>`/`<h2>` titles, and detail `<dt>`/`<dd>` definition lists) wrote `style={{ ... }}`, which Python collapses to single-brace `style={ ... }` in the emitted TSX. `task verify` never caught it because it asserts generated code as strings and never compiles the TSX.
+- **Fix:** rewrote those 14 f-string styles to quadruple braces `style={{{{ ... }}}}` (→ valid `style={{ ... }}` output) via a script targeting **only f-string lines** (regular/raw component templates, which are already correct, were left untouched). No component template, screen layout, styling value, or logic changed.
+- Added `services/agent-engine/tests/test_generated_screen_styles.py` (3 tests): generates both example IRs and asserts no generated `.tsx` contains a single-brace object-literal inline style (`style={ key: ...`) — precise enough to ignore valid single-brace expression styles (`style={expr}`). RED before the fix (caught `app/favourites/page.tsx` + blog screens), GREEN after.
+- Gates: focused 3 passed; `task verify` **2,870** passed; lint/security/env green; `task builder:demo -- minimal-blog` (152) and `-- rideshare-favourites` (149) pass. Diff-invariance/console-snapshot unaffected. **0 model calls in verify.**
+- Follow-up noted: the running `studio:preview` holds the old generator in memory — restart it so a fresh build compiles; and a broader generated-TSX compile/lint gate would catch this class of bug automatically (candidate future task).
+
 ## 2026-09-13 — R-426 (remove a build from the Studio history)
 
 - Recorded the R-426 contract (`.ai/tasks/R-426.md`, `.ai/CURRENT_TASK.yaml`) before code; implemented test-first.

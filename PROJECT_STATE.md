@@ -4,10 +4,23 @@ Last updated: 2026-09-13
 ## Current Phase
 Stage 0 (Founder Build Sequence, Brief Section 91) — BASIC/MVP
 
-> **The Studio's Recent builds list is fully manageable.** UI-component series PAUSED at R-415 (110 components, resumable). Front door: **R-416** intake · **R-417** builder · **R-418** chat web UI · **R-419** turnkey run · **R-420** SQL hardening · **R-421** managed embedded preview · **R-422** collision-free ports + controls · **R-423** build history + re-preview · **R-424** live preview status · **R-425** per-build repo actions · **R-426** remove-from-history. Recommended next: **R-427**, a build-in-progress preview state or a "clear all history" action.
+> **Generated web apps now compile — a real JSX bug is fixed.** UI-component series PAUSED at R-415 (110 components, resumable). Front door: **R-416**–**R-426** (chat → create → run → preview + history/controls) · **R-427** fixed a generated-code bug (single-brace JSX inline styles → HTTP 500). **⚠ Restart `task agent-engine:studio:preview` to pick up the fix** (the running instance holds the old generator). Recommended next: **R-428**, a build-in-progress preview state, "clear all history", or a generated-TSX compile/lint gate.
 
 ## Last Completed Task
-Tracker ID: R-426 — Remove a build from the Studio history — DONE. `StudioBuildHistory.remove(build_id) -> bool`
+Tracker ID: R-427 — Fix malformed single-brace inline styles in generated Next.js screens — DONE. Found via the
+Studio live preview: the generated backend ran fine (`/posts` 200) but the Next.js web app returned HTTP 500
+with an SWC syntax error (`Expected '</', got ':'`) on a single-brace JSX inline style. Root cause: 14 f-string
+templates in `codegen/nextjs.py` (screen header role badges, `<h1>`/`<h2>` titles, detail `<dt>`/`<dd>` lists)
+wrote `style={{ ... }}`, which Python collapses to single-brace `style={ ... }` in the emitted TSX; the fix
+rewrites them to quadruple braces `style={{{{ ... }}}}` (→ valid `style={{ ... }}`). Only f-string lines were
+changed (regular/raw component templates left untouched); no component template, screen layout, styling value,
+or logic changed. Added a deterministic regression test (`test_generated_screen_styles.py`) that forbids any
+single-brace object-literal inline style in generated `.tsx` — RED before, GREEN after — so it cannot recur.
+`task verify` never caught it because it checks generated code as strings and never compiles the TSX. 3 focused
+tests and `task verify`'s **2,870 tests** pass; lint, security, environment, and both demos (152 / 149 files)
+pass; diff-invariance/snapshots unaffected; 0 local/cloud model calls.
+
+Immediately preceded by R-426 — Remove a build from the Studio history — DONE. `StudioBuildHistory.remove(build_id) -> bool`
 (thread-safe; drops the entry by id, returns whether it was present; unknown id is a safe no-op) plus a new
 `POST /api/history/delete {id}` route (injected `delete_build_fn`, reusing the generic `_run_id_control` body
 reader; unset -> 404, missing id -> 400). Because removing an entry only edits the bounded in-memory list (it
