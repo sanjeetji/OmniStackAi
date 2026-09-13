@@ -20,6 +20,8 @@ from __future__ import annotations
 import asyncio
 import os
 import re
+import subprocess
+import sys
 import tempfile
 
 from ..intake._ollama import build_ollama_provider_from_env
@@ -82,6 +84,29 @@ def _preview_recorded_build(
     return preview_manager.replace(entry["target_dir"])
 
 
+def _open_path(path: str) -> bool:
+    """Open a directory in the OS file browser, best-effort. Never raises; no command is echoed."""
+    try:
+        if sys.platform == "darwin":
+            subprocess.Popen(["open", path])
+        elif sys.platform.startswith("win"):
+            os.startfile(path)  # type: ignore[attr-defined]  # noqa: SIM115 (Windows-only)
+        else:
+            subprocess.Popen(["xdg-open", path])
+        return True
+    except OSError:
+        return False
+
+
+def _open_recorded_build(build_id: str, history: StudioBuildHistory) -> dict:
+    entry = history.get(build_id)
+    if entry is None or not entry.get("target_dir"):
+        return {"status": "error", "message": "That build is no longer available in this session."}
+    if _open_path(entry["target_dir"]):
+        return {"status": "opened", "message": "Opened the generated project folder."}
+    return {"status": "error", "message": "Could not open the project folder on this machine."}
+
+
 def _preview_enabled() -> bool:
     return os.environ.get("OMNISTACKAI_STUDIO_LIVE_PREVIEW", "0").strip().lower() in {
         "1", "true", "yes", "on"
@@ -106,6 +131,7 @@ def main() -> None:
             preview_build_fn=lambda build_id: _preview_recorded_build(
                 build_id, history, preview_manager
             ),
+            open_dir_fn=lambda build_id: _open_recorded_build(build_id, history),
         )
 
     server = create_studio_server(build, host=host, port=port, **control_kwargs)

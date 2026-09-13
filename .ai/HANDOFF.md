@@ -1,15 +1,16 @@
 # Current Handoff
 
-Task ID: R-424
+Task ID: R-425
 Status: done
 Phase: BASIC/MVP — Founder Stage 0
 Branch: `main` (the only branch; the GitHub default)
 
-> **The local "chat → create → RUN → PREVIEW" loop has memory and live status.** UI-component series PAUSED at R-415 (110 components, resumable). Front door: **R-416** intake · **R-417** builder · **R-418** chat web UI · **R-419** turnkey run · **R-420** SQL hardening · **R-421** managed embedded preview · **R-422** collision-free ports + controls · **R-423** build history + re-preview · **R-424** live preview status. **RECOMMENDED NEXT: R-425** = per-build open/copy repo-path actions in Recent builds, or a build-in-progress state in the preview surface.
+> **The Studio connects to the owned code on disk.** UI-component series PAUSED at R-415 (110 components, resumable). Front door: **R-416** intake · **R-417** builder · **R-418** chat web UI · **R-419** turnkey run · **R-420** SQL hardening · **R-421** managed embedded preview · **R-422** collision-free ports + controls · **R-423** build history + re-preview · **R-424** live preview status · **R-425** per-build repo actions (Copy path / Open folder). **RECOMMENDED NEXT: R-426** = a build-in-progress state in the preview surface, or a per-build "delete from history" action.
 
 ## Repo/workflow state
 
-- **R-424 (live preview status)** shipped: `LocalAppSession.is_alive()` + liveness-aware `StudioPreviewManager.status()` detect a preview whose processes exited (stop/forget once, bounded "stopped" state), and the Studio page polls `GET /api/preview` every 5s while running, re-rendering on change without reloading an unchanged iframe. No new routes. 60 focused tests (7 net-new), `task verify` **2,857** pass; lint/security/env and both demos (152/149) green; 0 model calls. Single commit authored `sanjeetji <sk698166@gmail.com>`.
+- **R-425 (per-build repo actions)** shipped: Recent builds items now have Copy path (client clipboard of `target_dir`, both modes) and Open folder (`POST /api/history/open {id}` → OS file browser, trusted-local only) via an injected `open_dir_fn` and a generic `_run_id_control` in the stdlib server; `_open_path` opens darwin/win/linux best-effort. 64 focused tests (4 net-new), `task verify` **2,861** pass; lint/security/env and both demos (152/149) green; 0 model calls. Single commit authored `sanjeetji <sk698166@gmail.com>`.
+- **R-424 (live preview status)** shipped: `LocalAppSession.is_alive()` + liveness-aware `StudioPreviewManager.status()` + page polling of `GET /api/preview` (no iframe reload on unchanged URL).
 - **R-423 (build history + re-preview)** shipped: `studio/history.py` `StudioBuildHistory` + `GET /api/history` and `POST /api/history/preview {id}`, a "Recent builds" list, and history recording in `live_serve`.
 - **R-422 (collision-free preview ports + controls)** shipped: each preview allocates two distinct free loopback ports (`allocate_preview_ports`) via `start_preview_app`; `StudioPreviewManager` gained bounded, secret-free `status()`/`stop()`/`restart()` at `GET /api/preview` + `POST /api/preview/stop|restart` (trusted-local only; build-only 404s).
 - **R-421 (managed embedded local preview)** shipped: `studio:serve` remains build-only; explicit

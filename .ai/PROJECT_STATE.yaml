@@ -2,12 +2,26 @@ schema_version: 1
 project: OmniStackAI
 phase: BASIC/MVP
 founder_stage: 0
-current_task: R-424
+current_task: R-425
 current_status: done
 branch: main
-last_completed_task: R-424
+last_completed_task: R-425
 last_completed_task_summary: >-
-  Built R-424: live preview status. LocalAppSession.is_alive() reports whether a session is still running (not
+  Built R-425: per-build repo actions in the Studio's Recent builds list. A purely client-side "Copy path"
+  copies a recorded build's repo target_dir to the clipboard (navigator.clipboard with an execCommand
+  fallback; works in both Studio modes, no server call), and an "Open folder" action opens the recorded repo
+  directory in the OS file browser via a new trusted-local route POST /api/history/open {id}. The route reuses
+  the injected-handler pattern (open_dir_fn(build_id) -> dict) and a generic _run_id_control body reader in the
+  stdlib server (shared with re-preview); it is wired only in trusted-local preview mode (build-only 404).
+  live_serve's _open_recorded_build looks up the build and launches the platform folder opener (_open_path:
+  darwin open / win os.startfile / else xdg-open, best-effort, never raises or echoes a command) returning a
+  bounded, secret-free status (opened/error); an unknown build id returns a bounded error. The opener is an
+  opt-in/live path, injected/stubbed in tests. Build/preview/history/status/stop/restart, collision-free ports,
+  single-session cleanup, PostgreSQL, and studio:serve/studio:preview semantics unchanged. 64 focused tests
+  (4 net-new: 3 open-route, 1 page actions) and task verify's 2,861 tests pass; lint/security/env and both
+  builder demos (152 / 149 files) pass; a deterministic open-route inspection (opener stubbed) confirmed the
+  opened/error/unknown payloads are bounded and secret-free; 0 local/cloud model calls. Previously built
+  R-424: live preview status. LocalAppSession.is_alive() reports whether a session is still running (not
   stopped and every owned background process poll() is None). StudioPreviewManager.status() is now
   liveness-aware: under its lock it refreshes the active session, and if the generated app's processes have
   exited on their own it stops/forgets the dead session exactly once and reports a bounded, secret-free
@@ -393,17 +407,16 @@ product_direction: >-
   framework adapter contract -> Next.js adapter -> Git service -> preview/sandbox (needs cloud env).
 id_note: >-
   Workbook backlog owns R-010..R-219. Founder-requested tasks use IDs after R-219: R-220..R-223 done,
-  R-224 Next.js deferred (env-blocked), R-225..R-415 done, and R-416..R-424 done (front-door bricks 1-4,
+  R-224 Next.js deferred (env-blocked), R-225..R-415 done, and R-416..R-425 done (front-door bricks 1-4,
   generated-SQL hardening, embedded trusted-local preview, collision-free preview ports + controls, build
-  history + re-preview, and live preview status, not components). NOTE: the UI-COMPONENT SERIES is PAUSED at
-  R-415 (110 components, resumable at a future free Tracker ID); R-416..R-424 built, hardened, and made
-  robust the "chat -> create -> run -> preview" front-door pivot instead.
+  history + re-preview, live preview status, and per-build repo actions, not components). NOTE: the
+  UI-COMPONENT SERIES is PAUSED at R-415 (110 components, resumable at a future free Tracker ID); R-416..R-425
+  built, hardened, and made robust the "chat -> create -> run -> preview" front-door pivot instead.
 blockers: []
 next_action: >-
-  R-424 is complete: the Studio's preview view stays accurate over time - LocalAppSession.is_alive() +
-  liveness-aware StudioPreviewManager.status() detect a preview whose processes exited, and the page polls
-  GET /api/preview to re-render on change without reloading an unchanged iframe. Recommended next: propose
-  R-425 and record its contract before coding - candidates are per-build open/copy repo-path actions in the
-  Recent builds list, or a build-in-progress state in the preview surface. Keep execution trusted-local/opt-in
-  and task verify deterministic and network/DB/model independent. The UI-component series remains
-  paused/resumable.
+  R-425 is complete: the Studio's Recent builds list has per-build "Copy path" (client clipboard) and
+  "Open folder" (trusted-local POST /api/history/open {id}) actions, connecting the Studio to the owned code
+  on disk. Recommended next: propose R-426 and record its contract before coding - candidates are a
+  build-in-progress state in the preview surface, or a per-build "delete from history" action. Keep execution
+  trusted-local/opt-in and task verify deterministic and network/DB/model independent. The UI-component series
+  remains paused/resumable.

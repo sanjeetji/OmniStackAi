@@ -4,10 +4,23 @@ Last updated: 2026-09-13
 ## Current Phase
 Stage 0 (Founder Build Sequence, Brief Section 91) — BASIC/MVP
 
-> **The local "chat → create → RUN → PREVIEW" loop now has memory and live status.** UI-component series PAUSED at R-415 (110 components, resumable). Front door: **R-416** intake · **R-417** builder · **R-418** chat web UI · **R-419** turnkey run · **R-420** SQL hardening · **R-421** managed embedded preview · **R-422** collision-free ports + controls · **R-423** build history + re-preview · **R-424** live preview status. Recommended next: **R-425**, per-build open/copy actions or a build-in-progress preview state.
+> **The Studio connects to the owned code on disk.** UI-component series PAUSED at R-415 (110 components, resumable). Front door: **R-416** intake · **R-417** builder · **R-418** chat web UI · **R-419** turnkey run · **R-420** SQL hardening · **R-421** managed embedded preview · **R-422** collision-free ports + controls · **R-423** build history + re-preview · **R-424** live preview status · **R-425** per-build repo actions. Recommended next: **R-426**, a build-in-progress preview state or per-build delete-from-history.
 
 ## Last Completed Task
-Tracker ID: R-424 — Live preview status (liveness-aware status + Studio polling) — DONE. `LocalAppSession.is_alive()`
+Tracker ID: R-425 — Per-build repo actions (copy path + open folder) — DONE. The Studio's Recent builds list
+now has, per build, a purely client-side "Copy path" (clipboard write of the recorded repo `target_dir`, works
+in both modes) and an "Open folder" action that opens the recorded repo directory in the OS file browser via a
+new trusted-local route `POST /api/history/open {id}` (injected `open_dir_fn` + a generic `_run_id_control`
+body reader shared with re-preview; wired only in trusted-local preview mode, build-only 404s). `live_serve`'s
+`_open_path` launches the platform opener (darwin `open` / Windows `os.startfile` / else `xdg-open`,
+best-effort, never raises or echoes a command); an unknown build id returns a bounded, secret-free error. The
+opener is an opt-in/live path, injected/stubbed in tests. Build/preview/history/status/stop/restart,
+collision-free ports, single-session cleanup, and PostgreSQL unchanged. 64 focused tests (4 net-new) and
+`task verify`'s **2,861 tests** pass; lint, security, environment, and both demos (152 / 149 files) pass; a
+deterministic open-route inspection (opener stubbed) confirmed bounded, secret-free opened/error/unknown
+payloads; 0 local/cloud model calls.
+
+Immediately preceded by R-424 — Live preview status (liveness-aware status + Studio polling) — DONE. `LocalAppSession.is_alive()`
 reports whether a session is still running (not stopped and every owned background process alive), and
 `StudioPreviewManager.status()` is now liveness-aware: under its lock it stops/forgets a dead active session
 exactly once and reports a bounded, secret-free "stopped" state instead of a stale "ready". The Studio page

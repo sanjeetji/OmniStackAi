@@ -255,8 +255,37 @@ class TestStudioHistoryRoutes(unittest.TestCase):
             self.assertEqual(_get(base + "/api/history")[0], 404)
             self.assertEqual(_post(base + "/api/history/preview", obj={"id": "1"})[0], 404)
 
+    def test_post_history_open_passes_id(self) -> None:
+        seen = []
+
+        def open_dir(build_id):
+            seen.append(build_id)
+            return {"status": "opened", "message": "Opened the generated project folder."}
+
+        with running_server(RecordingBuild(STUB_RESULT), open_dir_fn=open_dir) as base:
+            status, data = _post(base + "/api/history/open", obj={"id": "3"})
+            self.assertEqual(status, 200)
+            self.assertEqual(data["status"], "opened")
+            self.assertEqual(seen, ["3"])
+
+    def test_post_history_open_missing_id_is_400(self) -> None:
+        with running_server(
+            RecordingBuild(STUB_RESULT), open_dir_fn=lambda build_id: {"status": "opened"}
+        ) as base:
+            status, data = _post(base + "/api/history/open", obj={})
+            self.assertEqual(status, 400)
+            self.assertIn("error", data)
+
+    def test_history_open_404_when_disabled(self) -> None:
+        with running_server(RecordingBuild(STUB_RESULT)) as base:
+            self.assertEqual(_post(base + "/api/history/open", obj={"id": "1"})[0], 404)
+
     def test_page_has_recent_builds_surface(self) -> None:
         for token in ('id="history-list"', "/api/history", "/api/history/preview"):
+            self.assertIn(token, STUDIO_HTML)
+
+    def test_page_has_per_build_repo_actions(self) -> None:
+        for token in ("/api/history/open", "navigator.clipboard", "Copy path", "Open folder"):
             self.assertIn(token, STUDIO_HTML)
 
 

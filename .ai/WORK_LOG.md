@@ -1,5 +1,14 @@
 # Work Log
 
+## 2026-09-13 — R-425 (per-build repo actions — copy path + open folder)
+
+- Recorded the R-425 contract (`.ai/tasks/R-425.md`, `.ai/CURRENT_TASK.yaml`) before code; implemented test-first.
+- `studio/server.py`: refactored the `{id}`-body handler into a generic `_run_id_control(fn)` (shared by re-preview) and added a trusted-local route `POST /api/history/open` via a new optional injected `open_dir_fn(build_id) -> dict`; unset handlers 404, missing id 400, handler errors 502. Existing routes unchanged.
+- `studio/live_serve.py`: added `_open_path(path)` (platform folder opener — darwin `open`, Windows `os.startfile`, else `xdg-open`; best-effort, never raises, never echoes a command) and `_open_recorded_build(build_id, history)` (looks up the recorded build, opens its `target_dir`, returns a bounded, secret-free `opened`/`error` status; unknown id -> bounded error). Wired `open_dir_fn` only in trusted-local preview mode.
+- `studio/page.py`: each Recent-builds item now has three actions (Preview, **Copy path**, **Open folder**). `copyPath` writes the recorded `target_dir` to the clipboard (`navigator.clipboard.writeText` with an `execCommand` fallback and transient feedback; works in both modes, no server call); `openBuild` calls `POST /api/history/open` and shows a bounded result. Rendered with `textContent`/DOM only (no HTML injection).
+- Tests (4 net-new): `test_studio_server.py` (POST /api/history/open passes id, missing id 400, 404 when disabled, page has per-build copy/open actions).
+- Gates: focused 64 passed; `task verify` **2,861** passed; lint/security/env green; `task builder:demo -- minimal-blog` (152) and `-- rideshare-favourites` (149) pass. Deterministic open-route inspection (opener stubbed — no real Finder launch) confirmed opened/error/unknown payloads are bounded and secret-free. **0 model calls in verify.**
+
 ## 2026-09-13 — R-424 (live preview status — liveness-aware status + Studio polling)
 
 - Recorded the R-424 contract (`.ai/tasks/R-424.md`, `.ai/CURRENT_TASK.yaml`) before code; implemented test-first.

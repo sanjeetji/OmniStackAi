@@ -87,6 +87,7 @@ STUDIO_HTML = r"""<!doctype html>
   .history-item { display: flex; align-items: center; justify-content: space-between; gap: 12px; background: rgba(18,28,48,0.55); border: 1px solid #223148; border-radius: 10px; padding: 10px 14px; }
   .history-item .h-name { font-weight: 650; color: #e6edf3; font-size: 14px; }
   .history-item .h-prompt { color: #9fb0c3; font-size: 12.5px; word-break: break-word; }
+  .history-actions { display: flex; gap: 8px; flex-wrap: wrap; flex-shrink: 0; }
   .history-empty { color: #62748c; font-size: 13px; }
   .preview-frame { display: block; width: 100%; height: 540px; border: 0; background: #fff; }
   .files { max-height: 320px; overflow: auto; background: #0b1220; border: 1px solid #223148; border-radius: 10px; padding: 10px 14px; }
@@ -272,6 +273,58 @@ STUDIO_HTML = r"""<!doctype html>
       .catch(function (err) { previewStatus.textContent = 'Preview failed: ' + err.message; });
   }
 
+  function flashButton(btn, label) {
+    if (!btn.getAttribute('data-label')) { btn.setAttribute('data-label', btn.textContent); }
+    btn.textContent = label;
+    setTimeout(function () { btn.textContent = btn.getAttribute('data-label'); }, 1500);
+  }
+
+  function actionButton(label, handler) {
+    var btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'preview-btn';
+    btn.textContent = label;
+    btn.addEventListener('click', function () { handler(btn); });
+    return btn;
+  }
+
+  function fallbackCopy(path, btn) {
+    try {
+      var ta = document.createElement('textarea');
+      ta.value = path;
+      document.body.appendChild(ta);
+      ta.select();
+      document.execCommand('copy');
+      document.body.removeChild(ta);
+      flashButton(btn, 'Copied');
+    } catch (_) {
+      flashButton(btn, 'Copy failed');
+    }
+  }
+
+  function copyPath(path, btn) {
+    if (!path) { return; }
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(path)
+        .then(function () { flashButton(btn, 'Copied'); })
+        .catch(function () { fallbackCopy(path, btn); });
+    } else {
+      fallbackCopy(path, btn);
+    }
+  }
+
+  function openBuild(id, btn) {
+    btn.disabled = true;
+    fetch('/api/history/open', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ id: id })
+    }).then(function (res) { return res.ok ? res.json() : { status: 'error' }; })
+      .then(function (data) { flashButton(btn, data && data.status === 'opened' ? 'Opened' : 'Unavailable'); })
+      .catch(function () { flashButton(btn, 'Unavailable'); })
+      .then(function () { btn.disabled = false; });
+  }
+
   function renderHistory(builds) {
     var list = document.getElementById('history-list');
     list.innerHTML = '';
@@ -294,13 +347,13 @@ STUDIO_HTML = r"""<!doctype html>
       prompt.textContent = (b.prompt || '') + '  -  ' + (b.file_count || 0) + ' files';
       meta.appendChild(name);
       meta.appendChild(prompt);
-      var btn = document.createElement('button');
-      btn.type = 'button';
-      btn.className = 'preview-btn';
-      btn.textContent = 'Preview';
-      btn.addEventListener('click', function () { previewBuild(b); });
+      var actions = document.createElement('div');
+      actions.className = 'history-actions';
+      actions.appendChild(actionButton('Preview', function () { previewBuild(b); }));
+      actions.appendChild(actionButton('Copy path', function (btn) { copyPath(b.target_dir, btn); }));
+      actions.appendChild(actionButton('Open folder', function (btn) { openBuild(b.id, btn); }));
       li.appendChild(meta);
-      li.appendChild(btn);
+      li.appendChild(actions);
       list.appendChild(li);
     });
   }

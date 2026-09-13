@@ -109,6 +109,20 @@ executes generated code) is wired only in trusted-local preview mode. The Studio
 builds** list that loads on start, refreshes after each build, and re-previews a build on click, rendered
 with `textContent` only.
 
+**Per-build repo actions (R-425).** Each recent build also offers **Copy path** and **Open folder**:
+
+```text
+(client-side)              copy the recorded repo target_dir to the clipboard (both Studio modes)
+POST /api/history/open  -> {"id": "..."}  open the recorded repo directory in the OS file browser
+                           (macOS `open` / Windows `os.startfile` / else `xdg-open`, best-effort),
+                           trusted-local preview mode only
+```
+
+Copy path is purely client-side (no server call) and works in both modes. Open folder launches a local file
+browser via `_open_path` and returns a bounded, secret-free `opened`/`error` status; it is wired only in
+trusted-local preview mode (build-only Studio returns 404) and, like all local execution, never runs during
+`task verify` (the opener is injected/stubbed in tests).
+
 ## Switching tiers — one knob (R-234)
 
 `OMNISTACKAI_TIER` is the single switch; change it in `.env` and the resolved providers change:

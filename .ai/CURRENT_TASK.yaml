@@ -1,41 +1,40 @@
-task_id: R-424
-id: R-424
-title: "Live preview status - liveness-aware status + Studio polling"
+task_id: R-425
+id: R-425
+title: "Per-build repo actions - copy path + open folder"
 status: done
 phase: MVP
 tracker_row: null
 started_at: "2026-09-13"
 completed_at: "2026-09-13"
 objective: >-
-  Keep the Studio's view of a running preview accurate over time. Add LocalAppSession.is_alive() (true only
-  when not stopped and every owned background process is still running). Make StudioPreviewManager.status()
-  liveness-aware: when the active preview's processes have exited on their own, stop/forget the dead session
-  and report a bounded, secret-free "stopped" state instead of a stale "ready". Have the Studio page poll the
-  existing R-422 GET /api/preview route while a preview is running and re-render the preview surface on change,
-  without reloading the embedded iframe when the URL is unchanged. Reuse the existing route and manager - no
-  new routes, server, or live-serve wiring. Preserve collision-free ports, status/stop/restart + history
-  controls, trusted-local studio:preview, build-only studio:serve, single-session cleanup, PostgreSQL, verify.
+  Let the operator jump from a recorded Studio build to the owned code on disk. Add per-build actions to the
+  Recent builds list: a purely client-side Copy path (clipboard write of the recorded repo target_dir; works
+  in both modes) and an Open folder action that opens the recorded repo directory in the OS file browser via
+  a new trusted-local route POST /api/history/open {id}. The open route reuses the injected-handler pattern
+  (open_dir_fn(build_id) -> dict), is wired only in trusted-local preview mode (build-only 404), looks up the
+  recorded build, launches the platform folder opener (open / xdg-open / os.startfile) best-effort, and
+  returns a bounded, secret-free status (opened/error) - never runs generated code, echoes a command, or
+  exposes an environment. No change to build/preview/history/status/stop/restart, collision-free ports,
+  single-session cleanup, PostgreSQL, or studio:serve/studio:preview semantics; verify stays offline.
 requirements:
-  - LocalAppSession.is_alive(): false when stopped or no process; true only when every owned background process poll() is None.
-  - StudioPreviewManager.status() refreshes liveness under its lock; dead active session -> stop/forget + bounded "stopped" state; else current state.
-  - Studio page polls GET /api/preview while ready, re-renders on change, stops polling when not ready, and does not reload an unchanged iframe.
-  - No new routes, server signature change, or live_serve wiring change.
+  - POST /api/history/open {id} over the stdlib server via injected open_dir_fn; unset -> 404; missing id -> 400; errors -> 502.
+  - Opener wired only in trusted-local preview mode; looks up the recorded build, opens target_dir, returns bounded secret-free opened/error; unknown id -> bounded error.
+  - Client-side Copy path per build (clipboard write of target_dir with fallback + transient feedback), no server call, both modes.
+  - Open folder button per build calling POST /api/history/open with bounded result.
+  - Secret-free payloads/logs; opener never echoes command, path env, or traceback.
   - Deterministic/offline verify via injected fakes.
 acceptance_criteria:
-  - is_alive() false when stopped / no processes / any process exited; true when all running.
-  - status() returns live ready while alive; once processes exit, returns bounded "stopped" and stops the dead session exactly once.
-  - Existing status/stop/restart/replace unchanged when the session stays alive.
-  - Studio page polls GET /api/preview while running and re-renders on change without reloading an unchanged iframe.
+  - POST /api/history/open {id} returns opener status when wired, 404 when not, 400 on missing id; handler gets the id.
+  - Opener default returns opened on success, bounded error otherwise, bounded error for unknown build id.
+  - Studio page exposes per-build Copy path (client clipboard) and Open folder (/api/history/open) without HTML injection.
   - Existing contracts compatible; focused + full verify + lint + security + env + both demos pass; 0 model calls in verify.
 allowed_paths:
-  - "services/agent-engine/src/omnistackai_agent_engine/localrun/run.py"
-  - "services/agent-engine/src/omnistackai_agent_engine/studio/preview.py"
+  - "services/agent-engine/src/omnistackai_agent_engine/studio/server.py"
+  - "services/agent-engine/src/omnistackai_agent_engine/studio/live_serve.py"
   - "services/agent-engine/src/omnistackai_agent_engine/studio/page.py"
-  - "services/agent-engine/tests/test_localrun_session.py"
-  - "services/agent-engine/tests/test_studio_preview.py"
   - "services/agent-engine/tests/test_studio_server.py"
   - "docs/RUNTIME.md"
-  - ".ai/tasks/R-424.md"
+  - ".ai/tasks/R-425.md"
   - ".ai/CURRENT_TASK.yaml"
   - ".ai/PROJECT_STATE.yaml"
   - ".ai/WORK_LOG.md"
@@ -46,13 +45,13 @@ allowed_paths:
   - "docs/RESUME_PROMPT.md"
 forbidden_changes:
   - "Do not modify or include the unrelated untracked .claude directory"
-  - "Do not add a service, top-level directory, platform/generated dependency, queue, sandbox vendor, database, route, or infrastructure"
-  - "Do not make generated-code execution implicit in task verify or the build-only Studio command"
-  - "Do not change studio:serve/studio:preview semantics, collision-free ports, history, or single-session cleanup"
+  - "Do not add a service, top-level directory, platform/generated dependency, queue, sandbox vendor, database, or infrastructure"
+  - "Do not make generated-code execution implicit in task verify or the build-only Studio command; the opener is opt-in/live only"
+  - "Do not change studio:serve/studio:preview semantics, collision-free ports, history, live status, or single-session cleanup"
   - "Do not change RuntimeProvider/ModelProvider/Application IR/database engine/assembler/Git-service/deployment/generated contracts; PostgreSQL stays"
-  - "Do not expose secrets, DB credentials, process environments, or raw tracebacks in preview payloads or logs"
+  - "Do not expose secrets, DB credentials, process environments, or raw tracebacks in payloads or logs"
 required_gates:
-  - focused local-run session, studio-preview, and studio-server tests
+  - focused studio-server, studio-preview, studio-history, and local-run session tests
   - task lint
   - task verify
   - task security:quick
@@ -64,17 +63,17 @@ model_tool_trace:
   local_calls: 0
   cloud_calls: 0
   note: >-
-    L2 local lifecycle/UX work. Deterministic runtime boundaries and injected fake processes/sessions are
-    sufficient; no local or cloud model call is needed for implementation or verify.
+    L2 local UX/lifecycle work. Deterministic server boundaries and injected fakes are sufficient; the folder
+    opener is an opt-in/live path (injected/stubbed in tests). No local or cloud model call is needed.
 evidence:
   baseline: >-
-    Start protocol passed at R-423: task verify 2,850 tests pass; local == origin/main at 19dd876 before
+    Start protocol passed at R-424: task verify 2,857 tests pass; local == origin/main at 4bde96c before
     coding; only the untracked .claude/ present.
-  verify: "2,857 passed"
+  verify: "2,861 passed"
   lint: "passed"
   security: "passed"
   env: "passed"
   demos: "minimal-blog 152 files; rideshare-favourites 149 files"
-  focused_test: "60 passed (test_localrun_session + test_studio_preview + test_studio_server + test_studio_history); 7 net-new R-424 tests (4 is_alive, 2 status liveness, 1 page poll)"
-  liveness_inspection: "is_alive True all-running / False on exit / False no-procs; status ready while alive -> stopped after exit (session stopped exactly once), secret-free, no re-stop; 0 model calls"
-next_action: "R-424 done. Next: R-425 (candidates: per-build open/copy repo-path actions in the Recent builds list, or a build-in-progress state in the preview surface)."
+  focused_test: "64 passed (test_studio_server + test_studio_preview + test_studio_history + test_localrun_session); 4 net-new R-425 tests (3 open-route, 1 page actions)"
+  open_route_inspection: "_open_recorded_build: opened on success (opener called with recorded target_dir), bounded error on failure, bounded error for unknown id, secret-free; opener stubbed - no real Finder launch; 0 model calls"
+next_action: "R-425 done. Next: R-426 (candidates: a build-in-progress state in the preview surface, or a per-build 'delete from history' action)."

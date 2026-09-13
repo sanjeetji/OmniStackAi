@@ -28,6 +28,7 @@ def _make_handler(
     restart_fn: ControlFn | None,
     history_fn: ControlFn | None,
     preview_build_fn: PreviewBuildFn | None,
+    open_dir_fn: PreviewBuildFn | None,
 ) -> type[BaseHTTPRequestHandler]:
     class StudioHandler(BaseHTTPRequestHandler):
         server_version = "OmniStackAIStudio/1.0"
@@ -73,11 +74,11 @@ def _make_handler(
                 self._send_json(400, {"error": "invalid JSON body"})
                 return None
 
-        def _run_preview_build(self) -> None:
+        def _run_id_control(self, fn: PreviewBuildFn | None) -> None:
             data = self._read_json_body()
             if data is None:
                 return
-            if preview_build_fn is None:
+            if fn is None:
                 self._send_json(404, {"error": "preview controls are not enabled"})
                 return
             build_id = str(data.get("id", "")).strip()
@@ -85,7 +86,7 @@ def _make_handler(
                 self._send_json(400, {"error": "id is required"})
                 return
             try:
-                self._send_json(200, preview_build_fn(build_id))
+                self._send_json(200, fn(build_id))
             except Exception as error:  # surface any control failure as a clean 502
                 self._send_json(502, {"error": str(error)})
 
@@ -115,7 +116,10 @@ def _make_handler(
                 self._run_control(restart_fn)
                 return
             if self.path == "/api/history/preview":
-                self._run_preview_build()
+                self._run_id_control(preview_build_fn)
+                return
+            if self.path == "/api/history/open":
+                self._run_id_control(open_dir_fn)
                 return
             if self.path != "/api/build":
                 self._send_json(404, {"error": "not found"})
@@ -154,16 +158,20 @@ def create_studio_server(
     restart_fn: ControlFn | None = None,
     history_fn: ControlFn | None = None,
     preview_build_fn: PreviewBuildFn | None = None,
+    open_dir_fn: PreviewBuildFn | None = None,
 ) -> ThreadingHTTPServer:
     """Create (but do not start) a studio server bound to ``host``/``port``.
 
     Pass ``port=0`` for an ephemeral port (used by tests). Call ``serve_forever()`` to run.
     The preview control and history handlers are optional; when unset, ``GET /api/preview``,
-    ``POST /api/preview/stop|restart``, ``GET /api/history``, and ``POST /api/history/preview``
-    return 404 (build-only mode). ``history_fn`` may be wired in build-only mode to list recent
-    builds; ``preview_build_fn`` (re-preview) is wired only in trusted-local preview mode.
+    ``POST /api/preview/stop|restart``, ``GET /api/history``, ``POST /api/history/preview``, and
+    ``POST /api/history/open`` return 404 (build-only mode). ``history_fn`` may be wired in
+    build-only mode to list recent builds; ``preview_build_fn`` (re-preview) and ``open_dir_fn``
+    (open the recorded repo folder) are wired only in trusted-local preview mode.
     """
     return ThreadingHTTPServer(
         (host, port),
-        _make_handler(build_fn, status_fn, stop_fn, restart_fn, history_fn, preview_build_fn),
+        _make_handler(
+            build_fn, status_fn, stop_fn, restart_fn, history_fn, preview_build_fn, open_dir_fn
+        ),
     )
