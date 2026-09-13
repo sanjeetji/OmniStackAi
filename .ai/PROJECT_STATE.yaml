@@ -2,12 +2,21 @@ schema_version: 1
 project: OmniStackAI
 phase: BASIC/MVP
 founder_stage: 0
-current_task: R-420
+current_task: R-421
 current_status: done
 branch: main
-last_completed_task: R-420
+last_completed_task: R-421
 last_completed_task_summary: >-
-  Built R-420: generated PostgreSQL is now safe for reserved-looking identifiers and FK dependencies.
+  Built R-421: an explicit trusted-local Studio mode now embeds the actual generated Next.js app in a
+  sandboxed iframe. The existing studio:serve remains build-only; new studio:preview depends on db:up and
+  opts into generated-code execution. LocalAppSession/start_app refactor the R-419 executor into a managed
+  reusable boundary with API/web readiness, idempotent cleanup, partial-failure cleanup, occupied-port
+  preflight, and exited-child protection; app:run preserves best-effort readiness. StudioPreviewManager
+  serializes one session, stops it on replacement/shutdown, returns secret-free ready/error/unavailable
+  payloads, and preserves successful build results when preview launch fails. 38 focused tests and task
+  verify's 2,823 tests pass; lint/security/env and both demos pass; 0 model calls. Existing user processes
+  on ports 3000/8000 were left untouched and now cause an honest preflight error rather than false preview
+  readiness. Previously built R-420: generated PostgreSQL is safe for reserved-looking identifiers and FK dependencies.
   One defensive double-quote encoder is used across schema DDL, honest fixture INSERTs, Python
   repositories, and Go stores while logical paths, symbols, routes, and API names remain unchanged.
   Entity CREATE TABLE blocks and fixture groups now use a stable FK topological order, preserve source
@@ -342,14 +351,14 @@ product_direction: >-
   framework adapter contract -> Next.js adapter -> Git service -> preview/sandbox (needs cloud env).
 id_note: >-
   Workbook backlog owns R-010..R-219. Founder-requested tasks use IDs after R-219: R-220..R-223 done,
-  R-224 Next.js deferred (env-blocked), R-225..R-415 done, and R-416..R-420 done (front-door bricks 1-4
-  plus generated-SQL hardening, not components). NOTE: the UI-COMPONENT SERIES is PAUSED at R-415
-  (110 components, resumable at a future free Tracker ID); R-416..R-420 built and hardened the
+  R-224 Next.js deferred (env-blocked), R-225..R-415 done, and R-416..R-421 done (front-door bricks 1-4,
+  generated-SQL hardening, and embedded trusted-local preview, not components). NOTE: the UI-COMPONENT SERIES is PAUSED at R-415
+  (110 components, resumable at a future free Tracker ID); R-416..R-421 built and hardened the
   "chat -> create -> run" front-door pivot instead.
 blockers: []
 next_action: >-
-  R-420 is complete and removes both migration defects found by the live R-419 run. Recommended next:
-  propose R-421 and record its contract before coding, to embed a live generated-app preview into the
-  existing studio by composing the current builder and local-run boundaries (aligned with R-033/R-034).
-  Keep preview execution opt-in and local; keep task verify deterministic and network/DB/model independent.
+  R-421 is complete: task agent-engine:studio:preview explicitly runs and embeds one managed local app,
+  while studio:serve stays build-only. Recommended next: propose R-422 and record its contract before
+  coding, to allocate collision-free preview ports and add bounded status/stop/restart controls. Keep
+  execution trusted-local/opt-in and task verify deterministic and network/DB/model independent. The
   UI-component series remains paused/resumable.

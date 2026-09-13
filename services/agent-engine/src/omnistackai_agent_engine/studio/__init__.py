@@ -5,6 +5,7 @@ injected so the HTTP layer is testable offline.
 """
 
 from .page import STUDIO_HTML
+from .preview import StudioPreviewManager
 from .server import BuildFn, create_studio_server
 
-__all__ = ["STUDIO_HTML", "BuildFn", "create_studio_server"]
+__all__ = ["STUDIO_HTML", "BuildFn", "StudioPreviewManager", "create_studio_server"]

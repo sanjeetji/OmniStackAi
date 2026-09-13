@@ -4,10 +4,19 @@ Last updated: 2026-09-13
 ## Current Phase
 Stage 0 (Founder Build Sequence, Brief Section 91) — BASIC/MVP
 
-> **The local "chat → create → RUN" loop works end to end and its generated PostgreSQL is now hardened.** UI-component series PAUSED at R-415 (110 components, resumable). Front door: **R-416** intake · **R-417** builder · **R-418** chat web UI · **R-419** turnkey run · **R-420** SQL-safe identifiers and FK dependency ordering. Recommended next: **R-421**, embed a live generated-app preview in the existing local studio (aligned with R-033/R-034).
+> **The local "chat → create → RUN → PREVIEW" loop is now connected.** UI-component series PAUSED at R-415 (110 components, resumable). Front door: **R-416** intake · **R-417** builder · **R-418** chat web UI · **R-419** turnkey run · **R-420** SQL hardening · **R-421** managed embedded trusted-local preview. Recommended next: **R-422**, collision-free preview ports plus status/stop/restart controls.
 
 ## Last Completed Task
-Tracker ID: R-420 — SQL-safe generated PostgreSQL identifiers and FK dependency ordering — DONE.
+Tracker ID: R-421 — Managed live generated-app preview inside the local Studio — DONE. New explicit
+`task agent-engine:studio:preview` starts PostgreSQL, builds the owned repo, starts it through the R-419
+run-plan boundary, waits for API/web readiness, and embeds the actual loopback Next.js URL in a sandboxed
+iframe. `studio:serve` remains build-only. `LocalAppSession` owns cleanup; `StudioPreviewManager` serializes
+replacement and returns bounded secret-free preview states without losing a successful build. Occupied
+ports and exited children are rejected before they can create false readiness. All 38 focused tests and
+`task verify`'s **2,823 tests** pass; lint, security, environment, and both demos pass. No model/generated
+code ran in verification; 0 local/cloud model calls. The earlier user app on ports 3000/8000 was preserved.
+
+Immediately preceded by R-420 — SQL-safe generated PostgreSQL identifiers and FK dependency ordering — DONE.
 Generated DDL, fixture INSERTs, Python repositories, and Go stores now use the same defensively quoted
 PostgreSQL identifiers without changing logical code or API names. Entity tables and fixture groups use
 a stable FK topological order; independent entities keep source order, self-references work, and non-self
@@ -212,8 +221,8 @@ R-324 (theming tokens), R-323 (popover), R-322 (dropdown menu), R-321 (accordion
 R-317 (skeleton), R-316 (alert), R-315 (card), R-314 (tooltip), R-313 (column visibility), R-312 (badge), R-311 (table density),
 R-310 (tabs), R-309 (pagination), and R-308 (JSON export).
 
-**Notes:** R-420 is complete with 2,808 tests passing. The next proposed task is R-421, live generated-app
-preview inside the existing local studio; its task contract must be recorded before coding.
+**Notes:** R-421 is complete with 2,823 tests passing. The next proposed task is R-422: dynamic collision-
+free local preview ports plus bounded status/stop/restart controls; its contract must be recorded first.
 
 
 

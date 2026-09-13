@@ -68,6 +68,13 @@ STUDIO_HTML = r"""<!doctype html>
   .meta { display: flex; gap: 20px; flex-wrap: wrap; font-size: 13px; color: #9fb0c3; margin-bottom: 12px; }
   .meta b { color: #e6edf3; }
   .path { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; word-break: break-all; }
+  .preview { margin: 18px 0; border: 1px solid #223148; border-radius: 12px; overflow: hidden; background: #080e19; }
+  .preview-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 11px 14px; border-bottom: 1px solid #223148; }
+  .preview-head h3 { margin: 0; font-size: 15px; }
+  .preview-status { margin: 0; padding: 12px 14px; color: #9fb0c3; font-size: 13px; }
+  .preview-open { color: #6ee7ff; font-size: 13px; font-weight: 650; text-decoration: none; }
+  .preview-open:hover { text-decoration: underline; }
+  .preview-frame { display: block; width: 100%; height: 540px; border: 0; background: #fff; }
   .files { max-height: 320px; overflow: auto; background: #0b1220; border: 1px solid #223148; border-radius: 10px; padding: 10px 14px; }
   .files ul { margin: 0; padding-left: 18px; }
   .files li { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 12.5px; color: #bcd; line-height: 1.55; }
@@ -105,6 +112,21 @@ STUDIO_HTML = r"""<!doctype html>
       <div>commit <b id="r-commit"></b></div>
     </div>
     <div class="meta">repo:&nbsp;<span class="path" id="r-path"></span></div>
+    <div class="preview" id="preview-panel">
+      <div class="preview-head">
+        <h3>Live application preview</h3>
+        <a id="preview-open" class="preview-open" target="_blank" rel="noreferrer" hidden>Open in new tab</a>
+      </div>
+      <p id="preview-status" class="preview-status" role="status" aria-live="polite">Preview has not started.</p>
+      <iframe
+        id="preview-frame"
+        class="preview-frame"
+        title="Generated application preview"
+        sandbox="allow-forms allow-modals allow-popups allow-same-origin allow-scripts"
+        referrerpolicy="no-referrer"
+        hidden
+      ></iframe>
+    </div>
     <div class="files"><ul id="r-files"></ul></div>
   </section>
 
@@ -118,6 +140,37 @@ STUDIO_HTML = r"""<!doctype html>
   var btn = document.getElementById('build-btn');
   var statusEl = document.getElementById('status');
   var result = document.getElementById('result');
+
+  function localPreviewUrl(value) {
+    if (typeof value !== 'string' || !value) { return null; }
+    try {
+      var url = new URL(value);
+      var localHost = url.hostname === '127.0.0.1' || url.hostname === 'localhost' || url.hostname === '[::1]';
+      return url.protocol === 'http:' && localHost ? url.href : null;
+    } catch (_) {
+      return null;
+    }
+  }
+
+  function renderPreview(preview) {
+    var frame = document.getElementById('preview-frame');
+    var open = document.getElementById('preview-open');
+    var previewStatus = document.getElementById('preview-status');
+    var url = preview && preview.status === 'ready' ? localPreviewUrl(preview.web_url) : null;
+    frame.hidden = true;
+    frame.removeAttribute('src');
+    open.hidden = true;
+    open.removeAttribute('href');
+    if (url) {
+      previewStatus.textContent = preview.message || 'The generated application is running locally.';
+      frame.src = url;
+      frame.hidden = false;
+      open.href = url;
+      open.hidden = false;
+      return;
+    }
+    previewStatus.textContent = (preview && preview.message) || 'No browser preview is available for this build.';
+  }
 
   document.getElementById('examples').addEventListener('click', function (e) {
     if (e.target && e.target.classList.contains('ex')) {
@@ -140,6 +193,7 @@ STUDIO_HTML = r"""<!doctype html>
     document.getElementById('r-count').textContent = (data.file_count || 0) + ' files';
     document.getElementById('r-path').textContent = data.target_dir || '';
     document.getElementById('r-commit').textContent = (data.commit_sha || '').slice(0, 12);
+    renderPreview(data.preview || null);
     var list = document.getElementById('r-files');
     list.innerHTML = '';
     (data.files || []).forEach(function (f) {

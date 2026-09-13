@@ -1,4 +1,4 @@
-# OmniStackAI — implementation progress (as of R-420)
+# OmniStackAI — implementation progress (as of R-421)
 
 A living summary of what is built, what is pending, and how to see results. Numbers come from the
 execution tracker (`R_&_D/OmniStackAI_Execution_Tracker_v6.xlsx`, `Phase_Roadmap`) plus the state
@@ -6,18 +6,21 @@ files (`.ai/`), Git history, and CHANGELOG for work done past the tracker's last
 
 ## Headline
 
-- **2,808 automated tests pass**, fully offline and network-independent (`task verify`).
+- **2,823 automated tests pass**, fully offline and network-independent (`task verify`).
 - **147 tracker tasks Done, 1 Deferred, 210 Not Started** across 358 tasks (the tracker's planned
   universe ends at R-358).
-- **Plus 62 completed tasks beyond the workbook (R-359 → R-420)**: 57 reusable UI-component suites,
-  four front-door bricks (intake, repository builder, studio, turnkey local run), and R-420 generated-SQL
-  hardening. The generated Next.js component library remains at **110 components**; its component series
+- **Plus 63 completed tasks beyond the workbook (R-359 → R-421)**: 57 reusable UI-component suites,
+  four front-door bricks, R-420 generated-SQL hardening, and R-421 managed embedded local preview. The
+  generated Next.js component library remains at **110 components**; its component series
   is **PAUSED at R-415** and fully resumable.
 - The generated app was **run live locally end-to-end this session** (Next.js web on `:3000` +
   FastAPI on `:8000` + seeded PostgreSQL) — proving the offline builder output actually runs on a Mac.
 - **R-420 closed both SQL defects exposed by that run:** generator-owned PostgreSQL identifiers are
   consistently quoted and entity tables/fixture groups are emitted in stable FK dependency order.
   A reserved-name User/Order migration passed a rollback-only live PostgreSQL proof.
+- **R-421 connects RUN to PREVIEW:** an explicit trusted-local Studio command owns one generated-app
+  session and embeds its actual Next.js URL in a sandboxed iframe; build-only mode still executes no
+  generated code. Port collisions now fail before setup instead of showing a stale app as ready.
 
 ## UI Component Series — status: PAUSED at R-415 (resumable)
 
@@ -32,7 +35,7 @@ create front door and the engine are). The founder chose to pivot to higher-valu
 
 **How to resume later (nothing decays — each component is independent and additive):**
 1. Pick the next best non-duplicate component and assign it the next available task ID after the active
-   front-door sequence (R-416 through R-420 are already used).
+   front-door sequence (R-416 through R-421 are already used).
 2. Follow the component-suite contract (see `.ai/HANDOFF.md` / any recent `.ai/tasks/R-4xx.md`):
    `'use client'`; `forwardRef` + `useImperativeHandle`; 4 variants / 3 sizes; WAI-ARIA; zero deps;
    100% diff-invariant; ASCII-only source; compound + alias exports with `displayName`; default export.
@@ -255,12 +258,12 @@ the live run needs the key + a network machine.
 
 ## What's next
 
-The local front door is now built through safe execution: R-416 prompt → IR, R-417 IR → owned repo,
-R-418 local chat studio, R-419 turnkey local run, and R-420 SQL hardening. The recommended next task is
-**R-421: embed a live generated-app preview in the existing local studio**, aligned with tracker backlog
-R-033/R-034. Its implementation should compose the existing builder/studio/local-run boundaries, keep
-runtime execution explicitly opt-in and local, and keep `task verify` independent of models, Docker,
-PostgreSQL, package installs, and network.
+The local front door is now built through browser preview: R-416 prompt → IR, R-417 IR → owned repo,
+R-418 local chat studio, R-419 turnkey local run, R-420 SQL hardening, and R-421 managed embedded preview.
+The recommended next task is **R-422: allocate collision-free local API/web ports per preview and add
+bounded status/stop/restart controls**. This follows directly from the honest R-421 preflight: an existing
+`app:run` session must never be mistaken for the new preview or unnecessarily block Studio. Execution
+must remain explicit trusted-local mode and `task verify` must remain model/Docker/DB/install/network-free.
 
 **The UI-component series remains PAUSED at R-415** and is independently resumable under a future free
 task ID.

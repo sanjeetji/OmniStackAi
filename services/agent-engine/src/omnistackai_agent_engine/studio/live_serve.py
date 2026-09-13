@@ -1,13 +1,18 @@
 """Opt-in live studio: serve the chat-to-create UI backed by the local Ollama build path.
 
-Excluded from static verification. Start it with:
+Excluded from static verification. Start build-only mode with:
 
     task agent-engine:studio:serve
+
+or explicitly opt into trusted-local generated-code execution and embedded preview with:
+
+    task agent-engine:studio:preview
 
 then open http://127.0.0.1:4173, type a description, and click Build. Each request compiles
 the description into an Application IR and materializes a real owned Git repo on disk. The
 output directory comes from OMNISTACKAI_APP_OUT_DIR (a per-build subfolder) or a temp dir.
-Requires a running local Ollama; no secrets, no cloud.
+Requires a running local Ollama; no secrets, no cloud. Preview mode also requires the local
+PostgreSQL/toolchain and is not a tenant-isolated sandbox.
 """
 
 from __future__ import annotations
@@ -19,6 +24,7 @@ import tempfile
 
 from ..intake._ollama import build_ollama_provider_from_env
 from ..intake.build_app import app_build_result_to_dict, build_app_from_prompt
+from .preview import StudioPreviewManager
 from .server import create_studio_server
 
 _AUTHOR_NAME = "sanjeetji"
@@ -33,7 +39,7 @@ def _target_dir_for(prompt: str) -> str:
     return os.path.join(tempfile.mkdtemp(prefix="omnistackai-studio-"), slug)
 
 
-def _build(prompt: str) -> dict:
+def _build(prompt: str, *, preview_manager: StudioPreviewManager | None = None) -> dict:
     provider, model_id, max_output, request_timeout = build_ollama_provider_from_env()
     result = asyncio.run(
         build_app_from_prompt(
@@ -48,14 +54,37 @@ def _build(prompt: str) -> dict:
             overwrite=True,
         )
     )
-    return app_build_result_to_dict(result)
+    payload = app_build_result_to_dict(result)
+    if preview_manager is None:
+        payload["preview"] = {
+            "status": "disabled",
+            "message": "Build-only mode: start the explicit Studio preview command to run generated code.",
+        }
+    else:
+        payload["preview"] = preview_manager.replace(result.target_dir)
+    return payload
+
+
+def _preview_enabled() -> bool:
+    return os.environ.get("OMNISTACKAI_STUDIO_LIVE_PREVIEW", "0").strip().lower() in {
+        "1", "true", "yes", "on"
+    }
 
 
 def main() -> None:
     host = os.environ.get("OMNISTACKAI_STUDIO_HOST", "127.0.0.1")
     port = int(os.environ.get("OMNISTACKAI_STUDIO_PORT", "4173"))
-    server = create_studio_server(_build, host=host, port=port)
+    preview_manager = StudioPreviewManager() if _preview_enabled() else None
+
+    def build(prompt: str) -> dict:
+        return _build(prompt, preview_manager=preview_manager)
+
+    server = create_studio_server(build, host=host, port=port)
     print(f"OmniStackAI Studio -> http://{host}:{port}")
+    if preview_manager is None:
+        print("Build-only mode: generated code is not executed.")
+    else:
+        print("Trusted-local preview mode: generated code will run on this machine.")
     print("Type an app description and click Build. Ctrl+C to stop.")
     try:
         server.serve_forever()
@@ -63,6 +92,8 @@ def main() -> None:
         print("\nStopping studio.")
     finally:
         server.server_close()
+        if preview_manager is not None:
+            preview_manager.stop()
 
 
 if __name__ == "__main__":

@@ -143,9 +143,15 @@ tasks:
       - bash scripts/agent-engine.sh app-build {{.CLI_ARGS}}
 
   agent-engine:studio:serve:
-    desc: 'Serve the chat-to-create Studio web UI on http://127.0.0.1:4173 (opt-in, live; local Ollama)'
+    desc: 'Serve the build-only chat-to-create Studio on http://127.0.0.1:4173 (opt-in local Ollama; generated code is not run)'
     cmds:
       - bash scripts/agent-engine.sh studio-serve
+
+  agent-engine:studio:preview:
+    desc: 'Serve Studio with an embedded live app on http://127.0.0.1:4173 (explicit trusted-local generated-code execution)'
+    deps: [db:up]
+    cmds:
+      - bash scripts/agent-engine.sh studio-preview
 
   agent-engine:app:run:
     desc: 'Run a generated app repo locally in one command - DB + migrations + backend :8000 + web :3000 (opt-in, live; CLI_ARGS - <repo-dir>)'

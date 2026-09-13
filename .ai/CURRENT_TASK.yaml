@@ -1,117 +1,126 @@
-task_id: R-420
-id: R-420
-title: "SQL-safe generated PostgreSQL identifiers and FK dependency order"
+task_id: R-421
+id: R-421
+title: "Managed live generated-app preview inside the local Studio"
 status: done
 phase: MVP
 tracker_row: null
 started_at: "2026-09-13"
 completed_at: "2026-09-13"
 objective: >-
-  Fix the two generated PostgreSQL defects exposed by R-419's live app run: emit safe quoted SQL
-  identifiers consistently across schema, seed, Python repositories, and Go stores; and create tables
-  plus seed fixture groups in a stable foreign-key dependency order so a child declared before its
-  parent never references a relation that does not exist yet.
+  Add the first visible actual-application preview to the existing local Studio. An explicit trusted-local
+  preview command must build a generated repo, start it through the existing R-419 run-plan boundary,
+  return a structured preview result, and embed its live Next.js URL in the Studio while owning and
+  cleaning up the generated app processes deterministically.
 requirements:
-  - Keep logical snake_case names unchanged for file paths, module names, functions, and route wiring.
-  - Render every generator-owned PostgreSQL table, column, relation column, and index identifier with safe double quoting.
-  - Apply the same SQL identifier representation in migrations, fixture INSERTs, Python repositories, and Go stores.
-  - Emit entity tables in stable topological order over many_to_one and one_to_one dependencies, preserving source order between independent entities.
-  - Emit fixture entity groups in the same dependency order while preserving row order within each fixture.
-  - Keep many-to-many association tables after all entity tables and preserve deterministic output.
-  - Fail deterministically with a clear error for cyclic non-self foreign-key dependencies rather than emitting an invalid migration.
+  - Keep the existing agent-engine:studio:serve command build-only; local generated-code execution must require a separate explicit opt-in command.
+  - Add agent-engine:studio:preview as the explicit trusted-local mode and start the existing local PostgreSQL dependency through the Task runner.
+  - Refactor the R-419 executor into a reusable managed LocalAppSession that starts one RunPlan, reports backend/web readiness, and idempotently terminates every child process.
+  - Preserve the existing agent-engine:app:run CLI behavior by delegating it to the managed session boundary.
+  - Add a Studio preview coordinator that replaces the previous session only after a new repo is built, serializes replacements, returns a JSON-safe secret-free preview payload, and converts launch failures into preview status without discarding the successful build result.
+  - Embed the ready web URL in a sandboxed iframe, expose an explicit open-preview link, and render starting/error/unavailable states without HTML injection.
+  - Stop the active preview on replacement and when the Studio server exits.
+  - Keep all verification deterministic and offline through injected/stubbed run, process, and readiness boundaries; task verify must not execute generated code, Docker, PostgreSQL, package installation, models, or external network calls.
 acceptance_criteria:
-  - An Order or User entity produces valid quoted table SQL everywhere it is referenced.
-  - Reserved-looking field, relation, and index names are quoted without changing public code identifiers.
-  - A child-before-parent IR renders the parent CREATE TABLE first and its child/fixture rows afterward.
-  - Independent entities retain their original relative order and self-references remain renderable.
-  - A non-self FK cycle raises a stable explanatory ValueError instead of emitting forward-reference SQL.
-  - Existing example IRs remain deterministic and both backend adapters emit consistent migrations/repositories.
-  - Focused tests and the full offline verification, lint, security, environment, and builder demo gates pass.
+  - task agent-engine:studio:serve still builds and reports a repository without launching it.
+  - task agent-engine:studio:preview is visibly documented as trusted-local execution and depends on db:up.
+  - A successful preview build returns preview.status=ready plus web_url/api_url and the Studio iframe uses web_url.
+  - A preview launch failure still returns HTTP 200 for the successful build with preview.status=error and a bounded user-facing message.
+  - Replacing a preview stops the old managed session; closing the Studio stops the active session; repeated stop calls are safe.
+  - LocalAppSession reports web/backend readiness and cleans up already-launched processes when a later setup/readiness step fails.
+  - Existing studio and app-run contracts remain compatible, and all focused/full verification, lint, security, environment, and builder-demo gates pass.
 expected_impact:
-  - services/agent-engine/src/omnistackai_agent_engine/codegen/schema_sql.py
-  - services/agent-engine/src/omnistackai_agent_engine/codegen/seed_sql.py
-  - services/agent-engine/src/omnistackai_agent_engine/codegen/data_access.py
-  - services/agent-engine/tests/test_schema_sql_safety.py
-  - Existing SQL/codegen assertion tests that must reflect deliberate quoted output
-  - State, handoff, work log, changelog, progress, resume, and codegen documentation
+  - services/agent-engine/src/omnistackai_agent_engine/localrun/run.py
+  - services/agent-engine/src/omnistackai_agent_engine/localrun/__init__.py
+  - services/agent-engine/src/omnistackai_agent_engine/studio/preview.py
+  - services/agent-engine/src/omnistackai_agent_engine/studio/live_serve.py
+  - services/agent-engine/src/omnistackai_agent_engine/studio/page.py
+  - services/agent-engine/src/omnistackai_agent_engine/studio/__init__.py
+  - services/agent-engine/tests/test_localrun_session.py
+  - services/agent-engine/tests/test_studio_preview.py
+  - services/agent-engine/tests/test_studio_server.py
+  - scripts/agent-engine.sh
+  - Taskfile.yml
+  - docs/RUNTIME.md
+  - State, handoff, work log, changelog, progress, and resume documentation
 allowed_paths:
-  - "services/agent-engine/src/omnistackai_agent_engine/codegen/schema_sql.py"
-  - "services/agent-engine/src/omnistackai_agent_engine/codegen/seed_sql.py"
-  - "services/agent-engine/src/omnistackai_agent_engine/codegen/data_access.py"
-  - "services/agent-engine/tests/test_schema_sql_safety.py"
-  - "services/agent-engine/tests/test_schema_sql.py"
-  - "services/agent-engine/tests/test_seed_sql.py"
-  - "services/agent-engine/tests/test_data_access.py"
-  - "services/agent-engine/tests/test_schema_indexes.py"
-  - "services/agent-engine/tests/test_field_validation.py"
-  - "services/agent-engine/tests/test_field_validation_numeric.py"
-  - "services/agent-engine/tests/test_field_filters_backend.py"
-  - "services/agent-engine/tests/test_pagination.py"
-  - "services/agent-engine/tests/test_patch_update_handlers.py"
-  - "services/agent-engine/tests/test_sorting.py"
-  - "services/agent-engine/tests/test_search.py"
-  - "services/agent-engine/tests/test_collection_field_filters.py"
-  - "services/agent-engine/tests/test_subcollection_field_filters.py"
-  - "services/agent-engine/tests/test_subcollection_wiring.py"
-  - "services/agent-engine/tests/test_total_count.py"
-  - ".ai/tasks/R-420.md"
+  - "services/agent-engine/src/omnistackai_agent_engine/localrun/run.py"
+  - "services/agent-engine/src/omnistackai_agent_engine/localrun/__init__.py"
+  - "services/agent-engine/src/omnistackai_agent_engine/studio/preview.py"
+  - "services/agent-engine/src/omnistackai_agent_engine/studio/live_serve.py"
+  - "services/agent-engine/src/omnistackai_agent_engine/studio/page.py"
+  - "services/agent-engine/src/omnistackai_agent_engine/studio/__init__.py"
+  - "services/agent-engine/tests/test_localrun_session.py"
+  - "services/agent-engine/tests/test_studio_preview.py"
+  - "services/agent-engine/tests/test_studio_server.py"
+  - "scripts/agent-engine.sh"
+  - "Taskfile.yml"
+  - "docs/RUNTIME.md"
+  - ".ai/tasks/R-421.md"
   - ".ai/CURRENT_TASK.yaml"
   - ".ai/PROJECT_STATE.yaml"
   - ".ai/WORK_LOG.md"
   - ".ai/HANDOFF.md"
   - "PROJECT_STATE.md"
   - "CHANGELOG.md"
-  - "docs/CODEGEN.md"
   - "docs/PROGRESS.md"
   - "docs/RESUME_PROMPT.md"
 forbidden_changes:
   - "Do not modify or include the unrelated untracked .claude directory"
-  - "Do not change the Application IR schema or accepted relation semantics"
-  - "Do not change PostgreSQL to another database engine or add a database dependency"
-  - "Do not add platform or generated-project dependencies"
-  - "Do not make task verify connect to PostgreSQL, Docker, the network, or a model"
-  - "Do not change model/provider, runtime, deployment, studio, localrun, assembler, or Git-service contracts"
-  - "Do not add a top-level directory, service, infrastructure, or native/mobile work"
+  - "Do not make generated-code execution implicit in task verify or the build-only Studio command"
+  - "Do not claim trusted local execution provides cloud sandbox isolation"
+  - "Do not add a service, top-level directory, platform/generated dependency, queue, sandbox vendor, or infrastructure"
+  - "Do not change the RuntimeProvider, ModelProvider, Application IR, database engine, assembler, Git-service, deployment, or generated-project contracts"
+  - "Do not expose environment secrets, database credentials, process environments, or raw tracebacks in preview payloads or logs"
+  - "Do not start cloud, paid-provider, native/mobile, device-cloud, or production deployment work"
 required_gates:
-  - focused schema SQL safety tests
-  - existing schema, seed, data-access, sorting, search, filter, and pagination regression tests
+  - focused managed-session tests
+  - focused studio-preview and existing studio-server tests
+  - existing local-run plan regressions
   - task lint
   - task verify
   - task security:quick
   - task env:check
   - task builder:demo -- minimal-blog
   - task builder:demo -- rideshare-favourites
-  - generated migration plus Python/Go repository artifact inspection
+  - opt-in task and preview payload inspection without invoking a model during verification
 model_tool_trace:
   routing: deterministic_only
   local_calls: 0
   cloud_calls: 0
   note: >-
-    L2 deterministic code-generation correction. Repository evidence and tests are sufficient; no
-    local or cloud model call is needed.
+    L2 local orchestration and lifecycle work. Deterministic repository/runtime boundaries and injected
+    test doubles are sufficient; no local or cloud model call is needed for implementation or verify.
 evidence:
-  baseline_verify: >-
-    task verify passed with 2,801 tests when rerun with ephemeral 127.0.0.1 binding permitted; the
-    sandbox-only first attempt reached all tests but eight existing studio tests could not bind a local port.
+  baseline: >-
+    task doctor passed. Existing studio-server plus local-run-plan baseline passed all 23 tests using
+    their current in-memory build stub and ephemeral loopback test server. Local and origin/main were
+    equal at 78e358585f873113d61531350f9a1568659eed65 before the contract; only the unrelated untracked
+    .claude directory was present.
+  test_first: >-
+    The initial focused run failed because LocalAppRunError, LocalAppSession, start_app, and
+    StudioPreviewManager did not exist. Later port-ownership tests also failed before the preflight
+    boundary existed. Both red states were recorded before implementation.
   focused_tests: >-
-    services/agent-engine/tests/test_schema_sql_safety.py passed all 7 tests, covering reserved
-    identifiers, cross-artifact quoting, transitive and stable dependency ordering, self references,
-    deterministic cycle rejection, and byte-stable output. The broader schema/seed/data-access/search/
-    sorting/filter/pagination regression selection passed all 186 tests.
-  full_verify: "task verify passed: 2,808 tests; task lint passed."
+    Existing and new studio/local-run tests passed all 38 tests: managed lifecycle/readiness/cleanup,
+    occupied-port and stale-health protection, preview replacement/error/unavailable payloads, explicit
+    Task wiring, sandboxed iframe rendering, HTTP build preservation, and all R-418/R-419 regressions.
+  full_verify: "task verify passed: 2,823 tests; task lint passed."
   security: "task security:quick passed; task env:check passed."
   builder_demos: >-
-    task builder:demo -- minimal-blog passed (152 files), and task builder:demo --
-    rideshare-favourites passed (149 files). Generated migrations and Python/Go repositories were
-    inspected; generated Python parsed with ast and both representative Go stores passed gofmt.
-  live_postgres: >-
-    Applied a reserved-name User/Order migration to the existing local PostgreSQL container inside a
-    transaction and verification schema: CREATE SCHEMA, both CREATE TABLE statements, and CREATE INDEX
-    succeeded, then ROLLBACK removed all verification state. Earlier invocation/access failures and an
-    initial test-fixture table/index name collision were diagnosed honestly and were not product defects.
+    task builder:demo -- minimal-blog passed (152 files) and task builder:demo --
+    rideshare-favourites passed (149 files); generated output was unchanged.
+  command_inspection: >-
+    task --list shows separate studio:serve build-only and studio:preview explicit trusted-local tasks;
+    studio:preview depends on db:up. Package export inspection loaded LocalAppSession, start_app, and
+    StudioPreviewManager successfully. No model or generated-code execution occurred during verification.
+  live_note: >-
+    Ports 3000 and 8000 were already occupied by the founder's earlier R-419 app session. R-421 did not
+    interrupt those processes. The new strict preview preflight rejects occupied ports before DB/setup
+    work, preventing an old app's health response from being misreported as the new preview. Dynamic port
+    selection is the recommended R-422 follow-up.
   model_calls: "0 local model calls; 0 cloud model calls."
 blockers: []
 next_action: >-
-  R-420 is complete. Propose R-421 before coding: embed a live generated-app preview into the existing
-  local studio by composing the R-418 studio, R-417 builder, and R-419 local-run boundaries, aligned
-  with the existing R-033/R-034 preview backlog. Keep it local, opt-in, and deterministic in verify.
+  R-421 is complete. Propose R-422 before coding: allocate collision-free local API/web ports for each
+  Studio preview and add bounded preview status/stop/restart controls, so an existing app:run session does
+  not block preview while preserving one-session ownership and deterministic offline verification.

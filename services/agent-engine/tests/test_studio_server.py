@@ -89,6 +89,18 @@ class TestStudioPage(unittest.TestCase):
         for bad in ("http://", "https://", "src=", "<link"):
             self.assertNotIn(bad, STUDIO_HTML)
 
+    def test_page_has_sandboxed_live_preview_surface(self) -> None:
+        for token in (
+            'id="preview-frame"',
+            'id="preview-status"',
+            'id="preview-open"',
+            'sandbox="allow-forms allow-modals allow-popups allow-same-origin allow-scripts"',
+            'referrerpolicy="no-referrer"',
+            "preview.web_url",
+        ):
+            self.assertIn(token, STUDIO_HTML)
+        self.assertNotIn("preview.innerHTML", STUDIO_HTML)
+
 
 class TestStudioServer(unittest.TestCase):
     def test_get_serves_page(self) -> None:
@@ -116,6 +128,20 @@ class TestStudioServer(unittest.TestCase):
             self.assertEqual(data["name"], "Recipe Box")
             self.assertEqual(data["file_count"], 154)
             self.assertEqual(build.prompts, ["Build a recipe box"])
+
+    def test_successful_build_keeps_200_when_preview_launch_failed(self) -> None:
+        result = {
+            **STUB_RESULT,
+            "preview": {
+                "status": "error",
+                "message": "Preview could not start. Stop other local app sessions and retry.",
+            },
+        }
+        with running_server(RecordingBuild(result)) as base:
+            status, data = _post(base + "/api/build", obj={"prompt": "Build a recipe box"})
+            self.assertEqual(status, 200)
+            self.assertEqual(data["name"], "Recipe Box")
+            self.assertEqual(data["preview"]["status"], "error")
 
     def test_post_empty_prompt_is_400(self) -> None:
         with running_server(RecordingBuild(STUB_RESULT)) as base:

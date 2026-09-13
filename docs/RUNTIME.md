@@ -37,6 +37,31 @@ task agent-engine:preview-plan -- nextjs-web
 cd apps/web && pnpm install && pnpm dev     # -> http://127.0.0.1:3000
 ```
 
+## Managed Studio preview (R-421)
+
+The local front door now offers two deliberately separate modes:
+
+```text
+task agent-engine:studio:serve
+  Build-only Studio. Uses local Ollama to create the owned repository but does not execute generated code.
+
+task agent-engine:studio:preview
+  Explicit trusted-local mode. Starts local PostgreSQL, builds the repository, runs its migrations,
+  backend, and Next.js web app, then embeds the actual web URL in a sandboxed Studio iframe.
+```
+
+`studio:preview` composes the existing R-419 run plan through a managed `LocalAppSession`; it does not
+introduce another runtime or bypass the platform boundary. The session owns every child process, waits for
+API and web readiness, stops the previous app when a new preview replaces it, and stops everything when
+Studio exits. A launch failure is returned as a bounded, secret-free preview status while the successfully
+generated repository remains available.
+
+This is explicitly **trusted local execution**, not tenant isolation or a cloud sandbox. Use it only for
+prompts/code you are willing to run on the current machine. Cloud-generated or otherwise untrusted code
+must still use an isolated provider-backed execution plane. Static verification never invokes this mode:
+`task verify` uses injected process/readiness fakes and performs no Docker, database, install, model, or
+external-network work.
+
 ## Switching tiers — one knob (R-234)
 
 `OMNISTACKAI_TIER` is the single switch; change it in `.env` and the resolved providers change:

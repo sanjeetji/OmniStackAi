@@ -1,5 +1,28 @@
 # Work Log
 
+## 2026-09-13 — R-421 (managed embedded trusted-local Studio preview)
+
+- Preserved `agent-engine:studio:serve` as build-only and added explicit
+  `agent-engine:studio:preview` with `db:up`; its Task description clearly labels trusted-local
+  generated-code execution rather than sandbox isolation.
+- Refactored the R-419 executor into exported `LocalAppSession`/`start_app`. The managed boundary owns
+  every child, waits for API and web readiness, stops idempotently, cleans up partial failures, checks
+  strict preview ports before DB/setup, and rejects exited children so stale health responses cannot
+  masquerade as a new preview. The existing `app:run` delegates to it with best-effort readiness retained.
+- Added `StudioPreviewManager`: a lock serializes one active session; replacement/shutdown stops it; only
+  JSON-safe secret-free `ready`/`error`/`unavailable` fields leave the boundary. A launch error preserves
+  the successful repo and the build endpoint's HTTP 200 response.
+- Added the actual-app iframe, accessible status, and open link. It accepts only loopback HTTP URLs and
+  sets DOM URL properties; model/build response text is never inserted as HTML. The iframe is sandboxed.
+- Test-first evidence: missing managed APIs failed first; new occupied-port/stale-process assertions failed
+  before the preflight/liveness implementation. Final focused suite: **38 passed**. `task verify`: **2,823
+  passed**. Lint/security/env and both demos passed (minimal-blog 152, rideshare-favourites 149).
+- Existing user-owned listeners on ports 3000/8000 were not interrupted. The strict preview now rejects
+  that collision honestly; dynamic port allocation is the recommended R-422 follow-up.
+- Verification made 0 local model calls, 0 cloud calls, and did not execute generated code, Docker, DB,
+  installs, or external network. No dependency/provider/IR/DB-engine/service/infra/top-level/mobile change;
+  no workbook row exists past R-358.
+
 ## 2026-09-13 — R-420 (SQL-safe identifiers and FK dependency order)
 
 - Added one defensive PostgreSQL identifier encoder and applied it consistently to generated schema DDL,

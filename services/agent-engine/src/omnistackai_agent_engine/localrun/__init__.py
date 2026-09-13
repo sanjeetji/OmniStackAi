@@ -5,5 +5,13 @@ opt-in executor lives in ``localrun.run``.
 """
 
 from .plan import RunPlan, RunStep, build_run_plan
+from .run import LocalAppRunError, LocalAppSession, start_app
 
-__all__ = ["RunPlan", "RunStep", "build_run_plan"]
+__all__ = [
+    "LocalAppRunError",
+    "LocalAppSession",
+    "RunPlan",
+    "RunStep",
+    "build_run_plan",
+    "start_app",
+]

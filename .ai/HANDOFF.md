@@ -1,14 +1,20 @@
 # Current Handoff
 
-Task ID: R-420
+Task ID: R-421
 Status: done
 Phase: BASIC/MVP — Founder Stage 0
 Branch: `main` (the only branch; the GitHub default)
 
-> **The local "chat → create → RUN" loop works end to end and generated PostgreSQL is hardened.** UI-component series PAUSED at R-415 (110 components, resumable). Front door: **R-416** intake · **R-417** builder · **R-418** chat web UI · **R-419** turnkey run · **R-420** quoted SQL identifiers plus FK dependency ordering. **RECOMMENDED NEXT: R-421** = embed a live generated-app preview into the existing local studio, aligned with the R-033/R-034 preview backlog.
+> **The local "chat → create → RUN → PREVIEW" loop is connected.** UI-component series PAUSED at R-415 (110 components, resumable). Front door: **R-416** intake · **R-417** builder · **R-418** chat web UI · **R-419** turnkey run · **R-420** SQL hardening · **R-421** managed embedded trusted-local preview. **RECOMMENDED NEXT: R-422** = collision-free preview ports plus bounded status/stop/restart controls.
 
 ## Repo/workflow state
 
+- **R-421 (managed embedded local preview)** shipped: `studio:serve` remains build-only; explicit
+  `studio:preview` (depends `db:up`) executes one generated app through exported LocalAppSession/start_app,
+  waits for API/web readiness, and embeds its loopback URL in a sandboxed iframe. StudioPreviewManager
+  serializes replacement and cleanup, with secret-free failure states that preserve the repo. Port
+  preflight/exited-child checks prevent stale apps from being reported ready. 38 focused tests and
+  `task verify` **2,823** pass; lint/security/env and both demos green; 0 model calls.
 - **R-420 (generated SQL hardening)** shipped: one PostgreSQL identifier encoder is used across schema,
   seed, Python repository, and Go store SQL. Stable FK topological ordering puts parents before dependants,
   preserves independent source order, supports self-references, and rejects non-self cycles clearly.
@@ -20,7 +26,7 @@ Branch: `main` (the only branch; the GitHub default)
 - **R-417 (Prompt → generated app repo)** shipped (brick 2): `intake/build_app.py` + opt-in `task agent-engine:app:build`.
 - **R-416 (Prompt → Application IR intake agent)** shipped (brick 1): `intake/` package + opt-in `task agent-engine:intake:run`.
 - **R-415 (Phone Number Input Suite)** was the last UI-component-series task (110 components; paused/resumable).
-- **R-420 code and required documentation are verified for the checkpoint commit on `main`**. Preserve
+- **R-421 code and required documentation are verified for the checkpoint commit on `main`**. Preserve
   and exclude the unrelated untracked `.claude/` directory.
 - Tracker and state files kept fully consistent and verified.
 - Completed:
@@ -76,7 +82,7 @@ Branch: `main` (the only branch; the GitHub default)
   50. **R-412**: Character & Word Counter Textarea Suite (`components/character-counter.tsx`)
   51. **R-413**: Copy-to-Clipboard Button Suite (`components/copy-button.tsx`)
   52. **R-414**: Duration Input Suite (`components/duration-input.tsx`)
-- R-420 is complete; the next coding action is gated on recording the R-421 contract. Still stop-and-ask
+- R-421 is complete; the next coding action is gated on recording the R-422 contract. Still stop-and-ask
   only for paid cloud / DB engine / new infra / native-mobile / a materially different architecture decision.
 
 ## Completed
@@ -988,10 +994,10 @@ Enabled accessible, desktop-and-mobile-grade, futuristic Time Picker and Time Ra
 
 ## Next action
 
-- R-420 is complete. Before coding, propose and record the R-421 Standard AI Task Contract. Recommended
-  scope: embed a live generated-app preview into the existing local studio by composing the R-417 builder,
-  R-418 studio, and R-419 local-run boundaries, aligned with the R-033/R-034 preview backlog. Execution
-  must remain opt-in/local while `task verify` stays deterministic and network/DB/model independent.
+- R-421 is complete. Before coding, propose and record the R-422 Standard AI Task Contract. Recommended
+  scope: allocate collision-free API/web ports for each local Studio preview and expose bounded
+  status/stop/restart controls, without weakening one-session ownership or executing anything in
+  `task verify`.
 
 ## Next command
 
