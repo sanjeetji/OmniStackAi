@@ -2,12 +2,27 @@ schema_version: 1
 project: OmniStackAI
 phase: BASIC/MVP
 founder_stage: 0
-current_task: R-421
+current_task: R-422
 current_status: done
 branch: main
-last_completed_task: R-421
+last_completed_task: R-422
 last_completed_task_summary: >-
-  Built R-421: an explicit trusted-local Studio mode now embeds the actual generated Next.js app in a
+  Built R-422: collision-free Studio preview ports plus bounded status/stop/restart controls. Each trusted-
+  local preview now allocates two distinct, currently-free loopback ports (allocate_preview_ports holds both
+  sockets open while reading their OS-assigned ports) and threads them through the R-419 run plan (and thus
+  the generated web app's NEXT_PUBLIC_API_URL) via a new start_preview_app boundary that delegates to the
+  strict start_app, so a preview never fails on, or clobbers, an existing task app:run app on 3000/8000 or a
+  prior preview. StudioPreviewManager (default start_fn now start_preview_app) gained bounded, JSON-safe,
+  secret-free status()/stop()/restart(): it remembers a single last repo, restart re-previews it (idle no-op
+  before any build), and stop is idempotent and reports "stopped". The stdlib Studio server gained optional
+  injected status_fn/stop_fn/restart_fn -> GET /api/preview, POST /api/preview/stop, POST /api/preview/restart,
+  wired only in trusted-local preview mode (build-only returns 404). The Studio page adds Stop/Restart buttons
+  and a live status line that call the control routes and re-render preview state without HTML injection.
+  studio:serve stays build-only, studio:preview stays trusted-local, single-session cleanup preserved,
+  PostgreSQL and architecture unchanged. 53 focused tests (15 net-new) and task verify's 2,838 tests pass;
+  lint/security/env and both builder demos (152 / 149 files) pass; a deterministic payload/port inspection
+  confirmed distinct free ports and secret-free control payloads; 0 local/cloud model calls. Previously built
+  R-421: an explicit trusted-local Studio mode now embeds the actual generated Next.js app in a
   sandboxed iframe. The existing studio:serve remains build-only; new studio:preview depends on db:up and
   opts into generated-code execution. LocalAppSession/start_app refactor the R-419 executor into a managed
   reusable boundary with API/web readiness, idempotent cleanup, partial-failure cleanup, occupied-port
@@ -351,14 +366,16 @@ product_direction: >-
   framework adapter contract -> Next.js adapter -> Git service -> preview/sandbox (needs cloud env).
 id_note: >-
   Workbook backlog owns R-010..R-219. Founder-requested tasks use IDs after R-219: R-220..R-223 done,
-  R-224 Next.js deferred (env-blocked), R-225..R-415 done, and R-416..R-421 done (front-door bricks 1-4,
-  generated-SQL hardening, and embedded trusted-local preview, not components). NOTE: the UI-COMPONENT SERIES is PAUSED at R-415
-  (110 components, resumable at a future free Tracker ID); R-416..R-421 built and hardened the
-  "chat -> create -> run" front-door pivot instead.
+  R-224 Next.js deferred (env-blocked), R-225..R-415 done, and R-416..R-422 done (front-door bricks 1-4,
+  generated-SQL hardening, embedded trusted-local preview, and collision-free preview ports + controls, not
+  components). NOTE: the UI-COMPONENT SERIES is PAUSED at R-415 (110 components, resumable at a future free
+  Tracker ID); R-416..R-422 built, hardened, and made robust the "chat -> create -> run -> preview"
+  front-door pivot instead.
 blockers: []
 next_action: >-
-  R-421 is complete: task agent-engine:studio:preview explicitly runs and embeds one managed local app,
-  while studio:serve stays build-only. Recommended next: propose R-422 and record its contract before
-  coding, to allocate collision-free preview ports and add bounded status/stop/restart controls. Keep
+  R-422 is complete: Studio previews allocate collision-free ports and expose bounded status/stop/restart
+  controls (GET /api/preview, POST /api/preview/stop|restart) in trusted-local mode; build-only studio:serve
+  returns 404 for them. Recommended next: propose R-423 and record its contract before coding - candidates
+  are a preview history/recent-builds surface, or live in-studio status polling of the running preview. Keep
   execution trusted-local/opt-in and task verify deterministic and network/DB/model independent. The
   UI-component series remains paused/resumable.

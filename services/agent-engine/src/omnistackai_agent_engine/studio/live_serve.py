@@ -79,7 +79,15 @@ def main() -> None:
     def build(prompt: str) -> dict:
         return _build(prompt, preview_manager=preview_manager)
 
-    server = create_studio_server(build, host=host, port=port)
+    control_kwargs: dict = {}
+    if preview_manager is not None:
+        control_kwargs = {
+            "status_fn": preview_manager.status,
+            "stop_fn": preview_manager.stop,
+            "restart_fn": preview_manager.restart,
+        }
+
+    server = create_studio_server(build, host=host, port=port, **control_kwargs)
     print(f"OmniStackAI Studio -> http://{host}:{port}")
     if preview_manager is None:
         print("Build-only mode: generated code is not executed.")

@@ -4,10 +4,25 @@ Last updated: 2026-09-13
 ## Current Phase
 Stage 0 (Founder Build Sequence, Brief Section 91) — BASIC/MVP
 
-> **The local "chat → create → RUN → PREVIEW" loop is now connected.** UI-component series PAUSED at R-415 (110 components, resumable). Front door: **R-416** intake · **R-417** builder · **R-418** chat web UI · **R-419** turnkey run · **R-420** SQL hardening · **R-421** managed embedded trusted-local preview. Recommended next: **R-422**, collision-free preview ports plus status/stop/restart controls.
+> **The local "chat → create → RUN → PREVIEW" loop is now robust.** UI-component series PAUSED at R-415 (110 components, resumable). Front door: **R-416** intake · **R-417** builder · **R-418** chat web UI · **R-419** turnkey run · **R-420** SQL hardening · **R-421** managed embedded preview · **R-422** collision-free preview ports + status/stop/restart controls. Recommended next: **R-423**, a preview history/recent-builds surface or live in-studio status polling.
 
 ## Last Completed Task
-Tracker ID: R-421 — Managed live generated-app preview inside the local Studio — DONE. New explicit
+Tracker ID: R-422 — Collision-free Studio preview ports + status/stop/restart controls — DONE. Each trusted-
+local preview now allocates two distinct, currently-free loopback ports (`allocate_preview_ports` holds both
+sockets open while reading their OS-assigned ports) and threads them through the R-419 run plan (and the
+generated web app's `NEXT_PUBLIC_API_URL`) via a new `start_preview_app` boundary that delegates to the strict
+`start_app`, so a preview never fails on, or clobbers, an existing `task app:run` app on 3000/8000 or a prior
+preview. `StudioPreviewManager` (default `start_fn` now `start_preview_app`) gained bounded, JSON-safe,
+secret-free `status()`/`stop()`/`restart()` (single remembered repo; restart re-previews it, idle no-op before
+any build; stop is idempotent). The stdlib Studio server gained optional injected `status_fn`/`stop_fn`/
+`restart_fn` → `GET /api/preview`, `POST /api/preview/stop`, `POST /api/preview/restart`, wired only in
+trusted-local preview mode (build-only returns 404). The Studio page adds Stop/Restart controls + a live status
+line without HTML injection. `studio:serve` stays build-only, `studio:preview` stays trusted-local,
+single-session cleanup and PostgreSQL unchanged. 53 focused tests (15 net-new) and `task verify`'s **2,838
+tests** pass; lint, security, environment, and both demos (152 / 149 files) pass; a deterministic payload/port
+inspection confirmed distinct free ports and secret-free control payloads; 0 local/cloud model calls.
+
+Immediately preceded by R-421 — Managed live generated-app preview inside the local Studio — DONE. New explicit
 `task agent-engine:studio:preview` starts PostgreSQL, builds the owned repo, starts it through the R-419
 run-plan boundary, waits for API/web readiness, and embeds the actual loopback Next.js URL in a sandboxed
 iframe. `studio:serve` remains build-only. `LocalAppSession` owns cleanup; `StudioPreviewManager` serializes

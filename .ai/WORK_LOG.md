@@ -1,5 +1,19 @@
 # Work Log
 
+## 2026-09-13 — R-422 (collision-free preview ports + status/stop/restart controls)
+
+- Recorded the R-422 contract (`.ai/tasks/R-422.md`, `.ai/CURRENT_TASK.yaml`) before code; implemented test-first.
+- `localrun/run.py`:
+  - Added `find_free_port(host)` and `allocate_preview_ports(host)` — the latter holds two sockets open simultaneously while reading their OS-assigned ports, guaranteeing two distinct free loopback ports.
+  - Added `start_preview_app(repo_dir, *, log, health_timeout_seconds, host)` — allocates collision-free ports, builds the env plan with them (`_plan_from_env` now accepts `api_port`/`web_port` overrides), and delegates to the strict `start_app` (readiness, occupied-port rejection, cleanup). Threads the ports into the run plan and thus the generated web app's `NEXT_PUBLIC_API_URL`.
+  - `localrun/__init__.py`: exported `find_free_port`, `allocate_preview_ports`, `start_preview_app`.
+- `studio/preview.py`: `StudioPreviewManager` default `start_fn` is now `start_preview_app` (collision-free). Added bounded, JSON-safe, secret-free `status()`, `stop()` (returns "stopped", idempotent), and `restart()` (re-previews the single remembered last repo; idle no-op before any build). All state is a fixed-shape dict.
+- `studio/server.py`: `create_studio_server` gained optional `status_fn`/`stop_fn`/`restart_fn` -> `GET /api/preview`, `POST /api/preview/stop`, `POST /api/preview/restart`; unset handlers return 404. Control-body drained; handler exceptions become clean 502s. Existing `GET /`, `/healthz`, `POST /api/build` unchanged.
+- `studio/live_serve.py`: wires the three control handlers to the manager only in trusted-local preview mode (build-only leaves them unset -> 404).
+- `studio/page.py`: added Stop/Restart buttons + a live status line in the preview head; `renderPreview` toggles them by state; `control()` POSTs to the routes and re-renders (no `innerHTML` of server data; loopback-URL validation and the sandboxed iframe preserved).
+- Tests (15 net-new): `test_localrun_session.py` (find_free_port bindable, allocate distinct free ports, start_preview_app threads allocated ports into the plan, missing-repo rejected); `test_studio_preview.py` (default start_fn is start_preview_app, status ready/idle, stop reports stopped, restart idle-noop / re-previews last repo, secret-free); `test_studio_server.py` (GET /api/preview, POST stop/restart, 404 when disabled, page has controls).
+- Gates: focused 53 passed; `task verify` **2,838** passed; lint/security/env green; `task builder:demo -- minimal-blog` (152) and `-- rideshare-favourites` (149) pass. Deterministic payload/port inspection confirmed distinct free ports and secret-free ready/status/stop/restart payloads. **0 model calls in verify.**
+
 ## 2026-09-13 — R-421 (managed embedded trusted-local Studio preview)
 
 - Preserved `agent-engine:studio:serve` as build-only and added explicit

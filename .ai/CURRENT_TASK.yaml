@@ -1,61 +1,49 @@
-task_id: R-421
-id: R-421
-title: "Managed live generated-app preview inside the local Studio"
+task_id: R-422
+id: R-422
+title: "Collision-free Studio preview ports + status/stop/restart controls"
 status: done
 phase: MVP
 tracker_row: null
 started_at: "2026-09-13"
 completed_at: "2026-09-13"
 objective: >-
-  Add the first visible actual-application preview to the existing local Studio. An explicit trusted-local
-  preview command must build a generated repo, start it through the existing R-419 run-plan boundary,
-  return a structured preview result, and embed its live Next.js URL in the Studio while owning and
-  cleaning up the generated app processes deterministically.
+  Make the trusted-local Studio preview robust against port collisions and give the operator bounded
+  lifecycle control. Add automatic collision-free API/web port allocation (distinct free loopback ports per
+  preview, threaded through the R-419 run plan and the generated app's NEXT_PUBLIC_API_URL) so a preview
+  never fails or clobbers an existing task app:run app on 3000/8000 or a prior preview. Add bounded
+  status/stop/restart to StudioPreviewManager (single remembered repo, single owned session, fixed-shape
+  secret-free payloads) exposed over the stdlib Studio server as GET /api/preview, POST /api/preview/stop,
+  POST /api/preview/restart, wired only in trusted-local preview mode (build-only returns 404). Add Stop/
+  Restart controls + a live status line to the Studio page without HTML injection. Preserve trusted-local
+  studio:preview, build-only studio:serve, single-session cleanup, offline deterministic verify, PostgreSQL,
+  and the existing architecture.
 requirements:
-  - Keep the existing agent-engine:studio:serve command build-only; local generated-code execution must require a separate explicit opt-in command.
-  - Add agent-engine:studio:preview as the explicit trusted-local mode and start the existing local PostgreSQL dependency through the Task runner.
-  - Refactor the R-419 executor into a reusable managed LocalAppSession that starts one RunPlan, reports backend/web readiness, and idempotently terminates every child process.
-  - Preserve the existing agent-engine:app:run CLI behavior by delegating it to the managed session boundary.
-  - Add a Studio preview coordinator that replaces the previous session only after a new repo is built, serializes replacements, returns a JSON-safe secret-free preview payload, and converts launch failures into preview status without discarding the successful build result.
-  - Embed the ready web URL in a sandboxed iframe, expose an explicit open-preview link, and render starting/error/unavailable states without HTML injection.
-  - Stop the active preview on replacement and when the Studio server exits.
-  - Keep all verification deterministic and offline through injected/stubbed run, process, and readiness boundaries; task verify must not execute generated code, Docker, PostgreSQL, package installation, models, or external network calls.
+  - Allocate two distinct currently-free loopback ports per preview; build-only studio:serve and app:run CLI unchanged.
+  - Add start_preview_app in localrun that allocates ports, builds the env plan with them, and delegates to strict start_app.
+  - Extend StudioPreviewManager with bounded, JSON-safe, secret-free status()/stop()/restart(); restart before any build is idle; after a build re-previews the last repo; stop is idempotent.
+  - Extend the stdlib Studio server with optional injected status_fn/stop_fn/restart_fn -> GET /api/preview, POST /api/preview/stop, POST /api/preview/restart; unset handlers 404.
+  - Wire control handlers to the manager only in trusted-local preview mode.
+  - Add Stop/Restart buttons + status line to the Studio page (no innerHTML of server data; keep loopback URL validation and the sandboxed iframe).
+  - Keep single-session ownership and cleanup on replace/stop/shutdown.
+  - Deterministic/offline verification via injected/stubbed run, process, readiness, and port boundaries.
 acceptance_criteria:
-  - task agent-engine:studio:serve still builds and reports a repository without launching it.
-  - task agent-engine:studio:preview is visibly documented as trusted-local execution and depends on db:up.
-  - A successful preview build returns preview.status=ready plus web_url/api_url and the Studio iframe uses web_url.
-  - A preview launch failure still returns HTTP 200 for the successful build with preview.status=error and a bounded user-facing message.
-  - Replacing a preview stops the old managed session; closing the Studio stops the active session; repeated stop calls are safe.
-  - LocalAppSession reports web/backend readiness and cleans up already-launched processes when a later setup/readiness step fails.
-  - Existing studio and app-run contracts remain compatible, and all focused/full verification, lint, security, environment, and builder-demo gates pass.
-expected_impact:
-  - services/agent-engine/src/omnistackai_agent_engine/localrun/run.py
-  - services/agent-engine/src/omnistackai_agent_engine/localrun/__init__.py
-  - services/agent-engine/src/omnistackai_agent_engine/studio/preview.py
-  - services/agent-engine/src/omnistackai_agent_engine/studio/live_serve.py
-  - services/agent-engine/src/omnistackai_agent_engine/studio/page.py
-  - services/agent-engine/src/omnistackai_agent_engine/studio/__init__.py
-  - services/agent-engine/tests/test_localrun_session.py
-  - services/agent-engine/tests/test_studio_preview.py
-  - services/agent-engine/tests/test_studio_server.py
-  - scripts/agent-engine.sh
-  - Taskfile.yml
-  - docs/RUNTIME.md
-  - State, handoff, work log, changelog, progress, and resume documentation
+  - Preview uses automatically allocated distinct free ports; start_preview_app overrides plan api/web ports and delegates to start_app.
+  - status/stop/restart return bounded secret-free dicts; restart idle before build, re-previews last repo after; stop reports stopped and is idempotent.
+  - GET /api/preview + POST /api/preview/stop + /restart return manager state in preview mode and 404 when disabled; GET / /healthz POST /api/build unchanged.
+  - Studio page exposes Stop/Restart controls that call the routes and re-render preview state.
+  - R-421 studio/preview/local-run contracts remain compatible; focused + full verify + lint + security + env + both builder demos pass; 0 model calls in verify.
 allowed_paths:
   - "services/agent-engine/src/omnistackai_agent_engine/localrun/run.py"
   - "services/agent-engine/src/omnistackai_agent_engine/localrun/__init__.py"
   - "services/agent-engine/src/omnistackai_agent_engine/studio/preview.py"
+  - "services/agent-engine/src/omnistackai_agent_engine/studio/server.py"
   - "services/agent-engine/src/omnistackai_agent_engine/studio/live_serve.py"
   - "services/agent-engine/src/omnistackai_agent_engine/studio/page.py"
-  - "services/agent-engine/src/omnistackai_agent_engine/studio/__init__.py"
   - "services/agent-engine/tests/test_localrun_session.py"
   - "services/agent-engine/tests/test_studio_preview.py"
   - "services/agent-engine/tests/test_studio_server.py"
-  - "scripts/agent-engine.sh"
-  - "Taskfile.yml"
   - "docs/RUNTIME.md"
-  - ".ai/tasks/R-421.md"
+  - ".ai/tasks/R-422.md"
   - ".ai/CURRENT_TASK.yaml"
   - ".ai/PROJECT_STATE.yaml"
   - ".ai/WORK_LOG.md"
@@ -67,14 +55,12 @@ allowed_paths:
 forbidden_changes:
   - "Do not modify or include the unrelated untracked .claude directory"
   - "Do not make generated-code execution implicit in task verify or the build-only Studio command"
-  - "Do not claim trusted local execution provides cloud sandbox isolation"
+  - "Do not change studio:serve build-only / studio:preview trusted-local semantics or single-session cleanup"
   - "Do not add a service, top-level directory, platform/generated dependency, queue, sandbox vendor, or infrastructure"
-  - "Do not change the RuntimeProvider, ModelProvider, Application IR, database engine, assembler, Git-service, deployment, or generated-project contracts"
-  - "Do not expose environment secrets, database credentials, process environments, or raw tracebacks in preview payloads or logs"
-  - "Do not start cloud, paid-provider, native/mobile, device-cloud, or production deployment work"
+  - "Do not change RuntimeProvider/ModelProvider/Application IR/database engine/assembler/Git-service/deployment/generated contracts; PostgreSQL stays"
+  - "Do not expose secrets, DB credentials, process environments, or raw tracebacks in preview payloads or logs"
 required_gates:
-  - focused managed-session tests
-  - focused studio-preview and existing studio-server tests
+  - focused managed-session, studio-preview, and studio-server tests
   - existing local-run plan regressions
   - task lint
   - task verify
@@ -82,45 +68,22 @@ required_gates:
   - task env:check
   - task builder:demo -- minimal-blog
   - task builder:demo -- rideshare-favourites
-  - opt-in task and preview payload inspection without invoking a model during verification
 model_tool_trace:
   routing: deterministic_only
   local_calls: 0
   cloud_calls: 0
   note: >-
-    L2 local orchestration and lifecycle work. Deterministic repository/runtime boundaries and injected
-    test doubles are sufficient; no local or cloud model call is needed for implementation or verify.
+    L2 local orchestration/lifecycle work. Deterministic repository/runtime boundaries and injected test
+    doubles are sufficient; no local or cloud model call is needed for implementation or verify.
 evidence:
   baseline: >-
-    task doctor passed. Existing studio-server plus local-run-plan baseline passed all 23 tests using
-    their current in-memory build stub and ephemeral loopback test server. Local and origin/main were
-    equal at 78e358585f873113d61531350f9a1568659eed65 before the contract; only the unrelated untracked
-    .claude directory was present.
-  test_first: >-
-    The initial focused run failed because LocalAppRunError, LocalAppSession, start_app, and
-    StudioPreviewManager did not exist. Later port-ownership tests also failed before the preflight
-    boundary existed. Both red states were recorded before implementation.
-  focused_tests: >-
-    Existing and new studio/local-run tests passed all 38 tests: managed lifecycle/readiness/cleanup,
-    occupied-port and stale-health protection, preview replacement/error/unavailable payloads, explicit
-    Task wiring, sandboxed iframe rendering, HTTP build preservation, and all R-418/R-419 regressions.
-  full_verify: "task verify passed: 2,823 tests; task lint passed."
-  security: "task security:quick passed; task env:check passed."
-  builder_demos: >-
-    task builder:demo -- minimal-blog passed (152 files) and task builder:demo --
-    rideshare-favourites passed (149 files); generated output was unchanged.
-  command_inspection: >-
-    task --list shows separate studio:serve build-only and studio:preview explicit trusted-local tasks;
-    studio:preview depends on db:up. Package export inspection loaded LocalAppSession, start_app, and
-    StudioPreviewManager successfully. No model or generated-code execution occurred during verification.
-  live_note: >-
-    Ports 3000 and 8000 were already occupied by the founder's earlier R-419 app session. R-421 did not
-    interrupt those processes. The new strict preview preflight rejects occupied ports before DB/setup
-    work, preventing an old app's health response from being misreported as the new preview. Dynamic port
-    selection is the recommended R-422 follow-up.
-  model_calls: "0 local model calls; 0 cloud model calls."
-blockers: []
-next_action: >-
-  R-421 is complete. Propose R-422 before coding: allocate collision-free local API/web ports for each
-  Studio preview and add bounded preview status/stop/restart controls, so an existing app:run session does
-  not block preview while preserving one-session ownership and deterministic offline verification.
+    Start protocol passed: task doctor OK, task ai:status shows R-421 done at 5a472b5, task verify 2,823
+    tests pass. Local == origin/main at 5a472b5 before coding; only the untracked .claude/ present.
+  verify: "2,838 passed"
+  lint: "passed"
+  security: "passed"
+  env: "passed"
+  demos: "minimal-blog 152 files; rideshare-favourites 149 files"
+  focused_test: "53 passed (test_localrun_session + test_studio_preview + test_studio_server + test_localrun_plan); 15 net-new R-422 tests"
+  payload_port_inspection: "allocate_preview_ports -> distinct free ports (e.g. 63269/63270); ready/status/stop/restart payloads JSON-safe and secret-free (DB password never present); 0 model calls"
+next_action: "R-422 done. Next: R-423 (candidates: preview history/log surface, or embed run-plan preview URL live status polling in the studio)."

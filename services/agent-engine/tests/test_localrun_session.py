@@ -11,7 +11,16 @@ import unittest
 from pathlib import Path
 from unittest.mock import patch
 
-from omnistackai_agent_engine.localrun import LocalAppRunError, LocalAppSession, RunPlan, RunStep, start_app
+from omnistackai_agent_engine.localrun import (
+    LocalAppRunError,
+    LocalAppSession,
+    RunPlan,
+    RunStep,
+    allocate_preview_ports,
+    find_free_port,
+    start_app,
+    start_preview_app,
+)
 
 
 class FakeProcess:
@@ -150,6 +159,55 @@ class TestLocalAppSession(unittest.TestCase):
         missing = str(Path(tempfile.gettempdir()) / "omnistackai-r421-does-not-exist")
         with self.assertRaisesRegex(LocalAppRunError, "not a directory"):
             start_app(missing, log=None)
+
+
+class TestPreviewPortAllocation(unittest.TestCase):
+    def test_find_free_port_returns_a_bindable_loopback_port(self) -> None:
+        import socket
+
+        port = find_free_port("127.0.0.1")
+        self.assertIsInstance(port, int)
+        self.assertGreater(port, 0)
+        # The reported port is actually free right now.
+        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as probe:
+            probe.bind(("127.0.0.1", port))
+
+    def test_allocate_preview_ports_returns_two_distinct_free_ports(self) -> None:
+        api_port, web_port = allocate_preview_ports("127.0.0.1")
+        self.assertIsInstance(api_port, int)
+        self.assertIsInstance(web_port, int)
+        self.assertNotEqual(api_port, web_port)
+        self.assertGreater(api_port, 0)
+        self.assertGreater(web_port, 0)
+
+    def test_start_preview_app_allocates_and_threads_ports_into_plan(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            captured: dict = {}
+
+            def fake_start_app(repo_dir, *, plan=None, **kwargs):
+                captured["plan"] = plan
+                captured["kwargs"] = kwargs
+                return LocalAppSession(plan)
+
+            with (
+                patch(
+                    "omnistackai_agent_engine.localrun.run.allocate_preview_ports",
+                    return_value=(9101, 9102),
+                ),
+                patch("omnistackai_agent_engine.localrun.run.start_app", side_effect=fake_start_app),
+            ):
+                start_preview_app(tmp, log=None)
+
+            plan = captured["plan"]
+            self.assertIsNotNone(plan)
+            # Allocated ports were threaded into the run plan (and thus NEXT_PUBLIC_API_URL).
+            self.assertEqual(plan.api_url, "http://127.0.0.1:9101")
+            self.assertEqual(plan.web_url, "http://127.0.0.1:9102")
+
+    def test_start_preview_app_rejects_missing_repo(self) -> None:
+        missing = str(Path(tempfile.gettempdir()) / "omnistackai-r422-does-not-exist")
+        with self.assertRaisesRegex(LocalAppRunError, "not a directory"):
+            start_preview_app(missing, log=None)
 
 
 if __name__ == "__main__":

@@ -61,7 +61,9 @@ class LocalAppSession:
                 pass
 
 
-def _plan_from_env(repo_dir: str) -> RunPlan:
+def _plan_from_env(
+    repo_dir: str, *, api_port: int | None = None, web_port: int | None = None
+) -> RunPlan:
     return build_run_plan(
         repo_dir,
         db_container=os.environ.get("OMNISTACKAI_POSTGRES_CONTAINER", "omnistackai-local-postgres-1"),
@@ -70,10 +72,37 @@ def _plan_from_env(repo_dir: str) -> RunPlan:
         db_host=os.environ.get("OMNISTACKAI_POSTGRES_HOST", "127.0.0.1"),
         db_port=int(os.environ.get("OMNISTACKAI_POSTGRES_PORT", "5432")),
         maintenance_db=os.environ.get("OMNISTACKAI_POSTGRES_DB", "omnistackai"),
-        api_port=int(os.environ.get("OMNISTACKAI_APP_API_PORT", "8000")),
-        web_port=int(os.environ.get("OMNISTACKAI_APP_WEB_PORT", "3000")),
+        api_port=api_port if api_port is not None else int(os.environ.get("OMNISTACKAI_APP_API_PORT", "8000")),
+        web_port=web_port if web_port is not None else int(os.environ.get("OMNISTACKAI_APP_WEB_PORT", "3000")),
         jwt_secret=os.environ.get("OMNISTACKAI_APP_JWT_SECRET", "local-dev-secret"),
     )
+
+
+def find_free_port(host: str = "127.0.0.1") -> int:
+    """Return a currently-free loopback TCP port (bound to port 0, then released)."""
+    family = socket.AF_INET6 if ":" in host else socket.AF_INET
+    with socket.socket(family, socket.SOCK_STREAM) as probe:
+        probe.bind((host, 0))
+        return probe.getsockname()[1]
+
+
+def allocate_preview_ports(host: str = "127.0.0.1") -> tuple[int, int]:
+    """Return two distinct, currently-free loopback ports for a preview's API and web servers.
+
+    Both sockets are held open simultaneously while their OS-assigned ports are read, so the two
+    ports are guaranteed distinct and free — a preview never collides with an existing local app
+    (e.g. a `task app:run` on 3000/8000) or a prior preview.
+    """
+    family = socket.AF_INET6 if ":" in host else socket.AF_INET
+    api_sock = socket.socket(family, socket.SOCK_STREAM)
+    web_sock = socket.socket(family, socket.SOCK_STREAM)
+    try:
+        api_sock.bind((host, 0))
+        web_sock.bind((host, 0))
+        return api_sock.getsockname()[1], web_sock.getsockname()[1]
+    finally:
+        api_sock.close()
+        web_sock.close()
 
 
 def _should_skip(step: RunStep) -> bool:
@@ -214,6 +243,26 @@ def start_app(
         session.stop()
         raise
     return session
+
+
+def start_preview_app(
+    repo_dir: str, *, log=None, health_timeout_seconds: float = 45.0, host: str = "127.0.0.1"
+) -> LocalAppSession:
+    """Start a managed preview on automatically allocated, collision-free API/web ports.
+
+    Distinct free loopback ports are chosen and threaded through the R-419 run plan (and thus the
+    generated web app's ``NEXT_PUBLIC_API_URL``), so a Studio preview never fails on, or clobbers, an
+    existing local app or a prior preview. Delegates to the strict ``start_app`` boundary (readiness,
+    occupied-port rejection, and cleanup on failure).
+    """
+    root = Path(repo_dir).expanduser().resolve()
+    if not root.is_dir():
+        raise LocalAppRunError(f"not a directory: {root}")
+    api_port, web_port = allocate_preview_ports(host)
+    plan = _plan_from_env(str(root), api_port=api_port, web_port=web_port)
+    return start_app(
+        str(root), plan=plan, log=log, health_timeout_seconds=health_timeout_seconds
+    )
 
 
 def run_app(repo_dir: str) -> None:

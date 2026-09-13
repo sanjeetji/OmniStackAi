@@ -82,6 +82,60 @@ class TestStudioPreviewManager(unittest.TestCase):
         manager.stop()
         self.assertEqual(session.stop_calls, 1)
 
+    def test_default_start_fn_uses_collision_free_preview_allocator(self) -> None:
+        from omnistackai_agent_engine.localrun import start_preview_app
+
+        self.assertIs(StudioPreviewManager()._start_fn, start_preview_app)
+
+    def test_status_reports_current_ready_state_secret_free(self) -> None:
+        session = FakeSession()
+        manager = StudioPreviewManager(start_fn=lambda repo, log=None: session)
+        manager.replace("/tmp/generated")
+        status = manager.status()
+        self.assertEqual(status["status"], "ready")
+        self.assertEqual(status["web_url"], "http://127.0.0.1:3000")
+        self.assertNotIn("top-secret-password", json.dumps(status))
+        manager.stop()
+
+    def test_status_before_any_build_is_idle(self) -> None:
+        status = StudioPreviewManager(start_fn=lambda repo, log=None: FakeSession()).status()
+        self.assertEqual(status["status"], "idle")
+
+    def test_stop_reports_stopped_state(self) -> None:
+        session = FakeSession()
+        manager = StudioPreviewManager(start_fn=lambda repo, log=None: session)
+        manager.replace("/tmp/generated")
+        stopped = manager.stop()
+        self.assertEqual(stopped["status"], "stopped")
+        self.assertEqual(manager.status()["status"], "stopped")
+
+    def test_restart_before_any_build_is_idle_noop(self) -> None:
+        calls: list[str] = []
+
+        def start(repo: str, log=None):
+            calls.append(repo)
+            return FakeSession()
+
+        manager = StudioPreviewManager(start_fn=start)
+        payload = manager.restart()
+        self.assertEqual(payload["status"], "idle")
+        self.assertEqual(calls, [])
+
+    def test_restart_re_previews_last_repo(self) -> None:
+        repos: list[str] = []
+
+        def start(repo: str, log=None):
+            repos.append(repo)
+            return FakeSession()
+
+        manager = StudioPreviewManager(start_fn=start)
+        manager.replace("/tmp/generated-one")
+        manager.stop()
+        payload = manager.restart()
+        self.assertEqual(payload["status"], "ready")
+        self.assertEqual(repos, ["/tmp/generated-one", "/tmp/generated-one"])
+        manager.stop()
+
 
 class TestStudioPreviewTask(unittest.TestCase):
     def test_preview_task_is_explicit_and_starts_database(self) -> None:

@@ -45,8 +45,8 @@ class RecordingBuild:
 
 
 @contextmanager
-def running_server(build_fn):
-    server = create_studio_server(build_fn, host="127.0.0.1", port=0)
+def running_server(build_fn, **control_kwargs):
+    server = create_studio_server(build_fn, host="127.0.0.1", port=0, **control_kwargs)
     thread = threading.Thread(target=server.serve_forever, daemon=True)
     thread.start()
     try:
@@ -100,6 +100,15 @@ class TestStudioPage(unittest.TestCase):
         ):
             self.assertIn(token, STUDIO_HTML)
         self.assertNotIn("preview.innerHTML", STUDIO_HTML)
+
+    def test_page_has_preview_lifecycle_controls(self) -> None:
+        for token in (
+            'id="preview-stop"',
+            'id="preview-restart"',
+            "/api/preview/stop",
+            "/api/preview/restart",
+        ):
+            self.assertIn(token, STUDIO_HTML)
 
 
 class TestStudioServer(unittest.TestCase):
@@ -168,6 +177,42 @@ class TestStudioServer(unittest.TestCase):
         with running_server(RecordingBuild(STUB_RESULT)) as base:
             status, _ = _post(base + "/api/other", obj={"prompt": "x"})
             self.assertEqual(status, 404)
+
+
+class TestStudioPreviewControlRoutes(unittest.TestCase):
+    READY = {"status": "ready", "web_url": "http://127.0.0.1:51234"}
+    STOPPED = {"status": "stopped", "message": "Preview stopped."}
+
+    def test_get_preview_status(self) -> None:
+        with running_server(RecordingBuild(STUB_RESULT), status_fn=lambda: self.READY) as base:
+            status, data = _get(base + "/api/preview")
+            self.assertEqual(status, 200)
+            self.assertEqual(json.loads(data)["status"], "ready")
+
+    def test_post_preview_stop(self) -> None:
+        calls = []
+
+        def stop_fn():
+            calls.append("stop")
+            return self.STOPPED
+
+        with running_server(RecordingBuild(STUB_RESULT), stop_fn=stop_fn) as base:
+            status, data = _post(base + "/api/preview/stop")
+            self.assertEqual(status, 200)
+            self.assertEqual(data["status"], "stopped")
+            self.assertEqual(calls, ["stop"])
+
+    def test_post_preview_restart(self) -> None:
+        with running_server(RecordingBuild(STUB_RESULT), restart_fn=lambda: self.READY) as base:
+            status, data = _post(base + "/api/preview/restart")
+            self.assertEqual(status, 200)
+            self.assertEqual(data["status"], "ready")
+
+    def test_control_routes_404_when_disabled(self) -> None:
+        with running_server(RecordingBuild(STUB_RESULT)) as base:
+            self.assertEqual(_get(base + "/api/preview")[0], 404)
+            self.assertEqual(_post(base + "/api/preview/stop")[0], 404)
+            self.assertEqual(_post(base + "/api/preview/restart")[0], 404)
 
 
 class TestResultDict(unittest.TestCase):

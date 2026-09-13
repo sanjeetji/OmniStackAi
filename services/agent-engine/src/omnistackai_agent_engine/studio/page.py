@@ -74,6 +74,13 @@ STUDIO_HTML = r"""<!doctype html>
   .preview-status { margin: 0; padding: 12px 14px; color: #9fb0c3; font-size: 13px; }
   .preview-open { color: #6ee7ff; font-size: 13px; font-weight: 650; text-decoration: none; }
   .preview-open:hover { text-decoration: underline; }
+  .preview-actions { display: flex; align-items: center; gap: 10px; }
+  .preview-btn {
+    background: transparent; color: #cbd5e1;
+    border: 1px solid #33465f; border-radius: 8px;
+    padding: 5px 12px; font-size: 12.5px; font-weight: 600; cursor: pointer;
+  }
+  .preview-btn:hover { border-color: #6ee7ff; color: #e6edf3; }
   .preview-frame { display: block; width: 100%; height: 540px; border: 0; background: #fff; }
   .files { max-height: 320px; overflow: auto; background: #0b1220; border: 1px solid #223148; border-radius: 10px; padding: 10px 14px; }
   .files ul { margin: 0; padding-left: 18px; }
@@ -115,7 +122,11 @@ STUDIO_HTML = r"""<!doctype html>
     <div class="preview" id="preview-panel">
       <div class="preview-head">
         <h3>Live application preview</h3>
-        <a id="preview-open" class="preview-open" target="_blank" rel="noreferrer" hidden>Open in new tab</a>
+        <div class="preview-actions">
+          <button type="button" id="preview-restart" class="preview-btn" hidden>Restart</button>
+          <button type="button" id="preview-stop" class="preview-btn" hidden>Stop</button>
+          <a id="preview-open" class="preview-open" target="_blank" rel="noreferrer" hidden>Open in new tab</a>
+        </div>
       </div>
       <p id="preview-status" class="preview-status" role="status" aria-live="polite">Preview has not started.</p>
       <iframe
@@ -156,11 +167,17 @@ STUDIO_HTML = r"""<!doctype html>
     var frame = document.getElementById('preview-frame');
     var open = document.getElementById('preview-open');
     var previewStatus = document.getElementById('preview-status');
-    var url = preview && preview.status === 'ready' ? localPreviewUrl(preview.web_url) : null;
+    var stopBtn = document.getElementById('preview-stop');
+    var restartBtn = document.getElementById('preview-restart');
+    var state = (preview && preview.status) || null;
+    var url = state === 'ready' ? localPreviewUrl(preview.web_url) : null;
     frame.hidden = true;
     frame.removeAttribute('src');
     open.hidden = true;
     open.removeAttribute('href');
+    // Stop is available only while running; Restart whenever a build has a preview outcome.
+    stopBtn.hidden = state !== 'ready';
+    restartBtn.hidden = !(state === 'ready' || state === 'stopped' || state === 'error');
     if (url) {
       previewStatus.textContent = preview.message || 'The generated application is running locally.';
       frame.src = url;
@@ -171,6 +188,32 @@ STUDIO_HTML = r"""<!doctype html>
     }
     previewStatus.textContent = (preview && preview.message) || 'No browser preview is available for this build.';
   }
+
+  function control(path, pending) {
+    var previewStatus = document.getElementById('preview-status');
+    var stopBtn = document.getElementById('preview-stop');
+    var restartBtn = document.getElementById('preview-restart');
+    stopBtn.disabled = true;
+    restartBtn.disabled = true;
+    previewStatus.textContent = pending;
+    fetch(path, { method: 'POST', headers: { 'Content-Type': 'application/json' } })
+      .then(function (res) { return res.json(); })
+      .then(function (data) { renderPreview(data); })
+      .catch(function (err) {
+        previewStatus.textContent = 'Preview control failed: ' + err.message;
+      })
+      .then(function () {
+        stopBtn.disabled = false;
+        restartBtn.disabled = false;
+      });
+  }
+
+  document.getElementById('preview-stop').addEventListener('click', function () {
+    control('/api/preview/stop', 'Stopping preview...');
+  });
+  document.getElementById('preview-restart').addEventListener('click', function () {
+    control('/api/preview/restart', 'Restarting preview...');
+  });
 
   document.getElementById('examples').addEventListener('click', function (e) {
     if (e.target && e.target.classList.contains('ex')) {

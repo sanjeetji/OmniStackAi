@@ -62,6 +62,28 @@ must still use an isolated provider-backed execution plane. Static verification 
 `task verify` uses injected process/readiness fakes and performs no Docker, database, install, model, or
 external-network work.
 
+### Collision-free ports and lifecycle controls (R-422)
+
+Each preview allocates its **own two distinct, currently-free loopback ports** for the generated API and
+web servers (`allocate_preview_ports` holds two sockets open while reading their OS-assigned ports;
+`start_preview_app` threads them through the R-419 run plan and the generated app's
+`NEXT_PUBLIC_API_URL`, then delegates to the strict `start_app`). A preview therefore never fails on, or
+clobbers, an existing `task agent-engine:app:run` app on `:3000`/`:8000` or a prior preview. The
+`task agent-engine:app:run` CLI is unchanged (fixed `:8000`/`:3000`, best-effort readiness).
+
+The Studio (trusted-local preview mode only) also exposes bounded lifecycle controls over its stdlib HTTP
+server; the build-only Studio returns 404 for all of them:
+
+```text
+GET  /api/preview          -> current preview state (bounded, secret-free)
+POST /api/preview/stop     -> stop the running preview  -> {"status":"stopped"}
+POST /api/preview/restart  -> re-preview the last built repo (idle no-op before any build)
+```
+
+`StudioPreviewManager` remembers a single last repo and owns a single session; `stop` is idempotent and
+`restart` re-previews the last build. The Studio page renders matching Stop/Restart controls that call these
+routes and re-render the preview state with `textContent` only (no response-HTML injection).
+
 ## Switching tiers — one knob (R-234)
 
 `OMNISTACKAI_TIER` is the single switch; change it in `.env` and the resolved providers change:
