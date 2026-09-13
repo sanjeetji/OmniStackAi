@@ -94,6 +94,19 @@ if project["project"]["requires-python"] != ">=3.13,<3.14":
     configure_python
     PYTHONPATH="$source_root" python3 -m omnistackai_agent_engine.intake.ecosystem_build "${@:2}"
     ;;
+  ecosystem-refine)
+    # Explicit opt-in: deterministic first pass, then local Ollama only for an unknown domain.
+    configure_python
+    export OMNISTACKAI_OLLAMA_BASE_URL="$(config_value OMNISTACKAI_OLLAMA_BASE_URL http://127.0.0.1:11434)"
+    export OMNISTACKAI_OLLAMA_MODEL="$(config_value OMNISTACKAI_OLLAMA_MODEL qwen2.5-coder:14b)"
+    export OMNISTACKAI_OLLAMA_CONTEXT_WINDOW_TOKENS="$(config_value OMNISTACKAI_OLLAMA_CONTEXT_WINDOW_TOKENS 8192)"
+    export OMNISTACKAI_OLLAMA_SAFE_INPUT_TOKENS="$(config_value OMNISTACKAI_OLLAMA_SAFE_INPUT_TOKENS 6144)"
+    export OMNISTACKAI_OLLAMA_MAX_OUTPUT_TOKENS="$(config_value OMNISTACKAI_OLLAMA_MAX_OUTPUT_TOKENS 2048)"
+    export OMNISTACKAI_OLLAMA_REQUEST_TIMEOUT_SECONDS="$(config_value OMNISTACKAI_OLLAMA_REQUEST_TIMEOUT_SECONDS 300)"
+    export OMNISTACKAI_OLLAMA_HEALTH_TIMEOUT_SECONDS="$(config_value OMNISTACKAI_OLLAMA_HEALTH_TIMEOUT_SECONDS 5)"
+    export OMNISTACKAI_OLLAMA_MAX_CONCURRENCY="$(config_value OMNISTACKAI_OLLAMA_MAX_CONCURRENCY 1)"
+    PYTHONPATH="$source_root" python3 -m omnistackai_agent_engine.intake.scope_refine_live "${@:2}"
+    ;;
   intake-run)
     configure_python
     export OMNISTACKAI_OLLAMA_BASE_URL="$(config_value OMNISTACKAI_OLLAMA_BASE_URL http://127.0.0.1:11434)"

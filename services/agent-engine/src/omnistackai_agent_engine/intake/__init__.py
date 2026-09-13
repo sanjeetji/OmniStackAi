@@ -41,6 +41,15 @@ from .ecosystem import (
     plan_ecosystem_from_prompt,
     surface_to_ir,
 )
+from .scope_refinement import (
+    DEFAULT_REFINEMENT_MAX_OUTPUT_TOKENS,
+    DEFAULT_REFINEMENT_TIMEOUT_SECONDS,
+    ScopeRefinementResult,
+    build_scope_refinement_messages,
+    parse_scope_refinement_response,
+    plan_refined_ecosystem,
+    refine_ecosystem,
+)
 
 __all__ = [
     "IntakeError",
@@ -76,4 +85,12 @@ __all__ = [
     "EcosystemBuildResult",
     "EcosystemAppBuild",
     "DOMAIN_ENTITIES",
+    # Opt-in unknown-domain refinement (R-432)
+    "ScopeRefinementResult",
+    "build_scope_refinement_messages",
+    "parse_scope_refinement_response",
+    "refine_ecosystem",
+    "plan_refined_ecosystem",
+    "DEFAULT_REFINEMENT_MAX_OUTPUT_TOKENS",
+    "DEFAULT_REFINEMENT_TIMEOUT_SECONDS",
 ]

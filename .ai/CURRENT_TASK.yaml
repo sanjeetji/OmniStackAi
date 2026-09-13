@@ -1,31 +1,29 @@
-task_id: R-431
-id: R-431
-title: "Scope -> Application IRs: materialize a multi-app ecosystem from one prompt"
+task_id: R-432
+id: R-432
+title: "Opt-in model refinement for tailored ecosystems outside curated domains"
 status: done
 phase: MVP
 tracker_row: null
 started_at: "2026-09-13"
 completed_at: "2026-09-13"
 objective: >-
-  Second brick of the differentiating spine. Turn a ScopeProposal (R-430) into an EcosystemPlan: one
-  validate_ir-clean ApplicationIR per selected app surface, built from a curated per-domain data model + a
-  deterministic CRUD deriver whose endpoints wire to real repositories. build_ecosystem materializes the
-  chosen build scope as MULTIPLE owned Git repos from a single prompt (reusing build_app_from_ir). Ship a
-  deterministic plan CLI (task agent-engine:ecosystem:plan) and an opt-in build CLI (:build). Keep task
-  verify offline/deterministic (0 model calls); no IR/adapter/DB-engine change (PostgreSQL stays).
+  Third brick of the differentiating spine. Preserve R-430/R-431 as the deterministic first pass, then add
+  an explicitly opt-in, cheap-model refinement path through the platform ModelProvider boundary. Unknown
+  business domains receive a strictly parsed and validated multi-app ScopeProposal plus typed Entity model,
+  which is converted into validate_ir-clean, repository-wired EcosystemPlan apps. Known curated domains stay
+  deterministic and make zero model calls. task verify remains fully offline and deterministic.
 allowed_paths:
+  - "services/agent-engine/src/omnistackai_agent_engine/intake/scope_refinement.py"
+  - "services/agent-engine/src/omnistackai_agent_engine/intake/scope_refine_live.py"
   - "services/agent-engine/src/omnistackai_agent_engine/intake/ecosystem.py"
-  - "services/agent-engine/src/omnistackai_agent_engine/intake/ecosystem_plan.py"
-  - "services/agent-engine/src/omnistackai_agent_engine/intake/ecosystem_build.py"
   - "services/agent-engine/src/omnistackai_agent_engine/intake/__init__.py"
-  - "services/agent-engine/src/omnistackai_agent_engine/codegen/nextjs.py"  # compile-bug fixes for FK/multi-subcol/filterable-child shapes
-  - "services/agent-engine/tests/test_ecosystem.py"
+  - "services/agent-engine/tests/test_scope_refinement.py"
   - "scripts/agent-engine.sh"
   - "Taskfile.yml"
   - "docs/SCOPE_COMPILER.md"
   - "docs/PROGRESS.md"
   - "docs/RESUME_PROMPT.md"
-  - ".ai/tasks/R-431.md"
+  - ".ai/tasks/R-432.md"
   - ".ai/CURRENT_TASK.yaml"
   - ".ai/PROJECT_STATE.yaml"
   - ".ai/WORK_LOG.md"
@@ -34,44 +32,40 @@ allowed_paths:
   - "CHANGELOG.md"
 forbidden_changes:
   - "Do not modify or include the unrelated untracked .claude directory"
-  - "Do not change the Application IR, adapters (beyond compile-bug fixes), assembler, Git-service, DB engine (PostgreSQL stays), or generated-project contracts"
-  - "Do not modify R-430 scope_compiler classification behavior"
-  - "No model/network/Docker in task verify; the planner is deterministic (LLM refinement stays opt-in/later)"
-  - "Stdlib + intra-package imports only; no new dependencies; ASCII-safe; secret-free; no fabricated runtime behavior"
+  - "Do not replace or weaken the deterministic R-430 classifier, curated R-431 models, Application IR, adapters, assembler, Git-service, generated-project contracts, or PostgreSQL"
+  - "No real model, network, Docker, database, package install, generated-code execution, or toolchain use in task verify"
+  - "No vendor SDK imports: stdlib plus intra-package imports only; live inference must use ModelProvider"
+  - "No automatic cloud fallback, new dependency, new infrastructure, secret exposure, or fabricated model output"
 required_gates:
-  - "focused test_ecosystem.py"
+  - "focused test_scope_refinement.py"
   - task verify
   - task lint
   - task security:quick
   - task env:check
   - task builder:demo -- minimal-blog
   - task builder:demo -- rideshare-favourites
-  - "deterministic CLI: task agent-engine:ecosystem:plan -- \"<prompt>\""
-  - "opt-in build: task agent-engine:ecosystem:build -- \"<prompt>\" (+ tsc --noEmit on the built apps)"
+  - "deterministic curated regression: task agent-engine:ecosystem:plan -- <known-domain prompt>"
+  - "opt-in local proof: task agent-engine:ecosystem:refine -- <unknown-domain prompt>"
 model_tool_trace:
-  routing: deterministic_only
-  local_calls: 0
+  routing: local_ollama_opt_in
+  local_calls: 5
   cloud_calls: 0
-  note: Deterministic scope->IR mapping + curated data models. No model call for implementation or verify.
+  note: >-
+    task verify used injected in-memory providers only (0 real calls). Five explicit local-Ollama attempts
+    were used outside verify: three rejected malformed responses, one response exposed new credential/FK
+    collision guards during review, and the final apiary-domain response passed the hardened boundary.
 evidence:
-  verify: "2,897 passed (+9 new ecosystem tests)"
+  focused_test: "test_scope_refinement.py: 14 passed"
+  verify: "2,911 passed (offline; +14)"
   lint: "passed"
   security: "passed"
   env: "passed"
-  demos: "minimal-blog 152; rideshare-favourites 149 (unaffected); both still pass web-typecheck"
-  focused_test: "test_ecosystem.py 9 passed"
-  build: >-
-    task agent-engine:ecosystem:build -- "food delivery app ..." -> 4 owned Git repos (Customer Ordering App,
-    Merchant Portal, Courier Dispatch App, Super-Admin Dashboard; 164 files each; author sanjeetji).
-  typecheck: >-
-    tsc --noEmit on all four generated ecosystem apps -> 0 errors. Fixed 4 generator compile bugs in
-    codegen/nextjs.py that the new FK/multi-subcollection/filterable-child IR shapes exposed (over-braced FK
-    <select> onChange; single-brace bool-badge style; multi-subcollection controls two-root -> fragment;
-    entity interface missing the scalar <relation>_id FK field). R-429 examples still pass web-typecheck.
+  demos: "minimal-blog 152 files; rideshare-favourites 149 files"
+  curated_regression: "food-delivery remained 4 apps, each 3 entities / 17 APIs / 6 screens"
+  local_refinement: >-
+    apiary operations prompt -> source=model, domain=apiary-management, Beekeeper Dashboard + Admin Panel;
+    4 entities, 23 APIs, 8 screens per app; parsed payload only, no raw output/secrets; no cloud fallback.
 next_action: >-
-  R-431 done: one prompt now materializes a full multi-app owned-code ecosystem (Complete Business Platform)
-  that compiles clean. NEXT spine bricks: (a) an opt-in cheap-LLM refinement layer over the deterministic
-  domain classifier + data models (mirror nl_to_ir core vs live_run) for prompts outside the curated domains;
-  (b) surface-specific entity focus / roles so each app is more tailored; (c) Solution Packs (pre-tested
-  skeletons + AI-delta) and optionally a frontier model for generation quality. Keep task verify
-  offline/deterministic.
+  R-432 done. Next R-433: add deterministic surface-specific entity focus and role/permission scoping so
+  customer, operator, and admin apps no longer receive the identical full domain model. Record its contract
+  before code; preserve the R-432 refinement boundary and offline verification.

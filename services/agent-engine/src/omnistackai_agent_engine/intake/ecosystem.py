@@ -236,9 +236,14 @@ def _roles_for(proposal: ScopeProposal) -> tuple[Role, ...]:
     return tuple(seen.values())
 
 
-def surface_to_ir(proposal: ScopeProposal, surface: AppSurface) -> ApplicationIR:
+def surface_to_ir(
+    proposal: ScopeProposal,
+    surface: AppSurface,
+    *,
+    entities: tuple[Entity, ...] | None = None,
+) -> ApplicationIR:
     """Build a validate_ir-clean ApplicationIR for one surface of the proposed ecosystem."""
-    entities = DOMAIN_ENTITIES.get(proposal.domain, DOMAIN_ENTITIES["custom-application"])
+    entities = entities or DOMAIN_ENTITIES.get(proposal.domain, DOMAIN_ENTITIES["custom-application"])
     roles = _roles_for(proposal)
     role_id = _role_id(surface.actor)
     if role_id not in {r.id for r in roles}:
@@ -276,10 +281,18 @@ def _surfaces_for_option(proposal: ScopeProposal, option_id: str) -> tuple[AppSu
     return proposal.surfaces
 
 
-def plan_ecosystem(proposal: ScopeProposal, option_id: str = "complete") -> EcosystemPlan:
+def plan_ecosystem(
+    proposal: ScopeProposal,
+    option_id: str = "complete",
+    *,
+    entities: tuple[Entity, ...] | None = None,
+) -> EcosystemPlan:
     """Turn a ScopeProposal + build-scope option into an EcosystemPlan (one IR per selected surface)."""
     surfaces = _surfaces_for_option(proposal, option_id)
-    apps = tuple(SurfaceApp(surface, surface_to_ir(proposal, surface)) for surface in surfaces)
+    apps = tuple(
+        SurfaceApp(surface, surface_to_ir(proposal, surface, entities=entities))
+        for surface in surfaces
+    )
     return EcosystemPlan(prompt=proposal.prompt, domain=proposal.domain, option_id=option_id, apps=apps)
 
 

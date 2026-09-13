@@ -1,14 +1,24 @@
 # Current Handoff
 
-Task ID: R-431
+Task ID: R-432
 Status: done
 Phase: BASIC/MVP — Founder Stage 0
 Branch: `main` (the only branch; the GitHub default)
 
-> **The differentiating SPINE now produces real, owned, clean-compiling apps.** R-430 *proposes* a multi-app ecosystem; **R-431 materializes it** — one prompt → MULTIPLE owned Git repos (customer app + merchant/driver/admin portals) that pass `tsc --noEmit` clean. See it: `task agent-engine:ecosystem:plan -- "Create a food delivery app …"` (shows the per-app IRs) and `task agent-engine:ecosystem:build -- "…"` (writes the repos). Foundation: front door **R-416**–**R-426** (chat → create → run → preview) · **R-427/R-428/R-429** generated apps compile & type-check clean · **R-430** Ecosystem Scope Compiler. UI-component series PAUSED at R-415 (resumable). **NEXT (founder-approved direction):** (a) an opt-in cheap-LLM refinement layer over the deterministic classifier + curated data models (mirror `nl_to_ir` core vs `live_run`) for prompts outside the 10 curated domains; (b) surface-specific entity focus/roles; (c) Solution Packs + optionally a frontier model for generation quality.
+> **The differentiating SPINE now handles unknown businesses safely.** R-430 proposes curated scopes, R-431 materializes them as multiple owned repos, and **R-432 adds explicit local-model refinement only when the deterministic classifier returns `custom-application`**. Known domains remain zero-call. Untrusted output is bounded, validated, and fed back through the deterministic IR/CRUD planner. See it: `task agent-engine:ecosystem:refine -- "Build apiary operations software …"`. UI-component series PAUSED at R-415. **NEXT:** R-433 surface-specific entity focus and role/permission scoping.
 
 ## Repo/workflow state
 
+- **R-432 (opt-in unknown-domain refinement — third spine brick)** shipped: new stdlib-only
+  `intake/scope_refinement.py` runs R-430 first, bypasses the provider for curated domains, and permits one
+  explicit `ModelProvider` request only for `custom-application`. Exact bounded parsing produces a
+  `ScopeProposal` + typed entities and rejects invalid keys/types/actors/relations, >3 questions, credential
+  fields, relation-derived FK collisions, and unsupported validation rules. `plan_refined_ecosystem` reuses
+  R-431's deterministic repository-wired CRUD/IR path. New local-only CLI
+  `task agent-engine:ecosystem:refine`; it prints parsed data, not raw model output, and never uses cloud.
+  Live apiary proof: Beekeeper Dashboard + Admin Panel, 4 entities, 23 APIs, 8 screens per app. 14 focused
+  tests; `task verify` **2,911 passed** offline with 0 model calls; lint/security/env + demos (152/149) green.
+  Five explicit local calls outside verify hardened/proved the boundary; 0 cloud calls.
 - **R-431 (Scope → Application IRs — second spine brick)** shipped: new stdlib-only `intake/ecosystem.py` maps each proposed `AppSurface` to a `validate_ir`-clean `ApplicationIR` from a curated `DOMAIN_ENTITIES` model (10 domains + fallback) + a deterministic CRUD API/screen deriver that WIRES to real repositories (no 501 stubs). `plan_ecosystem`/`plan_ecosystem_from_prompt` build an `EcosystemPlan` (respecting the build-scope option); `build_ecosystem` materializes each app as its own owned repo via `build_app_from_ir`. CLIs `task agent-engine:ecosystem:plan` (deterministic) / `:build` (opt-in). A food-delivery prompt → 4 apps → 4 owned repos (164 files each). **Verified all four compile clean (`tsc --noEmit` → 0 errors)**, which exposed + fixed **4 generator bugs** in `codegen/nextjs.py` (over-braced FK `<select>` onChange; single-brace bool-badge style; multi-subcollection two-root → fragment; entity interface missing the scalar `<relation>_id` FK field). `tests/test_ecosystem.py` (9 tests). `task verify` **2,897** pass; lint/security/env + demos (152/149) green; R-429 examples still pass `web-typecheck`; 0 model calls. Single commit authored `sanjeetji <sk698166@gmail.com>`.
 - **R-430 (Ecosystem Scope Compiler — first spine brick)** shipped: new stdlib-only `intake/scope_compiler.py` turns a prompt into a framework-neutral `ScopeProposal` (domain + confidence + matched keywords, actors, multi-surface ecosystem, Complete/Customer-only/Custom options, ≤3 questions) via a deterministic 10-domain `DOMAIN_LIBRARY` + weighted keyword `classify_domain()` + `propose_ecosystem()` (with a `custom-application` fallback). Deterministic CLI `task agent-engine:scope:propose`. `tests/test_scope_compiler.py` (11 tests). `task verify` **2,888** pass; 0 model calls. Single commit authored `sanjeetji <sk698166@gmail.com>`.
 - **R-429 (generated web app passes strict `tsc --noEmit`)** shipped: fixed **8** type-error classes at `codegen/nextjs.py` + the generated tsconfig so a generated `minimal-blog` (was 84 errors) and `rideshare-favourites` compile with **0** errors — G0 `skipLibCheck`, G1 duplicate exports (context-menu), G2 `displayName` on sub-component aliases, G3 typed compound (color-picker/pin-input), G4 `HTMLAttributes` `Omit` (banner/carousel/checkbox/code-block), G5 `React.RefObject<T>` (was `<T | null>`), G6 terminal `variant` default `"default"`→`"minimal"`, G7 `SplitDiffRow.isUnchanged`, G8 `api` object gains the `…WithCount` methods + hooks forward a fresh `requestParams` with `...options` first. `task agent-engine:web-typecheck` reports PASSED for both examples. `task verify` **2,877** pass; 0 model calls. Single commit authored `sanjeetji <sk698166@gmail.com>`.
@@ -92,7 +102,7 @@ Branch: `main` (the only branch; the GitHub default)
   50. **R-412**: Character & Word Counter Textarea Suite (`components/character-counter.tsx`)
   51. **R-413**: Copy-to-Clipboard Button Suite (`components/copy-button.tsx`)
   52. **R-414**: Duration Input Suite (`components/duration-input.tsx`)
-- R-421 is complete; the next coding action is gated on recording the R-422 contract. Still stop-and-ask
+- R-432 is complete; the next coding action is gated on recording the R-433 contract. Still stop-and-ask
   only for paid cloud / DB engine / new infra / native-mobile / a materially different architecture decision.
 
 ## Completed
@@ -1004,10 +1014,10 @@ Enabled accessible, desktop-and-mobile-grade, futuristic Time Picker and Time Ra
 
 ## Next action
 
-- R-421 is complete. Before coding, propose and record the R-422 Standard AI Task Contract. Recommended
-  scope: allocate collision-free API/web ports for each local Studio preview and expose bounded
-  status/stop/restart controls, without weakening one-session ownership or executing anything in
-  `task verify`.
+- R-432 is complete. Before coding, record the R-433 Standard AI Task Contract. Recommended scope:
+  deterministic surface-specific entity focus plus role/permission scoping, so customer, operator, and
+  admin applications receive only the domain data and capabilities their audience needs. Preserve the
+  R-432 provider/parser boundary, curated behavior, repository-wired CRUD, and offline verification.
 
 ## Next command
 

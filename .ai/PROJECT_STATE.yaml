@@ -2,12 +2,28 @@ schema_version: 1
 project: OmniStackAI
 phase: BASIC/MVP
 founder_stage: 0
-current_task: R-431
+current_task: R-432
 current_status: done
 branch: main
-last_completed_task: R-431
+last_completed_task: R-432
 last_completed_task_summary: >-
-  Built R-431: Scope -> Application IRs (second brick of the differentiating spine). One prompt now
+  Built R-432: opt-in cheap-model refinement for prompts outside the 10 curated domains (third spine
+  brick). The deterministic R-430 classifier always runs first: known domains return the curated R-431
+  ScopeProposal + entities with zero provider calls; only custom-application makes one explicit request
+  through the platform ModelProvider boundary. New stdlib-only intake/scope_refinement.py builds the bounded
+  instruction, strictly parses untrusted JSON into ScopeProposal + typed Entity records, and rejects unknown
+  keys, invalid identifiers/types/actors/relations, >3 questions, credential fields, relation-derived FK
+  collisions, and unsupported validation rules. An omitted empty relations list normalizes to (), without
+  inventing business values. plan_refined_ecosystem feeds accepted data into R-431's deterministic CRUD/IR
+  planner; surface_to_ir/plan_ecosystem gained an optional entities tuple with existing behavior unchanged.
+  New explicit local-only `task agent-engine:ecosystem:refine` uses the existing Ollama ModelProvider and
+  prints parsed bounded data, not raw output; no cloud fallback. Live apiary proof -> apiary-management,
+  Beekeeper Dashboard + Admin Panel, 4 entities, 23 wired APIs, 8 screens per app. Five local calls outside
+  verify were used while rejecting/hardening malformed outputs and proving the final boundary; 0 cloud calls.
+  test_scope_refinement.py 14 passed; task verify 2,911 passed fully offline (0 real model calls); lint,
+  security, env, curated food-delivery regression, and both demos (152/149) passed. PostgreSQL, IR, adapters,
+  generated contracts, infrastructure, and .claude unchanged. Previously built R-431: Scope -> Application
+  IRs (second brick of the differentiating spine). One prompt now
   materializes a full multi-app OWNED-CODE ecosystem. New Python-3.13-stdlib-only intake/ecosystem.py maps
   each proposed AppSurface (R-430) to a validate_ir-clean ApplicationIR from a curated per-domain data model
   (DOMAIN_ENTITIES: 2-4 typed entities + FK relations for all 10 domains + a custom-application fallback) plus
@@ -519,18 +535,16 @@ id_note: >-
   generated-SQL hardening, embedded trusted-local preview, collision-free preview ports + controls, build
   history + re-preview, live preview status, per-build repo actions, remove-from-history, generated-JSX
   inline-style fix, generated-app compile fixes + opt-in tsc gate, and strict-type cleanup so generated apps
-  pass tsc --noEmit clean), R-430 done (Ecosystem Scope Compiler = FIRST spine brick), and R-431 done
-  (Scope -> Application IRs = SECOND spine brick: one prompt -> multiple owned, clean-compiling app repos).
+  pass tsc --noEmit clean), R-430 done (Ecosystem Scope Compiler = FIRST spine brick), R-431 done
+  (Scope -> Application IRs = SECOND spine brick: one prompt -> multiple owned, clean-compiling app repos),
+  and R-432 done (opt-in unknown-domain refinement = THIRD spine brick).
   NOTE: the UI-COMPONENT SERIES is PAUSED at R-415 (110 components, resumable at a future free Tracker
-  ID); R-416..R-429 built/hardened the "chat -> create -> run -> preview" front door; R-430..R-431 build SPINE.
+  ID); R-416..R-429 built/hardened the "chat -> create -> run -> preview" front door; R-430..R-432 build SPINE.
 blockers: []
 next_action: >-
-  R-431 is complete: one prompt now materializes a full multi-app OWNED-CODE ecosystem that compiles clean.
-  See it: `task agent-engine:ecosystem:plan -- "<prompt>"` (shows the app IRs); `:build` writes the repos.
-  The scope compiler (R-430) + ecosystem planner/builder (R-431) are the differentiating spine competitors
-  lack. NEXT spine bricks (founder-approved direction): (a) an OPT-IN cheap-LLM refinement layer over the
-  deterministic domain classifier + curated data models (mirror nl_to_ir core vs live_run) so prompts OUTSIDE
-  the 10 curated domains still get a tailored ecosystem; (b) surface-specific entity focus/roles so each app
-  is more tailored than sharing the full domain model; (c) Solution Packs (pre-tested skeletons + AI-delta)
-  and optionally a frontier model for generation quality. Keep task verify deterministic and
-  network/DB/model independent. The UI-component series remains paused/resumable.
+  R-432 is complete: unknown domains can now receive an opt-in, local-model-tailored scope + entity model,
+  while curated domains remain deterministic and zero-call. NEXT R-433: add deterministic surface-specific
+  entity focus and role/permission scoping so customer, operator, and admin apps do not all receive the
+  identical full domain model. Record the task contract before code; preserve the R-432 parser/provider
+  boundary and keep task verify network/DB/model independent. Solution Packs follow. The UI-component series
+  remains paused/resumable.

@@ -147,6 +147,11 @@ tasks:
     cmds:
       - bash scripts/agent-engine.sh ecosystem-build {{.CLI_ARGS}}
 
+  agent-engine:ecosystem:refine:
+    desc: 'Refine an unknown business domain into a tailored multi-app scope + entity model via local Ollama (explicit opt-in; CLI_ARGS - "description")'
+    cmds:
+      - bash scripts/agent-engine.sh ecosystem-refine {{.CLI_ARGS}}
+
   agent-engine:intake:run:
     desc: 'Compile a plain-English app description into an Application IR via local Ollama (opt-in, live; CLI_ARGS - "description")'
     cmds:

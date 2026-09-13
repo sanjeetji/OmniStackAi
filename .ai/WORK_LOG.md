@@ -1,5 +1,30 @@
 # Work Log
 
+## 2026-09-13 — R-432 (opt-in model refinement for unknown-domain ecosystems)
+
+- Recorded `.ai/tasks/R-432.md` and `.ai/CURRENT_TASK.yaml` before code; focused test import failed RED
+  because the API did not exist, then finished at 14 passing tests.
+- Added stdlib-only `intake/scope_refinement.py`. The R-430 deterministic proposal always runs first:
+  curated domains return R-431 entities with **zero provider calls**; only `custom-application` is eligible
+  for one explicit `ModelProvider` request. The prompt includes the deterministic first pass and a bounded
+  JSON schema. The parser builds `ScopeProposal` + typed `Entity` values and rejects unknown keys, bad
+  identifiers/types/actor references/relation targets, >3 questions, missing UUID ids, credential fields,
+  relation-derived FK collisions, and unsupported validation grammar. An omitted empty `relations` list is
+  the sole safe structural normalization. Raw output is retained only in the result and excluded from
+  `to_dict()`/CLI output.
+- Extended R-431 `surface_to_ir`/`plan_ecosystem` with an optional validated entities tuple; existing callers
+  remain byte-equivalent. `plan_refined_ecosystem` reuses the same deterministic repository-wired CRUD/IR
+  path. Exported the refinement API from `intake`.
+- Added explicit local-only `scope_refine_live.py` and `task agent-engine:ecosystem:refine`; it uses the
+  existing environment-driven loopback Ollama `ModelProvider`, never cloud, and prints parsed bounded data.
+- Live proof: unknown apiary operations prompt -> `apiary-management`, Beekeeper Dashboard + Admin Panel,
+  four entities, 23 wired APIs and eight screens per app. Five local calls outside verify were used: three
+  malformed responses failed closed, one initially accepted response exposed credential/FK collision gaps
+  during review and caused stronger guards, and the final apiary response passed. 0 cloud calls.
+- Gates: focused **14 passed**; `task verify` **2,911 passed** fully offline (0 real model calls);
+  lint/security/env passed; food-delivery deterministic regression stayed four apps; both builder demos
+  passed (152 / 149 files). PostgreSQL, IR, adapters, infrastructure, and `.claude/` unchanged.
+
 ## 2026-09-13 — R-431 (Scope → Application IRs — materialize a multi-app ecosystem from one prompt)
 
 - **Second brick of the spine (founder said "continue").** R-430 *proposed* a multi-app ecosystem; R-431 makes it *real* — one prompt → multiple owned, clean-compiling app repos.

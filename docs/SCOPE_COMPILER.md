@@ -71,7 +71,23 @@ Super-Admin Dashboard); all four pass `tsc --noEmit` clean. See `docs/PROGRESS.m
 
 ## What's next
 
-An **opt-in cheap-LLM refinement layer** over the deterministic classifier + curated data models (for prompts
-outside the 10 curated domains) is the next brick — kept opt-in so it never enters `task verify`. Beyond that:
-surface-specific entity focus/roles, Solution Packs (pre-tested skeletons + AI-delta generation), and
-optionally a frontier model for generation quality.
+## Unknown-domain refinement (R-432)
+
+The deterministic compiler remains the first pass. Known domains use their curated proposal and data model
+with zero model calls. When it returns `custom-application`, an explicit local-only command can request a
+tailored proposal and entity model through the platform `ModelProvider` boundary:
+
+```bash
+task agent-engine:ecosystem:refine -- "Build apiary operations software for beekeepers"
+```
+
+The response is untrusted and fail-closed: exact bounded JSON only, 1-8 actors/surfaces/entities, at most
+three questions, IR-valid identifiers/types/relations, required UUID ids, no credential fields, no duplicate
+relation-derived FK columns, and only supported validation rules. Parsed entities then flow through the
+same deterministic CRUD/IR planner. The CLI imports only the loopback Ollama adapter, never falls back to
+cloud, and is excluded from `task verify`; tests inject an in-memory provider.
+
+## What's next
+
+Surface-specific entity focus and role/permission scoping is the next brick, followed by Solution Packs
+(pre-tested skeletons + AI-delta generation) and optionally a frontier model for generation quality.

@@ -4,20 +4,24 @@ Last updated: 2026-09-13
 ## Current Phase
 Stage 0 (Founder Build Sequence, Brief Section 91) — BASIC/MVP
 
-> **The differentiating SPINE now produces real, owned, clean-compiling apps (R-431).** One prompt → MULTIPLE customer-owned Git repos (customer app + merchant/driver/admin portals) that pass `tsc --noEmit` clean. See it: `task agent-engine:ecosystem:plan -- "Create a food delivery app …"` (per-app IRs) and `task agent-engine:ecosystem:build -- "…"` (writes the repos). Foundation: front door **R-416**–**R-426** (chat → create → run → preview) · **R-427/R-428/R-429** generated apps compile & type-check clean · **R-430** Ecosystem Scope Compiler. UI-component series PAUSED at R-415 (resumable). **NEXT (founder-approved):** (a) an opt-in cheap-LLM refinement over the deterministic classifier + data models for prompts outside the 10 curated domains; (b) surface-specific entity focus/roles; (c) Solution Packs + optionally a frontier model for generation quality.
+> **The differentiating SPINE now handles businesses outside its curated catalog (R-432).** R-430/R-431 remain the deterministic scope→multi-repo path; an explicit local-model refinement can now turn an unknown domain into a bounded, validated multi-app proposal and typed data model before the same deterministic IR planner runs. See it: `task agent-engine:ecosystem:refine -- "Build apiary operations software …"`. UI-component series PAUSED at R-415 (resumable). **NEXT:** R-433 surface-specific entity focus and role/permission scoping.
 
 ## Last Completed Task
-Tracker ID: R-431 — Scope → Application IRs: materialize a multi-app ecosystem from one prompt — DONE.
-New stdlib-only `intake/ecosystem.py` maps each proposed `AppSurface` (R-430) to a `validate_ir`-clean
-`ApplicationIR` from a curated `DOMAIN_ENTITIES` model (10 domains + fallback) + a deterministic CRUD deriver
-that WIRES to real repositories; `plan_ecosystem` builds an `EcosystemPlan` (one IR per selected surface) and
-`build_ecosystem` materializes each app as its own owned repo (reusing `build_app_from_ir`). Deterministic
-CLIs `task agent-engine:ecosystem:plan` / `:build`. A food-delivery prompt → 4 apps → 4 owned repos (164
-files each). Verified all four compile clean (`tsc --noEmit` → 0 errors), which exposed + fixed 4 generator
-bugs in `codegen/nextjs.py` (over-braced FK `<select>` onChange; single-brace bool-badge style;
-multi-subcollection two-root → fragment; entity interface missing the scalar `<relation>_id` FK field).
-`tests/test_ecosystem.py` (9 tests). `task verify` **2,897 tests** pass (offline; +9); lint/security/env and
-both demos (152 / 149) pass; R-429 examples still pass `web-typecheck`; 0 model calls.
+Tracker ID: R-432 — Opt-in model refinement for tailored ecosystems outside curated domains — DONE.
+New stdlib-only `intake/scope_refinement.py` always runs the deterministic scope compiler first: known
+domains return their curated proposal/entities with zero provider requests; only `custom-application` is
+eligible for one explicit `ModelProvider` request. Untrusted output is strictly bounded and parsed into
+`ScopeProposal` + typed `Entity` records, rejects unknown keys/types, bad actors/relations, credential fields,
+relation-derived FK collisions, and unsupported validation rules, then feeds the existing deterministic
+planner through `plan_refined_ecosystem`. New local-only CLI: `task agent-engine:ecosystem:refine`. A live
+apiary prompt produced Beekeeper Dashboard + Admin Panel with four entities, 23 wired APIs, and eight screens
+per app; no cloud fallback. `tests/test_scope_refinement.py`: 14 passed; `task verify`: **2,911 passed**
+(offline, 0 model calls); lint/security/env and both demos (152 / 149) pass. Five explicit local calls outside
+verify were used to harden/prove the boundary; the final response passed all guards.
+
+Immediately preceded by R-431 — Scope → Application IRs: materialize a multi-app ecosystem from one prompt — DONE.
+New stdlib-only `intake/ecosystem.py` maps each proposed surface to a valid IR from curated domain entities
+and repository-wired deterministic CRUD, then materializes the chosen scope as multiple owned Git repos.
 
 Immediately preceded by R-430 — Ecosystem Scope Compiler: deterministic domain classification + multi-app
 scope proposal — DONE. New stdlib-only `intake/scope_compiler.py` turns a business prompt into a framework-neutral
@@ -344,8 +348,8 @@ R-324 (theming tokens), R-323 (popover), R-322 (dropdown menu), R-321 (accordion
 R-317 (skeleton), R-316 (alert), R-315 (card), R-314 (tooltip), R-313 (column visibility), R-312 (badge), R-311 (table density),
 R-310 (tabs), R-309 (pagination), and R-308 (JSON export).
 
-**Notes:** R-421 is complete with 2,823 tests passing. The next proposed task is R-422: dynamic collision-
-free local preview ports plus bounded status/stop/restart controls; its contract must be recorded first.
+**Notes:** R-432 is complete with 2,911 tests passing. The next proposed task is R-433: deterministic
+surface-specific entity focus plus role/permission scoping; its contract must be recorded first.
 
 
 

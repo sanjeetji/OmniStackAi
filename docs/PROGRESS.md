@@ -1,4 +1,4 @@
-# OmniStackAI — implementation progress (as of R-431)
+# OmniStackAI — implementation progress (as of R-432)
 
 A living summary of what is built, what is pending, and how to see results. Numbers come from the
 execution tracker (`R_&_D/OmniStackAI_Execution_Tracker_v6.xlsx`, `Phase_Roadmap`) plus the state
@@ -6,17 +6,18 @@ files (`.ai/`), Git history, and CHANGELOG for work done past the tracker's last
 
 ## Headline
 
-- **2,897 automated tests pass**, fully offline and network-independent (`task verify`).
+- **2,911 automated tests pass**, fully offline and network-independent (`task verify`).
 - **147 tracker tasks Done, 1 Deferred, 210 Not Started** across 358 tasks (the tracker's planned
   universe ends at R-358).
-- **Plus 73 completed tasks beyond the workbook (R-359 → R-431)**: 57 reusable UI-component suites,
+- **Plus 74 completed tasks beyond the workbook (R-359 → R-432)**: 57 reusable UI-component suites,
   four front-door bricks, R-420 generated-SQL hardening, R-421 managed embedded local preview,
   R-422 collision-free preview ports + status/stop/restart controls, R-423 build history + re-preview,
   R-424 live preview status, R-425 per-build repo actions, R-426 remove-from-history, R-427 a
   generated-JSX inline-style fix, R-428 generated-app compile fixes + an opt-in `tsc` gate, R-429
   strict-type cleanup so a generated app passes `tsc --noEmit` clean, **R-430 the Ecosystem Scope
   Compiler**, and **R-431 Scope → Application IRs** (one prompt → multiple owned, clean-compiling app
-  repos) — R-430/R-431 are the first two bricks of the differentiating spine. The generated Next.js
+  repos), and **R-432 opt-in unknown-domain refinement** — the first three bricks of the differentiating
+  spine. The generated Next.js
   component library remains at **110 components**; its series is **PAUSED at R-415** and fully resumable.
 - The generated app was **run live locally end-to-end this session** (Next.js web on `:3000` +
   FastAPI on `:8000` + seeded PostgreSQL) — proving the offline builder output actually runs on a Mac.
@@ -64,6 +65,11 @@ files (`.ai/`), Git history, and CHANGELOG for work done past the tracker's last
   repos from one prompt. A food-delivery prompt builds 4 apps (customer/merchant/courier/admin), and all
   four compile clean (`tsc --noEmit` → 0 errors; fixed 4 generator bugs the FK/multi-subcollection shapes
   exposed). See it: `task agent-engine:ecosystem:plan -- "…"` and `task agent-engine:ecosystem:build -- "…"`.
+- **R-432 handles unknown domains safely:** `task agent-engine:ecosystem:refine -- "…"` runs the
+  deterministic classifier first, makes zero model calls for curated domains, and uses local Ollama only
+  when the fallback is `custom-application`. Strict bounded parsing rejects credentials, FK collisions,
+  invalid actors/relations/types/rules, then reuses the R-431 planner. An apiary prompt yielded Beekeeper +
+  Admin apps with four entities, 23 wired APIs, and eight screens per app; no cloud fallback.
 
 ## UI Component Series — status: PAUSED at R-415 (resumable)
 
@@ -316,16 +322,14 @@ app now renders in the preview), and **R-429 strict-type cleanup** (fixed the 8 
 revealed so a generated `minimal-blog` and `rideshare-favourites` pass `tsc --noEmit` with 0 errors; the gate
 now reports PASSED for both — generated apps are no longer blocked from a production `next build`).
 
-The differentiating spine's first two bricks are in: **R-430** (Ecosystem Scope Compiler) *proposes* a
+The differentiating spine's first three bricks are in: **R-430** (Ecosystem Scope Compiler) *proposes* a
 multi-app ecosystem, and **R-431** (Scope → Application IRs) *materializes* it — one prompt →
-multiple owned, clean-compiling app repos (`task agent-engine:ecosystem:plan` / `:build`). The
-founder-approved direction is to keep building the spine. Next bricks: **(a) an opt-in cheap-LLM refinement
-layer** over the deterministic domain classifier + curated data models (mirroring `nl_to_ir.py` core vs
-`live_run.py`) so prompts outside the 10 curated domains still get a tailored ecosystem; **(b)
-surface-specific entity focus/roles** so each app is more tailored than sharing the full domain model; and
-**(c) Solution Packs** (pre-tested skeletons + AI-delta generation) plus optionally a frontier model for
-generation quality. `task verify` must remain model/Docker/DB/install/network-free (any live/model path
-stays opt-in).
+multiple owned, clean-compiling app repos (`task agent-engine:ecosystem:plan` / `:build`); **R-432** adds
+opt-in local-model refinement for unknown domains with a strict validation boundary. The founder-approved
+next brick is **R-433 surface-specific entity focus and role/permission scoping**, so each app receives only
+its audience-relevant domain model and capabilities. After that: **Solution Packs** (pre-tested skeletons +
+AI-delta generation) and optionally a frontier model for generation quality. `task verify` must remain
+model/Docker/DB/install/network-free (any live/model path stays opt-in).
 
 **The UI-component series remains PAUSED at R-415** and is independently resumable under a future free
 task ID.
