@@ -1,5 +1,26 @@
 # Work Log
 
+## 2026-09-13 — R-433 (surface-specific ecosystem data and capability scoping)
+
+- Recorded `.ai/tasks/R-433.md` and `.ai/CURRENT_TASK.yaml` before implementation. Test-first focused run
+  failed four assertions against R-432 because each app still contained the full entity model and all
+  proposal roles; final R-431/R-432/R-433 focused regression is 30 passing tests (7 new R-433 tests).
+- Added explicit readable/writable entity policies for every surface across the ten curated domains.
+  R-432 refined domains use deterministic singular/verb-aware entity-name matching against bounded surface
+  metadata, falling back to the complete validated model when no match is defensible.
+- Added recursive relation closure: a selected entity never loses a required relation target. Dependencies
+  are retained read-only, selected readable entities receive list screens, and only explicit writable
+  entities receive editors plus POST/PUT/DELETE endpoints.
+- Each surface IR now declares exactly its normalized actor role with entity-qualified permissions. Every
+  authenticated mutation declares that role in `required_roles`; existing public GET behavior remains for
+  the current generated preview flow. Plan JSON exposes role/permission and writable-entity scope.
+- Deterministic food-delivery inspection: Customer has Restaurant/MenuItem/Order visible but only Order
+  writable; Merchant has all three read/write; Courier has Order plus Restaurant dependency, Order-only
+  write (8 APIs/2 screens); Admin has Restaurant+Order read/write (11 APIs/4 screens).
+- Gates: `task verify` 2,918 passed fully offline; `task lint`, `task security:quick`, `task env:check`
+  passed; demos generated 152 (`minimal-blog`) / 149 (`rideshare-favourites`) files. 0 local/cloud model
+  calls. Workbook unchanged because its planned universe ends at R-358; `.claude/` remained untracked.
+
 ## 2026-09-13 — R-432 (opt-in model refinement for unknown-domain ecosystems)
 
 - Recorded `.ai/tasks/R-432.md` and `.ai/CURRENT_TASK.yaml` before code; focused test import failed RED

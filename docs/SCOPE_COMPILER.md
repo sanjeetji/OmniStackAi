@@ -87,7 +87,22 @@ relation-derived FK columns, and only supported validation rules. Parsed entitie
 same deterministic CRUD/IR planner. The CLI imports only the loopback Ollama adapter, never falls back to
 cloud, and is excluded from `task verify`; tests inject an in-memory provider.
 
+## Surface-specific data and capabilities (R-433)
+
+The IR planner no longer clones one complete domain model and every platform actor into every app. All ten
+curated domains have an explicit per-surface readable/writable entity policy. Refined domains match entity
+names against bounded surface metadata and keep the complete validated model when the match is ambiguous.
+Relation targets are retained recursively as read dependencies. Each IR declares only its surface actor role
+with entity-qualified permissions; readable entities get list screens, only writable entities get editors
+and mutations, and every mutation requires that role. Existing public GET behavior remains intact until the
+authentication UX/persona-simulation brick.
+
+The deterministic plan output now shows `roles` and `writable_entities`. For food delivery, the customer can
+browse Restaurant/MenuItem but write Order; the courier receives Order plus the Restaurant relation
+dependency and can write only Order; the admin excludes MenuItem.
+
 ## What's next
 
-Surface-specific entity focus and role/permission scoping is the next brick, followed by Solution Packs
-(pre-tested skeletons + AI-delta generation) and optionally a frontier model for generation quality.
+R-434 begins Solution Packs by registering the already verified `minimal-blog` and
+`rideshare-favourites` targets as immutable versioned baseline descriptors, without duplicating their
+generated source. AI-delta generation and optional frontier-model quality work follow later.

@@ -2,12 +2,25 @@ schema_version: 1
 project: OmniStackAI
 phase: BASIC/MVP
 founder_stage: 0
-current_task: R-432
+current_task: R-433
 current_status: done
 branch: main
-last_completed_task: R-432
+last_completed_task: R-433
 last_completed_task_summary: >-
-  Built R-432: opt-in cheap-model refinement for prompts outside the 10 curated domains (third spine
+  Built R-433: deterministic per-surface data and capability scoping (fourth spine brick). The existing
+  curated and model-refined entity sets now pass through an explicit read/write surface policy before IR
+  generation. All ten curated domains have complete, reviewed surface mappings; refined domains match
+  entity names against bounded surface metadata and keep the complete validated model when intent is
+  ambiguous. Recursive relation closure retains targets as read dependencies without inventing data.
+  Each Application IR declares only its own normalized actor role with entity-qualified permissions;
+  selected readable entities get list screens, only writable entities get editors and POST/PUT/DELETE,
+  and every mutation requires the surface role. Public GET behavior remains unchanged for current previews.
+  Food-delivery now yields Customer (3 readable, Order-only write), Merchant (3 read/write), Courier
+  (Order + Restaurant dependency, Order-only write; 8 APIs/2 screens), and Admin (Order + Restaurant;
+  11 APIs/4 screens), rather than four identical models. Plan JSON exposes roles/permissions/write scope.
+  Seven new tests; focused R-431/R-432/R-433 suite 30 passed; task verify 2,918 passed fully offline;
+  lint/security/env and both demos (152/149) passed; 0 model calls. No dependency, IR/schema, provider,
+  generator, database, infra, tracker-workbook, or .claude change. Previously built R-432: opt-in cheap-model refinement for prompts outside the 10 curated domains (third spine
   brick). The deterministic R-430 classifier always runs first: known domains return the curated R-431
   ScopeProposal + entities with zero provider calls; only custom-application makes one explicit request
   through the platform ModelProvider boundary. New stdlib-only intake/scope_refinement.py builds the bounded
@@ -537,14 +550,15 @@ id_note: >-
   inline-style fix, generated-app compile fixes + opt-in tsc gate, and strict-type cleanup so generated apps
   pass tsc --noEmit clean), R-430 done (Ecosystem Scope Compiler = FIRST spine brick), R-431 done
   (Scope -> Application IRs = SECOND spine brick: one prompt -> multiple owned, clean-compiling app repos),
-  and R-432 done (opt-in unknown-domain refinement = THIRD spine brick).
+  R-432 done (opt-in unknown-domain refinement = THIRD spine brick), and R-433 done (surface-specific
+  data/capability scoping = FOURTH spine brick).
   NOTE: the UI-COMPONENT SERIES is PAUSED at R-415 (110 components, resumable at a future free Tracker
-  ID); R-416..R-429 built/hardened the "chat -> create -> run -> preview" front door; R-430..R-432 build SPINE.
+  ID); R-416..R-429 built/hardened the "chat -> create -> run -> preview" front door; R-430..R-433 build SPINE.
 blockers: []
 next_action: >-
-  R-432 is complete: unknown domains can now receive an opt-in, local-model-tailored scope + entity model,
-  while curated domains remain deterministic and zero-call. NEXT R-433: add deterministic surface-specific
-  entity focus and role/permission scoping so customer, operator, and admin apps do not all receive the
-  identical full domain model. Record the task contract before code; preserve the R-432 parser/provider
-  boundary and keep task verify network/DB/model independent. Solution Packs follow. The UI-component series
-  remains paused/resumable.
+  R-433 is complete: each ecosystem surface now receives bounded entities, read/write capabilities, and
+  one actor role instead of cloning the full platform model/roles. NEXT R-434: begin Solution Packs (Master
+  Architecture Specification section 5 / Stream C) by registering the already verified minimal-blog and
+  rideshare-favourites targets as immutable, versioned baseline pack descriptors with deterministic
+  validation and selection. Reuse existing examples/generators; do not duplicate skeleton source or add a
+  dependency/model/live path. The UI-component series remains paused/resumable.

@@ -4,20 +4,27 @@ Last updated: 2026-09-13
 ## Current Phase
 Stage 0 (Founder Build Sequence, Brief Section 91) — BASIC/MVP
 
-> **The differentiating SPINE now handles businesses outside its curated catalog (R-432).** R-430/R-431 remain the deterministic scope→multi-repo path; an explicit local-model refinement can now turn an unknown domain into a bounded, validated multi-app proposal and typed data model before the same deterministic IR planner runs. See it: `task agent-engine:ecosystem:refine -- "Build apiary operations software …"`. UI-component series PAUSED at R-415 (resumable). **NEXT:** R-433 surface-specific entity focus and role/permission scoping.
+> **The differentiating SPINE now produces deliberately scoped apps (R-433).** After deterministic or
+> opt-in local-model scope/data-model selection, each customer/operator/admin surface receives only its
+> relevant entities, readable/writable capabilities, and actor role. See it:
+> `task agent-engine:ecosystem:plan -- "Create a food delivery app with restaurants and couriers"`.
+> UI-component series PAUSED at R-415 (resumable). **NEXT:** R-434 baseline Solution Pack registry.
 
 ## Last Completed Task
-Tracker ID: R-432 — Opt-in model refinement for tailored ecosystems outside curated domains — DONE.
-New stdlib-only `intake/scope_refinement.py` always runs the deterministic scope compiler first: known
-domains return their curated proposal/entities with zero provider requests; only `custom-application` is
-eligible for one explicit `ModelProvider` request. Untrusted output is strictly bounded and parsed into
-`ScopeProposal` + typed `Entity` records, rejects unknown keys/types, bad actors/relations, credential fields,
-relation-derived FK collisions, and unsupported validation rules, then feeds the existing deterministic
-planner through `plan_refined_ecosystem`. New local-only CLI: `task agent-engine:ecosystem:refine`. A live
-apiary prompt produced Beekeeper Dashboard + Admin Panel with four entities, 23 wired APIs, and eight screens
-per app; no cloud fallback. `tests/test_scope_refinement.py`: 14 passed; `task verify`: **2,911 passed**
-(offline, 0 model calls); lint/security/env and both demos (152 / 149) pass. Five explicit local calls outside
-verify were used to harden/prove the boundary; the final response passed all guards.
+Tracker ID: R-433 — Surface-specific ecosystem data and capability scoping — DONE.
+The deterministic ecosystem planner now applies an explicit read/write policy across all ten curated
+domains and bounded entity-name matching for R-432 refined domains (ambiguous intent safely keeps the full
+validated model). Recursive relation closure retains integrity dependencies without granting write access.
+Each generated surface declares only its actor role with entity-qualified permissions; selected entities get
+list screens, only writable entities get editors/mutations, and each mutation requires that role. The
+food-delivery customer can browse Restaurant/MenuItem but write only Order; Courier and Admin exclude
+MenuItem, and Courier writes only Order. Plan JSON exposes roles/permissions/writable entities. Seven new
+tests; focused R-431/R-432/R-433 regression **30 passed**; `task verify` **2,918 passed** offline; lint,
+security, env and both demos (152 / 149) pass; 0 model calls.
+
+Immediately preceded by R-432 — Opt-in model refinement for tailored ecosystems outside curated domains — DONE.
+Known domains bypass the provider; unknown domains can explicitly use local Ollama through `ModelProvider`
+for a strictly parsed proposal + typed entity model before the deterministic planner runs.
 
 Immediately preceded by R-431 — Scope → Application IRs: materialize a multi-app ecosystem from one prompt — DONE.
 New stdlib-only `intake/ecosystem.py` maps each proposed surface to a valid IR from curated domain entities
@@ -348,8 +355,9 @@ R-324 (theming tokens), R-323 (popover), R-322 (dropdown menu), R-321 (accordion
 R-317 (skeleton), R-316 (alert), R-315 (card), R-314 (tooltip), R-313 (column visibility), R-312 (badge), R-311 (table density),
 R-310 (tabs), R-309 (pagination), and R-308 (JSON export).
 
-**Notes:** R-432 is complete with 2,911 tests passing. The next proposed task is R-433: deterministic
-surface-specific entity focus plus role/permission scoping; its contract must be recorded first.
+**Notes:** R-433 is complete with 2,918 tests passing. The next proposed task is R-434: register the existing
+verified `minimal-blog` and `rideshare-favourites` targets as immutable baseline Solution Packs, with a
+deterministic registry/selector and no duplicated skeleton source; its contract must be recorded first.
 
 
 

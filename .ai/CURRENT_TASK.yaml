@@ -1,29 +1,26 @@
-task_id: R-432
-id: R-432
-title: "Opt-in model refinement for tailored ecosystems outside curated domains"
+task_id: R-433
+id: R-433
+title: "Surface-specific ecosystem data and capability scoping"
 status: done
 phase: MVP
 tracker_row: null
 started_at: "2026-09-13"
 completed_at: "2026-09-13"
 objective: >-
-  Third brick of the differentiating spine. Preserve R-430/R-431 as the deterministic first pass, then add
-  an explicitly opt-in, cheap-model refinement path through the platform ModelProvider boundary. Unknown
-  business domains receive a strictly parsed and validated multi-app ScopeProposal plus typed Entity model,
-  which is converted into validate_ir-clean, repository-wired EcosystemPlan apps. Known curated domains stay
-  deterministic and make zero model calls. task verify remains fully offline and deterministic.
+  Fourth brick of the differentiating spine. Turn each R-431/R-432 app surface into a deliberately scoped
+  Application IR: retain only the business entities the surface needs (plus relation dependencies), separate
+  read-visible entities from writable entities, declare only its actor role, and attach that
+  role to every authenticated CRUD mutation. Preserve deterministic curated and refined planning, valid
+  repository wiring, runnable public reads, and fully offline verification.
 allowed_paths:
-  - "services/agent-engine/src/omnistackai_agent_engine/intake/scope_refinement.py"
-  - "services/agent-engine/src/omnistackai_agent_engine/intake/scope_refine_live.py"
   - "services/agent-engine/src/omnistackai_agent_engine/intake/ecosystem.py"
   - "services/agent-engine/src/omnistackai_agent_engine/intake/__init__.py"
-  - "services/agent-engine/tests/test_scope_refinement.py"
-  - "scripts/agent-engine.sh"
-  - "Taskfile.yml"
+  - "services/agent-engine/tests/test_surface_scoping.py"
+  - "services/agent-engine/tests/test_ecosystem.py"
   - "docs/SCOPE_COMPILER.md"
   - "docs/PROGRESS.md"
   - "docs/RESUME_PROMPT.md"
-  - ".ai/tasks/R-432.md"
+  - ".ai/tasks/R-433.md"
   - ".ai/CURRENT_TASK.yaml"
   - ".ai/PROJECT_STATE.yaml"
   - ".ai/WORK_LOG.md"
@@ -32,40 +29,44 @@ allowed_paths:
   - "CHANGELOG.md"
 forbidden_changes:
   - "Do not modify or include the unrelated untracked .claude directory"
-  - "Do not replace or weaken the deterministic R-430 classifier, curated R-431 models, Application IR, adapters, assembler, Git-service, generated-project contracts, or PostgreSQL"
-  - "No real model, network, Docker, database, package install, generated-code execution, or toolchain use in task verify"
-  - "No vendor SDK imports: stdlib plus intra-package imports only; live inference must use ModelProvider"
-  - "No automatic cloud fallback, new dependency, new infrastructure, secret exposure, or fabricated model output"
+  - "Do not change the R-430 classifier, R-432 provider/parser boundary, curated entity definitions, Application IR schema, adapters, generated-project contracts, or PostgreSQL"
+  - "No model, network, Docker, database, package install, generated-code execution, or toolchain use in task verify"
+  - "No new dependency, service, infrastructure, cloud fallback, secret handling, or fabricated entity relationship"
+  - "Do not remove an entity required by a retained relation; relation closure must remain validate_ir-clean"
 required_gates:
-  - "focused test_scope_refinement.py"
+  - "focused test_surface_scoping.py and test_ecosystem.py"
   - task verify
   - task lint
   - task security:quick
   - task env:check
   - task builder:demo -- minimal-blog
   - task builder:demo -- rideshare-favourites
-  - "deterministic curated regression: task agent-engine:ecosystem:plan -- <known-domain prompt>"
-  - "opt-in local proof: task agent-engine:ecosystem:refine -- <unknown-domain prompt>"
+  - "deterministic food-delivery ecosystem-plan inspection"
 model_tool_trace:
-  routing: local_ollama_opt_in
-  local_calls: 5
+  routing: deterministic_only
+  local_calls: 0
   cloud_calls: 0
-  note: >-
-    task verify used injected in-memory providers only (0 real calls). Five explicit local-Ollama attempts
-    were used outside verify: three rejected malformed responses, one response exposed new credential/FK
-    collision guards during review, and the final apiary-domain response passed the hardened boundary.
+  note: "R-433 is pure deterministic planning; no model call is authorized or needed."
+acceptance_criteria:
+  - "Known-domain surfaces use an explicit stable primary-entity policy; unknown/refined domains use bounded name matching and safely fall back to the complete model when intent is ambiguous."
+  - "A retained entity's relation targets are included recursively as read dependencies; selected entities receive list screens while only the explicit writable subset receives editors and write endpoints."
+  - "Each surface IR declares exactly its own normalized actor role with entity-qualified read/write permissions."
+  - "Every authenticated mutation has required_roles equal to that surface role; public GET behavior is preserved for runnable generated previews."
+  - "Food-delivery customers can read Restaurant/MenuItem but write only Order; courier/admin surfaces exclude MenuItem, and courier writes only Order while Restaurant remains a read dependency."
+  - "All 10 curated domains and injected R-432 refined plans remain deterministic, repository-wired, and validate_ir-clean."
 evidence:
-  focused_test: "test_scope_refinement.py: 14 passed"
-  verify: "2,911 passed (offline; +14)"
+  test_first_red: "4 focused failures against R-432: full entity model and all proposal roles still appeared on every surface"
+  focused_test: "test_surface_scoping.py + test_ecosystem.py + test_scope_refinement.py: 30 passed (7 R-433 tests)"
+  verify: "2,918 passed (offline; +7; 0 model calls)"
   lint: "passed"
   security: "passed"
   env: "passed"
   demos: "minimal-blog 152 files; rideshare-favourites 149 files"
-  curated_regression: "food-delivery remained 4 apps, each 3 entities / 17 APIs / 6 screens"
-  local_refinement: >-
-    apiary operations prompt -> source=model, domain=apiary-management, Beekeeper Dashboard + Admin Panel;
-    4 entities, 23 APIs, 8 screens per app; parsed payload only, no raw output/secrets; no cloud fallback.
+  deterministic_inspection: >-
+    food-delivery -> Customer 3 visible/Order-only write; Merchant 3 visible/3 writable; Courier
+    Order+Restaurant with Order-only write (8 APIs/2 screens); Admin Order+Restaurant (11 APIs/4 screens).
+  tracker: "No workbook row exists beyond R-358; workbook intentionally unchanged."
 next_action: >-
-  R-432 done. Next R-433: add deterministic surface-specific entity focus and role/permission scoping so
-  customer, operator, and admin apps no longer receive the identical full domain model. Record its contract
-  before code; preserve the R-432 refinement boundary and offline verification.
+  R-433 done. Next R-434: start Solution Packs by registering the already verified minimal-blog and
+  rideshare-favourites targets as immutable, versioned baseline pack descriptors with deterministic
+  validation/selection and zero code duplication or model calls. Record its contract before code.

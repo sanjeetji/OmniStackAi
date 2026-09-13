@@ -1,14 +1,29 @@
 # Current Handoff
 
-Task ID: R-432
+Task ID: R-433
 Status: done
 Phase: BASIC/MVP — Founder Stage 0
 Branch: `main` (the only branch; the GitHub default)
 
-> **The differentiating SPINE now handles unknown businesses safely.** R-430 proposes curated scopes, R-431 materializes them as multiple owned repos, and **R-432 adds explicit local-model refinement only when the deterministic classifier returns `custom-application`**. Known domains remain zero-call. Untrusted output is bounded, validated, and fed back through the deterministic IR/CRUD planner. See it: `task agent-engine:ecosystem:refine -- "Build apiary operations software …"`. UI-component series PAUSED at R-415. **NEXT:** R-433 surface-specific entity focus and role/permission scoping.
+> **The differentiating SPINE now emits deliberately scoped apps.** R-430 proposes the ecosystem, R-431
+> materializes owned repos, R-432 safely refines unknown domains, and **R-433 gives each surface its own
+> entity visibility, write capabilities, and actor role**. See it: `task agent-engine:ecosystem:plan --
+> "Create a food delivery app with restaurants and couriers"`. UI-component series PAUSED at R-415.
+> **NEXT:** R-434 baseline Solution Pack registry.
 
 ## Repo/workflow state
 
+- **R-433 (surface-specific data/capability scoping — fourth spine brick)** shipped: `intake/ecosystem.py`
+  now applies complete read/write mappings for every surface in all ten curated domains and conservative
+  entity-name matching to R-432 refined domains, with a complete-model fallback when intent is ambiguous.
+  Recursive relation closure retains targets as read dependencies. Each IR declares only the normalized
+  surface actor role with entity-qualified permissions; selected readable data gets list screens, only the
+  writable subset gets editors + POST/PUT/DELETE, and every mutation requires that role. Public GET behavior
+  is preserved for current previews. Food delivery now plans Customer (catalog read, Order write), Merchant,
+  Courier (Order + Restaurant dependency, Order-only write; 8 APIs/2 screens), and Admin (Order+Restaurant;
+  11 APIs/4 screens) as distinct IRs. Plan JSON exposes roles/permissions/writable entities. 7 new tests;
+  focused R-431/R-432/R-433 suite 30 passed; `task verify` **2,918 passed** offline; lint/security/env + demos
+  (152/149) green; 0 model calls. Workbook unchanged because its planned universe ends at R-358.
 - **R-432 (opt-in unknown-domain refinement — third spine brick)** shipped: new stdlib-only
   `intake/scope_refinement.py` runs R-430 first, bypasses the provider for curated domains, and permits one
   explicit `ModelProvider` request only for `custom-application`. Exact bounded parsing produces a
@@ -102,7 +117,7 @@ Branch: `main` (the only branch; the GitHub default)
   50. **R-412**: Character & Word Counter Textarea Suite (`components/character-counter.tsx`)
   51. **R-413**: Copy-to-Clipboard Button Suite (`components/copy-button.tsx`)
   52. **R-414**: Duration Input Suite (`components/duration-input.tsx`)
-- R-432 is complete; the next coding action is gated on recording the R-433 contract. Still stop-and-ask
+- R-433 is complete; the next coding action is gated on recording the R-434 contract. Still stop-and-ask
   only for paid cloud / DB engine / new infra / native-mobile / a materially different architecture decision.
 
 ## Completed
@@ -1014,10 +1029,11 @@ Enabled accessible, desktop-and-mobile-grade, futuristic Time Picker and Time Ra
 
 ## Next action
 
-- R-432 is complete. Before coding, record the R-433 Standard AI Task Contract. Recommended scope:
-  deterministic surface-specific entity focus plus role/permission scoping, so customer, operator, and
-  admin applications receive only the domain data and capabilities their audience needs. Preserve the
-  R-432 provider/parser boundary, curated behavior, repository-wired CRUD, and offline verification.
+- R-433 is complete. Before coding, record the R-434 Standard AI Task Contract. Recommended scope: begin
+  Master Architecture Specification section 5 / Stream C by registering the already verified
+  `minimal-blog` and `rideshare-favourites` targets as immutable, versioned baseline Solution Pack
+  descriptors with deterministic validation/selection. Reuse existing example IRs and generators; do not
+  duplicate generated source or add a model/live path. Keep verification offline.
 
 ## Next command
 

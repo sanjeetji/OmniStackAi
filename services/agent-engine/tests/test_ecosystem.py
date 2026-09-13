@@ -67,12 +67,15 @@ class EcosystemPlanTests(unittest.TestCase):
         self.assertIn("Customer Ordering App", names)
         self.assertIn("Merchant Portal", names)
         self.assertIn("Super-Admin Dashboard", names)
-        # Each app carries the curated food-delivery entities (normalize_ir may reorder them).
+        # Each app carries its bounded surface model (normalize_ir may reorder entities).
+        expected = {
+            "customer_web": {"Restaurant", "MenuItem", "Order"},
+            "merchant_portal": {"Restaurant", "MenuItem", "Order"},
+            "driver_portal": {"Restaurant", "Order"},
+            "admin_dashboard": {"Restaurant", "Order"},
+        }
         for app in plan.apps:
-            self.assertEqual(
-                {e.name for e in app.ir.entities},
-                {e.name for e in DOMAIN_ENTITIES["food-delivery"]},
-            )
+            self.assertEqual({e.name for e in app.ir.entities}, expected[app.surface.kind])
 
     def test_derived_crud_endpoints_wire_to_repositories(self) -> None:
         # The derived endpoints must resolve to real CRUD ops (not stay unwired -> 501).

@@ -1,4 +1,4 @@
-"""Scope -> Application IRs: materialize a multi-app ecosystem from one prompt (R-431).
+"""Scope -> Application IRs: materialize a scoped multi-app ecosystem (R-431, R-433).
 
 Second brick of the differentiating spine. R-430's `scope_compiler` *proposes* a multi-app ecosystem;
 this module makes it *real*: it maps each proposed `AppSurface` to a valid, `validate_ir`-clean
@@ -7,12 +7,14 @@ WIRE to real repository-backed handlers), and `build_ecosystem` materializes the
 MULTIPLE owned Git repos by reusing the existing `build_app_from_ir` (assembler + git-service).
 
 Deterministic and offline (no model/network/clock/randomness) so it runs under `task verify`. Any cheap-LLM
-data-model refinement for prompts outside the curated domains is a later, opt-in brick.
+R-433 adds deterministic per-surface entity/capability scoping after the model is selected. Relation targets
+are retained as read dependencies, while editor screens and writes stay limited to explicitly writable data.
 """
 
 from __future__ import annotations
 
 import os
+import re
 from dataclasses import dataclass
 
 from ..application_ir import (
@@ -145,7 +147,183 @@ DOMAIN_ENTITIES: dict[str, tuple[Entity, ...]] = {
     ),
 }
 
+# Business entities intentionally visible on each curated surface. Relation dependencies are added below, so
+# this table describes surface intent rather than a denormalized schema copy. Some compact
+# domains legitimately need their complete 2-3 entity model on more than one surface.
+CURATED_SURFACE_ENTITIES: dict[str, dict[str, tuple[str, ...]]] = {
+    "food-delivery": {
+        "customer_web": ("Restaurant", "MenuItem", "Order"),
+        "merchant_portal": ("Restaurant", "MenuItem", "Order"),
+        "driver_portal": ("Order",),
+        "admin_dashboard": ("Restaurant", "Order"),
+    },
+    "rideshare": {
+        "customer_pwa": ("Rider", "Driver", "Trip"),
+        "driver_portal": ("Driver", "Trip"),
+        "admin_dashboard": ("Rider", "Driver", "Trip"),
+    },
+    "marketplace": {
+        "customer_web": ("Seller", "Listing", "Purchase"),
+        "seller_portal": ("Seller", "Listing", "Purchase"),
+        "admin_dashboard": ("Seller", "Listing", "Purchase"),
+    },
+    "e-commerce": {
+        "customer_web": ("Category", "Product", "Order"),
+        "admin_dashboard": ("Category", "Product", "Order"),
+    },
+    "b2b-saas": {
+        "customer_web": ("Workspace", "Project", "Task"),
+        "admin_dashboard": ("Workspace",),
+    },
+    "healthcare-clinic": {
+        "customer_web": ("Patient", "Appointment"),
+        "provider_portal": ("Patient", "Appointment", "ClinicalNote"),
+        "admin_dashboard": ("Patient", "Appointment"),
+    },
+    "booking": {
+        "customer_web": ("Service", "Booking"),
+        "provider_portal": ("Service", "Booking"),
+        "admin_dashboard": ("Service", "Booking"),
+    },
+    "learning": {
+        "customer_web": ("Course", "Lesson", "Enrollment"),
+        "provider_portal": ("Course", "Lesson"),
+        "admin_dashboard": ("Course", "Enrollment"),
+    },
+    "social": {
+        "customer_web": ("Member", "Post", "Comment"),
+        "admin_dashboard": ("Member", "Post", "Comment"),
+    },
+    "blog-cms": {
+        "public_web": ("Article",),
+        "provider_portal": ("Article", "Comment"),
+        "admin_dashboard": ("Article",),
+    },
+}
+
+# Mutation authority is deliberately narrower than visibility. For example, customers can browse a menu but
+# only create/update their orders; public readers receive no mutations at all. Row ownership is a later auth
+# policy brick, so this matrix does not claim to enforce per-record ownership.
+CURATED_SURFACE_WRITABLE_ENTITIES: dict[str, dict[str, tuple[str, ...]]] = {
+    "food-delivery": {
+        "customer_web": ("Order",),
+        "merchant_portal": ("Restaurant", "MenuItem", "Order"),
+        "driver_portal": ("Order",),
+        "admin_dashboard": ("Restaurant", "Order"),
+    },
+    "rideshare": {
+        "customer_pwa": ("Rider", "Trip"),
+        "driver_portal": ("Driver", "Trip"),
+        "admin_dashboard": ("Rider", "Driver", "Trip"),
+    },
+    "marketplace": {
+        "customer_web": ("Purchase",),
+        "seller_portal": ("Seller", "Listing", "Purchase"),
+        "admin_dashboard": ("Seller", "Listing", "Purchase"),
+    },
+    "e-commerce": {
+        "customer_web": ("Order",),
+        "admin_dashboard": ("Category", "Product", "Order"),
+    },
+    "b2b-saas": {
+        "customer_web": ("Workspace", "Project", "Task"),
+        "admin_dashboard": ("Workspace",),
+    },
+    "healthcare-clinic": {
+        "customer_web": ("Patient", "Appointment"),
+        "provider_portal": ("Patient", "Appointment", "ClinicalNote"),
+        "admin_dashboard": ("Patient", "Appointment"),
+    },
+    "booking": {
+        "customer_web": ("Booking",),
+        "provider_portal": ("Service", "Booking"),
+        "admin_dashboard": ("Service", "Booking"),
+    },
+    "learning": {
+        "customer_web": ("Enrollment",),
+        "provider_portal": ("Course", "Lesson"),
+        "admin_dashboard": ("Course", "Enrollment"),
+    },
+    "social": {
+        "customer_web": ("Member", "Post", "Comment"),
+        "admin_dashboard": ("Member", "Post", "Comment"),
+    },
+    "blog-cms": {
+        "public_web": (),
+        "provider_portal": ("Article", "Comment"),
+        "admin_dashboard": ("Article",),
+    },
+}
+
 _FK_KINDS = (RelationKind.MANY_TO_ONE, RelationKind.ONE_TO_ONE)
+
+
+def _word_forms(text: str) -> frozenset[str]:
+    """Return conservative lowercase word/singular forms for deterministic entity-name matching."""
+    words = re.findall(
+        r"[A-Z]+(?=[A-Z][a-z]|\b)|[A-Z]?[a-z]+|[0-9]+",
+        text.replace("_", " "),
+    )
+    forms = {word.lower() for word in words if word}
+    for word in tuple(forms):
+        if word.endswith("ies") and len(word) > 3:
+            forms.add(word[:-3] + "y")
+        elif word.endswith("ing") and len(word) > 5:
+            forms.add(word[:-3])
+        elif word.endswith("s") and not word.endswith("ss") and len(word) > 3:
+            forms.add(word[:-1])
+    return frozenset(forms)
+
+
+def _primary_entity_names(
+    proposal: ScopeProposal,
+    surface: AppSurface,
+    entities: tuple[Entity, ...],
+) -> frozenset[str]:
+    available = {entity.name for entity in entities}
+    curated = CURATED_SURFACE_ENTITIES.get(proposal.domain, {}).get(surface.kind)
+    if curated is not None:
+        selected = frozenset(name for name in curated if name in available)
+        if selected:
+            return selected
+
+    surface_words = _word_forms(
+        " ".join((surface.kind, surface.name, surface.actor, surface.description))
+    )
+    matched = frozenset(
+        entity.name
+        for entity in entities
+        if _word_forms(entity.name) & surface_words
+    )
+    # Ambiguous intent is not permission to fabricate a partition: preserve the complete validated model.
+    return matched or frozenset(available)
+
+
+def _relation_closure(
+    entities: tuple[Entity, ...],
+    primary_names: frozenset[str],
+) -> tuple[Entity, ...]:
+    by_name = {entity.name: entity for entity in entities}
+    retained = set(primary_names)
+    pending = list(primary_names)
+    while pending:
+        entity = by_name[pending.pop()]
+        for relation in entity.relations:
+            if relation.target_entity in by_name and relation.target_entity not in retained:
+                retained.add(relation.target_entity)
+                pending.append(relation.target_entity)
+    return tuple(entity for entity in entities if entity.name in retained)
+
+
+def _writable_entity_names(
+    proposal: ScopeProposal,
+    surface: AppSurface,
+    selected_names: frozenset[str],
+) -> frozenset[str]:
+    curated = CURATED_SURFACE_WRITABLE_ENTITIES.get(proposal.domain, {}).get(surface.kind)
+    if curated is None:
+        return selected_names
+    return frozenset(name for name in curated if name in selected_names)
 
 
 # ---------------------------------------------------------------------------
@@ -153,17 +331,50 @@ _FK_KINDS = (RelationKind.MANY_TO_ONE, RelationKind.ONE_TO_ONE)
 # ---------------------------------------------------------------------------
 
 
-def _derive_apis(entities: tuple[Entity, ...]) -> tuple[ApiEndpoint, ...]:
+def _derive_apis(
+    entities: tuple[Entity, ...],
+    *,
+    writable_entities: frozenset[str],
+    role_id: str,
+) -> tuple[ApiEndpoint, ...]:
     by_name = {e.name: e for e in entities}
     apis: list[ApiEndpoint] = []
     for entity in entities:
         plural = _plural(_snake(entity.name))
         idp = f"{_lower_camel(entity.name)}Id"
         apis.append(ApiEndpoint(HttpMethod.GET, f"/{plural}", auth=False, response_schema=entity.name))
-        apis.append(ApiEndpoint(HttpMethod.POST, f"/{plural}", auth=True, request_schema=entity.name, response_schema=entity.name))
         apis.append(ApiEndpoint(HttpMethod.GET, f"/{plural}/{{{idp}}}", auth=False, response_schema=entity.name))
-        apis.append(ApiEndpoint(HttpMethod.PUT, f"/{plural}/{{{idp}}}", auth=True, request_schema=entity.name, response_schema=entity.name))
-        apis.append(ApiEndpoint(HttpMethod.DELETE, f"/{plural}/{{{idp}}}", auth=True, response_schema=entity.name))
+        if entity.name in writable_entities:
+            required_roles = (role_id,)
+            apis.append(
+                ApiEndpoint(
+                    HttpMethod.POST,
+                    f"/{plural}",
+                    auth=True,
+                    request_schema=entity.name,
+                    response_schema=entity.name,
+                    required_roles=required_roles,
+                )
+            )
+            apis.append(
+                ApiEndpoint(
+                    HttpMethod.PUT,
+                    f"/{plural}/{{{idp}}}",
+                    auth=True,
+                    request_schema=entity.name,
+                    response_schema=entity.name,
+                    required_roles=required_roles,
+                )
+            )
+            apis.append(
+                ApiEndpoint(
+                    HttpMethod.DELETE,
+                    f"/{plural}/{{{idp}}}",
+                    auth=True,
+                    response_schema=entity.name,
+                    required_roles=required_roles,
+                )
+            )
     # Sub-collection list for a child with exactly one FK relation -> parent-scoped list wiring.
     for entity in entities:
         fks = [r for r in entity.relations if r.kind in _FK_KINDS]
@@ -179,12 +390,17 @@ def _derive_apis(entities: tuple[Entity, ...]) -> tuple[ApiEndpoint, ...]:
     return tuple(apis)
 
 
-def _derive_screens(entities: tuple[Entity, ...], role_id: str) -> tuple[Screen, ...]:
+def _derive_screens(
+    entities: tuple[Entity, ...],
+    role_id: str,
+    writable_entities: frozenset[str],
+) -> tuple[Screen, ...]:
     screens: list[Screen] = []
     for entity in entities:
         base = _snake(entity.name)
         screens.append(Screen(f"{base}_list", role_id, components=("list",), actions=("open",)))
-        screens.append(Screen(f"{base}_editor", role_id, components=("form",), actions=("save",)))
+        if entity.name in writable_entities:
+            screens.append(Screen(f"{base}_editor", role_id, components=("form",), actions=("save",)))
     return tuple(screens)
 
 
@@ -199,11 +415,20 @@ class SurfaceApp:
     ir: ApplicationIR
 
     def to_dict(self) -> dict:
+        writable_entities = sorted(
+            {
+                api.request_schema
+                for api in self.ir.apis
+                if api.method is not HttpMethod.GET and api.request_schema is not None
+            }
+        )
         return {
             "surface": self.surface.to_dict(),
             "app_name": self.ir.name,
             "slug": _slug(self.ir.name),
             "entities": [e.name for e in self.ir.entities],
+            "writable_entities": writable_entities,
+            "roles": [role.to_dict() for role in self.ir.roles],
             "api_count": len(self.ir.apis),
             "screen_count": len(self.ir.screens),
         }
@@ -225,15 +450,18 @@ class EcosystemPlan:
         }
 
 
-def _roles_for(proposal: ScopeProposal) -> tuple[Role, ...]:
-    seen: dict[str, Role] = {}
-    for actor in proposal.actors:
-        rid = _role_id(actor.name)
-        # Admin/operators read+write; customers read+write their own data too.
-        seen.setdefault(rid, Role(rid, ("read", "write")))
-    if not seen:
-        seen["user"] = Role("user", ("read", "write"))
-    return tuple(seen.values())
+def _role_for_surface(
+    role_id: str,
+    entities: tuple[Entity, ...],
+    writable_names: frozenset[str],
+) -> Role:
+    permissions: list[str] = []
+    for entity in entities:
+        resource = _snake(entity.name)
+        permissions.append(f"{resource}:read")
+        if entity.name in writable_names:
+            permissions.append(f"{resource}:write")
+    return Role(role_id, tuple(sorted(permissions)))
 
 
 def surface_to_ir(
@@ -243,11 +471,12 @@ def surface_to_ir(
     entities: tuple[Entity, ...] | None = None,
 ) -> ApplicationIR:
     """Build a validate_ir-clean ApplicationIR for one surface of the proposed ecosystem."""
-    entities = entities or DOMAIN_ENTITIES.get(proposal.domain, DOMAIN_ENTITIES["custom-application"])
-    roles = _roles_for(proposal)
-    role_id = _role_id(surface.actor)
-    if role_id not in {r.id for r in roles}:
-        role_id = roles[0].id
+    source_entities = entities or DOMAIN_ENTITIES.get(proposal.domain, DOMAIN_ENTITIES["custom-application"])
+    selected_names = _primary_entity_names(proposal, surface, source_entities)
+    writable_names = _writable_entity_names(proposal, surface, selected_names)
+    entities = _relation_closure(source_entities, selected_names)
+    role_id = _role_id(surface.actor) or "user"
+    roles = (_role_for_surface(role_id, entities, writable_names),)
     ir = ApplicationIR(
         name=surface.name,
         description=f"{surface.description} (part of the {proposal.domain} platform generated by OmniStackAI)",
@@ -262,8 +491,16 @@ def surface_to_ir(
         ),
         roles=roles,
         entities=entities,
-        apis=_derive_apis(entities),
-        screens=_derive_screens(entities, role_id),
+        apis=_derive_apis(
+            entities,
+            writable_entities=writable_names,
+            role_id=role_id,
+        ),
+        screens=_derive_screens(
+            tuple(entity for entity in entities if entity.name in selected_names),
+            role_id,
+            writable_names,
+        ),
     )
     ir = normalize_ir(ir)
     issues = validate_ir(ir)
