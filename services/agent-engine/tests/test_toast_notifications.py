@@ -163,7 +163,7 @@ class ToastNotificationsTests(unittest.TestCase):
         self.assertEqual(file.content, self.toast_content)
 
     def test_layout_imports_and_wraps_toast_provider(self) -> None:
-        self.assertIn('import { ToastProvider } from "../components/toast";', self.layout_content)
+        self.assertIn('import { ToastProvider } from "@/components/toast";', self.layout_content)
         self.assertIn("<ToastProvider>", self.layout_content)
         self.assertIn("</ToastProvider>", self.layout_content)
         self.assertIn("<Navbar />", self.layout_content)
@@ -172,7 +172,7 @@ class ToastNotificationsTests(unittest.TestCase):
     def test_collection_screen_wires_use_toast(self) -> None:
         screen = next(s for s in self.ir.screens if s.id == "posts")
         content = render_screen_page(screen, self.ir)
-        self.assertIn('import { useToast } from "../components/toast";', content)
+        self.assertIn('import { useToast } from "@/components/toast";', content)
         self.assertIn("const { toast } = useToast();", content)
 
     def test_collection_screen_csv_export_triggers_toast(self) -> None:
@@ -193,7 +193,7 @@ class ToastNotificationsTests(unittest.TestCase):
     def test_detail_screen_wires_use_toast_and_feedback(self) -> None:
         screen = next(s for s in self.ir.screens if s.id == "post_detail")
         content = render_screen_page(screen, self.ir)
-        self.assertIn('import { useToast } from "../components/toast";', content)
+        self.assertIn('import { useToast } from "@/components/toast";', content)
         self.assertIn("const { toast } = useToast();", content)
         self.assertIn('toast.info("Exported JSON successfully");', content)
         self.assertIn('toast.success("Post deleted successfully");', content)
@@ -202,7 +202,7 @@ class ToastNotificationsTests(unittest.TestCase):
     def test_form_screen_wires_use_toast_and_feedback(self) -> None:
         screen = next(s for s in self.ir.screens if s.id == "post_form")
         content = render_screen_page(screen, self.ir)
-        self.assertIn('import { useToast } from "../components/toast";', content)
+        self.assertIn('import { useToast } from "@/components/toast";', content)
         self.assertIn("const { toast } = useToast();", content)
         self.assertIn('toast.success(isEdit ? "Post updated successfully" : "Post created successfully");', content)
         self.assertIn('toast.error(err instanceof Error ? err.message : (isEdit ? "Failed to update Post" : "Failed to create Post"));', content)

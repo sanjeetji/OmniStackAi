@@ -201,7 +201,7 @@ class SubcollectionDeletionTests(unittest.TestCase):
         page = render_screen_page(screen, ir)
 
         self.assertIn("useDeleteComment", page)
-        self.assertIn('import { useListCommentsByArticle, useDeleteComment } from "../lib/hooks";', page)
+        self.assertIn('import { useListCommentsByArticle, useDeleteComment } from "@/lib/hooks";', page)
 
     def test_collection_screen_instantiates_delete_hook(self) -> None:
         ir = _deletable_subcol_ir()

@@ -1,5 +1,17 @@
 # Work Log
 
+## 2026-09-13 — R-428 (generated web app compiles — opt-in tsc gate + fix the bugs it reveals)
+
+- **Chosen approach (founder): compile gate + fix all.** Added an opt-in, live TypeScript typecheck gate — `task agent-engine:web-typecheck -- <example> [out-dir]` (`scripts/agent-engine.sh web-typecheck` + Taskfile) — that generates an example app, `pnpm install --ignore-scripts`, and runs `./node_modules/.bin/tsc --noEmit`. Never run by `task verify`.
+- Ran it (and `next dev`) on a generated `minimal-blog` app; fixed the RUN-BLOCKING generator bugs:
+  - `codegen/nextjs.py` search input: `onChange={(e) => {{ ... }}}}` and clear `onClick={() => {{ ... }}}}` had extra literal braces (regular strings, not f-strings) → `=> { ... }}`.
+  - `components/pdf-viewer.tsx`: a raw string `r"...;\n"` made the trailing `\n` a literal backslash-n (TS1127 invalid character) → ended the raw string before `\n` and appended a real newline via adjacent concatenation.
+  - Nested screen pages imported `../components/`/`../lib/` (module-not-found one folder deep) → switched all 24 generator import sites to the `@/` path alias (tsconfig `@/* -> ./*`), which resolves from any depth.
+- Verified end-to-end: regenerated `minimal-blog`, `pnpm install`, `next dev` → `/`, `/post_list`, `/post_editor` all serve **HTTP 200** (were 500), 0 module-resolution errors in generated code, 0 compile errors in `next dev`.
+- Added `tests/test_generated_tsx_compile.py` (3 tests): forbids over-braced handlers (`=> {{`), depth-relative `../components|../lib` imports, and literal backslash-n in generated `.tsx` (alongside R-427's style test). Updated 9 screen/layout test files' import assertions from `../` to `@/` (25 assertions).
+- Gates: focused 6 (+117 in the updated screen tests) passed; `task verify` **2,873** passed; lint/security/env green; both builder demos (152 / 149) pass. **0 model calls in verify.**
+- **Remaining (follow-up R-429):** ~82 strict TYPE errors in the component library (TS2323 duplicate exports, TS2339 `displayName` on function components, TS2430/TS2322 prop-type conflicts). These do NOT block `next dev`/preview; they would fail a production `next build`/strict typecheck. The `web-typecheck` gate reports them.
+
 ## 2026-09-13 — R-427 (fix malformed single-brace inline styles in generated Next.js screens)
 
 - **Found while running a generated app via the Studio preview:** the backend was healthy (`/posts` 200) but the generated Next.js web app returned HTTP 500 with an SWC syntax error `Expected '</', got ':'` at `app/post_editor/page.tsx` — a single-brace JSX inline style `style={ fontSize: 12, ... }` (JSX requires double braces). Scanning a generated app found 3 offenders in 2 files; scanning the generator found the root cause.

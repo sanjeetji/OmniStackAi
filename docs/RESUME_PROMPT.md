@@ -41,7 +41,7 @@ START PROTOCOL
   `task ai:status`, `task ai:handoff`. `task verify` must stay green and network-independent.
 - Confirm git branch/HEAD/clean tree. Then restate: phase, next Tracker ID, objective, blast radius.
 
-WHAT IS ALREADY BUILT (platform generators are Python 3.13 stdlib-only, offline, in services/agent-engine; 2,870 tests pass)
+WHAT IS ALREADY BUILT (platform generators are Python 3.13 stdlib-only, offline, in services/agent-engine; 2,873 tests pass)
 - Model fabric: ModelProvider contract + registry; local Ollama adapter (runs any installed model via
 
 
@@ -200,16 +200,16 @@ R-316 accessible reusable Alert & Notification component (components/alert.tsx),
 Skeleton Loader component (components/skeleton.tsx), R-318 accessible reusable Drawer / Sheet component (components/drawer.tsx), R-319 accessible reusable Avatar component (components/avatar.tsx), R-320 accessible reusable Toggle Switch component (components/toggle.tsx), R-321 accessible reusable Accordion component (components/accordion.tsx), R-322 accessible reusable Dropdown Menu component (components/dropdown-menu.tsx), R-323 accessible reusable Popover component (components/popover.tsx), R-324 Design Tokens & CSS Custom Properties theming engine (styles/tokens.css), R-325 Theme Switcher / Mode Toggle component (components/theme-toggle.tsx), R-326 accessible reusable Dialog / Modal component (components/dialog.tsx), R-327 accessible reusable Form Controls & Input Primitives suite (components/form-controls.tsx), R-328 accessible reusable Date Picker & Calendar component (components/date-picker.tsx), R-329 accessible reusable Data Grid / Table component (components/data-grid.tsx), R-330 accessible reusable Command Palette / Search Menu component (components/command-palette.tsx), R-331 accessible reusable Slider & Range component (components/slider.tsx), R-332 accessible reusable Progress & Spinner component (components/progress.tsx), R-333 accessible reusable Rating & Review component (components/rating.tsx), R-334 accessible reusable Stepper / Multi-step Wizard component (components/stepper.tsx), R-335 accessible reusable File Upload / Dropzone component (components/file-upload.tsx), R-336 accessible reusable Timeline / Activity Feed component (components/timeline.tsx), R-337 accessible futuristic Stat & Metric KPI Card component (components/stat-card.tsx), R-338 accessible reusable Hierarchical Tree View component (components/tree-view.tsx), R-339 accessible futuristic Tag & Chip Input Tokenizer component (components/tag-input.tsx), R-340 accessible futuristic Code Block & Syntax Presentation component (components/code-block.tsx), R-341 accessible futuristic Radial Gauge & Activity Rings component (components/radial-gauge.tsx), R-342 accessible futuristic Segmented Control & Mode Switcher component (components/segmented-control.tsx), R-343 accessible futuristic Carousel & Slider Showcase component (components/carousel.tsx), R-344 accessible futuristic Resizable Panels & Splitter component (components/resizable.tsx), R-345 accessible futuristic Color Picker & Palette Swatch component (components/color-picker.tsx), R-346 accessible futuristic PIN & OTP Code Input component (components/pin-input.tsx), R-347 Speed Dial & Floating Action Button component (components/speed-dial.tsx), R-348 Accessible Futuristic Reusable Context Menu Suite (components/context-menu.tsx), R-349 Accessible Futuristic Reusable Hover Card Suite (components/hover-card.tsx), R-350 Accessible Futuristic Reusable Scroll Area Suite (components/scroll-area.tsx), R-351 Accessible Futuristic Reusable Collapsible Component (components/collapsible.tsx), R-352 Accessible Futuristic Reusable Aspect Ratio Viewport Container Component (components/aspect-ratio.tsx), R-353 Accessible Futuristic Reusable Separator Component (components/separator.tsx), R-354 Accessible Futuristic Reusable Keyboard Keycap Component (components/kbd.tsx), R-355 Accessible Futuristic Reusable Radio Group Suite (components/radio-group.tsx), R-356 Accessible Futuristic Reusable Checkbox & Checkbox Group Primitive (components/checkbox.tsx), R-357 Accessible Futuristic Reusable Announcement Banner & Callout Suite (components/banner.tsx), and R-358 Accessible Futuristic Reusable Searchable Combobox & Autocomplete Primitive (components/combobox.tsx).
 Do NOT overwrite backlog rows; continue from R-359.
 NOTE: the execution tracker's planned universe ends at R-358 (358 tasks: 147 Done, 1 Deferred, 210 Not
-Started; MVP 147/253 = 58.1%). Work past R-358 now covers 69 completed tasks: 57 reusable UI-component
+Started; MVP 147/253 = 58.1%). Work past R-358 now covers 70 completed tasks: 57 reusable UI-component
 suites (R-359 -> R-415), four front-door bricks (R-416 -> R-419), generated-SQL hardening (R-420),
 managed embedded trusted-local Studio preview (R-421), collision-free preview ports + status/stop/
 restart controls (R-422), build history + re-preview (R-423), live preview status (R-424), per-build
-repo actions - copy path + open folder (R-425), remove-from-history (R-426), and a generated-JSX
-inline-style fix (R-427).
+repo actions - copy path + open folder (R-425), remove-from-history (R-426), a generated-JSX
+inline-style fix (R-427), and generated-app compile fixes + an opt-in tsc gate (R-428).
 The generated component library is 110 components. Its UI-COMPONENT SERIES IS PAUSED at R-415
 (resumable under a future free ID; each component is independent/additive, nothing decays). Git, state files
 (.ai/), CHANGELOG, and docs/PROGRESS.md remain the executable/detail sources of truth. Current through
-R-427; `task verify` = 2,870 tests. R-416 added prompt-to-IR intake, R-417 materialized a generated
+R-428; `task verify` = 2,873 tests. R-416 added prompt-to-IR intake, R-417 materialized a generated
 owned repo, R-418 added the local chat studio, R-419 added turnkey local run, and R-420 fixed the two
 SQL defects found by live execution. R-421 added an explicit `task agent-engine:studio:preview` mode:
 one managed generated-app session, API/web readiness, replacement/shutdown cleanup, port-collision
@@ -232,8 +232,16 @@ generated-code bug found by running a generated app through the preview: 14 f-st
 codegen/nextjs.py emitted single-brace `style={ ... }` (invalid JSX -> web app HTTP 500); fixed to
 `style={{{{ ... }}}}` (valid `style={{ ... }}`) with a regression test (test_generated_screen_styles.py)
 forbidding single-brace object-literal styles. `task verify` never caught it because it checks generated
-code as strings and never compiles the TSX -- a broader generated-TSX compile/lint gate is a candidate.
-`studio:serve` remains build-only. No tracker workbook row exists past R-358.
+code as strings and never compiles the TSX. R-428 then closed that gap for the whole generated app: it
+added an OPT-IN typecheck gate (`task agent-engine:web-typecheck` -> builder-demo + `pnpm install
+--ignore-scripts` + `tsc --noEmit`; kept OUT of `task verify` so verify stays offline/deterministic) and
+fixed every run-blocking bug the gate revealed in codegen/nextjs.py: over-braced arrow handlers in the
+f-string search input (`=> {{ ... }}}}` -> `=> { ... }}`), a pdf-viewer raw-string that emitted a literal
+`\n` (TS1127), and 24 nested-screen import sites using `../components`/`../lib` -> `@/components`/`@/lib`
+(the generated tsconfig `@/*` alias resolves from any depth). A regression test
+(test_generated_tsx_compile.py) forbids all three classes across both example IRs. A generated minimal-blog
+now serves `/`, `/post_list`, `/post_editor` at HTTP 200 (were 500). `studio:serve` remains build-only. No
+tracker workbook row exists past R-358.
 
 
 ENVIRONMENT LIMITS
@@ -265,10 +273,14 @@ RULES (non-negotiable)
   SHA == local HEAD. Never claim unexecuted tests.
 
 WHAT TO DO NEXT
-- R-427 is DONE (fixed single-brace JSX inline styles in generated screens; regression test forbids them).
-  Propose **R-428** and write `.ai/CURRENT_TASK.yaml` plus `.ai/tasks/R-428.md` before coding. Candidate scope:
-  a build-in-progress state in the preview surface, a "clear all history" action, or a broader generated-TSX
-  compile/lint gate to catch this class of bug automatically. Preserve single-session ownership, explicit
+- R-428 is DONE (generated apps now compile: opt-in `task agent-engine:web-typecheck` gate + fixed the
+  run-blocking bugs it revealed; regression test forbids them). The run-blocking bugs are gone and generated
+  screens render, but ~82 strict *type* errors remain in the generated component library (TS2323 duplicate
+  exports, TS2339 `displayName` on function components, TS2430/TS2322 prop-type conflicts). They do NOT block
+  `next dev`/the Studio preview but WOULD fail a production `next build`.
+  Propose **R-429** and write `.ai/CURRENT_TASK.yaml` plus `.ai/tasks/R-429.md` before coding: strict-type
+  cleanup of the generated component library so a generated app passes `tsc --noEmit` clean (extend the
+  web-typecheck gate to assert a clean exit once fixed). Preserve single-session ownership, explicit
   trusted-local mode, secret-free payloads, and model/Docker/DB/install/network-independent `task verify`.
 - The UI-component series remains paused at R-415 and can be resumed later under a future free ID.
 - PROVEN THIS SESSION: a generated app runs live locally on the Mac (Next.js :3000 + FastAPI :8000 +
@@ -278,7 +290,7 @@ WHAT TO DO NEXT
   deploy (OMNISTACKAI_TIER=2 + E2B/Vercel keys) and cloud-model live-verify. Governance-deferred: native
   mobile (R-010 etc.) until web/backend stability.
 
-Begin by reading the files above and running the start protocol, then propose R-428 with its Standard AI
+Begin by reading the files above and running the start protocol, then propose R-429 with its Standard AI
 Task Contract before writing code.
 
 ```

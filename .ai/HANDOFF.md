@@ -1,15 +1,16 @@
 # Current Handoff
 
-Task ID: R-427
+Task ID: R-428
 Status: done
 Phase: BASIC/MVP — Founder Stage 0
 Branch: `main` (the only branch; the GitHub default)
 
-> **Generated web apps now compile — a real JSX bug is fixed.** UI-component series PAUSED at R-415 (110 components, resumable). Front door: **R-416**–**R-426** (chat → create → run → preview + history/controls). **R-427** fixed a generated-code bug (single-brace JSX inline styles → HTTP 500) found via the live preview. **⚠ To see it work in the Studio, restart `task agent-engine:studio:preview`** — the running instance still holds the OLD generator in memory. **RECOMMENDED NEXT: R-428** = a build-in-progress preview state, a "clear all history" action, or a broader generated-TSX compile/lint gate.
+> **Generated apps now compile and RENDER in the preview.** UI-component series PAUSED at R-415 (110 components, resumable). Front door: **R-416**–**R-426** (chat → create → run → preview + history/controls) · **R-427** JSX inline-style fix · **R-428** compile fixes + opt-in `tsc` gate. A generated `minimal-blog` app now serves `/`, `/post_list`, `/post_editor` at HTTP 200 (were 500). **⚠ Restart `task agent-engine:studio:preview` to load the fixed generator**, then a fresh build's screens render. **RECOMMENDED NEXT: R-429** = strict TYPE cleanup of the component library (~82 tsc errors; block `next build`, not `next dev`).
 
 ## Repo/workflow state
 
-- **R-427 (generated JSX inline-style fix)** shipped: 14 f-string `style={{ … }}` templates in `codegen/nextjs.py` collapsed to single-brace `style={ … }` (invalid JSX → generated web app 500). Fixed to `{{{{ … }}}}` (f-string lines only; raw/regular templates untouched) + a regression test (`test_generated_screen_styles.py`) that forbids single-brace object-literal styles in generated `.tsx`. Found via the Studio preview (backend healthy, web 500). 3 focused tests, `task verify` **2,870** pass; lint/security/env and both demos (152/149) green; 0 model calls. Single commit authored `sanjeetji <sk698166@gmail.com>`.
+- **R-428 (generated-app compile fixes + opt-in tsc gate)** shipped: added `task agent-engine:web-typecheck` (generate + pnpm install + `tsc --noEmit`, opt-in/live). Fixed the run-blocking generator bugs it revealed — over-braced event handlers (`=> {{`), a `pdf-viewer.tsx` literal `\n`, and screen import depth (switched `../components/`/`../lib/` → the `@/` alias at 24 sites). Verified: generated `minimal-blog` compiles under `next dev`, `/`,`/post_list`,`/post_editor` → 200. Added `test_generated_tsx_compile.py` + updated 9 screen-test files (`../` → `@/`). `task verify` **2,873** pass; lint/security/env + demos green; 0 model calls. **Remaining → R-429:** ~82 strict TYPE errors in the component library (don't block `next dev`; fail `next build`). Single commit authored `sanjeetji <sk698166@gmail.com>`.
+- **R-427 (generated JSX inline-style fix)** shipped: 14 f-string `style={{ … }}` → `{{{{ … }}}}` (single-brace JSX styles were causing HTTP 500) + a regression test.
 - **R-426 (remove from history)** shipped: `StudioBuildHistory.remove(id)` + `POST /api/history/delete {id}` (in-memory, both modes) + a per-build "Remove" button.
 - **R-425 (per-build repo actions)** shipped: Recent builds items have Copy path (client clipboard, both modes) and Open folder (`POST /api/history/open {id}`, trusted-local) via injected `open_dir_fn` + generic `_run_id_control`.
 - **R-424 (live preview status)** shipped: `LocalAppSession.is_alive()` + liveness-aware `StudioPreviewManager.status()` + page polling of `GET /api/preview` (no iframe reload on unchanged URL).

@@ -139,12 +139,12 @@ class SubcollectionCollectionScreenTests(TestCase):
         self.page = render_screen_page(self.post_list_screen, self.ir)
 
     def test_post_list_screen_imports_subcollection_hook(self) -> None:
-        self.assertIn('import { useListPosts } from "../lib/hooks";', self.page)
-        self.assertIn('import { useListCommentsByPost } from "../lib/hooks";', self.page)
+        self.assertIn('import { useListPosts } from "@/lib/hooks";', self.page)
+        self.assertIn('import { useListCommentsByPost } from "@/lib/hooks";', self.page)
 
     def test_post_list_screen_imports_child_type(self) -> None:
-        self.assertIn('import type { Post } from "../lib/types";', self.page)
-        self.assertIn('import type { Comment } from "../lib/types";', self.page)
+        self.assertIn('import type { Post } from "@/lib/types";', self.page)
+        self.assertIn('import type { Comment } from "@/lib/types";', self.page)
 
     def test_post_list_screen_declares_selection_state(self) -> None:
         self.assertIn("const [selectedId, setSelectedId] = useState<string | null>(null);", self.page)

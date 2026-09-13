@@ -159,6 +159,11 @@ tasks:
     cmds:
       - bash scripts/agent-engine.sh app-run {{.CLI_ARGS}}
 
+  agent-engine:web-typecheck:
+    desc: 'TypeScript-typecheck a generated example app''s web target with tsc --noEmit (opt-in, live; needs pnpm; CLI_ARGS - [example] [out-dir])'
+    cmds:
+      - bash scripts/agent-engine.sh web-typecheck {{.CLI_ARGS}}
+
   agent-engine:preview-plan:
     desc: Print the local (Tier 0/1) preview plan for a generated target (default nextjs-web)
     cmds:

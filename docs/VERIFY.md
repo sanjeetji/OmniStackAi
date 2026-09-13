@@ -47,3 +47,24 @@ task agent-engine:verify-plan -- nextjs-web
 
 `run_verify` is the only part that executes anything, and it is opt-in. `task verify` (the platform's
 own Stage 0 gate) stays network-independent and never installs, builds, or runs generated code.
+
+## Opt-in generated-app typecheck gate — `task agent-engine:web-typecheck` (R-428)
+
+`task verify` asserts generated code as **strings** and never compiles the TSX, so a generated app can pass
+verify yet fail to compile in the browser. To close that gap without making verify network-dependent, R-428
+added an **opt-in** end-to-end typecheck gate:
+
+```bash
+task agent-engine:web-typecheck                     # defaults to the minimal-blog example
+task agent-engine:web-typecheck -- rideshare-favourites [outdir]
+```
+
+It generates a real app via `scripts/builder-demo.sh`, runs `pnpm install --ignore-scripts` (the `sharp`
+ignored-build makes plain `pnpm install` exit 1), then `tsc --noEmit` in `apps/web`. It needs `pnpm` and
+network access, so it is **kept OUT of `task verify`** — run it manually on a toolchain machine. Fast
+string-level regression guards live in `tests/test_generated_screen_styles.py` (single-brace JSX styles)
+and `tests/test_generated_tsx_compile.py` (over-braced arrow handlers, `../components`/`../lib` relative
+imports, raw-string literal `\n`); these DO run under `task verify` and catch the known compile-breaking
+classes offline. As of R-428 the run-blocking bugs are fixed (a generated minimal-blog renders `/`,
+`/post_list`, `/post_editor` at HTTP 200); ~82 strict *type* errors remain in the component library and are
+scoped to R-429 — until then `tsc --noEmit` still reports those, so treat a clean exit as the R-429 goal.

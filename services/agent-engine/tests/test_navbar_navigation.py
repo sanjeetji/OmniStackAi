@@ -66,7 +66,7 @@ class NavbarNavigationTests(TestCase):
         self.assertIn("components/navbar.tsx", set(self.project.paths()))
 
     def test_layout_imports_and_renders_navbar(self) -> None:
-        self.assertIn('import { Navbar } from "../components/navbar";', self.layout)
+        self.assertIn('import { Navbar } from "@/components/navbar";', self.layout)
         self.assertIn("<Navbar />", self.layout)
         self.assertIn("{children}", self.layout)
 

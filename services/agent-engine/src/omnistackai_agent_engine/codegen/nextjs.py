@@ -1564,11 +1564,11 @@ def _collection_screen_page(screen: Screen, entity: Entity, ir: ApplicationIR, o
         'import { useEffect, useState } from "react";',
         'import { useRef } from "react";',
         'import Link from "next/link";',
-        'import { useToast } from "../components/toast";',
+        'import { useToast } from "@/components/toast";',
         *([
-            'import { useConfirm, ConfirmDialog } from "../components/confirm-dialog";',
+            'import { useConfirm, ConfirmDialog } from "@/components/confirm-dialog";',
         ] if uses_confirm else []),
-        f'import {{ {hooks_import} }} from "../lib/hooks";',
+        f'import {{ {hooks_import} }} from "@/lib/hooks";',
     ]
 
     if has_subcollections:
@@ -1578,14 +1578,14 @@ def _collection_screen_page(screen: Screen, entity: Entity, ir: ApplicationIR, o
                 del_hook = f"useDelete{sub.child_entity.name}"
                 if del_hook not in subcol_hook_names and (not can_delete or del_hook != f"useDelete{name}"):
                     subcol_hook_names.append(del_hook)
-        lines.append(f'import {{ {", ".join(subcol_hook_names)} }} from "../lib/hooks";')
+        lines.append(f'import {{ {", ".join(subcol_hook_names)} }} from "@/lib/hooks";')
 
-    lines.append(f'import type {{ {name} }} from "../lib/types";')
+    lines.append(f'import type {{ {name} }} from "@/lib/types";')
 
     if has_subcollections:
         child_type_names = list(dict.fromkeys(sub.child_entity.name for sub in subcollections if sub.child_entity.name != name))
         if child_type_names:
-            lines.append(f'import type {{ {", ".join(child_type_names)} }} from "../lib/types";')
+            lines.append(f'import type {{ {", ".join(child_type_names)} }} from "@/lib/types";')
 
     lines.extend([
         "",
@@ -1895,16 +1895,16 @@ def _collection_screen_page(screen: Screen, entity: Entity, ir: ApplicationIR, o
         "              ref={searchInputRef}",
         f'              aria-label="Search {plural}"',
         "              value={searchInput}",
-        "              onChange={(e) => {{",
+        "              onChange={(e) => {",
         "                setSearchInput(e.target.value);",
-        "              }}}}",
+        "              }}",
         f'              placeholder="Search {plural}..."',
         '              style={{ width: "100%", padding: "8px 12px", border: "1px solid #cbd5e1", borderRadius: 6, fontSize: 14, outline: "none", boxSizing: "border-box" }}',
         "            />",
         "            {Boolean(searchInput) && (",
         "              <button",
         '                type="button"',
-        '                onClick={() => {{ setSearchInput(""); setSearch(""); searchInputRef.current?.focus(); }}}}',
+        '                onClick={() => { setSearchInput(""); setSearch(""); searchInputRef.current?.focus(); }}',
         '                aria-label="Clear search"',
         '                style={{ position: "absolute", right: 8, background: "transparent", border: "none", color: "#94a3b8", cursor: "pointer", fontSize: 16, lineHeight: 1, padding: 2 }}',
         "              >",
@@ -2706,12 +2706,12 @@ def _form_screen_page(screen: Screen, entity: Entity, ir: ApplicationIR, ops: se
         lines.append('import { useSearchParams } from "next/navigation";')
 
     lines.append('import Link from "next/link";')
-    lines.append('import { useToast } from "../components/toast";')
-    lines.append('import { Breadcrumbs } from "../components/breadcrumbs";')
+    lines.append('import { useToast } from "@/components/toast";')
+    lines.append('import { Breadcrumbs } from "@/components/breadcrumbs";')
     imported_hooks: set[str] = set()
     if can_create:
         imported_hooks.add(f"useCreate{name}")
-        lines.append(f'import {{ useCreate{name} }} from "../lib/hooks";')
+        lines.append(f'import {{ useCreate{name} }} from "@/lib/hooks";')
     if can_update:
         update_hooks = []
         if has_get:
@@ -2719,16 +2719,16 @@ def _form_screen_page(screen: Screen, entity: Entity, ir: ApplicationIR, ops: se
             imported_hooks.add(f"use{name}")
         update_hooks.append(f"useUpdate{name}")
         imported_hooks.add(f"useUpdate{name}")
-        lines.append(f'import {{ {", ".join(update_hooks)} }} from "../lib/hooks";')
+        lines.append(f'import {{ {", ".join(update_hooks)} }} from "@/lib/hooks";')
 
     parent_hooks = sorted({r.hook_name for r in parent_relations if r.hook_name not in imported_hooks})
     if parent_hooks:
-        lines.append(f'import {{ {", ".join(parent_hooks)} }} from "../lib/hooks";')
+        lines.append(f'import {{ {", ".join(parent_hooks)} }} from "@/lib/hooks";')
 
     lines.extend([
-        'import { extractFieldErrors } from "../lib/api";',
-        'import { useConfirm, ConfirmDialog } from "../components/confirm-dialog";',
-        f'import type {{ {name} }} from "../lib/types";',
+        'import { extractFieldErrors } from "@/lib/api";',
+        'import { useConfirm, ConfirmDialog } from "@/components/confirm-dialog";',
+        f'import type {{ {name} }} from "@/lib/types";',
         "",
         f"export default function {page_name}() {{",
         "  const { toast } = useToast();",
@@ -3461,15 +3461,15 @@ def _detail_screen_page(screen: Screen, entity: Entity, ir: ApplicationIR, ops: 
         'import { useState, useEffect } from "react";',
         'import { useSearchParams } from "next/navigation";',
         'import Link from "next/link";',
-        'import { useToast } from "../components/toast";',
-        'import { Breadcrumbs } from "../components/breadcrumbs";',
+        'import { useToast } from "@/components/toast";',
+        'import { Breadcrumbs } from "@/components/breadcrumbs";',
         *([
-            'import { useConfirm, ConfirmDialog } from "../components/confirm-dialog";',
+            'import { useConfirm, ConfirmDialog } from "@/components/confirm-dialog";',
         ] if uses_confirm_detail else []),
     ]
 
     if hooks_to_import:
-        lines.append(f'import {{ {", ".join(hooks_to_import)} }} from "../lib/hooks";')
+        lines.append(f'import {{ {", ".join(hooks_to_import)} }} from "@/lib/hooks";')
     if has_subcollections:
         subcol_hook_names = [sub.hook_name for sub in subcollections]
         for sub in subcollections:
@@ -3477,14 +3477,14 @@ def _detail_screen_page(screen: Screen, entity: Entity, ir: ApplicationIR, ops: 
                 del_hook = f"useDelete{sub.child_entity.name}"
                 if del_hook not in subcol_hook_names:
                     subcol_hook_names.append(del_hook)
-        lines.append(f'import {{ {", ".join(subcol_hook_names)} }} from "../lib/hooks";')
+        lines.append(f'import {{ {", ".join(subcol_hook_names)} }} from "@/lib/hooks";')
 
-    lines.append(f'import type {{ {name} }} from "../lib/types";')
+    lines.append(f'import type {{ {name} }} from "@/lib/types";')
 
     if has_subcollections:
         child_type_names = list(dict.fromkeys(sub.child_entity.name for sub in subcollections if sub.child_entity.name != name))
         if child_type_names:
-            lines.append(f'import type {{ {", ".join(child_type_names)} }} from "../lib/types";')
+            lines.append(f'import type {{ {", ".join(child_type_names)} }} from "@/lib/types";')
 
     best_title_f = next((f.name for f in entity.fields if f.name in ("title", "name", "label", "email")), None)
     if not best_title_f:
@@ -4285,7 +4285,7 @@ def _overview_page(ir: ApplicationIR) -> str:  # noqa: PLR0912
         lines.append('import Link from "next/link";')
     if listable:
         hook_names = [f"useList{plural}" for _, plural in listable]
-        lines.append(f'import {{ {", ".join(hook_names)} }} from "../lib/hooks";')
+        lines.append(f'import {{ {", ".join(hook_names)} }} from "@/lib/hooks";')
     lines.append("")
 
     # ── Component open ────────────────────────────────────────────────────────
@@ -53382,7 +53382,7 @@ _PDF_VIEWER_COMPONENT = (
     "  // Render text with highlighted matches if search query is active\n"
     "  const renderHighlighted = (text: string) => {\n"
     "    if (!searchQuery.trim()) return text;\n"
-    r"    const regex = new RegExp(`(${searchQuery.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')})`, 'gi');\n"
+    r"    const regex = new RegExp(`(${searchQuery.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')})`, 'gi');" "\n"
     "    const parts = text.split(regex);\n"
     "    return parts.map((part, i) =>\n"
     "      regex.test(part) ? (\n"
@@ -71004,8 +71004,8 @@ def render_loading_page() -> str:
 _LAYOUT = (
     'import type { Metadata } from "next";\n'
     'import "./globals.css";\n'
-    'import { Navbar } from "../components/navbar";\n'
-    'import { ToastProvider } from "../components/toast";\n\n'
+    'import { Navbar } from "@/components/navbar";\n'
+    'import { ToastProvider } from "@/components/toast";\n\n'
     "export const metadata: Metadata = {\n"
     '  title: "%s",\n'
     '  description: "%s",\n'

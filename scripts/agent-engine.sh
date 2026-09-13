@@ -148,6 +148,21 @@ if project["project"]["requires-python"] != ">=3.13,<3.14":
     export OMNISTACKAI_POSTGRES_DB="$(config_value OMNISTACKAI_POSTGRES_DB omnistackai)"
     PYTHONPATH="$source_root" python3 -m omnistackai_agent_engine.localrun.run "${2:-}"
     ;;
+  web-typecheck)
+    # Opt-in/live gate: generate an example app and TypeScript-typecheck its web target.
+    # Needs the toolchain (pnpm + tsc); never run by `task verify`.
+    require_command pnpm
+    example="${2:-minimal-blog}"
+    out="${3:-$(mktemp -d -t omnistackai-tc-XXXXXX)}"
+    bash "$repo_root/scripts/builder-demo.sh" "$example" "$out" >/dev/null
+    web_dir="$out/apps/web"
+    echo "Typechecking generated '$example' web app at $web_dir ..."
+    (
+      cd "$web_dir"
+      pnpm install --ignore-scripts >/dev/null 2>&1
+      ./node_modules/.bin/tsc --noEmit
+    )
+    ;;
   preview-plan)
     configure_python
     target="${2:-nextjs-web}"
@@ -212,7 +227,7 @@ PY
     PYTHONPATH="$source_root" python3 -c "from omnistackai_agent_engine.runtime import format_status; print(format_status())"
     ;;
   *)
-    printf 'Usage: %s {lint|test|ollama-verify|gateway-run|intake-run [description]|app-build [description]|studio-serve|app-run <repo-dir>|preview-plan [target]|verify-plan [target]|plan-show [example]|platform-status}\n' "$0"
+    printf 'Usage: %s {lint|test|ollama-verify|gateway-run|intake-run [description]|app-build [description]|studio-serve|app-run <repo-dir>|web-typecheck [example] [out-dir]|preview-plan [target]|verify-plan [target]|plan-show [example]|platform-status}\n' "$0"
     exit 2
     ;;
 esac

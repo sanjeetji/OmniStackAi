@@ -2,12 +2,27 @@ schema_version: 1
 project: OmniStackAI
 phase: BASIC/MVP
 founder_stage: 0
-current_task: R-427
+current_task: R-428
 current_status: done
 branch: main
-last_completed_task: R-427
+last_completed_task: R-428
 last_completed_task_summary: >-
-  Built R-427: fixed a real generated-code bug that made generated Next.js web apps fail to compile. Found via
+  Built R-428: made generated Next.js apps actually compile and render, and added an opt-in TypeScript
+  typecheck gate to find this class of bug. Added `task agent-engine:web-typecheck -- <example> [dir]`
+  (generate + pnpm install + tsc --noEmit; opt-in/live, never in verify). Running it (and next dev) revealed
+  and fixed the RUN-BLOCKING generated-code bugs: (1) search-input onChange / clear-button onClick handlers
+  emitted `=> {{ ... }}}}` (extra braces, JSX syntax error) -> `=> { ... }}`; (2) components/pdf-viewer.tsx had
+  a literal `\n` from a raw-string join (invalid character) -> real newline via adjacent concatenation; (3)
+  nested screen pages imported depth-relative `../components/`/`../lib/` (broke module resolution one folder
+  deep) -> the depth-independent `@/` path alias at all 24 generator import sites. Verified end-to-end: a
+  generated minimal-blog app compiles under next dev and /, /post_list, /post_editor all serve HTTP 200 (were
+  500), 0 module-resolution errors in generated code. Added test_generated_tsx_compile.py (over-braced
+  handlers, relative ../components|../lib imports, literal backslash-n) alongside R-427's style test; updated
+  9 screen/layout test files' import assertions from ../ to @/. 2,873 tests pass; lint/security/env and both
+  builder demos (152 / 149) pass; diff-invariance unaffected; 0 model calls. REMAINING (follow-up R-429): ~82
+  strict TYPE errors in the component library (duplicate exports, displayName on function components, prop-type
+  conflicts) that do NOT block next dev/preview but would fail a production next build. Previously built R-427:
+  fixed a real generated-code bug that made generated Next.js web apps fail to compile. Found via
   the Studio live preview - the backend ran fine (/posts 200) but the web app returned HTTP 500 with an SWC
   syntax error ("Expected '</', got ':'") on a single-brace JSX inline style in the generated form/list/detail
   screens. Root cause: 14 f-string templates in codegen/nextjs.py wrote style={{ ... }}, which Python collapses
@@ -434,19 +449,19 @@ product_direction: >-
   framework adapter contract -> Next.js adapter -> Git service -> preview/sandbox (needs cloud env).
 id_note: >-
   Workbook backlog owns R-010..R-219. Founder-requested tasks use IDs after R-219: R-220..R-223 done,
-  R-224 Next.js deferred (env-blocked), R-225..R-415 done, and R-416..R-427 done (front-door bricks 1-4,
+  R-224 Next.js deferred (env-blocked), R-225..R-415 done, and R-416..R-428 done (front-door bricks 1-4,
   generated-SQL hardening, embedded trusted-local preview, collision-free preview ports + controls, build
-  history + re-preview, live preview status, per-build repo actions, remove-from-history, and generated-JSX
-  inline-style fix, not components). NOTE: the UI-COMPONENT SERIES is PAUSED at R-415 (110 components,
-  resumable at a future free Tracker ID); R-416..R-427 built, hardened, and made robust the "chat -> create ->
-  run -> preview" front-door pivot instead.
+  history + re-preview, live preview status, per-build repo actions, remove-from-history, generated-JSX
+  inline-style fix, and generated-app compile fixes + opt-in tsc gate, not components). NOTE: the
+  UI-COMPONENT SERIES is PAUSED at R-415 (110 components, resumable at a future free Tracker ID);
+  R-416..R-428 built, hardened, and made robust the "chat -> create -> run -> preview" front-door pivot.
 blockers: []
 next_action: >-
-  R-427 is complete: fixed the single-brace JSX inline-style bug (14 f-string lines in codegen/nextjs.py) that
-  made generated web apps return HTTP 500, plus a regression test that forbids it. IMPORTANT: the running
-  studio:preview holds the OLD generator in memory - restart `task agent-engine:studio:preview` so a fresh
-  build's web app compiles and the embedded preview renders. Recommended next: propose R-428 - candidates are
-  a build-in-progress state in the preview surface, or a "clear all history" action; consider a broader
-  generated-TSX compile/lint gate to catch this class of bug automatically. Keep execution trusted-local/opt-in
-  and task verify deterministic and network/DB/model independent. The UI-component series remains
-  paused/resumable.
+  R-428 is complete: generated apps now compile and RENDER in the preview (fixed over-braced handlers, a
+  pdf-viewer literal newline, and screen import depth via the @/ alias); added the opt-in
+  `task agent-engine:web-typecheck` gate. IMPORTANT: restart `task agent-engine:studio:preview` so it loads
+  the fixed generator, then a fresh build's screens render (/, /post_list, /post_editor -> 200). RECOMMENDED
+  NEXT: R-429 = strict TYPE cleanup of the generated component library (~82 tsc errors: duplicate exports,
+  displayName on function components, prop-type conflicts) so generated apps pass a production next build; the
+  opt-in web-typecheck gate reports them. Keep task verify deterministic and network/DB/model independent. The
+  UI-component series remains paused/resumable.

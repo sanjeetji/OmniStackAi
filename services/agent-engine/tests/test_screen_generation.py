@@ -55,8 +55,8 @@ class ScreenGenerationTests(TestCase):
         self.assertIn('"use client";', content)
 
         # 2. Imports hook and types
-        self.assertIn('import { useListPosts } from "../lib/hooks";', content)
-        self.assertIn('import type { Post } from "../lib/types";', content)
+        self.assertIn('import { useListPosts } from "@/lib/hooks";', content)
+        self.assertIn('import type { Post } from "@/lib/types";', content)
 
         # 3. Hook usage and data binding
         self.assertIn("useListPosts()", content)
@@ -105,8 +105,8 @@ class ScreenGenerationTests(TestCase):
         self.assertIn('"use client";', content)
 
         # 2. Imports mutation hook and types
-        self.assertIn('import { useCreatePost } from "../lib/hooks";', content)
-        self.assertIn('import type { Post } from "../lib/types";', content)
+        self.assertIn('import { useCreatePost } from "@/lib/hooks";', content)
+        self.assertIn('import type { Post } from "@/lib/types";', content)
 
         # 3. Hook usage
         self.assertIn("useCreatePost()", content)

@@ -3336,3 +3336,20 @@ makes the generated app fail to compile (HTTP 500). `tests/test_generated_screen
 projects and forbids any single-brace object-literal inline style in the output, so this cannot regress.
 (Note: `task verify` asserts generated code as strings and does not compile the TSX — keep emitted TSX correct
 by construction.)
+
+## Generated intra-app imports — always use the `@/` alias (R-428)
+
+Generated `apps/web/tsconfig.json` declares `"paths": { "@/*": ["./*"] }`, so app-internal imports must use
+the `@/` alias, never a relative `../` walk:
+
+- correct:   `import { Button } from "@/components/button";`  (resolves from any page depth)
+- incorrect: `import { Button } from "../components/button";` (breaks in nested `app/<screen>/page.tsx` — the
+  page is two-plus directories deep, so `../components` points outside `apps/web` and the module is not found)
+
+Screen pages live at varying depths (`app/page.tsx`, `app/post_list/page.tsx`, …), so a fixed `../` prefix
+cannot be correct for all of them; the alias is depth-independent and is the only correct form.
+`tests/test_generated_tsx_compile.py` forbids `from "../components/…"` / `from "../lib/…"` (both quote
+styles) across both example IRs, alongside over-braced arrow handlers (`=> {{`) and raw-string literal `\n`,
+so these compile bugs cannot regress. The opt-in `task agent-engine:web-typecheck` gate compiles a generated
+app end-to-end (builder-demo + `pnpm install --ignore-scripts` + `tsc --noEmit`) to catch anything the string
+assertions miss; it is intentionally kept OUT of `task verify` so verify stays offline and deterministic.

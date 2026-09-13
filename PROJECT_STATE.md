@@ -4,10 +4,23 @@ Last updated: 2026-09-13
 ## Current Phase
 Stage 0 (Founder Build Sequence, Brief Section 91) — BASIC/MVP
 
-> **Generated web apps now compile — a real JSX bug is fixed.** UI-component series PAUSED at R-415 (110 components, resumable). Front door: **R-416**–**R-426** (chat → create → run → preview + history/controls) · **R-427** fixed a generated-code bug (single-brace JSX inline styles → HTTP 500). **⚠ Restart `task agent-engine:studio:preview` to pick up the fix** (the running instance holds the old generator). Recommended next: **R-428**, a build-in-progress preview state, "clear all history", or a generated-TSX compile/lint gate.
+> **Generated apps now compile and RENDER in the preview.** UI-component series PAUSED at R-415 (110 components, resumable). Front door: **R-416**–**R-426** (chat → create → run → preview + history/controls) · **R-427** JSX inline-style fix · **R-428** compile fixes + opt-in `tsc` gate (a generated app's `/`, `/post_list`, `/post_editor` now serve 200; were 500). **⚠ Restart `task agent-engine:studio:preview` to load the fixed generator.** Recommended next: **R-429**, strict TYPE cleanup of the component library (~82 tsc errors; block `next build`, not `next dev`).
 
 ## Last Completed Task
-Tracker ID: R-427 — Fix malformed single-brace inline styles in generated Next.js screens — DONE. Found via the
+Tracker ID: R-428 — Generated web app compiles: opt-in tsc typecheck gate + fix the bugs it reveals — DONE.
+Added `task agent-engine:web-typecheck -- <example> [dir]` (generate + pnpm install + `tsc --noEmit`;
+opt-in/live, never in verify). Running it (and `next dev`) revealed and fixed the RUN-BLOCKING generated-code
+bugs: over-braced event handlers (`onChange={(e) => {{ … }}}}` → `=> { … }}`), a `components/pdf-viewer.tsx`
+literal `\n` from a raw-string join, and nested screen import depth (switched `../components/`/`../lib/` → the
+depth-independent `@/` path alias at 24 sites). Verified end-to-end: a generated `minimal-blog` app compiles
+under `next dev` and `/`, `/post_list`, `/post_editor` all serve HTTP 200 (were 500). Added
+`test_generated_tsx_compile.py` (forbids over-braced handlers, relative `../components|../lib` imports, literal
+backslash-n) and updated 9 screen/layout test files' import assertions to `@/`. `task verify` **2,873 tests**
+pass; lint/security/env and both demos (152 / 149) pass; 0 model calls. Remaining (follow-up R-429): ~82 strict
+TYPE errors in the component library (duplicate exports, `displayName`, prop-type conflicts) that do NOT block
+`next dev`/preview but fail a production `next build`.
+
+Immediately preceded by R-427 — Fix malformed single-brace inline styles in generated Next.js screens — DONE. Found via the
 Studio live preview: the generated backend ran fine (`/posts` 200) but the Next.js web app returned HTTP 500
 with an SWC syntax error (`Expected '</', got ':'`) on a single-brace JSX inline style. Root cause: 14 f-string
 templates in `codegen/nextjs.py` (screen header role badges, `<h1>`/`<h2>` titles, detail `<dt>`/`<dd>` lists)

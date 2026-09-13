@@ -1,4 +1,4 @@
-# OmniStackAI — implementation progress (as of R-427)
+# OmniStackAI — implementation progress (as of R-428)
 
 A living summary of what is built, what is pending, and how to see results. Numbers come from the
 execution tracker (`R_&_D/OmniStackAI_Execution_Tracker_v6.xlsx`, `Phase_Roadmap`) plus the state
@@ -6,15 +6,16 @@ files (`.ai/`), Git history, and CHANGELOG for work done past the tracker's last
 
 ## Headline
 
-- **2,870 automated tests pass**, fully offline and network-independent (`task verify`).
+- **2,873 automated tests pass**, fully offline and network-independent (`task verify`).
 - **147 tracker tasks Done, 1 Deferred, 210 Not Started** across 358 tasks (the tracker's planned
   universe ends at R-358).
-- **Plus 69 completed tasks beyond the workbook (R-359 → R-427)**: 57 reusable UI-component suites,
+- **Plus 70 completed tasks beyond the workbook (R-359 → R-428)**: 57 reusable UI-component suites,
   four front-door bricks, R-420 generated-SQL hardening, R-421 managed embedded local preview,
   R-422 collision-free preview ports + status/stop/restart controls, R-423 build history + re-preview,
-  R-424 live preview status, R-425 per-build repo actions, R-426 remove-from-history, and R-427 a
-  generated-JSX inline-style fix. The generated Next.js component library remains at **110 components**;
-  its component series is **PAUSED at R-415** and fully resumable.
+  R-424 live preview status, R-425 per-build repo actions, R-426 remove-from-history, R-427 a
+  generated-JSX inline-style fix, and R-428 generated-app compile fixes + an opt-in `tsc` gate. The
+  generated Next.js component library remains at **110 components**; its component series is **PAUSED at
+  R-415** and fully resumable.
 - The generated app was **run live locally end-to-end this session** (Next.js web on `:3000` +
   FastAPI on `:8000` + seeded PostgreSQL) — proving the offline builder output actually runs on a Mac.
 - **R-420 closed both SQL defects exposed by that run:** generator-owned PostgreSQL identifiers are
@@ -40,6 +41,11 @@ files (`.ai/`), Git history, and CHANGELOG for work done past the tracker's last
 - **R-427 makes generated apps actually compile:** running a generated app through the preview exposed a JSX
   bug — 14 f-string templates emitted single-brace `style={ … }` (invalid). Fixed to `style={{ … }}` with a
   regression test that forbids it, so a fresh build's web app now compiles and renders in the preview.
+- **R-428 makes generated apps render + adds a compile gate:** an opt-in `task agent-engine:web-typecheck`
+  runs `tsc --noEmit` on a generated app. It surfaced (and R-428 fixed) the run-blocking bugs — over-braced
+  event handlers, a `pdf-viewer` literal newline, and screen import depth (`../components/` → the `@/` alias).
+  A generated `minimal-blog` now serves `/`, `/post_list`, `/post_editor` at HTTP 200 (were 500). Remaining:
+  ~82 strict TYPE errors in the component library (block `next build`, not `next dev`) → follow-up R-429.
 
 ## UI Component Series — status: PAUSED at R-415 (resumable)
 
@@ -285,11 +291,13 @@ build), R-424 live preview status (liveness-aware `status()` + page polling of `
 preview whose processes exit is reported as stopped rather than shown stale), R-425 per-build repo actions
 (Copy path + Open folder on each Recent-builds item, connecting the Studio to the owned generated repo on
 disk), R-426 remove-from-history (a per-build Remove action that clears an entry from the in-memory Recent
-builds list), and **R-427 a generated-JSX inline-style fix** (single-brace `style={ … }` → valid double-brace,
-found by running a generated app through the preview, with a regression test that forbids it). The recommended
-next task is **R-428**: a build-in-progress state in the preview surface, a "clear all history" action, or a
-broader generated-TSX compile/lint gate to catch this class of bug automatically. Execution must remain
-explicit trusted-local mode and `task verify` must remain model/Docker/DB/install/network-free.
+builds list), R-427 a generated-JSX inline-style fix (single-brace `style={ … }` → valid double-brace), and
+**R-428 generated-app compile fixes + an opt-in `tsc` gate** (`task agent-engine:web-typecheck`; fixed
+over-braced handlers, a `pdf-viewer` literal newline, and screen import depth via the `@/` alias — a generated
+app now renders in the preview). The recommended next task is **R-429**: strict TYPE cleanup of the generated
+component library (~82 tsc errors: duplicate exports, `displayName`, prop-type conflicts) so generated apps
+pass a production `next build`. Execution must remain explicit trusted-local mode and `task verify` must remain
+model/Docker/DB/install/network-free (the typecheck gate is opt-in/live).
 
 **The UI-component series remains PAUSED at R-415** and is independently resumable under a future free
 task ID.

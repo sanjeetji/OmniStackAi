@@ -118,8 +118,8 @@ class FormUpdateScreenTests(TestCase):
         screen = next(s for s in ir.screens if s.id == "article_editor")
         page = render_screen_page(screen, ir)
 
-        self.assertIn('import { useArticle, useUpdateArticle } from "../lib/hooks";', page)
-        self.assertIn('import { useCreateArticle } from "../lib/hooks";', page)
+        self.assertIn('import { useArticle, useUpdateArticle } from "@/lib/hooks";', page)
+        self.assertIn('import { useCreateArticle } from "@/lib/hooks";', page)
 
     def test_form_screen_imports_search_params(self) -> None:
         ir = _update_capable_ir()

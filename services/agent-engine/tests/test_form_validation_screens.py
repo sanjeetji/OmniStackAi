@@ -4,7 +4,7 @@ Tests:
 1. extractFieldErrors export in lib/api.ts.
 2. extractFieldErrors handles Go structured validation error format ({"errors": [...]}).
 3. extractFieldErrors handles FastAPI/Pydantic structured format ({"detail": [...]}).
-4. Form screens import extractFieldErrors from "../lib/api".
+4. Form screens import extractFieldErrors from "@/lib/api".
 5. Form screens declare and manage fieldErrors state (Record<string, string>).
 6. Form inputs conditionally render red border (#ef4444) and aria-invalid based on fieldErrors.
 7. Form inputs render per-field error message span below input.
@@ -93,7 +93,7 @@ class FormValidationScreenTests(TestCase):
         screen = next(s for s in ir.screens if s.id == "product_editor")
         page = render_screen_page(screen, ir)
 
-        self.assertIn('import { extractFieldErrors } from "../lib/api";', page)
+        self.assertIn('import { extractFieldErrors } from "@/lib/api";', page)
         self.assertIn('const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});', page)
 
     def test_form_screen_has_client_side_validation(self) -> None:

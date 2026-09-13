@@ -131,7 +131,7 @@ class BreadcrumbsTests(unittest.TestCase):
         screen = next(s for s in ir.screens if s.id == "post_detail")
         content = render_screen_page(screen, ir)
 
-        self.assertIn('import { Breadcrumbs } from "../components/breadcrumbs";', content)
+        self.assertIn('import { Breadcrumbs } from "@/components/breadcrumbs";', content)
         self.assertIn("<Breadcrumbs items={breadcrumbs} />", content)
         self.assertIn('{ label: "Overview", href: "/" }', content)
         self.assertIn('{ label: "Posts", href: "/posts" }', content)
@@ -143,7 +143,7 @@ class BreadcrumbsTests(unittest.TestCase):
         screen = next(s for s in ir.screens if s.id == "post_detail")
         content = render_screen_page(screen, ir)
 
-        self.assertIn('import { Breadcrumbs } from "../components/breadcrumbs";', content)
+        self.assertIn('import { Breadcrumbs } from "@/components/breadcrumbs";', content)
         self.assertIn("<Breadcrumbs items={breadcrumbs} />", content)
         self.assertIn('{ label: "Overview", href: "/" }', content)
         self.assertNotIn('{ label: "Posts", href: "/posts" }', content)
@@ -155,7 +155,7 @@ class BreadcrumbsTests(unittest.TestCase):
         screen = next(s for s in ir.screens if s.id == "post_editor")
         content = render_screen_page(screen, ir)
 
-        self.assertIn('import { Breadcrumbs } from "../components/breadcrumbs";', content)
+        self.assertIn('import { Breadcrumbs } from "@/components/breadcrumbs";', content)
         self.assertIn("<Breadcrumbs items={breadcrumbs} />", content)
         self.assertIn('{ label: "Overview", href: "/" }', content)
         self.assertIn('{ label: "Posts", href: "/posts" }', content)
@@ -167,7 +167,7 @@ class BreadcrumbsTests(unittest.TestCase):
         screen = next(s for s in ir.screens if s.id == "post_editor")
         content = render_screen_page(screen, ir)
 
-        self.assertIn('import { Breadcrumbs } from "../components/breadcrumbs";', content)
+        self.assertIn('import { Breadcrumbs } from "@/components/breadcrumbs";', content)
         self.assertIn("<Breadcrumbs items={breadcrumbs} />", content)
         self.assertIn('{ label: "Overview", href: "/" }', content)
         self.assertNotIn('{ label: "Posts", href: "/posts" }', content)
@@ -211,7 +211,7 @@ class FullProjectBreadcrumbsTests(unittest.TestCase):
 
         # Check post_editor imports and mounts Breadcrumbs
         post_editor = project.get("app/post_editor/page.tsx").content
-        self.assertIn('import { Breadcrumbs } from "../components/breadcrumbs";', post_editor)
+        self.assertIn('import { Breadcrumbs } from "@/components/breadcrumbs";', post_editor)
         self.assertIn("<Breadcrumbs items={breadcrumbs} />", post_editor)
 
     def test_full_project_includes_breadcrumbs_in_rideshare(self) -> None:

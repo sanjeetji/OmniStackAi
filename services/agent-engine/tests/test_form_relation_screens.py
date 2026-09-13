@@ -128,9 +128,9 @@ class FormRelationScreensTests(unittest.TestCase):
         ops = self.ops_by_entity.get("Comment", set())
         page = _form_screen_page(self.comment_screen, self.comment_entity, self.ir, ops)
 
-        self.assertIn('import { useListArticles } from "../lib/hooks";', page)
+        self.assertIn('import { useListArticles } from "@/lib/hooks";', page)
         self.assertIn('import { useSearchParams } from "next/navigation";', page)
-        self.assertIn('import { useCreateComment } from "../lib/hooks";', page)
+        self.assertIn('import { useCreateComment } from "@/lib/hooks";', page)
 
     def test_child_form_invokes_parent_list_hook(self) -> None:
         ops = self.ops_by_entity.get("Comment", set())
