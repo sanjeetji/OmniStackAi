@@ -4,10 +4,22 @@ Last updated: 2026-09-13
 ## Current Phase
 Stage 0 (Founder Build Sequence, Brief Section 91) — BASIC/MVP
 
-> **Generated apps now pass strict `tsc --noEmit` (0 errors) — production `next build` no longer blocked.** UI-component series PAUSED at R-415 (110 components, resumable). Front door: **R-416**–**R-426** (chat → create → run → preview + history/controls) · **R-427** JSX inline-style fix · **R-428** compile fixes + opt-in `tsc` gate · **R-429** strict-type cleanup (8 classes). `task agent-engine:web-typecheck` reports **PASSED** for both `minimal-blog` and `rideshare-favourites`. **DECISION POINT** (per the founder's strategy talk): propose R-430 hardening, or PIVOT to the differentiating spine (Ecosystem Scope Compiler / Solution Packs per the Master Spec) and optionally wire a frontier model for generation quality. **⚠ If a `studio:preview` is running, restart it to load the fixed generator.**
+> **The differentiating SPINE has begun (R-430): the Ecosystem Scope Compiler.** A business prompt → a multi-app ecosystem proposal (customer app + merchant/driver/admin portals) with Complete / Customer-only / Custom build-scope options + ≤3 materiality questions — the "wow" competitors lack. Deterministic, offline, testable: `task agent-engine:scope:propose -- "Create a food delivery app …"`. Foundation: front door **R-416**–**R-426** (chat → create → run → preview) · **R-427/R-428** generated apps compile & render · **R-429** generated apps pass strict `tsc --noEmit` (0 errors). UI-component series PAUSED at R-415 (resumable). **NEXT (founder-approved):** R-431 map each AppSurface → an Application IR so "Complete Business Platform" materializes multiple owned repos from one prompt; and/or an opt-in cheap-LLM refinement over the deterministic classifier; optionally a frontier model for generation quality.
 
 ## Last Completed Task
-Tracker ID: R-429 — Generated web app passes strict `tsc --noEmit`: component-library type cleanup — DONE.
+Tracker ID: R-430 — Ecosystem Scope Compiler: deterministic domain classification + multi-app scope proposal
+— DONE. New stdlib-only `intake/scope_compiler.py` turns a business prompt into a framework-neutral
+`ScopeProposal` (domain + confidence + matched keywords, actors, multi-surface ecosystem, Complete/
+Customer-only/Custom options, ≤3 questions) via a curated 10-domain `DOMAIN_LIBRARY`, weighted-keyword
+`classify_domain()`, and `propose_ecosystem()` (with a `custom-application` fallback). Pure/deterministic
+(0 model/network), exported from `intake/__init__.py`. Deterministic CLI `intake/scope_propose.py` →
+`task agent-engine:scope:propose -- "<prompt>"`: "Create a food delivery app …" → food-delivery (confidence
+1.0) → Customer Ordering App + Merchant Portal + Courier Dispatch App + Super-Admin Dashboard + options +
+2 questions. `tests/test_scope_compiler.py` (11 tests). `task verify` **2,888 tests** pass (offline; +11);
+lint/security/env and both demos (152 / 149) pass; 0 model calls. NOT yet wired into IR/repo generation
+(next brick). This is the first brick of the differentiating spine.
+
+Immediately preceded by R-429 — Generated web app passes strict `tsc --noEmit`: component-library type cleanup — DONE.
 Fixed **8** type-error classes at `codegen/nextjs.py` + the generated tsconfig so a generated `minimal-blog`
 (was 84 errors: 4 `node_modules/next` from a missing `skipLibCheck` + 80 in our code across 19 files) AND
 `rideshare-favourites` compile with **0** errors: G0 tsconfig `skipLibCheck: true`; G1 context-menu no longer

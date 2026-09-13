@@ -1,5 +1,18 @@
 # Work Log
 
+## 2026-09-13 — R-430 (Ecosystem Scope Compiler — deterministic domain classification + multi-app scope proposal)
+
+- **Founder-approved pivot to the DIFFERENTIATING SPINE** (after the R-429 strategy discussion; via AskUserQuestion the founder chose "Start the Scope Compiler"). Master Architecture Spec §2: competitors turn "create a food delivery app" into a single customer screen — OmniStackAI proposes the whole business ecosystem BEFORE generation.
+- Built the **deterministic core** so it runs under `task verify` (no model/network), mirroring the intake agent's "deterministic core + opt-in model layer" pattern:
+  - New `intake/scope_compiler.py` (stdlib only): frozen `Actor`, `AppSurface` (kind/name/audience/actor/description), `ScopeOption`, `ScopeProposal`, `DomainMatch`, `DomainSpec` — all with JSON-safe `to_dict()`.
+  - Curated 10-domain `DOMAIN_LIBRARY` (food-delivery, rideshare, marketplace, e-commerce, b2b-saas, healthcare-clinic, booking, learning, social, blog-cms); each carries weighted keywords, the full-platform surfaces (customer app + operator portals + admin), ≤3 materiality questions, and a self-classifying example prompt.
+  - `classify_domain(prompt)` — case-insensitive weighted keyword scoring (multi-word phrases weigh 3, single tokens 1), highest score wins, stable tie-break by library order, `None` below threshold.
+  - `propose_ecosystem(prompt)` — classify → build Complete (recommended) / Customer-only (strict customer-audience subset) / Custom options + questions; single-app `custom-application` fallback when nothing matches. Pure/deterministic (same prompt → byte-identical proposal).
+- Exported the public API from `intake/__init__.py`; added a **deterministic CLI** `intake/scope_propose.py` wired as `task agent-engine:scope:propose -- "<prompt>"` (+ `scripts/agent-engine.sh scope-propose`, usage string updated).
+- Demo: `… "Create a food delivery app where customers order from restaurants and couriers deliver"` → domain **food-delivery** (confidence 1.0) → Customer Ordering App + Merchant Portal + Courier Dispatch App + Super-Admin Dashboard, with Complete/Customer-only/Custom options and 2 materiality questions.
+- `tests/test_scope_compiler.py` (11 tests): representative classification, each domain classifies its own example, determinism/purity, Complete carries all surfaces, Customer-only only customer-audience surfaces (strict subset), ≤3 questions, JSON round-trip, no-match fallback, public exports.
+- Gates: `task verify` **2,888** passed (offline; +11); lint/security/env green; both builder demos (152 / 149) unaffected. **0 model calls.** No IR/adapter/DB change; scope is not yet wired into generation (next brick).
+
 ## 2026-09-13 — R-429 (generated web app passes strict `tsc --noEmit` — component-library type cleanup)
 
 - **Founder direction:** "complete R-429 then tell me next strategy." Ran the R-428 opt-in gate to get the REAL error list (no guessing): a generated `minimal-blog` reported **84** `tsc --noEmit` errors — **4** in `node_modules/next` (missing `skipLibCheck`) + **80** in our code across 19 files, in 8 mechanical classes.

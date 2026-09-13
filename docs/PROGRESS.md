@@ -1,4 +1,4 @@
-# OmniStackAI — implementation progress (as of R-429)
+# OmniStackAI — implementation progress (as of R-430)
 
 A living summary of what is built, what is pending, and how to see results. Numbers come from the
 execution tracker (`R_&_D/OmniStackAI_Execution_Tracker_v6.xlsx`, `Phase_Roadmap`) plus the state
@@ -6,16 +6,17 @@ files (`.ai/`), Git history, and CHANGELOG for work done past the tracker's last
 
 ## Headline
 
-- **2,877 automated tests pass**, fully offline and network-independent (`task verify`).
+- **2,888 automated tests pass**, fully offline and network-independent (`task verify`).
 - **147 tracker tasks Done, 1 Deferred, 210 Not Started** across 358 tasks (the tracker's planned
   universe ends at R-358).
-- **Plus 71 completed tasks beyond the workbook (R-359 → R-429)**: 57 reusable UI-component suites,
+- **Plus 72 completed tasks beyond the workbook (R-359 → R-430)**: 57 reusable UI-component suites,
   four front-door bricks, R-420 generated-SQL hardening, R-421 managed embedded local preview,
   R-422 collision-free preview ports + status/stop/restart controls, R-423 build history + re-preview,
   R-424 live preview status, R-425 per-build repo actions, R-426 remove-from-history, R-427 a
-  generated-JSX inline-style fix, R-428 generated-app compile fixes + an opt-in `tsc` gate, and R-429
-  strict-type cleanup so a generated app passes `tsc --noEmit` clean. The generated Next.js component
-  library remains at **110 components**; its component series is **PAUSED at R-415** and fully resumable.
+  generated-JSX inline-style fix, R-428 generated-app compile fixes + an opt-in `tsc` gate, R-429
+  strict-type cleanup so a generated app passes `tsc --noEmit` clean, and **R-430 the Ecosystem Scope
+  Compiler** (the first brick of the differentiating spine). The generated Next.js component library
+  remains at **110 components**; its component series is **PAUSED at R-415** and fully resumable.
 - The generated app was **run live locally end-to-end this session** (Next.js web on `:3000` +
   FastAPI on `:8000` + seeded PostgreSQL) — proving the offline builder output actually runs on a Mac.
 - **R-420 closed both SQL defects exposed by that run:** generator-owned PostgreSQL identifiers are
@@ -51,6 +52,13 @@ files (`.ai/`), Git history, and CHANGELOG for work done past the tracker's last
   methods + hook request-params typing). A generated `minimal-blog` and `rideshare-favourites` now pass
   `tsc --noEmit` with **0** errors — `task agent-engine:web-typecheck` reports **PASSED** for both — so
   generated apps are no longer blocked from a production `next build`.
+- **R-430 begins the differentiating spine — the Ecosystem Scope Compiler:** a business prompt →
+  a framework-neutral multi-app ecosystem proposal (detected domain + actors + customer app +
+  merchant/driver/admin portals + Complete/Customer-only/Custom build-scope options + ≤3 materiality
+  questions), via a deterministic 10-domain keyword classifier (no model/network). Competitors turn
+  "food delivery app" into one customer screen; OmniStackAI proposes the whole business platform. See it:
+  `task agent-engine:scope:propose -- "Create a food delivery app …"`. Not yet wired into IR/repo
+  generation — mapping each surface → an Application IR is the next brick.
 
 ## UI Component Series — status: PAUSED at R-415 (resumable)
 
@@ -303,14 +311,16 @@ app now renders in the preview), and **R-429 strict-type cleanup** (fixed the 8 
 revealed so a generated `minimal-blog` and `rideshare-favourites` pass `tsc --noEmit` with 0 errors; the gate
 now reports PASSED for both — generated apps are no longer blocked from a production `next build`).
 
-The local front door is now solid end-to-end. The recommended next move is a **DECISION POINT** rather than a
-fixed task (see the founder's strategy discussion and `R_&_D/OmniStackAI_OS_Master_Architecture_Specification.md`):
-either propose **R-430** (further front-door hardening — e.g. a Go-backend typecheck gate, or extending the
-opt-in gate to run `next build`), or **pivot to the differentiating spine**: the Ecosystem Scope Compiler
-(one prompt → a multi-app scope proposal) or Solution Packs (pre-tested monorepo skeletons + AI-delta
-generation), optionally wiring a frontier model for the generation step so output quality is competitive.
-Whichever is chosen, execution must remain explicit trusted-local mode and `task verify` must remain
-model/Docker/DB/install/network-free (the typecheck gate is opt-in/live).
+The local front door is solid end-to-end, and **R-430 began the differentiating spine** with the Ecosystem
+Scope Compiler (a business prompt → a deterministic multi-app ecosystem proposal;
+`task agent-engine:scope:propose`). The founder-approved direction is to continue the spine. The next bricks:
+**(R-431) map each proposed `AppSurface` → an Application IR** so choosing "Complete Business Platform"
+materializes MULTIPLE owned repos/apps from one prompt (building on the assembler + git-service that already
+turn one IR into an owned repo); and **an opt-in cheap-LLM refinement layer** over the deterministic
+classifier (mirroring `nl_to_ir.py` core vs `live_run.py`) for prompts outside the curated domains. Solution
+Packs (pre-tested monorepo skeletons + AI-delta generation) and wiring a frontier model for generation
+quality remain on the spine roadmap. Whichever is chosen, `task verify` must remain
+model/Docker/DB/install/network-free (any live/model path stays opt-in).
 
 **The UI-component series remains PAUSED at R-415** and is independently resumable under a future free
 task ID.

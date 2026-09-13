@@ -41,7 +41,7 @@ START PROTOCOL
   `task ai:status`, `task ai:handoff`. `task verify` must stay green and network-independent.
 - Confirm git branch/HEAD/clean tree. Then restate: phase, next Tracker ID, objective, blast radius.
 
-WHAT IS ALREADY BUILT (platform generators are Python 3.13 stdlib-only, offline, in services/agent-engine; 2,877 tests pass)
+WHAT IS ALREADY BUILT (platform generators are Python 3.13 stdlib-only, offline, in services/agent-engine; 2,888 tests pass)
 - Model fabric: ModelProvider contract + registry; local Ollama adapter (runs any installed model via
 
 
@@ -200,7 +200,7 @@ R-316 accessible reusable Alert & Notification component (components/alert.tsx),
 Skeleton Loader component (components/skeleton.tsx), R-318 accessible reusable Drawer / Sheet component (components/drawer.tsx), R-319 accessible reusable Avatar component (components/avatar.tsx), R-320 accessible reusable Toggle Switch component (components/toggle.tsx), R-321 accessible reusable Accordion component (components/accordion.tsx), R-322 accessible reusable Dropdown Menu component (components/dropdown-menu.tsx), R-323 accessible reusable Popover component (components/popover.tsx), R-324 Design Tokens & CSS Custom Properties theming engine (styles/tokens.css), R-325 Theme Switcher / Mode Toggle component (components/theme-toggle.tsx), R-326 accessible reusable Dialog / Modal component (components/dialog.tsx), R-327 accessible reusable Form Controls & Input Primitives suite (components/form-controls.tsx), R-328 accessible reusable Date Picker & Calendar component (components/date-picker.tsx), R-329 accessible reusable Data Grid / Table component (components/data-grid.tsx), R-330 accessible reusable Command Palette / Search Menu component (components/command-palette.tsx), R-331 accessible reusable Slider & Range component (components/slider.tsx), R-332 accessible reusable Progress & Spinner component (components/progress.tsx), R-333 accessible reusable Rating & Review component (components/rating.tsx), R-334 accessible reusable Stepper / Multi-step Wizard component (components/stepper.tsx), R-335 accessible reusable File Upload / Dropzone component (components/file-upload.tsx), R-336 accessible reusable Timeline / Activity Feed component (components/timeline.tsx), R-337 accessible futuristic Stat & Metric KPI Card component (components/stat-card.tsx), R-338 accessible reusable Hierarchical Tree View component (components/tree-view.tsx), R-339 accessible futuristic Tag & Chip Input Tokenizer component (components/tag-input.tsx), R-340 accessible futuristic Code Block & Syntax Presentation component (components/code-block.tsx), R-341 accessible futuristic Radial Gauge & Activity Rings component (components/radial-gauge.tsx), R-342 accessible futuristic Segmented Control & Mode Switcher component (components/segmented-control.tsx), R-343 accessible futuristic Carousel & Slider Showcase component (components/carousel.tsx), R-344 accessible futuristic Resizable Panels & Splitter component (components/resizable.tsx), R-345 accessible futuristic Color Picker & Palette Swatch component (components/color-picker.tsx), R-346 accessible futuristic PIN & OTP Code Input component (components/pin-input.tsx), R-347 Speed Dial & Floating Action Button component (components/speed-dial.tsx), R-348 Accessible Futuristic Reusable Context Menu Suite (components/context-menu.tsx), R-349 Accessible Futuristic Reusable Hover Card Suite (components/hover-card.tsx), R-350 Accessible Futuristic Reusable Scroll Area Suite (components/scroll-area.tsx), R-351 Accessible Futuristic Reusable Collapsible Component (components/collapsible.tsx), R-352 Accessible Futuristic Reusable Aspect Ratio Viewport Container Component (components/aspect-ratio.tsx), R-353 Accessible Futuristic Reusable Separator Component (components/separator.tsx), R-354 Accessible Futuristic Reusable Keyboard Keycap Component (components/kbd.tsx), R-355 Accessible Futuristic Reusable Radio Group Suite (components/radio-group.tsx), R-356 Accessible Futuristic Reusable Checkbox & Checkbox Group Primitive (components/checkbox.tsx), R-357 Accessible Futuristic Reusable Announcement Banner & Callout Suite (components/banner.tsx), and R-358 Accessible Futuristic Reusable Searchable Combobox & Autocomplete Primitive (components/combobox.tsx).
 Do NOT overwrite backlog rows; continue from R-359.
 NOTE: the execution tracker's planned universe ends at R-358 (358 tasks: 147 Done, 1 Deferred, 210 Not
-Started; MVP 147/253 = 58.1%). Work past R-358 now covers 71 completed tasks: 57 reusable UI-component
+Started; MVP 147/253 = 58.1%). Work past R-358 now covers 72 completed tasks: 57 reusable UI-component
 suites (R-359 -> R-415), four front-door bricks (R-416 -> R-419), generated-SQL hardening (R-420),
 managed embedded trusted-local Studio preview (R-421), collision-free preview ports + status/stop/
 restart controls (R-422), build history + re-preview (R-423), live preview status (R-424), per-build
@@ -209,7 +209,7 @@ inline-style fix (R-427), and generated-app compile fixes + an opt-in tsc gate (
 The generated component library is 110 components. Its UI-COMPONENT SERIES IS PAUSED at R-415
 (resumable under a future free ID; each component is independent/additive, nothing decays). Git, state files
 (.ai/), CHANGELOG, and docs/PROGRESS.md remain the executable/detail sources of truth. Current through
-R-429; `task verify` = 2,877 tests. R-416 added prompt-to-IR intake, R-417 materialized a generated
+R-430; `task verify` = 2,888 tests. R-416 added prompt-to-IR intake, R-417 materialized a generated
 owned repo, R-418 added the local chat studio, R-419 added turnkey local run, and R-420 fixed the two
 SQL defects found by live execution. R-421 added an explicit `task agent-engine:studio:preview` mode:
 one managed generated-app session, API/web readiness, replacement/shutdown cleanup, port-collision
@@ -250,8 +250,17 @@ attribute in Banner/Carousel/Checkbox/CodeBlock(+CopyButton)Props; G5 element re
 `SplitDiffRow.isUnchanged`; G8 the `api` object gains the `…WithCount` methods + hooks forward a fresh
 `requestParams` with `...options` first. Extended the gate to assert a clean exit -> `task
 agent-engine:web-typecheck -- minimal-blog` and `-- rideshare-favourites` both report PASSED (0 errors).
-Generated apps are no longer blocked from a production `next build`. `studio:serve` remains build-only. No
-tracker workbook row exists past R-358.
+Generated apps are no longer blocked from a production `next build`. `studio:serve` remains build-only.
+R-430 then BEGAN THE DIFFERENTIATING SPINE (founder-approved pivot): the Ecosystem Scope Compiler
+(intake/scope_compiler.py, Python 3.13 stdlib only, deterministic). `propose_ecosystem(prompt)` classifies a
+business prompt against a curated 10-domain DOMAIN_LIBRARY (weighted keywords, stable tie-break) and returns
+a framework-neutral ScopeProposal: detected domain (+confidence +matched keywords), actors, the multi-surface
+app ecosystem (customer app + merchant/driver/admin portals), Complete/Customer-only/Custom build-scope
+options, and <=3 materiality questions (single-app `custom-application` fallback on no match). Pure/offline
+(0 model/network), so it runs under `task verify`. See it: `task agent-engine:scope:propose -- "Create a food
+delivery app ..."` -> food-delivery -> Customer Ordering App + Merchant Portal + Courier Dispatch App +
+Super-Admin Dashboard. Competitors turn that prompt into one customer screen; this proposes the whole
+platform. NOT yet wired into IR/repo generation (next brick). No tracker workbook row exists past R-358.
 
 
 ENVIRONMENT LIMITS
@@ -283,18 +292,19 @@ RULES (non-negotiable)
   SHA == local HEAD. Never claim unexecuted tests.
 
 WHAT TO DO NEXT
-- R-429 is DONE (a generated app passes strict `tsc --noEmit` with 0 errors on both example IRs; the opt-in
-  `task agent-engine:web-typecheck` gate reports PASSED for both; regression guards forbid the fixed classes).
-  Generated apps are no longer blocked from a production `next build`.
-- This is a **DECISION POINT** (per the founder's strategy discussion — see
-  R_&_D/OmniStackAI_OS_Master_Architecture_Specification.md). Two credible directions; ASK the founder which:
-  (a) **R-430 front-door hardening** — e.g. a Go-backend typecheck/`go vet` gate, or extend the opt-in gate
-  to run a full `next build`; or (b) **pivot to the differentiating spine** — the Ecosystem Scope Compiler
-  (one prompt -> a multi-app scope proposal) or Solution Packs (pre-tested monorepo skeletons + AI-delta
-  generation), optionally wiring a frontier model for the generation step so output quality is competitive.
-  Whichever is chosen: write `.ai/CURRENT_TASK.yaml` + `.ai/tasks/R-###.md` before coding; preserve
-  single-session ownership, explicit trusted-local mode, secret-free payloads, and
-  model/Docker/DB/install/network-independent `task verify`.
+- R-430 is DONE — the DIFFERENTIATING SPINE has begun (founder-approved): the Ecosystem Scope Compiler turns
+  a business prompt into a deterministic multi-app ecosystem proposal
+  (`task agent-engine:scope:propose -- "<prompt>"`; intake/scope_compiler.py + test_scope_compiler.py).
+- CONTINUE THE SPINE (founder-approved direction; write `.ai/CURRENT_TASK.yaml` + `.ai/tasks/R-###.md` before
+  coding). Highest-leverage next bricks:
+  (a) **R-431: map each proposed `AppSurface` -> an Application IR** so choosing "Complete Business Platform"
+  materializes MULTIPLE owned repos/apps from one prompt (build on the existing assembler + git-service that
+  already turn ONE IR into an owned repo); and
+  (b) **an opt-in cheap-LLM refinement layer** over the deterministic classifier (mirror nl_to_ir.py core vs
+  live_run.py) for prompts outside the curated domains.
+  Solution Packs (pre-tested monorepo skeletons + AI-delta generation) and wiring a frontier model for
+  generation quality remain on the spine roadmap. Keep `task verify` model/Docker/DB/install/network-free
+  (any live/model path stays opt-in); preserve single-session ownership and explicit trusted-local mode.
 - The UI-component series remains paused at R-415 and can be resumed later under a future free ID.
 - PROVEN THIS SESSION: a generated app runs live locally on the Mac (Next.js :3000 + FastAPI :8000 +
   seeded PostgreSQL). Run the Next binary directly (`./node_modules/.bin/next dev`), not `pnpm dev`
@@ -303,8 +313,7 @@ WHAT TO DO NEXT
   deploy (OMNISTACKAI_TIER=2 + E2B/Vercel keys) and cloud-model live-verify. Governance-deferred: native
   mobile (R-010 etc.) until web/backend stability.
 
-Begin by reading the files above and running the start protocol, then bring the DECISION POINT above to the
-founder (R-430 hardening vs. pivot to the spine) and write the chosen task's Standard AI Task Contract before
-writing code.
+Begin by reading the files above and running the start protocol, then continue the spine (R-431: scope
+surfaces -> Application IRs, per WHAT TO DO NEXT) and write its Standard AI Task Contract before writing code.
 
 ```

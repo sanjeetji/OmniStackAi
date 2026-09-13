@@ -2,12 +2,32 @@ schema_version: 1
 project: OmniStackAI
 phase: BASIC/MVP
 founder_stage: 0
-current_task: R-429
+current_task: R-430
 current_status: done
 branch: main
-last_completed_task: R-429
+last_completed_task: R-430
 last_completed_task_summary: >-
-  Built R-429: made a generated Next.js app pass strict `tsc --noEmit` with ZERO errors (was 84 on a
+  Built R-430: the Ecosystem Scope Compiler (first brick of the founder-approved DIFFERENTIATING SPINE, per
+  Master Architecture Spec section 2). New Python-3.13-stdlib-only intake/scope_compiler.py turns a
+  plain-English business prompt into a framework-neutral ScopeProposal: detected domain (+confidence +matched
+  keywords), business actors, the multi-surface app ecosystem, and build-scope options (Complete Business
+  Platform [recommended] / Customer Experience Only / Custom) plus <=3 high-materiality questions. A curated
+  10-domain DOMAIN_LIBRARY (food-delivery, rideshare, marketplace, e-commerce, b2b-saas, healthcare-clinic,
+  booking, learning, social, blog-cms); classify_domain() scores weighted keywords (multi-word phrases weigh
+  more) with a stable tie-break and returns None on no match; propose_ecosystem() assembles the options +
+  questions with a single-app custom-application fallback. 100% deterministic and pure (no model, network,
+  clock, or randomness), so it runs under task verify. Frozen dataclasses (Actor/AppSurface/ScopeOption/
+  ScopeProposal/DomainMatch/DomainSpec) with JSON-safe to_dict(); exported from intake/__init__.py. Added a
+  deterministic CLI intake/scope_propose.py wired as `task agent-engine:scope:propose -- "<prompt>"` (+
+  scripts/agent-engine.sh scope-propose): "Create a food delivery app ..." -> domain food-delivery (confidence
+  1.0) -> Customer Ordering App + Merchant Portal + Courier Dispatch App + Super-Admin Dashboard, with
+  Complete/Customer-only/Custom options and 2 materiality questions. This is the differentiating capability
+  competitors lack (they turn "food delivery app" into a single customer screen). NOT yet wired into IR/repo
+  generation (mapping each surface -> an Application IR is the next brick). test_scope_compiler.py (11 tests)
+  covers classification, per-domain example self-classification, determinism, option composition, <=3
+  questions, JSON round-trip, and the fallback. task verify 2,888 passed (offline; +11); lint/security/env
+  green; both builder demos (152 / 149) unaffected; 0 model calls. Previously built R-429: made a generated
+  Next.js app pass strict `tsc --noEmit` with ZERO errors (was 84 on a
   generated minimal-blog: 4 node_modules/next from a missing skipLibCheck + 80 in our code across 19
   files). All fixes at codegen/nextjs.py plus the generated tsconfig, in 8 classes: G0 tsconfig now sets
   skipLibCheck: true (Next's own default); G1 context-menu.tsx no longer double-exports names already
@@ -472,22 +492,20 @@ product_direction: >-
   framework adapter contract -> Next.js adapter -> Git service -> preview/sandbox (needs cloud env).
 id_note: >-
   Workbook backlog owns R-010..R-219. Founder-requested tasks use IDs after R-219: R-220..R-223 done,
-  R-224 Next.js deferred (env-blocked), R-225..R-415 done, and R-416..R-429 done (front-door bricks 1-4,
+  R-224 Next.js deferred (env-blocked), R-225..R-415 done, R-416..R-429 done (front-door bricks 1-4,
   generated-SQL hardening, embedded trusted-local preview, collision-free preview ports + controls, build
   history + re-preview, live preview status, per-build repo actions, remove-from-history, generated-JSX
   inline-style fix, generated-app compile fixes + opt-in tsc gate, and strict-type cleanup so generated apps
-  pass tsc --noEmit clean, not components). NOTE: the UI-COMPONENT SERIES is PAUSED at R-415 (110 components,
-  resumable at a future free Tracker ID); R-416..R-429 built, hardened, and made robust the
-  "chat -> create -> run -> preview" front-door pivot.
+  pass tsc --noEmit clean), and R-430 done (Ecosystem Scope Compiler = FIRST BRICK of the differentiating
+  spine). NOTE: the UI-COMPONENT SERIES is PAUSED at R-415 (110 components, resumable at a future free Tracker
+  ID); R-416..R-429 built/hardened the "chat -> create -> run -> preview" front door; R-430 begins the SPINE.
 blockers: []
 next_action: >-
-  R-429 is complete: a generated Next.js app now passes strict `tsc --noEmit` with ZERO errors on BOTH
-  example IRs (the opt-in `task agent-engine:web-typecheck` gate reports PASSED); fixed 8 type-error classes
-  at codegen/nextjs.py + the generated tsconfig (skipLibCheck, duplicate exports, displayName, compound
-  components, HTMLAttributes Omit, RefObject<T>, terminal variant default, SplitDiffRow.isUnchanged, api
-  WithCount + fresh requestParams). Generated apps are no longer blocked from a production `next build`.
-  DECISION POINT (per the founder's strategy discussion): either propose R-430 continuing hardening, OR
-  pivot to the DIFFERENTIATING SPINE from R_&_D/OmniStackAI_OS_Master_Architecture_Specification.md — the
-  Ecosystem Scope Compiler (one prompt -> multi-app scope) or Solution Packs — and optionally wire a
-  frontier model for the generation step so output quality is competitive. Keep task verify deterministic and
+  R-430 is complete: the Ecosystem Scope Compiler deterministically turns a business prompt into a multi-app
+  ecosystem proposal (Complete Business Platform / Customer-only / Custom + materiality questions) — the
+  differentiating "wow" competitors lack. See it: `task agent-engine:scope:propose -- "<prompt>"`. NEXT
+  bricks toward the spine (founder-approved direction): (a) R-431 map each proposed AppSurface -> an
+  Application IR so "Complete Business Platform" materializes MULTIPLE owned repos/apps from one prompt; and
+  (b) an opt-in cheap-LLM refinement layer over the deterministic classifier (mirroring nl_to_ir core vs
+  live_run). Optionally wire a frontier model for generation quality. Keep task verify deterministic and
   network/DB/model independent. The UI-component series remains paused/resumable.

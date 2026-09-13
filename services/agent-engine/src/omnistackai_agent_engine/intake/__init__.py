@@ -19,6 +19,17 @@ from .nl_to_ir import (
     generate_ir,
     parse_ir_response,
 )
+from .scope_compiler import (
+    DOMAIN_LIBRARY,
+    Actor,
+    AppSurface,
+    DomainMatch,
+    DomainSpec,
+    ScopeOption,
+    ScopeProposal,
+    classify_domain,
+    propose_ecosystem,
+)
 
 __all__ = [
     "IntakeError",
@@ -34,4 +45,14 @@ __all__ = [
     "DEFAULT_TEMPLATE_EXAMPLE",
     "DEFAULT_MAX_OUTPUT_TOKENS",
     "DEFAULT_TIMEOUT_SECONDS",
+    # Ecosystem Scope Compiler (R-430)
+    "propose_ecosystem",
+    "classify_domain",
+    "ScopeProposal",
+    "ScopeOption",
+    "AppSurface",
+    "Actor",
+    "DomainMatch",
+    "DomainSpec",
+    "DOMAIN_LIBRARY",
 ]

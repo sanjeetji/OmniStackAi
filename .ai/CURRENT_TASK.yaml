@@ -1,81 +1,71 @@
-task_id: R-429
-id: R-429
-title: "Generated web app passes strict tsc --noEmit - component-library type cleanup"
+task_id: R-430
+id: R-430
+title: "Ecosystem Scope Compiler - deterministic domain classification + multi-app scope proposal"
 status: done
 phase: MVP
 tracker_row: null
 started_at: "2026-09-13"
 completed_at: "2026-09-13"
 objective: >-
-  Make a generated Next.js app type-check cleanly under strict TypeScript. The R-428 opt-in
-  web-typecheck gate reports 84 errors on a generated minimal-blog: 4 from node_modules/next
-  (a missing skipLibCheck, Next's own default) and 80 in our generated code across 19 component
-  files + lib/hooks.ts in 8 mechanical patterns (duplicate exports, displayName on arrow-fn
-  sub-components, compound props on forwardRef results, interfaces incorrectly extending
-  HTMLAttributes, useRef<T|null>(null) passed to ref=, string vs union prop, a missing type field,
-  a hook calling a non-existent client method). Fix each at codegen/nextjs.py so tsc --noEmit exits
-  0 on BOTH example IRs, make a clean exit the web-typecheck pass condition, and add deterministic
-  regression assertions. Only correct malformed/mis-typed emitted TS - no structure, behavior,
-  styling, layout, or logic change; preserve diff-invariance. task verify stays offline/deterministic.
+  First brick of the differentiating spine (founder-approved pivot, Master Architecture Spec section 2).
+  Add a Python-3.13-stdlib-only intake/scope_compiler.py that turns a plain-English business prompt into a
+  framework-neutral ScopeProposal: detected domain (+confidence +matched keywords), business actors, the
+  multi-surface app ecosystem (customer app + merchant/driver/admin portals), and build-scope options
+  (Complete Business Platform [recommended] / Customer Experience Only / Custom) plus <=3 high-materiality
+  questions. Classification is a deterministic curated keyword heuristic (no model/network/clock/randomness),
+  so it is pure and runs under task verify. Ship a deterministic CLI (task agent-engine:scope:propose) so the
+  founder can see it. Do NOT wire scope -> IR/repo generation yet; no IR/adapter/DB change; task verify stays
+  offline/deterministic (0 model calls).
 allowed_paths:
-  - "services/agent-engine/src/omnistackai_agent_engine/codegen/nextjs.py"
-  - "services/agent-engine/tests/test_generated_tsx_compile.py"
+  - "services/agent-engine/src/omnistackai_agent_engine/intake/scope_compiler.py"
+  - "services/agent-engine/src/omnistackai_agent_engine/intake/scope_propose.py"
+  - "services/agent-engine/src/omnistackai_agent_engine/intake/__init__.py"
+  - "services/agent-engine/tests/test_scope_compiler.py"
   - "scripts/agent-engine.sh"
-  - "docs/CODEGEN.md"
-  - "docs/VERIFY.md"
-  - ".ai/tasks/R-429.md"
+  - "Taskfile.yml"
+  - "docs/SCOPE_COMPILER.md"
+  - "docs/RESUME_PROMPT.md"
+  - "docs/PROGRESS.md"
+  - ".ai/tasks/R-430.md"
   - ".ai/CURRENT_TASK.yaml"
   - ".ai/PROJECT_STATE.yaml"
   - ".ai/WORK_LOG.md"
   - ".ai/HANDOFF.md"
   - "PROJECT_STATE.md"
   - "CHANGELOG.md"
-  - "docs/PROGRESS.md"
-  - "docs/RESUME_PROMPT.md"
-  # hook/component tests whose exact asserted strings changed with the type-only fix:
-  - "services/agent-engine/tests/test_nextjs_hooks.py"
-  - "services/agent-engine/tests/test_collection_deeplink_state.py"
-  - "services/agent-engine/tests/test_collection_field_filters.py"
-  - "services/agent-engine/tests/test_subcollection_field_filter_wiring.py"
-  - "services/agent-engine/tests/test_subcollection_request_cancellation.py"
-  - "services/agent-engine/tests/test_color_picker_component.py"
-  - "services/agent-engine/tests/test_pin_input_component.py"
 forbidden_changes:
   - "Do not modify or include the unrelated untracked .claude directory"
-  - "Do not change component template structure/behavior, screen layout, styling values, or generated logic - only correct malformed/mis-typed emitted TS"
-  - "Do not make task verify run the toolchain, a model, Docker, or the network; the typecheck gate is opt-in/live only"
-  - "Do not change the Application IR, adapters, database engine, assembler, Git-service, or generated-project contracts; PostgreSQL stays"
-  - "Do not break snapshot diff-invariance across ir.description"
+  - "Do not change the Application IR, adapters, assembler, Git-service, DB engine (PostgreSQL stays), or generated-project contracts; do not wire scope -> IR/repo generation yet"
+  - "No model/network/Docker in task verify; the classifier is deterministic (any LLM refinement is a later opt-in brick)"
+  - "Stdlib-only agent-engine code; no new dependencies; ASCII-safe source; secret-free"
 required_gates:
-  - "opt-in: task agent-engine:web-typecheck -- minimal-blog / -- rideshare-favourites -> tsc 0 errors"
-  - focused generated-tsx-compile test
-  - task lint
+  - "focused test_scope_compiler.py"
   - task verify
+  - task lint
   - task security:quick
   - task env:check
   - task builder:demo -- minimal-blog
   - task builder:demo -- rideshare-favourites
+  - "deterministic CLI: task agent-engine:scope:propose -- \"<prompt>\""
 model_tool_trace:
   routing: deterministic_only
   local_calls: 0
   cloud_calls: 0
-  note: Pure codegen type-correctness cleanup. No model call for implementation or verify.
+  note: Pure deterministic keyword-heuristic classifier + proposal. No model call for implementation or verify.
 evidence:
-  baseline: >-
-    task agent-engine:web-typecheck on a generated minimal-blog reported 84 errors: 4 node_modules/next
-    (missing skipLibCheck) + 80 in generated code across 19 files (context-menu 39, color-picker 6,
-    terminal 4, geo-map 4, pin-input 3, pdf-viewer 3, diff-viewer 3, lib/hooks 2, others). HEAD 07c47ca
-    (R-428), task verify 2,873 before R-429.
-  verify: "2,877 passed (+4 new regression asserts)"
+  verify: "2,888 passed (+11 new scope-compiler tests)"
   lint: "passed"
   security: "passed"
   env: "passed"
-  demos: "minimal-blog 152 files; rideshare-favourites 149 files"
-  focused_test: "test_generated_tsx_compile.py 7 passed (added G0 skipLibCheck, G1 dup-export, G5 nullable-ref, G8 api-method guards)"
-  typecheck: >-
-    task agent-engine:web-typecheck -- minimal-blog -> PASSED (0 errors); -- rideshare-favourites -> PASSED
-    (0 errors). 8 type-error classes fixed at codegen/nextjs.py (G0 skipLibCheck, G1 dup exports, G2
-    displayName, G3 compound, G4 HTMLAttributes Omit, G5 RefObject<T>, G6 terminal variant default, G7
-    SplitDiffRow.isUnchanged, G8 api WithCount + fresh requestParams). 7 hook/component test files' exact
-    assertions updated to the corrected strings.
-next_action: "R-429 done: generated apps pass tsc --noEmit clean (0 errors) on both examples; production next build no longer blocked by type errors. Next candidate: R-430 (propose per RESUME_PROMPT) OR pivot to the differentiating spine (Scope Compiler / Solution Packs) per the founder's strategy discussion."
+  demos: "minimal-blog 152 files; rideshare-favourites 149 files (unaffected)"
+  focused_test: "test_scope_compiler.py 11 passed"
+  cli: >-
+    task agent-engine:scope:propose -- "Create a food delivery app ..." -> domain food-delivery (confidence
+    1.0), surfaces Customer Ordering App + Merchant Portal + Courier Dispatch App + Super-Admin Dashboard,
+    Complete/Customer-only/Custom options, 2 materiality questions. Deterministic (0 model/network).
+next_action: >-
+  R-430 done: the Ecosystem Scope Compiler deterministically proposes a multi-app ecosystem from a prompt
+  (the differentiating 'wow'). NEXT bricks toward the spine: (R-431) map each proposed AppSurface -> an
+  Application IR so 'Complete Business Platform' materializes multiple owned repos/apps; and/or an opt-in
+  cheap-LLM refinement layer over the deterministic classifier (like nl_to_ir live_run). Optionally wire a
+  frontier model for generation quality. Keep task verify offline/deterministic.
