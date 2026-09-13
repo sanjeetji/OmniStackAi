@@ -98,7 +98,14 @@ built, run, or written to disk except by the Git service into the caller's targe
 `render_postgres_schema(ir)` (in `codegen/schema_sql.py`) turns the IR entities + relations into a
 deterministic SQL DDL migration — the generated backend's persistence layer:
 
-- **Tables:** one `CREATE TABLE` per entity, snake_cased table name (`FavouriteDriver` → `favourite_driver`).
+- **Tables:** one `CREATE TABLE` per entity, snake_cased table name (`FavouriteDriver` →
+  `favourite_driver`). R-420 emits tables in a stable foreign-key dependency order, preserving source
+  order among independent entities. Self-references remain valid; a non-self FK cycle raises a clear,
+  deterministic `ValueError` instead of emitting a migration known to fail.
+- **SQL identifier safety (R-420):** every generator-owned PostgreSQL table, column, relation column,
+  join-table, and index identifier is defensively double-quoted. The same representation is used by DDL,
+  seed INSERTs, Python repositories, and Go stores, while logical snake_case code/API identifiers remain
+  unchanged. Reserved words such as an `Order` entity therefore execute safely.
 - **Columns:** each field → a column typed from `FieldType` (STRING/TEXT→`TEXT`, INT→`BIGINT`,
   FLOAT→`DOUBLE PRECISION`, BOOL→`BOOLEAN`, DATETIME→`TIMESTAMPTZ`, UUID→`UUID`, JSON→`JSONB`); required
   fields get `NOT NULL`.
@@ -142,7 +149,9 @@ NULL). It owns the SQL literal quoting (the only such helper in the codebase): s
 doubled, `bool → TRUE/FALSE`, `None → NULL`, numbers are bare, and `dict/list → '<json>'::jsonb`. Both
 backends emit it inside the same `has_db` block as `0001_init.sql`, but only when the IR declares
 fixtures — so a fixture-free IR (e.g. `rideshare-favourites`) gets no `0002_seed.sql`. Deterministic and
-offline; nothing connects to or runs a database. `task builder:demo -- minimal-blog` prints it.
+offline; nothing connects to or runs a database. R-420 quotes the INSERT table/column identifiers and
+orders fixture entity groups by the same FK dependency order as the schema while preserving authored row
+order inside each fixture. `task builder:demo -- minimal-blog` prints it.
 
 ## Data-access / repository layer (R-239)
 

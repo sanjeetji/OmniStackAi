@@ -54,7 +54,7 @@ class PythonEmissionTests(TestCase):
 
     def test_values_are_parameterized(self) -> None:
         content = PythonBackendAdapter().generate(example_ir("minimal-blog")).get("app/repositories/post.py").content
-        self.assertIn("WHERE id = %s", content)
+        self.assertIn('WHERE "id" = %s', content)
         self.assertIn('", ".join(["%s"] * len(columns))', content)
         # the id value is passed as a parameter tuple, never formatted into the SQL string
         self.assertNotIn("WHERE id = '", content)
@@ -70,7 +70,7 @@ class GoEmissionTests(TestCase):
         self.assertIn("github.com/jackc/pgx/v5", project.get("go.mod").content)
         driver = project.get("internal/store/driver.go").content
         self.assertIn('"rideshare-favourites/internal/models"', driver)  # import path matches go.mod
-        self.assertIn("WHERE id = $1", driver)
+        self.assertIn('WHERE "id" = $1', driver)
         self.assertIn("&m.Id", driver)  # scans into the generated model struct field
 
 
@@ -93,7 +93,7 @@ class IdOnlyEntityTests(TestCase):
         py = dict(python_data_access_files(ir, "shop-app"))["app/repositories/ping.py"]
         self.assertIn("INSERT INTO {TABLE} DEFAULT VALUES RETURNING *", py)
         go = dict(go_data_access_files(ir, "shop-app"))["internal/store/ping.go"]
-        self.assertIn("INSERT INTO ping DEFAULT VALUES RETURNING id", go)
+        self.assertIn('INSERT INTO "ping" DEFAULT VALUES RETURNING "id"', go)
 
 
 class DeterminismTests(TestCase):

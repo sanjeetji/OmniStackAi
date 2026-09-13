@@ -1,13 +1,23 @@
 # Project State — OmniStackAI
-Last updated: 2026-09-13T03:30:00+05:30
+Last updated: 2026-09-13
 
 ## Current Phase
 Stage 0 (Founder Build Sequence, Brief Section 91) — BASIC/MVP
 
-> **Front-door pivot: the local "chat → create → RUN" loop works end to end.** UI-component series PAUSED at R-415 (110 components, resumable). Front door: **R-416** intake (sentence→IR) · **R-417** builder (IR→owned repo) · **R-418** chat **web UI** (`task agent-engine:studio:serve` → http://127.0.0.1:4173) · **R-419** turnkey **run** (`task agent-engine:app:run -- <dir>` → DB+migrations+backend:8000+web:3000 in one command; blog app verified fully booted). Next: **R-420** — fix two schema-generator bugs R-419 exposed (unquoted reserved words like `order`; FK/table ordering) so chat-generated apps run.
+> **The local "chat → create → RUN" loop works end to end and its generated PostgreSQL is now hardened.** UI-component series PAUSED at R-415 (110 components, resumable). Front door: **R-416** intake · **R-417** builder · **R-418** chat web UI · **R-419** turnkey run · **R-420** SQL-safe identifiers and FK dependency ordering. Recommended next: **R-421**, embed a live generated-app preview in the existing local studio (aligned with R-033/R-034).
 
 ## Last Completed Task
-Tracker ID: R-419 — Turnkey local run (`omnistackai_agent_engine/localrun/`) — DONE, `task verify` (2,801
+Tracker ID: R-420 — SQL-safe generated PostgreSQL identifiers and FK dependency ordering — DONE.
+Generated DDL, fixture INSERTs, Python repositories, and Go stores now use the same defensively quoted
+PostgreSQL identifiers without changing logical code or API names. Entity tables and fixture groups use
+a stable FK topological order; independent entities keep source order, self-references work, and non-self
+cycles fail with a deterministic `ValueError`. Seven focused safety tests and 186 related regressions pass;
+`task verify` passes **2,808 tests**; lint, security, environment, and both builder demos pass. Representative
+Python and Go output was syntax/formatted checked, and a reserved-name User/Order migration ran successfully
+against local PostgreSQL inside a rollback-only transaction. No dependency, infrastructure, database-engine,
+IR, or top-level-layout change; 0 local/cloud model calls.
+
+Immediately preceded by R-419 — Turnkey local run (`omnistackai_agent_engine/localrun/`) — DONE, `task verify` (2,801
 tests, 12 new focused R-419 tests) passing. Brick 4 of the front door: `build_run_plan(repo_dir, ...)`
 inspects a generated repo and composes a deterministic, JSON-safe run plan (recreate a per-app Postgres DB,
 apply migrations, start backend with `DATABASE_URL`/`JWT_SECRET`, start web with `next dev` directly +
@@ -202,7 +212,8 @@ R-324 (theming tokens), R-323 (popover), R-322 (dropdown menu), R-321 (accordion
 R-317 (skeleton), R-316 (alert), R-315 (card), R-314 (tooltip), R-313 (column visibility), R-312 (badge), R-311 (table density),
 R-310 (tabs), R-309 (pagination), and R-308 (JSON export).
 
-**Notes:** (1) R-414 complete with 2,735 tests passing. (2) Advancing autonomously to R-415 via a self-paced /loop (posture is advancing, not stopped).
+**Notes:** R-420 is complete with 2,808 tests passing. The next proposed task is R-421, live generated-app
+preview inside the existing local studio; its task contract must be recorded before coding.
 
 
 

@@ -29,21 +29,21 @@ class GoSearchStoreTests(TestCase):
     def test_list_entity_store_accepts_q_and_filters_text_fields(self) -> None:
         # Post is filterable (published), so search flows through the R-282 postFilters helper.
         self.assertIn("func ListPost(ctx context.Context, db *sql.DB, limit, offset int, sort, order, q string, filters map[string]string) ([]models.Post, error)", self.post_store)
-        self.assertIn('conds = append(conds, "(title ILIKE $1 OR body ILIKE $1)")', self.post_store)
+        self.assertIn('conds = append(conds, "(\\\"title\\\" ILIKE $1 OR \\\"body\\\" ILIKE $1)")', self.post_store)
         self.assertIn('args = append(args, "%"+q+"%")', self.post_store)
         self.assertIn("rows, err := db.QueryContext(ctx, query, args...)", self.post_store)
 
     def test_count_entity_store_accepts_q_and_filters_text_fields(self) -> None:
         self.assertIn("func CountPost(ctx context.Context, db *sql.DB, q string, filters map[string]string) (int, error)", self.post_store)
-        self.assertIn('err := db.QueryRowContext(ctx, fmt.Sprintf("SELECT COUNT(*) FROM post%s", where), args...).Scan(&count)', self.post_store)
+        self.assertIn('err := db.QueryRowContext(ctx, fmt.Sprintf("SELECT COUNT(*) FROM \\"post\\"%s", where), args...).Scan(&count)', self.post_store)
 
     def test_subcollection_store_accepts_q_and_combines_with_relation(self) -> None:
         self.assertIn("func ListCommentByPost(ctx context.Context, db *sql.DB, postID string, limit, offset int, sort, order, q string) ([]models.Comment, error)", self.comment_store)
-        self.assertIn("WHERE post_id = $1 AND (body ILIKE $2)", self.comment_store)
+        self.assertIn('WHERE \\"post_id\\" = $1 AND (\\"body\\" ILIKE $2)', self.comment_store)
         self.assertIn('rows, err = db.QueryContext(ctx, query, postID, "%"+q+"%", limit, offset)', self.comment_store)
 
         self.assertIn("func CountCommentByPost(ctx context.Context, db *sql.DB, postID string, q string) (int, error)", self.comment_store)
-        self.assertIn("SELECT COUNT(*) FROM comment WHERE post_id = $1 AND (body ILIKE $2)", self.comment_store)
+        self.assertIn('SELECT COUNT(*) FROM "comment" WHERE "post_id" = $1 AND ("body" ILIKE $2)', self.comment_store)
 
     def test_entity_with_no_text_fields_omits_search_clause(self) -> None:
         from dataclasses import replace
@@ -98,19 +98,19 @@ class PythonSearchRepositoryTests(TestCase):
     def test_list_repo_accepts_q_and_filters_text_fields(self) -> None:
         # Post is filterable (published), so search flows through the R-282 _list_filters helper.
         self.assertIn('async def list_post(limit: int = 100, offset: int = 0, sort: str = "id", order: str = "asc", q: str | None = None, published=None) -> list[dict[str, Any]]:', self.post_repo)
-        self.assertIn('conditions.append("(title ILIKE %s OR body ILIKE %s)")', self.post_repo)
+        self.assertIn('conditions.append(\'(\"title\" ILIKE %s OR \"body\" ILIKE %s)\')', self.post_repo)
         self.assertIn('params.extend([f"%{q}%"] * 2)', self.post_repo)
         self.assertIn("await cur.execute(sql, (*params, limit, offset))", self.post_repo)
 
     def test_count_repo_accepts_q_and_filters_text_fields(self) -> None:
         self.assertIn("async def count_post(q: str | None = None, published=None) -> int:", self.post_repo)
-        self.assertIn('await cur.execute(f"SELECT COUNT(*) AS count FROM {TABLE}{where}", tuple(params))', self.post_repo)
+        self.assertIn("await cur.execute(f'SELECT COUNT(*) AS count FROM {TABLE}{where}', tuple(params))", self.post_repo)
 
     def test_subcollection_repo_accepts_q(self) -> None:
         self.assertIn('async def list_comment_by_post(post_id: str, limit: int = 100, offset: int = 0, sort: str = "id", order: str = "asc", q: str | None = None) -> list[dict[str, Any]]:', self.comment_repo)
-        self.assertIn("WHERE post_id = %s AND (body ILIKE %s)", self.comment_repo)
+        self.assertIn('WHERE "post_id" = %s AND ("body" ILIKE %s)', self.comment_repo)
         self.assertIn("async def count_comment_by_post(post_id: str, q: str | None = None) -> int:", self.comment_repo)
-        self.assertIn("SELECT COUNT(*) AS count FROM {TABLE} WHERE post_id = %s AND (body ILIKE %s)", self.comment_repo)
+        self.assertIn('SELECT COUNT(*) AS count FROM {TABLE} WHERE "post_id" = %s AND ("body" ILIKE %s)', self.comment_repo)
 
 
 class PythonSearchRouterTests(TestCase):

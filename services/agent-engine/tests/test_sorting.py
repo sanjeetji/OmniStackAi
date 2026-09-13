@@ -19,7 +19,7 @@ class GoSortingStoreTests(TestCase):
         self.assertIn('"strings"', self.post_store)
 
     def test_list_entity_store_whitelists_sort_fields(self) -> None:
-        self.assertIn('col := "id"', self.post_store)
+        self.assertIn('col := "\\\"id\\\""', self.post_store)
         self.assertIn("switch sort {", self.post_store)
         self.assertIn('case "id":', self.post_store)
         self.assertIn('case "title":', self.post_store)
@@ -33,13 +33,13 @@ class GoSortingStoreTests(TestCase):
 
     def test_list_entity_store_formats_validated_query(self) -> None:
         # Post is filterable (published), so its list query is the R-282 dynamic builder.
-        self.assertIn('fmt.Sprintf("SELECT id, title, body, published FROM post%s ORDER BY %s %s LIMIT $%d OFFSET $%d", where, col, dir, len(args)+1, len(args)+2)', self.post_store)
+        self.assertIn('fmt.Sprintf("SELECT \\"id\\", \\"title\\", \\"body\\", \\"published\\" FROM \\"post\\"%s ORDER BY %s %s LIMIT $%d OFFSET $%d", where, col, dir, len(args)+1, len(args)+2)', self.post_store)
 
     def test_subcollection_store_has_sort_whitelist_and_order(self) -> None:
-        self.assertIn('col := "id"', self.comment_store)
+        self.assertIn('col := "\\\"id\\\""', self.comment_store)
         self.assertIn('case "id":', self.comment_store)
         self.assertIn('case "body":', self.comment_store)
-        self.assertIn('fmt.Sprintf("SELECT id, body FROM comment WHERE post_id = $1 ORDER BY %s %s LIMIT $2 OFFSET $3", col, dir)', self.comment_store)
+        self.assertIn('fmt.Sprintf("SELECT \\"id\\", \\"body\\" FROM \\"comment\\" WHERE \\"post_id\\" = $1 ORDER BY %s %s LIMIT $2 OFFSET $3", col, dir)', self.comment_store)
 
 
 class GoSortingHandlerTests(TestCase):
@@ -72,14 +72,14 @@ class PythonSortingRepositoryTests(TestCase):
         self.assertIn("ALLOWED_SORT_FIELDS = ['id', 'title', 'body', 'published']", self.post_repo)
 
     def test_repository_whitelists_column_and_validates_order(self) -> None:
-        self.assertIn('sort_col = sort if sort in ALLOWED_SORT_FIELDS else "id"', self.post_repo)
+        self.assertIn('sort_col = SQL_COLUMNS.get(sort, SQL_COLUMNS["id"])', self.post_repo)
         self.assertIn('sort_dir = "DESC" if order.lower() == "desc" else "ASC"', self.post_repo)
         self.assertIn('ORDER BY {sort_col} {sort_dir} LIMIT %s OFFSET %s', self.post_repo)
 
     def test_subcollection_repository_whitelists_sort_and_order(self) -> None:
-        self.assertIn('sort_col = sort if sort in ALLOWED_SORT_FIELDS else "id"', self.comment_repo)
+        self.assertIn('sort_col = SQL_COLUMNS.get(sort, SQL_COLUMNS["id"])', self.comment_repo)
         self.assertIn('sort_dir = "DESC" if order.lower() == "desc" else "ASC"', self.comment_repo)
-        self.assertIn('WHERE post_id = %s', self.comment_repo)
+        self.assertIn('WHERE "post_id" = %s', self.comment_repo)
         self.assertIn('ORDER BY {sort_col} {sort_dir} LIMIT %s OFFSET %s', self.comment_repo)
 
 

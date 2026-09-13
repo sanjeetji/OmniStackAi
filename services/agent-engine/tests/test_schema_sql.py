@@ -61,29 +61,29 @@ class TypeMapTests(TestCase):
             ),
         )
         sql = render_postgres_schema(_ir((entity,)))
-        self.assertIn("CREATE TABLE widget (", sql)
-        self.assertIn("id UUID PRIMARY KEY DEFAULT gen_random_uuid()", sql)
-        self.assertIn("label TEXT NOT NULL", sql)
-        self.assertIn("notes TEXT", sql)
-        self.assertNotIn("notes TEXT NOT NULL", sql)
-        self.assertIn("qty BIGINT NOT NULL", sql)
-        self.assertIn("price DOUBLE PRECISION NOT NULL", sql)
-        self.assertIn("active BOOLEAN", sql)
-        self.assertIn("made_at TIMESTAMPTZ", sql)
-        self.assertIn("meta JSONB", sql)
+        self.assertIn('CREATE TABLE "widget" (', sql)
+        self.assertIn('"id" UUID PRIMARY KEY DEFAULT gen_random_uuid()', sql)
+        self.assertIn('"label" TEXT NOT NULL', sql)
+        self.assertIn('"notes" TEXT', sql)
+        self.assertNotIn('"notes" TEXT NOT NULL', sql)
+        self.assertIn('"qty" BIGINT NOT NULL', sql)
+        self.assertIn('"price" DOUBLE PRECISION NOT NULL', sql)
+        self.assertIn('"active" BOOLEAN', sql)
+        self.assertIn('"made_at" TIMESTAMPTZ', sql)
+        self.assertIn('"meta" JSONB', sql)
 
 
 class PrimaryKeyTests(TestCase):
     def test_surrogate_id_added_when_absent(self) -> None:
         entity = Entity("Note", (Field("body", FieldType.TEXT, True),))
         sql = render_postgres_schema(_ir((entity,)))
-        self.assertIn("id UUID PRIMARY KEY DEFAULT gen_random_uuid()", sql)
+        self.assertIn('"id" UUID PRIMARY KEY DEFAULT gen_random_uuid()', sql)
 
     def test_declared_id_becomes_primary_key(self) -> None:
         entity = Entity("Note", (Field("id", FieldType.UUID, True), Field("body", FieldType.TEXT, True)))
         sql = render_postgres_schema(_ir((entity,)))
         # the declared id is the only primary key; no surrogate id is prepended
-        self.assertIn("    id UUID PRIMARY KEY DEFAULT gen_random_uuid()", sql)
+        self.assertIn('    "id" UUID PRIMARY KEY DEFAULT gen_random_uuid()', sql)
         self.assertEqual(sql.count("PRIMARY KEY"), 1)
 
 
@@ -96,15 +96,15 @@ class ForeignKeyTests(TestCase):
             (Relation("driver", "Driver", RelationKind.MANY_TO_ONE),),
         )
         sql = render_postgres_schema(_ir((driver, fav)))
-        self.assertIn("driver_id UUID REFERENCES driver(id)", sql)
+        self.assertIn('"driver_id" UUID REFERENCES "driver"("id")', sql)
 
     def test_many_to_many_emits_single_join_table(self) -> None:
         a = Entity("Book", (Field("id", FieldType.UUID, True),), (Relation("tags", "Tag", RelationKind.MANY_TO_MANY),))
         b = Entity("Tag", (Field("id", FieldType.UUID, True),), (Relation("books", "Book", RelationKind.MANY_TO_MANY),))
         sql = render_postgres_schema(_ir((a, b)))
         # deterministic sorted pair -> one join table named book_tag
-        self.assertEqual(sql.count("CREATE TABLE book_tag ("), 1)
-        self.assertIn("PRIMARY KEY (book_id, tag_id)", sql)
+        self.assertEqual(sql.count('CREATE TABLE "book_tag" ('), 1)
+        self.assertIn('PRIMARY KEY ("book_id", "tag_id")', sql)
 
 
 class DeterminismAndGateTests(TestCase):
@@ -120,7 +120,7 @@ class AdapterEmissionTests(TestCase):
     def test_python_backend_emits_migration_for_postgres(self) -> None:
         project = PythonBackendAdapter().generate(example_ir("minimal-blog"))
         self.assertIn("migrations/0001_init.sql", project.paths())
-        self.assertIn("CREATE TABLE post (", project.get("migrations/0001_init.sql").content)
+        self.assertIn('CREATE TABLE "post" (', project.get("migrations/0001_init.sql").content)
 
     def test_go_backend_emits_migration_for_postgres(self) -> None:
         project = GoBackendAdapter().generate(example_ir("rideshare-favourites"))

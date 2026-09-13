@@ -18,7 +18,7 @@ class PythonTotalCountRepositoryTests(TestCase):
 
     def test_python_repo_declares_count_by_relation_method(self) -> None:
         self.assertIn("async def count_comment_by_post(post_id: str, q: str | None = None) -> int:", self.comment_repo)
-        self.assertIn('SELECT COUNT(*) AS count FROM {TABLE} WHERE post_id = %s', self.comment_repo)
+        self.assertIn('SELECT COUNT(*) AS count FROM {TABLE} WHERE "post_id" = %s', self.comment_repo)
 
 
 class PythonTotalCountRouterTests(TestCase):
@@ -48,11 +48,11 @@ class GoTotalCountStoreTests(TestCase):
 
     def test_go_store_declares_count_method(self) -> None:
         self.assertIn("func CountPost(ctx context.Context, db *sql.DB, q string, filters map[string]string) (int, error)", self.post_store)
-        self.assertIn("SELECT COUNT(*) FROM post", self.post_store)
+        self.assertIn('SELECT COUNT(*) FROM \\"post\\"', self.post_store)
 
     def test_go_store_declares_count_by_relation_method(self) -> None:
         self.assertIn("func CountCommentByPost(ctx context.Context, db *sql.DB, postID string, q string) (int, error)", self.comment_store)
-        self.assertIn("SELECT COUNT(*) FROM comment WHERE post_id = $1", self.comment_store)
+        self.assertIn('SELECT COUNT(*) FROM "comment" WHERE "post_id" = $1', self.comment_store)
 
 
 class GoTotalCountHandlerTests(TestCase):

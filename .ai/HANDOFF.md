@@ -1,20 +1,27 @@
 # Current Handoff
 
-Task ID: R-419
+Task ID: R-420
 Status: done
 Phase: BASIC/MVP — Founder Stage 0
 Branch: `main` (the only branch; the GitHub default)
 
-> **Front-door pivot: the local "chat → create → RUN" loop now works end to end.** UI-component series PAUSED at R-415 (110 components, resumable). Front door: **R-416** intake (sentence→IR) · **R-417** builder (IR→owned repo) · **R-418** chat **web UI** (`task agent-engine:studio:serve` → http://127.0.0.1:4173) · **R-419** turnkey **run** (`task agent-engine:app:run -- <dir>` → DB+migrations+backend:8000+web:3000, one command). Verified live on the Mac (blog app fully booted). **HIGH-PRIORITY NEXT: R-420** = fix the two schema-generator bugs R-419 exposed by running real migrations — (1) quote reserved-word identifiers (e.g. `order`, `user`); (2) emit `CREATE TABLE` in FK-dependency order — so chat-generated apps (bookstore/recipe) actually run. `task verify` never executes SQL, so fix must be correct-by-construction with string-level tests. Then live in-browser preview in the studio (R-033/R-034).
+> **The local "chat → create → RUN" loop works end to end and generated PostgreSQL is hardened.** UI-component series PAUSED at R-415 (110 components, resumable). Front door: **R-416** intake · **R-417** builder · **R-418** chat web UI · **R-419** turnkey run · **R-420** quoted SQL identifiers plus FK dependency ordering. **RECOMMENDED NEXT: R-421** = embed a live generated-app preview into the existing local studio, aligned with the R-033/R-034 preview backlog.
 
 ## Repo/workflow state
 
+- **R-420 (generated SQL hardening)** shipped: one PostgreSQL identifier encoder is used across schema,
+  seed, Python repository, and Go store SQL. Stable FK topological ordering puts parents before dependants,
+  preserves independent source order, supports self-references, and rejects non-self cycles clearly.
+  Seven focused tests + 186 related regressions pass; `task verify` **2,808** passing; lint/security/env and
+  both demos green. Generated Python/Go syntax checks passed. A reserved-name User/Order migration passed
+  a rollback-only live PostgreSQL proof. 0 model calls. No workbook row exists past R-358.
 - **R-419 (turnkey local run)** shipped: new `localrun/` package (`plan.py` `build_run_plan`, `run.py` executor) + opt-in `task agent-engine:app:run` (Task deps `db:up`). 12 focused tests, `task verify` **2,801** passing (0 model calls), lint/security/env green, demo unchanged. Live proof: one command booted the blog app (uvicorn :8000 `/healthz` 200 + `/posts` seeded; Next.js :3000 200). Fixed `pnpm install` → `pnpm install --ignore-scripts`. Surfaced 2 codegen SQL bugs → R-420. Single commit authored `sanjeetji <sk698166@gmail.com>`, pushed.
 - **R-418 (chat studio web UI)** shipped (brick 3): `studio/` package + opt-in `task agent-engine:studio:serve`.
 - **R-417 (Prompt → generated app repo)** shipped (brick 2): `intake/build_app.py` + opt-in `task agent-engine:app:build`.
 - **R-416 (Prompt → Application IR intake agent)** shipped (brick 1): `intake/` package + opt-in `task agent-engine:intake:run`.
 - **R-415 (Phone Number Input Suite)** was the last UI-component-series task (110 components; paused/resumable).
-- **Code clean and verified on `main`**.
+- **R-420 code and required documentation are verified for the checkpoint commit on `main`**. Preserve
+  and exclude the unrelated untracked `.claude/` directory.
 - Tracker and state files kept fully consistent and verified.
 - Completed:
   1. **R-363**: Tour & Onboarding Spotlight Guide Suite (`components/tour.tsx`)
@@ -69,7 +76,8 @@ Branch: `main` (the only branch; the GitHub default)
   50. **R-412**: Character & Word Counter Textarea Suite (`components/character-counter.tsx`)
   51. **R-413**: Copy-to-Clipboard Button Suite (`components/copy-button.tsx`)
   52. **R-414**: Duration Input Suite (`components/duration-input.tsx`)
-- Advancing autonomously (hands-off self-paced `/loop`) to the next Tracker ID (posture is advancing, not stopped). Still stop-and-ask only for paid cloud / DB engine / new infra / native-mobile / a materially different architecture decision.
+- R-420 is complete; the next coding action is gated on recording the R-421 contract. Still stop-and-ask
+  only for paid cloud / DB engine / new infra / native-mobile / a materially different architecture decision.
 
 ## Completed
 
@@ -980,10 +988,11 @@ Enabled accessible, desktop-and-mobile-grade, futuristic Time Picker and Time Ra
 
 ## Next action
 
-- Advancing autonomously (self-paced `/loop`) to Task R-415 (next unstarted Tracker ID). Record its contract in `.ai/CURRENT_TASK.yaml` and `.ai/tasks/R-415.md` before code.
+- R-420 is complete. Before coding, propose and record the R-421 Standard AI Task Contract. Recommended
+  scope: embed a live generated-app preview into the existing local studio by composing the R-417 builder,
+  R-418 studio, and R-419 local-run boundaries, aligned with the R-033/R-034 preview backlog. Execution
+  must remain opt-in/local while `task verify` stays deterministic and network/DB/model independent.
 
 ## Next command
 
 - `task ai:status`
-
-

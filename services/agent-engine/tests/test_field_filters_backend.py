@@ -85,9 +85,9 @@ class PythonFilterRepositoryTests(TestCase):
 
     def test_conditions_are_parameterized(self) -> None:
         self.assertIn("if active is not None:", self.repo)
-        self.assertIn('conditions.append("active = %s")', self.repo)
+        self.assertIn('conditions.append(\'"active" = %s\')', self.repo)
         self.assertIn("params.append(active)", self.repo)
-        self.assertIn('conditions.append("status = %s")', self.repo)
+        self.assertIn('conditions.append(\'"status" = %s\')', self.repo)
         self.assertIn("params.append(status)", self.repo)
         self.assertIn("await cur.execute(sql, (*params, limit, offset))", self.repo)
 
@@ -110,7 +110,7 @@ class GoFilterStoreTests(TestCase):
 
     def test_bool_and_enum_coercion_and_placeholders(self) -> None:
         self.assertIn('if v, ok := filters["active"]; ok && v != "" {', self.store)
-        self.assertIn('conds = append(conds, fmt.Sprintf("active = $%d", len(args)+1))', self.store)
+        self.assertIn('conds = append(conds, fmt.Sprintf("\\\"active\\\" = $%d", len(args)+1))', self.store)
         self.assertIn('args = append(args, v == "true")', self.store)          # bool coercion
         self.assertIn('if v, ok := filters["status"]; ok && v != "" {', self.store)
         self.assertIn("args = append(args, v)", self.store)                     # enum stays string

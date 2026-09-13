@@ -46,17 +46,57 @@ def table_name(entity_name: str) -> str:
     return _snake(entity_name)
 
 
+def sql_identifier(name: str) -> str:
+    """Return one PostgreSQL identifier with defensive standard double quoting."""
+
+    if not isinstance(name, str) or not name:
+        raise ValueError("SQL identifier must be a non-empty string")
+    return '"' + name.replace('"', '""') + '"'
+
+
+def ordered_entities(ir: ApplicationIR) -> tuple[Entity, ...]:
+    """Stable FK-dependency order for entity creation and fixture insertion.
+
+    PostgreSQL accepts a self-reference in the table currently being created, but an inline foreign
+    key to another table requires that target table to exist already. A non-self cycle cannot satisfy
+    that contract with inline constraints, so fail honestly instead of emitting a broken migration.
+    """
+
+    remaining = list(ir.entities)
+    emitted: set[str] = set()
+    ordered: list[Entity] = []
+    while remaining:
+        ready_index: int | None = None
+        for index, entity in enumerate(remaining):
+            dependencies = {
+                relation.target_entity
+                for relation in entity.relations
+                if relation.kind in _FK_KINDS and relation.target_entity != entity.name
+            }
+            if dependencies <= emitted:
+                ready_index = index
+                break
+        if ready_index is None:
+            names = ", ".join(entity.name for entity in remaining)
+            raise ValueError(f"cyclic foreign-key dependencies: {names}")
+        entity = remaining.pop(ready_index)
+        ordered.append(entity)
+        emitted.add(entity.name)
+    return tuple(ordered)
+
+
 def _column_lines(entity: Entity) -> list[str]:
     lines: list[str] = []
     has_id = any(field.name == "id" for field in entity.fields)
     if not has_id:
-        lines.append("    id UUID PRIMARY KEY DEFAULT gen_random_uuid()")
+        lines.append(f"    {sql_identifier('id')} UUID PRIMARY KEY DEFAULT gen_random_uuid()")
 
     for field in entity.fields:
         pg = _PG_TYPE[field.type]
+        column = sql_identifier(field.name)
         if field.name == "id":
             default = " DEFAULT gen_random_uuid()" if field.type is FieldType.UUID else ""
-            lines.append(f"    {field.name} {pg} PRIMARY KEY{default}")
+            lines.append(f"    {column} {pg} PRIMARY KEY{default}")
         else:
             rules = parse_field_rules(field)
             if field.type is FieldType.STRING and rules.max_length is not None:
@@ -66,19 +106,20 @@ def _column_lines(entity: Entity) -> list[str]:
             checks: list[str] = []
             if rules.enum:
                 allowed = ", ".join("'" + value.replace("'", "''") + "'" for value in rules.enum)
-                checks.append(f"{field.name} IN ({allowed})")
+                checks.append(f"{column} IN ({allowed})")
             if field.type in (FieldType.INT, FieldType.FLOAT):
                 if rules.minimum is not None:
-                    checks.append(f"{field.name} >= {rules.minimum}")
+                    checks.append(f"{column} >= {rules.minimum}")
                 if rules.maximum is not None:
-                    checks.append(f"{field.name} <= {rules.maximum}")
+                    checks.append(f"{column} <= {rules.maximum}")
             check = "".join(f" CHECK ({clause})" for clause in checks)
-            lines.append(f"    {field.name} {pg}{null}{unique}{check}")
+            lines.append(f"    {column} {pg}{null}{unique}{check}")
 
     for relation in entity.relations:
         if relation.kind in _FK_KINDS:
-            target = _table(relation.target_entity)
-            lines.append(f"    {relation.name}_id UUID REFERENCES {target}(id)")
+            target = sql_identifier(_table(relation.target_entity))
+            relation_column = sql_identifier(f"{relation.name}_id")
+            lines.append(f"    {relation_column} UUID REFERENCES {target}({sql_identifier('id')})")
     return lines
 
 
@@ -97,10 +138,10 @@ def _join_tables(ir: ApplicationIR) -> list[str]:
                 a, b = key
                 join = f"{a}_{b}"
                 seen[key] = (
-                    f"CREATE TABLE {join} (\n"
-                    f"    {a}_id UUID NOT NULL REFERENCES {a}(id),\n"
-                    f"    {b}_id UUID NOT NULL REFERENCES {b}(id),\n"
-                    f"    PRIMARY KEY ({a}_id, {b}_id)\n"
+                    f"CREATE TABLE {sql_identifier(join)} (\n"
+                    f"    {sql_identifier(f'{a}_id')} UUID NOT NULL REFERENCES {sql_identifier(a)}({sql_identifier('id')}),\n"
+                    f"    {sql_identifier(f'{b}_id')} UUID NOT NULL REFERENCES {sql_identifier(b)}({sql_identifier('id')}),\n"
+                    f"    PRIMARY KEY ({sql_identifier(f'{a}_id')}, {sql_identifier(f'{b}_id')})\n"
                     f");"
                 )
     return [seen[key] for key in sorted(seen)]
@@ -113,11 +154,13 @@ def _index_statements(ir: ApplicationIR) -> list[str]:
     for entity in ir.entities:
         table = _table(entity.name)
         for index in entity.indexes:
-            columns = ", ".join(index.fields)
+            columns = ", ".join(sql_identifier(field) for field in index.fields)
             default_name = f"{table}_{'_'.join(index.fields)}_{'key' if index.unique else 'idx'}"
             name = index.name or default_name
             unique = "UNIQUE " if index.unique else ""
-            statements.append(f"CREATE {unique}INDEX {name} ON {table} ({columns});")
+            statements.append(
+                f"CREATE {unique}INDEX {sql_identifier(name)} ON {sql_identifier(table)} ({columns});"
+            )
     return statements
 
 
@@ -134,9 +177,9 @@ def render_postgres_schema(ir: ApplicationIR) -> str:
         "-- Generated by OmniStackAI from the Application IR. Review before applying.",
         "",
     ]
-    for entity in ir.entities:
+    for entity in ordered_entities(ir):
         columns = ",\n".join(_column_lines(entity))
-        blocks.append(f"CREATE TABLE {_table(entity.name)} (\n{columns}\n);")
+        blocks.append(f"CREATE TABLE {sql_identifier(_table(entity.name))} (\n{columns}\n);")
         blocks.append("")
 
     join_tables = _join_tables(ir)

@@ -1,55 +1,117 @@
-task_id: R-419
-id: R-419
-title: "Turnkey local run for a generated app (chat-to-create front door, brick 4)"
+task_id: R-420
+id: R-420
+title: "SQL-safe generated PostgreSQL identifiers and FK dependency order"
 status: done
 phase: MVP
 tracker_row: null
 started_at: "2026-09-13"
 completed_at: "2026-09-13"
 objective: >-
-  Make a generated app repo run locally in one command, removing the manual DB/venv/pnpm dance. New
-  omnistackai_agent_engine/localrun/ package (Python 3.13 stdlib only) using the platform's "deterministic
-  plan + opt-in executor" pattern. plan.py: RunStep/RunPlan dataclasses + build_run_plan(repo_dir, *, db_*,
-  api_port, web_port, jwt_secret, db_name=None) inspects the repo (backend flavor python/go, migrations, web)
-  and composes an ordered JSON-safe plan: recreate a per-app Postgres DB (DROP IF EXISTS + CREATE) in the
-  running local container, apply each migration, start the backend (uvicorn or go run with DATABASE_URL/
-  JWT_SECRET), start the web app with next dev (the Next binary directly, NOT pnpm dev) + NEXT_PUBLIC_API_URL;
-  resolves api_url/web_url and RunPlan.to_dict() (masks the DB password). run.py: opt-in executor
-  (task agent-engine:app:run -- <dir>, excluded from verify) - runs setup synchronously (skips existing
-  .venv/node_modules), launches both servers, polls backend /healthz, prints URLs, cleans up on Ctrl+C. Task
-  depends on db:up. Deterministic core is fully offline-testable; the executor is opt-in. No paid cloud.
+  Fix the two generated PostgreSQL defects exposed by R-419's live app run: emit safe quoted SQL
+  identifiers consistently across schema, seed, Python repositories, and Go stores; and create tables
+  plus seed fixture groups in a stable foreign-key dependency order so a child declared before its
+  parent never references a relation that does not exist yet.
+requirements:
+  - Keep logical snake_case names unchanged for file paths, module names, functions, and route wiring.
+  - Render every generator-owned PostgreSQL table, column, relation column, and index identifier with safe double quoting.
+  - Apply the same SQL identifier representation in migrations, fixture INSERTs, Python repositories, and Go stores.
+  - Emit entity tables in stable topological order over many_to_one and one_to_one dependencies, preserving source order between independent entities.
+  - Emit fixture entity groups in the same dependency order while preserving row order within each fixture.
+  - Keep many-to-many association tables after all entity tables and preserve deterministic output.
+  - Fail deterministically with a clear error for cyclic non-self foreign-key dependencies rather than emitting an invalid migration.
+acceptance_criteria:
+  - An Order or User entity produces valid quoted table SQL everywhere it is referenced.
+  - Reserved-looking field, relation, and index names are quoted without changing public code identifiers.
+  - A child-before-parent IR renders the parent CREATE TABLE first and its child/fixture rows afterward.
+  - Independent entities retain their original relative order and self-references remain renderable.
+  - A non-self FK cycle raises a stable explanatory ValueError instead of emitting forward-reference SQL.
+  - Existing example IRs remain deterministic and both backend adapters emit consistent migrations/repositories.
+  - Focused tests and the full offline verification, lint, security, environment, and builder demo gates pass.
+expected_impact:
+  - services/agent-engine/src/omnistackai_agent_engine/codegen/schema_sql.py
+  - services/agent-engine/src/omnistackai_agent_engine/codegen/seed_sql.py
+  - services/agent-engine/src/omnistackai_agent_engine/codegen/data_access.py
+  - services/agent-engine/tests/test_schema_sql_safety.py
+  - Existing SQL/codegen assertion tests that must reflect deliberate quoted output
+  - State, handoff, work log, changelog, progress, resume, and codegen documentation
 allowed_paths:
-  - "services/agent-engine/src/omnistackai_agent_engine/localrun/__init__.py"
-  - "services/agent-engine/src/omnistackai_agent_engine/localrun/plan.py"
-  - "services/agent-engine/src/omnistackai_agent_engine/localrun/run.py"
-  - "services/agent-engine/tests/test_localrun_plan.py"
-  - "scripts/agent-engine.sh"
-  - "Taskfile.yml"
-  - ".ai/tasks/R-419.md"
+  - "services/agent-engine/src/omnistackai_agent_engine/codegen/schema_sql.py"
+  - "services/agent-engine/src/omnistackai_agent_engine/codegen/seed_sql.py"
+  - "services/agent-engine/src/omnistackai_agent_engine/codegen/data_access.py"
+  - "services/agent-engine/tests/test_schema_sql_safety.py"
+  - "services/agent-engine/tests/test_schema_sql.py"
+  - "services/agent-engine/tests/test_seed_sql.py"
+  - "services/agent-engine/tests/test_data_access.py"
+  - "services/agent-engine/tests/test_schema_indexes.py"
+  - "services/agent-engine/tests/test_field_validation.py"
+  - "services/agent-engine/tests/test_field_validation_numeric.py"
+  - "services/agent-engine/tests/test_field_filters_backend.py"
+  - "services/agent-engine/tests/test_pagination.py"
+  - "services/agent-engine/tests/test_patch_update_handlers.py"
+  - "services/agent-engine/tests/test_sorting.py"
+  - "services/agent-engine/tests/test_search.py"
+  - "services/agent-engine/tests/test_collection_field_filters.py"
+  - "services/agent-engine/tests/test_subcollection_field_filters.py"
+  - "services/agent-engine/tests/test_subcollection_wiring.py"
+  - "services/agent-engine/tests/test_total_count.py"
+  - ".ai/tasks/R-420.md"
   - ".ai/CURRENT_TASK.yaml"
   - ".ai/PROJECT_STATE.yaml"
   - ".ai/WORK_LOG.md"
   - ".ai/HANDOFF.md"
   - "PROJECT_STATE.md"
   - "CHANGELOG.md"
+  - "docs/CODEGEN.md"
+  - "docs/PROGRESS.md"
+  - "docs/RESUME_PROMPT.md"
 forbidden_changes:
-  - "Do not introduce external Python dependencies (stdlib only)"
-  - "Do not make task verify run the executor, docker, pnpm, pip, or any network/subprocess server"
-  - "Do not change the Application IR schema, model_gateway contracts, assembler, git_service, or codegen"
-  - "Do not put secrets in source/tests/logs/commits (DB password from env; masked in printed output)"
+  - "Do not modify or include the unrelated untracked .claude directory"
+  - "Do not change the Application IR schema or accepted relation semantics"
+  - "Do not change PostgreSQL to another database engine or add a database dependency"
+  - "Do not add platform or generated-project dependencies"
+  - "Do not make task verify connect to PostgreSQL, Docker, the network, or a model"
+  - "Do not change model/provider, runtime, deployment, studio, localrun, assembler, or Git-service contracts"
+  - "Do not add a top-level directory, service, infrastructure, or native/mobile work"
+required_gates:
+  - focused schema SQL safety tests
+  - existing schema, seed, data-access, sorting, search, filter, and pagination regression tests
+  - task lint
+  - task verify
+  - task security:quick
+  - task env:check
+  - task builder:demo -- minimal-blog
+  - task builder:demo -- rideshare-favourites
+  - generated migration plus Python/Go repository artifact inspection
+model_tool_trace:
+  routing: deterministic_only
+  local_calls: 0
+  cloud_calls: 0
+  note: >-
+    L2 deterministic code-generation correction. Repository evidence and tests are sufficient; no
+    local or cloud model call is needed.
 evidence:
-  verify: "2,801 passed"
-  lint: "passed"
-  security: "passed"
-  env: "passed"
-  demos: "minimal-blog -> 152 files (unchanged)"
-  focused_test: "12 passed (test_localrun_plan.py)"
-  live_optin: "task agent-engine:app:run -- ~/omnistackai-blog-run -> DB+both migrations+uvicorn:8000 (/healthz 200, /posts seeded)+next:3000 (200), one command, verified end-to-end"
-  bug_fixed: "pnpm install -> pnpm install --ignore-scripts (avoids ERR_PNPM_IGNORED_BUILDS exit 1)"
-  codegen_bugs_found: "running real migrations exposed 2 schema-generator defects (unquoted reserved words e.g. 'order'; FK/table ordering) -> next task R-420"
-  tracker: DONE
+  baseline_verify: >-
+    task verify passed with 2,801 tests when rerun with ephemeral 127.0.0.1 binding permitted; the
+    sandbox-only first attempt reached all tests but eight existing studio tests could not bind a local port.
+  focused_tests: >-
+    services/agent-engine/tests/test_schema_sql_safety.py passed all 7 tests, covering reserved
+    identifiers, cross-artifact quoting, transitive and stable dependency ordering, self references,
+    deterministic cycle rejection, and byte-stable output. The broader schema/seed/data-access/search/
+    sorting/filter/pagination regression selection passed all 186 tests.
+  full_verify: "task verify passed: 2,808 tests; task lint passed."
+  security: "task security:quick passed; task env:check passed."
+  builder_demos: >-
+    task builder:demo -- minimal-blog passed (152 files), and task builder:demo --
+    rideshare-favourites passed (149 files). Generated migrations and Python/Go repositories were
+    inspected; generated Python parsed with ast and both representative Go stores passed gofmt.
+  live_postgres: >-
+    Applied a reserved-name User/Order migration to the existing local PostgreSQL container inside a
+    transaction and verification schema: CREATE SCHEMA, both CREATE TABLE statements, and CREATE INDEX
+    succeeded, then ROLLBACK removed all verification state. Earlier invocation/access failures and an
+    initial test-fixture table/index name collision were diagnosed honestly and were not product defects.
+  model_calls: "0 local model calls; 0 cloud model calls."
+blockers: []
 next_action: >-
-  R-419 done and verified end-to-end (one-command run of a generated app). HIGH-PRIORITY NEXT: R-420 = fix
-  the two schema-generator bugs that R-419 exposed (quote reserved-word identifiers; order CREATE TABLE by
-  FK dependency) so chat-generated apps (bookstore/recipe/etc.) actually run - with deterministic string
-  tests. Then: embed a live in-browser preview into the studio [R-033/R-034]. Await founder direction.
+  R-420 is complete. Propose R-421 before coding: embed a live generated-app preview into the existing
+  local studio by composing the R-418 studio, R-417 builder, and R-419 local-run boundaries, aligned
+  with the existing R-033/R-034 preview backlog. Keep it local, opt-in, and deterministic in verify.

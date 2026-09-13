@@ -41,7 +41,7 @@ START PROTOCOL
   `task ai:status`, `task ai:handoff`. `task verify` must stay green and network-independent.
 - Confirm git branch/HEAD/clean tree. Then restate: phase, next Tracker ID, objective, blast radius.
 
-WHAT IS ALREADY BUILT (platform generators are Python 3.13 stdlib-only, offline, in services/agent-engine; 2,753 tests pass)
+WHAT IS ALREADY BUILT (platform generators are Python 3.13 stdlib-only, offline, in services/agent-engine; 2,808 tests pass)
 - Model fabric: ModelProvider contract + registry; local Ollama adapter (runs any installed model via
 
 
@@ -57,12 +57,14 @@ WHAT IS ALREADY BUILT (platform generators are Python 3.13 stdlib-only, offline,
   NextjsWebAdapter (Next.js) + PythonBackendAdapter (FastAPI) + GoBackendAdapter (Go net/http) ->
   project assembler (one IR -> a full customer monorepo: apps/web + services/api) -> git_service
   (materialize into a customer-owned Git repo with one commit). The backends also emit a real
-  PostgreSQL schema (migrations/0001_init.sql via render_postgres_schema: typed columns, PK, FKs,
+  PostgreSQL schema (migrations/0001_init.sql via render_postgres_schema: safely quoted identifiers,
+  stable FK dependency ordering, typed columns, PK, FKs,
   many-to-many join tables, Field.unique UNIQUE columns, Entity.indexes CREATE [UNIQUE] INDEX
   statements, and Field.validation max_length->VARCHAR(n)/enum->CHECK/numeric min->CHECK(col>=n)/
   max->CHECK(col<=n)), honest seed data
   (migrations/0002_seed.sql via render_postgres_seed from
-  explicit IR Fixtures — authored INSERTs, never fabricated, emitted only when fixtures present), a
+  explicit IR Fixtures — authored INSERTs, never fabricated, safely quoted and dependency ordered,
+  emitted only when fixtures present), a
   data-access layer (Python app/db.py + app/repositories/<entity>.py;
   Go internal/store/<entity>.go) reading/writing those tables with parameterized SQL, AND wired route
   handlers (route_wiring.py: the unambiguous CRUD endpoints call the repositories — Python routers await
@@ -198,12 +200,15 @@ R-316 accessible reusable Alert & Notification component (components/alert.tsx),
 Skeleton Loader component (components/skeleton.tsx), R-318 accessible reusable Drawer / Sheet component (components/drawer.tsx), R-319 accessible reusable Avatar component (components/avatar.tsx), R-320 accessible reusable Toggle Switch component (components/toggle.tsx), R-321 accessible reusable Accordion component (components/accordion.tsx), R-322 accessible reusable Dropdown Menu component (components/dropdown-menu.tsx), R-323 accessible reusable Popover component (components/popover.tsx), R-324 Design Tokens & CSS Custom Properties theming engine (styles/tokens.css), R-325 Theme Switcher / Mode Toggle component (components/theme-toggle.tsx), R-326 accessible reusable Dialog / Modal component (components/dialog.tsx), R-327 accessible reusable Form Controls & Input Primitives suite (components/form-controls.tsx), R-328 accessible reusable Date Picker & Calendar component (components/date-picker.tsx), R-329 accessible reusable Data Grid / Table component (components/data-grid.tsx), R-330 accessible reusable Command Palette / Search Menu component (components/command-palette.tsx), R-331 accessible reusable Slider & Range component (components/slider.tsx), R-332 accessible reusable Progress & Spinner component (components/progress.tsx), R-333 accessible reusable Rating & Review component (components/rating.tsx), R-334 accessible reusable Stepper / Multi-step Wizard component (components/stepper.tsx), R-335 accessible reusable File Upload / Dropzone component (components/file-upload.tsx), R-336 accessible reusable Timeline / Activity Feed component (components/timeline.tsx), R-337 accessible futuristic Stat & Metric KPI Card component (components/stat-card.tsx), R-338 accessible reusable Hierarchical Tree View component (components/tree-view.tsx), R-339 accessible futuristic Tag & Chip Input Tokenizer component (components/tag-input.tsx), R-340 accessible futuristic Code Block & Syntax Presentation component (components/code-block.tsx), R-341 accessible futuristic Radial Gauge & Activity Rings component (components/radial-gauge.tsx), R-342 accessible futuristic Segmented Control & Mode Switcher component (components/segmented-control.tsx), R-343 accessible futuristic Carousel & Slider Showcase component (components/carousel.tsx), R-344 accessible futuristic Resizable Panels & Splitter component (components/resizable.tsx), R-345 accessible futuristic Color Picker & Palette Swatch component (components/color-picker.tsx), R-346 accessible futuristic PIN & OTP Code Input component (components/pin-input.tsx), R-347 Speed Dial & Floating Action Button component (components/speed-dial.tsx), R-348 Accessible Futuristic Reusable Context Menu Suite (components/context-menu.tsx), R-349 Accessible Futuristic Reusable Hover Card Suite (components/hover-card.tsx), R-350 Accessible Futuristic Reusable Scroll Area Suite (components/scroll-area.tsx), R-351 Accessible Futuristic Reusable Collapsible Component (components/collapsible.tsx), R-352 Accessible Futuristic Reusable Aspect Ratio Viewport Container Component (components/aspect-ratio.tsx), R-353 Accessible Futuristic Reusable Separator Component (components/separator.tsx), R-354 Accessible Futuristic Reusable Keyboard Keycap Component (components/kbd.tsx), R-355 Accessible Futuristic Reusable Radio Group Suite (components/radio-group.tsx), R-356 Accessible Futuristic Reusable Checkbox & Checkbox Group Primitive (components/checkbox.tsx), R-357 Accessible Futuristic Reusable Announcement Banner & Callout Suite (components/banner.tsx), and R-358 Accessible Futuristic Reusable Searchable Combobox & Autocomplete Primitive (components/combobox.tsx).
 Do NOT overwrite backlog rows; continue from R-359.
 NOTE: the execution tracker's planned universe ends at R-358 (358 tasks: 147 Done, 1 Deferred, 210 Not
-Started; MVP 147/253 = 58.1%). Work past R-358 (R-359 -> R-415) is 57 additional reusable UI-component
-suites built beyond the tracker; the generated component library is now 110 components. This
-UI-COMPONENT SERIES IS PAUSED at R-415 (resumable — pick the next component as R-416 and follow the
-component-suite contract; each component is independent/additive, nothing decays). Git, state files
+Started; MVP 147/253 = 58.1%). Work past R-358 now covers 62 completed tasks: 57 reusable UI-component
+suites (R-359 -> R-415), four front-door bricks (R-416 -> R-419), and generated-SQL hardening (R-420).
+The generated component library is 110 components. Its UI-COMPONENT SERIES IS PAUSED at R-415
+(resumable under a future free ID; each component is independent/additive, nothing decays). Git, state files
 (.ai/), CHANGELOG, and docs/PROGRESS.md remain the executable/detail sources of truth. Current through
-R-415; `task verify` = 2,753 tests.
+R-420; `task verify` = 2,808 tests. R-416 added prompt-to-IR intake, R-417 materialized a generated
+owned repo, R-418 added the local chat studio, R-419 added turnkey local run, and R-420 fixed the two
+SQL defects found by live execution (reserved identifiers and FK/table ordering). A rollback-only live
+PostgreSQL proof passed for reserved-name User/Order output. No tracker workbook row exists past R-358.
 
 
 ENVIRONMENT LIMITS
@@ -234,20 +239,13 @@ RULES (non-negotiable)
   .ai/HANDOFF.md, PROJECT_STATE.md, CHANGELOG.md, and the tracker row. Push the branch; verify remote
   SHA == local HEAD. Never claim unexecuted tests.
 
-WHAT TO DO NEXT (pick with the founder)
-- The UI-COMPONENT SERIES IS PAUSED at R-415. To RESUME it: pick the next best non-duplicate component,
-  assign R-416, follow the component-suite contract, test-first, wire generate()/__init__.py, run all
-  gates, update the six state files, one commit feat(R-416): <Title>, push. Each component is
-  independent/additive; the series can be resumed at any time with no loss.
-- RECOMMENDED PIVOT (higher value, all MVP phase, all local/offline-buildable) — the user-facing
-  "chat -> create an app" FRONT DOOR, which does not exist yet (today the IR is authored by hand):
-  (1) Prompt -> Application IR agent using local Ollama [net-new, build first];
-  (2) Platform web app with a chat box [tracker R-224 Next.js console upgrade + R-011 Web/Admin Agent —
-      previously "blocked on npm", now UNBLOCKED: local pnpm works on the founder's Mac];
-  (3) Orchestration chat->IR->generate->preview [tracker R-180 Orchestrator Adapter];
-  (4) Live local preview of the generated app [tracker R-033 / R-034];
-  (5) Turnkey local run `task app:run -- <dir>` [net-new: auto-create DB, apply migrations, wire env,
-      boot both servers].
+WHAT TO DO NEXT
+- R-420 is DONE. Propose **R-421** and write `.ai/CURRENT_TASK.yaml` plus `.ai/tasks/R-421.md` before
+  coding. Recommended scope: embed a live generated-app preview into the existing local studio by
+  composing the R-417 builder, R-418 studio, and R-419 local-run boundaries, aligned with the existing
+  R-033/R-034 preview backlog. Keep execution opt-in/local; keep `task verify` independent of models,
+  PostgreSQL, Docker, package installs, and network.
+- The UI-component series remains paused at R-415 and can be resumed later under a future free ID.
 - PROVEN THIS SESSION: a generated app runs live locally on the Mac (Next.js :3000 + FastAPI :8000 +
   seeded PostgreSQL). Run the Next binary directly (`./node_modules/.bin/next dev`), not `pnpm dev`
   (pnpm 11's pre-run check exits 1 on the sharp ignored-build). Backend needs a venv (pyenv hides pip).
@@ -255,7 +253,7 @@ WHAT TO DO NEXT (pick with the founder)
   deploy (OMNISTACKAI_TIER=2 + E2B/Vercel keys) and cloud-model live-verify. Governance-deferred: native
   mobile (R-010 etc.) until web/backend stability.
 
-Begin by reading the files above and running the start protocol, then propose the next Tracker ID with
-its task contract before writing code (R-416 to resume components, or the pivot's first task).
+Begin by reading the files above and running the start protocol, then propose R-421 with its Standard AI
+Task Contract before writing code.
 
 ```

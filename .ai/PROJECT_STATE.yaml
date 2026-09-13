@@ -3,11 +3,20 @@ project: OmniStackAI
 phase: BASIC/MVP
 founder_stage: 0
 current_task: R-420
-current_status: advancing
+current_status: done
 branch: main
-last_completed_task: R-419
+last_completed_task: R-420
 last_completed_task_summary: >-
-  Built R-419, BRICK 4 of the "chat -> create an app" front door: the TURNKEY local run. New
+  Built R-420: generated PostgreSQL is now safe for reserved-looking identifiers and FK dependencies.
+  One defensive double-quote encoder is used across schema DDL, honest fixture INSERTs, Python
+  repositories, and Go stores while logical paths, symbols, routes, and API names remain unchanged.
+  Entity CREATE TABLE blocks and fixture groups now use a stable FK topological order, preserve source
+  order between independent entities, permit self references, and reject non-self cycles with a stable
+  ValueError. Seven focused safety tests and 186 related regressions pass; task verify passes all 2,808
+  tests; lint/security/env and both builder demos pass; representative Python parses and Go stores pass
+  gofmt. A reserved-name User/Order migration also executed successfully against local PostgreSQL inside
+  a rollback-only transaction. 0 local model calls, 0 cloud calls. Previously built R-419, BRICK 4 of the
+  "chat -> create an app" front door: the TURNKEY local run. New
   omnistackai_agent_engine/localrun/ package (Python 3.13 stdlib only), following the "deterministic plan +
   opt-in executor" pattern. plan.py: RunStep/RunPlan + build_run_plan(repo_dir, *, db_*, ports, jwt_secret)
   inspects a generated repo (python/go backend, migrations, web) and composes an ordered JSON-safe plan
@@ -333,16 +342,14 @@ product_direction: >-
   framework adapter contract -> Next.js adapter -> Git service -> preview/sandbox (needs cloud env).
 id_note: >-
   Workbook backlog owns R-010..R-219. Founder-requested tasks use IDs after R-219: R-220..R-223 done,
-  R-224 Next.js deferred (env-blocked), R-225..R-415 done, R-416..R-419 done (front-door bricks 1-4, not
-  components). NOTE: the UI-COMPONENT SERIES is PAUSED at R-415 (110 components, resumable at the next free
-  Tracker ID); R-416..R-419 built the "chat -> create -> run" front-door pivot instead.
+  R-224 Next.js deferred (env-blocked), R-225..R-415 done, and R-416..R-420 done (front-door bricks 1-4
+  plus generated-SQL hardening, not components). NOTE: the UI-COMPONENT SERIES is PAUSED at R-415
+  (110 components, resumable at a future free Tracker ID); R-416..R-420 built and hardened the
+  "chat -> create -> run" front-door pivot instead.
 blockers: []
 next_action: >-
-  R-419 (turnkey local run) complete and verified end-to-end: one command boots a generated app (blog:
-  Postgres + migrations + uvicorn:8000 + next:3000, all green). HIGH-PRIORITY NEXT: R-420 = fix the two
-  schema-generator bugs R-419 exposed by actually executing migrations - (1) quote reserved-word identifiers
-  in generated PostgreSQL (table/column names like "order", "user"); (2) emit CREATE TABLE in FK-dependency
-  order (referenced tables first) - both with deterministic string-level tests (verify never runs SQL, so
-  these must be correct by construction). Affected: codegen/schema_sql.py (+ possibly data_access.py/route
-  wiring for quoted identifiers). After R-420: embed a live in-browser preview into the studio (R-033/R-034).
-  Await founder direction on R-420. UI-component series remains paused/resumable.
+  R-420 is complete and removes both migration defects found by the live R-419 run. Recommended next:
+  propose R-421 and record its contract before coding, to embed a live generated-app preview into the
+  existing studio by composing the current builder and local-run boundaries (aligned with R-033/R-034).
+  Keep preview execution opt-in and local; keep task verify deterministic and network/DB/model independent.
+  UI-component series remains paused/resumable.

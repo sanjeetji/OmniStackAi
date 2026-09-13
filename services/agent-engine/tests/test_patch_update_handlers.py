@@ -114,7 +114,7 @@ class GoUpdateStoreTests(TestCase):
         store = project.get("internal/store/listing.go").content
         # UPDATE SET title=$1 WHERE id=$2 (parameterized, no string interpolation of values)
         self.assertIn("$1", store)
-        self.assertIn("WHERE id = $", store)
+        self.assertIn('WHERE "id" = $', store)
         self.assertIn("RETURNING", store)
         # No f-string value substitution of user data into the SQL template
         self.assertNotIn("WHERE id = '", store)
@@ -215,7 +215,7 @@ class PythonUpdateRepoTests(TestCase):
         project = PythonBackendAdapter().generate(_ir_py(_RULE_FREE_LISTING, _PATCH))
         repo = project.get("app/repositories/listing.py").content
         self.assertIn("UPDATE", repo)
-        self.assertIn("WHERE id = %s", repo)
+        self.assertIn('WHERE "id" = %s', repo)
         self.assertIn("RETURNING *", repo)
         # values must be passed as parameters, never string-interpolated
         self.assertNotIn("WHERE id = '", repo)

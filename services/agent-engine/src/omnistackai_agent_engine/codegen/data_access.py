@@ -12,7 +12,7 @@ import re
 
 from ..application_ir import ApplicationIR, Entity, FieldType, RelationKind
 from .field_validation import filter_fields
-from .schema_sql import table_name
+from .schema_sql import sql_identifier, table_name
 
 # Generated-project dependency pins (only added when the data-access layer is emitted).
 PSYCOPG_REQUIREMENT = "psycopg[binary]==3.2.3"
@@ -37,6 +37,16 @@ def _searchable_fields(entity: Entity) -> list[str]:
     return [field.name for field in entity.fields if field.type in (FieldType.STRING, FieldType.TEXT)]
 
 
+def _sql_columns(names: list[str]) -> str:
+    return ", ".join(sql_identifier(name) for name in names)
+
+
+def _go_string_fragment(value: str) -> str:
+    """Escape static SQL text for insertion into a generated Go double-quoted string."""
+
+    return value.replace("\\", "\\\\").replace('"', '\\"')
+
+
 # --------------------------------------------------------------------------- Python (FastAPI)
 
 def _python_db(slug: str) -> str:
@@ -56,21 +66,22 @@ def _python_db(slug: str) -> str:
 
 def _python_repository(entity: Entity) -> str:
     table = table_name(entity.name)
+    sql_table = sql_identifier(table)
     insert_cols = _insert_columns(entity)
     if insert_cols:
         create_body = (
             f"    columns = [c for c in {insert_cols!r} if c in data]\n"
             "    if not columns:\n"
-            '        sql = f"INSERT INTO {TABLE} DEFAULT VALUES RETURNING *"\n'
+            "        sql = f'INSERT INTO {TABLE} DEFAULT VALUES RETURNING *'\n"
             "        values: list = []\n"
             "    else:\n"
             '        placeholders = ", ".join(["%s"] * len(columns))\n'
-            '        sql = f"INSERT INTO {TABLE} ({\', \'.join(columns)}) VALUES ({placeholders}) RETURNING *"\n'
+            '        sql = f\'INSERT INTO {TABLE} ({", ".join(SQL_COLUMNS[c] for c in columns)}) VALUES ({placeholders}) RETURNING *\'\n'
             "        values = [data[c] for c in columns]\n"
         )
     else:
         create_body = (
-            '    sql = f"INSERT INTO {TABLE} DEFAULT VALUES RETURNING *"\n'
+            "    sql = f'INSERT INTO {TABLE} DEFAULT VALUES RETURNING *'\n"
             "    values: list = []\n"
         )
     cols = [field.name for field in entity.fields]
@@ -88,16 +99,16 @@ def _python_repository(entity: Entity) -> str:
             "    params: list[Any] = []",
         ]
         if searchable:
-            search_or = " OR ".join(f"{f} ILIKE %s" for f in searchable)
+            search_or = " OR ".join(f"{sql_identifier(f)} ILIKE %s" for f in searchable)
             helper += [
                 "    if q:",
-                f'        conditions.append("({search_or})")',
+                f"        conditions.append({f'({search_or})'!r})",
                 f'        params.extend([f"%{{q}}%"] * {len(searchable)})',
             ]
         for name in filter_names:
             helper += [
                 f"    if {name} is not None:",
-                f'        conditions.append("{name} = %s")',
+                f"        conditions.append({f'{sql_identifier(name)} = %s'!r})",
                 f"        params.append({name})",
             ]
         helper += [
@@ -107,39 +118,39 @@ def _python_repository(entity: Entity) -> str:
         filters_helper = "\n".join(helper) + "\n\n\n"
         list_body = (
             f"        where, params = _list_filters(q{filter_call})\n"
-            '        sql = f"SELECT * FROM {TABLE}{where} ORDER BY {sort_col} {sort_dir} LIMIT %s OFFSET %s"\n'
+            "        sql = f'SELECT * FROM {TABLE}{where} ORDER BY {sort_col} {sort_dir} LIMIT %s OFFSET %s'\n"
             "        await cur.execute(sql, (*params, limit, offset))\n"
         )
         count_body = (
             f"        where, params = _list_filters(q{filter_call})\n"
-            '        await cur.execute(f"SELECT COUNT(*) AS count FROM {TABLE}{where}", tuple(params))\n'
+            "        await cur.execute(f'SELECT COUNT(*) AS count FROM {TABLE}{where}', tuple(params))\n"
         )
     elif searchable:
         filters_helper = ""
-        search_or = " OR ".join(f"{f} ILIKE %s" for f in searchable)
+        search_or = " OR ".join(f"{sql_identifier(f)} ILIKE %s" for f in searchable)
         list_body = (
             '        if q:\n'
             '            pattern = f"%{q}%"\n'
-            f'            sql = f"SELECT * FROM {{TABLE}} WHERE ({search_or}) ORDER BY {{sort_col}} {{sort_dir}} LIMIT %s OFFSET %s"\n'
+            f"            sql = f'SELECT * FROM {{TABLE}} WHERE ({search_or}) ORDER BY {{sort_col}} {{sort_dir}} LIMIT %s OFFSET %s'\n"
             f'            await cur.execute(sql, (*([pattern] * {len(searchable)}), limit, offset))\n'
             '        else:\n'
-            '            await cur.execute(f"SELECT * FROM {TABLE} ORDER BY {sort_col} {sort_dir} LIMIT %s OFFSET %s", (limit, offset))\n'
+            "            await cur.execute(f'SELECT * FROM {TABLE} ORDER BY {sort_col} {sort_dir} LIMIT %s OFFSET %s', (limit, offset))\n"
         )
         count_body = (
             '        if q:\n'
             '            pattern = f"%{q}%"\n'
-            f'            sql = f"SELECT COUNT(*) AS count FROM {{TABLE}} WHERE ({search_or})"\n'
+            f"            sql = f'SELECT COUNT(*) AS count FROM {{TABLE}} WHERE ({search_or})'\n"
             f'            await cur.execute(sql, tuple([pattern] * {len(searchable)}))\n'
             '        else:\n'
-            '            await cur.execute(f"SELECT COUNT(*) AS count FROM {TABLE}")\n'
+            "            await cur.execute(f'SELECT COUNT(*) AS count FROM {TABLE}')\n"
         )
     else:
         filters_helper = ""
         list_body = (
-            '        await cur.execute(f"SELECT * FROM {TABLE} ORDER BY {sort_col} {sort_dir} LIMIT %s OFFSET %s", (limit, offset))\n'
+            "        await cur.execute(f'SELECT * FROM {TABLE} ORDER BY {sort_col} {sort_dir} LIMIT %s OFFSET %s', (limit, offset))\n"
         )
         count_body = (
-            '        await cur.execute(f"SELECT COUNT(*) AS count FROM {TABLE}")\n'
+            "        await cur.execute(f'SELECT COUNT(*) AS count FROM {TABLE}')\n"
         )
 
     return (
@@ -148,18 +159,19 @@ def _python_repository(entity: Entity) -> str:
         "from __future__ import annotations\n\n"
         "from typing import Any\n\n"
         "from app.db import connect\n\n"
-        f'TABLE = "{table}"\n'
+        f"TABLE = {sql_table!r}\n"
+        f"SQL_COLUMNS = {dict((name, sql_identifier(name)) for name in cols)!r}\n"
         f"ALLOWED_SORT_FIELDS = {cols!r}\n\n\n"
         f"{filters_helper}"
         f'async def list_{table}(limit: int = 100, offset: int = 0, sort: str = "id", order: str = "asc", q: str | None = None{filter_kwargs}) -> list[dict[str, Any]]:\n'
-        '    sort_col = sort if sort in ALLOWED_SORT_FIELDS else "id"\n'
+        '    sort_col = SQL_COLUMNS.get(sort, SQL_COLUMNS["id"])\n'
         '    sort_dir = "DESC" if order.lower() == "desc" else "ASC"\n'
         "    async with await connect() as conn, conn.cursor() as cur:\n"
         f"{list_body}"
         "        return await cur.fetchall()\n\n\n"
         f"async def get_{table}(id: str) -> dict[str, Any] | None:\n"
         "    async with await connect() as conn, conn.cursor() as cur:\n"
-        '        await cur.execute(f"SELECT * FROM {TABLE} WHERE id = %s", (id,))\n'
+        f"        await cur.execute(f'SELECT * FROM {{TABLE}} WHERE {sql_identifier('id')} = %s', (id,))\n"
         "        return await cur.fetchone()\n\n\n"
         f"async def create_{table}(data: dict[str, Any]) -> dict[str, Any]:\n"
         f"{create_body}"
@@ -168,7 +180,7 @@ def _python_repository(entity: Entity) -> str:
         "        return await cur.fetchone()\n\n\n"
         f"async def delete_{table}(id: str) -> bool:\n"
         "    async with await connect() as conn, conn.cursor() as cur:\n"
-        '        await cur.execute(f"DELETE FROM {TABLE} WHERE id = %s", (id,))\n'
+        f"        await cur.execute(f'DELETE FROM {{TABLE}} WHERE {sql_identifier('id')} = %s', (id,))\n"
         "        return cur.rowcount > 0\n\n\n"
         f"async def count_{table}(q: str | None = None{filter_kwargs}) -> int:\n"
         "    async with await connect() as conn, conn.cursor() as cur:\n"
@@ -184,16 +196,16 @@ def _python_update(entity: Entity, table: str) -> str:
     """Emit update_<table>(id, data) — parameterized UPDATE RETURNING *."""
     update_cols = _insert_columns(entity)  # every column except id
     if update_cols:
-        set_clause = ", ".join(f"{c} = %s" for c in update_cols)
+        set_clause = ", ".join(f"{sql_identifier(c)} = %s" for c in update_cols)
         values_expr = ", ".join(f"data['{c}']" for c in update_cols)
         update_body = (
-            f'        sql = f"UPDATE {{TABLE}} SET {set_clause} WHERE id = %s RETURNING *"\n'
+            f"        sql = f'UPDATE {{TABLE}} SET {set_clause} WHERE {sql_identifier('id')} = %s RETURNING *'\n"
             f"        await cur.execute(sql, ({values_expr}, id))\n"
         )
     else:
         # id-only entity — nothing to update; no-op returns the row if it exists
         update_body = (
-            '        sql = f"SELECT * FROM {TABLE} WHERE id = %s"\n'
+            f"        sql = f'SELECT * FROM {{TABLE}} WHERE {sql_identifier('id')} = %s'\n"
             "        await cur.execute(sql, (id,))\n"
         )
     return (
@@ -218,20 +230,20 @@ def _python_filtered_lists(entity: Entity, table: str, cols: list[str] | None = 
             helper_name = f"_list_by_{relation}_filters"
             helper = [
                 f"def {helper_name}({relation}_id, q=None{filter_kwargs}):",
-                f'    conditions: list[str] = ["{relation}_id = %s"]',
+                f"    conditions: list[str] = [{f'{sql_identifier(f"{relation}_id")} = %s'!r}]",
                 f"    params: list[Any] = [{relation}_id]",
             ]
             if searchable:
-                search_or = " OR ".join(f"{field} ILIKE %s" for field in searchable)
+                search_or = " OR ".join(f"{sql_identifier(field)} ILIKE %s" for field in searchable)
                 helper += [
                     "    if q:",
-                    f'        conditions.append("({search_or})")',
+                    f"        conditions.append({f'({search_or})'!r})",
                     f'        params.extend([f"%{{q}}%"] * {len(searchable)})',
                 ]
             for name in filter_names:
                 helper += [
                     f"    if {name} is not None:",
-                    f'        conditions.append("{name} = %s")',
+                    f"        conditions.append({f'{sql_identifier(name)} = %s'!r})",
                     f"        params.append({name})",
                 ]
             helper += [
@@ -242,43 +254,43 @@ def _python_filtered_lists(entity: Entity, table: str, cols: list[str] | None = 
             filters_helper = "\n".join(helper)
             list_exec = (
                 f"        where, params = {helper_name}({relation}_id, q{filter_call})\n"
-                '        sql = f"SELECT * FROM {TABLE}{where} ORDER BY {sort_col} {sort_dir} LIMIT %s OFFSET %s"\n'
+                "        sql = f'SELECT * FROM {TABLE}{where} ORDER BY {sort_col} {sort_dir} LIMIT %s OFFSET %s'\n"
                 "        await cur.execute(sql, (*params, limit, offset))\n"
             )
             count_exec = (
                 f"        where, params = {helper_name}({relation}_id, q{filter_call})\n"
-                '        await cur.execute(f"SELECT COUNT(*) AS count FROM {TABLE}{where}", tuple(params))\n'
+                "        await cur.execute(f'SELECT COUNT(*) AS count FROM {TABLE}{where}', tuple(params))\n"
             )
         elif searchable:
-            search_or = " OR ".join(f"{f} ILIKE %s" for f in searchable)
+            search_or = " OR ".join(f"{sql_identifier(f)} ILIKE %s" for f in searchable)
             list_exec = (
                 '        if q:\n'
                 '            pattern = f"%{q}%"\n'
-                f'            sql = f"SELECT * FROM {{TABLE}} WHERE {relation}_id = %s AND ({search_or}) ORDER BY {{sort_col}} {{sort_dir}} LIMIT %s OFFSET %s"\n'
+                f"            sql = f'SELECT * FROM {{TABLE}} WHERE {sql_identifier(f'{relation}_id')} = %s AND ({search_or}) ORDER BY {{sort_col}} {{sort_dir}} LIMIT %s OFFSET %s'\n"
                 f'            await cur.execute(sql, ({relation}_id, *([pattern] * {len(searchable)}), limit, offset))\n'
                 '        else:\n'
-                f'            await cur.execute(f"SELECT * FROM {{TABLE}} WHERE {relation}_id = %s ORDER BY {{sort_col}} {{sort_dir}} LIMIT %s OFFSET %s", ({relation}_id, limit, offset))\n'
+                f"            await cur.execute(f'SELECT * FROM {{TABLE}} WHERE {sql_identifier(f'{relation}_id')} = %s ORDER BY {{sort_col}} {{sort_dir}} LIMIT %s OFFSET %s', ({relation}_id, limit, offset))\n"
             )
             count_exec = (
                 '        if q:\n'
                 '            pattern = f"%{q}%"\n'
-                f'            sql = f"SELECT COUNT(*) AS count FROM {{TABLE}} WHERE {relation}_id = %s AND ({search_or})"\n'
+                f"            sql = f'SELECT COUNT(*) AS count FROM {{TABLE}} WHERE {sql_identifier(f'{relation}_id')} = %s AND ({search_or})'\n"
                 f'            await cur.execute(sql, ({relation}_id, *([pattern] * {len(searchable)})))\n'
                 '        else:\n'
-                f'            await cur.execute(f"SELECT COUNT(*) AS count FROM {{TABLE}} WHERE {relation}_id = %s", ({relation}_id,))\n'
+                f"            await cur.execute(f'SELECT COUNT(*) AS count FROM {{TABLE}} WHERE {sql_identifier(f'{relation}_id')} = %s', ({relation}_id,))\n"
             )
         else:
             list_exec = (
-                f'        await cur.execute(f"SELECT * FROM {{TABLE}} WHERE {relation}_id = %s ORDER BY {{sort_col}} {{sort_dir}} LIMIT %s OFFSET %s", ({relation}_id, limit, offset))\n'
+                f"        await cur.execute(f'SELECT * FROM {{TABLE}} WHERE {sql_identifier(f'{relation}_id')} = %s ORDER BY {{sort_col}} {{sort_dir}} LIMIT %s OFFSET %s', ({relation}_id, limit, offset))\n"
             )
             count_exec = (
-                f'        await cur.execute(f"SELECT COUNT(*) AS count FROM {{TABLE}} WHERE {relation}_id = %s", ({relation}_id,))\n'
+                f"        await cur.execute(f'SELECT COUNT(*) AS count FROM {{TABLE}} WHERE {sql_identifier(f'{relation}_id')} = %s', ({relation}_id,))\n"
             )
         parts.append(
             "\n\n"
             f"{filters_helper}"
             f'async def list_{table}_by_{relation}({relation}_id: str, limit: int = 100, offset: int = 0, sort: str = "id", order: str = "asc", q: str | None = None{filter_kwargs}) -> list[dict[str, Any]]:\n'
-            '    sort_col = sort if sort in ALLOWED_SORT_FIELDS else "id"\n'
+            '    sort_col = SQL_COLUMNS.get(sort, SQL_COLUMNS["id"])\n'
             '    sort_dir = "DESC" if order.lower() == "desc" else "ASC"\n'
             "    async with await connect() as conn, conn.cursor() as cur:\n"
             f"{list_exec}"
@@ -324,9 +336,12 @@ def _go_store(slug: str) -> str:
 
 
 def _go_sort_whitelist_block(cols: list[str]) -> str:
-    cases = "".join(f'\tcase "{c}":\n\t\tcol = "{c}"\n' for c in cols)
+    cases = "".join(
+        f'\tcase "{c}":\n\t\tcol = "{_go_string_fragment(sql_identifier(c))}"\n' for c in cols
+    )
+    default_column = _go_string_fragment(sql_identifier("id"))
     return (
-        '\tcol := "id"\n'
+        f'\tcol := "{default_column}"\n'
         "\tswitch sort {\n"
         f"{cases}"
         "\t}\n"
@@ -339,19 +354,22 @@ def _go_sort_whitelist_block(cols: list[str]) -> str:
 
 def _go_entity_store(entity: Entity, slug: str) -> str:
     table = table_name(entity.name)
+    sql_table = sql_identifier(table)
     pascal = entity.name
     cols = [field.name for field in entity.fields]
-    col_list = ", ".join(cols)
+    col_list = _sql_columns(cols)
+    go_col_list = _go_string_fragment(col_list)
+    go_sql_table = _go_string_fragment(sql_table)
     scan_targets = ", ".join(f"&m.{_pascal(c)}" for c in cols)
     insert_cols = _insert_columns(entity)
 
     if insert_cols:
-        insert_col_list = ", ".join(insert_cols)
+        insert_col_list = _sql_columns(insert_cols)
         placeholders = ", ".join(f"${i + 1}" for i in range(len(insert_cols)))
         insert_args = ", ".join(f"m.{_pascal(c)}" for c in insert_cols)
-        create_sql = f"`INSERT INTO {table} ({insert_col_list}) VALUES ({placeholders}) RETURNING id`, {insert_args}"
+        create_sql = f"`INSERT INTO {sql_table} ({insert_col_list}) VALUES ({placeholders}) RETURNING {sql_identifier('id')}`, {insert_args}"
     else:
-        create_sql = f"`INSERT INTO {table} DEFAULT VALUES RETURNING id`"
+        create_sql = f"`INSERT INTO {sql_table} DEFAULT VALUES RETURNING {sql_identifier('id')}`"
 
     sort_block = _go_sort_whitelist_block(cols)
     searchable = _searchable_fields(entity)
@@ -369,10 +387,10 @@ def _go_entity_store(entity: Entity, slug: str) -> str:
             "\targs := []any{}",
         ]
         if searchable:
-            search_or = " OR ".join(f"{f} ILIKE $1" for f in searchable)
+            search_or = " OR ".join(f"{sql_identifier(f)} ILIKE $1" for f in searchable)
             helper_lines += [
                 '\tif q != "" {',
-                f'\t\tconds = append(conds, "({search_or})")',
+                f'\t\tconds = append(conds, "({_go_string_fragment(search_or)})")',
                 '\t\targs = append(args, "%"+q+"%")',
                 "\t}",
             ]
@@ -380,7 +398,7 @@ def _go_entity_store(entity: Entity, slug: str) -> str:
             coerce = 'v == "true"' if kind == "bool" else "v"
             helper_lines += [
                 f'\tif v, ok := filters["{field.name}"]; ok && v != "" {{',
-                f'\t\tconds = append(conds, fmt.Sprintf("{field.name} = $%d", len(args)+1))',
+                f'\t\tconds = append(conds, fmt.Sprintf("{_go_string_fragment(sql_identifier(field.name))} = $%d", len(args)+1))',
                 f"\t\targs = append(args, {coerce})",
                 "\t}",
             ]
@@ -397,25 +415,25 @@ def _go_entity_store(entity: Entity, slug: str) -> str:
         filters_param = ", filters map[string]string"
         go_list_query = (
             f"\twhere, args := {filter_var}(q, filters)\n"
-            f'\tquery := fmt.Sprintf("SELECT {col_list} FROM {table}%s ORDER BY %s %s LIMIT $%d OFFSET $%d", where, col, dir, len(args)+1, len(args)+2)\n'
+            f'\tquery := fmt.Sprintf("SELECT {go_col_list} FROM {go_sql_table}%s ORDER BY %s %s LIMIT $%d OFFSET $%d", where, col, dir, len(args)+1, len(args)+2)\n'
             f"\targs = append(args, limit, offset)\n"
             f"\trows, err := db.QueryContext(ctx, query, args...)\n"
         )
         go_count_query = (
             f"\twhere, args := {filter_var}(q, filters)\n"
             f"\tvar count int\n"
-            f'\terr := db.QueryRowContext(ctx, fmt.Sprintf("SELECT COUNT(*) FROM {table}%s", where), args...).Scan(&count)\n'
+            f'\terr := db.QueryRowContext(ctx, fmt.Sprintf("SELECT COUNT(*) FROM {go_sql_table}%s", where), args...).Scan(&count)\n'
         )
     elif searchable:
-        search_or = " OR ".join(f"{f} ILIKE $1" for f in searchable)
+        search_or = " OR ".join(f"{sql_identifier(f)} ILIKE $1" for f in searchable)
         go_list_query = (
             f'\tvar rows *sql.Rows\n'
             f'\tvar err error\n'
             f'\tif q != "" {{\n'
-            f'\t\tquery := fmt.Sprintf("SELECT {col_list} FROM {table} WHERE ({search_or}) ORDER BY %s %s LIMIT $2 OFFSET $3", col, dir)\n'
+            f'\t\tquery := fmt.Sprintf("SELECT {go_col_list} FROM {go_sql_table} WHERE ({_go_string_fragment(search_or)}) ORDER BY %s %s LIMIT $2 OFFSET $3", col, dir)\n'
             f'\t\trows, err = db.QueryContext(ctx, query, "%"+q+"%", limit, offset)\n'
             f'\t}} else {{\n'
-            f'\t\tquery := fmt.Sprintf("SELECT {col_list} FROM {table} ORDER BY %s %s LIMIT $1 OFFSET $2", col, dir)\n'
+            f'\t\tquery := fmt.Sprintf("SELECT {go_col_list} FROM {go_sql_table} ORDER BY %s %s LIMIT $1 OFFSET $2", col, dir)\n'
             f'\t\trows, err = db.QueryContext(ctx, query, limit, offset)\n'
             f'\t}}\n'
         )
@@ -423,20 +441,20 @@ def _go_entity_store(entity: Entity, slug: str) -> str:
             f'\tvar count int\n'
             f'\tvar err error\n'
             f'\tif q != "" {{\n'
-            f'\t\tquery := `SELECT COUNT(*) FROM {table} WHERE ({search_or})`\n'
+            f'\t\tquery := `SELECT COUNT(*) FROM {sql_table} WHERE ({search_or})`\n'
             f'\t\terr = db.QueryRowContext(ctx, query, "%"+q+"%").Scan(&count)\n'
             f'\t}} else {{\n'
-            f'\t\terr = db.QueryRowContext(ctx, `SELECT COUNT(*) FROM {table}`).Scan(&count)\n'
+            f'\t\terr = db.QueryRowContext(ctx, `SELECT COUNT(*) FROM {sql_table}`).Scan(&count)\n'
             f'\t}}\n'
         )
     else:
         go_list_query = (
-            f'\tquery := fmt.Sprintf("SELECT {col_list} FROM {table} ORDER BY %s %s LIMIT $1 OFFSET $2", col, dir)\n'
+            f'\tquery := fmt.Sprintf("SELECT {go_col_list} FROM {go_sql_table} ORDER BY %s %s LIMIT $1 OFFSET $2", col, dir)\n'
             f'\trows, err := db.QueryContext(ctx, query, limit, offset)\n'
         )
         go_count_query = (
             f'\tvar count int\n'
-            f'\terr := db.QueryRowContext(ctx, `SELECT COUNT(*) FROM {table}`).Scan(&count)\n'
+            f'\terr := db.QueryRowContext(ctx, `SELECT COUNT(*) FROM {sql_table}`).Scan(&count)\n'
         )
 
     return (
@@ -464,7 +482,7 @@ def _go_entity_store(entity: Entity, slug: str) -> str:
         "}\n\n"
         f"func Get{pascal}(ctx context.Context, db *sql.DB, id string) (*models.{pascal}, error) {{\n"
         f"\tvar m models.{pascal}\n"
-        f"\terr := db.QueryRowContext(ctx, `SELECT {col_list} FROM {table} WHERE id = $1`, id).Scan({scan_targets})\n"
+        f"\terr := db.QueryRowContext(ctx, `SELECT {col_list} FROM {sql_table} WHERE {sql_identifier('id')} = $1`, id).Scan({scan_targets})\n"
         "\tif err == sql.ErrNoRows {\n\t\treturn nil, nil\n\t}\n"
         "\tif err != nil {\n\t\treturn nil, err\n\t}\n"
         "\treturn &m, nil\n"
@@ -476,7 +494,7 @@ def _go_entity_store(entity: Entity, slug: str) -> str:
         "}\n\n"
         + _go_update(entity, table, pascal, col_list, scan_targets)
         + f"func Delete{pascal}(ctx context.Context, db *sql.DB, id string) (bool, error) {{\n"
-        f"\tres, err := db.ExecContext(ctx, `DELETE FROM {table} WHERE id = $1`, id)\n"
+        f"\tres, err := db.ExecContext(ctx, `DELETE FROM {sql_table} WHERE {sql_identifier('id')} = $1`, id)\n"
         "\tif err != nil {\n\t\treturn false, err\n\t}\n"
         "\tn, _ := res.RowsAffected()\n"
         "\treturn n > 0, nil\n"
@@ -491,16 +509,23 @@ def _go_entity_store(entity: Entity, slug: str) -> str:
 
 def _go_update(entity: Entity, table: str, pascal: str, col_list: str, scan_targets: str) -> str:
     """Emit Update<Entity>(ctx, db, id, m) — parameterized UPDATE RETURNING full row."""
+    sql_table = sql_identifier(table)
     update_cols = _insert_columns(entity)  # every column except id
     if update_cols:
-        set_clause = ", ".join(f"{c} = ${i + 1}" for i, c in enumerate(update_cols))
+        set_clause = ", ".join(f"{sql_identifier(c)} = ${i + 1}" for i, c in enumerate(update_cols))
         set_args = ", ".join(f"m.{_pascal(c)}" for c in update_cols)
         id_placeholder = f"${len(update_cols) + 1}"
-        update_sql = f"`UPDATE {table} SET {set_clause} WHERE id = {id_placeholder} RETURNING {col_list}`"
+        update_sql = (
+            f"`UPDATE {sql_table} SET {set_clause} WHERE {sql_identifier('id')} = {id_placeholder} "
+            f"RETURNING {col_list}`"
+        )
         scan_call = f"db.QueryRowContext(ctx, {update_sql}, {set_args}, id).Scan({scan_targets})"
     else:
         # id-only entity — nothing to set; treat as a GET (returns the row or nil)
-        scan_call = f"db.QueryRowContext(ctx, `SELECT {col_list} FROM {table} WHERE id = $1`, id).Scan({scan_targets})"
+        scan_call = (
+            f"db.QueryRowContext(ctx, `SELECT {col_list} FROM {sql_table} WHERE {sql_identifier('id')} = $1`, "
+            f"id).Scan({scan_targets})"
+        )
     return (
         f"func Update{pascal}(ctx context.Context, db *sql.DB, id string, m models.{pascal}) (*models.{pascal}, error) {{\n"
         f"\tvar out models.{pascal}\n"
@@ -514,6 +539,9 @@ def _go_update(entity: Entity, table: str, pascal: str, col_list: str, scan_targ
 
 def _go_filtered_lists(entity: Entity, table: str, col_list: str, scan_targets: str, cols: list[str] | None = None) -> str:
     pascal = entity.name
+    sql_table = sql_identifier(table)
+    go_sql_table = _go_string_fragment(sql_table)
+    go_col_list = _go_string_fragment(col_list)
     if cols is None:
         cols = [field.name for field in entity.fields]
     sort_block = _go_sort_whitelist_block(cols)
@@ -523,19 +551,21 @@ def _go_filtered_lists(entity: Entity, table: str, col_list: str, scan_targets: 
     parts = []
     for relation in _fk_relation_names(entity):
         rel_pascal = _pascal(relation)
+        relation_column = sql_identifier(f"{relation}_id")
+        go_relation_column = _go_string_fragment(relation_column)
         filters_helper = ""
         if filters:
             helper_name = f"{table}By{rel_pascal}Filters"
             helper_lines = [
                 f"func {helper_name}({relation}ID, q string, filters map[string]string) (string, []any) {{",
-                f'\tconds := []string{{"{relation}_id = $1"}}',
+                f'\tconds := []string{{"{go_relation_column} = $1"}}',
                 f"\targs := []any{{{relation}ID}}",
             ]
             if searchable:
-                search_or = " OR ".join(f"{field} ILIKE $%[1]d" for field in searchable)
+                search_or = " OR ".join(f"{sql_identifier(field)} ILIKE $%[1]d" for field in searchable)
                 helper_lines += [
                     '\tif q != "" {',
-                    f'\t\tconds = append(conds, fmt.Sprintf("({search_or})", len(args)+1))',
+                    f'\t\tconds = append(conds, fmt.Sprintf("({_go_string_fragment(search_or)})", len(args)+1))',
                     '\t\targs = append(args, "%"+q+"%")',
                     "\t}",
                 ]
@@ -543,7 +573,7 @@ def _go_filtered_lists(entity: Entity, table: str, col_list: str, scan_targets: 
                 coerce = 'v == "true"' if kind == "bool" else "v"
                 helper_lines += [
                     f'\tif v, ok := filters["{field.name}"]; ok && v != "" {{',
-                    f'\t\tconds = append(conds, fmt.Sprintf("{field.name} = $%d", len(args)+1))',
+                    f'\t\tconds = append(conds, fmt.Sprintf("{_go_string_fragment(sql_identifier(field.name))} = $%d", len(args)+1))',
                     f"\t\targs = append(args, {coerce})",
                     "\t}",
                 ]
@@ -556,26 +586,26 @@ def _go_filtered_lists(entity: Entity, table: str, col_list: str, scan_targets: 
             filters_helper = "\n".join(helper_lines)
             sub_list_query = (
                 f"\twhere, args := {helper_name}({relation}ID, q, filters)\n"
-                f'\tquery := fmt.Sprintf("SELECT {col_list} FROM {table}%s ORDER BY %s %s LIMIT $%d OFFSET $%d", where, col, dir, len(args)+1, len(args)+2)\n'
+                f'\tquery := fmt.Sprintf("SELECT {go_col_list} FROM {go_sql_table}%s ORDER BY %s %s LIMIT $%d OFFSET $%d", where, col, dir, len(args)+1, len(args)+2)\n'
                 "\targs = append(args, limit, offset)\n"
                 "\trows, err := db.QueryContext(ctx, query, args...)\n"
             )
             sub_count_query = (
                 f"\twhere, args := {helper_name}({relation}ID, q, filters)\n"
                 "\tvar count int\n"
-                f'\tquery := fmt.Sprintf("SELECT COUNT(*) FROM {table}%s", where)\n'
+                f'\tquery := fmt.Sprintf("SELECT COUNT(*) FROM {go_sql_table}%s", where)\n'
                 "\terr := db.QueryRowContext(ctx, query, args...).Scan(&count)\n"
             )
         elif searchable:
-            search_or = " OR ".join(f"{f} ILIKE $2" for f in searchable)
+            search_or = " OR ".join(f"{sql_identifier(f)} ILIKE $2" for f in searchable)
             sub_list_query = (
                 f'\tvar rows *sql.Rows\n'
                 f'\tvar err error\n'
                 f'\tif q != "" {{\n'
-                f'\t\tquery := fmt.Sprintf("SELECT {col_list} FROM {table} WHERE {relation}_id = $1 AND ({search_or}) ORDER BY %s %s LIMIT $3 OFFSET $4", col, dir)\n'
+                f'\t\tquery := fmt.Sprintf("SELECT {go_col_list} FROM {go_sql_table} WHERE {go_relation_column} = $1 AND ({_go_string_fragment(search_or)}) ORDER BY %s %s LIMIT $3 OFFSET $4", col, dir)\n'
                 f'\t\trows, err = db.QueryContext(ctx, query, {relation}ID, "%"+q+"%", limit, offset)\n'
                 f'\t}} else {{\n'
-                f'\t\tquery := fmt.Sprintf("SELECT {col_list} FROM {table} WHERE {relation}_id = $1 ORDER BY %s %s LIMIT $2 OFFSET $3", col, dir)\n'
+                f'\t\tquery := fmt.Sprintf("SELECT {go_col_list} FROM {go_sql_table} WHERE {go_relation_column} = $1 ORDER BY %s %s LIMIT $2 OFFSET $3", col, dir)\n'
                 f'\t\trows, err = db.QueryContext(ctx, query, {relation}ID, limit, offset)\n'
                 f'\t}}\n'
             )
@@ -583,20 +613,20 @@ def _go_filtered_lists(entity: Entity, table: str, col_list: str, scan_targets: 
                 f'\tvar count int\n'
                 f'\tvar err error\n'
                 f'\tif q != "" {{\n'
-                f'\t\tquery := `SELECT COUNT(*) FROM {table} WHERE {relation}_id = $1 AND ({search_or})`\n'
+                f'\t\tquery := `SELECT COUNT(*) FROM {sql_table} WHERE {relation_column} = $1 AND ({search_or})`\n'
                 f'\t\terr = db.QueryRowContext(ctx, query, {relation}ID, "%"+q+"%").Scan(&count)\n'
                 f'\t}} else {{\n'
-                f'\t\terr = db.QueryRowContext(ctx, `SELECT COUNT(*) FROM {table} WHERE {relation}_id = $1`, {relation}ID).Scan(&count)\n'
+                f'\t\terr = db.QueryRowContext(ctx, `SELECT COUNT(*) FROM {sql_table} WHERE {relation_column} = $1`, {relation}ID).Scan(&count)\n'
                 f'\t}}\n'
             )
         else:
             sub_list_query = (
-                f'\tquery := fmt.Sprintf("SELECT {col_list} FROM {table} WHERE {relation}_id = $1 ORDER BY %s %s LIMIT $2 OFFSET $3", col, dir)\n'
+                f'\tquery := fmt.Sprintf("SELECT {go_col_list} FROM {go_sql_table} WHERE {go_relation_column} = $1 ORDER BY %s %s LIMIT $2 OFFSET $3", col, dir)\n'
                 f'\trows, err := db.QueryContext(ctx, query, {relation}ID, limit, offset)\n'
             )
             sub_count_query = (
                 f'\tvar count int\n'
-                f'\terr := db.QueryRowContext(ctx, `SELECT COUNT(*) FROM {table} WHERE {relation}_id = $1`, {relation}ID).Scan(&count)\n'
+                f'\terr := db.QueryRowContext(ctx, `SELECT COUNT(*) FROM {sql_table} WHERE {relation_column} = $1`, {relation}ID).Scan(&count)\n'
             )
 
         parts.append(

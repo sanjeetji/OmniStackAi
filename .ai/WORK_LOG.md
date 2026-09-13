@@ -1,5 +1,27 @@
 # Work Log
 
+## 2026-09-13 — R-420 (SQL-safe identifiers and FK dependency order)
+
+- Added one defensive PostgreSQL identifier encoder and applied it consistently to generated schema DDL,
+  fixture INSERTs, Python repositories, and Go stores. Logical snake_case paths, symbols, functions,
+  routes, and API contracts are unchanged.
+- Added stable topological ordering over non-self many-to-one/one-to-one dependencies for entity tables
+  and fixture groups. Independent entities preserve source order, fixture rows preserve authored order,
+  self-references remain valid, association tables stay after entities, and non-self cycles raise a stable
+  explanatory `ValueError`.
+- Added 7 focused tests in `test_schema_sql_safety.py`; updated only existing exact-output assertions
+  affected by deliberate SQL quoting. Focused tests and 186 related regression tests passed.
+- Gates: `task verify` **2,808 passed**; `task lint`, `task security:quick`, and `task env:check` passed;
+  both builder demos passed (minimal-blog 152 files, rideshare-favourites 149 files). Generated Python
+  parsed with `ast`; representative Go stores passed `gofmt`.
+- Live proof: a generated reserved-name User/Order migration created its verification schema, both tables,
+  and index in local PostgreSQL, then `ROLLBACK` removed all verification state. Initial command/env/Docker
+  access failures were sandbox/invocation issues; a subsequent table/index namespace collision came from
+  the test fixture reusing the same name and was corrected to a distinct reserved-looking index name.
+- 0 local model calls, 0 cloud calls. No dependency, IR, database-engine, infrastructure, top-level-layout,
+  studio, local-run, deployment, or native/mobile change. The workbook ends at R-358, so no tracker row
+  exists or was modified for R-420.
+
 ## 2026-09-13 — R-419 (front-door pivot: brick 4 — turnkey local run)
 
 - Made a generated app repo run locally in one command. New `omnistackai_agent_engine/localrun/` package (Python 3.13 stdlib only), "deterministic plan + opt-in executor" pattern.
@@ -4537,4 +4559,3 @@
   - `services/agent-engine/src/omnistackai_agent_engine/codegen/__init__.py`: Exported `render_stat_card_component`.
   - `services/agent-engine/tests/test_stat_card_component.py`: 15 unit tests (NEW).
 - **Gates**: task verify ✓ | task lint ✓ | task security:quick ✓ | builder:demo minimal-blog (74 files) ✓ | builder:demo rideshare-favourites (71 files) ✓
-

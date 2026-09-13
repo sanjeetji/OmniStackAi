@@ -52,16 +52,16 @@ class SchemaValidationTests(TestCase):
     def test_string_max_length_is_varchar(self) -> None:
         entity = Entity("Article", (Field("id", FieldType.UUID), Field("title", FieldType.STRING, validation=("max_length:120",))))
         sql = render_postgres_schema(_ir(entity))
-        self.assertIn("title VARCHAR(120) NOT NULL", sql)
+        self.assertIn('"title" VARCHAR(120) NOT NULL', sql)
 
     def test_enum_is_check_constraint_escaped(self) -> None:
         entity = Entity("Article", (Field("id", FieldType.UUID), Field("status", FieldType.STRING, validation=("enum:draft|it's",))))
         sql = render_postgres_schema(_ir(entity))
-        self.assertIn("status TEXT NOT NULL CHECK (status IN ('draft', 'it''s'))", sql)
+        self.assertIn('"status" TEXT NOT NULL CHECK ("status" IN (\'draft\', \'it\'\'s\'))', sql)
 
     def test_string_without_max_length_stays_text(self) -> None:
         entity = Entity("Article", (Field("id", FieldType.UUID), Field("title", FieldType.STRING)))
-        self.assertIn("title TEXT NOT NULL", render_postgres_schema(_ir(entity)))
+        self.assertIn('"title" TEXT NOT NULL', render_postgres_schema(_ir(entity)))
 
 
 class PydanticValidationTests(TestCase):

@@ -63,7 +63,7 @@ class RenderSeedTests(TestCase):
         fixtures = (Fixture("Widget", ({"label": "A", "id": "x"},)),)
         sql = render_postgres_seed(_ir((entity,), fixtures))
         # columns sorted alphabetically (id before label), values parameter-free literals
-        self.assertIn("INSERT INTO widget (id, label) VALUES ('x', 'A');", sql)
+        self.assertIn('INSERT INTO "widget" ("id", "label") VALUES (\'x\', \'A\');', sql)
 
     def test_no_fixtures_is_empty(self) -> None:
         entity = Entity("Widget", (Field("id", FieldType.UUID),))
@@ -75,14 +75,14 @@ class RenderSeedTests(TestCase):
 
     def test_fk_column_seeded(self) -> None:
         sql = render_postgres_seed(example_ir("minimal-blog"))
-        self.assertIn("INSERT INTO comment (body, id, post_id) VALUES (", sql)
+        self.assertIn('INSERT INTO "comment" ("body", "id", "post_id") VALUES (', sql)
 
 
 class AdapterEmissionTests(TestCase):
     def test_python_and_go_emit_seed_for_minimal_blog(self) -> None:
         py = PythonBackendAdapter().generate(example_ir("minimal-blog"))
         self.assertIn("migrations/0002_seed.sql", py.paths())
-        self.assertIn("INSERT INTO post", py.get("migrations/0002_seed.sql").content)
+        self.assertIn('INSERT INTO "post"', py.get("migrations/0002_seed.sql").content)
         go = GoBackendAdapter().generate(example_ir("minimal-blog"))
         self.assertIn("migrations/0002_seed.sql", go.paths())
 

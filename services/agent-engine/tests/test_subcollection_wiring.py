@@ -48,12 +48,12 @@ class FilteredRepositoryEmissionTests(TestCase):
     def test_python_repository_has_filtered_list(self) -> None:
         content = PythonBackendAdapter().generate(example_ir("minimal-blog")).get("app/repositories/comment.py").content
         self.assertIn("async def list_comment_by_post(post_id: str", content)
-        self.assertIn("WHERE post_id = %s", content)
+        self.assertIn('WHERE "post_id" = %s', content)
 
     def test_go_store_has_filtered_list(self) -> None:
         content = GoBackendAdapter().generate(example_ir("minimal-blog")).get("internal/store/comment.go").content
         self.assertIn("func ListCommentByPost(ctx context.Context, db *sql.DB, postID string, limit, offset int, sort, order, q string)", content)
-        self.assertIn("WHERE post_id = $1", content)
+        self.assertIn('WHERE \\"post_id\\" = $1', content)
 
 
 class SubcollectionWiringTests(TestCase):
@@ -73,6 +73,6 @@ class ValueParameterizationTests(TestCase):
         # emitted SQL filters by a placeholder, not a formatted value
         from omnistackai_agent_engine.codegen.data_access import _go_filtered_lists, _python_filtered_lists
         py = _python_filtered_lists(entity, "comment")
-        self.assertIn("WHERE post_id = %s", py)
+        self.assertIn('WHERE "post_id" = %s', py)
         go = _go_filtered_lists(entity, "comment", "id, body", "&m.Id, &m.Body")
-        self.assertIn("WHERE post_id = $1", go)
+        self.assertIn('WHERE \\"post_id\\" = $1', go)

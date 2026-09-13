@@ -72,15 +72,15 @@ class PythonSubcollectionFilterTests(TestCase):
             "async def count_child_by_parent(parent_id: str, q: str | None = None, active=None, status=None) -> int:",
             self.repo,
         )
-        self.assertIn('conditions: list[str] = ["parent_id = %s"]', self.repo)
+        self.assertIn('conditions: list[str] = [\'"parent_id" = %s\']', self.repo)
         self.assertIn("params: list[Any] = [parent_id]", self.repo)
-        self.assertIn('conditions.append("(body ILIKE %s OR status ILIKE %s)")', self.repo)
-        self.assertIn('conditions.append("active = %s")', self.repo)
+        self.assertIn('conditions.append(\'(\"body\" ILIKE %s OR \"status\" ILIKE %s)\')', self.repo)
+        self.assertIn('conditions.append(\'"active" = %s\')', self.repo)
         self.assertIn("params.append(active)", self.repo)
-        self.assertIn('conditions.append("status = %s")', self.repo)
+        self.assertIn('conditions.append(\'"status" = %s\')', self.repo)
         self.assertIn("params.append(status)", self.repo)
         self.assertIn("await cur.execute(sql, (*params, limit, offset))", self.repo)
-        self.assertIn('await cur.execute(f"SELECT COUNT(*) AS count FROM {TABLE}{where}", tuple(params))', self.repo)
+        self.assertIn("await cur.execute(f'SELECT COUNT(*) AS count FROM {TABLE}{where}', tuple(params))", self.repo)
 
     def test_router_declares_and_forwards_typed_filters(self) -> None:
         self.assertIn(
@@ -105,15 +105,15 @@ class GoSubcollectionFilterTests(TestCase):
             "func childByParentFilters(parentID, q string, filters map[string]string) (string, []any) {",
             self.store,
         )
-        self.assertIn('conds := []string{"parent_id = $1"}', self.store)
+        self.assertIn('conds := []string{"\\\"parent_id\\\" = $1"}', self.store)
         self.assertIn("args := []any{parentID}", self.store)
         self.assertIn(
-            'conds = append(conds, fmt.Sprintf("(body ILIKE $%[1]d OR status ILIKE $%[1]d)", len(args)+1))',
+            'conds = append(conds, fmt.Sprintf("(\\\"body\\\" ILIKE $%[1]d OR \\\"status\\\" ILIKE $%[1]d)", len(args)+1))',
             self.store,
         )
-        self.assertIn('conds = append(conds, fmt.Sprintf("active = $%d", len(args)+1))', self.store)
+        self.assertIn('conds = append(conds, fmt.Sprintf("\\\"active\\\" = $%d", len(args)+1))', self.store)
         self.assertIn('args = append(args, v == "true")', self.store)
-        self.assertIn('conds = append(conds, fmt.Sprintf("status = $%d", len(args)+1))', self.store)
+        self.assertIn('conds = append(conds, fmt.Sprintf("\\\"status\\\" = $%d", len(args)+1))', self.store)
         self.assertIn('return " WHERE " + strings.Join(conds, " AND "), args', self.store)
 
     def test_list_and_count_share_builder_and_bound_arguments(self) -> None:

@@ -76,7 +76,7 @@ class PythonPaginationRepositoryTests(TestCase):
     def test_repository_list_by_uses_limit_and_offset_sql(self) -> None:
         comment_repo = self.project.get("app/repositories/comment.py").content
         self.assertIn('async def list_comment_by_post(post_id: str, limit: int = 100, offset: int = 0, sort: str = "id", order: str = "asc", q: str | None = None) -> list[dict[str, Any]]:', comment_repo)
-        self.assertIn("WHERE post_id = %s", comment_repo)
+        self.assertIn('WHERE "post_id" = %s', comment_repo)
         self.assertIn("ORDER BY {sort_col} {sort_dir} LIMIT %s OFFSET %s", comment_repo)
         self.assertIn("(post_id, limit, offset)", comment_repo)
 

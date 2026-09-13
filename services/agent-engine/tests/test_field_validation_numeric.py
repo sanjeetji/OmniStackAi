@@ -48,12 +48,12 @@ class SchemaNumericTests(TestCase):
     def test_numeric_min_max_are_checks(self) -> None:
         entity = Entity("Product", (Field("id", FieldType.UUID), Field("rating", FieldType.FLOAT, required=False, validation=("min:0", "max:5"))))
         sql = render_postgres_schema(_ir(entity))
-        self.assertIn("rating DOUBLE PRECISION CHECK (rating >= 0) CHECK (rating <= 5)", sql)
+        self.assertIn('"rating" DOUBLE PRECISION CHECK ("rating" >= 0) CHECK ("rating" <= 5)', sql)
 
     def test_string_min_max_not_applied_as_numeric_check(self) -> None:
         # min/max only apply to numeric columns
         entity = Entity("Product", (Field("id", FieldType.UUID), Field("name", FieldType.STRING, validation=("min:1",))))
-        self.assertNotIn("CHECK (name >=", render_postgres_schema(_ir(entity)))
+        self.assertNotIn('CHECK ("name" >=', render_postgres_schema(_ir(entity)))
 
 
 class PydanticNumericTests(TestCase):

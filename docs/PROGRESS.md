@@ -1,4 +1,4 @@
-# OmniStackAI — implementation progress (as of R-415)
+# OmniStackAI — implementation progress (as of R-420)
 
 A living summary of what is built, what is pending, and how to see results. Numbers come from the
 execution tracker (`R_&_D/OmniStackAI_Execution_Tracker_v6.xlsx`, `Phase_Roadmap`) plus the state
@@ -6,14 +6,18 @@ files (`.ai/`), Git history, and CHANGELOG for work done past the tracker's last
 
 ## Headline
 
-- **2,753 automated tests pass**, fully offline and network-independent (`task verify`).
+- **2,808 automated tests pass**, fully offline and network-independent (`task verify`).
 - **147 tracker tasks Done, 1 Deferred, 210 Not Started** across 358 tasks (the tracker's planned
   universe ends at R-358).
-- **Plus 57 additional reusable UI-component suites (R-359 → R-415)** built beyond the tracker — the
-  generated Next.js component library is now **110 components**. This is the **UI-component series**,
-  now **PAUSED at R-415** (see the section below); it is fully resumable.
+- **Plus 62 completed tasks beyond the workbook (R-359 → R-420)**: 57 reusable UI-component suites,
+  four front-door bricks (intake, repository builder, studio, turnkey local run), and R-420 generated-SQL
+  hardening. The generated Next.js component library remains at **110 components**; its component series
+  is **PAUSED at R-415** and fully resumable.
 - The generated app was **run live locally end-to-end this session** (Next.js web on `:3000` +
   FastAPI on `:8000` + seeded PostgreSQL) — proving the offline builder output actually runs on a Mac.
+- **R-420 closed both SQL defects exposed by that run:** generator-owned PostgreSQL identifiers are
+  consistently quoted and entity tables/fixture groups are emitted in stable FK dependency order.
+  A reserved-name User/Order migration passed a rollback-only live PostgreSQL proof.
 
 ## UI Component Series — status: PAUSED at R-415 (resumable)
 
@@ -27,7 +31,8 @@ the point of diminishing returns and is *not* on the critical path to a usable p
 create front door and the engine are). The founder chose to pivot to higher-value platform work.
 
 **How to resume later (nothing decays — each component is independent and additive):**
-1. Pick the next best non-duplicate component; assign it the next ID **R-416** (continue numbering).
+1. Pick the next best non-duplicate component and assign it the next available task ID after the active
+   front-door sequence (R-416 through R-420 are already used).
 2. Follow the component-suite contract (see `.ai/HANDOFF.md` / any recent `.ai/tasks/R-4xx.md`):
    `'use client'`; `forwardRef` + `useImperativeHandle`; 4 variants / 3 sizes; WAI-ARIA; zero deps;
    100% diff-invariant; ASCII-only source; compound + alias exports with `displayName`; default export.
@@ -250,20 +255,15 @@ the live run needs the key + a network machine.
 
 ## What's next
 
-**The UI-component series is PAUSED at R-415** (resumable — see the section above). The founder is
-choosing the next direction; the recommended pivot is the **user-facing "chat → create an app" front
-door**, which is what turns the engine + component library into an actual product. All of it is MVP
-phase and buildable locally (no paid cloud):
+The local front door is now built through safe execution: R-416 prompt → IR, R-417 IR → owned repo,
+R-418 local chat studio, R-419 turnkey local run, and R-420 SQL hardening. The recommended next task is
+**R-421: embed a live generated-app preview in the existing local studio**, aligned with tracker backlog
+R-033/R-034. Its implementation should compose the existing builder/studio/local-run boundaries, keep
+runtime execution explicitly opt-in and local, and keep `task verify` independent of models, Docker,
+PostgreSQL, package installs, and network.
 
-1. **Prompt → Application IR agent** (net-new task) — turn a user's sentence into the engine's IR using
-   the **local Ollama** gateway. This is the first brick.
-2. **Platform web app with a chat box** — maps to tracker **R-224** (Next.js console upgrade) + **R-011**
-   (Web/Admin Agent). Previously marked "blocked on npm"; now **unblocked** (local `pnpm` works on the
-   founder's Mac, proven this session).
-3. **Orchestration** (chat → IR → generate → preview) — tracker **R-180** (Orchestrator Adapter).
-4. **Live local preview** of the generated app — tracker **R-033 / R-034**.
-5. **Turnkey local run** (`task app:run -- <dir>`, net-new) — auto-create DB, apply migrations, wire
-   env, boot both servers; removes the 6 manual steps hit when running a generated app by hand.
+**The UI-component series remains PAUSED at R-415** and is independently resumable under a future free
+task ID.
 
 Later, on a network machine / with keys: live **Tier-2** cloud preview + deploy (E2B, Vercel) and
 cloud-model verification. The plumbing (R-233/234 tier switch) is already built; it is a config flip.
