@@ -137,6 +137,16 @@ tasks:
     cmds:
       - bash scripts/agent-engine.sh scope-propose {{.CLI_ARGS}}
 
+  agent-engine:ecosystem:plan:
+    desc: 'Ecosystem planner: turn a business prompt into the Application IRs for each app surface (deterministic, no model; CLI_ARGS - "description")'
+    cmds:
+      - bash scripts/agent-engine.sh ecosystem-plan {{.CLI_ARGS}}
+
+  agent-engine:ecosystem:build:
+    desc: 'Ecosystem builder: turn a business prompt into MULTIPLE owned Git repos, one per app surface (opt-in, writes to disk; CLI_ARGS - "description")'
+    cmds:
+      - bash scripts/agent-engine.sh ecosystem-build {{.CLI_ARGS}}
+
   agent-engine:intake:run:
     desc: 'Compile a plain-English app description into an Application IR via local Ollama (opt-in, live; CLI_ARGS - "description")'
     cmds:

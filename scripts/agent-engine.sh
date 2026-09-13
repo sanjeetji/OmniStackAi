@@ -84,6 +84,16 @@ if project["project"]["requires-python"] != ">=3.13,<3.14":
     configure_python
     PYTHONPATH="$source_root" python3 -m omnistackai_agent_engine.intake.scope_propose "${@:2}"
     ;;
+  ecosystem-plan)
+    # Deterministic: prompt -> the Application IRs for each app surface (no model/network, writes nothing).
+    configure_python
+    PYTHONPATH="$source_root" python3 -m omnistackai_agent_engine.intake.ecosystem_plan "${@:2}"
+    ;;
+  ecosystem-build)
+    # Opt-in: prompt -> MULTIPLE owned Git repos (one per surface). Deterministic but writes to disk.
+    configure_python
+    PYTHONPATH="$source_root" python3 -m omnistackai_agent_engine.intake.ecosystem_build "${@:2}"
+    ;;
   intake-run)
     configure_python
     export OMNISTACKAI_OLLAMA_BASE_URL="$(config_value OMNISTACKAI_OLLAMA_BASE_URL http://127.0.0.1:11434)"
@@ -238,7 +248,7 @@ PY
     PYTHONPATH="$source_root" python3 -c "from omnistackai_agent_engine.runtime import format_status; print(format_status())"
     ;;
   *)
-    printf 'Usage: %s {lint|test|ollama-verify|gateway-run|scope-propose [description]|intake-run [description]|app-build [description]|studio-serve|app-run <repo-dir>|web-typecheck [example] [out-dir]|preview-plan [target]|verify-plan [target]|plan-show [example]|platform-status}\n' "$0"
+    printf 'Usage: %s {lint|test|ollama-verify|gateway-run|scope-propose [description]|ecosystem-plan [description]|ecosystem-build [description]|intake-run [description]|app-build [description]|studio-serve|app-run <repo-dir>|web-typecheck [example] [out-dir]|preview-plan [target]|verify-plan [target]|plan-show [example]|platform-status}\n' "$0"
     exit 2
     ;;
 esac

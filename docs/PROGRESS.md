@@ -1,4 +1,4 @@
-# OmniStackAI — implementation progress (as of R-430)
+# OmniStackAI — implementation progress (as of R-431)
 
 A living summary of what is built, what is pending, and how to see results. Numbers come from the
 execution tracker (`R_&_D/OmniStackAI_Execution_Tracker_v6.xlsx`, `Phase_Roadmap`) plus the state
@@ -6,17 +6,18 @@ files (`.ai/`), Git history, and CHANGELOG for work done past the tracker's last
 
 ## Headline
 
-- **2,888 automated tests pass**, fully offline and network-independent (`task verify`).
+- **2,897 automated tests pass**, fully offline and network-independent (`task verify`).
 - **147 tracker tasks Done, 1 Deferred, 210 Not Started** across 358 tasks (the tracker's planned
   universe ends at R-358).
-- **Plus 72 completed tasks beyond the workbook (R-359 → R-430)**: 57 reusable UI-component suites,
+- **Plus 73 completed tasks beyond the workbook (R-359 → R-431)**: 57 reusable UI-component suites,
   four front-door bricks, R-420 generated-SQL hardening, R-421 managed embedded local preview,
   R-422 collision-free preview ports + status/stop/restart controls, R-423 build history + re-preview,
   R-424 live preview status, R-425 per-build repo actions, R-426 remove-from-history, R-427 a
   generated-JSX inline-style fix, R-428 generated-app compile fixes + an opt-in `tsc` gate, R-429
-  strict-type cleanup so a generated app passes `tsc --noEmit` clean, and **R-430 the Ecosystem Scope
-  Compiler** (the first brick of the differentiating spine). The generated Next.js component library
-  remains at **110 components**; its component series is **PAUSED at R-415** and fully resumable.
+  strict-type cleanup so a generated app passes `tsc --noEmit` clean, **R-430 the Ecosystem Scope
+  Compiler**, and **R-431 Scope → Application IRs** (one prompt → multiple owned, clean-compiling app
+  repos) — R-430/R-431 are the first two bricks of the differentiating spine. The generated Next.js
+  component library remains at **110 components**; its series is **PAUSED at R-415** and fully resumable.
 - The generated app was **run live locally end-to-end this session** (Next.js web on `:3000` +
   FastAPI on `:8000` + seeded PostgreSQL) — proving the offline builder output actually runs on a Mac.
 - **R-420 closed both SQL defects exposed by that run:** generator-owned PostgreSQL identifiers are
@@ -55,10 +56,14 @@ files (`.ai/`), Git history, and CHANGELOG for work done past the tracker's last
 - **R-430 begins the differentiating spine — the Ecosystem Scope Compiler:** a business prompt →
   a framework-neutral multi-app ecosystem proposal (detected domain + actors + customer app +
   merchant/driver/admin portals + Complete/Customer-only/Custom build-scope options + ≤3 materiality
-  questions), via a deterministic 10-domain keyword classifier (no model/network). Competitors turn
-  "food delivery app" into one customer screen; OmniStackAI proposes the whole business platform. See it:
-  `task agent-engine:scope:propose -- "Create a food delivery app …"`. Not yet wired into IR/repo
-  generation — mapping each surface → an Application IR is the next brick.
+  questions), via a deterministic 10-domain keyword classifier (no model/network). See it:
+  `task agent-engine:scope:propose -- "Create a food delivery app …"`.
+- **R-431 makes the ecosystem real — Scope → Application IRs:** each proposed surface maps to a
+  `validate_ir`-clean `ApplicationIR` (curated per-domain data model + a deterministic CRUD deriver that
+  wires to real repositories), and `build_ecosystem` materializes the chosen scope as MULTIPLE owned Git
+  repos from one prompt. A food-delivery prompt builds 4 apps (customer/merchant/courier/admin), and all
+  four compile clean (`tsc --noEmit` → 0 errors; fixed 4 generator bugs the FK/multi-subcollection shapes
+  exposed). See it: `task agent-engine:ecosystem:plan -- "…"` and `task agent-engine:ecosystem:build -- "…"`.
 
 ## UI Component Series — status: PAUSED at R-415 (resumable)
 
@@ -311,16 +316,16 @@ app now renders in the preview), and **R-429 strict-type cleanup** (fixed the 8 
 revealed so a generated `minimal-blog` and `rideshare-favourites` pass `tsc --noEmit` with 0 errors; the gate
 now reports PASSED for both — generated apps are no longer blocked from a production `next build`).
 
-The local front door is solid end-to-end, and **R-430 began the differentiating spine** with the Ecosystem
-Scope Compiler (a business prompt → a deterministic multi-app ecosystem proposal;
-`task agent-engine:scope:propose`). The founder-approved direction is to continue the spine. The next bricks:
-**(R-431) map each proposed `AppSurface` → an Application IR** so choosing "Complete Business Platform"
-materializes MULTIPLE owned repos/apps from one prompt (building on the assembler + git-service that already
-turn one IR into an owned repo); and **an opt-in cheap-LLM refinement layer** over the deterministic
-classifier (mirroring `nl_to_ir.py` core vs `live_run.py`) for prompts outside the curated domains. Solution
-Packs (pre-tested monorepo skeletons + AI-delta generation) and wiring a frontier model for generation
-quality remain on the spine roadmap. Whichever is chosen, `task verify` must remain
-model/Docker/DB/install/network-free (any live/model path stays opt-in).
+The differentiating spine's first two bricks are in: **R-430** (Ecosystem Scope Compiler) *proposes* a
+multi-app ecosystem, and **R-431** (Scope → Application IRs) *materializes* it — one prompt →
+multiple owned, clean-compiling app repos (`task agent-engine:ecosystem:plan` / `:build`). The
+founder-approved direction is to keep building the spine. Next bricks: **(a) an opt-in cheap-LLM refinement
+layer** over the deterministic domain classifier + curated data models (mirroring `nl_to_ir.py` core vs
+`live_run.py`) so prompts outside the 10 curated domains still get a tailored ecosystem; **(b)
+surface-specific entity focus/roles** so each app is more tailored than sharing the full domain model; and
+**(c) Solution Packs** (pre-tested skeletons + AI-delta generation) plus optionally a frontier model for
+generation quality. `task verify` must remain model/Docker/DB/install/network-free (any live/model path
+stays opt-in).
 
 **The UI-component series remains PAUSED at R-415** and is independently resumable under a future free
 task ID.

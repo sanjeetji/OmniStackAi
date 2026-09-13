@@ -4,11 +4,23 @@ Last updated: 2026-09-13
 ## Current Phase
 Stage 0 (Founder Build Sequence, Brief Section 91) — BASIC/MVP
 
-> **The differentiating SPINE has begun (R-430): the Ecosystem Scope Compiler.** A business prompt → a multi-app ecosystem proposal (customer app + merchant/driver/admin portals) with Complete / Customer-only / Custom build-scope options + ≤3 materiality questions — the "wow" competitors lack. Deterministic, offline, testable: `task agent-engine:scope:propose -- "Create a food delivery app …"`. Foundation: front door **R-416**–**R-426** (chat → create → run → preview) · **R-427/R-428** generated apps compile & render · **R-429** generated apps pass strict `tsc --noEmit` (0 errors). UI-component series PAUSED at R-415 (resumable). **NEXT (founder-approved):** R-431 map each AppSurface → an Application IR so "Complete Business Platform" materializes multiple owned repos from one prompt; and/or an opt-in cheap-LLM refinement over the deterministic classifier; optionally a frontier model for generation quality.
+> **The differentiating SPINE now produces real, owned, clean-compiling apps (R-431).** One prompt → MULTIPLE customer-owned Git repos (customer app + merchant/driver/admin portals) that pass `tsc --noEmit` clean. See it: `task agent-engine:ecosystem:plan -- "Create a food delivery app …"` (per-app IRs) and `task agent-engine:ecosystem:build -- "…"` (writes the repos). Foundation: front door **R-416**–**R-426** (chat → create → run → preview) · **R-427/R-428/R-429** generated apps compile & type-check clean · **R-430** Ecosystem Scope Compiler. UI-component series PAUSED at R-415 (resumable). **NEXT (founder-approved):** (a) an opt-in cheap-LLM refinement over the deterministic classifier + data models for prompts outside the 10 curated domains; (b) surface-specific entity focus/roles; (c) Solution Packs + optionally a frontier model for generation quality.
 
 ## Last Completed Task
-Tracker ID: R-430 — Ecosystem Scope Compiler: deterministic domain classification + multi-app scope proposal
-— DONE. New stdlib-only `intake/scope_compiler.py` turns a business prompt into a framework-neutral
+Tracker ID: R-431 — Scope → Application IRs: materialize a multi-app ecosystem from one prompt — DONE.
+New stdlib-only `intake/ecosystem.py` maps each proposed `AppSurface` (R-430) to a `validate_ir`-clean
+`ApplicationIR` from a curated `DOMAIN_ENTITIES` model (10 domains + fallback) + a deterministic CRUD deriver
+that WIRES to real repositories; `plan_ecosystem` builds an `EcosystemPlan` (one IR per selected surface) and
+`build_ecosystem` materializes each app as its own owned repo (reusing `build_app_from_ir`). Deterministic
+CLIs `task agent-engine:ecosystem:plan` / `:build`. A food-delivery prompt → 4 apps → 4 owned repos (164
+files each). Verified all four compile clean (`tsc --noEmit` → 0 errors), which exposed + fixed 4 generator
+bugs in `codegen/nextjs.py` (over-braced FK `<select>` onChange; single-brace bool-badge style;
+multi-subcollection two-root → fragment; entity interface missing the scalar `<relation>_id` FK field).
+`tests/test_ecosystem.py` (9 tests). `task verify` **2,897 tests** pass (offline; +9); lint/security/env and
+both demos (152 / 149) pass; R-429 examples still pass `web-typecheck`; 0 model calls.
+
+Immediately preceded by R-430 — Ecosystem Scope Compiler: deterministic domain classification + multi-app
+scope proposal — DONE. New stdlib-only `intake/scope_compiler.py` turns a business prompt into a framework-neutral
 `ScopeProposal` (domain + confidence + matched keywords, actors, multi-surface ecosystem, Complete/
 Customer-only/Custom options, ≤3 questions) via a curated 10-domain `DOMAIN_LIBRARY`, weighted-keyword
 `classify_domain()`, and `propose_ecosystem()` (with a `custom-application` fallback). Pure/deterministic

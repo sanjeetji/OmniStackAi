@@ -2,12 +2,35 @@ schema_version: 1
 project: OmniStackAI
 phase: BASIC/MVP
 founder_stage: 0
-current_task: R-430
+current_task: R-431
 current_status: done
 branch: main
-last_completed_task: R-430
+last_completed_task: R-431
 last_completed_task_summary: >-
-  Built R-430: the Ecosystem Scope Compiler (first brick of the founder-approved DIFFERENTIATING SPINE, per
+  Built R-431: Scope -> Application IRs (second brick of the differentiating spine). One prompt now
+  materializes a full multi-app OWNED-CODE ecosystem. New Python-3.13-stdlib-only intake/ecosystem.py maps
+  each proposed AppSurface (R-430) to a validate_ir-clean ApplicationIR from a curated per-domain data model
+  (DOMAIN_ENTITIES: 2-4 typed entities + FK relations for all 10 domains + a custom-application fallback) plus
+  a deterministic CRUD API/screen deriver whose endpoints WIRE to real repositories (LIST/GET/CREATE/UPDATE/
+  DELETE + sub-collection LIST_BY, verified via wire_endpoint - no 501 stubs). surface_to_ir + plan_ecosystem
+  build an EcosystemPlan (one IR per selected surface, respecting the Complete/Customer-only/Custom option);
+  build_ecosystem materializes each app as its own owned Git repo under out/<slug>/ by reusing
+  build_app_from_ir. Deterministic (no model/network); exported from intake/__init__.py. Deterministic plan
+  CLI (task agent-engine:ecosystem:plan) + opt-in build CLI (:build). Demo: "Create a food delivery app ..."
+  -> 4 apps (Customer Ordering App, Merchant Portal, Courier Dispatch App, Super-Admin Dashboard), each
+  3 entities / 17 APIs / 6 screens; the build CLI wrote 4 owned repos (164 files each, author sanjeetji).
+  VERIFIED the generated ecosystem apps COMPILE clean: tsc --noEmit on all four -> 0 errors, which exposed
+  and fixed 4 generator compile bugs in codegen/nextjs.py that the new FK/multi-subcollection/filterable-child
+  shapes triggered (minimal-blog/rideshare never generate them): over-braced FK <select> onChange (=> {{ ->
+  => {); single-brace bool-badge inline style (}> -> }}>); a parent list with 2+ sub-collections rendered
+  search-bar + filter-chips as two JSX roots (wrapped in a fragment <>...</>); and the entity interface
+  omitted the scalar <relation>_id FK column the DB schema/API/editor use (now emitted for to-one relations).
+  test_ecosystem.py (9 tests) covers valid IRs per domain, option app-counts, deterministic plan, CRUD
+  wiring, a real 4-repo build, and an offline guard for the fixed compile-bug classes. task verify 2,897
+  passed (offline; +9); lint/security/env green; both builder demos (152 / 149) unaffected; the R-429
+  examples still pass web-typecheck (no regression); 0 model calls. NEXT: an opt-in cheap-LLM refinement
+  layer over the deterministic classifier/data-models for prompts outside the curated domains. Previously
+  built R-430: the Ecosystem Scope Compiler (first brick of the founder-approved DIFFERENTIATING SPINE, per
   Master Architecture Spec section 2). New Python-3.13-stdlib-only intake/scope_compiler.py turns a
   plain-English business prompt into a framework-neutral ScopeProposal: detected domain (+confidence +matched
   keywords), business actors, the multi-surface app ecosystem, and build-scope options (Complete Business
@@ -496,16 +519,18 @@ id_note: >-
   generated-SQL hardening, embedded trusted-local preview, collision-free preview ports + controls, build
   history + re-preview, live preview status, per-build repo actions, remove-from-history, generated-JSX
   inline-style fix, generated-app compile fixes + opt-in tsc gate, and strict-type cleanup so generated apps
-  pass tsc --noEmit clean), and R-430 done (Ecosystem Scope Compiler = FIRST BRICK of the differentiating
-  spine). NOTE: the UI-COMPONENT SERIES is PAUSED at R-415 (110 components, resumable at a future free Tracker
-  ID); R-416..R-429 built/hardened the "chat -> create -> run -> preview" front door; R-430 begins the SPINE.
+  pass tsc --noEmit clean), R-430 done (Ecosystem Scope Compiler = FIRST spine brick), and R-431 done
+  (Scope -> Application IRs = SECOND spine brick: one prompt -> multiple owned, clean-compiling app repos).
+  NOTE: the UI-COMPONENT SERIES is PAUSED at R-415 (110 components, resumable at a future free Tracker
+  ID); R-416..R-429 built/hardened the "chat -> create -> run -> preview" front door; R-430..R-431 build SPINE.
 blockers: []
 next_action: >-
-  R-430 is complete: the Ecosystem Scope Compiler deterministically turns a business prompt into a multi-app
-  ecosystem proposal (Complete Business Platform / Customer-only / Custom + materiality questions) — the
-  differentiating "wow" competitors lack. See it: `task agent-engine:scope:propose -- "<prompt>"`. NEXT
-  bricks toward the spine (founder-approved direction): (a) R-431 map each proposed AppSurface -> an
-  Application IR so "Complete Business Platform" materializes MULTIPLE owned repos/apps from one prompt; and
-  (b) an opt-in cheap-LLM refinement layer over the deterministic classifier (mirroring nl_to_ir core vs
-  live_run). Optionally wire a frontier model for generation quality. Keep task verify deterministic and
+  R-431 is complete: one prompt now materializes a full multi-app OWNED-CODE ecosystem that compiles clean.
+  See it: `task agent-engine:ecosystem:plan -- "<prompt>"` (shows the app IRs); `:build` writes the repos.
+  The scope compiler (R-430) + ecosystem planner/builder (R-431) are the differentiating spine competitors
+  lack. NEXT spine bricks (founder-approved direction): (a) an OPT-IN cheap-LLM refinement layer over the
+  deterministic domain classifier + curated data models (mirror nl_to_ir core vs live_run) so prompts OUTSIDE
+  the 10 curated domains still get a tailored ecosystem; (b) surface-specific entity focus/roles so each app
+  is more tailored than sharing the full domain model; (c) Solution Packs (pre-tested skeletons + AI-delta)
+  and optionally a frontier model for generation quality. Keep task verify deterministic and
   network/DB/model independent. The UI-component series remains paused/resumable.

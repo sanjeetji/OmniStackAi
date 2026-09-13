@@ -1,32 +1,31 @@
-task_id: R-430
-id: R-430
-title: "Ecosystem Scope Compiler - deterministic domain classification + multi-app scope proposal"
+task_id: R-431
+id: R-431
+title: "Scope -> Application IRs: materialize a multi-app ecosystem from one prompt"
 status: done
 phase: MVP
 tracker_row: null
 started_at: "2026-09-13"
 completed_at: "2026-09-13"
 objective: >-
-  First brick of the differentiating spine (founder-approved pivot, Master Architecture Spec section 2).
-  Add a Python-3.13-stdlib-only intake/scope_compiler.py that turns a plain-English business prompt into a
-  framework-neutral ScopeProposal: detected domain (+confidence +matched keywords), business actors, the
-  multi-surface app ecosystem (customer app + merchant/driver/admin portals), and build-scope options
-  (Complete Business Platform [recommended] / Customer Experience Only / Custom) plus <=3 high-materiality
-  questions. Classification is a deterministic curated keyword heuristic (no model/network/clock/randomness),
-  so it is pure and runs under task verify. Ship a deterministic CLI (task agent-engine:scope:propose) so the
-  founder can see it. Do NOT wire scope -> IR/repo generation yet; no IR/adapter/DB change; task verify stays
-  offline/deterministic (0 model calls).
+  Second brick of the differentiating spine. Turn a ScopeProposal (R-430) into an EcosystemPlan: one
+  validate_ir-clean ApplicationIR per selected app surface, built from a curated per-domain data model + a
+  deterministic CRUD deriver whose endpoints wire to real repositories. build_ecosystem materializes the
+  chosen build scope as MULTIPLE owned Git repos from a single prompt (reusing build_app_from_ir). Ship a
+  deterministic plan CLI (task agent-engine:ecosystem:plan) and an opt-in build CLI (:build). Keep task
+  verify offline/deterministic (0 model calls); no IR/adapter/DB-engine change (PostgreSQL stays).
 allowed_paths:
-  - "services/agent-engine/src/omnistackai_agent_engine/intake/scope_compiler.py"
-  - "services/agent-engine/src/omnistackai_agent_engine/intake/scope_propose.py"
+  - "services/agent-engine/src/omnistackai_agent_engine/intake/ecosystem.py"
+  - "services/agent-engine/src/omnistackai_agent_engine/intake/ecosystem_plan.py"
+  - "services/agent-engine/src/omnistackai_agent_engine/intake/ecosystem_build.py"
   - "services/agent-engine/src/omnistackai_agent_engine/intake/__init__.py"
-  - "services/agent-engine/tests/test_scope_compiler.py"
+  - "services/agent-engine/src/omnistackai_agent_engine/codegen/nextjs.py"  # compile-bug fixes for FK/multi-subcol/filterable-child shapes
+  - "services/agent-engine/tests/test_ecosystem.py"
   - "scripts/agent-engine.sh"
   - "Taskfile.yml"
   - "docs/SCOPE_COMPILER.md"
-  - "docs/RESUME_PROMPT.md"
   - "docs/PROGRESS.md"
-  - ".ai/tasks/R-430.md"
+  - "docs/RESUME_PROMPT.md"
+  - ".ai/tasks/R-431.md"
   - ".ai/CURRENT_TASK.yaml"
   - ".ai/PROJECT_STATE.yaml"
   - ".ai/WORK_LOG.md"
@@ -35,37 +34,44 @@ allowed_paths:
   - "CHANGELOG.md"
 forbidden_changes:
   - "Do not modify or include the unrelated untracked .claude directory"
-  - "Do not change the Application IR, adapters, assembler, Git-service, DB engine (PostgreSQL stays), or generated-project contracts; do not wire scope -> IR/repo generation yet"
-  - "No model/network/Docker in task verify; the classifier is deterministic (any LLM refinement is a later opt-in brick)"
-  - "Stdlib-only agent-engine code; no new dependencies; ASCII-safe source; secret-free"
+  - "Do not change the Application IR, adapters (beyond compile-bug fixes), assembler, Git-service, DB engine (PostgreSQL stays), or generated-project contracts"
+  - "Do not modify R-430 scope_compiler classification behavior"
+  - "No model/network/Docker in task verify; the planner is deterministic (LLM refinement stays opt-in/later)"
+  - "Stdlib + intra-package imports only; no new dependencies; ASCII-safe; secret-free; no fabricated runtime behavior"
 required_gates:
-  - "focused test_scope_compiler.py"
+  - "focused test_ecosystem.py"
   - task verify
   - task lint
   - task security:quick
   - task env:check
   - task builder:demo -- minimal-blog
   - task builder:demo -- rideshare-favourites
-  - "deterministic CLI: task agent-engine:scope:propose -- \"<prompt>\""
+  - "deterministic CLI: task agent-engine:ecosystem:plan -- \"<prompt>\""
+  - "opt-in build: task agent-engine:ecosystem:build -- \"<prompt>\" (+ tsc --noEmit on the built apps)"
 model_tool_trace:
   routing: deterministic_only
   local_calls: 0
   cloud_calls: 0
-  note: Pure deterministic keyword-heuristic classifier + proposal. No model call for implementation or verify.
+  note: Deterministic scope->IR mapping + curated data models. No model call for implementation or verify.
 evidence:
-  verify: "2,888 passed (+11 new scope-compiler tests)"
+  verify: "2,897 passed (+9 new ecosystem tests)"
   lint: "passed"
   security: "passed"
   env: "passed"
-  demos: "minimal-blog 152 files; rideshare-favourites 149 files (unaffected)"
-  focused_test: "test_scope_compiler.py 11 passed"
-  cli: >-
-    task agent-engine:scope:propose -- "Create a food delivery app ..." -> domain food-delivery (confidence
-    1.0), surfaces Customer Ordering App + Merchant Portal + Courier Dispatch App + Super-Admin Dashboard,
-    Complete/Customer-only/Custom options, 2 materiality questions. Deterministic (0 model/network).
+  demos: "minimal-blog 152; rideshare-favourites 149 (unaffected); both still pass web-typecheck"
+  focused_test: "test_ecosystem.py 9 passed"
+  build: >-
+    task agent-engine:ecosystem:build -- "food delivery app ..." -> 4 owned Git repos (Customer Ordering App,
+    Merchant Portal, Courier Dispatch App, Super-Admin Dashboard; 164 files each; author sanjeetji).
+  typecheck: >-
+    tsc --noEmit on all four generated ecosystem apps -> 0 errors. Fixed 4 generator compile bugs in
+    codegen/nextjs.py that the new FK/multi-subcollection/filterable-child IR shapes exposed (over-braced FK
+    <select> onChange; single-brace bool-badge style; multi-subcollection controls two-root -> fragment;
+    entity interface missing the scalar <relation>_id FK field). R-429 examples still pass web-typecheck.
 next_action: >-
-  R-430 done: the Ecosystem Scope Compiler deterministically proposes a multi-app ecosystem from a prompt
-  (the differentiating 'wow'). NEXT bricks toward the spine: (R-431) map each proposed AppSurface -> an
-  Application IR so 'Complete Business Platform' materializes multiple owned repos/apps; and/or an opt-in
-  cheap-LLM refinement layer over the deterministic classifier (like nl_to_ir live_run). Optionally wire a
-  frontier model for generation quality. Keep task verify offline/deterministic.
+  R-431 done: one prompt now materializes a full multi-app owned-code ecosystem (Complete Business Platform)
+  that compiles clean. NEXT spine bricks: (a) an opt-in cheap-LLM refinement layer over the deterministic
+  domain classifier + data models (mirror nl_to_ir core vs live_run) for prompts outside the curated domains;
+  (b) surface-specific entity focus / roles so each app is more tailored; (c) Solution Packs (pre-tested
+  skeletons + AI-delta) and optionally a frontier model for generation quality. Keep task verify
+  offline/deterministic.

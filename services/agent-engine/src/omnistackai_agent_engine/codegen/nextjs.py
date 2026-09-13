@@ -51,6 +51,11 @@ def _entity_interface(entity: Entity) -> str:
     for relation in entity.relations:
         many = relation.kind.value in ("one_to_many", "many_to_many")
         suffix = "[]" if many else ""
+        if not many:
+            # A to-one relation persists as a scalar `<name>_id` foreign-key column — this is what the
+            # DB schema, the API params, and the generated editor form state all use, so the entity type
+            # must expose it (the optional hydrated relation object below is for read-side convenience).
+            lines.append(f"  {relation.name}_id?: string;")
         lines.append(f"  {relation.name}?: {relation.target_entity}{suffix};")
     lines.append("}")
     return "\n".join(lines)
@@ -1260,6 +1265,8 @@ def _subcol_controls(sub: "SubcollectionInfo", s_var: str) -> list[str]:
     filterable_fields = _filterable_fields_for_entity(sub.child_entity)
     lines = [
         f"                {{{s_var}.data && (",
+        # A fragment so the search-bar and the (optional) filter-chips divs are one JSX root.
+        "                  <>",
         '                  <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap", marginBottom: 12 }}>',
         "                    <form",
         f'                      onSubmit={{(e) => {{ e.preventDefault(); {s_var}.setSearch({search_state}.trim()); }}}}',
@@ -1337,6 +1344,7 @@ def _subcol_controls(sub: "SubcollectionInfo", s_var: str) -> list[str]:
             "                    )}",
             "                  </div>",
         ])
+    lines.append("                  </>")
     lines.append("                )}")
     return lines
 
@@ -1515,7 +1523,7 @@ def _field_value_jsx(field: Field, expr: str) -> str:
         return (
             '<span style={{ padding: "2px 8px", borderRadius: 4, fontSize: 12, fontWeight: 600, '
             f'background: {expr} ? "#dcfce7" : "#f1f5f9", '
-            f'color: {expr} ? "#166534" : "#64748b" }}>'
+            f'color: {expr} ? "#166534" : "#64748b" }}}}>'
             f'{{{expr} ? "Yes" : "No"}}</span>'
         )
     if enum_rules.enum:
@@ -3223,7 +3231,7 @@ def _form_screen_page(screen: Screen, entity: Entity, ir: ApplicationIR, ops: se
                 f'          <label style={{{{ display: "block", marginBottom: 6, fontSize: 14, fontWeight: 500, color: "#334155" }}}}>{rel_label}{req_star}</label>',
                 '          <select',
                 f'            value={{String((formData as any).{f.name} ?? "")}}',
-                f'            onChange={{(e) => {{{{ setFormData((prev) => ({{{{ ...prev, {f.name}: e.target.value }}}})); if (fieldErrors.{f.name}) setFieldErrors((prev) => ({{{{ ...prev, {f.name}: "" }}}})); }}}}',
+                f'            onChange={{(e) => {{ setFormData((prev) => ({{ ...prev, {f.name}: e.target.value }})); if (fieldErrors.{f.name}) setFieldErrors((prev) => ({{ ...prev, {f.name}: "" }})); }}}}',
                 f'            style={{{{ width: "100%", padding: "8px 12px", border: fieldErrors.{f.name} ? "1px solid #ef4444" : "1px solid #cbd5e1", borderRadius: 6, fontSize: 14, boxSizing: "border-box", outline: "none", background: "#fff" }}}}',
                 f'            aria-invalid={{!!fieldErrors.{f.name}}}' + req_attr + autofocus_attr,
                 '          >',

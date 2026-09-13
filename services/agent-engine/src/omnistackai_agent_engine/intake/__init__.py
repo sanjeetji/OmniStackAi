@@ -30,6 +30,17 @@ from .scope_compiler import (
     classify_domain,
     propose_ecosystem,
 )
+from .ecosystem import (
+    DOMAIN_ENTITIES,
+    EcosystemAppBuild,
+    EcosystemBuildResult,
+    EcosystemPlan,
+    SurfaceApp,
+    build_ecosystem,
+    plan_ecosystem,
+    plan_ecosystem_from_prompt,
+    surface_to_ir,
+)
 
 __all__ = [
     "IntakeError",
@@ -55,4 +66,14 @@ __all__ = [
     "DomainMatch",
     "DomainSpec",
     "DOMAIN_LIBRARY",
+    # Ecosystem planner/builder (R-431)
+    "plan_ecosystem",
+    "plan_ecosystem_from_prompt",
+    "surface_to_ir",
+    "build_ecosystem",
+    "EcosystemPlan",
+    "SurfaceApp",
+    "EcosystemBuildResult",
+    "EcosystemAppBuild",
+    "DOMAIN_ENTITIES",
 ]

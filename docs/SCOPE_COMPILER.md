@@ -54,10 +54,24 @@ Build-scope options:
   - Custom / Multi-Surface Configuration: …
 ```
 
-## Scope boundary / what's next
+## From proposal to real apps (R-431)
 
-R-430 is the **proposal** engine only. It is **not yet wired into IR/repo generation**. The next brick maps
-each proposed `AppSurface` → an Application IR, so choosing "Complete Business Platform" materializes
-**multiple owned repos/apps** from one prompt (building on the existing project assembler + git-service that
-already turn one IR into an owned repo). An opt-in cheap-LLM refinement over the deterministic classifier (for
-prompts outside the curated domains) is a later, opt-in layer that must not enter `task verify`.
+R-430 is the **proposal** engine; **R-431 (`intake/ecosystem.py`) makes it real** — it maps each proposed
+`AppSurface` to a `validate_ir`-clean `ApplicationIR` (a curated per-domain data model + a deterministic CRUD
+deriver whose endpoints wire to real repositories) and materializes the chosen build scope as **multiple
+owned Git repos** from one prompt (reusing the assembler + git-service):
+
+```bash
+task agent-engine:ecosystem:plan  -- "Create a food delivery app with restaurants and couriers"   # shows the per-app IRs (deterministic, writes nothing)
+task agent-engine:ecosystem:build -- "Create a food delivery app with restaurants and couriers"   # writes one owned repo per surface (opt-in)
+```
+
+A food-delivery prompt builds 4 apps (Customer Ordering App, Merchant Portal, Courier Dispatch App,
+Super-Admin Dashboard); all four pass `tsc --noEmit` clean. See `docs/PROGRESS.md` and `.ai/tasks/R-431.md`.
+
+## What's next
+
+An **opt-in cheap-LLM refinement layer** over the deterministic classifier + curated data models (for prompts
+outside the 10 curated domains) is the next brick — kept opt-in so it never enters `task verify`. Beyond that:
+surface-specific entity focus/roles, Solution Packs (pre-tested skeletons + AI-delta generation), and
+optionally a frontier model for generation quality.

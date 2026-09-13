@@ -1,5 +1,22 @@
 # Work Log
 
+## 2026-09-13 — R-431 (Scope → Application IRs — materialize a multi-app ecosystem from one prompt)
+
+- **Second brick of the spine (founder said "continue").** R-430 *proposed* a multi-app ecosystem; R-431 makes it *real* — one prompt → multiple owned, clean-compiling app repos.
+- New stdlib-only `intake/ecosystem.py`:
+  - Curated `DOMAIN_ENTITIES` — 2–4 typed entities + FK relations for all 10 domains + a `custom-application` fallback.
+  - Deterministic CRUD API/screen derivers emitting canonical shapes that WIRE to real repositories (GET/POST /<plural>, GET/PUT/DELETE /<plural>/{id}, and GET /<parents>/{id}/<children> for a single-FK child).
+  - `surface_to_ir` (roles from actors, entities = domain model, apis/screens derived, Next.js + Python + PostgreSQL, `normalize_ir` + `validate_ir`-clean), `plan_ecosystem`/`plan_ecosystem_from_prompt` (respects the Complete/Customer-only/Custom option), and `build_ecosystem` (materializes each app under `out/<slug>/` via `build_app_from_ir`). Exported from `intake/__init__.py`.
+  - Deterministic plan CLI `intake/ecosystem_plan.py` (`task agent-engine:ecosystem:plan`) + opt-in build CLI `intake/ecosystem_build.py` (`:build`).
+- Demo: `ecosystem:plan -- "food delivery app …"` → 4 apps (Customer Ordering App, Merchant Portal, Courier Dispatch App, Super-Admin Dashboard), each 3 entities / 17 APIs / 6 screens. `ecosystem:build` wrote **4 owned Git repos** (164 files each, author sanjeetji).
+- **Verified the generated ecosystem apps COMPILE clean** (`tsc --noEmit` on all four → 0 errors). Running it exposed **4 generator compile bugs** in paths minimal-blog/rideshare never generate (FK editor, multi-subcollection parent list, filterable child) — all fixed in `codegen/nextjs.py`:
+  - over-braced FK `<select>` `onChange` (`=> {{` → `=> {`);
+  - single-brace bool-badge inline style in the child preview (`}>` → `}}>`);
+  - a parent list with 2+ sub-collections rendered search-bar + filter-chips as two JSX roots → wrapped in a fragment `<>…</>`;
+  - the entity interface omitted the scalar `<relation>_id` FK column the DB schema/API/editor use → now emitted for to-one relations.
+- `tests/test_ecosystem.py` (9 tests): per-domain valid IRs, option app-counts, deterministic plan, CRUD wiring (`wire_endpoint`), a real 4-repo build into a temp dir, and an offline guard for the fixed compile-bug classes.
+- Gates: `task verify` **2,897** passed (offline; +9); lint/security/env green; both builder demos (152 / 149) unaffected; the R-429 examples still pass `web-typecheck` (no regression). **0 model calls.**
+
 ## 2026-09-13 — R-430 (Ecosystem Scope Compiler — deterministic domain classification + multi-app scope proposal)
 
 - **Founder-approved pivot to the DIFFERENTIATING SPINE** (after the R-429 strategy discussion; via AskUserQuestion the founder chose "Start the Scope Compiler"). Master Architecture Spec §2: competitors turn "create a food delivery app" into a single customer screen — OmniStackAI proposes the whole business ecosystem BEFORE generation.
