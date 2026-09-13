@@ -1,4 +1,4 @@
-# OmniStackAI — implementation progress (as of R-423)
+# OmniStackAI — implementation progress (as of R-424)
 
 A living summary of what is built, what is pending, and how to see results. Numbers come from the
 execution tracker (`R_&_D/OmniStackAI_Execution_Tracker_v6.xlsx`, `Phase_Roadmap`) plus the state
@@ -6,14 +6,14 @@ files (`.ai/`), Git history, and CHANGELOG for work done past the tracker's last
 
 ## Headline
 
-- **2,850 automated tests pass**, fully offline and network-independent (`task verify`).
+- **2,857 automated tests pass**, fully offline and network-independent (`task verify`).
 - **147 tracker tasks Done, 1 Deferred, 210 Not Started** across 358 tasks (the tracker's planned
   universe ends at R-358).
-- **Plus 65 completed tasks beyond the workbook (R-359 → R-423)**: 57 reusable UI-component suites,
+- **Plus 66 completed tasks beyond the workbook (R-359 → R-424)**: 57 reusable UI-component suites,
   four front-door bricks, R-420 generated-SQL hardening, R-421 managed embedded local preview,
-  R-422 collision-free preview ports + status/stop/restart controls, and R-423 build history + re-preview.
-  The generated Next.js component library remains at **110 components**; its component series is
-  **PAUSED at R-415** and fully resumable.
+  R-422 collision-free preview ports + status/stop/restart controls, R-423 build history + re-preview,
+  and R-424 live preview status. The generated Next.js component library remains at **110 components**;
+  its component series is **PAUSED at R-415** and fully resumable.
 - The generated app was **run live locally end-to-end this session** (Next.js web on `:3000` +
   FastAPI on `:8000` + seeded PostgreSQL) — proving the offline builder output actually runs on a Mac.
 - **R-420 closed both SQL defects exposed by that run:** generator-owned PostgreSQL identifiers are
@@ -29,6 +29,9 @@ files (`.ai/`), Git history, and CHANGELOG for work done past the tracker's last
 - **R-423 gives the Studio memory:** a bounded, secret-free in-session build history (`GET /api/history`)
   and one-click re-preview of a recorded build (`POST /api/history/preview`), with a "Recent builds" list
   on the page.
+- **R-424 keeps preview status live:** `LocalAppSession.is_alive()` + a liveness-aware
+  `StudioPreviewManager.status()` detect a preview whose processes exited (reporting "stopped" instead of a
+  stale "ready"), and the page polls `GET /api/preview` to re-render on change without reloading the iframe.
 
 ## UI Component Series — status: PAUSED at R-415 (resumable)
 
@@ -268,11 +271,13 @@ the live run needs the key + a network machine.
 
 The local front door is built through robust browser preview with memory: R-416 prompt → IR, R-417 IR →
 owned repo, R-418 local chat studio, R-419 turnkey local run, R-420 SQL hardening, R-421 managed embedded
-preview, R-422 collision-free preview ports + status/stop/restart controls, and **R-423 build history +
-re-preview** (a bounded "Recent builds" list, `GET /api/history`, and `POST /api/history/preview` to re-open
-a prior build). The recommended next task is **R-424**: live in-studio status polling of the running
-preview, or per-build actions (open repo path / copy). Execution must remain explicit trusted-local mode and
-`task verify` must remain model/Docker/DB/install/network-free.
+preview, R-422 collision-free preview ports + status/stop/restart controls, R-423 build history + re-preview
+(a bounded "Recent builds" list, `GET /api/history`, and `POST /api/history/preview` to re-open a prior
+build), and **R-424 live preview status** (liveness-aware `status()` + page polling of `GET /api/preview`, so
+a preview whose processes exit is reported as stopped rather than shown stale). The recommended next task is
+**R-425**: per-build open/copy repo-path actions in the Recent builds list, or a build-in-progress state in
+the preview surface. Execution must remain explicit trusted-local mode and `task verify` must remain
+model/Docker/DB/install/network-free.
 
 **The UI-component series remains PAUSED at R-415** and is independently resumable under a future free
 task ID.

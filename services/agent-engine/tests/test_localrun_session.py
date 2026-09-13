@@ -210,5 +210,27 @@ class TestPreviewPortAllocation(unittest.TestCase):
             start_preview_app(missing, log=None)
 
 
+class TestLocalAppSessionLiveness(unittest.TestCase):
+    def test_alive_when_all_processes_running(self) -> None:
+        session = LocalAppSession(_plan("/tmp/app"), processes=[FakeProcess(), FakeProcess()])
+        self.assertTrue(session.is_alive())
+
+    def test_not_alive_with_no_processes(self) -> None:
+        session = LocalAppSession(_plan("/tmp/app"), processes=[])
+        self.assertFalse(session.is_alive())
+
+    def test_not_alive_when_a_process_exited(self) -> None:
+        session = LocalAppSession(
+            _plan("/tmp/app"), processes=[FakeProcess(), FakeProcess(returncode=1)]
+        )
+        self.assertFalse(session.is_alive())
+
+    def test_not_alive_after_stop(self) -> None:
+        session = LocalAppSession(_plan("/tmp/app"), processes=[FakeProcess()])
+        self.assertTrue(session.is_alive())
+        session.stop()
+        self.assertFalse(session.is_alive())
+
+
 if __name__ == "__main__":
     unittest.main()

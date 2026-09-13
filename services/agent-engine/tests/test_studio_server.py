@@ -110,6 +110,11 @@ class TestStudioPage(unittest.TestCase):
         ):
             self.assertIn(token, STUDIO_HTML)
 
+    def test_page_polls_live_preview_status(self) -> None:
+        # The page polls GET /api/preview on an interval to keep the preview surface accurate.
+        self.assertIn("setInterval", STUDIO_HTML)
+        self.assertIn("'/api/preview'", STUDIO_HTML)
+
 
 class TestStudioServer(unittest.TestCase):
     def test_get_serves_page(self) -> None:

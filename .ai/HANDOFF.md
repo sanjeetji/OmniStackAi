@@ -1,15 +1,16 @@
 # Current Handoff
 
-Task ID: R-423
+Task ID: R-424
 Status: done
 Phase: BASIC/MVP — Founder Stage 0
 Branch: `main` (the only branch; the GitHub default)
 
-> **The local "chat → create → RUN → PREVIEW" loop has memory.** UI-component series PAUSED at R-415 (110 components, resumable). Front door: **R-416** intake · **R-417** builder · **R-418** chat web UI · **R-419** turnkey run · **R-420** SQL hardening · **R-421** managed embedded preview · **R-422** collision-free preview ports + controls · **R-423** build history + re-preview. **RECOMMENDED NEXT: R-424** = live in-studio status polling of the running preview, or per-build actions (open repo path).
+> **The local "chat → create → RUN → PREVIEW" loop has memory and live status.** UI-component series PAUSED at R-415 (110 components, resumable). Front door: **R-416** intake · **R-417** builder · **R-418** chat web UI · **R-419** turnkey run · **R-420** SQL hardening · **R-421** managed embedded preview · **R-422** collision-free ports + controls · **R-423** build history + re-preview · **R-424** live preview status. **RECOMMENDED NEXT: R-425** = per-build open/copy repo-path actions in Recent builds, or a build-in-progress state in the preview surface.
 
 ## Repo/workflow state
 
-- **R-423 (build history + re-preview)** shipped: `studio/history.py` `StudioBuildHistory` (bounded in-memory ring of recent builds, secret-free) + `GET /api/history` and `POST /api/history/preview {id}` (re-preview via the R-422 manager, trusted-local only), a "Recent builds" list on the Studio page, and history recording in `live_serve`. 53 focused tests (12 net-new), `task verify` **2,850** pass; lint/security/env and both demos (152/149) green; 0 model calls. Single commit authored `sanjeetji <sk698166@gmail.com>`.
+- **R-424 (live preview status)** shipped: `LocalAppSession.is_alive()` + liveness-aware `StudioPreviewManager.status()` detect a preview whose processes exited (stop/forget once, bounded "stopped" state), and the Studio page polls `GET /api/preview` every 5s while running, re-rendering on change without reloading an unchanged iframe. No new routes. 60 focused tests (7 net-new), `task verify` **2,857** pass; lint/security/env and both demos (152/149) green; 0 model calls. Single commit authored `sanjeetji <sk698166@gmail.com>`.
+- **R-423 (build history + re-preview)** shipped: `studio/history.py` `StudioBuildHistory` + `GET /api/history` and `POST /api/history/preview {id}`, a "Recent builds" list, and history recording in `live_serve`.
 - **R-422 (collision-free preview ports + controls)** shipped: each preview allocates two distinct free loopback ports (`allocate_preview_ports`) via `start_preview_app`; `StudioPreviewManager` gained bounded, secret-free `status()`/`stop()`/`restart()` at `GET /api/preview` + `POST /api/preview/stop|restart` (trusted-local only; build-only 404s).
 - **R-421 (managed embedded local preview)** shipped: `studio:serve` remains build-only; explicit
   `studio:preview` (depends `db:up`) executes one generated app through exported LocalAppSession/start_app,

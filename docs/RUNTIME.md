@@ -84,6 +84,12 @@ POST /api/preview/restart  -> re-preview the last built repo (idle no-op before 
 `restart` re-previews the last build. The Studio page renders matching Stop/Restart controls that call these
 routes and re-render the preview state with `textContent` only (no response-HTML injection).
 
+**Live status (R-424).** `GET /api/preview` is liveness-aware: `LocalAppSession.is_alive()` is true only when
+every owned background process is still running, and `StudioPreviewManager.status()` stops/forgets a preview
+whose processes have exited on their own and reports a bounded "stopped" state instead of a stale "ready". The
+Studio page polls `GET /api/preview` (every 5s) while a preview is running and re-renders on change; it never
+reloads the embedded iframe when the preview URL is unchanged.
+
 ### Build history and re-preview (R-423)
 
 The Studio keeps a **bounded, in-session, secret-free history** of recent builds (`StudioBuildHistory`, an

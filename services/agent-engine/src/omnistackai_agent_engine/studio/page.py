@@ -175,6 +175,23 @@ STUDIO_HTML = r"""<!doctype html>
     }
   }
 
+  var currentPreviewUrl = null;
+  var previewPollTimer = null;
+
+  function stopPreviewPolling() {
+    if (previewPollTimer !== null) { clearInterval(previewPollTimer); previewPollTimer = null; }
+  }
+
+  function startPreviewPolling() {
+    if (previewPollTimer !== null) { return; }
+    previewPollTimer = setInterval(function () {
+      fetch('/api/preview')
+        .then(function (res) { return res.ok ? res.json() : null; })
+        .then(function (data) { if (data) { renderPreview(data); } })
+        .catch(function () {});
+    }, 5000);
+  }
+
   function renderPreview(preview) {
     var frame = document.getElementById('preview-frame');
     var open = document.getElementById('preview-open');
@@ -183,21 +200,28 @@ STUDIO_HTML = r"""<!doctype html>
     var restartBtn = document.getElementById('preview-restart');
     var state = (preview && preview.status) || null;
     var url = state === 'ready' ? localPreviewUrl(preview.web_url) : null;
-    frame.hidden = true;
-    frame.removeAttribute('src');
-    open.hidden = true;
-    open.removeAttribute('href');
     // Stop is available only while running; Restart whenever a build has a preview outcome.
     stopBtn.hidden = state !== 'ready';
     restartBtn.hidden = !(state === 'ready' || state === 'stopped' || state === 'error');
     if (url) {
       previewStatus.textContent = preview.message || 'The generated application is running locally.';
-      frame.src = url;
+      // Only (re)load the iframe when the preview URL actually changes — polling must not reload it.
+      if (currentPreviewUrl !== url) {
+        frame.src = url;
+        currentPreviewUrl = url;
+      }
       frame.hidden = false;
       open.href = url;
       open.hidden = false;
+      startPreviewPolling();
       return;
     }
+    stopPreviewPolling();
+    currentPreviewUrl = null;
+    frame.hidden = true;
+    frame.removeAttribute('src');
+    open.hidden = true;
+    open.removeAttribute('href');
     previewStatus.textContent = (preview && preview.message) || 'No browser preview is available for this build.';
   }
 

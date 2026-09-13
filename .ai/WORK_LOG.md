@@ -1,5 +1,15 @@
 # Work Log
 
+## 2026-09-13 — R-424 (live preview status — liveness-aware status + Studio polling)
+
+- Recorded the R-424 contract (`.ai/tasks/R-424.md`, `.ai/CURRENT_TASK.yaml`) before code; implemented test-first.
+- `localrun/run.py`: added `LocalAppSession.is_alive()` — false when stopped or owning no process, true only when every owned background process is still running (`poll()` is None).
+- `studio/preview.py`: `StudioPreviewManager.status()` is now liveness-aware. A new `_refresh_locked()` (called under the lock by `status()`) checks the active session; if it is no longer alive it stops/forgets the dead session exactly once and sets a bounded, secret-free "stopped" state (`_EXITED`: "The preview stopped running. Restart to run it again."). While the session stays alive, `status()` returns the current ready state unchanged.
+- `studio/page.py`: added live polling of the existing `GET /api/preview` route (`setInterval` every 5s) while a preview is `ready`; `renderPreview` starts polling on ready and stops it otherwise, and only (re)sets the iframe `src` when the preview URL actually changes (`currentPreviewUrl` guard) so polling never reloads/flickers the embedded app.
+- No new routes, server signature change, or `live_serve` wiring change — reuses R-422's `GET /api/preview` and the R-421/R-422 manager.
+- Tests (7 net-new): `test_localrun_session.py` (is_alive: all-running true, no-processes false, exited-process false, after-stop false); `test_studio_preview.py` (status stays ready while alive; status reports "stopped" and stops the dead session exactly once when it exits, and does not re-stop); `test_studio_server.py` (page polls `GET /api/preview` via `setInterval`).
+- Gates: focused 60 passed; `task verify` **2,857** passed; lint/security/env green; `task builder:demo -- minimal-blog` (152) and `-- rideshare-favourites` (149) pass. Deterministic liveness/status inspection confirmed the ready→stopped transition (single cleanup) and secret-free payloads. **0 model calls in verify.**
+
 ## 2026-09-13 — R-423 (Studio build history + re-preview a recent build)
 
 - Recorded the R-423 contract (`.ai/tasks/R-423.md`, `.ai/CURRENT_TASK.yaml`) before code; implemented test-first.

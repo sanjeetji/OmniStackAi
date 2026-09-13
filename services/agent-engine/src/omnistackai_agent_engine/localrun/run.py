@@ -38,6 +38,12 @@ class LocalAppSession:
         self.web_ready = False
         self._stopped = False
 
+    def is_alive(self) -> bool:
+        """True only when this session is not stopped and every owned process is still running."""
+        if self._stopped or not self.processes:
+            return False
+        return all(process.poll() is None for process in self.processes)
+
     def stop(self) -> None:
         """Terminate every owned process; safe to call more than once."""
         if self._stopped:

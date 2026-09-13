@@ -4,10 +4,22 @@ Last updated: 2026-09-13
 ## Current Phase
 Stage 0 (Founder Build Sequence, Brief Section 91) — BASIC/MVP
 
-> **The local "chat → create → RUN → PREVIEW" loop now has memory.** UI-component series PAUSED at R-415 (110 components, resumable). Front door: **R-416** intake · **R-417** builder · **R-418** chat web UI · **R-419** turnkey run · **R-420** SQL hardening · **R-421** managed embedded preview · **R-422** collision-free preview ports + controls · **R-423** build history + re-preview. Recommended next: **R-424**, live in-studio status polling or per-build actions.
+> **The local "chat → create → RUN → PREVIEW" loop now has memory and live status.** UI-component series PAUSED at R-415 (110 components, resumable). Front door: **R-416** intake · **R-417** builder · **R-418** chat web UI · **R-419** turnkey run · **R-420** SQL hardening · **R-421** managed embedded preview · **R-422** collision-free ports + controls · **R-423** build history + re-preview · **R-424** live preview status. Recommended next: **R-425**, per-build open/copy actions or a build-in-progress preview state.
 
 ## Last Completed Task
-Tracker ID: R-423 — Studio build history + re-preview a recent build — DONE. New dependency-free, thread-safe
+Tracker ID: R-424 — Live preview status (liveness-aware status + Studio polling) — DONE. `LocalAppSession.is_alive()`
+reports whether a session is still running (not stopped and every owned background process alive), and
+`StudioPreviewManager.status()` is now liveness-aware: under its lock it stops/forgets a dead active session
+exactly once and reports a bounded, secret-free "stopped" state instead of a stale "ready". The Studio page
+polls the existing R-422 `GET /api/preview` route every 5s while a preview is running and re-renders on change,
+stopping the poll when not running and never reloading the embedded iframe when the URL is unchanged (no
+flicker). No new routes, server signature change, or `live_serve` wiring change. Collision-free ports,
+status/stop/restart + history controls, `studio:serve`/`studio:preview` semantics, single-session cleanup, and
+PostgreSQL unchanged. 60 focused tests (7 net-new) and `task verify`'s **2,857 tests** pass; lint, security,
+environment, and both demos (152 / 149 files) pass; a deterministic liveness/status inspection confirmed the
+ready→stopped transition and secret-free payloads; 0 local/cloud model calls.
+
+Immediately preceded by R-423 — Studio build history + re-preview a recent build — DONE. New dependency-free, thread-safe
 `StudioBuildHistory` (stdlib only; in-memory ring capped at 10) records each successful build as a bounded,
 secret-free entry (id, truncated prompt, name, entities, file_count, target_dir, commit_sha, created_at). The
 stdlib Studio server gained `GET /api/history` (recent builds newest-first) and `POST /api/history/preview {id}`

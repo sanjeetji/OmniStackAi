@@ -20,6 +20,7 @@ _PREVIEW_ERROR = (
 )
 _IDLE = {"status": "idle", "message": "No preview is running yet. Build an app to start one."}
 _STOPPED = {"status": "stopped", "message": "Preview stopped."}
+_EXITED = {"status": "stopped", "message": "The preview stopped running. Restart to run it again."}
 
 
 class StudioPreviewManager:
@@ -65,9 +66,17 @@ class StudioPreviewManager:
             return self._set_state(payload)
 
     def status(self) -> dict:
-        """Return a bounded, secret-free snapshot of the current preview state."""
+        """Return a bounded, secret-free snapshot of the current preview state (liveness-aware)."""
         with self._lock:
+            self._refresh_locked()
             return dict(self._state)
+
+    def _refresh_locked(self) -> None:
+        """If the active preview's processes have exited on their own, stop and report it."""
+        if self._session is not None and not self._session.is_alive():
+            session, self._session = self._session, None
+            session.stop()
+            self._state = dict(_EXITED)
 
     def stop(self) -> dict:
         """Stop and forget the active preview; safe to call repeatedly. Returns the new state."""

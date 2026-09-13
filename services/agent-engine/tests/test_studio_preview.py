@@ -14,7 +14,7 @@ from omnistackai_agent_engine.studio import StudioPreviewManager
 
 
 class FakeSession:
-    def __init__(self, *, has_web: bool = True, web_ready: bool = True) -> None:
+    def __init__(self, *, has_web: bool = True, web_ready: bool = True, alive: bool = True) -> None:
         self.plan = RunPlan(
             repo_dir="/tmp/generated",
             app_slug="generated",
@@ -27,7 +27,11 @@ class FakeSession:
         )
         self.api_ready = True
         self.web_ready = web_ready
+        self.alive = alive
         self.stop_calls = 0
+
+    def is_alive(self) -> bool:
+        return self.alive
 
     def stop(self) -> None:
         self.stop_calls += 1
@@ -135,6 +139,27 @@ class TestStudioPreviewManager(unittest.TestCase):
         self.assertEqual(payload["status"], "ready")
         self.assertEqual(repos, ["/tmp/generated-one", "/tmp/generated-one"])
         manager.stop()
+
+    def test_status_stays_ready_while_session_alive(self) -> None:
+        session = FakeSession(alive=True)
+        manager = StudioPreviewManager(start_fn=lambda repo, log=None: session)
+        manager.replace("/tmp/generated")
+        self.assertEqual(manager.status()["status"], "ready")
+        self.assertEqual(manager.status()["status"], "ready")
+        self.assertEqual(session.stop_calls, 0)
+        manager.stop()
+
+    def test_status_reports_stopped_when_session_exits(self) -> None:
+        session = FakeSession(alive=True)
+        manager = StudioPreviewManager(start_fn=lambda repo, log=None: session)
+        manager.replace("/tmp/generated")
+        session.alive = False  # the generated app's processes exited on their own
+        status = manager.status()
+        self.assertEqual(status["status"], "stopped")
+        self.assertEqual(session.stop_calls, 1)  # dead session cleaned up exactly once
+        # subsequent status stays stopped and does not re-stop
+        self.assertEqual(manager.status()["status"], "stopped")
+        self.assertEqual(session.stop_calls, 1)
 
 
 class TestStudioPreviewTask(unittest.TestCase):

@@ -2,12 +2,25 @@ schema_version: 1
 project: OmniStackAI
 phase: BASIC/MVP
 founder_stage: 0
-current_task: R-423
+current_task: R-424
 current_status: done
 branch: main
-last_completed_task: R-423
+last_completed_task: R-424
 last_completed_task_summary: >-
-  Built R-423: the local Studio now keeps a bounded in-session history of recent builds and can re-preview any
+  Built R-424: live preview status. LocalAppSession.is_alive() reports whether a session is still running (not
+  stopped and every owned background process poll() is None). StudioPreviewManager.status() is now
+  liveness-aware: under its lock it refreshes the active session, and if the generated app's processes have
+  exited on their own it stops/forgets the dead session exactly once and reports a bounded, secret-free
+  "stopped" state instead of a stale "ready". The Studio page polls the existing R-422 GET /api/preview route
+  every 5s while a preview is running and re-renders the preview surface on change, stopping the poll when the
+  state is not "ready" and never reloading the embedded iframe when the preview URL is unchanged (no flicker).
+  No new routes, server signature change, or live_serve wiring change - it reuses GET /api/preview and the
+  R-421/R-422 manager. Collision-free ports, status/stop/restart + history controls, trusted-local
+  studio:preview, build-only studio:serve, single-session cleanup, PostgreSQL, and architecture unchanged.
+  60 focused tests (7 net-new: 4 is_alive, 2 status liveness, 1 page poll) and task verify's 2,857 tests pass;
+  lint/security/env and both builder demos (152 / 149 files) pass; a deterministic liveness/status inspection
+  confirmed the transition and secret-free payloads; 0 local/cloud model calls. Previously built R-423: the
+  local Studio now keeps a bounded in-session history of recent builds and can re-preview any
   of them. New dependency-free, thread-safe StudioBuildHistory (stdlib only, in-memory ring capped at 10 most
   recent) records each successful build as a bounded, secret-free entry (id, truncated prompt, name, entities,
   file_count, target_dir, commit_sha, created_at; injected clock for deterministic tests). The stdlib Studio
@@ -380,16 +393,17 @@ product_direction: >-
   framework adapter contract -> Next.js adapter -> Git service -> preview/sandbox (needs cloud env).
 id_note: >-
   Workbook backlog owns R-010..R-219. Founder-requested tasks use IDs after R-219: R-220..R-223 done,
-  R-224 Next.js deferred (env-blocked), R-225..R-415 done, and R-416..R-423 done (front-door bricks 1-4,
-  generated-SQL hardening, embedded trusted-local preview, collision-free preview ports + controls, and
-  build history + re-preview, not components). NOTE: the UI-COMPONENT SERIES is PAUSED at R-415 (110
-  components, resumable at a future free Tracker ID); R-416..R-423 built, hardened, and made robust the
-  "chat -> create -> run -> preview" front-door pivot instead.
+  R-224 Next.js deferred (env-blocked), R-225..R-415 done, and R-416..R-424 done (front-door bricks 1-4,
+  generated-SQL hardening, embedded trusted-local preview, collision-free preview ports + controls, build
+  history + re-preview, and live preview status, not components). NOTE: the UI-COMPONENT SERIES is PAUSED at
+  R-415 (110 components, resumable at a future free Tracker ID); R-416..R-424 built, hardened, and made
+  robust the "chat -> create -> run -> preview" front-door pivot instead.
 blockers: []
 next_action: >-
-  R-423 is complete: the Studio keeps a bounded in-session build history (GET /api/history) and can re-preview
-  a recorded build (POST /api/history/preview {id}) in trusted-local mode; a "Recent builds" list is on the
-  page. Recommended next: propose R-424 and record its contract before coding - candidates are live in-studio
-  status polling of the running preview, or per-build actions (open repo path / copy). Keep execution
-  trusted-local/opt-in and task verify deterministic and network/DB/model independent. The UI-component series
-  remains paused/resumable.
+  R-424 is complete: the Studio's preview view stays accurate over time - LocalAppSession.is_alive() +
+  liveness-aware StudioPreviewManager.status() detect a preview whose processes exited, and the page polls
+  GET /api/preview to re-render on change without reloading an unchanged iframe. Recommended next: propose
+  R-425 and record its contract before coding - candidates are per-build open/copy repo-path actions in the
+  Recent builds list, or a build-in-progress state in the preview surface. Keep execution trusted-local/opt-in
+  and task verify deterministic and network/DB/model independent. The UI-component series remains
+  paused/resumable.
