@@ -4,10 +4,23 @@ Last updated: 2026-09-13
 ## Current Phase
 Stage 0 (Founder Build Sequence, Brief Section 91) — BASIC/MVP
 
-> **The local "chat → create → RUN → PREVIEW" loop is now robust.** UI-component series PAUSED at R-415 (110 components, resumable). Front door: **R-416** intake · **R-417** builder · **R-418** chat web UI · **R-419** turnkey run · **R-420** SQL hardening · **R-421** managed embedded preview · **R-422** collision-free preview ports + status/stop/restart controls. Recommended next: **R-423**, a preview history/recent-builds surface or live in-studio status polling.
+> **The local "chat → create → RUN → PREVIEW" loop now has memory.** UI-component series PAUSED at R-415 (110 components, resumable). Front door: **R-416** intake · **R-417** builder · **R-418** chat web UI · **R-419** turnkey run · **R-420** SQL hardening · **R-421** managed embedded preview · **R-422** collision-free preview ports + controls · **R-423** build history + re-preview. Recommended next: **R-424**, live in-studio status polling or per-build actions.
 
 ## Last Completed Task
-Tracker ID: R-422 — Collision-free Studio preview ports + status/stop/restart controls — DONE. Each trusted-
+Tracker ID: R-423 — Studio build history + re-preview a recent build — DONE. New dependency-free, thread-safe
+`StudioBuildHistory` (stdlib only; in-memory ring capped at 10) records each successful build as a bounded,
+secret-free entry (id, truncated prompt, name, entities, file_count, target_dir, commit_sha, created_at). The
+stdlib Studio server gained `GET /api/history` (recent builds newest-first) and `POST /api/history/preview {id}`
+(re-previews a recorded build's already-materialized repo through the R-422 `StudioPreviewManager`), wired via
+optional injected handlers (unset → 404, missing/unknown id → bounded error). `live_serve` records every
+successful build (both modes) and wires re-preview only in trusted-local mode. The Studio page adds a "Recent
+builds" list that loads on start, refreshes after each build, and re-previews on click with `textContent` only.
+Collision-free ports, status/stop/restart, `studio:serve`/`studio:preview` semantics, single-session cleanup,
+and PostgreSQL unchanged. 53 focused tests (12 net-new) and `task verify`'s **2,850 tests** pass; lint,
+security, environment, and both demos (152 / 149 files) pass; a deterministic history-payload inspection
+confirmed bounded, newest-first, secret-free entries; 0 local/cloud model calls.
+
+Immediately preceded by R-422 — Collision-free Studio preview ports + status/stop/restart controls — DONE. Each trusted-
 local preview now allocates two distinct, currently-free loopback ports (`allocate_preview_ports` holds both
 sockets open while reading their OS-assigned ports) and threads them through the R-419 run plan (and the
 generated web app's `NEXT_PUBLIC_API_URL`) via a new `start_preview_app` boundary that delegates to the strict

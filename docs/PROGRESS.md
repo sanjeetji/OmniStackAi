@@ -1,4 +1,4 @@
-# OmniStackAI — implementation progress (as of R-422)
+# OmniStackAI — implementation progress (as of R-423)
 
 A living summary of what is built, what is pending, and how to see results. Numbers come from the
 execution tracker (`R_&_D/OmniStackAI_Execution_Tracker_v6.xlsx`, `Phase_Roadmap`) plus the state
@@ -6,13 +6,14 @@ files (`.ai/`), Git history, and CHANGELOG for work done past the tracker's last
 
 ## Headline
 
-- **2,838 automated tests pass**, fully offline and network-independent (`task verify`).
+- **2,850 automated tests pass**, fully offline and network-independent (`task verify`).
 - **147 tracker tasks Done, 1 Deferred, 210 Not Started** across 358 tasks (the tracker's planned
   universe ends at R-358).
-- **Plus 64 completed tasks beyond the workbook (R-359 → R-422)**: 57 reusable UI-component suites,
-  four front-door bricks, R-420 generated-SQL hardening, R-421 managed embedded local preview, and
-  R-422 collision-free preview ports + status/stop/restart controls. The generated Next.js component
-  library remains at **110 components**; its component series is **PAUSED at R-415** and fully resumable.
+- **Plus 65 completed tasks beyond the workbook (R-359 → R-423)**: 57 reusable UI-component suites,
+  four front-door bricks, R-420 generated-SQL hardening, R-421 managed embedded local preview,
+  R-422 collision-free preview ports + status/stop/restart controls, and R-423 build history + re-preview.
+  The generated Next.js component library remains at **110 components**; its component series is
+  **PAUSED at R-415** and fully resumable.
 - The generated app was **run live locally end-to-end this session** (Next.js web on `:3000` +
   FastAPI on `:8000` + seeded PostgreSQL) — proving the offline builder output actually runs on a Mac.
 - **R-420 closed both SQL defects exposed by that run:** generator-owned PostgreSQL identifiers are
@@ -25,6 +26,9 @@ files (`.ai/`), Git history, and CHANGELOG for work done past the tracker's last
   3000/8000), so it never collides with an existing `task app:run` app or a prior preview; and the
   Studio exposes bounded `status`/`stop`/`restart` controls (`GET /api/preview`, `POST /api/preview/stop`,
   `POST /api/preview/restart`) in trusted-local mode.
+- **R-423 gives the Studio memory:** a bounded, secret-free in-session build history (`GET /api/history`)
+  and one-click re-preview of a recorded build (`POST /api/history/preview`), with a "Recent builds" list
+  on the page.
 
 ## UI Component Series — status: PAUSED at R-415 (resumable)
 
@@ -262,13 +266,13 @@ the live run needs the key + a network machine.
 
 ## What's next
 
-The local front door is built through robust browser preview: R-416 prompt → IR, R-417 IR → owned repo,
-R-418 local chat studio, R-419 turnkey local run, R-420 SQL hardening, R-421 managed embedded preview, and
-**R-422 collision-free preview ports + status/stop/restart controls** (each preview now uses distinct
-auto-allocated free ports and can be stopped/restarted from the Studio, so it never collides with an
-existing `app:run` session). The recommended next task is **R-423**: a preview history / recent-builds
-surface, or live in-studio status polling of the running preview. Execution must remain explicit
-trusted-local mode and `task verify` must remain model/Docker/DB/install/network-free.
+The local front door is built through robust browser preview with memory: R-416 prompt → IR, R-417 IR →
+owned repo, R-418 local chat studio, R-419 turnkey local run, R-420 SQL hardening, R-421 managed embedded
+preview, R-422 collision-free preview ports + status/stop/restart controls, and **R-423 build history +
+re-preview** (a bounded "Recent builds" list, `GET /api/history`, and `POST /api/history/preview` to re-open
+a prior build). The recommended next task is **R-424**: live in-studio status polling of the running
+preview, or per-build actions (open repo path / copy). Execution must remain explicit trusted-local mode and
+`task verify` must remain model/Docker/DB/install/network-free.
 
 **The UI-component series remains PAUSED at R-415** and is independently resumable under a future free
 task ID.

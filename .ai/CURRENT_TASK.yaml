@@ -1,49 +1,46 @@
-task_id: R-422
-id: R-422
-title: "Collision-free Studio preview ports + status/stop/restart controls"
+task_id: R-423
+id: R-423
+title: "Studio build history + re-preview a recent build"
 status: done
 phase: MVP
 tracker_row: null
 started_at: "2026-09-13"
 completed_at: "2026-09-13"
 objective: >-
-  Make the trusted-local Studio preview robust against port collisions and give the operator bounded
-  lifecycle control. Add automatic collision-free API/web port allocation (distinct free loopback ports per
-  preview, threaded through the R-419 run plan and the generated app's NEXT_PUBLIC_API_URL) so a preview
-  never fails or clobbers an existing task app:run app on 3000/8000 or a prior preview. Add bounded
-  status/stop/restart to StudioPreviewManager (single remembered repo, single owned session, fixed-shape
-  secret-free payloads) exposed over the stdlib Studio server as GET /api/preview, POST /api/preview/stop,
-  POST /api/preview/restart, wired only in trusted-local preview mode (build-only returns 404). Add Stop/
-  Restart controls + a live status line to the Studio page without HTML injection. Preserve trusted-local
-  studio:preview, build-only studio:serve, single-session cleanup, offline deterministic verify, PostgreSQL,
-  and the existing architecture.
+  Give the local Studio a bounded, in-session memory of recent builds and let the operator re-preview any of
+  them. Add a dependency-free, thread-safe StudioBuildHistory (stdlib only) that records each successful build
+  as a bounded, secret-free entry (id, truncated prompt, name, entities, file_count, target_dir, commit_sha,
+  created_at) capped at a fixed number of most-recent entries (injected clock for deterministic tests). Expose
+  GET /api/history (recent builds newest-first) and, in trusted-local preview mode only, POST /api/history/
+  preview {id} to re-preview a recorded build's already-materialized repo through the R-422 StudioPreviewManager.
+  Record history from the live build path in both Studio modes; wire re-preview only in preview mode (build-only
+  404). Add a Studio-page "Recent builds" list that loads on start, refreshes after each build, and re-previews
+  on click with textContent only (no HTML injection). Preserve collision-free preview ports, status/stop/restart,
+  trusted-local studio:preview, build-only studio:serve, single-session cleanup, PostgreSQL, and offline verify.
 requirements:
-  - Allocate two distinct currently-free loopback ports per preview; build-only studio:serve and app:run CLI unchanged.
-  - Add start_preview_app in localrun that allocates ports, builds the env plan with them, and delegates to strict start_app.
-  - Extend StudioPreviewManager with bounded, JSON-safe, secret-free status()/stop()/restart(); restart before any build is idle; after a build re-previews the last repo; stop is idempotent.
-  - Extend the stdlib Studio server with optional injected status_fn/stop_fn/restart_fn -> GET /api/preview, POST /api/preview/stop, POST /api/preview/restart; unset handlers 404.
-  - Wire control handlers to the manager only in trusted-local preview mode.
-  - Add Stop/Restart buttons + status line to the Studio page (no innerHTML of server data; keep loopback URL validation and the sandboxed iframe).
-  - Keep single-session ownership and cleanup on replace/stop/shutdown.
-  - Deterministic/offline verification via injected/stubbed run, process, readiness, and port boundaries.
+  - Bounded thread-safe StudioBuildHistory (fixed max recent entries, oldest evicted; bounded secret-free entries; injected clock).
+  - GET /api/history over the stdlib server via injected handler; unset handler 404.
+  - POST /api/history/preview {id} re-previews a recorded build via the R-422 manager; preview mode only; unset 404; unknown/missing id -> bounded error.
+  - Record every successful build into history from the live build path (both modes).
+  - Studio-page recent-builds surface wired to /api/history and re-preview to /api/history/preview, no HTML injection.
+  - Keep R-421/R-422 studio/preview/server/local-run contracts compatible and single-session cleanup intact.
+  - Deterministic/offline verify via injected fakes.
 acceptance_criteria:
-  - Preview uses automatically allocated distinct free ports; start_preview_app overrides plan api/web ports and delegates to start_app.
-  - status/stop/restart return bounded secret-free dicts; restart idle before build, re-previews last repo after; stop reports stopped and is idempotent.
-  - GET /api/preview + POST /api/preview/stop + /restart return manager state in preview mode and 404 when disabled; GET / /healthz POST /api/build unchanged.
-  - Studio page exposes Stop/Restart controls that call the routes and re-render preview state.
-  - R-421 studio/preview/local-run contracts remain compatible; focused + full verify + lint + security + env + both builder demos pass; 0 model calls in verify.
+  - record returns id; list newest-first + bounded; get by id; public view JSON-safe + secret-free with bounded prompt.
+  - GET /api/history returns {builds:[...]} when wired, 404 when not; POST /api/history/preview known id -> preview payload, 404 when disabled, missing/unknown id -> bounded error, no crash.
+  - A successful build is recorded and appears in GET /api/history.
+  - Studio page exposes recent-builds list wired to /api/history and re-preview to /api/history/preview.
+  - Existing contracts compatible; focused + full verify + lint + security + env + both builder demos pass; 0 model calls in verify.
 allowed_paths:
-  - "services/agent-engine/src/omnistackai_agent_engine/localrun/run.py"
-  - "services/agent-engine/src/omnistackai_agent_engine/localrun/__init__.py"
-  - "services/agent-engine/src/omnistackai_agent_engine/studio/preview.py"
+  - "services/agent-engine/src/omnistackai_agent_engine/studio/history.py"
   - "services/agent-engine/src/omnistackai_agent_engine/studio/server.py"
   - "services/agent-engine/src/omnistackai_agent_engine/studio/live_serve.py"
   - "services/agent-engine/src/omnistackai_agent_engine/studio/page.py"
-  - "services/agent-engine/tests/test_localrun_session.py"
-  - "services/agent-engine/tests/test_studio_preview.py"
+  - "services/agent-engine/src/omnistackai_agent_engine/studio/__init__.py"
+  - "services/agent-engine/tests/test_studio_history.py"
   - "services/agent-engine/tests/test_studio_server.py"
   - "docs/RUNTIME.md"
-  - ".ai/tasks/R-422.md"
+  - ".ai/tasks/R-423.md"
   - ".ai/CURRENT_TASK.yaml"
   - ".ai/PROJECT_STATE.yaml"
   - ".ai/WORK_LOG.md"
@@ -54,14 +51,13 @@ allowed_paths:
   - "docs/RESUME_PROMPT.md"
 forbidden_changes:
   - "Do not modify or include the unrelated untracked .claude directory"
+  - "Do not add a service, top-level directory, platform/generated dependency, queue, sandbox vendor, database, or infrastructure (history is bounded in-memory)"
   - "Do not make generated-code execution implicit in task verify or the build-only Studio command"
-  - "Do not change studio:serve build-only / studio:preview trusted-local semantics or single-session cleanup"
-  - "Do not add a service, top-level directory, platform/generated dependency, queue, sandbox vendor, or infrastructure"
+  - "Do not change studio:serve / studio:preview semantics, collision-free ports, or single-session cleanup"
   - "Do not change RuntimeProvider/ModelProvider/Application IR/database engine/assembler/Git-service/deployment/generated contracts; PostgreSQL stays"
-  - "Do not expose secrets, DB credentials, process environments, or raw tracebacks in preview payloads or logs"
+  - "Do not expose secrets, DB credentials, process environments, or raw tracebacks in history or preview payloads/logs"
 required_gates:
-  - focused managed-session, studio-preview, and studio-server tests
-  - existing local-run plan regressions
+  - focused studio-history, studio-server, studio-preview, and local-run session tests
   - task lint
   - task verify
   - task security:quick
@@ -73,17 +69,17 @@ model_tool_trace:
   local_calls: 0
   cloud_calls: 0
   note: >-
-    L2 local orchestration/lifecycle work. Deterministic repository/runtime boundaries and injected test
-    doubles are sufficient; no local or cloud model call is needed for implementation or verify.
+    L2 local orchestration/UX work. Deterministic repository boundaries and injected test doubles are
+    sufficient; no local or cloud model call is needed for implementation or verify.
 evidence:
   baseline: >-
-    Start protocol passed: task doctor OK, task ai:status shows R-421 done at 5a472b5, task verify 2,823
-    tests pass. Local == origin/main at 5a472b5 before coding; only the untracked .claude/ present.
-  verify: "2,838 passed"
+    Start protocol passed at R-422: task verify 2,838 tests pass; local == origin/main at 56520db before
+    coding; only the untracked .claude/ present.
+  verify: "2,850 passed"
   lint: "passed"
   security: "passed"
   env: "passed"
   demos: "minimal-blog 152 files; rideshare-favourites 149 files"
-  focused_test: "53 passed (test_localrun_session + test_studio_preview + test_studio_server + test_localrun_plan); 15 net-new R-422 tests"
-  payload_port_inspection: "allocate_preview_ports -> distinct free ports (e.g. 63269/63270); ready/status/stop/restart payloads JSON-safe and secret-free (DB password never present); 0 model calls"
-next_action: "R-422 done. Next: R-423 (candidates: preview history/log surface, or embed run-plan preview URL live status polling in the studio)."
+  focused_test: "53 passed (test_studio_history + test_studio_server + test_studio_preview + test_localrun_session); 12 net-new R-423 tests (7 history, 5 server routes)"
+  history_payload_inspection: "StudioBuildHistory bounded to limit, newest-first, prompt truncated <=400, secret-free (DB password never present), get() finds/evicts by id, JSON-safe; 0 model calls"
+next_action: "R-423 done. Next: R-424 (candidates: live in-studio status polling of the running preview, or per-build open-in-editor/repo actions)."

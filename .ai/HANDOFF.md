@@ -1,15 +1,16 @@
 # Current Handoff
 
-Task ID: R-422
+Task ID: R-423
 Status: done
 Phase: BASIC/MVP — Founder Stage 0
 Branch: `main` (the only branch; the GitHub default)
 
-> **The local "chat → create → RUN → PREVIEW" loop is robust.** UI-component series PAUSED at R-415 (110 components, resumable). Front door: **R-416** intake · **R-417** builder · **R-418** chat web UI · **R-419** turnkey run · **R-420** SQL hardening · **R-421** managed embedded preview · **R-422** collision-free preview ports + status/stop/restart controls. **RECOMMENDED NEXT: R-423** = a preview history/recent-builds surface, or live in-studio status polling of the running preview.
+> **The local "chat → create → RUN → PREVIEW" loop has memory.** UI-component series PAUSED at R-415 (110 components, resumable). Front door: **R-416** intake · **R-417** builder · **R-418** chat web UI · **R-419** turnkey run · **R-420** SQL hardening · **R-421** managed embedded preview · **R-422** collision-free preview ports + controls · **R-423** build history + re-preview. **RECOMMENDED NEXT: R-424** = live in-studio status polling of the running preview, or per-build actions (open repo path).
 
 ## Repo/workflow state
 
-- **R-422 (collision-free preview ports + controls)** shipped: each preview allocates two distinct free loopback ports (`allocate_preview_ports`) via `start_preview_app`, so previews never collide with an existing `task app:run` app or a prior preview. `StudioPreviewManager` gained bounded, secret-free `status()`/`stop()`/`restart()`, exposed as `GET /api/preview` + `POST /api/preview/stop|restart` (wired only in trusted-local preview mode; build-only 404s). Studio page adds Stop/Restart controls. 53 focused tests (15 net-new), `task verify` **2,838** pass; lint/security/env and both demos (152/149) green; 0 model calls. Single commit authored `sanjeetji <sk698166@gmail.com>`.
+- **R-423 (build history + re-preview)** shipped: `studio/history.py` `StudioBuildHistory` (bounded in-memory ring of recent builds, secret-free) + `GET /api/history` and `POST /api/history/preview {id}` (re-preview via the R-422 manager, trusted-local only), a "Recent builds" list on the Studio page, and history recording in `live_serve`. 53 focused tests (12 net-new), `task verify` **2,850** pass; lint/security/env and both demos (152/149) green; 0 model calls. Single commit authored `sanjeetji <sk698166@gmail.com>`.
+- **R-422 (collision-free preview ports + controls)** shipped: each preview allocates two distinct free loopback ports (`allocate_preview_ports`) via `start_preview_app`; `StudioPreviewManager` gained bounded, secret-free `status()`/`stop()`/`restart()` at `GET /api/preview` + `POST /api/preview/stop|restart` (trusted-local only; build-only 404s).
 - **R-421 (managed embedded local preview)** shipped: `studio:serve` remains build-only; explicit
   `studio:preview` (depends `db:up`) executes one generated app through exported LocalAppSession/start_app,
   waits for API/web readiness, and embeds its loopback URL in a sandboxed iframe. StudioPreviewManager

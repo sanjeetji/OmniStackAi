@@ -81,6 +81,13 @@ STUDIO_HTML = r"""<!doctype html>
     padding: 5px 12px; font-size: 12.5px; font-weight: 600; cursor: pointer;
   }
   .preview-btn:hover { border-color: #6ee7ff; color: #e6edf3; }
+  .history { margin-top: 26px; }
+  .history-title { font-size: 15px; color: #9fb0c3; margin: 0 0 10px; }
+  .history-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
+  .history-item { display: flex; align-items: center; justify-content: space-between; gap: 12px; background: rgba(18,28,48,0.55); border: 1px solid #223148; border-radius: 10px; padding: 10px 14px; }
+  .history-item .h-name { font-weight: 650; color: #e6edf3; font-size: 14px; }
+  .history-item .h-prompt { color: #9fb0c3; font-size: 12.5px; word-break: break-word; }
+  .history-empty { color: #62748c; font-size: 13px; }
   .preview-frame { display: block; width: 100%; height: 540px; border: 0; background: #fff; }
   .files { max-height: 320px; overflow: auto; background: #0b1220; border: 1px solid #223148; border-radius: 10px; padding: 10px 14px; }
   .files ul { margin: 0; padding-left: 18px; }
@@ -139,6 +146,11 @@ STUDIO_HTML = r"""<!doctype html>
       ></iframe>
     </div>
     <div class="files"><ul id="r-files"></ul></div>
+  </section>
+
+  <section id="history" class="history">
+    <h3 class="history-title">Recent builds</h3>
+    <ul id="history-list" class="history-list"></ul>
   </section>
 
   <footer>Runs on your machine via the local model. No cloud, no account.</footer>
@@ -215,6 +227,67 @@ STUDIO_HTML = r"""<!doctype html>
     control('/api/preview/restart', 'Restarting preview...');
   });
 
+  function previewBuild(build) {
+    renderResult({
+      name: build.name,
+      description: build.prompt,
+      entities: build.entities || [],
+      file_count: build.file_count,
+      target_dir: build.target_dir,
+      commit_sha: build.commit_sha,
+      files: []
+    });
+    var previewStatus = document.getElementById('preview-status');
+    previewStatus.textContent = 'Starting preview...';
+    fetch('/api/history/preview', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ id: build.id })
+    }).then(function (res) { return res.json(); })
+      .then(function (data) { renderPreview(data); })
+      .catch(function (err) { previewStatus.textContent = 'Preview failed: ' + err.message; });
+  }
+
+  function renderHistory(builds) {
+    var list = document.getElementById('history-list');
+    list.innerHTML = '';
+    if (!builds || !builds.length) {
+      var empty = document.createElement('li');
+      empty.className = 'history-empty';
+      empty.textContent = 'No builds yet in this session.';
+      list.appendChild(empty);
+      return;
+    }
+    builds.forEach(function (b) {
+      var li = document.createElement('li');
+      li.className = 'history-item';
+      var meta = document.createElement('div');
+      var name = document.createElement('div');
+      name.className = 'h-name';
+      name.textContent = b.name || 'App';
+      var prompt = document.createElement('div');
+      prompt.className = 'h-prompt';
+      prompt.textContent = (b.prompt || '') + '  -  ' + (b.file_count || 0) + ' files';
+      meta.appendChild(name);
+      meta.appendChild(prompt);
+      var btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = 'preview-btn';
+      btn.textContent = 'Preview';
+      btn.addEventListener('click', function () { previewBuild(b); });
+      li.appendChild(meta);
+      li.appendChild(btn);
+      list.appendChild(li);
+    });
+  }
+
+  function loadHistory() {
+    fetch('/api/history')
+      .then(function (res) { return res.ok ? res.json() : { builds: [] }; })
+      .then(function (data) { renderHistory((data && data.builds) || []); })
+      .catch(function () {});
+  }
+
   document.getElementById('examples').addEventListener('click', function (e) {
     if (e.target && e.target.classList.contains('ex')) {
       promptEl.value = 'Build ' + e.target.textContent.replace(/^A /, 'a ');
@@ -266,6 +339,7 @@ STUDIO_HTML = r"""<!doctype html>
       if (!out.ok) { throw new Error((out.data && out.data.error) || ('HTTP ' + out.status)); }
       renderResult(out.data);
       statusEl.hidden = true;
+      loadHistory();
     }).catch(function (err) {
       statusEl.className = 'status error';
       statusEl.textContent = 'Build failed: ' + err.message;
@@ -273,6 +347,8 @@ STUDIO_HTML = r"""<!doctype html>
       btn.disabled = false;
     });
   });
+
+  loadHistory();
 })();
 </script>
 </body>

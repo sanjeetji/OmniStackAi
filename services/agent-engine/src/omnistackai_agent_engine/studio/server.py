@@ -16,6 +16,7 @@ from .page import STUDIO_HTML
 
 BuildFn = Callable[[str], dict]
 ControlFn = Callable[[], dict]
+PreviewBuildFn = Callable[[str], dict]
 
 _MAX_BODY_BYTES = 64 * 1024
 
@@ -25,6 +26,8 @@ def _make_handler(
     status_fn: ControlFn | None,
     stop_fn: ControlFn | None,
     restart_fn: ControlFn | None,
+    history_fn: ControlFn | None,
+    preview_build_fn: PreviewBuildFn | None,
 ) -> type[BaseHTTPRequestHandler]:
     class StudioHandler(BaseHTTPRequestHandler):
         server_version = "OmniStackAIStudio/1.0"
@@ -58,6 +61,34 @@ def _make_handler(
             except Exception as error:  # surface any control failure as a clean 502
                 self._send_json(502, {"error": str(error)})
 
+        def _read_json_body(self) -> dict | None:
+            length = int(self.headers.get("Content-Length", 0) or 0)
+            if length > _MAX_BODY_BYTES:
+                self._send_json(413, {"error": "request body too large"})
+                return None
+            raw = self.rfile.read(length) if length else b""
+            try:
+                return json.loads(raw.decode("utf-8")) if raw else {}
+            except (json.JSONDecodeError, UnicodeDecodeError, AttributeError):
+                self._send_json(400, {"error": "invalid JSON body"})
+                return None
+
+        def _run_preview_build(self) -> None:
+            data = self._read_json_body()
+            if data is None:
+                return
+            if preview_build_fn is None:
+                self._send_json(404, {"error": "preview controls are not enabled"})
+                return
+            build_id = str(data.get("id", "")).strip()
+            if not build_id:
+                self._send_json(400, {"error": "id is required"})
+                return
+            try:
+                self._send_json(200, preview_build_fn(build_id))
+            except Exception as error:  # surface any control failure as a clean 502
+                self._send_json(502, {"error": str(error)})
+
         def do_GET(self) -> None:  # noqa: N802 (http.server API)
             if self.path in ("/", "/index.html"):
                 self._send(200, "text/html; charset=utf-8", STUDIO_HTML.encode("utf-8"))
@@ -68,6 +99,11 @@ def _make_handler(
                     self._send_json(404, {"error": "preview controls are not enabled"})
                 else:
                     self._send_json(200, status_fn())
+            elif self.path == "/api/history":
+                if history_fn is None:
+                    self._send_json(404, {"error": "preview controls are not enabled"})
+                else:
+                    self._send_json(200, history_fn())
             else:
                 self._send(404, "text/plain; charset=utf-8", b"not found")
 
@@ -77,6 +113,9 @@ def _make_handler(
                 return
             if self.path == "/api/preview/restart":
                 self._run_control(restart_fn)
+                return
+            if self.path == "/api/history/preview":
+                self._run_preview_build()
                 return
             if self.path != "/api/build":
                 self._send_json(404, {"error": "not found"})
@@ -113,13 +152,18 @@ def create_studio_server(
     status_fn: ControlFn | None = None,
     stop_fn: ControlFn | None = None,
     restart_fn: ControlFn | None = None,
+    history_fn: ControlFn | None = None,
+    preview_build_fn: PreviewBuildFn | None = None,
 ) -> ThreadingHTTPServer:
     """Create (but do not start) a studio server bound to ``host``/``port``.
 
     Pass ``port=0`` for an ephemeral port (used by tests). Call ``serve_forever()`` to run.
-    The preview control handlers are optional; when unset, ``GET /api/preview`` and
-    ``POST /api/preview/stop|restart`` return 404 (build-only mode).
+    The preview control and history handlers are optional; when unset, ``GET /api/preview``,
+    ``POST /api/preview/stop|restart``, ``GET /api/history``, and ``POST /api/history/preview``
+    return 404 (build-only mode). ``history_fn`` may be wired in build-only mode to list recent
+    builds; ``preview_build_fn`` (re-preview) is wired only in trusted-local preview mode.
     """
     return ThreadingHTTPServer(
-        (host, port), _make_handler(build_fn, status_fn, stop_fn, restart_fn)
+        (host, port),
+        _make_handler(build_fn, status_fn, stop_fn, restart_fn, history_fn, preview_build_fn),
     )

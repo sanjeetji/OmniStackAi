@@ -215,6 +215,46 @@ class TestStudioPreviewControlRoutes(unittest.TestCase):
             self.assertEqual(_post(base + "/api/preview/restart")[0], 404)
 
 
+class TestStudioHistoryRoutes(unittest.TestCase):
+    HISTORY = {"builds": [{"id": "2", "name": "Blog"}, {"id": "1", "name": "Shop"}]}
+
+    def test_get_history(self) -> None:
+        with running_server(RecordingBuild(STUB_RESULT), history_fn=lambda: self.HISTORY) as base:
+            status, data = _get(base + "/api/history")
+            self.assertEqual(status, 200)
+            self.assertEqual(len(json.loads(data)["builds"]), 2)
+
+    def test_post_history_preview_passes_id(self) -> None:
+        seen = []
+
+        def preview_build(build_id):
+            seen.append(build_id)
+            return {"status": "ready", "web_url": "http://127.0.0.1:51999"}
+
+        with running_server(RecordingBuild(STUB_RESULT), preview_build_fn=preview_build) as base:
+            status, data = _post(base + "/api/history/preview", obj={"id": "2"})
+            self.assertEqual(status, 200)
+            self.assertEqual(data["status"], "ready")
+            self.assertEqual(seen, ["2"])
+
+    def test_post_history_preview_missing_id_is_400(self) -> None:
+        with running_server(
+            RecordingBuild(STUB_RESULT), preview_build_fn=lambda build_id: {"status": "ready"}
+        ) as base:
+            status, data = _post(base + "/api/history/preview", obj={})
+            self.assertEqual(status, 400)
+            self.assertIn("error", data)
+
+    def test_history_routes_404_when_disabled(self) -> None:
+        with running_server(RecordingBuild(STUB_RESULT)) as base:
+            self.assertEqual(_get(base + "/api/history")[0], 404)
+            self.assertEqual(_post(base + "/api/history/preview", obj={"id": "1"})[0], 404)
+
+    def test_page_has_recent_builds_surface(self) -> None:
+        for token in ('id="history-list"', "/api/history", "/api/history/preview"):
+            self.assertIn(token, STUDIO_HTML)
+
+
 class TestResultDict(unittest.TestCase):
     def test_app_build_result_to_dict_shape(self) -> None:
         ir = example_ir("minimal-blog")

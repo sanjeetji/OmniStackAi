@@ -1,5 +1,16 @@
 # Work Log
 
+## 2026-09-13 — R-423 (Studio build history + re-preview a recent build)
+
+- Recorded the R-423 contract (`.ai/tasks/R-423.md`, `.ai/CURRENT_TASK.yaml`) before code; implemented test-first.
+- `studio/history.py` (new): `StudioBuildHistory` — a dependency-free, thread-safe, in-memory ring (default cap 10) of recent builds. `record(build) -> id` stores a bounded, secret-free entry (id, prompt truncated to 400 chars, name, up to 24 entities, file_count, target_dir, commit_sha, created_at via an injected clock); `list()` returns `{builds: [...]}` newest-first; `get(id)` finds by id. Only the eight known fields are ever exposed.
+- `studio/__init__.py`: exported `StudioBuildHistory`.
+- `studio/server.py`: `create_studio_server` gained optional `history_fn` -> `GET /api/history` and `preview_build_fn` -> `POST /api/history/preview` (reads `{id}` from the body via a bounded JSON reader; missing id -> 400; unknown handler -> 404; handler errors -> clean 502). Existing routes unchanged.
+- `studio/live_serve.py`: creates a `StudioBuildHistory`, records every successful build (`payload["id"] = history.record(payload)`), wires `history_fn=history.list` in both modes, and wires `preview_build_fn` (re-preview via `_preview_recorded_build` -> `StudioPreviewManager.replace(entry.target_dir)`) only in trusted-local preview mode.
+- `studio/page.py`: added a "Recent builds" list (`id="history-list"`) that loads on start (`loadHistory`), refreshes after each successful build, and re-previews a build on click (`previewBuild` -> `POST /api/history/preview`), rendering with `textContent` only (no HTML injection). CSS added.
+- Tests (12 net-new): `test_studio_history.py` (record/list/get, newest-first, bounded eviction, injected clock, bounded secret-free entries, JSON-safe); `test_studio_server.py` (GET /api/history, POST /api/history/preview passes id, missing-id 400, 404 when disabled, page has the surface).
+- Gates: focused 53 passed; `task verify` **2,850** passed; lint/security/env green; `task builder:demo -- minimal-blog` (152) and `-- rideshare-favourites` (149) pass. Deterministic history-payload inspection confirmed bounded, newest-first, secret-free entries with id lookup/eviction. **0 model calls in verify.**
+
 ## 2026-09-13 — R-422 (collision-free preview ports + status/stop/restart controls)
 
 - Recorded the R-422 contract (`.ai/tasks/R-422.md`, `.ai/CURRENT_TASK.yaml`) before code; implemented test-first.

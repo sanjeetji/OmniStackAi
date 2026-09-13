@@ -84,6 +84,25 @@ POST /api/preview/restart  -> re-preview the last built repo (idle no-op before 
 `restart` re-previews the last build. The Studio page renders matching Stop/Restart controls that call these
 routes and re-render the preview state with `textContent` only (no response-HTML injection).
 
+### Build history and re-preview (R-423)
+
+The Studio keeps a **bounded, in-session, secret-free history** of recent builds (`StudioBuildHistory`, an
+in-memory ring capped at the 10 most recent; no persistence, service, or infrastructure). Each successful
+build is recorded in both Studio modes. Two routes surface it (both return 404 when their handler is not
+wired):
+
+```text
+GET  /api/history          -> recent builds, newest-first (id, prompt, name, entities, file_count,
+                              target_dir, commit_sha, created_at) — bounded and secret-free
+POST /api/history/preview  -> {"id": "..."}  re-preview a recorded build's already-materialized repo
+                              through the R-422 manager (trusted-local preview mode only)
+```
+
+`GET /api/history` is available in both build-only and preview modes; `POST /api/history/preview` (which
+executes generated code) is wired only in trusted-local preview mode. The Studio page shows a **Recent
+builds** list that loads on start, refreshes after each build, and re-previews a build on click, rendered
+with `textContent` only.
+
 ## Switching tiers — one knob (R-234)
 
 `OMNISTACKAI_TIER` is the single switch; change it in `.env` and the resolved providers change:

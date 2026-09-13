@@ -24,6 +24,7 @@ import tempfile
 
 from ..intake._ollama import build_ollama_provider_from_env
 from ..intake.build_app import app_build_result_to_dict, build_app_from_prompt
+from .history import StudioBuildHistory
 from .preview import StudioPreviewManager
 from .server import create_studio_server
 
@@ -39,7 +40,12 @@ def _target_dir_for(prompt: str) -> str:
     return os.path.join(tempfile.mkdtemp(prefix="omnistackai-studio-"), slug)
 
 
-def _build(prompt: str, *, preview_manager: StudioPreviewManager | None = None) -> dict:
+def _build(
+    prompt: str,
+    *,
+    preview_manager: StudioPreviewManager | None = None,
+    history: StudioBuildHistory | None = None,
+) -> dict:
     provider, model_id, max_output, request_timeout = build_ollama_provider_from_env()
     result = asyncio.run(
         build_app_from_prompt(
@@ -55,6 +61,8 @@ def _build(prompt: str, *, preview_manager: StudioPreviewManager | None = None) 
         )
     )
     payload = app_build_result_to_dict(result)
+    if history is not None:
+        payload["id"] = history.record(payload)
     if preview_manager is None:
         payload["preview"] = {
             "status": "disabled",
@@ -63,6 +71,15 @@ def _build(prompt: str, *, preview_manager: StudioPreviewManager | None = None) 
     else:
         payload["preview"] = preview_manager.replace(result.target_dir)
     return payload
+
+
+def _preview_recorded_build(
+    build_id: str, history: StudioBuildHistory, preview_manager: StudioPreviewManager
+) -> dict:
+    entry = history.get(build_id)
+    if entry is None or not entry.get("target_dir"):
+        return {"status": "error", "message": "That build is no longer available in this session."}
+    return preview_manager.replace(entry["target_dir"])
 
 
 def _preview_enabled() -> bool:
@@ -75,17 +92,21 @@ def main() -> None:
     host = os.environ.get("OMNISTACKAI_STUDIO_HOST", "127.0.0.1")
     port = int(os.environ.get("OMNISTACKAI_STUDIO_PORT", "4173"))
     preview_manager = StudioPreviewManager() if _preview_enabled() else None
+    history = StudioBuildHistory()
 
     def build(prompt: str) -> dict:
-        return _build(prompt, preview_manager=preview_manager)
+        return _build(prompt, preview_manager=preview_manager, history=history)
 
-    control_kwargs: dict = {}
+    control_kwargs: dict = {"history_fn": history.list}
     if preview_manager is not None:
-        control_kwargs = {
-            "status_fn": preview_manager.status,
-            "stop_fn": preview_manager.stop,
-            "restart_fn": preview_manager.restart,
-        }
+        control_kwargs.update(
+            status_fn=preview_manager.status,
+            stop_fn=preview_manager.stop,
+            restart_fn=preview_manager.restart,
+            preview_build_fn=lambda build_id: _preview_recorded_build(
+                build_id, history, preview_manager
+            ),
+        )
 
     server = create_studio_server(build, host=host, port=port, **control_kwargs)
     print(f"OmniStackAI Studio -> http://{host}:{port}")

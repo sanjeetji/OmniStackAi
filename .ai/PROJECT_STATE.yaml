@@ -2,12 +2,26 @@ schema_version: 1
 project: OmniStackAI
 phase: BASIC/MVP
 founder_stage: 0
-current_task: R-422
+current_task: R-423
 current_status: done
 branch: main
-last_completed_task: R-422
+last_completed_task: R-423
 last_completed_task_summary: >-
-  Built R-422: collision-free Studio preview ports plus bounded status/stop/restart controls. Each trusted-
+  Built R-423: the local Studio now keeps a bounded in-session history of recent builds and can re-preview any
+  of them. New dependency-free, thread-safe StudioBuildHistory (stdlib only, in-memory ring capped at 10 most
+  recent) records each successful build as a bounded, secret-free entry (id, truncated prompt, name, entities,
+  file_count, target_dir, commit_sha, created_at; injected clock for deterministic tests). The stdlib Studio
+  server gained GET /api/history (recent builds newest-first) and POST /api/history/preview {id} (re-previews a
+  recorded build's already-materialized repo through the R-422 StudioPreviewManager), via optional injected
+  handlers; unset handlers 404, missing/unknown id returns a bounded error. live_serve records every successful
+  build (both modes), wires history_fn always and preview_build_fn only in trusted-local preview mode. The
+  Studio page adds a "Recent builds" list that loads on start, refreshes after each build, and re-previews on
+  click with textContent only (no HTML injection). Collision-free preview ports, status/stop/restart controls,
+  trusted-local studio:preview, build-only studio:serve, single-session cleanup, PostgreSQL, and architecture
+  unchanged. 53 focused tests (12 net-new: 7 history + 5 server routes) and task verify's 2,850 tests pass;
+  lint/security/env and both builder demos (152 / 149 files) pass; a deterministic history-payload inspection
+  confirmed bounded newest-first secret-free entries; 0 local/cloud model calls. Previously built R-422:
+  collision-free Studio preview ports plus bounded status/stop/restart controls. Each trusted-
   local preview now allocates two distinct, currently-free loopback ports (allocate_preview_ports holds both
   sockets open while reading their OS-assigned ports) and threads them through the R-419 run plan (and thus
   the generated web app's NEXT_PUBLIC_API_URL) via a new start_preview_app boundary that delegates to the
@@ -366,16 +380,16 @@ product_direction: >-
   framework adapter contract -> Next.js adapter -> Git service -> preview/sandbox (needs cloud env).
 id_note: >-
   Workbook backlog owns R-010..R-219. Founder-requested tasks use IDs after R-219: R-220..R-223 done,
-  R-224 Next.js deferred (env-blocked), R-225..R-415 done, and R-416..R-422 done (front-door bricks 1-4,
-  generated-SQL hardening, embedded trusted-local preview, and collision-free preview ports + controls, not
-  components). NOTE: the UI-COMPONENT SERIES is PAUSED at R-415 (110 components, resumable at a future free
-  Tracker ID); R-416..R-422 built, hardened, and made robust the "chat -> create -> run -> preview"
-  front-door pivot instead.
+  R-224 Next.js deferred (env-blocked), R-225..R-415 done, and R-416..R-423 done (front-door bricks 1-4,
+  generated-SQL hardening, embedded trusted-local preview, collision-free preview ports + controls, and
+  build history + re-preview, not components). NOTE: the UI-COMPONENT SERIES is PAUSED at R-415 (110
+  components, resumable at a future free Tracker ID); R-416..R-423 built, hardened, and made robust the
+  "chat -> create -> run -> preview" front-door pivot instead.
 blockers: []
 next_action: >-
-  R-422 is complete: Studio previews allocate collision-free ports and expose bounded status/stop/restart
-  controls (GET /api/preview, POST /api/preview/stop|restart) in trusted-local mode; build-only studio:serve
-  returns 404 for them. Recommended next: propose R-423 and record its contract before coding - candidates
-  are a preview history/recent-builds surface, or live in-studio status polling of the running preview. Keep
-  execution trusted-local/opt-in and task verify deterministic and network/DB/model independent. The
-  UI-component series remains paused/resumable.
+  R-423 is complete: the Studio keeps a bounded in-session build history (GET /api/history) and can re-preview
+  a recorded build (POST /api/history/preview {id}) in trusted-local mode; a "Recent builds" list is on the
+  page. Recommended next: propose R-424 and record its contract before coding - candidates are live in-studio
+  status polling of the running preview, or per-build actions (open repo path / copy). Keep execution
+  trusted-local/opt-in and task verify deterministic and network/DB/model independent. The UI-component series
+  remains paused/resumable.

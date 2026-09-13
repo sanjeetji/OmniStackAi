@@ -4,8 +4,15 @@ Brick 3 of the front door. Dependency-free (stdlib ``http.server``); the build f
 injected so the HTTP layer is testable offline.
 """
 
+from .history import StudioBuildHistory
 from .page import STUDIO_HTML
 from .preview import StudioPreviewManager
 from .server import BuildFn, create_studio_server
 
-__all__ = ["STUDIO_HTML", "BuildFn", "StudioPreviewManager", "create_studio_server"]
+__all__ = [
+    "STUDIO_HTML",
+    "BuildFn",
+    "StudioBuildHistory",
+    "StudioPreviewManager",
+    "create_studio_server",
+]
