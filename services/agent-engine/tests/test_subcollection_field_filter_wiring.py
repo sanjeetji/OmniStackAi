@@ -88,21 +88,24 @@ class HookWiringTests(TestCase):
         self.assertIn("const { filters, ...baseParams } = params;", hooks)
         self.assertIn("const requestParams = { ...baseParams, ...(filters ?? {}) };", hooks)
         self.assertIn(
-            "api.listTasksByProjectWithCount(projectId, { params: requestParams, ...options, signal: controller.signal });",
+            "api.listTasksByProjectWithCount(projectId, { ...options, params: requestParams, signal: controller.signal });",
             hooks,
         )
         self.assertIn("    setFilter,", hooks)
         self.assertIn("    clearFilters,", hooks)
         self.assertGreaterEqual(hooks.count("offset: 0,"), 4)
 
-    def test_nonfilterable_subcollection_hook_is_unchanged(self) -> None:
+    def test_nonfilterable_subcollection_hook_has_no_filter_machinery(self) -> None:
         hooks = render_hooks(example_ir("minimal-blog"))
         self.assertNotIn("commentFilterOptions", hooks)
         section = hooks.split("export function useListCommentsByPost(", 1)[1].split("\n}\n", 1)[0]
         self.assertIn("initialParams: UseListParams = {},", section)
         self.assertIn("): UseListState<Comment> {", section)
         self.assertNotIn("setFilter", section)
-        self.assertNotIn("requestParams", section)
+        # A non-filterable hook forwards a plain params copy (implicit index signature keeps it
+        # assignable to the client's flat Record param type) and does NOT flatten a `filters` object.
+        self.assertIn("const requestParams = { ...params };", section)
+        self.assertNotIn("const { filters, ...baseParams } = params;", section)
 
 
 class ScreenWiringTests(TestCase):

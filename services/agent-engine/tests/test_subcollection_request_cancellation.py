@@ -26,7 +26,7 @@ class SubcollectionCancellationTests(TestCase):
     def test_nonfilterable_request_uses_non_overridable_internal_signal(self) -> None:
         hook = _hook_section(render_hooks(example_ir("minimal-blog")), "useListCommentsByPost")
         self.assertIn(
-            "api.listCommentsByPostWithCount(postId, { params, ...options, signal: controller.signal });",
+            "api.listCommentsByPostWithCount(postId, { ...options, params: requestParams, signal: controller.signal });",
             hook,
         )
 
@@ -34,7 +34,7 @@ class SubcollectionCancellationTests(TestCase):
         hook = _hook_section(render_hooks(filterable_subcollection_ir()), "useListTasksByProject")
         self.assertIn("const requestParams = { ...baseParams, ...(filters ?? {}) };", hook)
         self.assertIn(
-            "api.listTasksByProjectWithCount(projectId, { params: requestParams, ...options, signal: controller.signal });",
+            "api.listTasksByProjectWithCount(projectId, { ...options, params: requestParams, signal: controller.signal });",
             hook,
         )
 

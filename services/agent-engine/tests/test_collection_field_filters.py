@@ -197,7 +197,7 @@ class CollectionFieldFiltersTests(unittest.TestCase):
         self.assertIn("const { filters, ...baseParams } = params;", hooks)
         self.assertIn("const requestParams = { ...baseParams, ...(filters ?? {}) };", hooks)
         self.assertIn(
-            "api.listArticlesWithCount({ params: requestParams, signal: controller.signal, ...options });",
+            "api.listArticlesWithCount({ ...options, params: requestParams, signal: controller.signal });",
             hooks,
         )
 

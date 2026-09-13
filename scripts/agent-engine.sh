@@ -157,11 +157,17 @@ if project["project"]["requires-python"] != ">=3.13,<3.14":
     bash "$repo_root/scripts/builder-demo.sh" "$example" "$out" >/dev/null
     web_dir="$out/apps/web"
     echo "Typechecking generated '$example' web app at $web_dir ..."
+    tc_status=0
     (
       cd "$web_dir"
       pnpm install --ignore-scripts >/dev/null 2>&1
       ./node_modules/.bin/tsc --noEmit
-    )
+    ) || tc_status=$?
+    if [ "$tc_status" -ne 0 ]; then
+      echo "web-typecheck FAILED: 'tsc --noEmit' reported errors for '$example' (exit $tc_status)." >&2
+      exit "$tc_status"
+    fi
+    echo "web-typecheck PASSED: generated '$example' web app compiles with 0 errors."
     ;;
   preview-plan)
     configure_python

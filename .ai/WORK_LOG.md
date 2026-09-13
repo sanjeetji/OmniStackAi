@@ -1,5 +1,23 @@
 # Work Log
 
+## 2026-09-13 — R-429 (generated web app passes strict `tsc --noEmit` — component-library type cleanup)
+
+- **Founder direction:** "complete R-429 then tell me next strategy." Ran the R-428 opt-in gate to get the REAL error list (no guessing): a generated `minimal-blog` reported **84** `tsc --noEmit` errors — **4** in `node_modules/next` (missing `skipLibCheck`) + **80** in our code across 19 files, in 8 mechanical classes.
+- Wrote the contract (`.ai/tasks/R-429.md` + `CURRENT_TASK.yaml`) before coding; built a fast regenerate→symlink-node_modules→`tsc` loop to drive the count to 0.
+- Fixes (all at `codegen/nextjs.py` + the generated tsconfig):
+  - **G0** tsconfig now sets `"skipLibCheck": true` (Next's own default) → the 4 dependency `.d.ts` errors gone.
+  - **G1** `context-menu.tsx` trailing `export { … }` reduced to just `{ ContextMenu }` (the other 13 names are already `export const`; re-listing them was TS2323/2484) → 39 gone.
+  - **G2** internal sub-component aliases (audio-player/geo-map/pdf-viewer, 9) typed `typeof XInner & { displayName?: string }` so `.displayName =` is allowed (runtime unchanged).
+  - **G3** compound components (color-picker, pin-input) rebuilt as a typed compound: `forwardRef` result → a `…Base` const cast to `type XComponent = typeof XBase & { Sub: … }`; `.Sub =` assignments and `<X.Sub/>` are now on the type. Named (`export { X }`) + default exports preserved.
+  - **G4** `Banner/Carousel/Checkbox/CodeBlock/CodeBlockCopyButton`Props now `Omit` the conflicting inherited DOM attribute (`title`/`onSelect`/`defaultChecked`/`onCopy`).
+  - **G5** DOM/SVG element ref annotations `React.RefObject<T | null>` → `React.RefObject<T>` (assignable to a JSX `ref=`); mutable `MutableRefObject<T | null>` casts and value refs (`AbortController`/`number`) left untouched.
+  - **G6** `terminal.tsx` variant destructuring default `"default"` → `"minimal"` (a valid `TerminalVariant`; no `=== "minimal"` branch exists, so rendering is byte-identical), scoped to the terminal template only (the other 65 `variant = "default"` defaults, where "default" IS valid, untouched).
+  - **G7** added `isUnchanged?: boolean` to `SplitDiffRow`.
+  - **G8** the exported `api` object now includes the `…WithCount` LIST/LIST_BY methods (emitted as standalone functions but omitted from the object → TS2339/2551); the generated LIST/LIST_BY hooks always forward a fresh `requestParams` object literal (implicit index signature → assignable to the client's flat `Record` param type; a bare `UseListParams` interface value is not) with `...options` spread **first**, so a caller's `options` can no longer override the hook's params or abort signal (now consistent with the GET/CREATE hooks).
+- **Result:** a generated `minimal-blog` AND `rideshare-favourites` pass `tsc --noEmit` with **0** errors. Extended the gate (`scripts/agent-engine.sh web-typecheck`) to assert a clean exit + print PASS/FAIL; `task agent-engine:web-typecheck -- minimal-blog` → **PASSED**, `-- rideshare-favourites` → **PASSED** (fresh generate + `pnpm install` + `tsc` each).
+- Regression: `tests/test_generated_tsx_compile.py` gained 4 deterministic guards — tsconfig `skipLibCheck`, no duplicate exports, no `React.RefObject<HTMLxxx | null>`, and every `api.<method>` a hook calls exists on the `api` object. Updated 7 hook/component test files' exact assertions to the corrected emitted strings (spread order + `requestParams`; compound `X = XBase as XComponent` / `export { X }`).
+- Gates: `task verify` **2,877** passed (offline); lint/security/env green; both builder demos (152 / 149) pass. **0 model calls in verify.** Removes the last blocker to a production `next build` for generated apps.
+
 ## 2026-09-13 — R-428 (generated web app compiles — opt-in tsc gate + fix the bugs it reveals)
 
 - **Chosen approach (founder): compile gate + fix all.** Added an opt-in, live TypeScript typecheck gate — `task agent-engine:web-typecheck -- <example> [out-dir]` (`scripts/agent-engine.sh web-typecheck` + Taskfile) — that generates an example app, `pnpm install --ignore-scripts`, and runs `./node_modules/.bin/tsc --noEmit`. Never run by `task verify`.

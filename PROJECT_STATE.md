@@ -4,21 +4,28 @@ Last updated: 2026-09-13
 ## Current Phase
 Stage 0 (Founder Build Sequence, Brief Section 91) — BASIC/MVP
 
-> **Generated apps now compile and RENDER in the preview.** UI-component series PAUSED at R-415 (110 components, resumable). Front door: **R-416**–**R-426** (chat → create → run → preview + history/controls) · **R-427** JSX inline-style fix · **R-428** compile fixes + opt-in `tsc` gate (a generated app's `/`, `/post_list`, `/post_editor` now serve 200; were 500). **⚠ Restart `task agent-engine:studio:preview` to load the fixed generator.** Recommended next: **R-429**, strict TYPE cleanup of the component library (~82 tsc errors; block `next build`, not `next dev`).
+> **Generated apps now pass strict `tsc --noEmit` (0 errors) — production `next build` no longer blocked.** UI-component series PAUSED at R-415 (110 components, resumable). Front door: **R-416**–**R-426** (chat → create → run → preview + history/controls) · **R-427** JSX inline-style fix · **R-428** compile fixes + opt-in `tsc` gate · **R-429** strict-type cleanup (8 classes). `task agent-engine:web-typecheck` reports **PASSED** for both `minimal-blog` and `rideshare-favourites`. **DECISION POINT** (per the founder's strategy talk): propose R-430 hardening, or PIVOT to the differentiating spine (Ecosystem Scope Compiler / Solution Packs per the Master Spec) and optionally wire a frontier model for generation quality. **⚠ If a `studio:preview` is running, restart it to load the fixed generator.**
 
 ## Last Completed Task
-Tracker ID: R-428 — Generated web app compiles: opt-in tsc typecheck gate + fix the bugs it reveals — DONE.
-Added `task agent-engine:web-typecheck -- <example> [dir]` (generate + pnpm install + `tsc --noEmit`;
-opt-in/live, never in verify). Running it (and `next dev`) revealed and fixed the RUN-BLOCKING generated-code
-bugs: over-braced event handlers (`onChange={(e) => {{ … }}}}` → `=> { … }}`), a `components/pdf-viewer.tsx`
-literal `\n` from a raw-string join, and nested screen import depth (switched `../components/`/`../lib/` → the
-depth-independent `@/` path alias at 24 sites). Verified end-to-end: a generated `minimal-blog` app compiles
-under `next dev` and `/`, `/post_list`, `/post_editor` all serve HTTP 200 (were 500). Added
-`test_generated_tsx_compile.py` (forbids over-braced handlers, relative `../components|../lib` imports, literal
-backslash-n) and updated 9 screen/layout test files' import assertions to `@/`. `task verify` **2,873 tests**
-pass; lint/security/env and both demos (152 / 149) pass; 0 model calls. Remaining (follow-up R-429): ~82 strict
-TYPE errors in the component library (duplicate exports, `displayName`, prop-type conflicts) that do NOT block
-`next dev`/preview but fail a production `next build`.
+Tracker ID: R-429 — Generated web app passes strict `tsc --noEmit`: component-library type cleanup — DONE.
+Fixed **8** type-error classes at `codegen/nextjs.py` + the generated tsconfig so a generated `minimal-blog`
+(was 84 errors: 4 `node_modules/next` from a missing `skipLibCheck` + 80 in our code across 19 files) AND
+`rideshare-favourites` compile with **0** errors: G0 tsconfig `skipLibCheck: true`; G1 context-menu no longer
+double-exports; G2 `displayName` allowed on sub-component aliases (`typeof XInner & { displayName?: string }`);
+G3 typed compound for color-picker/pin-input (`…Base` cast to `typeof …Base & { Sub: … }`); G4 `Omit` the
+conflicting inherited DOM attribute in Banner/Carousel/Checkbox/CodeBlock(+CopyButton)Props; G5 element ref
+annotations `React.RefObject<T>` (was `<T | null>`); G6 terminal `variant` default `"default"`→`"minimal"`
+(byte-identical render); G7 `SplitDiffRow.isUnchanged`; G8 the `api` object gains the `…WithCount` methods and
+hooks forward a fresh `requestParams` with `...options` first (options no longer override params/abort signal).
+Extended `task agent-engine:web-typecheck` to assert a clean `tsc` exit → **PASSED** for both examples. Added 4
+regression guards to `test_generated_tsx_compile.py` and updated 7 hook/component test files' exact assertions.
+`task verify` **2,877 tests** pass (offline); lint/security/env and both demos (152 / 149) pass; 0 model calls.
+
+Immediately preceded by R-428 — Generated web app compiles: opt-in tsc typecheck gate + fix the bugs it
+reveals — DONE. Added `task agent-engine:web-typecheck` (generate + pnpm install + `tsc --noEmit`; opt-in/live,
+never in verify) and fixed the RUN-BLOCKING generated-code bugs it revealed (over-braced event handlers, a
+`pdf-viewer.tsx` literal `\n`, and nested screen import depth via the `@/` alias at 24 sites). `task verify`
+**2,873 tests** pass; both demos (152 / 149) pass; 0 model calls.
 
 Immediately preceded by R-427 — Fix malformed single-brace inline styles in generated Next.js screens — DONE. Found via the
 Studio live preview: the generated backend ran fine (`/posts` 200) but the Next.js web app returned HTTP 500

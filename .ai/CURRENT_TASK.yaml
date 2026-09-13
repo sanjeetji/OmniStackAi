@@ -1,27 +1,29 @@
-task_id: R-428
-id: R-428
-title: "Generated web app compiles - opt-in tsc typecheck gate + fix the bugs it reveals"
+task_id: R-429
+id: R-429
+title: "Generated web app passes strict tsc --noEmit - component-library type cleanup"
 status: done
 phase: MVP
 tracker_row: null
 started_at: "2026-09-13"
 completed_at: "2026-09-13"
 objective: >-
-  Add an opt-in live TypeScript typecheck gate (task agent-engine:web-typecheck -- <example> [dir]) that
-  generates an example app, installs web deps, and runs tsc --noEmit on apps/web; then fix every generator
-  bug it reveals (inconsistent f-string brace escaping in event handlers/screens, invalid character in a
-  component, import-path depth) until tsc passes cleanly on both example IRs. Add deterministic regression
-  tests for each fixed class. Only correct malformed emitted TSX - no screen structure, styling value,
-  component behavior, or logic change. task verify stays offline/deterministic; the gate is opt-in/live.
+  Make a generated Next.js app type-check cleanly under strict TypeScript. The R-428 opt-in
+  web-typecheck gate reports 84 errors on a generated minimal-blog: 4 from node_modules/next
+  (a missing skipLibCheck, Next's own default) and 80 in our generated code across 19 component
+  files + lib/hooks.ts in 8 mechanical patterns (duplicate exports, displayName on arrow-fn
+  sub-components, compound props on forwardRef results, interfaces incorrectly extending
+  HTMLAttributes, useRef<T|null>(null) passed to ref=, string vs union prop, a missing type field,
+  a hook calling a non-existent client method). Fix each at codegen/nextjs.py so tsc --noEmit exits
+  0 on BOTH example IRs, make a clean exit the web-typecheck pass condition, and add deterministic
+  regression assertions. Only correct malformed/mis-typed emitted TS - no structure, behavior,
+  styling, layout, or logic change; preserve diff-invariance. task verify stays offline/deterministic.
 allowed_paths:
   - "services/agent-engine/src/omnistackai_agent_engine/codegen/nextjs.py"
-  - "services/agent-engine/tests/test_generated_screen_styles.py"
   - "services/agent-engine/tests/test_generated_tsx_compile.py"
   - "scripts/agent-engine.sh"
-  - "Taskfile.yml"
   - "docs/CODEGEN.md"
   - "docs/VERIFY.md"
-  - ".ai/tasks/R-428.md"
+  - ".ai/tasks/R-429.md"
   - ".ai/CURRENT_TASK.yaml"
   - ".ai/PROJECT_STATE.yaml"
   - ".ai/WORK_LOG.md"
@@ -30,15 +32,23 @@ allowed_paths:
   - "CHANGELOG.md"
   - "docs/PROGRESS.md"
   - "docs/RESUME_PROMPT.md"
+  # hook/component tests whose exact asserted strings changed with the type-only fix:
+  - "services/agent-engine/tests/test_nextjs_hooks.py"
+  - "services/agent-engine/tests/test_collection_deeplink_state.py"
+  - "services/agent-engine/tests/test_collection_field_filters.py"
+  - "services/agent-engine/tests/test_subcollection_field_filter_wiring.py"
+  - "services/agent-engine/tests/test_subcollection_request_cancellation.py"
+  - "services/agent-engine/tests/test_color_picker_component.py"
+  - "services/agent-engine/tests/test_pin_input_component.py"
 forbidden_changes:
   - "Do not modify or include the unrelated untracked .claude directory"
-  - "Do not change component template structure/behavior, screen layout, styling values, or generated logic - only correct malformed emitted TSX"
+  - "Do not change component template structure/behavior, screen layout, styling values, or generated logic - only correct malformed/mis-typed emitted TS"
   - "Do not make task verify run the toolchain, a model, Docker, or the network; the typecheck gate is opt-in/live only"
   - "Do not change the Application IR, adapters, database engine, assembler, Git-service, or generated-project contracts; PostgreSQL stays"
   - "Do not break snapshot diff-invariance across ir.description"
 required_gates:
   - "opt-in: task agent-engine:web-typecheck -- minimal-blog / -- rideshare-favourites -> tsc 0 errors"
-  - focused generated-screen-styles + generated-tsx-compile tests
+  - focused generated-tsx-compile test
   - task lint
   - task verify
   - task security:quick
@@ -49,18 +59,23 @@ model_tool_trace:
   routing: deterministic_only
   local_calls: 0
   cloud_calls: 0
-  note: Pure codegen bugfix + an opt-in toolchain gate. No model call for implementation or verify.
+  note: Pure codegen type-correctness cleanup. No model call for implementation or verify.
 evidence:
   baseline: >-
-    Found via Studio preview then confirmed with tsc --noEmit on a generated app: 16 compile errors across
-    post_list/page.tsx (over-braced event handlers, JSX syntax) and components/pdf-viewer.tsx (invalid
-    character). task verify was 2,870 at R-427. HEAD 964023e before R-428.
-  verify: "2,873 passed"
+    task agent-engine:web-typecheck on a generated minimal-blog reported 84 errors: 4 node_modules/next
+    (missing skipLibCheck) + 80 in generated code across 19 files (context-menu 39, color-picker 6,
+    terminal 4, geo-map 4, pin-input 3, pdf-viewer 3, diff-viewer 3, lib/hooks 2, others). HEAD 07c47ca
+    (R-428), task verify 2,873 before R-429.
+  verify: "2,877 passed (+4 new regression asserts)"
   lint: "passed"
   security: "passed"
   env: "passed"
   demos: "minimal-blog 152 files; rideshare-favourites 149 files"
-  focused_test: "6 passed (test_generated_tsx_compile + test_generated_screen_styles); 9 screen/layout test files updated ../ -> @/ (117 passed)"
-  typecheck: "opt-in task agent-engine:web-typecheck added; run-blocking errors fixed; generated minimal-blog compiles under next dev, /, /post_list, /post_editor all HTTP 200 (were 500)"
-  remaining: "~82 strict TYPE errors in the component library (dup exports, displayName, prop types) -> follow-up R-429; do NOT block next dev/preview, only next build"
-next_action: "R-428 done: generated apps render in the preview. IMPORTANT: restart studio:preview to load the fixed generator, then a fresh build's screens render. Next: R-429 = strict typecheck cleanup (component library) so generated apps pass next build."
+  focused_test: "test_generated_tsx_compile.py 7 passed (added G0 skipLibCheck, G1 dup-export, G5 nullable-ref, G8 api-method guards)"
+  typecheck: >-
+    task agent-engine:web-typecheck -- minimal-blog -> PASSED (0 errors); -- rideshare-favourites -> PASSED
+    (0 errors). 8 type-error classes fixed at codegen/nextjs.py (G0 skipLibCheck, G1 dup exports, G2
+    displayName, G3 compound, G4 HTMLAttributes Omit, G5 RefObject<T>, G6 terminal variant default, G7
+    SplitDiffRow.isUnchanged, G8 api WithCount + fresh requestParams). 7 hook/component test files' exact
+    assertions updated to the corrected strings.
+next_action: "R-429 done: generated apps pass tsc --noEmit clean (0 errors) on both examples; production next build no longer blocked by type errors. Next candidate: R-430 (propose per RESUME_PROMPT) OR pivot to the differentiating spine (Scope Compiler / Solution Packs) per the founder's strategy discussion."

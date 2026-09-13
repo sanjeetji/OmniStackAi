@@ -3353,3 +3353,30 @@ styles) across both example IRs, alongside over-braced arrow handlers (`=> {{`) 
 so these compile bugs cannot regress. The opt-in `task agent-engine:web-typecheck` gate compiles a generated
 app end-to-end (builder-demo + `pnpm install --ignore-scripts` + `tsc --noEmit`) to catch anything the string
 assertions miss; it is intentionally kept OUT of `task verify` so verify stays offline and deterministic.
+
+## Strict-type conventions for emitted TS/TSX (R-429)
+
+A generated `minimal-blog` and `rideshare-favourites` pass `tsc --noEmit` with **0** errors; the
+`web-typecheck` gate reports PASSED for both. Keep the emitted code type-correct by construction:
+
+- **tsconfig sets `skipLibCheck: true`** (Next.js's own default) so dependency `.d.ts` files are not
+  type-checked. Without it, a React-18 vs Next-15 type mismatch in `node_modules/next` fails the build.
+- **Export each name exactly once.** A name declared `export const/function X` must NOT also appear bare in
+  a trailing `export { X }` block (that is TS2323/TS2484). Aliased re-exports (`export { X as Y }`) are fine.
+- **`displayName` on a helper:** a bare arrow/function const has no `displayName` in its type. Type the
+  export/alias as `React.FC<P>` or `typeof XInner & { displayName?: string }` before assigning `.displayName`.
+- **Compound components:** attach sub-components through a typed compound — a `…Base = forwardRef(...)` const
+  cast to `type XComponent = typeof XBase & { Sub: typeof SubImpl; … }` — so both `X.Sub = …` and consumer
+  `<X.Sub/>` are on the component type (a plain `ForwardRefExoticComponent` has no such members).
+- **Prop interfaces that extend a DOM attribute type must `Omit` any key they redefine incompatibly**
+  (`title`, `onSelect`, `defaultChecked`, `onCopy`, …), or the interface "incorrectly extends" (TS2430).
+- **Element refs use `React.RefObject<T>`, not `<T | null>`** — the nullable type-argument is not assignable
+  to a JSX `ref=`. A mutable value ref that is reassigned (`AbortController`, timers, callback-ref targets)
+  keeps `React.MutableRefObject<T | null>`.
+- **Union-typed defaults must be members of the union** — e.g. a `variant = "…"` destructuring default must
+  be one of the component's `Variant` literals, or the binding widens to `string`.
+- **The generated `api` object must include every function the hooks call** (LIST/LIST_BY `…WithCount`
+  variants included), and hooks forward a **fresh `requestParams` object literal** (an object literal has an
+  implicit index signature and so is assignable to the client's flat `Record<string, …>` param type; a bare
+  params interface value is not), spreading `...options` first so a caller cannot override the hook's params
+  or abort signal. `tests/test_generated_tsx_compile.py` guards these classes offline.

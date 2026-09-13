@@ -273,6 +273,7 @@ def _api_client_file(ir: ApplicationIR) -> str:
             lines.append(f'  return requestWithMeta<{wiring.entity}[]>({url_expr}, {{ method: "GET", ...options }});')
             lines.append("}")
             lines.append("")
+            fn_names.append(f"{fn_name}WithCount")
         elif wiring is not None and wiring.op is Op.LIST_BY:
             id_p = wiring.id_param or "id"
             lines.append(
@@ -293,6 +294,7 @@ def _api_client_file(ir: ApplicationIR) -> str:
             lines.append(f'  return requestWithMeta<{wiring.entity}[]>({url_expr}, {{ method: "GET", ...options }});')
             lines.append("}")
             lines.append("")
+            fn_names.append(f"{fn_name}WithCount")
         elif wiring is not None and wiring.op is Op.GET:
             id_p = wiring.id_param or "id"
             lines.append(
@@ -562,12 +564,20 @@ def _hooks_file(ir: ApplicationIR) -> str:
                 "    abortRef.current = controller;",
                 "    setLoading(true);",
                 "    setError(null);",
+                # Build a fresh `requestParams` object literal (implicit index signature -> assignable
+                # to the client's flat Record param type; a bare interface value is not). Strip the
+                # nested `filters` object when the entity is filterable.
                 *([
                     "    const { filters, ...baseParams } = params;",
                     "    const requestParams = { ...baseParams, ...(filters ?? {}) };",
-                ] if filterable_fields else []),
+                ] if filterable_fields else [
+                    "    const requestParams = { ...params };",
+                ]),
                 "    try {",
-                f"      const res = await api.list{plural}WithCount({{ {'params: requestParams' if filterable_fields else 'params'}, signal: controller.signal, ...options }});",
+                # `...options` is spread FIRST so the hook's own computed params win and options
+                # (ApiOptions.params?: Record<...>) cannot widen the params type into an
+                # unassignable union; the caller's token/signal still come through options.
+                f"      const res = await api.list{plural}WithCount({{ ...options, params: requestParams, signal: controller.signal }});",
                 "      if (controller.signal.aborted) return;",
                 "      setData(res.data);",
                 "      setTotal(res.total);",
@@ -944,12 +954,18 @@ def _hooks_file(ir: ApplicationIR) -> str:
             "    abortRef.current = controller;",
             "    setLoading(true);",
             "    setError(null);",
+            # Fresh `requestParams` object literal (see the top-level LIST hook) so it is assignable
+            # to the client's flat Record param type; strip `filters` when the entity is filterable.
             *([
                 "    const { filters, ...baseParams } = params;",
                 "    const requestParams = { ...baseParams, ...(filters ?? {}) };",
-            ] if filterable_fields else []),
+            ] if filterable_fields else [
+                "    const requestParams = { ...params };",
+            ]),
             "    try {",
-            f"      const res = await api.list{plural}By{rel_pascal}WithCount({id_p}, {{ {'params: requestParams' if filterable_fields else 'params'}, ...options, signal: controller.signal }});",
+            # `...options` first (see the top-level LIST hook): the hook's computed params win so
+            # ApiOptions.params cannot widen the params type into an unassignable union.
+            f"      const res = await api.list{plural}By{rel_pascal}WithCount({id_p}, {{ ...options, params: requestParams, signal: controller.signal }});",
             "      if (controller.signal.aborted) return;",
             "      setData(res.data);",
             "      setTotal(res.total);",
@@ -8060,8 +8076,8 @@ _DROPDOWN_MENU_COMPONENT = (
     '  setIsOpen: (open: boolean) => void;\n'
     '  triggerId: string;\n'
     '  contentId: string;\n'
-    '  triggerRef: React.RefObject<HTMLButtonElement | null>;\n'
-    '  contentRef: React.RefObject<HTMLDivElement | null>;\n'
+    '  triggerRef: React.RefObject<HTMLButtonElement>;\n'
+    '  contentRef: React.RefObject<HTMLDivElement>;\n'
     '  activeIndex: number;\n'
     '  setActiveIndex: React.Dispatch<React.SetStateAction<number>>;\n'
     '  getItemElements: () => HTMLElement[];\n'
@@ -8510,8 +8526,8 @@ _POPOVER_COMPONENT = (
     '  setIsOpen: (open: boolean) => void;\n'
     '  triggerId: string;\n'
     '  contentId: string;\n'
-    '  triggerRef: React.RefObject<HTMLButtonElement | null>;\n'
-    '  contentRef: React.RefObject<HTMLDivElement | null>;\n'
+    '  triggerRef: React.RefObject<HTMLButtonElement>;\n'
+    '  contentRef: React.RefObject<HTMLDivElement>;\n'
     '  side: PopoverSide;\n'
     '  align: PopoverAlign;\n'
     '}\n\n'
@@ -9153,7 +9169,7 @@ _DIALOG_COMPONENT = (
     '  descriptionId: string;\n'
     '  closeOnEscape: boolean;\n'
     '  closeOnBackdropClick: boolean;\n'
-    '  triggerRef: React.RefObject<HTMLButtonElement | null>;\n'
+    '  triggerRef: React.RefObject<HTMLButtonElement>;\n'
     '}\n\n'
     'const DialogContext = createContext<DialogContextValue | null>(null);\n\n'
     'export function useDialog(): DialogContextValue {\n'
@@ -16850,7 +16866,7 @@ _CODE_BLOCK_COMPONENT = (
     '  text: string;\n'
     '}\n'
     '\n'
-    'export interface CodeBlockProps extends React.HTMLAttributes<HTMLDivElement> {\n'
+    'export interface CodeBlockProps extends Omit<React.HTMLAttributes<HTMLDivElement>, "onCopy"> {\n'
     '  /** Raw code string (if using single snippet mode) */\n'
     '  code?: string;\n'
     '  /** Code language (e.g. "typescript", "python", "json", "sql", "bash", "go", "diff") */\n'
@@ -16922,7 +16938,7 @@ _CODE_BLOCK_COMPONENT = (
     '  size?: CodeBlockSize;\n'
     '}\n'
     '\n'
-    'export interface CodeBlockCopyButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {\n'
+    'export interface CodeBlockCopyButtonProps extends Omit<React.ButtonHTMLAttributes<HTMLButtonElement>, "onCopy"> {\n'
     '  code: string;\n'
     '  onCopy?: (code: string) => void;\n'
     '}\n'
@@ -19007,7 +19023,7 @@ _CAROUSEL_COMPONENT = (
     '  }\n'
     '  return context;\n'
     '}\n\n'
-    'export interface CarouselProps extends React.HTMLAttributes<HTMLDivElement> {\n'
+    'export interface CarouselProps extends Omit<React.HTMLAttributes<HTMLDivElement>, "onSelect"> {\n'
     '  variant?: CarouselVariant;\n'
     '  transition?: CarouselTransition;\n'
     '  orientation?: CarouselOrientation;\n'
@@ -21053,7 +21069,7 @@ _COLOR_PICKER_COMPONENT = (
     '  "#ffffff", "#94a3b8", "#475569", "#0f172a"\n'
     '];\n\n'
     '// --- Main Compound Component: ColorPicker ---\n'
-    'export const ColorPicker = forwardRef<HTMLDivElement, ColorPickerProps>(\n'
+    'const ColorPickerBase = forwardRef<HTMLDivElement, ColorPickerProps>(\n'
     '  function ColorPicker(\n'
     '    {\n'
     '      value,\n'
@@ -21237,13 +21253,23 @@ _COLOR_PICKER_COMPONENT = (
     '    );\n'
     '  }\n'
     ');\n\n'
-    '// Attach compound subcomponents\n'
+    '// Attach compound subcomponents (typed compound so members are on the component type)\n'
+    'type ColorPickerComponent = typeof ColorPickerBase & {\n'
+    '  Area: typeof ColorArea;\n'
+    '  HueSlider: typeof HueSlider;\n'
+    '  AlphaSlider: typeof AlphaSlider;\n'
+    '  Swatches: typeof ColorSwatches;\n'
+    '  Inputs: typeof ColorInputs;\n'
+    '  EyeDropper: typeof ColorEyeDropper;\n'
+    '};\n'
+    'const ColorPicker = ColorPickerBase as ColorPickerComponent;\n'
     'ColorPicker.Area = ColorArea;\n'
     'ColorPicker.HueSlider = HueSlider;\n'
     'ColorPicker.AlphaSlider = AlphaSlider;\n'
     'ColorPicker.Swatches = ColorSwatches;\n'
     'ColorPicker.Inputs = ColorInputs;\n'
     'ColorPicker.EyeDropper = ColorEyeDropper;\n\n'
+    'export { ColorPicker };\n'
     'export default ColorPicker;\n'
 )
 
@@ -21491,7 +21517,7 @@ _PIN_INPUT_COMPONENT = (
     '  style?: CSSProperties;\n'
     '  children?: React.ReactNode;\n'
     '}\n\n'
-    'export const PinInput = forwardRef<HTMLDivElement, PinInputProps>(\n'
+    'const PinInputBase = forwardRef<HTMLDivElement, PinInputProps>(\n'
     '  function PinInput(\n'
     '    {\n'
     '      length = 6,\n'
@@ -21674,10 +21700,17 @@ _PIN_INPUT_COMPONENT = (
     '    );\n'
     '  }\n'
     ');\n\n'
-    '// Attach compound subcomponents\n'
+    '// Attach compound subcomponents (typed compound so members are on the component type)\n'
+    'type PinInputComponent = typeof PinInputBase & {\n'
+    '  Group: typeof PinInputGroup;\n'
+    '  Slot: typeof PinInputSlot;\n'
+    '  Separator: typeof PinInputSeparator;\n'
+    '};\n'
+    'const PinInput = PinInputBase as PinInputComponent;\n'
     'PinInput.Group = PinInputGroup;\n'
     'PinInput.Slot = PinInputSlot;\n'
     'PinInput.Separator = PinInputSeparator;\n\n'
+    'export { PinInput };\n'
     'export default PinInput;\n'
 )
 
@@ -21759,8 +21792,8 @@ _SPEED_DIAL_COMPONENT = (
     "  closeOnSelect: boolean;\n"
     "  menuId: string;\n"
     "  triggerId: string;\n"
-    "  triggerRef: React.RefObject<HTMLButtonElement | null>;\n"
-    "  contentRef: React.RefObject<HTMLDivElement | null>;\n"
+    "  triggerRef: React.RefObject<HTMLButtonElement>;\n"
+    "  contentRef: React.RefObject<HTMLDivElement>;\n"
     "  onActionTrigger: (callback?: () => void) => void;\n"
     "  icon?: ReactNode;\n"
     "  activeIcon?: ReactNode;\n"
@@ -22465,7 +22498,7 @@ _CONTEXT_MENU_COMPONENT = (
     "  disabled: boolean;\n"
     "  menuId: string;\n"
     "  triggerId: string;\n"
-    "  menuRef: React.RefObject<HTMLDivElement | null>;\n"
+    "  menuRef: React.RefObject<HTMLDivElement>;\n"
     "  closeMenu: () => void;\n"
     "}\n"
     "\n"
@@ -22477,7 +22510,7 @@ _CONTEXT_MENU_COMPONENT = (
     "export interface ContextMenuSubContextValue {\n"
     "  open: boolean;\n"
     "  setOpen: (open: boolean) => void;\n"
-    "  triggerRef: React.RefObject<HTMLDivElement | null>;\n"
+    "  triggerRef: React.RefObject<HTMLDivElement>;\n"
     "}\n"
     "\n"
     "const ContextMenuContext = createContext<ContextMenuContextValue | null>(null);\n"
@@ -23305,22 +23338,9 @@ _CONTEXT_MENU_COMPONENT = (
     "ContextMenu.SubTrigger = ContextMenuSubTrigger;\n"
     "ContextMenu.SubContent = ContextMenuSubContent;\n"
     "\n"
-    "export {\n"
-    "  ContextMenu,\n"
-    "  ContextMenuTrigger,\n"
-    "  ContextMenuContent,\n"
-    "  ContextMenuItem,\n"
-    "  ContextMenuCheckboxItem,\n"
-    "  ContextMenuRadioGroup,\n"
-    "  ContextMenuRadioItem,\n"
-    "  ContextMenuSeparator,\n"
-    "  ContextMenuLabel,\n"
-    "  ContextMenuSub,\n"
-    "  ContextMenuSubTrigger,\n"
-    "  ContextMenuSubContent,\n"
-    "  ContextMenuRoot,\n"
-    "  useContextMenu,\n"
-    "};\n"
+    "// Sub-components, ContextMenuRoot, and useContextMenu are already exported at their\n"
+    "// declarations (export const ...). Only the compound `ContextMenu` needs exporting here.\n"
+    "export { ContextMenu };\n"
     "export default ContextMenu;\n"
 )
 
@@ -23365,8 +23385,8 @@ _HOVER_CARD_COMPONENT = (
     'export interface HoverCardContextValue {\n'
     '  isOpen: boolean;\n'
     '  setIsOpen: (open: boolean) => void;\n'
-    '  triggerRef: React.RefObject<HTMLElement | null>;\n'
-    '  contentRef: React.RefObject<HTMLDivElement | null>;\n'
+    '  triggerRef: React.RefObject<HTMLElement>;\n'
+    '  contentRef: React.RefObject<HTMLDivElement>;\n'
     '  triggerId: string;\n'
     '  contentId: string;\n'
     '  openDelay: number;\n'
@@ -23796,7 +23816,7 @@ _SCROLL_AREA_COMPONENT = (
     'export interface ScrollAreaThumbProps extends React.HTMLAttributes<HTMLDivElement> {}\n\n'
     'export interface ScrollAreaCornerProps extends React.HTMLAttributes<HTMLDivElement> {}\n\n'
     'export interface ScrollAreaContextValue {\n'
-    '  viewportRef: React.RefObject<HTMLDivElement | null>;\n'
+    '  viewportRef: React.RefObject<HTMLDivElement>;\n'
     '  type: ScrollAreaType;\n'
     '  variant: ScrollAreaVariant;\n'
     '  size: ScrollAreaSize;\n'
@@ -25919,7 +25939,7 @@ _CHECKBOX_COMPONENT = (
     'export function useCheckboxGroup(): CheckboxGroupContextValue | null {\n'
     '  return useContext(CheckboxGroupContext);\n'
     '}\n\n'
-    'export interface CheckboxProps extends Omit<React.ButtonHTMLAttributes<HTMLButtonElement>, "value" | "onChange"> {\n'
+    'export interface CheckboxProps extends Omit<React.ButtonHTMLAttributes<HTMLButtonElement>, "value" | "onChange" | "defaultChecked"> {\n'
     '  checked?: CheckedState;\n'
     '  defaultChecked?: CheckedState;\n'
     '  onCheckedChange?: (checked: CheckedState) => void;\n'
@@ -26452,7 +26472,7 @@ _BANNER_COMPONENT = (
     'export type BannerVariant = "info" | "success" | "warning" | "error" | "neon" | "gradient";\n'
     'export type BannerPosition = "top" | "bottom" | "inline" | "floating";\n'
     'export type BannerSize = "sm" | "md" | "lg";\n\n'
-    'export interface BannerProps extends React.HTMLAttributes<HTMLDivElement> {\n'
+    'export interface BannerProps extends Omit<React.HTMLAttributes<HTMLDivElement>, "title"> {\n'
     '  variant?: BannerVariant;\n'
     '  position?: BannerPosition;\n'
     '  size?: BannerSize;\n'
@@ -38990,6 +39010,7 @@ _DIFF_VIEWER_COMPONENT = (
     '  left?: DiffLine;\n'
     '  right?: DiffLine;\n'
     '  isFolded?: boolean;\n'
+    '  isUnchanged?: boolean;\n'
     '  foldedCount?: number;\n'
     '  foldIndex?: number;\n'
     '}\n'
@@ -43672,8 +43693,8 @@ _IMAGE_CROPPER_COMPONENT = (
     '    flipV: boolean;\n'
     '    showGrid: boolean;\n'
     '    onCropChange: (nextCrop: CropArea) => void;\n'
-    '    imageRef: React.RefObject<HTMLImageElement | null>;\n'
-    '    containerRef: React.RefObject<HTMLDivElement | null>;\n'
+    '    imageRef: React.RefObject<HTMLImageElement>;\n'
+    '    containerRef: React.RefObject<HTMLDivElement>;\n'
     '  }\n'
     '>(({\n'
     '  src,\n'
@@ -46417,7 +46438,7 @@ _TERMINAL_COMPONENT = (
     '  onTabClose?: (tabId: string) => void;\n'
     '  onTabAdd?: () => void;\n'
     '  variant?: TerminalVariant;\n'
-    '}> = ({ tabs, activeTab, onTabChange, onTabClose, onTabAdd, variant = "default" }) => {\n'
+    '}> = ({ tabs, activeTab, onTabChange, onTabClose, onTabAdd, variant = "minimal" }) => {\n'
     '  const isNeon = variant === "neon";\n'
     '  return (\n'
     '    <div\n'
@@ -46514,7 +46535,7 @@ _TERMINAL_COMPONENT = (
     '  onTabChange,\n'
     '  onTabClose,\n'
     '  onTabAdd,\n'
-    '  variant = "default",\n'
+    '  variant = "minimal",\n'
     '  onClose,\n'
     '  onMinimize,\n'
     '  onMaximize\n'
@@ -46609,7 +46630,7 @@ _TERMINAL_COMPONENT = (
     '\n'
     'export const TerminalOutput: React.FC<TerminalOutputProps> = ({\n'
     '  lines,\n'
-    '  variant = "default",\n'
+    '  variant = "minimal",\n'
     '  size = "md",\n'
     '  searchQuery\n'
     '}) => {\n'
@@ -46712,7 +46733,7 @@ _TERMINAL_COMPONENT = (
     '  onSubmit,\n'
     '  onKeyDown,\n'
     '  inputRef,\n'
-    '  variant = "default",\n'
+    '  variant = "minimal",\n'
     '  size = "md",\n'
     '  disabled = false,\n'
     '  placeholder\n'
@@ -46817,7 +46838,7 @@ _TERMINAL_COMPONENT = (
     '      onTabChange,\n'
     '      onTabClose,\n'
     '      onTabAdd,\n'
-    '      variant = "default",\n'
+    '      variant = "minimal",\n'
     '      size = "md",\n'
     '      maxLines = 1000,\n'
     '      showHeader = true,\n'
@@ -52741,10 +52762,10 @@ _GEO_MAP_COMPONENT = (
     "export const GeoMap = GeoMapComponent;\n"
     "export const InteractiveMap = GeoMapComponent;\n"
     "export const LocationPicker = GeoMapComponent;\n"
-    "export const MapPin = MapPinInner;\n"
-    "export const MapCallout = MapCalloutInner;\n"
-    "export const MapControls = MapControlsInner;\n"
-    "export const RouteLine = RouteLineInner;\n\n"
+    "export const MapPin: typeof MapPinInner & { displayName?: string } = MapPinInner;\n"
+    "export const MapCallout: typeof MapCalloutInner & { displayName?: string } = MapCalloutInner;\n"
+    "export const MapControls: typeof MapControlsInner & { displayName?: string } = MapControlsInner;\n"
+    "export const RouteLine: typeof RouteLineInner & { displayName?: string } = RouteLineInner;\n\n"
     "GeoMap.displayName = 'GeoMap';\n"
     "InteractiveMap.displayName = 'InteractiveMap';\n"
     "LocationPicker.displayName = 'LocationPicker';\n"
@@ -53740,9 +53761,9 @@ _PDF_VIEWER_COMPONENT = (
     "export const PdfViewer = PdfViewerComponent;\n"
     "export const DocumentViewer = PdfViewerComponent;\n"
     "export const FileViewer = PdfViewerComponent;\n"
-    "export const PdfThumbnails = PdfThumbnailsInner;\n"
-    "export const PdfToolbar = PdfToolbarInner;\n"
-    "export const PdfPageCanvas = PdfPageCanvasInner;\n\n"
+    "export const PdfThumbnails: typeof PdfThumbnailsInner & { displayName?: string } = PdfThumbnailsInner;\n"
+    "export const PdfToolbar: typeof PdfToolbarInner & { displayName?: string } = PdfToolbarInner;\n"
+    "export const PdfPageCanvas: typeof PdfPageCanvasInner & { displayName?: string } = PdfPageCanvasInner;\n\n"
     "PdfViewer.displayName = 'PdfViewer';\n"
     "DocumentViewer.displayName = 'DocumentViewer';\n"
     "FileViewer.displayName = 'FileViewer';\n"
@@ -54554,8 +54575,8 @@ _AUDIO_PLAYER_COMPONENT = (
     "export const AudioPlayer = AudioPlayerComponent;\n"
     "export const MusicPlayer = AudioPlayerComponent;\n"
     "export const SoundPlayer = AudioPlayerComponent;\n"
-    "export const AudioPlaylist = AudioPlaylistInner;\n"
-    "export const AudioEqualizer = AudioEqualizerInner;\n\n"
+    "export const AudioPlaylist: typeof AudioPlaylistInner & { displayName?: string } = AudioPlaylistInner;\n"
+    "export const AudioEqualizer: typeof AudioEqualizerInner & { displayName?: string } = AudioEqualizerInner;\n\n"
     "AudioPlayer.displayName = 'AudioPlayer';\n"
     "MusicPlayer.displayName = 'MusicPlayer';\n"
     "SoundPlayer.displayName = 'SoundPlayer';\n"
@@ -71044,6 +71065,7 @@ _NEXT_CONFIG = (
 _TSCONFIG = {
     "compilerOptions": {
         "target": "ES2022", "lib": ["dom", "dom.iterable", "ES2022"], "strict": True,
+        "skipLibCheck": True,
         "noEmit": True, "esModuleInterop": True, "module": "esnext", "moduleResolution": "bundler",
         "resolveJsonModule": True, "isolatedModules": True, "jsx": "preserve", "incremental": True,
         "plugins": [{"name": "next"}], "paths": {"@/*": ["./*"]},

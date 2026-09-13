@@ -107,7 +107,8 @@ class NextjsHooksUnitTests(TestCase):
         self.assertIn("const setPage = useCallback((newPage: number) => {", self.hooks_content)
         self.assertIn("const setSearch = useCallback((q: string) => {", self.hooks_content)
         self.assertIn('const setSort = useCallback((sort: string, order?: "asc" | "desc") => {', self.hooks_content)
-        self.assertIn("const res = await api.listPostsWithCount({ params, signal: controller.signal, ...options });", self.hooks_content)
+        self.assertIn("const requestParams = { ...params };", self.hooks_content)
+        self.assertIn("const res = await api.listPostsWithCount({ ...options, params: requestParams, signal: controller.signal });", self.hooks_content)
 
     def test_get_detail_hook_generated(self) -> None:
         self.assertIn("export function usePost(", self.hooks_content)
@@ -134,7 +135,7 @@ class NextjsHooksUnitTests(TestCase):
         self.assertIn("export function useListCommentsByPost(", self.hooks_content)
         self.assertIn("postId: string | null | undefined,", self.hooks_content)
         self.assertIn(
-            "const res = await api.listCommentsByPostWithCount(postId, { params, ...options, signal: controller.signal });",
+            "const res = await api.listCommentsByPostWithCount(postId, { ...options, params: requestParams, signal: controller.signal });",
             self.hooks_content,
         )
 

@@ -63,7 +63,9 @@ class ColorPickerComponentTests(unittest.TestCase):
 
     def test_color_picker_component_exports_compound(self) -> None:
         """Verify ColorPicker compound component and subcomponents."""
-        self.assertIn("export const ColorPicker =", self.code)
+        # Typed compound: forwardRef base cast to a component type carrying the sub-component members.
+        self.assertIn("const ColorPicker = ColorPickerBase as ColorPickerComponent;", self.code)
+        self.assertIn("export { ColorPicker };", self.code)
         self.assertIn("ColorPicker.Area = ColorArea", self.code)
         self.assertIn("ColorPicker.HueSlider = HueSlider", self.code)
         self.assertIn("ColorPicker.AlphaSlider = AlphaSlider", self.code)

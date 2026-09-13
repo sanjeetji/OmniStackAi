@@ -2,12 +2,35 @@ schema_version: 1
 project: OmniStackAI
 phase: BASIC/MVP
 founder_stage: 0
-current_task: R-428
+current_task: R-429
 current_status: done
 branch: main
-last_completed_task: R-428
+last_completed_task: R-429
 last_completed_task_summary: >-
-  Built R-428: made generated Next.js apps actually compile and render, and added an opt-in TypeScript
+  Built R-429: made a generated Next.js app pass strict `tsc --noEmit` with ZERO errors (was 84 on a
+  generated minimal-blog: 4 node_modules/next from a missing skipLibCheck + 80 in our code across 19
+  files). All fixes at codegen/nextjs.py plus the generated tsconfig, in 8 classes: G0 tsconfig now sets
+  skipLibCheck: true (Next's own default); G1 context-menu.tsx no longer double-exports names already
+  `export const` (kept `export { ContextMenu }`); G2 internal sub-component aliases (audio-player/geo-map/
+  pdf-viewer) typed `typeof XInner & { displayName?: string }` so `.displayName` is allowed; G3 compound
+  components (color-picker, pin-input) rebuilt as a typed compound (forwardRef `…Base` cast to
+  `typeof XBase & { Sub: … }`) so `.Sub =` and `<X.Sub/>` are on the type; G4 Banner/Carousel/Checkbox/
+  CodeBlock(+CopyButton)Props now Omit the conflicting inherited DOM attribute (title/onSelect/
+  defaultChecked/onCopy); G5 DOM/SVG element ref annotations changed React.RefObject<T | null> ->
+  React.RefObject<T> (assignable to a JSX ref=; mutable MutableRefObject/value refs untouched); G6
+  terminal.tsx variant destructuring default "default" -> "minimal" (a valid TerminalVariant, byte-identical
+  render, scoped to the terminal template); G7 added isUnchanged?: boolean to SplitDiffRow; G8 the exported
+  `api` object now includes the …WithCount LIST/LIST_BY methods (were emitted but omitted from the object)
+  and the generated LIST/LIST_BY hooks always forward a fresh requestParams object literal with `...options`
+  spread first (options can no longer override the hook's params/abort signal, matching the GET/CREATE
+  hooks). The opt-in `task agent-engine:web-typecheck` gate now asserts a clean tsc exit and reports PASSED
+  for BOTH minimal-blog and rideshare-favourites (fresh generate + pnpm install + tsc, 0 errors).
+  test_generated_tsx_compile.py gained deterministic guards (skipLibCheck present, no duplicate exports, no
+  React.RefObject<HTMLxxx | null>, every api.<method> a hook calls exists on the api object); 7 hook/
+  component test files' exact assertions updated to the corrected emitted strings. task verify 2,877 passed
+  (offline); lint/security/env green; both builder demos (152 / 149) pass; 0 model calls. This removes the
+  last blocker to a production `next build` for generated apps. Previously built R-428: made generated
+  Next.js apps actually compile and render, and added an opt-in TypeScript
   typecheck gate to find this class of bug. Added `task agent-engine:web-typecheck -- <example> [dir]`
   (generate + pnpm install + tsc --noEmit; opt-in/live, never in verify). Running it (and next dev) revealed
   and fixed the RUN-BLOCKING generated-code bugs: (1) search-input onChange / clear-button onClick handlers
@@ -449,19 +472,22 @@ product_direction: >-
   framework adapter contract -> Next.js adapter -> Git service -> preview/sandbox (needs cloud env).
 id_note: >-
   Workbook backlog owns R-010..R-219. Founder-requested tasks use IDs after R-219: R-220..R-223 done,
-  R-224 Next.js deferred (env-blocked), R-225..R-415 done, and R-416..R-428 done (front-door bricks 1-4,
+  R-224 Next.js deferred (env-blocked), R-225..R-415 done, and R-416..R-429 done (front-door bricks 1-4,
   generated-SQL hardening, embedded trusted-local preview, collision-free preview ports + controls, build
   history + re-preview, live preview status, per-build repo actions, remove-from-history, generated-JSX
-  inline-style fix, and generated-app compile fixes + opt-in tsc gate, not components). NOTE: the
-  UI-COMPONENT SERIES is PAUSED at R-415 (110 components, resumable at a future free Tracker ID);
-  R-416..R-428 built, hardened, and made robust the "chat -> create -> run -> preview" front-door pivot.
+  inline-style fix, generated-app compile fixes + opt-in tsc gate, and strict-type cleanup so generated apps
+  pass tsc --noEmit clean, not components). NOTE: the UI-COMPONENT SERIES is PAUSED at R-415 (110 components,
+  resumable at a future free Tracker ID); R-416..R-429 built, hardened, and made robust the
+  "chat -> create -> run -> preview" front-door pivot.
 blockers: []
 next_action: >-
-  R-428 is complete: generated apps now compile and RENDER in the preview (fixed over-braced handlers, a
-  pdf-viewer literal newline, and screen import depth via the @/ alias); added the opt-in
-  `task agent-engine:web-typecheck` gate. IMPORTANT: restart `task agent-engine:studio:preview` so it loads
-  the fixed generator, then a fresh build's screens render (/, /post_list, /post_editor -> 200). RECOMMENDED
-  NEXT: R-429 = strict TYPE cleanup of the generated component library (~82 tsc errors: duplicate exports,
-  displayName on function components, prop-type conflicts) so generated apps pass a production next build; the
-  opt-in web-typecheck gate reports them. Keep task verify deterministic and network/DB/model independent. The
-  UI-component series remains paused/resumable.
+  R-429 is complete: a generated Next.js app now passes strict `tsc --noEmit` with ZERO errors on BOTH
+  example IRs (the opt-in `task agent-engine:web-typecheck` gate reports PASSED); fixed 8 type-error classes
+  at codegen/nextjs.py + the generated tsconfig (skipLibCheck, duplicate exports, displayName, compound
+  components, HTMLAttributes Omit, RefObject<T>, terminal variant default, SplitDiffRow.isUnchanged, api
+  WithCount + fresh requestParams). Generated apps are no longer blocked from a production `next build`.
+  DECISION POINT (per the founder's strategy discussion): either propose R-430 continuing hardening, OR
+  pivot to the DIFFERENTIATING SPINE from R_&_D/OmniStackAI_OS_Master_Architecture_Specification.md — the
+  Ecosystem Scope Compiler (one prompt -> multi-app scope) or Solution Packs — and optionally wire a
+  frontier model for the generation step so output quality is competitive. Keep task verify deterministic and
+  network/DB/model independent. The UI-component series remains paused/resumable.

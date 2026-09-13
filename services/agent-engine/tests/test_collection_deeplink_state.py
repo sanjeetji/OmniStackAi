@@ -102,7 +102,7 @@ class UseListDeepLinkTests(unittest.TestCase):
         self.assertIn("const abortRef = useRef<AbortController | null>(null);", self.hooks)
         self.assertIn("abortRef.current?.abort();", self.hooks)
         self.assertIn("const controller = new AbortController();", self.hooks)
-        self.assertIn("api.listArticlesWithCount({ params, signal: controller.signal, ...options });", self.hooks)
+        self.assertIn("api.listArticlesWithCount({ ...options, params: requestParams, signal: controller.signal });", self.hooks)
         self.assertIn("if (controller.signal.aborted) return;", self.hooks)
         self.assertIn('err instanceof DOMException && err.name === "AbortError"', self.hooks)
         self.assertIn("if (!controller.signal.aborted) setLoading(false);", self.hooks)
@@ -114,7 +114,7 @@ class UseListDeepLinkTests(unittest.TestCase):
         ir = example_ir("minimal-blog")
         hooks = render_hooks(ir)
         self.assertIn(
-            "const res = await api.listCommentsByPostWithCount(postId, { params, ...options, signal: controller.signal });",
+            "const res = await api.listCommentsByPostWithCount(postId, { ...options, params: requestParams, signal: controller.signal });",
             hooks,
         )
 

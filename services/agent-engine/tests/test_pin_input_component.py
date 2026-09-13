@@ -63,7 +63,9 @@ class PinInputComponentTests(unittest.TestCase):
 
     def test_pin_input_component_exports_compound(self) -> None:
         """Verify PinInput compound component and subcomponents."""
-        self.assertIn("export const PinInput =", self.code)
+        # Typed compound: forwardRef base cast to a component type carrying the sub-component members.
+        self.assertIn("const PinInput = PinInputBase as PinInputComponent;", self.code)
+        self.assertIn("export { PinInput };", self.code)
         self.assertIn("export const PinInputSlot =", self.code)
         self.assertIn("export function PinInputGroup", self.code)
         self.assertIn("export function PinInputSeparator", self.code)

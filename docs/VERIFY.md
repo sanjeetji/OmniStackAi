@@ -60,11 +60,17 @@ task agent-engine:web-typecheck -- rideshare-favourites [outdir]
 ```
 
 It generates a real app via `scripts/builder-demo.sh`, runs `pnpm install --ignore-scripts` (the `sharp`
-ignored-build makes plain `pnpm install` exit 1), then `tsc --noEmit` in `apps/web`. It needs `pnpm` and
-network access, so it is **kept OUT of `task verify`** — run it manually on a toolchain machine. Fast
-string-level regression guards live in `tests/test_generated_screen_styles.py` (single-brace JSX styles)
-and `tests/test_generated_tsx_compile.py` (over-braced arrow handlers, `../components`/`../lib` relative
-imports, raw-string literal `\n`); these DO run under `task verify` and catch the known compile-breaking
-classes offline. As of R-428 the run-blocking bugs are fixed (a generated minimal-blog renders `/`,
-`/post_list`, `/post_editor` at HTTP 200); ~82 strict *type* errors remain in the component library and are
-scoped to R-429 — until then `tsc --noEmit` still reports those, so treat a clean exit as the R-429 goal.
+ignored-build makes plain `pnpm install` exit 1), then `tsc --noEmit` in `apps/web`; a non-zero `tsc` exit
+fails the gate and it prints PASS/FAIL (R-429). It needs `pnpm` and network access, so it is **kept OUT of
+`task verify`** — run it manually on a toolchain machine. Fast string-level regression guards live in
+`tests/test_generated_screen_styles.py` (single-brace JSX styles) and `tests/test_generated_tsx_compile.py`
+(over-braced arrow handlers, `../components`/`../lib` relative imports, raw-string literal `\n`, and the
+R-429 additions: generated `tsconfig` sets `skipLibCheck`, no duplicate exports, no
+`React.RefObject<HTMLxxx | null>`, every `api.<method>` a hook calls exists on the `api` object); these DO
+run under `task verify` and catch the known compile-breaking classes offline. **As of R-429 a generated
+`minimal-blog` and `rideshare-favourites` pass `tsc --noEmit` with 0 errors** — `task
+agent-engine:web-typecheck` reports PASSED for both — so generated apps are no longer blocked from a
+production `next build`. R-428 fixed the run-blocking (render-breaking) bugs; R-429 fixed the 8 strict-type
+classes the gate then revealed (skipLibCheck, duplicate exports, `displayName` on sub-components, typed
+compounds, `HTMLAttributes` Omit, `RefObject<T>`, a terminal variant default, a missing type field, and the
+`api` object's `…WithCount` methods + hook request-params typing).

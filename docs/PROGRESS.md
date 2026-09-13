@@ -1,4 +1,4 @@
-# OmniStackAI — implementation progress (as of R-428)
+# OmniStackAI — implementation progress (as of R-429)
 
 A living summary of what is built, what is pending, and how to see results. Numbers come from the
 execution tracker (`R_&_D/OmniStackAI_Execution_Tracker_v6.xlsx`, `Phase_Roadmap`) plus the state
@@ -6,16 +6,16 @@ files (`.ai/`), Git history, and CHANGELOG for work done past the tracker's last
 
 ## Headline
 
-- **2,873 automated tests pass**, fully offline and network-independent (`task verify`).
+- **2,877 automated tests pass**, fully offline and network-independent (`task verify`).
 - **147 tracker tasks Done, 1 Deferred, 210 Not Started** across 358 tasks (the tracker's planned
   universe ends at R-358).
-- **Plus 70 completed tasks beyond the workbook (R-359 → R-428)**: 57 reusable UI-component suites,
+- **Plus 71 completed tasks beyond the workbook (R-359 → R-429)**: 57 reusable UI-component suites,
   four front-door bricks, R-420 generated-SQL hardening, R-421 managed embedded local preview,
   R-422 collision-free preview ports + status/stop/restart controls, R-423 build history + re-preview,
   R-424 live preview status, R-425 per-build repo actions, R-426 remove-from-history, R-427 a
-  generated-JSX inline-style fix, and R-428 generated-app compile fixes + an opt-in `tsc` gate. The
-  generated Next.js component library remains at **110 components**; its component series is **PAUSED at
-  R-415** and fully resumable.
+  generated-JSX inline-style fix, R-428 generated-app compile fixes + an opt-in `tsc` gate, and R-429
+  strict-type cleanup so a generated app passes `tsc --noEmit` clean. The generated Next.js component
+  library remains at **110 components**; its component series is **PAUSED at R-415** and fully resumable.
 - The generated app was **run live locally end-to-end this session** (Next.js web on `:3000` +
   FastAPI on `:8000` + seeded PostgreSQL) — proving the offline builder output actually runs on a Mac.
 - **R-420 closed both SQL defects exposed by that run:** generator-owned PostgreSQL identifiers are
@@ -44,8 +44,13 @@ files (`.ai/`), Git history, and CHANGELOG for work done past the tracker's last
 - **R-428 makes generated apps render + adds a compile gate:** an opt-in `task agent-engine:web-typecheck`
   runs `tsc --noEmit` on a generated app. It surfaced (and R-428 fixed) the run-blocking bugs — over-braced
   event handlers, a `pdf-viewer` literal newline, and screen import depth (`../components/` → the `@/` alias).
-  A generated `minimal-blog` now serves `/`, `/post_list`, `/post_editor` at HTTP 200 (were 500). Remaining:
-  ~82 strict TYPE errors in the component library (block `next build`, not `next dev`) → follow-up R-429.
+  A generated `minimal-blog` now serves `/`, `/post_list`, `/post_editor` at HTTP 200 (were 500).
+- **R-429 makes generated apps type-check clean:** fixed the 8 strict-type classes the gate revealed
+  (skipLibCheck, duplicate exports, `displayName` on sub-components, typed compounds, `HTMLAttributes` Omit,
+  `RefObject<T>`, a terminal variant default, a missing type field, and the `api` object's `…WithCount`
+  methods + hook request-params typing). A generated `minimal-blog` and `rideshare-favourites` now pass
+  `tsc --noEmit` with **0** errors — `task agent-engine:web-typecheck` reports **PASSED** for both — so
+  generated apps are no longer blocked from a production `next build`.
 
 ## UI Component Series — status: PAUSED at R-415 (resumable)
 
@@ -291,12 +296,20 @@ build), R-424 live preview status (liveness-aware `status()` + page polling of `
 preview whose processes exit is reported as stopped rather than shown stale), R-425 per-build repo actions
 (Copy path + Open folder on each Recent-builds item, connecting the Studio to the owned generated repo on
 disk), R-426 remove-from-history (a per-build Remove action that clears an entry from the in-memory Recent
-builds list), R-427 a generated-JSX inline-style fix (single-brace `style={ … }` → valid double-brace), and
-**R-428 generated-app compile fixes + an opt-in `tsc` gate** (`task agent-engine:web-typecheck`; fixed
+builds list), R-427 a generated-JSX inline-style fix (single-brace `style={ … }` → valid double-brace),
+R-428 generated-app compile fixes + an opt-in `tsc` gate (`task agent-engine:web-typecheck`; fixed
 over-braced handlers, a `pdf-viewer` literal newline, and screen import depth via the `@/` alias — a generated
-app now renders in the preview). The recommended next task is **R-429**: strict TYPE cleanup of the generated
-component library (~82 tsc errors: duplicate exports, `displayName`, prop-type conflicts) so generated apps
-pass a production `next build`. Execution must remain explicit trusted-local mode and `task verify` must remain
+app now renders in the preview), and **R-429 strict-type cleanup** (fixed the 8 type-error classes the gate
+revealed so a generated `minimal-blog` and `rideshare-favourites` pass `tsc --noEmit` with 0 errors; the gate
+now reports PASSED for both — generated apps are no longer blocked from a production `next build`).
+
+The local front door is now solid end-to-end. The recommended next move is a **DECISION POINT** rather than a
+fixed task (see the founder's strategy discussion and `R_&_D/OmniStackAI_OS_Master_Architecture_Specification.md`):
+either propose **R-430** (further front-door hardening — e.g. a Go-backend typecheck gate, or extending the
+opt-in gate to run `next build`), or **pivot to the differentiating spine**: the Ecosystem Scope Compiler
+(one prompt → a multi-app scope proposal) or Solution Packs (pre-tested monorepo skeletons + AI-delta
+generation), optionally wiring a frontier model for the generation step so output quality is competitive.
+Whichever is chosen, execution must remain explicit trusted-local mode and `task verify` must remain
 model/Docker/DB/install/network-free (the typecheck gate is opt-in/live).
 
 **The UI-component series remains PAUSED at R-415** and is independently resumable under a future free
