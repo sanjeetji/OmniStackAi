@@ -123,6 +123,12 @@ browser via `_open_path` and returns a bounded, secret-free `opened`/`error` sta
 trusted-local preview mode (build-only Studio returns 404) and, like all local execution, never runs during
 `task verify` (the opener is injected/stubbed in tests).
 
+**Remove (R-426).** A per-build **Remove** action (`POST /api/history/delete {id}` -> `{removed, builds}`)
+drops a build from the in-memory Recent builds list via `StudioBuildHistory.remove(id)`. It only edits the
+bounded in-session list — it never runs generated code, touches PostgreSQL, or deletes anything on disk — so
+it is available in both build-only and preview modes and returns the refreshed, secret-free history for the
+page to re-render.
+
 ## Switching tiers — one knob (R-234)
 
 `OMNISTACKAI_TIER` is the single switch; change it in `.env` and the resolved providers change:

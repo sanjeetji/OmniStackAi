@@ -90,6 +90,22 @@ class TestStudioBuildHistory(unittest.TestCase):
         history.record(_build("Blog"))
         json.dumps(history.list())
 
+    def test_remove_drops_entry_by_id(self) -> None:
+        history = StudioBuildHistory()
+        keep = history.record(_build("Blog"))
+        drop = history.record(_build("Shop"))
+        self.assertTrue(history.remove(drop))
+        names = [b["name"] for b in history.list()["builds"]]
+        self.assertEqual(names, ["Blog"])
+        self.assertIsNone(history.get(drop))
+        self.assertIsNotNone(history.get(keep))
+
+    def test_remove_unknown_id_is_false_noop(self) -> None:
+        history = StudioBuildHistory()
+        history.record(_build("Blog"))
+        self.assertFalse(history.remove("does-not-exist"))
+        self.assertEqual(len(history.list()["builds"]), 1)
+
 
 if __name__ == "__main__":
     unittest.main()

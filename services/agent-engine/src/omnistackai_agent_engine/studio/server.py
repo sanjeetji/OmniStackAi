@@ -29,6 +29,7 @@ def _make_handler(
     history_fn: ControlFn | None,
     preview_build_fn: PreviewBuildFn | None,
     open_dir_fn: PreviewBuildFn | None,
+    delete_build_fn: PreviewBuildFn | None,
 ) -> type[BaseHTTPRequestHandler]:
     class StudioHandler(BaseHTTPRequestHandler):
         server_version = "OmniStackAIStudio/1.0"
@@ -121,6 +122,9 @@ def _make_handler(
             if self.path == "/api/history/open":
                 self._run_id_control(open_dir_fn)
                 return
+            if self.path == "/api/history/delete":
+                self._run_id_control(delete_build_fn)
+                return
             if self.path != "/api/build":
                 self._send_json(404, {"error": "not found"})
                 return
@@ -159,19 +163,28 @@ def create_studio_server(
     history_fn: ControlFn | None = None,
     preview_build_fn: PreviewBuildFn | None = None,
     open_dir_fn: PreviewBuildFn | None = None,
+    delete_build_fn: PreviewBuildFn | None = None,
 ) -> ThreadingHTTPServer:
     """Create (but do not start) a studio server bound to ``host``/``port``.
 
     Pass ``port=0`` for an ephemeral port (used by tests). Call ``serve_forever()`` to run.
     The preview control and history handlers are optional; when unset, ``GET /api/preview``,
-    ``POST /api/preview/stop|restart``, ``GET /api/history``, ``POST /api/history/preview``, and
-    ``POST /api/history/open`` return 404 (build-only mode). ``history_fn`` may be wired in
-    build-only mode to list recent builds; ``preview_build_fn`` (re-preview) and ``open_dir_fn``
-    (open the recorded repo folder) are wired only in trusted-local preview mode.
+    ``POST /api/preview/stop|restart``, ``GET /api/history``, ``POST /api/history/preview``,
+    ``POST /api/history/open``, and ``POST /api/history/delete`` return 404 (build-only mode).
+    ``history_fn`` and ``delete_build_fn`` may be wired in build-only mode (list/remove recorded
+    builds); ``preview_build_fn`` (re-preview) and ``open_dir_fn`` (open the recorded repo folder)
+    are wired only in trusted-local preview mode.
     """
     return ThreadingHTTPServer(
         (host, port),
         _make_handler(
-            build_fn, status_fn, stop_fn, restart_fn, history_fn, preview_build_fn, open_dir_fn
+            build_fn,
+            status_fn,
+            stop_fn,
+            restart_fn,
+            history_fn,
+            preview_build_fn,
+            open_dir_fn,
+            delete_build_fn,
         ),
     )

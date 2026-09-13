@@ -1,15 +1,16 @@
 # Current Handoff
 
-Task ID: R-425
+Task ID: R-426
 Status: done
 Phase: BASIC/MVP — Founder Stage 0
 Branch: `main` (the only branch; the GitHub default)
 
-> **The Studio connects to the owned code on disk.** UI-component series PAUSED at R-415 (110 components, resumable). Front door: **R-416** intake · **R-417** builder · **R-418** chat web UI · **R-419** turnkey run · **R-420** SQL hardening · **R-421** managed embedded preview · **R-422** collision-free ports + controls · **R-423** build history + re-preview · **R-424** live preview status · **R-425** per-build repo actions (Copy path / Open folder). **RECOMMENDED NEXT: R-426** = a build-in-progress state in the preview surface, or a per-build "delete from history" action.
+> **The Studio's Recent builds list is fully manageable.** UI-component series PAUSED at R-415 (110 components, resumable). Front door: **R-416** intake · **R-417** builder · **R-418** chat web UI · **R-419** turnkey run · **R-420** SQL hardening · **R-421** managed embedded preview · **R-422** collision-free ports + controls · **R-423** build history + re-preview · **R-424** live preview status · **R-425** per-build repo actions · **R-426** remove-from-history. **RECOMMENDED NEXT: R-427** = a build-in-progress state in the preview surface, or a "clear all history" action.
 
 ## Repo/workflow state
 
-- **R-425 (per-build repo actions)** shipped: Recent builds items now have Copy path (client clipboard of `target_dir`, both modes) and Open folder (`POST /api/history/open {id}` → OS file browser, trusted-local only) via an injected `open_dir_fn` and a generic `_run_id_control` in the stdlib server; `_open_path` opens darwin/win/linux best-effort. 64 focused tests (4 net-new), `task verify` **2,861** pass; lint/security/env and both demos (152/149) green; 0 model calls. Single commit authored `sanjeetji <sk698166@gmail.com>`.
+- **R-426 (remove from history)** shipped: `StudioBuildHistory.remove(id)` + `POST /api/history/delete {id}` (in-memory only, wired in both modes; returns the refreshed `{removed, builds}`), and a per-build "Remove" button on the page. Nothing on disk or in the DB is deleted. 70 focused tests (6 net-new), `task verify` **2,867** pass; lint/security/env and both demos (152/149) green; 0 model calls. Single commit authored `sanjeetji <sk698166@gmail.com>`.
+- **R-425 (per-build repo actions)** shipped: Recent builds items have Copy path (client clipboard, both modes) and Open folder (`POST /api/history/open {id}`, trusted-local) via injected `open_dir_fn` + generic `_run_id_control`.
 - **R-424 (live preview status)** shipped: `LocalAppSession.is_alive()` + liveness-aware `StudioPreviewManager.status()` + page polling of `GET /api/preview` (no iframe reload on unchanged URL).
 - **R-423 (build history + re-preview)** shipped: `studio/history.py` `StudioBuildHistory` + `GET /api/history` and `POST /api/history/preview {id}`, a "Recent builds" list, and history recording in `live_serve`.
 - **R-422 (collision-free preview ports + controls)** shipped: each preview allocates two distinct free loopback ports (`allocate_preview_ports`) via `start_preview_app`; `StudioPreviewManager` gained bounded, secret-free `status()`/`stop()`/`restart()` at `GET /api/preview` + `POST /api/preview/stop|restart` (trusted-local only; build-only 404s).

@@ -325,6 +325,19 @@ STUDIO_HTML = r"""<!doctype html>
       .then(function () { btn.disabled = false; });
   }
 
+  function deleteBuild(id, btn) {
+    btn.disabled = true;
+    fetch('/api/history/delete', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ id: id })
+    }).then(function (res) { return res.ok ? res.json() : null; })
+      .then(function (data) {
+        if (data && data.builds) { renderHistory(data.builds); } else { loadHistory(); }
+      })
+      .catch(function () { btn.disabled = false; });
+  }
+
   function renderHistory(builds) {
     var list = document.getElementById('history-list');
     list.innerHTML = '';
@@ -352,6 +365,7 @@ STUDIO_HTML = r"""<!doctype html>
       actions.appendChild(actionButton('Preview', function () { previewBuild(b); }));
       actions.appendChild(actionButton('Copy path', function (btn) { copyPath(b.target_dir, btn); }));
       actions.appendChild(actionButton('Open folder', function (btn) { openBuild(b.id, btn); }));
+      actions.appendChild(actionButton('Remove', function (btn) { deleteBuild(b.id, btn); }));
       li.appendChild(meta);
       li.appendChild(actions);
       list.appendChild(li);

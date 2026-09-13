@@ -4,10 +4,23 @@ Last updated: 2026-09-13
 ## Current Phase
 Stage 0 (Founder Build Sequence, Brief Section 91) — BASIC/MVP
 
-> **The Studio connects to the owned code on disk.** UI-component series PAUSED at R-415 (110 components, resumable). Front door: **R-416** intake · **R-417** builder · **R-418** chat web UI · **R-419** turnkey run · **R-420** SQL hardening · **R-421** managed embedded preview · **R-422** collision-free ports + controls · **R-423** build history + re-preview · **R-424** live preview status · **R-425** per-build repo actions. Recommended next: **R-426**, a build-in-progress preview state or per-build delete-from-history.
+> **The Studio's Recent builds list is fully manageable.** UI-component series PAUSED at R-415 (110 components, resumable). Front door: **R-416** intake · **R-417** builder · **R-418** chat web UI · **R-419** turnkey run · **R-420** SQL hardening · **R-421** managed embedded preview · **R-422** collision-free ports + controls · **R-423** build history + re-preview · **R-424** live preview status · **R-425** per-build repo actions · **R-426** remove-from-history. Recommended next: **R-427**, a build-in-progress preview state or a "clear all history" action.
 
 ## Last Completed Task
-Tracker ID: R-425 — Per-build repo actions (copy path + open folder) — DONE. The Studio's Recent builds list
+Tracker ID: R-426 — Remove a build from the Studio history — DONE. `StudioBuildHistory.remove(build_id) -> bool`
+(thread-safe; drops the entry by id, returns whether it was present; unknown id is a safe no-op) plus a new
+`POST /api/history/delete {id}` route (injected `delete_build_fn`, reusing the generic `_run_id_control` body
+reader; unset -> 404, missing id -> 400). Because removing an entry only edits the bounded in-memory list (it
+never runs generated code, touches the database, or deletes anything on disk), the delete handler is wired in
+both Studio modes and returns the refreshed, bounded, secret-free history (`{removed, builds}`) so the page
+re-renders in one call. The Studio page adds a per-build "Remove" action, DOM-only. Everything else — build,
+preview, re-preview, open-folder, live status, status/stop/restart, collision-free ports, single-session
+cleanup, PostgreSQL, `studio:serve`/`studio:preview` — is unchanged. 70 focused tests (6 net-new) and
+`task verify`'s **2,867 tests** pass; lint, security, environment, and both demos (152 / 149 files) pass; a
+deterministic remove/delete inspection confirmed True/False removal and a bounded secret-free payload;
+0 local/cloud model calls.
+
+Immediately preceded by R-425 — Per-build repo actions (copy path + open folder) — DONE. The Studio's Recent builds list
 now has, per build, a purely client-side "Copy path" (clipboard write of the recorded repo `target_dir`, works
 in both modes) and an "Open folder" action that opens the recorded repo directory in the OS file browser via a
 new trusted-local route `POST /api/history/open {id}` (injected `open_dir_fn` + a generic `_run_id_control`

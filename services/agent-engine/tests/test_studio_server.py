@@ -288,6 +288,36 @@ class TestStudioHistoryRoutes(unittest.TestCase):
         for token in ("/api/history/open", "navigator.clipboard", "Copy path", "Open folder"):
             self.assertIn(token, STUDIO_HTML)
 
+    def test_post_history_delete_passes_id(self) -> None:
+        seen = []
+
+        def delete_build(build_id):
+            seen.append(build_id)
+            return {"removed": True, "builds": [{"id": "1", "name": "Blog"}]}
+
+        with running_server(RecordingBuild(STUB_RESULT), delete_build_fn=delete_build) as base:
+            status, data = _post(base + "/api/history/delete", obj={"id": "2"})
+            self.assertEqual(status, 200)
+            self.assertTrue(data["removed"])
+            self.assertEqual(len(data["builds"]), 1)
+            self.assertEqual(seen, ["2"])
+
+    def test_post_history_delete_missing_id_is_400(self) -> None:
+        with running_server(
+            RecordingBuild(STUB_RESULT), delete_build_fn=lambda build_id: {"removed": False}
+        ) as base:
+            status, data = _post(base + "/api/history/delete", obj={})
+            self.assertEqual(status, 400)
+            self.assertIn("error", data)
+
+    def test_history_delete_404_when_disabled(self) -> None:
+        with running_server(RecordingBuild(STUB_RESULT)) as base:
+            self.assertEqual(_post(base + "/api/history/delete", obj={"id": "1"})[0], 404)
+
+    def test_page_has_remove_action(self) -> None:
+        for token in ("/api/history/delete", "Remove"):
+            self.assertIn(token, STUDIO_HTML)
+
 
 class TestResultDict(unittest.TestCase):
     def test_app_build_result_to_dict_shape(self) -> None:

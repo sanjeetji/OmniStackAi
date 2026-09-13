@@ -1,40 +1,43 @@
-task_id: R-425
-id: R-425
-title: "Per-build repo actions - copy path + open folder"
+task_id: R-426
+id: R-426
+title: "Remove a build from the Studio history"
 status: done
 phase: MVP
 tracker_row: null
 started_at: "2026-09-13"
 completed_at: "2026-09-13"
 objective: >-
-  Let the operator jump from a recorded Studio build to the owned code on disk. Add per-build actions to the
-  Recent builds list: a purely client-side Copy path (clipboard write of the recorded repo target_dir; works
-  in both modes) and an Open folder action that opens the recorded repo directory in the OS file browser via
-  a new trusted-local route POST /api/history/open {id}. The open route reuses the injected-handler pattern
-  (open_dir_fn(build_id) -> dict), is wired only in trusted-local preview mode (build-only 404), looks up the
-  recorded build, launches the platform folder opener (open / xdg-open / os.startfile) best-effort, and
-  returns a bounded, secret-free status (opened/error) - never runs generated code, echoes a command, or
-  exposes an environment. No change to build/preview/history/status/stop/restart, collision-free ports,
-  single-session cleanup, PostgreSQL, or studio:serve/studio:preview semantics; verify stays offline.
+  Let the operator clear a recorded build from the Studio's in-session Recent builds list. Add
+  StudioBuildHistory.remove(build_id) -> bool (thread-safe; removes by id, returns whether it existed).
+  Expose it over the stdlib server as POST /api/history/delete {id} via an injected delete_build_fn(build_id)
+  -> dict (reusing the generic id-body reader); unset -> 404, missing id -> 400. Because removing an entry
+  only edits the bounded in-memory list (never executes generated code, touches the DB, or deletes on disk),
+  the delete handler is wired in both Studio modes (alongside history listing) and returns the refreshed,
+  bounded, secret-free history ({removed, builds}) so the page re-renders in one call. The Studio page adds a
+  per-build Remove action, DOM-only. No change to build/preview/re-preview/open-folder/live status/status/
+  stop/restart, collision-free ports, single-session cleanup, PostgreSQL, or studio:serve/studio:preview.
 requirements:
-  - POST /api/history/open {id} over the stdlib server via injected open_dir_fn; unset -> 404; missing id -> 400; errors -> 502.
-  - Opener wired only in trusted-local preview mode; looks up the recorded build, opens target_dir, returns bounded secret-free opened/error; unknown id -> bounded error.
-  - Client-side Copy path per build (clipboard write of target_dir with fallback + transient feedback), no server call, both modes.
-  - Open folder button per build calling POST /api/history/open with bounded result.
-  - Secret-free payloads/logs; opener never echoes command, path env, or traceback.
+  - StudioBuildHistory.remove(build_id) -> bool (thread-safe): removes by id, reports presence; unknown id safe no-op False.
+  - POST /api/history/delete {id} via injected delete_build_fn (reuse generic id-body reader); unset 404, missing id 400, errors 502.
+  - Wire delete in both Studio modes (in-memory only); handler returns refreshed bounded secret-free history {removed, builds}.
+  - Per-build Remove button on the page wired to /api/history/delete, re-renders the list, DOM-only.
+  - Secret-free payloads/logs; nothing deleted on disk or in the DB.
   - Deterministic/offline verify via injected fakes.
 acceptance_criteria:
-  - POST /api/history/open {id} returns opener status when wired, 404 when not, 400 on missing id; handler gets the id.
-  - Opener default returns opened on success, bounded error otherwise, bounded error for unknown build id.
-  - Studio page exposes per-build Copy path (client clipboard) and Open folder (/api/history/open) without HTML injection.
+  - remove True drops the entry (gone from list/get); unknown id -> False, no error.
+  - POST /api/history/delete {id} returns handler payload when wired, 404 when not, 400 on missing id; handler gets the id.
+  - Delete route available in build-only and preview modes (in-memory only).
+  - Studio page exposes per-build Remove wired to /api/history/delete and re-renders the list.
   - Existing contracts compatible; focused + full verify + lint + security + env + both demos pass; 0 model calls in verify.
 allowed_paths:
+  - "services/agent-engine/src/omnistackai_agent_engine/studio/history.py"
   - "services/agent-engine/src/omnistackai_agent_engine/studio/server.py"
   - "services/agent-engine/src/omnistackai_agent_engine/studio/live_serve.py"
   - "services/agent-engine/src/omnistackai_agent_engine/studio/page.py"
+  - "services/agent-engine/tests/test_studio_history.py"
   - "services/agent-engine/tests/test_studio_server.py"
   - "docs/RUNTIME.md"
-  - ".ai/tasks/R-425.md"
+  - ".ai/tasks/R-426.md"
   - ".ai/CURRENT_TASK.yaml"
   - ".ai/PROJECT_STATE.yaml"
   - ".ai/WORK_LOG.md"
@@ -46,12 +49,13 @@ allowed_paths:
 forbidden_changes:
   - "Do not modify or include the unrelated untracked .claude directory"
   - "Do not add a service, top-level directory, platform/generated dependency, queue, sandbox vendor, database, or infrastructure"
-  - "Do not make generated-code execution implicit in task verify or the build-only Studio command; the opener is opt-in/live only"
-  - "Do not change studio:serve/studio:preview semantics, collision-free ports, history, live status, or single-session cleanup"
+  - "Do not delete anything on disk or in the database; the action only edits the in-memory history"
+  - "Do not make generated-code execution implicit in task verify or the build-only Studio command"
+  - "Do not change studio:serve/studio:preview semantics, collision-free ports, live status, re-preview/open-folder, or single-session cleanup"
   - "Do not change RuntimeProvider/ModelProvider/Application IR/database engine/assembler/Git-service/deployment/generated contracts; PostgreSQL stays"
   - "Do not expose secrets, DB credentials, process environments, or raw tracebacks in payloads or logs"
 required_gates:
-  - focused studio-server, studio-preview, studio-history, and local-run session tests
+  - focused studio-history, studio-server, studio-preview, and local-run session tests
   - task lint
   - task verify
   - task security:quick
@@ -63,17 +67,17 @@ model_tool_trace:
   local_calls: 0
   cloud_calls: 0
   note: >-
-    L2 local UX/lifecycle work. Deterministic server boundaries and injected fakes are sufficient; the folder
-    opener is an opt-in/live path (injected/stubbed in tests). No local or cloud model call is needed.
+    L2 local UX work. Deterministic in-memory history + server boundaries and injected fakes are sufficient;
+    no local or cloud model call is needed for implementation or verify.
 evidence:
   baseline: >-
-    Start protocol passed at R-424: task verify 2,857 tests pass; local == origin/main at 4bde96c before
+    Start protocol passed at R-425: task verify 2,861 tests pass; local == origin/main at 62686da before
     coding; only the untracked .claude/ present.
-  verify: "2,861 passed"
+  verify: "2,867 passed"
   lint: "passed"
   security: "passed"
   env: "passed"
   demos: "minimal-blog 152 files; rideshare-favourites 149 files"
-  focused_test: "64 passed (test_studio_server + test_studio_preview + test_studio_history + test_localrun_session); 4 net-new R-425 tests (3 open-route, 1 page actions)"
-  open_route_inspection: "_open_recorded_build: opened on success (opener called with recorded target_dir), bounded error on failure, bounded error for unknown id, secret-free; opener stubbed - no real Finder launch; 0 model calls"
-next_action: "R-425 done. Next: R-426 (candidates: a build-in-progress state in the preview surface, or a per-build 'delete from history' action)."
+  focused_test: "70 passed (test_studio_history + test_studio_server + test_studio_preview + test_localrun_session); 6 net-new R-426 tests (2 history.remove, 4 delete-route/page)"
+  delete_inspection: "history.remove True drops entry / False for unknown no-op; delete payload {removed, builds} bounded and secret-free; 0 model calls"
+next_action: "R-426 done. Next: R-427 (candidates: a build-in-progress state in the preview surface, or a 'clear all history' action)."

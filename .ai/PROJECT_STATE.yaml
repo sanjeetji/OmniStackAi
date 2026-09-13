@@ -2,12 +2,26 @@ schema_version: 1
 project: OmniStackAI
 phase: BASIC/MVP
 founder_stage: 0
-current_task: R-425
+current_task: R-426
 current_status: done
 branch: main
-last_completed_task: R-425
+last_completed_task: R-426
 last_completed_task_summary: >-
-  Built R-425: per-build repo actions in the Studio's Recent builds list. A purely client-side "Copy path"
+  Built R-426: remove a build from the Studio's in-session Recent builds list. StudioBuildHistory.remove(
+  build_id) -> bool (thread-safe; drops the entry by id, returns whether it was present; unknown id is a safe
+  no-op returning False). The stdlib Studio server gained POST /api/history/delete {id} via a new injected
+  delete_build_fn(build_id) -> dict (reusing the generic _run_id_control body reader shared with re-preview/
+  open); unset -> 404, missing id -> 400, errors -> 502. Because removing an entry only edits the bounded
+  in-memory list (it never runs generated code, touches the DB, or deletes anything on disk), the delete
+  handler is wired in BOTH Studio modes (alongside history listing) and returns the refreshed, bounded,
+  secret-free history ({removed, builds}) so the page re-renders in one call. The Studio page adds a per-build
+  "Remove" action that calls the route and re-renders the list, DOM-only. Build/preview/re-preview/open-folder/
+  live status/status/stop/restart, collision-free ports, single-session cleanup, PostgreSQL, and
+  studio:serve/studio:preview semantics unchanged. 70 focused tests (6 net-new: 2 history.remove, 4 delete-
+  route/page) and task verify's 2,867 tests pass; lint/security/env and both builder demos (152 / 149 files)
+  pass; a deterministic remove/delete inspection confirmed True/False removal and a bounded secret-free
+  {removed, builds} payload; 0 local/cloud model calls. Previously built R-425: per-build repo actions in the
+  Studio's Recent builds list. A purely client-side "Copy path"
   copies a recorded build's repo target_dir to the clipboard (navigator.clipboard with an execCommand
   fallback; works in both Studio modes, no server call), and an "Open folder" action opens the recorded repo
   directory in the OS file browser via a new trusted-local route POST /api/history/open {id}. The route reuses
@@ -407,16 +421,16 @@ product_direction: >-
   framework adapter contract -> Next.js adapter -> Git service -> preview/sandbox (needs cloud env).
 id_note: >-
   Workbook backlog owns R-010..R-219. Founder-requested tasks use IDs after R-219: R-220..R-223 done,
-  R-224 Next.js deferred (env-blocked), R-225..R-415 done, and R-416..R-425 done (front-door bricks 1-4,
+  R-224 Next.js deferred (env-blocked), R-225..R-415 done, and R-416..R-426 done (front-door bricks 1-4,
   generated-SQL hardening, embedded trusted-local preview, collision-free preview ports + controls, build
-  history + re-preview, live preview status, and per-build repo actions, not components). NOTE: the
-  UI-COMPONENT SERIES is PAUSED at R-415 (110 components, resumable at a future free Tracker ID); R-416..R-425
-  built, hardened, and made robust the "chat -> create -> run -> preview" front-door pivot instead.
+  history + re-preview, live preview status, per-build repo actions, and remove-from-history, not
+  components). NOTE: the UI-COMPONENT SERIES is PAUSED at R-415 (110 components, resumable at a future free
+  Tracker ID); R-416..R-426 built, hardened, and made robust the "chat -> create -> run -> preview"
+  front-door pivot instead.
 blockers: []
 next_action: >-
-  R-425 is complete: the Studio's Recent builds list has per-build "Copy path" (client clipboard) and
-  "Open folder" (trusted-local POST /api/history/open {id}) actions, connecting the Studio to the owned code
-  on disk. Recommended next: propose R-426 and record its contract before coding - candidates are a
-  build-in-progress state in the preview surface, or a per-build "delete from history" action. Keep execution
-  trusted-local/opt-in and task verify deterministic and network/DB/model independent. The UI-component series
-  remains paused/resumable.
+  R-426 is complete: the Studio's Recent builds list has a per-build "Remove" action (POST /api/history/delete
+  {id}, in-memory only, both modes) that re-renders the list. Recommended next: propose R-427 and record its
+  contract before coding - candidates are a build-in-progress state in the preview surface, or a "clear all
+  history" action. Keep execution trusted-local/opt-in and task verify deterministic and network/DB/model
+  independent. The UI-component series remains paused/resumable.

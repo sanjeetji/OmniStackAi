@@ -57,3 +57,10 @@ class StudioBuildHistory:
                 if entry["id"] == build_id:
                     return dict(entry)
             return None
+
+    def remove(self, build_id: str) -> bool:
+        """Remove the recorded build with ``build_id``; return whether it was present."""
+        with self._lock:
+            before = len(self._entries)
+            self._entries = [entry for entry in self._entries if entry["id"] != build_id]
+            return len(self._entries) != before

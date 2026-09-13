@@ -1,5 +1,15 @@
 # Work Log
 
+## 2026-09-13 — R-426 (remove a build from the Studio history)
+
+- Recorded the R-426 contract (`.ai/tasks/R-426.md`, `.ai/CURRENT_TASK.yaml`) before code; implemented test-first.
+- `studio/history.py`: added `StudioBuildHistory.remove(build_id) -> bool` (thread-safe; drops the entry by id, returns whether it was present; unknown id is a safe no-op returning False).
+- `studio/server.py`: added `POST /api/history/delete` via a new optional injected `delete_build_fn`, reusing the generic `_run_id_control` body reader (unset -> 404, missing id -> 400, errors -> 502).
+- `studio/live_serve.py`: wired `delete_build_fn` in **both** Studio modes (it only edits the in-memory list) — `delete_build(id)` calls `history.remove(id)` and returns `{"removed": bool, **history.list()}` (the refreshed, bounded, secret-free history).
+- `studio/page.py`: each Recent-builds item now has a fourth action, **Remove**, which POSTs `/api/history/delete` and re-renders the list from the returned `builds` (falls back to `loadHistory()`), DOM-only (no HTML injection).
+- Tests (6 net-new): `test_studio_history.py` (remove drops the entry by id; unknown id -> False no-op); `test_studio_server.py` (POST /api/history/delete passes id, missing id 400, 404 when disabled, page has the Remove action).
+- Gates: focused 70 passed; `task verify` **2,867** passed; lint/security/env green; `task builder:demo -- minimal-blog` (152) and `-- rideshare-favourites` (149) pass. Deterministic remove/delete inspection confirmed True/False removal and a bounded, secret-free `{removed, builds}` payload. **0 model calls in verify.** Nothing on disk or in the database is deleted.
+
 ## 2026-09-13 — R-425 (per-build repo actions — copy path + open folder)
 
 - Recorded the R-425 contract (`.ai/tasks/R-425.md`, `.ai/CURRENT_TASK.yaml`) before code; implemented test-first.

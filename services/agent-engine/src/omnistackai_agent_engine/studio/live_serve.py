@@ -122,7 +122,11 @@ def main() -> None:
     def build(prompt: str) -> dict:
         return _build(prompt, preview_manager=preview_manager, history=history)
 
-    control_kwargs: dict = {"history_fn": history.list}
+    def delete_build(build_id: str) -> dict:
+        removed = history.remove(build_id)
+        return {"removed": removed, **history.list()}
+
+    control_kwargs: dict = {"history_fn": history.list, "delete_build_fn": delete_build}
     if preview_manager is not None:
         control_kwargs.update(
             status_fn=preview_manager.status,
