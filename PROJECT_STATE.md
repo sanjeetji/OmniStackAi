@@ -4,21 +4,24 @@ Last updated: 2026-09-14
 ## Current Phase
 Stage 0 (Founder Build Sequence, Brief Section 91) — BASIC/MVP
 
-> **The differentiating SPINE now has a safe customization boundary (R-436).** A selected exact-compatible
-> baseline becomes a frozen, digest-pinned canonical manifest of bounded configuration and AI-delta intent.
-> It cannot carry executable patches/source/commands/secrets, applies nothing, and calls no model.
-> UI-component series PAUSED at R-415 (resumable). **NEXT:** R-437 deterministic configuration application.
+> **The differentiating SPINE now applies safe configuration deterministically (R-437).** Explicit project
+> name/description values are applied to a fresh exact-pinned baseline IR, validated, and returned with
+> canonical applied/pending provenance. AI-delta intent remains unapplied and no model is called.
+> UI-component series PAUSED at R-415 (resumable). **NEXT:** R-438 strict opt-in local AI-delta proposal.
 
 ## Last Completed Task
-Tracker ID: R-436 — Pinned declarative Solution Pack customization manifests — DONE.
-New stdlib-only frozen manifests are factory-created only from a selected R-435 recommendation and pin the
-pack id/version/canonical IR SHA-256 plus exact domain/capability/target query. At most 32 changes are
-canonicalized by unique ID; every change has a typed configuration/AI-delta source, add/update/remove
-operation, semantic area/target, bounded summary, and 1–8 acceptance criteria. Strict parsing and canonical
-JSON reject malformed/unbounded values, unknown keys, duplicates, controls, noncanonical order, and registry
-pin/query drift. No pack/IR is applied, no source is generated, and no model is called. Eleven new tests;
-focused regressions **27 passed**; `task verify` **2,945 passed** offline; lint, security, env, both demos
-(152 / 149), and canonical round-trip pass; 0 model calls.
+Tracker ID: R-437 — Deterministic Solution Pack configuration application — DONE.
+Manifest schema 1.1 adds explicit bounded `desired_text` only for project-name/description updates while
+legacy R-436 schema 1.0 remains losslessly readable. Application revalidates the exact pin, preflights all
+configuration/duplicate targets, loads a fresh baseline, applies only those two allowlisted fields immutably,
+and requires a valid derived IR. Unsupported configuration fails closed; AI-delta IDs stay pending. Frozen
+canonical provenance includes base/derived digests, applied/pending IDs, and the derived IR. Repeated results
+are byte-stable and registered baselines stay unchanged. Ten new tests; focused regressions **37 passed**;
+`task verify` **2,955 passed** offline; lint, security, env, both demos (152 / 149), and deterministic proof
+pass; 0 model calls.
+
+Immediately preceded by R-436 — Pinned declarative Solution Pack customization manifests — DONE.
+Selected exact recommendations become immutable, canonical, digest-pinned manifests of bounded intent.
 
 Immediately preceded by R-435 — Exact-compatible Solution Pack recommendations in ecosystem planning — DONE.
 Every ecosystem plan reports an exact pack id/version/digest/targets recommendation or explicit no-match.
@@ -363,10 +366,9 @@ R-324 (theming tokens), R-323 (popover), R-322 (dropdown menu), R-321 (accordion
 R-317 (skeleton), R-316 (alert), R-315 (card), R-314 (tooltip), R-313 (column visibility), R-312 (badge), R-311 (table density),
 R-310 (tabs), R-309 (pagination), and R-308 (JSON export).
 
-**Notes:** R-436 is complete with 2,945 tests passing. The next proposed task is R-437: deterministically
-apply only validated configuration intents to a fresh pinned-pack Application IR and return a validated
-derived IR with explicit applied/unapplied provenance; AI-delta intents remain unapplied and its contract
-must be recorded first.
+**Notes:** R-437 is complete with 2,955 tests passing. The next proposed task is R-438: define a strict typed
+AI-delta proposal schema plus an explicit opt-in local `ModelProvider` path that returns validated proposal
+data only—no application, source generation, build, or cloud fallback—and its contract must be recorded first.
 
 
 

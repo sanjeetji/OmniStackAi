@@ -1,25 +1,28 @@
-task_id: R-436
-id: R-436
-title: "Pinned declarative Solution Pack customization manifests"
+task_id: R-437
+id: R-437
+title: "Deterministic Solution Pack configuration application"
 status: done
 phase: MVP
 tracker_row: null
 started_at: "2026-09-14"
 completed_at: "2026-09-14"
 objective: >-
-  Seventh brick of the differentiating spine and third Solution Pack task. Define an immutable,
-  standard-library-only manifest that can express bounded deterministic-configuration and AI-delta intents
-  above one exact R-435 recommendation. Pin every manifest to the selected pack id/version/IR digest and the
-  original compatibility query, validate all typed semantic changes fail-closed, and provide canonical JSON
-  parsing/serialization without loading, applying, mutating, building, or asking a model to produce a delta.
+  Eighth brick of the differentiating spine and fourth Solution Pack task. Add the first executable but
+  deterministic layer above R-436: apply only explicitly valued, allowlisted configuration changes to a fresh
+  Application IR loaded from the exact pinned pack, validate the derived IR, and return immutable transparent
+  provenance. Preserve R-436 manifest JSON compatibility while adding a typed desired-text value for safe
+  project name/description updates. Every AI-delta intent remains explicitly unapplied; do not generate
+  source, build a repository, or call a model.
 allowed_paths:
   - "services/agent-engine/src/omnistackai_agent_engine/solution_packs/__init__.py"
   - "services/agent-engine/src/omnistackai_agent_engine/solution_packs/manifest.py"
+  - "services/agent-engine/src/omnistackai_agent_engine/solution_packs/application.py"
   - "services/agent-engine/tests/test_solution_pack_manifest.py"
+  - "services/agent-engine/tests/test_solution_pack_application.py"
   - "docs/SOLUTION_PACKS.md"
   - "docs/PROGRESS.md"
   - "docs/RESUME_PROMPT.md"
-  - ".ai/tasks/R-436.md"
+  - ".ai/tasks/R-437.md"
   - ".ai/CURRENT_TASK.yaml"
   - ".ai/PROJECT_STATE.yaml"
   - ".ai/WORK_LOG.md"
@@ -28,47 +31,48 @@ allowed_paths:
   - "CHANGELOG.md"
 forbidden_changes:
   - "Do not modify or include the unrelated untracked .claude directory"
-  - "Do not load/apply a pack, mutate an Application IR, generate/copy source, build a repository, or change ecosystem/generated output"
-  - "Do not call a model or add a prompt/live/provider path; AI-delta records are declarative intent only"
-  - "Do not change pack baselines, registry selection, Application IR schemas/examples, adapters/generators, PostgreSQL, or infrastructure"
+  - "Do not mutate a registered baseline IR, apply AI-delta intents, infer configuration values from summaries, or allow arbitrary paths/patches/source/commands"
+  - "Do not apply entity/API/screen/design/capability changes yet; unsupported configuration targets and operations must fail closed before returning a result"
+  - "Do not generate source, build repositories, change ecosystem output, or call/add a model/provider/live path"
+  - "Do not change pack baselines/selection, Application IR schemas/examples, adapters/generators, PostgreSQL, or infrastructure"
   - "No model, network, Docker, database, package install, generated-code execution, or toolchain use in task verify"
-  - "No new dependency, executable patch/file-content field, arbitrary fallback, secret, mutable global state, or fabricated capability"
+  - "No new dependency, secret/credential configuration target, mutable global state, fuzzy fallback, or fabricated value"
 required_gates:
-  - "test-first focused test_solution_pack_manifest.py plus R-434/R-435 regressions"
+  - "test-first focused test_solution_pack_application.py plus R-434/R-435/R-436 regressions"
   - task verify
   - task lint
   - task security:quick
   - task env:check
   - task builder:demo -- minimal-blog
   - task builder:demo -- rideshare-favourites
-  - "deterministic manifest canonical-JSON and round-trip inspection"
+  - "deterministic repeated-application and canonical provenance inspection"
 model_tool_trace:
   routing: deterministic_only
   local_calls: 0
   cloud_calls: 0
-  note: "R-436 defines and validates metadata only; no model call is authorized or needed."
+  note: "R-437 is an allowlisted pure IR transformation; no model call is authorized or needed."
 acceptance_criteria:
-  - "A frozen manifest can only be created above a selected exact-compatible SolutionPackRecommendation and pins its pack id, semantic version, lowercase SHA-256, domain, required capabilities, and required targets."
-  - "Every frozen change has an identifier, configuration or ai-delta source, add/update/remove operation, typed semantic area, area-compatible semantic target reference, bounded summary, and bounded acceptance criteria."
-  - "Manifests reject no-match recommendations, duplicate or excessive changes, invalid types/identifiers/target-area pairs, control characters, oversized text, malformed/unknown JSON keys, and registry pin drift."
-  - "Manifest changes are canonicalized deterministically and serialize to byte-stable JSON; strict parsing round-trips the value while revalidating the exact registered pack pin and compatibility query."
-  - "The schema contains declarative semantic intent only: no file paths, patches, source blobs, commands, model output, secret values, or mutation/apply/build behavior."
-  - "Existing registry/recommendation behavior, ecosystem plans, Application IRs, builders, generated files, and baseline pack descriptors remain unchanged."
+  - "Current manifests use a new schema version with optional typed desired_text; legacy R-436 schema 1.0 JSON still parses and serializes losslessly."
+  - "desired_text is accepted only for configuration/update/project:name or project:description, is bounded by the corresponding Application IR field, and is forbidden on AI-delta or other semantic targets."
+  - "Application revalidates the exact manifest registry pin, loads a fresh baseline IR, applies project:name/project:description updates without parsing prose, and leaves the registered baseline unchanged."
+  - "Unsupported configuration areas/targets/operations, missing values, duplicate target writes, invalid derived IRs, malformed types, and pin drift fail closed without a partial result."
+  - "A frozen JSON-safe result records base and derived digests, applied configuration change IDs, explicitly unapplied AI-delta change IDs, and the validate_ir-clean derived Application IR."
+  - "Repeated application is deterministic, empty/AI-only manifests preserve the baseline digest, and existing registry/recommendation/ecosystem/builder/generated output remains unchanged."
 evidence:
-  baseline_focused: "R-434/R-435 focused baseline: 16 passed"
-  baseline_verify: "2,934 passed fully offline after allowing sandbox loopback test sockets"
-  test_first_red: "Focused import failed as expected because MANIFEST_SCHEMA_VERSION and the manifest API did not exist."
-  focused_test: "R-436 + R-435 + R-434 focused regressions: 27 passed (11 new R-436 tests)"
-  verify: "2,945 passed (fully offline; +11; 0 model calls)"
+  baseline_focused: "R-434/R-435/R-436 focused baseline: 27 passed"
+  baseline_verify: "R-436 checkpoint task verify: 2,945 passed fully offline"
+  test_first_red: "Focused import failed as expected because LEGACY_MANIFEST_SCHEMA_VERSION and the application API did not exist."
+  focused_test: "R-437 + R-436 + R-435 + R-434 focused regressions: 37 passed (10 new R-437 tests)"
+  verify: "2,955 passed (fully offline; +10; 0 model calls)"
   lint: "task agent-engine:lint and task lint passed"
   security: "task security:quick passed"
   env: "task env:check passed"
   demos: "minimal-blog 152 files; rideshare-favourites 149 files"
   deterministic_inspection: >-
-    Canonical minimal-blog manifest serialized configuration + ai-delta intents in change-id order and strict
-    parse round-tripped equal while revalidating pack id/version/digest and the exact compatibility query.
+    Repeated minimal-blog application produced identical canonical JSON and derived digest; project:name was
+    applied, the AI-delta change remained pending, the derived IR was valid, and the baseline digest stayed pinned.
   tracker: "No workbook row exists beyond R-358; workbook intentionally unchanged."
 next_action: >-
-  R-436 done. Next R-437: define deterministic application of the configuration-source subset to a fresh
-  pinned pack Application IR, producing a validated derived IR plus transparent provenance while leaving
-  ai-delta intents explicitly unapplied; do not generate source or call a model yet.
+  R-437 done. Next R-438: define a strict bounded typed AI-delta proposal schema and an explicit opt-in local
+  ModelProvider path that converts pending manifest AI-delta intents into validated proposal data only; do not
+  apply the delta, generate source, build, or add cloud fallback.

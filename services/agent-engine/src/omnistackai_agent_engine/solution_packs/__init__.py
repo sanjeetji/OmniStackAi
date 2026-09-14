@@ -1,6 +1,7 @@
-"""Public Solution Pack registry and customization-manifest contracts (R-434 to R-436)."""
+"""Public Solution Pack registry, manifest, and application contracts (R-434 to R-437)."""
 
 from .manifest import (
+    LEGACY_MANIFEST_SCHEMA_VERSION,
     MANIFEST_SCHEMA_VERSION,
     MAX_MANIFEST_CHANGES,
     ChangeArea,
@@ -10,7 +11,9 @@ from .manifest import (
     SolutionPackManifest,
     create_solution_pack_manifest,
     parse_solution_pack_manifest,
+    validate_solution_pack_manifest,
 )
+from .application import SolutionPackApplicationResult, apply_solution_pack_manifest
 
 from .registry import (
     BASELINE_SOLUTION_PACKS,
@@ -25,6 +28,7 @@ from .registry import (
 )
 
 __all__ = [
+    "LEGACY_MANIFEST_SCHEMA_VERSION",
     "MANIFEST_SCHEMA_VERSION",
     "MAX_MANIFEST_CHANGES",
     "ChangeArea",
@@ -34,6 +38,9 @@ __all__ = [
     "SolutionPackManifest",
     "create_solution_pack_manifest",
     "parse_solution_pack_manifest",
+    "validate_solution_pack_manifest",
+    "SolutionPackApplicationResult",
+    "apply_solution_pack_manifest",
     "SolutionPack",
     "SolutionPackError",
     "SolutionPackRecommendation",

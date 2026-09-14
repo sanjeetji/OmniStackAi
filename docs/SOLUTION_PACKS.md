@@ -6,7 +6,8 @@ OmniStackAI's intended generation model is:
 
 R-434 implements the immutable registry for verified baseline packs. R-435 exposes an exact-compatible pack
 recommendation in deterministic ecosystem planning. R-436 adds the immutable declarative customization
-manifest above that recommendation. None of these layers applies a pack or asks a model to generate a delta.
+manifest above that recommendation. R-437 applies its first allowlisted deterministic configuration subset
+to a fresh pinned-pack IR. No layer asks a model to generate or apply an AI delta yet.
 
 ## Registered baselines
 
@@ -74,6 +75,13 @@ operation, one typed area, an area-compatible semantic target such as `entity:Po
 project metadata, the data model, APIs, screens, design, and capabilities. These are reviewable intentions,
 not executable mutations.
 
+R-437 advances the manifest schema from 1.0 to 1.1 with an optional typed `desired_text`. It is accepted only
+for a `configuration` + `update` + `project` change targeting `project:name` (≤128 characters) or
+`project:description` (≤4000 characters). Values are explicit; summaries and acceptance criteria are never
+parsed as configuration. AI-delta entries and all other targets cannot carry `desired_text`. Strict parsing
+continues to accept and losslessly serialize R-436 schema 1.0 documents; their unvalued project configuration
+cannot be applied until explicitly upgraded.
+
 `SolutionPackManifest.to_json()` emits byte-stable canonical JSON. `parse_solution_pack_manifest()` strictly
 rejects unknown/missing keys, invalid types/enums/targets, control characters, duplicates, excess changes,
 and stale or incompatible registry pins. It re-runs exact recommendation selection for the recorded query;
@@ -83,9 +91,22 @@ The schema intentionally contains no file path, patch, source-code blob, command
 output field. Creating or parsing a manifest does not load/apply the pack, mutate an Application IR, generate
 source, build a repository, use the network/database, or call a model.
 
+## Deterministic configuration application
+
+`apply_solution_pack_manifest()` revalidates the exact recommendation pin, preflights all configuration
+entries, rejects duplicate writes, then loads a fresh baseline IR. In this first allowlist it applies only
+explicit project-name and project-description updates. Any add/remove operation or entity/API/screen/design/
+capability configuration fails closed before a result is returned.
+
+The derived IR is reconstructed immutably and must pass `validate_ir`. A frozen
+`SolutionPackApplicationResult` records the pack id/version/base digest, canonical derived digest, sorted
+applied configuration IDs, explicitly unapplied AI-delta IDs, and the complete derived IR. Repeated application
+is byte-stable. Empty and AI-only manifests preserve the base digest, and registry baselines remain unchanged.
+This layer performs no source generation, build, network/database work, or model call.
+
 ## Next boundary
 
-R-437 may apply only validated `configuration` intents deterministically to a fresh copy of the pinned pack
-Application IR and record transparent provenance. `ai-delta` intents must remain explicitly unapplied until
-a separate provider-gated task. Source generation/building remains later still; every layer must preserve
-the deterministic IR, verification, ownership, and provider boundaries.
+R-438 may define a strict typed AI-delta proposal and an explicit opt-in local `ModelProvider` path that turns
+pending manifest intent into validated proposal data. It must not apply the proposal or silently use cloud.
+Delta application and source generation/building remain later, separately verified layers; every step must
+preserve the deterministic IR, ownership, secret, and provider boundaries.

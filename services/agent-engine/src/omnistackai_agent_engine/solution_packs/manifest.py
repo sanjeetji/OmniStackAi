@@ -8,7 +8,7 @@ from __future__ import annotations
 
 import json
 import re
-from dataclasses import dataclass
+from dataclasses import InitVar, dataclass
 from enum import StrEnum
 
 from .registry import (
@@ -18,7 +18,8 @@ from .registry import (
     SolutionPackRegistry,
 )
 
-MANIFEST_SCHEMA_VERSION = "1.0"
+LEGACY_MANIFEST_SCHEMA_VERSION = "1.0"
+MANIFEST_SCHEMA_VERSION = "1.1"
 MAX_MANIFEST_CHANGES = 32
 MAX_ACCEPTANCE_CRITERIA = 8
 MAX_SUMMARY_LENGTH = 240
@@ -32,6 +33,7 @@ _SEMANTIC_TARGET = re.compile(
     r"(?P<name>[A-Za-z][A-Za-z0-9_.-]{0,119})\Z"
 )
 _CONTROL_CHARACTER = re.compile(r"[\x00-\x1f\x7f]")
+_IR_CONTROL_CHARACTER = re.compile(r"[\x00-\x08\x0b\x0c\x0e-\x1f\x7f]")
 
 
 class ChangeSource(StrEnum):
@@ -72,7 +74,7 @@ _TARGET_KINDS: dict[ChangeArea, frozenset[str]] = {
 _ROOT_KEYS = frozenset({"schema_version", "base_pack", "query", "changes"})
 _BASE_PACK_KEYS = frozenset({"pack_id", "version", "ir_sha256"})
 _QUERY_KEYS = frozenset({"domain", "required_capabilities", "required_targets"})
-_CHANGE_KEYS = frozenset(
+_LEGACY_CHANGE_KEYS = frozenset(
     {
         "change_id",
         "source",
@@ -83,6 +85,7 @@ _CHANGE_KEYS = frozenset(
         "acceptance_criteria",
     }
 )
+_CHANGE_KEYS = _LEGACY_CHANGE_KEYS | {"desired_text"}
 _CONSTRUCTION_TOKEN = object()
 
 
@@ -128,8 +131,10 @@ class SolutionPackChange:
     target: str
     summary: str
     acceptance_criteria: tuple[str, ...]
+    desired_text: str | None = None
+    _legacy_unvalued: InitVar[bool] = False
 
-    def __post_init__(self) -> None:
+    def __post_init__(self, _legacy_unvalued: bool) -> None:
         _slug(self.change_id, "change_id")
         if not isinstance(self.source, ChangeSource):
             raise SolutionPackError("source must be a ChangeSource")
@@ -160,8 +165,38 @@ class SolutionPackChange:
                 maximum=MAX_CRITERION_LENGTH,
             )
 
-    def to_dict(self) -> dict[str, object]:
-        return {
+        valued_target = (
+            self.source is ChangeSource.CONFIGURATION
+            and self.operation is ChangeOperation.UPDATE
+            and self.area is ChangeArea.PROJECT
+            and self.target in {"project:name", "project:description"}
+        )
+        if self.desired_text is None:
+            if valued_target and not _legacy_unvalued:
+                raise SolutionPackError(
+                    f"{self.target} configuration requires explicit desired_text"
+                )
+            return
+        if not valued_target:
+            raise SolutionPackError(
+                "desired_text is allowed only for configuration update of project:name or "
+                "project:description"
+            )
+        maximum = 128 if self.target == "project:name" else 4000
+        if (
+            not isinstance(self.desired_text, str)
+            or not self.desired_text
+            or self.desired_text != self.desired_text.strip()
+            or len(self.desired_text) > maximum
+            or _IR_CONTROL_CHARACTER.search(self.desired_text) is not None
+        ):
+            raise SolutionPackError(
+                f"desired_text for {self.target} must be trimmed, non-empty, control-free text "
+                f"of at most {maximum} characters"
+            )
+
+    def to_dict(self, *, include_desired_text: bool = True) -> dict[str, object]:
+        result: dict[str, object] = {
             "change_id": self.change_id,
             "source": self.source.value,
             "operation": self.operation.value,
@@ -170,6 +205,9 @@ class SolutionPackChange:
             "summary": self.summary,
             "acceptance_criteria": list(self.acceptance_criteria),
         }
+        if include_desired_text:
+            result["desired_text"] = self.desired_text
+        return result
 
 
 @dataclass(frozen=True, slots=True, init=False)
@@ -213,9 +251,12 @@ class SolutionPackManifest:
         self._validate_structure()
 
     def _validate_structure(self) -> None:
-        if self.schema_version != MANIFEST_SCHEMA_VERSION:
+        if self.schema_version not in {
+            LEGACY_MANIFEST_SCHEMA_VERSION,
+            MANIFEST_SCHEMA_VERSION,
+        }:
             raise SolutionPackError(
-                f"schema_version must be {MANIFEST_SCHEMA_VERSION!r}"
+                "schema_version must be a supported Solution Pack manifest version"
             )
         _slug(self.pack_id, "base pack_id")
         if not isinstance(self.pack_version, str) or _SEMVER.fullmatch(self.pack_version) is None:
@@ -253,7 +294,14 @@ class SolutionPackManifest:
                 "required_capabilities": list(self.required_capabilities),
                 "required_targets": list(self.required_targets),
             },
-            "changes": [change.to_dict() for change in self.changes],
+            "changes": [
+                change.to_dict(
+                    include_desired_text=(
+                        self.schema_version != LEGACY_MANIFEST_SCHEMA_VERSION
+                    )
+                )
+                for change in self.changes
+            ],
         }
 
     def to_json(self) -> str:
@@ -313,6 +361,18 @@ def _validate_registered_pin(
         )
 
 
+def validate_solution_pack_manifest(
+    manifest: SolutionPackManifest,
+    *,
+    registry: SolutionPackRegistry = DEFAULT_SOLUTION_PACK_REGISTRY,
+) -> None:
+    """Revalidate a manifest's structure and exact current registry recommendation pin."""
+    if not isinstance(manifest, SolutionPackManifest):
+        raise SolutionPackError("manifest must be a SolutionPackManifest")
+    manifest._validate_structure()
+    _validate_registered_pin(manifest, registry)
+
+
 def create_solution_pack_manifest(
     recommendation: SolutionPackRecommendation,
     *,
@@ -354,8 +414,12 @@ def _string_list(value: object, label: str) -> tuple[str, ...]:
     return tuple(value)
 
 
-def _parse_change(value: object) -> SolutionPackChange:
-    document = _exact_dict(value, "change", _CHANGE_KEYS)
+def _parse_change(value: object, *, legacy: bool) -> SolutionPackChange:
+    document = _exact_dict(
+        value,
+        "change",
+        _LEGACY_CHANGE_KEYS if legacy else _CHANGE_KEYS,
+    )
     try:
         source = ChangeSource(document["source"])
         operation = ChangeOperation(document["operation"])
@@ -373,6 +437,8 @@ def _parse_change(value: object) -> SolutionPackChange:
             document["acceptance_criteria"],
             "change acceptance_criteria",
         ),
+        desired_text=None if legacy else document["desired_text"],  # type: ignore[arg-type]
+        _legacy_unvalued=legacy,
     )
 
 
@@ -393,14 +459,21 @@ def parse_solution_pack_manifest(
         raise SolutionPackError("manifest must be a JSON object or JSON object string")
 
     root = _exact_dict(decoded, "manifest", _ROOT_KEYS)
+    schema_version = root["schema_version"]
+    if schema_version not in {
+        LEGACY_MANIFEST_SCHEMA_VERSION,
+        MANIFEST_SCHEMA_VERSION,
+    }:
+        raise SolutionPackError("manifest schema_version is not supported")
+    legacy = schema_version == LEGACY_MANIFEST_SCHEMA_VERSION
     base_pack = _exact_dict(root["base_pack"], "base_pack", _BASE_PACK_KEYS)
     query = _exact_dict(root["query"], "query", _QUERY_KEYS)
     raw_changes = root["changes"]
     if not isinstance(raw_changes, list):
         raise SolutionPackError("changes must be a JSON array")
-    changes = tuple(_parse_change(change) for change in raw_changes)
+    changes = tuple(_parse_change(change, legacy=legacy) for change in raw_changes)
     manifest = SolutionPackManifest(
-        schema_version=root["schema_version"],  # type: ignore[arg-type]
+        schema_version=schema_version,
         pack_id=base_pack["pack_id"],  # type: ignore[arg-type]
         pack_version=base_pack["version"],  # type: ignore[arg-type]
         pack_ir_sha256=base_pack["ir_sha256"],  # type: ignore[arg-type]
@@ -416,5 +489,5 @@ def parse_solution_pack_manifest(
         changes=changes,
         _token=_CONSTRUCTION_TOKEN,
     )
-    _validate_registered_pin(manifest, registry)
+    validate_solution_pack_manifest(manifest, registry=registry)
     return manifest

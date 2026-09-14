@@ -1,18 +1,28 @@
 # Current Handoff
 
-Task ID: R-436
+Task ID: R-437
 Status: done
 Phase: BASIC/MVP — Founder Stage 0
 Branch: `main` (the only branch; the GitHub default)
 
-> **The differentiating SPINE now has a safe customization boundary.** R-430 proposes the ecosystem,
-> R-431 materializes it, R-432 refines unknown domains, R-433 scopes surfaces, R-434 registers immutable
-> packs, R-435 recommends an exact compatible pack, and **R-436 records bounded configuration/AI-delta
-> intent in an exact-pinned canonical manifest**. Nothing is applied and no model is called.
-> UI-component series PAUSED at R-415. **NEXT:** R-437 deterministic configuration application to fresh IR.
+> **The differentiating SPINE now applies safe configuration deterministically.** R-430 proposes the
+> ecosystem, R-431 materializes it, R-432 refines unknown domains, R-433 scopes surfaces, R-434 registers
+> packs, R-435 recommends one, R-436 records bounded intent, and **R-437 applies only explicit allowlisted
+> project metadata to a fresh pinned IR with validation/provenance**. AI deltas stay pending; no model call.
+> UI-component series PAUSED at R-415. **NEXT:** R-438 strict opt-in local AI-delta proposal.
 
 ## Repo/workflow state
 
+- **R-437 (deterministic pack configuration application — eighth spine brick)** shipped: manifest schema 1.1
+  adds bounded `desired_text` only for explicit configuration/update of `project:name` or
+  `project:description`; summaries are never interpreted and legacy R-436 schema 1.0 JSON round-trips
+  losslessly. New `application.py` revalidates the exact registry pin, preflights all config/duplicate targets,
+  loads a fresh pack IR, applies only those two metadata targets immutably, and requires validate_ir-clean
+  output. Unsupported config fails closed; AI-delta IDs are reported unapplied. Frozen canonical result records
+  base/derived digests, applied/pending IDs, and the derived IR. Repeated apply is byte-stable; empty/AI-only
+  retains the base digest; baseline unchanged. 10 new tests; focused 37 passed; `task verify` **2,955 passed**
+  offline; lint/security/env + demos (152/149) green; deterministic inspection green; 0 model calls. Workbook
+  unchanged past R-358.
 - **R-436 (pinned declarative customization manifests — seventh spine brick)** shipped: new stdlib-only
   `solution_packs/manifest.py` defines frozen, factory-created manifests above selected R-435 recommendations.
   Pack id/version/canonical IR SHA-256 plus the exact domain/capability/target query are pinned and revalidated
@@ -144,7 +154,7 @@ Branch: `main` (the only branch; the GitHub default)
   50. **R-412**: Character & Word Counter Textarea Suite (`components/character-counter.tsx`)
   51. **R-413**: Copy-to-Clipboard Button Suite (`components/copy-button.tsx`)
   52. **R-414**: Duration Input Suite (`components/duration-input.tsx`)
-- R-436 is complete; the next coding action is gated on recording the R-437 contract. Still stop-and-ask
+- R-437 is complete; the next coding action is gated on recording the R-438 contract. Still stop-and-ask
   only for paid cloud / DB engine / new infra / native-mobile / a materially different architecture decision.
 
 ## Completed
@@ -1056,11 +1066,11 @@ Enabled accessible, desktop-and-mobile-grade, futuristic Time Picker and Time Ra
 
 ## Next action
 
-- R-436 is complete. Before coding, record the R-437 Standard AI Task Contract. Recommended scope: apply
-  only validated `configuration` intents deterministically to a fresh Application IR loaded from the exact
-  pinned pack, return a validate_ir-clean derived IR plus explicit applied/unapplied provenance, and leave
-  every `ai-delta` intent unapplied. Do not generate source, build, or add a dependency/model/live path.
-  Keep verification offline.
+- R-437 is complete. Before coding, record the R-438 Standard AI Task Contract. Recommended scope: define a
+  strict bounded typed AI-delta proposal schema and an explicit opt-in local `ModelProvider` path that turns
+  pending manifest AI-delta intents into validated proposal data only. Curated/no-delta flows must make zero
+  calls; no cloud fallback, proposal application, source generation, or build. Keep verification offline with
+  fake providers only.
 
 ## Next command
 

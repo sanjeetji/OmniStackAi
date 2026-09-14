@@ -1,5 +1,27 @@
 # Work Log
 
+## 2026-09-14 — R-437 (deterministic Solution Pack configuration application)
+
+- Recorded `.ai/tasks/R-437.md` and `.ai/CURRENT_TASK.yaml` before implementation. Test-first focused import
+  failed because the legacy-version constant/application API did not exist; final R-437 through R-434 focused
+  regression is 37 passing tests (10 new R-437 tests).
+- Advanced current manifest JSON to schema 1.1 with typed `desired_text`, accepted only for explicit
+  configuration/update of `project:name` or `project:description` and bounded to the corresponding IR limits.
+  AI-delta and all other targets cannot carry it. Summaries are never parsed as values.
+- Preserved strict, lossless parsing/serialization for R-436 schema 1.0 manifests. A legacy unvalued project
+  configuration remains valid historical intent but application fails until it has an explicit value.
+- Added `apply_solution_pack_manifest`: revalidates the exact registry recommendation pin, preflights the
+  complete configuration set and duplicate targets, loads a fresh pinned baseline IR, applies only the two
+  allowlisted project metadata updates immutably, and requires a validate_ir-clean derived result.
+- Added frozen canonical `SolutionPackApplicationResult` with base/derived digests, applied configuration IDs,
+  explicitly unapplied AI-delta IDs, and the derived IR. Empty/AI-only manifests preserve the base digest;
+  repeated application is byte-identical and the registered baseline remains unchanged.
+- Gates: `task verify` 2,955 passed fully offline (+10); agent-engine/repository lint, security, and environment
+  passed; both demos remained 152/149 files; deterministic manifest/application proof passed; 0 model calls.
+- No dependency, pack baseline/selection, ecosystem plan, Application IR schema/example, generator, generated
+  output, provider, PostgreSQL, infrastructure, tracker workbook, or `.claude/` change. Workbook remains
+  unchanged past R-358.
+
 ## 2026-09-14 — R-436 (pinned declarative Solution Pack customization manifests)
 
 - Recorded `.ai/tasks/R-436.md` and `.ai/CURRENT_TASK.yaml` before implementation. Test-first focused import

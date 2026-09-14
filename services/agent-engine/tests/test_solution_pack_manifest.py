@@ -37,6 +37,7 @@ def _configuration_change(**changes: object) -> SolutionPackChange:
         "operation": ChangeOperation.UPDATE,
         "area": ChangeArea.PROJECT,
         "target": "project:name",
+        "desired_text": "Editorial Workspace",
         "summary": "Use the accepted customer-facing product name.",
         "acceptance_criteria": ("The product name is shown consistently.",),
     }
@@ -139,7 +140,13 @@ class TypedChangeValidationTests(TestCase):
         for area, target in valid:
             with self.subTest(area=area, target=target):
                 self.assertEqual(
-                    _configuration_change(area=area, target=target).target,
+                    _configuration_change(
+                        area=area,
+                        target=target,
+                        desired_text=(
+                            "Editorial Workspace" if area is ChangeArea.PROJECT else None
+                        ),
+                    ).target,
                     target,
                 )
 
