@@ -4,20 +4,24 @@ Last updated: 2026-09-14
 ## Current Phase
 Stage 0 (Founder Build Sequence, Brief Section 91) — BASIC/MVP
 
-> **The differentiating SPINE now recommends only compatible verified baselines (R-435).** Every ecosystem
-> plan derives its actual framework targets and reports a versioned pack id/digest or explicit no-match;
-> nothing is silently applied. See it: `task agent-engine:ecosystem:plan -- "Build a blog CMS"`.
-> UI-component series PAUSED at R-415 (resumable). **NEXT:** R-436 declarative customization/delta manifest.
+> **The differentiating SPINE now has a safe customization boundary (R-436).** A selected exact-compatible
+> baseline becomes a frozen, digest-pinned canonical manifest of bounded configuration and AI-delta intent.
+> It cannot carry executable patches/source/commands/secrets, applies nothing, and calls no model.
+> UI-component series PAUSED at R-415 (resumable). **NEXT:** R-437 deterministic configuration application.
 
 ## Last Completed Task
-Tracker ID: R-435 — Exact-compatible Solution Pack recommendations in ecosystem planning — DONE.
-Registry selection now supports a required target subset alongside exact domain/capability matching. A frozen
-recommendation records the canonical query and selected pack id/version/digest/targets or explicit no-match.
-Every ecosystem plan derives targets from its existing surface IR project plans and exposes the result in
-JSON/CLI without applying the pack. Blog-CMS Next.js/Python recommends `minimal-blog@1.0.0`; rideshare
-Next.js/Python correctly reports no match because its registered baseline is Go-backed. Existing IRs and
-generated output are unchanged. Eight new tests; focused regressions **25 passed**; `task verify` **2,934
-passed** offline; lint, security, env and both demos (152 / 149) pass; 0 model calls.
+Tracker ID: R-436 — Pinned declarative Solution Pack customization manifests — DONE.
+New stdlib-only frozen manifests are factory-created only from a selected R-435 recommendation and pin the
+pack id/version/canonical IR SHA-256 plus exact domain/capability/target query. At most 32 changes are
+canonicalized by unique ID; every change has a typed configuration/AI-delta source, add/update/remove
+operation, semantic area/target, bounded summary, and 1–8 acceptance criteria. Strict parsing and canonical
+JSON reject malformed/unbounded values, unknown keys, duplicates, controls, noncanonical order, and registry
+pin/query drift. No pack/IR is applied, no source is generated, and no model is called. Eleven new tests;
+focused regressions **27 passed**; `task verify` **2,945 passed** offline; lint, security, env, both demos
+(152 / 149), and canonical round-trip pass; 0 model calls.
+
+Immediately preceded by R-435 — Exact-compatible Solution Pack recommendations in ecosystem planning — DONE.
+Every ecosystem plan reports an exact pack id/version/digest/targets recommendation or explicit no-match.
 
 Immediately preceded by R-434 — Versioned baseline Solution Pack registry — DONE.
 The verified `minimal-blog` and `rideshare-favourites` IR examples are immutable, digest/target-pinned packs.
@@ -359,9 +363,10 @@ R-324 (theming tokens), R-323 (popover), R-322 (dropdown menu), R-321 (accordion
 R-317 (skeleton), R-316 (alert), R-315 (card), R-314 (tooltip), R-313 (column visibility), R-312 (badge), R-311 (table density),
 R-310 (tabs), R-309 (pagination), and R-308 (JSON export).
 
-**Notes:** R-435 is complete with 2,934 tests passing. The next proposed task is R-436: define an immutable,
-declarative Solution Pack customization/delta manifest pinned to pack id/version/digest, without applying
-mutations or calling a model; its contract must be recorded first.
+**Notes:** R-436 is complete with 2,945 tests passing. The next proposed task is R-437: deterministically
+apply only validated configuration intents to a fresh pinned-pack Application IR and return a validated
+derived IR with explicit applied/unapplied provenance; AI-delta intents remain unapplied and its contract
+must be recorded first.
 
 
 

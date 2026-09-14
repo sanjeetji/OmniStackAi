@@ -1,5 +1,27 @@
 # Work Log
 
+## 2026-09-14 — R-436 (pinned declarative Solution Pack customization manifests)
+
+- Recorded `.ai/tasks/R-436.md` and `.ai/CURRENT_TASK.yaml` before implementation. Test-first focused import
+  failed because the manifest API did not exist; final R-436/R-435/R-434 focused regression is 27 passing
+  tests (11 new R-436 tests).
+- Added frozen `SolutionPackChange` with typed configuration/AI-delta source, add/update/remove operation,
+  six bounded semantic areas, area-compatible semantic target references, bounded summaries, and 1–8 bounded
+  acceptance criteria. Change IDs are unique and a manifest contains at most 32 changes.
+- Added factory-only `SolutionPackManifest` construction above a selected exact recommendation. It pins pack
+  id/version/canonical IR SHA-256 and the exact domain/capability/target query; no-match and registry pin drift
+  fail closed. Change order is canonical by ID.
+- Added byte-stable `to_json()` plus strict JSON/object parsing. Unknown/missing keys, malformed types/enums,
+  wrong target-area pairs, controls, oversized values, duplicates, noncanonical input, and a query/version/
+  digest that no longer resolves to the exact registered selection are rejected.
+- The schema has no path/patch/source-code/command/model-output/secret-value field. It neither loads/applies a
+  pack nor mutates an IR, generates source, builds, or calls a provider.
+- Gates: `task verify` 2,945 passed fully offline (+11); agent-engine/repository lint, security, and environment
+  passed; both demos remained 152/149 files; canonical manifest JSON round-tripped equal; 0 model calls.
+- No dependency, pack baseline/registry behavior, ecosystem plan, Application IR/schema, generator, generated
+  output, provider, PostgreSQL, infrastructure, tracker workbook, or `.claude/` change. Workbook remains
+  unchanged past R-358.
+
 ## 2026-09-14 — R-435 (exact-compatible Solution Pack recommendations in ecosystem planning)
 
 - Recorded `.ai/tasks/R-435.md` and `.ai/CURRENT_TASK.yaml` before implementation. Test-first focused import

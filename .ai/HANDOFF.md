@@ -1,18 +1,28 @@
 # Current Handoff
 
-Task ID: R-435
+Task ID: R-436
 Status: done
 Phase: BASIC/MVP — Founder Stage 0
 Branch: `main` (the only branch; the GitHub default)
 
-> **The differentiating SPINE now recommends only compatible verified baselines.** R-430 proposes the
-> ecosystem, R-431 materializes it, R-432 refines unknown domains, R-433 scopes surfaces, R-434 registers
-> immutable packs, and **R-435 exposes an exact target-aware recommendation or explicit no-match**. See it:
-> `task agent-engine:ecosystem:plan -- "Build a blog CMS"`. UI-component series PAUSED at R-415.
-> **NEXT:** R-436 declarative pack customization/delta manifest.
+> **The differentiating SPINE now has a safe customization boundary.** R-430 proposes the ecosystem,
+> R-431 materializes it, R-432 refines unknown domains, R-433 scopes surfaces, R-434 registers immutable
+> packs, R-435 recommends an exact compatible pack, and **R-436 records bounded configuration/AI-delta
+> intent in an exact-pinned canonical manifest**. Nothing is applied and no model is called.
+> UI-component series PAUSED at R-415. **NEXT:** R-437 deterministic configuration application to fresh IR.
 
 ## Repo/workflow state
 
+- **R-436 (pinned declarative customization manifests — seventh spine brick)** shipped: new stdlib-only
+  `solution_packs/manifest.py` defines frozen, factory-created manifests above selected R-435 recommendations.
+  Pack id/version/canonical IR SHA-256 plus the exact domain/capability/target query are pinned and revalidated
+  against the registry. At most 32 canonical changes use typed configuration/AI-delta source, add/update/remove
+  operation, six semantic areas, area-compatible target refs, bounded summary, and 1–8 acceptance criteria.
+  Strict parsing rejects unknown/missing keys, malformed/unbounded values, duplicates, controls, noncanonical
+  order, and registry/query/version/digest drift. Canonical JSON is byte-stable. The schema cannot carry file
+  paths, patches, source blobs, commands, raw model output, or secret values and has no application/build/model
+  behavior. 11 new tests; focused 27 passed; `task verify` **2,945 passed** offline; lint/security/env + demos
+  (152/149) green; canonical round-trip green; 0 model calls. Workbook unchanged past R-358.
 - **R-435 (exact-compatible pack recommendations — sixth spine brick)** shipped: registry selection now
   accepts required targets as well as exact domain/capabilities. Frozen `SolutionPackRecommendation` stores
   a canonical query and minimal id/version/digest/targets selection metadata or `no-exact-match`. Every
@@ -134,7 +144,7 @@ Branch: `main` (the only branch; the GitHub default)
   50. **R-412**: Character & Word Counter Textarea Suite (`components/character-counter.tsx`)
   51. **R-413**: Copy-to-Clipboard Button Suite (`components/copy-button.tsx`)
   52. **R-414**: Duration Input Suite (`components/duration-input.tsx`)
-- R-435 is complete; the next coding action is gated on recording the R-436 contract. Still stop-and-ask
+- R-436 is complete; the next coding action is gated on recording the R-437 contract. Still stop-and-ask
   only for paid cloud / DB engine / new infra / native-mobile / a materially different architecture decision.
 
 ## Completed
@@ -1046,10 +1056,11 @@ Enabled accessible, desktop-and-mobile-grade, futuristic Time Picker and Time Ra
 
 ## Next action
 
-- R-435 is complete. Before coding, record the R-436 Standard AI Task Contract. Recommended scope: define
-  an immutable declarative Solution Pack customization/delta manifest pinned to pack id/version/digest, with
-  bounded typed changes and deterministic validation/JSON. Do not apply mutations or add a
-  dependency/model/live path. Keep verification offline.
+- R-436 is complete. Before coding, record the R-437 Standard AI Task Contract. Recommended scope: apply
+  only validated `configuration` intents deterministically to a fresh Application IR loaded from the exact
+  pinned pack, return a validate_ir-clean derived IR plus explicit applied/unapplied provenance, and leave
+  every `ai-delta` intent unapplied. Do not generate source, build, or add a dependency/model/live path.
+  Keep verification offline.
 
 ## Next command
 

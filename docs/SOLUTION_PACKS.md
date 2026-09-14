@@ -5,8 +5,8 @@ OmniStackAI's intended generation model is:
 `owned product = verified baseline pack + deterministic configuration + bounded AI delta`
 
 R-434 implements the immutable registry for verified baseline packs. R-435 exposes an exact-compatible pack
-recommendation in deterministic ecosystem planning. It still does not apply a pack, compose a configuration,
-or generate an AI delta.
+recommendation in deterministic ecosystem planning. R-436 adds the immutable declarative customization
+manifest above that recommendation. None of these layers applies a pack or asks a model to generate a delta.
 
 ## Registered baselines
 
@@ -59,8 +59,33 @@ For example, the current blog-CMS ecosystem uses Next.js plus Python and recomme
 Go-backed `rideshare-favourites` baseline. That baseline remains selectable when a caller explicitly asks
 for its compatible Next.js/Go target set.
 
+## Declarative customization manifests
+
+`create_solution_pack_manifest()` accepts only a selected `SolutionPackRecommendation`. The resulting
+frozen manifest pins all facts needed to reproduce the choice:
+
+- baseline pack id, semantic version, and canonical Application IR SHA-256;
+- exact domain, required capabilities, and required framework targets from the recommendation query; and
+- at most 32 frozen semantic changes, canonically ordered by unique change id.
+
+Each `SolutionPackChange` declares a `configuration` or `ai-delta` source, an `add`/`update`/`remove`
+operation, one typed area, an area-compatible semantic target such as `entity:Post`, `field:Post.status`, or
+`screen:EditorialWorkflow`, a bounded summary, and 1–8 bounded acceptance criteria. Areas are limited to
+project metadata, the data model, APIs, screens, design, and capabilities. These are reviewable intentions,
+not executable mutations.
+
+`SolutionPackManifest.to_json()` emits byte-stable canonical JSON. `parse_solution_pack_manifest()` strictly
+rejects unknown/missing keys, invalid types/enums/targets, control characters, duplicates, excess changes,
+and stale or incompatible registry pins. It re-runs exact recommendation selection for the recorded query;
+a changed version, digest, or target set fails closed.
+
+The schema intentionally contains no file path, patch, source-code blob, command, secret-value, or raw model
+output field. Creating or parsing a manifest does not load/apply the pack, mutate an Application IR, generate
+source, build a repository, use the network/database, or call a model.
+
 ## Next boundary
 
-A follow-up task may define the immutable declarative configuration/delta manifest that sits above a pinned
-pack. Pack application and AI-generated deltas remain separate, explicit layers and must preserve the
-deterministic IR, verification, ownership, and provider boundaries.
+R-437 may apply only validated `configuration` intents deterministically to a fresh copy of the pinned pack
+Application IR and record transparent provenance. `ai-delta` intents must remain explicitly unapplied until
+a separate provider-gated task. Source generation/building remains later still; every layer must preserve
+the deterministic IR, verification, ownership, and provider boundaries.

@@ -2,12 +2,25 @@ schema_version: 1
 project: OmniStackAI
 phase: BASIC/MVP
 founder_stage: 0
-current_task: R-435
+current_task: R-436
 current_status: done
 branch: main
-last_completed_task: R-435
+last_completed_task: R-436
 last_completed_task_summary: >-
-  Built R-435: exact-compatible Solution Pack recommendations in ecosystem planning (sixth spine brick).
+  Built R-436: pinned declarative Solution Pack customization manifests (seventh spine brick). New stdlib-only
+  solution_packs/manifest.py defines frozen typed changes and factory-created manifests above a selected exact
+  R-435 recommendation. Each manifest pins pack id/version/canonical IR SHA-256 plus the exact domain,
+  capabilities, and targets query and revalidates that identity against the immutable registry. At most 32
+  changes are canonicalized by unique ID; every change has a configuration or ai-delta source,
+  add/update/remove operation, one of six semantic areas, an area-compatible semantic target, bounded summary,
+  and 1-8 bounded acceptance criteria. Byte-stable canonical JSON and strict parsing reject unknown/missing
+  keys, malformed types/enums/targets, controls, oversized values, duplicates, noncanonical order, no-match,
+  and registry/query/version/digest drift. The schema has no file-path, patch, source-code, command,
+  raw-model-output, or secret-value field and performs no pack load/application, IR mutation, source generation,
+  build, or provider call. Eleven new tests; focused R-434/R-435/R-436 regressions 27 passed; task verify 2,945
+  passed fully offline; lint/security/env and both demos (152/149) passed; canonical JSON round-trip passed;
+  0 model calls. No dependency, pack baseline/registry behavior, ecosystem, IR/schema, generator, provider,
+  database, infra, tracker-workbook, or .claude change. Previously built R-435: exact-compatible Solution Pack recommendations in ecosystem planning (sixth spine brick).
   Registry selection now optionally requires an exact target subset alongside its existing exact-domain and
   required-capability rules. Frozen SolutionPackRecommendation records a canonical query and only the
   selected pack id/version/digest/targets or explicit no-exact-match. Every EcosystemPlan derives required
@@ -573,13 +586,15 @@ id_note: >-
   (Scope -> Application IRs = SECOND spine brick: one prompt -> multiple owned, clean-compiling app repos),
   R-432 done (opt-in unknown-domain refinement = THIRD spine brick), R-433 done (surface-specific
   data/capability scoping = FOURTH spine brick), R-434 done (immutable baseline Solution Pack registry
-  = FIFTH spine brick), and R-435 done (target-aware pack recommendations in planning = SIXTH spine brick).
+  = FIFTH spine brick), R-435 done (target-aware pack recommendations in planning = SIXTH spine brick), and
+  R-436 done (pinned declarative customization manifests = SEVENTH spine brick).
   NOTE: the UI-COMPONENT SERIES is PAUSED at R-415 (110 components, resumable at a future free Tracker
-  ID); R-416..R-429 built/hardened the "chat -> create -> run -> preview" front door; R-430..R-435 build SPINE.
+  ID); R-416..R-429 built/hardened the "chat -> create -> run -> preview" front door; R-430..R-436 build SPINE.
 blockers: []
 next_action: >-
-  R-435 is complete: every ecosystem plan exposes an exact target-aware Solution Pack recommendation or
-  explicit no-match without changing generated output. NEXT R-436: define an immutable declarative pack
-  customization/delta manifest pinned to pack id/version/digest, with bounded typed changes and deterministic
-  validation/JSON. Do not apply mutations or add a dependency, model/live path, copied skeleton,
-  infrastructure, or database change. The UI-component series remains paused/resumable.
+  R-436 is complete: selected exact pack recommendations can be captured as immutable, canonical,
+  digest-pinned declarative manifests with bounded configuration and AI-delta intent. NEXT R-437: apply only
+  validated configuration intents deterministically to a fresh pinned-pack Application IR and return a
+  validate_ir-clean derived IR plus explicit applied/unapplied provenance; leave AI-delta intents unapplied.
+  Do not generate source or add a dependency, model/live path, copied skeleton, infrastructure, or database
+  change. The UI-component series remains paused/resumable.

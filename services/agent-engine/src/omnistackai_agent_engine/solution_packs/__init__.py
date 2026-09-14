@@ -1,4 +1,16 @@
-"""Public Solution Pack registry contract (R-434)."""
+"""Public Solution Pack registry and customization-manifest contracts (R-434 to R-436)."""
+
+from .manifest import (
+    MANIFEST_SCHEMA_VERSION,
+    MAX_MANIFEST_CHANGES,
+    ChangeArea,
+    ChangeOperation,
+    ChangeSource,
+    SolutionPackChange,
+    SolutionPackManifest,
+    create_solution_pack_manifest,
+    parse_solution_pack_manifest,
+)
 
 from .registry import (
     BASELINE_SOLUTION_PACKS,
@@ -13,6 +25,15 @@ from .registry import (
 )
 
 __all__ = [
+    "MANIFEST_SCHEMA_VERSION",
+    "MAX_MANIFEST_CHANGES",
+    "ChangeArea",
+    "ChangeOperation",
+    "ChangeSource",
+    "SolutionPackChange",
+    "SolutionPackManifest",
+    "create_solution_pack_manifest",
+    "parse_solution_pack_manifest",
     "SolutionPack",
     "SolutionPackError",
     "SolutionPackRecommendation",

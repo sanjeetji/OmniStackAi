@@ -1,26 +1,25 @@
-task_id: R-435
-id: R-435
-title: "Exact-compatible Solution Pack recommendations in ecosystem planning"
+task_id: R-436
+id: R-436
+title: "Pinned declarative Solution Pack customization manifests"
 status: done
 phase: MVP
 tracker_row: null
 started_at: "2026-09-14"
 completed_at: "2026-09-14"
 objective: >-
-  Sixth brick of the differentiating spine and second Solution Pack task. Extend the immutable registry with
-  target-aware, fail-closed recommendations and attach one transparent recommendation to every deterministic
-  EcosystemPlan. Derive required targets from the already planned Application IRs, report the selected pack's
-  id/version/digest or an explicit no-match, and do not apply the pack or change generated output yet.
+  Seventh brick of the differentiating spine and third Solution Pack task. Define an immutable,
+  standard-library-only manifest that can express bounded deterministic-configuration and AI-delta intents
+  above one exact R-435 recommendation. Pin every manifest to the selected pack id/version/IR digest and the
+  original compatibility query, validate all typed semantic changes fail-closed, and provide canonical JSON
+  parsing/serialization without loading, applying, mutating, building, or asking a model to produce a delta.
 allowed_paths:
   - "services/agent-engine/src/omnistackai_agent_engine/solution_packs/__init__.py"
-  - "services/agent-engine/src/omnistackai_agent_engine/solution_packs/registry.py"
-  - "services/agent-engine/src/omnistackai_agent_engine/intake/ecosystem.py"
-  - "services/agent-engine/src/omnistackai_agent_engine/intake/ecosystem_plan.py"
-  - "services/agent-engine/tests/test_solution_pack_planning.py"
+  - "services/agent-engine/src/omnistackai_agent_engine/solution_packs/manifest.py"
+  - "services/agent-engine/tests/test_solution_pack_manifest.py"
   - "docs/SOLUTION_PACKS.md"
   - "docs/PROGRESS.md"
   - "docs/RESUME_PROMPT.md"
-  - ".ai/tasks/R-435.md"
+  - ".ai/tasks/R-436.md"
   - ".ai/CURRENT_TASK.yaml"
   - ".ai/PROJECT_STATE.yaml"
   - ".ai/WORK_LOG.md"
@@ -29,44 +28,47 @@ allowed_paths:
   - "CHANGELOG.md"
 forbidden_changes:
   - "Do not modify or include the unrelated untracked .claude directory"
-  - "Do not apply a recommended pack, merge/replace IRs, copy generated source, or change generated repository output"
-  - "Do not change Application IR schemas/examples, adapters/generators, R-430 through R-434 semantics, PostgreSQL, or infrastructure"
+  - "Do not load/apply a pack, mutate an Application IR, generate/copy source, build a repository, or change ecosystem/generated output"
+  - "Do not call a model or add a prompt/live/provider path; AI-delta records are declarative intent only"
+  - "Do not change pack baselines, registry selection, Application IR schemas/examples, adapters/generators, PostgreSQL, or infrastructure"
   - "No model, network, Docker, database, package install, generated-code execution, or toolchain use in task verify"
-  - "No new dependency, hidden/fuzzy fallback, secret, mutable global registry, or fabricated capability"
+  - "No new dependency, executable patch/file-content field, arbitrary fallback, secret, mutable global state, or fabricated capability"
 required_gates:
-  - "focused test_solution_pack_planning.py plus R-434/R-431 regressions"
+  - "test-first focused test_solution_pack_manifest.py plus R-434/R-435 regressions"
   - task verify
   - task lint
   - task security:quick
   - task env:check
   - task builder:demo -- minimal-blog
   - task builder:demo -- rideshare-favourites
-  - "deterministic blog-cms and rideshare ecosystem-plan inspections"
+  - "deterministic manifest canonical-JSON and round-trip inspection"
 model_tool_trace:
   routing: deterministic_only
   local_calls: 0
   cloud_calls: 0
-  note: "R-435 is pure planning metadata; no model call is authorized or needed."
+  note: "R-436 defines and validates metadata only; no model call is authorized or needed."
 acceptance_criteria:
-  - "Registry selection can require an exact target subset in addition to its existing exact-domain and required-capability rules, with deterministic newest-version selection unchanged."
-  - "A frozen JSON-safe recommendation records the exact domain/capability/target query and either minimal pack id/version/digest/targets metadata or an explicit no-exact-match result."
-  - "Every EcosystemPlan derives its canonical required-target tuple from all already-planned surface IR project plans and attaches one registry recommendation."
-  - "A blog-cms Next.js/Python plan recommends minimal-blog@1.0.0; the current rideshare Next.js/Python plan honestly reports no match because the registered rideshare baseline is Go-backed."
-  - "Unsupported/custom domains report no match; no fallback is fabricated and no semantic capabilities are inferred from entity names or prompt text."
-  - "Ecosystem plan CLI/JSON exposes the recommendation, while generated Application IRs and build output remain unchanged."
+  - "A frozen manifest can only be created above a selected exact-compatible SolutionPackRecommendation and pins its pack id, semantic version, lowercase SHA-256, domain, required capabilities, and required targets."
+  - "Every frozen change has an identifier, configuration or ai-delta source, add/update/remove operation, typed semantic area, area-compatible semantic target reference, bounded summary, and bounded acceptance criteria."
+  - "Manifests reject no-match recommendations, duplicate or excessive changes, invalid types/identifiers/target-area pairs, control characters, oversized text, malformed/unknown JSON keys, and registry pin drift."
+  - "Manifest changes are canonicalized deterministically and serialize to byte-stable JSON; strict parsing round-trips the value while revalidating the exact registered pack pin and compatibility query."
+  - "The schema contains declarative semantic intent only: no file paths, patches, source blobs, commands, model output, secret values, or mutation/apply/build behavior."
+  - "Existing registry/recommendation behavior, ecosystem plans, Application IRs, builders, generated files, and baseline pack descriptors remain unchanged."
 evidence:
-  test_first_red: "Focused import failed as expected because SolutionPackRecommendation did not exist."
-  focused_test: "R-435 + R-434 + R-431 focused regressions: 25 passed (8 new R-435 tests)"
-  verify: "2,934 passed (fully offline; +8; 0 model calls)"
+  baseline_focused: "R-434/R-435 focused baseline: 16 passed"
+  baseline_verify: "2,934 passed fully offline after allowing sandbox loopback test sockets"
+  test_first_red: "Focused import failed as expected because MANIFEST_SCHEMA_VERSION and the manifest API did not exist."
+  focused_test: "R-436 + R-435 + R-434 focused regressions: 27 passed (11 new R-436 tests)"
+  verify: "2,945 passed (fully offline; +11; 0 model calls)"
   lint: "task agent-engine:lint and task lint passed"
   security: "task security:quick passed"
   env: "task env:check passed"
   demos: "minimal-blog 152 files; rideshare-favourites 149 files"
   deterministic_inspection: >-
-    Blog-cms complete plan -> minimal-blog@1.0.0 for backend-python + nextjs-web; rideshare complete plan ->
-    no-exact-match for the same targets because its registered baseline is backend-go + nextjs-web.
+    Canonical minimal-blog manifest serialized configuration + ai-delta intents in change-id order and strict
+    parse round-tripped equal while revalidating pack id/version/digest and the exact compatibility query.
   tracker: "No workbook row exists beyond R-358; workbook intentionally unchanged."
 next_action: >-
-  R-435 done. Next R-436: define an immutable declarative Solution Pack customization/delta manifest pinned
-  to the recommended pack id/version/digest, with bounded typed changes and deterministic validation/JSON;
-  do not apply mutations or call a model yet.
+  R-436 done. Next R-437: define deterministic application of the configuration-source subset to a fresh
+  pinned pack Application IR, producing a validated derived IR plus transparent provenance while leaving
+  ai-delta intents explicitly unapplied; do not generate source or call a model yet.

@@ -41,7 +41,7 @@ START PROTOCOL
   `task ai:status`, `task ai:handoff`. `task verify` must stay green and network-independent.
 - Confirm git branch/HEAD/clean tree. Then restate: phase, next Tracker ID, objective, blast radius.
 
-WHAT IS ALREADY BUILT (platform generators are Python 3.13 stdlib-only, offline, in services/agent-engine; 2,934 tests pass)
+WHAT IS ALREADY BUILT (platform generators are Python 3.13 stdlib-only, offline, in services/agent-engine; 2,945 tests pass)
 - Model fabric: ModelProvider contract + registry; local Ollama adapter (runs any installed model via
 
 
@@ -200,17 +200,17 @@ R-316 accessible reusable Alert & Notification component (components/alert.tsx),
 Skeleton Loader component (components/skeleton.tsx), R-318 accessible reusable Drawer / Sheet component (components/drawer.tsx), R-319 accessible reusable Avatar component (components/avatar.tsx), R-320 accessible reusable Toggle Switch component (components/toggle.tsx), R-321 accessible reusable Accordion component (components/accordion.tsx), R-322 accessible reusable Dropdown Menu component (components/dropdown-menu.tsx), R-323 accessible reusable Popover component (components/popover.tsx), R-324 Design Tokens & CSS Custom Properties theming engine (styles/tokens.css), R-325 Theme Switcher / Mode Toggle component (components/theme-toggle.tsx), R-326 accessible reusable Dialog / Modal component (components/dialog.tsx), R-327 accessible reusable Form Controls & Input Primitives suite (components/form-controls.tsx), R-328 accessible reusable Date Picker & Calendar component (components/date-picker.tsx), R-329 accessible reusable Data Grid / Table component (components/data-grid.tsx), R-330 accessible reusable Command Palette / Search Menu component (components/command-palette.tsx), R-331 accessible reusable Slider & Range component (components/slider.tsx), R-332 accessible reusable Progress & Spinner component (components/progress.tsx), R-333 accessible reusable Rating & Review component (components/rating.tsx), R-334 accessible reusable Stepper / Multi-step Wizard component (components/stepper.tsx), R-335 accessible reusable File Upload / Dropzone component (components/file-upload.tsx), R-336 accessible reusable Timeline / Activity Feed component (components/timeline.tsx), R-337 accessible futuristic Stat & Metric KPI Card component (components/stat-card.tsx), R-338 accessible reusable Hierarchical Tree View component (components/tree-view.tsx), R-339 accessible futuristic Tag & Chip Input Tokenizer component (components/tag-input.tsx), R-340 accessible futuristic Code Block & Syntax Presentation component (components/code-block.tsx), R-341 accessible futuristic Radial Gauge & Activity Rings component (components/radial-gauge.tsx), R-342 accessible futuristic Segmented Control & Mode Switcher component (components/segmented-control.tsx), R-343 accessible futuristic Carousel & Slider Showcase component (components/carousel.tsx), R-344 accessible futuristic Resizable Panels & Splitter component (components/resizable.tsx), R-345 accessible futuristic Color Picker & Palette Swatch component (components/color-picker.tsx), R-346 accessible futuristic PIN & OTP Code Input component (components/pin-input.tsx), R-347 Speed Dial & Floating Action Button component (components/speed-dial.tsx), R-348 Accessible Futuristic Reusable Context Menu Suite (components/context-menu.tsx), R-349 Accessible Futuristic Reusable Hover Card Suite (components/hover-card.tsx), R-350 Accessible Futuristic Reusable Scroll Area Suite (components/scroll-area.tsx), R-351 Accessible Futuristic Reusable Collapsible Component (components/collapsible.tsx), R-352 Accessible Futuristic Reusable Aspect Ratio Viewport Container Component (components/aspect-ratio.tsx), R-353 Accessible Futuristic Reusable Separator Component (components/separator.tsx), R-354 Accessible Futuristic Reusable Keyboard Keycap Component (components/kbd.tsx), R-355 Accessible Futuristic Reusable Radio Group Suite (components/radio-group.tsx), R-356 Accessible Futuristic Reusable Checkbox & Checkbox Group Primitive (components/checkbox.tsx), R-357 Accessible Futuristic Reusable Announcement Banner & Callout Suite (components/banner.tsx), and R-358 Accessible Futuristic Reusable Searchable Combobox & Autocomplete Primitive (components/combobox.tsx).
 Do NOT overwrite backlog rows; continue from R-359.
 NOTE: the execution tracker's planned universe ends at R-358 (358 tasks: 147 Done, 1 Deferred, 210 Not
-Started; MVP 147/253 = 58.1%). Work past R-358 now covers 77 completed tasks: 57 reusable UI-component
+Started; MVP 147/253 = 58.1%). Work past R-358 now covers 78 completed tasks: 57 reusable UI-component
 suites (R-359 -> R-415), four front-door bricks (R-416 -> R-419), generated-SQL hardening (R-420),
 managed embedded trusted-local Studio preview (R-421), collision-free preview ports + status/stop/
 restart controls (R-422), build history + re-preview (R-423), live preview status (R-424), per-build
 repo actions - copy path + open folder (R-425), remove-from-history (R-426), a generated-JSX
 inline-style fix (R-427), generated-app compile fixes + an opt-in tsc gate (R-428), strict generated-app
-type cleanup (R-429), and the first six differentiating-spine bricks (R-430 -> R-435).
+type cleanup (R-429), and the first seven differentiating-spine bricks (R-430 -> R-436).
 The generated component library is 110 components. Its UI-COMPONENT SERIES IS PAUSED at R-415
 (resumable under a future free ID; each component is independent/additive, nothing decays). Git, state files
 (.ai/), CHANGELOG, and docs/PROGRESS.md remain the executable/detail sources of truth. Current through
-R-435; `task verify` = 2,934 tests. R-416 added prompt-to-IR intake, R-417 materialized a generated
+R-436; `task verify` = 2,945 tests. R-416 added prompt-to-IR intake, R-417 materialized a generated
 owned repo, R-418 added the local chat studio, R-419 added turnkey local run, and R-420 fixed the two
 SQL defects found by live execution. R-421 added an explicit `task agent-engine:studio:preview` mode:
 one managed generated-app session, API/web readiness, replacement/shutdown cleanup, port-collision
@@ -293,6 +293,14 @@ JSON-safe recommendation records the canonical query and only selected pack id/v
 explicit `no-exact-match`; it never applies the pack. Blog-CMS Next.js/Python recommends
 `minimal-blog@1.0.0`. Today's rideshare Next.js/Python plan honestly reports no match because the registered
 rideshare baseline is Go-backed. The CLI and plan JSON expose this decision; generated output is unchanged.
+R-436 added the seventh spine brick: an immutable, stdlib-only `SolutionPackManifest` can be created only
+from a selected exact recommendation and pins its pack id/version/canonical IR digest plus the exact query.
+At most 32 frozen changes declare configuration or AI-delta source, add/update/remove operation, one of six
+semantic areas, an area-compatible semantic target, bounded summary, and 1-8 acceptance criteria. Changes
+are canonical by unique ID; canonical JSON is byte-stable. Strict parsing rejects unknown/missing keys,
+malformed/unbounded values, controls, duplicates, noncanonical order, and registry/query/version/digest
+drift. The schema has no executable path/patch/source/command/model-output/secret field; it applies nothing,
+mutates no IR, and makes no model call.
 
 
 ENVIRONMENT LIMITS
@@ -324,16 +332,17 @@ RULES (non-negotiable)
   SHA == local HEAD. Never claim unexecuted tests.
 
 WHAT TO DO NEXT
-- R-430 through R-435 are DONE — the DIFFERENTIATING SPINE now proposes a curated multi-app ecosystem,
+- R-430 through R-436 are DONE — the DIFFERENTIATING SPINE now proposes a curated multi-app ecosystem,
   materializes it as multiple owned repos, and can explicitly refine an unknown domain through local Ollama
   before using the same deterministic planner. R-433 then gives each surface a bounded read/write entity
   policy, relation-safe dependencies, one actor role, and role-gated mutations. R-434 registers immutable,
   versioned, digest-pinned verified baselines; R-435 exposes exact target-aware recommendations or no-match
-  in ecosystem planning without changing generated output.
-- NEXT R-436 (write `.ai/CURRENT_TASK.yaml` + `.ai/tasks/R-436.md` before coding): define an immutable,
-  declarative Solution Pack customization/delta manifest pinned to pack id/version/digest, with bounded typed
-  changes and deterministic validation/JSON. Do not apply mutations or call a model yet.
-- After R-436: apply validated deterministic configuration, then add bounded AI-delta generation;
+  in ecosystem planning; R-436 captures bounded configuration/AI-delta intent in a strict pinned manifest.
+- NEXT R-437 (write `.ai/CURRENT_TASK.yaml` + `.ai/tasks/R-437.md` before coding): deterministically apply
+  only validated `configuration` intents to a fresh Application IR loaded from the exact pinned pack. Return
+  a validate_ir-clean derived IR plus transparent applied/unapplied provenance; every `ai-delta` intent stays
+  explicitly unapplied. Do not generate source, build, or call a model yet.
+- After R-437: add bounded AI-delta generation through the provider boundary;
   optionally use a frontier model later for generation quality.
   Keep `task verify` model/Docker/DB/install/network-free (any live/model path stays opt-in); preserve
   single-session ownership and explicit trusted-local mode.
@@ -345,8 +354,8 @@ WHAT TO DO NEXT
   deploy (OMNISTACKAI_TIER=2 + E2B/Vercel keys) and cloud-model live-verify. Governance-deferred: native
   mobile (R-010 etc.) until web/backend stability.
 
-Begin by reading the files above and running the start protocol, then continue the spine at R-436
-(declarative Solution Pack customization/delta manifest, per WHAT TO DO NEXT) and write its Standard AI Task Contract
+Begin by reading the files above and running the start protocol, then continue the spine at R-437
+(deterministic configuration application to a fresh pinned pack IR, per WHAT TO DO NEXT) and write its Standard AI Task Contract
 before writing code.
 
 ```
