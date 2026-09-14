@@ -49,6 +49,13 @@ from .ecosystem_pack import (
     verify_ecosystem_pack,
     synthesize_ecosystem_pack,
 )
+from .ecosystem_registry import (
+    DEFAULT_ECOSYSTEM_PACK_REGISTRY,
+    EcosystemPack,
+    EcosystemPackRecommendation,
+    EcosystemPackRegistry,
+    build_default_ecosystem_packs,
+)
 
 __all__ = [
     "LEGACY_MANIFEST_SCHEMA_VERSION",
@@ -81,6 +88,11 @@ __all__ = [
     "parse_ecosystem_pack_package",
     "verify_ecosystem_pack",
     "synthesize_ecosystem_pack",
+    "EcosystemPack",
+    "EcosystemPackRecommendation",
+    "EcosystemPackRegistry",
+    "build_default_ecosystem_packs",
+    "DEFAULT_ECOSYSTEM_PACK_REGISTRY",
     "SolutionPack",
     "SolutionPackError",
     "SolutionPackRecommendation",

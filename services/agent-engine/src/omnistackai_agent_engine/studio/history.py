@@ -47,6 +47,17 @@ class StudioBuildHistory:
                 entry["applied_ai_delta_change_ids"] = [
                     str(cid) for cid in build["applied_ai_delta_change_ids"]
                 ]
+            if build.get("ecosystem_id"):
+                entry["ecosystem_id"] = str(build["ecosystem_id"])
+                entry["ecosystem_version"] = str(build.get("ecosystem_version", ""))
+            if build.get("surface_slug"):
+                entry["surface_slug"] = str(build["surface_slug"])
+            if build.get("surface_kind"):
+                entry["surface_kind"] = str(build["surface_kind"])
+            if build.get("is_ecosystem"):
+                entry["is_ecosystem"] = bool(build["is_ecosystem"])
+            if build.get("surface_count"):
+                entry["surface_count"] = int(build["surface_count"])
             self._entries.append(entry)
             if len(self._entries) > self._limit:
                 self._entries = self._entries[-self._limit :]

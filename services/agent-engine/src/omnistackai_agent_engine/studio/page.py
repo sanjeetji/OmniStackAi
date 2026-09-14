@@ -183,6 +183,72 @@ STUDIO_HTML = """<!doctype html>
     border-radius: 4px;
     padding: 1px 5px;
   }
+  .eco-chip {
+    display: inline-block;
+    margin-left: 6px;
+    background: rgba(34, 197, 94, 0.15);
+    border: 1px solid rgba(34, 197, 94, 0.35);
+    color: #4ade80;
+    font-size: 11px;
+    border-radius: 4px;
+    padding: 1px 5px;
+  }
+  .surface-chip {
+    display: inline-block;
+    margin-left: 6px;
+    background: rgba(245, 158, 11, 0.15);
+    border: 1px solid rgba(245, 158, 11, 0.35);
+    color: #fbbf24;
+    font-size: 11px;
+    border-radius: 4px;
+    padding: 1px 5px;
+  }
+  .tab-group {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 12px;
+  }
+  .tab-btn {
+    background: rgba(8, 14, 25, 0.8);
+    color: #9fb0c3;
+    border: 1px solid #223148;
+    border-radius: 6px;
+    padding: 6px 14px;
+    font-size: 12.5px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+  .tab-btn.active {
+    background: rgba(110, 231, 255, 0.15);
+    border-color: #6ee7ff;
+    color: #6ee7ff;
+  }
+  .surface-cards {
+    display: flex;
+    gap: 8px;
+    margin-top: 10px;
+    flex-wrap: wrap;
+    width: 100%;
+  }
+  .surface-card {
+    flex: 1;
+    min-width: 160px;
+    background: #080e19;
+    border: 1px solid #223148;
+    border-radius: 6px;
+    padding: 8px 10px;
+    font-size: 11.5px;
+  }
+  .surface-card-title {
+    font-weight: 600;
+    color: #e6edf3;
+    margin-bottom: 2px;
+  }
+  .surface-card-kind {
+    color: #6ee7ff;
+    font-size: 10.5px;
+  }
   .status { margin-top: 18px; padding: 12px 14px; border-radius: 10px; font-size: 14px; }
   .status.building { background: rgba(99,102,241,0.14); border: 1px solid rgba(99,102,241,0.4); color: #c7d2fe; }
   .status.error { background: rgba(244,63,94,0.12); border: 1px solid rgba(244,63,94,0.4); color: #fecdd3; }
@@ -237,29 +303,56 @@ STUDIO_HTML = """<!doctype html>
   <form id="build-form">
     <textarea id="prompt" placeholder="e.g. Build a recipe box where users save recipes, each recipe has ingredients and cooking steps"></textarea>
     <div class="pack-panel">
-      <div class="pack-header">
-        <label for="pack-select" class="pack-title">Solution Pack</label>
-        <span id="pack-banner" class="pack-banner" hidden></span>
+      <div class="tab-group">
+        <button type="button" id="tab-single" class="tab-btn active">Single App</button>
+        <button type="button" id="tab-ecosystem" class="tab-btn">Multi-Surface Ecosystem</button>
       </div>
-      <div class="pack-row">
-        <select id="pack-select" class="pack-select">
-          <option value="auto">Auto-detect from prompt (Recommended)</option>
-          <option value="none">AI Model Build (No pack)</option>
-        </select>
-        <div id="pack-details" class="pack-details" hidden></div>
+      <div id="single-pack-section">
+        <div class="pack-header">
+          <label for="pack-select" class="pack-title">Solution Pack</label>
+          <span id="pack-banner" class="pack-banner" hidden></span>
+        </div>
+        <div class="pack-row">
+          <select id="pack-select" class="pack-select">
+            <option value="auto">Auto-detect from prompt (Recommended)</option>
+            <option value="none">AI Model Build (No pack)</option>
+          </select>
+          <div id="pack-details" class="pack-details" hidden></div>
+        </div>
+        <div id="pack-customization" class="pack-customization" hidden>
+          <div class="pack-input-group">
+            <label for="custom-name">Custom App Name (optional)</label>
+            <input type="text" id="custom-name" placeholder="e.g. My Custom App">
+          </div>
+          <div class="pack-input-group">
+            <label for="custom-desc">Custom Description (optional)</label>
+            <input type="text" id="custom-desc" placeholder="e.g. A fast responsive application">
+          </div>
+          <div class="pack-input-group full-width">
+            <label for="ai-features">AI Feature Modifications (optional)</label>
+            <input type="text" id="ai-features" placeholder="e.g. Add newsletter subscribers with email and signup endpoint">
+          </div>
+        </div>
       </div>
-      <div id="pack-customization" class="pack-customization" hidden>
-        <div class="pack-input-group">
-          <label for="custom-name">Custom App Name (optional)</label>
-          <input type="text" id="custom-name" placeholder="e.g. My Custom App">
+      <div id="ecosystem-pack-section" hidden>
+        <div class="pack-header">
+          <label for="eco-select" class="pack-title">Ecosystem Pack</label>
+          <span id="eco-banner" class="pack-banner" hidden></span>
         </div>
-        <div class="pack-input-group">
-          <label for="custom-desc">Custom Description (optional)</label>
-          <input type="text" id="custom-desc" placeholder="e.g. A fast responsive application">
+        <div class="pack-row">
+          <select id="eco-select" class="pack-select">
+            <option value="auto">Auto-detect from prompt (Recommended)</option>
+          </select>
+          <div id="eco-details" class="pack-details" hidden></div>
         </div>
-        <div class="pack-input-group full-width">
-          <label for="ai-features">AI Feature Modifications (optional)</label>
-          <input type="text" id="ai-features" placeholder="e.g. Add newsletter subscribers with email and signup endpoint">
+        <div id="surface-selector-group" class="pack-customization">
+          <div class="pack-input-group full-width">
+            <label for="surface-select">Target Surface</label>
+            <select id="surface-select" class="pack-select">
+              <option value="all">All Surfaces (Complete Multi-App Platform)</option>
+            </select>
+          </div>
+          <div id="surface-cards" class="surface-cards"></div>
         </div>
       </div>
     </div>
@@ -323,6 +416,11 @@ STUDIO_HTML = """<!doctype html>
   var statusEl = document.getElementById('status');
   var result = document.getElementById('result');
 
+  var tabSingle = document.getElementById('tab-single');
+  var tabEco = document.getElementById('tab-ecosystem');
+  var singleSection = document.getElementById('single-pack-section');
+  var ecoSection = document.getElementById('ecosystem-pack-section');
+
   var packSelect = document.getElementById('pack-select');
   var packBanner = document.getElementById('pack-banner');
   var packDetails = document.getElementById('pack-details');
@@ -331,9 +429,35 @@ STUDIO_HTML = """<!doctype html>
   var customDescInput = document.getElementById('custom-desc');
   var aiFeaturesInput = document.getElementById('ai-features');
 
+  var ecoSelect = document.getElementById('eco-select');
+  var ecoBanner = document.getElementById('eco-banner');
+  var ecoDetails = document.getElementById('eco-details');
+  var surfaceSelect = document.getElementById('surface-select');
+  var surfaceCards = document.getElementById('surface-cards');
+
+  var activeMode = 'single';
   var availablePacks = [];
   var recommendedPackId = null;
+  var availableEcosystems = [];
+  var recommendedEcoId = null;
   var recommendDebounceTimer = null;
+
+  tabSingle.addEventListener('click', function () {
+    activeMode = 'single';
+    tabSingle.classList.add('active');
+    tabEco.classList.remove('active');
+    singleSection.hidden = false;
+    ecoSection.hidden = true;
+  });
+
+  tabEco.addEventListener('click', function () {
+    activeMode = 'ecosystem';
+    tabEco.classList.add('active');
+    tabSingle.classList.remove('active');
+    singleSection.hidden = true;
+    ecoSection.hidden = false;
+    updateEcoUi();
+  });
 
   function loadSolutionPacks() {
     fetch('/api/solution-packs')
@@ -351,6 +475,22 @@ STUDIO_HTML = """<!doctype html>
       .catch(function () {});
   }
 
+  function loadEcosystemPacks() {
+    fetch('/api/ecosystem-packs')
+      .then(function (res) { return res.ok ? res.json() : { ecosystems: [] }; })
+      .then(function (data) {
+        availableEcosystems = (data && data.ecosystems) || [];
+        availableEcosystems.forEach(function (e) {
+          var opt = document.createElement('option');
+          opt.value = e.ecosystem_id;
+          opt.textContent = (e.display_name || e.ecosystem_id) + ' (' + (e.surface_count || (e.surfaces && e.surfaces.length) || 0) + ' surfaces)';
+          ecoSelect.appendChild(opt);
+        });
+        updateEcoUi();
+      })
+      .catch(function () {});
+  }
+
   function getSelectedOrRecommendedPack() {
     var val = packSelect.value;
     if (val === 'none') { return null; }
@@ -358,6 +498,18 @@ STUDIO_HTML = """<!doctype html>
     if (!targetId) { return null; }
     for (var i = 0; i < availablePacks.length; i++) {
       if (availablePacks[i].pack_id === targetId) { return availablePacks[i]; }
+    }
+    return null;
+  }
+
+  function getSelectedOrRecommendedEco() {
+    var val = ecoSelect.value;
+    var targetId = val === 'auto' ? recommendedEcoId : val;
+    if (!targetId && availableEcosystems.length > 0) {
+      targetId = availableEcosystems[0].ecosystem_id;
+    }
+    for (var i = 0; i < availableEcosystems.length; i++) {
+      if (availableEcosystems[i].ecosystem_id === targetId) { return availableEcosystems[i]; }
     }
     return null;
   }
@@ -371,6 +523,41 @@ STUDIO_HTML = """<!doctype html>
     } else {
       packDetails.hidden = true;
       packCustomization.hidden = true;
+    }
+  }
+
+  function updateEcoUi() {
+    var eco = getSelectedOrRecommendedEco();
+    surfaceSelect.innerHTML = '';
+    var optAll = document.createElement('option');
+    optAll.value = 'all';
+    optAll.textContent = 'All Surfaces (Complete Multi-App Platform)';
+    surfaceSelect.appendChild(optAll);
+
+    surfaceCards.innerHTML = '';
+    if (eco) {
+      ecoDetails.hidden = false;
+      ecoDetails.textContent = (eco.description || '') + ' [Domain: ' + eco.domain + ']';
+      (eco.surfaces || []).forEach(function (s) {
+        var opt = document.createElement('option');
+        opt.value = s.slug;
+        opt.textContent = s.app_name + ' [' + s.surface_kind + ']';
+        surfaceSelect.appendChild(opt);
+
+        var card = document.createElement('div');
+        card.className = 'surface-card';
+        var cardTitle = document.createElement('div');
+        cardTitle.className = 'surface-card-title';
+        cardTitle.textContent = s.app_name;
+        var cardKind = document.createElement('div');
+        cardKind.className = 'surface-card-kind';
+        cardKind.textContent = s.surface_kind + ' (' + (s.verify_targets || []).join(', ') + ')';
+        card.appendChild(cardTitle);
+        card.appendChild(cardKind);
+        surfaceCards.appendChild(card);
+      });
+    } else {
+      ecoDetails.hidden = true;
     }
   }
 
@@ -401,6 +588,33 @@ STUDIO_HTML = """<!doctype html>
       .catch(function () {});
   }
 
+  function checkEcoRecommendation(prompt) {
+    if (!prompt) {
+      recommendedEcoId = null;
+      ecoBanner.hidden = true;
+      updateEcoUi();
+      return;
+    }
+    fetch('/api/ecosystem-packs/recommend', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ prompt: prompt })
+    })
+      .then(function (res) { return res.ok ? res.json() : null; })
+      .then(function (data) {
+        if (data && data.recommendation && data.recommendation.status === 'selected' && data.recommendation.ecosystem) {
+          recommendedEcoId = data.recommendation.ecosystem.ecosystem_id;
+          ecoBanner.textContent = 'Ecosystem: ' + recommendedEcoId;
+          ecoBanner.hidden = false;
+        } else {
+          recommendedEcoId = null;
+          ecoBanner.hidden = true;
+        }
+        updateEcoUi();
+      })
+      .catch(function () {});
+  }
+
   packSelect.addEventListener('change', function () {
     if (packSelect.value === 'none') {
       packBanner.hidden = true;
@@ -410,11 +624,24 @@ STUDIO_HTML = """<!doctype html>
     updatePackUi();
   });
 
+  ecoSelect.addEventListener('change', function () {
+    if (ecoSelect.value === 'auto' && recommendedEcoId) {
+      ecoBanner.hidden = false;
+    } else {
+      ecoBanner.hidden = true;
+    }
+    updateEcoUi();
+  });
+
   promptEl.addEventListener('input', function () {
     clearTimeout(recommendDebounceTimer);
     recommendDebounceTimer = setTimeout(function () {
+      var text = promptEl.value.trim();
       if (packSelect.value === 'auto') {
-        checkPackRecommendation(promptEl.value.trim());
+        checkPackRecommendation(text);
+      }
+      if (ecoSelect.value === 'auto') {
+        checkEcoRecommendation(text);
       }
     }, 350);
   });
@@ -514,6 +741,12 @@ STUDIO_HTML = """<!doctype html>
       commit_sha: build.commit_sha,
       pack_id: build.pack_id,
       pack_version: build.pack_version,
+      ecosystem_id: build.ecosystem_id,
+      ecosystem_version: build.ecosystem_version,
+      surface_slug: build.surface_slug,
+      surface_kind: build.surface_kind,
+      is_ecosystem: build.is_ecosystem,
+      surface_count: build.surface_count,
       base_ir_sha256: build.base_ir_sha256,
       derived_ir_sha256: build.derived_ir_sha256,
       applied_configuration_change_ids: build.applied_configuration_change_ids || [],
@@ -613,7 +846,23 @@ STUDIO_HTML = """<!doctype html>
       var name = document.createElement('div');
       name.className = 'h-name';
       name.textContent = b.name || 'App';
-      if (b.pack_id) {
+      if (b.is_ecosystem) {
+        var ecoBadge = document.createElement('span');
+        ecoBadge.className = 'eco-chip';
+        ecoBadge.textContent = 'Ecosystem (' + (b.surface_count || 3) + ' apps)';
+        name.appendChild(ecoBadge);
+      } else if (b.ecosystem_id) {
+        var ecoChip = document.createElement('span');
+        ecoChip.className = 'eco-chip';
+        ecoChip.textContent = b.ecosystem_id;
+        name.appendChild(ecoChip);
+        if (b.surface_slug) {
+          var surfChip = document.createElement('span');
+          surfChip.className = 'surface-chip';
+          surfChip.textContent = b.surface_slug;
+          name.appendChild(surfChip);
+        }
+      } else if (b.pack_id) {
         var chip = document.createElement('span');
         chip.className = 'pack-chip';
         chip.textContent = b.pack_id;
@@ -653,8 +902,12 @@ STUDIO_HTML = """<!doctype html>
     if (e.target && e.target.classList.contains('ex')) {
       promptEl.value = 'Build ' + e.target.textContent.replace(/^A /, 'a ');
       promptEl.focus();
+      var text = promptEl.value.trim();
       if (packSelect.value === 'auto') {
-        checkPackRecommendation(promptEl.value.trim());
+        checkPackRecommendation(text);
+      }
+      if (ecoSelect.value === 'auto') {
+        checkEcoRecommendation(text);
       }
     }
   });
@@ -662,7 +915,27 @@ STUDIO_HTML = """<!doctype html>
   function renderResult(data) {
     var packBadge = document.getElementById('r-pack-badge');
     var provBox = document.getElementById('r-provenance');
-    if (data.pack_id) {
+    if (data.is_ecosystem) {
+      packBadge.textContent = 'Verified Ecosystem: ' + (data.name || data.ecosystem_id) + ' (' + (data.surface_count || 3) + ' surface apps)';
+      packBadge.hidden = false;
+      var provText = 'Ecosystem: ' + data.ecosystem_id + '@' + (data.ecosystem_version || '1.0.0') +
+                     ' | Domain: ' + (data.domain || 'n/a') +
+                     ' | Base Pack: ' + (data.base_pack_id || 'n/a');
+      if (data.surfaces && data.surfaces.length) {
+        provText += ' | Surfaces: ' + data.surfaces.map(function (s) { return s.app_name + ' [' + s.surface_kind + ']'; }).join(', ');
+      }
+      provBox.textContent = provText;
+      provBox.hidden = false;
+    } else if (data.ecosystem_id) {
+      packBadge.textContent = 'Verified Ecosystem Surface: ' + (data.name || 'App') + ' [' + (data.surface_kind || 'surface') + ']';
+      packBadge.hidden = false;
+      var provText = 'Ecosystem: ' + data.ecosystem_id + '@' + (data.ecosystem_version || '1.0.0') +
+                     ' | Surface: ' + (data.surface_slug || 'n/a') +
+                     ' | Base Pack: ' + (data.base_pack_id || 'n/a') +
+                     ' | IR: ' + (data.ir_sha256 ? data.ir_sha256.slice(0, 12) : 'n/a');
+      provBox.textContent = provText;
+      provBox.hidden = false;
+    } else if (data.pack_id) {
       packBadge.textContent = 'Verified Solution Pack: ' + data.pack_id + (data.pack_version ? '@' + data.pack_version : '');
       packBadge.hidden = false;
       var provText = 'Provenance: Base IR: ' + (data.base_ir_sha256 ? data.base_ir_sha256.slice(0, 12) : 'n/a') +
@@ -713,25 +986,43 @@ STUDIO_HTML = """<!doctype html>
     statusEl.hidden = false;
     statusEl.className = 'status building';
 
-    var selectedPack = getSelectedOrRecommendedPack();
     var payload = { prompt: prompt };
-    if (selectedPack) {
-      payload.pack_id = selectedPack.pack_id;
-      payload.pack_version = selectedPack.version;
-      var cName = (customNameInput.value || '').trim();
-      if (cName) { payload.custom_name = cName; }
-      var cDesc = (customDescInput.value || '').trim();
-      if (cDesc) { payload.custom_description = cDesc; }
-      var aiFeat = (aiFeaturesInput.value || '').trim();
-      if (aiFeat) {
-        payload.ai_features = [aiFeat];
-        payload.ai_delta_prompt = aiFeat;
-        statusEl.textContent = 'Synthesizing feature additions with AI and compiling with ' + selectedPack.pack_id + '...';
+
+    if (activeMode === 'ecosystem') {
+      var eco = getSelectedOrRecommendedEco();
+      if (eco) {
+        payload.ecosystem_id = eco.ecosystem_id;
+        payload.ecosystem_version = eco.version;
+        var surfVal = surfaceSelect.value;
+        if (surfVal && surfVal !== 'all') {
+          payload.surface_slug = surfVal;
+          statusEl.textContent = 'Building ecosystem surface (' + surfVal + ') from ' + eco.ecosystem_id + '...';
+        } else {
+          statusEl.textContent = 'Materializing complete multi-surface platform (' + (eco.surface_count || 3) + ' applications)...';
+        }
       } else {
-        statusEl.textContent = 'Building app from verified Solution Pack (' + selectedPack.pack_id + ')...';
+        statusEl.textContent = 'Building your app - this runs a local model and can take a moment...';
       }
     } else {
-      statusEl.textContent = 'Building your app - this runs a local model and can take a moment...';
+      var selectedPack = getSelectedOrRecommendedPack();
+      if (selectedPack) {
+        payload.pack_id = selectedPack.pack_id;
+        payload.pack_version = selectedPack.version;
+        var cName = (customNameInput.value || '').trim();
+        if (cName) { payload.custom_name = cName; }
+        var cDesc = (customDescInput.value || '').trim();
+        if (cDesc) { payload.custom_description = cDesc; }
+        var aiFeat = (aiFeaturesInput.value || '').trim();
+        if (aiFeat) {
+          payload.ai_features = [aiFeat];
+          payload.ai_delta_prompt = aiFeat;
+          statusEl.textContent = 'Synthesizing feature additions with AI and compiling with ' + selectedPack.pack_id + '...';
+        } else {
+          statusEl.textContent = 'Building app from verified Solution Pack (' + selectedPack.pack_id + ')...';
+        }
+      } else {
+        statusEl.textContent = 'Building your app - this runs a local model and can take a moment...';
+      }
     }
 
     fetch('/api/build', {
@@ -754,6 +1045,7 @@ STUDIO_HTML = """<!doctype html>
   });
 
   loadSolutionPacks();
+  loadEcosystemPacks();
   loadHistory();
 })();
 </script>

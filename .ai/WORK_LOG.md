@@ -1,6 +1,39 @@
 # Work Log
 
-## 2026-09-14 — R-444 (Solution Pack Multi-Surface Ecosystem Pack Synthesis)
+## 2026-09-14 — R-445 (Solution Pack Ecosystem Pack Registry Integration, Catalog Discovery, and Studio Multi-Surface Selection)
+
+- Recorded `.ai/tasks/R-445.md` and `.ai/CURRENT_TASK.yaml` before implementation. Approved implementation plan.
+  Final focused suites: 14 passing tests across `test_ecosystem_pack_registry.py` (8 tests) and `test_studio_ecosystem.py` (6 tests). Total studio/solution pack suites: 101 passing tests.
+- Implemented Ecosystem Pack Registry (`solution_packs/ecosystem_registry.py`):
+  - Defined frozen canonical `EcosystemPack` descriptor (`ecosystem_id`, `version`, `display_name`, `description`, `domain`, `base_pack_id`, `surfaces`, `package_sha256`, `package`).
+  - Defined frozen canonical `EcosystemPackRecommendation` (`query`, `recommended_ecosystem_id`, `recommended_version`, `reason`, `matched_surface_count`, `surfaces`).
+  - Implemented immutable `EcosystemPackRegistry` supporting `list_packs`, `get`, `select`, `recommend`, `register_package`, and `load_surface_ir`.
+  - Implemented `build_default_ecosystem_packs` synthesizing built-in ecosystem baselines (`minimal-blog-ecosystem`, `rideshare-favourites-ecosystem`).
+  - Implemented `_LazyEcosystemPackRegistry` to defer baseline synthesis on first attribute access, breaking potential circular imports during module load.
+  - Initialized `DEFAULT_ECOSYSTEM_PACK_REGISTRY`.
+- Updated Ecosystem Pack Synthesis (`solution_packs/ecosystem_pack.py`):
+  - Enabled passing `pack_id` string directly into `synthesize_ecosystem_pack`.
+  - Defaulted `registry=None` to `DEFAULT_SOLUTION_PACK_REGISTRY`.
+- Added Ecosystem Pack Catalog CLI (`solution_packs/ecosystem_cli.py`):
+  - Added `catalog` subcommand supporting human-readable table output and `--json` format.
+  - Exported registry symbols in `solution_packs/__init__.py`.
+- Extended Studio HTTP Server (`studio/server.py`):
+  - Added optional `ecosystem_pack_registry` parameter to `create_studio_server` and handler maker.
+  - Implemented `GET /api/ecosystem-packs` returning the complete registered ecosystem catalog.
+  - Implemented `POST /api/ecosystem-packs/recommend` recommending ecosystem packs based on domain and capabilities.
+  - Updated `POST /api/build` to extract `ecosystem_id`, `ecosystem_version`, and `surface_slug` and forward to `build_fn`.
+- Extended Studio Live Runner & History (`studio/live_serve.py`, `studio/history.py`):
+  - Handled multi-surface ecosystem builds in `live_serve.py`: building a single selected surface with 0 model calls via `load_surface_ir` or compiling the full multi-surface ecosystem using `build_ecosystem`.
+  - Prioritized the first customer web surface for preview when an entire ecosystem is built.
+  - Extended `StudioBuildHistory` to record `ecosystem_id`, `ecosystem_version`, `surface_slug`, `surface_kind`, and `is_ecosystem`.
+- Enhanced Studio Web UI (`studio/page.py`):
+  - Added tab selector (`#tab-single` vs `#tab-ecosystem`) to toggle between single-app and multi-surface modes.
+  - Added multi-surface ecosystem selector (`#eco-select`), surface selector (`#surface-select`), surface summary banner (`#eco-banner`), and interactive surface cards (`#surface-cards`).
+  - Added ecosystem badges and chips to recent build history items.
+  - Maintained strict compliance with 0 external network requests (no external http/https/src/link/fonts).
+- Gates: `task verify` **3,055 passed** fully offline (+14); agent-engine/repository lint, security, and environment passed; both builder demos remained 152/149 files; 0 model calls in test execution.
+- No dependency, pack baseline/selection, Application IR schema/example, generator, generated output, provider, PostgreSQL, infrastructure, tracker workbook, or `.claude/` change.
+
 
 - Recorded `.ai/tasks/R-444.md` and `.ai/CURRENT_TASK.yaml` before implementation. Approved implementation plan.
   Final focused ecosystem suite: 18 passing tests across `test_solution_pack_ecosystem.py`.

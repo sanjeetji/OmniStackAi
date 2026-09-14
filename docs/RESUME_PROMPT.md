@@ -41,7 +41,7 @@ START PROTOCOL
   `task ai:status`, `task ai:handoff`. `task verify` must stay green and network-independent.
 - Confirm git branch/HEAD/clean tree. Then restate: phase, next Tracker ID, objective, blast radius.
 
-WHAT IS ALREADY BUILT (platform generators are Python 3.13 stdlib-only, offline, in services/agent-engine; 3,041 tests pass)
+WHAT IS ALREADY BUILT (platform generators are Python 3.13 stdlib-only, offline, in services/agent-engine; 3,055 tests pass)
 - Model fabric: ModelProvider contract + registry; local Ollama adapter (runs any installed model via
 
 
@@ -329,6 +329,10 @@ and dynamic package registry ingestion.
 R-444 added the fifteenth spine brick: Solution Pack Multi-Surface Ecosystem Pack Synthesis, enabling portable
 `EcosystemPackPackage` bundles with multiple surface packages, surface-specific Application IR synthesis scoping
 entity visibility, mutation authority, actor roles, APIs, and screens per surface, and CLI synthesize/verify/inspect/build.
+R-445 added the sixteenth spine brick: Solution Pack Ecosystem Pack Registry Integration, Catalog Discovery, and Studio
+Multi-Surface Selection, providing immutable EcosystemPackRegistry, pre-registered baselines (`minimal-blog-ecosystem`,
+`rideshare-favourites-ecosystem`), Studio discovery/recommendation endpoints, Studio single vs ecosystem tabs, multi-surface
+selection/building with 0 model calls, and ecosystem catalog CLI.
 
 ENVIRONMENT LIMITS
 - Inside the AI sandbox only: large native-binary downloads (Next.js SWC, Vite/esbuild) can time out, so
@@ -359,7 +363,7 @@ RULES (non-negotiable)
   SHA == local HEAD. Never claim unexecuted tests.
 
 WHAT TO DO NEXT
-- R-430 through R-444 are DONE — the DIFFERENTIATING SPINE now proposes a curated multi-app ecosystem,
+- R-430 through R-445 are DONE — the DIFFERENTIATING SPINE now proposes a curated multi-app ecosystem,
   materializes it as multiple owned repos, and can explicitly refine an unknown domain through local Ollama
   before using the same deterministic planner. R-433 then gives each surface a bounded read/write entity
   policy, relation-safe dependencies, one actor role, and role-gated mutations. R-434 registers immutable,
@@ -374,9 +378,10 @@ WHAT TO DO NEXT
   R-441 integrates Solution Pack discovery, recommendation, selection, customization, and provenance
   into the Studio UI, HTTP server, and live build pipeline; R-442 wires Studio AI-delta feature modification
   controls above Solution Packs; R-443 introduces portable SolutionPackPackage bundles, strict integrity
-  verification, export/inspect CLI, and dynamic registry ingestion; and R-444 introduces multi-surface Ecosystem
-  Pack synthesis, portable `EcosystemPackPackage` bundles, and multi-repo ecosystem builds.
-- NEXT R-445: Solution Pack ecosystem pack registry integration, catalog discovery, and Studio multi-surface selection.
+  verification, export/inspect CLI, and dynamic registry ingestion; R-444 introduces multi-surface Ecosystem
+  Pack synthesis, portable `EcosystemPackPackage` bundles, and multi-repo ecosystem builds; and R-445 introduces
+  Ecosystem Pack Registry integration, catalog discovery, and Studio multi-surface selection.
+- NEXT R-446: Solution Pack Ecosystem Studio Live Multi-Surface Preview and Process Orchestration.
   Keep `task verify` model/Docker/DB/install/network-free (any live/model path stays opt-in); preserve
   single-session ownership and explicit trusted-local mode.
 - The UI-component series remains paused at R-415 and can be resumed later under a future free ID.
@@ -387,7 +392,7 @@ WHAT TO DO NEXT
   deploy (OMNISTACKAI_TIER=2 + E2B/Vercel keys) and cloud-model live-verify. Governance-deferred: native
   mobile (R-010 etc.) until web/backend stability.
 
-Begin by reading the files above and running the start protocol, then continue the spine at R-444
+Begin by reading the files above and running the start protocol, then continue the spine at R-445
 and write its Standard AI Task Contract before writing code.
 
 ```

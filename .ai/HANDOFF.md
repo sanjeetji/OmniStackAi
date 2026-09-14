@@ -1,11 +1,11 @@
 # Current Handoff
 
-Task ID: R-444
+Task ID: R-445
 Status: done
 Phase: BASIC/MVP — Founder Stage 0
 Branch: `main` (the only branch; the GitHub default)
 
-> **The differentiating SPINE now supports Solution Pack multi-surface ecosystem pack synthesis.** R-430 proposes the
+> **The differentiating SPINE now supports Solution Pack ecosystem pack registry integration, catalog discovery, and Studio multi-surface selection.** R-430 proposes the
 > ecosystem, R-431 materializes it, R-432 refines unknown domains, R-433 scopes surfaces, R-434 registers
 > packs, R-435 recommends one, R-436 records bounded intent, R-437 applies safe configuration deterministically,
 > R-438 converts pending manifest AI-delta intents into strictly typed, bounded AIDeltaProposal objects via an
@@ -13,12 +13,28 @@ Branch: `main` (the only branch; the GitHub default)
 > derived Application IRs, R-440 wires derived Solution Pack Application IRs into verified multi-repo
 > builder pipelines, R-441 wires Solution Pack selection into the Studio, R-442 wires natural-language
 > AI-delta feature modifications on top of Solution Packs into the Studio, R-443 introduces portable
-> SolutionPackPackage bundles and export CLI, and **R-444 enables synthesizing a complete, coordinated
+> SolutionPackPackage bundles and export CLI, R-444 enables synthesizing a complete, coordinated
 > multi-surface ecosystem (customer web, operator portal, admin dashboard) from a Solution Pack's unified data model,
-> bundled into an EcosystemPackPackage with CLI synthesis, verification, inspection, and multi-repo building**.
-> UI-component series PAUSED at R-415. **NEXT:** R-445 Studio multi-surface ecosystem pack selection, customization, and preview.
+> and **R-445 provides the immutable EcosystemPackRegistry, discovery endpoints (GET /api/ecosystem-packs and
+> POST /api/ecosystem-packs/recommend), Studio multi-surface selection and building in server.py/live_serve.py,
+> Studio UI multi-surface controls with 0 external network assets, and ecosystem catalog CLI**.
+> UI-component series PAUSED at R-415. **NEXT:** R-446 Solution Pack Ecosystem Studio Live Multi-Surface Preview and Process Orchestration.
 
 ## Repo/workflow state
+
+- **R-445 (Solution Pack Ecosystem Pack Registry Integration, Catalog Discovery, and Studio Multi-Surface Selection — sixteenth spine brick)** shipped:
+  `solution_packs/ecosystem_registry.py` defines `EcosystemPack`, `EcosystemPackRecommendation`, and `EcosystemPackRegistry`
+  with immutable operations (`list_packs()`, `get()`, `select()`, `recommend()`, `register_package()`, and `load_surface_ir()`);
+  pre-registers built-in ecosystem baselines (`minimal-blog-ecosystem`, `rideshare-favourites-ecosystem`) via `DEFAULT_ECOSYSTEM_PACK_REGISTRY`;
+  Studio server (`studio/server.py`) exposes discovery and recommendation endpoints (`GET /api/ecosystem-packs`, `POST /api/ecosystem-packs/recommend`);
+  Studio `POST /api/build` in `server.py` and `live_serve.py` accepts `ecosystem_id`, `ecosystem_version`, and `surface_slug`
+  to build an individual surface or complete multi-surface platform with 0 model calls; `studio/history.py` tracks `ecosystem_id`,
+  `ecosystem_version`, `surface_slug`, `surface_kind`, and `is_ecosystem`; `studio/page.py` adds tab selector (`#tab-single` vs `#tab-ecosystem`),
+  ecosystem dropdown (`#eco-select`), surface selector (`#surface-select`), surface cards (`#surface-cards`), real-time recommendations,
+  and history badges with strictly 0 external assets; `solution_packs/ecosystem_cli.py` adds `catalog` subcommand (`task agent-engine:solution-pack:ecosystem -- catalog`).
+  14 new tests across `test_ecosystem_pack_registry.py` and `test_studio_ecosystem.py`; `task verify` **3,055 passed** offline (+14);
+  lint/security/env + demos (152/149) green; 0 model calls in test execution.
+
 
 - **R-444 (Solution Pack Multi-Surface Ecosystem Pack Synthesis — fifteenth spine brick)** shipped:
   `intake/ecosystem.py` and `solution_packs/ecosystem_pack.py` add `synthesize_surface_ir` and `synthesize_ecosystem_pack`,

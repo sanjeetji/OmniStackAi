@@ -256,11 +256,20 @@ def synthesize_ecosystem_pack(
     proposal: Any = None,
     option_id: str = "complete",
     *,
-    registry: SolutionPackRegistry = DEFAULT_SOLUTION_PACK_REGISTRY,
+    registry: SolutionPackRegistry | None = None,
 ) -> EcosystemPackPackage:
     """Synthesize a complete multi-surface EcosystemPackPackage from a Solution Pack or Application Result."""
     from omnistackai_agent_engine.intake.scope_compiler import DOMAIN_LIBRARY, propose_ecosystem
     from omnistackai_agent_engine.intake.ecosystem import _surfaces_for_option, synthesize_surface_ir
+
+    if registry is None:
+        registry = DEFAULT_SOLUTION_PACK_REGISTRY
+
+    if isinstance(pack_or_result, str):
+        pack = registry.get(pack_or_result)
+        if pack is None:
+            raise SolutionPackError(f"Solution pack '{pack_or_result}' not found in registry")
+        pack_or_result = pack
 
     if isinstance(pack_or_result, SolutionPackApplicationResult):
         base_pack_id = pack_or_result.pack_id

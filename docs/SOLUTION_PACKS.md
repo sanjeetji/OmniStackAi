@@ -201,6 +201,25 @@ R-444 synthesizes multi-surface ecosystems from Solution Packs and packages them
   ```
 - 100% offline verification in `task verify` (0 model calls).
 
+## Ecosystem pack registry integration and Studio multi-surface selection
+
+R-445 introduces centralized registry management for ecosystem packs, catalog discovery, and Studio multi-surface selection:
+- Registry model: `EcosystemPackRegistry` manages `EcosystemPack` descriptors (`ecosystem_id`, `version`, `display_name`, `description`, `domain`, `base_pack_id`, `surfaces`, `package_sha256`, `package`), offering `list_packs()`, `get()`, `select()`, `recommend()`, `register_package()`, and `load_surface_ir()`.
+- Built-in baselines: Pre-registers `minimal-blog-ecosystem` and `rideshare-favourites-ecosystem` via `DEFAULT_ECOSYSTEM_PACK_REGISTRY`. Utilizes `_LazyEcosystemPackRegistry` to break circular dependency cycles during module import.
+- Studio discovery & recommendation: HTTP endpoints `GET /api/ecosystem-packs` (catalog listing) and `POST /api/ecosystem-packs/recommend` (domain-based recommendations).
+- Studio build & live runner: `POST /api/build` in `server.py` and `live_serve.py` accepts `ecosystem_id`, `ecosystem_version`, and `surface_slug` to build an individual surface (using `load_surface_ir()`) or compile the complete multi-surface ecosystem with 0 model calls.
+- Studio history: Tracks `ecosystem_id`, `ecosystem_version`, `surface_slug`, `surface_kind`, and `is_ecosystem` in `StudioBuildHistory`.
+- Studio web UI: Features single-app vs ecosystem tabs (`#tab-single`, `#tab-ecosystem`), ecosystem selector (`#eco-select`), surface selector (`#surface-select`), surface cards (`#surface-cards`), real-time recommendations, and history chips, strictly maintaining 0 external network requests (no external http/https/src/link/fonts).
+- CLI catalog discovery:
+  ```bash
+  # Discover registered ecosystem packs
+  task agent-engine:solution-pack:ecosystem -- catalog
+
+  # Output in JSON format
+  task agent-engine:solution-pack:ecosystem -- catalog --json
+  ```
+- 100% offline verification in `task verify` (0 model calls).
+
 ## Next boundary
 
-R-445: Solution Pack ecosystem pack registry integration, catalog discovery, and Studio multi-surface selection.
+R-446: Solution Pack Ecosystem Studio Live Multi-Surface Preview and Process Orchestration.

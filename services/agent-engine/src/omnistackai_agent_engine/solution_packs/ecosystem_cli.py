@@ -71,6 +71,11 @@ def build_parser() -> argparse.ArgumentParser:
     build_parser.add_argument("--author-email", default=os.environ.get("GIT_AUTHOR_EMAIL", "sk698166@gmail.com"), help="Git author email.")
     build_parser.add_argument("--overwrite", action="store_true", help="Overwrite target directories if they exist.")
 
+    # Subcommand: catalog
+    catalog_parser = subparsers.add_parser("catalog", help="List registered ecosystem packs in the default registry.")
+    catalog_parser.add_argument("--domain", default=None, help="Optional domain filter.")
+    catalog_parser.add_argument("--json", action="store_true", help="Output catalog as canonical JSON.")
+
     return parser
 
 
@@ -203,6 +208,33 @@ def run_build(args: argparse.Namespace) -> int:
     return 0
 
 
+def run_catalog(args: argparse.Namespace) -> int:
+    import json
+    from .ecosystem_registry import DEFAULT_ECOSYSTEM_PACK_REGISTRY
+
+    packs = DEFAULT_ECOSYSTEM_PACK_REGISTRY.list_packs()
+    if args.domain:
+        packs = tuple(p for p in packs if p.domain == args.domain)
+
+    if args.json:
+        payload = {"ecosystems": [p.to_dict() for p in packs]}
+        sys.stdout.write(json.dumps(payload, indent=2, sort_keys=True))
+        sys.stdout.write("\n")
+        return 0
+
+    sys.stdout.write(f"Registered Ecosystem Packs ({len(packs)}):\n\n")
+    for p in packs:
+        sys.stdout.write(f"• {p.display_name} ({p.ecosystem_id}@{p.version})\n")
+        sys.stdout.write(f"  Domain:    {p.domain}\n")
+        sys.stdout.write(f"  Base Pack: {p.base_pack_id}\n")
+        sys.stdout.write(f"  Surfaces ({p.surface_count}):\n")
+        for s in p.surfaces:
+            targets_str = ", ".join(s.verify_targets) or "none"
+            sys.stdout.write(f"    - [{s.surface_kind}] {s.app_name} (slug: {s.slug}, targets: {targets_str})\n")
+        sys.stdout.write(f"  Checksum:  {p.package_sha256[:16]}...\n\n")
+    return 0
+
+
 def main(argv: Sequence[str] | None = None) -> int:
     parser = build_parser()
     args = parser.parse_args(argv)
@@ -215,6 +247,8 @@ def main(argv: Sequence[str] | None = None) -> int:
         return run_inspect(args)
     if args.subcommand == "build":
         return run_build(args)
+    if args.subcommand == "catalog":
+        return run_catalog(args)
     sys.stderr.write(f"Unknown subcommand: {args.subcommand}\n")
     return 1
 

@@ -4,18 +4,28 @@ Last updated: 2026-09-14
 ## Current Phase
 Stage 0 (Founder Build Sequence, Brief Section 91) — BASIC/MVP
 
-> **The differentiating SPINE now supports Solution Pack multi-surface ecosystem pack synthesis (R-444).**
-> `intake/ecosystem.py` and `solution_packs/ecosystem_pack.py` add `synthesize_surface_ir` and `synthesize_ecosystem_pack`,
-> scoping entity visibility, mutation authority, actor roles, APIs, and screens per surface while preserving the pack's
-> unified data model and project strategy; `EcosystemPackPackage` and `EcosystemSurfacePackage` bundle all surfaces
-> with canonical IR digests, verify targets, and whole-ecosystem package checksum; `parse_ecosystem_pack_package` strictly
-> validates all surface IRs (`validate_ir`), digests, and checksums; `plan_ecosystem` synthesizes secondary surfaces
-> from pack_result data models (marking `is_synthesized=True`); and `ecosystem_cli.py` provides `synthesize`, `verify`,
-> `inspect`, and `build` subcommands (`task agent-engine:solution-pack:ecosystem`).
-> UI-component series PAUSED at R-415 (resumable). **NEXT:** R-445 Studio multi-surface ecosystem pack selection, customization, and preview.
+> **The differentiating SPINE now supports Solution Pack ecosystem pack registry integration, catalog discovery, and Studio multi-surface selection (R-445).**
+> `solution_packs/ecosystem_registry.py` defines `EcosystemPack`, `EcosystemPackRecommendation`, and `EcosystemPackRegistry`
+> with immutable operations (`list_packs()`, `get()`, `select()`, `recommend()`, `register_package()`, and `load_surface_ir()`);
+> pre-registers built-in ecosystem baselines (`minimal-blog-ecosystem`, `rideshare-favourites-ecosystem`) via `DEFAULT_ECOSYSTEM_PACK_REGISTRY`;
+> Studio server (`studio/server.py`) exposes discovery and recommendation endpoints (`GET /api/ecosystem-packs`, `POST /api/ecosystem-packs/recommend`);
+> Studio `POST /api/build` in `server.py` and `live_serve.py` accepts `ecosystem_id`, `ecosystem_version`, and `surface_slug`
+> to build an individual surface or complete multi-surface platform with 0 model calls; `studio/history.py` tracks `ecosystem_id`,
+> `ecosystem_version`, `surface_slug`, `surface_kind`, and `is_ecosystem`; `studio/page.py` adds tab selector (`#tab-single` vs `#tab-ecosystem`),
+> ecosystem dropdown (`#eco-select`), surface selector (`#surface-select`), surface cards (`#surface-cards`), real-time recommendations,
+> and history badges with strictly 0 external assets; `solution_packs/ecosystem_cli.py` adds `catalog` subcommand (`task agent-engine:solution-pack:ecosystem -- catalog`).
+> UI-component series PAUSED at R-415 (resumable). **NEXT:** R-446 Solution Pack Ecosystem Studio Live Multi-Surface Preview and Process Orchestration.
 
 ## Last Completed Task
-Tracker ID: R-444 — Solution Pack Multi-Surface Ecosystem Pack Synthesis — DONE.
+Tracker ID: R-445 — Solution Pack Ecosystem Pack Registry Integration, Catalog Discovery, and Studio Multi-Surface Selection — DONE.
+Implemented Solution Pack ecosystem pack registry integration, catalog discovery, and Studio multi-surface selection:
+- `ecosystem_registry.py`: Defined `EcosystemPack` descriptor, `EcosystemPackRecommendation`, and immutable `EcosystemPackRegistry`; pre-registered built-in baselines (`minimal-blog-ecosystem`, `rideshare-favourites-ecosystem`) accessible via `DEFAULT_ECOSYSTEM_PACK_REGISTRY`; added `load_surface_ir()` to load clean, valid `ApplicationIR` per surface; used lazy registry loading to avoid circular imports.
+- `ecosystem_pack.py` & `ecosystem_cli.py`: Extended `synthesize_ecosystem_pack` to accept `pack_id` string directly; added `catalog` subcommand to CLI for text/json discovery (`task agent-engine:solution-pack:ecosystem -- catalog`).
+- `studio/server.py` & `studio/live_serve.py`: Added discovery/recommendation endpoints (`GET /api/ecosystem-packs`, `POST /api/ecosystem-packs/recommend`); extended `POST /api/build` to support `ecosystem_id`, `ecosystem_version`, and `surface_slug`; wired `live_serve.py` to compile a single surface or the entire multi-surface ecosystem with 0 model calls.
+- `studio/page.py` & `studio/history.py`: Enhanced UI with tabs, ecosystem dropdown, surface selector, surface cards, and live recommendation banner (0 external network assets); extended `StudioBuildHistory` to record ecosystem and surface metadata.
+- Fourteen new focused tests in `test_ecosystem_pack_registry.py` and `test_studio_ecosystem.py`; `task verify` **3,055 passed** offline (+14 net-new tests); lint, security, env, and both builder demos (152 / 149) pass; 0 model calls in test execution.
+
+Immediately preceded by R-444 — Solution Pack Multi-Surface Ecosystem Pack Synthesis — DONE.
 Implemented Solution Pack multi-surface ecosystem pack synthesis, packaging, CLI, and planner integration:
 - `ecosystem_pack.py`: Defined `EcosystemPackPackage` bundle with `schema_version` (`"1.0"`), `ecosystem_id`, `version`, `display_name`, `description`, `domain`, `base_pack_id`, `surfaces`, and whole-ecosystem `package_sha256` checksum (`compute_ecosystem_checksum`); implemented `parse_ecosystem_pack_package` (strict validation, embedded `validate_ir` for all surfaces, digest verification, package integrity check, failing closed on corruption) and `verify_ecosystem_pack`.
 - `ecosystem.py`: Implemented `_primary_entity_names_for_pack`, `_writable_entity_names_for_pack`, and `synthesize_surface_ir` to derive surface-scoped Application IRs sharing the pack's authoritative data model; updated `SurfaceApp` with `is_synthesized: bool = False`; enhanced `plan_ecosystem` to synthesize secondary surfaces when `pack_result` is provided.

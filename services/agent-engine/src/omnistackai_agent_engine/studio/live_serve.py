@@ -53,10 +53,148 @@ def _build(
     ai_features: list[str] | None = None,
     ai_delta_prompt: str | None = None,
     ai_delta_provider: object | None = None,
+    ecosystem_id: str | None = None,
+    ecosystem_version: str | None = None,
+    surface_slug: str | None = None,
     preview_manager: StudioPreviewManager | None = None,
     history: StudioBuildHistory | None = None,
 ) -> dict:
-    if pack_id:
+    if ecosystem_id:
+        from pathlib import Path
+        from ..solution_packs import DEFAULT_ECOSYSTEM_PACK_REGISTRY
+        from ..intake.build_app import build_app_from_ir
+
+        eco_pack = DEFAULT_ECOSYSTEM_PACK_REGISTRY.get(ecosystem_id, version=ecosystem_version)
+        if eco_pack is None:
+            raise ValueError(f"Unknown Ecosystem Pack '{ecosystem_id}'")
+        eco_pkg = eco_pack.to_package()
+
+        target_dir = _target_dir_for(prompt)
+
+        if surface_slug and surface_slug != "all":
+            surface = next(
+                (s for s in eco_pkg.surfaces if s.slug == surface_slug or s.surface_kind == surface_slug),
+                None,
+            )
+            if surface is None:
+                raise ValueError(f"Surface '{surface_slug}' not found in ecosystem '{ecosystem_id}'")
+
+            surface_ir = surface.to_application_ir()
+            if custom_name:
+                surface_ir = ApplicationIR(
+                    name=custom_name,
+                    description=custom_description or surface_ir.description,
+                    entities=surface_ir.entities,
+                    apis=surface_ir.apis,
+                    screens=surface_ir.screens,
+                    roles=surface_ir.roles,
+                    fixtures=surface_ir.fixtures,
+                    project_strategy=surface_ir.project_strategy,
+                )
+            elif custom_description:
+                surface_ir = ApplicationIR(
+                    name=surface_ir.name,
+                    description=custom_description,
+                    entities=surface_ir.entities,
+                    apis=surface_ir.apis,
+                    screens=surface_ir.screens,
+                    roles=surface_ir.roles,
+                    fixtures=surface_ir.fixtures,
+                    project_strategy=surface_ir.project_strategy,
+                )
+
+            build_res = build_app_from_ir(
+                surface_ir,
+                target_dir,
+                author_name=_AUTHOR_NAME,
+                author_email=_AUTHOR_EMAIL,
+                prompt=prompt,
+                overwrite=True,
+            )
+            root = Path(target_dir)
+            files = []
+            if root.is_dir():
+                for path in sorted(root.rglob("*")):
+                    if not path.is_file():
+                        continue
+                    rel = path.relative_to(root)
+                    if rel.parts and rel.parts[0] == ".git":
+                        continue
+                    files.append(str(rel))
+
+            payload = {
+                "prompt": prompt,
+                "name": surface_ir.name,
+                "description": surface_ir.description,
+                "entities": [entity.name for entity in surface_ir.entities],
+                "file_count": build_res.file_count,
+                "target_dir": target_dir,
+                "commit_sha": build_res.commit_sha,
+                "files": files,
+                "ecosystem_id": eco_pkg.ecosystem_id,
+                "ecosystem_version": eco_pkg.version,
+                "surface_slug": surface.slug,
+                "surface_kind": surface.surface_kind,
+                "base_pack_id": eco_pkg.base_pack_id,
+                "ir_sha256": surface.ir_sha256,
+                "verify_targets": list(surface.verify_targets),
+                "is_ecosystem": False,
+            }
+        else:
+            os.makedirs(target_dir, exist_ok=True)
+            surface_results = []
+            total_files = 0
+            all_entities = set()
+            used_slugs: dict[str, int] = {}
+
+            for surface in eco_pkg.surfaces:
+                surface_ir = surface.to_application_ir()
+                for e in surface_ir.entities:
+                    all_entities.add(e.name)
+                base_slug = surface.slug
+                count = used_slugs.get(base_slug, 0)
+                used_slugs[base_slug] = count + 1
+                unique_slug = base_slug if count == 0 else f"{base_slug}-{count + 1}"
+                surface_target_dir = os.path.join(target_dir, unique_slug)
+
+                build_res = build_app_from_ir(
+                    surface_ir,
+                    surface_target_dir,
+                    author_name=_AUTHOR_NAME,
+                    author_email=_AUTHOR_EMAIL,
+                    prompt=prompt,
+                    overwrite=True,
+                )
+                total_files += build_res.file_count
+                surface_results.append({
+                    "surface_kind": surface.surface_kind,
+                    "app_name": surface.app_name,
+                    "slug": surface.slug,
+                    "target_dir": surface_target_dir,
+                    "file_count": build_res.file_count,
+                    "commit_sha": build_res.commit_sha,
+                    "verify_targets": list(surface.verify_targets),
+                    "ir_sha256": surface.ir_sha256,
+                })
+
+            payload = {
+                "prompt": prompt,
+                "name": eco_pkg.display_name,
+                "description": eco_pkg.description,
+                "entities": sorted(all_entities),
+                "file_count": total_files,
+                "target_dir": target_dir,
+                "commit_sha": surface_results[0]["commit_sha"] if surface_results else "",
+                "files": [f"{s['slug']} ({s['file_count']} files)" for s in surface_results],
+                "ecosystem_id": eco_pkg.ecosystem_id,
+                "ecosystem_version": eco_pkg.version,
+                "domain": eco_pkg.domain,
+                "base_pack_id": eco_pkg.base_pack_id,
+                "surface_count": len(surface_results),
+                "surfaces": surface_results,
+                "is_ecosystem": True,
+            }
+    elif pack_id:
         from pathlib import Path
         from ..solution_packs import (
             DEFAULT_SOLUTION_PACK_REGISTRY,
@@ -219,7 +357,10 @@ def _build(
             "message": "Build-only mode: start the explicit Studio preview command to run generated code.",
         }
     else:
-        payload["preview"] = preview_manager.replace(payload["target_dir"])
+        preview_dir = payload["target_dir"]
+        if payload.get("is_ecosystem") and payload.get("surfaces"):
+            preview_dir = payload["surfaces"][0]["target_dir"]
+        payload["preview"] = preview_manager.replace(preview_dir)
     return payload
 
 

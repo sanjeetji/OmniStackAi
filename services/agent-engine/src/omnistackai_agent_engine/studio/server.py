@@ -13,7 +13,12 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from typing import Callable
 
 from ..intake.ecosystem import propose_ecosystem
-from ..solution_packs import DEFAULT_SOLUTION_PACK_REGISTRY, SolutionPackRegistry
+from ..solution_packs import (
+    DEFAULT_ECOSYSTEM_PACK_REGISTRY,
+    DEFAULT_SOLUTION_PACK_REGISTRY,
+    EcosystemPackRegistry,
+    SolutionPackRegistry,
+)
 from .page import STUDIO_HTML
 
 BuildFn = Callable[..., dict]
@@ -33,8 +38,11 @@ def _make_handler(
     open_dir_fn: PreviewBuildFn | None,
     delete_build_fn: PreviewBuildFn | None,
     registry: SolutionPackRegistry | None = None,
+    ecosystem_registry: EcosystemPackRegistry | None = None,
 ) -> type[BaseHTTPRequestHandler]:
     pack_registry = registry or DEFAULT_SOLUTION_PACK_REGISTRY
+    eco_registry = ecosystem_registry or DEFAULT_ECOSYSTEM_PACK_REGISTRY
+
     class StudioHandler(BaseHTTPRequestHandler):
         server_version = "OmniStackAIStudio/1.0"
 
@@ -112,6 +120,8 @@ def _make_handler(
                     self._send_json(200, history_fn())
             elif self.path == "/api/solution-packs":
                 self._send_json(200, {"packs": [p.to_dict() for p in pack_registry.packs]})
+            elif self.path == "/api/ecosystem-packs":
+                self._send_json(200, {"ecosystems": [e.to_dict() for e in eco_registry.list_packs()]})
             else:
                 self._send(404, "text/plain; charset=utf-8", b"not found")
 
@@ -159,6 +169,34 @@ def _make_handler(
                 except Exception as error:
                     self._send_json(502, {"error": str(error)})
                 return
+            if self.path == "/api/ecosystem-packs/recommend":
+                data = self._read_json_body()
+                if data is None:
+                    return
+                prompt = str(data.get("prompt", "")).strip()
+                domain = str(data.get("domain", "")).strip()
+                if not prompt and not domain:
+                    self._send_json(400, {"error": "prompt or domain is required"})
+                    return
+                if not domain:
+                    try:
+                        proposal = propose_ecosystem(prompt)
+                        domain = proposal.domain
+                    except Exception:
+                        domain = "custom-application"
+                try:
+                    recommendation = eco_registry.recommend(domain, prompt)
+                    self._send_json(
+                        200,
+                        {
+                            "domain": domain,
+                            "recommendation": recommendation.to_dict(),
+                            "ecosystems": [e.to_dict() for e in eco_registry.list_packs()],
+                        },
+                    )
+                except Exception as error:
+                    self._send_json(502, {"error": str(error)})
+                return
             if self.path != "/api/build":
                 self._send_json(404, {"error": "not found"})
                 return
@@ -171,7 +209,15 @@ def _make_handler(
                 return
 
             options: dict = {}
-            for key in ("pack_id", "pack_version", "custom_name", "custom_description"):
+            for key in (
+                "pack_id",
+                "pack_version",
+                "custom_name",
+                "custom_description",
+                "ecosystem_id",
+                "ecosystem_version",
+                "surface_slug",
+            ):
                 if key in data and data[key] is not None and str(data[key]).strip():
                     options[key] = str(data[key]).strip()
             if "configuration_changes" in data and isinstance(data["configuration_changes"], list):
@@ -210,6 +256,7 @@ def create_studio_server(
     open_dir_fn: PreviewBuildFn | None = None,
     delete_build_fn: PreviewBuildFn | None = None,
     solution_pack_registry: SolutionPackRegistry | None = None,
+    ecosystem_pack_registry: EcosystemPackRegistry | None = None,
 ) -> ThreadingHTTPServer:
     """Create (but do not start) a studio server bound to ``host``/``port``.
 
@@ -233,5 +280,6 @@ def create_studio_server(
             open_dir_fn,
             delete_build_fn,
             registry=solution_pack_registry,
+            ecosystem_registry=ecosystem_pack_registry,
         ),
     )
