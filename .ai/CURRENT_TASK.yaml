@@ -1,28 +1,25 @@
-task_id: R-437
-id: R-437
-title: "Deterministic Solution Pack configuration application"
+task_id: R-438
+id: R-438
+title: "Bounded Typed Solution Pack AI-Delta Proposal Schema & Local ModelProvider Boundary"
 status: done
 phase: MVP
 tracker_row: null
 started_at: "2026-09-14"
 completed_at: "2026-09-14"
 objective: >-
-  Eighth brick of the differentiating spine and fourth Solution Pack task. Add the first executable but
-  deterministic layer above R-436: apply only explicitly valued, allowlisted configuration changes to a fresh
-  Application IR loaded from the exact pinned pack, validate the derived IR, and return immutable transparent
-  provenance. Preserve R-436 manifest JSON compatibility while adding a typed desired-text value for safe
-  project name/description updates. Every AI-delta intent remains explicitly unapplied; do not generate
-  source, build a repository, or call a model.
+  Ninth brick of the differentiating spine and fifth Solution Pack task. Define a strict, bounded typed
+  AI-delta proposal schema and an explicit opt-in local ModelProvider path that converts pending manifest
+  AI-delta intents into validated proposal data only. Manifests with zero AI-delta changes bypass the model
+  completely (0 calls); all verification runs offline with mock providers; no cloud fallback, proposal
+  application, IR mutation, source generation, or repository build.
 allowed_paths:
   - "services/agent-engine/src/omnistackai_agent_engine/solution_packs/__init__.py"
-  - "services/agent-engine/src/omnistackai_agent_engine/solution_packs/manifest.py"
-  - "services/agent-engine/src/omnistackai_agent_engine/solution_packs/application.py"
-  - "services/agent-engine/tests/test_solution_pack_manifest.py"
-  - "services/agent-engine/tests/test_solution_pack_application.py"
+  - "services/agent-engine/src/omnistackai_agent_engine/solution_packs/ai_delta.py"
+  - "services/agent-engine/tests/test_solution_pack_ai_delta.py"
   - "docs/SOLUTION_PACKS.md"
   - "docs/PROGRESS.md"
   - "docs/RESUME_PROMPT.md"
-  - ".ai/tasks/R-437.md"
+  - ".ai/tasks/R-438.md"
   - ".ai/CURRENT_TASK.yaml"
   - ".ai/PROJECT_STATE.yaml"
   - ".ai/WORK_LOG.md"
@@ -31,48 +28,42 @@ allowed_paths:
   - "CHANGELOG.md"
 forbidden_changes:
   - "Do not modify or include the unrelated untracked .claude directory"
-  - "Do not mutate a registered baseline IR, apply AI-delta intents, infer configuration values from summaries, or allow arbitrary paths/patches/source/commands"
-  - "Do not apply entity/API/screen/design/capability changes yet; unsupported configuration targets and operations must fail closed before returning a result"
-  - "Do not generate source, build repositories, change ecosystem output, or call/add a model/provider/live path"
-  - "Do not change pack baselines/selection, Application IR schemas/examples, adapters/generators, PostgreSQL, or infrastructure"
-  - "No model, network, Docker, database, package install, generated-code execution, or toolchain use in task verify"
-  - "No new dependency, secret/credential configuration target, mutable global state, fuzzy fallback, or fabricated value"
+  - "Do not apply proposals to Application IR, mutate registered baseline IRs, or modify generator templates"
+  - "Do not generate source code, build repositories, change ecosystem planning output, or invoke cloud models"
+  - "Do not allow sensitive credential fields (password, secret, token, jwt, api_key)"
+  - "No model, network, Docker, database, package install, or generated-code execution in task verify"
+  - "No new external dependencies, mutable global state, or fuzzy unvalidated fallbacks"
 required_gates:
-  - "test-first focused test_solution_pack_application.py plus R-434/R-435/R-436 regressions"
+  - "test-first focused test_solution_pack_ai_delta.py plus R-434/R-435/R-436/R-437 regressions"
   - task verify
   - task lint
   - task security:quick
   - task env:check
   - task builder:demo -- minimal-blog
   - task builder:demo -- rideshare-favourites
-  - "deterministic repeated-application and canonical provenance inspection"
+  - "deterministic zero-call fast-path and mock generation inspection"
 model_tool_trace:
-  routing: deterministic_only
+  routing: local_opt_in_only
   local_calls: 0
   cloud_calls: 0
-  note: "R-437 is an allowlisted pure IR transformation; no model call is authorized or needed."
+  note: "Task verify uses mock ModelProvider; 0 real model calls in CI/verification."
 acceptance_criteria:
-  - "Current manifests use a new schema version with optional typed desired_text; legacy R-436 schema 1.0 JSON still parses and serializes losslessly."
-  - "desired_text is accepted only for configuration/update/project:name or project:description, is bounded by the corresponding Application IR field, and is forbidden on AI-delta or other semantic targets."
-  - "Application revalidates the exact manifest registry pin, loads a fresh baseline IR, applies project:name/project:description updates without parsing prose, and leaves the registered baseline unchanged."
-  - "Unsupported configuration areas/targets/operations, missing values, duplicate target writes, invalid derived IRs, malformed types, and pin drift fail closed without a partial result."
-  - "A frozen JSON-safe result records base and derived digests, applied configuration change IDs, explicitly unapplied AI-delta change IDs, and the validate_ir-clean derived Application IR."
-  - "Repeated application is deterministic, empty/AI-only manifests preserve the baseline digest, and existing registry/recommendation/ecosystem/builder/generated output remains unchanged."
+  - "AIDeltaProposal is an immutable, frozen value object containing pack_id, pack_version, base_ir_sha256, addressed_change_ids, bounded entities (0–8), apis (0–16), screens (0–16), capabilities (0–16), and rationale (≤500 chars)."
+  - "Manifests containing zero ai-delta changes bypass the provider completely, making 0 calls and returning an empty proposal."
+  - "build_ai_delta_messages constructs system and user messages embedding base IR context and exact pending manifest ai-delta change definitions without prompt injection vulnerability."
+  - "parse_ai_delta_proposal strictly validates untrusted model responses, rejecting unknown keys, missing required fields, controls, malformed types/identifiers, entity name collisions with base IR, and credential fields."
+  - "generate_ai_delta_proposal issues a single bounded GenerateRequest to provider.generate(), parsing and returning a validated AIDeltaProposal without mutating the base IR."
+  - "Verification runs fully offline with mock providers (0 real model calls in task verify), maintaining diff invariance and existing baseline test suite passes."
 evidence:
-  baseline_focused: "R-434/R-435/R-436 focused baseline: 27 passed"
-  baseline_verify: "R-436 checkpoint task verify: 2,945 passed fully offline"
-  test_first_red: "Focused import failed as expected because LEGACY_MANIFEST_SCHEMA_VERSION and the application API did not exist."
-  focused_test: "R-437 + R-436 + R-435 + R-434 focused regressions: 37 passed (10 new R-437 tests)"
-  verify: "2,955 passed (fully offline; +10; 0 model calls)"
-  lint: "task agent-engine:lint and task lint passed"
-  security: "task security:quick passed"
-  env: "task env:check passed"
-  demos: "minimal-blog 152 files; rideshare-favourites 149 files"
-  deterministic_inspection: >-
-    Repeated minimal-blog application produced identical canonical JSON and derived digest; project:name was
-    applied, the AI-delta change remained pending, the derived IR was valid, and the baseline digest stayed pinned.
+  baseline_focused: "R-434 through R-437 focused regressions: 37 passed"
+  baseline_verify: "R-437 checkpoint task verify: 2,955 passed fully offline"
+  test_first_red: "ImportError / AttributeError: cannot import name 'AIDeltaProposal' from 'omnistackai_agent_engine.solution_packs'"
+  focused_test: "52 passed in 0.25s (15 new R-438 tests + 37 R-434 through R-437 regressions)"
+  verify: "2,970 passed in 23.47s fully offline (0 model calls)"
+  lint: "ruff check, black --check, and markdown/yaml formatting passed cleanly"
+  security: "bandit and gitleaks passed with 0 findings"
+  env: "task env:check passed cleanly"
+  demos: "minimal-blog: 152 files; rideshare-favourites: 149 files; diff invariance verified"
+  deterministic_inspection: "Zero-call bypass confirmed (0 provider calls on manifest with 0 AI deltas); mock provider generated validated AIDeltaProposal"
   tracker: "No workbook row exists beyond R-358; workbook intentionally unchanged."
-next_action: >-
-  R-437 done. Next R-438: define a strict bounded typed AI-delta proposal schema and an explicit opt-in local
-  ModelProvider path that converts pending manifest AI-delta intents into validated proposal data only; do not
-  apply the delta, generate source, build, or add cloud fallback.
+next_action: "R-439: Safely apply validated AI-delta proposals to Application IR with semantic validation and provenance tracking."

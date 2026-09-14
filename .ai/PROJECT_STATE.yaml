@@ -2,12 +2,26 @@ schema_version: 1
 project: OmniStackAI
 phase: BASIC/MVP
 founder_stage: 0
-current_task: R-437
+current_task: R-438
 current_status: done
 branch: main
-last_completed_task: R-437
+last_completed_task: R-438
 last_completed_task_summary: >-
-  Built R-437: deterministic Solution Pack configuration application (eighth spine brick). Manifest schema
+  Built R-438: bounded typed Solution Pack AI-delta proposal schema & local ModelProvider boundary (ninth
+  spine brick). New stdlib-only solution_packs/ai_delta.py defines frozen AIDeltaProposal containing pack_id,
+  pack_version, base_ir_sha256, addressed_change_ids, bounded entities (0-8), apis (0-16), screens (0-16),
+  capabilities (0-16), and rationale (<=500 chars). Manifests with zero pending AI-delta changes bypass the
+  model provider completely (0 calls) and return an empty proposal. For pending AI deltas, build_ai_delta_messages
+  formulates system and user instructions embedding the base pack context and pending change intents;
+  parse_ai_delta_proposal strictly validates untrusted JSON, rejecting credential-bearing fields (password,
+  secret, token, jwt, api_key), entity name / API / screen collisions with base IR, unknown/missing keys,
+  controls, malformed types, and unmapped change IDs; generate_ai_delta_proposal issues a single bounded
+  GenerateRequest to provider.generate(). The proposal is data only and does not apply the delta, mutate base
+  IR, generate source, build repos, or invoke cloud models. Fifteen new tests; focused regressions 52 passed;
+  task verify 2,970 passed fully offline; lint, security, env, both demos (152/149), and deterministic zero-call/mock
+  inspection pass; 0 model calls. No dependency, pack baseline/selection, ecosystem plan, Application IR
+  schema/example, generator, generated output, provider, database, infrastructure, workbook, or .claude change.
+  Previously built R-437: deterministic Solution Pack configuration application (eighth spine brick). Manifest schema
   1.1 adds typed desired_text accepted only for configuration/update of project:name or project:description,
   bounded to the Application IR's 128/4000-character rules; summaries are never parsed and AI-delta/other
   targets cannot carry it. Strict parsing remains backward compatible with R-436 schema 1.0 and serializes it

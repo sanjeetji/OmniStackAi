@@ -1,4 +1,4 @@
-# OmniStackAI — implementation progress (as of R-437)
+# OmniStackAI — implementation progress (as of R-438)
 
 A living summary of what is built, what is pending, and how to see results. Numbers come from the
 execution tracker (`R_&_D/OmniStackAI_Execution_Tracker_v6.xlsx`, `Phase_Roadmap`) plus the state
@@ -6,22 +6,22 @@ files (`.ai/`), Git history, and CHANGELOG for work done past the tracker's last
 
 ## Headline
 
-- **2,955 automated tests pass**, fully offline and network-independent (`task verify`).
+- **2,970 automated tests pass**, fully offline and network-independent (`task verify`).
 - **147 tracker tasks Done, 1 Deferred, 210 Not Started** across 358 tasks (the tracker's planned
   universe ends at R-358).
-- **Plus 79 completed tasks beyond the workbook (R-359 → R-437)**: 57 reusable UI-component suites,
+- **Plus 80 completed tasks beyond the workbook (R-359 → R-438)**: 57 reusable UI-component suites,
   four front-door bricks, R-420 generated-SQL hardening, R-421 managed embedded local preview,
   R-422 collision-free preview ports + status/stop/restart controls, R-423 build history + re-preview,
   R-424 live preview status, R-425 per-build repo actions, R-426 remove-from-history, R-427 a
   generated-JSX inline-style fix, R-428 generated-app compile fixes + an opt-in `tsc` gate, R-429
   strict-type cleanup so a generated app passes `tsc --noEmit` clean, **R-430 the Ecosystem Scope
-  Compiler**, and **R-431 Scope → Application IRs** (one prompt → multiple owned, clean-compiling app
+  Compiler**, **R-431 Scope → Application IRs** (one prompt → multiple owned, clean-compiling app
   repos), **R-432 opt-in unknown-domain refinement**, **R-433 surface-specific data/capability
   scoping**, **R-434 immutable baseline Solution Packs**, **R-435 exact-compatible pack planning
-  recommendations**, **R-436 pinned declarative customization manifests**, and **R-437 deterministic
-  configuration application** — the first eight bricks of the differentiating
-  spine. The generated Next.js
-  component library remains at **110 components**; its series is **PAUSED at R-415** and fully resumable.
+  recommendations**, **R-436 pinned declarative customization manifests**, **R-437 deterministic
+  configuration application**, and **R-438 bounded typed AI-delta proposal schema** — the first nine
+  bricks of the differentiating spine. The generated Next.js component library remains at **110 components**;
+  its series is **PAUSED at R-415** and fully resumable.
 - **R-433 stops cloning one full model into every app:** all ten curated domains have deterministic
   read/write surface policies; refined domains use bounded entity-name matching with a safe full-model
   fallback; relation targets remain read dependencies. Each surface declares only its actor role, only its
@@ -347,7 +347,7 @@ app now renders in the preview), and **R-429 strict-type cleanup** (fixed the 8 
 revealed so a generated `minimal-blog` and `rideshare-favourites` pass `tsc --noEmit` with 0 errors; the gate
 now reports PASSED for both — generated apps are no longer blocked from a production `next build`).
 
-The differentiating spine's first eight bricks are in: **R-430** (Ecosystem Scope Compiler) *proposes* a
+The differentiating spine's first nine bricks are in: **R-430** (Ecosystem Scope Compiler) *proposes* a
 multi-app ecosystem, and **R-431** (Scope → Application IRs) *materializes* it — one prompt →
 multiple owned, clean-compiling app repos (`task agent-engine:ecosystem:plan` / `:build`); **R-432** adds
 opt-in local-model refinement for unknown domains with a strict validation boundary; **R-433** scopes each
@@ -355,11 +355,12 @@ surface's entities, read/write capabilities, and actor role; **R-434** registers
 examples as immutable, versioned, digest-pinned baseline Solution Packs; **R-435** adds exact target-aware
 recommendations to ecosystem planning without applying them; **R-436** adds the immutable, strict,
 digest-pinned declarative customization manifest; **R-437** deterministically applies explicit allowlisted
-project metadata to a fresh validated pack IR with provenance while leaving AI deltas pending. Next is
-**R-438**: a strict typed AI-delta proposal schema plus explicit opt-in local provider generation, without
-application. An optional frontier model can improve generation quality later.
-`task verify` must remain
-model/Docker/DB/install/network-free (any live/model path stays opt-in).
+project metadata to a fresh validated pack IR with provenance while leaving AI deltas pending; and **R-438**
+defines the strict bounded typed AI-delta proposal schema (`AIDeltaProposal`) and explicit opt-in local
+`ModelProvider` boundary (0 calls when no AI-delta changes exist, credential filtering, collision rejection).
+Next is **R-439**: deterministic application of validated AI-delta proposals to derive a new Application IR.
+An optional frontier model can improve generation quality later.
+`task verify` must remain model/Docker/DB/install/network-free (any live/model path stays opt-in).
 
 **The UI-component series remains PAUSED at R-415** and is independently resumable under a future free
 task ID.
@@ -368,3 +369,4 @@ Later, on a network machine / with keys: live **Tier-2** cloud preview + deploy 
 cloud-model verification. The plumbing (R-233/234 tier switch) is already built; it is a config flip.
 
 This file is refreshed as tasks land.
+

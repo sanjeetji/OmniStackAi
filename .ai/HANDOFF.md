@@ -1,18 +1,31 @@
 # Current Handoff
 
-Task ID: R-437
+Task ID: R-438
 Status: done
 Phase: BASIC/MVP — Founder Stage 0
 Branch: `main` (the only branch; the GitHub default)
 
-> **The differentiating SPINE now applies safe configuration deterministically.** R-430 proposes the
+> **The differentiating SPINE now defines bounded AI-delta proposals and local model boundary.** R-430 proposes the
 > ecosystem, R-431 materializes it, R-432 refines unknown domains, R-433 scopes surfaces, R-434 registers
-> packs, R-435 recommends one, R-436 records bounded intent, and **R-437 applies only explicit allowlisted
-> project metadata to a fresh pinned IR with validation/provenance**. AI deltas stay pending; no model call.
-> UI-component series PAUSED at R-415. **NEXT:** R-438 strict opt-in local AI-delta proposal.
+> packs, R-435 recommends one, R-436 records bounded intent, R-437 applies safe configuration deterministically,
+> and **R-438 converts pending manifest AI-delta intents into strictly typed, bounded AIDeltaProposal objects
+> via an explicit opt-in local ModelProvider boundary with 0 model calls for no-delta manifests**.
+> UI-component series PAUSED at R-415. **NEXT:** R-439 safely apply validated AI-delta proposals to Application IR.
 
 ## Repo/workflow state
 
+- **R-438 (bounded typed AI-delta proposal schema & local ModelProvider boundary — ninth spine brick)** shipped:
+  new stdlib-only `solution_packs/ai_delta.py` defines frozen `AIDeltaProposal` (`pack_id`, `pack_version`,
+  `base_ir_sha256`, `addressed_change_ids`, bounded `entities`, `apis`, `screens`, `capabilities`, `rationale`).
+  Manifests with zero pending `ai-delta` changes bypass the model provider completely (0 calls) and return an empty
+  proposal. For pending AI deltas, `build_ai_delta_messages` formulates system and user instructions embedding the
+  base pack context and pending change intents; `parse_ai_delta_proposal` strictly validates untrusted JSON, rejecting
+  credential-bearing fields (`password`, `secret`, `token`, `jwt`, `api_key`), entity name / API / screen collisions
+  with base IR, unknown/missing keys, controls, malformed types, and unmapped change IDs; `generate_ai_delta_proposal`
+  issues a single bounded `GenerateRequest` to `provider.generate()`. The proposal is data only and does not apply the
+  delta, mutate base IR, generate source, build repos, or invoke cloud models. 15 new tests; focused 52 passed;
+  `task verify` **2,970 passed** offline (+15); lint/security/env + demos (152/149) green; deterministic zero-call/mock
+  inspection green; 0 model calls. Workbook unchanged past R-358.
 - **R-437 (deterministic pack configuration application — eighth spine brick)** shipped: manifest schema 1.1
   adds bounded `desired_text` only for explicit configuration/update of `project:name` or
   `project:description`; summaries are never interpreted and legacy R-436 schema 1.0 JSON round-trips
@@ -1055,23 +1068,23 @@ Enabled accessible, desktop-and-mobile-grade, futuristic Time Picker and Time Ra
 
 ## Verification
 
-- `task verify` — pass (2,735 agent-engine tests; 18 focused R-414 tests in `test_duration_input_component.py`).
+- `task verify` — pass (2,970 agent-engine tests; 15 new focused R-438 tests in `test_solution_pack_ai_delta.py` + 37 regression tests).
 - `task lint`, `task security:quick`, `task env:check` — pass.
-- `task builder:demo -- minimal-blog` — pass (151 files, includes `components/duration-input.tsx`).
+- `task builder:demo -- minimal-blog` and `task builder:demo -- rideshare-favourites` — pass (152 and 149 files).
+- Zero-call fast-path and mock provider generation inspection — pass.
 
 ## Blockers and risks
 
-- None for offline Next.js compound component suites and codegen increments.
+- None for offline Solution Pack AI-delta proposal schema and local model provider integration.
 - Deferred R-224 (Next.js console upgrade) remains paused pending network/npm registry access.
 
 ## Next action
 
-- R-437 is complete. Before coding, record the R-438 Standard AI Task Contract. Recommended scope: define a
-  strict bounded typed AI-delta proposal schema and an explicit opt-in local `ModelProvider` path that turns
-  pending manifest AI-delta intents into validated proposal data only. Curated/no-delta flows must make zero
-  calls; no cloud fallback, proposal application, source generation, or build. Keep verification offline with
-  fake providers only.
+- R-438 is complete. Before coding, record the R-439 Standard AI Task Contract. Recommended scope: safely apply
+  validated AI-delta proposals to Application IR with semantic validation and provenance tracking, extending
+  `SolutionPackApplicationResult` to reflect applied AI-delta modifications while rejecting invalid deltas.
 
 ## Next command
 
 - `task ai:status`
+

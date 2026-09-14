@@ -1,5 +1,28 @@
 # Work Log
 
+## 2026-09-14 — R-438 (bounded typed Solution Pack AI-delta proposal schema & local ModelProvider boundary)
+
+- Recorded `.ai/tasks/R-438.md` and `.ai/CURRENT_TASK.yaml` before implementation. Test-first focused import
+  failed because `omnistackai_agent_engine.solution_packs.ai_delta` did not exist; final R-438 through R-434 focused
+  regression is 52 passing tests (15 new R-438 tests).
+- Added frozen `AIDeltaProposal` (`pack_id`, `pack_version`, `base_ir_sha256`, `addressed_change_ids`, bounded
+  `entities`, `apis`, `screens`, `capabilities`, `rationale`). Limits enforce 0-8 entities, 0-16 APIs, 0-16 screens,
+  0-16 capabilities, and rationale <= 500 characters.
+- Manifests with zero pending `ai-delta` changes bypass the model provider completely (0 calls) and return an empty
+  proposal.
+- Added `build_ai_delta_messages` formulating system and user instructions embedding the base pack context and
+  pending change intents without prompt injection risk.
+- Added `parse_ai_delta_proposal` to strictly validate untrusted JSON, rejecting credential-bearing fields (`password`,
+  `secret`, `token`, `jwt`, `api_key`), entity name / API / screen collisions with base IR, unknown/missing keys,
+  controls, malformed types, and unmapped change IDs.
+- Added `generate_ai_delta_proposal` issuing a single bounded `GenerateRequest` to `provider.generate()`. The proposal
+  is data only and does not apply the delta, mutate base IR, generate source, build repos, or invoke cloud models.
+- Gates: `task verify` 2,970 passed fully offline (+15); agent-engine/repository lint, security, and environment
+  passed; both demos remained 152/149 files; deterministic zero-call fast-path and mock inspection passed; 0 model calls.
+- No dependency, pack baseline/selection, ecosystem plan, Application IR schema/example, generator, generated
+  output, provider, PostgreSQL, infrastructure, tracker workbook, or `.claude/` change. Workbook remains
+  unchanged past R-358.
+
 ## 2026-09-14 — R-437 (deterministic Solution Pack configuration application)
 
 - Recorded `.ai/tasks/R-437.md` and `.ai/CURRENT_TASK.yaml` before implementation. Test-first focused import

@@ -4,13 +4,26 @@ Last updated: 2026-09-14
 ## Current Phase
 Stage 0 (Founder Build Sequence, Brief Section 91) — BASIC/MVP
 
-> **The differentiating SPINE now applies safe configuration deterministically (R-437).** Explicit project
-> name/description values are applied to a fresh exact-pinned baseline IR, validated, and returned with
-> canonical applied/pending provenance. AI-delta intent remains unapplied and no model is called.
-> UI-component series PAUSED at R-415 (resumable). **NEXT:** R-438 strict opt-in local AI-delta proposal.
+> **The differentiating SPINE now defines bounded AI-delta proposals and local model boundary (R-438).**
+> Pending manifest AI-delta intents generate strict, typed `AIDeltaProposal` records via an explicit opt-in
+> local `ModelProvider` path, with zero calls for no-delta manifests. No cloud fallback, IR mutation, source
+> generation, or build. UI-component series PAUSED at R-415 (resumable). **NEXT:** R-439 apply AI deltas.
 
 ## Last Completed Task
-Tracker ID: R-437 — Deterministic Solution Pack configuration application — DONE.
+Tracker ID: R-438 — Bounded Typed Solution Pack AI-Delta Proposal Schema & Local ModelProvider Boundary — DONE.
+Defined `solution_packs/ai_delta.py` with frozen `AIDeltaProposal` (`pack_id`, `pack_version`, `base_ir_sha256`,
+`addressed_change_ids`, bounded `entities`, `apis`, `screens`, `capabilities`, `rationale`). Manifests with
+zero AI deltas bypass the model provider completely (0 calls) and return an empty proposal. For pending AI
+deltas, `build_ai_delta_messages` formulates system/user instructions embedding the base pack context and
+pending change intents; `parse_ai_delta_proposal` strictly validates untrusted JSON, rejecting credential-bearing
+fields (`password`, `secret`, `token`, `jwt`, `api_key`), entity name / API / screen collisions with base IR,
+unknown/missing keys, controls, malformed types, and unmapped change IDs; `generate_ai_delta_proposal` issues
+a single bounded `GenerateRequest` to `provider.generate()`. The proposal is data only and does not apply the
+delta, mutate base IR, generate source, build repos, or invoke cloud models. Fifteen new tests; focused regressions
+**52 passed**; `task verify` **2,970 passed** offline; lint, security, env, both demos (152 / 149), and
+deterministic zero-call/mock inspection pass; 0 model calls.
+
+Immediately preceded by R-437 — Deterministic Solution Pack configuration application — DONE.
 Manifest schema 1.1 adds explicit bounded `desired_text` only for project-name/description updates while
 legacy R-436 schema 1.0 remains losslessly readable. Application revalidates the exact pin, preflights all
 configuration/duplicate targets, loads a fresh baseline, applies only those two allowlisted fields immutably,

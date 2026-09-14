@@ -104,9 +104,24 @@ applied configuration IDs, explicitly unapplied AI-delta IDs, and the complete d
 is byte-stable. Empty and AI-only manifests preserve the base digest, and registry baselines remain unchanged.
 This layer performs no source generation, build, network/database work, or model call.
 
+## Bounded typed AI-delta proposal schema
+
+`generate_ai_delta_proposal()` provides an explicit opt-in model boundary for converting pending manifest
+AI-delta intents into validated `AIDeltaProposal` data. When a manifest has zero AI-delta changes, the provider
+is completely bypassed and 0 calls are made.
+
+When pending AI-delta items exist, the prompt teaches the model by providing the base Solution Pack metadata,
+existing entities, APIs, screens, and the exact set of pending change intents. The untrusted JSON output is
+strictly parsed by `parse_ai_delta_proposal()`:
+- Rejecting credential-bearing fields (`password`, `secret`, `token`, `jwt`, `api_key`).
+- Rejecting collisions with existing base IR entities, APIs, or screens.
+- Enforcing structural validity on entities (required UUID `id` field, valid field types and relation kinds).
+- Restricting outputs to bounded `AIDeltaProposal` records without mutating the base IR, generating source,
+  or invoking cloud models.
+
 ## Next boundary
 
-R-438 may define a strict typed AI-delta proposal and an explicit opt-in local `ModelProvider` path that turns
-pending manifest intent into validated proposal data. It must not apply the proposal or silently use cloud.
-Delta application and source generation/building remain later, separately verified layers; every step must
-preserve the deterministic IR, ownership, secret, and provider boundaries.
+R-439 will define deterministic application of validated AI-delta proposals to a fresh Application IR,
+combining allowlisted configuration and verified AI deltas into a unified `validate_ir`-clean result.
+Source generation and repo builds follow in subsequent layers.
+
