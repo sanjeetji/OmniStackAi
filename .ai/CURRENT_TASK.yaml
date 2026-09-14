@@ -1,26 +1,30 @@
-task_id: R-439
-id: R-439
-title: "Safely Apply Validated AI-Delta Proposals to Application IR"
+task_id: R-440
+id: R-440
+title: "Wire Derived Solution Pack Application IRs into Verified Multi-Repo Builder Pipelines and Project Generation"
 status: done
 phase: MVP
 tracker_row: null
 started_at: "2026-09-14"
 completed_at: "2026-09-14"
 objective: >-
-  Tenth brick of the differentiating spine and sixth Solution Pack task. Safely apply validated
-  AIDeltaProposal objects to a fresh pinned Solution Pack ApplicationIR, combining allowlisted
-  configuration updates and verified AI-delta additions into a single, unified validate_ir-clean
-  derived ApplicationIR with transparent, byte-stable provenance tracking. When no proposal is
-  provided, existing configuration application behavior is strictly preserved.
+  Eleventh brick of the differentiating spine and seventh Solution Pack task. Connects derived
+  ApplicationIR instances from safe Solution Pack customization (apply_solution_pack_manifest)
+  into verified single-project generation (build_solution_pack_project) and multi-repo ecosystem
+  pipelines (plan_ecosystem / build_ecosystem).
 allowed_paths:
-  - "services/agent-engine/src/omnistackai_agent_engine/solution_packs/application.py"
+  - "services/agent-engine/src/omnistackai_agent_engine/solution_packs/builder.py"
+  - "services/agent-engine/src/omnistackai_agent_engine/solution_packs/build_cli.py"
   - "services/agent-engine/src/omnistackai_agent_engine/solution_packs/__init__.py"
-  - "services/agent-engine/src/omnistackai_agent_engine/codegen/nextjs.py"
-  - "services/agent-engine/tests/test_solution_pack_application.py"
+  - "services/agent-engine/src/omnistackai_agent_engine/intake/ecosystem.py"
+  - "services/agent-engine/src/omnistackai_agent_engine/intake/__init__.py"
+  - "services/agent-engine/tests/test_solution_pack_builder.py"
+  - "services/agent-engine/tests/test_ecosystem.py"
+  - "scripts/agent-engine.sh"
+  - "Taskfile.yml"
   - "docs/SOLUTION_PACKS.md"
   - "docs/PROGRESS.md"
   - "docs/RESUME_PROMPT.md"
-  - ".ai/tasks/R-439.md"
+  - ".ai/tasks/R-440.md"
   - ".ai/CURRENT_TASK.yaml"
   - ".ai/PROJECT_STATE.yaml"
   - ".ai/WORK_LOG.md"
@@ -29,14 +33,12 @@ allowed_paths:
   - "CHANGELOG.md"
 forbidden_changes:
   - "Do not modify or include the unrelated untracked .claude directory"
-  - "Do not make model calls, network requests, or database queries during proposal application"
+  - "Do not make model calls, network requests, or database queries during builder execution"
   - "Do not mutate registered baseline Solution Packs in the registry"
-  - "Do not allow collisions between proposed entities, APIs, or screens and the base IR"
-  - "Do not permit broken cross-references (e.g. relations pointing to non-existent entities)"
-  - "Do not output a derived IR that fails validate_ir"
-  - "Do not generate source code or build repositories in this task"
+  - "Do not break backward compatibility for plan_ecosystem / build_ecosystem callers without packs"
+  - "Do not add external Python dependencies (Python 3.13 stdlib only)"
 required_gates:
-  - "test-first focused test_solution_pack_application.py plus R-434/R-435/R-436/R-437/R-438 regressions"
+  - "test-first focused test_solution_pack_builder.py plus R-434/R-435/R-436/R-437/R-438/R-439 regressions"
   - task verify
   - task lint
   - task security:quick
@@ -48,24 +50,24 @@ model_tool_trace:
   routing: none
   local_calls: 0
   cloud_calls: 0
-  note: "Deterministic IR application only; 0 model calls."
+  note: "Deterministic builder pipeline only; 0 model calls."
 acceptance_criteria:
-  - "SolutionPackApplicationResult includes applied_ai_delta_change_ids: tuple[str, ...] = () alongside existing configuration IDs, with all ID sets strictly partitioned, sorted, and unique."
-  - "apply_solution_pack_manifest(manifest, *, proposal=None, registry=...) accepts an optional proposal: AIDeltaProposal | None = None."
-  - "When proposal is None, behavior is strictly backward-compatible with R-437 (configuration applied, all AI deltas marked unapplied, applied_ai_delta_change_ids empty)."
-  - "When proposal is provided, revalidate pins (pack_id, pack_version, base_ir_sha256), change IDs, collisions (entities, APIs, screens), and relation references."
-  - "Immutably merge entities, APIs, and screens into derived IR and verify validate_ir-clean result."
-  - "Repeated application is byte-stable and deterministic."
+  - "build_solution_pack_project builds an owned Git repo for a SolutionPackApplicationResult or manifest + proposal, verified against its verify plans."
+  - "SolutionPackBuildResult records pack id, version, base/derived digests, applied/unapplied change IDs, verify targets, commit sha, and file count."
+  - "plan_ecosystem accepts optional pack_result or pack_manifest (+ pack_proposal) and wires the derived Application IR to the matching ecosystem surface."
+  - "build_ecosystem validates verify plans for all apps and captures pack provenance in EcosystemAppBuild."
+  - "Deterministic byte-stable JSON serialization for all result structures."
+  - "100% offline verification in task verify (0 model calls)."
 evidence:
-  baseline_focused: "R-434 through R-438 focused regressions: 52 passed"
-  baseline_verify: "R-438 checkpoint task verify: 2,970 passed fully offline"
-  test_first_red: "Test-first suite failed with 14 errors due to missing proposal argument and applied_ai_delta_change_ids"
-  focused_test: "66 passed in 1.48s (14 new R-439 tests + 52 R-434..R-438 regression tests)"
-  verify: "2,984 passed in 30.63s fully offline (+14 new tests)"
-  lint: "ruff check passed (0 errors)"
-  security: "bandit and pip-audit passed (0 vulnerabilities, 0 issues)"
-  env: "Task doctor, node/pnpm, and python environments clean"
-  demos: "minimal-blog (152 files) and rideshare-favourites (149 files) generated and verified byte-clean"
-  deterministic_inspection: "Derived IR serialization round-trip, byte-stable hash equivalence, and mutual exclusion of change ID sets verified"
+  baseline_focused: "R-434 through R-439 focused regressions: 67 passed"
+  baseline_verify: "R-439 checkpoint task verify: 2,984 passed fully offline"
+  test_first_red: "Failed initially when builder.py and build_cli.py were missing"
+  focused_test: "test_solution_pack_builder.py and regressions: 86 passed (11 new)"
+  verify: "task verify: 2,995 passed fully offline (+11)"
+  lint: "task lint passed"
+  security: "task security:quick passed"
+  env: "task env:check passed"
+  demos: "task builder:demo -- minimal-blog (152 files) and rideshare-favourites (149 files) passed"
+  deterministic_inspection: "Passed byte-stable JSON serialization and exact provenance checking"
   tracker: "No workbook row exists beyond R-358; workbook intentionally unchanged."
-next_action: "R-440: wire derived Solution Pack Application IRs into verified multi-repo builder pipelines and project generation."
+next_action: "Proceed to R-441: live Studio integration and UI controls for Solution Pack selection and modification."

@@ -134,7 +134,21 @@ When `proposal` is provided:
 - Ensures the derived IR is `validate_ir`-clean; any error fails closed with `SolutionPackError`.
 - Records `applied_ai_delta_change_ids` and remaining `unapplied_ai_delta_change_ids` in `SolutionPackApplicationResult`.
 - Application is byte-stable, repeatable, and offline (0 model calls).
- 
+
+## Project builder and CLI
+
+`build_solution_pack_project()` assembles a Solution Pack derived `ApplicationIR` into an owned Git repository on disk:
+- Accepts either a `SolutionPackApplicationResult` or a `SolutionPackManifest` (with optional `AIDeltaProposal`).
+- Verifies domain and pack compatibility, compiles target projects via `assemble_project()`, and initializes an owned Git repository with complete initial commit via `create_repository()`.
+- Computes deterministic target verification plans (`verify_plans_for_ir`) and records complete provenance:
+  - `pack_id`, `pack_version`, `base_ir_sha256`, `derived_ir_sha256`
+  - `applied_configuration_change_ids`, `applied_ai_delta_change_ids`, `unapplied_ai_delta_change_ids`
+  - `target_dir`, `file_count`, `commit_sha`, and `verify_targets`.
+- Serializes byte-stable, deterministically formatted metadata via `SolutionPackBuildResult.to_json()`.
+- Wires seamlessly into `plan_ecosystem()` and `build_ecosystem()` to replace the customer web surface IR with the pack-derived IR while preserving all other ecosystem services.
+- Exposes CLI via `python3 -m omnistackai_agent_engine.solution_packs.build_cli` and `task agent-engine:solution-pack:build`.
+- 100% offline verification in `task verify` (0 model calls).
+
 ## Next boundary
- 
-R-440 will wire derived Solution Pack Application IRs into verified multi-repo builder pipelines and project generation.
+
+R-441: live Studio integration and UI controls for Solution Pack selection and modification.

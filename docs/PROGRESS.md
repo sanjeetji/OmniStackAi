@@ -1,4 +1,4 @@
-# OmniStackAI — implementation progress (as of R-439)
+# OmniStackAI — implementation progress (as of R-440)
 
 A living summary of what is built, what is pending, and how to see results. Numbers come from the
 execution tracker (`R_&_D/OmniStackAI_Execution_Tracker_v6.xlsx`, `Phase_Roadmap`) plus the state
@@ -6,10 +6,10 @@ files (`.ai/`), Git history, and CHANGELOG for work done past the tracker's last
 
 ## Headline
 
-- **2,984 automated tests pass**, fully offline and network-independent (`task verify`).
+- **2,992 automated tests pass**, fully offline and network-independent (`task verify`).
 - **147 tracker tasks Done, 1 Deferred, 210 Not Started** across 358 tasks (the tracker's planned
   universe ends at R-358).
-- **Plus 81 completed tasks beyond the workbook (R-359 → R-439)**: 57 reusable UI-component suites,
+- **Plus 82 completed tasks beyond the workbook (R-359 → R-440)**: 57 reusable UI-component suites,
   four front-door bricks, R-420 generated-SQL hardening, R-421 managed embedded local preview,
   R-422 collision-free preview ports + status/stop/restart controls, R-423 build history + re-preview,
   R-424 live preview status, R-425 per-build repo actions, R-426 remove-from-history, R-427 a
@@ -19,10 +19,16 @@ files (`.ai/`), Git history, and CHANGELOG for work done past the tracker's last
   repos), **R-432 opt-in unknown-domain refinement**, **R-433 surface-specific data/capability
   scoping**, **R-434 immutable baseline Solution Packs**, **R-435 exact-compatible pack planning
   recommendations**, **R-436 pinned declarative customization manifests**, **R-437 deterministic
-  configuration application**, **R-438 bounded typed AI-delta proposal schema**, and **R-439 safe
-  application of validated AI-delta proposals to Application IR** — the first ten bricks of the
-  differentiating spine. The generated Next.js component library remains at **110 components**; its
-  series is **PAUSED at R-415** and fully resumable.
+  configuration application**, **R-438 bounded typed AI-delta proposal schema**, **R-439 safe
+  application of validated AI-delta proposals to Application IR**, and **R-440 verified multi-repo
+  builder pipelines and project generation with Solution Pack derived IRs** — the first eleven bricks
+  of the differentiating spine. The generated Next.js component library remains at **110 components**;
+  its series is **PAUSED at R-415** and fully resumable.
+- **R-440 wires derived Solution Pack IRs into verified multi-repo builder pipelines and project generation:**
+  `build_solution_pack_project()` compiles a pack-derived `ApplicationIR` into an owned Git repo on disk,
+  derives verify gate plans, and records complete provenance (pack id/version, base/derived digests,
+  applied change IDs, verify targets, commit SHA). `plan_ecosystem()` and `build_ecosystem()` integrate
+  pack-derived IRs seamlessly for targeted surfaces with full ecosystem domain safety checks.
 - **R-438 defines the bounded AI-delta proposal schema and local model boundary:** manifests with
   zero AI deltas bypass the model completely (0 calls); pending AI deltas produce bounded, typed
   `AIDeltaProposal` objects strictly parsed and validated against base IR collisions and credential fields.

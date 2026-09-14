@@ -1,20 +1,31 @@
 # Current Handoff
 
-Task ID: R-439
+Task ID: R-440
 Status: done
 Phase: BASIC/MVP — Founder Stage 0
 Branch: `main` (the only branch; the GitHub default)
 
-> **The differentiating SPINE now safely applies validated AI-delta proposals to Application IR.** R-430 proposes the
+> **The differentiating SPINE now wires derived Solution Pack Application IRs into verified multi-repo builder pipelines and project generation.** R-430 proposes the
 > ecosystem, R-431 materializes it, R-432 refines unknown domains, R-433 scopes surfaces, R-434 registers
 > packs, R-435 recommends one, R-436 records bounded intent, R-437 applies safe configuration deterministically,
 > R-438 converts pending manifest AI-delta intents into strictly typed, bounded AIDeltaProposal objects via an
-> explicit opt-in local ModelProvider boundary, and **R-439 safely applies validated AI-delta proposals to
-> derived Application IRs with strict pin revalidation, entity/API/screen collision checks, relation validation,
-> and atomic validate_ir-clean derived results**.
-> UI-component series PAUSED at R-415. **NEXT:** R-440 wire derived Solution Pack Application IRs into verified multi-repo builder pipelines and project generation.
+> explicit opt-in local ModelProvider boundary, R-439 safely applies validated AI-delta proposals to
+> derived Application IRs, and **R-440 wires derived Solution Pack Application IRs into verified multi-repo
+> builder pipelines (build_solution_pack_project, plan_ecosystem, build_ecosystem) with full verify plans and
+> deterministic provenance**.
+> UI-component series PAUSED at R-415. **NEXT:** R-441 live Studio integration and UI controls for Solution Pack selection and modification.
 
 ## Repo/workflow state
+
+- **R-440 (wire derived Solution Pack Application IRs into verified builder pipelines — eleventh spine brick)** shipped:
+  `solution_packs/builder.py` and `solution_packs/build_cli.py` add `build_solution_pack_project`, which assembles
+  an owned Git repository for a `SolutionPackApplicationResult` or `SolutionPackManifest` (+ optional `AIDeltaProposal`),
+  validates verification gate plans against the derived Application IR, and returns a frozen byte-stable `SolutionPackBuildResult`.
+  `plan_ecosystem` and `build_ecosystem` now accept optional `pack_result` or `pack_manifest` (+ `pack_proposal`),
+  revalidating domain compatibility, transparently substituting the customer surface with the pack-derived IR while
+  preserving other surfaces, and recording complete pack provenance in `EcosystemAppBuild`.
+  New CLI `task agent-engine:solution-pack:build`. 11 new tests; focused 86 passed; `task verify` **2,995 passed**
+  offline (+11); lint/security/env + demos (152/149) green; 0 model calls. Workbook unchanged past R-358.
 
 - **R-439 (safely apply validated AI-delta proposals to Application IR — tenth spine brick)** shipped:
   `apply_solution_pack_manifest(manifest, *, proposal=None, registry=...)` now accepts an optional validated

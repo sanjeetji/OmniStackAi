@@ -1,5 +1,26 @@
 # Work Log
 
+## 2026-09-14 — R-440 (wire derived Solution Pack Application IRs into verified multi-repo builder pipelines and project generation)
+
+- Recorded `.ai/tasks/R-440.md` and `.ai/CURRENT_TASK.yaml` before implementation. Test-first focused suite
+  failed because `omnistackai_agent_engine.solution_packs.builder` and exports were missing; final R-440 through R-434
+  focused regression is 86 passing tests (11 new R-440 tests).
+- Implemented `solution_packs/builder.py` with frozen `SolutionPackBuildResult`:
+  - `build_solution_pack_project()` accepts a `SolutionPackApplicationResult` or `SolutionPackManifest` (+ optional `AIDeltaProposal`).
+  - Calls `assemble_project()` and `create_repository()` to write an owned Git repository to disk.
+  - Derives deterministic verification plans via `verify_plans_for_ir()`.
+  - Serializes byte-stable provenance via `to_dict()` and `to_json()`.
+- Extended `intake/ecosystem.py`:
+  - `plan_ecosystem()` and `build_ecosystem()` accept optional `pack_result` or `pack_manifest` (+ `pack_proposal`).
+  - Validates pack compatibility with ecosystem domain (raising `SolutionPackError` on mismatch).
+  - Substitutes the customer web surface IR with the pack-derived IR while preserving all other ecosystem services.
+  - Embeds pack provenance in `EcosystemPlan.to_dict()`.
+- Implemented standalone CLI `solution_packs/build_cli.py` and Taskfile task `agent-engine:solution-pack:build`.
+- Gates: `task verify` 2,995 passed fully offline (+11); agent-engine/repository lint, security, and environment
+  passed; both demos remained 152/149 files; build CLI passed; 0 model calls.
+- No dependency, pack baseline/selection, Application IR schema/example, generator, generated output, provider,
+  PostgreSQL, infrastructure, tracker workbook, or `.claude/` change. Workbook remains unchanged past R-358.
+
 ## 2026-09-14 — R-439 (safely apply validated AI-delta proposals to Application IR)
 
 - Recorded `.ai/tasks/R-439.md` and `.ai/CURRENT_TASK.yaml` before implementation. Test-first focused suite

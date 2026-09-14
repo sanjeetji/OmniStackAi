@@ -33,6 +33,8 @@ from .registry import (
     canonical_ir_digest,
 )
 
+from .builder import SolutionPackBuildResult, build_solution_pack_project
+
 __all__ = [
     "LEGACY_MANIFEST_SCHEMA_VERSION",
     "MANIFEST_SCHEMA_VERSION",
@@ -51,6 +53,8 @@ __all__ = [
     "build_ai_delta_messages",
     "generate_ai_delta_proposal",
     "parse_ai_delta_proposal",
+    "SolutionPackBuildResult",
+    "build_solution_pack_project",
     "SolutionPack",
     "SolutionPackError",
     "SolutionPackRecommendation",

@@ -2,12 +2,28 @@ schema_version: 1
 project: OmniStackAI
 phase: BASIC/MVP
 founder_stage: 0
-current_task: R-439
-current_status: done
+current_task: R-441
+current_status: ready
 branch: main
-last_completed_task: R-439
+last_completed_task: R-440
 last_completed_task_summary: >-
-  Built R-439: safely apply validated AI-delta proposals to Application IR (tenth spine brick).
+  Built R-440: wire derived Solution Pack Application IRs into verified multi-repo builder pipelines
+  and project generation (eleventh spine brick). Added Python-3.13-stdlib-only solution_packs/builder.py
+  and solution_packs/build_cli.py. build_solution_pack_project assembles a Solution Pack derived
+  ApplicationIR (from a SolutionPackApplicationResult or SolutionPackManifest + optional AIDeltaProposal)
+  into an owned Git repository on disk using assemble_project and create_repository. Computes deterministic
+  verify gate plans (verify_plans_for_ir) and records complete provenance in a frozen, byte-stable
+  SolutionPackBuildResult (pack_id, pack_version, base_ir_sha256, derived_ir_sha256, applied_configuration_change_ids,
+  applied_ai_delta_change_ids, unapplied_ai_delta_change_ids, target_dir, file_count, commit_sha, verify_targets).
+  Extended plan_ecosystem and build_ecosystem with optional pack_result or pack_manifest (+ pack_proposal)
+  arguments: checks pack compatibility against ecosystem domain (failing closed with SolutionPackError on domain
+  mismatch), transparently substitutes the customer web surface with the pack-derived IR while preserving other
+  ecosystem services, and records pack provenance in the ecosystem plan. Added task agent-engine:solution-pack:build
+  and CLI build_cli.py for standalone repo generation. Eleven new tests; focused regressions 86 passed;
+  task verify 2,995 passed fully offline (+11); lint, security, env, both builder demos (152/149 files), and
+  build CLI pass; 0 model calls. No dependency, pack baseline/selection, Application IR schema/example, generator,
+  generated output, provider, database, infrastructure, workbook, or .claude change.
+  Previously built R-439: safely apply validated AI-delta proposals to Application IR (tenth spine brick).
   Enhanced solution_packs/application.py and SolutionPackApplicationResult to accept an optional
   proposal: AIDeltaProposal | None = None. When proposal is None, existing deterministic configuration
   application behavior is strictly preserved (applied configuration changes merged, all AI deltas marked

@@ -41,7 +41,7 @@ START PROTOCOL
   `task ai:status`, `task ai:handoff`. `task verify` must stay green and network-independent.
 - Confirm git branch/HEAD/clean tree. Then restate: phase, next Tracker ID, objective, blast radius.
 
-WHAT IS ALREADY BUILT (platform generators are Python 3.13 stdlib-only, offline, in services/agent-engine; 2,984 tests pass)
+WHAT IS ALREADY BUILT (platform generators are Python 3.13 stdlib-only, offline, in services/agent-engine; 2,992 tests pass)
 - Model fabric: ModelProvider contract + registry; local Ollama adapter (runs any installed model via
 
 
@@ -206,11 +206,11 @@ managed embedded trusted-local Studio preview (R-421), collision-free preview po
 restart controls (R-422), build history + re-preview (R-423), live preview status (R-424), per-build
 repo actions - copy path + open folder (R-425), remove-from-history (R-426), a generated-JSX
 inline-style fix (R-427), generated-app compile fixes + an opt-in tsc gate (R-428), strict generated-app
-type cleanup (R-429), and the first ten differentiating-spine bricks (R-430 -> R-439).
+type cleanup (R-429), and the first eleven differentiating-spine bricks (R-430 -> R-440).
 The generated component library is 110 components. Its UI-COMPONENT SERIES IS PAUSED at R-415
 (resumable under a future free ID; each component is independent/additive, nothing decays). Git, state files
 (.ai/), CHANGELOG, and docs/PROGRESS.md remain the executable/detail sources of truth. Current through
-R-439; `task verify` = 2,984 tests. R-416 added prompt-to-IR intake, R-417 materialized a generated
+R-440; `task verify` = 2,992 tests. R-416 added prompt-to-IR intake, R-417 materialized a generated
 owned repo, R-418 added the local chat studio, R-419 added turnkey local run, and R-420 fixed the two
 SQL defects found by live execution. R-421 added an explicit `task agent-engine:studio:preview` mode:
 one managed generated-app session, API/web readiness, replacement/shutdown cleanup, port-collision
@@ -345,7 +345,7 @@ RULES (non-negotiable)
   SHA == local HEAD. Never claim unexecuted tests.
 
 WHAT TO DO NEXT
-- R-430 through R-439 are DONE — the DIFFERENTIATING SPINE now proposes a curated multi-app ecosystem,
+- R-430 through R-440 are DONE — the DIFFERENTIATING SPINE now proposes a curated multi-app ecosystem,
   materializes it as multiple owned repos, and can explicitly refine an unknown domain through local Ollama
   before using the same deterministic planner. R-433 then gives each surface a bounded read/write entity
   policy, relation-safe dependencies, one actor role, and role-gated mutations. R-434 registers immutable,
@@ -355,9 +355,9 @@ WHAT TO DO NEXT
   AI-delta intent pending; R-438 converts pending manifest AI-delta intents into strict validated proposal
   data via an opt-in local ModelProvider boundary (0 calls when no AI-delta changes exist); R-439 safely
   applies validated AI-delta proposals to Application IR with pin/collision/relation revalidation, immutable
-  merging, semantic validation, and byte-stable provenance tracking.
-- NEXT R-440: wire derived Solution Pack Application IRs into verified multi-repo builder pipelines and
-  project generation.
+  merging, semantic validation, and byte-stable provenance tracking; and R-440 compiles Solution Pack derived
+  IRs into owned Git repositories with verification gate ladders and transparent ecosystem builder integration.
+- NEXT R-441: live Studio integration and UI controls for Solution Pack selection and modification.
   Keep `task verify` model/Docker/DB/install/network-free (any live/model path stays opt-in); preserve
   single-session ownership and explicit trusted-local mode.
 - The UI-component series remains paused at R-415 and can be resumed later under a future free ID.
@@ -368,7 +368,7 @@ WHAT TO DO NEXT
   deploy (OMNISTACKAI_TIER=2 + E2B/Vercel keys) and cloud-model live-verify. Governance-deferred: native
   mobile (R-010 etc.) until web/backend stability.
 
-Begin by reading the files above and running the start protocol, then continue the spine at R-439
+Begin by reading the files above and running the start protocol, then continue the spine at R-441
 and write its Standard AI Task Contract before writing code.
 
 ```

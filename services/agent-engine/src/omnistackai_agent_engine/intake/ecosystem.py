@@ -43,9 +43,16 @@ from ..application_ir import (
 from ..application_ir.validate import has_errors
 from ..projectplan import build_project_plan
 from ..solution_packs import (
+    AIDeltaProposal,
     DEFAULT_SOLUTION_PACK_REGISTRY,
+    SolutionPackApplicationResult,
+    SolutionPackError,
+    SolutionPackManifest,
     SolutionPackRecommendation,
+    SolutionPackRegistry,
+    apply_solution_pack_manifest,
 )
+from ..verify import verify_plans_for_ir
 from .build_app import AppBuildResult, build_app_from_ir
 from .scope_compiler import AppSurface, ScopeProposal, propose_ecosystem
 
@@ -419,6 +426,7 @@ def _derive_screens(
 class SurfaceApp:
     surface: AppSurface
     ir: ApplicationIR
+    pack_result: SolutionPackApplicationResult | None = None
 
     def to_dict(self) -> dict:
         writable_entities = sorted(
@@ -428,7 +436,7 @@ class SurfaceApp:
                 if api.method is not HttpMethod.GET and api.request_schema is not None
             }
         )
-        return {
+        payload = {
             "surface": self.surface.to_dict(),
             "app_name": self.ir.name,
             "slug": _slug(self.ir.name),
@@ -438,6 +446,9 @@ class SurfaceApp:
             "api_count": len(self.ir.apis),
             "screen_count": len(self.ir.screens),
         }
+        if self.pack_result is not None:
+            payload["pack_result"] = self.pack_result.to_dict()
+        return payload
 
 
 @dataclass(frozen=True)
@@ -531,13 +542,47 @@ def plan_ecosystem(
     option_id: str = "complete",
     *,
     entities: tuple[Entity, ...] | None = None,
+    pack_result: SolutionPackApplicationResult | None = None,
+    pack_manifest: SolutionPackManifest | None = None,
+    pack_proposal: AIDeltaProposal | None = None,
+    registry: SolutionPackRegistry = DEFAULT_SOLUTION_PACK_REGISTRY,
 ) -> EcosystemPlan:
     """Turn a ScopeProposal + build-scope option into an EcosystemPlan (one IR per selected surface)."""
+    if pack_manifest is not None and pack_result is None:
+        pack_result = apply_solution_pack_manifest(
+            pack_manifest,
+            proposal=pack_proposal,
+            registry=registry,
+        )
+
+    if pack_result is not None:
+        descriptor = registry.get(pack_result.pack_id)
+        if descriptor is None or proposal.domain not in descriptor.domains:
+            pack_domains = ", ".join(descriptor.domains) if descriptor else "unknown"
+            raise SolutionPackError(
+                f"Solution pack '{pack_result.pack_id}' for domain(s) '{pack_domains}' "
+                f"does not match ecosystem domain '{proposal.domain}'"
+            )
+
     surfaces = _surfaces_for_option(proposal, option_id)
-    apps = tuple(
-        SurfaceApp(surface, surface_to_ir(proposal, surface, entities=entities))
-        for surface in surfaces
-    )
+
+    target_surface_index: int | None = None
+    if pack_result is not None and surfaces:
+        for idx, s in enumerate(surfaces):
+            if s.kind == "customer_web":
+                target_surface_index = idx
+                break
+        if target_surface_index is None:
+            target_surface_index = 0
+
+    apps_list: list[SurfaceApp] = []
+    for idx, surface in enumerate(surfaces):
+        if idx == target_surface_index and pack_result is not None:
+            apps_list.append(SurfaceApp(surface, pack_result.ir, pack_result=pack_result))
+        else:
+            apps_list.append(SurfaceApp(surface, surface_to_ir(proposal, surface, entities=entities)))
+    apps = tuple(apps_list)
+
     required_targets = tuple(
         sorted(
             {
@@ -547,7 +592,7 @@ def plan_ecosystem(
             }
         )
     )
-    recommendation = DEFAULT_SOLUTION_PACK_REGISTRY.recommend(
+    recommendation = registry.recommend(
         proposal.domain,
         required_targets=required_targets,
     )
@@ -573,16 +618,28 @@ class EcosystemAppBuild:
     target_dir: str
     file_count: int
     commit_sha: str
+    verify_targets: tuple[str, ...] = ()
+    pack_id: str | None = None
+    pack_version: str | None = None
+    derived_ir_sha256: str | None = None
+    applied_change_ids: tuple[str, ...] = ()
 
     def to_dict(self) -> dict:
-        return {
+        d = {
             "surface_kind": self.surface_kind,
             "app_name": self.app_name,
             "slug": self.slug,
             "target_dir": self.target_dir,
             "file_count": self.file_count,
             "commit_sha": self.commit_sha,
+            "verify_targets": list(self.verify_targets),
         }
+        if self.pack_id is not None:
+            d["pack_id"] = self.pack_id
+            d["pack_version"] = self.pack_version
+            d["derived_ir_sha256"] = self.derived_ir_sha256
+            d["applied_change_ids"] = list(self.applied_change_ids)
+        return d
 
 
 @dataclass(frozen=True)
@@ -630,6 +687,15 @@ def build_ecosystem(
             prompt=plan.prompt,
             overwrite=overwrite,
         )
+        plans = verify_plans_for_ir(app.ir)
+        verify_targets = tuple(sorted({p.target for p in plans}))
+        pack_id = app.pack_result.pack_id if app.pack_result else None
+        pack_version = app.pack_result.pack_version if app.pack_result else None
+        derived_ir_sha256 = app.pack_result.derived_ir_sha256 if app.pack_result else None
+        applied_change_ids = (
+            app.pack_result.applied_configuration_change_ids + app.pack_result.applied_ai_delta_change_ids
+            if app.pack_result else ()
+        )
         builds.append(
             EcosystemAppBuild(
                 surface_kind=app.surface.kind,
@@ -638,6 +704,11 @@ def build_ecosystem(
                 target_dir=result.target_dir,
                 file_count=result.file_count,
                 commit_sha=result.commit_sha,
+                verify_targets=verify_targets,
+                pack_id=pack_id,
+                pack_version=pack_version,
+                derived_ir_sha256=derived_ir_sha256,
+                applied_change_ids=applied_change_ids,
             )
         )
     return EcosystemBuildResult(

@@ -89,6 +89,11 @@ if project["project"]["requires-python"] != ">=3.13,<3.14":
     configure_python
     PYTHONPATH="$source_root" python3 -m omnistackai_agent_engine.solution_packs.cli "${@:2}"
     ;;
+  solution-pack-build)
+    # Build a Solution Pack project into an owned Git repository (no model/network).
+    configure_python
+    PYTHONPATH="$source_root" python3 -m omnistackai_agent_engine.solution_packs.build_cli "${@:2}"
+    ;;
   ecosystem-plan)
     # Deterministic: prompt -> the Application IRs for each app surface (no model/network, writes nothing).
     configure_python

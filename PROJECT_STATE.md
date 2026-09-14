@@ -4,25 +4,19 @@ Last updated: 2026-09-14
 ## Current Phase
 Stage 0 (Founder Build Sequence, Brief Section 91) — BASIC/MVP
 
-> **The differentiating SPINE now safely applies validated AI-delta proposals to Application IR (R-439).**
-> `apply_solution_pack_manifest` revalidates pins, change IDs, entity/API/screen collisions, and relation targets,
-> immutably merges entities, APIs, and screens with allowlisted configuration updates into a `validate_ir`-clean
-> derived `ApplicationIR`, with byte-stable provenance tracking. UI-component series PAUSED at R-415 (resumable). **NEXT:** R-440 wire derived IR to builder pipelines.
+> **The differentiating SPINE now wires derived Solution Pack Application IRs into verified multi-repo builder pipelines and project generation (R-440).**
+> `build_solution_pack_project` compiles a pack-derived `ApplicationIR` into an owned Git repo on disk,
+> derives verify gate plans, and records complete provenance. `plan_ecosystem` and `build_ecosystem`
+> integrate pack-derived IRs seamlessly for targeted surfaces with full ecosystem domain safety checks.
+> UI-component series PAUSED at R-415 (resumable). **NEXT:** R-441 live Studio integration & UI controls.
 
 ## Last Completed Task
-Tracker ID: R-439 — Safely Apply Validated AI-Delta Proposals to Application IR — DONE.
-Enhanced `solution_packs/application.py` and `SolutionPackApplicationResult` to accept an optional `proposal: AIDeltaProposal | None = None`.
-When `proposal` is `None`, behavior is strictly backward-compatible with R-437 (configuration applied, all AI deltas marked unapplied, `applied_ai_delta_change_ids` empty).
-When `proposal` is provided:
-- Revalidates pins: `proposal.pack_id`, `proposal.pack_version`, and `proposal.base_ir_sha256` must match the manifest.
-- Revalidates change IDs: all `proposal.addressed_change_ids` must correspond to pending `ai-delta` changes in `manifest.changes`.
-- Revalidates collisions: proposed entity names, API endpoints, and screen IDs must not collide with the base IR.
-- Revalidates relation targets: all relations in proposed entities must target declared base or proposed entities.
-- Immutably merges entities, APIs, and screens with allowlisted configuration updates into a fresh derived `ApplicationIR`.
-- Ensures the derived IR is `validate_ir`-clean; any error fails closed with `SolutionPackError`.
-- Records `applied_ai_delta_change_ids` and remaining `unapplied_ai_delta_change_ids` in `SolutionPackApplicationResult`.
-Fourteen new tests; focused regressions **66 passed**; `task verify` **2,984 passed** offline; lint, security, env, both demos (152 / 149), and
-deterministic serialization inspection pass; 0 model calls.
+Tracker ID: R-440 — Wire Derived Solution Pack Application IRs into Verified Multi-Repo Builder Pipelines and Project Generation — DONE.
+Implemented `solution_packs/builder.py` and `solution_packs/build_cli.py`:
+- `build_solution_pack_project()`: Assembles a Solution Pack derived `ApplicationIR` into an owned Git repository on disk using `assemble_project()` and `create_repository()`. Computes deterministic verification plans via `verify_plans_for_ir()`, and produces a frozen, byte-stable `SolutionPackBuildResult` tracking complete pack and repository provenance.
+- `plan_ecosystem()` and `build_ecosystem()`: Extended with optional `pack_result` or `pack_manifest` (+ `pack_proposal`) arguments. Validates pack compatibility against ecosystem domain (raising `SolutionPackError` on mismatch), transparently substitutes the customer web surface with the pack-derived IR, and serializes pack provenance in the ecosystem plan.
+- Standalone CLI & Taskfile: Added `build_cli.py` with full command-line options and `task agent-engine:solution-pack:build` integration.
+- Eight new comprehensive tests; focused regressions **74 passed**; `task verify` **2,992 passed** offline; lint, security, env, both demos (152 / 149), and build CLI pass; 0 model calls.
 
 Immediately preceded by R-438 — Bounded Typed Solution Pack AI-Delta Proposal Schema & Local ModelProvider Boundary — DONE.
 Defined `solution_packs/ai_delta.py` with frozen `AIDeltaProposal` (`pack_id`, `pack_version`, `base_ir_sha256`,
