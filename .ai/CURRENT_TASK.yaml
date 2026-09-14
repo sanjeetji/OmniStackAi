@@ -1,19 +1,20 @@
-task_id: R-452
-status: completed
+task_id: R-453
+status: in_progress
 phase: MVP
 tracker_row: 9
 started_at: "2026-09-14"
-completed_at: "2026-09-14"
+completed_at: null
 objective: >-
-  Implement Solution Pack Ecosystem Multi-Surface CI/CD Workflow & GitHub Actions Orchestration, providing
-  canonical CIJobStep, CIJob, CIWorkflow, EcosystemCICDContract, deterministic Python 3.13 stdlib-only
-  GitHub Actions YAML workflow generation (zero external dependencies, no PyYAML), in-process DAG
-  dependency validation and dry-run pipeline simulation (EcosystemCICDEngine), ecosystem package bundling
-  with whole-package SHA-256 integrity, registry discovery, Studio preview CI/CD status injection,
-  endpoints GET /api/ecosystem/cicd, GET /api/ecosystem/cicd/yaml, POST /api/ecosystem/cicd/simulate,
-  Studio UI #preview-cicd-info panel (0 external requests), and CLI cicd subcommand.
+  Implement Solution Pack Ecosystem Comprehensive Multi-Surface Health Check, Smoke Testing, and Canary Verification,
+  providing canonical HealthCheckProbe, SmokeTestSpec, CanaryVerificationRule, EcosystemVerificationContract,
+  deterministic Python 3.13 stdlib-only verification contract synthesis (synthesize_ecosystem_verification)
+  for all ecosystem surfaces (web, admin, API, worker, database), in-process thread-safe EcosystemVerificationEngine
+  for deterministic health evaluation and dry-run simulation, ecosystem package bundling with whole-package SHA-256
+  integrity, registry discovery, Studio preview verification status injection, endpoints GET /api/ecosystem/verification
+  and POST /api/ecosystem/verification/simulate, Studio UI #preview-verification-info panel (0 external requests),
+  and CLI verify-suite subcommand.
 allowed_paths:
-  - services/agent-engine/src/omnistackai_agent_engine/solution_packs/ecosystem_cicd.py
+  - services/agent-engine/src/omnistackai_agent_engine/solution_packs/ecosystem_verification.py
   - services/agent-engine/src/omnistackai_agent_engine/solution_packs/ecosystem_pack.py
   - services/agent-engine/src/omnistackai_agent_engine/solution_packs/ecosystem_registry.py
   - services/agent-engine/src/omnistackai_agent_engine/solution_packs/ecosystem_cli.py
@@ -22,13 +23,13 @@ allowed_paths:
   - services/agent-engine/src/omnistackai_agent_engine/studio/server.py
   - services/agent-engine/src/omnistackai_agent_engine/studio/live_serve.py
   - services/agent-engine/src/omnistackai_agent_engine/studio/page.py
-  - services/agent-engine/tests/test_ecosystem_cicd.py
+  - services/agent-engine/tests/test_ecosystem_verification.py
   - scripts/agent-engine.sh
   - Taskfile.yml
   - docs/SOLUTION_PACKS.md
   - docs/PROGRESS.md
   - docs/RESUME_PROMPT.md
-  - .ai/tasks/R-452.md
+  - .ai/tasks/R-453.md
   - .ai/CURRENT_TASK.yaml
   - .ai/PROJECT_STATE.yaml
   - .ai/WORK_LOG.md
@@ -42,7 +43,7 @@ forbidden_changes:
   - Do not add external network requests, fonts, or scripts to Studio HTML
   - Do not change the control-plane database from PostgreSQL
 required_gates:
-  - test-first focused test_ecosystem_cicd.py
+  - test-first focused test_ecosystem_verification.py
   - task verify
   - task lint
   - task security:quick
@@ -50,9 +51,9 @@ required_gates:
   - task builder:demo -- minimal-blog
   - task builder:demo -- rideshare-favourites
 evidence:
-  task_verify: "Passed: 3173 tests in 34.140s, Stage 0 verification passed"
-  task_lint: "Passed: Lint passed"
-  task_security_quick: "Passed: Stage 0 secret-policy check passed"
-  task_env_check: "Passed: Environment contract passed"
-  builder_demo_minimal_blog: "Passed: 152 files generated into owned Git repo"
-  builder_demo_rideshare_favourites: "Passed: 149 files generated into owned Git repo"
+  task_verify: null
+  task_lint: null
+  task_security_quick: null
+  task_env_check: null
+  builder_demo_minimal_blog: null
+  builder_demo_rideshare_favourites: null
