@@ -41,7 +41,7 @@ START PROTOCOL
   `task ai:status`, `task ai:handoff`. `task verify` must stay green and network-independent.
 - Confirm git branch/HEAD/clean tree. Then restate: phase, next Tracker ID, objective, blast radius.
 
-WHAT IS ALREADY BUILT (platform generators are Python 3.13 stdlib-only, offline, in services/agent-engine; 3,083 tests pass)
+WHAT IS ALREADY BUILT (platform generators are Python 3.13 stdlib-only, offline, in services/agent-engine; 3,098 tests pass)
 - Model fabric: ModelProvider contract + registry; local Ollama adapter (runs any installed model via
 
 
@@ -339,6 +339,17 @@ and global `stop` & `restart`), multi-session management (`_sessions: dict[str, 
 allocation per surface, liveness-aware status tracking, `threading.RLock` deadlock prevention, Studio HTTP endpoints
 (`POST /api/preview/switch`, scoped stop/restart/re-preview), and Studio Web UI `#preview-surface-tabs` switcher bar with live
 status indicators and 0 external network requests.
+R-447 added the eighteenth spine brick: Solution Pack Ecosystem Multi-Surface Cross-App Auth and Unified State Binding,
+providing canonical `EcosystemRoleBinding`, `EcosystemAuthContract`, `CrossAppAuthMatrix`, Python 3.13 stdlib-only deterministic
+HS256 JWT minting/verifying (`mint_ecosystem_token`, `verify_ecosystem_token`), demo token generation, `EcosystemStateBinding`
+with entity lifecycle state flows and role-gated transitions, Studio preview auth/state injection and endpoints, and CLI auth/state subcommands.
+R-448 added the nineteenth spine brick: Solution Pack Ecosystem Cross-Surface Webhook and Event Bridge, providing canonical
+`WebhookRetryPolicy`, `EcosystemWebhookSubscription`, `EcosystemEventPayload`, `WebhookDeliveryRecord`, `EcosystemEventBridgeContract`,
+Python 3.13 stdlib-only HMAC-SHA256 signing and verification (`sign_webhook_payload`, `verify_webhook_signature`) with constant-time
+`hmac.compare_digest`, in-process `EcosystemEventBridge` with bounded delivery logging (max 100 entries), deterministic contract synthesis
+(`synthesize_ecosystem_events`), Studio preview event bridge tracking and endpoints (`GET /api/ecosystem/events`, `POST /api/ecosystem/events/dispatch`),
+Studio Web UI `#preview-events-info` container with subscription count badges, event simulation panel ("Simulate Event"), and live delivery log table,
+and CLI events inspection subcommand.
 
 ENVIRONMENT LIMITS
 - Inside the AI sandbox only: large native-binary downloads (Next.js SWC, Vite/esbuild) can time out, so

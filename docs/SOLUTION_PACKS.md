@@ -253,7 +253,25 @@ R-447 formalizes cross-app authentication, shared security boundaries, and unifi
   ```
 - 100% offline verification in `task verify` (0 model calls).
 
+## Ecosystem cross-surface webhook and event bridge
+
+R-448 introduces automated cross-surface event dispatch, HMAC-SHA256 signature verification, and webhook delivery orchestration across multi-surface ecosystems:
+- Cross-surface event contracts: `EcosystemWebhookSubscription` defines event delivery pipelines with `WebhookRetryPolicy`, pattern matching (`entity.action` or `*`), secret references, and target endpoints. `EcosystemEventPayload` defines canonical event structures with idempotency keys.
+- Python 3.13 stdlib-only HMAC-SHA256 engine: `sign_webhook_payload` and `verify_webhook_signature` compute and verify `sha256=<hex>` signatures using `hmac.compare_digest` with zero external dependencies.
+- In-process event bridge: `EcosystemEventBridge` coordinates cross-surface routing, subscription management, event dispatching, and bounded delivery logging (max 100 entries).
+- Deterministic contract synthesis: `synthesize_ecosystem_events` derives cross-surface subscriptions linking surfaces that write shared entities to surfaces that read them.
+- Package bundling & registry access: `EcosystemPackPackage` validates event bridge contracts with whole-package SHA-256 integrity checks; `EcosystemPackRegistry` and `EcosystemPack` expose `get_event_bridge`.
+- Studio preview & server: `StudioPreviewManager` tracks event bridge status, exposes `get_ecosystem_events()` and `dispatch_ecosystem_event()`, and injects `has_events`, `event_count`, and `subscription_count` into preview payloads. Studio HTTP server exposes `GET /api/ecosystem/events` and `POST /api/ecosystem/events/dispatch`.
+- Studio web UI: Renders `#preview-events-info` with subscription count badges, an event simulation panel ("Simulate Event"), and live delivery log table, strictly maintaining 0 external network requests.
+- CLI event bridge inspection:
+  ```bash
+  # Inspect event bridge subscriptions and deliveries
+  task agent-engine:solution-pack:ecosystem -- events minimal-blog-ecosystem
+  task agent-engine:solution-pack:ecosystem -- events minimal-blog-ecosystem --json
+  ```
+- 100% offline verification in `task verify` (0 model calls).
+
 ## Next boundary
 
-R-448: Solution Pack Ecosystem Cross-Surface Webhook and Event Bridge.
+R-449: Solution Pack Ecosystem Cross-Surface Telemetry, Audit Trails, and Distributed Tracing.
 

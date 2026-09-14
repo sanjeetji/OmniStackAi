@@ -153,7 +153,7 @@ tasks:
       - bash scripts/agent-engine.sh solution-pack-package {{.CLI_ARGS}}
 
   agent-engine:solution-pack:ecosystem:
-    desc: 'Synthesize, verify, inspect, catalog, auth, state, or build multi-surface ecosystem packs (deterministic, no model; CLI_ARGS - synthesize --pack minimal-blog)'
+    desc: 'Synthesize, verify, inspect, catalog, auth, state, events, or build multi-surface ecosystem packs (deterministic, no model; CLI_ARGS - synthesize --pack minimal-blog)'
     cmds:
       - bash scripts/agent-engine.sh solution-pack-ecosystem {{.CLI_ARGS}}
 

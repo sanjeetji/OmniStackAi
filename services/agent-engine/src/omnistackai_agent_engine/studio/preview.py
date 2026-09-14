@@ -19,6 +19,12 @@ from ..solution_packs.ecosystem_auth import (
     generate_surface_tokens,
     synthesize_ecosystem_auth,
 )
+from ..solution_packs.ecosystem_events import (
+    EcosystemEventBridge,
+    EcosystemEventBridgeContract,
+    EcosystemEventPayload,
+    synthesize_ecosystem_events,
+)
 from ..solution_packs.ecosystem_state import (
     EcosystemStateBinding,
     synthesize_ecosystem_state,
@@ -53,6 +59,8 @@ class StudioPreviewManager:
         self._auth_contract: EcosystemAuthContract | None = None
         self._state_binding: EcosystemStateBinding | None = None
         self._demo_tokens: dict[str, str] = {}
+        self._event_bridge_contract: EcosystemEventBridgeContract | None = None
+        self._event_bridge: EcosystemEventBridge | None = None
 
     def replace(self, repo_dir: str) -> dict:
         """Stop prior previews, start single app ``repo_dir`` on free ports, and return state."""
@@ -97,6 +105,7 @@ class StudioPreviewManager:
         active_surface_slug: str | None = None,
         auth_contract: EcosystemAuthContract | None = None,
         state_binding: EcosystemStateBinding | None = None,
+        event_bridge: EcosystemEventBridgeContract | None = None,
     ) -> dict:
         """Stop prior previews, register ecosystem surfaces, and start the active surface."""
         with self._lock:
@@ -120,6 +129,19 @@ class StudioPreviewManager:
                 self._state_binding = synthesize_ecosystem_state(ecosystem_id, self._surfaces)
 
             self._demo_tokens = generate_surface_tokens(self._auth_contract)
+
+            if event_bridge is not None:
+                self._event_bridge_contract = event_bridge
+            else:
+                from ..solution_packs.ecosystem_registry import DEFAULT_ECOSYSTEM_PACK_REGISTRY
+                cached_bridge = DEFAULT_ECOSYSTEM_PACK_REGISTRY.get_event_bridge(ecosystem_id)
+                if cached_bridge is not None:
+                    self._event_bridge_contract = cached_bridge
+                else:
+                    self._event_bridge_contract = synthesize_ecosystem_events(
+                        ecosystem_id, self._surfaces, state_binding=self._state_binding
+                    )
+            self._event_bridge = EcosystemEventBridge(self._event_bridge_contract)
 
             # Determine initial active surface
             chosen_slug = active_surface_slug
@@ -283,6 +305,9 @@ class StudioPreviewManager:
                 "active_token": active_token,
                 "has_auth": self._auth_contract is not None,
                 "has_state": self._state_binding is not None,
+                "has_events": self._event_bridge_contract is not None,
+                "event_count": len(self._event_bridge_contract.supported_events) if self._event_bridge_contract else 0,
+                "subscription_count": len(self._event_bridge_contract.subscriptions) if self._event_bridge_contract else 0,
                 "message": error_msg or _PREVIEW_ERROR,
                 "surfaces": surface_statuses,
             }
@@ -296,6 +321,9 @@ class StudioPreviewManager:
                 "active_token": active_token,
                 "has_auth": self._auth_contract is not None,
                 "has_state": self._state_binding is not None,
+                "has_events": self._event_bridge_contract is not None,
+                "event_count": len(self._event_bridge_contract.supported_events) if self._event_bridge_contract else 0,
+                "subscription_count": len(self._event_bridge_contract.subscriptions) if self._event_bridge_contract else 0,
                 "web_url": active_sess.plan.web_url,
                 "message": f"The generated {active_surface_info['app_name']} is running locally.",
                 "surfaces": surface_statuses,
@@ -314,6 +342,9 @@ class StudioPreviewManager:
                 "active_token": active_token,
                 "has_auth": self._auth_contract is not None,
                 "has_state": self._state_binding is not None,
+                "has_events": self._event_bridge_contract is not None,
+                "event_count": len(self._event_bridge_contract.supported_events) if self._event_bridge_contract else 0,
+                "subscription_count": len(self._event_bridge_contract.subscriptions) if self._event_bridge_contract else 0,
                 "message": f"Preview for {self._active_surface or 'surface'} stopped.",
                 "surfaces": surface_statuses,
             }
@@ -334,6 +365,8 @@ class StudioPreviewManager:
         self._auth_contract = None
         self._state_binding = None
         self._demo_tokens.clear()
+        self._event_bridge_contract = None
+        self._event_bridge = None
 
     def get_ecosystem_auth(self) -> dict:
         """Inspect the active ecosystem's auth contract, role matrix, and surface demo tokens."""
@@ -363,3 +396,65 @@ class StudioPreviewManager:
                 "state_binding": self._state_binding.to_dict(),
                 "active_surface": self._active_surface,
             }
+
+    def get_ecosystem_events(self) -> dict:
+        """Inspect the active ecosystem's event bridge contract, subscriptions, and recent delivery logs."""
+        with self._lock:
+            if not self._is_ecosystem or not self._event_bridge_contract or not self._event_bridge:
+                return {
+                    "is_ecosystem": False,
+                    "contract": None,
+                    "supported_events": [],
+                    "subscriptions": [],
+                    "deliveries": [],
+                }
+            return {
+                "is_ecosystem": True,
+                "ecosystem_id": self._ecosystem_id,
+                "contract": self._event_bridge_contract.to_dict(),
+                "supported_events": list(self._event_bridge_contract.supported_events),
+                "subscriptions": [s.to_dict() for s in self._event_bridge_contract.subscriptions],
+                "deliveries": self._event_bridge.get_delivery_log(limit=50),
+                "active_surface": self._active_surface,
+            }
+
+    def dispatch_ecosystem_event(
+        self,
+        event_type: str,
+        entity_name: str,
+        entity_id: str,
+        action: str = "update",
+        data: dict | None = None,
+        source_surface: str | None = None,
+    ) -> dict:
+        """Dispatch a cross-surface event via the event bridge to running surface endpoints or simulated targets."""
+        with self._lock:
+            if not self._is_ecosystem or not self._event_bridge:
+                return {"status": "error", "message": "No ecosystem preview is running."}
+
+            src = source_surface or self._active_surface or (self._surfaces[0]["slug"] if self._surfaces else "system")
+            event = EcosystemEventPayload(
+                event_id="",
+                event_type=event_type,
+                ecosystem_id=self._ecosystem_id or "unknown",
+                source_surface=src,
+                timestamp="",
+                entity_name=entity_name,
+                entity_id=entity_id,
+                action=action,
+                data=data or {},
+            )
+
+            surface_urls: dict[str, str] = {}
+            for slug, sess in self._sessions.items():
+                if sess.is_alive() and sess.plan.web_url:
+                    surface_urls[slug] = sess.plan.web_url
+
+            deliveries = self._event_bridge.dispatch(event, surface_urls=surface_urls)
+            return {
+                "status": "ok",
+                "event": event.to_dict(),
+                "deliveries": [d.to_dict() for d in deliveries],
+                "delivery_count": len(deliveries),
+            }
+

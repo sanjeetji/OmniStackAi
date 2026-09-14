@@ -4,20 +4,30 @@ Last updated: 2026-09-14
 ## Current Phase
 Stage 0 (Founder Build Sequence, Brief Section 91) — BASIC/MVP
 
-> **The differentiating SPINE now supports Solution Pack Ecosystem Multi-Surface Cross-App Auth and Unified State Binding (R-447).**
-> `solution_packs/ecosystem_auth.py` implements `EcosystemRoleBinding`, `EcosystemAuthContract`, `CrossAppAuthMatrix`,
-> stdlib-only HS256 JWT minting/verifying (`mint_ecosystem_token`, `verify_ecosystem_token`), demo token generation, and
-> `synthesize_ecosystem_auth`; `solution_packs/ecosystem_state.py` implements `SharedEntityBinding`, `StateTransition`,
-> `EntityStateFlow` with role-gated `can_transition`, `CrossAppEndpointBinding`, `SurfaceEnvBinding`, `EcosystemStateBinding`, and
-> `synthesize_ecosystem_state`; `solution_packs/ecosystem_pack.py` bundles and validates auth and state bindings with checksums;
-> `solution_packs/ecosystem_registry.py` exposes `get_auth_contract` and `get_state_binding`; `studio/preview.py` attaches
-> `active_role` and `active_token` to preview payloads and exposes `get_ecosystem_auth` and `get_ecosystem_state`; `studio/server.py`
-> exposes `GET /api/ecosystem/auth` and `GET /api/ecosystem/state`; `studio/page.py` renders `#preview-auth-info` with role badge
-> and "Copy Demo JWT" button (0 external requests); `solution_packs/ecosystem_cli.py` adds `auth` and `state` subcommands.
-> UI-component series PAUSED at R-415 (resumable). **NEXT:** R-448 Solution Pack Ecosystem Cross-Surface Webhook and Event Bridge.
+> **The differentiating SPINE now supports Solution Pack Ecosystem Cross-Surface Webhook and Event Bridge (R-448).**
+> `solution_packs/ecosystem_events.py` implements `WebhookRetryPolicy`, `EcosystemWebhookSubscription`, `EcosystemEventPayload`,
+> `WebhookDeliveryRecord`, `EcosystemEventBridgeContract`, stdlib-only deterministic HMAC-SHA256 signing and verification
+> (`sign_webhook_payload`, `verify_webhook_signature`) with `hmac.compare_digest`, in-process `EcosystemEventBridge` with
+> subscription management and bounded delivery logging (max 100 records), and deterministic contract synthesis (`synthesize_ecosystem_events`)
+> deriving subscriptions from entity writers to readers; `solution_packs/ecosystem_pack.py` bundles and validates event bridge contracts
+> with package checksums; `solution_packs/ecosystem_registry.py` exposes `event_bridge` and `get_event_bridge`; `studio/preview.py`
+> attaches `has_events`, `event_count`, and `subscription_count` to preview payloads and exposes `get_ecosystem_events` and
+> `dispatch_ecosystem_event`; `studio/server.py` exposes `GET /api/ecosystem/events` and `POST /api/ecosystem/events/dispatch`;
+> `studio/page.py` renders `#preview-events-info` with subscription count, "Simulate Event" panel, and live delivery log table (0 external requests);
+> `solution_packs/ecosystem_cli.py` adds `events` subcommand.
+> UI-component series PAUSED at R-415 (resumable). **NEXT:** R-449 Solution Pack Ecosystem Cross-Surface Telemetry, Audit Trails, and Distributed Tracing.
 
 ## Last Completed Task
-Tracker ID: R-447 — Solution Pack Ecosystem Multi-Surface Cross-App Auth and Unified State Binding — DONE.
+Tracker ID: R-448 — Solution Pack Ecosystem Cross-Surface Webhook and Event Bridge — DONE.
+Implemented Solution Pack Ecosystem Cross-Surface Webhook and Event Bridge:
+- `solution_packs/ecosystem_events.py`: Implemented canonical `WebhookRetryPolicy`, `EcosystemWebhookSubscription`, `EcosystemEventPayload`, `WebhookDeliveryRecord`, and `EcosystemEventBridgeContract`; implemented Python 3.13 stdlib-only HMAC-SHA256 signature generator (`sign_webhook_payload`) and verifier (`verify_webhook_signature`) with constant-time equality check (`hmac.compare_digest`) and zero external dependencies; implemented in-process `EcosystemEventBridge` with subscription management, cross-surface webhook routing, dispatching, and bounded delivery logging (max 100 entries); implemented deterministic `synthesize_ecosystem_events(ecosystem_id, surfaces)` deriving cross-surface subscriptions from entity writers to readers with lowercase slug formatting.
+- `solution_packs/ecosystem_pack.py` & `solution_packs/ecosystem_registry.py`: Extended `EcosystemPackPackage` and `EcosystemPack` with `event_bridge`, validating with SHA-256 package checksums; added `get_event_bridge` accessor on `EcosystemPackRegistry`.
+- `studio/preview.py`, `studio/server.py`, `studio/live_serve.py`: Preview manager tracks event bridge contracts, injects `has_events`, `event_count`, and `subscription_count` into preview status/payloads, and exposes `get_ecosystem_events()` and `dispatch_ecosystem_event()`; Studio HTTP server exposes `GET /api/ecosystem/events` and `POST /api/ecosystem/events/dispatch`.
+- `studio/page.py`: Enhanced Web UI with `#preview-events-info` container displaying subscription count badges, an event simulation panel ("Simulate Event"), and live delivery log table, strictly maintaining 0 external network requests.
+- `solution_packs/ecosystem_cli.py`: Added `events` subcommand supporting both file paths and registered ecosystem IDs with human-readable and `--json` outputs; updated `Taskfile.yml` and `scripts/agent-engine.sh`.
+- Fifteen new focused tests in `test_ecosystem_event_bridge.py`; `task verify` **3,098 passed** offline (+15 net-new tests); lint, security, env, and both builder demos (152 / 149) pass; 0 model calls in test execution.
+
+Immediately preceded by R-447 — Solution Pack Ecosystem Multi-Surface Cross-App Auth and Unified State Binding — DONE.
 Implemented Solution Pack Ecosystem Multi-Surface Cross-App Auth and Unified State Binding:
 - `solution_packs/ecosystem_auth.py`: Implemented canonical `EcosystemRoleBinding`, `EcosystemAuthContract`, and `CrossAppAuthMatrix`; implemented Python 3.13 stdlib-only HS256 JWT token minter (`mint_ecosystem_token`) and verifier (`verify_ecosystem_token`) with 0 external dependencies; implemented `generate_surface_tokens` and deterministic `synthesize_ecosystem_auth(ecosystem_id, surfaces)`.
 - `solution_packs/ecosystem_state.py`: Implemented canonical `SharedEntityBinding`, `StateTransition`, `EntityStateFlow` with role-gated `can_transition`, `CrossAppEndpointBinding`, `SurfaceEnvBinding`, `EcosystemStateBinding`, and `synthesize_ecosystem_state(ecosystem_id, surfaces)`.

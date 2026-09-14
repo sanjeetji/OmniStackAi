@@ -42,6 +42,8 @@ def _make_handler(
     switch_surface_fn: PreviewBuildFn | None = None,
     get_ecosystem_auth_fn: ControlFn | None = None,
     get_ecosystem_state_fn: ControlFn | None = None,
+    get_ecosystem_events_fn: ControlFn | None = None,
+    dispatch_ecosystem_event_fn: Callable[..., dict] | None = None,
 ) -> type[BaseHTTPRequestHandler]:
     pack_registry = registry or DEFAULT_SOLUTION_PACK_REGISTRY
     eco_registry = ecosystem_registry or DEFAULT_ECOSYSTEM_PACK_REGISTRY
@@ -132,9 +134,22 @@ def _make_handler(
                     self._send_json(200, get_ecosystem_auth_fn())
             elif self.path == "/api/ecosystem/state":
                 if get_ecosystem_state_fn is None:
-                    self._send_json(404, {"error": "ecosystem state controls are not enabled"})
-                else:
+                    self._send_json(404, {"error": "ecosystem state inspection not enabled"})
+                    return
+                try:
                     self._send_json(200, get_ecosystem_state_fn())
+                except Exception as error:
+                    self._send_json(502, {"error": str(error)})
+                return
+            elif self.path == "/api/ecosystem/events":
+                if get_ecosystem_events_fn is None:
+                    self._send_json(404, {"error": "ecosystem event inspection not enabled"})
+                    return
+                try:
+                    self._send_json(200, get_ecosystem_events_fn())
+                except Exception as error:
+                    self._send_json(502, {"error": str(error)})
+                return
             else:
                 self._send(404, "text/plain; charset=utf-8", b"not found")
 
@@ -212,6 +227,32 @@ def _make_handler(
                 return
             if self.path == "/api/history/delete":
                 self._run_id_control(delete_build_fn)
+                return
+            if self.path == "/api/ecosystem/events/dispatch":
+                if dispatch_ecosystem_event_fn is None:
+                    self._send_json(404, {"error": "ecosystem event dispatch not enabled"})
+                    return
+                data = self._read_json_body()
+                if data is None:
+                    return
+                event_type = str(data.get("event_type", "")).strip()
+                entity_name = str(data.get("entity_name", "")).strip()
+                entity_id = str(data.get("entity_id", "")).strip()
+                if not event_type or not entity_name or not entity_id:
+                    self._send_json(400, {"error": "event_type, entity_name, and entity_id are required"})
+                    return
+                try:
+                    res = dispatch_ecosystem_event_fn(
+                        event_type=event_type,
+                        entity_name=entity_name,
+                        entity_id=entity_id,
+                        action=str(data.get("action", "update")).strip(),
+                        data=data.get("data"),
+                        source_surface=data.get("source_surface"),
+                    )
+                    self._send_json(200, res)
+                except Exception as error:
+                    self._send_json(502, {"error": str(error)})
                 return
             if self.path == "/api/solution-packs/recommend":
                 data = self._read_json_body()
@@ -332,6 +373,8 @@ def create_studio_server(
     switch_surface_fn: PreviewBuildFn | None = None,
     get_ecosystem_auth_fn: ControlFn | None = None,
     get_ecosystem_state_fn: ControlFn | None = None,
+    get_ecosystem_events_fn: ControlFn | None = None,
+    dispatch_ecosystem_event_fn: Callable[..., dict] | None = None,
 ) -> ThreadingHTTPServer:
     """Create (but do not start) a studio server bound to ``host``/``port``.
 
@@ -360,5 +403,7 @@ def create_studio_server(
             switch_surface_fn=switch_surface_fn,
             get_ecosystem_auth_fn=get_ecosystem_auth_fn,
             get_ecosystem_state_fn=get_ecosystem_state_fn,
+            get_ecosystem_events_fn=get_ecosystem_events_fn,
+            dispatch_ecosystem_event_fn=dispatch_ecosystem_event_fn,
         ),
     )

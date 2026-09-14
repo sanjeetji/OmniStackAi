@@ -74,6 +74,17 @@ from .ecosystem_state import (
     SurfaceEnvBinding,
     synthesize_ecosystem_state,
 )
+from .ecosystem_events import (
+    EcosystemEventBridge,
+    EcosystemEventBridgeContract,
+    EcosystemEventPayload,
+    EcosystemWebhookSubscription,
+    WebhookDeliveryRecord,
+    WebhookRetryPolicy,
+    sign_webhook_payload,
+    synthesize_ecosystem_events,
+    verify_webhook_signature,
+)
 
 __all__ = [
     "LEGACY_MANIFEST_SCHEMA_VERSION",
@@ -120,4 +131,13 @@ __all__ = [
     "RIDESHARE_FAVOURITES_PACK",
     "BASELINE_SOLUTION_PACKS",
     "DEFAULT_SOLUTION_PACK_REGISTRY",
+    "EcosystemEventBridge",
+    "EcosystemEventBridgeContract",
+    "EcosystemEventPayload",
+    "EcosystemWebhookSubscription",
+    "WebhookDeliveryRecord",
+    "WebhookRetryPolicy",
+    "sign_webhook_payload",
+    "synthesize_ecosystem_events",
+    "verify_webhook_signature",
 ]

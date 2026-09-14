@@ -1,11 +1,11 @@
 # Current Handoff
 
-Task ID: R-447
+Task ID: R-448
 Status: done
 Phase: BASIC/MVP — Founder Stage 0
 Branch: `main` (the only branch; the GitHub default)
 
-> **The differentiating SPINE now supports Solution Pack Ecosystem Multi-Surface Cross-App Auth and Unified State Binding.** R-430 proposes the
+> **The differentiating SPINE now supports Solution Pack Ecosystem Cross-Surface Webhook and Event Bridge.** R-430 proposes the
 > ecosystem, R-431 materializes it, R-432 refines unknown domains, R-433 scopes surfaces, R-434 registers
 > packs, R-435 recommends one, R-436 records bounded intent, R-437 applies safe configuration deterministically,
 > R-438 converts pending manifest AI-delta intents into strictly typed, bounded AIDeltaProposal objects via an
@@ -16,13 +16,33 @@ Branch: `main` (the only branch; the GitHub default)
 > SolutionPackPackage bundles and export CLI, R-444 enables synthesizing a complete, coordinated
 > multi-surface ecosystem from a Solution Pack's unified data model, R-445 provides the immutable EcosystemPackRegistry,
 > R-446 provides multi-surface process coordination in StudioPreviewManager, collision-free loopback port allocation,
-> POST /api/preview/switch, and Studio Web UI surface navigation tabs, and **R-447 provides canonical
+> POST /api/preview/switch, and Studio Web UI surface navigation tabs, R-447 provides canonical
 > EcosystemAuthContract, CrossAppAuthMatrix, stdlib-only deterministic HS256 JWT minting/verifying,
 > EcosystemStateBinding with entity lifecycle state flows and role-gated transitions, Studio preview auth/state
-> injection and endpoints, and CLI auth/state inspection subcommands**.
-> UI-component series PAUSED at R-415. **NEXT:** R-448 Solution Pack Ecosystem Cross-Surface Webhook and Event Bridge.
+> injection and endpoints, and CLI auth/state inspection subcommands, and **R-448 provides canonical
+> WebhookRetryPolicy, EcosystemWebhookSubscription, EcosystemEventPayload, WebhookDeliveryRecord,
+> EcosystemEventBridgeContract, stdlib-only deterministic HMAC-SHA256 signature generation and verification
+> (sign_webhook_payload, verify_webhook_signature) with constant-time comparison, in-process EcosystemEventBridge,
+> deterministic contract synthesis (synthesize_ecosystem_events), Studio preview event bridge tracking and endpoints
+> (GET /api/ecosystem/events, POST /api/ecosystem/events/dispatch), Studio Web UI #preview-events-info container with
+> subscription badges, event simulation panel, and live delivery logs, and CLI events inspection subcommand**.
+> UI-component series PAUSED at R-415. **NEXT:** R-449 Solution Pack Ecosystem Cross-Surface Telemetry, Audit Trails, and Distributed Tracing.
 
 ## Repo/workflow state
+
+- **R-448 (Solution Pack Ecosystem Cross-Surface Webhook and Event Bridge — nineteenth spine brick)** shipped:
+  `solution_packs/ecosystem_events.py` implements `WebhookRetryPolicy`, `EcosystemWebhookSubscription`, `EcosystemEventPayload`,
+  `WebhookDeliveryRecord`, `EcosystemEventBridgeContract`, stdlib-only deterministic HMAC-SHA256 signing and verification
+  (`sign_webhook_payload`, `verify_webhook_signature`) with `hmac.compare_digest`, in-process `EcosystemEventBridge` with
+  subscription management and bounded delivery logging (max 100 records), and deterministic contract synthesis (`synthesize_ecosystem_events`)
+  deriving subscriptions from entity writers to readers; `solution_packs/ecosystem_pack.py` bundles and validates event bridge contracts
+  with package checksums; `solution_packs/ecosystem_registry.py` exposes `event_bridge` and `get_event_bridge`; `studio/preview.py`
+  attaches `has_events`, `event_count`, and `subscription_count` to preview payloads and exposes `get_ecosystem_events` and
+  `dispatch_ecosystem_event`; `studio/server.py` exposes `GET /api/ecosystem/events` and `POST /api/ecosystem/events/dispatch`;
+  `studio/page.py` renders `#preview-events-info` with subscription count, "Simulate Event" panel, and live delivery log table (0 external requests);
+  `solution_packs/ecosystem_cli.py` adds `events` subcommand.
+  15 new tests in `test_ecosystem_event_bridge.py`; `task verify` **3,098 passed** offline (+15);
+  lint/security/env + demos (152/149) green; 0 model calls in test execution.
 
 - **R-447 (Solution Pack Ecosystem Multi-Surface Cross-App Auth and Unified State Binding — eighteenth spine brick)** shipped:
   `solution_packs/ecosystem_auth.py` implements `EcosystemRoleBinding`, `EcosystemAuthContract`, `CrossAppAuthMatrix`,

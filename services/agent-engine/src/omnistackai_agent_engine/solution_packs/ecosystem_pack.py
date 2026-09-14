@@ -22,6 +22,7 @@ from omnistackai_agent_engine.application_ir import (
 from omnistackai_agent_engine.verify import verify_plans_for_ir
 from .application import SolutionPackApplicationResult
 from .ecosystem_auth import EcosystemAuthContract, synthesize_ecosystem_auth
+from .ecosystem_events import EcosystemEventBridgeContract, synthesize_ecosystem_events
 from .ecosystem_state import EcosystemStateBinding, synthesize_ecosystem_state
 from .registry import (
     DEFAULT_SOLUTION_PACK_REGISTRY,
@@ -94,6 +95,7 @@ class EcosystemPackPackage:
     package_sha256: str
     auth_contract: EcosystemAuthContract | None = None
     state_binding: EcosystemStateBinding | None = None
+    event_bridge: EcosystemEventBridgeContract | None = None
 
     def to_dict(self) -> dict[str, Any]:
         data: dict[str, Any] = {
@@ -111,6 +113,8 @@ class EcosystemPackPackage:
             data["auth_contract"] = self.auth_contract.to_dict()
         if self.state_binding is not None:
             data["state_binding"] = self.state_binding.to_dict()
+        if self.event_bridge is not None:
+            data["event_bridge"] = self.event_bridge.to_dict()
         return data
 
     def to_json(self) -> str:
@@ -241,6 +245,10 @@ def parse_ecosystem_pack_package(data: str | bytes | Mapping[str, Any]) -> Ecosy
     if "state_binding" in raw and raw["state_binding"] is not None:
         state_binding = EcosystemStateBinding.from_dict(raw["state_binding"])
 
+    event_bridge = None
+    if "event_bridge" in raw and raw["event_bridge"] is not None:
+        event_bridge = EcosystemEventBridgeContract.from_dict(raw["event_bridge"])
+
     return EcosystemPackPackage(
         schema_version=schema_version,
         ecosystem_id=ecosystem_id,
@@ -253,6 +261,7 @@ def parse_ecosystem_pack_package(data: str | bytes | Mapping[str, Any]) -> Ecosy
         package_sha256=declared_package_checksum,
         auth_contract=auth_contract,
         state_binding=state_binding,
+        event_bridge=event_bridge,
     )
 
 
@@ -351,6 +360,7 @@ def synthesize_ecosystem_pack(
     ecosystem_id = f"{base_pack_id}-ecosystem"
     auth_contract = synthesize_ecosystem_auth(ecosystem_id, surface_packages)
     state_binding = synthesize_ecosystem_state(ecosystem_id, surface_packages)
+    event_bridge = synthesize_ecosystem_events(ecosystem_id, surface_packages, state_binding=state_binding)
 
     payload = {
         "schema_version": ECOSYSTEM_PACK_SCHEMA_VERSION,
@@ -363,6 +373,7 @@ def synthesize_ecosystem_pack(
         "surfaces": [s.to_dict() for s in surface_packages],
         "auth_contract": auth_contract.to_dict(),
         "state_binding": state_binding.to_dict(),
+        "event_bridge": event_bridge.to_dict(),
     }
     package_sha256 = compute_ecosystem_checksum(payload)
 
@@ -378,4 +389,5 @@ def synthesize_ecosystem_pack(
         package_sha256=package_sha256,
         auth_contract=auth_contract,
         state_binding=state_binding,
+        event_bridge=event_bridge,
     )

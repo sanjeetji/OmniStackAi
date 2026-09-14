@@ -86,6 +86,11 @@ def build_parser() -> argparse.ArgumentParser:
     state_parser.add_argument("package_file", help="Path to the .ecosystem.pack.json file to inspect.")
     state_parser.add_argument("--json", action="store_true", help="Output state binding as canonical JSON.")
 
+    # Subcommand: events
+    events_parser = subparsers.add_parser("events", help="Inspect cross-surface event bridge contracts, webhook subscriptions, and delivery policies.")
+    events_parser.add_argument("package_file", help="Path to the .ecosystem.pack.json file or registered ecosystem ID to inspect.")
+    events_parser.add_argument("--json", action="store_true", help="Output event bridge contract as canonical JSON.")
+
     return parser
 
 
@@ -329,6 +334,42 @@ def run_state(args: argparse.Namespace) -> int:
     return 0
 
 
+def run_events(args: argparse.Namespace) -> int:
+    import json
+    from .ecosystem_events import synthesize_ecosystem_events
+
+    pkg, err = _load_package(args.package_file)
+    if pkg is None:
+        sys.stderr.write(f"Error: {err}\n")
+        return 1
+
+    events = pkg.event_bridge
+    if events is None:
+        events = synthesize_ecosystem_events(pkg.ecosystem_id, pkg.surfaces)
+
+    if args.json:
+        sys.stdout.write(json.dumps(events.to_dict(), indent=2, sort_keys=True))
+        sys.stdout.write("\n")
+        return 0
+
+    sys.stdout.write(f"Ecosystem Event Bridge: {pkg.display_name} ({pkg.ecosystem_id})\n")
+    sys.stdout.write(f"  Signature Algorithm: {events.signature_algorithm} (header: {events.signature_header})\n")
+    sys.stdout.write(f"  Idempotency Header:  {events.idempotency_header}\n")
+    sys.stdout.write(f"  Secret Reference:    {events.secret_ref}\n")
+    sys.stdout.write(f"  Supported Events ({len(events.supported_events)}):\n")
+    for ev in events.supported_events:
+        sys.stdout.write(f"    - {ev}\n")
+    sys.stdout.write(f"  Webhook Subscriptions ({len(events.subscriptions)}):\n")
+    for sub in events.subscriptions:
+        active_str = "active" if sub.is_active else "disabled"
+        retry = f"retries={sub.retry_policy.max_retries}, backoff={sub.retry_policy.backoff_seconds}s"
+        sys.stdout.write(
+            f"    - [{active_str}] {sub.source_surface} -> {sub.target_surface} ({sub.event_type}) "
+            f"at {sub.webhook_path} ({retry})\n"
+        )
+    return 0
+
+
 def main(argv: Sequence[str] | None = None) -> int:
     parser = build_parser()
     args = parser.parse_args(argv)
@@ -347,6 +388,8 @@ def main(argv: Sequence[str] | None = None) -> int:
         return run_auth(args)
     if args.subcommand == "state":
         return run_state(args)
+    if args.subcommand == "events":
+        return run_events(args)
     sys.stderr.write(f"Unknown subcommand: {args.subcommand}\n")
     return 1
 

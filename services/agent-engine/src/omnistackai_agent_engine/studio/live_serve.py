@@ -436,6 +436,8 @@ def main() -> None:
             switch_surface_fn=preview_manager.switch_surface,
             get_ecosystem_auth_fn=preview_manager.get_ecosystem_auth,
             get_ecosystem_state_fn=preview_manager.get_ecosystem_state,
+            get_ecosystem_events_fn=preview_manager.get_ecosystem_events,
+            dispatch_ecosystem_event_fn=preview_manager.dispatch_ecosystem_event,
             preview_build_fn=lambda build_id, surface_slug=None: _preview_recorded_build(
                 build_id, history, preview_manager, surface_slug=surface_slug
             ),

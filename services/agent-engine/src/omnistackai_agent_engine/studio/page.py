@@ -318,6 +318,112 @@ STUDIO_HTML = """<!doctype html>
     font-size: 11px;
     color: #94a3b8;
   }
+  .preview-events-info {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    padding: 8px 14px;
+    background: #060a14;
+    border-bottom: 1px solid #1e293b;
+    font-size: 11.5px;
+    color: #94a3b8;
+  }
+  .events-header-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    flex-wrap: wrap;
+  }
+  .events-meta-group {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+  }
+  .events-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 2px 7px;
+    background: rgba(168, 85, 247, 0.12);
+    border: 1px solid #a855f7;
+    border-radius: 4px;
+    color: #c084fc;
+    font-weight: 600;
+  }
+  .events-count-badge {
+    display: inline-flex;
+    align-items: center;
+    padding: 2px 6px;
+    background: rgba(34, 211, 238, 0.1);
+    border: 1px solid #22d3ee;
+    border-radius: 4px;
+    color: #22d3ee;
+  }
+  .events-action-btn {
+    background: transparent;
+    border: 1px solid #6366f1;
+    color: #a5b4fc;
+    border-radius: 4px;
+    padding: 3px 8px;
+    font-size: 11px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+  .events-action-btn:hover {
+    background: rgba(99, 102, 241, 0.2);
+    color: #ffffff;
+  }
+  .events-sim-panel {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+    flex-wrap: wrap;
+    padding: 8px 10px;
+    background: rgba(15, 23, 42, 0.85);
+    border: 1px solid #334155;
+    border-radius: 6px;
+    margin-top: 4px;
+  }
+  .events-sim-input {
+    background: #0b1220;
+    border: 1px solid #334155;
+    color: #e2e8f0;
+    border-radius: 4px;
+    padding: 4px 8px;
+    font-size: 11px;
+  }
+  .events-log-container {
+    max-height: 140px;
+    overflow-y: auto;
+    border: 1px solid #1e293b;
+    border-radius: 4px;
+    background: #030712;
+    padding: 4px 6px;
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-size: 10.5px;
+  }
+  .events-log-entry {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    padding: 2px 4px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+  }
+  .events-log-entry:last-child { border-bottom: none; }
+  .status-tag {
+    padding: 1px 4px;
+    border-radius: 3px;
+    font-size: 9.5px;
+    font-weight: 600;
+    text-transform: uppercase;
+  }
+  .status-tag.simulated { background: rgba(56, 189, 248, 0.2); color: #38bdf8; }
+  .status-tag.delivered { background: rgba(34, 197, 94, 0.2); color: #4ade80; }
+  .status-tag.failed { background: rgba(239, 68, 68, 0.2); color: #f87171; }
   .auth-role-badge {
     display: inline-flex;
     align-items: center;
@@ -466,6 +572,28 @@ STUDIO_HTML = """<!doctype html>
       </div>
       <div id="preview-surface-tabs" class="preview-surface-tabs" hidden></div>
       <div id="preview-auth-info" class="preview-auth-info" hidden></div>
+      <div id="preview-events-info" class="preview-events-info" hidden>
+        <div class="events-header-row">
+          <div class="events-meta-group">
+            <span class="events-badge">Event Bridge</span>
+            <span id="events-subscriptions-count" class="events-count-badge">0 subscriptions</span>
+            <span id="events-deliveries-count" class="events-count-badge">0 deliveries</span>
+          </div>
+          <div class="events-meta-group">
+            <button type="button" id="events-toggle-sim" class="events-action-btn">Simulate Event</button>
+            <button type="button" id="events-refresh-log" class="events-action-btn">Refresh Events</button>
+          </div>
+        </div>
+        <div id="events-sim-panel" class="events-sim-panel" hidden>
+          <input type="text" id="sim-event-type" class="events-sim-input" placeholder="Event Type (e.g. post.created)" style="flex: 1; min-width: 140px;" />
+          <input type="text" id="sim-entity-name" class="events-sim-input" placeholder="Entity Name (e.g. Post)" style="width: 100px;" />
+          <input type="text" id="sim-entity-id" class="events-sim-input" placeholder="Entity ID" style="width: 80px;" />
+          <button type="button" id="sim-dispatch-btn" class="events-action-btn" style="background: rgba(99, 102, 241, 0.3); border-color: #818cf8; color: #fff;">Dispatch</button>
+        </div>
+        <div id="events-log-container" class="events-log-container" hidden>
+          <div id="events-log-list"></div>
+        </div>
+      </div>
       <p id="preview-status" class="preview-status" role="status" aria-live="polite">Preview has not started.</p>
       <iframe
         id="preview-frame"
@@ -829,6 +957,24 @@ STUDIO_HTML = """<!doctype html>
       }
     }
 
+    var eventsInfo = document.getElementById('preview-events-info');
+    if (eventsInfo) {
+      if (preview && preview.is_ecosystem && (preview.has_events || preview.subscription_count > 0)) {
+        eventsInfo.hidden = false;
+        var subBadge = document.getElementById('events-subscriptions-count');
+        if (subBadge) {
+          subBadge.textContent = (preview.subscription_count || 0) + ' subscriptions';
+        }
+        var delBadge = document.getElementById('events-deliveries-count');
+        if (delBadge) {
+          delBadge.textContent = (preview.event_count || 0) + ' deliveries';
+        }
+        loadEcosystemEventsLog();
+      } else {
+        eventsInfo.hidden = true;
+      }
+    }
+
     if (url) {
       previewStatus.textContent = preview.message || 'The generated application is running locally.';
       if (currentPreviewUrl !== url) {
@@ -875,6 +1021,125 @@ STUDIO_HTML = """<!doctype html>
   document.getElementById('preview-restart').addEventListener('click', function () {
     control('/api/preview/restart', 'Restarting preview...');
   });
+
+  function loadEcosystemEventsLog() {
+    var listContainer = document.getElementById('events-log-container');
+    var listEl = document.getElementById('events-log-list');
+    if (!listContainer || !listEl) { return; }
+
+    fetch('/api/ecosystem/events')
+      .then(function (res) { return res.ok ? res.json() : null; })
+      .then(function (data) {
+        if (!data || !data.deliveries) { return; }
+        renderEventsLog(data.deliveries);
+      })
+      .catch(function () {});
+  }
+
+  function renderEventsLog(deliveries) {
+    var listContainer = document.getElementById('events-log-container');
+    var listEl = document.getElementById('events-log-list');
+    var delBadge = document.getElementById('events-deliveries-count');
+    if (!listContainer || !listEl) { return; }
+
+    if (delBadge && deliveries) {
+      delBadge.textContent = deliveries.length + ' deliveries';
+    }
+
+    if (!deliveries || !deliveries.length) {
+      listContainer.hidden = true;
+      listEl.innerHTML = '';
+      return;
+    }
+
+    listContainer.hidden = false;
+    listEl.innerHTML = '';
+
+    deliveries.slice(-20).reverse().forEach(function (d) {
+      var row = document.createElement('div');
+      row.className = 'events-log-entry';
+
+      var left = document.createElement('div');
+      left.style.display = 'flex';
+      left.style.gap = '6px';
+      left.style.alignItems = 'center';
+
+      var tag = document.createElement('span');
+      tag.className = 'status-tag ' + (d.status === 'delivered' ? 'delivered' : (d.status === 'failed' ? 'failed' : 'simulated'));
+      tag.textContent = d.status || 'event';
+      left.appendChild(tag);
+
+      var desc = document.createElement('span');
+      desc.textContent = (d.event_id || '').slice(0, 10) + ' -> ' + (d.target_surface || 'surface');
+      left.appendChild(desc);
+
+      var right = document.createElement('div');
+      right.style.color = '#64748b';
+      right.textContent = (d.duration_ms ? d.duration_ms.toFixed(1) + 'ms' : '') + ' (' + (d.status_code || 200) + ')';
+
+      row.appendChild(left);
+      row.appendChild(right);
+      listEl.appendChild(row);
+    });
+  }
+
+  var toggleSimBtn = document.getElementById('events-toggle-sim');
+  if (toggleSimBtn) {
+    toggleSimBtn.addEventListener('click', function () {
+      var panel = document.getElementById('events-sim-panel');
+      if (panel) {
+        panel.hidden = !panel.hidden;
+      }
+    });
+  }
+
+  var refreshLogBtn = document.getElementById('events-refresh-log');
+  if (refreshLogBtn) {
+    refreshLogBtn.addEventListener('click', function () {
+      loadEcosystemEventsLog();
+      flashButton(refreshLogBtn, 'Refreshed!');
+    });
+  }
+
+  var dispatchSimBtn = document.getElementById('sim-dispatch-btn');
+  if (dispatchSimBtn) {
+    dispatchSimBtn.addEventListener('click', function () {
+      var eventTypeInput = document.getElementById('sim-event-type');
+      var entityNameInput = document.getElementById('sim-entity-name');
+      var entityIdInput = document.getElementById('sim-entity-id');
+
+      var eventType = eventTypeInput ? eventTypeInput.value.trim() : '';
+      if (!eventType) {
+        eventType = 'test.event';
+      }
+      var entityName = entityNameInput ? entityNameInput.value.trim() : 'TestEntity';
+      var entityId = entityIdInput ? entityIdInput.value.trim() : '1';
+
+      dispatchSimBtn.disabled = true;
+      fetch('/api/ecosystem/events/dispatch', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          event_type: eventType,
+          entity_name: entityName,
+          entity_id: entityId,
+          action: 'create',
+          data: { simulated: true, timestamp: Date.now() }
+        })
+      })
+      .then(function (res) { return res.json(); })
+      .then(function (data) {
+        flashButton(dispatchSimBtn, 'Dispatched (' + (data.dispatched_count || 0) + ')');
+        loadEcosystemEventsLog();
+      })
+      .catch(function (err) {
+        flashButton(dispatchSimBtn, 'Error');
+      })
+      .then(function () {
+        dispatchSimBtn.disabled = false;
+      });
+    });
+  }
 
   function previewBuild(build, surface_slug) {
     renderResult({

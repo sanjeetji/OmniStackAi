@@ -1,4 +1,4 @@
-# OmniStackAI — implementation progress (as of R-447)
+# OmniStackAI — implementation progress (as of R-448)
 
 A living summary of what is built, what is pending, and how to see results. Numbers come from the
 execution tracker (`R_&_D/OmniStackAI_Execution_Tracker_v6.xlsx`, `Phase_Roadmap`) plus the state
@@ -6,10 +6,10 @@ files (`.ai/`), Git history, and CHANGELOG for work done past the tracker's last
 
 ## Headline
 
-- **3,083 automated tests pass**, fully offline and network-independent (`task verify`).
+- **3,098 automated tests pass**, fully offline and network-independent (`task verify`).
 - **147 tracker tasks Done, 1 Deferred, 210 Not Started** across 358 tasks (the tracker's planned
   universe ends at R-358).
-- **Plus 89 completed tasks beyond the workbook (R-359 → R-447)**: 57 reusable UI-component suites,
+- **Plus 90 completed tasks beyond the workbook (R-359 → R-448)**: 57 reusable UI-component suites,
   four front-door bricks, R-420 generated-SQL hardening, R-421 managed embedded local preview,
   R-422 collision-free preview ports + status/stop/restart controls, R-423 build history + re-preview,
   R-424 live preview status, R-425 per-build repo actions, R-426 remove-from-history, R-427 a
@@ -26,10 +26,21 @@ files (`.ai/`), Git history, and CHANGELOG for work done past the tracker's last
   AI-delta feature modification controls above Solution Packs**, **R-443 Solution Pack Packaging,
   Verification, and Export CLI**, **R-444 Solution Pack Multi-Surface Ecosystem Pack Synthesis**,
   **R-445 Solution Pack Ecosystem Pack Registry Integration, Catalog Discovery, and Studio Multi-Surface Selection**,
-  **R-446 Solution Pack Ecosystem Studio Live Multi-Surface Preview and Process Orchestration**, and
-  **R-447 Solution Pack Ecosystem Multi-Surface Cross-App Auth and Unified State Binding** —
-  the first eighteen bricks of the differentiating spine.
+  **R-446 Solution Pack Ecosystem Studio Live Multi-Surface Preview and Process Orchestration**,
+  **R-447 Solution Pack Ecosystem Multi-Surface Cross-App Auth and Unified State Binding**, and
+  **R-448 Solution Pack Ecosystem Cross-Surface Webhook and Event Bridge** —
+  the first nineteen bricks of the differentiating spine.
   The generated Next.js component library remains at **110 components**; its series is **PAUSED at R-415** and fully resumable.
+- **R-448 adds Ecosystem Cross-Surface Webhook and Event Bridge:**
+  `WebhookRetryPolicy`, `EcosystemWebhookSubscription`, `EcosystemEventPayload`, and `WebhookDeliveryRecord` formalize cross-surface event transport;
+  `sign_webhook_payload` and `verify_webhook_signature` provide Python 3.13 stdlib-only HMAC-SHA256 signing and verification
+  with constant-time comparison (`hmac.compare_digest`) and 0 external dependencies; `EcosystemEventBridge` provides in-process
+  event routing and bounded delivery logging (max 100 entries); `synthesize_ecosystem_events` deterministically derives cross-surface
+  event subscriptions from entity writers to readers; `StudioPreviewManager` tracks event bridge contracts, injects `has_events`,
+  `event_count`, and `subscription_count` into preview status/payloads, and exposes `get_ecosystem_events()` and `dispatch_ecosystem_event()`;
+  Studio HTTP server exposes `GET /api/ecosystem/events` and `POST /api/ecosystem/events/dispatch`; `studio/page.py` renders
+  `#preview-events-info` with subscription count, "Simulate Event" panel, and live delivery logs (0 external network requests);
+  and `ecosystem_cli.py` adds `events` subcommand.
 - **R-447 adds Ecosystem Cross-App Auth and Unified State Binding:**
   `EcosystemAuthContract` and `CrossAppAuthMatrix` define shared HS256 JWT parameters and role isolation;
   `mint_ecosystem_token` and `verify_ecosystem_token` provide Python 3.13 stdlib-only JWT token signing and validation

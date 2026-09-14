@@ -1,20 +1,20 @@
-task_id: R-447
-id: R-447
-title: "Solution Pack Ecosystem Multi-Surface Cross-App Auth and Unified State Binding"
+task_id: R-448
+id: R-448
+title: "Solution Pack Ecosystem Cross-Surface Webhook and Event Bridge"
 status: completed
 phase: MVP
 tracker_row: null
 started_at: "2026-09-14"
 completed_at: "2026-09-14"
 objective: >-
-  Eighteenth brick of the differentiating spine and fourteenth Solution Pack task. Implement
-  Solution Pack Ecosystem Multi-Surface Cross-App Auth and Unified State Binding, providing
-  canonical EcosystemAuthContract, CrossAppAuthMatrix, stdlib-only JWT token minting/verification,
-  EcosystemStateBinding with entity lifecycle state flows and role-gated transitions, Studio
-  cross-app preview auth/state injection, Studio HTTP endpoints, and CLI auth/state subcommands.
+  Nineteenth brick of the differentiating spine and fifteenth Solution Pack task. Implement
+  Solution Pack Ecosystem Cross-Surface Webhook and Event Bridge, providing canonical
+  EcosystemWebhookSubscription, EcosystemEventPayload, WebhookDeliveryRecord, EcosystemEventBridgeContract,
+  Python 3.13 stdlib-only HMAC-SHA256 signature generation/verification, in-process EcosystemEventBridge
+  with bounded delivery logging, contract synthesis, Studio preview event injection, endpoints,
+  Studio UI event simulation and log stream, and CLI events subcommand.
 allowed_paths:
-  - "services/agent-engine/src/omnistackai_agent_engine/solution_packs/ecosystem_auth.py"
-  - "services/agent-engine/src/omnistackai_agent_engine/solution_packs/ecosystem_state.py"
+  - "services/agent-engine/src/omnistackai_agent_engine/solution_packs/ecosystem_events.py"
   - "services/agent-engine/src/omnistackai_agent_engine/solution_packs/ecosystem_pack.py"
   - "services/agent-engine/src/omnistackai_agent_engine/solution_packs/ecosystem_registry.py"
   - "services/agent-engine/src/omnistackai_agent_engine/solution_packs/ecosystem_cli.py"
@@ -23,13 +23,13 @@ allowed_paths:
   - "services/agent-engine/src/omnistackai_agent_engine/studio/server.py"
   - "services/agent-engine/src/omnistackai_agent_engine/studio/live_serve.py"
   - "services/agent-engine/src/omnistackai_agent_engine/studio/page.py"
-  - "services/agent-engine/tests/test_ecosystem_auth_and_state.py"
+  - "services/agent-engine/tests/test_ecosystem_event_bridge.py"
   - "scripts/agent-engine.sh"
   - "Taskfile.yml"
   - "docs/SOLUTION_PACKS.md"
   - "docs/PROGRESS.md"
   - "docs/RESUME_PROMPT.md"
-  - ".ai/tasks/R-447.md"
+  - ".ai/tasks/R-448.md"
   - ".ai/CURRENT_TASK.yaml"
   - ".ai/PROJECT_STATE.yaml"
   - ".ai/WORK_LOG.md"
@@ -38,12 +38,12 @@ allowed_paths:
   - "CHANGELOG.md"
 forbidden_changes:
   - "Do not modify or track the unrelated untracked .claude directory"
-  - "Do not break existing single-app Studio preview, server, or history behavior"
+  - "Do not break existing single-app or ecosystem Studio preview, server, or history behavior"
   - "Do not add external Python dependencies (Python 3.13 stdlib only)"
   - "Do not add external network requests, fonts, or scripts to Studio HTML"
   - "Do not change the control-plane database from PostgreSQL"
 required_gates:
-  - "test-first focused test_ecosystem_auth_and_state.py"
+  - "test-first focused test_ecosystem_event_bridge.py"
   - task verify
   - task lint
   - task security:quick
@@ -54,12 +54,12 @@ model_tool_trace:
   routing: none
   local_calls: 0
   cloud_calls: 0
-  note: "0 model calls during verification; cross-app auth and state binding are 100% deterministic and offline."
+  note: "0 model calls during verification; cross-surface webhook and event bridge are 100% deterministic and offline."
 acceptance_criteria:
-  - "EcosystemAuthContract and CrossAppAuthMatrix define canonical cross-app JWT parameters and role isolation."
-  - "mint_ecosystem_token and verify_ecosystem_token use Python stdlib (hmac/hashlib) with 0 external dependencies."
-  - "EcosystemStateBinding formalizes shared entities, lifecycle state flows, and cross-app endpoint bindings."
-  - "synthesize_ecosystem_auth and synthesize_ecosystem_state derive valid contracts from ecosystem packs."
-  - "GET /api/ecosystem/auth and GET /api/ecosystem/state return active ecosystem auth and state bindings."
-  - "StudioPreviewManager injects shared JWT_SECRET and surface demo tokens into running surface environments."
-  - "CLI commands 'auth' and 'state' inspect ecosystem pack auth and state bindings."
+  - "EcosystemEventBridgeContract and EcosystemWebhookSubscription define canonical cross-app event parameters."
+  - "sign_webhook_payload and verify_webhook_signature use Python stdlib hmac/hashlib with 0 external dependencies."
+  - "EcosystemEventBridge manages subscriptions, routes events to surfaces, and maintains bounded delivery logs."
+  - "synthesize_ecosystem_events derives valid event bridge contracts and subscriptions from ecosystem packs."
+  - "GET /api/ecosystem/events and POST /api/ecosystem/events/dispatch inspect and trigger cross-app events in Studio."
+  - "StudioPreviewManager tracks event bridge and injects has_events into preview status."
+  - "CLI command 'events' inspects ecosystem pack webhook subscriptions and supported events."
