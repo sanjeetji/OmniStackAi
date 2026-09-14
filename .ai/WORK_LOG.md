@@ -1,5 +1,25 @@
 # Work Log
 
+## 2026-09-14 — R-435 (exact-compatible Solution Pack recommendations in ecosystem planning)
+
+- Recorded `.ai/tasks/R-435.md` and `.ai/CURRENT_TASK.yaml` before implementation. Test-first focused import
+  failed because `SolutionPackRecommendation` did not exist; final R-435/R-434/R-431 focused regression is
+  25 passing tests (8 new R-435 tests).
+- Extended immutable registry selection with optional required targets while preserving its exact-domain,
+  capability-subset, and deterministic newest-version behavior.
+- Added frozen `SolutionPackRecommendation`: canonical domain/capability/target query plus minimal selected
+  pack id/version/digest/targets metadata or explicit `no-exact-match`. Constructor consistency checks prevent
+  incompatible selections from being represented.
+- Every `EcosystemPlan` now derives its required targets from the existing project plans of all already-built
+  surface IRs and exposes one recommendation in `to_dict()` and the plan CLI. The recommendation is metadata
+  only; it does not load, merge, apply, or build the pack.
+- Deterministic proof: blog-cms Next.js/Python -> `minimal-blog@1.0.0`; rideshare Next.js/Python ->
+  `no-exact-match` because the registered rideshare baseline targets Go. No semantic capability was guessed.
+- Gates: `task verify` 2,934 passed fully offline (+8); agent-engine/repository lint, security, and environment
+  passed; both demos remained 152/149 files; 0 model calls.
+- No dependency, baseline/example, Application IR/schema, generator, provider, PostgreSQL, infrastructure,
+  tracker workbook, generated-output, or `.claude/` change. Workbook remains unchanged past R-358.
+
 ## 2026-09-14 — R-434 (versioned baseline Solution Pack registry)
 
 - Recorded `.ai/tasks/R-434.md` and `.ai/CURRENT_TASK.yaml` before implementation. Test-first focused run

@@ -1,18 +1,26 @@
 # Current Handoff
 
-Task ID: R-434
+Task ID: R-435
 Status: done
 Phase: BASIC/MVP — Founder Stage 0
 Branch: `main` (the only branch; the GitHub default)
 
-> **The differentiating SPINE now has verified baseline Solution Packs.** R-430 proposes the ecosystem,
-> R-431 materializes owned repos, R-432 safely refines unknown domains, R-433 scopes each surface, and
-> **R-434 registers immutable, digest-pinned baselines without copying source**. See them:
-> `task agent-engine:solution-packs`. UI-component series PAUSED at R-415.
-> **NEXT:** R-435 pack recommendations in ecosystem planning.
+> **The differentiating SPINE now recommends only compatible verified baselines.** R-430 proposes the
+> ecosystem, R-431 materializes it, R-432 refines unknown domains, R-433 scopes surfaces, R-434 registers
+> immutable packs, and **R-435 exposes an exact target-aware recommendation or explicit no-match**. See it:
+> `task agent-engine:ecosystem:plan -- "Build a blog CMS"`. UI-component series PAUSED at R-415.
+> **NEXT:** R-436 declarative pack customization/delta manifest.
 
 ## Repo/workflow state
 
+- **R-435 (exact-compatible pack recommendations — sixth spine brick)** shipped: registry selection now
+  accepts required targets as well as exact domain/capabilities. Frozen `SolutionPackRecommendation` stores
+  a canonical query and minimal id/version/digest/targets selection metadata or `no-exact-match`. Every
+  `EcosystemPlan` derives targets from its already-planned surface IR project plans and exposes one
+  recommendation in JSON/CLI without applying a pack. Blog-cms Next.js/Python selects
+  `minimal-blog@1.0.0`; current rideshare Next.js/Python correctly does not select its Go-backed baseline.
+  Existing IRs/build output unchanged. 8 new tests; focused 25 passed; `task verify` **2,934 passed** offline;
+  lint/security/env + demos (152/149) green; 0 model calls. Workbook unchanged past R-358.
 - **R-434 (versioned baseline Solution Pack registry — fifth spine brick)** shipped: new stdlib-only
   `solution_packs` package registers `minimal-blog@1.0.0` and `rideshare-favourites@1.0.0` by reference to
   their existing Application IR examples. Frozen descriptors pin domains/capabilities, canonical IR SHA-256,
@@ -126,7 +134,7 @@ Branch: `main` (the only branch; the GitHub default)
   50. **R-412**: Character & Word Counter Textarea Suite (`components/character-counter.tsx`)
   51. **R-413**: Copy-to-Clipboard Button Suite (`components/copy-button.tsx`)
   52. **R-414**: Duration Input Suite (`components/duration-input.tsx`)
-- R-434 is complete; the next coding action is gated on recording the R-435 contract. Still stop-and-ask
+- R-435 is complete; the next coding action is gated on recording the R-436 contract. Still stop-and-ask
   only for paid cloud / DB engine / new infra / native-mobile / a materially different architecture decision.
 
 ## Completed
@@ -1038,10 +1046,10 @@ Enabled accessible, desktop-and-mobile-grade, futuristic Time Picker and Time Ra
 
 ## Next action
 
-- R-434 is complete. Before coding, record the R-435 Standard AI Task Contract. Recommended scope: expose
-  deterministic exact-compatible pack recommendations in ecosystem planning without changing generated
-  output. Report pack id/version/digest or no match and define the explicit configuration/AI-delta boundary;
-  do not duplicate generated source or add a dependency/model/live path. Keep verification offline.
+- R-435 is complete. Before coding, record the R-436 Standard AI Task Contract. Recommended scope: define
+  an immutable declarative Solution Pack customization/delta manifest pinned to pack id/version/digest, with
+  bounded typed changes and deterministic validation/JSON. Do not apply mutations or add a
+  dependency/model/live path. Keep verification offline.
 
 ## Next command
 

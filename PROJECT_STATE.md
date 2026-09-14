@@ -4,20 +4,23 @@ Last updated: 2026-09-14
 ## Current Phase
 Stage 0 (Founder Build Sequence, Brief Section 91) — BASIC/MVP
 
-> **The differentiating SPINE now has immutable verified baselines (R-434).** Existing Application IR
-> examples are registered as versioned Solution Packs pinned to canonical digests and exact targets, with
-> deterministic exact-match selection and no copied source. See them: `task agent-engine:solution-packs`.
-> UI-component series PAUSED at R-415 (resumable). **NEXT:** R-435 pack recommendations in planning.
+> **The differentiating SPINE now recommends only compatible verified baselines (R-435).** Every ecosystem
+> plan derives its actual framework targets and reports a versioned pack id/digest or explicit no-match;
+> nothing is silently applied. See it: `task agent-engine:ecosystem:plan -- "Build a blog CMS"`.
+> UI-component series PAUSED at R-415 (resumable). **NEXT:** R-436 declarative customization/delta manifest.
 
 ## Last Completed Task
-Tracker ID: R-434 — Versioned baseline Solution Pack registry — DONE.
-New stdlib-only frozen descriptors register the existing `minimal-blog` and `rideshare-favourites` IRs at
-version 1.0.0 without copying their source. Every pack pins exact domains/capabilities, canonical IR SHA-256,
-and assembled targets. Registry construction validates the IR, targets, and verify plans and fails closed on
-malformed, duplicate, missing, or drifted definitions. Selection uses an exact domain and required-capability
-subset, chooses the newest compatible semantic version, and returns no match instead of guessing. The
-deterministic JSON CLI performs no build or live work. Eight focused tests passed; `task verify` **2,926
+Tracker ID: R-435 — Exact-compatible Solution Pack recommendations in ecosystem planning — DONE.
+Registry selection now supports a required target subset alongside exact domain/capability matching. A frozen
+recommendation records the canonical query and selected pack id/version/digest/targets or explicit no-match.
+Every ecosystem plan derives targets from its existing surface IR project plans and exposes the result in
+JSON/CLI without applying the pack. Blog-CMS Next.js/Python recommends `minimal-blog@1.0.0`; rideshare
+Next.js/Python correctly reports no match because its registered baseline is Go-backed. Existing IRs and
+generated output are unchanged. Eight new tests; focused regressions **25 passed**; `task verify` **2,934
 passed** offline; lint, security, env and both demos (152 / 149) pass; 0 model calls.
+
+Immediately preceded by R-434 — Versioned baseline Solution Pack registry — DONE.
+The verified `minimal-blog` and `rideshare-favourites` IR examples are immutable, digest/target-pinned packs.
 
 Immediately preceded by R-433 — Surface-specific ecosystem data and capability scoping — DONE.
 Each ecosystem surface receives bounded entities, read/write capabilities, one actor role, relation-safe
@@ -356,9 +359,9 @@ R-324 (theming tokens), R-323 (popover), R-322 (dropdown menu), R-321 (accordion
 R-317 (skeleton), R-316 (alert), R-315 (card), R-314 (tooltip), R-313 (column visibility), R-312 (badge), R-311 (table density),
 R-310 (tabs), R-309 (pagination), and R-308 (JSON export).
 
-**Notes:** R-434 is complete with 2,926 tests passing. The next proposed task is R-435: expose deterministic,
-exact-compatible Solution Pack recommendations in ecosystem planning without changing generated output,
-reporting the pack id/version/digest or no match; its contract must be recorded first.
+**Notes:** R-435 is complete with 2,934 tests passing. The next proposed task is R-436: define an immutable,
+declarative Solution Pack customization/delta manifest pinned to pack id/version/digest, without applying
+mutations or calling a model; its contract must be recorded first.
 
 
 

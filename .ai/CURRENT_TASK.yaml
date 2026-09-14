@@ -1,28 +1,26 @@
-task_id: R-434
-id: R-434
-title: "Versioned baseline Solution Pack registry"
+task_id: R-435
+id: R-435
+title: "Exact-compatible Solution Pack recommendations in ecosystem planning"
 status: done
 phase: MVP
 tracker_row: null
 started_at: "2026-09-14"
 completed_at: "2026-09-14"
 objective: >-
-  Fifth brick of the differentiating spine and first Solution Pack task. Register the already verified
-  minimal-blog and rideshare-favourites Application IR examples as immutable, versioned baseline pack
-  descriptors. Pin each descriptor to its canonical IR digest and assembled targets, validate registry
-  integrity deterministically, and select packs by domain plus required capabilities without duplicating
-  skeleton source or invoking a model/live path.
+  Sixth brick of the differentiating spine and second Solution Pack task. Extend the immutable registry with
+  target-aware, fail-closed recommendations and attach one transparent recommendation to every deterministic
+  EcosystemPlan. Derive required targets from the already planned Application IRs, report the selected pack's
+  id/version/digest or an explicit no-match, and do not apply the pack or change generated output yet.
 allowed_paths:
   - "services/agent-engine/src/omnistackai_agent_engine/solution_packs/__init__.py"
   - "services/agent-engine/src/omnistackai_agent_engine/solution_packs/registry.py"
-  - "services/agent-engine/src/omnistackai_agent_engine/solution_packs/cli.py"
-  - "services/agent-engine/tests/test_solution_packs.py"
-  - "scripts/agent-engine.sh"
-  - "Taskfile.yml"
+  - "services/agent-engine/src/omnistackai_agent_engine/intake/ecosystem.py"
+  - "services/agent-engine/src/omnistackai_agent_engine/intake/ecosystem_plan.py"
+  - "services/agent-engine/tests/test_solution_pack_planning.py"
   - "docs/SOLUTION_PACKS.md"
   - "docs/PROGRESS.md"
   - "docs/RESUME_PROMPT.md"
-  - ".ai/tasks/R-434.md"
+  - ".ai/tasks/R-435.md"
   - ".ai/CURRENT_TASK.yaml"
   - ".ai/PROJECT_STATE.yaml"
   - ".ai/WORK_LOG.md"
@@ -31,44 +29,44 @@ allowed_paths:
   - "CHANGELOG.md"
 forbidden_changes:
   - "Do not modify or include the unrelated untracked .claude directory"
-  - "Do not copy generated skeleton files or duplicate the existing example Application IR definitions"
-  - "Do not change Application IR examples, generators, adapters, R-430 through R-433 behavior, PostgreSQL, or infrastructure"
+  - "Do not apply a recommended pack, merge/replace IRs, copy generated source, or change generated repository output"
+  - "Do not change Application IR schemas/examples, adapters/generators, R-430 through R-434 semantics, PostgreSQL, or infrastructure"
   - "No model, network, Docker, database, package install, generated-code execution, or toolchain use in task verify"
-  - "No new dependency, mutable global registry, hidden fallback, secret, or unverified pack claim"
+  - "No new dependency, hidden/fuzzy fallback, secret, mutable global registry, or fabricated capability"
 required_gates:
-  - "focused test_solution_packs.py"
+  - "focused test_solution_pack_planning.py plus R-434/R-431 regressions"
   - task verify
   - task lint
   - task security:quick
   - task env:check
   - task builder:demo -- minimal-blog
   - task builder:demo -- rideshare-favourites
-  - "deterministic solution-pack CLI list and rideshare selection inspection"
+  - "deterministic blog-cms and rideshare ecosystem-plan inspections"
 model_tool_trace:
   routing: deterministic_only
   local_calls: 0
   cloud_calls: 0
-  note: "R-434 is pure registry/validation/selection logic; no model call is authorized or needed."
+  note: "R-435 is pure planning metadata; no model call is authorized or needed."
 acceptance_criteria:
-  - "SolutionPack descriptors are frozen, structurally bounded, semantically versioned, JSON-safe, and pin an existing example IR by SHA-256 plus exact assembled targets."
-  - "The registry contains minimal-blog and rideshare-favourites baseline packs without duplicating their IR or generated files."
-  - "Registry construction fails closed on duplicate id/version pairs, missing examples, digest drift, target drift, invalid domains/capabilities, or malformed semantic versions."
-  - "Selection is deterministic by exact domain and required-capability subset, chooses the newest valid version, and returns None rather than inventing a fallback."
-  - "Loading a selected pack returns a fresh validate_ir-clean ApplicationIR and its project plan has verify ladders for every declared target."
-  - "A deterministic CLI lists pack metadata and resolves a domain/capability query without model/network/live execution."
+  - "Registry selection can require an exact target subset in addition to its existing exact-domain and required-capability rules, with deterministic newest-version selection unchanged."
+  - "A frozen JSON-safe recommendation records the exact domain/capability/target query and either minimal pack id/version/digest/targets metadata or an explicit no-exact-match result."
+  - "Every EcosystemPlan derives its canonical required-target tuple from all already-planned surface IR project plans and attaches one registry recommendation."
+  - "A blog-cms Next.js/Python plan recommends minimal-blog@1.0.0; the current rideshare Next.js/Python plan honestly reports no match because the registered rideshare baseline is Go-backed."
+  - "Unsupported/custom domains report no match; no fallback is fabricated and no semantic capabilities are inferred from entity names or prompt text."
+  - "Ecosystem plan CLI/JSON exposes the recommendation, while generated Application IRs and build output remain unchanged."
 evidence:
-  test_first_red: "Focused test import failed as expected: ModuleNotFoundError because solution_packs did not exist."
-  focused_test: "test_solution_packs.py: 8 passed"
-  verify: "2,926 passed (fully offline; +8; 0 model calls)"
+  test_first_red: "Focused import failed as expected because SolutionPackRecommendation did not exist."
+  focused_test: "R-435 + R-434 + R-431 focused regressions: 25 passed (8 new R-435 tests)"
+  verify: "2,934 passed (fully offline; +8; 0 model calls)"
   lint: "task agent-engine:lint and task lint passed"
   security: "task security:quick passed"
   env: "task env:check passed"
   demos: "minimal-blog 152 files; rideshare-favourites 149 files"
   deterministic_inspection: >-
-    Registry list returned exactly two version-1.0.0 packs; rideshare + favourites selected
-    rideshare-favourites@1.0.0 with its pinned digest and nextjs-web/backend-go targets.
+    Blog-cms complete plan -> minimal-blog@1.0.0 for backend-python + nextjs-web; rideshare complete plan ->
+    no-exact-match for the same targets because its registered baseline is backend-go + nextjs-web.
   tracker: "No workbook row exists beyond R-358; workbook intentionally unchanged."
 next_action: >-
-  R-434 done. Next R-435: expose deterministic, exact-compatible Solution Pack recommendations in
-  ecosystem planning without changing generated output. Report pack id/version/digest or no match; define
-  the configuration/delta boundary explicitly and keep all model/live/build behavior out of verification.
+  R-435 done. Next R-436: define an immutable declarative Solution Pack customization/delta manifest pinned
+  to the recommended pack id/version/digest, with bounded typed changes and deterministic validation/JSON;
+  do not apply mutations or call a model yet.

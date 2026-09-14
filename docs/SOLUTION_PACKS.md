@@ -4,8 +4,9 @@ OmniStackAI's intended generation model is:
 
 `owned product = verified baseline pack + deterministic configuration + bounded AI delta`
 
-R-434 implements the first, deliberately small part of that model: an immutable registry for verified
-baseline packs. It does not yet compose ecosystem surfaces or generate an AI delta.
+R-434 implements the immutable registry for verified baseline packs. R-435 exposes an exact-compatible pack
+recommendation in deterministic ecosystem planning. It still does not apply a pack, compose a configuration,
+or generate an AI delta.
 
 ## Registered baselines
 
@@ -40,8 +41,26 @@ The selector chooses the newest compatible semantic version deterministically. A
 capability returns a JSON `null` selection; the platform does not fabricate a fallback. These commands do
 not build a repository, call a model, access the network, connect to a database, or run generated code.
 
+## Planning recommendations
+
+`task agent-engine:ecosystem:plan -- "<business description>"` now reports one transparent Solution Pack
+recommendation. Compatibility requires:
+
+1. The classifier's exact domain.
+2. Any explicitly required capability tags.
+3. Every framework target derived from the Application IR project plans already selected for the ecosystem.
+
+The query and result are serialized under `solution_pack_recommendation`. A selection contains only its pack
+id, version, pinned IR digest, and targets. A miss is explicitly `no-exact-match`; no semantic capability is
+guessed from entity names or prose.
+
+For example, the current blog-CMS ecosystem uses Next.js plus Python and recommends
+`minimal-blog@1.0.0`. The current rideshare ecosystem also uses Python, so it does not recommend the
+Go-backed `rideshare-favourites` baseline. That baseline remains selectable when a caller explicitly asks
+for its compatible Next.js/Go target set.
+
 ## Next boundary
 
-A follow-up task may expose exact compatible pack recommendations to ecosystem planning. Pack
-configuration and AI-generated deltas remain separate, explicit layers and must preserve the deterministic
-IR, verification, ownership, and provider boundaries.
+A follow-up task may define the immutable declarative configuration/delta manifest that sits above a pinned
+pack. Pack application and AI-generated deltas remain separate, explicit layers and must preserve the
+deterministic IR, verification, ownership, and provider boundaries.

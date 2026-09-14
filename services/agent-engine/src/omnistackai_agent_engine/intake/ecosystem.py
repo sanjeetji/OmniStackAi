@@ -1,4 +1,4 @@
-"""Scope -> Application IRs: materialize a scoped multi-app ecosystem (R-431, R-433).
+"""Scope -> Application IRs and transparent pack recommendation (R-431, R-433, R-435).
 
 Second brick of the differentiating spine. R-430's `scope_compiler` *proposes* a multi-app ecosystem;
 this module makes it *real*: it maps each proposed `AppSurface` to a valid, `validate_ir`-clean
@@ -6,9 +6,10 @@ this module makes it *real*: it maps each proposed `AppSurface` to a valid, `val
 WIRE to real repository-backed handlers), and `build_ecosystem` materializes the chosen build scope as
 MULTIPLE owned Git repos by reusing the existing `build_app_from_ir` (assembler + git-service).
 
-Deterministic and offline (no model/network/clock/randomness) so it runs under `task verify`. Any cheap-LLM
-R-433 adds deterministic per-surface entity/capability scoping after the model is selected. Relation targets
-are retained as read dependencies, while editor screens and writes stay limited to explicitly writable data.
+Deterministic and offline (no model/network/clock/randomness) so it runs under `task verify`. R-433 adds
+deterministic per-surface entity/capability scoping after the model is selected. Relation targets are retained
+as read dependencies, while editor screens and writes stay limited to explicitly writable data. R-435 adds
+an exact-compatible Solution Pack recommendation to plan metadata but does not apply it to generated output.
 """
 
 from __future__ import annotations
@@ -40,6 +41,11 @@ from ..application_ir import (
     validate_ir,
 )
 from ..application_ir.validate import has_errors
+from ..projectplan import build_project_plan
+from ..solution_packs import (
+    DEFAULT_SOLUTION_PACK_REGISTRY,
+    SolutionPackRecommendation,
+)
 from .build_app import AppBuildResult, build_app_from_ir
 from .scope_compiler import AppSurface, ScopeProposal, propose_ecosystem
 
@@ -440,6 +446,7 @@ class EcosystemPlan:
     domain: str
     option_id: str
     apps: tuple[SurfaceApp, ...]
+    pack_recommendation: SolutionPackRecommendation
 
     def to_dict(self) -> dict:
         return {
@@ -447,6 +454,7 @@ class EcosystemPlan:
             "domain": self.domain,
             "option_id": self.option_id,
             "apps": [a.to_dict() for a in self.apps],
+            "solution_pack_recommendation": self.pack_recommendation.to_dict(),
         }
 
 
@@ -530,7 +538,26 @@ def plan_ecosystem(
         SurfaceApp(surface, surface_to_ir(proposal, surface, entities=entities))
         for surface in surfaces
     )
-    return EcosystemPlan(prompt=proposal.prompt, domain=proposal.domain, option_id=option_id, apps=apps)
+    required_targets = tuple(
+        sorted(
+            {
+                target.target
+                for app in apps
+                for target in build_project_plan(app.ir).apps
+            }
+        )
+    )
+    recommendation = DEFAULT_SOLUTION_PACK_REGISTRY.recommend(
+        proposal.domain,
+        required_targets=required_targets,
+    )
+    return EcosystemPlan(
+        prompt=proposal.prompt,
+        domain=proposal.domain,
+        option_id=option_id,
+        apps=apps,
+        pack_recommendation=recommendation,
+    )
 
 
 def plan_ecosystem_from_prompt(prompt: str, option_id: str = "complete") -> EcosystemPlan:

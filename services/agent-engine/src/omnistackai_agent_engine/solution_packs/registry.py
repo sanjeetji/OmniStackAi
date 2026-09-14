@@ -1,4 +1,4 @@
-"""Immutable, versioned Solution Pack descriptors and deterministic registry (R-434).
+"""Immutable Solution Pack descriptors, registry, and planning recommendations (R-434, R-435).
 
 A baseline pack references an existing, verified Application IR builder. It never copies generated source.
 The descriptor pins the canonical IR digest and assembled targets so an IR change cannot silently masquerade
@@ -107,6 +107,60 @@ class SolutionPack:
         }
 
 
+@dataclass(frozen=True, slots=True)
+class SolutionPackRecommendation:
+    """A canonical compatibility query plus its exact registry selection, if one exists."""
+
+    domain: str
+    required_capabilities: tuple[str, ...]
+    required_targets: tuple[str, ...]
+    selection: SolutionPack | None
+
+    def __post_init__(self) -> None:
+        _slug(self.domain, "recommendation domain")
+        capabilities = _slug_tuple(
+            self.required_capabilities,
+            "recommendation required_capabilities",
+            allow_empty=True,
+        )
+        targets = _slug_tuple(
+            self.required_targets,
+            "recommendation required_targets",
+            allow_empty=True,
+        )
+        if capabilities != tuple(sorted(capabilities)) or targets != tuple(sorted(targets)):
+            raise SolutionPackError("recommendation requirements must be canonically sorted")
+        if self.selection is None:
+            return
+        if not isinstance(self.selection, SolutionPack):
+            raise SolutionPackError("recommendation selection must be a SolutionPack or None")
+        if (
+            self.domain not in self.selection.domains
+            or not set(capabilities) <= set(self.selection.capabilities)
+            or not set(targets) <= set(self.selection.targets)
+        ):
+            raise SolutionPackError("recommendation selection is incompatible with its exact query")
+
+    def to_dict(self) -> dict[str, object]:
+        selection: dict[str, object] | None = None
+        if self.selection is not None:
+            selection = {
+                "pack_id": self.selection.pack_id,
+                "version": self.selection.version,
+                "ir_sha256": self.selection.ir_sha256,
+                "targets": list(self.selection.targets),
+            }
+        return {
+            "status": "selected" if self.selection is not None else "no-exact-match",
+            "query": {
+                "domain": self.domain,
+                "required_capabilities": list(self.required_capabilities),
+                "required_targets": list(self.required_targets),
+            },
+            "selection": selection,
+        }
+
+
 def _load_and_validate(pack: SolutionPack) -> ApplicationIR:
     try:
         ir = example_ir(pack.example_ir_ref)
@@ -186,16 +240,24 @@ class SolutionPackRegistry:
         domain: str,
         *,
         required_capabilities: tuple[str, ...] = (),
+        required_targets: tuple[str, ...] = (),
     ) -> SolutionPack | None:
-        """Select the newest exact-domain pack satisfying every required capability; never guess."""
+        """Select the newest exact-domain pack satisfying all capabilities and targets; never guess."""
         domain = _slug(domain, "domain query")
         required = frozenset(
             _slug_tuple(required_capabilities, "required_capabilities", allow_empty=True)
         )
+        targets = frozenset(
+            _slug_tuple(required_targets, "required_targets", allow_empty=True)
+        )
         matches = [
             pack
             for pack in self.packs
-            if domain in pack.domains and required <= set(pack.capabilities)
+            if (
+                domain in pack.domains
+                and required <= set(pack.capabilities)
+                and targets <= set(pack.targets)
+            )
         ]
         if not matches:
             return None
@@ -207,6 +269,39 @@ class SolutionPackRegistry:
                 pack.pack_id,
             ),
         )[0]
+
+    def recommend(
+        self,
+        domain: str,
+        *,
+        required_capabilities: tuple[str, ...] = (),
+        required_targets: tuple[str, ...] = (),
+    ) -> SolutionPackRecommendation:
+        """Return an immutable, transparent exact-match recommendation result."""
+        domain = _slug(domain, "domain query")
+        capabilities = tuple(
+            sorted(
+                _slug_tuple(
+                    required_capabilities,
+                    "required_capabilities",
+                    allow_empty=True,
+                )
+            )
+        )
+        targets = tuple(
+            sorted(_slug_tuple(required_targets, "required_targets", allow_empty=True))
+        )
+        selection = self.select(
+            domain,
+            required_capabilities=capabilities,
+            required_targets=targets,
+        )
+        return SolutionPackRecommendation(
+            domain=domain,
+            required_capabilities=capabilities,
+            required_targets=targets,
+            selection=selection,
+        )
 
     def load_ir(self, pack_id: str, version: str | None = None) -> ApplicationIR:
         """Load and revalidate a fresh IR instance for a registered pack."""

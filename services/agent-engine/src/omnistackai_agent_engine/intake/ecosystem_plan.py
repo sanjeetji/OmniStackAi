@@ -1,11 +1,12 @@
-"""Deterministic ecosystem PLAN CLI (R-431): prompt -> the Application IRs for each app surface.
+"""Deterministic ecosystem PLAN CLI (R-431, R-435): prompt -> IRs plus pack recommendation.
 
 No model, no network, writes nothing to disk — it just shows the multi-app plan:
 
     task agent-engine:ecosystem:plan -- "Create a food delivery app with restaurants and couriers"
 
-For each selected surface it prints the app name, its entities, and the derived API/screen counts, then the
-full EcosystemPlan JSON. Use `task agent-engine:ecosystem:build` to materialize the plan as owned repos.
+It prints the exact-compatible Solution Pack recommendation, then each selected surface's app name, entities,
+and derived API/screen counts plus the full EcosystemPlan JSON. Use `task agent-engine:ecosystem:build` to
+materialize the unchanged plan IRs as owned repos; R-435 does not apply the recommended pack.
 """
 
 from __future__ import annotations
@@ -23,6 +24,11 @@ def main() -> None:
     plan = plan_ecosystem_from_prompt(prompt, "complete")
     print(f"Prompt: {prompt}")
     print(f"Domain: {plan.domain}  |  build scope: {plan.option_id}  |  apps: {len(plan.apps)}")
+    selected_pack = plan.pack_recommendation.selection
+    if selected_pack is None:
+        print("Solution Pack: no exact compatible pack")
+    else:
+        print(f"Solution Pack: {selected_pack.pack_id}@{selected_pack.version}")
     print("\nEcosystem apps (each becomes its own owned repo):")
     for app in plan.apps:
         print(

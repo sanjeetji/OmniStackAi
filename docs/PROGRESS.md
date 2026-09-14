@@ -1,4 +1,4 @@
-# OmniStackAI — implementation progress (as of R-434)
+# OmniStackAI — implementation progress (as of R-435)
 
 A living summary of what is built, what is pending, and how to see results. Numbers come from the
 execution tracker (`R_&_D/OmniStackAI_Execution_Tracker_v6.xlsx`, `Phase_Roadmap`) plus the state
@@ -6,10 +6,10 @@ files (`.ai/`), Git history, and CHANGELOG for work done past the tracker's last
 
 ## Headline
 
-- **2,926 automated tests pass**, fully offline and network-independent (`task verify`).
+- **2,934 automated tests pass**, fully offline and network-independent (`task verify`).
 - **147 tracker tasks Done, 1 Deferred, 210 Not Started** across 358 tasks (the tracker's planned
   universe ends at R-358).
-- **Plus 76 completed tasks beyond the workbook (R-359 → R-434)**: 57 reusable UI-component suites,
+- **Plus 77 completed tasks beyond the workbook (R-359 → R-435)**: 57 reusable UI-component suites,
   four front-door bricks, R-420 generated-SQL hardening, R-421 managed embedded local preview,
   R-422 collision-free preview ports + status/stop/restart controls, R-423 build history + re-preview,
   R-424 live preview status, R-425 per-build repo actions, R-426 remove-from-history, R-427 a
@@ -17,7 +17,8 @@ files (`.ai/`), Git history, and CHANGELOG for work done past the tracker's last
   strict-type cleanup so a generated app passes `tsc --noEmit` clean, **R-430 the Ecosystem Scope
   Compiler**, and **R-431 Scope → Application IRs** (one prompt → multiple owned, clean-compiling app
   repos), **R-432 opt-in unknown-domain refinement**, **R-433 surface-specific data/capability
-  scoping**, and **R-434 immutable baseline Solution Packs** — the first five bricks of the differentiating
+  scoping**, **R-434 immutable baseline Solution Packs**, and **R-435 exact-compatible pack planning
+  recommendations** — the first six bricks of the differentiating
   spine. The generated Next.js
   component library remains at **110 components**; its series is **PAUSED at R-415** and fully resumable.
 - **R-433 stops cloning one full model into every app:** all ten curated domains have deterministic
@@ -30,6 +31,10 @@ files (`.ai/`), Git history, and CHANGELOG for work done past the tracker's last
   `rideshare-favourites@1.0.0` reference existing Application IR examples and pin canonical digests plus
   exact targets. The fail-closed registry validates drift and selects only exact domain/capability matches;
   `task agent-engine:solution-packs` lists or selects them deterministically without model/live work.
+- **R-435 connects that registry transparently to ecosystem plans:** actual framework targets are derived
+  from the already-planned surface IRs, then the plan reports minimal pack id/version/digest/targets or
+  `no-exact-match`. Blog-CMS selects the Python baseline; rideshare does not misrepresent its Go baseline as
+  compatible with today's Python plan. Recommendations are metadata only; generated output is unchanged.
 - The generated app was **run live locally end-to-end this session** (Next.js web on `:3000` +
   FastAPI on `:8000` + seeded PostgreSQL) — proving the offline builder output actually runs on a Mac.
 - **R-420 closed both SQL defects exposed by that run:** generator-owned PostgreSQL identifiers are
@@ -333,14 +338,15 @@ app now renders in the preview), and **R-429 strict-type cleanup** (fixed the 8 
 revealed so a generated `minimal-blog` and `rideshare-favourites` pass `tsc --noEmit` with 0 errors; the gate
 now reports PASSED for both — generated apps are no longer blocked from a production `next build`).
 
-The differentiating spine's first five bricks are in: **R-430** (Ecosystem Scope Compiler) *proposes* a
+The differentiating spine's first six bricks are in: **R-430** (Ecosystem Scope Compiler) *proposes* a
 multi-app ecosystem, and **R-431** (Scope → Application IRs) *materializes* it — one prompt →
 multiple owned, clean-compiling app repos (`task agent-engine:ecosystem:plan` / `:build`); **R-432** adds
 opt-in local-model refinement for unknown domains with a strict validation boundary; **R-433** scopes each
 surface's entities, read/write capabilities, and actor role; **R-434** registers the two existing verified
-examples as immutable, versioned, digest-pinned baseline Solution Packs. Next is **R-435**: expose exact
-compatible pack recommendations in ecosystem planning without changing generated output, then add bounded
-configuration and AI-delta layers. An optional frontier model can improve generation quality later.
+examples as immutable, versioned, digest-pinned baseline Solution Packs; **R-435** adds exact target-aware
+recommendations to ecosystem planning without applying them. Next is **R-436**: define the immutable,
+declarative pack customization/delta manifest, then add bounded application and AI-delta generation. An
+optional frontier model can improve generation quality later.
 `task verify` must remain
 model/Docker/DB/install/network-free (any live/model path stays opt-in).
 

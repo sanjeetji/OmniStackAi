@@ -7,6 +7,7 @@ from .registry import (
     RIDESHARE_FAVOURITES_PACK,
     SolutionPack,
     SolutionPackError,
+    SolutionPackRecommendation,
     SolutionPackRegistry,
     canonical_ir_digest,
 )
@@ -14,6 +15,7 @@ from .registry import (
 __all__ = [
     "SolutionPack",
     "SolutionPackError",
+    "SolutionPackRecommendation",
     "SolutionPackRegistry",
     "canonical_ir_digest",
     "MINIMAL_BLOG_PACK",

@@ -2,12 +2,22 @@ schema_version: 1
 project: OmniStackAI
 phase: BASIC/MVP
 founder_stage: 0
-current_task: R-434
+current_task: R-435
 current_status: done
 branch: main
-last_completed_task: R-434
+last_completed_task: R-435
 last_completed_task_summary: >-
-  Built R-434: immutable, versioned baseline Solution Pack registry (fifth spine brick). New stdlib-only
+  Built R-435: exact-compatible Solution Pack recommendations in ecosystem planning (sixth spine brick).
+  Registry selection now optionally requires an exact target subset alongside its existing exact-domain and
+  required-capability rules. Frozen SolutionPackRecommendation records a canonical query and only the
+  selected pack id/version/digest/targets or explicit no-exact-match. Every EcosystemPlan derives required
+  targets from the project plans of its already-built surface IRs and exposes the recommendation in JSON and
+  the deterministic CLI; it never applies or loads the pack. Blog-cms (Next.js/Python) recommends
+  minimal-blog@1.0.0. The current rideshare plan honestly reports no match because it is Python-backed while
+  rideshare-favourites is Go-backed. Existing surface IRs and builder output are unchanged. Eight new tests;
+  focused R-431/R-434/R-435 regressions 25 passed; task verify 2,934 passed fully offline; lint/security/env
+  and both demos (152/149) passed; 0 model calls. No dependency, pack baseline, IR/schema, generator, provider,
+  database, infra, tracker-workbook, or .claude change. Previously built R-434: immutable, versioned baseline Solution Pack registry (fifth spine brick). New stdlib-only
   solution_packs descriptors reference the already verified minimal-blog and rideshare-favourites example
   Application IR builders without copying source or restating IR. Each frozen descriptor pins semantic
   version, exact domains/capabilities, canonical IR SHA-256, and assembled targets. Registry construction
@@ -562,15 +572,14 @@ id_note: >-
   pass tsc --noEmit clean), R-430 done (Ecosystem Scope Compiler = FIRST spine brick), R-431 done
   (Scope -> Application IRs = SECOND spine brick: one prompt -> multiple owned, clean-compiling app repos),
   R-432 done (opt-in unknown-domain refinement = THIRD spine brick), R-433 done (surface-specific
-  data/capability scoping = FOURTH spine brick), and R-434 done (immutable baseline Solution Pack registry
-  = FIFTH spine brick).
+  data/capability scoping = FOURTH spine brick), R-434 done (immutable baseline Solution Pack registry
+  = FIFTH spine brick), and R-435 done (target-aware pack recommendations in planning = SIXTH spine brick).
   NOTE: the UI-COMPONENT SERIES is PAUSED at R-415 (110 components, resumable at a future free Tracker
-  ID); R-416..R-429 built/hardened the "chat -> create -> run -> preview" front door; R-430..R-434 build SPINE.
+  ID); R-416..R-429 built/hardened the "chat -> create -> run -> preview" front door; R-430..R-435 build SPINE.
 blockers: []
 next_action: >-
-  R-434 is complete: minimal-blog and rideshare-favourites are registered as immutable versioned baseline
-  Solution Packs with deterministic validation and exact-match selection. NEXT R-435: expose exact-compatible
-  pack recommendations in ecosystem planning without changing generated output, and define the explicit
-  configuration/AI-delta boundary. Return no match rather than fabricating one; do not add a dependency,
-  model/live path, copied skeleton, infrastructure, or database change. The UI-component series remains
-  paused/resumable.
+  R-435 is complete: every ecosystem plan exposes an exact target-aware Solution Pack recommendation or
+  explicit no-match without changing generated output. NEXT R-436: define an immutable declarative pack
+  customization/delta manifest pinned to pack id/version/digest, with bounded typed changes and deterministic
+  validation/JSON. Do not apply mutations or add a dependency, model/live path, copied skeleton,
+  infrastructure, or database change. The UI-component series remains paused/resumable.
