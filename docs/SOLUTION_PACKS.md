@@ -332,7 +332,32 @@ R-451 introduces canonical cross-surface data sync models, deterministic conflic
   ```
 - 100% offline verification in `task verify` (0 model calls).
 
+## Ecosystem multi-surface CI/CD workflow & GitHub Actions orchestration
+
+R-452 introduces canonical multi-surface CI/CD workflow contracts, deterministic GitHub Actions workflow generation, DAG dependency validation, and pipeline simulation across multi-surface ecosystems:
+- CI/CD workflow contracts: `CIJobStep` defines individual execution steps (`name`, `uses`, `run`, `working_directory`, `env`, `with_args`). `CIJob` defines individual CI jobs (`job_id`, `name`, `surface_slug`, `runs_on`, `needs`, `steps`, `services`, `env`). `CIWorkflow` encapsulates workflow triggers (`push`, `pull_request`, `workflow_dispatch`), jobs, and environments. `EcosystemCICDContract` formalizes the overall CI/CD configuration (`ecosystem_id`, `version`, `workflows`, `surfaces_covered`, `required_gates`).
+- Deterministic Python 3.13 stdlib-only GitHub Actions YAML generator: `generate_github_actions_workflow` and `to_workflow_yaml` generate byte-stable, valid GitHub Actions YAML specifications with zero external dependencies (no PyYAML). Supports triggers, runs-on, needs matrices, service containers (e.g. PostgreSQL with Alpine image and health checks), step arguments, working directories, and environment variables.
+- In-process DAG validator & pipeline simulator: `EcosystemCICDEngine` implements Kahn's algorithm for topological sorting and cycle detection (`validate_dag`, `topological_sort`). Exposes deterministic dry-run pipeline simulation (`simulate_pipeline_run`) computing job ordering, simulated step durations, exit codes, and gate validation offline.
+- Deterministic contract synthesis: `synthesize_ecosystem_cicd` automatically derives surface verification jobs according to surface runtime (Node.js/pnpm for web/admin surfaces, Python/pip + PostgreSQL service for FastAPI APIs, Go + PostgreSQL service for Go backends), and links an overarching `ecosystem-integration` verification job that runs after all surface jobs pass.
+- Package bundling & registry access: `EcosystemPackPackage` bundles `cicd_contract` with whole-package SHA-256 integrity verification; `EcosystemPackRegistry` and `EcosystemPack` expose `get_cicd_contract`.
+- Studio preview & server: `StudioPreviewManager` tracks CI/CD contracts and simulation engines, injecting `has_cicd`, `cicd_workflow_count`, `cicd_job_count`, and `cicd_status` into preview payloads, and exposing `get_ecosystem_cicd()`, `to_workflow_yaml()`, and `simulate_cicd_run()`. Studio HTTP server exposes `GET /api/ecosystem/cicd`, `GET /api/ecosystem/cicd/yaml`, and `POST /api/ecosystem/cicd/simulate`.
+- Studio web UI: Renders `#preview-cicd-info` with workflow triggers, job chips, and 1-click "Copy GitHub Actions YAML", "Simulate Pipeline", and "Refresh CI/CD" buttons, strictly maintaining 0 external network requests.
+- CLI CI/CD inspection:
+  ```bash
+  # Inspect ecosystem pack CI/CD contract
+  task agent-engine:solution-pack:ecosystem -- cicd minimal-blog-ecosystem
+  task agent-engine:solution-pack:ecosystem -- cicd minimal-blog-ecosystem --json
+
+  # Export GitHub Actions YAML workflow
+  task agent-engine:solution-pack:ecosystem -- cicd minimal-blog-ecosystem --yaml
+
+  # Simulate pipeline run (DAG validation + step simulation)
+  task agent-engine:solution-pack:ecosystem -- cicd minimal-blog-ecosystem --simulate
+  ```
+- 100% offline verification in `task verify` (0 model calls).
+
 ## Next boundary
 
-R-452: Solution Pack Ecosystem Multi-Surface CI/CD Workflow & GitHub Actions Orchestration.
+R-453: Solution Pack Ecosystem Comprehensive Multi-Surface Health Check, Smoke Testing, and Canary Verification.
+
 

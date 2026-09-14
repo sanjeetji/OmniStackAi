@@ -45,6 +45,12 @@ from ..solution_packs.ecosystem_sync import (
     SyncMutation,
     synthesize_ecosystem_sync,
 )
+from ..solution_packs.ecosystem_cicd import (
+    EcosystemCICDContract,
+    EcosystemCICDEngine,
+    synthesize_ecosystem_cicd,
+    to_workflow_yaml,
+)
 
 StartFn = Callable[..., LocalAppSession]
 
@@ -83,6 +89,8 @@ class StudioPreviewManager:
         self._live_gateway: EcosystemLiveGateway | None = None
         self._sync_contract: EcosystemSyncContract | None = None
         self._sync_engine: EcosystemSyncEngine | None = None
+        self._cicd_contract: EcosystemCICDContract | None = None
+        self._cicd_engine: EcosystemCICDEngine | None = None
 
     def replace(self, repo_dir: str) -> dict:
         """Stop prior previews, start single app ``repo_dir`` on free ports, and return state."""
@@ -131,6 +139,7 @@ class StudioPreviewManager:
         telemetry_contract: EcosystemTelemetryContract | None = None,
         deployment_manifest: EcosystemDeploymentManifest | None = None,
         sync_contract: EcosystemSyncContract | None = None,
+        cicd_contract: EcosystemCICDContract | None = None,
     ) -> dict:
         """Stop prior previews, register ecosystem surfaces, and start the active surface."""
         with self._lock:
@@ -211,6 +220,20 @@ class StudioPreviewManager:
                         ecosystem_id, self._surfaces
                     )
             self._sync_engine = EcosystemSyncEngine(self._sync_contract)
+
+            # CI/CD contract (R-452)
+            if cicd_contract is not None:
+                self._cicd_contract = cicd_contract
+            else:
+                from ..solution_packs.ecosystem_registry import DEFAULT_ECOSYSTEM_PACK_REGISTRY
+                cached_cicd = DEFAULT_ECOSYSTEM_PACK_REGISTRY.get_cicd_contract(ecosystem_id)
+                if cached_cicd is not None:
+                    self._cicd_contract = cached_cicd
+                else:
+                    self._cicd_contract = synthesize_ecosystem_cicd(
+                        ecosystem_id, self._surfaces
+                    )
+            self._cicd_engine = EcosystemCICDEngine(self._cicd_contract)
 
             # Determine initial active surface
             chosen_slug = active_surface_slug
@@ -388,6 +411,10 @@ class StudioPreviewManager:
                 "sync_entity_count": len(self._sync_contract.sync_entities) if self._sync_contract else 0,
                 "sync_conflict_count": self._sync_engine.conflict_count if self._sync_engine else 0,
                 "sync_version": self._sync_engine.current_version if self._sync_engine else 0,
+                "has_cicd": self._cicd_contract is not None,
+                "cicd_workflow_count": len(self._cicd_contract.workflows) if self._cicd_contract else 0,
+                "cicd_job_count": sum(len(w.jobs) for w in self._cicd_contract.workflows) if self._cicd_contract else 0,
+                "cicd_status": "configured" if self._cicd_contract else "none",
                 "message": error_msg or _PREVIEW_ERROR,
                 "surfaces": surface_statuses,
             }
@@ -415,6 +442,10 @@ class StudioPreviewManager:
                 "sync_entity_count": len(self._sync_contract.sync_entities) if self._sync_contract else 0,
                 "sync_conflict_count": self._sync_engine.conflict_count if self._sync_engine else 0,
                 "sync_version": self._sync_engine.current_version if self._sync_engine else 0,
+                "has_cicd": self._cicd_contract is not None,
+                "cicd_workflow_count": len(self._cicd_contract.workflows) if self._cicd_contract else 0,
+                "cicd_job_count": sum(len(w.jobs) for w in self._cicd_contract.workflows) if self._cicd_contract else 0,
+                "cicd_status": "configured" if self._cicd_contract else "none",
                 "web_url": active_sess.plan.web_url,
                 "message": f"The generated {active_surface_info['app_name']} is running locally.",
                 "surfaces": surface_statuses,
@@ -447,6 +478,10 @@ class StudioPreviewManager:
                 "sync_entity_count": len(self._sync_contract.sync_entities) if self._sync_contract else 0,
                 "sync_conflict_count": self._sync_engine.conflict_count if self._sync_engine else 0,
                 "sync_version": self._sync_engine.current_version if self._sync_engine else 0,
+                "has_cicd": self._cicd_contract is not None,
+                "cicd_workflow_count": len(self._cicd_contract.workflows) if self._cicd_contract else 0,
+                "cicd_job_count": sum(len(w.jobs) for w in self._cicd_contract.workflows) if self._cicd_contract else 0,
+                "cicd_status": "configured" if self._cicd_contract else "none",
                 "message": f"Preview for {self._active_surface or 'surface'} stopped.",
                 "surfaces": surface_statuses,
             }
@@ -691,6 +726,39 @@ class StudioPreviewManager:
                 "status": "ok",
                 "conflict": conflict.to_dict(),
                 "conflict_count": self._sync_engine.conflict_count,
+            }
+
+    def get_ecosystem_cicd(self) -> dict:
+        """Return the serialized EcosystemCICDContract and engine status."""
+        with self._lock:
+            if not self._is_ecosystem or not self._cicd_contract:
+                return {"status": "none", "is_ecosystem": False, "message": "No active ecosystem CI/CD contract"}
+            return {
+                "status": "ok",
+                "is_ecosystem": True,
+                "cicd_contract": self._cicd_contract.to_dict(),
+                "contract": self._cicd_contract.to_dict(),
+                "workflow_count": len(self._cicd_contract.workflows),
+                "job_count": sum(len(w.jobs) for w in self._cicd_contract.workflows),
+            }
+
+    def to_workflow_yaml(self) -> str:
+        """Export the primary workflow as GitHub Actions YAML."""
+        with self._lock:
+            if not self._is_ecosystem or not self._cicd_contract:
+                return "# No ecosystem CI/CD contract configured\n"
+            return to_workflow_yaml(self._cicd_contract)
+
+    def simulate_cicd_run(self, trigger: str = "push") -> dict:
+        """Simulate a dry-run execution of the ecosystem CI/CD pipeline."""
+        with self._lock:
+            if not self._is_ecosystem or not self._cicd_engine:
+                return {"status": "error", "success": False, "error": "No active ecosystem CI/CD engine"}
+            res = self._cicd_engine.simulate_pipeline_run(trigger=trigger)
+            return {
+                **res,
+                "status": "ok",
+                "simulation": res,
             }
 
 

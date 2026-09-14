@@ -116,6 +116,16 @@ from .ecosystem_sync import (
     resolve_sync_conflict,
     synthesize_ecosystem_sync,
 )
+from .ecosystem_cicd import (
+    CIJob,
+    CIJobStep,
+    CIWorkflow,
+    EcosystemCICDContract,
+    EcosystemCICDEngine,
+    generate_github_actions_workflow,
+    synthesize_ecosystem_cicd,
+    to_workflow_yaml,
+)
 
 __all__ = [
     "LEGACY_MANIFEST_SCHEMA_VERSION",
@@ -196,4 +206,12 @@ __all__ = [
     "SyncMutation",
     "resolve_sync_conflict",
     "synthesize_ecosystem_sync",
+    "CIJob",
+    "CIJobStep",
+    "CIWorkflow",
+    "EcosystemCICDContract",
+    "EcosystemCICDEngine",
+    "generate_github_actions_workflow",
+    "synthesize_ecosystem_cicd",
+    "to_workflow_yaml",
 ]

@@ -27,6 +27,7 @@ from .ecosystem_state import EcosystemStateBinding, synthesize_ecosystem_state
 from .ecosystem_telemetry import EcosystemTelemetryContract, synthesize_ecosystem_telemetry
 from .ecosystem_deployment import EcosystemDeploymentManifest, synthesize_ecosystem_deployment
 from .ecosystem_sync import EcosystemSyncContract, synthesize_ecosystem_sync
+from .ecosystem_cicd import EcosystemCICDContract, synthesize_ecosystem_cicd
 from .registry import (
     DEFAULT_SOLUTION_PACK_REGISTRY,
     SolutionPack,
@@ -102,6 +103,7 @@ class EcosystemPackPackage:
     telemetry_contract: EcosystemTelemetryContract | None = None
     deployment_manifest: EcosystemDeploymentManifest | None = None
     sync_contract: EcosystemSyncContract | None = None
+    cicd_contract: EcosystemCICDContract | None = None
 
     def to_dict(self) -> dict[str, Any]:
         data: dict[str, Any] = {
@@ -127,6 +129,8 @@ class EcosystemPackPackage:
             data["deployment_manifest"] = self.deployment_manifest.to_dict()
         if self.sync_contract is not None:
             data["sync_contract"] = self.sync_contract.to_dict()
+        if self.cicd_contract is not None:
+            data["cicd_contract"] = self.cicd_contract.to_dict()
         return data
 
     def to_json(self) -> str:
@@ -273,6 +277,10 @@ def parse_ecosystem_pack_package(data: str | bytes | Mapping[str, Any]) -> Ecosy
     if "sync_contract" in raw and raw["sync_contract"] is not None:
         sync_contract = EcosystemSyncContract.from_dict(raw["sync_contract"])
 
+    cicd_contract = None
+    if "cicd_contract" in raw and raw["cicd_contract"] is not None:
+        cicd_contract = EcosystemCICDContract.from_dict(raw["cicd_contract"])
+
     return EcosystemPackPackage(
         schema_version=schema_version,
         ecosystem_id=ecosystem_id,
@@ -289,6 +297,7 @@ def parse_ecosystem_pack_package(data: str | bytes | Mapping[str, Any]) -> Ecosy
         telemetry_contract=telemetry_contract,
         deployment_manifest=deployment_manifest,
         sync_contract=sync_contract,
+        cicd_contract=cicd_contract,
     )
 
 
@@ -400,6 +409,10 @@ def synthesize_ecosystem_pack(
         surface_packages,
         version=version,
     )
+    cicd_contract = synthesize_ecosystem_cicd(
+        ecosystem_id,
+        surface_packages,
+    )
 
     payload = {
         "schema_version": ECOSYSTEM_PACK_SCHEMA_VERSION,
@@ -416,6 +429,7 @@ def synthesize_ecosystem_pack(
         "telemetry_contract": telemetry_contract.to_dict(),
         "deployment_manifest": deployment_manifest.to_dict(),
         "sync_contract": sync_contract.to_dict(),
+        "cicd_contract": cicd_contract.to_dict(),
     }
     package_sha256 = compute_ecosystem_checksum(payload)
 
@@ -435,4 +449,5 @@ def synthesize_ecosystem_pack(
         telemetry_contract=telemetry_contract,
         deployment_manifest=deployment_manifest,
         sync_contract=sync_contract,
+        cicd_contract=cicd_contract,
     )

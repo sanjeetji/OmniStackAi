@@ -4,17 +4,18 @@ Last updated: 2026-09-14
 ## Current Phase
 Stage 0 (Founder Build Sequence, Brief Section 91) — BASIC/MVP
 
-> **The differentiating SPINE now supports Solution Pack Ecosystem Cross-Surface Data Sync, Conflict Resolution, and Offline-First Sync Protocol (R-451).**
-> `solution_packs/ecosystem_sync.py` implements canonical `SyncEntitySpec`, `SyncMutation`, `SyncConflict`, `SyncCheckpoint`, `EcosystemSyncContract`,
-> deterministic Python 3.13 stdlib-only conflict resolution algorithms (`resolve_sync_conflict` supporting `last_write_wins`, `source_of_truth`, and `field_merge` strategies),
-> thread-safe in-process `EcosystemSyncEngine` with mutation log, state store, conflict log, push/pull checkpoints, and mutation base-version validation,
-> and deterministic contract synthesis (`synthesize_ecosystem_sync`) deriving sync entities, authority mappings, and conflict strategies across ecosystem surfaces and entities;
-> `solution_packs/ecosystem_pack.py` bundles and validates sync contracts with package SHA-256 integrity; `solution_packs/ecosystem_registry.py` exposes
-> `sync_contract` and `get_sync_contract()`; `studio/preview.py` attaches `has_sync`, `sync_entity_count`, `sync_conflict_count`, and `sync_version` to preview payloads
-> and exposes `get_ecosystem_sync()`, `push_sync_mutations()`, `pull_sync_changes()`, and `simulate_sync_conflict()`; `studio/server.py` exposes `GET /api/ecosystem/sync`,
-> `POST /api/ecosystem/sync/push`, `GET /api/ecosystem/sync/pull`, and `POST /api/ecosystem/sync/simulate`; `studio/page.py` renders `#preview-sync-info` with
-> entity chips, conflict/version badges, and 1-click "Simulate Conflict" and "Refresh Sync" buttons (0 external requests); `solution_packs/ecosystem_cli.py` adds `sync` subcommand.
-> UI-component series PAUSED at R-415 (resumable). **NEXT:** R-452 Solution Pack Ecosystem Multi-Surface CI/CD Workflow & GitHub Actions Orchestration.
+> **The differentiating SPINE now supports Solution Pack Ecosystem Multi-Surface CI/CD Workflow & GitHub Actions Orchestration (R-452).**
+> `solution_packs/ecosystem_cicd.py` implements canonical `CIJobStep`, `CIJob`, `CIWorkflow`, `EcosystemCICDContract`,
+> deterministic Python 3.13 stdlib-only GitHub Actions YAML workflow generation (`generate_github_actions_workflow`, `to_workflow_yaml`) with 0 external dependencies,
+> in-process DAG dependency validation (Kahn's algorithm cycle detection) and dry-run pipeline simulation (`EcosystemCICDEngine`),
+> and deterministic contract synthesis (`synthesize_ecosystem_cicd`) deriving surface verification jobs (Node.js/pnpm, Python/pip + PostgreSQL, Go + PostgreSQL)
+> and overarching `ecosystem-integration` verification job; `solution_packs/ecosystem_pack.py` bundles and validates CI/CD contracts with package SHA-256 integrity;
+> `solution_packs/ecosystem_registry.py` exposes `cicd_contract` and `get_cicd_contract()`; `studio/preview.py` attaches `has_cicd`, `cicd_workflow_count`, `cicd_job_count`,
+> and `cicd_status` to preview payloads and exposes `get_ecosystem_cicd()`, `to_workflow_yaml()`, and `simulate_cicd_run()`; `studio/server.py` exposes
+> `GET /api/ecosystem/cicd`, `GET /api/ecosystem/cicd/yaml`, and `POST /api/ecosystem/cicd/simulate`; `studio/page.py` renders `#preview-cicd-info` with
+> workflow triggers, job chips, and 1-click "Copy GitHub Actions YAML", "Simulate Pipeline", and "Refresh CI/CD" buttons (0 external requests);
+> `solution_packs/ecosystem_cli.py` adds `cicd` subcommand with formatted text, `--yaml`, `--json`, and `--simulate` modes.
+> UI-component series PAUSED at R-415 (resumable). **NEXT:** R-453 Solution Pack Ecosystem Comprehensive Multi-Surface Health Check, Smoke Testing, and Canary Verification.
 
 ## Task Compilation Audit — 2026-09-14
 
@@ -47,16 +48,16 @@ Stage 0 (Founder Build Sequence, Brief Section 91) — BASIC/MVP
    - `.ai/PROJECT_STATE.yaml`, `.ai/WORK_LOG.md`, `.ai/HANDOFF.md`: Updated state and handoff notes.
 
 ## Last Completed Task
-Tracker ID: R-451 — Solution Pack Ecosystem Cross-Surface Data Sync, Conflict Resolution, and Offline-First Sync Protocol — DONE.
-Implemented Solution Pack Ecosystem Cross-Surface Data Sync, Conflict Resolution, and Offline-First Sync Protocol:
-- `solution_packs/ecosystem_sync.py`: Implemented canonical `SyncEntitySpec`, `SyncMutation`, `SyncConflict`, `SyncCheckpoint`, `EcosystemSyncContract`; implemented deterministic Python 3.13 stdlib-only conflict resolution algorithms (`resolve_sync_conflict` supporting `last_write_wins`, `source_of_truth`, and `field_merge` strategies) with zero external dependencies; implemented thread-safe in-process `EcosystemSyncEngine` with mutation log, state store, conflict log, push/pull checkpoints, and mutation base-version validation; implemented deterministic `synthesize_ecosystem_sync(ecosystem_id, surfaces)` deriving sync entities, authority mappings, and conflict strategies across ecosystem surfaces and entities.
-- `solution_packs/ecosystem_pack.py` & `solution_packs/ecosystem_registry.py`: Extended `EcosystemPackPackage` and `EcosystemPack` with `sync_contract`, validating with whole-package SHA-256 checksums; added `get_sync_contract` accessor on `EcosystemPackRegistry`; exported symbols in `solution_packs/__init__.py`.
-- `studio/preview.py`, `studio/server.py`, `studio/live_serve.py`: Preview manager tracks sync contract and sync engine, injects `has_sync`, `sync_entity_count`, `sync_conflict_count`, and `sync_version` into preview status/payloads, and exposes `get_ecosystem_sync()`, `push_sync_mutations()`, `pull_sync_changes()`, and `simulate_sync_conflict()`; Studio HTTP server exposes `GET /api/ecosystem/sync`, `POST /api/ecosystem/sync/push`, `GET /api/ecosystem/sync/pull`, and `POST /api/ecosystem/sync/simulate`.
-- `studio/page.py`: Enhanced Web UI with `#preview-sync-info` container displaying entity chips, conflict/version badges, and 1-click "Simulate Conflict" and "Refresh Sync" buttons, strictly maintaining 0 external network requests.
-- `solution_packs/ecosystem_cli.py`: Added `sync` subcommand supporting both file paths and registered ecosystem IDs with human-readable and `--json` outputs; updated `Taskfile.yml` and `scripts/agent-engine.sh`.
-- Fourteen new focused tests in `test_ecosystem_sync.py`; `task verify` **3,158 passed** offline (+14 net-new tests); lint, security, env, and both builder demos (152 / 149) pass; 0 model calls in test execution.
+Tracker ID: R-452 — Solution Pack Ecosystem Multi-Surface CI/CD Workflow & GitHub Actions Orchestration — DONE.
+Implemented Solution Pack Ecosystem Multi-Surface CI/CD Workflow & GitHub Actions Orchestration:
+- `solution_packs/ecosystem_cicd.py`: Implemented canonical `CIJobStep`, `CIJob`, `CIWorkflow`, `EcosystemCICDContract`; implemented deterministic Python 3.13 stdlib-only GitHub Actions YAML workflow generation (`generate_github_actions_workflow` and `to_workflow_yaml`) with zero external dependencies (no PyYAML); implemented in-process DAG dependency validation (Kahn's algorithm cycle detection) and deterministic dry-run pipeline simulation (`EcosystemCICDEngine`); implemented deterministic `synthesize_ecosystem_cicd(ecosystem_id, surfaces)` deriving surface verification jobs (Node.js/pnpm for web/admin surfaces, Python/pip + PostgreSQL service for FastAPI APIs, Go + PostgreSQL service for Go backends) and overarching `ecosystem-integration` verification gate.
+- `solution_packs/ecosystem_pack.py` & `solution_packs/ecosystem_registry.py`: Extended `EcosystemPackPackage` and `EcosystemPack` with `cicd_contract`, validating with whole-package SHA-256 checksums; added `get_cicd_contract` accessor on `EcosystemPackRegistry`; exported all CI/CD types and helper functions in `solution_packs/__init__.py`.
+- `studio/preview.py`, `studio/server.py`, `studio/live_serve.py`: Preview manager tracks CI/CD contracts and simulation engines, injects `has_cicd`, `cicd_workflow_count`, `cicd_job_count`, and `cicd_status` into preview status/payloads, and exposes `get_ecosystem_cicd()`, `to_workflow_yaml()`, and `simulate_cicd_run()`; Studio HTTP server exposes `GET /api/ecosystem/cicd`, `GET /api/ecosystem/cicd/yaml`, and `POST /api/ecosystem/cicd/simulate`.
+- `studio/page.py`: Enhanced Web UI with `#preview-cicd-info` container displaying workflow triggers, job chips, and 1-click "Copy GitHub Actions YAML", "Simulate Pipeline", and "Refresh CI/CD" buttons, strictly maintaining 0 external network requests.
+- `solution_packs/ecosystem_cli.py`: Added `cicd` subcommand supporting both file paths and registered ecosystem IDs with formatted text summary, `--yaml`, `--json`, and `--simulate` modes; updated `Taskfile.yml` and `scripts/agent-engine.sh`.
+- Fifteen new focused tests in `test_ecosystem_cicd.py`; `task verify` **3,173 passed** offline (+15 net-new tests); lint, security, env, and both builder demos (152 / 149) pass; 0 model calls in test execution.
 
-Immediately preceded by R-450 — Solution Pack Ecosystem Multi-Surface Export, Deployment Manifest, and Live Gateway Orchestration — DONE.
+Immediately preceded by R-451 — Solution Pack Ecosystem Cross-Surface Data Sync, Conflict Resolution, and Offline-First Sync Protocol — DONE.
 Implemented Solution Pack Ecosystem Multi-Surface Export, Deployment Manifest, and Live Gateway Orchestration:
 - `solution_packs/ecosystem_deployment.py`: Implemented canonical `GatewayRoute`, `SurfaceDeploymentSpec`, `EcosystemDeploymentManifest`; implemented deterministic Python 3.13 stdlib-only Docker Compose YAML generator (`generate_docker_compose`, `to_compose_yaml()`) for all surfaces and PostgreSQL with 0 external dependencies; implemented in-process `EcosystemLiveGateway` HTTP reverse proxy routing requests via longest-prefix matching with hop-by-hop header strip and forwarding headers injection; implemented deterministic deployment synthesis (`synthesize_ecosystem_deployment(ecosystem_id, surfaces)`) deriving non-colliding host ports, routes, and environment bindings across surfaces and PostgreSQL.
 - `solution_packs/ecosystem_pack.py` & `solution_packs/ecosystem_registry.py`: Extended `EcosystemPackPackage` and `EcosystemPack` with `deployment_manifest`, validating with SHA-256 package checksums; added `get_deployment_manifest` accessor on `EcosystemPackRegistry`; exported symbols in `solution_packs/__init__.py`.

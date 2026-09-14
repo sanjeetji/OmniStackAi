@@ -445,6 +445,9 @@ def main() -> None:
             push_sync_mutations_fn=preview_manager.push_sync_mutations,
             pull_sync_changes_fn=preview_manager.pull_sync_changes,
             simulate_sync_conflict_fn=preview_manager.simulate_sync_conflict,
+            get_ecosystem_cicd_fn=preview_manager.get_ecosystem_cicd,
+            to_workflow_yaml_fn=preview_manager.to_workflow_yaml,
+            simulate_cicd_run_fn=preview_manager.simulate_cicd_run,
             preview_build_fn=lambda build_id, surface_slug=None: _preview_recorded_build(
                 build_id, history, preview_manager, surface_slug=surface_slug
             ),

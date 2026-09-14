@@ -107,6 +107,13 @@ def build_parser() -> argparse.ArgumentParser:
     sync_parser.add_argument("package_file", help="Path to the .ecosystem.pack.json file or registered ecosystem ID to inspect.")
     sync_parser.add_argument("--json", action="store_true", help="Output sync contract as canonical JSON.")
 
+    # Subcommand: cicd
+    cicd_parser = subparsers.add_parser("cicd", help="Inspect multi-surface CI/CD workflow contracts, generate GitHub Actions YAML, or simulate pipeline.")
+    cicd_parser.add_argument("package_file", help="Path to the .ecosystem.pack.json file or registered ecosystem ID to inspect.")
+    cicd_parser.add_argument("--json", action="store_true", help="Output CI/CD contract as canonical JSON.")
+    cicd_parser.add_argument("--yaml", action="store_true", help="Output GitHub Actions workflow YAML.")
+    cicd_parser.add_argument("--simulate", action="store_true", help="Run in-process dry-run simulation of the CI/CD DAG.")
+
     return parser
 
 
@@ -502,6 +509,62 @@ def run_sync(args: argparse.Namespace) -> int:
     return 0
 
 
+def run_cicd(args: argparse.Namespace) -> int:
+    import json
+    from .ecosystem_cicd import synthesize_ecosystem_cicd
+
+    pkg, err = _load_package(args.package_file)
+    if pkg is None:
+        sys.stderr.write(f"Error: {err}\n")
+        return 1
+
+    cicd = pkg.cicd_contract
+    if cicd is None:
+        cicd = synthesize_ecosystem_cicd(
+            pkg.ecosystem_id,
+            pkg.surfaces,
+        )
+
+    if args.json:
+        sys.stdout.write(json.dumps(cicd.to_dict(), indent=2, sort_keys=True))
+        sys.stdout.write("\n")
+        return 0
+
+    if args.yaml:
+        from .ecosystem_cicd import to_workflow_yaml
+        yaml_text = to_workflow_yaml(cicd)
+        sys.stdout.write(yaml_text)
+        if not yaml_text.endswith("\n"):
+            sys.stdout.write("\n")
+        return 0
+
+    if args.simulate:
+        from .ecosystem_cicd import EcosystemCICDEngine
+        engine = EcosystemCICDEngine(cicd)
+        res = engine.simulate_pipeline_run()
+        sys.stdout.write(f"CI/CD Simulation: {res['status'].upper()}\n")
+        sys.stdout.write(f"  Total Duration: {res['total_duration_ms'] / 1000.0:.2f}s\n")
+        sys.stdout.write(f"  Executed Jobs ({len(res['jobs'])}):\n")
+        for j in res["jobs"]:
+            sys.stdout.write(f"    - {j['job_id']} ({j['runs_on']}): {j['status']} ({len(j['steps'])} steps)\n")
+        return 0
+
+    sys.stdout.write(f"Ecosystem CI/CD: {pkg.display_name} ({pkg.ecosystem_id})\n")
+    sys.stdout.write(f"  Version:   {cicd.version}\n")
+    sys.stdout.write(f"  Workflows: {len(cicd.workflows)}\n")
+    for wf in cicd.workflows:
+        sys.stdout.write(f"  Workflow '{wf.workflow_id}' ({wf.name}):\n")
+        sys.stdout.write(f"    Triggers: {', '.join(wf.triggers)}\n")
+        sys.stdout.write(f"    Jobs ({len(wf.jobs)}):\n")
+        for j in wf.jobs:
+            needs_str = f" [needs: {', '.join(j.needs)}]" if j.needs else ""
+            sys.stdout.write(f"      - {j.job_id} ({j.name}, runner: {j.runs_on}){needs_str}\n")
+            for st in j.steps:
+                action = st.uses or st.run or "step"
+                sys.stdout.write(f"          * {st.name} ({action})\n")
+    return 0
+
+
 def main(argv: Sequence[str] | None = None) -> int:
     parser = build_parser()
     args = parser.parse_args(argv)
@@ -528,6 +591,8 @@ def main(argv: Sequence[str] | None = None) -> int:
         return run_deploy(args)
     if args.subcommand == "sync":
         return run_sync(args)
+    if args.subcommand == "cicd":
+        return run_cicd(args)
     sys.stderr.write(f"Unknown subcommand: {args.subcommand}\n")
     return 1
 

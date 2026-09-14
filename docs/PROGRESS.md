@@ -1,15 +1,15 @@
-# OmniStackAI — implementation progress (as of R-451)
+# OmniStackAI — implementation progress (as of R-452)
 
 A living summary of what is built, what is pending, and how to see results. Numbers come from the
-execution tracker (`R_&_D/OmniStackAI_Execution_Tracker_v6.xlsx`, `Phase_Roadmap`, 450 tasks as of
-R-451 completion) plus the state files (`.ai/`), Git history, and CHANGELOG.
+execution tracker (`R_&_D/OmniStackAI_Execution_Tracker_v6.xlsx`, `Phase_Roadmap`, 452 tasks as of
+R-452 completion) plus the state files (`.ai/`), Git history, and CHANGELOG.
 
 ## Headline
 
-- **3,158 automated tests pass**, fully offline and network-independent (`task verify`).
-- **240 tracker tasks Done, 1 Deferred, 209 Not Started** across **450 tasks** in the execution tracker
-  (`R_&_D/OmniStackAI_Execution_Tracker_v6.xlsx`, `Phase_Roadmap`). MVP completion: **240 / 344 = 69.8%**. Overall program completion: **240 / 450 = 53.3%**.
-- **93 tasks (R-359 → R-451) formally tracked in the tracker workbook**:
+- **3,173 automated tests pass**, fully offline and network-independent (`task verify`).
+- **241 tracker tasks Done, 1 Deferred, 210 Not Started** across **452 tasks** in the execution tracker
+  (`R_&_D/OmniStackAI_Execution_Tracker_v6.xlsx`, `Phase_Roadmap`). MVP completion: **241 / 344 = 70.1%**. Overall program completion: **241 / 452 = 53.3%**.
+- **94 tasks (R-359 → R-452) formally tracked in the tracker workbook**:
   Rows inserted into `Phase_Roadmap` with full column data and audit evidence so the workbook remains the single authoritative tracker.
 - **Built tasks include**: 57 reusable UI-component suites,
   four front-door bricks, R-420 generated-SQL hardening, R-421 managed embedded local preview,
@@ -32,10 +32,21 @@ R-451 completion) plus the state files (`.ai/`), Git history, and CHANGELOG.
   **R-447 Solution Pack Ecosystem Multi-Surface Cross-App Auth and Unified State Binding**,
   **R-448 Solution Pack Ecosystem Cross-Surface Webhook and Event Bridge**,
   **R-449 Solution Pack Ecosystem Cross-Surface Telemetry, Audit Trails, and Distributed Tracing**,
-  **R-450 Solution Pack Ecosystem Multi-Surface Export, Deployment Manifest, and Live Gateway Orchestration**, and
-  **R-451 Solution Pack Ecosystem Cross-Surface Data Sync, Conflict Resolution, and Offline-First Sync Protocol** —
-  the first twenty-two bricks of the differentiating spine.
+  **R-450 Solution Pack Ecosystem Multi-Surface Export, Deployment Manifest, and Live Gateway Orchestration**,
+  **R-451 Solution Pack Ecosystem Cross-Surface Data Sync, Conflict Resolution, and Offline-First Sync Protocol**, and
+  **R-452 Solution Pack Ecosystem Multi-Surface CI/CD Workflow & GitHub Actions Orchestration** —
+  the first twenty-three bricks of the differentiating spine.
   The generated Next.js component library remains at **110 components**; its series is **PAUSED at R-415** and fully resumable.
+- **R-452 adds Ecosystem Multi-Surface CI/CD Workflow & GitHub Actions Orchestration:**
+  `CIJobStep`, `CIJob`, `CIWorkflow`, and `EcosystemCICDContract` formalize multi-surface CI/CD models;
+  `generate_github_actions_workflow` and `to_workflow_yaml` generate valid, deterministic GitHub Actions YAML specifications with 0 external dependencies (no PyYAML);
+  `EcosystemCICDEngine` provides in-process DAG dependency validation (Kahn's algorithm cycle detection) and deterministic dry-run pipeline simulation offline;
+  `synthesize_ecosystem_cicd` automatically derives surface verification jobs (Node.js/pnpm for web/admin, Python/pip + PostgreSQL for FastAPI, Go + PostgreSQL for Go backends) and overarching `ecosystem-integration` verification gate;
+  `EcosystemPackPackage` bundles and validates `cicd_contract` with whole-package SHA-256 integrity;
+  `StudioPreviewManager` tracks CI/CD contract and engine, injecting `has_cicd`, `cicd_workflow_count`, `cicd_job_count`, and `cicd_status` into preview status/payloads;
+  Studio HTTP server exposes `GET /api/ecosystem/cicd`, `GET /api/ecosystem/cicd/yaml`, and `POST /api/ecosystem/cicd/simulate`;
+  `studio/page.py` renders `#preview-cicd-info` with workflow triggers, job chips, and 1-click "Copy GitHub Actions YAML", "Simulate Pipeline", and "Refresh CI/CD" buttons (0 external network requests);
+  and `ecosystem_cli.py` adds `cicd` subcommand with formatted text, `--yaml`, `--json`, and `--simulate` options.
 - **R-451 adds Ecosystem Cross-Surface Data Sync, Conflict Resolution, and Offline-First Sync Protocol:**
   `SyncEntitySpec`, `SyncMutation`, `SyncConflict`, `SyncCheckpoint`, and `EcosystemSyncContract` formalize multi-surface sync models;
   deterministic Python 3.13 stdlib-only conflict resolution algorithms (`resolve_sync_conflict` supporting `last_write_wins`, `source_of_truth`, `field_merge`) with 0 external dependencies;

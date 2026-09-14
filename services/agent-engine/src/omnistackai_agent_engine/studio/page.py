@@ -530,6 +530,74 @@ STUDIO_HTML = """<!doctype html>
     color: #94a3b8;
     font-family: monospace;
   }
+  .preview-cicd-info {
+    margin-top: 10px;
+    padding: 10px 12px;
+    background: rgba(15, 23, 42, 0.6);
+    border: 1px solid rgba(59, 130, 246, 0.25);
+    border-radius: 8px;
+    font-size: 11px;
+    color: #cbd5e1;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+  .cicd-header-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    flex-wrap: wrap;
+  }
+  .cicd-meta-group {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+  }
+  .cicd-badge {
+    background: rgba(59, 130, 246, 0.2);
+    color: #60a5fa;
+    padding: 2px 8px;
+    border-radius: 999px;
+    font-size: 10px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
+  .cicd-count-badge {
+    background: #1e293b;
+    padding: 2px 6px;
+    border-radius: 4px;
+    font-size: 10px;
+    color: #94a3b8;
+  }
+  .cicd-action-btn {
+    background: rgba(59, 130, 246, 0.15);
+    border: 1px solid rgba(59, 130, 246, 0.35);
+    border-radius: 4px;
+    color: #93c5fd;
+    font-size: 10px;
+    padding: 3px 8px;
+    cursor: pointer;
+    transition: background 0.15s;
+  }
+  .cicd-action-btn:hover { background: rgba(59, 130, 246, 0.25); }
+  .cicd-jobs-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-top: 2px;
+  }
+  .cicd-job-chip {
+    background: rgba(15, 23, 42, 0.8);
+    border: 1px solid #1e293b;
+    border-radius: 4px;
+    padding: 2px 8px;
+    font-size: 10px;
+    color: #94a3b8;
+    font-family: monospace;
+  }
   .events-header-row {
     display: flex;
     align-items: center;
@@ -837,6 +905,22 @@ STUDIO_HTML = """<!doctype html>
           </div>
         </div>
         <div id="sync-entities-list" class="sync-entities-list"></div>
+      </div>
+      <div id="preview-cicd-info" class="preview-cicd-info" hidden>
+        <div class="cicd-header-row">
+          <div class="cicd-meta-group">
+            <span class="cicd-badge">CI/CD Orchestration</span>
+            <span id="cicd-workflows-count" class="cicd-count-badge">0 workflows</span>
+            <span id="cicd-jobs-count" class="cicd-count-badge">0 jobs</span>
+            <span id="cicd-status-badge" class="cicd-count-badge">configured</span>
+          </div>
+          <div class="cicd-meta-group">
+            <button type="button" id="cicd-yaml-btn" class="cicd-action-btn">Copy GitHub Actions YAML</button>
+            <button type="button" id="cicd-simulate-btn" class="cicd-action-btn">Simulate Pipeline</button>
+            <button type="button" id="cicd-refresh-btn" class="cicd-action-btn">Refresh CI/CD</button>
+          </div>
+        </div>
+        <div id="cicd-jobs-list" class="cicd-jobs-list"></div>
       </div>
       <p id="preview-status" class="preview-status" role="status" aria-live="polite">Preview has not started.</p>
       <iframe
@@ -1281,6 +1365,27 @@ STUDIO_HTML = """<!doctype html>
       }
     }
 
+    var cicdInfo = document.getElementById('preview-cicd-info');
+    if (cicdInfo) {
+      if (preview && preview.is_ecosystem && preview.has_cicd) {
+        cicdInfo.hidden = false;
+        var cicdWorkflowsBadge = document.getElementById('cicd-workflows-count');
+        if (cicdWorkflowsBadge) {
+          cicdWorkflowsBadge.textContent = (preview.cicd_workflow_count || 1) + ' workflow' + ((preview.cicd_workflow_count || 1) > 1 ? 's' : '');
+        }
+        var cicdJobsBadge = document.getElementById('cicd-jobs-count');
+        if (cicdJobsBadge) {
+          cicdJobsBadge.textContent = (preview.cicd_job_count || 0) + ' jobs';
+        }
+        var cicdStatusBadge = document.getElementById('cicd-status-badge');
+        if (cicdStatusBadge) {
+          cicdStatusBadge.textContent = preview.cicd_status || 'configured';
+        }
+      } else {
+        cicdInfo.hidden = true;
+      }
+    }
+
     if (url) {
       previewStatus.textContent = preview.message || 'The generated application is running locally.';
       if (currentPreviewUrl !== url) {
@@ -1558,6 +1663,100 @@ STUDIO_HTML = """<!doctype html>
         })
         .catch(function () {
           flashButton(syncRefreshBtn, 'Error');
+        });
+    });
+  }
+
+  var cicdYamlBtn = document.getElementById('cicd-yaml-btn');
+  if (cicdYamlBtn) {
+    cicdYamlBtn.addEventListener('click', function () {
+      flashButton(cicdYamlBtn, 'Fetching YAML...');
+      fetch('/api/ecosystem/cicd/yaml')
+        .then(function (res) {
+          if (!res.ok) throw new Error('status ' + res.status);
+          return res.text();
+        })
+        .then(function (yamlText) {
+          if (navigator.clipboard && navigator.clipboard.writeText) {
+            navigator.clipboard.writeText(yamlText).then(function () {
+              flashButton(cicdYamlBtn, 'YAML Copied!');
+            }).catch(function () {
+              flashButton(cicdYamlBtn, 'Loaded (' + yamlText.length + ' chars)');
+            });
+          } else {
+            flashButton(cicdYamlBtn, 'Loaded (' + yamlText.length + ' chars)');
+          }
+        })
+        .catch(function () {
+          flashButton(cicdYamlBtn, 'Failed');
+        });
+    });
+  }
+
+  var cicdSimulateBtn = document.getElementById('cicd-simulate-btn');
+  if (cicdSimulateBtn) {
+    cicdSimulateBtn.addEventListener('click', function () {
+      flashButton(cicdSimulateBtn, 'Simulating...');
+      fetch('/api/ecosystem/cicd/simulate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({})
+      })
+        .then(function (res) {
+          if (!res.ok) throw new Error('status ' + res.status);
+          return res.json();
+        })
+        .then(function (data) {
+          if (data && data.simulation) {
+            var sim = data.simulation;
+            flashButton(cicdSimulateBtn, sim.status === 'success' ? 'Sim Passed (' + sim.executed_jobs.length + ' jobs)' : 'Sim Failed');
+          } else {
+            flashButton(cicdSimulateBtn, 'Done');
+          }
+        })
+        .catch(function () {
+          flashButton(cicdSimulateBtn, 'Failed');
+        });
+    });
+  }
+
+  var cicdRefreshBtn = document.getElementById('cicd-refresh-btn');
+  if (cicdRefreshBtn) {
+    cicdRefreshBtn.addEventListener('click', function () {
+      flashButton(cicdRefreshBtn, 'Loading...');
+      fetch('/api/ecosystem/cicd')
+        .then(function (res) {
+          if (!res.ok) throw new Error('status ' + res.status);
+          return res.json();
+        })
+        .then(function (data) {
+          var cicdJobsList = document.getElementById('cicd-jobs-list');
+          if (cicdJobsList && data.cicd_contract && Array.isArray(data.cicd_contract.workflows)) {
+            cicdJobsList.innerHTML = '';
+            data.cicd_contract.workflows.forEach(function (wf) {
+              if (Array.isArray(wf.jobs)) {
+                wf.jobs.forEach(function (jb) {
+                  var chip = document.createElement('span');
+                  chip.className = 'cicd-job-chip';
+                  var deps = jb.needs && jb.needs.length ? ' [needs: ' + jb.needs.join(', ') + ']' : '';
+                  chip.textContent = jb.job_id + deps;
+                  cicdJobsList.appendChild(chip);
+                });
+              }
+            });
+          }
+          var cicdWorkflowsBadge = document.getElementById('cicd-workflows-count');
+          if (cicdWorkflowsBadge) {
+            cicdWorkflowsBadge.textContent = (data.workflow_count || 1) + ' workflows';
+          }
+          var cicdJobsBadge = document.getElementById('cicd-jobs-count');
+          if (cicdJobsBadge) {
+            cicdJobsBadge.textContent = (data.job_count || 0) + ' jobs';
+          }
+          flashButton(cicdRefreshBtn, 'Refreshed!');
+        })
+        .catch(function () {
+          flashButton(cicdRefreshBtn, 'Error');
         });
     });
   }

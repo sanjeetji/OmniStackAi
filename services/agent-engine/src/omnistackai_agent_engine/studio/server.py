@@ -52,6 +52,9 @@ def _make_handler(
     push_sync_mutations_fn: Callable[[str, list[dict]], dict] | None = None,
     pull_sync_changes_fn: Callable[[str, int], dict] | None = None,
     simulate_sync_conflict_fn: Callable[..., dict] | None = None,
+    get_ecosystem_cicd_fn: ControlFn | None = None,
+    to_workflow_yaml_fn: Callable[[], str | None] | None = None,
+    simulate_cicd_run_fn: Callable[[str], dict] | None = None,
 ) -> type[BaseHTTPRequestHandler]:
     pack_registry = registry or DEFAULT_SOLUTION_PACK_REGISTRY
     eco_registry = ecosystem_registry or DEFAULT_ECOSYSTEM_PACK_REGISTRY
@@ -219,6 +222,32 @@ def _make_handler(
                 try:
                     res = pull_sync_changes_fn(surface_slug, since_version)
                     self._send_json(200, res)
+                except Exception as error:
+                    self._send_json(502, {"error": str(error)})
+                return
+            elif self.path == "/api/ecosystem/cicd":
+                if get_ecosystem_cicd_fn is None:
+                    self._send_json(404, {"error": "ecosystem cicd inspection not enabled"})
+                    return
+                try:
+                    cicd_data = get_ecosystem_cicd_fn()
+                    if cicd_data is None:
+                        self._send_json(404, {"error": "no cicd contract available"})
+                    else:
+                        self._send_json(200, cicd_data)
+                except Exception as error:
+                    self._send_json(502, {"error": str(error)})
+                return
+            elif self.path == "/api/ecosystem/cicd/yaml":
+                if to_workflow_yaml_fn is None:
+                    self._send_json(404, {"error": "ecosystem cicd yaml export not enabled"})
+                    return
+                try:
+                    yaml_text = to_workflow_yaml_fn()
+                    if yaml_text is None:
+                        self._send_json(404, {"error": "no cicd contract available"})
+                    else:
+                        self._send(200, "text/yaml; charset=utf-8", yaml_text.encode("utf-8"))
                 except Exception as error:
                     self._send_json(502, {"error": str(error)})
                 return
@@ -431,6 +460,20 @@ def _make_handler(
                 except Exception as error:
                     self._send_json(502, {"error": str(error)})
                 return
+            if self.path == "/api/ecosystem/cicd/simulate":
+                if simulate_cicd_run_fn is None:
+                    self._send_json(404, {"error": "ecosystem cicd simulate not enabled"})
+                    return
+                data = self._read_json_body()
+                trigger = "push"
+                if data and isinstance(data, dict):
+                    trigger = str(data.get("trigger", "push")).strip() or "push"
+                try:
+                    res = simulate_cicd_run_fn(trigger)
+                    self._send_json(200, res)
+                except Exception as error:
+                    self._send_json(502, {"error": str(error)})
+                return
             if self.path != "/api/build":
                 self._send_json(404, {"error": "not found"})
                 return
@@ -503,6 +546,9 @@ def create_studio_server(
     push_sync_mutations_fn: Callable[[str, list[dict]], dict] | None = None,
     pull_sync_changes_fn: Callable[[str, int], dict] | None = None,
     simulate_sync_conflict_fn: Callable[..., dict] | None = None,
+    get_ecosystem_cicd_fn: ControlFn | None = None,
+    to_workflow_yaml_fn: Callable[[], str | None] | None = None,
+    simulate_cicd_run_fn: Callable[[str], dict] | None = None,
 ) -> ThreadingHTTPServer:
     """Create (but do not start) a studio server bound to ``host``/``port``.
 
@@ -540,6 +586,9 @@ def create_studio_server(
             push_sync_mutations_fn=push_sync_mutations_fn,
             pull_sync_changes_fn=pull_sync_changes_fn,
             simulate_sync_conflict_fn=simulate_sync_conflict_fn,
+            get_ecosystem_cicd_fn=get_ecosystem_cicd_fn,
+            to_workflow_yaml_fn=to_workflow_yaml_fn,
+            simulate_cicd_run_fn=simulate_cicd_run_fn,
         ),
     )
 
