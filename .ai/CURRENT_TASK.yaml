@@ -1,32 +1,30 @@
-task_id: R-445
-id: R-445
-title: "Solution Pack Ecosystem Pack Registry Integration, Catalog Discovery, and Studio Multi-Surface Selection"
+task_id: R-446
+id: R-446
+title: "Solution Pack Ecosystem Studio Live Multi-Surface Preview and Process Orchestration"
 status: completed
 phase: MVP
 tracker_row: null
 started_at: "2026-09-14"
 completed_at: "2026-09-14"
 objective: >-
-  Sixteenth brick of the differentiating spine and twelfth Solution Pack task. Implement
-  Solution Pack Ecosystem Pack Registry Integration, Catalog Discovery, and Studio
-  Multi-Surface Selection, providing an immutable EcosystemPackRegistry, discovery endpoints
-  (GET /api/ecosystem-packs and POST /api/ecosystem-packs/recommend), Studio multi-surface
-  selection and building in server.py/live_serve.py, Studio UI multi-surface controls,
-  and ecosystem catalog CLI.
+  Seventeenth brick of the differentiating spine and thirteenth Solution Pack task. Implement
+  Solution Pack Ecosystem Studio Live Multi-Surface Preview and Process Orchestration, providing
+  multi-surface process coordination in StudioPreviewManager, surface-switching and per-surface
+  controls in studio/server.py and live_serve.py, multi-surface history re-previewing, and Studio
+  Web UI surface navigation tabs with 0 external network requests.
 allowed_paths:
-  - "services/agent-engine/src/omnistackai_agent_engine/solution_packs/ecosystem_registry.py"
-  - "services/agent-engine/src/omnistackai_agent_engine/solution_packs/ecosystem_cli.py"
-  - "services/agent-engine/src/omnistackai_agent_engine/solution_packs/__init__.py"
+  - "services/agent-engine/src/omnistackai_agent_engine/studio/preview.py"
   - "services/agent-engine/src/omnistackai_agent_engine/studio/server.py"
   - "services/agent-engine/src/omnistackai_agent_engine/studio/live_serve.py"
   - "services/agent-engine/src/omnistackai_agent_engine/studio/history.py"
   - "services/agent-engine/src/omnistackai_agent_engine/studio/page.py"
-  - "services/agent-engine/tests/test_ecosystem_pack_registry.py"
-  - "services/agent-engine/tests/test_studio_ecosystem.py"
+  - "services/agent-engine/tests/test_studio_ecosystem_preview.py"
+  - "services/agent-engine/tests/test_studio_preview.py"
+  - "services/agent-engine/tests/test_studio_server.py"
   - "docs/SOLUTION_PACKS.md"
   - "docs/PROGRESS.md"
   - "docs/RESUME_PROMPT.md"
-  - ".ai/tasks/R-445.md"
+  - ".ai/tasks/R-446.md"
   - ".ai/CURRENT_TASK.yaml"
   - ".ai/PROJECT_STATE.yaml"
   - ".ai/WORK_LOG.md"
@@ -35,13 +33,12 @@ allowed_paths:
   - "CHANGELOG.md"
 forbidden_changes:
   - "Do not modify or track the unrelated untracked .claude directory"
-  - "Do not break existing SolutionPack, SolutionPackPackage, or Studio server/preview tests"
+  - "Do not break existing single-app Studio preview, server, or history behavior"
   - "Do not add external Python dependencies (Python 3.13 stdlib only)"
   - "Do not add external network requests, fonts, or scripts to Studio HTML"
   - "Do not change the control-plane database from PostgreSQL"
 required_gates:
-  - "test-first focused test_ecosystem_pack_registry.py"
-  - "focused test_studio_ecosystem.py"
+  - "test-first focused test_studio_ecosystem_preview.py"
   - task verify
   - task lint
   - task security:quick
@@ -52,23 +49,24 @@ model_tool_trace:
   routing: none
   local_calls: 0
   cloud_calls: 0
-  note: "0 model calls during verification; catalog discovery and building are 100% deterministic and offline."
+  note: "0 model calls during verification; process orchestration and preview management are 100% deterministic and offline."
 acceptance_criteria:
-  - "EcosystemPack and EcosystemPackRegistry provide immutable registry operations."
-  - "Built-in default ecosystem packs (minimal-blog-ecosystem, rideshare-favourites-ecosystem) are registered in DEFAULT_ECOSYSTEM_PACK_REGISTRY."
-  - "load_surface_ir loads clean, valid ApplicationIR for any surface in any registered ecosystem pack."
-  - "GET /api/ecosystem-packs and POST /api/ecosystem-packs/recommend return catalog and recommendation data."
-  - "POST /api/build accepts ecosystem_id, ecosystem_version, and surface_slug options."
-  - "live_serve.py builds individual surface app or entire multi-surface ecosystem with 0 model calls."
-  - "StudioBuildHistory records ecosystem_id, ecosystem_version, and surface_slug."
-  - "Studio web UI provides ecosystem dropdown, surface selector, surface cards, and ecosystem badges with 0 external assets."
-  - "ecosystem_cli.py catalog subcommand lists registered ecosystem packs."
+  - "StudioPreviewManager supports multi-surface ecosystem preview lifecycle and seamless surface switching."
+  - "StudioPreviewManager allocates collision-free loopback ports for each surface without port conflicts."
+  - "POST /api/preview/switch switches active surface and returns updated preview payload."
+  - "POST /api/preview/stop and POST /api/preview/restart support surface-specific or whole-ecosystem operation."
+  - "POST /api/history/preview supports re-previewing an ecosystem with optional surface selection."
+  - "Studio web UI renders surface switcher tabs with live status indicators and 0 external network requests."
+  - "Liveness checks detect terminated processes across all running surfaces."
 evidence:
-  tests_passed: 3055
-  net_new_tests: 14
-  lint_passed: true
-  security_quick_passed: true
-  env_check_passed: true
-  demos_passed:
-    - "task builder:demo -- minimal-blog (152 files)"
-    - "task builder:demo -- rideshare-favourites (149 files)"
+  - "test_studio_ecosystem_preview.py: 12 passed (test-first RED -> GREEN)"
+  - "test_studio_preview.py: 14 passed (regression green)"
+  - "test_studio_server.py: 27 passed (regression green)"
+  - "studio test suite: 85 passed (+12 net-new tests)"
+  - "task lint: passed"
+  - "task security:quick: passed"
+  - "task env:check: passed"
+  - "task builder:demo -- minimal-blog: passed (152 files)"
+  - "task builder:demo -- rideshare-favourites: passed (149 files)"
+  - "task verify: 3,067 passed fully offline in 35.362s (0 model calls)"
+

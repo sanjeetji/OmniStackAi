@@ -4,20 +4,25 @@ Last updated: 2026-09-14
 ## Current Phase
 Stage 0 (Founder Build Sequence, Brief Section 91) — BASIC/MVP
 
-> **The differentiating SPINE now supports Solution Pack ecosystem pack registry integration, catalog discovery, and Studio multi-surface selection (R-445).**
-> `solution_packs/ecosystem_registry.py` defines `EcosystemPack`, `EcosystemPackRecommendation`, and `EcosystemPackRegistry`
-> with immutable operations (`list_packs()`, `get()`, `select()`, `recommend()`, `register_package()`, and `load_surface_ir()`);
-> pre-registers built-in ecosystem baselines (`minimal-blog-ecosystem`, `rideshare-favourites-ecosystem`) via `DEFAULT_ECOSYSTEM_PACK_REGISTRY`;
-> Studio server (`studio/server.py`) exposes discovery and recommendation endpoints (`GET /api/ecosystem-packs`, `POST /api/ecosystem-packs/recommend`);
-> Studio `POST /api/build` in `server.py` and `live_serve.py` accepts `ecosystem_id`, `ecosystem_version`, and `surface_slug`
-> to build an individual surface or complete multi-surface platform with 0 model calls; `studio/history.py` tracks `ecosystem_id`,
-> `ecosystem_version`, `surface_slug`, `surface_kind`, and `is_ecosystem`; `studio/page.py` adds tab selector (`#tab-single` vs `#tab-ecosystem`),
-> ecosystem dropdown (`#eco-select`), surface selector (`#surface-select`), surface cards (`#surface-cards`), real-time recommendations,
-> and history badges with strictly 0 external assets; `solution_packs/ecosystem_cli.py` adds `catalog` subcommand (`task agent-engine:solution-pack:ecosystem -- catalog`).
-> UI-component series PAUSED at R-415 (resumable). **NEXT:** R-446 Solution Pack Ecosystem Studio Live Multi-Surface Preview and Process Orchestration.
+> **The differentiating SPINE now supports Solution Pack Ecosystem Studio live multi-surface preview and process orchestration (R-446).**
+> `studio/preview.py` enhanced `StudioPreviewManager` with `replace_ecosystem`, `switch_surface`, per-surface/global `stop` & `restart`,
+> multi-session tracking (`_sessions: dict[str, LocalAppSession]`), collision-free loopback port allocation per surface, and
+> liveness-aware multi-surface status tracking, using `threading.RLock` to eliminate reentrant deadlocks; `studio/server.py` added
+> `switch_surface_fn`, implementing `POST /api/preview/switch` and surface-scoping for stop, restart, and history preview;
+> `studio/live_serve.py` and `studio/history.py` wired automatic multi-surface preview on ecosystem compilation and history persistence;
+> `studio/page.py` added `#preview-surface-tabs` surface switcher bar with live status indicators and 0 external network requests.
+> UI-component series PAUSED at R-415 (resumable). **NEXT:** R-447 Solution Pack Ecosystem Multi-Surface Cross-App Auth and Unified State Binding.
 
 ## Last Completed Task
-Tracker ID: R-445 — Solution Pack Ecosystem Pack Registry Integration, Catalog Discovery, and Studio Multi-Surface Selection — DONE.
+Tracker ID: R-446 — Solution Pack Ecosystem Studio Live Multi-Surface Preview and Process Orchestration — DONE.
+Implemented Solution Pack Ecosystem Studio live multi-surface preview and process orchestration:
+- `studio/preview.py`: Switched internal synchronization to `threading.RLock` to eliminate reentrant deadlocks; implemented `replace_ecosystem(ecosystem_id, surfaces, active_surface_slug=None)`, `switch_surface(surface_slug)`, `stop(surface_slug=None)`, `restart(surface_slug=None)`, multi-session tracking (`_sessions: dict[str, LocalAppSession]`), collision-free loopback port allocation per surface, and liveness-aware multi-surface `status()` reporting while preserving 100% backward compatibility with single-app preview.
+- `studio/server.py`: Extended `create_studio_server` and handler maker with `switch_surface_fn`; implemented `POST /api/preview/switch`; updated `POST /api/preview/stop` and `POST /api/preview/restart` to accept optional `surface_slug`; updated `POST /api/history/preview` to accept optional `surface_slug`.
+- `studio/live_serve.py` & `studio/history.py`: Automatically invoked `replace_ecosystem` when an entire ecosystem is compiled with preview enabled; extended `_preview_recorded_build` to handle surface-targeted re-previews; preserved `surfaces` list in `StudioBuildHistory`.
+- `studio/page.py`: Enhanced Web UI with `#preview-surface-tabs` switcher bar, pulsing live status dots (`.surface-dot.running`), surface kind badges, 1-click surface switching without iframe flicker, and direct surface preview chips in history cards, strictly maintaining 0 external network requests.
+- Twelve new focused tests in `test_studio_ecosystem_preview.py`; `task verify` **3,067 passed** offline (+12 net-new tests); lint, security, env, and both builder demos (152 / 149) pass; 0 model calls in test execution.
+
+Immediately preceded by R-445 — Solution Pack Ecosystem Pack Registry Integration, Catalog Discovery, and Studio Multi-Surface Selection — DONE.
 Implemented Solution Pack ecosystem pack registry integration, catalog discovery, and Studio multi-surface selection:
 - `ecosystem_registry.py`: Defined `EcosystemPack` descriptor, `EcosystemPackRecommendation`, and immutable `EcosystemPackRegistry`; pre-registered built-in baselines (`minimal-blog-ecosystem`, `rideshare-favourites-ecosystem`) accessible via `DEFAULT_ECOSYSTEM_PACK_REGISTRY`; added `load_surface_ir()` to load clean, valid `ApplicationIR` per surface; used lazy registry loading to avoid circular imports.
 - `ecosystem_pack.py` & `ecosystem_cli.py`: Extended `synthesize_ecosystem_pack` to accept `pack_id` string directly; added `catalog` subcommand to CLI for text/json discovery (`task agent-engine:solution-pack:ecosystem -- catalog`).

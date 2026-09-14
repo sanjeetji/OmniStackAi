@@ -1,11 +1,11 @@
 # Current Handoff
 
-Task ID: R-445
+Task ID: R-446
 Status: done
 Phase: BASIC/MVP — Founder Stage 0
 Branch: `main` (the only branch; the GitHub default)
 
-> **The differentiating SPINE now supports Solution Pack ecosystem pack registry integration, catalog discovery, and Studio multi-surface selection.** R-430 proposes the
+> **The differentiating SPINE now supports Solution Pack Ecosystem Studio live multi-surface preview and process orchestration.** R-430 proposes the
 > ecosystem, R-431 materializes it, R-432 refines unknown domains, R-433 scopes surfaces, R-434 registers
 > packs, R-435 recommends one, R-436 records bounded intent, R-437 applies safe configuration deterministically,
 > R-438 converts pending manifest AI-delta intents into strictly typed, bounded AIDeltaProposal objects via an
@@ -14,13 +14,23 @@ Branch: `main` (the only branch; the GitHub default)
 > builder pipelines, R-441 wires Solution Pack selection into the Studio, R-442 wires natural-language
 > AI-delta feature modifications on top of Solution Packs into the Studio, R-443 introduces portable
 > SolutionPackPackage bundles and export CLI, R-444 enables synthesizing a complete, coordinated
-> multi-surface ecosystem (customer web, operator portal, admin dashboard) from a Solution Pack's unified data model,
-> and **R-445 provides the immutable EcosystemPackRegistry, discovery endpoints (GET /api/ecosystem-packs and
-> POST /api/ecosystem-packs/recommend), Studio multi-surface selection and building in server.py/live_serve.py,
-> Studio UI multi-surface controls with 0 external network assets, and ecosystem catalog CLI**.
-> UI-component series PAUSED at R-415. **NEXT:** R-446 Solution Pack Ecosystem Studio Live Multi-Surface Preview and Process Orchestration.
+> multi-surface ecosystem from a Solution Pack's unified data model, R-445 provides the immutable EcosystemPackRegistry,
+> and **R-446 provides multi-surface process coordination in StudioPreviewManager, collision-free loopback port allocation,
+> POST /api/preview/switch, per-surface stop/restart controls, surface-aware history re-previewing, and Studio Web UI
+> surface navigation tabs with live indicators and 0 external network requests**.
+> UI-component series PAUSED at R-415. **NEXT:** R-447 Solution Pack Ecosystem Multi-Surface Cross-App Auth and Unified State Binding.
 
 ## Repo/workflow state
+
+- **R-446 (Solution Pack Ecosystem Studio Live Multi-Surface Preview and Process Orchestration — seventeenth spine brick)** shipped:
+  `studio/preview.py` enhanced `StudioPreviewManager` with `replace_ecosystem`, `switch_surface`, per-surface/global `stop` & `restart`,
+  multi-session tracking (`_sessions: dict[str, LocalAppSession]`), collision-free loopback port allocation per surface, and
+  liveness-aware multi-surface status tracking, using `threading.RLock` to eliminate reentrant deadlocks; `studio/server.py` added
+  `switch_surface_fn`, implementing `POST /api/preview/switch` and surface-scoping for stop, restart, and history preview;
+  `studio/live_serve.py` and `studio/history.py` wired automatic multi-surface preview on ecosystem compilation and history persistence;
+  `studio/page.py` added `#preview-surface-tabs` surface switcher bar with live status indicators and 0 external network requests.
+  12 new tests in `test_studio_ecosystem_preview.py`; `task verify` **3,067 passed** offline (+12);
+  lint/security/env + demos (152/149) green; 0 model calls in test execution.
 
 - **R-445 (Solution Pack Ecosystem Pack Registry Integration, Catalog Discovery, and Studio Multi-Surface Selection — sixteenth spine brick)** shipped:
   `solution_packs/ecosystem_registry.py` defines `EcosystemPack`, `EcosystemPackRecommendation`, and `EcosystemPackRegistry`

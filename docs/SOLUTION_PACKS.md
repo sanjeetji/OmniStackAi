@@ -220,6 +220,18 @@ R-445 introduces centralized registry management for ecosystem packs, catalog di
   ```
 - 100% offline verification in `task verify` (0 model calls).
 
+## Ecosystem Studio live multi-surface preview and process orchestration
+
+R-446 enhances Studio live preview and process orchestration to coordinate multi-surface business ecosystems:
+- Lifecycle orchestration: `StudioPreviewManager` (`studio/preview.py`) coordinates multi-surface ecosystems via `replace_ecosystem(ecosystem_id, surfaces, active_surface_slug=None)`, `switch_surface(surface_slug)`, `stop(surface_slug=None)`, and `restart(surface_slug=None)`.
+- Multi-session process management: Maintains an internal multi-session map (`_sessions: dict[str, LocalAppSession]`), dynamically allocating collision-free loopback ports for each surface to prevent port conflicts across surfaces.
+- Thread safety & deadlock elimination: Uses `threading.RLock` to eliminate reentrant synchronization deadlocks during composite lifecycle operations (e.g., `restart` delegating to `replace`).
+- Liveness awareness: Continuous status inspection (`status()`) tracks whether background processes are running across all active surfaces, reporting live state changes without stale status indicators.
+- Studio HTTP endpoints: Extended `POST /api/preview/switch` (surface switching), `POST /api/preview/stop` (per-surface/global stop), `POST /api/preview/restart` (per-surface/global restart), and `POST /api/history/preview` (surface-targeted re-preview).
+- Studio Web UI: Renders `#preview-surface-tabs` surface switcher bar in the preview header, live running indicators (pulsing dots), surface kind badges, and 1-click surface switching without iframe flicker, strictly maintaining 0 external network requests.
+- 100% offline verification in `task verify` (0 model calls).
+
 ## Next boundary
 
-R-446: Solution Pack Ecosystem Studio Live Multi-Surface Preview and Process Orchestration.
+R-447: Solution Pack Ecosystem Multi-Surface Cross-App Auth and Unified State Binding.
+

@@ -41,7 +41,7 @@ START PROTOCOL
   `task ai:status`, `task ai:handoff`. `task verify` must stay green and network-independent.
 - Confirm git branch/HEAD/clean tree. Then restate: phase, next Tracker ID, objective, blast radius.
 
-WHAT IS ALREADY BUILT (platform generators are Python 3.13 stdlib-only, offline, in services/agent-engine; 3,055 tests pass)
+WHAT IS ALREADY BUILT (platform generators are Python 3.13 stdlib-only, offline, in services/agent-engine; 3,067 tests pass)
 - Model fabric: ModelProvider contract + registry; local Ollama adapter (runs any installed model via
 
 
@@ -333,6 +333,12 @@ R-445 added the sixteenth spine brick: Solution Pack Ecosystem Pack Registry Int
 Multi-Surface Selection, providing immutable EcosystemPackRegistry, pre-registered baselines (`minimal-blog-ecosystem`,
 `rideshare-favourites-ecosystem`), Studio discovery/recommendation endpoints, Studio single vs ecosystem tabs, multi-surface
 selection/building with 0 model calls, and ecosystem catalog CLI.
+R-446 added the seventeenth spine brick: Solution Pack Ecosystem Studio Live Multi-Surface Preview and Process Orchestration,
+providing multi-surface ecosystem preview lifecycle in StudioPreviewManager (`replace_ecosystem`, `switch_surface`, per-surface
+and global `stop` & `restart`), multi-session management (`_sessions: dict[str, LocalAppSession]`), collision-free loopback port
+allocation per surface, liveness-aware status tracking, `threading.RLock` deadlock prevention, Studio HTTP endpoints
+(`POST /api/preview/switch`, scoped stop/restart/re-preview), and Studio Web UI `#preview-surface-tabs` switcher bar with live
+status indicators and 0 external network requests.
 
 ENVIRONMENT LIMITS
 - Inside the AI sandbox only: large native-binary downloads (Next.js SWC, Vite/esbuild) can time out, so
@@ -363,7 +369,7 @@ RULES (non-negotiable)
   SHA == local HEAD. Never claim unexecuted tests.
 
 WHAT TO DO NEXT
-- R-430 through R-445 are DONE — the DIFFERENTIATING SPINE now proposes a curated multi-app ecosystem,
+- R-430 through R-446 are DONE — the DIFFERENTIATING SPINE now proposes a curated multi-app ecosystem,
   materializes it as multiple owned repos, and can explicitly refine an unknown domain through local Ollama
   before using the same deterministic planner. R-433 then gives each surface a bounded read/write entity
   policy, relation-safe dependencies, one actor role, and role-gated mutations. R-434 registers immutable,
@@ -379,9 +385,11 @@ WHAT TO DO NEXT
   into the Studio UI, HTTP server, and live build pipeline; R-442 wires Studio AI-delta feature modification
   controls above Solution Packs; R-443 introduces portable SolutionPackPackage bundles, strict integrity
   verification, export/inspect CLI, and dynamic registry ingestion; R-444 introduces multi-surface Ecosystem
-  Pack synthesis, portable `EcosystemPackPackage` bundles, and multi-repo ecosystem builds; and R-445 introduces
-  Ecosystem Pack Registry integration, catalog discovery, and Studio multi-surface selection.
-- NEXT R-446: Solution Pack Ecosystem Studio Live Multi-Surface Preview and Process Orchestration.
+  Pack synthesis, portable `EcosystemPackPackage` bundles, and multi-repo ecosystem builds; R-445 introduces
+  Ecosystem Pack Registry integration, catalog discovery, and Studio multi-surface selection; and R-446
+  introduces multi-surface process orchestration, dynamic collision-free port allocation, live surface switching,
+  and Studio Web UI surface tabs.
+- NEXT R-447: Solution Pack Ecosystem Multi-Surface Cross-App Auth and Unified State Binding.
   Keep `task verify` model/Docker/DB/install/network-free (any live/model path stays opt-in); preserve
   single-session ownership and explicit trusted-local mode.
 - The UI-component series remains paused at R-415 and can be resumed later under a future free ID.
@@ -392,7 +400,7 @@ WHAT TO DO NEXT
   deploy (OMNISTACKAI_TIER=2 + E2B/Vercel keys) and cloud-model live-verify. Governance-deferred: native
   mobile (R-010 etc.) until web/backend stability.
 
-Begin by reading the files above and running the start protocol, then continue the spine at R-445
+Begin by reading the files above and running the start protocol, then continue the spine at R-447
 and write its Standard AI Task Contract before writing code.
 
 ```

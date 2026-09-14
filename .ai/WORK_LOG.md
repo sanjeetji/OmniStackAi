@@ -1,5 +1,35 @@
 # Work Log
 
+## 2026-09-14 — R-446 (Solution Pack Ecosystem Studio Live Multi-Surface Preview and Process Orchestration)
+
+- Recorded `.ai/tasks/R-446.md` and `.ai/CURRENT_TASK.yaml` before implementation. Approved implementation plan.
+  Final focused suites: 12 passing tests across `test_studio_ecosystem_preview.py`. Total studio suites: 85 passing tests (+12 net-new tests).
+- Enhanced `StudioPreviewManager` (`studio/preview.py`):
+  - Switched internal synchronization from `threading.Lock` to `threading.RLock`, eliminating deadlocks when composite lifecycle actions (like `restart`) invoke other synchronized methods (`replace`).
+  - Added multi-surface ecosystem preview lifecycle: `replace_ecosystem(ecosystem_id, surfaces, active_surface_slug=None)`.
+  - Added multi-session map (`_sessions: dict[str, LocalAppSession]`), dynamically allocating collision-free loopback ports for each surface to prevent port conflicts across surfaces.
+  - Implemented `switch_surface(surface_slug)` for instantaneous switching between ecosystem surfaces, lazily starting unlaunched surfaces on demand.
+  - Implemented surface-scoped and global process control: `stop(surface_slug=None)` and `restart(surface_slug=None)`.
+  - Implemented liveness-aware multi-surface `status()` reporting `is_ecosystem`, `active_surface`, and per-surface status descriptors.
+  - Preserved 100% backward compatibility for existing single-app preview calls (`replace(repo_dir)`).
+- Extended Studio HTTP Server (`studio/server.py`):
+  - Added `switch_surface_fn` control parameter to `create_studio_server` and `_make_handler`.
+  - Implemented `POST /api/preview/switch` with payload `{"surface_slug": str}`.
+  - Updated `POST /api/preview/stop` and `POST /api/preview/restart` to accept optional `{"surface_slug": str}` for per-surface or whole-ecosystem scoping.
+  - Updated `POST /api/history/preview` to accept optional `{"id": str, "surface_slug": str | None}` for surface-targeted re-previewing.
+- Extended Studio Live Runner & History (`studio/live_serve.py`, `studio/history.py`):
+  - In `live_serve.py`, automatically invoked `preview_manager.replace_ecosystem` when an entire multi-surface ecosystem is built with preview enabled.
+  - Extended `_preview_recorded_build` to handle re-previewing recorded ecosystem builds and activating targeted surfaces.
+  - Updated `StudioBuildHistory.record` to preserve the `surfaces` list for ecosystem entries.
+- Enhanced Studio Web UI (`studio/page.py`):
+  - Added `#preview-surface-tabs` container with sleek CSS tabs and pulsing live status dots (`.surface-dot.running`).
+  - Implemented client-side `switchSurface(slug)` calling `POST /api/preview/switch` with zero iframe flicker.
+  - Updated preview render logic to display active surface tabs, surface kind badges, and surface URLs.
+  - Updated history card rendering to provide direct preview chips for all surfaces in an ecosystem build.
+  - Maintained strict compliance with 0 external network requests (no external http/https/src/link/fonts).
+- Gates: `task verify` **3,067 passed** fully offline (+12); agent-engine/repository lint, security, and environment passed; both builder demos remained 152/149 files; 0 model calls in test execution.
+- No dependency, pack baseline/selection, Application IR schema/example, generator, generated output, provider, PostgreSQL, infrastructure, tracker workbook, or `.claude/` change.
+
 ## 2026-09-14 — R-445 (Solution Pack Ecosystem Pack Registry Integration, Catalog Discovery, and Studio Multi-Surface Selection)
 
 - Recorded `.ai/tasks/R-445.md` and `.ai/CURRENT_TASK.yaml` before implementation. Approved implementation plan.

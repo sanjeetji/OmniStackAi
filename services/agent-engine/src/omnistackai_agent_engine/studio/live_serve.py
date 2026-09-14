@@ -357,19 +357,31 @@ def _build(
             "message": "Build-only mode: start the explicit Studio preview command to run generated code.",
         }
     else:
-        preview_dir = payload["target_dir"]
         if payload.get("is_ecosystem") and payload.get("surfaces"):
-            preview_dir = payload["surfaces"][0]["target_dir"]
-        payload["preview"] = preview_manager.replace(preview_dir)
+            payload["preview"] = preview_manager.replace_ecosystem(
+                ecosystem_id=str(payload.get("ecosystem_id", "ecosystem")),
+                surfaces=payload["surfaces"],
+            )
+        else:
+            payload["preview"] = preview_manager.replace(payload["target_dir"])
     return payload
 
 
 def _preview_recorded_build(
-    build_id: str, history: StudioBuildHistory, preview_manager: StudioPreviewManager
+    build_id: str,
+    history: StudioBuildHistory,
+    preview_manager: StudioPreviewManager,
+    surface_slug: str | None = None,
 ) -> dict:
     entry = history.get(build_id)
     if entry is None or not entry.get("target_dir"):
         return {"status": "error", "message": "That build is no longer available in this session."}
+    if entry.get("is_ecosystem") and entry.get("surfaces"):
+        return preview_manager.replace_ecosystem(
+            ecosystem_id=str(entry.get("ecosystem_id", "ecosystem")),
+            surfaces=entry["surfaces"],
+            active_surface_slug=surface_slug,
+        )
     return preview_manager.replace(entry["target_dir"])
 
 
@@ -421,8 +433,9 @@ def main() -> None:
             status_fn=preview_manager.status,
             stop_fn=preview_manager.stop,
             restart_fn=preview_manager.restart,
-            preview_build_fn=lambda build_id: _preview_recorded_build(
-                build_id, history, preview_manager
+            switch_surface_fn=preview_manager.switch_surface,
+            preview_build_fn=lambda build_id, surface_slug=None: _preview_recorded_build(
+                build_id, history, preview_manager, surface_slug=surface_slug
             ),
             open_dir_fn=lambda build_id: _open_recorded_build(build_id, history),
         )

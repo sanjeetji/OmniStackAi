@@ -58,6 +58,17 @@ class StudioBuildHistory:
                 entry["is_ecosystem"] = bool(build["is_ecosystem"])
             if build.get("surface_count"):
                 entry["surface_count"] = int(build["surface_count"])
+            if build.get("surfaces") and isinstance(build["surfaces"], list):
+                entry["surfaces"] = [
+                    {
+                        "slug": str(s.get("slug", "")),
+                        "app_name": str(s.get("app_name", "")),
+                        "surface_kind": str(s.get("surface_kind", "")),
+                        "target_dir": str(s.get("target_dir", "")),
+                    }
+                    for s in build["surfaces"]
+                    if isinstance(s, dict)
+                ]
             self._entries.append(entry)
             if len(self._entries) > self._limit:
                 self._entries = self._entries[-self._limit :]

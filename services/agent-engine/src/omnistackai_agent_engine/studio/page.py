@@ -276,6 +276,48 @@ STUDIO_HTML = """<!doctype html>
     padding: 5px 12px; font-size: 12.5px; font-weight: 600; cursor: pointer;
   }
   .preview-btn:hover { border-color: #6ee7ff; color: #e6edf3; }
+  .preview-surface-tabs {
+    display: flex;
+    gap: 6px;
+    padding: 8px 14px;
+    background: #0d1527;
+    border-bottom: 1px solid #223148;
+    overflow-x: auto;
+  }
+  .surface-tab-btn {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    background: rgba(8, 14, 25, 0.6);
+    color: #9fb0c3;
+    border: 1px solid #223148;
+    border-radius: 6px;
+    padding: 4px 10px;
+    font-size: 11.5px;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: all 0.15s;
+  }
+  .surface-tab-btn:hover {
+    border-color: #6ee7ff;
+    color: #e6edf3;
+  }
+  .surface-tab-btn.active {
+    background: rgba(110, 231, 255, 0.12);
+    border-color: #6ee7ff;
+    color: #6ee7ff;
+    font-weight: 600;
+  }
+  .surface-dot {
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: #64748b;
+  }
+  .surface-dot.ready {
+    background: #34d399;
+    box-shadow: 0 0 6px rgba(52, 211, 153, 0.6);
+  }
   .history { margin-top: 26px; }
   .history-title { font-size: 15px; color: #9fb0c3; margin: 0 0 10px; }
   .history-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
@@ -387,6 +429,7 @@ STUDIO_HTML = """<!doctype html>
           <a id="preview-open" class="preview-open" target="_blank" rel="noreferrer" hidden>Open in new tab</a>
         </div>
       </div>
+      <div id="preview-surface-tabs" class="preview-surface-tabs" hidden></div>
       <p id="preview-status" class="preview-status" role="status" aria-live="polite">Preview has not started.</p>
       <iframe
         id="preview-frame"
@@ -674,16 +717,55 @@ STUDIO_HTML = """<!doctype html>
     }, 5000);
   }
 
+  function switchSurface(slug) {
+    var previewStatus = document.getElementById('preview-status');
+    previewStatus.textContent = 'Switching to surface ' + slug + '...';
+    fetch('/api/preview/switch', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ surface_slug: slug })
+    })
+      .then(function (res) { return res.json(); })
+      .then(function (data) { renderPreview(data); })
+      .catch(function (err) { previewStatus.textContent = 'Switch failed: ' + err.message; });
+  }
+
   function renderPreview(preview) {
     var frame = document.getElementById('preview-frame');
     var open = document.getElementById('preview-open');
     var previewStatus = document.getElementById('preview-status');
     var stopBtn = document.getElementById('preview-stop');
     var restartBtn = document.getElementById('preview-restart');
+    var surfaceTabs = document.getElementById('preview-surface-tabs');
     var state = (preview && preview.status) || null;
     var url = state === 'ready' ? localPreviewUrl(preview.web_url) : null;
     stopBtn.hidden = state !== 'ready';
     restartBtn.hidden = !(state === 'ready' || state === 'stopped' || state === 'error');
+
+    if (surfaceTabs) {
+      if (preview && preview.is_ecosystem && preview.surfaces && preview.surfaces.length > 0) {
+        surfaceTabs.innerHTML = '';
+        surfaceTabs.hidden = false;
+        preview.surfaces.forEach(function (s) {
+          var tabBtn = document.createElement('button');
+          tabBtn.type = 'button';
+          tabBtn.className = 'surface-tab-btn' + (s.is_active ? ' active' : '');
+          var dot = document.createElement('span');
+          dot.className = 'surface-dot' + (s.status === 'ready' ? ' ready' : '');
+          tabBtn.appendChild(dot);
+          var label = document.createElement('span');
+          label.textContent = s.app_name + ' [' + s.surface_kind + ']';
+          tabBtn.appendChild(label);
+          tabBtn.addEventListener('click', function () {
+            switchSurface(s.slug);
+          });
+          surfaceTabs.appendChild(tabBtn);
+        });
+      } else {
+        surfaceTabs.hidden = true;
+      }
+    }
+
     if (url) {
       previewStatus.textContent = preview.message || 'The generated application is running locally.';
       if (currentPreviewUrl !== url) {
@@ -731,7 +813,7 @@ STUDIO_HTML = """<!doctype html>
     control('/api/preview/restart', 'Restarting preview...');
   });
 
-  function previewBuild(build) {
+  function previewBuild(build, surface_slug) {
     renderResult({
       name: build.name,
       description: build.prompt,
@@ -743,10 +825,11 @@ STUDIO_HTML = """<!doctype html>
       pack_version: build.pack_version,
       ecosystem_id: build.ecosystem_id,
       ecosystem_version: build.ecosystem_version,
-      surface_slug: build.surface_slug,
+      surface_slug: surface_slug || build.surface_slug,
       surface_kind: build.surface_kind,
       is_ecosystem: build.is_ecosystem,
       surface_count: build.surface_count,
+      surfaces: build.surfaces || [],
       base_ir_sha256: build.base_ir_sha256,
       derived_ir_sha256: build.derived_ir_sha256,
       applied_configuration_change_ids: build.applied_configuration_change_ids || [],
@@ -755,10 +838,14 @@ STUDIO_HTML = """<!doctype html>
     });
     var previewStatus = document.getElementById('preview-status');
     previewStatus.textContent = 'Starting preview...';
+    var payload = { id: build.id };
+    if (surface_slug) {
+      payload.surface_slug = surface_slug;
+    }
     fetch('/api/history/preview', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ id: build.id })
+      body: JSON.stringify(payload)
     }).then(function (res) { return res.json(); })
       .then(function (data) { renderPreview(data); })
       .catch(function (err) { previewStatus.textContent = 'Preview failed: ' + err.message; });
@@ -881,7 +968,13 @@ STUDIO_HTML = """<!doctype html>
       meta.appendChild(prompt);
       var actions = document.createElement('div');
       actions.className = 'history-actions';
-      actions.appendChild(actionButton('Preview', function () { previewBuild(b); }));
+      if (b.is_ecosystem && b.surfaces && b.surfaces.length) {
+        b.surfaces.forEach(function (surf) {
+          actions.appendChild(actionButton('Preview: ' + (surf.app_name || surf.slug), function () { previewBuild(b, surf.slug); }));
+        });
+      } else {
+        actions.appendChild(actionButton('Preview', function () { previewBuild(b); }));
+      }
       actions.appendChild(actionButton('Copy path', function (btn) { copyPath(b.target_dir, btn); }));
       actions.appendChild(actionButton('Open folder', function (btn) { openBuild(b.id, btn); }));
       actions.appendChild(actionButton('Remove', function (btn) { deleteBuild(b.id, btn); }));

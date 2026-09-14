@@ -22,8 +22,8 @@ from ..solution_packs import (
 from .page import STUDIO_HTML
 
 BuildFn = Callable[..., dict]
-ControlFn = Callable[[], dict]
-PreviewBuildFn = Callable[[str], dict]
+ControlFn = Callable[..., dict]
+PreviewBuildFn = Callable[..., dict]
 
 _MAX_BODY_BYTES = 64 * 1024
 
@@ -39,6 +39,7 @@ def _make_handler(
     delete_build_fn: PreviewBuildFn | None,
     registry: SolutionPackRegistry | None = None,
     ecosystem_registry: EcosystemPackRegistry | None = None,
+    switch_surface_fn: PreviewBuildFn | None = None,
 ) -> type[BaseHTTPRequestHandler]:
     pack_registry = registry or DEFAULT_SOLUTION_PACK_REGISTRY
     eco_registry = ecosystem_registry or DEFAULT_ECOSYSTEM_PACK_REGISTRY
@@ -126,14 +127,73 @@ def _make_handler(
                 self._send(404, "text/plain; charset=utf-8", b"not found")
 
         def do_POST(self) -> None:  # noqa: N802 (http.server API)
+            if self.path == "/api/preview/switch":
+                data = self._read_json_body()
+                if data is None:
+                    return
+                if switch_surface_fn is None:
+                    self._send_json(404, {"error": "preview controls are not enabled"})
+                    return
+                surface_slug = str(data.get("surface_slug", "")).strip()
+                if not surface_slug:
+                    self._send_json(400, {"error": "surface_slug is required"})
+                    return
+                try:
+                    self._send_json(200, switch_surface_fn(surface_slug))
+                except Exception as error:
+                    self._send_json(502, {"error": str(error)})
+                return
             if self.path == "/api/preview/stop":
-                self._run_control(stop_fn)
+                data = self._read_json_body()
+                slug = str(data.get("surface_slug", "")).strip() if (data and isinstance(data, dict)) else None
+                if stop_fn is None:
+                    self._send_json(404, {"error": "preview controls are not enabled"})
+                    return
+                try:
+                    res = stop_fn(slug) if slug else stop_fn()
+                    self._send_json(200, res)
+                except TypeError:
+                    self._send_json(200, stop_fn())
+                except Exception as error:
+                    self._send_json(502, {"error": str(error)})
                 return
             if self.path == "/api/preview/restart":
-                self._run_control(restart_fn)
+                data = self._read_json_body()
+                slug = str(data.get("surface_slug", "")).strip() if (data and isinstance(data, dict)) else None
+                if restart_fn is None:
+                    self._send_json(404, {"error": "preview controls are not enabled"})
+                    return
+                try:
+                    res = restart_fn(slug) if slug else restart_fn()
+                    self._send_json(200, res)
+                except TypeError:
+                    self._send_json(200, restart_fn())
+                except Exception as error:
+                    self._send_json(502, {"error": str(error)})
                 return
             if self.path == "/api/history/preview":
-                self._run_id_control(preview_build_fn)
+                data = self._read_json_body()
+                if data is None:
+                    return
+                if preview_build_fn is None:
+                    self._send_json(404, {"error": "preview controls are not enabled"})
+                    return
+                build_id = str(data.get("id", "")).strip()
+                if not build_id:
+                    self._send_json(400, {"error": "id is required"})
+                    return
+                surface_slug = str(data.get("surface_slug", "")).strip() if data.get("surface_slug") else None
+                try:
+                    if surface_slug:
+                        try:
+                            res = preview_build_fn(build_id, surface_slug)
+                        except TypeError:
+                            res = preview_build_fn(build_id)
+                    else:
+                        res = preview_build_fn(build_id)
+                    self._send_json(200, res)
+                except Exception as error:
+                    self._send_json(502, {"error": str(error)})
                 return
             if self.path == "/api/history/open":
                 self._run_id_control(open_dir_fn)
@@ -257,13 +317,15 @@ def create_studio_server(
     delete_build_fn: PreviewBuildFn | None = None,
     solution_pack_registry: SolutionPackRegistry | None = None,
     ecosystem_pack_registry: EcosystemPackRegistry | None = None,
+    switch_surface_fn: PreviewBuildFn | None = None,
 ) -> ThreadingHTTPServer:
     """Create (but do not start) a studio server bound to ``host``/``port``.
 
     Pass ``port=0`` for an ephemeral port (used by tests). Call ``serve_forever()`` to run.
     The preview control and history handlers are optional; when unset, ``GET /api/preview``,
-    ``POST /api/preview/stop|restart``, ``GET /api/history``, ``POST /api/history/preview``,
-    ``POST /api/history/open``, and ``POST /api/history/delete`` return 404 (build-only mode).
+    ``POST /api/preview/stop|restart``, ``POST /api/preview/switch``, ``GET /api/history``,
+    ``POST /api/history/preview``, ``POST /api/history/open``, and ``POST /api/history/delete``
+    return 404 (build-only mode).
     ``history_fn`` and ``delete_build_fn`` may be wired in build-only mode (list/remove recorded
     builds); ``preview_build_fn`` (re-preview) and ``open_dir_fn`` (open the recorded repo folder)
     are wired only in trusted-local preview mode.
@@ -281,5 +343,6 @@ def create_studio_server(
             delete_build_fn,
             registry=solution_pack_registry,
             ecosystem_registry=ecosystem_pack_registry,
+            switch_surface_fn=switch_surface_fn,
         ),
     )
