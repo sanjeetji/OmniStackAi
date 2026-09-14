@@ -96,6 +96,12 @@ def build_parser() -> argparse.ArgumentParser:
     telemetry_parser.add_argument("package_file", help="Path to the .ecosystem.pack.json file or registered ecosystem ID to inspect.")
     telemetry_parser.add_argument("--json", action="store_true", help="Output telemetry contract as canonical JSON.")
 
+    # Subcommand: deploy
+    deploy_parser = subparsers.add_parser("deploy", help="Inspect multi-surface deployment manifest, gateway routes, or generate Docker Compose YAML.")
+    deploy_parser.add_argument("package_file", help="Path to the .ecosystem.pack.json file or registered ecosystem ID to inspect.")
+    deploy_parser.add_argument("--json", action="store_true", help="Output deployment manifest as canonical JSON.")
+    deploy_parser.add_argument("--compose", action="store_true", help="Output deployment manifest as Docker Compose YAML.")
+
     return parser
 
 
@@ -413,6 +419,48 @@ def run_telemetry(args: argparse.Namespace) -> int:
     return 0
 
 
+def run_deploy(args: argparse.Namespace) -> int:
+    import json
+    from .ecosystem_deployment import synthesize_ecosystem_deployment
+
+    pkg, err = _load_package(args.package_file)
+    if pkg is None:
+        sys.stderr.write(f"Error: {err}\n")
+        return 1
+
+    deployment = pkg.deployment_manifest
+    if deployment is None:
+        deployment = synthesize_ecosystem_deployment(
+            pkg.ecosystem_id,
+            pkg.surfaces,
+            auth_contract=pkg.auth_contract,
+            state_binding=pkg.state_binding,
+        )
+
+    if args.compose:
+        sys.stdout.write(deployment.to_compose_yaml())
+        sys.stdout.write("\n")
+        return 0
+
+    if args.json:
+        sys.stdout.write(json.dumps(deployment.to_dict(), indent=2, sort_keys=True))
+        sys.stdout.write("\n")
+        return 0
+
+    sys.stdout.write(f"Ecosystem Deployment: {pkg.display_name} ({pkg.ecosystem_id})\n")
+    sys.stdout.write(f"  Schema Version:     {deployment.schema_version}\n")
+    sys.stdout.write(f"  Gateway Port:       {deployment.gateway_port}\n")
+    sys.stdout.write(f"  Database Engine:    {deployment.database_spec.get('engine')} ({deployment.database_spec.get('database_name')})\n")
+    sys.stdout.write(f"  Surfaces ({len(deployment.surfaces)}):\n")
+    for s in deployment.surfaces:
+        deps = f"deps: {', '.join(s.depends_on)}" if s.depends_on else "no deps"
+        sys.stdout.write(f"    - [{s.surface_slug}] {s.app_name} ({s.runtime_target}) -> host:{s.host_port} container:{s.container_port} ({deps})\n")
+    sys.stdout.write(f"  Gateway Routes ({len(deployment.gateway_routes)}):\n")
+    for r in deployment.gateway_routes:
+        sys.stdout.write(f"    - {r.path_prefix} -> {r.target_surface} (port {r.target_port})\n")
+    return 0
+
+
 def main(argv: Sequence[str] | None = None) -> int:
     parser = build_parser()
     args = parser.parse_args(argv)
@@ -435,6 +483,8 @@ def main(argv: Sequence[str] | None = None) -> int:
         return run_events(args)
     if args.subcommand == "telemetry":
         return run_telemetry(args)
+    if args.subcommand == "deploy":
+        return run_deploy(args)
     sys.stderr.write(f"Unknown subcommand: {args.subcommand}\n")
     return 1
 

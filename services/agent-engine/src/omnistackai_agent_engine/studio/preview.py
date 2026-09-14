@@ -19,6 +19,11 @@ from ..solution_packs.ecosystem_auth import (
     generate_surface_tokens,
     synthesize_ecosystem_auth,
 )
+from ..solution_packs.ecosystem_deployment import (
+    EcosystemDeploymentManifest,
+    EcosystemLiveGateway,
+    synthesize_ecosystem_deployment,
+)
 from ..solution_packs.ecosystem_events import (
     EcosystemEventBridge,
     EcosystemEventBridgeContract,
@@ -68,6 +73,8 @@ class StudioPreviewManager:
         self._event_bridge: EcosystemEventBridge | None = None
         self._telemetry_contract: EcosystemTelemetryContract | None = None
         self._telemetry_collector: EcosystemTelemetryCollector | None = None
+        self._deployment_manifest: EcosystemDeploymentManifest | None = None
+        self._live_gateway: EcosystemLiveGateway | None = None
 
     def replace(self, repo_dir: str) -> dict:
         """Stop prior previews, start single app ``repo_dir`` on free ports, and return state."""
@@ -114,13 +121,17 @@ class StudioPreviewManager:
         state_binding: EcosystemStateBinding | None = None,
         event_bridge: EcosystemEventBridgeContract | None = None,
         telemetry_contract: EcosystemTelemetryContract | None = None,
+        deployment_manifest: EcosystemDeploymentManifest | None = None,
     ) -> dict:
         """Stop prior previews, register ecosystem surfaces, and start the active surface."""
         with self._lock:
             self._stop_locked()
             self._is_ecosystem = True
             self._ecosystem_id = ecosystem_id
-            self._surfaces = [dict(s) for s in surfaces]
+            self._surfaces = [
+                s.to_dict() if hasattr(s, "to_dict") else dict(s)
+                for s in surfaces
+            ]
             self._sessions = {}
 
             if not self._surfaces:
@@ -165,6 +176,19 @@ class StudioPreviewManager:
                     )
             self._telemetry_collector = EcosystemTelemetryCollector(self._telemetry_contract)
 
+            # Deployment manifest (R-450)
+            if deployment_manifest is not None:
+                self._deployment_manifest = deployment_manifest
+            else:
+                from ..solution_packs.ecosystem_registry import DEFAULT_ECOSYSTEM_PACK_REGISTRY
+                cached_dm = DEFAULT_ECOSYSTEM_PACK_REGISTRY.get_deployment_manifest(ecosystem_id)
+                if cached_dm is not None:
+                    self._deployment_manifest = cached_dm
+                else:
+                    self._deployment_manifest = synthesize_ecosystem_deployment(
+                        ecosystem_id, self._surfaces
+                    )
+
             # Determine initial active surface
             chosen_slug = active_surface_slug
             if not chosen_slug or not any(s["slug"] == chosen_slug for s in self._surfaces):
@@ -203,7 +227,7 @@ class StudioPreviewManager:
                 {"status": "error", "message": f"Surface '{surface_slug}' not found in ecosystem."}
             )
 
-        repo_dir = surface["target_dir"]
+        repo_dir = surface.get("target_dir", "")
         self._last_repo_dir = repo_dir
 
         if surface_slug in self._sessions:
@@ -332,6 +356,11 @@ class StudioPreviewManager:
                 "subscription_count": len(self._event_bridge_contract.subscriptions) if self._event_bridge_contract else 0,
                 "has_telemetry": self._telemetry_contract is not None,
                 "telemetry_surface_count": len(self._telemetry_contract.traced_surfaces) if self._telemetry_contract else 0,
+                "has_deployment": self._deployment_manifest is not None,
+                "deployment_surface_count": len(self._deployment_manifest.surfaces) if self._deployment_manifest else 0,
+                "gateway_routes": [r.to_dict() for r in self._deployment_manifest.gateway_routes] if self._deployment_manifest else [],
+                "gateway_port": self._deployment_manifest.gateway_port if self._deployment_manifest else None,
+                "gateway_url": f"http://127.0.0.1:{self._deployment_manifest.gateway_port}" if self._deployment_manifest else None,
                 "message": error_msg or _PREVIEW_ERROR,
                 "surfaces": surface_statuses,
             }
@@ -350,6 +379,11 @@ class StudioPreviewManager:
                 "subscription_count": len(self._event_bridge_contract.subscriptions) if self._event_bridge_contract else 0,
                 "has_telemetry": self._telemetry_contract is not None,
                 "telemetry_surface_count": len(self._telemetry_contract.traced_surfaces) if self._telemetry_contract else 0,
+                "has_deployment": self._deployment_manifest is not None,
+                "deployment_surface_count": len(self._deployment_manifest.surfaces) if self._deployment_manifest else 0,
+                "gateway_routes": [r.to_dict() for r in self._deployment_manifest.gateway_routes] if self._deployment_manifest else [],
+                "gateway_port": self._deployment_manifest.gateway_port if self._deployment_manifest else None,
+                "gateway_url": f"http://127.0.0.1:{self._deployment_manifest.gateway_port}" if self._deployment_manifest else None,
                 "web_url": active_sess.plan.web_url,
                 "message": f"The generated {active_surface_info['app_name']} is running locally.",
                 "surfaces": surface_statuses,
@@ -373,6 +407,11 @@ class StudioPreviewManager:
                 "subscription_count": len(self._event_bridge_contract.subscriptions) if self._event_bridge_contract else 0,
                 "has_telemetry": self._telemetry_contract is not None,
                 "telemetry_surface_count": len(self._telemetry_contract.traced_surfaces) if self._telemetry_contract else 0,
+                "has_deployment": self._deployment_manifest is not None,
+                "deployment_surface_count": len(self._deployment_manifest.surfaces) if self._deployment_manifest else 0,
+                "gateway_routes": [r.to_dict() for r in self._deployment_manifest.gateway_routes] if self._deployment_manifest else [],
+                "gateway_port": self._deployment_manifest.gateway_port if self._deployment_manifest else None,
+                "gateway_url": f"http://127.0.0.1:{self._deployment_manifest.gateway_port}" if self._deployment_manifest else None,
                 "message": f"Preview for {self._active_surface or 'surface'} stopped.",
                 "surfaces": surface_statuses,
             }
@@ -397,6 +436,10 @@ class StudioPreviewManager:
         self._event_bridge = None
         self._telemetry_contract = None
         self._telemetry_collector = None
+        if self._live_gateway is not None:
+            self._live_gateway.stop()
+            self._live_gateway = None
+        self._deployment_manifest = None
 
     def get_ecosystem_auth(self) -> dict:
         """Inspect the active ecosystem's auth contract, role matrix, and surface demo tokens."""
@@ -516,4 +559,23 @@ class StudioPreviewManager:
                 "spans": recent_spans,
                 "audit_trail": recent_audit,
             }
+
+    def get_ecosystem_deployment(self) -> dict | None:
+        """Inspect the active ecosystem's deployment manifest and gateway routes."""
+        with self._lock:
+            if not self._is_ecosystem or not self._deployment_manifest:
+                return None
+            return {
+                "is_ecosystem": True,
+                "ecosystem_id": self._ecosystem_id,
+                **self._deployment_manifest.to_dict(),
+            }
+
+    def to_compose_yaml(self) -> str | None:
+        """Generate Docker Compose YAML for the active ecosystem deployment."""
+        with self._lock:
+            if not self._is_ecosystem or not self._deployment_manifest:
+                return None
+            return self._deployment_manifest.to_compose_yaml()
+
 

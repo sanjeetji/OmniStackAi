@@ -1,19 +1,19 @@
 # Current Handoff
 
-Task ID: R-449
+Task ID: R-450
 Status: done
 Phase: BASIC/MVP — Founder Stage 0
 Branch: `main` (the only branch; the GitHub default)
 
 > **Task Compilation Audit completed on 2026-09-14.** All task documentation is 100% synchronized.
-> - Execution tracker now covers **449 tasks** (238 Done, 1 Deferred, 210 Not Started; MVP 69.2%).
-> - 91 completed tasks (R-359..R-449) formally tracked in `Phase_Roadmap` in the workbook.
+> - Execution tracker now covers **450 tasks** (239 Done, 1 Deferred, 210 Not Started; MVP 69.5%).
+> - 92 completed tasks (R-359..R-450) formally tracked in `Phase_Roadmap` in the workbook.
 > - 5 CHANGELOG entries backfilled (R-272, R-314, R-374, R-375, R-376).
 > - R-360.md status corrected to DONE. All `.ai/tasks/*.md` files have valid terminal status.
-> - `CHANGELOG.md` now has 239 entries covering all completed tasks (0 missing).
+> - `CHANGELOG.md` now has 240 entries covering all completed tasks (0 missing).
 > - All docs updated: `PROGRESS.md`, `RESUME_PROMPT.md`, `PROJECT_STATE.md`, `PROJECT_STATE.yaml`, `WORK_LOG.md`.
 
-> **The differentiating SPINE now supports Solution Pack Ecosystem Cross-Surface Telemetry, Audit Trails, and Distributed Tracing.**
+> **The differentiating SPINE now supports Solution Pack Ecosystem Multi-Surface Export, Deployment Manifest, and Live Gateway Orchestration.**
 > R-430 proposes the ecosystem, R-431 materializes it, R-432 refines unknown domains, R-433 scopes surfaces, R-434 registers
 > packs, R-435 recommends one, R-436 records bounded intent, R-437 applies safe configuration deterministically,
 > R-438 converts pending manifest AI-delta intents into strictly typed, bounded AIDeltaProposal objects via an
@@ -30,30 +30,33 @@ Branch: `main` (the only branch; the GitHub default)
 > injection and endpoints, and CLI auth/state inspection subcommands, R-448 provides canonical
 > WebhookRetryPolicy, EcosystemWebhookSubscription, EcosystemEventPayload, WebhookDeliveryRecord,
 > EcosystemEventBridgeContract, stdlib-only deterministic HMAC-SHA256 signature generation and verification,
-> and **R-449 provides canonical TelemetrySpan, AuditTrailEntry, DistributedTrace, TelemetrySamplingPolicy,
-> TracedSurface, EcosystemTelemetryContract, stdlib-only deterministic trace ID and span ID generation (uuid + hashlib,
-> 0 external dependencies, 100% offline), in-process EcosystemTelemetryCollector with bounded ring-buffer storage
-> (max 500 entries each), deterministic contract synthesis (synthesize_ecosystem_telemetry), Studio preview telemetry
-> injection and GET /api/ecosystem/telemetry endpoint, Studio Web UI #preview-telemetry-info container with span count
-> badges, and CLI telemetry inspection subcommand**.
-> UI-component series PAUSED at R-415. **NEXT:** R-450 Solution Pack Ecosystem Multi-Surface Export, Deployment Manifest, and Live Gateway Orchestration.
+> R-449 provides canonical TelemetrySpan, AuditTrailEntry, DistributedTrace, TelemetrySamplingPolicy,
+> TracedSurface, EcosystemTelemetryContract, stdlib-only deterministic trace ID and span ID generation,
+> in-process EcosystemTelemetryCollector, Studio preview telemetry injection and GET /api/ecosystem/telemetry,
+> and **R-450 provides canonical GatewayRoute, SurfaceDeploymentSpec, EcosystemDeploymentManifest,
+> deterministic Python 3.13 stdlib-only Docker Compose YAML generation (to_compose_yaml()) with zero external dependencies,
+> thread-safe in-process HTTP reverse-proxy EcosystemLiveGateway routing requests via longest-prefix matching with hop-by-hop header strip
+> and forwarding headers injection, deterministic deployment synthesis (synthesize_ecosystem_deployment), Studio preview deployment
+> manifest injection, GET /api/ecosystem/deployment and GET /api/ecosystem/deployment/compose, Studio UI #preview-deployment-info panel,
+> and CLI deploy subcommand**.
+> UI-component series PAUSED at R-415. **NEXT:** R-451 Solution Pack Ecosystem Multi-Surface CI/CD Workflow & GitHub Actions Orchestration.
 
 ## Repo/workflow state
 
-- **R-449 (Solution Pack Ecosystem Cross-Surface Telemetry, Audit Trails, and Distributed Tracing — twentieth spine brick)** shipped:
-  `solution_packs/ecosystem_telemetry.py` implements `TelemetrySpan`, `AuditTrailEntry`, `DistributedTrace`,
-  `TelemetrySamplingPolicy`, `TracedSurface`, and `EcosystemTelemetryContract`; implements Python 3.13 stdlib-only
-  deterministic trace ID and span ID generation (uuid + hashlib, 0 external dependencies, 100% offline); implements
-  in-process `EcosystemTelemetryCollector` with bounded ring-buffer storage (max 500 entries each) and span lifecycle
-  orchestration (`start_span`, `finish_span`, `record_audit`); implements deterministic contract synthesis
-  (`synthesize_ecosystem_telemetry`) deriving traced surfaces, cross-surface operations, and audit actions from ecosystem
-  definitions; `solution_packs/ecosystem_pack.py` bundles and validates telemetry contracts with package checksums;
-  `solution_packs/ecosystem_registry.py` exposes `telemetry_contract` and `get_telemetry_contract`; exports all symbols in
-  `solution_packs/__init__.py`; `studio/preview.py` attaches `has_telemetry` and `span_count` to preview payloads and
-  exposes `get_ecosystem_telemetry()`; `studio/server.py` exposes `GET /api/ecosystem/telemetry`; `studio/page.py` renders
-  `#preview-telemetry-info` with span counts and surface badges (0 external requests); `solution_packs/ecosystem_cli.py`
-  adds `telemetry` subcommand.
-  33 new tests in `test_ecosystem_telemetry.py`; `task verify` **3,131 passed** offline (+33);
+- **R-450 (Solution Pack Ecosystem Multi-Surface Export, Deployment Manifest, and Live Gateway Orchestration — twenty-first spine brick)** shipped:
+  `solution_packs/ecosystem_deployment.py` implements `GatewayRoute`, `SurfaceDeploymentSpec`, `EcosystemDeploymentManifest`;
+  implements deterministic Python 3.13 stdlib-only Docker Compose YAML generator (`generate_docker_compose`, `to_compose_yaml()`) for
+  all surfaces and PostgreSQL with 0 external dependencies; implements in-process `EcosystemLiveGateway` HTTP reverse proxy routing
+  requests via longest-prefix matching with hop-by-hop header strip and forwarding headers injection; implements deterministic deployment
+  synthesis (`synthesize_ecosystem_deployment`) deriving non-colliding host ports, routes, and environment bindings across surfaces
+  and PostgreSQL; `solution_packs/ecosystem_pack.py` bundles and validates deployment manifests with package checksums;
+  `solution_packs/ecosystem_registry.py` exposes `deployment_manifest` and `get_deployment_manifest()`; exports all symbols in
+  `solution_packs/__init__.py`; `studio/preview.py` attaches `has_deployment`, `deployment_surface_count`, `gateway_routes`, `gateway_port`,
+  and `gateway_url` to preview status/payloads, and exposes `get_ecosystem_deployment()` and `to_compose_yaml()`; `studio/server.py`
+  exposes `GET /api/ecosystem/deployment` and `GET /api/ecosystem/deployment/compose`; `studio/page.py` renders `#preview-deployment-info`
+  with surface counts, route chips, and 1-click "Copy Compose YAML" / "Refresh Deployment" buttons (0 external requests);
+  `solution_packs/ecosystem_cli.py` adds `deploy` subcommand.
+  13 new tests in `test_ecosystem_deployment.py`; `task verify` **3,144 passed** offline (+13);
   lint/security/env + demos (152/149) green; 0 model calls in test execution.
 
 - **R-448 (Solution Pack Ecosystem Cross-Surface Webhook and Event Bridge — nineteenth spine brick)** shipped:

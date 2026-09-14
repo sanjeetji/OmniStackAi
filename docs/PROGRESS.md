@@ -1,15 +1,15 @@
-# OmniStackAI — implementation progress (as of R-449)
+# OmniStackAI — implementation progress (as of R-450)
 
 A living summary of what is built, what is pending, and how to see results. Numbers come from the
-execution tracker (`R_&_D/OmniStackAI_Execution_Tracker_v6.xlsx`, `Phase_Roadmap`, 449 tasks as of
-R-449 completion) plus the state files (`.ai/`), Git history, and CHANGELOG.
+execution tracker (`R_&_D/OmniStackAI_Execution_Tracker_v6.xlsx`, `Phase_Roadmap`, 450 tasks as of
+R-450 completion) plus the state files (`.ai/`), Git history, and CHANGELOG.
 
 ## Headline
 
-- **3,131 automated tests pass**, fully offline and network-independent (`task verify`).
-- **238 tracker tasks Done, 1 Deferred, 210 Not Started** across **449 tasks** in the execution tracker
-  (`R_&_D/OmniStackAI_Execution_Tracker_v6.xlsx`, `Phase_Roadmap`). MVP completion: **238 / 344 = 69.2%**. Overall program completion: **238 / 449 = 53.0%**.
-- **91 tasks (R-359 → R-449) formally tracked in the tracker workbook**:
+- **3,144 automated tests pass**, fully offline and network-independent (`task verify`).
+- **239 tracker tasks Done, 1 Deferred, 210 Not Started** across **450 tasks** in the execution tracker
+  (`R_&_D/OmniStackAI_Execution_Tracker_v6.xlsx`, `Phase_Roadmap`). MVP completion: **239 / 344 = 69.5%**. Overall program completion: **239 / 450 = 53.1%**.
+- **92 tasks (R-359 → R-450) formally tracked in the tracker workbook**:
   Rows inserted into `Phase_Roadmap` with full column data and audit evidence so the workbook remains the single authoritative tracker.
 - **Built tasks include**: 57 reusable UI-component suites,
   four front-door bricks, R-420 generated-SQL hardening, R-421 managed embedded local preview,
@@ -30,10 +30,20 @@ R-449 completion) plus the state files (`.ai/`), Git history, and CHANGELOG.
   **R-445 Solution Pack Ecosystem Pack Registry Integration, Catalog Discovery, and Studio Multi-Surface Selection**,
   **R-446 Solution Pack Ecosystem Studio Live Multi-Surface Preview and Process Orchestration**,
   **R-447 Solution Pack Ecosystem Multi-Surface Cross-App Auth and Unified State Binding**,
-  **R-448 Solution Pack Ecosystem Cross-Surface Webhook and Event Bridge**, and
-  **R-449 Solution Pack Ecosystem Cross-Surface Telemetry, Audit Trails, and Distributed Tracing** —
-  the first twenty bricks of the differentiating spine.
+  **R-448 Solution Pack Ecosystem Cross-Surface Webhook and Event Bridge**,
+  **R-449 Solution Pack Ecosystem Cross-Surface Telemetry, Audit Trails, and Distributed Tracing**, and
+  **R-450 Solution Pack Ecosystem Multi-Surface Export, Deployment Manifest, and Live Gateway Orchestration** —
+  the first twenty-one bricks of the differentiating spine.
   The generated Next.js component library remains at **110 components**; its series is **PAUSED at R-415** and fully resumable.
+- **R-450 adds Ecosystem Multi-Surface Export, Deployment Manifest, and Live Gateway Orchestration:**
+  `GatewayRoute`, `SurfaceDeploymentSpec`, and `EcosystemDeploymentManifest` formalize multi-surface deployment topologies;
+  `generate_docker_compose` and `to_compose_yaml()` generate valid, deterministic Docker Compose YAML for all surfaces and PostgreSQL with 0 external dependencies (no PyYAML);
+  `EcosystemLiveGateway` provides an in-process HTTP reverse proxy on loopback routing requests via longest-prefix matching with header rewriting;
+  `synthesize_ecosystem_deployment` deterministically derives non-colliding host ports, routes, and environment bindings across surfaces;
+  `StudioPreviewManager` tracks deployment manifest and gateway status, injecting `has_deployment`, `deployment_surface_count`, `gateway_routes`, `gateway_port`, and `gateway_url` into preview status/payloads;
+  Studio HTTP server exposes `GET /api/ecosystem/deployment` and `GET /api/ecosystem/deployment/compose`;
+  `studio/page.py` renders `#preview-deployment-info` with surface counts, route chips, and 1-click "Copy Compose YAML" / "Refresh Deployment" buttons (0 external network requests);
+  and `ecosystem_cli.py` adds `deploy` subcommand with `--json` and `--compose` options.
 - **R-449 adds Ecosystem Cross-Surface Telemetry, Audit Trails, and Distributed Tracing:**
   `TelemetrySpan`, `AuditTrailEntry`, `DistributedTrace`, `TelemetrySamplingPolicy`, `TracedSurface`, and `EcosystemTelemetryContract` formalize distributed tracing and audit;
   Python 3.13 stdlib-only deterministic trace ID and span ID generation (uuid + hashlib, 0 external deps, 100% offline);

@@ -394,6 +394,74 @@ STUDIO_HTML = """<!doctype html>
     font-size: 10px;
     color: #94a3b8;
   }
+  .preview-deployment-info {
+    margin-top: 10px;
+    padding: 10px 12px;
+    background: rgba(15, 23, 42, 0.6);
+    border: 1px solid rgba(59, 130, 246, 0.25);
+    border-radius: 8px;
+    font-size: 11px;
+    color: #cbd5e1;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+  .deployment-header-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    flex-wrap: wrap;
+  }
+  .deployment-meta-group {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+  }
+  .deployment-badge {
+    background: rgba(59, 130, 246, 0.2);
+    color: #60a5fa;
+    padding: 2px 8px;
+    border-radius: 999px;
+    font-size: 10px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
+  .deployment-count-badge {
+    background: #1e293b;
+    padding: 2px 6px;
+    border-radius: 4px;
+    font-size: 10px;
+    color: #94a3b8;
+  }
+  .deployment-action-btn {
+    background: rgba(59, 130, 246, 0.15);
+    border: 1px solid rgba(59, 130, 246, 0.35);
+    border-radius: 4px;
+    color: #93c5fd;
+    font-size: 10px;
+    padding: 3px 8px;
+    cursor: pointer;
+    transition: background 0.15s;
+  }
+  .deployment-action-btn:hover { background: rgba(59, 130, 246, 0.25); }
+  .deployment-routes-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-top: 2px;
+  }
+  .deployment-route-chip {
+    background: rgba(15, 23, 42, 0.8);
+    border: 1px solid #1e293b;
+    border-radius: 4px;
+    padding: 2px 8px;
+    font-size: 10px;
+    color: #94a3b8;
+    font-family: monospace;
+  }
   .events-header-row {
     display: flex;
     align-items: center;
@@ -672,6 +740,20 @@ STUDIO_HTML = """<!doctype html>
           </div>
         </div>
         <div id="telemetry-surfaces-list" class="telemetry-surfaces-list"></div>
+      </div>
+      <div id="preview-deployment-info" class="preview-deployment-info" hidden>
+        <div class="deployment-header-row">
+          <div class="deployment-meta-group">
+            <span class="deployment-badge">Deployment</span>
+            <span id="deployment-surfaces-count" class="deployment-count-badge">0 surfaces</span>
+            <span id="deployment-routes-count" class="deployment-count-badge">0 routes</span>
+          </div>
+          <div class="deployment-meta-group">
+            <button type="button" id="deployment-compose-btn" class="deployment-action-btn">Copy Compose YAML</button>
+            <button type="button" id="deployment-refresh-btn" class="deployment-action-btn">Refresh Deployment</button>
+          </div>
+        </div>
+        <div id="deployment-routes-list" class="deployment-routes-list"></div>
       </div>
       <p id="preview-status" class="preview-status" role="status" aria-live="polite">Preview has not started.</p>
       <iframe
@@ -1067,6 +1149,34 @@ STUDIO_HTML = """<!doctype html>
       }
     }
 
+    var deploymentInfo = document.getElementById('preview-deployment-info');
+    if (deploymentInfo) {
+      if (preview && preview.is_ecosystem && preview.has_deployment) {
+        deploymentInfo.hidden = false;
+        var depSurfaceBadge = document.getElementById('deployment-surfaces-count');
+        if (depSurfaceBadge) {
+          depSurfaceBadge.textContent = (preview.deployment_surface_count || 0) + ' surfaces';
+        }
+        var depRouteBadge = document.getElementById('deployment-routes-count');
+        if (depRouteBadge) {
+          var rCount = (preview.gateway_routes && preview.gateway_routes.length) || 0;
+          depRouteBadge.textContent = rCount + ' routes';
+        }
+        var depRoutesList = document.getElementById('deployment-routes-list');
+        if (depRoutesList && Array.isArray(preview.gateway_routes)) {
+          depRoutesList.innerHTML = '';
+          preview.gateway_routes.forEach(function (r) {
+            var chip = document.createElement('span');
+            chip.className = 'deployment-route-chip';
+            chip.textContent = r.path_prefix + ' \u2192 :' + r.target_port + ' (' + r.target_surface + ')';
+            depRoutesList.appendChild(chip);
+          });
+        }
+      } else {
+        deploymentInfo.hidden = true;
+      }
+    }
+
     if (url) {
       previewStatus.textContent = preview.message || 'The generated application is running locally.';
       if (currentPreviewUrl !== url) {
@@ -1218,6 +1328,62 @@ STUDIO_HTML = """<!doctype html>
         })
         .catch(function () {
           flashButton(telemetryRefreshBtn, 'Error');
+        });
+    });
+  }
+
+  var deploymentComposeBtn = document.getElementById('deployment-compose-btn');
+  if (deploymentComposeBtn) {
+    deploymentComposeBtn.addEventListener('click', function () {
+      flashButton(deploymentComposeBtn, 'Fetching...');
+      fetch('/api/ecosystem/deployment/compose')
+        .then(function (res) {
+          if (!res.ok) throw new Error('status ' + res.status);
+          return res.text();
+        })
+        .then(function (yamlText) {
+          if (navigator.clipboard && navigator.clipboard.writeText) {
+            navigator.clipboard.writeText(yamlText).then(function () {
+              flashButton(deploymentComposeBtn, 'Copied Compose YAML!');
+            });
+          } else {
+            flashButton(deploymentComposeBtn, 'YAML Ready');
+          }
+        })
+        .catch(function () {
+          flashButton(deploymentComposeBtn, 'Failed');
+        });
+    });
+  }
+
+  var deploymentRefreshBtn = document.getElementById('deployment-refresh-btn');
+  if (deploymentRefreshBtn) {
+    deploymentRefreshBtn.addEventListener('click', function () {
+      flashButton(deploymentRefreshBtn, 'Loading...');
+      fetch('/api/ecosystem/deployment')
+        .then(function (res) {
+          if (!res.ok) throw new Error('status ' + res.status);
+          return res.json();
+        })
+        .then(function (data) {
+          var depRoutesList = document.getElementById('deployment-routes-list');
+          if (depRoutesList && Array.isArray(data.gateway_routes)) {
+            depRoutesList.innerHTML = '';
+            data.gateway_routes.forEach(function (r) {
+              var chip = document.createElement('span');
+              chip.className = 'deployment-route-chip';
+              chip.textContent = r.path_prefix + ' \u2192 :' + r.target_port + ' (' + r.target_surface + ')';
+              depRoutesList.appendChild(chip);
+            });
+          }
+          var routeCountBadge = document.getElementById('deployment-routes-count');
+          if (routeCountBadge && Array.isArray(data.gateway_routes)) {
+            routeCountBadge.textContent = data.gateway_routes.length + ' routes';
+          }
+          flashButton(deploymentRefreshBtn, 'Refreshed!');
+        })
+        .catch(function () {
+          flashButton(deploymentRefreshBtn, 'Error');
         });
     });
   }

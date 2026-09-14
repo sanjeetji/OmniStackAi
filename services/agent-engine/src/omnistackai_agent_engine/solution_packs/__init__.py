@@ -95,6 +95,15 @@ from .ecosystem_telemetry import (
     TracedSurface,
     synthesize_ecosystem_telemetry,
 )
+from .ecosystem_deployment import (
+    EcosystemDeploymentManifest,
+    EcosystemLiveGateway,
+    GatewayRoute,
+    SurfaceDeploymentSpec,
+    generate_docker_compose,
+    match_gateway_route,
+    synthesize_ecosystem_deployment,
+)
 
 __all__ = [
     "LEGACY_MANIFEST_SCHEMA_VERSION",
@@ -158,4 +167,11 @@ __all__ = [
     "TelemetrySpan",
     "TracedSurface",
     "synthesize_ecosystem_telemetry",
+    "EcosystemDeploymentManifest",
+    "EcosystemLiveGateway",
+    "GatewayRoute",
+    "SurfaceDeploymentSpec",
+    "generate_docker_compose",
+    "match_gateway_route",
+    "synthesize_ecosystem_deployment",
 ]

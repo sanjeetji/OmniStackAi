@@ -290,7 +290,28 @@ R-449 introduces cross-surface distributed tracing, audit logging, and telemetry
   ```
 - 100% offline verification in `task verify` (0 model calls).
 
+## Ecosystem multi-surface export, deployment manifest, and live gateway orchestration
+
+R-450 introduces unified multi-surface deployment manifests, Docker Compose generation, and reverse-proxy live gateway orchestration across multi-surface ecosystems:
+- Deployment contracts: `GatewayRoute` defines route path prefixes, target surfaces, target ports, strip prefix flags, and allowed HTTP methods. `SurfaceDeploymentSpec` defines container image naming, build contexts, Dockerfile paths, exposed container ports, host port mappings, environment variable bindings, and resource limits. `EcosystemDeploymentManifest` encapsulates the complete multi-surface deployment topology (`ecosystem_id`, `version`, `gateway_port`, `routes`, `surfaces`, `network_name`, `compose_version`).
+- Python 3.13 stdlib-only Docker Compose generator: `generate_docker_compose()` outputs byte-stable, valid Docker Compose YAML (version `3.8`) for all ecosystem surfaces, a PostgreSQL service (when database strategy is postgres), shared bridge networks, volume definitions, health checks, and depends_on constraints with 0 external dependencies (zero PyYAML).
+- In-process HTTP live gateway: `EcosystemLiveGateway` provides a thread-safe, non-blocking HTTP reverse proxy using stdlib `http.server.ThreadingHTTPServer` and `urllib.request`. Features longest-prefix route matching (`match_gateway_route`), request proxying, response header forwarding, and tracing header injection (`X-OmniStack-Surface`, `X-Forwarded-For`, `X-Forwarded-Proto`, `X-OmniStack-Gateway`).
+- Deterministic contract synthesis: `synthesize_ecosystem_deployment` automatically derives non-colliding host ports (starting from 3000 for web/admin/mobile surfaces, 8000 for APIs), route paths (`/` for consumer web, `/<slug>` for other surfaces, `/api` for APIs), container names, and environment variable bindings.
+- Package bundling & registry access: `EcosystemPackPackage` bundles `deployment_manifest` with canonical whole-package SHA-256 integrity checks; `EcosystemPackRegistry` and `EcosystemPack` expose `get_deployment_manifest`.
+- Studio preview & server: `StudioPreviewManager` tracks deployment manifest and live gateway lifecycle, exposes `get_ecosystem_deployment()` and `to_compose_yaml()`, and injects `has_deployment`, `gateway_url`, and `gateway_routes` into preview payloads. Studio HTTP server exposes `GET /api/ecosystem/deployment` and `GET /api/ecosystem/deployment/compose`.
+- Studio web UI: Renders `#preview-deployment-info` with route listing, target surface badges, gateway URL links, and 1-click "Copy Docker Compose YAML" affordance, strictly maintaining 0 external network requests.
+- CLI deployment & Compose export:
+  ```bash
+  # Inspect deployment manifest
+  task agent-engine:solution-pack:ecosystem -- deploy minimal-blog-ecosystem
+  task agent-engine:solution-pack:ecosystem -- deploy minimal-blog-ecosystem --json
+
+  # Export Docker Compose YAML specification
+  task agent-engine:solution-pack:ecosystem -- deploy minimal-blog-ecosystem --compose
+  ```
+- 100% offline verification in `task verify` (0 model calls).
+
 ## Next boundary
 
-R-450: Solution Pack Ecosystem Multi-Surface Export, Deployment Manifest, and Live Gateway Orchestration.
+R-451: Solution Pack Ecosystem Cross-Surface Data Sync, Conflict Resolution, and Offline-First Sync Protocol.
 

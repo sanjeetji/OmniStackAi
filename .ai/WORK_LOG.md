@@ -1,5 +1,32 @@
 # Work Log
 
+## 2026-09-14 — R-450 (Solution Pack Ecosystem Multi-Surface Export, Deployment Manifest, and Live Gateway Orchestration)
+
+- Recorded `.ai/tasks/R-450.md` and `.ai/CURRENT_TASK.yaml` before implementation. Approved implementation plan.
+  Final focused suites: 13 passing tests in `test_ecosystem_deployment.py`. Total test suite: 3,144 tests passing offline.
+- Implemented Ecosystem Multi-Surface Deployment Manifest and Live Gateway Engine (`solution_packs/ecosystem_deployment.py`):
+  - Defined frozen `GatewayRoute`: route ID, path prefix, target surface, target port, strip_prefix flag, and optional required_role.
+  - Defined `match_gateway_route`: longest prefix match algorithm matching incoming requests to registered gateway routes.
+  - Defined frozen `SurfaceDeploymentSpec`: surface slug, surface kind, app name, runtime target, container port, host port, env vars, health path, and service dependencies.
+  - Defined frozen `EcosystemDeploymentManifest`: ecosystem ID, version, gateway port, database spec, surfaces tuple, and gateway routes tuple.
+  - Implemented `generate_docker_compose` and `to_compose_yaml()`: deterministic, byte-stable Docker Compose YAML generator for all surfaces and PostgreSQL with 0 external dependencies (no PyYAML).
+  - Implemented in-process `EcosystemLiveGateway`: thread-safe HTTP reverse proxy listening on loopback (127.0.0.1) that intercepts incoming HTTP requests, matches longest route prefix, strips hop-by-hop headers, injects forwarding headers (`X-Forwarded-For`, `X-Forwarded-Host`, `X-Forwarded-Proto`, `X-Gateway-Route`), and proxies to target surface ports.
+  - Implemented deterministic deployment synthesis (`synthesize_ecosystem_deployment(ecosystem_id, surfaces)`): assigns non-colliding host ports, creates root `/` and subpath `/<slug>` gateway routes, and binds database and cross-app environment variables.
+- Updated Ecosystem Pack Package & Registry (`solution_packs/ecosystem_pack.py`, `solution_packs/ecosystem_registry.py`):
+  - Extended `EcosystemPackPackage` with optional `deployment_manifest`, serializing, parsing, and verifying it with checksum integrity.
+  - Updated `synthesize_ecosystem_pack` to automatically derive and attach deployment manifests.
+  - Updated `EcosystemPackRegistry` and `EcosystemPack` with `deployment_manifest` and `get_deployment_manifest`.
+  - Exported all symbols in `solution_packs/__init__.py`.
+- Updated Studio Preview & Server (`studio/preview.py`, `studio/server.py`, `studio/live_serve.py`):
+  - `StudioPreviewManager` tracks deployment manifest and live gateway, injects `has_deployment`, `deployment_surface_count`, `gateway_routes`, `gateway_port`, and `gateway_url` into preview status payloads, and exposes `get_ecosystem_deployment()` and `to_compose_yaml()`.
+  - Added `GET /api/ecosystem/deployment` and `GET /api/ecosystem/deployment/compose` to Studio HTTP server and wired handlers in `live_serve.py`.
+- Updated Studio Web UI (`studio/page.py`):
+  - Added `#preview-deployment-info` container displaying surface counts, route chips, and 1-click "Copy Compose YAML" / "Refresh Deployment" buttons, strictly maintaining zero external network requests.
+- Added CLI & Taskfile Tooling (`solution_packs/ecosystem_cli.py`):
+  - Added `deploy` subcommand supporting both file paths and registered ecosystem IDs (`task agent-engine:solution-pack:ecosystem -- deploy <id|file> [--compose|--json]`).
+  - Updated `scripts/agent-engine.sh` and `Taskfile.yml`.
+- Verification: 13 focused tests in `test_ecosystem_deployment.py` passed; `task verify` passed (3,144 tests passed in 33.3s); `task lint`, `task security:quick`, `task env:check`, and both builder demos passed.
+
 ## 2026-09-14 — R-449 (Solution Pack Ecosystem Cross-Surface Telemetry, Audit Trails, and Distributed Tracing)
 
 - Recorded `.ai/tasks/R-449.md` and `.ai/CURRENT_TASK.yaml` before implementation. Approved implementation plan.

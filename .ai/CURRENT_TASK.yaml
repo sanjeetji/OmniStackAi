@@ -1,20 +1,22 @@
-task_id: R-449
-id: R-449
-title: "Solution Pack Ecosystem Cross-Surface Telemetry, Audit Trails, and Distributed Tracing"
+task_id: R-450
+id: R-450
+title: "Solution Pack Ecosystem Multi-Surface Export, Deployment Manifest, and Live Gateway Orchestration"
 status: completed
 phase: MVP
-tracker_row: null
+tracker_row: 9
 started_at: "2026-09-14"
 completed_at: "2026-09-14"
 objective: >-
-  Twentieth brick of the differentiating spine and sixteenth Solution Pack task. Implement
-  Solution Pack Ecosystem Cross-Surface Telemetry, Audit Trails, and Distributed Tracing,
-  providing canonical TelemetrySpan, AuditTrailEntry, DistributedTrace, EcosystemTelemetryContract,
-  Python 3.13 stdlib-only deterministic trace ID generation (uuid + hashlib, 0 external deps),
-  in-process EcosystemTelemetryCollector with bounded span/audit log, contract synthesis,
-  Studio preview telemetry injection, endpoints, Studio UI telemetry panel, and CLI telemetry subcommand.
+  Twenty-first brick of the differentiating spine and seventeenth Solution Pack task. Implement
+  Solution Pack Ecosystem Multi-Surface Export, Deployment Manifest, and Live Gateway Orchestration,
+  providing canonical GatewayRoute, SurfaceDeploymentSpec, EcosystemDeploymentManifest, Python 3.13
+  stdlib-only deterministic Docker Compose YAML generation (0 external dependencies), in-process
+  EcosystemLiveGateway reverse proxy for local multi-surface preview, deployment contract synthesis,
+  Studio preview gateway and deployment status injection, endpoints GET /api/ecosystem/deployment and
+  GET /api/ecosystem/deployment/compose, Studio UI #preview-deployment-info panel (0 external requests),
+  and CLI deploy subcommand.
 allowed_paths:
-  - "services/agent-engine/src/omnistackai_agent_engine/solution_packs/ecosystem_telemetry.py"
+  - "services/agent-engine/src/omnistackai_agent_engine/solution_packs/ecosystem_deployment.py"
   - "services/agent-engine/src/omnistackai_agent_engine/solution_packs/ecosystem_pack.py"
   - "services/agent-engine/src/omnistackai_agent_engine/solution_packs/ecosystem_registry.py"
   - "services/agent-engine/src/omnistackai_agent_engine/solution_packs/ecosystem_cli.py"
@@ -23,13 +25,13 @@ allowed_paths:
   - "services/agent-engine/src/omnistackai_agent_engine/studio/server.py"
   - "services/agent-engine/src/omnistackai_agent_engine/studio/live_serve.py"
   - "services/agent-engine/src/omnistackai_agent_engine/studio/page.py"
-  - "services/agent-engine/tests/test_ecosystem_telemetry.py"
+  - "services/agent-engine/tests/test_ecosystem_deployment.py"
   - "scripts/agent-engine.sh"
   - "Taskfile.yml"
   - "docs/SOLUTION_PACKS.md"
   - "docs/PROGRESS.md"
   - "docs/RESUME_PROMPT.md"
-  - ".ai/tasks/R-449.md"
+  - ".ai/tasks/R-450.md"
   - ".ai/CURRENT_TASK.yaml"
   - ".ai/PROJECT_STATE.yaml"
   - ".ai/WORK_LOG.md"
@@ -43,7 +45,7 @@ forbidden_changes:
   - "Do not add external network requests, fonts, or scripts to Studio HTML"
   - "Do not change the control-plane database from PostgreSQL"
 required_gates:
-  - "test-first focused test_ecosystem_telemetry.py"
+  - "test-first focused test_ecosystem_deployment.py"
   - task verify
   - task lint
   - task security:quick
@@ -54,14 +56,14 @@ model_tool_trace:
   routing: none
   local_calls: 0
   cloud_calls: 0
-  note: "0 model calls during verification; cross-surface telemetry, audit trails, and distributed tracing are 100% deterministic and offline."
+  note: "0 model calls during verification; multi-surface deployment manifest and gateway orchestration are 100% deterministic and offline."
 acceptance_criteria:
-  - "EcosystemTelemetryContract defines canonical cross-surface telemetry configuration and span schema."
-  - "TelemetrySpan, AuditTrailEntry, DistributedTrace use stdlib-only deterministic trace/span ID generation (uuid + hashlib, 0 external deps)."
-  - "EcosystemTelemetryCollector manages bounded in-process spans and audit trail (max 500 entries each)."
-  - "synthesize_ecosystem_telemetry derives a valid EcosystemTelemetryContract from ecosystem packs."
-  - "EcosystemPackPackage bundles telemetry_contract with checksum integrity."
-  - "StudioPreviewManager tracks telemetry contract, injects has_telemetry, span_count into preview status."
-  - "GET /api/ecosystem/telemetry inspects and returns telemetry contract and recent spans."
-  - "Studio UI #preview-telemetry-info displays span_count and telemetry configuration (0 external requests)."
-  - "CLI 'telemetry' subcommand inspects ecosystem pack telemetry contract."
+  - "GatewayRoute, SurfaceDeploymentSpec, EcosystemDeploymentManifest define canonical multi-surface deployment topologies and routing rules."
+  - "synthesize_ecosystem_deployment derives valid deployment specifications and reverse proxy routes from ecosystem packs."
+  - "to_compose_yaml() generates valid, deterministic Docker Compose YAML for all surfaces and PostgreSQL with 0 external dependencies."
+  - "EcosystemPackPackage bundles deployment_manifest with SHA-256 checksum integrity."
+  - "EcosystemLiveGateway provides thread-safe in-process HTTP reverse-proxy routing requests to surface ports based on longest prefix matching."
+  - "StudioPreviewManager tracks deployment manifest and gateway status, injecting has_deployment, gateway_url into preview status."
+  - "GET /api/ecosystem/deployment and GET /api/ecosystem/deployment/compose inspect deployment manifest and Docker Compose YAML."
+  - "Studio UI #preview-deployment-info renders gateway route badges and compose export controls (0 external requests)."
+  - "CLI 'deploy' subcommand inspects deployment manifest with text, --json, and --compose formatting."
