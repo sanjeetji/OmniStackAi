@@ -2,28 +2,34 @@ schema_version: 1
 project: OmniStackAI
 phase: BASIC/MVP
 founder_stage: 0
-current_task: R-447
+current_task: R-448
 current_status: ready
 branch: main
-last_completed_task: R-446
+last_completed_task: R-447
 last_completed_task_summary: >-
-  Built R-446: Solution Pack Ecosystem Studio Live Multi-Surface Preview and Process Orchestration
-  (seventeenth brick of the differentiating spine and thirteenth Solution Pack task). Enhanced
-  StudioPreviewManager in studio/preview.py to orchestrate multi-surface business ecosystem previews
-  with replace_ecosystem, switch_surface, per-surface/global stop and restart, and multi-session
-  tracking (_sessions: dict[str, LocalAppSession]) with collision-free loopback port allocation
-  and liveness-aware status tracking, using threading.RLock to eliminate deadlocks while preserving
-  100% backward compatibility with single-app preview; extended Studio Server in studio/server.py
-  with switch_surface_fn, implementing POST /api/preview/switch and surface-scoping for
-  POST /api/preview/stop, POST /api/preview/restart, and POST /api/history/preview; extended
-  live_serve.py and history.py to automatically trigger multi-surface previews on ecosystem compilation
-  and preserve surfaces in build history; enhanced Studio Web UI in studio/page.py with
-  #preview-surface-tabs switcher bar in preview header, pulsing live status dots, surface kind badges,
-  and 1-click surface switching without iframe flicker, strictly maintaining 0 external network
-  requests (no external http/https/src/link/fonts). Twelve new focused tests in test_studio_ecosystem_preview.py;
-  task verify: 3,067 passed fully offline (+12 net-new tests); lint, security, env, and both builder
-  demos (152/149 files) pass; 0 model calls in test execution. No dependency, pack baseline/selection,
-  Application IR schema/example, generator, generated output, provider, database, infrastructure, workbook, or .claude change.
+  Built R-447: Solution Pack Ecosystem Multi-Surface Cross-App Auth and Unified State Binding
+  (eighteenth brick of the differentiating spine and fourteenth Solution Pack task). Implemented
+  Ecosystem Cross-App Auth Engine in solution_packs/ecosystem_auth.py with canonical EcosystemRoleBinding,
+  EcosystemAuthContract, CrossAppAuthMatrix, Python 3.13 stdlib-only deterministic HS256 JWT token minter
+  and verifier (mint_ecosystem_token, verify_ecosystem_token) with zero external dependencies, and demo
+  token generation (generate_surface_tokens); implemented Unified State Binding Engine in
+  solution_packs/ecosystem_state.py with SharedEntityBinding (authoritative/reading/writing surfaces),
+  EntityStateFlow and StateTransition (formal entity lifecycle state machines with role-gated transition
+  validation), CrossAppEndpointBinding, SurfaceEnvBinding, and EcosystemStateBinding; updated EcosystemPackPackage,
+  parse_ecosystem_pack_package, and synthesize_ecosystem_pack in solution_packs/ecosystem_pack.py to serialize,
+  parse, and verify auth contracts and state bindings with checksum integrity; updated EcosystemPackRegistry
+  and EcosystemPack in solution_packs/ecosystem_registry.py with get_auth_contract and get_state_binding;
+  updated StudioPreviewManager in studio/preview.py to track auth contracts and state bindings, generate surface
+  demo tokens, inject active_role and active_token into live preview payloads, and expose get_ecosystem_auth()
+  and get_ecosystem_state(); added GET /api/ecosystem/auth and GET /api/ecosystem/state to Studio HTTP server in
+  studio/server.py and wired handlers in studio/live_serve.py; updated Studio Web UI in studio/page.py with
+  #preview-auth-info container displaying active role badge and 1-click "Copy Demo JWT" button, strictly
+  maintaining zero external network requests; added 'auth' and 'state' subcommands to ecosystem_cli.py supporting
+  both file paths and registered ecosystem IDs with text and --json formatting; updated Taskfile.yml and
+  scripts/agent-engine.sh. Sixteen new focused tests in test_ecosystem_auth_and_state.py; task verify: 3,083 passed
+  fully offline (+16 net-new tests); lint, security, env, and both builder demos (152/149 files) pass; 0 model
+  calls in test execution. No dependency, pack baseline/selection, Application IR schema/example, generator,
+  generated output, provider, database, infrastructure, workbook, or .claude change.
   Previously built R-445: Solution Pack ecosystem pack registry integration, catalog discovery, and Studio
   multi-surface selection (sixteenth brick of the differentiating spine and twelfth Solution Pack
   task). Defined EcosystemPack, EcosystemPackRecommendation, and an immutable EcosystemPackRegistry

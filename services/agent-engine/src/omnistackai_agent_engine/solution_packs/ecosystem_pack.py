@@ -21,6 +21,8 @@ from omnistackai_agent_engine.application_ir import (
 )
 from omnistackai_agent_engine.verify import verify_plans_for_ir
 from .application import SolutionPackApplicationResult
+from .ecosystem_auth import EcosystemAuthContract, synthesize_ecosystem_auth
+from .ecosystem_state import EcosystemStateBinding, synthesize_ecosystem_state
 from .registry import (
     DEFAULT_SOLUTION_PACK_REGISTRY,
     SolutionPack,
@@ -90,9 +92,11 @@ class EcosystemPackPackage:
     base_pack_id: str
     surfaces: tuple[EcosystemSurfacePackage, ...]
     package_sha256: str
+    auth_contract: EcosystemAuthContract | None = None
+    state_binding: EcosystemStateBinding | None = None
 
     def to_dict(self) -> dict[str, Any]:
-        return {
+        data: dict[str, Any] = {
             "schema_version": self.schema_version,
             "ecosystem_id": self.ecosystem_id,
             "version": self.version,
@@ -103,6 +107,11 @@ class EcosystemPackPackage:
             "surfaces": [s.to_dict() for s in self.surfaces],
             "package_sha256": self.package_sha256,
         }
+        if self.auth_contract is not None:
+            data["auth_contract"] = self.auth_contract.to_dict()
+        if self.state_binding is not None:
+            data["state_binding"] = self.state_binding.to_dict()
+        return data
 
     def to_json(self) -> str:
         return json.dumps(self.to_dict(), sort_keys=True, separators=(",", ":"), ensure_ascii=False)
@@ -224,6 +233,14 @@ def parse_ecosystem_pack_package(data: str | bytes | Mapping[str, Any]) -> Ecosy
             )
         )
 
+    auth_contract = None
+    if "auth_contract" in raw and raw["auth_contract"] is not None:
+        auth_contract = EcosystemAuthContract.from_dict(raw["auth_contract"])
+
+    state_binding = None
+    if "state_binding" in raw and raw["state_binding"] is not None:
+        state_binding = EcosystemStateBinding.from_dict(raw["state_binding"])
+
     return EcosystemPackPackage(
         schema_version=schema_version,
         ecosystem_id=ecosystem_id,
@@ -234,6 +251,8 @@ def parse_ecosystem_pack_package(data: str | bytes | Mapping[str, Any]) -> Ecosy
         base_pack_id=base_pack_id,
         surfaces=tuple(surfaces_list),
         package_sha256=declared_package_checksum,
+        auth_contract=auth_contract,
+        state_binding=state_binding,
     )
 
 
@@ -330,6 +349,9 @@ def synthesize_ecosystem_pack(
         )
 
     ecosystem_id = f"{base_pack_id}-ecosystem"
+    auth_contract = synthesize_ecosystem_auth(ecosystem_id, surface_packages)
+    state_binding = synthesize_ecosystem_state(ecosystem_id, surface_packages)
+
     payload = {
         "schema_version": ECOSYSTEM_PACK_SCHEMA_VERSION,
         "ecosystem_id": ecosystem_id,
@@ -339,6 +361,8 @@ def synthesize_ecosystem_pack(
         "domain": domain,
         "base_pack_id": base_pack_id,
         "surfaces": [s.to_dict() for s in surface_packages],
+        "auth_contract": auth_contract.to_dict(),
+        "state_binding": state_binding.to_dict(),
     }
     package_sha256 = compute_ecosystem_checksum(payload)
 
@@ -352,4 +376,6 @@ def synthesize_ecosystem_pack(
         base_pack_id=base_pack_id,
         surfaces=tuple(surface_packages),
         package_sha256=package_sha256,
+        auth_contract=auth_contract,
+        state_binding=state_binding,
     )

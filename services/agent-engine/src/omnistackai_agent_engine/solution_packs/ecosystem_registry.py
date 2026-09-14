@@ -64,6 +64,14 @@ class EcosystemPack:
     def surface_slugs(self) -> tuple[str, ...]:
         return tuple(s.slug for s in self.surfaces)
 
+    @property
+    def auth_contract(self) -> Any:
+        return self.package.auth_contract if self.package else None
+
+    @property
+    def state_binding(self) -> Any:
+        return self.package.state_binding if self.package else None
+
     def to_dict(self) -> dict[str, Any]:
         return {
             "ecosystem_id": self.ecosystem_id,
@@ -84,6 +92,8 @@ class EcosystemPack:
                 }
                 for s in self.surfaces
             ],
+            "has_auth_contract": self.auth_contract is not None,
+            "has_state_binding": self.state_binding is not None,
         }
 
     @classmethod
@@ -245,6 +255,16 @@ class EcosystemPackRegistry:
             )
         return surface.to_application_ir()
 
+    def get_auth_contract(self, ecosystem_id: str, version: str | None = None) -> Any:
+        """Get the EcosystemAuthContract for an ecosystem if present."""
+        pack = self.get(ecosystem_id, version)
+        return pack.auth_contract if pack else None
+
+    def get_state_binding(self, ecosystem_id: str, version: str | None = None) -> Any:
+        """Get the EcosystemStateBinding for an ecosystem if present."""
+        pack = self.get(ecosystem_id, version)
+        return pack.state_binding if pack else None
+
 
 def build_default_ecosystem_packs() -> tuple[EcosystemPack, ...]:
     """Synthesize default verified ecosystem packs from registered baseline solution packs."""
@@ -312,6 +332,12 @@ class _LazyEcosystemPackRegistry(EcosystemPackRegistry):
         version: str | None = None,
     ) -> ApplicationIR:
         return self._get_delegate().load_surface_ir(ecosystem_id, surface_slug, version)
+
+    def get_auth_contract(self, ecosystem_id: str, version: str | None = None) -> Any:
+        return self._get_delegate().get_auth_contract(ecosystem_id, version)
+
+    def get_state_binding(self, ecosystem_id: str, version: str | None = None) -> Any:
+        return self._get_delegate().get_state_binding(ecosystem_id, version)
 
 
 DEFAULT_ECOSYSTEM_PACK_REGISTRY: EcosystemPackRegistry = _LazyEcosystemPackRegistry()

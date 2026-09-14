@@ -1,4 +1,4 @@
-# OmniStackAI — implementation progress (as of R-446)
+# OmniStackAI — implementation progress (as of R-447)
 
 A living summary of what is built, what is pending, and how to see results. Numbers come from the
 execution tracker (`R_&_D/OmniStackAI_Execution_Tracker_v6.xlsx`, `Phase_Roadmap`) plus the state
@@ -6,10 +6,10 @@ files (`.ai/`), Git history, and CHANGELOG for work done past the tracker's last
 
 ## Headline
 
-- **3,067 automated tests pass**, fully offline and network-independent (`task verify`).
+- **3,083 automated tests pass**, fully offline and network-independent (`task verify`).
 - **147 tracker tasks Done, 1 Deferred, 210 Not Started** across 358 tasks (the tracker's planned
   universe ends at R-358).
-- **Plus 88 completed tasks beyond the workbook (R-359 → R-446)**: 57 reusable UI-component suites,
+- **Plus 89 completed tasks beyond the workbook (R-359 → R-447)**: 57 reusable UI-component suites,
   four front-door bricks, R-420 generated-SQL hardening, R-421 managed embedded local preview,
   R-422 collision-free preview ports + status/stop/restart controls, R-423 build history + re-preview,
   R-424 live preview status, R-425 per-build repo actions, R-426 remove-from-history, R-427 a
@@ -25,10 +25,19 @@ files (`.ai/`), Git history, and CHANGELOG for work done past the tracker's last
   integration and UI controls for Solution Pack selection, customization, and provenance**, **R-442 Studio
   AI-delta feature modification controls above Solution Packs**, **R-443 Solution Pack Packaging,
   Verification, and Export CLI**, **R-444 Solution Pack Multi-Surface Ecosystem Pack Synthesis**,
-  **R-445 Solution Pack Ecosystem Pack Registry Integration, Catalog Discovery, and Studio Multi-Surface Selection**, and
-  **R-446 Solution Pack Ecosystem Studio Live Multi-Surface Preview and Process Orchestration** —
-  the first seventeen bricks of the differentiating spine.
+  **R-445 Solution Pack Ecosystem Pack Registry Integration, Catalog Discovery, and Studio Multi-Surface Selection**,
+  **R-446 Solution Pack Ecosystem Studio Live Multi-Surface Preview and Process Orchestration**, and
+  **R-447 Solution Pack Ecosystem Multi-Surface Cross-App Auth and Unified State Binding** —
+  the first eighteen bricks of the differentiating spine.
   The generated Next.js component library remains at **110 components**; its series is **PAUSED at R-415** and fully resumable.
+- **R-447 adds Ecosystem Cross-App Auth and Unified State Binding:**
+  `EcosystemAuthContract` and `CrossAppAuthMatrix` define shared HS256 JWT parameters and role isolation;
+  `mint_ecosystem_token` and `verify_ecosystem_token` provide Python 3.13 stdlib-only JWT token signing and validation
+  with 0 external dependencies; `EcosystemStateBinding` formalizes shared entities, lifecycle state flows with role-gated
+  `can_transition`, cross-app endpoints, and per-surface env variables; `StudioPreviewManager` generates demo tokens, injects
+  `active_role` and `active_token` into preview status/payloads, and exposes `get_ecosystem_auth()` and `get_ecosystem_state()`;
+  Studio HTTP server exposes `GET /api/ecosystem/auth` and `GET /api/ecosystem/state`; `studio/page.py` renders `#preview-auth-info`
+  with role badge and "Copy Demo JWT" button (0 external network requests); and `ecosystem_cli.py` adds `auth` and `state` subcommands.
 - **R-446 adds Ecosystem Studio live multi-surface preview and process orchestration:**
   `StudioPreviewManager` provides multi-surface ecosystem preview lifecycle (`replace_ecosystem`, `switch_surface`,
   per-surface/global `stop` & `restart`), multi-session management (`_sessions: dict[str, LocalAppSession]`), collision-free loopback

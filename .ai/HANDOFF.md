@@ -1,11 +1,11 @@
 # Current Handoff
 
-Task ID: R-446
+Task ID: R-447
 Status: done
 Phase: BASIC/MVP — Founder Stage 0
 Branch: `main` (the only branch; the GitHub default)
 
-> **The differentiating SPINE now supports Solution Pack Ecosystem Studio live multi-surface preview and process orchestration.** R-430 proposes the
+> **The differentiating SPINE now supports Solution Pack Ecosystem Multi-Surface Cross-App Auth and Unified State Binding.** R-430 proposes the
 > ecosystem, R-431 materializes it, R-432 refines unknown domains, R-433 scopes surfaces, R-434 registers
 > packs, R-435 recommends one, R-436 records bounded intent, R-437 applies safe configuration deterministically,
 > R-438 converts pending manifest AI-delta intents into strictly typed, bounded AIDeltaProposal objects via an
@@ -15,12 +15,27 @@ Branch: `main` (the only branch; the GitHub default)
 > AI-delta feature modifications on top of Solution Packs into the Studio, R-443 introduces portable
 > SolutionPackPackage bundles and export CLI, R-444 enables synthesizing a complete, coordinated
 > multi-surface ecosystem from a Solution Pack's unified data model, R-445 provides the immutable EcosystemPackRegistry,
-> and **R-446 provides multi-surface process coordination in StudioPreviewManager, collision-free loopback port allocation,
-> POST /api/preview/switch, per-surface stop/restart controls, surface-aware history re-previewing, and Studio Web UI
-> surface navigation tabs with live indicators and 0 external network requests**.
-> UI-component series PAUSED at R-415. **NEXT:** R-447 Solution Pack Ecosystem Multi-Surface Cross-App Auth and Unified State Binding.
+> R-446 provides multi-surface process coordination in StudioPreviewManager, collision-free loopback port allocation,
+> POST /api/preview/switch, and Studio Web UI surface navigation tabs, and **R-447 provides canonical
+> EcosystemAuthContract, CrossAppAuthMatrix, stdlib-only deterministic HS256 JWT minting/verifying,
+> EcosystemStateBinding with entity lifecycle state flows and role-gated transitions, Studio preview auth/state
+> injection and endpoints, and CLI auth/state inspection subcommands**.
+> UI-component series PAUSED at R-415. **NEXT:** R-448 Solution Pack Ecosystem Cross-Surface Webhook and Event Bridge.
 
 ## Repo/workflow state
+
+- **R-447 (Solution Pack Ecosystem Multi-Surface Cross-App Auth and Unified State Binding — eighteenth spine brick)** shipped:
+  `solution_packs/ecosystem_auth.py` implements `EcosystemRoleBinding`, `EcosystemAuthContract`, `CrossAppAuthMatrix`,
+  stdlib-only HS256 JWT minting/verifying (`mint_ecosystem_token`, `verify_ecosystem_token`), demo token generation, and
+  `synthesize_ecosystem_auth`; `solution_packs/ecosystem_state.py` implements `SharedEntityBinding`, `StateTransition`,
+  `EntityStateFlow` with role-gated `can_transition`, `CrossAppEndpointBinding`, `SurfaceEnvBinding`, `EcosystemStateBinding`, and
+  `synthesize_ecosystem_state`; `solution_packs/ecosystem_pack.py` bundles and validates auth and state bindings with checksums;
+  `solution_packs/ecosystem_registry.py` exposes `get_auth_contract` and `get_state_binding`; `studio/preview.py` attaches
+  `active_role` and `active_token` to preview payloads and exposes `get_ecosystem_auth` and `get_ecosystem_state`; `studio/server.py`
+  exposes `GET /api/ecosystem/auth` and `GET /api/ecosystem/state`; `studio/page.py` renders `#preview-auth-info` with role badge
+  and "Copy Demo JWT" button (0 external requests); `solution_packs/ecosystem_cli.py` adds `auth` and `state` subcommands.
+  16 new tests in `test_ecosystem_auth_and_state.py`; `task verify` **3,083 passed** offline (+16);
+  lint/security/env + demos (152/149) green; 0 model calls in test execution.
 
 - **R-446 (Solution Pack Ecosystem Studio Live Multi-Surface Preview and Process Orchestration — seventeenth spine brick)** shipped:
   `studio/preview.py` enhanced `StudioPreviewManager` with `replace_ecosystem`, `switch_surface`, per-surface/global `stop` & `restart`,

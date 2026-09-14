@@ -76,6 +76,16 @@ def build_parser() -> argparse.ArgumentParser:
     catalog_parser.add_argument("--domain", default=None, help="Optional domain filter.")
     catalog_parser.add_argument("--json", action="store_true", help="Output catalog as canonical JSON.")
 
+    # Subcommand: auth
+    auth_parser = subparsers.add_parser("auth", help="Inspect cross-app auth contract and role matrix for an ecosystem pack.")
+    auth_parser.add_argument("package_file", help="Path to the .ecosystem.pack.json file to inspect.")
+    auth_parser.add_argument("--json", action="store_true", help="Output auth contract as canonical JSON.")
+
+    # Subcommand: state
+    state_parser = subparsers.add_parser("state", help="Inspect unified state binding and lifecycle flows for an ecosystem pack.")
+    state_parser.add_argument("package_file", help="Path to the .ecosystem.pack.json file to inspect.")
+    state_parser.add_argument("--json", action="store_true", help="Output state binding as canonical JSON.")
+
     return parser
 
 
@@ -129,18 +139,28 @@ def run_verify(args: argparse.Namespace) -> int:
         return 1
 
 
-def run_inspect(args: argparse.Namespace) -> int:
-    path = os.path.abspath(args.package_file)
-    if not os.path.isfile(path):
-        sys.stderr.write(f"Error: File not found: {path}\n")
-        return 1
-
+def _load_package(target: str) -> tuple[EcosystemPackPackage | None, str]:
+    if os.path.isfile(target):
+        try:
+            with open(target, "rb") as f:
+                content = f.read()
+            return parse_ecosystem_pack_package(content), ""
+        except Exception as exc:
+            return None, f"Error reading ecosystem package file: {exc}"
     try:
-        with open(path, "rb") as f:
-            content = f.read()
-        pkg = parse_ecosystem_pack_package(content)
-    except SolutionPackError as exc:
-        sys.stderr.write(f"Error inspecting package {path}: {exc}\n")
+        from .ecosystem_registry import DEFAULT_ECOSYSTEM_PACK_REGISTRY
+        eco = DEFAULT_ECOSYSTEM_PACK_REGISTRY.get(target)
+        if eco is not None and eco.package is not None:
+            return eco.package, ""
+    except Exception:
+        pass
+    return None, f"File not found: {target}"
+
+
+def run_inspect(args: argparse.Namespace) -> int:
+    pkg, err = _load_package(args.package_file)
+    if pkg is None:
+        sys.stderr.write(f"Error: {err}\n")
         return 1
 
     sys.stdout.write(f"Ecosystem Pack: {pkg.ecosystem_id} (version {pkg.version})\n")
@@ -235,6 +255,80 @@ def run_catalog(args: argparse.Namespace) -> int:
     return 0
 
 
+def run_auth(args: argparse.Namespace) -> int:
+    import json
+    from .ecosystem_auth import CrossAppAuthMatrix, synthesize_ecosystem_auth
+
+    pkg, err = _load_package(args.package_file)
+    if pkg is None:
+        sys.stderr.write(f"Error: {err}\n")
+        return 1
+
+    auth = pkg.auth_contract
+    if auth is None:
+        auth = synthesize_ecosystem_auth(pkg.ecosystem_id, pkg.surfaces)
+
+    matrix = CrossAppAuthMatrix.from_contract(auth)
+
+    if args.json:
+        payload = {
+            "auth_contract": auth.to_dict(),
+            "matrix": matrix.to_dict(),
+        }
+        sys.stdout.write(json.dumps(payload, indent=2, sort_keys=True))
+        sys.stdout.write("\n")
+        return 0
+
+    sys.stdout.write(f"Ecosystem Cross-App Auth: {pkg.display_name} ({pkg.ecosystem_id})\n")
+    sys.stdout.write(f"  Algorithm: {auth.jwt_algorithm}\n")
+    sys.stdout.write(f"  Issuer:    {auth.issuer}\n")
+    sys.stdout.write(f"  Audience:  {auth.audience}\n")
+    sys.stdout.write(f"  TTL:       {auth.token_ttl_seconds}s\n")
+    sys.stdout.write(f"  Roles ({len(auth.roles)}):\n")
+    for r in auth.roles:
+        sys.stdout.write(f"    - Role: {r.role_id} (surface: {r.surface_slug})\n")
+        sys.stdout.write(f"      Allowed surfaces: {', '.join(r.allowed_surfaces)}\n")
+        sys.stdout.write(f"      Actions:          {', '.join(r.authorized_actions)}\n")
+        sys.stdout.write(f"      Permissions:      {', '.join(r.scope_permissions)}\n")
+    return 0
+
+
+def run_state(args: argparse.Namespace) -> int:
+    import json
+    from .ecosystem_state import synthesize_ecosystem_state
+
+    pkg, err = _load_package(args.package_file)
+    if pkg is None:
+        sys.stderr.write(f"Error: {err}\n")
+        return 1
+
+    state = pkg.state_binding
+    if state is None:
+        state = synthesize_ecosystem_state(pkg.ecosystem_id, pkg.surfaces)
+
+    if args.json:
+        sys.stdout.write(json.dumps(state.to_dict(), indent=2, sort_keys=True))
+        sys.stdout.write("\n")
+        return 0
+
+    sys.stdout.write(f"Ecosystem Unified State: {pkg.display_name} ({pkg.ecosystem_id})\n")
+    sys.stdout.write(f"  Database: {state.database_strategy}\n")
+    sys.stdout.write(f"  Shared Entities ({len(state.shared_entities)}):\n")
+    for e in state.shared_entities:
+        sys.stdout.write(f"    - {e.entity_name} (author: {e.authoritative_surface})\n")
+        sys.stdout.write(f"      Readers: {', '.join(e.reading_surfaces)}\n")
+        sys.stdout.write(f"      Writers: {', '.join(e.writing_surfaces)}\n")
+    sys.stdout.write(f"  State Flows ({len(state.state_flows)}):\n")
+    for f in state.state_flows:
+        sys.stdout.write(f"    - {f.entity_name}.{f.state_field} (initial: {f.initial_state}, terminal: {', '.join(f.terminal_states)})\n")
+        for t in f.transitions:
+            sys.stdout.write(f"      [{t.from_state} -> {t.to_state}] by {', '.join(t.authorized_roles)} (action: {t.action_name})\n")
+    sys.stdout.write(f"  Endpoints ({len(state.cross_app_endpoints)}):\n")
+    for ep in state.cross_app_endpoints:
+        sys.stdout.write(f"    - {ep.http_method} {ep.endpoint_path} -> consumers: {', '.join(ep.consuming_surfaces)}\n")
+    return 0
+
+
 def main(argv: Sequence[str] | None = None) -> int:
     parser = build_parser()
     args = parser.parse_args(argv)
@@ -249,6 +343,10 @@ def main(argv: Sequence[str] | None = None) -> int:
         return run_build(args)
     if args.subcommand == "catalog":
         return run_catalog(args)
+    if args.subcommand == "auth":
+        return run_auth(args)
+    if args.subcommand == "state":
+        return run_state(args)
     sys.stderr.write(f"Unknown subcommand: {args.subcommand}\n")
     return 1
 

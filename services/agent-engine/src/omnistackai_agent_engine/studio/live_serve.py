@@ -434,6 +434,8 @@ def main() -> None:
             stop_fn=preview_manager.stop,
             restart_fn=preview_manager.restart,
             switch_surface_fn=preview_manager.switch_surface,
+            get_ecosystem_auth_fn=preview_manager.get_ecosystem_auth,
+            get_ecosystem_state_fn=preview_manager.get_ecosystem_state,
             preview_build_fn=lambda build_id, surface_slug=None: _preview_recorded_build(
                 build_id, history, preview_manager, surface_slug=surface_slug
             ),

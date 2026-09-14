@@ -40,6 +40,8 @@ def _make_handler(
     registry: SolutionPackRegistry | None = None,
     ecosystem_registry: EcosystemPackRegistry | None = None,
     switch_surface_fn: PreviewBuildFn | None = None,
+    get_ecosystem_auth_fn: ControlFn | None = None,
+    get_ecosystem_state_fn: ControlFn | None = None,
 ) -> type[BaseHTTPRequestHandler]:
     pack_registry = registry or DEFAULT_SOLUTION_PACK_REGISTRY
     eco_registry = ecosystem_registry or DEFAULT_ECOSYSTEM_PACK_REGISTRY
@@ -123,6 +125,16 @@ def _make_handler(
                 self._send_json(200, {"packs": [p.to_dict() for p in pack_registry.packs]})
             elif self.path == "/api/ecosystem-packs":
                 self._send_json(200, {"ecosystems": [e.to_dict() for e in eco_registry.list_packs()]})
+            elif self.path == "/api/ecosystem/auth":
+                if get_ecosystem_auth_fn is None:
+                    self._send_json(404, {"error": "ecosystem auth controls are not enabled"})
+                else:
+                    self._send_json(200, get_ecosystem_auth_fn())
+            elif self.path == "/api/ecosystem/state":
+                if get_ecosystem_state_fn is None:
+                    self._send_json(404, {"error": "ecosystem state controls are not enabled"})
+                else:
+                    self._send_json(200, get_ecosystem_state_fn())
             else:
                 self._send(404, "text/plain; charset=utf-8", b"not found")
 
@@ -318,6 +330,8 @@ def create_studio_server(
     solution_pack_registry: SolutionPackRegistry | None = None,
     ecosystem_pack_registry: EcosystemPackRegistry | None = None,
     switch_surface_fn: PreviewBuildFn | None = None,
+    get_ecosystem_auth_fn: ControlFn | None = None,
+    get_ecosystem_state_fn: ControlFn | None = None,
 ) -> ThreadingHTTPServer:
     """Create (but do not start) a studio server bound to ``host``/``port``.
 
@@ -344,5 +358,7 @@ def create_studio_server(
             registry=solution_pack_registry,
             ecosystem_registry=ecosystem_pack_registry,
             switch_surface_fn=switch_surface_fn,
+            get_ecosystem_auth_fn=get_ecosystem_auth_fn,
+            get_ecosystem_state_fn=get_ecosystem_state_fn,
         ),
     )

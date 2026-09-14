@@ -1,30 +1,35 @@
-task_id: R-446
-id: R-446
-title: "Solution Pack Ecosystem Studio Live Multi-Surface Preview and Process Orchestration"
+task_id: R-447
+id: R-447
+title: "Solution Pack Ecosystem Multi-Surface Cross-App Auth and Unified State Binding"
 status: completed
 phase: MVP
 tracker_row: null
 started_at: "2026-09-14"
 completed_at: "2026-09-14"
 objective: >-
-  Seventeenth brick of the differentiating spine and thirteenth Solution Pack task. Implement
-  Solution Pack Ecosystem Studio Live Multi-Surface Preview and Process Orchestration, providing
-  multi-surface process coordination in StudioPreviewManager, surface-switching and per-surface
-  controls in studio/server.py and live_serve.py, multi-surface history re-previewing, and Studio
-  Web UI surface navigation tabs with 0 external network requests.
+  Eighteenth brick of the differentiating spine and fourteenth Solution Pack task. Implement
+  Solution Pack Ecosystem Multi-Surface Cross-App Auth and Unified State Binding, providing
+  canonical EcosystemAuthContract, CrossAppAuthMatrix, stdlib-only JWT token minting/verification,
+  EcosystemStateBinding with entity lifecycle state flows and role-gated transitions, Studio
+  cross-app preview auth/state injection, Studio HTTP endpoints, and CLI auth/state subcommands.
 allowed_paths:
+  - "services/agent-engine/src/omnistackai_agent_engine/solution_packs/ecosystem_auth.py"
+  - "services/agent-engine/src/omnistackai_agent_engine/solution_packs/ecosystem_state.py"
+  - "services/agent-engine/src/omnistackai_agent_engine/solution_packs/ecosystem_pack.py"
+  - "services/agent-engine/src/omnistackai_agent_engine/solution_packs/ecosystem_registry.py"
+  - "services/agent-engine/src/omnistackai_agent_engine/solution_packs/ecosystem_cli.py"
+  - "services/agent-engine/src/omnistackai_agent_engine/solution_packs/__init__.py"
   - "services/agent-engine/src/omnistackai_agent_engine/studio/preview.py"
   - "services/agent-engine/src/omnistackai_agent_engine/studio/server.py"
   - "services/agent-engine/src/omnistackai_agent_engine/studio/live_serve.py"
-  - "services/agent-engine/src/omnistackai_agent_engine/studio/history.py"
   - "services/agent-engine/src/omnistackai_agent_engine/studio/page.py"
-  - "services/agent-engine/tests/test_studio_ecosystem_preview.py"
-  - "services/agent-engine/tests/test_studio_preview.py"
-  - "services/agent-engine/tests/test_studio_server.py"
+  - "services/agent-engine/tests/test_ecosystem_auth_and_state.py"
+  - "scripts/agent-engine.sh"
+  - "Taskfile.yml"
   - "docs/SOLUTION_PACKS.md"
   - "docs/PROGRESS.md"
   - "docs/RESUME_PROMPT.md"
-  - ".ai/tasks/R-446.md"
+  - ".ai/tasks/R-447.md"
   - ".ai/CURRENT_TASK.yaml"
   - ".ai/PROJECT_STATE.yaml"
   - ".ai/WORK_LOG.md"
@@ -38,7 +43,7 @@ forbidden_changes:
   - "Do not add external network requests, fonts, or scripts to Studio HTML"
   - "Do not change the control-plane database from PostgreSQL"
 required_gates:
-  - "test-first focused test_studio_ecosystem_preview.py"
+  - "test-first focused test_ecosystem_auth_and_state.py"
   - task verify
   - task lint
   - task security:quick
@@ -49,24 +54,12 @@ model_tool_trace:
   routing: none
   local_calls: 0
   cloud_calls: 0
-  note: "0 model calls during verification; process orchestration and preview management are 100% deterministic and offline."
+  note: "0 model calls during verification; cross-app auth and state binding are 100% deterministic and offline."
 acceptance_criteria:
-  - "StudioPreviewManager supports multi-surface ecosystem preview lifecycle and seamless surface switching."
-  - "StudioPreviewManager allocates collision-free loopback ports for each surface without port conflicts."
-  - "POST /api/preview/switch switches active surface and returns updated preview payload."
-  - "POST /api/preview/stop and POST /api/preview/restart support surface-specific or whole-ecosystem operation."
-  - "POST /api/history/preview supports re-previewing an ecosystem with optional surface selection."
-  - "Studio web UI renders surface switcher tabs with live status indicators and 0 external network requests."
-  - "Liveness checks detect terminated processes across all running surfaces."
-evidence:
-  - "test_studio_ecosystem_preview.py: 12 passed (test-first RED -> GREEN)"
-  - "test_studio_preview.py: 14 passed (regression green)"
-  - "test_studio_server.py: 27 passed (regression green)"
-  - "studio test suite: 85 passed (+12 net-new tests)"
-  - "task lint: passed"
-  - "task security:quick: passed"
-  - "task env:check: passed"
-  - "task builder:demo -- minimal-blog: passed (152 files)"
-  - "task builder:demo -- rideshare-favourites: passed (149 files)"
-  - "task verify: 3,067 passed fully offline in 35.362s (0 model calls)"
-
+  - "EcosystemAuthContract and CrossAppAuthMatrix define canonical cross-app JWT parameters and role isolation."
+  - "mint_ecosystem_token and verify_ecosystem_token use Python stdlib (hmac/hashlib) with 0 external dependencies."
+  - "EcosystemStateBinding formalizes shared entities, lifecycle state flows, and cross-app endpoint bindings."
+  - "synthesize_ecosystem_auth and synthesize_ecosystem_state derive valid contracts from ecosystem packs."
+  - "GET /api/ecosystem/auth and GET /api/ecosystem/state return active ecosystem auth and state bindings."
+  - "StudioPreviewManager injects shared JWT_SECRET and surface demo tokens into running surface environments."
+  - "CLI commands 'auth' and 'state' inspect ecosystem pack auth and state bindings."

@@ -231,7 +231,29 @@ R-446 enhances Studio live preview and process orchestration to coordinate multi
 - Studio Web UI: Renders `#preview-surface-tabs` surface switcher bar in the preview header, live running indicators (pulsing dots), surface kind badges, and 1-click surface switching without iframe flicker, strictly maintaining 0 external network requests.
 - 100% offline verification in `task verify` (0 model calls).
 
+## Ecosystem multi-surface cross-app auth and unified state binding
+
+R-447 formalizes cross-app authentication, shared security boundaries, and unified data/lifecycle state binding across multi-surface ecosystems:
+- Cross-app authentication: `EcosystemAuthContract` defines shared JWT parameters (algorithm `HS256`, secret reference, issuer, audience, TTL, and role bindings). `CrossAppAuthMatrix` specifies role isolation and surface access permissions.
+- Python 3.13 stdlib-only JWT engine: `mint_ecosystem_token` and `verify_ecosystem_token` provide deterministic HMAC-SHA256 token minting and signature verification using only `hmac`, `hashlib`, `base64`, and `json` (0 external dependencies, no PyJWT).
+- Deterministic demo tokens: `generate_surface_tokens` produces per-surface test JWTs for automated test suites and instant Studio preview testing.
+- Unified state binding: `EcosystemStateBinding` formalizes shared entities (`SharedEntityBinding`), lifecycle state flows (`EntityStateFlow`, `StateTransition` with role-gated `can_transition`), cross-app endpoint bindings (`CrossAppEndpointBinding`), and per-surface environment variables (`SurfaceEnvBinding`).
+- Deterministic synthesis: `synthesize_ecosystem_auth` and `synthesize_ecosystem_state` derive valid contracts from any ecosystem plan or pack surfaces with surface kind role affinity matching.
+- Studio integration: `StudioPreviewManager` injects `active_role` and `active_token` into preview status/payloads, and exposes `get_ecosystem_auth()` and `get_ecosystem_state()`. The Studio HTTP server exposes `GET /api/ecosystem/auth` and `GET /api/ecosystem/state`.
+- Studio web UI: Renders `#preview-auth-info` with active role badge and 1-click "Copy Demo JWT" button, strictly maintaining 0 external network requests.
+- CLI auth & state inspection:
+  ```bash
+  # Inspect cross-app auth contract
+  task agent-engine:solution-pack:ecosystem -- auth minimal-blog-ecosystem
+  task agent-engine:solution-pack:ecosystem -- auth minimal-blog-ecosystem --json
+
+  # Inspect unified state binding
+  task agent-engine:solution-pack:ecosystem -- state minimal-blog-ecosystem
+  task agent-engine:solution-pack:ecosystem -- state minimal-blog-ecosystem --json
+  ```
+- 100% offline verification in `task verify` (0 model calls).
+
 ## Next boundary
 
-R-447: Solution Pack Ecosystem Multi-Surface Cross-App Auth and Unified State Binding.
+R-448: Solution Pack Ecosystem Cross-Surface Webhook and Event Bridge.
 

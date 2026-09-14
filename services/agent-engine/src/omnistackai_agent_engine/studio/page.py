@@ -308,6 +308,41 @@ STUDIO_HTML = """<!doctype html>
     color: #6ee7ff;
     font-weight: 600;
   }
+  .preview-auth-info {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 14px;
+    background: #080e1a;
+    border-bottom: 1px solid #1e293b;
+    font-size: 11px;
+    color: #94a3b8;
+  }
+  .auth-role-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 2px 7px;
+    background: rgba(56, 189, 248, 0.1);
+    border: 1px solid #38bdf8;
+    border-radius: 4px;
+    color: #38bdf8;
+    font-weight: 600;
+  }
+  .auth-token-btn {
+    background: transparent;
+    border: 1px solid #334155;
+    color: #94a3b8;
+    border-radius: 4px;
+    padding: 2px 6px;
+    font-size: 11px;
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+  .auth-token-btn:hover {
+    border-color: #38bdf8;
+    color: #f1f5f9;
+  }
   .surface-dot {
     width: 7px;
     height: 7px;
@@ -430,6 +465,7 @@ STUDIO_HTML = """<!doctype html>
         </div>
       </div>
       <div id="preview-surface-tabs" class="preview-surface-tabs" hidden></div>
+      <div id="preview-auth-info" class="preview-auth-info" hidden></div>
       <p id="preview-status" class="preview-status" role="status" aria-live="polite">Preview has not started.</p>
       <iframe
         id="preview-frame"
@@ -763,6 +799,33 @@ STUDIO_HTML = """<!doctype html>
         });
       } else {
         surfaceTabs.hidden = true;
+      }
+    }
+
+    var authInfo = document.getElementById('preview-auth-info');
+    if (authInfo) {
+      if (preview && preview.is_ecosystem && preview.active_role) {
+        authInfo.innerHTML = '';
+        authInfo.hidden = false;
+        var roleBadge = document.createElement('span');
+        roleBadge.className = 'auth-role-badge';
+        roleBadge.textContent = 'Role: ' + preview.active_role;
+        authInfo.appendChild(roleBadge);
+
+        if (preview.active_token) {
+          var copyTokenBtn = document.createElement('button');
+          copyTokenBtn.type = 'button';
+          copyTokenBtn.className = 'auth-token-btn';
+          copyTokenBtn.textContent = 'Copy Demo JWT';
+          copyTokenBtn.title = 'Copy surface demo bearer token for API testing';
+          copyTokenBtn.addEventListener('click', function () {
+            copyTextToClipboard(preview.active_token);
+            flashButton(copyTokenBtn, 'Copied!');
+          });
+          authInfo.appendChild(copyTokenBtn);
+        }
+      } else {
+        authInfo.hidden = true;
       }
     }
 

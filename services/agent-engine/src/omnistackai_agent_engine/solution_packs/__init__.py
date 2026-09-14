@@ -56,6 +56,24 @@ from .ecosystem_registry import (
     EcosystemPackRegistry,
     build_default_ecosystem_packs,
 )
+from .ecosystem_auth import (
+    CrossAppAuthMatrix,
+    EcosystemAuthContract,
+    EcosystemRoleBinding,
+    generate_surface_tokens,
+    mint_ecosystem_token,
+    synthesize_ecosystem_auth,
+    verify_ecosystem_token,
+)
+from .ecosystem_state import (
+    CrossAppEndpointBinding,
+    EcosystemStateBinding,
+    EntityStateFlow,
+    SharedEntityBinding,
+    StateTransition,
+    SurfaceEnvBinding,
+    synthesize_ecosystem_state,
+)
 
 __all__ = [
     "LEGACY_MANIFEST_SCHEMA_VERSION",

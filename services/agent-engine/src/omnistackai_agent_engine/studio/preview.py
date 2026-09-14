@@ -13,6 +13,16 @@ from threading import RLock
 from typing import Callable
 
 from ..localrun import LocalAppSession, start_preview_app
+from ..solution_packs.ecosystem_auth import (
+    CrossAppAuthMatrix,
+    EcosystemAuthContract,
+    generate_surface_tokens,
+    synthesize_ecosystem_auth,
+)
+from ..solution_packs.ecosystem_state import (
+    EcosystemStateBinding,
+    synthesize_ecosystem_state,
+)
 
 StartFn = Callable[..., LocalAppSession]
 
@@ -34,12 +44,15 @@ class StudioPreviewManager:
         self._state: dict = dict(_IDLE)
         self._lock = RLock()
 
-        # Multi-surface ecosystem state (R-446)
+        # Multi-surface ecosystem state (R-446/R-447)
         self._is_ecosystem = False
         self._ecosystem_id: str | None = None
         self._surfaces: list[dict] = []
         self._active_surface: str | None = None
         self._sessions: dict[str, LocalAppSession] = {}
+        self._auth_contract: EcosystemAuthContract | None = None
+        self._state_binding: EcosystemStateBinding | None = None
+        self._demo_tokens: dict[str, str] = {}
 
     def replace(self, repo_dir: str) -> dict:
         """Stop prior previews, start single app ``repo_dir`` on free ports, and return state."""
@@ -82,6 +95,8 @@ class StudioPreviewManager:
         ecosystem_id: str,
         surfaces: list[dict],
         active_surface_slug: str | None = None,
+        auth_contract: EcosystemAuthContract | None = None,
+        state_binding: EcosystemStateBinding | None = None,
     ) -> dict:
         """Stop prior previews, register ecosystem surfaces, and start the active surface."""
         with self._lock:
@@ -93,6 +108,18 @@ class StudioPreviewManager:
 
             if not self._surfaces:
                 return self._set_state({"status": "error", "message": "No surfaces provided in ecosystem."})
+
+            if auth_contract is not None:
+                self._auth_contract = auth_contract
+            else:
+                self._auth_contract = synthesize_ecosystem_auth(ecosystem_id, self._surfaces)
+
+            if state_binding is not None:
+                self._state_binding = state_binding
+            else:
+                self._state_binding = synthesize_ecosystem_state(ecosystem_id, self._surfaces)
+
+            self._demo_tokens = generate_surface_tokens(self._auth_contract)
 
             # Determine initial active surface
             chosen_slug = active_surface_slug
@@ -236,12 +263,26 @@ class StudioPreviewManager:
         active_sess = self._sessions.get(self._active_surface or "") if self._active_surface else None
         active_ready = active_sess is not None and active_sess.is_alive() and active_sess.web_ready
 
+        # Resolve active auth role and demo token
+        active_role = None
+        active_token = None
+        if self._auth_contract and self._active_surface:
+            for r in self._auth_contract.roles:
+                if r.surface_slug == self._active_surface:
+                    active_role = r.role_id
+                    break
+            active_token = self._demo_tokens.get(self._active_surface)
+
         if error_surface and error_surface == self._active_surface:
             payload = {
                 "status": "error",
                 "is_ecosystem": True,
                 "ecosystem_id": self._ecosystem_id,
                 "active_surface": self._active_surface,
+                "active_role": active_role,
+                "active_token": active_token,
+                "has_auth": self._auth_contract is not None,
+                "has_state": self._state_binding is not None,
                 "message": error_msg or _PREVIEW_ERROR,
                 "surfaces": surface_statuses,
             }
@@ -251,6 +292,10 @@ class StudioPreviewManager:
                 "is_ecosystem": True,
                 "ecosystem_id": self._ecosystem_id,
                 "active_surface": self._active_surface,
+                "active_role": active_role,
+                "active_token": active_token,
+                "has_auth": self._auth_contract is not None,
+                "has_state": self._state_binding is not None,
                 "web_url": active_sess.plan.web_url,
                 "message": f"The generated {active_surface_info['app_name']} is running locally.",
                 "surfaces": surface_statuses,
@@ -265,6 +310,10 @@ class StudioPreviewManager:
                 "is_ecosystem": True,
                 "ecosystem_id": self._ecosystem_id,
                 "active_surface": self._active_surface,
+                "active_role": active_role,
+                "active_token": active_token,
+                "has_auth": self._auth_contract is not None,
+                "has_state": self._state_binding is not None,
                 "message": f"Preview for {self._active_surface or 'surface'} stopped.",
                 "surfaces": surface_statuses,
             }
@@ -282,3 +331,35 @@ class StudioPreviewManager:
         for session in self._sessions.values():
             session.stop()
         self._sessions.clear()
+        self._auth_contract = None
+        self._state_binding = None
+        self._demo_tokens.clear()
+
+    def get_ecosystem_auth(self) -> dict:
+        """Inspect the active ecosystem's auth contract, role matrix, and surface demo tokens."""
+        with self._lock:
+            if not self._is_ecosystem or not self._auth_contract:
+                return {"is_ecosystem": False, "auth_contract": None, "tokens": {}}
+            matrix = CrossAppAuthMatrix.from_contract(self._auth_contract)
+            safe_contract = dict(self._auth_contract.to_dict())
+            safe_contract["jwt_secret"] = "***"
+            return {
+                "is_ecosystem": True,
+                "ecosystem_id": self._ecosystem_id,
+                "auth_contract": safe_contract,
+                "matrix": matrix.to_dict(),
+                "active_surface": self._active_surface,
+                "tokens": dict(self._demo_tokens),
+            }
+
+    def get_ecosystem_state(self) -> dict:
+        """Inspect the active ecosystem's unified state binding."""
+        with self._lock:
+            if not self._is_ecosystem or not self._state_binding:
+                return {"is_ecosystem": False, "state_binding": None}
+            return {
+                "is_ecosystem": True,
+                "ecosystem_id": self._ecosystem_id,
+                "state_binding": self._state_binding.to_dict(),
+                "active_surface": self._active_surface,
+            }

@@ -1,5 +1,39 @@
 # Work Log
 
+## 2026-09-14 — R-447 (Solution Pack Ecosystem Multi-Surface Cross-App Auth and Unified State Binding)
+
+- Recorded `.ai/tasks/R-447.md` and `.ai/CURRENT_TASK.yaml` before implementation. Approved implementation plan.
+  Final focused suites: 16 passing tests across `test_ecosystem_auth_and_state.py`. Total studio/ecosystem suites: 85 studio + 69 ecosystem passing tests.
+- Implemented Ecosystem Cross-App Auth Engine (`solution_packs/ecosystem_auth.py`):
+  - Defined frozen `EcosystemRoleBinding` capturing surface slug, role identifier, display name, allowed surfaces, authorized actions, and scope permissions.
+  - Defined frozen `EcosystemAuthContract` encapsulating shared cross-app JWT parameters (`HS256`, secret reference, issuer, audience, TTL, and role bindings).
+  - Defined frozen `CrossAppAuthMatrix` verifying role isolation, surface access permissions, and action capabilities across surfaces.
+  - Implemented Python 3.13 stdlib-only deterministic HS256 JWT minter (`mint_ecosystem_token`) and verifier (`verify_ecosystem_token`) using standard `hmac`, `hashlib`, `base64`, and `json` with 0 external dependencies (no PyJWT).
+  - Implemented `generate_surface_tokens` for deterministic per-surface demo token generation.
+  - Implemented `synthesize_ecosystem_auth(ecosystem_id, surfaces)` with surface kind role affinity selection.
+- Implemented Ecosystem Unified State Binding Engine (`solution_packs/ecosystem_state.py`):
+  - Defined frozen `SharedEntityBinding` declaring authoritative surfaces, reading surfaces, and writing surfaces per entity.
+  - Defined frozen `EntityStateFlow` and `StateTransition` formalizing entity lifecycle state machines with role-gated transition checks (`can_transition`).
+  - Defined frozen `CrossAppEndpointBinding` mapping shared backend routes to consuming surfaces and required roles.
+  - Defined frozen `SurfaceEnvBinding` specifying per-surface environment variables (`NEXT_PUBLIC_API_URL`, `JWT_SECRET`, `DATABASE_URL`, demo token).
+  - Defined frozen `EcosystemStateBinding` formalizing whole-ecosystem shared data model and lifecycle transitions.
+  - Implemented `synthesize_ecosystem_state(ecosystem_id, surfaces)`.
+- Updated Ecosystem Pack Package & Registry (`solution_packs/ecosystem_pack.py`, `solution_packs/ecosystem_registry.py`):
+  - Extended `EcosystemPackPackage` with optional `auth_contract` and `state_binding`, serializing, parsing, and verifying them with checksum integrity.
+  - Updated `synthesize_ecosystem_pack` to automatically derive and attach auth contracts and state bindings.
+  - Extended `EcosystemPack` and `EcosystemPackRegistry` with `auth_contract` and `state_binding` properties and accessors (`get_auth_contract`, `get_state_binding`).
+  - Exported new auth and state symbols in `solution_packs/__init__.py`.
+- Updated Studio Preview Manager & HTTP Server (`studio/preview.py`, `studio/server.py`, `studio/live_serve.py`, `studio/page.py`):
+  - In `StudioPreviewManager`, stored active ecosystem auth contract and state binding, generated demo tokens, and injected `active_role`, `active_token`, `has_auth`, `has_state` into preview status and launch payloads.
+  - Implemented `get_ecosystem_auth()` and `get_ecosystem_state()` on `StudioPreviewManager`.
+  - In `studio/server.py`, exposed `GET /api/ecosystem/auth` and `GET /api/ecosystem/state`. Wired handlers in `studio/live_serve.py`.
+  - In `studio/page.py`, added `#preview-auth-info` UI container displaying active role badge and "Copy Demo JWT" button, strictly preserving 0 external network requests.
+- Added CLI and Taskfile Integration (`solution_packs/ecosystem_cli.py`, `scripts/agent-engine.sh`, `Taskfile.yml`):
+  - Added `auth` and `state` subcommands to `ecosystem_cli.py`, supporting both file paths and registered ecosystem IDs with human-readable and `--json` outputs.
+  - Updated `scripts/agent-engine.sh` usage string and `Taskfile.yml` task description.
+- Gates: `task verify` **3,083 passed** fully offline (+16); agent-engine/repository lint, security, and environment passed; both builder demos remained 152/149 files; 0 model calls in test execution.
+- No dependency, pack baseline/selection, Application IR schema/example, generator, generated output, provider, PostgreSQL, infrastructure, tracker workbook, or `.claude/` change.
+
 ## 2026-09-14 — R-446 (Solution Pack Ecosystem Studio Live Multi-Surface Preview and Process Orchestration)
 
 - Recorded `.ai/tasks/R-446.md` and `.ai/CURRENT_TASK.yaml` before implementation. Approved implementation plan.
