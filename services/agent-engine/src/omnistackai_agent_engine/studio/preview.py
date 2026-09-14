@@ -29,6 +29,11 @@ from ..solution_packs.ecosystem_state import (
     EcosystemStateBinding,
     synthesize_ecosystem_state,
 )
+from ..solution_packs.ecosystem_telemetry import (
+    EcosystemTelemetryContract,
+    EcosystemTelemetryCollector,
+    synthesize_ecosystem_telemetry,
+)
 
 StartFn = Callable[..., LocalAppSession]
 
@@ -50,7 +55,7 @@ class StudioPreviewManager:
         self._state: dict = dict(_IDLE)
         self._lock = RLock()
 
-        # Multi-surface ecosystem state (R-446/R-447)
+        # Multi-surface ecosystem state (R-446/R-447/R-448/R-449)
         self._is_ecosystem = False
         self._ecosystem_id: str | None = None
         self._surfaces: list[dict] = []
@@ -61,6 +66,8 @@ class StudioPreviewManager:
         self._demo_tokens: dict[str, str] = {}
         self._event_bridge_contract: EcosystemEventBridgeContract | None = None
         self._event_bridge: EcosystemEventBridge | None = None
+        self._telemetry_contract: EcosystemTelemetryContract | None = None
+        self._telemetry_collector: EcosystemTelemetryCollector | None = None
 
     def replace(self, repo_dir: str) -> dict:
         """Stop prior previews, start single app ``repo_dir`` on free ports, and return state."""
@@ -106,6 +113,7 @@ class StudioPreviewManager:
         auth_contract: EcosystemAuthContract | None = None,
         state_binding: EcosystemStateBinding | None = None,
         event_bridge: EcosystemEventBridgeContract | None = None,
+        telemetry_contract: EcosystemTelemetryContract | None = None,
     ) -> dict:
         """Stop prior previews, register ecosystem surfaces, and start the active surface."""
         with self._lock:
@@ -142,6 +150,20 @@ class StudioPreviewManager:
                         ecosystem_id, self._surfaces, state_binding=self._state_binding
                     )
             self._event_bridge = EcosystemEventBridge(self._event_bridge_contract)
+
+            # Telemetry contract (R-449)
+            if telemetry_contract is not None:
+                self._telemetry_contract = telemetry_contract
+            else:
+                from ..solution_packs.ecosystem_registry import DEFAULT_ECOSYSTEM_PACK_REGISTRY
+                cached_tc = DEFAULT_ECOSYSTEM_PACK_REGISTRY.get_telemetry_contract(ecosystem_id)
+                if cached_tc is not None:
+                    self._telemetry_contract = cached_tc
+                else:
+                    self._telemetry_contract = synthesize_ecosystem_telemetry(
+                        ecosystem_id, self._surfaces
+                    )
+            self._telemetry_collector = EcosystemTelemetryCollector(self._telemetry_contract)
 
             # Determine initial active surface
             chosen_slug = active_surface_slug
@@ -308,6 +330,8 @@ class StudioPreviewManager:
                 "has_events": self._event_bridge_contract is not None,
                 "event_count": len(self._event_bridge_contract.supported_events) if self._event_bridge_contract else 0,
                 "subscription_count": len(self._event_bridge_contract.subscriptions) if self._event_bridge_contract else 0,
+                "has_telemetry": self._telemetry_contract is not None,
+                "telemetry_surface_count": len(self._telemetry_contract.traced_surfaces) if self._telemetry_contract else 0,
                 "message": error_msg or _PREVIEW_ERROR,
                 "surfaces": surface_statuses,
             }
@@ -324,6 +348,8 @@ class StudioPreviewManager:
                 "has_events": self._event_bridge_contract is not None,
                 "event_count": len(self._event_bridge_contract.supported_events) if self._event_bridge_contract else 0,
                 "subscription_count": len(self._event_bridge_contract.subscriptions) if self._event_bridge_contract else 0,
+                "has_telemetry": self._telemetry_contract is not None,
+                "telemetry_surface_count": len(self._telemetry_contract.traced_surfaces) if self._telemetry_contract else 0,
                 "web_url": active_sess.plan.web_url,
                 "message": f"The generated {active_surface_info['app_name']} is running locally.",
                 "surfaces": surface_statuses,
@@ -345,6 +371,8 @@ class StudioPreviewManager:
                 "has_events": self._event_bridge_contract is not None,
                 "event_count": len(self._event_bridge_contract.supported_events) if self._event_bridge_contract else 0,
                 "subscription_count": len(self._event_bridge_contract.subscriptions) if self._event_bridge_contract else 0,
+                "has_telemetry": self._telemetry_contract is not None,
+                "telemetry_surface_count": len(self._telemetry_contract.traced_surfaces) if self._telemetry_contract else 0,
                 "message": f"Preview for {self._active_surface or 'surface'} stopped.",
                 "surfaces": surface_statuses,
             }
@@ -367,6 +395,8 @@ class StudioPreviewManager:
         self._demo_tokens.clear()
         self._event_bridge_contract = None
         self._event_bridge = None
+        self._telemetry_contract = None
+        self._telemetry_collector = None
 
     def get_ecosystem_auth(self) -> dict:
         """Inspect the active ecosystem's auth contract, role matrix, and surface demo tokens."""
@@ -456,5 +486,34 @@ class StudioPreviewManager:
                 "event": event.to_dict(),
                 "deliveries": [d.to_dict() for d in deliveries],
                 "delivery_count": len(deliveries),
+            }
+
+    def get_ecosystem_telemetry(self) -> dict:
+        """Inspect the active ecosystem's telemetry contract and recent spans."""
+        with self._lock:
+            if not self._is_ecosystem or not self._telemetry_contract:
+                return {
+                    "is_ecosystem": False,
+                    "telemetry_contract": None,
+                    "traced_surfaces": [],
+                    "spans": [],
+                    "audit_trail": [],
+                    "span_count": 0,
+                    "audit_count": 0,
+                }
+            span_count = self._telemetry_collector.get_span_count() if self._telemetry_collector else 0
+            audit_count = self._telemetry_collector.get_audit_count() if self._telemetry_collector else 0
+            recent_spans = self._telemetry_collector.get_spans(limit=50) if self._telemetry_collector else []
+            recent_audit = self._telemetry_collector.get_audit_trail(limit=50) if self._telemetry_collector else []
+            return {
+                "is_ecosystem": True,
+                "ecosystem_id": self._ecosystem_id,
+                "telemetry_contract": self._telemetry_contract.to_dict(),
+                "traced_surfaces": [ts.to_dict() for ts in self._telemetry_contract.traced_surfaces],
+                "active_surface": self._active_surface,
+                "span_count": span_count,
+                "audit_count": audit_count,
+                "spans": recent_spans,
+                "audit_trail": recent_audit,
             }
 

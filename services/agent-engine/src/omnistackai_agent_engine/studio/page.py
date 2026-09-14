@@ -328,6 +328,72 @@ STUDIO_HTML = """<!doctype html>
     font-size: 11.5px;
     color: #94a3b8;
   }
+  .preview-telemetry-info {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    padding: 8px 14px;
+    background: #060d18;
+    border-bottom: 1px solid #1e293b;
+    font-size: 11.5px;
+    color: #94a3b8;
+  }
+  .telemetry-header-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    flex-wrap: wrap;
+  }
+  .telemetry-meta-group {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+  }
+  .telemetry-badge {
+    background: rgba(16, 185, 129, 0.15);
+    border: 1px solid #10b981;
+    color: #6ee7b7;
+    border-radius: 4px;
+    padding: 2px 7px;
+    font-size: 10.5px;
+    font-weight: 600;
+    letter-spacing: 0.03em;
+  }
+  .telemetry-count-badge {
+    background: rgba(15, 23, 42, 0.6);
+    border: 1px solid #1e293b;
+    color: #64748b;
+    border-radius: 4px;
+    padding: 2px 6px;
+    font-size: 10px;
+  }
+  .telemetry-action-btn {
+    background: rgba(16, 185, 129, 0.12);
+    border: 1px solid #10b981;
+    color: #6ee7b7;
+    border-radius: 5px;
+    padding: 3px 10px;
+    font-size: 10.5px;
+    cursor: pointer;
+    transition: background 0.15s;
+  }
+  .telemetry-action-btn:hover { background: rgba(16, 185, 129, 0.25); }
+  .telemetry-surfaces-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-top: 2px;
+  }
+  .telemetry-surface-chip {
+    background: rgba(15, 23, 42, 0.8);
+    border: 1px solid #1e293b;
+    border-radius: 4px;
+    padding: 2px 8px;
+    font-size: 10px;
+    color: #94a3b8;
+  }
   .events-header-row {
     display: flex;
     align-items: center;
@@ -593,6 +659,19 @@ STUDIO_HTML = """<!doctype html>
         <div id="events-log-container" class="events-log-container" hidden>
           <div id="events-log-list"></div>
         </div>
+      </div>
+      <div id="preview-telemetry-info" class="preview-telemetry-info" hidden>
+        <div class="telemetry-header-row">
+          <div class="telemetry-meta-group">
+            <span class="telemetry-badge">Telemetry</span>
+            <span id="telemetry-surfaces-count" class="telemetry-count-badge">0 surfaces</span>
+            <span id="telemetry-spans-count" class="telemetry-count-badge">0 spans</span>
+          </div>
+          <div class="telemetry-meta-group">
+            <button type="button" id="telemetry-refresh-btn" class="telemetry-action-btn">Refresh Telemetry</button>
+          </div>
+        </div>
+        <div id="telemetry-surfaces-list" class="telemetry-surfaces-list"></div>
       </div>
       <p id="preview-status" class="preview-status" role="status" aria-live="polite">Preview has not started.</p>
       <iframe
@@ -975,6 +1054,19 @@ STUDIO_HTML = """<!doctype html>
       }
     }
 
+    var telemetryInfo = document.getElementById('preview-telemetry-info');
+    if (telemetryInfo) {
+      if (preview && preview.is_ecosystem && preview.has_telemetry) {
+        telemetryInfo.hidden = false;
+        var surfaceCountBadge = document.getElementById('telemetry-surfaces-count');
+        if (surfaceCountBadge) {
+          surfaceCountBadge.textContent = (preview.telemetry_surface_count || 0) + ' surfaces';
+        }
+      } else {
+        telemetryInfo.hidden = true;
+      }
+    }
+
     if (url) {
       previewStatus.textContent = preview.message || 'The generated application is running locally.';
       if (currentPreviewUrl !== url) {
@@ -1098,6 +1190,35 @@ STUDIO_HTML = """<!doctype html>
     refreshLogBtn.addEventListener('click', function () {
       loadEcosystemEventsLog();
       flashButton(refreshLogBtn, 'Refreshed!');
+    });
+  }
+
+  var telemetryRefreshBtn = document.getElementById('telemetry-refresh-btn');
+  if (telemetryRefreshBtn) {
+    telemetryRefreshBtn.addEventListener('click', function () {
+      flashButton(telemetryRefreshBtn, 'Loading...');
+      fetch('/api/ecosystem/telemetry')
+        .then(function (res) { return res.json(); })
+        .then(function (data) {
+          var spansCount = document.getElementById('telemetry-spans-count');
+          if (spansCount) {
+            spansCount.textContent = (data.span_count || 0) + ' spans';
+          }
+          var surfacesList = document.getElementById('telemetry-surfaces-list');
+          if (surfacesList && Array.isArray(data.traced_surfaces)) {
+            surfacesList.innerHTML = '';
+            data.traced_surfaces.forEach(function (ts) {
+              var chip = document.createElement('span');
+              chip.className = 'telemetry-surface-chip';
+              chip.textContent = ts.display_name || ts.surface_slug;
+              surfacesList.appendChild(chip);
+            });
+          }
+          flashButton(telemetryRefreshBtn, 'Refreshed!');
+        })
+        .catch(function () {
+          flashButton(telemetryRefreshBtn, 'Error');
+        });
     });
   }
 

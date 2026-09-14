@@ -85,6 +85,16 @@ from .ecosystem_events import (
     synthesize_ecosystem_events,
     verify_webhook_signature,
 )
+from .ecosystem_telemetry import (
+    AuditTrailEntry,
+    DistributedTrace,
+    EcosystemTelemetryCollector,
+    EcosystemTelemetryContract,
+    TelemetrySamplingPolicy,
+    TelemetrySpan,
+    TracedSurface,
+    synthesize_ecosystem_telemetry,
+)
 
 __all__ = [
     "LEGACY_MANIFEST_SCHEMA_VERSION",
@@ -140,4 +150,12 @@ __all__ = [
     "sign_webhook_payload",
     "synthesize_ecosystem_events",
     "verify_webhook_signature",
+    "AuditTrailEntry",
+    "DistributedTrace",
+    "EcosystemTelemetryCollector",
+    "EcosystemTelemetryContract",
+    "TelemetrySamplingPolicy",
+    "TelemetrySpan",
+    "TracedSurface",
+    "synthesize_ecosystem_telemetry",
 ]

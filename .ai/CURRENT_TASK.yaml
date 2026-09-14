@@ -1,20 +1,20 @@
-task_id: R-448
-id: R-448
-title: "Solution Pack Ecosystem Cross-Surface Webhook and Event Bridge"
+task_id: R-449
+id: R-449
+title: "Solution Pack Ecosystem Cross-Surface Telemetry, Audit Trails, and Distributed Tracing"
 status: completed
 phase: MVP
 tracker_row: null
 started_at: "2026-09-14"
 completed_at: "2026-09-14"
 objective: >-
-  Nineteenth brick of the differentiating spine and fifteenth Solution Pack task. Implement
-  Solution Pack Ecosystem Cross-Surface Webhook and Event Bridge, providing canonical
-  EcosystemWebhookSubscription, EcosystemEventPayload, WebhookDeliveryRecord, EcosystemEventBridgeContract,
-  Python 3.13 stdlib-only HMAC-SHA256 signature generation/verification, in-process EcosystemEventBridge
-  with bounded delivery logging, contract synthesis, Studio preview event injection, endpoints,
-  Studio UI event simulation and log stream, and CLI events subcommand.
+  Twentieth brick of the differentiating spine and sixteenth Solution Pack task. Implement
+  Solution Pack Ecosystem Cross-Surface Telemetry, Audit Trails, and Distributed Tracing,
+  providing canonical TelemetrySpan, AuditTrailEntry, DistributedTrace, EcosystemTelemetryContract,
+  Python 3.13 stdlib-only deterministic trace ID generation (uuid + hashlib, 0 external deps),
+  in-process EcosystemTelemetryCollector with bounded span/audit log, contract synthesis,
+  Studio preview telemetry injection, endpoints, Studio UI telemetry panel, and CLI telemetry subcommand.
 allowed_paths:
-  - "services/agent-engine/src/omnistackai_agent_engine/solution_packs/ecosystem_events.py"
+  - "services/agent-engine/src/omnistackai_agent_engine/solution_packs/ecosystem_telemetry.py"
   - "services/agent-engine/src/omnistackai_agent_engine/solution_packs/ecosystem_pack.py"
   - "services/agent-engine/src/omnistackai_agent_engine/solution_packs/ecosystem_registry.py"
   - "services/agent-engine/src/omnistackai_agent_engine/solution_packs/ecosystem_cli.py"
@@ -23,13 +23,13 @@ allowed_paths:
   - "services/agent-engine/src/omnistackai_agent_engine/studio/server.py"
   - "services/agent-engine/src/omnistackai_agent_engine/studio/live_serve.py"
   - "services/agent-engine/src/omnistackai_agent_engine/studio/page.py"
-  - "services/agent-engine/tests/test_ecosystem_event_bridge.py"
+  - "services/agent-engine/tests/test_ecosystem_telemetry.py"
   - "scripts/agent-engine.sh"
   - "Taskfile.yml"
   - "docs/SOLUTION_PACKS.md"
   - "docs/PROGRESS.md"
   - "docs/RESUME_PROMPT.md"
-  - ".ai/tasks/R-448.md"
+  - ".ai/tasks/R-449.md"
   - ".ai/CURRENT_TASK.yaml"
   - ".ai/PROJECT_STATE.yaml"
   - ".ai/WORK_LOG.md"
@@ -43,7 +43,7 @@ forbidden_changes:
   - "Do not add external network requests, fonts, or scripts to Studio HTML"
   - "Do not change the control-plane database from PostgreSQL"
 required_gates:
-  - "test-first focused test_ecosystem_event_bridge.py"
+  - "test-first focused test_ecosystem_telemetry.py"
   - task verify
   - task lint
   - task security:quick
@@ -54,12 +54,14 @@ model_tool_trace:
   routing: none
   local_calls: 0
   cloud_calls: 0
-  note: "0 model calls during verification; cross-surface webhook and event bridge are 100% deterministic and offline."
+  note: "0 model calls during verification; cross-surface telemetry, audit trails, and distributed tracing are 100% deterministic and offline."
 acceptance_criteria:
-  - "EcosystemEventBridgeContract and EcosystemWebhookSubscription define canonical cross-app event parameters."
-  - "sign_webhook_payload and verify_webhook_signature use Python stdlib hmac/hashlib with 0 external dependencies."
-  - "EcosystemEventBridge manages subscriptions, routes events to surfaces, and maintains bounded delivery logs."
-  - "synthesize_ecosystem_events derives valid event bridge contracts and subscriptions from ecosystem packs."
-  - "GET /api/ecosystem/events and POST /api/ecosystem/events/dispatch inspect and trigger cross-app events in Studio."
-  - "StudioPreviewManager tracks event bridge and injects has_events into preview status."
-  - "CLI command 'events' inspects ecosystem pack webhook subscriptions and supported events."
+  - "EcosystemTelemetryContract defines canonical cross-surface telemetry configuration and span schema."
+  - "TelemetrySpan, AuditTrailEntry, DistributedTrace use stdlib-only deterministic trace/span ID generation (uuid + hashlib, 0 external deps)."
+  - "EcosystemTelemetryCollector manages bounded in-process spans and audit trail (max 500 entries each)."
+  - "synthesize_ecosystem_telemetry derives a valid EcosystemTelemetryContract from ecosystem packs."
+  - "EcosystemPackPackage bundles telemetry_contract with checksum integrity."
+  - "StudioPreviewManager tracks telemetry contract, injects has_telemetry, span_count into preview status."
+  - "GET /api/ecosystem/telemetry inspects and returns telemetry contract and recent spans."
+  - "Studio UI #preview-telemetry-info displays span_count and telemetry configuration (0 external requests)."
+  - "CLI 'telemetry' subcommand inspects ecosystem pack telemetry contract."

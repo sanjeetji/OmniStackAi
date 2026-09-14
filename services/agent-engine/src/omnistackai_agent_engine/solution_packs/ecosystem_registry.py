@@ -76,6 +76,10 @@ class EcosystemPack:
     def event_bridge(self) -> Any:
         return self.package.event_bridge if self.package else None
 
+    @property
+    def telemetry_contract(self) -> Any:
+        return self.package.telemetry_contract if self.package else None
+
     def to_dict(self) -> dict[str, Any]:
         return {
             "ecosystem_id": self.ecosystem_id,
@@ -99,6 +103,7 @@ class EcosystemPack:
             "has_auth_contract": self.auth_contract is not None,
             "has_state_binding": self.state_binding is not None,
             "has_event_bridge": self.event_bridge is not None,
+            "has_telemetry_contract": self.telemetry_contract is not None,
         }
 
     @classmethod
@@ -275,6 +280,11 @@ class EcosystemPackRegistry:
         pack = self.get(ecosystem_id, version)
         return pack.event_bridge if pack else None
 
+    def get_telemetry_contract(self, ecosystem_id: str, version: str | None = None) -> Any:
+        """Get the EcosystemTelemetryContract for an ecosystem if present."""
+        pack = self.get(ecosystem_id, version)
+        return pack.telemetry_contract if pack else None
+
 
 def build_default_ecosystem_packs() -> tuple[EcosystemPack, ...]:
     """Synthesize default verified ecosystem packs from registered baseline solution packs."""
@@ -351,6 +361,9 @@ class _LazyEcosystemPackRegistry(EcosystemPackRegistry):
 
     def get_event_bridge(self, ecosystem_id: str, version: str | None = None) -> Any:
         return self._get_delegate().get_event_bridge(ecosystem_id, version)
+
+    def get_telemetry_contract(self, ecosystem_id: str, version: str | None = None) -> Any:
+        return self._get_delegate().get_telemetry_contract(ecosystem_id, version)
 
 
 DEFAULT_ECOSYSTEM_PACK_REGISTRY: EcosystemPackRegistry = _LazyEcosystemPackRegistry()

@@ -1,12 +1,20 @@
 # Current Handoff
 
-Task ID: R-448
+Task ID: R-449
 Status: done
 Phase: BASIC/MVP — Founder Stage 0
 Branch: `main` (the only branch; the GitHub default)
 
-> **The differentiating SPINE now supports Solution Pack Ecosystem Cross-Surface Webhook and Event Bridge.** R-430 proposes the
-> ecosystem, R-431 materializes it, R-432 refines unknown domains, R-433 scopes surfaces, R-434 registers
+> **Task Compilation Audit completed on 2026-09-14.** All task documentation is 100% synchronized.
+> - Execution tracker now covers **449 tasks** (238 Done, 1 Deferred, 210 Not Started; MVP 69.2%).
+> - 91 completed tasks (R-359..R-449) formally tracked in `Phase_Roadmap` in the workbook.
+> - 5 CHANGELOG entries backfilled (R-272, R-314, R-374, R-375, R-376).
+> - R-360.md status corrected to DONE. All `.ai/tasks/*.md` files have valid terminal status.
+> - `CHANGELOG.md` now has 239 entries covering all completed tasks (0 missing).
+> - All docs updated: `PROGRESS.md`, `RESUME_PROMPT.md`, `PROJECT_STATE.md`, `PROJECT_STATE.yaml`, `WORK_LOG.md`.
+
+> **The differentiating SPINE now supports Solution Pack Ecosystem Cross-Surface Telemetry, Audit Trails, and Distributed Tracing.**
+> R-430 proposes the ecosystem, R-431 materializes it, R-432 refines unknown domains, R-433 scopes surfaces, R-434 registers
 > packs, R-435 recommends one, R-436 records bounded intent, R-437 applies safe configuration deterministically,
 > R-438 converts pending manifest AI-delta intents into strictly typed, bounded AIDeltaProposal objects via an
 > explicit opt-in local ModelProvider boundary, R-439 safely applies validated AI-delta proposals to
@@ -19,16 +27,34 @@ Branch: `main` (the only branch; the GitHub default)
 > POST /api/preview/switch, and Studio Web UI surface navigation tabs, R-447 provides canonical
 > EcosystemAuthContract, CrossAppAuthMatrix, stdlib-only deterministic HS256 JWT minting/verifying,
 > EcosystemStateBinding with entity lifecycle state flows and role-gated transitions, Studio preview auth/state
-> injection and endpoints, and CLI auth/state inspection subcommands, and **R-448 provides canonical
+> injection and endpoints, and CLI auth/state inspection subcommands, R-448 provides canonical
 > WebhookRetryPolicy, EcosystemWebhookSubscription, EcosystemEventPayload, WebhookDeliveryRecord,
-> EcosystemEventBridgeContract, stdlib-only deterministic HMAC-SHA256 signature generation and verification
-> (sign_webhook_payload, verify_webhook_signature) with constant-time comparison, in-process EcosystemEventBridge,
-> deterministic contract synthesis (synthesize_ecosystem_events), Studio preview event bridge tracking and endpoints
-> (GET /api/ecosystem/events, POST /api/ecosystem/events/dispatch), Studio Web UI #preview-events-info container with
-> subscription badges, event simulation panel, and live delivery logs, and CLI events inspection subcommand**.
-> UI-component series PAUSED at R-415. **NEXT:** R-449 Solution Pack Ecosystem Cross-Surface Telemetry, Audit Trails, and Distributed Tracing.
+> EcosystemEventBridgeContract, stdlib-only deterministic HMAC-SHA256 signature generation and verification,
+> and **R-449 provides canonical TelemetrySpan, AuditTrailEntry, DistributedTrace, TelemetrySamplingPolicy,
+> TracedSurface, EcosystemTelemetryContract, stdlib-only deterministic trace ID and span ID generation (uuid + hashlib,
+> 0 external dependencies, 100% offline), in-process EcosystemTelemetryCollector with bounded ring-buffer storage
+> (max 500 entries each), deterministic contract synthesis (synthesize_ecosystem_telemetry), Studio preview telemetry
+> injection and GET /api/ecosystem/telemetry endpoint, Studio Web UI #preview-telemetry-info container with span count
+> badges, and CLI telemetry inspection subcommand**.
+> UI-component series PAUSED at R-415. **NEXT:** R-450 Solution Pack Ecosystem Multi-Surface Export, Deployment Manifest, and Live Gateway Orchestration.
 
 ## Repo/workflow state
+
+- **R-449 (Solution Pack Ecosystem Cross-Surface Telemetry, Audit Trails, and Distributed Tracing — twentieth spine brick)** shipped:
+  `solution_packs/ecosystem_telemetry.py` implements `TelemetrySpan`, `AuditTrailEntry`, `DistributedTrace`,
+  `TelemetrySamplingPolicy`, `TracedSurface`, and `EcosystemTelemetryContract`; implements Python 3.13 stdlib-only
+  deterministic trace ID and span ID generation (uuid + hashlib, 0 external dependencies, 100% offline); implements
+  in-process `EcosystemTelemetryCollector` with bounded ring-buffer storage (max 500 entries each) and span lifecycle
+  orchestration (`start_span`, `finish_span`, `record_audit`); implements deterministic contract synthesis
+  (`synthesize_ecosystem_telemetry`) deriving traced surfaces, cross-surface operations, and audit actions from ecosystem
+  definitions; `solution_packs/ecosystem_pack.py` bundles and validates telemetry contracts with package checksums;
+  `solution_packs/ecosystem_registry.py` exposes `telemetry_contract` and `get_telemetry_contract`; exports all symbols in
+  `solution_packs/__init__.py`; `studio/preview.py` attaches `has_telemetry` and `span_count` to preview payloads and
+  exposes `get_ecosystem_telemetry()`; `studio/server.py` exposes `GET /api/ecosystem/telemetry`; `studio/page.py` renders
+  `#preview-telemetry-info` with span counts and surface badges (0 external requests); `solution_packs/ecosystem_cli.py`
+  adds `telemetry` subcommand.
+  33 new tests in `test_ecosystem_telemetry.py`; `task verify` **3,131 passed** offline (+33);
+  lint/security/env + demos (152/149) green; 0 model calls in test execution.
 
 - **R-448 (Solution Pack Ecosystem Cross-Surface Webhook and Event Bridge — nineteenth spine brick)** shipped:
   `solution_packs/ecosystem_events.py` implements `WebhookRetryPolicy`, `EcosystemWebhookSubscription`, `EcosystemEventPayload`,

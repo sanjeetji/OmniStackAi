@@ -91,6 +91,11 @@ def build_parser() -> argparse.ArgumentParser:
     events_parser.add_argument("package_file", help="Path to the .ecosystem.pack.json file or registered ecosystem ID to inspect.")
     events_parser.add_argument("--json", action="store_true", help="Output event bridge contract as canonical JSON.")
 
+    # Subcommand: telemetry
+    telemetry_parser = subparsers.add_parser("telemetry", help="Inspect cross-surface telemetry contract, traced surfaces, and audit actions for an ecosystem pack.")
+    telemetry_parser.add_argument("package_file", help="Path to the .ecosystem.pack.json file or registered ecosystem ID to inspect.")
+    telemetry_parser.add_argument("--json", action="store_true", help="Output telemetry contract as canonical JSON.")
+
     return parser
 
 
@@ -370,6 +375,44 @@ def run_events(args: argparse.Namespace) -> int:
     return 0
 
 
+def run_telemetry(args: argparse.Namespace) -> int:
+    import json
+    from .ecosystem_telemetry import synthesize_ecosystem_telemetry
+
+    pkg, err = _load_package(args.package_file)
+    if pkg is None:
+        sys.stderr.write(f"Error: {err}\n")
+        return 1
+
+    telemetry = pkg.telemetry_contract
+    if telemetry is None:
+        telemetry = synthesize_ecosystem_telemetry(pkg.ecosystem_id, pkg.surfaces)
+
+    if args.json:
+        sys.stdout.write(json.dumps(telemetry.to_dict(), indent=2, sort_keys=True))
+        sys.stdout.write("\n")
+        return 0
+
+    sys.stdout.write(f"Ecosystem Telemetry: {pkg.display_name} ({pkg.ecosystem_id})\n")
+    sys.stdout.write(f"  Trace ID Algorithm: {telemetry.trace_id_algorithm}\n")
+    sys.stdout.write(f"  Span ID Algorithm:  {telemetry.span_id_algorithm}\n")
+    sys.stdout.write(f"  Default Sampling Rate: {telemetry.default_sampling_policy.sampling_rate}\n")
+    sys.stdout.write(f"  Export Format:      {telemetry.default_sampling_policy.export_format}\n")
+    sys.stdout.write(f"  Propagation Header: {telemetry.default_sampling_policy.propagation_header}\n")
+    sys.stdout.write(f"  Traced Surfaces ({len(telemetry.traced_surfaces)}):\n")
+    for ts in telemetry.traced_surfaces:
+        audit_str = "emits audit" if ts.emits_audit_events else "no audit"
+        sys.stdout.write(f"    - [{ts.surface_slug}] {ts.display_name} ({audit_str})\n")
+        sys.stdout.write(f"      Operations: {', '.join(ts.instrumented_operations[:5])}{', ...' if len(ts.instrumented_operations) > 5 else ''}\n")
+    sys.stdout.write(f"  Cross-Surface Operations ({len(telemetry.cross_surface_operations)}):\n")
+    for op in telemetry.cross_surface_operations:
+        sys.stdout.write(f"    - {op}\n")
+    sys.stdout.write(f"  Audit Actions ({len(telemetry.audit_actions)}):\n")
+    for action in telemetry.audit_actions:
+        sys.stdout.write(f"    - {action}\n")
+    return 0
+
+
 def main(argv: Sequence[str] | None = None) -> int:
     parser = build_parser()
     args = parser.parse_args(argv)
@@ -390,6 +433,8 @@ def main(argv: Sequence[str] | None = None) -> int:
         return run_state(args)
     if args.subcommand == "events":
         return run_events(args)
+    if args.subcommand == "telemetry":
+        return run_telemetry(args)
     sys.stderr.write(f"Unknown subcommand: {args.subcommand}\n")
     return 1
 

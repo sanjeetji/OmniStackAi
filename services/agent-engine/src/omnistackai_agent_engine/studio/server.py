@@ -44,6 +44,7 @@ def _make_handler(
     get_ecosystem_state_fn: ControlFn | None = None,
     get_ecosystem_events_fn: ControlFn | None = None,
     dispatch_ecosystem_event_fn: Callable[..., dict] | None = None,
+    get_ecosystem_telemetry_fn: ControlFn | None = None,
 ) -> type[BaseHTTPRequestHandler]:
     pack_registry = registry or DEFAULT_SOLUTION_PACK_REGISTRY
     eco_registry = ecosystem_registry or DEFAULT_ECOSYSTEM_PACK_REGISTRY
@@ -147,6 +148,15 @@ def _make_handler(
                     return
                 try:
                     self._send_json(200, get_ecosystem_events_fn())
+                except Exception as error:
+                    self._send_json(502, {"error": str(error)})
+                return
+            elif self.path == "/api/ecosystem/telemetry":
+                if get_ecosystem_telemetry_fn is None:
+                    self._send_json(404, {"error": "ecosystem telemetry inspection not enabled"})
+                    return
+                try:
+                    self._send_json(200, get_ecosystem_telemetry_fn())
                 except Exception as error:
                     self._send_json(502, {"error": str(error)})
                 return
@@ -375,6 +385,7 @@ def create_studio_server(
     get_ecosystem_state_fn: ControlFn | None = None,
     get_ecosystem_events_fn: ControlFn | None = None,
     dispatch_ecosystem_event_fn: Callable[..., dict] | None = None,
+    get_ecosystem_telemetry_fn: ControlFn | None = None,
 ) -> ThreadingHTTPServer:
     """Create (but do not start) a studio server bound to ``host``/``port``.
 
@@ -405,5 +416,6 @@ def create_studio_server(
             get_ecosystem_state_fn=get_ecosystem_state_fn,
             get_ecosystem_events_fn=get_ecosystem_events_fn,
             dispatch_ecosystem_event_fn=dispatch_ecosystem_event_fn,
+            get_ecosystem_telemetry_fn=get_ecosystem_telemetry_fn,
         ),
     )

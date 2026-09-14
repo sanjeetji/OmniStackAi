@@ -100,7 +100,7 @@ if project["project"]["requires-python"] != ">=3.13,<3.14":
     PYTHONPATH="$source_root" python3 -m omnistackai_agent_engine.solution_packs.package_cli "${@:2}"
     ;;
   solution-pack-ecosystem)
-    # Synthesize, verify, inspect, build, catalog, auth, state, or events for ecosystem packs (no model/network).
+    # Synthesize, verify, inspect, build, catalog, auth, state, events, or telemetry for ecosystem packs (no model/network).
     configure_python
     PYTHONPATH="$source_root" python3 -m omnistackai_agent_engine.solution_packs.ecosystem_cli "${@:2}"
     ;;
@@ -281,7 +281,7 @@ PY
     PYTHONPATH="$source_root" python3 -c "from omnistackai_agent_engine.runtime import format_status; print(format_status())"
     ;;
   *)
-    printf 'Usage: %s {lint|test|ollama-verify|gateway-run|scope-propose [description]|solution-packs [--domain domain] [--capability capability]|solution-pack-build [pack] [out-dir]|solution-pack-package [export|verify|inspect]|solution-pack-ecosystem [synthesize|verify|inspect|build|catalog|auth|state|events]|ecosystem-plan [description]|ecosystem-build [description]|intake-run [description]|app-build [description]|studio-serve|app-run <repo-dir>|web-typecheck [example] [out-dir]|preview-plan [target]|verify-plan [target]|plan-show [example]|platform-status}\n' "$0"
+    printf 'Usage: %s {lint|test|ollama-verify|gateway-run|scope-propose [description]|solution-packs [--domain domain] [--capability capability]|solution-pack-build [pack] [out-dir]|solution-pack-package [export|verify|inspect]|solution-pack-ecosystem [synthesize|verify|inspect|build|catalog|auth|state|events|telemetry]|ecosystem-plan [description]|ecosystem-build [description]|intake-run [description]|app-build [description]|studio-serve|app-run <repo-dir>|web-typecheck [example] [out-dir]|preview-plan [target]|verify-plan [target]|plan-show [example]|platform-status}\n' "$0"
     exit 2
     ;;
 esac

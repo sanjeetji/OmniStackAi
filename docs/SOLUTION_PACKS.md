@@ -271,7 +271,26 @@ R-448 introduces automated cross-surface event dispatch, HMAC-SHA256 signature v
   ```
 - 100% offline verification in `task verify` (0 model calls).
 
+## Ecosystem cross-surface telemetry, audit trails, and distributed tracing
+
+R-449 introduces cross-surface distributed tracing, audit logging, and telemetry contract orchestration across multi-surface ecosystems:
+- Cross-surface telemetry contracts: `EcosystemTelemetryContract`, `TelemetrySamplingPolicy`, and `TracedSurface` define unified tracing topology, propagation headers (`X-OmniStack-Trace-Id`), instrumented operations, and audit-emitting surfaces.
+- Canonical telemetry and audit records: `TelemetrySpan` defines span attributes with parent linkage and deterministic digests; `AuditTrailEntry` defines actor-attributed audit logs; `DistributedTrace` assembles spans across surfaces.
+- Python 3.13 stdlib-only deterministic ID generation: Trace IDs and span IDs use stdlib `uuid` + `hashlib` with 0 external dependencies and 100% offline determinism.
+- In-process telemetry collector: `EcosystemTelemetryCollector` coordinates span lifecycles (`start_span`, `finish_span`), audit recording, and bounded ring-buffer storage (max 500 spans / 500 audit entries).
+- Deterministic contract synthesis: `synthesize_ecosystem_telemetry` derives traced surfaces, cross-surface operations, and audit actions from ecosystem definitions.
+- Package bundling & registry access: `EcosystemPackPackage` bundles and validates telemetry contracts with whole-package SHA-256 integrity checks; `EcosystemPackRegistry` and `EcosystemPack` expose telemetry contracts.
+- Studio preview & server: `StudioPreviewManager` tracks telemetry collector, injects `has_telemetry` and `span_count` into preview payloads, and exposes `get_ecosystem_telemetry()`. Studio HTTP server exposes `GET /api/ecosystem/telemetry`.
+- Studio web UI: Renders `#preview-telemetry-info` with span counts and surface badges, strictly maintaining 0 external network requests.
+- CLI telemetry inspection:
+  ```bash
+  # Inspect ecosystem pack telemetry contract
+  task agent-engine:solution-pack:ecosystem -- telemetry minimal-blog-ecosystem
+  task agent-engine:solution-pack:ecosystem -- telemetry minimal-blog-ecosystem --json
+  ```
+- 100% offline verification in `task verify` (0 model calls).
+
 ## Next boundary
 
-R-449: Solution Pack Ecosystem Cross-Surface Telemetry, Audit Trails, and Distributed Tracing.
+R-450: Solution Pack Ecosystem Multi-Surface Export, Deployment Manifest, and Live Gateway Orchestration.
 

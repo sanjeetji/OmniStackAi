@@ -24,6 +24,7 @@ from .application import SolutionPackApplicationResult
 from .ecosystem_auth import EcosystemAuthContract, synthesize_ecosystem_auth
 from .ecosystem_events import EcosystemEventBridgeContract, synthesize_ecosystem_events
 from .ecosystem_state import EcosystemStateBinding, synthesize_ecosystem_state
+from .ecosystem_telemetry import EcosystemTelemetryContract, synthesize_ecosystem_telemetry
 from .registry import (
     DEFAULT_SOLUTION_PACK_REGISTRY,
     SolutionPack,
@@ -96,6 +97,7 @@ class EcosystemPackPackage:
     auth_contract: EcosystemAuthContract | None = None
     state_binding: EcosystemStateBinding | None = None
     event_bridge: EcosystemEventBridgeContract | None = None
+    telemetry_contract: EcosystemTelemetryContract | None = None
 
     def to_dict(self) -> dict[str, Any]:
         data: dict[str, Any] = {
@@ -115,6 +117,8 @@ class EcosystemPackPackage:
             data["state_binding"] = self.state_binding.to_dict()
         if self.event_bridge is not None:
             data["event_bridge"] = self.event_bridge.to_dict()
+        if self.telemetry_contract is not None:
+            data["telemetry_contract"] = self.telemetry_contract.to_dict()
         return data
 
     def to_json(self) -> str:
@@ -249,6 +253,10 @@ def parse_ecosystem_pack_package(data: str | bytes | Mapping[str, Any]) -> Ecosy
     if "event_bridge" in raw and raw["event_bridge"] is not None:
         event_bridge = EcosystemEventBridgeContract.from_dict(raw["event_bridge"])
 
+    telemetry_contract = None
+    if "telemetry_contract" in raw and raw["telemetry_contract"] is not None:
+        telemetry_contract = EcosystemTelemetryContract.from_dict(raw["telemetry_contract"])
+
     return EcosystemPackPackage(
         schema_version=schema_version,
         ecosystem_id=ecosystem_id,
@@ -262,6 +270,7 @@ def parse_ecosystem_pack_package(data: str | bytes | Mapping[str, Any]) -> Ecosy
         auth_contract=auth_contract,
         state_binding=state_binding,
         event_bridge=event_bridge,
+        telemetry_contract=telemetry_contract,
     )
 
 
@@ -361,6 +370,7 @@ def synthesize_ecosystem_pack(
     auth_contract = synthesize_ecosystem_auth(ecosystem_id, surface_packages)
     state_binding = synthesize_ecosystem_state(ecosystem_id, surface_packages)
     event_bridge = synthesize_ecosystem_events(ecosystem_id, surface_packages, state_binding=state_binding)
+    telemetry_contract = synthesize_ecosystem_telemetry(ecosystem_id, surface_packages)
 
     payload = {
         "schema_version": ECOSYSTEM_PACK_SCHEMA_VERSION,
@@ -374,6 +384,7 @@ def synthesize_ecosystem_pack(
         "auth_contract": auth_contract.to_dict(),
         "state_binding": state_binding.to_dict(),
         "event_bridge": event_bridge.to_dict(),
+        "telemetry_contract": telemetry_contract.to_dict(),
     }
     package_sha256 = compute_ecosystem_checksum(payload)
 
@@ -390,4 +401,5 @@ def synthesize_ecosystem_pack(
         auth_contract=auth_contract,
         state_binding=state_binding,
         event_bridge=event_bridge,
+        telemetry_contract=telemetry_contract,
     )
