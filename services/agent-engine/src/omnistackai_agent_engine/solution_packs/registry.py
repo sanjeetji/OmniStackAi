@@ -80,6 +80,7 @@ class SolutionPack:
     example_ir_ref: str
     ir_sha256: str
     targets: tuple[str, ...]
+    package: object | None = None
 
     def __post_init__(self) -> None:
         _slug(self.pack_id, "pack_id")
@@ -92,6 +93,26 @@ class SolutionPack:
         if not isinstance(self.ir_sha256, str) or _SHA256.fullmatch(self.ir_sha256) is None:
             raise SolutionPackError("ir_sha256 must be a lowercase 64-character SHA-256 digest")
         _slug_tuple(self.targets, "targets")
+
+    @classmethod
+    def from_package(cls, pkg: object) -> "SolutionPack":
+        """Construct a SolutionPack descriptor wrapping an in-memory package."""
+        from .package import SolutionPackPackage
+
+        if not isinstance(pkg, SolutionPackPackage):
+            raise SolutionPackError("from_package expects a SolutionPackPackage")
+        return cls(
+            pack_id=pkg.pack_id,
+            version=pkg.version,
+            display_name=pkg.display_name,
+            description=pkg.description,
+            domains=pkg.domains,
+            capabilities=pkg.capabilities,
+            example_ir_ref=f"pkg-{pkg.pack_id}",
+            ir_sha256=pkg.ir_sha256,
+            targets=pkg.targets,
+            package=pkg,
+        )
 
     def to_dict(self) -> dict[str, object]:
         return {
@@ -162,12 +183,15 @@ class SolutionPackRecommendation:
 
 
 def _load_and_validate(pack: SolutionPack) -> ApplicationIR:
-    try:
-        ir = example_ir(pack.example_ir_ref)
-    except Exception as error:  # existing builder owns its bounded error type
-        raise SolutionPackError(
-            f"pack {pack.pack_id}@{pack.version} references unknown example {pack.example_ir_ref!r}"
-        ) from error
+    if getattr(pack, "package", None) is not None:
+        ir = pack.package.to_application_ir()  # type: ignore[union-attr]
+    else:
+        try:
+            ir = example_ir(pack.example_ir_ref)
+        except Exception as error:  # existing builder owns its bounded error type
+            raise SolutionPackError(
+                f"pack {pack.pack_id}@{pack.version} references unknown example {pack.example_ir_ref!r}"
+            ) from error
 
     issues = validate_ir(ir)
     if has_errors(issues):
@@ -220,6 +244,16 @@ class SolutionPackRegistry:
             )
         )
         object.__setattr__(self, "packs", ordered)
+
+    def register_package(self, pkg: object) -> "SolutionPackRegistry":
+        """Return a fresh immutable registry with the given package registered."""
+        pack = SolutionPack.from_package(pkg)
+        existing = [
+            p
+            for p in self.packs
+            if not (p.pack_id == pack.pack_id and p.version == pack.version)
+        ]
+        return SolutionPackRegistry(tuple(existing + [pack]))
 
     def get(self, pack_id: str, version: str | None = None) -> SolutionPack | None:
         """Return an exact version, or the newest registered stable version, for ``pack_id``."""

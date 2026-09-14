@@ -159,6 +159,25 @@ R-441 and R-442 wire Solution Pack selection, customization, AI-delta feature mo
 - Studio web UI: includes a Solution Pack dropdown, real-time recommendation banner, customization inputs, AI Feature Modifications input (`#ai-features`), verified badges, AI delta chips, and full provenance rendering while strictly preserving 0 external resource links in HTML.
 - History: records `pack_id`, `pack_version`, and `applied_ai_delta_change_ids` in `StudioBuildHistory`.
 
+## Packaging, verification, and export CLI
+
+R-443 introduces portable, byte-stable Solution Pack bundles and command-line lifecycle management:
+- Bundle format: `SolutionPackPackage` encapsulates `schema_version` (`"1.0"`), metadata (`pack_id`, `version`, `display_name`, `description`, `domains`, `capabilities`, `targets`, `verify_targets`), `ir_sha256`, canonical `ir_dict`, `verify_plans`, and `package_sha256` checksum.
+- Integrity verification: `parse_solution_pack_package()` and `verify_package()` strictly validate schema, semver, fields, embedded Application IR via `validate_ir`, confirm canonical `ir_sha256` digest matching, and verify the whole-package SHA-256 integrity hash, failing closed on tampering or corruption with `SolutionPackError`.
+- Dynamic registration: `SolutionPackRegistry.register_package(pkg)` registers verified packages dynamically with duplicate ID and target/digest consistency checks.
+- CLI operations:
+  ```bash
+  # Export pack to canonical JSON
+  task agent-engine:solution-pack:package -- export --pack minimal-blog --output minimal-blog.pack.json
+
+  # Verify package integrity
+  task agent-engine:solution-pack:package -- verify minimal-blog.pack.json
+
+  # Inspect package metadata
+  task agent-engine:solution-pack:package -- inspect minimal-blog.pack.json
+  ```
+- 100% offline verification in `task verify` (0 model calls).
+
 ## Next boundary
 
-R-443: Solution Pack registry packaging, export CLI, or multi-surface ecosystem pack synthesis.
+R-444: Solution Pack multi-surface ecosystem pack synthesis or ecosystem pack bundling.

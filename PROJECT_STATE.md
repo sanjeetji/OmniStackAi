@@ -4,16 +4,24 @@ Last updated: 2026-09-14
 ## Current Phase
 Stage 0 (Founder Build Sequence, Brief Section 91) — BASIC/MVP
 
-> **The differentiating SPINE now supports AI-delta feature additions above Solution Packs in the Studio (R-442).**
-> `page.py` includes an AI Feature Modifications input, live synthesis status messages, AI delta badge
-> chips in history items, and applied AI-delta provenance rendering with zero external resources. `server.py`
-> exposes `ai_features` and `ai_delta_prompt` options in `POST /api/build`, `live_serve.py` generates bounded
-> AI deltas via `generate_ai_delta_proposal` (bypassing the model with 0 calls when none requested), and `history.py`
-> tracks applied AI delta change IDs.
-> UI-component series PAUSED at R-415 (resumable). **NEXT:** R-443 Solution Pack registry packaging and export CLI.
+> **The differentiating SPINE now supports portable, verified Solution Pack packaging, export CLI, and dynamic registry ingestion (R-443).**
+> `SolutionPackPackage` defines canonical byte-stable bundles pinning schema version (`"1.0"`), metadata,
+> `ir_sha256`, canonical `ir_dict`, `verify_plans`, and `package_sha256` checksum; `parse_solution_pack_package`
+> strictly validates JSON/dict payloads, verifies embedded Application IR with `validate_ir`, confirms `ir_sha256`
+> digest matching, verifies whole-package SHA-256 integrity, and fails closed with `SolutionPackError` on corruption
+> or drift; `SolutionPackRegistry` supports dynamic package registration via `register_package` and `SolutionPack.from_package`;
+> and `package_cli.py` provides `export`, `verify`, and `inspect` subcommands.
+> UI-component series PAUSED at R-415 (resumable). **NEXT:** R-444 Solution Pack multi-surface ecosystem pack synthesis.
 
 ## Last Completed Task
-Tracker ID: R-442 — Studio AI-Delta Feature Modification Controls Above Solution Packs — DONE.
+Tracker ID: R-443 — Solution Pack Packaging, Verification, and Export CLI — DONE.
+Implemented Solution Pack packaging, verification, CLI, and dynamic registry ingestion:
+- `package.py`: Defined `SolutionPackPackage` bundle with `schema_version` (`"1.0"`), metadata, canonical IR digest, canonical `ir_dict`, verify plans, and whole-package SHA-256 checksum (`compute_package_checksum`); implemented `parse_solution_pack_package` (strict validation, embedded `validate_ir`, digest verification, package integrity check, failing closed on corruption) and `verify_package`.
+- `registry.py`: Extended `SolutionPack` with `.package` reference and `from_package` constructor; extended `SolutionPackRegistry` with dynamic `register_package` capability ensuring no duplicate IDs, valid semver, and digest/target integrity.
+- `package_cli.py`: Implemented CLI with `export` (stdout or file), `verify` (integrity & validity check), and `inspect` (pretty metadata printer) subcommands; wired into `scripts/agent-engine.sh` and `Taskfile.yml` (`task agent-engine:solution-pack:package`).
+- Sixteen new focused tests in `test_solution_pack_package.py`; `task verify` **3,023 passed** offline (+16 net-new tests); lint, security, env, and both builder demos (152 / 149) pass; 0 model calls in test execution.
+
+Immediately preceded by R-442 — Studio AI-Delta Feature Modification Controls Above Solution Packs — DONE.
 Implemented AI-delta feature modification controls in Studio across `server.py`, `live_serve.py`, `page.py`, and `history.py`:
 - `server.py`: Extended `POST /api/build` to accept `ai_features` and `ai_delta_prompt` and pass them to the build pipeline.
 - `live_serve.py`: Formulates typed `ai-delta` `SolutionPackChange` intents targeting capability areas; calls `generate_ai_delta_proposal` via the `ModelProvider` boundary (with async/sync compatibility) when AI features are requested; bypasses the model provider completely (0 model calls) when no AI features are requested; applies the proposal safely via `apply_solution_pack_manifest`; and records full provenance including `applied_ai_delta_change_ids`.

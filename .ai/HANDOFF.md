@@ -1,22 +1,32 @@
 # Current Handoff
 
-Task ID: R-442
+Task ID: R-443
 Status: done
 Phase: BASIC/MVP — Founder Stage 0
 Branch: `main` (the only branch; the GitHub default)
 
-> **The differentiating SPINE now supports AI-delta feature additions above Solution Packs in the Studio.** R-430 proposes the
+> **The differentiating SPINE now supports portable, verified Solution Pack packaging, export CLI, and dynamic registry ingestion.** R-430 proposes the
 > ecosystem, R-431 materializes it, R-432 refines unknown domains, R-433 scopes surfaces, R-434 registers
 > packs, R-435 recommends one, R-436 records bounded intent, R-437 applies safe configuration deterministically,
 > R-438 converts pending manifest AI-delta intents into strictly typed, bounded AIDeltaProposal objects via an
 > explicit opt-in local ModelProvider boundary, R-439 safely applies validated AI-delta proposals to
 > derived Application IRs, R-440 wires derived Solution Pack Application IRs into verified multi-repo
-> builder pipelines, R-441 wires Solution Pack selection into the Studio, and **R-442 wires natural-language
-> AI-delta feature modifications on top of Solution Packs into the Studio UI (`page.py`), live server (`live_serve.py`),
-> HTTP server (`server.py`), and history (`history.py`)**.
-> UI-component series PAUSED at R-415. **NEXT:** R-443 Solution Pack registry packaging and export CLI.
+> builder pipelines, R-441 wires Solution Pack selection into the Studio, R-442 wires natural-language
+> AI-delta feature modifications on top of Solution Packs into the Studio, and **R-443 introduces portable,
+> byte-stable SolutionPackPackage bundles, strict verification, export/inspect CLI, and dynamic package registry ingestion**.
+> UI-component series PAUSED at R-415. **NEXT:** R-444 Solution Pack multi-surface ecosystem pack synthesis.
 
 ## Repo/workflow state
+
+- **R-443 (Solution Pack Packaging, Verification, and Export CLI — fourteenth spine brick)** shipped:
+  `solution_packs/package.py` defines `SolutionPackPackage` bundles pinning schema version (`"1.0"`), metadata,
+  `ir_sha256`, canonical `ir_dict`, `verify_plans`, and `package_sha256` checksum; `parse_solution_pack_package`
+  strictly validates JSON/dict payloads, verifies embedded Application IR with `validate_ir`, confirms `ir_sha256`
+  digest matching, verifies whole-package SHA-256 integrity, and fails closed with `SolutionPackError` on corruption
+  or drift; `SolutionPackRegistry` supports dynamic package registration via `register_package` and `SolutionPack.from_package`;
+  `package_cli.py` provides `export`, `verify`, and `inspect` subcommands; and Taskfile + `scripts/agent-engine.sh`
+  expose `task agent-engine:solution-pack:package`. 16 new tests in `test_solution_pack_package.py`;
+  `task verify` **3,023 passed** offline (+16); lint/security/env + demos (152/149) green; 0 model calls in test execution.
 
 - **R-442 (Studio AI-delta feature modification controls above Solution Packs — thirteenth spine brick)** shipped:
   `server.py` extends `POST /api/build` to accept `ai_features` and `ai_delta_prompt`; `live_serve.py` generates

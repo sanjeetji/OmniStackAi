@@ -1,5 +1,23 @@
 # Work Log
 
+## 2026-09-14 — R-443 (Solution Pack Packaging, Verification, and Export CLI)
+
+- Recorded `.ai/tasks/R-443.md` and `.ai/CURRENT_TASK.yaml` before implementation. Approved implementation plan.
+  Final focused package suite: 16 passing tests across `test_solution_pack_package.py`.
+- Implemented `SolutionPackPackage` in `services/agent-engine/src/omnistackai_agent_engine/solution_packs/package.py`:
+  - Defined frozen canonical `SolutionPackPackage` bundle with `schema_version` (`"1.0"`), metadata (`pack_id`, `version`, `display_name`, `description`, `domains`, `capabilities`, `targets`, `verify_targets`), `ir_sha256`, canonical `ir_dict`, `verify_plans`, and `package_sha256` checksum.
+  - Implemented `compute_package_checksum` using canonical JSON representation with sorted keys and no whitespace.
+  - Implemented `parse_solution_pack_package` with strict validation: validates schema version, semver format, slug format, required keys, non-empty targets/domains, validates embedded Application IR with `validate_ir`, confirms `ir_sha256` digest match, verifies whole-package SHA-256 integrity, and fails closed with `SolutionPackError` on drift, tampering, or corruption.
+  - Implemented `verify_package` returning verification boolean and diagnostics tuple.
+- Extended `SolutionPack` and `SolutionPackRegistry` (`registry.py`):
+  - Added `SolutionPack.package` optional field and `SolutionPack.from_package(pkg)` constructor.
+  - Added `SolutionPackRegistry.register_package(pkg)` supporting dynamic registration of verified packages with duplicate/digest/target drift validation.
+- Implemented CLI in `services/agent-engine/src/omnistackai_agent_engine/solution_packs/package_cli.py`:
+  - Subcommands: `export` (export registered pack to canonical JSON or stdout), `verify` (verify package file integrity, IR validity, and checksums), `inspect` (pretty-print package metadata and integrity).
+  - Wired into `scripts/agent-engine.sh` (`solution-pack-package|solution-pack-export`) and `Taskfile.yml` (`task agent-engine:solution-pack:package`).
+- Gates: `task verify` **3,023 passed** fully offline (+16); agent-engine/repository lint, security, and environment passed; both builder demos remained 152/149 files; 0 model calls in test execution.
+- No dependency, pack baseline/selection, Application IR schema/example, generator, generated output, provider, PostgreSQL, infrastructure, tracker workbook, or `.claude/` change.
+
 ## 2026-09-14 — R-442 (Studio AI-delta feature modification controls above Solution Packs)
 
 - Recorded `.ai/tasks/R-442.md` and `.ai/CURRENT_TASK.yaml` before implementation. Approved implementation plan.

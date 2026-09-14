@@ -323,6 +323,9 @@ customization, and provenance with 0 external resource links in HTML.
 R-442 added the thirteenth spine brick: Studio AI-delta feature modification controls above Solution Packs,
 enabling natural-language feature additions with bounded model proposals, safe IR derivation, and full
 provenance tracking in Studio history and UI.
+R-443 added the fourteenth spine brick: Solution Pack packaging, verification, and export CLI, enabling
+portable, canonical, byte-stable SolutionPackPackage bundles, strict integrity verification, export/inspect CLI,
+and dynamic package registry ingestion.
 
 ENVIRONMENT LIMITS
 - Inside the AI sandbox only: large native-binary downloads (Next.js SWC, Vite/esbuild) can time out, so
@@ -353,7 +356,7 @@ RULES (non-negotiable)
   SHA == local HEAD. Never claim unexecuted tests.
 
 WHAT TO DO NEXT
-- R-430 through R-441 are DONE — the DIFFERENTIATING SPINE now proposes a curated multi-app ecosystem,
+- R-430 through R-443 are DONE — the DIFFERENTIATING SPINE now proposes a curated multi-app ecosystem,
   materializes it as multiple owned repos, and can explicitly refine an unknown domain through local Ollama
   before using the same deterministic planner. R-433 then gives each surface a bounded read/write entity
   policy, relation-safe dependencies, one actor role, and role-gated mutations. R-434 registers immutable,
@@ -365,9 +368,11 @@ WHAT TO DO NEXT
   applies validated AI-delta proposals to Application IR with pin/collision/relation revalidation, immutable
   merging, semantic validation, and byte-stable provenance tracking; R-440 compiles Solution Pack derived
   IRs into owned Git repositories with verification gate ladders and transparent ecosystem builder integration;
-  and R-441 integrates Solution Pack discovery, recommendation, selection, customization, and provenance
-  into the Studio UI, HTTP server, and live build pipeline.
-- NEXT R-442: Studio AI-delta feature modification controls above Solution Packs.
+  R-441 integrates Solution Pack discovery, recommendation, selection, customization, and provenance
+  into the Studio UI, HTTP server, and live build pipeline; R-442 wires Studio AI-delta feature modification
+  controls above Solution Packs; and R-443 introduces portable SolutionPackPackage bundles, strict integrity
+  verification, export/inspect CLI, and dynamic registry ingestion.
+- NEXT R-444: Solution Pack multi-surface ecosystem pack synthesis or ecosystem pack bundling.
   Keep `task verify` model/Docker/DB/install/network-free (any live/model path stays opt-in); preserve
   single-session ownership and explicit trusted-local mode.
 - The UI-component series remains paused at R-415 and can be resumed later under a future free ID.
@@ -378,7 +383,7 @@ WHAT TO DO NEXT
   deploy (OMNISTACKAI_TIER=2 + E2B/Vercel keys) and cloud-model live-verify. Governance-deferred: native
   mobile (R-010 etc.) until web/backend stability.
 
-Begin by reading the files above and running the start protocol, then continue the spine at R-442
+Begin by reading the files above and running the start protocol, then continue the spine at R-444
 and write its Standard AI Task Contract before writing code.
 
 ```

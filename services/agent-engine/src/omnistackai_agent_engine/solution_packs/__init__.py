@@ -34,6 +34,12 @@ from .registry import (
 )
 
 from .builder import SolutionPackBuildResult, build_solution_pack_project
+from .package import (
+    PACKAGE_SCHEMA_VERSION,
+    SolutionPackPackage,
+    parse_solution_pack_package,
+    verify_package,
+)
 
 __all__ = [
     "LEGACY_MANIFEST_SCHEMA_VERSION",
@@ -55,6 +61,10 @@ __all__ = [
     "parse_ai_delta_proposal",
     "SolutionPackBuildResult",
     "build_solution_pack_project",
+    "PACKAGE_SCHEMA_VERSION",
+    "SolutionPackPackage",
+    "parse_solution_pack_package",
+    "verify_package",
     "SolutionPack",
     "SolutionPackError",
     "SolutionPackRecommendation",

@@ -1,28 +1,30 @@
-task_id: R-442
-id: R-442
-title: "Studio AI-Delta Feature Modification Controls Above Solution Packs"
+task_id: R-443
+id: R-443
+title: "Solution Pack Packaging, Verification, and Export CLI"
 status: completed
 phase: MVP
 tracker_row: null
 started_at: "2026-09-14"
 completed_at: "2026-09-14"
 objective: >-
-  Thirteenth brick of the differentiating spine and ninth Solution Pack task. Wire natural-language
-  feature additions and AI modifications on top of Solution Packs into the OmniStackAI Studio web
-  interface (page.py), live server (live_serve.py), HTTP server (server.py), and history tracking (history.py).
+  Fourteenth brick of the differentiating spine and tenth Solution Pack task. Implement standalone,
+  portable Solution Pack packaging (SolutionPackPackage), package verification, and export/inspect CLI tools
+  (package_cli.py), enabling Solution Packs to be bundled with their canonical Application IR, verification
+  plans, and SHA-256 integrity digests into self-contained, redistributable, and tamper-evident .pack.json
+  artifacts that can be independently inspected, verified, exported, and imported into registry instances
+  without reliance on Python module imports.
 allowed_paths:
-  - "services/agent-engine/src/omnistackai_agent_engine/studio/server.py"
-  - "services/agent-engine/src/omnistackai_agent_engine/studio/live_serve.py"
-  - "services/agent-engine/src/omnistackai_agent_engine/studio/page.py"
-  - "services/agent-engine/src/omnistackai_agent_engine/studio/history.py"
-  - "services/agent-engine/src/omnistackai_agent_engine/studio/__init__.py"
-  - "services/agent-engine/tests/test_studio_server.py"
-  - "services/agent-engine/tests/test_studio_history.py"
-  - "services/agent-engine/tests/test_studio_preview.py"
+  - "services/agent-engine/src/omnistackai_agent_engine/solution_packs/package.py"
+  - "services/agent-engine/src/omnistackai_agent_engine/solution_packs/package_cli.py"
+  - "services/agent-engine/src/omnistackai_agent_engine/solution_packs/registry.py"
+  - "services/agent-engine/src/omnistackai_agent_engine/solution_packs/__init__.py"
+  - "services/agent-engine/tests/test_solution_pack_package.py"
+  - "Taskfile.yml"
+  - "scripts/agent-engine.sh"
   - "docs/SOLUTION_PACKS.md"
   - "docs/PROGRESS.md"
   - "docs/RESUME_PROMPT.md"
-  - ".ai/tasks/R-442.md"
+  - ".ai/tasks/R-443.md"
   - ".ai/CURRENT_TASK.yaml"
   - ".ai/PROJECT_STATE.yaml"
   - ".ai/WORK_LOG.md"
@@ -30,13 +32,13 @@ allowed_paths:
   - "PROJECT_STATE.md"
   - "CHANGELOG.md"
 forbidden_changes:
-  - "Do not modify or include the unrelated untracked .claude directory"
-  - "Do not include external resources (http://, https://, src=, <link) in STUDIO_HTML"
-  - "Do not make model calls or network requests when no AI-delta features are requested"
-  - "Do not break existing POST /api/build or GET / callers"
+  - "Do not modify or track the unrelated untracked .claude directory"
+  - "Do not break existing SolutionPack, SolutionPackRegistry, or baseline tests"
+  - "Do not make model calls or network requests during package/verify/export operations"
   - "Do not add external Python dependencies (Python 3.13 stdlib only)"
+  - "Do not change the control-plane database from PostgreSQL"
 required_gates:
-  - "test-first focused test_studio_server.py and test_studio_history.py"
+  - "test-first focused test_solution_pack_package.py"
   - task verify
   - task lint
   - task security:quick
@@ -47,21 +49,20 @@ model_tool_trace:
   routing: none
   local_calls: 0
   cloud_calls: 0
-  note: "0 model calls during verification; local Ollama provider used only when AI deltas are requested in live mode."
+  note: "0 model calls during verification; packaging, export, and verification are 100% deterministic and offline."
 acceptance_criteria:
-  - "POST /api/build accepts ai_features and ai_delta_prompt options."
-  - "live_serve._build generates AI-delta proposals using generate_ai_delta_proposal when ai_features are present."
-  - "live_serve._build bypasses model provider (0 model calls) when no AI-delta features are requested."
-  - "Derived Application IR safely merges proposed entities, APIs, and screens and records applied_ai_delta_change_ids in provenance."
-  - "STUDIO_HTML provides AI feature modifications input and renders applied AI-delta changes in result."
-  - "STUDIO_HTML contains 0 external resources (no http://, https://, src=, <link)."
-  - "History tracks applied_ai_delta_change_ids and displays indicator in history item."
+  - "SolutionPackPackage bundles metadata, canonical Application IR dict, verification plans, and package checksum."
+  - "to_json and to_dict provide byte-stable, deterministic serialization."
+  - "parse_solution_pack_package validates embedded IR (validate_ir), checks IR digest matches ir_sha256, and verifies package checksum."
+  - "SolutionPackRegistry supports registering standalone packages via register_package."
+  - "package_cli.py supports export, verify, and inspect subcommands."
+  - "Taskfile and scripts expose agent-engine:solution-pack:export and inspect commands."
   - "100% offline verification in task verify (0 model calls)."
 evidence:
-  focused_tests: "test_studio_server + test_studio_history: 53 passed in 14.57s (+4 new tests)"
-  task_verify: "3,007 tests passed in 24.82s (0 failures, 0 model calls, 100% offline)"
+  focused_tests: "test_solution_pack_package.py: 16 passed in 0.011s (+16 new tests)"
+  task_verify: "3,023 tests passed in 25.48s (0 failures, 0 model calls, 100% offline)"
   task_lint: "Lint passed"
   task_security: "Stage 0 secret-policy check passed"
   task_env: "Environment contract passed"
   task_demos: "minimal-blog (152 files) and rideshare-favourites (149 files) generated clean repos"
-next_action: "Complete task R-442 and proceed to next task."
+next_action: "Complete task R-443 and proceed to next task."

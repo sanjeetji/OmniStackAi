@@ -1,4 +1,4 @@
-# OmniStackAI — implementation progress (as of R-442)
+# OmniStackAI — implementation progress (as of R-443)
 
 A living summary of what is built, what is pending, and how to see results. Numbers come from the
 execution tracker (`R_&_D/OmniStackAI_Execution_Tracker_v6.xlsx`, `Phase_Roadmap`) plus the state
@@ -6,10 +6,10 @@ files (`.ai/`), Git history, and CHANGELOG for work done past the tracker's last
 
 ## Headline
 
-- **3,007 automated tests pass**, fully offline and network-independent (`task verify`).
+- **3,023 automated tests pass**, fully offline and network-independent (`task verify`).
 - **147 tracker tasks Done, 1 Deferred, 210 Not Started** across 358 tasks (the tracker's planned
   universe ends at R-358).
-- **Plus 84 completed tasks beyond the workbook (R-359 → R-442)**: 57 reusable UI-component suites,
+- **Plus 85 completed tasks beyond the workbook (R-359 → R-443)**: 57 reusable UI-component suites,
   four front-door bricks, R-420 generated-SQL hardening, R-421 managed embedded local preview,
   R-422 collision-free preview ports + status/stop/restart controls, R-423 build history + re-preview,
   R-424 live preview status, R-425 per-build repo actions, R-426 remove-from-history, R-427 a
@@ -22,10 +22,17 @@ files (`.ai/`), Git history, and CHANGELOG for work done past the tracker's last
   configuration application**, **R-438 bounded typed AI-delta proposal schema**, **R-439 safe
   application of validated AI-delta proposals to Application IR**, **R-440 verified multi-repo
   builder pipelines and project generation with Solution Pack derived IRs**, **R-441 live Studio
-  integration and UI controls for Solution Pack selection, customization, and provenance**, and **R-442 Studio
-  AI-delta feature modification controls above Solution Packs** — the first thirteen bricks
-  of the differentiating spine. The generated Next.js component library remains at **110 components**;
-  its series is **PAUSED at R-415** and fully resumable.
+  integration and UI controls for Solution Pack selection, customization, and provenance**, **R-442 Studio
+  AI-delta feature modification controls above Solution Packs**, and **R-443 Solution Pack Packaging,
+  Verification, and Export CLI** — the first fourteen bricks of the differentiating spine.
+  The generated Next.js component library remains at **110 components**; its series is **PAUSED at R-415** and fully resumable.
+- **R-443 introduces portable, verified Solution Pack packaging and export CLI:**
+  `SolutionPackPackage` bundles schema version (`"1.0"`), metadata, canonical IR digest, canonical `ir_dict`,
+  verify gate plans, and whole-package SHA-256 checksum; `parse_solution_pack_package` strictly validates
+  JSON/dict payloads, verifies embedded Application IR with `validate_ir`, confirms `ir_sha256` digest matching,
+  verifies whole-package SHA-256 integrity, and fails closed with `SolutionPackError` on corruption or drift;
+  `SolutionPackRegistry` supports dynamic package registration via `register_package` and `SolutionPack.from_package`;
+  and `package_cli.py` provides `export`, `verify`, and `inspect` subcommands (`task agent-engine:solution-pack:package`).
 - **R-442 wires AI-delta feature modification controls into the Studio:**
   Updated `POST /api/build` to accept `ai_features` and `ai_delta_prompt`; extended `live_serve.py` to formulate
   `ai-delta` changes, call `generate_ai_delta_proposal` (bypassing the model with 0 calls when none requested),
