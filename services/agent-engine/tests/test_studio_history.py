@@ -106,6 +106,13 @@ class TestStudioBuildHistory(unittest.TestCase):
         self.assertFalse(history.remove("does-not-exist"))
         self.assertEqual(len(history.list()["builds"]), 1)
 
+    def test_record_with_solution_pack(self) -> None:
+        history = StudioBuildHistory()
+        history.record(_build("Blog", pack_id="minimal-blog", pack_version="1.0.0"))
+        entry = history.list()["builds"][0]
+        self.assertEqual(entry["pack_id"], "minimal-blog")
+        self.assertEqual(entry["pack_version"], "1.0.0")
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -45,24 +45,119 @@ def _target_dir_for(prompt: str) -> str:
 def _build(
     prompt: str,
     *,
+    pack_id: str | None = None,
+    pack_version: str | None = None,
+    custom_name: str | None = None,
+    custom_description: str | None = None,
+    configuration_changes: list[dict] | None = None,
     preview_manager: StudioPreviewManager | None = None,
     history: StudioBuildHistory | None = None,
 ) -> dict:
-    provider, model_id, max_output, request_timeout = build_ollama_provider_from_env()
-    result = asyncio.run(
-        build_app_from_prompt(
-            prompt,
-            provider,
-            _target_dir_for(prompt),
-            model_id=model_id,
+    if pack_id:
+        from pathlib import Path
+        from ..solution_packs import (
+            DEFAULT_SOLUTION_PACK_REGISTRY,
+            ChangeArea,
+            ChangeOperation,
+            ChangeSource,
+            SolutionPackChange,
+            apply_solution_pack_manifest,
+            build_solution_pack_project,
+            create_solution_pack_manifest,
+        )
+
+        pack = DEFAULT_SOLUTION_PACK_REGISTRY.get(pack_id, version=pack_version)
+        if pack is None:
+            raise ValueError(f"Unknown Solution Pack '{pack_id}'")
+        rec = DEFAULT_SOLUTION_PACK_REGISTRY.recommend(
+            pack.domains[0],
+            required_targets=pack.targets,
+        )
+        changes: list[SolutionPackChange] = []
+        if custom_name:
+            changes.append(
+                SolutionPackChange(
+                    change_id="config-custom-name",
+                    source=ChangeSource.CONFIGURATION,
+                    operation=ChangeOperation.UPDATE,
+                    area=ChangeArea.PROJECT,
+                    target="project:name",
+                    summary="Update project name",
+                    acceptance_criteria=("Project name matches custom name.",),
+                    desired_text=custom_name,
+                )
+            )
+        if custom_description:
+            changes.append(
+                SolutionPackChange(
+                    change_id="config-custom-description",
+                    source=ChangeSource.CONFIGURATION,
+                    operation=ChangeOperation.UPDATE,
+                    area=ChangeArea.PROJECT,
+                    target="project:description",
+                    summary="Update project description",
+                    acceptance_criteria=("Project description matches custom description.",),
+                    desired_text=custom_description,
+                )
+            )
+        manifest = create_solution_pack_manifest(
+            rec,
+            changes=tuple(changes),
+        )
+        app_result = apply_solution_pack_manifest(manifest)
+        target_dir = _target_dir_for(prompt)
+        build_result = build_solution_pack_project(
+            app_result,
+            target_dir,
             author_name=_AUTHOR_NAME,
             author_email=_AUTHOR_EMAIL,
-            max_output_tokens=max_output,
-            timeout_seconds=request_timeout,
             overwrite=True,
         )
-    )
-    payload = app_build_result_to_dict(result)
+        root = Path(build_result.target_dir)
+        files: list[str] = []
+        if root.is_dir():
+            for path in sorted(root.rglob("*")):
+                if not path.is_file():
+                    continue
+                rel = path.relative_to(root)
+                if rel.parts and rel.parts[0] == ".git":
+                    continue
+                files.append(str(rel))
+        payload = {
+            "prompt": prompt,
+            "name": build_result.app_name,
+            "description": app_result.ir.description,
+            "entities": [entity.name for entity in app_result.ir.entities],
+            "file_count": build_result.file_count,
+            "target_dir": build_result.target_dir,
+            "commit_sha": build_result.commit_sha,
+            "files": files,
+            "pack_id": build_result.pack_id,
+            "pack_version": build_result.pack_version,
+            "base_ir_sha256": build_result.base_ir_sha256,
+            "derived_ir_sha256": build_result.derived_ir_sha256,
+            "applied_configuration_change_ids": list(build_result.applied_configuration_change_ids),
+            "applied_ai_delta_change_ids": list(build_result.applied_ai_delta_change_ids),
+            "unapplied_ai_delta_change_ids": list(build_result.unapplied_ai_delta_change_ids),
+            "verify_targets": list(build_result.verify_targets),
+        }
+    else:
+        provider, model_id, max_output, request_timeout = build_ollama_provider_from_env()
+        result = asyncio.run(
+            build_app_from_prompt(
+                prompt,
+                provider,
+                _target_dir_for(prompt),
+                model_id=model_id,
+                author_name=_AUTHOR_NAME,
+                author_email=_AUTHOR_EMAIL,
+                max_output_tokens=max_output,
+                timeout_seconds=request_timeout,
+                overwrite=True,
+            )
+        )
+        payload = app_build_result_to_dict(result)
+
     if history is not None:
         payload["id"] = history.record(payload)
     if preview_manager is None:
@@ -71,7 +166,7 @@ def _build(
             "message": "Build-only mode: start the explicit Studio preview command to run generated code.",
         }
     else:
-        payload["preview"] = preview_manager.replace(result.target_dir)
+        payload["preview"] = preview_manager.replace(payload["target_dir"])
     return payload
 
 
@@ -119,8 +214,8 @@ def main() -> None:
     preview_manager = StudioPreviewManager() if _preview_enabled() else None
     history = StudioBuildHistory()
 
-    def build(prompt: str) -> dict:
-        return _build(prompt, preview_manager=preview_manager, history=history)
+    def build(prompt: str, **options) -> dict:
+        return _build(prompt, preview_manager=preview_manager, history=history, **options)
 
     def delete_build(build_id: str) -> dict:
         removed = history.remove(build_id)

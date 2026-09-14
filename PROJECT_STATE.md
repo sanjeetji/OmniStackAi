@@ -4,14 +4,23 @@ Last updated: 2026-09-14
 ## Current Phase
 Stage 0 (Founder Build Sequence, Brief Section 91) — BASIC/MVP
 
-> **The differentiating SPINE now wires derived Solution Pack Application IRs into verified multi-repo builder pipelines and project generation (R-440).**
-> `build_solution_pack_project` compiles a pack-derived `ApplicationIR` into an owned Git repo on disk,
-> derives verify gate plans, and records complete provenance. `plan_ecosystem` and `build_ecosystem`
-> integrate pack-derived IRs seamlessly for targeted surfaces with full ecosystem domain safety checks.
-> UI-component series PAUSED at R-415 (resumable). **NEXT:** R-441 live Studio integration & UI controls.
+> **The differentiating SPINE now integrates Solution Packs into the Studio UI and HTTP server (R-441).**
+> `page.py` includes a Solution Pack dropdown, real-time recommendation banner, customization inputs,
+> verified badges, and full provenance rendering with zero external resources. `server.py` exposes
+> Solution Pack registry and recommendation endpoints, and `live_serve.py` deterministically builds
+> Solution Pack apps offline (0 model calls).
+> UI-component series PAUSED at R-415 (resumable). **NEXT:** R-442 Studio AI-delta feature modification controls above Solution Packs.
 
 ## Last Completed Task
-Tracker ID: R-440 — Wire Derived Solution Pack Application IRs into Verified Multi-Repo Builder Pipelines and Project Generation — DONE.
+Tracker ID: R-441 — Live Studio Integration and UI Controls for Solution Pack Selection and Modification — DONE.
+Implemented Studio integration across `server.py`, `live_serve.py`, `page.py`, and `history.py`:
+- `server.py`: Added `GET /api/solution-packs` and `POST /api/solution-packs/recommend` endpoints; extended `POST /api/build` with `pack_id`, `pack_version`, `custom_name`, `custom_description`, and `configuration_changes` options.
+- `live_serve.py`: Deterministically builds Solution Pack projects with 0 model calls via `create_solution_pack_manifest`, `apply_solution_pack_manifest`, and `build_solution_pack_project`, recording full provenance (pack id/version, base/derived digests, applied change IDs, verify targets).
+- `history.py`: Tracks `pack_id` and `pack_version` in `StudioBuildHistory`.
+- `page.py`: Enhanced Studio UI with pack select dropdown, real-time recommendation banner, customization inputs, verified pack chip, and provenance box; strictly 0 external resources in HTML.
+- Eight new comprehensive tests; focused studio regressions **63 passed**; `task verify` **3,003 passed** offline (+8); lint, security, env, and both builder demos (152 / 149) pass; 0 model calls.
+
+Immediately preceded by R-440 — Wire Derived Solution Pack Application IRs into Verified Multi-Repo Builder Pipelines and Project Generation — DONE.
 Implemented `solution_packs/builder.py` and `solution_packs/build_cli.py`:
 - `build_solution_pack_project()`: Assembles a Solution Pack derived `ApplicationIR` into an owned Git repository on disk using `assemble_project()` and `create_repository()`. Computes deterministic verification plans via `verify_plans_for_ir()`, and produces a frozen, byte-stable `SolutionPackBuildResult` tracking complete pack and repository provenance.
 - `plan_ecosystem()` and `build_ecosystem()`: Extended with optional `pack_result` or `pack_manifest` (+ `pack_proposal`) arguments. Validates pack compatibility against ecosystem domain (raising `SolutionPackError` on mismatch), transparently substitutes the customer web surface with the pack-derived IR, and serializes pack provenance in the ecosystem plan.

@@ -1,30 +1,29 @@
-task_id: R-440
-id: R-440
-title: "Wire Derived Solution Pack Application IRs into Verified Multi-Repo Builder Pipelines and Project Generation"
-status: done
+task_id: R-441
+id: R-441
+title: "Live Studio Integration and UI Controls for Solution Pack Selection and Modification"
+status: completed
 phase: MVP
 tracker_row: null
 started_at: "2026-09-14"
 completed_at: "2026-09-14"
 objective: >-
-  Eleventh brick of the differentiating spine and seventh Solution Pack task. Connects derived
-  ApplicationIR instances from safe Solution Pack customization (apply_solution_pack_manifest)
-  into verified single-project generation (build_solution_pack_project) and multi-repo ecosystem
-  pipelines (plan_ecosystem / build_ecosystem).
+  Twelfth brick of the differentiating spine and eighth Solution Pack task. Wire Solution Pack
+  discovery, recommendation, selection, customization, and provenance into the OmniStackAI Studio
+  web interface (page.py), live server (live_serve.py), HTTP server (server.py), and history
+  tracking (history.py).
 allowed_paths:
-  - "services/agent-engine/src/omnistackai_agent_engine/solution_packs/builder.py"
-  - "services/agent-engine/src/omnistackai_agent_engine/solution_packs/build_cli.py"
-  - "services/agent-engine/src/omnistackai_agent_engine/solution_packs/__init__.py"
-  - "services/agent-engine/src/omnistackai_agent_engine/intake/ecosystem.py"
-  - "services/agent-engine/src/omnistackai_agent_engine/intake/__init__.py"
-  - "services/agent-engine/tests/test_solution_pack_builder.py"
-  - "services/agent-engine/tests/test_ecosystem.py"
-  - "scripts/agent-engine.sh"
-  - "Taskfile.yml"
+  - "services/agent-engine/src/omnistackai_agent_engine/studio/server.py"
+  - "services/agent-engine/src/omnistackai_agent_engine/studio/live_serve.py"
+  - "services/agent-engine/src/omnistackai_agent_engine/studio/page.py"
+  - "services/agent-engine/src/omnistackai_agent_engine/studio/history.py"
+  - "services/agent-engine/src/omnistackai_agent_engine/studio/__init__.py"
+  - "services/agent-engine/tests/test_studio_server.py"
+  - "services/agent-engine/tests/test_studio_history.py"
+  - "services/agent-engine/tests/test_studio_preview.py"
   - "docs/SOLUTION_PACKS.md"
   - "docs/PROGRESS.md"
   - "docs/RESUME_PROMPT.md"
-  - ".ai/tasks/R-440.md"
+  - ".ai/tasks/R-441.md"
   - ".ai/CURRENT_TASK.yaml"
   - ".ai/PROJECT_STATE.yaml"
   - ".ai/WORK_LOG.md"
@@ -33,41 +32,34 @@ allowed_paths:
   - "CHANGELOG.md"
 forbidden_changes:
   - "Do not modify or include the unrelated untracked .claude directory"
-  - "Do not make model calls, network requests, or database queries during builder execution"
-  - "Do not mutate registered baseline Solution Packs in the registry"
-  - "Do not break backward compatibility for plan_ecosystem / build_ecosystem callers without packs"
+  - "Do not include external resources (http://, https://, src=, <link) in STUDIO_HTML"
+  - "Do not make model calls or network requests when building with a Solution Pack"
+  - "Do not break existing POST /api/build or GET / callers without packs"
   - "Do not add external Python dependencies (Python 3.13 stdlib only)"
 required_gates:
-  - "test-first focused test_solution_pack_builder.py plus R-434/R-435/R-436/R-437/R-438/R-439 regressions"
+  - "test-first focused test_studio_server.py"
   - task verify
   - task lint
   - task security:quick
   - task env:check
   - task builder:demo -- minimal-blog
   - task builder:demo -- rideshare-favourites
-  - "deterministic byte-stable serialization inspection"
 model_tool_trace:
   routing: none
   local_calls: 0
   cloud_calls: 0
-  note: "Deterministic builder pipeline only; 0 model calls."
+  note: "Deterministic server and UI integration; 0 model calls when using Solution Packs."
 acceptance_criteria:
-  - "build_solution_pack_project builds an owned Git repo for a SolutionPackApplicationResult or manifest + proposal, verified against its verify plans."
-  - "SolutionPackBuildResult records pack id, version, base/derived digests, applied/unapplied change IDs, verify targets, commit sha, and file count."
-  - "plan_ecosystem accepts optional pack_result or pack_manifest (+ pack_proposal) and wires the derived Application IR to the matching ecosystem surface."
-  - "build_ecosystem validates verify plans for all apps and captures pack provenance in EcosystemAppBuild."
-  - "Deterministic byte-stable JSON serialization for all result structures."
+  - "GET /api/solution-packs returns registered packs with domain, capabilities, targets, and base digests."
+  - "POST /api/solution-packs/recommend returns domain classification and matching pack recommendation."
+  - "POST /api/build accepts pack_id and custom modification options (custom_name, custom_description)."
+  - "POST /api/build returns full Solution Pack provenance when built with a pack."
+  - "STUDIO_HTML includes Solution Pack selection dropdown, recommendation badge, customization inputs, and provenance rendering."
+  - "STUDIO_HTML contains 0 external resources (no http://, https://, src=, <link)."
+  - "History tracks pack_id and renders pack badges."
   - "100% offline verification in task verify (0 model calls)."
 evidence:
-  baseline_focused: "R-434 through R-439 focused regressions: 67 passed"
-  baseline_verify: "R-439 checkpoint task verify: 2,984 passed fully offline"
-  test_first_red: "Failed initially when builder.py and build_cli.py were missing"
-  focused_test: "test_solution_pack_builder.py and regressions: 86 passed (11 new)"
-  verify: "task verify: 2,995 passed fully offline (+11)"
-  lint: "task lint passed"
-  security: "task security:quick passed"
-  env: "task env:check passed"
-  demos: "task builder:demo -- minimal-blog (152 files) and rideshare-favourites (149 files) passed"
-  deterministic_inspection: "Passed byte-stable JSON serialization and exact provenance checking"
-  tracker: "No workbook row exists beyond R-358; workbook intentionally unchanged."
-next_action: "Proceed to R-441: live Studio integration and UI controls for Solution Pack selection and modification."
+  focused_suite: "test_studio_server (39 passed) + test_studio_history (10 passed) + test_studio_preview (14 passed): 63 passed"
+  verify_suite: "task verify: 3,003 passed fully offline (+8 net-new tests)"
+  quality_gates: "task lint, task security:quick, task env:check, and both builder demos (152/149 files) passed cleanly"
+next_action: "Proceed to R-442: Studio AI-delta feature modification controls above Solution Packs."

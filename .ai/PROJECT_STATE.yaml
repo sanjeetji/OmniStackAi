@@ -2,12 +2,25 @@ schema_version: 1
 project: OmniStackAI
 phase: BASIC/MVP
 founder_stage: 0
-current_task: R-441
+current_task: R-442
 current_status: ready
 branch: main
-last_completed_task: R-440
+last_completed_task: R-441
 last_completed_task_summary: >-
-  Built R-440: wire derived Solution Pack Application IRs into verified multi-repo builder pipelines
+  Built R-441: live Studio integration and UI controls for Solution Pack selection, customization, and provenance
+  (twelfth spine brick and eighth Solution Pack task). Added solution pack discovery and recommendation endpoints
+  to the Studio HTTP server (GET /api/solution-packs and POST /api/solution-packs/recommend), updated POST /api/build
+  to accept pack_id, pack_version, custom_name, custom_description, and configuration_changes, and wired
+  live_serve.py to deterministically compile apps from Solution Packs (0 model calls) using create_solution_pack_manifest,
+  apply_solution_pack_manifest, and build_solution_pack_project with full provenance recorded. Enhanced Studio
+  history (StudioBuildHistory) to track pack_id and pack_version, and updated the Studio web UI (STUDIO_HTML in
+  page.py) with a Solution Pack selection dropdown, real-time recommendation banner, custom metadata inputs,
+  verified solution pack badges, and full SHA-256 / change provenance rendering, while strictly maintaining 0 external
+  resource requests (no http/https/src/<link). Eight new tests; focused studio suite: 63 passed; task verify: 3,003
+  passed fully offline (+8 net-new tests); lint, security, env, and both builder demos (152/149 files) pass; 0 model calls.
+  No dependency, pack baseline/selection, Application IR schema/example, generator, generated output, provider,
+  database, infrastructure, workbook, or .claude change.
+  Previously built R-440: wire derived Solution Pack Application IRs into verified multi-repo builder pipelines
   and project generation (eleventh spine brick). Added Python-3.13-stdlib-only solution_packs/builder.py
   and solution_packs/build_cli.py. build_solution_pack_project assembles a Solution Pack derived
   ApplicationIR (from a SolutionPackApplicationResult or SolutionPackManifest + optional AIDeltaProposal)

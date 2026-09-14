@@ -40,6 +40,9 @@ class StudioBuildHistory:
                 "commit_sha": str(build.get("commit_sha", ""))[:40],
                 "created_at": self._clock(),
             }
+            if build.get("pack_id"):
+                entry["pack_id"] = str(build["pack_id"])
+                entry["pack_version"] = str(build.get("pack_version", ""))
             self._entries.append(entry)
             if len(self._entries) > self._limit:
                 self._entries = self._entries[-self._limit :]

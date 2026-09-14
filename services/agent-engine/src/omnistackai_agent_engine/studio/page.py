@@ -1,21 +1,17 @@
-"""The OmniStackAI Studio page: a self-contained, dependency-free chat-to-create UI.
+"""The complete HTML/CSS/JS payload for the OmniStackAI Studio web page.
 
-Served verbatim by ``studio.server`` at ``GET /``. Static and diff-invariant: inline CSS
-and JS only, no external requests, no npm/pnpm, no framework. It POSTs the description to
-``/api/build`` and renders the resulting generated app.
+Zero external assets: no CDNs, no web fonts, no external JS/CSS, no analytics.
+Self-contained, fully functional offline. Served directly by ``omnistackai_agent_engine.studio.server``.
 """
 
-from __future__ import annotations
-
-STUDIO_HTML = r"""<!doctype html>
+STUDIO_HTML = """<!doctype html>
 <html lang="en">
 <head>
-<meta charset="utf-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>OmniStackAI Studio</title>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>OmniStackAI Studio - Chat to App</title>
 <style>
-  :root { color-scheme: dark; }
-  * { box-sizing: border-box; }
+  *, *::before, *::after { box-sizing: border-box; }
   body {
     margin: 0; min-height: 100vh;
     font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
@@ -54,6 +50,126 @@ STUDIO_HTML = r"""<!doctype html>
     font-size: 15px; font-weight: 700; cursor: pointer;
   }
   button:disabled { opacity: .55; cursor: default; }
+  .pack-panel {
+    margin-top: 14px;
+    padding: 12px 14px;
+    background: rgba(11, 18, 32, 0.7);
+    border: 1px solid #223148;
+    border-radius: 10px;
+  }
+  .pack-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    margin-bottom: 8px;
+  }
+  .pack-title {
+    font-size: 13px;
+    font-weight: 600;
+    color: #9fb0c3;
+    text-transform: uppercase;
+    letter-spacing: .4px;
+  }
+  .pack-banner {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 12px;
+    font-weight: 600;
+    color: #6ee7ff;
+    background: rgba(110, 231, 255, 0.12);
+    border: 1px solid rgba(110, 231, 255, 0.3);
+    border-radius: 999px;
+    padding: 3px 10px;
+  }
+  .pack-row {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+    flex-wrap: wrap;
+  }
+  .pack-select {
+    flex: 1;
+    min-width: 220px;
+    background: #080e19;
+    color: #e6edf3;
+    border: 1px solid #223148;
+    border-radius: 8px;
+    padding: 8px 12px;
+    font-size: 13.5px;
+    font-family: inherit;
+    outline: none;
+  }
+  .pack-select:focus { border-color: #6ee7ff; }
+  .pack-details {
+    font-size: 12.5px;
+    color: #9fb0c3;
+    width: 100%;
+    margin-top: 4px;
+  }
+  .pack-customization {
+    margin-top: 10px;
+    padding-top: 10px;
+    border-top: 1px solid #1a2638;
+    display: flex;
+    gap: 12px;
+    flex-wrap: wrap;
+  }
+  .pack-input-group {
+    flex: 1;
+    min-width: 180px;
+  }
+  .pack-input-group label {
+    display: block;
+    font-size: 11.5px;
+    color: #7d90a9;
+    margin-bottom: 4px;
+  }
+  .pack-input-group input {
+    width: 100%;
+    background: #080e19;
+    color: #e6edf3;
+    border: 1px solid #223148;
+    border-radius: 6px;
+    padding: 6px 10px;
+    font-size: 13px;
+    font-family: inherit;
+    outline: none;
+  }
+  .pack-input-group input:focus { border-color: #6ee7ff; }
+  .badge-pack {
+    display: inline-block;
+    background: rgba(99, 102, 241, 0.2);
+    border: 1px solid rgba(99, 102, 241, 0.45);
+    color: #c7d2fe;
+    border-radius: 6px;
+    padding: 4px 10px;
+    font-size: 12.5px;
+    font-weight: 600;
+    margin-bottom: 12px;
+  }
+  .prov-box {
+    margin: 8px 0 14px;
+    padding: 10px 12px;
+    background: rgba(8, 14, 25, 0.85);
+    border: 1px solid #223148;
+    border-radius: 8px;
+    font-size: 12px;
+    color: #8fa0b5;
+    line-height: 1.6;
+    word-break: break-word;
+  }
+  .pack-chip {
+    display: inline-block;
+    margin-left: 6px;
+    background: rgba(34, 211, 238, 0.15);
+    border: 1px solid rgba(34, 211, 238, 0.35);
+    color: #6ee7ff;
+    font-size: 11px;
+    border-radius: 4px;
+    padding: 1px 5px;
+  }
   .status { margin-top: 18px; padding: 12px 14px; border-radius: 10px; font-size: 14px; }
   .status.building { background: rgba(99,102,241,0.14); border: 1px solid rgba(99,102,241,0.4); color: #c7d2fe; }
   .status.error { background: rgba(244,63,94,0.12); border: 1px solid rgba(244,63,94,0.4); color: #fecdd3; }
@@ -107,6 +223,29 @@ STUDIO_HTML = r"""<!doctype html>
 
   <form id="build-form">
     <textarea id="prompt" placeholder="e.g. Build a recipe box where users save recipes, each recipe has ingredients and cooking steps"></textarea>
+    <div class="pack-panel">
+      <div class="pack-header">
+        <label for="pack-select" class="pack-title">Solution Pack</label>
+        <span id="pack-banner" class="pack-banner" hidden></span>
+      </div>
+      <div class="pack-row">
+        <select id="pack-select" class="pack-select">
+          <option value="auto">Auto-detect from prompt (Recommended)</option>
+          <option value="none">AI Model Build (No pack)</option>
+        </select>
+        <div id="pack-details" class="pack-details" hidden></div>
+      </div>
+      <div id="pack-customization" class="pack-customization" hidden>
+        <div class="pack-input-group">
+          <label for="custom-name">Custom App Name (optional)</label>
+          <input type="text" id="custom-name" placeholder="e.g. My Custom App">
+        </div>
+        <div class="pack-input-group">
+          <label for="custom-desc">Custom Description (optional)</label>
+          <input type="text" id="custom-desc" placeholder="e.g. A fast responsive application">
+        </div>
+      </div>
+    </div>
     <div class="row">
       <div class="examples" id="examples">
         <span class="ex">A blog with posts and comments</span>
@@ -119,9 +258,11 @@ STUDIO_HTML = r"""<!doctype html>
   </form>
 
   <section id="result" class="result" hidden>
+    <div id="r-pack-badge" class="badge-pack" hidden></div>
     <h2 id="r-name">App</h2>
     <p class="desc" id="r-desc"></p>
     <div class="chips" id="r-entities"></div>
+    <div id="r-provenance" class="prov-box" hidden></div>
     <div class="meta">
       <div><b id="r-count">0 files</b> generated</div>
       <div>commit <b id="r-commit"></b></div>
@@ -165,6 +306,101 @@ STUDIO_HTML = r"""<!doctype html>
   var statusEl = document.getElementById('status');
   var result = document.getElementById('result');
 
+  var packSelect = document.getElementById('pack-select');
+  var packBanner = document.getElementById('pack-banner');
+  var packDetails = document.getElementById('pack-details');
+  var packCustomization = document.getElementById('pack-customization');
+  var customNameInput = document.getElementById('custom-name');
+  var customDescInput = document.getElementById('custom-desc');
+
+  var availablePacks = [];
+  var recommendedPackId = null;
+  var recommendDebounceTimer = null;
+
+  function loadSolutionPacks() {
+    fetch('/api/solution-packs')
+      .then(function (res) { return res.ok ? res.json() : { packs: [] }; })
+      .then(function (data) {
+        availablePacks = (data && data.packs) || [];
+        availablePacks.forEach(function (p) {
+          var opt = document.createElement('option');
+          opt.value = p.pack_id;
+          opt.textContent = (p.display_name || p.pack_id) + ' (' + p.pack_id + '@' + (p.version || '1.0.0') + ')';
+          packSelect.appendChild(opt);
+        });
+        updatePackUi();
+      })
+      .catch(function () {});
+  }
+
+  function getSelectedOrRecommendedPack() {
+    var val = packSelect.value;
+    if (val === 'none') { return null; }
+    var targetId = val === 'auto' ? recommendedPackId : val;
+    if (!targetId) { return null; }
+    for (var i = 0; i < availablePacks.length; i++) {
+      if (availablePacks[i].pack_id === targetId) { return availablePacks[i]; }
+    }
+    return null;
+  }
+
+  function updatePackUi() {
+    var pack = getSelectedOrRecommendedPack();
+    if (pack) {
+      packDetails.hidden = false;
+      packDetails.textContent = (pack.description || '') + ' - Targets: ' + (pack.targets || pack.verify_targets || []).join(', ');
+      packCustomization.hidden = false;
+    } else {
+      packDetails.hidden = true;
+      packCustomization.hidden = true;
+    }
+  }
+
+  function checkPackRecommendation(prompt) {
+    if (!prompt) {
+      recommendedPackId = null;
+      packBanner.hidden = true;
+      updatePackUi();
+      return;
+    }
+    fetch('/api/solution-packs/recommend', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ prompt: prompt })
+    })
+      .then(function (res) { return res.ok ? res.json() : null; })
+      .then(function (data) {
+        if (data && data.recommendation && data.recommendation.status === 'selected' && data.recommendation.selection) {
+          recommendedPackId = data.recommendation.selection.pack_id;
+          packBanner.textContent = 'Solution Pack: ' + recommendedPackId;
+          packBanner.hidden = false;
+        } else {
+          recommendedPackId = null;
+          packBanner.hidden = true;
+        }
+        updatePackUi();
+      })
+      .catch(function () {});
+  }
+
+  packSelect.addEventListener('change', function () {
+    if (packSelect.value === 'none') {
+      packBanner.hidden = true;
+    } else if (packSelect.value === 'auto' && recommendedPackId) {
+      packBanner.hidden = false;
+    }
+    updatePackUi();
+  });
+
+  promptEl.addEventListener('input', function () {
+    clearTimeout(recommendDebounceTimer);
+    recommendDebounceTimer = setTimeout(function () {
+      if (packSelect.value === 'auto') {
+        checkPackRecommendation(promptEl.value.trim());
+      }
+    }, 350);
+  });
+
   function localPreviewUrl(value) {
     if (typeof value !== 'string' || !value) { return null; }
     try {
@@ -201,12 +437,10 @@ STUDIO_HTML = r"""<!doctype html>
     var restartBtn = document.getElementById('preview-restart');
     var state = (preview && preview.status) || null;
     var url = state === 'ready' ? localPreviewUrl(preview.web_url) : null;
-    // Stop is available only while running; Restart whenever a build has a preview outcome.
     stopBtn.hidden = state !== 'ready';
     restartBtn.hidden = !(state === 'ready' || state === 'stopped' || state === 'error');
     if (url) {
       previewStatus.textContent = preview.message || 'The generated application is running locally.';
-      // Only (re)load the iframe when the preview URL actually changes — polling must not reload it.
       if (currentPreviewUrl !== url) {
         frame.src = url;
         currentPreviewUrl = url;
@@ -260,6 +494,8 @@ STUDIO_HTML = r"""<!doctype html>
       file_count: build.file_count,
       target_dir: build.target_dir,
       commit_sha: build.commit_sha,
+      pack_id: build.pack_id,
+      pack_version: build.pack_version,
       files: []
     });
     var previewStatus = document.getElementById('preview-status');
@@ -355,6 +591,12 @@ STUDIO_HTML = r"""<!doctype html>
       var name = document.createElement('div');
       name.className = 'h-name';
       name.textContent = b.name || 'App';
+      if (b.pack_id) {
+        var chip = document.createElement('span');
+        chip.className = 'pack-chip';
+        chip.textContent = b.pack_id;
+        name.appendChild(chip);
+      }
       var prompt = document.createElement('div');
       prompt.className = 'h-prompt';
       prompt.textContent = (b.prompt || '') + '  -  ' + (b.file_count || 0) + ' files';
@@ -383,10 +625,33 @@ STUDIO_HTML = r"""<!doctype html>
     if (e.target && e.target.classList.contains('ex')) {
       promptEl.value = 'Build ' + e.target.textContent.replace(/^A /, 'a ');
       promptEl.focus();
+      if (packSelect.value === 'auto') {
+        checkPackRecommendation(promptEl.value.trim());
+      }
     }
   });
 
   function renderResult(data) {
+    var packBadge = document.getElementById('r-pack-badge');
+    var provBox = document.getElementById('r-provenance');
+    if (data.pack_id) {
+      packBadge.textContent = 'Verified Solution Pack: ' + data.pack_id + (data.pack_version ? '@' + data.pack_version : '');
+      packBadge.hidden = false;
+      var provText = 'Provenance: Base IR: ' + (data.base_ir_sha256 ? data.base_ir_sha256.slice(0, 12) : 'n/a') +
+                     ' | Derived IR: ' + (data.derived_ir_sha256 ? data.derived_ir_sha256.slice(0, 12) : 'n/a');
+      if (data.applied_configuration_change_ids && data.applied_configuration_change_ids.length) {
+        provText += ' | Applied Config: ' + data.applied_configuration_change_ids.join(', ');
+      }
+      if (data.applied_ai_delta_change_ids && data.applied_ai_delta_change_ids.length) {
+        provText += ' | Applied AI Deltas: ' + data.applied_ai_delta_change_ids.join(', ');
+      }
+      provBox.textContent = provText;
+      provBox.hidden = false;
+    } else {
+      packBadge.hidden = true;
+      provBox.hidden = true;
+    }
+
     document.getElementById('r-name').textContent = data.name || 'App';
     document.getElementById('r-desc').textContent = data.description || '';
     var ents = document.getElementById('r-entities');
@@ -419,11 +684,25 @@ STUDIO_HTML = r"""<!doctype html>
     result.hidden = true;
     statusEl.hidden = false;
     statusEl.className = 'status building';
-    statusEl.textContent = 'Building your app - this runs a local model and can take a moment...';
+
+    var selectedPack = getSelectedOrRecommendedPack();
+    var payload = { prompt: prompt };
+    if (selectedPack) {
+      payload.pack_id = selectedPack.pack_id;
+      payload.pack_version = selectedPack.version;
+      var cName = (customNameInput.value || '').trim();
+      if (cName) { payload.custom_name = cName; }
+      var cDesc = (customDescInput.value || '').trim();
+      if (cDesc) { payload.custom_description = cDesc; }
+      statusEl.textContent = 'Building app from verified Solution Pack (' + selectedPack.pack_id + ')...';
+    } else {
+      statusEl.textContent = 'Building your app - this runs a local model and can take a moment...';
+    }
+
     fetch('/api/build', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ prompt: prompt })
+      body: JSON.stringify(payload)
     }).then(function (res) {
       return res.json().then(function (data) { return { ok: res.ok, status: res.status, data: data }; });
     }).then(function (out) {
@@ -439,6 +718,7 @@ STUDIO_HTML = r"""<!doctype html>
     });
   });
 
+  loadSolutionPacks();
   loadHistory();
 })();
 </script>

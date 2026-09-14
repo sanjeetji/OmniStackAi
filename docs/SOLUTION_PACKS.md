@@ -149,6 +149,15 @@ When `proposal` is provided:
 - Exposes CLI via `python3 -m omnistackai_agent_engine.solution_packs.build_cli` and `task agent-engine:solution-pack:build`.
 - 100% offline verification in `task verify` (0 model calls).
 
+## Studio integration and UI controls
+
+R-441 wires Solution Pack selection, customization, and provenance into the Studio:
+- HTTP API: `GET /api/solution-packs` returns the registered packs; `POST /api/solution-packs/recommend` returns domain classification and matching pack recommendation.
+- Build options: `POST /api/build` accepts `pack_id`, `pack_version`, `custom_name`, `custom_description`, and `configuration_changes`.
+- Zero-model builds: when building with a Solution Pack, `live_serve.py` uses `create_solution_pack_manifest`, `apply_solution_pack_manifest`, and `build_solution_pack_project` to deterministically create the repository and record full provenance without any model calls.
+- Studio web UI: includes a Solution Pack dropdown, real-time recommendation banner, customization inputs, verified badges, and provenance box while preserving 0 external resource links in HTML.
+- History: records `pack_id` and `pack_version` in `StudioBuildHistory`.
+
 ## Next boundary
 
-R-441: live Studio integration and UI controls for Solution Pack selection and modification.
+R-442: Studio AI-delta feature modification controls above Solution Packs.

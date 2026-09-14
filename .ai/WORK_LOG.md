@@ -1,5 +1,30 @@
 # Work Log
 
+## 2026-09-14 — R-441 (live Studio integration and UI controls for Solution Pack selection, customization, and provenance)
+
+- Recorded `.ai/tasks/R-441.md` and `.ai/CURRENT_TASK.yaml` before implementation. Test-first focused suite
+  failed on missing Solution Pack routes and UI tokens; final focused studio suite: 63 passing tests (8 net-new tests across test_studio_server and test_studio_history).
+- Extended Studio HTTP server (`services/agent-engine/src/omnistackai_agent_engine/studio/server.py`):
+  - `GET /api/solution-packs`: returns registered packs with domain, capabilities, targets, and base digests from `SolutionPackRegistry`.
+  - `POST /api/solution-packs/recommend`: returns domain classification and matching pack recommendation via `propose_ecosystem` and `registry.recommend`.
+  - `POST /api/build`: accepts `pack_id`, `pack_version`, `custom_name`, `custom_description`, and `configuration_changes` options and passes them to `build_fn`.
+- Extended `live_serve.py`:
+  - When `pack_id` is provided, deterministically builds the app with 0 model calls using `create_solution_pack_manifest`, `apply_solution_pack_manifest`, and `build_solution_pack_project`.
+  - Records full Solution Pack provenance in build payload: `pack_id`, `pack_version`, `base_ir_sha256`, `derived_ir_sha256`, `applied_configuration_change_ids`, `applied_ai_delta_change_ids`, `unapplied_ai_delta_change_ids`, and `verify_targets`.
+- Enhanced `StudioBuildHistory` (`history.py`):
+  - Records `pack_id` and `pack_version` in bounded secret-free history entries.
+- Enhanced Studio web UI (`page.py`):
+  - Added Solution Pack dropdown selector (`id="pack-select"`) with Auto-detect (recommended), AI Model Build (no pack), and individual pack options.
+  - Real-time prompt recommendation banner (`id="pack-banner"`).
+  - Custom app name and description inputs (`id="custom-name"`, `id="custom-desc"`).
+  - Provenance box in build results rendering base/derived SHA-256 digests and applied change IDs.
+  - Verified Solution Pack badge in build result and history items (`.pack-chip`).
+  - Preserved 100% self-contained inline CSS and JS with 0 external resource requests (no `http://`, `https://`, `src=`, `<link`).
+- Gates: `task verify` 3,003 passed fully offline (+8); agent-engine/repository lint, security, and environment
+  passed; both builder demos remained 152/149 files; 0 model calls.
+- No dependency, pack baseline/selection, Application IR schema/example, generator, generated output, provider,
+  PostgreSQL, infrastructure, tracker workbook, or `.claude/` change. Workbook remains unchanged past R-358.
+
 ## 2026-09-14 — R-440 (wire derived Solution Pack Application IRs into verified multi-repo builder pipelines and project generation)
 
 - Recorded `.ai/tasks/R-440.md` and `.ai/CURRENT_TASK.yaml` before implementation. Test-first focused suite

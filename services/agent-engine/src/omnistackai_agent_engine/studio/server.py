@@ -12,9 +12,11 @@ import json
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from typing import Callable
 
+from ..intake.ecosystem import propose_ecosystem
+from ..solution_packs import DEFAULT_SOLUTION_PACK_REGISTRY, SolutionPackRegistry
 from .page import STUDIO_HTML
 
-BuildFn = Callable[[str], dict]
+BuildFn = Callable[..., dict]
 ControlFn = Callable[[], dict]
 PreviewBuildFn = Callable[[str], dict]
 
@@ -30,7 +32,9 @@ def _make_handler(
     preview_build_fn: PreviewBuildFn | None,
     open_dir_fn: PreviewBuildFn | None,
     delete_build_fn: PreviewBuildFn | None,
+    registry: SolutionPackRegistry | None = None,
 ) -> type[BaseHTTPRequestHandler]:
+    pack_registry = registry or DEFAULT_SOLUTION_PACK_REGISTRY
     class StudioHandler(BaseHTTPRequestHandler):
         server_version = "OmniStackAIStudio/1.0"
 
@@ -106,6 +110,8 @@ def _make_handler(
                     self._send_json(404, {"error": "preview controls are not enabled"})
                 else:
                     self._send_json(200, history_fn())
+            elif self.path == "/api/solution-packs":
+                self._send_json(200, {"packs": [p.to_dict() for p in pack_registry.packs]})
             else:
                 self._send(404, "text/plain; charset=utf-8", b"not found")
 
@@ -125,25 +131,60 @@ def _make_handler(
             if self.path == "/api/history/delete":
                 self._run_id_control(delete_build_fn)
                 return
+            if self.path == "/api/solution-packs/recommend":
+                data = self._read_json_body()
+                if data is None:
+                    return
+                prompt = str(data.get("prompt", "")).strip()
+                domain = str(data.get("domain", "")).strip()
+                if not prompt and not domain:
+                    self._send_json(400, {"error": "prompt or domain is required"})
+                    return
+                if not domain:
+                    try:
+                        proposal = propose_ecosystem(prompt)
+                        domain = proposal.domain
+                    except Exception:
+                        domain = "custom-application"
+                try:
+                    recommendation = pack_registry.recommend(domain)
+                    self._send_json(
+                        200,
+                        {
+                            "domain": domain,
+                            "recommendation": recommendation.to_dict(),
+                            "packs": [p.to_dict() for p in pack_registry.packs],
+                        },
+                    )
+                except Exception as error:
+                    self._send_json(502, {"error": str(error)})
+                return
             if self.path != "/api/build":
                 self._send_json(404, {"error": "not found"})
                 return
-            length = int(self.headers.get("Content-Length", 0) or 0)
-            if length > _MAX_BODY_BYTES:
-                self._send_json(413, {"error": "request body too large"})
+            data = self._read_json_body()
+            if data is None:
                 return
-            raw = self.rfile.read(length) if length else b""
-            try:
-                data = json.loads(raw.decode("utf-8")) if raw else {}
-                prompt = str(data.get("prompt", "")).strip()
-            except (json.JSONDecodeError, UnicodeDecodeError, AttributeError):
-                self._send_json(400, {"error": "invalid JSON body"})
-                return
+            prompt = str(data.get("prompt", "")).strip()
             if not prompt:
                 self._send_json(400, {"error": "prompt is required"})
                 return
+
+            options: dict = {}
+            for key in ("pack_id", "pack_version", "custom_name", "custom_description"):
+                if key in data and data[key] is not None and str(data[key]).strip():
+                    options[key] = str(data[key]).strip()
+            if "configuration_changes" in data and isinstance(data["configuration_changes"], list):
+                options["configuration_changes"] = data["configuration_changes"]
+
             try:
-                result = build_fn(prompt)
+                if options:
+                    try:
+                        result = build_fn(prompt, **options)
+                    except TypeError:
+                        result = build_fn(prompt)
+                else:
+                    result = build_fn(prompt)
             except Exception as error:  # surface any build failure as a clean 502
                 self._send_json(502, {"error": str(error)})
                 return
@@ -164,6 +205,7 @@ def create_studio_server(
     preview_build_fn: PreviewBuildFn | None = None,
     open_dir_fn: PreviewBuildFn | None = None,
     delete_build_fn: PreviewBuildFn | None = None,
+    solution_pack_registry: SolutionPackRegistry | None = None,
 ) -> ThreadingHTTPServer:
     """Create (but do not start) a studio server bound to ``host``/``port``.
 
@@ -186,5 +228,6 @@ def create_studio_server(
             preview_build_fn,
             open_dir_fn,
             delete_build_fn,
+            registry=solution_pack_registry,
         ),
     )

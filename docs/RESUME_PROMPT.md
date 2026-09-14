@@ -345,7 +345,7 @@ RULES (non-negotiable)
   SHA == local HEAD. Never claim unexecuted tests.
 
 WHAT TO DO NEXT
-- R-430 through R-440 are DONE — the DIFFERENTIATING SPINE now proposes a curated multi-app ecosystem,
+- R-430 through R-441 are DONE — the DIFFERENTIATING SPINE now proposes a curated multi-app ecosystem,
   materializes it as multiple owned repos, and can explicitly refine an unknown domain through local Ollama
   before using the same deterministic planner. R-433 then gives each surface a bounded read/write entity
   policy, relation-safe dependencies, one actor role, and role-gated mutations. R-434 registers immutable,
@@ -355,9 +355,11 @@ WHAT TO DO NEXT
   AI-delta intent pending; R-438 converts pending manifest AI-delta intents into strict validated proposal
   data via an opt-in local ModelProvider boundary (0 calls when no AI-delta changes exist); R-439 safely
   applies validated AI-delta proposals to Application IR with pin/collision/relation revalidation, immutable
-  merging, semantic validation, and byte-stable provenance tracking; and R-440 compiles Solution Pack derived
-  IRs into owned Git repositories with verification gate ladders and transparent ecosystem builder integration.
-- NEXT R-441: live Studio integration and UI controls for Solution Pack selection and modification.
+  merging, semantic validation, and byte-stable provenance tracking; R-440 compiles Solution Pack derived
+  IRs into owned Git repositories with verification gate ladders and transparent ecosystem builder integration;
+  and R-441 integrates Solution Pack discovery, recommendation, selection, customization, and provenance
+  into the Studio UI, HTTP server, and live build pipeline.
+- NEXT R-442: Studio AI-delta feature modification controls above Solution Packs.
   Keep `task verify` model/Docker/DB/install/network-free (any live/model path stays opt-in); preserve
   single-session ownership and explicit trusted-local mode.
 - The UI-component series remains paused at R-415 and can be resumed later under a future free ID.
@@ -368,7 +370,7 @@ WHAT TO DO NEXT
   deploy (OMNISTACKAI_TIER=2 + E2B/Vercel keys) and cloud-model live-verify. Governance-deferred: native
   mobile (R-010 etc.) until web/backend stability.
 
-Begin by reading the files above and running the start protocol, then continue the spine at R-441
+Begin by reading the files above and running the start protocol, then continue the spine at R-442
 and write its Standard AI Task Contract before writing code.
 
 ```

@@ -1,21 +1,31 @@
 # Current Handoff
 
-Task ID: R-440
+Task ID: R-441
 Status: done
 Phase: BASIC/MVP — Founder Stage 0
 Branch: `main` (the only branch; the GitHub default)
 
-> **The differentiating SPINE now wires derived Solution Pack Application IRs into verified multi-repo builder pipelines and project generation.** R-430 proposes the
+> **The differentiating SPINE now integrates Solution Packs into the Studio UI and HTTP server.** R-430 proposes the
 > ecosystem, R-431 materializes it, R-432 refines unknown domains, R-433 scopes surfaces, R-434 registers
 > packs, R-435 recommends one, R-436 records bounded intent, R-437 applies safe configuration deterministically,
 > R-438 converts pending manifest AI-delta intents into strictly typed, bounded AIDeltaProposal objects via an
 > explicit opt-in local ModelProvider boundary, R-439 safely applies validated AI-delta proposals to
-> derived Application IRs, and **R-440 wires derived Solution Pack Application IRs into verified multi-repo
-> builder pipelines (build_solution_pack_project, plan_ecosystem, build_ecosystem) with full verify plans and
-> deterministic provenance**.
-> UI-component series PAUSED at R-415. **NEXT:** R-441 live Studio integration and UI controls for Solution Pack selection and modification.
+> derived Application IRs, R-440 wires derived Solution Pack Application IRs into verified multi-repo
+> builder pipelines, and **R-441 wires Solution Pack discovery, recommendation, selection, customization, and provenance
+> into the OmniStackAI Studio UI (`page.py`), live server (`live_serve.py`), HTTP server (`server.py`), and history (`history.py`)**.
+> UI-component series PAUSED at R-415. **NEXT:** R-442 Studio AI-delta feature modification controls above Solution Packs.
 
 ## Repo/workflow state
+
+- **R-441 (live Studio integration and UI controls for Solution Pack selection and modification — twelfth spine brick)** shipped:
+  `server.py` adds `GET /api/solution-packs` and `POST /api/solution-packs/recommend` endpoints; `POST /api/build` accepts
+  `pack_id`, `pack_version`, `custom_name`, `custom_description`, and `configuration_changes`; `live_serve.py` compiles
+  Solution Pack projects deterministically with 0 model calls using `create_solution_pack_manifest`, `apply_solution_pack_manifest`,
+  and `build_solution_pack_project`; `history.py` tracks `pack_id` and `pack_version`; `page.py` includes Solution Pack
+  selection dropdown, real-time recommendation banner, customization inputs, verified badges, and full SHA-256 / change
+  provenance rendering with zero external resources in HTML. 8 new tests; focused studio suite: 63 passed; `task verify`
+  **3,003 passed** offline (+8); lint/security/env + demos (152/149) green; 0 model calls. Workbook unchanged past R-358.
+
 
 - **R-440 (wire derived Solution Pack Application IRs into verified builder pipelines — eleventh spine brick)** shipped:
   `solution_packs/builder.py` and `solution_packs/build_cli.py` add `build_solution_pack_project`, which assembles

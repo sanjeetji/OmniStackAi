@@ -337,5 +337,111 @@ class TestResultDict(unittest.TestCase):
             json.dumps(payload)  # must be JSON-serializable
 
 
+class TestStudioSolutionPacks(unittest.TestCase):
+    def test_get_solution_packs(self) -> None:
+        with running_server(RecordingBuild(STUB_RESULT)) as base:
+            status, body = _get(base + "/api/solution-packs")
+            self.assertEqual(status, 200)
+            data = json.loads(body)
+            self.assertIn("packs", data)
+            pack_ids = [p["pack_id"] for p in data["packs"]]
+            self.assertIn("minimal-blog", pack_ids)
+            self.assertIn("rideshare-favourites", pack_ids)
+            blog = next(p for p in data["packs"] if p["pack_id"] == "minimal-blog")
+            self.assertEqual(blog["version"], "1.0.0")
+            self.assertIn("blog-cms", blog["domains"])
+            self.assertIn("nextjs-web", blog["targets"])
+
+    def test_post_solution_packs_recommend_for_blog(self) -> None:
+        with running_server(RecordingBuild(STUB_RESULT)) as base:
+            status, data = _post(
+                base + "/api/solution-packs/recommend",
+                obj={"prompt": "A blog with posts and comments"},
+            )
+            self.assertEqual(status, 200)
+            self.assertEqual(data["domain"], "blog-cms")
+            self.assertEqual(data["recommendation"]["status"], "selected")
+            self.assertEqual(data["recommendation"]["selection"]["pack_id"], "minimal-blog")
+
+    def test_post_solution_packs_recommend_missing_prompt_is_400(self) -> None:
+        with running_server(RecordingBuild(STUB_RESULT)) as base:
+            status, data = _post(base + "/api/solution-packs/recommend", obj={})
+            self.assertEqual(status, 400)
+            self.assertIn("error", data)
+
+    def test_post_build_passes_solution_pack_options(self) -> None:
+        captured = {}
+
+        def pack_build(prompt: str, **options) -> dict:
+            captured["prompt"] = prompt
+            captured["options"] = options
+            return {
+                **STUB_RESULT,
+                "pack_id": options.get("pack_id"),
+                "pack_version": "1.0.0",
+                "applied_configuration_change_ids": ["config-name"],
+            }
+
+        with running_server(pack_build) as base:
+            status, data = _post(
+                base + "/api/build",
+                obj={
+                    "prompt": "Build a tech blog",
+                    "pack_id": "minimal-blog",
+                    "custom_name": "My Tech Blog",
+                    "custom_description": "A tech blog for developers",
+                },
+            )
+            self.assertEqual(status, 200)
+            self.assertEqual(captured["prompt"], "Build a tech blog")
+            self.assertEqual(captured["options"].get("pack_id"), "minimal-blog")
+            self.assertEqual(captured["options"].get("custom_name"), "My Tech Blog")
+            self.assertEqual(data["pack_id"], "minimal-blog")
+            self.assertEqual(data["applied_configuration_change_ids"], ["config-name"])
+
+    def test_page_has_solution_pack_ui_controls(self) -> None:
+        for token in (
+            'id="pack-select"',
+            'id="pack-banner"',
+            'id="custom-name"',
+            'id="custom-desc"',
+            "/api/solution-packs",
+            "/api/solution-packs/recommend",
+            "Solution Pack",
+            "pack_id",
+        ):
+            self.assertIn(token, STUDIO_HTML)
+
+    def test_page_solution_pack_still_has_no_external_resources(self) -> None:
+        for bad in ("http://", "https://", "src=", "<link"):
+            self.assertNotIn(bad, STUDIO_HTML)
+
+    def test_live_serve_build_with_solution_pack(self) -> None:
+        from unittest.mock import patch
+        from omnistackai_agent_engine.studio.live_serve import _build
+
+        with tempfile.TemporaryDirectory() as tmp:
+            with patch(
+                "omnistackai_agent_engine.studio.live_serve._target_dir_for",
+                return_value=str(Path(tmp) / "blog_app"),
+            ):
+                payload = _build(
+                    "A tech blog",
+                    pack_id="minimal-blog",
+                    custom_name="Custom Blog",
+                    custom_description="My customized blog",
+                )
+                self.assertEqual(payload["pack_id"], "minimal-blog")
+                self.assertEqual(payload["name"], "Custom Blog")
+                self.assertEqual(payload["description"], "My customized blog")
+                self.assertIn("config-custom-name", payload["applied_configuration_change_ids"])
+                self.assertIn(
+                    "config-custom-description", payload["applied_configuration_change_ids"]
+                )
+                self.assertGreater(payload["file_count"], 100)
+                self.assertTrue(Path(payload["target_dir"]).is_dir())
+                self.assertIn("nextjs-web", payload["verify_targets"])
+
+
 if __name__ == "__main__":
     unittest.main()
