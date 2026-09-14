@@ -4,17 +4,25 @@ Last updated: 2026-09-14
 ## Current Phase
 Stage 0 (Founder Build Sequence, Brief Section 91) — BASIC/MVP
 
-> **The differentiating SPINE now supports portable, verified Solution Pack packaging, export CLI, and dynamic registry ingestion (R-443).**
-> `SolutionPackPackage` defines canonical byte-stable bundles pinning schema version (`"1.0"`), metadata,
-> `ir_sha256`, canonical `ir_dict`, `verify_plans`, and `package_sha256` checksum; `parse_solution_pack_package`
-> strictly validates JSON/dict payloads, verifies embedded Application IR with `validate_ir`, confirms `ir_sha256`
-> digest matching, verifies whole-package SHA-256 integrity, and fails closed with `SolutionPackError` on corruption
-> or drift; `SolutionPackRegistry` supports dynamic package registration via `register_package` and `SolutionPack.from_package`;
-> and `package_cli.py` provides `export`, `verify`, and `inspect` subcommands.
-> UI-component series PAUSED at R-415 (resumable). **NEXT:** R-444 Solution Pack multi-surface ecosystem pack synthesis.
+> **The differentiating SPINE now supports Solution Pack multi-surface ecosystem pack synthesis (R-444).**
+> `intake/ecosystem.py` and `solution_packs/ecosystem_pack.py` add `synthesize_surface_ir` and `synthesize_ecosystem_pack`,
+> scoping entity visibility, mutation authority, actor roles, APIs, and screens per surface while preserving the pack's
+> unified data model and project strategy; `EcosystemPackPackage` and `EcosystemSurfacePackage` bundle all surfaces
+> with canonical IR digests, verify targets, and whole-ecosystem package checksum; `parse_ecosystem_pack_package` strictly
+> validates all surface IRs (`validate_ir`), digests, and checksums; `plan_ecosystem` synthesizes secondary surfaces
+> from pack_result data models (marking `is_synthesized=True`); and `ecosystem_cli.py` provides `synthesize`, `verify`,
+> `inspect`, and `build` subcommands (`task agent-engine:solution-pack:ecosystem`).
+> UI-component series PAUSED at R-415 (resumable). **NEXT:** R-445 Studio multi-surface ecosystem pack selection, customization, and preview.
 
 ## Last Completed Task
-Tracker ID: R-443 — Solution Pack Packaging, Verification, and Export CLI — DONE.
+Tracker ID: R-444 — Solution Pack Multi-Surface Ecosystem Pack Synthesis — DONE.
+Implemented Solution Pack multi-surface ecosystem pack synthesis, packaging, CLI, and planner integration:
+- `ecosystem_pack.py`: Defined `EcosystemPackPackage` bundle with `schema_version` (`"1.0"`), `ecosystem_id`, `version`, `display_name`, `description`, `domain`, `base_pack_id`, `surfaces`, and whole-ecosystem `package_sha256` checksum (`compute_ecosystem_checksum`); implemented `parse_ecosystem_pack_package` (strict validation, embedded `validate_ir` for all surfaces, digest verification, package integrity check, failing closed on corruption) and `verify_ecosystem_pack`.
+- `ecosystem.py`: Implemented `_primary_entity_names_for_pack`, `_writable_entity_names_for_pack`, and `synthesize_surface_ir` to derive surface-scoped Application IRs sharing the pack's authoritative data model; updated `SurfaceApp` with `is_synthesized: bool = False`; enhanced `plan_ecosystem` to synthesize secondary surfaces when `pack_result` is provided.
+- `ecosystem_cli.py`: Implemented CLI with `synthesize` (pack -> ecosystem pack JSON), `verify` (integrity & validity check), `inspect` (pretty metadata & surfaces printer), and `build` (materialize all surfaces into separate owned Git repos) subcommands; wired into `scripts/agent-engine.sh` and `Taskfile.yml` (`task agent-engine:solution-pack:ecosystem`).
+- Eighteen new focused tests in `test_solution_pack_ecosystem.py`; `task verify` **3,041 passed** offline (+18 net-new tests); lint, security, env, and both builder demos (152 / 149) pass; 0 model calls in test execution.
+
+Immediately preceded by R-443 — Solution Pack Packaging, Verification, and Export CLI — DONE.
 Implemented Solution Pack packaging, verification, CLI, and dynamic registry ingestion:
 - `package.py`: Defined `SolutionPackPackage` bundle with `schema_version` (`"1.0"`), metadata, canonical IR digest, canonical `ir_dict`, verify plans, and whole-package SHA-256 checksum (`compute_package_checksum`); implemented `parse_solution_pack_package` (strict validation, embedded `validate_ir`, digest verification, package integrity check, failing closed on corruption) and `verify_package`.
 - `registry.py`: Extended `SolutionPack` with `.package` reference and `from_package` constructor; extended `SolutionPackRegistry` with dynamic `register_package` capability ensuring no duplicate IDs, valid semver, and digest/target integrity.

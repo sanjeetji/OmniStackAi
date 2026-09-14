@@ -1,22 +1,34 @@
 # Current Handoff
 
-Task ID: R-443
+Task ID: R-444
 Status: done
 Phase: BASIC/MVP — Founder Stage 0
 Branch: `main` (the only branch; the GitHub default)
 
-> **The differentiating SPINE now supports portable, verified Solution Pack packaging, export CLI, and dynamic registry ingestion.** R-430 proposes the
+> **The differentiating SPINE now supports Solution Pack multi-surface ecosystem pack synthesis.** R-430 proposes the
 > ecosystem, R-431 materializes it, R-432 refines unknown domains, R-433 scopes surfaces, R-434 registers
 > packs, R-435 recommends one, R-436 records bounded intent, R-437 applies safe configuration deterministically,
 > R-438 converts pending manifest AI-delta intents into strictly typed, bounded AIDeltaProposal objects via an
 > explicit opt-in local ModelProvider boundary, R-439 safely applies validated AI-delta proposals to
 > derived Application IRs, R-440 wires derived Solution Pack Application IRs into verified multi-repo
 > builder pipelines, R-441 wires Solution Pack selection into the Studio, R-442 wires natural-language
-> AI-delta feature modifications on top of Solution Packs into the Studio, and **R-443 introduces portable,
-> byte-stable SolutionPackPackage bundles, strict verification, export/inspect CLI, and dynamic package registry ingestion**.
-> UI-component series PAUSED at R-415. **NEXT:** R-444 Solution Pack multi-surface ecosystem pack synthesis.
+> AI-delta feature modifications on top of Solution Packs into the Studio, R-443 introduces portable
+> SolutionPackPackage bundles and export CLI, and **R-444 enables synthesizing a complete, coordinated
+> multi-surface ecosystem (customer web, operator portal, admin dashboard) from a Solution Pack's unified data model,
+> bundled into an EcosystemPackPackage with CLI synthesis, verification, inspection, and multi-repo building**.
+> UI-component series PAUSED at R-415. **NEXT:** R-445 Studio multi-surface ecosystem pack selection, customization, and preview.
 
 ## Repo/workflow state
+
+- **R-444 (Solution Pack Multi-Surface Ecosystem Pack Synthesis — fifteenth spine brick)** shipped:
+  `intake/ecosystem.py` and `solution_packs/ecosystem_pack.py` add `synthesize_surface_ir` and `synthesize_ecosystem_pack`,
+  scoping entity visibility, mutation authority, actor roles, APIs, and screens per surface while preserving the pack's
+  unified data model and project strategy; `EcosystemPackPackage` and `EcosystemSurfacePackage` bundle all surfaces
+  with canonical IR digests, verify targets, and whole-ecosystem package checksum; `parse_ecosystem_pack_package` strictly
+  validates all surface IRs (`validate_ir`), digests, and checksums; `plan_ecosystem` synthesizes secondary surfaces
+  from pack_result data models (marking `is_synthesized=True`); and `ecosystem_cli.py` provides `synthesize`, `verify`,
+  `inspect`, and `build` subcommands (`task agent-engine:solution-pack:ecosystem`). 18 new tests in `test_solution_pack_ecosystem.py`;
+  `task verify` **3,041 passed** offline (+18); lint/security/env + demos (152/149) green; 0 model calls in test execution.
 
 - **R-443 (Solution Pack Packaging, Verification, and Export CLI — fourteenth spine brick)** shipped:
   `solution_packs/package.py` defines `SolutionPackPackage` bundles pinning schema version (`"1.0"`), metadata,

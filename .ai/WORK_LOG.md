@@ -1,5 +1,28 @@
 # Work Log
 
+## 2026-09-14 — R-444 (Solution Pack Multi-Surface Ecosystem Pack Synthesis)
+
+- Recorded `.ai/tasks/R-444.md` and `.ai/CURRENT_TASK.yaml` before implementation. Approved implementation plan.
+  Final focused ecosystem suite: 18 passing tests across `test_solution_pack_ecosystem.py`.
+- Implemented Multi-Surface Ecosystem Pack Schema & Verification (`solution_packs/ecosystem_pack.py`):
+  - Defined frozen canonical `EcosystemSurfacePackage` (`surface_kind`, `app_name`, `slug`, `ir_sha256`, `ir_dict`, `verify_targets`).
+  - Defined frozen canonical `EcosystemPackPackage` bundle with `schema_version` (`"1.0"`), `ecosystem_id`, `version`, `display_name`, `description`, `domain`, `base_pack_id`, `surfaces`, and whole-ecosystem `package_sha256` checksum.
+  - Implemented `compute_ecosystem_checksum` using canonical JSON representation with sorted keys and no whitespace.
+  - Implemented `parse_ecosystem_pack_package` with strict validation: validates schema version, semver, slugs, required keys, validates every surface's embedded Application IR with `validate_ir`, confirms `ir_sha256` digest match for every surface, verifies whole-ecosystem package checksum, and fails closed with `SolutionPackError` on any drift, tampering, or corruption.
+  - Implemented `verify_ecosystem_pack` diagnostic checker.
+  - Implemented `synthesize_ecosystem_pack` to synthesize all surfaces for a domain/proposal from a base pack or application result.
+- Implemented Multi-Surface Synthesis Engine & Planner Integration (`intake/ecosystem.py`):
+  - Added `_primary_entity_names_for_pack` and `_writable_entity_names_for_pack` with synonym mapping (`_SYNONYM_MAP`) ensuring entities from packs (e.g. `Post`/`Comment` or `Driver`/`FavouriteDriver`) are appropriately scoped for reader, portal, and admin surfaces.
+  - Added `synthesize_surface_ir`: builds clean `ApplicationIR` for secondary surfaces derived from the pack's authoritative data model, preserving project strategy, relational closures, surface actor roles, APIs, and screens.
+  - Enhanced `SurfaceApp` with `is_synthesized: bool = False` flag and serialization.
+  - Enhanced `plan_ecosystem`: when `pack_result` is provided, synthesizes secondary surfaces via `synthesize_surface_ir` from `pack_result.ir` (marked `is_synthesized=True`).
+- Implemented Ecosystem Pack CLI (`solution_packs/ecosystem_cli.py`):
+  - Subcommands: `synthesize` (generate multi-surface ecosystem pack JSON from Solution Pack), `verify` (verify package integrity, IRs, and checksums), `inspect` (pretty-print surfaces, entities, APIs, screens, targets), and `build` (materialize all surfaces as separate owned Git repos).
+  - Wired into `scripts/agent-engine.sh` (`solution-pack-ecosystem`) and `Taskfile.yml` (`task agent-engine:solution-pack:ecosystem`).
+- Exported new symbols in `solution_packs/__init__.py`.
+- Gates: `task verify` **3,041 passed** fully offline (+18); agent-engine/repository lint, security, and environment passed; both builder demos remained 152/149 files; 0 model calls in test execution.
+- No dependency, pack baseline/selection, Application IR schema/example, generator, generated output, provider, PostgreSQL, infrastructure, tracker workbook, or `.claude/` change.
+
 ## 2026-09-14 — R-443 (Solution Pack Packaging, Verification, and Export CLI)
 
 - Recorded `.ai/tasks/R-443.md` and `.ai/CURRENT_TASK.yaml` before implementation. Approved implementation plan.

@@ -1,0 +1,223 @@
+"""Command-line interface for Solution Pack Ecosystem Pack operations (R-444).
+
+Supports:
+- synthesize: Synthesize a multi-surface ecosystem pack from a Solution Pack
+- verify: Verify integrity and Application IR validity of an ecosystem package file
+- inspect: Pretty-print ecosystem package metadata and surfaces
+- build: Materialize all surfaces of an ecosystem package as separate Git repos
+"""
+
+from __future__ import annotations
+
+import argparse
+import os
+import sys
+from typing import Sequence
+
+from omnistackai_agent_engine.intake.build_app import build_app_from_ir
+from omnistackai_agent_engine.verify import verify_plans_for_ir
+from .ecosystem_pack import (
+    EcosystemPackPackage,
+    parse_ecosystem_pack_package,
+    synthesize_ecosystem_pack,
+)
+from .registry import DEFAULT_SOLUTION_PACK_REGISTRY, SolutionPackError
+
+
+def build_parser() -> argparse.ArgumentParser:
+    parser = argparse.ArgumentParser(
+        prog="omnistackai-agent-engine solution-pack-ecosystem",
+        description="Synthesize, verify, inspect, and build Solution Pack multi-surface ecosystem packages.",
+    )
+    subparsers = parser.add_subparsers(dest="subcommand", required=True)
+
+    # Subcommand: synthesize
+    synthesize_parser = subparsers.add_parser("synthesize", help="Synthesize an ecosystem pack from a Solution Pack.")
+    synthesize_parser.add_argument(
+        "--pack",
+        required=True,
+        help="Pack identifier in the registry (e.g. 'minimal-blog', 'rideshare-favourites').",
+    )
+    synthesize_parser.add_argument(
+        "--prompt",
+        default=None,
+        help="Optional prompt to drive surface scoping.",
+    )
+    synthesize_parser.add_argument(
+        "--option",
+        default="complete",
+        help="Build-scope option ('complete', 'customer', etc.). Defaults to 'complete'.",
+    )
+    synthesize_parser.add_argument(
+        "--output",
+        "-o",
+        default=None,
+        help="Output file path for the .ecosystem.pack.json artifact. If omitted, writes to stdout.",
+    )
+
+    # Subcommand: verify
+    verify_parser = subparsers.add_parser("verify", help="Verify the integrity and schema of an ecosystem pack file.")
+    verify_parser.add_argument("package_file", help="Path to the .ecosystem.pack.json file to verify.")
+
+    # Subcommand: inspect
+    inspect_parser = subparsers.add_parser("inspect", help="Pretty-print ecosystem package details.")
+    inspect_parser.add_argument("package_file", help="Path to the .ecosystem.pack.json file to inspect.")
+
+    # Subcommand: build
+    build_parser = subparsers.add_parser("build", help="Materialize all surfaces into separate Git repositories.")
+    build_parser.add_argument("package_file", help="Path to the .ecosystem.pack.json file.")
+    build_parser.add_argument("--out-dir", required=True, help="Root output directory where repositories will be created.")
+    build_parser.add_argument("--author-name", default=os.environ.get("GIT_AUTHOR_NAME", "sanjeetji"), help="Git author name.")
+    build_parser.add_argument("--author-email", default=os.environ.get("GIT_AUTHOR_EMAIL", "sk698166@gmail.com"), help="Git author email.")
+    build_parser.add_argument("--overwrite", action="store_true", help="Overwrite target directories if they exist.")
+
+    return parser
+
+
+def run_synthesize(args: argparse.Namespace) -> int:
+    registry = DEFAULT_SOLUTION_PACK_REGISTRY
+    pack = registry.get(args.pack)
+    if pack is None:
+        sys.stderr.write(f"Error: Unknown solution pack '{args.pack}'\n")
+        return 1
+
+    try:
+        from omnistackai_agent_engine.intake.scope_compiler import propose_ecosystem
+        proposal = propose_ecosystem(args.prompt) if args.prompt else None
+        eco_pkg = synthesize_ecosystem_pack(pack, proposal=proposal, option_id=args.option, registry=registry)
+    except SolutionPackError as exc:
+        sys.stderr.write(f"Error synthesizing ecosystem pack: {exc}\n")
+        return 1
+
+    canonical_json = eco_pkg.to_json()
+
+    if args.output:
+        out_path = os.path.abspath(args.output)
+        os.makedirs(os.path.dirname(out_path), exist_ok=True)
+        with open(out_path, "w", encoding="utf-8") as f:
+            f.write(canonical_json)
+            f.write("\n")
+        sys.stdout.write(f"Synthesized ecosystem pack '{eco_pkg.ecosystem_id}' (version {eco_pkg.version}) to {out_path}\n")
+    else:
+        sys.stdout.write(canonical_json)
+        sys.stdout.write("\n")
+    return 0
+
+
+def run_verify(args: argparse.Namespace) -> int:
+    path = os.path.abspath(args.package_file)
+    if not os.path.isfile(path):
+        sys.stderr.write(f"Error: File not found: {path}\n")
+        return 1
+
+    try:
+        with open(path, "rb") as f:
+            content = f.read()
+        parse_ecosystem_pack_package(content)
+        sys.stdout.write(f"Package {path} is valid (verified).\n")
+        return 0
+    except SolutionPackError as exc:
+        sys.stderr.write(f"Package verification FAILED for {path}: {exc}\n")
+        return 1
+    except Exception as exc:
+        sys.stderr.write(f"Unexpected error verifying {path}: {exc}\n")
+        return 1
+
+
+def run_inspect(args: argparse.Namespace) -> int:
+    path = os.path.abspath(args.package_file)
+    if not os.path.isfile(path):
+        sys.stderr.write(f"Error: File not found: {path}\n")
+        return 1
+
+    try:
+        with open(path, "rb") as f:
+            content = f.read()
+        pkg = parse_ecosystem_pack_package(content)
+    except SolutionPackError as exc:
+        sys.stderr.write(f"Error inspecting package {path}: {exc}\n")
+        return 1
+
+    sys.stdout.write(f"Ecosystem Pack: {pkg.ecosystem_id} (version {pkg.version})\n")
+    sys.stdout.write(f"Display Name: {pkg.display_name}\n")
+    sys.stdout.write(f"Description: {pkg.description}\n")
+    sys.stdout.write(f"Domain: {pkg.domain}\n")
+    sys.stdout.write(f"Base Pack: {pkg.base_pack_id}\n")
+    sys.stdout.write(f"Schema Version: {pkg.schema_version}\n")
+    sys.stdout.write(f"Surfaces: {len(pkg.surfaces)}\n")
+    for s in pkg.surfaces:
+        ir = s.to_application_ir()
+        entities_str = ", ".join(e.name for e in ir.entities)
+        targets_str = ", ".join(s.verify_targets) or "none"
+        sys.stdout.write(f"  - [{s.surface_kind}] {s.app_name} (slug: {s.slug})\n")
+        sys.stdout.write(f"    Entities: {entities_str}\n")
+        sys.stdout.write(f"    APIs: {len(ir.apis)}, Screens: {len(ir.screens)}\n")
+        sys.stdout.write(f"    Targets: {targets_str}\n")
+        sys.stdout.write(f"    IR SHA-256: {s.ir_sha256}\n")
+    sys.stdout.write(f"Package Checksum: {pkg.package_sha256}\n")
+    sys.stdout.write("Integrity: VERIFIED\n")
+    return 0
+
+
+def run_build(args: argparse.Namespace) -> int:
+    path = os.path.abspath(args.package_file)
+    if not os.path.isfile(path):
+        sys.stderr.write(f"Error: File not found: {path}\n")
+        return 1
+
+    try:
+        with open(path, "rb") as f:
+            content = f.read()
+        pkg = parse_ecosystem_pack_package(content)
+    except SolutionPackError as exc:
+        sys.stderr.write(f"Error loading package {path}: {exc}\n")
+        return 1
+
+    root_out = os.path.abspath(args.out_dir)
+    os.makedirs(root_out, exist_ok=True)
+
+    sys.stdout.write(f"Building ecosystem pack '{pkg.ecosystem_id}' ({len(pkg.surfaces)} surfaces) into {root_out}...\n")
+    build_results = []
+    used_slugs: dict[str, int] = {}
+
+    for s in pkg.surfaces:
+        ir = s.to_application_ir()
+        base_slug = s.slug
+        count = used_slugs.get(base_slug, 0)
+        used_slugs[base_slug] = count + 1
+        unique_slug = base_slug if count == 0 else f"{base_slug}-{count + 1}"
+        target_dir = os.path.join(root_out, unique_slug)
+
+        build_res = build_app_from_ir(
+            ir,
+            target_dir,
+            author_name=args.author_name,
+            author_email=args.author_email,
+            prompt=pkg.description,
+            overwrite=args.overwrite,
+        )
+        build_results.append((s, build_res))
+        sys.stdout.write(f"  [OK] {s.surface_kind}: {s.app_name} -> {target_dir} (commit: {build_res.commit_sha[:8]}, {build_res.file_count} files)\n")
+
+    sys.stdout.write(f"Materialized {len(build_results)} ecosystem applications under {root_out}\n")
+    return 0
+
+
+def main(argv: Sequence[str] | None = None) -> int:
+    parser = build_parser()
+    args = parser.parse_args(argv)
+
+    if args.subcommand == "synthesize":
+        return run_synthesize(args)
+    if args.subcommand == "verify":
+        return run_verify(args)
+    if args.subcommand == "inspect":
+        return run_inspect(args)
+    if args.subcommand == "build":
+        return run_build(args)
+    sys.stderr.write(f"Unknown subcommand: {args.subcommand}\n")
+    return 1
+
+
+if __name__ == "__main__":
+    sys.exit(main())

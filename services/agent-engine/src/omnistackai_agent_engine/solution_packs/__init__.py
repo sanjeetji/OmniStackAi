@@ -40,6 +40,15 @@ from .package import (
     parse_solution_pack_package,
     verify_package,
 )
+from .ecosystem_pack import (
+    ECOSYSTEM_PACK_SCHEMA_VERSION,
+    EcosystemSurfacePackage,
+    EcosystemPackPackage,
+    compute_ecosystem_checksum,
+    parse_ecosystem_pack_package,
+    verify_ecosystem_pack,
+    synthesize_ecosystem_pack,
+)
 
 __all__ = [
     "LEGACY_MANIFEST_SCHEMA_VERSION",
@@ -65,6 +74,13 @@ __all__ = [
     "SolutionPackPackage",
     "parse_solution_pack_package",
     "verify_package",
+    "ECOSYSTEM_PACK_SCHEMA_VERSION",
+    "EcosystemSurfacePackage",
+    "EcosystemPackPackage",
+    "compute_ecosystem_checksum",
+    "parse_ecosystem_pack_package",
+    "verify_ecosystem_pack",
+    "synthesize_ecosystem_pack",
     "SolutionPack",
     "SolutionPackError",
     "SolutionPackRecommendation",

@@ -1,30 +1,30 @@
-task_id: R-443
-id: R-443
-title: "Solution Pack Packaging, Verification, and Export CLI"
+task_id: R-444
+id: R-444
+title: "Solution Pack Multi-Surface Ecosystem Pack Synthesis"
 status: completed
 phase: MVP
 tracker_row: null
 started_at: "2026-09-14"
 completed_at: "2026-09-14"
 objective: >-
-  Fourteenth brick of the differentiating spine and tenth Solution Pack task. Implement standalone,
-  portable Solution Pack packaging (SolutionPackPackage), package verification, and export/inspect CLI tools
-  (package_cli.py), enabling Solution Packs to be bundled with their canonical Application IR, verification
-  plans, and SHA-256 integrity digests into self-contained, redistributable, and tamper-evident .pack.json
-  artifacts that can be independently inspected, verified, exported, and imported into registry instances
-  without reliance on Python module imports.
+  Fifteenth brick of the differentiating spine and eleventh Solution Pack task. Implement
+  Solution Pack Multi-Surface Ecosystem Pack Synthesis, enabling synthesizing a complete,
+  coordinated multi-surface ecosystem (customer web, operator portal, admin dashboard)
+  from a Solution Pack's unified data model, packaging the entire ecosystem into a byte-stable,
+  verifiable EcosystemPackPackage bundle, integrating with the ecosystem planner, and providing
+  CLI synthesize, verify, inspect, and build capabilities.
 allowed_paths:
-  - "services/agent-engine/src/omnistackai_agent_engine/solution_packs/package.py"
-  - "services/agent-engine/src/omnistackai_agent_engine/solution_packs/package_cli.py"
-  - "services/agent-engine/src/omnistackai_agent_engine/solution_packs/registry.py"
+  - "services/agent-engine/src/omnistackai_agent_engine/solution_packs/ecosystem_pack.py"
+  - "services/agent-engine/src/omnistackai_agent_engine/solution_packs/ecosystem_cli.py"
   - "services/agent-engine/src/omnistackai_agent_engine/solution_packs/__init__.py"
-  - "services/agent-engine/tests/test_solution_pack_package.py"
+  - "services/agent-engine/src/omnistackai_agent_engine/intake/ecosystem.py"
+  - "services/agent-engine/tests/test_solution_pack_ecosystem.py"
   - "Taskfile.yml"
   - "scripts/agent-engine.sh"
   - "docs/SOLUTION_PACKS.md"
   - "docs/PROGRESS.md"
   - "docs/RESUME_PROMPT.md"
-  - ".ai/tasks/R-443.md"
+  - ".ai/tasks/R-444.md"
   - ".ai/CURRENT_TASK.yaml"
   - ".ai/PROJECT_STATE.yaml"
   - ".ai/WORK_LOG.md"
@@ -33,12 +33,12 @@ allowed_paths:
   - "CHANGELOG.md"
 forbidden_changes:
   - "Do not modify or track the unrelated untracked .claude directory"
-  - "Do not break existing SolutionPack, SolutionPackRegistry, or baseline tests"
-  - "Do not make model calls or network requests during package/verify/export operations"
+  - "Do not break existing SolutionPack, SolutionPackPackage, or ecosystem tests"
+  - "Do not make model calls or network requests during synthesis, package, or build operations"
   - "Do not add external Python dependencies (Python 3.13 stdlib only)"
   - "Do not change the control-plane database from PostgreSQL"
 required_gates:
-  - "test-first focused test_solution_pack_package.py"
+  - "test-first focused test_solution_pack_ecosystem.py"
   - task verify
   - task lint
   - task security:quick
@@ -49,20 +49,21 @@ model_tool_trace:
   routing: none
   local_calls: 0
   cloud_calls: 0
-  note: "0 model calls during verification; packaging, export, and verification are 100% deterministic and offline."
+  note: "0 model calls during verification; synthesis, packaging, and building are 100% deterministic and offline."
 acceptance_criteria:
-  - "SolutionPackPackage bundles metadata, canonical Application IR dict, verification plans, and package checksum."
+  - "EcosystemPackPackage and EcosystemSurfacePackage schemas bundle all surfaces with canonical IR digests, verify targets, and package checksum."
   - "to_json and to_dict provide byte-stable, deterministic serialization."
-  - "parse_solution_pack_package validates embedded IR (validate_ir), checks IR digest matches ir_sha256, and verifies package checksum."
-  - "SolutionPackRegistry supports registering standalone packages via register_package."
-  - "package_cli.py supports export, verify, and inspect subcommands."
-  - "Taskfile and scripts expose agent-engine:solution-pack:export and inspect commands."
+  - "parse_ecosystem_pack_package validates each surface IR (validate_ir), checks IR digests, and verifies ecosystem package checksum."
+  - "synthesize_surface_ir and synthesize_ecosystem_pack derive surface-scoped Application IRs from the pack's unified entity model."
+  - "plan_ecosystem synthesizes secondary surfaces using the pack's data model when pack_result is provided."
+  - "ecosystem_cli.py supports synthesize, verify, inspect, and build subcommands."
+  - "Taskfile and scripts expose agent-engine:solution-pack:ecosystem command."
   - "100% offline verification in task verify (0 model calls)."
 evidence:
-  focused_tests: "test_solution_pack_package.py: 16 passed in 0.011s (+16 new tests)"
-  task_verify: "3,023 tests passed in 25.48s (0 failures, 0 model calls, 100% offline)"
+  focused_tests: "test_solution_pack_ecosystem.py: 18 passed in 1.170s (+18 net-new tests)"
+  task_verify: "3,041 tests passed in 29.92s (0 failures, 0 model calls, 100% offline)"
   task_lint: "Lint passed"
   task_security: "Stage 0 secret-policy check passed"
   task_env: "Environment contract passed"
   task_demos: "minimal-blog (152 files) and rideshare-favourites (149 files) generated clean repos"
-next_action: "Complete task R-443 and proceed to next task."
+next_action: "Complete task R-444 documentation and proceed to next task."

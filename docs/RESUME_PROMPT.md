@@ -41,7 +41,7 @@ START PROTOCOL
   `task ai:status`, `task ai:handoff`. `task verify` must stay green and network-independent.
 - Confirm git branch/HEAD/clean tree. Then restate: phase, next Tracker ID, objective, blast radius.
 
-WHAT IS ALREADY BUILT (platform generators are Python 3.13 stdlib-only, offline, in services/agent-engine; 2,992 tests pass)
+WHAT IS ALREADY BUILT (platform generators are Python 3.13 stdlib-only, offline, in services/agent-engine; 3,041 tests pass)
 - Model fabric: ModelProvider contract + registry; local Ollama adapter (runs any installed model via
 
 
@@ -326,6 +326,9 @@ provenance tracking in Studio history and UI.
 R-443 added the fourteenth spine brick: Solution Pack packaging, verification, and export CLI, enabling
 portable, canonical, byte-stable SolutionPackPackage bundles, strict integrity verification, export/inspect CLI,
 and dynamic package registry ingestion.
+R-444 added the fifteenth spine brick: Solution Pack Multi-Surface Ecosystem Pack Synthesis, enabling portable
+`EcosystemPackPackage` bundles with multiple surface packages, surface-specific Application IR synthesis scoping
+entity visibility, mutation authority, actor roles, APIs, and screens per surface, and CLI synthesize/verify/inspect/build.
 
 ENVIRONMENT LIMITS
 - Inside the AI sandbox only: large native-binary downloads (Next.js SWC, Vite/esbuild) can time out, so
@@ -356,7 +359,7 @@ RULES (non-negotiable)
   SHA == local HEAD. Never claim unexecuted tests.
 
 WHAT TO DO NEXT
-- R-430 through R-443 are DONE — the DIFFERENTIATING SPINE now proposes a curated multi-app ecosystem,
+- R-430 through R-444 are DONE — the DIFFERENTIATING SPINE now proposes a curated multi-app ecosystem,
   materializes it as multiple owned repos, and can explicitly refine an unknown domain through local Ollama
   before using the same deterministic planner. R-433 then gives each surface a bounded read/write entity
   policy, relation-safe dependencies, one actor role, and role-gated mutations. R-434 registers immutable,
@@ -370,9 +373,10 @@ WHAT TO DO NEXT
   IRs into owned Git repositories with verification gate ladders and transparent ecosystem builder integration;
   R-441 integrates Solution Pack discovery, recommendation, selection, customization, and provenance
   into the Studio UI, HTTP server, and live build pipeline; R-442 wires Studio AI-delta feature modification
-  controls above Solution Packs; and R-443 introduces portable SolutionPackPackage bundles, strict integrity
-  verification, export/inspect CLI, and dynamic registry ingestion.
-- NEXT R-444: Solution Pack multi-surface ecosystem pack synthesis or ecosystem pack bundling.
+  controls above Solution Packs; R-443 introduces portable SolutionPackPackage bundles, strict integrity
+  verification, export/inspect CLI, and dynamic registry ingestion; and R-444 introduces multi-surface Ecosystem
+  Pack synthesis, portable `EcosystemPackPackage` bundles, and multi-repo ecosystem builds.
+- NEXT R-445: Solution Pack ecosystem pack registry integration, catalog discovery, and Studio multi-surface selection.
   Keep `task verify` model/Docker/DB/install/network-free (any live/model path stays opt-in); preserve
   single-session ownership and explicit trusted-local mode.
 - The UI-component series remains paused at R-415 and can be resumed later under a future free ID.

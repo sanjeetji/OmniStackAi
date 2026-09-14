@@ -1,4 +1,4 @@
-# OmniStackAI — implementation progress (as of R-443)
+# OmniStackAI — implementation progress (as of R-444)
 
 A living summary of what is built, what is pending, and how to see results. Numbers come from the
 execution tracker (`R_&_D/OmniStackAI_Execution_Tracker_v6.xlsx`, `Phase_Roadmap`) plus the state
@@ -6,10 +6,10 @@ files (`.ai/`), Git history, and CHANGELOG for work done past the tracker's last
 
 ## Headline
 
-- **3,023 automated tests pass**, fully offline and network-independent (`task verify`).
+- **3,041 automated tests pass**, fully offline and network-independent (`task verify`).
 - **147 tracker tasks Done, 1 Deferred, 210 Not Started** across 358 tasks (the tracker's planned
   universe ends at R-358).
-- **Plus 85 completed tasks beyond the workbook (R-359 → R-443)**: 57 reusable UI-component suites,
+- **Plus 86 completed tasks beyond the workbook (R-359 → R-444)**: 57 reusable UI-component suites,
   four front-door bricks, R-420 generated-SQL hardening, R-421 managed embedded local preview,
   R-422 collision-free preview ports + status/stop/restart controls, R-423 build history + re-preview,
   R-424 live preview status, R-425 per-build repo actions, R-426 remove-from-history, R-427 a
@@ -23,9 +23,18 @@ files (`.ai/`), Git history, and CHANGELOG for work done past the tracker's last
   application of validated AI-delta proposals to Application IR**, **R-440 verified multi-repo
   builder pipelines and project generation with Solution Pack derived IRs**, **R-441 live Studio
   integration and UI controls for Solution Pack selection, customization, and provenance**, **R-442 Studio
-  AI-delta feature modification controls above Solution Packs**, and **R-443 Solution Pack Packaging,
-  Verification, and Export CLI** — the first fourteen bricks of the differentiating spine.
+  AI-delta feature modification controls above Solution Packs**, **R-443 Solution Pack Packaging,
+  Verification, and Export CLI**, and **R-444 Solution Pack Multi-Surface Ecosystem Pack Synthesis** —
+  the first fifteen bricks of the differentiating spine.
   The generated Next.js component library remains at **110 components**; its series is **PAUSED at R-415** and fully resumable.
+- **R-444 introduces multi-surface Ecosystem Pack synthesis and lifecycle tooling:**
+  `EcosystemPackPackage` bundles schema version (`"1.0"`), ecosystem metadata, and a collection of
+  `EcosystemSurfacePackage` objects pinning each surface's Application IR, digest, and verify targets alongside
+  the whole-ecosystem SHA-256 checksum; `parse_ecosystem_pack_package` strictly validates payloads and validates
+  all embedded surface IRs with `validate_ir`; multi-surface synthesis in `intake/ecosystem.py` derives surface-specific
+  Application IRs scoping entity visibility, mutation authority, actor roles, APIs, and screens per surface;
+  `plan_ecosystem` marks synthesized secondary surfaces with `is_synthesized=True`; and `ecosystem_cli.py` exposes
+  `synthesize`, `verify`, `inspect`, and `build` subcommands (`task agent-engine:solution-pack:ecosystem`).
 - **R-443 introduces portable, verified Solution Pack packaging and export CLI:**
   `SolutionPackPackage` bundles schema version (`"1.0"`), metadata, canonical IR digest, canonical `ir_dict`,
   verify gate plans, and whole-package SHA-256 checksum; `parse_solution_pack_package` strictly validates

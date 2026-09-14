@@ -178,6 +178,29 @@ R-443 introduces portable, byte-stable Solution Pack bundles and command-line li
   ```
 - 100% offline verification in `task verify` (0 model calls).
 
+## Multi-surface ecosystem pack synthesis
+
+R-444 synthesizes multi-surface ecosystems from Solution Packs and packages them into verified bundles:
+- Package format: `EcosystemPackPackage` encapsulates `schema_version` (`"1.0"`), `ecosystem_id`, `version`, `display_name`, `description`, `domain`, `base_pack_id`, a collection of `EcosystemSurfacePackage` objects (`surface_kind`, `app_name`, `slug`, `ir_sha256`, canonical `ir_dict`, `verify_targets`), and whole-ecosystem `package_sha256` checksum.
+- Synthesis semantics: `synthesize_surface_ir()` derives surface-specific Application IRs from the pack's unified entity model, scoping entity visibility, mutation authority, actor roles, APIs, and screens per surface while preserving relational dependencies, strategy, and semantic correctness.
+- Ecosystem planner integration: `plan_ecosystem()` synthesizes secondary surfaces using the pack's authoritative data model when `pack_result` is provided, marking synthesized secondary surfaces with `is_synthesized=True`.
+- Integrity verification: `parse_ecosystem_pack_package()` and `verify_ecosystem_pack()` strictly validate schema, semver, fields, embedded Application IRs across all surfaces via `validate_ir`, confirm surface `ir_sha256` digest matching, and verify whole-package SHA-256 integrity, failing closed on tampering or corruption with `SolutionPackError`.
+- CLI operations:
+  ```bash
+  # Synthesize ecosystem pack from baseline pack
+  task agent-engine:solution-pack:ecosystem -- synthesize --pack minimal-blog --output minimal-blog-eco.pack.json
+
+  # Verify ecosystem pack integrity
+  task agent-engine:solution-pack:ecosystem -- verify minimal-blog-eco.pack.json
+
+  # Inspect ecosystem pack surfaces and metadata
+  task agent-engine:solution-pack:ecosystem -- inspect minimal-blog-eco.pack.json
+
+  # Materialize all multi-surface repositories to disk
+  task agent-engine:solution-pack:ecosystem -- build minimal-blog-eco.pack.json --out-dir /tmp/ecosystem-repos
+  ```
+- 100% offline verification in `task verify` (0 model calls).
+
 ## Next boundary
 
-R-444: Solution Pack multi-surface ecosystem pack synthesis or ecosystem pack bundling.
+R-445: Solution Pack ecosystem pack registry integration, catalog discovery, and Studio multi-surface selection.
