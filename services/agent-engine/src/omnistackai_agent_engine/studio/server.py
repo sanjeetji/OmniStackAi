@@ -176,6 +176,10 @@ def _make_handler(
                     options[key] = str(data[key]).strip()
             if "configuration_changes" in data and isinstance(data["configuration_changes"], list):
                 options["configuration_changes"] = data["configuration_changes"]
+            if "ai_delta_prompt" in data and data["ai_delta_prompt"] is not None and str(data["ai_delta_prompt"]).strip():
+                options["ai_delta_prompt"] = str(data["ai_delta_prompt"]).strip()
+            if "ai_features" in data and isinstance(data["ai_features"], list):
+                options["ai_features"] = [str(f).strip() for f in data["ai_features"] if str(f).strip()]
 
             try:
                 if options:

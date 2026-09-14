@@ -151,13 +151,14 @@ When `proposal` is provided:
 
 ## Studio integration and UI controls
 
-R-441 wires Solution Pack selection, customization, and provenance into the Studio:
+R-441 and R-442 wire Solution Pack selection, customization, AI-delta feature modifications, and provenance into the Studio:
 - HTTP API: `GET /api/solution-packs` returns the registered packs; `POST /api/solution-packs/recommend` returns domain classification and matching pack recommendation.
-- Build options: `POST /api/build` accepts `pack_id`, `pack_version`, `custom_name`, `custom_description`, and `configuration_changes`.
-- Zero-model builds: when building with a Solution Pack, `live_serve.py` uses `create_solution_pack_manifest`, `apply_solution_pack_manifest`, and `build_solution_pack_project` to deterministically create the repository and record full provenance without any model calls.
-- Studio web UI: includes a Solution Pack dropdown, real-time recommendation banner, customization inputs, verified badges, and provenance box while preserving 0 external resource links in HTML.
-- History: records `pack_id` and `pack_version` in `StudioBuildHistory`.
+- Build options: `POST /api/build` accepts `pack_id`, `pack_version`, `custom_name`, `custom_description`, `configuration_changes`, `ai_features`, and `ai_delta_prompt`.
+- Zero-model baseline builds: when building with a Solution Pack and no AI features, `live_serve.py` uses `create_solution_pack_manifest`, `apply_solution_pack_manifest`, and `build_solution_pack_project` to deterministically create the repository and record full provenance without any model calls.
+- Bounded AI-delta modifications: when `ai_features` are specified, `live_serve.py` formulates typed `ai-delta` `SolutionPackChange` intents, calls `generate_ai_delta_proposal`, safely derives the Application IR with `apply_solution_pack_manifest`, and records `applied_ai_delta_change_ids` in provenance.
+- Studio web UI: includes a Solution Pack dropdown, real-time recommendation banner, customization inputs, AI Feature Modifications input (`#ai-features`), verified badges, AI delta chips, and full provenance rendering while strictly preserving 0 external resource links in HTML.
+- History: records `pack_id`, `pack_version`, and `applied_ai_delta_change_ids` in `StudioBuildHistory`.
 
 ## Next boundary
 
-R-442: Studio AI-delta feature modification controls above Solution Packs.
+R-443: Solution Pack registry packaging, export CLI, or multi-surface ecosystem pack synthesis.

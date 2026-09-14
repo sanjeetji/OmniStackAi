@@ -43,6 +43,10 @@ class StudioBuildHistory:
             if build.get("pack_id"):
                 entry["pack_id"] = str(build["pack_id"])
                 entry["pack_version"] = str(build.get("pack_version", ""))
+            if build.get("applied_ai_delta_change_ids"):
+                entry["applied_ai_delta_change_ids"] = [
+                    str(cid) for cid in build["applied_ai_delta_change_ids"]
+                ]
             self._entries.append(entry)
             if len(self._entries) > self._limit:
                 self._entries = self._entries[-self._limit :]

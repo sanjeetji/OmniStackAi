@@ -4,15 +4,24 @@ Last updated: 2026-09-14
 ## Current Phase
 Stage 0 (Founder Build Sequence, Brief Section 91) — BASIC/MVP
 
-> **The differentiating SPINE now integrates Solution Packs into the Studio UI and HTTP server (R-441).**
-> `page.py` includes a Solution Pack dropdown, real-time recommendation banner, customization inputs,
-> verified badges, and full provenance rendering with zero external resources. `server.py` exposes
-> Solution Pack registry and recommendation endpoints, and `live_serve.py` deterministically builds
-> Solution Pack apps offline (0 model calls).
-> UI-component series PAUSED at R-415 (resumable). **NEXT:** R-442 Studio AI-delta feature modification controls above Solution Packs.
+> **The differentiating SPINE now supports AI-delta feature additions above Solution Packs in the Studio (R-442).**
+> `page.py` includes an AI Feature Modifications input, live synthesis status messages, AI delta badge
+> chips in history items, and applied AI-delta provenance rendering with zero external resources. `server.py`
+> exposes `ai_features` and `ai_delta_prompt` options in `POST /api/build`, `live_serve.py` generates bounded
+> AI deltas via `generate_ai_delta_proposal` (bypassing the model with 0 calls when none requested), and `history.py`
+> tracks applied AI delta change IDs.
+> UI-component series PAUSED at R-415 (resumable). **NEXT:** R-443 Solution Pack registry packaging and export CLI.
 
 ## Last Completed Task
-Tracker ID: R-441 — Live Studio Integration and UI Controls for Solution Pack Selection and Modification — DONE.
+Tracker ID: R-442 — Studio AI-Delta Feature Modification Controls Above Solution Packs — DONE.
+Implemented AI-delta feature modification controls in Studio across `server.py`, `live_serve.py`, `page.py`, and `history.py`:
+- `server.py`: Extended `POST /api/build` to accept `ai_features` and `ai_delta_prompt` and pass them to the build pipeline.
+- `live_serve.py`: Formulates typed `ai-delta` `SolutionPackChange` intents targeting capability areas; calls `generate_ai_delta_proposal` via the `ModelProvider` boundary (with async/sync compatibility) when AI features are requested; bypasses the model provider completely (0 model calls) when no AI features are requested; applies the proposal safely via `apply_solution_pack_manifest`; and records full provenance including `applied_ai_delta_change_ids`.
+- `history.py`: Tracks `applied_ai_delta_change_ids` in `StudioBuildHistory`.
+- `page.py`: Enhanced Studio UI with AI Feature Modifications input (`#ai-features`), full-width styling, synthesis status messaging, AI delta badge chips in history items (`.ai-delta-chip`), and applied AI delta provenance rendering; strictly 0 external resources in HTML.
+- Four new focused tests; focused studio regressions **53 passed**; `task verify` **3,007 passed** offline (+4 net-new tests); lint, security, env, and both builder demos (152 / 149) pass; 0 model calls in test execution.
+
+Immediately preceded by R-441 — Live Studio Integration and UI Controls for Solution Pack Selection and Modification — DONE.
 Implemented Studio integration across `server.py`, `live_serve.py`, `page.py`, and `history.py`:
 - `server.py`: Added `GET /api/solution-packs` and `POST /api/solution-packs/recommend` endpoints; extended `POST /api/build` with `pack_id`, `pack_version`, `custom_name`, `custom_description`, and `configuration_changes` options.
 - `live_serve.py`: Deterministically builds Solution Pack projects with 0 model calls via `create_solution_pack_manifest`, `apply_solution_pack_manifest`, and `build_solution_pack_project`, recording full provenance (pack id/version, base/derived digests, applied change IDs, verify targets).

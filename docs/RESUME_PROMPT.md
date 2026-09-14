@@ -314,7 +314,15 @@ bypass the provider completely with 0 calls; pending AI-delta intents generate a
 parse untrusted JSON into validated entity/API/screen/capability proposal data, rejecting credential-bearing
 fields, collisions with base IR, and unregistered change IDs; no cloud fallback, IR mutation, source
 generation, or build.
-
+R-439 added the tenth spine brick: safely applying validated AI-delta proposals to Application IRs with
+strict collision detection, relation verification, and complete applied/unapplied AI delta provenance.
+R-440 added the eleventh spine brick: verified multi-repo builder pipelines and project generation with
+Solution Pack derived IRs via `build_solution_pack_project()` and ecosystem planner integration.
+R-441 added the twelfth spine brick: live Studio integration and UI controls for Solution Pack selection,
+customization, and provenance with 0 external resource links in HTML.
+R-442 added the thirteenth spine brick: Studio AI-delta feature modification controls above Solution Packs,
+enabling natural-language feature additions with bounded model proposals, safe IR derivation, and full
+provenance tracking in Studio history and UI.
 
 ENVIRONMENT LIMITS
 - Inside the AI sandbox only: large native-binary downloads (Next.js SWC, Vite/esbuild) can time out, so

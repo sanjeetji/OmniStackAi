@@ -50,6 +50,9 @@ def _build(
     custom_name: str | None = None,
     custom_description: str | None = None,
     configuration_changes: list[dict] | None = None,
+    ai_features: list[str] | None = None,
+    ai_delta_prompt: str | None = None,
+    ai_delta_provider: object | None = None,
     preview_manager: StudioPreviewManager | None = None,
     history: StudioBuildHistory | None = None,
 ) -> dict:
@@ -100,11 +103,61 @@ def _build(
                     desired_text=custom_description,
                 )
             )
+
+        feature_items: list[str] = []
+        if ai_features:
+            feature_items.extend(str(f).strip() for f in ai_features if str(f).strip())
+        if ai_delta_prompt and str(ai_delta_prompt).strip():
+            for line in str(ai_delta_prompt).splitlines():
+                line = line.strip()
+                if line and line not in feature_items:
+                    feature_items.append(line)
+
+        for idx, item in enumerate(feature_items):
+            cid = f"ai-delta-{idx + 1}"
+            clean_item = re.sub(r"[^a-zA-Z0-9]+", "-", item).strip("-").lower()
+            slug = clean_item[:30] if clean_item else f"feature-{idx + 1}"
+            changes.append(
+                SolutionPackChange(
+                    change_id=cid,
+                    source=ChangeSource.AI_DELTA,
+                    operation=ChangeOperation.ADD,
+                    area=ChangeArea.CAPABILITY,
+                    target=f"capability:{slug}",
+                    summary=item[:240],
+                    acceptance_criteria=(f"{item[:200]} is supported.",),
+                )
+            )
+
         manifest = create_solution_pack_manifest(
             rec,
             changes=tuple(changes),
         )
-        app_result = apply_solution_pack_manifest(manifest)
+
+        has_ai_deltas = any(c.source is ChangeSource.AI_DELTA for c in manifest.changes)
+        proposal = None
+        if has_ai_deltas:
+            from ..solution_packs.ai_delta import generate_ai_delta_proposal
+
+            if ai_delta_provider is not None:
+                provider = ai_delta_provider
+                model_id = None
+            else:
+                provider, model_id, _, _ = build_ollama_provider_from_env()
+
+            base_ir = DEFAULT_SOLUTION_PACK_REGISTRY.load_ir(pack.pack_id, pack.version)
+            maybe_coro = generate_ai_delta_proposal(
+                manifest,
+                base_ir,
+                provider,
+                model_id=model_id,
+            )
+            if asyncio.iscoroutine(maybe_coro):
+                proposal = asyncio.run(maybe_coro)
+            else:
+                proposal = maybe_coro
+
+        app_result = apply_solution_pack_manifest(manifest, proposal=proposal)
         target_dir = _target_dir_for(prompt)
         build_result = build_solution_pack_project(
             app_result,

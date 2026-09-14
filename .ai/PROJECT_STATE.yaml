@@ -2,12 +2,25 @@ schema_version: 1
 project: OmniStackAI
 phase: BASIC/MVP
 founder_stage: 0
-current_task: R-442
+current_task: R-443
 current_status: ready
 branch: main
-last_completed_task: R-441
+last_completed_task: R-442
 last_completed_task_summary: >-
-  Built R-441: live Studio integration and UI controls for Solution Pack selection, customization, and provenance
+  Built R-442: Studio AI-delta feature modification controls above Solution Packs (thirteenth spine brick
+  and ninth Solution Pack task). Enabled natural-language feature additions on top of selected Solution
+  Packs in the Studio: extended POST /api/build in server.py to accept ai_features and ai_delta_prompt options;
+  wired live_serve.py to formulate typed ai-delta change intents, generate bounded AIDeltaProposal objects
+  via generate_ai_delta_proposal (bypassing the model with 0 calls when no AI features are requested), and safely
+  derive the Application IR via apply_solution_pack_manifest with complete applied_ai_delta_change_ids provenance;
+  enhanced Studio history (StudioBuildHistory) to track applied_ai_delta_change_ids; and updated the Studio web
+  interface (STUDIO_HTML in page.py) with an AI Feature Modifications input (#ai-features), live synthesis
+  status messages, AI delta badge chips in history items, and applied AI delta provenance rendering, all while
+  strictly maintaining 0 external resource requests (no http/https/src/<link). Four new focused tests; focused
+  studio suite: 53 passed; task verify: 3,007 passed fully offline (+4 net-new tests); lint, security, env,
+  and both builder demos (152/149 files) pass; 0 model calls in test execution. No dependency, pack baseline/selection,
+  Application IR schema/example, generator, generated output, provider, database, infrastructure, workbook, or .claude change.
+  Previously built R-441: live Studio integration and UI controls for Solution Pack selection, customization, and provenance
   (twelfth spine brick and eighth Solution Pack task). Added solution pack discovery and recommendation endpoints
   to the Studio HTTP server (GET /api/solution-packs and POST /api/solution-packs/recommend), updated POST /api/build
   to accept pack_id, pack_version, custom_name, custom_description, and configuration_changes, and wired

@@ -1,5 +1,32 @@
 # Work Log
 
+## 2026-09-14 — R-442 (Studio AI-delta feature modification controls above Solution Packs)
+
+- Recorded `.ai/tasks/R-442.md` and `.ai/CURRENT_TASK.yaml` before implementation. Approved implementation plan.
+  Test-first focused suite failed on missing AI-delta server extraction and page UI tokens; final focused studio suite: 53 passing tests (4 net-new tests across test_studio_server and test_studio_history).
+- Extended Studio HTTP server (`services/agent-engine/src/omnistackai_agent_engine/studio/server.py`):
+  - Updated `POST /api/build` handler to parse `ai_features` (list of strings or comma-separated string) and `ai_delta_prompt` from JSON body and forward them to `build_fn`.
+- Extended `live_serve.py`:
+  - When `pack_id` is specified with `ai_features`, formulates typed `ai-delta` `SolutionPackChange` intents targeting the capability area.
+  - Generates bounded `AIDeltaProposal` via `generate_ai_delta_proposal` (supporting both real async coroutines and sync mocks).
+  - Bypasses the model provider (0 model calls) when no AI-delta features are requested.
+  - Merges the proposal safely into a derived `ApplicationIR` via `apply_solution_pack_manifest` and compiles the project with `build_solution_pack_project`.
+  - Records full provenance including `applied_ai_delta_change_ids` and `unapplied_ai_delta_change_ids`.
+- Enhanced `StudioBuildHistory` (`history.py`):
+  - Records `applied_ai_delta_change_ids` in bounded secret-free history entries.
+- Enhanced Studio web UI (`page.py`):
+  - Added AI Feature Modifications input (`id="ai-features"`) inside the Solution Pack customization card.
+  - Added full-width responsive styling for `#ai-features` and `.ai-delta-chip` styling for history items.
+  - Form submit includes `ai_features` and `ai_delta_prompt` in `/api/build` payload when provided.
+  - Live status indicator reflects AI feature synthesis progress when requested.
+  - Provenance box renders `Applied AI Deltas` list when present.
+  - History items render an `AI delta (N)` chip when deltas were applied.
+  - Preserved 100% self-contained inline CSS and JS with 0 external resource requests (no `http://`, `https://`, `src=`, `<link`).
+- Gates: `task verify` 3,007 passed fully offline (+4); agent-engine/repository lint, security, and environment
+  passed; both builder demos remained 152/149 files; 0 model calls in test execution.
+- No dependency, pack baseline/selection, Application IR schema/example, generator, generated output, provider,
+  PostgreSQL, infrastructure, tracker workbook, or `.claude/` change. Workbook remains unchanged past R-358.
+
 ## 2026-09-14 — R-441 (live Studio integration and UI controls for Solution Pack selection, customization, and provenance)
 
 - Recorded `.ai/tasks/R-441.md` and `.ai/CURRENT_TASK.yaml` before implementation. Test-first focused suite

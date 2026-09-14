@@ -120,6 +120,9 @@ STUDIO_HTML = """<!doctype html>
     flex: 1;
     min-width: 180px;
   }
+  .pack-input-group.full-width {
+    flex: 1 1 100%;
+  }
   .pack-input-group label {
     display: block;
     font-size: 11.5px;
@@ -166,6 +169,16 @@ STUDIO_HTML = """<!doctype html>
     background: rgba(34, 211, 238, 0.15);
     border: 1px solid rgba(34, 211, 238, 0.35);
     color: #6ee7ff;
+    font-size: 11px;
+    border-radius: 4px;
+    padding: 1px 5px;
+  }
+  .ai-delta-chip {
+    display: inline-block;
+    margin-left: 6px;
+    background: rgba(168, 85, 247, 0.15);
+    border: 1px solid rgba(168, 85, 247, 0.35);
+    color: #d8b4fe;
     font-size: 11px;
     border-radius: 4px;
     padding: 1px 5px;
@@ -244,6 +257,10 @@ STUDIO_HTML = """<!doctype html>
           <label for="custom-desc">Custom Description (optional)</label>
           <input type="text" id="custom-desc" placeholder="e.g. A fast responsive application">
         </div>
+        <div class="pack-input-group full-width">
+          <label for="ai-features">AI Feature Modifications (optional)</label>
+          <input type="text" id="ai-features" placeholder="e.g. Add newsletter subscribers with email and signup endpoint">
+        </div>
       </div>
     </div>
     <div class="row">
@@ -312,6 +329,7 @@ STUDIO_HTML = """<!doctype html>
   var packCustomization = document.getElementById('pack-customization');
   var customNameInput = document.getElementById('custom-name');
   var customDescInput = document.getElementById('custom-desc');
+  var aiFeaturesInput = document.getElementById('ai-features');
 
   var availablePacks = [];
   var recommendedPackId = null;
@@ -496,6 +514,10 @@ STUDIO_HTML = """<!doctype html>
       commit_sha: build.commit_sha,
       pack_id: build.pack_id,
       pack_version: build.pack_version,
+      base_ir_sha256: build.base_ir_sha256,
+      derived_ir_sha256: build.derived_ir_sha256,
+      applied_configuration_change_ids: build.applied_configuration_change_ids || [],
+      applied_ai_delta_change_ids: build.applied_ai_delta_change_ids || [],
       files: []
     });
     var previewStatus = document.getElementById('preview-status');
@@ -597,6 +619,12 @@ STUDIO_HTML = """<!doctype html>
         chip.textContent = b.pack_id;
         name.appendChild(chip);
       }
+      if (b.applied_ai_delta_change_ids && b.applied_ai_delta_change_ids.length) {
+        var deltaChip = document.createElement('span');
+        deltaChip.className = 'ai-delta-chip';
+        deltaChip.textContent = 'AI delta (' + b.applied_ai_delta_change_ids.length + ')';
+        name.appendChild(deltaChip);
+      }
       var prompt = document.createElement('div');
       prompt.className = 'h-prompt';
       prompt.textContent = (b.prompt || '') + '  -  ' + (b.file_count || 0) + ' files';
@@ -694,7 +722,14 @@ STUDIO_HTML = """<!doctype html>
       if (cName) { payload.custom_name = cName; }
       var cDesc = (customDescInput.value || '').trim();
       if (cDesc) { payload.custom_description = cDesc; }
-      statusEl.textContent = 'Building app from verified Solution Pack (' + selectedPack.pack_id + ')...';
+      var aiFeat = (aiFeaturesInput.value || '').trim();
+      if (aiFeat) {
+        payload.ai_features = [aiFeat];
+        payload.ai_delta_prompt = aiFeat;
+        statusEl.textContent = 'Synthesizing feature additions with AI and compiling with ' + selectedPack.pack_id + '...';
+      } else {
+        statusEl.textContent = 'Building app from verified Solution Pack (' + selectedPack.pack_id + ')...';
+      }
     } else {
       statusEl.textContent = 'Building your app - this runs a local model and can take a moment...';
     }

@@ -443,5 +443,107 @@ class TestStudioSolutionPacks(unittest.TestCase):
                 self.assertIn("nextjs-web", payload["verify_targets"])
 
 
+    def test_post_build_passes_ai_delta_options(self) -> None:
+        captured = {}
+
+        def pack_build(prompt: str, **options) -> dict:
+            captured["prompt"] = prompt
+            captured["options"] = options
+            return {
+                **STUB_RESULT,
+                "pack_id": options.get("pack_id"),
+                "applied_ai_delta_change_ids": ["ai-delta-1"],
+            }
+
+        with running_server(pack_build) as base:
+            status, data = _post(
+                base + "/api/build",
+                obj={
+                    "prompt": "Build a tech blog",
+                    "pack_id": "minimal-blog",
+                    "ai_delta_prompt": "Add newsletter subscribers",
+                    "ai_features": ["Add newsletter subscribers"],
+                },
+            )
+            self.assertEqual(status, 200)
+            self.assertEqual(captured["options"].get("ai_delta_prompt"), "Add newsletter subscribers")
+            self.assertEqual(captured["options"].get("ai_features"), ["Add newsletter subscribers"])
+            self.assertEqual(data["applied_ai_delta_change_ids"], ["ai-delta-1"])
+
+    def test_live_serve_build_with_ai_delta_features(self) -> None:
+        from unittest.mock import patch
+        from omnistackai_agent_engine.application_ir import (
+            ApiEndpoint,
+            Entity,
+            Field,
+            FieldType,
+            HttpMethod,
+            Screen,
+        )
+        from omnistackai_agent_engine.solution_packs.ai_delta import AIDeltaProposal
+        from omnistackai_agent_engine.solution_packs.registry import DEFAULT_SOLUTION_PACK_REGISTRY
+        from omnistackai_agent_engine.studio.live_serve import _build
+
+        pack = DEFAULT_SOLUTION_PACK_REGISTRY.get("minimal-blog")
+        assert pack is not None
+
+        mock_proposal = AIDeltaProposal(
+            pack_id=pack.pack_id,
+            pack_version=pack.version,
+            base_ir_sha256=pack.ir_sha256,
+            addressed_change_ids=("ai-delta-1",),
+            entities=(
+                Entity(
+                    name="Subscriber",
+                    fields=(
+                        Field(name="id", type=FieldType.UUID, required=True),
+                        Field(name="email", type=FieldType.STRING, required=True),
+                    ),
+                ),
+            ),
+            apis=(
+                ApiEndpoint(
+                    method=HttpMethod.POST,
+                    path="/subscribers",
+                    request_schema="Subscriber",
+                    response_schema="Subscriber",
+                ),
+            ),
+            screens=(
+                Screen(
+                    id="subscriber_list",
+                    role="reader",
+                ),
+            ),
+            capabilities=("newsletter-subscription",),
+            rationale="Added Subscriber entity and API endpoint.",
+        )
+
+        with tempfile.TemporaryDirectory() as tmp:
+            with patch(
+                "omnistackai_agent_engine.studio.live_serve._target_dir_for",
+                return_value=str(Path(tmp) / "blog_app"),
+            ), patch(
+                "omnistackai_agent_engine.solution_packs.ai_delta.generate_ai_delta_proposal",
+                return_value=mock_proposal,
+            ):
+                payload = _build(
+                    "A tech blog",
+                    pack_id="minimal-blog",
+                    ai_features=["Add newsletter subscribers"],
+                )
+                self.assertEqual(payload["pack_id"], "minimal-blog")
+                self.assertIn("Subscriber", payload["entities"])
+                self.assertIn("ai-delta-1", payload["applied_ai_delta_change_ids"])
+                self.assertTrue(Path(payload["target_dir"]).is_dir())
+
+    def test_page_has_ai_delta_ui_controls(self) -> None:
+        for token in (
+            'id="ai-features"',
+            "ai_features",
+        ):
+            self.assertIn(token, STUDIO_HTML)
+
+
 if __name__ == "__main__":
     unittest.main()

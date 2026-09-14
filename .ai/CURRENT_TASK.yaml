@@ -1,16 +1,15 @@
-task_id: R-441
-id: R-441
-title: "Live Studio Integration and UI Controls for Solution Pack Selection and Modification"
+task_id: R-442
+id: R-442
+title: "Studio AI-Delta Feature Modification Controls Above Solution Packs"
 status: completed
 phase: MVP
 tracker_row: null
 started_at: "2026-09-14"
 completed_at: "2026-09-14"
 objective: >-
-  Twelfth brick of the differentiating spine and eighth Solution Pack task. Wire Solution Pack
-  discovery, recommendation, selection, customization, and provenance into the OmniStackAI Studio
-  web interface (page.py), live server (live_serve.py), HTTP server (server.py), and history
-  tracking (history.py).
+  Thirteenth brick of the differentiating spine and ninth Solution Pack task. Wire natural-language
+  feature additions and AI modifications on top of Solution Packs into the OmniStackAI Studio web
+  interface (page.py), live server (live_serve.py), HTTP server (server.py), and history tracking (history.py).
 allowed_paths:
   - "services/agent-engine/src/omnistackai_agent_engine/studio/server.py"
   - "services/agent-engine/src/omnistackai_agent_engine/studio/live_serve.py"
@@ -23,7 +22,7 @@ allowed_paths:
   - "docs/SOLUTION_PACKS.md"
   - "docs/PROGRESS.md"
   - "docs/RESUME_PROMPT.md"
-  - ".ai/tasks/R-441.md"
+  - ".ai/tasks/R-442.md"
   - ".ai/CURRENT_TASK.yaml"
   - ".ai/PROJECT_STATE.yaml"
   - ".ai/WORK_LOG.md"
@@ -33,11 +32,11 @@ allowed_paths:
 forbidden_changes:
   - "Do not modify or include the unrelated untracked .claude directory"
   - "Do not include external resources (http://, https://, src=, <link) in STUDIO_HTML"
-  - "Do not make model calls or network requests when building with a Solution Pack"
-  - "Do not break existing POST /api/build or GET / callers without packs"
+  - "Do not make model calls or network requests when no AI-delta features are requested"
+  - "Do not break existing POST /api/build or GET / callers"
   - "Do not add external Python dependencies (Python 3.13 stdlib only)"
 required_gates:
-  - "test-first focused test_studio_server.py"
+  - "test-first focused test_studio_server.py and test_studio_history.py"
   - task verify
   - task lint
   - task security:quick
@@ -48,18 +47,21 @@ model_tool_trace:
   routing: none
   local_calls: 0
   cloud_calls: 0
-  note: "Deterministic server and UI integration; 0 model calls when using Solution Packs."
+  note: "0 model calls during verification; local Ollama provider used only when AI deltas are requested in live mode."
 acceptance_criteria:
-  - "GET /api/solution-packs returns registered packs with domain, capabilities, targets, and base digests."
-  - "POST /api/solution-packs/recommend returns domain classification and matching pack recommendation."
-  - "POST /api/build accepts pack_id and custom modification options (custom_name, custom_description)."
-  - "POST /api/build returns full Solution Pack provenance when built with a pack."
-  - "STUDIO_HTML includes Solution Pack selection dropdown, recommendation badge, customization inputs, and provenance rendering."
+  - "POST /api/build accepts ai_features and ai_delta_prompt options."
+  - "live_serve._build generates AI-delta proposals using generate_ai_delta_proposal when ai_features are present."
+  - "live_serve._build bypasses model provider (0 model calls) when no AI-delta features are requested."
+  - "Derived Application IR safely merges proposed entities, APIs, and screens and records applied_ai_delta_change_ids in provenance."
+  - "STUDIO_HTML provides AI feature modifications input and renders applied AI-delta changes in result."
   - "STUDIO_HTML contains 0 external resources (no http://, https://, src=, <link)."
-  - "History tracks pack_id and renders pack badges."
+  - "History tracks applied_ai_delta_change_ids and displays indicator in history item."
   - "100% offline verification in task verify (0 model calls)."
 evidence:
-  focused_suite: "test_studio_server (39 passed) + test_studio_history (10 passed) + test_studio_preview (14 passed): 63 passed"
-  verify_suite: "task verify: 3,003 passed fully offline (+8 net-new tests)"
-  quality_gates: "task lint, task security:quick, task env:check, and both builder demos (152/149 files) passed cleanly"
-next_action: "Proceed to R-442: Studio AI-delta feature modification controls above Solution Packs."
+  focused_tests: "test_studio_server + test_studio_history: 53 passed in 14.57s (+4 new tests)"
+  task_verify: "3,007 tests passed in 24.82s (0 failures, 0 model calls, 100% offline)"
+  task_lint: "Lint passed"
+  task_security: "Stage 0 secret-policy check passed"
+  task_env: "Environment contract passed"
+  task_demos: "minimal-blog (152 files) and rideshare-favourites (149 files) generated clean repos"
+next_action: "Complete task R-442 and proceed to next task."

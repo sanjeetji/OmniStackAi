@@ -1,21 +1,31 @@
 # Current Handoff
 
-Task ID: R-441
+Task ID: R-442
 Status: done
 Phase: BASIC/MVP — Founder Stage 0
 Branch: `main` (the only branch; the GitHub default)
 
-> **The differentiating SPINE now integrates Solution Packs into the Studio UI and HTTP server.** R-430 proposes the
+> **The differentiating SPINE now supports AI-delta feature additions above Solution Packs in the Studio.** R-430 proposes the
 > ecosystem, R-431 materializes it, R-432 refines unknown domains, R-433 scopes surfaces, R-434 registers
 > packs, R-435 recommends one, R-436 records bounded intent, R-437 applies safe configuration deterministically,
 > R-438 converts pending manifest AI-delta intents into strictly typed, bounded AIDeltaProposal objects via an
 > explicit opt-in local ModelProvider boundary, R-439 safely applies validated AI-delta proposals to
 > derived Application IRs, R-440 wires derived Solution Pack Application IRs into verified multi-repo
-> builder pipelines, and **R-441 wires Solution Pack discovery, recommendation, selection, customization, and provenance
-> into the OmniStackAI Studio UI (`page.py`), live server (`live_serve.py`), HTTP server (`server.py`), and history (`history.py`)**.
-> UI-component series PAUSED at R-415. **NEXT:** R-442 Studio AI-delta feature modification controls above Solution Packs.
+> builder pipelines, R-441 wires Solution Pack selection into the Studio, and **R-442 wires natural-language
+> AI-delta feature modifications on top of Solution Packs into the Studio UI (`page.py`), live server (`live_serve.py`),
+> HTTP server (`server.py`), and history (`history.py`)**.
+> UI-component series PAUSED at R-415. **NEXT:** R-443 Solution Pack registry packaging and export CLI.
 
 ## Repo/workflow state
+
+- **R-442 (Studio AI-delta feature modification controls above Solution Packs — thirteenth spine brick)** shipped:
+  `server.py` extends `POST /api/build` to accept `ai_features` and `ai_delta_prompt`; `live_serve.py` generates
+  bounded `AIDeltaProposal` via `generate_ai_delta_proposal` when AI features are requested (and bypasses the model
+  with 0 calls when none requested), applying the proposal safely via `apply_solution_pack_manifest` and recording
+  full provenance in `applied_ai_delta_change_ids`; `history.py` tracks `applied_ai_delta_change_ids` in `StudioBuildHistory`;
+  and `page.py` adds `#ai-features` input, AI synthesis status messaging, and AI delta badge chips in history items
+  and build provenance, strictly preserving 0 external resources. 4 new tests; focused studio suite: 53 passed;
+  `task verify` **3,007 passed** offline (+4); lint/security/env + demos (152/149) green; 0 model calls in test execution.
 
 - **R-441 (live Studio integration and UI controls for Solution Pack selection and modification — twelfth spine brick)** shipped:
   `server.py` adds `GET /api/solution-packs` and `POST /api/solution-packs/recommend` endpoints; `POST /api/build` accepts

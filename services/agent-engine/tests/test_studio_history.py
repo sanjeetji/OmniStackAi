@@ -113,6 +113,19 @@ class TestStudioBuildHistory(unittest.TestCase):
         self.assertEqual(entry["pack_id"], "minimal-blog")
         self.assertEqual(entry["pack_version"], "1.0.0")
 
+    def test_record_with_applied_ai_deltas(self) -> None:
+        history = StudioBuildHistory()
+        history.record(
+            _build(
+                "Blog",
+                pack_id="minimal-blog",
+                pack_version="1.0.0",
+                applied_ai_delta_change_ids=["ai-delta-1", "ai-delta-2"],
+            )
+        )
+        entry = history.list()["builds"][0]
+        self.assertEqual(entry["applied_ai_delta_change_ids"], ["ai-delta-1", "ai-delta-2"])
+
 
 if __name__ == "__main__":
     unittest.main()
