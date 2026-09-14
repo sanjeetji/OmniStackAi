@@ -84,6 +84,10 @@ class EcosystemPack:
     def deployment_manifest(self) -> Any:
         return self.package.deployment_manifest if self.package else None
 
+    @property
+    def sync_contract(self) -> Any:
+        return self.package.sync_contract if self.package else None
+
     def to_dict(self) -> dict[str, Any]:
         return {
             "ecosystem_id": self.ecosystem_id,
@@ -109,6 +113,7 @@ class EcosystemPack:
             "has_event_bridge": self.event_bridge is not None,
             "has_telemetry_contract": self.telemetry_contract is not None,
             "has_deployment_manifest": self.deployment_manifest is not None,
+            "has_sync_contract": self.sync_contract is not None,
         }
 
     @classmethod
@@ -295,6 +300,11 @@ class EcosystemPackRegistry:
         pack = self.get(ecosystem_id, version)
         return pack.deployment_manifest if pack else None
 
+    def get_sync_contract(self, ecosystem_id: str, version: str | None = None) -> Any:
+        """Get the EcosystemSyncContract for an ecosystem if present."""
+        pack = self.get(ecosystem_id, version)
+        return pack.sync_contract if pack else None
+
 
 def build_default_ecosystem_packs() -> tuple[EcosystemPack, ...]:
     """Synthesize default verified ecosystem packs from registered baseline solution packs."""
@@ -377,6 +387,9 @@ class _LazyEcosystemPackRegistry(EcosystemPackRegistry):
 
     def get_deployment_manifest(self, ecosystem_id: str, version: str | None = None) -> Any:
         return self._get_delegate().get_deployment_manifest(ecosystem_id, version)
+
+    def get_sync_contract(self, ecosystem_id: str, version: str | None = None) -> Any:
+        return self._get_delegate().get_sync_contract(ecosystem_id, version)
 
 
 DEFAULT_ECOSYSTEM_PACK_REGISTRY: EcosystemPackRegistry = _LazyEcosystemPackRegistry()

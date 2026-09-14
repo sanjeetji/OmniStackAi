@@ -102,6 +102,11 @@ def build_parser() -> argparse.ArgumentParser:
     deploy_parser.add_argument("--json", action="store_true", help="Output deployment manifest as canonical JSON.")
     deploy_parser.add_argument("--compose", action="store_true", help="Output deployment manifest as Docker Compose YAML.")
 
+    # Subcommand: sync
+    sync_parser = subparsers.add_parser("sync", help="Inspect cross-surface data sync contracts, sync entities, and conflict resolution rules.")
+    sync_parser.add_argument("package_file", help="Path to the .ecosystem.pack.json file or registered ecosystem ID to inspect.")
+    sync_parser.add_argument("--json", action="store_true", help="Output sync contract as canonical JSON.")
+
     return parser
 
 
@@ -461,6 +466,42 @@ def run_deploy(args: argparse.Namespace) -> int:
     return 0
 
 
+def run_sync(args: argparse.Namespace) -> int:
+    import json
+    from .ecosystem_sync import synthesize_ecosystem_sync
+
+    pkg, err = _load_package(args.package_file)
+    if pkg is None:
+        sys.stderr.write(f"Error: {err}\n")
+        return 1
+
+    sync = pkg.sync_contract
+    if sync is None:
+        sync = synthesize_ecosystem_sync(
+            pkg.ecosystem_id,
+            pkg.surfaces,
+            version=pkg.version,
+        )
+
+    if args.json:
+        sys.stdout.write(json.dumps(sync.to_dict(), indent=2, sort_keys=True))
+        sys.stdout.write("\n")
+        return 0
+
+    sys.stdout.write(f"Ecosystem Data Sync: {pkg.display_name} ({pkg.ecosystem_id})\n")
+    sys.stdout.write(f"  Version:          {sync.version}\n")
+    sys.stdout.write(f"  Default Strategy: {sync.default_strategy}\n")
+    sys.stdout.write(f"  Offline Queue:    {sync.offline_queue_max_size} mutations\n")
+    sys.stdout.write(f"  Surface Policies ({len(sync.surface_policies)}):\n")
+    for surf, policy in sorted(sync.surface_policies.items()):
+        sys.stdout.write(f"    - {surf}: {policy}\n")
+    sys.stdout.write(f"  Sync Entities ({len(sync.sync_entities)}):\n")
+    for e in sync.sync_entities:
+        auth = f" [SoT: {e.source_of_truth_surface}]" if e.source_of_truth_surface else ""
+        sys.stdout.write(f"    - {e.entity_name} ({e.sync_mode}, {e.conflict_strategy}){auth}\n")
+    return 0
+
+
 def main(argv: Sequence[str] | None = None) -> int:
     parser = build_parser()
     args = parser.parse_args(argv)
@@ -485,6 +526,8 @@ def main(argv: Sequence[str] | None = None) -> int:
         return run_telemetry(args)
     if args.subcommand == "deploy":
         return run_deploy(args)
+    if args.subcommand == "sync":
+        return run_sync(args)
     sys.stderr.write(f"Unknown subcommand: {args.subcommand}\n")
     return 1
 

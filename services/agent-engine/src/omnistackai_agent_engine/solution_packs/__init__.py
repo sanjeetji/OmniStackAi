@@ -104,6 +104,18 @@ from .ecosystem_deployment import (
     match_gateway_route,
     synthesize_ecosystem_deployment,
 )
+from .ecosystem_sync import (
+    ConflictStrategy,
+    EcosystemSyncContract,
+    EcosystemSyncEngine,
+    SyncCheckpoint,
+    SyncConflict,
+    SyncEntitySpec,
+    SyncMode,
+    SyncMutation,
+    resolve_sync_conflict,
+    synthesize_ecosystem_sync,
+)
 
 __all__ = [
     "LEGACY_MANIFEST_SCHEMA_VERSION",
@@ -174,4 +186,14 @@ __all__ = [
     "generate_docker_compose",
     "match_gateway_route",
     "synthesize_ecosystem_deployment",
+    "ConflictStrategy",
+    "EcosystemSyncContract",
+    "EcosystemSyncEngine",
+    "SyncCheckpoint",
+    "SyncConflict",
+    "SyncEntitySpec",
+    "SyncMode",
+    "SyncMutation",
+    "resolve_sync_conflict",
+    "synthesize_ecosystem_sync",
 ]

@@ -39,6 +39,12 @@ from ..solution_packs.ecosystem_telemetry import (
     EcosystemTelemetryCollector,
     synthesize_ecosystem_telemetry,
 )
+from ..solution_packs.ecosystem_sync import (
+    EcosystemSyncContract,
+    EcosystemSyncEngine,
+    SyncMutation,
+    synthesize_ecosystem_sync,
+)
 
 StartFn = Callable[..., LocalAppSession]
 
@@ -75,6 +81,8 @@ class StudioPreviewManager:
         self._telemetry_collector: EcosystemTelemetryCollector | None = None
         self._deployment_manifest: EcosystemDeploymentManifest | None = None
         self._live_gateway: EcosystemLiveGateway | None = None
+        self._sync_contract: EcosystemSyncContract | None = None
+        self._sync_engine: EcosystemSyncEngine | None = None
 
     def replace(self, repo_dir: str) -> dict:
         """Stop prior previews, start single app ``repo_dir`` on free ports, and return state."""
@@ -122,6 +130,7 @@ class StudioPreviewManager:
         event_bridge: EcosystemEventBridgeContract | None = None,
         telemetry_contract: EcosystemTelemetryContract | None = None,
         deployment_manifest: EcosystemDeploymentManifest | None = None,
+        sync_contract: EcosystemSyncContract | None = None,
     ) -> dict:
         """Stop prior previews, register ecosystem surfaces, and start the active surface."""
         with self._lock:
@@ -188,6 +197,20 @@ class StudioPreviewManager:
                     self._deployment_manifest = synthesize_ecosystem_deployment(
                         ecosystem_id, self._surfaces
                     )
+
+            # Data Sync contract (R-451)
+            if sync_contract is not None:
+                self._sync_contract = sync_contract
+            else:
+                from ..solution_packs.ecosystem_registry import DEFAULT_ECOSYSTEM_PACK_REGISTRY
+                cached_sync = DEFAULT_ECOSYSTEM_PACK_REGISTRY.get_sync_contract(ecosystem_id)
+                if cached_sync is not None:
+                    self._sync_contract = cached_sync
+                else:
+                    self._sync_contract = synthesize_ecosystem_sync(
+                        ecosystem_id, self._surfaces
+                    )
+            self._sync_engine = EcosystemSyncEngine(self._sync_contract)
 
             # Determine initial active surface
             chosen_slug = active_surface_slug
@@ -361,6 +384,10 @@ class StudioPreviewManager:
                 "gateway_routes": [r.to_dict() for r in self._deployment_manifest.gateway_routes] if self._deployment_manifest else [],
                 "gateway_port": self._deployment_manifest.gateway_port if self._deployment_manifest else None,
                 "gateway_url": f"http://127.0.0.1:{self._deployment_manifest.gateway_port}" if self._deployment_manifest else None,
+                "has_sync": self._sync_contract is not None,
+                "sync_entity_count": len(self._sync_contract.sync_entities) if self._sync_contract else 0,
+                "sync_conflict_count": self._sync_engine.conflict_count if self._sync_engine else 0,
+                "sync_version": self._sync_engine.current_version if self._sync_engine else 0,
                 "message": error_msg or _PREVIEW_ERROR,
                 "surfaces": surface_statuses,
             }
@@ -384,6 +411,10 @@ class StudioPreviewManager:
                 "gateway_routes": [r.to_dict() for r in self._deployment_manifest.gateway_routes] if self._deployment_manifest else [],
                 "gateway_port": self._deployment_manifest.gateway_port if self._deployment_manifest else None,
                 "gateway_url": f"http://127.0.0.1:{self._deployment_manifest.gateway_port}" if self._deployment_manifest else None,
+                "has_sync": self._sync_contract is not None,
+                "sync_entity_count": len(self._sync_contract.sync_entities) if self._sync_contract else 0,
+                "sync_conflict_count": self._sync_engine.conflict_count if self._sync_engine else 0,
+                "sync_version": self._sync_engine.current_version if self._sync_engine else 0,
                 "web_url": active_sess.plan.web_url,
                 "message": f"The generated {active_surface_info['app_name']} is running locally.",
                 "surfaces": surface_statuses,
@@ -412,6 +443,10 @@ class StudioPreviewManager:
                 "gateway_routes": [r.to_dict() for r in self._deployment_manifest.gateway_routes] if self._deployment_manifest else [],
                 "gateway_port": self._deployment_manifest.gateway_port if self._deployment_manifest else None,
                 "gateway_url": f"http://127.0.0.1:{self._deployment_manifest.gateway_port}" if self._deployment_manifest else None,
+                "has_sync": self._sync_contract is not None,
+                "sync_entity_count": len(self._sync_contract.sync_entities) if self._sync_contract else 0,
+                "sync_conflict_count": self._sync_engine.conflict_count if self._sync_engine else 0,
+                "sync_version": self._sync_engine.current_version if self._sync_engine else 0,
                 "message": f"Preview for {self._active_surface or 'surface'} stopped.",
                 "surfaces": surface_statuses,
             }
@@ -577,5 +612,85 @@ class StudioPreviewManager:
             if not self._is_ecosystem or not self._deployment_manifest:
                 return None
             return self._deployment_manifest.to_compose_yaml()
+
+    def get_ecosystem_sync(self) -> dict | None:
+        """Inspect the active ecosystem's data sync contract and status."""
+        with self._lock:
+            if not self._is_ecosystem or not self._sync_contract:
+                return None
+            conflicts = [c.to_dict() for c in self._sync_engine.get_conflicts()] if self._sync_engine else []
+            return {
+                "is_ecosystem": True,
+                "ecosystem_id": self._ecosystem_id,
+                "sync_contract": self._sync_contract.to_dict(),
+                "current_version": self._sync_engine.current_version if self._sync_engine else 0,
+                "mutation_count": self._sync_engine.mutation_count if self._sync_engine else 0,
+                "conflict_count": self._sync_engine.conflict_count if self._sync_engine else 0,
+                "conflicts": conflicts,
+            }
+
+    def push_sync_mutations(
+        self,
+        surface_slug: str,
+        mutations: list[dict],
+    ) -> dict:
+        """Push a batch of mutations to the active sync engine."""
+        with self._lock:
+            if not self._is_ecosystem or not self._sync_engine:
+                return {"status": "error", "message": "No active ecosystem sync engine"}
+            parsed_mutations = [SyncMutation.from_dict(m) for m in mutations]
+            accepted, conflicts = self._sync_engine.push_mutations(surface_slug, parsed_mutations)
+            return {
+                "status": "ok",
+                "accepted": [m.to_dict() for m in accepted],
+                "conflicts": [c.to_dict() for c in conflicts],
+                "current_version": self._sync_engine.current_version,
+            }
+
+    def pull_sync_changes(
+        self,
+        surface_slug: str,
+        since_version: int = 0,
+    ) -> dict:
+        """Pull mutations that occurred since ``since_version``."""
+        with self._lock:
+            if not self._is_ecosystem or not self._sync_engine:
+                return {"status": "error", "message": "No active ecosystem sync engine"}
+            mutations, checkpoint = self._sync_engine.pull_changes(surface_slug, since_version)
+            return {
+                "status": "ok",
+                "mutations": [m.to_dict() for m in mutations],
+                "checkpoint": checkpoint.to_dict(),
+                "current_version": self._sync_engine.current_version,
+            }
+
+    def simulate_sync_conflict(
+        self,
+        entity_name: str,
+        record_id: str,
+        local_surface: str,
+        remote_surface: str,
+        local_updates: dict,
+        remote_updates: dict,
+        strategy: str = "field_merge",
+    ) -> dict:
+        """Simulate a concurrent mutation conflict and return the resolved record."""
+        with self._lock:
+            if not self._is_ecosystem or not self._sync_engine:
+                return {"status": "error", "message": "No active ecosystem sync engine"}
+            conflict = self._sync_engine.simulate_conflict(
+                entity_name=entity_name,
+                record_id=record_id,
+                local_surface=local_surface,
+                remote_surface=remote_surface,
+                local_updates=local_updates,
+                remote_updates=remote_updates,
+                strategy=strategy,
+            )
+            return {
+                "status": "ok",
+                "conflict": conflict.to_dict(),
+                "conflict_count": self._sync_engine.conflict_count,
+            }
 
 

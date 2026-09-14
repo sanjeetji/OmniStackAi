@@ -26,6 +26,7 @@ from .ecosystem_events import EcosystemEventBridgeContract, synthesize_ecosystem
 from .ecosystem_state import EcosystemStateBinding, synthesize_ecosystem_state
 from .ecosystem_telemetry import EcosystemTelemetryContract, synthesize_ecosystem_telemetry
 from .ecosystem_deployment import EcosystemDeploymentManifest, synthesize_ecosystem_deployment
+from .ecosystem_sync import EcosystemSyncContract, synthesize_ecosystem_sync
 from .registry import (
     DEFAULT_SOLUTION_PACK_REGISTRY,
     SolutionPack,
@@ -100,6 +101,7 @@ class EcosystemPackPackage:
     event_bridge: EcosystemEventBridgeContract | None = None
     telemetry_contract: EcosystemTelemetryContract | None = None
     deployment_manifest: EcosystemDeploymentManifest | None = None
+    sync_contract: EcosystemSyncContract | None = None
 
     def to_dict(self) -> dict[str, Any]:
         data: dict[str, Any] = {
@@ -123,6 +125,8 @@ class EcosystemPackPackage:
             data["telemetry_contract"] = self.telemetry_contract.to_dict()
         if self.deployment_manifest is not None:
             data["deployment_manifest"] = self.deployment_manifest.to_dict()
+        if self.sync_contract is not None:
+            data["sync_contract"] = self.sync_contract.to_dict()
         return data
 
     def to_json(self) -> str:
@@ -265,6 +269,10 @@ def parse_ecosystem_pack_package(data: str | bytes | Mapping[str, Any]) -> Ecosy
     if "deployment_manifest" in raw and raw["deployment_manifest"] is not None:
         deployment_manifest = EcosystemDeploymentManifest.from_dict(raw["deployment_manifest"])
 
+    sync_contract = None
+    if "sync_contract" in raw and raw["sync_contract"] is not None:
+        sync_contract = EcosystemSyncContract.from_dict(raw["sync_contract"])
+
     return EcosystemPackPackage(
         schema_version=schema_version,
         ecosystem_id=ecosystem_id,
@@ -280,6 +288,7 @@ def parse_ecosystem_pack_package(data: str | bytes | Mapping[str, Any]) -> Ecosy
         event_bridge=event_bridge,
         telemetry_contract=telemetry_contract,
         deployment_manifest=deployment_manifest,
+        sync_contract=sync_contract,
     )
 
 
@@ -386,6 +395,11 @@ def synthesize_ecosystem_pack(
         auth_contract=auth_contract,
         state_binding=state_binding,
     )
+    sync_contract = synthesize_ecosystem_sync(
+        ecosystem_id,
+        surface_packages,
+        version=version,
+    )
 
     payload = {
         "schema_version": ECOSYSTEM_PACK_SCHEMA_VERSION,
@@ -401,6 +415,7 @@ def synthesize_ecosystem_pack(
         "event_bridge": event_bridge.to_dict(),
         "telemetry_contract": telemetry_contract.to_dict(),
         "deployment_manifest": deployment_manifest.to_dict(),
+        "sync_contract": sync_contract.to_dict(),
     }
     package_sha256 = compute_ecosystem_checksum(payload)
 
@@ -419,4 +434,5 @@ def synthesize_ecosystem_pack(
         event_bridge=event_bridge,
         telemetry_contract=telemetry_contract,
         deployment_manifest=deployment_manifest,
+        sync_contract=sync_contract,
     )

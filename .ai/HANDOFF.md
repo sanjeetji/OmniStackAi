@@ -1,19 +1,19 @@
 # Current Handoff
 
-Task ID: R-450
+Task ID: R-451
 Status: done
 Phase: BASIC/MVP — Founder Stage 0
 Branch: `main` (the only branch; the GitHub default)
 
 > **Task Compilation Audit completed on 2026-09-14.** All task documentation is 100% synchronized.
-> - Execution tracker now covers **450 tasks** (239 Done, 1 Deferred, 210 Not Started; MVP 69.5%).
+> - Execution tracker now covers **450 tasks** (240 Done, 1 Deferred, 209 Not Started; MVP 69.8%).
 > - 92 completed tasks (R-359..R-450) formally tracked in `Phase_Roadmap` in the workbook.
 > - 5 CHANGELOG entries backfilled (R-272, R-314, R-374, R-375, R-376).
 > - R-360.md status corrected to DONE. All `.ai/tasks/*.md` files have valid terminal status.
-> - `CHANGELOG.md` now has 240 entries covering all completed tasks (0 missing).
+> - `CHANGELOG.md` now has 241 entries covering all completed tasks (0 missing).
 > - All docs updated: `PROGRESS.md`, `RESUME_PROMPT.md`, `PROJECT_STATE.md`, `PROJECT_STATE.yaml`, `WORK_LOG.md`.
 
-> **The differentiating SPINE now supports Solution Pack Ecosystem Multi-Surface Export, Deployment Manifest, and Live Gateway Orchestration.**
+> **The differentiating SPINE now supports Solution Pack Ecosystem Cross-Surface Data Sync, Conflict Resolution, and Offline-First Sync Protocol.**
 > R-430 proposes the ecosystem, R-431 materializes it, R-432 refines unknown domains, R-433 scopes surfaces, R-434 registers
 > packs, R-435 recommends one, R-436 records bounded intent, R-437 applies safe configuration deterministically,
 > R-438 converts pending manifest AI-delta intents into strictly typed, bounded AIDeltaProposal objects via an
@@ -33,15 +33,33 @@ Branch: `main` (the only branch; the GitHub default)
 > R-449 provides canonical TelemetrySpan, AuditTrailEntry, DistributedTrace, TelemetrySamplingPolicy,
 > TracedSurface, EcosystemTelemetryContract, stdlib-only deterministic trace ID and span ID generation,
 > in-process EcosystemTelemetryCollector, Studio preview telemetry injection and GET /api/ecosystem/telemetry,
-> and **R-450 provides canonical GatewayRoute, SurfaceDeploymentSpec, EcosystemDeploymentManifest,
-> deterministic Python 3.13 stdlib-only Docker Compose YAML generation (to_compose_yaml()) with zero external dependencies,
-> thread-safe in-process HTTP reverse-proxy EcosystemLiveGateway routing requests via longest-prefix matching with hop-by-hop header strip
-> and forwarding headers injection, deterministic deployment synthesis (synthesize_ecosystem_deployment), Studio preview deployment
-> manifest injection, GET /api/ecosystem/deployment and GET /api/ecosystem/deployment/compose, Studio UI #preview-deployment-info panel,
-> and CLI deploy subcommand**.
-> UI-component series PAUSED at R-415. **NEXT:** R-451 Solution Pack Ecosystem Multi-Surface CI/CD Workflow & GitHub Actions Orchestration.
+> R-450 provides canonical GatewayRoute, SurfaceDeploymentSpec, EcosystemDeploymentManifest,
+> deterministic Docker Compose YAML generation, thread-safe in-process HTTP reverse-proxy EcosystemLiveGateway,
+> and **R-451 provides canonical SyncEntitySpec, SyncMutation, SyncConflict, SyncCheckpoint, EcosystemSyncContract,
+> deterministic Python 3.13 stdlib-only conflict resolution algorithms (last_write_wins, source_of_truth, field_merge),
+> thread-safe in-process EcosystemSyncEngine with mutation log, state store, conflict log, push/pull checkpoints,
+> and mutation base-version validation, deterministic sync contract synthesis, Studio preview sync status injection,
+> endpoints GET /api/ecosystem/sync, POST /api/ecosystem/sync/push, GET /api/ecosystem/sync/pull, POST /api/ecosystem/sync/simulate,
+> Studio UI #preview-sync-info panel, and CLI sync subcommand**.
+> UI-component series PAUSED at R-415. **NEXT:** R-452 Solution Pack Ecosystem Multi-Surface CI/CD Workflow & GitHub Actions Orchestration.
 
 ## Repo/workflow state
+
+- **R-451 (Solution Pack Ecosystem Cross-Surface Data Sync, Conflict Resolution, and Offline-First Sync Protocol — twenty-second spine brick)** shipped:
+  `solution_packs/ecosystem_sync.py` implements `SyncEntitySpec`, `SyncMutation`, `SyncConflict`, `SyncCheckpoint`, `EcosystemSyncContract`;
+  implements deterministic Python 3.13 stdlib-only conflict resolution algorithms (`resolve_sync_conflict` supporting `last_write_wins`,
+  `source_of_truth`, and `field_merge` strategies) with 0 external dependencies; implements thread-safe in-process `EcosystemSyncEngine` with
+  mutation log, state store, conflict log (bounded 500), push/pull checkpoints, and mutation base-version validation; implements deterministic
+  `synthesize_ecosystem_sync` deriving sync entities, authority mappings, and conflict strategies across ecosystem surfaces;
+  `solution_packs/ecosystem_pack.py` bundles and validates sync contracts with whole-package SHA-256 checksums;
+  `solution_packs/ecosystem_registry.py` exposes `sync_contract` and `get_sync_contract()`; exports all symbols in `solution_packs/__init__.py`;
+  `studio/preview.py` attaches `has_sync`, `sync_entity_count`, `sync_conflict_count`, and `sync_version` to preview status/payloads, and
+  exposes `get_ecosystem_sync()`, `push_sync_mutations()`, `pull_sync_changes()`, and `simulate_sync_conflict()`; `studio/server.py` exposes
+  `GET /api/ecosystem/sync`, `POST /api/ecosystem/sync/push`, `GET /api/ecosystem/sync/pull`, and `POST /api/ecosystem/sync/simulate`;
+  `studio/page.py` renders `#preview-sync-info` with entity chips, conflict/version badges, and 1-click "Simulate Conflict" and "Refresh Sync"
+  buttons (0 external requests); `solution_packs/ecosystem_cli.py` adds `sync` subcommand.
+  14 new tests in `test_ecosystem_sync.py`; `task verify` **3,158 passed** offline (+14);
+  lint/security/env + demos (152/149) green; 0 model calls in test execution.
 
 - **R-450 (Solution Pack Ecosystem Multi-Surface Export, Deployment Manifest, and Live Gateway Orchestration — twenty-first spine brick)** shipped:
   `solution_packs/ecosystem_deployment.py` implements `GatewayRoute`, `SurfaceDeploymentSpec`, `EcosystemDeploymentManifest`;

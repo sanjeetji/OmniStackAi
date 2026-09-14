@@ -1,15 +1,15 @@
-# OmniStackAI — implementation progress (as of R-450)
+# OmniStackAI — implementation progress (as of R-451)
 
 A living summary of what is built, what is pending, and how to see results. Numbers come from the
 execution tracker (`R_&_D/OmniStackAI_Execution_Tracker_v6.xlsx`, `Phase_Roadmap`, 450 tasks as of
-R-450 completion) plus the state files (`.ai/`), Git history, and CHANGELOG.
+R-451 completion) plus the state files (`.ai/`), Git history, and CHANGELOG.
 
 ## Headline
 
-- **3,144 automated tests pass**, fully offline and network-independent (`task verify`).
-- **239 tracker tasks Done, 1 Deferred, 210 Not Started** across **450 tasks** in the execution tracker
-  (`R_&_D/OmniStackAI_Execution_Tracker_v6.xlsx`, `Phase_Roadmap`). MVP completion: **239 / 344 = 69.5%**. Overall program completion: **239 / 450 = 53.1%**.
-- **92 tasks (R-359 → R-450) formally tracked in the tracker workbook**:
+- **3,158 automated tests pass**, fully offline and network-independent (`task verify`).
+- **240 tracker tasks Done, 1 Deferred, 209 Not Started** across **450 tasks** in the execution tracker
+  (`R_&_D/OmniStackAI_Execution_Tracker_v6.xlsx`, `Phase_Roadmap`). MVP completion: **240 / 344 = 69.8%**. Overall program completion: **240 / 450 = 53.3%**.
+- **93 tasks (R-359 → R-451) formally tracked in the tracker workbook**:
   Rows inserted into `Phase_Roadmap` with full column data and audit evidence so the workbook remains the single authoritative tracker.
 - **Built tasks include**: 57 reusable UI-component suites,
   four front-door bricks, R-420 generated-SQL hardening, R-421 managed embedded local preview,
@@ -31,10 +31,20 @@ R-450 completion) plus the state files (`.ai/`), Git history, and CHANGELOG.
   **R-446 Solution Pack Ecosystem Studio Live Multi-Surface Preview and Process Orchestration**,
   **R-447 Solution Pack Ecosystem Multi-Surface Cross-App Auth and Unified State Binding**,
   **R-448 Solution Pack Ecosystem Cross-Surface Webhook and Event Bridge**,
-  **R-449 Solution Pack Ecosystem Cross-Surface Telemetry, Audit Trails, and Distributed Tracing**, and
-  **R-450 Solution Pack Ecosystem Multi-Surface Export, Deployment Manifest, and Live Gateway Orchestration** —
-  the first twenty-one bricks of the differentiating spine.
+  **R-449 Solution Pack Ecosystem Cross-Surface Telemetry, Audit Trails, and Distributed Tracing**,
+  **R-450 Solution Pack Ecosystem Multi-Surface Export, Deployment Manifest, and Live Gateway Orchestration**, and
+  **R-451 Solution Pack Ecosystem Cross-Surface Data Sync, Conflict Resolution, and Offline-First Sync Protocol** —
+  the first twenty-two bricks of the differentiating spine.
   The generated Next.js component library remains at **110 components**; its series is **PAUSED at R-415** and fully resumable.
+- **R-451 adds Ecosystem Cross-Surface Data Sync, Conflict Resolution, and Offline-First Sync Protocol:**
+  `SyncEntitySpec`, `SyncMutation`, `SyncConflict`, `SyncCheckpoint`, and `EcosystemSyncContract` formalize multi-surface sync models;
+  deterministic Python 3.13 stdlib-only conflict resolution algorithms (`resolve_sync_conflict` supporting `last_write_wins`, `source_of_truth`, `field_merge`) with 0 external dependencies;
+  in-process thread-safe `EcosystemSyncEngine` with mutation log, state store, conflict log (bounded 500), push/pull checkpoints, and mutation base-version validation;
+  deterministic contract synthesis (`synthesize_ecosystem_sync`) deriving sync entities, authority mappings, and conflict strategies across surfaces;
+  `StudioPreviewManager` tracks sync contract and engine, injecting `has_sync`, `sync_entity_count`, `sync_conflict_count`, and `sync_version` into preview status/payloads;
+  Studio HTTP server exposes `GET /api/ecosystem/sync`, `POST /api/ecosystem/sync/push`, `GET /api/ecosystem/sync/pull`, and `POST /api/ecosystem/sync/simulate`;
+  `studio/page.py` renders `#preview-sync-info` with entity chips, conflict/version badges, and 1-click "Simulate Conflict" and "Refresh Sync" buttons (0 external network requests);
+  and `ecosystem_cli.py` adds `sync` subcommand with `--json` option.
 - **R-450 adds Ecosystem Multi-Surface Export, Deployment Manifest, and Live Gateway Orchestration:**
   `GatewayRoute`, `SurfaceDeploymentSpec`, and `EcosystemDeploymentManifest` formalize multi-surface deployment topologies;
   `generate_docker_compose` and `to_compose_yaml()` generate valid, deterministic Docker Compose YAML for all surfaces and PostgreSQL with 0 external dependencies (no PyYAML);

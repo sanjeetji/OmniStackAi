@@ -462,6 +462,74 @@ STUDIO_HTML = """<!doctype html>
     color: #94a3b8;
     font-family: monospace;
   }
+  .preview-sync-info {
+    margin-top: 10px;
+    padding: 10px 12px;
+    background: rgba(15, 23, 42, 0.6);
+    border: 1px solid rgba(16, 185, 129, 0.25);
+    border-radius: 8px;
+    font-size: 11px;
+    color: #cbd5e1;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+  .sync-header-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    flex-wrap: wrap;
+  }
+  .sync-meta-group {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+  }
+  .sync-badge {
+    background: rgba(16, 185, 129, 0.2);
+    color: #34d399;
+    padding: 2px 8px;
+    border-radius: 999px;
+    font-size: 10px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
+  .sync-count-badge {
+    background: #1e293b;
+    padding: 2px 6px;
+    border-radius: 4px;
+    font-size: 10px;
+    color: #94a3b8;
+  }
+  .sync-action-btn {
+    background: rgba(16, 185, 129, 0.15);
+    border: 1px solid rgba(16, 185, 129, 0.35);
+    border-radius: 4px;
+    color: #a7f3d0;
+    font-size: 10px;
+    padding: 3px 8px;
+    cursor: pointer;
+    transition: background 0.15s;
+  }
+  .sync-action-btn:hover { background: rgba(16, 185, 129, 0.25); }
+  .sync-entities-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-top: 2px;
+  }
+  .sync-entity-chip {
+    background: rgba(15, 23, 42, 0.8);
+    border: 1px solid #1e293b;
+    border-radius: 4px;
+    padding: 2px 8px;
+    font-size: 10px;
+    color: #94a3b8;
+    font-family: monospace;
+  }
   .events-header-row {
     display: flex;
     align-items: center;
@@ -754,6 +822,21 @@ STUDIO_HTML = """<!doctype html>
           </div>
         </div>
         <div id="deployment-routes-list" class="deployment-routes-list"></div>
+      </div>
+      <div id="preview-sync-info" class="preview-sync-info" hidden>
+        <div class="sync-header-row">
+          <div class="sync-meta-group">
+            <span class="sync-badge">Data Sync</span>
+            <span id="sync-entities-count" class="sync-count-badge">0 entities</span>
+            <span id="sync-version-badge" class="sync-count-badge">v0</span>
+            <span id="sync-conflicts-count" class="sync-count-badge">0 conflicts</span>
+          </div>
+          <div class="sync-meta-group">
+            <button type="button" id="sync-simulate-btn" class="sync-action-btn">Simulate Conflict</button>
+            <button type="button" id="sync-refresh-btn" class="sync-action-btn">Refresh Sync</button>
+          </div>
+        </div>
+        <div id="sync-entities-list" class="sync-entities-list"></div>
       </div>
       <p id="preview-status" class="preview-status" role="status" aria-live="polite">Preview has not started.</p>
       <iframe
@@ -1177,6 +1260,27 @@ STUDIO_HTML = """<!doctype html>
       }
     }
 
+    var syncInfo = document.getElementById('preview-sync-info');
+    if (syncInfo) {
+      if (preview && preview.is_ecosystem && preview.has_sync) {
+        syncInfo.hidden = false;
+        var syncEntitiesBadge = document.getElementById('sync-entities-count');
+        if (syncEntitiesBadge) {
+          syncEntitiesBadge.textContent = (preview.sync_entity_count || 0) + ' entities';
+        }
+        var syncVersionBadge = document.getElementById('sync-version-badge');
+        if (syncVersionBadge) {
+          syncVersionBadge.textContent = 'v' + (preview.sync_version || 0);
+        }
+        var syncConflictsBadge = document.getElementById('sync-conflicts-count');
+        if (syncConflictsBadge) {
+          syncConflictsBadge.textContent = (preview.sync_conflict_count || 0) + ' conflicts';
+        }
+      } else {
+        syncInfo.hidden = true;
+      }
+    }
+
     if (url) {
       previewStatus.textContent = preview.message || 'The generated application is running locally.';
       if (currentPreviewUrl !== url) {
@@ -1384,6 +1488,76 @@ STUDIO_HTML = """<!doctype html>
         })
         .catch(function () {
           flashButton(deploymentRefreshBtn, 'Error');
+        });
+    });
+  }
+
+  var syncSimulateBtn = document.getElementById('sync-simulate-btn');
+  if (syncSimulateBtn) {
+    syncSimulateBtn.addEventListener('click', function () {
+      flashButton(syncSimulateBtn, 'Simulating...');
+      fetch('/api/ecosystem/sync/simulate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          entity_name: 'Post',
+          record_id: 'post-demo-1',
+          local_surface: 'author-studio',
+          remote_surface: 'cms-admin',
+          local_updates: { title: 'Draft title by Author', content: 'Author content' },
+          remote_updates: { title: 'Editorial Title by Editor', tags: ['news'] },
+          strategy: 'field_merge'
+        })
+      })
+        .then(function (res) {
+          if (!res.ok) throw new Error('status ' + res.status);
+          return res.json();
+        })
+        .then(function (data) {
+          flashButton(syncSimulateBtn, 'Resolved: ' + data.conflict.winning_surface);
+          var syncConflictsBadge = document.getElementById('sync-conflicts-count');
+          if (syncConflictsBadge) {
+            syncConflictsBadge.textContent = (data.conflict_count || 1) + ' conflicts';
+          }
+        })
+        .catch(function () {
+          flashButton(syncSimulateBtn, 'Failed');
+        });
+    });
+  }
+
+  var syncRefreshBtn = document.getElementById('sync-refresh-btn');
+  if (syncRefreshBtn) {
+    syncRefreshBtn.addEventListener('click', function () {
+      flashButton(syncRefreshBtn, 'Loading...');
+      fetch('/api/ecosystem/sync')
+        .then(function (res) {
+          if (!res.ok) throw new Error('status ' + res.status);
+          return res.json();
+        })
+        .then(function (data) {
+          var syncEntitiesList = document.getElementById('sync-entities-list');
+          if (syncEntitiesList && data.sync_contract && Array.isArray(data.sync_contract.sync_entities)) {
+            syncEntitiesList.innerHTML = '';
+            data.sync_contract.sync_entities.forEach(function (e) {
+              var chip = document.createElement('span');
+              chip.className = 'sync-entity-chip';
+              chip.textContent = e.entity_name + ' (' + e.conflict_strategy + ')';
+              syncEntitiesList.appendChild(chip);
+            });
+          }
+          var syncVersionBadge = document.getElementById('sync-version-badge');
+          if (syncVersionBadge) {
+            syncVersionBadge.textContent = 'v' + (data.current_version || 0);
+          }
+          var syncConflictsBadge = document.getElementById('sync-conflicts-count');
+          if (syncConflictsBadge) {
+            syncConflictsBadge.textContent = (data.conflict_count || 0) + ' conflicts';
+          }
+          flashButton(syncRefreshBtn, 'Refreshed!');
+        })
+        .catch(function () {
+          flashButton(syncRefreshBtn, 'Error');
         });
     });
   }

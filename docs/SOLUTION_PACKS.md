@@ -311,7 +311,28 @@ R-450 introduces unified multi-surface deployment manifests, Docker Compose gene
   ```
 - 100% offline verification in `task verify` (0 model calls).
 
+## Ecosystem cross-surface data sync, conflict resolution, and offline-first sync protocol
+
+R-451 introduces canonical cross-surface data sync models, deterministic conflict resolution algorithms, and offline-first sync protocols across multi-surface ecosystems:
+- Cross-surface sync contracts: `SyncEntitySpec` defines sync entity configurations including resolution strategy (`last_write_wins`, `source_of_truth`, `field_merge`), authority surface, sync surfaces, and immutable fields. `SyncMutation` defines individual entity mutations (`insert`, `update`, `delete`) with client sequence numbers, data dictionaries, base versions, and SHA-256 mutation hashes. `SyncConflict` logs detected concurrent update conflicts with resolution records. `SyncCheckpoint` captures per-surface sync positions. `EcosystemSyncContract` formalizes the overall sync topology.
+- Deterministic conflict resolution algorithms: `resolve_sync_conflict` implements three zero-dependency conflict resolution strategies:
+  - `last_write_wins`: Compares ISO timestamps of conflicting mutations, resolving in favor of the latest write (using SHA-256 hash as stable tie-breaker).
+  - `source_of_truth`: Prioritizes mutations from the designated authoritative surface (e.g. admin or core API surface) over secondary client surfaces.
+  - `field_merge`: Performs granular field-level merges between concurrent mutations, preserving non-overlapping changes while enforcing immutable field protections and authoritative field defaults.
+- In-process thread-safe sync engine: `EcosystemSyncEngine` maintains mutation journals, current entity states, bounded conflict logs (max 500 entries), and surface checkpoints using `threading.RLock`. Exposes `push_mutations()` with base-version conflict detection, `pull_changes()` for incremental synchronization, and `simulate_conflict()` for live demonstration.
+- Deterministic contract synthesis: `synthesize_ecosystem_sync` automatically derives sync entity specifications, authority mappings, and strategy assignments from ecosystem surfaces and entity definitions.
+- Package bundling & registry access: `EcosystemPackPackage` bundles `sync_contract` with canonical whole-package SHA-256 integrity verification; `EcosystemPackRegistry` and `EcosystemPack` expose `get_sync_contract`.
+- Studio preview & server: `StudioPreviewManager` tracks sync contracts and engine state, injecting `has_sync`, `sync_entity_count`, `sync_conflict_count`, and `sync_version` into preview payloads, and exposing `get_ecosystem_sync()`, `push_sync_mutations()`, `pull_sync_changes()`, and `simulate_sync_conflict()`. Studio HTTP server exposes `GET /api/ecosystem/sync`, `POST /api/ecosystem/sync/push`, `GET /api/ecosystem/sync/pull`, and `POST /api/ecosystem/sync/simulate`.
+- Studio web UI: Renders `#preview-sync-info` with entity chips, conflict/version badges, and 1-click "Simulate Conflict" and "Refresh Sync" buttons, strictly maintaining 0 external network requests.
+- CLI data sync inspection:
+  ```bash
+  # Inspect ecosystem pack data sync contract
+  task agent-engine:solution-pack:ecosystem -- sync minimal-blog-ecosystem
+  task agent-engine:solution-pack:ecosystem -- sync minimal-blog-ecosystem --json
+  ```
+- 100% offline verification in `task verify` (0 model calls).
+
 ## Next boundary
 
-R-451: Solution Pack Ecosystem Cross-Surface Data Sync, Conflict Resolution, and Offline-First Sync Protocol.
+R-452: Solution Pack Ecosystem Multi-Surface CI/CD Workflow & GitHub Actions Orchestration.
 

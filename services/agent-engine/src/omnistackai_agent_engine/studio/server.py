@@ -11,6 +11,7 @@ from __future__ import annotations
 import json
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from typing import Callable
+from urllib.parse import parse_qs, urlparse
 
 from ..intake.ecosystem import propose_ecosystem
 from ..solution_packs import (
@@ -47,6 +48,10 @@ def _make_handler(
     get_ecosystem_telemetry_fn: ControlFn | None = None,
     get_ecosystem_deployment_fn: ControlFn | None = None,
     to_compose_yaml_fn: Callable[[], str | None] | None = None,
+    get_ecosystem_sync_fn: ControlFn | None = None,
+    push_sync_mutations_fn: Callable[[str, list[dict]], dict] | None = None,
+    pull_sync_changes_fn: Callable[[str, int], dict] | None = None,
+    simulate_sync_conflict_fn: Callable[..., dict] | None = None,
 ) -> type[BaseHTTPRequestHandler]:
     pack_registry = registry or DEFAULT_SOLUTION_PACK_REGISTRY
     eco_registry = ecosystem_registry or DEFAULT_ECOSYSTEM_PACK_REGISTRY
@@ -185,6 +190,35 @@ def _make_handler(
                         self._send_json(404, {"error": "no deployment manifest available"})
                     else:
                         self._send(200, "text/yaml; charset=utf-8", yaml_text.encode("utf-8"))
+                except Exception as error:
+                    self._send_json(502, {"error": str(error)})
+                return
+            elif self.path == "/api/ecosystem/sync":
+                if get_ecosystem_sync_fn is None:
+                    self._send_json(404, {"error": "ecosystem sync inspection not enabled"})
+                    return
+                try:
+                    sync_data = get_ecosystem_sync_fn()
+                    if sync_data is None:
+                        self._send_json(404, {"error": "no sync contract available"})
+                    else:
+                        self._send_json(200, sync_data)
+                except Exception as error:
+                    self._send_json(502, {"error": str(error)})
+                return
+            elif self.path.startswith("/api/ecosystem/sync/pull"):
+                if pull_sync_changes_fn is None:
+                    self._send_json(404, {"error": "ecosystem sync pull not enabled"})
+                    return
+                qs = parse_qs(urlparse(self.path).query)
+                surface_slug = qs.get("surface_slug", [""])[0]
+                since_version = int(qs.get("since_version", ["0"])[0] or 0)
+                if not surface_slug:
+                    self._send_json(400, {"error": "surface_slug is required"})
+                    return
+                try:
+                    res = pull_sync_changes_fn(surface_slug, since_version)
+                    self._send_json(200, res)
                 except Exception as error:
                     self._send_json(502, {"error": str(error)})
                 return
@@ -348,6 +382,55 @@ def _make_handler(
                 except Exception as error:
                     self._send_json(502, {"error": str(error)})
                 return
+            if self.path == "/api/ecosystem/sync/push":
+                if push_sync_mutations_fn is None:
+                    self._send_json(404, {"error": "ecosystem sync push not enabled"})
+                    return
+                data = self._read_json_body()
+                if data is None:
+                    return
+                surface_slug = str(data.get("surface_slug", "")).strip()
+                mutations = data.get("mutations", [])
+                if not surface_slug or not isinstance(mutations, list):
+                    self._send_json(400, {"error": "surface_slug and mutations list are required"})
+                    return
+                try:
+                    res = push_sync_mutations_fn(surface_slug, mutations)
+                    self._send_json(200, res)
+                except Exception as error:
+                    self._send_json(502, {"error": str(error)})
+                return
+            if self.path == "/api/ecosystem/sync/simulate":
+                if simulate_sync_conflict_fn is None:
+                    self._send_json(404, {"error": "ecosystem sync simulate not enabled"})
+                    return
+                data = self._read_json_body()
+                if data is None:
+                    return
+                entity_name = str(data.get("entity_name", "")).strip()
+                record_id = str(data.get("record_id", "")).strip()
+                local_surface = str(data.get("local_surface", "")).strip()
+                remote_surface = str(data.get("remote_surface", "")).strip()
+                local_updates = data.get("local_updates", {})
+                remote_updates = data.get("remote_updates", {})
+                strategy = str(data.get("strategy", "field_merge")).strip()
+                if not entity_name or not record_id or not local_surface or not remote_surface:
+                    self._send_json(400, {"error": "entity_name, record_id, local_surface, and remote_surface are required"})
+                    return
+                try:
+                    res = simulate_sync_conflict_fn(
+                        entity_name=entity_name,
+                        record_id=record_id,
+                        local_surface=local_surface,
+                        remote_surface=remote_surface,
+                        local_updates=local_updates,
+                        remote_updates=remote_updates,
+                        strategy=strategy,
+                    )
+                    self._send_json(200, res)
+                except Exception as error:
+                    self._send_json(502, {"error": str(error)})
+                return
             if self.path != "/api/build":
                 self._send_json(404, {"error": "not found"})
                 return
@@ -416,6 +499,10 @@ def create_studio_server(
     get_ecosystem_telemetry_fn: ControlFn | None = None,
     get_ecosystem_deployment_fn: ControlFn | None = None,
     to_compose_yaml_fn: Callable[[], str | None] | None = None,
+    get_ecosystem_sync_fn: ControlFn | None = None,
+    push_sync_mutations_fn: Callable[[str, list[dict]], dict] | None = None,
+    pull_sync_changes_fn: Callable[[str, int], dict] | None = None,
+    simulate_sync_conflict_fn: Callable[..., dict] | None = None,
 ) -> ThreadingHTTPServer:
     """Create (but do not start) a studio server bound to ``host``/``port``.
 
@@ -449,6 +536,10 @@ def create_studio_server(
             get_ecosystem_telemetry_fn=get_ecosystem_telemetry_fn,
             get_ecosystem_deployment_fn=get_ecosystem_deployment_fn,
             to_compose_yaml_fn=to_compose_yaml_fn,
+            get_ecosystem_sync_fn=get_ecosystem_sync_fn,
+            push_sync_mutations_fn=push_sync_mutations_fn,
+            pull_sync_changes_fn=pull_sync_changes_fn,
+            simulate_sync_conflict_fn=simulate_sync_conflict_fn,
         ),
     )
 
