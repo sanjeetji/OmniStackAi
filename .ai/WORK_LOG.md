@@ -1,5 +1,26 @@
 # Work Log
 
+## 2026-09-14 — R-434 (versioned baseline Solution Pack registry)
+
+- Recorded `.ai/tasks/R-434.md` and `.ai/CURRENT_TASK.yaml` before implementation. Test-first focused run
+  failed with the expected `ModuleNotFoundError` because the `solution_packs` package did not exist; final
+  focused suite is 8 passing tests.
+- Added frozen, stdlib-only `SolutionPack` descriptors and immutable `SolutionPackRegistry`. The descriptors
+  reference the existing `minimal-blog` and `rideshare-favourites` example IR builders, pin their canonical
+  SHA-256 and exact assembled targets, and contain no copied skeleton or duplicated IR.
+- Registry construction validates descriptor shape, stable semantic versions, duplicate identities, example
+  existence, `validate_ir`, digest/target drift, and target verify plans. Exact domain + required-capability
+  selection deterministically prefers the newest compatible version and returns `None` for no match.
+- Added a deterministic JSON CLI/task: `task agent-engine:solution-packs` lists the registry or selects by
+  `--domain` and repeatable `--capability`. It performs no build, model, network, database, or live work.
+- Added `docs/SOLUTION_PACKS.md` describing the verified-baseline/configuration/AI-delta boundary and the
+  honest scope of this foundation.
+- Gates: focused 8 passed; `task verify` 2,926 passed fully offline (+8); agent-engine lint + repository lint,
+  security, and environment gates passed; minimal-blog/rideshare demos generated 152/149 files; deterministic
+  list returned two packs and rideshare+favourites selected `rideshare-favourites@1.0.0`; 0 model calls.
+- No dependency, existing IR/example, generator, provider, PostgreSQL, infrastructure, tracker workbook, or
+  `.claude/` change. The workbook remains unchanged because its planned task universe ends at R-358.
+
 ## 2026-09-13 — R-433 (surface-specific ecosystem data and capability scoping)
 
 - Recorded `.ai/tasks/R-433.md` and `.ai/CURRENT_TASK.yaml` before implementation. Test-first focused run

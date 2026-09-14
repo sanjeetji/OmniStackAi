@@ -137,6 +137,11 @@ tasks:
     cmds:
       - bash scripts/agent-engine.sh scope-propose {{.CLI_ARGS}}
 
+  agent-engine:solution-packs:
+    desc: 'List or select immutable baseline Solution Packs (deterministic, no model; CLI_ARGS - --domain rideshare --capability favourites)'
+    cmds:
+      - bash scripts/agent-engine.sh solution-packs {{.CLI_ARGS}}
+
   agent-engine:ecosystem:plan:
     desc: 'Ecosystem planner: turn a business prompt into the Application IRs for each app surface (deterministic, no model; CLI_ARGS - "description")'
     cmds:

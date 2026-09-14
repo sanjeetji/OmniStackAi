@@ -1,18 +1,27 @@
 # Current Handoff
 
-Task ID: R-433
+Task ID: R-434
 Status: done
 Phase: BASIC/MVP — Founder Stage 0
 Branch: `main` (the only branch; the GitHub default)
 
-> **The differentiating SPINE now emits deliberately scoped apps.** R-430 proposes the ecosystem, R-431
-> materializes owned repos, R-432 safely refines unknown domains, and **R-433 gives each surface its own
-> entity visibility, write capabilities, and actor role**. See it: `task agent-engine:ecosystem:plan --
-> "Create a food delivery app with restaurants and couriers"`. UI-component series PAUSED at R-415.
-> **NEXT:** R-434 baseline Solution Pack registry.
+> **The differentiating SPINE now has verified baseline Solution Packs.** R-430 proposes the ecosystem,
+> R-431 materializes owned repos, R-432 safely refines unknown domains, R-433 scopes each surface, and
+> **R-434 registers immutable, digest-pinned baselines without copying source**. See them:
+> `task agent-engine:solution-packs`. UI-component series PAUSED at R-415.
+> **NEXT:** R-435 pack recommendations in ecosystem planning.
 
 ## Repo/workflow state
 
+- **R-434 (versioned baseline Solution Pack registry — fifth spine brick)** shipped: new stdlib-only
+  `solution_packs` package registers `minimal-blog@1.0.0` and `rideshare-favourites@1.0.0` by reference to
+  their existing Application IR examples. Frozen descriptors pin domains/capabilities, canonical IR SHA-256,
+  and exact targets; registry construction revalidates IRs, targets, and verify plans and rejects malformed,
+  duplicate, missing, or drifted entries. Selection is exact-domain + capability-subset, deterministic,
+  newest-version-first, and returns no match rather than guessing. Fresh pack loads are validate_ir-clean.
+  `task agent-engine:solution-packs` lists/selects JSON without build/model/network/live execution. 8 new
+  tests; `task verify` **2,926 passed** offline; lint/security/env + demos (152/149) green; 0 model calls.
+  Workbook unchanged because its planned universe ends at R-358.
 - **R-433 (surface-specific data/capability scoping — fourth spine brick)** shipped: `intake/ecosystem.py`
   now applies complete read/write mappings for every surface in all ten curated domains and conservative
   entity-name matching to R-432 refined domains, with a complete-model fallback when intent is ambiguous.
@@ -117,7 +126,7 @@ Branch: `main` (the only branch; the GitHub default)
   50. **R-412**: Character & Word Counter Textarea Suite (`components/character-counter.tsx`)
   51. **R-413**: Copy-to-Clipboard Button Suite (`components/copy-button.tsx`)
   52. **R-414**: Duration Input Suite (`components/duration-input.tsx`)
-- R-433 is complete; the next coding action is gated on recording the R-434 contract. Still stop-and-ask
+- R-434 is complete; the next coding action is gated on recording the R-435 contract. Still stop-and-ask
   only for paid cloud / DB engine / new infra / native-mobile / a materially different architecture decision.
 
 ## Completed
@@ -1029,11 +1038,10 @@ Enabled accessible, desktop-and-mobile-grade, futuristic Time Picker and Time Ra
 
 ## Next action
 
-- R-433 is complete. Before coding, record the R-434 Standard AI Task Contract. Recommended scope: begin
-  Master Architecture Specification section 5 / Stream C by registering the already verified
-  `minimal-blog` and `rideshare-favourites` targets as immutable, versioned baseline Solution Pack
-  descriptors with deterministic validation/selection. Reuse existing example IRs and generators; do not
-  duplicate generated source or add a model/live path. Keep verification offline.
+- R-434 is complete. Before coding, record the R-435 Standard AI Task Contract. Recommended scope: expose
+  deterministic exact-compatible pack recommendations in ecosystem planning without changing generated
+  output. Report pack id/version/digest or no match and define the explicit configuration/AI-delta boundary;
+  do not duplicate generated source or add a dependency/model/live path. Keep verification offline.
 
 ## Next command
 

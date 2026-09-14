@@ -1,26 +1,28 @@
-task_id: R-433
-id: R-433
-title: "Surface-specific ecosystem data and capability scoping"
+task_id: R-434
+id: R-434
+title: "Versioned baseline Solution Pack registry"
 status: done
 phase: MVP
 tracker_row: null
-started_at: "2026-09-13"
-completed_at: "2026-09-13"
+started_at: "2026-09-14"
+completed_at: "2026-09-14"
 objective: >-
-  Fourth brick of the differentiating spine. Turn each R-431/R-432 app surface into a deliberately scoped
-  Application IR: retain only the business entities the surface needs (plus relation dependencies), separate
-  read-visible entities from writable entities, declare only its actor role, and attach that
-  role to every authenticated CRUD mutation. Preserve deterministic curated and refined planning, valid
-  repository wiring, runnable public reads, and fully offline verification.
+  Fifth brick of the differentiating spine and first Solution Pack task. Register the already verified
+  minimal-blog and rideshare-favourites Application IR examples as immutable, versioned baseline pack
+  descriptors. Pin each descriptor to its canonical IR digest and assembled targets, validate registry
+  integrity deterministically, and select packs by domain plus required capabilities without duplicating
+  skeleton source or invoking a model/live path.
 allowed_paths:
-  - "services/agent-engine/src/omnistackai_agent_engine/intake/ecosystem.py"
-  - "services/agent-engine/src/omnistackai_agent_engine/intake/__init__.py"
-  - "services/agent-engine/tests/test_surface_scoping.py"
-  - "services/agent-engine/tests/test_ecosystem.py"
-  - "docs/SCOPE_COMPILER.md"
+  - "services/agent-engine/src/omnistackai_agent_engine/solution_packs/__init__.py"
+  - "services/agent-engine/src/omnistackai_agent_engine/solution_packs/registry.py"
+  - "services/agent-engine/src/omnistackai_agent_engine/solution_packs/cli.py"
+  - "services/agent-engine/tests/test_solution_packs.py"
+  - "scripts/agent-engine.sh"
+  - "Taskfile.yml"
+  - "docs/SOLUTION_PACKS.md"
   - "docs/PROGRESS.md"
   - "docs/RESUME_PROMPT.md"
-  - ".ai/tasks/R-433.md"
+  - ".ai/tasks/R-434.md"
   - ".ai/CURRENT_TASK.yaml"
   - ".ai/PROJECT_STATE.yaml"
   - ".ai/WORK_LOG.md"
@@ -29,44 +31,44 @@ allowed_paths:
   - "CHANGELOG.md"
 forbidden_changes:
   - "Do not modify or include the unrelated untracked .claude directory"
-  - "Do not change the R-430 classifier, R-432 provider/parser boundary, curated entity definitions, Application IR schema, adapters, generated-project contracts, or PostgreSQL"
+  - "Do not copy generated skeleton files or duplicate the existing example Application IR definitions"
+  - "Do not change Application IR examples, generators, adapters, R-430 through R-433 behavior, PostgreSQL, or infrastructure"
   - "No model, network, Docker, database, package install, generated-code execution, or toolchain use in task verify"
-  - "No new dependency, service, infrastructure, cloud fallback, secret handling, or fabricated entity relationship"
-  - "Do not remove an entity required by a retained relation; relation closure must remain validate_ir-clean"
+  - "No new dependency, mutable global registry, hidden fallback, secret, or unverified pack claim"
 required_gates:
-  - "focused test_surface_scoping.py and test_ecosystem.py"
+  - "focused test_solution_packs.py"
   - task verify
   - task lint
   - task security:quick
   - task env:check
   - task builder:demo -- minimal-blog
   - task builder:demo -- rideshare-favourites
-  - "deterministic food-delivery ecosystem-plan inspection"
+  - "deterministic solution-pack CLI list and rideshare selection inspection"
 model_tool_trace:
   routing: deterministic_only
   local_calls: 0
   cloud_calls: 0
-  note: "R-433 is pure deterministic planning; no model call is authorized or needed."
+  note: "R-434 is pure registry/validation/selection logic; no model call is authorized or needed."
 acceptance_criteria:
-  - "Known-domain surfaces use an explicit stable primary-entity policy; unknown/refined domains use bounded name matching and safely fall back to the complete model when intent is ambiguous."
-  - "A retained entity's relation targets are included recursively as read dependencies; selected entities receive list screens while only the explicit writable subset receives editors and write endpoints."
-  - "Each surface IR declares exactly its own normalized actor role with entity-qualified read/write permissions."
-  - "Every authenticated mutation has required_roles equal to that surface role; public GET behavior is preserved for runnable generated previews."
-  - "Food-delivery customers can read Restaurant/MenuItem but write only Order; courier/admin surfaces exclude MenuItem, and courier writes only Order while Restaurant remains a read dependency."
-  - "All 10 curated domains and injected R-432 refined plans remain deterministic, repository-wired, and validate_ir-clean."
+  - "SolutionPack descriptors are frozen, structurally bounded, semantically versioned, JSON-safe, and pin an existing example IR by SHA-256 plus exact assembled targets."
+  - "The registry contains minimal-blog and rideshare-favourites baseline packs without duplicating their IR or generated files."
+  - "Registry construction fails closed on duplicate id/version pairs, missing examples, digest drift, target drift, invalid domains/capabilities, or malformed semantic versions."
+  - "Selection is deterministic by exact domain and required-capability subset, chooses the newest valid version, and returns None rather than inventing a fallback."
+  - "Loading a selected pack returns a fresh validate_ir-clean ApplicationIR and its project plan has verify ladders for every declared target."
+  - "A deterministic CLI lists pack metadata and resolves a domain/capability query without model/network/live execution."
 evidence:
-  test_first_red: "4 focused failures against R-432: full entity model and all proposal roles still appeared on every surface"
-  focused_test: "test_surface_scoping.py + test_ecosystem.py + test_scope_refinement.py: 30 passed (7 R-433 tests)"
-  verify: "2,918 passed (offline; +7; 0 model calls)"
-  lint: "passed"
-  security: "passed"
-  env: "passed"
+  test_first_red: "Focused test import failed as expected: ModuleNotFoundError because solution_packs did not exist."
+  focused_test: "test_solution_packs.py: 8 passed"
+  verify: "2,926 passed (fully offline; +8; 0 model calls)"
+  lint: "task agent-engine:lint and task lint passed"
+  security: "task security:quick passed"
+  env: "task env:check passed"
   demos: "minimal-blog 152 files; rideshare-favourites 149 files"
   deterministic_inspection: >-
-    food-delivery -> Customer 3 visible/Order-only write; Merchant 3 visible/3 writable; Courier
-    Order+Restaurant with Order-only write (8 APIs/2 screens); Admin Order+Restaurant (11 APIs/4 screens).
+    Registry list returned exactly two version-1.0.0 packs; rideshare + favourites selected
+    rideshare-favourites@1.0.0 with its pinned digest and nextjs-web/backend-go targets.
   tracker: "No workbook row exists beyond R-358; workbook intentionally unchanged."
 next_action: >-
-  R-433 done. Next R-434: start Solution Packs by registering the already verified minimal-blog and
-  rideshare-favourites targets as immutable, versioned baseline pack descriptors with deterministic
-  validation/selection and zero code duplication or model calls. Record its contract before code.
+  R-434 done. Next R-435: expose deterministic, exact-compatible Solution Pack recommendations in
+  ecosystem planning without changing generated output. Report pack id/version/digest or no match; define
+  the configuration/delta boundary explicitly and keep all model/live/build behavior out of verification.

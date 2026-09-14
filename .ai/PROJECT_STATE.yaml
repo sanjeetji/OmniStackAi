@@ -2,12 +2,23 @@ schema_version: 1
 project: OmniStackAI
 phase: BASIC/MVP
 founder_stage: 0
-current_task: R-433
+current_task: R-434
 current_status: done
 branch: main
-last_completed_task: R-433
+last_completed_task: R-434
 last_completed_task_summary: >-
-  Built R-433: deterministic per-surface data and capability scoping (fourth spine brick). The existing
+  Built R-434: immutable, versioned baseline Solution Pack registry (fifth spine brick). New stdlib-only
+  solution_packs descriptors reference the already verified minimal-blog and rideshare-favourites example
+  Application IR builders without copying source or restating IR. Each frozen descriptor pins semantic
+  version, exact domains/capabilities, canonical IR SHA-256, and assembled targets. Registry construction
+  validates the IR, digest, targets, and every target's verify plan and fails closed on malformed or duplicate
+  descriptors and drift. Deterministic get/select/load APIs choose the newest exact-domain pack satisfying
+  all required capabilities and return None rather than fabricating a fallback; loads are fresh and
+  validate_ir-clean. `task agent-engine:solution-packs` provides JSON inspection/selection with no build,
+  model, network, database, or live work. Eight new tests; task verify 2,926 passed fully offline;
+  lint/security/env and both demos (152/149) passed; 0 model calls. No dependency, existing IR/example,
+  generator, provider, database, infra, tracker-workbook, or .claude change. Previously built R-433:
+  deterministic per-surface data and capability scoping (fourth spine brick). The existing
   curated and model-refined entity sets now pass through an explicit read/write surface policy before IR
   generation. All ten curated domains have complete, reviewed surface mappings; refined domains match
   entity names against bounded surface metadata and keep the complete validated model when intent is
@@ -550,15 +561,16 @@ id_note: >-
   inline-style fix, generated-app compile fixes + opt-in tsc gate, and strict-type cleanup so generated apps
   pass tsc --noEmit clean), R-430 done (Ecosystem Scope Compiler = FIRST spine brick), R-431 done
   (Scope -> Application IRs = SECOND spine brick: one prompt -> multiple owned, clean-compiling app repos),
-  R-432 done (opt-in unknown-domain refinement = THIRD spine brick), and R-433 done (surface-specific
-  data/capability scoping = FOURTH spine brick).
+  R-432 done (opt-in unknown-domain refinement = THIRD spine brick), R-433 done (surface-specific
+  data/capability scoping = FOURTH spine brick), and R-434 done (immutable baseline Solution Pack registry
+  = FIFTH spine brick).
   NOTE: the UI-COMPONENT SERIES is PAUSED at R-415 (110 components, resumable at a future free Tracker
-  ID); R-416..R-429 built/hardened the "chat -> create -> run -> preview" front door; R-430..R-433 build SPINE.
+  ID); R-416..R-429 built/hardened the "chat -> create -> run -> preview" front door; R-430..R-434 build SPINE.
 blockers: []
 next_action: >-
-  R-433 is complete: each ecosystem surface now receives bounded entities, read/write capabilities, and
-  one actor role instead of cloning the full platform model/roles. NEXT R-434: begin Solution Packs (Master
-  Architecture Specification section 5 / Stream C) by registering the already verified minimal-blog and
-  rideshare-favourites targets as immutable, versioned baseline pack descriptors with deterministic
-  validation and selection. Reuse existing examples/generators; do not duplicate skeleton source or add a
-  dependency/model/live path. The UI-component series remains paused/resumable.
+  R-434 is complete: minimal-blog and rideshare-favourites are registered as immutable versioned baseline
+  Solution Packs with deterministic validation and exact-match selection. NEXT R-435: expose exact-compatible
+  pack recommendations in ecosystem planning without changing generated output, and define the explicit
+  configuration/AI-delta boundary. Return no match rather than fabricating one; do not add a dependency,
+  model/live path, copied skeleton, infrastructure, or database change. The UI-component series remains
+  paused/resumable.

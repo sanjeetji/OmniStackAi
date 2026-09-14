@@ -84,6 +84,11 @@ if project["project"]["requires-python"] != ">=3.13,<3.14":
     configure_python
     PYTHONPATH="$source_root" python3 -m omnistackai_agent_engine.intake.scope_propose "${@:2}"
     ;;
+  solution-packs)
+    # Deterministic Solution Pack registry inspection/selection (no build/model/network).
+    configure_python
+    PYTHONPATH="$source_root" python3 -m omnistackai_agent_engine.solution_packs.cli "${@:2}"
+    ;;
   ecosystem-plan)
     # Deterministic: prompt -> the Application IRs for each app surface (no model/network, writes nothing).
     configure_python
@@ -261,7 +266,7 @@ PY
     PYTHONPATH="$source_root" python3 -c "from omnistackai_agent_engine.runtime import format_status; print(format_status())"
     ;;
   *)
-    printf 'Usage: %s {lint|test|ollama-verify|gateway-run|scope-propose [description]|ecosystem-plan [description]|ecosystem-build [description]|intake-run [description]|app-build [description]|studio-serve|app-run <repo-dir>|web-typecheck [example] [out-dir]|preview-plan [target]|verify-plan [target]|plan-show [example]|platform-status}\n' "$0"
+    printf 'Usage: %s {lint|test|ollama-verify|gateway-run|scope-propose [description]|solution-packs [--domain domain] [--capability capability]|ecosystem-plan [description]|ecosystem-build [description]|intake-run [description]|app-build [description]|studio-serve|app-run <repo-dir>|web-typecheck [example] [out-dir]|preview-plan [target]|verify-plan [target]|plan-show [example]|platform-status}\n' "$0"
     exit 2
     ;;
 esac
