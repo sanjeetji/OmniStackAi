@@ -1,18 +1,31 @@
 # Current Handoff
 
-Task ID: R-438
+Task ID: R-439
 Status: done
 Phase: BASIC/MVP — Founder Stage 0
 Branch: `main` (the only branch; the GitHub default)
 
-> **The differentiating SPINE now defines bounded AI-delta proposals and local model boundary.** R-430 proposes the
+> **The differentiating SPINE now safely applies validated AI-delta proposals to Application IR.** R-430 proposes the
 > ecosystem, R-431 materializes it, R-432 refines unknown domains, R-433 scopes surfaces, R-434 registers
 > packs, R-435 recommends one, R-436 records bounded intent, R-437 applies safe configuration deterministically,
-> and **R-438 converts pending manifest AI-delta intents into strictly typed, bounded AIDeltaProposal objects
-> via an explicit opt-in local ModelProvider boundary with 0 model calls for no-delta manifests**.
-> UI-component series PAUSED at R-415. **NEXT:** R-439 safely apply validated AI-delta proposals to Application IR.
+> R-438 converts pending manifest AI-delta intents into strictly typed, bounded AIDeltaProposal objects via an
+> explicit opt-in local ModelProvider boundary, and **R-439 safely applies validated AI-delta proposals to
+> derived Application IRs with strict pin revalidation, entity/API/screen collision checks, relation validation,
+> and atomic validate_ir-clean derived results**.
+> UI-component series PAUSED at R-415. **NEXT:** R-440 wire derived Solution Pack Application IRs into verified multi-repo builder pipelines and project generation.
 
 ## Repo/workflow state
+
+- **R-439 (safely apply validated AI-delta proposals to Application IR — tenth spine brick)** shipped:
+  `apply_solution_pack_manifest(manifest, *, proposal=None, registry=...)` now accepts an optional validated
+  `AIDeltaProposal`. When `proposal is None`, application is backward-compatible with R-437 (configuration applied,
+  AI deltas unapplied). When `proposal` is provided: pins (`pack_id`, `pack_version`, `base_ir_sha256`) are revalidated;
+  `addressed_change_ids` are mapped to `manifest.changes`; collisions on entity names, API endpoints (method + path),
+  and screen IDs are rejected; relation targets are verified against base and proposed entities; entities, APIs,
+  and screens are immutably merged; and the derived IR is verified to be `validate_ir`-clean. `SolutionPackApplicationResult`
+  tracks `applied_ai_delta_change_ids` and remaining `unapplied_ai_delta_change_ids` in deterministic JSON provenance.
+  14 new tests; focused 66 passed; `task verify` **2,984 passed** offline (+14); lint/security/env + demos (152/149) green;
+  deterministic serialization inspection green; 0 model calls. Workbook unchanged past R-358.
 
 - **R-438 (bounded typed AI-delta proposal schema & local ModelProvider boundary — ninth spine brick)** shipped:
   new stdlib-only `solution_packs/ai_delta.py` defines frozen `AIDeltaProposal` (`pack_id`, `pack_version`,

@@ -6,7 +6,18 @@ import json
 from dataclasses import FrozenInstanceError, replace
 from unittest import TestCase
 
-from omnistackai_agent_engine.application_ir import validate_ir
+from omnistackai_agent_engine.application_ir import (
+    ApiEndpoint,
+    ApplicationIR,
+    Entity,
+    Field,
+    FieldType,
+    HttpMethod,
+    Relation,
+    RelationKind,
+    Screen,
+    validate_ir,
+)
 from omnistackai_agent_engine.application_ir.validate import has_errors
 from omnistackai_agent_engine.solution_packs import (
     BASELINE_SOLUTION_PACKS,
@@ -14,6 +25,7 @@ from omnistackai_agent_engine.solution_packs import (
     LEGACY_MANIFEST_SCHEMA_VERSION,
     MANIFEST_SCHEMA_VERSION,
     MINIMAL_BLOG_PACK,
+    AIDeltaProposal,
     ChangeArea,
     ChangeOperation,
     ChangeSource,
@@ -253,6 +265,296 @@ class ManifestCompatibilityTests(TestCase):
         self.assertEqual(parsed.to_dict(), legacy)
         with self.assertRaisesRegex(SolutionPackError, "explicit desired_text"):
             apply_solution_pack_manifest(parsed)
+
+
+class AIDeltaProposalApplicationTests(TestCase):
+    def _sample_tag_proposal(
+        self,
+        *,
+        pack_id: str = "minimal-blog",
+        pack_version: str = "1.0.0",
+        base_ir_sha256: str = MINIMAL_BLOG_PACK.ir_sha256,
+        addressed_change_ids: tuple[str, ...] = ("ai-tags",),
+        entities: tuple[Entity, ...] | None = None,
+        apis: tuple[ApiEndpoint, ...] | None = None,
+        screens: tuple[Screen, ...] | None = None,
+        capabilities: tuple[str, ...] = ("tagging",),
+        rationale: str = "Add taxonomy tagging for posts.",
+    ) -> AIDeltaProposal:
+        if entities is None:
+            entities = (
+                Entity(
+                    name="Tag",
+                    fields=(
+                        Field(name="id", type=FieldType.UUID, required=True),
+                        Field(name="name", type=FieldType.STRING, required=True),
+                    ),
+                    relations=(
+                        Relation(name="post", kind=RelationKind.MANY_TO_ONE, target_entity="Post"),
+                    ),
+                ),
+            )
+        if apis is None:
+            apis = (
+                ApiEndpoint(
+                    method=HttpMethod.GET,
+                    path="/tags",
+                    auth=False,
+                    response_schema="Tag",
+                ),
+            )
+        if screens is None:
+            screens = (
+                Screen(
+                    id="tag_list",
+                    role="author",
+                ),
+            )
+        return AIDeltaProposal(
+            pack_id=pack_id,
+            pack_version=pack_version,
+            base_ir_sha256=base_ir_sha256,
+            addressed_change_ids=addressed_change_ids,
+            entities=entities,
+            apis=apis,
+            screens=screens,
+            capabilities=capabilities,
+            rationale=rationale,
+        )
+
+    def test_apply_ai_delta_proposal_success(self) -> None:
+        manifest = _manifest(
+            _project_change("rename-product", "project:name", "Northstar Editorial"),
+            SolutionPackChange(
+                change_id="ai-tags",
+                source=ChangeSource.AI_DELTA,
+                operation=ChangeOperation.ADD,
+                area=ChangeArea.DATA_MODEL,
+                target="entity:Tag",
+                summary="Add tags entity for post categorization",
+                acceptance_criteria=("Tags can be created and linked to posts",),
+            ),
+        )
+        proposal = self._sample_tag_proposal(addressed_change_ids=("ai-tags",))
+
+        result = apply_solution_pack_manifest(manifest, proposal=proposal)
+
+        self.assertIsInstance(result, SolutionPackApplicationResult)
+        self.assertEqual(result.ir.name, "Northstar Editorial")
+        self.assertEqual(result.applied_configuration_change_ids, ("rename-product",))
+        self.assertEqual(result.applied_ai_delta_change_ids, ("ai-tags",))
+        self.assertEqual(result.unapplied_ai_delta_change_ids, ())
+        self.assertEqual(result.base_ir_sha256, MINIMAL_BLOG_PACK.ir_sha256)
+        self.assertNotEqual(result.derived_ir_sha256, result.base_ir_sha256)
+        self.assertEqual(result.derived_ir_sha256, canonical_ir_digest(result.ir))
+
+        entity_names = [e.name for e in result.ir.entities]
+        self.assertIn("Post", entity_names)
+        self.assertIn("Comment", entity_names)
+        self.assertIn("Tag", entity_names)
+
+        api_paths = [(a.method.value, a.path) for a in result.ir.apis]
+        self.assertIn(("GET", "/tags"), api_paths)
+
+        screen_ids = [s.id for s in result.ir.screens]
+        self.assertIn("tag_list", screen_ids)
+
+        self.assertFalse(has_errors(validate_ir(result.ir)))
+
+        d = result.to_dict()
+        self.assertEqual(d["applied_ai_delta_change_ids"], ["ai-tags"])
+        self.assertEqual(d["unapplied_ai_delta_change_ids"], [])
+        j = result.to_json()
+        self.assertIn('"applied_ai_delta_change_ids":["ai-tags"]', j)
+
+    def test_apply_ai_delta_proposal_partial(self) -> None:
+        manifest = _manifest(
+            SolutionPackChange(
+                change_id="ai-tags",
+                source=ChangeSource.AI_DELTA,
+                operation=ChangeOperation.ADD,
+                area=ChangeArea.DATA_MODEL,
+                target="entity:Tag",
+                summary="Add tags entity for post categorization",
+                acceptance_criteria=("Tags can be created and linked to posts",),
+            ),
+            SolutionPackChange(
+                change_id="ai-workflow",
+                source=ChangeSource.AI_DELTA,
+                operation=ChangeOperation.ADD,
+                area=ChangeArea.SCREEN,
+                target="screen:Workflow",
+                summary="Add workflow screen",
+                acceptance_criteria=("Workflow screen is visible",),
+            ),
+        )
+        proposal = self._sample_tag_proposal(addressed_change_ids=("ai-tags",))
+
+        result = apply_solution_pack_manifest(manifest, proposal=proposal)
+
+        self.assertEqual(result.applied_ai_delta_change_ids, ("ai-tags",))
+        self.assertEqual(result.unapplied_ai_delta_change_ids, ("ai-workflow",))
+
+    def test_backward_compatibility_when_proposal_is_none(self) -> None:
+        manifest = _manifest(
+            _project_change("rename-product", "project:name", "Northstar Editorial"),
+            SolutionPackChange(
+                change_id="ai-tags",
+                source=ChangeSource.AI_DELTA,
+                operation=ChangeOperation.ADD,
+                area=ChangeArea.DATA_MODEL,
+                target="entity:Tag",
+                summary="Add tags entity",
+                acceptance_criteria=("Tags can be created",),
+            ),
+        )
+        result = apply_solution_pack_manifest(manifest, proposal=None)
+
+        self.assertEqual(result.applied_configuration_change_ids, ("rename-product",))
+        self.assertEqual(result.applied_ai_delta_change_ids, ())
+        self.assertEqual(result.unapplied_ai_delta_change_ids, ("ai-tags",))
+        self.assertEqual(result.ir.name, "Northstar Editorial")
+        self.assertEqual(len(result.ir.entities), 2)  # Post, Comment only
+
+    def test_proposal_pin_mismatch_pack_id(self) -> None:
+        manifest = _manifest(_ai_delta())
+        proposal = self._sample_tag_proposal(
+            pack_id="other-pack",
+            addressed_change_ids=("add-editorial-flow",),
+        )
+        with self.assertRaisesRegex(SolutionPackError, "pack_id.*does not match"):
+            apply_solution_pack_manifest(manifest, proposal=proposal)
+
+    def test_proposal_pin_mismatch_pack_version(self) -> None:
+        manifest = _manifest(_ai_delta())
+        proposal = self._sample_tag_proposal(
+            pack_version="2.0.0",
+            addressed_change_ids=("add-editorial-flow",),
+        )
+        with self.assertRaisesRegex(SolutionPackError, "pack_version.*does not match"):
+            apply_solution_pack_manifest(manifest, proposal=proposal)
+
+    def test_proposal_pin_mismatch_base_ir_digest(self) -> None:
+        manifest = _manifest(_ai_delta())
+        proposal = self._sample_tag_proposal(
+            base_ir_sha256="0" * 64,
+            addressed_change_ids=("add-editorial-flow",),
+        )
+        with self.assertRaisesRegex(SolutionPackError, "base_ir_sha256.*does not match"):
+            apply_solution_pack_manifest(manifest, proposal=proposal)
+
+    def test_proposal_addresses_unmapped_change_id(self) -> None:
+        manifest = _manifest(_ai_delta())
+        proposal = self._sample_tag_proposal(
+            addressed_change_ids=("unknown-change-id",),
+        )
+        with self.assertRaisesRegex(SolutionPackError, "unknown AI-delta change"):
+            apply_solution_pack_manifest(manifest, proposal=proposal)
+
+    def test_proposal_addresses_configuration_change_id(self) -> None:
+        manifest = _manifest(
+            _project_change("rename-product", "project:name", "Northstar Editorial"),
+            _ai_delta(),
+        )
+        proposal = self._sample_tag_proposal(
+            addressed_change_ids=("rename-product",),
+        )
+        with self.assertRaisesRegex(SolutionPackError, "unknown AI-delta change"):
+            apply_solution_pack_manifest(manifest, proposal=proposal)
+
+    def test_proposal_collides_with_base_entity_name(self) -> None:
+        manifest = _manifest(_ai_delta())
+        colliding_entity = Entity(
+            name="Post",  # Already exists in minimal-blog
+            fields=(Field(name="id", type=FieldType.UUID, required=True),),
+        )
+        proposal = self._sample_tag_proposal(
+            addressed_change_ids=("add-editorial-flow",),
+            entities=(colliding_entity,),
+        )
+        with self.assertRaisesRegex(SolutionPackError, "entity.*collides"):
+            apply_solution_pack_manifest(manifest, proposal=proposal)
+
+    def test_proposal_collides_with_base_api_endpoint(self) -> None:
+        manifest = _manifest(_ai_delta())
+        colliding_api = ApiEndpoint(
+            method=HttpMethod.GET,
+            path="/posts",  # Already exists in minimal-blog
+            auth=False,
+        )
+        proposal = self._sample_tag_proposal(
+            addressed_change_ids=("add-editorial-flow",),
+            apis=(colliding_api,),
+        )
+        with self.assertRaisesRegex(SolutionPackError, "API endpoint.*collides"):
+            apply_solution_pack_manifest(manifest, proposal=proposal)
+
+    def test_proposal_collides_with_base_screen_id(self) -> None:
+        manifest = _manifest(_ai_delta())
+        colliding_screen = Screen(
+            id="post_list",  # Already exists in minimal-blog
+            role="reader",
+        )
+        proposal = self._sample_tag_proposal(
+            addressed_change_ids=("add-editorial-flow",),
+            screens=(colliding_screen,),
+        )
+        with self.assertRaisesRegex(SolutionPackError, "screen.*collides"):
+            apply_solution_pack_manifest(manifest, proposal=proposal)
+
+    def test_proposal_relation_targets_unknown_entity(self) -> None:
+        manifest = _manifest(_ai_delta())
+        broken_entity = Entity(
+            name="Broken",
+            fields=(Field(name="id", type=FieldType.UUID, required=True),),
+            relations=(
+                Relation(name="target", kind=RelationKind.MANY_TO_ONE, target_entity="DoesNotExist"),
+            ),
+        )
+        proposal = self._sample_tag_proposal(
+            addressed_change_ids=("add-editorial-flow",),
+            entities=(broken_entity,),
+        )
+        with self.assertRaisesRegex(SolutionPackError, "relation targets undeclared entity"):
+            apply_solution_pack_manifest(manifest, proposal=proposal)
+
+    def test_proposal_derived_ir_semantic_validation_failure(self) -> None:
+        manifest = _manifest(_ai_delta())
+        invalid_api = ApiEndpoint(
+            method=HttpMethod.GET,
+            path="/tags",
+            auth=False,
+            response_schema="UndeclaredEntity",
+        )
+        proposal = self._sample_tag_proposal(
+            addressed_change_ids=("add-editorial-flow",),
+            apis=(invalid_api,),
+        )
+        with self.assertRaisesRegex(SolutionPackError, "invalid Application IR|semantic validation"):
+            apply_solution_pack_manifest(manifest, proposal=proposal)
+
+    def test_proposal_application_is_repeatable_and_byte_stable(self) -> None:
+        manifest = _manifest(
+            _project_change("rename-product", "project:name", "Northstar Editorial"),
+            SolutionPackChange(
+                change_id="ai-tags",
+                source=ChangeSource.AI_DELTA,
+                operation=ChangeOperation.ADD,
+                area=ChangeArea.DATA_MODEL,
+                target="entity:Tag",
+                summary="Add tags entity",
+                acceptance_criteria=("Tags can be created",),
+            ),
+        )
+        proposal = self._sample_tag_proposal(addressed_change_ids=("ai-tags",))
+        first = apply_solution_pack_manifest(manifest, proposal=proposal)
+        second = apply_solution_pack_manifest(manifest, proposal=proposal)
+        self.assertEqual(first, second)
+        self.assertEqual(first.to_json(), second.to_json())
+        self.assertEqual(
+            DEFAULT_SOLUTION_PACK_REGISTRY.load_ir("minimal-blog").name,
+            "Minimal Blog",
+        )
 
 
 if __name__ == "__main__":

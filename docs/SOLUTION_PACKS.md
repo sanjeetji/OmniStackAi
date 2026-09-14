@@ -7,7 +7,8 @@ OmniStackAI's intended generation model is:
 R-434 implements the immutable registry for verified baseline packs. R-435 exposes an exact-compatible pack
 recommendation in deterministic ecosystem planning. R-436 adds the immutable declarative customization
 manifest above that recommendation. R-437 applies its first allowlisted deterministic configuration subset
-to a fresh pinned-pack IR. No layer asks a model to generate or apply an AI delta yet.
+to a fresh pinned-pack IR. R-438 defines bounded typed AI-delta proposals and the local ModelProvider boundary.
+R-439 safely applies validated AI-delta proposals to Application IR with semantic validation and provenance.
 
 ## Registered baselines
 
@@ -119,9 +120,21 @@ strictly parsed by `parse_ai_delta_proposal()`:
 - Restricting outputs to bounded `AIDeltaProposal` records without mutating the base IR, generating source,
   or invoking cloud models.
 
+## Safe AI-delta proposal application
+ 
+`apply_solution_pack_manifest()` accepts an optional `proposal: AIDeltaProposal | None = None`.
+When `proposal` is `None`, existing configuration application behavior is strictly preserved.
+ 
+When `proposal` is provided:
+- Revalidates pins: `proposal.pack_id`, `proposal.pack_version`, and `proposal.base_ir_sha256` must match the manifest.
+- Revalidates change IDs: all `proposal.addressed_change_ids` must correspond to pending `ai-delta` changes in `manifest.changes`.
+- Revalidates collisions: proposed entity names, API endpoints, and screen IDs must not collide with the base IR.
+- Revalidates relation targets: all relations in proposed entities must target declared base or proposed entities.
+- Immutably merges entities, APIs, and screens with allowlisted configuration updates into a fresh derived `ApplicationIR`.
+- Ensures the derived IR is `validate_ir`-clean; any error fails closed with `SolutionPackError`.
+- Records `applied_ai_delta_change_ids` and remaining `unapplied_ai_delta_change_ids` in `SolutionPackApplicationResult`.
+- Application is byte-stable, repeatable, and offline (0 model calls).
+ 
 ## Next boundary
-
-R-439 will define deterministic application of validated AI-delta proposals to a fresh Application IR,
-combining allowlisted configuration and verified AI deltas into a unified `validate_ir`-clean result.
-Source generation and repo builds follow in subsequent layers.
-
+ 
+R-440 will wire derived Solution Pack Application IRs into verified multi-repo builder pipelines and project generation.

@@ -71100,7 +71100,12 @@ class NextjsWebAdapter:
             "version": "0.1.0",
             "private": True,
             "scripts": {"dev": "next dev", "build": "next build", "start": "next start"},
-            "dependencies": {"next": "15.5.4", "react": "18.3.1", "react-dom": "18.3.1"},
+            "dependencies": {
+                "next": "15.5.4",
+                "react": "18.3.1",
+                "react-dom": "18.3.1",
+                "styled-jsx": "5.1.6",
+            },
             "devDependencies": {
                 "@types/node": "22.10.2", "@types/react": "18.3.12",
                 "@types/react-dom": "18.3.1", "typescript": "5.6.3",

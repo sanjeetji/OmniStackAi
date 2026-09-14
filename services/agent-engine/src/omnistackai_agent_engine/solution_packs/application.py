@@ -1,4 +1,4 @@
-"""Deterministic allowlisted application of Solution Pack configuration (R-437)."""
+"""Deterministic allowlisted application of Solution Pack configuration and AI deltas (R-437, R-439)."""
 
 from __future__ import annotations
 
@@ -8,6 +8,7 @@ from dataclasses import dataclass, replace
 
 from ..application_ir import ApplicationIR, ApplicationIRError, validate_ir
 from ..application_ir.validate import has_errors
+from .ai_delta import AIDeltaProposal
 from .manifest import (
     ChangeArea,
     ChangeOperation,
@@ -37,6 +38,7 @@ class SolutionPackApplicationResult:
     applied_configuration_change_ids: tuple[str, ...]
     unapplied_ai_delta_change_ids: tuple[str, ...]
     ir: ApplicationIR
+    applied_ai_delta_change_ids: tuple[str, ...] = ()
 
     def __post_init__(self) -> None:
         if not isinstance(self.pack_id, str) or not self.pack_id:
@@ -56,6 +58,7 @@ class SolutionPackApplicationResult:
             raise SolutionPackError("application result derived IR digest does not match its IR")
         for label, change_ids in (
             ("applied configuration", self.applied_configuration_change_ids),
+            ("applied AI delta", self.applied_ai_delta_change_ids),
             ("unapplied AI delta", self.unapplied_ai_delta_change_ids),
         ):
             if (
@@ -65,9 +68,17 @@ class SolutionPackApplicationResult:
                 or len(set(change_ids)) != len(change_ids)
             ):
                 raise SolutionPackError(f"{label} change ids must be a unique sorted tuple")
+
+        applied_set = set(self.applied_configuration_change_ids) | set(
+            self.applied_ai_delta_change_ids
+        )
         if set(self.applied_configuration_change_ids) & set(
-            self.unapplied_ai_delta_change_ids
+            self.applied_ai_delta_change_ids
         ):
+            raise SolutionPackError(
+                "a change cannot be both configuration and AI delta applied"
+            )
+        if applied_set & set(self.unapplied_ai_delta_change_ids):
             raise SolutionPackError("a change cannot be both applied and unapplied")
 
     def to_dict(self) -> dict[str, object]:
@@ -80,6 +91,9 @@ class SolutionPackApplicationResult:
             "derived_ir_sha256": self.derived_ir_sha256,
             "applied_configuration_change_ids": list(
                 self.applied_configuration_change_ids
+            ),
+            "applied_ai_delta_change_ids": list(
+                self.applied_ai_delta_change_ids
             ),
             "unapplied_ai_delta_change_ids": list(
                 self.unapplied_ai_delta_change_ids
@@ -99,9 +113,10 @@ class SolutionPackApplicationResult:
 def apply_solution_pack_manifest(
     manifest: SolutionPackManifest,
     *,
+    proposal: AIDeltaProposal | None = None,
     registry: SolutionPackRegistry = DEFAULT_SOLUTION_PACK_REGISTRY,
 ) -> SolutionPackApplicationResult:
-    """Apply the allowlisted configuration subset to a fresh exact-pinned pack IR."""
+    """Apply allowlisted configuration and validated AI deltas to a fresh exact-pinned pack IR."""
     validate_solution_pack_manifest(manifest, registry=registry)
 
     configuration_changes = tuple(
@@ -142,12 +157,96 @@ def apply_solution_pack_manifest(
     base_ir = registry.load_ir(manifest.pack_id, manifest.pack_version)
     if canonical_ir_digest(base_ir) != manifest.pack_ir_sha256:
         raise SolutionPackError("loaded Solution Pack IR does not match the manifest pin")
+
+    applied_ai_delta_change_ids: tuple[str, ...] = ()
+    unapplied_ai_delta_change_ids = ai_delta_change_ids
+    proposed_entities: tuple = ()
+    proposed_apis: tuple = ()
+    proposed_screens: tuple = ()
+
+    if proposal is not None:
+        if not isinstance(proposal, AIDeltaProposal):
+            raise SolutionPackError("proposal must be an AIDeltaProposal instance")
+        if proposal.pack_id != manifest.pack_id:
+            raise SolutionPackError(
+                f"proposal pack_id '{proposal.pack_id}' does not match manifest pin '{manifest.pack_id}'"
+            )
+        if proposal.pack_version != manifest.pack_version:
+            raise SolutionPackError(
+                f"proposal pack_version '{proposal.pack_version}' does not match manifest pin '{manifest.pack_version}'"
+            )
+        if proposal.base_ir_sha256 != manifest.pack_ir_sha256:
+            raise SolutionPackError(
+                f"proposal base_ir_sha256 '{proposal.base_ir_sha256}' does not match manifest pin '{manifest.pack_ir_sha256}'"
+            )
+
+        manifest_ai_ids = set(ai_delta_change_ids)
+        addressed_ids = set(proposal.addressed_change_ids)
+        unmapped = sorted(addressed_ids - manifest_ai_ids)
+        if unmapped:
+            raise SolutionPackError(
+                f"proposal addresses unknown AI-delta change ids: {unmapped}"
+            )
+
+        applied_ai_delta_change_ids = proposal.addressed_change_ids
+        unapplied_ai_delta_change_ids = tuple(
+            cid for cid in ai_delta_change_ids if cid not in addressed_ids
+        )
+
+        base_entity_names = {e.name for e in base_ir.entities}
+        for entity in proposal.entities:
+            if entity.name in base_entity_names:
+                raise SolutionPackError(
+                    f"proposed entity '{entity.name}' collides with base IR entity"
+                )
+
+        base_api_endpoints = {(api.method, api.path) for api in base_ir.apis}
+        for api in proposal.apis:
+            if (api.method, api.path) in base_api_endpoints:
+                raise SolutionPackError(
+                    f"proposed API endpoint '{api.method.value} {api.path}' collides with base IR API"
+                )
+
+        base_screen_ids = {s.id for s in base_ir.screens}
+        for screen in proposal.screens:
+            if screen.id in base_screen_ids:
+                raise SolutionPackError(
+                    f"proposed screen '{screen.id}' collides with base IR screen"
+                )
+
+        all_entities = base_entity_names | {e.name for e in proposal.entities}
+        for entity in proposal.entities:
+            for relation in entity.relations:
+                if relation.target_entity not in all_entities:
+                    raise SolutionPackError(
+                        f"proposed entity '{entity.name}' relation targets undeclared entity '{relation.target_entity}'"
+                    )
+
+        proposed_entities = proposal.entities
+        proposed_apis = proposal.apis
+        proposed_screens = proposal.screens
+
+    new_entities = base_ir.entities + proposed_entities
+    new_apis = base_ir.apis + proposed_apis
+    new_screens = base_ir.screens + proposed_screens
+
     try:
-        derived_ir = replace(base_ir, **updates) if updates else base_ir
+        derived_ir = (
+            replace(
+                base_ir,
+                entities=new_entities,
+                apis=new_apis,
+                screens=new_screens,
+                **updates,
+            )
+            if (updates or proposal is not None)
+            else base_ir
+        )
     except ApplicationIRError as error:
-        raise SolutionPackError("configuration produced an invalid Application IR") from error
+        raise SolutionPackError("merged IR produced an invalid Application IR") from error
+
     if has_errors(validate_ir(derived_ir)):
-        raise SolutionPackError("configuration produced an invalid Application IR")
+        raise SolutionPackError("merged IR failed semantic validation")
 
     return SolutionPackApplicationResult(
         pack_id=manifest.pack_id,
@@ -157,6 +256,7 @@ def apply_solution_pack_manifest(
         applied_configuration_change_ids=tuple(
             change.change_id for change in configuration_changes
         ),
-        unapplied_ai_delta_change_ids=ai_delta_change_ids,
+        unapplied_ai_delta_change_ids=unapplied_ai_delta_change_ids,
         ir=derived_ir,
+        applied_ai_delta_change_ids=applied_ai_delta_change_ids,
     )

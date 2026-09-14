@@ -1,4 +1,4 @@
-# OmniStackAI — implementation progress (as of R-438)
+# OmniStackAI — implementation progress (as of R-439)
 
 A living summary of what is built, what is pending, and how to see results. Numbers come from the
 execution tracker (`R_&_D/OmniStackAI_Execution_Tracker_v6.xlsx`, `Phase_Roadmap`) plus the state
@@ -6,10 +6,10 @@ files (`.ai/`), Git history, and CHANGELOG for work done past the tracker's last
 
 ## Headline
 
-- **2,970 automated tests pass**, fully offline and network-independent (`task verify`).
+- **2,984 automated tests pass**, fully offline and network-independent (`task verify`).
 - **147 tracker tasks Done, 1 Deferred, 210 Not Started** across 358 tasks (the tracker's planned
   universe ends at R-358).
-- **Plus 80 completed tasks beyond the workbook (R-359 → R-438)**: 57 reusable UI-component suites,
+- **Plus 81 completed tasks beyond the workbook (R-359 → R-439)**: 57 reusable UI-component suites,
   four front-door bricks, R-420 generated-SQL hardening, R-421 managed embedded local preview,
   R-422 collision-free preview ports + status/stop/restart controls, R-423 build history + re-preview,
   R-424 live preview status, R-425 per-build repo actions, R-426 remove-from-history, R-427 a
@@ -19,9 +19,18 @@ files (`.ai/`), Git history, and CHANGELOG for work done past the tracker's last
   repos), **R-432 opt-in unknown-domain refinement**, **R-433 surface-specific data/capability
   scoping**, **R-434 immutable baseline Solution Packs**, **R-435 exact-compatible pack planning
   recommendations**, **R-436 pinned declarative customization manifests**, **R-437 deterministic
-  configuration application**, and **R-438 bounded typed AI-delta proposal schema** — the first nine
-  bricks of the differentiating spine. The generated Next.js component library remains at **110 components**;
-  its series is **PAUSED at R-415** and fully resumable.
+  configuration application**, **R-438 bounded typed AI-delta proposal schema**, and **R-439 safe
+  application of validated AI-delta proposals to Application IR** — the first ten bricks of the
+  differentiating spine. The generated Next.js component library remains at **110 components**; its
+  series is **PAUSED at R-415** and fully resumable.
+- **R-438 defines the bounded AI-delta proposal schema and local model boundary:** manifests with
+  zero AI deltas bypass the model completely (0 calls); pending AI deltas produce bounded, typed
+  `AIDeltaProposal` objects strictly parsed and validated against base IR collisions and credential fields.
+- **R-439 safely applies validated AI-delta proposals to Application IR:** `apply_solution_pack_manifest`
+  revalidates pack pins, change IDs, entity/API/screen collisions, and relation targets, immutably merges
+  entities, APIs, and screens with allowlisted configuration updates into a `validate_ir`-clean derived
+  `ApplicationIR`, and tracks transparent provenance with `applied_ai_delta_change_ids` and remaining
+  `unapplied_ai_delta_change_ids`. 100% offline, byte-stable, and repeatable.
 - **R-433 stops cloning one full model into every app:** all ten curated domains have deterministic
   read/write surface policies; refined domains use bounded entity-name matching with a safe full-model
   fallback; relation targets remain read dependencies. Each surface declares only its actor role, only its

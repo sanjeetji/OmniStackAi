@@ -1,5 +1,28 @@
 # Work Log
 
+## 2026-09-14 — R-439 (safely apply validated AI-delta proposals to Application IR)
+
+- Recorded `.ai/tasks/R-439.md` and `.ai/CURRENT_TASK.yaml` before implementation. Test-first focused suite
+  failed because `proposal` argument and `applied_ai_delta_change_ids` were missing; final R-439 through R-434
+  focused regression is 66 passing tests (14 new R-439 tests).
+- Enhanced `SolutionPackApplicationResult` with `applied_ai_delta_change_ids: tuple[str, ...] = ()` and updated
+  `to_dict()` / `to_json()` for deterministic serialization.
+- Updated `apply_solution_pack_manifest(manifest, *, proposal=None, registry=...)`:
+  - When `proposal is None`: backward-compatible with R-437. All configuration applied, AI deltas marked unapplied.
+  - When `proposal` is provided:
+    - Revalidates pack pins (`proposal.pack_id`, `proposal.pack_version`, and `proposal.base_ir_sha256` match manifest).
+    - Revalidates change IDs (all `proposal.addressed_change_ids` match pending `ai-delta` changes in `manifest.changes`).
+    - Revalidates collisions: proposed entity names, API endpoints (method + path), and screen IDs do not collide with base IR.
+    - Revalidates relation targets: all relations in proposed entities target declared base or proposed entities.
+    - Immutably merges entities, APIs, and screens with allowlisted configuration updates into a fresh derived `ApplicationIR`.
+    - Ensures the derived IR is `validate_ir`-clean (failing closed with `SolutionPackError` on any semantic issue).
+    - Records `applied_ai_delta_change_ids` and remaining `unapplied_ai_delta_change_ids` in `SolutionPackApplicationResult`.
+- Gates: `task verify` 2,984 passed fully offline (+14); agent-engine/repository lint, security, and environment
+  passed; both demos remained 152/149 files; deterministic serialization inspection passed; 0 model calls.
+- No dependency, pack baseline/selection, ecosystem plan, Application IR schema/example, generator, generated
+  output, provider, PostgreSQL, infrastructure, tracker workbook, or `.claude/` change. Workbook remains
+  unchanged past R-358.
+
 ## 2026-09-14 — R-438 (bounded typed Solution Pack AI-delta proposal schema & local ModelProvider boundary)
 
 - Recorded `.ai/tasks/R-438.md` and `.ai/CURRENT_TASK.yaml` before implementation. Test-first focused import

@@ -4,13 +4,27 @@ Last updated: 2026-09-14
 ## Current Phase
 Stage 0 (Founder Build Sequence, Brief Section 91) — BASIC/MVP
 
-> **The differentiating SPINE now defines bounded AI-delta proposals and local model boundary (R-438).**
-> Pending manifest AI-delta intents generate strict, typed `AIDeltaProposal` records via an explicit opt-in
-> local `ModelProvider` path, with zero calls for no-delta manifests. No cloud fallback, IR mutation, source
-> generation, or build. UI-component series PAUSED at R-415 (resumable). **NEXT:** R-439 apply AI deltas.
+> **The differentiating SPINE now safely applies validated AI-delta proposals to Application IR (R-439).**
+> `apply_solution_pack_manifest` revalidates pins, change IDs, entity/API/screen collisions, and relation targets,
+> immutably merges entities, APIs, and screens with allowlisted configuration updates into a `validate_ir`-clean
+> derived `ApplicationIR`, with byte-stable provenance tracking. UI-component series PAUSED at R-415 (resumable). **NEXT:** R-440 wire derived IR to builder pipelines.
 
 ## Last Completed Task
-Tracker ID: R-438 — Bounded Typed Solution Pack AI-Delta Proposal Schema & Local ModelProvider Boundary — DONE.
+Tracker ID: R-439 — Safely Apply Validated AI-Delta Proposals to Application IR — DONE.
+Enhanced `solution_packs/application.py` and `SolutionPackApplicationResult` to accept an optional `proposal: AIDeltaProposal | None = None`.
+When `proposal` is `None`, behavior is strictly backward-compatible with R-437 (configuration applied, all AI deltas marked unapplied, `applied_ai_delta_change_ids` empty).
+When `proposal` is provided:
+- Revalidates pins: `proposal.pack_id`, `proposal.pack_version`, and `proposal.base_ir_sha256` must match the manifest.
+- Revalidates change IDs: all `proposal.addressed_change_ids` must correspond to pending `ai-delta` changes in `manifest.changes`.
+- Revalidates collisions: proposed entity names, API endpoints, and screen IDs must not collide with the base IR.
+- Revalidates relation targets: all relations in proposed entities must target declared base or proposed entities.
+- Immutably merges entities, APIs, and screens with allowlisted configuration updates into a fresh derived `ApplicationIR`.
+- Ensures the derived IR is `validate_ir`-clean; any error fails closed with `SolutionPackError`.
+- Records `applied_ai_delta_change_ids` and remaining `unapplied_ai_delta_change_ids` in `SolutionPackApplicationResult`.
+Fourteen new tests; focused regressions **66 passed**; `task verify` **2,984 passed** offline; lint, security, env, both demos (152 / 149), and
+deterministic serialization inspection pass; 0 model calls.
+
+Immediately preceded by R-438 — Bounded Typed Solution Pack AI-Delta Proposal Schema & Local ModelProvider Boundary — DONE.
 Defined `solution_packs/ai_delta.py` with frozen `AIDeltaProposal` (`pack_id`, `pack_version`, `base_ir_sha256`,
 `addressed_change_ids`, bounded `entities`, `apis`, `screens`, `capabilities`, `rationale`). Manifests with
 zero AI deltas bypass the model provider completely (0 calls) and return an empty proposal. For pending AI
