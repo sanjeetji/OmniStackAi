@@ -1024,13 +1024,75 @@ def render_hooks(ir: ApplicationIR) -> str:
 
 
 def _route_file(apis: list[ApiEndpoint]) -> str:
-    lines = ['import { NextResponse } from "next/server";', ""]
+    lines = [
+        'import { NextResponse } from "next/server";',
+        "",
+        "const BACKEND_URL =",
+        '  process.env.BACKEND_INTERNAL_URL ||',
+        '  process.env.NEXT_PUBLIC_API_URL ||',
+        '  "http://127.0.0.1:8000";',
+        "",
+        "async function proxyRequest(request: Request, method: string, targetPath: string) {",
+        "  try {",
+        "    const url = new URL(request.url);",
+        '    const targetUrl = `${BACKEND_URL.replace(/\\/$/, "")}${url.pathname}${url.search}`;',
+        "",
+        "    const headers: Record<string, string> = {",
+        '      accept: "application/json",',
+        "    };",
+        '    const authHeader = request.headers.get("authorization");',
+        '    if (authHeader) headers["authorization"] = authHeader;',
+        '    const contentType = request.headers.get("content-type");',
+        '    if (contentType) headers["content-type"] = contentType;',
+        "",
+        "    let body: string | undefined = undefined;",
+        '    if (["POST", "PUT", "PATCH"].includes(method)) {',
+        "      try {",
+        "        const text = await request.text();",
+        "        if (text) body = text;",
+        "      } catch {",
+        "        // no body payload",
+        "      }",
+        "    }",
+        "",
+        "    const response = await fetch(targetUrl, {",
+        "      method,",
+        "      headers,",
+        "      ...(body ? { body } : {}),",
+        '      cache: "no-store",',
+        "    });",
+        "",
+        "    const data = await response.text();",
+        "    return new NextResponse(data, {",
+        "      status: response.status,",
+        "      headers: {",
+        '        "content-type": response.headers.get("content-type") || "application/json",',
+        "      },",
+        "    });",
+        "  } catch (err) {",
+        "    return NextResponse.json(",
+        "      {",
+        "        ok: false,",
+        '        error: "backend_unavailable",',
+        '        message: "Upstream backend service is not reachable. Ensure the backend server is running.",',
+        "        detail: err instanceof Error ? err.message : String(err),",
+        "      },",
+        "      { status: 503 }",
+        "    );",
+        "  }",
+        "}",
+        "",
+    ]
+    seen_methods: set[str] = set()
     for api in apis:
+        method = api.method.value
+        if method in seen_methods:
+            continue
+        seen_methods.add(method)
         auth = "required" if api.auth else "public"
-        lines.append(f"// {api.method.value} {api.path}  (auth: {auth})")
-        lines.append(f"export async function {api.method.value}(request: Request) {{")
-        lines.append("  // TODO: implement. Scaffolded from the Application IR.")
-        lines.append('  return NextResponse.json({ ok: false, error: "not_implemented" }, { status: 501 });')
+        lines.append(f"// {method} {api.path}  (auth: {auth})")
+        lines.append(f"export async function {method}(request: Request) {{")
+        lines.append(f'  return proxyRequest(request, "{method}", "{api.path}");')
         lines.append("}")
         lines.append("")
     return "\n".join(lines)

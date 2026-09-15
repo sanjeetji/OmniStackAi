@@ -421,11 +421,13 @@ WHAT TO DO NEXT
   cryptographic audit evidence items, in-process compliance evaluation and multi-scenario audit simulation, Studio preview governance endpoints and indigo UI panel, and CLI governance subcommand;
   and R-459 introduces multi-surface documentation, architecture runbooks, and aggregated OpenAPI 3.1 specifications,
   deterministic stdlib synthesis, in-process Markdown bundle rendering, keyword/tag search with relevance scoring,
-  OpenAPI route aggregation with collision detection, documentation export simulation, Studio preview docs endpoints and sky-blue UI panel, and CLI docs subcommand.
-- NEXT R-460: Solution Pack Ecosystem Multi-Surface Unified Developer CLI and Operational Control Plane Contracts.
+  OpenAPI route aggregation with collision detection, documentation export simulation, Studio preview docs endpoints and sky-blue UI panel, and CLI docs subcommand;
+  and R-460 introduces Next.js Codegen End-to-End Route Handler Synthesis & Interactive CRUD Form Submission,
+  replacing 501 `not_implemented` route stubs with real backend proxy handlers, scoping `X-Frame-Options: DENY`
+  to production in `next.config.mjs` to unblock Studio iframe previews, and connecting forms and routes for real data persistence.
+- NEXT R-461: Solution Pack Ecosystem Multi-Surface Unified Developer CLI and Operational Control Plane Contracts.
   Keep `task verify` model/Docker/DB/install/network-free (any live/model path stays opt-in); preserve
   single-session ownership and explicit trusted-local mode.
-- The UI-component series remains paused at R-415 and can be resumed later under a future free ID.
 - PROVEN THIS SESSION: a generated app runs live locally on the Mac (Next.js :3000 + FastAPI :8000 +
   seeded PostgreSQL). Run the Next binary directly (`./node_modules/.bin/next dev`), not `pnpm dev`
   (pnpm 11's pre-run check exits 1 on the sharp ignored-build). Backend needs a venv (pyenv hides pip).

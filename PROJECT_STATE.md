@@ -4,45 +4,39 @@ Last updated: 2026-09-15
 ## Current Phase
 Stage 0 (Founder Build Sequence, Brief Section 91) — BASIC/MVP
 
-> **The differentiating SPINE now supports Solution Pack Ecosystem Multi-Surface Documentation, Architecture Runbooks, and OpenAPI Aggregator Contracts (R-459).**
-> `solution_packs/ecosystem_docs.py` implements canonical `DocPage`, `RunbookStep`, `ArchitectureRunbook`, `OpenAPIRoute`,
-> `OpenAPIAggregationEntry`, `AggregatedAPISpec`, `EcosystemDocsContract`, deterministic Python 3.13 stdlib-only contract synthesis (`synthesize_ecosystem_docs`)
-> across web, admin, api, worker, and database surfaces, thread-safe `EcosystemDocsEngine` for unified Markdown bundle rendering,
-> keyword/tag search, OpenAPI 3.1 route aggregation with collision detection, and documentation export simulations;
-> `solution_packs/ecosystem_pack.py` bundles and validates docs contracts with whole-package SHA-256 integrity;
-> `solution_packs/ecosystem_registry.py` exposes `docs_contract` and `get_docs_contract()`;
-> `studio/preview.py` attaches `has_docs`, `page_count`, `runbook_count`, `api_endpoint_count`, and `docs_status`
-> to preview payloads and exposes `get_ecosystem_docs()` and `export_ecosystem_docs()`; `studio/server.py` exposes
-> `GET /api/ecosystem/docs` and `POST /api/ecosystem/docs/export`; `studio/page.py` renders sky-blue/amber-themed `#preview-docs-info`
-> with pages, runbooks, and API endpoints count badges, and "Export Docs" / "Refresh" buttons (0 external requests);
-> `solution_packs/ecosystem_cli.py` adds `docs` subcommand with formatted text, `--json`, `--search`, and `--export` options.
-> UI-component series PAUSED at R-415 (resumable). **NEXT:** R-460 Solution Pack Ecosystem Multi-Surface Unified Developer CLI and Operational Control Plane Contracts.
+> **The differentiating SPINE now supports End-to-End Route Handler Synthesis & Interactive CRUD Form Submission (R-460).**
+> `services/agent-engine/src/omnistackai_agent_engine/codegen/nextjs.py`: Replaced 501 `not_implemented` route stubs
+> with production-grade backend proxy handlers (`BACKEND_INTERNAL_URL` / `NEXT_PUBLIC_API_URL` / `127.0.0.1:8000`)
+> forwarding HTTP methods, query params, auth headers, and bodies with structured 503 fallback;
+> scoped `X-Frame-Options: DENY` to production only in generated `next.config.mjs` to enable local Studio iframe preview;
+> tested via `test_nextjs_routes_crud.py` and `test_nextjs_adapter.py` passing 100% offline (3,340 tests total).
 
 ## Task Compilation Audit — 2026-09-15
 
-**Performed on 2026-09-15 to achieve 100% synchronization across all task-tracking documentation.**
+**Updated on 2026-09-15 to achieve 100% synchronization across all task-tracking documentation.**
 
-### Actions Taken
+### Current Metrics
 1. **Execution Tracker Workbook** (`R_&_D/OmniStackAI_Execution_Tracker_v6.xlsx`):
-   - Inserted row into `Phase_Roadmap` for task R-459. Now covers **459 tasks total** with R-459.
-   - Status breakdown: **248 Done, 1 Deferred (R-252), 210 Not Started**.
-   - MVP completion: **248 / 354 = 70.1%**. Overall: **248 / 459 = 54.0%**.
-   - All rows populated with Phase, Category, Title, Objective, Priority, Owner, Status, Points,
-     Dependencies, Stage, Verification Evidence, and audit comments.
+   - Row inserted into `Phase_Roadmap` for task R-460. Covers **460 tasks total** with R-460.
+   - Status breakdown: **249 Done, 1 Deferred (R-252), 210 Not Started**.
+   - MVP completion: **249 / 355 = 70.1%**. Overall: **249 / 460 = 54.1%**.
 2. **Changelog** (`CHANGELOG.md`):
-   - All 249 completed tasks now have changelog entries. 0 missing.
+   - All 250 completed tasks now have changelog entries. 0 missing.
 3. **Documentation Updates**:
-   - `docs/PROGRESS.md`: Updated headline counts to 3,333 tests, 248 Done, 459 total tasks.
-   - `docs/RESUME_PROMPT.md`: Updated task count and next action to R-460.
-   - `PROJECT_STATE.md` (this file): Added R-459 completion details and next action.
+   - `docs/PROGRESS.md`: Updated headline counts to 3,340 tests, 249 Done, 460 total tasks.
+   - `docs/RESUME_PROMPT.md`: Updated task count and next action to R-461.
+   - `PROJECT_STATE.md` (this file): Added R-460 completion details.
    - `.ai/PROJECT_STATE.yaml`, `.ai/WORK_LOG.md`, `.ai/HANDOFF.md`: Updated state and handoff notes.
 
 ## Last Completed Task
-Tracker ID: R-459 — Solution Pack Ecosystem Multi-Surface Documentation, Architecture Runbooks, and OpenAPI Aggregator Contracts — DONE.
-Implemented Solution Pack Ecosystem Multi-Surface Documentation, Architecture Runbooks, and OpenAPI Aggregator Contracts:
-- `solution_packs/ecosystem_docs.py`: Implemented canonical `DocPage`, `RunbookStep`, `ArchitectureRunbook`, `OpenAPIRoute`, `OpenAPIAggregationEntry`, `AggregatedAPISpec`, `EcosystemDocsContract`; implemented deterministic Python 3.13 stdlib-only contract synthesis (`synthesize_ecosystem_docs`) for all ecosystem surfaces; implemented thread-safe in-process `EcosystemDocsEngine` for unified Markdown documentation rendering, keyword and tag search with relevance scoring, OpenAPI 3.1 aggregation with route collision detection, and multi-format documentation export simulation (`markdown`, `json`, `openapi_bundle`, `runbook_checklist`).
-- `solution_packs/ecosystem_pack.py` & `solution_packs/ecosystem_registry.py`: Extended `EcosystemPackPackage` and `EcosystemPack` with `docs_contract`, validating with whole-package SHA-256 checksums; added `get_docs_contract` accessor on `EcosystemPackRegistry`; exported all docs symbols in `solution_packs/__init__.py`.
-- `studio/preview.py`, `studio/server.py`, `studio/live_serve.py`: Preview manager tracks docs contracts and docs engines, injects `has_docs`, `page_count`, `runbook_count`, `api_endpoint_count`, and `docs_status` into preview status/payloads, and exposes `get_ecosystem_docs()` and `export_ecosystem_docs()`; Studio HTTP server exposes `GET /api/ecosystem/docs` and `POST /api/ecosystem/docs/export`.
+Tracker ID: R-460 — Next.js Codegen End-to-End Route Handler Synthesis and Interactive CRUD Form Submission — DONE.
+Implemented Next.js Codegen End-to-End Route Handler Synthesis & Interactive CRUD Form Submission:
+- `services/agent-engine/src/omnistackai_agent_engine/codegen/nextjs.py`: Replaced scaffolded HTTP 501 `not_implemented` route stubs in generated Next.js web apps (`apps/web/app/<api_path>/route.ts`) with functional route handlers that forward requests directly to the FastAPI backend (`BACKEND_INTERNAL_URL` / `NEXT_PUBLIC_API_URL` / `http://127.0.0.1:8000`), preserving methods, auth headers, query params, and JSON payloads with structured 503 fallback handling; scoped `X-Frame-Options: DENY` to production only in `next.config.mjs` to enable Web Studio iframe preview.
+- `scratch/apps/create-a-worker-attendance-management-sy/apps/web/`: Updated active generated app's `next.config.mjs` and `route.ts` files for immediate end-to-end functionality.
+- `services/agent-engine/tests/test_nextjs_routes_crud.py`: Added 3 focused tests verifying zero 501 stubs, backend proxy resolution, and parameter forwarding.
+- `task verify`: 3,340 tests pass offline; lint, security, and environment checks clean.
+
+Immediately preceded by R-459 — Solution Pack Ecosystem Multi-Surface Documentation, Architecture Runbooks, and OpenAPI Aggregator Contracts — DONE.
 - `studio/page.py`: Enhanced Web UI with sky-blue/amber-themed `#preview-docs-info` container displaying pages, runbooks, and API endpoints count badges, and "Export Docs" / "Refresh" buttons, strictly maintaining 0 external network requests.
 - `solution_packs/ecosystem_cli.py`: Added `docs` subcommand supporting both file paths and registered ecosystem IDs with formatted text summary, `--json`, `--search`, and `--export` options; updated `Taskfile.yml` and `scripts/agent-engine.sh`.
 - Twenty new focused tests in `test_ecosystem_docs.py`; `task verify` **3,333 passed** offline (+23 net-new tests); lint, security, env, and both builder demos (152 / 149) pass; 0 model calls in test execution.

@@ -1,15 +1,15 @@
 # Current Handoff
 
-Task ID: R-459
+Task ID: R-460
 Status: done
 Phase: BASIC/MVP — Founder Stage 0
 Branch: `main` (the only branch; the GitHub default)
 
-> **Task Compilation Audit completed on 2026-09-15.** All task documentation is 100% synchronized.
-> - Execution tracker covers **459 tasks** (248 Done, 1 Deferred, 210 Not Started; MVP 70.1%).
-> - 101 completed tasks (R-359..R-459) formally tracked in `Phase_Roadmap` in the workbook.
-> - `CHANGELOG.md` has 249 entries covering all completed tasks (0 missing).
-> - All docs updated: `PROGRESS.md`, `RESUME_PROMPT.md`, `PROJECT_STATE.md`, `PROJECT_STATE.yaml`, `WORK_LOG.md`.
+> **R-460 Completed (2026-09-15): Next.js Codegen End-to-End Route Handler Synthesis & Interactive CRUD Form Submission.**
+> - Replaced 501 `not_implemented` stubs in `services/agent-engine/src/omnistackai_agent_engine/codegen/nextjs.py` with real backend proxy route handlers.
+> - Forwards HTTP methods, headers, query parameters, and bodies to FastAPI backend (`BACKEND_INTERNAL_URL` / `NEXT_PUBLIC_API_URL` / `127.0.0.1:8000`), with structured 503 fallback when backend is offline.
+> - Fixed Web Studio iframe preview blocker by scoping `X-Frame-Options: DENY` to production only in `next.config.mjs`.
+> - All 3,340 tests pass offline in `task verify`. Total completed tasks in tracker: **249 Done / 460 Total**.
 
 > **The differentiating SPINE now supports Solution Pack Ecosystem Multi-Surface Documentation, Architecture Runbooks, and OpenAPI Aggregator Contracts.**
 > R-430 proposes the ecosystem, R-431 materializes it, R-432 refines unknown domains, R-433 scopes surfaces, R-434 registers

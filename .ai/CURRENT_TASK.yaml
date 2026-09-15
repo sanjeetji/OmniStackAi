@@ -1,35 +1,27 @@
-task_id: R-459
+task_id: R-460
 status: completed
 phase: MVP
 tracker_row: 9
 started_at: "2026-09-15"
 completed_at: "2026-09-15"
 objective: >-
-  Implement Solution Pack Ecosystem Multi-Surface Documentation, Architecture Runbooks, and OpenAPI Aggregator Contracts,
-  providing canonical DocPage, ArchitectureRunbook, OpenAPIAggregationEntry, AggregatedAPISpec,
-  EcosystemDocsContract, deterministic Python 3.13 stdlib-only contract synthesis
-  (synthesize_ecosystem_docs) for all ecosystem surfaces, in-process thread-safe EcosystemDocsEngine
-  for unified Markdown bundle rendering, keyword search, OpenAPI aggregation with route collision detection,
-  and export dry-run simulations, ecosystem package bundling with whole-package SHA-256 integrity, registry discovery,
-  Studio preview documentation status injection, endpoints GET /api/ecosystem/docs and POST /api/ecosystem/docs/export,
-  Studio UI #preview-docs-info panel (0 external requests), and CLI docs subcommand.
+  Implement Next.js Codegen End-to-End Route Handler Synthesis and Interactive CRUD Form Submission (R-460),
+  replacing scaffolded 501 Not Implemented stubs in generated Next.js web apps (apps/web/app/<api_path>/route.ts)
+  with functional proxy route handlers that forward requests directly to the FastAPI backend, preserving methods,
+  headers, auth tokens, query params, and JSON payloads with structured 503 fallback handling; scoping X-Frame-Options
+  to production in next.config.mjs to enable Studio iframe preview.
 allowed_paths:
-  - services/agent-engine/src/omnistackai_agent_engine/solution_packs/ecosystem_docs.py
-  - services/agent-engine/src/omnistackai_agent_engine/solution_packs/ecosystem_pack.py
-  - services/agent-engine/src/omnistackai_agent_engine/solution_packs/ecosystem_registry.py
-  - services/agent-engine/src/omnistackai_agent_engine/solution_packs/ecosystem_cli.py
-  - services/agent-engine/src/omnistackai_agent_engine/solution_packs/__init__.py
-  - services/agent-engine/src/omnistackai_agent_engine/studio/preview.py
-  - services/agent-engine/src/omnistackai_agent_engine/studio/server.py
-  - services/agent-engine/src/omnistackai_agent_engine/studio/live_serve.py
-  - services/agent-engine/src/omnistackai_agent_engine/studio/page.py
-  - services/agent-engine/tests/test_ecosystem_docs.py
-  - scripts/agent-engine.sh
-  - Taskfile.yml
-  - docs/SOLUTION_PACKS.md
+  - services/agent-engine/src/omnistackai_agent_engine/codegen/nextjs.py
+  - services/agent-engine/tests/test_nextjs_routes_crud.py
+  - services/agent-engine/tests/test_nextjs_adapter.py
+  - scratch/apps/create-a-worker-attendance-management-sy/apps/web/next.config.mjs
+  - scratch/apps/create-a-worker-attendance-management-sy/apps/web/app/attendance/route.ts
+  - scratch/apps/create-a-worker-attendance-management-sy/apps/web/app/attendance/[employeeId]/route.ts
+  - scratch/apps/create-a-worker-attendance-management-sy/apps/web/app/employees/route.ts
+  - R_&_D/OmniStackAI_Execution_Tracker_v6.xlsx
   - docs/PROGRESS.md
   - docs/RESUME_PROMPT.md
-  - .ai/tasks/R-459.md
+  - .ai/tasks/R-460.md
   - .ai/CURRENT_TASK.yaml
   - .ai/PROJECT_STATE.yaml
   - .ai/WORK_LOG.md
@@ -43,32 +35,19 @@ forbidden_changes:
   - Do not add external network requests, fonts, or scripts to Studio HTML
   - Do not change the control-plane database from PostgreSQL
 required_gates:
-  - test-first focused test_ecosystem_docs.py
+  - test-first focused test_nextjs_routes_crud.py
   - task verify
   - task lint
   - task security:quick
   - task env:check
 evidence:
   tests:
-    - name: test_ecosystem_docs.py
-      count: 20
+    - name: test_nextjs_routes_crud.py
+      count: 3
       status: passed
-    - name: test_ecosystem_*.py
-      count: 271
-      status: passed
-    - name: test_studio_*.py
-      count: 85
+    - name: test_nextjs_adapter.py
+      count: 8
       status: passed
     - name: task verify
-      count: 3333
-      status: passed
-    - name: lint
-      status: passed
-    - name: security:quick
-      status: passed
-    - name: env:check
-      status: passed
-    - name: builder:demo minimal-blog
-      status: passed
-    - name: builder:demo rideshare-favourites
+      count: 3340
       status: passed

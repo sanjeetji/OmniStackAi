@@ -1,15 +1,15 @@
-# OmniStackAI — implementation progress (as of R-459)
+# OmniStackAI — implementation progress (as of R-460)
 
 A living summary of what is built, what is pending, and how to see results. Numbers come from the
-execution tracker (`R_&_D/OmniStackAI_Execution_Tracker_v6.xlsx`, `Phase_Roadmap`, 459 tasks as of
-R-459 completion) plus the state files (`.ai/`), Git history, and CHANGELOG.
+execution tracker (`R_&_D/OmniStackAI_Execution_Tracker_v6.xlsx`, `Phase_Roadmap`, 460 tasks as of
+R-460 completion) plus the state files (`.ai/`), Git history, and CHANGELOG.
 
 ## Headline
 
-- **3,333 automated tests pass**, fully offline and network-independent (`task verify`).
-- **248 tracker tasks Done, 1 Deferred, 210 Not Started** across **459 tasks** in the execution tracker
-  (`R_&_D/OmniStackAI_Execution_Tracker_v6.xlsx`, `Phase_Roadmap`). MVP completion: **248 / 354 = 70.1%**. Overall program completion: **248 / 459 = 54.0%**.
-- **101 tasks (R-359 → R-459) formally tracked in the tracker workbook**:
+- **3,340 automated tests pass**, fully offline and network-independent (`task verify`).
+- **249 tracker tasks Done, 1 Deferred, 210 Not Started** across **460 tasks** in the execution tracker
+  (`R_&_D/OmniStackAI_Execution_Tracker_v6.xlsx`, `Phase_Roadmap`). MVP completion: **249 / 355 = 70.1%**. Overall program completion: **249 / 460 = 54.1%**.
+- **102 tasks (R-359 → R-460) formally tracked in the tracker workbook**:
   Rows inserted into `Phase_Roadmap` with full column data and audit evidence so the workbook remains the single authoritative tracker.
 - **Built tasks include**: 57 reusable UI-component suites,
   four front-door bricks, R-420 generated-SQL hardening, R-421 managed embedded local preview,

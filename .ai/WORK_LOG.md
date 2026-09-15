@@ -1,5 +1,19 @@
 # Work Log
 
+## 2026-09-15 — R-460 (Next.js Codegen End-to-End Route Handler Synthesis & Interactive CRUD Form Submission)
+
+- Recorded `.ai/CURRENT_TASK.yaml` and `.ai/tasks/R-460.md` before implementation.
+- Fixed Web Studio iframe preview blocker:
+  - Scoped `X-Frame-Options: DENY` to production only in generated Next.js `next.config.mjs` (`process.env.NODE_ENV === "production"`).
+  - Resolves `ERR_BLOCKED_BY_RESPONSE` (broken sad document icon) inside the Studio preview iframe at `http://127.0.0.1:4173`.
+- Replaced scaffolded 501 `not_implemented` route stubs in `services/agent-engine/src/omnistackai_agent_engine/codegen/nextjs.py`:
+  - `_route_file(apis)` now synthesizes production-grade proxy route handlers that forward requests directly to the FastAPI backend (`BACKEND_INTERNAL_URL || NEXT_PUBLIC_API_URL || "http://127.0.0.1:8000"`).
+  - Forwards HTTP methods (`GET`, `POST`, `PUT`, `PATCH`, `DELETE`), query parameters, request bodies, and authorization/content-type headers.
+  - Implements reliable fallback returning structured HTTP 503 JSON (`backend_unavailable`) when the upstream backend service is offline.
+  - Updated existing generated app route handlers in `scratch/apps/create-a-worker-attendance-management-sy/apps/web/app/` for immediate end-to-end functionality.
+- Added comprehensive unit tests in `services/agent-engine/tests/test_nextjs_routes_crud.py` (+3 tests).
+- Verified with `task test` and full offline `task verify`: 3,340 tests passing offline (+3 net-new tests); 0 model calls, 0 network, clean lint, security, and environment checks.
+
 ## 2026-09-15 — Studio Output Destination Selector & Folder Customization (Option A / Option B / Custom)
 
 - Implemented Output Destination switching and folder name customization across Studio frontend and backend:
