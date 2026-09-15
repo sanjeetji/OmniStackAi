@@ -263,6 +263,17 @@ class TestNextjsNavbarAuthUI(TestCase):
         navbar = project.get('components/navbar.tsx').content
         self.assertNotIn('useAuth', navbar)
 
+    def test_layout_wraps_auth_provider_when_auth_required(self) -> None:
+        layout = self.project.get('app/layout.tsx').content
+        self.assertIn('import { AuthProvider } from "@/components/auth-provider";', layout)
+        self.assertIn('<AuthProvider>', layout)
+        self.assertIn('</AuthProvider>', layout)
+
+    def test_layout_no_auth_provider_when_no_auth(self) -> None:
+        project = NextjsWebAdapter().generate(_no_auth_ir())
+        layout = project.get('app/layout.tsx').content
+        self.assertNotIn('AuthProvider', layout)
+
 
 # ---------------------------------------------------------------------------
 # 6. API client — auto Bearer token
