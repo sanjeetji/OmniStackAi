@@ -71055,9 +71055,10 @@ _LAYOUT = (
 
 _NEXT_CONFIG = (
     "/** @type {import('next').NextConfig} */\n"
+    "const isProd = process.env.NODE_ENV === \"production\";\n"
     "const securityHeaders = [\n"
     '  { key: "X-Content-Type-Options", value: "nosniff" },\n'
-    '  { key: "X-Frame-Options", value: "DENY" },\n'
+    '  ...(isProd ? [{ key: "X-Frame-Options", value: "DENY" }] : []),\n'
     '  { key: "Referrer-Policy", value: "no-referrer" },\n'
     "];\n\n"
     "const nextConfig = {\n"
