@@ -163,6 +163,7 @@ if project["project"]["requires-python"] != ">=3.13,<3.14":
     export OMNISTACKAI_OLLAMA_MAX_CONCURRENCY="$(config_value OMNISTACKAI_OLLAMA_MAX_CONCURRENCY 1)"
     export OMNISTACKAI_STUDIO_HOST="$(config_value OMNISTACKAI_STUDIO_HOST 127.0.0.1)"
     export OMNISTACKAI_STUDIO_PORT="$(config_value OMNISTACKAI_STUDIO_PORT 4173)"
+    export OMNISTACKAI_APP_OUT_DIR="$(config_value OMNISTACKAI_APP_OUT_DIR '')"
     PYTHONPATH="$source_root" python3 -m omnistackai_agent_engine.studio.live_serve
     ;;
   studio-preview)
@@ -184,6 +185,7 @@ if project["project"]["requires-python"] != ">=3.13,<3.14":
     export OMNISTACKAI_POSTGRES_PORT="$(config_value OMNISTACKAI_POSTGRES_PORT 5432)"
     export OMNISTACKAI_POSTGRES_DB="$(config_value OMNISTACKAI_POSTGRES_DB omnistackai)"
     export OMNISTACKAI_STUDIO_LIVE_PREVIEW=1
+    export OMNISTACKAI_APP_OUT_DIR="$(config_value OMNISTACKAI_APP_OUT_DIR '')"
     PYTHONPATH="$source_root" python3 -m omnistackai_agent_engine.studio.live_serve
     ;;
   app-run)

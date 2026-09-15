@@ -38,6 +38,7 @@ def _target_dir_for(prompt: str) -> str:
     base = os.environ.get("OMNISTACKAI_APP_OUT_DIR")
     slug = re.sub(r"[^a-z0-9]+", "-", prompt.lower()).strip("-")[:40] or "app"
     if base:
+        os.makedirs(base, exist_ok=True)
         return os.path.join(base, slug)
     return os.path.join(tempfile.mkdtemp(prefix="omnistackai-studio-"), slug)
 
