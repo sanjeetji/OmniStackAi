@@ -91,13 +91,29 @@ def _column_lines(entity: Entity) -> list[str]:
     if not has_id:
         lines.append(f"    {sql_identifier('id')} UUID PRIMARY KEY DEFAULT gen_random_uuid()")
 
+    fk_map: dict[str, Relation] = {}
+    for relation in entity.relations:
+        if relation.kind in _FK_KINDS:
+            fk_map[f"{relation.name}_id"] = relation
+            if relation.name.endswith("_id"):
+                fk_map[relation.name] = relation
+
+    emitted_field_names: set[str] = set()
+
     for field in entity.fields:
-        pg = _PG_TYPE[field.type]
         column = sql_identifier(field.name)
+        emitted_field_names.add(field.name)
         if field.name == "id":
             default = " DEFAULT gen_random_uuid()" if field.type is FieldType.UUID else ""
-            lines.append(f"    {column} {pg} PRIMARY KEY{default}")
+            lines.append(f"    {column} {sql_identifier('id') and _PG_TYPE[field.type]} PRIMARY KEY{default}")
+        elif field.name in fk_map:
+            relation = fk_map[field.name]
+            target = sql_identifier(_table(relation.target_entity))
+            null = " NOT NULL" if field.required else ""
+            unique = " UNIQUE" if field.unique else ""
+            lines.append(f"    {column} UUID{null}{unique} REFERENCES {target}({sql_identifier('id')})")
         else:
+            pg = _PG_TYPE[field.type]
             rules = parse_field_rules(field)
             if field.type is FieldType.STRING and rules.max_length is not None:
                 pg = f"VARCHAR({rules.max_length})"
@@ -118,8 +134,11 @@ def _column_lines(entity: Entity) -> list[str]:
     for relation in entity.relations:
         if relation.kind in _FK_KINDS:
             target = sql_identifier(_table(relation.target_entity))
-            relation_column = sql_identifier(f"{relation.name}_id")
-            lines.append(f"    {relation_column} UUID REFERENCES {target}({sql_identifier('id')})")
+            relation_column_name = f"{relation.name}_id"
+            if relation_column_name not in emitted_field_names and relation.name not in emitted_field_names:
+                relation_column = sql_identifier(relation_column_name)
+                lines.append(f"    {relation_column} UUID REFERENCES {target}({sql_identifier('id')})")
+                emitted_field_names.add(relation_column_name)
     return lines
 
 

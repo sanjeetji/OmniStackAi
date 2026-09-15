@@ -208,7 +208,7 @@ def build_run_plan(
                 # build scripts (e.g. sharp), which `next dev` does not need.
                 label="install web dependencies (pnpm)",
                 program="pnpm",
-                args=("install", "--ignore-scripts"),
+                args=("install", "--ignore-scripts", "--ignore-workspace"),
                 cwd=str(web_dir),
             )
         )
