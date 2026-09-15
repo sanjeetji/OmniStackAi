@@ -598,6 +598,59 @@ STUDIO_HTML = """<!doctype html>
     color: #94a3b8;
     font-family: monospace;
   }
+  .preview-verification-info {
+    margin-top: 10px;
+    padding: 10px 12px;
+    background: rgba(15, 23, 42, 0.6);
+    border: 1px solid rgba(16, 185, 129, 0.25);
+    border-radius: 8px;
+    font-size: 11px;
+    color: #cbd5e1;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+  .verification-header-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    flex-wrap: wrap;
+  }
+  .verification-meta-group {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+  }
+  .verification-badge {
+    background: rgba(16, 185, 129, 0.2);
+    color: #34d399;
+    padding: 2px 8px;
+    border-radius: 999px;
+    font-size: 10px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
+  .verification-count-badge {
+    background: #1e293b;
+    padding: 2px 6px;
+    border-radius: 4px;
+    font-size: 10px;
+    color: #94a3b8;
+  }
+  .verification-action-btn {
+    background: rgba(16, 185, 129, 0.15);
+    border: 1px solid rgba(16, 185, 129, 0.35);
+    border-radius: 4px;
+    color: #6ee7b7;
+    font-size: 10px;
+    padding: 3px 8px;
+    cursor: pointer;
+    transition: background 0.15s;
+  }
+  .verification-action-btn:hover { background: rgba(16, 185, 129, 0.25); }
   .events-header-row {
     display: flex;
     align-items: center;
@@ -921,6 +974,20 @@ STUDIO_HTML = """<!doctype html>
           </div>
         </div>
         <div id="cicd-jobs-list" class="cicd-jobs-list"></div>
+      </div>
+      <div id="preview-verification-info" class="preview-verification-info" hidden>
+        <div class="verification-header-row">
+          <div class="verification-meta-group">
+            <span class="verification-badge">Health &amp; Verification</span>
+            <span id="verification-probe-count" class="verification-count-badge">0 probes</span>
+            <span id="verification-smoke-count" class="verification-count-badge">0 smoke tests</span>
+            <span id="verification-canary-count" class="verification-count-badge">0 canary rules</span>
+          </div>
+          <div class="verification-meta-group">
+            <button type="button" id="verification-simulate-btn" class="verification-action-btn">Simulate Verification</button>
+            <button type="button" id="verification-refresh-btn" class="verification-action-btn">Refresh</button>
+          </div>
+        </div>
       </div>
       <p id="preview-status" class="preview-status" role="status" aria-live="polite">Preview has not started.</p>
       <iframe
@@ -1386,6 +1453,27 @@ STUDIO_HTML = """<!doctype html>
       }
     }
 
+    var verificationInfo = document.getElementById('preview-verification-info');
+    if (verificationInfo) {
+      if (preview && preview.is_ecosystem && preview.has_verification) {
+        verificationInfo.hidden = false;
+        var vProbeCount = document.getElementById('verification-probe-count');
+        if (vProbeCount) {
+          vProbeCount.textContent = (preview.probe_count || 0) + ' probe' + ((preview.probe_count || 0) !== 1 ? 's' : '');
+        }
+        var vSmokeCount = document.getElementById('verification-smoke-count');
+        if (vSmokeCount) {
+          vSmokeCount.textContent = (preview.smoke_test_count || 0) + ' smoke test' + ((preview.smoke_test_count || 0) !== 1 ? 's' : '');
+        }
+        var vCanaryCount = document.getElementById('verification-canary-count');
+        if (vCanaryCount) {
+          vCanaryCount.textContent = (preview.canary_rule_count || 0) + ' canary rule' + ((preview.canary_rule_count || 0) !== 1 ? 's' : '');
+        }
+      } else {
+        verificationInfo.hidden = true;
+      }
+    }
+
     if (url) {
       previewStatus.textContent = preview.message || 'The generated application is running locally.';
       if (currentPreviewUrl !== url) {
@@ -1757,6 +1845,51 @@ STUDIO_HTML = """<!doctype html>
         })
         .catch(function () {
           flashButton(cicdRefreshBtn, 'Error');
+        });
+    });
+  }
+
+  var verificationSimulateBtn = document.getElementById('verification-simulate-btn');
+  if (verificationSimulateBtn) {
+    verificationSimulateBtn.addEventListener('click', function () {
+      flashButton(verificationSimulateBtn, 'Simulating...');
+      fetch('/api/ecosystem/verification/simulate', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: '{}' })
+        .then(function (r) { return r.json(); })
+        .then(function (data) {
+          var s = data.summary || {};
+          var pass = (s.probe_pass || 0) + (s.smoke_pass || 0) + (s.canary_pass || 0);
+          var fail = (s.probe_fail || 0) + (s.smoke_fail || 0) + (s.canary_fail || 0);
+          flashButton(verificationSimulateBtn, fail === 0 ? 'All Pass (' + pass + ')' : 'Failures: ' + fail);
+        })
+        .catch(function () {
+          flashButton(verificationSimulateBtn, 'Error');
+        });
+    });
+  }
+
+  var verificationRefreshBtn = document.getElementById('verification-refresh-btn');
+  if (verificationRefreshBtn) {
+    verificationRefreshBtn.addEventListener('click', function () {
+      flashButton(verificationRefreshBtn, 'Loading...');
+      fetch('/api/ecosystem/verification')
+        .then(function (r) { return r.json(); })
+        .then(function (data) {
+          var vProbeCount = document.getElementById('verification-probe-count');
+          if (vProbeCount && data.probe_count != null) {
+            vProbeCount.textContent = data.probe_count + ' probe' + (data.probe_count !== 1 ? 's' : '');
+          }
+          var vSmokeCount = document.getElementById('verification-smoke-count');
+          if (vSmokeCount && data.smoke_test_count != null) {
+            vSmokeCount.textContent = data.smoke_test_count + ' smoke test' + (data.smoke_test_count !== 1 ? 's' : '');
+          }
+          var vCanaryCount = document.getElementById('verification-canary-count');
+          if (vCanaryCount && data.canary_rule_count != null) {
+            vCanaryCount.textContent = data.canary_rule_count + ' canary rule' + (data.canary_rule_count !== 1 ? 's' : '');
+          }
+          flashButton(verificationRefreshBtn, 'Refreshed!');
+        })
+        .catch(function () {
+          flashButton(verificationRefreshBtn, 'Error');
         });
     });
   }

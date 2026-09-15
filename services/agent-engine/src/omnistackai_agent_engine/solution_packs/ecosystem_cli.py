@@ -5,6 +5,7 @@ Supports:
 - verify: Verify integrity and Application IR validity of an ecosystem package file
 - inspect: Pretty-print ecosystem package metadata and surfaces
 - build: Materialize all surfaces of an ecosystem package as separate Git repos
+- verify-suite: Inspect or dry-run simulate the full ecosystem verification suite
 """
 
 from __future__ import annotations
@@ -113,6 +114,18 @@ def build_parser() -> argparse.ArgumentParser:
     cicd_parser.add_argument("--json", action="store_true", help="Output CI/CD contract as canonical JSON.")
     cicd_parser.add_argument("--yaml", action="store_true", help="Output GitHub Actions workflow YAML.")
     cicd_parser.add_argument("--simulate", action="store_true", help="Run in-process dry-run simulation of the CI/CD DAG.")
+
+    # Subcommand: verify-suite
+    verify_suite_parser = subparsers.add_parser(
+        "verify-suite",
+        help="Inspect or dry-run simulate the health check, smoke test, and canary verification suite for an ecosystem pack.",
+    )
+    verify_suite_parser.add_argument(
+        "package_file",
+        help="Path to the .ecosystem.pack.json file or registered ecosystem ID to inspect.",
+    )
+    verify_suite_parser.add_argument("--json", action="store_true", help="Output verification contract as canonical JSON.")
+    verify_suite_parser.add_argument("--simulate", action="store_true", help="Run in-process dry-run simulation of all probes, smoke tests, and canary rules.")
 
     return parser
 
@@ -565,6 +578,63 @@ def run_cicd(args: argparse.Namespace) -> int:
     return 0
 
 
+def run_verify_suite(args: argparse.Namespace) -> int:
+    import json
+    from .ecosystem_verification import EcosystemVerificationEngine, synthesize_ecosystem_verification
+
+    pkg, err = _load_package(args.package_file)
+    if pkg is None:
+        sys.stderr.write(f"Error: {err}\n")
+        return 1
+
+    vc = pkg.verification_contract
+    if vc is None:
+        vc = synthesize_ecosystem_verification(
+            pkg.ecosystem_id,
+            pkg.surfaces,
+            version=pkg.version,
+        )
+
+    if args.json:
+        sys.stdout.write(json.dumps(vc.to_dict(), indent=2, sort_keys=True))
+        sys.stdout.write("\n")
+        return 0
+
+    if args.simulate:
+        engine = EcosystemVerificationEngine(vc)
+        res = engine.simulate_full_verification()
+        summary = res["summary"]
+        status = res["status"].upper()
+        sys.stdout.write(f"Verification Simulation: {status}\n")
+        sys.stdout.write(f"  Probes:      {summary['probe_pass']} pass / {summary['probe_fail']} fail (total {summary['total_probes']})\n")
+        sys.stdout.write(f"  Smoke Tests: {summary['smoke_pass']} pass / {summary['smoke_fail']} fail (total {summary['total_smoke_tests']})\n")
+        sys.stdout.write(f"  Canary Rules:{summary['canary_pass']} pass / {summary['canary_fail']} fail (total {summary['total_canary_rules']})\n")
+        if summary["probe_fail"] + summary["smoke_fail"] + summary["canary_fail"] == 0:
+            sys.stdout.write("  All checks PASSED (dry-run)\n")
+        else:
+            sys.stdout.write("  Some checks FAILED\n")
+        return 0
+
+    sys.stdout.write(f"Ecosystem Verification Suite: {pkg.display_name} ({pkg.ecosystem_id})\n")
+    sys.stdout.write(f"  Version:      {vc.version}\n")
+    sys.stdout.write(f"  Digest:       {vc.digest()[:16]}...\n")
+    sys.stdout.write(f"  Probes ({len(vc.probes)}):\n")
+    for p in vc.probes:
+        tags_str = ", ".join(p.tags) or "none"
+        sys.stdout.write(f"    - [{p.surface_slug}] {p.method} {p.endpoint} -> {p.expected_status} (timeout: {p.timeout_seconds}s, tags: {tags_str})\n")
+    sys.stdout.write(f"  Smoke Tests ({len(vc.smoke_tests)}):\n")
+    for t in vc.smoke_tests:
+        sys.stdout.write(f"    - [{t.surface_slug}] {t.name} ({t.category}, {len(t.steps)} steps, expected: {t.expected_outcome})\n")
+    sys.stdout.write(f"  Canary Rules ({len(vc.canary_rules)}):\n")
+    for r in vc.canary_rules:
+        surfaces_str = ", ".join(r.surfaces_covered)
+        sys.stdout.write(f"    - [{r.severity.upper()}] {r.rule_id}\n")
+        sys.stdout.write(f"      Trigger:   {r.trigger}\n")
+        sys.stdout.write(f"      Assertion: {r.assertion}\n")
+        sys.stdout.write(f"      Surfaces:  {surfaces_str}\n")
+    return 0
+
+
 def main(argv: Sequence[str] | None = None) -> int:
     parser = build_parser()
     args = parser.parse_args(argv)
@@ -593,6 +663,8 @@ def main(argv: Sequence[str] | None = None) -> int:
         return run_sync(args)
     if args.subcommand == "cicd":
         return run_cicd(args)
+    if args.subcommand == "verify-suite":
+        return run_verify_suite(args)
     sys.stderr.write(f"Unknown subcommand: {args.subcommand}\n")
     return 1
 

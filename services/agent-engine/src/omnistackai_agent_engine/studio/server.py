@@ -55,6 +55,8 @@ def _make_handler(
     get_ecosystem_cicd_fn: ControlFn | None = None,
     to_workflow_yaml_fn: Callable[[], str | None] | None = None,
     simulate_cicd_run_fn: Callable[[str], dict] | None = None,
+    get_ecosystem_verification_fn: ControlFn | None = None,
+    simulate_ecosystem_verification_fn: ControlFn | None = None,
 ) -> type[BaseHTTPRequestHandler]:
     pack_registry = registry or DEFAULT_SOLUTION_PACK_REGISTRY
     eco_registry = ecosystem_registry or DEFAULT_ECOSYSTEM_PACK_REGISTRY
@@ -248,6 +250,15 @@ def _make_handler(
                         self._send_json(404, {"error": "no cicd contract available"})
                     else:
                         self._send(200, "text/yaml; charset=utf-8", yaml_text.encode("utf-8"))
+                except Exception as error:
+                    self._send_json(502, {"error": str(error)})
+                return
+            elif self.path == "/api/ecosystem/verification":
+                if get_ecosystem_verification_fn is None:
+                    self._send_json(404, {"error": "ecosystem verification not enabled"})
+                    return
+                try:
+                    self._send_json(200, get_ecosystem_verification_fn())
                 except Exception as error:
                     self._send_json(502, {"error": str(error)})
                 return
@@ -474,6 +485,17 @@ def _make_handler(
                 except Exception as error:
                     self._send_json(502, {"error": str(error)})
                 return
+            if self.path == "/api/ecosystem/verification/simulate":
+                if simulate_ecosystem_verification_fn is None:
+                    self._send_json(404, {"error": "ecosystem verification simulate not enabled"})
+                    return
+                self._drain_body()
+                try:
+                    res = simulate_ecosystem_verification_fn()
+                    self._send_json(200, res)
+                except Exception as error:
+                    self._send_json(502, {"error": str(error)})
+                return
             if self.path != "/api/build":
                 self._send_json(404, {"error": "not found"})
                 return
@@ -549,6 +571,8 @@ def create_studio_server(
     get_ecosystem_cicd_fn: ControlFn | None = None,
     to_workflow_yaml_fn: Callable[[], str | None] | None = None,
     simulate_cicd_run_fn: Callable[[str], dict] | None = None,
+    get_ecosystem_verification_fn: ControlFn | None = None,
+    simulate_ecosystem_verification_fn: ControlFn | None = None,
 ) -> ThreadingHTTPServer:
     """Create (but do not start) a studio server bound to ``host``/``port``.
 
@@ -589,6 +613,8 @@ def create_studio_server(
             get_ecosystem_cicd_fn=get_ecosystem_cicd_fn,
             to_workflow_yaml_fn=to_workflow_yaml_fn,
             simulate_cicd_run_fn=simulate_cicd_run_fn,
+            get_ecosystem_verification_fn=get_ecosystem_verification_fn,
+            simulate_ecosystem_verification_fn=simulate_ecosystem_verification_fn,
         ),
     )
 

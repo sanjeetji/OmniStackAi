@@ -41,7 +41,7 @@ START PROTOCOL
   `task ai:status`, `task ai:handoff`. `task verify` must stay green and network-independent.
 - Confirm git branch/HEAD/clean tree. Then restate: phase, next Tracker ID, objective, blast radius.
 
-WHAT IS ALREADY BUILT (platform generators are Python 3.13 stdlib-only, offline, in services/agent-engine; 3,173 tests pass)
+WHAT IS ALREADY BUILT (platform generators are Python 3.13 stdlib-only, offline, in services/agent-engine; 3,202 tests pass)
 - Model fabric: ModelProvider contract + registry; local Ollama adapter (runs any installed model via
 
 
@@ -379,7 +379,7 @@ RULES (non-negotiable)
   SHA == local HEAD. Never claim unexecuted tests.
 
 WHAT TO DO NEXT
-- R-430 through R-452 are DONE — the DIFFERENTIATING SPINE now proposes a curated multi-app ecosystem,
+- R-430 through R-453 are DONE — the DIFFERENTIATING SPINE now proposes a curated multi-app ecosystem,
   materializes it as multiple owned repos, and can explicitly refine an unknown domain through local Ollama
   before using the same deterministic planner. R-433 then gives each surface a bounded read/write entity
   policy, relation-safe dependencies, one actor role, and role-gated mutations. R-434 registers immutable,
@@ -405,9 +405,11 @@ WHAT TO DO NEXT
   introduces multi-surface export, deployment manifests, stdlib Docker Compose YAML generation, and HTTP reverse-proxy live gateway orchestration;
   R-451 introduces cross-surface data sync, conflict resolution algorithms (last-write-wins, source-of-truth, field-merge),
   offline-first sync engine, Studio sync endpoints/UI badges, and CLI sync subcommand;
-  and R-452 introduces multi-surface CI/CD workflow contracts, deterministic Python stdlib GitHub Actions YAML generation,
-  in-process DAG cycle validation, pipeline dry-run simulation, Studio preview CI/CD endpoints and UI container, and CLI cicd subcommand.
-- NEXT R-453: Solution Pack Ecosystem Comprehensive Multi-Surface Health Check, Smoke Testing, and Canary Verification.
+  R-452 introduces multi-surface CI/CD workflow contracts, deterministic Python stdlib GitHub Actions YAML generation,
+  in-process DAG cycle validation, pipeline dry-run simulation, Studio preview CI/CD endpoints and UI container, and CLI cicd subcommand;
+  and R-453 introduces comprehensive multi-surface health check probes, end-to-end smoke test specifications, canary verification rules,
+  in-process dry-run evaluation engine, Studio preview verification endpoints and UI panel, and CLI verify-suite subcommand.
+- NEXT R-454: Solution Pack Ecosystem Multi-Surface Disaster Recovery, Snapshot Backup, and Rollback Orchestration.
   Keep `task verify` model/Docker/DB/install/network-free (any live/model path stays opt-in); preserve
   single-session ownership and explicit trusted-local mode.
 - The UI-component series remains paused at R-415 and can be resumed later under a future free ID.
@@ -418,6 +420,6 @@ WHAT TO DO NEXT
   deploy (OMNISTACKAI_TIER=2 + E2B/Vercel keys) and cloud-model live-verify. Governance-deferred: native
   mobile (R-010 etc.) until web/backend stability.
 
-Begin by reading the files above and running the start protocol, then continue the spine at R-453
+Begin by reading the files above and running the start protocol, then continue the spine at R-454
 and write its Standard AI Task Contract before writing code.
 ```

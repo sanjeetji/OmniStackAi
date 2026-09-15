@@ -92,6 +92,10 @@ class EcosystemPack:
     def cicd_contract(self) -> Any:
         return self.package.cicd_contract if self.package else None
 
+    @property
+    def verification_contract(self) -> Any:
+        return self.package.verification_contract if self.package else None
+
     def to_dict(self) -> dict[str, Any]:
         return {
             "ecosystem_id": self.ecosystem_id,
@@ -119,6 +123,7 @@ class EcosystemPack:
             "has_deployment_manifest": self.deployment_manifest is not None,
             "has_sync_contract": self.sync_contract is not None,
             "has_cicd_contract": self.cicd_contract is not None,
+            "has_verification_contract": self.verification_contract is not None,
         }
 
     @classmethod
@@ -315,6 +320,11 @@ class EcosystemPackRegistry:
         pack = self.get(ecosystem_id, version)
         return pack.cicd_contract if pack else None
 
+    def get_verification_contract(self, ecosystem_id: str, version: str | None = None) -> Any:
+        """Get the EcosystemVerificationContract for an ecosystem if present."""
+        pack = self.get(ecosystem_id, version)
+        return pack.verification_contract if pack else None
+
 
 def build_default_ecosystem_packs() -> tuple[EcosystemPack, ...]:
     """Synthesize default verified ecosystem packs from registered baseline solution packs."""
@@ -403,6 +413,9 @@ class _LazyEcosystemPackRegistry(EcosystemPackRegistry):
 
     def get_cicd_contract(self, ecosystem_id: str, version: str | None = None) -> Any:
         return self._get_delegate().get_cicd_contract(ecosystem_id, version)
+
+    def get_verification_contract(self, ecosystem_id: str, version: str | None = None) -> Any:
+        return self._get_delegate().get_verification_contract(ecosystem_id, version)
 
 
 DEFAULT_ECOSYSTEM_PACK_REGISTRY: EcosystemPackRegistry = _LazyEcosystemPackRegistry()

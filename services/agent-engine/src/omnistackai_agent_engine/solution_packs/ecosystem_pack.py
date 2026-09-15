@@ -28,6 +28,7 @@ from .ecosystem_telemetry import EcosystemTelemetryContract, synthesize_ecosyste
 from .ecosystem_deployment import EcosystemDeploymentManifest, synthesize_ecosystem_deployment
 from .ecosystem_sync import EcosystemSyncContract, synthesize_ecosystem_sync
 from .ecosystem_cicd import EcosystemCICDContract, synthesize_ecosystem_cicd
+from .ecosystem_verification import EcosystemVerificationContract, synthesize_ecosystem_verification
 from .registry import (
     DEFAULT_SOLUTION_PACK_REGISTRY,
     SolutionPack,
@@ -104,6 +105,7 @@ class EcosystemPackPackage:
     deployment_manifest: EcosystemDeploymentManifest | None = None
     sync_contract: EcosystemSyncContract | None = None
     cicd_contract: EcosystemCICDContract | None = None
+    verification_contract: EcosystemVerificationContract | None = None
 
     def to_dict(self) -> dict[str, Any]:
         data: dict[str, Any] = {
@@ -131,6 +133,8 @@ class EcosystemPackPackage:
             data["sync_contract"] = self.sync_contract.to_dict()
         if self.cicd_contract is not None:
             data["cicd_contract"] = self.cicd_contract.to_dict()
+        if self.verification_contract is not None:
+            data["verification_contract"] = self.verification_contract.to_dict()
         return data
 
     def to_json(self) -> str:
@@ -281,6 +285,10 @@ def parse_ecosystem_pack_package(data: str | bytes | Mapping[str, Any]) -> Ecosy
     if "cicd_contract" in raw and raw["cicd_contract"] is not None:
         cicd_contract = EcosystemCICDContract.from_dict(raw["cicd_contract"])
 
+    verification_contract = None
+    if "verification_contract" in raw and raw["verification_contract"] is not None:
+        verification_contract = EcosystemVerificationContract.from_dict(raw["verification_contract"])
+
     return EcosystemPackPackage(
         schema_version=schema_version,
         ecosystem_id=ecosystem_id,
@@ -298,6 +306,7 @@ def parse_ecosystem_pack_package(data: str | bytes | Mapping[str, Any]) -> Ecosy
         deployment_manifest=deployment_manifest,
         sync_contract=sync_contract,
         cicd_contract=cicd_contract,
+        verification_contract=verification_contract,
     )
 
 
@@ -413,6 +422,11 @@ def synthesize_ecosystem_pack(
         ecosystem_id,
         surface_packages,
     )
+    verification_contract = synthesize_ecosystem_verification(
+        ecosystem_id,
+        surface_packages,
+        version=version,
+    )
 
     payload = {
         "schema_version": ECOSYSTEM_PACK_SCHEMA_VERSION,
@@ -430,6 +444,7 @@ def synthesize_ecosystem_pack(
         "deployment_manifest": deployment_manifest.to_dict(),
         "sync_contract": sync_contract.to_dict(),
         "cicd_contract": cicd_contract.to_dict(),
+        "verification_contract": verification_contract.to_dict(),
     }
     package_sha256 = compute_ecosystem_checksum(payload)
 
@@ -450,4 +465,5 @@ def synthesize_ecosystem_pack(
         deployment_manifest=deployment_manifest,
         sync_contract=sync_contract,
         cicd_contract=cicd_contract,
+        verification_contract=verification_contract,
     )

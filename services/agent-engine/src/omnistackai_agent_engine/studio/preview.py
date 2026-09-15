@@ -51,6 +51,11 @@ from ..solution_packs.ecosystem_cicd import (
     synthesize_ecosystem_cicd,
     to_workflow_yaml,
 )
+from ..solution_packs.ecosystem_verification import (
+    EcosystemVerificationContract,
+    EcosystemVerificationEngine,
+    synthesize_ecosystem_verification,
+)
 
 StartFn = Callable[..., LocalAppSession]
 
@@ -91,6 +96,8 @@ class StudioPreviewManager:
         self._sync_engine: EcosystemSyncEngine | None = None
         self._cicd_contract: EcosystemCICDContract | None = None
         self._cicd_engine: EcosystemCICDEngine | None = None
+        self._verification_contract: EcosystemVerificationContract | None = None
+        self._verification_engine: EcosystemVerificationEngine | None = None
 
     def replace(self, repo_dir: str) -> dict:
         """Stop prior previews, start single app ``repo_dir`` on free ports, and return state."""
@@ -140,6 +147,7 @@ class StudioPreviewManager:
         deployment_manifest: EcosystemDeploymentManifest | None = None,
         sync_contract: EcosystemSyncContract | None = None,
         cicd_contract: EcosystemCICDContract | None = None,
+        verification_contract: EcosystemVerificationContract | None = None,
     ) -> dict:
         """Stop prior previews, register ecosystem surfaces, and start the active surface."""
         with self._lock:
@@ -234,6 +242,20 @@ class StudioPreviewManager:
                         ecosystem_id, self._surfaces
                     )
             self._cicd_engine = EcosystemCICDEngine(self._cicd_contract)
+
+            # Verification contract (R-453)
+            if verification_contract is not None:
+                self._verification_contract = verification_contract
+            else:
+                from ..solution_packs.ecosystem_registry import DEFAULT_ECOSYSTEM_PACK_REGISTRY
+                cached_vc = DEFAULT_ECOSYSTEM_PACK_REGISTRY.get_verification_contract(ecosystem_id)
+                if cached_vc is not None:
+                    self._verification_contract = cached_vc
+                else:
+                    self._verification_contract = synthesize_ecosystem_verification(
+                        ecosystem_id, self._surfaces
+                    )
+            self._verification_engine = EcosystemVerificationEngine(self._verification_contract)
 
             # Determine initial active surface
             chosen_slug = active_surface_slug
@@ -415,6 +437,10 @@ class StudioPreviewManager:
                 "cicd_workflow_count": len(self._cicd_contract.workflows) if self._cicd_contract else 0,
                 "cicd_job_count": sum(len(w.jobs) for w in self._cicd_contract.workflows) if self._cicd_contract else 0,
                 "cicd_status": "configured" if self._cicd_contract else "none",
+                "has_verification": self._verification_contract is not None,
+                "probe_count": len(self._verification_contract.probes) if self._verification_contract else 0,
+                "smoke_test_count": len(self._verification_contract.smoke_tests) if self._verification_contract else 0,
+                "canary_rule_count": len(self._verification_contract.canary_rules) if self._verification_contract else 0,
                 "message": error_msg or _PREVIEW_ERROR,
                 "surfaces": surface_statuses,
             }
@@ -446,6 +472,10 @@ class StudioPreviewManager:
                 "cicd_workflow_count": len(self._cicd_contract.workflows) if self._cicd_contract else 0,
                 "cicd_job_count": sum(len(w.jobs) for w in self._cicd_contract.workflows) if self._cicd_contract else 0,
                 "cicd_status": "configured" if self._cicd_contract else "none",
+                "has_verification": self._verification_contract is not None,
+                "probe_count": len(self._verification_contract.probes) if self._verification_contract else 0,
+                "smoke_test_count": len(self._verification_contract.smoke_tests) if self._verification_contract else 0,
+                "canary_rule_count": len(self._verification_contract.canary_rules) if self._verification_contract else 0,
                 "web_url": active_sess.plan.web_url,
                 "message": f"The generated {active_surface_info['app_name']} is running locally.",
                 "surfaces": surface_statuses,
@@ -482,6 +512,10 @@ class StudioPreviewManager:
                 "cicd_workflow_count": len(self._cicd_contract.workflows) if self._cicd_contract else 0,
                 "cicd_job_count": sum(len(w.jobs) for w in self._cicd_contract.workflows) if self._cicd_contract else 0,
                 "cicd_status": "configured" if self._cicd_contract else "none",
+                "has_verification": self._verification_contract is not None,
+                "probe_count": len(self._verification_contract.probes) if self._verification_contract else 0,
+                "smoke_test_count": len(self._verification_contract.smoke_tests) if self._verification_contract else 0,
+                "canary_rule_count": len(self._verification_contract.canary_rules) if self._verification_contract else 0,
                 "message": f"Preview for {self._active_surface or 'surface'} stopped.",
                 "surfaces": surface_statuses,
             }
@@ -510,6 +544,8 @@ class StudioPreviewManager:
             self._live_gateway.stop()
             self._live_gateway = None
         self._deployment_manifest = None
+        self._verification_contract = None
+        self._verification_engine = None
 
     def get_ecosystem_auth(self) -> dict:
         """Inspect the active ecosystem's auth contract, role matrix, and surface demo tokens."""
@@ -761,4 +797,31 @@ class StudioPreviewManager:
                 "simulation": res,
             }
 
+    def get_ecosystem_verification(self) -> dict:
+        """Inspect the active ecosystem's verification contract (probes, smoke tests, canary rules)."""
+        with self._lock:
+            if not self._is_ecosystem or not self._verification_contract:
+                return {
+                    "is_ecosystem": False,
+                    "verification_contract": None,
+                    "probe_count": 0,
+                    "smoke_test_count": 0,
+                    "canary_rule_count": 0,
+                }
+            return {
+                "is_ecosystem": True,
+                "ecosystem_id": self._ecosystem_id,
+                "verification_contract": self._verification_contract.to_dict(),
+                "probe_count": len(self._verification_contract.probes),
+                "smoke_test_count": len(self._verification_contract.smoke_tests),
+                "canary_rule_count": len(self._verification_contract.canary_rules),
+                "active_surface": self._active_surface,
+            }
+
+    def simulate_ecosystem_verification(self) -> dict:
+        """Run a full dry-run simulation of ecosystem verification probes, smoke tests, and canary rules."""
+        with self._lock:
+            if not self._is_ecosystem or not self._verification_engine:
+                return {"status": "error", "message": "No active ecosystem verification engine"}
+            return self._verification_engine.simulate_full_verification()
 

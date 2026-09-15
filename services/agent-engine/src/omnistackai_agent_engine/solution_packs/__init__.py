@@ -126,6 +126,15 @@ from .ecosystem_cicd import (
     synthesize_ecosystem_cicd,
     to_workflow_yaml,
 )
+from .ecosystem_verification import (
+    CanaryVerificationRule,
+    EcosystemVerificationContract,
+    EcosystemVerificationEngine,
+    HealthCheckProbe,
+    SmokeTestSpec,
+    SmokeTestStep,
+    synthesize_ecosystem_verification,
+)
 
 __all__ = [
     "LEGACY_MANIFEST_SCHEMA_VERSION",
@@ -214,4 +223,11 @@ __all__ = [
     "generate_github_actions_workflow",
     "synthesize_ecosystem_cicd",
     "to_workflow_yaml",
+    "CanaryVerificationRule",
+    "EcosystemVerificationContract",
+    "EcosystemVerificationEngine",
+    "HealthCheckProbe",
+    "SmokeTestSpec",
+    "SmokeTestStep",
+    "synthesize_ecosystem_verification",
 ]

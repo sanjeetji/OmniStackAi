@@ -356,8 +356,27 @@ R-452 introduces canonical multi-surface CI/CD workflow contracts, deterministic
   ```
 - 100% offline verification in `task verify` (0 model calls).
 
+## Multi-surface comprehensive health check, smoke testing, and canary verification (R-453)
+
+The twenty-fourth brick of the differentiating spine formalizes multi-surface health check probes, end-to-end smoke test specifications, and cross-surface canary verification rules:
+
+- Canonical data models: `HealthCheckProbe` (probe_id, surface_slug, surface_kind, method, endpoint, expected_status, timeout_seconds, tags), `SmokeTestStep` (step_id, description, action, target, expected), `SmokeTestSpec` (test_id, surface_slug, name, category, steps, expected_outcome), `CanaryVerificationRule` (rule_id, surfaces_covered, trigger, assertion, severity), and `EcosystemVerificationContract` (ecosystem_id, version, probes, smoke_tests, canary_rules) with full `to_dict`/`from_dict` roundtrips and deterministic SHA-256 `digest()`.
+- Deterministic contract synthesis: `synthesize_ecosystem_verification(ecosystem_id, surfaces, version)` derives probes per surface endpoint (based on surface_kind), one smoke test per surface with kind-specific action sequences, and cross-surface canary rules (health-all, cross-auth, api-web-latency, data-consistency, smoke-suite) deterministically and offline with zero I/O.
+- In-process evaluation engine: Thread-safe `EcosystemVerificationEngine` simulates health probes, smoke tests, and canary rules dry-run, returning structured PASS/FAIL summaries with passed/failed counts and diagnostic detail.
+- Package bundling & registry access: `EcosystemPackPackage` bundles `verification_contract` with whole-package SHA-256 integrity verification; `EcosystemPackRegistry` and `EcosystemPack` expose `get_verification_contract`.
+- Studio preview & server: `StudioPreviewManager` tracks verification contracts and simulation engines, injecting `has_verification`, `probe_count`, `smoke_test_count`, and `canary_rule_count` into preview payloads, and exposing `get_ecosystem_verification()` and `simulate_ecosystem_verification()`. Studio HTTP server exposes `GET /api/ecosystem/verification` and `POST /api/ecosystem/verification/simulate`.
+- Studio web UI: Renders green-themed `#preview-verification-info` container with probe/smoke/canary badges and 1-click "Simulate Verification" and "Refresh" buttons, strictly maintaining 0 external network requests.
+- CLI verification inspection:
+  ```bash
+  # Inspect ecosystem pack verification suite
+  task agent-engine:solution-pack:ecosystem -- verify-suite minimal-blog-ecosystem
+  task agent-engine:solution-pack:ecosystem -- verify-suite minimal-blog-ecosystem --json
+
+  # Simulate full verification suite dry-run
+  task agent-engine:solution-pack:ecosystem -- verify-suite minimal-blog-ecosystem --simulate
+  ```
+- 100% offline verification in `task verify` (0 model calls).
+
 ## Next boundary
 
-R-453: Solution Pack Ecosystem Comprehensive Multi-Surface Health Check, Smoke Testing, and Canary Verification.
-
-
+R-454: Solution Pack Ecosystem Multi-Surface Disaster Recovery, Snapshot Backup, and Rollback Orchestration.
