@@ -438,6 +438,28 @@ The twenty-seventh brick of the differentiating spine formalizes multi-surface a
   ```
 - 100% offline verification in `task verify` (0 model calls).
 
+## Multi-surface SLA, SLO, and error budget contracts (R-457)
+
+The twenty-eighth brick of the differentiating spine formalizes multi-surface Service Level Indicators (SLIs), Service Level Objectives (SLOs), multi-window error budgets, and contractual customer Service Level Agreements (SLAs):
+
+- Canonical data models: `ServiceLevelIndicator` (sli_id, surface_slug, metric_name, kind, threshold, unit, good_events_query, total_events_query, description, tags), `ServiceLevelObjective` (slo_id, name, surface_slug, sli_id, target_percentage, rolling_window_days, budgeting_method, warning_threshold_pct, tier, tags), `ErrorBudget` (slo_id, total_budget_percentage, remaining_budget_percentage, burn_rate_1h, burn_rate_6h, burn_rate_24h, budget_status, consumed_budget_percentage), `ServiceLevelAgreement` (sla_id, customer_tier, surface_slug, availability_target_pct, p95_latency_ms_target, financial_credit_pct, penalty_threshold_pct, description), and `EcosystemSLAContract` (ecosystem_id, version, slis, slos, error_budgets, slas) with full `to_dict`/`from_dict`/`to_json`/`from_json` roundtrips and deterministic SHA-256 `digest()`.
+- Deterministic contract synthesis: `synthesize_ecosystem_sla(ecosystem_id, surfaces, version)` derives surface-specific SLIs (availability, p95 latency, edge uptime, Core Web Vitals LCP, mobile crash-free sessions), tiered SLOs with rolling windows, error budgets, and customer-tier SLAs with availability and financial credit guarantees deterministically and offline with zero I/O.
+- In-process evaluation & simulation engine: Thread-safe `EcosystemSLAEngine` evaluates metric observations against thresholds (`evaluate_sli_metrics`), calculates multi-window error budget burn rates and projected exhaustion (`calculate_error_budget_burn`), and executes end-to-end SLA compliance simulations (`simulate_sla_compliance`) across operational scenarios (`normal_operations`, `minor_degradation`, `severe_outage`, `budget_exhaustion`), resolving SLI evaluations, burn reports, breached SLOs, breached SLAs, and customer financial credit liabilities.
+- Package bundling & registry access: `EcosystemPackPackage` bundles `sla_contract` with whole-package SHA-256 integrity verification; `EcosystemPackRegistry` and `EcosystemPack` expose `get_sla_contract`.
+- Studio preview & server: `StudioPreviewManager` tracks SLA contracts and simulation engines, injecting `has_sla`, `sli_count`, `slo_count`, `sla_count`, and `sla_status` into preview payloads, and exposing `get_ecosystem_sla()` and `simulate_ecosystem_sla()`. Studio HTTP server exposes `GET /api/ecosystem/sla` and `POST /api/ecosystem/sla/simulate`.
+- Studio web UI: Renders emerald/teal-themed `#preview-sla-info` container with SLI, SLO, and SLA count badges, and 1-click "Simulate SLA" and "Refresh" buttons, strictly maintaining 0 external network requests.
+- CLI SLA inspection:
+  ```bash
+  # Inspect ecosystem pack SLA contract
+  task agent-engine:solution-pack:ecosystem -- sla minimal-blog-ecosystem
+  task agent-engine:solution-pack:ecosystem -- sla minimal-blog-ecosystem --json
+
+  # Simulate SLA compliance scenario dry-run (normal_operations, minor_degradation, severe_outage, budget_exhaustion)
+  task agent-engine:solution-pack:ecosystem -- sla minimal-blog-ecosystem --simulate --scenario normal_operations
+  ```
+- 100% offline verification in `task verify` (0 model calls).
+
 ## Next boundary
 
-R-457: Solution Pack Ecosystem Multi-Surface SLA, SLO, and Error Budget Contracts.
+R-458: Solution Pack Ecosystem Multi-Surface Governance, Compliance Policy, and Audit Evidence Contracts.
+

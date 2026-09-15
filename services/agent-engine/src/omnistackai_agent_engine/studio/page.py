@@ -810,6 +810,59 @@ STUDIO_HTML = """<!doctype html>
     transition: background 0.15s;
   }
   .alerting-action-btn:hover { background: rgba(244, 63, 94, 0.25); }
+  .preview-sla-info {
+    margin-top: 10px;
+    padding: 10px 12px;
+    background: rgba(15, 23, 42, 0.6);
+    border: 1px solid rgba(16, 185, 129, 0.3);
+    border-radius: 8px;
+    font-size: 11px;
+    color: #cbd5e1;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+  .sla-header-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    flex-wrap: wrap;
+  }
+  .sla-meta-group {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+  }
+  .sla-badge {
+    background: rgba(16, 185, 129, 0.2);
+    color: #34d399;
+    padding: 2px 8px;
+    border-radius: 999px;
+    font-size: 10px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
+  .sla-count-badge {
+    background: #1e293b;
+    padding: 2px 6px;
+    border-radius: 4px;
+    font-size: 10px;
+    color: #94a3b8;
+  }
+  .sla-action-btn {
+    background: rgba(16, 185, 129, 0.15);
+    border: 1px solid rgba(16, 185, 129, 0.35);
+    border-radius: 4px;
+    color: #6ee7b7;
+    font-size: 10px;
+    padding: 3px 8px;
+    cursor: pointer;
+    transition: background 0.15s;
+  }
+  .sla-action-btn:hover { background: rgba(16, 185, 129, 0.25); }
   .events-header-row {
     display: flex;
     align-items: center;
@@ -1187,6 +1240,20 @@ STUDIO_HTML = """<!doctype html>
           <div class="alerting-meta-group">
             <button type="button" id="alerting-simulate-btn" class="alerting-action-btn">Simulate Alert</button>
             <button type="button" id="alerting-refresh-btn" class="alerting-action-btn">Refresh</button>
+          </div>
+        </div>
+      </div>
+      <div id="preview-sla-info" class="preview-sla-info" hidden>
+        <div class="sla-header-row">
+          <div class="sla-meta-group">
+            <span class="sla-badge">SLA &amp; SLO</span>
+            <span id="sla-sli-count" class="sla-count-badge">0 SLIs</span>
+            <span id="sla-slo-count" class="sla-count-badge">0 SLOs</span>
+            <span id="sla-contract-count" class="sla-count-badge">0 SLAs</span>
+          </div>
+          <div class="sla-meta-group">
+            <button type="button" id="sla-simulate-btn" class="sla-action-btn">Simulate SLA</button>
+            <button type="button" id="sla-refresh-btn" class="sla-action-btn">Refresh</button>
           </div>
         </div>
       </div>
@@ -1735,6 +1802,27 @@ STUDIO_HTML = """<!doctype html>
         }
       } else {
         alertingInfo.hidden = true;
+      }
+    }
+
+    var slaInfo = document.getElementById('preview-sla-info');
+    if (slaInfo) {
+      if (preview && preview.is_ecosystem && preview.has_sla) {
+        slaInfo.hidden = false;
+        var sliCount = document.getElementById('sla-sli-count');
+        if (sliCount) {
+          sliCount.textContent = (preview.sli_count || 0) + ' SLI' + ((preview.sli_count || 0) !== 1 ? 's' : '');
+        }
+        var sloCount = document.getElementById('sla-slo-count');
+        if (sloCount) {
+          sloCount.textContent = (preview.slo_count || 0) + ' SLO' + ((preview.slo_count || 0) !== 1 ? 's' : '');
+        }
+        var slaCount = document.getElementById('sla-contract-count');
+        if (slaCount) {
+          slaCount.textContent = (preview.sla_count || 0) + ' SLA' + ((preview.sla_count || 0) !== 1 ? 's' : '');
+        }
+      } else {
+        slaInfo.hidden = true;
       }
     }
 
@@ -2288,6 +2376,49 @@ STUDIO_HTML = """<!doctype html>
         })
         .catch(function () {
           flashButton(alertingRefreshBtn, 'Error');
+        });
+    });
+  }
+
+  var slaSimulateBtn = document.getElementById('sla-simulate-btn');
+  if (slaSimulateBtn) {
+    slaSimulateBtn.addEventListener('click', function () {
+      flashButton(slaSimulateBtn, 'Simulating...');
+      fetch('/api/ecosystem/sla/simulate', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({scenario: 'normal_operations'}) })
+        .then(function (res) { return res.json(); })
+        .then(function (data) {
+          var status = data.sla_status || (data.report && data.report.sla_status) || 'Simulated!';
+          flashButton(slaSimulateBtn, status);
+        })
+        .catch(function () {
+          flashButton(slaSimulateBtn, 'Error');
+        });
+    });
+  }
+
+  var slaRefreshBtn = document.getElementById('sla-refresh-btn');
+  if (slaRefreshBtn) {
+    slaRefreshBtn.addEventListener('click', function () {
+      flashButton(slaRefreshBtn, 'Loading...');
+      fetch('/api/ecosystem/sla')
+        .then(function (res) { return res.json(); })
+        .then(function (data) {
+          var sliCount = document.getElementById('sla-sli-count');
+          if (sliCount && data.sli_count != null) {
+            sliCount.textContent = data.sli_count + ' SLI' + (data.sli_count !== 1 ? 's' : '');
+          }
+          var sloCount = document.getElementById('sla-slo-count');
+          if (sloCount && data.slo_count != null) {
+            sloCount.textContent = data.slo_count + ' SLO' + (data.slo_count !== 1 ? 's' : '');
+          }
+          var slaCount = document.getElementById('sla-contract-count');
+          if (slaCount && data.sla_count != null) {
+            slaCount.textContent = data.sla_count + ' SLA' + (data.sla_count !== 1 ? 's' : '');
+          }
+          flashButton(slaRefreshBtn, 'Refreshed!');
+        })
+        .catch(function () {
+          flashButton(slaRefreshBtn, 'Error');
         });
     });
   }

@@ -10,7 +10,7 @@ independent process management, and bounded status/stop/restart controls.
 from __future__ import annotations
 
 from threading import RLock
-from typing import Callable
+from typing import Any, Callable, Mapping
 
 from ..localrun import LocalAppSession, start_preview_app
 from ..solution_packs.ecosystem_auth import (
@@ -71,6 +71,11 @@ from ..solution_packs.ecosystem_alerting import (
     EcosystemAlertingEngine,
     synthesize_ecosystem_alerting,
 )
+from ..solution_packs.ecosystem_sla import (
+    EcosystemSLAContract,
+    EcosystemSLAEngine,
+    synthesize_ecosystem_sla,
+)
 
 StartFn = Callable[..., LocalAppSession]
 
@@ -119,6 +124,8 @@ class StudioPreviewManager:
         self._capacity_engine: EcosystemCapacityEngine | None = None
         self._alerting_contract: EcosystemAlertingContract | None = None
         self._alerting_engine: EcosystemAlertingEngine | None = None
+        self._sla_contract: EcosystemSLAContract | None = None
+        self._sla_engine: EcosystemSLAEngine | None = None
 
     def replace(self, repo_dir: str) -> dict:
         """Stop prior previews, start single app ``repo_dir`` on free ports, and return state."""
@@ -172,6 +179,7 @@ class StudioPreviewManager:
         recovery_contract: EcosystemDisasterRecoveryContract | None = None,
         capacity_contract: EcosystemCapacityContract | None = None,
         alerting_contract: EcosystemAlertingContract | None = None,
+        sla_contract: EcosystemSLAContract | None = None,
     ) -> dict:
         """Stop prior previews, register ecosystem surfaces, and start the active surface."""
         with self._lock:
@@ -322,6 +330,20 @@ class StudioPreviewManager:
                         ecosystem_id, self._surfaces
                     )
             self._alerting_engine = EcosystemAlertingEngine(self._alerting_contract)
+
+            # SLA contract (R-457)
+            if sla_contract is not None:
+                self._sla_contract = sla_contract
+            else:
+                from ..solution_packs.ecosystem_registry import DEFAULT_ECOSYSTEM_PACK_REGISTRY
+                cached_sc = DEFAULT_ECOSYSTEM_PACK_REGISTRY.get_sla_contract(ecosystem_id)
+                if cached_sc is not None:
+                    self._sla_contract = cached_sc
+                else:
+                    self._sla_contract = synthesize_ecosystem_sla(
+                        ecosystem_id, self._surfaces
+                    )
+            self._sla_engine = EcosystemSLAEngine(self._sla_contract)
 
             # Determine initial active surface
             chosen_slug = active_surface_slug
@@ -523,6 +545,11 @@ class StudioPreviewManager:
                 "runbook_count": len(self._alerting_contract.runbooks) if self._alerting_contract else 0,
                 "escalation_policy_count": len(self._alerting_contract.escalation_policies) if self._alerting_contract else 0,
                 "alert_status": "configured" if self._alerting_contract else "none",
+                "has_sla": self._sla_contract is not None,
+                "sli_count": len(self._sla_contract.slis) if self._sla_contract else 0,
+                "slo_count": len(self._sla_contract.slos) if self._sla_contract else 0,
+                "sla_count": len(self._sla_contract.slas) if self._sla_contract else 0,
+                "sla_status": "configured" if self._sla_contract else "none",
                 "message": error_msg or _PREVIEW_ERROR,
                 "surfaces": surface_statuses,
             }
@@ -574,6 +601,11 @@ class StudioPreviewManager:
                 "runbook_count": len(self._alerting_contract.runbooks) if self._alerting_contract else 0,
                 "escalation_policy_count": len(self._alerting_contract.escalation_policies) if self._alerting_contract else 0,
                 "alert_status": "configured" if self._alerting_contract else "none",
+                "has_sla": self._sla_contract is not None,
+                "sli_count": len(self._sla_contract.slis) if self._sla_contract else 0,
+                "slo_count": len(self._sla_contract.slos) if self._sla_contract else 0,
+                "sla_count": len(self._sla_contract.slas) if self._sla_contract else 0,
+                "sla_status": "configured" if self._sla_contract else "none",
                 "web_url": active_sess.plan.web_url,
                 "message": f"The generated {active_surface_info['app_name']} is running locally.",
                 "surfaces": surface_statuses,
@@ -630,6 +662,11 @@ class StudioPreviewManager:
                 "runbook_count": len(self._alerting_contract.runbooks) if self._alerting_contract else 0,
                 "escalation_policy_count": len(self._alerting_contract.escalation_policies) if self._alerting_contract else 0,
                 "alert_status": "configured" if self._alerting_contract else "none",
+                "has_sla": self._sla_contract is not None,
+                "sli_count": len(self._sla_contract.slis) if self._sla_contract else 0,
+                "slo_count": len(self._sla_contract.slos) if self._sla_contract else 0,
+                "sla_count": len(self._sla_contract.slas) if self._sla_contract else 0,
+                "sla_status": "configured" if self._sla_contract else "none",
                 "message": f"Preview for {self._active_surface or 'surface'} stopped.",
                 "surfaces": surface_statuses,
             }
@@ -666,6 +703,8 @@ class StudioPreviewManager:
         self._capacity_engine = None
         self._alerting_contract = None
         self._alerting_engine = None
+        self._sla_contract = None
+        self._sla_engine = None
 
     def get_ecosystem_auth(self) -> dict:
         """Inspect the active ecosystem's auth contract, role matrix, and surface demo tokens."""
@@ -1064,5 +1103,48 @@ class StudioPreviewManager:
                 "report": rep.to_dict(),
                 **rep.to_dict(),
             }
+
+    def get_ecosystem_sla(self) -> dict:
+        """Inspect the active ecosystem's SLA/SLO contract."""
+        with self._lock:
+            if not self._is_ecosystem or not self._sla_contract:
+                return {
+                    "is_ecosystem": False,
+                    "status": "not_configured",
+                    "contract": None,
+                    "sla_contract": None,
+                    "sli_count": 0,
+                    "slo_count": 0,
+                    "sla_count": 0,
+                }
+            return {
+                "is_ecosystem": True,
+                "status": "ok",
+                "ecosystem_id": self._ecosystem_id,
+                "contract": self._sla_contract.to_dict(),
+                "sla_contract": self._sla_contract.to_dict(),
+                "digest": self._sla_contract.digest(),
+                "sli_count": len(self._sla_contract.slis),
+                "slo_count": len(self._sla_contract.slos),
+                "sla_count": len(self._sla_contract.slas),
+                "active_surface": self._active_surface,
+            }
+
+    def simulate_ecosystem_sla(self, body: Mapping[str, Any] | None = None) -> dict:
+        """Run a dry-run simulation of ecosystem SLA compliance and burn rates."""
+        with self._lock:
+            if not self._is_ecosystem or not self._sla_engine:
+                return {"status": "error", "message": "No active ecosystem SLA engine"}
+            scenario = "normal_operations"
+            if isinstance(body, Mapping):
+                scenario = str(body.get("scenario", "normal_operations"))
+            rep = self._sla_engine.simulate_sla_compliance(scenario=scenario)
+            return {
+                **rep.to_dict(),
+                "report": rep.to_dict(),
+                "status": "ok",
+                "sla_status": rep.status,
+            }
+
 
 

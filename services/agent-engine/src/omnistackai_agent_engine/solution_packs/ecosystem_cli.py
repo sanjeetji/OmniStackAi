@@ -174,6 +174,23 @@ def build_parser() -> argparse.ArgumentParser:
         help="Incident scenario for simulation (api_error_spike, latency_spike, db_connection_exhaustion, budget_overrun; default: api_error_spike).",
     )
 
+    # Subcommand: sla
+    sla_parser = subparsers.add_parser(
+        "sla",
+        help="Inspect or dry-run simulate SLIs, SLOs, error budgets, and SLAs for an ecosystem pack.",
+    )
+    sla_parser.add_argument(
+        "package_file",
+        help="Path to the .ecosystem.pack.json file or registered ecosystem ID to inspect.",
+    )
+    sla_parser.add_argument("--json", action="store_true", help="Output SLA contract as canonical JSON.")
+    sla_parser.add_argument("--simulate", action="store_true", help="Run in-process dry-run simulation of SLA compliance and burn rates.")
+    sla_parser.add_argument(
+        "--scenario",
+        default="normal_operations",
+        help="SLA simulation scenario (normal_operations, minor_degradation, severe_outage, budget_exhaustion; default: normal_operations).",
+    )
+
     return parser
 
 
@@ -851,6 +868,66 @@ def run_alerting(args: argparse.Namespace) -> int:
     return 0
 
 
+def run_sla(args: argparse.Namespace) -> int:
+    import json
+    from .ecosystem_sla import EcosystemSLAEngine, synthesize_ecosystem_sla
+
+    pkg, err = _load_package(args.package_file)
+    if pkg is None:
+        sys.stderr.write(f"Error: {err}\n")
+        return 1
+
+    sla_contract = pkg.sla_contract
+    if sla_contract is None:
+        sla_contract = synthesize_ecosystem_sla(
+            pkg.ecosystem_id,
+            pkg.surfaces,
+            version=pkg.version,
+        )
+
+    if args.json:
+        sys.stdout.write(json.dumps(sla_contract.to_dict(), indent=2, sort_keys=True))
+        sys.stdout.write("\n")
+        return 0
+
+    if args.simulate:
+        engine = EcosystemSLAEngine(sla_contract)
+        scenario = getattr(args, "scenario", "normal_operations") or "normal_operations"
+        rep = engine.simulate_sla_compliance(scenario=scenario)
+        status = rep.status.upper()
+        sys.stdout.write(f"SLA Compliance Simulation ({scenario}): {status}\n")
+        sys.stdout.write(f"OVERALL STATUS: {status}\n")
+        sys.stdout.write(f"  SLIs Evaluated:   {len(rep.sli_evaluations)}\n")
+        for sli in rep.sli_evaluations:
+            pass_str = "PASS" if sli.is_good else "FAIL"
+            sys.stdout.write(f"    - [{sli.surface_slug}] {sli.sli_id}: {sli.observed_value:.2f}{sli.unit} (threshold: {sli.threshold}{sli.unit}) -> {pass_str}\n")
+        sys.stdout.write(f"  Burn Reports:     {len(rep.burn_reports)}\n")
+        for br in rep.burn_reports:
+            sys.stdout.write(f"    - [{br.slo_id}]: remaining={br.remaining_pct:.4f}% burn_rate_1h={br.burn_rate_1h:.1f}x status={br.status}\n")
+        sys.stdout.write(f"  Financial Credits: {rep.total_financial_credit_pct:.1f}%\n")
+        sys.stdout.write(f"  Breached SLOs ({len(rep.breached_slos)}): {', '.join(rep.breached_slos) or 'None'}\n")
+        sys.stdout.write(f"  Breached SLAs ({len(rep.breached_slas)}): {', '.join(rep.breached_slas) or 'None'}\n")
+        sys.stdout.write(f"  Summary:          {rep.summary}\n")
+        return 0
+
+    sys.stdout.write(f"SLA Contract: {pkg.display_name} ({pkg.ecosystem_id})\n")
+    sys.stdout.write(f"  Version:          {sla_contract.version}\n")
+    sys.stdout.write(f"  Digest:           {sla_contract.digest()[:16]}...\n")
+    sys.stdout.write(f"  SLIs ({len(sla_contract.slis)}):\n")
+    for sli in sla_contract.slis:
+        sys.stdout.write(f"    - [{sli.surface_slug}] {sli.sli_id} ({sli.kind}): {sli.metric_name} threshold {sli.threshold}{sli.unit}\n")
+    sys.stdout.write(f"  SLOs ({len(sla_contract.slos)}):\n")
+    for slo in sla_contract.slos:
+        sys.stdout.write(f"    - [{slo.surface_slug}] {slo.slo_id} ({slo.tier}): {slo.target_percentage}% over {slo.rolling_window_days}d\n")
+    sys.stdout.write(f"  Error Budgets ({len(sla_contract.error_budgets)}):\n")
+    for eb in sla_contract.error_budgets:
+        sys.stdout.write(f"    - [{eb.slo_id}]: total={eb.total_budget_percentage}% remaining={eb.remaining_budget_percentage}%\n")
+    sys.stdout.write(f"  SLAs ({len(sla_contract.slas)}):\n")
+    for sla in sla_contract.slas:
+        sys.stdout.write(f"    - [{sla.sla_id}] {sla.customer_tier} ({sla.surface_slug}): {sla.availability_target_pct}% uptime, {sla.financial_credit_pct}% credit\n")
+    return 0
+
+
 def main(argv: Sequence[str] | None = None) -> int:
     parser = build_parser()
     args = parser.parse_args(argv)
@@ -887,6 +964,8 @@ def main(argv: Sequence[str] | None = None) -> int:
         return run_capacity(args)
     if args.subcommand == "alerting":
         return run_alerting(args)
+    if args.subcommand == "sla":
+        return run_sla(args)
     sys.stderr.write(f"Unknown subcommand: {args.subcommand}\n")
     return 1
 

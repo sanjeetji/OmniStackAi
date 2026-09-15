@@ -174,6 +174,24 @@ from .ecosystem_alerting import (
     RunbookStepExecution,
     synthesize_ecosystem_alerting,
 )
+from .ecosystem_sla import (
+    BudgetStatus,
+    BudgetingMethod,
+    CustomerTier,
+    EcosystemSLAContract,
+    EcosystemSLAEngine,
+    ErrorBudget,
+    ErrorBudgetBurnReport,
+    SLASimulationReport,
+    SLAStatus,
+    SLIEvaluationResult,
+    SLIKind,
+    SLOTier,
+    ServiceLevelAgreement,
+    ServiceLevelIndicator,
+    ServiceLevelObjective,
+    synthesize_ecosystem_sla,
+)
 
 __all__ = [
     "LEGACY_MANIFEST_SCHEMA_VERSION",
@@ -302,5 +320,21 @@ __all__ = [
     "RunbookStep",
     "RunbookStepExecution",
     "synthesize_ecosystem_alerting",
+    "BudgetStatus",
+    "BudgetingMethod",
+    "CustomerTier",
+    "EcosystemSLAContract",
+    "EcosystemSLAEngine",
+    "ErrorBudget",
+    "ErrorBudgetBurnReport",
+    "SLASimulationReport",
+    "SLAStatus",
+    "SLIEvaluationResult",
+    "SLIKind",
+    "SLOTier",
+    "ServiceLevelAgreement",
+    "ServiceLevelIndicator",
+    "ServiceLevelObjective",
+    "synthesize_ecosystem_sla",
 ]
 

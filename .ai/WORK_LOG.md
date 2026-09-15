@@ -1,5 +1,29 @@
 # Work Log
 
+## 2026-09-15 — R-457 (Solution Pack Ecosystem Multi-Surface SLA, SLO, and Error Budget Contracts)
+
+- Recorded `.ai/CURRENT_TASK.yaml` before implementation.
+  Final focused suite: 23 passing tests in `test_ecosystem_sla.py`. Total test suite: 3,288 tests passing offline (+23 net-new tests).
+- Implemented `solution_packs/ecosystem_sla.py`:
+  - Defined frozen `ServiceLevelIndicator`: sli_id, surface_slug, metric_name, kind (availability, latency, error_rate, throughput, saturation), threshold, unit, good_events_query, total_events_query, description, tags tuple.
+  - Defined frozen `ServiceLevelObjective`: slo_id, name, surface_slug, sli_id, target_percentage, rolling_window_days, budgeting_method (timeslice, occurrences), warning_threshold_pct, tier (critical, high, medium, low), tags tuple.
+  - Defined frozen `ErrorBudget`: slo_id, total_budget_percentage, remaining_budget_percentage, burn_rate_1h, burn_rate_6h, burn_rate_24h, budget_status (healthy, warning, exhausted), consumed_budget_percentage.
+  - Defined frozen `ServiceLevelAgreement`: sla_id, customer_tier (enterprise, business, developer, free), surface_slug, availability_target_pct, p95_latency_ms_target, financial_credit_pct, penalty_threshold_pct, description.
+  - Defined frozen `EcosystemSLAContract`: ecosystem_id, version, slis, slos, error_budgets, slas; `to_dict`/`from_dict`/`to_json`/`from_json` roundtrips; deterministic SHA-256 `digest()`.
+  - Implemented `synthesize_ecosystem_sla(ecosystem_id, surfaces, version)`: derives surface-specific SLIs (availability, p95 latency, web uptime, Core Web Vitals LCP, mobile crash-free sessions), tiered SLOs with rolling windows, error budgets, and customer-tier SLAs with availability and financial credit guarantees offline (0 model calls).
+  - Implemented `EcosystemSLAEngine`: thread-safe (`threading.Lock`); `evaluate_sli_metrics(metrics)` evaluating observations against thresholds; `calculate_error_budget_burn(slo_id, error_rate_pct, time_window_hours)` computing 1h, 6h, 24h burn rates and exhaustion projections; `simulate_sla_compliance(scenario, metrics)` simulating compliance, SLO breaches, and financial credit liabilities across operational scenarios (normal_operations, minor_degradation, severe_outage, budget_exhaustion).
+- Updated Ecosystem Pack Package & Registry:
+  - `ecosystem_pack.py`: Added `sla_contract: EcosystemSLAContract | None` field; updated `to_dict`, `parse_ecosystem_pack_package`, and `synthesize_ecosystem_pack` to include sla_contract in payload and whole-package SHA-256 checksum.
+  - `ecosystem_registry.py`: Added `sla_contract` property to `EcosystemPack`; `has_sla_contract` in `to_dict`; `get_sla_contract(ecosystem_id, version)` on `EcosystemPackRegistry` and `_LazyEcosystemPackRegistry` delegate.
+- Updated Studio Preview & Server:
+  - `studio/preview.py`: Imports SLA types; adds `_sla_contract`/`_sla_engine` fields; `replace_ecosystem()` accepts optional `sla_contract` param, falls back to registry cache then synthesize; all three payload branches inject `has_sla`, `sli_count`, `slo_count`, `sla_count`, and `sla_status`; cleanup in `_stop_locked()`; new `get_ecosystem_sla()` and `simulate_ecosystem_sla()` methods.
+  - `studio/server.py`: `_make_handler` and `create_studio_server` accept `get_ecosystem_sla_fn` and `simulate_ecosystem_sla_fn`; `GET /api/ecosystem/sla`; `POST /api/ecosystem/sla/simulate`.
+  - `studio/live_serve.py`: Wires `get_ecosystem_sla_fn` and `simulate_ecosystem_sla_fn` in `control_kwargs`.
+  - `studio/page.py`: Emerald/teal-themed `.preview-sla-info` CSS panel; `#preview-sla-info` HTML with SLI count, SLO count, SLA count badges, and "Simulate SLA" / "Refresh" buttons; JS update logic in preview status handler; button handlers for Simulate (calls POST, renders compliance status) and Refresh (calls GET, updates badges, strictly 0 external network requests).
+- Added `sla` subcommand to `ecosystem_cli.py`: accepts file path or registered ecosystem ID; `--json` outputs canonical JSON; `--simulate` with `--scenario` runs compliance simulation and prints structured SLIs, burn rates, and financial liabilities; default text mode shows SLIs, SLOs, error budgets, and SLAs.
+- Exported all SLA symbols in `solution_packs/__init__.py`.
+- All gates pass: `task verify` (3,288 tests), `task lint`, `task security:quick`, `task env:check`, `task builder:demo -- minimal-blog`, `task builder:demo -- rideshare-favourites`. Zero model calls.
+
 ## 2026-09-15 — R-456 (Solution Pack Ecosystem Multi-Surface Alerting, Incident Runbooks, and Escalation Policies)
 
 - Recorded `.ai/CURRENT_TASK.yaml` before implementation.

@@ -1,19 +1,20 @@
-task_id: R-456
+task_id: R-457
 status: completed
 phase: MVP
 tracker_row: 9
 started_at: "2026-09-15"
 completed_at: "2026-09-15"
 objective: >-
-  Implement Solution Pack Ecosystem Multi-Surface Alerting, Incident Runbooks, and Escalation Policies,
-  providing canonical AlertRule, RunbookStep, IncidentRunbook, EscalationTier, EscalationPolicy,
-  EcosystemAlertingContract, deterministic Python 3.13 stdlib-only contract synthesis (synthesize_ecosystem_alerting)
-  for all ecosystem surfaces, in-process thread-safe EcosystemAlertingEngine for alert trigger evaluation,
-  incident runbook simulation, and escalation sequencing, ecosystem package bundling with whole-package SHA-256 integrity,
-  registry discovery, Studio preview alerting status injection, endpoints GET /api/ecosystem/alerting and
-  POST /api/ecosystem/alerting/simulate, Studio UI #preview-alerting-info panel (0 external requests), and CLI alerting subcommand.
+  Implement Solution Pack Ecosystem Multi-Surface SLA, SLO, and Error Budget Contracts,
+  providing canonical ServiceLevelIndicator (SLI), ServiceLevelObjective (SLO), ErrorBudget,
+  ServiceLevelAgreement (SLA), EcosystemSLAContract, deterministic Python 3.13 stdlib-only contract
+  synthesis (synthesize_ecosystem_sla) for all ecosystem surfaces, in-process thread-safe EcosystemSLAEngine
+  for SLI evaluation, multi-window error budget burn rate tracking (1h, 6h, 24h), and SLA compliance simulation,
+  ecosystem package bundling with whole-package SHA-256 integrity, registry discovery, Studio preview SLA status
+  injection, endpoints GET /api/ecosystem/sla and POST /api/ecosystem/sla/simulate, Studio UI #preview-sla-info panel
+  (0 external requests), and CLI sla subcommand.
 allowed_paths:
-  - services/agent-engine/src/omnistackai_agent_engine/solution_packs/ecosystem_alerting.py
+  - services/agent-engine/src/omnistackai_agent_engine/solution_packs/ecosystem_sla.py
   - services/agent-engine/src/omnistackai_agent_engine/solution_packs/ecosystem_pack.py
   - services/agent-engine/src/omnistackai_agent_engine/solution_packs/ecosystem_registry.py
   - services/agent-engine/src/omnistackai_agent_engine/solution_packs/ecosystem_cli.py
@@ -22,13 +23,13 @@ allowed_paths:
   - services/agent-engine/src/omnistackai_agent_engine/studio/server.py
   - services/agent-engine/src/omnistackai_agent_engine/studio/live_serve.py
   - services/agent-engine/src/omnistackai_agent_engine/studio/page.py
-  - services/agent-engine/tests/test_ecosystem_alerting.py
+  - services/agent-engine/tests/test_ecosystem_sla.py
   - scripts/agent-engine.sh
   - Taskfile.yml
   - docs/SOLUTION_PACKS.md
   - docs/PROGRESS.md
   - docs/RESUME_PROMPT.md
-  - .ai/tasks/R-456.md
+  - .ai/tasks/R-457.md
   - .ai/CURRENT_TASK.yaml
   - .ai/PROJECT_STATE.yaml
   - .ai/WORK_LOG.md
@@ -42,7 +43,7 @@ forbidden_changes:
   - Do not add external network requests, fonts, or scripts to Studio HTML
   - Do not change the control-plane database from PostgreSQL
 required_gates:
-  - test-first focused test_ecosystem_alerting.py
+  - test-first focused test_ecosystem_sla.py
   - task verify
   - task lint
   - task security:quick
@@ -50,13 +51,10 @@ required_gates:
   - task builder:demo -- minimal-blog
   - task builder:demo -- rideshare-favourites
 evidence:
-  test_ecosystem_alerting: "23 tests passed in 1.036s"
-  test_ecosystem_all: "206 tests passed in 7.530s"
-  test_studio_all: "85 tests passed in 19.861s"
-  lint: "Agent-engine contract lint passed"
-  security_quick: "Stage 0 secret-policy check passed"
-  env_check: "Environment contract passed"
-  builder_demo_minimal_blog: "Passed (152 files generated, valid schema & seed)"
-  builder_demo_rideshare_favourites: "Passed (149 files generated, valid schema & seed)"
-  task_verify: "3,265 tests passed in 38.699s, Stage 0 verification passed"
-  tracker_status: "Inserted row 9 into Phase_Roadmap; total tasks 456, 245 Done"
+  unit_tests: "23 passing tests in test_ecosystem_sla.py (229 ecosystem tests passing, 85 studio tests passing)"
+  verification: "3,288 tests passing in task verify (offline, stage 0)"
+  lint: "Agent-engine contract lint passed (bash scripts/agent-engine.sh lint)"
+  security: "Stage 0 secret-policy check passed (task security:quick)"
+  env: "Environment contract passed (task env:check)"
+  demos: "Builder demos minimal-blog and rideshare-favourites passed"
+  excel_tracker: "Row 9 inserted in Phase_Roadmap with status Done (457 total tasks, 246 Done)"

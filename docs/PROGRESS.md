@@ -1,15 +1,15 @@
-# OmniStackAI — implementation progress (as of R-456)
+# OmniStackAI — implementation progress (as of R-457)
 
 A living summary of what is built, what is pending, and how to see results. Numbers come from the
-execution tracker (`R_&_D/OmniStackAI_Execution_Tracker_v6.xlsx`, `Phase_Roadmap`, 456 tasks as of
-R-456 completion) plus the state files (`.ai/`), Git history, and CHANGELOG.
+execution tracker (`R_&_D/OmniStackAI_Execution_Tracker_v6.xlsx`, `Phase_Roadmap`, 457 tasks as of
+R-457 completion) plus the state files (`.ai/`), Git history, and CHANGELOG.
 
 ## Headline
 
-- **3,265 automated tests pass**, fully offline and network-independent (`task verify`).
-- **245 tracker tasks Done, 1 Deferred, 210 Not Started** across **456 tasks** in the execution tracker
-  (`R_&_D/OmniStackAI_Execution_Tracker_v6.xlsx`, `Phase_Roadmap`). MVP completion: **245 / 351 = 69.8%**. Overall program completion: **245 / 456 = 53.7%**.
-- **98 tasks (R-359 → R-456) formally tracked in the tracker workbook**:
+- **3,288 automated tests pass**, fully offline and network-independent (`task verify`).
+- **246 tracker tasks Done, 1 Deferred, 210 Not Started** across **457 tasks** in the execution tracker
+  (`R_&_D/OmniStackAI_Execution_Tracker_v6.xlsx`, `Phase_Roadmap`). MVP completion: **246 / 352 = 69.9%**. Overall program completion: **246 / 457 = 53.8%**.
+- **99 tasks (R-359 → R-457) formally tracked in the tracker workbook**:
   Rows inserted into `Phase_Roadmap` with full column data and audit evidence so the workbook remains the single authoritative tracker.
 - **Built tasks include**: 57 reusable UI-component suites,
   four front-door bricks, R-420 generated-SQL hardening, R-421 managed embedded local preview,
@@ -37,10 +37,20 @@ R-456 completion) plus the state files (`.ai/`), Git history, and CHANGELOG.
   **R-452 Solution Pack Ecosystem Multi-Surface CI/CD Workflow & GitHub Actions Orchestration**,
   **R-453 Solution Pack Ecosystem Comprehensive Multi-Surface Health Check, Smoke Testing, and Canary Verification**,
   **R-454 Solution Pack Ecosystem Multi-Surface Disaster Recovery, Snapshot Backup, and Rollback Orchestration**,
-  **R-455 Solution Pack Ecosystem Multi-Surface Capacity Planning, Resource Quotas, and Unit Economics Budgeting**, and
-  **R-456 Solution Pack Ecosystem Multi-Surface Alerting, Incident Runbooks, and Escalation Policies** —
-  the first twenty-seven bricks of the differentiating spine.
+  **R-455 Solution Pack Ecosystem Multi-Surface Capacity Planning, Resource Quotas, and Unit Economics Budgeting**,
+  **R-456 Solution Pack Ecosystem Multi-Surface Alerting, Incident Runbooks, and Escalation Policies**, and
+  **R-457 Solution Pack Ecosystem Multi-Surface SLA, SLO, and Error Budget Contracts** —
+  the first twenty-eight bricks of the differentiating spine.
   The generated Next.js component library remains at **110 components**; its series is **PAUSED at R-415** and fully resumable.
+- **R-457 adds Ecosystem Multi-Surface SLA, SLO, and Error Budget Contracts:**
+  `ServiceLevelIndicator`, `ServiceLevelObjective`, `ErrorBudget`, `ServiceLevelAgreement`, and `EcosystemSLAContract` formalize multi-surface reliability contracts with deterministic SHA-256 digests and JSON roundtrips;
+  `synthesize_ecosystem_sla` deterministically derives surface-specific SLIs (availability, p95 latency, error rate, LCP), SLO targets with multi-window error budgeting, and customer tier SLAs (enterprise, business, developer);
+  thread-safe `EcosystemSLAEngine` evaluates SLI metrics against SLO thresholds, tracks multi-window error budget burn rates (1h, 6h, 24h), and simulates SLA compliance across operational scenarios (`normal_operations`, `minor_degradation`, `severe_outage`, `budget_exhaustion`);
+  `EcosystemPackPackage` bundles and validates `sla_contract` with whole-package SHA-256 integrity;
+  `StudioPreviewManager` tracks SLA contract and engine, injecting `has_sla`, `sli_count`, `slo_count`, `sla_count`, and `sla_status` into preview payloads;
+  Studio HTTP server exposes `GET /api/ecosystem/sla` and `POST /api/ecosystem/sla/simulate`;
+  `studio/page.py` renders emerald/teal-themed `#preview-sla-info` with SLIs, SLO targets, error budget burn rates, SLA tiers, and 1-click "Simulate SLA" and "Refresh" buttons (0 external network requests);
+  and `ecosystem_cli.py` adds `sla` subcommand with formatted text, `--json`, `--simulate`, and `--scenario` options.
 - **R-456 adds Ecosystem Multi-Surface Alerting, Incident Runbooks, and Escalation Policies:**
   `AlertRule`, `RunbookStep`, `IncidentRunbook`, `EscalationTier`, `EscalationPolicy`, and `EcosystemAlertingContract` formalize multi-surface alerting models with deterministic SHA-256 digests and JSON roundtrips;
   `synthesize_ecosystem_alerting` deterministically derives surface-specific alert rules (HTTP 5xx error spikes, p99 latency degradation, DB connection saturation, worker queue depth, Web LCP degradation), linked incident runbooks with remediation steps, and tiered escalation policies;
