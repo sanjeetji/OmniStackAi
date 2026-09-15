@@ -459,7 +459,28 @@ The twenty-eighth brick of the differentiating spine formalizes multi-surface Se
   ```
 - 100% offline verification in `task verify` (0 model calls).
 
+## Multi-surface governance, compliance policy, and audit evidence contracts (R-458)
+
+The twenty-ninth brick of the differentiating spine formalizes multi-surface compliance standards (SOC 2 Type II, GDPR, ISO/IEC 27001, HIPAA, PCI-DSS), compliance policies, multi-tier data classifications, cryptographic audit evidence items, and compliance/audit simulation engines:
+
+- Canonical data models: `ComplianceStandard` (standard_id, name, version, authority, description, mandatory_controls), `CompliancePolicy` (policy_id, standard_id, surface_slug, control_code, title, severity, enforcement_level, description, remediation_guidance, tags), `DataClassification` (classification_id, surface_slug, data_category, sensitivity_level, encryption_required, retention_days, anonymization_required, handling_instructions), `AuditEvidenceItem` (evidence_id, surface_slug, standard_id, control_code, evidence_type, description, collection_frequency, cryptographic_hash, storage_uri, tags), and `EcosystemGovernanceContract` (ecosystem_id, version, standards, policies, data_classifications, audit_evidence) with full `to_dict`/`from_dict`/`to_json`/`from_json` roundtrips and deterministic SHA-256 `digest()`.
+- Deterministic contract synthesis: `synthesize_ecosystem_governance(ecosystem_id, surfaces, version)` derives surface-specific compliance standards, policies (TLS encryption, role-based access control, automated audit logging, rate limiting, least-privilege DB access), data classifications (Public, Internal, Confidential, Restricted/PII), and cryptographically verified audit evidence with SHA-256 digests deterministically and offline with zero I/O.
+- In-process evaluation & simulation engine: Thread-safe `EcosystemGovernanceEngine` evaluates surface state and configurations against active compliance policies (`evaluate_compliance`), cryptographically verifies audit evidence records against expected SHA-256 digests (`verify_audit_evidence`), and executes end-to-end multi-scenario audit simulations (`simulate_compliance_audit`) across scenarios (`standard_audit`, `gdpr_dsar_request`, `data_breach_investigation`, `soc2_certification`, `high_risk_violations`), resolving overall compliance status, policy violations, evidence validity, and auditor findings.
+- Package bundling & registry access: `EcosystemPackPackage` bundles `governance_contract` with whole-package SHA-256 integrity verification; `EcosystemPackRegistry` and `EcosystemPack` expose `get_governance_contract`.
+- Studio preview & server: `StudioPreviewManager` tracks governance contracts and simulation engines, injecting `has_governance`, `policy_count`, `standard_count`, `evidence_count`, and `governance_status` into preview payloads, and exposing `get_ecosystem_governance()` and `simulate_ecosystem_governance()`. Studio HTTP server exposes `GET /api/ecosystem/governance` and `POST /api/ecosystem/governance/simulate`.
+- Studio web UI: Renders indigo/violet-themed `#preview-governance-info` container with standards, policies, classifications, and audit evidence badges, and 1-click "Simulate Audit" and "Refresh" buttons, strictly maintaining 0 external network requests.
+- CLI governance inspection:
+  ```bash
+  # Inspect ecosystem pack governance contract
+  task agent-engine:solution-pack:ecosystem -- governance minimal-blog-ecosystem
+  task agent-engine:solution-pack:ecosystem -- governance minimal-blog-ecosystem --json
+
+  # Simulate compliance audit scenario dry-run (standard_audit, gdpr_dsar_request, soc2_certification, etc.)
+  task agent-engine:solution-pack:ecosystem -- governance minimal-blog-ecosystem --simulate --scenario standard_audit
+  ```
+- 100% offline verification in `task verify` (0 model calls).
+
 ## Next boundary
 
-R-458: Solution Pack Ecosystem Multi-Surface Governance, Compliance Policy, and Audit Evidence Contracts.
+R-459: Solution Pack Ecosystem Multi-Surface Documentation, Architecture Runbooks, and OpenAPI Aggregator Contracts.
 

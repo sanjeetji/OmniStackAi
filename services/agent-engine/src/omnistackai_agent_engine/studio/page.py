@@ -863,6 +863,59 @@ STUDIO_HTML = """<!doctype html>
     transition: background 0.15s;
   }
   .sla-action-btn:hover { background: rgba(16, 185, 129, 0.25); }
+  .preview-governance-info {
+    margin-top: 10px;
+    padding: 10px 12px;
+    background: rgba(15, 23, 42, 0.6);
+    border: 1px solid rgba(99, 102, 241, 0.3);
+    border-radius: 8px;
+    font-size: 11px;
+    color: #cbd5e1;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+  .governance-header-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    flex-wrap: wrap;
+  }
+  .governance-meta-group {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+  }
+  .governance-badge {
+    background: rgba(99, 102, 241, 0.2);
+    color: #a5b4fc;
+    padding: 2px 8px;
+    border-radius: 999px;
+    font-size: 10px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
+  .governance-count-badge {
+    background: #1e293b;
+    padding: 2px 6px;
+    border-radius: 4px;
+    font-size: 10px;
+    color: #94a3b8;
+  }
+  .governance-action-btn {
+    background: rgba(99, 102, 241, 0.15);
+    border: 1px solid rgba(99, 102, 241, 0.35);
+    border-radius: 4px;
+    color: #c7d2fe;
+    font-size: 10px;
+    padding: 3px 8px;
+    cursor: pointer;
+    transition: background 0.15s;
+  }
+  .governance-action-btn:hover { background: rgba(99, 102, 241, 0.25); }
   .events-header-row {
     display: flex;
     align-items: center;
@@ -1254,6 +1307,20 @@ STUDIO_HTML = """<!doctype html>
           <div class="sla-meta-group">
             <button type="button" id="sla-simulate-btn" class="sla-action-btn">Simulate SLA</button>
             <button type="button" id="sla-refresh-btn" class="sla-action-btn">Refresh</button>
+          </div>
+        </div>
+      </div>
+      <div id="preview-governance-info" class="preview-governance-info" hidden>
+        <div class="governance-header-row">
+          <div class="governance-meta-group">
+            <span class="governance-badge">Governance &amp; Audit</span>
+            <span id="gov-standard-count" class="governance-count-badge">0 Standards</span>
+            <span id="gov-policy-count" class="governance-count-badge">0 Policies</span>
+            <span id="gov-evidence-count" class="governance-count-badge">0 Evidence Items</span>
+          </div>
+          <div class="governance-meta-group">
+            <button type="button" id="gov-simulate-btn" class="governance-action-btn">Simulate Audit</button>
+            <button type="button" id="gov-refresh-btn" class="governance-action-btn">Refresh</button>
           </div>
         </div>
       </div>
@@ -1823,6 +1890,27 @@ STUDIO_HTML = """<!doctype html>
         }
       } else {
         slaInfo.hidden = true;
+      }
+    }
+
+    var govInfo = document.getElementById('preview-governance-info');
+    if (govInfo) {
+      if (preview && preview.is_ecosystem && preview.has_governance) {
+        govInfo.hidden = false;
+        var stdCount = document.getElementById('gov-standard-count');
+        if (stdCount) {
+          stdCount.textContent = (preview.standard_count || 0) + ' Standard' + ((preview.standard_count || 0) !== 1 ? 's' : '');
+        }
+        var polCount = document.getElementById('gov-policy-count');
+        if (polCount) {
+          polCount.textContent = (preview.policy_count || 0) + ' Polic' + ((preview.policy_count || 0) !== 1 ? 'ies' : 'y');
+        }
+        var evCount = document.getElementById('gov-evidence-count');
+        if (evCount) {
+          evCount.textContent = (preview.evidence_count || 0) + ' Evidence Item' + ((preview.evidence_count || 0) !== 1 ? 's' : '');
+        }
+      } else {
+        govInfo.hidden = true;
       }
     }
 
@@ -2419,6 +2507,49 @@ STUDIO_HTML = """<!doctype html>
         })
         .catch(function () {
           flashButton(slaRefreshBtn, 'Error');
+        });
+    });
+  }
+
+  var govSimulateBtn = document.getElementById('gov-simulate-btn');
+  if (govSimulateBtn) {
+    govSimulateBtn.addEventListener('click', function () {
+      flashButton(govSimulateBtn, 'Simulating...');
+      fetch('/api/ecosystem/governance/simulate', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({scenario: 'standard_audit'}) })
+        .then(function (res) { return res.json(); })
+        .then(function (data) {
+          var status = data.governance_status || (data.report && data.report.overall_audit_passed ? 'Audit Passed' : 'Audit Failed') || 'Simulated!';
+          flashButton(govSimulateBtn, status);
+        })
+        .catch(function () {
+          flashButton(govSimulateBtn, 'Error');
+        });
+    });
+  }
+
+  var govRefreshBtn = document.getElementById('gov-refresh-btn');
+  if (govRefreshBtn) {
+    govRefreshBtn.addEventListener('click', function () {
+      flashButton(govRefreshBtn, 'Loading...');
+      fetch('/api/ecosystem/governance')
+        .then(function (res) { return res.json(); })
+        .then(function (data) {
+          var stdCount = document.getElementById('gov-standard-count');
+          if (stdCount && data.standard_count != null) {
+            stdCount.textContent = data.standard_count + ' Standard' + (data.standard_count !== 1 ? 's' : '');
+          }
+          var polCount = document.getElementById('gov-policy-count');
+          if (polCount && data.policy_count != null) {
+            polCount.textContent = data.policy_count + ' Polic' + (data.policy_count !== 1 ? 'ies' : 'y');
+          }
+          var evCount = document.getElementById('gov-evidence-count');
+          if (evCount && data.evidence_count != null) {
+            evCount.textContent = data.evidence_count + ' Evidence Item' + (data.evidence_count !== 1 ? 's' : '');
+          }
+          flashButton(govRefreshBtn, 'Refreshed!');
+        })
+        .catch(function () {
+          flashButton(govRefreshBtn, 'Error');
         });
     });
   }

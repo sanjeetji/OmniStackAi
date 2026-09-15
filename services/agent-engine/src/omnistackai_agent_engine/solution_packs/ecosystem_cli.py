@@ -191,6 +191,23 @@ def build_parser() -> argparse.ArgumentParser:
         help="SLA simulation scenario (normal_operations, minor_degradation, severe_outage, budget_exhaustion; default: normal_operations).",
     )
 
+    # Subcommand: governance
+    governance_parser = subparsers.add_parser(
+        "governance",
+        help="Inspect or dry-run simulate compliance policies, data classifications, and audit evidence for an ecosystem pack.",
+    )
+    governance_parser.add_argument(
+        "package_file",
+        help="Path to the .ecosystem.pack.json file or registered ecosystem ID to inspect.",
+    )
+    governance_parser.add_argument("--json", action="store_true", help="Output governance contract as canonical JSON.")
+    governance_parser.add_argument("--simulate", action="store_true", help="Run in-process dry-run simulation of compliance audit.")
+    governance_parser.add_argument(
+        "--scenario",
+        default="standard_audit",
+        help="Audit simulation scenario (standard_audit, gdpr_dsar_request, data_breach_investigation, soc2_certification, high_risk_violations; default: standard_audit).",
+    )
+
     return parser
 
 
@@ -928,6 +945,64 @@ def run_sla(args: argparse.Namespace) -> int:
     return 0
 
 
+def run_governance(args: argparse.Namespace) -> int:
+    import json
+    from .ecosystem_governance import EcosystemGovernanceEngine, synthesize_ecosystem_governance
+
+    pkg, err = _load_package(args.package_file)
+    if pkg is None:
+        sys.stderr.write(f"Error: {err}\n")
+        return 1
+
+    gov_contract = pkg.governance_contract
+    if gov_contract is None:
+        gov_contract = synthesize_ecosystem_governance(
+            pkg.ecosystem_id,
+            pkg.surfaces,
+            version=pkg.version,
+        )
+
+    if args.json:
+        sys.stdout.write(json.dumps(gov_contract.to_dict(), indent=2, sort_keys=True))
+        sys.stdout.write("\n")
+        return 0
+
+    if args.simulate:
+        engine = EcosystemGovernanceEngine(gov_contract)
+        scenario = getattr(args, "scenario", "standard_audit") or "standard_audit"
+        rep = engine.simulate_compliance_audit(scenario=scenario)
+        status = rep.audit_status.upper()
+        sys.stdout.write(f"Governance Audit Simulation ({scenario}): {status}\n")
+        sys.stdout.write(f"OVERALL STATUS: {status}\n")
+        sys.stdout.write(f"  Standards Tested: {', '.join(rep.standards_evaluated)}\n")
+        sys.stdout.write(f"  Controls Tested:  {rep.total_controls_tested} (Passed: {rep.passed_controls}, Failed: {rep.failed_controls})\n")
+        sys.stdout.write(f"  Risk Score:       {rep.risk_score:.2f}\n")
+        sys.stdout.write(f"  Findings ({len(rep.findings)}):\n")
+        for f in rep.findings:
+            sys.stdout.write(f"    - [{f.get('severity', 'info').upper()}] {f.get('finding_id')}: {f.get('title')} - {f.get('description')}\n")
+        sys.stdout.write(f"  Recommended Actions ({len(rep.recommended_actions)}):\n")
+        for act in rep.recommended_actions:
+            sys.stdout.write(f"    - {act}\n")
+        return 0
+
+    sys.stdout.write(f"Governance Contract: {pkg.display_name} ({pkg.ecosystem_id})\n")
+    sys.stdout.write(f"  Version:          {gov_contract.version}\n")
+    sys.stdout.write(f"  Digest:           {gov_contract.digest()[:16]}...\n")
+    sys.stdout.write(f"  Standards ({len(gov_contract.standards)}):\n")
+    for std in gov_contract.standards:
+        sys.stdout.write(f"    - {std.name} ({std.standard_id} v{std.version}): {len(std.mandatory_controls)} mandatory controls\n")
+    sys.stdout.write(f"  Policies ({len(gov_contract.policies)}):\n")
+    for pol in gov_contract.policies:
+        sys.stdout.write(f"    - [{pol.surface_slug}] {pol.policy_id} ({pol.severity}/{pol.enforcement_mode}): {pol.control_id} - {pol.description}\n")
+    sys.stdout.write(f"  Data Classifications ({len(gov_contract.classifications)}):\n")
+    for cls in gov_contract.classifications:
+        sys.stdout.write(f"    - [{cls.surface_slug}] {cls.entity_name}.{cls.field_name}: {cls.classification_level} (encryption: {cls.encryption_required})\n")
+    sys.stdout.write(f"  Audit Evidence Items ({len(gov_contract.evidence_items)}):\n")
+    for ev in gov_contract.evidence_items:
+        sys.stdout.write(f"    - [{ev.surface_slug}] {ev.evidence_id}: {ev.control_id} ({ev.collector_kind}) -> {ev.status}\n")
+    return 0
+
+
 def main(argv: Sequence[str] | None = None) -> int:
     parser = build_parser()
     args = parser.parse_args(argv)
@@ -966,6 +1041,8 @@ def main(argv: Sequence[str] | None = None) -> int:
         return run_alerting(args)
     if args.subcommand == "sla":
         return run_sla(args)
+    if args.subcommand == "governance":
+        return run_governance(args)
     sys.stderr.write(f"Unknown subcommand: {args.subcommand}\n")
     return 1
 

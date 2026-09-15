@@ -65,6 +65,8 @@ def _make_handler(
     simulate_ecosystem_alerting_fn: Callable[..., dict] | ControlFn | None = None,
     get_ecosystem_sla_fn: ControlFn | None = None,
     simulate_ecosystem_sla_fn: Callable[..., dict] | ControlFn | None = None,
+    get_ecosystem_governance_fn: ControlFn | None = None,
+    simulate_ecosystem_governance_fn: Callable[..., dict] | ControlFn | None = None,
 ) -> type[BaseHTTPRequestHandler]:
     pack_registry = registry or DEFAULT_SOLUTION_PACK_REGISTRY
     eco_registry = ecosystem_registry or DEFAULT_ECOSYSTEM_PACK_REGISTRY
@@ -303,6 +305,15 @@ def _make_handler(
                     return
                 try:
                     self._send_json(200, get_ecosystem_sla_fn())
+                except Exception as error:
+                    self._send_json(502, {"error": str(error)})
+                return
+            elif self.path == "/api/ecosystem/governance":
+                if get_ecosystem_governance_fn is None:
+                    self._send_json(404, {"error": "ecosystem governance not enabled"})
+                    return
+                try:
+                    self._send_json(200, get_ecosystem_governance_fn())
                 except Exception as error:
                     self._send_json(502, {"error": str(error)})
                 return
@@ -590,6 +601,19 @@ def _make_handler(
                 except Exception as error:
                     self._send_json(502, {"error": str(error)})
                 return
+            if self.path == "/api/ecosystem/governance/simulate":
+                if simulate_ecosystem_governance_fn is None:
+                    self._send_json(404, {"error": "ecosystem governance simulate not enabled"})
+                    return
+                data = self._read_json_body()
+                if data is None:
+                    data = {}
+                try:
+                    res = simulate_ecosystem_governance_fn(data)
+                    self._send_json(200, res)
+                except Exception as error:
+                    self._send_json(502, {"error": str(error)})
+                return
             if self.path != "/api/build":
                 self._send_json(404, {"error": "not found"})
                 return
@@ -675,6 +699,8 @@ def create_studio_server(
     simulate_ecosystem_alerting_fn: Callable[..., dict] | ControlFn | None = None,
     get_ecosystem_sla_fn: ControlFn | None = None,
     simulate_ecosystem_sla_fn: Callable[..., dict] | ControlFn | None = None,
+    get_ecosystem_governance_fn: ControlFn | None = None,
+    simulate_ecosystem_governance_fn: Callable[..., dict] | ControlFn | None = None,
 ) -> ThreadingHTTPServer:
     """Create (but do not start) a studio server bound to ``host``/``port``.
 
@@ -725,6 +751,8 @@ def create_studio_server(
             simulate_ecosystem_alerting_fn=simulate_ecosystem_alerting_fn,
             get_ecosystem_sla_fn=get_ecosystem_sla_fn,
             simulate_ecosystem_sla_fn=simulate_ecosystem_sla_fn,
+            get_ecosystem_governance_fn=get_ecosystem_governance_fn,
+            simulate_ecosystem_governance_fn=simulate_ecosystem_governance_fn,
         ),
     )
 

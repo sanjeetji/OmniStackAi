@@ -76,6 +76,11 @@ from ..solution_packs.ecosystem_sla import (
     EcosystemSLAEngine,
     synthesize_ecosystem_sla,
 )
+from ..solution_packs.ecosystem_governance import (
+    EcosystemGovernanceContract,
+    EcosystemGovernanceEngine,
+    synthesize_ecosystem_governance,
+)
 
 StartFn = Callable[..., LocalAppSession]
 
@@ -126,6 +131,8 @@ class StudioPreviewManager:
         self._alerting_engine: EcosystemAlertingEngine | None = None
         self._sla_contract: EcosystemSLAContract | None = None
         self._sla_engine: EcosystemSLAEngine | None = None
+        self._governance_contract: EcosystemGovernanceContract | None = None
+        self._governance_engine: EcosystemGovernanceEngine | None = None
 
     def replace(self, repo_dir: str) -> dict:
         """Stop prior previews, start single app ``repo_dir`` on free ports, and return state."""
@@ -180,6 +187,7 @@ class StudioPreviewManager:
         capacity_contract: EcosystemCapacityContract | None = None,
         alerting_contract: EcosystemAlertingContract | None = None,
         sla_contract: EcosystemSLAContract | None = None,
+        governance_contract: EcosystemGovernanceContract | None = None,
     ) -> dict:
         """Stop prior previews, register ecosystem surfaces, and start the active surface."""
         with self._lock:
@@ -344,6 +352,20 @@ class StudioPreviewManager:
                         ecosystem_id, self._surfaces
                     )
             self._sla_engine = EcosystemSLAEngine(self._sla_contract)
+
+            # Governance contract (R-458)
+            if governance_contract is not None:
+                self._governance_contract = governance_contract
+            else:
+                from ..solution_packs.ecosystem_registry import DEFAULT_ECOSYSTEM_PACK_REGISTRY
+                cached_gc = DEFAULT_ECOSYSTEM_PACK_REGISTRY.get_governance_contract(ecosystem_id)
+                if cached_gc is not None:
+                    self._governance_contract = cached_gc
+                else:
+                    self._governance_contract = synthesize_ecosystem_governance(
+                        ecosystem_id, self._surfaces
+                    )
+            self._governance_engine = EcosystemGovernanceEngine(self._governance_contract)
 
             # Determine initial active surface
             chosen_slug = active_surface_slug
@@ -550,6 +572,11 @@ class StudioPreviewManager:
                 "slo_count": len(self._sla_contract.slos) if self._sla_contract else 0,
                 "sla_count": len(self._sla_contract.slas) if self._sla_contract else 0,
                 "sla_status": "configured" if self._sla_contract else "none",
+                "has_governance": self._governance_contract is not None,
+                "policy_count": len(self._governance_contract.policies) if self._governance_contract else 0,
+                "standard_count": len(self._governance_contract.standards) if self._governance_contract else 0,
+                "evidence_count": len(self._governance_contract.evidence_items) if self._governance_contract else 0,
+                "governance_status": "configured" if self._governance_contract else "none",
                 "message": error_msg or _PREVIEW_ERROR,
                 "surfaces": surface_statuses,
             }
@@ -606,6 +633,11 @@ class StudioPreviewManager:
                 "slo_count": len(self._sla_contract.slos) if self._sla_contract else 0,
                 "sla_count": len(self._sla_contract.slas) if self._sla_contract else 0,
                 "sla_status": "configured" if self._sla_contract else "none",
+                "has_governance": self._governance_contract is not None,
+                "policy_count": len(self._governance_contract.policies) if self._governance_contract else 0,
+                "standard_count": len(self._governance_contract.standards) if self._governance_contract else 0,
+                "evidence_count": len(self._governance_contract.evidence_items) if self._governance_contract else 0,
+                "governance_status": "configured" if self._governance_contract else "none",
                 "web_url": active_sess.plan.web_url,
                 "message": f"The generated {active_surface_info['app_name']} is running locally.",
                 "surfaces": surface_statuses,
@@ -667,6 +699,11 @@ class StudioPreviewManager:
                 "slo_count": len(self._sla_contract.slos) if self._sla_contract else 0,
                 "sla_count": len(self._sla_contract.slas) if self._sla_contract else 0,
                 "sla_status": "configured" if self._sla_contract else "none",
+                "has_governance": self._governance_contract is not None,
+                "policy_count": len(self._governance_contract.policies) if self._governance_contract else 0,
+                "standard_count": len(self._governance_contract.standards) if self._governance_contract else 0,
+                "evidence_count": len(self._governance_contract.evidence_items) if self._governance_contract else 0,
+                "governance_status": "configured" if self._governance_contract else "none",
                 "message": f"Preview for {self._active_surface or 'surface'} stopped.",
                 "surfaces": surface_statuses,
             }
@@ -705,6 +742,8 @@ class StudioPreviewManager:
         self._alerting_engine = None
         self._sla_contract = None
         self._sla_engine = None
+        self._governance_contract = None
+        self._governance_engine = None
 
     def get_ecosystem_auth(self) -> dict:
         """Inspect the active ecosystem's auth contract, role matrix, and surface demo tokens."""
@@ -1144,6 +1183,48 @@ class StudioPreviewManager:
                 "report": rep.to_dict(),
                 "status": "ok",
                 "sla_status": rep.status,
+            }
+
+    def get_ecosystem_governance(self) -> dict:
+        """Inspect the active ecosystem's governance, compliance policy, and audit contract."""
+        with self._lock:
+            if not self._is_ecosystem or not self._governance_contract:
+                return {
+                    "is_ecosystem": False,
+                    "status": "not_configured",
+                    "contract": None,
+                    "governance_contract": None,
+                    "policy_count": 0,
+                    "standard_count": 0,
+                    "evidence_count": 0,
+                }
+            return {
+                "is_ecosystem": True,
+                "status": "ok",
+                "ecosystem_id": self._ecosystem_id,
+                "contract": self._governance_contract.to_dict(),
+                "governance_contract": self._governance_contract.to_dict(),
+                "digest": self._governance_contract.digest(),
+                "policy_count": len(self._governance_contract.policies),
+                "standard_count": len(self._governance_contract.standards),
+                "evidence_count": len(self._governance_contract.evidence_items),
+                "active_surface": self._active_surface,
+            }
+
+    def simulate_ecosystem_governance(self, body: Mapping[str, Any] | None = None) -> dict:
+        """Run a dry-run simulation of ecosystem compliance audit."""
+        with self._lock:
+            if not self._is_ecosystem or not self._governance_engine:
+                return {"status": "error", "message": "No active ecosystem governance engine"}
+            scenario = "standard_audit"
+            if isinstance(body, Mapping):
+                scenario = str(body.get("scenario", "standard_audit"))
+            rep = self._governance_engine.simulate_compliance_audit(scenario=scenario)
+            return {
+                **rep.to_dict(),
+                "report": rep.to_dict(),
+                "status": "ok",
+                "governance_status": rep.audit_status,
             }
 
 

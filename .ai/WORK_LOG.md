@@ -1,5 +1,30 @@
 # Work Log
 
+## 2026-09-15 — R-458 (Solution Pack Ecosystem Multi-Surface Governance, Compliance Policy, and Audit Evidence Contracts)
+
+- Recorded `.ai/CURRENT_TASK.yaml` before implementation.
+  Final focused suite: 22 passing tests in `test_ecosystem_governance.py`. Total test suite: 3,310 tests passing offline (+22 net-new tests).
+- Implemented `solution_packs/ecosystem_governance.py`:
+  - Defined frozen `ComplianceStandard`: standard_id, name, version, description, mandatory_controls tuple; `to_dict`/`from_dict`.
+  - Defined frozen `CompliancePolicy`: policy_id, surface_slug, standard_id, control_id, severity, enforcement_mode, rule_expression, remediation, description, tags tuple; `to_dict`/`from_dict`.
+  - Defined frozen `DataClassification`: classification_id, surface_slug, entity_name, field_name, classification_level, encryption_required, retention_days, anonymization_method, description; `to_dict`/`from_dict`.
+  - Defined frozen `AuditEvidenceItem`: evidence_id, control_id, surface_slug, collector_kind, status, collected_at, sha256_hash, details dict; `to_dict`/`from_dict`.
+  - Defined frozen `EcosystemGovernanceContract`: ecosystem_id, version, standards, policies, classifications, evidence_items, metadata; `to_dict`/`from_dict`/`to_json`/`from_json` roundtrips; deterministic SHA-256 `digest()`.
+  - Report models: `PolicyEvaluationResult`, `GovernanceComplianceReport` (with `overall_compliant`, `violations`), `EvidenceVerificationItemResult`, `AuditVerificationReport` (with `all_valid`), `GovernanceAuditSimulationReport` (with `overall_audit_passed`, `compliance_report`, `evidence_report`).
+  - Implemented `synthesize_ecosystem_governance(ecosystem_id, surfaces, version)`: derives surface-specific compliance policies, data privacy classifications, and initial cryptographic audit evidence items across web, admin, API, worker, and database surfaces offline (0 model calls).
+  - Implemented `EcosystemGovernanceEngine`: thread-safe (`threading.RLock`); `evaluate_compliance(surface_configs, environment_state)` verifying configuration rules and detecting violations; `verify_audit_evidence(evidence_items)` verifying cryptographic SHA-256 hashes against evidence items; `simulate_compliance_audit(scenario)` simulating full compliance audits across operational scenarios (`standard_audit`, `gdpr_dsar_request`, `data_breach_investigation`, `soc2_certification`, `high_risk_violations`).
+- Updated Ecosystem Pack Package & Registry:
+  - `ecosystem_pack.py`: Added `governance_contract: EcosystemGovernanceContract | None` field; updated `to_dict`, `parse_ecosystem_pack_package`, and `synthesize_ecosystem_pack` to include governance_contract in payload and whole-package SHA-256 checksum.
+  - `ecosystem_registry.py`: Added `governance_contract` property to `EcosystemPack`; `has_governance_contract` in `to_dict`; `get_governance_contract(ecosystem_id, version)` on `EcosystemPackRegistry` and `_LazyEcosystemPackRegistry` delegate.
+- Updated Studio Preview & Server:
+  - `studio/preview.py`: Imports governance types; adds `_governance_contract`/`_governance_engine` fields; `replace_ecosystem()` accepts optional `governance_contract` param, falls back to registry cache then synthesize; all three payload branches inject `has_governance`, `standard_count`, `policy_count`, `evidence_count`, and `governance_status`; cleanup in `_stop_locked()`; new `get_ecosystem_governance()` and `simulate_ecosystem_governance()` methods.
+  - `studio/server.py`: `_make_handler` and `create_studio_server` accept `get_ecosystem_governance_fn` and `simulate_ecosystem_governance_fn`; `GET /api/ecosystem/governance`; `POST /api/ecosystem/governance/simulate`.
+  - `studio/live_serve.py`: Wires `get_ecosystem_governance_fn` and `simulate_ecosystem_governance_fn` in `control_kwargs`.
+  - `studio/page.py`: Indigo/violet-themed `.preview-governance-info` CSS panel; `#preview-governance-info` HTML with Standards count, Policies count, Evidence Items count badges, and "Simulate Audit" / "Refresh" buttons; JS update logic in preview status handler; button handlers for Simulate (calls POST, renders audit status) and Refresh (calls GET, updates badges, strictly 0 external network requests).
+- Added `governance` subcommand to `ecosystem_cli.py`: accepts file path or registered ecosystem ID; `--json` outputs canonical JSON; `--simulate` with `--scenario` runs compliance simulation and prints structured controls, risk score, findings, and recommended actions; default text mode shows standards, policies, data classifications, and audit evidence.
+- Exported all governance symbols in `solution_packs/__init__.py`.
+- All gates pass: `task verify` (3,310 tests in 41.372s), `bash scripts/agent-engine.sh lint`, `task security:quick`, `task env:check`, `task builder:demo -- minimal-blog`, `task builder:demo -- rideshare-favourites`. Zero model calls.
+
 ## 2026-09-15 — R-457 (Solution Pack Ecosystem Multi-Surface SLA, SLO, and Error Budget Contracts)
 
 - Recorded `.ai/CURRENT_TASK.yaml` before implementation.

@@ -1,15 +1,15 @@
-# OmniStackAI — implementation progress (as of R-457)
+# OmniStackAI — implementation progress (as of R-458)
 
 A living summary of what is built, what is pending, and how to see results. Numbers come from the
-execution tracker (`R_&_D/OmniStackAI_Execution_Tracker_v6.xlsx`, `Phase_Roadmap`, 457 tasks as of
-R-457 completion) plus the state files (`.ai/`), Git history, and CHANGELOG.
+execution tracker (`R_&_D/OmniStackAI_Execution_Tracker_v6.xlsx`, `Phase_Roadmap`, 458 tasks as of
+R-458 completion) plus the state files (`.ai/`), Git history, and CHANGELOG.
 
 ## Headline
 
-- **3,288 automated tests pass**, fully offline and network-independent (`task verify`).
-- **246 tracker tasks Done, 1 Deferred, 210 Not Started** across **457 tasks** in the execution tracker
-  (`R_&_D/OmniStackAI_Execution_Tracker_v6.xlsx`, `Phase_Roadmap`). MVP completion: **246 / 352 = 69.9%**. Overall program completion: **246 / 457 = 53.8%**.
-- **99 tasks (R-359 → R-457) formally tracked in the tracker workbook**:
+- **3,310 automated tests pass**, fully offline and network-independent (`task verify`).
+- **247 tracker tasks Done, 1 Deferred, 210 Not Started** across **458 tasks** in the execution tracker
+  (`R_&_D/OmniStackAI_Execution_Tracker_v6.xlsx`, `Phase_Roadmap`). MVP completion: **247 / 353 = 70.0%**. Overall program completion: **247 / 458 = 53.9%**.
+- **100 tasks (R-359 → R-458) formally tracked in the tracker workbook**:
   Rows inserted into `Phase_Roadmap` with full column data and audit evidence so the workbook remains the single authoritative tracker.
 - **Built tasks include**: 57 reusable UI-component suites,
   four front-door bricks, R-420 generated-SQL hardening, R-421 managed embedded local preview,
@@ -38,10 +38,20 @@ R-457 completion) plus the state files (`.ai/`), Git history, and CHANGELOG.
   **R-453 Solution Pack Ecosystem Comprehensive Multi-Surface Health Check, Smoke Testing, and Canary Verification**,
   **R-454 Solution Pack Ecosystem Multi-Surface Disaster Recovery, Snapshot Backup, and Rollback Orchestration**,
   **R-455 Solution Pack Ecosystem Multi-Surface Capacity Planning, Resource Quotas, and Unit Economics Budgeting**,
-  **R-456 Solution Pack Ecosystem Multi-Surface Alerting, Incident Runbooks, and Escalation Policies**, and
-  **R-457 Solution Pack Ecosystem Multi-Surface SLA, SLO, and Error Budget Contracts** —
-  the first twenty-eight bricks of the differentiating spine.
+  **R-456 Solution Pack Ecosystem Multi-Surface Alerting, Incident Runbooks, and Escalation Policies**,
+  **R-457 Solution Pack Ecosystem Multi-Surface SLA, SLO, and Error Budget Contracts**, and
+  **R-458 Solution Pack Ecosystem Multi-Surface Governance, Compliance Policy, and Audit Evidence Contracts** —
+  the first twenty-nine bricks of the differentiating spine.
   The generated Next.js component library remains at **110 components**; its series is **PAUSED at R-415** and fully resumable.
+- **R-458 adds Ecosystem Multi-Surface Governance, Compliance Policy, and Audit Evidence Contracts:**
+  `ComplianceStandard`, `CompliancePolicy`, `DataClassification`, `AuditEvidenceItem`, and `EcosystemGovernanceContract` formalize multi-surface governance and compliance controls with deterministic SHA-256 digests and JSON roundtrips;
+  `synthesize_ecosystem_governance` deterministically derives surface-specific compliance policies, data privacy classifications, and cryptographic audit evidence items across web, admin, API, worker, and database surfaces offline (0 model calls);
+  thread-safe `EcosystemGovernanceEngine` evaluates surface configurations against policy rules, verifies cryptographic audit evidence hashes, and simulates full audits across operational scenarios (`standard_audit`, `gdpr_dsar_request`, `data_breach_investigation`, `soc2_certification`, `high_risk_violations`);
+  `EcosystemPackPackage` bundles and validates `governance_contract` with whole-package SHA-256 integrity;
+  `StudioPreviewManager` tracks governance contract and engine, injecting `has_governance`, `standard_count`, `policy_count`, `evidence_count`, and `governance_status` into preview payloads;
+  Studio HTTP server exposes `GET /api/ecosystem/governance` and `POST /api/ecosystem/governance/simulate`;
+  `studio/page.py` renders indigo/violet-themed `#preview-governance-info` with standards, policies, audit evidence items, and 1-click "Simulate Audit" and "Refresh" buttons (0 external network requests);
+  and `ecosystem_cli.py` adds `governance` subcommand with formatted text, `--json`, `--simulate`, and `--scenario` options.
 - **R-457 adds Ecosystem Multi-Surface SLA, SLO, and Error Budget Contracts:**
   `ServiceLevelIndicator`, `ServiceLevelObjective`, `ErrorBudget`, `ServiceLevelAgreement`, and `EcosystemSLAContract` formalize multi-surface reliability contracts with deterministic SHA-256 digests and JSON roundtrips;
   `synthesize_ecosystem_sla` deterministically derives surface-specific SLIs (availability, p95 latency, error rate, LCP), SLO targets with multi-window error budgeting, and customer tier SLAs (enterprise, business, developer);

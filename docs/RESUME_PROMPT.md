@@ -41,7 +41,7 @@ START PROTOCOL
   `task ai:status`, `task ai:handoff`. `task verify` must stay green and network-independent.
 - Confirm git branch/HEAD/clean tree. Then restate: phase, next Tracker ID, objective, blast radius.
 
-WHAT IS ALREADY BUILT (platform generators are Python 3.13 stdlib-only, offline, in services/agent-engine; 3,288 tests pass)
+WHAT IS ALREADY BUILT (platform generators are Python 3.13 stdlib-only, offline, in services/agent-engine; 3,310 tests pass)
 - Model fabric: ModelProvider contract + registry; local Ollama adapter (runs any installed model via
 
 
@@ -416,8 +416,10 @@ WHAT TO DO NEXT
   and R-456 introduces multi-surface alerting contracts, alert rules, incident remediation runbooks, multi-tier escalation policies,
   in-process metric evaluation and incident simulation engine, Studio preview alerting endpoints and UI panel, and CLI alerting subcommand;
   and R-457 introduces multi-surface SLA, SLO, and error budget contracts, deterministic stdlib synthesis,
-  in-process metric evaluation and multi-window burn rate calculation, SLA compliance simulation, Studio preview SLA endpoints and emerald UI panel, and CLI sla subcommand.
-- NEXT R-458: Solution Pack Ecosystem Multi-Surface Governance, Compliance Policy, and Audit Evidence Contracts.
+  in-process metric evaluation and multi-window burn rate calculation, SLA compliance simulation, Studio preview SLA endpoints and emerald UI panel, and CLI sla subcommand;
+  and R-458 introduces multi-surface governance contracts, compliance policies (SOC 2, GDPR, ISO 27001), data classifications,
+  cryptographic audit evidence items, in-process compliance evaluation and multi-scenario audit simulation, Studio preview governance endpoints and indigo UI panel, and CLI governance subcommand.
+- NEXT R-459: Solution Pack Ecosystem Multi-Surface Documentation, Architecture Runbooks, and OpenAPI Aggregator Contracts.
   Keep `task verify` model/Docker/DB/install/network-free (any live/model path stays opt-in); preserve
   single-session ownership and explicit trusted-local mode.
 - The UI-component series remains paused at R-415 and can be resumed later under a future free ID.
@@ -428,7 +430,7 @@ WHAT TO DO NEXT
   deploy (OMNISTACKAI_TIER=2 + E2B/Vercel keys) and cloud-model live-verify. Governance-deferred: native
   mobile (R-010 etc.) until web/backend stability.
 
-Begin by reading the files above and running the start protocol, then continue the spine at R-458
+Begin by reading the files above and running the start protocol, then continue the spine at R-459
 and write its Standard AI Task Contract before writing code.
 ```
 
