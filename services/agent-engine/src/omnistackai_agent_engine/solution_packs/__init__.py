@@ -135,6 +135,18 @@ from .ecosystem_verification import (
     SmokeTestStep,
     synthesize_ecosystem_verification,
 )
+from .ecosystem_recovery import (
+    BackupTarget,
+    EcosystemDisasterRecoveryContract,
+    EcosystemRecoveryEngine,
+    RecoveryStep,
+    RecoveryStepResult,
+    RollbackTrigger,
+    RollbackTriggerResult,
+    SnapshotManifest,
+    SnapshotResult,
+    synthesize_ecosystem_recovery,
+)
 
 __all__ = [
     "LEGACY_MANIFEST_SCHEMA_VERSION",
@@ -230,4 +242,15 @@ __all__ = [
     "SmokeTestSpec",
     "SmokeTestStep",
     "synthesize_ecosystem_verification",
+    "BackupTarget",
+    "EcosystemDisasterRecoveryContract",
+    "EcosystemRecoveryEngine",
+    "RecoveryStep",
+    "RecoveryStepResult",
+    "RollbackTrigger",
+    "RollbackTriggerResult",
+    "SnapshotManifest",
+    "SnapshotResult",
+    "synthesize_ecosystem_recovery",
 ]
+

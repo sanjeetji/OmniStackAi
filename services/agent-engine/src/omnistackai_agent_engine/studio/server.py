@@ -57,6 +57,8 @@ def _make_handler(
     simulate_cicd_run_fn: Callable[[str], dict] | None = None,
     get_ecosystem_verification_fn: ControlFn | None = None,
     simulate_ecosystem_verification_fn: ControlFn | None = None,
+    get_ecosystem_recovery_fn: ControlFn | None = None,
+    simulate_ecosystem_recovery_fn: ControlFn | None = None,
 ) -> type[BaseHTTPRequestHandler]:
     pack_registry = registry or DEFAULT_SOLUTION_PACK_REGISTRY
     eco_registry = ecosystem_registry or DEFAULT_ECOSYSTEM_PACK_REGISTRY
@@ -259,6 +261,15 @@ def _make_handler(
                     return
                 try:
                     self._send_json(200, get_ecosystem_verification_fn())
+                except Exception as error:
+                    self._send_json(502, {"error": str(error)})
+                return
+            elif self.path == "/api/ecosystem/recovery":
+                if get_ecosystem_recovery_fn is None:
+                    self._send_json(404, {"error": "ecosystem recovery not enabled"})
+                    return
+                try:
+                    self._send_json(200, get_ecosystem_recovery_fn())
                 except Exception as error:
                     self._send_json(502, {"error": str(error)})
                 return
@@ -496,6 +507,17 @@ def _make_handler(
                 except Exception as error:
                     self._send_json(502, {"error": str(error)})
                 return
+            if self.path == "/api/ecosystem/recovery/simulate":
+                if simulate_ecosystem_recovery_fn is None:
+                    self._send_json(404, {"error": "ecosystem recovery simulate not enabled"})
+                    return
+                self._drain_body()
+                try:
+                    res = simulate_ecosystem_recovery_fn()
+                    self._send_json(200, res)
+                except Exception as error:
+                    self._send_json(502, {"error": str(error)})
+                return
             if self.path != "/api/build":
                 self._send_json(404, {"error": "not found"})
                 return
@@ -573,6 +595,8 @@ def create_studio_server(
     simulate_cicd_run_fn: Callable[[str], dict] | None = None,
     get_ecosystem_verification_fn: ControlFn | None = None,
     simulate_ecosystem_verification_fn: ControlFn | None = None,
+    get_ecosystem_recovery_fn: ControlFn | None = None,
+    simulate_ecosystem_recovery_fn: ControlFn | None = None,
 ) -> ThreadingHTTPServer:
     """Create (but do not start) a studio server bound to ``host``/``port``.
 
@@ -615,6 +639,8 @@ def create_studio_server(
             simulate_cicd_run_fn=simulate_cicd_run_fn,
             get_ecosystem_verification_fn=get_ecosystem_verification_fn,
             simulate_ecosystem_verification_fn=simulate_ecosystem_verification_fn,
+            get_ecosystem_recovery_fn=get_ecosystem_recovery_fn,
+            simulate_ecosystem_recovery_fn=simulate_ecosystem_recovery_fn,
         ),
     )
 

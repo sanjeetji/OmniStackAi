@@ -450,6 +450,8 @@ def main() -> None:
             simulate_cicd_run_fn=preview_manager.simulate_cicd_run,
             get_ecosystem_verification_fn=preview_manager.get_ecosystem_verification,
             simulate_ecosystem_verification_fn=preview_manager.simulate_ecosystem_verification,
+            get_ecosystem_recovery_fn=preview_manager.get_ecosystem_recovery,
+            simulate_ecosystem_recovery_fn=preview_manager.simulate_ecosystem_recovery,
             preview_build_fn=lambda build_id, surface_slug=None: _preview_recorded_build(
                 build_id, history, preview_manager, surface_slug=surface_slug
             ),

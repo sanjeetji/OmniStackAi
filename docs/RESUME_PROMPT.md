@@ -41,7 +41,7 @@ START PROTOCOL
   `task ai:status`, `task ai:handoff`. `task verify` must stay green and network-independent.
 - Confirm git branch/HEAD/clean tree. Then restate: phase, next Tracker ID, objective, blast radius.
 
-WHAT IS ALREADY BUILT (platform generators are Python 3.13 stdlib-only, offline, in services/agent-engine; 3,202 tests pass)
+WHAT IS ALREADY BUILT (platform generators are Python 3.13 stdlib-only, offline, in services/agent-engine; 3,223 tests pass)
 - Model fabric: ModelProvider contract + registry; local Ollama adapter (runs any installed model via
 
 
@@ -408,8 +408,10 @@ WHAT TO DO NEXT
   R-452 introduces multi-surface CI/CD workflow contracts, deterministic Python stdlib GitHub Actions YAML generation,
   in-process DAG cycle validation, pipeline dry-run simulation, Studio preview CI/CD endpoints and UI container, and CLI cicd subcommand;
   and R-453 introduces comprehensive multi-surface health check probes, end-to-end smoke test specifications, canary verification rules,
-  in-process dry-run evaluation engine, Studio preview verification endpoints and UI panel, and CLI verify-suite subcommand.
-- NEXT R-454: Solution Pack Ecosystem Multi-Surface Disaster Recovery, Snapshot Backup, and Rollback Orchestration.
+  in-process dry-run evaluation engine, Studio preview verification endpoints and UI panel, and CLI verify-suite subcommand;
+  and R-454 introduces multi-surface disaster recovery contracts, backup targets, snapshot manifests, sequential recovery plans,
+  rollback triggers, in-process dry-run simulation engine, Studio preview DR endpoints and UI panel, and CLI recovery subcommand.
+- NEXT R-455: Solution Pack Ecosystem Multi-Surface Capacity Planning, Resource Quotas, and Unit Economics Budgeting.
   Keep `task verify` model/Docker/DB/install/network-free (any live/model path stays opt-in); preserve
   single-session ownership and explicit trusted-local mode.
 - The UI-component series remains paused at R-415 and can be resumed later under a future free ID.
@@ -420,6 +422,7 @@ WHAT TO DO NEXT
   deploy (OMNISTACKAI_TIER=2 + E2B/Vercel keys) and cloud-model live-verify. Governance-deferred: native
   mobile (R-010 etc.) until web/backend stability.
 
-Begin by reading the files above and running the start protocol, then continue the spine at R-454
+Begin by reading the files above and running the start protocol, then continue the spine at R-455
 and write its Standard AI Task Contract before writing code.
 ```
+

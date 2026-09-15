@@ -377,6 +377,27 @@ The twenty-fourth brick of the differentiating spine formalizes multi-surface he
   ```
 - 100% offline verification in `task verify` (0 model calls).
 
+## Multi-surface disaster recovery, snapshot backup, and rollback orchestration (R-454)
+
+The twenty-fifth brick of the differentiating spine formalizes multi-surface backup targets, snapshot manifests, sequential disaster recovery plans, and automated rollback triggers:
+
+- Canonical data models: `BackupTarget` (target_id, surface_slug, target_kind, storage_uri, frequency, retention_days, encryption_required, tags), `SnapshotManifest` (snapshot_id, ecosystem_id, surface_slug, created_at_utc, checksum_sha256, size_bytes, metadata), `RecoveryStep` (step_id, sequence_order, surface_slug, action, target, timeout_seconds, critical, description), `RollbackTrigger` (trigger_id, condition, threshold, action, severity), and `EcosystemDisasterRecoveryContract` (ecosystem_id, version, backup_targets, recovery_steps, rollback_triggers) with full `to_dict`/`from_dict`/`to_json`/`from_json` roundtrips and deterministic SHA-256 `digest()`.
+- Deterministic contract synthesis: `synthesize_ecosystem_recovery(ecosystem_id, surfaces, version)` derives backup targets (database, state, configuration based on surface kind), sequential recovery plan (ingress isolation, graceful service quiescing, snapshot restoration, schema migration integrity verification, phased service start, live cutover), and rollback triggers (health probe failures, database migration errors, timeout exceeded) deterministically and offline with zero I/O.
+- In-process simulation engine: Thread-safe `EcosystemRecoveryEngine` simulates snapshot creation, recovery steps, rollback triggers, and full DR exercises dry-run, returning structured PASS/FAIL summaries with duration and passed/failed counts.
+- Package bundling & registry access: `EcosystemPackPackage` bundles `recovery_contract` with whole-package SHA-256 integrity verification; `EcosystemPackRegistry` and `EcosystemPack` expose `get_recovery_contract`.
+- Studio preview & server: `StudioPreviewManager` tracks recovery contracts and simulation engines, injecting `has_recovery`, `backup_target_count`, `recovery_step_count`, `rollback_trigger_count`, and `dr_status` into preview payloads, and exposing `get_ecosystem_recovery()` and `simulate_ecosystem_recovery()`. Studio HTTP server exposes `GET /api/ecosystem/recovery` and `POST /api/ecosystem/recovery/simulate`.
+- Studio web UI: Renders amber-themed `#preview-recovery-info` container with backup targets, recovery steps, rollback triggers, and 1-click "Simulate DR" and "Refresh" buttons, strictly maintaining 0 external network requests.
+- CLI disaster recovery inspection:
+  ```bash
+  # Inspect ecosystem pack disaster recovery contract
+  task agent-engine:solution-pack:ecosystem -- recovery minimal-blog-ecosystem
+  task agent-engine:solution-pack:ecosystem -- recovery minimal-blog-ecosystem --json
+
+  # Simulate full disaster recovery exercise dry-run
+  task agent-engine:solution-pack:ecosystem -- recovery minimal-blog-ecosystem --simulate
+  ```
+- 100% offline verification in `task verify` (0 model calls).
+
 ## Next boundary
 
-R-454: Solution Pack Ecosystem Multi-Surface Disaster Recovery, Snapshot Backup, and Rollback Orchestration.
+R-455: Solution Pack Ecosystem Multi-Surface Capacity Planning, Resource Quotas, and Unit Economics Budgeting.

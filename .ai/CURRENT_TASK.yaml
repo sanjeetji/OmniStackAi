@@ -1,20 +1,19 @@
-task_id: R-453
+task_id: R-454
 status: done
 phase: MVP
 tracker_row: 9
-started_at: "2026-09-14"
+started_at: "2026-09-15"
 completed_at: "2026-09-15"
 objective: >-
-  Implement Solution Pack Ecosystem Comprehensive Multi-Surface Health Check, Smoke Testing, and Canary Verification,
-  providing canonical HealthCheckProbe, SmokeTestSpec, CanaryVerificationRule, EcosystemVerificationContract,
-  deterministic Python 3.13 stdlib-only verification contract synthesis (synthesize_ecosystem_verification)
-  for all ecosystem surfaces (web, admin, API, worker, database), in-process thread-safe EcosystemVerificationEngine
-  for deterministic health evaluation and dry-run simulation, ecosystem package bundling with whole-package SHA-256
-  integrity, registry discovery, Studio preview verification status injection, endpoints GET /api/ecosystem/verification
-  and POST /api/ecosystem/verification/simulate, Studio UI #preview-verification-info panel (0 external requests),
-  and CLI verify-suite subcommand.
+  Implement Solution Pack Ecosystem Multi-Surface Disaster Recovery, Snapshot Backup, and Rollback Orchestration,
+  providing canonical BackupTarget, SnapshotManifest, RecoveryStep, RollbackTrigger, EcosystemDisasterRecoveryContract,
+  deterministic Python 3.13 stdlib-only contract synthesis (synthesize_ecosystem_recovery) for all ecosystem surfaces,
+  in-process thread-safe EcosystemRecoveryEngine for dry-run simulation and evaluation, ecosystem package bundling
+  with whole-package SHA-256 integrity, registry discovery, Studio preview disaster recovery status injection,
+  endpoints GET /api/ecosystem/recovery and POST /api/ecosystem/recovery/simulate, Studio UI #preview-recovery-info panel
+  (0 external requests), and CLI recovery subcommand.
 allowed_paths:
-  - services/agent-engine/src/omnistackai_agent_engine/solution_packs/ecosystem_verification.py
+  - services/agent-engine/src/omnistackai_agent_engine/solution_packs/ecosystem_recovery.py
   - services/agent-engine/src/omnistackai_agent_engine/solution_packs/ecosystem_pack.py
   - services/agent-engine/src/omnistackai_agent_engine/solution_packs/ecosystem_registry.py
   - services/agent-engine/src/omnistackai_agent_engine/solution_packs/ecosystem_cli.py
@@ -23,7 +22,13 @@ allowed_paths:
   - services/agent-engine/src/omnistackai_agent_engine/studio/server.py
   - services/agent-engine/src/omnistackai_agent_engine/studio/live_serve.py
   - services/agent-engine/src/omnistackai_agent_engine/studio/page.py
-  - services/agent-engine/tests/test_ecosystem_verification.py
+  - services/agent-engine/tests/test_ecosystem_recovery.py
+  - scripts/agent-engine.sh
+  - Taskfile.yml
+  - docs/SOLUTION_PACKS.md
+  - docs/PROGRESS.md
+  - docs/RESUME_PROMPT.md
+  - .ai/tasks/R-454.md
   - .ai/CURRENT_TASK.yaml
   - .ai/PROJECT_STATE.yaml
   - .ai/WORK_LOG.md
@@ -37,7 +42,7 @@ forbidden_changes:
   - Do not add external network requests, fonts, or scripts to Studio HTML
   - Do not change the control-plane database from PostgreSQL
 required_gates:
-  - test-first focused test_ecosystem_verification.py
+  - test-first focused test_ecosystem_recovery.py
   - task verify
   - task lint
   - task security:quick
@@ -45,10 +50,10 @@ required_gates:
   - task builder:demo -- minimal-blog
   - task builder:demo -- rideshare-favourites
 evidence:
-  task_verify: "3202 tests passed (Ran 3202 tests in 35.123s)"
+  task_verify: "3,223 tests passed in 36.304s (100% offline, Stage 0 verification passed)"
   task_lint: "Agent-engine contract lint passed"
   task_security_quick: "Stage 0 secret-policy check passed"
   task_env_check: "Environment contract passed"
-  builder_demo_minimal_blog: "minimal-blog demo passed"
-  builder_demo_rideshare_favourites: "rideshare-favourites demo passed"
-  new_tests: "29/29 test_ecosystem_verification.py"
+  builder_demo_minimal_blog: "152 files generated into owned Git repo"
+  builder_demo_rideshare_favourites: "149 files generated into owned Git repo"
+

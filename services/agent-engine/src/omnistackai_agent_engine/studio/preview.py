@@ -56,6 +56,11 @@ from ..solution_packs.ecosystem_verification import (
     EcosystemVerificationEngine,
     synthesize_ecosystem_verification,
 )
+from ..solution_packs.ecosystem_recovery import (
+    EcosystemDisasterRecoveryContract,
+    EcosystemRecoveryEngine,
+    synthesize_ecosystem_recovery,
+)
 
 StartFn = Callable[..., LocalAppSession]
 
@@ -98,6 +103,8 @@ class StudioPreviewManager:
         self._cicd_engine: EcosystemCICDEngine | None = None
         self._verification_contract: EcosystemVerificationContract | None = None
         self._verification_engine: EcosystemVerificationEngine | None = None
+        self._recovery_contract: EcosystemDisasterRecoveryContract | None = None
+        self._recovery_engine: EcosystemRecoveryEngine | None = None
 
     def replace(self, repo_dir: str) -> dict:
         """Stop prior previews, start single app ``repo_dir`` on free ports, and return state."""
@@ -148,6 +155,7 @@ class StudioPreviewManager:
         sync_contract: EcosystemSyncContract | None = None,
         cicd_contract: EcosystemCICDContract | None = None,
         verification_contract: EcosystemVerificationContract | None = None,
+        recovery_contract: EcosystemDisasterRecoveryContract | None = None,
     ) -> dict:
         """Stop prior previews, register ecosystem surfaces, and start the active surface."""
         with self._lock:
@@ -256,6 +264,20 @@ class StudioPreviewManager:
                         ecosystem_id, self._surfaces
                     )
             self._verification_engine = EcosystemVerificationEngine(self._verification_contract)
+
+            # Disaster Recovery contract (R-454)
+            if recovery_contract is not None:
+                self._recovery_contract = recovery_contract
+            else:
+                from ..solution_packs.ecosystem_registry import DEFAULT_ECOSYSTEM_PACK_REGISTRY
+                cached_rc = DEFAULT_ECOSYSTEM_PACK_REGISTRY.get_recovery_contract(ecosystem_id)
+                if cached_rc is not None:
+                    self._recovery_contract = cached_rc
+                else:
+                    self._recovery_contract = synthesize_ecosystem_recovery(
+                        ecosystem_id, self._surfaces
+                    )
+            self._recovery_engine = EcosystemRecoveryEngine(self._recovery_contract)
 
             # Determine initial active surface
             chosen_slug = active_surface_slug
@@ -441,6 +463,11 @@ class StudioPreviewManager:
                 "probe_count": len(self._verification_contract.probes) if self._verification_contract else 0,
                 "smoke_test_count": len(self._verification_contract.smoke_tests) if self._verification_contract else 0,
                 "canary_rule_count": len(self._verification_contract.canary_rules) if self._verification_contract else 0,
+                "has_recovery": self._recovery_contract is not None,
+                "backup_target_count": len(self._recovery_contract.backup_targets) if self._recovery_contract else 0,
+                "recovery_step_count": len(self._recovery_contract.recovery_steps) if self._recovery_contract else 0,
+                "rollback_trigger_count": len(self._recovery_contract.rollback_triggers) if self._recovery_contract else 0,
+                "dr_status": "configured" if self._recovery_contract else "none",
                 "message": error_msg or _PREVIEW_ERROR,
                 "surfaces": surface_statuses,
             }
@@ -476,6 +503,11 @@ class StudioPreviewManager:
                 "probe_count": len(self._verification_contract.probes) if self._verification_contract else 0,
                 "smoke_test_count": len(self._verification_contract.smoke_tests) if self._verification_contract else 0,
                 "canary_rule_count": len(self._verification_contract.canary_rules) if self._verification_contract else 0,
+                "has_recovery": self._recovery_contract is not None,
+                "backup_target_count": len(self._recovery_contract.backup_targets) if self._recovery_contract else 0,
+                "recovery_step_count": len(self._recovery_contract.recovery_steps) if self._recovery_contract else 0,
+                "rollback_trigger_count": len(self._recovery_contract.rollback_triggers) if self._recovery_contract else 0,
+                "dr_status": "configured" if self._recovery_contract else "none",
                 "web_url": active_sess.plan.web_url,
                 "message": f"The generated {active_surface_info['app_name']} is running locally.",
                 "surfaces": surface_statuses,
@@ -516,6 +548,11 @@ class StudioPreviewManager:
                 "probe_count": len(self._verification_contract.probes) if self._verification_contract else 0,
                 "smoke_test_count": len(self._verification_contract.smoke_tests) if self._verification_contract else 0,
                 "canary_rule_count": len(self._verification_contract.canary_rules) if self._verification_contract else 0,
+                "has_recovery": self._recovery_contract is not None,
+                "backup_target_count": len(self._recovery_contract.backup_targets) if self._recovery_contract else 0,
+                "recovery_step_count": len(self._recovery_contract.recovery_steps) if self._recovery_contract else 0,
+                "rollback_trigger_count": len(self._recovery_contract.rollback_triggers) if self._recovery_contract else 0,
+                "dr_status": "configured" if self._recovery_contract else "none",
                 "message": f"Preview for {self._active_surface or 'surface'} stopped.",
                 "surfaces": surface_statuses,
             }
@@ -546,6 +583,8 @@ class StudioPreviewManager:
         self._deployment_manifest = None
         self._verification_contract = None
         self._verification_engine = None
+        self._recovery_contract = None
+        self._recovery_engine = None
 
     def get_ecosystem_auth(self) -> dict:
         """Inspect the active ecosystem's auth contract, role matrix, and surface demo tokens."""
@@ -824,4 +863,33 @@ class StudioPreviewManager:
             if not self._is_ecosystem or not self._verification_engine:
                 return {"status": "error", "message": "No active ecosystem verification engine"}
             return self._verification_engine.simulate_full_verification()
+
+    def get_ecosystem_recovery(self) -> dict:
+        """Inspect the active ecosystem's disaster recovery contract."""
+        with self._lock:
+            if not self._is_ecosystem or not self._recovery_contract:
+                return {
+                    "is_ecosystem": False,
+                    "recovery_contract": None,
+                    "backup_target_count": 0,
+                    "recovery_step_count": 0,
+                    "rollback_trigger_count": 0,
+                }
+            return {
+                "is_ecosystem": True,
+                "ecosystem_id": self._ecosystem_id,
+                "recovery_contract": self._recovery_contract.to_dict(),
+                "backup_target_count": len(self._recovery_contract.backup_targets),
+                "recovery_step_count": len(self._recovery_contract.recovery_steps),
+                "rollback_trigger_count": len(self._recovery_contract.rollback_triggers),
+                "active_surface": self._active_surface,
+            }
+
+    def simulate_ecosystem_recovery(self) -> dict:
+        """Run a full dry-run simulation of ecosystem disaster recovery exercise."""
+        with self._lock:
+            if not self._is_ecosystem or not self._recovery_engine:
+                return {"status": "error", "message": "No active ecosystem recovery engine"}
+            return self._recovery_engine.simulate_full_dr_exercise()
+
 

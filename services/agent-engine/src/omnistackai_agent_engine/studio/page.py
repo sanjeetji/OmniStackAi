@@ -651,6 +651,59 @@ STUDIO_HTML = """<!doctype html>
     transition: background 0.15s;
   }
   .verification-action-btn:hover { background: rgba(16, 185, 129, 0.25); }
+  .preview-recovery-info {
+    margin-top: 10px;
+    padding: 10px 12px;
+    background: rgba(15, 23, 42, 0.6);
+    border: 1px solid rgba(245, 158, 11, 0.25);
+    border-radius: 8px;
+    font-size: 11px;
+    color: #cbd5e1;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+  .recovery-header-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    flex-wrap: wrap;
+  }
+  .recovery-meta-group {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+  }
+  .recovery-badge {
+    background: rgba(245, 158, 11, 0.2);
+    color: #fbbf24;
+    padding: 2px 8px;
+    border-radius: 999px;
+    font-size: 10px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
+  .recovery-count-badge {
+    background: #1e293b;
+    padding: 2px 6px;
+    border-radius: 4px;
+    font-size: 10px;
+    color: #94a3b8;
+  }
+  .recovery-action-btn {
+    background: rgba(245, 158, 11, 0.15);
+    border: 1px solid rgba(245, 158, 11, 0.35);
+    border-radius: 4px;
+    color: #fcd34d;
+    font-size: 10px;
+    padding: 3px 8px;
+    cursor: pointer;
+    transition: background 0.15s;
+  }
+  .recovery-action-btn:hover { background: rgba(245, 158, 11, 0.25); }
   .events-header-row {
     display: flex;
     align-items: center;
@@ -986,6 +1039,20 @@ STUDIO_HTML = """<!doctype html>
           <div class="verification-meta-group">
             <button type="button" id="verification-simulate-btn" class="verification-action-btn">Simulate Verification</button>
             <button type="button" id="verification-refresh-btn" class="verification-action-btn">Refresh</button>
+          </div>
+        </div>
+      </div>
+      <div id="preview-recovery-info" class="preview-recovery-info" hidden>
+        <div class="recovery-header-row">
+          <div class="recovery-meta-group">
+            <span class="recovery-badge">Disaster Recovery &amp; Rollback</span>
+            <span id="recovery-target-count" class="recovery-count-badge">0 backup targets</span>
+            <span id="recovery-step-count" class="recovery-count-badge">0 recovery steps</span>
+            <span id="recovery-trigger-count" class="recovery-count-badge">0 rollback triggers</span>
+          </div>
+          <div class="recovery-meta-group">
+            <button type="button" id="recovery-simulate-btn" class="recovery-action-btn">Simulate DR Exercise</button>
+            <button type="button" id="recovery-refresh-btn" class="recovery-action-btn">Refresh</button>
           </div>
         </div>
       </div>
@@ -1474,6 +1541,27 @@ STUDIO_HTML = """<!doctype html>
       }
     }
 
+    var recoveryInfo = document.getElementById('preview-recovery-info');
+    if (recoveryInfo) {
+      if (preview && preview.is_ecosystem && preview.has_recovery) {
+        recoveryInfo.hidden = false;
+        var rTargetCount = document.getElementById('recovery-target-count');
+        if (rTargetCount) {
+          rTargetCount.textContent = (preview.backup_target_count || 0) + ' backup target' + ((preview.backup_target_count || 0) !== 1 ? 's' : '');
+        }
+        var rStepCount = document.getElementById('recovery-step-count');
+        if (rStepCount) {
+          rStepCount.textContent = (preview.recovery_step_count || 0) + ' recovery step' + ((preview.recovery_step_count || 0) !== 1 ? 's' : '');
+        }
+        var rTriggerCount = document.getElementById('recovery-trigger-count');
+        if (rTriggerCount) {
+          rTriggerCount.textContent = (preview.rollback_trigger_count || 0) + ' rollback trigger' + ((preview.rollback_trigger_count || 0) !== 1 ? 's' : '');
+        }
+      } else {
+        recoveryInfo.hidden = true;
+      }
+    }
+
     if (url) {
       previewStatus.textContent = preview.message || 'The generated application is running locally.';
       if (currentPreviewUrl !== url) {
@@ -1890,6 +1978,51 @@ STUDIO_HTML = """<!doctype html>
         })
         .catch(function () {
           flashButton(verificationRefreshBtn, 'Error');
+        });
+    });
+  }
+
+  var recoverySimulateBtn = document.getElementById('recovery-simulate-btn');
+  if (recoverySimulateBtn) {
+    recoverySimulateBtn.addEventListener('click', function () {
+      flashButton(recoverySimulateBtn, 'Simulating...');
+      fetch('/api/ecosystem/recovery/simulate', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: '{}' })
+        .then(function (r) { return r.json(); })
+        .then(function (data) {
+          var s = (data.result && data.result.summary) || data.summary || {};
+          var pass = (s.snapshots_pass || 0) + (s.steps_pass || 0) + (s.triggers_pass || 0);
+          var fail = (s.snapshots_fail || 0) + (s.steps_fail || 0) + (s.triggers_fail || 0);
+          flashButton(recoverySimulateBtn, fail === 0 ? 'All Pass (' + pass + ')' : 'Failures: ' + fail);
+        })
+        .catch(function () {
+          flashButton(recoverySimulateBtn, 'Error');
+        });
+    });
+  }
+
+  var recoveryRefreshBtn = document.getElementById('recovery-refresh-btn');
+  if (recoveryRefreshBtn) {
+    recoveryRefreshBtn.addEventListener('click', function () {
+      flashButton(recoveryRefreshBtn, 'Loading...');
+      fetch('/api/ecosystem/recovery')
+        .then(function (r) { return r.json(); })
+        .then(function (data) {
+          var rTargetCount = document.getElementById('recovery-target-count');
+          if (rTargetCount && data.backup_target_count != null) {
+            rTargetCount.textContent = data.backup_target_count + ' backup target' + (data.backup_target_count !== 1 ? 's' : '');
+          }
+          var rStepCount = document.getElementById('recovery-step-count');
+          if (rStepCount && data.recovery_step_count != null) {
+            rStepCount.textContent = data.recovery_step_count + ' recovery step' + (data.recovery_step_count !== 1 ? 's' : '');
+          }
+          var rTriggerCount = document.getElementById('recovery-trigger-count');
+          if (rTriggerCount && data.rollback_trigger_count != null) {
+            rTriggerCount.textContent = data.rollback_trigger_count + ' rollback trigger' + (data.rollback_trigger_count !== 1 ? 's' : '');
+          }
+          flashButton(recoveryRefreshBtn, 'Refreshed!');
+        })
+        .catch(function () {
+          flashButton(recoveryRefreshBtn, 'Error');
         });
     });
   }

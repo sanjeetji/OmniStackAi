@@ -127,6 +127,18 @@ def build_parser() -> argparse.ArgumentParser:
     verify_suite_parser.add_argument("--json", action="store_true", help="Output verification contract as canonical JSON.")
     verify_suite_parser.add_argument("--simulate", action="store_true", help="Run in-process dry-run simulation of all probes, smoke tests, and canary rules.")
 
+    # Subcommand: recovery
+    recovery_parser = subparsers.add_parser(
+        "recovery",
+        help="Inspect or dry-run simulate the disaster recovery, snapshot backup, and rollback contract for an ecosystem pack.",
+    )
+    recovery_parser.add_argument(
+        "package_file",
+        help="Path to the .ecosystem.pack.json file or registered ecosystem ID to inspect.",
+    )
+    recovery_parser.add_argument("--json", action="store_true", help="Output disaster recovery contract as canonical JSON.")
+    recovery_parser.add_argument("--simulate", action="store_true", help="Run in-process dry-run simulation of snapshots, recovery steps, and rollback triggers.")
+
     return parser
 
 
@@ -635,6 +647,64 @@ def run_verify_suite(args: argparse.Namespace) -> int:
     return 0
 
 
+def run_recovery(args: argparse.Namespace) -> int:
+    import json
+    from .ecosystem_recovery import EcosystemRecoveryEngine, synthesize_ecosystem_recovery
+
+    pkg, err = _load_package(args.package_file)
+    if pkg is None:
+        sys.stderr.write(f"Error: {err}\n")
+        return 1
+
+    rc = pkg.recovery_contract
+    if rc is None:
+        rc = synthesize_ecosystem_recovery(
+            pkg.ecosystem_id,
+            pkg.surfaces,
+            version=pkg.version,
+        )
+
+    if args.json:
+        sys.stdout.write(json.dumps(rc.to_dict(), indent=2, sort_keys=True))
+        sys.stdout.write("\n")
+        return 0
+
+    if args.simulate:
+        engine = EcosystemRecoveryEngine(rc)
+        res = engine.simulate_full_dr_exercise()
+        summary = res["summary"]
+        status = res["status"].upper()
+        sys.stdout.write(f"Disaster Recovery Simulation: {status}\n")
+        sys.stdout.write(f"OVERALL STATUS: {status}\n")
+        sys.stdout.write(f"  Snapshots: {summary['snapshots_pass']} pass / {summary['snapshots_fail']} fail (total {summary['total_backup_targets']})\n")
+        sys.stdout.write(f"  Recovery:  {summary['steps_pass']} pass / {summary['steps_fail']} fail (total {summary['total_recovery_steps']})\n")
+        sys.stdout.write(f"  Rollback:  {summary['triggers_pass']} pass / {summary['triggers_fail']} fail (total {summary['total_rollback_triggers']})\n")
+        if summary["snapshots_fail"] + summary["steps_fail"] + summary["triggers_fail"] == 0:
+            sys.stdout.write("  All disaster recovery checks PASSED (dry-run)\n")
+        else:
+            sys.stdout.write("  Some disaster recovery checks FAILED\n")
+        return 0
+
+    sys.stdout.write(f"Disaster Recovery Contract: {pkg.display_name} ({pkg.ecosystem_id})\n")
+    sys.stdout.write(f"  Version:          {rc.version}\n")
+    sys.stdout.write(f"  Digest:           {rc.digest()[:16]}...\n")
+    sys.stdout.write(f"  Backup Targets: ({len(rc.backup_targets)}):\n")
+    for t in rc.backup_targets:
+        enc = "encrypted" if t.encryption_required else "unencrypted"
+        sys.stdout.write(f"    - [{t.surface_slug}] {t.target_id} ({t.target_kind}, {t.frequency}, retention: {t.retention_days}d, {enc})\n")
+        sys.stdout.write(f"      URI: {t.storage_uri}\n")
+    sys.stdout.write(f"  Recovery Steps: ({len(rc.recovery_steps)}):\n")
+    for s in rc.recovery_steps:
+        crit = "CRITICAL" if s.critical else "OPTIONAL"
+        sys.stdout.write(f"    {s.sequence_order}. [{s.surface_slug}] {s.action} (target: {s.target or 'none'}, timeout: {s.timeout_seconds}s, {crit})\n")
+        if s.description:
+            sys.stdout.write(f"       {s.description}\n")
+    sys.stdout.write(f"  Rollback Triggers: ({len(rc.rollback_triggers)}):\n")
+    for r in rc.rollback_triggers:
+        sys.stdout.write(f"    - [{r.severity.upper()}] {r.trigger_id}: if {r.condition} ({r.threshold}) -> {r.action}\n")
+    return 0
+
+
 def main(argv: Sequence[str] | None = None) -> int:
     parser = build_parser()
     args = parser.parse_args(argv)
@@ -665,9 +735,12 @@ def main(argv: Sequence[str] | None = None) -> int:
         return run_cicd(args)
     if args.subcommand == "verify-suite":
         return run_verify_suite(args)
+    if args.subcommand == "recovery":
+        return run_recovery(args)
     sys.stderr.write(f"Unknown subcommand: {args.subcommand}\n")
     return 1
 
 
 if __name__ == "__main__":
     sys.exit(main())
+
