@@ -1,15 +1,15 @@
-# OmniStackAI — implementation progress (as of R-454)
+# OmniStackAI — implementation progress (as of R-455)
 
 A living summary of what is built, what is pending, and how to see results. Numbers come from the
-execution tracker (`R_&_D/OmniStackAI_Execution_Tracker_v6.xlsx`, `Phase_Roadmap`, 454 tasks as of
-R-454 completion) plus the state files (`.ai/`), Git history, and CHANGELOG.
+execution tracker (`R_&_D/OmniStackAI_Execution_Tracker_v6.xlsx`, `Phase_Roadmap`, 455 tasks as of
+R-455 completion) plus the state files (`.ai/`), Git history, and CHANGELOG.
 
 ## Headline
 
-- **3,223 automated tests pass**, fully offline and network-independent (`task verify`).
-- **243 tracker tasks Done, 1 Deferred, 210 Not Started** across **454 tasks** in the execution tracker
-  (`R_&_D/OmniStackAI_Execution_Tracker_v6.xlsx`, `Phase_Roadmap`). MVP completion: **243 / 349 = 69.6%**. Overall program completion: **243 / 454 = 53.5%**.
-- **96 tasks (R-359 → R-454) formally tracked in the tracker workbook**:
+- **3,242 automated tests pass**, fully offline and network-independent (`task verify`).
+- **244 tracker tasks Done, 1 Deferred, 210 Not Started** across **455 tasks** in the execution tracker
+  (`R_&_D/OmniStackAI_Execution_Tracker_v6.xlsx`, `Phase_Roadmap`). MVP completion: **244 / 350 = 69.7%**. Overall program completion: **244 / 455 = 53.6%**.
+- **97 tasks (R-359 → R-455) formally tracked in the tracker workbook**:
   Rows inserted into `Phase_Roadmap` with full column data and audit evidence so the workbook remains the single authoritative tracker.
 - **Built tasks include**: 57 reusable UI-component suites,
   four front-door bricks, R-420 generated-SQL hardening, R-421 managed embedded local preview,
@@ -35,10 +35,20 @@ R-454 completion) plus the state files (`.ai/`), Git history, and CHANGELOG.
   **R-450 Solution Pack Ecosystem Multi-Surface Export, Deployment Manifest, and Live Gateway Orchestration**,
   **R-451 Solution Pack Ecosystem Cross-Surface Data Sync, Conflict Resolution, and Offline-First Sync Protocol**,
   **R-452 Solution Pack Ecosystem Multi-Surface CI/CD Workflow & GitHub Actions Orchestration**,
-  **R-453 Solution Pack Ecosystem Comprehensive Multi-Surface Health Check, Smoke Testing, and Canary Verification**, and
-  **R-454 Solution Pack Ecosystem Multi-Surface Disaster Recovery, Snapshot Backup, and Rollback Orchestration** —
-  the first twenty-five bricks of the differentiating spine.
+  **R-453 Solution Pack Ecosystem Comprehensive Multi-Surface Health Check, Smoke Testing, and Canary Verification**,
+  **R-454 Solution Pack Ecosystem Multi-Surface Disaster Recovery, Snapshot Backup, and Rollback Orchestration**, and
+  **R-455 Solution Pack Ecosystem Multi-Surface Capacity Planning, Resource Quotas, and Unit Economics Budgeting** —
+  the first twenty-six bricks of the differentiating spine.
   The generated Next.js component library remains at **110 components**; its series is **PAUSED at R-415** and fully resumable.
+- **R-455 adds Ecosystem Multi-Surface Capacity Planning, Resource Quotas, and Unit Economics Budgeting:**
+  `ResourceQuota`, `SurfaceCapacitySpec`, `UnitEconomicsCostModel`, and `EcosystemCapacityContract` formalize multi-surface capacity models with deterministic SHA-256 digests and JSON roundtrips;
+  `synthesize_ecosystem_capacity` deterministically derives surface-specific resource quotas (CPU, memory, storage, concurrency, rate limits) and cost models across web, admin, API, worker, and database surfaces;
+  thread-safe `EcosystemCapacityEngine` executes multi-tier workload simulation (base, peak, stress), capacity limits evaluation, and monthly unit economics / cloud cost projections;
+  `EcosystemPackPackage` bundles and validates `capacity_contract` with whole-package SHA-256 integrity;
+  `StudioPreviewManager` tracks capacity contract and engine, injecting `has_capacity`, `capacity_spec_count`, `monthly_base_cost_usd`, and `capacity_status` into preview payloads;
+  Studio HTTP server exposes `GET /api/ecosystem/capacity` and `POST /api/ecosystem/capacity/simulate`;
+  `studio/page.py` renders cyan-themed `#preview-capacity-info` with surface quotas, cost models, and 1-click "Simulate Capacity" and "Refresh" buttons (0 external network requests);
+  and `ecosystem_cli.py` adds `capacity` subcommand with formatted text, `--json`, `--simulate`, and `--tier` options.
 - **R-454 adds Ecosystem Multi-Surface Disaster Recovery, Snapshot Backup, and Rollback Orchestration:**
   `BackupTarget`, `SnapshotManifest`, `RecoveryStep`, `RollbackTrigger`, and `EcosystemDisasterRecoveryContract` formalize multi-surface DR models;
   `synthesize_ecosystem_recovery` deterministically derives backup targets (database, state, configuration), ordered sequential recovery plan (isolation, quiescing, snapshot restoration, schema verification, phased service restart, cutover), and rollback triggers (health probe failures, database migration errors, timeout exceeded);

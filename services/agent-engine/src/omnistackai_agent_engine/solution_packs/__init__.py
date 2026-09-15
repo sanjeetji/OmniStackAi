@@ -147,6 +147,18 @@ from .ecosystem_recovery import (
     SnapshotResult,
     synthesize_ecosystem_recovery,
 )
+from .ecosystem_capacity import (
+    CapacitySimulationReport,
+    EcosystemCapacityContract,
+    EcosystemCapacityEngine,
+    QuotaEvaluationResult,
+    ResourceQuota,
+    SurfaceCapacityProjection,
+    SurfaceCapacitySpec,
+    UnitEconomicsCostModel,
+    UnitEconomicsReport,
+    synthesize_ecosystem_capacity,
+)
 
 __all__ = [
     "LEGACY_MANIFEST_SCHEMA_VERSION",
@@ -252,5 +264,15 @@ __all__ = [
     "SnapshotManifest",
     "SnapshotResult",
     "synthesize_ecosystem_recovery",
+    "CapacitySimulationReport",
+    "EcosystemCapacityContract",
+    "EcosystemCapacityEngine",
+    "QuotaEvaluationResult",
+    "ResourceQuota",
+    "SurfaceCapacityProjection",
+    "SurfaceCapacitySpec",
+    "UnitEconomicsCostModel",
+    "UnitEconomicsReport",
+    "synthesize_ecosystem_capacity",
 ]
 

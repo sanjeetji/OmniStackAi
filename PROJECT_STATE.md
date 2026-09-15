@@ -4,20 +4,18 @@ Last updated: 2026-09-15
 ## Current Phase
 Stage 0 (Founder Build Sequence, Brief Section 91) — BASIC/MVP
 
-> **The differentiating SPINE now supports Solution Pack Ecosystem Multi-Surface Disaster Recovery, Snapshot Backup, and Rollback Orchestration (R-454).**
-> `solution_packs/ecosystem_recovery.py` implements canonical `BackupTarget`, `SnapshotManifest`, `RecoveryStep`,
-> `RollbackTrigger`, `EcosystemDisasterRecoveryContract`, deterministic Python 3.13 stdlib-only contract synthesis
-> (`synthesize_ecosystem_recovery`) for all ecosystem surfaces (database, state, configuration), ordered sequential recovery plan
-> (traffic draining, graceful service quiescing, snapshot restoration, schema migration integrity verification, phased service start, live cutover),
-> and cross-surface rollback triggers (health probe failures, database migration errors, timeout exceeded);
-> `solution_packs/ecosystem_pack.py` bundles and validates recovery contracts with whole-package SHA-256 integrity;
-> `solution_packs/ecosystem_registry.py` exposes `recovery_contract` and `get_recovery_contract()`;
-> `studio/preview.py` attaches `has_recovery`, `backup_target_count`, `recovery_step_count`, `rollback_trigger_count`, and `dr_status` to preview payloads and
-> exposes `get_ecosystem_recovery()` and `simulate_ecosystem_recovery()`; `studio/server.py` exposes `GET /api/ecosystem/recovery`
-> and `POST /api/ecosystem/recovery/simulate`; `studio/page.py` renders amber-themed `#preview-recovery-info` with backup targets,
-> recovery steps, rollback triggers, and "Simulate DR" / "Refresh" buttons (0 external requests); `solution_packs/ecosystem_cli.py` adds `recovery` subcommand
-> with formatted text, `--json`, and `--simulate` modes.
-> UI-component series PAUSED at R-415 (resumable). **NEXT:** R-455 Solution Pack Ecosystem Multi-Surface Capacity Planning, Resource Quotas, and Unit Economics Budgeting.
+> **The differentiating SPINE now supports Solution Pack Ecosystem Multi-Surface Capacity Planning, Resource Quotas, and Unit Economics Budgeting (R-455).**
+> `solution_packs/ecosystem_capacity.py` implements canonical `ResourceQuota`, `SurfaceCapacitySpec`, `UnitEconomicsCostModel`,
+> `EcosystemCapacityContract`, deterministic Python 3.13 stdlib-only contract synthesis (`synthesize_ecosystem_capacity`)
+> for all ecosystem surfaces (database singletons, api horizontal auto-scaling, web edge caching), resource quotas for CPU, memory,
+> bandwidth, and RPS, and cost models with budget limits; `solution_packs/ecosystem_pack.py` bundles and validates capacity contracts
+> with whole-package SHA-256 integrity; `solution_packs/ecosystem_registry.py` exposes `capacity_contract` and `get_capacity_contract()`;
+> `studio/preview.py` attaches `has_capacity`, `capacity_spec_count`, `quota_count`, `cost_model_count`, `monthly_budget_usd`, and `capacity_status`
+> to preview payloads and exposes `get_ecosystem_capacity()` and `simulate_ecosystem_capacity()`; `studio/server.py` exposes
+> `GET /api/ecosystem/capacity` and `POST /api/ecosystem/capacity/simulate`; `studio/page.py` renders cyan-themed `#preview-capacity-info`
+> with capacity specs, resource quotas, monthly budget badges, and "Simulate Capacity" / "Refresh" buttons (0 external requests);
+> `solution_packs/ecosystem_cli.py` adds `capacity` subcommand with formatted text, `--json`, and `--simulate` modes.
+> UI-component series PAUSED at R-415 (resumable). **NEXT:** R-456 Solution Pack Ecosystem Multi-Surface Alerting, Incident Runbooks, and Escalation Policies.
 
 ## Task Compilation Audit — 2026-09-15
 
@@ -25,21 +23,30 @@ Stage 0 (Founder Build Sequence, Brief Section 91) — BASIC/MVP
 
 ### Actions Taken
 1. **Execution Tracker Workbook** (`R_&_D/OmniStackAI_Execution_Tracker_v6.xlsx`):
-   - Inserted row into `Phase_Roadmap` for task R-454. Now covers **454 tasks total** with R-454.
-   - Status breakdown: **243 Done, 1 Deferred (R-252), 210 Not Started**.
-   - MVP completion: **243 / 349 = 69.6%**. Overall: **243 / 454 = 53.5%**.
+   - Inserted row into `Phase_Roadmap` for task R-455. Now covers **455 tasks total** with R-455.
+   - Status breakdown: **244 Done, 1 Deferred (R-252), 210 Not Started**.
+   - MVP completion: **244 / 350 = 69.7%**. Overall: **244 / 455 = 53.6%**.
    - All rows populated with Phase, Category, Title, Objective, Priority, Owner, Status, Points,
      Dependencies, Stage, Verification Evidence, and audit comments.
 2. **Changelog** (`CHANGELOG.md`):
-   - All 244 completed tasks now have changelog entries. 0 missing.
+   - All 245 completed tasks now have changelog entries. 0 missing.
 3. **Documentation Updates**:
-   - `docs/PROGRESS.md`: Updated headline counts to 3,223 tests, 243 Done, 454 total tasks.
-   - `docs/RESUME_PROMPT.md`: Updated task count and next action to R-455.
-   - `PROJECT_STATE.md` (this file): Added R-454 completion details and next action.
+   - `docs/PROGRESS.md`: Updated headline counts to 3,242 tests, 244 Done, 455 total tasks.
+   - `docs/RESUME_PROMPT.md`: Updated task count and next action to R-456.
+   - `PROJECT_STATE.md` (this file): Added R-455 completion details and next action.
    - `.ai/PROJECT_STATE.yaml`, `.ai/WORK_LOG.md`, `.ai/HANDOFF.md`: Updated state and handoff notes.
 
 ## Last Completed Task
-Tracker ID: R-454 — Solution Pack Ecosystem Multi-Surface Disaster Recovery, Snapshot Backup, and Rollback Orchestration — DONE.
+Tracker ID: R-455 — Solution Pack Ecosystem Multi-Surface Capacity Planning, Resource Quotas, and Unit Economics Budgeting — DONE.
+Implemented Solution Pack Ecosystem Multi-Surface Capacity Planning, Resource Quotas, and Unit Economics Budgeting:
+- `solution_packs/ecosystem_capacity.py`: Implemented canonical `ResourceQuota`, `SurfaceCapacitySpec`, `UnitEconomicsCostModel`, `EcosystemCapacityContract`; implemented deterministic Python 3.13 stdlib-only contract synthesis (`synthesize_ecosystem_capacity`) for all ecosystem surfaces; implemented thread-safe in-process `EcosystemCapacityEngine` executing workload tier simulation (base, peak, stress with quota breach detection), quota evaluation, and MAU unit economics projections.
+- `solution_packs/ecosystem_pack.py` & `solution_packs/ecosystem_registry.py`: Extended `EcosystemPackPackage` and `EcosystemPack` with `capacity_contract`, validating with whole-package SHA-256 checksums; added `get_capacity_contract` accessor on `EcosystemPackRegistry`; exported all capacity symbols in `solution_packs/__init__.py`.
+- `studio/preview.py`, `studio/server.py`, `studio/live_serve.py`: Preview manager tracks capacity contracts and simulation engines, injects `has_capacity`, `capacity_spec_count`, `quota_count`, `cost_model_count`, `monthly_budget_usd`, and `capacity_status` into preview status/payloads, and exposes `get_ecosystem_capacity()` and `simulate_ecosystem_capacity()`; Studio HTTP server exposes `GET /api/ecosystem/capacity` and `POST /api/ecosystem/capacity/simulate`.
+- `studio/page.py`: Enhanced Web UI with cyan-themed `#preview-capacity-info` container displaying capacity specs, resource quotas, monthly budget badges, and "Simulate Capacity" / "Refresh" buttons, strictly maintaining 0 external network requests.
+- `solution_packs/ecosystem_cli.py`: Added `capacity` subcommand supporting both file paths and registered ecosystem IDs with formatted text summary, `--json`, and `--simulate` modes; updated `Taskfile.yml` and `scripts/agent-engine.sh`.
+- Nineteen new focused tests in `test_ecosystem_capacity.py`; `task verify` **3,242 passed** offline (+19 net-new tests); lint, security, env, and both builder demos (152 / 149) pass; 0 model calls in test execution.
+
+Immediately preceded by R-454 — Solution Pack Ecosystem Multi-Surface Disaster Recovery, Snapshot Backup, and Rollback Orchestration — DONE.
 Implemented Solution Pack Ecosystem Multi-Surface Disaster Recovery, Snapshot Backup, and Rollback Orchestration:
 - `solution_packs/ecosystem_recovery.py`: Implemented canonical `BackupTarget`, `SnapshotManifest`, `RecoveryStep`, `RollbackTrigger`, `EcosystemDisasterRecoveryContract`; implemented deterministic Python 3.13 stdlib-only contract synthesis (`synthesize_ecosystem_recovery`) for all ecosystem surfaces; implemented thread-safe in-process `EcosystemRecoveryEngine` executing dry-run simulation for snapshots, recovery steps, rollback triggers, and full DR exercises returning structured PASS/FAIL summaries.
 - `solution_packs/ecosystem_pack.py` & `solution_packs/ecosystem_registry.py`: Extended `EcosystemPackPackage` and `EcosystemPack` with `recovery_contract`, validating with whole-package SHA-256 checksums; added `get_recovery_contract` accessor on `EcosystemPackRegistry`; exported all recovery symbols in `solution_packs/__init__.py`.

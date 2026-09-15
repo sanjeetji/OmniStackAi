@@ -139,6 +139,24 @@ def build_parser() -> argparse.ArgumentParser:
     recovery_parser.add_argument("--json", action="store_true", help="Output disaster recovery contract as canonical JSON.")
     recovery_parser.add_argument("--simulate", action="store_true", help="Run in-process dry-run simulation of snapshots, recovery steps, and rollback triggers.")
 
+    # Subcommand: capacity
+    capacity_parser = subparsers.add_parser(
+        "capacity",
+        help="Inspect or dry-run simulate capacity planning, resource quotas, and unit economics for an ecosystem pack.",
+    )
+    capacity_parser.add_argument(
+        "package_file",
+        help="Path to the .ecosystem.pack.json file or registered ecosystem ID to inspect.",
+    )
+    capacity_parser.add_argument("--json", action="store_true", help="Output capacity planning contract as canonical JSON.")
+    capacity_parser.add_argument("--simulate", action="store_true", help="Run in-process dry-run simulation of workload scaling tiers.")
+    capacity_parser.add_argument(
+        "--tier",
+        choices=["base", "peak", "stress"],
+        default="base",
+        help="Workload tier for simulation (base, peak, or stress; default: base).",
+    )
+
     return parser
 
 
@@ -705,6 +723,62 @@ def run_recovery(args: argparse.Namespace) -> int:
     return 0
 
 
+def run_capacity(args: argparse.Namespace) -> int:
+    import json
+    from .ecosystem_capacity import EcosystemCapacityEngine, synthesize_ecosystem_capacity
+
+    pkg, err = _load_package(args.package_file)
+    if pkg is None:
+        sys.stderr.write(f"Error: {err}\n")
+        return 1
+
+    cap = pkg.capacity_contract
+    if cap is None:
+        cap = synthesize_ecosystem_capacity(
+            pkg.ecosystem_id,
+            pkg.surfaces,
+            version=pkg.version,
+        )
+
+    if args.json:
+        sys.stdout.write(json.dumps(cap.to_dict(), indent=2, sort_keys=True))
+        sys.stdout.write("\n")
+        return 0
+
+    if args.simulate:
+        engine = EcosystemCapacityEngine(cap)
+        tier = getattr(args, "tier", "base") or "base"
+        rep = engine.simulate_workload_tier(tier=tier)
+        status = rep.status.upper()
+        sys.stdout.write(f"Capacity Planning Simulation ({tier}): {status}\n")
+        sys.stdout.write(f"OVERALL STATUS: {status}\n")
+        sys.stdout.write(f"  Monthly Requests: {rep.total_monthly_requests:,}\n")
+        sys.stdout.write(f"  Monthly Cost:     ${rep.total_monthly_cost_usd:.2f} (Budget: ${rep.monthly_budget_limit_usd:.2f})\n")
+        sys.stdout.write(f"  Within Budget:    {'YES' if rep.within_budget else 'NO'}\n")
+        sys.stdout.write(f"  Surfaces:         {len(rep.surface_projections)}\n")
+        for p in rep.surface_projections:
+            sys.stdout.write(f"    - [{p.surface_slug}] replicas: {p.required_replicas}, CPU: {p.estimated_cpu_cores:.1f}, Mem: {p.estimated_memory_mb}MB, Est: ${p.estimated_monthly_cost_usd:.2f}/mo\n")
+            for v in p.quota_violations:
+                sys.stdout.write(f"      * VIOLATION: {v}\n")
+        sys.stdout.write(f"  Summary:          {rep.summary}\n")
+        return 0
+
+    sys.stdout.write(f"Capacity Contract: {pkg.display_name} ({pkg.ecosystem_id})\n")
+    sys.stdout.write(f"  Version:          {cap.version}\n")
+    sys.stdout.write(f"  Digest:           {cap.digest()[:16]}...\n")
+    sys.stdout.write(f"  Monthly Budget:   ${cap.monthly_budget_limit_usd:.2f}\n")
+    sys.stdout.write(f"  Surface Capacities ({len(cap.surface_capacities)}):\n")
+    for s in cap.surface_capacities:
+        sys.stdout.write(f"    - [{s.surface_slug}] {s.surface_kind} (replicas: {s.min_replicas}-{s.max_replicas}, CPU target: {s.target_cpu_utilization_pct}%, Mem target: {s.target_memory_utilization_pct}%)\n")
+    sys.stdout.write(f"  Resource Quotas ({len(cap.resource_quotas)}):\n")
+    for q in cap.resource_quotas:
+        sys.stdout.write(f"    - [{q.surface_slug}] {q.resource_kind}: limit {q.limit_value} {q.unit} (burst: {q.burst_limit_value} {q.unit}, action: {q.enforcement_action})\n")
+    sys.stdout.write(f"  Cost Models ({len(cap.cost_models)}):\n")
+    for m in cap.cost_models:
+        sys.stdout.write(f"    - [{m.surface_slug}] base: ${m.base_monthly_cost_usd:.2f}/mo, marginal/1k: ${m.marginal_cost_per_1k_requests_usd:.4f} ({m.cost_tier})\n")
+    return 0
+
+
 def main(argv: Sequence[str] | None = None) -> int:
     parser = build_parser()
     args = parser.parse_args(argv)
@@ -737,6 +811,8 @@ def main(argv: Sequence[str] | None = None) -> int:
         return run_verify_suite(args)
     if args.subcommand == "recovery":
         return run_recovery(args)
+    if args.subcommand == "capacity":
+        return run_capacity(args)
     sys.stderr.write(f"Unknown subcommand: {args.subcommand}\n")
     return 1
 

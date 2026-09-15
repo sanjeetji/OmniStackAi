@@ -1,17 +1,17 @@
 # Current Handoff
 
-Task ID: R-454
+Task ID: R-455
 Status: done
 Phase: BASIC/MVP — Founder Stage 0
 Branch: `main` (the only branch; the GitHub default)
 
 > **Task Compilation Audit completed on 2026-09-15.** All task documentation is 100% synchronized.
-> - Execution tracker covers **454 tasks** (243 Done, 1 Deferred, 210 Not Started; MVP 69.6%).
-> - 96 completed tasks (R-359..R-454) formally tracked in `Phase_Roadmap` in the workbook.
-> - `CHANGELOG.md` has 244 entries covering all completed tasks (0 missing).
+> - Execution tracker covers **455 tasks** (244 Done, 1 Deferred, 210 Not Started; MVP 69.7%).
+> - 97 completed tasks (R-359..R-455) formally tracked in `Phase_Roadmap` in the workbook.
+> - `CHANGELOG.md` has 245 entries covering all completed tasks (0 missing).
 > - All docs updated: `PROGRESS.md`, `RESUME_PROMPT.md`, `PROJECT_STATE.md`, `PROJECT_STATE.yaml`, `WORK_LOG.md`.
 
-> **The differentiating SPINE now supports Solution Pack Ecosystem Multi-Surface Disaster Recovery, Snapshot Backup, and Rollback Orchestration.**
+> **The differentiating SPINE now supports Solution Pack Ecosystem Multi-Surface Capacity Planning, Resource Quotas, and Unit Economics Budgeting.**
 > R-430 proposes the ecosystem, R-431 materializes it, R-432 refines unknown domains, R-433 scopes surfaces, R-434 registers
 > packs, R-435 recommends one, R-436 records bounded intent, R-437 applies safe configuration deterministically,
 > R-438 converts pending manifest AI-delta intents into strictly typed, bounded AIDeltaProposal objects via an
@@ -40,24 +40,25 @@ Branch: `main` (the only branch; the GitHub default)
 > validation (Kahn's algorithm cycle detection) and dry-run pipeline simulation (EcosystemCICDEngine),
 > R-453 provides canonical HealthCheckProbe, SmokeTestStep, SmokeTestSpec, CanaryVerificationRule,
 > EcosystemVerificationContract, deterministic Python 3.13 stdlib-only verification contract synthesis,
-> and **R-454 provides canonical BackupTarget, SnapshotManifest, RecoveryStep, RollbackTrigger,
-> EcosystemDisasterRecoveryContract, deterministic Python 3.13 stdlib-only disaster recovery contract synthesis
-> (synthesize_ecosystem_recovery) for all ecosystem surfaces (database, state, configuration), thread-safe
-> in-process EcosystemRecoveryEngine for dry-run simulation of snapshots, recovery steps, rollback triggers, and full DR exercise,
-> whole-package SHA-256 integrity, Studio preview disaster recovery status injection, endpoints GET /api/ecosystem/recovery
-> and POST /api/ecosystem/recovery/simulate, Studio UI amber-themed #preview-recovery-info panel, and CLI recovery subcommand**.
-> UI-component series PAUSED at R-415. **NEXT:** R-455 Solution Pack Ecosystem Multi-Surface Capacity Planning, Resource Quotas, and Unit Economics Budgeting.
+> R-454 provides canonical BackupTarget, SnapshotManifest, RecoveryStep, RollbackTrigger, EcosystemDisasterRecoveryContract,
+> and **R-455 provides canonical ResourceQuota, SurfaceCapacitySpec, UnitEconomicsCostModel,
+> EcosystemCapacityContract, deterministic Python 3.13 stdlib-only capacity planning contract synthesis
+> (synthesize_ecosystem_capacity) for all ecosystem surfaces, thread-safe in-process EcosystemCapacityEngine
+> for workload tier scaling (base, peak, stress), capacity limits, and monthly unit economics / cloud cost projections,
+> whole-package SHA-256 integrity, Studio preview capacity status injection, endpoints GET /api/ecosystem/capacity
+> and POST /api/ecosystem/capacity/simulate, Studio UI cyan-themed #preview-capacity-info panel, and CLI capacity subcommand**.
+> UI-component series PAUSED at R-415. **NEXT:** R-456 Solution Pack Ecosystem Multi-Surface Alerting, Incident Runbooks, and Escalation Policies.
 
 ## Repo/workflow state
 
-- **R-454 (Solution Pack Ecosystem Multi-Surface Disaster Recovery, Snapshot Backup, and Rollback Orchestration — twenty-fifth spine brick)** shipped:
-  `solution_packs/ecosystem_recovery.py` implements `BackupTarget`, `SnapshotManifest`, `RecoveryStep`, `RollbackTrigger`, `EcosystemDisasterRecoveryContract`;
-  implements deterministic Python 3.13 stdlib-only disaster recovery contract synthesis (`synthesize_ecosystem_recovery`) for all ecosystem surfaces;
-  implements thread-safe in-process `EcosystemRecoveryEngine` executing dry-run simulation of snapshots, recovery steps, rollback triggers, and full DR exercises returning structured PASS/FAIL summaries;
-  `solution_packs/ecosystem_pack.py` bundles and validates recovery contracts with whole-package SHA-256 checksums;
-  `solution_packs/ecosystem_registry.py` exposes `recovery_contract` and `get_recovery_contract()`; exports all recovery symbols in `solution_packs/__init__.py`;
-  `studio/preview.py` attaches `has_recovery`, `backup_target_count`, `recovery_step_count`, `rollback_trigger_count`, and `dr_status` to preview status/payloads, and
-  exposes `get_ecosystem_recovery()` and `simulate_ecosystem_recovery()`; `studio/server.py` exposes
+- **R-455 (Solution Pack Ecosystem Multi-Surface Capacity Planning, Resource Quotas, and Unit Economics Budgeting — twenty-sixth spine brick)** shipped:
+  `solution_packs/ecosystem_capacity.py` implements `ResourceQuota`, `SurfaceCapacitySpec`, `UnitEconomicsCostModel`, `EcosystemCapacityContract`;
+  implements deterministic Python 3.13 stdlib-only capacity planning contract synthesis (`synthesize_ecosystem_capacity`) for all ecosystem surfaces;
+  implements thread-safe in-process `EcosystemCapacityEngine` executing workload tier simulation (base, peak, stress with quota breach detection), quota evaluation, and MAU unit economics projections;
+  `solution_packs/ecosystem_pack.py` bundles and validates capacity contracts with whole-package SHA-256 checksums;
+  `solution_packs/ecosystem_registry.py` exposes `capacity_contract` and `get_capacity_contract()`; exports all capacity symbols in `solution_packs/__init__.py`;
+  `studio/preview.py` attaches `has_capacity`, `capacity_spec_count`, `quota_count`, `cost_model_count`, `monthly_budget_usd`, and `capacity_status` to preview status/payloads, and
+  exposes `get_ecosystem_capacity()` and `simulate_ecosystem_capacity()`; `studio/server.py` exposes
   `GET /api/ecosystem/recovery` and `POST /api/ecosystem/recovery/simulate`;
   `studio/page.py` renders `#preview-recovery-info` with backup targets, recovery steps, rollback triggers, and "Simulate DR" / "Refresh" buttons (0 external requests);
   `solution_packs/ecosystem_cli.py` adds `recovery` subcommand.

@@ -1,5 +1,28 @@
 # Work Log
 
+## 2026-09-15 — R-455 (Solution Pack Ecosystem Multi-Surface Capacity Planning, Resource Quotas, and Unit Economics Budgeting)
+
+- Recorded `.ai/CURRENT_TASK.yaml` before implementation.
+  Final focused suite: 19 passing tests in `test_ecosystem_capacity.py`. Total test suite: 3,242 tests passing offline (+19 net-new tests).
+- Implemented `solution_packs/ecosystem_capacity.py`:
+  - Defined frozen `ResourceQuota`: quota_id, surface_slug, resource_kind (cpu_cores/memory_mb/storage_gb/bandwidth_mbps/concurrent_connections/requests_per_second), limit_value, burst_limit_value, unit, enforcement_action (throttle/queue/reject/scale_out).
+  - Defined frozen `SurfaceCapacitySpec`: surface_slug, surface_kind, min_replicas, max_replicas, target_cpu_utilization_pct, target_memory_utilization_pct, requests_per_replica_limit, scale_down_stabilization_seconds.
+  - Defined frozen `UnitEconomicsCostModel`: cost_model_id, surface_slug, base_monthly_cost_usd, marginal_cost_per_1k_requests_usd, marginal_cost_per_gb_storage_usd, currency, cost_tier (free/starter/growth/enterprise).
+  - Defined frozen `EcosystemCapacityContract`: ecosystem_id, version, surface_capacities, resource_quotas, cost_models, monthly_budget_limit_usd; `to_dict`/`from_dict`/`to_json`/`from_json` roundtrips; deterministic SHA-256 `digest()`.
+  - Implemented `synthesize_ecosystem_capacity(ecosystem_id, surfaces, version, monthly_budget_limit_usd)`: derives surface capacity specs (database singletons, api horizontal auto-scaling, web edge caching), resource quotas for CPU, memory, concurrent connections, bandwidth, and RPS, and cost models with budget limits. Fully offline, deterministic, zero I/O.
+  - Implemented `EcosystemCapacityEngine`: thread-safe (threading.Lock); `simulate_workload_tier(tier="base"|"peak"|"stress", monthly_requests=100_000)` computing scaled requests, required replicas, resource utilization, and cost with quota breach detection; `evaluate_quota()` evaluating proposed allocations against quota limits and burst windows; `estimate_monthly_unit_economics(monthly_active_users, requests_per_user_monthly)` projecting per-user and per-1k request unit economics.
+- Updated Ecosystem Pack Package & Registry:
+  - `ecosystem_pack.py`: Added `capacity_contract: EcosystemCapacityContract | None` field; updated `to_dict`, `parse_ecosystem_pack_package`, and `synthesize_ecosystem_pack` to include capacity_contract in payload and whole-package SHA-256 checksum.
+  - `ecosystem_registry.py`: Added `capacity_contract` property to `EcosystemPack`; `has_capacity_contract` in `to_dict`; `get_capacity_contract(ecosystem_id, version)` on `EcosystemPackRegistry` and `_LazyEcosystemPackRegistry` delegate.
+- Updated Studio Preview & Server:
+  - `studio/preview.py`: Imports capacity types; adds `_capacity_contract`/`_capacity_engine` fields; `replace_ecosystem()` accepts optional `capacity_contract` param, falls back to registry cache then synthesize; all three payload branches inject `has_capacity`, `capacity_spec_count`, `quota_count`, `cost_model_count`, `monthly_budget_usd`, and `capacity_status`; cleanup in `_stop_locked()`; new `get_ecosystem_capacity()` and `simulate_ecosystem_capacity()` methods.
+  - `studio/server.py`: `_make_handler` and `create_studio_server` accept `get_ecosystem_capacity_fn` and `simulate_ecosystem_capacity_fn`; `GET /api/ecosystem/capacity`; `POST /api/ecosystem/capacity/simulate`.
+  - `studio/live_serve.py`: Wires `get_ecosystem_capacity_fn` and `simulate_ecosystem_capacity_fn` in `control_kwargs`.
+  - `studio/page.py`: Cyan-themed `.preview-capacity-info` CSS panel; `#preview-capacity-info` HTML with capacity spec count, quota count, and monthly budget badges, and "Simulate Capacity" / "Refresh" buttons; JS update logic in preview status handler; button handlers for Simulate (calls POST, renders summary and cost) and Refresh (calls GET, updates badges).
+- Added `capacity` subcommand to `ecosystem_cli.py`: accepts file path or registered ecosystem ID; `--json` outputs canonical JSON; `--simulate` with `--tier` (base, peak, stress) runs dry-run simulation and prints structured PASS/FAIL/BREACH summary; default text mode shows surface capacities, quotas, and cost models.
+- Exported all capacity symbols in `solution_packs/__init__.py`.
+- All gates pass: `task verify` (3,242 tests), `task lint`, `task security:quick`, `task env:check`, `task builder:demo -- minimal-blog`, `task builder:demo -- rideshare-favourites`. Zero model calls.
+
 ## 2026-09-15 — R-454 (Solution Pack Ecosystem Multi-Surface Disaster Recovery, Snapshot Backup, and Rollback Orchestration)
 
 - Recorded `.ai/CURRENT_TASK.yaml` before implementation.

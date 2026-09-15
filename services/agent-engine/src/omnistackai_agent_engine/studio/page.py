@@ -704,6 +704,59 @@ STUDIO_HTML = """<!doctype html>
     transition: background 0.15s;
   }
   .recovery-action-btn:hover { background: rgba(245, 158, 11, 0.25); }
+  .preview-capacity-info {
+    margin-top: 10px;
+    padding: 10px 12px;
+    background: rgba(15, 23, 42, 0.6);
+    border: 1px solid rgba(14, 165, 233, 0.3);
+    border-radius: 8px;
+    font-size: 11px;
+    color: #cbd5e1;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+  .capacity-header-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    flex-wrap: wrap;
+  }
+  .capacity-meta-group {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+  }
+  .capacity-badge {
+    background: rgba(14, 165, 233, 0.2);
+    color: #38bdf8;
+    padding: 2px 8px;
+    border-radius: 999px;
+    font-size: 10px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
+  .capacity-count-badge {
+    background: #1e293b;
+    padding: 2px 6px;
+    border-radius: 4px;
+    font-size: 10px;
+    color: #94a3b8;
+  }
+  .capacity-action-btn {
+    background: rgba(14, 165, 233, 0.15);
+    border: 1px solid rgba(14, 165, 233, 0.35);
+    border-radius: 4px;
+    color: #7dd3fc;
+    font-size: 10px;
+    padding: 3px 8px;
+    cursor: pointer;
+    transition: background 0.15s;
+  }
+  .capacity-action-btn:hover { background: rgba(14, 165, 233, 0.25); }
   .events-header-row {
     display: flex;
     align-items: center;
@@ -1053,6 +1106,20 @@ STUDIO_HTML = """<!doctype html>
           <div class="recovery-meta-group">
             <button type="button" id="recovery-simulate-btn" class="recovery-action-btn">Simulate DR Exercise</button>
             <button type="button" id="recovery-refresh-btn" class="recovery-action-btn">Refresh</button>
+          </div>
+        </div>
+      </div>
+      <div id="preview-capacity-info" class="preview-capacity-info" hidden>
+        <div class="capacity-header-row">
+          <div class="capacity-meta-group">
+            <span class="capacity-badge">Capacity &amp; Unit Economics</span>
+            <span id="capacity-spec-count" class="capacity-count-badge">0 capacity specs</span>
+            <span id="capacity-quota-count" class="capacity-count-badge">0 resource quotas</span>
+            <span id="capacity-budget-badge" class="capacity-count-badge">$0/mo budget</span>
+          </div>
+          <div class="capacity-meta-group">
+            <button type="button" id="capacity-simulate-btn" class="capacity-action-btn">Simulate Capacity</button>
+            <button type="button" id="capacity-refresh-btn" class="capacity-action-btn">Refresh</button>
           </div>
         </div>
       </div>
@@ -1562,6 +1629,27 @@ STUDIO_HTML = """<!doctype html>
       }
     }
 
+    var capacityInfo = document.getElementById('preview-capacity-info');
+    if (capacityInfo) {
+      if (preview && preview.is_ecosystem && preview.has_capacity) {
+        capacityInfo.hidden = false;
+        var capSpecCount = document.getElementById('capacity-spec-count');
+        if (capSpecCount) {
+          capSpecCount.textContent = (preview.capacity_spec_count || 0) + ' capacity spec' + ((preview.capacity_spec_count || 0) !== 1 ? 's' : '');
+        }
+        var capQuotaCount = document.getElementById('capacity-quota-count');
+        if (capQuotaCount) {
+          capQuotaCount.textContent = (preview.quota_count || 0) + ' resource quota' + ((preview.quota_count || 0) !== 1 ? 's' : '');
+        }
+        var capBudgetBadge = document.getElementById('capacity-budget-badge');
+        if (capBudgetBadge) {
+          capBudgetBadge.textContent = '$' + (preview.monthly_budget_usd || 0) + '/mo budget';
+        }
+      } else {
+        capacityInfo.hidden = true;
+      }
+    }
+
     if (url) {
       previewStatus.textContent = preview.message || 'The generated application is running locally.';
       if (currentPreviewUrl !== url) {
@@ -2023,6 +2111,51 @@ STUDIO_HTML = """<!doctype html>
         })
         .catch(function () {
           flashButton(recoveryRefreshBtn, 'Error');
+        });
+    });
+  }
+
+  var capacitySimulateBtn = document.getElementById('capacity-simulate-btn');
+  if (capacitySimulateBtn) {
+    capacitySimulateBtn.addEventListener('click', function () {
+      flashButton(capacitySimulateBtn, 'Simulating...');
+      fetch('/api/ecosystem/capacity/simulate', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({tier: 'base'}) })
+        .then(function (r) { return r.json(); })
+        .then(function (data) {
+          var rep = data.report || data;
+          var status = (rep.status || 'pass').toUpperCase();
+          var cost = rep.total_monthly_cost_usd != null ? '$' + rep.total_monthly_cost_usd : '';
+          flashButton(capacitySimulateBtn, status + ' (' + cost + ')');
+        })
+        .catch(function () {
+          flashButton(capacitySimulateBtn, 'Error');
+        });
+    });
+  }
+
+  var capacityRefreshBtn = document.getElementById('capacity-refresh-btn');
+  if (capacityRefreshBtn) {
+    capacityRefreshBtn.addEventListener('click', function () {
+      flashButton(capacityRefreshBtn, 'Loading...');
+      fetch('/api/ecosystem/capacity')
+        .then(function (r) { return r.json(); })
+        .then(function (data) {
+          var capSpecCount = document.getElementById('capacity-spec-count');
+          if (capSpecCount && data.capacity_spec_count != null) {
+            capSpecCount.textContent = data.capacity_spec_count + ' capacity spec' + (data.capacity_spec_count !== 1 ? 's' : '');
+          }
+          var capQuotaCount = document.getElementById('capacity-quota-count');
+          if (capQuotaCount && data.quota_count != null) {
+            capQuotaCount.textContent = data.quota_count + ' resource quota' + (data.quota_count !== 1 ? 's' : '');
+          }
+          var capBudgetBadge = document.getElementById('capacity-budget-badge');
+          if (capBudgetBadge && data.monthly_budget_usd != null) {
+            capBudgetBadge.textContent = '$' + data.monthly_budget_usd + '/mo budget';
+          }
+          flashButton(capacityRefreshBtn, 'Refreshed!');
+        })
+        .catch(function () {
+          flashButton(capacityRefreshBtn, 'Error');
         });
     });
   }

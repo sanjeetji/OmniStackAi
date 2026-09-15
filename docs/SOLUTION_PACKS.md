@@ -398,6 +398,27 @@ The twenty-fifth brick of the differentiating spine formalizes multi-surface bac
   ```
 - 100% offline verification in `task verify` (0 model calls).
 
+## Multi-surface capacity planning, resource quotas, and unit economics budgeting (R-455)
+
+The twenty-sixth brick of the differentiating spine formalizes multi-surface resource quotas, surface capacity specifications, unit economics cost models, and capacity simulation engines:
+
+- Canonical data models: `ResourceQuota` (quota_id, surface_slug, resource_type, limit_value, unit, tier, tags), `SurfaceCapacitySpec` (surface_slug, surface_kind, min_instances, max_instances, target_cpu_utilization_pct, target_memory_utilization_pct, max_concurrent_requests, requests_per_second_quota, storage_gb_quota, egress_gb_per_month_quota, estimated_monthly_cost_usd), `UnitEconomicsCostModel` (ecosystem_id, cost_per_monthly_active_user_usd, cost_per_thousand_requests_usd, base_monthly_fixed_cost_usd, projected_monthly_budget_usd, currency), and `EcosystemCapacityContract` (ecosystem_id, version, surface_capacities, quotas, cost_model) with full `to_dict`/`from_dict`/`to_json`/`from_json` roundtrips and deterministic SHA-256 `digest()`.
+- Deterministic contract synthesis: `synthesize_ecosystem_capacity(ecosystem_id, surfaces, version)` derives surface-specific resource quotas (CPU, memory, storage, concurrency, rate limits based on surface kind) and cost models across web, admin, API, worker, and database surfaces deterministically and offline with zero I/O.
+- In-process simulation engine: Thread-safe `EcosystemCapacityEngine` executes workload scaling simulations across tiers (`base` 1.0x, `peak` 3.0x, `stress` 10.0x), evaluating instance counts, CPU/memory headroom, concurrency, and projected monthly cost against configured budget thresholds.
+- Package bundling & registry access: `EcosystemPackPackage` bundles `capacity_contract` with whole-package SHA-256 integrity verification; `EcosystemPackRegistry` and `EcosystemPack` expose `get_capacity_contract`.
+- Studio preview & server: `StudioPreviewManager` tracks capacity contracts and simulation engines, injecting `has_capacity`, `capacity_spec_count`, `monthly_base_cost_usd`, and `capacity_status` into preview payloads, and exposing `get_ecosystem_capacity()` and `simulate_ecosystem_capacity()`. Studio HTTP server exposes `GET /api/ecosystem/capacity` and `POST /api/ecosystem/capacity/simulate`.
+- Studio web UI: Renders cyan-themed `#preview-capacity-info` container with surface quotas, cost models, and 1-click "Simulate Capacity" and "Refresh" buttons, strictly maintaining 0 external network requests.
+- CLI capacity inspection:
+  ```bash
+  # Inspect ecosystem pack capacity contract
+  task agent-engine:solution-pack:ecosystem -- capacity minimal-blog-ecosystem
+  task agent-engine:solution-pack:ecosystem -- capacity minimal-blog-ecosystem --json
+
+  # Simulate capacity scaling and cost across workload tiers (base, peak, stress)
+  task agent-engine:solution-pack:ecosystem -- capacity minimal-blog-ecosystem --simulate --tier peak
+  ```
+- 100% offline verification in `task verify` (0 model calls).
+
 ## Next boundary
 
-R-455: Solution Pack Ecosystem Multi-Surface Capacity Planning, Resource Quotas, and Unit Economics Budgeting.
+R-456: Solution Pack Ecosystem Multi-Surface Alerting, Incident Runbooks, and Escalation Policies.

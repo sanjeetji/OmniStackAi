@@ -61,6 +61,11 @@ from ..solution_packs.ecosystem_recovery import (
     EcosystemRecoveryEngine,
     synthesize_ecosystem_recovery,
 )
+from ..solution_packs.ecosystem_capacity import (
+    EcosystemCapacityContract,
+    EcosystemCapacityEngine,
+    synthesize_ecosystem_capacity,
+)
 
 StartFn = Callable[..., LocalAppSession]
 
@@ -105,6 +110,8 @@ class StudioPreviewManager:
         self._verification_engine: EcosystemVerificationEngine | None = None
         self._recovery_contract: EcosystemDisasterRecoveryContract | None = None
         self._recovery_engine: EcosystemRecoveryEngine | None = None
+        self._capacity_contract: EcosystemCapacityContract | None = None
+        self._capacity_engine: EcosystemCapacityEngine | None = None
 
     def replace(self, repo_dir: str) -> dict:
         """Stop prior previews, start single app ``repo_dir`` on free ports, and return state."""
@@ -156,6 +163,7 @@ class StudioPreviewManager:
         cicd_contract: EcosystemCICDContract | None = None,
         verification_contract: EcosystemVerificationContract | None = None,
         recovery_contract: EcosystemDisasterRecoveryContract | None = None,
+        capacity_contract: EcosystemCapacityContract | None = None,
     ) -> dict:
         """Stop prior previews, register ecosystem surfaces, and start the active surface."""
         with self._lock:
@@ -278,6 +286,20 @@ class StudioPreviewManager:
                         ecosystem_id, self._surfaces
                     )
             self._recovery_engine = EcosystemRecoveryEngine(self._recovery_contract)
+
+            # Capacity Planning contract (R-455)
+            if capacity_contract is not None:
+                self._capacity_contract = capacity_contract
+            else:
+                from ..solution_packs.ecosystem_registry import DEFAULT_ECOSYSTEM_PACK_REGISTRY
+                cached_cc = DEFAULT_ECOSYSTEM_PACK_REGISTRY.get_capacity_contract(ecosystem_id)
+                if cached_cc is not None:
+                    self._capacity_contract = cached_cc
+                else:
+                    self._capacity_contract = synthesize_ecosystem_capacity(
+                        ecosystem_id, self._surfaces
+                    )
+            self._capacity_engine = EcosystemCapacityEngine(self._capacity_contract)
 
             # Determine initial active surface
             chosen_slug = active_surface_slug
@@ -468,6 +490,12 @@ class StudioPreviewManager:
                 "recovery_step_count": len(self._recovery_contract.recovery_steps) if self._recovery_contract else 0,
                 "rollback_trigger_count": len(self._recovery_contract.rollback_triggers) if self._recovery_contract else 0,
                 "dr_status": "configured" if self._recovery_contract else "none",
+                "has_capacity": self._capacity_contract is not None,
+                "capacity_spec_count": len(self._capacity_contract.surface_capacities) if self._capacity_contract else 0,
+                "quota_count": len(self._capacity_contract.resource_quotas) if self._capacity_contract else 0,
+                "cost_model_count": len(self._capacity_contract.cost_models) if self._capacity_contract else 0,
+                "monthly_budget_usd": self._capacity_contract.monthly_budget_limit_usd if self._capacity_contract else 0.0,
+                "capacity_status": "configured" if self._capacity_contract else "none",
                 "message": error_msg or _PREVIEW_ERROR,
                 "surfaces": surface_statuses,
             }
@@ -508,6 +536,12 @@ class StudioPreviewManager:
                 "recovery_step_count": len(self._recovery_contract.recovery_steps) if self._recovery_contract else 0,
                 "rollback_trigger_count": len(self._recovery_contract.rollback_triggers) if self._recovery_contract else 0,
                 "dr_status": "configured" if self._recovery_contract else "none",
+                "has_capacity": self._capacity_contract is not None,
+                "capacity_spec_count": len(self._capacity_contract.surface_capacities) if self._capacity_contract else 0,
+                "quota_count": len(self._capacity_contract.resource_quotas) if self._capacity_contract else 0,
+                "cost_model_count": len(self._capacity_contract.cost_models) if self._capacity_contract else 0,
+                "monthly_budget_usd": self._capacity_contract.monthly_budget_limit_usd if self._capacity_contract else 0.0,
+                "capacity_status": "configured" if self._capacity_contract else "none",
                 "web_url": active_sess.plan.web_url,
                 "message": f"The generated {active_surface_info['app_name']} is running locally.",
                 "surfaces": surface_statuses,
@@ -553,6 +587,12 @@ class StudioPreviewManager:
                 "recovery_step_count": len(self._recovery_contract.recovery_steps) if self._recovery_contract else 0,
                 "rollback_trigger_count": len(self._recovery_contract.rollback_triggers) if self._recovery_contract else 0,
                 "dr_status": "configured" if self._recovery_contract else "none",
+                "has_capacity": self._capacity_contract is not None,
+                "capacity_spec_count": len(self._capacity_contract.surface_capacities) if self._capacity_contract else 0,
+                "quota_count": len(self._capacity_contract.resource_quotas) if self._capacity_contract else 0,
+                "cost_model_count": len(self._capacity_contract.cost_models) if self._capacity_contract else 0,
+                "monthly_budget_usd": self._capacity_contract.monthly_budget_limit_usd if self._capacity_contract else 0.0,
+                "capacity_status": "configured" if self._capacity_contract else "none",
                 "message": f"Preview for {self._active_surface or 'surface'} stopped.",
                 "surfaces": surface_statuses,
             }
@@ -585,6 +625,8 @@ class StudioPreviewManager:
         self._verification_engine = None
         self._recovery_contract = None
         self._recovery_engine = None
+        self._capacity_contract = None
+        self._capacity_engine = None
 
     def get_ecosystem_auth(self) -> dict:
         """Inspect the active ecosystem's auth contract, role matrix, and surface demo tokens."""
@@ -891,5 +933,50 @@ class StudioPreviewManager:
             if not self._is_ecosystem or not self._recovery_engine:
                 return {"status": "error", "message": "No active ecosystem recovery engine"}
             return self._recovery_engine.simulate_full_dr_exercise()
+
+    def get_ecosystem_capacity(self) -> dict:
+        """Inspect the active ecosystem's capacity planning contract."""
+        with self._lock:
+            if not self._is_ecosystem or not self._capacity_contract:
+                return {
+                    "is_ecosystem": False,
+                    "status": "not_configured",
+                    "contract": None,
+                    "capacity_contract": None,
+                    "capacity_spec_count": 0,
+                    "quota_count": 0,
+                    "cost_model_count": 0,
+                    "monthly_budget_usd": 0.0,
+                }
+            return {
+                "is_ecosystem": True,
+                "status": "ok",
+                "ecosystem_id": self._ecosystem_id,
+                "contract": self._capacity_contract.to_dict(),
+                "capacity_contract": self._capacity_contract.to_dict(),
+                "digest": self._capacity_contract.digest(),
+                "capacity_spec_count": len(self._capacity_contract.surface_capacities),
+                "quota_count": len(self._capacity_contract.resource_quotas),
+                "cost_model_count": len(self._capacity_contract.cost_models),
+                "monthly_budget_usd": self._capacity_contract.monthly_budget_limit_usd,
+                "active_surface": self._active_surface,
+            }
+
+    def simulate_ecosystem_capacity(self, body: Mapping[str, Any] | None = None) -> dict:
+        """Run a dry-run simulation of ecosystem capacity workload tier."""
+        with self._lock:
+            if not self._is_ecosystem or not self._capacity_engine:
+                return {"status": "error", "message": "No active ecosystem capacity engine"}
+            tier = "base"
+            monthly_requests = 100_000
+            if isinstance(body, Mapping):
+                tier = str(body.get("tier", "base"))
+                monthly_requests = int(body.get("monthly_requests", 100_000))
+            rep = self._capacity_engine.simulate_workload_tier(tier=tier, monthly_requests=monthly_requests)
+            return {
+                "status": "ok",
+                "report": rep.to_dict(),
+                **rep.to_dict(),
+            }
 
 

@@ -30,6 +30,7 @@ from .ecosystem_sync import EcosystemSyncContract, synthesize_ecosystem_sync
 from .ecosystem_cicd import EcosystemCICDContract, synthesize_ecosystem_cicd
 from .ecosystem_verification import EcosystemVerificationContract, synthesize_ecosystem_verification
 from .ecosystem_recovery import EcosystemDisasterRecoveryContract, synthesize_ecosystem_recovery
+from .ecosystem_capacity import EcosystemCapacityContract, synthesize_ecosystem_capacity
 from .registry import (
     DEFAULT_SOLUTION_PACK_REGISTRY,
     SolutionPack,
@@ -108,6 +109,7 @@ class EcosystemPackPackage:
     cicd_contract: EcosystemCICDContract | None = None
     verification_contract: EcosystemVerificationContract | None = None
     recovery_contract: EcosystemDisasterRecoveryContract | None = None
+    capacity_contract: EcosystemCapacityContract | None = None
 
     def to_dict(self) -> dict[str, Any]:
         data: dict[str, Any] = {
@@ -139,6 +141,8 @@ class EcosystemPackPackage:
             data["verification_contract"] = self.verification_contract.to_dict()
         if self.recovery_contract is not None:
             data["recovery_contract"] = self.recovery_contract.to_dict()
+        if self.capacity_contract is not None:
+            data["capacity_contract"] = self.capacity_contract.to_dict()
         return data
 
     def to_json(self) -> str:
@@ -297,6 +301,10 @@ def parse_ecosystem_pack_package(data: str | bytes | Mapping[str, Any]) -> Ecosy
     if "recovery_contract" in raw and raw["recovery_contract"] is not None:
         recovery_contract = EcosystemDisasterRecoveryContract.from_dict(raw["recovery_contract"])
 
+    capacity_contract = None
+    if "capacity_contract" in raw and raw["capacity_contract"] is not None:
+        capacity_contract = EcosystemCapacityContract.from_dict(raw["capacity_contract"])
+
     return EcosystemPackPackage(
         schema_version=schema_version,
         ecosystem_id=ecosystem_id,
@@ -316,6 +324,7 @@ def parse_ecosystem_pack_package(data: str | bytes | Mapping[str, Any]) -> Ecosy
         cicd_contract=cicd_contract,
         verification_contract=verification_contract,
         recovery_contract=recovery_contract,
+        capacity_contract=capacity_contract,
     )
 
 
@@ -441,6 +450,11 @@ def synthesize_ecosystem_pack(
         surface_packages,
         version=version,
     )
+    capacity_contract = synthesize_ecosystem_capacity(
+        ecosystem_id,
+        surface_packages,
+        version=version,
+    )
 
     payload = {
         "schema_version": ECOSYSTEM_PACK_SCHEMA_VERSION,
@@ -460,6 +474,7 @@ def synthesize_ecosystem_pack(
         "cicd_contract": cicd_contract.to_dict(),
         "verification_contract": verification_contract.to_dict(),
         "recovery_contract": recovery_contract.to_dict(),
+        "capacity_contract": capacity_contract.to_dict(),
     }
     package_sha256 = compute_ecosystem_checksum(payload)
 
@@ -482,4 +497,5 @@ def synthesize_ecosystem_pack(
         cicd_contract=cicd_contract,
         verification_contract=verification_contract,
         recovery_contract=recovery_contract,
+        capacity_contract=capacity_contract,
     )
