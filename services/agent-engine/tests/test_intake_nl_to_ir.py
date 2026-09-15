@@ -136,6 +136,26 @@ class TestParseIrResponse(unittest.TestCase):
         ir = parse_ir_response(VALID_IR_JSON)
         self.assertFalse(has_errors(validate_ir(ir)))
 
+    def test_reactive_native_normalized(self) -> None:
+        payload = dict(VALID_IR_DICT)
+        payload["project_strategy"] = dict(payload["project_strategy"])
+        payload["project_strategy"]["mobile_profile"] = "reactive native"
+        payload["project_strategy"]["admin_strategy"] = "reactive native"
+        ir = parse_ir_response(json.dumps(payload))
+        from omnistackai_agent_engine.application_ir.ir import AdminStrategy, MobileProfile
+
+        self.assertEqual(ir.project_strategy.mobile_profile, MobileProfile.REACT_NATIVE)
+        self.assertEqual(ir.project_strategy.admin_strategy, AdminStrategy.NEXTJS)
+
+    def test_missing_strategy_keys_defaulted(self) -> None:
+        payload = dict(VALID_IR_DICT)
+        payload["project_strategy"] = {"mobile_profile": "react-native"}
+        ir = parse_ir_response(json.dumps(payload))
+        from omnistackai_agent_engine.application_ir.ir import MobileProfile
+
+        self.assertEqual(ir.project_strategy.mobile_profile, MobileProfile.REACT_NATIVE)
+        self.assertEqual(ir.project_strategy.web_strategy.value, "nextjs")
+
 
 class TestGenerateIr(unittest.TestCase):
     def test_happy_path_returns_result(self) -> None:

@@ -32,7 +32,16 @@ from ..application_ir import (
 )
 from ..application_ir.errors import ApplicationIRError
 from ..application_ir.examples import example_ir
-from ..application_ir.ir import IR_SCHEMA_VERSION, FieldType
+from ..application_ir.ir import (
+    IR_SCHEMA_VERSION,
+    AdminStrategy,
+    BackendStrategy,
+    DatabaseStrategy,
+    FieldType,
+    MobileProfile,
+    RepoStrategy,
+    WebStrategy,
+)
 from ..model_gateway import (
     ChatRole,
     GenerateRequest,
@@ -60,6 +69,12 @@ class IntakeResult:
 def _system_instruction(example_name: str) -> str:
     template = json.dumps(example_ir(example_name).to_dict(), indent=2, sort_keys=True)
     field_types = ", ".join(t.value for t in FieldType)
+    mobile_profiles = ", ".join(m.value for m in MobileProfile)
+    web_strategies = ", ".join(w.value for w in WebStrategy)
+    admin_strategies = ", ".join(a.value for a in AdminStrategy)
+    backend_strategies = ", ".join(b.value for b in BackendStrategy)
+    database_strategies = ", ".join(d.value for d in DatabaseStrategy)
+    repo_strategies = ", ".join(r.value for r in RepoStrategy)
     return (
         "You are the intake compiler for OmniStackAI, an AI app-generation platform.\n"
         "Convert the user's application description into a single Application IR JSON object.\n"
@@ -73,6 +88,13 @@ def _system_instruction(example_name: str) -> str:
         "  relations, API endpoints, screens, and at least one acceptance criterion. Minimal but complete.\n"
         f"- Every field 'type' MUST be EXACTLY one of: {field_types}. Do NOT invent other types.\n"
         "  For a status/category/enum-like field use \"string\". For money use \"float\". For an id use \"uuid\".\n"
+        "- In 'project_strategy', use only allowed canonical values:\n"
+        f"  * 'mobile_profile': {mobile_profiles} (choose 'react_native' or 'flutter' if the user requested a mobile app)\n"
+        f"  * 'web_strategy': {web_strategies}\n"
+        f"  * 'admin_strategy': {admin_strategies} (choose 'nextjs' if the user requested an admin dashboard/panel)\n"
+        f"  * 'backend_strategy': {backend_strategies}\n"
+        f"  * 'database_strategy': {database_strategies}\n"
+        f"  * 'repo_strategy': {repo_strategies}\n"
         "\n"
         "Template (copy this shape; replace the content with the user's domain):\n"
         f"{template}\n"
@@ -130,6 +152,23 @@ def parse_ir_response(text: str) -> ApplicationIR:
     if not isinstance(data, dict):
         raise IntakeResponseError("model response JSON was not an object")
     data.setdefault("schema_version", IR_SCHEMA_VERSION)
+    if "project_strategy" not in data or not isinstance(data["project_strategy"], dict):
+        data["project_strategy"] = {
+            "mobile_profile": "none",
+            "web_strategy": "nextjs",
+            "admin_strategy": "nextjs",
+            "backend_strategy": "python",
+            "database_strategy": "postgres",
+            "repo_strategy": "customer_project_monorepo",
+        }
+    else:
+        strat = data["project_strategy"]
+        strat.setdefault("mobile_profile", "none")
+        strat.setdefault("web_strategy", "nextjs")
+        strat.setdefault("admin_strategy", "nextjs")
+        strat.setdefault("backend_strategy", "python")
+        strat.setdefault("database_strategy", "postgres")
+        strat.setdefault("repo_strategy", "customer_project_monorepo")
     try:
         ir = ApplicationIR.from_dict(data)
     except (ApplicationIRError, ValueError, TypeError, KeyError) as error:

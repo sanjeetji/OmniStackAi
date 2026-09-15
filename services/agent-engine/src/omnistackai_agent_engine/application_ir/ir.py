@@ -123,9 +123,145 @@ def _str_tuple(value: Any, name: str, maximum: int = 128) -> tuple[str, ...]:
     return value
 
 
+_ENUM_ALIASES: dict[type, dict[str, str]] = {
+    MobileProfile: {
+        "react_native": "react_native",
+        "react-native": "react_native",
+        "reactive_native": "react_native",
+        "reactive-native": "react_native",
+        "reactnative": "react_native",
+        "react native": "react_native",
+        "react_native_app": "react_native",
+        "flutter": "flutter",
+        "flutter_mobile": "flutter",
+        "flutter_app": "flutter",
+        "native": "native",
+        "auto": "auto",
+        "none": "none",
+        "null": "none",
+        "false": "none",
+    },
+    WebStrategy: {
+        "next": "nextjs",
+        "next.js": "nextjs",
+        "nextjs": "nextjs",
+        "next_js": "nextjs",
+        "react": "nextjs",
+        "react_web": "rn_web",
+        "react-native-web": "rn_web",
+        "rn_web": "rn_web",
+        "flutter": "flutter_web",
+        "flutter_web": "flutter_web",
+        "pwa": "pwa",
+        "none": "none",
+        "null": "none",
+        "false": "none",
+    },
+    AdminStrategy: {
+        "next": "nextjs",
+        "next.js": "nextjs",
+        "nextjs": "nextjs",
+        "next_js": "nextjs",
+        "react": "nextjs",
+        "react_admin": "nextjs",
+        "react_native": "nextjs",
+        "reactive_native": "nextjs",
+        "reactnative": "nextjs",
+        "none": "none",
+        "null": "none",
+        "false": "none",
+    },
+    BackendStrategy: {
+        "python": "python",
+        "fastapi": "python",
+        "py": "python",
+        "go": "go",
+        "golang": "go",
+        "node": "node",
+        "nodejs": "node",
+        "express": "node",
+    },
+    DatabaseStrategy: {
+        "postgres": "postgres",
+        "postgresql": "postgres",
+        "pg": "postgres",
+        "sqlite": "other",
+        "mysql": "other",
+        "other": "other",
+    },
+    RepoStrategy: {
+        "monorepo": "customer_project_monorepo",
+        "customer_project_monorepo": "customer_project_monorepo",
+        "multi_repo": "approved_multi_repo",
+        "approved_multi_repo": "approved_multi_repo",
+    },
+    Platform: {
+        "mobile": "mobile",
+        "web": "web",
+        "admin": "admin",
+        "backend": "backend",
+        "api": "backend",
+    },
+    FieldType: {
+        "string": "string",
+        "str": "string",
+        "varchar": "string",
+        "text": "text",
+        "int": "int",
+        "integer": "int",
+        "bigint": "int",
+        "number": "float",
+        "float": "float",
+        "double": "float",
+        "decimal": "float",
+        "bool": "bool",
+        "boolean": "bool",
+        "datetime": "datetime",
+        "date": "datetime",
+        "timestamp": "datetime",
+        "timestamptz": "datetime",
+        "uuid": "uuid",
+        "id": "uuid",
+        "json": "json",
+        "jsonb": "json",
+        "dict": "json",
+        "object": "json",
+        "array": "json",
+        "list": "json",
+    },
+    HttpMethod: {
+        "get": "GET",
+        "post": "POST",
+        "put": "PUT",
+        "patch": "PATCH",
+        "delete": "DELETE",
+    },
+}
+
+
 def _enum(value: Any, enum_cls: type[StrEnum], name: str) -> Any:
     if isinstance(value, enum_cls):
         return value
+    if isinstance(value, str):
+        cleaned = value.strip()
+        try:
+            return enum_cls(cleaned)
+        except ValueError:
+            pass
+        try:
+            return enum_cls(cleaned.upper())
+        except ValueError:
+            pass
+        norm = cleaned.lower().replace("-", "_").replace(" ", "_")
+        try:
+            return enum_cls(norm)
+        except ValueError:
+            pass
+        aliases = _ENUM_ALIASES.get(enum_cls, {})
+        if norm in aliases:
+            return enum_cls(aliases[norm])
+        if cleaned.lower() in aliases:
+            return enum_cls(aliases[cleaned.lower()])
     try:
         return enum_cls(value)
     except ValueError as error:
