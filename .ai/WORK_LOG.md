@@ -1,5 +1,19 @@
 # Work Log
 
+## 2026-09-15 — Studio Output Destination Selector & Folder Customization (Option A / Option B / Custom)
+
+- Implemented Output Destination switching and folder name customization across Studio frontend and backend:
+  - Added Option A: Project workspace apps (`scratch/apps`).
+  - Added Option B: Personal projects folder (`~/Documents/Projects/GeneratedApps`).
+  - Added Custom Path option: arbitrary parent folder directory + custom app folder name input.
+  - Live destination preview indicator: dynamically reflects destination path as user types prompt or custom folder name.
+  - Added `GET /api/config` in `studio/server.py` returning `workspace_apps_dir`, `personal_apps_dir`, and `current_out_dir`.
+  - Updated `POST /api/build` options allowlist to accept `output_dir`, `folder_name`, `target_dir`.
+  - Updated `_target_dir_for` in `studio/live_serve.py` to accept `custom_dir`, `folder_name`, `custom_name`, expand `~`, and auto-create target directories.
+  - Wired `output_dir` and `folder_name` across ecosystem, solution pack, and local LLM build branches in `studio/live_serve.py`.
+  - Updated `scripts/agent-engine.sh` to export `OMNISTACKAI_APP_OUT_DIR` consistently.
+  - Added comprehensive offline tests in `test_studio_server.py` (+4 tests, total 46 studio tests, 3,337 project tests). Zero external network requests, 100% offline verification passed.
+
 ## 2026-09-15 — R-459 (Solution Pack Ecosystem Multi-Surface Documentation, Architecture Runbooks, and OpenAPI Aggregator Contracts)
 
 - Recorded `.ai/CURRENT_TASK.yaml` before implementation.
