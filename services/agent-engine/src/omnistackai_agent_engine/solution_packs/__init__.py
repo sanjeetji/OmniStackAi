@@ -159,6 +159,21 @@ from .ecosystem_capacity import (
     UnitEconomicsReport,
     synthesize_ecosystem_capacity,
 )
+from .ecosystem_alerting import (
+    AlertRule,
+    AlertSeverity,
+    AlertTriggerResult,
+    EcosystemAlertingContract,
+    EcosystemAlertingEngine,
+    EscalationPolicy,
+    EscalationTier,
+    IncidentRunbook,
+    IncidentSimulationReport,
+    RunbookExecutionReport,
+    RunbookStep,
+    RunbookStepExecution,
+    synthesize_ecosystem_alerting,
+)
 
 __all__ = [
     "LEGACY_MANIFEST_SCHEMA_VERSION",
@@ -274,5 +289,18 @@ __all__ = [
     "UnitEconomicsCostModel",
     "UnitEconomicsReport",
     "synthesize_ecosystem_capacity",
+    "AlertRule",
+    "AlertSeverity",
+    "AlertTriggerResult",
+    "EcosystemAlertingContract",
+    "EcosystemAlertingEngine",
+    "EscalationPolicy",
+    "EscalationTier",
+    "IncidentRunbook",
+    "IncidentSimulationReport",
+    "RunbookExecutionReport",
+    "RunbookStep",
+    "RunbookStepExecution",
+    "synthesize_ecosystem_alerting",
 ]
 

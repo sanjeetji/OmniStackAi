@@ -454,6 +454,8 @@ def main() -> None:
             simulate_ecosystem_recovery_fn=preview_manager.simulate_ecosystem_recovery,
             get_ecosystem_capacity_fn=preview_manager.get_ecosystem_capacity,
             simulate_ecosystem_capacity_fn=preview_manager.simulate_ecosystem_capacity,
+            get_ecosystem_alerting_fn=preview_manager.get_ecosystem_alerting,
+            simulate_ecosystem_alerting_fn=preview_manager.simulate_ecosystem_alerting,
             preview_build_fn=lambda build_id, surface_slug=None: _preview_recorded_build(
                 build_id, history, preview_manager, surface_slug=surface_slug
             ),

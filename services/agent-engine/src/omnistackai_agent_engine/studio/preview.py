@@ -66,6 +66,11 @@ from ..solution_packs.ecosystem_capacity import (
     EcosystemCapacityEngine,
     synthesize_ecosystem_capacity,
 )
+from ..solution_packs.ecosystem_alerting import (
+    EcosystemAlertingContract,
+    EcosystemAlertingEngine,
+    synthesize_ecosystem_alerting,
+)
 
 StartFn = Callable[..., LocalAppSession]
 
@@ -112,6 +117,8 @@ class StudioPreviewManager:
         self._recovery_engine: EcosystemRecoveryEngine | None = None
         self._capacity_contract: EcosystemCapacityContract | None = None
         self._capacity_engine: EcosystemCapacityEngine | None = None
+        self._alerting_contract: EcosystemAlertingContract | None = None
+        self._alerting_engine: EcosystemAlertingEngine | None = None
 
     def replace(self, repo_dir: str) -> dict:
         """Stop prior previews, start single app ``repo_dir`` on free ports, and return state."""
@@ -164,6 +171,7 @@ class StudioPreviewManager:
         verification_contract: EcosystemVerificationContract | None = None,
         recovery_contract: EcosystemDisasterRecoveryContract | None = None,
         capacity_contract: EcosystemCapacityContract | None = None,
+        alerting_contract: EcosystemAlertingContract | None = None,
     ) -> dict:
         """Stop prior previews, register ecosystem surfaces, and start the active surface."""
         with self._lock:
@@ -300,6 +308,20 @@ class StudioPreviewManager:
                         ecosystem_id, self._surfaces
                     )
             self._capacity_engine = EcosystemCapacityEngine(self._capacity_contract)
+
+            # Alerting contract (R-456)
+            if alerting_contract is not None:
+                self._alerting_contract = alerting_contract
+            else:
+                from ..solution_packs.ecosystem_registry import DEFAULT_ECOSYSTEM_PACK_REGISTRY
+                cached_ac = DEFAULT_ECOSYSTEM_PACK_REGISTRY.get_alerting_contract(ecosystem_id)
+                if cached_ac is not None:
+                    self._alerting_contract = cached_ac
+                else:
+                    self._alerting_contract = synthesize_ecosystem_alerting(
+                        ecosystem_id, self._surfaces
+                    )
+            self._alerting_engine = EcosystemAlertingEngine(self._alerting_contract)
 
             # Determine initial active surface
             chosen_slug = active_surface_slug
@@ -496,6 +518,11 @@ class StudioPreviewManager:
                 "cost_model_count": len(self._capacity_contract.cost_models) if self._capacity_contract else 0,
                 "monthly_budget_usd": self._capacity_contract.monthly_budget_limit_usd if self._capacity_contract else 0.0,
                 "capacity_status": "configured" if self._capacity_contract else "none",
+                "has_alerting": self._alerting_contract is not None,
+                "alert_rule_count": len(self._alerting_contract.alert_rules) if self._alerting_contract else 0,
+                "runbook_count": len(self._alerting_contract.runbooks) if self._alerting_contract else 0,
+                "escalation_policy_count": len(self._alerting_contract.escalation_policies) if self._alerting_contract else 0,
+                "alert_status": "configured" if self._alerting_contract else "none",
                 "message": error_msg or _PREVIEW_ERROR,
                 "surfaces": surface_statuses,
             }
@@ -542,6 +569,11 @@ class StudioPreviewManager:
                 "cost_model_count": len(self._capacity_contract.cost_models) if self._capacity_contract else 0,
                 "monthly_budget_usd": self._capacity_contract.monthly_budget_limit_usd if self._capacity_contract else 0.0,
                 "capacity_status": "configured" if self._capacity_contract else "none",
+                "has_alerting": self._alerting_contract is not None,
+                "alert_rule_count": len(self._alerting_contract.alert_rules) if self._alerting_contract else 0,
+                "runbook_count": len(self._alerting_contract.runbooks) if self._alerting_contract else 0,
+                "escalation_policy_count": len(self._alerting_contract.escalation_policies) if self._alerting_contract else 0,
+                "alert_status": "configured" if self._alerting_contract else "none",
                 "web_url": active_sess.plan.web_url,
                 "message": f"The generated {active_surface_info['app_name']} is running locally.",
                 "surfaces": surface_statuses,
@@ -593,6 +625,11 @@ class StudioPreviewManager:
                 "cost_model_count": len(self._capacity_contract.cost_models) if self._capacity_contract else 0,
                 "monthly_budget_usd": self._capacity_contract.monthly_budget_limit_usd if self._capacity_contract else 0.0,
                 "capacity_status": "configured" if self._capacity_contract else "none",
+                "has_alerting": self._alerting_contract is not None,
+                "alert_rule_count": len(self._alerting_contract.alert_rules) if self._alerting_contract else 0,
+                "runbook_count": len(self._alerting_contract.runbooks) if self._alerting_contract else 0,
+                "escalation_policy_count": len(self._alerting_contract.escalation_policies) if self._alerting_contract else 0,
+                "alert_status": "configured" if self._alerting_contract else "none",
                 "message": f"Preview for {self._active_surface or 'surface'} stopped.",
                 "surfaces": surface_statuses,
             }
@@ -627,6 +664,8 @@ class StudioPreviewManager:
         self._recovery_engine = None
         self._capacity_contract = None
         self._capacity_engine = None
+        self._alerting_contract = None
+        self._alerting_engine = None
 
     def get_ecosystem_auth(self) -> dict:
         """Inspect the active ecosystem's auth contract, role matrix, and surface demo tokens."""
@@ -973,6 +1012,53 @@ class StudioPreviewManager:
                 tier = str(body.get("tier", "base"))
                 monthly_requests = int(body.get("monthly_requests", 100_000))
             rep = self._capacity_engine.simulate_workload_tier(tier=tier, monthly_requests=monthly_requests)
+            return {
+                "status": "ok",
+                "report": rep.to_dict(),
+                **rep.to_dict(),
+            }
+
+    def get_ecosystem_alerting(self) -> dict:
+        """Inspect the active ecosystem's alerting contract."""
+        with self._lock:
+            if not self._is_ecosystem or not self._alerting_contract:
+                return {
+                    "is_ecosystem": False,
+                    "status": "not_configured",
+                    "contract": None,
+                    "alerting_contract": None,
+                    "alert_rule_count": 0,
+                    "runbook_count": 0,
+                    "escalation_policy_count": 0,
+                }
+            return {
+                "is_ecosystem": True,
+                "status": "ok",
+                "ecosystem_id": self._ecosystem_id,
+                "contract": self._alerting_contract.to_dict(),
+                "alerting_contract": self._alerting_contract.to_dict(),
+                "digest": self._alerting_contract.digest(),
+                "alert_rule_count": len(self._alerting_contract.alert_rules),
+                "runbook_count": len(self._alerting_contract.runbooks),
+                "escalation_policy_count": len(self._alerting_contract.escalation_policies),
+                "active_surface": self._active_surface,
+            }
+
+    def simulate_ecosystem_alerting(self, body: Mapping[str, Any] | None = None) -> dict:
+        """Run a dry-run simulation of ecosystem alerting / incident scenario."""
+        with self._lock:
+            if not self._is_ecosystem or not self._alerting_engine:
+                return {"status": "error", "message": "No active ecosystem alerting engine"}
+            scenario = "api_error_spike"
+            metric_value = None
+            if isinstance(body, Mapping):
+                scenario = str(body.get("scenario", body.get("rule_id", "api_error_spike")))
+                if "metric_value" in body:
+                    try:
+                        metric_value = float(body["metric_value"])
+                    except (ValueError, TypeError):
+                        metric_value = None
+            rep = self._alerting_engine.simulate_incident(scenario=scenario, metric_value=metric_value)
             return {
                 "status": "ok",
                 "report": rep.to_dict(),

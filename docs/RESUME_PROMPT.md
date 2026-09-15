@@ -41,7 +41,7 @@ START PROTOCOL
   `task ai:status`, `task ai:handoff`. `task verify` must stay green and network-independent.
 - Confirm git branch/HEAD/clean tree. Then restate: phase, next Tracker ID, objective, blast radius.
 
-WHAT IS ALREADY BUILT (platform generators are Python 3.13 stdlib-only, offline, in services/agent-engine; 3,242 tests pass)
+WHAT IS ALREADY BUILT (platform generators are Python 3.13 stdlib-only, offline, in services/agent-engine; 3,265 tests pass)
 - Model fabric: ModelProvider contract + registry; local Ollama adapter (runs any installed model via
 
 
@@ -412,8 +412,10 @@ WHAT TO DO NEXT
   and R-454 introduces multi-surface disaster recovery contracts, backup targets, snapshot manifests, sequential recovery plans,
   rollback triggers, in-process dry-run simulation engine, Studio preview DR endpoints and UI panel, and CLI recovery subcommand;
   and R-455 introduces multi-surface capacity planning contracts, resource quotas, unit economics cost models,
-  in-process workload scaling simulation engine, Studio preview capacity endpoints and UI panel, and CLI capacity subcommand.
-- NEXT R-456: Solution Pack Ecosystem Multi-Surface Alerting, Incident Runbooks, and Escalation Policies.
+  in-process workload scaling simulation engine, Studio preview capacity endpoints and UI panel, and CLI capacity subcommand;
+  and R-456 introduces multi-surface alerting contracts, alert rules, incident remediation runbooks, multi-tier escalation policies,
+  in-process metric evaluation and incident simulation engine, Studio preview alerting endpoints and UI panel, and CLI alerting subcommand.
+- NEXT R-457: Solution Pack Ecosystem Multi-Surface SLA, SLO, and Error Budget Contracts.
   Keep `task verify` model/Docker/DB/install/network-free (any live/model path stays opt-in); preserve
   single-session ownership and explicit trusted-local mode.
 - The UI-component series remains paused at R-415 and can be resumed later under a future free ID.
@@ -424,7 +426,7 @@ WHAT TO DO NEXT
   deploy (OMNISTACKAI_TIER=2 + E2B/Vercel keys) and cloud-model live-verify. Governance-deferred: native
   mobile (R-010 etc.) until web/backend stability.
 
-Begin by reading the files above and running the start protocol, then continue the spine at R-456
+Begin by reading the files above and running the start protocol, then continue the spine at R-457
 and write its Standard AI Task Contract before writing code.
 ```
 

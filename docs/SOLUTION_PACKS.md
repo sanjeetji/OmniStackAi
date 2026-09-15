@@ -417,8 +417,27 @@ The twenty-sixth brick of the differentiating spine formalizes multi-surface res
   # Simulate capacity scaling and cost across workload tiers (base, peak, stress)
   task agent-engine:solution-pack:ecosystem -- capacity minimal-blog-ecosystem --simulate --tier peak
   ```
+## Multi-surface alerting, incident runbooks, and escalation policies (R-456)
+
+The twenty-seventh brick of the differentiating spine formalizes multi-surface alert rules, incident remediation runbooks, and multi-tier escalation policies:
+
+- Canonical data models: `AlertRule` (rule_id, surface_slug, metric_name, condition, threshold, duration_seconds, severity, description, runbook_id, tags), `RunbookStep` (step_id, order, action, target, description, is_automated, remediation_command), `IncidentRunbook` (runbook_id, title, severity, summary, steps, escalation_policy_id, tags), `EscalationTier` (tier, target_channel, wait_minutes, auto_action), `EscalationPolicy` (policy_id, name, description, tiers), and `EcosystemAlertingContract` (ecosystem_id, version, alert_rules, runbooks, escalation_policies) with full `to_dict`/`from_dict`/`to_json`/`from_json` roundtrips and deterministic SHA-256 `digest()`.
+- Deterministic contract synthesis: `synthesize_ecosystem_alerting(ecosystem_id, surfaces, version)` derives surface-specific alert rules (HTTP 5xx error spikes, p99 latency degradation, DB connection saturation, worker queue depth, Web LCP degradation), linked incident runbooks with remediation steps, and tiered escalation policies deterministically and offline with zero I/O.
+- In-process evaluation & simulation engine: Thread-safe `EcosystemAlertingEngine` evaluates metric values against rules (`evaluate_metric`), dry-runs runbook steps (`dry_run_runbook`), and executes end-to-end incident simulations (`simulate_incident`) across scenarios (`api_error_spike`, `high_latency_degradation`, `db_connection_exhaustion`, `finops_budget_breach`, `healthy_baseline`), resolving alert triggers, runbook actions, and escalation responder tiers.
+- Package bundling & registry access: `EcosystemPackPackage` bundles `alerting_contract` with whole-package SHA-256 integrity verification; `EcosystemPackRegistry` and `EcosystemPack` expose `get_alerting_contract`.
+- Studio preview & server: `StudioPreviewManager` tracks alerting contracts and simulation engines, injecting `has_alerting`, `alert_rule_count`, `runbook_count`, `escalation_policy_count`, and `alert_status` into preview payloads, and exposing `get_ecosystem_alerting()` and `simulate_ecosystem_alerting()`. Studio HTTP server exposes `GET /api/ecosystem/alerting` and `POST /api/ecosystem/alerting/simulate`.
+- Studio web UI: Renders rose/crimson-themed `#preview-alerting-info` container with alert rules, runbooks, escalation policies, and 1-click "Simulate Incident" and "Refresh" buttons, strictly maintaining 0 external network requests.
+- CLI alerting inspection:
+  ```bash
+  # Inspect ecosystem pack alerting contract
+  task agent-engine:solution-pack:ecosystem -- alerting minimal-blog-ecosystem
+  task agent-engine:solution-pack:ecosystem -- alerting minimal-blog-ecosystem --json
+
+  # Simulate incident scenario dry-run (api_error_spike, high_latency_degradation, etc.)
+  task agent-engine:solution-pack:ecosystem -- alerting minimal-blog-ecosystem --simulate --scenario api_error_spike
+  ```
 - 100% offline verification in `task verify` (0 model calls).
 
 ## Next boundary
 
-R-456: Solution Pack Ecosystem Multi-Surface Alerting, Incident Runbooks, and Escalation Policies.
+R-457: Solution Pack Ecosystem Multi-Surface SLA, SLO, and Error Budget Contracts.

@@ -157,6 +157,23 @@ def build_parser() -> argparse.ArgumentParser:
         help="Workload tier for simulation (base, peak, or stress; default: base).",
     )
 
+    # Subcommand: alerting
+    alerting_parser = subparsers.add_parser(
+        "alerting",
+        help="Inspect or dry-run simulate alert rules, incident runbooks, and escalation policies for an ecosystem pack.",
+    )
+    alerting_parser.add_argument(
+        "package_file",
+        help="Path to the .ecosystem.pack.json file or registered ecosystem ID to inspect.",
+    )
+    alerting_parser.add_argument("--json", action="store_true", help="Output alerting contract as canonical JSON.")
+    alerting_parser.add_argument("--simulate", action="store_true", help="Run in-process dry-run simulation of incident scenario.")
+    alerting_parser.add_argument(
+        "--scenario",
+        default="api_error_spike",
+        help="Incident scenario for simulation (api_error_spike, latency_spike, db_connection_exhaustion, budget_overrun; default: api_error_spike).",
+    )
+
     return parser
 
 
@@ -779,6 +796,61 @@ def run_capacity(args: argparse.Namespace) -> int:
     return 0
 
 
+def run_alerting(args: argparse.Namespace) -> int:
+    import json
+    from .ecosystem_alerting import EcosystemAlertingEngine, synthesize_ecosystem_alerting
+
+    pkg, err = _load_package(args.package_file)
+    if pkg is None:
+        sys.stderr.write(f"Error: {err}\n")
+        return 1
+
+    alerting = pkg.alerting_contract
+    if alerting is None:
+        alerting = synthesize_ecosystem_alerting(
+            pkg.ecosystem_id,
+            pkg.surfaces,
+            version=pkg.version,
+        )
+
+    if args.json:
+        sys.stdout.write(json.dumps(alerting.to_dict(), indent=2, sort_keys=True))
+        sys.stdout.write("\n")
+        return 0
+
+    if args.simulate:
+        engine = EcosystemAlertingEngine(alerting)
+        scenario = getattr(args, "scenario", "api_error_spike") or "api_error_spike"
+        rep = engine.simulate_incident(scenario=scenario)
+        status = rep.status.upper()
+        sys.stdout.write(f"Incident Simulation ({scenario}): {status}\n")
+        sys.stdout.write(f"OVERALL STATUS: {status}\n")
+        sys.stdout.write(f"  Trigger:          {rep.alert_trigger.rule_id} ({rep.alert_trigger.severity})\n")
+        sys.stdout.write(f"  Metric:           {rep.alert_trigger.metric_name} = {rep.alert_trigger.metric_value} ({rep.alert_trigger.condition} {rep.alert_trigger.threshold})\n")
+        if rep.runbook_report:
+            sys.stdout.write(f"  Runbook:          {rep.runbook_report.title} ({rep.runbook_report.status})\n")
+            sys.stdout.write(f"    - Steps:        {rep.runbook_report.total_steps} ({rep.runbook_report.automated_steps} auto, {rep.runbook_report.manual_steps} manual)\n")
+            for step in rep.runbook_report.step_executions:
+                sys.stdout.write(f"      * [{step.order}] {step.action} -> {step.status} ({step.output})\n")
+        sys.stdout.write(f"  Escalation:       Tier {rep.escalation_tier_reached} ({', '.join(rep.active_responder_channels)})\n")
+        sys.stdout.write(f"  Summary:          {rep.summary}\n")
+        return 0
+
+    sys.stdout.write(f"Alerting Contract: {pkg.display_name} ({pkg.ecosystem_id})\n")
+    sys.stdout.write(f"  Version:          {alerting.version}\n")
+    sys.stdout.write(f"  Digest:           {alerting.digest()[:16]}...\n")
+    sys.stdout.write(f"  Alert Rules ({len(alerting.alert_rules)}):\n")
+    for r in alerting.alert_rules:
+        sys.stdout.write(f"    - [{r.surface_slug}] {r.rule_id} ({r.severity}): {r.metric_name} {r.condition} {r.threshold} -> runbook: {r.runbook_id}\n")
+    sys.stdout.write(f"  Incident Runbooks ({len(alerting.runbooks)}):\n")
+    for rb in alerting.runbooks:
+        sys.stdout.write(f"    - [{rb.runbook_id}] {rb.title} ({len(rb.steps)} steps, policy: {rb.escalation_policy_id})\n")
+    sys.stdout.write(f"  Escalation Policies ({len(alerting.escalation_policies)}):\n")
+    for ep in alerting.escalation_policies:
+        sys.stdout.write(f"    - [{ep.policy_id}] {ep.name} ({len(ep.tiers)} tiers)\n")
+    return 0
+
+
 def main(argv: Sequence[str] | None = None) -> int:
     parser = build_parser()
     args = parser.parse_args(argv)
@@ -813,6 +885,8 @@ def main(argv: Sequence[str] | None = None) -> int:
         return run_recovery(args)
     if args.subcommand == "capacity":
         return run_capacity(args)
+    if args.subcommand == "alerting":
+        return run_alerting(args)
     sys.stderr.write(f"Unknown subcommand: {args.subcommand}\n")
     return 1
 

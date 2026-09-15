@@ -1,5 +1,30 @@
 # Work Log
 
+## 2026-09-15 — R-456 (Solution Pack Ecosystem Multi-Surface Alerting, Incident Runbooks, and Escalation Policies)
+
+- Recorded `.ai/CURRENT_TASK.yaml` before implementation.
+  Final focused suite: 23 passing tests in `test_ecosystem_alerting.py`. Total test suite: 3,265 tests passing offline (+23 net-new tests).
+- Implemented `solution_packs/ecosystem_alerting.py`:
+  - Defined frozen `AlertRule`: rule_id, surface_slug, metric_name, condition (>, >=, <, <=, ==), threshold, duration_seconds, severity (info, warning, critical, fatal), description, runbook_id, tags tuple.
+  - Defined frozen `RunbookStep`: step_id, order, action (inspect_telemetry, scale_replicas, drain_traffic, restart_service, notify_stakeholders), target, description, is_automated, remediation_command.
+  - Defined frozen `IncidentRunbook`: runbook_id, title, severity, summary, steps tuple, escalation_policy_id, tags tuple.
+  - Defined frozen `EscalationTier`: tier, target_channel (slack, pagerduty, executive), wait_minutes, auto_action.
+  - Defined frozen `EscalationPolicy`: policy_id, name, description, tiers tuple.
+  - Defined frozen `EcosystemAlertingContract`: ecosystem_id, version, alert_rules, runbooks, escalation_policies; `to_dict`/`from_dict`/`to_json`/`from_json` roundtrips; deterministic SHA-256 `digest()`.
+  - Implemented `synthesize_ecosystem_alerting(ecosystem_id, surfaces, version)`: derives surface-specific alert rules (HTTP 5xx error spikes, p99 request latency degradation, DB connection saturation, worker queue depth, Web LCP degradation), linked incident runbooks with remediation steps, and tiered escalation policies. Fully offline, deterministic, zero I/O.
+  - Implemented `EcosystemAlertingEngine`: thread-safe (threading.Lock); `evaluate_metric()` comparing metric values against rules, `dry_run_runbook()` validating automated commands and manual intervention flags, and `simulate_incident()` evaluating alert firing, running runbook dry-run, and sequencing escalation responders across tiers (scenarios: api_error_spike, high_latency_degradation, db_connection_exhaustion, finops_budget_breach, healthy_baseline).
+- Updated Ecosystem Pack Package & Registry:
+  - `ecosystem_pack.py`: Added `alerting_contract: EcosystemAlertingContract | None` field; updated `to_dict`, `parse_ecosystem_pack_package`, and `synthesize_ecosystem_pack` to include alerting_contract in payload and whole-package SHA-256 checksum.
+  - `ecosystem_registry.py`: Added `alerting_contract` property to `EcosystemPack`; `has_alerting_contract` in `to_dict`; `get_alerting_contract(ecosystem_id, version)` on `EcosystemPackRegistry` and `_LazyEcosystemPackRegistry` delegate.
+- Updated Studio Preview & Server:
+  - `studio/preview.py`: Imports alerting types; adds `_alerting_contract`/`_alerting_engine` fields; `replace_ecosystem()` accepts optional `alerting_contract` param, falls back to registry cache then synthesize; all three payload branches inject `has_alerting`, `alert_rule_count`, `runbook_count`, `escalation_policy_count`, and `alert_status`; cleanup in `_stop_locked()`; new `get_ecosystem_alerting()` and `simulate_ecosystem_alerting()` methods.
+  - `studio/server.py`: `_make_handler` and `create_studio_server` accept `get_ecosystem_alerting_fn` and `simulate_ecosystem_alerting_fn`; `GET /api/ecosystem/alerting`; `POST /api/ecosystem/alerting/simulate`.
+  - `studio/live_serve.py`: Wires `get_ecosystem_alerting_fn` and `simulate_ecosystem_alerting_fn` in `control_kwargs`.
+  - `studio/page.py`: Rose/crimson-themed `.preview-alerting-info` CSS panel; `#preview-alerting-info` HTML with alert rule count, runbook count, escalation policy count badges, and "Simulate Incident" / "Refresh" buttons; JS update logic in preview status handler; button handlers for Simulate (calls POST, renders summary and responder channels) and Refresh (calls GET, updates badges).
+- Added `alerting` subcommand to `ecosystem_cli.py`: accepts file path or registered ecosystem ID; `--json` outputs canonical JSON; `--simulate` with `--scenario` runs incident dry-run simulation and prints structured trigger, runbook, and escalation details; default text mode shows rules, runbooks, and escalation policies.
+- Exported all alerting symbols in `solution_packs/__init__.py`.
+- All gates pass: `task verify` (3,265 tests), `task lint`, `task security:quick`, `task env:check`, `task builder:demo -- minimal-blog`, `task builder:demo -- rideshare-favourites`. Zero model calls.
+
 ## 2026-09-15 — R-455 (Solution Pack Ecosystem Multi-Surface Capacity Planning, Resource Quotas, and Unit Economics Budgeting)
 
 - Recorded `.ai/CURRENT_TASK.yaml` before implementation.

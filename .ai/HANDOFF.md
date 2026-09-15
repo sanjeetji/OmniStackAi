@@ -1,17 +1,17 @@
 # Current Handoff
 
-Task ID: R-455
+Task ID: R-456
 Status: done
 Phase: BASIC/MVP — Founder Stage 0
 Branch: `main` (the only branch; the GitHub default)
 
 > **Task Compilation Audit completed on 2026-09-15.** All task documentation is 100% synchronized.
-> - Execution tracker covers **455 tasks** (244 Done, 1 Deferred, 210 Not Started; MVP 69.7%).
-> - 97 completed tasks (R-359..R-455) formally tracked in `Phase_Roadmap` in the workbook.
-> - `CHANGELOG.md` has 245 entries covering all completed tasks (0 missing).
+> - Execution tracker covers **456 tasks** (245 Done, 1 Deferred, 210 Not Started; MVP 69.8%).
+> - 98 completed tasks (R-359..R-456) formally tracked in `Phase_Roadmap` in the workbook.
+> - `CHANGELOG.md` has 246 entries covering all completed tasks (0 missing).
 > - All docs updated: `PROGRESS.md`, `RESUME_PROMPT.md`, `PROJECT_STATE.md`, `PROJECT_STATE.yaml`, `WORK_LOG.md`.
 
-> **The differentiating SPINE now supports Solution Pack Ecosystem Multi-Surface Capacity Planning, Resource Quotas, and Unit Economics Budgeting.**
+> **The differentiating SPINE now supports Solution Pack Ecosystem Multi-Surface Alerting, Incident Runbooks, and Escalation Policies.**
 > R-430 proposes the ecosystem, R-431 materializes it, R-432 refines unknown domains, R-433 scopes surfaces, R-434 registers
 > packs, R-435 recommends one, R-436 records bounded intent, R-437 applies safe configuration deterministically,
 > R-438 converts pending manifest AI-delta intents into strictly typed, bounded AIDeltaProposal objects via an
@@ -41,15 +41,29 @@ Branch: `main` (the only branch; the GitHub default)
 > R-453 provides canonical HealthCheckProbe, SmokeTestStep, SmokeTestSpec, CanaryVerificationRule,
 > EcosystemVerificationContract, deterministic Python 3.13 stdlib-only verification contract synthesis,
 > R-454 provides canonical BackupTarget, SnapshotManifest, RecoveryStep, RollbackTrigger, EcosystemDisasterRecoveryContract,
-> and **R-455 provides canonical ResourceQuota, SurfaceCapacitySpec, UnitEconomicsCostModel,
-> EcosystemCapacityContract, deterministic Python 3.13 stdlib-only capacity planning contract synthesis
-> (synthesize_ecosystem_capacity) for all ecosystem surfaces, thread-safe in-process EcosystemCapacityEngine
-> for workload tier scaling (base, peak, stress), capacity limits, and monthly unit economics / cloud cost projections,
-> whole-package SHA-256 integrity, Studio preview capacity status injection, endpoints GET /api/ecosystem/capacity
-> and POST /api/ecosystem/capacity/simulate, Studio UI cyan-themed #preview-capacity-info panel, and CLI capacity subcommand**.
-> UI-component series PAUSED at R-415. **NEXT:** R-456 Solution Pack Ecosystem Multi-Surface Alerting, Incident Runbooks, and Escalation Policies.
+> R-455 provides canonical ResourceQuota, SurfaceCapacitySpec, UnitEconomicsCostModel, EcosystemCapacityContract,
+> and **R-456 provides canonical AlertRule, RunbookStep, IncidentRunbook, EscalationTier, EscalationPolicy,
+> EcosystemAlertingContract, deterministic Python 3.13 stdlib-only contract synthesis (synthesize_ecosystem_alerting)
+> for all ecosystem surfaces, in-process thread-safe EcosystemAlertingEngine for alert trigger evaluation,
+> incident runbook simulation, and escalation sequencing, whole-package SHA-256 integrity, Studio preview alerting status injection,
+> endpoints GET /api/ecosystem/alerting and POST /api/ecosystem/alerting/simulate, Studio UI rose/crimson-themed #preview-alerting-info panel, and CLI alerting subcommand**.
+> UI-component series PAUSED at R-415. **NEXT:** R-457 Solution Pack Ecosystem Multi-Surface SLA, SLO, and Error Budget Contracts.
 
 ## Repo/workflow state
+
+- **R-456 (Solution Pack Ecosystem Multi-Surface Alerting, Incident Runbooks, and Escalation Policies — twenty-seventh spine brick)** shipped:
+  `solution_packs/ecosystem_alerting.py` implements `AlertRule`, `RunbookStep`, `IncidentRunbook`, `EscalationTier`, `EscalationPolicy`, `EcosystemAlertingContract`;
+  implements deterministic Python 3.13 stdlib-only contract synthesis (`synthesize_ecosystem_alerting`) for all ecosystem surfaces;
+  implements thread-safe in-process `EcosystemAlertingEngine` evaluating metrics against rules, dry-running runbooks, and executing incident simulations across operational scenarios;
+  `solution_packs/ecosystem_pack.py` bundles and validates alerting contracts with whole-package SHA-256 checksums;
+  `solution_packs/ecosystem_registry.py` exposes `alerting_contract` and `get_alerting_contract()`; exports all alerting symbols in `solution_packs/__init__.py`;
+  `studio/preview.py` attaches `has_alerting`, `alert_rule_count`, `runbook_count`, `escalation_policy_count`, and `alert_status` to preview status/payloads, and
+  exposes `get_ecosystem_alerting()` and `simulate_ecosystem_alerting()`;
+  `studio/server.py` and `studio/live_serve.py` expose `GET /api/ecosystem/alerting` and `POST /api/ecosystem/alerting/simulate`;
+  `studio/page.py` renders rose/crimson-themed `#preview-alerting-info` container with alert rules, runbooks, escalation policies, and 1-click "Simulate Incident" / "Refresh" buttons (0 external network requests);
+  `solution_packs/ecosystem_cli.py` adds `alerting` subcommand supporting both file paths and registered ecosystem IDs with formatted text summary, `--json`, `--simulate`, and `--scenario` options;
+  `tests/test_ecosystem_alerting.py` adds 23 new focused unit tests. `task verify` **3,265 passed** offline (+23);
+  lint/security/env + demos (152/149) green; 0 model calls in test execution.
 
 - **R-455 (Solution Pack Ecosystem Multi-Surface Capacity Planning, Resource Quotas, and Unit Economics Budgeting — twenty-sixth spine brick)** shipped:
   `solution_packs/ecosystem_capacity.py` implements `ResourceQuota`, `SurfaceCapacitySpec`, `UnitEconomicsCostModel`, `EcosystemCapacityContract`;

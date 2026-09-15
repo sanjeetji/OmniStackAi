@@ -757,6 +757,59 @@ STUDIO_HTML = """<!doctype html>
     transition: background 0.15s;
   }
   .capacity-action-btn:hover { background: rgba(14, 165, 233, 0.25); }
+  .preview-alerting-info {
+    margin-top: 10px;
+    padding: 10px 12px;
+    background: rgba(15, 23, 42, 0.6);
+    border: 1px solid rgba(244, 63, 94, 0.3);
+    border-radius: 8px;
+    font-size: 11px;
+    color: #cbd5e1;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+  .alerting-header-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    flex-wrap: wrap;
+  }
+  .alerting-meta-group {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+  }
+  .alerting-badge {
+    background: rgba(244, 63, 94, 0.2);
+    color: #fb7185;
+    padding: 2px 8px;
+    border-radius: 999px;
+    font-size: 10px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
+  .alerting-count-badge {
+    background: #1e293b;
+    padding: 2px 6px;
+    border-radius: 4px;
+    font-size: 10px;
+    color: #94a3b8;
+  }
+  .alerting-action-btn {
+    background: rgba(244, 63, 94, 0.15);
+    border: 1px solid rgba(244, 63, 94, 0.35);
+    border-radius: 4px;
+    color: #fda4af;
+    font-size: 10px;
+    padding: 3px 8px;
+    cursor: pointer;
+    transition: background 0.15s;
+  }
+  .alerting-action-btn:hover { background: rgba(244, 63, 94, 0.25); }
   .events-header-row {
     display: flex;
     align-items: center;
@@ -1120,6 +1173,20 @@ STUDIO_HTML = """<!doctype html>
           <div class="capacity-meta-group">
             <button type="button" id="capacity-simulate-btn" class="capacity-action-btn">Simulate Capacity</button>
             <button type="button" id="capacity-refresh-btn" class="capacity-action-btn">Refresh</button>
+          </div>
+        </div>
+      </div>
+      <div id="preview-alerting-info" class="preview-alerting-info" hidden>
+        <div class="alerting-header-row">
+          <div class="alerting-meta-group">
+            <span class="alerting-badge">Alerting &amp; Runbooks</span>
+            <span id="alerting-rule-count" class="alerting-count-badge">0 alert rules</span>
+            <span id="alerting-runbook-count" class="alerting-count-badge">0 runbooks</span>
+            <span id="alerting-policy-count" class="alerting-count-badge">0 escalation policies</span>
+          </div>
+          <div class="alerting-meta-group">
+            <button type="button" id="alerting-simulate-btn" class="alerting-action-btn">Simulate Alert</button>
+            <button type="button" id="alerting-refresh-btn" class="alerting-action-btn">Refresh</button>
           </div>
         </div>
       </div>
@@ -1650,6 +1717,27 @@ STUDIO_HTML = """<!doctype html>
       }
     }
 
+    var alertingInfo = document.getElementById('preview-alerting-info');
+    if (alertingInfo) {
+      if (preview && preview.is_ecosystem && preview.has_alerting) {
+        alertingInfo.hidden = false;
+        var alertRuleCount = document.getElementById('alerting-rule-count');
+        if (alertRuleCount) {
+          alertRuleCount.textContent = (preview.alert_rule_count || 0) + ' alert rule' + ((preview.alert_rule_count || 0) !== 1 ? 's' : '');
+        }
+        var alertRbCount = document.getElementById('alerting-runbook-count');
+        if (alertRbCount) {
+          alertRbCount.textContent = (preview.runbook_count || 0) + ' runbook' + ((preview.runbook_count || 0) !== 1 ? 's' : '');
+        }
+        var alertEpCount = document.getElementById('alerting-policy-count');
+        if (alertEpCount) {
+          alertEpCount.textContent = (preview.escalation_policy_count || 0) + ' escalation polic' + ((preview.escalation_policy_count || 0) !== 1 ? 'ies' : 'y');
+        }
+      } else {
+        alertingInfo.hidden = true;
+      }
+    }
+
     if (url) {
       previewStatus.textContent = preview.message || 'The generated application is running locally.';
       if (currentPreviewUrl !== url) {
@@ -2156,6 +2244,50 @@ STUDIO_HTML = """<!doctype html>
         })
         .catch(function () {
           flashButton(capacityRefreshBtn, 'Error');
+        });
+    });
+  }
+
+  var alertingSimulateBtn = document.getElementById('alerting-simulate-btn');
+  if (alertingSimulateBtn) {
+    alertingSimulateBtn.addEventListener('click', function () {
+      flashButton(alertingSimulateBtn, 'Simulating...');
+      fetch('/api/ecosystem/alerting/simulate', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({scenario: 'api_error_spike'}) })
+        .then(function (r) { return r.json(); })
+        .then(function (data) {
+          var rep = data.report || data;
+          var status = (rep.status || 'pass').toUpperCase();
+          flashButton(alertingSimulateBtn, status);
+        })
+        .catch(function () {
+          flashButton(alertingSimulateBtn, 'Error');
+        });
+    });
+  }
+
+  var alertingRefreshBtn = document.getElementById('alerting-refresh-btn');
+  if (alertingRefreshBtn) {
+    alertingRefreshBtn.addEventListener('click', function () {
+      flashButton(alertingRefreshBtn, 'Loading...');
+      fetch('/api/ecosystem/alerting')
+        .then(function (r) { return r.json(); })
+        .then(function (data) {
+          var rCount = document.getElementById('alerting-rule-count');
+          if (rCount && data.alert_rule_count != null) {
+            rCount.textContent = data.alert_rule_count + ' alert rule' + (data.alert_rule_count !== 1 ? 's' : '');
+          }
+          var rbCount = document.getElementById('alerting-runbook-count');
+          if (rbCount && data.runbook_count != null) {
+            rbCount.textContent = data.runbook_count + ' runbook' + (data.runbook_count !== 1 ? 's' : '');
+          }
+          var epCount = document.getElementById('alerting-policy-count');
+          if (epCount && data.escalation_policy_count != null) {
+            epCount.textContent = data.escalation_policy_count + ' escalation polic' + (data.escalation_policy_count !== 1 ? 'ies' : 'y');
+          }
+          flashButton(alertingRefreshBtn, 'Refreshed!');
+        })
+        .catch(function () {
+          flashButton(alertingRefreshBtn, 'Error');
         });
     });
   }
