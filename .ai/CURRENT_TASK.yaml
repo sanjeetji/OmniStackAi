@@ -1,27 +1,27 @@
-task_id: R-460
+task_id: R-461
 status: completed
 phase: MVP
 tracker_row: 9
-started_at: "2026-09-15"
-completed_at: "2026-09-15"
+started_at: "2026-09-16"
+completed_at: "2026-09-16"
 objective: >-
-  Implement Next.js Codegen End-to-End Route Handler Synthesis and Interactive CRUD Form Submission (R-460),
-  replacing scaffolded 501 Not Implemented stubs in generated Next.js web apps (apps/web/app/<api_path>/route.ts)
-  with functional proxy route handlers that forward requests directly to the FastAPI backend, preserving methods,
-  headers, auth tokens, query params, and JSON payloads with structured 503 fallback handling; scoping X-Frame-Options
-  to production in next.config.mjs to enable Studio iframe preview.
+  Implement Full-Stack Production Authentication Engine (R-461),
+  rendering a PostgreSQL users table and admin seed row, FastAPI auth router
+  (/auth/register, /auth/login, /auth/me, /auth/logout) using PBKDF2-HMAC-SHA256
+  with zero external dependencies, Next.js AuthProvider context and hook (useAuth),
+  responsive login and registration pages, navbar auth state injection, and auto-attached
+  Bearer token client handling with localStorage fallback.
 allowed_paths:
+  - services/agent-engine/src/omnistackai_agent_engine/codegen/schema_sql.py
+  - services/agent-engine/src/omnistackai_agent_engine/codegen/auth_guard.py
+  - services/agent-engine/src/omnistackai_agent_engine/codegen/backend_python.py
   - services/agent-engine/src/omnistackai_agent_engine/codegen/nextjs.py
-  - services/agent-engine/tests/test_nextjs_routes_crud.py
-  - services/agent-engine/tests/test_nextjs_adapter.py
-  - scratch/apps/create-a-worker-attendance-management-sy/apps/web/next.config.mjs
-  - scratch/apps/create-a-worker-attendance-management-sy/apps/web/app/attendance/route.ts
-  - scratch/apps/create-a-worker-attendance-management-sy/apps/web/app/attendance/[employeeId]/route.ts
-  - scratch/apps/create-a-worker-attendance-management-sy/apps/web/app/employees/route.ts
+  - services/agent-engine/tests/test_full_stack_auth.py
+  - services/agent-engine/tests/test_auth_guard_dev_mode.py
   - R_&_D/OmniStackAI_Execution_Tracker_v6.xlsx
   - docs/PROGRESS.md
   - docs/RESUME_PROMPT.md
-  - .ai/tasks/R-460.md
+  - .ai/tasks/R-461.md
   - .ai/CURRENT_TASK.yaml
   - .ai/PROJECT_STATE.yaml
   - .ai/WORK_LOG.md
@@ -29,25 +29,25 @@ allowed_paths:
   - PROJECT_STATE.md
   - CHANGELOG.md
 forbidden_changes:
-  - Do not modify or track the unrelated untracked .claude directory
-  - Do not break existing single-app or ecosystem Studio preview, server, or history behavior
-  - Do not add external Python dependencies (Python 3.13 stdlib only)
-  - Do not add external network requests, fonts, or scripts to Studio HTML
+  - Do not add external Python dependencies (Python 3.13 stdlib only for hashing)
+  - Do not modify any existing test that already passes
   - Do not change the control-plane database from PostgreSQL
+  - Do not add external network requests to Studio HTML or generated frontend
+  - Do not break existing auth guard tests
 required_gates:
-  - test-first focused test_nextjs_routes_crud.py
+  - test-first focused test_full_stack_auth.py
   - task verify
   - task lint
   - task security:quick
   - task env:check
 evidence:
   tests:
-    - name: test_nextjs_routes_crud.py
-      count: 3
+    - name: test_full_stack_auth.py
+      count: 42
       status: passed
-    - name: test_nextjs_adapter.py
-      count: 8
+    - name: test_field_validation.py
+      count: 10
       status: passed
     - name: task verify
-      count: 3340
+      count: 3386
       status: passed

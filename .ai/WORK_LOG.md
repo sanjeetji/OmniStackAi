@@ -1,5 +1,16 @@
 # Work Log
 
+## 2026-09-16 — R-461 (Full-Stack Production Authentication Engine)
+
+- Recorded `.ai/CURRENT_TASK.yaml` and `.ai/tasks/R-461.md` before implementation.
+- Implemented complete production-ready authentication across the full generated stack:
+  - Database schema (`schema_sql.py`): Emits PostgreSQL `users` table with UUID primary key, `VARCHAR UNIQUE NOT NULL` email, `VARCHAR NOT NULL` password_hash, optional full_name, `VARCHAR NOT NULL DEFAULT 'user'` role, and `TIMESTAMPTZ` created_at, plus a development admin seed row (`admin@example.local` / `changeme`) with PBKDF2 hash.
+  - FastAPI Auth Router (`auth_guard.py`): Exported `python_auth_router_file(ir)` with `/register`, `/login`, `/me`, `/logout` endpoints, using `hashlib.pbkdf2_hmac` (SHA-256, 100k iterations) with zero external dependencies, JWT signing/verification, and wired into `main.py` via `backend_python.py`.
+  - Next.js Web (`nextjs.py`): Synthesizes `components/auth-provider.tsx` with `useAuth()` hook exposing `user`, `token`, `login()`, `register()`, and `logout()`; responsive `app/login/page.tsx` and `app/register/page.tsx` with error alerts, client validation, and redirection; navbar user state toggle showing user greeting / logout button when logged in and Sign In link when logged out.
+  - API Client (`lib/api.ts`): Automatically attaches the Bearer token from localStorage (`auth_token`) with explicit override support.
+- Added comprehensive unit tests in `services/agent-engine/tests/test_full_stack_auth.py` (42 tests).
+- Verified with `task test`, `task lint`, `task security:quick`, `task env:check`, and full offline `task verify`: 3,386 tests passing offline (+46 net-new tests); zero external deps, zero network calls, clean gates.
+
 ## 2026-09-15 — R-460 (Next.js Codegen End-to-End Route Handler Synthesis & Interactive CRUD Form Submission)
 
 - Recorded `.ai/CURRENT_TASK.yaml` and `.ai/tasks/R-460.md` before implementation.

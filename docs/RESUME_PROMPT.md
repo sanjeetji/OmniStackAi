@@ -424,8 +424,12 @@ WHAT TO DO NEXT
   OpenAPI route aggregation with collision detection, documentation export simulation, Studio preview docs endpoints and sky-blue UI panel, and CLI docs subcommand;
   and R-460 introduces Next.js Codegen End-to-End Route Handler Synthesis & Interactive CRUD Form Submission,
   replacing 501 `not_implemented` route stubs with real backend proxy handlers, scoping `X-Frame-Options: DENY`
-  to production in `next.config.mjs` to unblock Studio iframe previews, and connecting forms and routes for real data persistence.
-- NEXT R-461: Solution Pack Ecosystem Multi-Surface Unified Developer CLI and Operational Control Plane Contracts.
+  to production in `next.config.mjs` to unblock Studio iframe previews, and connecting forms and routes for real data persistence;
+  and R-461 introduces Full-Stack Production Authentication Engine,
+  rendering a PostgreSQL `users` table and admin seed row, FastAPI auth router (`/auth/register`, `/auth/login`, `/auth/me`, `/auth/logout`)
+  using `hashlib.pbkdf2_hmac` with zero external dependencies, Next.js `AuthProvider` context and `useAuth()` hook,
+  responsive login and registration pages, navbar auth status controls, and `lib/api.ts` Bearer token auto-attachment with localStorage fallback.
+- NEXT R-462: Solution Pack Ecosystem Multi-Surface Unified Developer CLI and Operational Control Plane Contracts.
   Keep `task verify` model/Docker/DB/install/network-free (any live/model path stays opt-in); preserve
   single-session ownership and explicit trusted-local mode.
 - PROVEN THIS SESSION: a generated app runs live locally on the Mac (Next.js :3000 + FastAPI :8000 +
@@ -435,7 +439,7 @@ WHAT TO DO NEXT
   deploy (OMNISTACKAI_TIER=2 + E2B/Vercel keys) and cloud-model live-verify. Governance-deferred: native
   mobile (R-010 etc.) until web/backend stability.
 
-Begin by reading the files above and running the start protocol, then continue the spine at R-460
+Begin by reading the files above and running the start protocol, then continue the spine at R-462
 and write its Standard AI Task Contract before writing code.
 ```
 

@@ -1,15 +1,19 @@
 # Current Handoff
 
-Task ID: R-460
+Task ID: R-461
 Status: done
 Phase: BASIC/MVP — Founder Stage 0
-Branch: `main` (the only branch; the GitHub default)
+Branch: `ai/R-461-full-stack-auth-engine`
 
-> **R-460 Completed (2026-09-15): Next.js Codegen End-to-End Route Handler Synthesis & Interactive CRUD Form Submission.**
-> - Replaced 501 `not_implemented` stubs in `services/agent-engine/src/omnistackai_agent_engine/codegen/nextjs.py` with real backend proxy route handlers.
-> - Forwards HTTP methods, headers, query parameters, and bodies to FastAPI backend (`BACKEND_INTERNAL_URL` / `NEXT_PUBLIC_API_URL` / `127.0.0.1:8000`), with structured 503 fallback when backend is offline.
-> - Fixed Web Studio iframe preview blocker by scoping `X-Frame-Options: DENY` to production only in `next.config.mjs`.
-> - All 3,340 tests pass offline in `task verify`. Total completed tasks in tracker: **249 Done / 460 Total**.
+> **R-461 Completed (2026-09-16): Full-Stack Production Authentication Engine.**
+> - Implemented complete production-ready authentication across the full generated stack:
+>   - PostgreSQL `users` table with UUID primary key, `VARCHAR UNIQUE NOT NULL` email, `VARCHAR NOT NULL` password_hash, optional full_name, `VARCHAR NOT NULL DEFAULT 'user'` role, and `TIMESTAMPTZ` created_at, plus development admin seed row (`admin@example.local` / `changeme`).
+>   - FastAPI auth router (`/auth/register`, `/auth/login`, `/auth/me`, `/auth/logout`) in `auth_guard.py` using `hashlib.pbkdf2_hmac` (SHA-256, 100k iterations) with zero external dependencies, JWT signing/verification, and wired into `main.py` via `backend_python.py`.
+>   - Next.js AuthProvider (`components/auth-provider.tsx`) exposing `useAuth()` hook with `user`, `token`, `login()`, `register()`, and `logout()`.
+>   - Responsive `app/login/page.tsx` and `app/register/page.tsx` pages with error states, validation, and auto-redirect.
+>   - Navbar user state toggle (signed in greeting & logout button vs. sign-in link).
+>   - API client (`lib/api.ts`) auto-attaching Bearer token with localStorage fallback.
+> - All 3,386 tests pass offline in `task verify`. Total completed tasks in tracker: **250 Done / 461 Total**.
 
 > **The differentiating SPINE now supports Solution Pack Ecosystem Multi-Surface Documentation, Architecture Runbooks, and OpenAPI Aggregator Contracts.**
 > R-430 proposes the ecosystem, R-431 materializes it, R-432 refines unknown domains, R-433 scopes surfaces, R-434 registers

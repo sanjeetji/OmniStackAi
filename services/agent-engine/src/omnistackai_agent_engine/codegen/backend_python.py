@@ -12,7 +12,7 @@ import re
 
 from ..application_ir import ApplicationIR, ApiEndpoint, DatabaseStrategy, Entity, FieldType
 from .adapter import GenerationTarget
-from .auth_guard import PYJWT_REQUIREMENT, needs_auth, python_auth_file
+from .auth_guard import PYJWT_REQUIREMENT, needs_auth, python_auth_file, python_auth_router_file
 from .data_access import PSYCOPG_REQUIREMENT, python_data_access_files
 from .errors import GenerationError
 from .field_validation import filter_fields, parse_field_rules
@@ -199,13 +199,16 @@ def _router_file(
     return "\n".join(lines) + "\n"
 
 
-def _main_file(ir: ApplicationIR, segments: list[str]) -> str:
+def _main_file(ir: ApplicationIR, segments: list[str], has_auth: bool = False) -> str:
     imports = "".join(f"from app.routers import {seg}\n" for seg in segments)
     includes = "".join(f"app.include_router({seg}.router)\n" for seg in segments)
+    auth_import = "from app.routers import auth\n" if has_auth else ""
+    auth_include = 'app.include_router(auth.router, prefix="/auth", tags=["auth"])\n' if has_auth else ""
     return (
         "import os\n"
         "from fastapi import FastAPI\n"
         "from fastapi.middleware.cors import CORSMiddleware\n\n"
+        + auth_import
         + imports
         + "\n"
         + f'app = FastAPI(title="{_escape(ir.name)}")\n\n'
@@ -221,6 +224,7 @@ def _main_file(ir: ApplicationIR, segments: list[str]) -> str:
         + '@app.get("/healthz")\n'
         + "async def healthz() -> dict:\n"
         + '    return {"status": "ok"}\n\n'
+        + auth_include
         + includes
     )
 
@@ -262,7 +266,7 @@ class PythonBackendAdapter:
             GeneratedFile("app/__init__.py", ""),
             GeneratedFile("app/config.py", _CONFIG % (_escape(ir.name),)),
             GeneratedFile("app/models.py", _models_file(ir)),
-            GeneratedFile("app/main.py", _main_file(ir, segments)),
+            GeneratedFile("app/main.py", _main_file(ir, segments, has_auth=has_auth)),
             GeneratedFile("app/routers/__init__.py", ""),
             GeneratedFile(".gitignore", "__pycache__/\n.venv/\n*.pyc\n.env\n"),
             GeneratedFile(".env.example", env_example),
@@ -270,6 +274,7 @@ class PythonBackendAdapter:
         ]
         if has_auth:
             files.append(GeneratedFile("app/auth.py", python_auth_file(ir)))
+            files.append(GeneratedFile("app/routers/auth.py", python_auth_router_file(ir)))
 
         repo_entities = frozenset(entity.name for entity in ir.entities) if has_db else frozenset()
         fk_by_entity = fk_relations(ir) if has_db else None

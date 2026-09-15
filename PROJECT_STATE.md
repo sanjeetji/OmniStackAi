@@ -1,35 +1,45 @@
 # Project State — OmniStackAI
-Last updated: 2026-09-15
+Last updated: 2026-09-16
 
 ## Current Phase
 Stage 0 (Founder Build Sequence, Brief Section 91) — BASIC/MVP
 
-> **The differentiating SPINE now supports End-to-End Route Handler Synthesis & Interactive CRUD Form Submission (R-460).**
-> `services/agent-engine/src/omnistackai_agent_engine/codegen/nextjs.py`: Replaced 501 `not_implemented` route stubs
-> with production-grade backend proxy handlers (`BACKEND_INTERNAL_URL` / `NEXT_PUBLIC_API_URL` / `127.0.0.1:8000`)
-> forwarding HTTP methods, query params, auth headers, and bodies with structured 503 fallback;
-> scoped `X-Frame-Options: DENY` to production only in generated `next.config.mjs` to enable local Studio iframe preview;
-> tested via `test_nextjs_routes_crud.py` and `test_nextjs_adapter.py` passing 100% offline (3,340 tests total).
+> **The differentiating SPINE now supports Full-Stack Production Authentication Engine (R-461).**
+> - Database schema (`schema_sql.py`): Emits PostgreSQL `users` table with UUID primary key, `VARCHAR UNIQUE NOT NULL` email, `VARCHAR NOT NULL` password_hash, optional full_name, `VARCHAR NOT NULL DEFAULT 'user'` role, and `TIMESTAMPTZ` created_at, plus development admin seed row (`admin@example.local` / `changeme`).
+> - FastAPI auth router (`auth_guard.py`): Exported `python_auth_router_file(ir)` with `/register`, `/login`, `/me`, `/logout` endpoints, using `hashlib.pbkdf2_hmac` (SHA-256, 100k iterations) with zero external dependencies, JWT signing/verification, and wired into `main.py` via `backend_python.py`.
+> - Next.js Web (`nextjs.py`): Synthesizes `components/auth-provider.tsx` with `useAuth()` hook exposing `user`, `token`, `login()`, `register()`, and `logout()`; responsive `app/login/page.tsx` and `app/register/page.tsx` with error alerts, client validation, and redirection; navbar user state toggle showing user greeting / logout button when logged in and Sign In link when logged out.
+> - API Client (`lib/api.ts`): Automatically attaches the Bearer token from localStorage (`auth_token`) with explicit override support.
+> - Tested via `test_full_stack_auth.py` (42/42) and full offline `task verify` (3,386 tests total).
 
-## Task Compilation Audit — 2026-09-15
+## Task Compilation Audit — 2026-09-16
 
-**Updated on 2026-09-15 to achieve 100% synchronization across all task-tracking documentation.**
+**Updated on 2026-09-16 to achieve 100% synchronization across all task-tracking documentation.**
 
 ### Current Metrics
 1. **Execution Tracker Workbook** (`R_&_D/OmniStackAI_Execution_Tracker_v6.xlsx`):
-   - Row inserted into `Phase_Roadmap` for task R-460. Covers **460 tasks total** with R-460.
-   - Status breakdown: **249 Done, 1 Deferred (R-252), 210 Not Started**.
-   - MVP completion: **249 / 355 = 70.1%**. Overall: **249 / 460 = 54.1%**.
+   - Row inserted into `Phase_Roadmap` for task R-461. Covers **461 tasks total** with R-461.
+   - Status breakdown: **250 Done, 1 Deferred (R-252), 210 Not Started**.
+   - MVP completion: **250 / 356 = 70.2%**. Overall: **250 / 461 = 54.2%**.
 2. **Changelog** (`CHANGELOG.md`):
-   - All 250 completed tasks now have changelog entries. 0 missing.
+   - All 251 completed tasks now have changelog entries. 0 missing.
 3. **Documentation Updates**:
-   - `docs/PROGRESS.md`: Updated headline counts to 3,340 tests, 249 Done, 460 total tasks.
-   - `docs/RESUME_PROMPT.md`: Updated task count and next action to R-461.
-   - `PROJECT_STATE.md` (this file): Added R-460 completion details.
+   - `docs/PROGRESS.md`: Updated headline counts to 3,386 tests, 250 Done, 461 total tasks.
+   - `docs/RESUME_PROMPT.md`: Updated task count and next action to R-462.
+   - `PROJECT_STATE.md` (this file): Added R-461 completion details.
    - `.ai/PROJECT_STATE.yaml`, `.ai/WORK_LOG.md`, `.ai/HANDOFF.md`: Updated state and handoff notes.
 
 ## Last Completed Task
-Tracker ID: R-460 — Next.js Codegen End-to-End Route Handler Synthesis and Interactive CRUD Form Submission — DONE.
+Tracker ID: R-461 — Full-Stack Production Authentication Engine — DONE.
+Implemented Full-Stack Production Authentication Engine:
+- PostgreSQL `users` table with UUID primary key, `VARCHAR UNIQUE NOT NULL` email, `VARCHAR NOT NULL` password_hash, optional full_name, `VARCHAR NOT NULL DEFAULT 'user'` role, and `TIMESTAMPTZ` created_at, plus development admin seed row (`admin@example.local` / `changeme`).
+- FastAPI auth router (`/auth/register`, `/auth/login`, `/auth/me`, `/auth/logout`) in `auth_guard.py` using `hashlib.pbkdf2_hmac` (SHA-256, 100k iterations) with zero external dependencies, JWT signing/verification, and wired into `main.py` via `backend_python.py`.
+- Next.js AuthProvider (`components/auth-provider.tsx`) exposing `useAuth()` hook with `user`, `token`, `login()`, `register()`, and `logout()`.
+- Responsive `app/login/page.tsx` and `app/register/page.tsx` pages with error states, validation, and auto-redirect.
+- Navbar user state toggle (signed in greeting & logout button vs. sign-in link).
+- API client (`lib/api.ts`) auto-attaching Bearer token with localStorage fallback.
+- `test_full_stack_auth.py` (42/42) and full offline `task verify` (3,386 tests passing); zero external dependencies, zero network requests.
+
+Immediately preceded by R-460 — Next.js Codegen End-to-End Route Handler Synthesis and Interactive CRUD Form Submission — DONE.
 Implemented Next.js Codegen End-to-End Route Handler Synthesis & Interactive CRUD Form Submission:
 - `services/agent-engine/src/omnistackai_agent_engine/codegen/nextjs.py`: Replaced scaffolded HTTP 501 `not_implemented` route stubs in generated Next.js web apps (`apps/web/app/<api_path>/route.ts`) with functional route handlers that forward requests directly to the FastAPI backend (`BACKEND_INTERNAL_URL` / `NEXT_PUBLIC_API_URL` / `http://127.0.0.1:8000`), preserving methods, auth headers, query params, and JSON payloads with structured 503 fallback handling; scoped `X-Frame-Options: DENY` to production only in `next.config.mjs` to enable Web Studio iframe preview.
 - `scratch/apps/create-a-worker-attendance-management-sy/apps/web/`: Updated active generated app's `next.config.mjs` and `route.ts` files for immediate end-to-end functionality.
