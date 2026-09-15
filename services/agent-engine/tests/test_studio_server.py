@@ -544,6 +544,70 @@ class TestStudioSolutionPacks(unittest.TestCase):
         ):
             self.assertIn(token, STUDIO_HTML)
 
+    def test_page_has_destination_selector_controls(self) -> None:
+        for token in (
+            'id="dest-btn-workspace"',
+            'id="dest-btn-personal"',
+            'id="dest-btn-custom"',
+            'id="output-dir"',
+            'id="folder-name"',
+            'id="dest-preview-path"',
+            "loadConfig",
+            "/api/config",
+        ):
+            self.assertIn(token, STUDIO_HTML)
+
+    def test_get_api_config(self) -> None:
+        def stub_build(prompt: str, **kwargs) -> dict:
+            return STUB_RESULT
+
+        with running_server(stub_build) as base_url:
+            req = urllib.request.Request(f"{base_url}/api/config")
+            with urllib.request.urlopen(req) as resp:
+                self.assertEqual(resp.status, 200)
+                data = json.loads(resp.read().decode("utf-8"))
+                self.assertIn("workspace_apps_dir", data)
+                self.assertIn("personal_apps_dir", data)
+                self.assertIn("current_out_dir", data)
+                self.assertTrue(data["workspace_apps_dir"].endswith("scratch/apps"))
+
+    def test_build_forwards_destination_options(self) -> None:
+        captured_options = {}
+
+        def stub_build(prompt: str, **options) -> dict:
+            captured_options.update(options)
+            return STUB_RESULT
+
+        with running_server(stub_build) as base_url:
+            body = json.dumps({
+                "prompt": "Build a test app",
+                "output_dir": "/custom/path/apps",
+                "folder_name": "my-special-app",
+            }).encode("utf-8")
+            req = urllib.request.Request(
+                f"{base_url}/api/build",
+                data=body,
+                headers={"Content-Type": "application/json"},
+                method="POST",
+            )
+            with urllib.request.urlopen(req) as resp:
+                self.assertEqual(resp.status, 200)
+
+        self.assertEqual(captured_options.get("output_dir"), "/custom/path/apps")
+        self.assertEqual(captured_options.get("folder_name"), "my-special-app")
+
+    def test_target_dir_for_resolution(self) -> None:
+        from omnistackai_agent_engine.studio.live_serve import _target_dir_for
+        import os
+
+        with tempfile.TemporaryDirectory() as tmp:
+            p = _target_dir_for("Prompt", custom_dir=tmp, folder_name="my_custom_folder")
+            self.assertEqual(p, os.path.join(tmp, "my-custom-folder"))
+            self.assertTrue(os.path.isdir(tmp))
+
+        p_tilde = _target_dir_for("Prompt", custom_dir="~/some_test_dir", folder_name="my_app")
+        self.assertEqual(p_tilde, os.path.join(os.path.expanduser("~/some_test_dir"), "my-app"))
+
 
 if __name__ == "__main__":
     unittest.main()

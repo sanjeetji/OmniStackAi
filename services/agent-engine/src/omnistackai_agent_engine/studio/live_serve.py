@@ -34,12 +34,20 @@ _AUTHOR_NAME = "sanjeetji"
 _AUTHOR_EMAIL = "sk698166@gmail.com"
 
 
-def _target_dir_for(prompt: str) -> str:
-    base = os.environ.get("OMNISTACKAI_APP_OUT_DIR")
-    slug = re.sub(r"[^a-z0-9]+", "-", prompt.lower()).strip("-")[:40] or "app"
+def _target_dir_for(
+    prompt: str,
+    *,
+    custom_dir: str | None = None,
+    folder_name: str | None = None,
+    custom_name: str | None = None,
+) -> str:
+    base = custom_dir or os.environ.get("OMNISTACKAI_APP_OUT_DIR")
+    slug_source = folder_name or custom_name or prompt
+    slug = re.sub(r"[^a-z0-9]+", "-", slug_source.lower()).strip("-")[:40] or "app"
     if base:
-        os.makedirs(base, exist_ok=True)
-        return os.path.join(base, slug)
+        resolved_base = os.path.expanduser(base)
+        os.makedirs(resolved_base, exist_ok=True)
+        return os.path.join(resolved_base, slug)
     return os.path.join(tempfile.mkdtemp(prefix="omnistackai-studio-"), slug)
 
 
@@ -57,6 +65,9 @@ def _build(
     ecosystem_id: str | None = None,
     ecosystem_version: str | None = None,
     surface_slug: str | None = None,
+    output_dir: str | None = None,
+    folder_name: str | None = None,
+    target_dir: str | None = None,
     preview_manager: StudioPreviewManager | None = None,
     history: StudioBuildHistory | None = None,
 ) -> dict:
@@ -70,7 +81,12 @@ def _build(
             raise ValueError(f"Unknown Ecosystem Pack '{ecosystem_id}'")
         eco_pkg = eco_pack.to_package()
 
-        target_dir = _target_dir_for(prompt)
+        target_dir = _target_dir_for(
+            prompt,
+            custom_dir=output_dir or target_dir,
+            folder_name=folder_name,
+            custom_name=custom_name,
+        )
 
         if surface_slug and surface_slug != "all":
             surface = next(
@@ -297,7 +313,12 @@ def _build(
                 proposal = maybe_coro
 
         app_result = apply_solution_pack_manifest(manifest, proposal=proposal)
-        target_dir = _target_dir_for(prompt)
+        target_dir = _target_dir_for(
+            prompt,
+            custom_dir=output_dir or target_dir,
+            folder_name=folder_name,
+            custom_name=custom_name,
+        )
         build_result = build_solution_pack_project(
             app_result,
             target_dir,
@@ -335,11 +356,17 @@ def _build(
         }
     else:
         provider, model_id, max_output, request_timeout = build_ollama_provider_from_env()
+        chosen_dir = _target_dir_for(
+            prompt,
+            custom_dir=output_dir or target_dir,
+            folder_name=folder_name,
+            custom_name=custom_name,
+        )
         result = asyncio.run(
             build_app_from_prompt(
                 prompt,
                 provider,
-                _target_dir_for(prompt),
+                chosen_dir,
                 model_id=model_id,
                 author_name=_AUTHOR_NAME,
                 author_email=_AUTHOR_EMAIL,

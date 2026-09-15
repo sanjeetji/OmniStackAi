@@ -141,6 +141,87 @@ STUDIO_HTML = """<!doctype html>
     outline: none;
   }
   .pack-input-group input:focus { border-color: #6ee7ff; }
+  .dest-panel {
+    margin-top: 14px;
+    padding: 12px 14px;
+    background: rgba(11, 18, 32, 0.7);
+    border: 1px solid #223148;
+    border-radius: 10px;
+  }
+  .dest-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    margin-bottom: 10px;
+    flex-wrap: wrap;
+  }
+  .dest-title {
+    font-size: 13px;
+    font-weight: 600;
+    color: #9fb0c3;
+    text-transform: uppercase;
+    letter-spacing: .4px;
+  }
+  .dest-toggle-group {
+    display: flex;
+    gap: 6px;
+    flex-wrap: wrap;
+  }
+  .dest-btn {
+    background: #080e19;
+    color: #9fb0c3;
+    border: 1px solid #223148;
+    border-radius: 6px;
+    padding: 5px 11px;
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+  }
+  .dest-btn:hover {
+    color: #e6edf3;
+    border-color: #3b506f;
+  }
+  .dest-btn.active {
+    background: rgba(110, 231, 255, 0.15);
+    color: #6ee7ff;
+    border-color: rgba(110, 231, 255, 0.4);
+  }
+  .dest-inputs {
+    display: flex;
+    gap: 12px;
+    flex-wrap: wrap;
+    margin-top: 4px;
+  }
+  .dest-input-group {
+    flex: 1;
+    min-width: 220px;
+  }
+  .dest-input-group label {
+    display: block;
+    font-size: 11.5px;
+    color: #7d90a9;
+    margin-bottom: 4px;
+  }
+  .dest-input-group input {
+    width: 100%;
+    background: #080e19;
+    color: #e6edf3;
+    border: 1px solid #223148;
+    border-radius: 6px;
+    padding: 6px 10px;
+    font-size: 13px;
+    font-family: inherit;
+    outline: none;
+  }
+  .dest-input-group input:focus {
+    border-color: #6ee7ff;
+  }
+  .dest-hint {
+    font-size: 11px;
+    color: #60738a;
+    margin-top: 6px;
+  }
   .badge-pack {
     display: inline-block;
     background: rgba(99, 102, 241, 0.2);
@@ -1180,6 +1261,27 @@ STUDIO_HTML = """<!doctype html>
         </div>
       </div>
     </div>
+    <div class="dest-panel">
+      <div class="dest-header">
+        <label class="dest-title">Output Location</label>
+        <div class="dest-toggle-group">
+          <button type="button" id="dest-btn-workspace" class="dest-btn active">Option A: Project (scratch/apps)</button>
+          <button type="button" id="dest-btn-personal" class="dest-btn">Option B: Personal Projects</button>
+          <button type="button" id="dest-btn-custom" class="dest-btn">Custom Path</button>
+        </div>
+      </div>
+      <div class="dest-inputs">
+        <div class="dest-input-group">
+          <label for="output-dir">Parent Folder Path</label>
+          <input type="text" id="output-dir" placeholder="Folder path, e.g. scratch/apps" />
+        </div>
+        <div class="dest-input-group">
+          <label for="folder-name">App Folder Name (optional)</label>
+          <input type="text" id="folder-name" placeholder="Leave empty for auto-generated slug" />
+        </div>
+      </div>
+      <div id="dest-hint" class="dest-hint">Destination: <code id="dest-preview-path">scratch/apps/&lt;app-slug&gt;</code></div>
+    </div>
     <div class="row">
       <div class="examples" id="examples">
         <span class="ex">A blog with posts and comments</span>
@@ -1438,6 +1540,99 @@ STUDIO_HTML = """<!doctype html>
   var ecoDetails = document.getElementById('eco-details');
   var surfaceSelect = document.getElementById('surface-select');
   var surfaceCards = document.getElementById('surface-cards');
+
+  var destBtnWorkspace = document.getElementById('dest-btn-workspace');
+  var destBtnPersonal = document.getElementById('dest-btn-personal');
+  var destBtnCustom = document.getElementById('dest-btn-custom');
+  var outputDirInput = document.getElementById('output-dir');
+  var folderNameInput = document.getElementById('folder-name');
+  var destPreviewPath = document.getElementById('dest-preview-path');
+  var workspaceAppsDir = '';
+  var personalAppsDir = '';
+
+  function updateDestPreview() {
+    var p = (outputDirInput && outputDirInput.value || '').trim() || 'scratch/apps';
+    var f = (folderNameInput && folderNameInput.value || '').trim();
+    if (!f) {
+      var rawPrompt = (promptEl && promptEl.value || '').trim().toLowerCase();
+      f = rawPrompt.replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 40) || '<app-slug>';
+    }
+    if (destPreviewPath) {
+      destPreviewPath.textContent = p + '/' + f;
+    }
+  }
+
+  function setDestMode(mode) {
+    if (!destBtnWorkspace) return;
+    destBtnWorkspace.classList.remove('active');
+    destBtnPersonal.classList.remove('active');
+    destBtnCustom.classList.remove('active');
+    if (mode === 'workspace') {
+      destBtnWorkspace.classList.add('active');
+      if (outputDirInput) { outputDirInput.value = workspaceAppsDir || 'scratch/apps'; }
+    } else if (mode === 'personal') {
+      destBtnPersonal.classList.add('active');
+      if (outputDirInput) { outputDirInput.value = personalAppsDir || '~/Documents/Projects/GeneratedApps'; }
+    } else {
+      destBtnCustom.classList.add('active');
+    }
+    updateDestPreview();
+  }
+
+  if (destBtnWorkspace && destBtnPersonal && destBtnCustom) {
+    destBtnWorkspace.addEventListener('click', function () { setDestMode('workspace'); });
+    destBtnPersonal.addEventListener('click', function () { setDestMode('personal'); });
+    destBtnCustom.addEventListener('click', function () {
+      setDestMode('custom');
+      if (outputDirInput) { outputDirInput.focus(); }
+    });
+  }
+
+  if (outputDirInput) {
+    outputDirInput.addEventListener('input', function () {
+      var v = (outputDirInput.value || '').trim();
+      if (v && v === workspaceAppsDir) {
+        destBtnWorkspace.classList.add('active');
+        destBtnPersonal.classList.remove('active');
+        destBtnCustom.classList.remove('active');
+      } else if (v && v === personalAppsDir) {
+        destBtnPersonal.classList.add('active');
+        destBtnWorkspace.classList.remove('active');
+        destBtnCustom.classList.remove('active');
+      } else {
+        destBtnCustom.classList.add('active');
+        destBtnWorkspace.classList.remove('active');
+        destBtnPersonal.classList.remove('active');
+      }
+      updateDestPreview();
+    });
+  }
+  if (folderNameInput) {
+    folderNameInput.addEventListener('input', updateDestPreview);
+  }
+  if (promptEl) {
+    promptEl.addEventListener('input', updateDestPreview);
+  }
+
+  function loadConfig() {
+    fetch('/api/config')
+      .then(function (res) { return res.ok ? res.json() : null; })
+      .then(function (cfg) {
+        if (!cfg) return;
+        workspaceAppsDir = cfg.workspace_apps_dir || '';
+        personalAppsDir = cfg.personal_apps_dir || '';
+        if (cfg.current_out_dir && outputDirInput) {
+          outputDirInput.value = cfg.current_out_dir;
+          if (cfg.current_out_dir === personalAppsDir) {
+            setDestMode('personal');
+          } else {
+            setDestMode('workspace');
+          }
+        }
+        updateDestPreview();
+      })
+      .catch(function () {});
+  }
 
   var activeMode = 'single';
   var availablePacks = [];
@@ -3030,6 +3225,11 @@ STUDIO_HTML = """<!doctype html>
       }
     }
 
+    var outDirVal = (outputDirInput && outputDirInput.value || '').trim();
+    if (outDirVal) { payload.output_dir = outDirVal; }
+    var folderNameVal = (folderNameInput && folderNameInput.value || '').trim();
+    if (folderNameVal) { payload.folder_name = folderNameVal; }
+
     fetch('/api/build', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -3052,6 +3252,7 @@ STUDIO_HTML = """<!doctype html>
   loadSolutionPacks();
   loadEcosystemPacks();
   loadHistory();
+  loadConfig();
 })();
 </script>
 </body>

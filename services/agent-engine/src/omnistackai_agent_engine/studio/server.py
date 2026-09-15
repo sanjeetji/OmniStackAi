@@ -9,6 +9,7 @@ No web framework, no external dependencies.
 from __future__ import annotations
 
 import json
+import os
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from typing import Callable
 from urllib.parse import parse_qs, urlparse
@@ -152,6 +153,15 @@ def _make_handler(
                 self._send_json(200, {"packs": [p.to_dict() for p in pack_registry.packs]})
             elif self.path == "/api/ecosystem-packs":
                 self._send_json(200, {"ecosystems": [e.to_dict() for e in eco_registry.list_packs()]})
+            elif self.path == "/api/config":
+                workspace_dir = os.path.abspath("scratch/apps")
+                personal_dir = os.path.expanduser("~/Documents/Projects/GeneratedApps")
+                current_env = os.environ.get("OMNISTACKAI_APP_OUT_DIR", "")
+                self._send_json(200, {
+                    "workspace_apps_dir": workspace_dir,
+                    "personal_apps_dir": personal_dir,
+                    "current_out_dir": current_env or workspace_dir,
+                })
             elif self.path == "/api/ecosystem/auth":
                 if get_ecosystem_auth_fn is None:
                     self._send_json(404, {"error": "ecosystem auth controls are not enabled"})
@@ -658,6 +668,9 @@ def _make_handler(
                 "ecosystem_id",
                 "ecosystem_version",
                 "surface_slug",
+                "output_dir",
+                "folder_name",
+                "target_dir",
             ):
                 if key in data and data[key] is not None and str(data[key]).strip():
                     options[key] = str(data[key]).strip()
