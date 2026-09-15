@@ -460,6 +460,8 @@ def main() -> None:
             simulate_ecosystem_sla_fn=preview_manager.simulate_ecosystem_sla,
             get_ecosystem_governance_fn=preview_manager.get_ecosystem_governance,
             simulate_ecosystem_governance_fn=preview_manager.simulate_ecosystem_governance,
+            get_ecosystem_docs_fn=preview_manager.get_ecosystem_docs,
+            export_ecosystem_docs_fn=preview_manager.export_ecosystem_docs,
             preview_build_fn=lambda build_id, surface_slug=None: _preview_recorded_build(
                 build_id, history, preview_manager, surface_slug=surface_slug
             ),

@@ -213,6 +213,18 @@ from .ecosystem_governance import (
     PolicySeverity,
     synthesize_ecosystem_governance,
 )
+from .ecosystem_docs import (
+    AggregatedAPISpec,
+    ArchitectureRunbook,
+    DocCategory,
+    DocPage,
+    EcosystemDocsContract,
+    EcosystemDocsEngine,
+    ExportFormat,
+    OpenAPIAggregationEntry,
+    OpenAPIRoute,
+    synthesize_ecosystem_docs,
+)
 
 __all__ = [
     "LEGACY_MANIFEST_SCHEMA_VERSION",
@@ -376,5 +388,15 @@ __all__ = [
     "PolicyEvaluationResult",
     "PolicySeverity",
     "synthesize_ecosystem_governance",
+    "AggregatedAPISpec",
+    "ArchitectureRunbook",
+    "DocCategory",
+    "DocPage",
+    "EcosystemDocsContract",
+    "EcosystemDocsEngine",
+    "ExportFormat",
+    "OpenAPIAggregationEntry",
+    "OpenAPIRoute",
+    "synthesize_ecosystem_docs",
 ]
 

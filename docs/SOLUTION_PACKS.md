@@ -480,7 +480,31 @@ The twenty-ninth brick of the differentiating spine formalizes multi-surface com
   ```
 - 100% offline verification in `task verify` (0 model calls).
 
+## Multi-surface documentation, architecture runbooks, and OpenAPI aggregator contracts (R-459)
+
+The thirtieth brick of the differentiating spine formalizes multi-surface documentation pages, operational architecture runbooks, OpenAPI 3.1 aggregator specifications, and multi-format documentation export simulation:
+
+- Canonical data models: `DocPage` (page_id, surface_slug, title, category, order, markdown_content, tags), `RunbookStep` (step_id, order, action, command, expected_output, is_automated, description), `ArchitectureRunbook` (runbook_id, title, surface_slug, runbook_type, severity, trigger, steps, tags), `OpenAPIRoute` (path, method, summary, operation_id, request_schema, response_schema, tags), `OpenAPIAggregationEntry` (surface_slug, base_path, routes), `AggregatedAPISpec` (title, version, description, openapi_version, base_url, surfaces, routes), and `EcosystemDocsContract` (ecosystem_id, version, pages, runbooks, aggregated_api, metadata) with full `to_dict`/`from_dict`/`to_json`/`from_json` roundtrips and deterministic SHA-256 `digest()`.
+- Deterministic contract synthesis: `synthesize_ecosystem_docs(ecosystem_id, surfaces, version)` derives platform overview, data-flow, security pages, surface-specific architecture pages, operational runbooks (local development setup, production deployment, incident triage), and OpenAPI 3.1 aggregated route specifications across web, admin, API, worker, and database surfaces deterministically and offline with zero I/O.
+- In-process documentation & API engine: Thread-safe `EcosystemDocsEngine` renders unified, navigational Markdown bundles (`render_markdown_bundle`), performs keyword and tag-based searches with relevance scoring (`search_documentation`), aggregates surface OpenAPI 3.1 specifications with route collision detection (`get_aggregated_openapi`), and executes end-to-end documentation export simulations (`simulate_documentation_export`) across formats (`markdown`, `json`, `openapi_bundle`, `runbook_checklist`).
+- Package bundling & registry access: `EcosystemPackPackage` bundles `docs_contract` with whole-package SHA-256 integrity verification; `EcosystemPackRegistry` and `EcosystemPack` expose `get_docs_contract`.
+- Studio preview & server: `StudioPreviewManager` tracks docs contracts and docs engines, injecting `has_docs`, `page_count`, `runbook_count`, `api_endpoint_count`, and `docs_status` into preview payloads, and exposing `get_ecosystem_docs()` and `export_ecosystem_docs()`. Studio HTTP server exposes `GET /api/ecosystem/docs` and `POST /api/ecosystem/docs/export`.
+- Studio web UI: Renders sky-blue/amber-themed `#preview-docs-info` container with pages, runbooks, and API endpoints count badges, and 1-click "Export Docs" and "Refresh" buttons, strictly maintaining 0 external network requests.
+- CLI docs inspection:
+  ```bash
+  # Inspect ecosystem pack documentation contract
+  task agent-engine:solution-pack:ecosystem -- docs minimal-blog-ecosystem
+  task agent-engine:solution-pack:ecosystem -- docs minimal-blog-ecosystem --json
+
+  # Search documentation by query and tags
+  task agent-engine:solution-pack:ecosystem -- docs minimal-blog-ecosystem --search architecture
+
+  # Simulate documentation export dry-run (markdown, json, openapi_bundle, runbook_checklist)
+  task agent-engine:solution-pack:ecosystem -- docs minimal-blog-ecosystem --export markdown
+  ```
+- 100% offline verification in `task verify` (0 model calls).
+
 ## Next boundary
 
-R-459: Solution Pack Ecosystem Multi-Surface Documentation, Architecture Runbooks, and OpenAPI Aggregator Contracts.
+R-460: Solution Pack Ecosystem Multi-Surface Unified Developer CLI and Operational Control Plane Contracts.
 

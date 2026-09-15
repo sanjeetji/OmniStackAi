@@ -34,6 +34,7 @@ from .ecosystem_capacity import EcosystemCapacityContract, synthesize_ecosystem_
 from .ecosystem_alerting import EcosystemAlertingContract, synthesize_ecosystem_alerting
 from .ecosystem_sla import EcosystemSLAContract, synthesize_ecosystem_sla
 from .ecosystem_governance import EcosystemGovernanceContract, synthesize_ecosystem_governance
+from .ecosystem_docs import EcosystemDocsContract, synthesize_ecosystem_docs
 from .registry import (
     DEFAULT_SOLUTION_PACK_REGISTRY,
     SolutionPack,
@@ -116,6 +117,7 @@ class EcosystemPackPackage:
     alerting_contract: EcosystemAlertingContract | None = None
     sla_contract: EcosystemSLAContract | None = None
     governance_contract: EcosystemGovernanceContract | None = None
+    docs_contract: EcosystemDocsContract | None = None
 
     def to_dict(self) -> dict[str, Any]:
         data: dict[str, Any] = {
@@ -155,6 +157,8 @@ class EcosystemPackPackage:
             data["sla_contract"] = self.sla_contract.to_dict()
         if self.governance_contract is not None:
             data["governance_contract"] = self.governance_contract.to_dict()
+        if self.docs_contract is not None:
+            data["docs_contract"] = self.docs_contract.to_dict()
         return data
 
     def to_json(self) -> str:
@@ -329,6 +333,10 @@ def parse_ecosystem_pack_package(data: str | bytes | Mapping[str, Any]) -> Ecosy
     if "governance_contract" in raw and raw["governance_contract"] is not None:
         governance_contract = EcosystemGovernanceContract.from_dict(raw["governance_contract"])
 
+    docs_contract = None
+    if "docs_contract" in raw and raw["docs_contract"] is not None:
+        docs_contract = EcosystemDocsContract.from_dict(raw["docs_contract"])
+
     return EcosystemPackPackage(
         schema_version=schema_version,
         ecosystem_id=ecosystem_id,
@@ -352,6 +360,7 @@ def parse_ecosystem_pack_package(data: str | bytes | Mapping[str, Any]) -> Ecosy
         alerting_contract=alerting_contract,
         sla_contract=sla_contract,
         governance_contract=governance_contract,
+        docs_contract=docs_contract,
     )
 
 
@@ -493,8 +502,13 @@ def synthesize_ecosystem_pack(
         version=version,
     )
     governance_contract = synthesize_ecosystem_governance(
-        ecosystem_id,
-        surface_packages,
+        ecosystem_id=ecosystem_id,
+        surfaces=surface_packages,
+        version=version,
+    )
+    docs_contract = synthesize_ecosystem_docs(
+        ecosystem_id=ecosystem_id,
+        surfaces=surface_packages,
         version=version,
     )
 
@@ -520,6 +534,7 @@ def synthesize_ecosystem_pack(
         "alerting_contract": alerting_contract.to_dict(),
         "sla_contract": sla_contract.to_dict(),
         "governance_contract": governance_contract.to_dict(),
+        "docs_contract": docs_contract.to_dict(),
     }
     package_sha256 = compute_ecosystem_checksum(payload)
 
@@ -546,4 +561,5 @@ def synthesize_ecosystem_pack(
         alerting_contract=alerting_contract,
         sla_contract=sla_contract,
         governance_contract=governance_contract,
+        docs_contract=docs_contract,
     )

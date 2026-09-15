@@ -1,20 +1,20 @@
-task_id: R-458
+task_id: R-459
 status: completed
 phase: MVP
 tracker_row: 9
 started_at: "2026-09-15"
 completed_at: "2026-09-15"
 objective: >-
-  Implement Solution Pack Ecosystem Multi-Surface Governance, Compliance Policy, and Audit Evidence Contracts,
-  providing canonical ComplianceStandard, CompliancePolicy, DataClassification, AuditEvidenceItem,
-  EcosystemGovernanceContract, deterministic Python 3.13 stdlib-only contract synthesis
-  (synthesize_ecosystem_governance) for all ecosystem surfaces, in-process thread-safe EcosystemGovernanceEngine
-  for compliance evaluation, cryptographic audit evidence verification, and multi-scenario audit simulation,
-  ecosystem package bundling with whole-package SHA-256 integrity, registry discovery, Studio preview governance status
-  injection, endpoints GET /api/ecosystem/governance and POST /api/ecosystem/governance/simulate, Studio UI #preview-governance-info panel
-  (0 external requests), and CLI governance subcommand.
+  Implement Solution Pack Ecosystem Multi-Surface Documentation, Architecture Runbooks, and OpenAPI Aggregator Contracts,
+  providing canonical DocPage, ArchitectureRunbook, OpenAPIAggregationEntry, AggregatedAPISpec,
+  EcosystemDocsContract, deterministic Python 3.13 stdlib-only contract synthesis
+  (synthesize_ecosystem_docs) for all ecosystem surfaces, in-process thread-safe EcosystemDocsEngine
+  for unified Markdown bundle rendering, keyword search, OpenAPI aggregation with route collision detection,
+  and export dry-run simulations, ecosystem package bundling with whole-package SHA-256 integrity, registry discovery,
+  Studio preview documentation status injection, endpoints GET /api/ecosystem/docs and POST /api/ecosystem/docs/export,
+  Studio UI #preview-docs-info panel (0 external requests), and CLI docs subcommand.
 allowed_paths:
-  - services/agent-engine/src/omnistackai_agent_engine/solution_packs/ecosystem_governance.py
+  - services/agent-engine/src/omnistackai_agent_engine/solution_packs/ecosystem_docs.py
   - services/agent-engine/src/omnistackai_agent_engine/solution_packs/ecosystem_pack.py
   - services/agent-engine/src/omnistackai_agent_engine/solution_packs/ecosystem_registry.py
   - services/agent-engine/src/omnistackai_agent_engine/solution_packs/ecosystem_cli.py
@@ -23,13 +23,13 @@ allowed_paths:
   - services/agent-engine/src/omnistackai_agent_engine/studio/server.py
   - services/agent-engine/src/omnistackai_agent_engine/studio/live_serve.py
   - services/agent-engine/src/omnistackai_agent_engine/studio/page.py
-  - services/agent-engine/tests/test_ecosystem_governance.py
+  - services/agent-engine/tests/test_ecosystem_docs.py
   - scripts/agent-engine.sh
   - Taskfile.yml
   - docs/SOLUTION_PACKS.md
   - docs/PROGRESS.md
   - docs/RESUME_PROMPT.md
-  - .ai/tasks/R-458.md
+  - .ai/tasks/R-459.md
   - .ai/CURRENT_TASK.yaml
   - .ai/PROJECT_STATE.yaml
   - .ai/WORK_LOG.md
@@ -43,18 +43,32 @@ forbidden_changes:
   - Do not add external network requests, fonts, or scripts to Studio HTML
   - Do not change the control-plane database from PostgreSQL
 required_gates:
-  - test-first focused test_ecosystem_governance.py
+  - test-first focused test_ecosystem_docs.py
   - task verify
   - task lint
   - task security:quick
   - task env:check
-  - task builder:demo -- minimal-blog
-  - task builder:demo -- rideshare-favourites
 evidence:
-  unit_tests: "22 passing tests in test_ecosystem_governance.py (251 ecosystem tests passing, 85 studio tests passing)"
-  verification: "3,310 tests passing in task verify (offline, stage 0 in 41.372s)"
-  lint: "Agent-engine contract lint passed (bash scripts/agent-engine.sh lint)"
-  security: "Stage 0 secret-policy check passed (task security:quick)"
-  env: "Environment contract passed (task env:check)"
-  demos: "Builder demos minimal-blog (152 files) and rideshare-favourites (149 files) passed"
-  excel_tracker: "Row 9 inserted in Phase_Roadmap with status Done (458 total tasks, 247 Done)"
+  tests:
+    - name: test_ecosystem_docs.py
+      count: 20
+      status: passed
+    - name: test_ecosystem_*.py
+      count: 271
+      status: passed
+    - name: test_studio_*.py
+      count: 85
+      status: passed
+    - name: task verify
+      count: 3333
+      status: passed
+    - name: lint
+      status: passed
+    - name: security:quick
+      status: passed
+    - name: env:check
+      status: passed
+    - name: builder:demo minimal-blog
+      status: passed
+    - name: builder:demo rideshare-favourites
+      status: passed

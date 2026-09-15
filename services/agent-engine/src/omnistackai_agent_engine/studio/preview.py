@@ -81,6 +81,11 @@ from ..solution_packs.ecosystem_governance import (
     EcosystemGovernanceEngine,
     synthesize_ecosystem_governance,
 )
+from ..solution_packs.ecosystem_docs import (
+    EcosystemDocsContract,
+    EcosystemDocsEngine,
+    synthesize_ecosystem_docs,
+)
 
 StartFn = Callable[..., LocalAppSession]
 
@@ -133,6 +138,8 @@ class StudioPreviewManager:
         self._sla_engine: EcosystemSLAEngine | None = None
         self._governance_contract: EcosystemGovernanceContract | None = None
         self._governance_engine: EcosystemGovernanceEngine | None = None
+        self._docs_contract: EcosystemDocsContract | None = None
+        self._docs_engine: EcosystemDocsEngine | None = None
 
     def replace(self, repo_dir: str) -> dict:
         """Stop prior previews, start single app ``repo_dir`` on free ports, and return state."""
@@ -188,6 +195,7 @@ class StudioPreviewManager:
         alerting_contract: EcosystemAlertingContract | None = None,
         sla_contract: EcosystemSLAContract | None = None,
         governance_contract: EcosystemGovernanceContract | None = None,
+        docs_contract: EcosystemDocsContract | None = None,
     ) -> dict:
         """Stop prior previews, register ecosystem surfaces, and start the active surface."""
         with self._lock:
@@ -366,6 +374,20 @@ class StudioPreviewManager:
                         ecosystem_id, self._surfaces
                     )
             self._governance_engine = EcosystemGovernanceEngine(self._governance_contract)
+
+            # Documentation contract (R-459)
+            if docs_contract is not None:
+                self._docs_contract = docs_contract
+            else:
+                from ..solution_packs.ecosystem_registry import DEFAULT_ECOSYSTEM_PACK_REGISTRY
+                cached_dc = DEFAULT_ECOSYSTEM_PACK_REGISTRY.get_docs_contract(ecosystem_id)
+                if cached_dc is not None:
+                    self._docs_contract = cached_dc
+                else:
+                    self._docs_contract = synthesize_ecosystem_docs(
+                        ecosystem_id, self._surfaces
+                    )
+            self._docs_engine = EcosystemDocsEngine(self._docs_contract)
 
             # Determine initial active surface
             chosen_slug = active_surface_slug
@@ -577,6 +599,15 @@ class StudioPreviewManager:
                 "standard_count": len(self._governance_contract.standards) if self._governance_contract else 0,
                 "evidence_count": len(self._governance_contract.evidence_items) if self._governance_contract else 0,
                 "governance_status": "configured" if self._governance_contract else "none",
+                "has_docs": self._docs_contract is not None,
+                "page_count": len(self._docs_contract.pages) if self._docs_contract else 0,
+                "runbook_count": len(self._docs_contract.runbooks) if self._docs_contract else 0,
+                "api_endpoint_count": (
+                    self._docs_contract.aggregated_api.total_endpoints
+                    if self._docs_contract and self._docs_contract.aggregated_api
+                    else 0
+                ),
+                "docs_status": "configured" if self._docs_contract else "none",
                 "message": error_msg or _PREVIEW_ERROR,
                 "surfaces": surface_statuses,
             }
@@ -638,6 +669,15 @@ class StudioPreviewManager:
                 "standard_count": len(self._governance_contract.standards) if self._governance_contract else 0,
                 "evidence_count": len(self._governance_contract.evidence_items) if self._governance_contract else 0,
                 "governance_status": "configured" if self._governance_contract else "none",
+                "has_docs": self._docs_contract is not None,
+                "page_count": len(self._docs_contract.pages) if self._docs_contract else 0,
+                "runbook_count": len(self._docs_contract.runbooks) if self._docs_contract else 0,
+                "api_endpoint_count": (
+                    self._docs_contract.aggregated_api.total_endpoints
+                    if self._docs_contract and self._docs_contract.aggregated_api
+                    else 0
+                ),
+                "docs_status": "configured" if self._docs_contract else "none",
                 "web_url": active_sess.plan.web_url,
                 "message": f"The generated {active_surface_info['app_name']} is running locally.",
                 "surfaces": surface_statuses,
@@ -704,6 +744,15 @@ class StudioPreviewManager:
                 "standard_count": len(self._governance_contract.standards) if self._governance_contract else 0,
                 "evidence_count": len(self._governance_contract.evidence_items) if self._governance_contract else 0,
                 "governance_status": "configured" if self._governance_contract else "none",
+                "has_docs": self._docs_contract is not None,
+                "page_count": len(self._docs_contract.pages) if self._docs_contract else 0,
+                "runbook_count": len(self._docs_contract.runbooks) if self._docs_contract else 0,
+                "api_endpoint_count": (
+                    self._docs_contract.aggregated_api.total_endpoints
+                    if self._docs_contract and self._docs_contract.aggregated_api
+                    else 0
+                ),
+                "docs_status": "configured" if self._docs_contract else "none",
                 "message": f"Preview for {self._active_surface or 'surface'} stopped.",
                 "surfaces": surface_statuses,
             }
@@ -744,6 +793,8 @@ class StudioPreviewManager:
         self._sla_engine = None
         self._governance_contract = None
         self._governance_engine = None
+        self._docs_contract = None
+        self._docs_engine = None
 
     def get_ecosystem_auth(self) -> dict:
         """Inspect the active ecosystem's auth contract, role matrix, and surface demo tokens."""
@@ -1226,6 +1277,53 @@ class StudioPreviewManager:
                 "status": "ok",
                 "governance_status": rep.audit_status,
             }
+
+    def get_ecosystem_docs(self) -> dict:
+        """Inspect active ecosystem documentation, runbooks, and aggregated OpenAPI endpoints."""
+        with self._lock:
+            if not self._is_ecosystem or not self._docs_contract:
+                return {
+                    "is_ecosystem": False,
+                    "status": "not_configured",
+                    "contract": None,
+                    "docs_contract": None,
+                    "page_count": 0,
+                    "runbook_count": 0,
+                    "api_endpoint_count": 0,
+                }
+            return {
+                "is_ecosystem": True,
+                "status": "ok",
+                "ecosystem_id": self._ecosystem_id,
+                "contract": self._docs_contract.to_dict(),
+                "docs_contract": self._docs_contract.to_dict(),
+                "digest": self._docs_contract.digest(),
+                "page_count": len(self._docs_contract.pages),
+                "runbook_count": len(self._docs_contract.runbooks),
+                "api_endpoint_count": (
+                    self._docs_contract.aggregated_api.total_endpoints
+                    if self._docs_contract.aggregated_api
+                    else 0
+                ),
+                "active_surface": self._active_surface,
+            }
+
+    def export_ecosystem_docs(self, body: Mapping[str, Any] | None = None) -> dict:
+        """Run a dry-run export simulation of ecosystem documentation."""
+        with self._lock:
+            if not self._is_ecosystem or not self._docs_engine:
+                return {"status": "error", "message": "No active ecosystem documentation engine"}
+            export_format = "markdown"
+            if isinstance(body, Mapping):
+                export_format = str(body.get("format", "markdown"))
+            try:
+                rep = self._docs_engine.simulate_documentation_export(export_format=export_format)  # type: ignore[arg-type]
+                return {
+                    **rep,
+                    "status": "ok",
+                }
+            except Exception as exc:
+                return {"status": "error", "message": str(exc)}
 
 
 

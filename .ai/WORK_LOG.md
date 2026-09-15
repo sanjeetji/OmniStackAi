@@ -1,5 +1,32 @@
 # Work Log
 
+## 2026-09-15 — R-459 (Solution Pack Ecosystem Multi-Surface Documentation, Architecture Runbooks, and OpenAPI Aggregator Contracts)
+
+- Recorded `.ai/CURRENT_TASK.yaml` before implementation.
+  Final focused suite: 20 passing tests in `test_ecosystem_docs.py`. Total test suite: 3,333 tests passing offline (+23 net-new tests across test files).
+- Implemented `solution_packs/ecosystem_docs.py`:
+  - Defined frozen `DocPage`: page_id, surface_slug, title, category, order, markdown_content, tags tuple; `to_dict`/`from_dict`.
+  - Defined frozen `RunbookStep`: step_id, order, action, command, expected_output, is_automated, description; `to_dict`/`from_dict`.
+  - Defined frozen `ArchitectureRunbook`: runbook_id, title, surface_slug, runbook_type, severity, trigger, steps tuple, tags tuple; `to_dict`/`from_dict`.
+  - Defined frozen `OpenAPIRoute`: path, method, summary, operation_id, request_schema dict, response_schema dict, tags tuple; `to_dict`/`from_dict`.
+  - Defined frozen `OpenAPIAggregationEntry`: surface_slug, base_path, routes tuple; `to_dict`/`from_dict`.
+  - Defined frozen `AggregatedAPISpec`: title, version, description, openapi_version, base_url, surfaces tuple, routes tuple; `to_dict`/`from_dict`.
+  - Defined frozen `EcosystemDocsContract`: ecosystem_id, version, pages, runbooks, aggregated_api, metadata; `to_dict`/`from_dict`/`to_json`/`from_json` roundtrips; deterministic SHA-256 `digest()`.
+  - Defined report models: `DocSearchResult`, `DocSearchReport`, `DocExportSimulationResult`.
+  - Implemented `synthesize_ecosystem_docs(ecosystem_id, surfaces, version)`: derives platform overview, data-flow, security pages, surface-specific architecture pages, operational runbooks (local dev setup, production deployment, incident triage), and OpenAPI 3.1 aggregated specs across web, admin, API, worker, and database surfaces offline (0 model calls).
+  - Implemented `EcosystemDocsEngine`: thread-safe (`threading.RLock`); `render_markdown_bundle(surface_slug, category)` producing unified, navigational documentation bundles; `search_documentation(query, tags)` with keyword and tag-based relevance scoring; `get_aggregated_openapi()` merging OpenAPI specs with route collision detection; `simulate_documentation_export(format_type, output_dir)` simulating exports across `markdown`, `json`, `openapi_bundle`, and `runbook_checklist` formats.
+- Updated Ecosystem Pack Package & Registry:
+  - `ecosystem_pack.py`: Added `docs_contract: EcosystemDocsContract | None` field; updated `to_dict`, `parse_ecosystem_pack_package`, and `synthesize_ecosystem_pack` to include docs_contract in payload and whole-package SHA-256 checksum.
+  - `ecosystem_registry.py`: Added `docs_contract` property to `EcosystemPack`; `has_docs_contract` in `to_dict`; `get_docs_contract(ecosystem_id, version)` on `EcosystemPackRegistry` and `_LazyEcosystemPackRegistry` delegate.
+- Updated Studio Preview & Server:
+  - `studio/preview.py`: Imports docs types; adds `_docs_contract`/`_docs_engine` fields; `replace_ecosystem()` accepts optional `docs_contract` param, falls back to registry cache then synthesize; all three payload branches inject `has_docs`, `page_count`, `runbook_count`, `api_endpoint_count`, and `docs_status`; cleanup in `_stop_locked()`; new `get_ecosystem_docs()` and `export_ecosystem_docs()` methods.
+  - `studio/server.py`: `_make_handler` and `create_studio_server` accept `get_ecosystem_docs_fn` and `export_ecosystem_docs_fn`; `GET /api/ecosystem/docs`; `POST /api/ecosystem/docs/export`.
+  - `studio/live_serve.py`: Wires `get_ecosystem_docs_fn` and `export_ecosystem_docs_fn` in `control_kwargs`.
+  - `studio/page.py`: Sky-blue/amber-themed `.preview-docs-info` CSS panel; `#preview-docs-info` HTML with Pages count, Runbooks count, API Endpoints count badges, and "Export Docs" / "Refresh" buttons; JS update logic in preview status handler; button handlers for Export (calls POST, renders export status) and Refresh (calls GET, updates badges, strictly 0 external network requests).
+- Added `docs` subcommand to `ecosystem_cli.py`: accepts file path or registered ecosystem ID; `--json` outputs canonical JSON; `--search` performs tag/keyword query; `--export` simulates export into specified format (`markdown`, `json`, `openapi_bundle`, `runbook_checklist`); default text mode shows pages, runbooks, and aggregated OpenAPI route specs.
+- Exported all docs symbols in `solution_packs/__init__.py`.
+- All gates pass: `task verify` (3,333 tests in 41.057s), `bash scripts/agent-engine.sh lint`, `task security:quick`, `task env:check`, `task builder:demo -- minimal-blog`, `task builder:demo -- rideshare-favourites`. Zero model calls.
+
 ## 2026-09-15 — R-458 (Solution Pack Ecosystem Multi-Surface Governance, Compliance Policy, and Audit Evidence Contracts)
 
 - Recorded `.ai/CURRENT_TASK.yaml` before implementation.

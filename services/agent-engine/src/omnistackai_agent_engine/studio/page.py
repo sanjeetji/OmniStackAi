@@ -916,6 +916,59 @@ STUDIO_HTML = """<!doctype html>
     transition: background 0.15s;
   }
   .governance-action-btn:hover { background: rgba(99, 102, 241, 0.25); }
+  .preview-docs-info {
+    margin-top: 10px;
+    padding: 10px 12px;
+    background: rgba(15, 23, 42, 0.6);
+    border: 1px solid rgba(14, 165, 233, 0.3);
+    border-radius: 8px;
+    font-size: 11px;
+    color: #cbd5e1;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+  .docs-header-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    flex-wrap: wrap;
+  }
+  .docs-meta-group {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+  }
+  .docs-badge {
+    background: rgba(14, 165, 233, 0.2);
+    color: #38bdf8;
+    padding: 2px 8px;
+    border-radius: 999px;
+    font-size: 10px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
+  .docs-count-badge {
+    background: #1e293b;
+    padding: 2px 6px;
+    border-radius: 4px;
+    font-size: 10px;
+    color: #94a3b8;
+  }
+  .docs-action-btn {
+    background: rgba(14, 165, 233, 0.15);
+    border: 1px solid rgba(14, 165, 233, 0.35);
+    border-radius: 4px;
+    color: #7dd3fc;
+    font-size: 10px;
+    padding: 3px 8px;
+    cursor: pointer;
+    transition: background 0.15s;
+  }
+  .docs-action-btn:hover { background: rgba(14, 165, 233, 0.25); }
   .events-header-row {
     display: flex;
     align-items: center;
@@ -1321,6 +1374,20 @@ STUDIO_HTML = """<!doctype html>
           <div class="governance-meta-group">
             <button type="button" id="gov-simulate-btn" class="governance-action-btn">Simulate Audit</button>
             <button type="button" id="gov-refresh-btn" class="governance-action-btn">Refresh</button>
+          </div>
+        </div>
+      </div>
+      <div id="preview-docs-info" class="preview-docs-info" hidden>
+        <div class="docs-header-row">
+          <div class="docs-meta-group">
+            <span class="docs-badge">Docs &amp; OpenAPI</span>
+            <span id="docs-page-count" class="docs-count-badge">0 Pages</span>
+            <span id="docs-runbook-count" class="docs-count-badge">0 Runbooks</span>
+            <span id="docs-endpoint-count" class="docs-count-badge">0 Endpoints</span>
+          </div>
+          <div class="docs-meta-group">
+            <button type="button" id="docs-export-btn" class="docs-action-btn">Export Docs</button>
+            <button type="button" id="docs-refresh-btn" class="docs-action-btn">Refresh</button>
           </div>
         </div>
       </div>
@@ -1911,6 +1978,27 @@ STUDIO_HTML = """<!doctype html>
         }
       } else {
         govInfo.hidden = true;
+      }
+    }
+
+    var docsInfo = document.getElementById('preview-docs-info');
+    if (docsInfo) {
+      if (preview && preview.is_ecosystem && preview.has_docs) {
+        docsInfo.hidden = false;
+        var pageCount = document.getElementById('docs-page-count');
+        if (pageCount) {
+          pageCount.textContent = (preview.page_count || 0) + ' Page' + ((preview.page_count || 0) !== 1 ? 's' : '');
+        }
+        var rbCount = document.getElementById('docs-runbook-count');
+        if (rbCount) {
+          rbCount.textContent = (preview.runbook_count || 0) + ' Runbook' + ((preview.runbook_count || 0) !== 1 ? 's' : '');
+        }
+        var epCount = document.getElementById('docs-endpoint-count');
+        if (epCount) {
+          epCount.textContent = (preview.api_endpoint_count || 0) + ' Endpoint' + ((preview.api_endpoint_count || 0) !== 1 ? 's' : '');
+        }
+      } else {
+        docsInfo.hidden = true;
       }
     }
 
@@ -2550,6 +2638,49 @@ STUDIO_HTML = """<!doctype html>
         })
         .catch(function () {
           flashButton(govRefreshBtn, 'Error');
+        });
+    });
+  }
+
+  var docsExportBtn = document.getElementById('docs-export-btn');
+  if (docsExportBtn) {
+    docsExportBtn.addEventListener('click', function () {
+      flashButton(docsExportBtn, 'Exporting...');
+      fetch('/api/ecosystem/docs/export', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({format: 'markdown'}) })
+        .then(function (res) { return res.json(); })
+        .then(function (data) {
+          var msg = data.file_count != null ? (data.file_count + ' Files!') : 'Exported!';
+          flashButton(docsExportBtn, msg);
+        })
+        .catch(function () {
+          flashButton(docsExportBtn, 'Error');
+        });
+    });
+  }
+
+  var docsRefreshBtn = document.getElementById('docs-refresh-btn');
+  if (docsRefreshBtn) {
+    docsRefreshBtn.addEventListener('click', function () {
+      flashButton(docsRefreshBtn, 'Loading...');
+      fetch('/api/ecosystem/docs')
+        .then(function (res) { return res.json(); })
+        .then(function (data) {
+          var pageCount = document.getElementById('docs-page-count');
+          if (pageCount && data.page_count != null) {
+            pageCount.textContent = data.page_count + ' Page' + (data.page_count !== 1 ? 's' : '');
+          }
+          var rbCount = document.getElementById('docs-runbook-count');
+          if (rbCount && data.runbook_count != null) {
+            rbCount.textContent = data.runbook_count + ' Runbook' + (data.runbook_count !== 1 ? 's' : '');
+          }
+          var epCount = document.getElementById('docs-endpoint-count');
+          if (epCount && data.api_endpoint_count != null) {
+            epCount.textContent = data.api_endpoint_count + ' Endpoint' + (data.api_endpoint_count !== 1 ? 's' : '');
+          }
+          flashButton(docsRefreshBtn, 'Refreshed!');
+        })
+        .catch(function () {
+          flashButton(docsRefreshBtn, 'Error');
         });
     });
   }

@@ -116,6 +116,10 @@ class EcosystemPack:
     def governance_contract(self) -> Any:
         return self.package.governance_contract if self.package else None
 
+    @property
+    def docs_contract(self) -> Any:
+        return self.package.docs_contract if self.package else None
+
     def to_dict(self) -> dict[str, Any]:
         return {
             "ecosystem_id": self.ecosystem_id,
@@ -149,6 +153,7 @@ class EcosystemPack:
             "has_alerting_contract": self.alerting_contract is not None,
             "has_sla_contract": self.sla_contract is not None,
             "has_governance_contract": self.governance_contract is not None,
+            "has_docs_contract": self.docs_contract is not None,
         }
 
     @classmethod
@@ -375,6 +380,11 @@ class EcosystemPackRegistry:
         pack = self.get(ecosystem_id, version)
         return pack.governance_contract if pack else None
 
+    def get_docs_contract(self, ecosystem_id: str, version: str | None = None) -> Any:
+        """Get the EcosystemDocsContract for an ecosystem if present."""
+        pack = self.get(ecosystem_id, version)
+        return pack.docs_contract if pack else None
+
 
 def build_default_ecosystem_packs() -> tuple[EcosystemPack, ...]:
     """Synthesize default verified ecosystem packs from registered baseline solution packs."""
@@ -481,6 +491,9 @@ class _LazyEcosystemPackRegistry(EcosystemPackRegistry):
 
     def get_governance_contract(self, ecosystem_id: str, version: str | None = None) -> Any:
         return self._get_delegate().get_governance_contract(ecosystem_id, version)
+
+    def get_docs_contract(self, ecosystem_id: str, version: str | None = None) -> Any:
+        return self._get_delegate().get_docs_contract(ecosystem_id, version)
 
 
 DEFAULT_ECOSYSTEM_PACK_REGISTRY: EcosystemPackRegistry = _LazyEcosystemPackRegistry()

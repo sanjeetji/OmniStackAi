@@ -41,7 +41,7 @@ START PROTOCOL
   `task ai:status`, `task ai:handoff`. `task verify` must stay green and network-independent.
 - Confirm git branch/HEAD/clean tree. Then restate: phase, next Tracker ID, objective, blast radius.
 
-WHAT IS ALREADY BUILT (platform generators are Python 3.13 stdlib-only, offline, in services/agent-engine; 3,310 tests pass)
+WHAT IS ALREADY BUILT (platform generators are Python 3.13 stdlib-only, offline, in services/agent-engine; 3,333 tests pass)
 - Model fabric: ModelProvider contract + registry; local Ollama adapter (runs any installed model via
 
 
@@ -418,8 +418,11 @@ WHAT TO DO NEXT
   and R-457 introduces multi-surface SLA, SLO, and error budget contracts, deterministic stdlib synthesis,
   in-process metric evaluation and multi-window burn rate calculation, SLA compliance simulation, Studio preview SLA endpoints and emerald UI panel, and CLI sla subcommand;
   and R-458 introduces multi-surface governance contracts, compliance policies (SOC 2, GDPR, ISO 27001), data classifications,
-  cryptographic audit evidence items, in-process compliance evaluation and multi-scenario audit simulation, Studio preview governance endpoints and indigo UI panel, and CLI governance subcommand.
-- NEXT R-459: Solution Pack Ecosystem Multi-Surface Documentation, Architecture Runbooks, and OpenAPI Aggregator Contracts.
+  cryptographic audit evidence items, in-process compliance evaluation and multi-scenario audit simulation, Studio preview governance endpoints and indigo UI panel, and CLI governance subcommand;
+  and R-459 introduces multi-surface documentation, architecture runbooks, and aggregated OpenAPI 3.1 specifications,
+  deterministic stdlib synthesis, in-process Markdown bundle rendering, keyword/tag search with relevance scoring,
+  OpenAPI route aggregation with collision detection, documentation export simulation, Studio preview docs endpoints and sky-blue UI panel, and CLI docs subcommand.
+- NEXT R-460: Solution Pack Ecosystem Multi-Surface Unified Developer CLI and Operational Control Plane Contracts.
   Keep `task verify` model/Docker/DB/install/network-free (any live/model path stays opt-in); preserve
   single-session ownership and explicit trusted-local mode.
 - The UI-component series remains paused at R-415 and can be resumed later under a future free ID.
@@ -430,7 +433,7 @@ WHAT TO DO NEXT
   deploy (OMNISTACKAI_TIER=2 + E2B/Vercel keys) and cloud-model live-verify. Governance-deferred: native
   mobile (R-010 etc.) until web/backend stability.
 
-Begin by reading the files above and running the start protocol, then continue the spine at R-459
+Begin by reading the files above and running the start protocol, then continue the spine at R-460
 and write its Standard AI Task Contract before writing code.
 ```
 

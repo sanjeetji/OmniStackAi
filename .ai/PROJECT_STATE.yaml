@@ -5,23 +5,23 @@ founder_stage: 0
 current_task: null
 current_status: ready
 branch: main
-last_completed_task: R-458
+last_completed_task: R-459
 # TASK COMPILATION AUDIT — 2026-09-15
 # Performed to achieve 100% synchronization across all task-tracking documentation.
-# Tracker workbook expanded to 458 tasks with R-458.
+# Tracker workbook expanded to 459 tasks with R-459.
 # All documentation (PROGRESS.md, RESUME_PROMPT.md, PROJECT_STATE.md, WORK_LOG.md, HANDOFF.md) updated.
 task_compilation_audit:
   performed_at: "2026-09-15"
-  total_tasks: 458
-  done: 247
+  total_tasks: 459
+  done: 248
   deferred: 1
   not_started: 210
-  mvp_total: 353
-  mvp_done: 247
-  mvp_completion_pct: 70.0
-  overall_completion_pct: 53.9
-  test_suite_count: 3310
-  changelog_entries: 248
+  mvp_total: 354
+  mvp_done: 248
+  mvp_completion_pct: 70.1
+  overall_completion_pct: 54.0
+  test_suite_count: 3333
+  changelog_entries: 249
   missing_entries_backfilled:
     - R-272
     - R-314
@@ -34,24 +34,25 @@ task_compilation_audit:
       new_status: DONE
       reason: "Task fully completed on 2026-09-11 with 35 tests. Status left stale during rapid development sprint."
 last_completed_task_summary: >-
-  Built R-458: Solution Pack Ecosystem Multi-Surface Governance, Compliance Policy, and Audit Evidence Contracts
-  (twenty-ninth brick of the differentiating spine and twenty-fifth Solution Pack task). Implemented ecosystem_governance.py
-  with canonical ComplianceStandard, CompliancePolicy, DataClassification, AuditEvidenceItem, and EcosystemGovernanceContract
-  with full to_dict/from_dict/to_json/from_json roundtrips and deterministic SHA-256 digest();
-  synthesize_ecosystem_governance() derives surface-specific compliance policies, data privacy classifications, and cryptographic
-  audit evidence items offline (0 model calls); in-process thread-safe EcosystemGovernanceEngine evaluates surface configurations,
-  verifies cryptographic audit evidence hashes, and simulates full audits across operational scenarios (standard_audit,
-  gdpr_dsar_request, data_breach_investigation, soc2_certification, high_risk_violations); updated EcosystemPackPackage in
-  ecosystem_pack.py with governance_contract field, to_dict/parse/synthesize integration with whole-package checksum integrity;
-  updated EcosystemPack in ecosystem_registry.py with governance_contract property and has_governance_contract flag;
-  added get_governance_contract(ecosystem_id, version) to EcosystemPackRegistry and delegate proxy;
-  updated StudioPreviewManager in studio/preview.py to synthesize and cache governance_contract and engine in replace_ecosystem(),
-  inject has_governance, standard_count, policy_count, evidence_count, governance_status into preview status payloads, and expose
-  get_ecosystem_governance() and simulate_ecosystem_governance(); added GET /api/ecosystem/governance and
-  POST /api/ecosystem/governance/simulate to studio/server.py and wired in studio/live_serve.py; updated Studio page.py with
-  indigo/violet-themed #preview-governance-info panel (CSS, HTML, JS update logic, Simulate Audit and Refresh button handlers,
-  strictly 0 external network requests); added governance subcommand to ecosystem_cli.py supporting text, --json, --simulate,
-  and --scenario; exported all governance symbols in solution_packs/__init__.py; twenty-two new tests in test_ecosystem_governance.py;
+  Built R-459: Solution Pack Ecosystem Multi-Surface Documentation, Architecture Runbooks, and OpenAPI Aggregator Contracts
+  (thirtieth brick of the differentiating spine and twenty-sixth Solution Pack task). Implemented ecosystem_docs.py
+  with canonical DocPage, RunbookStep, ArchitectureRunbook, OpenAPIRoute, OpenAPIAggregationEntry, AggregatedAPISpec,
+  and EcosystemDocsContract with full to_dict/from_dict/to_json/from_json roundtrips and deterministic SHA-256 digest();
+  synthesize_ecosystem_docs() derives surface-specific architecture documentation pages, operational runbooks (local dev,
+  production deployment, incident triage), and aggregated OpenAPI 3.1 specifications offline (0 model calls);
+  in-process thread-safe EcosystemDocsEngine provides unified Markdown documentation bundle rendering, keyword and tag search,
+  OpenAPI aggregation with route collision detection, and export dry-run simulations (markdown, json, openapi_bundle, runbook_checklist);
+  updated EcosystemPackPackage in ecosystem_pack.py with docs_contract field, to_dict/parse/synthesize integration with whole-package checksum integrity;
+  updated EcosystemPack in ecosystem_registry.py with docs_contract property and has_docs_contract flag;
+  added get_docs_contract(ecosystem_id, version) to EcosystemPackRegistry and delegate proxy;
+  updated StudioPreviewManager in studio/preview.py to synthesize and cache docs_contract and engine in replace_ecosystem(),
+  inject has_docs, page_count, runbook_count, api_endpoint_count, docs_status into preview status payloads, and expose
+  get_ecosystem_docs() and export_ecosystem_docs(); added GET /api/ecosystem/docs and POST /api/ecosystem/docs/export to studio/server.py
+  and wired in studio/live_serve.py; updated Studio page.py with sky-blue/amber-themed #preview-docs-info panel (CSS, HTML,
+  JS update logic, Export Docs and Refresh button handlers, strictly 0 external network requests); added docs subcommand to
+  ecosystem_cli.py supporting formatted text, --json, --search, and --export; exported all docs symbols in solution_packs/__init__.py;
+  twenty new tests in test_ecosystem_docs.py; 3,333 tests passing offline in task verify.
+  Previously built R-458: Solution Pack Ecosystem Multi-Surface Governance, Compliance Policy, and Audit Evidence Contracts
   Previously built R-457: Solution Pack Ecosystem Multi-Surface SLA, SLO, and Error Budget Contracts
   Previously built R-456: Solution Pack Ecosystem Multi-Surface Alerting, Incident Runbooks, and Escalation Policies
   Previously built R-455: Solution Pack Ecosystem Multi-Surface Capacity Planning, Resource Quotas, and Unit Economics Budgeting

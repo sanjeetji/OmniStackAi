@@ -1,17 +1,17 @@
 # Current Handoff
 
-Task ID: R-458
+Task ID: R-459
 Status: done
 Phase: BASIC/MVP — Founder Stage 0
 Branch: `main` (the only branch; the GitHub default)
 
 > **Task Compilation Audit completed on 2026-09-15.** All task documentation is 100% synchronized.
-> - Execution tracker covers **458 tasks** (247 Done, 1 Deferred, 210 Not Started; MVP 70.0%).
-> - 100 completed tasks (R-359..R-458) formally tracked in `Phase_Roadmap` in the workbook.
-> - `CHANGELOG.md` has 248 entries covering all completed tasks (0 missing).
+> - Execution tracker covers **459 tasks** (248 Done, 1 Deferred, 210 Not Started; MVP 70.1%).
+> - 101 completed tasks (R-359..R-459) formally tracked in `Phase_Roadmap` in the workbook.
+> - `CHANGELOG.md` has 249 entries covering all completed tasks (0 missing).
 > - All docs updated: `PROGRESS.md`, `RESUME_PROMPT.md`, `PROJECT_STATE.md`, `PROJECT_STATE.yaml`, `WORK_LOG.md`.
 
-> **The differentiating SPINE now supports Solution Pack Ecosystem Multi-Surface Governance, Compliance Policy, and Audit Evidence Contracts.**
+> **The differentiating SPINE now supports Solution Pack Ecosystem Multi-Surface Documentation, Architecture Runbooks, and OpenAPI Aggregator Contracts.**
 > R-430 proposes the ecosystem, R-431 materializes it, R-432 refines unknown domains, R-433 scopes surfaces, R-434 registers
 > packs, R-435 recommends one, R-436 records bounded intent, R-437 applies safe configuration deterministically,
 > R-438 converts pending manifest AI-delta intents into strictly typed, bounded AIDeltaProposal objects via an
@@ -44,15 +44,30 @@ Branch: `main` (the only branch; the GitHub default)
 > R-455 provides canonical ResourceQuota, SurfaceCapacitySpec, UnitEconomicsCostModel, EcosystemCapacityContract,
 > R-456 provides canonical AlertRule, RunbookStep, IncidentRunbook, EscalationTier, EscalationPolicy, EcosystemAlertingContract,
 > R-457 provides canonical ServiceLevelIndicator, ServiceLevelObjective, ErrorBudget, ServiceLevelAgreement, EcosystemSLAContract,
-> and **R-458 provides canonical ComplianceStandard, CompliancePolicy, DataClassification, AuditEvidenceItem,
-> EcosystemGovernanceContract, deterministic Python 3.13 stdlib-only contract synthesis (synthesize_ecosystem_governance)
-> for all ecosystem surfaces, in-process thread-safe EcosystemGovernanceEngine for policy compliance evaluation,
-> cryptographic audit evidence verification, and multi-scenario audit simulations, whole-package SHA-256 integrity,
-> Studio preview governance status injection, endpoints GET /api/ecosystem/governance and POST /api/ecosystem/governance/simulate,
-> Studio UI indigo/violet-themed #preview-governance-info panel, and CLI governance subcommand**.
-> UI-component series PAUSED at R-415. **NEXT:** R-459 Solution Pack Ecosystem Multi-Surface Documentation, Architecture Runbooks, and OpenAPI Aggregator Contracts.
+> R-458 provides canonical ComplianceStandard, CompliancePolicy, DataClassification, AuditEvidenceItem, EcosystemGovernanceContract,
+> and **R-459 provides canonical DocPage, RunbookStep, ArchitectureRunbook, OpenAPIRoute, OpenAPIAggregationEntry,
+> AggregatedAPISpec, EcosystemDocsContract, deterministic Python 3.13 stdlib-only contract synthesis (synthesize_ecosystem_docs)
+> for all ecosystem surfaces, in-process thread-safe EcosystemDocsEngine for unified Markdown bundle rendering,
+> keyword/tag search, OpenAPI 3.1 route aggregation with collision detection, and documentation export simulations,
+> whole-package SHA-256 integrity, Studio preview docs status injection, endpoints GET /api/ecosystem/docs and POST /api/ecosystem/docs/export,
+> Studio UI sky-blue/amber-themed #preview-docs-info panel, and CLI docs subcommand**.
+> UI-component series PAUSED at R-415. **NEXT:** R-460 Solution Pack Ecosystem Multi-Surface Unified Developer CLI and Operational Control Plane Contracts.
 
 ## Repo/workflow state
+
+- **R-459 (Solution Pack Ecosystem Multi-Surface Documentation, Architecture Runbooks, and OpenAPI Aggregator Contracts — thirtieth spine brick)** shipped:
+  `solution_packs/ecosystem_docs.py` implements `DocPage`, `RunbookStep`, `ArchitectureRunbook`, `OpenAPIRoute`, `OpenAPIAggregationEntry`, `AggregatedAPISpec`, `EcosystemDocsContract`;
+  implements deterministic Python 3.13 stdlib-only contract synthesis (`synthesize_ecosystem_docs`) for all ecosystem surfaces;
+  implements thread-safe in-process `EcosystemDocsEngine` rendering unified Markdown documentation bundles, searching docs with relevance scoring, aggregating OpenAPI 3.1 specs with collision detection, and simulating multi-format exports;
+  `solution_packs/ecosystem_pack.py` bundles and validates docs contracts with whole-package SHA-256 checksums;
+  `solution_packs/ecosystem_registry.py` exposes `docs_contract` and `get_docs_contract()`; exports all docs symbols in `solution_packs/__init__.py`;
+  `studio/preview.py` attaches `has_docs`, `page_count`, `runbook_count`, `api_endpoint_count`, and `docs_status` to preview status/payloads, and
+  exposes `get_ecosystem_docs()` and `export_ecosystem_docs()`;
+  `studio/server.py` and `studio/live_serve.py` expose `GET /api/ecosystem/docs` and `POST /api/ecosystem/docs/export`;
+  `studio/page.py` renders sky-blue/amber-themed `#preview-docs-info` container with pages, runbooks, and API endpoints badges, and 1-click "Export Docs" / "Refresh" buttons (0 external network requests);
+  `solution_packs/ecosystem_cli.py` adds `docs` subcommand supporting both file paths and registered ecosystem IDs with formatted text summary, `--json`, `--search`, and `--export` options;
+  `tests/test_ecosystem_docs.py` adds 20 new focused unit tests. `task verify` **3,333 passed** offline (+23 net-new);
+  lint/security/env + demos (152/149) green; 0 model calls in test execution.
 
 - **R-458 (Solution Pack Ecosystem Multi-Surface Governance, Compliance Policy, and Audit Evidence Contracts — twenty-ninth spine brick)** shipped:
   `solution_packs/ecosystem_governance.py` implements `ComplianceStandard`, `CompliancePolicy`, `DataClassification`, `AuditEvidenceItem`, `EcosystemGovernanceContract`;

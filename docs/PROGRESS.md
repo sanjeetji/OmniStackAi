@@ -1,15 +1,15 @@
-# OmniStackAI — implementation progress (as of R-458)
+# OmniStackAI — implementation progress (as of R-459)
 
 A living summary of what is built, what is pending, and how to see results. Numbers come from the
-execution tracker (`R_&_D/OmniStackAI_Execution_Tracker_v6.xlsx`, `Phase_Roadmap`, 458 tasks as of
-R-458 completion) plus the state files (`.ai/`), Git history, and CHANGELOG.
+execution tracker (`R_&_D/OmniStackAI_Execution_Tracker_v6.xlsx`, `Phase_Roadmap`, 459 tasks as of
+R-459 completion) plus the state files (`.ai/`), Git history, and CHANGELOG.
 
 ## Headline
 
-- **3,310 automated tests pass**, fully offline and network-independent (`task verify`).
-- **247 tracker tasks Done, 1 Deferred, 210 Not Started** across **458 tasks** in the execution tracker
-  (`R_&_D/OmniStackAI_Execution_Tracker_v6.xlsx`, `Phase_Roadmap`). MVP completion: **247 / 353 = 70.0%**. Overall program completion: **247 / 458 = 53.9%**.
-- **100 tasks (R-359 → R-458) formally tracked in the tracker workbook**:
+- **3,333 automated tests pass**, fully offline and network-independent (`task verify`).
+- **248 tracker tasks Done, 1 Deferred, 210 Not Started** across **459 tasks** in the execution tracker
+  (`R_&_D/OmniStackAI_Execution_Tracker_v6.xlsx`, `Phase_Roadmap`). MVP completion: **248 / 354 = 70.1%**. Overall program completion: **248 / 459 = 54.0%**.
+- **101 tasks (R-359 → R-459) formally tracked in the tracker workbook**:
   Rows inserted into `Phase_Roadmap` with full column data and audit evidence so the workbook remains the single authoritative tracker.
 - **Built tasks include**: 57 reusable UI-component suites,
   four front-door bricks, R-420 generated-SQL hardening, R-421 managed embedded local preview,
@@ -39,10 +39,20 @@ R-458 completion) plus the state files (`.ai/`), Git history, and CHANGELOG.
   **R-454 Solution Pack Ecosystem Multi-Surface Disaster Recovery, Snapshot Backup, and Rollback Orchestration**,
   **R-455 Solution Pack Ecosystem Multi-Surface Capacity Planning, Resource Quotas, and Unit Economics Budgeting**,
   **R-456 Solution Pack Ecosystem Multi-Surface Alerting, Incident Runbooks, and Escalation Policies**,
-  **R-457 Solution Pack Ecosystem Multi-Surface SLA, SLO, and Error Budget Contracts**, and
-  **R-458 Solution Pack Ecosystem Multi-Surface Governance, Compliance Policy, and Audit Evidence Contracts** —
-  the first twenty-nine bricks of the differentiating spine.
+  **R-457 Solution Pack Ecosystem Multi-Surface SLA, SLO, and Error Budget Contracts**,
+  **R-458 Solution Pack Ecosystem Multi-Surface Governance, Compliance Policy, and Audit Evidence Contracts**, and
+  **R-459 Solution Pack Ecosystem Multi-Surface Documentation, Architecture Runbooks, and OpenAPI Aggregator Contracts** —
+  the first thirty bricks of the differentiating spine.
   The generated Next.js component library remains at **110 components**; its series is **PAUSED at R-415** and fully resumable.
+- **R-459 adds Ecosystem Multi-Surface Documentation, Architecture Runbooks, and OpenAPI Aggregator Contracts:**
+  `DocPage`, `RunbookStep`, `ArchitectureRunbook`, `OpenAPIRoute`, `OpenAPIAggregationEntry`, `AggregatedAPISpec`, and `EcosystemDocsContract` formalize multi-surface documentation, architecture runbooks, and aggregated OpenAPI 3.1 specifications with deterministic SHA-256 digests and JSON roundtrips;
+  `synthesize_ecosystem_docs` deterministically derives platform overview, data-flow, security pages, surface-specific architecture pages, operational runbooks (local dev setup, production deployment, incident triage), and OpenAPI 3.1 aggregated specs across web, admin, API, worker, and database surfaces offline (0 model calls);
+  thread-safe `EcosystemDocsEngine` renders unified Markdown bundles, searches documentation with keyword and tag relevance scoring, aggregates OpenAPI specs with route collision detection, and simulates multi-format documentation exports (`markdown`, `json`, `openapi_bundle`, `runbook_checklist`);
+  `EcosystemPackPackage` bundles and validates `docs_contract` with whole-package SHA-256 integrity;
+  `StudioPreviewManager` tracks docs contract and engine, injecting `has_docs`, `page_count`, `runbook_count`, `api_endpoint_count`, and `docs_status` into preview payloads;
+  Studio HTTP server exposes `GET /api/ecosystem/docs` and `POST /api/ecosystem/docs/export`;
+  `studio/page.py` renders sky-blue/amber-themed `#preview-docs-info` with pages, runbooks, API endpoints badges, and 1-click "Export Docs" and "Refresh" buttons (0 external network requests);
+  and `ecosystem_cli.py` adds `docs` subcommand with formatted text, `--json`, `--search`, and `--export` options.
 - **R-458 adds Ecosystem Multi-Surface Governance, Compliance Policy, and Audit Evidence Contracts:**
   `ComplianceStandard`, `CompliancePolicy`, `DataClassification`, `AuditEvidenceItem`, and `EcosystemGovernanceContract` formalize multi-surface governance and compliance controls with deterministic SHA-256 digests and JSON roundtrips;
   `synthesize_ecosystem_governance` deterministically derives surface-specific compliance policies, data privacy classifications, and cryptographic audit evidence items across web, admin, API, worker, and database surfaces offline (0 model calls);

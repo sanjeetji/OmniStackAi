@@ -11,6 +11,7 @@ Supports:
 from __future__ import annotations
 
 import argparse
+import json
 import os
 import sys
 from typing import Sequence
@@ -206,6 +207,24 @@ def build_parser() -> argparse.ArgumentParser:
         "--scenario",
         default="standard_audit",
         help="Audit simulation scenario (standard_audit, gdpr_dsar_request, data_breach_investigation, soc2_certification, high_risk_violations; default: standard_audit).",
+    )
+
+    # Subcommand: docs
+    docs_parser = subparsers.add_parser(
+        "docs",
+        help="Inspect, search, or export documentation, architecture runbooks, and aggregated OpenAPI specs.",
+    )
+    docs_parser.add_argument(
+        "package_file",
+        help="Path to the .ecosystem.pack.json file or registered ecosystem ID to inspect.",
+    )
+    docs_parser.add_argument("--json", action="store_true", help="Output documentation contract as canonical JSON.")
+    docs_parser.add_argument("--search", default=None, help="Search documentation pages, runbooks, and API routes.")
+    docs_parser.add_argument(
+        "--export",
+        choices=["markdown", "json", "openapi_bundle", "runbook_checklist"],
+        default=None,
+        help="Simulate documentation export.",
     )
 
     return parser
@@ -1003,6 +1022,68 @@ def run_governance(args: argparse.Namespace) -> int:
     return 0
 
 
+def run_docs(args: argparse.Namespace) -> int:
+    from .ecosystem_docs import EcosystemDocsEngine, synthesize_ecosystem_docs
+
+    pkg, err = _load_package(args.package_file)
+    if pkg is None:
+        sys.stderr.write(f"Error: {err}\n")
+        return 1
+
+    docs_contract = pkg.docs_contract
+    if docs_contract is None:
+        docs_contract = synthesize_ecosystem_docs(
+            pkg.ecosystem_id,
+            pkg.surfaces,
+            version=pkg.version,
+        )
+
+    if args.json:
+        sys.stdout.write(json.dumps(docs_contract.to_dict(), indent=2, sort_keys=True))
+        sys.stdout.write("\n")
+        return 0
+
+    engine = EcosystemDocsEngine(docs_contract)
+
+    if args.search:
+        results = engine.search_documentation(args.search)
+        sys.stdout.write(f"Documentation Search ('{args.search}'): {len(results)} matches\n")
+        for res in results:
+            sys.stdout.write(f"  - [{res['kind'].upper()}] {res['title']} (score: {res['score']})\n")
+            sys.stdout.write(f"    {res['snippet']}\n")
+        return 0
+
+    if args.export:
+        rep = engine.simulate_documentation_export(export_format=args.export)
+        sys.stdout.write(f"Documentation Export Simulation ({args.export}): {rep['status'].upper()}\n")
+        sys.stdout.write(f"  Total Files:       {rep['file_count']}\n")
+        sys.stdout.write(f"  Total Bytes:       {rep['total_bytes']}\n")
+        sys.stdout.write(f"  Pages Exported:    {rep['pages_exported']}\n")
+        sys.stdout.write(f"  Runbooks Exported: {rep['runbooks_exported']}\n")
+        sys.stdout.write(f"  Endpoints:         {rep['endpoints_exported']}\n")
+        sys.stdout.write(f"  Files:\n")
+        for f in rep['files']:
+            sys.stdout.write(f"    - {f['path']} ({f['bytes']} bytes): {f['description']}\n")
+        return 0
+
+    sys.stdout.write(f"Documentation Contract: {pkg.display_name} ({pkg.ecosystem_id})\n")
+    sys.stdout.write(f"  Version:          {docs_contract.version}\n")
+    sys.stdout.write(f"  Digest:           {docs_contract.digest()[:16]}...\n")
+    sys.stdout.write(f"  Doc Pages ({len(docs_contract.pages)}):\n")
+    for page in sorted(docs_contract.pages, key=lambda p: p.order):
+        sys.stdout.write(f"    - [{page.category}] {page.title} (slug: {page.slug}, surface: {page.surface_slug})\n")
+    sys.stdout.write(f"  Operational Runbooks ({len(docs_contract.runbooks)}):\n")
+    for rb in docs_contract.runbooks:
+        sys.stdout.write(f"    - {rb.title} ({rb.target_role}, {rb.estimated_minutes} min): {len(rb.steps)} steps\n")
+    if docs_contract.aggregated_api:
+        sys.stdout.write(f"  Aggregated OpenAPI ({docs_contract.aggregated_api.total_endpoints} endpoints across {len(docs_contract.aggregated_api.surfaces)} surfaces):\n")
+        for p in docs_contract.aggregated_api.paths_summary[:10]:
+            sys.stdout.write(f"    - {p}\n")
+        if len(docs_contract.aggregated_api.paths_summary) > 10:
+            sys.stdout.write(f"    ... and {len(docs_contract.aggregated_api.paths_summary) - 10} more\n")
+    return 0
+
+
 def main(argv: Sequence[str] | None = None) -> int:
     parser = build_parser()
     args = parser.parse_args(argv)
@@ -1043,6 +1124,8 @@ def main(argv: Sequence[str] | None = None) -> int:
         return run_sla(args)
     if args.subcommand == "governance":
         return run_governance(args)
+    if args.subcommand == "docs":
+        return run_docs(args)
     sys.stderr.write(f"Unknown subcommand: {args.subcommand}\n")
     return 1
 
