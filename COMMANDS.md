@@ -8,6 +8,9 @@
 ## 1. Quick Start (Most Frequently Used)
 
 ```bash
+# 0. Always navigate into the OmniStackAI project root first (all commands must be executed from here)
+cd ~/Documents/Projects/Startup/Omnistackai
+
 # 1. Check your machine setup, dependencies, and toolchains (Python, Docker, Node, Ollama)
 task doctor
 
