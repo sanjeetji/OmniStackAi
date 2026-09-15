@@ -126,7 +126,7 @@ def build_run_plan(
             args=(
                 "exec", "-i", db_container,
                 "psql", "-U", db_user, "-d", maintenance_db,
-                "-c", f'DROP DATABASE IF EXISTS "{database}";',
+                "-c", f'DROP DATABASE IF EXISTS "{database}" WITH (FORCE);',
             ),
             env=pg_env,
             tolerate_failure=True,
