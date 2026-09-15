@@ -23,3 +23,8 @@ older sections when they conflict.
 Run verification, then update `.ai/CURRENT_TASK.yaml`, `.ai/PROJECT_STATE.yaml`,
 `.ai/WORK_LOG.md`, `.ai/HANDOFF.md`, root `PROJECT_STATE.md`, the changelog, and tracker
 evidence. Record one exact next action and command.
+
+## Quick Commands Reference
+
+For a complete cheat sheet of all runnable tasks, see [COMMANDS.md](../COMMANDS.md).
+
