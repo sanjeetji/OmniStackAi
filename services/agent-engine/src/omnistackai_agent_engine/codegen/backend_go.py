@@ -31,6 +31,7 @@ _GO_TYPE: dict[FieldType, str] = {
     FieldType.BOOL: "bool",
     FieldType.DATETIME: "time.Time",
     FieldType.JSON: "json.RawMessage",
+    FieldType.ATTACHMENT: "string",
 }
 
 
@@ -69,8 +70,9 @@ def _validated_entities(ir: ApplicationIR) -> frozenset[str]:
 
 
 def _models_file(ir: ApplicationIR) -> str:
-    needs_time = any(f.type is FieldType.DATETIME for e in ir.entities for f in e.fields)
     needs_json = any(f.type is FieldType.JSON for e in ir.entities for f in e.fields)
+    # R-502: audit timestamps always use time.Time, so always import "time" when entities exist.
+    needs_time = bool(ir.entities) or any(f.type is FieldType.DATETIME for e in ir.entities for f in e.fields)
     lines = ["package models", ""]
     import_names: list[str] = []
     if needs_time:
@@ -86,6 +88,7 @@ def _models_file(ir: ApplicationIR) -> str:
         lines.append("// No entities in the IR.")
         return "\n".join(lines) + "\n"
     for entity in ir.entities:
+        declared_names = {field.name for field in entity.fields}
         lines.append(f"type {entity.name} struct {{")
         for field in entity.fields:
             go = _GO_TYPE[field.type]
@@ -96,6 +99,11 @@ def _models_file(ir: ApplicationIR) -> str:
                 lines.append(f'\t{go_name} {go} `json:"{field.name}"{validate}`')
             else:
                 lines.append(f'\t{go_name} *{go} `json:"{field.name},omitempty"{validate}`')
+        # R-502: audit timestamp fields — omitted if the IR already declares them.
+        if "created_at" not in declared_names:
+            lines.append(f'\tCreatedAt time.Time `json:"created_at"`')
+        if "updated_at" not in declared_names:
+            lines.append(f'\tUpdatedAt time.Time `json:"updated_at"`')
         lines.append("}")
         lines.append("")
     return "\n".join(lines) + "\n"
@@ -350,7 +358,14 @@ def _main_file(slug: str, apis: list[ApiEndpoint], *, has_db: bool = False) -> s
         elif api.auth:
             target = f"handlers.RequireAuth({target})"
         lines.append(f'\tmux.HandleFunc("{api.method.value} {api.path}", {target})')
-    lines.append('\taddr := ":8080"')
+    lines.append('\tport := os.Getenv("PORT")')
+    lines.append('\tif port == "" {')
+    lines.append('\t\tport = "8080"')
+    lines.append('\t}')
+    lines.append('\taddr := ":" + port')
+    lines.append('\tif envAddr := os.Getenv("ADDR"); envAddr != "" {')
+    lines.append('\t\taddr = envAddr')
+    lines.append('\t}')
     lines.append('\tlog.Printf("listening on %s", addr)')
     lines.append("\tlog.Fatal(http.ListenAndServe(addr, corsMiddleware(mux)))")
     lines.append("}")
@@ -405,6 +420,7 @@ class GoBackendAdapter:
         env_example = f"# Backend config placeholders only. Never commit secrets.\nAPP_NAME={ir.name}\nADDR=:8080\nDATABASE_URL=postgres://localhost:5432/{slug}\nCORS_ALLOWED_ORIGIN=*\n"
         if has_auth:
             env_example += "JWT_SECRET=\n"
+        env_example += "STORAGE_ENDPOINT=http://localhost:9000\nSTORAGE_BUCKET=uploads\nSTORAGE_ACCESS_KEY=minioadmin\nSTORAGE_SECRET_KEY=minioadmin\n"
         files: list[GeneratedFile] = [
             GeneratedFile("go.mod", go_mod),
             GeneratedFile("main.go", _main_file(slug, apis, has_db=has_db)),

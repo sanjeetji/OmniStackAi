@@ -85,6 +85,9 @@ def build_solution_pack_project(
     author_email: str,
     overwrite: bool = False,
     registry: SolutionPackRegistry = DEFAULT_SOLUTION_PACK_REGISTRY,
+    provider: ModelProvider | None = None,
+    prompt: str = "",
+    model_id: str | None = None,
 ) -> SolutionPackBuildResult:
     """Assemble a derived Solution Pack Application IR into an owned Git repository.
 
@@ -106,7 +109,12 @@ def build_solution_pack_project(
             f"Expected SolutionPackApplicationResult or SolutionPackManifest, got {type(source).__name__}"
         )
 
-    project = assemble_project(app_result.ir)
+    project = assemble_project(
+        app_result.ir,
+        provider=provider,
+        prompt=prompt,
+        model_id=model_id,
+    )
     repo = create_repository(
         project,
         target_dir,

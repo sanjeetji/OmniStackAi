@@ -195,7 +195,12 @@ def build_run_plan(
                 program="go",
                 args=("run", "."),
                 cwd=str(api_dir),
-                env=(("DATABASE_URL", database_url), ("JWT_SECRET", jwt_secret)),
+                env=(
+                    ("DATABASE_URL", database_url),
+                    ("JWT_SECRET", jwt_secret),
+                    ("PORT", str(api_port)),
+                    ("ADDR", f":{api_port}"),
+                ),
                 background=True,
             )
         )

@@ -25,8 +25,12 @@ def _pascal(value: str) -> str:
     return "".join(part[:1].upper() + part[1:] for part in re.split(r"[^A-Za-z0-9]+", value) if part)
 
 
+_AUTO_COLUMNS: frozenset[str] = frozenset({"id", "created_at", "updated_at"})
+
+
 def _insert_columns(entity: Entity) -> list[str]:
-    return [field.name for field in entity.fields if field.name != "id"]
+    """Columns written by INSERT/UPDATE. Excludes auto-managed columns (id, created_at, updated_at)."""
+    return [field.name for field in entity.fields if field.name not in _AUTO_COLUMNS]
 
 
 def _fk_relation_names(entity: Entity) -> list[str]:
@@ -34,7 +38,7 @@ def _fk_relation_names(entity: Entity) -> list[str]:
 
 
 def _searchable_fields(entity: Entity) -> list[str]:
-    return [field.name for field in entity.fields if field.type in (FieldType.STRING, FieldType.TEXT)]
+    return [field.name for field in entity.fields if field.type in (FieldType.STRING, FieldType.TEXT, FieldType.ATTACHMENT)]
 
 
 def _sql_columns(names: list[str]) -> str:
@@ -71,18 +75,25 @@ def _python_repository(entity: Entity) -> str:
     if insert_cols:
         create_body = (
             f"    columns = [c for c in {insert_cols!r} if c in data]\n"
+            "    values: list = [data[c] for c in columns]\n"
+            "    if created_by is not None:\n"
+            "        columns.append('created_by')\n"
+            "        values.append(created_by)\n"
             "    if not columns:\n"
             "        sql = f'INSERT INTO {TABLE} DEFAULT VALUES RETURNING *'\n"
-            "        values: list = []\n"
+            "        values = []\n"
             "    else:\n"
             '        placeholders = ", ".join(["%s"] * len(columns))\n'
-            '        sql = f\'INSERT INTO {TABLE} ({", ".join(SQL_COLUMNS[c] for c in columns)}) VALUES ({placeholders}) RETURNING *\'\n'
-            "        values = [data[c] for c in columns]\n"
+            '        sql = f\'INSERT INTO {TABLE} ({", ".join(SQL_COLUMNS.get(c, sql_identifier(c)) for c in columns)}) VALUES ({placeholders}) RETURNING *\'\n'
         )
     else:
         create_body = (
-            "    sql = f'INSERT INTO {TABLE} DEFAULT VALUES RETURNING *'\n"
-            "    values: list = []\n"
+            "    if created_by is not None:\n"
+            f"        sql = f'INSERT INTO {{TABLE}} ({sql_identifier('created_by')}) VALUES (%s) RETURNING *'\n"
+            "        values = [created_by]\n"
+            "    else:\n"
+            "        sql = f'INSERT INTO {TABLE} DEFAULT VALUES RETURNING *'\n"
+            "        values = []\n"
         )
     cols = [field.name for field in entity.fields]
     searchable = _searchable_fields(entity)
@@ -173,7 +184,7 @@ def _python_repository(entity: Entity) -> str:
         "    async with await connect() as conn, conn.cursor() as cur:\n"
         f"        await cur.execute(f'SELECT * FROM {{TABLE}} WHERE {sql_identifier('id')} = %s', (id,))\n"
         "        return await cur.fetchone()\n\n\n"
-        f"async def create_{table}(data: dict[str, Any]) -> dict[str, Any]:\n"
+        f"async def create_{table}(data: dict[str, Any], created_by: str | None = None) -> dict[str, Any]:\n"
         f"{create_body}"
         "    async with await connect() as conn, conn.cursor() as cur:\n"
         "        await cur.execute(sql, values)\n"

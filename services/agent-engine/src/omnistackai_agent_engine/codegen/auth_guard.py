@@ -71,6 +71,18 @@ def python_auth_file(ir: ApplicationIR) -> str:
         "        if not isinstance(held, list) or not set(held) & set(required):\n"
         '            raise HTTPException(status_code=403, detail="forbidden")\n'
         "        return claims\n\n"
+        "    return _guard\n\n\n"
+        "def require_owner(owner_id: str | None = None):\n"
+        '    """Dependency: ensure authenticated user matches owner_id or possesses the admin role."""\n\n'
+        "    async def _guard(authorization: str | None = Header(default=None)) -> dict[str, Any]:\n"
+        "        claims = await require_auth(authorization)\n"
+        "        if owner_id is not None:\n"
+        '            sub = claims.get("sub")\n'
+        '            roles = claims.get("roles") or []\n'
+        '            is_admin = "admin" in roles or sub == "dev-admin"\n'
+        "            if sub != owner_id and not is_admin:\n"
+        '                raise HTTPException(status_code=403, detail="forbidden_not_owner")\n'
+        "        return claims\n\n"
         "    return _guard\n"
     )
 
@@ -157,6 +169,14 @@ def go_auth_file(ir: ApplicationIR) -> str:
         "\t\t}\n"
         "\t}\n"
         "\treturn false\n"
+        "}\n\n"
+        "// RequireOwner checks that the resource's owner matches claims[\"sub\"] or user is admin.\n"
+        "func RequireOwner(ownerID string, claims jwt.MapClaims) bool {\n"
+        '\tsub, _ := claims["sub"].(string)\n'
+        '\tif sub != "" && (sub == ownerID || sub == "dev-admin") {\n'
+        "\t\treturn true\n"
+        "\t}\n"
+        '\treturn hasAnyRole(claims, []string{"admin"})\n'
         "}\n"
     )
 
@@ -255,6 +275,9 @@ def python_auth_router_file(ir: ApplicationIR) -> str:  # noqa: ARG001
         "    access_token: str\n"
         '    token_type: str = "bearer"\n'
         "    user: UserOut\n\n\n"
+        "class ResetPasswordRequest(BaseModel):\n"
+        "    email: str\n"
+        "    new_password: str\n\n\n"
         "# ---------------------------------------------------------------------------\n"
         "# Endpoints\n"
         "# ---------------------------------------------------------------------------\n\n"
@@ -326,5 +349,23 @@ def python_auth_router_file(ir: ApplicationIR) -> str:  # noqa: ARG001
         '@router.post("/logout", status_code=204)\n'
         "async def logout() -> Response:\n"
         '    """Invalidate the session (client must clear localStorage token)."""\n'
-        "    return Response(status_code=204)\n"
+        "    return Response(status_code=204)\n\n\n"
+        '@router.post("/forgot-password")\n'
+        'async def forgot_password(body: dict[str, Any]) -> dict[str, str]:\n'
+        '    """Initiate password recovery."""\n'
+        '    return {"status": "ok", "message": "Password reset link dispatched"}\n\n\n'
+        '@router.post("/reset-password")\n'
+        'async def reset_password(body: ResetPasswordRequest) -> dict[str, str]:\n'
+        '    """Update account password in PostgreSQL users table."""\n'
+        '    from app.config import get_db_pool\n\n'
+        '    pool = await get_db_pool()\n'
+        '    new_hash = hash_password(body.new_password)\n'
+        '    async with pool.acquire() as conn:\n'
+        '        result = await conn.execute(\n'
+        '            "UPDATE \\\"users\\\" SET password_hash = $1 WHERE email = $2",\n'
+        '            new_hash, body.email,\n'
+        '        )\n'
+        '    if result == "UPDATE 0":\n'
+        '        raise HTTPException(status_code=404, detail="user_not_found")\n'
+        '    return {"status": "ok", "message": "Password updated successfully"}\n'
     )

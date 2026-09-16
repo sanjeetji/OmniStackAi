@@ -1,27 +1,25 @@
-task_id: R-461
+task_id: R-464
 status: completed
 phase: MVP
 tracker_row: 9
 started_at: "2026-09-16"
 completed_at: "2026-09-16"
 objective: >-
-  Implement Full-Stack Production Authentication Engine (R-461),
-  rendering a PostgreSQL users table and admin seed row, FastAPI auth router
-  (/auth/register, /auth/login, /auth/me, /auth/logout) using PBKDF2-HMAC-SHA256
-  with zero external dependencies, Next.js AuthProvider context and hook (useAuth),
-  responsive login and registration pages, navbar auth state injection, and auto-attached
-  Bearer token client handling with localStorage fallback.
+  Implement Full-Stack Platform Feature Completeness across 4 phases:
+  Phase 1: Frontend Search, Pagination & Filter UI Controls & LLM prompt hook descriptions.
+  Phase 2: Audit Timestamps (created_at, updated_at) on all entity tables, models, TypeScript types, and detail metadata footer.
+  Phase 3: RBAC / Row Ownership (created_by) when needs_auth(ir) is True across schema, data access, handlers, types, hooks, and RequireOwner middleware.
+  Phase 4: S3-Compatible File Uploads with FieldType.ATTACHMENT, presigned upload-url endpoints, form screen upload component wiring, and storage env contracts.
 allowed_paths:
+  - services/agent-engine/src/omnistackai_agent_engine/application_ir/ir.py
   - services/agent-engine/src/omnistackai_agent_engine/codegen/schema_sql.py
-  - services/agent-engine/src/omnistackai_agent_engine/codegen/auth_guard.py
+  - services/agent-engine/src/omnistackai_agent_engine/codegen/data_access.py
   - services/agent-engine/src/omnistackai_agent_engine/codegen/backend_python.py
+  - services/agent-engine/src/omnistackai_agent_engine/codegen/backend_go.py
   - services/agent-engine/src/omnistackai_agent_engine/codegen/nextjs.py
-  - services/agent-engine/tests/test_full_stack_auth.py
-  - services/agent-engine/tests/test_auth_guard_dev_mode.py
-  - R_&_D/OmniStackAI_Execution_Tracker_v6.xlsx
-  - docs/PROGRESS.md
-  - docs/RESUME_PROMPT.md
-  - .ai/tasks/R-461.md
+  - services/agent-engine/src/omnistackai_agent_engine/codegen/auth_guard.py
+  - services/agent-engine/src/omnistackai_agent_engine/codegen/llm_ui.py
+  - services/agent-engine/tests/test_platform_feature_completeness.py
   - .ai/CURRENT_TASK.yaml
   - .ai/PROJECT_STATE.yaml
   - .ai/WORK_LOG.md
@@ -29,25 +27,22 @@ allowed_paths:
   - PROJECT_STATE.md
   - CHANGELOG.md
 forbidden_changes:
-  - Do not add external Python dependencies (Python 3.13 stdlib only for hashing)
-  - Do not modify any existing test that already passes
+  - Do not introduce placeholder stubs or TODOs in generated code
+  - Do not break offline determinism or existing passing tests
+  - Do not add external network requests to frontend or studio HTML
   - Do not change the control-plane database from PostgreSQL
-  - Do not add external network requests to Studio HTML or generated frontend
-  - Do not break existing auth guard tests
 required_gates:
-  - test-first focused test_full_stack_auth.py
-  - task verify
   - task lint
-  - task security:quick
-  - task env:check
+  - bash scripts/agent-engine.sh lint
+  - bash scripts/agent-engine.sh test
 evidence:
   tests:
-    - name: test_full_stack_auth.py
-      count: 42
-      status: passed
-    - name: test_field_validation.py
-      count: 10
-      status: passed
-    - name: task verify
-      count: 3386
-      status: passed
+    - command: PYTHONPATH=services/agent-engine/src python3 -m unittest services/agent-engine/tests/test_platform_feature_completeness.py
+      result: 14 tests in 0.005s OK
+    - command: PYTHONPATH=services/agent-engine/src python3 -m unittest services/agent-engine/tests/test_collection_field_filters.py services/agent-engine/tests/test_platform_feature_completeness.py
+      result: 32 tests in 0.010s OK
+    - command: bash scripts/agent-engine.sh lint
+      result: Agent-engine contract lint passed.
+    - command: bash scripts/agent-engine.sh test
+      result: Ran 3427 tests in 60.751s. OK.
+

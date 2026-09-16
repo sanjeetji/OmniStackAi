@@ -49,9 +49,16 @@ def build_app_from_ir(
     author_email: str,
     prompt: str = "",
     overwrite: bool = False,
+    provider: ModelProvider | None = None,
+    model_id: str | None = None,
 ) -> AppBuildResult:
     """Assemble ``ir`` into a monorepo and materialize it as an owned Git repo at ``target_dir``."""
-    project = assemble_project(ir)
+    project = assemble_project(
+        ir,
+        provider=provider,
+        prompt=prompt,
+        model_id=model_id,
+    )
     repo = create_repository(
         project,
         target_dir,
@@ -128,4 +135,6 @@ async def build_app_from_prompt(
         author_email=author_email,
         prompt=prompt,
         overwrite=overwrite,
+        provider=provider,
+        model_id=model_id,
     )

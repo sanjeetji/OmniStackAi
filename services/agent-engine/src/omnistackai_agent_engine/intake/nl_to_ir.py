@@ -20,6 +20,7 @@ Design (so `task verify` stays offline and deterministic):
 from __future__ import annotations
 
 import json
+import re
 from dataclasses import dataclass
 
 from ..application_ir import (
@@ -52,7 +53,7 @@ from ..model_gateway import (
 from .errors import IntakeError, IntakeResponseError
 
 DEFAULT_TEMPLATE_EXAMPLE = "minimal-blog"
-DEFAULT_MAX_OUTPUT_TOKENS = 2048
+DEFAULT_MAX_OUTPUT_TOKENS = 4096
 DEFAULT_TIMEOUT_SECONDS = 300.0
 _REQUEST_ID = "r416-intake-nl-to-ir"
 
@@ -79,24 +80,47 @@ def _system_instruction(example_name: str) -> str:
         "You are the intake compiler for OmniStackAI, an AI app-generation platform.\n"
         "Convert the user's application description into a single Application IR JSON object.\n"
         "\n"
-        "Rules:\n"
+        "Core Architecture Rules:\n"
         "- Output ONLY one JSON object. No prose, no explanation, no markdown code fences.\n"
+        "- Keep JSON compact and avoid unnecessary verbosity or whitespace so it parses cleanly within token limits.\n"
         f'- It MUST match the structure of the template below exactly, including "schema_version": '
         f"{IR_SCHEMA_VERSION}.\n"
-        "- Use lower_snake_case identifiers for entity names, field names, roles, and screen ids.\n"
-        "- Model the user's real domain: choose sensible entities, fields (each with a name and type),\n"
-        "  relations, API endpoints, screens, and at least one acceptance criterion. Minimal but complete.\n"
+        "- Use PascalCase for entity names (e.g. Product, CartItem, CustomerReview, Appointment, TaskItem).\n"
+        "- Use lower_snake_case identifiers for field names, roles, and screen ids.\n"
         f"- Every field 'type' MUST be EXACTLY one of: {field_types}. Do NOT invent other types.\n"
         "  For a status/category/enum-like field use \"string\". For money use \"float\". For an id use \"uuid\".\n"
+        "\n"
+        "Feature Completeness & 1:1 Full-Stack Triad:\n"
+        "- For EVERY feature or capability requested by the user (e.g., product grid, shopping cart, discounts, reviews, wishlist, booking, messaging):\n"
+        "  1. Database Entity: Model a dedicated Entity with realistic, complete fields and relations.\n"
+        "  2. API Endpoints: Define the necessary REST endpoints (list, get, create, update, delete).\n"
+        "  3. Screens: Define interactive, user-facing screens corresponding to each workflow.\n"
+        "  Never drop, skip, or omit any user-specified feature.\n"
+        "\n"
+        "Universal Domain Archetype Expansion (For Short Prompts):\n"
+        "- If the user gives a concise, generic, or high-level prompt (e.g., 'Create an e-commerce platform', 'Build a clinic management app', 'Create a project tracker', 'Make an invoicing system', 'Build a gym fitness platform', 'Create a real estate portal'):\n"
+        "  You MUST intelligently expand the domain into a comprehensive, production-grade 4 to 7 entity architecture.\n"
+        "  Examples:\n"
+        "  * E-Commerce: Product, Category, CartItem, Order, CustomerReview, Discount\n"
+        "  * Healthcare / Clinic: Patient, Provider, Appointment, MedicalRecord, Prescription\n"
+        "  * SaaS / Project Management: Workspace, Project, Task, TaskComment, TeamMember\n"
+        "  * FinTech / Invoicing: Client, Invoice, LineItem, PaymentRecord, Expense\n"
+        "  * Real Estate: PropertyListing, Agent, TourBooking, ClientInquiry, Review\n"
+        "  * Education / LMS: Course, Module, Lesson, StudentEnrollment, QuizSubmission\n"
+        "  * Hospitality / Restaurant: MenuItem, MenuCategory, TableBooking, CustomerOrder, Review\n"
+        "  * Logistics / Fleet: Vehicle, Driver, DeliveryRoute, DispatchOrder, MaintenanceLog\n"
+        "  Do NOT emit a shallow 1-entity stub when the user asks for a complete platform.\n"
+        "\n"
+        "Project Strategy Rules:\n"
         "- In 'project_strategy', use only allowed canonical values:\n"
         f"  * 'mobile_profile': {mobile_profiles} (choose 'react_native' or 'flutter' if the user requested a mobile app)\n"
         f"  * 'web_strategy': {web_strategies}\n"
         f"  * 'admin_strategy': {admin_strategies} (choose 'nextjs' if the user requested an admin dashboard/panel)\n"
-        f"  * 'backend_strategy': {backend_strategies}\n"
+        f"  * 'backend_strategy': {backend_strategies} (choose 'go' if the user requested Go/golang; default to 'python')\n"
         f"  * 'database_strategy': {database_strategies}\n"
         f"  * 'repo_strategy': {repo_strategies}\n"
         "\n"
-        "Template (copy this shape; replace the content with the user's domain):\n"
+        "Template Schema Reference (copy this JSON shape; replace the content with the expanded domain):\n"
         f"{template}\n"
     )
 
@@ -133,25 +157,159 @@ def _extract_json_object(text: str) -> str:
                 stripped = stripped[newline + 1 : close].strip()
     open_idx = stripped.find("{")
     close_idx = stripped.rfind("}")
-    if open_idx == -1 or close_idx == -1 or close_idx < open_idx:
+    if open_idx == -1:
         raise IntakeResponseError("model response did not contain a JSON object")
+    if close_idx == -1 or close_idx < open_idx:
+        return stripped[open_idx:]
     return stripped[open_idx : close_idx + 1]
 
 
-def parse_ir_response(text: str) -> ApplicationIR:
-    """Parse raw model text into a validated, normalized ApplicationIR.
+def _close_truncated_json(text: str) -> str:
+    """Balance unclosed quotes and brackets/braces if the model output was truncated."""
+    in_str = False
+    escape = False
+    stack: list[str] = []
+    for ch in text:
+        if escape:
+            escape = False
+            continue
+        if ch == "\\":
+            escape = True
+            continue
+        if ch == '"':
+            in_str = not in_str
+            continue
+        if in_str:
+            continue
+        if ch in "{[":
+            stack.append(ch)
+        elif ch in "}]":
+            if stack and ((ch == "}" and stack[-1] == "{") or (ch == "]" and stack[-1] == "[")):
+                stack.pop()
 
-    Raises IntakeResponseError when the text is not JSON or does not describe a
-    structurally valid IR.
-    """
-    payload = _extract_json_object(text)
+    closing = ""
+    if in_str:
+        closing += '"'
+    while stack:
+        opener = stack.pop()
+        closing += "}" if opener == "{" else "]"
+    return text + closing
+
+
+def _clean_json_syntax(text: str) -> str:
+    """Strip comments, trailing commas, and insert missing commas across lines outside strings."""
+    text = re.sub(r"//.*$", "", text, flags=re.MULTILINE)
+
+    result: list[str] = []
+    in_string = False
+    escape = False
+    lines = text.split("\n")
+    for i, line in enumerate(lines):
+        result.append(line)
+        for ch in line:
+            if escape:
+                escape = False
+            elif ch == "\\":
+                escape = True
+            elif ch == '"':
+                in_string = not in_string
+        if not in_string and i + 1 < len(lines):
+            stripped_curr = line.rstrip()
+            next_line = lines[i + 1].lstrip()
+            if stripped_curr and next_line:
+                last_char = stripped_curr[-1]
+                first_char = next_line[0]
+                if last_char in ('"', "0", "1", "2", "3", "4", "5", "6", "7", "8", "9", "e", "l", "}", "]") and last_char != ",":
+                    if first_char in ('"', "{", "[") and not stripped_curr.endswith(("{", "[", ":", ",")):
+                        result[-1] = stripped_curr + ","
+
+    cleaned = "\n".join(result)
+    cleaned = re.sub(r",\s*([}\]])", r"\1", cleaned)
+    return cleaned
+
+
+def _robust_json_decode(payload: str) -> dict:
+    """Decode JSON with multi-pass repair for quotes, comments, missing commas, and truncation."""
     try:
-        data = json.loads(payload)
-    except json.JSONDecodeError as error:
-        raise IntakeResponseError(f"model response was not valid JSON: {error}") from error
-    if not isinstance(data, dict):
-        raise IntakeResponseError("model response JSON was not an object")
+        return json.loads(payload, strict=False)
+    except Exception:
+        pass
+
+    cleaned = _clean_json_syntax(payload)
+    try:
+        return json.loads(cleaned, strict=False)
+    except Exception:
+        pass
+
+    closed = _close_truncated_json(cleaned)
+    try:
+        return json.loads(closed, strict=False)
+    except Exception:
+        pass
+
+    curr = closed
+    for _ in range(30):
+        try:
+            return json.loads(curr, strict=False)
+        except json.JSONDecodeError as err:
+            pos = err.pos
+            found = False
+            if "delimiter" in err.msg:
+                q_pos = curr.rfind('"', 0, pos)
+                if q_pos != -1 and (q_pos == 0 or curr[q_pos - 1] != "\\"):
+                    curr = curr[:q_pos] + '\\"' + curr[q_pos + 1:]
+                    found = True
+            if not found:
+                for p in range(max(0, pos - 6), min(len(curr), pos + 6)):
+                    if curr[p] == '"' and (p == 0 or curr[p - 1] != "\\"):
+                        curr = curr[:p] + '\\"' + curr[p + 1:]
+                        found = True
+                        break
+            if not found:
+                break
+
+    return json.loads(curr, strict=False)
+
+
+_FIELD_TYPE_ALIASES: dict[str, str] = {
+    "str": "string",
+    "varchar": "string",
+    "char": "string",
+    "text": "text",
+    "integer": "int",
+    "bigint": "int",
+    "smallint": "int",
+    "number": "float",
+    "decimal": "float",
+    "double": "float",
+    "real": "float",
+    "numeric": "float",
+    "currency": "float",
+    "money": "float",
+    "boolean": "bool",
+    "timestamp": "datetime",
+    "date": "datetime",
+    "time": "datetime",
+    "id": "uuid",
+    "dict": "json",
+    "object": "json",
+    "array": "json",
+    "list": "json",
+}
+
+
+def _to_snake(val: str, default: str = "item") -> str:
+    cleaned = re.sub(r"[^a-zA-Z0-9_]+", "_", str(val)).strip("_").lower()
+    if not cleaned or not cleaned[0].isalpha():
+        cleaned = f"item_{cleaned}" if cleaned else default
+    return cleaned[:64]
+
+
+def _sanitize_ir_dict(data: dict) -> dict:
+    """Coerce common LLM syntax variances into strict Application IR schemas."""
     data.setdefault("schema_version", IR_SCHEMA_VERSION)
+
+    # Project strategy
     if "project_strategy" not in data or not isinstance(data["project_strategy"], dict):
         data["project_strategy"] = {
             "mobile_profile": "none",
@@ -169,6 +327,118 @@ def parse_ir_response(text: str) -> ApplicationIR:
         strat.setdefault("backend_strategy", "python")
         strat.setdefault("database_strategy", "postgres")
         strat.setdefault("repo_strategy", "customer_project_monorepo")
+
+        # If LLM set web_strategy to 'none' but set admin_strategy to 'nextjs',
+        # ensure web_strategy is 'nextjs' so the Admin Panel UI is assembled into apps/web.
+        if strat.get("web_strategy") == "none" and strat.get("admin_strategy") in ("nextjs", "react"):
+            strat["web_strategy"] = "nextjs"
+
+    # APIs
+    if "apis" in data and isinstance(data["apis"], list):
+        valid_apis = []
+        for api in data["apis"]:
+            if not isinstance(api, dict):
+                continue
+            method = str(api.get("method", "GET")).strip().upper()
+            if method not in ("GET", "POST", "PUT", "PATCH", "DELETE"):
+                method = "GET"
+            api["method"] = method
+
+            path = str(api.get("path", "/")).strip()
+            if not path.startswith("/"):
+                path = f"/{path}"
+            api["path"] = path
+
+            raw_auth = api.get("auth", True)
+            if isinstance(raw_auth, str):
+                api["auth"] = raw_auth.strip().lower() not in ("false", "0", "no", "none", "public")
+            elif not isinstance(raw_auth, bool):
+                api["auth"] = bool(raw_auth)
+
+            roles = api.get("required_roles", ())
+            if isinstance(roles, (list, tuple)):
+                cleaned_roles = [_to_snake(r) for r in roles if str(r).strip()]
+                if cleaned_roles and not api["auth"]:
+                    api["auth"] = True
+                api["required_roles"] = cleaned_roles
+            else:
+                api["required_roles"] = []
+            valid_apis.append(api)
+        data["apis"] = valid_apis
+
+    # Screens
+    if "screens" in data and isinstance(data["screens"], list):
+        valid_screens = []
+        for s in data["screens"]:
+            if not isinstance(s, dict):
+                continue
+            s["id"] = _to_snake(s.get("id", "screen"))
+            s["role"] = _to_snake(s.get("role", "user"))
+            s["components"] = [str(c).strip() for c in s.get("components", ()) if str(c).strip()]
+            s["actions"] = [str(a).strip() for a in s.get("actions", ()) if str(a).strip()]
+            s["navigation"] = [str(n).strip() for n in s.get("navigation", ()) if str(n).strip()]
+            valid_screens.append(s)
+        data["screens"] = valid_screens
+
+    # Entities
+    valid_field_types = {t.value for t in FieldType}
+    if "entities" in data and isinstance(data["entities"], list):
+        valid_entities = []
+        for e in data["entities"]:
+            if not isinstance(e, dict):
+                continue
+            raw_name = str(e.get("name", "Item")).strip()
+            e["name"] = re.sub(r"[^a-zA-Z0-9]+", "", raw_name) or "Item"
+            if "fields" in e and isinstance(e["fields"], list):
+                valid_fields = []
+                for f in e["fields"]:
+                    if not isinstance(f, dict):
+                        continue
+                    f["name"] = _to_snake(f.get("name", "field"))
+                    raw_type = str(f.get("type", "string")).strip().lower()
+                    if raw_type in valid_field_types:
+                        f["type"] = raw_type
+                    elif raw_type in _FIELD_TYPE_ALIASES:
+                        f["type"] = _FIELD_TYPE_ALIASES[raw_type]
+                    else:
+                        f["type"] = "string"
+                    f["primary_key"] = bool(f.get("primary_key", False))
+                    f["nullable"] = bool(f.get("nullable", False))
+                    f["unique"] = bool(f.get("unique", False))
+                    f["indexed"] = bool(f.get("indexed", False))
+                    valid_fields.append(f)
+                e["fields"] = valid_fields
+            valid_entities.append(e)
+        data["entities"] = valid_entities
+
+    # Roles
+    if "roles" in data and isinstance(data["roles"], list):
+        valid_roles = []
+        for r in data["roles"]:
+            if not isinstance(r, dict):
+                continue
+            r["id"] = _to_snake(r.get("id", "user"))
+            r["description"] = str(r.get("description", "Role")).strip() or "Role"
+            valid_roles.append(r)
+        data["roles"] = valid_roles
+
+    return data
+
+
+def parse_ir_response(text: str) -> ApplicationIR:
+    """Parse raw model text into a validated, normalized ApplicationIR.
+
+    Raises IntakeResponseError when the text is not JSON or does not describe a
+    structurally valid IR.
+    """
+    payload = _extract_json_object(text)
+    try:
+        data = _robust_json_decode(payload)
+    except json.JSONDecodeError as error:
+        raise IntakeResponseError(f"model response was not valid JSON: {error}") from error
+    if not isinstance(data, dict):
+        raise IntakeResponseError("model response JSON was not an object")
+    data = _sanitize_ir_dict(data)
     try:
         ir = ApplicationIR.from_dict(data)
     except (ApplicationIRError, ValueError, TypeError, KeyError) as error:

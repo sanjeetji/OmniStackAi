@@ -84,6 +84,7 @@ class FieldType(StrEnum):
     DATETIME = "datetime"
     UUID = "uuid"
     JSON = "json"
+    ATTACHMENT = "attachment"
 
 
 class RelationKind(StrEnum):
@@ -228,6 +229,10 @@ _ENUM_ALIASES: dict[type, dict[str, str]] = {
         "object": "json",
         "array": "json",
         "list": "json",
+        "attachment": "attachment",
+        "file": "attachment",
+        "upload": "attachment",
+        "media": "attachment",
     },
     HttpMethod: {
         "get": "GET",

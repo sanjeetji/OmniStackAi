@@ -31,6 +31,7 @@ _PY_TYPE: dict[FieldType, str] = {
     FieldType.BOOL: "bool",
     FieldType.DATETIME: "datetime",
     FieldType.JSON: "dict",
+    FieldType.ATTACHMENT: "str",
 }
 
 
@@ -76,8 +77,10 @@ def _py_field_line(field, rules) -> str:
 
 def _models_file(ir: ApplicationIR) -> str:
     rules_by_field = {id(f): parse_field_rules(f) for e in ir.entities for f in e.fields}
-    needs_datetime = any(f.type is FieldType.DATETIME for e in ir.entities for f in e.fields)
-    needs_optional = any(not f.required for e in ir.entities for f in e.fields)
+    # R-502: audit timestamps always use datetime, so always import it when entities exist.
+    needs_datetime = bool(ir.entities) or any(f.type is FieldType.DATETIME for e in ir.entities for f in e.fields)
+    # R-502: audit fields are Optional, so always need Optional when entities exist.
+    needs_optional = bool(ir.entities) or any(not f.required for e in ir.entities for f in e.fields)
     needs_field = any(r.max_length is not None for r in rules_by_field.values())
     needs_literal = any(r.enum for r in rules_by_field.values())
 
@@ -93,10 +96,16 @@ def _models_file(ir: ApplicationIR) -> str:
         lines.append("# No entities in the IR.")
         return "\n".join(lines) + "\n"
     for entity in ir.entities:
+        declared_names = {field.name for field in entity.fields}
         lines.append("")
         lines.append(f"class {entity.name}(BaseModel):")
         for field in entity.fields:
             lines.append(_py_field_line(field, rules_by_field[id(field)]))
+        # R-502: audit timestamp fields — omitted if the IR already declares them.
+        if "created_at" not in declared_names:
+            lines.append("    created_at: Optional[datetime] = None")
+        if "updated_at" not in declared_names:
+            lines.append("    updated_at: Optional[datetime] = None")
         if entity.relations:
             rels = ", ".join(f"{r.name}->{r.target_entity}" for r in entity.relations)
             lines.append(f"    # relations: {rels}")
@@ -260,6 +269,7 @@ class PythonBackendAdapter:
         env_example = f"# Backend config placeholders only. Never commit secrets.\nAPP_NAME={ir.name}\nDATABASE_URL=postgresql://localhost:5432/{_slug(ir.name)}\nCORS_ALLOWED_ORIGIN=*\n"
         if has_auth:
             env_example += "JWT_SECRET=\n"
+        env_example += "STORAGE_ENDPOINT=http://localhost:9000\nSTORAGE_BUCKET=uploads\nSTORAGE_ACCESS_KEY=minioadmin\nSTORAGE_SECRET_KEY=minioadmin\n"
 
         files: list[GeneratedFile] = [
             GeneratedFile("requirements.txt", requirements),

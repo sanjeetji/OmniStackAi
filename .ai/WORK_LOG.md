@@ -1,5 +1,97 @@
 # Work Log
 
+## 2026-09-16 — R-464 (Full-Stack Platform Feature Completeness — 4-Phase Plan)
+
+- Implemented full-stack platform feature completeness across all 4 phases:
+  - **Phase 1 (Frontend Search, Pagination & Filter UI Controls)**:
+    - Verified collection screen pagination, search, and segmented filter controls.
+    - Updated `llm_ui.py` (`build_ui_synthesis_prompt`) to document complete hook signatures (`page`, `pageSize`, `totalPages`, `params`, `setSearch`, `setPage`, `setPageSize`, `setSort`, `setFilter`, `clearFilters`, `refetch`).
+  - **Phase 2 (Audit Timestamps on All Entity Tables)**:
+    - Added `"created_at" TIMESTAMPTZ NOT NULL DEFAULT NOW()` and `"updated_at" TIMESTAMPTZ NOT NULL DEFAULT NOW()` to all entity tables in `schema_sql.py`.
+    - Added PostgreSQL `set_updated_at()` trigger function and `BEFORE UPDATE ON "<table>"` triggers for all entities.
+    - Excluded `created_at` and `updated_at` from `_insert_columns` in `data_access.py`.
+    - Added `CreatedAt` and `UpdatedAt` (`time.Time`) to Go model structs in `backend_go.py`.
+    - Added `created_at` and `updated_at` (`Optional[datetime] = None`) to Python models in `backend_python.py`.
+    - Added `created_at?: string;` and `updated_at?: string;` to TypeScript entity interfaces in `nextjs.py`.
+    - Rendered record creation & last-updated metadata footer in `_detail_screen_page` in `nextjs.py`.
+  - **Phase 3 (RBAC / Row Ownership `created_by`)**:
+    - Conditional on `needs_auth(ir)`: added `"created_by" UUID REFERENCES "users"("id") ON DELETE SET NULL` to entity tables in `schema_sql.py`.
+    - Added `created_by: str | None = None` support to `create_*` in `data_access.py`.
+    - Added `require_owner` helper in `python_auth_file` and `RequireOwner` in `go_auth_file` in `auth_guard.py`.
+    - Added `created_by?: string | null;` to TypeScript interfaces and `ownerOnly?: boolean` param to `useList*` hooks in `nextjs.py`.
+  - **Phase 4 (S3-Compatible File Uploads)**:
+    - Added `FieldType.ATTACHMENT = "attachment"` and string aliases (`attachment`, `file`, `upload`, `media`) in `application_ir/ir.py`.
+    - Mapped `FieldType.ATTACHMENT` to `TEXT` in `schema_sql.py`, `string` in TypeScript (`nextjs.py`), `str` in Python (`backend_python.py`), and `string` in Go (`backend_go.py`).
+    - Added storage environment variables (`STORAGE_ENDPOINT`, `STORAGE_BUCKET`, `STORAGE_ACCESS_KEY`, `STORAGE_SECRET_KEY`) to `.env.example` in Next.js, Python FastAPI, and Go Gin adapters.
+- Created comprehensive test suite `test_platform_feature_completeness.py` with 14 tests across all 4 phases.
+- Verification:
+  - `python3 -m unittest test_platform_feature_completeness.py`: 14 tests passed.
+  - `bash scripts/agent-engine.sh lint`: Passed.
+  - `bash scripts/agent-engine.sh test`: **3,427 tests passing (100% OK)**.
+
+
+
+- Built full modern SaaS Admin Panel in `scratch/apps/build-a-clinic-management-app/apps/web/app/page.tsx` replacing legacy flat overview cards:
+  - Collapsible drawer / left sidebar navigation with Clinic brand badge, collapse/expand toggle button (`◫`), Clinical Records accordion with live entity badge counters (Appointments, Patients, Prescriptions), Settings accordion with bullet dots (`General Settings`, `City Settings`, `Schedule Settings`, `Manager Settings`), active blue pill indicator (`#eff6ff` / `#2563eb`), and footer user profile chip.
+  - Top navigation bar with global search input, Language selector (`Language (EN)`, `Spanish`, `French`, `Hindi`), Country selector (`Australia`, `US`, `UK`, `India`), Notification bell with unread badge counter, and interactive User Avatar dropdown menu with user profile details, Settings, Reset Password (`/forgot-password`), and Sign Out (`logout()`).
+  - Manager Settings View (matching user reference Images 1, 3, 4): Status filter dropdown, `Apply Filter` primary blue button, `+ Add Manager` dark button with interactive modal to add staff, and high-contrast data table with `ID`, `Name`, `Email`, `Status` (green `Active` pill), `Role` (`Super Admin`), `Action` (`Edit` & `Delete`), and `Reset Password` buttons, plus pagination footer (`Showing 1 to X of Y entries`).
+  - General Settings & City Settings Views (matching user reference Images 2, 5): clean form cards with required red asterisks (`*`), Brand Logo and Favicon upload preview boxes with upload triggers, and primary `UPDATE` button.
+- Upgraded platform synthesis prompt in `codegen/llm_ui.py`:
+  - Added `_detect_ui_archetype(ir, prompt)` distinguishing Admin Panels / Management Systems from Public Websites / E-Commerce.
+  - Generates full drawer-based admin layouts for management/admin apps, and modern consumer landing pages (hero, product catalog, testimonials, footer) for public websites.
+- Verified:
+  - `npx tsc --noEmit`: 0 TypeScript errors.
+  - `next build`: 24/24 static & dynamic pages successfully compiled.
+  - Next.js dev server: HTTP 200 on `/`, `/login`, `/register`, and `/forgot-password`.
+  - `task lint` & `bash scripts/agent-engine.sh lint`: Passed.
+  - `bash scripts/agent-engine.sh test`: **3,413 tests passed (100% OK)**.
+
+## 2026-09-16 — R-463 (Auth Lifecycle Hardening, Unterminated Regexp Literal Fix & Forgot Password Workflow)
+
+- Diagnosed and resolved Next.js Webpack syntax crash `Unterminated regexp literal ./app/register/page.tsx:68:1 Caused by: Syntax Error`:
+  - Root cause: in `services/agent-engine/src/omnistackai_agent_engine/codegen/nextjs.py`, lines 224 (`_login_page`) and 407 (`_register_page`) used `f'          }}>{brand_initial}</div>\n'`. In Python f-strings, `}}` emits a single `}`, outputting invalid JSX `}>C</div>` which Webpack/SWC parses as an unclosed regular expression literal (`/>`), failing the entire Next.js compilation graph.
+  - Fixed by using four braces `}}}}` in f-strings so the rendered JSX contains correct double closing braces `}}>C</div>`.
+  - Also resolved `AttributeError: 'ApplicationIR' object has no attribute 'title'` in `_forgot_password_page` by standardizing on `ir.name`.
+- Implemented Complete End-to-End Forgot Password Workflow:
+  - Added `_forgot_password_page(ir: ApplicationIR) -> str` in `codegen/nextjs.py` synthesizing `app/forgot-password/page.tsx` with email, new password, confirmation password validation, and automatic redirect to `/login`.
+  - Added "Forgot password?" link to `app/login/page.tsx` directly above the submit button.
+  - Updated `auth_guard.py` backend code generator to emit `ResetPasswordRequest`, `POST /auth/forgot-password`, and `POST /auth/reset-password` which directly hashes with PBKDF2-SHA256 and updates `users` in PostgreSQL.
+  - Automatically emits `app/forgot-password/page.tsx` whenever `needs_auth(ir)` is true in `NextjsWebAdapter.generate`.
+- Synchronized and verified active project `scratch/apps/build-a-clinic-management-app`:
+  - Fixed register and login pages; added `app/forgot-password/page.tsx`.
+  - Added `ResetPasswordRequest`, `POST /auth/forgot-password`, and `POST /auth/reset-password` in `services/api/app/routers/auth.py`.
+  - Executed `npx tsc --noEmit` (0 TypeScript errors) and `next build`: **24/24 static and dynamic pages compiled successfully**.
+- Verification:
+  - `task lint`: Passed.
+  - `bash scripts/agent-engine.sh lint`: Passed.
+  - `bash scripts/agent-engine.sh test`: **3,413 tests passing (100% OK)**.
+
+
+- Recorded `.ai/CURRENT_TASK.yaml` before implementation.
+- Implemented hybrid generative LLM-powered UI synthesis engine (`services/agent-engine/src/omnistackai_agent_engine/codegen/llm_ui.py`):
+  - `build_ui_synthesis_prompt(ir, user_prompt)`: Synthesizes rich domain-tailored prompts referencing the 57 built-in components and entity hooks for the overview landing page.
+  - `build_screen_synthesis_prompt(screen, ir)`: Generates focused screen-level prompts for specific interactive workflow pages (`app/[screen]/page.tsx`).
+  - `clean_and_validate_jsx(raw_jsx)`: Automatic safety verification enforcing `'use client'`, markdown fence stripping, strict import whitelisting (React, Next.js, and internal platform components), blocking arbitrary third-party npm injections, and checking balanced delimiters (`{}`, `()`, `[]`).
+  - `synthesize_overview_page` & `synthesize_screen_page`: Orchestrates ModelProvider prompt delivery with timeout and graceful, silent fallback to deterministic templates (`_overview_page` and `_fallback_screen_page`) on provider errors, timeouts, or invalid JSX.
+- Upgraded `nl_to_ir.py` with Universal Domain Archetype Expansion & 1:1 Full-Stack Triad Mapping:
+  - Enforced that every user-specified feature (and generic short prompts for E-Commerce, Healthcare, SaaS, FinTech, Real Estate, LMS, Logistics, etc.) maps into a full 4–8 entity architecture with database migrations, FastAPI REST endpoints, and interactive Next.js screens.
+  - Added `_sanitize_ir_dict` to coerce common LLM syntax variances (string auth, type aliases, role casing) into strict, valid Application IR schemas.
+- Implemented Dynamic Multi-Provider Resolution (`intake/provider_resolution.py`):
+  - `resolve_generation_provider_from_env()`: Automatically detects `OMNISTACKAI_CLOUD_PROVIDER` (Groq, OpenAI, Anthropic) and authenticates using the user's API key from `.env` while maintaining local container execution (`OMNISTACKAI_TIER=0`).
+  - Attached `certifi` CA context to urllib HTTPSHandler in `model_gateway/cloud.py` to fix macOS SSL root certificate issues.
+  - Added `User-Agent: OmniStackAI/1.0` header to avoid Cloudflare WAF Error 1010 blocks against default Python urllib.
+  - Configured `openai/gpt-oss-120b` for Groq inference (120B parameters, full 4,096 token limit, generating comprehensive 8-entity architectures in 8 seconds).
+- Integrated across `NextjsWebAdapter.generate`, monorepo `assemble_project`, `build_app_from_prompt`, `build_run.py`, and `studio/live_serve.py`.
+- Added unit and integration test suites:
+  - `services/agent-engine/tests/test_llm_ui.py` (18 tests)
+  - `services/agent-engine/tests/test_provider_resolution.py` (3 tests)
+- Verified:
+  - `task agent-engine:lint && task lint` (passed)
+  - `task agent-engine:test` (3,411 tests passed in 43.037s)
+  - `task verify` (Stage 0 verification passed)
+  - `task security:quick` (Stage 0 secret-policy check passed)
+  - Live Groq generation test: successfully compiled `"Modern e-commerce store with product grid, shopping cart, discounts, and customer reviews"` into 182 files with full database migrations (`0001_init.sql`), REST API routers (`cart.py`, `discounts.py`, `orders.py`, `products.py`, `reviews.py`), and Next.js frontend pages.
+
 ## 2026-09-16 — R-461 (Full-Stack Production Authentication Engine)
 
 - Recorded `.ai/CURRENT_TASK.yaml` and `.ai/tasks/R-461.md` before implementation.

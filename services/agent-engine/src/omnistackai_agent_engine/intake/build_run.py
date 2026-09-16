@@ -15,10 +15,9 @@ import sys
 import tempfile
 from pathlib import Path
 
-from ..model_gateway.ollama import OLLAMA_PROVIDER_ID
-from ._ollama import build_ollama_provider_from_env
 from .build_app import build_app_from_prompt
 from .errors import IntakeError
+from .provider_resolution import resolve_generation_provider_from_env
 
 _DEFAULT_PROMPT = "Build a simple blog with posts and comments."
 _AUTHOR_NAME = "sanjeetji"
@@ -26,9 +25,10 @@ _AUTHOR_EMAIL = "sk698166@gmail.com"
 
 
 async def _run(target_dir: str, prompt: str) -> None:
-    provider, model_id, max_output, request_timeout = build_ollama_provider_from_env()
+    provider, model_id, max_output, request_timeout = resolve_generation_provider_from_env()
+    provider_name = getattr(provider, "provider_id", "provider")
     print(f"Prompt: {prompt}")
-    print(f"Model:  {OLLAMA_PROVIDER_ID}/{model_id}")
+    print(f"Model:  {provider_name}/{model_id}")
     print("Compiling description -> Application IR -> owned Git repo ...")
     result = await build_app_from_prompt(
         prompt,

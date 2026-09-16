@@ -1,9 +1,54 @@
 # Current Handoff
 
-Task ID: R-461
+Task ID: R-464
 Status: done
 Phase: BASIC/MVP — Founder Stage 0
-Branch: `ai/R-461-full-stack-auth-engine`
+Branch: `main`
+
+> **R-464 Completed (2026-09-16): Full-Stack Platform Feature Completeness — 4-Phase Plan.**
+> - **Phase 1 (Frontend Search, Pagination & Filter UI Controls)**:
+>   - Verified collection screen pagination, search, and segmented filter controls.
+>   - Updated `llm_ui.py` (`build_ui_synthesis_prompt`) to document complete hook signatures (`page`, `pageSize`, `totalPages`, `params`, `setSearch`, `setPage`, `setPageSize`, `setSort`, `setFilter`, `clearFilters`, `refetch`).
+> - **Phase 2 (Audit Timestamps on All Entity Tables)**:
+>   - Added `"created_at" TIMESTAMPTZ NOT NULL DEFAULT NOW()` and `"updated_at" TIMESTAMPTZ NOT NULL DEFAULT NOW()` to all entity tables in `schema_sql.py`.
+>   - Added PostgreSQL `set_updated_at()` trigger function and `BEFORE UPDATE ON "<table>"` triggers for all entities.
+>   - Excluded `created_at` and `updated_at` from `_insert_columns` in `data_access.py`.
+>   - Added `CreatedAt` and `UpdatedAt` (`time.Time`) to Go model structs in `backend_go.py`.
+>   - Added `created_at` and `updated_at` (`Optional[datetime] = None`) to Python models in `backend_python.py`.
+>   - Added `created_at?: string;` and `updated_at?: string;` to TypeScript entity interfaces in `nextjs.py`.
+>   - Rendered record creation & last-updated metadata footer in `_detail_screen_page` in `nextjs.py`.
+> - **Phase 3 (RBAC / Row Ownership `created_by`)**:
+>   - Conditional on `needs_auth(ir)`: added `"created_by" UUID REFERENCES "users"("id") ON DELETE SET NULL` to entity tables in `schema_sql.py`.
+>   - Added `created_by: str | None = None` support to `create_*` in `data_access.py`.
+>   - Added `require_owner` helper in `python_auth_file` and `RequireOwner` in `go_auth_file` in `auth_guard.py`.
+>   - Added `created_by?: string | null;` to TypeScript interfaces and `ownerOnly?: boolean` param to `useList*` hooks in `nextjs.py`.
+> - **Phase 4 (S3-Compatible File Uploads)**:
+>   - Added `FieldType.ATTACHMENT = "attachment"` and string aliases (`attachment`, `file`, `upload`, `media`) in `application_ir/ir.py`.
+>   - Mapped `FieldType.ATTACHMENT` to `TEXT` in `schema_sql.py`, `string` in TypeScript (`nextjs.py`), `str` in Python (`backend_python.py`), and `string` in Go (`backend_go.py`).
+>   - Added storage environment variables (`STORAGE_ENDPOINT`, `STORAGE_BUCKET`, `STORAGE_ACCESS_KEY`, `STORAGE_SECRET_KEY`) to `.env.example` in Next.js, Python FastAPI, and Go Gin adapters.
+> - Verified:
+>   - `python3 -m unittest test_platform_feature_completeness.py`: 14 tests passed.
+>   - `bash scripts/agent-engine.sh lint`: Passed.
+>   - `bash scripts/agent-engine.sh test`: **3,427 tests passing (100% OK)**.
+
+
+> **R-463 Completed (2026-09-16): Auth Lifecycle Hardening, Webpack Syntax Fix & Forgot Password Workflow.**
+> - Diagnosed and fixed the Next.js Webpack syntax crash (`Unterminated regexp literal ./app/register/page.tsx:68:1`) caused by single-closing braces in f-string branding icon JSX (`f'          }}>{brand_initial}</div>\n'`), which rendered `}>C</div>`. Fixed by using 4 curly braces `}}}}` yielding valid JSX `}}>C</div>`.
+> - Fixed `AttributeError: 'ApplicationIR' object has no attribute 'title'` in `_forgot_password_page` by standardizing on `ir.name`.
+> - Added full Forgot Password workflow:
+>   - Frontend screen `app/forgot-password/page.tsx` with email, new password, confirmation password validation, and auto-redirect.
+>   - Added "Forgot password?" link on `app/login/page.tsx`.
+>   - Added backend endpoints in `auth_guard.py` (`ResetPasswordRequest`, `POST /auth/forgot-password`, `POST /auth/reset-password`).
+> - Synchronized active project `scratch/apps/build-a-clinic-management-app`: validated with `npx tsc --noEmit` and `next build` (24/24 static & dynamic pages compiled successfully).
+> - All 3,413 tests pass in `scripts/agent-engine.sh test`.
+
+> **R-462 Completed (2026-09-16): Hybrid Generative LLM-Powered UI Synthesis Engine, Universal Domain Archetype Expansion & Groq Cloud Resolution.**
+> - Implemented bespoke UI synthesizer (`codegen/llm_ui.py`) leveraging the 57 built-in components and data hooks for overview and screen-level pages (`app/[screen]/page.tsx`).
+> - Strict JSX AST/syntax validation (`clean_and_validate_jsx`) checking `'use client'`, import whitelisting, balanced delimiters, and preventing unapproved npm imports.
+> - Bulletproof silent fallback to deterministic templates (`_overview_page` and `_fallback_screen_page`) on offline, timeouts, or invalid model output.
+> - Universal Domain Archetype Expansion & 1:1 Full-Stack Triad Mapping in `intake/nl_to_ir.py`: short prompts and multi-feature requests expand into complete 4–8 entity architectures with PostgreSQL migrations, FastAPI REST endpoints, and interactive Next.js screens.
+> - Dynamic Multi-Provider Resolution (`intake/provider_resolution.py`): seamlessly resolves Groq (`openai/gpt-oss-120b`) from `.env` while preserving local container execution (`OMNISTACKAI_TIER=0`).
+> - All 3,411 tests pass offline in `task verify`. Total completed tasks in tracker: **251 Done / 462 Total**.
 
 > **R-461 Completed (2026-09-16): Full-Stack Production Authentication Engine.**
 > - Implemented complete production-ready authentication across the full generated stack:

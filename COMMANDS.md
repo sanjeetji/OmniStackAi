@@ -122,6 +122,31 @@ task agent-engine:app:run -- scratch/apps/recipe-box
 task agent-engine:web-typecheck -- minimal-blog scratch/apps/my-blog
 ```
 
+### Managing & Cleaning Generated Projects (`scratch/apps` & Output Folders)
+
+```bash
+# 1. List all generated projects currently in scratch/apps
+ls -la scratch/apps
+
+# 2. Delete a single generated project by name (one by one)
+rm -rf scratch/apps/<project-name>
+# Example:
+rm -rf scratch/apps/create-a-worker-attendance-management-sy
+
+# 3. Delete ALL generated projects from scratch/apps at once (cleans all apps, preserves directory)
+rm -rf scratch/apps/*
+
+# 4. If using your personal projects folder (~/Documents/Projects/GeneratedApps):
+# List all apps in personal projects folder
+ls -la ~/Documents/Projects/GeneratedApps
+
+# Delete a single app from personal projects folder by name
+rm -rf ~/Documents/Projects/GeneratedApps/<project-name>
+
+# Delete ALL apps from personal projects folder at once
+rm -rf ~/Documents/Projects/GeneratedApps/*
+```
+
 ---
 
 ## 6. Solution Packs & Multi-Surface Ecosystems

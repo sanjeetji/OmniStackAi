@@ -109,9 +109,9 @@ def _cloud_descriptor(provider_id: str, model_id: str) -> ModelDescriptor:
     return ModelDescriptor(
         ModelRef(provider_id, model_id),
         _text_capabilities(),
-        _int_env("OMNISTACKAI_CLOUD_CONTEXT_WINDOW_TOKENS", 8_192),
-        _int_env("OMNISTACKAI_CLOUD_SAFE_INPUT_TOKENS", 6_144),
-        _int_env("OMNISTACKAI_CLOUD_MAX_OUTPUT_TOKENS", 1_024),
+        _int_env("OMNISTACKAI_CLOUD_CONTEXT_WINDOW_TOKENS", 128_000),
+        _int_env("OMNISTACKAI_CLOUD_SAFE_INPUT_TOKENS", 120_000),
+        _int_env("OMNISTACKAI_CLOUD_MAX_OUTPUT_TOKENS", 4_096),
     )
 
 

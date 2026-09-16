@@ -32,3 +32,6 @@ secrets.json
 
 .idea/
 .vscode/
+.claude/
+scratch/
+

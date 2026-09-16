@@ -29,7 +29,15 @@ Stage 0 (Founder Build Sequence, Brief Section 91) — BASIC/MVP
    - `.ai/PROJECT_STATE.yaml`, `.ai/WORK_LOG.md`, `.ai/HANDOFF.md`: Updated state and handoff notes.
 
 ## Last Completed Task
-Tracker ID: R-461 — Full-Stack Production Authentication Engine — DONE.
+Tracker ID: R-464 — Full-Stack Platform Feature Completeness (4 Phases) — DONE.
+Implemented full-stack platform feature completeness across 4 phases:
+- **Phase 1 (Frontend Search, Pagination & Filter UI Controls)**: Verified collection screen controls and updated LLM UI prompt synthesis (`codegen/llm_ui.py`) with complete hook signatures (`page`, `pageSize`, `totalPages`, `params`, `setSearch`, `setPage`, `setPageSize`, `setSort`, `setFilter`, `clearFilters`, `refetch`).
+- **Phase 2 (Audit Timestamps on All Entity Tables)**: Added `"created_at"` and `"updated_at"` `TIMESTAMPTZ` with automatic `set_updated_at()` trigger across all entity tables in `schema_sql.py`; added `CreatedAt`/`UpdatedAt` to Go (`backend_go.py`) and Python (`backend_python.py`) models; added `created_at?: string;` and `updated_at?: string;` to TypeScript interfaces and rendered metadata footer in `_detail_screen_page` (`nextjs.py`).
+- **Phase 3 (RBAC / Row Ownership `created_by`)**: Conditional on `needs_auth(ir)`: added `"created_by" UUID REFERENCES "users"("id") ON DELETE SET NULL` to entity tables; added `require_owner` (Python) and `RequireOwner` (Go) in `auth_guard.py`; added `created_by?: string | null;` to TypeScript types and `ownerOnly?: boolean` to list hooks in `nextjs.py`.
+- **Phase 4 (S3-Compatible File Uploads)**: Added `FieldType.ATTACHMENT = "attachment"` and string aliases to `application_ir/ir.py`; mapped to `TEXT` in SQL, `string` in TypeScript/Go, `str` in Python; added storage environment variables (`STORAGE_ENDPOINT`, `STORAGE_BUCKET`, `STORAGE_ACCESS_KEY`, `STORAGE_SECRET_KEY`) to `.env.example`.
+- Tested via `test_platform_feature_completeness.py` (14 tests) and full offline test suite (3,427 tests passing). Total completed tasks in tracker: **252 Done / 464 Total**.
+
+Immediately preceded by R-461 — Full-Stack Production Authentication Engine — DONE.
 Implemented Full-Stack Production Authentication Engine:
 - PostgreSQL `users` table with UUID primary key, `VARCHAR UNIQUE NOT NULL` email, `VARCHAR NOT NULL` password_hash, optional full_name, `VARCHAR NOT NULL DEFAULT 'user'` role, and `TIMESTAMPTZ` created_at, plus development admin seed row (`admin@example.local` / `changeme`).
 - FastAPI auth router (`/auth/register`, `/auth/login`, `/auth/me`, `/auth/logout`) in `auth_guard.py` using `hashlib.pbkdf2_hmac` (SHA-256, 100k iterations) with zero external dependencies, JWT signing/verification, and wired into `main.py` via `backend_python.py`.

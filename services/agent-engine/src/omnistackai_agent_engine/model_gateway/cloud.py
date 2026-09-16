@@ -22,7 +22,7 @@ from time import monotonic
 from typing import Any
 from urllib.error import HTTPError, URLError
 from urllib.parse import quote
-from urllib.request import HTTPRedirectHandler, OpenerDirector, ProxyHandler, Request, build_opener
+from urllib.request import HTTPRedirectHandler, HTTPSHandler, OpenerDirector, ProxyHandler, Request, build_opener
 
 from .contracts import (
     ChatRole,
@@ -231,7 +231,15 @@ class _HttpCloudProvider:
         self._max_response_bytes = max_response_bytes
         self._max_stream_line_bytes = max_stream_line_bytes
         self._semaphore = asyncio.Semaphore(max_concurrency)
-        self._opener = opener or build_opener(ProxyHandler({}), _RejectRedirects())
+        handlers = [ProxyHandler({}), _RejectRedirects()]
+        try:
+            import certifi
+            import ssl
+            ssl_ctx = ssl.create_default_context(cafile=certifi.where())
+            handlers.append(HTTPSHandler(context=ssl_ctx))
+        except Exception:
+            pass
+        self._opener = opener or build_opener(*handlers)
 
     @property
     def provider_id(self) -> str:
@@ -286,7 +294,12 @@ class _HttpCloudProvider:
         raise NotImplementedError
 
     def _open_post_stream(self, path: str, headers: dict[str, str], payload: dict[str, Any], timeout_seconds: float) -> Any:
-        merged = {"Accept": "text/event-stream", "Content-Type": "application/json", **headers}
+        merged = {
+            "Accept": "text/event-stream",
+            "Content-Type": "application/json",
+            "User-Agent": "OmniStackAI/1.0",
+            **headers,
+        }
         request = Request(
             f"{self._base_url}{path}", data=json.dumps(payload).encode("utf-8"), method="POST", headers=merged
         )
@@ -382,7 +395,12 @@ class _HttpCloudProvider:
     def _post_json_sync(
         self, path: str, headers: dict[str, str], payload: dict[str, Any], timeout_seconds: float
     ) -> dict[str, Any]:
-        merged = {"Accept": "application/json", "Content-Type": "application/json", **headers}
+        merged = {
+            "Accept": "application/json",
+            "Content-Type": "application/json",
+            "User-Agent": "OmniStackAI/1.0",
+            **headers,
+        }
         request = Request(
             f"{self._base_url}{path}", data=json.dumps(payload).encode("utf-8"), method="POST", headers=merged
         )
@@ -393,7 +411,15 @@ class _HttpCloudProvider:
                     raise ProviderHTTPError(f"{self._provider_id} returned a non-success status")
                 raw = response.read(self._max_response_bytes + 1)
         except HTTPError as error:
-            raise ProviderHTTPError(f"{self._provider_id} returned an HTTP error") from error
+            error_body = ""
+            try:
+                error_body = error.read().decode("utf-8", errors="replace")
+            except Exception:
+                pass
+            msg = f"{self._provider_id} returned an HTTP {error.code} error"
+            if error_body:
+                msg += f": {error_body[:500]}"
+            raise ProviderHTTPError(msg) from error
         except (socket.timeout, TimeoutError) as error:
             raise ProviderTimeoutError(f"{self._provider_id} request timed out") from error
         except (URLError, OSError) as error:

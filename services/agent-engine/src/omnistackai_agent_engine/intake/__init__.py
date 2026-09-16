@@ -10,6 +10,7 @@ from .build_app import (
     build_app_from_prompt,
 )
 from .errors import IntakeError, IntakeResponseError
+from .provider_resolution import resolve_generation_provider_from_env
 from .nl_to_ir import (
     DEFAULT_MAX_OUTPUT_TOKENS,
     DEFAULT_TEMPLATE_EXAMPLE,
@@ -62,6 +63,7 @@ __all__ = [
     "app_build_result_to_dict",
     "build_app_from_ir",
     "build_app_from_prompt",
+    "resolve_generation_provider_from_env",
     "DEFAULT_TEMPLATE_EXAMPLE",
     "DEFAULT_MAX_OUTPUT_TOKENS",
     "DEFAULT_TIMEOUT_SECONDS",

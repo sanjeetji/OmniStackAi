@@ -12,6 +12,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 
 from ..application_ir import ApplicationIR, BackendStrategy, WebStrategy
+from ..model_gateway import ModelProvider
 from .adapter import AdapterRegistry, GenerationTarget
 from .backend_go import GoBackendAdapter
 from .backend_python import PythonBackendAdapter
@@ -85,6 +86,8 @@ def _plan_assembly(ir: ApplicationIR) -> tuple[list[AssembledApp], list[str]]:
 
     if strategy.web_strategy is WebStrategy.NEXTJS:
         apps.append(AssembledApp("web (Next.js)", "apps/web", GenerationTarget.NEXTJS_WEB.value))
+    elif strategy.web_strategy is WebStrategy.NONE and strategy.admin_strategy.value == "nextjs":
+        apps.append(AssembledApp("admin (Next.js)", "apps/web", GenerationTarget.NEXTJS_WEB.value))
     elif strategy.web_strategy is not WebStrategy.NONE:
         skipped.append(f"web_strategy {strategy.web_strategy.value!r} has no adapter yet")
 
@@ -114,7 +117,14 @@ def assembled_targets(ir: ApplicationIR, registry: AdapterRegistry | None = None
     return tuple(apps)
 
 
-def assemble_project(ir: ApplicationIR, registry: AdapterRegistry | None = None) -> GeneratedProject:
+def assemble_project(
+    ir: ApplicationIR,
+    registry: AdapterRegistry | None = None,
+    *,
+    provider: ModelProvider | None = None,
+    prompt: str = "",
+    model_id: str | None = None,
+) -> GeneratedProject:
     """Assemble one customer monorepo GeneratedProject from an Application IR."""
 
     if not isinstance(ir, ApplicationIR):
@@ -124,7 +134,11 @@ def assemble_project(ir: ApplicationIR, registry: AdapterRegistry | None = None)
     apps, skipped = _plan_assembly(ir)
     files: list[GeneratedFile] = []
     for app in apps:
-        project = registry.get(app.target).generate(ir)
+        adapter = registry.get(app.target)
+        if isinstance(adapter, NextjsWebAdapter) and provider is not None:
+            project = adapter.generate(ir, provider=provider, prompt=prompt, model_id=model_id)
+        else:
+            project = adapter.generate(ir)
         files += _prefixed(project, app.directory)
 
     if ir.apis:

@@ -24,7 +24,7 @@ import subprocess
 import sys
 import tempfile
 
-from ..intake._ollama import build_ollama_provider_from_env
+from ..intake.provider_resolution import resolve_generation_provider_from_env
 from ..intake.build_app import app_build_result_to_dict, build_app_from_prompt
 from .history import StudioBuildHistory
 from .preview import StudioPreviewManager
@@ -88,6 +88,13 @@ def _build(
             custom_name=custom_name,
         )
 
+        eco_provider = None
+        eco_model_id = None
+        try:
+            eco_provider, eco_model_id, _, _ = resolve_generation_provider_from_env()
+        except Exception:
+            pass
+
         if surface_slug and surface_slug != "all":
             surface = next(
                 (s for s in eco_pkg.surfaces if s.slug == surface_slug or s.surface_kind == surface_slug),
@@ -127,6 +134,8 @@ def _build(
                 author_email=_AUTHOR_EMAIL,
                 prompt=prompt,
                 overwrite=True,
+                provider=eco_provider,
+                model_id=eco_model_id,
             )
             root = Path(target_dir)
             files = []
@@ -181,6 +190,8 @@ def _build(
                     author_email=_AUTHOR_EMAIL,
                     prompt=prompt,
                     overwrite=True,
+                    provider=eco_provider,
+                    model_id=eco_model_id,
                 )
                 total_files += build_res.file_count
                 surface_results.append({
@@ -289,28 +300,35 @@ def _build(
             changes=tuple(changes),
         )
 
+        pack_provider = None
+        pack_model_id = None
         has_ai_deltas = any(c.source is ChangeSource.AI_DELTA for c in manifest.changes)
         proposal = None
         if has_ai_deltas:
             from ..solution_packs.ai_delta import generate_ai_delta_proposal
 
             if ai_delta_provider is not None:
-                provider = ai_delta_provider
-                model_id = None
+                pack_provider = ai_delta_provider
+                pack_model_id = None
             else:
-                provider, model_id, _, _ = build_ollama_provider_from_env()
+                pack_provider, pack_model_id, _, _ = resolve_generation_provider_from_env()
 
             base_ir = DEFAULT_SOLUTION_PACK_REGISTRY.load_ir(pack.pack_id, pack.version)
             maybe_coro = generate_ai_delta_proposal(
                 manifest,
                 base_ir,
-                provider,
-                model_id=model_id,
+                pack_provider,
+                model_id=pack_model_id,
             )
             if asyncio.iscoroutine(maybe_coro):
                 proposal = asyncio.run(maybe_coro)
             else:
                 proposal = maybe_coro
+        else:
+            try:
+                pack_provider, pack_model_id, _, _ = resolve_generation_provider_from_env()
+            except Exception:
+                pass
 
         app_result = apply_solution_pack_manifest(manifest, proposal=proposal)
         target_dir = _target_dir_for(
@@ -325,6 +343,9 @@ def _build(
             author_name=_AUTHOR_NAME,
             author_email=_AUTHOR_EMAIL,
             overwrite=True,
+            provider=pack_provider,
+            prompt=prompt,
+            model_id=pack_model_id,
         )
         root = Path(build_result.target_dir)
         files: list[str] = []
@@ -355,7 +376,7 @@ def _build(
             "verify_targets": list(build_result.verify_targets),
         }
     else:
-        provider, model_id, max_output, request_timeout = build_ollama_provider_from_env()
+        provider, model_id, max_output, request_timeout = resolve_generation_provider_from_env()
         chosen_dir = _target_dir_for(
             prompt,
             custom_dir=output_dir or target_dir,

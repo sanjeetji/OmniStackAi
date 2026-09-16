@@ -58,9 +58,23 @@ _PG_TYPE: dict[FieldType, str] = {
     FieldType.DATETIME: "TIMESTAMPTZ",
     FieldType.UUID: "UUID",
     FieldType.JSON: "JSONB",
+    FieldType.ATTACHMENT: "TEXT",
 }
 
 _FK_KINDS = frozenset({RelationKind.MANY_TO_ONE, RelationKind.ONE_TO_ONE})
+
+# R-502: trigger function emitted once per migration file to keep updated_at current.
+_SET_UPDATED_AT_FUNCTION = """\
+CREATE OR REPLACE FUNCTION set_updated_at()
+RETURNS TRIGGER AS $$
+BEGIN
+    NEW.updated_at = NOW();
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;"""
+
+# Columns automatically appended to every entity table (unless already declared by the IR).
+_AUDIT_COLUMNS: tuple[str, str] = ("created_at", "updated_at")
 
 
 def _snake(name: str) -> str:
@@ -120,7 +134,7 @@ def ordered_entities(ir: ApplicationIR) -> tuple[Entity, ...]:
     return tuple(ordered)
 
 
-def _column_lines(entity: Entity) -> list[str]:
+def _column_lines(entity: Entity, has_auth: bool = False) -> list[str]:
     lines: list[str] = []
     has_id = any(field.name == "id" for field in entity.fields)
     if not has_id:
@@ -174,6 +188,17 @@ def _column_lines(entity: Entity) -> list[str]:
                 relation_column = sql_identifier(relation_column_name)
                 lines.append(f"    {relation_column} UUID REFERENCES {target}({sql_identifier('id')})")
                 emitted_field_names.add(relation_column_name)
+
+    # Phase 3: Row ownership column (created_by) when auth is enabled.
+    if has_auth and "created_by" not in emitted_field_names:
+        lines.append(f'    {sql_identifier("created_by")} UUID REFERENCES {sql_identifier("users")}({sql_identifier("id")}) ON DELETE SET NULL')
+
+    # R-502: audit timestamp columns — skipped if the IR already declares them.
+    if "created_at" not in emitted_field_names:
+        lines.append(f'    {sql_identifier("created_at")} TIMESTAMPTZ NOT NULL DEFAULT NOW()')
+    if "updated_at" not in emitted_field_names:
+        lines.append(f'    {sql_identifier("updated_at")} TIMESTAMPTZ NOT NULL DEFAULT NOW()')
+
     return lines
 
 
@@ -245,9 +270,21 @@ def render_postgres_schema(ir: ApplicationIR) -> str:
         blocks.append(_USERS_TABLE_DDL)
         blocks.append("")
 
+    # R-502: emit the trigger function once before the entity tables.
+    if ir.entities:
+        blocks.append(_SET_UPDATED_AT_FUNCTION)
+        blocks.append("")
+
     for entity in ordered_entities(ir):
-        columns = ",\n".join(_column_lines(entity))
-        blocks.append(f"CREATE TABLE {sql_identifier(_table(entity.name))} (\n{columns}\n);")
+        table = _table(entity.name)
+        columns = ",\n".join(_column_lines(entity, has_auth=auth))
+        blocks.append(f"CREATE TABLE {sql_identifier(table)} (\n{columns}\n);")
+        # R-502: BEFORE UPDATE trigger keeps updated_at current.
+        blocks.append(
+            f"CREATE TRIGGER {sql_identifier(f'trg_{table}_updated_at')}\n"
+            f"  BEFORE UPDATE ON {sql_identifier(table)}\n"
+            f"  FOR EACH ROW EXECUTE FUNCTION set_updated_at();"
+        )
         blocks.append("")
 
     join_tables = _join_tables(ir)

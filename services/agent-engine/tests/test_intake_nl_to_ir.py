@@ -156,6 +156,20 @@ class TestParseIrResponse(unittest.TestCase):
         self.assertEqual(ir.project_strategy.mobile_profile, MobileProfile.REACT_NATIVE)
         self.assertEqual(ir.project_strategy.web_strategy.value, "nextjs")
 
+    def test_syntax_faults_and_missing_commas_repaired(self) -> None:
+        raw = VALID_IR_JSON.replace('"name": "Minimal Blog",', '"name": "Minimal Blog"\n')
+        raw = raw.replace('"version": 1,', '"version": 1,\n// inline comment\n')
+        ir = parse_ir_response(raw)
+        self.assertEqual(ir.name, "Minimal Blog")
+
+    def test_unescaped_quotes_and_newlines_repaired(self) -> None:
+        payload = dict(VALID_IR_DICT)
+        payload["description"] = 'A "cool" store with\nmultiple lines'
+        # Emulate raw JSON with unescaped quote and unescaped newline
+        raw = json.dumps(payload).replace('\\"cool\\"', '"cool"').replace('\\n', '\n')
+        ir = parse_ir_response(raw)
+        self.assertIn("cool", ir.description)
+
 
 class TestGenerateIr(unittest.TestCase):
     def test_happy_path_returns_result(self) -> None:
