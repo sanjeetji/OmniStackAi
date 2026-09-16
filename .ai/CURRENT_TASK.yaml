@@ -1,25 +1,37 @@
-task_id: R-464
+task_id: R-465
 status: completed
 phase: MVP
-tracker_row: 9
-started_at: "2026-09-16"
-completed_at: "2026-09-16"
+tracker_row: null
+started_at: "2026-09-17"
+completed_at: "2026-09-17"
 objective: >-
-  Implement Full-Stack Platform Feature Completeness across 4 phases:
-  Phase 1: Frontend Search, Pagination & Filter UI Controls & LLM prompt hook descriptions.
-  Phase 2: Audit Timestamps (created_at, updated_at) on all entity tables, models, TypeScript types, and detail metadata footer.
-  Phase 3: RBAC / Row Ownership (created_by) when needs_auth(ir) is True across schema, data access, handlers, types, hooks, and RequireOwner middleware.
-  Phase 4: S3-Compatible File Uploads with FieldType.ATTACHMENT, presigned upload-url endpoints, form screen upload component wiring, and storage env contracts.
+  Grounded Hybrid UI Synthesis (first brick of the founder-approved hybrid engine): the LLM writes the modern
+  Next.js UI constrained to the deterministic typed data layer (real generated lib/types.ts / lib/api.ts /
+  lib/hooks.ts, derived by parsing the same generators so it cannot drift) and the existing design-token layer,
+  with a bounded validation->feedback->retry loop (retry only on validator rejection, never on exceptions) and a
+  deterministic-template fallback. Replaced the never-set OMNISTACKAI_SYNTHESIZE_ALL_SCREENS env gate with an
+  explicit synthesize_screens flag threaded generate -> assemble_project -> build_app_from_ir/prompt (default
+  False; deterministic output byte-identical). Hardened the import whitelist (multi-line bypass, react-*,
+  require, dynamic import). Added a JSON-safe secret-free UiSynthesisOutcome per file and an opt-in CLI
+  `task agent-engine:ui:synthesize` (Groq/Gemini via OMNISTACKAI_CLOUD_PROVIDER, Ollama fallback). Model calls
+  stay opt-in and never run under task verify (stub providers, 0 real calls).
 allowed_paths:
-  - services/agent-engine/src/omnistackai_agent_engine/application_ir/ir.py
-  - services/agent-engine/src/omnistackai_agent_engine/codegen/schema_sql.py
-  - services/agent-engine/src/omnistackai_agent_engine/codegen/data_access.py
-  - services/agent-engine/src/omnistackai_agent_engine/codegen/backend_python.py
-  - services/agent-engine/src/omnistackai_agent_engine/codegen/backend_go.py
-  - services/agent-engine/src/omnistackai_agent_engine/codegen/nextjs.py
-  - services/agent-engine/src/omnistackai_agent_engine/codegen/auth_guard.py
   - services/agent-engine/src/omnistackai_agent_engine/codegen/llm_ui.py
+  - services/agent-engine/src/omnistackai_agent_engine/codegen/nextjs.py
+  - services/agent-engine/src/omnistackai_agent_engine/codegen/assembler.py
+  - services/agent-engine/src/omnistackai_agent_engine/codegen/__init__.py
+  - services/agent-engine/src/omnistackai_agent_engine/intake/build_app.py
+  - services/agent-engine/src/omnistackai_agent_engine/intake/ui_synthesize_run.py
+  - services/agent-engine/tests/test_llm_ui_grounding.py
+  - services/agent-engine/tests/test_llm_ui.py
   - services/agent-engine/tests/test_platform_feature_completeness.py
+  - scripts/agent-engine.sh
+  - Taskfile.yml
+  - COMMANDS.md
+  - docs/HYBRID_UI.md
+  - docs/PROGRESS.md
+  - docs/RESUME_PROMPT.md
+  - .ai/tasks/R-465.md
   - .ai/CURRENT_TASK.yaml
   - .ai/PROJECT_STATE.yaml
   - .ai/WORK_LOG.md
@@ -27,22 +39,48 @@ allowed_paths:
   - PROJECT_STATE.md
   - CHANGELOG.md
 forbidden_changes:
-  - Do not introduce placeholder stubs or TODOs in generated code
-  - Do not break offline determinism or existing passing tests
-  - Do not add external network requests to frontend or studio HTML
-  - Do not change the control-plane database from PostgreSQL
+  - No model, network, Docker, or toolchain calls under task verify; the model path stays opt-in
+  - No new dependencies (Python 3.13 stdlib only); no vendor SDKs; no secrets in source/logs/state/tests/commits
+  - Do not change the bytes of the deterministic default output (parse, do not refactor, the hooks/types/api generators; reproduce the component file set identically)
+  - Do not change the Application IR, DB engine (PostgreSQL stays), or generated-project contracts
+  - Do not modify or commit the untracked .claude directory
 required_gates:
+  - focused: tests/test_llm_ui_grounding.py + tests/test_llm_ui.py + tests/test_platform_feature_completeness.py
+  - task verify
   - task lint
-  - bash scripts/agent-engine.sh lint
-  - bash scripts/agent-engine.sh test
+  - task security:quick
+  - task env:check
+  - task builder:demo -- minimal-blog
+  - task builder:demo -- rideshare-favourites
+  - task agent-engine:web-typecheck -- minimal-blog / -- rideshare-favourites (deterministic default unchanged)
+  - "live proof (opt-in, paid): task agent-engine:ui:synthesize + tsc on the produced app"
+model_tool_trace:
+  routing: deterministic_only
+  local_calls: 0
+  cloud_calls: 0
+  note: >-
+    Implementation and verify used in-memory stub providers only. The live proof was a separate opt-in run
+    with the founder's Groq key (3 cloud requests total, all reported in evidence).
 evidence:
-  tests:
-    - command: PYTHONPATH=services/agent-engine/src python3 -m unittest services/agent-engine/tests/test_platform_feature_completeness.py
-      result: 14 tests in 0.005s OK
-    - command: PYTHONPATH=services/agent-engine/src python3 -m unittest services/agent-engine/tests/test_collection_field_filters.py services/agent-engine/tests/test_platform_feature_completeness.py
-      result: 32 tests in 0.010s OK
-    - command: bash scripts/agent-engine.sh lint
-      result: Agent-engine contract lint passed.
-    - command: bash scripts/agent-engine.sh test
-      result: Ran 3427 tests in 60.751s. OK.
-
+  focused_tests: "47 passed (test_llm_ui_grounding 15 new, test_llm_ui, test_platform_feature_completeness)"
+  verify: "Ran 3442 tests ... OK; Stage 0 verification passed (3,427 + 15 new; 0 model calls)"
+  lint: "Lint passed"
+  security: "Stage 0 secret-policy check passed"
+  env: "Environment contract passed"
+  demos: "minimal-blog 157 files; rideshare-favourites 153 files (unchanged baseline)"
+  web_typecheck: "minimal-blog PASSED (0 errors); rideshare-favourites PASSED (0 errors) - deterministic default unchanged"
+  live_proof: >-
+    Founder's Groq account: free on_demand tier, 8,000 TPM, exactly one accessible model (openai/gpt-oss-120b).
+    Run 1 (full CLI) -> HTTP 429 on the intake call ("Used 3809, Requested 4857"); CLI traceback leak fixed.
+    Run 2 (scoped: one grounded overview call for minimal-blog + tsc) -> the model returned a page; the validator
+    rejected it with an exact reason (Mismatched curly braces 179/178, truncated at max_output 4096); the repair
+    loop engaged; attempt 2 -> HTTP 429 (echo pushed the request past 8k TPM) -> graceful deterministic fallback;
+    outcome {mode: deterministic, attempts: 2, last_reason: ProviderHTTPError}; repo compiles (tsc 0 errors).
+    Engine behaves as designed under adverse conditions; an end-to-end LLM-page-compiles proof needs a TPM
+    budget above 8k/min (GOOGLE_API_KEY for Gemini, or Groq Dev tier). Repair echo cap lowered 16k -> 8k chars.
+next_action: >-
+  R-465 done. NEXT R-466: compile-level repair (a capturing tsc executor feeding per-file errors through the
+  same _repair_message channel, per-file template fallback) plus rate-limit-aware pacing/backoff (HTTP 429
+  retry-after) in the model gateway so the hybrid flow completes on small TPM tiers. Then R-467: the product-UI
+  shell (chat + live preview + file tree) driving synthesize_screens=True and surfacing ui_outcomes. Founder
+  action to unlock a full live proof: add GOOGLE_API_KEY (Gemini) to .env or upgrade the Groq tier.

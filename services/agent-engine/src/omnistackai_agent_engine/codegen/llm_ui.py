@@ -1,12 +1,18 @@
-"""Generative LLM-powered UI Synthesizer with Deterministic Fallback (R-462).
+"""Grounded hybrid LLM UI synthesizer with a bounded repair loop and deterministic fallback (R-462, R-465).
 
-Enables OmniStackAI to synthesize creative, bespoke, domain-tailored Next.js pages
-leveraging the platform's rich pre-built component suite (@/components/*) and typed
-data hooks (@/lib/hooks), while guaranteeing:
-1. Complete, non-stubbed implementations with zero placeholder TODOs.
-2. Strict JSX safety and AST/import validation (rejecting unwhitelisted external imports).
-3. 100% reliable, silent fallback to the deterministic Python template whenever the
-   model is offline, times out, or fails validation.
+The hybrid engine: a model writes the modern Next.js UI, but it is GROUNDED in the deterministic typed
+data layer the customer project actually ships — the real ``lib/types.ts`` / ``lib/hooks.ts`` / ``lib/api.ts``
+surface (parsed from the same generators, so it cannot drift), the real ``components/*`` export names, and the
+real ``styles/tokens.css`` design-token names. The model owns look and features; the deterministic core owns
+correctness (DB, API, auth, data wiring).
+
+Guarantees:
+1. The model can only import what exists (strict whitelist, multi-line aware; no ``require``/dynamic import).
+2. Validator rejection feeds the reason back to the model and retries (bounded, ``max_attempts``); provider
+   exceptions never retry. Exhaustion falls back to the deterministic template with no marker.
+3. A JSON-safe, secret-free ``UiSynthesisOutcome`` per file records mode / attempts / last reason.
+4. Model calls are opt-in: with ``provider=None`` everything is the deterministic template (``task verify``
+   uses in-memory stubs — 0 real calls).
 """
 
 from __future__ import annotations
@@ -14,36 +20,126 @@ from __future__ import annotations
 import asyncio
 import logging
 import re
-from typing import TYPE_CHECKING
+import uuid
+from dataclasses import dataclass
+from typing import TYPE_CHECKING, Callable
 
 if TYPE_CHECKING:
     from ..application_ir import ApplicationIR, Screen
-    from ..model_gateway.contracts import ModelProvider
+    from ..model_gateway.contracts import ModelProvider, ModelRef
 
 logger = logging.getLogger(__name__)
 
-# Allowed import source prefixes for security and build stability (strictly no random npm packages)
+# Bare packages the generated project actually installs. Anything else that merely *starts* with "react"
+# (react-icons, react-query, ...) is NOT installed and is rejected.
+ALLOWED_EXACT_IMPORTS: frozenset[str] = frozenset({"react", "react-dom"})
+# Allowed import prefixes: platform modules and relative paths.
 ALLOWED_IMPORT_PREFIXES: tuple[str, ...] = (
     "@/components/",
     "@/lib/",
-    "react",
     "next/",
     "./",
     "../",
 )
 
-# Core pre-built UI components available in customer projects
-AVAILABLE_COMPONENTS_SUMMARY = """
-AVAILABLE PRE-BUILT UI COMPONENTS (import from '@/components'):
-- StatCard, StatCardHeader, StatCardValue: KPI metric cards
-- DataGrid: { columns: Array<{ key: string, header: string }>, data: any[], sortable?: boolean }
+MARKER_PREFIX = "// [OmniStackAI] Mode: LLM-Synthesized Bespoke UI"
+DEFAULT_MAX_ATTEMPTS = 3
+# The prior output echoed back on a repair turn. Kept lean: a live Groq run showed a full echo (~4k tokens)
+# can push the repair request past a small tokens-per-minute quota; the rejection reason is already precise.
+_MAX_ECHO_CHARS = 8_000
+_SYSTEM_MESSAGE = (
+    "You are an expert Next.js full-stack UI designer. Respond only with valid, executable TypeScript React code."
+)
+
+# Curated prop hints for the most-used components. The FULL, real export list is injected by
+# nextjs.summarize_components (derived from the shipped component files), so the model never guesses names.
+COMPONENT_PROP_HINTS = """KEY COMPONENT PROPS (each from '@/components/<file>' as listed above):
+- StatCard compound: <StatCard><StatCardHeader title="Label" icon="📊" /><StatCardValue value="123" subtext="info" /></StatCard>
+- DataGrid: { columns: Array<{ key: string, header: string }>, data: any[], sortable?: boolean }  (columns use `header`, never `label`)
 - Tabs: { tabs: Array<{ id: string, label: string }>, activeTab: string, onChange: (id: string) => void }
 - Badge: { variant?: 'default' | 'success' | 'warning' | 'error' | 'info', children: ReactNode }
 - Avatar: { name?: string, src?: string, size?: 'sm' | 'md' | 'lg' }
 - Progress: { value: number, max?: number, variant?: string }
-- Dialog: { open?: boolean, onOpenChange?: (open: boolean) => void, children: ReactNode }
+- Dialog: { open?: boolean, onOpenChange?: (open: boolean) => void, children: ReactNode }  (use `open`, never `isOpen`)
 - EmptyState: { title: string, description?: string, actionLabel?: string, onAction?: () => void }
+- Rating: { value: number, max?: number, onChange?: (val: number) => void, readOnly?: boolean }
+- Toast: useToast() => { toast: (opts: { title: string, description?: string, variant?: 'default' | 'success' | 'destructive' }) => void }
 """
+
+_ADMIN_ARCHETYPE = """ARCHETYPE: MODERN SAAS ADMIN PANEL / WORKSPACE
+Design a complete, production-grade SaaS Admin Panel with drawer navigation:
+1. Left Collapsible Drawer / Sidebar Navigation:
+   - Sidebar header: App logo badge, title, and collapse toggle button.
+   - Navigation links with icons (e.g. Dashboard, Management tables, Settings).
+   - Sub-items with bullet dots and an active pill state (use the primary token).
+2. Top Navigation Bar:
+   - Global search input.
+   - Right controls: Notification bell, User Avatar.
+   - User Avatar dropdown: if this app has an auth provider, show user email/name, Settings, Reset Password
+     (`/forgot-password`) and Sign Out (calling `logout()`); otherwise a simple Settings link.
+3. Main View Modes (toggleable via state):
+   - Data Management Table View:
+     - Page Title (e.g. Management, Settings).
+     - Filter bar: Status dropdown, and '+ Add [Entity]' button.
+     - Table card with columns: ID, Name/Title, Status pill, Actions ('Edit' & 'Delete' buttons).
+   - Analytics Stat Cards: metric counters for key entities."""
+
+_WEBSITE_ARCHETYPE = """ARCHETYPE: MODERN PUBLIC WEBSITE / E-COMMERCE
+Design a world-class consumer-facing public web experience:
+1. Modern Navigation Header: Brand logo, category links, search, cart/actions, and user auth buttons.
+2. Dynamic Hero Banner: Compelling headline, value proposition, high-contrast CTA buttons, and floating metric chips.
+3. Feature / Product Showcase: Responsive grid with product/service cards, prices, rating badges, and action buttons.
+4. Interactive Testimonials & Social Proof: Rating cards and customer feedback quotes.
+5. Modern Footer: Sitemap links, newsletter subscription input, and copyright."""
+
+_DYNAMIC_IMPORT_RE = re.compile(r"\b(?:require|import)\s*\(")
+_QUOTED_SOURCE_RE = re.compile(r"""['"]([^'"]+)['"]""")
+_FROM_SOURCE_RE = re.compile(r"""from\s+['"]([^'"]+)['"]""")
+
+
+# ---------------------------------------------------------------------------
+# Validation
+# ---------------------------------------------------------------------------
+
+
+def _iter_import_sources(content: str):
+    """Yield the module source of every static import statement, joining multi-line statements.
+
+    A statement starts on a line beginning with ``import`` and is accumulated until a quoted module source
+    appears; it never spans into the next ``import`` line, so a side-effect import cannot hide behind a later,
+    allowed one.
+    """
+    lines = content.splitlines()
+    i = 0
+    total = len(lines)
+    while i < total:
+        stripped = lines[i].strip()
+        if stripped.startswith("import ") or stripped.startswith("import{") or stripped == "import":
+            statement = stripped
+            end = i
+            while (
+                not _QUOTED_SOURCE_RE.search(statement)
+                and end + 1 < total
+                and not lines[end + 1].strip().startswith("import")
+            ):
+                end += 1
+                statement += " " + lines[end].strip()
+            match = _FROM_SOURCE_RE.search(statement)
+            if match:
+                yield match.group(1)
+            else:
+                side_effect = _QUOTED_SOURCE_RE.search(statement)
+                if side_effect:
+                    yield side_effect.group(1)
+            i = end + 1
+            continue
+        i += 1
+
+
+def _import_allowed(module_name: str) -> bool:
+    if module_name in ALLOWED_EXACT_IMPORTS:
+        return True
+    return any(module_name.startswith(prefix) for prefix in ALLOWED_IMPORT_PREFIXES)
 
 
 def clean_and_validate_jsx(raw: str) -> tuple[bool, str, str]:
@@ -60,10 +156,8 @@ def clean_and_validate_jsx(raw: str) -> tuple[bool, str, str]:
     # 1. Strip markdown code fences if model enclosed in ```tsx ... ```
     if content.startswith("```"):
         lines = content.splitlines()
-        # Remove opening fence
         if lines and lines[0].startswith("```"):
             lines = lines[1:]
-        # Remove closing fence
         if lines and lines[-1].startswith("```"):
             lines = lines[:-1]
         content = "\n".join(lines).strip()
@@ -75,19 +169,17 @@ def clean_and_validate_jsx(raw: str) -> tuple[bool, str, str]:
     if not content.startswith('"use client"') and not content.startswith("'use client'"):
         content = '"use client";\n\n' + content
 
-    # 3. Validate imports against whitelist
-    import_pattern = re.compile(r"""(?:import\s+.*?from\s+['"]([^'"]+)['"])|(?:import\s+['"]([^'"]+)['"])""")
-    for line in content.splitlines():
-        line_clean = line.strip()
-        if not line_clean.startswith("import "):
-            continue
-        match = import_pattern.search(line_clean)
-        if match:
-            module_name = match.group(1) or match.group(2)
-            if module_name:
-                is_allowed = any(module_name == prefix or module_name.startswith(prefix) for prefix in ALLOWED_IMPORT_PREFIXES)
-                if not is_allowed:
-                    return False, "", f"Forbidden import '{module_name}'. Must use internal platform modules or react/next."
+    # 3. Validate EVERY static import (multi-line aware) against the whitelist; forbid dynamic loading.
+    for module_name in _iter_import_sources(content):
+        if not _import_allowed(module_name):
+            return (
+                False,
+                "",
+                f"Forbidden import '{module_name}'. Only react, react-dom, next/*, @/lib/*, @/components/* "
+                "and relative imports exist in this project.",
+            )
+    if _DYNAMIC_IMPORT_RE.search(content):
+        return False, "", "Dynamic import() / require() is not allowed. Use static imports from the approved modules only."
 
     # 4. Check for strict bracket balance and closing brace to prevent truncated code
     open_curly = content.count("{")
@@ -111,6 +203,11 @@ def clean_and_validate_jsx(raw: str) -> tuple[bool, str, str]:
     return True, content, ""
 
 
+# ---------------------------------------------------------------------------
+# Prompt construction (grounded in the real generated project)
+# ---------------------------------------------------------------------------
+
+
 def _detect_ui_archetype(ir: ApplicationIR, user_prompt: str) -> str:
     """Detect whether the application is an 'admin_panel' or 'public_website'."""
     text = f"{user_prompt} {ir.name} {ir.description}".lower()
@@ -124,72 +221,92 @@ def _detect_ui_archetype(ir: ApplicationIR, user_prompt: str) -> str:
         "fashion shop",
         "showcase",
     )
-    admin_keywords = (
-        "admin",
-        "management",
-        "system",
-        "portal",
-        "clinic",
-        "hospital",
-        "attendance",
-        "dashboard",
-        "fleet",
-        "crm",
-        "erp",
-        "internal",
-        "console",
-        "backoffice",
-        "manager",
-    )
     if any(k in text for k in website_keywords) and not any(k in text for k in ("admin", "management", "backoffice")):
         return "public_website"
     return "admin_panel"
 
 
-def build_ui_synthesis_prompt(ir: ApplicationIR, user_prompt: str) -> str:
-    """Build high-fidelity prompt for LLM-powered overview page synthesis."""
-    entities_desc = []
-    hooks_desc = []
-    for entity in ir.entities:
-        fields_str = ", ".join(f"{f.name}: {f.type.value}" for f in entity.fields)
-        plural = entity.name if entity.name.endswith("s") else f"{entity.name}s"
-        entities_desc.append(f"- Entity {entity.name} ({fields_str})")
-        hooks_desc.append(
-            f"- useList{plural}({{ page?: number, pageSize?: number, sort?: string, order?: 'asc' | 'desc', q?: string, filters?: Record<string, string>, ownerOnly?: boolean }}): "
-            f"returns {{ data, total, loading, error, page, pageSize, totalPages, params, setSearch, setPage, setPageSize, setSort, setFilter, clearFilters, refetch }}"
+def _entities_block(ir: ApplicationIR) -> str:
+    rows = [
+        f"- Entity {entity.name} ({', '.join(f'{f.name}: {f.type.value}' for f in entity.fields)})"
+        for entity in ir.entities
+    ]
+    return "\n".join(rows) or "- (no entities)"
+
+
+def _grounding_blocks(
+    ir: ApplicationIR,
+    data_layer: str | None,
+    components: str | None,
+    design_tokens: str | None,
+) -> str:
+    """The three grounding blocks. Computed lazily from the real generators when not supplied.
+
+    The lazy import is deliberate: nextjs.py imports this module lazily too, so only a module-level import
+    would create a cycle.
+    """
+    from .nextjs import summarize_components, summarize_data_layer, summarize_design_tokens
+
+    data_layer = data_layer if data_layer is not None else summarize_data_layer(ir)
+    components = components if components is not None else summarize_components(ir)
+    design_tokens = design_tokens if design_tokens is not None else summarize_design_tokens()
+    return (
+        "TYPED DATA LAYER — THE ONLY DATA ACCESS THAT EXISTS (generated code; use EXACTLY these names and signatures):\n"
+        f"{data_layer}\n\n"
+        f"{components}\n\n"
+        f"{COMPONENT_PROP_HINTS}\n"
+        f"{design_tokens}\n"
+    )
+
+
+def _core_rules(ir: ApplicationIR) -> str:
+    from .auth_guard import needs_auth
+
+    if needs_auth(ir):
+        auth_rule = (
+            "6. AUTH: `useAuth()` from '@/components/auth-provider' returns "
+            "{ user: { id, email, full_name, role } | null, token, logout }; show `user?.full_name || user?.email`.\n"
         )
-        hooks_desc.append(f"- useCreate{entity.name}(): returns {{ create, loading, error }}")
-
-    entities_block = "\n".join(entities_desc)
-    hooks_block = "\n".join(hooks_desc)
-    archetype = _detect_ui_archetype(ir, user_prompt)
-
-    if archetype == "admin_panel":
-        archetype_instructions = """ARCHETYPE: MODERN SAAS ADMIN PANEL / WORKSPACE
-Design a complete, production-grade SaaS Admin Panel with drawer navigation:
-1. Left Collapsible Drawer / Sidebar Navigation:
-   - Sidebar header: App logo badge, title, and collapse toggle button.
-   - Navigation links with icons (e.g. Dashboard, Management tables, Settings).
-   - Sub-items with bullet dots and active blue pill state.
-2. Top Navigation Bar:
-   - Global search input.
-   - Right controls: Notification bell, User Avatar.
-   - Interactive User Avatar dropdown menu with user email/name, Settings link, Reset Password link (`/forgot-password`), and Sign Out button (calling `logout()`).
-3. Main View Modes (toggleable via state):
-   - Data Management Table View:
-     - Page Title (e.g. Management, Settings).
-     - Filter bar: Status dropdown, and '+ Add [Entity]' button.
-     - Table card with columns: ID, Name/Title, Status pill, Actions ('Edit' & 'Delete' buttons).
-   - Analytics Stat Cards: metric counters for key entities."""
     else:
-        archetype_instructions = """ARCHETYPE: MODERN PUBLIC WEBSITE / E-COMMERCE
-Design a world-class consumer-facing public web experience:
-1. Modern Navigation Header: Brand logo, category links, search, cart/actions, and user auth buttons.
-2. Dynamic Hero Banner: Compelling headline, value proposition, high-contrast CTA buttons, and floating metric chips.
-3. Feature / Product Showcase: Responsive grid with product/service cards, prices, rating badges, and action buttons.
-4. Interactive Testimonials & Social Proof: Rating cards and customer feedback quotes.
-5. Modern Footer: Sitemap links, newsletter subscription input, and copyright."""
+        auth_rule = (
+            "6. AUTH: this app has NO auth provider — do NOT import '@/components/auth-provider' or call useAuth().\n"
+        )
+    return f"""CORE IMPLEMENTATION RULES:
+1. Start with `"use client";`
+2. IMPORTS: ONLY `react`, `react-dom`, `next/*` (e.g. next/link, next/navigation), `@/lib/hooks`, `@/lib/types`,
+   `@/lib/api`, and the `@/components/<file>` modules listed above. No other package exists (no Tailwind, no icon
+   libraries, no axios). Never use require() or dynamic import().
+3. DATA ACCESS: use ONLY the hooks in the TYPED DATA LAYER with EXACTLY those signatures. List hooks expose
+   `refetch()`, `setPage()`, `setPageSize()`, `setSearch()`, `setSort()` (and `setFilter()`/`clearFilters()` on
+   collection lists); there is NO `refresh()`. List params are `{{ limit, offset, sort, order, q }}` — never
+   page/pageSize as params. If the data layer says NO hooks exist, do not import '@/lib/hooks'.
+4. NULL SAFETY: hook `data` can be null while loading — ALWAYS write `(data ?? []).map(...)`,
+   `(data ?? []).filter(...)`, `data?.length ?? 0`.
+5. STYLING: styles/tokens.css is already loaded by app/globals.css. Style with inline `style={{{{...}}}}` or scoped
+   `<style jsx>` using the DESIGN TOKENS via `var(--color-…)`, `var(--space-…)`, `var(--radius-…)`,
+   `var(--shadow-…)`, `var(--font-size-…)`. NEVER hardcode hex colors and do NOT use Tailwind classes (it is not
+   installed). Dark mode works automatically through the tokens.
+{auth_rule}7. DATA GRID columns use `header` (never `label`); DIALOG uses `open`/`onOpenChange` (never `isOpen`);
+   STAT CARDS use the compound form shown above.
+8. ZERO PLACEHOLDERS: complete, functional JSX with real buttons, inputs, and loading / empty / error states.
+   No `// TODO`.
+9. CONCISE: keep the file under 300 lines so it is never truncated; it MUST end with the closing `}}` of the
+   default export.
+10. Output ONLY the raw TypeScript/React file content — no markdown fences, no commentary.
+"""
 
+
+def build_ui_synthesis_prompt(
+    ir: ApplicationIR,
+    user_prompt: str,
+    *,
+    data_layer: str | None = None,
+    components: str | None = None,
+    design_tokens: str | None = None,
+) -> str:
+    """Build the grounded prompt for LLM-powered overview page synthesis (``app/page.tsx``)."""
+    archetype = _detect_ui_archetype(ir, user_prompt)
+    archetype_instructions = _ADMIN_ARCHETYPE if archetype == "admin_panel" else _WEBSITE_ARCHETYPE
     return f"""You are a Lead UI/UX Engineer at a world-class software platform.
 Your mission is to write the main page (`app/page.tsx`) for a Next.js 15 application.
 
@@ -201,200 +318,26 @@ PROJECT CONTEXT:
 - Purpose: {ir.description}
 
 DATA ENTITIES IN POSTGRES DATABASE:
-{entities_block}
+{_entities_block(ir)}
 
-TYPED DATA HOOKS (import from '@/lib/hooks'):
-{hooks_block}
-- useAuth() (from '@/components/auth-provider'): returns {{ user: {{ id, email, full_name, role }} | null, token, logout }}
-
-{AVAILABLE_COMPONENTS_SUMMARY}
-
+{_grounding_blocks(ir, data_layer, components, design_tokens)}
 {archetype_instructions}
 
-CORE IMPLEMENTATION RULES:
-1. Start with `"use client";`
-2. Strictly NO unapproved third-party npm packages. Only import from:
-   - React (`useState`, `useEffect`, etc.)
-   - Next.js (`next/link`)
-   - `@/lib/hooks`
-   - `@/components` or `@/components/*`
-3. ZERO PLACEHOLDERS: Implement complete, functional JSX. Do NOT leave `// TODO` or empty stubs.
-4. CONCISE & MODULAR: Keep total length under 300 lines so output is NEVER truncated.
-5. NULL SAFETY: `data` in hooks can be null while loading. ALWAYS use `(data ?? []).map(...)`, `(data ?? []).filter(...)`, or `data?.length || 0`.
-6. AUTH USER: user object has `user?.full_name || user?.email` (do NOT use `first_name` or `last_name`).
-7. DATA GRID: Column definitions MUST use `header: string` (e.g. key and header properties). Do NOT use `label`.
-8. DIALOG COMPONENT: Use `open` and `onOpenChange` props (do NOT use `isOpen`).
-9. STAT CARDS: Use compound format: `<StatCard><StatCardHeader title="Label" icon="📊" /><StatCardValue value="123" subtext="info" /></StatCard>`.
-10. HOOK METHODS: Use `refetch()` to reload data (do NOT call `refresh()`).
-11. STYLING: Do NOT rely on Tailwind CSS classes alone. Use scoped `<style jsx>{{`...`}}</style>` or inline styles so the UI is styled with modern colors (#0f172a, #2563eb, #f8fafc), rounded corners, and soft shadows.
-12. FILE COMPLETION: The file MUST end cleanly with the closing `}}` of the default export component.
-13. Output ONLY the raw TypeScript/React JSX file content. Do NOT include markdown commentary.
-"""
+{_core_rules(ir)}"""
 
 
-
-async def synthesize_overview_page(
+def build_screen_synthesis_prompt(
+    screen: Screen,
     ir: ApplicationIR,
     user_prompt: str,
-    provider: ModelProvider | None = None,
-    model_id: str | None = None,
-    failover_provider: ModelProvider | None = None,
-    failover_model_id: str | None = None,
-    timeout_seconds: float = 120.0,
+    *,
+    data_layer: str | None = None,
+    components: str | None = None,
+    design_tokens: str | None = None,
 ) -> str:
-    """Synthesize bespoke overview page with LLM or fallback to deterministic template.
-
-    Never raises: if anything fails, returns the deterministic _overview_page(ir).
-    """
-    from .nextjs import _overview_page
-
-    # Deterministic fallback when no provider is given (e.g., offline test suite)
-    if provider is None:
-        return _overview_page(ir)
-
-    try:
-        from ..model_gateway.contracts import (
-            ChatRole,
-            GenerateRequest,
-            Message,
-            ModelRef,
-        )
-
-        import uuid
-
-        prompt = build_ui_synthesis_prompt(ir, user_prompt).strip()
-        provider_id = getattr(provider, "provider_id", "auto")
-        if not model_id:
-            profiles = getattr(provider, "profiles", lambda: ())()
-            if profiles:
-                resolved_model_id = profiles[0].descriptor.model.model_id
-            else:
-                resolved_model_id = "default"
-        else:
-            resolved_model_id = model_id
-        target_model = ModelRef(provider_id=provider_id, model_id=resolved_model_id)
-
-        max_output = 4096
-        profiles_dict = getattr(provider, "_profiles", None)
-        if isinstance(profiles_dict, dict) and resolved_model_id in profiles_dict:
-            max_output = profiles_dict[resolved_model_id].descriptor.max_output_tokens
-        elif hasattr(provider, "profile"):
-            try:
-                prof = provider.profile(target_model)
-                max_output = prof.descriptor.max_output_tokens
-            except Exception:
-                pass
-
-        req_id = f"ui-synth-{uuid.uuid4().hex[:12]}"
-        request = GenerateRequest(
-            request_id=req_id,
-            model=target_model,
-            messages=(
-                Message(
-                    role=ChatRole.SYSTEM,
-                    content="You are an expert Next.js full-stack UI designer. Respond only with valid, executable TypeScript React code.",
-                ),
-                Message(role=ChatRole.USER, content=prompt),
-            ),
-            max_output_tokens=max_output,
-            timeout_seconds=timeout_seconds,
-        )
-
-        response = await asyncio.wait_for(
-            provider.generate(request),
-            timeout=timeout_seconds,
-        )
-        raw_content = getattr(response, "text", None)
-        if raw_content is None:
-            raw_content = getattr(getattr(response, "message", None), "content", "")
-        valid, cleaned_jsx, reason = clean_and_validate_jsx(raw_content)
-        if valid:
-            logger.info("Successfully synthesized bespoke LLM UI for project '%s'", ir.name)
-            tag = f'// [OmniStackAI] Mode: LLM-Synthesized Bespoke UI ({resolved_model_id})\n'
-            if cleaned_jsx.startswith('"use client";'):
-                return '"use client";\n' + tag + cleaned_jsx[len('"use client";'):].lstrip('\n')
-            return tag + cleaned_jsx
-        else:
-            logger.warning("Synthesized JSX failed safety validation (%s); falling back to deterministic template", reason)
-    except Exception as err:
-        err_msg = str(err) if str(err) else type(err).__name__
-        logger.warning("LLM UI synthesis with primary provider failed (%s); checking failover provider", err_msg)
-        if failover_provider is not None:
-            try:
-                logger.info("Attempting failover to secondary provider '%s'...", getattr(failover_provider, "provider_id", "unknown"))
-                return await synthesize_overview_page(
-                    ir,
-                    user_prompt,
-                    provider=failover_provider,
-                    model_id=failover_model_id,
-                    failover_provider=None,
-                    timeout_seconds=min(timeout_seconds, 60.0),
-                )
-            except Exception as failover_err:
-                logger.warning("Failover provider also failed: %s", failover_err)
-
-    return _overview_page(ir)
-
-
-def synthesize_overview_page_sync(
-    ir: ApplicationIR,
-    user_prompt: str,
-    provider: ModelProvider | None = None,
-    model_id: str | None = None,
-    timeout_seconds: float = 120.0,
-) -> str:
-    """Synchronous bridge for synthesize_overview_page."""
-    if provider is None:
-        from .nextjs import _overview_page
-        return _overview_page(ir)
-
-    try:
-        loop = asyncio.get_running_loop()
-    except RuntimeError:
-        loop = None
-
-    if loop is not None and loop.is_running():
-        import concurrent.futures
-        with concurrent.futures.ThreadPoolExecutor(max_workers=1) as executor:
-            future = executor.submit(
-                asyncio.run,
-                synthesize_overview_page(
-                    ir,
-                    user_prompt,
-                    provider=provider,
-                    model_id=model_id,
-                    timeout_seconds=timeout_seconds,
-                ),
-            )
-            return future.result()
-    else:
-        return asyncio.run(
-            synthesize_overview_page(
-                ir,
-                user_prompt,
-                provider=provider,
-                model_id=model_id,
-                timeout_seconds=timeout_seconds,
-            )
-        )
-
-
-def build_screen_synthesis_prompt(screen: Screen, ir: ApplicationIR, user_prompt: str) -> str:
-    """Build high-fidelity prompt for bespoke screen page synthesis."""
-    entities_desc = []
-    hooks_desc = []
-    for entity in ir.entities:
-        fields_str = ", ".join(f"{f.name}: {f.type.value}" for f in entity.fields)
-        entities_desc.append(f"- Entity {entity.name} ({fields_str})")
-        plural = f"{entity.name}s" if not entity.name.endswith("s") else entity.name
-        hooks_desc.append(f"- useList{plural}({{ limit?: number }}): returns {{ data, total, loading, error, refresh }}")
-        hooks_desc.append(f"- useCreate{entity.name}(): returns {{ create, loading, error }}")
-
-    entities_block = "\n".join(entities_desc)
-    hooks_block = "\n".join(hooks_desc)
+    """Build the grounded prompt for bespoke screen page synthesis (``app/<screen>/page.tsx``)."""
     components_str = ", ".join(screen.components) if screen.components else "default layout"
     actions_str = ", ".join(screen.actions) if screen.actions else "default actions"
-
     return f"""You are a Lead UI/UX Engineer at a world-class software platform.
 Your mission is to write the dedicated, interactive page (`app/{screen.id}/page.tsx`) for a Next.js 15 application.
 
@@ -412,38 +355,267 @@ PROJECT CONTEXT:
 - Purpose: {ir.description}
 
 DATA ENTITIES IN POSTGRES DATABASE:
-{entities_block}
+{_entities_block(ir)}
 
-TYPED DATA HOOKS (import from '@/lib/hooks'):
-{hooks_block}
-- useAuth() (from '@/components/auth-provider'): returns {{ user, token, logout }}
-
-{AVAILABLE_COMPONENTS_SUMMARY}
-- Rating: {{ value: number, max?: number, onChange?: (val: number) => void, readOnly?: boolean }}
-- Toast: {{ useToast: () => {{ toast: (opts: {{ title: string, description?: string, variant?: 'default' | 'success' | 'destructive' }}) => void }} }}
-
+{_grounding_blocks(ir, data_layer, components, design_tokens)}
 DESIGN & ARCHITECTURE GUIDELINES:
-1. Start with `"use client";`
-2. Deliver a state-of-the-art, domain-specific UI:
-   - If this is a Catalog / Product Grid / Item List:
-     Render a responsive grid of modern cards with badges, formatted prices, ratings (using `@/components/rating`), tags, and action buttons.
-   - If this is a Shopping Cart / Order Review:
-     Render interactive item rows with quantity steppers (+/-), price calculations, discount coupon code input, line items, order summary card (subtotal, discounts, total), and Checkout action.
-   - If this is a Customer Reviews / Feedback page:
-     Render overall rating summary, star breakdown bars, review cards with verified badges, and a "Write a Review" form or dialog.
-   - If this is a Booking / Schedule / Clinic page:
-     Render appointment slots, status badges, provider details, and confirmation modal.
-   - If this is a Dashboard / Analytics page:
-     Render StatCards with trend badges, filter controls, and action items.
-3. Use the typed hooks (`useList<Entities>`) to load and display dynamic records.
-4. Strictly NO unapproved third-party npm packages. Only import from:
-   - React (`useState`, `useEffect`, `useMemo`, etc.)
-   - Next.js (`next/link`, `next/navigation`)
-   - `@/lib/hooks`
-   - `@/components/*` (e.g., `@/components/stat-card`, `@/components/badge`, `@/components/dialog`, `@/components/rating`, `@/components/toast`, etc.)
-5. ZERO PLACEHOLDERS: Implement complete, functional JSX with real buttons, inputs, and feedback states. Do NOT leave `// TODO` or empty stubs.
-6. Output ONLY the raw TypeScript/React JSX file content. Do NOT include markdown commentary.
-"""
+Deliver a state-of-the-art, domain-specific UI for this screen:
+- Catalog / Product Grid / Item List: a responsive grid of modern cards with badges, formatted values, ratings
+  (Rating), tags, and action buttons; search, sort and pagination wired to the list hook.
+- Editor / Form: a complete create/edit form bound to the real create/update hooks with validation, field
+  errors, submit/loading states and success feedback (useToast).
+- Detail: the record's fields, related sub-collections via the real list-by hooks, and edit/delete actions.
+- Shopping Cart / Order Review: interactive rows with quantity steppers, totals, a summary card and a checkout action.
+- Booking / Schedule: slots, status badges, provider details and a confirmation Dialog.
+- Dashboard / Analytics: StatCards with trend badges, filter controls and action items.
+
+{_core_rules(ir)}"""
+
+
+# ---------------------------------------------------------------------------
+# Synthesis core: one file, bounded repair loop, deterministic fallback
+# ---------------------------------------------------------------------------
+
+
+@dataclass(frozen=True, slots=True)
+class UiSynthesisOutcome:
+    """JSON-safe, secret-free record of how one file was produced.
+
+    ``last_reason`` is a validator rejection reason or an exception *type name* only — provider errors can
+    embed response bodies, which must never leak into state or logs.
+    """
+
+    path: str
+    mode: str  # "llm" | "deterministic"
+    attempts: int  # model calls made (0 when the model was never called)
+    model_id: str
+    last_reason: str = ""
+
+    def to_dict(self) -> dict:
+        return {
+            "path": self.path,
+            "mode": self.mode,
+            "attempts": self.attempts,
+            "model_id": self.model_id,
+            "last_reason": self.last_reason,
+        }
+
+
+def _resolve_target(provider: ModelProvider, model_id: str | None) -> tuple[ModelRef, int]:
+    from ..model_gateway.contracts import ModelRef
+
+    provider_id = getattr(provider, "provider_id", "auto")
+    if not model_id:
+        profiles = getattr(provider, "profiles", lambda: ())()
+        resolved_model_id = profiles[0].descriptor.model.model_id if profiles else "default"
+    else:
+        resolved_model_id = model_id
+    target = ModelRef(provider_id=provider_id, model_id=resolved_model_id)
+
+    max_output = 4096
+    profiles_dict = getattr(provider, "_profiles", None)
+    if isinstance(profiles_dict, dict) and resolved_model_id in profiles_dict:
+        max_output = profiles_dict[resolved_model_id].descriptor.max_output_tokens
+    elif hasattr(provider, "profile"):
+        try:
+            max_output = provider.profile(target).descriptor.max_output_tokens
+        except Exception:  # noqa: BLE001 - profile lookup is best-effort
+            pass
+    return target, max_output
+
+
+def _safe_message_text(text: str, limit: int) -> str:
+    """Bound and sanitize text for a Message: no control characters (newline kept), no surrounding whitespace."""
+    clipped = text[:limit]
+    cleaned = "".join(ch if ch == "\n" or (ch >= " " and ch != "\x7f") else " " for ch in clipped)
+    cleaned = cleaned.replace("\t", "    ").strip()
+    return cleaned or "(empty output)"
+
+
+def _repair_message(path: str, reason: str) -> str:
+    """The corrective turn. Kept generic so a compiler's output can be fed through the same channel."""
+    return (
+        f"Your previous `{path}` was REJECTED: {reason}\n"
+        "Return ONLY the corrected, complete file content (under 300 lines, no markdown fences, no commentary). "
+        "Keep every import within react, react-dom, next/*, @/lib/*, @/components/* and relative paths, and use "
+        "only the hooks and components that were listed."
+    )
+
+
+def _finalize(cleaned_jsx: str, tag: str) -> str:
+    if cleaned_jsx.startswith('"use client";'):
+        return '"use client";\n' + tag + cleaned_jsx[len('"use client";') :].lstrip("\n")
+    return tag + cleaned_jsx
+
+
+async def _synthesize_file(
+    *,
+    path: str,
+    prompt: str,
+    fallback: Callable[[], str],
+    provider: ModelProvider,
+    model_id: str | None,
+    timeout_seconds: float,
+    max_attempts: int,
+    outcomes: list[UiSynthesisOutcome] | None,
+    log_label: str,
+) -> str:
+    """Generate one file with a bounded validation→feedback→retry loop. Never raises."""
+    from ..model_gateway.contracts import ChatRole, GenerateRequest, Message
+
+    try:
+        target, max_output = _resolve_target(provider, model_id)
+    except Exception as err:  # noqa: BLE001 - never raise out of synthesis
+        if outcomes is not None:
+            outcomes.append(UiSynthesisOutcome(path, "deterministic", 0, "default", type(err).__name__))
+        return fallback()
+
+    attempts_allowed = max(1, int(max_attempts))
+    messages = [Message(ChatRole.SYSTEM, _SYSTEM_MESSAGE), Message(ChatRole.USER, prompt.strip())]
+    attempts = 0
+    last_reason = ""
+    for attempt in range(1, attempts_allowed + 1):
+        attempts = attempt
+        try:
+            request = GenerateRequest(
+                request_id=f"ui-synth-{uuid.uuid4().hex[:12]}",
+                model=target,
+                messages=tuple(messages),
+                max_output_tokens=max_output,
+                timeout_seconds=timeout_seconds,
+            )
+            response = await asyncio.wait_for(provider.generate(request), timeout=timeout_seconds)
+        except Exception as err:  # noqa: BLE001 - transport/provider errors never retry; fall back
+            last_reason = type(err).__name__
+            logger.warning(
+                "LLM UI synthesis for %s failed (%s); falling back to the deterministic template", log_label, last_reason
+            )
+            break
+        raw = getattr(response, "text", None)
+        if raw is None:
+            raw = getattr(getattr(response, "message", None), "content", "") or ""
+        valid, cleaned, reason = clean_and_validate_jsx(raw)
+        if valid:
+            tag = f"{MARKER_PREFIX} ({target.model_id}; attempt {attempt}/{attempts_allowed})\n"
+            if outcomes is not None:
+                outcomes.append(UiSynthesisOutcome(path, "llm", attempts, target.model_id, ""))
+            logger.info("Synthesized bespoke LLM UI for %s on attempt %d", log_label, attempt)
+            return _finalize(cleaned, tag)
+        last_reason = reason
+        logger.warning(
+            "Synthesized JSX for %s rejected on attempt %d/%d (%s)", log_label, attempt, attempts_allowed, reason
+        )
+        if attempt < attempts_allowed:
+            try:
+                messages.append(Message(ChatRole.ASSISTANT, _safe_message_text(raw, _MAX_ECHO_CHARS)))
+                messages.append(Message(ChatRole.USER, _repair_message(path, reason)))
+            except Exception as err:  # noqa: BLE001 - a malformed transcript must not raise out of synthesis
+                last_reason = type(err).__name__
+                break
+
+    if outcomes is not None:
+        outcomes.append(UiSynthesisOutcome(path, "deterministic", attempts, target.model_id, last_reason))
+    return fallback()
+
+
+# ---------------------------------------------------------------------------
+# Public entry points
+# ---------------------------------------------------------------------------
+
+
+async def synthesize_overview_page(
+    ir: ApplicationIR,
+    user_prompt: str,
+    provider: ModelProvider | None = None,
+    model_id: str | None = None,
+    failover_provider: ModelProvider | None = None,
+    failover_model_id: str | None = None,
+    timeout_seconds: float = 120.0,
+    *,
+    max_attempts: int = DEFAULT_MAX_ATTEMPTS,
+    outcomes: list[UiSynthesisOutcome] | None = None,
+    data_layer: str | None = None,
+    components: str | None = None,
+    design_tokens: str | None = None,
+) -> str:
+    """Synthesize the bespoke overview page (``app/page.tsx``) or fall back to the deterministic template.
+
+    Never raises: any failure returns ``_overview_page(ir)``.
+    """
+    from .nextjs import _overview_page
+
+    if provider is None:
+        return _overview_page(ir)
+
+    prompt = build_ui_synthesis_prompt(
+        ir, user_prompt, data_layer=data_layer, components=components, design_tokens=design_tokens
+    )
+    path = "app/page.tsx"
+    primary: list[UiSynthesisOutcome] = []
+    result = await _synthesize_file(
+        path=path,
+        prompt=prompt,
+        fallback=lambda: _overview_page(ir),
+        provider=provider,
+        model_id=model_id,
+        timeout_seconds=timeout_seconds,
+        max_attempts=max_attempts,
+        outcomes=primary,
+        log_label=f"project '{ir.name}' {path}",
+    )
+    if primary and primary[-1].mode == "deterministic" and failover_provider is not None:
+        # One extra pass with the failover provider (preserves the R-462 failover behavior).
+        logger.info("Attempting failover provider '%s' for %s", getattr(failover_provider, "provider_id", "unknown"), path)
+        failover: list[UiSynthesisOutcome] = []
+        result = await _synthesize_file(
+            path=path,
+            prompt=prompt,
+            fallback=lambda: _overview_page(ir),
+            provider=failover_provider,
+            model_id=failover_model_id,
+            timeout_seconds=min(timeout_seconds, 60.0),
+            max_attempts=max_attempts,
+            outcomes=failover,
+            log_label=f"project '{ir.name}' {path} (failover)",
+        )
+        primary = failover
+    if outcomes is not None:
+        outcomes.extend(primary)
+    return result
+
+
+def synthesize_overview_page_sync(
+    ir: ApplicationIR,
+    user_prompt: str,
+    provider: ModelProvider | None = None,
+    model_id: str | None = None,
+    timeout_seconds: float = 120.0,
+    *,
+    max_attempts: int = DEFAULT_MAX_ATTEMPTS,
+    outcomes: list[UiSynthesisOutcome] | None = None,
+    data_layer: str | None = None,
+    components: str | None = None,
+    design_tokens: str | None = None,
+) -> str:
+    """Synchronous bridge for synthesize_overview_page (the repair loop lives inside the coroutine)."""
+    if provider is None:
+        from .nextjs import _overview_page
+
+        return _overview_page(ir)
+
+    coro_factory = lambda: synthesize_overview_page(  # noqa: E731 - a fresh coroutine per run
+        ir,
+        user_prompt,
+        provider=provider,
+        model_id=model_id,
+        timeout_seconds=timeout_seconds,
+        max_attempts=max_attempts,
+        outcomes=outcomes,
+        data_layer=data_layer,
+        components=components,
+        design_tokens=design_tokens,
+    )
+    return _run_sync(coro_factory)
 
 
 async def synthesize_screen_page(
@@ -453,78 +625,34 @@ async def synthesize_screen_page(
     provider: ModelProvider | None = None,
     model_id: str | None = None,
     timeout_seconds: float = 120.0,
+    *,
+    max_attempts: int = DEFAULT_MAX_ATTEMPTS,
+    outcomes: list[UiSynthesisOutcome] | None = None,
+    data_layer: str | None = None,
+    components: str | None = None,
+    design_tokens: str | None = None,
 ) -> str:
-    """Synthesize bespoke screen page with LLM or fallback to deterministic template."""
+    """Synthesize a bespoke screen page (``app/<screen>/page.tsx``) or fall back to the deterministic template."""
     from .nextjs import _screen_page
 
     if provider is None:
         return _screen_page(screen, ir)
 
-    try:
-        from ..model_gateway.contracts import (
-            ChatRole,
-            GenerateRequest,
-            Message,
-            ModelRef,
-        )
-        import uuid
-
-        prompt = build_screen_synthesis_prompt(screen, ir, user_prompt).strip()
-        provider_id = getattr(provider, "provider_id", "auto")
-        if not model_id:
-            profiles = getattr(provider, "profiles", lambda: ())()
-            resolved_model_id = profiles[0].descriptor.model.model_id if profiles else "default"
-        else:
-            resolved_model_id = model_id
-        target_model = ModelRef(provider_id=provider_id, model_id=resolved_model_id)
-
-        max_output = 4096
-        profiles_dict = getattr(provider, "_profiles", None)
-        if isinstance(profiles_dict, dict) and resolved_model_id in profiles_dict:
-            max_output = profiles_dict[resolved_model_id].descriptor.max_output_tokens
-        elif hasattr(provider, "profile"):
-            try:
-                prof = provider.profile(target_model)
-                max_output = prof.descriptor.max_output_tokens
-            except Exception:
-                pass
-
-        req_id = f"screen-synth-{uuid.uuid4().hex[:12]}"
-        request = GenerateRequest(
-            request_id=req_id,
-            model=target_model,
-            messages=(
-                Message(
-                    role=ChatRole.SYSTEM,
-                    content="You are an expert Next.js full-stack UI designer. Respond only with valid, executable TypeScript React code.",
-                ),
-                Message(role=ChatRole.USER, content=prompt),
-            ),
-            max_output_tokens=max_output,
-            timeout_seconds=timeout_seconds,
-        )
-
-        response = await asyncio.wait_for(
-            provider.generate(request),
-            timeout=timeout_seconds,
-        )
-        raw_content = getattr(response, "text", None)
-        if raw_content is None:
-            raw_content = getattr(getattr(response, "message", None), "content", "")
-        valid, cleaned_jsx, reason = clean_and_validate_jsx(raw_content)
-        if valid:
-            logger.info("Successfully synthesized bespoke screen '%s' for project '%s'", screen.id, ir.name)
-            tag = f'// [OmniStackAI] Mode: LLM-Synthesized Bespoke UI ({resolved_model_id})\n'
-            if cleaned_jsx.startswith('"use client";'):
-                return '"use client";\n' + tag + cleaned_jsx[len('"use client";'):].lstrip('\n')
-            return tag + cleaned_jsx
-        else:
-            logger.warning("Synthesized screen JSX for '%s' failed validation (%s); falling back to deterministic template", screen.id, reason)
-    except Exception as err:
-        err_msg = str(err) if str(err) else type(err).__name__
-        logger.warning("LLM screen UI synthesis for '%s' encountered error (%s); falling back to deterministic template", screen.id, err_msg)
-
-    return _screen_page(screen, ir)
+    prompt = build_screen_synthesis_prompt(
+        screen, ir, user_prompt, data_layer=data_layer, components=components, design_tokens=design_tokens
+    )
+    path = f"app/{screen.id}/page.tsx"
+    return await _synthesize_file(
+        path=path,
+        prompt=prompt,
+        fallback=lambda: _screen_page(screen, ir),
+        provider=provider,
+        model_id=model_id,
+        timeout_seconds=timeout_seconds,
+        max_attempts=max_attempts,
+        outcomes=outcomes,
+        log_label=f"project '{ir.name}' {path}",
+    )
 
 
 def synthesize_screen_page_sync(
@@ -534,12 +662,37 @@ def synthesize_screen_page_sync(
     provider: ModelProvider | None = None,
     model_id: str | None = None,
     timeout_seconds: float = 120.0,
+    *,
+    max_attempts: int = DEFAULT_MAX_ATTEMPTS,
+    outcomes: list[UiSynthesisOutcome] | None = None,
+    data_layer: str | None = None,
+    components: str | None = None,
+    design_tokens: str | None = None,
 ) -> str:
     """Synchronous bridge for synthesize_screen_page."""
     if provider is None:
         from .nextjs import _screen_page
+
         return _screen_page(screen, ir)
 
+    coro_factory = lambda: synthesize_screen_page(  # noqa: E731 - a fresh coroutine per run
+        screen,
+        ir,
+        user_prompt=user_prompt,
+        provider=provider,
+        model_id=model_id,
+        timeout_seconds=timeout_seconds,
+        max_attempts=max_attempts,
+        outcomes=outcomes,
+        data_layer=data_layer,
+        components=components,
+        design_tokens=design_tokens,
+    )
+    return _run_sync(coro_factory)
+
+
+def _run_sync(coro_factory: Callable[[], object]) -> str:
+    """Run a synthesis coroutine to completion from sync code, even if an event loop is already running."""
     try:
         loop = asyncio.get_running_loop()
     except RuntimeError:
@@ -547,28 +700,7 @@ def synthesize_screen_page_sync(
 
     if loop is not None and loop.is_running():
         import concurrent.futures
-        with concurrent.futures.ThreadPoolExecutor(max_workers=1) as executor:
-            future = executor.submit(
-                asyncio.run,
-                synthesize_screen_page(
-                    screen,
-                    ir,
-                    user_prompt=user_prompt,
-                    provider=provider,
-                    model_id=model_id,
-                    timeout_seconds=timeout_seconds,
-                ),
-            )
-            return future.result()
-    else:
-        return asyncio.run(
-            synthesize_screen_page(
-                screen,
-                ir,
-                user_prompt=user_prompt,
-                provider=provider,
-                model_id=model_id,
-                timeout_seconds=timeout_seconds,
-            )
-        )
 
+        with concurrent.futures.ThreadPoolExecutor(max_workers=1) as executor:
+            return executor.submit(asyncio.run, coro_factory()).result()
+    return asyncio.run(coro_factory())

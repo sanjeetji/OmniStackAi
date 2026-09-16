@@ -14,12 +14,14 @@ from unittest.mock import AsyncMock, patch
 
 from omnistackai_agent_engine.application_ir import (
     AdminStrategy,
+    ApiEndpoint,
     ApplicationIR,
     BackendStrategy,
     DatabaseStrategy,
     Entity,
     Field,
     FieldType,
+    HttpMethod,
     MobileProfile,
     Platform,
     ProjectStrategy,
@@ -100,6 +102,13 @@ def _make_test_ir() -> ApplicationIR:
                     Field(name="cost", type=FieldType.FLOAT),
                 ),
             ),
+        ),
+        # R-465: real entity-schema APIs so lib/hooks.ts actually exports useListVehicles etc. — the
+        # prompt is now grounded in the generated hooks instead of hand-written (drifting) descriptions.
+        apis=(
+            ApiEndpoint(HttpMethod.GET, "/vehicles", auth=False, response_schema="Vehicle"),
+            ApiEndpoint(HttpMethod.POST, "/vehicles", auth=False, request_schema="Vehicle", response_schema="Vehicle"),
+            ApiEndpoint(HttpMethod.GET, "/fuel-logs", auth=False, response_schema="FuelLog"),
         ),
         screens=(
             Screen(id="vehicle_list", role="user", components=("list",)),

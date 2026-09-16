@@ -1,5 +1,58 @@
 # Work Log
 
+## 2026-09-17 — R-465 (Grounded Hybrid UI Synthesis — LLM writes the UI over the deterministic data layer)
+
+- **Founder decisions (after the honest platform assessment):** compete via a HYBRID engine — an LLM writes
+  the modern UI constrained to the deterministic typed data layer, with a verify/repair loop; paid Groq/Gemini
+  approved, opt-in only; engine slightly ahead of the product-UI shell. R-465 is the first engine brick.
+- **Why the R-462 seed hallucinated:** the prompt hand-described the hooks and had drifted from the generator
+  (`refresh()` vs the real `refetch()`; `page/pageSize` *params* vs the real `limit/offset`; no
+  `use<Entity>`/`useUpdate`/`useDelete`/`useList<Child>By<Rel>`; `useAuth` advertised even without an
+  auth-provider); it told the model to hardcode hex colours although `styles/tokens.css` exists; per-screen
+  synthesis sat behind a never-set env var with zero test coverage; the validator's rejection reason was
+  discarded after one attempt; the import whitelist had a multi-line bypass.
+- **Grounding (`codegen/nextjs.py`):** `summarize_data_layer(ir)` parses the REAL generator output — entity
+  interfaces (`_entity_interface`), the `Use*` interfaces and every exported hook signature from
+  `_hooks_file(ir)` (mutation hooks rendered from their bodies), `api.*` names — with an explicit "NO data
+  hooks" line for IRs without entity-schema APIs. `_component_files(ir)` factors the ~110 component files out
+  of `generate()` (byte-identical output; `GeneratedProject` sorts by path) and `summarize_components(ir)` lists
+  their real export names (auth-provider first, only when `needs_auth`). `summarize_design_tokens()` lists the
+  real token names. `NextjsWebAdapter.generate` computes the three blocks once per project when a provider is
+  present.
+- **Engine (`codegen/llm_ui.py` rewritten):** one `_synthesize_file` core — `[SYSTEM, USER]`; on validator
+  rejection append `ASSISTANT(prior output, capped 8k chars)` + `USER(_repair_message(path, reason))` and
+  retry up to 3; **retry only on validator rejection, never on exceptions**; exhaustion/exception → the
+  deterministic template with no marker; success marker `… (<model>; attempt k/N)`; a JSON-safe, secret-free
+  `UiSynthesisOutcome(path, mode, attempts, model_id, last_reason)` per file (`last_reason` = validator reason
+  or exception type name only). `clean_and_validate_jsx` now scans every static import statement (multi-line
+  aware), allows exactly `react`/`react-dom` + platform prefixes, rejects `react-*`, `require(`, dynamic
+  `import(`. Prompt builders accept `data_layer`/`components`/`design_tokens` (lazily computed — no import
+  cycle), share `_grounding_blocks` + `_core_rules` (token styling; `useAuth` rule conditional on `needs_auth`).
+- **Explicit switch:** `synthesize_screens: bool = False` + `ui_outcomes` threaded
+  `NextjsWebAdapter.generate → assemble_project → build_app_from_ir / build_app_from_prompt`; the env gate and
+  the now-unused `import os` removed; `ModelProvider` gets a proper `TYPE_CHECKING` import.
+- **Opt-in CLI:** `intake/ui_synthesize_run.py` → `task agent-engine:ui:synthesize -- "<prompt>"` (script case
+  + Taskfile + COMMANDS.md): intake via `resolve_generation_provider_from_env()`, then
+  `build_app_from_ir(..., synthesize_screens=True, ui_outcomes=…)`, per-file outcome table, local-Ollama
+  context warning, clean bounded exit on provider errors. New `docs/HYBRID_UI.md`.
+- **Tests:** new `tests/test_llm_ui_grounding.py` (15: grounding, no-hallucination, drift guard, tokens,
+  components/auth, repair success on attempt 2 with the reason in request #2, exhaustion → template, exception
+  → 1 request, switch default/opt-in, byte-identical default, import hardening, assemble/build threading).
+  Honest updates: the R-462 test IR gained real entity-schema APIs (two tests had been asserting the
+  hallucinated hook); the platform test's drifted `page?/pageSize?` assertions became the real
+  `limit?/offset?` params + `page/pageSize` state.
+- **Gates:** focused 47 passed; `task verify` **3,442 OK** (Stage 0; 0 model calls); lint/security/env green;
+  demos 157/153; `web-typecheck` **PASSED** for minimal-blog and rideshare-favourites (deterministic default
+  unchanged).
+- **Live proof (opt-in, founder's Groq key) — honest:** the account is on the free `on_demand` tier (8,000 TPM)
+  with exactly one accessible model (`openai/gpt-oss-120b`). Full CLI run → 429 on the intake call (the CLI's
+  traceback leak was fixed). Scoped run (one grounded overview call + tsc): the model returned a page, the
+  validator rejected it with an exact reason (truncated at max_output 4096), the repair loop engaged, the repair
+  call hit 429 (the echo pushed it past 8k TPM), and the engine fell back gracefully with a truthful outcome
+  record; the built repo compiles (tsc 0). The engine behaves as designed; a full LLM-page-compiles proof needs
+  >8k TPM (Gemini via `GOOGLE_API_KEY`, or Groq Dev tier). Echo cap lowered 16k → 8k chars; gateway 429 pacing
+  logged for R-466.
+
 ## 2026-09-16 — R-464 (Full-Stack Platform Feature Completeness — 4-Phase Plan)
 
 - Implemented full-stack platform feature completeness across all 4 phases:

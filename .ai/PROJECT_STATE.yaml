@@ -2,10 +2,10 @@ schema_version: 1
 project: OmniStackAI
 phase: BASIC/MVP
 founder_stage: 0
-current_task: null
-current_status: ready
+current_task: R-465
+current_status: done
 branch: main
-last_completed_task: R-464
+last_completed_task: R-465
 # TASK COMPILATION AUDIT — 2026-09-16
 # Performed to achieve 100% synchronization across all task-tracking documentation.
 # Tracker workbook expanded to 464 tasks with R-464.
@@ -20,7 +20,7 @@ task_compilation_audit:
   mvp_done: 252
   mvp_completion_pct: 70.4
   overall_completion_pct: 54.3
-  test_suite_count: 3427
+  test_suite_count: 3442
   changelog_entries: 253
   missing_entries_backfilled:
     - R-272
@@ -34,7 +34,30 @@ task_compilation_audit:
       new_status: DONE
       reason: "Task fully completed on 2026-09-11 with 35 tests. Status left stale during rapid development sprint."
 last_completed_task_summary: >-
-  Completed R-464: Full-Stack Platform Feature Completeness across 4 phases:
+  Completed R-465 (2026-09-17): Grounded Hybrid UI Synthesis - the first brick of the founder-approved HYBRID
+  engine (LLM writes the modern UI over the deterministic typed data layer, with a bounded repair loop and a
+  template fallback; model calls opt-in, never in task verify). codegen/nextjs.py gained summarize_data_layer
+  (parses the REAL generated types/hooks/api so the prompt cannot drift - the R-462 seed hallucinated refresh(),
+  page/pageSize params and missed use<Entity>/useUpdate/useDelete/useList<Child>By<Rel>), _component_files +
+  summarize_components (the real ~110 component files with real export names; auth-provider only when
+  needs_auth), and summarize_design_tokens (real --color-*/--space-*/... names; the hardcode-hex rule is gone).
+  codegen/llm_ui.py was rewritten around one _synthesize_file core: validator rejection feeds the reason back
+  (ASSISTANT echo capped 8k chars + corrective USER turn), up to 3 attempts, retry ONLY on validator rejection
+  and NEVER on exceptions, then the deterministic template with no marker; a JSON-safe secret-free
+  UiSynthesisOutcome per file; import hardening (multi-line statements, exact react/react-dom, react-* /
+  require / dynamic import rejected). The never-set OMNISTACKAI_SYNTHESIZE_ALL_SCREENS env gate is replaced by an
+  explicit synthesize_screens flag threaded generate -> assemble_project -> build_app_from_ir/prompt (default
+  False; default output byte-identical; import os removed). Opt-in CLI `task agent-engine:ui:synthesize`
+  (intake/ui_synthesize_run.py; provider via OMNISTACKAI_CLOUD_PROVIDER; clean bounded exit on provider errors).
+  tests/test_llm_ui_grounding.py (15 tests: grounding, no-hallucination, drift guard, tokens, components,
+  repair success/exhaustion/exception, switch, byte-identical default, import hardening, threading); the R-462
+  test IR gained real APIs and the drifted page?/pageSize? assertions became the real limit?/offset?. Gates:
+  task verify 3,442 OK; lint/security/env green; demos 157/153; web-typecheck PASSED for both examples. Live
+  proof (founder's Groq key, free on_demand tier, 8,000 TPM, one accessible model openai/gpt-oss-120b): the
+  model returned a page, the validator rejected it with an exact reason (truncated at max_output 4096), the
+  repair loop engaged, the repair call was rate-limited (429), and the engine fell back gracefully with a truthful
+  outcome record; a full LLM-page-compiles proof needs >8k TPM (GOOGLE_API_KEY / Groq Dev tier). docs/HYBRID_UI.md
+  documents the approach. Previously: Completed R-464: Full-Stack Platform Feature Completeness across 4 phases:
   Phase 1: Verified frontend search, pagination & filter UI controls across collection screens, and updated LLM prompt synthesis with complete hook signatures (page, pageSize, totalPages, params, setSearch, setPage, setPageSize, setSort, setFilter, clearFilters, refetch).
   Phase 2: Audit timestamps (created_at, updated_at) with automatic PostgreSQL set_updated_at() trigger on all entity tables, Go and Python models, TypeScript interfaces, and record detail footer.
   Phase 3: RBAC / Row Ownership (created_by) conditional on needs_auth(ir) across PostgreSQL schema (FK to users table), data access layer, require_owner (Python) and RequireOwner (Go) middleware, TypeScript interfaces, and ownerOnly list hook support.
@@ -855,9 +878,15 @@ id_note: >-
   ID); R-416..R-429 built/hardened the "chat -> create -> run -> preview" front door; R-430..R-437 build SPINE.
 blockers: []
 next_action: >-
-  R-437 is complete: explicit allowlisted project name/description configuration can be applied
-  deterministically to a fresh exact-pinned pack IR with validation and canonical applied/pending provenance;
-  AI-delta intent remains unapplied. NEXT R-438: define a strict bounded typed AI-delta proposal schema and an
-  explicit opt-in local ModelProvider path that produces validated proposal data only. Do not apply deltas,
-  generate source, build, use cloud fallback, or add a dependency, copied skeleton, infrastructure, or database
-  change. The UI-component series remains paused/resumable.
+  R-465 is complete: the hybrid UI engine is grounded (real hooks/types/api + real components + real design
+  tokens, parsed from the generators), has a bounded validation->feedback->retry loop with a deterministic
+  fallback, an explicit synthesize_screens switch, and an opt-in CLI (`task agent-engine:ui:synthesize`).
+  NEXT R-466: compile-level repair - a capturing tsc executor (verify/run_verify only returns exit codes) that
+  feeds per-file compiler errors through the same _repair_message channel for LLM-written files only, bounded
+  retries, per-file template fallback, applied via a hand-built ProjectDiff + edit/apply_diff - PLUS
+  rate-limit-aware pacing/backoff (HTTP 429 retry-after) in the model gateway so the multi-call hybrid flow
+  completes on small tokens-per-minute tiers (the live proof showed Groq free tier = 8k TPM, one model). Then
+  R-467: the product-UI shell (chat + live preview + file tree) driving synthesize_screens=True and surfacing
+  ui_outcomes in the build payload. Founder action to unlock a full live proof: add GOOGLE_API_KEY (Gemini) to
+  the gitignored .env, or upgrade the Groq tier. Keep task verify model/Docker/DB/install/network-free. The
+  UI-component series remains paused/resumable; the tracker workbook still lags (ends at R-462).

@@ -182,6 +182,11 @@ tasks:
     cmds:
       - bash scripts/agent-engine.sh app-build {{.CLI_ARGS}}
 
+  agent-engine:ui:synthesize:
+    desc: 'HYBRID build: an owned Git repo whose UI is written by a model over the deterministic API/DB layer (opt-in, live model calls via OMNISTACKAI_CLOUD_PROVIDER=groq|google, Ollama fallback; never run by verify; out dir via OMNISTACKAI_APP_OUT_DIR; CLI_ARGS - "description")'
+    cmds:
+      - bash scripts/agent-engine.sh ui-synthesize {{.CLI_ARGS}}
+
   agent-engine:studio:serve:
     desc: 'Serve the build-only chat-to-create Studio on http://127.0.0.1:4173 (opt-in local Ollama; generated code is not run)'
     cmds:

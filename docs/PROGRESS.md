@@ -1,4 +1,4 @@
-# OmniStackAI — implementation progress (as of R-461)
+# OmniStackAI — implementation progress (as of R-465)
 
 A living summary of what is built, what is pending, and how to see results. Numbers come from the
 execution tracker (`R_&_D/OmniStackAI_Execution_Tracker_v6.xlsx`, `Phase_Roadmap`, 461 tasks as of
@@ -6,7 +6,15 @@ R-461 completion) plus the state files (`.ai/`), Git history, and CHANGELOG.
 
 ## Headline
 
-- **3,386 automated tests pass**, fully offline and network-independent (`task verify`).
+- **3,442 automated tests pass**, fully offline and network-independent (`task verify`).
+- **R-465 — the HYBRID UI engine is grounded (2026-09-17):** the LLM writes the modern UI over the
+  deterministic, typed data layer — the prompt embeds the REAL generated hooks/types/api (parsed from the same
+  generators, so it cannot drift), the real component exports, and the real design tokens — with a bounded
+  validation→feedback→retry loop and a deterministic template fallback; an explicit `synthesize_screens`
+  switch (default off; default output byte-identical) and the opt-in `task agent-engine:ui:synthesize`. See
+  `docs/HYBRID_UI.md`. Live proof with the founder's Groq key ran honestly into the free tier's 8k TPM limit:
+  validation → repair → rate-limited → graceful fallback (a full LLM-page-compiles proof needs a Gemini key or
+  Groq Dev tier). Next: R-466 compile-level repair + 429 pacing; R-467 product-UI shell.
 - **250 tracker tasks Done, 1 Deferred, 210 Not Started** across **461 tasks** in the execution tracker
   (`R_&_D/OmniStackAI_Execution_Tracker_v6.xlsx`, `Phase_Roadmap`). MVP completion: **250 / 356 = 70.2%**. Overall program completion: **250 / 461 = 54.2%**.
 - **103 tasks (R-359 → R-461) formally tracked in the tracker workbook**:
@@ -515,6 +523,15 @@ deploy), set `OMNISTACKAI_TIER=2`, and run the runtime/deploy driver. The plumbi
 the live run needs the key + a network machine.
 
 ## What's next
+
+**Hybrid engine (founder-approved direction, R-465 done):** the next brick is **R-466 — compile-level
+repair**: a capturing `tsc` executor (today `verify/run_verify` returns only exit codes) feeding per-file compiler
+errors back through R-465's `_repair_message` channel for LLM-written files only, bounded retries, per-file
+template fallback (applied via a hand-built `ProjectDiff` + `edit/apply_diff`) — plus **rate-limit-aware pacing
+in the model gateway** (HTTP 429 `retry-after`) so the multi-call hybrid flow completes on small
+tokens-per-minute tiers. Then **R-467 — the product-UI shell** (multi-turn chat, live preview, a real file tree +
+viewer) driving `synthesize_screens=True` and surfacing `ui_outcomes`. Founder action to unlock a full live proof:
+add `GOOGLE_API_KEY` (Gemini) to the gitignored `.env`, or upgrade the Groq tier.
 
 The local front door is built through robust browser preview with memory: R-416 prompt → IR, R-417 IR →
 owned repo, R-418 local chat studio, R-419 turnkey local run, R-420 SQL hardening, R-421 managed embedded

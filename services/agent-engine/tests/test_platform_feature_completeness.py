@@ -82,8 +82,12 @@ class TestPlatformFeatureCompletenessPhase1(TestCase):
         ir = _make_ir()
         prompt = build_ui_synthesis_prompt(ir, "Manage fleet projects")
         self.assertIn("useListProjects", prompt)
-        self.assertIn("page?: number", prompt)
-        self.assertIn("pageSize?: number", prompt)
+        # R-465: the prompt is grounded in the REAL generated hooks — list *params* are limit/offset,
+        # page/pageSize are *state* fields (the old page?/pageSize? param assertions were the drift).
+        self.assertIn("limit?: number", prompt)
+        self.assertIn("offset?: number", prompt)
+        self.assertIn("page: number", prompt)
+        self.assertIn("pageSize: number", prompt)
         self.assertIn("setSearch", prompt)
         self.assertIn("setPage", prompt)
         self.assertIn("setPageSize", prompt)

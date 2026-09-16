@@ -124,8 +124,15 @@ def assemble_project(
     provider: ModelProvider | None = None,
     prompt: str = "",
     model_id: str | None = None,
+    synthesize_screens: bool = False,
+    ui_outcomes: list | None = None,
 ) -> GeneratedProject:
-    """Assemble one customer monorepo GeneratedProject from an Application IR."""
+    """Assemble one customer monorepo GeneratedProject from an Application IR.
+
+    ``synthesize_screens`` (R-465) opts the Next.js target into model-written screen pages as well as the
+    overview page; it is a silent no-op without a ``provider``. ``ui_outcomes`` collects one JSON-safe
+    ``UiSynthesisOutcome`` per synthesized file when supplied.
+    """
 
     if not isinstance(ir, ApplicationIR):
         raise TypeError("assemble_project expects an ApplicationIR")
@@ -136,7 +143,14 @@ def assemble_project(
     for app in apps:
         adapter = registry.get(app.target)
         if isinstance(adapter, NextjsWebAdapter) and provider is not None:
-            project = adapter.generate(ir, provider=provider, prompt=prompt, model_id=model_id)
+            project = adapter.generate(
+                ir,
+                provider=provider,
+                prompt=prompt,
+                model_id=model_id,
+                synthesize_screens=synthesize_screens,
+                ui_outcomes=ui_outcomes,
+            )
         else:
             project = adapter.generate(ir)
         files += _prefixed(project, app.directory)

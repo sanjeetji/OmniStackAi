@@ -151,6 +151,20 @@ if project["project"]["requires-python"] != ">=3.13,<3.14":
     export OMNISTACKAI_OLLAMA_MAX_CONCURRENCY="$(config_value OMNISTACKAI_OLLAMA_MAX_CONCURRENCY 1)"
     PYTHONPATH="$source_root" python3 -m omnistackai_agent_engine.intake.build_run "${OMNISTACKAI_APP_OUT_DIR:-}" "${@:2}"
     ;;
+  ui-synthesize)
+    # R-465 HYBRID build (opt-in, live model calls): the UI is written by the model over the deterministic
+    # data layer. Provider via OMNISTACKAI_CLOUD_PROVIDER (groq|google|...; Ollama fallback). Never run by verify.
+    configure_python
+    export OMNISTACKAI_OLLAMA_BASE_URL="$(config_value OMNISTACKAI_OLLAMA_BASE_URL http://127.0.0.1:11434)"
+    export OMNISTACKAI_OLLAMA_MODEL="$(config_value OMNISTACKAI_OLLAMA_MODEL qwen2.5-coder:14b)"
+    export OMNISTACKAI_OLLAMA_CONTEXT_WINDOW_TOKENS="$(config_value OMNISTACKAI_OLLAMA_CONTEXT_WINDOW_TOKENS 8192)"
+    export OMNISTACKAI_OLLAMA_SAFE_INPUT_TOKENS="$(config_value OMNISTACKAI_OLLAMA_SAFE_INPUT_TOKENS 6144)"
+    export OMNISTACKAI_OLLAMA_MAX_OUTPUT_TOKENS="$(config_value OMNISTACKAI_OLLAMA_MAX_OUTPUT_TOKENS 2048)"
+    export OMNISTACKAI_OLLAMA_REQUEST_TIMEOUT_SECONDS="$(config_value OMNISTACKAI_OLLAMA_REQUEST_TIMEOUT_SECONDS 300)"
+    export OMNISTACKAI_OLLAMA_HEALTH_TIMEOUT_SECONDS="$(config_value OMNISTACKAI_OLLAMA_HEALTH_TIMEOUT_SECONDS 5)"
+    export OMNISTACKAI_OLLAMA_MAX_CONCURRENCY="$(config_value OMNISTACKAI_OLLAMA_MAX_CONCURRENCY 1)"
+    PYTHONPATH="$source_root" python3 -m omnistackai_agent_engine.intake.ui_synthesize_run "${OMNISTACKAI_APP_OUT_DIR:-}" "${@:2}"
+    ;;
   studio-serve)
     configure_python
     export OMNISTACKAI_OLLAMA_BASE_URL="$(config_value OMNISTACKAI_OLLAMA_BASE_URL http://127.0.0.1:11434)"
@@ -284,7 +298,7 @@ PY
     PYTHONPATH="$source_root" python3 -c "from omnistackai_agent_engine.runtime import format_status; print(format_status())"
     ;;
   *)
-    printf 'Usage: %s {lint|test|ollama-verify|gateway-run|scope-propose [description]|solution-packs [--domain domain] [--capability capability]|solution-pack-build [pack] [out-dir]|solution-pack-package [export|verify|inspect]|solution-pack-ecosystem [synthesize|verify|inspect|build|catalog|auth|state|events|telemetry|deploy|sync|cicd]|ecosystem-plan [description]|ecosystem-build [description]|intake-run [description]|app-build [description]|studio-serve|app-run <repo-dir>|web-typecheck [example] [out-dir]|preview-plan [target]|verify-plan [target]|plan-show [example]|platform-status}\n' "$0"
+    printf 'Usage: %s {lint|test|ollama-verify|gateway-run|scope-propose [description]|solution-packs [--domain domain] [--capability capability]|solution-pack-build [pack] [out-dir]|solution-pack-package [export|verify|inspect]|solution-pack-ecosystem [synthesize|verify|inspect|build|catalog|auth|state|events|telemetry|deploy|sync|cicd]|ecosystem-plan [description]|ecosystem-build [description]|intake-run [description]|app-build [description]|ui-synthesize [description]|studio-serve|app-run <repo-dir>|web-typecheck [example] [out-dir]|preview-plan [target]|verify-plan [target]|plan-show [example]|platform-status}\n' "$0"
     exit 2
     ;;
 esac

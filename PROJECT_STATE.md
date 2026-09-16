@@ -1,8 +1,24 @@
 # Project State — OmniStackAI
-Last updated: 2026-09-16
+Last updated: 2026-09-17
 
 ## Current Phase
 Stage 0 (Founder Build Sequence, Brief Section 91) — BASIC/MVP
+
+> **R-465 (2026-09-17): the HYBRID UI engine is grounded — the LLM writes the UI over the deterministic data layer.**
+> - `codegen/nextjs.py`: `summarize_data_layer` (real `lib/types.ts`/`lib/hooks.ts`/`lib/api.ts` surface parsed from
+>   the same generators — cannot drift), `_component_files` + `summarize_components` (real ~110 component files and
+>   export names; auth-provider only when `needs_auth`), `summarize_design_tokens` (real token names).
+> - `codegen/llm_ui.py`: one `_synthesize_file` core with a bounded validation→feedback→retry loop (≤3; retry only on
+>   validator rejection, never on exceptions) and a deterministic template fallback; JSON-safe, secret-free
+>   `UiSynthesisOutcome` per file; hardened import whitelist (multi-line, exact `react`/`react-dom`, no
+>   `react-*`/`require`/dynamic `import`).
+> - Explicit `synthesize_screens` + `ui_outcomes` threaded `generate → assemble_project → build_app_from_ir/prompt`
+>   (default off; default output byte-identical; the never-set env gate removed). Opt-in CLI
+>   `task agent-engine:ui:synthesize` (`intake/ui_synthesize_run.py`). Docs: `docs/HYBRID_UI.md`.
+> - Tests: `test_llm_ui_grounding.py` (15) + honest updates to the R-462/platform tests; `task verify` **3,442** OK;
+>   `web-typecheck` PASSED ×2. Live proof with the founder's Groq key (free tier, 8k TPM, one model): validator
+>   rejection → repair engaged → rate-limited → graceful fallback with a truthful outcome; a full LLM-page proof needs
+>   >8k TPM (Gemini key or Groq Dev tier). NEXT R-466 (compile-level repair + 429 pacing), R-467 (product-UI shell).
 
 > **The differentiating SPINE now supports Full-Stack Production Authentication Engine (R-461).**
 > - Database schema (`schema_sql.py`): Emits PostgreSQL `users` table with UUID primary key, `VARCHAR UNIQUE NOT NULL` email, `VARCHAR NOT NULL` password_hash, optional full_name, `VARCHAR NOT NULL DEFAULT 'user'` role, and `TIMESTAMPTZ` created_at, plus development admin seed row (`admin@example.local` / `changeme`).

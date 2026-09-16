@@ -51,13 +51,21 @@ def build_app_from_ir(
     overwrite: bool = False,
     provider: ModelProvider | None = None,
     model_id: str | None = None,
+    synthesize_screens: bool = False,
+    ui_outcomes: list | None = None,
 ) -> AppBuildResult:
-    """Assemble ``ir`` into a monorepo and materialize it as an owned Git repo at ``target_dir``."""
+    """Assemble ``ir`` into a monorepo and materialize it as an owned Git repo at ``target_dir``.
+
+    ``synthesize_screens`` / ``ui_outcomes`` (R-465) opt the web target into model-written screens and
+    collect the per-file outcome records; both are no-ops without a ``provider``.
+    """
     project = assemble_project(
         ir,
         provider=provider,
         prompt=prompt,
         model_id=model_id,
+        synthesize_screens=synthesize_screens,
+        ui_outcomes=ui_outcomes,
     )
     repo = create_repository(
         project,
@@ -114,11 +122,14 @@ async def build_app_from_prompt(
     max_output_tokens: int = DEFAULT_MAX_OUTPUT_TOKENS,
     timeout_seconds: float = DEFAULT_TIMEOUT_SECONDS,
     overwrite: bool = False,
+    synthesize_screens: bool = False,
+    ui_outcomes: list | None = None,
 ) -> AppBuildResult:
     """Compile ``prompt`` into an IR via ``provider`` and materialize an owned Git repo.
 
     Raises IntakeResponseError (from the intake step) if the model output cannot be turned
-    into a valid Application IR.
+    into a valid Application IR. ``synthesize_screens`` (R-465) additionally lets the same provider write
+    every screen page (the overview page is always model-written when a provider is given).
     """
     result = await generate_ir(
         prompt,
@@ -137,4 +148,6 @@ async def build_app_from_prompt(
         overwrite=overwrite,
         provider=provider,
         model_id=model_id,
+        synthesize_screens=synthesize_screens,
+        ui_outcomes=ui_outcomes,
     )

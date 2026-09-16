@@ -41,7 +41,7 @@ START PROTOCOL
   `task ai:status`, `task ai:handoff`. `task verify` must stay green and network-independent.
 - Confirm git branch/HEAD/clean tree. Then restate: phase, next Tracker ID, objective, blast radius.
 
-WHAT IS ALREADY BUILT (platform generators are Python 3.13 stdlib-only, offline, in services/agent-engine; 3,333 tests pass)
+WHAT IS ALREADY BUILT (platform generators are Python 3.13 stdlib-only, offline, in services/agent-engine; 3,442 tests pass)
 - Model fabric: ModelProvider contract + registry; local Ollama adapter (runs any installed model via
 
 
@@ -208,7 +208,7 @@ front-door bricks, R-420 is generated-SQL hardening, R-421..R-426 are Studio pre
 R-427..R-429 are generated-app compile fixes, R-430..R-457 are the first twenty-eight differentiating-spine
 bricks (Scope Compiler through Ecosystem Multi-Surface SLA, SLO, and Error Budget Contracts).
 Git, state files (.ai/), CHANGELOG, and docs/PROGRESS.md remain the executable/detail sources of truth.
-Current through R-457; `task verify` = 3,288 tests. R-416 added prompt-to-IR intake, R-417 materialized a generated
+Current through R-465; `task verify` = 3,442 tests. R-416 added prompt-to-IR intake, R-417 materialized a generated
 owned repo, R-418 added the local chat studio, R-419 added turnkey local run, and R-420 fixed the two
 SQL defects found by live execution. R-421 added an explicit `task agent-engine:studio:preview` mode:
 one managed generated-app session, API/web readiness, replacement/shutdown cleanup, port-collision
@@ -428,8 +428,24 @@ WHAT TO DO NEXT
   and R-461 introduces Full-Stack Production Authentication Engine,
   rendering a PostgreSQL `users` table and admin seed row, FastAPI auth router (`/auth/register`, `/auth/login`, `/auth/me`, `/auth/logout`)
   using `hashlib.pbkdf2_hmac` with zero external dependencies, Next.js `AuthProvider` context and `useAuth()` hook,
-  responsive login and registration pages, navbar auth status controls, and `lib/api.ts` Bearer token auto-attachment with localStorage fallback.
-- NEXT R-462: Solution Pack Ecosystem Multi-Surface Unified Developer CLI and Operational Control Plane Contracts.
+  responsive login and registration pages, navbar auth status controls, and `lib/api.ts` Bearer token auto-attachment with localStorage fallback;
+  R-462 added an opt-in LLM UI synthesizer, R-463 hardened auth, R-464 completed platform features (search/filter UI,
+  audit timestamps, RBAC row-ownership, S3 upload field); and **R-465 (2026-09-17) grounded the HYBRID UI engine** —
+  the founder-approved direction after an honest competitive assessment: the LLM writes the modern UI over the
+  deterministic typed data layer (the prompt embeds the REAL generated lib/types.ts / lib/hooks.ts / lib/api.ts
+  parsed from the same generators — the R-462 seed had hallucinated `refresh()`/`page` params — plus the real
+  component exports and design-token names), with a bounded validation->feedback->retry loop in one
+  `_synthesize_file` core (retry only on validator rejection, never on exceptions; deterministic template fallback;
+  JSON-safe secret-free `UiSynthesisOutcome` per file; hardened import whitelist), an explicit `synthesize_screens`
+  flag threaded generate -> assemble_project -> build_app_from_ir/prompt (default off; default output byte-identical;
+  the never-set env gate removed), and the opt-in `task agent-engine:ui:synthesize` (see docs/HYBRID_UI.md).
+- NEXT R-466: compile-level repair for the hybrid engine — a capturing `tsc` executor (verify/run_verify returns
+  only exit codes) feeding per-file compiler errors through R-465's `_repair_message` channel for LLM-written files
+  only, bounded retries, per-file template fallback (hand-built ProjectDiff + edit/apply_diff) — PLUS rate-limit-aware
+  pacing/backoff (HTTP 429 retry-after) in the model gateway: the live proof showed the founder's Groq free tier is
+  8k TPM with one model, which the multi-call flow exceeds. Then R-467: the product-UI shell (multi-turn chat + live
+  preview + real file tree/viewer) driving `synthesize_screens=True` and surfacing `ui_outcomes`. Founder action to
+  unlock a full live proof: add GOOGLE_API_KEY (Gemini) to the gitignored .env, or upgrade the Groq tier.
   Keep `task verify` model/Docker/DB/install/network-free (any live/model path stays opt-in); preserve
   single-session ownership and explicit trusted-local mode.
 - PROVEN THIS SESSION: a generated app runs live locally on the Mac (Next.js :3000 + FastAPI :8000 +
@@ -439,7 +455,7 @@ WHAT TO DO NEXT
   deploy (OMNISTACKAI_TIER=2 + E2B/Vercel keys) and cloud-model live-verify. Governance-deferred: native
   mobile (R-010 etc.) until web/backend stability.
 
-Begin by reading the files above and running the start protocol, then continue the spine at R-462
-and write its Standard AI Task Contract before writing code.
+Begin by reading the files above and running the start protocol, then continue the hybrid engine at R-466
+(compile-level repair + gateway 429 pacing) and write its Standard AI Task Contract before writing code.
 ```
 

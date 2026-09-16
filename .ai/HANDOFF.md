@@ -1,9 +1,27 @@
 # Current Handoff
 
-Task ID: R-464
+Task ID: R-465
 Status: done
 Phase: BASIC/MVP — Founder Stage 0
 Branch: `main`
+
+> **R-465 Completed (2026-09-17): Grounded Hybrid UI Synthesis — first brick of the founder-approved HYBRID engine.**
+> - The LLM writes the modern Next.js UI **grounded in the real generated data layer** (`summarize_data_layer` parses
+>   `lib/types.ts`/`lib/hooks.ts`/`lib/api.ts` from the same generators — no more hallucinated `refresh()`/`page`
+>   params), the real component files/exports (`summarize_components`), and the real design tokens
+>   (`summarize_design_tokens`; hardcoded hex is gone).
+> - `codegen/llm_ui.py` rewritten around one `_synthesize_file` core: validator rejection → reason fed back →
+>   retry (≤3; never on exceptions) → deterministic template fallback; JSON-safe secret-free `UiSynthesisOutcome`
+>   per file; import whitelist hardened (multi-line, exact react/react-dom, no react-*/require/dynamic import).
+> - Explicit `synthesize_screens` flag threaded `generate → assemble_project → build_app_from_ir/prompt` (default
+>   off; default output byte-identical); the never-set env gate is gone. Opt-in CLI `task agent-engine:ui:synthesize`.
+> - Gates: `task verify` **3,442 OK**; lint/security/env green; demos 157/153; `web-typecheck` PASSED ×2.
+> - Live proof (Groq, free tier 8k TPM, one model): model answered → validator rejected a truncated file with an
+>   exact reason → repair engaged → repair call rate-limited → graceful fallback (truthful outcome). A full
+>   LLM-page-compiles proof needs >8k TPM: **founder action — add `GOOGLE_API_KEY` (Gemini) to `.env` or upgrade Groq.**
+> - **NEXT R-466:** compile-level repair (capturing `tsc` executor → per-file errors through `_repair_message`) +
+>   HTTP-429 pacing in the gateway. **Then R-467:** the product-UI shell (chat + live preview + file tree).
+> - See `docs/HYBRID_UI.md`, `.ai/tasks/R-465.md`.
 
 > **R-464 Completed (2026-09-16): Full-Stack Platform Feature Completeness — 4-Phase Plan.**
 > - **Phase 1 (Frontend Search, Pagination & Filter UI Controls)**:

@@ -9,10 +9,13 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 import json
-import os
 import re
+from typing import TYPE_CHECKING
 
 from ..application_ir import ApiEndpoint, ApplicationIR, Entity, Field, FieldType, HttpMethod, RelationKind, Screen
+
+if TYPE_CHECKING:  # annotation-only; keeps the generator free of a runtime model_gateway import
+    from ..model_gateway.contracts import ModelProvider
 from .adapter import GenerationTarget
 from .auth_guard import needs_auth
 from .errors import GenerationError
@@ -1598,6 +1601,88 @@ def _hooks_file(ir: ApplicationIR) -> str:
 def render_hooks(ir: ApplicationIR) -> str:
     """Public generator for Next.js React hooks (lib/hooks.ts)."""
     return _hooks_file(ir)
+
+
+# ---------------------------------------------------------------------------
+# R-465: grounding summaries for the hybrid LLM UI synthesizer. They are PARSED from the real generator
+# output (types/hooks/api client) so the model is shown exactly what the customer project ships — the
+# description can never drift from reality, which is what kept the R-462 seed hallucinating hooks.
+# ---------------------------------------------------------------------------
+
+_HOOK_SIGNATURE_RE = re.compile(r"^export function (use\w+)\(([^)]*)\)(?:\s*:\s*([^{]+?))?\s*\{", re.M)
+_HOOK_INTERFACE_RE = re.compile(r"^export interface [^\n]*\{\n.*?^\}", re.M | re.S)
+_MUTATION_SIG_RE = re.compile(r"async \(([^)]*)\)\s*:\s*([^=]+?)\s*=>")
+_MUTATION_RETURN_RE = re.compile(r"^\s*return \{([^}]*)\};", re.M)
+_API_FN_RE = re.compile(r"^export async function (\w+)\(", re.M)
+_NO_HOOKS_NOTE = (
+    'NO data hooks are generated for this IR (its apis reference no entity schema). '
+    'Do NOT import from "@/lib/hooks".'
+)
+
+
+def _truncate(text: str, max_chars: int) -> str:
+    if len(text) <= max_chars:
+        return text
+    return text[:max_chars].rstrip() + "\n// ... (truncated)"
+
+
+def summarize_data_layer(ir: ApplicationIR, *, max_chars: int = 12_000) -> str:
+    """The REAL typed data surface an LLM may use, parsed from the generated lib files (R-465).
+
+    Entity interfaces come from ``_entity_interface`` (exactly what lib/types.ts ships); the Use* state
+    interfaces and every exported hook signature are parsed from ``_hooks_file(ir)`` (exactly what
+    lib/hooks.ts ships — mutation hooks are rendered from their real bodies); the api.* names come from
+    ``_api_client_file(ir)``. Size-capped for the prompt.
+    """
+    parts: list[str] = []
+    if ir.entities:
+        parts.append('// lib/types.ts  (import type { ... } from "@/lib/types")')
+        parts.extend(_entity_interface(entity) for entity in ir.entities)
+    else:
+        parts.append("// lib/types.ts: this IR declares no entities.")
+
+    hooks_src = _hooks_file(ir)
+    interfaces = _HOOK_INTERFACE_RE.findall(hooks_src)
+    signatures: list[str] = []
+    for match in _HOOK_SIGNATURE_RE.finditer(hooks_src):
+        name = match.group(1)
+        params = " ".join(match.group(2).split())
+        return_type = match.group(3)
+        if return_type:
+            signatures.append(f"{name}({params}): {return_type.strip()}")
+            continue
+        # Mutation hooks carry no return annotation: render the real inner callback + return shape.
+        body_start = match.end()
+        next_export = hooks_src.find("\nexport ", body_start)
+        body = hooks_src[body_start : next_export if next_export != -1 else len(hooks_src)]
+        inner = _MUTATION_SIG_RE.search(body)
+        shape = _MUTATION_RETURN_RE.search(body)
+        inner_sig = (
+            f"({' '.join(inner.group(1).split())}) => {inner.group(2).strip()}" if inner else "(...) => Promise<unknown>"
+        )
+        fields = shape.group(1).strip() if shape else "loading, error, reset"
+        signatures.append(
+            f"{name}(): {{ {fields} }}  // first field / mutate: {inner_sig}; loading: boolean; "
+            "error: Error | null; reset: () => void"
+        )
+
+    if interfaces or signatures:
+        parts.append('\n// lib/hooks.ts  (import { ... } from "@/lib/hooks") — USE EXACTLY THESE')
+        parts.extend(interfaces)
+        if signatures:
+            parts.append("// Exported hooks (exact signatures):")
+            parts.extend(f"export function {signature}" for signature in signatures)
+        else:
+            parts.append(_NO_HOOKS_NOTE)
+    else:
+        parts.append("\n// lib/hooks.ts: " + _NO_HOOKS_NOTE)
+
+    api_names = _API_FN_RE.findall(_api_client_file(ir))
+    if api_names:
+        parts.append(
+            '\n// lib/api.ts  (import { api } from "@/lib/api"): ' + ", ".join(f"api.{name}" for name in api_names)
+        )
+    return _truncate("\n".join(parts), max_chars)
 
 
 def _route_file(apis: list[ApiEndpoint]) -> str:
@@ -72153,6 +72238,30 @@ def render_design_tokens() -> str:
     return _DESIGN_TOKENS_CSS
 
 
+_TOKEN_NAME_RE = re.compile(r"--([a-z0-9-]+)\s*:")
+
+
+def summarize_design_tokens(*, max_chars: int = 3_000) -> str:
+    """The REAL CSS custom-property NAMES in styles/tokens.css, grouped by family (R-465).
+
+    Only names are listed (never values), so the model styles with ``var(--...)`` and dark mode keeps working
+    through the token overrides.
+    """
+    css = _DESIGN_TOKENS_CSS
+    start = css.index(":root {")
+    end = css.index("\n}", start)
+    groups: dict[str, list[str]] = {}
+    for token in _TOKEN_NAME_RE.findall(css[start:end]):
+        family, _, rest = token.partition("-")
+        groups.setdefault(family, []).append(rest or token)
+    lines = [
+        "DESIGN TOKENS (styles/tokens.css is already loaded by app/globals.css; use var(--<name>); dark mode is automatic):"
+    ]
+    for family, names in groups.items():
+        lines.append(f"- --{family}-*: " + ", ".join(dict.fromkeys(names)))
+    return _truncate("\n".join(lines), max_chars)
+
+
 _GLOBALS_CSS = (
     '@import "../styles/tokens.css";\n\n'
     "*,\n"
@@ -72402,12 +72511,168 @@ _TSCONFIG = {
 }
 
 
+def _component_files(ir: ApplicationIR) -> list[GeneratedFile]:
+    """The pre-built component library every generated web app ships.
+
+    R-465 factored this out of ``generate`` so the hybrid UI synthesizer can enumerate the REAL files and
+    their exports; ``GeneratedProject`` sorts by path, so the default output is byte-identical.
+    """
+    return [
+        GeneratedFile("components/navbar.tsx", _navbar_component(ir)),
+        GeneratedFile("components/toast.tsx", _TOAST_COMPONENT),
+        GeneratedFile("components/confirm-dialog.tsx", _CONFIRM_DIALOG_COMPONENT),
+        GeneratedFile("components/shortcuts-dialog.tsx", _SHORTCUTS_DIALOG_COMPONENT),
+        GeneratedFile("components/breadcrumbs.tsx", _BREADCRUMBS_COMPONENT),
+        GeneratedFile("components/empty-state.tsx", _EMPTY_STATE_COMPONENT),
+        GeneratedFile("components/pagination.tsx", _PAGINATION_COMPONENT),
+        GeneratedFile("components/tabs.tsx", _TABS_COMPONENT),
+        GeneratedFile("components/badge.tsx", _BADGE_COMPONENT),
+        GeneratedFile("components/tooltip.tsx", _TOOLTIP_COMPONENT),
+        GeneratedFile("components/card.tsx", _CARD_COMPONENT),
+        GeneratedFile("components/alert.tsx", _ALERT_COMPONENT),
+        GeneratedFile("components/skeleton.tsx", _SKELETON_COMPONENT),
+        GeneratedFile("components/drawer.tsx", _DRAWER_COMPONENT),
+        GeneratedFile("components/avatar.tsx", _AVATAR_COMPONENT),
+        GeneratedFile("components/toggle.tsx", _TOGGLE_COMPONENT),
+        GeneratedFile("components/accordion.tsx", _ACCORDION_COMPONENT),
+        GeneratedFile("components/dropdown-menu.tsx", _DROPDOWN_MENU_COMPONENT),
+        GeneratedFile("components/popover.tsx", _POPOVER_COMPONENT),
+        GeneratedFile("components/theme-toggle.tsx", _THEME_TOGGLE_COMPONENT),
+        GeneratedFile("components/dialog.tsx", _DIALOG_COMPONENT),
+        GeneratedFile("components/form-controls.tsx", _FORM_CONTROLS_COMPONENT),
+        GeneratedFile("components/date-picker.tsx", _DATE_PICKER_COMPONENT),
+        GeneratedFile("components/data-grid.tsx", _DATA_GRID_COMPONENT),
+        GeneratedFile("components/command-palette.tsx", _COMMAND_PALETTE_COMPONENT),
+        GeneratedFile("components/slider.tsx", _SLIDER_COMPONENT),
+        GeneratedFile("components/progress.tsx", _PROGRESS_COMPONENT),
+        GeneratedFile("components/rating.tsx", _RATING_COMPONENT),
+        GeneratedFile("components/stepper.tsx", _STEPPER_COMPONENT),
+        GeneratedFile("components/file-upload.tsx", _FILE_UPLOAD_COMPONENT),
+        GeneratedFile("components/timeline.tsx", _TIMELINE_COMPONENT),
+        GeneratedFile("components/stat-card.tsx", _STAT_CARD_COMPONENT),
+        GeneratedFile("components/tree-view.tsx", _TREE_VIEW_COMPONENT),
+        GeneratedFile("components/tag-input.tsx", _TAG_INPUT_COMPONENT),
+        GeneratedFile("components/code-block.tsx", _CODE_BLOCK_COMPONENT),
+        GeneratedFile("components/radial-gauge.tsx", _RADIAL_GAUGE_COMPONENT),
+        GeneratedFile("components/segmented-control.tsx", _SEGMENTED_CONTROL_COMPONENT),
+        GeneratedFile("components/carousel.tsx", _CAROUSEL_COMPONENT),
+        GeneratedFile("components/resizable.tsx", _RESIZABLE_COMPONENT),
+        GeneratedFile("components/color-picker.tsx", _COLOR_PICKER_COMPONENT),
+        GeneratedFile("components/pin-input.tsx", _PIN_INPUT_COMPONENT),
+        GeneratedFile("components/speed-dial.tsx", _SPEED_DIAL_COMPONENT),
+        GeneratedFile("components/context-menu.tsx", _CONTEXT_MENU_COMPONENT),
+        GeneratedFile("components/hover-card.tsx", _HOVER_CARD_COMPONENT),
+        GeneratedFile("components/scroll-area.tsx", _SCROLL_AREA_COMPONENT),
+        GeneratedFile("components/collapsible.tsx", _COLLAPSIBLE_COMPONENT),
+        GeneratedFile("components/aspect-ratio.tsx", _ASPECT_RATIO_COMPONENT),
+        GeneratedFile("components/separator.tsx", _SEPARATOR_COMPONENT),
+        GeneratedFile("components/kbd.tsx", _KBD_COMPONENT),
+        GeneratedFile("components/radio-group.tsx", _RADIO_GROUP_COMPONENT),
+        GeneratedFile("components/checkbox.tsx", _CHECKBOX_COMPONENT),
+        GeneratedFile("components/banner.tsx", _BANNER_COMPONENT),
+        GeneratedFile("components/combobox.tsx", _COMBOBOX_COMPONENT),
+        GeneratedFile("components/bottom-nav.tsx", _BOTTOM_NAV_COMPONENT),
+        GeneratedFile("components/number-input.tsx", _NUMBER_INPUT_COMPONENT),
+        GeneratedFile("components/notification-center.tsx", _NOTIFICATION_CENTER_COMPONENT),
+        GeneratedFile("components/sidebar.tsx", _SIDEBAR_COMPONENT),
+        GeneratedFile("components/tour.tsx", _TOUR_COMPONENT),
+        GeneratedFile("components/transfer.tsx", _TRANSFER_COMPONENT),
+        GeneratedFile("components/markdown-editor.tsx", _MARKDOWN_EDITOR_COMPONENT),
+        GeneratedFile("components/calendar.tsx", _CALENDAR_COMPONENT),
+        GeneratedFile("components/kanban.tsx", _KANBAN_COMPONENT),
+        GeneratedFile("components/virtual-list.tsx", _VIRTUAL_LIST_COMPONENT),
+        GeneratedFile("components/filter-builder.tsx", _FILTER_BUILDER_COMPONENT),
+        GeneratedFile("components/chart.tsx", _CHART_COMPONENT),
+        GeneratedFile("components/time-picker.tsx", _TIME_PICKER_COMPONENT),
+        GeneratedFile("components/signature-pad.tsx", _SIGNATURE_PAD_COMPONENT),
+        GeneratedFile("components/diff-viewer.tsx", _DIFF_VIEWER_COMPONENT),
+        GeneratedFile("components/org-chart.tsx", _ORG_CHART_COMPONENT),
+        GeneratedFile("components/heatmap.tsx", _HEATMAP_COMPONENT),
+        GeneratedFile("components/media-player.tsx", _MEDIA_PLAYER_COMPONENT),
+        GeneratedFile("components/pivot-table.tsx", _PIVOT_TABLE_COMPONENT),
+        GeneratedFile("components/image-cropper.tsx", _IMAGE_CROPPER_COMPONENT),
+        GeneratedFile("components/gantt-chart.tsx", _GANTT_CHART_COMPONENT),
+        GeneratedFile("components/flow-canvas.tsx", _FLOW_CANVAS_COMPONENT),
+        GeneratedFile("components/terminal.tsx", _TERMINAL_COMPONENT),
+        GeneratedFile("components/qr-code.tsx", _QR_CODE_COMPONENT),
+        GeneratedFile("components/spreadsheet.tsx", _SPREADSHEET_COMPONENT),
+        GeneratedFile("components/chat.tsx", _CHAT_COMPONENT),
+        GeneratedFile("components/audio-recorder.tsx", _AUDIO_RECORDER_COMPONENT),
+        GeneratedFile("components/file-explorer.tsx", _FILE_EXPLORER_COMPONENT),
+        GeneratedFile("components/geo-map.tsx", _GEO_MAP_COMPONENT),
+        GeneratedFile("components/pdf-viewer.tsx", _PDF_VIEWER_COMPONENT),
+        GeneratedFile("components/audio-player.tsx", _AUDIO_PLAYER_COMPONENT),
+        GeneratedFile("components/video-player.tsx", _VIDEO_PLAYER_COMPONENT),
+        GeneratedFile("components/whiteboard.tsx", _WHITEBOARD_COMPONENT),
+        GeneratedFile("components/merge-editor.tsx", _MERGE_EDITOR_COMPONENT),
+        GeneratedFile("components/json-viewer.tsx", _JSON_VIEWER_COMPONENT),
+        GeneratedFile("components/image-gallery.tsx", _IMAGE_GALLERY_COMPONENT),
+        GeneratedFile("components/network-graph.tsx", _NETWORK_GRAPH_COMPONENT),
+        GeneratedFile("components/log-viewer.tsx", _LOG_VIEWER_COMPONENT),
+        GeneratedFile("components/audio-visualizer.tsx", _AUDIO_VISUALIZER_COMPONENT),
+        GeneratedFile("components/mind-map.tsx", _MIND_MAP_COMPONENT),
+        GeneratedFile("components/particle-network.tsx", _PARTICLE_NETWORK_COMPONENT),
+        GeneratedFile("components/image-comparison.tsx", _IMAGE_COMPARISON_COMPONENT),
+        GeneratedFile("components/countdown.tsx", _COUNTDOWN_COMPONENT),
+        GeneratedFile("components/cookie-consent.tsx", _COOKIE_CONSENT_COMPONENT),
+        GeneratedFile("components/password-strength.tsx", _PASSWORD_STRENGTH_COMPONENT),
+        GeneratedFile("components/masked-input.tsx", _MASKED_INPUT_COMPONENT),
+        GeneratedFile("components/mention.tsx", _MENTION_COMPONENT),
+        GeneratedFile("components/marquee.tsx", _MARQUEE_COMPONENT),
+        GeneratedFile("components/credit-card.tsx", _CREDIT_CARD_COMPONENT),
+        GeneratedFile("components/color-contrast.tsx", _COLOR_CONTRAST_COMPONENT),
+        GeneratedFile("components/currency-input.tsx", _CURRENCY_INPUT_COMPONENT),
+        GeneratedFile("components/password-generator.tsx", _PASSWORD_GENERATOR_COMPONENT),
+        GeneratedFile("components/slug-input.tsx", _SLUG_INPUT_COMPONENT),
+        GeneratedFile("components/character-counter.tsx", _CHARACTER_COUNTER_COMPONENT),
+        GeneratedFile("components/copy-button.tsx", _COPY_BUTTON_COMPONENT),
+        GeneratedFile("components/duration-input.tsx", _DURATION_INPUT_COMPONENT),
+        GeneratedFile("components/phone-input.tsx", _PHONE_INPUT_COMPONENT),
+    ]
+
+
+_COMPONENT_EXPORT_RE = re.compile(r"^export (?:function|const|class) (\w+)", re.M)
+_COMPONENT_EXPORT_BLOCK_RE = re.compile(r"^export \{([^}]*)\}", re.M)
+
+
+def _component_export_names(source: str) -> list[str]:
+    names = list(_COMPONENT_EXPORT_RE.findall(source))
+    for block in _COMPONENT_EXPORT_BLOCK_RE.findall(source):
+        for raw in block.split(","):
+            entry = raw.strip()
+            if entry:
+                names.append(entry.split(" as ")[-1].strip())
+    return list(dict.fromkeys(names))
+
+
+def summarize_components(ir: ApplicationIR, *, max_chars: int = 16_000, max_names_per_file: int = 12) -> str:
+    """The REAL pre-built components an LLM may import, with their real export names (R-465).
+
+    The auth-provider entry appears only when ``needs_auth(ir)`` — it is only generated then — and is listed
+    first so it can never be lost to the size cap (the full library is ~110 files).
+    """
+    files = _component_files(ir)
+    if needs_auth(ir):
+        files = [GeneratedFile("components/auth-provider.tsx", _auth_provider_component(ir))] + files
+    lines = [
+        "AVAILABLE PRE-BUILT UI COMPONENTS (import from '@/components/<file>'; ONLY these files and exports exist):"
+    ]
+    for generated in files:
+        stem = generated.path[len("components/") : -len(".tsx")]
+        names = _component_export_names(generated.content)
+        if names:
+            lines.append(f"- @/components/{stem}: {', '.join(names[:max_names_per_file])}")
+    return _truncate("\n".join(lines), max_chars)
+
+
 def _synthesize_page_content(
     ir: ApplicationIR,
     *,
     provider: ModelProvider | None = None,
     prompt: str = "",
     model_id: str | None = None,
+    outcomes: list | None = None,
+    grounding: dict | None = None,
 ) -> str:
     if provider is None:
         return _overview_page(ir)
@@ -72417,6 +72682,8 @@ def _synthesize_page_content(
         user_prompt=prompt,
         provider=provider,
         model_id=model_id,
+        outcomes=outcomes,
+        **(grounding or {}),
     )
 
 
@@ -72427,8 +72694,12 @@ def _synthesize_screen_content(
     provider: ModelProvider | None = None,
     prompt: str = "",
     model_id: str | None = None,
+    synthesize_screens: bool = False,
+    outcomes: list | None = None,
+    grounding: dict | None = None,
 ) -> str:
-    if provider is None or not os.environ.get("OMNISTACKAI_SYNTHESIZE_ALL_SCREENS"):
+    # R-465: per-screen synthesis is an explicit opt-in flag (it replaced a never-set env gate).
+    if provider is None or not synthesize_screens:
         return _screen_page(screen, ir)
     from .llm_ui import synthesize_screen_page_sync
     return synthesize_screen_page_sync(
@@ -72437,6 +72708,8 @@ def _synthesize_screen_content(
         user_prompt=prompt,
         provider=provider,
         model_id=model_id,
+        outcomes=outcomes,
+        **(grounding or {}),
     )
 
 
@@ -72454,9 +72727,21 @@ class NextjsWebAdapter:
         provider: ModelProvider | None = None,
         prompt: str = "",
         model_id: str | None = None,
+        synthesize_screens: bool = False,
+        ui_outcomes: list | None = None,
     ) -> GeneratedProject:
         if not isinstance(ir, ApplicationIR):
             raise GenerationError("ir must be an ApplicationIR")
+
+        # R-465: the grounding blocks are computed once per project, only when a model will be used, and
+        # shared by every synthesized file. Without a provider nothing is computed and output is deterministic.
+        grounding: dict | None = None
+        if provider is not None:
+            grounding = {
+                "data_layer": summarize_data_layer(ir),
+                "components": summarize_components(ir),
+                "design_tokens": summarize_design_tokens(),
+            }
 
         slug = _slug(ir.name)
         package_json = {
@@ -72484,116 +72769,7 @@ class NextjsWebAdapter:
             GeneratedFile(".env.example", "# Public env vars only. Never commit secrets.\nNEXT_PUBLIC_APP_NAME=" + ir.name + "\nNEXT_PUBLIC_API_URL=http://localhost:8080\nSTORAGE_ENDPOINT=http://localhost:9000\nSTORAGE_BUCKET=uploads\n"),
             GeneratedFile("README.md", f"# {ir.name}\n\n{ir.description}\n\nGenerated by OmniStackAI from the Application IR.\n\n```\npnpm install\npnpm dev\n```\n"),
             GeneratedFile("app/layout.tsx", _layout_file(ir)),
-            GeneratedFile("components/navbar.tsx", _navbar_component(ir)),
-            GeneratedFile("components/toast.tsx", _TOAST_COMPONENT),
-            GeneratedFile("components/confirm-dialog.tsx", _CONFIRM_DIALOG_COMPONENT),
-            GeneratedFile("components/shortcuts-dialog.tsx", _SHORTCUTS_DIALOG_COMPONENT),
-            GeneratedFile("components/breadcrumbs.tsx", _BREADCRUMBS_COMPONENT),
-            GeneratedFile("components/empty-state.tsx", _EMPTY_STATE_COMPONENT),
-            GeneratedFile("components/pagination.tsx", _PAGINATION_COMPONENT),
-            GeneratedFile("components/tabs.tsx", _TABS_COMPONENT),
-            GeneratedFile("components/badge.tsx", _BADGE_COMPONENT),
-            GeneratedFile("components/tooltip.tsx", _TOOLTIP_COMPONENT),
-            GeneratedFile("components/card.tsx", _CARD_COMPONENT),
-            GeneratedFile("components/alert.tsx", _ALERT_COMPONENT),
-            GeneratedFile("components/skeleton.tsx", _SKELETON_COMPONENT),
-            GeneratedFile("components/drawer.tsx", _DRAWER_COMPONENT),
-            GeneratedFile("components/avatar.tsx", _AVATAR_COMPONENT),
-            GeneratedFile("components/toggle.tsx", _TOGGLE_COMPONENT),
-            GeneratedFile("components/accordion.tsx", _ACCORDION_COMPONENT),
-            GeneratedFile("components/dropdown-menu.tsx", _DROPDOWN_MENU_COMPONENT),
-            GeneratedFile("components/popover.tsx", _POPOVER_COMPONENT),
-            GeneratedFile("components/theme-toggle.tsx", _THEME_TOGGLE_COMPONENT),
-            GeneratedFile("components/dialog.tsx", _DIALOG_COMPONENT),
-            GeneratedFile("components/form-controls.tsx", _FORM_CONTROLS_COMPONENT),
-            GeneratedFile("components/date-picker.tsx", _DATE_PICKER_COMPONENT),
-            GeneratedFile("components/data-grid.tsx", _DATA_GRID_COMPONENT),
-            GeneratedFile("components/command-palette.tsx", _COMMAND_PALETTE_COMPONENT),
-            GeneratedFile("components/slider.tsx", _SLIDER_COMPONENT),
-            GeneratedFile("components/progress.tsx", _PROGRESS_COMPONENT),
-            GeneratedFile("components/rating.tsx", _RATING_COMPONENT),
-            GeneratedFile("components/stepper.tsx", _STEPPER_COMPONENT),
-            GeneratedFile("components/file-upload.tsx", _FILE_UPLOAD_COMPONENT),
-            GeneratedFile("components/timeline.tsx", _TIMELINE_COMPONENT),
-            GeneratedFile("components/stat-card.tsx", _STAT_CARD_COMPONENT),
-            GeneratedFile("components/tree-view.tsx", _TREE_VIEW_COMPONENT),
-            GeneratedFile("components/tag-input.tsx", _TAG_INPUT_COMPONENT),
-            GeneratedFile("components/code-block.tsx", _CODE_BLOCK_COMPONENT),
-            GeneratedFile("components/radial-gauge.tsx", _RADIAL_GAUGE_COMPONENT),
-            GeneratedFile("components/segmented-control.tsx", _SEGMENTED_CONTROL_COMPONENT),
-            GeneratedFile("components/carousel.tsx", _CAROUSEL_COMPONENT),
-            GeneratedFile("components/resizable.tsx", _RESIZABLE_COMPONENT),
-            GeneratedFile("components/color-picker.tsx", _COLOR_PICKER_COMPONENT),
-            GeneratedFile("components/pin-input.tsx", _PIN_INPUT_COMPONENT),
-            GeneratedFile("components/speed-dial.tsx", _SPEED_DIAL_COMPONENT),
-            GeneratedFile("components/context-menu.tsx", _CONTEXT_MENU_COMPONENT),
-            GeneratedFile("components/hover-card.tsx", _HOVER_CARD_COMPONENT),
-            GeneratedFile("components/scroll-area.tsx", _SCROLL_AREA_COMPONENT),
-            GeneratedFile("components/collapsible.tsx", _COLLAPSIBLE_COMPONENT),
-            GeneratedFile("components/aspect-ratio.tsx", _ASPECT_RATIO_COMPONENT),
-            GeneratedFile("components/separator.tsx", _SEPARATOR_COMPONENT),
-            GeneratedFile("components/kbd.tsx", _KBD_COMPONENT),
-            GeneratedFile("components/radio-group.tsx", _RADIO_GROUP_COMPONENT),
-            GeneratedFile("components/checkbox.tsx", _CHECKBOX_COMPONENT),
-            GeneratedFile("components/banner.tsx", _BANNER_COMPONENT),
-            GeneratedFile("components/combobox.tsx", _COMBOBOX_COMPONENT),
-            GeneratedFile("components/bottom-nav.tsx", _BOTTOM_NAV_COMPONENT),
-            GeneratedFile("components/number-input.tsx", _NUMBER_INPUT_COMPONENT),
-            GeneratedFile("components/notification-center.tsx", _NOTIFICATION_CENTER_COMPONENT),
-            GeneratedFile("components/sidebar.tsx", _SIDEBAR_COMPONENT),
-            GeneratedFile("components/tour.tsx", _TOUR_COMPONENT),
-            GeneratedFile("components/transfer.tsx", _TRANSFER_COMPONENT),
-            GeneratedFile("components/markdown-editor.tsx", _MARKDOWN_EDITOR_COMPONENT),
-            GeneratedFile("components/calendar.tsx", _CALENDAR_COMPONENT),
-            GeneratedFile("components/kanban.tsx", _KANBAN_COMPONENT),
-            GeneratedFile("components/virtual-list.tsx", _VIRTUAL_LIST_COMPONENT),
-            GeneratedFile("components/filter-builder.tsx", _FILTER_BUILDER_COMPONENT),
-            GeneratedFile("components/chart.tsx", _CHART_COMPONENT),
-            GeneratedFile("components/time-picker.tsx", _TIME_PICKER_COMPONENT),
-            GeneratedFile("components/signature-pad.tsx", _SIGNATURE_PAD_COMPONENT),
-            GeneratedFile("components/diff-viewer.tsx", _DIFF_VIEWER_COMPONENT),
-            GeneratedFile("components/org-chart.tsx", _ORG_CHART_COMPONENT),
-            GeneratedFile("components/heatmap.tsx", _HEATMAP_COMPONENT),
-            GeneratedFile("components/media-player.tsx", _MEDIA_PLAYER_COMPONENT),
-            GeneratedFile("components/pivot-table.tsx", _PIVOT_TABLE_COMPONENT),
-            GeneratedFile("components/image-cropper.tsx", _IMAGE_CROPPER_COMPONENT),
-            GeneratedFile("components/gantt-chart.tsx", _GANTT_CHART_COMPONENT),
-            GeneratedFile("components/flow-canvas.tsx", _FLOW_CANVAS_COMPONENT),
-            GeneratedFile("components/terminal.tsx", _TERMINAL_COMPONENT),
-            GeneratedFile("components/qr-code.tsx", _QR_CODE_COMPONENT),
-            GeneratedFile("components/spreadsheet.tsx", _SPREADSHEET_COMPONENT),
-            GeneratedFile("components/chat.tsx", _CHAT_COMPONENT),
-            GeneratedFile("components/audio-recorder.tsx", _AUDIO_RECORDER_COMPONENT),
-            GeneratedFile("components/file-explorer.tsx", _FILE_EXPLORER_COMPONENT),
-            GeneratedFile("components/geo-map.tsx", _GEO_MAP_COMPONENT),
-            GeneratedFile("components/pdf-viewer.tsx", _PDF_VIEWER_COMPONENT),
-            GeneratedFile("components/audio-player.tsx", _AUDIO_PLAYER_COMPONENT),
-            GeneratedFile("components/video-player.tsx", _VIDEO_PLAYER_COMPONENT),
-            GeneratedFile("components/whiteboard.tsx", _WHITEBOARD_COMPONENT),
-            GeneratedFile("components/merge-editor.tsx", _MERGE_EDITOR_COMPONENT),
-            GeneratedFile("components/json-viewer.tsx", _JSON_VIEWER_COMPONENT),
-            GeneratedFile("components/image-gallery.tsx", _IMAGE_GALLERY_COMPONENT),
-            GeneratedFile("components/network-graph.tsx", _NETWORK_GRAPH_COMPONENT),
-            GeneratedFile("components/log-viewer.tsx", _LOG_VIEWER_COMPONENT),
-            GeneratedFile("components/audio-visualizer.tsx", _AUDIO_VISUALIZER_COMPONENT),
-            GeneratedFile("components/mind-map.tsx", _MIND_MAP_COMPONENT),
-            GeneratedFile("components/particle-network.tsx", _PARTICLE_NETWORK_COMPONENT),
-            GeneratedFile("components/image-comparison.tsx", _IMAGE_COMPARISON_COMPONENT),
-            GeneratedFile("components/countdown.tsx", _COUNTDOWN_COMPONENT),
-            GeneratedFile("components/cookie-consent.tsx", _COOKIE_CONSENT_COMPONENT),
-            GeneratedFile("components/password-strength.tsx", _PASSWORD_STRENGTH_COMPONENT),
-            GeneratedFile("components/masked-input.tsx", _MASKED_INPUT_COMPONENT),
-            GeneratedFile("components/mention.tsx", _MENTION_COMPONENT),
-            GeneratedFile("components/marquee.tsx", _MARQUEE_COMPONENT),
-            GeneratedFile("components/credit-card.tsx", _CREDIT_CARD_COMPONENT),
-            GeneratedFile("components/color-contrast.tsx", _COLOR_CONTRAST_COMPONENT),
-            GeneratedFile("components/currency-input.tsx", _CURRENCY_INPUT_COMPONENT),
-            GeneratedFile("components/password-generator.tsx", _PASSWORD_GENERATOR_COMPONENT),
-            GeneratedFile("components/slug-input.tsx", _SLUG_INPUT_COMPONENT),
-            GeneratedFile("components/character-counter.tsx", _CHARACTER_COUNTER_COMPONENT),
-            GeneratedFile("components/copy-button.tsx", _COPY_BUTTON_COMPONENT),
-            GeneratedFile("components/duration-input.tsx", _DURATION_INPUT_COMPONENT),
-            GeneratedFile("components/phone-input.tsx", _PHONE_INPUT_COMPONENT),
+            *_component_files(ir),
             GeneratedFile("styles/tokens.css", _DESIGN_TOKENS_CSS),
             GeneratedFile("app/globals.css", _GLOBALS_CSS),
             GeneratedFile("app/error.tsx", _ERROR_PAGE),
@@ -72602,7 +72778,9 @@ class NextjsWebAdapter:
             GeneratedFile("app/loading.tsx", _LOADING_PAGE),
             GeneratedFile(
                 "app/page.tsx",
-                _synthesize_page_content(ir, provider=provider, prompt=prompt, model_id=model_id),
+                _synthesize_page_content(
+                    ir, provider=provider, prompt=prompt, model_id=model_id, outcomes=ui_outcomes, grounding=grounding
+                ),
             ),
             GeneratedFile("lib/types.ts", _types_file(ir)),
             GeneratedFile("lib/api.ts", _api_client_file(ir)),
@@ -72613,7 +72791,16 @@ class NextjsWebAdapter:
             files.append(
                 GeneratedFile(
                     f"app/{screen.id}/page.tsx",
-                    _synthesize_screen_content(screen, ir, provider=provider, prompt=prompt, model_id=model_id),
+                    _synthesize_screen_content(
+                        screen,
+                        ir,
+                        provider=provider,
+                        prompt=prompt,
+                        model_id=model_id,
+                        synthesize_screens=synthesize_screens,
+                        outcomes=ui_outcomes,
+                        grounding=grounding,
+                    ),
                 )
             )
 
