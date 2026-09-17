@@ -16,6 +16,7 @@ import (
 type User struct {
 	ID            string
 	Email         string
+	Name          string
 	Role          string
 	Plan          string
 	BYOKEnabled   bool
@@ -35,7 +36,7 @@ var (
 // stored password hash alongside the profile because verifying a password is business logic that
 // belongs in the handler layer, not the storage layer.
 type Store interface {
-	CreateUser(ctx context.Context, email, passwordHash string, startingCredits int64) (User, error)
+	CreateUser(ctx context.Context, email, passwordHash, name string, startingCredits int64) (User, error)
 	FindUserByEmail(ctx context.Context, email string) (user User, passwordHash string, err error)
 	FindUserByID(ctx context.Context, id string) (User, error)
 	CreateSession(ctx context.Context, tokenHash, userID string, expiresAt time.Time) error

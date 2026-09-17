@@ -4,6 +4,7 @@ import { isSecureRequest, SESSION_COOKIE_MAX_AGE_SECONDS, SESSION_COOKIE_NAME } 
 
 interface RegisterRequestBody {
   email?: unknown;
+  name?: unknown;
   password?: unknown;
 }
 
@@ -15,12 +16,19 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "invalid request body" }, { status: 400 });
   }
 
-  if (typeof body.email !== "string" || typeof body.password !== "string") {
-    return NextResponse.json({ error: "email and password are required" }, { status: 400 });
+  if (
+    typeof body.email !== "string" ||
+    typeof body.name !== "string" ||
+    typeof body.password !== "string"
+  ) {
+    return NextResponse.json({ error: "email, name, and password are required" }, { status: 400 });
+  }
+  if (body.name.trim().length === 0) {
+    return NextResponse.json({ error: "name is required" }, { status: 400 });
   }
 
   try {
-    const { token, ...profile } = await registerAccount(body.email, body.password);
+    const { token, ...profile } = await registerAccount(body.email, body.name, body.password);
     const response = NextResponse.json(profile, { status: 201 });
     response.cookies.set(SESSION_COOKIE_NAME, token, {
       httpOnly: true,

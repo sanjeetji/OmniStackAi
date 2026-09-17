@@ -166,7 +166,12 @@ available ID per `.ai/tasks/` is **R-469** (R-468 is the last shipped task).
   requirement — a deliberate, explicit scope change from "dependency-free Stage 0," recorded
   here so it isn't a silent surprise later.
 
-**Phase C — Bridge to agent-engine via the control-plane's Job API (proposed R-471)**
+**Phase C — Bridge to agent-engine via the control-plane's Job API (proposed R-472)**
+
+> Renumbered from R-471: that slot went to a real, unplanned fix instead (R-471 — the founder's
+> first live try of the R-470 console hit a real dev-mode hydration bug that broke all forms, plus
+> a request to add a Name field to registration). See `.ai/tasks/R-471.md`.
+
 - Control-plane proxies "build this app" requests to the existing, unmodified `agent-engine`
   (hybrid UI synthesis, compile-repair, multi-turn edit — all of R-465–R-468 reused as-is).
 - Every generation call is attributed to the authenticated user and debits their credit balance

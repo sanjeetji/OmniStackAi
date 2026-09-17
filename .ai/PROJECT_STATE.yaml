@@ -2,10 +2,10 @@ schema_version: 1
 project: OmniStackAI
 phase: BASIC/MVP
 founder_stage: 0
-current_task: R-470
+current_task: R-471
 current_status: done
 branch: main
-last_completed_task: R-470
+last_completed_task: R-471
 # TASK COMPILATION AUDIT — 2026-09-16
 # Performed to achieve 100% synchronization across all task-tracking documentation.
 # Tracker workbook expanded to 464 tasks with R-464.
@@ -34,6 +34,38 @@ task_compilation_audit:
       new_status: DONE
       reason: "Task fully completed on 2026-09-11 with 35 tests. Status left stale during rapid development sprint."
 last_completed_task_summary: >-
+  Completed R-471 (2026-09-17): fixed a real dev-mode hydration bug found by the founder's own
+  first live try of R-470, and added a full_name field to registration. The founder opened the
+  console at http://127.0.0.1:4321/register and registration silently did nothing. Root cause found
+  in the dev server's own log: Next.js 16 blocks cross-origin access to its dev/HMR resources by
+  default and treats 127.0.0.1 and localhost as distinct origins for that check - with no client JS
+  hydrated, the register form's onSubmit handler never attached, so the browser's native default
+  form submission fired instead (a GET request with email/password serialized into the URL query
+  string, doing nothing, with no visible error). Fixed with allowedDevOrigins in next.config.ts;
+  verified live by fetching the register page's actual client JS chunk with
+  Origin: http://127.0.0.1:4321 and confirming both a 200 and the absence of the
+  previously-triggered "Blocked cross-origin request" warning in the dev server log - the strongest
+  verification possible without literally driving a browser.
+  Also answered and implemented the founder's question about whether to collect more profile info:
+  added full_name (broadly useful - personalization, addressing the user, the home page previously
+  only showed an email) but explicitly recommended against and did not add Gender or Age (no
+  function anywhere in this product's actual roadmap - credits, plans, a builder Studio - and
+  collecting them would be unused PII with real privacy/compliance liability for zero product
+  benefit). Threaded full_name through a new migration (000003_users_full_name, additive, does not
+  touch 000001/000002), internal/auth's Store interface/handler/types, and the console's register
+  form + home page greeting ("Welcome back, {name}"). Renumbered the kickoff doc's Phase C from
+  R-471 to R-472 since this task took the R-471 slot as its own real, scoped work.
+  Gates: control-plane go test all green (internal/auth 15 incl. 2 new sub-cases, config 2, health
+  3, password 8, migrations 4); console typecheck/lint/build clean; task verify - Ran 3593 tests in
+  62.945s, OK, Stage 0 verification passed. Live: rebuilt/restarted the real control-plane (picked
+  up migration 000003 cleanly on the existing volume); register without a name -> 400; with a name
+  -> 201 with the name in the body; home page shows "Welcome back, Saurabh Chopra"; a direct
+  control-plane check (bypassing the console) confirmed the same round trip against the real
+  Postgres-backed Store.
+  NEXT R-472 (Phase C): bridge the control-plane's Job API to the unmodified agent-engine so a real
+  generation call actually debits a user's credits (local Ollama stays credit-exempt).
+
+_prior_last_completed_task_summary_R470: >-
   Completed R-470 (2026-09-17): real Next.js console-web, wired to R-469's auth API. Phase B of
   R_&_D/OmniStackAI_Commercial_Platform_Kickoff_v1.md - replaced the static, dependency-free
   apps/console-web (plain HTML/CSS/JS reading a committed data/overview.json snapshot) with a real

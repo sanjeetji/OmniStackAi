@@ -208,7 +208,7 @@ front-door bricks, R-420 is generated-SQL hardening, R-421..R-426 are Studio pre
 R-427..R-429 are generated-app compile fixes, R-430..R-457 are the first twenty-eight differentiating-spine
 bricks (Scope Compiler through Ecosystem Multi-Surface SLA, SLO, and Error Budget Contracts).
 Git, state files (.ai/), CHANGELOG, and docs/PROGRESS.md remain the executable/detail sources of truth.
-Current through R-470; `task verify` = 3,593 tests (agent-engine) + the Go control-plane's own suite +
+Current through R-471; `task verify` = 3,593 tests (agent-engine) + the Go control-plane's own suite +
 the Next.js console's typecheck/lint/build. R-416 added prompt-to-IR intake, R-417 materialized a generated
 owned repo, R-418 added the local chat studio, R-419 added turnkey local run, and R-420 fixed the two
 SQL defects found by live execution. R-421 added an explicit `task agent-engine:studio:preview` mode:
@@ -507,7 +507,17 @@ WHAT TO DO NEXT
   status codes). `task verify` 3,593 OK; a real Docker Compose control-plane + a real `next start`
   server proved the full register -> home -> fabric -> logout -> login round trip live, twice (the
   second run after the cookie fix).
-- NEXT R-471 (Phase C): bridge the control-plane's Job API to the unmodified agent-engine so a real
+- R-471 (2026-09-17, done) fixed a real bug the founder hit trying the R-470 console live: opening
+  `http://127.0.0.1:4321/register` and submitting the form did nothing. Root cause in the dev server's
+  own log: Next.js 16 blocks cross-origin access to its dev/HMR resources by default and treats
+  `127.0.0.1`/`localhost` as different origins, so client JS never hydrated and the form fell back to a
+  native GET submission (fields in the URL, no visible error). Fixed with `allowedDevOrigins` in
+  `next.config.ts`; verified as far as possible without a real browser (fetched the actual client JS
+  chunk with the real origin header - 200, warning gone). Also added a required Name field to
+  registration (`full_name`, new additive migration `000003`) - explicitly declined Gender/Age (no
+  function in this product's roadmap, unnecessary PII). Renumbered the kickoff doc's Phase C from R-471
+  to R-472.
+- NEXT R-472 (Phase C): bridge the control-plane's Job API to the unmodified agent-engine so a real
   generation call debits credits (local Ollama stays credit-exempt). After that, Phase D rebuilds the
   Studio UX for real inside the console (the Lovable/Dyad/Emergent pattern research already done applies
   there). Previously-named agent-engine follow-ups (wiring R-466's `compile_and_repair` into the edit
@@ -527,7 +537,7 @@ WHAT TO DO NEXT
   mobile (R-010 etc.) until web/backend stability.
 
 Begin by reading the files above and `R_&_D/OmniStackAI_Commercial_Platform_Kickoff_v1.md`, run the start
-protocol, then continue at R-471 (Phase C: bridge the control-plane's Job API to the agent-engine so
+protocol, then continue at R-472 (Phase C: bridge the control-plane's Job API to the agent-engine so
 credits actually get debited) and write its Standard AI Task Contract before writing code.
 ```
 

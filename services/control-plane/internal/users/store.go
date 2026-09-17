@@ -34,7 +34,7 @@ func New(pool *pgxpool.Pool) *Store {
 // CreateUser inserts a new user and, if startingCredits is non-zero, an accompanying
 // credit_ledger row recording the signup grant - in one transaction, so a user's credit_balance
 // and its ledger history can never disagree.
-func (s *Store) CreateUser(ctx context.Context, email, passwordHash string, startingCredits int64) (auth.User, error) {
+func (s *Store) CreateUser(ctx context.Context, email, passwordHash, name string, startingCredits int64) (auth.User, error) {
 	email = normalizeEmail(email)
 
 	tx, err := s.pool.Begin(ctx)
@@ -45,11 +45,11 @@ func (s *Store) CreateUser(ctx context.Context, email, passwordHash string, star
 
 	var user auth.User
 	err = tx.QueryRow(ctx, `
-		INSERT INTO users (email, password_hash, credit_balance)
-		VALUES ($1, $2, $3)
-		RETURNING id, email, role, plan, byok_enabled, credit_balance, created_at
-	`, email, passwordHash, startingCredits).Scan(
-		&user.ID, &user.Email, &user.Role, &user.Plan, &user.BYOKEnabled, &user.CreditBalance, &user.CreatedAt,
+		INSERT INTO users (email, password_hash, full_name, credit_balance)
+		VALUES ($1, $2, $3, $4)
+		RETURNING id, email, full_name, role, plan, byok_enabled, credit_balance, created_at
+	`, email, passwordHash, name, startingCredits).Scan(
+		&user.ID, &user.Email, &user.Name, &user.Role, &user.Plan, &user.BYOKEnabled, &user.CreditBalance, &user.CreatedAt,
 	)
 	if err != nil {
 		var pgErr *pgconn.PgError
@@ -82,11 +82,11 @@ func (s *Store) FindUserByEmail(ctx context.Context, email string) (auth.User, s
 	var user auth.User
 	var passwordHash string
 	err := s.pool.QueryRow(ctx, `
-		SELECT id, email, password_hash, role, plan, byok_enabled, credit_balance, created_at
+		SELECT id, email, password_hash, full_name, role, plan, byok_enabled, credit_balance, created_at
 		FROM users
 		WHERE email = $1
 	`, normalizeEmail(email)).Scan(
-		&user.ID, &user.Email, &passwordHash, &user.Role, &user.Plan, &user.BYOKEnabled, &user.CreditBalance, &user.CreatedAt,
+		&user.ID, &user.Email, &passwordHash, &user.Name, &user.Role, &user.Plan, &user.BYOKEnabled, &user.CreditBalance, &user.CreatedAt,
 	)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return auth.User{}, "", auth.ErrUserNotFound
@@ -101,10 +101,10 @@ func (s *Store) FindUserByEmail(ctx context.Context, email string) (auth.User, s
 func (s *Store) FindUserByID(ctx context.Context, id string) (auth.User, error) {
 	var user auth.User
 	err := s.pool.QueryRow(ctx, `
-		SELECT id, email, role, plan, byok_enabled, credit_balance, created_at
+		SELECT id, email, full_name, role, plan, byok_enabled, credit_balance, created_at
 		FROM users
 		WHERE id = $1
-	`, id).Scan(&user.ID, &user.Email, &user.Role, &user.Plan, &user.BYOKEnabled, &user.CreditBalance, &user.CreatedAt)
+	`, id).Scan(&user.ID, &user.Email, &user.Name, &user.Role, &user.Plan, &user.BYOKEnabled, &user.CreditBalance, &user.CreatedAt)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return auth.User{}, auth.ErrUserNotFound
 	}
@@ -125,11 +125,11 @@ func (s *Store) CreateSession(ctx context.Context, tokenHash, userID string, exp
 func (s *Store) FindUserBySessionToken(ctx context.Context, tokenHash string) (auth.User, error) {
 	var user auth.User
 	err := s.pool.QueryRow(ctx, `
-		SELECT u.id, u.email, u.role, u.plan, u.byok_enabled, u.credit_balance, u.created_at
+		SELECT u.id, u.email, u.full_name, u.role, u.plan, u.byok_enabled, u.credit_balance, u.created_at
 		FROM sessions s
 		JOIN users u ON u.id = s.user_id
 		WHERE s.token_hash = $1 AND s.expires_at > now()
-	`, tokenHash).Scan(&user.ID, &user.Email, &user.Role, &user.Plan, &user.BYOKEnabled, &user.CreditBalance, &user.CreatedAt)
+	`, tokenHash).Scan(&user.ID, &user.Email, &user.Name, &user.Role, &user.Plan, &user.BYOKEnabled, &user.CreditBalance, &user.CreatedAt)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return auth.User{}, auth.ErrSessionNotFound
 	}

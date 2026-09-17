@@ -47,7 +47,7 @@ func newFakeStore() *fakeStore {
 	}
 }
 
-func (s *fakeStore) CreateUser(_ context.Context, email, passwordHash string, startingCredits int64) (User, error) {
+func (s *fakeStore) CreateUser(_ context.Context, email, passwordHash, name string, startingCredits int64) (User, error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
@@ -58,6 +58,7 @@ func (s *fakeStore) CreateUser(_ context.Context, email, passwordHash string, st
 	user := User{
 		ID:            "user-" + strconv.Itoa(s.nextID),
 		Email:         email,
+		Name:          name,
 		Role:          "user",
 		Plan:          "free",
 		BYOKEnabled:   false,
@@ -179,6 +180,7 @@ func TestRegisterCreatesAccountWithFreeplanAndSignupCredits(t *testing.T) {
 
 	resp := postJSON(t, server, "/auth/register", map[string]string{
 		"email":    "New.User@Example.com",
+		"name":     "New User",
 		"password": "correct-horse-battery",
 	})
 	if resp.StatusCode != http.StatusCreated {
@@ -189,6 +191,9 @@ func TestRegisterCreatesAccountWithFreeplanAndSignupCredits(t *testing.T) {
 	decodeBody(t, resp, &got)
 	if got.Email != "new.user@example.com" {
 		t.Fatalf("Email = %q, want normalized lowercase", got.Email)
+	}
+	if got.Name != "New User" {
+		t.Fatalf("Name = %q, want %q", got.Name, "New User")
 	}
 	if got.Role != "user" || got.Plan != "free" {
 		t.Fatalf("Role/Plan = %q/%q, want user/free", got.Role, got.Plan)
@@ -206,12 +211,12 @@ func TestRegisterRejectsDuplicateEmailCaseInsensitively(t *testing.T) {
 	server := newTestServer(testDeps(store, time.Now))
 	defer server.Close()
 
-	first := postJSON(t, server, "/auth/register", map[string]string{"email": "dup@example.com", "password": "password123"})
+	first := postJSON(t, server, "/auth/register", map[string]string{"email": "dup@example.com", "name": "Dup", "password": "password123"})
 	if first.StatusCode != http.StatusCreated {
 		t.Fatalf("first register status = %d", first.StatusCode)
 	}
 
-	second := postJSON(t, server, "/auth/register", map[string]string{"email": "DUP@Example.com", "password": "different123"})
+	second := postJSON(t, server, "/auth/register", map[string]string{"email": "DUP@Example.com", "name": "Dup", "password": "different123"})
 	if second.StatusCode != http.StatusConflict {
 		t.Fatalf("second register status = %d, want %d", second.StatusCode, http.StatusConflict)
 	}
@@ -223,17 +228,20 @@ func TestRegisterRejectsInvalidEmailAndShortPassword(t *testing.T) {
 	defer server.Close()
 
 	cases := []struct {
-		name  string
-		email string
-		pass  string
+		name        string
+		email       string
+		accountName string
+		pass        string
 	}{
-		{"invalid email", "not-an-email", "password123"},
-		{"empty email", "", "password123"},
-		{"short password", "person@example.com", "short"},
+		{"invalid email", "not-an-email", "Person", "password123"},
+		{"empty email", "", "Person", "password123"},
+		{"short password", "person@example.com", "Person", "short"},
+		{"missing name", "person@example.com", "", "password123"},
+		{"whitespace-only name", "person@example.com", "   ", "password123"},
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
-			resp := postJSON(t, server, "/auth/register", map[string]string{"email": tc.email, "password": tc.pass})
+			resp := postJSON(t, server, "/auth/register", map[string]string{"email": tc.email, "name": tc.accountName, "password": tc.pass})
 			if resp.StatusCode != http.StatusBadRequest {
 				t.Fatalf("status = %d, want %d", resp.StatusCode, http.StatusBadRequest)
 			}
@@ -247,7 +255,7 @@ func TestRegisterRejectsUnknownFieldsInBody(t *testing.T) {
 	defer server.Close()
 
 	resp := postJSON(t, server, "/auth/register", map[string]string{
-		"email": "person@example.com", "password": "password123", "role": "super_admin",
+		"email": "person@example.com", "name": "Person", "password": "password123", "role": "super_admin",
 	})
 	if resp.StatusCode != http.StatusBadRequest {
 		t.Fatalf("status = %d, want %d (role must not be settable at registration)", resp.StatusCode, http.StatusBadRequest)
@@ -259,7 +267,7 @@ func TestLoginSucceedsWithCorrectCredentialsCaseInsensitiveEmail(t *testing.T) {
 	server := newTestServer(testDeps(store, time.Now))
 	defer server.Close()
 
-	postJSON(t, server, "/auth/register", map[string]string{"email": "person@example.com", "password": "password123"})
+	postJSON(t, server, "/auth/register", map[string]string{"email": "person@example.com", "name": "Person", "password": "password123"})
 
 	resp := postJSON(t, server, "/auth/login", map[string]string{"email": "PERSON@example.com", "password": "password123"})
 	if resp.StatusCode != http.StatusOK {
@@ -277,7 +285,7 @@ func TestLoginFailsIdenticallyForWrongPasswordAndUnknownEmail(t *testing.T) {
 	server := newTestServer(testDeps(store, time.Now))
 	defer server.Close()
 
-	postJSON(t, server, "/auth/register", map[string]string{"email": "person@example.com", "password": "password123"})
+	postJSON(t, server, "/auth/register", map[string]string{"email": "person@example.com", "name": "Person", "password": "password123"})
 
 	wrongPassword := postJSON(t, server, "/auth/login", map[string]string{"email": "person@example.com", "password": "nope-wrong"})
 	unknownEmail := postJSON(t, server, "/auth/login", map[string]string{"email": "ghost@example.com", "password": "whatever123"})
@@ -303,7 +311,7 @@ func TestSessionExpiryIsComputedFromInjectedClockAndSessionTTL(t *testing.T) {
 	defer server.Close()
 	store.clock = func() time.Time { return fixedNow }
 
-	resp := postJSON(t, server, "/auth/register", map[string]string{"email": "person@example.com", "password": "password123"})
+	resp := postJSON(t, server, "/auth/register", map[string]string{"email": "person@example.com", "name": "Person", "password": "password123"})
 	var got authResponse
 	decodeBody(t, resp, &got)
 
@@ -325,7 +333,7 @@ func TestMeReturnsProfileForValidTokenAndRejectsMissingOrUnknownToken(t *testing
 	server := newTestServer(testDeps(store, time.Now))
 	defer server.Close()
 
-	registerResp := postJSON(t, server, "/auth/register", map[string]string{"email": "person@example.com", "password": "password123"})
+	registerResp := postJSON(t, server, "/auth/register", map[string]string{"email": "person@example.com", "name": "Person", "password": "password123"})
 	var registered authResponse
 	decodeBody(t, registerResp, &registered)
 
@@ -345,6 +353,9 @@ func TestMeReturnsProfileForValidTokenAndRejectsMissingOrUnknownToken(t *testing
 	decodeBody(t, resp, &me)
 	if me.Email != "person@example.com" {
 		t.Fatalf("me.Email = %q", me.Email)
+	}
+	if me.Name != "Person" {
+		t.Fatalf("me.Name = %q, want %q", me.Name, "Person")
 	}
 
 	noHeader, _ := http.NewRequest(http.MethodGet, server.URL+"/auth/me", nil)
@@ -394,7 +405,7 @@ func TestLogoutInvalidatesTheSessionAndIsIdempotent(t *testing.T) {
 	server := newTestServer(testDeps(store, time.Now))
 	defer server.Close()
 
-	registerResp := postJSON(t, server, "/auth/register", map[string]string{"email": "person@example.com", "password": "password123"})
+	registerResp := postJSON(t, server, "/auth/register", map[string]string{"email": "person@example.com", "name": "Person", "password": "password123"})
 	var registered authResponse
 	decodeBody(t, registerResp, &registered)
 
@@ -445,10 +456,10 @@ func TestLogoutWithoutBearerTokenIsUnauthorized(t *testing.T) {
 
 func TestFakeStoreCreateUserReturnsErrEmailTaken(t *testing.T) {
 	store := newFakeStore()
-	if _, err := store.CreateUser(context.Background(), "person@example.com", "hash", 0); err != nil {
+	if _, err := store.CreateUser(context.Background(), "person@example.com", "hash", "Person", 0); err != nil {
 		t.Fatal(err)
 	}
-	_, err := store.CreateUser(context.Background(), "person@example.com", "hash", 0)
+	_, err := store.CreateUser(context.Background(), "person@example.com", "hash", "Person", 0)
 	if !errors.Is(err, ErrEmailTaken) {
 		t.Fatalf("err = %v, want ErrEmailTaken", err)
 	}

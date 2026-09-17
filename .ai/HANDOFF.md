@@ -1,9 +1,31 @@
 # Current Handoff
 
-Task ID: R-470
+Task ID: R-471
 Status: done
 Phase: BASIC/MVP — Founder Stage 0
 Branch: `main`
+
+> **R-471 Completed (2026-09-17): Fix dev-mode hydration bug + add full name to registration.**
+> - **Real bug the founder hit, found via the dev server's own log:** Next.js 16 blocks
+>   cross-origin access to its dev/HMR resources by default and treats `127.0.0.1`/`localhost` as
+>   different origins — the founder was pointed at `127.0.0.1`, so client JS never hydrated and the
+>   register form fell back to a native GET submission (fields in the URL, doing nothing, no
+>   visible error). Fixed with `allowedDevOrigins` in `next.config.ts`; verified as far as possible
+>   without a real browser (fetched the actual client JS chunk with the real origin header — 200,
+>   warning gone).
+> - **Registration now collects a Name** (`full_name`, new migration `000003`, threaded through
+>   `internal/auth`/`internal/users` and the console). Explicitly **did not** add Gender or Age —
+>   no function in this product's roadmap, unnecessary PII/privacy liability for no benefit; a
+>   deliberate decision recorded in `.ai/tasks/R-471.md`, not a silent omission.
+> - Renumbered the kickoff doc's Phase C from R-471 to **R-472** since this task took the R-471 slot.
+> - Gates: control-plane `go test` all green (15/2/3/8/4 across packages); console
+>   `typecheck`/`lint`/`build` clean; `task verify` **3,593 OK**. Live: control-plane
+>   rebuilt/restarted (migration `000003` applied cleanly on the existing volume); register without
+>   a name → 400; with a name → 201; home page shows "Welcome back, Saurabh Chopra"; confirmed
+>   directly against the control-plane too, bypassing the console.
+> - **NEXT R-472 (Phase C):** bridge the control-plane's Job API to the unmodified agent-engine so a
+>   real generation call debits credits. See `R_&_D/OmniStackAI_Commercial_Platform_Kickoff_v1.md`,
+>   `.ai/tasks/R-471.md`.
 
 > **R-470 Completed (2026-09-17): Real Next.js console-web, wired to R-469's auth API.**
 > - **Phase B of `R_&_D/OmniStackAI_Commercial_Platform_Kickoff_v1.md`** — replaced the static

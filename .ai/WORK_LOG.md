@@ -1,5 +1,50 @@
 # Work Log
 
+## 2026-09-17 — R-471 (Fix dev-mode hydration bug + add full name to registration)
+
+- **Why:** the founder actually opened the R-470 console in a browser and reported registration
+  silently did nothing, plus asked whether the registration form should collect more profile
+  fields (Name/Gender/Age) "if they are helpful later."
+- **Real bug, found via the dev server's own log, not guessed:** `⚠ Blocked cross-origin request to
+  Next.js dev resource /_next/hmr from "127.0.0.1"`, immediately followed by `GET
+  /register?email=...&password=... 200`. Next.js 16 blocks cross-origin access to its own dev/HMR
+  resources by default and treats `127.0.0.1` and `localhost` as different origins for that check —
+  the founder had been pointed at `http://127.0.0.1:4321`. With no client JS hydrated, the
+  register form's `onSubmit` handler never attached to the DOM, so the browser fell back to its
+  native default form submission: a plain GET request with every field serialized into the URL
+  query string, reloading the page and doing nothing — with no visible error to explain why.
+  Fixed with `allowedDevOrigins: ["127.0.0.1", "localhost"]` in `next.config.ts` — exactly the fix
+  Next.js's own warning prescribes.
+- **Verified as thoroughly as possible without a real browser:** fetched the register page's own
+  actual client JS chunk (taken from the real page HTML, not guessed) with `Origin:
+  http://127.0.0.1:4321` — 200, and the dev server log shows no cross-origin warning this time,
+  where an equivalent request was blocked outright before the fix. Honestly logged as the strongest
+  available verification, not a substitute for the founder retrying it themselves.
+- **Registration field decision, made explicit rather than silently picked:** added **Name**
+  (`full_name`) — broadly useful, and the home page previously only had an email to show. Explicitly
+  **did not** add Gender or Age: neither serves any function anywhere in this product's actual
+  roadmap (credits, plans, a builder Studio), and collecting them would be unused PII with real
+  privacy/compliance liability (gender is special-category data under some privacy regimes) for
+  zero benefit. New migration `000003_users_full_name` (additive, `000001`/`000002` untouched);
+  `internal/auth`'s `Store` interface, handler, and `User`/response types now carry `Name`;
+  registration without a non-empty name is a clean 400. Console: `lib/control-plane.ts`,
+  `app/api/auth/register/route.ts`, `app/register/page.tsx` (new required Name field), and
+  `app/page.tsx` (greets "Welcome back, {name}" instead of showing only the email).
+- **Renumbered the kickoff doc's Phase C** from R-471 to **R-472**, since this fix-and-feature work
+  took the R-471 slot as its own real, scoped task rather than being folded silently into R-470 or
+  Phase C.
+- **Gates:** control-plane `go build`/`go vet`/`gofmt` clean; `go test ./...` all green
+  (`internal/auth` 15, incl. 2 new sub-cases for missing/whitespace-only name; `config` 2; `health`
+  3; `password` 8; `migrations` 4). Console `typecheck`/`lint`/`build` all clean. `task verify` —
+  Ran 3,593 tests in 62.945s, OK, Stage 0 verification passed. **Live:** rebuilt and restarted the
+  real Docker Compose control-plane (picked up migration `000003` cleanly on the pre-existing
+  volume, re-proving R-469's self-healing migration runner); `POST /auth/register` with no name →
+  400; with a name → 201, name in the response body; `GET /` with the resulting cookie → 200, page
+  contains "Welcome back, Saurabh Chopra"; a direct control-plane check bypassing the console
+  confirmed the same round trip against the real Postgres-backed `users.Store`.
+- **NEXT R-472 (Phase C):** bridge the control-plane's Job API to the unmodified agent-engine so a
+  real generation call actually debits a user's credits (local Ollama stays credit-exempt).
+
 ## 2026-09-17 — R-470 (Real Next.js console-web, wired to R-469's auth API)
 
 - **Why:** Phase B of `R_&_D/OmniStackAI_Commercial_Platform_Kickoff_v1.md` — replace the static,

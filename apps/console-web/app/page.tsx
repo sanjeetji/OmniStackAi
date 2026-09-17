@@ -14,7 +14,7 @@ export default async function HomePage() {
       <header className="masthead">
         <div>
           <p className="eyebrow">OmniStackAI</p>
-          <h1>Welcome back</h1>
+          <h1>Welcome back, {user.name}</h1>
           <p className="lede">{user.email}</p>
         </div>
         <LogoutButton />

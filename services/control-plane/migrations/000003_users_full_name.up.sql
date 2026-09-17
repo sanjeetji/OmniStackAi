@@ -1,0 +1,9 @@
+BEGIN;
+
+ALTER TABLE users ADD COLUMN IF NOT EXISTS full_name TEXT NOT NULL DEFAULT '';
+
+INSERT INTO schema_migrations (version)
+VALUES (3)
+ON CONFLICT (version) DO NOTHING;
+
+COMMIT;

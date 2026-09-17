@@ -1,4 +1,4 @@
-# OmniStackAI — implementation progress (as of R-470)
+# OmniStackAI — implementation progress (as of R-471)
 
 A living summary of what is built, what is pending, and how to see results. Numbers come from the
 execution tracker (`R_&_D/OmniStackAI_Execution_Tracker_v6.xlsx`, `Phase_Roadmap`, 461 tasks as of
@@ -8,6 +8,14 @@ R-461 completion) plus the state files (`.ai/`), Git history, and CHANGELOG.
 
 - **3,593 automated tests pass** (agent-engine + Go control-plane), fully offline and
   network-independent (`task verify`), plus the console's own `typecheck`/`lint`/`build` gates.
+- **R-471 — fixed a real dev-mode hydration bug + added Name to registration (2026-09-17):** the
+  founder's own first live try of the R-470 console hit a real bug — Next.js 16 blocks
+  cross-origin access to its dev/HMR resources by default and treats `127.0.0.1`/`localhost` as
+  different origins, so opening the console at `127.0.0.1` (as instructed) meant client JS never
+  hydrated and the register form silently fell back to a native GET submission. Fixed with
+  `allowedDevOrigins`. Also added a required Name field to registration (a new, additive
+  migration) — explicitly declined to add Gender or Age, which serve no function in this
+  product's roadmap. See `.ai/tasks/R-471.md` for full live-verification detail.
 - **R-470 — real Next.js console-web, wired to R-469's auth API (2026-09-17):** Phase B of
   `R_&_D/OmniStackAI_Commercial_Platform_Kickoff_v1.md`. The static `apps/console-web` is now a
   real Next.js (App Router, TypeScript) app: `/login`/`/register` pages, an authenticated `/` home
@@ -592,16 +600,18 @@ compile repair + pacing, R-467 file browser + hybrid-UI toggle, R-468 multi-turn
 product UI going forward. **R-469 (done)** built the real control-plane foundation: users,
 authentication, and a plan/credit model on the existing Go `services/control-plane` skeleton.
 **R-470 (done)** replaced the static `apps/console-web` with a real Next.js app wired to R-469's auth
-endpoints via a server-side cookie proxy. Next is **R-471 (Phase C)**: bridge the control-plane's Job
-API to the unmodified agent-engine so a real generation call actually debits a user's credits
-(local-Ollama calls stay credit-exempt). After that, **Phase D** rebuilds the Studio UX for real
-inside the new console (the Lovable/Dyad/Emergent pattern research already done applies there), and
-**Phase E** adds plan-gated UI, an admin console, and — with its own explicit sign-off — a payment
-processor. Previously-named follow-ups (wiring R-466's `compile_and_repair` into the edit flow, an
-undo/revert UI, extending `app_delta` beyond additive-only) remain real but lower priority than the
-platform foundation now underway. Founder action to unlock a full live proof of a model-written page
-that compiles, or of the chat-edit delta against a real model: after the Groq daily reset run with
-`OMNISTACKAI_MAX_RETRY_AFTER_SECONDS=180`, or add `GOOGLE_API_KEY` (Gemini) to the gitignored `.env`.
+endpoints via a server-side cookie proxy. **R-471 (done)** fixed a real dev-mode hydration bug the
+founder hit trying it live, and added a required Name field to registration. Next is **R-472 (Phase
+C)**: bridge the control-plane's Job API to the unmodified agent-engine so a real generation call
+actually debits a user's credits (local-Ollama calls stay credit-exempt). After that, **Phase D**
+rebuilds the Studio UX for real inside the new console (the Lovable/Dyad/Emergent pattern research
+already done applies there), and **Phase E** adds plan-gated UI, an admin console, and — with its own
+explicit sign-off — a payment processor. Previously-named follow-ups (wiring R-466's
+`compile_and_repair` into the edit flow, an undo/revert UI, extending `app_delta` beyond
+additive-only) remain real but lower priority than the platform foundation now underway. Founder
+action to unlock a full live proof of a model-written page that compiles, or of the chat-edit delta
+against a real model: after the Groq daily reset run with `OMNISTACKAI_MAX_RETRY_AFTER_SECONDS=180`,
+or add `GOOGLE_API_KEY` (Gemini) to the gitignored `.env`.
 
 The local front door is built through robust browser preview with memory: R-416 prompt → IR, R-417 IR →
 owned repo, R-418 local chat studio, R-419 turnkey local run, R-420 SQL hardening, R-421 managed embedded

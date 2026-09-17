@@ -12,6 +12,7 @@ import (
 const (
 	minPasswordLength = 8
 	maxPasswordLength = 128
+	maxNameLength     = 200
 )
 
 // Register mounts /auth/register, /auth/login, /auth/logout and /auth/me onto mux.
@@ -24,6 +25,7 @@ func Register(mux *http.ServeMux, deps Deps) {
 
 type registerRequest struct {
 	Email    string `json:"email"`
+	Name     string `json:"name"`
 	Password string `json:"password"`
 }
 
@@ -35,6 +37,7 @@ type loginRequest struct {
 type userResponse struct {
 	ID            string `json:"id"`
 	Email         string `json:"email"`
+	Name          string `json:"name"`
 	Role          string `json:"role"`
 	Plan          string `json:"plan"`
 	BYOKEnabled   bool   `json:"byok_enabled"`
@@ -50,6 +53,7 @@ func toUserResponse(user User) userResponse {
 	return userResponse{
 		ID:            user.ID,
 		Email:         user.Email,
+		Name:          user.Name,
 		Role:          user.Role,
 		Plan:          user.Plan,
 		BYOKEnabled:   user.BYOKEnabled,
@@ -69,6 +73,11 @@ func handleRegister(deps Deps) http.HandlerFunc {
 			writeError(w, http.StatusBadRequest, "invalid email")
 			return
 		}
+		name, err := validateName(req.Name)
+		if err != nil {
+			writeError(w, http.StatusBadRequest, err.Error())
+			return
+		}
 		if err := validatePassword(req.Password); err != nil {
 			writeError(w, http.StatusBadRequest, err.Error())
 			return
@@ -81,7 +90,7 @@ func handleRegister(deps Deps) http.HandlerFunc {
 			return
 		}
 
-		user, err := deps.Store.CreateUser(r.Context(), email, hash, deps.SignupCredits)
+		user, err := deps.Store.CreateUser(r.Context(), email, hash, name, deps.SignupCredits)
 		if err != nil {
 			if errors.Is(err, ErrEmailTaken) {
 				writeError(w, http.StatusConflict, "email already registered")
@@ -232,6 +241,17 @@ func normalizeEmail(email string) (string, error) {
 		return "", err
 	}
 	return email, nil
+}
+
+func validateName(name string) (string, error) {
+	name = strings.TrimSpace(name)
+	if name == "" {
+		return "", errors.New("name is required")
+	}
+	if len(name) > maxNameLength {
+		return "", errors.New("name must be at most 200 characters")
+	}
+	return name, nil
 }
 
 func validatePassword(password string) error {

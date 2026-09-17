@@ -7,6 +7,7 @@ import Link from "next/link";
 export default function RegisterPage() {
   const router = useRouter();
   const [email, setEmail] = useState("");
+  const [name, setName] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
@@ -19,7 +20,7 @@ export default function RegisterPage() {
       const response = await fetch("/api/auth/register", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email, password }),
+        body: JSON.stringify({ email, name, password }),
       });
       if (!response.ok) {
         const body = (await response.json().catch(() => ({}))) as { error?: string };
@@ -51,6 +52,19 @@ export default function RegisterPage() {
       <section className="panel">
         {error ? <div className="error-banner">{error}</div> : null}
         <form onSubmit={handleSubmit}>
+          <div className="field">
+            <label htmlFor="name">Name</label>
+            <input
+              id="name"
+              name="name"
+              type="text"
+              autoComplete="name"
+              maxLength={200}
+              required
+              value={name}
+              onChange={(event) => setName(event.target.value)}
+            />
+          </div>
           <div className="field">
             <label htmlFor="email">Email</label>
             <input

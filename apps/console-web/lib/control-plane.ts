@@ -16,6 +16,7 @@ export function controlPlaneUrl(): string {
 export interface ControlPlaneUser {
   id: string;
   email: string;
+  name: string;
   role: string;
   plan: string;
   byok_enabled: boolean;
@@ -69,12 +70,13 @@ async function callControlPlane<T>(
 
 export function registerAccount(
   email: string,
+  name: string,
   password: string,
 ): Promise<ControlPlaneAuthResponse> {
   return callControlPlane<ControlPlaneAuthResponse>("/auth/register", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ email, password }),
+    body: JSON.stringify({ email, name, password }),
   });
 }
 

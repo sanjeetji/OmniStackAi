@@ -4,6 +4,24 @@ Last updated: 2026-09-17
 ## Current Phase
 Stage 0 (Founder Build Sequence, Brief Section 91) — BASIC/MVP
 
+> **R-471 (2026-09-17): fixed a real dev-mode hydration bug found by the founder's own first live
+> try of the console, and added a full name field to registration.** Opening
+> `http://127.0.0.1:4321/register` and submitting the form silently did nothing — Next.js 16 blocks
+> cross-origin access to its own dev/HMR resources by default and treats `127.0.0.1`/`localhost` as
+> different origins, so client JS never hydrated and the browser fell back to a native form
+> submission (fields serialized into the URL, no visible error). Fixed with `allowedDevOrigins` in
+> `next.config.ts` — verified as far as possible without literally driving a browser (fetched the
+> exact client JS chunk the page references with the real origin header: 200, and the warning that
+> appeared before the fix no longer does). Also added a required **Name** field to registration
+> (new migration `000003_users_full_name`) — explicitly **not** Gender or Age, which serve no
+> function in this product and would be unnecessary PII, a deliberate decision recorded in
+> `.ai/tasks/R-471.md`. Renumbered the kickoff doc's Phase C from R-471 to R-472. `task verify`
+> **3,593 OK**; live: control-plane rebuilt/restarted, migration applied cleanly on the existing
+> volume, register-without-name → 400, register-with-name → 201, home page shows "Welcome back,
+> {name}", confirmed both through the console and directly against the control-plane.
+> NEXT R-472 (Phase C): bridge the control-plane's Job API to the agent-engine so credits get
+> debited on a real generation call.
+
 > **R-470 (2026-09-17): real Next.js console-web, wired to R-469's auth API.**
 > Phase B of `R_&_D/OmniStackAI_Commercial_Platform_Kickoff_v1.md`: the static, dependency-free
 > `apps/console-web` is now a real Next.js (App Router, TypeScript) app. `/login`/`/register`
