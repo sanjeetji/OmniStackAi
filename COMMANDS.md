@@ -50,6 +50,12 @@ export OMNISTACKAI_APP_OUT_DIR="$(pwd)/scratch/apps" && task agent-engine:studio
 export OMNISTACKAI_APP_OUT_DIR="$HOME/Documents/Projects/GeneratedApps" && task agent-engine:studio:preview
 ```
 
+R-467: after a build, click any file in the result panel's file list to view it (read-only, backed by
+`GET /api/build/{id}/files` / `.../file?path=...`, wired in every mode). Tick "Hybrid UI (experimental)" on
+the build form before building to send `hybrid_ui: true` on `/api/build` — it threads R-465/R-466's engine
+into the plain-prompt and Ecosystem Pack build paths and shows a per-file 🤖 badge for model-written pages
+(Solution Pack builds don't support it yet and say so honestly rather than pretending).
+
 ---
 
 ## 3. Database & Container Management (PostgreSQL + pgvector)

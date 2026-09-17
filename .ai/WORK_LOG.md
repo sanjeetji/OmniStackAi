@@ -1,5 +1,61 @@
 # Work Log
 
+## 2026-09-17 — R-467 (Studio File Browser + Hybrid UI Toggle — wiring the hybrid engine into the product UI)
+
+- **Why:** R-465/R-466 built a real hybrid engine, but it was reachable only from a standalone CLI
+  (`task agent-engine:ui:synthesize`), completely disconnected from the Studio a user actually opens in a
+  browser. Direct reading of `studio/server.py` (stdlib `http.server`, route dispatch as an `if/elif` chain
+  with every capability function-injected), `live_serve.py` (the real build-trigger wiring), and `page.py`
+  (one server-rendered HTML+vanilla-JS string, no framework) confirmed two concrete gaps: no endpoint ever
+  exposed a build's files after the initial response (`<ul id="r-files">` was flat, non-clickable text), and
+  `synthesize_screens`/`ui_outcomes` were never passed by any of the three `_build` code paths.
+- **File browser:** new pure `studio/files.py` — `list_build_files`/`read_build_file`, path safety mirroring
+  `edit/apply.py`'s `_safe_destination` (resolve, `relative_to(root)`, reject on `ValueError`); excludes
+  `.git`/`node_modules`/`__pycache__`/`.next`/`.venv`/`venv` and any real `.env*` file (`.env.example` kept).
+  `server.py` gains `GET /api/build/{id}/files` and `GET /api/build/{id}/file?path=...`
+  (`_build_id_for_suffix` path matching — an id containing `/` never matches; `BuildNotFoundError`→404,
+  `PathOutsideBuildError`→400, `FileNotFoundInBuildError`→404); `live_serve.py`'s
+  `_resolve_build_dir`/`_list_build_files`/`_read_build_file` resolve against `StudioBuildHistory`'s
+  recorded `target_dir`, wired unconditionally (file browsing needs no toolchain or running preview).
+- **Hybrid UI toggle:** `/api/build` accepts `hybrid_ui: bool`. Plain-prompt path: always active (a
+  provider is already mandatory there). Ecosystem path (single- and all-surfaces): active only when a
+  provider actually resolved — `hybrid_ui_active = hybrid_ui and eco_provider is not None`, never a silent
+  no-op. `ui_outcomes` surfaces in the response and, via `app_build_result_to_dict`'s new optional
+  `ui_outcomes` param (additive; byte-identical when omitted — regression-tested) and
+  `StudioBuildHistory.record`'s new bounded capture. Solution Pack path: `build_solution_pack_project` has
+  no such parameter — `hybrid_ui_active: false` reported honestly, never guessed at or ignored.
+- **`page.py`:** the flat inert `<ul id="r-files">` becomes a clickable two-pane file browser (list +
+  read-only viewer fetching `/api/build/{id}/file?path=`, with binary/truncated notices); a "Hybrid UI
+  (experimental)" checkbox on the build form; a one-line hybrid summary + a 🤖 badge on model-written files.
+  Zero external assets preserved (verified: no `http://`, `https://`, `src=`, `<link`; JS syntax verified
+  with `node --check` on the extracted `<script>` block).
+- **Found and fixed while implementing:** a missing `ApplicationIR` import (latent `NameError`) in
+  `live_serve.py`'s ecosystem single-surface branch (`custom_name`/`custom_description` override path).
+- **Live discovery — a real, active gap, not a theoretical one:** the founder's real Groq credentials now
+  sit in the repo's gitignored `.env` (added during today's R-465/R-466 live proofs). Running the
+  *pre-existing, unmodified* Studio test suite made real outbound Groq calls — `pytest` took minutes instead
+  of seconds. Four pre-existing `live_serve._build(...)` test call sites never mocked
+  `resolve_generation_provider_from_env`: the two already suspected in `test_studio_ecosystem.py`, **plus
+  two more found here** in `test_studio_server.py` (`test_live_serve_build_with_solution_pack`,
+  `test_live_serve_build_with_ai_delta_features`) — because *any* non-`None` provider reaching
+  `build_app_from_ir`/`build_solution_pack_project` triggers R-462's overview-page LLM synthesis regardless
+  of `hybrid_ui`. Timed precisely: `resolve_generation_provider_from_env()` alone takes 0.02s; the unmocked
+  ai-delta test took **23.5s of real, R-466-paced Groq traffic** (413 too-large → compact-grounding retry →
+  validator rejection → 429 rate-limited → give-up) before falling back. All four now mock it explicitly to
+  `(None, "stub-model", 4096, 5.0)`.
+- **Tests:** `test_studio_files.py` (18, new), plus additions to `test_studio_server.py` (file routes,
+  `hybrid_ui` forwarding, page-controls), `test_studio_ecosystem.py` (hybrid-UI threading + Solution Pack
+  honest no-op), `test_studio_history.py` (hybrid fields round-trip), `test_build_app.py` (`ui_outcomes`
+  regression guard). Gates: focused 144 passed; `task verify` **3,529 OK** (full local suite: 3,529 passed +
+  42 subtests in 68.80s — materially faster post-fix, corroborating no hidden network calls remain);
+  lint/security/env green; demos clean (359/353 files).
+- **Manual smoke (opt-in, real HTTP, build-only mode, no `hybrid_ui` — today's Groq daily quota was already
+  spent per R-466):** a real 160-file build via `POST /api/build`; `GET /api/build/1/files` listed 160 real
+  paths; `GET /api/build/1/file?path=...` returned real content; unknown build id → 404; a
+  `../../../etc/passwd` traversal attempt → 400; missing `path` → 400. `hybrid_ui` end-to-end threading was
+  proven by the stub-provider ecosystem test (a real `page.tsx` on disk carries the `LLM-Synthesized`
+  marker) rather than spending more of today's exhausted quota.
+
 ## 2026-09-17 — R-466 (Compile-Level Repair for LLM-Written UI + Rate-Limit-Aware Pacing)
 
 - **Why:** the R-465 live run showed two gaps — the gateway collapsed every HTTP failure into an opaque

@@ -15,6 +15,7 @@ from pathlib import Path
 from omnistackai_agent_engine.application_ir import example_ir
 from omnistackai_agent_engine.intake import (
     AppBuildResult,
+    app_build_result_to_dict,
     build_app_from_ir,
     build_app_from_prompt,
 )
@@ -146,6 +147,42 @@ class TestBuildAppFromPrompt(unittest.TestCase):
                     )
                 )
             self.assertFalse(target.exists())
+
+
+class _FakeOutcome:
+    """Stand-in for R-465's UiSynthesisOutcome -- only .to_dict() is required by the contract."""
+
+    def __init__(self, path: str, mode: str) -> None:
+        self._path, self._mode = path, mode
+
+    def to_dict(self) -> dict:
+        return {"path": self._path, "mode": self._mode, "attempts": 1, "model_id": "m", "last_reason": ""}
+
+
+class TestAppBuildResultToDict(unittest.TestCase):
+    def _result(self, tmp: str) -> AppBuildResult:
+        ir = example_ir("minimal-blog")
+        return build_app_from_ir(ir, str(Path(tmp) / "app"), **AUTHOR)
+
+    def test_omitting_ui_outcomes_is_byte_for_byte_the_old_shape(self) -> None:
+        # R-467: a regression guard -- every existing caller of app_build_result_to_dict must see the
+        # exact same dict as before this parameter was added.
+        with tempfile.TemporaryDirectory() as tmp:
+            result = self._result(tmp)
+            without_kwarg = app_build_result_to_dict(result)
+            explicit_none = app_build_result_to_dict(result, ui_outcomes=None)
+            explicit_empty = app_build_result_to_dict(result, ui_outcomes=[])
+            self.assertEqual(without_kwarg, explicit_none)
+            self.assertEqual(without_kwarg, explicit_empty)
+            self.assertNotIn("ui_outcomes", without_kwarg)
+
+    def test_ui_outcomes_are_included_when_given(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            result = self._result(tmp)
+            outcomes = [_FakeOutcome("app/page.tsx", "llm"), _FakeOutcome("app/posts/page.tsx", "deterministic")]
+            payload = app_build_result_to_dict(result, ui_outcomes=outcomes)
+            self.assertEqual(payload["ui_outcomes"], [o.to_dict() for o in outcomes])
+            json.dumps(payload)
 
 
 class TestPackageExports(unittest.TestCase):

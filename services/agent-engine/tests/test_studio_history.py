@@ -113,6 +113,48 @@ class TestStudioBuildHistory(unittest.TestCase):
         self.assertEqual(entry["pack_id"], "minimal-blog")
         self.assertEqual(entry["pack_version"], "1.0.0")
 
+    def test_record_with_hybrid_ui_outcomes(self) -> None:
+        history = StudioBuildHistory()
+        history.record(
+            _build(
+                "Blog",
+                hybrid_ui_requested=True,
+                hybrid_ui_active=True,
+                ui_outcomes=[
+                    {"path": "app/page.tsx", "mode": "llm", "attempts": 1, "model_id": "m", "last_reason": ""},
+                    {
+                        "path": "app/posts/page.tsx",
+                        "mode": "deterministic",
+                        "attempts": 3,
+                        "model_id": "m",
+                        "last_reason": "brace mismatch",
+                    },
+                ],
+            )
+        )
+        entry = history.list()["builds"][0]
+        self.assertTrue(entry["hybrid_ui_requested"])
+        self.assertTrue(entry["hybrid_ui_active"])
+        self.assertEqual(len(entry["ui_outcomes"]), 2)
+        self.assertEqual(entry["ui_outcomes"][0]["path"], "app/page.tsx")
+        self.assertEqual(entry["ui_outcomes"][1]["mode"], "deterministic")
+        json.dumps(history.list())  # still JSON-safe
+
+    def test_hybrid_ui_requested_without_ui_outcomes_omits_the_list(self) -> None:
+        history = StudioBuildHistory()
+        history.record(_build("Blog", hybrid_ui_requested=False, hybrid_ui_active=False))
+        entry = history.list()["builds"][0]
+        self.assertFalse(entry["hybrid_ui_requested"])
+        self.assertFalse(entry["hybrid_ui_active"])
+        self.assertNotIn("ui_outcomes", entry)
+
+    def test_ui_outcomes_list_is_bounded(self) -> None:
+        history = StudioBuildHistory()
+        many = [{"path": f"app/p{i}/page.tsx", "mode": "llm"} for i in range(500)]
+        history.record(_build("Blog", hybrid_ui_requested=True, ui_outcomes=many))
+        entry = history.list()["builds"][0]
+        self.assertLessEqual(len(entry["ui_outcomes"]), 200)
+
     def test_record_with_applied_ai_deltas(self) -> None:
         history = StudioBuildHistory()
         history.record(

@@ -1,5 +1,9 @@
 """Opt-in live studio: serve the chat-to-create UI backed by the local Ollama build path.
 
+Also serves a read-only file browser (``GET /api/build/{id}/files`` / ``.../file?path=``, R-467) and a
+``hybrid_ui`` build option that opts the plain-prompt and Ecosystem Pack paths into R-465's model-written
+screens, surfacing R-465's ``ui_outcomes`` in the response and the recorded history.
+
 Excluded from static verification. Start build-only mode with:
 
     task agent-engine:studio:serve
@@ -26,6 +30,7 @@ import tempfile
 
 from ..intake.provider_resolution import resolve_generation_provider_from_env
 from ..intake.build_app import app_build_result_to_dict, build_app_from_prompt
+from .files import BuildNotFoundError, list_build_files, read_build_file
 from .history import StudioBuildHistory
 from .preview import StudioPreviewManager
 from .server import create_studio_server
@@ -68,11 +73,20 @@ def _build(
     output_dir: str | None = None,
     folder_name: str | None = None,
     target_dir: str | None = None,
+    hybrid_ui: bool = False,
     preview_manager: StudioPreviewManager | None = None,
     history: StudioBuildHistory | None = None,
 ) -> dict:
+    """Build an app for one ``/api/build`` request.
+
+    ``hybrid_ui`` (R-467) opts the plain-prompt and Ecosystem Pack paths into R-465's model-synthesized
+    screens (``synthesize_screens=True`` + a ``ui_outcomes`` sink, surfaced in the returned payload). The
+    Solution Pack path has no such parameter on ``build_solution_pack_project`` -- a request there is
+    reported back honestly as ``hybrid_ui_active: False`` rather than silently ignored.
+    """
     if ecosystem_id:
         from pathlib import Path
+        from ..application_ir import ApplicationIR
         from ..solution_packs import DEFAULT_ECOSYSTEM_PACK_REGISTRY
         from ..intake.build_app import build_app_from_ir
 
@@ -127,6 +141,11 @@ def _build(
                     project_strategy=surface_ir.project_strategy,
                 )
 
+            # R-467: hybrid UI only actually runs when a provider resolved -- report that honestly
+            # rather than silently no-op'ing (build_app_from_ir treats synthesize_screens=True with
+            # provider=None as a no-op by design).
+            single_hybrid_active = bool(hybrid_ui and eco_provider is not None)
+            single_ui_outcomes: list = []
             build_res = build_app_from_ir(
                 surface_ir,
                 target_dir,
@@ -136,6 +155,8 @@ def _build(
                 overwrite=True,
                 provider=eco_provider,
                 model_id=eco_model_id,
+                synthesize_screens=single_hybrid_active,
+                ui_outcomes=(single_ui_outcomes if single_hybrid_active else None),
             )
             root = Path(target_dir)
             files = []
@@ -165,13 +186,18 @@ def _build(
                 "ir_sha256": surface.ir_sha256,
                 "verify_targets": list(surface.verify_targets),
                 "is_ecosystem": False,
+                "hybrid_ui_requested": hybrid_ui,
+                "hybrid_ui_active": single_hybrid_active,
             }
+            if single_hybrid_active:
+                payload["ui_outcomes"] = [outcome.to_dict() for outcome in single_ui_outcomes]
         else:
             os.makedirs(target_dir, exist_ok=True)
             surface_results = []
             total_files = 0
             all_entities = set()
             used_slugs: dict[str, int] = {}
+            all_hybrid_active = bool(hybrid_ui and eco_provider is not None)
 
             for surface in eco_pkg.surfaces:
                 surface_ir = surface.to_application_ir()
@@ -183,6 +209,7 @@ def _build(
                 unique_slug = base_slug if count == 0 else f"{base_slug}-{count + 1}"
                 surface_target_dir = os.path.join(target_dir, unique_slug)
 
+                surface_ui_outcomes: list = []
                 build_res = build_app_from_ir(
                     surface_ir,
                     surface_target_dir,
@@ -192,9 +219,11 @@ def _build(
                     overwrite=True,
                     provider=eco_provider,
                     model_id=eco_model_id,
+                    synthesize_screens=all_hybrid_active,
+                    ui_outcomes=(surface_ui_outcomes if all_hybrid_active else None),
                 )
                 total_files += build_res.file_count
-                surface_results.append({
+                surface_entry = {
                     "surface_kind": surface.surface_kind,
                     "app_name": surface.app_name,
                     "slug": surface.slug,
@@ -203,7 +232,10 @@ def _build(
                     "commit_sha": build_res.commit_sha,
                     "verify_targets": list(surface.verify_targets),
                     "ir_sha256": surface.ir_sha256,
-                })
+                }
+                if all_hybrid_active:
+                    surface_entry["ui_outcomes"] = [outcome.to_dict() for outcome in surface_ui_outcomes]
+                surface_results.append(surface_entry)
 
             payload = {
                 "prompt": prompt,
@@ -221,6 +253,8 @@ def _build(
                 "surface_count": len(surface_results),
                 "surfaces": surface_results,
                 "is_ecosystem": True,
+                "hybrid_ui_requested": hybrid_ui,
+                "hybrid_ui_active": all_hybrid_active,
             }
     elif pack_id:
         from pathlib import Path
@@ -374,6 +408,10 @@ def _build(
             "applied_ai_delta_change_ids": list(build_result.applied_ai_delta_change_ids),
             "unapplied_ai_delta_change_ids": list(build_result.unapplied_ai_delta_change_ids),
             "verify_targets": list(build_result.verify_targets),
+            # R-467: build_solution_pack_project has no synthesize_screens/ui_outcomes parameter -- a
+            # requested hybrid_ui is reported honestly as inactive here, never silently ignored.
+            "hybrid_ui_requested": hybrid_ui,
+            "hybrid_ui_active": False,
         }
     else:
         provider, model_id, max_output, request_timeout = resolve_generation_provider_from_env()
@@ -383,6 +421,7 @@ def _build(
             folder_name=folder_name,
             custom_name=custom_name,
         )
+        plain_ui_outcomes: list = []
         result = asyncio.run(
             build_app_from_prompt(
                 prompt,
@@ -394,9 +433,14 @@ def _build(
                 max_output_tokens=max_output,
                 timeout_seconds=request_timeout,
                 overwrite=True,
+                synthesize_screens=hybrid_ui,
+                ui_outcomes=(plain_ui_outcomes if hybrid_ui else None),
             )
         )
-        payload = app_build_result_to_dict(result)
+        # A provider is already mandatory on this path, so a requested hybrid_ui is always honored.
+        payload = app_build_result_to_dict(result, ui_outcomes=(plain_ui_outcomes if hybrid_ui else None))
+        payload["hybrid_ui_requested"] = hybrid_ui
+        payload["hybrid_ui_active"] = hybrid_ui
 
     if history is not None:
         payload["id"] = history.record(payload)
@@ -432,6 +476,22 @@ def _preview_recorded_build(
             active_surface_slug=surface_slug,
         )
     return preview_manager.replace(entry["target_dir"])
+
+
+def _resolve_build_dir(build_id: str, history: StudioBuildHistory) -> str:
+    """The recorded ``target_dir`` for ``build_id``, or a ``BuildNotFoundError`` (R-467)."""
+    entry = history.get(build_id)
+    if entry is None or not entry.get("target_dir"):
+        raise BuildNotFoundError(f"build '{build_id}' is not available in this session")
+    return entry["target_dir"]
+
+
+def _list_build_files(build_id: str, history: StudioBuildHistory) -> dict:
+    return list_build_files(_resolve_build_dir(build_id, history))
+
+
+def _read_build_file(build_id: str, path: str, history: StudioBuildHistory) -> dict:
+    return read_build_file(_resolve_build_dir(build_id, history), path)
 
 
 def _open_path(path: str) -> bool:
@@ -476,7 +536,13 @@ def main() -> None:
         removed = history.remove(build_id)
         return {"removed": removed, **history.list()}
 
-    control_kwargs: dict = {"history_fn": history.list, "delete_build_fn": delete_build}
+    control_kwargs: dict = {
+        "history_fn": history.list,
+        "delete_build_fn": delete_build,
+        # R-467: file browsing needs no toolchain or running preview -- wired in build-only mode too.
+        "file_tree_fn": lambda build_id: _list_build_files(build_id, history),
+        "read_file_fn": lambda build_id, path: _read_build_file(build_id, path, history),
+    }
     if preview_manager is not None:
         control_kwargs.update(
             status_fn=preview_manager.status,

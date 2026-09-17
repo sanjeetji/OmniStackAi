@@ -1,9 +1,30 @@
 # Current Handoff
 
-Task ID: R-466
+Task ID: R-467
 Status: done
 Phase: BASIC/MVP — Founder Stage 0
 Branch: `main`
+
+> **R-467 Completed (2026-09-17): Studio File Browser + Hybrid UI Toggle — the hybrid engine reaches the product UI.**
+> - **File browser:** new `studio/files.py` (path safety mirrors `edit/apply.py`) backs
+>   `GET /api/build/{id}/files` + `GET /api/build/{id}/file?path=...`; wired in build-only mode too. `page.py`'s
+>   flat inert file list is now a clickable two-pane browser (list + read-only viewer).
+> - **Hybrid UI toggle:** `/api/build` accepts `hybrid_ui: bool`, threading R-465's `synthesize_screens`/
+>   `ui_outcomes` into the plain-prompt and Ecosystem Pack paths; Solution Pack builds honestly report
+>   `hybrid_ui_active: false` (no such parameter exists there). Surfaced in the response, `StudioBuildHistory`,
+>   and the page (summary line + 🤖 badge).
+> - **Live discovery (not anticipated):** the founder's real Groq credentials now sit in `.env` — running the
+>   *pre-existing, unmodified* Studio suite made real outbound Groq calls (one unmocked test cost 23.5s of
+>   real R-466-paced traffic). Found 2 more unmocked `resolve_generation_provider_from_env` call sites beyond
+>   the 2 already suspected (`test_studio_server.py`'s solution-pack/ai-delta tests); all 4 now mocked — this
+>   closed a live, active violation of the "0 model/network calls under `task verify`" constraint.
+> - Also fixed a missing `ApplicationIR` import (latent `NameError`) in `live_serve.py`'s ecosystem branch.
+> - Gates: `task verify` **3,529 OK** (full local suite 3,529 passed + 42 subtests in 68.80s — materially
+>   faster post-fix); lint/security/env green; demos clean. Manual smoke against a real running server
+>   (build-only mode): build → file tree → file content → 404/400 error mapping, all correct.
+> - **NEXT R-468:** multi-turn chat / "continue editing this app" — no session concept exists at all today;
+>   likely built on `edit/diff.py`'s `plan_edit`/`ProjectDiff`/`apply_diff`. Then wire R-466's
+>   `compile_and_repair` into `studio:preview`. See `docs/HYBRID_UI.md`, `.ai/tasks/R-467.md`.
 
 > **R-466 Completed (2026-09-17): Compile-Level Repair for LLM-Written UI + Rate-Limit-Aware Pacing — second brick of the hybrid engine.**
 > - **Compiler has the last word:** `verify/compile.py` captures `tsc --noEmit --pretty false` into per-file

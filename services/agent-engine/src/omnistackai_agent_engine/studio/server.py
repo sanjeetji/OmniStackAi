@@ -12,7 +12,7 @@ import json
 import os
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from typing import Callable
-from urllib.parse import parse_qs, urlparse
+from urllib.parse import parse_qs, unquote, urlparse
 
 from ..intake.ecosystem import propose_ecosystem
 from ..solution_packs import (
@@ -21,11 +21,14 @@ from ..solution_packs import (
     EcosystemPackRegistry,
     SolutionPackRegistry,
 )
+from .files import BuildNotFoundError, FileNotFoundInBuildError, PathOutsideBuildError
 from .page import STUDIO_HTML
 
 BuildFn = Callable[..., dict]
 ControlFn = Callable[..., dict]
 PreviewBuildFn = Callable[..., dict]
+FileTreeFn = Callable[[str], dict]
+ReadFileFn = Callable[[str, str], dict]
 
 _MAX_BODY_BYTES = 64 * 1024
 
@@ -39,6 +42,8 @@ def _make_handler(
     preview_build_fn: PreviewBuildFn | None,
     open_dir_fn: PreviewBuildFn | None,
     delete_build_fn: PreviewBuildFn | None,
+    file_tree_fn: FileTreeFn | None = None,
+    read_file_fn: ReadFileFn | None = None,
     registry: SolutionPackRegistry | None = None,
     ecosystem_registry: EcosystemPackRegistry | None = None,
     switch_surface_fn: PreviewBuildFn | None = None,
@@ -132,6 +137,49 @@ def _make_handler(
             try:
                 self._send_json(200, fn(build_id))
             except Exception as error:  # surface any control failure as a clean 502
+                self._send_json(502, {"error": str(error)})
+
+        @staticmethod
+        def _build_id_for_suffix(path: str, suffix: str) -> str | None:
+            """``/api/build/<id><suffix>`` -> ``<id>``, or None when the path doesn't match.
+
+            The id itself must not contain ``/`` (recorded build ids never do); a path like
+            ``/api/build/1/2/files`` is therefore not a match and falls through to the generic 404.
+            """
+            prefix = "/api/build/"
+            if not (path.startswith(prefix) and path.endswith(suffix)):
+                return None
+            build_id = unquote(path[len(prefix) : -len(suffix)])
+            return build_id if build_id and "/" not in build_id else None
+
+        def _handle_file_tree(self, build_id: str) -> None:
+            if file_tree_fn is None:
+                self._send_json(404, {"error": "file browsing is not enabled"})
+                return
+            try:
+                self._send_json(200, file_tree_fn(build_id))
+            except BuildNotFoundError as error:
+                self._send_json(404, {"error": str(error)})
+            except Exception as error:  # surface any other failure as a clean 502
+                self._send_json(502, {"error": str(error)})
+
+        def _handle_read_file(self, build_id: str, query: str) -> None:
+            if read_file_fn is None:
+                self._send_json(404, {"error": "file browsing is not enabled"})
+                return
+            rel_path = parse_qs(query).get("path", [""])[0]
+            if not rel_path:
+                self._send_json(400, {"error": "path is required"})
+                return
+            try:
+                self._send_json(200, read_file_fn(build_id, rel_path))
+            except BuildNotFoundError as error:
+                self._send_json(404, {"error": str(error)})
+            except PathOutsideBuildError as error:
+                self._send_json(400, {"error": str(error)})
+            except FileNotFoundInBuildError as error:
+                self._send_json(404, {"error": str(error)})
+            except Exception as error:  # surface any other failure as a clean 502
                 self._send_json(502, {"error": str(error)})
 
         def do_GET(self) -> None:  # noqa: N802 (http.server API)
@@ -339,6 +387,15 @@ def _make_handler(
                     self._send_json(502, {"error": str(error)})
                 return
             else:
+                path_only = urlparse(self.path).path
+                files_build_id = self._build_id_for_suffix(path_only, "/files")
+                if files_build_id is not None:
+                    self._handle_file_tree(files_build_id)
+                    return
+                file_build_id = self._build_id_for_suffix(path_only, "/file")
+                if file_build_id is not None:
+                    self._handle_read_file(file_build_id, urlparse(self.path).query)
+                    return
                 self._send(404, "text/plain; charset=utf-8", b"not found")
 
         def do_POST(self) -> None:  # noqa: N802 (http.server API)
@@ -680,6 +737,8 @@ def _make_handler(
                 options["ai_delta_prompt"] = str(data["ai_delta_prompt"]).strip()
             if "ai_features" in data and isinstance(data["ai_features"], list):
                 options["ai_features"] = [str(f).strip() for f in data["ai_features"] if str(f).strip()]
+            if "hybrid_ui" in data:
+                options["hybrid_ui"] = bool(data["hybrid_ui"])
 
             try:
                 if options:
@@ -709,6 +768,8 @@ def create_studio_server(
     preview_build_fn: PreviewBuildFn | None = None,
     open_dir_fn: PreviewBuildFn | None = None,
     delete_build_fn: PreviewBuildFn | None = None,
+    file_tree_fn: FileTreeFn | None = None,
+    read_file_fn: ReadFileFn | None = None,
     solution_pack_registry: SolutionPackRegistry | None = None,
     ecosystem_pack_registry: EcosystemPackRegistry | None = None,
     switch_surface_fn: PreviewBuildFn | None = None,
@@ -750,7 +811,9 @@ def create_studio_server(
     return 404 (build-only mode).
     ``history_fn`` and ``delete_build_fn`` may be wired in build-only mode (list/remove recorded
     builds); ``preview_build_fn`` (re-preview) and ``open_dir_fn`` (open the recorded repo folder)
-    are wired only in trusted-local preview mode.
+    are wired only in trusted-local preview mode. ``file_tree_fn`` (``GET /api/build/{id}/files``)
+    and ``read_file_fn`` (``GET /api/build/{id}/file?path=...``) may also be wired in build-only mode
+    (R-467) -- inspecting a build's files needs no toolchain or running preview.
     """
     return ThreadingHTTPServer(
         (host, port),
@@ -763,6 +826,8 @@ def create_studio_server(
             preview_build_fn,
             open_dir_fn,
             delete_build_fn,
+            file_tree_fn=file_tree_fn,
+            read_file_fn=read_file_fn,
             registry=solution_pack_registry,
             ecosystem_registry=ecosystem_pack_registry,
             switch_surface_fn=switch_surface_fn,

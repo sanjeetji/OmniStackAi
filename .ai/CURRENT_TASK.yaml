@@ -1,46 +1,47 @@
-task_id: R-466
+task_id: R-467
 status: completed
 phase: MVP
 tracker_row: null
 started_at: "2026-09-17"
 completed_at: "2026-09-17"
 objective: >-
-  Second brick of the founder-approved hybrid engine, driven by the R-465/R-466 live runs: (1) rate-limit-aware
-  pacing in the model gateway - a typed ProviderRateLimitedError carrying the HTTP status and a parsed
-  Retry-After (header seconds/HTTP-date, else the provider body's "try again in Ns"), and a bounded,
-  injectable-sleep retry of the same request inside the cloud provider's generate(), with the cap and retry
-  budget env-tunable (OMNISTACKAI_MAX_RETRY_AFTER_SECONDS / OMNISTACKAI_RATE_LIMIT_RETRIES) and every wait
-  logged; (2) compile-level repair - a capturing tsc executor (verify/compile.py: `tsc --noEmit --pretty false`
-  parsed into per-file CompileErrors) and codegen/hybrid_repair.py, which feeds each LLM-written file's
-  compiler errors back through R-465's _repair_message channel (bounded rounds, validator-gated, template
-  fallback per file, UiSynthesisOutcome records), never rewrites deterministic files, and applies the result via
-  a hand-built ProjectDiff + edit/apply_diff with one customer-identity commit; wired into the opt-in
-  `task agent-engine:ui:synthesize` CLI as Step 3/3; (3) shrink-and-retry when a provider rejects a request as
-  too large (413, or a 400 that says so): drop the echoed output, then switch to a compact grounding (every hook
-  signature, one export per component) that fits an 8k-token tier; (4) outcome records carry the HTTP status of
-  a failed call (ProviderHTTPError(413)), never the body. task verify stays model-, network- and toolchain-free.
+  First slice of the product-UI shell: wire R-465/R-466's hybrid engine and a read-only file browser into
+  the actual Studio a user opens in a browser. New pure studio/files.py (list_build_files, read_build_file -
+  path-safety mirrors edit/apply.py's _safe_destination; excludes .git/node_modules/__pycache__/.next/.venv
+  and real .env* files, keeps .env.example) backs new GET /api/build/{id}/files and
+  GET /api/build/{id}/file?path= routes in server.py, resolved against StudioBuildHistory's recorded
+  target_dir in live_serve.py; wired in build-only mode too (no toolchain needed). /api/build gains a
+  hybrid_ui boolean threading synthesize_screens=True + a ui_outcomes sink into the plain-prompt and
+  Ecosystem Pack build paths; ui_outcomes surfaced in the response, recorded in history, shown in the page
+  (summary line + per-file badge). The Solution Pack path has no such kwarg on build_solution_pack_project -
+  requesting hybrid_ui there is honestly reported as hybrid_ui_active: false. page.py gained a clickable
+  file list + read-only viewer pane and a "Hybrid UI (experimental)" checkbox, still zero external assets.
+  Fixed a missing ApplicationIR import (latent NameError) in live_serve's ecosystem branch. Found and fixed
+  a LIVE, ACTIVE violation of the "0 model/network calls under task verify" constraint: with the founder's
+  real Groq credentials now in the gitignored .env (from the R-465/R-466 live proofs), four pre-existing
+  live_serve._build() test call sites (2 in test_studio_ecosystem.py, 2 more found in test_studio_server.py)
+  never mocked resolve_generation_provider_from_env, so running the existing Studio suite unmodified made
+  real outbound Groq calls (one unmocked test cost 23.5s of real, R-466-paced traffic). All four now mock it.
+  Out of scope, named for R-468: multi-turn chat/conversation state (no session concept exists at all
+  today), and wiring R-466's toolchain-dependent compile_and_repair into the live server.
 allowed_paths:
-  - services/agent-engine/src/omnistackai_agent_engine/model_gateway/errors.py
-  - services/agent-engine/src/omnistackai_agent_engine/model_gateway/cloud.py
-  - services/agent-engine/src/omnistackai_agent_engine/model_gateway/__init__.py
-  - services/agent-engine/src/omnistackai_agent_engine/model_gateway/bootstrap.py
-  - .env.example
-  - services/agent-engine/src/omnistackai_agent_engine/verify/compile.py
-  - services/agent-engine/src/omnistackai_agent_engine/verify/__init__.py
-  - services/agent-engine/src/omnistackai_agent_engine/codegen/hybrid_repair.py
-  - services/agent-engine/src/omnistackai_agent_engine/codegen/__init__.py
-  - services/agent-engine/src/omnistackai_agent_engine/codegen/llm_ui.py
-  - services/agent-engine/src/omnistackai_agent_engine/codegen/nextjs.py
-  - services/agent-engine/src/omnistackai_agent_engine/intake/ui_synthesize_run.py
-  - services/agent-engine/tests/test_cloud_rate_limit.py
-  - services/agent-engine/tests/test_compile_report.py
-  - services/agent-engine/tests/test_hybrid_repair.py
-  - services/agent-engine/tests/test_llm_ui_compact.py
-  - COMMANDS.md
+  - services/agent-engine/src/omnistackai_agent_engine/studio/files.py
+  - services/agent-engine/src/omnistackai_agent_engine/studio/__init__.py
+  - services/agent-engine/src/omnistackai_agent_engine/studio/server.py
+  - services/agent-engine/src/omnistackai_agent_engine/studio/live_serve.py
+  - services/agent-engine/src/omnistackai_agent_engine/studio/history.py
+  - services/agent-engine/src/omnistackai_agent_engine/studio/page.py
+  - services/agent-engine/src/omnistackai_agent_engine/intake/build_app.py
+  - services/agent-engine/tests/test_studio_files.py
+  - services/agent-engine/tests/test_studio_server.py
+  - services/agent-engine/tests/test_studio_ecosystem.py
+  - services/agent-engine/tests/test_studio_history.py
+  - services/agent-engine/tests/test_build_app.py
   - docs/HYBRID_UI.md
   - docs/PROGRESS.md
   - docs/RESUME_PROMPT.md
-  - .ai/tasks/R-466.md
+  - COMMANDS.md
+  - .ai/tasks/R-467.md
   - .ai/CURRENT_TASK.yaml
   - .ai/PROJECT_STATE.yaml
   - .ai/WORK_LOG.md
@@ -48,48 +49,51 @@ allowed_paths:
   - PROJECT_STATE.md
   - CHANGELOG.md
 forbidden_changes:
-  - No model, network, Docker, or toolchain calls under task verify (fake runners / stub providers only)
-  - No new dependencies (Python 3.13 stdlib only); no vendor SDKs; no secrets in source/logs/state/tests/commits; provider errors never include the API key
-  - Do not change the bytes of the deterministic default output; never rewrite non-LLM files during repair
-  - Do not change the Application IR, DB engine (PostgreSQL stays), generated-project contracts, or gateway routing semantics
+  - No model, network, Docker, subprocess, or toolchain calls under task verify (stub functions and tmp dirs only); build-only mode still never executes generated code
+  - No new dependencies (Python 3.13 stdlib only); no framework/bundler/CDN asset introduced into page.py
+  - No conversation/session/multi-turn state, and no edit/diff.py or apply_diff calls from the Studio (read-only inspection + a build-time toggle only)
+  - Do not wire codegen/hybrid_repair.py's compile_and_repair into the live server (deferred - needs the toolchain)
+  - Do not change the Application IR, DB engine (PostgreSQL stays), generated-project contracts, or any codegen module's deterministic default output
   - Do not modify or commit the untracked .claude directory
 required_gates:
-  - focused: tests/test_cloud_rate_limit.py + tests/test_compile_report.py + tests/test_hybrid_repair.py + tests/test_llm_ui_compact.py (+ neighbours)
+  - focused: tests/test_studio_files.py + tests/test_studio_server.py + tests/test_studio_ecosystem.py + tests/test_studio_history.py + tests/test_build_app.py
   - task verify
   - task lint
   - task security:quick
   - task env:check
   - task builder:demo -- minimal-blog
   - task builder:demo -- rideshare-favourites
-  - task agent-engine:web-typecheck -- minimal-blog / -- rideshare-favourites (deterministic default unchanged)
-  - "live re-run (opt-in, paid): task agent-engine:ui:synthesize with compile repair, reported honestly"
+  - "manual smoke (opt-in): task agent-engine:studio:serve, build, browse files"
 model_tool_trace:
   routing: deterministic_only
   local_calls: 0
   cloud_calls: 0
   note: >-
-    Implementation and verify use in-memory stub providers, fake runners and temp dirs only. The live runs
-    were separate opt-in steps with the founder's Groq key (one full CLI run, one direct probe, one
-    reproduction), all reported in evidence.
+    Implementation and verify use stub build/provider functions and real tmp-dir filesystems only - 0
+    model/network calls (confirmed live: full local test suite completed in 68.8s after fixing the 4
+    previously-unmocked provider-resolution call sites). The manual smoke test used build-only mode with no
+    hybrid_ui, so it made 0 model calls too; hybrid_ui end-to-end threading was proven by stub-provider tests.
 evidence:
-  focused_tests: "115 passed (48 new: rate-limit 15, compile-report 11, hybrid-repair 12, compact/shrink 10; plus neighbouring suites)"
-  verify: "Ran 3490 tests ... OK; Stage 0 verification passed (3,442 + 48 new; 0 model calls)"
+  focused_tests: "144 passed (test_studio_files 18, test_studio_server 59, test_studio_ecosystem 9, test_studio_history 14, test_studio_preview 14, test_studio_ecosystem_preview 7, test_build_app 23)"
+  verify: "Ran 3529 tests ... OK; Stage 0 verification passed (0 model calls); full local suite: 3,529 passed, 42 subtests passed in 68.80s"
   lint: "Lint passed"
   security: "Stage 0 secret-policy check passed"
   env: "Environment contract passed"
-  demos: "minimal-blog and rideshare-favourites built clean"
-  web_typecheck: "minimal-blog PASSED (0 errors); rideshare-favourites PASSED (0 errors) - deterministic default unchanged"
-  live_runs: >-
-    Groq free tier. Full 3-step CLI finished in 13s: intake OK (162 files, first commit), all 5 UI calls failed
-    instantly with a non-429 HTTP status (outcomes now carry the status code), pages fell back, Step 3 linked
-    node_modules and compiled at 0 errors (final PASSED). A direct probe with the full 19k-char grounded prompt
-    SUCCEEDED on an empty window (5024 in / 3639 out). A reproduction showed the 429 path working (typed error,
-    Retry-After 112 honoured) but giving up above the 60s cap (now env-tunable); that limiter was tokens per
-    day (200k, 191k used) - the daily budget was spent, so no further live call was possible today. Pacing and
-    status-carrying outcomes are live-verified; compile repair with real tsc errors and shrink-on-413 are
-    verified by stub/fake-runner tests only.
+  demos: "minimal-blog 359 files; rideshare-favourites 353 files"
+  manual_smoke: >-
+    Real HTTP against a running live_serve instance (build-only, no hybrid_ui): POST /api/build -> 160-file
+    build id=1; GET /api/build/1/files -> 160 sorted paths; GET /api/build/1/file?path=... -> real content;
+    GET /api/build/999/files -> 404; path-traversal attempt -> 400 "path escapes the build directory";
+    missing path query -> 400. Server stopped cleanly.
+  live_discovery: >-
+    Found and fixed a live, active "0 model/network calls under task verify" violation: real Groq
+    credentials in .env (from R-465/R-466 live proofs) meant 4 pre-existing Studio tests that never mocked
+    resolve_generation_provider_from_env were making real network calls - one cost 23.5s of real,
+    R-466-paced Groq traffic. All 4 now mock it explicitly.
 next_action: >-
-  R-466 done. NEXT R-467: the product-UI shell (multi-turn chat + live preview + real file tree/viewer via new
-  GET /api/build/{id}/files and /file?path=) driving synthesize_screens=True and surfacing ui_outcomes plus the
-  CompileRepairReport in the build payload. Founder action to unlock a full live proof: wait for the Groq daily
-  reset and run with OMNISTACKAI_MAX_RETRY_AFTER_SECONDS=180, or add GOOGLE_API_KEY (Gemini) to .env.
+  R-467 done. NEXT R-468: multi-turn chat / "continue editing this app" in the Studio - no session concept
+  exists at all today (confirmed by direct reading of studio/), so this needs real design, likely built on
+  edit/diff.py's plan_edit/ProjectDiff + apply_diff for in-place follow-up turns rather than a fresh repo
+  every time. Then wire R-466's compile_and_repair into studio:preview (needs the toolchain; opt-in).
+  Founder action to unlock a full live hybrid-UI proof: after the Groq daily reset run with
+  OMNISTACKAI_MAX_RETRY_AFTER_SECONDS=180, or add GOOGLE_API_KEY (Gemini) to the gitignored .env.

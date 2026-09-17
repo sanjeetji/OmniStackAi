@@ -2,10 +2,10 @@ schema_version: 1
 project: OmniStackAI
 phase: BASIC/MVP
 founder_stage: 0
-current_task: R-466
+current_task: R-467
 current_status: done
 branch: main
-last_completed_task: R-466
+last_completed_task: R-467
 # TASK COMPILATION AUDIT — 2026-09-16
 # Performed to achieve 100% synchronization across all task-tracking documentation.
 # Tracker workbook expanded to 464 tasks with R-464.
@@ -20,7 +20,7 @@ task_compilation_audit:
   mvp_done: 252
   mvp_completion_pct: 70.4
   overall_completion_pct: 54.3
-  test_suite_count: 3490
+  test_suite_count: 3529
   changelog_entries: 253
   missing_entries_backfilled:
     - R-272
@@ -34,6 +34,50 @@ task_compilation_audit:
       new_status: DONE
       reason: "Task fully completed on 2026-09-11 with 35 tests. Status left stale during rapid development sprint."
 last_completed_task_summary: >-
+  Completed R-467 (2026-09-17): Studio File Browser + Hybrid UI Toggle - the first slice of the hybrid
+  engine reaching the actual product UI (the Studio a user opens in a browser, studio/server.py +
+  live_serve.py + page.py - confirmed by direct reading to be a dependency-free stdlib http.server app with
+  one server-rendered HTML+vanilla-JS page; no session/chat concept exists there at all). New pure
+  studio/files.py (list_build_files, read_build_file - path safety mirrors edit/apply.py's
+  _safe_destination; excludes .git/node_modules/__pycache__/.next/.venv and real .env* files, keeps
+  .env.example) backs new GET /api/build/{id}/files and GET /api/build/{id}/file?path= routes in server.py
+  (_build_id_for_suffix path matching; BuildNotFoundError->404, PathOutsideBuildError->400,
+  FileNotFoundInBuildError->404), resolved via live_serve.py's _resolve_build_dir/_list_build_files/
+  _read_build_file against StudioBuildHistory's recorded target_dir, wired unconditionally (build-only mode
+  too - no toolchain needed). /api/build gains a hybrid_ui boolean: threaded into the plain-prompt path
+  (build_app_from_prompt, always active - a provider is already mandatory there) and the Ecosystem Pack path
+  (build_app_from_ir per surface, active only when a provider actually resolved - honestly reported via
+  hybrid_ui_active) as synthesize_screens=True + a ui_outcomes sink; app_build_result_to_dict gained an
+  optional ui_outcomes param (additive, byte-identical when omitted); StudioBuildHistory.record captures
+  hybrid_ui_requested/active/ui_outcomes (bounded). The Solution Pack path has no such kwarg on
+  build_solution_pack_project - hybrid_ui there reports hybrid_ui_active: false honestly, never silently
+  ignored. page.py: the flat inert file list became a clickable two-pane browser (list + read-only viewer,
+  fetches /api/build/{id}/file?path=, shows binary/truncated notices), a "Hybrid UI (experimental)" checkbox
+  on the build form, and a one-line hybrid summary with a per-file robot badge - still zero external assets
+  (verified: no http://, https://, src=, <link). Fixed a missing ApplicationIR import (latent NameError) in
+  live_serve's ecosystem single-surface branch (custom_name/custom_description override path).
+  LIVE DISCOVERY while implementing: with the founder's real Groq credentials now sitting in the repo's
+  gitignored .env (added during the R-465/R-466 live proofs), running the pre-existing, UNMODIFIED Studio
+  test suite made real outbound calls to Groq - pytest took minutes instead of seconds. Four pre-existing
+  live_serve._build() test call sites never mocked resolve_generation_provider_from_env: the two already
+  suspected in test_studio_ecosystem.py, PLUS two more found here in test_studio_server.py
+  (test_live_serve_build_with_solution_pack, test_live_serve_build_with_ai_delta_features) - because ANY
+  non-None provider reaching build_app_from_ir/build_solution_pack_project triggers R-462's overview-page
+  LLM synthesis regardless of hybrid_ui. Timed precisely: resolve_generation_provider_from_env() alone takes
+  0.02s; the unmocked ai-delta test took 23.5s of real, R-466-paced Groq traffic (413 too-large -> compact
+  grounding retry -> validator rejection -> 429 rate-limited -> give-up) before falling back. This was a
+  LIVE, ACTIVE violation of the standing "0 model/network calls under task verify" constraint on this
+  machine today, not theoretical. All four now patch resolve_generation_provider_from_env to
+  (None, "stub-model", 4096, 5.0). Gates: focused 144 passed; task verify 3,529 OK (0 model calls; full
+  local suite 3,529 passed + 42 subtests in 68.80s, materially faster post-fix, confirming no hidden network
+  calls remain); lint/security/env green; demos clean (359/353 files). Manual smoke (opt-in, real HTTP,
+  build-only mode, no hybrid_ui to avoid today's exhausted Groq daily quota): a real 160-file build via
+  POST /api/build; GET /api/build/1/files listed 160 real paths; GET /api/build/1/file?path=... returned
+  real file content; unknown build id -> 404; a ../../../etc/passwd traversal attempt -> 400 "path escapes
+  the build directory"; missing path query -> 400; server stopped cleanly. hybrid_ui end-to-end threading
+  (synthesize_screens actually firing, a real page.tsx on disk carrying the LLM-Synthesized marker) was
+  proven by stub-provider tests rather than a second live Groq call, since today's daily quota was already
+  spent per R-466. Previously:
   Completed R-466 (2026-09-17): Compile-Level Repair for LLM-Written UI + Rate-Limit-Aware Pacing - the second
   brick of the hybrid engine, driven by what the live runs proved. model_gateway: ProviderHTTPError carries
   status_code + retry_after_seconds; new ProviderRateLimitedError (429); parse_retry_after (Retry-After header
@@ -903,14 +947,17 @@ id_note: >-
   ID); R-416..R-429 built/hardened the "chat -> create -> run -> preview" front door; R-430..R-437 build SPINE.
 blockers: []
 next_action: >-
-  R-466 is complete: the hybrid engine now compiles what the model wrote (capturing tsc executor + per-file
-  repair through the same corrective channel, template revert, customer-identity commit), paces HTTP 429 from
-  the provider's own Retry-After (env-tunable cap), shrinks a too-large request to a compact grounding, and
-  records the HTTP status of every failed call. NEXT R-467: the product-UI shell v1 in the Studio - multi-turn
-  chat (a follow-up re-synthesizes the targeted screen), a real file tree from `files` via new
-  GET /api/build/{id}/files and GET /api/build/{id}/file?path=, a read-only code viewer, a "hybrid UI" toggle
-  that sets synthesize_screens=True, and the ui_outcomes + CompileRepairReport surfaced in the build payload
-  (both are JSON-safe by design). Founder action to unlock a full live proof: after the Groq daily reset run the
-  CLI with OMNISTACKAI_MAX_RETRY_AFTER_SECONDS=180, or add GOOGLE_API_KEY (Gemini) to the gitignored .env.
+  R-467 is complete: the Studio a user opens in a browser now has a read-only file browser (path-safe,
+  wired in build-only mode too) and a hybrid_ui toggle on /api/build threading synthesize_screens/
+  ui_outcomes into the plain-prompt and Ecosystem Pack paths (Solution Pack honestly reports inactive).
+  While implementing, closed a live, active "0 model/network calls under task verify" violation caused by
+  real Groq credentials now sitting in .env - 4 previously-unmocked Studio test call sites are now mocked.
+  NEXT R-468: multi-turn chat / "continue editing this app" in the Studio - no session/conversation concept
+  exists at all today (confirmed by direct reading of studio/*.py); needs real design, likely built on
+  edit/diff.py's plan_edit/ProjectDiff + apply_diff for in-place follow-up turns rather than a fresh repo
+  every time. Then wire R-466's compile_and_repair into studio:preview (needs the toolchain; opt-in), and
+  live-refresh the file browser after any in-place edit. Founder action to unlock a full live hybrid-UI
+  proof: after the Groq daily reset run with OMNISTACKAI_MAX_RETRY_AFTER_SECONDS=180, or add
+  GOOGLE_API_KEY (Gemini) to the gitignored .env.
   Keep task verify model/Docker/DB/install/network-free. The UI-component series remains paused/resumable; the
   tracker workbook still lags (ends at R-462).

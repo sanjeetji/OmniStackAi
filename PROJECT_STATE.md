@@ -4,6 +4,28 @@ Last updated: 2026-09-17
 ## Current Phase
 Stage 0 (Founder Build Sequence, Brief Section 91) — BASIC/MVP
 
+> **R-467 (2026-09-17): the HYBRID engine reaches the product UI — a file browser and a hybrid-UI toggle in the Studio.**
+> - `studio/files.py` (new): `list_build_files`/`read_build_file`, path safety mirroring `edit/apply.py`'s
+>   `_safe_destination`; excludes `.git`/`node_modules`/`__pycache__`/`.next`/`.venv` and real `.env*` files.
+>   New `GET /api/build/{id}/files` + `GET /api/build/{id}/file?path=...` routes in `server.py`, resolved
+>   against `StudioBuildHistory`'s recorded `target_dir` in `live_serve.py`, wired in build-only mode too.
+> - `/api/build` gains `hybrid_ui: bool`, threading `synthesize_screens=True` + a `ui_outcomes` sink into the
+>   plain-prompt and Ecosystem Pack build paths (`hybrid_ui_active` reported honestly when a provider didn't
+>   resolve); the Solution Pack path (no such parameter exists there) reports `hybrid_ui_active: false`.
+>   `intake/build_app.py`'s `app_build_result_to_dict` gained an additive `ui_outcomes` param (unchanged
+>   when omitted); `StudioBuildHistory.record` captures the new fields (bounded).
+> - `page.py`: the flat, non-clickable file list is now a two-pane browser (list + read-only viewer); a
+>   "Hybrid UI (experimental)" checkbox on the build form; a summary line + 🤖 badge for model-written files.
+>   Zero external assets preserved.
+> - **Live discovery while implementing:** real Groq credentials now sit in the repo's gitignored `.env`
+>   (from the R-465/R-466 live proofs) — running the *pre-existing* Studio test suite unmodified made real
+>   outbound calls to Groq (one unmocked test cost 23.5s of real traffic). 4 pre-existing test call sites
+>   (2 already suspected, 2 more found here) never mocked `resolve_generation_provider_from_env`; all 4 now
+>   do — closing a live, active violation of the "0 model/network calls under `task verify`" constraint.
+> - Tests: 4 new test files/additions (`test_studio_files` new, 18); `task verify` **3,529** OK (full local
+>   suite 3,529 + 42 subtests in 68.80s, materially faster post-fix); demos clean. Manual smoke against a real
+>   running server confirmed the file browser end-to-end. NEXT R-468: multi-turn chat in the Studio.
+
 > **R-466 (2026-09-17): the HYBRID engine compiles what the model wrote, paces rate limits, and shrinks too-large requests.**
 > - `verify/compile.py`: capturing `tsc --noEmit --pretty false` executor → `CompileReport` of per-file `CompileError`s
 >   (+ `ensure_web_dependencies`: reuse / symlink / `pnpm install`). `codegen/hybrid_repair.py`: `llm_file_specs`

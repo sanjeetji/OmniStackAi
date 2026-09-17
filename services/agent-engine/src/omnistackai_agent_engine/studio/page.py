@@ -1190,9 +1190,22 @@ STUDIO_HTML = """<!doctype html>
   .history-actions { display: flex; gap: 8px; flex-wrap: wrap; flex-shrink: 0; }
   .history-empty { color: #62748c; font-size: 13px; }
   .preview-frame { display: block; width: 100%; height: 540px; border: 0; background: #fff; }
-  .files { max-height: 320px; overflow: auto; background: #0b1220; border: 1px solid #223148; border-radius: 10px; padding: 10px 14px; }
-  .files ul { margin: 0; padding-left: 18px; }
-  .files li { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 12.5px; color: #bcd; line-height: 1.55; }
+  .file-browser { display: flex; gap: 12px; max-height: 420px; flex-wrap: wrap; }
+  .file-list { flex: 1 1 240px; max-width: 320px; overflow: auto; max-height: 420px; background: #0b1220; border: 1px solid #223148; border-radius: 10px; padding: 8px; }
+  .file-list ul { list-style: none; margin: 0; padding: 0; }
+  .file-list li { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 12.5px; color: #bcd; line-height: 1.7; padding: 3px 8px; border-radius: 6px; cursor: pointer; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .file-list li:hover { background: rgba(110,231,255,0.1); }
+  .file-list li.active { background: rgba(110,231,255,0.18); color: #e6edf3; }
+  .file-list li .hybrid-badge { margin-right: 4px; }
+  .file-viewer { flex: 2 1 320px; min-width: 0; overflow: auto; max-height: 420px; background: #0b1220; border: 1px solid #223148; border-radius: 10px; padding: 10px 14px; }
+  .file-viewer-path { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 12.5px; color: #9fb0c3; margin: 0 0 8px; word-break: break-all; }
+  .file-viewer pre { margin: 0; white-space: pre-wrap; word-break: break-word; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 12.5px; color: #d5e3f0; }
+  .file-viewer-empty { color: #62748c; font-size: 13px; }
+  .file-viewer-note { color: #f0b429; font-size: 12px; margin: 0 0 8px; }
+  .hybrid-toggle { display: flex; align-items: center; gap: 8px; margin-top: 12px; font-size: 13px; color: #9fb0c3; }
+  .hybrid-toggle input { width: 16px; height: 16px; accent-color: #22d3ee; }
+  .hybrid-summary { font-size: 13px; color: #9fb0c3; margin: 8px 0 0; }
+  .hybrid-summary.active { color: #6ee7ff; }
   [hidden] { display: none !important; }
   footer { text-align: center; color: #62748c; font-size: 12px; margin-top: 30px; }
 </style>
@@ -1282,6 +1295,10 @@ STUDIO_HTML = """<!doctype html>
       </div>
       <div id="dest-hint" class="dest-hint">Destination: <code id="dest-preview-path">scratch/apps/&lt;app-slug&gt;</code></div>
     </div>
+    <label class="hybrid-toggle">
+      <input type="checkbox" id="hybrid-ui-toggle">
+      Hybrid UI (experimental) - let a model write the screens over the generated data layer
+    </label>
     <div class="row">
       <div class="examples" id="examples">
         <span class="ex">A blog with posts and comments</span>
@@ -1503,7 +1520,16 @@ STUDIO_HTML = """<!doctype html>
         hidden
       ></iframe>
     </div>
-    <div class="files"><ul id="r-files"></ul></div>
+    <p id="hybrid-summary" class="hybrid-summary" hidden></p>
+    <div class="file-browser">
+      <div class="file-list"><ul id="r-files"></ul></div>
+      <div class="file-viewer">
+        <p id="file-viewer-path" class="file-viewer-path" hidden></p>
+        <p id="file-viewer-note" class="file-viewer-note" hidden></p>
+        <p id="file-viewer-empty" class="file-viewer-empty">Click a file to view it.</p>
+        <pre id="file-viewer-pre" hidden><code id="file-viewer-code"></code></pre>
+      </div>
+    </div>
   </section>
 
   <section id="history" class="history">
@@ -1521,6 +1547,9 @@ STUDIO_HTML = """<!doctype html>
   var btn = document.getElementById('build-btn');
   var statusEl = document.getElementById('status');
   var result = document.getElementById('result');
+  var hybridToggle = document.getElementById('hybrid-ui-toggle');
+  var currentBuildId = null;
+  var currentUiOutcomes = {};
 
   var tabSingle = document.getElementById('tab-single');
   var tabEco = document.getElementById('tab-ecosystem');
@@ -3167,14 +3196,92 @@ STUDIO_HTML = """<!doctype html>
     document.getElementById('r-path').textContent = data.target_dir || '';
     document.getElementById('r-commit').textContent = (data.commit_sha || '').slice(0, 12);
     renderPreview(data.preview || null);
+
+    currentBuildId = data.id || null;
+    currentUiOutcomes = {};
+    (data.ui_outcomes || []).forEach(function (o) { currentUiOutcomes[o.path] = o; });
+    renderHybridSummary(data);
+
     var list = document.getElementById('r-files');
     list.innerHTML = '';
+    resetFileViewer();
     (data.files || []).forEach(function (f) {
       var li = document.createElement('li');
-      li.textContent = f;
+      li.dataset.path = f;
+      var outcome = currentUiOutcomes[f];
+      if (outcome && outcome.mode === 'llm') {
+        var badge = document.createElement('span');
+        badge.className = 'hybrid-badge';
+        badge.title = 'Written by the model (' + (outcome.model_id || 'model') + ')';
+        badge.textContent = '🤖';
+        li.appendChild(badge);
+      }
+      li.appendChild(document.createTextNode(f));
+      li.addEventListener('click', function () { selectFile(f, li); });
       list.appendChild(li);
     });
     result.hidden = false;
+  }
+
+  function renderHybridSummary(data) {
+    var el = document.getElementById('hybrid-summary');
+    if (!data.hybrid_ui_requested) { el.hidden = true; return; }
+    el.hidden = false;
+    if (!data.hybrid_ui_active) {
+      el.className = 'hybrid-summary';
+      el.textContent = 'Hybrid UI: requested but no model was available for this build.';
+      return;
+    }
+    var outcomes = data.ui_outcomes || [];
+    var llmCount = outcomes.filter(function (o) { return o.mode === 'llm'; }).length;
+    el.className = 'hybrid-summary active';
+    el.textContent = '🤖 Hybrid UI: ' + llmCount + '/' + outcomes.length + ' page(s) written by the model.';
+  }
+
+  function resetFileViewer() {
+    document.getElementById('file-viewer-path').hidden = true;
+    document.getElementById('file-viewer-note').hidden = true;
+    document.getElementById('file-viewer-pre').hidden = true;
+    document.getElementById('file-viewer-empty').hidden = false;
+  }
+
+  function selectFile(path, li) {
+    var list = document.getElementById('r-files');
+    Array.prototype.forEach.call(list.querySelectorAll('li.active'), function (el) { el.classList.remove('active'); });
+    li.classList.add('active');
+    if (!currentBuildId) { return; }
+    var pathEl = document.getElementById('file-viewer-path');
+    var noteEl = document.getElementById('file-viewer-note');
+    var emptyEl = document.getElementById('file-viewer-empty');
+    var preEl = document.getElementById('file-viewer-pre');
+    var codeEl = document.getElementById('file-viewer-code');
+    pathEl.textContent = path;
+    pathEl.hidden = false;
+    emptyEl.hidden = true;
+    noteEl.hidden = true;
+    preEl.hidden = true;
+    fetch('/api/build/' + encodeURIComponent(currentBuildId) + '/file?path=' + encodeURIComponent(path))
+      .then(function (res) {
+        return res.json().then(function (data) { return { ok: res.ok, data: data }; });
+      })
+      .then(function (out) {
+        if (!out.ok) { throw new Error((out.data && out.data.error) || 'Could not load this file.'); }
+        if (out.data.binary) {
+          noteEl.textContent = 'Binary file - not shown.';
+          noteEl.hidden = false;
+          return;
+        }
+        if (out.data.truncated) {
+          noteEl.textContent = 'File is large and was truncated.';
+          noteEl.hidden = false;
+        }
+        codeEl.textContent = out.data.content || '';
+        preEl.hidden = false;
+      })
+      .catch(function (err) {
+        noteEl.textContent = err.message;
+        noteEl.hidden = false;
+      });
   }
 
   form.addEventListener('submit', function (e) {
@@ -3187,6 +3294,7 @@ STUDIO_HTML = """<!doctype html>
     statusEl.className = 'status building';
 
     var payload = { prompt: prompt };
+    if (hybridToggle && hybridToggle.checked) { payload.hybrid_ui = true; }
 
     if (activeMode === 'ecosystem') {
       var eco = getSelectedOrRecommendedEco();

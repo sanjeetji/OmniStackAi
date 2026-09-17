@@ -4,6 +4,14 @@ Brick 3 of the front door. Dependency-free (stdlib ``http.server``); the build f
 injected so the HTTP layer is testable offline.
 """
 
+from .files import (
+    BuildNotFoundError,
+    FileNotFoundInBuildError,
+    PathOutsideBuildError,
+    StudioFilesError,
+    list_build_files,
+    read_build_file,
+)
 from .history import StudioBuildHistory
 from .page import STUDIO_HTML
 from .preview import StudioPreviewManager
@@ -12,7 +20,13 @@ from .server import BuildFn, create_studio_server
 __all__ = [
     "STUDIO_HTML",
     "BuildFn",
+    "BuildNotFoundError",
+    "FileNotFoundInBuildError",
+    "PathOutsideBuildError",
     "StudioBuildHistory",
+    "StudioFilesError",
     "StudioPreviewManager",
     "create_studio_server",
+    "list_build_files",
+    "read_build_file",
 ]

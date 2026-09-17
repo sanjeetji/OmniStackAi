@@ -41,7 +41,7 @@ START PROTOCOL
   `task ai:status`, `task ai:handoff`. `task verify` must stay green and network-independent.
 - Confirm git branch/HEAD/clean tree. Then restate: phase, next Tracker ID, objective, blast radius.
 
-WHAT IS ALREADY BUILT (platform generators are Python 3.13 stdlib-only, offline, in services/agent-engine; 3,490 tests pass)
+WHAT IS ALREADY BUILT (platform generators are Python 3.13 stdlib-only, offline, in services/agent-engine; 3,529 tests pass)
 - Model fabric: ModelProvider contract + registry; local Ollama adapter (runs any installed model via
 
 
@@ -208,7 +208,7 @@ front-door bricks, R-420 is generated-SQL hardening, R-421..R-426 are Studio pre
 R-427..R-429 are generated-app compile fixes, R-430..R-457 are the first twenty-eight differentiating-spine
 bricks (Scope Compiler through Ecosystem Multi-Surface SLA, SLO, and Error Budget Contracts).
 Git, state files (.ai/), CHANGELOG, and docs/PROGRESS.md remain the executable/detail sources of truth.
-Current through R-466; `task verify` = 3,490 tests. R-416 added prompt-to-IR intake, R-417 materialized a generated
+Current through R-467; `task verify` = 3,529 tests. R-416 added prompt-to-IR intake, R-417 materialized a generated
 owned repo, R-418 added the local chat studio, R-419 added turnkey local run, and R-420 fixed the two
 SQL defects found by live execution. R-421 added an explicit `task agent-engine:studio:preview` mode:
 one managed generated-app session, API/web readiness, replacement/shutdown cleanup, port-collision
@@ -451,12 +451,24 @@ WHAT TO DO NEXT
   3-step CLI ran end-to-end with the fallback repo compiling at 0 errors; pacing verified live (`Retry-After: 112`
   honoured, above the 60s cap); the limiter was tokens per DAY — the daily budget was spent, so a full live proof of
   a model-written page that compiles is still pending (see docs/HYBRID_UI.md).
-- NEXT R-467: the product-UI shell v1 in the Studio — multi-turn chat (a follow-up re-synthesizes the targeted
-  screen), a real file tree from `files` via new `GET /api/build/{id}/files` + `GET /api/build/{id}/file?path=`, a
-  read-only code viewer, a "hybrid UI" toggle that sets `synthesize_screens=True`, and `ui_outcomes` +
-  `CompileRepairReport` surfaced in the build payload (JSON-safe by design). Founder action to unlock the full live
-  proof: after the Groq daily reset run `task agent-engine:ui:synthesize` with OMNISTACKAI_MAX_RETRY_AFTER_SECONDS=180,
-  or add GOOGLE_API_KEY (Gemini) to the gitignored .env.
+- R-467 (2026-09-17) brought the hybrid engine into the actual Studio a user opens in a browser: a read-only
+  file browser (new `studio/files.py`, `edit/apply.py`-style path safety; `GET /api/build/{id}/files` +
+  `GET /api/build/{id}/file?path=...`, wired in build-only mode too) and a `hybrid_ui` toggle on `/api/build`
+  that threads `synthesize_screens`/`ui_outcomes` into the plain-prompt and Ecosystem Pack build paths (the
+  Solution Pack path has no such parameter on `build_solution_pack_project` and says so honestly via
+  `hybrid_ui_active: false`). `page.py` gained a clickable file list + viewer pane and a "Hybrid UI
+  (experimental)" checkbox, still zero external assets. Found and fixed while implementing: a missing
+  `ApplicationIR` import (latent `NameError`) in `live_serve.py`'s ecosystem branch, and — more importantly —
+  a LIVE, ACTIVE violation of the "0 model/network calls under `task verify`" constraint: with real Groq
+  credentials now in the gitignored `.env`, four pre-existing Studio test call sites that never mocked
+  `resolve_generation_provider_from_env` were making real network calls (confirmed by timing: one unmocked
+  test cost 23.5s of real Groq traffic). All four now mock it explicitly.
+- NEXT R-468: multi-turn chat / "continue editing this app" — the Studio has no session/conversation concept
+  at all today (confirmed by direct reading), so this needs real design, likely built on `edit/diff.py`'s
+  `plan_edit`/`ProjectDiff` + `apply_diff` for in-place follow-up turns rather than a fresh repo every time.
+  Then wire R-466's `compile_and_repair` into `studio:preview` (needs the toolchain; opt-in). Founder action
+  to unlock a full live proof of a model-written page that compiles: after the Groq daily reset run with
+  OMNISTACKAI_MAX_RETRY_AFTER_SECONDS=180, or add GOOGLE_API_KEY (Gemini) to the gitignored .env.
   Keep `task verify` model/Docker/DB/install/network-free (any live/model path stays opt-in); preserve
   single-session ownership and explicit trusted-local mode.
 - PROVEN THIS SESSION: a generated app runs live locally on the Mac (Next.js :3000 + FastAPI :8000 +
@@ -466,7 +478,7 @@ WHAT TO DO NEXT
   deploy (OMNISTACKAI_TIER=2 + E2B/Vercel keys) and cloud-model live-verify. Governance-deferred: native
   mobile (R-010 etc.) until web/backend stability.
 
-Begin by reading the files above and running the start protocol, then continue at R-467 (the product-UI shell
-v1 driving the hybrid engine) and write its Standard AI Task Contract before writing code.
+Begin by reading the files above and running the start protocol, then continue at R-468 (multi-turn chat /
+"continue editing this app" in the Studio) and write its Standard AI Task Contract before writing code.
 ```
 

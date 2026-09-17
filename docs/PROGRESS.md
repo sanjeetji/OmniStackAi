@@ -1,4 +1,4 @@
-# OmniStackAI — implementation progress (as of R-466)
+# OmniStackAI — implementation progress (as of R-467)
 
 A living summary of what is built, what is pending, and how to see results. Numbers come from the
 execution tracker (`R_&_D/OmniStackAI_Execution_Tracker_v6.xlsx`, `Phase_Roadmap`, 461 tasks as of
@@ -6,7 +6,19 @@ R-461 completion) plus the state files (`.ai/`), Git history, and CHANGELOG.
 
 ## Headline
 
-- **3,490 automated tests pass**, fully offline and network-independent (`task verify`).
+- **3,529 automated tests pass**, fully offline and network-independent (`task verify`).
+- **R-467 — the hybrid engine reaches the product UI (2026-09-17):** the Studio a user actually opens in a
+  browser (`task agent-engine:studio:serve`/`:preview`) gets a read-only file browser
+  (`GET /api/build/{id}/files` / `.../file?path=...`, a new pure `studio/files.py` with `edit/apply.py`-style
+  path safety; the flat file list is now clickable, opening a viewer pane) and a "Hybrid UI (experimental)"
+  toggle on `/api/build` that threads R-465's `synthesize_screens`/`ui_outcomes` into the plain-prompt and
+  Ecosystem Pack build paths (Solution Pack builds report `hybrid_ui_active: false` honestly — no such
+  parameter exists there). While implementing, found and fixed a live, active violation of the "0
+  model/network calls under `task verify`" constraint: with real Groq credentials now in the gitignored
+  `.env` (from the R-465/R-466 live proofs), four pre-existing Studio test call sites that never mocked
+  `resolve_generation_provider_from_env` were making real network calls during `task verify` (confirmed by
+  timing — one unmocked test took 23.5s of real, R-466-paced Groq traffic before giving up). All four now
+  mock it explicitly.
 - **R-466 — the hybrid engine compiles what the model wrote and paces rate limits (2026-09-17):** a
   capturing `tsc` executor turns compiler diagnostics into per-file errors; each LLM-written file's errors go
   back to the model through the same corrective channel, still-failing files revert to their templates, the
@@ -532,13 +544,15 @@ the live run needs the key + a network machine.
 
 ## What's next
 
-**Hybrid engine (founder-approved direction; R-465 grounding and R-466 compile repair + pacing done):** the
-next brick is **R-467 — the product-UI shell v1** in the Studio: multi-turn chat (a follow-up re-synthesizes the
-targeted screen), a real file tree from `files` via new `GET /api/build/{id}/files` + `GET /api/build/{id}/file?path=`,
-a read-only code viewer, a "hybrid UI" toggle that sets `synthesize_screens=True`, and the `ui_outcomes` +
-`CompileRepairReport` surfaced in the build payload (both JSON-safe by design). Founder action to unlock a full
-live proof of a model-written page that compiles: after the Groq daily reset run the CLI with
-`OMNISTACKAI_MAX_RETRY_AFTER_SECONDS=180`, or add `GOOGLE_API_KEY` (Gemini) to the gitignored `.env`.
+**Hybrid engine (founder-approved direction; R-465 grounding, R-466 compile repair + pacing, R-467 file
+browser + hybrid-UI toggle all done):** the next brick is **R-468 — multi-turn chat / "continue editing this
+app"**: the Studio has no conversation/session concept at all today (confirmed by direct reading — every
+`/api/build` call is a fresh, stateless one-shot prompt), so this needs real design — likely a fresh
+session/thread id plus either a new build or an `edit/diff.py`-based (`plan_edit`/`ProjectDiff`/`apply_diff`)
+in-place patch for a follow-up turn. Then wiring R-466's `compile_and_repair` (needs the `pnpm`/`tsc`
+toolchain) into `studio:preview`. Founder action to unlock a full live proof of a model-written page that
+compiles: after the Groq daily reset run with `OMNISTACKAI_MAX_RETRY_AFTER_SECONDS=180`, or add
+`GOOGLE_API_KEY` (Gemini) to the gitignored `.env`.
 
 The local front door is built through robust browser preview with memory: R-416 prompt → IR, R-417 IR →
 owned repo, R-418 local chat studio, R-419 turnkey local run, R-420 SQL hardening, R-421 managed embedded

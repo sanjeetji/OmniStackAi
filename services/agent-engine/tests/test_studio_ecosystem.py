@@ -15,10 +15,32 @@ import unittest
 import urllib.error
 import urllib.request
 from contextlib import contextmanager
+from pathlib import Path
+from unittest.mock import patch
 
 from omnistackai_agent_engine.studio import STUDIO_HTML, create_studio_server
 from omnistackai_agent_engine.studio.history import StudioBuildHistory
 from omnistackai_agent_engine.studio.live_serve import _build
+
+_VALID_PAGE = '''"use client";
+import { useListPosts } from "@/lib/hooks";
+
+export default function Page() {
+  const { items, loading } = useListPosts();
+  return <main>{loading ? "..." : items.length}</main>;
+}
+'''
+
+
+class _StubProvider:
+    """Always-succeeding in-memory ModelProvider (R-467: proves hybrid_ui threading with 0 real calls)."""
+
+    provider_id = "stub"
+
+    async def generate(self, request):  # noqa: ANN001
+        from types import SimpleNamespace
+
+        return SimpleNamespace(text=_VALID_PAGE)
 
 
 @contextmanager
@@ -137,13 +159,20 @@ class TestStudioEcosystem(unittest.TestCase):
             old_out = os.environ.get("OMNISTACKAI_APP_OUT_DIR")
             os.environ["OMNISTACKAI_APP_OUT_DIR"] = tmpdir
             try:
-                payload = _build(
-                    "Publish blog articles",
-                    ecosystem_id="minimal-blog-ecosystem",
-                    ecosystem_version="1.0.0",
-                    surface_slug="author-studio",
-                    history=history,
-                )
+                # R-467: resolve_generation_provider_from_env is real and env-sensitive (it loads .env
+                # and can resolve a live cloud provider); mock it so this suite's "0 model calls, 0
+                # network calls" claim holds by construction, not by accident of the local environment.
+                with patch(
+                    "omnistackai_agent_engine.studio.live_serve.resolve_generation_provider_from_env",
+                    return_value=(None, "stub-model", 4096, 5.0),
+                ):
+                    payload = _build(
+                        "Publish blog articles",
+                        ecosystem_id="minimal-blog-ecosystem",
+                        ecosystem_version="1.0.0",
+                        surface_slug="author-studio",
+                        history=history,
+                    )
             finally:
                 if old_out is None:
                     os.environ.pop("OMNISTACKAI_APP_OUT_DIR", None)
@@ -172,13 +201,17 @@ class TestStudioEcosystem(unittest.TestCase):
             old_out = os.environ.get("OMNISTACKAI_APP_OUT_DIR")
             os.environ["OMNISTACKAI_APP_OUT_DIR"] = tmpdir
             try:
-                payload = _build(
-                    "Launch minimal blog platform",
-                    ecosystem_id="minimal-blog-ecosystem",
-                    ecosystem_version="1.0.0",
-                    surface_slug="all",
-                    history=history,
-                )
+                with patch(
+                    "omnistackai_agent_engine.studio.live_serve.resolve_generation_provider_from_env",
+                    return_value=(None, "stub-model", 4096, 5.0),
+                ):
+                    payload = _build(
+                        "Launch minimal blog platform",
+                        ecosystem_id="minimal-blog-ecosystem",
+                        ecosystem_version="1.0.0",
+                        surface_slug="all",
+                        history=history,
+                    )
             finally:
                 if old_out is None:
                     os.environ.pop("OMNISTACKAI_APP_OUT_DIR", None)
@@ -198,6 +231,89 @@ class TestStudioEcosystem(unittest.TestCase):
             self.assertEqual(entry["ecosystem_id"], "minimal-blog-ecosystem")
             self.assertTrue(entry.get("is_ecosystem"))
             self.assertEqual(entry["surface_count"], 3)
+
+    def test_hybrid_ui_threads_synthesize_screens_through_ecosystem_build(self) -> None:
+        history = StudioBuildHistory()
+        with tempfile.TemporaryDirectory() as tmpdir:
+            import os
+            old_out = os.environ.get("OMNISTACKAI_APP_OUT_DIR")
+            os.environ["OMNISTACKAI_APP_OUT_DIR"] = tmpdir
+            try:
+                with patch(
+                    "omnistackai_agent_engine.studio.live_serve.resolve_generation_provider_from_env",
+                    return_value=(_StubProvider(), "stub-model", 4096, 5.0),
+                ):
+                    payload = _build(
+                        "Publish blog articles",
+                        ecosystem_id="minimal-blog-ecosystem",
+                        ecosystem_version="1.0.0",
+                        surface_slug="author-studio",
+                        hybrid_ui=True,
+                        history=history,
+                    )
+            finally:
+                if old_out is None:
+                    os.environ.pop("OMNISTACKAI_APP_OUT_DIR", None)
+                else:
+                    os.environ["OMNISTACKAI_APP_OUT_DIR"] = old_out
+
+            self.assertTrue(payload["hybrid_ui_requested"])
+            self.assertTrue(payload["hybrid_ui_active"])
+            outcomes = payload["ui_outcomes"]
+            self.assertTrue(outcomes)
+            page_outcome = next(o for o in outcomes if o["path"] == "app/page.tsx")
+            self.assertEqual(page_outcome["mode"], "llm")
+            page_file = Path(payload["target_dir"]) / "apps" / "web" / "app" / "page.tsx"
+            self.assertIn("LLM-Synthesized", page_file.read_text(encoding="utf-8"))
+            # It round-trips into history too.
+            entry = history.list()["builds"][0]
+            self.assertTrue(entry["hybrid_ui_active"])
+            self.assertTrue(entry["ui_outcomes"])
+
+    def test_hybrid_ui_without_a_provider_is_reported_as_inactive(self) -> None:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            import os
+            old_out = os.environ.get("OMNISTACKAI_APP_OUT_DIR")
+            os.environ["OMNISTACKAI_APP_OUT_DIR"] = tmpdir
+            try:
+                with patch(
+                    "omnistackai_agent_engine.studio.live_serve.resolve_generation_provider_from_env",
+                    return_value=(None, "stub-model", 4096, 5.0),
+                ):
+                    payload = _build(
+                        "Publish blog articles",
+                        ecosystem_id="minimal-blog-ecosystem",
+                        ecosystem_version="1.0.0",
+                        surface_slug="author-studio",
+                        hybrid_ui=True,
+                    )
+            finally:
+                if old_out is None:
+                    os.environ.pop("OMNISTACKAI_APP_OUT_DIR", None)
+                else:
+                    os.environ["OMNISTACKAI_APP_OUT_DIR"] = old_out
+
+            self.assertTrue(payload["hybrid_ui_requested"])
+            self.assertFalse(payload["hybrid_ui_active"])
+            self.assertNotIn("ui_outcomes", payload)
+
+    def test_solution_pack_build_reports_hybrid_ui_inactive_honestly(self) -> None:
+        from omnistackai_agent_engine.studio.live_serve import _target_dir_for  # noqa: F401 (documents intent)
+
+        with tempfile.TemporaryDirectory() as tmp:
+            with patch(
+                "omnistackai_agent_engine.studio.live_serve._target_dir_for",
+                return_value=str(Path(tmp) / "blog_app"),
+            ), patch(
+                "omnistackai_agent_engine.studio.live_serve.resolve_generation_provider_from_env",
+                return_value=(_StubProvider(), "stub-model", 4096, 5.0),
+            ):
+                payload = _build("A tech blog", pack_id="minimal-blog", hybrid_ui=True)
+            # build_solution_pack_project has no synthesize_screens/ui_outcomes parameter -- the request
+            # is reported back honestly as inactive, never silently ignored or guessed at.
+            self.assertTrue(payload["hybrid_ui_requested"])
+            self.assertFalse(payload["hybrid_ui_active"])
+            self.assertNotIn("ui_outcomes", payload)
 
     def test_studio_html_has_ecosystem_ui_and_zero_external_assets(self) -> None:
         html = STUDIO_HTML

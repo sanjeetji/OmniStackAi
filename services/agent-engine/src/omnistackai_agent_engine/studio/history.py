@@ -14,6 +14,7 @@ from typing import Callable
 _DEFAULT_LIMIT = 10
 _MAX_PROMPT_CHARS = 400
 _MAX_ENTITIES = 24
+_MAX_UI_OUTCOMES = 200  # R-467: one entry per synthesized page/screen; generously bounded
 
 
 class StudioBuildHistory:
@@ -58,6 +59,13 @@ class StudioBuildHistory:
                 entry["is_ecosystem"] = bool(build["is_ecosystem"])
             if build.get("surface_count"):
                 entry["surface_count"] = int(build["surface_count"])
+            if "hybrid_ui_requested" in build:
+                entry["hybrid_ui_requested"] = bool(build["hybrid_ui_requested"])
+                entry["hybrid_ui_active"] = bool(build.get("hybrid_ui_active", False))
+            if build.get("ui_outcomes") and isinstance(build["ui_outcomes"], list):
+                entry["ui_outcomes"] = [
+                    dict(outcome) for outcome in build["ui_outcomes"][:_MAX_UI_OUTCOMES] if isinstance(outcome, dict)
+                ]
             if build.get("surfaces") and isinstance(build["surfaces"], list):
                 entry["surfaces"] = [
                     {

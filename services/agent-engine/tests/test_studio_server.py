@@ -319,6 +319,127 @@ class TestStudioHistoryRoutes(unittest.TestCase):
             self.assertIn(token, STUDIO_HTML)
 
 
+class TestStudioFileRoutes(unittest.TestCase):
+    """R-467: GET /api/build/{id}/files and GET /api/build/{id}/file?path=..."""
+
+    def test_get_file_tree(self) -> None:
+        seen = []
+
+        def file_tree(build_id):
+            seen.append(build_id)
+            return {"files": ["app/page.tsx", "lib/hooks.ts"], "truncated": False}
+
+        with running_server(RecordingBuild(STUB_RESULT), file_tree_fn=file_tree) as base:
+            status, data = _get(base + "/api/build/7/files")
+            self.assertEqual(status, 200)
+            payload = json.loads(data)
+            self.assertEqual(payload["files"], ["app/page.tsx", "lib/hooks.ts"])
+            self.assertFalse(payload["truncated"])
+            self.assertEqual(seen, ["7"])
+
+    def test_file_tree_404_when_disabled(self) -> None:
+        with running_server(RecordingBuild(STUB_RESULT)) as base:
+            self.assertEqual(_get(base + "/api/build/7/files")[0], 404)
+
+    def test_file_tree_maps_build_not_found_to_404(self) -> None:
+        from omnistackai_agent_engine.studio.files import BuildNotFoundError
+
+        def file_tree(build_id):
+            raise BuildNotFoundError(f"build '{build_id}' is not available in this session")
+
+        with running_server(RecordingBuild(STUB_RESULT), file_tree_fn=file_tree) as base:
+            status, data = _get(base + "/api/build/missing/files")
+            self.assertEqual(status, 404)
+            self.assertIn("missing", data.decode())
+
+    def test_file_tree_maps_other_exception_to_502(self) -> None:
+        def file_tree(build_id):
+            raise RuntimeError("disk is unavailable")
+
+        with running_server(RecordingBuild(STUB_RESULT), file_tree_fn=file_tree) as base:
+            status, data = _get(base + "/api/build/1/files")
+            self.assertEqual(status, 502)
+            self.assertIn("disk is unavailable", json.loads(data)["error"])
+
+    def test_build_id_with_a_slash_is_not_matched(self) -> None:
+        with running_server(RecordingBuild(STUB_RESULT), file_tree_fn=lambda build_id: {"files": []}) as base:
+            status, _ = _get(base + "/api/build/1/2/files")
+            self.assertEqual(status, 404)
+
+    def test_get_file_content(self) -> None:
+        seen = []
+
+        def read_file(build_id, path):
+            seen.append((build_id, path))
+            return {"path": path, "content": "export default function Page() {}", "truncated": False, "binary": False, "size": 34}
+
+        with running_server(RecordingBuild(STUB_RESULT), read_file_fn=read_file) as base:
+            status, data = _get(base + "/api/build/7/file?path=app%2Fpage.tsx")
+            self.assertEqual(status, 200)
+            payload = json.loads(data)
+            self.assertEqual(payload["path"], "app/page.tsx")
+            self.assertIn("export default function Page", payload["content"])
+            self.assertEqual(seen, [("7", "app/page.tsx")])
+
+    def test_file_content_404_when_disabled(self) -> None:
+        with running_server(RecordingBuild(STUB_RESULT)) as base:
+            self.assertEqual(_get(base + "/api/build/7/file?path=a.txt")[0], 404)
+
+    def test_file_content_missing_path_is_400(self) -> None:
+        with running_server(RecordingBuild(STUB_RESULT), read_file_fn=lambda bid, path: {}) as base:
+            status, data = _get(base + "/api/build/7/file")
+            self.assertEqual(status, 400)
+            self.assertIn("path", json.loads(data)["error"])
+
+    def test_file_content_maps_each_typed_error(self) -> None:
+        from omnistackai_agent_engine.studio.files import (
+            BuildNotFoundError,
+            FileNotFoundInBuildError,
+            PathOutsideBuildError,
+        )
+
+        cases = [
+            (BuildNotFoundError("no such build"), 404),
+            (PathOutsideBuildError("escapes the build directory"), 400),
+            (FileNotFoundInBuildError("no such file"), 404),
+            (RuntimeError("boom"), 502),
+        ]
+        for error, expected_status in cases:
+            def read_file(build_id, path, _error=error):
+                raise _error
+
+            with running_server(RecordingBuild(STUB_RESULT), read_file_fn=read_file) as base:
+                status, _ = _get(base + "/api/build/7/file?path=a.txt")
+                self.assertEqual(status, expected_status, type(error).__name__)
+
+    def test_page_has_file_browser_and_hybrid_ui_controls(self) -> None:
+        for token in (
+            'id="r-files"',
+            'id="file-viewer-code"',
+            'id="file-viewer-path"',
+            'id="hybrid-ui-toggle"',
+            'id="hybrid-summary"',
+            "/api/build/",
+            "hybrid_ui",
+        ):
+            self.assertIn(token, STUDIO_HTML)
+        # Still zero external assets after this addition.
+        for bad in ("http://", "https://", "src=", "<link"):
+            self.assertNotIn(bad, STUDIO_HTML)
+
+    def test_file_routes_available_without_any_preview_wiring(self) -> None:
+        # File browsing needs no toolchain or running preview -- available in build-only mode.
+        with running_server(
+            RecordingBuild(STUB_RESULT),
+            file_tree_fn=lambda build_id: {"files": [], "truncated": False},
+            read_file_fn=lambda build_id, path: {"path": path, "content": "", "truncated": False, "binary": False, "size": 0},
+        ) as base:
+            self.assertEqual(_get(base + "/api/build/1/files")[0], 200)
+            self.assertEqual(_get(base + "/api/build/1/file?path=a.txt")[0], 200)
+            # Preview/history controls remain unwired and 404, confirming independence.
+            self.assertEqual(_get(base + "/api/preview")[0], 404)
+
+
 class TestResultDict(unittest.TestCase):
     def test_app_build_result_to_dict_shape(self) -> None:
         ir = example_ir("minimal-blog")
@@ -399,6 +520,29 @@ class TestStudioSolutionPacks(unittest.TestCase):
             self.assertEqual(data["pack_id"], "minimal-blog")
             self.assertEqual(data["applied_configuration_change_ids"], ["config-name"])
 
+    def test_post_build_forwards_hybrid_ui(self) -> None:
+        captured = {}
+
+        def build(prompt: str, **options) -> dict:
+            captured["options"] = options
+            return STUB_RESULT
+
+        with running_server(build) as base:
+            status, _ = _post(base + "/api/build", obj={"prompt": "A blog", "hybrid_ui": True})
+            self.assertEqual(status, 200)
+            self.assertIs(captured["options"]["hybrid_ui"], True)
+
+    def test_post_build_omits_hybrid_ui_when_not_sent(self) -> None:
+        captured = {}
+
+        def build(prompt: str, **options) -> dict:
+            captured["options"] = options
+            return STUB_RESULT
+
+        with running_server(build) as base:
+            _post(base + "/api/build", obj={"prompt": "A blog"})
+            self.assertNotIn("hybrid_ui", captured["options"])
+
     def test_page_has_solution_pack_ui_controls(self) -> None:
         for token in (
             'id="pack-select"',
@@ -424,6 +568,11 @@ class TestStudioSolutionPacks(unittest.TestCase):
             with patch(
                 "omnistackai_agent_engine.studio.live_serve._target_dir_for",
                 return_value=str(Path(tmp) / "blog_app"),
+            ), patch(
+                # R-467: resolve_generation_provider_from_env is real and env-sensitive; mock it so
+                # this test's "0 model calls, 0 network calls" holds by construction.
+                "omnistackai_agent_engine.studio.live_serve.resolve_generation_provider_from_env",
+                return_value=(None, "stub-model", 4096, 5.0),
             ):
                 payload = _build(
                     "A tech blog",
@@ -526,6 +675,11 @@ class TestStudioSolutionPacks(unittest.TestCase):
             ), patch(
                 "omnistackai_agent_engine.solution_packs.ai_delta.generate_ai_delta_proposal",
                 return_value=mock_proposal,
+            ), patch(
+                # R-467: same as above -- this test forces the has_ai_deltas branch, which also
+                # resolves a real provider unless mocked.
+                "omnistackai_agent_engine.studio.live_serve.resolve_generation_provider_from_env",
+                return_value=(None, "stub-model", 4096, 5.0),
             ):
                 payload = _build(
                     "A tech blog",

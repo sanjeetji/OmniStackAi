@@ -167,10 +167,33 @@ day's proofs had spent the free tier's daily budget, so a further full live proo
 or a Gemini key. The shrink-on-413 behaviour above is built from Groq's documented limit semantics and the
 measured request sizes, and is covered by stub tests — not yet by a live run.
 
+## The Studio: a file browser and a hybrid-UI toggle (R-467)
+
+The engine (R-465/R-466) is opt-in-CLI-only; **R-467** is the first slice of it reaching the actual product
+UI — the Studio a user opens in a browser (`task agent-engine:studio:serve` /
+`task agent-engine:studio:preview`, `studio/server.py` + `live_serve.py` + `page.py`):
+
+- **File browser.** Every recorded build gets `GET /api/build/{id}/files` (a sorted, flat, secret-free file
+  list — `.git`, `node_modules`, `__pycache__`, `.next`, `.venv`, and any real `.env*` file are excluded;
+  `.env.example` is kept) and `GET /api/build/{id}/file?path=...` (one file's content, path-safety-checked
+  the same way `edit/apply.py` checks a write target — a `../` or symlink escape is refused). Both are pure,
+  bounded filesystem reads (`studio/files.py`) — no toolchain, no running preview required, wired in
+  build-only mode too. The page's file list is now clickable and opens the selected file in a read-only
+  viewer pane.
+- **Hybrid UI toggle.** `/api/build` accepts `hybrid_ui: bool`. When true, it threads
+  `synthesize_screens=True` + a `ui_outcomes` sink into the **plain-prompt** and **Ecosystem Pack** paths
+  (the two that already accept those kwargs); `ui_outcomes` comes back in the response, gets recorded in
+  `StudioBuildHistory`, and the page shows a one-line summary plus a 🤖 badge on model-written files. The
+  **Solution Pack** path has no such parameter on `build_solution_pack_project` — a request there is
+  reported honestly as `hybrid_ui_active: false`, never silently ignored.
+- Compile-level repair (R-466's `compile_and_repair`, which needs the `pnpm`/`tsc` toolchain) is **not**
+  wired into the live server yet — that and multi-turn "continue editing this app" chat are follow-ups
+  (see `.ai/tasks/R-467.md`'s Follow-ups).
+
 ## Limits and what comes next
 
 - Brace/paren counting is a heuristic; the compiler (R-466) is the authority, and a file the compiler rejects
   twice goes back to its template rather than shipping broken.
-- Compile repair currently runs in the opt-in CLI; the product UI shell (chat, live preview, file tree) that
-  drives the engine and surfaces the outcome/compile reports is **R-467**.
+- The engine reaches the Studio's file browser and a build-time toggle (R-467); the rest of the product-UI
+  shell — multi-turn chat / in-place edits, and wiring compile-repair into the live server — is **R-468+**.
 - The backend, DB, auth and data layer stay deterministic by design — that is the point.

@@ -84,8 +84,14 @@ def build_app_from_ir(
     )
 
 
-def app_build_result_to_dict(result: AppBuildResult, *, max_files: int = 500) -> dict:
-    """A JSON-safe view of an AppBuildResult for the studio/API (no secrets)."""
+def app_build_result_to_dict(result: AppBuildResult, *, max_files: int = 500, ui_outcomes: list | None = None) -> dict:
+    """A JSON-safe view of an AppBuildResult for the studio/API (no secrets).
+
+    ``ui_outcomes`` (R-467) is a list of R-465 ``UiSynthesisOutcome`` records from a hybrid
+    (``synthesize_screens=True``) build; when given and non-empty, an ``"ui_outcomes"`` key is added
+    (each entry via its own ``.to_dict()`` -- already JSON-safe and secret-free). Omitted entirely when
+    ``None`` or empty, so every existing caller's output is unchanged.
+    """
     root = Path(result.target_dir)
     files: list[str] = []
     if root.is_dir():
@@ -98,7 +104,7 @@ def app_build_result_to_dict(result: AppBuildResult, *, max_files: int = 500) ->
             files.append(str(rel))
             if len(files) >= max_files:
                 break
-    return {
+    payload = {
         "prompt": result.prompt,
         "name": result.ir.name,
         "description": result.ir.description,
@@ -108,6 +114,9 @@ def app_build_result_to_dict(result: AppBuildResult, *, max_files: int = 500) ->
         "commit_sha": result.commit_sha,
         "files": files,
     }
+    if ui_outcomes:
+        payload["ui_outcomes"] = [outcome.to_dict() for outcome in ui_outcomes]
+    return payload
 
 
 async def build_app_from_prompt(
