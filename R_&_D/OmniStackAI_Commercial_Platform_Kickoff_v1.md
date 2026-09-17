@@ -288,7 +288,39 @@ before code, per this project's standing rule — this section is the map, not t
   in R-474) — needed before this is genuinely multi-tenant, not needed for the single-operator demo
   this roadmap targets.
 
-**Phase E — Plan/credit UX + admin surface (proposed R-482+)**
+### Beyond R-475–481: what "exact target" still needs (asked and answered 2026-09-18)
+
+The founder asked directly whether R-475–481 gets this platform to "exact" Lovable/Dyad/Emergent
+parity. Honest answer, recorded here rather than left as a spoken claim: **substantially closer,
+but not exact or complete.** Two structural gaps remain that are bigger than UI polish and are not
+closed by any task above:
+
+- **R-482 — Real-time build/edit streaming.** Lovable/Dyad/Emergent's signature "smoothness" is
+  watching the model write code live (token-by-token, file-by-file) as it happens. Every task
+  above still uses one blocking HTTP call that takes seconds to a few real minutes and then returns
+  everything at once — R-477's chat UI would show "Building…" and then a result, not a
+  live-updating stream, without this task. Requires a materially different transport (Server-Sent
+  Events or a WebSocket) threaded through all three layers: the agent-engine's build/edit path
+  would need to emit incremental progress events (not just a final JSON response),
+  `internal/jobs`'s proxy would need to relay a stream instead of buffering a whole response body
+  (a real change to the "read the whole body, then decide" pattern every Job API route uses today),
+  and the console would need to consume and render it live. Scope this as its own task once
+  R-475–480 exist to stream progress *into* — do not start it before then.
+- **Per-user backend multi-tenancy — not a Tracker ID here, a prerequisite for calling this "done."**
+  Even after R-475–482 all ship, the agent-engine's Studio server is still the same single shared
+  in-memory process named as a limitation in R-474 and re-confirmed in the "Resolved decision" above
+  for live preview. A polished UI on top of it does not change what it is: **a single, trusted
+  operator's own tool that looks like a multi-user SaaS, not yet an actual one.** Lovable/Dyad/
+  Emergent are real multi-tenant products where many mutually-untrusted strangers can safely build
+  at the same time. Getting there needs the Studio server itself (build history, sessions, preview
+  processes) to become genuinely multi-tenant-aware — a real architecture project, not a UI task,
+  and not proposed with a Tracker ID yet because it needs its own scoping conversation first.
+- **Publish/deploy — still Phase E+ territory**, unchanged from the note already above: no
+  deployment/hosting backend exists anywhere in this codebase, and standing this up is very likely
+  its own "new infra" decision requiring explicit founder sign-off before any code gets written for
+  it, per this project's standing rules.
+
+**Phase E — Plan/credit UX + admin surface (proposed R-483+)**
 - Plan-gated feature access in the UI, a credit top-up flow, a `super_admin` console (user
   management, usage, plan overrides — the Dyad "Danger Zone" / Emergent admin-adjacent idea).
 - Actual payment processor integration (Stripe or similar) is intentionally **not** included

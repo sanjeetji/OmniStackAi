@@ -1221,7 +1221,16 @@ next_action: >-
   no deployment backend exists yet). R-481 (Model Provider settings UI) is independent, can slot in
   anytime after R-475. Full detail, effort estimates, and the live-preview decision's reasoning are
   in the kickoff doc - read it in full before starting R-475, per its own "How to resume" section.
-  Phase E (plan-gated UI, admin console, payment processor) still needs its own explicit founder
+  The founder then directly asked whether R-475..R-481 gets this platform to "exact"
+  Lovable/Dyad/Emergent parity - honest answer, recorded in the kickoff doc's new "Beyond
+  R-475-481" subsection: closer, not exact. Two gaps remain beyond those six tasks: R-482 (real-time
+  build/edit streaming via SSE/WebSocket - Lovable/Dyad/Emergent's live token-by-token feel, which
+  nothing in R-475..R-481 provides since every call today is one blocking HTTP request; scope only
+  after R-475-480 exist to stream progress into) and per-user backend multi-tenancy (the
+  agent-engine's Studio server stays a single shared in-memory process even after R-475-482 -
+  without this, it is a polished single-operator tool, not yet an actual multi-tenant SaaS; not
+  proposed with a Tracker ID yet, needs its own scoping conversation first). Phase E (plan-gated UI,
+  admin console, payment processor, now proposed R-483+) still needs its own explicit founder
   sign-off before starting.
   Keep task verify model/Docker/DB/install/network-free. The UI-component series remains
   paused/resumable; the tracker workbook still lags (ends at R-462).
