@@ -216,7 +216,79 @@ available ID per `.ai/tasks/` is **R-469** (R-468 is the last shipped task).
   has no per-user build scoping (a single shared in-memory process, unchanged since R-467) — any
   signed-in console user who knows a build id can browse its files. See `.ai/tasks/R-474.md`.
 
-**Phase E — Plan/credit UX + admin surface (proposed R-475+)**
+### Remaining Phase D roadmap (planned 2026-09-18, to resume from tomorrow)
+
+The founder asked, after seeing R-473/R-474 live, for the full "rich, upgraded, advanced UI" the
+Lovable/Dyad/Emergent screenshot research was originally for — not just the functional loop
+R-472–R-474 proved. Explicit instruction: close the session now, resume tomorrow from this written
+plan (matching this doc's own stated purpose — the "if we stop today, anyone can pick this up
+tomorrow" artifact).
+
+**Honest scope assessment**: this is not one task. It is six more, each following the same
+contract-first / test-first / one-commit / real-gate-evidence discipline every prior Tracker ID in
+this doc has used. Rough effort, extrapolated from R-472/473/474's own pace in this session
+(~30–60 minutes of continuous, gated work each when nothing unexpected comes up): **~4–6 hours of
+continuous work across the six tasks below**, likely spanning more than one sitting once real model
+flakiness, live-verification time, and ordinary mid-implementation discoveries are accounted for
+(every prior phase in this doc found at least one real, unanticipated thing while implementing —
+there is no reason to assume this run of tasks won't too).
+
+**Resolved decision (2026-09-18, founder confirmed): live preview stays local-only.** It reuses the
+exact trust boundary that already exists today (`task agent-engine:studio:preview`'s
+`StudioPreviewManager`, a single trusted-local developer's own machine) — the console/control-plane
+only add a way to *reach* that same mechanism, they do not add new hosted/sandboxed remote code
+execution. If this platform later becomes genuinely multi-tenant-hosted (many real, mutually
+untrusted users, not one operator), live preview's trust model needs a full redesign from scratch —
+this roadmap explicitly does not attempt that, and no task below should quietly expand into it.
+
+Proposed sequence (next available ID is **R-475**; each gets its own `.ai/tasks/R-###.md` contract
+before code, per this project's standing rule — this section is the map, not the contract):
+
+1. **R-475 — Studio visual foundation.** Redesign `/studio`'s look and feel: a proper app shell
+   (not just a stacked list of `.panel` sections), refined typography/color/spacing, card-based
+   layout for the build result. Framed as a *foundation* the later chat UI (R-477) and tabbed
+   workspace (R-480) build on top of, not a one-off skin of the current form that gets discarded —
+   sequenced first specifically so that visual work is not done twice. No backend changes. Lowest
+   risk, fastest visible improvement, good first task to resume with tomorrow.
+2. **R-476 — Backend: multi-turn edit bridge.** New control-plane route(s) proxying to the
+   agent-engine's existing R-468 edit/turns endpoints (`POST /api/build/{id}/edit`,
+   `GET /api/build/{id}/turns`), mirroring `POST /jobs/build`'s exact shape (R-472): authenticate,
+   forward verbatim, debit credits from any real usage the edit call reports. Needs the same
+   `usage_ledger` threading R-472 did for the initial build — R-468's `_edit` does not yet create
+   one; confirm this while implementing rather than assuming it already does.
+3. **R-477 — Console: chat UI.** Replace `/studio`'s one-shot prompt form with a persistent,
+   multi-turn chat thread (message history, a follow-up input that stays active after a build
+   completes), wired to R-476 and built on R-475's visual foundation.
+4. **R-478 — Backend: live preview proxy (local-only).** New authenticated control-plane route(s)
+   proxying to the agent-engine's existing `StudioPreviewManager` endpoints (start/stop/status,
+   R-421–R-424), same generic-proxy shape as every prior Job API route — no new execution sandbox,
+   per the resolved decision above.
+5. **R-479 — Console: live preview UI.** An iframe (or equivalent) rendering the running generated
+   app, wired to R-478, with real status (starting/running/stopped/crashed) — not a static
+   placeholder.
+6. **R-480 — Tabbed workspace.** Restructure `/studio` into the Preview/Files/Code/Problems tabs
+   (chat stays persistent alongside the tabs, matching the competitor pattern, rather than being
+   just another tab), assembling R-474's file browser, R-477's chat, and R-479's live preview under
+   one shell built on R-475's foundation. **"Code" and "Problems" need research at implementation
+   time, not an assumption now**: "Code" may just be the existing file viewer with syntax
+   highlighting added; "Problems" needs confirming whether an agent-engine endpoint surfacing real
+   compile/verify errors (`verify/compile.py`, used internally by R-466's repair loop) already
+   exists or needs to be added — if it needs adding, that is itself real, not-yet-scoped backend
+   work and should be called out honestly rather than quietly folded in. **"Publish" is explicitly
+   deferred** — there is no deployment/hosting backend concept anywhere in this codebase yet; a
+   placeholder-only "Publish" tab would be dishonest UI, not a smaller version of the real feature.
+
+**Named, deliberately not in the six above:**
+- **Model Provider settings UI** (surfacing `model_gateway`'s cloud/local Ollama status, Dyad-style
+  "Ready" state) — a real, smaller, independent UI surface. Slot in as **R-481** whenever it's
+  convenient after R-475; it has no hard dependency on the chat/preview/tabs work.
+- Solution Pack / Ecosystem build selection in the Studio UI — still real follow-up work, lower
+  priority than the six above since it's about build-type breadth, not depth of the core loop.
+- Per-user build/session scoping in the agent-engine's Studio server (the honest limitation named
+  in R-474) — needed before this is genuinely multi-tenant, not needed for the single-operator demo
+  this roadmap targets.
+
+**Phase E — Plan/credit UX + admin surface (proposed R-482+)**
 - Plan-gated feature access in the UI, a credit top-up flow, a `super_admin` console (user
   management, usage, plan overrides — the Dyad "Danger Zone" / Emergent admin-adjacent idea).
 - Actual payment processor integration (Stripe or similar) is intentionally **not** included
@@ -257,17 +329,29 @@ available ID per `.ai/tasks/` is **R-469** (R-468 is the last shipped task).
   a real URL rather than local dev.
 - Whether email verification / password-reset flows are required for the Phase A v1 cut, or can
   follow once the core auth loop works.
+- ~~Live preview's execution trust model~~ — **answered 2026-09-18**: stays local-only, reusing the
+  existing trusted-local `StudioPreviewManager` mechanism exactly as it runs today
+  (`task agent-engine:studio:preview`); the console/control-plane only add a way to reach it, not a
+  new hosted/sandboxed execution path. Revisit fully if/when this platform becomes genuinely
+  multi-tenant-hosted — see the "Remaining Phase D roadmap" note under Phase D.
 
 ---
 
 ## 6. How to resume this if the session stops here
 
+**Immediate next action as of 2026-09-18 (session paused here on the founder's request — "close my
+system and want to start tomorrow"): R-475, the first item in Phase D's "Remaining Phase D roadmap"
+above.** `.ai/PROJECT_STATE.yaml`'s `next_action` and `.ai/CURRENT_TASK.yaml` are the authoritative
+pointers per `AGENTS.md`'s source-of-truth order (they win over this paragraph if they ever
+disagree) — read them first, but they should already agree with this.
+
 1. Read this file in full before touching code.
 2. Read `.ai/PROJECT_STATE.yaml` and `.ai/CURRENT_TASK.yaml` — if they show a different
-   in-progress task than "start Phase A," they win (per `AGENTS.md`'s source-of-truth order);
-   reconcile before proceeding.
-3. Write `.ai/tasks/R-469.md` for Phase A following the Standard AI Task Contract (Brief
-   Section 26) and this file's Phase A description, then follow the project's normal
-   contract-first, test-first, one-commit discipline.
-4. Do not start Phase B before Phase A is done and gated; do not start Phase C before Phase B's
-   login flow actually works end-to-end.
+   in-progress task than the Phase D roadmap above, they win (per `AGENTS.md`'s source-of-truth
+   order); reconcile before proceeding.
+3. Write `.ai/tasks/R-475.md` following the Standard AI Task Contract (Brief Section 26) and this
+   file's R-475 description above, then follow the project's normal contract-first, test-first,
+   one-commit discipline — exactly as R-469 through R-474 already did.
+4. Work through R-475 → R-481 in the order listed (each depends on visual/backend pieces the prior
+   ones build) — do not start R-477 (chat UI) before R-476 (its backend) is done and gated; do not
+   start R-480 (tabs) before R-475/R-477/R-479 all exist to assemble.

@@ -1203,17 +1203,25 @@ id_note: >-
   ID); R-416..R-429 built/hardened the "chat -> create -> run -> preview" front door; R-430..R-437 build SPINE.
 blockers: []
 next_action: >-
-  R-474 is complete: file browser in the console Studio - each filename in a build result now
-  opens a real, read-only viewer showing the actual generated content, bridged through two new
-  authenticated control-plane proxy routes to the agent-engine's existing R-467 file-serving
-  endpoints (no agent-engine changes). The founder asked to see the platform running before
-  continuing Phase D; the live demo stack (Docker control-plane, agent-engine Studio server, next
-  start console) was brought up, shown, and - per the founder's explicit request - left running
-  through this task's own live verification too.
-  NEXT: continue Phase D - live preview (a materially different trust posture since it executes
-  generated code, needs its own scoped decision before starting, unlike this task's read-only file
-  access), chat/multi-turn edit (porting R-468's capability into the console), or Solution
-  Pack/Ecosystem build selection in the Studio UI. Phase E (plan-gated UI, admin console, payment
-  processor) still needs its own explicit founder sign-off before starting, per the kickoff doc.
+  R-474 is complete (file browser in the console Studio). The founder then asked for the platform's
+  UI to genuinely match the Lovable/Dyad/Emergent research (visual polish + persistent chat + live
+  preview + tabbed workspace, "everything"), asked for a time estimate, then asked to record the
+  full plan in R_&_D/OmniStackAI_Commercial_Platform_Kickoff_v1.md's Phase D section (see its new
+  "Remaining Phase D roadmap" subsection) and close the session for the day - resume tomorrow from
+  that written plan.
+  NEXT (start here): R-475 - Studio visual foundation (app shell, typography, color, spacing, card
+  layout for the build result), sequenced first so later chat/tabs work doesn't redo visual work.
+  Then in order: R-476 (backend: multi-turn edit bridge, mirroring R-472's proxy+debit shape for
+  R-468's edit/turns endpoints), R-477 (console: persistent chat UI), R-478 (backend: live preview
+  proxy - resolved decision: local-only, reuses the existing trusted-local StudioPreviewManager,
+  no new hosted execution), R-479 (console: live preview UI), R-480 (tabbed workspace: Preview/
+  Files/Code/Problems: "Code" needs syntax highlighting added to the existing viewer; "Problems"
+  needs confirming whether an agent-engine endpoint for real compile/verify errors already exists
+  or needs adding - research at implementation time, don't assume; "Publish" explicitly deferred,
+  no deployment backend exists yet). R-481 (Model Provider settings UI) is independent, can slot in
+  anytime after R-475. Full detail, effort estimates, and the live-preview decision's reasoning are
+  in the kickoff doc - read it in full before starting R-475, per its own "How to resume" section.
+  Phase E (plan-gated UI, admin console, payment processor) still needs its own explicit founder
+  sign-off before starting.
   Keep task verify model/Docker/DB/install/network-free. The UI-component series remains
   paused/resumable; the tracker workbook still lags (ends at R-462).
