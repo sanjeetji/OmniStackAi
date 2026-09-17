@@ -1,5 +1,65 @@
 # Work Log
 
+## 2026-09-18 — R-474 (File browser in the console Studio — see what a build actually produced)
+
+- **Why:** the founder asked to see the platform running before continuing Phase D. Brought up the
+  real Docker control-plane + real agent-engine Studio server + real `next start` console for a
+  live look (walkthrough: register → `/` → `/studio` build → `/fabric`), then, per the founder's
+  "Left it as running and continue," carried on with the next Phase D slice against that same
+  running stack rather than tearing it down first.
+- **What:** R-473's build result panel listed filenames as inert text; this task makes that list
+  clickable so a user can actually read the generated code, not just see it exists. The
+  agent-engine's Studio server already had real, tested, path-safe read-only file access
+  (`studio/files.py`, wired since R-467 as `GET /api/build/{id}/files` /
+  `GET /api/build/{id}/file?path=...`) — this task bridges those two existing endpoints through the
+  authenticated control-plane, the same "generic proxy, no new agent-engine code" shape R-472
+  established for the build endpoint itself.
+- **Control-plane:** two new authenticated, read-only routes — `GET /jobs/build/{id}/files` and
+  `GET /jobs/build/{id}/file?path=...` — proxying verbatim to the agent-engine, no credit debit
+  (browsing already-generated files isn't a billable model call). A shared `writeAuthError` helper
+  replaces three copies of the same `errors.Is(err, auth.ErrUnauthenticated)` mapping that would
+  otherwise have been repeated across `handleBuild`/`handleBuildFiles`/`handleBuildFile`.
+- **No agent-engine changes** — `studio/files.py`'s path-safety guarantees (traversal-proof,
+  secret-`.env`-excluded, binary-file-safe) carry over completely unchanged, since nothing about
+  them is touched.
+- **Console:** `lib/control-plane.ts` gained `BuildFileTreeResponse`/`BuildFileContentResponse`
+  types and `listBuildFiles()`/`readBuildFile()` clients; two new dynamic Route Handlers
+  (`app/api/jobs/build/[id]/files/route.ts`, `.../file/route.ts`) follow the exact
+  session-cookie-gated pattern `app/api/jobs/build/route.ts` already established; `studio-form.tsx`
+  gained a `FileBrowser` component — each filename is now a button that fetches and shows real file
+  content in a read-only `<pre>` viewer, with a binary-file guard ("binary file, not shown" instead
+  of corrupted output).
+- **Known, honestly-documented limitation, not fixed or worsened by this task:** the agent-engine's
+  Studio server (`StudioBuildHistory`) is a single shared in-memory process with no per-user
+  scoping — unchanged from R-467. Any authenticated console user who knows (or guesses) a build id
+  can browse its files through this new proxy, exactly as any local Studio user already could
+  before an authenticated frontend ever existed. Real per-user build isolation needs the Studio
+  server itself to become multi-tenant-aware — out of scope here, named rather than silently
+  accepted.
+- **Gates:** control-plane `go build`/`go vet`/`gofmt` clean; `go test ./...` all green (15 tests in
+  `internal/jobs`, 6 new: missing-token 401 on both routes, verbatim file-list/file-content
+  proxying with the exact `?path=` query forwarded, an unknown-build 404 proxied unchanged, a
+  path-traversal-rejection 400 proxied unchanged). Console `typecheck`/`lint`/`build` all clean (13
+  routes now, including the two new dynamic file routes). `task verify` — Ran 3,603 tests, OK,
+  Stage 0 verification passed. `task lint`/`security:quick`/`env:check` all pass. New
+  `scripts/test.sh` R-474 block.
+- **Live** (against the founder's own already-running stack — rebuilt/restarted only the
+  control-plane container and the console process to pick up this task's code; Postgres and the
+  agent-engine Studio server's in-memory build history were left completely untouched):
+  registered a fresh account, built a real 158-file "Simple Notes App" via real Groq cloud (`id:
+  "2"`, confirming the Studio server really had been left running with prior history from the
+  founder's own browsing), then proved the file browser end to end — the file list matched the
+  build response exactly, `GET .../file?path=README.md` returned genuine content read from the real
+  repo on disk (`binary: false`, `size: 402`), an unknown build id proxied through as the
+  agent-engine's own `404`, and a path-traversal attempt (`../../../../etc/passwd`) proxied through
+  as the agent-engine's own `400` — no new traversal logic added or needed. (One earlier build
+  attempt hit a real, unforced Groq IR-validation failure, the same class of live-model flakiness
+  already documented in R-472/R-473 — not a bug in this task.)
+- **NEXT:** continue Phase D — live preview (a materially different trust posture since it executes
+  generated code, needs its own scoped decision before starting), chat/multi-turn edit (porting
+  R-468's capability into the console), or Solution Pack/Ecosystem build selection in the Studio
+  UI. Phase E still needs its own explicit founder sign-off before starting.
+
 ## 2026-09-18 — R-473 (Studio v1 in the console — build an app from the product, not curl)
 
 - **Why:** Phase D of `R_&_D/OmniStackAI_Commercial_Platform_Kickoff_v1.md`, first slice — a

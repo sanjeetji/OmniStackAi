@@ -302,13 +302,56 @@ tr:last-child td {
 }
 
 .file-list li {
-  padding: 6px 0;
   border-bottom: 1px solid var(--border);
   font-size: 13px;
 }
 
 .file-list li:last-child {
   border-bottom: none;
+}
+
+.file-list-item {
+  display: block;
+  width: 100%;
+  text-align: left;
+  background: none;
+  border: none;
+  color: inherit;
+  font: inherit;
+  padding: 6px 4px;
+  cursor: pointer;
+  border-radius: 6px;
+}
+
+.file-list-item:hover {
+  background: var(--off-bg);
+}
+
+.file-list-item.selected {
+  background: var(--accent);
+  color: #fff;
+}
+
+.file-viewer {
+  margin-top: 16px;
+}
+
+.file-viewer-header {
+  font-size: 13px;
+  color: var(--muted);
+  margin-bottom: 6px;
+}
+
+.file-viewer-content {
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 14px 16px;
+  max-height: 420px;
+  overflow-y: auto;
+  white-space: pre-wrap;
+  word-break: break-word;
+  font-size: 13px;
 }
 
 @media (max-width: 640px) {

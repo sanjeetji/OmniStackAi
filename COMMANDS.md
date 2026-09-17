@@ -369,12 +369,12 @@ nothing is charged.
 
 ---
 
-## 11. Console — Real Next.js App (R-470, Studio v1 R-473)
+## 11. Console — Real Next.js App (R-470, Studio v1 R-473, file browser R-474)
 
 `apps/console-web` is now a real Next.js (App Router, TypeScript) app — register/login/logout wired
 to the control-plane's auth API via a server-side cookie proxy, a `/studio` page that builds a real
-app through the control-plane's Job API (R-472/R-473), plus the carried-over model/cost overview
-page.
+app through the control-plane's Job API (R-472/R-473) and lets you click a file to read its real
+generated content (R-474), plus the carried-over model/cost overview page.
 
 ```bash
 # One-time (or after pulling changes that touch apps/console-web/package.json):
@@ -400,11 +400,19 @@ credits), then `/` for the authenticated home page, `/studio` to describe an app
 real (requires the agent-engine's Studio server running — see Section 10 above), and `/fabric` for
 the model/cost overview.
 
-`/studio` (R-473) is v1: a prompt in, a real build out, the real post-debit credit balance shown.
-No file browser, live preview, or chat yet — those are named follow-ups, not silently dropped (see
-`.ai/tasks/R-473.md`'s "Scope decision"). A build can take anywhere from a few seconds to several
-minutes depending on the model in use; the page shows a "Building…" state rather than a spinner
-with no context, since builds this slow deserve real expectation-setting.
+`/studio` (R-473) is v1: a prompt in, a real build out, the real post-debit credit balance shown,
+plus (R-474) a clickable file list — click any filename to read its real generated content in a
+read-only viewer. No live preview or chat yet — those are named follow-ups, not silently dropped
+(see `.ai/tasks/R-473.md`/`R-474.md`'s "Scope decision"). A build can take anywhere from a few
+seconds to several minutes depending on the model in use; the page shows a "Building…" state rather
+than a spinner with no context, since builds this slow deserve real expectation-setting.
+
+The file browser reuses the agent-engine's own read-only file access as-is (no new agent-engine
+code): `GET /jobs/build/{id}/files` and `GET /jobs/build/{id}/file?path=...` on the control-plane
+proxy straight through to it. Known limitation: the agent-engine's Studio server has no per-user
+build scoping (a single shared in-memory process, unchanged since R-467) — any signed-in user who
+knows a build id can browse its files. Fine for a single-operator/trusted-demo deployment; a real
+gap before this becomes genuinely multi-tenant.
 
 Config: `OMNISTACKAI_CONTROL_PLANE_URL` in the repo root `.env` (default `http://127.0.0.1:8080`) —
 `scripts/console.sh` exports it before running any Next.js command; the console does not read its

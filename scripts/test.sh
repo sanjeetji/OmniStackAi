@@ -358,4 +358,27 @@ if ! rg -q 'getSessionToken' "$console_root/app/api/jobs/build/route.ts"; then
   exit 1
 fi
 
+# R-474: file browser in the console Studio - see what a build actually produced.
+for required_file in \
+  "$control_plane_root/internal/jobs/handler.go" \
+  "$console_root/app/api/jobs/build/[id]/files/route.ts" \
+  "$console_root/app/api/jobs/build/[id]/file/route.ts"; do
+  if [[ ! -f "$required_file" ]]; then
+    printf 'Missing R-474 contract file: %s\n' "$required_file"
+    exit 1
+  fi
+done
+
+for route in 'GET /jobs/build/{id}/files' 'GET /jobs/build/{id}/file'; do
+  if ! rg -qF "$route" "$control_plane_root/internal/jobs/handler.go"; then
+    printf 'R-474 control-plane must register: %s\n' "$route"
+    exit 1
+  fi
+done
+
+if ! rg -q 'listBuildFiles|readBuildFile' "$console_root/lib/control-plane.ts"; then
+  printf 'R-474 must add listBuildFiles()/readBuildFile() clients to lib/control-plane.ts.\n'
+  exit 1
+fi
+
 printf 'Repository contract tests passed.\n'

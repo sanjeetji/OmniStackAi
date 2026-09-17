@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, type FormEvent } from "react";
-import type { BuildJobResponse } from "@/lib/control-plane";
+import type { BuildFileContentResponse, BuildJobResponse } from "@/lib/control-plane";
 
 interface StudioFormProps {
   initialCreditBalance: number;
@@ -157,22 +157,84 @@ function BuildResult({ result }: { result: BuildJobResponse }) {
       ) : null}
 
       {result.files && result.files.length > 0 ? (
-        <>
-          <h3 style={{ marginTop: 20, fontSize: 15 }}>Files ({result.files.length})</h3>
-          <div className="overflow file-list">
-            <ul>
-              {result.files.slice(0, 40).map((file) => (
-                <li key={file} className="mono">
-                  {file}
-                </li>
-              ))}
-            </ul>
-          </div>
-          {result.files.length > 40 ? (
-            <p className="muted">+{result.files.length - 40} more files</p>
-          ) : null}
-        </>
+        <FileBrowser buildId={result.id} files={result.files} />
       ) : null}
     </section>
+  );
+}
+
+type FileErrorBody = { error?: string };
+
+function FileBrowser({ buildId, files }: { buildId?: string; files: string[] }) {
+  const [selectedPath, setSelectedPath] = useState<string | null>(null);
+  const [content, setContent] = useState<BuildFileContentResponse | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [fileError, setFileError] = useState<string | null>(null);
+
+  async function openFile(path: string) {
+    setSelectedPath(path);
+    setContent(null);
+    setFileError(null);
+    if (!buildId) {
+      setFileError("this build has no browsable id");
+      return;
+    }
+    setLoading(true);
+    try {
+      const response = await fetch(
+        `/api/jobs/build/${encodeURIComponent(buildId)}/file?path=${encodeURIComponent(path)}`,
+      );
+      const body = (await response
+        .json()
+        .catch(() => ({}))) as Partial<BuildFileContentResponse> & FileErrorBody;
+      if (!response.ok) {
+        setFileError(body.error ?? `could not read file (status ${response.status})`);
+        return;
+      }
+      setContent(body as BuildFileContentResponse);
+    } catch {
+      setFileError("could not reach the server");
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  return (
+    <>
+      <h3 style={{ marginTop: 20, fontSize: 15 }}>Files ({files.length})</h3>
+      <div className="overflow file-list">
+        <ul>
+          {files.slice(0, 40).map((file) => (
+            <li key={file}>
+              <button
+                type="button"
+                className={
+                  file === selectedPath ? "file-list-item mono selected" : "file-list-item mono"
+                }
+                onClick={() => openFile(file)}
+              >
+                {file}
+              </button>
+            </li>
+          ))}
+        </ul>
+      </div>
+      {files.length > 40 ? <p className="muted">+{files.length - 40} more files</p> : null}
+
+      {selectedPath ? (
+        <div className="file-viewer">
+          <div className="file-viewer-header mono">{selectedPath}</div>
+          {loading ? <p className="muted">Loading…</p> : null}
+          {fileError ? <div className="error-banner">{fileError}</div> : null}
+          {content && content.binary ? <p className="muted">Binary file, not shown.</p> : null}
+          {content && !content.binary ? (
+            <pre className="mono overflow file-viewer-content">{content.content}</pre>
+          ) : null}
+          {content?.truncated ? (
+            <p className="muted">File truncated for display (it&apos;s larger than the preview limit).</p>
+          ) : null}
+        </div>
+      ) : null}
+    </>
   );
 }

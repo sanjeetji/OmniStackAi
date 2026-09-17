@@ -1,9 +1,38 @@
 # Current Handoff
 
-Task ID: R-473
+Task ID: R-474
 Status: done
 Phase: BASIC/MVP — Founder Stage 0
 Branch: `main`
+
+> **R-474 Completed (2026-09-18): File browser in the console Studio — see what a build actually produced.**
+> - The founder asked to see the platform running before continuing Phase D — brought up the real
+>   Docker control-plane + real agent-engine Studio server + real `next start` console for a live
+>   look, then, per "Left it as running and continue," kept building on that same running stack.
+> - R-473's build result panel listed filenames as inert text; each filename is now a button that
+>   fetches and shows real generated file content in a read-only viewer.
+> - **No agent-engine changes**: bridges the agent-engine's existing, real, path-safe read-only file
+>   endpoints (`studio/files.py`, R-467) through two new authenticated control-plane proxy routes —
+>   `GET /jobs/build/{id}/files` / `GET /jobs/build/{id}/file?path=...` — the same "generic proxy"
+>   shape R-472 established. No credit debit (browsing isn't a billable model call).
+> - New `listBuildFiles()`/`readBuildFile()` clients in `lib/control-plane.ts`, two new dynamic
+>   Route Handlers, and a `FileBrowser` component in `studio-form.tsx` (binary-file guard included).
+>   A shared `writeAuthError` helper replaces three copies of the same auth-error mapping.
+> - **Honest, named limitation, not fixed here**: the agent-engine's Studio server has no per-user
+>   build scoping (unchanged from R-467) — any authenticated caller who knows a build id can browse
+>   its files. Real per-user isolation needs the Studio server itself to become multi-tenant-aware.
+> - Gates: control-plane `go test` all green (15 in `internal/jobs`, 6 new); console
+>   `typecheck`/`lint`/`build` clean (13 routes); `task verify` **3,603 OK**;
+>   `task lint`/`security:quick`/`env:check` all pass. **Live** (against the founder's own
+>   already-running stack, only the control-plane and console restarted to pick up the code —
+>   Postgres and the Studio server's build history left completely untouched): built a real 158-file
+>   "Simple Notes App" via real Groq cloud, then proved the file browser end to end — real
+>   `README.md` content read from the real repo on disk, an unknown build id proxied as the
+>   agent-engine's own 404, a path-traversal attempt proxied as the agent-engine's own 400.
+> - **NEXT:** continue Phase D — live preview (executes generated code, a materially different
+>   trust posture needing its own scoped decision), chat/multi-turn edit (porting R-468), or
+>   Solution Pack/Ecosystem build selection in the Studio UI. See
+>   `R_&_D/OmniStackAI_Commercial_Platform_Kickoff_v1.md`, `.ai/tasks/R-474.md`.
 
 > **R-473 Completed (2026-09-18): Studio v1 in the console — build an app from the product, not curl.**
 > - **Phase D of `R_&_D/OmniStackAI_Commercial_Platform_Kickoff_v1.md` (first slice)** — a

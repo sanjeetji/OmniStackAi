@@ -4,6 +4,21 @@ Last updated: 2026-09-18
 ## Current Phase
 Stage 0 (Founder Build Sequence, Brief Section 91) — BASIC/MVP
 
+> **R-474 (2026-09-18): file browser in the console Studio — see what a build actually produced.**
+> Continues Phase D. R-473's build result panel listed filenames as inert text; each filename is
+> now a button showing real generated file content in a read-only viewer, bridged through two new
+> authenticated control-plane proxy routes (`GET /jobs/build/{id}/files`,
+> `GET /jobs/build/{id}/file?path=...`) to the agent-engine's existing R-467 file-serving endpoints
+> — no agent-engine changes, no credit debit. Honest, named limitation carried over unchanged from
+> R-467: the Studio server has no per-user build scoping. `task verify` **3,603 OK**; control-plane
+> `go test` all green (15 in `internal/jobs`); console `typecheck`/`lint`/`build` clean (13 routes).
+> Live, against the founder's own already-running demo stack (only the control-plane and console
+> restarted to pick up the code, Postgres and the Studio server's build history left untouched):
+> built a real 158-file app via real Groq cloud, then proved the file browser end to end, including
+> an unknown-build 404 and a path-traversal 400, both proxied through from the agent-engine unchanged.
+> NEXT: continue Phase D (live preview, chat/multi-turn edit, or Solution Pack/Ecosystem selection).
+> Phase E still needs its own explicit founder sign-off before starting.
+
 > **R-473 (2026-09-18): Studio v1 in the console — build an app from the product, not curl.**
 > Phase D of `R_&_D/OmniStackAI_Commercial_Platform_Kickoff_v1.md`, first slice: a logged-in user
 > can open `apps/console-web`'s new `/studio` page, type a plain-English app description, click

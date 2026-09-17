@@ -287,6 +287,139 @@ func TestHandleBuildReturnsBadGatewayWhenAgentEngineIsUnreachable(t *testing.T) 
 	}
 }
 
+func getBuildPath(t *testing.T, server *httptest.Server, authHeader, path string) *http.Response {
+	t.Helper()
+	request, err := http.NewRequest(http.MethodGet, server.URL+path, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if authHeader != "" {
+		request.Header.Set("Authorization", authHeader)
+	}
+	resp, err := server.Client().Do(request)
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { _ = resp.Body.Close() })
+	return resp
+}
+
+func TestHandleBuildFilesRejectsMissingToken(t *testing.T) {
+	agentEngine := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		t.Fatal("agent-engine must not be called for an unauthenticated request")
+	}))
+	defer agentEngine.Close()
+
+	server := newTestServer(t, agentEngine.URL, fakeAuthStore{returnErr: auth.ErrSessionNotFound}, &fakeCreditStore{}, 1000)
+
+	resp := getBuildPath(t, server, "", "/jobs/build/abc123/files")
+	if resp.StatusCode != http.StatusUnauthorized {
+		t.Fatalf("status = %d, want %d", resp.StatusCode, http.StatusUnauthorized)
+	}
+}
+
+func TestHandleBuildFilesProxiesTheFileListVerbatim(t *testing.T) {
+	var requestedPath string
+	agentEngine := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		requestedPath = r.URL.Path
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusOK)
+		_, _ = w.Write([]byte(`{"files":["README.md","apps/web/app/page.tsx"],"truncated":false}`))
+	}))
+	defer agentEngine.Close()
+
+	server := newTestServer(t, agentEngine.URL, fakeAuthStore{user: newTestUser()}, &fakeCreditStore{}, 1000)
+
+	resp := getBuildPath(t, server, validToken, "/jobs/build/abc123/files")
+	if resp.StatusCode != http.StatusOK {
+		t.Fatalf("status = %d, want %d", resp.StatusCode, http.StatusOK)
+	}
+	if requestedPath != "/api/build/abc123/files" {
+		t.Fatalf("agent-engine received path = %q, want %q", requestedPath, "/api/build/abc123/files")
+	}
+	var payload map[string]any
+	decodeJSON(t, resp, &payload)
+	if files, ok := payload["files"].([]any); !ok || len(files) != 2 {
+		t.Fatalf("payload[files] = %v, want a 2-element list", payload["files"])
+	}
+}
+
+func TestHandleBuildFilesProxiesUnknownBuildAs404(t *testing.T) {
+	agentEngine := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusNotFound)
+		_, _ = w.Write([]byte(`{"error":"build 'abc123' is not available in this session"}`))
+	}))
+	defer agentEngine.Close()
+
+	server := newTestServer(t, agentEngine.URL, fakeAuthStore{user: newTestUser()}, &fakeCreditStore{}, 1000)
+
+	resp := getBuildPath(t, server, validToken, "/jobs/build/abc123/files")
+	if resp.StatusCode != http.StatusNotFound {
+		t.Fatalf("status = %d, want %d (proxied unchanged)", resp.StatusCode, http.StatusNotFound)
+	}
+}
+
+func TestHandleBuildFileRejectsMissingToken(t *testing.T) {
+	agentEngine := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		t.Fatal("agent-engine must not be called for an unauthenticated request")
+	}))
+	defer agentEngine.Close()
+
+	server := newTestServer(t, agentEngine.URL, fakeAuthStore{returnErr: auth.ErrSessionNotFound}, &fakeCreditStore{}, 1000)
+
+	resp := getBuildPath(t, server, "", "/jobs/build/abc123/file?path=README.md")
+	if resp.StatusCode != http.StatusUnauthorized {
+		t.Fatalf("status = %d, want %d", resp.StatusCode, http.StatusUnauthorized)
+	}
+}
+
+func TestHandleBuildFileForwardsThePathQueryParamAndProxiesContentVerbatim(t *testing.T) {
+	var requestedPath, requestedQuery string
+	agentEngine := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		requestedPath = r.URL.Path
+		requestedQuery = r.URL.Query().Get("path")
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusOK)
+		_, _ = w.Write([]byte(`{"path":"apps/web/app/page.tsx","content":"export default function Page() {}","truncated":false,"binary":false,"size":34}`))
+	}))
+	defer agentEngine.Close()
+
+	server := newTestServer(t, agentEngine.URL, fakeAuthStore{user: newTestUser()}, &fakeCreditStore{}, 1000)
+
+	resp := getBuildPath(t, server, validToken, "/jobs/build/abc123/file?path=apps%2Fweb%2Fapp%2Fpage.tsx")
+	if resp.StatusCode != http.StatusOK {
+		t.Fatalf("status = %d, want %d", resp.StatusCode, http.StatusOK)
+	}
+	if requestedPath != "/api/build/abc123/file" {
+		t.Fatalf("agent-engine received path = %q, want %q", requestedPath, "/api/build/abc123/file")
+	}
+	if requestedQuery != "apps/web/app/page.tsx" {
+		t.Fatalf("agent-engine received path query = %q, want %q", requestedQuery, "apps/web/app/page.tsx")
+	}
+	var payload map[string]any
+	decodeJSON(t, resp, &payload)
+	if payload["content"] != "export default function Page() {}" {
+		t.Fatalf("payload[content] = %v", payload["content"])
+	}
+}
+
+func TestHandleBuildFileProxiesPathTraversalRejectionAs400(t *testing.T) {
+	agentEngine := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusBadRequest)
+		_, _ = w.Write([]byte(`{"error":"path escapes the build directory: ../../etc/passwd"}`))
+	}))
+	defer agentEngine.Close()
+
+	server := newTestServer(t, agentEngine.URL, fakeAuthStore{user: newTestUser()}, &fakeCreditStore{}, 1000)
+
+	resp := getBuildPath(t, server, validToken, "/jobs/build/abc123/file?path=..%2F..%2Fetc%2Fpasswd")
+	if resp.StatusCode != http.StatusBadRequest {
+		t.Fatalf("status = %d, want %d (proxied unchanged, no new traversal logic here)", resp.StatusCode, http.StatusBadRequest)
+	}
+}
+
 func TestCreditsForUsage(t *testing.T) {
 	cases := []struct {
 		name          string

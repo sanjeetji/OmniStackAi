@@ -1,34 +1,32 @@
-task_id: R-473
+task_id: R-474
 status: completed
 phase: MVP
 tracker_row: null
 started_at: "2026-09-18"
 completed_at: "2026-09-18"
 objective: >-
-  Phase D of R_&_D/OmniStackAI_Commercial_Platform_Kickoff_v1.md, first slice: a logged-in user can
-  open apps/console-web, type a prompt, click Build, and get a real app built through R-472's real
-  Job API, with the console showing the real post-debit credit balance. New app/studio/page.tsx
-  (auth-gated, mirrors app/page.tsx) + app/studio/studio-form.tsx (client component: prompt
-  textarea, Build button, pending state, result panel, error banner) + app/api/jobs/build/route.ts
-  (server-side proxy: reads the session cookie, 401s locally if absent, forwards to the
-  control-plane's POST /jobs/build with the bearer token attached, never exposed to client JS).
-  lib/control-plane.ts gains BuildJobResponse + buildApp() following the existing
-  login/registerAccount pattern. app/page.tsx gains a link to /studio. Explicitly NOT the full
-  Phase D vision (file browser, live preview, chat/multi-turn edit, Solution Pack/Ecosystem
-  selection, Model Provider settings, Problems/Publish tabs) - those are named, separately-scoped
-  follow-ups, matching how the agent-engine's own hybrid-UI engine shipped across four separate
-  gated Tracker IDs (R-465..R-468) rather than one large task. No changes to services/control-plane
-  or services/agent-engine - R-472 already built the real backend this task's UI calls.
+  Continue Phase D: R-473's build result panel lists filenames as inert text; this task makes that
+  list clickable so a user can read the generated code, not just see it exists. The agent-engine's
+  Studio server already has real, tested, path-safe read-only file access (studio/files.py, wired
+  since R-467 as GET /api/build/{id}/files and GET /api/build/{id}/file?path=...) - this task
+  bridges those two existing endpoints through the authenticated control-plane, the same "generic
+  proxy, no new agent-engine code" shape R-472 established for the build endpoint itself. New
+  control-plane routes GET /jobs/build/{id}/files and GET /jobs/build/{id}/file?path=... (auth
+  required, no credit debit - browsing files is not a billable call), proxying verbatim. Console
+  gains listBuildFiles/readBuildFile clients, two new proxy Route Handlers, and a clickable file
+  list + read-only viewer in studio-form.tsx. No agent-engine changes. Known, honestly-documented
+  limitation carried over unchanged from R-467: the Studio server has no per-user build scoping
+  (single shared in-memory process) - not introduced or worsened by this task.
 allowed_paths:
-  - apps/console-web/app/studio/page.tsx
-  - apps/console-web/app/studio/studio-form.tsx
-  - apps/console-web/app/api/jobs/build/route.ts
+  - services/control-plane/internal/jobs/handler.go
+  - services/control-plane/internal/jobs/handler_test.go
   - apps/console-web/lib/control-plane.ts
-  - apps/console-web/app/page.tsx
+  - apps/console-web/app/api/jobs/build/[id]/files/route.ts
+  - apps/console-web/app/api/jobs/build/[id]/file/route.ts
+  - apps/console-web/app/studio/studio-form.tsx
   - apps/console-web/app/globals.css
   - scripts/test.sh
-  - .gitignore
-  - .ai/tasks/R-473.md
+  - .ai/tasks/R-474.md
   - .ai/CURRENT_TASK.yaml
   - .ai/PROJECT_STATE.yaml
   - .ai/WORK_LOG.md
@@ -40,27 +38,29 @@ allowed_paths:
   - COMMANDS.md
   - R_&_D/OmniStackAI_Commercial_Platform_Kickoff_v1.md
 forbidden_changes:
-  - No changes to services/control-plane or services/agent-engine
+  - No changes to services/agent-engine
+  - No live preview / code execution
   - No new UI/component-library dependency
-  - No file browser, live preview, chat/multi-turn edit, or Solution Pack/Ecosystem selection UI
   - Do not modify or commit the untracked .claude directory
 required_gates:
+  - "control-plane: go build ./..., go vet ./..., go test ./..."
   - "apps/console-web: pnpm run typecheck, pnpm run lint, pnpm run build"
   - task verify
   - task lint
   - task security:quick
   - task env:check
-  - "manual smoke (real docker control-plane + real agent-engine studio server + real next start): register/login -> /studio -> real build -> response renders, credit balance matches"
+  - "manual smoke (real docker control-plane + real agent-engine studio server + real next start): build an app, click a file, see real source"
 model_tool_trace:
   routing: deterministic_only
   local_calls: 0
   cloud_calls: 0
   note: >-
-    TypeScript/React implementation, 0 model/network calls in any automated gate. The manual smoke
-    test's build call uses local Ollama, not a paid cloud model.
+    Go/TypeScript implementation, 0 model/network calls in any automated gate. The manual smoke
+    test reuses whatever build already exists from the live stack the founder left running.
 next_action: >-
-  R-473 is complete (see .ai/tasks/R-473.md for full Gates & Evidence). Next up: continue Phase D -
-  a file browser/live preview and chat/multi-turn edit in the console (porting the agent-engine's
-  own studio/page.py capabilities from R-467/R-468 into apps/console-web), or Solution Pack/
-  Ecosystem build selection in the Studio UI. Phase E (plan-gated UI, admin console, payment
-  processor) still needs its own explicit founder sign-off before starting.
+  R-474 is complete (see .ai/tasks/R-474.md for full Gates & Evidence). Next up: continue Phase D -
+  live preview (running the generated app - needs a real security/trust decision since it executes
+  generated code, unlike this task's read-only file browsing), chat/multi-turn edit (porting R-468),
+  or Solution Pack/Ecosystem build selection in the Studio UI. Phase E still needs its own explicit
+  founder sign-off before starting. The live demo stack (Docker control-plane, agent-engine Studio
+  server, next start console) is intentionally left running per the founder's request.

@@ -142,6 +142,7 @@ export interface BuildJobUsage {
  * fields this console actually renders are typed; everything else still round-trips via the index
  * signature rather than being silently dropped. */
 export interface BuildJobResponse {
+  id?: string;
   name?: string;
   description?: string;
   entities?: string[];
@@ -165,4 +166,42 @@ export function buildApp(token: string, prompt: string): Promise<BuildJobRespons
     headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
     body: JSON.stringify({ prompt }),
   });
+}
+
+/** A sorted, flat, secret-free file list for a build, exactly as studio/files.py's
+ * `list_build_files` (R-467) reports it. */
+export interface BuildFileTreeResponse {
+  files: string[];
+  truncated: boolean;
+}
+
+/** One file's content, exactly as studio/files.py's `read_build_file` (R-467) reports it. A binary
+ * file has `binary: true` and empty `content` - never garbled raw bytes. */
+export interface BuildFileContentResponse {
+  path: string;
+  content: string;
+  truncated: boolean;
+  binary: boolean;
+  size: number;
+}
+
+/** Lists a build's files via the control-plane's `GET /jobs/build/{id}/files` (R-474) - read-only,
+ * no credit debit. */
+export function listBuildFiles(token: string, buildId: string): Promise<BuildFileTreeResponse> {
+  return callControlPlane<BuildFileTreeResponse>(`/jobs/build/${encodeURIComponent(buildId)}/files`, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+}
+
+/** Reads one file's content via the control-plane's `GET /jobs/build/{id}/file?path=...` (R-474). */
+export function readBuildFile(
+  token: string,
+  buildId: string,
+  path: string,
+): Promise<BuildFileContentResponse> {
+  const query = new URLSearchParams({ path });
+  return callControlPlane<BuildFileContentResponse>(
+    `/jobs/build/${encodeURIComponent(buildId)}/file?${query.toString()}`,
+    { headers: { Authorization: `Bearer ${token}` } },
+  );
 }

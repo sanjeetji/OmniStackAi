@@ -1,4 +1,4 @@
-# OmniStackAI — implementation progress (as of R-473)
+# OmniStackAI — implementation progress (as of R-474)
 
 A living summary of what is built, what is pending, and how to see results. Numbers come from the
 execution tracker (`R_&_D/OmniStackAI_Execution_Tracker_v6.xlsx`, `Phase_Roadmap`, 461 tasks as of
@@ -8,6 +8,16 @@ R-461 completion) plus the state files (`.ai/`), Git history, and CHANGELOG.
 
 - **3,603 automated tests pass** (agent-engine + Go control-plane), fully offline and
   network-independent (`task verify`), plus the console's own `typecheck`/`lint`/`build` gates.
+- **R-474 — file browser in the console Studio (2026-09-18):** continues Phase D. Each filename in
+  a build result panel is now a clickable button showing real generated file content in a
+  read-only viewer, bridged through two new authenticated control-plane proxy routes
+  (`GET /jobs/build/{id}/files`, `GET /jobs/build/{id}/file?path=...`) to the agent-engine's
+  existing R-467 file-serving endpoints — no agent-engine changes, no credit debit for browsing.
+  Honest, named limitation carried over unchanged from R-467: the Studio server has no per-user
+  build scoping. This session began with the founder asking to see the platform running before
+  continuing Phase D; the live demo stack was brought up, shown, and left running per the
+  founder's request — this task's own implementation continued and was verified against that same
+  stack. See `.ai/tasks/R-474.md` for full live-verification detail.
 - **R-473 — Studio v1 in the console, build an app from the product (2026-09-18):** Phase D of
   `R_&_D/OmniStackAI_Commercial_Platform_Kickoff_v1.md`, first slice. A logged-in user can now open
   `apps/console-web`'s new `/studio` page, type a plain-English app description, click Build, and

@@ -208,7 +208,7 @@ front-door bricks, R-420 is generated-SQL hardening, R-421..R-426 are Studio pre
 R-427..R-429 are generated-app compile fixes, R-430..R-457 are the first twenty-eight differentiating-spine
 bricks (Scope Compiler through Ecosystem Multi-Surface SLA, SLO, and Error Budget Contracts).
 Git, state files (.ai/), CHANGELOG, and docs/PROGRESS.md remain the executable/detail sources of truth.
-Current through R-473; `task verify` = 3,603 tests (agent-engine) + the Go control-plane's own suite +
+Current through R-474; `task verify` = 3,603 tests (agent-engine) + the Go control-plane's own suite +
 the Next.js console's typecheck/lint/build. R-416 added prompt-to-IR intake, R-417 materialized a generated
 owned repo, R-418 added the local chat studio, R-419 added turnkey local run, and R-420 fixed the two
 SQL defects found by live execution. R-421 added an explicit `task agent-engine:studio:preview` mode:
@@ -564,9 +564,32 @@ WHAT TO DO NEXT
   local-model IR-validation failure, honestly proxied through as a real 502 (an authentic live
   proof of the error-banner path, not a synthetic test); a retry succeeded for real - a genuine
   157-file "Recipe Box" repo with every field matching exactly what the UI renders.
-- NEXT: continue Phase D - port the agent-engine's own `studio/page.py` capabilities (file browser
-  + live preview from R-467, multi-turn chat/edit from R-468) into the console, and/or add Solution
-  Pack/Ecosystem build selection to the Studio UI. After that, Phase E (plan-gated UI, admin
+- The founder asked to see the platform running before continuing Phase D (2026-09-18): brought up
+  the real Docker control-plane + real agent-engine Studio server + real `next start` console for a
+  live walkthrough (register -> home -> Studio build -> fabric overview), then, per "Left it as
+  running and continue," kept building the next Phase D slice on that same running stack.
+- R-474 (2026-09-18, done) built the console's file browser: R-473's build result panel listed
+  filenames as inert text; each is now a button showing real generated file content in a read-only
+  viewer. Bridges the agent-engine's existing, real, path-safe read-only file endpoints
+  (`studio/files.py`, R-467) through two new authenticated control-plane proxy routes -
+  `GET /jobs/build/{id}/files` / `GET /jobs/build/{id}/file?path=...` - the same generic-proxy shape
+  R-472 established; no agent-engine changes, no credit debit (browsing isn't billable). New
+  `listBuildFiles()`/`readBuildFile()` clients, two new dynamic Route Handlers, and a `FileBrowser`
+  component in `studio-form.tsx` (binary-file guard included). A shared `writeAuthError` helper
+  replaces three copies of the same auth-error mapping. Honest, named limitation not fixed here: the
+  Studio server has no per-user build scoping (unchanged from R-467) - any authenticated caller who
+  knows a build id can browse its files; real isolation needs the Studio server to become
+  multi-tenant-aware. `task verify` 3,603 OK; control-plane `go test` all green (15 in
+  `internal/jobs`); console `typecheck`/`lint`/`build` clean (13 routes). Live, against the
+  founder's own already-running stack (only the control-plane and console restarted to pick up the
+  code, Postgres and the Studio server's build history left untouched): built a real 158-file app
+  via real Groq cloud, then proved the file browser end to end - real file content read from the
+  real repo on disk, an unknown-build 404 and a path-traversal 400 both proxied through from the
+  agent-engine unchanged.
+- NEXT: continue Phase D - live preview (executes generated code, a materially different trust
+  posture needing its own scoped decision before starting, unlike read-only file access),
+  chat/multi-turn edit (porting R-468's capability into the console), and/or Solution
+  Pack/Ecosystem build selection in the Studio UI. After that, Phase E (plan-gated UI, admin
   console, payment processor) needs its own explicit founder sign-off before starting.
   Previously-named agent-engine follow-ups (wiring R-466's `compile_and_repair` into the edit flow,
   an undo/revert UI, extending `app_delta` beyond additive-only, threading `usage_ledger` through

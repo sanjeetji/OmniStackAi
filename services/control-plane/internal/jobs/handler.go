@@ -7,14 +7,17 @@ import (
 	"io"
 	"math"
 	"net/http"
+	"net/url"
 	"time"
 
 	"github.com/sanjeetji/OmniStackAi/services/control-plane/internal/auth"
 )
 
-// Register mounts POST /jobs/build onto mux.
+// Register mounts the Job API: building an app, and read-only browsing of what a build produced.
 func Register(mux *http.ServeMux, deps Deps) {
 	mux.HandleFunc("POST /jobs/build", handleBuild(deps))
+	mux.HandleFunc("GET /jobs/build/{id}/files", handleBuildFiles(deps))
+	mux.HandleFunc("GET /jobs/build/{id}/file", handleBuildFile(deps))
 }
 
 // handleBuild authenticates the caller, forwards their JSON body verbatim to the agent-engine's
@@ -35,12 +38,7 @@ func handleBuild(deps Deps) http.HandlerFunc {
 
 		user, err := auth.RequireUser(r.Context(), deps.AuthStore, r)
 		if err != nil {
-			if errors.Is(err, auth.ErrUnauthenticated) {
-				writeError(w, http.StatusUnauthorized, "missing bearer token or session not found or expired")
-				return
-			}
-			deps.logger().Error("resolve authenticated user", "error", err)
-			writeError(w, http.StatusInternalServerError, "could not authenticate request")
+			writeAuthError(w, deps, err)
 			return
 		}
 
@@ -112,6 +110,89 @@ func handleBuild(deps Deps) http.HandlerFunc {
 		payload["credit_balance"] = newBalance
 		writeJSON(w, http.StatusOK, payload)
 	}
+}
+
+// handleBuildFiles proxies GET /api/build/{id}/files (R-467) verbatim, requiring an authenticated
+// caller but never debiting credits - browsing already-generated files is not a billable model
+// call. Known limitation, unchanged from R-467: the agent-engine's Studio server has no per-user
+// build scoping, so any authenticated caller who knows a build id can browse its files, exactly as
+// any local Studio user already could before this proxy existed.
+func handleBuildFiles(deps Deps) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		if _, err := auth.RequireUser(r.Context(), deps.AuthStore, r); err != nil {
+			writeAuthError(w, deps, err)
+			return
+		}
+		id := r.PathValue("id")
+		if id == "" {
+			writeError(w, http.StatusBadRequest, "build id is required")
+			return
+		}
+		proxyGet(w, r, deps, deps.AgentEngineURL+"/api/build/"+url.PathEscape(id)+"/files")
+	}
+}
+
+// handleBuildFile proxies GET /api/build/{id}/file?path=... (R-467) verbatim, same auth/no-debit
+// shape as handleBuildFiles. Path-traversal safety is entirely the agent-engine's own
+// (studio/files.py's already-tested _safe_destination-style check) - this proxy adds no new logic
+// over the path, it only forwards it.
+func handleBuildFile(deps Deps) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		if _, err := auth.RequireUser(r.Context(), deps.AuthStore, r); err != nil {
+			writeAuthError(w, deps, err)
+			return
+		}
+		id := r.PathValue("id")
+		if id == "" {
+			writeError(w, http.StatusBadRequest, "build id is required")
+			return
+		}
+		target := deps.AgentEngineURL + "/api/build/" + url.PathEscape(id) + "/file"
+		if path := r.URL.Query().Get("path"); path != "" {
+			target += "?" + (url.Values{"path": {path}}).Encode()
+		}
+		proxyGet(w, r, deps, target)
+	}
+}
+
+// proxyGet makes a GET request to targetURL and copies the upstream status code and body back to
+// w unchanged - the same "dumb pipe" shape handleBuild uses for POST, so the agent-engine's own
+// error responses (404 unknown build, 400 bad path, ...) reach the caller exactly as it sent them.
+func proxyGet(w http.ResponseWriter, r *http.Request, deps Deps, targetURL string) {
+	upstreamRequest, err := http.NewRequestWithContext(r.Context(), http.MethodGet, targetURL, nil)
+	if err != nil {
+		deps.logger().Error("build proxy request", "error", err)
+		writeError(w, http.StatusInternalServerError, "could not build upstream request")
+		return
+	}
+	upstreamResponse, err := deps.httpClient().Do(upstreamRequest)
+	if err != nil {
+		deps.logger().Error("call agent-engine", "error", err)
+		writeError(w, http.StatusBadGateway, "could not reach the build service")
+		return
+	}
+	defer func() { _ = upstreamResponse.Body.Close() }()
+
+	body, err := io.ReadAll(upstreamResponse.Body)
+	if err != nil {
+		deps.logger().Error("read agent-engine response", "error", err)
+		writeError(w, http.StatusBadGateway, "could not read build service response")
+		return
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(upstreamResponse.StatusCode)
+	_, _ = w.Write(body)
+}
+
+// writeAuthError maps auth.RequireUser's error to the right HTTP status - shared by every Job API
+// handler so the mapping is written, and can change, in exactly one place.
+func writeAuthError(w http.ResponseWriter, deps Deps, err error) {
+	if errors.Is(err, auth.ErrUnauthenticated) {
+		writeError(w, http.StatusUnauthorized, "missing bearer token or session not found or expired")
+		return
+	}
+	deps.logger().Error("resolve authenticated user", "error", err)
+	writeError(w, http.StatusInternalServerError, "could not authenticate request")
 }
 
 // creditsForUsage extracts cost_micros_usd from a build response's optional "usage" object (as

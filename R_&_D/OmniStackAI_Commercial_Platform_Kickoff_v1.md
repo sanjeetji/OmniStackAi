@@ -189,7 +189,7 @@ available ID per `.ai/tasks/` is **R-469** (R-468 is the last shipped task).
   scope); Solution Pack and Ecosystem builds report no `usage` key yet and so debit `0` credits —
   named, not silent, follow-up work, not a regression.
 
-**Phase D — The actual Studio UX, inside the real console-web (R-473 started, 2026-09-18)**
+**Phase D — The actual Studio UX, inside the real console-web (in progress: R-473, R-474, since 2026-09-18)**
 - This is where the earlier Lovable/Dyad/Emergent pattern research gets used for real: persistent
   chat + top tabs (Preview/Files/Code/Problems/Publish/More), one unified UI for every user with
   progressive disclosure (not persona branching), Model Provider settings surfacing the existing
@@ -204,8 +204,19 @@ available ID per `.ai/tasks/` is **R-469** (R-468 is the last shipped task).
   file browser + live preview (porting R-467's `studio/page.py` capabilities), persistent chat /
   multi-turn edit (porting R-468's), Solution Pack/Ecosystem build selection, Model Provider
   settings, and a Problems tab — each a named, separately-scoped follow-up. See `.ai/tasks/R-473.md`.
+- **R-474 (DONE, 2026-09-18) shipped the file-browser half of the item above**: each filename in
+  the `/studio` result panel is now a button showing real generated file content in a read-only
+  viewer, bridged through two new authenticated control-plane proxy routes
+  (`GET /jobs/build/{id}/files`, `GET /jobs/build/{id}/file?path=...`) to the agent-engine's
+  existing R-467 file-serving endpoints — no agent-engine changes, no credit debit for browsing.
+  Still needed: live preview (a materially different trust posture, since it executes generated
+  code, unlike read-only file access — needs its own scoped decision before starting), persistent
+  chat/multi-turn edit, Solution Pack/Ecosystem build selection, Model Provider settings, and a
+  Problems tab. Honest, named limitation not fixed by this task: the agent-engine's Studio server
+  has no per-user build scoping (a single shared in-memory process, unchanged since R-467) — any
+  signed-in console user who knows a build id can browse its files. See `.ai/tasks/R-474.md`.
 
-**Phase E — Plan/credit UX + admin surface (proposed R-474+)**
+**Phase E — Plan/credit UX + admin surface (proposed R-475+)**
 - Plan-gated feature access in the UI, a credit top-up flow, a `super_admin` console (user
   management, usage, plan overrides — the Dyad "Danger Zone" / Emergent admin-adjacent idea).
 - Actual payment processor integration (Stripe or similar) is intentionally **not** included
