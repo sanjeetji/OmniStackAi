@@ -1,9 +1,35 @@
 # Current Handoff
 
-Task ID: R-467
+Task ID: R-468
 Status: done
 Phase: BASIC/MVP — Founder Stage 0
 Branch: `main`
+
+> **R-468 Completed (2026-09-17): Multi-turn chat / "continue editing this app" in the Studio.**
+> - **New generic delta:** `intake/app_delta.py` mirrors `solution_packs/ai_delta.py`'s shape (bounded typed
+>   proposal, strict JSON-only prompt, collision-checked merge) with no pack coupling — a follow-up prompt
+>   proposes only *new* entities/apis/screens, validated (`parse_app_delta_proposal`), merged by tuple
+>   concatenation (`apply_app_delta`, mirrors `solution_packs/application.py`'s merge exactly, backstopped by
+>   `ApplicationIR`'s own validation), with a bounded validate→feedback→retry loop
+>   (`generate_app_delta_proposal`, mirroring R-465's repair idiom).
+> - **Zero changes to `edit/`, `git_service/`, or `application_ir/`** — `plan_edit`/`commit_edit` (proven
+>   end-to-end already by `test_edit_loop.py`) are reused exactly as-is to turn the delta into a real second
+>   git commit on the same owned repo.
+> - **New `studio/session.py`:** a small, bounded, in-memory, server-only `StudioSessionStore` tracking each
+>   editable build's current `ApplicationIR` + turn history (never sent to the browser).
+> - **New routes:** `POST /api/build/{id}/edit`, `GET /api/build/{id}/turns`; wired unconditionally (no
+>   toolchain needed). `page.py` gets a small chat box under the file browser.
+> - **v1 scope:** additive-only (rename/remove is rejected, never merged); works for plain-prompt and
+>   single-surface Ecosystem builds; Solution Pack and "all surfaces" builds get an honest
+>   `EditNotSupportedError` (400), not a silent no-op.
+> - **Found and fixed:** neither this module nor `ai_delta.py` validated a screen's `role` against the base
+>   IR's real roles — caught only as a last resort by `ApplicationIR`, too late for the retry loop. Fixed at
+>   both the parse and merge layers.
+> - Gates: `task verify` **3,593 OK** (63.8s, no slowdown); lint/security/env green; demos clean. End-to-end
+>   tests prove a real second (and third, stacked) git commit with the new entity's files actually on disk.
+> - **NEXT R-469:** wire R-466's toolchain-dependent `compile_and_repair` into the edit flow, and/or an
+>   undo/revert UI over the real git history every edited build now has. See `docs/CHAT_EDIT.md`,
+>   `.ai/tasks/R-468.md`.
 
 > **R-467 Completed (2026-09-17): Studio File Browser + Hybrid UI Toggle — the hybrid engine reaches the product UI.**
 > - **File browser:** new `studio/files.py` (path safety mirrors `edit/apply.py`) backs

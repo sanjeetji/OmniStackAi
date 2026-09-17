@@ -4,6 +4,27 @@ Last updated: 2026-09-17
 ## Current Phase
 Stage 0 (Founder Build Sequence, Brief Section 91) — BASIC/MVP
 
+> **R-468 (2026-09-17): the Studio supports multi-turn "continue editing this app".**
+> - `intake/app_delta.py` (new): a generic, non-pack-coupled sibling of `solution_packs/ai_delta.py` — a
+>   follow-up prompt proposes a bounded, validated delta (new entities/apis/screens only, never a
+>   restatement of the app), merged onto the tracked IR by tuple concatenation (mirrors
+>   `solution_packs/application.py`'s merge exactly, backstopped by `ApplicationIR`'s own validation), with
+>   a bounded validate→feedback→retry loop (mirrors R-465's `_synthesize_file`). **Zero changes to `edit/`,
+>   `git_service/`, or `application_ir/`** — `plan_edit`/`commit_edit` (already proven end-to-end) turn the
+>   delta into a real second git commit on the same owned repo, unmodified.
+> - `studio/session.py` (new): a small, bounded, in-memory, server-only `StudioSessionStore` tracking each
+>   editable build's current IR + turn history. New `POST /api/build/{id}/edit` /
+>   `GET /api/build/{id}/turns` routes, wired unconditionally; `page.py` gets a small chat box.
+> - v1 scope: additive-only; Solution Pack and "all surfaces" Ecosystem builds get an honest
+>   `EditNotSupportedError` rather than a silent no-op.
+> - Found and fixed while implementing: neither this module nor `ai_delta.py` validated a screen's `role`
+>   against the base IR's real declared roles — fixed at both the parse and merge layers.
+> - Gates: `task verify` **3,593** OK (63.8s, no slowdown); demos clean. End-to-end tests
+>   (`test_studio_edit.py`) prove real second/third git commits with the new entity's files actually on
+>   disk, a rejected collision making zero commits, and both excluded build kinds honestly rejected.
+>   NEXT R-469: wire R-466's `compile_and_repair` into the edit flow; an undo/revert UI over the real git
+>   history every edited build now has.
+
 > **R-467 (2026-09-17): the HYBRID engine reaches the product UI — a file browser and a hybrid-UI toggle in the Studio.**
 > - `studio/files.py` (new): `list_build_files`/`read_build_file`, path safety mirroring `edit/apply.py`'s
 >   `_safe_destination`; excludes `.git`/`node_modules`/`__pycache__`/`.next`/`.venv` and real `.env*` files.

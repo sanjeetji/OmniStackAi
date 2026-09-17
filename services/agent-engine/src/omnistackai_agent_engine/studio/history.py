@@ -15,6 +15,9 @@ _DEFAULT_LIMIT = 10
 _MAX_PROMPT_CHARS = 400
 _MAX_ENTITIES = 24
 _MAX_UI_OUTCOMES = 200  # R-467: one entry per synthesized page/screen; generously bounded
+# R-468: fields an in-place edit (see studio/session.py) may refresh on an existing entry -- the app's
+# structure after the edit, never its identity/location (id, prompt, target_dir, created_at stay fixed).
+_UPDATABLE_FIELDS = frozenset({"file_count", "commit_sha", "entities"})
 
 
 class StudioBuildHistory:
@@ -94,6 +97,27 @@ class StudioBuildHistory:
                 if entry["id"] == build_id:
                     return dict(entry)
             return None
+
+    def update(self, build_id: str, patch: dict) -> bool:
+        """Refresh a few bounded fields (see ``_UPDATABLE_FIELDS``) on an existing entry in place.
+
+        Used after an in-place edit (R-468) so "Recent builds" reflects the app's current state rather
+        than its stale first-build snapshot. Unknown/non-updatable keys in ``patch`` are ignored; the
+        entry's position (recency order) and every other field are untouched. Returns whether an entry
+        with ``build_id`` was found.
+        """
+        with self._lock:
+            for entry in self._entries:
+                if entry["id"] != build_id:
+                    continue
+                if "file_count" in patch:
+                    entry["file_count"] = int(patch["file_count"] or 0)
+                if "commit_sha" in patch:
+                    entry["commit_sha"] = str(patch["commit_sha"])[:40]
+                if "entities" in patch and isinstance(patch["entities"], list):
+                    entry["entities"] = [str(e) for e in patch["entities"][:_MAX_ENTITIES]]
+                return True
+            return False
 
     def remove(self, build_id: str) -> bool:
         """Remove the recorded build with ``build_id``; return whether it was present."""

@@ -23,11 +23,13 @@ from ..solution_packs import (
 )
 from .files import BuildNotFoundError, FileNotFoundInBuildError, PathOutsideBuildError
 from .page import STUDIO_HTML
+from .session import EditNotSupportedError
 
 BuildFn = Callable[..., dict]
 ControlFn = Callable[..., dict]
 PreviewBuildFn = Callable[..., dict]
 FileTreeFn = Callable[[str], dict]
+EditFn = Callable[[str, str], dict]
 ReadFileFn = Callable[[str, str], dict]
 
 _MAX_BODY_BYTES = 64 * 1024
@@ -44,6 +46,8 @@ def _make_handler(
     delete_build_fn: PreviewBuildFn | None,
     file_tree_fn: FileTreeFn | None = None,
     read_file_fn: ReadFileFn | None = None,
+    edit_fn: EditFn | None = None,
+    turns_fn: FileTreeFn | None = None,
     registry: SolutionPackRegistry | None = None,
     ecosystem_registry: EcosystemPackRegistry | None = None,
     switch_surface_fn: PreviewBuildFn | None = None,
@@ -180,6 +184,35 @@ def _make_handler(
             except FileNotFoundInBuildError as error:
                 self._send_json(404, {"error": str(error)})
             except Exception as error:  # surface any other failure as a clean 502
+                self._send_json(502, {"error": str(error)})
+
+        def _handle_turns(self, build_id: str) -> None:
+            if turns_fn is None:
+                self._send_json(404, {"error": "editing is not enabled"})
+                return
+            try:
+                self._send_json(200, turns_fn(build_id))
+            except Exception as error:  # a session read never targets a specific build_id error today
+                self._send_json(502, {"error": str(error)})
+
+        def _handle_edit(self, build_id: str) -> None:
+            data = self._read_json_body()
+            if data is None:
+                return
+            if edit_fn is None:
+                self._send_json(404, {"error": "editing is not enabled"})
+                return
+            prompt = str(data.get("prompt", "")).strip()
+            if not prompt:
+                self._send_json(400, {"error": "prompt is required"})
+                return
+            try:
+                self._send_json(200, edit_fn(build_id, prompt))
+            except BuildNotFoundError as error:
+                self._send_json(404, {"error": str(error)})
+            except EditNotSupportedError as error:
+                self._send_json(400, {"error": str(error)})
+            except Exception as error:  # surface any other failure (model/git) as a clean 502
                 self._send_json(502, {"error": str(error)})
 
         def do_GET(self) -> None:  # noqa: N802 (http.server API)
@@ -395,6 +428,10 @@ def _make_handler(
                 file_build_id = self._build_id_for_suffix(path_only, "/file")
                 if file_build_id is not None:
                     self._handle_read_file(file_build_id, urlparse(self.path).query)
+                    return
+                turns_build_id = self._build_id_for_suffix(path_only, "/turns")
+                if turns_build_id is not None:
+                    self._handle_turns(turns_build_id)
                     return
                 self._send(404, "text/plain; charset=utf-8", b"not found")
 
@@ -706,6 +743,10 @@ def _make_handler(
                     self._send_json(502, {"error": str(error)})
                 return
             if self.path != "/api/build":
+                edit_build_id = self._build_id_for_suffix(self.path, "/edit")
+                if edit_build_id is not None:
+                    self._handle_edit(edit_build_id)
+                    return
                 self._send_json(404, {"error": "not found"})
                 return
             data = self._read_json_body()
@@ -770,6 +811,8 @@ def create_studio_server(
     delete_build_fn: PreviewBuildFn | None = None,
     file_tree_fn: FileTreeFn | None = None,
     read_file_fn: ReadFileFn | None = None,
+    edit_fn: EditFn | None = None,
+    turns_fn: FileTreeFn | None = None,
     solution_pack_registry: SolutionPackRegistry | None = None,
     ecosystem_pack_registry: EcosystemPackRegistry | None = None,
     switch_surface_fn: PreviewBuildFn | None = None,
@@ -811,9 +854,11 @@ def create_studio_server(
     return 404 (build-only mode).
     ``history_fn`` and ``delete_build_fn`` may be wired in build-only mode (list/remove recorded
     builds); ``preview_build_fn`` (re-preview) and ``open_dir_fn`` (open the recorded repo folder)
-    are wired only in trusted-local preview mode. ``file_tree_fn`` (``GET /api/build/{id}/files``)
-    and ``read_file_fn`` (``GET /api/build/{id}/file?path=...``) may also be wired in build-only mode
-    (R-467) -- inspecting a build's files needs no toolchain or running preview.
+    are wired only in trusted-local preview mode. ``file_tree_fn`` (``GET /api/build/{id}/files``),
+    ``read_file_fn`` (``GET /api/build/{id}/file?path=...``, R-467), ``edit_fn``
+    (``POST /api/build/{id}/edit``), and ``turns_fn`` (``GET /api/build/{id}/turns``, R-468) may also be
+    wired in build-only mode -- inspecting a build's files or applying a follow-up edit needs no toolchain
+    or running preview, only git and a model.
     """
     return ThreadingHTTPServer(
         (host, port),
@@ -828,6 +873,8 @@ def create_studio_server(
             delete_build_fn,
             file_tree_fn=file_tree_fn,
             read_file_fn=read_file_fn,
+            edit_fn=edit_fn,
+            turns_fn=turns_fn,
             registry=solution_pack_registry,
             ecosystem_registry=ecosystem_pack_registry,
             switch_surface_fn=switch_surface_fn,

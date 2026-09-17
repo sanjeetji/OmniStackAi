@@ -56,6 +56,12 @@ the build form before building to send `hybrid_ui: true` on `/api/build` — it 
 into the plain-prompt and Ecosystem Pack build paths and shows a per-file 🤖 badge for model-written pages
 (Solution Pack builds don't support it yet and say so honestly rather than pretending).
 
+R-468: use the "Continue editing this app" box under the file browser to send a follow-up instruction (e.g.
+"add a favorites feature") — it lands as a real second commit on the *same* owned repo
+(`POST /api/build/{id}/edit`; `GET /api/build/{id}/turns` for the chat log). Additive only (new
+entities/apis/screens; renaming/removing existing structure is rejected); Solution Pack and multi-surface
+Ecosystem builds aren't supported yet and say so honestly rather than pretending. See `docs/CHAT_EDIT.md`.
+
 ---
 
 ## 3. Database & Container Management (PostgreSQL + pgvector)

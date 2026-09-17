@@ -1206,6 +1206,20 @@ STUDIO_HTML = """<!doctype html>
   .hybrid-toggle input { width: 16px; height: 16px; accent-color: #22d3ee; }
   .hybrid-summary { font-size: 13px; color: #9fb0c3; margin: 8px 0 0; }
   .hybrid-summary.active { color: #6ee7ff; }
+  .edit-panel { margin-top: 16px; padding-top: 14px; border-top: 1px solid #223148; }
+  .edit-panel h3 { font-size: 14px; color: #9fb0c3; margin: 0 0 8px; }
+  .edit-turns { list-style: none; margin: 0 0 10px; padding: 0; display: flex; flex-direction: column; gap: 6px; max-height: 180px; overflow: auto; }
+  .edit-turn { font-size: 13px; padding: 6px 10px; border-radius: 8px; background: rgba(18,28,48,0.55); border: 1px solid #223148; }
+  .edit-turn.user { color: #e6edf3; }
+  .edit-turn.assistant { color: #9fb0c3; }
+  .edit-turn .turn-role { font-weight: 650; text-transform: uppercase; font-size: 10.5px; letter-spacing: .4px; margin-right: 6px; color: #6ee7ff; }
+  .edit-form { display: flex; gap: 8px; }
+  .edit-input { flex: 1; background: #0b1220; color: #e6edf3; border: 1px solid #223148; border-radius: 8px; padding: 10px 12px; font-size: 14px; font-family: inherit; outline: none; }
+  .edit-input:focus { border-color: #6ee7ff; box-shadow: 0 0 0 3px rgba(110,231,255,0.15); }
+  .edit-btn { padding: 10px 18px; white-space: nowrap; }
+  .edit-status { font-size: 12.5px; margin-top: 8px; }
+  .edit-status.error { color: #f87171; }
+  .edit-status.ok { color: #6ee7ff; }
   [hidden] { display: none !important; }
   footer { text-align: center; color: #62748c; font-size: 12px; margin-top: 30px; }
 </style>
@@ -1530,6 +1544,15 @@ STUDIO_HTML = """<!doctype html>
         <pre id="file-viewer-pre" hidden><code id="file-viewer-code"></code></pre>
       </div>
     </div>
+    <div class="edit-panel">
+      <h3>Continue editing this app</h3>
+      <ul id="edit-turns" class="edit-turns"></ul>
+      <form id="edit-form" class="edit-form">
+        <input type="text" id="edit-input" class="edit-input" placeholder="e.g. Add a favorites feature">
+        <button type="submit" id="edit-btn" class="edit-btn">Apply change</button>
+      </form>
+      <p id="edit-status" class="edit-status" hidden></p>
+    </div>
   </section>
 
   <section id="history" class="history">
@@ -1548,6 +1571,9 @@ STUDIO_HTML = """<!doctype html>
   var statusEl = document.getElementById('status');
   var result = document.getElementById('result');
   var hybridToggle = document.getElementById('hybrid-ui-toggle');
+  var editForm = document.getElementById('edit-form');
+  var editInput = document.getElementById('edit-input');
+  var editBtn = document.getElementById('edit-btn');
   var currentBuildId = null;
   var currentUiOutcomes = {};
 
@@ -3201,11 +3227,26 @@ STUDIO_HTML = """<!doctype html>
     currentUiOutcomes = {};
     (data.ui_outcomes || []).forEach(function (o) { currentUiOutcomes[o.path] = o; });
     renderHybridSummary(data);
+    renderFileList(data.files || []);
+    resetFileViewer();
+    loadTurns(currentBuildId);
+    var editStatusEl = document.getElementById('edit-status');
+    editStatusEl.hidden = true;
+    result.hidden = false;
+  }
 
+  function loadTurns(buildId) {
+    if (!buildId) { renderTurns([]); return; }
+    fetch('/api/build/' + encodeURIComponent(buildId) + '/turns')
+      .then(function (res) { return res.ok ? res.json() : { turns: [] }; })
+      .then(function (data) { renderTurns(data.turns || []); })
+      .catch(function () { renderTurns([]); });
+  }
+
+  function renderFileList(files) {
     var list = document.getElementById('r-files');
     list.innerHTML = '';
-    resetFileViewer();
-    (data.files || []).forEach(function (f) {
+    files.forEach(function (f) {
       var li = document.createElement('li');
       li.dataset.path = f;
       var outcome = currentUiOutcomes[f];
@@ -3220,7 +3261,30 @@ STUDIO_HTML = """<!doctype html>
       li.addEventListener('click', function () { selectFile(f, li); });
       list.appendChild(li);
     });
-    result.hidden = false;
+  }
+
+  function refreshFileList() {
+    if (!currentBuildId) { return; }
+    fetch('/api/build/' + encodeURIComponent(currentBuildId) + '/files')
+      .then(function (res) { return res.ok ? res.json() : { files: [] }; })
+      .then(function (data) { renderFileList(data.files || []); resetFileViewer(); })
+      .catch(function () {});
+  }
+
+  function renderTurns(turns) {
+    var list = document.getElementById('edit-turns');
+    list.innerHTML = '';
+    turns.forEach(function (turn) {
+      var li = document.createElement('li');
+      li.className = 'edit-turn ' + (turn.role === 'user' ? 'user' : 'assistant');
+      var roleSpan = document.createElement('span');
+      roleSpan.className = 'turn-role';
+      roleSpan.textContent = turn.role === 'user' ? 'You' : 'App';
+      li.appendChild(roleSpan);
+      li.appendChild(document.createTextNode(turn.text || ''));
+      list.appendChild(li);
+    });
+    list.scrollTop = list.scrollHeight;
   }
 
   function renderHybridSummary(data) {
@@ -3283,6 +3347,54 @@ STUDIO_HTML = """<!doctype html>
         noteEl.hidden = false;
       });
   }
+
+  editForm.addEventListener('submit', function (e) {
+    e.preventDefault();
+    var prompt = editInput.value.trim();
+    var editStatusEl = document.getElementById('edit-status');
+    if (!prompt) { editInput.focus(); return; }
+    if (!currentBuildId) {
+      editStatusEl.className = 'edit-status error';
+      editStatusEl.textContent = 'Build an app first.';
+      editStatusEl.hidden = false;
+      return;
+    }
+    editBtn.disabled = true;
+    editStatusEl.hidden = true;
+    fetch('/api/build/' + encodeURIComponent(currentBuildId) + '/edit', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ prompt: prompt })
+    }).then(function (res) {
+      return res.json().then(function (data) { return { ok: res.ok, status: res.status, data: data }; });
+    }).then(function (out) {
+      if (!out.ok) { throw new Error((out.data && out.data.error) || ('HTTP ' + out.status)); }
+      var data = out.data;
+      document.getElementById('r-count').textContent = (data.file_count || 0) + ' files';
+      document.getElementById('r-commit').textContent = (data.commit_sha || '').slice(0, 12);
+      var ents = document.getElementById('r-entities');
+      ents.innerHTML = '';
+      (data.entities || []).forEach(function (name) {
+        var chip = document.createElement('span');
+        chip.className = 'chip';
+        chip.textContent = name;
+        ents.appendChild(chip);
+      });
+      renderTurns(data.turns || []);
+      refreshFileList();
+      editStatusEl.className = 'edit-status ok';
+      editStatusEl.textContent = (data.diff && data.diff.summary) || 'Applied.';
+      editStatusEl.hidden = false;
+      editInput.value = '';
+      loadHistory();
+    }).catch(function (err) {
+      editStatusEl.className = 'edit-status error';
+      editStatusEl.textContent = 'Edit failed: ' + err.message;
+      editStatusEl.hidden = false;
+    }).then(function () {
+      editBtn.disabled = false;
+    });
+  });
 
   form.addEventListener('submit', function (e) {
     e.preventDefault();

@@ -1,5 +1,71 @@
 # Work Log
 
+## 2026-09-17 — R-468 (Multi-turn chat / "continue editing this app" in the Studio)
+
+- **Why:** every `/api/build` call was a fresh, stateless one-shot prompt — no way to say "now add a
+  favorites feature" and have it land as a further commit on the same repo. Two rounds of direct-code
+  investigation (not guessed) confirmed no session/conversation concept exists anywhere in the repo, that
+  the apply/commit half already works end-to-end and untested-nowhere-except (`edit/diff.py::plan_edit` →
+  `edit/apply.py::commit_edit`, proven by `test_edit_loop.py::CommitEditTests`), and that the missing half —
+  producing a second `ApplicationIR` from a follow-up prompt — has no existing code.
+- **Chosen approach, and why not the obvious one:** a generic, validated delta (mirroring
+  `solution_packs/ai_delta.py`'s shape) rather than re-calling `generate_ir` with an augmented prompt and
+  diffing old vs new — the latter has no code, no test, and no guarantee the model preserves every existing
+  entity/screen verbatim (the intake system prompt actively says to "replace the template content"); a
+  supersetting failure there would produce a huge, confusing diff, the opposite of the clean incremental
+  history this feature exists for.
+- **`intake/app_delta.py` (new):** `AppDeltaProposal(entities=(), apis=(), screens=(), rationale="")` — the
+  same bounded/unique validation as `AIDeltaProposal` minus pack-specific fields; `build_app_delta_messages`
+  lists the app's real existing entities/apis/screens/roles as context; `parse_app_delta_proposal` strictly
+  parses untrusted model JSON, rejecting any collision with the base IR at parse time;
+  `apply_app_delta` independently re-checks every collision (defense in depth) before merging by tuple
+  concatenation (`base_ir.entities + proposal.entities`, mirroring `solution_packs/application.py:196-231`
+  exactly), backstopped by `ApplicationIR.__post_init__` and the same `validate_ir`/`has_errors` check;
+  `generate_app_delta_proposal` is a bounded validate→feedback→retry loop (retry only on a validation
+  rejection, never on a provider exception, mirroring R-465's `_synthesize_file`). **Zero changes to
+  `edit/`, `git_service/`, or `application_ir/`** — every diff/commit primitive is reused exactly as-is.
+- **`studio/session.py` (new):** `StudioSessionStore` — bounded (LRU-by-last-touched, `OrderedDict`),
+  thread-safe, in-memory, server-only, keyed by the same build id `StudioBuildHistory` assigns; holds the
+  app's *current* `ApplicationIR` (never sent to the browser) and a bounded turn history. `live_serve.py`'s
+  `_build` starts a session only for the two build kinds with exactly one IR — plain-prompt and
+  single-surface Ecosystem Pack builds; Solution Pack and "all surfaces" ecosystem builds never get one.
+- **`studio/live_serve.py`'s new `_edit`:** resolve the session (typed not-found) → reject Solution
+  Pack/all-surfaces builds honestly (`EditNotSupportedError`) → resolve a provider (mocked in every test
+  from the start) → `generate_app_delta_proposal` → `apply_app_delta` → `plan_edit` (empty diff → no
+  commit, early honest response) → `commit_edit` (one new commit on the existing repo) →
+  `session_store.advance` + `record_turn` → `history.update(...)` so "Recent builds" reflects the edited
+  state. `main()` wires `edit_fn`/`turns_fn` unconditionally (no toolchain needed — just git and a model).
+- **`studio/server.py`:** `POST /api/build/{id}/edit` and `GET /api/build/{id}/turns`, via the same
+  `_build_id_for_suffix` path-matching helper R-467 built for the file routes; typed-error → status mapping
+  (not-found→404, unsupported-build-kind→400, other→502).
+- **`studio/history.py`:** new `.update(build_id, patch)` refreshes `file_count`/`commit_sha`/`entities` on
+  an existing entry in place (identity/location fields stay fixed) — so "Recent builds" isn't stale after
+  an edit.
+- **`page.py`:** a "Continue editing this app" panel (turn list + input + Apply button) under the file
+  browser; a successful edit re-renders entities/file-count/commit and refreshes the file browser (files
+  changed); zero external assets preserved (verified with `node --check` on the extracted script + the
+  usual no-CDN/no-`<link>` checks).
+- **Found and fixed while implementing (via the end-to-end tests, not a live run):** neither this new
+  module nor `ai_delta.py` (the pattern it mirrors) validated that a proposed screen's `role` refers to one
+  of the base IR's *actual* declared roles — `ApplicationIR.__post_init__` does catch it as a last resort
+  (it did, in the first failing test run: `minimal-blog-ecosystem`'s "author-studio" surface only declares
+  an `author` role), but only *after* `generate_app_delta_proposal` had already returned, too late for the
+  retry loop to use it. Fixed by adding an explicit role check to `parse_app_delta_proposal` (same layer as
+  every other base-IR collision, gets the retry benefit) and to `apply_app_delta` (defense in depth), plus
+  listing the app's real roles in the prompt.
+- **Tests:** `test_app_delta.py` (27, new), `test_studio_session.py` (13, new), `test_studio_edit.py` (11,
+  new end-to-end against real temp git repos — a real second commit with the new entity's files actually on
+  disk, a second edit stacking a third commit, a collision rejected with zero commits and state unchanged,
+  `StudioBuildHistory` updated in place, a provider exception never retried, both excluded build kinds
+  honestly rejected), plus route/page-control additions to `test_studio_server.py`. Gates: focused 214
+  passed; `task verify` **3,593 OK** (63.8s — no slowdown, confirming no hidden network calls crept in);
+  lint/security/env green; demos clean (359/353 files).
+- **Manual smoke (opt-in, real HTTP, build-only mode, no live model call — today's Groq daily quota was
+  already exhausted per R-466/R-467):** `/healthz` ok; an unknown build's `/turns` → `{"turns": []}` (200,
+  honest empty view, not an error); an unknown build's `/edit` → 404; a build id with a slash → 404 (not
+  matched); the page's HTML contains "Apply change". The core delta→merge→diff→commit round trip was
+  already proven end-to-end by the test suite above, so no further live model call was spent.
+
 ## 2026-09-17 — R-467 (Studio File Browser + Hybrid UI Toggle — wiring the hybrid engine into the product UI)
 
 - **Why:** R-465/R-466 built a real hybrid engine, but it was reachable only from a standalone CLI

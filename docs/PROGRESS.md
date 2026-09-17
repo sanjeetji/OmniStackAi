@@ -1,4 +1,4 @@
-# OmniStackAI — implementation progress (as of R-467)
+# OmniStackAI — implementation progress (as of R-468)
 
 A living summary of what is built, what is pending, and how to see results. Numbers come from the
 execution tracker (`R_&_D/OmniStackAI_Execution_Tracker_v6.xlsx`, `Phase_Roadmap`, 461 tasks as of
@@ -6,7 +6,18 @@ R-461 completion) plus the state files (`.ai/`), Git history, and CHANGELOG.
 
 ## Headline
 
-- **3,529 automated tests pass**, fully offline and network-independent (`task verify`).
+- **3,593 automated tests pass**, fully offline and network-independent (`task verify`).
+- **R-468 — multi-turn chat / "continue editing this app" (2026-09-17):** a follow-up prompt ("add a
+  favorites feature") now lands as a real second commit on the same owned repo. New `intake/app_delta.py`
+  is a generic, non-pack-coupled sibling of `solution_packs/ai_delta.py`: a bounded, validated delta (new
+  entities/apis/screens only) merged onto the app's tracked IR by tuple concatenation, backstopped by
+  `ApplicationIR`'s own validation and a retry loop mirroring R-465's repair idiom. The diff/commit half
+  needed zero changes — `edit/diff.py::plan_edit` + `edit/apply.py::commit_edit` (already proven
+  end-to-end) turn the delta straight into a git commit. New `studio/session.py`'s bounded, server-only
+  `StudioSessionStore` tracks each editable build's current IR; `POST /api/build/{id}/edit` +
+  `GET /api/build/{id}/turns` and a small chat box in the Studio page. v1 is additive-only (renaming/
+  removing existing structure is rejected, never merged); Solution Pack and multi-surface Ecosystem builds
+  get an honest "not supported" error rather than a silent no-op. See `docs/CHAT_EDIT.md`.
 - **R-467 — the hybrid engine reaches the product UI (2026-09-17):** the Studio a user actually opens in a
   browser (`task agent-engine:studio:serve`/`:preview`) gets a read-only file browser
   (`GET /api/build/{id}/files` / `.../file?path=...`, a new pure `studio/files.py` with `edit/apply.py`-style
@@ -545,14 +556,15 @@ the live run needs the key + a network machine.
 ## What's next
 
 **Hybrid engine (founder-approved direction; R-465 grounding, R-466 compile repair + pacing, R-467 file
-browser + hybrid-UI toggle all done):** the next brick is **R-468 — multi-turn chat / "continue editing this
-app"**: the Studio has no conversation/session concept at all today (confirmed by direct reading — every
-`/api/build` call is a fresh, stateless one-shot prompt), so this needs real design — likely a fresh
-session/thread id plus either a new build or an `edit/diff.py`-based (`plan_edit`/`ProjectDiff`/`apply_diff`)
-in-place patch for a follow-up turn. Then wiring R-466's `compile_and_repair` (needs the `pnpm`/`tsc`
-toolchain) into `studio:preview`. Founder action to unlock a full live proof of a model-written page that
-compiles: after the Groq daily reset run with `OMNISTACKAI_MAX_RETRY_AFTER_SECONDS=180`, or add
-`GOOGLE_API_KEY` (Gemini) to the gitignored `.env`.
+browser + hybrid-UI toggle, R-468 multi-turn edit all done):** the next brick is **R-469 — wiring R-466's
+`compile_and_repair` into the edit flow** (so an edited hybrid-UI screen also gets type-checked/repaired;
+needs the `pnpm`/`tsc` toolchain), and/or an **undo/revert UI** over the real git history every edited build
+now has on disk (`git log`/`git revert` already work from a terminal; nothing exposes them in the Studio
+yet). A further-out idea: extending `app_delta` beyond additive-only (rename/remove existing entities) —
+real design needed, higher risk of a confusing diff, deliberately deferred. Founder action to unlock a full
+live proof of a model-written page that compiles, or of the chat-edit delta against a real model: after the
+Groq daily reset run with `OMNISTACKAI_MAX_RETRY_AFTER_SECONDS=180`, or add `GOOGLE_API_KEY` (Gemini) to the
+gitignored `.env`.
 
 The local front door is built through robust browser preview with memory: R-416 prompt → IR, R-417 IR →
 owned repo, R-418 local chat studio, R-419 turnkey local run, R-420 SQL hardening, R-421 managed embedded

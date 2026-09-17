@@ -1,8 +1,10 @@
 """Opt-in live studio: serve the chat-to-create UI backed by the local Ollama build path.
 
-Also serves a read-only file browser (``GET /api/build/{id}/files`` / ``.../file?path=``, R-467) and a
+Also serves a read-only file browser (``GET /api/build/{id}/files`` / ``.../file?path=``, R-467), a
 ``hybrid_ui`` build option that opts the plain-prompt and Ecosystem Pack paths into R-465's model-written
-screens, surfacing R-465's ``ui_outcomes`` in the response and the recorded history.
+screens, surfacing R-465's ``ui_outcomes`` in the response and the recorded history, and a follow-up edit
+loop (``POST /api/build/{id}/edit`` / ``GET /api/build/{id}/turns``, R-468) that lets a further prompt add
+to a plain-prompt or single-surface Ecosystem Pack build as one more commit on the same repo.
 
 Excluded from static verification. Start build-only mode with:
 
@@ -28,12 +30,18 @@ import subprocess
 import sys
 import tempfile
 
+from ..application_ir import ApplicationIR
+from ..codegen import assemble_project
+from ..edit.apply import commit_edit
+from ..edit.diff import plan_edit
+from ..intake.app_delta import apply_app_delta, generate_app_delta_proposal
 from ..intake.provider_resolution import resolve_generation_provider_from_env
 from ..intake.build_app import app_build_result_to_dict, build_app_from_prompt
 from .files import BuildNotFoundError, list_build_files, read_build_file
 from .history import StudioBuildHistory
 from .preview import StudioPreviewManager
 from .server import create_studio_server
+from .session import EditNotSupportedError, StudioSessionStore
 
 _AUTHOR_NAME = "sanjeetji"
 _AUTHOR_EMAIL = "sk698166@gmail.com"
@@ -76,6 +84,7 @@ def _build(
     hybrid_ui: bool = False,
     preview_manager: StudioPreviewManager | None = None,
     history: StudioBuildHistory | None = None,
+    session_store: StudioSessionStore | None = None,
 ) -> dict:
     """Build an app for one ``/api/build`` request.
 
@@ -83,7 +92,12 @@ def _build(
     screens (``synthesize_screens=True`` + a ``ui_outcomes`` sink, surfaced in the returned payload). The
     Solution Pack path has no such parameter on ``build_solution_pack_project`` -- a request there is
     reported back honestly as ``hybrid_ui_active: False`` rather than silently ignored.
+
+    ``session_store`` (R-468) starts a follow-up edit session for this build's Application IR -- but only
+    for the plain-prompt and single-surface Ecosystem Pack paths, which produce exactly one IR; Solution
+    Pack and "all surfaces" Ecosystem builds set ``editable_ir`` to None and are left un-editable.
     """
+    editable_ir: ApplicationIR | None = None
     if ecosystem_id:
         from pathlib import Path
         from ..application_ir import ApplicationIR
@@ -191,6 +205,7 @@ def _build(
             }
             if single_hybrid_active:
                 payload["ui_outcomes"] = [outcome.to_dict() for outcome in single_ui_outcomes]
+            editable_ir = surface_ir  # R-468: a single-surface build has exactly one IR to edit
         else:
             os.makedirs(target_dir, exist_ok=True)
             surface_results = []
@@ -441,9 +456,12 @@ def _build(
         payload = app_build_result_to_dict(result, ui_outcomes=(plain_ui_outcomes if hybrid_ui else None))
         payload["hybrid_ui_requested"] = hybrid_ui
         payload["hybrid_ui_active"] = hybrid_ui
+        editable_ir = result.ir  # R-468: a plain-prompt build has exactly one IR to edit
 
     if history is not None:
         payload["id"] = history.record(payload)
+        if session_store is not None and editable_ir is not None:
+            session_store.begin(payload["id"], editable_ir, payload["target_dir"])
     if preview_manager is None:
         payload["preview"] = {
             "status": "disabled",
@@ -494,6 +512,82 @@ def _read_build_file(build_id: str, path: str, history: StudioBuildHistory) -> d
     return read_build_file(_resolve_build_dir(build_id, history), path)
 
 
+def _turns(build_id: str, session_store: StudioSessionStore) -> dict:
+    return session_store.turns_view(build_id)
+
+
+async def _edit(
+    build_id: str,
+    prompt: str,
+    *,
+    history: StudioBuildHistory,
+    session_store: StudioSessionStore,
+) -> dict:
+    """Apply one follow-up prompt to an existing build as a further commit on the same repo (R-468).
+
+    Additive only: the model proposes new entities/apis/screens (`generate_app_delta_proposal`), which are
+    merged onto the session's current IR (`apply_app_delta`), diffed against it (`plan_edit`, unmodified
+    from R-237), and applied as one new commit (`commit_edit`, unmodified) -- or, if the delta produced no
+    file changes, reported back with no commit. Never called for a Solution Pack or "all surfaces"
+    Ecosystem build (`_build` only starts a session for the two single-IR build kinds).
+    """
+    entry = history.get(build_id)
+    if entry is None:
+        raise BuildNotFoundError(f"build '{build_id}' is not available in this session")
+    if entry.get("pack_id") or entry.get("is_ecosystem"):
+        raise EditNotSupportedError(
+            "editing is not yet supported for Solution Pack builds or multi-surface Ecosystem builds"
+        )
+    session = session_store.get(build_id)
+    if session is None:
+        raise BuildNotFoundError(f"build '{build_id}' session has expired in this server session; rebuild to continue editing")
+
+    provider, model_id, _max_output, timeout = resolve_generation_provider_from_env()
+    proposal = await generate_app_delta_proposal(session.ir, prompt, provider, model_id=model_id, timeout_seconds=timeout)
+    new_ir = apply_app_delta(session.ir, proposal)
+    diff = plan_edit(session.ir, new_ir)
+
+    if diff.is_empty():
+        session_store.record_turn(build_id, "user", prompt)
+        session_store.record_turn(build_id, "assistant", "No file changes were needed for that request.")
+        return {
+            "id": build_id,
+            "diff": {"added": [], "modified": [], "deleted": [], "summary": diff.summary()},
+            "entities": [entity.name for entity in session.ir.entities],
+            "file_count": entry.get("file_count", 0),
+            "commit_sha": entry.get("commit_sha", ""),
+            "rationale": proposal.rationale,
+            "turns": session_store.turns_view(build_id)["turns"],
+        }
+
+    result = commit_edit(
+        diff, session.target_dir, author_name=_AUTHOR_NAME, author_email=_AUTHOR_EMAIL,
+        message=f"edit: {prompt.strip()[:72]}",
+    )
+    session_store.advance(build_id, new_ir)
+    session_store.record_turn(build_id, "user", prompt)
+    session_store.record_turn(build_id, "assistant", diff.summary())
+
+    file_count = len(assemble_project(new_ir).files())
+    entities = [entity.name for entity in new_ir.entities]
+    history.update(build_id, {"file_count": file_count, "commit_sha": result.commit_sha, "entities": entities})
+
+    return {
+        "id": build_id,
+        "diff": {
+            "added": list(diff.added()),
+            "modified": list(diff.modified()),
+            "deleted": list(diff.deleted()),
+            "summary": diff.summary(),
+        },
+        "entities": entities,
+        "file_count": file_count,
+        "commit_sha": result.commit_sha,
+        "rationale": proposal.rationale,
+        "turns": session_store.turns_view(build_id)["turns"],
+    }
+
+
 def _open_path(path: str) -> bool:
     """Open a directory in the OS file browser, best-effort. Never raises; no command is echoed."""
     try:
@@ -528,20 +622,27 @@ def main() -> None:
     port = int(os.environ.get("OMNISTACKAI_STUDIO_PORT", "4173"))
     preview_manager = StudioPreviewManager() if _preview_enabled() else None
     history = StudioBuildHistory()
+    session_store = StudioSessionStore()
 
     def build(prompt: str, **options) -> dict:
-        return _build(prompt, preview_manager=preview_manager, history=history, **options)
+        return _build(prompt, preview_manager=preview_manager, history=history, session_store=session_store, **options)
 
     def delete_build(build_id: str) -> dict:
         removed = history.remove(build_id)
         return {"removed": removed, **history.list()}
 
+    def edit_build(build_id: str, prompt: str) -> dict:
+        return asyncio.run(_edit(build_id, prompt, history=history, session_store=session_store))
+
     control_kwargs: dict = {
         "history_fn": history.list,
         "delete_build_fn": delete_build,
-        # R-467: file browsing needs no toolchain or running preview -- wired in build-only mode too.
+        # R-467/R-468: file browsing and editing need no toolchain or running preview -- wired in
+        # build-only mode too.
         "file_tree_fn": lambda build_id: _list_build_files(build_id, history),
         "read_file_fn": lambda build_id, path: _read_build_file(build_id, path, history),
+        "edit_fn": edit_build,
+        "turns_fn": lambda build_id: _turns(build_id, session_store),
     }
     if preview_manager is not None:
         control_kwargs.update(

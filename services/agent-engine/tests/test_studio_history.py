@@ -155,6 +155,42 @@ class TestStudioBuildHistory(unittest.TestCase):
         entry = history.list()["builds"][0]
         self.assertLessEqual(len(entry["ui_outcomes"]), 200)
 
+    def test_update_merges_bounded_fields_onto_an_existing_entry(self) -> None:
+        history = StudioBuildHistory()
+        build_id = history.record(_build("Blog", entities=["Post"], file_count=150, commit_sha="a" * 40))
+        changed = history.update(build_id, {"file_count": 160, "commit_sha": "b" * 40, "entities": ["Post", "Favorite"]})
+        self.assertTrue(changed)
+        entry = history.get(build_id)
+        self.assertEqual(entry["file_count"], 160)
+        self.assertEqual(entry["commit_sha"], "b" * 40)
+        self.assertEqual(entry["entities"], ["Post", "Favorite"])
+        # Fields not in the patch (name, prompt, target_dir, ...) are untouched.
+        self.assertEqual(entry["name"], "Blog")
+
+    def test_update_unknown_id_returns_false_and_changes_nothing(self) -> None:
+        history = StudioBuildHistory()
+        history.record(_build("Blog"))
+        self.assertFalse(history.update("does-not-exist", {"file_count": 999}))
+        self.assertEqual(history.list()["builds"][0]["file_count"], 152)
+
+    def test_update_ignores_unknown_or_unbounded_keys(self) -> None:
+        history = StudioBuildHistory()
+        build_id = history.record(_build("Blog"))
+        history.update(build_id, {"target_dir": "/etc/passwd", "db_password": "SUPER-SECRET-PW", "id": "9999"})
+        entry = history.get(build_id)
+        self.assertEqual(entry["target_dir"], "/tmp/Blog")  # unchanged -- not an updatable field
+        self.assertEqual(entry["id"], build_id)  # unchanged -- id is immutable
+        self.assertNotIn("db_password", entry)
+
+    def test_update_is_json_serializable_and_stays_newest_first_by_original_position(self) -> None:
+        history = StudioBuildHistory()
+        first = history.record(_build("One"))
+        history.record(_build("Two"))
+        history.update(first, {"file_count": 999})
+        json.dumps(history.list())
+        # Updating an entry's fields does not change its recency ordering.
+        self.assertEqual([b["name"] for b in history.list()["builds"]], ["Two", "One"])
+
     def test_record_with_applied_ai_deltas(self) -> None:
         history = StudioBuildHistory()
         history.record(

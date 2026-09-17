@@ -1,47 +1,46 @@
-task_id: R-467
+task_id: R-468
 status: completed
 phase: MVP
 tracker_row: null
 started_at: "2026-09-17"
 completed_at: "2026-09-17"
 objective: >-
-  First slice of the product-UI shell: wire R-465/R-466's hybrid engine and a read-only file browser into
-  the actual Studio a user opens in a browser. New pure studio/files.py (list_build_files, read_build_file -
-  path-safety mirrors edit/apply.py's _safe_destination; excludes .git/node_modules/__pycache__/.next/.venv
-  and real .env* files, keeps .env.example) backs new GET /api/build/{id}/files and
-  GET /api/build/{id}/file?path= routes in server.py, resolved against StudioBuildHistory's recorded
-  target_dir in live_serve.py; wired in build-only mode too (no toolchain needed). /api/build gains a
-  hybrid_ui boolean threading synthesize_screens=True + a ui_outcomes sink into the plain-prompt and
-  Ecosystem Pack build paths; ui_outcomes surfaced in the response, recorded in history, shown in the page
-  (summary line + per-file badge). The Solution Pack path has no such kwarg on build_solution_pack_project -
-  requesting hybrid_ui there is honestly reported as hybrid_ui_active: false. page.py gained a clickable
-  file list + read-only viewer pane and a "Hybrid UI (experimental)" checkbox, still zero external assets.
-  Fixed a missing ApplicationIR import (latent NameError) in live_serve's ecosystem branch. Found and fixed
-  a LIVE, ACTIVE violation of the "0 model/network calls under task verify" constraint: with the founder's
-  real Groq credentials now in the gitignored .env (from the R-465/R-466 live proofs), four pre-existing
-  live_serve._build() test call sites (2 in test_studio_ecosystem.py, 2 more found in test_studio_server.py)
-  never mocked resolve_generation_provider_from_env, so running the existing Studio suite unmodified made
-  real outbound Groq calls (one unmocked test cost 23.5s of real, R-466-paced traffic). All four now mock it.
-  Out of scope, named for R-468: multi-turn chat/conversation state (no session concept exists at all
-  today), and wiring R-466's toolchain-dependent compile_and_repair into the live server.
+  Multi-turn chat / "continue editing this app" in the Studio: a generic, validated delta mechanism
+  (intake/app_delta.py, a non-pack-coupled sibling of solution_packs/ai_delta.py) lets a follow-up prompt
+  propose new entities/apis/screens, merged onto the current ApplicationIR by tuple concatenation
+  (mirroring solution_packs/application.py's merge, backstopped by ApplicationIR.__post_init__ and
+  validate_ir/has_errors), diffed via the EXISTING unmodified edit/diff.py::plan_edit and applied via the
+  EXISTING unmodified edit/apply.py::commit_edit (one new commit on the same repo). New in-memory
+  StudioSessionStore (studio/session.py) tracks the current IR + turn history per build id, server-only
+  (never sent to the browser). New POST /api/build/{id}/edit + GET /api/build/{id}/turns routes (via the
+  R-467 _build_id_for_suffix pattern), wired unconditionally in live_serve.py (no toolchain needed). page.py
+  gets a small follow-up chat box. v1 scope: additive-only changes; works for plain-prompt and
+  single-surface ecosystem builds; Solution Pack and all-surfaces ecosystem builds get an honest
+  "not supported" error (EditNotSupportedError) rather than being silently ignored or guessed at. No changes
+  to edit/, git_service/, or application_ir/. Every resolve_generation_provider_from_env call site in every
+  new test is mocked from the start. Found and fixed while implementing: neither this module nor the
+  ai_delta.py pattern it mirrors validated a proposed screen's role against the base IR's real declared
+  roles (caught only as a last resort by ApplicationIR's own validation, too late for the retry loop to use
+  it) - added an explicit role-existence check at both the parse layer (gets the retry benefit) and the
+  merge layer (defense in depth), plus listing real roles in the prompt.
 allowed_paths:
-  - services/agent-engine/src/omnistackai_agent_engine/studio/files.py
-  - services/agent-engine/src/omnistackai_agent_engine/studio/__init__.py
+  - services/agent-engine/src/omnistackai_agent_engine/intake/app_delta.py
+  - services/agent-engine/src/omnistackai_agent_engine/studio/session.py
   - services/agent-engine/src/omnistackai_agent_engine/studio/server.py
   - services/agent-engine/src/omnistackai_agent_engine/studio/live_serve.py
   - services/agent-engine/src/omnistackai_agent_engine/studio/history.py
   - services/agent-engine/src/omnistackai_agent_engine/studio/page.py
-  - services/agent-engine/src/omnistackai_agent_engine/intake/build_app.py
-  - services/agent-engine/tests/test_studio_files.py
+  - services/agent-engine/src/omnistackai_agent_engine/studio/__init__.py
+  - services/agent-engine/tests/test_app_delta.py
+  - services/agent-engine/tests/test_studio_session.py
+  - services/agent-engine/tests/test_studio_edit.py
   - services/agent-engine/tests/test_studio_server.py
-  - services/agent-engine/tests/test_studio_ecosystem.py
   - services/agent-engine/tests/test_studio_history.py
-  - services/agent-engine/tests/test_build_app.py
-  - docs/HYBRID_UI.md
+  - docs/CHAT_EDIT.md
   - docs/PROGRESS.md
   - docs/RESUME_PROMPT.md
   - COMMANDS.md
-  - .ai/tasks/R-467.md
+  - .ai/tasks/R-468.md
   - .ai/CURRENT_TASK.yaml
   - .ai/PROJECT_STATE.yaml
   - .ai/WORK_LOG.md
@@ -49,51 +48,48 @@ allowed_paths:
   - PROJECT_STATE.md
   - CHANGELOG.md
 forbidden_changes:
-  - No model, network, Docker, subprocess, or toolchain calls under task verify (stub functions and tmp dirs only); build-only mode still never executes generated code
+  - No model, network, Docker, subprocess, or toolchain calls under task verify (stub providers + real tmp-dir git repos only)
   - No new dependencies (Python 3.13 stdlib only); no framework/bundler/CDN asset introduced into page.py
-  - No conversation/session/multi-turn state, and no edit/diff.py or apply_diff calls from the Studio (read-only inspection + a build-time toggle only)
-  - Do not wire codegen/hybrid_repair.py's compile_and_repair into the live server (deferred - needs the toolchain)
-  - Do not change the Application IR, DB engine (PostgreSQL stays), generated-project contracts, or any codegen module's deterministic default output
+  - No changes to edit/diff.py, edit/apply.py, edit/patch.py, edit/errors.py, git_service/, or application_ir/
+  - Do not support renaming/modifying/removing existing entities/fields, multi-surface ecosystem edits, or Solution Pack edits via this mechanism in v1
   - Do not modify or commit the untracked .claude directory
 required_gates:
-  - focused: tests/test_studio_files.py + tests/test_studio_server.py + tests/test_studio_ecosystem.py + tests/test_studio_history.py + tests/test_build_app.py
+  - focused: tests/test_app_delta.py + tests/test_studio_session.py + tests/test_studio_edit.py + tests/test_studio_server.py
   - task verify
   - task lint
   - task security:quick
   - task env:check
   - task builder:demo -- minimal-blog
   - task builder:demo -- rideshare-favourites
-  - "manual smoke (opt-in): task agent-engine:studio:serve, build, browse files"
+  - "manual smoke (opt-in, no live model call): task agent-engine:studio:serve, GET/POST edit+turns routing"
 model_tool_trace:
   routing: deterministic_only
   local_calls: 0
   cloud_calls: 0
   note: >-
-    Implementation and verify use stub build/provider functions and real tmp-dir filesystems only - 0
-    model/network calls (confirmed live: full local test suite completed in 68.8s after fixing the 4
-    previously-unmocked provider-resolution call sites). The manual smoke test used build-only mode with no
-    hybrid_ui, so it made 0 model calls too; hybrid_ui end-to-end threading was proven by stub-provider tests.
+    Implementation and verify use stub providers and real tmp-dir git repos only - 0 model/network calls.
+    Every resolve_generation_provider_from_env call site in every new test is mocked from the start.
 evidence:
-  focused_tests: "144 passed (test_studio_files 18, test_studio_server 59, test_studio_ecosystem 9, test_studio_history 14, test_studio_preview 14, test_studio_ecosystem_preview 7, test_build_app 23)"
-  verify: "Ran 3529 tests ... OK; Stage 0 verification passed (0 model calls); full local suite: 3,529 passed, 42 subtests passed in 68.80s"
+  focused_tests: "214 passed (test_app_delta 27, test_studio_session 13, test_studio_edit 11, test_studio_server 69, test_studio_history 18, test_studio_files 18, test_studio_ecosystem 11, test_studio_ecosystem_preview 7, test_studio_preview 14, test_build_app 23, test_edit_loop/test_edit_patch)"
+  verify: "Ran 3593 tests ... OK; Stage 0 verification passed (0 model/network calls; 63.8s, no slowdown)"
   lint: "Lint passed"
   security: "Stage 0 secret-policy check passed"
   env: "Environment contract passed"
   demos: "minimal-blog 359 files; rideshare-favourites 353 files"
   manual_smoke: >-
-    Real HTTP against a running live_serve instance (build-only, no hybrid_ui): POST /api/build -> 160-file
-    build id=1; GET /api/build/1/files -> 160 sorted paths; GET /api/build/1/file?path=... -> real content;
-    GET /api/build/999/files -> 404; path-traversal attempt -> 400 "path escapes the build directory";
-    missing path query -> 400. Server stopped cleanly.
+    Real HTTP against a running live_serve instance (build-only, no live model call): GET /healthz ok;
+    GET /api/build/does-not-exist/turns -> {"turns": []} (200, honest empty view); POST
+    /api/build/does-not-exist/edit -> 404; POST /api/build/1/2/edit (slash in id) -> 404; page HTML contains
+    "Apply change". The delta->merge->diff->real-second-commit round trip is proven by test_studio_edit.py
+    against real temp git repos (stub provider): second edit stacks a third commit; a collision is rejected
+    with zero commits made; Solution Pack and all-surfaces ecosystem builds return EditNotSupportedError.
   live_discovery: >-
-    Found and fixed a live, active "0 model/network calls under task verify" violation: real Groq
-    credentials in .env (from R-465/R-466 live proofs) meant 4 pre-existing Studio tests that never mocked
-    resolve_generation_provider_from_env were making real network calls - one cost 23.5s of real,
-    R-466-paced Groq traffic. All 4 now mock it explicitly.
+    Neither this module nor solution_packs/ai_delta.py (which it mirrors) validated a proposed screen's role
+    against the base IR's real declared roles - only ApplicationIR's own last-resort validation caught it,
+    too late for the retry loop. Fixed at both the parse layer (gets the retry benefit) and the merge layer
+    (defense in depth), plus real roles now listed in the prompt.
 next_action: >-
-  R-467 done. NEXT R-468: multi-turn chat / "continue editing this app" in the Studio - no session concept
-  exists at all today (confirmed by direct reading of studio/), so this needs real design, likely built on
-  edit/diff.py's plan_edit/ProjectDiff + apply_diff for in-place follow-up turns rather than a fresh repo
-  every time. Then wire R-466's compile_and_repair into studio:preview (needs the toolchain; opt-in).
-  Founder action to unlock a full live hybrid-UI proof: after the Groq daily reset run with
-  OMNISTACKAI_MAX_RETRY_AFTER_SECONDS=180, or add GOOGLE_API_KEY (Gemini) to the gitignored .env.
+  R-468 done. NEXT R-469: wire R-466's toolchain-dependent compile_and_repair into the live server's edit
+  flow (so an edited hybrid-UI screen also gets type-checked/repaired), and/or an undo/revert UI over the
+  real git history that now exists on disk for every edited build. Founder action to unlock a full live
+  hybrid-UI/delta proof: after the Groq daily reset, or add GOOGLE_API_KEY (Gemini) to the gitignored .env.

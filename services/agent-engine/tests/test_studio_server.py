@@ -440,6 +440,104 @@ class TestStudioFileRoutes(unittest.TestCase):
             self.assertEqual(_get(base + "/api/preview")[0], 404)
 
 
+class TestStudioEditRoutes(unittest.TestCase):
+    """R-468: POST /api/build/{id}/edit and GET /api/build/{id}/turns."""
+
+    def test_post_edit_success(self) -> None:
+        seen = []
+
+        def edit_build(build_id, prompt):
+            seen.append((build_id, prompt))
+            return {
+                "id": build_id,
+                "diff": {"added": ["app/favorites/page.tsx"], "modified": [], "deleted": [], "summary": "1 added"},
+                "entities": ["Post", "Favorite"],
+                "file_count": 161,
+                "commit_sha": "def456",
+                "rationale": "Adds favorites.",
+                "turns": [{"role": "user", "text": "add favorites", "created_at": 1.0}],
+            }
+
+        with running_server(RecordingBuild(STUB_RESULT), edit_fn=edit_build) as base:
+            status, data = _post(base + "/api/build/7/edit", obj={"prompt": "add favorites"})
+            self.assertEqual(status, 200)
+            self.assertEqual(data["entities"], ["Post", "Favorite"])
+            self.assertEqual(data["diff"]["added"], ["app/favorites/page.tsx"])
+            self.assertEqual(seen, [("7", "add favorites")])
+
+    def test_edit_404_when_disabled(self) -> None:
+        with running_server(RecordingBuild(STUB_RESULT)) as base:
+            self.assertEqual(_post(base + "/api/build/7/edit", obj={"prompt": "x"})[0], 404)
+
+    def test_edit_empty_prompt_is_400(self) -> None:
+        with running_server(RecordingBuild(STUB_RESULT), edit_fn=lambda bid, p: {}) as base:
+            status, data = _post(base + "/api/build/7/edit", obj={"prompt": "   "})
+            self.assertEqual(status, 400)
+            self.assertIn("prompt", data["error"])
+
+    def test_edit_maps_each_typed_error(self) -> None:
+        from omnistackai_agent_engine.studio.files import BuildNotFoundError
+        from omnistackai_agent_engine.studio.session import EditNotSupportedError
+
+        cases = [
+            (BuildNotFoundError("no such build"), 404),
+            (EditNotSupportedError("not supported for this build kind"), 400),
+            (RuntimeError("boom"), 502),
+        ]
+        for error, expected_status in cases:
+            def edit_build(build_id, prompt, _error=error):
+                raise _error
+
+            with running_server(RecordingBuild(STUB_RESULT), edit_fn=edit_build) as base:
+                status, _ = _post(base + "/api/build/7/edit", obj={"prompt": "add favorites"})
+                self.assertEqual(status, expected_status, type(error).__name__)
+
+    def test_edit_build_id_with_a_slash_is_not_matched(self) -> None:
+        with running_server(RecordingBuild(STUB_RESULT), edit_fn=lambda bid, p: {}) as base:
+            status, _ = _post(base + "/api/build/1/2/edit", obj={"prompt": "x"})
+            self.assertEqual(status, 404)
+
+    def test_get_turns(self) -> None:
+        seen = []
+
+        def turns(build_id):
+            seen.append(build_id)
+            return {"turns": [{"role": "user", "text": "add favorites", "created_at": 1.0}]}
+
+        with running_server(RecordingBuild(STUB_RESULT), turns_fn=turns) as base:
+            status, data = _get(base + "/api/build/7/turns")
+            self.assertEqual(status, 200)
+            self.assertEqual(len(json.loads(data)["turns"]), 1)
+            self.assertEqual(seen, ["7"])
+
+    def test_turns_404_when_disabled(self) -> None:
+        with running_server(RecordingBuild(STUB_RESULT)) as base:
+            self.assertEqual(_get(base + "/api/build/7/turns")[0], 404)
+
+    def test_turns_maps_other_exception_to_502(self) -> None:
+        def turns(build_id):
+            raise RuntimeError("boom")
+
+        with running_server(RecordingBuild(STUB_RESULT), turns_fn=turns) as base:
+            status, data = _get(base + "/api/build/7/turns")
+            self.assertEqual(status, 502)
+            self.assertIn("boom", json.loads(data)["error"])
+
+    def test_edit_and_turns_available_without_any_preview_wiring(self) -> None:
+        with running_server(
+            RecordingBuild(STUB_RESULT),
+            edit_fn=lambda bid, prompt: {"id": bid},
+            turns_fn=lambda bid: {"turns": []},
+        ) as base:
+            self.assertEqual(_post(base + "/api/build/1/edit", obj={"prompt": "x"})[0], 200)
+            self.assertEqual(_get(base + "/api/build/1/turns")[0], 200)
+            self.assertEqual(_get(base + "/api/preview")[0], 404)
+
+    def test_page_has_edit_chat_controls(self) -> None:
+        for token in ("/edit", "/turns", "Apply change"):
+            self.assertIn(token, STUDIO_HTML)
+
+
 class TestResultDict(unittest.TestCase):
     def test_app_build_result_to_dict_shape(self) -> None:
         ir = example_ir("minimal-blog")

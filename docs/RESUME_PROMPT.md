@@ -41,7 +41,7 @@ START PROTOCOL
   `task ai:status`, `task ai:handoff`. `task verify` must stay green and network-independent.
 - Confirm git branch/HEAD/clean tree. Then restate: phase, next Tracker ID, objective, blast radius.
 
-WHAT IS ALREADY BUILT (platform generators are Python 3.13 stdlib-only, offline, in services/agent-engine; 3,529 tests pass)
+WHAT IS ALREADY BUILT (platform generators are Python 3.13 stdlib-only, offline, in services/agent-engine; 3,593 tests pass)
 - Model fabric: ModelProvider contract + registry; local Ollama adapter (runs any installed model via
 
 
@@ -208,7 +208,7 @@ front-door bricks, R-420 is generated-SQL hardening, R-421..R-426 are Studio pre
 R-427..R-429 are generated-app compile fixes, R-430..R-457 are the first twenty-eight differentiating-spine
 bricks (Scope Compiler through Ecosystem Multi-Surface SLA, SLO, and Error Budget Contracts).
 Git, state files (.ai/), CHANGELOG, and docs/PROGRESS.md remain the executable/detail sources of truth.
-Current through R-467; `task verify` = 3,529 tests. R-416 added prompt-to-IR intake, R-417 materialized a generated
+Current through R-468; `task verify` = 3,593 tests. R-416 added prompt-to-IR intake, R-417 materialized a generated
 owned repo, R-418 added the local chat studio, R-419 added turnkey local run, and R-420 fixed the two
 SQL defects found by live execution. R-421 added an explicit `task agent-engine:studio:preview` mode:
 one managed generated-app session, API/web readiness, replacement/shutdown cleanup, port-collision
@@ -463,11 +463,25 @@ WHAT TO DO NEXT
   credentials now in the gitignored `.env`, four pre-existing Studio test call sites that never mocked
   `resolve_generation_provider_from_env` were making real network calls (confirmed by timing: one unmocked
   test cost 23.5s of real Groq traffic). All four now mock it explicitly.
-- NEXT R-468: multi-turn chat / "continue editing this app" — the Studio has no session/conversation concept
-  at all today (confirmed by direct reading), so this needs real design, likely built on `edit/diff.py`'s
-  `plan_edit`/`ProjectDiff` + `apply_diff` for in-place follow-up turns rather than a fresh repo every time.
-  Then wire R-466's `compile_and_repair` into `studio:preview` (needs the toolchain; opt-in). Founder action
-  to unlock a full live proof of a model-written page that compiles: after the Groq daily reset run with
+- R-468 (2026-09-17) added multi-turn "continue editing this app": new `intake/app_delta.py` is a generic,
+  non-pack-coupled sibling of `solution_packs/ai_delta.py` — a follow-up prompt proposes a bounded, validated
+  delta (new entities/apis/screens only), merged onto the tracked IR by tuple concatenation (mirroring
+  `solution_packs/application.py`'s merge exactly), with a validate→feedback→retry loop mirroring R-465's
+  `_synthesize_file`. `edit/diff.py::plan_edit` + `edit/apply.py::commit_edit` (already proven end-to-end by
+  `test_edit_loop.py`) turn the delta into a real second git commit on the same owned repo — **zero changes**
+  to `edit/`, `git_service/`, or `application_ir/`. New `studio/session.py`'s bounded, server-only
+  `StudioSessionStore` tracks each editable build's current IR + turn history; new
+  `POST /api/build/{id}/edit` / `GET /api/build/{id}/turns`, wired unconditionally; `page.py` gets a small
+  chat box. v1 is additive-only; Solution Pack and "all surfaces" Ecosystem builds get an honest
+  `EditNotSupportedError` rather than a silent no-op. Found and fixed while implementing (via the
+  end-to-end tests, not a live run): neither this module nor `ai_delta.py` validated a proposed screen's
+  `role` against the base IR's real declared roles — fixed at both the parse layer (gets the retry benefit)
+  and the merge layer (defense in depth).
+- NEXT R-469: wire R-466's `compile_and_repair` into the edit flow (needs the toolchain; opt-in), and/or an
+  undo/revert UI over the real git history every edited build now has on disk. A further-out idea: extending
+  `app_delta` beyond additive-only (rename/remove existing entities) — real design needed, deliberately
+  deferred. Founder action to unlock a full live proof of a model-written page that compiles, or of the
+  chat-edit delta against a real model: after the Groq daily reset run with
   OMNISTACKAI_MAX_RETRY_AFTER_SECONDS=180, or add GOOGLE_API_KEY (Gemini) to the gitignored .env.
   Keep `task verify` model/Docker/DB/install/network-free (any live/model path stays opt-in); preserve
   single-session ownership and explicit trusted-local mode.
@@ -478,7 +492,8 @@ WHAT TO DO NEXT
   deploy (OMNISTACKAI_TIER=2 + E2B/Vercel keys) and cloud-model live-verify. Governance-deferred: native
   mobile (R-010 etc.) until web/backend stability.
 
-Begin by reading the files above and running the start protocol, then continue at R-468 (multi-turn chat /
-"continue editing this app" in the Studio) and write its Standard AI Task Contract before writing code.
+Begin by reading the files above and running the start protocol, then continue at R-469 (wiring R-466's
+compile-repair into the edit flow, and/or an undo/revert UI) and write its Standard AI Task Contract before
+writing code.
 ```
 
