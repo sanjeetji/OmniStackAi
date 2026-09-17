@@ -41,7 +41,7 @@ START PROTOCOL
   `task ai:status`, `task ai:handoff`. `task verify` must stay green and network-independent.
 - Confirm git branch/HEAD/clean tree. Then restate: phase, next Tracker ID, objective, blast radius.
 
-WHAT IS ALREADY BUILT (platform generators are Python 3.13 stdlib-only, offline, in services/agent-engine; 3,593 tests pass)
+WHAT IS ALREADY BUILT (platform generators are Python 3.13 stdlib-only, offline, in services/agent-engine; 3,603 tests pass)
 - Model fabric: ModelProvider contract + registry; local Ollama adapter (runs any installed model via
 
 
@@ -208,7 +208,7 @@ front-door bricks, R-420 is generated-SQL hardening, R-421..R-426 are Studio pre
 R-427..R-429 are generated-app compile fixes, R-430..R-457 are the first twenty-eight differentiating-spine
 bricks (Scope Compiler through Ecosystem Multi-Surface SLA, SLO, and Error Budget Contracts).
 Git, state files (.ai/), CHANGELOG, and docs/PROGRESS.md remain the executable/detail sources of truth.
-Current through R-471; `task verify` = 3,593 tests (agent-engine) + the Go control-plane's own suite +
+Current through R-472; `task verify` = 3,603 tests (agent-engine) + the Go control-plane's own suite +
 the Next.js console's typecheck/lint/build. R-416 added prompt-to-IR intake, R-417 materialized a generated
 owned repo, R-418 added the local chat studio, R-419 added turnkey local run, and R-420 fixed the two
 SQL defects found by live execution. R-421 added an explicit `task agent-engine:studio:preview` mode:
@@ -517,15 +517,40 @@ WHAT TO DO NEXT
   registration (`full_name`, new additive migration `000003`) - explicitly declined Gender/Age (no
   function in this product's roadmap, unnecessary PII). Renumbered the kickoff doc's Phase C from R-471
   to R-472.
-- NEXT R-472 (Phase C): bridge the control-plane's Job API to the unmodified agent-engine so a real
-  generation call debits credits (local Ollama stays credit-exempt). After that, Phase D rebuilds the
-  Studio UX for real inside the console (the Lovable/Dyad/Emergent pattern research already done applies
-  there). Previously-named agent-engine follow-ups (wiring R-466's `compile_and_repair` into the edit
-  flow, an undo/revert UI, extending `app_delta` beyond additive-only) remain real but lower priority
-  than the platform foundation now underway. Founder action to unlock a full live proof of a
-  model-written page that compiles, or of the chat-edit delta against a real model: after the Groq daily
-  reset run with OMNISTACKAI_MAX_RETRY_AFTER_SECONDS=180, or add GOOGLE_API_KEY (Gemini) to the
-  gitignored .env.
+- R-472 (2026-09-18, done) built Phase C: the control-plane's new `POST /jobs/build` authenticates the
+  caller (`auth.RequireUser`, factored out of `handleMe`), forwards the request body verbatim to the
+  agent-engine's real plain-prompt build path, and debits real credits from the actual dollar cost the
+  agent-engine reports via a new `users.Store.DebitCredits` (row-locked `SELECT ... FOR UPDATE`, clamped
+  so `credit_balance` never goes negative - v1 policy is never block a build, only clamp the charge).
+  Correction found while researching: that build path returned a **raw** `ModelProvider`, bypassing the
+  gateway's own real-but-previously-demo-only `UsageLedger` entirely - closed with a new, additive
+  `model_gateway.RecordingProvider` decorator (zero changes to any existing provider or call site),
+  threaded through a new optional `usage_ledger` param on `resolve_generation_provider_from_env` and
+  surfaced as an additive `usage` key (`cost_micros_usd` as an int, not a decimal string) from
+  `studio/live_serve.py`'s plain-prompt `_build`. A real bug was caught by the new tests before any
+  commit (`RecordingProvider` initially recorded the wrong provider/model identity - the response's own
+  echoed field instead of the actually-dispatched provider). A real infrastructure bug was found only by
+  the live smoke test: the control-plane's global 15s `http.Server.WriteTimeout` was silently killing
+  `/jobs/build`'s connection before a real, multi-minute build finished - fixed with a per-request
+  `http.ResponseController.SetWriteDeadline` instead of loosening the server-wide timeout. Compose
+  networking: added `OMNISTACKAI_AGENT_ENGINE_URL` (containers default to `host.docker.internal:4173`)
+  + `extra_hosts: host-gateway` so the containerized control-plane can reach the host-run agent-engine
+  Studio server. `task verify` 3,603 OK (agent-engine) + full control-plane `go test` green (7 new
+  `internal/jobs` cases, `creditsForUsage`/`clampCharge` table tests). Live: a real Docker
+  Postgres+control-plane, a real local Ollama build via `POST /jobs/build` produced a real 161-file
+  "Task Tracker" repo with `usage.cost_micros_usd: 0`/`credits_spent: 0` (correct - local usage is
+  credit-exempt by price, not a special case); since a free build has nothing to debit, `DebitCredits`'s
+  row-locked/clamped SQL path was proven separately against the same live Postgres with a throwaway,
+  never-committed `go run` program (`100 -> 63 -> 0`, clamped, never negative), independently confirmed
+  via a real `GET /auth/me`.
+- NEXT R-473 (Phase D): rebuild the real Studio/builder UX inside `apps/console-web` so a logged-in user
+  can actually call the now-real `/jobs/build` from the product itself (type a prompt, see credit balance,
+  see the resulting app/files), reusing the earlier Lovable/Dyad/Emergent pattern research. After that,
+  Phase E (plan-gated UI, admin console, payment processor) needs its own explicit founder sign-off before
+  starting. Previously-named agent-engine follow-ups (wiring R-466's `compile_and_repair` into the edit
+  flow, an undo/revert UI, extending `app_delta` beyond additive-only, threading `usage_ledger` through
+  `/jobs/build/{id}/edit` and the Solution Pack/Ecosystem build paths) remain real but lower priority than
+  the platform foundation now underway.
   Keep `task verify` model/Docker/DB-free at its core (the console's own build/lint/typecheck gates need
   no live control-plane; any live/model path stays opt-in); preserve single-session ownership and
   explicit trusted-local mode.

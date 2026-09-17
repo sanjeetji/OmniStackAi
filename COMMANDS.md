@@ -285,12 +285,13 @@ docker ps
 
 ---
 
-## 10. Control-Plane — Users, Auth, Plans, Credits (R-469)
+## 10. Control-Plane — Users, Auth, Plans, Credits, Job API (R-469, R-472)
 
-The Go control-plane (`services/control-plane`) is the future home of the real, hosted, multi-user
-OmniStackAI platform (see `R_&_D/OmniStackAI_Commercial_Platform_Kickoff_v1.md` for the full phased
-plan). As of R-469 it has real accounts, sessions, and a plan/credit model — no frontend yet
-(`apps/console-web` is still the old static page; the real Next.js console is Phase B).
+The Go control-plane (`services/control-plane`) is the real, hosted, multi-user OmniStackAI
+platform (see `R_&_D/OmniStackAI_Commercial_Platform_Kickoff_v1.md` for the full phased plan). It
+has real accounts, sessions, a plan/credit model (R-469), and — since R-472 — a real Job API that
+bridges an authenticated build request to the agent-engine and debits real credits from the actual
+cost incurred.
 
 ```bash
 # Run the Go control-plane's own unit tests (hermetic, no database needed)
@@ -332,12 +333,39 @@ curl -s -X POST http://127.0.0.1:8080/auth/logout -H "Authorization: Bearer <tok
 Two roles only: `super_admin` (full platform access, not a purchasable tier) and `user` (everyone who
 signs up — all access is gated by `plan`, never a second role tier). Plans are
 `free`/`developer`/`pro`/`agency`/`enterprise`, with `byok` as an add-on flag rather than a separate
-tier. Local-model usage is intended to stay credit-exempt (that enforcement lands in Phase C, once the
-control-plane's Job API bridges to the agent-engine — R-469 only builds the account/credit-ledger
-foundation, it does not yet meter any actual generation call).
+tier. Local-model usage stays credit-exempt (it is priced at $0, not special-cased).
 
 Config knobs (see `.env.example`): `OMNISTACKAI_SESSION_TTL` (default `720h`),
-`OMNISTACKAI_SIGNUP_CREDIT_GRANT` (default `100`).
+`OMNISTACKAI_SIGNUP_CREDIT_GRANT` (default `100`), `OMNISTACKAI_AGENT_ENGINE_URL` (default
+`http://127.0.0.1:4173`, containers default to `http://host.docker.internal:4173`),
+`OMNISTACKAI_CREDITS_PER_USD` (default `1000`, i.e. 1 credit = $0.001).
+
+### Job API — build an app and debit real credits (R-472)
+
+`POST /jobs/build` authenticates the caller, forwards the request body verbatim to the
+agent-engine's Studio server (`task agent-engine:studio:serve`/`:preview` must be running — Compose
+is deliberately never used for it, see `R_&_D/OmniStackAI_Commercial_Platform_Kickoff_v1.md`), and —
+on a successful build that reports real usage — debits the caller's credit balance and returns the
+agent-engine's own response augmented with `credits_spent`/`credit_balance`:
+
+```bash
+# Start the agent-engine's Studio server in another terminal first
+task agent-engine:studio:serve
+
+# Then, with a real token from register/login:
+curl -s -X POST http://127.0.0.1:8080/jobs/build \
+  -H "Authorization: Bearer <token>" \
+  -H 'Content-Type: application/json' \
+  -d '{"prompt":"Build a task tracker where users create projects and each project has tasks"}'
+# -> the agent-engine's own build response (name, entities, file_count, commit_sha, files, ...)
+#    plus "usage": {"cost_micros_usd": ..., "total_calls": ..., ...},
+#    "credits_spent": <int>, "credit_balance": <int>
+```
+
+A response with no `usage` key (e.g. today's Solution Pack/Ecosystem build paths, which R-472
+deliberately does not thread a ledger through yet) debits 0 credits, not an error. A build that
+fails upstream is proxied through with the agent-engine's own status code and body unchanged, and
+nothing is charged.
 
 ---
 

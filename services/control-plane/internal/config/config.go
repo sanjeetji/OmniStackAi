@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"net"
+	"net/url"
 	"strconv"
 	"strings"
 	"time"
@@ -21,6 +22,14 @@ const (
 	defaultDatabasePingTimeout = "2s"
 	defaultSessionTTL          = "720h" // 30 days
 	defaultSignupCreditGrant   = "100"
+	defaultAgentEngineURL      = "http://127.0.0.1:4173"
+	// 1,000 credits per USD (1 credit = $0.001) - fine enough granularity that even a single cheap
+	// cloud generation call (fractions of a cent, per model_gateway's DEFAULT_PRICE_BOOK) debits a
+	// non-zero amount, while a 100-credit signup grant (defaultSignupCreditGrant) still buys a
+	// real, multi-call trial. The exact ratio is a business/pricing decision (R_&_D/
+	// OmniStackAI_Commercial_Platform_Kickoff_v1.md Section 5's open item) - deliberately an env
+	// var, not a constant, so it can be retuned without a redeploy of code.
+	defaultCreditsPerUSD = "1000"
 )
 
 // Config contains the complete Stage 0 control-plane runtime configuration.
@@ -39,6 +48,8 @@ type Config struct {
 	DatabasePingTimeout time.Duration
 	SessionTTL          time.Duration
 	SignupCreditGrant   int64
+	AgentEngineURL      string
+	CreditsPerUSD       float64
 }
 
 // Lookup matches os.LookupEnv and makes configuration loading deterministic in tests.
@@ -109,6 +120,18 @@ func Load(lookup Lookup) (Config, error) {
 	}
 	config.SignupCreditGrant = signupCreditGrant
 
+	agentEngineURL := valueOrDefault(lookup, "OMNISTACKAI_AGENT_ENGINE_URL", defaultAgentEngineURL)
+	if err := validateAbsoluteHTTPURL(agentEngineURL); err != nil {
+		return Config{}, fmt.Errorf("OMNISTACKAI_AGENT_ENGINE_URL: %w", err)
+	}
+	config.AgentEngineURL = agentEngineURL
+
+	creditsPerUSD, err := parsePositiveFloat(valueOrDefault(lookup, "OMNISTACKAI_CREDITS_PER_USD", defaultCreditsPerUSD))
+	if err != nil {
+		return Config{}, fmt.Errorf("OMNISTACKAI_CREDITS_PER_USD: %w", err)
+	}
+	config.CreditsPerUSD = creditsPerUSD
+
 	return config, nil
 }
 
@@ -167,4 +190,26 @@ func parsePositiveDuration(value string) (time.Duration, error) {
 		return 0, errors.New("duration must be positive")
 	}
 	return duration, nil
+}
+
+func validateAbsoluteHTTPURL(value string) error {
+	parsed, err := url.Parse(value)
+	if err != nil {
+		return fmt.Errorf("invalid URL: %w", err)
+	}
+	if parsed.Scheme != "http" && parsed.Scheme != "https" {
+		return errors.New("must be an absolute http(s) URL")
+	}
+	if parsed.Host == "" {
+		return errors.New("must include a host")
+	}
+	return nil
+}
+
+func parsePositiveFloat(value string) (float64, error) {
+	parsed, err := strconv.ParseFloat(value, 64)
+	if err != nil || parsed <= 0 {
+		return 0, errors.New("must be a positive number")
+	}
+	return parsed, nil
 }

@@ -1,40 +1,53 @@
-task_id: R-471
+task_id: R-472
 status: completed
 phase: MVP
 tracker_row: null
 started_at: "2026-09-17"
-completed_at: "2026-09-17"
+completed_at: "2026-09-18"
 objective: >-
-  Founder tried the real R-470 console in a browser and reported registration silently did
-  nothing. Root cause found in the dev server's own log: Next.js 16 blocks cross-origin access to
-  its dev/HMR resources by default, and 127.0.0.1 (the URL given to the founder) is a different
-  origin than localhost as far as that check is concerned - with no client JS hydrated, the
-  register form's onSubmit handler never attached, so the browser's native default form submission
-  fired instead (a GET request with email/password serialized into the URL query string, doing
-  nothing). Fixed with allowedDevOrigins in next.config.ts; verified live by fetching the actual
-  client JS chunk the register page references with Origin: http://127.0.0.1:4321 and confirming
-  both a 200 and the absence of the previously-triggered warning in the dev server log.
-  Also implemented the founder's request to add more registration fields: added full_name (broadly
-  useful - personalization, addressing the user, the home page previously only showed an email) but
-  explicitly did NOT add Gender or Age (no function anywhere in this product's roadmap, unnecessary
-  PII/privacy liability for zero benefit) - a deliberate decision, not a silent omission. Threaded
-  full_name through a new migration (000003_users_full_name), the control-plane's Store/auth
-  handler, and the console's register form and home page greeting. Renumbered the kickoff doc's
-  Phase C from R-471 to R-472 since this task took the R-471 slot as its own real, scoped work.
+  Phase C of R_&_D/OmniStackAI_Commercial_Platform_Kickoff_v1.md (renumbered from R-471, which
+  became a real bug-fix task instead): the control-plane's Job API proxies "build this app"
+  requests to the existing agent-engine, and a real generation call actually debits the
+  authenticated user's credit balance, with local-Ollama usage staying credit-exempt. Correction
+  found while researching: the Studio's real build path returns a raw ModelProvider (bypassing the
+  ModelGateway's existing but currently demo-only UsageLedger accounting), so a small additive
+  agent-engine change is needed - a new RecordingProvider decorator (model_gateway/recording.py)
+  implementing the exact same ModelProvider protocol, wrapping any provider to record real
+  usage/cost into an injected UsageLedger, with zero changes to any existing call site.
+  resolve_generation_provider_from_env gains an optional usage_ledger param (default None = todays
+  unchanged behavior); live_serve.py's _build creates one per request and adds a JSON-safe usage
+  summary (cost_micros_usd as an int, not a decimal string, to avoid any float/precision issue
+  crossing the Go/Python boundary) to the response, additive like R-467's ui_outcomes. Go side: new
+  internal/jobs package proxies POST /jobs/build (authenticated via a new exported
+  auth.RequireUser helper) to the agent-engine, converts cost_micros_usd to credits via
+  OMNISTACKAI_CREDITS_PER_USD, debits atomically via a new users.Store.DebitCredits (row-locked,
+  clamped so balance never goes negative - v1 policy is to never block a build, only clamp the
+  charge). No console-web changes (Phase D); no /jobs/build/{id}/edit yet (named follow-up); no
+  hard pre-flight balance blocking (named follow-up, needs its own UX); agent-engine is reached via
+  a configured URL, not Docker Compose (scripts/test.sh already hard-blocks adding it as a
+  service at this stage).
 allowed_paths:
-  - apps/console-web/next.config.ts
-  - apps/console-web/lib/control-plane.ts
-  - apps/console-web/app/api/auth/register/route.ts
-  - apps/console-web/app/register/page.tsx
-  - apps/console-web/app/page.tsx
-  - services/control-plane/migrations/000003_users_full_name.up.sql
-  - services/control-plane/migrations/000003_users_full_name.down.sql
-  - services/control-plane/internal/auth/types.go
+  - services/agent-engine/src/omnistackai_agent_engine/model_gateway/recording.py
+  - services/agent-engine/src/omnistackai_agent_engine/model_gateway/__init__.py
+  - services/agent-engine/src/omnistackai_agent_engine/intake/provider_resolution.py
+  - services/agent-engine/src/omnistackai_agent_engine/intake/build_app.py
+  - services/agent-engine/src/omnistackai_agent_engine/studio/live_serve.py
+  - services/agent-engine/tests/test_recording_provider.py
+  - services/agent-engine/tests/test_provider_resolution.py
+  - services/agent-engine/tests/test_build_app.py
+  - services/agent-engine/tests/test_studio_server.py
   - services/control-plane/internal/auth/handler.go
+  - services/control-plane/internal/auth/types.go
   - services/control-plane/internal/auth/handler_test.go
   - services/control-plane/internal/users/store.go
+  - services/control-plane/internal/users/store_test.go
+  - services/control-plane/internal/jobs/**
+  - services/control-plane/internal/config/config.go
+  - services/control-plane/internal/config/config_test.go
+  - services/control-plane/cmd/control-plane/main.go
+  - .env.example
   - R_&_D/OmniStackAI_Commercial_Platform_Kickoff_v1.md
-  - .ai/tasks/R-471.md
+  - .ai/tasks/R-472.md
   - .ai/CURRENT_TASK.yaml
   - .ai/PROJECT_STATE.yaml
   - .ai/WORK_LOG.md
@@ -43,46 +56,29 @@ allowed_paths:
   - CHANGELOG.md
   - docs/PROGRESS.md
   - docs/RESUME_PROMPT.md
+  - COMMANDS.md
 forbidden_changes:
-  - No Gender, Age, or other demographic/profile field
-  - Do not modify 000001_platform_foundation.* or 000002_users_auth_billing.* (additive only)
+  - No new Docker Compose service
+  - No changes to any existing ModelProvider implementation or existing .generate() call site
+  - No hard-blocking of a build when a user has zero credits
+  - No changes to apps/console-web
   - Do not modify or commit the untracked .claude directory
 required_gates:
+  - "agent-engine: task verify (0 model/network calls)"
   - "control-plane: go test ./..."
-  - "apps/console-web: pnpm run lint, pnpm run typecheck, pnpm run build"
   - task verify
   - task lint
   - task security:quick
   - task env:check
-  - "manual smoke (real docker + real next dev with the origin fix): register with a name -> home greets by name"
+  - "manual smoke (real docker control-plane + real agent-engine studio server): authenticated /jobs/build debits real credits"
 model_tool_trace:
   routing: deterministic_only
   local_calls: 0
   cloud_calls: 0
   note: >-
-    Go/TypeScript implementation, no model/network calls in any automated gate.
-evidence:
-  go_build_vet: "clean"
-  go_test: "internal/auth 15 (2 new sub-cases), internal/config 2, internal/health 3, internal/password 8, migrations 4 - all passing"
-  gofmt: "no output, fully formatted"
-  console_typecheck: "tsc --noEmit - clean"
-  console_lint: "eslint . - clean"
-  console_build: "next build - Compiled successfully, same 8 routes as R-470"
-  repo_gates: "lint.sh, test.sh, env-check.sh, security-quick.sh all passed"
-  verify: "Ran 3593 tests in 62.945s - OK; Stage 0 verification passed"
-  hydration_fix_live_check: >-
-    Rebuilt/restarted the real control-plane (picked up migration 000003 cleanly on the existing
-    volume). Fetched the register page's actual client JS chunk with Origin: http://127.0.0.1:4321
-    -> 200, and no "Blocked cross-origin request" warning appeared in the dev server log, where an
-    equivalent request was blocked before the fix - the strongest verification possible without
-    literally driving a browser.
-  name_field_live_check: >-
-    POST /api/auth/register with no name -> 400. With a name -> 201, name in the response body. GET
-    / with the session cookie -> 200, page contains "Welcome back, Saurabh Chopra" (confirmed by
-    reading the full HTML - a React hydration comment sits between the two text nodes, not a bug). A
-    direct control-plane check (bypassing the console) confirms the same round trip against the real
-    Postgres-backed Store.
+    Go/Python implementation, 0 model/network calls in any automated gate. The manual smoke test
+    uses a stub/local provider for the live agent-engine call, not a paid cloud model.
 next_action: >-
-  R-471 done. NEXT: Phase C of R_&_D/OmniStackAI_Commercial_Platform_Kickoff_v1.md, now R-472 -
-  bridge the control-plane's Job API to the unmodified agent-engine so a real generation call
-  actually debits a user's credits (local Ollama stays credit-exempt).
+  R-472 is complete (see .ai/tasks/R-472.md for full Gates & Evidence). Next up: Phase D of
+  R_&_D/OmniStackAI_Commercial_Platform_Kickoff_v1.md - rebuild the real Studio/builder UX inside
+  apps/console-web so a logged-in user can actually call the now-real /jobs/build.

@@ -1,8 +1,29 @@
 # Project State — OmniStackAI
-Last updated: 2026-09-17
+Last updated: 2026-09-18
 
 ## Current Phase
 Stage 0 (Founder Build Sequence, Brief Section 91) — BASIC/MVP
+
+> **R-472 (2026-09-18): bridge the control-plane's Job API to the agent-engine — real credit
+> debiting.** Phase C of `R_&_D/OmniStackAI_Commercial_Platform_Kickoff_v1.md`: the control-plane's
+> new `POST /jobs/build` authenticates the caller, forwards the request body verbatim to the
+> agent-engine's real plain-prompt build path, and debits real credits from the actual dollar cost
+> the agent-engine now reports. Correction found while researching: that build path returned a raw
+> `ModelProvider`, bypassing the gateway's own real-but-previously-demo-only `UsageLedger` entirely
+> — closed with a new, additive `model_gateway.RecordingProvider` decorator (zero changes to any
+> existing provider or call site). A real bug was caught by the new tests before any commit
+> (`RecordingProvider` initially recorded the wrong provider/model identity); a real infrastructure
+> bug was found only by the live smoke test (the control-plane's global 15s `WriteTimeout` was
+> killing the connection before a real multi-minute build finished, fixed with a per-request
+> `http.ResponseController.SetWriteDeadline`). New Go pieces: `auth.RequireUser`,
+> `users.Store.DebitCredits` (row-locked, clamped so balance never goes negative — v1 policy is
+> never block a build), and the new `internal/jobs` package. `task verify` **3,603 OK** (agent-engine)
+> + full control-plane `go test` green; live: a real Docker Postgres+control-plane, a real local
+> Ollama build produced a real 161-file repo with correctly-zero cost/credits (local usage is
+> credit-exempt by price); `DebitCredits`'s real Postgres path (row lock + clamp) was proven
+> separately since a free local build had nothing to debit.
+> NEXT R-473 (Phase D): rebuild the real Studio/builder UX inside `apps/console-web` so a logged-in
+> user can actually call `/jobs/build` from the product itself.
 
 > **R-471 (2026-09-17): fixed a real dev-mode hydration bug found by the founder's own first live
 > try of the console, and added a full name field to registration.** Opening

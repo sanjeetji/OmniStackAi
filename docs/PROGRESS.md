@@ -1,4 +1,4 @@
-# OmniStackAI — implementation progress (as of R-471)
+# OmniStackAI — implementation progress (as of R-472)
 
 A living summary of what is built, what is pending, and how to see results. Numbers come from the
 execution tracker (`R_&_D/OmniStackAI_Execution_Tracker_v6.xlsx`, `Phase_Roadmap`, 461 tasks as of
@@ -6,8 +6,23 @@ R-461 completion) plus the state files (`.ai/`), Git history, and CHANGELOG.
 
 ## Headline
 
-- **3,593 automated tests pass** (agent-engine + Go control-plane), fully offline and
+- **3,603 automated tests pass** (agent-engine + Go control-plane), fully offline and
   network-independent (`task verify`), plus the console's own `typecheck`/`lint`/`build` gates.
+- **R-472 — bridge the control-plane's Job API to the agent-engine, real credit debiting
+  (2026-09-18):** Phase C of `R_&_D/OmniStackAI_Commercial_Platform_Kickoff_v1.md`. The
+  control-plane's new `POST /jobs/build` authenticates the caller, proxies verbatim to the
+  agent-engine's real plain-prompt build path, and debits real credits from the actual dollar cost
+  the agent-engine now reports (a new, additive `model_gateway.RecordingProvider` decorator closes
+  a real gap found while researching: that build path bypassed the gateway's own real-but-demo-only
+  `UsageLedger` entirely). New Go pieces: `auth.RequireUser`, a row-locked and clamped
+  `users.Store.DebitCredits` (v1 policy — never block a build, only clamp the charge), and the new
+  `internal/jobs` package. A real bug was caught by the new tests before any commit; a real
+  infrastructure bug (the control-plane's global `WriteTimeout` killing a slow build's connection)
+  was found only by the live smoke test and fixed with a per-request write-deadline extension. Live
+  proof: a real Docker Postgres+control-plane, a real local Ollama build produced a real 161-file
+  repo with correctly-zero cost/credits (local usage is credit-exempt by price); the real
+  `DebitCredits` row-lock/clamp path was proven separately against the same live Postgres. See
+  `.ai/tasks/R-472.md` for full live-verification detail.
 - **R-471 — fixed a real dev-mode hydration bug + added Name to registration (2026-09-17):** the
   founder's own first live try of the R-470 console hit a real bug — Next.js 16 blocks
   cross-origin access to its dev/HMR resources by default and treats `127.0.0.1`/`localhost` as

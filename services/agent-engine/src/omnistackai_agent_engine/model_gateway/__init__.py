@@ -74,6 +74,7 @@ from .gateway import (
 )
 from .ollama import OLLAMA_PROVIDER_ID, OllamaModelProfile, OllamaProvider
 from .overview import platform_overview
+from .recording import RecordingProvider
 from .registry import ProviderRegistry
 from .resilience import CircuitBreaker
 
@@ -129,6 +130,7 @@ __all__ = [
     "ProviderResponseTooLargeError",
     "ProviderTimeoutError",
     "ProviderUnavailableError",
+    "RecordingProvider",
     "RoutingDecision",
     "RoutingMode",
     "RoutingPolicy",

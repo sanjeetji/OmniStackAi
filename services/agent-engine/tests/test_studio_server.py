@@ -689,6 +689,54 @@ class TestStudioSolutionPacks(unittest.TestCase):
                 self.assertTrue(Path(payload["target_dir"]).is_dir())
                 self.assertIn("nextjs-web", payload["verify_targets"])
 
+    def test_live_serve_plain_prompt_build_surfaces_real_usage(self) -> None:
+        """R-472: a plain-prompt build's response carries a real, per-request usage summary.
+
+        The provider is wrapped in the real RecordingProvider (around the exact UsageLedger `_build`
+        creates for this request) so the resulting `payload["usage"]` reflects genuinely recorded
+        calls, not a hand-built fixture.
+        """
+        from unittest.mock import patch
+        from omnistackai_agent_engine.application_ir import example_ir
+        from omnistackai_agent_engine.model_gateway import FinishReason, GenerateResponse, TokenUsage
+        from omnistackai_agent_engine.model_gateway.recording import RecordingProvider
+        from omnistackai_agent_engine.studio.live_serve import _build
+
+        ir_json = json.dumps(example_ir("minimal-blog").to_dict())
+
+        class _StubProvider:
+            provider_id = "stub"
+
+            async def generate(self, request):  # noqa: ANN001
+                return GenerateResponse(
+                    request.request_id, request.model, ir_json, FinishReason.STOP, TokenUsage(37, 11), 5
+                )
+
+        captured = {}
+
+        def fake_resolve(*, usage_ledger=None, **_ignored):
+            captured["usage_ledger"] = usage_ledger
+            return RecordingProvider(_StubProvider(), usage_ledger), "stub-model", 4096, 5.0
+
+        with tempfile.TemporaryDirectory() as tmp:
+            with patch(
+                "omnistackai_agent_engine.studio.live_serve.resolve_generation_provider_from_env",
+                side_effect=fake_resolve,
+            ):
+                payload = _build("A tech blog", target_dir=str(Path(tmp) / "blog"))
+
+        self.assertIsNotNone(captured["usage_ledger"])
+        self.assertIn("usage", payload)
+        usage = payload["usage"]
+        self.assertGreaterEqual(usage["total_calls"], 1)
+        self.assertEqual(usage["successful_calls"], usage["total_calls"])
+        self.assertEqual(usage["failed_calls"], 0)
+        # The stub's provider_id ("stub") has no DEFAULT_PRICE_BOOK entry -- unpriced by design,
+        # never guessed (accounting.py's own documented contract).
+        self.assertEqual(usage["unpriced_calls"], usage["total_calls"])
+        self.assertEqual(usage["cost_micros_usd"], 0)
+        self.assertIsInstance(usage["cost_micros_usd"], int)
+
 
     def test_post_build_passes_ai_delta_options(self) -> None:
         captured = {}

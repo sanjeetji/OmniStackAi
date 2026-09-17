@@ -283,4 +283,58 @@ if ! rg -q '^\.next/$' "$repo_root/.gitignore"; then
   exit 1
 fi
 
+# R-472: control-plane Job API bridge to the agent-engine - real credit debiting.
+for required_file in \
+  "$control_plane_root/internal/jobs/types.go" \
+  "$control_plane_root/internal/jobs/handler.go" \
+  "$control_plane_root/internal/jobs/handler_test.go" \
+  "$control_plane_root/internal/users/store_test.go" \
+  "$agent_engine_root/src/omnistackai_agent_engine/model_gateway/recording.py" \
+  "$agent_engine_root/tests/test_recording_provider.py"; do
+  if [[ ! -f "$required_file" ]]; then
+    printf 'Missing R-472 contract file: %s\n' "$required_file"
+    exit 1
+  fi
+done
+
+if ! rg -q 'POST /jobs/build' "$control_plane_root/internal/jobs/handler.go"; then
+  printf 'R-472 control-plane must register POST /jobs/build.\n'
+  exit 1
+fi
+
+if ! rg -q 'func RequireUser' "$control_plane_root/internal/auth/handler.go"; then
+  printf 'R-472 must expose an exported auth.RequireUser helper.\n'
+  exit 1
+fi
+
+if ! rg -q 'func \(s \*Store\) DebitCredits' "$control_plane_root/internal/users/store.go"; then
+  printf 'R-472 must expose an exported users.Store.DebitCredits helper.\n'
+  exit 1
+fi
+
+if ! rg -q 'class RecordingProvider' "$agent_engine_root/src/omnistackai_agent_engine/model_gateway/recording.py"; then
+  printf 'R-472 must define model_gateway.RecordingProvider.\n'
+  exit 1
+fi
+
+if ! rg -q '"RecordingProvider"' "$agent_engine_root/src/omnistackai_agent_engine/model_gateway/__init__.py"; then
+  printf 'R-472 must export RecordingProvider from model_gateway/__init__.py.\n'
+  exit 1
+fi
+
+if ! rg -q 'usage_ledger' "$agent_engine_root/src/omnistackai_agent_engine/intake/provider_resolution.py"; then
+  printf 'R-472 must add an optional usage_ledger parameter to resolve_generation_provider_from_env.\n'
+  exit 1
+fi
+
+if ! rg -q 'cost_micros_usd' "$agent_engine_root/src/omnistackai_agent_engine/studio/live_serve.py"; then
+  printf 'R-472 must surface a JSON-safe usage summary (cost_micros_usd) from studio/live_serve.py.\n'
+  exit 1
+fi
+
+if rg -qi '^  (redis|agent-engine|runner-manager|nats|temporal|kubernetes):' "$compose_file"; then
+  printf 'R-472 must not add agent-engine (or any of the still-forbidden services) as a Docker Compose service.\n'
+  exit 1
+fi
+
 printf 'Repository contract tests passed.\n'

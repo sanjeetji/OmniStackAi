@@ -400,6 +400,68 @@ func TestMeRejectsExpiredSession(t *testing.T) {
 	}
 }
 
+func TestRequireUserResolvesAuthenticatedUserOrErrUnauthenticated(t *testing.T) {
+	store := newFakeStore()
+	ctx := context.Background()
+
+	created, err := store.CreateUser(ctx, "person@example.com", "hash", "Person", 100)
+	if err != nil {
+		t.Fatal(err)
+	}
+	rawToken := randomHex(t)
+	if err := store.CreateSession(ctx, hashToken(rawToken), created.ID, time.Now().Add(time.Hour)); err != nil {
+		t.Fatal(err)
+	}
+
+	authed := httptest.NewRequest(http.MethodGet, "/jobs/build", nil)
+	authed.Header.Set("Authorization", "Bearer "+rawToken)
+	user, err := RequireUser(ctx, store, authed)
+	if err != nil {
+		t.Fatalf("RequireUser with a valid token returned an error: %v", err)
+	}
+	if user.ID != created.ID {
+		t.Fatalf("RequireUser user.ID = %q, want %q", user.ID, created.ID)
+	}
+
+	noHeader := httptest.NewRequest(http.MethodGet, "/jobs/build", nil)
+	if _, err := RequireUser(ctx, store, noHeader); !errors.Is(err, ErrUnauthenticated) {
+		t.Fatalf("RequireUser with no Authorization header error = %v, want ErrUnauthenticated", err)
+	}
+
+	garbage := httptest.NewRequest(http.MethodGet, "/jobs/build", nil)
+	garbage.Header.Set("Authorization", "Bearer this-token-does-not-exist")
+	if _, err := RequireUser(ctx, store, garbage); !errors.Is(err, ErrUnauthenticated) {
+		t.Fatalf("RequireUser with an unknown token error = %v, want ErrUnauthenticated", err)
+	}
+}
+
+// erroringSessionStore embeds Store so it satisfies the interface without implementing every
+// method - only FindUserBySessionToken is ever called by RequireUser, so the rest are unused.
+type erroringSessionStore struct {
+	Store
+	err error
+}
+
+func (s erroringSessionStore) FindUserBySessionToken(context.Context, string) (User, error) {
+	return User{}, s.err
+}
+
+func TestRequireUserPropagatesNonSentinelStorageErrors(t *testing.T) {
+	boom := errors.New("boom: database is on fire")
+	store := erroringSessionStore{err: boom}
+
+	request := httptest.NewRequest(http.MethodGet, "/jobs/build", nil)
+	request.Header.Set("Authorization", "Bearer whatever")
+
+	_, err := RequireUser(context.Background(), store, request)
+	if !errors.Is(err, boom) {
+		t.Fatalf("RequireUser error = %v, want %v", err, boom)
+	}
+	if errors.Is(err, ErrUnauthenticated) {
+		t.Fatal("RequireUser must not map a real storage error to ErrUnauthenticated")
+	}
+}
+
 func TestLogoutInvalidatesTheSessionAndIsIdempotent(t *testing.T) {
 	store := newFakeStore()
 	server := newTestServer(testDeps(store, time.Now))

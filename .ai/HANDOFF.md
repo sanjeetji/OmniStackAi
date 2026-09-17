@@ -1,9 +1,47 @@
 # Current Handoff
 
-Task ID: R-471
+Task ID: R-472
 Status: done
 Phase: BASIC/MVP — Founder Stage 0
 Branch: `main`
+
+> **R-472 Completed (2026-09-18): Bridge the control-plane's Job API to the agent-engine — real credit debiting.**
+> - **Phase C of `R_&_D/OmniStackAI_Commercial_Platform_Kickoff_v1.md`** — the control-plane's new
+>   `POST /jobs/build` authenticates the caller, proxies verbatim to the agent-engine's real
+>   plain-prompt build path, and debits real credits from the actual cost the agent-engine reports.
+> - **Correction found while researching:** the Studio's real build path returned a raw
+>   `ModelProvider`, bypassing the gateway's own (real, tested, but previously demo-only)
+>   `UsageLedger` entirely. Closed with a new, additive `model_gateway.RecordingProvider` decorator
+>   — zero changes to any existing provider or call site.
+> - **Real bug caught by the new tests, before any commit:** `RecordingProvider` originally sourced
+>   `provider_id`/`model_id` from the response's own echoed `.model` field instead of
+>   `self._inner.provider_id`/`request.model.model_id` (the pattern `ModelGateway._record` actually
+>   uses) — the local-Ollama test caught the mismatch immediately.
+> - **Go side:** new exported `auth.RequireUser` (factored out of `handleMe`); new
+>   `users.Store.DebitCredits` (row-locked `SELECT ... FOR UPDATE`, clamped via a pure, unit-tested
+>   `clampCharge` so `credit_balance` never goes negative — v1 policy: never block a build, only
+>   clamp); new `internal/jobs` package (`POST /jobs/build`, generic proxy, converts
+>   `cost_micros_usd` to credits via `OMNISTACKAI_CREDITS_PER_USD`, round-to-nearest).
+> - **Real infra bug found only by the live smoke test:** the control-plane's global 15s
+>   `http.Server.WriteTimeout` was killing `/jobs/build`'s connection before a real multi-minute
+>   build finished. Fixed with `http.NewResponseController(w).SetWriteDeadline(...)` scoped to just
+>   this handler, leaving the server-wide timeout intact everywhere else.
+> - **Compose networking:** added `OMNISTACKAI_AGENT_ENGINE_URL` (default
+>   `http://host.docker.internal:4173`) + `extra_hosts: host-gateway` so the containerized
+>   control-plane can reach the host-run agent-engine Studio server (Compose is still hard-blocked
+>   from adding it as a service).
+> - Gates: agent-engine `task verify` — 3,603 tests OK, 0 model/network calls. Control-plane
+>   `go test ./...` all green (7 new `internal/jobs` cases, `creditsForUsage` + `clampCharge` table
+>   tests). Repo-wide `task verify` — Stage 0 verification passed. **Live:** real Docker
+>   Postgres+control-plane, a real local Ollama build via `POST /jobs/build` produced a real
+>   161-file "Task Tracker" repo with `usage.cost_micros_usd: 0`/`credits_spent: 0` (correct — local
+>   is credit-exempt by price); `DebitCredits`'s row-locked/clamped SQL path proven separately
+>   against the same live Postgres (a free local build has nothing to debit) with a throwaway,
+>   never-committed `go run` program: `100 → 63 → 0` (clamped, never negative), independently
+>   confirmed via a real `GET /auth/me`.
+> - **NEXT R-473 (Phase D):** rebuild the real Studio/builder UX inside `apps/console-web` so a
+>   logged-in user can actually call the now-real `/jobs/build` from the product itself. See
+>   `R_&_D/OmniStackAI_Commercial_Platform_Kickoff_v1.md`, `.ai/tasks/R-472.md`.
 
 > **R-471 Completed (2026-09-17): Fix dev-mode hydration bug + add full name to registration.**
 > - **Real bug the founder hit, found via the dev server's own log:** Next.js 16 blocks

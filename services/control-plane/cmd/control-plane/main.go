@@ -18,6 +18,7 @@ import (
 	"github.com/sanjeetji/OmniStackAi/services/control-plane/internal/auth"
 	"github.com/sanjeetji/OmniStackAi/services/control-plane/internal/config"
 	"github.com/sanjeetji/OmniStackAi/services/control-plane/internal/health"
+	"github.com/sanjeetji/OmniStackAi/services/control-plane/internal/jobs"
 	"github.com/sanjeetji/OmniStackAi/services/control-plane/internal/password"
 	"github.com/sanjeetji/OmniStackAi/services/control-plane/internal/users"
 	"github.com/sanjeetji/OmniStackAi/services/control-plane/migrations"
@@ -50,14 +51,23 @@ func run(ctx context.Context, logger *slog.Logger) error {
 		return fmt.Errorf("apply migrations: %w", err)
 	}
 
+	userStore := users.New(pool)
+
 	mux := http.NewServeMux()
 	health.Register(mux, pool, runtimeConfig.DatabasePingTimeout)
 	auth.Register(mux, auth.Deps{
-		Store:         users.New(pool),
+		Store:         userStore,
 		Hasher:        passwordHasher{},
 		SessionTTL:    runtimeConfig.SessionTTL,
 		SignupCredits: runtimeConfig.SignupCreditGrant,
 		Logger:        logger,
+	})
+	jobs.Register(mux, jobs.Deps{
+		AuthStore:      userStore,
+		CreditStore:    userStore,
+		AgentEngineURL: runtimeConfig.AgentEngineURL,
+		CreditsPerUSD:  runtimeConfig.CreditsPerUSD,
+		Logger:         logger,
 	})
 
 	server := &http.Server{

@@ -166,20 +166,30 @@ available ID per `.ai/tasks/` is **R-469** (R-468 is the last shipped task).
   requirement — a deliberate, explicit scope change from "dependency-free Stage 0," recorded
   here so it isn't a silent surprise later.
 
-**Phase C — Bridge to agent-engine via the control-plane's Job API (proposed R-472)**
+**Phase C — Bridge to agent-engine via the control-plane's Job API (R-472 — DONE, 2026-09-18)**
 
 > Renumbered from R-471: that slot went to a real, unplanned fix instead (R-471 — the founder's
 > first live try of the R-470 console hit a real dev-mode hydration bug that broke all forms, plus
 > a request to add a Name field to registration). See `.ai/tasks/R-471.md`.
 
-- Control-plane proxies "build this app" requests to the existing, unmodified `agent-engine`
-  (hybrid UI synthesis, compile-repair, multi-turn edit — all of R-465–R-468 reused as-is).
+- Control-plane's new `POST /jobs/build` proxies "build this app" requests to the agent-engine's
+  real plain-prompt build path, verbatim, via a configured `OMNISTACKAI_AGENT_ENGINE_URL` (not
+  Docker Compose). **Not literally unmodified**, as originally planned here: the build path
+  returned a raw `ModelProvider` bypassing the gateway's own accounting entirely, so a small,
+  additive `model_gateway.RecordingProvider` decorator (agent-engine) was needed to record real
+  usage/cost — zero changes to any existing provider or call site. See `.ai/tasks/R-472.md`'s
+  "Correction to the kickoff doc's own framing" for the full reasoning.
 - Every generation call is attributed to the authenticated user and debits their credit balance
-  per Section 2's model; local-Ollama calls are logged but never debited.
+  (`users.Store.DebitCredits`, row-locked, clamped so the balance never goes negative); local-Ollama
+  calls are recorded but debit `0` credits (priced at `$0` in `DEFAULT_PRICE_BOOK`, not
+  special-cased).
 - This is the only place credit enforcement actually lives — agent-engine itself stays
   credit-agnostic, matching "agents depend on provider interfaces, not billing logic."
+- Scoped to the plain-prompt build path only for v1 (matching this task's actual allowed-paths
+  scope); Solution Pack and Ecosystem builds report no `usage` key yet and so debit `0` credits —
+  named, not silent, follow-up work, not a regression.
 
-**Phase D — The actual Studio UX, inside the real console-web (proposed R-472+)**
+**Phase D — The actual Studio UX, inside the real console-web (proposed R-473)**
 - This is where the earlier Lovable/Dyad/Emergent pattern research gets used for real: persistent
   chat + top tabs (Preview/Files/Code/Problems/Publish/More), one unified UI for every user with
   progressive disclosure (not persona branching), Model Provider settings surfacing the existing
@@ -187,7 +197,7 @@ available ID per `.ai/tasks/` is **R-469** (R-468 is the last shipped task).
   already-existing `verify/compile.py`.
 - Built as real Next.js components against the real API — not retrofitted into `studio/page.py`.
 
-**Phase E — Plan/credit UX + admin surface (proposed R-473+)**
+**Phase E — Plan/credit UX + admin surface (proposed R-474+)**
 - Plan-gated feature access in the UI, a credit top-up flow, a `super_admin` console (user
   management, usage, plan overrides — the Dyad "Danger Zone" / Emergent admin-adjacent idea).
 - Actual payment processor integration (Stripe or similar) is intentionally **not** included
@@ -213,10 +223,14 @@ available ID per `.ai/tasks/` is **R-469** (R-468 is the last shipped task).
 
 ## 5. Open decisions (not blocking Phase A, but need an answer before later phases)
 
-- Exact free-tier credit grant amount and paid-tier pricing/limits — business decision.
-- Credit metering unit: per-token, per-generation-call, or a hybrid — affects Phase C's ledger
-  schema shape, worth deciding before Phase A's migration is finalized so the column shapes
-  don't need a breaking change.
+- Exact free-tier credit grant amount and paid-tier pricing/limits — business decision. `.env`'s
+  current defaults (100 signup credits, `OMNISTACKAI_CREDITS_PER_USD=1000` i.e. 1 credit = $0.001)
+  are reasonable v1 starting points, not a final pricing decision.
+- ~~Credit metering unit: per-token, per-generation-call, or a hybrid~~ — **answered by R-472**:
+  real dollar cost (derived from real token counts via `model_gateway`'s existing `PriceBook`,
+  crossing the Go/Python boundary as an integer `cost_micros_usd`), converted to credits via a
+  tunable `OMNISTACKAI_CREDITS_PER_USD` ratio — not literally per-token or per-call, a cost-based
+  hybrid of both.
 - Payment processor choice and timing (Phase E) — explicit "paid cloud service" sign-off needed
   when reached.
 - Hosting target for the real deployment (which cloud, which region) — a "new infra" decision

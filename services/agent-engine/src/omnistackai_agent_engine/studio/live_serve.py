@@ -29,6 +29,7 @@ import re
 import subprocess
 import sys
 import tempfile
+from decimal import ROUND_HALF_UP, Decimal
 
 from ..application_ir import ApplicationIR
 from ..codegen import assemble_project
@@ -37,11 +38,33 @@ from ..edit.diff import plan_edit
 from ..intake.app_delta import apply_app_delta, generate_app_delta_proposal
 from ..intake.provider_resolution import resolve_generation_provider_from_env
 from ..intake.build_app import app_build_result_to_dict, build_app_from_prompt
+from ..model_gateway.accounting import UsageLedger
 from .files import BuildNotFoundError, list_build_files, read_build_file
 from .history import StudioBuildHistory
 from .preview import StudioPreviewManager
 from .server import create_studio_server
 from .session import EditNotSupportedError, StudioSessionStore
+
+_MICROS_PER_USD = Decimal(1_000_000)
+
+
+def _usage_summary_to_dict(ledger: UsageLedger) -> dict:
+    """A JSON-safe, secret-free view of ``ledger``'s aggregate cost/usage (R-472).
+
+    ``cost_micros_usd`` is an int (USD * 1,000,000, rounded) rather than a Decimal or a decimal
+    string, so it crosses the eventual Go control-plane boundary with no float/precision risk.
+    """
+    summary = ledger.summary()
+    cost_micros = int((summary.total_cost_usd * _MICROS_PER_USD).to_integral_value(rounding=ROUND_HALF_UP))
+    return {
+        "total_calls": summary.total_calls,
+        "successful_calls": summary.successful_calls,
+        "failed_calls": summary.failed_calls,
+        "input_tokens": summary.input_tokens,
+        "output_tokens": summary.output_tokens,
+        "unpriced_calls": summary.unpriced_calls,
+        "cost_micros_usd": cost_micros,
+    }
 
 _AUTHOR_NAME = "sanjeetji"
 _AUTHOR_EMAIL = "sk698166@gmail.com"
@@ -429,7 +452,10 @@ def _build(
             "hybrid_ui_active": False,
         }
     else:
-        provider, model_id, max_output, request_timeout = resolve_generation_provider_from_env()
+        usage_ledger = UsageLedger()
+        provider, model_id, max_output, request_timeout = resolve_generation_provider_from_env(
+            usage_ledger=usage_ledger
+        )
         chosen_dir = _target_dir_for(
             prompt,
             custom_dir=output_dir or target_dir,
@@ -453,7 +479,11 @@ def _build(
             )
         )
         # A provider is already mandatory on this path, so a requested hybrid_ui is always honored.
-        payload = app_build_result_to_dict(result, ui_outcomes=(plain_ui_outcomes if hybrid_ui else None))
+        payload = app_build_result_to_dict(
+            result,
+            ui_outcomes=(plain_ui_outcomes if hybrid_ui else None),
+            usage=_usage_summary_to_dict(usage_ledger),
+        )
         payload["hybrid_ui_requested"] = hybrid_ui
         payload["hybrid_ui_active"] = hybrid_ui
         editable_ir = result.ir  # R-468: a plain-prompt build has exactly one IR to edit

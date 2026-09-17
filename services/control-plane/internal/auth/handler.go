@@ -188,15 +188,10 @@ func handleLogout(deps Deps) http.HandlerFunc {
 
 func handleMe(deps Deps) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		token, ok := bearerToken(r)
-		if !ok {
-			writeError(w, http.StatusUnauthorized, "missing bearer token")
-			return
-		}
-		user, err := deps.Store.FindUserBySessionToken(r.Context(), hashToken(token))
+		user, err := RequireUser(r.Context(), deps.Store, r)
 		if err != nil {
-			if errors.Is(err, ErrSessionNotFound) {
-				writeError(w, http.StatusUnauthorized, "session not found or expired")
+			if errors.Is(err, ErrUnauthenticated) {
+				writeError(w, http.StatusUnauthorized, "missing bearer token or session not found or expired")
 				return
 			}
 			deps.logger().Error("find user by session token", "error", err)
@@ -205,6 +200,27 @@ func handleMe(deps Deps) http.HandlerFunc {
 		}
 		writeJSON(w, http.StatusOK, toUserResponse(user))
 	}
+}
+
+// RequireUser resolves the authenticated User for r's bearer token. It returns ErrUnauthenticated
+// (wrap-checkable via errors.Is) when the token is missing, malformed, or does not match a live
+// session, and any other error unchanged (a real storage failure, which callers should treat as a
+// 500, not a 401). Exposed so other HTTP surfaces in this service - e.g. internal/jobs's Job API -
+// require an authenticated caller without duplicating the bearer-token/session-lookup logic this
+// package's own handlers already use.
+func RequireUser(ctx context.Context, store Store, r *http.Request) (User, error) {
+	token, ok := bearerToken(r)
+	if !ok {
+		return User{}, ErrUnauthenticated
+	}
+	user, err := store.FindUserBySessionToken(ctx, hashToken(token))
+	if err != nil {
+		if errors.Is(err, ErrSessionNotFound) {
+			return User{}, ErrUnauthenticated
+		}
+		return User{}, err
+	}
+	return user, nil
 }
 
 func issueSession(ctx context.Context, deps Deps, userID string) (string, error) {

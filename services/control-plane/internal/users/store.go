@@ -7,6 +7,7 @@ package users
 import (
 	"context"
 	"errors"
+	"fmt"
 	"strings"
 	"time"
 
@@ -143,6 +144,73 @@ func (s *Store) DeleteSession(ctx context.Context, tokenHash string) error {
 	return err
 }
 
+// DebitCredits atomically charges up to `requested` credits against userID's balance, row-locking
+// the user for the duration of the transaction so concurrent debits never race. The charge is
+// clamped to whatever balance actually exists (v1 policy, R-472: never block a build attempt for
+// insufficient credits - only the amount charged is clamped, so credit_balance never goes
+// negative; hard pre-flight blocking is a deliberately deferred follow-up). It returns the amount
+// actually charged (0 <= charged <= requested) and the resulting balance, and - only when
+// charged != 0 - records one append-only credit_ledger row, mirroring CreateUser's signup-grant
+// row.
+func (s *Store) DebitCredits(ctx context.Context, userID string, requested int64, reason string) (charged int64, newBalance int64, err error) {
+	if requested < 0 {
+		return 0, 0, fmt.Errorf("users: DebitCredits requested must be >= 0, got %d", requested)
+	}
+	if strings.TrimSpace(reason) == "" {
+		return 0, 0, errors.New("users: DebitCredits reason must not be empty")
+	}
+
+	tx, err := s.pool.Begin(ctx)
+	if err != nil {
+		return 0, 0, err
+	}
+	defer func() { _ = tx.Rollback(ctx) }()
+
+	var balance int64
+	err = tx.QueryRow(ctx, `SELECT credit_balance FROM users WHERE id = $1 FOR UPDATE`, userID).Scan(&balance)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return 0, 0, auth.ErrUserNotFound
+	}
+	if err != nil {
+		return 0, 0, err
+	}
+
+	charged, newBalance = clampCharge(balance, requested)
+
+	if charged != 0 {
+		if _, err = tx.Exec(ctx, `UPDATE users SET credit_balance = $2 WHERE id = $1`, userID, newBalance); err != nil {
+			return 0, 0, err
+		}
+		if _, err = tx.Exec(ctx, `
+			INSERT INTO credit_ledger (user_id, delta, reason, balance_after)
+			VALUES ($1, $2, $3, $4)
+		`, userID, -charged, reason, newBalance); err != nil {
+			return 0, 0, err
+		}
+	}
+
+	if err := tx.Commit(ctx); err != nil {
+		return 0, 0, err
+	}
+	return charged, newBalance, nil
+}
+
 func normalizeEmail(email string) string {
 	return strings.ToLower(strings.TrimSpace(email))
+}
+
+// clampCharge is the pure arithmetic at the heart of DebitCredits's v1 never-block policy: charge
+// whatever is requested, but never more than the balance actually has, and never let the
+// resulting balance go negative even if balance itself is already negative (which should not
+// happen, but a defensive floor here costs nothing). Split out from DebitCredits so this rule can
+// be unit-tested without a database.
+func clampCharge(balance, requested int64) (charged, newBalance int64) {
+	charged = requested
+	if charged > balance {
+		charged = balance
+	}
+	if charged < 0 {
+		charged = 0
+	}
+	return charged, balance - charged
 }

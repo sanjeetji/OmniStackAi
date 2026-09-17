@@ -30,6 +30,10 @@ var (
 	ErrEmailTaken      = errors.New("auth: email already registered")
 	ErrUserNotFound    = errors.New("auth: user not found")
 	ErrSessionNotFound = errors.New("auth: session not found or expired")
+	// ErrUnauthenticated is what RequireUser returns for a missing, malformed, or unknown/expired
+	// bearer token - a single sentinel so callers (e.g. internal/jobs) can map straight to 401
+	// without depending on which specific reason caused it.
+	ErrUnauthenticated = errors.New("auth: unauthenticated")
 )
 
 // Store is the narrow persistence capability the auth handlers need. FindUserByEmail returns the

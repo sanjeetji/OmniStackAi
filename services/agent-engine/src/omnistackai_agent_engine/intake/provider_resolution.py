@@ -14,8 +14,10 @@ import logging
 import os
 from pathlib import Path
 
+from ..model_gateway.accounting import UsageLedger
 from ..model_gateway.bootstrap import build_gateway_from_env
 from ..model_gateway.contracts import ModelProvider
+from ..model_gateway.recording import RecordingProvider
 from ._ollama import build_ollama_provider_from_env
 
 logger = logging.getLogger(__name__)
@@ -59,6 +61,7 @@ def resolve_generation_provider_from_env(
     *,
     load_dotenv: bool = True,
     prefer_local: bool | None = None,
+    usage_ledger: UsageLedger | None = None,
 ) -> tuple[ModelProvider, str, int, float]:
     """Resolve (provider, model_id, max_output_tokens, request_timeout_seconds).
 
@@ -67,6 +70,10 @@ def resolve_generation_provider_from_env(
       uses local Ollama if reachable; otherwise falls over to cloud.
     - If cloud provider is specified (e.g. Groq) and valid, uses cloud;
       otherwise falls back to local Ollama.
+
+    If usage_ledger is given, the resolved provider is wrapped in a RecordingProvider so every
+    real generate() call it makes is recorded (tokens, cost, success/failure) into that ledger.
+    Default None keeps today's unchanged behavior (a raw, unwrapped provider).
     """
     if load_dotenv:
         _load_dotenv_if_needed()
@@ -82,7 +89,8 @@ def resolve_generation_provider_from_env(
     # If preference is local and Ollama is online, use Ollama immediately
     if env_prefer_local and is_ollama_ready():
         logger.info("Local Ollama is ready and preferred; routing to Ollama")
-        return build_ollama_provider_from_env()
+        provider, model_id, max_output, timeout = build_ollama_provider_from_env()
+        return _maybe_record(provider, usage_ledger), model_id, max_output, timeout
 
     if cloud_selection and cloud_selection != "none":
         try:
@@ -104,7 +112,7 @@ def resolve_generation_provider_from_env(
                     boot.cloud_tier_provider_id,
                     model_id,
                 )
-                return provider, model_id, max_output, timeout
+                return _maybe_record(provider, usage_ledger), model_id, max_output, timeout
         except Exception as err:
             logger.warning(
                 "Failed to bootstrap cloud provider '%s' (%s); falling back to Ollama",
@@ -112,4 +120,9 @@ def resolve_generation_provider_from_env(
                 err,
             )
 
-    return build_ollama_provider_from_env()
+    provider, model_id, max_output, timeout = build_ollama_provider_from_env()
+    return _maybe_record(provider, usage_ledger), model_id, max_output, timeout
+
+
+def _maybe_record(provider: ModelProvider, usage_ledger: UsageLedger | None) -> ModelProvider:
+    return provider if usage_ledger is None else RecordingProvider(provider, usage_ledger)

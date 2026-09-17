@@ -32,6 +32,12 @@ func TestLoadUsesTypedDefaults(t *testing.T) {
 	if config.SignupCreditGrant != 100 {
 		t.Fatalf("SignupCreditGrant = %d, want 100", config.SignupCreditGrant)
 	}
+	if config.AgentEngineURL != "http://127.0.0.1:4173" {
+		t.Fatalf("AgentEngineURL = %q, want %q", config.AgentEngineURL, "http://127.0.0.1:4173")
+	}
+	if config.CreditsPerUSD != 1000 {
+		t.Fatalf("CreditsPerUSD = %v, want 1000", config.CreditsPerUSD)
+	}
 }
 
 func TestLoadRejectsInvalidConfiguration(t *testing.T) {
@@ -55,6 +61,12 @@ func TestLoadRejectsInvalidConfiguration(t *testing.T) {
 		{"bad session ttl", "OMNISTACKAI_SESSION_TTL", "forever", "invalid duration"},
 		{"negative signup credit grant", "OMNISTACKAI_SIGNUP_CREDIT_GRANT", "-1", "non-negative integer"},
 		{"non-numeric signup credit grant", "OMNISTACKAI_SIGNUP_CREDIT_GRANT", "many", "non-negative integer"},
+		{"agent engine url missing scheme", "OMNISTACKAI_AGENT_ENGINE_URL", "127.0.0.1", "must be an absolute http(s) URL"},
+		{"agent engine url not a url", "OMNISTACKAI_AGENT_ENGINE_URL", "not a url", "must be an absolute http(s) URL"},
+		{"agent engine url with colon port but no scheme", "OMNISTACKAI_AGENT_ENGINE_URL", "127.0.0.1:4173", "invalid URL"},
+		{"zero credits per usd", "OMNISTACKAI_CREDITS_PER_USD", "0", "positive number"},
+		{"negative credits per usd", "OMNISTACKAI_CREDITS_PER_USD", "-5", "positive number"},
+		{"non-numeric credits per usd", "OMNISTACKAI_CREDITS_PER_USD", "many", "positive number"},
 	}
 
 	for _, test := range tests {

@@ -184,6 +184,24 @@ class TestAppBuildResultToDict(unittest.TestCase):
             self.assertEqual(payload["ui_outcomes"], [o.to_dict() for o in outcomes])
             json.dumps(payload)
 
+    def test_omitting_usage_is_byte_for_byte_the_old_shape(self) -> None:
+        # R-472: the same additive-key regression guard R-467 established for ui_outcomes, applied
+        # to the new usage key -- every existing caller must see an unchanged dict.
+        with tempfile.TemporaryDirectory() as tmp:
+            result = self._result(tmp)
+            without_kwarg = app_build_result_to_dict(result)
+            explicit_none = app_build_result_to_dict(result, usage=None)
+            self.assertEqual(without_kwarg, explicit_none)
+            self.assertNotIn("usage", without_kwarg)
+
+    def test_usage_is_included_unchanged_when_given(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            result = self._result(tmp)
+            usage = {"total_calls": 2, "successful_calls": 1, "failed_calls": 1, "cost_micros_usd": 0}
+            payload = app_build_result_to_dict(result, usage=usage)
+            self.assertEqual(payload["usage"], usage)
+            json.dumps(payload)
+
 
 class TestPackageExports(unittest.TestCase):
     def test_public_api(self) -> None:

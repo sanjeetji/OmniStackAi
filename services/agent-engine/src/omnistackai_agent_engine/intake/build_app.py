@@ -84,13 +84,23 @@ def build_app_from_ir(
     )
 
 
-def app_build_result_to_dict(result: AppBuildResult, *, max_files: int = 500, ui_outcomes: list | None = None) -> dict:
+def app_build_result_to_dict(
+    result: AppBuildResult,
+    *,
+    max_files: int = 500,
+    ui_outcomes: list | None = None,
+    usage: dict | None = None,
+) -> dict:
     """A JSON-safe view of an AppBuildResult for the studio/API (no secrets).
 
     ``ui_outcomes`` (R-467) is a list of R-465 ``UiSynthesisOutcome`` records from a hybrid
     (``synthesize_screens=True``) build; when given and non-empty, an ``"ui_outcomes"`` key is added
     (each entry via its own ``.to_dict()`` -- already JSON-safe and secret-free). Omitted entirely when
     ``None`` or empty, so every existing caller's output is unchanged.
+
+    ``usage`` (R-472) is an already-JSON-safe cost/token summary dict (see
+    ``studio/live_serve.py``'s ``_usage_summary_to_dict``); when given, a ``"usage"`` key is added
+    unchanged. Omitted entirely when ``None``, so every existing caller's output is unchanged.
     """
     root = Path(result.target_dir)
     files: list[str] = []
@@ -116,6 +126,8 @@ def app_build_result_to_dict(result: AppBuildResult, *, max_files: int = 500, ui
     }
     if ui_outcomes:
         payload["ui_outcomes"] = [outcome.to_dict() for outcome in ui_outcomes]
+    if usage is not None:
+        payload["usage"] = usage
     return payload
 
 

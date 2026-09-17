@@ -1,5 +1,70 @@
 # Work Log
 
+## 2026-09-18 — R-472 (Bridge the control-plane's Job API to the agent-engine — real credit debiting)
+
+- **Why:** Phase C of `R_&_D/OmniStackAI_Commercial_Platform_Kickoff_v1.md` — a real generation
+  call needs to actually debit the authenticated user's credit balance, with local-Ollama usage
+  staying credit-exempt, closing the loop Phases A/B (auth, plans, credits, console) set up.
+- **Correction to the kickoff doc's own framing, found while researching:** the Studio's real
+  plain-prompt build path (`intake/provider_resolution.py::resolve_generation_provider_from_env`)
+  hands callers a **raw** `ModelProvider` — the `ModelGateway`'s own accounting hook
+  (`model_gateway/accounting.py::UsageLedger`) is real and tested, but until now was only ever
+  exercised by `console_snapshot`'s illustrative dashboard, never a real build. Closed the gap with
+  a small, additive `model_gateway.RecordingProvider` decorator (new file) implementing the exact
+  same `ModelProvider` protocol — zero changes to any existing provider or call site.
+- **Agent-engine wiring:** `resolve_generation_provider_from_env` gained an optional
+  `usage_ledger: UsageLedger | None = None` param (default preserves today's exact behavior);
+  `intake/build_app.py::app_build_result_to_dict` gained an additive `usage` key (same pattern as
+  R-467's `ui_outcomes`); `studio/live_serve.py`'s plain-prompt `_build` branch creates one
+  `UsageLedger()` per request and surfaces a JSON-safe summary — `cost_micros_usd` as an **int**
+  (`cost_usd * 1_000_000`, rounded), not a decimal string, to avoid any float/precision risk
+  crossing the Go/Python boundary.
+- **Real bug caught by the new tests themselves, before any commit:** the first
+  `RecordingProvider.generate()` draft recorded `provider_id`/`model_id` from the *response's own*
+  echoed `.model` field instead of `self._inner.provider_id`/`request.model.model_id` — the
+  pattern `ModelGateway._record` actually uses (the truly-dispatched provider, not whatever the
+  response happens to echo). The local-Ollama test caught the mismatch immediately (wrong tier,
+  `cost_usd` came back `None`); fixed to match the gateway exactly.
+- **Control-plane wiring:** new exported `auth.RequireUser(ctx, store, r) (User, error)` (factored
+  out of `handleMe`, which now calls it too); new `users.Store.DebitCredits` — one transaction,
+  row-locked (`SELECT ... FOR UPDATE`), clamped via a pure, unit-tested `clampCharge` helper so
+  `credit_balance` never goes negative (v1 policy: never block a build, only clamp the charge); a
+  new `internal/jobs` package (`POST /jobs/build`) that authenticates the caller, forwards the
+  request body **verbatim** to `${OMNISTACKAI_AGENT_ENGINE_URL}/api/build`, and — only on a
+  successful response reporting real usage — converts `cost_micros_usd` to credits via the new
+  `OMNISTACKAI_CREDITS_PER_USD` and debits them, returning the agent-engine's response augmented
+  with `credits_spent`/`credit_balance`. Chose round-to-nearest over the originally-planned
+  ceiling rounding (ceiling would systematically overcharge every build; the exact real cost stays
+  visible in `cost_micros_usd` regardless).
+- **Real infra bug found only by the live smoke test:** the control-plane's global
+  `http.Server.WriteTimeout` (15s, tuned for fast routes like `/auth/*`) was silently killing
+  `/jobs/build`'s connection before a real multi-minute build finished. Fixed with
+  `http.NewResponseController(w).SetWriteDeadline(...)` scoped to just this one handler, leaving
+  the server-wide timeout intact for every other route.
+- **Compose networking:** the agent-engine's Studio server runs on the host (Compose is
+  hard-blocked from adding it as a service); added `OMNISTACKAI_AGENT_ENGINE_URL` defaulting to
+  `http://host.docker.internal:4173` plus `extra_hosts: ["host.docker.internal:host-gateway"]` so
+  the containerized control-plane can reach it — verified reachable from inside the container
+  before relying on it.
+- **Gates:** agent-engine `task verify` — Ran 3,603 tests, OK, 0 model/network calls. Control-plane
+  `go build`/`go vet`/`gofmt` clean; `go test ./...` all green (7 new `internal/jobs` cases, a
+  7-case `creditsForUsage` table test, a 6-case `clampCharge` table test in the new
+  `internal/users/store_test.go`). Repo-wide `task verify` — Stage 0 verification passed; `task
+  lint`/`security:quick`/`env:check` all pass. **Live:** real Docker Postgres+control-plane, a
+  real local Ollama build (forced via `OMNISTACKAI_PREFER_LOCAL=1` to keep the proof free and
+  reproducible — this machine's real `.env` otherwise defaults to live Groq) produced a real
+  161-file "Task Tracker" repo via `POST /jobs/build`, with `usage.cost_micros_usd: 0` and
+  `credits_spent: 0` (correct — local usage is credit-exempt by price, not a special case). Since
+  a free build has nothing to debit, `DebitCredits`'s row-locked SQL path was proven separately
+  against the same live Postgres with a throwaway, never-committed `go run` program: `100 → 63`
+  after `DebitCredits(37)`, then `63 → 0` (clamped, never negative) after `DebitCredits(999999)`,
+  independently confirmed via a real `GET /auth/me` showing `credit_balance: 0`. One small, real,
+  incidental Groq cost was honestly incurred by the *first* smoke attempt (before discovering this
+  environment's real cloud default and switching to forced-local) — the build failed at
+  IR-parsing before any usage summary existed, so nothing was charged for it either.
+- **NEXT R-473 (Phase D):** rebuild the real Studio/builder UX inside `apps/console-web` so a
+  logged-in user can actually call the now-real `/jobs/build` from the product itself.
+
 ## 2026-09-17 — R-471 (Fix dev-mode hydration bug + add full name to registration)
 
 - **Why:** the founder actually opened the R-470 console in a browser and reported registration

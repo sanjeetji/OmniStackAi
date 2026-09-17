@@ -41,6 +41,15 @@ services:
       OMNISTACKAI_SHUTDOWN_TIMEOUT: ${OMNISTACKAI_SHUTDOWN_TIMEOUT:-10s}
       OMNISTACKAI_SESSION_TTL: ${OMNISTACKAI_SESSION_TTL:-720h}
       OMNISTACKAI_SIGNUP_CREDIT_GRANT: ${OMNISTACKAI_SIGNUP_CREDIT_GRANT:-100}
+      # R-472: the agent-engine's Studio server runs directly on the host (scripts/test.sh hard-
+      # blocks adding it as a Compose service at this stage), so the container reaches it via the
+      # Docker-provided host gateway alias rather than 127.0.0.1 (which inside the container means
+      # the container itself). extra_hosts below makes host.docker.internal resolve on Linux
+      # Docker Engine too, not just Docker Desktop/Colima where it already works.
+      OMNISTACKAI_AGENT_ENGINE_URL: ${OMNISTACKAI_AGENT_ENGINE_URL:-http://host.docker.internal:4173}
+      OMNISTACKAI_CREDITS_PER_USD: ${OMNISTACKAI_CREDITS_PER_USD:-1000}
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     ports:
       - "127.0.0.1:${OMNISTACKAI_CONTROL_PLANE_PORT:-8080}:8080"
     healthcheck:
