@@ -143,7 +143,21 @@ available ID per `.ai/tasks/` is **R-469** (R-468 is the last shipped task).
 - Deterministic, offline-testable (Go `httptest` + a real Postgres in CI/compose, matching the
   existing `control-plane:verify` pattern) — no dependency on the frontend or agent-engine yet.
 
-**Phase B — Real Next.js console-web (proposed R-470)**
+**Phase B — Real Next.js console-web (R-470 — DONE, 2026-09-17)**
+
+> Shipped as designed below. Full evidence in `.ai/tasks/R-470.md`: `apps/console-web`
+> `typecheck`/`lint`/`build` all clean, `task verify` 3,593 OK, and a real Docker Compose
+> control-plane + a real `next start` server proved the full register → home → fabric → logout →
+> login round trip live (with cookies, not a bearer token), run twice — the second time after
+> fixing a genuine bug found along the way: the session cookie's `Secure` flag was derived from
+> `NODE_ENV` (always "production" under `next start`) instead of the actual request protocol,
+> which would have silently broken login in a real browser over local HTTP. Also found and fixed:
+> `pnpm`'s default fetch timeout was too short for this network on large packages; `typescript@7`
+> (npm's real current `latest`) isn't yet supported by `typescript-eslint` (pinned to `6.0.3`); the
+> documented ESLint `FlatCompat` pattern crashed on a circular-reference bug (fixed by importing
+> `eslint-config-next`'s native flat-config export directly); pnpm 11.19 moved build-script
+> allowlisting from `package.json` to `pnpm-workspace.yaml`.
+
 - Replace `apps/console-web`'s static HTML/JS with a Next.js (App Router, TypeScript) app.
 - Login/signup/session screens wired to Phase A's endpoints.
 - Carry forward the existing `overview.json` data contract and visual design as one section of

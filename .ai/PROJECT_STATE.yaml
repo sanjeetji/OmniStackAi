@@ -2,10 +2,10 @@ schema_version: 1
 project: OmniStackAI
 phase: BASIC/MVP
 founder_stage: 0
-current_task: R-469
+current_task: R-470
 current_status: done
 branch: main
-last_completed_task: R-469
+last_completed_task: R-470
 # TASK COMPILATION AUDIT — 2026-09-16
 # Performed to achieve 100% synchronization across all task-tracking documentation.
 # Tracker workbook expanded to 464 tasks with R-464.
@@ -34,6 +34,47 @@ task_compilation_audit:
       new_status: DONE
       reason: "Task fully completed on 2026-09-11 with 35 tests. Status left stale during rapid development sprint."
 last_completed_task_summary: >-
+  Completed R-470 (2026-09-17): real Next.js console-web, wired to R-469's auth API. Phase B of
+  R_&_D/OmniStackAI_Commercial_Platform_Kickoff_v1.md - replaced the static, dependency-free
+  apps/console-web (plain HTML/CSS/JS reading a committed data/overview.json snapshot) with a real
+  Next.js (App Router, TypeScript) app. Register/login/logout wired to R-469's control-plane via
+  server-side Route Handlers (app/api/auth/*) that proxy the calls and set/clear an httpOnly
+  session cookie - the raw token is never handed to client-side JavaScript, no CORS needed (the
+  browser only ever talks to the Next.js origin). An authenticated home page shows the signed-in
+  user's profile + credit balance; a /fabric page carries the old model/cost overview dashboard
+  forward on the exact same data/overview.json data contract, now a React Server Component instead
+  of hand-written DOM JS. No new UI dependency beyond React/Next.js itself (no Tailwind/component
+  library) - the console's existing CSS design tokens carry forward into app/globals.css. New env
+  var OMNISTACKAI_CONTROL_PLANE_URL (server-side only). Old index.html/app.js/styles.css removed.
+  scripts/console.sh rewritten around next dev/build/lint/start; scripts/verify.sh gained console
+  lint/typecheck/build steps (next build succeeds with no live control-plane - Route Handlers are
+  compiled, not executed, at build time).
+  Real compatibility issues found and fixed while implementing (full detail in
+  .ai/tasks/R-470.md "Live discovery"): pnpm's default fetch timeout was too short for this
+  network's throughput on large packages (fixed with a new root .npmrc); typescript@7.0.2 (npm's
+  actual current latest) is not yet supported by typescript-eslint (pinned to typescript@6.0.3,
+  matching eslint-config-next's own tested version); the documented FlatCompat eslint.config.mjs
+  pattern crashed on a circular-reference bug inside @eslint/eslintrc's error formatter (fixed by
+  importing eslint-config-next's own native flat-config export directly, dropping
+  @eslint/eslintrc entirely); pnpm 11.19 stopped reading package.json's pnpm.* fields (moved
+  onlyBuiltDependencies/allowBuilds to pnpm-workspace.yaml). Most importantly: the session cookie's
+  Secure flag was originally derived from NODE_ENV (always "production" under next start regardless
+  of the real protocol) rather than the actual request protocol - this would have silently broken
+  login for anyone using the app locally over plain HTTP in a real browser (curl does not enforce
+  the Secure attribute the way browsers do, so the first smoke test's 200/204s masked it; caught by
+  inspecting the raw Set-Cookie header instead of trusting status codes alone). Fixed with a
+  per-request isSecureRequest() helper; the full live smoke test was re-run afterward and confirmed
+  correct (cookie issued without Secure over plain HTTP, verified in curl's own cookie-jar file).
+  Gates: apps/console-web typecheck/lint/build all clean; task verify - Ran 3593 tests in 63.552s,
+  OK, Stage 0 verification passed; live smoke against a real running Next.js server + the real
+  R-469 control-plane container proved register(201, no token leaked) -> duplicate(409) ->
+  home-authenticated(200, real email shown) -> fabric(200) -> home-no-cookie(307 to /login) ->
+  logout(204) -> home-after-logout(307 to /login, real server-side invalidation) -> login(200, new
+  cookie) end to end.
+  NEXT R-471 (Phase C): bridge the control-plane's Job API to the unmodified agent-engine so a real
+  generation call actually debits a user's credits (local Ollama stays credit-exempt).
+
+_prior_last_completed_task_summary_R469: >-
   Completed R-469 (2026-09-17): control-plane foundation - users, auth, plans, credits. Phase A of
   R_&_D/OmniStackAI_Commercial_Platform_Kickoff_v1.md, the founder-approved decision (2026-09-17)
   to advance from the Stage-0 static console/stdlib Studio prototype toward the real commercial

@@ -1,60 +1,53 @@
-task_id: R-469
+task_id: R-470
 status: completed
 phase: MVP
 tracker_row: null
 started_at: "2026-09-17"
 completed_at: "2026-09-17"
 objective: >-
-  Phase A of R_&_D/OmniStackAI_Commercial_Platform_Kickoff_v1.md (founder-approved commercial
-  platform kickoff, 2026-09-17): give the existing services/control-plane Go skeleton
-  (health-check-only before this task) real users, authentication, and a plan/credit model. Two
-  roles only (super_admin, user); a user's access is gated entirely by plan (free/developer/pro/
-  agency/enterprise, byok as an add-on flag - reusing the tier names already named in the
-  Implementation Brief Section 22), never a second role tier. Every signup gets the free plan and
-  a starting credit grant (env-configurable, default 100) recorded in an append-only
-  credit_ledger. New migration 000002_users_auth_billing (users, credit_ledger, sessions) plus a
-  small embedded migration runner (migrations package, go:embed *.up.sql) that replays every
-  migration file, in order, inside a Go-managed transaction on every control-plane boot - safe
-  because every migration is written idempotently (IF NOT EXISTS / ON CONFLICT DO NOTHING), and
-  necessary because docker-entrypoint-initdb.d only runs against a brand-new empty Postgres
-  volume, never an existing one. Password hashing is PBKDF2-HMAC-SHA256 implemented directly on
-  crypto/hmac+crypto/sha256+crypto/subtle - zero new go.mod dependency, matching this repo's
-  minimal-dependency convention (verified in scripts/test.sh: go.mod's direct-dependency count
-  stays exactly 1, pgx). Session tokens are opaque crypto/rand bearer tokens; only their SHA-256
-  hash is ever persisted. Four new HTTP endpoints (POST /auth/register, /auth/login, /auth/logout,
-  GET /auth/me) mounted alongside the existing health routes via a shared http.ServeMux
-  (health.NewHandler became health.Register so main.go can combine both route groups). Login
-  failure is a generic 401 regardless of wrong-password vs. unknown-email, including a same-cost
-  dummy-hash Verify call on the "not found" path so there is no timing side channel for
-  enumerating registered emails - proven both in the fake-store unit tests and against the real
-  running container. No frontend, no agent-engine bridge, no payment processor, no team/org model
-  - all named as separate later Tracker IDs (Phases B/C/D/E) in the kickoff doc, not attempted
-  here.
+  Phase B of R_&_D/OmniStackAI_Commercial_Platform_Kickoff_v1.md: replaced the static,
+  dependency-free apps/console-web (plain HTML/CSS/JS reading a committed data/overview.json
+  snapshot) with a real Next.js (App Router, TypeScript) app. Register/login/logout wired to
+  R-469's control-plane (POST /auth/register, /auth/login, /auth/logout, GET /auth/me) via
+  server-side Route Handlers that proxy the calls and set/clear an httpOnly session cookie - the
+  raw token is never handed to client-side JavaScript, no CORS needed. An authenticated home page
+  shows the signed-in user's profile + credit balance; a /fabric page carries the old model/cost
+  overview dashboard forward on the exact same data/overview.json data contract, now rendered by a
+  React Server Component. No new UI dependency beyond React/Next.js itself - the existing console's
+  CSS design tokens carry forward into app/globals.css. New env var
+  OMNISTACKAI_CONTROL_PLANE_URL (server-side only). Old index.html/app.js/styles.css removed.
+  scripts/console.sh rewritten around next dev/build/lint/start; scripts/verify.sh gained console
+  lint/typecheck/build steps (next build succeeds without a live control-plane). Correction to the
+  kickoff doc's own framing: scripts/doctor.sh already required node/pnpm before this task - what
+  was actually new was pnpm install fetching real packages for the first time.
+  Several real compatibility issues found and fixed while implementing (see .ai/tasks/R-470.md
+  "Live discovery" for full detail): pnpm's default fetch timeout was too short for this network
+  (fixed with a new root .npmrc); typescript@7.0.2 (npm's actual latest) is not yet supported by
+  typescript-eslint (pinned to typescript@6.0.3, matching eslint-config-next's own tested version);
+  the documented FlatCompat eslint.config.mjs pattern crashed on a circular-reference bug in
+  @eslint/eslintrc's error formatter (fixed by importing eslint-config-next's own native flat-config
+  export directly instead); pnpm 11.19 stopped reading package.json's pnpm.* fields (moved the
+  onlyBuiltDependencies/allowBuilds setting to pnpm-workspace.yaml); and, most importantly, the
+  session cookie's Secure flag was wired from NODE_ENV (always "production" under next start
+  regardless of real protocol) rather than the actual request protocol - this would have silently
+  broken login for anyone using the app locally over plain HTTP in a real browser (curl doesn't
+  enforce the Secure attribute the way browsers do, so the first smoke test's 200s masked it; caught
+  by inspecting the raw Set-Cookie header). Fixed with a per-request isSecureRequest() check; the
+  full live smoke test was re-run afterward and confirmed correct. No agent-engine bridge, no
+  payment processor, no Studio/builder UX yet - Phases C/D/E, separate Tracker IDs.
 allowed_paths:
-  - services/control-plane/migrations/000002_users_auth_billing.up.sql
-  - services/control-plane/migrations/000002_users_auth_billing.down.sql
-  - services/control-plane/migrations/migrations.go
-  - services/control-plane/migrations/migrations_test.go
-  - services/control-plane/internal/password/password.go
-  - services/control-plane/internal/password/password_test.go
-  - services/control-plane/internal/auth/types.go
-  - services/control-plane/internal/auth/token.go
-  - services/control-plane/internal/auth/token_test.go
-  - services/control-plane/internal/auth/handler.go
-  - services/control-plane/internal/auth/handler_test.go
-  - services/control-plane/internal/users/store.go
-  - services/control-plane/internal/health/handler.go
-  - services/control-plane/internal/health/handler_test.go
-  - services/control-plane/internal/config/config.go
-  - services/control-plane/internal/config/config_test.go
-  - services/control-plane/cmd/control-plane/main.go
-  - services/control-plane/Dockerfile
-  - infra/environments/local/compose.yaml
-  - .env.example
-  - scripts/env-check.sh
+  - apps/console-web/**
+  - pnpm-lock.yaml
+  - pnpm-workspace.yaml
+  - .npmrc
+  - scripts/console.sh
   - scripts/test.sh
+  - scripts/verify.sh
+  - Taskfile.yml
+  - .env.example
+  - .gitignore
   - R_&_D/OmniStackAI_Commercial_Platform_Kickoff_v1.md
-  - .ai/tasks/R-469.md
+  - .ai/tasks/R-470.md
   - .ai/CURRENT_TASK.yaml
   - .ai/PROJECT_STATE.yaml
   - .ai/WORK_LOG.md
@@ -65,54 +58,58 @@ allowed_paths:
   - docs/RESUME_PROMPT.md
   - COMMANDS.md
 forbidden_changes:
-  - No new go.mod direct dependency (stdlib PBKDF2, not golang.org/x/crypto/bcrypt or similar)
-  - No changes to apps/console-web, services/agent-engine, or any Python file
-  - No new Docker Compose service (still exactly postgres + control-plane)
-  - No payment processor, email-sending integration, or team/org/workspace tables
-  - No raw password or raw session token ever logged, returned twice, or stored unhashed
-  - Do not modify services/control-plane/migrations/000001_platform_foundation.{up,down}.sql
+  - No changes to services/control-plane or services/agent-engine
+  - No new UI/component-library dependency (no Tailwind, no shadcn, no CSS-in-JS library)
+  - No payment processor, email-sending integration, team/org tables
+  - No raw session token ever sent to client-side JS, logged, or stored in localStorage/non-httpOnly cookie
+  - No hosting/deployment configuration for the console beyond local dev
   - Do not modify or commit the untracked .claude directory
 required_gates:
-  - "focused: go test ./... for migrations, password, auth, users, health, config packages"
+  - "apps/console-web: pnpm run lint, pnpm run typecheck, pnpm run build"
   - task verify
   - task lint
   - task security:quick
   - task env:check
-  - "manual smoke (real docker compose + curl): register -> login -> me -> logout -> me-after-logout"
+  - "manual smoke (real next start + real control-plane): register -> home -> fabric -> logout -> login via cookies"
 model_tool_trace:
   routing: deterministic_only
   local_calls: 0
   cloud_calls: 0
   note: >-
-    Pure Go implementation and Go test suite - 0 model/network calls. The manual smoke test made
-    real HTTP calls to a locally-run control-plane container (Docker/Colima), not to any model
+    TypeScript/React implementation, no model/network calls in any automated gate beyond the npm
+    registry fetch during pnpm install. The manual smoke test makes real HTTP calls between a
+    locally-run Next.js server and the locally-run control-plane container, not to any model
     provider.
 evidence:
-  focused_tests: "internal/auth 15 passed, internal/config 2 (9 subtests) passed, internal/health 3 passed, internal/password 8 passed, migrations 4 passed"
-  control_plane_lint: "Control-plane lint passed (gofmt + go vet clean)"
-  control_plane_build: "Control-plane build passed"
-  contract_tests: "bash scripts/test.sh -> Repository contract tests passed (new R-469 block: contract files present, migration creates users/credit_ledger/sessions, down-migration targets version 2, all 4 auth routes present, go.mod direct-dependency count still exactly 1)"
-  lint: "Lint passed"
-  security: "Stage 0 secret-policy check passed"
+  typecheck: "tsc --noEmit - clean, exit 0"
+  lint: "eslint . - clean, exit 0"
+  build: "next build - Compiled successfully; 8 routes built, 3 correctly dynamic (api/auth/*), rest static; succeeded with no control-plane running"
+  repo_lint: "Lint passed"
+  contract_tests: "bash scripts/test.sh -> Repository contract tests passed (new R-470 block: 12 contract files present, 3 removed static files confirmed gone, no forbidden UI dependency, .gitignore covers .next/)"
   env: "Environment contract passed"
-  verify: "Ran 3593 tests in 62.421s - OK; Stage 0 verification passed (0 model/network calls, no slowdown)"
+  security: "Stage 0 secret-policy check passed"
+  verify: "Ran 3593 tests in 63.552s - OK; Stage 0 verification passed"
   manual_smoke: >-
-    Real Docker Compose (Colima) + real PostgreSQL: control-plane image built with the new
-    COPY migrations layer, both containers reported Healthy, live health/readiness check passed
-    (proves migrations.Apply ran cleanly on boot). Full curl round trip against the running
-    container: POST /auth/register -> 201 with role=user, plan=free, credit_balance=100, a real
-    token; duplicate register -> 409; POST /auth/login (correct password) -> 200 with a different
-    new token; login wrong password -> 401; login unknown email -> 401 with the BYTE-IDENTICAL
-    error body as the wrong-password case (no enumeration leak in production); GET /auth/me with
-    the token -> 200 with the correct profile (no token echoed); GET /auth/me with no header ->
-    401; POST /auth/logout -> 204; GET /auth/me with the now-invalid token -> 401 "session not
-    found or expired" (real deletion from PostgreSQL, not just in-memory); logout again -> 204
-    (idempotent).
+    Real next start (port 4321) + real docker-compose control-plane/Postgres (from R-469, still
+    healthy). Register -> 201, Set-Cookie without Secure over plain HTTP (verified in both the
+    header and curl's cookie-jar file), no token in the JSON body. Duplicate register -> 409. Home
+    with the cookie -> 200, shows the real registered email (proves cookie -> control-plane
+    /auth/me -> rendered profile round trip). Fabric page -> 200, shows "Model Fabric". Home with no
+    cookie -> 307 to /login. Logout -> 204, cookie cleared. Home with the cleared cookie -> 307 to
+    /login again (real server-side session invalidation, not just local). Login again -> 200, a new
+    session cookie issued.
+  live_discovery: >-
+    See .ai/tasks/R-470.md for full detail: pnpm fetch-timeout too short for this network (fixed via
+    .npmrc); typescript@7.0.2 not yet supported by typescript-eslint (pinned to 6.0.3);
+    FlatCompat + eslint-config-next crashed on a circular-reference bug (fixed by importing
+    eslint-config-next's native flat-config export directly); pnpm 11.19 moved
+    onlyBuiltDependencies/allowBuilds from package.json to pnpm-workspace.yaml; and a real bug where
+    the session cookie's Secure flag was derived from NODE_ENV instead of the actual request
+    protocol, which would have silently broken login in a real browser over local HTTP - fixed with
+    a per-request isSecureRequest() check and re-verified live.
 next_action: >-
-  R-469 done. NEXT: Phase B of R_&_D/OmniStackAI_Commercial_Platform_Kickoff_v1.md - replace the
-  static apps/console-web with a real Next.js (App Router, TypeScript) app wired to this task's
-  /auth/register, /auth/login, /auth/logout, /auth/me endpoints. This is the point where
-  task bootstrap/task doctor gain a real Node/npm toolchain requirement for the console, a
-  deliberate scope change already recorded in the kickoff doc. After that, Phase C bridges the
-  control-plane's Job API to the unmodified agent-engine so credits actually get debited on a
-  real generation call.
+  R-470 done. NEXT: Phase C of R_&_D/OmniStackAI_Commercial_Platform_Kickoff_v1.md - bridge the
+  control-plane's Job API to the unmodified agent-engine so a real generation call actually debits
+  a user's credits (local Ollama usage stays credit-exempt). After that, Phase D rebuilds the actual
+  Studio/builder UX for real inside this console (the Lovable/Dyad/Emergent pattern research from
+  earlier this session applies there).

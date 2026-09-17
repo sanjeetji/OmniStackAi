@@ -239,10 +239,35 @@ tasks:
     cmds:
       - bash scripts/console.sh snapshot
 
+  console:dev:
+    desc: Refresh the snapshot and run the Next.js console in dev mode on http://127.0.0.1:4321
+    cmds:
+      - bash scripts/console.sh dev
+
   console:serve:
-    desc: Refresh the snapshot and serve the console on http://127.0.0.1:4321
+    desc: Alias for console:dev (kept for backward compatibility)
     cmds:
       - bash scripts/console.sh serve
+
+  console:lint:
+    desc: Lint the Next.js console
+    cmds:
+      - bash scripts/console.sh lint
+
+  console:typecheck:
+    desc: Type-check the Next.js console
+    cmds:
+      - bash scripts/console.sh typecheck
+
+  console:build:
+    desc: Refresh the snapshot and build the Next.js console for production
+    cmds:
+      - bash scripts/console.sh build
+
+  console:start:
+    desc: Start the built Next.js console (run console:build first)
+    cmds:
+      - bash scripts/console.sh start
 
   verify:
     desc: Run the CI-equivalent Stage 0 verification

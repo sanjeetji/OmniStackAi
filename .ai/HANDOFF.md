@@ -1,9 +1,40 @@
 # Current Handoff
 
-Task ID: R-469
+Task ID: R-470
 Status: done
 Phase: BASIC/MVP — Founder Stage 0
 Branch: `main`
+
+> **R-470 Completed (2026-09-17): Real Next.js console-web, wired to R-469's auth API.**
+> - **Phase B of `R_&_D/OmniStackAI_Commercial_Platform_Kickoff_v1.md`** — replaced the static
+>   `apps/console-web` (plain HTML/CSS/JS) with a real Next.js (App Router, TypeScript) app.
+> - **Session handling:** server-side cookie proxy (`app/api/auth/{register,login,logout}`), not a
+>   browser-held bearer token — no CORS, raw token never reaches client-side JS. `lib/session.ts`
+>   reads the cookie server-side for `getCurrentUser()`.
+> - **Pages:** `/login`, `/register`, `/` (authenticated home — profile + credit balance, redirects
+>   to `/login` otherwise), `/fabric` (the old model/cost overview carried forward on the same
+>   `data/overview.json` contract, now a Server Component).
+> - **No new UI dependency** beyond React/Next.js — existing CSS design tokens carried into
+>   `app/globals.css`. A real design system is Phase D's job.
+> - **Five real ecosystem-compatibility issues found and fixed** (see `.ai/tasks/R-470.md` "Live
+>   discovery" for full detail): pnpm's fetch timeout too short for this network (`.npmrc` added);
+>   `typescript@7.0.2` (npm's actual latest) unsupported by `typescript-eslint` yet (pinned to
+>   `6.0.3`); the documented `FlatCompat` ESLint pattern crashed on a circular-reference bug (fixed
+>   by importing `eslint-config-next`'s native flat-config export directly); pnpm 11.19 moved
+>   `onlyBuiltDependencies`/`allowBuilds` from `package.json` to `pnpm-workspace.yaml`; and, most
+>   importantly, **the session cookie's `Secure` flag was wired from `NODE_ENV` instead of the
+>   actual request protocol** — would have silently broken login in a real browser over local HTTP
+>   (curl doesn't enforce `Secure` the way browsers do, so the first smoke test's 200s masked it).
+>   Fixed with a per-request `isSecureRequest()` check; re-verified live afterward.
+> - Gates: console `typecheck`/`lint`/`build` all clean; `task verify` **3,593 OK** (63.6s, `next
+>   build` succeeds with no control-plane running). **Live smoke, twice** (real `next start` + the
+>   real R-469 Docker Compose control-plane): the second run (post-fix) proved register(201, no
+>   leaked token) → duplicate(409) → home-authenticated(200, real email) → fabric(200) →
+>   home-no-cookie(307) → logout(204) → home-after-logout(307, real invalidation) → login(200, new
+>   cookie) end to end.
+> - **NEXT R-471 (Phase C):** bridge the control-plane's Job API to the unmodified agent-engine so a
+>   real generation call debits credits (local Ollama stays credit-exempt). See
+>   `R_&_D/OmniStackAI_Commercial_Platform_Kickoff_v1.md`, `.ai/tasks/R-470.md`.
 
 > **R-469 Completed (2026-09-17): Control-plane foundation — users, auth, plans, credits.**
 > - **Phase A of `R_&_D/OmniStackAI_Commercial_Platform_Kickoff_v1.md`** — the founder's decision

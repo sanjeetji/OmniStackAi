@@ -208,8 +208,8 @@ front-door bricks, R-420 is generated-SQL hardening, R-421..R-426 are Studio pre
 R-427..R-429 are generated-app compile fixes, R-430..R-457 are the first twenty-eight differentiating-spine
 bricks (Scope Compiler through Ecosystem Multi-Surface SLA, SLO, and Error Budget Contracts).
 Git, state files (.ai/), CHANGELOG, and docs/PROGRESS.md remain the executable/detail sources of truth.
-Current through R-469; `task verify` = 3,593 tests (agent-engine) + the Go control-plane's own suite.
-R-416 added prompt-to-IR intake, R-417 materialized a generated
+Current through R-470; `task verify` = 3,593 tests (agent-engine) + the Go control-plane's own suite +
+the Next.js console's typecheck/lint/build. R-416 added prompt-to-IR intake, R-417 materialized a generated
 owned repo, R-418 added the local chat studio, R-419 added turnkey local run, and R-420 fixed the two
 SQL defects found by live execution. R-421 added an explicit `task agent-engine:studio:preview` mode:
 one managed generated-app session, API/web readiness, replacement/shutdown cleanup, port-collision
@@ -493,17 +493,32 @@ WHAT TO DO NEXT
   the real PostgreSQL `internal/users.Store`; login failure is a generic 401 with no email-enumeration
   timing leak. `go test` all green; `task verify` 3,593 OK; a real Docker Compose + PostgreSQL smoke test
   proved register → login → me → logout → me-after-logout end to end.
-- NEXT R-470 (Phase B): replace the static `apps/console-web` with a real Next.js (App Router, TypeScript)
-  app wired to R-469's four auth endpoints — the point where `task bootstrap`/`task doctor` deliberately
-  gain a real Node/npm toolchain requirement for the console. Then Phase C bridges the control-plane's Job
-  API to the unmodified agent-engine so a real generation call debits credits (local Ollama stays
-  credit-exempt). Previously-named agent-engine follow-ups (wiring R-466's `compile_and_repair` into the
-  edit flow, an undo/revert UI, extending `app_delta` beyond additive-only) remain real but lower priority
-  than the platform foundation now underway. Founder action to unlock a full live proof of a model-written
-  page that compiles, or of the chat-edit delta against a real model: after the Groq daily reset run with
-  OMNISTACKAI_MAX_RETRY_AFTER_SECONDS=180, or add GOOGLE_API_KEY (Gemini) to the gitignored .env.
-  Keep `task verify` model/Docker/DB/install/network-free (any live/model path stays opt-in); preserve
-  single-session ownership and explicit trusted-local mode.
+- R-470 (2026-09-17, done) built Phase B — replaced the static `apps/console-web` with a real Next.js
+  (App Router, TypeScript) app: `/login`/`/register` pages, an authenticated `/` home page (profile +
+  credit balance), `/fabric` carrying the old model/cost overview forward on the same
+  `data/overview.json` contract. Session handling is a server-side cookie proxy (`app/api/auth/*` Route
+  Handlers set/clear an `httpOnly` cookie) - the raw token never reaches client-side JS, no CORS needed.
+  No new UI dependency beyond React/Next.js. Found and fixed five real ecosystem-compatibility issues
+  (pnpm fetch timeouts fixed via a new root `.npmrc`; `typescript@7` not yet supported by
+  `typescript-eslint`, pinned to `6.0.3`; an ESLint `FlatCompat` crash fixed by importing
+  `eslint-config-next`'s native flat-config export directly; pnpm 11.19 moved build-script
+  allowlisting to `pnpm-workspace.yaml`; and a `Secure`-cookie-over-HTTP bug that would have silently
+  broken login in a real browser, caught by inspecting the raw `Set-Cookie` header rather than trusting
+  status codes). `task verify` 3,593 OK; a real Docker Compose control-plane + a real `next start`
+  server proved the full register -> home -> fabric -> logout -> login round trip live, twice (the
+  second run after the cookie fix).
+- NEXT R-471 (Phase C): bridge the control-plane's Job API to the unmodified agent-engine so a real
+  generation call debits credits (local Ollama stays credit-exempt). After that, Phase D rebuilds the
+  Studio UX for real inside the console (the Lovable/Dyad/Emergent pattern research already done applies
+  there). Previously-named agent-engine follow-ups (wiring R-466's `compile_and_repair` into the edit
+  flow, an undo/revert UI, extending `app_delta` beyond additive-only) remain real but lower priority
+  than the platform foundation now underway. Founder action to unlock a full live proof of a
+  model-written page that compiles, or of the chat-edit delta against a real model: after the Groq daily
+  reset run with OMNISTACKAI_MAX_RETRY_AFTER_SECONDS=180, or add GOOGLE_API_KEY (Gemini) to the
+  gitignored .env.
+  Keep `task verify` model/Docker/DB-free at its core (the console's own build/lint/typecheck gates need
+  no live control-plane; any live/model path stays opt-in); preserve single-session ownership and
+  explicit trusted-local mode.
 - PROVEN THIS SESSION: a generated app runs live locally on the Mac (Next.js :3000 + FastAPI :8000 +
   seeded PostgreSQL). Run the Next binary directly (`./node_modules/.bin/next dev`), not `pnpm dev`
   (pnpm 11's pre-run check exits 1 on the sharp ignored-build). Backend needs a venv (pyenv hides pip).
@@ -512,7 +527,7 @@ WHAT TO DO NEXT
   mobile (R-010 etc.) until web/backend stability.
 
 Begin by reading the files above and `R_&_D/OmniStackAI_Commercial_Platform_Kickoff_v1.md`, run the start
-protocol, then continue at R-470 (Phase B: the real Next.js console-web) and write its Standard AI Task
-Contract before writing code.
+protocol, then continue at R-471 (Phase C: bridge the control-plane's Job API to the agent-engine so
+credits actually get debited) and write its Standard AI Task Contract before writing code.
 ```
 

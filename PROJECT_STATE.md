@@ -4,6 +4,22 @@ Last updated: 2026-09-17
 ## Current Phase
 Stage 0 (Founder Build Sequence, Brief Section 91) — BASIC/MVP
 
+> **R-470 (2026-09-17): real Next.js console-web, wired to R-469's auth API.**
+> Phase B of `R_&_D/OmniStackAI_Commercial_Platform_Kickoff_v1.md`: the static, dependency-free
+> `apps/console-web` is now a real Next.js (App Router, TypeScript) app. `/login`/`/register`
+> pages, an authenticated `/` home page (profile + credit balance), and `/fabric` (the old
+> model/cost overview carried forward on the same `data/overview.json` contract). Session handling
+> is a server-side cookie proxy (`app/api/auth/*` Route Handlers set/clear an `httpOnly` cookie) —
+> the raw token never reaches client-side JS, no CORS needed. No new UI dependency beyond
+> React/Next.js itself. Found and fixed five real ecosystem-compatibility issues while
+> implementing, most notably a `Secure`-cookie-over-HTTP bug that would have silently broken login
+> in a real browser (curl's leniency masked it in the first smoke test) — full detail in
+> `.ai/tasks/R-470.md`. `task verify` **3,593 OK**; a real Docker Compose control-plane + a real
+> `next start` server proved the full register → home → fabric → logout → login round trip live,
+> twice (the second run after the cookie fix).
+> NEXT R-471 (Phase C): bridge the control-plane's Job API to the unmodified agent-engine so a real
+> generation call debits credits.
+
 > **R-469 (2026-09-17): control-plane foundation — users, auth, plans, credits.**
 > Phase A of `R_&_D/OmniStackAI_Commercial_Platform_Kickoff_v1.md` (the founder-approved
 > commercial platform kickoff): the existing `services/control-plane` Go skeleton

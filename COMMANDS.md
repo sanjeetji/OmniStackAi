@@ -338,3 +338,37 @@ foundation, it does not yet meter any actual generation call).
 
 Config knobs (see `.env.example`): `OMNISTACKAI_SESSION_TTL` (default `720h`),
 `OMNISTACKAI_SIGNUP_CREDIT_GRANT` (default `100`).
+
+---
+
+## 11. Console — Real Next.js App (R-470)
+
+`apps/console-web` is now a real Next.js (App Router, TypeScript) app — register/login/logout wired
+to the control-plane's auth API via a server-side cookie proxy, plus the carried-over model/cost
+overview page.
+
+```bash
+# One-time (or after pulling changes that touch apps/console-web/package.json):
+pnpm install
+
+# Bring up the control-plane it talks to
+task control-plane:verify
+
+# Then, in another terminal — dev server with hot reload on http://127.0.0.1:4321
+task console:dev
+
+# Or a production-style run:
+task console:build
+task console:start
+
+# Individual gates (all run automatically as part of `task verify`):
+task console:typecheck
+task console:lint
+```
+
+Open `http://127.0.0.1:4321/register` to create an account (grants the free plan + starting
+credits), then `/` for the authenticated home page and `/fabric` for the model/cost overview.
+
+Config: `OMNISTACKAI_CONTROL_PLANE_URL` in the repo root `.env` (default `http://127.0.0.1:8080`) —
+`scripts/console.sh` exports it before running any Next.js command; the console does not read its
+own `.env` files.

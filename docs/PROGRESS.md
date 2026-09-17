@@ -1,4 +1,4 @@
-# OmniStackAI — implementation progress (as of R-469)
+# OmniStackAI — implementation progress (as of R-470)
 
 A living summary of what is built, what is pending, and how to see results. Numbers come from the
 execution tracker (`R_&_D/OmniStackAI_Execution_Tracker_v6.xlsx`, `Phase_Roadmap`, 461 tasks as of
@@ -7,7 +7,19 @@ R-461 completion) plus the state files (`.ai/`), Git history, and CHANGELOG.
 ## Headline
 
 - **3,593 automated tests pass** (agent-engine + Go control-plane), fully offline and
-  network-independent (`task verify`).
+  network-independent (`task verify`), plus the console's own `typecheck`/`lint`/`build` gates.
+- **R-470 — real Next.js console-web, wired to R-469's auth API (2026-09-17):** Phase B of
+  `R_&_D/OmniStackAI_Commercial_Platform_Kickoff_v1.md`. The static `apps/console-web` is now a
+  real Next.js (App Router, TypeScript) app: `/login`/`/register` pages, an authenticated `/` home
+  page (profile + credit balance), and `/fabric` carrying the old model/cost overview forward on
+  the same `data/overview.json` contract. Session handling is a server-side cookie proxy
+  (`app/api/auth/*` Route Handlers) — the raw token never reaches client-side JS, no CORS needed.
+  No new UI dependency beyond React/Next.js itself. Found and fixed five real ecosystem
+  compatibility issues while implementing (pnpm fetch timeouts, `typescript@7`/`typescript-eslint`
+  incompatibility, an ESLint `FlatCompat` crash, pnpm 11.19 moving build-script allowlisting to
+  `pnpm-workspace.yaml`, and — most importantly — a `Secure`-cookie-over-HTTP bug that would have
+  silently broken login in a real browser). A real Docker Compose control-plane + a real `next
+  start` server proved the full register → home → fabric → logout → login round trip live, twice.
 - **R-469 — control-plane foundation: users, auth, plans, credits (2026-09-17):** Phase A of
   `R_&_D/OmniStackAI_Commercial_Platform_Kickoff_v1.md` — the founder's decision to advance from the
   Stage-0 static console/stdlib Studio prototype toward the real commercial platform (Next.js console
@@ -577,20 +589,18 @@ the live run needs the key + a network machine.
 `R_&_D/OmniStackAI_Commercial_Platform_Kickoff_v1.md`):** the hybrid engine (R-465 grounding, R-466
 compile repair + pacing, R-467 file browser + hybrid-UI toggle, R-468 multi-turn edit) and the Studio
 (`studio/page.py`) stay exactly as they are — the agent-engine's own local proof harness, not the
-product UI going forward. **R-469 (done)** built the real control-plane foundation instead: users,
-authentication, and a plan/credit model on the existing Go `services/control-plane` skeleton. Next is
-**R-470 (Phase B)**: replace the static `apps/console-web` with a real Next.js (App Router, TypeScript)
-app wired to R-469's `/auth/register`/`/auth/login`/`/auth/logout`/`/auth/me` endpoints — the point
-where `task bootstrap`/`task doctor` deliberately gain a real Node/npm toolchain requirement for the
-console. After that, **R-471 (Phase C)** bridges the control-plane's Job API to the unmodified
-agent-engine so a real generation call actually debits a user's credits (local-Ollama calls stay
-credit-exempt), then **Phase D** rebuilds the Studio UX for real inside the new console (the
-Lovable/Dyad/Emergent pattern research already done applies there), and **Phase E** adds plan-gated UI,
-an admin console, and — with its own explicit sign-off — a payment processor. Previously-named
-follow-ups (wiring R-466's `compile_and_repair` into the edit flow, an undo/revert UI, extending
-`app_delta` beyond additive-only) remain real but lower priority than the platform foundation now
-underway. Founder action to unlock a full live proof of a model-written page that compiles, or of the
-chat-edit delta against a real model: after the Groq daily reset run with
+product UI going forward. **R-469 (done)** built the real control-plane foundation: users,
+authentication, and a plan/credit model on the existing Go `services/control-plane` skeleton.
+**R-470 (done)** replaced the static `apps/console-web` with a real Next.js app wired to R-469's auth
+endpoints via a server-side cookie proxy. Next is **R-471 (Phase C)**: bridge the control-plane's Job
+API to the unmodified agent-engine so a real generation call actually debits a user's credits
+(local-Ollama calls stay credit-exempt). After that, **Phase D** rebuilds the Studio UX for real
+inside the new console (the Lovable/Dyad/Emergent pattern research already done applies there), and
+**Phase E** adds plan-gated UI, an admin console, and — with its own explicit sign-off — a payment
+processor. Previously-named follow-ups (wiring R-466's `compile_and_repair` into the edit flow, an
+undo/revert UI, extending `app_delta` beyond additive-only) remain real but lower priority than the
+platform foundation now underway. Founder action to unlock a full live proof of a model-written page
+that compiles, or of the chat-edit delta against a real model: after the Groq daily reset run with
 `OMNISTACKAI_MAX_RETRY_AFTER_SECONDS=180`, or add `GOOGLE_API_KEY` (Gemini) to the gitignored `.env`.
 
 The local front door is built through robust browser preview with memory: R-416 prompt → IR, R-417 IR →

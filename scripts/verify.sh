@@ -13,6 +13,9 @@ bash "$repo_root/scripts/ollama.sh" config
 bash "$repo_root/scripts/control-plane.sh" lint
 bash "$repo_root/scripts/control-plane.sh" test
 bash "$repo_root/scripts/control-plane.sh" build
+bash "$repo_root/scripts/console.sh" lint
+bash "$repo_root/scripts/console.sh" typecheck
+bash "$repo_root/scripts/console.sh" build
 bash "$repo_root/scripts/agent-engine.sh" lint
 bash "$repo_root/scripts/agent-engine.sh" test
 

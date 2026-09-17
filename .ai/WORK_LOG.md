@@ -1,5 +1,66 @@
 # Work Log
 
+## 2026-09-17 — R-470 (Real Next.js console-web, wired to R-469's auth API)
+
+- **Why:** Phase B of `R_&_D/OmniStackAI_Commercial_Platform_Kickoff_v1.md` — replace the static,
+  dependency-free `apps/console-web` with the real Next.js console the platform architecture has
+  always specified, wired to R-469's newly-real auth API.
+- **Session handling — a deliberate architecture call:** server-side cookie proxy, not a
+  browser-held bearer token. `app/api/auth/{register,login,logout}/route.ts` proxy to the
+  control-plane server-to-server (no CORS — the browser only ever talks to the Next.js origin) and
+  set/clear an `httpOnly`, `sameSite=lax` cookie holding the token; the raw token is never handed
+  to client-side JS. `lib/session.ts`'s `getCurrentUser()` reads the cookie and resolves it against
+  the control-plane's `/auth/me` for Server Components.
+- **Pages:** `/login`, `/register` (client forms), `/` (server component — redirects to `/login` if
+  no session, otherwise shows profile/plan/credit balance + a logout control), `/fabric` (the old
+  model/cost overview, now a Server Component importing `data/overview.json` directly at build
+  time — same data contract, same design language, carried forward as promised in the old static
+  console's own README).
+- **No new UI dependency** beyond React/Next.js itself — the existing console's CSS custom
+  properties (indigo accent, light/dark via `prefers-color-scheme`) carry into `app/globals.css`
+  unchanged in spirit. A real design system is Phase D's job.
+- **Real, non-trivial ecosystem friction found and fixed** (not anticipated in the contract):
+  - `pnpm install` timed out fetching `next`/`@next/swc-darwin-arm64` (curl error 23) — a raw
+    `curl` of the same tarball took ~50s on this network, right at pnpm's default per-attempt
+    timeout edge. Fixed with a new root `.npmrc` (longer `fetch-timeout`, more retries).
+  - `typescript@7.0.2` — genuinely npm's current `latest` — is not yet supported by
+    `typescript-eslint@8.70.0` (`eslint` refused to run at all). `eslint-config-next@16.3.5`'s own
+    `devDependencies` pin `typescript: 6.0.2`; matched that generation (`6.0.3`, latest 6.x)
+    instead. `tsc --noEmit` itself works fine under TS7 — this was pure ecosystem-tooling lag.
+  - The documented `FlatCompat` + `compat.extends("next/core-web-vitals", "next/typescript")`
+    pattern crashed (`TypeError: Converting circular structure to JSON` inside
+    `@eslint/eslintrc`'s error formatter) on both ESLint 10.10.0 and 9.9.1 — never actually an
+    ESLint-version problem. Root cause: `eslint-config-next@16.3.5`'s default export is already a
+    native flat-config array; the legacy compat shim is unneeded for this version and its
+    validator chokes formatting an unrelated error because of a circular self-reference inside
+    `eslint-plugin-react`'s own flat config. Fixed by importing `eslint-config-next` directly and
+    dropping `@eslint/eslintrc` entirely.
+  - pnpm 11.19 silently stopped reading `package.json`'s `pnpm.*` fields (warned once) — moved
+    `onlyBuiltDependencies`/`allowBuilds` (needed to let `unrs-resolver`'s postinstall run) to
+    `pnpm-workspace.yaml` instead.
+  - **The session cookie's `Secure` flag was wired from `NODE_ENV === "production"`, which is
+    wrong**: `next start` always sets `NODE_ENV=production` regardless of the real protocol, so
+    every cookie issued locally over plain `http://127.0.0.1` was marked `Secure` — invisible in
+    the first curl-based smoke test (curl doesn't enforce the attribute the way a real browser
+    does), but a real browser refuses to send a `Secure` cookie back over non-HTTPS, which would
+    have silently broken login persistence for anyone actually using the app locally. Caught by
+    inspecting the raw `Set-Cookie` header rather than trusting 200/204 status codes alone. Fixed
+    with a new per-request `isSecureRequest()` helper (checks `x-forwarded-proto` then the
+    request's own protocol); re-ran the full live smoke test afterward and confirmed the cookie is
+    now issued without `Secure` over plain HTTP.
+- **Gates:** `apps/console-web` `typecheck`/`lint`/`build` all clean; `task verify` — Ran 3,593
+  tests in 63.552s, OK, Stage 0 verification passed (the two new console steps run inside it,
+  `next build` succeeding with no control-plane running, proving Route Handlers are compiled, not
+  executed, at build time). **Live manual smoke, twice** (real `next start` on :4321 + the real,
+  still-running R-469 Docker Compose control-plane/Postgres) — the second run, after the
+  `Secure`-cookie fix, is authoritative: register → 201 (no token in the body, `Set-Cookie` correct
+  without `Secure`) → duplicate register → 409 → home with the cookie → 200, real email rendered
+  (proves the full cookie → control-plane `/auth/me` → profile round trip) → `/fabric` → 200 → home
+  with no cookie → 307 to `/login` → logout → 204 → home with the cleared cookie → 307 to `/login`
+  again (real server-side session invalidation) → login again → 200, a new cookie issued.
+- **NEXT R-471 (Phase C):** bridge the control-plane's Job API to the unmodified agent-engine so a
+  real generation call actually debits a user's credits (local Ollama stays credit-exempt).
+
 ## 2026-09-17 — R-469 (Control-plane foundation: users, auth, plans, credits)
 
 - **Why:** the founder decided (2026-09-17) to advance OmniStackAI from its Stage-0 static console

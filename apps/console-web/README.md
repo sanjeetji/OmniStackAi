@@ -1,34 +1,48 @@
 # OmniStackAI Console (`apps/console-web`)
 
-The dependency-free Stage 0 visual console. It now shows both halves of the platform:
-
-- a real builder proof — the combined preview/verify project plan for a bundled Application IR and a
-  hunk-level unified edit patch produced from an actual old/new IR assembly; and
-- the model fabric — providers (local + all supported cloud, with active/key state), Balanced routing,
-  price book, resilience, and usage/cost accounting.
+The real product console — a Next.js (App Router, TypeScript) app, replacing the Stage-0
+dependency-free static page (R-470). This is Phase B of
+`R_&_D/OmniStackAI_Commercial_Platform_Kickoff_v1.md`.
 
 ## Run it
 
 ```
-task console:snapshot   # refresh data/overview.json from the Python model gateway
-task console:serve      # snapshot + serve on http://127.0.0.1:4321
+# Bring up the control-plane it talks to (Postgres + control-plane via Docker Compose)
+task control-plane:verify
+
+# Then, in another terminal:
+task console:dev      # http://localhost:3000, hot reload
 ```
 
-Then open <http://127.0.0.1:4321>.
+Or for a production-style run: `task console:build` then `task console:start`.
 
-## How it works
+## What's here
 
-- `data/overview.json` is a **metadata-only** snapshot composed by
-  `omnistackai_agent_engine.console_snapshot`. It calls the existing model overview, project planner,
-  IR assembler, and edit-diff contracts; it never installs/runs/verifies/deploys generated code or
-  connects to a database. It never contains an API key or secret — provider key state is a boolean.
-- `index.html` + `styles.css` + `app.js` render that snapshot with safe DOM APIs (`textContent`
-  only, never `innerHTML`). The page makes **no external network requests** (same-origin fetch of the
-  snapshot only) and sets a strict `Content-Security-Policy` meta tag.
+- `app/login`, `app/register` — account creation and sign-in, posting to this app's own
+  `app/api/auth/*` Route Handlers.
+- `app/api/auth/{register,login,logout}` — server-side proxies to the Go control-plane's
+  `/auth/*` API (R-469). The browser never sees the raw session token: these routes set/clear an
+  `httpOnly` cookie (`omnistackai_session`) instead, so there's no token in `localStorage` for an
+  injected script to steal, and no CORS to configure (the browser only ever talks to this app's
+  own origin).
+- `app/page.tsx` — the signed-in home page: profile, plan, and credit balance, proving the cookie
+  session round-trip against the real control-plane.
+- `app/fabric` — the model fabric / cost overview, carried forward from the old static console on
+  the exact same `data/overview.json` data contract (still refreshed by
+  `task console:snapshot`, which is unchanged Python).
+- `lib/control-plane.ts` — the one place that knows the control-plane's response shapes.
+  `lib/session.ts` — the one place that knows the session cookie's name and how to read it.
 
-## Why static (for now)
+## Config
 
-This slice is intentionally dependency-free so it builds and runs in the offline Stage 0 environment
-and keeps `task bootstrap`/`task verify` green. The forward path is a Next.js (App Router, TypeScript)
-app once the build environment can install the front-end toolchain; the data contract
-(`overview.json`) and the design carry over unchanged.
+`OMNISTACKAI_CONTROL_PLANE_URL` (server-side only, default `http://127.0.0.1:8080`) — where this
+app calls the control-plane. Set in the repo root `.env`, exported into the environment by
+`scripts/console.sh` before running any Next.js command (this app does not read `.env` files of
+its own — the root `.env` stays the single source of truth for the whole repo).
+
+## What's not here yet
+
+The actual Studio/builder UX (chat, files, preview) is Phase D — built on this console once it
+exists. No generation call spends a credit yet (Phase C bridges the control-plane's Job API to the
+agent-engine). No payment processor, no password reset, no team/org — all named as deferred in
+`.ai/tasks/R-469.md` and the kickoff doc, unchanged here.

@@ -6,3 +6,5 @@ packages:
   - packages/*
   - templates/*
 
+allowBuilds:
+  unrs-resolver: true

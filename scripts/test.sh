@@ -245,4 +245,42 @@ if [[ "$direct_dependency_count" != "1" ]]; then
   exit 1
 fi
 
+# R-470: real Next.js console-web, wired to R-469's auth API.
+console_root="$repo_root/apps/console-web"
+for required_file in \
+  "$console_root/package.json" \
+  "$console_root/next.config.ts" \
+  "$console_root/app/layout.tsx" \
+  "$console_root/app/page.tsx" \
+  "$console_root/app/login/page.tsx" \
+  "$console_root/app/register/page.tsx" \
+  "$console_root/app/fabric/page.tsx" \
+  "$console_root/app/api/auth/register/route.ts" \
+  "$console_root/app/api/auth/login/route.ts" \
+  "$console_root/app/api/auth/logout/route.ts" \
+  "$console_root/lib/control-plane.ts" \
+  "$console_root/lib/session.ts"; do
+  if [[ ! -f "$required_file" ]]; then
+    printf 'Missing R-470 console contract file: %s\n' "$required_file"
+    exit 1
+  fi
+done
+
+for removed_file in index.html app.js styles.css; do
+  if [[ -f "$console_root/$removed_file" ]]; then
+    printf 'R-470 must remove the Stage-0 static console file: %s\n' "$removed_file"
+    exit 1
+  fi
+done
+
+if rg -qi 'tailwind|shadcn|styled-components|@emotion|bootstrap|material-ui|@mui' "$console_root/package.json"; then
+  printf 'R-470 must not add a UI/component-library dependency to the console.\n'
+  exit 1
+fi
+
+if ! rg -q '^\.next/$' "$repo_root/.gitignore"; then
+  printf 'Missing .gitignore entry for the console build output: .next/\n'
+  exit 1
+fi
+
 printf 'Repository contract tests passed.\n'
