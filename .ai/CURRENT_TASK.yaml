@@ -1,95 +1,118 @@
-task_id: R-468
+task_id: R-469
 status: completed
 phase: MVP
 tracker_row: null
 started_at: "2026-09-17"
 completed_at: "2026-09-17"
 objective: >-
-  Multi-turn chat / "continue editing this app" in the Studio: a generic, validated delta mechanism
-  (intake/app_delta.py, a non-pack-coupled sibling of solution_packs/ai_delta.py) lets a follow-up prompt
-  propose new entities/apis/screens, merged onto the current ApplicationIR by tuple concatenation
-  (mirroring solution_packs/application.py's merge, backstopped by ApplicationIR.__post_init__ and
-  validate_ir/has_errors), diffed via the EXISTING unmodified edit/diff.py::plan_edit and applied via the
-  EXISTING unmodified edit/apply.py::commit_edit (one new commit on the same repo). New in-memory
-  StudioSessionStore (studio/session.py) tracks the current IR + turn history per build id, server-only
-  (never sent to the browser). New POST /api/build/{id}/edit + GET /api/build/{id}/turns routes (via the
-  R-467 _build_id_for_suffix pattern), wired unconditionally in live_serve.py (no toolchain needed). page.py
-  gets a small follow-up chat box. v1 scope: additive-only changes; works for plain-prompt and
-  single-surface ecosystem builds; Solution Pack and all-surfaces ecosystem builds get an honest
-  "not supported" error (EditNotSupportedError) rather than being silently ignored or guessed at. No changes
-  to edit/, git_service/, or application_ir/. Every resolve_generation_provider_from_env call site in every
-  new test is mocked from the start. Found and fixed while implementing: neither this module nor the
-  ai_delta.py pattern it mirrors validated a proposed screen's role against the base IR's real declared
-  roles (caught only as a last resort by ApplicationIR's own validation, too late for the retry loop to use
-  it) - added an explicit role-existence check at both the parse layer (gets the retry benefit) and the
-  merge layer (defense in depth), plus listing real roles in the prompt.
+  Phase A of R_&_D/OmniStackAI_Commercial_Platform_Kickoff_v1.md (founder-approved commercial
+  platform kickoff, 2026-09-17): give the existing services/control-plane Go skeleton
+  (health-check-only before this task) real users, authentication, and a plan/credit model. Two
+  roles only (super_admin, user); a user's access is gated entirely by plan (free/developer/pro/
+  agency/enterprise, byok as an add-on flag - reusing the tier names already named in the
+  Implementation Brief Section 22), never a second role tier. Every signup gets the free plan and
+  a starting credit grant (env-configurable, default 100) recorded in an append-only
+  credit_ledger. New migration 000002_users_auth_billing (users, credit_ledger, sessions) plus a
+  small embedded migration runner (migrations package, go:embed *.up.sql) that replays every
+  migration file, in order, inside a Go-managed transaction on every control-plane boot - safe
+  because every migration is written idempotently (IF NOT EXISTS / ON CONFLICT DO NOTHING), and
+  necessary because docker-entrypoint-initdb.d only runs against a brand-new empty Postgres
+  volume, never an existing one. Password hashing is PBKDF2-HMAC-SHA256 implemented directly on
+  crypto/hmac+crypto/sha256+crypto/subtle - zero new go.mod dependency, matching this repo's
+  minimal-dependency convention (verified in scripts/test.sh: go.mod's direct-dependency count
+  stays exactly 1, pgx). Session tokens are opaque crypto/rand bearer tokens; only their SHA-256
+  hash is ever persisted. Four new HTTP endpoints (POST /auth/register, /auth/login, /auth/logout,
+  GET /auth/me) mounted alongside the existing health routes via a shared http.ServeMux
+  (health.NewHandler became health.Register so main.go can combine both route groups). Login
+  failure is a generic 401 regardless of wrong-password vs. unknown-email, including a same-cost
+  dummy-hash Verify call on the "not found" path so there is no timing side channel for
+  enumerating registered emails - proven both in the fake-store unit tests and against the real
+  running container. No frontend, no agent-engine bridge, no payment processor, no team/org model
+  - all named as separate later Tracker IDs (Phases B/C/D/E) in the kickoff doc, not attempted
+  here.
 allowed_paths:
-  - services/agent-engine/src/omnistackai_agent_engine/intake/app_delta.py
-  - services/agent-engine/src/omnistackai_agent_engine/studio/session.py
-  - services/agent-engine/src/omnistackai_agent_engine/studio/server.py
-  - services/agent-engine/src/omnistackai_agent_engine/studio/live_serve.py
-  - services/agent-engine/src/omnistackai_agent_engine/studio/history.py
-  - services/agent-engine/src/omnistackai_agent_engine/studio/page.py
-  - services/agent-engine/src/omnistackai_agent_engine/studio/__init__.py
-  - services/agent-engine/tests/test_app_delta.py
-  - services/agent-engine/tests/test_studio_session.py
-  - services/agent-engine/tests/test_studio_edit.py
-  - services/agent-engine/tests/test_studio_server.py
-  - services/agent-engine/tests/test_studio_history.py
-  - docs/CHAT_EDIT.md
-  - docs/PROGRESS.md
-  - docs/RESUME_PROMPT.md
-  - COMMANDS.md
-  - .ai/tasks/R-468.md
+  - services/control-plane/migrations/000002_users_auth_billing.up.sql
+  - services/control-plane/migrations/000002_users_auth_billing.down.sql
+  - services/control-plane/migrations/migrations.go
+  - services/control-plane/migrations/migrations_test.go
+  - services/control-plane/internal/password/password.go
+  - services/control-plane/internal/password/password_test.go
+  - services/control-plane/internal/auth/types.go
+  - services/control-plane/internal/auth/token.go
+  - services/control-plane/internal/auth/token_test.go
+  - services/control-plane/internal/auth/handler.go
+  - services/control-plane/internal/auth/handler_test.go
+  - services/control-plane/internal/users/store.go
+  - services/control-plane/internal/health/handler.go
+  - services/control-plane/internal/health/handler_test.go
+  - services/control-plane/internal/config/config.go
+  - services/control-plane/internal/config/config_test.go
+  - services/control-plane/cmd/control-plane/main.go
+  - services/control-plane/Dockerfile
+  - infra/environments/local/compose.yaml
+  - .env.example
+  - scripts/env-check.sh
+  - scripts/test.sh
+  - R_&_D/OmniStackAI_Commercial_Platform_Kickoff_v1.md
+  - .ai/tasks/R-469.md
   - .ai/CURRENT_TASK.yaml
   - .ai/PROJECT_STATE.yaml
   - .ai/WORK_LOG.md
   - .ai/HANDOFF.md
   - PROJECT_STATE.md
   - CHANGELOG.md
+  - docs/PROGRESS.md
+  - docs/RESUME_PROMPT.md
+  - COMMANDS.md
 forbidden_changes:
-  - No model, network, Docker, subprocess, or toolchain calls under task verify (stub providers + real tmp-dir git repos only)
-  - No new dependencies (Python 3.13 stdlib only); no framework/bundler/CDN asset introduced into page.py
-  - No changes to edit/diff.py, edit/apply.py, edit/patch.py, edit/errors.py, git_service/, or application_ir/
-  - Do not support renaming/modifying/removing existing entities/fields, multi-surface ecosystem edits, or Solution Pack edits via this mechanism in v1
+  - No new go.mod direct dependency (stdlib PBKDF2, not golang.org/x/crypto/bcrypt or similar)
+  - No changes to apps/console-web, services/agent-engine, or any Python file
+  - No new Docker Compose service (still exactly postgres + control-plane)
+  - No payment processor, email-sending integration, or team/org/workspace tables
+  - No raw password or raw session token ever logged, returned twice, or stored unhashed
+  - Do not modify services/control-plane/migrations/000001_platform_foundation.{up,down}.sql
   - Do not modify or commit the untracked .claude directory
 required_gates:
-  - focused: tests/test_app_delta.py + tests/test_studio_session.py + tests/test_studio_edit.py + tests/test_studio_server.py
+  - "focused: go test ./... for migrations, password, auth, users, health, config packages"
   - task verify
   - task lint
   - task security:quick
   - task env:check
-  - task builder:demo -- minimal-blog
-  - task builder:demo -- rideshare-favourites
-  - "manual smoke (opt-in, no live model call): task agent-engine:studio:serve, GET/POST edit+turns routing"
+  - "manual smoke (real docker compose + curl): register -> login -> me -> logout -> me-after-logout"
 model_tool_trace:
   routing: deterministic_only
   local_calls: 0
   cloud_calls: 0
   note: >-
-    Implementation and verify use stub providers and real tmp-dir git repos only - 0 model/network calls.
-    Every resolve_generation_provider_from_env call site in every new test is mocked from the start.
+    Pure Go implementation and Go test suite - 0 model/network calls. The manual smoke test made
+    real HTTP calls to a locally-run control-plane container (Docker/Colima), not to any model
+    provider.
 evidence:
-  focused_tests: "214 passed (test_app_delta 27, test_studio_session 13, test_studio_edit 11, test_studio_server 69, test_studio_history 18, test_studio_files 18, test_studio_ecosystem 11, test_studio_ecosystem_preview 7, test_studio_preview 14, test_build_app 23, test_edit_loop/test_edit_patch)"
-  verify: "Ran 3593 tests ... OK; Stage 0 verification passed (0 model/network calls; 63.8s, no slowdown)"
+  focused_tests: "internal/auth 15 passed, internal/config 2 (9 subtests) passed, internal/health 3 passed, internal/password 8 passed, migrations 4 passed"
+  control_plane_lint: "Control-plane lint passed (gofmt + go vet clean)"
+  control_plane_build: "Control-plane build passed"
+  contract_tests: "bash scripts/test.sh -> Repository contract tests passed (new R-469 block: contract files present, migration creates users/credit_ledger/sessions, down-migration targets version 2, all 4 auth routes present, go.mod direct-dependency count still exactly 1)"
   lint: "Lint passed"
   security: "Stage 0 secret-policy check passed"
   env: "Environment contract passed"
-  demos: "minimal-blog 359 files; rideshare-favourites 353 files"
+  verify: "Ran 3593 tests in 62.421s - OK; Stage 0 verification passed (0 model/network calls, no slowdown)"
   manual_smoke: >-
-    Real HTTP against a running live_serve instance (build-only, no live model call): GET /healthz ok;
-    GET /api/build/does-not-exist/turns -> {"turns": []} (200, honest empty view); POST
-    /api/build/does-not-exist/edit -> 404; POST /api/build/1/2/edit (slash in id) -> 404; page HTML contains
-    "Apply change". The delta->merge->diff->real-second-commit round trip is proven by test_studio_edit.py
-    against real temp git repos (stub provider): second edit stacks a third commit; a collision is rejected
-    with zero commits made; Solution Pack and all-surfaces ecosystem builds return EditNotSupportedError.
-  live_discovery: >-
-    Neither this module nor solution_packs/ai_delta.py (which it mirrors) validated a proposed screen's role
-    against the base IR's real declared roles - only ApplicationIR's own last-resort validation caught it,
-    too late for the retry loop. Fixed at both the parse layer (gets the retry benefit) and the merge layer
-    (defense in depth), plus real roles now listed in the prompt.
+    Real Docker Compose (Colima) + real PostgreSQL: control-plane image built with the new
+    COPY migrations layer, both containers reported Healthy, live health/readiness check passed
+    (proves migrations.Apply ran cleanly on boot). Full curl round trip against the running
+    container: POST /auth/register -> 201 with role=user, plan=free, credit_balance=100, a real
+    token; duplicate register -> 409; POST /auth/login (correct password) -> 200 with a different
+    new token; login wrong password -> 401; login unknown email -> 401 with the BYTE-IDENTICAL
+    error body as the wrong-password case (no enumeration leak in production); GET /auth/me with
+    the token -> 200 with the correct profile (no token echoed); GET /auth/me with no header ->
+    401; POST /auth/logout -> 204; GET /auth/me with the now-invalid token -> 401 "session not
+    found or expired" (real deletion from PostgreSQL, not just in-memory); logout again -> 204
+    (idempotent).
 next_action: >-
-  R-468 done. NEXT R-469: wire R-466's toolchain-dependent compile_and_repair into the live server's edit
-  flow (so an edited hybrid-UI screen also gets type-checked/repaired), and/or an undo/revert UI over the
-  real git history that now exists on disk for every edited build. Founder action to unlock a full live
-  hybrid-UI/delta proof: after the Groq daily reset, or add GOOGLE_API_KEY (Gemini) to the gitignored .env.
+  R-469 done. NEXT: Phase B of R_&_D/OmniStackAI_Commercial_Platform_Kickoff_v1.md - replace the
+  static apps/console-web with a real Next.js (App Router, TypeScript) app wired to this task's
+  /auth/register, /auth/login, /auth/logout, /auth/me endpoints. This is the point where
+  task bootstrap/task doctor gain a real Node/npm toolchain requirement for the console, a
+  deliberate scope change already recorded in the kickoff doc. After that, Phase C bridges the
+  control-plane's Job API to the unmodified agent-engine so credits actually get debited on a
+  real generation call.

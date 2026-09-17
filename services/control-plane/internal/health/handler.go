@@ -19,9 +19,9 @@ type response struct {
 	Status  string `json:"status"`
 }
 
-// NewHandler returns the complete Stage 0 HTTP surface.
-func NewHandler(database Pinger, pingTimeout time.Duration) http.Handler {
-	mux := http.NewServeMux()
+// Register mounts /healthz and /readyz onto mux, so the control-plane can combine health routes
+// with other route groups (e.g. internal/auth) on a single http.ServeMux/http.Server.
+func Register(mux *http.ServeMux, database Pinger, pingTimeout time.Duration) {
 	mux.HandleFunc("GET /healthz", func(writer http.ResponseWriter, _ *http.Request) {
 		writeJSON(writer, http.StatusOK, response{Service: serviceName, Status: "ok"})
 	})
@@ -35,7 +35,6 @@ func NewHandler(database Pinger, pingTimeout time.Duration) http.Handler {
 		}
 		writeJSON(writer, http.StatusOK, response{Service: serviceName, Status: "ready"})
 	})
-	return mux
 }
 
 func writeJSON(writer http.ResponseWriter, status int, payload response) {

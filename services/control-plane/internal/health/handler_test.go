@@ -19,11 +19,17 @@ func (pinger *fakePinger) Ping(ctx context.Context) error {
 	return pinger.err
 }
 
+func newTestMux(database Pinger, pingTimeout time.Duration) *http.ServeMux {
+	mux := http.NewServeMux()
+	Register(mux, database, pingTimeout)
+	return mux
+}
+
 func TestHealthzDoesNotRequireDatabase(t *testing.T) {
 	request := httptest.NewRequest(http.MethodGet, "/healthz", nil)
 	recorder := httptest.NewRecorder()
 
-	NewHandler(nil, time.Second).ServeHTTP(recorder, request)
+	newTestMux(nil, time.Second).ServeHTTP(recorder, request)
 
 	if recorder.Code != http.StatusOK {
 		t.Fatalf("status = %d", recorder.Code)
@@ -38,7 +44,7 @@ func TestReadyzReportsReadyWithBoundedPing(t *testing.T) {
 	request := httptest.NewRequest(http.MethodGet, "/readyz", nil)
 	recorder := httptest.NewRecorder()
 
-	NewHandler(database, time.Second).ServeHTTP(recorder, request)
+	newTestMux(database, time.Second).ServeHTTP(recorder, request)
 
 	if recorder.Code != http.StatusOK || !database.observedDeadline {
 		t.Fatalf("status = %d, observed deadline = %t", recorder.Code, database.observedDeadline)
@@ -53,7 +59,7 @@ func TestReadyzHidesDatabaseError(t *testing.T) {
 	request := httptest.NewRequest(http.MethodGet, "/readyz", nil)
 	recorder := httptest.NewRecorder()
 
-	NewHandler(database, time.Second).ServeHTTP(recorder, request)
+	newTestMux(database, time.Second).ServeHTTP(recorder, request)
 
 	if recorder.Code != http.StatusServiceUnavailable {
 		t.Fatalf("status = %d", recorder.Code)

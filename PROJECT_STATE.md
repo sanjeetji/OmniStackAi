@@ -4,6 +4,26 @@ Last updated: 2026-09-17
 ## Current Phase
 Stage 0 (Founder Build Sequence, Brief Section 91) — BASIC/MVP
 
+> **R-469 (2026-09-17): control-plane foundation — users, auth, plans, credits.**
+> Phase A of `R_&_D/OmniStackAI_Commercial_Platform_Kickoff_v1.md` (the founder-approved
+> commercial platform kickoff): the existing `services/control-plane` Go skeleton
+> (health-check-only before this task) now has real users, authentication, and a plan/credit
+> model. Two roles only (`super_admin`, `user` — a user's access is gated entirely by `plan`,
+> reusing the Brief Section 22 tier names `free`/`developer`/`pro`/`agency`/`enterprise`, `byok`
+> as an add-on flag); every signup gets `free` plus a starting credit grant recorded in an
+> append-only `credit_ledger`. New migration `000002_users_auth_billing` applied via a new
+> self-healing embedded migration runner (`migrations` package, replays every idempotent
+> migration file on every boot — necessary because `docker-entrypoint-initdb.d` only runs against
+> a brand-new volume). Password hashing is PBKDF2-HMAC-SHA256 on Go stdlib only — **zero new
+> `go.mod` dependency**. Four new endpoints (`/auth/register`, `/auth/login`, `/auth/logout`,
+> `/auth/me`); login failure is a generic 401 with no email-enumeration timing leak, proven both
+> in unit tests and against a real running container. `go test` all green; `task verify` **3,593
+> OK**, 0 model/network calls; a real Docker Compose + PostgreSQL smoke test proved the full
+> register → login → me → logout → me-after-logout round trip end to end. `studio/page.py`
+> untouched — still the agent-engine's own local proof harness, not the product UI.
+> NEXT R-470 (Phase B): replace `apps/console-web` with a real Next.js app wired to these
+> endpoints. See `R_&_D/OmniStackAI_Commercial_Platform_Kickoff_v1.md`, `.ai/tasks/R-469.md`.
+
 > **R-468 (2026-09-17): the Studio supports multi-turn "continue editing this app".**
 > - `intake/app_delta.py` (new): a generic, non-pack-coupled sibling of `solution_packs/ai_delta.py` — a
 >   follow-up prompt proposes a bounded, validated delta (new entities/apis/screens only, never a

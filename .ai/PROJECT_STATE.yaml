@@ -2,10 +2,10 @@ schema_version: 1
 project: OmniStackAI
 phase: BASIC/MVP
 founder_stage: 0
-current_task: R-468
+current_task: R-469
 current_status: done
 branch: main
-last_completed_task: R-468
+last_completed_task: R-469
 # TASK COMPILATION AUDIT — 2026-09-16
 # Performed to achieve 100% synchronization across all task-tracking documentation.
 # Tracker workbook expanded to 464 tasks with R-464.
@@ -34,6 +34,45 @@ task_compilation_audit:
       new_status: DONE
       reason: "Task fully completed on 2026-09-11 with 35 tests. Status left stale during rapid development sprint."
 last_completed_task_summary: >-
+  Completed R-469 (2026-09-17): control-plane foundation - users, auth, plans, credits. Phase A of
+  R_&_D/OmniStackAI_Commercial_Platform_Kickoff_v1.md, the founder-approved decision (2026-09-17)
+  to advance from the Stage-0 static console/stdlib Studio prototype toward the real commercial
+  platform Implementation Brief Section 33 always specified. Gave the existing services/
+  control-plane Go skeleton (health-check-only before this task) real users, authentication, and a
+  plan/credit model: two roles only (super_admin, user - a user's access is gated entirely by plan,
+  never a second role tier); plans reuse the Brief Section 22 tier names (free/developer/pro/
+  agency/enterprise, byok as an add-on flag); every signup gets the free plan plus a starting
+  credit grant recorded in an append-only credit_ledger. New migration 000002_users_auth_billing
+  (users, credit_ledger, sessions) plus a small embedded migration runner (migrations package,
+  go:embed *.up.sql) that replays every migration in order on every boot - safe because every
+  migration file is idempotent, and necessary because docker-entrypoint-initdb.d only runs against
+  a brand-new empty Postgres volume, never an existing one. Password hashing is PBKDF2-HMAC-SHA256
+  implemented directly on crypto/hmac+crypto/sha256+crypto/subtle - zero new go.mod dependency
+  (golang.org/x/crypto/bcrypt was considered and rejected for that reason), verified mechanically
+  by a new scripts/test.sh check that go.mod's direct-dependency count stays exactly 1 (pgx).
+  Session tokens are opaque crypto/rand bearer tokens; only their SHA-256 hash is ever persisted.
+  Four new endpoints (POST /auth/register, /auth/login, /auth/logout, GET /auth/me) mounted
+  alongside the existing health routes on one shared http.ServeMux (health.NewHandler became
+  health.Register). Login failure is a generic 401 regardless of wrong-password vs. unknown-email,
+  including a same-cost dummy-hash Verify call on the "not found" path - no email-enumeration
+  timing leak, proven both in fake-store unit tests and against the real running container.
+  internal/users' real PostgreSQL-backed Store is deliberately not unit-tested against a live
+  database in go test (keeps control-plane:test exactly as hermetic as it already was, matching
+  how internal/health tests a fake Pinger) - instead proven by a real Docker Compose + curl smoke
+  test: register -> duplicate-register(409) -> login -> wrong-password(401) -> unknown-email(401,
+  byte-identical error body) -> me(200) -> me-with-no-token(401) -> logout(204) ->
+  me-after-logout(401, real session deletion) -> logout-again(204, idempotent). No frontend, no
+  agent-engine bridge, no payment processor, no team/org model - all named as separate later
+  Tracker IDs (Phases B/C/D/E) in the kickoff doc, not attempted here.
+  Gates: go test (migrations 4, password 8, auth 15, health 3, config 2/9 subtests, all passing);
+  control-plane lint/build passed; scripts/test.sh's new R-469 contract block passed; task verify
+  (full pipeline, 3593 agent-engine tests, 62.4s, 0 model/network calls, no slowdown) passed;
+  live Docker Compose smoke test passed end to end as above.
+  NEXT R-470 (Phase B): replace the static apps/console-web with a real Next.js (App Router,
+  TypeScript) app wired to this task's four auth endpoints - the point where task bootstrap/
+  task doctor deliberately gain a real Node/npm toolchain requirement for the console.
+
+_prior_last_completed_task_summary_R468: >-
   Completed R-468 (2026-09-17): Multi-turn chat / "continue editing this app" in the Studio. Every
   /api/build call used to be a fresh, stateless one-shot prompt with no way to say "now add a favorites
   feature" and have it land as a further commit on the same repo. New intake/app_delta.py is a generic

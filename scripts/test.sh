@@ -195,4 +195,54 @@ if ! rg -q 'version = 1' "$down_migration"; then
   exit 1
 fi
 
+# R-469: control-plane foundation - users, auth, plans, credits.
+users_up_migration="$control_plane_root/migrations/000002_users_auth_billing.up.sql"
+users_down_migration="$control_plane_root/migrations/000002_users_auth_billing.down.sql"
+for required_file in \
+  "$users_up_migration" \
+  "$users_down_migration" \
+  "$control_plane_root/migrations/migrations.go" \
+  "$control_plane_root/internal/password/password.go" \
+  "$control_plane_root/internal/auth/handler.go" \
+  "$control_plane_root/internal/users/store.go"; do
+  if [[ ! -f "$required_file" ]]; then
+    printf 'Missing R-469 control-plane contract file: %s\n' "$required_file"
+    exit 1
+  fi
+done
+
+for required_table in users credit_ledger sessions; do
+  if ! rg -q "CREATE TABLE IF NOT EXISTS ${required_table} " "$users_up_migration"; then
+    printf 'R-469 migration must create table: %s\n' "$required_table"
+    exit 1
+  fi
+done
+
+if ! rg -q 'version = 2' "$users_down_migration"; then
+  printf 'R-469 down migration must target schema version 2.\n'
+  exit 1
+fi
+
+for route in /auth/register /auth/login /auth/logout /auth/me; do
+  if ! rg -q "$route" "$control_plane_root/internal/auth/handler.go"; then
+    printf 'Missing control-plane auth route: %s\n' "$route"
+    exit 1
+  fi
+done
+
+# Password hashing must stay standard-library only: go.mod's direct require block must still be
+# exactly the one pre-existing pgx dependency (golang.org/x/crypto/bcrypt or any other new direct
+# dependency would fail this).
+direct_dependency_count="$(awk '
+  /^require \(/ { in_block = 1; next }
+  in_block && /^\)/ { in_block = 0; next }
+  in_block && !/\/\/ indirect/ && NF { count += 1; next }
+  /^require [^(]/ { count += 1 }
+  END { print count + 0 }
+' "$control_plane_root/go.mod")"
+if [[ "$direct_dependency_count" != "1" ]]; then
+  printf 'R-469 password hashing must stay standard-library only (go.mod must have exactly one direct dependency).\n'
+  exit 1
+fi
+
 printf 'Repository contract tests passed.\n'

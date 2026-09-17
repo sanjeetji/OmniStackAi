@@ -208,7 +208,8 @@ front-door bricks, R-420 is generated-SQL hardening, R-421..R-426 are Studio pre
 R-427..R-429 are generated-app compile fixes, R-430..R-457 are the first twenty-eight differentiating-spine
 bricks (Scope Compiler through Ecosystem Multi-Surface SLA, SLO, and Error Budget Contracts).
 Git, state files (.ai/), CHANGELOG, and docs/PROGRESS.md remain the executable/detail sources of truth.
-Current through R-468; `task verify` = 3,593 tests. R-416 added prompt-to-IR intake, R-417 materialized a generated
+Current through R-469; `task verify` = 3,593 tests (agent-engine) + the Go control-plane's own suite.
+R-416 added prompt-to-IR intake, R-417 materialized a generated
 owned repo, R-418 added the local chat studio, R-419 added turnkey local run, and R-420 fixed the two
 SQL defects found by live execution. R-421 added an explicit `task agent-engine:studio:preview` mode:
 one managed generated-app session, API/web readiness, replacement/shutdown cleanup, port-collision
@@ -477,11 +478,29 @@ WHAT TO DO NEXT
   end-to-end tests, not a live run): neither this module nor `ai_delta.py` validated a proposed screen's
   `role` against the base IR's real declared roles — fixed at both the parse layer (gets the retry benefit)
   and the merge layer (defense in depth).
-- NEXT R-469: wire R-466's `compile_and_repair` into the edit flow (needs the toolchain; opt-in), and/or an
-  undo/revert UI over the real git history every edited build now has on disk. A further-out idea: extending
-  `app_delta` beyond additive-only (rename/remove existing entities) — real design needed, deliberately
-  deferred. Founder action to unlock a full live proof of a model-written page that compiles, or of the
-  chat-edit delta against a real model: after the Groq daily reset run with
+- FOUNDER DECISION (2026-09-17): advance from the Stage-0 static console (`apps/console-web`) and stdlib
+  Studio prototype toward the real commercial platform Implementation Brief Section 33 always specified —
+  a Next.js console over a Go control-plane (Auth/Orgs/Billing), hosted, multi-user. Full decision record
+  and phased Tracker-ID sequence: `R_&_D/OmniStackAI_Commercial_Platform_Kickoff_v1.md`. The hybrid engine
+  and Studio (R-465-R-468) stay as the agent-engine's own local proof harness, not the product UI.
+- R-469 (2026-09-17, done) built Phase A — control-plane foundation: users, auth, plans, credits. Two
+  roles only (`super_admin`, `user` — access gated entirely by `plan`, reusing the Brief Section 22 tier
+  names `free`/`developer`/`pro`/`agency`/`enterprise`, `byok` an add-on flag); every signup gets `free`
+  plus a starting credit grant in an append-only `credit_ledger`. New migration `000002_users_auth_billing`
+  applied by a new self-healing embedded migration runner (`migrations` package, replays every idempotent
+  migration on every boot). Password hashing is PBKDF2-HMAC-SHA256 on Go stdlib only — zero new `go.mod`
+  dependency. New `POST /auth/register`/`/login`/`/logout` + `GET /auth/me` on `internal/auth`, backed by
+  the real PostgreSQL `internal/users.Store`; login failure is a generic 401 with no email-enumeration
+  timing leak. `go test` all green; `task verify` 3,593 OK; a real Docker Compose + PostgreSQL smoke test
+  proved register → login → me → logout → me-after-logout end to end.
+- NEXT R-470 (Phase B): replace the static `apps/console-web` with a real Next.js (App Router, TypeScript)
+  app wired to R-469's four auth endpoints — the point where `task bootstrap`/`task doctor` deliberately
+  gain a real Node/npm toolchain requirement for the console. Then Phase C bridges the control-plane's Job
+  API to the unmodified agent-engine so a real generation call debits credits (local Ollama stays
+  credit-exempt). Previously-named agent-engine follow-ups (wiring R-466's `compile_and_repair` into the
+  edit flow, an undo/revert UI, extending `app_delta` beyond additive-only) remain real but lower priority
+  than the platform foundation now underway. Founder action to unlock a full live proof of a model-written
+  page that compiles, or of the chat-edit delta against a real model: after the Groq daily reset run with
   OMNISTACKAI_MAX_RETRY_AFTER_SECONDS=180, or add GOOGLE_API_KEY (Gemini) to the gitignored .env.
   Keep `task verify` model/Docker/DB/install/network-free (any live/model path stays opt-in); preserve
   single-session ownership and explicit trusted-local mode.
@@ -492,8 +511,8 @@ WHAT TO DO NEXT
   deploy (OMNISTACKAI_TIER=2 + E2B/Vercel keys) and cloud-model live-verify. Governance-deferred: native
   mobile (R-010 etc.) until web/backend stability.
 
-Begin by reading the files above and running the start protocol, then continue at R-469 (wiring R-466's
-compile-repair into the edit flow, and/or an undo/revert UI) and write its Standard AI Task Contract before
-writing code.
+Begin by reading the files above and `R_&_D/OmniStackAI_Commercial_Platform_Kickoff_v1.md`, run the start
+protocol, then continue at R-470 (Phase B: the real Next.js console-web) and write its Standard AI Task
+Contract before writing code.
 ```
 

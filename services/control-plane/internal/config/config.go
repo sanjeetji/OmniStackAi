@@ -19,6 +19,8 @@ const (
 	defaultIdleTimeout         = "60s"
 	defaultShutdownTimeout     = "10s"
 	defaultDatabasePingTimeout = "2s"
+	defaultSessionTTL          = "720h" // 30 days
+	defaultSignupCreditGrant   = "100"
 )
 
 // Config contains the complete Stage 0 control-plane runtime configuration.
@@ -35,6 +37,8 @@ type Config struct {
 	IdleTimeout         time.Duration
 	ShutdownTimeout     time.Duration
 	DatabasePingTimeout time.Duration
+	SessionTTL          time.Duration
+	SignupCreditGrant   int64
 }
 
 // Lookup matches os.LookupEnv and makes configuration loading deterministic in tests.
@@ -89,6 +93,7 @@ func Load(lookup Lookup) (Config, error) {
 		{"OMNISTACKAI_HTTP_IDLE_TIMEOUT", defaultIdleTimeout, &config.IdleTimeout},
 		{"OMNISTACKAI_SHUTDOWN_TIMEOUT", defaultShutdownTimeout, &config.ShutdownTimeout},
 		{"OMNISTACKAI_DATABASE_PING_TIMEOUT", defaultDatabasePingTimeout, &config.DatabasePingTimeout},
+		{"OMNISTACKAI_SESSION_TTL", defaultSessionTTL, &config.SessionTTL},
 	}
 	for _, item := range durations {
 		value, parseErr := parsePositiveDuration(valueOrDefault(lookup, item.name, item.defaultValue))
@@ -97,6 +102,12 @@ func Load(lookup Lookup) (Config, error) {
 		}
 		*item.destination = value
 	}
+
+	signupCreditGrant, err := parseNonNegativeInt64(valueOrDefault(lookup, "OMNISTACKAI_SIGNUP_CREDIT_GRANT", defaultSignupCreditGrant))
+	if err != nil {
+		return Config{}, fmt.Errorf("OMNISTACKAI_SIGNUP_CREDIT_GRANT: %w", err)
+	}
+	config.SignupCreditGrant = signupCreditGrant
 
 	return config, nil
 }
@@ -137,6 +148,14 @@ func parsePort(value string) (uint16, error) {
 		return 0, fmt.Errorf("must be an integer from 1 to 65535")
 	}
 	return uint16(port), nil
+}
+
+func parseNonNegativeInt64(value string) (int64, error) {
+	parsed, err := strconv.ParseInt(value, 10, 64)
+	if err != nil || parsed < 0 {
+		return 0, errors.New("must be a non-negative integer")
+	}
+	return parsed, nil
 }
 
 func parsePositiveDuration(value string) (time.Duration, error) {

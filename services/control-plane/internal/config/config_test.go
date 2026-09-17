@@ -26,6 +26,12 @@ func TestLoadUsesTypedDefaults(t *testing.T) {
 	if config.DatabasePingTimeout != 2*time.Second {
 		t.Fatalf("DatabasePingTimeout = %s", config.DatabasePingTimeout)
 	}
+	if config.SessionTTL != 720*time.Hour {
+		t.Fatalf("SessionTTL = %s, want 720h", config.SessionTTL)
+	}
+	if config.SignupCreditGrant != 100 {
+		t.Fatalf("SignupCreditGrant = %d, want 100", config.SignupCreditGrant)
+	}
 }
 
 func TestLoadRejectsInvalidConfiguration(t *testing.T) {
@@ -46,6 +52,9 @@ func TestLoadRejectsInvalidConfiguration(t *testing.T) {
 		{"bad port", "OMNISTACKAI_POSTGRES_PORT", "70000", "1 to 65535"},
 		{"bad duration", "OMNISTACKAI_DATABASE_PING_TIMEOUT", "soon", "invalid duration"},
 		{"zero duration", "OMNISTACKAI_SHUTDOWN_TIMEOUT", "0s", "must be positive"},
+		{"bad session ttl", "OMNISTACKAI_SESSION_TTL", "forever", "invalid duration"},
+		{"negative signup credit grant", "OMNISTACKAI_SIGNUP_CREDIT_GRANT", "-1", "non-negative integer"},
+		{"non-numeric signup credit grant", "OMNISTACKAI_SIGNUP_CREDIT_GRANT", "many", "non-negative integer"},
 	}
 
 	for _, test := range tests {

@@ -13,6 +13,7 @@ services:
     volumes:
       - omnistackai-postgres-data:/var/lib/postgresql
       - ../../../services/control-plane/migrations/000001_platform_foundation.up.sql:/docker-entrypoint-initdb.d/000001_platform_foundation.sql:ro
+      - ../../../services/control-plane/migrations/000002_users_auth_billing.up.sql:/docker-entrypoint-initdb.d/000002_users_auth_billing.sql:ro
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
       interval: 5s
@@ -38,6 +39,8 @@ services:
       OMNISTACKAI_POSTGRES_PASSWORD: ${OMNISTACKAI_POSTGRES_PASSWORD:?set OMNISTACKAI_POSTGRES_PASSWORD in .env}
       OMNISTACKAI_DATABASE_PING_TIMEOUT: ${OMNISTACKAI_DATABASE_PING_TIMEOUT:-2s}
       OMNISTACKAI_SHUTDOWN_TIMEOUT: ${OMNISTACKAI_SHUTDOWN_TIMEOUT:-10s}
+      OMNISTACKAI_SESSION_TTL: ${OMNISTACKAI_SESSION_TTL:-720h}
+      OMNISTACKAI_SIGNUP_CREDIT_GRANT: ${OMNISTACKAI_SIGNUP_CREDIT_GRANT:-100}
     ports:
       - "127.0.0.1:${OMNISTACKAI_CONTROL_PLANE_PORT:-8080}:8080"
     healthcheck:

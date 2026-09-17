@@ -1,4 +1,4 @@
-# OmniStackAI — implementation progress (as of R-468)
+# OmniStackAI — implementation progress (as of R-469)
 
 A living summary of what is built, what is pending, and how to see results. Numbers come from the
 execution tracker (`R_&_D/OmniStackAI_Execution_Tracker_v6.xlsx`, `Phase_Roadmap`, 461 tasks as of
@@ -6,7 +6,25 @@ R-461 completion) plus the state files (`.ai/`), Git history, and CHANGELOG.
 
 ## Headline
 
-- **3,593 automated tests pass**, fully offline and network-independent (`task verify`).
+- **3,593 automated tests pass** (agent-engine + Go control-plane), fully offline and
+  network-independent (`task verify`).
+- **R-469 — control-plane foundation: users, auth, plans, credits (2026-09-17):** Phase A of
+  `R_&_D/OmniStackAI_Commercial_Platform_Kickoff_v1.md` — the founder's decision to advance from the
+  Stage-0 static console/stdlib Studio prototype toward the real commercial platform (Next.js console
+  over a Go control-plane, per Implementation Brief Section 33). The existing `services/control-plane`
+  Go skeleton (health-check-only before this task) now has real users, authentication, and a
+  plan/credit model: two roles only (`super_admin`, `user` — a user's access is gated entirely by
+  `plan`, reusing the Brief Section 22 tier names `free`/`developer`/`pro`/`agency`/`enterprise`,
+  `byok` an add-on flag); every signup gets `free` plus a starting credit grant recorded in an
+  append-only `credit_ledger`. New migration `000002_users_auth_billing` applied by a new self-healing
+  embedded migration runner (replays every idempotent migration file on every boot — necessary because
+  `docker-entrypoint-initdb.d` only runs against a brand-new Postgres volume). Password hashing is
+  PBKDF2-HMAC-SHA256 on Go stdlib only — zero new `go.mod` dependency. Four new endpoints
+  (`/auth/register`, `/auth/login`, `/auth/logout`, `/auth/me`); login failure is a generic 401 with
+  no email-enumeration timing leak, proven both in unit tests and against a real running Docker
+  container (register → login → me → logout → me-after-logout, real PostgreSQL). No frontend, no
+  agent-engine bridge, no payment processor yet — those are Phases B/C/E, separate Tracker IDs.
+  `studio/page.py` is untouched — still the agent-engine's own local proof harness, not the product UI.
 - **R-468 — multi-turn chat / "continue editing this app" (2026-09-17):** a follow-up prompt ("add a
   favorites feature") now lands as a real second commit on the same owned repo. New `intake/app_delta.py`
   is a generic, non-pack-coupled sibling of `solution_packs/ai_delta.py`: a bounded, validated delta (new
@@ -555,16 +573,25 @@ the live run needs the key + a network machine.
 
 ## What's next
 
-**Hybrid engine (founder-approved direction; R-465 grounding, R-466 compile repair + pacing, R-467 file
-browser + hybrid-UI toggle, R-468 multi-turn edit all done):** the next brick is **R-469 — wiring R-466's
-`compile_and_repair` into the edit flow** (so an edited hybrid-UI screen also gets type-checked/repaired;
-needs the `pnpm`/`tsc` toolchain), and/or an **undo/revert UI** over the real git history every edited build
-now has on disk (`git log`/`git revert` already work from a terminal; nothing exposes them in the Studio
-yet). A further-out idea: extending `app_delta` beyond additive-only (rename/remove existing entities) —
-real design needed, higher risk of a confusing diff, deliberately deferred. Founder action to unlock a full
-live proof of a model-written page that compiles, or of the chat-edit delta against a real model: after the
-Groq daily reset run with `OMNISTACKAI_MAX_RETRY_AFTER_SECONDS=180`, or add `GOOGLE_API_KEY` (Gemini) to the
-gitignored `.env`.
+**Commercial platform kickoff (founder-approved direction, 2026-09-17 — see
+`R_&_D/OmniStackAI_Commercial_Platform_Kickoff_v1.md`):** the hybrid engine (R-465 grounding, R-466
+compile repair + pacing, R-467 file browser + hybrid-UI toggle, R-468 multi-turn edit) and the Studio
+(`studio/page.py`) stay exactly as they are — the agent-engine's own local proof harness, not the
+product UI going forward. **R-469 (done)** built the real control-plane foundation instead: users,
+authentication, and a plan/credit model on the existing Go `services/control-plane` skeleton. Next is
+**R-470 (Phase B)**: replace the static `apps/console-web` with a real Next.js (App Router, TypeScript)
+app wired to R-469's `/auth/register`/`/auth/login`/`/auth/logout`/`/auth/me` endpoints — the point
+where `task bootstrap`/`task doctor` deliberately gain a real Node/npm toolchain requirement for the
+console. After that, **R-471 (Phase C)** bridges the control-plane's Job API to the unmodified
+agent-engine so a real generation call actually debits a user's credits (local-Ollama calls stay
+credit-exempt), then **Phase D** rebuilds the Studio UX for real inside the new console (the
+Lovable/Dyad/Emergent pattern research already done applies there), and **Phase E** adds plan-gated UI,
+an admin console, and — with its own explicit sign-off — a payment processor. Previously-named
+follow-ups (wiring R-466's `compile_and_repair` into the edit flow, an undo/revert UI, extending
+`app_delta` beyond additive-only) remain real but lower priority than the platform foundation now
+underway. Founder action to unlock a full live proof of a model-written page that compiles, or of the
+chat-edit delta against a real model: after the Groq daily reset run with
+`OMNISTACKAI_MAX_RETRY_AFTER_SECONDS=180`, or add `GOOGLE_API_KEY` (Gemini) to the gitignored `.env`.
 
 The local front door is built through robust browser preview with memory: R-416 prompt → IR, R-417 IR →
 owned repo, R-418 local chat studio, R-419 turnkey local run, R-420 SQL hardening, R-421 managed embedded

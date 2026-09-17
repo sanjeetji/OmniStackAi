@@ -1,0 +1,9 @@
+BEGIN;
+
+DELETE FROM schema_migrations WHERE version = 2;
+DROP TABLE IF EXISTS sessions;
+DROP TABLE IF EXISTS credit_ledger;
+DROP TABLE IF EXISTS users;
+DROP EXTENSION IF EXISTS pgcrypto;
+
+COMMIT;

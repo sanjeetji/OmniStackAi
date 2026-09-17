@@ -1,5 +1,93 @@
 # Work Log
 
+## 2026-09-17 — R-469 (Control-plane foundation: users, auth, plans, credits)
+
+- **Why:** the founder decided (2026-09-17) to advance OmniStackAI from its Stage-0 static console
+  (`apps/console-web`) and stdlib Studio prototype toward the real commercial platform
+  `R_&_D/OmniStackAI_Implementation_Brief_v6.md` Section 33 has always specified — a Next.js
+  console over a Go control-plane (Auth/Orgs/Billing) and the existing Python agent-engine. This
+  is recorded in full in `R_&_D/OmniStackAI_Commercial_Platform_Kickoff_v1.md` (written this
+  session, five phases). R-469 is Phase A: give the existing `services/control-plane` Go skeleton
+  (health-check-only before this task) real users, authentication, and a plan/credit model.
+- **Role/plan/credit model (resolves the founder's "which is best approach" question):** two roles
+  only — `super_admin` (full access, internal) and `user` (everyone else, gated entirely by
+  `plan`, never a second role tier). Plans reuse the tier names already named in the Implementation
+  Brief Section 22 (`free`/`developer`/`pro`/`agency`/`enterprise`, `byok` as an add-on flag rather
+  than a separate tier). Every signup gets the `free` plan plus an env-configurable starting credit
+  grant (`OMNISTACKAI_SIGNUP_CREDIT_GRANT`, default 100), recorded in an append-only
+  `credit_ledger` — local-model usage is intended to stay credit-exempt (Phase C's job to enforce
+  once the agent-engine bridge exists; this task only needed the ledger to record the grant
+  correctly).
+- **Migration `000002_users_auth_billing`:** `users` (role/plan/byok_enabled/credit_balance
+  columns, `CHECK` constraints), `credit_ledger` (append-only, `balance_after` snapshot per row),
+  `sessions` (token stored only as its SHA-256 hash, never raw). Transactional, idempotent
+  (`IF NOT EXISTS`/`ON CONFLICT DO NOTHING`) — same style as the pre-existing `000001`.
+- **`migrations` package (new):** `//go:embed *.up.sql` embeds every migration file in its own
+  directory; `Apply(ctx, pool)` replays all of them, in ascending version order, each inside a
+  Go-managed transaction, on every control-plane boot. This closes a real gap:
+  `docker-entrypoint-initdb.d` (the existing fast path wired in `compose.yaml`) only runs against
+  a brand-new empty Postgres volume — a developer's existing local volume would otherwise never
+  see `000002` just by restarting the container. Safe to replay because every migration file is
+  written idempotently.
+- **`internal/password` (new):** PBKDF2-HMAC-SHA256 (RFC 8018) implemented directly on
+  `crypto/hmac`+`crypto/sha256`+`crypto/subtle` — **zero new `go.mod` dependency**.
+  `golang.org/x/crypto/bcrypt` was considered and rejected specifically because it would be this
+  repo's first new Go dependency beyond the one already-necessary `pgx` (there is no stdlib
+  Postgres driver, but there is no such excuse for password hashing). Self-describing encoded
+  format (`pbkdf2-sha256$<iterations>$<salt>$<key>`), constant-time comparison.
+- **`internal/auth` (new):** `User`/`Store`/`Hasher` interfaces (same "narrow interface, wire the
+  real thing at the edge" shape `internal/health`'s `Pinger` already established), `Register(mux,
+  Deps)` mounting `POST /auth/{register,login,logout}` + `GET /auth/me`. Login failure is a
+  generic 401 regardless of wrong-password vs. unknown-email — including a same-cost dummy-hash
+  `Verify` call on the "not found" path, computed once per handler construction (not per-request,
+  not a package-level global) from whichever `Hasher` that `Deps` carries, so there is no timing
+  side channel for enumerating registered emails. Opaque `crypto/rand` session tokens; only their
+  SHA-256 hash is ever persisted (`internal/auth/token.go`).
+- **`internal/users` (new):** the real PostgreSQL-backed `Store` (`var _ auth.Store =
+  (*Store)(nil)` compiles). `CreateUser` wraps the user insert and the signup credit-grant ledger
+  row in one transaction — a user's `credit_balance` and its ledger history can never disagree.
+  Deliberately **not** unit-tested against a live database in `go test` (keeps
+  `control-plane:test` exactly as hermetic as it already was, matching how `internal/health` tests
+  a fake `Pinger` rather than a real database) — proven instead by a real Docker Compose smoke
+  test (see Gates below).
+- **`internal/health`:** `NewHandler` renamed to `Register(mux, ...)` so `main.go` can mount
+  health and auth routes on one shared `http.ServeMux` — behavior/JSON bodies unchanged.
+- **`internal/config` + `cmd/control-plane/main.go`:** two new env-configurable fields
+  (`OMNISTACKAI_SESSION_TTL` default `720h`, `OMNISTACKAI_SIGNUP_CREDIT_GRANT` default `100`);
+  `main.go` now calls `migrations.Apply` before serving traffic and wires the real `users.Store` +
+  a `password`-backed `auth.Hasher` adapter into `auth.Register`.
+- **`Dockerfile`/`compose.yaml`/`.env.example`/`scripts/env-check.sh`/`scripts/test.sh`:**
+  `COPY migrations ./migrations` (required for the new `//go:embed` to see its files during the
+  container build); a second `docker-entrypoint-initdb.d` mount for `000002` (fast path for a
+  fresh volume); the two new env vars documented and enforced; a new `scripts/test.sh` block
+  (matching the existing per-Tracker-ID convention) asserting the new contract files exist, the
+  migration creates the three new tables, all four auth routes are present, and — the concrete,
+  checkable proof password hashing stayed stdlib-only — `go.mod`'s direct-dependency count is
+  still exactly 1 (`pgx`).
+- **Live discovery while implementing:** an initial design used a package-level mutable global
+  (`SetDefaultHasher`) plus a `sync.Once`-cached dummy hash to support the login-timing mitigation
+  — this had a real footgun (panics on first login if `main.go` forgot to call `SetDefaultHasher`,
+  plus stale-cache risk across tests using different fake hashers). Replaced with computing the
+  dummy hash once per handler construction from the request's own injected `Hasher`, removing the
+  global entirely — simpler, no initialization-order dependency, and the timing mitigation now
+  automatically uses whatever hasher a given `Deps` actually carries.
+- **Gates:** `go test ./...` — migrations 4, password 8, auth 15, health 3, config 2 (9 subtests),
+  all passing, all hermetic/offline. `control-plane` lint/build passed. `scripts/test.sh`'s new
+  R-469 block passed. `task verify` (full pipeline) → **Ran 3593 tests in 62.421s — OK; Stage 0
+  verification passed** (agent-engine untouched, 0 model/network calls, no slowdown). **Live
+  manual smoke** (Colima started, real Docker Compose + real PostgreSQL): image built with the new
+  `COPY migrations` layer, both containers `Healthy`, live readiness check passed (proves
+  `migrations.Apply` ran cleanly on boot). Full `curl` round trip against the running container:
+  register (201, `credit_balance:100`) → duplicate register (409) → login (200, new token) →
+  wrong password (401) → unknown email (401, **byte-identical** error body to wrong-password — no
+  enumeration leak in production) → `/auth/me` authenticated (200) → `/auth/me` no token (401) →
+  logout (204) → `/auth/me` with the now-invalid token (401, "session not found or expired" — a
+  real deletion from PostgreSQL) → logout again (204, idempotent).
+- **NEXT R-470 (Phase B):** replace the static `apps/console-web` with a real Next.js (App Router,
+  TypeScript) app wired to this task's four auth endpoints — the point where `task bootstrap`/
+  `task doctor` deliberately gain a real Node/npm toolchain requirement for the console, a scope
+  change already recorded in the kickoff doc.
+
 ## 2026-09-17 — R-468 (Multi-turn chat / "continue editing this app" in the Studio)
 
 - **Why:** every `/api/build` call was a fresh, stateless one-shot prompt — no way to say "now add a

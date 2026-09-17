@@ -282,3 +282,59 @@ colima start
 # Check running Docker containers
 docker ps
 ```
+
+---
+
+## 10. Control-Plane — Users, Auth, Plans, Credits (R-469)
+
+The Go control-plane (`services/control-plane`) is the future home of the real, hosted, multi-user
+OmniStackAI platform (see `R_&_D/OmniStackAI_Commercial_Platform_Kickoff_v1.md` for the full phased
+plan). As of R-469 it has real accounts, sessions, and a plan/credit model — no frontend yet
+(`apps/console-web` is still the old static page; the real Next.js console is Phase B).
+
+```bash
+# Run the Go control-plane's own unit tests (hermetic, no database needed)
+task control-plane:test
+
+# Format/vet check the control-plane
+task control-plane:lint
+
+# Build the control-plane binary locally
+task control-plane:build
+
+# Start Postgres + the control-plane for real via Docker Compose, and verify health/readiness
+task control-plane:verify
+```
+
+Once `task control-plane:verify` (or `docker compose -f infra/environments/local/compose.yaml up -d
+postgres control-plane`) is running, the control-plane listens on `http://127.0.0.1:8080`:
+
+```bash
+# Register a new account — every signup gets the free plan + a starting credit grant
+# (OMNISTACKAI_SIGNUP_CREDIT_GRANT in .env, default 100)
+curl -s -X POST http://127.0.0.1:8080/auth/register \
+  -H 'Content-Type: application/json' \
+  -d '{"email":"you@example.com","password":"a-real-password"}'
+# -> {"id":"...","email":"you@example.com","role":"user","plan":"free","credit_balance":100,"token":"..."}
+
+# Log in (returns a new session token; the old one from register is still valid until it expires)
+curl -s -X POST http://127.0.0.1:8080/auth/login \
+  -H 'Content-Type: application/json' \
+  -d '{"email":"you@example.com","password":"a-real-password"}'
+
+# Who am I — pass the token from register/login as a bearer token
+curl -s http://127.0.0.1:8080/auth/me -H "Authorization: Bearer <token>"
+
+# Sign out (idempotent — safe to call again on an already-invalid token)
+curl -s -X POST http://127.0.0.1:8080/auth/logout -H "Authorization: Bearer <token>"
+```
+
+Two roles only: `super_admin` (full platform access, not a purchasable tier) and `user` (everyone who
+signs up — all access is gated by `plan`, never a second role tier). Plans are
+`free`/`developer`/`pro`/`agency`/`enterprise`, with `byok` as an add-on flag rather than a separate
+tier. Local-model usage is intended to stay credit-exempt (that enforcement lands in Phase C, once the
+control-plane's Job API bridges to the agent-engine — R-469 only builds the account/credit-ledger
+foundation, it does not yet meter any actual generation call).
+
+Config knobs (see `.env.example`): `OMNISTACKAI_SESSION_TTL` (default `720h`),
+`OMNISTACKAI_SIGNUP_CREDIT_GRANT` (default `100`).

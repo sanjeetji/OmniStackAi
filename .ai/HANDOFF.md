@@ -1,9 +1,51 @@
 # Current Handoff
 
-Task ID: R-468
+Task ID: R-469
 Status: done
 Phase: BASIC/MVP — Founder Stage 0
 Branch: `main`
+
+> **R-469 Completed (2026-09-17): Control-plane foundation — users, auth, plans, credits.**
+> - **Phase A of `R_&_D/OmniStackAI_Commercial_Platform_Kickoff_v1.md`** — the founder's decision
+>   (2026-09-17) to advance from the Stage-0 static console/stdlib Studio prototype toward the real
+>   commercial platform (Next.js console over a Go control-plane, Implementation Brief Section 33).
+>   No frontend, no agent-engine bridge, no payment processor here — those are Phases B/C/E,
+>   separate Tracker IDs, already sequenced in the kickoff doc.
+> - **Role/plan/credit model:** two roles only (`super_admin` full access; `user` gated entirely by
+>   `plan`, never a second role tier). Plans reuse the Brief Section 22 tier names
+>   (`free`/`developer`/`pro`/`agency`/`enterprise`, `byok` an add-on flag). Every signup gets
+>   `free` + a starting credit grant (`OMNISTACKAI_SIGNUP_CREDIT_GRANT`, default 100) recorded in
+>   an append-only `credit_ledger`.
+> - **New migration `000002_users_auth_billing`** (`users`/`credit_ledger`/`sessions`) plus a new
+>   `migrations` package (`//go:embed *.up.sql`) that replays every migration, in order, inside a
+>   Go-managed transaction on every boot — every file is idempotent, so this is safe, and it's
+>   necessary because `docker-entrypoint-initdb.d` only runs against a brand-new empty volume.
+> - **Password hashing:** PBKDF2-HMAC-SHA256 on `crypto/hmac`+`crypto/sha256`+`crypto/subtle` —
+>   zero new `go.mod` dependency (`golang.org/x/crypto/bcrypt` considered and rejected for that
+>   reason). Session tokens: opaque `crypto/rand` bearer tokens, only their SHA-256 hash persisted.
+> - **New `internal/auth`:** `POST /auth/{register,login,logout}` + `GET /auth/me`, mounted with
+>   the existing health routes on one shared `http.ServeMux` (`health.NewHandler` → `Register`).
+>   Login failure is a generic 401 regardless of wrong-password vs. unknown-email, including a
+>   same-cost dummy-hash check on the "not found" path — no email-enumeration timing leak.
+> - **New `internal/users`:** the real PostgreSQL-backed `Store`; `CreateUser` wraps the insert and
+>   the signup credit-grant ledger row in one transaction. Deliberately not unit-tested against a
+>   live DB in `go test` (keeps `control-plane:test` hermetic, matching `internal/health`'s fake
+>   `Pinger`) — proven instead by a real Docker Compose smoke test.
+> - **Live discovery (not anticipated):** an initial timing-mitigation design used a package-level
+>   mutable global (`SetDefaultHasher`) with real footguns (panic risk, cross-test cache staleness)
+>   — replaced with computing the dummy hash once per handler construction from the request's own
+>   injected `Hasher`, removing the global entirely.
+> - Gates: `go test` all green (migrations 4, password 8, auth 15, health 3, config 2/9 subtests);
+>   `task verify` **3,593 OK** (62.4s, 0 model/network calls, no slowdown); `scripts/test.sh`'s new
+>   R-469 block passed (including a mechanical check that `go.mod` gained zero new direct
+>   dependencies). **Live smoke against a real running Docker container** (Colima + real
+>   PostgreSQL): register (201, `credit_balance:100`) → duplicate (409) → login (200, new token) →
+>   wrong password (401) → unknown email (401, byte-identical body) → `/auth/me` (200) → no-token
+>   (401) → logout (204) → `/auth/me` post-logout (401, real DB deletion) → logout again (204).
+> - **NEXT R-470 (Phase B):** replace `apps/console-web` with a real Next.js app wired to these
+>   four endpoints — the point where `task bootstrap`/`task doctor` deliberately gain a Node/npm
+>   toolchain requirement. See `R_&_D/OmniStackAI_Commercial_Platform_Kickoff_v1.md`,
+>   `.ai/tasks/R-469.md`.
 
 > **R-468 Completed (2026-09-17): Multi-turn chat / "continue editing this app" in the Studio.**
 > - **New generic delta:** `intake/app_delta.py` mirrors `solution_packs/ai_delta.py`'s shape (bounded typed

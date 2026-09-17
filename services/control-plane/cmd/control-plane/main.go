@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"errors"
+	"fmt"
 	"log/slog"
 	"net"
 	"net/http"
@@ -14,8 +15,12 @@ import (
 
 	"github.com/jackc/pgx/v5/pgxpool"
 
+	"github.com/sanjeetji/OmniStackAi/services/control-plane/internal/auth"
 	"github.com/sanjeetji/OmniStackAi/services/control-plane/internal/config"
 	"github.com/sanjeetji/OmniStackAi/services/control-plane/internal/health"
+	"github.com/sanjeetji/OmniStackAi/services/control-plane/internal/password"
+	"github.com/sanjeetji/OmniStackAi/services/control-plane/internal/users"
+	"github.com/sanjeetji/OmniStackAi/services/control-plane/migrations"
 )
 
 func main() {
@@ -41,9 +46,23 @@ func run(ctx context.Context, logger *slog.Logger) error {
 	}
 	defer pool.Close()
 
+	if err := migrations.Apply(ctx, pool); err != nil {
+		return fmt.Errorf("apply migrations: %w", err)
+	}
+
+	mux := http.NewServeMux()
+	health.Register(mux, pool, runtimeConfig.DatabasePingTimeout)
+	auth.Register(mux, auth.Deps{
+		Store:         users.New(pool),
+		Hasher:        passwordHasher{},
+		SessionTTL:    runtimeConfig.SessionTTL,
+		SignupCredits: runtimeConfig.SignupCreditGrant,
+		Logger:        logger,
+	})
+
 	server := &http.Server{
 		Addr:              runtimeConfig.HTTPAddress,
-		Handler:           health.NewHandler(pool, runtimeConfig.DatabasePingTimeout),
+		Handler:           mux,
 		ReadHeaderTimeout: runtimeConfig.ReadHeaderTimeout,
 		ReadTimeout:       runtimeConfig.ReadTimeout,
 		WriteTimeout:      runtimeConfig.WriteTimeout,
@@ -72,6 +91,18 @@ func run(ctx context.Context, logger *slog.Logger) error {
 		}
 		return err
 	}
+}
+
+// passwordHasher adapts the internal/password package's functions to the auth.Hasher interface,
+// so internal/auth stays decoupled from the specific hashing implementation.
+type passwordHasher struct{}
+
+func (passwordHasher) Hash(plain string) (string, error) {
+	return password.Hash(plain)
+}
+
+func (passwordHasher) Verify(encoded, plain string) (bool, error) {
+	return password.Verify(encoded, plain)
 }
 
 func postgresURL(runtimeConfig config.Config) string {
