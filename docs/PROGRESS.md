@@ -1,4 +1,4 @@
-# OmniStackAI — implementation progress (as of R-472)
+# OmniStackAI — implementation progress (as of R-473)
 
 A living summary of what is built, what is pending, and how to see results. Numbers come from the
 execution tracker (`R_&_D/OmniStackAI_Execution_Tracker_v6.xlsx`, `Phase_Roadmap`, 461 tasks as of
@@ -8,6 +8,18 @@ R-461 completion) plus the state files (`.ai/`), Git history, and CHANGELOG.
 
 - **3,603 automated tests pass** (agent-engine + Go control-plane), fully offline and
   network-independent (`task verify`), plus the console's own `typecheck`/`lint`/`build` gates.
+- **R-473 — Studio v1 in the console, build an app from the product (2026-09-18):** Phase D of
+  `R_&_D/OmniStackAI_Commercial_Platform_Kickoff_v1.md`, first slice. A logged-in user can now open
+  `apps/console-web`'s new `/studio` page, type a plain-English app description, click Build, and
+  get a real app built through R-472's real Job API, with the console showing the real post-debit
+  credit balance. Deliberately scoped small — no file browser, live preview, or chat yet — matching
+  how the agent-engine's own hybrid-UI engine shipped across four separate gated Tracker IDs
+  (R-465–R-468) rather than one large task; those capabilities are named follow-ups, not silently
+  dropped. No control-plane or agent-engine changes. Live proof: a real Docker control-plane + a
+  real agent-engine Studio server on local Ollama + a real `next start` console proved the auth
+  gate, a genuine (unforced) local-model failure rendering as a real error banner, and a genuine
+  successful 157-file build with every field matching the UI's expectations. See `.ai/tasks/
+  R-473.md` for full live-verification detail.
 - **R-472 — bridge the control-plane's Job API to the agent-engine, real credit debiting
   (2026-09-18):** Phase C of `R_&_D/OmniStackAI_Commercial_Platform_Kickoff_v1.md`. The
   control-plane's new `POST /jobs/build` authenticates the caller, proxies verbatim to the

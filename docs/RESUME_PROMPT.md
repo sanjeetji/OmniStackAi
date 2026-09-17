@@ -208,7 +208,7 @@ front-door bricks, R-420 is generated-SQL hardening, R-421..R-426 are Studio pre
 R-427..R-429 are generated-app compile fixes, R-430..R-457 are the first twenty-eight differentiating-spine
 bricks (Scope Compiler through Ecosystem Multi-Surface SLA, SLO, and Error Budget Contracts).
 Git, state files (.ai/), CHANGELOG, and docs/PROGRESS.md remain the executable/detail sources of truth.
-Current through R-472; `task verify` = 3,603 tests (agent-engine) + the Go control-plane's own suite +
+Current through R-473; `task verify` = 3,603 tests (agent-engine) + the Go control-plane's own suite +
 the Next.js console's typecheck/lint/build. R-416 added prompt-to-IR intake, R-417 materialized a generated
 owned repo, R-418 added the local chat studio, R-419 added turnkey local run, and R-420 fixed the two
 SQL defects found by live execution. R-421 added an explicit `task agent-engine:studio:preview` mode:
@@ -543,14 +543,35 @@ WHAT TO DO NEXT
   row-locked/clamped SQL path was proven separately against the same live Postgres with a throwaway,
   never-committed `go run` program (`100 -> 63 -> 0`, clamped, never negative), independently confirmed
   via a real `GET /auth/me`.
-- NEXT R-473 (Phase D): rebuild the real Studio/builder UX inside `apps/console-web` so a logged-in user
-  can actually call the now-real `/jobs/build` from the product itself (type a prompt, see credit balance,
-  see the resulting app/files), reusing the earlier Lovable/Dyad/Emergent pattern research. After that,
-  Phase E (plan-gated UI, admin console, payment processor) needs its own explicit founder sign-off before
-  starting. Previously-named agent-engine follow-ups (wiring R-466's `compile_and_repair` into the edit
-  flow, an undo/revert UI, extending `app_delta` beyond additive-only, threading `usage_ledger` through
-  `/jobs/build/{id}/edit` and the Solution Pack/Ecosystem build paths) remain real but lower priority than
-  the platform foundation now underway.
+- R-473 (2026-09-18, done) built Phase D's first slice: a logged-in user can now open
+  `apps/console-web`'s new `/studio` page, type a prompt, click Build, and get a real app built
+  through R-472's real Job API, with the console showing the real post-debit credit balance.
+  Deliberately scoped small - no file browser, live preview, or chat yet - matching how the
+  agent-engine's own hybrid-UI engine shipped across four separate gated Tracker IDs (R-465-R-468)
+  rather than one large task; those capabilities (and Solution Pack/Ecosystem selection, Model
+  Provider settings, a Problems tab) are named follow-ups, not silently dropped. New
+  `app/studio/page.tsx` (auth-gated, mirrors `app/page.tsx`) + `app/studio/studio-form.tsx` (prompt
+  textarea, Build button, a real pending state since builds take real time, result panel, error
+  banner) + `app/api/jobs/build/route.ts` (server-side proxy: reads the session cookie, 401s
+  locally with no upstream call if absent, forwards to the control-plane with the bearer token
+  attached, never exposed to client JS). `lib/control-plane.ts` gained `BuildJobResponse`/
+  `buildApp()` following the existing `login`/`registerAccount` pattern. No control-plane or
+  agent-engine changes - R-472 already built the real backend this task's UI calls. `task verify`
+  3,603 OK; console `typecheck`/`lint`/`build` clean. Live: a real Docker control-plane, a real
+  agent-engine Studio server on local Ollama, and a real `next start` console proved `/studio`'s
+  auth gate (307 signed out, 200 signed in with the real credit balance) and
+  `POST /api/jobs/build`'s local 401 with no cookie; a real build attempt hit a genuine, unforced
+  local-model IR-validation failure, honestly proxied through as a real 502 (an authentic live
+  proof of the error-banner path, not a synthetic test); a retry succeeded for real - a genuine
+  157-file "Recipe Box" repo with every field matching exactly what the UI renders.
+- NEXT: continue Phase D - port the agent-engine's own `studio/page.py` capabilities (file browser
+  + live preview from R-467, multi-turn chat/edit from R-468) into the console, and/or add Solution
+  Pack/Ecosystem build selection to the Studio UI. After that, Phase E (plan-gated UI, admin
+  console, payment processor) needs its own explicit founder sign-off before starting.
+  Previously-named agent-engine follow-ups (wiring R-466's `compile_and_repair` into the edit flow,
+  an undo/revert UI, extending `app_delta` beyond additive-only, threading `usage_ledger` through
+  `/jobs/build/{id}/edit` and the Solution Pack/Ecosystem build paths) remain real but lower
+  priority than the platform foundation now underway.
   Keep `task verify` model/Docker/DB-free at its core (the console's own build/lint/typecheck gates need
   no live control-plane; any live/model path stays opt-in); preserve single-session ownership and
   explicit trusted-local mode.

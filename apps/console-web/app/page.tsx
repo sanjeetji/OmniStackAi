@@ -47,6 +47,9 @@ export default async function HomePage() {
       </section>
 
       <p className="muted" style={{ marginTop: 20 }}>
+        <Link href="/studio">Open the Studio to build an app →</Link>
+      </p>
+      <p className="muted" style={{ marginTop: 8 }}>
         <Link href="/fabric">View the model fabric &amp; cost overview →</Link>
       </p>
     </main>

@@ -125,9 +125,21 @@ header.masthead .lede {
   color: var(--text);
 }
 
-.field input:focus {
+.field input:focus,
+.field textarea:focus {
   outline: 2px solid var(--accent);
   outline-offset: 1px;
+}
+
+.field textarea {
+  font: inherit;
+  padding: 10px 12px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: var(--bg);
+  color: var(--text);
+  resize: vertical;
+  min-height: 88px;
 }
 
 .button {
@@ -255,6 +267,48 @@ tr:last-child td {
 
 .overflow {
   overflow-x: auto;
+}
+
+.pill-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.pill {
+  display: inline-block;
+  padding: 4px 12px;
+  border-radius: 999px;
+  font-size: 13px;
+  background: var(--off-bg);
+  color: var(--off-fg);
+}
+
+.file-list {
+  margin-top: 8px;
+  max-height: 260px;
+  overflow-y: auto;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 4px 14px;
+}
+
+.file-list ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.file-list li {
+  padding: 6px 0;
+  border-bottom: 1px solid var(--border);
+  font-size: 13px;
+}
+
+.file-list li:last-child {
+  border-bottom: none;
 }
 
 @media (max-width: 640px) {

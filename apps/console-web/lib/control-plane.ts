@@ -123,3 +123,46 @@ export async function currentUser(token: string): Promise<ControlPlaneUser | nul
     return null;
   }
 }
+
+/** Real per-request cost/usage, exactly as studio/live_serve.py's `_usage_summary_to_dict` (R-472)
+ * reports it. `cost_micros_usd` is USD * 1,000,000 (an integer, never a float/decimal string). */
+export interface BuildJobUsage {
+  total_calls: number;
+  successful_calls: number;
+  failed_calls: number;
+  input_tokens: number;
+  output_tokens: number;
+  unpriced_calls: number;
+  cost_micros_usd: number;
+}
+
+/** The control-plane's `POST /jobs/build` response (R-472): the agent-engine's own build payload -
+ * whose exact shape varies by build kind (plain prompt vs. Solution Pack vs. Ecosystem) and this
+ * client does not fully enumerate - augmented with `credits_spent`/`credit_balance`. Only the
+ * fields this console actually renders are typed; everything else still round-trips via the index
+ * signature rather than being silently dropped. */
+export interface BuildJobResponse {
+  name?: string;
+  description?: string;
+  entities?: string[];
+  file_count?: number;
+  commit_sha?: string;
+  files?: string[];
+  usage?: BuildJobUsage;
+  credits_spent: number;
+  credit_balance: number;
+  [key: string]: unknown;
+}
+
+/** Builds an app for `prompt` via the control-plane's Job API. `token` is the caller's session
+ * token - it is only ever handled server-side (see app/api/jobs/build/route.ts), never sent to
+ * client-side JavaScript. Can take real minutes for a real model call; this makes no attempt to
+ * time it out early - the control-plane's own R-472 write-deadline fix is what makes waiting
+ * possible in the first place. */
+export function buildApp(token: string, prompt: string): Promise<BuildJobResponse> {
+  return callControlPlane<BuildJobResponse>("/jobs/build", {
+    method: "POST",
+    headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+    body: JSON.stringify({ prompt }),
+  });
+}

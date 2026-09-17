@@ -337,4 +337,25 @@ if rg -qi '^  (redis|agent-engine|runner-manager|nats|temporal|kubernetes):' "$c
   exit 1
 fi
 
+# R-473: Studio v1 in the console - build an app from the product, not curl.
+for required_file in \
+  "$console_root/app/studio/page.tsx" \
+  "$console_root/app/studio/studio-form.tsx" \
+  "$console_root/app/api/jobs/build/route.ts"; do
+  if [[ ! -f "$required_file" ]]; then
+    printf 'Missing R-473 console contract file: %s\n' "$required_file"
+    exit 1
+  fi
+done
+
+if ! rg -q 'buildApp' "$console_root/lib/control-plane.ts"; then
+  printf 'R-473 must add a buildApp() client to lib/control-plane.ts.\n'
+  exit 1
+fi
+
+if ! rg -q 'getSessionToken' "$console_root/app/api/jobs/build/route.ts"; then
+  printf 'R-473 must authenticate POST /api/jobs/build via the session cookie before proxying.\n'
+  exit 1
+fi
+
 printf 'Repository contract tests passed.\n'

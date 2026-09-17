@@ -1,53 +1,34 @@
-task_id: R-472
+task_id: R-473
 status: completed
 phase: MVP
 tracker_row: null
-started_at: "2026-09-17"
+started_at: "2026-09-18"
 completed_at: "2026-09-18"
 objective: >-
-  Phase C of R_&_D/OmniStackAI_Commercial_Platform_Kickoff_v1.md (renumbered from R-471, which
-  became a real bug-fix task instead): the control-plane's Job API proxies "build this app"
-  requests to the existing agent-engine, and a real generation call actually debits the
-  authenticated user's credit balance, with local-Ollama usage staying credit-exempt. Correction
-  found while researching: the Studio's real build path returns a raw ModelProvider (bypassing the
-  ModelGateway's existing but currently demo-only UsageLedger accounting), so a small additive
-  agent-engine change is needed - a new RecordingProvider decorator (model_gateway/recording.py)
-  implementing the exact same ModelProvider protocol, wrapping any provider to record real
-  usage/cost into an injected UsageLedger, with zero changes to any existing call site.
-  resolve_generation_provider_from_env gains an optional usage_ledger param (default None = todays
-  unchanged behavior); live_serve.py's _build creates one per request and adds a JSON-safe usage
-  summary (cost_micros_usd as an int, not a decimal string, to avoid any float/precision issue
-  crossing the Go/Python boundary) to the response, additive like R-467's ui_outcomes. Go side: new
-  internal/jobs package proxies POST /jobs/build (authenticated via a new exported
-  auth.RequireUser helper) to the agent-engine, converts cost_micros_usd to credits via
-  OMNISTACKAI_CREDITS_PER_USD, debits atomically via a new users.Store.DebitCredits (row-locked,
-  clamped so balance never goes negative - v1 policy is to never block a build, only clamp the
-  charge). No console-web changes (Phase D); no /jobs/build/{id}/edit yet (named follow-up); no
-  hard pre-flight balance blocking (named follow-up, needs its own UX); agent-engine is reached via
-  a configured URL, not Docker Compose (scripts/test.sh already hard-blocks adding it as a
-  service at this stage).
+  Phase D of R_&_D/OmniStackAI_Commercial_Platform_Kickoff_v1.md, first slice: a logged-in user can
+  open apps/console-web, type a prompt, click Build, and get a real app built through R-472's real
+  Job API, with the console showing the real post-debit credit balance. New app/studio/page.tsx
+  (auth-gated, mirrors app/page.tsx) + app/studio/studio-form.tsx (client component: prompt
+  textarea, Build button, pending state, result panel, error banner) + app/api/jobs/build/route.ts
+  (server-side proxy: reads the session cookie, 401s locally if absent, forwards to the
+  control-plane's POST /jobs/build with the bearer token attached, never exposed to client JS).
+  lib/control-plane.ts gains BuildJobResponse + buildApp() following the existing
+  login/registerAccount pattern. app/page.tsx gains a link to /studio. Explicitly NOT the full
+  Phase D vision (file browser, live preview, chat/multi-turn edit, Solution Pack/Ecosystem
+  selection, Model Provider settings, Problems/Publish tabs) - those are named, separately-scoped
+  follow-ups, matching how the agent-engine's own hybrid-UI engine shipped across four separate
+  gated Tracker IDs (R-465..R-468) rather than one large task. No changes to services/control-plane
+  or services/agent-engine - R-472 already built the real backend this task's UI calls.
 allowed_paths:
-  - services/agent-engine/src/omnistackai_agent_engine/model_gateway/recording.py
-  - services/agent-engine/src/omnistackai_agent_engine/model_gateway/__init__.py
-  - services/agent-engine/src/omnistackai_agent_engine/intake/provider_resolution.py
-  - services/agent-engine/src/omnistackai_agent_engine/intake/build_app.py
-  - services/agent-engine/src/omnistackai_agent_engine/studio/live_serve.py
-  - services/agent-engine/tests/test_recording_provider.py
-  - services/agent-engine/tests/test_provider_resolution.py
-  - services/agent-engine/tests/test_build_app.py
-  - services/agent-engine/tests/test_studio_server.py
-  - services/control-plane/internal/auth/handler.go
-  - services/control-plane/internal/auth/types.go
-  - services/control-plane/internal/auth/handler_test.go
-  - services/control-plane/internal/users/store.go
-  - services/control-plane/internal/users/store_test.go
-  - services/control-plane/internal/jobs/**
-  - services/control-plane/internal/config/config.go
-  - services/control-plane/internal/config/config_test.go
-  - services/control-plane/cmd/control-plane/main.go
-  - .env.example
-  - R_&_D/OmniStackAI_Commercial_Platform_Kickoff_v1.md
-  - .ai/tasks/R-472.md
+  - apps/console-web/app/studio/page.tsx
+  - apps/console-web/app/studio/studio-form.tsx
+  - apps/console-web/app/api/jobs/build/route.ts
+  - apps/console-web/lib/control-plane.ts
+  - apps/console-web/app/page.tsx
+  - apps/console-web/app/globals.css
+  - scripts/test.sh
+  - .gitignore
+  - .ai/tasks/R-473.md
   - .ai/CURRENT_TASK.yaml
   - .ai/PROJECT_STATE.yaml
   - .ai/WORK_LOG.md
@@ -57,28 +38,29 @@ allowed_paths:
   - docs/PROGRESS.md
   - docs/RESUME_PROMPT.md
   - COMMANDS.md
+  - R_&_D/OmniStackAI_Commercial_Platform_Kickoff_v1.md
 forbidden_changes:
-  - No new Docker Compose service
-  - No changes to any existing ModelProvider implementation or existing .generate() call site
-  - No hard-blocking of a build when a user has zero credits
-  - No changes to apps/console-web
+  - No changes to services/control-plane or services/agent-engine
+  - No new UI/component-library dependency
+  - No file browser, live preview, chat/multi-turn edit, or Solution Pack/Ecosystem selection UI
   - Do not modify or commit the untracked .claude directory
 required_gates:
-  - "agent-engine: task verify (0 model/network calls)"
-  - "control-plane: go test ./..."
+  - "apps/console-web: pnpm run typecheck, pnpm run lint, pnpm run build"
   - task verify
   - task lint
   - task security:quick
   - task env:check
-  - "manual smoke (real docker control-plane + real agent-engine studio server): authenticated /jobs/build debits real credits"
+  - "manual smoke (real docker control-plane + real agent-engine studio server + real next start): register/login -> /studio -> real build -> response renders, credit balance matches"
 model_tool_trace:
   routing: deterministic_only
   local_calls: 0
   cloud_calls: 0
   note: >-
-    Go/Python implementation, 0 model/network calls in any automated gate. The manual smoke test
-    uses a stub/local provider for the live agent-engine call, not a paid cloud model.
+    TypeScript/React implementation, 0 model/network calls in any automated gate. The manual smoke
+    test's build call uses local Ollama, not a paid cloud model.
 next_action: >-
-  R-472 is complete (see .ai/tasks/R-472.md for full Gates & Evidence). Next up: Phase D of
-  R_&_D/OmniStackAI_Commercial_Platform_Kickoff_v1.md - rebuild the real Studio/builder UX inside
-  apps/console-web so a logged-in user can actually call the now-real /jobs/build.
+  R-473 is complete (see .ai/tasks/R-473.md for full Gates & Evidence). Next up: continue Phase D -
+  a file browser/live preview and chat/multi-turn edit in the console (porting the agent-engine's
+  own studio/page.py capabilities from R-467/R-468 into apps/console-web), or Solution Pack/
+  Ecosystem build selection in the Studio UI. Phase E (plan-gated UI, admin console, payment
+  processor) still needs its own explicit founder sign-off before starting.

@@ -189,13 +189,21 @@ available ID per `.ai/tasks/` is **R-469** (R-468 is the last shipped task).
   scope); Solution Pack and Ecosystem builds report no `usage` key yet and so debit `0` credits —
   named, not silent, follow-up work, not a regression.
 
-**Phase D — The actual Studio UX, inside the real console-web (proposed R-473)**
+**Phase D — The actual Studio UX, inside the real console-web (R-473 started, 2026-09-18)**
 - This is where the earlier Lovable/Dyad/Emergent pattern research gets used for real: persistent
   chat + top tabs (Preview/Files/Code/Problems/Publish/More), one unified UI for every user with
   progressive disclosure (not persona branching), Model Provider settings surfacing the existing
   `model_gateway` (cloud + local Ollama, Dyad-style "Ready" state), a Problems tab wired to the
   already-existing `verify/compile.py`.
 - Built as real Next.js components against the real API — not retrofitted into `studio/page.py`.
+- **R-473 (DONE, 2026-09-18) shipped the first slice, not the full vision above**: a new `/studio`
+  page in `apps/console-web` — a prompt textarea, a Build button, and a result panel — calling the
+  now-real `POST /jobs/build` (R-472) and showing the real post-debit credit balance. Deliberately
+  scoped small, matching how the agent-engine's own hybrid-UI engine shipped across four separate
+  gated Tracker IDs (R-465–R-468) rather than one large task. Still needed for the full vision: a
+  file browser + live preview (porting R-467's `studio/page.py` capabilities), persistent chat /
+  multi-turn edit (porting R-468's), Solution Pack/Ecosystem build selection, Model Provider
+  settings, and a Problems tab — each a named, separately-scoped follow-up. See `.ai/tasks/R-473.md`.
 
 **Phase E — Plan/credit UX + admin surface (proposed R-474+)**
 - Plan-gated feature access in the UI, a credit top-up flow, a `super_admin` console (user

@@ -1,5 +1,58 @@
 # Work Log
 
+## 2026-09-18 — R-473 (Studio v1 in the console — build an app from the product, not curl)
+
+- **Why:** Phase D of `R_&_D/OmniStackAI_Commercial_Platform_Kickoff_v1.md`, first slice — a
+  logged-in user should be able to actually call the now-real `/jobs/build` (R-472) from the
+  product itself, not just curl, and see their real credit balance update.
+- **Scope, deliberately small:** the kickoff doc's Phase D vision is a full IDE-like surface
+  (persistent chat, top tabs Preview/Files/Code/Problems/Publish/More, Model Provider settings, a
+  Problems tab). Building all of that in one task would repeat the mistake this project's own
+  history avoids — the agent-engine's own hybrid-UI engine shipped across four separate, gated
+  Tracker IDs (R-465 synthesis, R-466 compile-repair, R-467 file browser + toggle, R-468 multi-turn
+  edit). This task ships the smallest real, end-to-end slice: prompt in, real build out, real
+  credit debit reflected in the UI. File browser, live preview, and chat/multi-turn edit are named,
+  not silently dropped, follow-ups.
+- **New `app/studio/page.tsx`** (Server Component): mirrors `app/page.tsx`'s auth gate exactly —
+  `getCurrentUser()` → redirect to `/login` if signed out.
+- **New `app/studio/studio-form.tsx`** (Client Component): a prompt textarea, a Build button, a
+  real pending state (builds take real time — 3s to 3+ minutes observed live, both in this task and
+  R-472's), an error banner on failure, and a result panel (name/description/entities/file_count/
+  commit_sha/files, plus the `usage` block and `credits_spent` when the agent-engine reported
+  them). Updates the displayed credit balance straight from the response's `credit_balance` — no
+  separate `/auth/me` re-fetch needed, the Job API already returns the authoritative post-debit
+  value.
+- **New `app/api/jobs/build/route.ts`**: server-side proxy — reads the session cookie
+  (`getSessionToken()`), 401s immediately with **no** upstream call if absent, then forwards to the
+  control-plane's `POST /jobs/build` with the bearer token attached (never exposed to client-side
+  JS, the same boundary every existing `app/api/auth/*` route already draws). No artificial
+  timeout — R-472's own `http.ResponseController.SetWriteDeadline` fix is what makes waiting out a
+  real multi-minute build possible; this route does nothing that would cut that short.
+- **`lib/control-plane.ts`** gained `BuildJobResponse`/`BuildJobUsage`/`buildApp()`, following the
+  exact `callControlPlane` pattern `login`/`registerAccount` already use. Only the fields this UI
+  actually renders are typed; an index signature lets other build-kind-specific fields (e.g.
+  `pack_id`) round-trip without the UI needing to know about them.
+- **No control-plane or agent-engine changes** — R-472 already built the real backend this task's
+  UI calls; this task is console-only.
+- **Gates:** `pnpm run typecheck`/`lint`/`build` all clean (11 routes; `/studio` and
+  `/api/jobs/build` both correctly dynamic, since they read the session cookie per request).
+  `task verify` — Ran 3,603 tests, OK, Stage 0 verification passed. `task lint`/`security:quick`/
+  `env:check` all pass. New `scripts/test.sh` R-473 block (contract files present, `buildApp()`
+  exists, the build route checks `getSessionToken()` before proxying).
+- **Live:** real Docker Postgres+control-plane, a real agent-engine Studio server on local Ollama
+  (kept free/reproducible, matching R-472's precedent), and a real `next start` console. `GET
+  /studio` with no session → `307` to `/login`; with a real session → `200`, correct credit balance
+  server-rendered. `POST /api/jobs/build` with no cookie → `401` instantly (no upstream call). Two
+  real build attempts: the first hit a genuine, unforced local-model IR-validation failure, honestly
+  proxied through as a `502` with the agent-engine's own error message — a real, live proof of the
+  error-banner path, not a synthetic test. The second succeeded for real: a genuine 157-file
+  "Recipe Box" repo with `entities`/`commit_sha`/`files`/`usage`/`credits_spent`/`credit_balance` in
+  exactly the shape the new UI renders.
+- **NEXT:** continue Phase D — port the agent-engine's own `studio/page.py` capabilities (file
+  browser + live preview from R-467, multi-turn chat/edit from R-468) into the console, and/or add
+  Solution Pack/Ecosystem build selection to the Studio UI. Phase E still needs its own explicit
+  founder sign-off before starting.
+
 ## 2026-09-18 — R-472 (Bridge the control-plane's Job API to the agent-engine — real credit debiting)
 
 - **Why:** Phase C of `R_&_D/OmniStackAI_Commercial_Platform_Kickoff_v1.md` — a real generation

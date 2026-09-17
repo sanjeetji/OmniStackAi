@@ -4,6 +4,23 @@ Last updated: 2026-09-18
 ## Current Phase
 Stage 0 (Founder Build Sequence, Brief Section 91) — BASIC/MVP
 
+> **R-473 (2026-09-18): Studio v1 in the console — build an app from the product, not curl.**
+> Phase D of `R_&_D/OmniStackAI_Commercial_Platform_Kickoff_v1.md`, first slice: a logged-in user
+> can open `apps/console-web`'s new `/studio` page, type a plain-English app description, click
+> Build, and get a real app built through R-472's real Job API, with the console showing the real
+> post-debit credit balance. Deliberately scoped small — no file browser, live preview, or chat yet
+> — matching how the agent-engine's own hybrid-UI engine shipped across four separate gated Tracker
+> IDs (R-465–R-468) rather than one large task; those capabilities are named follow-ups. New
+> `app/studio/page.tsx` (auth-gated) + `app/studio/studio-form.tsx` (prompt, Build, result panel,
+> error banner) + `app/api/jobs/build/route.ts` (server-side proxy, session-cookie-gated, bearer
+> token never exposed to client JS). No control-plane or agent-engine changes. `task verify`
+> **3,603 OK**; console `typecheck`/`lint`/`build` clean; live: a real Docker control-plane + a real
+> agent-engine Studio server on local Ollama + a real `next start` console proved `/studio`'s auth
+> gate, a genuine (unforced) local-model failure rendering as a real error banner, and a genuine
+> successful 157-file build with every field matching the UI's expectations.
+> NEXT: continue Phase D (file browser/live preview/chat, or Solution Pack/Ecosystem selection in
+> the Studio UI). Phase E still needs its own explicit founder sign-off before starting.
+
 > **R-472 (2026-09-18): bridge the control-plane's Job API to the agent-engine — real credit
 > debiting.** Phase C of `R_&_D/OmniStackAI_Commercial_Platform_Kickoff_v1.md`: the control-plane's
 > new `POST /jobs/build` authenticates the caller, forwards the request body verbatim to the

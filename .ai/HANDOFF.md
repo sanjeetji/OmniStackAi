@@ -1,9 +1,40 @@
 # Current Handoff
 
-Task ID: R-472
+Task ID: R-473
 Status: done
 Phase: BASIC/MVP — Founder Stage 0
 Branch: `main`
+
+> **R-473 Completed (2026-09-18): Studio v1 in the console — build an app from the product, not curl.**
+> - **Phase D of `R_&_D/OmniStackAI_Commercial_Platform_Kickoff_v1.md` (first slice)** — a
+>   logged-in user can open `apps/console-web`'s new `/studio` page, type a plain-English app
+>   description, click Build, and get a real app built through R-472's real Job API, with the
+>   console showing the real post-debit credit balance.
+> - **Deliberately scoped small, not the full Phase D vision** (persistent chat, top tabs
+>   Preview/Files/Code/Problems/Publish/More): matches how the agent-engine's own hybrid-UI engine
+>   shipped across four separate gated Tracker IDs (R-465–R-468) rather than one large task. File
+>   browser, live preview, and chat/multi-turn edit are named follow-ups, not silently dropped.
+> - New `app/studio/page.tsx` (auth-gated, mirrors `app/page.tsx` exactly) +
+>   `app/studio/studio-form.tsx` (prompt textarea, Build button, a real pending state — builds take
+>   real time, 3s–3+min observed live — result panel, error banner) +
+>   `app/api/jobs/build/route.ts` (server-side proxy: reads the session cookie, 401s locally with
+>   no upstream call if absent, forwards to the control-plane with the bearer token attached, never
+>   exposed to client JS). `lib/control-plane.ts` gained `BuildJobResponse`/`buildApp()` following
+>   the existing `login`/`registerAccount` pattern exactly.
+> - **No control-plane or agent-engine changes** — R-472 already built the real backend this task's
+>   UI calls.
+> - Gates: console `typecheck`/`lint`/`build` all clean (11 routes); `task verify` **3,603 OK**;
+>   `task lint`/`security:quick`/`env:check` all pass. **Live:** real Docker Postgres+control-plane,
+>   a real agent-engine Studio server on local Ollama, a real `next start` console — `/studio`
+>   redirects when signed out (307), renders correctly signed in (200, real credit balance); a real
+>   build attempt hit a genuine local-model IR-validation failure, honestly proxied as a `502` (a
+>   real, unforced proof of the error-banner path); a retry succeeded for real — a genuine 157-file
+>   "Recipe Box" repo with every field (`entities`/`commit_sha`/`files`/`usage`/`credits_spent`/
+>   `credit_balance`) matching exactly what the new UI renders.
+> - **NEXT:** continue Phase D — port the agent-engine's own `studio/page.py` capabilities (file
+>   browser + live preview from R-467, multi-turn chat/edit from R-468) into the console, and/or add
+>   Solution Pack/Ecosystem build selection to the Studio UI. See
+>   `R_&_D/OmniStackAI_Commercial_Platform_Kickoff_v1.md`, `.ai/tasks/R-473.md`.
 
 > **R-472 Completed (2026-09-18): Bridge the control-plane's Job API to the agent-engine — real credit debiting.**
 > - **Phase C of `R_&_D/OmniStackAI_Commercial_Platform_Kickoff_v1.md`** — the control-plane's new
