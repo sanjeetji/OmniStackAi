@@ -1,9 +1,28 @@
 # Current Handoff
 
-Task ID: R-465
+Task ID: R-466
 Status: done
 Phase: BASIC/MVP — Founder Stage 0
 Branch: `main`
+
+> **R-466 Completed (2026-09-17): Compile-Level Repair for LLM-Written UI + Rate-Limit-Aware Pacing — second brick of the hybrid engine.**
+> - **Compiler has the last word:** `verify/compile.py` captures `tsc --noEmit --pretty false` into per-file
+>   `CompileError`s; `codegen/hybrid_repair.py` feeds each LLM-written file's errors back through R-465's
+>   corrective channel (validator-gated, template fallback, outcome record), applies a `ProjectDiff` via
+>   `edit/apply_diff`, recompiles, reverts what still fails; deterministic files are never rewritten.
+> - **Pacing:** typed `ProviderRateLimitedError(429)` with parsed `Retry-After`; the adapter waits and re-sends
+>   the same request, bounded by `OMNISTACKAI_RATE_LIMIT_RETRIES` / `OMNISTACKAI_MAX_RETRY_AFTER_SECONDS`
+>   (`.env.example`), every wait logged. **Shrink on 413:** drop the echo, then a compact grounding that fits 8k
+>   tokens. Outcomes carry the HTTP status, never the body.
+> - CLI `task agent-engine:ui:synthesize` Step 3/3: link/install `node_modules`, compile, repair, commit.
+> - Gates: `task verify` **3,490 OK**; lint/security/env green; demos clean; `web-typecheck` PASSED ×2.
+> - Live (Groq free tier, honest): the 3-step CLI ran end-to-end (fallback repo compiled at 0 errors); pacing
+>   verified live (`Retry-After: 112` honoured, above the 60 s cap); the limiter was **tokens per day** (200k,
+>   191k used) — daily budget spent. **Founder action:** after the reset run with
+>   `OMNISTACKAI_MAX_RETRY_AFTER_SECONDS=180`, or add `GOOGLE_API_KEY` (Gemini) to `.env`.
+> - **NEXT R-467:** product-UI shell v1 (multi-turn chat, live preview, real file tree/viewer via
+>   `GET /api/build/{id}/files` + `/file?path=`, "hybrid UI" toggle, `ui_outcomes` + `CompileRepairReport` in
+>   the build payload). See `docs/HYBRID_UI.md`, `.ai/tasks/R-466.md`.
 
 > **R-465 Completed (2026-09-17): Grounded Hybrid UI Synthesis — first brick of the founder-approved HYBRID engine.**
 > - The LLM writes the modern Next.js UI **grounded in the real generated data layer** (`summarize_data_layer` parses

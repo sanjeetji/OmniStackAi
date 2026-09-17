@@ -72665,6 +72665,24 @@ def summarize_components(ir: ApplicationIR, *, max_chars: int = 16_000, max_name
     return _truncate("\n".join(lines), max_chars)
 
 
+# R-466: the compact grounding the engine switches to when a provider rejects the full request as too large
+# (Groq's 8k-tokens-per-minute tier answers 413 for a ~9k-token request). Every hook signature survives
+# (the data layer of a typical app is well under the cap); each component keeps its primary export; the
+# overview/screen prompts stay ≈12k chars (≈3k tokens), leaving room for a 4k-token page under 8k.
+_COMPACT_DATA_LAYER_CHARS = 5_000
+_COMPACT_COMPONENTS_CHARS = 4_000
+_COMPACT_DESIGN_TOKENS_CHARS = 1_000
+
+
+def compact_grounding(ir: ApplicationIR) -> dict[str, str]:
+    """The smaller data-layer/components/tokens blocks for size-limited providers (R-466)."""
+    return {
+        "data_layer": summarize_data_layer(ir, max_chars=_COMPACT_DATA_LAYER_CHARS),
+        "components": summarize_components(ir, max_chars=_COMPACT_COMPONENTS_CHARS, max_names_per_file=1),
+        "design_tokens": summarize_design_tokens(max_chars=_COMPACT_DESIGN_TOKENS_CHARS),
+    }
+
+
 def _synthesize_page_content(
     ir: ApplicationIR,
     *,
@@ -72741,6 +72759,8 @@ class NextjsWebAdapter:
                 "data_layer": summarize_data_layer(ir),
                 "components": summarize_components(ir),
                 "design_tokens": summarize_design_tokens(),
+                # R-466: the smaller variant the engine falls back to when a request is rejected as too large.
+                "compact_grounding": compact_grounding(ir),
             }
 
         slug = _slug(ir.name)

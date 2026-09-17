@@ -1,5 +1,49 @@
 # Work Log
 
+## 2026-09-17 — R-466 (Compile-Level Repair for LLM-Written UI + Rate-Limit-Aware Pacing)
+
+- **Why:** the R-465 live run showed two gaps — the gateway collapsed every HTTP failure into an opaque
+  `ProviderHTTPError` (no status, no `Retry-After`), and the R-465 validator is string-level (a page can pass
+  and still fail `tsc`; `run_verify` only records exit codes).
+- **Pacing (`model_gateway/errors.py`, `cloud.py`, `bootstrap.py`, `.env.example`):** `ProviderHTTPError`
+  carries `status_code` + `retry_after_seconds`; `ProviderRateLimitedError` for 429; pure `parse_retry_after`
+  (header delay-seconds / HTTP-date, else the body's "try again in 6.495s"); one `_http_error` builder for the
+  JSON and stream paths (bounded body, never the key); `generate()` waits the hint (+0.5s; 2s/4s backoff
+  without one) and re-sends the SAME request, bounded by `OMNISTACKAI_RATE_LIMIT_RETRIES` (2) and
+  `OMNISTACKAI_MAX_RETRY_AFTER_SECONDS` (60; a longer ask fails fast); every wait/give-up logged; injectable
+  sleep. No other error is retried; the circuit breaker and routing are untouched.
+- **Capturing compiler (`verify/compile.py`):** `CompileError`/`CompileReport` (JSON-safe, grouped by file),
+  `parse_tsc_output` (`--pretty false` format, de-duplicated, POSIX paths), `compile_web_project` (the app's own
+  `node_modules/.bin/tsc`, injectable runner, timeout → `VerifyError`), `ensure_web_dependencies`
+  (present / symlink an existing install / `pnpm install --ignore-scripts`).
+- **Compile repair (`codegen/hybrid_repair.py`):** `llm_file_specs` reproduces the exact R-465 prompts,
+  template fallbacks and compact prompts for `app/page.tsx` + `app/<screen>/page.tsx`;
+  `compile_errors_message` (bounded); `repair_compiled_files` sends `[SYSTEM, USER(prompt), ASSISTANT(current
+  file), USER(REJECTED: TypeScript reported N error(s) …)]`, validates, marks `compile-repair k/N`, falls back to
+  the template, records a `UiSynthesisOutcome`, and never touches a path without a spec; `build_repair_diff`
+  → `ProjectDiff` of `MODIFIED apps/web/<path>`; `compile_and_repair(_sync)` = compile → repair → apply →
+  recompile for `max_rounds`, reverting still-failing LLM files on the last round →
+  `CompileRepairReport(rounds, repaired, reverted, untouched_failures, final_ok)`.
+- **Shrink on "request too large" (`llm_ui.py`, `nextjs.py`) — amendment from the live runs:** a
+  `_Transcript` holds the bounded conversation and shrinks on 413 (or a 400 that says "context length"/"too
+  large"): first drop the echoed output (corrective text merged into the prompt turn), then switch to
+  `compact_grounding(ir)` (every hook signature; one export per component; tokens; prompts ≤ 14k chars);
+  threaded through the synthesis entry points, the adapter (only with a provider — default bytes unchanged),
+  `LlmFileSpec.compact_prompt` and `_repair_one`. `last_reason` now carries the HTTP status
+  (`ProviderHTTPError(413)`), never the body.
+- **CLI Step 3/3 (`intake/ui_synthesize_run.py`):** link (`OMNISTACKAI_WEB_NODE_MODULES`) or install
+  `node_modules`, compile, repair, revert, commit the repair as the customer identity, print each compile
+  round + repaired/reverted/untouched + the verdict; skips cleanly without the toolchain.
+- **Tests:** `test_cloud_rate_limit.py` (15), `test_compile_report.py` (11), `test_hybrid_repair.py` (12),
+  `test_llm_ui_compact.py` (10) — stub providers, fake runners, temp dirs. Gates: focused 115 passed;
+  `task verify` **3,490 OK**; lint/security/env green; demos clean; `web-typecheck` PASSED ×2.
+- **Live (Groq free tier) — as found:** the 3-step CLI ran end-to-end in 13 s (intake OK; all 5 UI calls
+  failed instantly on a non-429 status; fallbacks; Step 3 compiled at 0 errors, PASSED). A direct probe with
+  the full grounded prompt SUCCEEDED on an empty window (5,024 in / 3,639 out). A reproduction showed the 429
+  path working (typed; `Retry-After: 112` honoured) but giving up above the 60 s cap — the limiter was tokens
+  per DAY (200k, 191k used): the day's proofs spent the daily budget. Pacing + status outcomes are
+  live-verified; compile repair with real tsc errors and shrink-on-413 are stub-verified only.
+
 ## 2026-09-17 — R-465 (Grounded Hybrid UI Synthesis — LLM writes the UI over the deterministic data layer)
 
 - **Founder decisions (after the honest platform assessment):** compete via a HYBRID engine — an LLM writes

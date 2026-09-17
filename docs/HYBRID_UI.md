@@ -72,20 +72,73 @@ errors) through the same channel.
   explicit keyword threaded `NextjsWebAdapter.generate → assemble_project → build_app_from_ir /
   build_app_from_prompt` (R-465 replaced a never-set `OMNISTACKAI_SYNTHESIZE_ALL_SCREENS` env gate).
 
+## Compile-level repair (R-466, `codegen/hybrid_repair.py` + `verify/compile.py`)
+
+The validator is string-level; the compiler has the last word. `verify/compile.py` runs the app's own
+`tsc --noEmit --pretty false` and parses every diagnostic into a `CompileError(path, line, column, code,
+message)` (`run_verify` only ever recorded exit codes). `compile_and_repair` then:
+
+1. compiles; on failure groups the errors by file;
+2. for **LLM-written files only** (`app/page.tsx`, `app/<screen>/page.tsx` — `llm_file_specs` reproduces the
+   exact R-465 prompt and template for each), sends `[SYSTEM, USER(original grounded prompt),
+   ASSISTANT(current file), USER("REJECTED: TypeScript reported N error(s): L12:5 TS2339 …")]` — the same
+   `_repair_message` channel — validates the answer with `clean_and_validate_jsx`, and marks a success
+   `… (<model>; compile-repair k/N)`;
+3. applies the new content as a `ProjectDiff` of `MODIFIED apps/web/<path>` changes via `edit/apply_diff`,
+   recompiles, and repeats for `max_rounds` (default 2: one model round, then a **revert round** that puts the
+   deterministic template back for anything still failing);
+4. returns a JSON-safe `CompileRepairReport(rounds, repaired, reverted, untouched_failures, final_ok)`.
+
+A deterministic file with an error is listed in `untouched_failures` and **never rewritten** — that is a
+generator bug to fix in the platform, not something to paper over with a model. The CLI commits the repair as
+the customer identity, so the repo you get compiles.
+
+## Rate-limit pacing (R-466, `model_gateway/cloud.py`)
+
+A 429 is now a typed `ProviderRateLimitedError` (a `ProviderHTTPError` with `status_code` and
+`retry_after_seconds`). `parse_retry_after` reads the standard `Retry-After` header (delay-seconds or an
+HTTP-date) and falls back to the "Please try again in 6.495s" phrase Groq puts in the body. The adapter's
+`generate()` waits that long (plus 0.5s; exponential 2s/4s backoff when no hint) and **re-sends the same
+request**, up to `OMNISTACKAI_RATE_LIMIT_RETRIES` (default 2) and never longer than
+`OMNISTACKAI_MAX_RETRY_AFTER_SECONDS` (default 60) — a longer ask re-raises immediately so the caller decides,
+and every wait or give-up is logged with the numbers. Free tiers can ask for 1–3 minute waits: raise the cap
+(e.g. `OMNISTACKAI_MAX_RETRY_AFTER_SECONDS=180`) for the hybrid CLI. No other error is ever retried; the
+sleep is injectable, so the behaviour is unit-tested with 0 network. Every outcome record now carries the HTTP
+status of a failed call (`ProviderRateLimitedError(429)`, `ProviderHTTPError(413)`) — never the body.
+
+## Too-large requests: shrink and retry (R-466, `codegen/llm_ui.py`)
+
+Waiting cannot fix a request that is too large on its own: Groq answers **413** when one request exceeds the
+8k-tokens-per-minute limit by itself, and a full grounded UI request is ~9k tokens (≈5k prompt + 4k requested
+output). On a 413 (or a 400 that says "context length"/"too large") the transcript shrinks and the engine
+retries, each shrink costing one attempt from the same bounded budget:
+
+1. **drop the echoed prior output** — the corrective text ("REJECTED: …" or the compiler's errors) is merged
+   into the prompt turn, so a repair still carries its reason;
+2. **switch to the compact grounding** — `compact_grounding(ir)` keeps every hook signature
+   (`summarize_data_layer(max_chars=5_000)`), each component's primary export
+   (`summarize_components(max_chars=4_000, max_names_per_file=1)`) and the token names
+   (`summarize_design_tokens(max_chars=1_000)`); the compact overview/screen prompts are ≈12k chars (≈3k
+   tokens), leaving room for a 4k-token page under an 8k limit (a test keeps them ≤ 14k chars).
+
+`NextjsWebAdapter.generate` computes the compact blocks only when a provider is present (the deterministic
+default is untouched), `llm_file_specs` carries a `compact_prompt`, and compile repair shrinks the same way.
+Nothing else is ever retried on an exception.
+
 ## Run it
 
 ```bash
 # Paid, per-generation model calls (your Groq/Gemini key lives only in the gitignored .env):
 OMNISTACKAI_CLOUD_PROVIDER=groq task agent-engine:ui:synthesize -- "Create a food delivery app with restaurants and couriers"
 # Optional: OMNISTACKAI_APP_OUT_DIR=/path/to/repo  OMNISTACKAI_GROQ_MODEL=llama-3.3-70b-versatile
+#           OMNISTACKAI_WEB_NODE_MODULES=/path/to/an/existing/node_modules   (skips `pnpm install`)
 ```
 
-It compiles the prompt into an IR, builds the owned repo with every page model-written, and prints a per-file
-outcome table (`path | mode | attempts | model | last_reason`). Then compile it:
-
-```bash
-cd <repo>/apps/web && pnpm install --ignore-scripts && ./node_modules/.bin/tsc --noEmit
-```
+Step 1 compiles the prompt into an IR; Step 2 builds the owned repo with every page model-written; Step 3
+type-checks it with `tsc`, repairs model-written files from the compiler's errors, reverts what still fails,
+commits the repair, and prints each compile round, what was repaired/reverted, and the final verdict, followed
+by the per-file outcome table (`path | mode | attempts | model | last_reason`; compile repairs follow synthesis).
+When pnpm/tsc are not available Step 3 is skipped with a clean message and the command to run later.
 
 Local Ollama also works but the grounded prompt plus the repair transcript can exceed its 8192-token context;
 the CLI warns about this. Groq/Gemini are the intended providers for the hybrid engine.
@@ -99,14 +152,25 @@ engine behaved exactly as designed: the model answered, the validator rejected t
 ("Mismatched curly braces … truncated" — it hit the 4096 max-output), the repair loop engaged, the repair call was
 rate-limited (HTTP 429), and the file fell back to the template with a truthful outcome record
 (`mode=deterministic, attempts=2, last_reason=ProviderHTTPError`). Two consequences: the repair echo is capped at
-8k chars, and **rate-limit-aware pacing (HTTP 429 `retry-after`) in the model gateway is the R-466 companion**.
-To run the full hybrid flow today, use a provider/tier with a larger TPM budget (e.g. Gemini via `GOOGLE_API_KEY`,
-`OMNISTACKAI_CLOUD_PROVIDER=google`, or the Groq Dev tier).
+8k chars, and R-466 added the rate-limit pacing described above, so the adapter now waits the provider's own
+`Retry-After` instead of aborting. A larger TPM budget (Gemini via `GOOGLE_API_KEY`,
+`OMNISTACKAI_CLOUD_PROVIDER=google`, or the Groq Dev tier) still makes the flow much faster.
+
+**R-466 live runs (same account, reported as found):** the full three-step CLI ran end-to-end in 13 s —
+intake succeeded, all five UI calls failed instantly with a non-429 HTTP status (hidden at the time behind the
+bare type name — hence the status now in every outcome), every page fell back, and Step 3 compiled the repo
+at 0 errors. A direct probe with the full 19k-char grounded prompt then **succeeded** on an empty window
+(5,024 in / 3,639 out tokens), and a reproduction of the CLI path showed the 429 path working exactly as built
+— typed `ProviderRateLimitedError(429)`, `Retry-After: 112` honoured — but giving up because 112 s exceeded
+the 60 s cap (now tunable). That 429 was the **tokens-per-day** limiter (`Limit 200000, Used 191262`): the
+day's proofs had spent the free tier's daily budget, so a further full live proof waits for the daily reset
+or a Gemini key. The shrink-on-413 behaviour above is built from Groq's documented limit semantics and the
+measured request sizes, and is covered by stub tests — not yet by a live run.
 
 ## Limits and what comes next
 
-- The validator is string-level (imports, balance, default export). A file can pass validation and still have
-  **type errors** — that is exactly what **R-466** addresses: a capturing `tsc` executor feeding per-file
-  compiler errors back through the same repair channel, with per-file template fallback.
-- The product UI shell (chat, live preview, file tree) that drives this engine is **R-467**.
+- Brace/paren counting is a heuristic; the compiler (R-466) is the authority, and a file the compiler rejects
+  twice goes back to its template rather than shipping broken.
+- Compile repair currently runs in the opt-in CLI; the product UI shell (chat, live preview, file tree) that
+  drives the engine and surfaces the outcome/compile reports is **R-467**.
 - The backend, DB, auth and data layer stay deterministic by design — that is the point.

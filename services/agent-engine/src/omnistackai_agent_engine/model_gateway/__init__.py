@@ -34,6 +34,7 @@ from .cloud import (
     PROVIDER_SPECS,
     create_cloud_provider,
     custom_provider_specs_from_env,
+    parse_retry_after,
     resolve_provider_specs,
 )
 from .errors import (
@@ -51,6 +52,7 @@ from .errors import (
     ModelProviderError,
     NoEligibleProviderError,
     ProviderHTTPError,
+    ProviderRateLimitedError,
     ProviderRegistryError,
     ProviderResponseError,
     ProviderResponseTooLargeError,
@@ -120,6 +122,7 @@ __all__ = [
     "PROVIDER_SPECS",
     "ProviderHealth",
     "ProviderHTTPError",
+    "ProviderRateLimitedError",
     "ProviderRegistry",
     "ProviderRegistryError",
     "ProviderResponseError",
@@ -140,6 +143,7 @@ __all__ = [
     "build_gateway_from_env",
     "create_cloud_provider",
     "custom_provider_specs_from_env",
+    "parse_retry_after",
     "resolve_provider_specs",
     "estimate_input_tokens",
     "fallback_provider_ids_from_env",

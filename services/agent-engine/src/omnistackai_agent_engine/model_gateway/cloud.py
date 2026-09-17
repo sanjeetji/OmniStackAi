@@ -12,12 +12,14 @@ from __future__ import annotations
 
 import asyncio
 import json
+import logging
 import os
 import re
 import socket
-from collections.abc import AsyncIterator, Callable
+from collections.abc import AsyncIterator, Awaitable, Callable
 from dataclasses import dataclass
 from datetime import UTC, datetime
+from email.utils import parsedate_to_datetime
 from time import monotonic
 from typing import Any
 from urllib.error import HTTPError, URLError
@@ -40,6 +42,7 @@ from .errors import (
     MissingCredentialError,
     ModelProviderError,
     ProviderHTTPError,
+    ProviderRateLimitedError,
     ProviderResponseError,
     ProviderResponseTooLargeError,
     ProviderTimeoutError,
@@ -49,6 +52,8 @@ from .errors import (
 )
 
 _DEFAULT_MAX_RESPONSE_BYTES = 4 * 1024 * 1024
+
+logger = logging.getLogger(__name__)
 
 _OPENAI_FINISH = {
     "stop": FinishReason.STOP,
@@ -66,6 +71,54 @@ _GEMINI_FINISH = {
     "STOP": FinishReason.STOP,
     "MAX_TOKENS": FinishReason.LENGTH,
 }
+
+# R-466 rate-limit pacing. A 429 carries how long to wait (the standard Retry-After header, or the
+# "Please try again in 6.495s" phrase Groq puts in the body); the adapter waits that long (bounded) and
+# re-sends the SAME request, so a multi-call flow completes on a small tokens-per-minute tier instead
+# of aborting. Never sleeps longer than the cap; never retries any other error.
+_RETRY_AFTER_BODY = re.compile(r"try again in\s+(\d+(?:\.\d+)?)\s*(ms|s|m)\b", re.IGNORECASE)
+_DEFAULT_RATE_LIMIT_RETRIES = 2
+_DEFAULT_MAX_RETRY_AFTER_SECONDS = 60.0
+_BACKOFF_BASE_SECONDS = 2.0
+_RETRY_AFTER_PAD_SECONDS = 0.5  # provider clocks are coarse; land just after the window reopens
+
+
+def parse_retry_after(headers: Any, body: str = "", *, now: datetime | None = None) -> float | None:
+    """How long a provider asked us to wait, in seconds, or None when it did not say.
+
+    Reads the standard ``Retry-After`` header (delay-seconds or an HTTP-date, measured from ``now``),
+    then falls back to the bounded "try again in 6.495s" phrase in the error body. Pure; no network.
+    """
+
+    raw = None
+    getter = getattr(headers, "get", None) if headers is not None else None
+    if callable(getter):
+        raw = getter("Retry-After") or getter("retry-after")
+    if isinstance(raw, str) and raw.strip():
+        value = raw.strip()
+        try:
+            return max(0.0, float(value))
+        except ValueError:
+            pass
+        try:
+            when = parsedate_to_datetime(value)
+        except (TypeError, ValueError, IndexError):
+            when = None
+        if when is not None:
+            if when.tzinfo is None:
+                when = when.replace(tzinfo=UTC)
+            current = now if now is not None else datetime.now(UTC)
+            return max(0.0, (when - current).total_seconds())
+    match = _RETRY_AFTER_BODY.search(body or "")
+    if match is None:
+        return None
+    amount = float(match.group(1))
+    unit = match.group(2).lower()
+    if unit == "ms":
+        return amount / 1000.0
+    if unit == "m":
+        return amount * 60.0
+    return amount
 
 
 class _RejectRedirects(HTTPRedirectHandler):
@@ -208,9 +261,20 @@ class _HttpCloudProvider:
         max_stream_line_bytes: int = 1024 * 1024,
         max_concurrency: int = 4,
         opener: OpenerDirector | Any | None = None,
+        rate_limit_retries: int = _DEFAULT_RATE_LIMIT_RETRIES,
+        max_retry_after_seconds: float = _DEFAULT_MAX_RETRY_AFTER_SECONDS,
+        sleep: Callable[[float], Awaitable[None]] | None = None,
     ) -> None:
         if not isinstance(api_key, str) or not api_key.strip():
             raise MissingCredentialError(f"{provider_id} requires a non-empty API key")
+        if isinstance(rate_limit_retries, bool) or not isinstance(rate_limit_retries, int) or rate_limit_retries < 0:
+            raise InvalidProviderConfigurationError("rate limit retries must be a non-negative integer")
+        if (
+            isinstance(max_retry_after_seconds, bool)
+            or not isinstance(max_retry_after_seconds, (int, float))
+            or max_retry_after_seconds <= 0
+        ):
+            raise InvalidProviderConfigurationError("max retry-after seconds must be positive")
         if not isinstance(descriptor, ModelDescriptor):
             raise InvalidProviderConfigurationError("descriptor must be a ModelDescriptor")
         if descriptor.model.provider_id != provider_id:
@@ -231,6 +295,9 @@ class _HttpCloudProvider:
         self._max_response_bytes = max_response_bytes
         self._max_stream_line_bytes = max_stream_line_bytes
         self._semaphore = asyncio.Semaphore(max_concurrency)
+        self._rate_limit_retries = rate_limit_retries
+        self._max_retry_after_seconds = float(max_retry_after_seconds)
+        self._sleep = sleep if sleep is not None else asyncio.sleep
         handlers = [ProxyHandler({}), _RejectRedirects()]
         try:
             import certifi
@@ -262,7 +329,34 @@ class _HttpCloudProvider:
         self._validate_request(request)
         path, headers, payload = self._build(request)
         started_at = monotonic()
-        response = await self._post_json(path, headers, payload, request.timeout_seconds)
+        attempt = 0
+        while True:
+            try:
+                response = await self._post_json(path, headers, payload, request.timeout_seconds)
+                break
+            except ProviderRateLimitedError as error:
+                # R-466: pace on 429 only — wait what the provider asked (bounded), re-send the same request.
+                delay = self._rate_limit_delay(error, attempt)
+                if delay is None:
+                    hinted = error.retry_after_seconds
+                    if hinted is not None and hinted + _RETRY_AFTER_PAD_SECONDS > self._max_retry_after_seconds:
+                        logger.warning(
+                            "%s is rate-limited (429) and asked for a %.0fs wait, above the %.0fs cap "
+                            "(OMNISTACKAI_MAX_RETRY_AFTER_SECONDS); giving up",
+                            self._provider_id, hinted, self._max_retry_after_seconds,
+                        )
+                    else:
+                        logger.warning(
+                            "%s is rate-limited (429); the retry budget of %d is spent; giving up",
+                            self._provider_id, self._rate_limit_retries,
+                        )
+                    raise
+                attempt += 1
+                logger.warning(
+                    "%s is rate-limited (429); waiting %.1fs before re-sending (retry %d/%d)",
+                    self._provider_id, delay, attempt, self._rate_limit_retries,
+                )
+                await self._sleep(delay)
         text, finish_reason, usage = self._parse(response, request)
         latency_ms = max(0, int((monotonic() - started_at) * 1000))
         return GenerateResponse(request.request_id, request.model, text, finish_reason, usage, latency_ms)
@@ -308,10 +402,13 @@ class _HttpCloudProvider:
             status = getattr(response, "status", 200)
             if not isinstance(status, int) or not 200 <= status < 300:
                 response.close()
-                raise ProviderHTTPError(f"{self._provider_id} returned a non-success status")
+                raise ProviderHTTPError(
+                    f"{self._provider_id} returned a non-success status",
+                    status_code=status if isinstance(status, int) else None,
+                )
             return response
         except HTTPError as error:
-            raise ProviderHTTPError(f"{self._provider_id} returned an HTTP error") from error
+            raise self._http_error(error) from error
         except (socket.timeout, TimeoutError) as error:
             raise ProviderTimeoutError(f"{self._provider_id} request timed out") from error
         except (URLError, OSError) as error:
@@ -408,18 +505,13 @@ class _HttpCloudProvider:
             with self._opener.open(request, timeout=timeout_seconds) as response:
                 status = getattr(response, "status", 200)
                 if not isinstance(status, int) or not 200 <= status < 300:
-                    raise ProviderHTTPError(f"{self._provider_id} returned a non-success status")
+                    raise ProviderHTTPError(
+                        f"{self._provider_id} returned a non-success status",
+                        status_code=status if isinstance(status, int) else None,
+                    )
                 raw = response.read(self._max_response_bytes + 1)
         except HTTPError as error:
-            error_body = ""
-            try:
-                error_body = error.read().decode("utf-8", errors="replace")
-            except Exception:
-                pass
-            msg = f"{self._provider_id} returned an HTTP {error.code} error"
-            if error_body:
-                msg += f": {error_body[:500]}"
-            raise ProviderHTTPError(msg) from error
+            raise self._http_error(error) from error
         except (socket.timeout, TimeoutError) as error:
             raise ProviderTimeoutError(f"{self._provider_id} request timed out") from error
         except (URLError, OSError) as error:
@@ -450,6 +542,43 @@ class _HttpCloudProvider:
             if isinstance(getattr(error, "reason", None), TimeoutError):
                 raise ProviderTimeoutError(f"{self._provider_id} request timed out") from error
             raise ProviderUnavailableError(f"{self._provider_id} is unavailable") from error
+
+    def _http_error(self, error: HTTPError) -> ProviderHTTPError:
+        """Map an HTTPError to the platform's typed error: bounded body, status code, Retry-After, no key."""
+
+        error_body = ""
+        try:
+            error_body = error.read().decode("utf-8", errors="replace")
+        except Exception:
+            pass
+        code = error.code if isinstance(error.code, int) else None
+        msg = f"{self._provider_id} returned an HTTP {code} error" if code is not None else (
+            f"{self._provider_id} returned an HTTP error"
+        )
+        if error_body:
+            msg += f": {error_body[:500]}"
+        retry_after = parse_retry_after(getattr(error, "headers", None), error_body)
+        if code == 429:
+            return ProviderRateLimitedError(msg, status_code=code, retry_after_seconds=retry_after)
+        return ProviderHTTPError(msg, status_code=code, retry_after_seconds=retry_after)
+
+    def _rate_limit_delay(self, error: ProviderRateLimitedError, attempt: int) -> float | None:
+        """Seconds to wait before re-sending after a 429, or None when the adapter must give up.
+
+        Uses the provider's own hint (plus a small pad) when it gave one, else exponential backoff;
+        gives up once the retry budget is spent or the ask exceeds the cap (a long wait is the caller's call).
+        """
+
+        if attempt >= self._rate_limit_retries:
+            return None
+        hinted = error.retry_after_seconds
+        if hinted is None:
+            delay = _BACKOFF_BASE_SECONDS * (2**attempt)
+        else:
+            delay = hinted + _RETRY_AFTER_PAD_SECONDS
+        if delay > self._max_retry_after_seconds:
+            return None
+        return delay
 
     @staticmethod
     def _require_int(value: Any, provider_id: str) -> int:
@@ -682,6 +811,9 @@ def create_cloud_provider(
     base_url: str | None = None,
     max_concurrency: int = 4,
     opener: OpenerDirector | Any | None = None,
+    rate_limit_retries: int = _DEFAULT_RATE_LIMIT_RETRIES,
+    max_retry_after_seconds: float = _DEFAULT_MAX_RETRY_AFTER_SECONDS,
+    sleep: Callable[[float], Awaitable[None]] | None = None,
 ) -> _HttpCloudProvider:
     """Construct the adapter for a spec's provider kind."""
 
@@ -696,4 +828,7 @@ def create_cloud_provider(
         base_url=base_url or spec.base_url,
         max_concurrency=max_concurrency,
         opener=opener,
+        rate_limit_retries=rate_limit_retries,
+        max_retry_after_seconds=max_retry_after_seconds,
+        sleep=sleep,
     )

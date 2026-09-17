@@ -2,10 +2,10 @@ schema_version: 1
 project: OmniStackAI
 phase: BASIC/MVP
 founder_stage: 0
-current_task: R-465
+current_task: R-466
 current_status: done
 branch: main
-last_completed_task: R-465
+last_completed_task: R-466
 # TASK COMPILATION AUDIT — 2026-09-16
 # Performed to achieve 100% synchronization across all task-tracking documentation.
 # Tracker workbook expanded to 464 tasks with R-464.
@@ -20,7 +20,7 @@ task_compilation_audit:
   mvp_done: 252
   mvp_completion_pct: 70.4
   overall_completion_pct: 54.3
-  test_suite_count: 3442
+  test_suite_count: 3490
   changelog_entries: 253
   missing_entries_backfilled:
     - R-272
@@ -34,6 +34,31 @@ task_compilation_audit:
       new_status: DONE
       reason: "Task fully completed on 2026-09-11 with 35 tests. Status left stale during rapid development sprint."
 last_completed_task_summary: >-
+  Completed R-466 (2026-09-17): Compile-Level Repair for LLM-Written UI + Rate-Limit-Aware Pacing - the second
+  brick of the hybrid engine, driven by what the live runs proved. model_gateway: ProviderHTTPError carries
+  status_code + retry_after_seconds; new ProviderRateLimitedError (429); parse_retry_after (Retry-After header
+  seconds/HTTP-date, else the body's "try again in Ns"); the cloud adapter's generate() waits the hint (+0.5s;
+  2s/4s backoff without one) and re-sends the SAME request, bounded by OMNISTACKAI_RATE_LIMIT_RETRIES (2) and
+  OMNISTACKAI_MAX_RETRY_AFTER_SECONDS (60; a longer ask fails fast), every wait/give-up logged, injectable sleep,
+  knobs read by the bootstrap and documented in .env.example. verify/compile.py: CompileError/CompileReport,
+  parse_tsc_output (`tsc --noEmit --pretty false`), compile_web_project (injectable runner), ensure_web_dependencies
+  (present/linked/installed). codegen/hybrid_repair.py: llm_file_specs (the exact R-465 prompts + template
+  fallbacks + compact prompts), compile_errors_message, repair_compiled_files (compiler errors through
+  _repair_message; validator-gated; template fallback; UiSynthesisOutcome per file; deterministic files never
+  rewritten), build_repair_diff (ProjectDiff of MODIFIED apps/web paths), compile_and_repair(_sync) (compile ->
+  repair -> apply -> recompile for max_rounds, reverting still-failing LLM files on the last round). llm_ui:
+  _Transcript shrinks on a "request too large" rejection (413, or a 400 that says so) - drop the echo, then
+  switch to compact_grounding(ir) (every hook signature, one export per component; prompts <= 14k chars) -
+  threaded through the synthesis entry points and the adapter (only with a provider; default bytes unchanged);
+  outcome last_reason carries the HTTP status (ProviderHTTPError(413)), never the body. CLI Step 3/3: link or
+  install node_modules, compile, repair, revert, commit the repair as the customer, print rounds and verdict.
+  Tests: test_cloud_rate_limit (15), test_compile_report (11), test_hybrid_repair (12), test_llm_ui_compact (10);
+  task verify 3,490 OK; lint/security/env green; demos clean; web-typecheck PASSED x2. Live (Groq free tier):
+  the 3-step CLI ran end-to-end in 13s with every UI call failing on a non-429 status and the fallback repo
+  compiling at 0 errors; a direct probe with the full grounded prompt succeeded on an empty window; a
+  reproduction showed the 429 path working (Retry-After 112 honoured) but capped at 60s - the limiter was
+  tokens per DAY (200k, 191k used), so the daily budget was spent. Pacing + status outcomes are live-verified;
+  compile repair with real tsc errors and shrink-on-413 are stub-verified only. Previously:
   Completed R-465 (2026-09-17): Grounded Hybrid UI Synthesis - the first brick of the founder-approved HYBRID
   engine (LLM writes the modern UI over the deterministic typed data layer, with a bounded repair loop and a
   template fallback; model calls opt-in, never in task verify). codegen/nextjs.py gained summarize_data_layer
@@ -878,15 +903,14 @@ id_note: >-
   ID); R-416..R-429 built/hardened the "chat -> create -> run -> preview" front door; R-430..R-437 build SPINE.
 blockers: []
 next_action: >-
-  R-465 is complete: the hybrid UI engine is grounded (real hooks/types/api + real components + real design
-  tokens, parsed from the generators), has a bounded validation->feedback->retry loop with a deterministic
-  fallback, an explicit synthesize_screens switch, and an opt-in CLI (`task agent-engine:ui:synthesize`).
-  NEXT R-466: compile-level repair - a capturing tsc executor (verify/run_verify only returns exit codes) that
-  feeds per-file compiler errors through the same _repair_message channel for LLM-written files only, bounded
-  retries, per-file template fallback, applied via a hand-built ProjectDiff + edit/apply_diff - PLUS
-  rate-limit-aware pacing/backoff (HTTP 429 retry-after) in the model gateway so the multi-call hybrid flow
-  completes on small tokens-per-minute tiers (the live proof showed Groq free tier = 8k TPM, one model). Then
-  R-467: the product-UI shell (chat + live preview + file tree) driving synthesize_screens=True and surfacing
-  ui_outcomes in the build payload. Founder action to unlock a full live proof: add GOOGLE_API_KEY (Gemini) to
-  the gitignored .env, or upgrade the Groq tier. Keep task verify model/Docker/DB/install/network-free. The
-  UI-component series remains paused/resumable; the tracker workbook still lags (ends at R-462).
+  R-466 is complete: the hybrid engine now compiles what the model wrote (capturing tsc executor + per-file
+  repair through the same corrective channel, template revert, customer-identity commit), paces HTTP 429 from
+  the provider's own Retry-After (env-tunable cap), shrinks a too-large request to a compact grounding, and
+  records the HTTP status of every failed call. NEXT R-467: the product-UI shell v1 in the Studio - multi-turn
+  chat (a follow-up re-synthesizes the targeted screen), a real file tree from `files` via new
+  GET /api/build/{id}/files and GET /api/build/{id}/file?path=, a read-only code viewer, a "hybrid UI" toggle
+  that sets synthesize_screens=True, and the ui_outcomes + CompileRepairReport surfaced in the build payload
+  (both are JSON-safe by design). Founder action to unlock a full live proof: after the Groq daily reset run the
+  CLI with OMNISTACKAI_MAX_RETRY_AFTER_SECONDS=180, or add GOOGLE_API_KEY (Gemini) to the gitignored .env.
+  Keep task verify model/Docker/DB/install/network-free. The UI-component series remains paused/resumable; the
+  tracker workbook still lags (ends at R-462).

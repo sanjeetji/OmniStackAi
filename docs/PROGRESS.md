@@ -1,4 +1,4 @@
-# OmniStackAI — implementation progress (as of R-465)
+# OmniStackAI — implementation progress (as of R-466)
 
 A living summary of what is built, what is pending, and how to see results. Numbers come from the
 execution tracker (`R_&_D/OmniStackAI_Execution_Tracker_v6.xlsx`, `Phase_Roadmap`, 461 tasks as of
@@ -6,7 +6,15 @@ R-461 completion) plus the state files (`.ai/`), Git history, and CHANGELOG.
 
 ## Headline
 
-- **3,442 automated tests pass**, fully offline and network-independent (`task verify`).
+- **3,490 automated tests pass**, fully offline and network-independent (`task verify`).
+- **R-466 — the hybrid engine compiles what the model wrote and paces rate limits (2026-09-17):** a
+  capturing `tsc` executor turns compiler diagnostics into per-file errors; each LLM-written file's errors go
+  back to the model through the same corrective channel, still-failing files revert to their templates, the
+  repair is applied as a `ProjectDiff` and committed — deterministic files are never rewritten. HTTP 429 is
+  typed and paced from the provider's own `Retry-After` (env-tunable cap); a request rejected as too large
+  shrinks to a compact grounding and retries; every failed call's HTTP status is in the outcome record. Live
+  (Groq free tier): the 3-step CLI ran end-to-end with the fallback repo compiling at 0 errors; pacing was
+  verified live; the day's proofs hit the tokens-per-day cap. Next: R-467 product-UI shell.
 - **R-465 — the HYBRID UI engine is grounded (2026-09-17):** the LLM writes the modern UI over the
   deterministic, typed data layer — the prompt embeds the REAL generated hooks/types/api (parsed from the same
   generators, so it cannot drift), the real component exports, and the real design tokens — with a bounded
@@ -524,14 +532,13 @@ the live run needs the key + a network machine.
 
 ## What's next
 
-**Hybrid engine (founder-approved direction, R-465 done):** the next brick is **R-466 — compile-level
-repair**: a capturing `tsc` executor (today `verify/run_verify` returns only exit codes) feeding per-file compiler
-errors back through R-465's `_repair_message` channel for LLM-written files only, bounded retries, per-file
-template fallback (applied via a hand-built `ProjectDiff` + `edit/apply_diff`) — plus **rate-limit-aware pacing
-in the model gateway** (HTTP 429 `retry-after`) so the multi-call hybrid flow completes on small
-tokens-per-minute tiers. Then **R-467 — the product-UI shell** (multi-turn chat, live preview, a real file tree +
-viewer) driving `synthesize_screens=True` and surfacing `ui_outcomes`. Founder action to unlock a full live proof:
-add `GOOGLE_API_KEY` (Gemini) to the gitignored `.env`, or upgrade the Groq tier.
+**Hybrid engine (founder-approved direction; R-465 grounding and R-466 compile repair + pacing done):** the
+next brick is **R-467 — the product-UI shell v1** in the Studio: multi-turn chat (a follow-up re-synthesizes the
+targeted screen), a real file tree from `files` via new `GET /api/build/{id}/files` + `GET /api/build/{id}/file?path=`,
+a read-only code viewer, a "hybrid UI" toggle that sets `synthesize_screens=True`, and the `ui_outcomes` +
+`CompileRepairReport` surfaced in the build payload (both JSON-safe by design). Founder action to unlock a full
+live proof of a model-written page that compiles: after the Groq daily reset run the CLI with
+`OMNISTACKAI_MAX_RETRY_AFTER_SECONDS=180`, or add `GOOGLE_API_KEY` (Gemini) to the gitignored `.env`.
 
 The local front door is built through robust browser preview with memory: R-416 prompt → IR, R-417 IR →
 owned repo, R-418 local chat studio, R-419 turnkey local run, R-420 SQL hardening, R-421 managed embedded

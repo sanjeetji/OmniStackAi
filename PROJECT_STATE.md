@@ -4,6 +4,23 @@ Last updated: 2026-09-17
 ## Current Phase
 Stage 0 (Founder Build Sequence, Brief Section 91) — BASIC/MVP
 
+> **R-466 (2026-09-17): the HYBRID engine compiles what the model wrote, paces rate limits, and shrinks too-large requests.**
+> - `verify/compile.py`: capturing `tsc --noEmit --pretty false` executor → `CompileReport` of per-file `CompileError`s
+>   (+ `ensure_web_dependencies`: reuse / symlink / `pnpm install`). `codegen/hybrid_repair.py`: `llm_file_specs`
+>   (the exact R-465 prompts, template fallbacks, compact prompts), `repair_compiled_files` (compiler errors through
+>   `_repair_message`; validator-gated; template fallback; outcome per file; deterministic files never rewritten),
+>   `build_repair_diff` + `compile_and_repair(_sync)` (compile → repair → apply → recompile; revert on the last round).
+> - `model_gateway`: `ProviderHTTPError(status_code, retry_after_seconds)`, `ProviderRateLimitedError` (429),
+>   `parse_retry_after`; the cloud adapter waits the provider's own hint and re-sends the same request, bounded by
+>   `OMNISTACKAI_RATE_LIMIT_RETRIES` / `OMNISTACKAI_MAX_RETRY_AFTER_SECONDS` (documented in `.env.example`), logged.
+> - `codegen/llm_ui.py`: `_Transcript` shrinks on a "request too large" rejection (drop the echo, then
+>   `compact_grounding(ir)`); `last_reason` carries the HTTP status (`ProviderHTTPError(413)`), never the body.
+> - CLI `task agent-engine:ui:synthesize` Step 3/3 type-checks, repairs, reverts and commits. Tests: 48 new
+>   (`test_cloud_rate_limit`, `test_compile_report`, `test_hybrid_repair`, `test_llm_ui_compact`); `task verify`
+>   **3,490** OK; `web-typecheck` PASSED ×2. Live (Groq free tier): the 3-step CLI ran end-to-end (fallback repo at 0
+>   errors); pacing verified live (`Retry-After: 112` honoured, above the cap); limiter = tokens per day (daily budget
+>   spent). NEXT R-467: product-UI shell v1.
+
 > **R-465 (2026-09-17): the HYBRID UI engine is grounded — the LLM writes the UI over the deterministic data layer.**
 > - `codegen/nextjs.py`: `summarize_data_layer` (real `lib/types.ts`/`lib/hooks.ts`/`lib/api.ts` surface parsed from
 >   the same generators — cannot drift), `_component_files` + `summarize_components` (real ~110 component files and

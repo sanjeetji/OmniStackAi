@@ -44,7 +44,30 @@ class ProviderTimeoutError(ModelProviderError):
 
 
 class ProviderHTTPError(ModelProviderError):
+    """A non-success HTTP status from a provider.
+
+    R-466: carries the status code and any parsed ``Retry-After`` hint (seconds) so callers can pace
+    instead of aborting; the message stays bounded and never contains a credential.
+    """
+
     code = "provider_http_error"
+
+    def __init__(
+        self,
+        message: str = "",
+        *,
+        status_code: int | None = None,
+        retry_after_seconds: float | None = None,
+    ) -> None:
+        super().__init__(message)
+        self.status_code = status_code
+        self.retry_after_seconds = retry_after_seconds
+
+
+class ProviderRateLimitedError(ProviderHTTPError):
+    """HTTP 429: the provider asked us to slow down. The cloud adapter honours the hint (bounded)."""
+
+    code = "provider_rate_limited"
 
 
 class ProviderResponseError(ModelProviderError):

@@ -112,9 +112,14 @@ task agent-engine:app:build -- "Build a recipe box where users save recipes with
 # Compile an app prompt into a specific output directory
 OMNISTACKAI_APP_OUT_DIR="$HOME/Documents/Projects/GeneratedApps" task agent-engine:app:build -- "Task tracker with projects and deadlines"
 
-# HYBRID build (R-465): the UI is written by a model over the deterministic API/DB/auth layer, with a
-# validation->feedback->retry loop and template fallback. Opt-in, paid per generation (Groq/Gemini keys in .env).
+# HYBRID build (R-465/R-466): the UI is written by a model over the deterministic API/DB/auth layer, with a
+# validation->feedback->retry loop and template fallback, then type-checked with tsc and repaired from the
+# compiler's errors (still-failing files revert to templates; the repair is committed). Opt-in, paid per
+# generation (Groq/Gemini keys in .env). 429s are paced automatically (Retry-After honoured, bounded) and a
+# request a provider rejects as too large (413) is shrunk to a compact grounding and retried.
 OMNISTACKAI_CLOUD_PROVIDER=groq task agent-engine:ui:synthesize -- "Create a food delivery app with restaurants and couriers"
+# Optional: OMNISTACKAI_WEB_NODE_MODULES=/path/to/existing/node_modules  (skips `pnpm install` in Step 3)
+#           OMNISTACKAI_MAX_RETRY_AFTER_SECONDS=180                      (free tiers ask for 1-3 minute waits)
 
 # Compile a prompt into an Application IR (JSON architecture spec) without writing files
 task agent-engine:intake:run -- "A bookstore with books, authors, and orders"

@@ -27,6 +27,7 @@ from .field_validation import (
 )
 from .files import GeneratedFile, GeneratedProject
 from .llm_ui import (
+    MARKER_PREFIX,
     UiSynthesisOutcome,
     build_screen_synthesis_prompt,
     build_ui_synthesis_prompt,
@@ -35,6 +36,16 @@ from .llm_ui import (
     synthesize_overview_page_sync,
     synthesize_screen_page,
     synthesize_screen_page_sync,
+)
+from .hybrid_repair import (
+    CompileRepairReport,
+    LlmFileSpec,
+    build_repair_diff,
+    compile_and_repair,
+    compile_and_repair_sync,
+    compile_errors_message,
+    llm_file_specs,
+    repair_compiled_files,
 )
 from .nextjs import (
     NextjsWebAdapter,
@@ -79,6 +90,7 @@ from .nextjs import (
     render_global_error_page,
     render_globals_css,
     render_hooks,
+    compact_grounding,
     summarize_components,
     summarize_data_layer,
     summarize_design_tokens,
@@ -317,6 +329,16 @@ __all__ = [
     "synthesize_screen_page",
     "synthesize_screen_page_sync",
     "UiSynthesisOutcome",
+    "MARKER_PREFIX",
+    "CompileRepairReport",
+    "LlmFileSpec",
+    "build_repair_diff",
+    "compile_and_repair",
+    "compile_and_repair_sync",
+    "compile_errors_message",
+    "llm_file_specs",
+    "repair_compiled_files",
+    "compact_grounding",
     "summarize_components",
     "summarize_data_layer",
     "summarize_design_tokens",

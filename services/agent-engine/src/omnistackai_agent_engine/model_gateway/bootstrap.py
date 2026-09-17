@@ -141,7 +141,14 @@ def build_gateway_from_env(recorder: UsageLedger | None = None) -> GatewayBootst
         model_id = os.environ.get(spec.model_env, "") or spec.default_model
         descriptor = _cloud_descriptor(spec.provider_id, model_id)
         registry.register(
-            create_cloud_provider(spec, api_key=api_key, descriptor=descriptor)
+            create_cloud_provider(
+                spec,
+                api_key=api_key,
+                descriptor=descriptor,
+                # R-466: how a 429 is paced. Free tiers may ask for waits above the default 60s cap.
+                rate_limit_retries=_int_env("OMNISTACKAI_RATE_LIMIT_RETRIES", 2),
+                max_retry_after_seconds=_float_env("OMNISTACKAI_MAX_RETRY_AFTER_SECONDS", 60.0),
+            )
         )
         cloud_descriptors[name] = descriptor
 

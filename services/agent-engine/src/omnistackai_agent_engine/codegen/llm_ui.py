@@ -381,8 +381,9 @@ Deliver a state-of-the-art, domain-specific UI for this screen:
 class UiSynthesisOutcome:
     """JSON-safe, secret-free record of how one file was produced.
 
-    ``last_reason`` is a validator rejection reason or an exception *type name* only — provider errors can
-    embed response bodies, which must never leak into state or logs.
+    ``last_reason`` is a validator rejection reason or an exception *type name* (plus the HTTP status code when
+    the error carries one, e.g. ``ProviderHTTPError(413)``) — provider errors can embed response bodies, which
+    must never leak into state or logs.
     """
 
     path: str
@@ -442,6 +443,74 @@ def _repair_message(path: str, reason: str) -> str:
     )
 
 
+def _reason_for(err: BaseException) -> str:
+    """A secret-free reason for an exception: the type name, plus the HTTP status when the error has one.
+
+    Provider errors can embed response bodies, so the message is never used — but the status code is not
+    a secret and is exactly what an operator needs (R-466: `ProviderHTTPError(413)` vs a bare type name).
+    """
+    name = type(err).__name__
+    status = getattr(err, "status_code", None)
+    return f"{name}({status})" if isinstance(status, int) and not isinstance(status, bool) else name
+
+
+_TOO_LARGE_HINT = re.compile(r"too large|too long|context[ _]length|maximum context|reduce (?:the |your )?(?:message|prompt)", re.I)
+
+
+def _is_request_too_large(err: BaseException) -> bool:
+    """True when a provider rejected the request for its SIZE (HTTP 413, or a 400 that says so).
+
+    Groq answers 413 when one request exceeds the tokens-per-minute limit on its own; OpenAI-style APIs
+    answer 400 "context length exceeded". Waiting cannot fix either — only a smaller request can.
+    """
+    status = getattr(err, "status_code", None)
+    if status == 413:
+        return True
+    return status == 400 and bool(_TOO_LARGE_HINT.search(str(err)))
+
+
+class _Transcript:
+    """The bounded conversation for one file, able to shrink itself after a 'request too large' rejection.
+
+    Shape: ``[SYSTEM, USER(prompt)]`` plus one ``[ASSISTANT(echo), USER(corrective)]`` pair per rejected
+    attempt. ``shrink()`` applies the next smaller form — level 1 drops every echo (the latest corrective text
+    is merged into the prompt turn), level 2 swaps the full grounded prompt for the compact one — so a
+    too-large rejection costs at most two extra attempts (R-466).
+    """
+
+    def __init__(self, prompt: str, compact_prompt: str | None) -> None:
+        self.base = prompt.strip()
+        self.compact = compact_prompt.strip() if compact_prompt else None
+        self.compacted = False
+        self.merged_repair: str | None = None
+        self.pairs: list[tuple[str, str]] = []
+
+    def reject(self, echo: str, corrective: str) -> None:
+        self.pairs.append((echo, corrective))
+
+    def shrink(self) -> str | None:
+        """Apply the next shrink level; return what changed, or None when nothing is left to drop."""
+        if self.pairs:
+            self.merged_repair = self.pairs[-1][1]
+            self.pairs = []
+            return "dropped the echoed output"
+        if self.compact is not None and not self.compacted:
+            self.base = self.compact
+            self.compacted = True
+            return "switched to the compact grounding"
+        return None
+
+    def messages(self) -> tuple:
+        from ..model_gateway.contracts import ChatRole, Message
+
+        first = self.base if self.merged_repair is None else f"{self.base}\n\n{self.merged_repair}"
+        messages = [Message(ChatRole.SYSTEM, _SYSTEM_MESSAGE), Message(ChatRole.USER, first)]
+        for echo, corrective in self.pairs:
+            messages.append(Message(ChatRole.ASSISTANT, echo))
+            messages.append(Message(ChatRole.USER, corrective))
+        return tuple(messages)
+
+
 def _finalize(cleaned_jsx: str, tag: str) -> str:
     if cleaned_jsx.startswith('"use client";'):
         return '"use client";\n' + tag + cleaned_jsx[len('"use client";') :].lstrip("\n")
@@ -459,9 +528,14 @@ async def _synthesize_file(
     max_attempts: int,
     outcomes: list[UiSynthesisOutcome] | None,
     log_label: str,
+    compact_prompt: str | None = None,
 ) -> str:
-    """Generate one file with a bounded validation→feedback→retry loop. Never raises."""
-    from ..model_gateway.contracts import ChatRole, GenerateRequest, Message
+    """Generate one file with a bounded validation→feedback→retry loop. Never raises.
+
+    Retries happen for exactly two reasons: a validator rejection (the reason is fed back) and a provider
+    rejecting the request as too large (the transcript shrinks — R-466). Every other exception falls back at once.
+    """
+    from ..model_gateway.contracts import GenerateRequest
 
     try:
         target, max_output = _resolve_target(provider, model_id)
@@ -471,7 +545,7 @@ async def _synthesize_file(
         return fallback()
 
     attempts_allowed = max(1, int(max_attempts))
-    messages = [Message(ChatRole.SYSTEM, _SYSTEM_MESSAGE), Message(ChatRole.USER, prompt.strip())]
+    transcript = _Transcript(prompt, compact_prompt)
     attempts = 0
     last_reason = ""
     for attempt in range(1, attempts_allowed + 1):
@@ -480,13 +554,17 @@ async def _synthesize_file(
             request = GenerateRequest(
                 request_id=f"ui-synth-{uuid.uuid4().hex[:12]}",
                 model=target,
-                messages=tuple(messages),
+                messages=transcript.messages(),
                 max_output_tokens=max_output,
                 timeout_seconds=timeout_seconds,
             )
             response = await asyncio.wait_for(provider.generate(request), timeout=timeout_seconds)
         except Exception as err:  # noqa: BLE001 - transport/provider errors never retry; fall back
-            last_reason = type(err).__name__
+            last_reason = _reason_for(err)
+            shrunk = transcript.shrink() if _is_request_too_large(err) and attempt < attempts_allowed else None
+            if shrunk is not None:
+                logger.warning("LLM UI synthesis for %s: request too large (%s); %s and retrying", log_label, last_reason, shrunk)
+                continue
             logger.warning(
                 "LLM UI synthesis for %s failed (%s); falling back to the deterministic template", log_label, last_reason
             )
@@ -506,12 +584,7 @@ async def _synthesize_file(
             "Synthesized JSX for %s rejected on attempt %d/%d (%s)", log_label, attempt, attempts_allowed, reason
         )
         if attempt < attempts_allowed:
-            try:
-                messages.append(Message(ChatRole.ASSISTANT, _safe_message_text(raw, _MAX_ECHO_CHARS)))
-                messages.append(Message(ChatRole.USER, _repair_message(path, reason)))
-            except Exception as err:  # noqa: BLE001 - a malformed transcript must not raise out of synthesis
-                last_reason = type(err).__name__
-                break
+            transcript.reject(_safe_message_text(raw, _MAX_ECHO_CHARS), _repair_message(path, reason))
 
     if outcomes is not None:
         outcomes.append(UiSynthesisOutcome(path, "deterministic", attempts, target.model_id, last_reason))
@@ -537,10 +610,13 @@ async def synthesize_overview_page(
     data_layer: str | None = None,
     components: str | None = None,
     design_tokens: str | None = None,
+    compact_grounding: dict | None = None,
 ) -> str:
     """Synthesize the bespoke overview page (``app/page.tsx``) or fall back to the deterministic template.
 
-    Never raises: any failure returns ``_overview_page(ir)``.
+    Never raises: any failure returns ``_overview_page(ir)``. ``compact_grounding`` (R-466) supplies the
+    smaller data-layer/components/tokens blocks the engine switches to when a provider rejects the full
+    request as too large.
     """
     from .nextjs import _overview_page
 
@@ -550,6 +626,7 @@ async def synthesize_overview_page(
     prompt = build_ui_synthesis_prompt(
         ir, user_prompt, data_layer=data_layer, components=components, design_tokens=design_tokens
     )
+    compact_prompt = build_ui_synthesis_prompt(ir, user_prompt, **compact_grounding) if compact_grounding else None
     path = "app/page.tsx"
     primary: list[UiSynthesisOutcome] = []
     result = await _synthesize_file(
@@ -562,6 +639,7 @@ async def synthesize_overview_page(
         max_attempts=max_attempts,
         outcomes=primary,
         log_label=f"project '{ir.name}' {path}",
+        compact_prompt=compact_prompt,
     )
     if primary and primary[-1].mode == "deterministic" and failover_provider is not None:
         # One extra pass with the failover provider (preserves the R-462 failover behavior).
@@ -577,6 +655,7 @@ async def synthesize_overview_page(
             max_attempts=max_attempts,
             outcomes=failover,
             log_label=f"project '{ir.name}' {path} (failover)",
+            compact_prompt=compact_prompt,
         )
         primary = failover
     if outcomes is not None:
@@ -596,6 +675,7 @@ def synthesize_overview_page_sync(
     data_layer: str | None = None,
     components: str | None = None,
     design_tokens: str | None = None,
+    compact_grounding: dict | None = None,
 ) -> str:
     """Synchronous bridge for synthesize_overview_page (the repair loop lives inside the coroutine)."""
     if provider is None:
@@ -614,6 +694,7 @@ def synthesize_overview_page_sync(
         data_layer=data_layer,
         components=components,
         design_tokens=design_tokens,
+        compact_grounding=compact_grounding,
     )
     return _run_sync(coro_factory)
 
@@ -631,6 +712,7 @@ async def synthesize_screen_page(
     data_layer: str | None = None,
     components: str | None = None,
     design_tokens: str | None = None,
+    compact_grounding: dict | None = None,
 ) -> str:
     """Synthesize a bespoke screen page (``app/<screen>/page.tsx``) or fall back to the deterministic template."""
     from .nextjs import _screen_page
@@ -640,6 +722,9 @@ async def synthesize_screen_page(
 
     prompt = build_screen_synthesis_prompt(
         screen, ir, user_prompt, data_layer=data_layer, components=components, design_tokens=design_tokens
+    )
+    compact_prompt = (
+        build_screen_synthesis_prompt(screen, ir, user_prompt, **compact_grounding) if compact_grounding else None
     )
     path = f"app/{screen.id}/page.tsx"
     return await _synthesize_file(
@@ -652,6 +737,7 @@ async def synthesize_screen_page(
         max_attempts=max_attempts,
         outcomes=outcomes,
         log_label=f"project '{ir.name}' {path}",
+        compact_prompt=compact_prompt,
     )
 
 
@@ -668,6 +754,7 @@ def synthesize_screen_page_sync(
     data_layer: str | None = None,
     components: str | None = None,
     design_tokens: str | None = None,
+    compact_grounding: dict | None = None,
 ) -> str:
     """Synchronous bridge for synthesize_screen_page."""
     if provider is None:
@@ -687,6 +774,7 @@ def synthesize_screen_page_sync(
         data_layer=data_layer,
         components=components,
         design_tokens=design_tokens,
+        compact_grounding=compact_grounding,
     )
     return _run_sync(coro_factory)
 

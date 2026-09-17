@@ -1,37 +1,46 @@
-task_id: R-465
+task_id: R-466
 status: completed
 phase: MVP
 tracker_row: null
 started_at: "2026-09-17"
 completed_at: "2026-09-17"
 objective: >-
-  Grounded Hybrid UI Synthesis (first brick of the founder-approved hybrid engine): the LLM writes the modern
-  Next.js UI constrained to the deterministic typed data layer (real generated lib/types.ts / lib/api.ts /
-  lib/hooks.ts, derived by parsing the same generators so it cannot drift) and the existing design-token layer,
-  with a bounded validation->feedback->retry loop (retry only on validator rejection, never on exceptions) and a
-  deterministic-template fallback. Replaced the never-set OMNISTACKAI_SYNTHESIZE_ALL_SCREENS env gate with an
-  explicit synthesize_screens flag threaded generate -> assemble_project -> build_app_from_ir/prompt (default
-  False; deterministic output byte-identical). Hardened the import whitelist (multi-line bypass, react-*,
-  require, dynamic import). Added a JSON-safe secret-free UiSynthesisOutcome per file and an opt-in CLI
-  `task agent-engine:ui:synthesize` (Groq/Gemini via OMNISTACKAI_CLOUD_PROVIDER, Ollama fallback). Model calls
-  stay opt-in and never run under task verify (stub providers, 0 real calls).
+  Second brick of the founder-approved hybrid engine, driven by the R-465/R-466 live runs: (1) rate-limit-aware
+  pacing in the model gateway - a typed ProviderRateLimitedError carrying the HTTP status and a parsed
+  Retry-After (header seconds/HTTP-date, else the provider body's "try again in Ns"), and a bounded,
+  injectable-sleep retry of the same request inside the cloud provider's generate(), with the cap and retry
+  budget env-tunable (OMNISTACKAI_MAX_RETRY_AFTER_SECONDS / OMNISTACKAI_RATE_LIMIT_RETRIES) and every wait
+  logged; (2) compile-level repair - a capturing tsc executor (verify/compile.py: `tsc --noEmit --pretty false`
+  parsed into per-file CompileErrors) and codegen/hybrid_repair.py, which feeds each LLM-written file's
+  compiler errors back through R-465's _repair_message channel (bounded rounds, validator-gated, template
+  fallback per file, UiSynthesisOutcome records), never rewrites deterministic files, and applies the result via
+  a hand-built ProjectDiff + edit/apply_diff with one customer-identity commit; wired into the opt-in
+  `task agent-engine:ui:synthesize` CLI as Step 3/3; (3) shrink-and-retry when a provider rejects a request as
+  too large (413, or a 400 that says so): drop the echoed output, then switch to a compact grounding (every hook
+  signature, one export per component) that fits an 8k-token tier; (4) outcome records carry the HTTP status of
+  a failed call (ProviderHTTPError(413)), never the body. task verify stays model-, network- and toolchain-free.
 allowed_paths:
+  - services/agent-engine/src/omnistackai_agent_engine/model_gateway/errors.py
+  - services/agent-engine/src/omnistackai_agent_engine/model_gateway/cloud.py
+  - services/agent-engine/src/omnistackai_agent_engine/model_gateway/__init__.py
+  - services/agent-engine/src/omnistackai_agent_engine/model_gateway/bootstrap.py
+  - .env.example
+  - services/agent-engine/src/omnistackai_agent_engine/verify/compile.py
+  - services/agent-engine/src/omnistackai_agent_engine/verify/__init__.py
+  - services/agent-engine/src/omnistackai_agent_engine/codegen/hybrid_repair.py
+  - services/agent-engine/src/omnistackai_agent_engine/codegen/__init__.py
   - services/agent-engine/src/omnistackai_agent_engine/codegen/llm_ui.py
   - services/agent-engine/src/omnistackai_agent_engine/codegen/nextjs.py
-  - services/agent-engine/src/omnistackai_agent_engine/codegen/assembler.py
-  - services/agent-engine/src/omnistackai_agent_engine/codegen/__init__.py
-  - services/agent-engine/src/omnistackai_agent_engine/intake/build_app.py
   - services/agent-engine/src/omnistackai_agent_engine/intake/ui_synthesize_run.py
-  - services/agent-engine/tests/test_llm_ui_grounding.py
-  - services/agent-engine/tests/test_llm_ui.py
-  - services/agent-engine/tests/test_platform_feature_completeness.py
-  - scripts/agent-engine.sh
-  - Taskfile.yml
+  - services/agent-engine/tests/test_cloud_rate_limit.py
+  - services/agent-engine/tests/test_compile_report.py
+  - services/agent-engine/tests/test_hybrid_repair.py
+  - services/agent-engine/tests/test_llm_ui_compact.py
   - COMMANDS.md
   - docs/HYBRID_UI.md
   - docs/PROGRESS.md
   - docs/RESUME_PROMPT.md
-  - .ai/tasks/R-465.md
+  - .ai/tasks/R-466.md
   - .ai/CURRENT_TASK.yaml
   - .ai/PROJECT_STATE.yaml
   - .ai/WORK_LOG.md
@@ -39,13 +48,13 @@ allowed_paths:
   - PROJECT_STATE.md
   - CHANGELOG.md
 forbidden_changes:
-  - No model, network, Docker, or toolchain calls under task verify; the model path stays opt-in
-  - No new dependencies (Python 3.13 stdlib only); no vendor SDKs; no secrets in source/logs/state/tests/commits
-  - Do not change the bytes of the deterministic default output (parse, do not refactor, the hooks/types/api generators; reproduce the component file set identically)
-  - Do not change the Application IR, DB engine (PostgreSQL stays), or generated-project contracts
+  - No model, network, Docker, or toolchain calls under task verify (fake runners / stub providers only)
+  - No new dependencies (Python 3.13 stdlib only); no vendor SDKs; no secrets in source/logs/state/tests/commits; provider errors never include the API key
+  - Do not change the bytes of the deterministic default output; never rewrite non-LLM files during repair
+  - Do not change the Application IR, DB engine (PostgreSQL stays), generated-project contracts, or gateway routing semantics
   - Do not modify or commit the untracked .claude directory
 required_gates:
-  - focused: tests/test_llm_ui_grounding.py + tests/test_llm_ui.py + tests/test_platform_feature_completeness.py
+  - focused: tests/test_cloud_rate_limit.py + tests/test_compile_report.py + tests/test_hybrid_repair.py + tests/test_llm_ui_compact.py (+ neighbours)
   - task verify
   - task lint
   - task security:quick
@@ -53,34 +62,34 @@ required_gates:
   - task builder:demo -- minimal-blog
   - task builder:demo -- rideshare-favourites
   - task agent-engine:web-typecheck -- minimal-blog / -- rideshare-favourites (deterministic default unchanged)
-  - "live proof (opt-in, paid): task agent-engine:ui:synthesize + tsc on the produced app"
+  - "live re-run (opt-in, paid): task agent-engine:ui:synthesize with compile repair, reported honestly"
 model_tool_trace:
   routing: deterministic_only
   local_calls: 0
   cloud_calls: 0
   note: >-
-    Implementation and verify used in-memory stub providers only. The live proof was a separate opt-in run
-    with the founder's Groq key (3 cloud requests total, all reported in evidence).
+    Implementation and verify use in-memory stub providers, fake runners and temp dirs only. The live runs
+    were separate opt-in steps with the founder's Groq key (one full CLI run, one direct probe, one
+    reproduction), all reported in evidence.
 evidence:
-  focused_tests: "47 passed (test_llm_ui_grounding 15 new, test_llm_ui, test_platform_feature_completeness)"
-  verify: "Ran 3442 tests ... OK; Stage 0 verification passed (3,427 + 15 new; 0 model calls)"
+  focused_tests: "115 passed (48 new: rate-limit 15, compile-report 11, hybrid-repair 12, compact/shrink 10; plus neighbouring suites)"
+  verify: "Ran 3490 tests ... OK; Stage 0 verification passed (3,442 + 48 new; 0 model calls)"
   lint: "Lint passed"
   security: "Stage 0 secret-policy check passed"
   env: "Environment contract passed"
-  demos: "minimal-blog 157 files; rideshare-favourites 153 files (unchanged baseline)"
+  demos: "minimal-blog and rideshare-favourites built clean"
   web_typecheck: "minimal-blog PASSED (0 errors); rideshare-favourites PASSED (0 errors) - deterministic default unchanged"
-  live_proof: >-
-    Founder's Groq account: free on_demand tier, 8,000 TPM, exactly one accessible model (openai/gpt-oss-120b).
-    Run 1 (full CLI) -> HTTP 429 on the intake call ("Used 3809, Requested 4857"); CLI traceback leak fixed.
-    Run 2 (scoped: one grounded overview call for minimal-blog + tsc) -> the model returned a page; the validator
-    rejected it with an exact reason (Mismatched curly braces 179/178, truncated at max_output 4096); the repair
-    loop engaged; attempt 2 -> HTTP 429 (echo pushed the request past 8k TPM) -> graceful deterministic fallback;
-    outcome {mode: deterministic, attempts: 2, last_reason: ProviderHTTPError}; repo compiles (tsc 0 errors).
-    Engine behaves as designed under adverse conditions; an end-to-end LLM-page-compiles proof needs a TPM
-    budget above 8k/min (GOOGLE_API_KEY for Gemini, or Groq Dev tier). Repair echo cap lowered 16k -> 8k chars.
+  live_runs: >-
+    Groq free tier. Full 3-step CLI finished in 13s: intake OK (162 files, first commit), all 5 UI calls failed
+    instantly with a non-429 HTTP status (outcomes now carry the status code), pages fell back, Step 3 linked
+    node_modules and compiled at 0 errors (final PASSED). A direct probe with the full 19k-char grounded prompt
+    SUCCEEDED on an empty window (5024 in / 3639 out). A reproduction showed the 429 path working (typed error,
+    Retry-After 112 honoured) but giving up above the 60s cap (now env-tunable); that limiter was tokens per
+    day (200k, 191k used) - the daily budget was spent, so no further live call was possible today. Pacing and
+    status-carrying outcomes are live-verified; compile repair with real tsc errors and shrink-on-413 are
+    verified by stub/fake-runner tests only.
 next_action: >-
-  R-465 done. NEXT R-466: compile-level repair (a capturing tsc executor feeding per-file errors through the
-  same _repair_message channel, per-file template fallback) plus rate-limit-aware pacing/backoff (HTTP 429
-  retry-after) in the model gateway so the hybrid flow completes on small TPM tiers. Then R-467: the product-UI
-  shell (chat + live preview + file tree) driving synthesize_screens=True and surfacing ui_outcomes. Founder
-  action to unlock a full live proof: add GOOGLE_API_KEY (Gemini) to .env or upgrade the Groq tier.
+  R-466 done. NEXT R-467: the product-UI shell (multi-turn chat + live preview + real file tree/viewer via new
+  GET /api/build/{id}/files and /file?path=) driving synthesize_screens=True and surfacing ui_outcomes plus the
+  CompileRepairReport in the build payload. Founder action to unlock a full live proof: wait for the Groq daily
+  reset and run with OMNISTACKAI_MAX_RETRY_AFTER_SECONDS=180, or add GOOGLE_API_KEY (Gemini) to .env.
