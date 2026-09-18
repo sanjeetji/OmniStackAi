@@ -13,14 +13,18 @@ import (
 	"github.com/sanjeetji/OmniStackAi/services/control-plane/internal/auth"
 )
 
-// Register mounts the Job API: building an app, following up with an edit, and read-only
-// browsing of what a build produced.
+// Register mounts the Job API: building an app, following up with an edit, read-only browsing of
+// what a build produced, and controlling the trusted-local live preview.
 func Register(mux *http.ServeMux, deps Deps) {
 	mux.HandleFunc("POST /jobs/build", handleBuild(deps))
 	mux.HandleFunc("POST /jobs/build/{id}/edit", handleBuildEdit(deps))
 	mux.HandleFunc("GET /jobs/build/{id}/turns", handleBuildTurns(deps))
 	mux.HandleFunc("GET /jobs/build/{id}/files", handleBuildFiles(deps))
 	mux.HandleFunc("GET /jobs/build/{id}/file", handleBuildFile(deps))
+	mux.HandleFunc("GET /jobs/preview", handlePreviewStatus(deps))
+	mux.HandleFunc("POST /jobs/preview/stop", handlePreviewStop(deps))
+	mux.HandleFunc("POST /jobs/preview/restart", handlePreviewRestart(deps))
+	mux.HandleFunc("POST /jobs/build/{id}/preview", handleBuildPreview(deps))
 }
 
 // handleBuild authenticates the caller and forwards their JSON body verbatim to the agent-engine's
@@ -213,15 +217,27 @@ func handleBuildFile(deps Deps) http.HandlerFunc {
 }
 
 // proxyGet makes a GET request to targetURL and copies the upstream status code and body back to
-// w unchanged - the same "dumb pipe" shape handleBuild uses for POST, so the agent-engine's own
-// error responses (404 unknown build, 400 bad path, ...) reach the caller exactly as it sent them.
+// w unchanged - a thin wrapper over proxyUpstream, kept so every existing GET call site stays as
+// simple as it was before R-478 generalized the POST case too.
 func proxyGet(w http.ResponseWriter, r *http.Request, deps Deps, targetURL string) {
-	upstreamRequest, err := http.NewRequestWithContext(r.Context(), http.MethodGet, targetURL, nil)
+	proxyUpstream(w, r, deps, http.MethodGet, targetURL, nil)
+}
+
+// proxyUpstream makes an HTTP request to targetURL using method (forwarding body, or none for a
+// nil body) and copies the upstream status code and body back to w unchanged - the same "dumb
+// pipe" shape for both the read-only GET routes and the credit-free preview-control POST routes
+// (status/stop/restart/build-preview), none of which need proxyAndDebit's decode-and-charge logic.
+func proxyUpstream(w http.ResponseWriter, r *http.Request, deps Deps, method string, targetURL string, body io.Reader) {
+	upstreamRequest, err := http.NewRequestWithContext(r.Context(), method, targetURL, body)
 	if err != nil {
 		deps.logger().Error("build proxy request", "error", err)
 		writeError(w, http.StatusInternalServerError, "could not build upstream request")
 		return
 	}
+	if body != nil {
+		upstreamRequest.Header.Set("Content-Type", "application/json")
+	}
+
 	upstreamResponse, err := deps.httpClient().Do(upstreamRequest)
 	if err != nil {
 		deps.logger().Error("call agent-engine", "error", err)
@@ -230,7 +246,7 @@ func proxyGet(w http.ResponseWriter, r *http.Request, deps Deps, targetURL strin
 	}
 	defer func() { _ = upstreamResponse.Body.Close() }()
 
-	body, err := io.ReadAll(upstreamResponse.Body)
+	respBody, err := io.ReadAll(upstreamResponse.Body)
 	if err != nil {
 		deps.logger().Error("read agent-engine response", "error", err)
 		writeError(w, http.StatusBadGateway, "could not read build service response")
@@ -238,7 +254,98 @@ func proxyGet(w http.ResponseWriter, r *http.Request, deps Deps, targetURL strin
 	}
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(upstreamResponse.StatusCode)
-	_, _ = w.Write(body)
+	_, _ = w.Write(respBody)
+}
+
+// handlePreviewStatus proxies GET /api/preview verbatim - the singleton preview's current
+// status ("whichever preview is currently running"). No debit: checking status isn't a billable
+// model call.
+func handlePreviewStatus(deps Deps) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		if _, err := auth.RequireUser(r.Context(), deps.AuthStore, r); err != nil {
+			writeAuthError(w, deps, err)
+			return
+		}
+		proxyGet(w, r, deps, deps.AgentEngineURL+"/api/preview")
+	}
+}
+
+// handlePreviewStop proxies POST /api/preview/stop verbatim, forwarding whatever body the caller
+// sent (the agent-engine treats an empty body as {} - an ecosystem caller may include
+// surface_slug, out of scope for today's console UI but not worth rejecting here). No debit:
+// stopping a local process isn't a billable model call.
+func handlePreviewStop(deps Deps) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		if _, err := auth.RequireUser(r.Context(), deps.AuthStore, r); err != nil {
+			writeAuthError(w, deps, err)
+			return
+		}
+		body, err := io.ReadAll(r.Body)
+		_ = r.Body.Close()
+		if err != nil {
+			writeError(w, http.StatusBadRequest, "could not read request body")
+			return
+		}
+		proxyUpstream(w, r, deps, http.MethodPost, deps.AgentEngineURL+"/api/preview/stop", bytes.NewReader(body))
+	}
+}
+
+// handlePreviewRestart proxies POST /api/preview/restart verbatim, same body-forwarding shape as
+// handlePreviewStop. Write deadline is extended via defaultPreviewTimeout: restarting the
+// currently-running preview can itself trigger a real cold start, the same real wait
+// handleBuildPreview can hit.
+func handlePreviewRestart(deps Deps) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		if controller := http.NewResponseController(w); controller != nil {
+			_ = controller.SetWriteDeadline(time.Now().Add(defaultPreviewTimeout))
+		}
+		if _, err := auth.RequireUser(r.Context(), deps.AuthStore, r); err != nil {
+			writeAuthError(w, deps, err)
+			return
+		}
+		body, err := io.ReadAll(r.Body)
+		_ = r.Body.Close()
+		if err != nil {
+			writeError(w, http.StatusBadRequest, "could not read request body")
+			return
+		}
+		proxyUpstream(w, r, deps, http.MethodPost, deps.AgentEngineURL+"/api/preview/restart", bytes.NewReader(body))
+	}
+}
+
+// handleBuildPreview proxies POST /api/history/preview - the build-scoped preview a chat-per-build
+// UI actually needs ("show me *this* build's preview"), verbatim except for the outgoing body:
+// the id always comes from the URL path, never the caller's own body, matching every other
+// build-scoped route in this package. Write deadline is extended via defaultPreviewTimeout since
+// this can trigger a real cold start (StudioPreviewManager.replace()).
+//
+// An unknown/evicted build id is NOT proxied as a 404 - the agent-engine's own
+// _preview_recorded_build returns a plain 200 {"status":"error","message":"..."} for that case
+// (verified by reading live_serve.py before this task's tests were written), and this proxy
+// deliberately makes no attempt to "fix" that shape into a 404 - it forwards exactly what the
+// agent-engine says.
+func handleBuildPreview(deps Deps) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		if controller := http.NewResponseController(w); controller != nil {
+			_ = controller.SetWriteDeadline(time.Now().Add(defaultPreviewTimeout))
+		}
+		if _, err := auth.RequireUser(r.Context(), deps.AuthStore, r); err != nil {
+			writeAuthError(w, deps, err)
+			return
+		}
+		id := r.PathValue("id")
+		if id == "" {
+			writeError(w, http.StatusBadRequest, "build id is required")
+			return
+		}
+		body, err := json.Marshal(map[string]string{"id": id})
+		if err != nil {
+			deps.logger().Error("build preview request body", "error", err)
+			writeError(w, http.StatusInternalServerError, "could not build upstream request")
+			return
+		}
+		proxyUpstream(w, r, deps, http.MethodPost, deps.AgentEngineURL+"/api/history/preview", bytes.NewReader(body))
+	}
 }
 
 // writeAuthError maps auth.RequireUser's error to the right HTTP status - shared by every Job API

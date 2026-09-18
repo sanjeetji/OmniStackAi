@@ -53,3 +53,10 @@ func (d Deps) logger() *slog.Logger {
 }
 
 const defaultBuildTimeout = 5 * time.Minute
+
+// defaultPreviewTimeout extends the write deadline for the one preview route that can trigger a
+// real cold start (POST /jobs/build/{id}/preview, via StudioPreviewManager.replace()) - sized just
+// above the agent-engine's own real preview-readiness wait (localrun/run.py's
+// health_timeout_seconds default of 45s), not the much larger defaultBuildTimeout, which is
+// oversized for this.
+const defaultPreviewTimeout = 60 * time.Second

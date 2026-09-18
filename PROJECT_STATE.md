@@ -4,6 +4,22 @@ Last updated: 2026-09-19
 ## Current Phase
 Stage 0 (Founder Build Sequence, Brief Section 91) — BASIC/MVP
 
+> **R-478 (2026-09-19): Backend — live preview proxy (local-only).** Fourth of the founder-approved
+> 7-task plan (R-475–R-481). Four new control-plane routes proxying the agent-engine's existing
+> trusted-local preview control surface verbatim: `GET /jobs/preview`, `POST /jobs/preview/stop`,
+> `POST /jobs/preview/restart` (the singleton surface) plus `POST /jobs/build/{id}/preview` (the
+> build-scoped one, server-constructing its own `{"id": id}` body rather than trusting the
+> caller's). All auth-required, no credit debit, zero agent-engine changes. Verified, not assumed:
+> an unknown build's build-scoped preview route returns a real 200 `{"status":"error"}`, not a 404
+> — the proxy forwards it unchanged. New `defaultPreviewTimeout` (60s) applied to both
+> `handleBuildPreview` and `handlePreviewRestart` (both can trigger a real cold start). `task
+> verify` **3,604 OK**; control-plane `go test` all green (38 tests, 13 new). Live: real control-plane
+> rebuilt + real agent-engine Studio server in preview mode proved a real build auto-starting a real
+> preview, real status/stop/restart/build-preview proxying, the 200-with-error shape confirmed live
+> for an unknown build, unchanged credit balance across all four calls, and uniform 404s against
+> build-only mode.
+> NEXT: R-479 (console: live preview UI), then R-480–R-481 per the approved plan.
+
 > **R-477 (2026-09-19): Console — chat UI.** Third of the founder-approved 7-task plan
 > (R-475–R-481). Replaced `/studio`'s one-shot prompt form with a persistent, multi-turn chat thread
 > on R-475's shell, wired to R-476's new routes. `buildId` (`null` vs. set) decides whether the

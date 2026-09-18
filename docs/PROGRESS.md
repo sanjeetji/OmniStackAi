@@ -1,4 +1,4 @@
-# OmniStackAI — implementation progress (as of R-477)
+# OmniStackAI — implementation progress (as of R-478)
 
 A living summary of what is built, what is pending, and how to see results. Numbers come from the
 execution tracker (`R_&_D/OmniStackAI_Execution_Tracker_v6.xlsx`, `Phase_Roadmap`, 461 tasks as of
@@ -8,6 +8,20 @@ R-461 completion) plus the state files (`.ai/`), Git history, and CHANGELOG.
 
 - **3,604 automated tests pass** (agent-engine + Go control-plane), fully offline and
   network-independent (`task verify`), plus the console's own `typecheck`/`lint`/`build` gates.
+- **R-478 — Backend: live preview proxy, local-only (2026-09-19):** fourth of the seven. Four new
+  control-plane routes proxying the agent-engine's existing trusted-local preview control surface
+  verbatim: `GET /jobs/preview`, `POST /jobs/preview/stop`, `POST /jobs/preview/restart` (the
+  singleton surface) plus `POST /jobs/build/{id}/preview` (the build-scoped one, server-constructing
+  its own `{"id": id}` body rather than trusting the caller's). All auth-required, no credit debit,
+  zero agent-engine changes. Verified, not assumed: an unknown build's build-scoped preview route
+  returns a real 200 `{"status":"error"}`, not a 404 — the proxy forwards it unchanged. New
+  `defaultPreviewTimeout` (60s) applied to both `handleBuildPreview` and `handlePreviewRestart`
+  (both can trigger a real cold start). `task verify` **3,604 OK**; control-plane `go test` all
+  green (38 tests, 13 new). Live: real control-plane rebuilt + real agent-engine Studio server in
+  preview mode proved a real build auto-starting a real preview, real
+  status/stop/restart/build-preview proxying, the 200-with-error shape confirmed live for an
+  unknown build, unchanged credit balance across all four calls, and uniform 404s against
+  build-only mode. See `.ai/tasks/R-478.md` for full verification detail.
 - **R-477 — Console: chat UI (2026-09-19):** third of the seven. Replaced `/studio`'s one-shot
   prompt form with a persistent, multi-turn chat thread on R-475's shell, wired to R-476's new
   routes. `buildId` (`null` vs. set) is the single piece of state deciding whether the composer

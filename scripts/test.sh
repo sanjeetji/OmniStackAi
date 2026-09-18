@@ -448,4 +448,17 @@ if ! rg -q '\.studio-grid' "$console_root/app/globals.css"; then
   exit 1
 fi
 
+# R-478: backend - live preview proxy (local-only).
+for route in 'GET /jobs/preview' 'POST /jobs/preview/stop' 'POST /jobs/preview/restart' 'POST /jobs/build/{id}/preview'; do
+  if ! rg -qF "$route" "$control_plane_root/internal/jobs/handler.go"; then
+    printf 'R-478 control-plane must register: %s\n' "$route"
+    exit 1
+  fi
+done
+
+if ! rg -q 'defaultPreviewTimeout' "$control_plane_root/internal/jobs/types.go"; then
+  printf 'R-478 must add a defaultPreviewTimeout constant to types.go.\n'
+  exit 1
+fi
+
 printf 'Repository contract tests passed.\n'

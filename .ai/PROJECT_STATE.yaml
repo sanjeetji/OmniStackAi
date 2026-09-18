@@ -2,10 +2,10 @@ schema_version: 1
 project: OmniStackAI
 phase: BASIC/MVP
 founder_stage: 0
-current_task: R-477
+current_task: R-478
 current_status: done
 branch: main
-last_completed_task: R-477
+last_completed_task: R-478
 # TASK COMPILATION AUDIT — 2026-09-16
 # Performed to achieve 100% synchronization across all task-tracking documentation.
 # Tracker workbook expanded to 464 tasks with R-464.
@@ -34,6 +34,39 @@ task_compilation_audit:
       new_status: DONE
       reason: "Task fully completed on 2026-09-11 with 35 tests. Status left stale during rapid development sprint."
 last_completed_task_summary: >-
+  Completed R-478 (2026-09-19): backend - live preview proxy (local-only). Fourth of the approved
+  7-task Phase D roadmap (plan: /Users/sanjeet_kumar/.claude/plans/hi-fancy-shannon.md). Four new
+  control-plane routes proxying the agent-engine's existing trusted-local preview control surface
+  verbatim: GET /jobs/preview, POST /jobs/preview/stop, POST /jobs/preview/restart (the singleton
+  control surface) plus POST /jobs/build/{id}/preview (the build-scoped one, -> POST
+  /api/history/preview with a server-constructed {"id": id} body - the caller's own body is never
+  trusted for this one). All auth-required, no credit debit. Zero agent-engine changes.
+  Generalized proxyGet into proxyUpstream(method, body) covering GET and POST alike. New
+  defaultPreviewTimeout constant (60s, above the real 45s internal readiness wait) applied to both
+  handleBuildPreview AND handlePreviewRestart (a design addition beyond the original plan sketch,
+  made during implementation once it was clear restart() can itself trigger a real cold start, the
+  same risk build-preview has - confirmed live).
+  Verified, not assumed: an unknown/evicted build's build-scoped preview route returns a real 200
+  {"status":"error","message":"..."} - NOT a 404 - confirmed by reading _preview_recorded_build
+  before writing the tests, then proven live during the manual smoke test too. The proxy
+  deliberately does not "fix" this shape into a 404.
+  Gates: control-plane go test all green (38 in internal/jobs, 13 new); repo task verify/lint/
+  security:quick/env:check all pass (unchanged test count, no agent-engine/console files touched).
+  Live (real Docker control-plane rebuilt via control-plane.sh verify, real agent-engine Studio
+  server in preview mode via studio-preview): a real build automatically started a real preview
+  (real pnpm install + real Next.js dev server + real FastAPI backend, confirmed in the
+  agent-engine's own log output, including a real Groq rate-limit retry and a real JSX-synthesis
+  fallback to the deterministic template along the way - an honest real-world signal, not a bug);
+  GET /jobs/preview returned real live URLs; POST /jobs/build/1/preview with a deliberately
+  mismatched body proved the server-constructed-body design (a genuine re-preview on new ports,
+  caller's body ignored); POST /jobs/build/nonexistent-999/preview returned the real
+  200-with-error-status shape, confirming the Finding live; stop/restart both worked and left the
+  credit balance unchanged (100, same as right after the build) across all four calls; switching to
+  build-only mode made all four routes return the identical uniform 404
+  "preview controls are not enabled" - the honest zero-new-logic passthrough confirmed.
+  NEXT: R-479 (console: live preview UI) per the approved plan, then R-480 (problems backend),
+  R-481 (tabbed workspace).
+_prior_last_completed_task_summary_R477: >-
   Completed R-477 (2026-09-19): console - chat UI. Third of the approved 7-task Phase D roadmap
   (plan: /Users/sanjeet_kumar/.claude/plans/hi-fancy-shannon.md). Replaced /studio's one-shot
   prompt form with a persistent, multi-turn chat thread on R-475's shell, wired to R-476's new
@@ -1320,18 +1353,18 @@ id_note: >-
   ID); R-416..R-429 built/hardened the "chat -> create -> run -> preview" front door; R-430..R-437 build SPINE.
 blockers: []
 next_action: >-
-  R-477 is complete (console: chat UI). Executing a founder-approved, fully-researched 7-task plan
-  (superseding the earlier 6-task doc sketch): R-475/R-476/R-477 done; R-478..R-481 remain. Full
-  design detail for every task is in the approved plan file
+  R-478 is complete (backend: live preview proxy). Executing a founder-approved, fully-researched
+  7-task plan (superseding the earlier 6-task doc sketch): R-475/R-476/R-477/R-478 done;
+  R-479..R-481 remain. Full design detail for every task is in the approved plan file
   (/Users/sanjeet_kumar/.claude/plans/hi-fancy-shannon.md) and mirrored in
   R_&_D/OmniStackAI_Commercial_Platform_Kickoff_v1.md's "Remaining Phase D roadmap" - read the plan
   file first, it has the most implementation-level detail (exact function names, verified line
   numbers, exact response shapes).
-  NEXT (start here): R-478 (backend: live preview proxy -
-  four routes not three, the agent-engine's preview API is two different surfaces; the build-scoped
-  one has a verified unusual 200-with-{"status":"error"} shape for an unknown build, not a 404),
-  R-479 (console: live preview UI, polling is for crash detection not progress since preview start
-  is synchronous; must trigger its own re-preview after edits since _edit() never restarts preview),
+  NEXT (start here): R-479 (console: live preview UI, polling is for crash detection not progress
+  since preview start is synchronous; must trigger its own re-preview after edits since _edit()
+  never restarts preview; the build-scoped route's real 200-with-{"status":"error"} shape for an
+  unknown build - confirmed live during R-478's own smoke test, not just by source-reading - must
+  render the real message field, not a generic failure),
   R-480 (backend: Problems/compile-report support - NEW work, confirmed no compile-error endpoint
   exists anywhere in the Studio path today; founder explicitly chose to build this for real rather
   than defer it, which is what took the roadmap from 6 tasks to 7; must be on-demand not automatic,

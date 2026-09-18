@@ -1,5 +1,43 @@
 # Work Log
 
+## 2026-09-19 — R-478 (Backend — live preview proxy, local-only)
+
+- **Why:** fourth task of the approved 7-task Phase D roadmap. Proxy the agent-engine's existing
+  trusted-local preview control surface — correctly **four** routes, not three: the singleton
+  control surface (`GET /api/preview`, `POST /api/preview/stop`, `POST /api/preview/restart`) plus
+  the build-scoped one (`POST /api/history/preview`) a chat-per-build UI actually needs. Zero
+  agent-engine changes — every route reused exactly as-is, same precedent R-474 set for the file
+  browser.
+- **A real, verified shape, not assumed:** an unknown/evicted build's build-scoped preview route
+  does not 404 — `_preview_recorded_build` has no exception path for that case, it returns a plain
+  `{"status": "error", "message": "..."}` dict sent as a **200**. Confirmed by reading the source
+  before writing the tests, then confirmed live during the manual smoke test too. The proxy
+  deliberately forwards this shape unchanged rather than "fixing" it into a 404.
+- **Go side:** generalized `proxyGet` into `proxyUpstream(method, body)`, covering both GET and the
+  new credit-free POST control routes. `handleBuildPreview` always constructs its own
+  `{"id": "<path id>"}` body server-side — the caller's own body is never trusted for which build to
+  preview, matching every other build-scoped route in this package. New `defaultPreviewTimeout`
+  (60s, above the real 45s internal readiness wait) applied to `handleBuildPreview`; also applied to
+  `handlePreviewRestart` — added during implementation once it was clear `restart()` can itself
+  trigger a real cold start, the same risk build-preview has (confirmed live).
+- **Gates:** control-plane `go test` all green (38 in `internal/jobs`, 13 new, including a dedicated
+  test asserting the 200-with-error-status shape survives the proxy unchanged). Repo
+  `task verify`/`lint`/`security:quick`/`env:check` all pass — unchanged test count, since this task
+  touched no agent-engine or console-web files.
+- **Live** (real Docker control-plane rebuilt via `control-plane.sh verify`, real agent-engine
+  Studio server in preview mode via `studio-preview`): a real build automatically started a real
+  preview as a side effect (existing pre-R-478 behavior) — a genuine `pnpm install` + Next.js dev
+  server + FastAPI backend, with a real Groq rate-limit retry and a real JSX-synthesis fallback to
+  the deterministic template along the way (an honest real-world signal, not a bug). `GET
+  /jobs/preview` returned real live URLs. `POST /jobs/build/1/preview` sent with a deliberately
+  mismatched body proved the server-constructed-body design (a genuine re-preview on new ports, the
+  caller's body ignored). `POST /jobs/build/nonexistent-999/preview` returned the real
+  200-with-error-status shape live. Stop/restart both worked; the credit balance stayed unchanged
+  across all four calls. Switching the agent-engine to build-only mode made all four routes return
+  the identical, uniform `404 "preview controls are not enabled"` — the honest zero-new-logic
+  passthrough confirmed.
+- **NEXT:** R-479 (console: live preview UI) per the approved plan.
+
 ## 2026-09-19 — R-477 (Console — chat UI)
 
 - **Why:** third task of the approved 7-task Phase D roadmap. Replace `/studio`'s one-shot prompt

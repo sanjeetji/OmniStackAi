@@ -1,32 +1,26 @@
-task_id: R-477
+task_id: R-478
 status: completed
 phase: MVP
 tracker_row: null
 started_at: "2026-09-19"
 completed_at: "2026-09-19"
 objective: >-
-  Third task of the approved 7-task Phase D roadmap. Replace /studio's one-shot prompt form with a
-  persistent, multi-turn chat thread on R-475's shell, wired to R-476's new
-  POST /jobs/build/{id}/edit and GET /jobs/build/{id}/turns routes. buildId (null vs. set) is the
-  single piece of state deciding whether the composer calls /jobs/build (first message) or
-  /jobs/build/{id}/edit (every follow-up). buildId persists in the URL (?build=<id>) so a refresh
-  can rehydrate chat text history from /turns. Introduces the two-column .studio-grid layout
-  deferred from R-475: a workspace panel (build/edit result, entities, usage, file browser) plus a
-  persistent chat rail. New finding verified by direct source read before implementation: GET
-  /turns does not 404 for an unknown build (turns_view returns {"turns": []} for a missing session
-  entry) - only the edit endpoint's BuildNotFoundError is a real, reachable 404, so that is where
-  the "session no longer available" recovery is wired, not turns-hydration.
+  Fourth task of the approved 7-task Phase D roadmap. Proxy the agent-engine's existing trusted-
+  local preview control surface - four routes, not three: GET /jobs/preview, POST /jobs/preview/
+  stop, POST /jobs/preview/restart (the singleton control surface), plus POST
+  /jobs/build/{id}/preview (the build-scoped one, -> POST /api/history/preview with a server-
+  constructed {"id": id} body, never trusting the caller's body). All auth-required, no credit
+  debit. Generalizes proxyGet into proxyUpstream(method, body) covering GET and POST. A new
+  defaultPreviewTimeout constant (60s, above the real 45s internal readiness wait) applies to
+  handleBuildPreview specifically (it can trigger a real cold start). The build-scoped route's
+  verified unusual 200-with-{"status":"error"} shape for an unknown build must survive the proxy
+  unchanged - a dedicated test asserts this. Zero agent-engine changes.
 allowed_paths:
-  - apps/console-web/lib/control-plane.ts
-  - apps/console-web/app/api/jobs/build/[id]/edit/route.ts
-  - apps/console-web/app/api/jobs/build/[id]/turns/route.ts
-  - apps/console-web/app/studio/studio-chat.tsx
-  - apps/console-web/app/studio/studio-workspace.tsx
-  - apps/console-web/app/studio/studio-form.tsx
-  - apps/console-web/app/studio/page.tsx
-  - apps/console-web/app/globals.css
+  - services/control-plane/internal/jobs/handler.go
+  - services/control-plane/internal/jobs/types.go
+  - services/control-plane/internal/jobs/handler_test.go
   - scripts/test.sh
-  - .ai/tasks/R-477.md
+  - .ai/tasks/R-478.md
   - .ai/CURRENT_TASK.yaml
   - .ai/PROJECT_STATE.yaml
   - .ai/WORK_LOG.md
@@ -36,30 +30,32 @@ allowed_paths:
   - docs/PROGRESS.md
   - docs/RESUME_PROMPT.md
 forbidden_changes:
-  - No changes to services/control-plane or services/agent-engine
-  - No live preview, Problems, or tab functionality (later tasks)
+  - No changes to services/agent-engine or apps/console-web
+  - No live preview UI, Problems, or tab functionality (later tasks)
   - Do not modify or commit the untracked .claude directory
 required_gates:
-  - "console-web: pnpm run typecheck, pnpm run lint, pnpm run build"
+  - "control-plane: go build ./..., go vet ./..., go test ./..."
   - task verify
   - task lint
   - task security:quick
   - task env:check
-  - "manual smoke (real docker control-plane + real agent-engine studio server + next start): build -> follow-up edit in the same thread, buildId switches endpoint correctly; refresh hydrates /turns text; stale-buildId 404 recovers gracefully"
+  - "manual smoke (real docker control-plane + real agent-engine studio server in preview mode): status/stop/restart/build-preview all proxy real shapes; same four routes 404 cleanly against build-only mode"
 model_tool_trace:
   routing: deterministic_only
   local_calls: 0
   cloud_calls: 0
   note: >-
-    Pure console-web (TypeScript/React) work, 0 model/network calls in any automated gate. The
-    manual smoke test's build+edit calls use whatever provider is configured (real Groq or local
-    Ollama).
+    Pure Go work, 0 model/network calls in any automated gate.
 next_action: >-
-  R-477 is complete (see .ai/tasks/R-477.md for full Gates & Evidence). Next up per the approved
-  plan (/Users/sanjeet_kumar/.claude/plans/hi-fancy-shannon.md): R-478 - Backend: live preview proxy
-  (local-only). Four new control-plane routes (GET /jobs/preview, POST /jobs/preview/stop,
-  POST /jobs/preview/restart, POST /jobs/build/{id}/preview) proxying the agent-engine's existing
-  preview control surface verbatim - zero agent-engine changes. The build-scoped route must handle
-  the agent-engine's unusual 200-with-{"status":"error"} shape for an unknown build (not a 404,
-  verified during the original planning research). A new defaultPreviewTimeout constant (~60s,
-  above the real 45s internal readiness wait) is needed on the routes that can trigger a cold start.
+  R-478 is complete (see .ai/tasks/R-478.md for full Gates & Evidence). Next up per the approved
+  plan (/Users/sanjeet_kumar/.claude/plans/hi-fancy-shannon.md): R-479 - Console: live preview UI.
+  An iframe rendering the running generated app, wired to R-478's four routes. Preview start
+  (replace()/restart()) is synchronous - there is no server-side "starting" state to poll for, so
+  polling's real job is crash detection (5s interval while status is "ready", calling GET
+  /jobs/preview), not progress-watching. "Starting" in the UI is just the pending state of the
+  POST /jobs/build/{id}/preview call itself, using R-475's .spinner with real elapsed time (cold
+  starts up to ~45s, confirmed live during R-478's own smoke test). Since _edit() never restarts
+  the preview, trigger an automatic re-preview after every successful edit in the chat - confirm
+  live whether HMR alone would have sufficed, but ship the safe automatic version regardless. A 404
+  from GET /jobs/preview (build-only mode) renders a clear static message; the build-scoped 200-
+  with-{"status":"error"} shape (verified live in R-478) renders the real message field.

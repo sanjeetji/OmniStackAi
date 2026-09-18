@@ -683,6 +683,229 @@ func TestCreditsForUsage(t *testing.T) {
 	}
 }
 
+func TestHandlePreviewStatusRejectsMissingToken(t *testing.T) {
+	agentEngine := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		t.Fatal("agent-engine must not be called for an unauthenticated request")
+	}))
+	defer agentEngine.Close()
+
+	server := newTestServer(t, agentEngine.URL, fakeAuthStore{returnErr: auth.ErrSessionNotFound}, &fakeCreditStore{}, 1000)
+
+	resp := getBuildPath(t, server, "", "/jobs/preview")
+	if resp.StatusCode != http.StatusUnauthorized {
+		t.Fatalf("status = %d, want %d", resp.StatusCode, http.StatusUnauthorized)
+	}
+}
+
+func TestHandlePreviewStatusProxiesVerbatim(t *testing.T) {
+	cases := []struct {
+		name   string
+		status int
+		body   string
+	}{
+		{"a running preview", http.StatusOK, `{"status":"ready","url":"http://127.0.0.1:53211","web_port":53211}`},
+		{"preview controls not enabled (build-only mode)", http.StatusNotFound, `{"error":"preview controls are not enabled"}`},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			var requestedPath string
+			agentEngine := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				requestedPath = r.URL.Path
+				w.Header().Set("Content-Type", "application/json")
+				w.WriteHeader(tc.status)
+				_, _ = w.Write([]byte(tc.body))
+			}))
+			defer agentEngine.Close()
+
+			server := newTestServer(t, agentEngine.URL, fakeAuthStore{user: newTestUser()}, &fakeCreditStore{}, 1000)
+
+			resp := getBuildPath(t, server, validToken, "/jobs/preview")
+			if resp.StatusCode != tc.status {
+				t.Fatalf("status = %d, want %d (proxied unchanged)", resp.StatusCode, tc.status)
+			}
+			if requestedPath != "/api/preview" {
+				t.Fatalf("agent-engine received path = %q, want %q", requestedPath, "/api/preview")
+			}
+		})
+	}
+}
+
+func TestHandlePreviewStopAndRestartRejectMissingToken(t *testing.T) {
+	for _, path := range []string{"/jobs/preview/stop", "/jobs/preview/restart"} {
+		t.Run(path, func(t *testing.T) {
+			agentEngine := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				t.Fatal("agent-engine must not be called for an unauthenticated request")
+			}))
+			defer agentEngine.Close()
+
+			server := newTestServer(t, agentEngine.URL, fakeAuthStore{returnErr: auth.ErrSessionNotFound}, &fakeCreditStore{}, 1000)
+
+			resp := postPath(t, server, "", path, "")
+			if resp.StatusCode != http.StatusUnauthorized {
+				t.Fatalf("status = %d, want %d", resp.StatusCode, http.StatusUnauthorized)
+			}
+		})
+	}
+}
+
+func TestHandlePreviewStopAndRestartProxyVerbatimAndDoNotDebit(t *testing.T) {
+	cases := []struct {
+		jobsPath     string
+		agentPath    string
+		responseBody string
+	}{
+		{"/jobs/preview/stop", "/api/preview/stop", `{"status":"stopped"}`},
+		{"/jobs/preview/restart", "/api/preview/restart", `{"status":"ready","url":"http://127.0.0.1:53211"}`},
+	}
+	for _, tc := range cases {
+		t.Run(tc.jobsPath, func(t *testing.T) {
+			var requestedPath string
+			agentEngine := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				requestedPath = r.URL.Path
+				w.Header().Set("Content-Type", "application/json")
+				w.WriteHeader(http.StatusOK)
+				_, _ = w.Write([]byte(tc.responseBody))
+			}))
+			defer agentEngine.Close()
+
+			creditStore := &fakeCreditStore{}
+			server := newTestServer(t, agentEngine.URL, fakeAuthStore{user: newTestUser()}, creditStore, 1000)
+
+			resp := postPath(t, server, validToken, tc.jobsPath, "")
+			if resp.StatusCode != http.StatusOK {
+				t.Fatalf("status = %d, want %d", resp.StatusCode, http.StatusOK)
+			}
+			if requestedPath != tc.agentPath {
+				t.Fatalf("agent-engine received path = %q, want %q", requestedPath, tc.agentPath)
+			}
+			if creditStore.callCount() != 0 {
+				t.Fatalf("DebitCredits called %d times, want 0 (preview control is not billable)", creditStore.callCount())
+			}
+		})
+	}
+}
+
+func TestHandlePreviewStopProxiesNotEnabledUnchanged(t *testing.T) {
+	agentEngine := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusNotFound)
+		_, _ = w.Write([]byte(`{"error":"preview controls are not enabled"}`))
+	}))
+	defer agentEngine.Close()
+
+	server := newTestServer(t, agentEngine.URL, fakeAuthStore{user: newTestUser()}, &fakeCreditStore{}, 1000)
+
+	resp := postPath(t, server, validToken, "/jobs/preview/stop", "")
+	if resp.StatusCode != http.StatusNotFound {
+		t.Fatalf("status = %d, want %d (proxied unchanged)", resp.StatusCode, http.StatusNotFound)
+	}
+}
+
+func TestHandleBuildPreviewRejectsMissingToken(t *testing.T) {
+	agentEngine := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		t.Fatal("agent-engine must not be called for an unauthenticated request")
+	}))
+	defer agentEngine.Close()
+
+	server := newTestServer(t, agentEngine.URL, fakeAuthStore{returnErr: auth.ErrSessionNotFound}, &fakeCreditStore{}, 1000)
+
+	resp := postPath(t, server, "", "/jobs/build/abc123/preview", `{"id":"someone-elses-build"}`)
+	if resp.StatusCode != http.StatusUnauthorized {
+		t.Fatalf("status = %d, want %d", resp.StatusCode, http.StatusUnauthorized)
+	}
+}
+
+func TestHandleBuildPreviewAlwaysSendsTheURLPathIDIgnoringTheCallersBody(t *testing.T) {
+	var requestedPath, receivedBody string
+	agentEngine := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		requestedPath = r.URL.Path
+		raw, err := io.ReadAll(r.Body)
+		if err != nil {
+			t.Fatal(err)
+		}
+		receivedBody = string(raw)
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusOK)
+		_, _ = w.Write([]byte(`{"status":"ready","url":"http://127.0.0.1:53211"}`))
+	}))
+	defer agentEngine.Close()
+
+	creditStore := &fakeCreditStore{}
+	server := newTestServer(t, agentEngine.URL, fakeAuthStore{user: newTestUser()}, creditStore, 1000)
+
+	// The caller's body names a completely different build id - it must be ignored. Only the URL
+	// path id is ever trusted for which build to preview.
+	resp := postPath(t, server, validToken, "/jobs/build/abc123/preview", `{"id":"someone-elses-build"}`)
+	if resp.StatusCode != http.StatusOK {
+		t.Fatalf("status = %d, want %d", resp.StatusCode, http.StatusOK)
+	}
+	if requestedPath != "/api/history/preview" {
+		t.Fatalf("agent-engine received path = %q, want %q", requestedPath, "/api/history/preview")
+	}
+	if receivedBody != `{"id":"abc123"}` {
+		t.Fatalf("agent-engine received body = %q, want %q (server-constructed from the URL path, not the caller's body)", receivedBody, `{"id":"abc123"}`)
+	}
+	if creditStore.callCount() != 0 {
+		t.Fatalf("DebitCredits called %d times, want 0 (preview is not billable)", creditStore.callCount())
+	}
+}
+
+func TestHandleBuildPreviewProxiesThe200WithErrorStatusShapeForAnUnknownBuild(t *testing.T) {
+	// _preview_recorded_build (live_serve.py) has no exception path for an unknown/evicted build -
+	// it returns a plain error dict, sent as a 200. This proxy must not "fix" that into a 404; it
+	// forwards exactly what the agent-engine says.
+	agentEngine := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusOK)
+		_, _ = w.Write([]byte(`{"status":"error","message":"That build is no longer available in this session."}`))
+	}))
+	defer agentEngine.Close()
+
+	server := newTestServer(t, agentEngine.URL, fakeAuthStore{user: newTestUser()}, &fakeCreditStore{}, 1000)
+
+	resp := postPath(t, server, validToken, "/jobs/build/gone123/preview", `{}`)
+	if resp.StatusCode != http.StatusOK {
+		t.Fatalf("status = %d, want %d (the agent-engine's own shape, not a synthesized 404)", resp.StatusCode, http.StatusOK)
+	}
+	var payload map[string]any
+	decodeJSON(t, resp, &payload)
+	if payload["status"] != "error" {
+		t.Fatalf("payload[status] = %v, want %q", payload["status"], "error")
+	}
+	if payload["message"] != "That build is no longer available in this session." {
+		t.Fatalf("payload[message] = %v, want the agent-engine's own message", payload["message"])
+	}
+}
+
+func TestHandleBuildPreviewProxiesNotEnabledUnchanged(t *testing.T) {
+	agentEngine := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusNotFound)
+		_, _ = w.Write([]byte(`{"error":"preview controls are not enabled"}`))
+	}))
+	defer agentEngine.Close()
+
+	server := newTestServer(t, agentEngine.URL, fakeAuthStore{user: newTestUser()}, &fakeCreditStore{}, 1000)
+
+	resp := postPath(t, server, validToken, "/jobs/build/abc123/preview", `{}`)
+	if resp.StatusCode != http.StatusNotFound {
+		t.Fatalf("status = %d, want %d (proxied unchanged)", resp.StatusCode, http.StatusNotFound)
+	}
+}
+
+func TestHandleBuildPreviewReturnsBadGatewayWhenAgentEngineIsUnreachable(t *testing.T) {
+	closedServer := httptest.NewServer(http.HandlerFunc(func(http.ResponseWriter, *http.Request) {}))
+	unreachableURL := closedServer.URL
+	closedServer.Close()
+
+	server := newTestServer(t, unreachableURL, fakeAuthStore{user: newTestUser()}, &fakeCreditStore{}, 1000)
+
+	resp := postPath(t, server, validToken, "/jobs/build/abc123/preview", `{}`)
+	if resp.StatusCode != http.StatusBadGateway {
+		t.Fatalf("status = %d, want %d", resp.StatusCode, http.StatusBadGateway)
+	}
+}
+
 func TestHandleBuildReturns500WhenDebitCreditsFails(t *testing.T) {
 	agentEngine := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")

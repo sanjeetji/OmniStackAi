@@ -1,9 +1,33 @@
 # Current Handoff
 
-Task ID: R-477
+Task ID: R-478
 Status: done
 Phase: BASIC/MVP — Founder Stage 0
 Branch: `main`
+
+> **R-478 Completed (2026-09-19): Backend — live preview proxy (local-only).**
+> - **Fourth of the founder-approved 7-task plan** (R-475–R-481). Four new control-plane routes
+>   proxying the agent-engine's existing trusted-local preview control surface verbatim: the
+>   singleton surface (`GET /jobs/preview`, `POST /jobs/preview/stop`, `POST /jobs/preview/restart`)
+>   plus the build-scoped one (`POST /jobs/build/{id}/preview`) a chat-per-build UI actually needs.
+>   All auth-required, no credit debit. Zero agent-engine changes.
+> - **Verified, not assumed**: an unknown/evicted build's build-scoped preview route does not 404 —
+>   it returns a real 200 `{"status":"error","message":"..."}`. Confirmed by source read before
+>   writing the tests, then confirmed live too. The proxy forwards this shape unchanged.
+> - Generalized `proxyGet` into `proxyUpstream(method, body)`. `handleBuildPreview` always
+>   constructs its own `{"id": "<path id>"}` body server-side, never trusting the caller's. New
+>   `defaultPreviewTimeout` (60s) applied to both `handleBuildPreview` and `handlePreviewRestart` —
+>   the latter added during implementation once it was clear restart can itself cold-start.
+> - Gates: control-plane `go test` all green (38 tests, 13 new); repo `task verify` **3,604 OK**
+>   (unchanged, no agent-engine/console touched); `task lint`/`security:quick`/`env:check` all pass.
+>   **Live** (real control-plane rebuilt + real agent-engine Studio server in preview mode): a real
+>   build auto-started a real preview (real `pnpm install` + Next.js dev server + FastAPI backend,
+>   including a real Groq rate-limit retry along the way); real status/stop/restart/build-preview all
+>   proxied correctly; the 200-with-error shape confirmed live for an unknown build; credit balance
+>   unchanged across all four calls; switching to build-only mode made all four routes return the
+>   identical uniform 404.
+> - **NEXT:** R-479 (console: live preview UI) per the approved plan. See
+>   `R_&_D/OmniStackAI_Commercial_Platform_Kickoff_v1.md`, `.ai/tasks/R-478.md`, and the plan file.
 
 > **R-477 Completed (2026-09-19): Console — chat UI.**
 > - **Third of the founder-approved 7-task plan** (R-475–R-481). Replaced `/studio`'s one-shot

@@ -208,7 +208,7 @@ front-door bricks, R-420 is generated-SQL hardening, R-421..R-426 are Studio pre
 R-427..R-429 are generated-app compile fixes, R-430..R-457 are the first twenty-eight differentiating-spine
 bricks (Scope Compiler through Ecosystem Multi-Surface SLA, SLO, and Error Budget Contracts).
 Git, state files (.ai/), CHANGELOG, and docs/PROGRESS.md remain the executable/detail sources of truth.
-Current through R-477; `task verify` = 3,604 tests (agent-engine) + the Go control-plane's own suite +
+Current through R-478; `task verify` = 3,604 tests (agent-engine) + the Go control-plane's own suite +
 the Next.js console's typecheck/lint/build. R-416 added prompt-to-IR intake, R-417 materialized a generated
 owned repo, R-418 added the local chat studio, R-419 added turnkey local run, and R-420 fixed the two
 SQL defects found by live execution. R-421 added an explicit `task agent-engine:studio:preview` mode:
@@ -644,8 +644,21 @@ WHAT TO DO NEXT
   killed and restarted mid-test to simulate a real stale session - the edit-triggered 404 recovery
   and the turns-hydration honest-empty-thread finding both confirmed live, then a fresh build proved
   the full recovery loop.
-- NEXT: R-478 (backend: live preview proxy - four routes not three, per the
-  build-scoped-route finding above), R-479 (console: live preview UI - polling is for crash
+- R-478 (2026-09-19, done) built the backend live preview proxy, fourth of the seven: four new
+  control-plane routes proxying the agent-engine's existing trusted-local preview control surface
+  verbatim - `GET /jobs/preview`/`POST /jobs/preview/stop`/`POST /jobs/preview/restart` (the
+  singleton surface) plus `POST /jobs/build/{id}/preview` (the build-scoped one, server-constructing
+  its own `{"id": id}` body rather than trusting the caller's). All auth-required, no credit debit,
+  zero agent-engine changes. Verified, not assumed: an unknown build's build-scoped preview route
+  returns a real 200 `{"status":"error"}`, not a 404 - the proxy forwards it unchanged. New
+  `defaultPreviewTimeout` (60s) applied to both `handleBuildPreview` and `handlePreviewRestart`
+  (both can trigger a real cold start - added to restart during implementation once that was clear).
+  `task verify` 3,604 OK; control-plane `go test` all green (38 tests, 13 new). Live: real
+  control-plane rebuilt + real agent-engine Studio server in preview mode proved a real build
+  auto-starting a real preview, real status/stop/restart/build-preview proxying, the 200-with-error
+  shape confirmed live for an unknown build, unchanged credit balance across all four calls, and
+  uniform 404s against build-only mode.
+- NEXT: R-479 (console: live preview UI - polling is for crash
   detection not progress, since preview start is synchronous), R-480 (backend: Problems/
   compile-report support - genuinely new work, on-demand not automatic since `node_modules`/`tsc`
   only exist after a preview install), R-481 (tabbed workspace: Preview/Files/Code/Problems as four
