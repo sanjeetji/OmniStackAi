@@ -1,4 +1,4 @@
-# OmniStackAI — implementation progress (as of R-480)
+# OmniStackAI — implementation progress (as of R-481)
 
 A living summary of what is built, what is pending, and how to see results. Numbers come from the
 execution tracker (`R_&_D/OmniStackAI_Execution_Tracker_v6.xlsx`, `Phase_Roadmap`, 461 tasks as of
@@ -8,6 +8,23 @@ R-461 completion) plus the state files (`.ai/`), Git history, and CHANGELOG.
 
 - **3,625 automated tests pass** (agent-engine + Go control-plane), fully offline and
   network-independent (`task verify`), plus the console's own `typecheck`/`lint`/`build` gates.
+- **R-481 — Tabbed workspace (2026-09-19): THE SEVENTH AND FINAL TASK of the founder-approved
+  7-task Phase D roadmap (R-475–R-481) is complete.** Restructured `/studio`'s main pane into four
+  real tabs — Preview, Files, Code, Problems — with chat persisting alongside, assembling R-474
+  (files), R-477 (chat), R-479 (preview), and R-480 (problems) into one shell. Files and Code stay
+  separate real tabs (founder's explicit choice), sharing one lifted `selectedFile`. New
+  `code-highlight.ts`: a hand-rolled, dependency-free tokenizer porting the approach of
+  `codegen/nextjs.py`'s own generated `tokenizeCodeLine` — no new dependency, confirmed live it
+  renders real generated TSX cleanly. Problems tab is an explicit on-demand button per R-480's own
+  design. `task verify` **3,625 OK**; console `typecheck`/`lint`/`build` clean (19 routes, 1 new).
+  Live: full loop confirmed — build → real Preview/Files/Code → real edit → confirmed Files/Preview
+  refresh → real Problems check. A real, pre-existing codegen bug was found live (a dynamic-route
+  slug collision from the edit-delta path, unrelated to this task) — correctly surfaced as an
+  honest Preview error *and* independently caught by a real Problems check (18 genuine TypeScript
+  errors), cross-confirming both R-479's and R-480's error-surfacing design work under real failure
+  conditions. **The Studio is now a real chat-driven, multi-pane workspace closer to
+  Lovable/Dyad/Emergent parity than at the start of this roadmap.** No pre-approved task remains
+  queued — see `.ai/tasks/R-481.md` for full verification detail and named follow-ups.
 - **R-480 — Backend: Problems/compile-report support (2026-09-19):** sixth of the seven. Real
   compile-error reporting for the first time in this codebase — the founder's explicit choice over
   a placeholder. New `studio/problems.py` mirrors `files.py`'s shape: resolves `apps/web`, raises

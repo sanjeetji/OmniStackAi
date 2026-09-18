@@ -1,9 +1,36 @@
 # Current Handoff
 
-Task ID: R-480
+Task ID: R-481
 Status: done
 Phase: BASIC/MVP — Founder Stage 0
 Branch: `main`
+
+> **R-481 Completed (2026-09-19): Tabbed workspace — the SEVENTH AND FINAL task of the
+> founder-approved 7-task Phase D roadmap (R-475–R-481).**
+> - Restructured `/studio`'s main pane into four real tabs — Preview, Files, Code, Problems — with
+>   chat persisting alongside, assembling R-474 (files), R-477 (chat), R-479 (preview), and R-480
+>   (problems) into one shell. Files and Code stay separate real tabs (founder's explicit choice),
+>   sharing one lifted `selectedFile`. New `code-highlight.ts`: a hand-rolled tokenizer porting the
+>   approach of `codegen/nextjs.py`'s own generated `tokenizeCodeLine` — no new dependency, confirmed
+>   live it renders real generated TSX cleanly. Problems tab is an explicit on-demand button, per
+>   R-480's own design.
+> - Gates: console `typecheck`/`lint`/`build` clean (19 routes, 1 new); `task verify` **3,625 OK**
+>   (unchanged); `task lint`/`security:quick`/`env:check` all pass. **Live** (Colima had stopped
+>   again, restarted; real control-plane + real agent-engine Studio server in preview mode + fresh
+>   `next start`): full loop confirmed — build → real Preview/Files/Code → real edit → confirmed
+>   Files/Preview refresh → real Problems check.
+> - **A real, pre-existing codegen bug found live** (unrelated to this task, not fixed): a Next.js
+>   dynamic-route slug-name collision (`counterId` vs `counter_id`) from the edit-delta path —
+>   correctly surfaced as an honest Preview error *and* independently caught by a real Problems
+>   check (18 genuine TypeScript errors), cross-confirming R-479's and R-480's error-surfacing design
+>   both work under real failure conditions.
+> - **THIS COMPLETES THE APPROVED 7-TASK PHASE D ROADMAP.** The Studio is now a real chat-driven,
+>   multi-pane workspace closer to Lovable/Dyad/Emergent parity.
+> - **NEXT:** no pre-approved task remains queued. Named follow-ups: R-482 (Model Provider settings
+>   UI), R-483 (real-time streaming — its prerequisite now exists), per-user backend
+>   multi-tenancy, Publish/deploy, and the newly-found route-slug codegen bug. **Needs explicit
+>   founder direction on priority before picking the next Tracker ID.** See
+>   `R_&_D/OmniStackAI_Commercial_Platform_Kickoff_v1.md`, `.ai/tasks/R-481.md`, and the plan file.
 
 > **R-480 Completed (2026-09-19): Backend — Problems/compile-report support.**
 > - **Sixth of the founder-approved 7-task plan** (R-475–R-481). Real compile-error reporting for

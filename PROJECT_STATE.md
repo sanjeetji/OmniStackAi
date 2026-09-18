@@ -4,6 +4,22 @@ Last updated: 2026-09-19
 ## Current Phase
 Stage 0 (Founder Build Sequence, Brief Section 91) — BASIC/MVP
 
+> **R-481 (2026-09-19): Tabbed workspace — the SEVENTH AND FINAL task of the founder-approved
+> 7-task Phase D roadmap (R-475–R-481).** Restructured `/studio`'s main pane into four real tabs —
+> Preview, Files, Code, Problems — with chat persisting alongside, assembling R-474/R-477/R-479/
+> R-480 into one shell. Files and Code stay separate (founder's choice), sharing one lifted
+> `selectedFile`. New `code-highlight.ts` hand-rolled tokenizer (no new dependency, confirmed live
+> against real generated TSX). Problems tab is on-demand per R-480's design. `task verify`
+> **3,625 OK**; console `typecheck`/`lint`/`build` clean (19 routes, 1 new). Live: full loop
+> confirmed (build → Preview/Files/Code → edit → refresh confirmed → Problems check). A real,
+> pre-existing codegen bug was found live (a dynamic-route slug collision from the edit path,
+> unrelated to this task) — correctly surfaced as an honest Preview error and independently caught
+> by a real Problems check, cross-confirming both features' error-surfacing design.
+> **THIS COMPLETES THE APPROVED 7-TASK PHASE D ROADMAP.**
+> NEXT: no pre-approved task remains queued — needs explicit founder direction on priority among
+> R-482 (Model Provider settings UI), R-483 (streaming), per-user multi-tenancy, Publish/deploy,
+> and the newly-found codegen bug.
+
 > **R-480 (2026-09-19): Backend — Problems/compile-report support.** Sixth of the founder-approved
 > 7-task plan (R-475–R-481). Real compile-error reporting for the first time in this codebase — the
 > founder's explicit choice over a placeholder. New `studio/problems.py` mirrors `files.py`'s

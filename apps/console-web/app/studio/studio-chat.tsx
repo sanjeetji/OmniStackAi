@@ -10,7 +10,7 @@ import type {
   ChatTurn,
 } from "@/lib/control-plane";
 import { CreditIcon, SendIcon } from "./studio-icons";
-import { StudioPreview } from "./studio-preview";
+import { StudioTabs } from "./studio-tabs";
 import { StudioWorkspace, type WorkspaceSnapshot } from "./studio-workspace";
 
 interface ChatMessage {
@@ -226,8 +226,8 @@ export default function StudioChat({ initialCreditBalance }: { initialCreditBala
   return (
     <div className="studio-grid">
       <div className="studio-workspace-column">
-        <StudioPreview buildId={buildId} previewVersion={previewVersion} />
         <StudioWorkspace snapshot={workspace} />
+        <StudioTabs buildId={buildId} previewVersion={previewVersion} workspace={workspace} />
       </div>
 
       <div className="panel chat-rail">

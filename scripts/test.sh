@@ -507,4 +507,32 @@ if ! rg -q 'defaultProblemsTimeout' "$control_plane_root/internal/jobs/types.go"
   exit 1
 fi
 
+# R-481: tabbed workspace (Preview/Files/Code/Problems).
+for required_file in \
+  "$console_root/app/studio/studio-tabs.tsx" \
+  "$console_root/app/studio/code-highlight.ts" \
+  "$console_root/app/api/jobs/build/[id]/problems/route.ts"; do
+  if [[ ! -f "$required_file" ]]; then
+    printf 'Missing R-481 contract file: %s\n' "$required_file"
+    exit 1
+  fi
+done
+
+if ! rg -q 'checkBuildProblems|getBuildProblems' "$console_root/lib/control-plane.ts"; then
+  printf 'R-481 must add checkBuildProblems()/getBuildProblems() clients to lib/control-plane.ts.\n'
+  exit 1
+fi
+
+if ! rg -q 'StudioTabs' "$console_root/app/studio/studio-chat.tsx"; then
+  printf 'R-481 must wire <StudioTabs> into studio-chat.tsx.\n'
+  exit 1
+fi
+
+for tab_label in '"Preview"' '"Files"' '"Code"' '"Problems"'; do
+  if ! rg -qF "$tab_label" "$console_root/app/studio/studio-tabs.tsx"; then
+    printf 'R-481 must include the %s tab in studio-tabs.tsx.\n' "$tab_label"
+    exit 1
+  fi
+done
+
 printf 'Repository contract tests passed.\n'

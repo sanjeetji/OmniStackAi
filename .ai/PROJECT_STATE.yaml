@@ -2,10 +2,10 @@ schema_version: 1
 project: OmniStackAI
 phase: BASIC/MVP
 founder_stage: 0
-current_task: R-480
+current_task: R-481
 current_status: done
 branch: main
-last_completed_task: R-480
+last_completed_task: R-481
 # TASK COMPILATION AUDIT — 2026-09-16
 # Performed to achieve 100% synchronization across all task-tracking documentation.
 # Tracker workbook expanded to 464 tasks with R-464.
@@ -34,6 +34,41 @@ task_compilation_audit:
       new_status: DONE
       reason: "Task fully completed on 2026-09-11 with 35 tests. Status left stale during rapid development sprint."
 last_completed_task_summary: >-
+  Completed R-481 (2026-09-19): tabbed workspace - the SEVENTH AND FINAL task of the approved
+  7-task Phase D roadmap (plan: /Users/sanjeet_kumar/.claude/plans/hi-fancy-shannon.md). Restructured
+  /studio's main pane into four real tabs - Preview, Files, Code, Problems - with chat persisting
+  alongside, assembling R-474 (files), R-477 (chat), R-479 (preview), and R-480 (problems) into one
+  shell. New studio-tabs.tsx owns activeTab + a lifted selectedFile shared by Files and Code (per
+  the founder's explicit decision to keep them separate): Files is a lightweight clickable list
+  that opens a file in Code; Code has its own file switcher too. New code-highlight.ts: a
+  hand-rolled, dependency-free tokenizer porting the approach (not the exact code) of
+  codegen/nextjs.py's own generated tokenizeCodeLine/normalizeLang, scoped to TS/TSX/JS/JSON/CSS/
+  Markdown/plain - matches the R-475 icon-decision precedent, no new dependency needed (confirmed
+  live: real generated TSX rendered cleanly, the documented prismjs fallback was not needed).
+  Problems tab is an explicit on-demand "Check for problems" button per R-480's own design, hydrates
+  the last stored report on mount, shows real toolchain/no-web-target errors verbatim.
+  studio-workspace.tsx lost its inline FileBrowser (moved into Files/Code tabs).
+  Gates: console typecheck/lint/build all clean (19 routes, 1 new); task verify 3,625 OK (unchanged,
+  no backend files touched); repo task verify/lint/security:quick/env:check all pass.
+  Live (real Docker control-plane rebuilt after Colima/Docker had stopped again since the prior
+  session - restarted with colima start - + real agent-engine Studio server in preview mode + a
+  freshly rebuilt next start): full loop confirmed - build -> real Preview (ready status + real
+  web_url serving real HTML) -> real Files list -> real Code content (11,616 chars of real TSX,
+  hand-rolled tokenizer rendered cleanly) -> real edit (second commit) -> Files list refresh
+  confirmed (168->170 files matching the edit's own diff) -> Preview re-preview confirmed triggered.
+  **A real, pre-existing codegen bug was found live along the way, unrelated to this task**: the
+  edit introduced a Next.js dynamic-route slug-name collision ("counterId" vs "counter_id"),
+  correctly surfaced as an honest Preview error (not a crash) AND independently caught by a real
+  Problems check (18 genuine TypeScript errors across 2 files, tracing to the exact same root
+  cause) - cross-confirmed evidence that both R-479's and R-480's error-surfacing design work
+  correctly under genuine failure conditions, not just the happy path. A repeated GET returned the
+  byte-identical cached problems report in 17ms. Not fixed here (out of scope); worth its own future
+  Tracker ID.
+  NEXT: all seven tasks of the approved Phase D roadmap are now shipped. Named, not-yet-scheduled
+  follow-ups: R-482 (Model Provider settings UI), R-483 (real-time streaming), per-user backend
+  multi-tenancy, Publish/deploy, and the newly-found route-slug codegen bug. Needs explicit founder
+  direction on priority before starting any of these - this session's approved plan ends here.
+_prior_last_completed_task_summary_R480: >-
   Completed R-480 (2026-09-19): backend - Problems/compile-report support. Sixth of the approved
   7-task Phase D roadmap (plan: /Users/sanjeet_kumar/.claude/plans/hi-fancy-shannon.md). Real
   compile-error reporting for the first time in this codebase - the founder's explicit choice over
@@ -1426,23 +1461,21 @@ id_note: >-
   ID); R-416..R-429 built/hardened the "chat -> create -> run -> preview" front door; R-430..R-437 build SPINE.
 blockers: []
 next_action: >-
-  R-480 is complete (backend: Problems/compile-report support). Executing a founder-approved,
-  fully-researched 7-task plan (superseding the earlier 6-task doc sketch):
-  R-475/R-476/R-477/R-478/R-479/R-480 done; R-481 remains - the final task. Full design detail is in
-  the approved plan file (/Users/sanjeet_kumar/.claude/plans/hi-fancy-shannon.md) and mirrored in
-  R_&_D/OmniStackAI_Commercial_Platform_Kickoff_v1.md's "Remaining Phase D roadmap" - read the plan
-  file first, it has the most implementation-level detail (exact function names, verified line
-  numbers, exact response shapes).
-  NEXT (start here): R-481 (tabbed workspace: Preview/
-  Files/Code/Problems as four real tabs - founder explicitly chose to keep Files and Code separate
-  rather than collapse them; syntax highlighting hand-rolled per the icon-decision precedent set in
-  R-475; Problems tab is an explicit "Check for problems" button per R-480's own on-demand design,
-  not automatic). R-482 (Model Provider settings UI) is independent, can slot in anytime after R-475.
-  Beyond R-475-481: R-483 (real-time build/edit streaming, only after R-475-481 exist to stream
-  progress into) and per-user backend multi-tenancy (no Tracker ID yet, needs its own scoping
-  conversation) are both named, not forgotten, gaps to genuine Lovable/Dyad/Emergent parity - full
-  reasoning in the kickoff doc's "Beyond R-475-481" section. Phase E (plan-gated UI, admin console,
-  payment processor, proposed R-484+) still needs its own explicit founder sign-off before
-  starting.
+  ALL SEVEN TASKS of the founder-approved Phase D roadmap are now complete and shipped:
+  R-475/R-476/R-477/R-478/R-479/R-480/R-481. The Studio is now a real chat-driven, multi-pane
+  workspace (persistent chat + tabbed Preview/Files/Code/Problems), closer to Lovable/Dyad/Emergent
+  parity than at the start of this roadmap. Full history/design detail remains in the plan file
+  (/Users/sanjeet_kumar/.claude/plans/hi-fancy-shannon.md) and the kickoff doc's "Remaining Phase D
+  roadmap" section.
+  NEXT: nothing pre-approved remains queued. A real, pre-existing codegen bug was found live during
+  R-481's own smoke test - a Next.js dynamic-route slug-name collision ("counterId" vs
+  "counter_id") introduced by the edit-delta path - not fixed, out of scope, worth its own future
+  Tracker ID once scoped with the founder. Named, not-yet-scheduled follow-ups per the plan's "Out
+  of this execution pass" section: R-482 (Model Provider settings UI, independent, can slot in
+  anytime), R-483 (real-time build/edit streaming, needs R-475-481 to exist first - now true),
+  per-user backend multi-tenancy (no Tracker ID yet, needs its own scoping conversation), and
+  Publish/deploy (no backend exists yet). Phase E (plan-gated UI, admin console, payment processor,
+  proposed R-484+) still needs its own explicit founder sign-off before starting. Get explicit
+  founder direction on priority among these before picking the next Tracker ID.
   Keep task verify model/Docker/DB/install/network-free. The UI-component series remains
   paused/resumable; the tracker workbook still lags (ends at R-462).

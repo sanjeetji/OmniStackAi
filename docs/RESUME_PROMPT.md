@@ -208,7 +208,7 @@ front-door bricks, R-420 is generated-SQL hardening, R-421..R-426 are Studio pre
 R-427..R-429 are generated-app compile fixes, R-430..R-457 are the first twenty-eight differentiating-spine
 bricks (Scope Compiler through Ecosystem Multi-Surface SLA, SLO, and Error Budget Contracts).
 Git, state files (.ai/), CHANGELOG, and docs/PROGRESS.md remain the executable/detail sources of truth.
-Current through R-480; `task verify` = 3,625 tests (agent-engine) + the Go control-plane's own suite +
+Current through R-481; `task verify` = 3,625 tests (agent-engine) + the Go control-plane's own suite +
 the Next.js console's typecheck/lint/build. R-416 added prompt-to-IR intake, R-417 materialized a generated
 owned repo, R-418 added the local chat studio, R-419 added turnkey local run, and R-420 fixed the two
 SQL defects found by live execution. R-421 added an explicit `task agent-engine:studio:preview` mode:
@@ -685,12 +685,25 @@ WHAT TO DO NEXT
   mode with a real installed toolchain surfaced 10 genuine TypeScript errors via a real `tsc` run in
   an LLM-synthesized page - real compiler output that also explained the runtime 500; a repeated GET
   returned the byte-identical cached report in 12ms.
-- NEXT: R-481 (tabbed workspace: Preview/Files/Code/Problems as four
-  real tabs) - the final task of the approved 7-task roadmap. R-482 (Model Provider settings UI) is independent, can slot in anytime after R-475.
-  R-483 (real-time streaming, only after R-475-481 exist to stream progress into) and per-user
-  backend multi-tenancy (no Tracker ID yet) remain named, not forgotten, gaps to genuine parity.
-  After that, Phase E (plan-gated UI, admin console, payment processor, proposed R-484+) needs its
-  own explicit founder sign-off before starting.
+- R-481 (2026-09-19, done) built the tabbed workspace, the SEVENTH AND FINAL task of the approved
+  7-task roadmap: restructured `/studio`'s main pane into four real tabs - Preview, Files, Code,
+  Problems - with chat persisting alongside, assembling R-474/R-477/R-479/R-480 into one shell.
+  Files and Code stay separate (founder's choice), sharing one lifted `selectedFile`. New
+  `code-highlight.ts` hand-rolled tokenizer (no new dependency, confirmed live against real
+  generated TSX). Problems tab is on-demand per R-480's design. `task verify` 3,625 OK; console
+  `typecheck`/`lint`/`build` clean (19 routes, 1 new). Live: full loop confirmed (build ->
+  Preview/Files/Code -> edit -> refresh confirmed -> Problems check). A real, pre-existing codegen
+  bug was found live (a dynamic-route slug collision from the edit path, unrelated to this task) -
+  correctly surfaced as an honest Preview error and independently caught by a real Problems check,
+  cross-confirming both features' error-surfacing design. **THIS COMPLETES THE APPROVED 7-TASK
+  PHASE D ROADMAP.**
+- NEXT: no pre-approved task remains queued - needs explicit founder direction on priority.
+  R-482 (Model Provider settings UI) is independent, can slot in anytime.
+  R-483 (real-time streaming - its prerequisite, a UI with real progress to stream into, now
+  exists) and per-user backend multi-tenancy (no Tracker ID yet) remain named, not forgotten, gaps
+  to genuine parity. The newly-found dynamic-route slug-collision codegen bug also needs its own
+  scoped Tracker ID. After that, Phase E (plan-gated UI, admin console, payment processor, proposed
+  R-484+) needs its own explicit founder sign-off before starting.
   Keep `task verify` model/Docker/DB-free at its core (the console's own build/lint/typecheck gates need
   no live control-plane; any live/model path stays opt-in); preserve single-session ownership and
   explicit trusted-local mode.

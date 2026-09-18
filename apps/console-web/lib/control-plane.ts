@@ -316,3 +316,32 @@ export function previewBuild(token: string, buildId: string): Promise<PreviewSta
     headers: { Authorization: `Bearer ${token}` },
   });
 }
+
+/** A real TypeScript compile report, exactly as `verify/compile.py`'s `CompileReport.to_dict()`
+ * (R-480) reports it. `files` maps a path to its already-rendered diagnostic lines (`"L12:5
+ * TS2339: ..."`) - ready to show as-is, no client-side re-formatting needed. */
+export interface ProblemsReport {
+  ok: boolean;
+  returncode: number;
+  error_count: number;
+  files: Record<string, string[]>;
+  output_tail: string;
+}
+
+/** Triggers a fresh problems check via `POST /jobs/build/{id}/problems` (R-480) - a real local
+ * `tsc` run, can take real time on a larger app. Not automatic; only ever called from an explicit
+ * user action ("Check for problems"). */
+export function checkBuildProblems(token: string, buildId: string): Promise<ProblemsReport> {
+  return callControlPlane<ProblemsReport>(`/jobs/build/${encodeURIComponent(buildId)}/problems`, {
+    method: "POST",
+    headers: { Authorization: `Bearer ${token}` },
+  });
+}
+
+/** Reads the last stored problems report via `GET /jobs/build/{id}/problems` (R-480) - read-only,
+ * no credit debit. Throws a `ControlPlaneError` with `status: 404` when no check has been run yet. */
+export function getBuildProblems(token: string, buildId: string): Promise<ProblemsReport> {
+  return callControlPlane<ProblemsReport>(`/jobs/build/${encodeURIComponent(buildId)}/problems`, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+}

@@ -1,5 +1,45 @@
 # Work Log
 
+## 2026-09-19 — R-481 (Tabbed workspace) — FINAL task of the 7-task Phase D roadmap
+
+- **Why:** seventh and final task of the approved 7-task Phase D roadmap. Restructure `/studio`'s
+  main pane into four real tabs — Preview, Files, Code, Problems — with chat persisting alongside,
+  assembling R-474 (files), R-477 (chat), R-479 (preview), and R-480 (problems) into one shell.
+- **New `studio-tabs.tsx`** owns `activeTab` and a lifted `selectedFile` shared by Files and Code
+  (kept as two separate tabs, per the founder's explicit decision): Files is a lightweight clickable
+  list that opens a file in Code; Code has its own file switcher too, for a technical user who wants
+  to jump straight to reading code.
+- **New `code-highlight.ts`**: a hand-rolled, dependency-free tokenizer porting the *approach* of
+  `codegen/nextjs.py`'s own generated `tokenizeCodeLine`/`normalizeLang` — the exact same
+  regex-driven algorithm the platform already ships (tested) inside every generated app's own
+  `CodeBlock` component, scoped to TS/TSX/JS/JSON/CSS/Markdown/plain. Matches the R-475
+  icon-decision precedent — confirmed live that no `prismjs` fallback was needed.
+- **Problems tab** is an explicit on-demand "Check for problems" button (per R-480's own design,
+  never automatic), hydrates the last stored report on mount, shows real toolchain/no-web-target
+  errors verbatim.
+- **Gates:** console `typecheck`/`lint`/`build` all clean (19 routes, 1 new). `task verify` 3,625 OK
+  (unchanged — no backend files touched). Repo `task verify`/`lint`/`security:quick`/`env:check` all
+  pass.
+- **Live** (Colima/Docker had stopped again since the prior session — restarted — real control-plane
+  + real agent-engine Studio server in preview mode + a freshly rebuilt `next start`): full loop
+  confirmed — build → real Preview (ready + real HTML served) → real Files list → real Code content
+  (hand-rolled tokenizer rendered real generated TSX cleanly) → real edit (second commit) → Files
+  list refresh confirmed (168→170, matching the edit's own diff) → Preview re-preview confirmed
+  triggered.
+- **A real, pre-existing codegen bug found live, unrelated to this task**: the edit introduced a
+  Next.js dynamic-route slug-name collision (`counterId` vs `counter_id`) — correctly surfaced as an
+  honest Preview error (not a crash) *and* independently caught by a real Problems check (18 genuine
+  TypeScript errors across 2 files, tracing to the exact same root cause). Cross-confirmed evidence
+  that R-479's and R-480's error-surfacing design both work correctly under genuine failure
+  conditions, not just the happy path. Not fixed here — out of scope, worth its own future Tracker
+  ID. A repeated `GET` returned the byte-identical cached problems report in 17ms.
+- **THIS COMPLETES THE APPROVED 7-TASK PHASE D ROADMAP** (R-475 through R-481). The Studio is now a
+  real chat-driven, multi-pane workspace closer to Lovable/Dyad/Emergent parity than at the start.
+- **NEXT:** no pre-approved task remains queued. Named, not-yet-scheduled follow-ups: R-482 (Model
+  Provider settings UI), R-483 (real-time streaming, its prerequisite now exists), per-user backend
+  multi-tenancy, Publish/deploy, and the newly-found route-slug codegen bug. Needs explicit founder
+  direction on priority before picking the next Tracker ID.
+
 ## 2026-09-19 — R-480 (Backend — Problems/compile-report support)
 
 - **Why:** sixth task of the approved 7-task Phase D roadmap. Real compile-error reporting for the

@@ -216,7 +216,21 @@ available ID per `.ai/tasks/` is **R-469** (R-468 is the last shipped task).
   has no per-user build scoping (a single shared in-memory process, unchanged since R-467) — any
   signed-in console user who knows a build id can browse its files. See `.ai/tasks/R-474.md`.
 
-### Remaining Phase D roadmap (planned 2026-09-18, approved and started 2026-09-19)
+### Remaining Phase D roadmap (planned 2026-09-18, approved 2026-09-19, **completed 2026-09-19**)
+
+**Status: all seven tasks shipped.** R-475 (visual foundation), R-476 (multi-turn edit bridge),
+R-477 (chat UI), R-478 (live preview proxy), R-479 (live preview UI), R-480 (Problems/compile-report
+support), and R-481 (tabbed workspace) are all committed and pushed to `origin/main`. The Studio is
+now a real chat-driven, multi-pane workspace — persistent chat plus a tabbed Preview/Files/Code/
+Problems main pane — genuinely closer to Lovable/Dyad/Emergent parity than at the start of this
+roadmap. See "Beyond R-475–481" below for the two structural gaps that remain even so (real-time
+streaming, per-user multi-tenancy), and each task's own `.ai/tasks/R-###.md` for full verification
+detail. A real, pre-existing codegen bug was found live during R-481's own manual smoke test — a
+Next.js dynamic-route slug-name collision (`counterId` vs `counter_id`) introduced by the edit-delta
+path — not fixed as part of this roadmap (out of scope), worth its own future Tracker ID once
+scoped. No pre-approved task remains queued after this roadmap; the next Tracker ID needs explicit
+founder direction on priority (see "Named, deliberately not in the seven above" and "Beyond
+R-475–481" for the candidates).
 
 The founder asked, after seeing R-473/R-474 live, for the full "rich, upgraded, advanced UI" the
 Lovable/Dyad/Emergent screenshot research was originally for — not just the functional loop

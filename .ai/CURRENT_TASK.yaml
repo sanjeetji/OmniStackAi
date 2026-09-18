@@ -1,31 +1,27 @@
-task_id: R-480
+task_id: R-481
 status: completed
 phase: MVP
 tracker_row: null
 started_at: "2026-09-19"
 completed_at: "2026-09-19"
 objective: >-
-  Sixth task of the approved 7-task Phase D roadmap. Build real compile-error reporting for the
-  first time in this codebase. On-demand, not automatic (node_modules/tsc only exist after a
-  preview install). New studio/problems.py: check_build_problems(root_dir, runner=None) resolves
-  root_dir/apps/web, raises NoWebTargetError if no package.json, calls verify/compile.py's real
-  compile_web_project(), remaps VerifyError into ToolchainNotInstalledError. StudioProblemsStore is
-  a bounded per-build-id LRU cache mirroring StudioSessionStore. New agent-engine routes POST/GET
-  /api/build/{id}/problems wired build-only-mode-inclusive (checking needs the build's own
-  node_modules from a prior preview install, not a currently running preview). New control-plane
-  proxy routes POST/GET /jobs/build/{id}/problems, no credit debit, a new defaultProblemsTimeout
-  (90s) on the POST route.
+  Seventh and final task of the approved 7-task Phase D roadmap. Restructure /studio's main pane
+  into four real tabs - Preview, Files, Code, Problems - with chat persisting alongside (not as a
+  tab itself), assembling R-474 (files), R-477 (chat), R-479 (preview), and R-480 (problems). Files
+  and Code stay separate per the founder's explicit decision, sharing one lifted selectedFile state.
+  New code-highlight.ts: a hand-rolled tokenizer porting the approach of codegen/nextjs.py's own
+  generated tokenizeCodeLine/normalizeLang, scoped to TS/TSX/JS/JSON/CSS/Markdown/plain. Problems
+  tab is an explicit on-demand "Check for problems" button per R-480's own design, not automatic.
 allowed_paths:
-  - services/agent-engine/src/omnistackai_agent_engine/studio/problems.py
-  - services/agent-engine/src/omnistackai_agent_engine/studio/server.py
-  - services/agent-engine/src/omnistackai_agent_engine/studio/live_serve.py
-  - services/agent-engine/tests/test_studio_problems.py
-  - services/agent-engine/tests/test_studio_server.py
-  - services/control-plane/internal/jobs/handler.go
-  - services/control-plane/internal/jobs/types.go
-  - services/control-plane/internal/jobs/handler_test.go
+  - apps/console-web/app/studio/studio-tabs.tsx
+  - apps/console-web/app/studio/code-highlight.ts
+  - apps/console-web/app/api/jobs/build/[id]/problems/route.ts
+  - apps/console-web/app/studio/studio-chat.tsx
+  - apps/console-web/app/studio/studio-workspace.tsx
+  - apps/console-web/lib/control-plane.ts
+  - apps/console-web/app/globals.css
   - scripts/test.sh
-  - .ai/tasks/R-480.md
+  - .ai/tasks/R-481.md
   - .ai/CURRENT_TASK.yaml
   - .ai/PROJECT_STATE.yaml
   - .ai/WORK_LOG.md
@@ -34,36 +30,34 @@ allowed_paths:
   - CHANGELOG.md
   - docs/PROGRESS.md
   - docs/RESUME_PROMPT.md
+  - R_&_D/OmniStackAI_Commercial_Platform_Kickoff_v1.md
 forbidden_changes:
-  - No changes to apps/console-web
-  - No live preview, chat, or tab functionality beyond what's listed
+  - No changes to services/control-plane or services/agent-engine
   - Do not modify or commit the untracked .claude directory
 required_gates:
-  - "agent-engine: task verify (0 model/network calls)"
-  - "control-plane: go build ./..., go vet ./..., go test ./..."
+  - "console-web: pnpm run typecheck, pnpm run lint, pnpm run build"
   - task verify
   - task lint
   - task security:quick
   - task env:check
-  - "manual smoke: real build with live preview running -> trigger a real problems check -> confirm real tsc output; a build with no toolchain -> confirm the clear 409 error, not a crash or hang"
+  - "manual smoke (real docker control-plane + real agent-engine studio server in preview mode + next start): full loop - build -> Preview+Files+Code -> edit -> confirm refresh -> Problems -> real tsc check"
 model_tool_trace:
   routing: deterministic_only
   local_calls: 0
   cloud_calls: 0
   note: >-
-    Go/Python implementation, 0 model/network calls in any automated gate (a runner injection point
-    mirrors verify/compile.py's own test style, so no real tsc/subprocess needed in the automated
-    suite). The manual smoke test's real tsc run is a local compile, not a model/network call.
+    Pure console-web work, 0 model/network calls in any automated gate. The manual smoke test's
+    build+edit calls use whatever provider is configured (real Groq or local Ollama); the Problems
+    check runs a real local tsc, not a model/network call.
 next_action: >-
-  R-480 is complete (see .ai/tasks/R-480.md for full Gates & Evidence). Next up per the approved
-  plan (/Users/sanjeet_kumar/.claude/plans/hi-fancy-shannon.md): R-481 - Tabbed workspace, the final
-  task of the 7-task roadmap. Restructure /studio's main pane into four real tabs - Preview, Files,
-  Code, Problems - with chat persisting alongside (not as a tab itself), assembling R-474 (files),
-  R-477 (chat), R-479 (preview), and R-480 (problems, just shipped). Files and Code stay separate
-  per the founder's explicit decision. Code tab syntax highlighting: hand-rolled per the R-475
-  icon-decision precedent (no new dependency), porting the approach (not the exact code) from
-  codegen/nextjs.py's own generated CodeBlock component. Problems tab: an explicit "Check for
-  problems" button (on-demand per R-480's own design, not automatic), real tsc results grouped by
-  file. This is the last task in the currently-approved plan - after R-481 ships, re-read the plan
-  file's "Out of this execution pass" section (R-482 Model Provider settings UI, R-483 streaming,
-  per-user multi-tenancy, Publish) before deciding what's next.
+  R-481 is complete (see .ai/tasks/R-481.md for full Gates & Evidence) - the seventh and FINAL task
+  of the founder-approved Phase D roadmap (R-475-R-481). All seven tasks are now shipped, tested,
+  gated, and pushed to origin/main. A real, pre-existing codegen bug was found live during R-481's
+  own smoke test (a Next.js dynamic-route slug-name collision, "counterId" vs "counter_id", from
+  the edit-delta path) - not fixed as part of this task, out of scope, worth its own future Tracker
+  ID once scoped. Named, not-yet-scheduled follow-ups per the plan file's "Out of this execution
+  pass" section: R-482 (Model Provider settings UI, independent, can slot in anytime), R-483
+  (real-time build/edit streaming, needs R-475-481 to exist first), per-user backend
+  multi-tenancy (no Tracker ID yet), and Publish/deploy (no backend exists yet). Before starting any
+  of these, or the newly-found route-slug bug, get explicit founder direction on priority - this
+  session's approved plan ends here.
