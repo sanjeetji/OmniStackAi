@@ -1,9 +1,39 @@
 # Current Handoff
 
-Task ID: R-474
+Task ID: R-475
 Status: done
 Phase: BASIC/MVP — Founder Stage 0
 Branch: `main`
+
+> **R-475 Completed (2026-09-19): Studio visual foundation.**
+> - **First of a founder-approved, fully-researched 7-task plan** (R-475–R-481, saved at
+>   `/Users/sanjeet_kumar/.claude/plans/hi-fancy-shannon.md` and mirrored in the kickoff doc's
+>   "Remaining Phase D roadmap") to take the Studio from functionally-real-but-plain toward a
+>   genuinely rich, chat-driven, multi-pane workspace. Planning went through full plan-mode
+>   discipline this session: two Explore agents researched the real frontend/backend code, a Plan
+>   agent designed the task sequence, and the most consequential claims were independently verified
+>   by reading the actual source (see the plan file's "Findings from research" for the full list —
+>   e.g. `_edit()` has no `usage_ledger` today, so every edit currently debits 0 credits regardless
+>   of real cost; the agent-engine's live-preview API has an unusual 200-with-error-status shape for
+>   an unknown build; no compile-error endpoint exists anywhere in the Studio path today). Two
+>   direct founder decisions are folded in: Problems (compile errors) gets built for real, given its
+>   own task (R-480) rather than a placeholder — this is what took the roadmap from six tasks to
+>   seven; Files and Code stay as two separate real tabs, not collapsed into one.
+> - **This task**: new `app/studio/layout.tsx` takes over `/studio`'s auth gate and renders
+>   persistent top-bar chrome (brand, back link, sign-out) that later chat/tab tasks build on top
+>   of. `globals.css` gained additive design tokens (`--radius-sm/md/lg` replacing inconsistent
+>   inline values, `--surface-2`, an accent chip background, a CSS-only `.spinner`, `.pill--accent`)
+>   mirrored into the existing dark-mode media query. New hand-rolled `studio-icons.tsx` rather than
+>   a new npm dependency — the fixed, small icon surface doesn't clear the bar for one.
+>   `studio-form.tsx` restyled only, zero logic change. No backend changes.
+> - Gates: console `typecheck`/`lint`/`build` clean (13 routes unchanged); `task verify` **3,603
+>   OK**; `task lint`/`security:quick`/`env:check` all pass. **Live** (Colima had stopped since the
+>   prior session, restarted; real control-plane + real agent-engine Studio server + a fresh `next
+>   start`): `/studio`'s auth gate now correctly lives in `layout.tsx` (307 signed out), the new
+>   shell renders correctly signed in with a real credit pill, and `/`, `/fabric`, `/login`,
+>   `/register` all remain structurally unaffected. Confirmed no new npm dependency was added.
+> - **NEXT:** R-476 (backend: multi-turn edit bridge) per the approved plan. See
+>   `R_&_D/OmniStackAI_Commercial_Platform_Kickoff_v1.md`, `.ai/tasks/R-475.md`, and the plan file.
 
 > **R-474 Completed (2026-09-18): File browser in the console Studio — see what a build actually produced.**
 > - The founder asked to see the platform running before continuing Phase D — brought up the real

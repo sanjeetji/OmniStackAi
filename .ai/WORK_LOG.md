@@ -1,5 +1,57 @@
 # Work Log
 
+## 2026-09-19 — R-475 (Studio visual foundation)
+
+- **Why:** the founder asked directly whether the platform now has a "rich, upgraded, advanced UI"
+  like Lovable/Dyad/Emergent. Honest answer: no — R-473/R-474 are functionally real but visually
+  still a plain form. The founder asked for "everything" (visual polish, chat, live preview, tabs),
+  got an honest time estimate, then asked for a written plan and paused for the day.
+- **Planning, this session:** turning the doc's 6-task sketch into an executable plan went through
+  full plan-mode discipline — two parallel Explore agents researched the real console-web frontend
+  and the real agent-engine/control-plane backend (not the doc's assumptions), a Plan agent
+  synthesized a task-by-task design, and the most consequential claims were independently verified
+  by directly reading the source. Confirmed: `_build()` never records a chat turn though `_edit()`
+  does; `_edit()` has no `usage_ledger` at all (every edit today debits 0 credits regardless of
+  real cost); the agent-engine's live-preview API is two different surfaces, the build-scoped one
+  returning an unusual `200 {"status":"error"}` for an unknown build, not a 404; the
+  control-plane's `WriteTimeout` defaults to 15s against a real 45s preview-readiness wait; no
+  compile/verify-error endpoint exists anywhere in the Studio path today. Two decisions asked of
+  the founder directly, both honored: Problems (compile errors) gets built for real, not deferred
+  as a placeholder — given its own task, R-480, rather than bloating tab assembly (this is what
+  took the roadmap from six tasks to seven); Files and Code stay as two separate real tabs, not
+  collapsed into one. Plan approved via `ExitPlanMode` — twice, since the session briefly
+  re-entered plan mode mid-execution after R-475's contract/doc files were already written; the
+  plan file was updated with a status note reflecting real on-disk progress and re-approved rather
+  than re-litigated.
+- **R-475 itself:** new `app/studio/layout.tsx` takes over `/studio`'s auth gate and renders
+  persistent top-bar chrome (brand, back link, sign-out) that R-477's chat and R-481's tabs build
+  on top of — moved out of `page.tsx` so every future Studio sub-view inherits it for free.
+  `globals.css` gained additive design tokens (`--radius-sm/md/lg`, replacing today's inconsistent
+  inline 8/12/14px values across `.field input/textarea`, `.button`, `.error-banner`, `.stat`, and
+  `.panel`; `--surface-2`; an accent-tinted chip background; a CSS-only `.spinner`; `.pill--accent`)
+  mirrored into the existing dark-mode media query exactly like every token before it. New
+  hand-rolled `studio-icons.tsx` (~10 inline-SVG stroke icons) rather than a new npm dependency —
+  the fixed, small icon surface needed across the whole roadmap didn't clear the bar for a
+  dependency given everything else in this app is already hand-rolled. `studio-form.tsx` restyled
+  only (credit balance moved from its own stat panel into a compact pill chip), zero logic change.
+  No backend changes.
+- **Gates:** console `typecheck`/`lint`/`build` all clean (13 routes unchanged). `task verify` —
+  Ran 3,603 tests, OK, Stage 0 verification passed. `task lint`/`security:quick`/`env:check` all
+  pass. New `scripts/test.sh` R-475 block (contract files present, `layout.tsx` has the auth gate,
+  `globals.css` has the new tokens/classes).
+- **Live:** Colima/Docker had stopped since the previous session and was restarted; real
+  control-plane + real agent-engine Studio server + a fresh `next start` on the new build proved
+  `/studio`'s auth gate now correctly lives in `layout.tsx` (`307` signed out), the new shell
+  renders correctly signed in (`studio-shell`/`studio-topbar` present, real credit pill showing
+  "100 credits" — the `<!-- -->` between the number and the word is React's own harmless hydration
+  boundary comment, the same pattern already diagnosed in R-471), and `/`, `/fabric`, `/login`,
+  `/register` all remain structurally unaffected (only the shared `.panel` radius token change is
+  visible — confirmed via the home page's real `"Welcome back, R475 Smoke"` heading rendering
+  correctly). Confirmed `package.json`'s dependencies are still exactly `next`/`react`/`react-dom`.
+- **NEXT:** R-476 (backend: multi-turn edit bridge) per the approved plan
+  (`/Users/sanjeet_kumar/.claude/plans/hi-fancy-shannon.md`), then R-477 (chat UI), R-478 (preview
+  backend), R-479 (preview UI), R-480 (problems backend), R-481 (tabbed workspace) in that order.
+
 ## 2026-09-18 — R-474 (File browser in the console Studio — see what a build actually produced)
 
 - **Why:** the founder asked to see the platform running before continuing Phase D. Brought up the

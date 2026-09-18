@@ -2,10 +2,10 @@ schema_version: 1
 project: OmniStackAI
 phase: BASIC/MVP
 founder_stage: 0
-current_task: R-474
+current_task: R-475
 current_status: done
 branch: main
-last_completed_task: R-474
+last_completed_task: R-475
 # TASK COMPILATION AUDIT — 2026-09-16
 # Performed to achieve 100% synchronization across all task-tracking documentation.
 # Tracker workbook expanded to 464 tasks with R-464.
@@ -34,6 +34,53 @@ task_compilation_audit:
       new_status: DONE
       reason: "Task fully completed on 2026-09-11 with 35 tests. Status left stale during rapid development sprint."
 last_completed_task_summary: >-
+  Completed R-475 (2026-09-19): Studio visual foundation - the first of a founder-approved,
+  fully-researched 7-task plan (R-475..R-481, saved at
+  /Users/sanjeet_kumar/.claude/plans/hi-fancy-shannon.md) to take the console's Studio from
+  functionally-real-but-plain (R-473/R-474) toward a genuinely rich, chat-driven, multi-pane
+  workspace closer to Lovable/Dyad/Emergent. This session: the founder asked directly whether the
+  6-task sketch already in the kickoff doc gets to "exact" competitor parity - honest answer,
+  recorded in the doc, was no (still missing real-time streaming and per-user backend
+  multi-tenancy) - then asked to add that gap analysis to the doc. Then asked to continue the
+  remaining roadmap tasks, which (per house discipline) went through a full plan-mode cycle: two
+  parallel Explore agents researched the real console-web frontend and the real agent-engine/
+  control-plane backend code (not the roadmap doc's assumptions), a Plan agent synthesized a
+  concrete task-by-task design, several of its most consequential claims were independently
+  verified by directly reading the source (confirmed: _build() never records a chat turn though
+  _edit() does; _edit() has no usage_ledger at all so every edit today debits 0 credits regardless
+  of real cost; the agent-engine's live-preview API is two different surfaces with an unusual
+  200-with-error-status shape on the build-scoped one; the control-plane's WriteTimeout defaults to
+  15s against a real 45s preview-readiness wait; no compile/verify-error endpoint exists anywhere
+  in the Studio path today). Two direct decisions were asked of the founder and both honored:
+  Problems (compile-error reporting) gets built for real rather than deferred as a placeholder
+  (given its own task, R-480, rather than bloating tab assembly - this is what took the roadmap
+  from 6 tasks to 7), and Files/Code stay as two separate real tabs rather than one collapsed tab.
+  Plan approved via ExitPlanMode (twice - the session briefly re-entered plan mode mid-execution
+  after R-475's contract/doc files were already written; the plan file was updated with a status
+  note reflecting real on-disk progress rather than re-litigated, then re-approved).
+  R-475 itself: new app/studio/layout.tsx takes over the /studio auth gate + persistent top-bar
+  chrome (brand, back link, sign-out) that later chat/tab tasks build on top of; globals.css gained
+  additive design tokens (--radius-sm/md/lg replacing inconsistent inline 8/12/14px values,
+  --surface-2, an accent-tinted chip background, a CSS-only .spinner, .pill--accent) mirrored into
+  the existing dark-mode media query exactly like every token before it; new hand-rolled
+  studio-icons.tsx (~10 inline-SVG stroke icons) rather than a new npm dependency - the fixed,
+  small icon surface needed across the whole roadmap didn't clear the bar for a new dependency
+  given everything else in this app is already hand-rolled. studio-form.tsx restyled only (credit
+  balance moved from its own stat panel into a compact pill chip), zero logic change. No backend
+  changes.
+  Gates: console typecheck/lint/build clean (13 routes unchanged); task verify 3,603 OK; task
+  lint/security:quick/env:check all pass. Live: Colima/Docker had stopped since the prior session
+  and was restarted; real control-plane + real agent-engine Studio server + a fresh next start
+  proved /studio's auth gate now correctly lives in layout.tsx (307 signed out), the new shell
+  renders correctly signed in (studio-shell/studio-topbar present, real credit pill showing "100
+  credits"), and /, /fabric, /login, /register all remain structurally unaffected (only the shared
+  .panel radius token change is visible) - confirmed via the real home page's
+  "Welcome back, R475 Smoke" heading rendering correctly. Confirmed package.json's dependencies
+  are still exactly next/react/react-dom.
+  NEXT: R-476 (backend: multi-turn edit bridge) per the approved plan, then R-477 (chat UI), R-478
+  (preview backend), R-479 (preview UI), R-480 (problems backend), R-481 (tabbed workspace) in
+  that order - full detail in the plan file and in the kickoff doc's "Remaining Phase D roadmap".
+_prior_last_completed_task_summary_R474: >-
   Completed R-474 (2026-09-18): file browser in the console Studio - the founder asked to see the
   platform running before continuing Phase D, so this session brought up the real Docker
   control-plane + real agent-engine Studio server + real next start console for a live look, then
@@ -1203,34 +1250,38 @@ id_note: >-
   ID); R-416..R-429 built/hardened the "chat -> create -> run -> preview" front door; R-430..R-437 build SPINE.
 blockers: []
 next_action: >-
-  R-474 is complete (file browser in the console Studio). The founder then asked for the platform's
-  UI to genuinely match the Lovable/Dyad/Emergent research (visual polish + persistent chat + live
-  preview + tabbed workspace, "everything"), asked for a time estimate, then asked to record the
-  full plan in R_&_D/OmniStackAI_Commercial_Platform_Kickoff_v1.md's Phase D section (see its new
-  "Remaining Phase D roadmap" subsection) and close the session for the day - resume tomorrow from
-  that written plan.
-  NEXT (start here): R-475 - Studio visual foundation (app shell, typography, color, spacing, card
-  layout for the build result), sequenced first so later chat/tabs work doesn't redo visual work.
-  Then in order: R-476 (backend: multi-turn edit bridge, mirroring R-472's proxy+debit shape for
-  R-468's edit/turns endpoints), R-477 (console: persistent chat UI), R-478 (backend: live preview
-  proxy - resolved decision: local-only, reuses the existing trusted-local StudioPreviewManager,
-  no new hosted execution), R-479 (console: live preview UI), R-480 (tabbed workspace: Preview/
-  Files/Code/Problems: "Code" needs syntax highlighting added to the existing viewer; "Problems"
-  needs confirming whether an agent-engine endpoint for real compile/verify errors already exists
-  or needs adding - research at implementation time, don't assume; "Publish" explicitly deferred,
-  no deployment backend exists yet). R-481 (Model Provider settings UI) is independent, can slot in
-  anytime after R-475. Full detail, effort estimates, and the live-preview decision's reasoning are
-  in the kickoff doc - read it in full before starting R-475, per its own "How to resume" section.
-  The founder then directly asked whether R-475..R-481 gets this platform to "exact"
-  Lovable/Dyad/Emergent parity - honest answer, recorded in the kickoff doc's new "Beyond
-  R-475-481" subsection: closer, not exact. Two gaps remain beyond those six tasks: R-482 (real-time
-  build/edit streaming via SSE/WebSocket - Lovable/Dyad/Emergent's live token-by-token feel, which
-  nothing in R-475..R-481 provides since every call today is one blocking HTTP request; scope only
-  after R-475-480 exist to stream progress into) and per-user backend multi-tenancy (the
-  agent-engine's Studio server stays a single shared in-memory process even after R-475-482 -
-  without this, it is a polished single-operator tool, not yet an actual multi-tenant SaaS; not
-  proposed with a Tracker ID yet, needs its own scoping conversation first). Phase E (plan-gated UI,
-  admin console, payment processor, now proposed R-483+) still needs its own explicit founder
-  sign-off before starting.
+  R-475 is complete (Studio visual foundation). Executing a founder-approved, fully-researched
+  7-task plan (superseding the earlier 6-task doc sketch): R-475 done; R-476..R-481 remain. Full
+  design detail for every task is in the approved plan file
+  (/Users/sanjeet_kumar/.claude/plans/hi-fancy-shannon.md) and mirrored in
+  R_&_D/OmniStackAI_Commercial_Platform_Kickoff_v1.md's "Remaining Phase D roadmap" - read the plan
+  file first, it has the most implementation-level detail (exact function names, verified line
+  numbers, exact response shapes).
+  NEXT (start here): R-476 - Backend: multi-turn edit bridge. New control-plane routes
+  POST /jobs/build/{id}/edit and GET /jobs/build/{id}/turns, mirroring POST /jobs/build's exact
+  proxy+debit shape (R-472). Also fixes two real, verified gaps in live_serve.py's _edit(): it has
+  no usage_ledger at all today (confirmed by direct comparison with _build() - every edit
+  currently debits 0 credits regardless of real cost), and _build() never calls
+  session_store.record_turn (only _edit() does - a future chat hydrating history from /turns after
+  a refresh would silently lose the first message). Both fixed by mirroring _build()'s own
+  existing patterns exactly.
+  Then in order: R-477 (console: chat UI, needs R-475+R-476), R-478 (backend: live preview proxy -
+  four routes not three, the agent-engine's preview API is two different surfaces; the build-scoped
+  one has a verified unusual 200-with-{"status":"error"} shape for an unknown build, not a 404),
+  R-479 (console: live preview UI, polling is for crash detection not progress since preview start
+  is synchronous; must trigger its own re-preview after edits since _edit() never restarts preview),
+  R-480 (backend: Problems/compile-report support - NEW work, confirmed no compile-error endpoint
+  exists anywhere in the Studio path today; founder explicitly chose to build this for real rather
+  than defer it, which is what took the roadmap from 6 tasks to 7; must be on-demand not automatic,
+  since node_modules/tsc only exist after a preview install), R-481 (tabbed workspace: Preview/
+  Files/Code/Problems as four real tabs - founder explicitly chose to keep Files and Code separate
+  rather than collapse them; syntax highlighting hand-rolled per the icon-decision precedent set in
+  R-475). R-482 (Model Provider settings UI) is independent, can slot in anytime after R-475.
+  Beyond R-475-481: R-483 (real-time build/edit streaming, only after R-475-481 exist to stream
+  progress into) and per-user backend multi-tenancy (no Tracker ID yet, needs its own scoping
+  conversation) are both named, not forgotten, gaps to genuine Lovable/Dyad/Emergent parity - full
+  reasoning in the kickoff doc's "Beyond R-475-481" section. Phase E (plan-gated UI, admin console,
+  payment processor, proposed R-484+) still needs its own explicit founder sign-off before
+  starting.
   Keep task verify model/Docker/DB/install/network-free. The UI-component series remains
   paused/resumable; the tracker workbook still lags (ends at R-462).

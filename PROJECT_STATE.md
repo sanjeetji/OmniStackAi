@@ -1,8 +1,28 @@
 # Project State — OmniStackAI
-Last updated: 2026-09-18
+Last updated: 2026-09-19
 
 ## Current Phase
 Stage 0 (Founder Build Sequence, Brief Section 91) — BASIC/MVP
+
+> **R-475 (2026-09-19): Studio visual foundation.** First of a founder-approved, fully-researched
+> 7-task plan (R-475–R-481, saved at `/Users/sanjeet_kumar/.claude/plans/hi-fancy-shannon.md`,
+> mirrored in the kickoff doc) to take the Studio from functionally-real-but-plain toward a
+> genuinely rich, chat-driven, multi-pane workspace closer to Lovable/Dyad/Emergent. Planning used
+> full plan-mode discipline: two Explore agents researched the real frontend/backend code, a Plan
+> agent designed the sequence, and the most consequential claims (e.g. `_edit()` has no
+> `usage_ledger` today, so every edit currently debits 0 credits; the live-preview API's
+> build-scoped route returns an unusual `200`-with-error-status for an unknown build; no
+> compile-error endpoint exists anywhere yet) were independently verified by reading the real
+> source. Two founder decisions honored: Problems (compile errors) gets built for real via its own
+> task (R-480) rather than a placeholder, taking the roadmap from six tasks to seven; Files and
+> Code stay as two separate tabs, not one. This task: new `app/studio/layout.tsx` takes over the
+> `/studio` auth gate and persistent top-bar chrome; `globals.css` gained additive design tokens
+> (`--radius-*`, `--surface-2`, `.spinner`, `.pill--accent`); new hand-rolled `studio-icons.tsx`
+> rather than a new npm dependency. `studio-form.tsx` restyled only, zero logic change, no backend
+> changes. `task verify` **3,603 OK**; console `typecheck`/`lint`/`build` clean; live: real
+> control-plane + real agent-engine Studio server + a fresh `next start` proved the auth gate,
+> shell, and unaffected sibling pages all work correctly.
+> NEXT: R-476 (backend: multi-turn edit bridge), then R-477–R-481 per the approved plan.
 
 > **R-474 (2026-09-18): file browser in the console Studio — see what a build actually produced.**
 > Continues Phase D. R-473's build result panel listed filenames as inert text; each filename is

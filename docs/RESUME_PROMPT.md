@@ -208,7 +208,7 @@ front-door bricks, R-420 is generated-SQL hardening, R-421..R-426 are Studio pre
 R-427..R-429 are generated-app compile fixes, R-430..R-457 are the first twenty-eight differentiating-spine
 bricks (Scope Compiler through Ecosystem Multi-Surface SLA, SLO, and Error Budget Contracts).
 Git, state files (.ai/), CHANGELOG, and docs/PROGRESS.md remain the executable/detail sources of truth.
-Current through R-474; `task verify` = 3,603 tests (agent-engine) + the Go control-plane's own suite +
+Current through R-475; `task verify` = 3,603 tests (agent-engine) + the Go control-plane's own suite +
 the Next.js console's typecheck/lint/build. R-416 added prompt-to-IR intake, R-417 materialized a generated
 owned repo, R-418 added the local chat studio, R-419 added turnkey local run, and R-420 fixed the two
 SQL defects found by live execution. R-421 added an explicit `task agent-engine:studio:preview` mode:
@@ -586,15 +586,46 @@ WHAT TO DO NEXT
   via real Groq cloud, then proved the file browser end to end - real file content read from the
   real repo on disk, an unknown-build 404 and a path-traversal 400 both proxied through from the
   agent-engine unchanged.
-- NEXT: continue Phase D - live preview (executes generated code, a materially different trust
-  posture needing its own scoped decision before starting, unlike read-only file access),
-  chat/multi-turn edit (porting R-468's capability into the console), and/or Solution
-  Pack/Ecosystem build selection in the Studio UI. After that, Phase E (plan-gated UI, admin
-  console, payment processor) needs its own explicit founder sign-off before starting.
-  Previously-named agent-engine follow-ups (wiring R-466's `compile_and_repair` into the edit flow,
-  an undo/revert UI, extending `app_delta` beyond additive-only, threading `usage_ledger` through
-  `/jobs/build/{id}/edit` and the Solution Pack/Ecosystem build paths) remain real but lower
-  priority than the platform foundation now underway.
+- The founder asked directly whether the doc's original 6-task Phase D sketch gets this platform to
+  "exact" Lovable/Dyad/Emergent parity - honest answer recorded in the kickoff doc: closer, not
+  exact (still missing real-time streaming and per-user backend multi-tenancy). Asked to continue
+  the roadmap anyway. Turning the sketch into an executable plan went through full plan-mode
+  discipline (2026-09-19): two Explore agents researched the real console-web frontend and the real
+  agent-engine/control-plane backend (not the doc's assumptions), a Plan agent designed a
+  task-by-task sequence, and the most consequential claims were independently verified by reading
+  the actual source - confirmed `_build()` never records a chat turn though `_edit()` does;
+  `_edit()` has no `usage_ledger` at all (every edit today debits 0 credits regardless of real
+  cost); the live-preview API's build-scoped route returns an unusual `200 {"status":"error"}` for
+  an unknown build, not a 404; no compile-error endpoint exists anywhere in the Studio path today.
+  Two decisions asked of the founder directly, both honored: Problems (compile errors) gets built
+  for real via its own task (R-480) rather than a placeholder - this took the roadmap from six
+  tasks to seven; Files and Code stay as two separate real tabs, not one. Plan approved via
+  `ExitPlanMode` (saved at `/Users/sanjeet_kumar/.claude/plans/hi-fancy-shannon.md`).
+- R-475 (2026-09-19, done) built Studio visual foundation, the first of the seven: new
+  `app/studio/layout.tsx` takes over `/studio`'s auth gate and persistent top-bar chrome (brand,
+  back link, sign-out) later tasks build on. `globals.css` gained additive design tokens
+  (`--radius-sm/md/lg` replacing inconsistent inline values, `--surface-2`, an accent chip
+  background, a CSS-only `.spinner`, `.pill--accent`) mirrored into the existing dark-mode media
+  query. New hand-rolled `studio-icons.tsx` rather than a new npm dependency. `studio-form.tsx`
+  restyled only, zero logic change. No backend changes. `task verify` 3,603 OK; console
+  `typecheck`/`lint`/`build` clean. Live (Colima had stopped since the prior session, restarted):
+  real control-plane + real agent-engine Studio server + a fresh `next start` proved the auth gate
+  now correctly lives in `layout.tsx`, the new shell renders correctly with a real credit pill, and
+  `/`, `/fabric`, `/login`, `/register` all remain structurally unaffected. Confirmed no new npm
+  dependency was added.
+- NEXT: R-476 (backend: multi-turn edit bridge - new control-plane routes
+  `POST /jobs/build/{id}/edit`/`GET /jobs/build/{id}/turns` mirroring `POST /jobs/build`'s exact
+  proxy+debit shape, plus the two real Python fixes to `_edit()` found during planning), then R-477
+  (console: chat UI), R-478 (backend: live preview proxy - four routes not three, per the
+  build-scoped-route finding above), R-479 (console: live preview UI - polling is for crash
+  detection not progress, since preview start is synchronous), R-480 (backend: Problems/
+  compile-report support - genuinely new work, on-demand not automatic since `node_modules`/`tsc`
+  only exist after a preview install), R-481 (tabbed workspace: Preview/Files/Code/Problems as four
+  real tabs). R-482 (Model Provider settings UI) is independent, can slot in anytime after R-475.
+  R-483 (real-time streaming, only after R-475-481 exist to stream progress into) and per-user
+  backend multi-tenancy (no Tracker ID yet) remain named, not forgotten, gaps to genuine parity.
+  After that, Phase E (plan-gated UI, admin console, payment processor, proposed R-484+) needs its
+  own explicit founder sign-off before starting.
   Keep `task verify` model/Docker/DB-free at its core (the console's own build/lint/typecheck gates need
   no live control-plane; any live/model path stays opt-in); preserve single-session ownership and
   explicit trusted-local mode.

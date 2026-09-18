@@ -216,74 +216,101 @@ available ID per `.ai/tasks/` is **R-469** (R-468 is the last shipped task).
   has no per-user build scoping (a single shared in-memory process, unchanged since R-467) — any
   signed-in console user who knows a build id can browse its files. See `.ai/tasks/R-474.md`.
 
-### Remaining Phase D roadmap (planned 2026-09-18, to resume from tomorrow)
+### Remaining Phase D roadmap (planned 2026-09-18, approved and started 2026-09-19)
 
 The founder asked, after seeing R-473/R-474 live, for the full "rich, upgraded, advanced UI" the
 Lovable/Dyad/Emergent screenshot research was originally for — not just the functional loop
-R-472–R-474 proved. Explicit instruction: close the session now, resume tomorrow from this written
-plan (matching this doc's own stated purpose — the "if we stop today, anyone can pick this up
-tomorrow" artifact).
+R-472–R-474 proved. This section was first drafted as a six-task sketch on 2026-09-18, then turned
+into a fully-researched, founder-approved execution plan on 2026-09-19 (full detail, including
+verified code-level findings, in that session's plan record) — two research passes over the real
+code plus two direct founder decisions changed the count from six tasks to **seven**. This section
+now reflects the approved plan; the six-task version is superseded, not preserved separately.
 
-**Honest scope assessment**: this is not one task. It is six more, each following the same
-contract-first / test-first / one-commit / real-gate-evidence discipline every prior Tracker ID in
-this doc has used. Rough effort, extrapolated from R-472/473/474's own pace in this session
-(~30–60 minutes of continuous, gated work each when nothing unexpected comes up): **~4–6 hours of
-continuous work across the six tasks below**, likely spanning more than one sitting once real model
-flakiness, live-verification time, and ordinary mid-implementation discoveries are accounted for
-(every prior phase in this doc found at least one real, unanticipated thing while implementing —
-there is no reason to assume this run of tasks won't too).
+**Honest scope assessment (unchanged in spirit, one task longer):** contract-first / test-first /
+one-commit / real-gate-evidence discipline, same as every prior Tracker ID. Roughly 30–90 minutes
+of continuous gated work per task at this session's established pace, likely spanning more than one
+sitting once real model flakiness, live-verification time, and ordinary mid-implementation
+discoveries are accounted for (every prior phase in this doc has found at least one real,
+unanticipated thing while implementing).
 
-**Resolved decision (2026-09-18, founder confirmed): live preview stays local-only.** It reuses the
-exact trust boundary that already exists today (`task agent-engine:studio:preview`'s
+**Resolved decision (2026-09-18, founder confirmed): live preview stays local-only.** Reuses the
+exact trust boundary that already exists (`task agent-engine:studio:preview`'s
 `StudioPreviewManager`, a single trusted-local developer's own machine) — the console/control-plane
-only add a way to *reach* that same mechanism, they do not add new hosted/sandboxed remote code
-execution. If this platform later becomes genuinely multi-tenant-hosted (many real, mutually
-untrusted users, not one operator), live preview's trust model needs a full redesign from scratch —
-this roadmap explicitly does not attempt that, and no task below should quietly expand into it.
+only add a way to *reach* that mechanism, not new hosted/sandboxed execution. Full multi-tenant
+redesign is out of scope until the platform is genuinely multi-tenant-hosted.
 
-Proposed sequence (next available ID is **R-475**; each gets its own `.ai/tasks/R-###.md` contract
-before code, per this project's standing rule — this section is the map, not the contract):
+**Two further decisions (2026-09-19, founder confirmed, both change the plan):**
+- **Problems (compile-error reporting) gets built for real, not deferred as a placeholder** — even
+  though nothing in this codebase calls `compile_web_project()` from the Studio path today, so this
+  is genuinely new backend work (confirmed by exhaustive grep: the only caller anywhere is a
+  standalone CLI script, never `_build()`/`_edit()`). Given it back its own task (**R-480**, backend
+  only) rather than folding it into tab assembly, keeping every task's scope consistent with the
+  rest of this session's tasks — this is what took the roadmap from six tasks to seven.
+- **Files and Code stay as two separate, real tabs** — a Files tab for browsing/getting oriented
+  (tree only) and a Code tab for actually reading one file (full syntax-highlighted content),
+  sharing one lifted "selected file" state — rather than collapsing them into a single tab.
 
-1. **R-475 — Studio visual foundation.** Redesign `/studio`'s look and feel: a proper app shell
-   (not just a stacked list of `.panel` sections), refined typography/color/spacing, card-based
-   layout for the build result. Framed as a *foundation* the later chat UI (R-477) and tabbed
-   workspace (R-480) build on top of, not a one-off skin of the current form that gets discarded —
-   sequenced first specifically so that visual work is not done twice. No backend changes. Lowest
-   risk, fastest visible improvement, good first task to resume with tomorrow.
-2. **R-476 — Backend: multi-turn edit bridge.** New control-plane route(s) proxying to the
-   agent-engine's existing R-468 edit/turns endpoints (`POST /api/build/{id}/edit`,
-   `GET /api/build/{id}/turns`), mirroring `POST /jobs/build`'s exact shape (R-472): authenticate,
-   forward verbatim, debit credits from any real usage the edit call reports. Needs the same
-   `usage_ledger` threading R-472 did for the initial build — R-468's `_edit` does not yet create
-   one; confirm this while implementing rather than assuming it already does.
-3. **R-477 — Console: chat UI.** Replace `/studio`'s one-shot prompt form with a persistent,
-   multi-turn chat thread (message history, a follow-up input that stays active after a build
-   completes), wired to R-476 and built on R-475's visual foundation.
-4. **R-478 — Backend: live preview proxy (local-only).** New authenticated control-plane route(s)
-   proxying to the agent-engine's existing `StudioPreviewManager` endpoints (start/stop/status,
-   R-421–R-424), same generic-proxy shape as every prior Job API route — no new execution sandbox,
-   per the resolved decision above.
-5. **R-479 — Console: live preview UI.** An iframe (or equivalent) rendering the running generated
-   app, wired to R-478, with real status (starting/running/stopped/crashed) — not a static
-   placeholder.
-6. **R-480 — Tabbed workspace.** Restructure `/studio` into the Preview/Files/Code/Problems tabs
-   (chat stays persistent alongside the tabs, matching the competitor pattern, rather than being
-   just another tab), assembling R-474's file browser, R-477's chat, and R-479's live preview under
-   one shell built on R-475's foundation. **"Code" and "Problems" need research at implementation
-   time, not an assumption now**: "Code" may just be the existing file viewer with syntax
-   highlighting added; "Problems" needs confirming whether an agent-engine endpoint surfacing real
-   compile/verify errors (`verify/compile.py`, used internally by R-466's repair loop) already
-   exists or needs to be added — if it needs adding, that is itself real, not-yet-scoped backend
-   work and should be called out honestly rather than quietly folded in. **"Publish" is explicitly
-   deferred** — there is no deployment/hosting backend concept anywhere in this codebase yet; a
-   placeholder-only "Publish" tab would be dishonest UI, not a smaller version of the real feature.
+Sequence (each gets its own `.ai/tasks/R-###.md` contract before code, per this project's standing
+rule — this section is the map, not the contract):
 
-**Named, deliberately not in the six above:**
+1. **R-475 — Studio visual foundation** *(in progress, 2026-09-19)*. A real app shell (top bar,
+   refined design tokens — `--radius-*`, `--surface-2`, a CSS-only `.spinner`, hand-rolled inline-SVG
+   icons rather than a new dependency) the later chat (R-477) and tabbed workspace (R-481) tasks
+   build on top of, not a one-off skin of the current form. No backend changes.
+2. **R-476 — Backend: multi-turn edit bridge.** New control-plane routes
+   (`POST /jobs/build/{id}/edit`, `GET /jobs/build/{id}/turns`) proxying the agent-engine's existing
+   R-468 endpoints, mirroring `POST /jobs/build`'s exact proxy+debit shape (R-472). Also fixes two
+   real, verified gaps in the Python edit path: `_edit()` has no `usage_ledger` at all today (so
+   every edit currently debits 0 credits regardless of real cost — confirmed by direct comparison
+   with `_build()`), and `_build()` never records a chat turn (only `_edit()` does — so a chat that
+   hydrates history from `/turns` after a refresh would silently lose the first message). Both
+   fixed here, mirroring `_build()`'s own existing patterns.
+3. **R-477 — Console: chat UI.** Replaces `/studio`'s one-shot prompt form with a persistent,
+   multi-turn chat thread wired to R-476, built on R-475's shell. `buildId` (`null` vs. set) is the
+   single piece of state deciding whether the composer calls `/jobs/build` or
+   `/jobs/build/{id}/edit`; `buildId` persists in the URL so a refresh can rehydrate history from
+   `/turns`.
+4. **R-478 — Backend: live preview proxy (local-only).** Four new control-plane routes, not three —
+   the agent-engine's preview API turned out to be two different surfaces on inspection: a
+   singleton "whichever preview is running" surface (`GET/POST /api/preview*`) and a build-scoped
+   one (`POST /api/history/preview`) that a chat-per-build UI actually needs. The build-scoped
+   route has a real, unusual error shape worth documenting here since it's easy to get wrong: an
+   unknown build returns **200** `{"status":"error","message":...}`, not a 404 like every other
+   build-scoped route in this codebase. No agent-engine changes, no credit debit (viewing/
+   controlling a preview isn't a billable model call).
+5. **R-479 — Console: live preview UI.** An iframe wired to R-478, with real status. The
+   agent-engine's preview start/restart calls are synchronous (block until ready/error), so there
+   is no server-side "starting" state to poll for — polling's real job is crash detection (a 5s
+   interval while status is "ready"), not progress-watching. Since `_edit()` never restarts the
+   preview on its own (only `_build()` does), this task also triggers its own re-preview call after
+   every successful edit rather than assuming hot-reload alone keeps the iframe correct.
+6. **R-480 — Backend: Problems/compile-report support** *(new — this is the task that took the
+   roadmap from six to seven, per the founder decision above)*. Builds real `tsc`-backed
+   compile-error reporting from scratch: a new agent-engine function calling the already-existing
+   (but until now, never invoked from the Studio path) `compile_web_project()`, a small new
+   bounded store keyed by build id, and new routes (agent-engine `POST`/`GET /api/build/{id}/problems`,
+   control-plane proxy). **Deliberately on-demand (an explicit "Check for problems" trigger), not
+   automatic on every build/edit** — the Node toolchain/`node_modules` only exists in a generated
+   repo after a live-preview install, so an automatic check would make the normally fast,
+   network-light core build loop slower and toolchain-dependent by default; a real regression risk
+   worth avoiding by design rather than discovering later.
+7. **R-481 — Tabbed workspace.** Restructures `/studio` into four real tabs — Preview, Files, Code,
+   Problems — chat persisting alongside (not itself a tab), assembling R-474 (files), R-477 (chat),
+   R-479 (preview), R-480 (problems). Files and Code stay separate per the founder decision above.
+   Code's syntax highlighting is hand-rolled (there is already real in-house precedent — the
+   generated apps' own `CodeBlock` component ships a regex tokenizer in `codegen/nextjs.py`) rather
+   than a new dependency, with a documented, non-default fallback (`prismjs`) if real usage during
+   this task's own live verification shows the hand-rolled version visibly failing on real
+   generated files. **"Publish" is still explicitly not a tab** — no deployment/hosting backend
+   exists anywhere in this codebase; a placeholder would be dishonest UI, the same principle now
+   also guiding Problems' honest "not yet checked" state rather than fabricated data.
+
+**Named, deliberately not in the seven above:**
 - **Model Provider settings UI** (surfacing `model_gateway`'s cloud/local Ollama status, Dyad-style
-  "Ready" state) — a real, smaller, independent UI surface. Slot in as **R-481** whenever it's
-  convenient after R-475; it has no hard dependency on the chat/preview/tabs work.
+  "Ready" state) — a real, smaller, independent UI surface. Slot in as **R-482** whenever
+  convenient after R-475; no hard dependency on the chat/preview/tabs work.
 - Solution Pack / Ecosystem build selection in the Studio UI — still real follow-up work, lower
-  priority than the six above since it's about build-type breadth, not depth of the core loop.
+  priority than the seven above since it's about build-type breadth, not depth of the core loop.
 - Per-user build/session scoping in the agent-engine's Studio server (the honest limitation named
   in R-474) — needed before this is genuinely multi-tenant, not needed for the single-operator demo
   this roadmap targets.
@@ -295,19 +322,19 @@ parity. Honest answer, recorded here rather than left as a spoken claim: **subst
 but not exact or complete.** Two structural gaps remain that are bigger than UI polish and are not
 closed by any task above:
 
-- **R-482 — Real-time build/edit streaming.** Lovable/Dyad/Emergent's signature "smoothness" is
-  watching the model write code live (token-by-token, file-by-file) as it happens. Every task
-  above still uses one blocking HTTP call that takes seconds to a few real minutes and then returns
-  everything at once — R-477's chat UI would show "Building…" and then a result, not a
-  live-updating stream, without this task. Requires a materially different transport (Server-Sent
-  Events or a WebSocket) threaded through all three layers: the agent-engine's build/edit path
-  would need to emit incremental progress events (not just a final JSON response),
-  `internal/jobs`'s proxy would need to relay a stream instead of buffering a whole response body
-  (a real change to the "read the whole body, then decide" pattern every Job API route uses today),
-  and the console would need to consume and render it live. Scope this as its own task once
-  R-475–480 exist to stream progress *into* — do not start it before then.
+- **R-483 — Real-time build/edit streaming** *(renumbered from R-482 now that Problems took a
+  number)*. Lovable/Dyad/Emergent's signature "smoothness" is watching the model write code live
+  (token-by-token, file-by-file) as it happens. Every task above still uses one blocking HTTP call
+  that takes seconds to a few real minutes and then returns everything at once — R-477's chat UI
+  would show "Building…" and then a result, not a live-updating stream, without this task. Requires
+  a materially different transport (Server-Sent Events or a WebSocket) threaded through all three
+  layers: the agent-engine's build/edit path would need to emit incremental progress events (not
+  just a final JSON response), `internal/jobs`'s proxy would need to relay a stream instead of
+  buffering a whole response body (a real change to the "read the whole body, then decide" pattern
+  every Job API route uses today), and the console would need to consume and render it live. Scope
+  this as its own task once R-475–481 exist to stream progress *into* — do not start it before then.
 - **Per-user backend multi-tenancy — not a Tracker ID here, a prerequisite for calling this "done."**
-  Even after R-475–482 all ship, the agent-engine's Studio server is still the same single shared
+  Even after R-475–483 all ship, the agent-engine's Studio server is still the same single shared
   in-memory process named as a limitation in R-474 and re-confirmed in the "Resolved decision" above
   for live preview. A polished UI on top of it does not change what it is: **a single, trusted
   operator's own tool that looks like a multi-user SaaS, not yet an actual one.** Lovable/Dyad/
@@ -320,7 +347,7 @@ closed by any task above:
   its own "new infra" decision requiring explicit founder sign-off before any code gets written for
   it, per this project's standing rules.
 
-**Phase E — Plan/credit UX + admin surface (proposed R-483+)**
+**Phase E — Plan/credit UX + admin surface (proposed R-484+)**
 - Plan-gated feature access in the UI, a credit top-up flow, a `super_admin` console (user
   management, usage, plan overrides — the Dyad "Danger Zone" / Emergent admin-adjacent idea).
 - Actual payment processor integration (Stripe or similar) is intentionally **not** included

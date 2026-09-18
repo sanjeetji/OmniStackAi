@@ -1,32 +1,29 @@
-task_id: R-474
+task_id: R-475
 status: completed
 phase: MVP
 tracker_row: null
-started_at: "2026-09-18"
-completed_at: "2026-09-18"
+started_at: "2026-09-19"
+completed_at: "2026-09-19"
 objective: >-
-  Continue Phase D: R-473's build result panel lists filenames as inert text; this task makes that
-  list clickable so a user can read the generated code, not just see it exists. The agent-engine's
-  Studio server already has real, tested, path-safe read-only file access (studio/files.py, wired
-  since R-467 as GET /api/build/{id}/files and GET /api/build/{id}/file?path=...) - this task
-  bridges those two existing endpoints through the authenticated control-plane, the same "generic
-  proxy, no new agent-engine code" shape R-472 established for the build endpoint itself. New
-  control-plane routes GET /jobs/build/{id}/files and GET /jobs/build/{id}/file?path=... (auth
-  required, no credit debit - browsing files is not a billable call), proxying verbatim. Console
-  gains listBuildFiles/readBuildFile clients, two new proxy Route Handlers, and a clickable file
-  list + read-only viewer in studio-form.tsx. No agent-engine changes. Known, honestly-documented
-  limitation carried over unchanged from R-467: the Studio server has no per-user build scoping
-  (single shared in-memory process) - not introduced or worsened by this task.
+  First task of the approved 7-task Phase D roadmap (R-475..R-481, renumbered from an earlier
+  6-task sketch after two research passes plus two founder decisions - see the plan record). Turn
+  /studio into a real app shell the later chat (R-477) and tabbed workspace (R-481) tasks build on
+  top of, not a one-off skin of the current single-page form. New app/studio/layout.tsx takes over
+  the auth gate + persistent top-bar chrome; globals.css gains additive design tokens
+  (--radius-sm/md/lg, --surface-2, accent chip background, refined .panel, a CSS-only .spinner,
+  .pill--accent) mirrored into the existing dark-mode media query; new hand-rolled
+  studio-icons.tsx (explicit decision: stay dependency-free, the icon surface is small and fixed
+  enough that an icon library doesn't clear the bar for a new dependency). studio-form.tsx is
+  restyled only, zero logic change. No backend changes; no chat/tab/preview functionality yet -
+  purely the shell and tokens later tasks build on.
 allowed_paths:
-  - services/control-plane/internal/jobs/handler.go
-  - services/control-plane/internal/jobs/handler_test.go
-  - apps/console-web/lib/control-plane.ts
-  - apps/console-web/app/api/jobs/build/[id]/files/route.ts
-  - apps/console-web/app/api/jobs/build/[id]/file/route.ts
-  - apps/console-web/app/studio/studio-form.tsx
   - apps/console-web/app/globals.css
+  - apps/console-web/app/studio/layout.tsx
+  - apps/console-web/app/studio/page.tsx
+  - apps/console-web/app/studio/studio-form.tsx
+  - apps/console-web/app/studio/studio-icons.tsx
   - scripts/test.sh
-  - .ai/tasks/R-474.md
+  - .ai/tasks/R-475.md
   - .ai/CURRENT_TASK.yaml
   - .ai/PROJECT_STATE.yaml
   - .ai/WORK_LOG.md
@@ -35,32 +32,31 @@ allowed_paths:
   - CHANGELOG.md
   - docs/PROGRESS.md
   - docs/RESUME_PROMPT.md
-  - COMMANDS.md
   - R_&_D/OmniStackAI_Commercial_Platform_Kickoff_v1.md
 forbidden_changes:
-  - No changes to services/agent-engine
-  - No live preview / code execution
-  - No new UI/component-library dependency
+  - No changes to services/control-plane or services/agent-engine
+  - No new npm dependency
+  - No chat/tab/preview/problems functionality (later tasks)
   - Do not modify or commit the untracked .claude directory
 required_gates:
-  - "control-plane: go build ./..., go vet ./..., go test ./..."
   - "apps/console-web: pnpm run typecheck, pnpm run lint, pnpm run build"
   - task verify
   - task lint
   - task security:quick
   - task env:check
-  - "manual smoke (real docker control-plane + real agent-engine studio server + real next start): build an app, click a file, see real source"
+  - "manual smoke (real next start): /studio shell renders correctly, /, /fabric, /login, /register structurally unaffected"
 model_tool_trace:
   routing: deterministic_only
   local_calls: 0
   cloud_calls: 0
   note: >-
-    Go/TypeScript implementation, 0 model/network calls in any automated gate. The manual smoke
-    test reuses whatever build already exists from the live stack the founder left running.
+    Pure CSS/TypeScript/React implementation, 0 model/network calls in any gate.
 next_action: >-
-  R-474 is complete (see .ai/tasks/R-474.md for full Gates & Evidence). Next up: continue Phase D -
-  live preview (running the generated app - needs a real security/trust decision since it executes
-  generated code, unlike this task's read-only file browsing), chat/multi-turn edit (porting R-468),
-  or Solution Pack/Ecosystem build selection in the Studio UI. Phase E still needs its own explicit
-  founder sign-off before starting. The live demo stack (Docker control-plane, agent-engine Studio
-  server, next start console) is intentionally left running per the founder's request.
+  R-475 is complete (see .ai/tasks/R-475.md for full Gates & Evidence). Next up per the approved
+  plan (/Users/sanjeet_kumar/.claude/plans/hi-fancy-shannon.md): R-476 - Backend: multi-turn edit
+  bridge. New control-plane routes POST /jobs/build/{id}/edit and GET /jobs/build/{id}/turns,
+  mirroring POST /jobs/build's exact proxy+debit shape. Also fixes two real, verified gaps in the
+  Python edit path: _edit() has no usage_ledger at all today (every edit currently debits 0
+  credits regardless of real cost), and _build() never records a chat turn (only _edit() does, so
+  a future chat hydrating history from /turns after a refresh would lose the first message). Both
+  fixed by mirroring _build()'s own existing patterns.

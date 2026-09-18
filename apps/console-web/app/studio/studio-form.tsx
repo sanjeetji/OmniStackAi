@@ -2,6 +2,7 @@
 
 import { useState, type FormEvent } from "react";
 import type { BuildFileContentResponse, BuildJobResponse } from "@/lib/control-plane";
+import { CreditIcon } from "./studio-icons";
 
 interface StudioFormProps {
   initialCreditBalance: number;
@@ -46,18 +47,18 @@ export default function StudioForm({ initialCreditBalance }: StudioFormProps) {
 
   return (
     <>
-      <section className="panel">
-        <h2>Your credits</h2>
-        <div className="grid">
-          <div className="stat">
-            <div className="label">Credit balance</div>
-            <div className="value">{creditBalance}</div>
-          </div>
-        </div>
-      </section>
+      <div className="studio-credit-row">
+        <span className="pill pill--accent">
+          <CreditIcon width={14} height={14} />
+          {creditBalance} credits
+        </span>
+      </div>
 
       <section className="panel">
         <h2>Build an app</h2>
+        <p className="studio-intro muted">
+          Describe an app in plain English — it becomes a real, owned Git repository.
+        </p>
         {error ? <div className="error-banner">{error}</div> : null}
         <form onSubmit={handleSubmit}>
           <div className="field">

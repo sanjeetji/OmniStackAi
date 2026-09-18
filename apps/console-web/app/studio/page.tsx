@@ -1,5 +1,3 @@
-import { redirect } from "next/navigation";
-import Link from "next/link";
 import { getCurrentUser } from "@/lib/session";
 import StudioForm from "./studio-form";
 
@@ -8,27 +6,8 @@ export const metadata = {
 };
 
 export default async function StudioPage() {
+  // The auth gate lives in this route's layout.tsx (it redirects to /login before this ever
+  // renders) - the fallback here is purely to satisfy TypeScript's null check, never exercised.
   const user = await getCurrentUser();
-  if (!user) {
-    redirect("/login");
-  }
-
-  return (
-    <main className="wrap wrap--wide">
-      <header className="masthead">
-        <div>
-          <p className="eyebrow">OmniStackAI</p>
-          <h1>Studio</h1>
-          <p className="lede">
-            Describe an app in plain English. It becomes a real, owned Git repository.
-          </p>
-        </div>
-        <Link href="/" className="button button--secondary">
-          ← Back
-        </Link>
-      </header>
-
-      <StudioForm initialCreditBalance={user.credit_balance} />
-    </main>
-  );
+  return <StudioForm initialCreditBalance={user?.credit_balance ?? 0} />;
 }

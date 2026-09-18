@@ -381,4 +381,26 @@ if ! rg -q 'listBuildFiles|readBuildFile' "$console_root/lib/control-plane.ts"; 
   exit 1
 fi
 
+# R-475: Studio visual foundation.
+for required_file in \
+  "$console_root/app/studio/layout.tsx" \
+  "$console_root/app/studio/studio-icons.tsx"; do
+  if [[ ! -f "$required_file" ]]; then
+    printf 'Missing R-475 contract file: %s\n' "$required_file"
+    exit 1
+  fi
+done
+
+if ! rg -q 'getCurrentUser' "$console_root/app/studio/layout.tsx"; then
+  printf 'R-475 must move the /studio auth gate into layout.tsx.\n'
+  exit 1
+fi
+
+for design_token in '\-\-radius-sm' '\-\-radius-md' '\-\-radius-lg' '\-\-surface-2' '\.spinner' '\.pill--accent'; do
+  if ! rg -q -- "$design_token" "$console_root/app/globals.css"; then
+    printf 'R-475 must add the %s design token/class to globals.css.\n' "$design_token"
+    exit 1
+  fi
+done
+
 printf 'Repository contract tests passed.\n'

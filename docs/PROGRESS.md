@@ -1,4 +1,4 @@
-# OmniStackAI — implementation progress (as of R-474)
+# OmniStackAI — implementation progress (as of R-475)
 
 A living summary of what is built, what is pending, and how to see results. Numbers come from the
 execution tracker (`R_&_D/OmniStackAI_Execution_Tracker_v6.xlsx`, `Phase_Roadmap`, 461 tasks as of
@@ -8,6 +8,18 @@ R-461 completion) plus the state files (`.ai/`), Git history, and CHANGELOG.
 
 - **3,603 automated tests pass** (agent-engine + Go control-plane), fully offline and
   network-independent (`task verify`), plus the console's own `typecheck`/`lint`/`build` gates.
+- **R-475 — Studio visual foundation (2026-09-19):** first of a founder-approved, fully-researched
+  7-task plan (R-475–R-481, saved at `/Users/sanjeet_kumar/.claude/plans/hi-fancy-shannon.md`,
+  mirrored in the kickoff doc's "Remaining Phase D roadmap") to take the Studio from
+  functionally-real-but-plain toward a genuinely rich, chat-driven, multi-pane workspace. Planning
+  used full plan-mode discipline (two Explore agents, a Plan agent, direct source verification of
+  the most consequential claims) and two direct founder decisions: Problems (compile errors) gets
+  built for real via its own task rather than a placeholder, and Files/Code stay as two separate
+  tabs. This task: a new `app/studio/layout.tsx` takes over the auth gate and persistent top-bar
+  chrome later tasks build on; `globals.css` gained additive design tokens; a new hand-rolled
+  icon set avoids a new npm dependency. No backend changes. `task verify` **3,603 OK**; live:
+  real control-plane + real agent-engine Studio server + a fresh `next start` proved the auth gate,
+  new shell, and unaffected sibling pages. See `.ai/tasks/R-475.md` for full verification detail.
 - **R-474 — file browser in the console Studio (2026-09-18):** continues Phase D. Each filename in
   a build result panel is now a clickable button showing real generated file content in a
   read-only viewer, bridged through two new authenticated control-plane proxy routes
