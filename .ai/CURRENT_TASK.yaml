@@ -1,26 +1,31 @@
-task_id: R-478
+task_id: R-479
 status: completed
 phase: MVP
 tracker_row: null
 started_at: "2026-09-19"
 completed_at: "2026-09-19"
 objective: >-
-  Fourth task of the approved 7-task Phase D roadmap. Proxy the agent-engine's existing trusted-
-  local preview control surface - four routes, not three: GET /jobs/preview, POST /jobs/preview/
-  stop, POST /jobs/preview/restart (the singleton control surface), plus POST
-  /jobs/build/{id}/preview (the build-scoped one, -> POST /api/history/preview with a server-
-  constructed {"id": id} body, never trusting the caller's body). All auth-required, no credit
-  debit. Generalizes proxyGet into proxyUpstream(method, body) covering GET and POST. A new
-  defaultPreviewTimeout constant (60s, above the real 45s internal readiness wait) applies to
-  handleBuildPreview specifically (it can trigger a real cold start). The build-scoped route's
-  verified unusual 200-with-{"status":"error"} shape for an unknown build must survive the proxy
-  unchanged - a dedicated test asserts this. Zero agent-engine changes.
+  Fifth task of the approved 7-task Phase D roadmap. An iframe rendering the real running
+  generated app, wired to R-478's four routes. Preview start is synchronous (confirmed live during
+  R-478), so polling's job is crash detection (5s interval while status is "ready"), not
+  progress-watching. New studio-preview.tsx effect triggers POST /jobs/build/{id}/preview whenever
+  buildId changes or a previewVersion counter (bumped by studio-chat.tsx after every successful
+  edit, since _edit() never restarts the preview on its own) changes. Verified response shapes
+  (idle/stopped/error/unavailable/ready) read directly from preview.py before implementation. A 404
+  from either preview route renders an honest disabled message instead of a broken iframe. Manual
+  Restart/Stop controls wired to the real R-478 routes, reusing the RefreshIcon/StopIcon that
+  existed unused since R-475.
 allowed_paths:
-  - services/control-plane/internal/jobs/handler.go
-  - services/control-plane/internal/jobs/types.go
-  - services/control-plane/internal/jobs/handler_test.go
+  - apps/console-web/lib/control-plane.ts
+  - apps/console-web/app/api/preview/route.ts
+  - apps/console-web/app/api/preview/stop/route.ts
+  - apps/console-web/app/api/preview/restart/route.ts
+  - apps/console-web/app/api/jobs/build/[id]/preview/route.ts
+  - apps/console-web/app/studio/studio-preview.tsx
+  - apps/console-web/app/studio/studio-chat.tsx
+  - apps/console-web/app/globals.css
   - scripts/test.sh
-  - .ai/tasks/R-478.md
+  - .ai/tasks/R-479.md
   - .ai/CURRENT_TASK.yaml
   - .ai/PROJECT_STATE.yaml
   - .ai/WORK_LOG.md
@@ -30,32 +35,38 @@ allowed_paths:
   - docs/PROGRESS.md
   - docs/RESUME_PROMPT.md
 forbidden_changes:
-  - No changes to services/agent-engine or apps/console-web
-  - No live preview UI, Problems, or tab functionality (later tasks)
+  - No changes to services/control-plane or services/agent-engine
+  - No Problems or tab functionality (later tasks)
   - Do not modify or commit the untracked .claude directory
 required_gates:
-  - "control-plane: go build ./..., go vet ./..., go test ./..."
+  - "console-web: pnpm run typecheck, pnpm run lint, pnpm run build"
   - task verify
   - task lint
   - task security:quick
   - task env:check
-  - "manual smoke (real docker control-plane + real agent-engine studio server in preview mode): status/stop/restart/build-preview all proxy real shapes; same four routes 404 cleanly against build-only mode"
+  - "manual smoke (real docker control-plane + real agent-engine studio server in preview mode + next start): build -> iframe shows real app; edit -> auto re-preview; kill preview process -> poll notices within ~5-10s; build-only mode -> honest disabled message"
 model_tool_trace:
   routing: deterministic_only
   local_calls: 0
   cloud_calls: 0
   note: >-
-    Pure Go work, 0 model/network calls in any automated gate.
+    Pure console-web work, 0 model/network calls in any automated gate. The manual smoke test's
+    build+edit calls use whatever provider is configured (real Groq or local Ollama); the preview
+    itself runs the real generated app locally (pnpm install + next dev + optional backend).
 next_action: >-
-  R-478 is complete (see .ai/tasks/R-478.md for full Gates & Evidence). Next up per the approved
-  plan (/Users/sanjeet_kumar/.claude/plans/hi-fancy-shannon.md): R-479 - Console: live preview UI.
-  An iframe rendering the running generated app, wired to R-478's four routes. Preview start
-  (replace()/restart()) is synchronous - there is no server-side "starting" state to poll for, so
-  polling's real job is crash detection (5s interval while status is "ready", calling GET
-  /jobs/preview), not progress-watching. "Starting" in the UI is just the pending state of the
-  POST /jobs/build/{id}/preview call itself, using R-475's .spinner with real elapsed time (cold
-  starts up to ~45s, confirmed live during R-478's own smoke test). Since _edit() never restarts
-  the preview, trigger an automatic re-preview after every successful edit in the chat - confirm
-  live whether HMR alone would have sufficed, but ship the safe automatic version regardless. A 404
-  from GET /jobs/preview (build-only mode) renders a clear static message; the build-scoped 200-
-  with-{"status":"error"} shape (verified live in R-478) renders the real message field.
+  R-479 is complete (see .ai/tasks/R-479.md for full Gates & Evidence). Next up per the approved
+  plan (/Users/sanjeet_kumar/.claude/plans/hi-fancy-shannon.md): R-480 - Backend: Problems/
+  compile-report support. Genuinely new backend work (confirmed by exhaustive grep during the
+  original planning research: no compile/verify-error endpoint exists anywhere in the Studio path
+  today - the only caller of compile_web_project()/compile_and_repair() is a standalone CLI script,
+  never _build()/_edit()). On-demand, not automatic (a "Check for problems" trigger), since
+  node_modules/tsc only exist after a preview install - confirmed by this session's own R-478/R-479
+  live smokes, which needed preview mode's pnpm install before any Node toolchain existed. New
+  agent-engine routes POST/GET /api/build/{id}/problems, a small new bounded per-build-id report
+  store, and matching new control-plane proxy routes POST/GET /jobs/build/{id}/problems (no credit
+  debit - this runs a local tsc, not a model call).
+next_action_note: >-
+  Before starting R-480, restore the agent-engine Studio server to build-only mode if it's not
+  already (R-479's smoke test ended in build-only mode) - R-480's own live smoke needs BOTH modes
+  (a real problems check needs node_modules from a preview install; the "toolchain not installed"
+  honest-error path needs build-only mode) so switch deliberately per step, don't assume either.

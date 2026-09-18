@@ -1,4 +1,4 @@
-# OmniStackAI — implementation progress (as of R-478)
+# OmniStackAI — implementation progress (as of R-479)
 
 A living summary of what is built, what is pending, and how to see results. Numbers come from the
 execution tracker (`R_&_D/OmniStackAI_Execution_Tracker_v6.xlsx`, `Phase_Roadmap`, 461 tasks as of
@@ -8,6 +8,20 @@ R-461 completion) plus the state files (`.ai/`), Git history, and CHANGELOG.
 
 - **3,604 automated tests pass** (agent-engine + Go control-plane), fully offline and
   network-independent (`task verify`), plus the console's own `typecheck`/`lint`/`build` gates.
+- **R-479 — Console: live preview UI (2026-09-19):** fifth of the seven. An iframe rendering the
+  real running generated app, wired to R-478's four routes. Preview start is synchronous, so
+  polling's job is crash detection (5s interval while `status: "ready"`), not progress-watching.
+  New `studio-preview.tsx` triggers a re-preview whenever `buildId` becomes real or a
+  `previewVersion` counter (bumped after every edit, since `_edit()` never restarts the preview)
+  changes; a 404 renders an honest disabled message; manual Restart/Stop reuse icons that existed
+  unused since R-475. Every `PreviewStatus` shape verified by reading `preview.py` directly.
+  `task verify` **3,604 OK**; console `typecheck`/`lint`/`build` clean (18 routes, 4 new). Live: real
+  control-plane + real agent-engine Studio server in preview mode proved build → real iframe-ready
+  preview (fetched the real `web_url` directly, got genuine HTML) → edit → real re-preview on a new
+  port → the real preview OS process was killed directly to simulate an external crash, and the
+  next poll correctly reported "stopped" → manual Restart/Stop both worked → build-only mode
+  produced the uniform honest 404 disabled state. See `.ai/tasks/R-479.md` for full verification
+  detail.
 - **R-478 — Backend: live preview proxy, local-only (2026-09-19):** fourth of the seven. Four new
   control-plane routes proxying the agent-engine's existing trusted-local preview control surface
   verbatim: `GET /jobs/preview`, `POST /jobs/preview/stop`, `POST /jobs/preview/restart` (the

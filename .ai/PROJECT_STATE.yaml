@@ -2,10 +2,10 @@ schema_version: 1
 project: OmniStackAI
 phase: BASIC/MVP
 founder_stage: 0
-current_task: R-478
+current_task: R-479
 current_status: done
 branch: main
-last_completed_task: R-478
+last_completed_task: R-479
 # TASK COMPILATION AUDIT — 2026-09-16
 # Performed to achieve 100% synchronization across all task-tracking documentation.
 # Tracker workbook expanded to 464 tasks with R-464.
@@ -34,6 +34,45 @@ task_compilation_audit:
       new_status: DONE
       reason: "Task fully completed on 2026-09-11 with 35 tests. Status left stale during rapid development sprint."
 last_completed_task_summary: >-
+  Completed R-479 (2026-09-19): console - live preview UI. Fifth of the approved 7-task Phase D
+  roadmap (plan: /Users/sanjeet_kumar/.claude/plans/hi-fancy-shannon.md). An iframe rendering the
+  real running generated app, wired to R-478's four routes. Preview start is synchronous (confirmed
+  live during R-478), so polling's real job is crash detection (5s interval while status is
+  "ready"), not progress-watching. New app/studio/studio-preview.tsx: one effect triggers
+  POST /jobs/build/{id}/preview whenever buildId becomes real or a previewVersion counter (bumped
+  by studio-chat.tsx after every successful edit, since _edit() never restarts the preview) changes;
+  a second effect runs the 5s crash-detection poll; a third ticks elapsed time while starting. A 404
+  from either preview route sets a disabled flag and renders an honest static message instead of a
+  broken iframe. Manual Restart/Stop controls wired to the real R-478 routes, reusing the
+  RefreshIcon/StopIcon that existed unused since R-475. New lib/control-plane.ts additions
+  (PreviewStatus type - every status shape verified by reading preview.py directly - plus
+  getPreviewStatus/stopPreview/restartPreview/previewBuild clients) and four new proxy routes.
+  Wired into studio-chat.tsx via a new previewVersion state, rendered inside a new
+  .studio-workspace-column alongside the existing StudioWorkspace panel inside .studio-grid.
+  Implementation note: eslint-plugin-react-hooks's set-state-in-effect rule flagged a synchronous
+  setState at the top of the buildId-change effect (the classic React-docs "set loading, then
+  fetch" pattern) - fixed by moving it to be the first statement inside the effect's own async IIFE
+  instead of before it, and consolidating starting/elapsedMs/fetchError into one combined state
+  object so there's exactly one setState call there, not several. Gates: console
+  typecheck/lint/build all clean (18 routes, 4 new); task verify 3,604 OK (unchanged, no backend
+  files touched); repo task verify/lint/security:quick/env:check all pass.
+  Live (real Docker control-plane + real agent-engine Studio server in preview mode + a freshly
+  rebuilt next start): first discovered and cleaned up a real operational gap from R-478's own
+  smoke test (an orphaned generated-app preview process left running because the agent-engine had
+  been killed non-gracefully, not a bug in this task's code) before starting. Then: build -> the
+  exact POST /jobs/build/{id}/preview call <StudioPreview> makes -> real 200 ready status with a
+  real web_url that, fetched directly, returned genuine Next.js-rendered HTML (proof the iframe
+  would show a real working app); edit -> the exact re-preview call the previewVersion bump
+  triggers -> a genuinely new preview port, confirming fresh code was served, not stale content.
+  **Crash detection confirmed live**: found the real OS process behind the current preview port and
+  kill -9'd it directly (a true external crash) - the very next GET /jobs/preview poll correctly
+  reported "stopped" with the real agent-engine message. Manual Restart recovered cleanly on a new
+  port; manual Stop worked. Switching to build-only mode made both preview routes return the real,
+  uniform 404 through the console proxy - exactly what <StudioPreview> checks for to render the
+  honest disabled message.
+  NEXT: R-480 (backend: Problems/compile-report support) per the approved plan, then R-481 (tabbed
+  workspace).
+_prior_last_completed_task_summary_R478: >-
   Completed R-478 (2026-09-19): backend - live preview proxy (local-only). Fourth of the approved
   7-task Phase D roadmap (plan: /Users/sanjeet_kumar/.claude/plans/hi-fancy-shannon.md). Four new
   control-plane routes proxying the agent-engine's existing trusted-local preview control surface
@@ -1353,19 +1392,14 @@ id_note: >-
   ID); R-416..R-429 built/hardened the "chat -> create -> run -> preview" front door; R-430..R-437 build SPINE.
 blockers: []
 next_action: >-
-  R-478 is complete (backend: live preview proxy). Executing a founder-approved, fully-researched
-  7-task plan (superseding the earlier 6-task doc sketch): R-475/R-476/R-477/R-478 done;
-  R-479..R-481 remain. Full design detail for every task is in the approved plan file
+  R-479 is complete (console: live preview UI). Executing a founder-approved, fully-researched
+  7-task plan (superseding the earlier 6-task doc sketch): R-475/R-476/R-477/R-478/R-479 done;
+  R-480/R-481 remain. Full design detail for every task is in the approved plan file
   (/Users/sanjeet_kumar/.claude/plans/hi-fancy-shannon.md) and mirrored in
   R_&_D/OmniStackAI_Commercial_Platform_Kickoff_v1.md's "Remaining Phase D roadmap" - read the plan
   file first, it has the most implementation-level detail (exact function names, verified line
   numbers, exact response shapes).
-  NEXT (start here): R-479 (console: live preview UI, polling is for crash detection not progress
-  since preview start is synchronous; must trigger its own re-preview after edits since _edit()
-  never restarts preview; the build-scoped route's real 200-with-{"status":"error"} shape for an
-  unknown build - confirmed live during R-478's own smoke test, not just by source-reading - must
-  render the real message field, not a generic failure),
-  R-480 (backend: Problems/compile-report support - NEW work, confirmed no compile-error endpoint
+  NEXT (start here): R-480 (backend: Problems/compile-report support - NEW work, confirmed no compile-error endpoint
   exists anywhere in the Studio path today; founder explicitly chose to build this for real rather
   than defer it, which is what took the roadmap from 6 tasks to 7; must be on-demand not automatic,
   since node_modules/tsc only exist after a preview install), R-481 (tabbed workspace: Preview/

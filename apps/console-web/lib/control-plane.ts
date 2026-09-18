@@ -266,3 +266,53 @@ export function getBuildTurns(token: string, buildId: string): Promise<BuildTurn
     headers: { Authorization: `Bearer ${token}` },
   });
 }
+
+/** The trusted-local preview's current state, exactly as studio/preview.py's
+ * `StudioPreviewManager` reports it (R-478) - every shape verified by reading the source rather
+ * than assumed: `"idle"`/`"stopped"` (never started, stopped, or exited on its own), `"error"`
+ * (start failed, or - for the build-scoped route only - the build itself is no longer available),
+ * `"unavailable"` (the generated project has no web target), `"ready"` (`web_url` always present,
+ * `api_url` only when the generated project also has a backend). */
+export interface PreviewStatus {
+  status: "idle" | "stopped" | "error" | "unavailable" | "ready";
+  message: string;
+  web_url?: string;
+  api_url?: string;
+}
+
+/** Reads the singleton preview's current status via `GET /jobs/preview` (R-478) - read-only, no
+ * credit debit. */
+export function getPreviewStatus(token: string): Promise<PreviewStatus> {
+  return callControlPlane<PreviewStatus>("/jobs/preview", {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+}
+
+/** Stops the singleton preview via `POST /jobs/preview/stop` (R-478). */
+export function stopPreview(token: string): Promise<PreviewStatus> {
+  return callControlPlane<PreviewStatus>("/jobs/preview/stop", {
+    method: "POST",
+    headers: { Authorization: `Bearer ${token}` },
+  });
+}
+
+/** Restarts the singleton preview via `POST /jobs/preview/restart` (R-478) - can take as long as a
+ * real cold start (up to ~45s, confirmed live during R-478's own smoke test). */
+export function restartPreview(token: string): Promise<PreviewStatus> {
+  return callControlPlane<PreviewStatus>("/jobs/preview/restart", {
+    method: "POST",
+    headers: { Authorization: `Bearer ${token}` },
+  });
+}
+
+/** Starts (or re-starts) the preview for one specific build via
+ * `POST /jobs/build/{id}/preview` (R-478) - the primitive a chat-per-build UI needs to answer
+ * "show me *this* build's preview." An unknown/evicted build id resolves successfully with a real
+ * `{"status": "error", ...}` body (verified live during R-478), not a thrown `ControlPlaneError` -
+ * only a non-2xx HTTP status throws. */
+export function previewBuild(token: string, buildId: string): Promise<PreviewStatus> {
+  return callControlPlane<PreviewStatus>(`/jobs/build/${encodeURIComponent(buildId)}/preview`, {
+    method: "POST",
+    headers: { Authorization: `Bearer ${token}` },
+  });
+}

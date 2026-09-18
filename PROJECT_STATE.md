@@ -4,6 +4,20 @@ Last updated: 2026-09-19
 ## Current Phase
 Stage 0 (Founder Build Sequence, Brief Section 91) — BASIC/MVP
 
+> **R-479 (2026-09-19): Console — live preview UI.** Fifth of the founder-approved 7-task plan
+> (R-475–R-481). An iframe rendering the real running generated app, wired to R-478's four routes.
+> Preview start is synchronous, so polling's job is crash detection (5s interval while
+> `status: "ready"`), not progress-watching. New `studio-preview.tsx` triggers a re-preview whenever
+> `buildId` becomes real or a `previewVersion` counter (bumped after every edit) changes; a 404
+> renders an honest disabled message; manual Restart/Stop reuse icons that existed unused since
+> R-475. Every `PreviewStatus` shape verified by reading `preview.py` directly. `task verify`
+> **3,604 OK**; console `typecheck`/`lint`/`build` clean (18 routes, 4 new). Live: real control-plane
+> + real agent-engine Studio server in preview mode proved build → real iframe-ready preview → edit
+> → real re-preview on a new port → the real preview OS process was killed directly to simulate an
+> external crash, and the next poll correctly reported "stopped" → manual Restart/Stop both worked
+> → build-only mode produced the uniform honest 404 disabled state.
+> NEXT: R-480 (backend: Problems/compile-report support), then R-481 per the approved plan.
+
 > **R-478 (2026-09-19): Backend — live preview proxy (local-only).** Fourth of the founder-approved
 > 7-task plan (R-475–R-481). Four new control-plane routes proxying the agent-engine's existing
 > trusted-local preview control surface verbatim: `GET /jobs/preview`, `POST /jobs/preview/stop`,

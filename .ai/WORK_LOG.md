@@ -1,5 +1,43 @@
 # Work Log
 
+## 2026-09-19 — R-479 (Console — live preview UI)
+
+- **Why:** fifth task of the approved 7-task Phase D roadmap. An iframe rendering the real running
+  generated app, wired to R-478's four routes.
+- **Preview start is synchronous** (confirmed live during R-478's own smoke test), so there's no
+  server-side "starting" state to poll for — polling's real job is **crash detection**: a 5s
+  interval while `status.status === "ready"`, calling `GET /jobs/preview`, since the agent-engine's
+  own `status()` lazily notices a subprocess that died on its own.
+- **New `studio-preview.tsx`:** one effect triggers `POST /jobs/build/{id}/preview` whenever
+  `buildId` becomes real or a `previewVersion` counter (bumped by `studio-chat.tsx` after every
+  successful edit — `_edit()` never restarts the preview on its own, unlike `_build()`) changes. A
+  404 from either preview route sets a `disabled` flag, rendering an honest static message instead
+  of a broken iframe. Manual Restart/Stop controls reuse the `RefreshIcon`/`StopIcon` that existed
+  unused since R-475, purpose-built for exactly this.
+- **Every `PreviewStatus` shape verified by reading `preview.py` directly**, not assumed:
+  idle/stopped/error/unavailable/ready, plus the build-scoped route's own extra error case
+  (confirmed live in R-478) rendering through the same branch.
+- **A real lint finding, not a design change:** `eslint-plugin-react-hooks`'s `set-state-in-effect`
+  rule flagged a synchronous `setState` at the top of the buildId-change effect — the classic
+  React-docs "set loading, then fetch" pattern. Fixed by moving it to be the first statement inside
+  the effect's own async IIFE instead of before it, and consolidating `starting`/`elapsedMs`/
+  `fetchError` into one combined state object.
+- **Gates:** console `typecheck`/`lint`/`build` all clean (18 routes, 4 new). `task verify` 3,604 OK
+  (unchanged — no backend files touched). Repo `task verify`/`lint`/`security:quick`/`env:check` all
+  pass.
+- **Live** (real control-plane + real agent-engine Studio server in preview mode + a freshly
+  rebuilt `next start`): first found and cleaned up a real operational gap from R-478's own smoke
+  test — an orphaned generated-app preview process left running because the agent-engine had been
+  killed non-gracefully (not a bug in this task's code, just cleanup hygiene worth naming). Then: a
+  real build auto-started a real preview whose `web_url`, fetched directly, returned genuine
+  Next.js HTML; a real edit triggered the exact re-preview call the `previewVersion` bump makes,
+  landing on a genuinely new port (fresh code served, not stale). **Crash detection confirmed
+  live**: found the real OS process behind the current preview port and `kill -9`'d it directly (a
+  true external crash) — the very next poll correctly reported `"stopped"`. Manual Restart/Stop both
+  worked. Build-only mode made both preview routes return the real, uniform 404 the component
+  checks for.
+- **NEXT:** R-480 (backend: Problems/compile-report support) per the approved plan.
+
 ## 2026-09-19 — R-478 (Backend — live preview proxy, local-only)
 
 - **Why:** fourth task of the approved 7-task Phase D roadmap. Proxy the agent-engine's existing

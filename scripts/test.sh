@@ -461,4 +461,27 @@ if ! rg -q 'defaultPreviewTimeout' "$control_plane_root/internal/jobs/types.go";
   exit 1
 fi
 
+# R-479: console - live preview UI.
+for required_file in \
+  "$console_root/app/studio/studio-preview.tsx" \
+  "$console_root/app/api/preview/route.ts" \
+  "$console_root/app/api/preview/stop/route.ts" \
+  "$console_root/app/api/preview/restart/route.ts" \
+  "$console_root/app/api/jobs/build/[id]/preview/route.ts"; do
+  if [[ ! -f "$required_file" ]]; then
+    printf 'Missing R-479 contract file: %s\n' "$required_file"
+    exit 1
+  fi
+done
+
+if ! rg -q 'getPreviewStatus|stopPreview|restartPreview|previewBuild' "$console_root/lib/control-plane.ts"; then
+  printf 'R-479 must add getPreviewStatus()/stopPreview()/restartPreview()/previewBuild() clients to lib/control-plane.ts.\n'
+  exit 1
+fi
+
+if ! rg -q 'StudioPreview' "$console_root/app/studio/studio-chat.tsx"; then
+  printf 'R-479 must wire <StudioPreview> into studio-chat.tsx.\n'
+  exit 1
+fi
+
 printf 'Repository contract tests passed.\n'

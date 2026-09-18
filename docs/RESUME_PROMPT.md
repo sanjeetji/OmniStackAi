@@ -208,7 +208,7 @@ front-door bricks, R-420 is generated-SQL hardening, R-421..R-426 are Studio pre
 R-427..R-429 are generated-app compile fixes, R-430..R-457 are the first twenty-eight differentiating-spine
 bricks (Scope Compiler through Ecosystem Multi-Surface SLA, SLO, and Error Budget Contracts).
 Git, state files (.ai/), CHANGELOG, and docs/PROGRESS.md remain the executable/detail sources of truth.
-Current through R-478; `task verify` = 3,604 tests (agent-engine) + the Go control-plane's own suite +
+Current through R-479; `task verify` = 3,604 tests (agent-engine) + the Go control-plane's own suite +
 the Next.js console's typecheck/lint/build. R-416 added prompt-to-IR intake, R-417 materialized a generated
 owned repo, R-418 added the local chat studio, R-419 added turnkey local run, and R-420 fixed the two
 SQL defects found by live execution. R-421 added an explicit `task agent-engine:studio:preview` mode:
@@ -658,8 +658,20 @@ WHAT TO DO NEXT
   auto-starting a real preview, real status/stop/restart/build-preview proxying, the 200-with-error
   shape confirmed live for an unknown build, unchanged credit balance across all four calls, and
   uniform 404s against build-only mode.
-- NEXT: R-479 (console: live preview UI - polling is for crash
-  detection not progress, since preview start is synchronous), R-480 (backend: Problems/
+- R-479 (2026-09-19, done) built the console live preview UI, fifth of the seven: an iframe
+  rendering the real running generated app, wired to R-478's four routes. Preview start is
+  synchronous, so polling's job is crash detection (5s interval while `status: "ready"`), not
+  progress-watching. New `studio-preview.tsx` triggers a re-preview whenever `buildId` becomes real
+  or a `previewVersion` counter (bumped after every edit, since `_edit()` never restarts the
+  preview) changes; a 404 renders an honest disabled message; manual Restart/Stop reuse icons that
+  existed unused since R-475. Every `PreviewStatus` shape verified by reading `preview.py` directly.
+  `task verify` 3,604 OK; console `typecheck`/`lint`/`build` clean (18 routes, 4 new). Live: real
+  control-plane + real agent-engine Studio server in preview mode proved build -> real iframe-ready
+  preview (fetched the real `web_url` directly, got genuine HTML) -> edit -> real re-preview on a
+  new port -> the real preview OS process was killed directly to simulate an external crash, and
+  the next poll correctly reported "stopped" -> manual Restart/Stop both worked -> build-only mode
+  produced the uniform honest 404 disabled state.
+- NEXT: R-480 (backend: Problems/
   compile-report support - genuinely new work, on-demand not automatic since `node_modules`/`tsc`
   only exist after a preview install), R-481 (tabbed workspace: Preview/Files/Code/Problems as four
   real tabs). R-482 (Model Provider settings UI) is independent, can slot in anytime after R-475.

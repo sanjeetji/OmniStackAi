@@ -10,6 +10,7 @@ import type {
   ChatTurn,
 } from "@/lib/control-plane";
 import { CreditIcon, SendIcon } from "./studio-icons";
+import { StudioPreview } from "./studio-preview";
 import { StudioWorkspace, type WorkspaceSnapshot } from "./studio-workspace";
 
 interface ChatMessage {
@@ -36,6 +37,10 @@ export default function StudioChat({ initialCreditBalance }: { initialCreditBala
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [buildId, setBuildId] = useState<string | null>(urlBuildId);
   const [workspace, setWorkspace] = useState<WorkspaceSnapshot | null>(null);
+  // Bumped after every successful edit so <StudioPreview> re-previews this build - _edit() never
+  // restarts the preview on its own, unlike _build() (which StudioPreview already re-previews for
+  // via its own buildId-change effect, so no bump is needed on a fresh build).
+  const [previewVersion, setPreviewVersion] = useState(0);
   const [prompt, setPrompt] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [hydrating, setHydrating] = useState(Boolean(urlBuildId));
@@ -212,6 +217,7 @@ export default function StudioChat({ initialCreditBalance }: { initialCreditBala
         usage: result.usage ?? prev?.usage,
         files: files.length > 0 ? files : prev?.files ?? [],
       }));
+      setPreviewVersion((v) => v + 1);
     } catch {
       appendMessage("assistant", "could not reach the server", "error");
     }
@@ -219,7 +225,10 @@ export default function StudioChat({ initialCreditBalance }: { initialCreditBala
 
   return (
     <div className="studio-grid">
-      <StudioWorkspace snapshot={workspace} />
+      <div className="studio-workspace-column">
+        <StudioPreview buildId={buildId} previewVersion={previewVersion} />
+        <StudioWorkspace snapshot={workspace} />
+      </div>
 
       <div className="panel chat-rail">
         <div className="studio-credit-row">
