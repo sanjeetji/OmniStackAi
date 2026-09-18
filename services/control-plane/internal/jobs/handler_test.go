@@ -420,6 +420,244 @@ func TestHandleBuildFileProxiesPathTraversalRejectionAs400(t *testing.T) {
 	}
 }
 
+func postPath(t *testing.T, server *httptest.Server, authHeader, path, body string) *http.Response {
+	t.Helper()
+	request, err := http.NewRequest(http.MethodPost, server.URL+path, strings.NewReader(body))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if authHeader != "" {
+		request.Header.Set("Authorization", authHeader)
+	}
+	request.Header.Set("Content-Type", "application/json")
+	resp, err := server.Client().Do(request)
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { _ = resp.Body.Close() })
+	return resp
+}
+
+func TestHandleBuildEditRejectsMissingOrUnknownToken(t *testing.T) {
+	agentEngine := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		t.Fatal("agent-engine must not be called for an unauthenticated request")
+	}))
+	defer agentEngine.Close()
+
+	creditStore := &fakeCreditStore{}
+	server := newTestServer(t, agentEngine.URL, fakeAuthStore{returnErr: auth.ErrSessionNotFound}, creditStore, 1000)
+
+	resp := postPath(t, server, "", "/jobs/build/abc123/edit", `{"prompt":"add favorites"}`)
+	if resp.StatusCode != http.StatusUnauthorized {
+		t.Fatalf("status = %d, want %d", resp.StatusCode, http.StatusUnauthorized)
+	}
+	if creditStore.callCount() != 0 {
+		t.Fatalf("DebitCredits called %d times, want 0", creditStore.callCount())
+	}
+}
+
+func TestHandleBuildEditForwardsBodyVerbatimAndDebitsRealUsage(t *testing.T) {
+	const requestBody = `{"prompt":"add a favorites feature"}`
+	var receivedPath, receivedBody string
+	agentEngine := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		receivedPath = r.URL.Path
+		raw, err := io.ReadAll(r.Body)
+		if err != nil {
+			t.Fatal(err)
+		}
+		receivedBody = string(raw)
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusOK)
+		_, _ = w.Write([]byte(`{"id":"abc123","entities":["Favorite"],"file_count":161,"commit_sha":"deadbeef","rationale":"Added Favorite entity.","turns":[],"usage":{"cost_micros_usd":18000,"total_calls":1}}`))
+	}))
+	defer agentEngine.Close()
+
+	creditStore := &fakeCreditStore{charged: 18, balance: 82}
+	server := newTestServer(t, agentEngine.URL, fakeAuthStore{user: newTestUser()}, creditStore, 1000)
+
+	resp := postPath(t, server, validToken, "/jobs/build/abc123/edit", requestBody)
+	if resp.StatusCode != http.StatusOK {
+		t.Fatalf("status = %d, want %d", resp.StatusCode, http.StatusOK)
+	}
+	if receivedPath != "/api/build/abc123/edit" {
+		t.Fatalf("agent-engine received path = %q, want %q", receivedPath, "/api/build/abc123/edit")
+	}
+	if receivedBody != requestBody {
+		t.Fatalf("agent-engine received body = %q, want %q (must forward verbatim)", receivedBody, requestBody)
+	}
+
+	var payload map[string]any
+	decodeJSON(t, resp, &payload)
+	if payload["credits_spent"].(float64) != 18 {
+		t.Fatalf("payload[credits_spent] = %v, want 18", payload["credits_spent"])
+	}
+	if payload["credit_balance"].(float64) != 82 {
+		t.Fatalf("payload[credit_balance] = %v, want 82", payload["credit_balance"])
+	}
+	if creditStore.callCount() != 1 {
+		t.Fatalf("DebitCredits called %d times, want 1", creditStore.callCount())
+	}
+	call := creditStore.calls[0]
+	if call.userID != "user-1" || call.requested != 18 || call.reason != "job:edit" {
+		t.Fatalf("DebitCredits call = %+v, want {user-1 18 job:edit}", call)
+	}
+}
+
+func TestHandleBuildEditChargesForANoOpEdit(t *testing.T) {
+	// A no-op edit (the delta call still happened, it just produced no file changes) still costs
+	// a real model call - creditsForUsage only ever looks at the reported cost, not the diff.
+	agentEngine := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusOK)
+		_, _ = w.Write([]byte(`{"id":"abc123","diff":{"added":[],"modified":[],"deleted":[],"summary":"No file changes were needed."},"usage":{"cost_micros_usd":9000}}`))
+	}))
+	defer agentEngine.Close()
+
+	creditStore := &fakeCreditStore{charged: 9, balance: 91}
+	server := newTestServer(t, agentEngine.URL, fakeAuthStore{user: newTestUser()}, creditStore, 1000)
+
+	resp := postPath(t, server, validToken, "/jobs/build/abc123/edit", `{"prompt":"add favorites"}`)
+	if resp.StatusCode != http.StatusOK {
+		t.Fatalf("status = %d, want %d", resp.StatusCode, http.StatusOK)
+	}
+	var payload map[string]any
+	decodeJSON(t, resp, &payload)
+	if payload["credits_spent"].(float64) != 9 {
+		t.Fatalf("payload[credits_spent] = %v, want 9 (a no-op edit still costs a real model call)", payload["credits_spent"])
+	}
+}
+
+func TestHandleBuildEditDoesNotChargeWhenNoUsageIsReported(t *testing.T) {
+	agentEngine := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusOK)
+		_, _ = w.Write([]byte(`{"id":"abc123","entities":[]}`))
+	}))
+	defer agentEngine.Close()
+
+	creditStore := &fakeCreditStore{}
+	server := newTestServer(t, agentEngine.URL, fakeAuthStore{user: newTestUser()}, creditStore, 1000)
+
+	resp := postPath(t, server, validToken, "/jobs/build/abc123/edit", `{"prompt":"add favorites"}`)
+	var payload map[string]any
+	decodeJSON(t, resp, &payload)
+	if payload["credits_spent"].(float64) != 0 {
+		t.Fatalf("payload[credits_spent] = %v, want 0", payload["credits_spent"])
+	}
+	if creditStore.callCount() != 0 {
+		t.Fatalf("DebitCredits called %d times, want 0", creditStore.callCount())
+	}
+}
+
+func TestHandleBuildEditProxiesUpstreamErrorsUnchanged(t *testing.T) {
+	cases := []struct {
+		name   string
+		status int
+		body   string
+	}{
+		{"unknown build (BuildNotFoundError)", http.StatusNotFound, `{"error":"build 'abc123' is not available in this session"}`},
+		{"unsupported build kind (EditNotSupportedError)", http.StatusBadRequest, `{"error":"editing is not yet supported for Solution Pack builds or multi-surface Ecosystem builds"}`},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			agentEngine := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				w.Header().Set("Content-Type", "application/json")
+				w.WriteHeader(tc.status)
+				_, _ = w.Write([]byte(tc.body))
+			}))
+			defer agentEngine.Close()
+
+			creditStore := &fakeCreditStore{}
+			server := newTestServer(t, agentEngine.URL, fakeAuthStore{user: newTestUser()}, creditStore, 1000)
+
+			resp := postPath(t, server, validToken, "/jobs/build/abc123/edit", `{"prompt":"add favorites"}`)
+			if resp.StatusCode != tc.status {
+				t.Fatalf("status = %d, want %d (proxied unchanged)", resp.StatusCode, tc.status)
+			}
+			if creditStore.callCount() != 0 {
+				t.Fatalf("DebitCredits called %d times, want 0", creditStore.callCount())
+			}
+		})
+	}
+}
+
+func TestHandleBuildEditReturnsBadGatewayWhenAgentEngineIsUnreachable(t *testing.T) {
+	creditStore := &fakeCreditStore{}
+	closedServer := httptest.NewServer(http.HandlerFunc(func(http.ResponseWriter, *http.Request) {}))
+	unreachableURL := closedServer.URL
+	closedServer.Close()
+
+	server := newTestServer(t, unreachableURL, fakeAuthStore{user: newTestUser()}, creditStore, 1000)
+
+	resp := postPath(t, server, validToken, "/jobs/build/abc123/edit", `{"prompt":"add favorites"}`)
+	if resp.StatusCode != http.StatusBadGateway {
+		t.Fatalf("status = %d, want %d", resp.StatusCode, http.StatusBadGateway)
+	}
+}
+
+func TestHandleBuildEditReturns500WhenDebitCreditsFails(t *testing.T) {
+	agentEngine := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusOK)
+		_, _ = w.Write([]byte(`{"id":"abc123","usage":{"cost_micros_usd":9000}}`))
+	}))
+	defer agentEngine.Close()
+
+	creditStore := &fakeCreditStore{returnErr: errors.New("database is on fire")}
+	server := newTestServer(t, agentEngine.URL, fakeAuthStore{user: newTestUser()}, creditStore, 1000)
+
+	resp := postPath(t, server, validToken, "/jobs/build/abc123/edit", `{"prompt":"add favorites"}`)
+	if resp.StatusCode != http.StatusInternalServerError {
+		t.Fatalf("status = %d, want %d", resp.StatusCode, http.StatusInternalServerError)
+	}
+}
+
+func TestHandleBuildTurnsRejectsMissingToken(t *testing.T) {
+	agentEngine := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		t.Fatal("agent-engine must not be called for an unauthenticated request")
+	}))
+	defer agentEngine.Close()
+
+	server := newTestServer(t, agentEngine.URL, fakeAuthStore{returnErr: auth.ErrSessionNotFound}, &fakeCreditStore{}, 1000)
+
+	resp := getBuildPath(t, server, "", "/jobs/build/abc123/turns")
+	if resp.StatusCode != http.StatusUnauthorized {
+		t.Fatalf("status = %d, want %d", resp.StatusCode, http.StatusUnauthorized)
+	}
+}
+
+func TestHandleBuildTurnsProxiesVerbatim(t *testing.T) {
+	cases := []struct {
+		name string
+		body string
+	}{
+		{"a build with real turns", `{"turns":[{"role":"user","text":"add favorites","created_at":1234.5},{"role":"assistant","text":"Added Favorite entity and API endpoint.","created_at":1235.0}]}`},
+		{"an unknown build (empty turns, not an error)", `{"turns":[]}`},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			var requestedPath string
+			agentEngine := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				requestedPath = r.URL.Path
+				w.Header().Set("Content-Type", "application/json")
+				w.WriteHeader(http.StatusOK)
+				_, _ = w.Write([]byte(tc.body))
+			}))
+			defer agentEngine.Close()
+
+			server := newTestServer(t, agentEngine.URL, fakeAuthStore{user: newTestUser()}, &fakeCreditStore{}, 1000)
+
+			resp := getBuildPath(t, server, validToken, "/jobs/build/abc123/turns")
+			if resp.StatusCode != http.StatusOK {
+				t.Fatalf("status = %d, want %d", resp.StatusCode, http.StatusOK)
+			}
+			if requestedPath != "/api/build/abc123/turns" {
+				t.Fatalf("agent-engine received path = %q, want %q", requestedPath, "/api/build/abc123/turns")
+			}
+		})
+	}
+}
+
 func TestCreditsForUsage(t *testing.T) {
 	cases := []struct {
 		name          string

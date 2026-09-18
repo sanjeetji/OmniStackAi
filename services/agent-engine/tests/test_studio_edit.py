@@ -124,9 +124,13 @@ class EditEndToEndTests(unittest.TestCase):
             self.assertEqual(entry["commit_sha"], result["commit_sha"])
             self.assertGreater(entry["file_count"], payload["file_count"])
 
-            # Turns were recorded: a user turn and an assistant summary turn.
-            self.assertEqual([t["role"] for t in result["turns"]], ["user", "assistant"])
-            self.assertEqual(result["turns"][0]["text"], "add a favorites feature")
+            # Turns were recorded: the build's own turn (R-476), then the edit's user turn and
+            # assistant summary turn.
+            self.assertEqual(
+                [t["role"] for t in result["turns"]], ["user", "assistant", "user", "assistant"]
+            )
+            self.assertEqual(result["turns"][0]["text"], "A tech blog")
+            self.assertEqual(result["turns"][2]["text"], "add a favorites feature")
 
     def test_second_edit_stacks_on_the_first(self) -> None:
         history = StudioBuildHistory()
@@ -153,7 +157,8 @@ class EditEndToEndTests(unittest.TestCase):
                 result = asyncio.run(_edit(build_id, "add a health check", history=history, session_store=session_store))
 
             self.assertEqual(len(_git_log_oneline(repo_dir)), 3)
-            self.assertEqual(len(result["turns"]), 4)  # 2 user + 2 assistant turns across both edits
+            # 2 build turns (R-476) + 2 user + 2 assistant turns across both edits
+            self.assertEqual(len(result["turns"]), 6)
             self.assertIn("Favorite", result["entities"])  # the first edit's entity is still present
 
     def test_empty_delta_produces_no_commit(self) -> None:

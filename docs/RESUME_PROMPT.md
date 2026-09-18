@@ -208,7 +208,7 @@ front-door bricks, R-420 is generated-SQL hardening, R-421..R-426 are Studio pre
 R-427..R-429 are generated-app compile fixes, R-430..R-457 are the first twenty-eight differentiating-spine
 bricks (Scope Compiler through Ecosystem Multi-Surface SLA, SLO, and Error Budget Contracts).
 Git, state files (.ai/), CHANGELOG, and docs/PROGRESS.md remain the executable/detail sources of truth.
-Current through R-475; `task verify` = 3,603 tests (agent-engine) + the Go control-plane's own suite +
+Current through R-476; `task verify` = 3,604 tests (agent-engine) + the Go control-plane's own suite +
 the Next.js console's typecheck/lint/build. R-416 added prompt-to-IR intake, R-417 materialized a generated
 owned repo, R-418 added the local chat studio, R-419 added turnkey local run, and R-420 fixed the two
 SQL defects found by live execution. R-421 added an explicit `task agent-engine:studio:preview` mode:
@@ -613,10 +613,25 @@ WHAT TO DO NEXT
   now correctly lives in `layout.tsx`, the new shell renders correctly with a real credit pill, and
   `/`, `/fabric`, `/login`, `/register` all remain structurally unaffected. Confirmed no new npm
   dependency was added.
-- NEXT: R-476 (backend: multi-turn edit bridge - new control-plane routes
-  `POST /jobs/build/{id}/edit`/`GET /jobs/build/{id}/turns` mirroring `POST /jobs/build`'s exact
-  proxy+debit shape, plus the two real Python fixes to `_edit()` found during planning), then R-477
-  (console: chat UI), R-478 (backend: live preview proxy - four routes not three, per the
+- R-476 (2026-09-19, done) built the backend multi-turn edit bridge, second of the seven: new
+  control-plane routes `POST /jobs/build/{id}/edit`/`GET /jobs/build/{id}/turns` mirroring
+  `POST /jobs/build`'s exact proxy+debit shape, with the shared "forward, decode, debit, inject"
+  logic extracted out of `handleBuild` into a `proxyAndDebit` helper both handlers reuse. Also fixed
+  two real, verified Python gaps found during planning: `_edit()` had no `usage_ledger` at all (every
+  edit debited 0 credits regardless of real cost); `_build()` never recorded its own chat turn (only
+  `_edit()` did). Both fixed by mirroring `_build()`'s own existing pattern. A no-op edit still
+  charges real credits (the model call happened even with an empty diff) - locked in by a dedicated
+  test. `task verify` 3,604 OK; control-plane `go test` all green (25 tests, 10 new). Live (real
+  Docker control-plane + a freshly restarted real agent-engine Studio server - Python doesn't
+  hot-reload, and the first attempt against the stale process usefully reproduced the exact bug this
+  task fixes): a real build's own turn now appears in `/turns` before any edit; a real edit produced
+  a genuine second git commit and, for the first time, a real `"usage"` key on the edit response.
+  Both came back `credits_spent: 0` honestly - this environment's real configured cloud model has no
+  price-book entry, a pre-existing fact unrelated to this task; the "debits a nonzero charge"
+  behavior is proven by the new unit tests instead.
+- NEXT: R-477 (console: chat UI - replace the one-shot form with a persistent multi-turn thread on
+  R-475's shell, wired to R-476's new routes; `buildId` null vs. set decides build-vs-edit), then
+  R-478 (backend: live preview proxy - four routes not three, per the
   build-scoped-route finding above), R-479 (console: live preview UI - polling is for crash
   detection not progress, since preview start is synchronous), R-480 (backend: Problems/
   compile-report support - genuinely new work, on-demand not automatic since `node_modules`/`tsc`

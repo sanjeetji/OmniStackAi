@@ -1,4 +1,4 @@
-# OmniStackAI — implementation progress (as of R-475)
+# OmniStackAI — implementation progress (as of R-476)
 
 A living summary of what is built, what is pending, and how to see results. Numbers come from the
 execution tracker (`R_&_D/OmniStackAI_Execution_Tracker_v6.xlsx`, `Phase_Roadmap`, 461 tasks as of
@@ -6,8 +6,23 @@ R-461 completion) plus the state files (`.ai/`), Git history, and CHANGELOG.
 
 ## Headline
 
-- **3,603 automated tests pass** (agent-engine + Go control-plane), fully offline and
+- **3,604 automated tests pass** (agent-engine + Go control-plane), fully offline and
   network-independent (`task verify`), plus the console's own `typecheck`/`lint`/`build` gates.
+- **R-476 — Backend: multi-turn edit bridge (2026-09-19):** second of the seven. New control-plane
+  routes `POST /jobs/build/{id}/edit` and `GET /jobs/build/{id}/turns`, mirroring
+  `POST /jobs/build`'s exact proxy+debit shape (R-472), plus two real, verified fixes to the Python
+  edit path found during this roadmap's planning research: `_edit()` had no `usage_ledger` at all
+  (every edit debited 0 credits regardless of real cost); `_build()` never recorded its own chat
+  turn (only `_edit()` did, so a chat hydrating history from `/turns` after a refresh would lose the
+  first message). Both fixed by mirroring `_build()`'s own existing patterns. Go side extracts a
+  shared `proxyAndDebit` helper out of `handleBuild`, reused by the new `handleBuildEdit`. A no-op
+  edit still charges real credits — locked in by a dedicated test. `task verify` **3,604 OK**;
+  control-plane `go test` all green (25 tests, 10 new). Live: a real build's own turn now appears in
+  `/turns` before any edit, and a real edit produced a genuine second git commit plus, for the first
+  time, a real `"usage"` key on the edit response — both honestly `credits_spent: 0` since this
+  environment's real configured cloud model has no price-book entry (a pre-existing, unrelated
+  fact); the "debits a nonzero charge" behavior is proven by the new unit tests instead. See
+  `.ai/tasks/R-476.md` for full verification detail.
 - **R-475 — Studio visual foundation (2026-09-19):** first of a founder-approved, fully-researched
   7-task plan (R-475–R-481, saved at `/Users/sanjeet_kumar/.claude/plans/hi-fancy-shannon.md`,
   mirrored in the kickoff doc's "Remaining Phase D roadmap") to take the Studio from

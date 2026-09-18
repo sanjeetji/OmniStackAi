@@ -737,6 +737,78 @@ class TestStudioSolutionPacks(unittest.TestCase):
         self.assertEqual(usage["cost_micros_usd"], 0)
         self.assertIsInstance(usage["cost_micros_usd"], int)
 
+    def test_live_serve_edit_surfaces_real_usage(self) -> None:
+        """R-476: a follow-up edit's response also carries a real, per-request usage summary.
+
+        Before this fix, _edit() never created a UsageLedger at all, so its response had no
+        "usage" key regardless of the real cost incurred. Same RecordingProvider-around-a-real-
+        UsageLedger approach as the plain-prompt build test above, applied to the edit call.
+        """
+        import asyncio
+        from unittest.mock import patch
+        from omnistackai_agent_engine.application_ir import example_ir
+        from omnistackai_agent_engine.model_gateway import FinishReason, GenerateResponse, TokenUsage
+        from omnistackai_agent_engine.model_gateway.recording import RecordingProvider
+        from omnistackai_agent_engine.studio.history import StudioBuildHistory
+        from omnistackai_agent_engine.studio.live_serve import _build, _edit
+        from omnistackai_agent_engine.studio.session import StudioSessionStore
+
+        ir_json = json.dumps(example_ir("minimal-blog").to_dict())
+        delta_json = json.dumps(
+            {
+                "entities": [],
+                "apis": [{"method": "GET", "path": "/health", "auth": False}],
+                "screens": [],
+                "rationale": "Adds a health check.",
+            }
+        )
+
+        class _StubProvider:
+            def __init__(self, text: str) -> None:
+                self._text = text
+                self.provider_id = "stub"
+
+            async def generate(self, request):  # noqa: ANN001
+                return GenerateResponse(
+                    request.request_id, request.model, self._text, FinishReason.STOP, TokenUsage(20, 8), 4
+                )
+
+        history = StudioBuildHistory()
+        session_store = StudioSessionStore()
+
+        with tempfile.TemporaryDirectory() as tmp:
+            with patch(
+                "omnistackai_agent_engine.studio.live_serve.resolve_generation_provider_from_env",
+                return_value=(_StubProvider(ir_json), "stub-model", 4096, 5.0),
+            ):
+                build_payload = _build(
+                    "A tech blog",
+                    target_dir=str(Path(tmp) / "blog"),
+                    history=history,
+                    session_store=session_store,
+                )
+
+            captured = {}
+
+            def fake_resolve(*, usage_ledger=None, **_ignored):
+                captured["usage_ledger"] = usage_ledger
+                return RecordingProvider(_StubProvider(delta_json), usage_ledger), "stub-model", 4096, 5.0
+
+            with patch(
+                "omnistackai_agent_engine.studio.live_serve.resolve_generation_provider_from_env",
+                side_effect=fake_resolve,
+            ):
+                edit_result = asyncio.run(
+                    _edit(build_payload["id"], "add a health check", history=history, session_store=session_store)
+                )
+
+        self.assertIsNotNone(captured["usage_ledger"])
+        self.assertIn("usage", edit_result)
+        usage = edit_result["usage"]
+        self.assertGreaterEqual(usage["total_calls"], 1)
+        self.assertEqual(usage["successful_calls"], usage["total_calls"])
+        self.assertEqual(usage["cost_micros_usd"], 0)  # unpriced "stub" provider, never guessed
+        self.assertIsInstance(usage["cost_micros_usd"], int)
 
     def test_post_build_passes_ai_delta_options(self) -> None:
         captured = {}

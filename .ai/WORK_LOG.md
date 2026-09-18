@@ -1,5 +1,50 @@
 # Work Log
 
+## 2026-09-19 — R-476 (Backend — multi-turn edit bridge)
+
+- **Why:** second task of the approved 7-task Phase D roadmap. New control-plane routes proxying
+  the agent-engine's existing (R-468) edit/turns endpoints, mirroring `POST /jobs/build`'s exact
+  proxy+debit shape (R-472) — plus two real, verified gaps in the Python edit path found while
+  planning this roadmap.
+- **Two real bugs fixed, both confirmed by direct comparison with `_build()`, not assumed:**
+  `_edit()` had no `usage_ledger` at all — its response carried no `"usage"` key whatsoever, so
+  every edit was debiting 0 credits regardless of real cost. `_build()` never called
+  `session_store.record_turn` — only `_edit()` did, so `GET /turns` returned an empty history for
+  any build that had never been edited yet, meaning a future chat UI hydrating from `/turns` after
+  a page refresh would silently lose the very first message. Both fixed by mirroring `_build()`'s
+  own existing patterns exactly (a fresh `UsageLedger()` threaded into
+  `resolve_generation_provider_from_env`, and `record_turn` calls right after
+  `session_store.begin(...)`).
+- **Go side:** new `POST /jobs/build/{id}/edit` and `GET /jobs/build/{id}/turns`. The shared
+  "forward, decode, debit, inject" body was extracted out of `handleBuild` into a `proxyAndDebit`
+  helper both handlers now call — mirrors the `writeAuthError` extraction precedent R-474 set once
+  a second call site appeared. A no-op edit (the delta call still happened even though it produced
+  no file changes) still debits real credits by design, since `creditsForUsage` only ever looks at
+  the reported cost — a dedicated test locks this in.
+- **Gates:** control-plane `go test` all green (25 in `internal/jobs`, 10 new). Agent-engine
+  `task verify` — 3,604 tests, OK (2 pre-existing `test_studio_edit.py` assertions updated to
+  account for `_build()` now correctly recording its own turn — a real, intended behavior change,
+  not a regression; 1 new test proving `_edit()`'s real usage recording, mirroring the exact
+  `RecordingProvider`-around-a-real-`UsageLedger` pattern R-472's own build test already
+  established). `task verify`/`lint`/`security:quick`/`env:check` all pass.
+- **Live:** rebuilt/restarted the control-plane, **and separately had to restart the agent-engine
+  Studio server** — Python doesn't hot-reload, and the first live attempt against the still-running
+  old process reproduced exactly the bug this task fixes (`GET /turns` returning `{"turns": []}`
+  even after a real build) — a useful, honest confirmation that the fix only takes effect once
+  actually deployed, not a new bug. After restarting: a real build's own turn was immediately
+  present in `/turns` before any edit; a real edit produced a genuine second git commit (5 files
+  added including a new `Favorite` entity's repository/router/screen, 10 modified) and, for the
+  first time ever, a real `"usage"` key on the edit response. **Honest note:** this environment's
+  real configured cloud model has no `DEFAULT_PRICE_BOOK` entry, so both the build and the edit
+  came back genuinely unpriced (`credits_spent: 0`) — a pre-existing, unrelated fact about this
+  deployment, not a flaw in this task; the "debits a nonzero charge" half of the acceptance
+  criteria is proven deterministically by the new unit tests instead, not claimed as something the
+  live run itself showed. Error paths (401 no token, 404 unknown build on both new routes) all
+  proxied correctly too.
+- **NEXT:** R-477 (console: chat UI) per the approved plan
+  (`/Users/sanjeet_kumar/.claude/plans/hi-fancy-shannon.md`), then R-478 (preview backend), R-479
+  (preview UI), R-480 (problems backend), R-481 (tabbed workspace).
+
 ## 2026-09-19 — R-475 (Studio visual foundation)
 
 - **Why:** the founder asked directly whether the platform now has a "rich, upgraded, advanced UI"

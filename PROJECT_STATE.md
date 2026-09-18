@@ -4,6 +4,27 @@ Last updated: 2026-09-19
 ## Current Phase
 Stage 0 (Founder Build Sequence, Brief Section 91) — BASIC/MVP
 
+> **R-476 (2026-09-19): Backend — multi-turn edit bridge.** Second of the founder-approved 7-task
+> plan (R-475–R-481). New control-plane routes `POST /jobs/build/{id}/edit` and
+> `GET /jobs/build/{id}/turns`, mirroring `POST /jobs/build`'s exact proxy+debit shape (R-472), plus
+> two real, verified fixes to the Python edit path found during this roadmap's planning research
+> (confirmed by direct source reads): `_edit()` had no `usage_ledger` at all, so every edit debited
+> 0 credits regardless of real cost; `_build()` never recorded its own chat turn, so a future chat
+> hydrating history from `/turns` after a refresh would silently lose the first message. Both fixed
+> by mirroring `_build()`'s own existing patterns. Go side: `handleBuildEdit`/`handleBuildTurns`
+> added, with the shared "forward, decode, debit, inject" logic extracted out of `handleBuild` into
+> a `proxyAndDebit` helper both handlers reuse. A no-op edit still charges real credits — locked in
+> by a dedicated test. Python side: `_edit()` now threads a real `UsageLedger`, adding a real
+> `"usage"` key to its response; `_build()` now records its own chat turn. `task verify` **3,604
+> OK**; control-plane `go test` all green (25 tests, 10 new). Live (real control-plane + a freshly
+> restarted real agent-engine Studio server — Python doesn't hot-reload, and the first attempt
+> against the stale process usefully reproduced the exact bug this task fixes): a real build's own
+> turn now appears in `/turns` before any edit; a real edit produced a genuine second git commit and
+> a real `"usage"` key on the edit response, both honestly `credits_spent: 0` since this
+> environment's real configured cloud model has no price-book entry — the "debits a nonzero charge"
+> behavior is proven by the new unit tests instead.
+> NEXT: R-477 (console: chat UI), then R-478–R-481 per the approved plan.
+
 > **R-475 (2026-09-19): Studio visual foundation.** First of a founder-approved, fully-researched
 > 7-task plan (R-475–R-481, saved at `/Users/sanjeet_kumar/.claude/plans/hi-fancy-shannon.md`,
 > mirrored in the kickoff doc) to take the Studio from functionally-real-but-plain toward a

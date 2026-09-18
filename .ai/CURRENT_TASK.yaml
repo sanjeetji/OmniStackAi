@@ -1,29 +1,27 @@
-task_id: R-475
+task_id: R-476
 status: completed
 phase: MVP
 tracker_row: null
 started_at: "2026-09-19"
 completed_at: "2026-09-19"
 objective: >-
-  First task of the approved 7-task Phase D roadmap (R-475..R-481, renumbered from an earlier
-  6-task sketch after two research passes plus two founder decisions - see the plan record). Turn
-  /studio into a real app shell the later chat (R-477) and tabbed workspace (R-481) tasks build on
-  top of, not a one-off skin of the current single-page form. New app/studio/layout.tsx takes over
-  the auth gate + persistent top-bar chrome; globals.css gains additive design tokens
-  (--radius-sm/md/lg, --surface-2, accent chip background, refined .panel, a CSS-only .spinner,
-  .pill--accent) mirrored into the existing dark-mode media query; new hand-rolled
-  studio-icons.tsx (explicit decision: stay dependency-free, the icon surface is small and fixed
-  enough that an icon library doesn't clear the bar for a new dependency). studio-form.tsx is
-  restyled only, zero logic change. No backend changes; no chat/tab/preview functionality yet -
-  purely the shell and tokens later tasks build on.
+  Second task of the approved 7-task Phase D roadmap. New control-plane routes
+  POST /jobs/build/{id}/edit and GET /jobs/build/{id}/turns, mirroring POST /jobs/build's exact
+  proxy+debit shape (R-472). Also fixes two real, verified gaps in the Python edit path: _edit()
+  has no usage_ledger at all today (confirmed by direct comparison with _build() - every edit
+  currently debits 0 credits regardless of real cost), and _build() never records a chat turn
+  (only _edit() does - a future chat hydrating history from /turns after a refresh would lose the
+  first message). Both fixed by mirroring _build()'s own existing patterns. Go side extracts a
+  shared proxyAndDebit helper out of handleBuild so handleBuildEdit reuses it, mirroring the
+  writeAuthError extraction precedent R-474 set.
 allowed_paths:
-  - apps/console-web/app/globals.css
-  - apps/console-web/app/studio/layout.tsx
-  - apps/console-web/app/studio/page.tsx
-  - apps/console-web/app/studio/studio-form.tsx
-  - apps/console-web/app/studio/studio-icons.tsx
+  - services/control-plane/internal/jobs/handler.go
+  - services/control-plane/internal/jobs/handler_test.go
+  - services/agent-engine/src/omnistackai_agent_engine/studio/live_serve.py
+  - services/agent-engine/tests/test_studio_edit.py
+  - services/agent-engine/tests/test_studio_server.py
   - scripts/test.sh
-  - .ai/tasks/R-475.md
+  - .ai/tasks/R-476.md
   - .ai/CURRENT_TASK.yaml
   - .ai/PROJECT_STATE.yaml
   - .ai/WORK_LOG.md
@@ -32,31 +30,32 @@ allowed_paths:
   - CHANGELOG.md
   - docs/PROGRESS.md
   - docs/RESUME_PROMPT.md
-  - R_&_D/OmniStackAI_Commercial_Platform_Kickoff_v1.md
 forbidden_changes:
-  - No changes to services/control-plane or services/agent-engine
-  - No new npm dependency
-  - No chat/tab/preview/problems functionality (later tasks)
+  - No changes to apps/console-web
+  - No changes to live preview, Problems, or tab functionality (later tasks)
   - Do not modify or commit the untracked .claude directory
 required_gates:
-  - "apps/console-web: pnpm run typecheck, pnpm run lint, pnpm run build"
+  - "control-plane: go build ./..., go vet ./..., go test ./..."
+  - "agent-engine: task verify (0 model/network calls)"
   - task verify
   - task lint
   - task security:quick
   - task env:check
-  - "manual smoke (real next start): /studio shell renders correctly, /, /fabric, /login, /register structurally unaffected"
+  - "manual smoke (real docker control-plane + real agent-engine studio server): real build -> real edit, credits_spent > 0, /turns includes the first build's turn"
 model_tool_trace:
   routing: deterministic_only
   local_calls: 0
   cloud_calls: 0
   note: >-
-    Pure CSS/TypeScript/React implementation, 0 model/network calls in any gate.
+    Go/Python implementation, 0 model/network calls in any automated gate. The manual smoke test's
+    build+edit calls use whatever provider is configured (real Groq or local Ollama).
 next_action: >-
-  R-475 is complete (see .ai/tasks/R-475.md for full Gates & Evidence). Next up per the approved
-  plan (/Users/sanjeet_kumar/.claude/plans/hi-fancy-shannon.md): R-476 - Backend: multi-turn edit
-  bridge. New control-plane routes POST /jobs/build/{id}/edit and GET /jobs/build/{id}/turns,
-  mirroring POST /jobs/build's exact proxy+debit shape. Also fixes two real, verified gaps in the
-  Python edit path: _edit() has no usage_ledger at all today (every edit currently debits 0
-  credits regardless of real cost), and _build() never records a chat turn (only _edit() does, so
-  a future chat hydrating history from /turns after a refresh would lose the first message). Both
-  fixed by mirroring _build()'s own existing patterns.
+  R-476 is complete (see .ai/tasks/R-476.md for full Gates & Evidence). Next up per the approved
+  plan (/Users/sanjeet_kumar/.claude/plans/hi-fancy-shannon.md): R-477 - Console: chat UI. Replace
+  /studio's one-shot prompt form with a persistent, multi-turn chat thread built on R-475's shell,
+  wired to R-476's new routes. buildId (null vs. set) is the single piece of state deciding
+  whether the composer calls /jobs/build or /jobs/build/{id}/edit. buildId persists in the URL
+  (?build=<id>) so a refresh can rehydrate history from /turns (now covering the first message
+  too, per R-476's fix). New failure modes to handle explicitly: EditNotSupportedError (400) ->
+  plain error banner; BuildNotFoundError (404) on edit or turns-hydration -> clear buildId and
+  show "session no longer available."

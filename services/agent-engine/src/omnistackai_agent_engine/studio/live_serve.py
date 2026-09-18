@@ -492,6 +492,14 @@ def _build(
         payload["id"] = history.record(payload)
         if session_store is not None and editable_ir is not None:
             session_store.begin(payload["id"], editable_ir, payload["target_dir"])
+            # R-476: without this, GET /api/build/{id}/turns would return an empty history for a
+            # build that has never been edited yet, even though a real build happened - a chat UI
+            # (R-477) hydrating from /turns after a page refresh would silently lose the very
+            # first message. Only _edit() recorded turns before this fix.
+            session_store.record_turn(payload["id"], "user", prompt)
+            session_store.record_turn(
+                payload["id"], "assistant", f"Built {payload.get('name', 'the app')}."
+            )
     if preview_manager is None:
         payload["preview"] = {
             "status": "disabled",
@@ -572,7 +580,13 @@ async def _edit(
     if session is None:
         raise BuildNotFoundError(f"build '{build_id}' session has expired in this server session; rebuild to continue editing")
 
-    provider, model_id, _max_output, timeout = resolve_generation_provider_from_env()
+    # R-476: without usage_ledger, an edit's real cost was never recorded anywhere - the response
+    # had no "usage" key at all, so the control-plane's Job API proxy would debit 0 credits for
+    # every edit regardless of what it actually cost. Mirrors _build()'s own exact pattern.
+    usage_ledger = UsageLedger()
+    provider, model_id, _max_output, timeout = resolve_generation_provider_from_env(
+        usage_ledger=usage_ledger
+    )
     proposal = await generate_app_delta_proposal(session.ir, prompt, provider, model_id=model_id, timeout_seconds=timeout)
     new_ir = apply_app_delta(session.ir, proposal)
     diff = plan_edit(session.ir, new_ir)
@@ -588,6 +602,7 @@ async def _edit(
             "commit_sha": entry.get("commit_sha", ""),
             "rationale": proposal.rationale,
             "turns": session_store.turns_view(build_id)["turns"],
+            "usage": _usage_summary_to_dict(usage_ledger),
         }
 
     result = commit_edit(
@@ -614,6 +629,7 @@ async def _edit(
         "file_count": file_count,
         "commit_sha": result.commit_sha,
         "rationale": proposal.rationale,
+        "usage": _usage_summary_to_dict(usage_ledger),
         "turns": session_store.turns_view(build_id)["turns"],
     }
 

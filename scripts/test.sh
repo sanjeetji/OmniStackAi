@@ -403,4 +403,22 @@ for design_token in '\-\-radius-sm' '\-\-radius-md' '\-\-radius-lg' '\-\-surface
   fi
 done
 
+# R-476: backend - multi-turn edit bridge.
+for route in 'POST /jobs/build/{id}/edit' 'GET /jobs/build/{id}/turns'; do
+  if ! rg -qF "$route" "$control_plane_root/internal/jobs/handler.go"; then
+    printf 'R-476 control-plane must register: %s\n' "$route"
+    exit 1
+  fi
+done
+
+if ! rg -q 'usage_ledger = UsageLedger\(\)' "$agent_engine_root/src/omnistackai_agent_engine/studio/live_serve.py"; then
+  printf 'R-476 must thread a real UsageLedger through _edit() (live_serve.py).\n'
+  exit 1
+fi
+
+if [[ "$(rg -c 'record_turn' "$agent_engine_root/src/omnistackai_agent_engine/studio/live_serve.py" 2>/dev/null || echo 0)" -lt 4 ]]; then
+  printf 'R-476 must make _build() record its own turn (session_store.record_turn), not just _edit().\n'
+  exit 1
+fi
+
 printf 'Repository contract tests passed.\n'

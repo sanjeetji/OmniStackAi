@@ -1,9 +1,40 @@
 # Current Handoff
 
-Task ID: R-475
+Task ID: R-476
 Status: done
 Phase: BASIC/MVP — Founder Stage 0
 Branch: `main`
+
+> **R-476 Completed (2026-09-19): Backend — multi-turn edit bridge.**
+> - **Second of the founder-approved 7-task plan** (R-475–R-481). New control-plane routes
+>   `POST /jobs/build/{id}/edit` and `GET /jobs/build/{id}/turns`, mirroring `POST /jobs/build`'s
+>   exact proxy+debit shape (R-472), plus two real, verified fixes to the Python edit path found
+>   during this roadmap's planning research (not assumed — confirmed by direct source reads):
+>   `_edit()` had no `usage_ledger` at all, so every edit debited 0 credits regardless of real cost;
+>   `_build()` never recorded its own chat turn, so a future chat hydrating history from `/turns`
+>   after a refresh would silently lose the first message. Both fixed by mirroring `_build()`'s own
+>   existing patterns exactly.
+> - **Go side**: `handleBuildEdit`/`handleBuildTurns` added to `internal/jobs/handler.go`; the
+>   shared "forward, decode, debit, inject" logic extracted out of `handleBuild` into a
+>   `proxyAndDebit` helper both handlers now call — mirrors the `writeAuthError` extraction
+>   precedent R-474 set. A no-op edit still charges real credits (the model call happened even if
+>   the diff was empty) — locked in by a dedicated test, since it's non-obvious and easy to regress.
+> - **Python side** (`studio/live_serve.py`): `_edit()` now threads a real `UsageLedger` through
+>   `resolve_generation_provider_from_env`, adding a real `"usage"` key to both its response
+>   branches; `_build()` now calls `session_store.record_turn` for its own user/assistant turn.
+> - Gates: control-plane `go build/vet/test` all green (25 tests in `internal/jobs`, 10 new);
+>   agent-engine `task verify` **3,604 OK** (0 model/network calls — stub-provider-mocked, matching
+>   every prior task); repo `task verify`/`lint`/`security:quick`/`env:check` all pass. **Live**
+>   (real Docker control-plane + a freshly restarted real agent-engine Studio server — Python
+>   doesn't hot-reload; the first attempt against the still-running old process usefully reproduced
+>   the exact bug this task fixes before the restart, confirming the fix is real): a real build's
+>   own turn now appears in `/turns` before any edit; a real edit produced a genuine second git
+>   commit and, for the first time, a real `"usage"` key on the edit response. Both came back
+>   `credits_spent: 0` honestly — this environment's real configured cloud model has no price-book
+>   entry, a pre-existing fact unrelated to this task; the "debits a nonzero charge" behavior is
+>   proven by the new unit tests instead, not misrepresented as something the live run itself showed.
+> - **NEXT:** R-477 (console: chat UI) per the approved plan. See
+>   `R_&_D/OmniStackAI_Commercial_Platform_Kickoff_v1.md`, `.ai/tasks/R-476.md`, and the plan file.
 
 > **R-475 Completed (2026-09-19): Studio visual foundation.**
 > - **First of a founder-approved, fully-researched 7-task plan** (R-475–R-481, saved at
