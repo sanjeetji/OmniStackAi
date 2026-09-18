@@ -60,3 +60,10 @@ const defaultBuildTimeout = 5 * time.Minute
 // health_timeout_seconds default of 45s), not the much larger defaultBuildTimeout, which is
 // oversized for this.
 const defaultPreviewTimeout = 60 * time.Second
+
+// defaultProblemsTimeout extends the write deadline for POST /jobs/build/{id}/problems, which runs
+// a real `tsc --noEmit` on the generated app - a local compile, not a model call, but one that can
+// still take real time on a larger app. Sized well above ordinary single-app compile times observed
+// in this codebase's own generated fixtures, well below verify/compile.py's own much larger internal
+// default (600s), which exists for pathological cases this route does not need to wait out.
+const defaultProblemsTimeout = 90 * time.Second

@@ -1,4 +1,4 @@
-# OmniStackAI — implementation progress (as of R-479)
+# OmniStackAI — implementation progress (as of R-480)
 
 A living summary of what is built, what is pending, and how to see results. Numbers come from the
 execution tracker (`R_&_D/OmniStackAI_Execution_Tracker_v6.xlsx`, `Phase_Roadmap`, 461 tasks as of
@@ -6,8 +6,25 @@ R-461 completion) plus the state files (`.ai/`), Git history, and CHANGELOG.
 
 ## Headline
 
-- **3,604 automated tests pass** (agent-engine + Go control-plane), fully offline and
+- **3,625 automated tests pass** (agent-engine + Go control-plane), fully offline and
   network-independent (`task verify`), plus the console's own `typecheck`/`lint`/`build` gates.
+- **R-480 — Backend: Problems/compile-report support (2026-09-19):** sixth of the seven. Real
+  compile-error reporting for the first time in this codebase — the founder's explicit choice over
+  a placeholder. New `studio/problems.py` mirrors `files.py`'s shape: resolves `apps/web`, raises
+  `NoWebTargetError` if there's no web app, remaps `verify/compile.py`'s real
+  `compile_web_project()`'s `VerifyError` into a clear `ToolchainNotInstalledError` — never
+  silently installs dependencies. On-demand, not automatic (`node_modules`/`tsc` only exist after a
+  preview install). `StudioProblemsStore` is a bounded per-build-id LRU cache mirroring
+  `StudioSessionStore`. New control-plane routes `POST`/`GET /jobs/build/{id}/problems`, no credit
+  debit, a new `defaultProblemsTimeout` (90s), a new 409 status for "toolchain not installed."
+  `task verify` **3,625 OK** (21 new tests, no real toolchain needed); control-plane `go test` all
+  green (45 tests, 7 new). Live: build-only mode with no toolchain produced real 409/404, no crash;
+  along the way hit two real, pre-existing environment issues unrelated to this task (a
+  generated-migration collision, a 500ing preview page) worked through honestly; preview mode with
+  a real installed toolchain surfaced **10 genuine TypeScript errors** via a real `tsc` run in an
+  LLM-synthesized page — real compiler output that also explained the runtime 500; a repeated GET
+  returned the byte-identical cached report in 12ms. See `.ai/tasks/R-480.md` for full verification
+  detail.
 - **R-479 — Console: live preview UI (2026-09-19):** fifth of the seven. An iframe rendering the
   real running generated app, wired to R-478's four routes. Preview start is synchronous, so
   polling's job is crash detection (5s interval while `status: "ready"`), not progress-watching.

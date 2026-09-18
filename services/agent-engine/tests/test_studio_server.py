@@ -538,6 +538,90 @@ class TestStudioEditRoutes(unittest.TestCase):
             self.assertIn(token, STUDIO_HTML)
 
 
+class TestStudioProblemsRoutes(unittest.TestCase):
+    """R-480: POST /api/build/{id}/problems and GET /api/build/{id}/problems."""
+
+    def test_post_problems_check_success(self) -> None:
+        seen = []
+
+        def check(build_id):
+            seen.append(build_id)
+            return {"ok": False, "returncode": 2, "error_count": 1, "files": {"app/page.tsx": ["L1:1 TS2339: x"]}, "output_tail": ""}
+
+        with running_server(RecordingBuild(STUB_RESULT), problems_check_fn=check) as base:
+            status, data = _post(base + "/api/build/7/problems", obj={})
+            self.assertEqual(status, 200)
+            self.assertFalse(data["ok"])
+            self.assertEqual(data["error_count"], 1)
+            self.assertEqual(seen, ["7"])
+
+    def test_problems_check_404_when_disabled(self) -> None:
+        with running_server(RecordingBuild(STUB_RESULT)) as base:
+            self.assertEqual(_post(base + "/api/build/7/problems", obj={})[0], 404)
+
+    def test_problems_check_maps_each_typed_error(self) -> None:
+        from omnistackai_agent_engine.studio.files import BuildNotFoundError
+        from omnistackai_agent_engine.studio.problems import NoWebTargetError, ToolchainNotInstalledError
+
+        cases = [
+            (BuildNotFoundError("no such build"), 404),
+            (NoWebTargetError("this build has no web app to check for problems"), 400),
+            (ToolchainNotInstalledError("tsc is not installed for this app"), 409),
+            (RuntimeError("boom"), 502),
+        ]
+        for error, expected_status in cases:
+            def check(build_id, _error=error):
+                raise _error
+
+            with running_server(RecordingBuild(STUB_RESULT), problems_check_fn=check) as base:
+                status, _ = _post(base + "/api/build/7/problems", obj={})
+                self.assertEqual(status, expected_status, type(error).__name__)
+
+    def test_get_problems_success(self) -> None:
+        seen = []
+
+        def get(build_id):
+            seen.append(build_id)
+            return {"ok": True, "returncode": 0, "error_count": 0, "files": {}, "output_tail": ""}
+
+        with running_server(RecordingBuild(STUB_RESULT), problems_get_fn=get) as base:
+            status, data = _get(base + "/api/build/7/problems")
+            self.assertEqual(status, 200)
+            self.assertTrue(json.loads(data)["ok"])
+            self.assertEqual(seen, ["7"])
+
+    def test_get_problems_404_when_disabled(self) -> None:
+        with running_server(RecordingBuild(STUB_RESULT)) as base:
+            self.assertEqual(_get(base + "/api/build/7/problems")[0], 404)
+
+    def test_get_problems_maps_each_typed_error(self) -> None:
+        from omnistackai_agent_engine.studio.files import BuildNotFoundError
+        from omnistackai_agent_engine.studio.problems import ProblemsNotCheckedError
+
+        cases = [
+            (BuildNotFoundError("no such build"), 404),
+            (ProblemsNotCheckedError("not checked yet"), 404),
+            (RuntimeError("boom"), 502),
+        ]
+        for error, expected_status in cases:
+            def get(build_id, _error=error):
+                raise _error
+
+            with running_server(RecordingBuild(STUB_RESULT), problems_get_fn=get) as base:
+                status, _ = _get(base + "/api/build/7/problems")
+                self.assertEqual(status, expected_status, type(error).__name__)
+
+    def test_problems_available_without_any_preview_wiring(self) -> None:
+        with running_server(
+            RecordingBuild(STUB_RESULT),
+            problems_check_fn=lambda bid: {"ok": True, "returncode": 0, "error_count": 0, "files": {}, "output_tail": ""},
+            problems_get_fn=lambda bid: {"ok": True, "returncode": 0, "error_count": 0, "files": {}, "output_tail": ""},
+        ) as base:
+            self.assertEqual(_post(base + "/api/build/1/problems", obj={})[0], 200)
+            self.assertEqual(_get(base + "/api/build/1/problems")[0], 200)
+            self.assertEqual(_get(base + "/api/preview")[0], 404)
+
+
 class TestResultDict(unittest.TestCase):
     def test_app_build_result_to_dict_shape(self) -> None:
         ir = example_ir("minimal-blog")

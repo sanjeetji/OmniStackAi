@@ -23,6 +23,7 @@ from ..solution_packs import (
 )
 from .files import BuildNotFoundError, FileNotFoundInBuildError, PathOutsideBuildError
 from .page import STUDIO_HTML
+from .problems import NoWebTargetError, ProblemsNotCheckedError, ToolchainNotInstalledError
 from .session import EditNotSupportedError
 
 BuildFn = Callable[..., dict]
@@ -31,6 +32,7 @@ PreviewBuildFn = Callable[..., dict]
 FileTreeFn = Callable[[str], dict]
 EditFn = Callable[[str, str], dict]
 ReadFileFn = Callable[[str, str], dict]
+ProblemsFn = Callable[[str], dict]
 
 _MAX_BODY_BYTES = 64 * 1024
 
@@ -48,6 +50,8 @@ def _make_handler(
     read_file_fn: ReadFileFn | None = None,
     edit_fn: EditFn | None = None,
     turns_fn: FileTreeFn | None = None,
+    problems_check_fn: ProblemsFn | None = None,
+    problems_get_fn: ProblemsFn | None = None,
     registry: SolutionPackRegistry | None = None,
     ecosystem_registry: EcosystemPackRegistry | None = None,
     switch_surface_fn: PreviewBuildFn | None = None,
@@ -193,6 +197,34 @@ def _make_handler(
             try:
                 self._send_json(200, turns_fn(build_id))
             except Exception as error:  # a session read never targets a specific build_id error today
+                self._send_json(502, {"error": str(error)})
+
+        def _handle_check_problems(self, build_id: str) -> None:
+            if problems_check_fn is None:
+                self._send_json(404, {"error": "problems checking is not enabled"})
+                return
+            try:
+                self._send_json(200, problems_check_fn(build_id))
+            except BuildNotFoundError as error:
+                self._send_json(404, {"error": str(error)})
+            except NoWebTargetError as error:
+                self._send_json(400, {"error": str(error)})
+            except ToolchainNotInstalledError as error:
+                self._send_json(409, {"error": str(error)})
+            except Exception as error:  # surface any other failure (a real tsc crash) as a clean 502
+                self._send_json(502, {"error": str(error)})
+
+        def _handle_get_problems(self, build_id: str) -> None:
+            if problems_get_fn is None:
+                self._send_json(404, {"error": "problems checking is not enabled"})
+                return
+            try:
+                self._send_json(200, problems_get_fn(build_id))
+            except BuildNotFoundError as error:
+                self._send_json(404, {"error": str(error)})
+            except ProblemsNotCheckedError as error:
+                self._send_json(404, {"error": str(error)})
+            except Exception as error:  # surface any other failure as a clean 502
                 self._send_json(502, {"error": str(error)})
 
         def _handle_edit(self, build_id: str) -> None:
@@ -432,6 +464,10 @@ def _make_handler(
                 turns_build_id = self._build_id_for_suffix(path_only, "/turns")
                 if turns_build_id is not None:
                     self._handle_turns(turns_build_id)
+                    return
+                problems_build_id = self._build_id_for_suffix(path_only, "/problems")
+                if problems_build_id is not None:
+                    self._handle_get_problems(problems_build_id)
                     return
                 self._send(404, "text/plain; charset=utf-8", b"not found")
 
@@ -747,6 +783,10 @@ def _make_handler(
                 if edit_build_id is not None:
                     self._handle_edit(edit_build_id)
                     return
+                problems_build_id = self._build_id_for_suffix(self.path, "/problems")
+                if problems_build_id is not None:
+                    self._handle_check_problems(problems_build_id)
+                    return
                 self._send_json(404, {"error": "not found"})
                 return
             data = self._read_json_body()
@@ -813,6 +853,8 @@ def create_studio_server(
     read_file_fn: ReadFileFn | None = None,
     edit_fn: EditFn | None = None,
     turns_fn: FileTreeFn | None = None,
+    problems_check_fn: ProblemsFn | None = None,
+    problems_get_fn: ProblemsFn | None = None,
     solution_pack_registry: SolutionPackRegistry | None = None,
     ecosystem_pack_registry: EcosystemPackRegistry | None = None,
     switch_surface_fn: PreviewBuildFn | None = None,
@@ -858,7 +900,11 @@ def create_studio_server(
     ``read_file_fn`` (``GET /api/build/{id}/file?path=...``, R-467), ``edit_fn``
     (``POST /api/build/{id}/edit``), and ``turns_fn`` (``GET /api/build/{id}/turns``, R-468) may also be
     wired in build-only mode -- inspecting a build's files or applying a follow-up edit needs no toolchain
-    or running preview, only git and a model.
+    or running preview, only git and a model. ``problems_check_fn``
+    (``POST /api/build/{id}/problems``, R-480, triggers a fresh `tsc` type-check) and
+    ``problems_get_fn`` (``GET /api/build/{id}/problems``, the last stored report) may also be wired in
+    build-only mode -- the check itself needs the build's own installed `node_modules`/`tsc` (from a prior
+    live-preview install), but not a *currently running* preview.
     """
     return ThreadingHTTPServer(
         (host, port),
@@ -875,6 +921,8 @@ def create_studio_server(
             read_file_fn=read_file_fn,
             edit_fn=edit_fn,
             turns_fn=turns_fn,
+            problems_check_fn=problems_check_fn,
+            problems_get_fn=problems_get_fn,
             registry=solution_pack_registry,
             ecosystem_registry=ecosystem_pack_registry,
             switch_surface_fn=switch_surface_fn,

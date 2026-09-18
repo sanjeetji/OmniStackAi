@@ -484,4 +484,27 @@ if ! rg -q 'StudioPreview' "$console_root/app/studio/studio-chat.tsx"; then
   exit 1
 fi
 
+# R-480: backend - Problems/compile-report support.
+if [[ ! -f "$agent_engine_root/src/omnistackai_agent_engine/studio/problems.py" ]]; then
+  printf 'Missing R-480 contract file: studio/problems.py\n'
+  exit 1
+fi
+
+if ! rg -q 'problems_check_fn|problems_get_fn' "$agent_engine_root/src/omnistackai_agent_engine/studio/server.py"; then
+  printf 'R-480 must wire problems_check_fn/problems_get_fn into studio/server.py.\n'
+  exit 1
+fi
+
+for route in 'POST /jobs/build/{id}/problems' 'GET /jobs/build/{id}/problems'; do
+  if ! rg -qF "$route" "$control_plane_root/internal/jobs/handler.go"; then
+    printf 'R-480 control-plane must register: %s\n' "$route"
+    exit 1
+  fi
+done
+
+if ! rg -q 'defaultProblemsTimeout' "$control_plane_root/internal/jobs/types.go"; then
+  printf 'R-480 must add a defaultProblemsTimeout constant to types.go.\n'
+  exit 1
+fi
+
 printf 'Repository contract tests passed.\n'

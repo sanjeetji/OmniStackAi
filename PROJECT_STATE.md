@@ -4,6 +4,19 @@ Last updated: 2026-09-19
 ## Current Phase
 Stage 0 (Founder Build Sequence, Brief Section 91) — BASIC/MVP
 
+> **R-480 (2026-09-19): Backend — Problems/compile-report support.** Sixth of the founder-approved
+> 7-task plan (R-475–R-481). Real compile-error reporting for the first time in this codebase — the
+> founder's explicit choice over a placeholder. New `studio/problems.py` mirrors `files.py`'s
+> shape: resolves `apps/web`, raises `NoWebTargetError` if no web app, remaps `verify/compile.py`'s
+> real `compile_web_project()`'s `VerifyError` into a clear `ToolchainNotInstalledError`. On-demand,
+> not automatic. New control-plane routes `POST`/`GET /jobs/build/{id}/problems`, no credit debit, a
+> new `defaultProblemsTimeout` (90s), a new 409 status for "toolchain not installed." `task verify`
+> **3,625 OK** (21 new tests); control-plane `go test` all green (45 tests, 7 new). Live: build-only
+> mode with no toolchain produced real 409/404, no crash; preview mode with a real installed
+> toolchain surfaced **10 genuine TypeScript errors** via a real `tsc` run in an LLM-synthesized
+> page; a repeated GET returned the byte-identical cached report in 12ms.
+> NEXT: R-481 (tabbed workspace) — the final task of the approved 7-task roadmap.
+
 > **R-479 (2026-09-19): Console — live preview UI.** Fifth of the founder-approved 7-task plan
 > (R-475–R-481). An iframe rendering the real running generated app, wired to R-478's four routes.
 > Preview start is synchronous, so polling's job is crash detection (5s interval while

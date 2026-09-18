@@ -208,7 +208,7 @@ front-door bricks, R-420 is generated-SQL hardening, R-421..R-426 are Studio pre
 R-427..R-429 are generated-app compile fixes, R-430..R-457 are the first twenty-eight differentiating-spine
 bricks (Scope Compiler through Ecosystem Multi-Surface SLA, SLO, and Error Budget Contracts).
 Git, state files (.ai/), CHANGELOG, and docs/PROGRESS.md remain the executable/detail sources of truth.
-Current through R-479; `task verify` = 3,604 tests (agent-engine) + the Go control-plane's own suite +
+Current through R-480; `task verify` = 3,625 tests (agent-engine) + the Go control-plane's own suite +
 the Next.js console's typecheck/lint/build. R-416 added prompt-to-IR intake, R-417 materialized a generated
 owned repo, R-418 added the local chat studio, R-419 added turnkey local run, and R-420 fixed the two
 SQL defects found by live execution. R-421 added an explicit `task agent-engine:studio:preview` mode:
@@ -671,10 +671,22 @@ WHAT TO DO NEXT
   new port -> the real preview OS process was killed directly to simulate an external crash, and
   the next poll correctly reported "stopped" -> manual Restart/Stop both worked -> build-only mode
   produced the uniform honest 404 disabled state.
-- NEXT: R-480 (backend: Problems/
-  compile-report support - genuinely new work, on-demand not automatic since `node_modules`/`tsc`
-  only exist after a preview install), R-481 (tabbed workspace: Preview/Files/Code/Problems as four
-  real tabs). R-482 (Model Provider settings UI) is independent, can slot in anytime after R-475.
+- R-480 (2026-09-19, done) built backend Problems/compile-report support, sixth of the seven: real
+  compile-error reporting for the first time in this codebase. New `studio/problems.py` mirrors
+  `files.py`'s shape: resolves `apps/web`, raises `NoWebTargetError` if no web app, remaps
+  `verify/compile.py`'s real `compile_web_project()`'s `VerifyError` into a clear
+  `ToolchainNotInstalledError`. On-demand, not automatic. `StudioProblemsStore` is a bounded
+  per-build-id LRU cache mirroring `StudioSessionStore`. New control-plane routes
+  `POST`/`GET /jobs/build/{id}/problems`, no credit debit, a new `defaultProblemsTimeout` (90s), a
+  new 409 status for "toolchain not installed." `task verify` 3,625 OK (21 new tests, no real
+  toolchain needed); control-plane `go test` all green (45 tests, 7 new). Live: build-only mode with
+  no toolchain produced real 409/404, no crash; hit two real, pre-existing environment issues along
+  the way (a generated-migration collision, a 500ing preview page) worked through honestly; preview
+  mode with a real installed toolchain surfaced 10 genuine TypeScript errors via a real `tsc` run in
+  an LLM-synthesized page - real compiler output that also explained the runtime 500; a repeated GET
+  returned the byte-identical cached report in 12ms.
+- NEXT: R-481 (tabbed workspace: Preview/Files/Code/Problems as four
+  real tabs) - the final task of the approved 7-task roadmap. R-482 (Model Provider settings UI) is independent, can slot in anytime after R-475.
   R-483 (real-time streaming, only after R-475-481 exist to stream progress into) and per-user
   backend multi-tenancy (no Tracker ID yet) remain named, not forgotten, gaps to genuine parity.
   After that, Phase E (plan-gated UI, admin console, payment processor, proposed R-484+) needs its

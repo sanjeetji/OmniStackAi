@@ -906,6 +906,143 @@ func TestHandleBuildPreviewReturnsBadGatewayWhenAgentEngineIsUnreachable(t *test
 	}
 }
 
+func TestHandleBuildProblemsCheckRejectsMissingToken(t *testing.T) {
+	agentEngine := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		t.Fatal("agent-engine must not be called for an unauthenticated request")
+	}))
+	defer agentEngine.Close()
+
+	creditStore := &fakeCreditStore{}
+	server := newTestServer(t, agentEngine.URL, fakeAuthStore{returnErr: auth.ErrSessionNotFound}, creditStore, 1000)
+
+	resp := postPath(t, server, "", "/jobs/build/abc123/problems", "")
+	if resp.StatusCode != http.StatusUnauthorized {
+		t.Fatalf("status = %d, want %d", resp.StatusCode, http.StatusUnauthorized)
+	}
+	if creditStore.callCount() != 0 {
+		t.Fatalf("DebitCredits called %d times, want 0", creditStore.callCount())
+	}
+}
+
+func TestHandleBuildProblemsCheckProxiesTheRealReportAndDoesNotDebit(t *testing.T) {
+	var requestedPath string
+	agentEngine := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		requestedPath = r.URL.Path
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusOK)
+		_, _ = w.Write([]byte(`{"ok":false,"returncode":2,"error_count":1,"files":{"app/page.tsx":["L12:5 TS2339: Property 'x' does not exist."]},"output_tail":"..."}`))
+	}))
+	defer agentEngine.Close()
+
+	creditStore := &fakeCreditStore{}
+	server := newTestServer(t, agentEngine.URL, fakeAuthStore{user: newTestUser()}, creditStore, 1000)
+
+	resp := postPath(t, server, validToken, "/jobs/build/abc123/problems", "")
+	if resp.StatusCode != http.StatusOK {
+		t.Fatalf("status = %d, want %d", resp.StatusCode, http.StatusOK)
+	}
+	if requestedPath != "/api/build/abc123/problems" {
+		t.Fatalf("agent-engine received path = %q, want %q", requestedPath, "/api/build/abc123/problems")
+	}
+	var payload map[string]any
+	decodeJSON(t, resp, &payload)
+	if payload["ok"] != false || payload["error_count"].(float64) != 1 {
+		t.Fatalf("payload = %v, want the agent-engine's own real report proxied unchanged", payload)
+	}
+	if creditStore.callCount() != 0 {
+		t.Fatalf("DebitCredits called %d times, want 0 (a local compile is not billable)", creditStore.callCount())
+	}
+}
+
+func TestHandleBuildProblemsCheckProxiesErrorsUnchanged(t *testing.T) {
+	cases := []struct {
+		name   string
+		status int
+		body   string
+	}{
+		{"unknown build (BuildNotFoundError)", http.StatusNotFound, `{"error":"build 'abc123' is not available in this session"}`},
+		{"no web target (NoWebTargetError)", http.StatusBadRequest, `{"error":"this build has no web app to check for problems"}`},
+		{"toolchain not installed (ToolchainNotInstalledError)", http.StatusConflict, `{"error":"tsc is not installed for this app; run 'pnpm install' first"}`},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			agentEngine := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				w.Header().Set("Content-Type", "application/json")
+				w.WriteHeader(tc.status)
+				_, _ = w.Write([]byte(tc.body))
+			}))
+			defer agentEngine.Close()
+
+			server := newTestServer(t, agentEngine.URL, fakeAuthStore{user: newTestUser()}, &fakeCreditStore{}, 1000)
+
+			resp := postPath(t, server, validToken, "/jobs/build/abc123/problems", "")
+			if resp.StatusCode != tc.status {
+				t.Fatalf("status = %d, want %d (proxied unchanged)", resp.StatusCode, tc.status)
+			}
+		})
+	}
+}
+
+func TestHandleBuildProblemsCheckReturnsBadGatewayWhenAgentEngineIsUnreachable(t *testing.T) {
+	closedServer := httptest.NewServer(http.HandlerFunc(func(http.ResponseWriter, *http.Request) {}))
+	unreachableURL := closedServer.URL
+	closedServer.Close()
+
+	server := newTestServer(t, unreachableURL, fakeAuthStore{user: newTestUser()}, &fakeCreditStore{}, 1000)
+
+	resp := postPath(t, server, validToken, "/jobs/build/abc123/problems", "")
+	if resp.StatusCode != http.StatusBadGateway {
+		t.Fatalf("status = %d, want %d", resp.StatusCode, http.StatusBadGateway)
+	}
+}
+
+func TestHandleBuildProblemsGetRejectsMissingToken(t *testing.T) {
+	agentEngine := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		t.Fatal("agent-engine must not be called for an unauthenticated request")
+	}))
+	defer agentEngine.Close()
+
+	server := newTestServer(t, agentEngine.URL, fakeAuthStore{returnErr: auth.ErrSessionNotFound}, &fakeCreditStore{}, 1000)
+
+	resp := getBuildPath(t, server, "", "/jobs/build/abc123/problems")
+	if resp.StatusCode != http.StatusUnauthorized {
+		t.Fatalf("status = %d, want %d", resp.StatusCode, http.StatusUnauthorized)
+	}
+}
+
+func TestHandleBuildProblemsGetProxiesVerbatim(t *testing.T) {
+	cases := []struct {
+		name   string
+		status int
+		body   string
+	}{
+		{"a stored report", http.StatusOK, `{"ok":true,"returncode":0,"error_count":0,"files":{},"output_tail":""}`},
+		{"not checked yet", http.StatusNotFound, `{"error":"build 'abc123' has not been checked for problems yet"}`},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			var requestedPath string
+			agentEngine := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				requestedPath = r.URL.Path
+				w.Header().Set("Content-Type", "application/json")
+				w.WriteHeader(tc.status)
+				_, _ = w.Write([]byte(tc.body))
+			}))
+			defer agentEngine.Close()
+
+			server := newTestServer(t, agentEngine.URL, fakeAuthStore{user: newTestUser()}, &fakeCreditStore{}, 1000)
+
+			resp := getBuildPath(t, server, validToken, "/jobs/build/abc123/problems")
+			if resp.StatusCode != tc.status {
+				t.Fatalf("status = %d, want %d (proxied unchanged)", resp.StatusCode, tc.status)
+			}
+			if requestedPath != "/api/build/abc123/problems" {
+				t.Fatalf("agent-engine received path = %q, want %q", requestedPath, "/api/build/abc123/problems")
+			}
+		})
+	}
+}
+
 func TestHandleBuildReturns500WhenDebitCreditsFails(t *testing.T) {
 	agentEngine := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")

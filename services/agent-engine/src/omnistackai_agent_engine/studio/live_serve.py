@@ -42,6 +42,7 @@ from ..model_gateway.accounting import UsageLedger
 from .files import BuildNotFoundError, list_build_files, read_build_file
 from .history import StudioBuildHistory
 from .preview import StudioPreviewManager
+from .problems import ProblemsNotCheckedError, StudioProblemsStore, check_build_problems
 from .server import create_studio_server
 from .session import EditNotSupportedError, StudioSessionStore
 
@@ -554,6 +555,23 @@ def _turns(build_id: str, session_store: StudioSessionStore) -> dict:
     return session_store.turns_view(build_id)
 
 
+def _check_build_problems(build_id: str, history: StudioBuildHistory, problems_store: StudioProblemsStore) -> dict:
+    """Run a fresh `tsc` check for `build_id` and remember the result (R-480)."""
+    root_dir = _resolve_build_dir(build_id, history)
+    report = check_build_problems(root_dir)
+    problems_store.set(build_id, report)
+    return report
+
+
+def _get_build_problems(build_id: str, history: StudioBuildHistory, problems_store: StudioProblemsStore) -> dict:
+    """The last stored problems report for `build_id`, or `ProblemsNotCheckedError` (R-480)."""
+    _resolve_build_dir(build_id, history)  # still 404 for an unknown build, not "not checked yet"
+    report = problems_store.get(build_id)
+    if report is None:
+        raise ProblemsNotCheckedError(f"build '{build_id}' has not been checked for problems yet")
+    return report
+
+
 async def _edit(
     build_id: str,
     prompt: str,
@@ -669,6 +687,7 @@ def main() -> None:
     preview_manager = StudioPreviewManager() if _preview_enabled() else None
     history = StudioBuildHistory()
     session_store = StudioSessionStore()
+    problems_store = StudioProblemsStore()
 
     def build(prompt: str, **options) -> dict:
         return _build(prompt, preview_manager=preview_manager, history=history, session_store=session_store, **options)
@@ -688,6 +707,11 @@ def main() -> None:
         "file_tree_fn": lambda build_id: _list_build_files(build_id, history),
         "read_file_fn": lambda build_id, path: _read_build_file(build_id, path, history),
         "edit_fn": edit_build,
+        # R-480: checking/reading problems needs the build's own installed node_modules/tsc (from a
+        # prior live-preview install), but not a *currently running* preview -- wired in build-only
+        # mode too, same reasoning as file browsing and editing above.
+        "problems_check_fn": lambda build_id: _check_build_problems(build_id, history, problems_store),
+        "problems_get_fn": lambda build_id: _get_build_problems(build_id, history, problems_store),
         "turns_fn": lambda build_id: _turns(build_id, session_store),
     }
     if preview_manager is not None:

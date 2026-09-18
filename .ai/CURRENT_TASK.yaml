@@ -1,31 +1,31 @@
-task_id: R-479
+task_id: R-480
 status: completed
 phase: MVP
 tracker_row: null
 started_at: "2026-09-19"
 completed_at: "2026-09-19"
 objective: >-
-  Fifth task of the approved 7-task Phase D roadmap. An iframe rendering the real running
-  generated app, wired to R-478's four routes. Preview start is synchronous (confirmed live during
-  R-478), so polling's job is crash detection (5s interval while status is "ready"), not
-  progress-watching. New studio-preview.tsx effect triggers POST /jobs/build/{id}/preview whenever
-  buildId changes or a previewVersion counter (bumped by studio-chat.tsx after every successful
-  edit, since _edit() never restarts the preview on its own) changes. Verified response shapes
-  (idle/stopped/error/unavailable/ready) read directly from preview.py before implementation. A 404
-  from either preview route renders an honest disabled message instead of a broken iframe. Manual
-  Restart/Stop controls wired to the real R-478 routes, reusing the RefreshIcon/StopIcon that
-  existed unused since R-475.
+  Sixth task of the approved 7-task Phase D roadmap. Build real compile-error reporting for the
+  first time in this codebase. On-demand, not automatic (node_modules/tsc only exist after a
+  preview install). New studio/problems.py: check_build_problems(root_dir, runner=None) resolves
+  root_dir/apps/web, raises NoWebTargetError if no package.json, calls verify/compile.py's real
+  compile_web_project(), remaps VerifyError into ToolchainNotInstalledError. StudioProblemsStore is
+  a bounded per-build-id LRU cache mirroring StudioSessionStore. New agent-engine routes POST/GET
+  /api/build/{id}/problems wired build-only-mode-inclusive (checking needs the build's own
+  node_modules from a prior preview install, not a currently running preview). New control-plane
+  proxy routes POST/GET /jobs/build/{id}/problems, no credit debit, a new defaultProblemsTimeout
+  (90s) on the POST route.
 allowed_paths:
-  - apps/console-web/lib/control-plane.ts
-  - apps/console-web/app/api/preview/route.ts
-  - apps/console-web/app/api/preview/stop/route.ts
-  - apps/console-web/app/api/preview/restart/route.ts
-  - apps/console-web/app/api/jobs/build/[id]/preview/route.ts
-  - apps/console-web/app/studio/studio-preview.tsx
-  - apps/console-web/app/studio/studio-chat.tsx
-  - apps/console-web/app/globals.css
+  - services/agent-engine/src/omnistackai_agent_engine/studio/problems.py
+  - services/agent-engine/src/omnistackai_agent_engine/studio/server.py
+  - services/agent-engine/src/omnistackai_agent_engine/studio/live_serve.py
+  - services/agent-engine/tests/test_studio_problems.py
+  - services/agent-engine/tests/test_studio_server.py
+  - services/control-plane/internal/jobs/handler.go
+  - services/control-plane/internal/jobs/types.go
+  - services/control-plane/internal/jobs/handler_test.go
   - scripts/test.sh
-  - .ai/tasks/R-479.md
+  - .ai/tasks/R-480.md
   - .ai/CURRENT_TASK.yaml
   - .ai/PROJECT_STATE.yaml
   - .ai/WORK_LOG.md
@@ -35,38 +35,35 @@ allowed_paths:
   - docs/PROGRESS.md
   - docs/RESUME_PROMPT.md
 forbidden_changes:
-  - No changes to services/control-plane or services/agent-engine
-  - No Problems or tab functionality (later tasks)
+  - No changes to apps/console-web
+  - No live preview, chat, or tab functionality beyond what's listed
   - Do not modify or commit the untracked .claude directory
 required_gates:
-  - "console-web: pnpm run typecheck, pnpm run lint, pnpm run build"
+  - "agent-engine: task verify (0 model/network calls)"
+  - "control-plane: go build ./..., go vet ./..., go test ./..."
   - task verify
   - task lint
   - task security:quick
   - task env:check
-  - "manual smoke (real docker control-plane + real agent-engine studio server in preview mode + next start): build -> iframe shows real app; edit -> auto re-preview; kill preview process -> poll notices within ~5-10s; build-only mode -> honest disabled message"
+  - "manual smoke: real build with live preview running -> trigger a real problems check -> confirm real tsc output; a build with no toolchain -> confirm the clear 409 error, not a crash or hang"
 model_tool_trace:
   routing: deterministic_only
   local_calls: 0
   cloud_calls: 0
   note: >-
-    Pure console-web work, 0 model/network calls in any automated gate. The manual smoke test's
-    build+edit calls use whatever provider is configured (real Groq or local Ollama); the preview
-    itself runs the real generated app locally (pnpm install + next dev + optional backend).
+    Go/Python implementation, 0 model/network calls in any automated gate (a runner injection point
+    mirrors verify/compile.py's own test style, so no real tsc/subprocess needed in the automated
+    suite). The manual smoke test's real tsc run is a local compile, not a model/network call.
 next_action: >-
-  R-479 is complete (see .ai/tasks/R-479.md for full Gates & Evidence). Next up per the approved
-  plan (/Users/sanjeet_kumar/.claude/plans/hi-fancy-shannon.md): R-480 - Backend: Problems/
-  compile-report support. Genuinely new backend work (confirmed by exhaustive grep during the
-  original planning research: no compile/verify-error endpoint exists anywhere in the Studio path
-  today - the only caller of compile_web_project()/compile_and_repair() is a standalone CLI script,
-  never _build()/_edit()). On-demand, not automatic (a "Check for problems" trigger), since
-  node_modules/tsc only exist after a preview install - confirmed by this session's own R-478/R-479
-  live smokes, which needed preview mode's pnpm install before any Node toolchain existed. New
-  agent-engine routes POST/GET /api/build/{id}/problems, a small new bounded per-build-id report
-  store, and matching new control-plane proxy routes POST/GET /jobs/build/{id}/problems (no credit
-  debit - this runs a local tsc, not a model call).
-next_action_note: >-
-  Before starting R-480, restore the agent-engine Studio server to build-only mode if it's not
-  already (R-479's smoke test ended in build-only mode) - R-480's own live smoke needs BOTH modes
-  (a real problems check needs node_modules from a preview install; the "toolchain not installed"
-  honest-error path needs build-only mode) so switch deliberately per step, don't assume either.
+  R-480 is complete (see .ai/tasks/R-480.md for full Gates & Evidence). Next up per the approved
+  plan (/Users/sanjeet_kumar/.claude/plans/hi-fancy-shannon.md): R-481 - Tabbed workspace, the final
+  task of the 7-task roadmap. Restructure /studio's main pane into four real tabs - Preview, Files,
+  Code, Problems - with chat persisting alongside (not as a tab itself), assembling R-474 (files),
+  R-477 (chat), R-479 (preview), and R-480 (problems, just shipped). Files and Code stay separate
+  per the founder's explicit decision. Code tab syntax highlighting: hand-rolled per the R-475
+  icon-decision precedent (no new dependency), porting the approach (not the exact code) from
+  codegen/nextjs.py's own generated CodeBlock component. Problems tab: an explicit "Check for
+  problems" button (on-demand per R-480's own design, not automatic), real tsc results grouped by
+  file. This is the last task in the currently-approved plan - after R-481 ships, re-read the plan
+  file's "Out of this execution pass" section (R-482 Model Provider settings UI, R-483 streaming,
+  per-user multi-tenancy, Publish) before deciding what's next.

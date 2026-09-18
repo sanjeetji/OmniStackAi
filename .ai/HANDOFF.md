@@ -1,9 +1,31 @@
 # Current Handoff
 
-Task ID: R-479
+Task ID: R-480
 Status: done
 Phase: BASIC/MVP — Founder Stage 0
 Branch: `main`
+
+> **R-480 Completed (2026-09-19): Backend — Problems/compile-report support.**
+> - **Sixth of the founder-approved 7-task plan** (R-475–R-481). Real compile-error reporting for
+>   the first time in this codebase — the founder's explicit choice over a placeholder. New
+>   `studio/problems.py` mirrors `files.py`'s shape: resolves `apps/web`, raises `NoWebTargetError`
+>   if there's no web app, remaps `verify/compile.py`'s real `compile_web_project()`'s `VerifyError`
+>   into a clear `ToolchainNotInstalledError` — never silently installs dependencies. On-demand, not
+>   automatic (`node_modules`/`tsc` only exist after a preview install). `StudioProblemsStore` is a
+>   bounded per-build-id LRU cache mirroring `StudioSessionStore`.
+> - New control-plane routes `POST`/`GET /jobs/build/{id}/problems`, no credit debit, a new
+>   `defaultProblemsTimeout` (90s). Error mapping includes a new 409 for "toolchain not installed."
+> - Gates: agent-engine `task verify` **3,625 OK** (21 new tests, no real toolchain needed —
+>   injected fake `tsc` runner, mirroring `verify/compile.py`'s own test style); control-plane
+>   `go test` all green (45 tests, 7 new); repo `task verify`/`lint`/`security:quick`/`env:check`
+>   all pass. **Live**: build-only mode with no toolchain → real 409/404, no crash. Hit two real,
+>   pre-existing environment issues unrelated to this task (a generated-migration collision, a
+>   500ing preview page) worked through honestly. Preview mode with a real installed toolchain → a
+>   real `tsc` run surfaced **10 genuine TypeScript errors** in an LLM-synthesized page — real,
+>   substantial compiler output, explaining why that same preview page was 500ing. A repeated GET
+>   returned the byte-identical cached report in 12ms.
+> - **NEXT:** R-481 (tabbed workspace) — the final task of the approved 7-task roadmap. See
+>   `R_&_D/OmniStackAI_Commercial_Platform_Kickoff_v1.md`, `.ai/tasks/R-480.md`, and the plan file.
 
 > **R-479 Completed (2026-09-19): Console — live preview UI.**
 > - **Fifth of the founder-approved 7-task plan** (R-475–R-481). An iframe rendering the real

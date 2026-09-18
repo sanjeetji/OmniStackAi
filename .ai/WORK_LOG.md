@@ -1,5 +1,44 @@
 # Work Log
 
+## 2026-09-19 — R-480 (Backend — Problems/compile-report support)
+
+- **Why:** sixth task of the approved 7-task Phase D roadmap. Real compile-error reporting for the
+  first time in this codebase — the founder's explicit choice over a placeholder, even though it
+  made the roadmap longer. Confirmed by exhaustive grep during the original planning research:
+  `verify/compile.py` has a real `CompileError`/`CompileReport`/`compile_web_project()`, but its
+  only caller anywhere was a standalone CLI script — never the Studio's `_build()`/`_edit()` path.
+- **On-demand, not automatic:** `node_modules`/`tsc` only exist after a live-preview install
+  (confirmed by this session's own R-478/R-479 smoke tests, which needed a real `pnpm install`
+  before any toolchain existed). Automating a compile check on every build/edit would make the
+  fast, network-light core loop slower and more toolchain-dependent — an explicit "Check for
+  problems" trigger avoids that regression.
+- **New `studio/problems.py`** mirrors `files.py`'s shape: `check_build_problems()` resolves
+  `apps/web`, raises `NoWebTargetError` if there's no web app, remaps `compile_web_project()`'s
+  `VerifyError` into a clear `ToolchainNotInstalledError` — never silently installs dependencies as
+  a side effect of a click. `StudioProblemsStore` is a bounded per-build-id LRU cache mirroring
+  `StudioSessionStore`. New agent-engine routes wired into build-only mode too (checking needs the
+  build's own already-installed `node_modules`, not a *currently running* preview).
+- **Control-plane:** new `POST`/`GET /jobs/build/{id}/problems`, no credit debit (a local compile
+  isn't a model call), a new `defaultProblemsTimeout` (90s) on the write route. Error mapping:
+  `BuildNotFoundError`→404, `NoWebTargetError`→400, `ToolchainNotInstalledError`→409 (a new status
+  for this API surface, chosen so a client can distinguish "install dependencies first" from every
+  other failure), `ProblemsNotCheckedError`→404 (GET only).
+- **Gates:** agent-engine `task verify` 3,625 OK (21 new tests, all against an injected fake `tsc`
+  runner or a tempdir — no real toolchain needed, mirroring `verify/compile.py`'s own test style).
+  Control-plane `go test` all green (45 tests, 7 new). Repo `task verify`/`lint`/`security:quick`/
+  `env:check` all pass.
+- **Live:** build-only mode with no toolchain → real `409` "tsc is not installed..." and real `404`
+  "not checked yet," no crash, no accidental multi-minute install. Along the way, hit two real,
+  pre-existing environment issues unrelated to this task — a generated-migration collision
+  (`relation "bookmark_tag" already exists`) and a 500ing preview page — both honestly worked
+  through rather than hidden, since a problems check only needs the build's already-installed
+  `node_modules`, not a working running preview. Preview mode with a real installed toolchain → a
+  real `tsc --noEmit` run surfaced **10 genuine TypeScript errors** in an LLM-synthesized page
+  (missing module, not-callable expressions, a type mismatch, a missing name, an invalid prop
+  value) — real, substantial compiler output, and the same real bug explains why that build's own
+  preview page was 500ing. A repeated `GET` returned the byte-identical cached report in 12ms.
+- **NEXT:** R-481 (tabbed workspace) — the final task of the approved 7-task roadmap.
+
 ## 2026-09-19 — R-479 (Console — live preview UI)
 
 - **Why:** fifth task of the approved 7-task Phase D roadmap. An iframe rendering the real running

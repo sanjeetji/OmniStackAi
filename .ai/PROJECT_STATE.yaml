@@ -2,10 +2,10 @@ schema_version: 1
 project: OmniStackAI
 phase: BASIC/MVP
 founder_stage: 0
-current_task: R-479
+current_task: R-480
 current_status: done
 branch: main
-last_completed_task: R-479
+last_completed_task: R-480
 # TASK COMPILATION AUDIT — 2026-09-16
 # Performed to achieve 100% synchronization across all task-tracking documentation.
 # Tracker workbook expanded to 464 tasks with R-464.
@@ -34,6 +34,40 @@ task_compilation_audit:
       new_status: DONE
       reason: "Task fully completed on 2026-09-11 with 35 tests. Status left stale during rapid development sprint."
 last_completed_task_summary: >-
+  Completed R-480 (2026-09-19): backend - Problems/compile-report support. Sixth of the approved
+  7-task Phase D roadmap (plan: /Users/sanjeet_kumar/.claude/plans/hi-fancy-shannon.md). Real
+  compile-error reporting for the first time in this codebase - the founder's explicit choice over
+  a placeholder. New studio/problems.py: check_build_problems(root_dir, runner=None) resolves
+  root_dir/apps/web, raises NoWebTargetError if no package.json, calls verify/compile.py's real
+  compile_web_project(), remaps its VerifyError into a clear ToolchainNotInstalledError - never
+  silently installs dependencies as a side effect of a check. StudioProblemsStore is a bounded
+  per-build-id LRU cache mirroring StudioSessionStore. New agent-engine routes POST/GET
+  /api/build/{id}/problems wired into live_serve.py's always-on control_kwargs (build-only mode
+  included - checking needs the build's own already-installed node_modules from a prior preview
+  install, not a currently running preview). New control-plane proxy routes POST/GET
+  /jobs/build/{id}/problems, no credit debit, a new defaultProblemsTimeout (90s) on the POST route.
+  Error mapping: BuildNotFoundError->404, NoWebTargetError->400, ToolchainNotInstalledError->409 (a
+  new status code for this API surface, chosen so a client can distinguish "install dependencies
+  first" from every other failure), ProblemsNotCheckedError->404 (GET only).
+  Gates: agent-engine task verify 3,625 OK (21 new tests - all against an injected fake tsc runner
+  or a tempdir, no real toolchain needed in the automated suite, mirroring verify/compile.py's own
+  test style); control-plane go test all green (45 tests, 7 new); repo task verify/lint/
+  security:quick/env:check all pass.
+  Live (real Docker control-plane + real agent-engine Studio server in both build-only and preview
+  mode): build-only mode with no toolchain -> real 409 "tsc is not installed..." (clear, actionable,
+  no crash, no accidental multi-minute install) and real 404 "not checked yet" before any check.
+  Real environment friction along the way, honestly worked through and unrelated to this task's own
+  code: one preview build hit a real generated-migration collision
+  (relation "bookmark_tag" already exists), another's preview page 500'd at runtime - neither
+  blocked the actual test since a problems check only needs the build's already-installed
+  node_modules, not a working running preview. Preview mode with a real installed toolchain -> a
+  real tsc --noEmit run surfaced 10 genuine TypeScript errors in the LLM-synthesized page (missing
+  module, not-callable expressions, a type mismatch, a missing name, an invalid prop value) - real,
+  substantial output from the real compiler, and the same real bug explains why that build's own
+  preview page was 500ing. A repeated GET returned the byte-identical cached report in 12ms, no
+  recompile. Unauthenticated calls -> 401; an unknown build -> real 404.
+  NEXT: R-481 (tabbed workspace) - the final task of the approved 7-task roadmap.
+_prior_last_completed_task_summary_R479: >-
   Completed R-479 (2026-09-19): console - live preview UI. Fifth of the approved 7-task Phase D
   roadmap (plan: /Users/sanjeet_kumar/.claude/plans/hi-fancy-shannon.md). An iframe rendering the
   real running generated app, wired to R-478's four routes. Preview start is synchronous (confirmed
@@ -1392,20 +1426,18 @@ id_note: >-
   ID); R-416..R-429 built/hardened the "chat -> create -> run -> preview" front door; R-430..R-437 build SPINE.
 blockers: []
 next_action: >-
-  R-479 is complete (console: live preview UI). Executing a founder-approved, fully-researched
-  7-task plan (superseding the earlier 6-task doc sketch): R-475/R-476/R-477/R-478/R-479 done;
-  R-480/R-481 remain. Full design detail for every task is in the approved plan file
-  (/Users/sanjeet_kumar/.claude/plans/hi-fancy-shannon.md) and mirrored in
+  R-480 is complete (backend: Problems/compile-report support). Executing a founder-approved,
+  fully-researched 7-task plan (superseding the earlier 6-task doc sketch):
+  R-475/R-476/R-477/R-478/R-479/R-480 done; R-481 remains - the final task. Full design detail is in
+  the approved plan file (/Users/sanjeet_kumar/.claude/plans/hi-fancy-shannon.md) and mirrored in
   R_&_D/OmniStackAI_Commercial_Platform_Kickoff_v1.md's "Remaining Phase D roadmap" - read the plan
   file first, it has the most implementation-level detail (exact function names, verified line
   numbers, exact response shapes).
-  NEXT (start here): R-480 (backend: Problems/compile-report support - NEW work, confirmed no compile-error endpoint
-  exists anywhere in the Studio path today; founder explicitly chose to build this for real rather
-  than defer it, which is what took the roadmap from 6 tasks to 7; must be on-demand not automatic,
-  since node_modules/tsc only exist after a preview install), R-481 (tabbed workspace: Preview/
+  NEXT (start here): R-481 (tabbed workspace: Preview/
   Files/Code/Problems as four real tabs - founder explicitly chose to keep Files and Code separate
   rather than collapse them; syntax highlighting hand-rolled per the icon-decision precedent set in
-  R-475). R-482 (Model Provider settings UI) is independent, can slot in anytime after R-475.
+  R-475; Problems tab is an explicit "Check for problems" button per R-480's own on-demand design,
+  not automatic). R-482 (Model Provider settings UI) is independent, can slot in anytime after R-475.
   Beyond R-475-481: R-483 (real-time build/edit streaming, only after R-475-481 exist to stream
   progress into) and per-user backend multi-tenancy (no Tracker ID yet, needs its own scoping
   conversation) are both named, not forgotten, gaps to genuine Lovable/Dyad/Emergent parity - full

@@ -25,6 +25,8 @@ func Register(mux *http.ServeMux, deps Deps) {
 	mux.HandleFunc("POST /jobs/preview/stop", handlePreviewStop(deps))
 	mux.HandleFunc("POST /jobs/preview/restart", handlePreviewRestart(deps))
 	mux.HandleFunc("POST /jobs/build/{id}/preview", handleBuildPreview(deps))
+	mux.HandleFunc("POST /jobs/build/{id}/problems", handleBuildProblemsCheck(deps))
+	mux.HandleFunc("GET /jobs/build/{id}/problems", handleBuildProblemsGet(deps))
 }
 
 // handleBuild authenticates the caller and forwards their JSON body verbatim to the agent-engine's
@@ -345,6 +347,46 @@ func handleBuildPreview(deps Deps) http.HandlerFunc {
 			return
 		}
 		proxyUpstream(w, r, deps, http.MethodPost, deps.AgentEngineURL+"/api/history/preview", bytes.NewReader(body))
+	}
+}
+
+// handleBuildProblemsCheck proxies POST /api/build/{id}/problems (R-480) - triggers a fresh real
+// `tsc` type-check of the build's web app and returns the report. No credit debit: a local compile
+// isn't a billable model call. Write deadline extended via defaultProblemsTimeout since a real
+// compile can take real time on a larger generated app.
+func handleBuildProblemsCheck(deps Deps) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		if controller := http.NewResponseController(w); controller != nil {
+			_ = controller.SetWriteDeadline(time.Now().Add(defaultProblemsTimeout))
+		}
+		if _, err := auth.RequireUser(r.Context(), deps.AuthStore, r); err != nil {
+			writeAuthError(w, deps, err)
+			return
+		}
+		id := r.PathValue("id")
+		if id == "" {
+			writeError(w, http.StatusBadRequest, "build id is required")
+			return
+		}
+		proxyUpstream(w, r, deps, http.MethodPost, deps.AgentEngineURL+"/api/build/"+url.PathEscape(id)+"/problems", nil)
+	}
+}
+
+// handleBuildProblemsGet proxies GET /api/build/{id}/problems (R-480) verbatim - the last stored
+// report, or the agent-engine's own real 404 "not checked yet" - same auth/no-debit shape as
+// handleBuildFiles.
+func handleBuildProblemsGet(deps Deps) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		if _, err := auth.RequireUser(r.Context(), deps.AuthStore, r); err != nil {
+			writeAuthError(w, deps, err)
+			return
+		}
+		id := r.PathValue("id")
+		if id == "" {
+			writeError(w, http.StatusBadRequest, "build id is required")
+			return
+		}
+		proxyGet(w, r, deps, deps.AgentEngineURL+"/api/build/"+url.PathEscape(id)+"/problems")
 	}
 }
 
