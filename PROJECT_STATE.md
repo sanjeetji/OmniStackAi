@@ -4,6 +4,24 @@ Last updated: 2026-09-19
 ## Current Phase
 Stage 0 (Founder Build Sequence, Brief Section 91) — BASIC/MVP
 
+> **R-477 (2026-09-19): Console — chat UI.** Third of the founder-approved 7-task plan
+> (R-475–R-481). Replaced `/studio`'s one-shot prompt form with a persistent, multi-turn chat thread
+> on R-475's shell, wired to R-476's new routes. `buildId` (`null` vs. set) decides whether the
+> composer calls `/jobs/build` or `/jobs/build/{id}/edit`. New `studio-chat.tsx` +
+> `studio-workspace.tsx` (the latter holding the `BuildResult`/`FileBrowser` pieces moved out of the
+> retired `studio-form.tsx`, generalized to a `WorkspaceSnapshot`). `buildId` persists in the URL so
+> a refresh hydrates chat text history from `/turns` — the workspace panel does not rehydrate, an
+> honest, named simplification. A real finding, verified by source read before implementation: `GET
+> /turns` does not 404 for an unknown build (`{"turns": []}` instead) — only `_edit()`'s
+> `BuildNotFoundError` is a real 404, so the "session no longer available" recovery is wired there.
+> `task verify` **3,604 OK**; console `typecheck`/`lint`/`build` clean (14 routes, 2 new). Live: real
+> control-plane + real agent-engine Studio server + fresh `next start` proved build → turns hydration
+> → follow-up edit with a refreshed file list, then the agent-engine Studio server was killed and
+> restarted mid-test to simulate a real stale session — the edit-triggered 404 recovery and the
+> turns-hydration honest-empty-thread finding both confirmed live, then a fresh build proved the
+> full recovery loop.
+> NEXT: R-478 (backend: live preview proxy), then R-479–R-481 per the approved plan.
+
 > **R-476 (2026-09-19): Backend — multi-turn edit bridge.** Second of the founder-approved 7-task
 > plan (R-475–R-481). New control-plane routes `POST /jobs/build/{id}/edit` and
 > `GET /jobs/build/{id}/turns`, mirroring `POST /jobs/build`'s exact proxy+debit shape (R-472), plus

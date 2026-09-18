@@ -205,3 +205,64 @@ export function readBuildFile(
     { headers: { Authorization: `Bearer ${token}` } },
   );
 }
+
+/** One chat turn, exactly as studio/session.py's `StudioSessionStore.turns_view` (R-468, extended
+ * R-476 so a build's own first turn is included too) reports it. `created_at` is a `time.time()`
+ * float - seconds since the epoch, not milliseconds. */
+export interface ChatTurn {
+  role: string;
+  text: string;
+  created_at: number;
+}
+
+/** The control-plane's `GET /jobs/build/{id}/turns` (R-476) response - proxied verbatim from the
+ * agent-engine. Empty for an unknown or evicted build id (not an error - see studio-chat.tsx for
+ * why this means turns-hydration can't itself detect a stale build id). */
+export interface BuildTurnsResponse {
+  turns: ChatTurn[];
+}
+
+/** The control-plane's `POST /jobs/build/{id}/edit` response (R-476): the agent-engine's real
+ * `_edit()` payload - deliberately narrower than `BuildJobResponse` (no `name`/`description`/
+ * `files` - an edit never re-lists the whole file tree) - augmented with
+ * `credits_spent`/`credit_balance`. */
+export interface BuildEditResponse {
+  id?: string;
+  diff?: {
+    added: string[];
+    modified: string[];
+    deleted: string[];
+    summary: string;
+  };
+  entities?: string[];
+  file_count?: number;
+  commit_sha?: string;
+  rationale?: string;
+  usage?: BuildJobUsage;
+  turns?: ChatTurn[];
+  credits_spent: number;
+  credit_balance: number;
+  [key: string]: unknown;
+}
+
+/** Applies one follow-up prompt to an existing build via the control-plane's
+ * `POST /jobs/build/{id}/edit` (R-476). Same "can take real minutes" shape as `buildApp`. */
+export function editBuild(
+  token: string,
+  buildId: string,
+  prompt: string,
+): Promise<BuildEditResponse> {
+  return callControlPlane<BuildEditResponse>(`/jobs/build/${encodeURIComponent(buildId)}/edit`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+    body: JSON.stringify({ prompt }),
+  });
+}
+
+/** Lists a build's chat turns via the control-plane's `GET /jobs/build/{id}/turns` (R-476) -
+ * read-only, no credit debit. */
+export function getBuildTurns(token: string, buildId: string): Promise<BuildTurnsResponse> {
+  return callControlPlane<BuildTurnsResponse>(`/jobs/build/${encodeURIComponent(buildId)}/turns`, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+}

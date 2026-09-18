@@ -1,9 +1,37 @@
 # Current Handoff
 
-Task ID: R-476
+Task ID: R-477
 Status: done
 Phase: BASIC/MVP — Founder Stage 0
 Branch: `main`
+
+> **R-477 Completed (2026-09-19): Console — chat UI.**
+> - **Third of the founder-approved 7-task plan** (R-475–R-481). Replaced `/studio`'s one-shot
+>   prompt form with a persistent, multi-turn chat thread on R-475's shell, wired to R-476's new
+>   `POST /jobs/build/{id}/edit` / `GET /jobs/build/{id}/turns` routes. `buildId` (`null` vs. set) is
+>   the single piece of state deciding whether the composer calls `/jobs/build` or
+>   `/jobs/build/{id}/edit` — same composer, same input box.
+> - New `studio-chat.tsx` owns `messages`/`buildId`/`workspace` state; new `studio-workspace.tsx`
+>   holds the `BuildResult`/`FileBrowser` pieces moved out of the retired `studio-form.tsx`,
+>   generalized to a `WorkspaceSnapshot` an edit's narrower response can patch (re-fetching the file
+>   list separately, since `_edit()`'s response has no `files` key). `buildId` persists in the URL
+>   so a refresh hydrates chat *text* history from `/turns` — the workspace panel does not
+>   rehydrate, an honest, named simplification.
+> - **A real finding, verified by reading the actual source before writing the failure-mode handling
+>   (not assumed from the plan sketch)**: `GET /turns` does not 404 for an unknown/evicted build —
+>   it returns `{"turns": []}`, not an error. Only `_edit()`'s own `BuildNotFoundError` is a real,
+>   reachable 404, so the "session no longer available" recovery is wired to a failed edit response,
+>   not to turns-hydration.
+> - Gates: console `typecheck`/`lint`/`build` clean (14 routes, 2 new); `task verify` **3,604 OK**
+>   (unchanged, no backend touched); `task lint`/`security:quick`/`env:check` all pass. **Live** (real
+>   control-plane + real agent-engine Studio server + a fresh `next start`): build → turns hydration
+>   → follow-up edit with a refreshed file list → **the agent-engine Studio server was killed and
+>   restarted mid-test to simulate a real stale session** — an edit against the now-stale `buildId`
+>   returned a real 404, exactly what the recovery code checks for, while `/turns` against the same
+>   stale id returned `200 {"turns": []}`, confirming the finding above live; a fresh build afterward
+>   proved the full recovery loop.
+> - **NEXT:** R-478 (backend: live preview proxy) per the approved plan. See
+>   `R_&_D/OmniStackAI_Commercial_Platform_Kickoff_v1.md`, `.ai/tasks/R-477.md`, and the plan file.
 
 > **R-476 Completed (2026-09-19): Backend — multi-turn edit bridge.**
 > - **Second of the founder-approved 7-task plan** (R-475–R-481). New control-plane routes

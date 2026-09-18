@@ -1,4 +1,4 @@
-# OmniStackAI — implementation progress (as of R-476)
+# OmniStackAI — implementation progress (as of R-477)
 
 A living summary of what is built, what is pending, and how to see results. Numbers come from the
 execution tracker (`R_&_D/OmniStackAI_Execution_Tracker_v6.xlsx`, `Phase_Roadmap`, 461 tasks as of
@@ -8,6 +8,22 @@ R-461 completion) plus the state files (`.ai/`), Git history, and CHANGELOG.
 
 - **3,604 automated tests pass** (agent-engine + Go control-plane), fully offline and
   network-independent (`task verify`), plus the console's own `typecheck`/`lint`/`build` gates.
+- **R-477 — Console: chat UI (2026-09-19):** third of the seven. Replaced `/studio`'s one-shot
+  prompt form with a persistent, multi-turn chat thread on R-475's shell, wired to R-476's new
+  routes. `buildId` (`null` vs. set) is the single piece of state deciding whether the composer
+  calls `/jobs/build` or `/jobs/build/{id}/edit`. New `studio-chat.tsx` + `studio-workspace.tsx`
+  (the latter holding the `BuildResult`/`FileBrowser` pieces moved out of the retired
+  `studio-form.tsx`, generalized to a `WorkspaceSnapshot`). `buildId` persists in the URL so a
+  refresh hydrates chat text history from `/turns` — the workspace panel does not rehydrate, an
+  honest, named simplification. A real finding, verified by source read before implementation: `GET
+  /turns` does not 404 for an unknown build (`{"turns": []}` instead) — only `_edit()`'s
+  `BuildNotFoundError` is a real 404, so the "session no longer available" recovery is wired there.
+  `task verify` **3,604 OK**; console `typecheck`/`lint`/`build` clean (14 routes, 2 new). Live: real
+  control-plane + real agent-engine Studio server + fresh `next start` proved build → turns hydration
+  → follow-up edit with a refreshed file list, then the agent-engine Studio server was killed and
+  restarted mid-test to simulate a real stale session — the edit-triggered 404 recovery and the
+  turns-hydration honest-empty-thread finding both confirmed live, then a fresh build proved the
+  full recovery loop. See `.ai/tasks/R-477.md` for full verification detail.
 - **R-476 — Backend: multi-turn edit bridge (2026-09-19):** second of the seven. New control-plane
   routes `POST /jobs/build/{id}/edit` and `GET /jobs/build/{id}/turns`, mirroring
   `POST /jobs/build`'s exact proxy+debit shape (R-472), plus two real, verified fixes to the Python

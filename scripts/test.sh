@@ -338,9 +338,9 @@ if rg -qi '^  (redis|agent-engine|runner-manager|nats|temporal|kubernetes):' "$c
 fi
 
 # R-473: Studio v1 in the console - build an app from the product, not curl.
+# studio-form.tsx was retired in R-477, replaced by studio-chat.tsx (its contract block below).
 for required_file in \
   "$console_root/app/studio/page.tsx" \
-  "$console_root/app/studio/studio-form.tsx" \
   "$console_root/app/api/jobs/build/route.ts"; do
   if [[ ! -f "$required_file" ]]; then
     printf 'Missing R-473 console contract file: %s\n' "$required_file"
@@ -418,6 +418,33 @@ fi
 
 if [[ "$(rg -c 'record_turn' "$agent_engine_root/src/omnistackai_agent_engine/studio/live_serve.py" 2>/dev/null || echo 0)" -lt 4 ]]; then
   printf 'R-476 must make _build() record its own turn (session_store.record_turn), not just _edit().\n'
+  exit 1
+fi
+
+# R-477: Console chat UI.
+for required_file in \
+  "$console_root/app/studio/studio-chat.tsx" \
+  "$console_root/app/studio/studio-workspace.tsx" \
+  "$console_root/app/api/jobs/build/[id]/edit/route.ts" \
+  "$console_root/app/api/jobs/build/[id]/turns/route.ts"; do
+  if [[ ! -f "$required_file" ]]; then
+    printf 'Missing R-477 contract file: %s\n' "$required_file"
+    exit 1
+  fi
+done
+
+if [[ -f "$console_root/app/studio/studio-form.tsx" ]]; then
+  printf 'R-477 must retire studio-form.tsx (replaced by studio-chat.tsx/studio-workspace.tsx).\n'
+  exit 1
+fi
+
+if ! rg -q 'editBuild|getBuildTurns' "$console_root/lib/control-plane.ts"; then
+  printf 'R-477 must add editBuild()/getBuildTurns() clients to lib/control-plane.ts.\n'
+  exit 1
+fi
+
+if ! rg -q '\.studio-grid' "$console_root/app/globals.css"; then
+  printf 'R-477 must add the .studio-grid layout to globals.css.\n'
   exit 1
 fi
 

@@ -1,27 +1,32 @@
-task_id: R-476
+task_id: R-477
 status: completed
 phase: MVP
 tracker_row: null
 started_at: "2026-09-19"
 completed_at: "2026-09-19"
 objective: >-
-  Second task of the approved 7-task Phase D roadmap. New control-plane routes
-  POST /jobs/build/{id}/edit and GET /jobs/build/{id}/turns, mirroring POST /jobs/build's exact
-  proxy+debit shape (R-472). Also fixes two real, verified gaps in the Python edit path: _edit()
-  has no usage_ledger at all today (confirmed by direct comparison with _build() - every edit
-  currently debits 0 credits regardless of real cost), and _build() never records a chat turn
-  (only _edit() does - a future chat hydrating history from /turns after a refresh would lose the
-  first message). Both fixed by mirroring _build()'s own existing patterns. Go side extracts a
-  shared proxyAndDebit helper out of handleBuild so handleBuildEdit reuses it, mirroring the
-  writeAuthError extraction precedent R-474 set.
+  Third task of the approved 7-task Phase D roadmap. Replace /studio's one-shot prompt form with a
+  persistent, multi-turn chat thread on R-475's shell, wired to R-476's new
+  POST /jobs/build/{id}/edit and GET /jobs/build/{id}/turns routes. buildId (null vs. set) is the
+  single piece of state deciding whether the composer calls /jobs/build (first message) or
+  /jobs/build/{id}/edit (every follow-up). buildId persists in the URL (?build=<id>) so a refresh
+  can rehydrate chat text history from /turns. Introduces the two-column .studio-grid layout
+  deferred from R-475: a workspace panel (build/edit result, entities, usage, file browser) plus a
+  persistent chat rail. New finding verified by direct source read before implementation: GET
+  /turns does not 404 for an unknown build (turns_view returns {"turns": []} for a missing session
+  entry) - only the edit endpoint's BuildNotFoundError is a real, reachable 404, so that is where
+  the "session no longer available" recovery is wired, not turns-hydration.
 allowed_paths:
-  - services/control-plane/internal/jobs/handler.go
-  - services/control-plane/internal/jobs/handler_test.go
-  - services/agent-engine/src/omnistackai_agent_engine/studio/live_serve.py
-  - services/agent-engine/tests/test_studio_edit.py
-  - services/agent-engine/tests/test_studio_server.py
+  - apps/console-web/lib/control-plane.ts
+  - apps/console-web/app/api/jobs/build/[id]/edit/route.ts
+  - apps/console-web/app/api/jobs/build/[id]/turns/route.ts
+  - apps/console-web/app/studio/studio-chat.tsx
+  - apps/console-web/app/studio/studio-workspace.tsx
+  - apps/console-web/app/studio/studio-form.tsx
+  - apps/console-web/app/studio/page.tsx
+  - apps/console-web/app/globals.css
   - scripts/test.sh
-  - .ai/tasks/R-476.md
+  - .ai/tasks/R-477.md
   - .ai/CURRENT_TASK.yaml
   - .ai/PROJECT_STATE.yaml
   - .ai/WORK_LOG.md
@@ -31,31 +36,30 @@ allowed_paths:
   - docs/PROGRESS.md
   - docs/RESUME_PROMPT.md
 forbidden_changes:
-  - No changes to apps/console-web
-  - No changes to live preview, Problems, or tab functionality (later tasks)
+  - No changes to services/control-plane or services/agent-engine
+  - No live preview, Problems, or tab functionality (later tasks)
   - Do not modify or commit the untracked .claude directory
 required_gates:
-  - "control-plane: go build ./..., go vet ./..., go test ./..."
-  - "agent-engine: task verify (0 model/network calls)"
+  - "console-web: pnpm run typecheck, pnpm run lint, pnpm run build"
   - task verify
   - task lint
   - task security:quick
   - task env:check
-  - "manual smoke (real docker control-plane + real agent-engine studio server): real build -> real edit, credits_spent > 0, /turns includes the first build's turn"
+  - "manual smoke (real docker control-plane + real agent-engine studio server + next start): build -> follow-up edit in the same thread, buildId switches endpoint correctly; refresh hydrates /turns text; stale-buildId 404 recovers gracefully"
 model_tool_trace:
   routing: deterministic_only
   local_calls: 0
   cloud_calls: 0
   note: >-
-    Go/Python implementation, 0 model/network calls in any automated gate. The manual smoke test's
-    build+edit calls use whatever provider is configured (real Groq or local Ollama).
+    Pure console-web (TypeScript/React) work, 0 model/network calls in any automated gate. The
+    manual smoke test's build+edit calls use whatever provider is configured (real Groq or local
+    Ollama).
 next_action: >-
-  R-476 is complete (see .ai/tasks/R-476.md for full Gates & Evidence). Next up per the approved
-  plan (/Users/sanjeet_kumar/.claude/plans/hi-fancy-shannon.md): R-477 - Console: chat UI. Replace
-  /studio's one-shot prompt form with a persistent, multi-turn chat thread built on R-475's shell,
-  wired to R-476's new routes. buildId (null vs. set) is the single piece of state deciding
-  whether the composer calls /jobs/build or /jobs/build/{id}/edit. buildId persists in the URL
-  (?build=<id>) so a refresh can rehydrate history from /turns (now covering the first message
-  too, per R-476's fix). New failure modes to handle explicitly: EditNotSupportedError (400) ->
-  plain error banner; BuildNotFoundError (404) on edit or turns-hydration -> clear buildId and
-  show "session no longer available."
+  R-477 is complete (see .ai/tasks/R-477.md for full Gates & Evidence). Next up per the approved
+  plan (/Users/sanjeet_kumar/.claude/plans/hi-fancy-shannon.md): R-478 - Backend: live preview proxy
+  (local-only). Four new control-plane routes (GET /jobs/preview, POST /jobs/preview/stop,
+  POST /jobs/preview/restart, POST /jobs/build/{id}/preview) proxying the agent-engine's existing
+  preview control surface verbatim - zero agent-engine changes. The build-scoped route must handle
+  the agent-engine's unusual 200-with-{"status":"error"} shape for an unknown build (not a 404,
+  verified during the original planning research). A new defaultPreviewTimeout constant (~60s,
+  above the real 45s internal readiness wait) is needed on the routes that can trigger a cold start.

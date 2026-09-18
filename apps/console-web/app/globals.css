@@ -440,6 +440,118 @@ tr:last-child td {
   font-size: 13px;
 }
 
+.studio-grid {
+  display: grid;
+  grid-template-columns: 1fr 380px;
+  gap: 20px;
+  align-items: start;
+}
+
+.chat-rail {
+  display: flex;
+  flex-direction: column;
+  height: calc(100vh - 160px);
+  min-height: 420px;
+  position: sticky;
+  top: 20px;
+}
+
+.chat-thread {
+  flex: 1;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 4px 2px;
+}
+
+.chat-empty {
+  color: var(--muted);
+  font-size: 13px;
+  text-align: center;
+  padding: 24px 8px;
+  margin: 0;
+}
+
+.chat-message {
+  max-width: 92%;
+  padding: 10px 14px;
+  border-radius: var(--radius-md);
+  font-size: 14px;
+  line-height: 1.45;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.chat-message--user {
+  align-self: flex-end;
+  background: var(--accent);
+  color: #fff;
+}
+
+.chat-message--assistant {
+  align-self: flex-start;
+  background: var(--surface-2);
+  color: var(--text);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.chat-message--error {
+  align-self: flex-start;
+  background: var(--error-bg);
+  color: var(--error-fg);
+}
+
+.chat-composer {
+  display: flex;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.chat-composer textarea {
+  flex: 1;
+  font: inherit;
+  padding: 10px 12px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border);
+  background: var(--bg);
+  color: var(--text);
+  resize: none;
+  min-height: 44px;
+  max-height: 140px;
+}
+
+.chat-composer textarea:focus {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+
+.chat-send {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  border-radius: var(--radius-sm);
+  border: none;
+  background: var(--accent);
+  color: #fff;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+.chat-send:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.workspace-empty {
+  text-align: center;
+  padding: 60px 24px;
+}
+
 @media (max-width: 640px) {
   .wrap {
     padding: 28px 16px 56px;
@@ -455,5 +567,17 @@ tr:last-child td {
 
   .studio-main {
     padding: 24px 16px 56px;
+  }
+}
+
+@media (max-width: 900px) {
+  .studio-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .chat-rail {
+    height: auto;
+    min-height: 320px;
+    position: static;
   }
 }

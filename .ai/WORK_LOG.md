@@ -1,5 +1,44 @@
 # Work Log
 
+## 2026-09-19 — R-477 (Console — chat UI)
+
+- **Why:** third task of the approved 7-task Phase D roadmap. Replace `/studio`'s one-shot prompt
+  form with a persistent, multi-turn chat thread on R-475's shell, wired to R-476's new
+  `POST /jobs/build/{id}/edit` / `GET /jobs/build/{id}/turns` routes. `buildId` (`null` vs. set) is
+  the single piece of state deciding whether the composer calls `/jobs/build` or
+  `/jobs/build/{id}/edit` — same composer, same input box.
+- **New components:** `studio-chat.tsx` owns `messages`/`buildId`/`workspace` state and the
+  composer. `studio-workspace.tsx` holds the `BuildResult`/`FileBrowser` pieces moved out of the
+  retired `studio-form.tsx`, generalized to a `WorkspaceSnapshot` patched by either a build's full
+  response (has `name`/`description`/`files`) or an edit's narrower one (re-fetching the file list
+  separately, since `_edit()`'s response carries no `files` key at all).
+- **Refresh survival:** `buildId` persists in the URL (`?build=<id>`); a refresh hydrates the chat
+  thread's *text* from `/turns` — the rich workspace panel does not rehydrate, an honest, named
+  simplification rather than a silently incomplete "full history" claim.
+- **A real finding, verified by reading the actual source before writing the failure-mode handling
+  (not assumed from the plan sketch):** `GET /turns` does **not** 404 for an unknown/evicted build —
+  `session.py`'s `turns_view` returns `{"turns": []}` for a missing session entry, not an error.
+  Only `_edit()`'s own `BuildNotFoundError` is a real, reachable 404. So the "session no longer
+  available, start a new app" recovery is wired to a failed *edit* response (status 404), not to
+  turns-hydration, which just honestly (and harmlessly) starts as an empty thread against a stale id.
+- **Gates:** console `typecheck`/`lint`/`build` all clean (14 routes, 2 new). `task verify` 3,604 OK
+  (unchanged — no backend files touched). Repo `task verify`/`lint`/`security:quick`/`env:check` all
+  pass. A pre-existing `scripts/test.sh` R-473 contract block had hard-coded `studio-form.tsx` as a
+  required file — updated in this same commit, since retiring that exact file is this task's job.
+- **Live** (real Docker control-plane + real agent-engine Studio server + a freshly rebuilt/restarted
+  `next start`): a real build, then a real turns-hydration fetch proving both the build's own turns
+  are present; a real follow-up edit on the same `buildId` produced a genuine second commit and a
+  refreshed 162-file list (confirmed a real favorites-related file present post-edit — the workspace
+  panel's file-list refresh is real, not stale). **The task's most important new path**: killed and
+  restarted the real agent-engine Studio server (wiping in-memory session state, the same real
+  mechanism a production restart would cause) — an edit against the now-stale `buildId` returned a
+  real `404 {"error":"build '2' is not available in this session"}`, exactly what `sendEdit()`
+  checks for; `GET /turns` against the same stale id returned `200 {"turns": []}`, not an error,
+  confirming the Finding above live, not just by source-reading. A fresh build afterward succeeded
+  normally, proving the full recovery loop. `GET /studio`'s rendered HTML confirmed the new
+  `studio-grid`/`chat-rail`/`chat-composer` markup present with no server errors.
+- **NEXT:** R-478 (backend: live preview proxy) per the approved plan.
+
 ## 2026-09-19 — R-476 (Backend — multi-turn edit bridge)
 
 - **Why:** second task of the approved 7-task Phase D roadmap. New control-plane routes proxying

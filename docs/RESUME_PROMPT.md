@@ -208,7 +208,7 @@ front-door bricks, R-420 is generated-SQL hardening, R-421..R-426 are Studio pre
 R-427..R-429 are generated-app compile fixes, R-430..R-457 are the first twenty-eight differentiating-spine
 bricks (Scope Compiler through Ecosystem Multi-Surface SLA, SLO, and Error Budget Contracts).
 Git, state files (.ai/), CHANGELOG, and docs/PROGRESS.md remain the executable/detail sources of truth.
-Current through R-476; `task verify` = 3,604 tests (agent-engine) + the Go control-plane's own suite +
+Current through R-477; `task verify` = 3,604 tests (agent-engine) + the Go control-plane's own suite +
 the Next.js console's typecheck/lint/build. R-416 added prompt-to-IR intake, R-417 materialized a generated
 owned repo, R-418 added the local chat studio, R-419 added turnkey local run, and R-420 fixed the two
 SQL defects found by live execution. R-421 added an explicit `task agent-engine:studio:preview` mode:
@@ -629,9 +629,22 @@ WHAT TO DO NEXT
   Both came back `credits_spent: 0` honestly - this environment's real configured cloud model has no
   price-book entry, a pre-existing fact unrelated to this task; the "debits a nonzero charge"
   behavior is proven by the new unit tests instead.
-- NEXT: R-477 (console: chat UI - replace the one-shot form with a persistent multi-turn thread on
-  R-475's shell, wired to R-476's new routes; `buildId` null vs. set decides build-vs-edit), then
-  R-478 (backend: live preview proxy - four routes not three, per the
+- R-477 (2026-09-19, done) built the console chat UI, third of the seven: replaced the one-shot
+  form with a persistent multi-turn thread on R-475's shell, wired to R-476's new routes; `buildId`
+  null vs. set decides build-vs-edit. New `studio-chat.tsx` + `studio-workspace.tsx` (the latter
+  holding the `BuildResult`/`FileBrowser` pieces moved out of the retired `studio-form.tsx`,
+  generalized to a `WorkspaceSnapshot`). `buildId` persists in the URL so a refresh hydrates chat
+  text history from `/turns` - the workspace panel does not rehydrate, an honest, named
+  simplification. A real finding, verified by source read before implementation: `GET /turns` does
+  not 404 for an unknown build (`{"turns": []}` instead) - only `_edit()`'s `BuildNotFoundError` is
+  a real 404, so the "session no longer available" recovery is wired there, not to hydration.
+  `task verify` 3,604 OK; console `typecheck`/`lint`/`build` clean (14 routes, 2 new). Live: real
+  control-plane + real agent-engine Studio server + fresh `next start` proved build -> turns
+  hydration -> follow-up edit with a refreshed file list, then the agent-engine Studio server was
+  killed and restarted mid-test to simulate a real stale session - the edit-triggered 404 recovery
+  and the turns-hydration honest-empty-thread finding both confirmed live, then a fresh build proved
+  the full recovery loop.
+- NEXT: R-478 (backend: live preview proxy - four routes not three, per the
   build-scoped-route finding above), R-479 (console: live preview UI - polling is for crash
   detection not progress, since preview start is synchronous), R-480 (backend: Problems/
   compile-report support - genuinely new work, on-demand not automatic since `node_modules`/`tsc`
