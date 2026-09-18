@@ -1,35 +1,30 @@
-task_id: R-482
+task_id: R-483
 status: completed
 phase: MVP
 tracker_row: null
 started_at: "2026-09-19"
 completed_at: "2026-09-19"
 objective: >-
-  Named, independent follow-up from the Phase D roadmap. A real, live Model Provider settings page.
-  platform_overview() already exists (real, tested, metadata-only) but is only ever used to
-  generate a static build-time JSON snapshot for the public /fabric page - no live HTTP endpoint
-  exists anywhere. New: resolve_generation_provider_from_env() always succeeds (falls through to
-  Ollama, never raises) and its returned ModelProvider has a real .provider_id - calling it safely
-  reports which provider would actually run the next build right now. New agent-engine
-  GET /api/providers (build-only mode included, no toolchain needed), new control-plane
-  GET /jobs/providers (no debit), new authenticated console /settings page reusing /fabric's
-  existing table visual language but live-polled instead of a static snapshot.
+  Fix a real, reproducible bug found live during R-481's own manual smoke test, scoped and fixed as
+  its own Tracker ID per the founder's "complete one by one all" direction. Two independent,
+  compounding defects in the edit-delta codegen path: (1) a Next.js dynamic-route slug collision
+  ('counterId' !== 'counter_id') caused by an unreconciled casing mismatch between the full-build
+  prompt (no path-param casing rule, camelCase by example) and the edit-delta prompt (explicit
+  lower_snake_case instruction); (2) a duplicate lib/types.ts identifier when an edit's entity
+  declares both an explicit '<relation>_id' field and a same-named relation. Fixed at the root:
+  ApiEndpoint.__post_init__ now canonicalizes every {param} to camelCase unconditionally (every
+  construction path, not just the two known ones); _entity_interface() now skips the synthesized FK
+  field when an explicit same-named field already exists.
 allowed_paths:
-  - services/agent-engine/src/omnistackai_agent_engine/studio/live_serve.py
-  - services/agent-engine/src/omnistackai_agent_engine/studio/server.py
-  - services/agent-engine/tests/test_studio_server.py
-  - services/control-plane/internal/jobs/handler.go
-  - services/control-plane/internal/jobs/handler_test.go
-  - apps/console-web/lib/control-plane.ts
-  - apps/console-web/app/api/providers/route.ts
-  - apps/console-web/app/settings/layout.tsx
-  - apps/console-web/app/settings/page.tsx
-  - apps/console-web/app/studio/studio-icons.tsx
-  - apps/console-web/app/studio/layout.tsx
-  - apps/console-web/app/page.tsx
-  - apps/console-web/app/globals.css
-  - scripts/test.sh
-  - .ai/tasks/R-482.md
+  - services/agent-engine/src/omnistackai_agent_engine/application_ir/ir.py
+  - services/agent-engine/src/omnistackai_agent_engine/intake/nl_to_ir.py
+  - services/agent-engine/src/omnistackai_agent_engine/intake/app_delta.py
+  - services/agent-engine/src/omnistackai_agent_engine/codegen/nextjs.py
+  - services/agent-engine/tests/test_application_ir.py
+  - services/agent-engine/tests/test_nextjs_adapter.py
+  - services/agent-engine/tests/test_form_update_screens.py
+  - "R_&_D/OmniStackAI_Commercial_Platform_Kickoff_v1.md"
+  - .ai/tasks/R-483.md
   - .ai/CURRENT_TASK.yaml
   - .ai/PROJECT_STATE.yaml
   - .ai/WORK_LOG.md
@@ -39,34 +34,30 @@ allowed_paths:
   - docs/PROGRESS.md
   - docs/RESUME_PROMPT.md
 forbidden_changes:
-  - No changes to /fabric, data/overview.json, or the console:snapshot task
-  - No BYOK credential entry/editing
+  - No changes to apps/console-web or services/control-plane
   - Do not modify or commit the untracked .claude directory
 required_gates:
   - "agent-engine: task verify (0 model/network calls)"
-  - "control-plane: go build ./..., go vet ./..., go test ./..."
   - task verify
   - task lint
   - task security:quick
   - task env:check
-  - "console-web: pnpm run typecheck, pnpm run lint, pnpm run build"
-  - "manual smoke: real signed-in request to /settings shows the real configured provider list and a real active-now provider/model matching what a real build actually used"
+  - "manual smoke: reproduce the exact originally-reported scenario (build a counter app, edit it to add a feature) and confirm both defects are gone"
 model_tool_trace:
   routing: deterministic_only
   local_calls: 0
   cloud_calls: 0
   note: >-
-    Go/Python/TS implementation, 0 model/network calls in any automated gate. The live smoke test's
-    activeNow check makes a real, lightweight local Ollama ping (<=1.5s) and/or reads env - never a
-    real model generation call.
+    Pure Python codegen/IR fix, 0 model/network calls in any automated gate. The manual smoke
+    test's build+edit calls use whatever provider is configured (real Groq or local Ollama); the
+    verification tsc run is a local compile, not a model/network call.
 next_action: >-
-  R-482 is complete (see .ai/tasks/R-482.md for full Gates & Evidence, including a real
-  dotenv-load-ordering bug found and fixed live during this task's own smoke test - not a
-  pre-existing platform issue, introduced and fixed within this same task). Per the founder's
-  "complete one by one all" direction: NEXT is scoping and fixing the dynamic-route slug-collision
-  codegen bug found live during R-481 (edit-delta path generates a Next.js dynamic route whose slug
-  name can collide, e.g. "counterId" vs "counter_id", causing a real Next.js dev-server crash).
-  After that, R-483 (real-time streaming), per-user multi-tenancy, and Publish/deploy each involve a
-  materially different architecture decision (transport protocol, tenancy model, deploy target) -
-  per the standing "stop and ask for hard-gate architecture decisions" rule, ask the founder which
-  specific approach they want for each BEFORE implementing, rather than assuming.
+  R-483 is complete (see .ai/tasks/R-483.md for full Gates & Evidence) - the exact originally-
+  reported bug (dynamic-route slug collision + duplicate lib/types.ts identifier) reproduced and
+  confirmed fixed live: no crash, one consistent dynamic route folder, 0 duplicate-identifier tsc
+  errors, real lib/types.ts inspected directly with no duplicate line. Per "complete one by one
+  all": R-484 (real-time streaming, renumbered from R-483), per-user backend multi-tenancy, and
+  Publish/deploy each involve a materially different architecture decision (transport protocol -
+  SSE vs WebSocket; tenancy model; deploy target/hosting) - per the standing "stop and ask for
+  hard-gate architecture decisions" rule, ask the founder which specific approach for each before
+  implementing, rather than assuming.

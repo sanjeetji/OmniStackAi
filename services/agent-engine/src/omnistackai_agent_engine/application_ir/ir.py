@@ -21,6 +21,34 @@ _IDENT = re.compile(r"^[a-z][a-z0-9_]*$")
 _ENTITY_NAME = re.compile(r"^[A-Za-z][A-Za-z0-9]*$")
 _API_PATH = re.compile(r"^/[A-Za-z0-9/_{}-]*$")
 _CONTROL = re.compile(r"[\x00-\x08\x0b\x0c\x0e-\x1f\x7f]")
+_PATH_PARAM = re.compile(r"\{([A-Za-z0-9_-]+)\}")
+
+
+def _canonicalize_path_params(path: str) -> str:
+    """Rewrite every ``{param}`` path segment to camelCase - the one casing every generated Next.js
+    dynamic route folder (``[paramName]``) already uses.
+
+    Two different sources feed `ApiEndpoint`s into the same IR: a fresh build's own prompt has no
+    casing rule for path params and its worked example uses camelCase (``{postId}``), while a
+    follow-up edit's prompt explicitly asks for ``lower_snake_case`` segments. Left unreconciled,
+    an edit proposing a new endpoint under the same resource as an existing one (e.g. an existing
+    `GET /counters/{counterId}` plus a proposed `POST /counters/{counter_id}/reset`) merges into two
+    literally different param names for what Next.js treats as the same dynamic segment -- a real
+    bug reproduced live: ``Error: You cannot use different slug names for the same dynamic path
+    ('counterId' !== 'counter_id')``. Applied unconditionally in `ApiEndpoint.__post_init__` so
+    every construction path (fresh build, edit delta, solution packs, ecosystem packs) is covered,
+    not just the ones known about today. Idempotent: an already-camelCase or single-word param
+    (``{id}``) passes through unchanged.
+    """
+
+    def _camel(match: re.Match[str]) -> str:
+        parts = [p for p in re.split(r"[_-]", match.group(1)) if p]
+        if not parts:
+            return match.group(0)
+        head = parts[0][:1].lower() + parts[0][1:]
+        return "{" + head + "".join(p[:1].upper() + p[1:] for p in parts[1:]) + "}"
+
+    return _PATH_PARAM.sub(_camel, path)
 
 
 class Platform(StrEnum):
@@ -429,6 +457,7 @@ class ApiEndpoint:
         object.__setattr__(self, "method", _enum(self.method, HttpMethod, "api method"))
         if not isinstance(self.path, str) or not _API_PATH.fullmatch(self.path) or len(self.path) > 256:
             raise InvalidIRError(f"api path must start with / and be a bounded URL path: {self.path!r}")
+        object.__setattr__(self, "path", _canonicalize_path_params(self.path))
         if not isinstance(self.auth, bool):
             raise InvalidIRError("api auth must be a boolean")
         for schema_name in ("request_schema", "response_schema", "error_schema"):

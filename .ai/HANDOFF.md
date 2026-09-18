@@ -1,9 +1,32 @@
 # Current Handoff
 
-Task ID: R-482
+Task ID: R-483
 Status: done
 Phase: BASIC/MVP — Founder Stage 0
 Branch: `main`
+
+> **R-483 Completed (2026-09-19): Fix — dynamic-route slug collision & duplicate FK identifier.**
+> - Second follow-up after the 7-task Phase D roadmap, per "complete one by one all." Fixes the
+>   exact real bug found live during R-481's own smoke test: a Next.js dev-server crash
+>   (`'counterId' !== 'counter_id'`) and a duplicate `lib/types.ts` identifier.
+> - Root cause verified by direct source read: (1) the full-build prompt has no path-param casing
+>   rule while the edit-delta prompt demanded snake_case, with nothing reconciling a new endpoint's
+>   param against an existing one for the same resource; (2) `_entity_interface()` unconditionally
+>   synthesized a `<relation>_id` FK field with no check against already-declared explicit fields.
+> - Fixed at the structural root: `ApiEndpoint.__post_init__` now canonicalizes every `{param}` to
+>   camelCase unconditionally (every construction path, not just the two known ones);
+>   `_entity_interface()` now skips the synthesized FK when an explicit same-named field exists.
+> - A pre-existing test's assertion (matching an old, inconsistent snake_case spelling) was updated
+>   to the new correct camelCase expectation, confirmed not a functional regression — the generated
+>   reader code already defensively checked the camelCase spelling as its own fallback.
+> - Gates: agent-engine `task verify` **3,635 OK** (6 new); repo `task verify`/`lint`/
+>   `security:quick`/`env:check` all pass. **Live**: reproduced the exact original scenario — built
+>   the same counter app, sent the same edit, started the preview → real `ready`, no crash (grepped
+>   the real log, error absent); one consistent dynamic route folder on disk; a real `tsc` check via
+>   Problems → 0 duplicate-identifier errors; `lib/types.ts` inspected directly, no duplicate line.
+> - **NEXT** (per "complete one by one all"): R-484 (real-time streaming, renumbered), per-user
+>   multi-tenancy, and Publish/deploy each need an explicit founder architecture decision first.
+>   See `.ai/tasks/R-483.md`.
 
 > **R-482 Completed (2026-09-19): Model Provider settings UI.**
 > - First follow-up after the 7-task Phase D roadmap shipped, per the founder's "complete one by

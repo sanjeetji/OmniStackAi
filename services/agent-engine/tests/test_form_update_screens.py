@@ -213,8 +213,12 @@ class FormUpdateScreenTests(TestCase):
         screen = next(s for s in ir.screens if s.id == "article_list")
         page = render_screen_page(screen, ir)
 
-        # Subcollection view has + New Comment link
-        self.assertIn('href={`/comment_editor?article_id=${selectedId}`}', page)
+        # Subcollection view has + New Comment link. Query param key is camelCase, matching the
+        # {articleId} path param `ApiEndpoint` now canonicalizes every {param} to (a real fix -
+        # see ApiPathParamCanonicalizationTests in test_application_ir.py); this fixture's own IR
+        # still writes the raw endpoint path as {article_id} on purpose, to exercise that
+        # normalization end-to-end rather than pre-normalizing the fixture itself.
+        self.assertIn('href={`/comment_editor?articleId=${selectedId}`}', page)
         self.assertIn('+ New Comment', page)
 
     def test_diff_invariance_across_ir_description_changes(self) -> None:
@@ -253,4 +257,6 @@ class FormUpdateScreenTests(TestCase):
 
         art_list = project.get("app/article_list/page.tsx").content
         self.assertIn("article_editor?id=", art_list)
-        self.assertIn("comment_editor?article_id=", art_list)
+        # camelCase, not the fixture's own raw {article_id} - see the note in
+        # test_subcollection_view_renders_new_child_link above.
+        self.assertIn("comment_editor?articleId=", art_list)

@@ -1,5 +1,49 @@
 # Work Log
 
+## 2026-09-19 — R-483 (Fix: dynamic-route slug collision & duplicate FK identifier)
+
+- **Why:** second follow-up task after the 7-task Phase D roadmap, per the founder's "complete one
+  by one all" direction. Fixes the exact real bug found live during R-481's own manual smoke test:
+  a Next.js dev-server crash (`Error: You cannot use different slug names for the same dynamic path
+  ('counterId' !== 'counter_id')`) and a duplicate `lib/types.ts` identifier (`TS2300`/`TS2687`/
+  `TS2717`).
+- **Root cause, verified by direct source read before any fix** — two independent, compounding
+  defects, both deterministic code/prompt facts, not one-off model randomness:
+  1. The full-build prompt has no path-param casing rule for API endpoints (camelCase only by its
+     own worked example); the edit-delta prompt explicitly demanded `lower_snake_case` for the
+     *whole* path, including `{param}` placeholders. Nothing reconciled a new endpoint's param
+     spelling against an existing endpoint's own param for the same resource —
+     `apply_app_delta` never even called `normalize_ir()`.
+  2. `codegen/nextjs.py`'s `_entity_interface()` unconditionally synthesized a `<relation>_id` FK
+     field for every to-one relation with no check against already-declared explicit fields —
+     confirmed this exact shape (a field *and* a same-named relation) already sat, unexercised for
+     this, in `test_app_delta.py`'s own fixture.
+- **Fixed at the structural root, not just the two known call sites:**
+  `ApiEndpoint.__post_init__` (`application_ir/ir.py`) now canonicalizes every `{param}` to
+  camelCase unconditionally, via a new pure, idempotent `_canonicalize_path_params()` helper —
+  covering every construction path, present and future, not just full-build and edit-delta.
+  `_entity_interface()` now skips the synthesized FK field when an explicit same-named field
+  already exists. Both prompts also corrected to ask for camelCase params, as a first line of
+  defense (the code-level fix is the real guarantee).
+- **A pre-existing test initially failed after the fix — investigated, not reverted:** its
+  fixture's own hardcoded path used raw snake_case, and the previously-passing assertion matched
+  that exact raw spelling. Confirmed not a functional regression: the generated reader code already
+  defensively checked the camelCase spelling as *its own* second-priority fallback — clear
+  pre-existing evidence this exact inconsistency was already anticipated. Updated the assertions to
+  the new, correct camelCase expectation.
+- **Gates:** agent-engine `task verify` 3,635 OK (6 new regression tests). Repo
+  `task verify`/`lint`/`security:quick`/`env:check` all pass.
+- **Live — reproduced the exact originally-reported scenario end to end**: built the same counter
+  app, sent the same follow-up edit, started the preview → real `200 ready`, no crash (grepped the
+  real log for the exact original error string, confirmed absent). Listed the real generated
+  dynamic route folders on disk → exactly one, no colliding sibling. Ran a real `tsc` check via
+  Problems → 8 real errors remained (pre-existing, unrelated LLM-UI-synthesis noise, not this
+  task's concern) but **zero** duplicate-identifier errors and zero in `lib/types.ts`. Read the
+  real generated `lib/types.ts` directly → exactly one `user_id` line, no duplicate.
+- **NEXT** (per "complete one by one all"): R-484 (real-time streaming, renumbered from R-483),
+  per-user backend multi-tenancy, and Publish/deploy each need an explicit founder architecture
+  decision before implementation.
+
 ## 2026-09-19 — R-482 (Model Provider settings UI)
 
 - **Why:** first follow-up task after the 7-task Phase D roadmap shipped, per the founder's

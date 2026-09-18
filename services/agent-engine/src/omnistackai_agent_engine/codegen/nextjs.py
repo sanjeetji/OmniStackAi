@@ -601,7 +601,13 @@ def _entity_interface(entity: Entity) -> str:
             # A to-one relation persists as a scalar `<name>_id` foreign-key column — this is what the
             # DB schema, the API params, and the generated editor form state all use, so the entity type
             # must expose it (the optional hydrated relation object below is for read-side convenience).
-            lines.append(f"  {relation.name}_id?: string;")
+            # An edit's proposed entity can independently declare both an explicit field and a
+            # same-named relation for the same conceptual FK (real bug reproduced live: a duplicate
+            # `counter_id`/`user_id` identifier in the generated lib/types.ts, TS2300/TS2687/TS2717) —
+            # the explicit field's own declaration always wins; never emit this one a second time.
+            fk_name = f"{relation.name}_id"
+            if fk_name not in declared:
+                lines.append(f"  {fk_name}?: string;")
         lines.append(f"  {relation.name}?: {relation.target_entity}{suffix};")
     lines.append("}")
     return "\n".join(lines)

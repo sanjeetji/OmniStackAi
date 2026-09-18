@@ -336,8 +336,10 @@ parity. Honest answer, recorded here rather than left as a spoken claim: **subst
 but not exact or complete.** Two structural gaps remain that are bigger than UI polish and are not
 closed by any task above:
 
-- **R-483 — Real-time build/edit streaming** *(renumbered from R-482 now that Problems took a
-  number)*. Lovable/Dyad/Emergent's signature "smoothness" is watching the model write code live
+- **R-484 — Real-time build/edit streaming** *(renumbered again: R-482 went to the real Model
+  Provider settings UI shipped 2026-09-19, and R-483 went to a real bug fix found live during
+  R-481's own smoke test — a dynamic-route slug-name collision and a duplicate `lib/types.ts`
+  identifier, both in the edit-delta codegen path)*. Lovable/Dyad/Emergent's signature "smoothness" is watching the model write code live
   (token-by-token, file-by-file) as it happens. Every task above still uses one blocking HTTP call
   that takes seconds to a few real minutes and then returns everything at once — R-477's chat UI
   would show "Building…" and then a result, not a live-updating stream, without this task. Requires

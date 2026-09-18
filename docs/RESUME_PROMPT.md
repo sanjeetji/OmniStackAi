@@ -208,7 +208,7 @@ front-door bricks, R-420 is generated-SQL hardening, R-421..R-426 are Studio pre
 R-427..R-429 are generated-app compile fixes, R-430..R-457 are the first twenty-eight differentiating-spine
 bricks (Scope Compiler through Ecosystem Multi-Surface SLA, SLO, and Error Budget Contracts).
 Git, state files (.ai/), CHANGELOG, and docs/PROGRESS.md remain the executable/detail sources of truth.
-Current through R-482; `task verify` = 3,629 tests (agent-engine) + the Go control-plane's own suite +
+Current through R-483; `task verify` = 3,635 tests (agent-engine) + the Go control-plane's own suite +
 the Next.js console's typecheck/lint/build. R-416 added prompt-to-IR intake, R-417 materialized a generated
 owned repo, R-418 added the local chat studio, R-419 added turnkey local run, and R-420 fixed the two
 SQL defects found by live execution. R-421 added an explicit `task agent-engine:studio:preview` mode:
@@ -710,15 +710,24 @@ WHAT TO DO NEXT
   `task verify` 3,629 OK; control-plane `go test` all green (48 tests, 3 new); console
   `typecheck`/`lint`/`build` clean (20 routes, 2 new). Live: cross-verified `activeNow` against a
   real build whose own log confirmed the exact same provider was used.
-- NEXT (per "complete one by one all"): scope and fix the dynamic-route slug-collision codegen bug
-  found live during R-481 (edit-delta path can generate colliding Next.js route slugs, e.g.
-  "counterId" vs "counter_id"). After that: R-483 (real-time streaming) and per-user backend
-  multi-tenancy each involve a materially different architecture decision (transport protocol - SSE
-  vs WebSocket; tenancy model) - per the standing "stop and ask for hard-gate architecture
-  decisions" rule, ask the founder which specific approach before implementing, rather than
-  assuming. Publish/deploy likewise needs an explicit deploy-target decision first. After that,
-  Phase E (plan-gated UI, admin console, payment processor, proposed R-484+) needs its own explicit
-  founder sign-off before starting.
+- R-483 (2026-09-19, done) fixed the dynamic-route slug-collision + duplicate FK identifier bug
+  found live during R-481 (edit-delta path could generate colliding Next.js route slugs, e.g.
+  "counterId" vs "counter_id", plus a duplicate lib/types.ts identifier). Root cause verified by
+  direct source read: the full-build and edit-delta prompts had an unreconciled casing mismatch for
+  API {param}s, and _entity_interface() never checked for an already-declared field before
+  synthesizing a relation's FK column. Fixed at the structural root - ApiEndpoint.__post_init__ now
+  canonicalizes every {param} to camelCase unconditionally; _entity_interface() now skips the
+  synthesized FK when an explicit same-named field exists. `task verify` 3,635 OK (6 new tests).
+  Live: reproduced the exact original scenario end to end - built the same counter app, sent the
+  same edit, started the preview successfully (no crash, confirmed via the real log), one
+  consistent dynamic route folder on disk, a real tsc check showing 0 duplicate-identifier errors.
+- NEXT (per "complete one by one all"): R-484 (real-time streaming, renumbered from R-483) and
+  per-user backend multi-tenancy each involve a materially different architecture decision
+  (transport protocol - SSE vs WebSocket; tenancy model) - per the standing "stop and ask for
+  hard-gate architecture decisions" rule, ask the founder which specific approach before
+  implementing, rather than assuming. Publish/deploy likewise needs an explicit deploy-target
+  decision first. After that, Phase E (plan-gated UI, admin console, payment processor, proposed
+  R-485+) needs its own explicit founder sign-off before starting.
   Keep `task verify` model/Docker/DB-free at its core (the console's own build/lint/typecheck gates need
   no live control-plane; any live/model path stays opt-in); preserve single-session ownership and
   explicit trusted-local mode.

@@ -1,4 +1,4 @@
-# OmniStackAI — implementation progress (as of R-482)
+# OmniStackAI — implementation progress (as of R-483)
 
 A living summary of what is built, what is pending, and how to see results. Numbers come from the
 execution tracker (`R_&_D/OmniStackAI_Execution_Tracker_v6.xlsx`, `Phase_Roadmap`, 461 tasks as of
@@ -6,8 +6,25 @@ R-461 completion) plus the state files (`.ai/`), Git history, and CHANGELOG.
 
 ## Headline
 
-- **3,629 automated tests pass** (agent-engine + Go control-plane), fully offline and
+- **3,635 automated tests pass** (agent-engine + Go control-plane), fully offline and
   network-independent (`task verify`), plus the console's own `typecheck`/`lint`/`build` gates.
+- **R-483 — Fix: dynamic-route slug collision & duplicate FK identifier (2026-09-19):** second
+  follow-up task after the 7-task Phase D roadmap shipped, per the founder's "complete one by one
+  all" direction. Fixes a real, reproducible bug found live during R-481's own manual smoke test: a
+  Next.js dev-server crash (`'counterId' !== 'counter_id'`) and a duplicate `lib/types.ts`
+  identifier. Root cause verified by direct source read: the full-build and edit-delta prompts had
+  an unreconciled casing mismatch for API `{param}`s, and `_entity_interface()` never checked for
+  an already-declared field before synthesizing a relation's FK column. Fixed at the structural
+  root — `ApiEndpoint.__post_init__` now canonicalizes every `{param}` to camelCase unconditionally
+  (every construction path, not just the two known ones); `_entity_interface()` now skips the
+  synthesized FK when an explicit same-named field exists. A pre-existing test's assertion (an old,
+  inconsistent snake_case expectation) was updated, confirmed not a functional regression — the
+  generated reader code already defensively checked the camelCase spelling as its own fallback.
+  `task verify` **3,635 OK** (6 new tests). Live: reproduced the exact original scenario end to
+  end — built the same counter app, sent the same edit, started the preview successfully (no
+  crash, confirmed via the real log), one consistent dynamic route folder on disk, a real `tsc`
+  check showing 0 duplicate-identifier errors, `lib/types.ts` inspected directly with no duplicate
+  line. See `.ai/tasks/R-483.md` for full verification detail.
 - **R-482 — Model Provider settings UI (2026-09-19):** first follow-up task after the 7-task Phase D
   roadmap shipped, per the founder's "complete one by one all" direction. A real, live Dyad-style
   provider status page. `platform_overview()` already existed (real, tested) but only ever

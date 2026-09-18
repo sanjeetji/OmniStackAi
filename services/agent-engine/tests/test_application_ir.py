@@ -96,6 +96,39 @@ class ConstructionTests(TestCase):
             ApiEndpoint("FETCH", "/x")  # type: ignore[arg-type]
 
 
+class ApiPathParamCanonicalizationTests(TestCase):
+    """R-fix (2026-09-19): a real bug reproduced live - two IR sources (a fresh build's own prompt,
+    with no path-param casing rule, versus a follow-up edit's prompt, which explicitly asked for
+    lower_snake_case) merged into sibling dynamic segments Next.js itself refuses to serve:
+    `Error: You cannot use different slug names for the same dynamic path ('counterId' !==
+    'counter_id')`. `ApiEndpoint.__post_init__` now canonicalizes every {param} to camelCase
+    unconditionally, closing this at the one place every ApiEndpoint is ever constructed."""
+
+    def test_snake_case_param_is_canonicalized_to_camel_case(self) -> None:
+        api = ApiEndpoint(HttpMethod.POST, "/counters/{counter_id}/reset")
+        self.assertEqual(api.path, "/counters/{counterId}/reset")
+
+    def test_already_camel_case_param_is_unchanged(self) -> None:
+        api = ApiEndpoint(HttpMethod.GET, "/favourites/drivers/{driverId}")
+        self.assertEqual(api.path, "/favourites/drivers/{driverId}")
+
+    def test_single_word_param_is_unchanged(self) -> None:
+        api = ApiEndpoint(HttpMethod.GET, "/posts/{id}")
+        self.assertEqual(api.path, "/posts/{id}")
+
+    def test_multiple_underscore_segments_all_canonicalized(self) -> None:
+        api = ApiEndpoint(HttpMethod.GET, "/{parent_item_id}/children/{child_item_id}")
+        self.assertEqual(api.path, "/{parentItemId}/children/{childItemId}")
+
+    def test_reproduces_the_live_bug_scenario_end_to_end(self) -> None:
+        # The exact shape observed live: a build's own endpoint uses {counterId}; a follow-up edit
+        # proposes a new endpoint for the same resource using {counter_id}. Both must now resolve
+        # to the identical param name, so Next.js sees one consistent dynamic segment, not two.
+        existing = ApiEndpoint(HttpMethod.GET, "/counters/{counterId}")
+        proposed = ApiEndpoint(HttpMethod.POST, "/counters/{counter_id}/reset")
+        self.assertEqual(existing.path.split("/")[2], proposed.path.split("/")[2])
+
+
 class UniquenessTests(TestCase):
     def test_duplicate_entity_names_rejected(self) -> None:
         entity = Entity("Driver", (Field("id", FieldType.UUID),))

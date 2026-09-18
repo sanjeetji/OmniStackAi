@@ -4,6 +4,22 @@ Last updated: 2026-09-19
 ## Current Phase
 Stage 0 (Founder Build Sequence, Brief Section 91) — BASIC/MVP
 
+> **R-483 (2026-09-19): Fix — dynamic-route slug collision & duplicate FK identifier.** Second
+> follow-up after the 7-task Phase D roadmap, per "complete one by one all." Fixes the exact real
+> bug found live during R-481's own smoke test: a Next.js dev-server crash (`'counterId' !==
+> 'counter_id'`) and a duplicate `lib/types.ts` identifier. Root cause verified by direct source
+> read: an unreconciled casing mismatch between the full-build and edit-delta prompts for API
+> `{param}`s, and `_entity_interface()` never checking for an already-declared field before
+> synthesizing a relation's FK column. Fixed at the structural root — `ApiEndpoint.__post_init__`
+> now canonicalizes every `{param}` to camelCase unconditionally; `_entity_interface()` now skips
+> the synthesized FK when an explicit same-named field exists. `task verify` **3,635 OK** (6 new
+> tests). Live: reproduced the exact original scenario end to end — built the same counter app,
+> sent the same edit, started the preview successfully (no crash, confirmed via the real log), one
+> consistent dynamic route folder on disk, a real `tsc` check showing 0 duplicate-identifier
+> errors, `lib/types.ts` inspected directly with no duplicate line.
+> NEXT: R-484 (real-time streaming), per-user multi-tenancy, and Publish/deploy each need an
+> explicit founder architecture decision before implementation.
+
 > **R-482 (2026-09-19): Model Provider settings UI.** First follow-up after the 7-task Phase D
 > roadmap shipped, per the founder's "complete one by one all" direction. A real, live Dyad-style
 > provider status page — `platform_overview()` already existed but only ever generated a static

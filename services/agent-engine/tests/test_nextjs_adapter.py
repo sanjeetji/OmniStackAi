@@ -111,3 +111,40 @@ class NextjsAdapterTests(TestCase):
         cfg = self.project.get("next.config.mjs").content
         self.assertIn("X-Frame-Options", cfg)
         self.assertIn("nosniff", cfg)
+
+
+class DuplicateForeignKeyFieldTests(TestCase):
+    """R-fix (2026-09-19): a real bug reproduced live - a follow-up edit's proposed entity can
+    independently declare both an explicit field and a same-named relation for the same conceptual
+    FK (e.g. an explicit `counter_id` field plus a `counter` relation), which used to emit a
+    duplicate `counter_id?: string;` declaration in lib/types.ts - a real tsc failure (TS2300
+    'Duplicate identifier', TS2687, TS2717) observed live. The explicit field's own declaration
+    must always win; the synthesized one from the relation must never duplicate it."""
+
+    def test_explicit_fk_field_is_not_duplicated_by_its_relation(self) -> None:
+        ir = ApplicationIR(
+            name="Counter App",
+            description="A counter with favorites.",
+            platforms=(Platform.WEB, Platform.BACKEND),
+            project_strategy=ProjectStrategy(
+                MobileProfile.NONE, WebStrategy.NEXTJS, AdminStrategy.NONE,
+                BackendStrategy.GO, DatabaseStrategy.POSTGRES, RepoStrategy.CUSTOMER_PROJECT_MONOREPO,
+            ),
+            roles=(Role("user"),),
+            entities=(
+                Entity("Counter", (Field("id", FieldType.UUID), Field("value", FieldType.INT))),
+                Entity(
+                    "Favorite",
+                    (
+                        Field("id", FieldType.UUID),
+                        # The exact shape observed live: an explicit FK field alongside a
+                        # same-named to-one relation for the same conceptual foreign key.
+                        Field("counter_id", FieldType.UUID),
+                    ),
+                    relations=(Relation("counter", "Counter", RelationKind.MANY_TO_ONE),),
+                ),
+            ),
+            screens=(Screen("counters", "user", components=("list",)),),
+        )
+        types = NextjsWebAdapter().generate(ir).get("lib/types.ts").content
+        self.assertEqual(types.count("counter_id"), 1, types)

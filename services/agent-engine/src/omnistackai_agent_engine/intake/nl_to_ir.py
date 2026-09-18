@@ -89,6 +89,8 @@ def _system_instruction(example_name: str) -> str:
         "- Use lower_snake_case identifiers for field names, roles, and screen ids.\n"
         f"- Every field 'type' MUST be EXACTLY one of: {field_types}. Do NOT invent other types.\n"
         "  For a status/category/enum-like field use \"string\". For money use \"float\". For an id use \"uuid\".\n"
+        "- In an api 'path', use lower_snake_case for literal segments and camelCase for any {param} "
+        "placeholder (e.g. {productId}, not {product_id}), matching the template below.\n"
         "\n"
         "Feature Completeness & 1:1 Full-Stack Triad:\n"
         "- For EVERY feature or capability requested by the user (e.g., product grid, shopping cart, discounts, reviews, wishlist, booking, messaging):\n"

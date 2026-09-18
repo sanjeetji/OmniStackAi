@@ -2,10 +2,10 @@ schema_version: 1
 project: OmniStackAI
 phase: BASIC/MVP
 founder_stage: 0
-current_task: R-482
+current_task: R-483
 current_status: done
 branch: main
-last_completed_task: R-482
+last_completed_task: R-483
 # TASK COMPILATION AUDIT — 2026-09-16
 # Performed to achieve 100% synchronization across all task-tracking documentation.
 # Tracker workbook expanded to 464 tasks with R-464.
@@ -34,6 +34,45 @@ task_compilation_audit:
       new_status: DONE
       reason: "Task fully completed on 2026-09-11 with 35 tests. Status left stale during rapid development sprint."
 last_completed_task_summary: >-
+  Completed R-483 (2026-09-19): fix - dynamic-route slug collision & duplicate FK identifier in the
+  edit-delta path. Second follow-up task after the 7-task Phase D roadmap, per the founder's
+  "complete one by one all" direction. Fixes the exact real bug found live during R-481's own
+  manual smoke test: (1) a Next.js dev-server crash ("You cannot use different slug names for the
+  same dynamic path ('counterId' !== 'counter_id')") and (2) a duplicate lib/types.ts identifier
+  (TS2300/TS2687/TS2717).
+  Root cause verified by direct source read before any fix: (1) the full-build prompt has no
+  path-param casing rule (camelCase by its own worked example) while the edit-delta prompt
+  explicitly demanded lower_snake_case for the whole path including {param}s - nothing reconciled
+  a new endpoint's param spelling against an existing endpoint's own param for the same resource;
+  apply_app_delta never even called normalize_ir(). (2) codegen/nextjs.py's _entity_interface()
+  unconditionally synthesized a "<relation>_id" FK field for every to-one relation with no check
+  against already-declared explicit fields - confirmed this exact shape (a field + same-named
+  relation) already sat, unexercised, in test_app_delta.py's own fixture.
+  Fixed at the structural root, not just the two known call sites: ApiEndpoint.__post_init__
+  (application_ir/ir.py) now canonicalizes every {param} to camelCase unconditionally via a new
+  pure _canonicalize_path_params() helper (idempotent), covering every construction path present
+  and future. _entity_interface() now skips the synthesized FK field when an explicit same-named
+  field already exists. Both prompts also corrected to ask for camelCase params, as a first line of
+  defense.
+  A pre-existing test initially failed after the fix - investigated, not reverted: its fixture's
+  hardcoded path used raw snake_case, and the previously-passing assertion matched that same raw
+  spelling. Confirmed not a functional regression - the generated reader code already defensively
+  checked the camelCase spelling as ITS OWN second-priority fallback, clear pre-existing evidence
+  this exact inconsistency was already anticipated. Updated the assertions to the new, correct
+  camelCase expectation rather than reverting.
+  Gates: agent-engine task verify 3,635 OK (6 new regression tests); repo task verify/lint/
+  security:quick/env:check all pass.
+  Live - reproduced the EXACT originally-reported scenario end to end: built the same counter app,
+  sent the same follow-up edit, started the preview -> real 200 ready, NO crash (grepped the real
+  log for the exact original error string, confirmed absent); listed the real generated dynamic
+  route folders on disk -> exactly one, no colliding sibling; ran a real tsc check via Problems ->
+  8 real errors remained (pre-existing, unrelated LLM-UI-synthesis noise, honestly not this task's
+  concern) but ZERO duplicate-identifier errors and zero in lib/types.ts; read the real generated
+  lib/types.ts directly -> exactly one user_id line, no duplicate.
+  NEXT (per "complete one by one all"): R-484 (real-time streaming, renumbered from R-483), per-user
+  backend multi-tenancy, and Publish/deploy each need an explicit founder architecture decision
+  (transport protocol, tenancy model, deploy target) before implementation.
+_prior_last_completed_task_summary_R482: >-
   Completed R-482 (2026-09-19): Model Provider settings UI. First follow-up task after the 7-task
   Phase D roadmap, per the founder's "complete one by one all" direction (2026-09-19). A real, live
   Dyad-style provider status page. Verified before writing code: model_gateway/overview.py's
@@ -1501,15 +1540,16 @@ blockers: []
 next_action: >-
   The founder-approved 7-task Phase D roadmap (R-475-R-481) shipped, then the founder said
   "Complete one by one all" (2026-09-19) - continue through every named follow-up, one Tracker ID
-  at a time, full discipline, same as every task so far. R-482 (Model Provider settings UI) is
-  done. NEXT: scope and fix the dynamic-route slug-collision codegen bug found live during R-481's
-  own smoke test - a Next.js dynamic-route slug-name collision ("counterId" vs "counter_id")
-  introduced by the edit-delta path, causing a real Next.js dev-server crash. After that: R-483
-  (real-time build/edit streaming), per-user backend multi-tenancy, and Publish/deploy each involve
-  a materially different architecture decision (transport protocol - SSE vs WebSocket; tenancy
-  model; deploy target/hosting) - per the standing "stop and ask for hard-gate architecture
-  decisions" rule, ask the founder which specific approach for each BEFORE implementing, rather than
-  assuming. Phase E (plan-gated UI, admin console, payment processor, proposed R-484+) still needs
-  its own explicit founder sign-off before starting.
+  at a time, full discipline, same as every task so far. R-482 (Model Provider settings UI) and
+  R-483 (fix: dynamic-route slug collision + duplicate FK identifier) are both done - the exact
+  originally-reported bug was reproduced live and confirmed fixed (no crash, one consistent route
+  folder, 0 duplicate-identifier tsc errors).
+  NEXT: R-484 (real-time build/edit streaming, renumbered from R-483 now that the bug fix took that
+  number), per-user backend multi-tenancy, and Publish/deploy each involve a materially different
+  architecture decision (transport protocol - SSE vs WebSocket; tenancy model; deploy
+  target/hosting) - per the standing "stop and ask for hard-gate architecture decisions" rule, ask
+  the founder which specific approach for each BEFORE implementing, rather than assuming. Phase E
+  (plan-gated UI, admin console, payment processor, proposed R-485+) still needs its own explicit
+  founder sign-off before starting.
   Keep task verify model/Docker/DB/install/network-free. The UI-component series remains
   paused/resumable; the tracker workbook still lags (ends at R-462).
