@@ -1,4 +1,4 @@
-# OmniStackAI — implementation progress (as of R-481)
+# OmniStackAI — implementation progress (as of R-482)
 
 A living summary of what is built, what is pending, and how to see results. Numbers come from the
 execution tracker (`R_&_D/OmniStackAI_Execution_Tracker_v6.xlsx`, `Phase_Roadmap`, 461 tasks as of
@@ -6,8 +6,27 @@ R-461 completion) plus the state files (`.ai/`), Git history, and CHANGELOG.
 
 ## Headline
 
-- **3,625 automated tests pass** (agent-engine + Go control-plane), fully offline and
+- **3,629 automated tests pass** (agent-engine + Go control-plane), fully offline and
   network-independent (`task verify`), plus the console's own `typecheck`/`lint`/`build` gates.
+- **R-482 — Model Provider settings UI (2026-09-19):** first follow-up task after the 7-task Phase D
+  roadmap shipped, per the founder's "complete one by one all" direction. A real, live Dyad-style
+  provider status page. `platform_overview()` already existed (real, tested) but only ever
+  generated a static snapshot for the public `/fabric` page — no live endpoint existed anywhere.
+  New, never surfaced before: calling `resolve_generation_provider_from_env()` safely reports which
+  provider would actually run the *next* build right now. New agent-engine `GET /api/providers`
+  (build-only mode included); new control-plane `GET /jobs/providers` (no debit); new authenticated
+  `/settings` page (live "Ready"/"Not ready" callout + provider table, linked from the Studio
+  topbar and home page). **A real bug was found and fixed during this task's own live smoke test**
+  (introduced by this task's own first draft, not a pre-existing platform issue): calling
+  `platform_overview()` before `resolve_generation_provider_from_env()` read the providers list's
+  "active" flags before `.env` had been lazily loaded — in a fresh process, every cloud provider
+  showed "Needs key" even with a real key configured, while `activeNow` was correct. Fixed by
+  reordering; verified with `env -i` (a clean environment) both reproducing and confirming the fix.
+  `task verify` **3,629 OK** (4 new tests); control-plane `go test` all green (48 tests, 3 new);
+  console `typecheck`/`lint`/`build` clean (20 routes, 2 new). Live: real `/api/providers` +
+  `/settings` both correct; cross-verified `activeNow` against a real build whose own log confirmed
+  the exact same provider (Groq) was actually used. See `.ai/tasks/R-482.md` for full verification
+  detail.
 - **R-481 — Tabbed workspace (2026-09-19): THE SEVENTH AND FINAL TASK of the founder-approved
   7-task Phase D roadmap (R-475–R-481) is complete.** Restructured `/studio`'s main pane into four
   real tabs — Preview, Files, Code, Problems — with chat persisting alongside, assembling R-474

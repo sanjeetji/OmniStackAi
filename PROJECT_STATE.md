@@ -4,6 +4,20 @@ Last updated: 2026-09-19
 ## Current Phase
 Stage 0 (Founder Build Sequence, Brief Section 91) — BASIC/MVP
 
+> **R-482 (2026-09-19): Model Provider settings UI.** First follow-up after the 7-task Phase D
+> roadmap shipped, per the founder's "complete one by one all" direction. A real, live Dyad-style
+> provider status page — `platform_overview()` already existed but only ever generated a static
+> snapshot for `/fabric`; new: calling `resolve_generation_provider_from_env()` safely reports which
+> provider would actually run the next build, never surfaced anywhere before. New agent-engine
+> `GET /api/providers`, new control-plane `GET /jobs/providers` (no debit), new authenticated
+> `/settings` page. **A real bug was found and fixed during this task's own live smoke test**
+> (introduced by this task's own first draft): a dotenv-load-ordering bug that made the providers
+> list's "active" flags read stale in a fresh process — fixed by reordering, verified with `env -i`.
+> `task verify` **3,629 OK**; control-plane `go test` all green (48 tests, 3 new); console
+> `typecheck`/`lint`/`build` clean (20 routes, 2 new). Live: cross-verified `activeNow` against a
+> real build whose own log confirmed the exact same provider was used.
+> NEXT: scope and fix the dynamic-route slug-collision codegen bug found live during R-481.
+
 > **R-481 (2026-09-19): Tabbed workspace — the SEVENTH AND FINAL task of the founder-approved
 > 7-task Phase D roadmap (R-475–R-481).** Restructured `/studio`'s main pane into four real tabs —
 > Preview, Files, Code, Problems — with chat persisting alongside, assembling R-474/R-477/R-479/

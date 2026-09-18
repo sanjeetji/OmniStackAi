@@ -37,6 +37,7 @@ from ..edit.apply import commit_edit
 from ..edit.diff import plan_edit
 from ..intake.app_delta import apply_app_delta, generate_app_delta_proposal
 from ..intake.provider_resolution import resolve_generation_provider_from_env
+from ..model_gateway.overview import platform_overview
 from ..intake.build_app import app_build_result_to_dict, build_app_from_prompt
 from ..model_gateway.accounting import UsageLedger
 from .files import BuildNotFoundError, list_build_files, read_build_file
@@ -555,6 +556,42 @@ def _turns(build_id: str, session_store: StudioSessionStore) -> dict:
     return session_store.turns_view(build_id)
 
 
+def _provider_status() -> dict:
+    """A live model-fabric status view for the console's Settings page (R-482).
+
+    `platform_overview()` is real, tested, and metadata-only (never a key value) but was previously
+    only ever exported to a static build-time JSON snapshot for the public /fabric page - this is
+    the first time it's served live. Adds `activeNow`: which provider would actually run the next
+    real build/edit, resolved via `resolve_generation_provider_from_env()` - a function that always
+    succeeds (it falls through to local Ollama, never raises for "nothing configured"), so the only
+    failure mode here would be a genuinely unexpected error, reported honestly rather than crashing
+    the whole status view.
+
+    Resolves `activeNow` BEFORE calling `platform_overview()`, not after - `resolve_generation_
+    provider_from_env()` lazily loads `.env` into `os.environ` on its first-ever call in this
+    process (`load_dotenv=True` by default), so calling it first ensures `platform_overview()`'s own
+    `os.environ` reads see the same, fully-loaded environment. Getting this backwards was a real bug
+    caught live during this task's own manual smoke test: in a process where no build had happened
+    yet, the providers list showed every cloud provider as "Needs key" (read before .env loaded)
+    while `activeNow` correctly named the real configured provider (read after) - an honest,
+    internally-inconsistent response, not a crash, but wrong. Fixed by simply reordering the two
+    calls rather than reaching into `_load_dotenv_if_needed` (a private helper of a different
+    module) directly.
+    """
+    active_now: dict | None = None
+    active_now_error: str | None = None
+    try:
+        provider, model_id, _max_output, _timeout = resolve_generation_provider_from_env()
+        active_now = {"providerId": provider.provider_id, "modelId": model_id}
+    except Exception as error:
+        active_now_error = str(error)
+
+    overview = platform_overview()
+    overview["activeNow"] = active_now
+    overview["activeNowError"] = active_now_error
+    return overview
+
+
 def _check_build_problems(build_id: str, history: StudioBuildHistory, problems_store: StudioProblemsStore) -> dict:
     """Run a fresh `tsc` check for `build_id` and remember the result (R-480)."""
     root_dir = _resolve_build_dir(build_id, history)
@@ -712,6 +749,9 @@ def main() -> None:
         # mode too, same reasoning as file browsing and editing above.
         "problems_check_fn": lambda build_id: _check_build_problems(build_id, history, problems_store),
         "problems_get_fn": lambda build_id: _get_build_problems(build_id, history, problems_store),
+        # R-482: needs only env vars + one optional lightweight local ping, never a toolchain or
+        # running preview - wired in build-only mode too, same reasoning as the routes above.
+        "providers_fn": _provider_status,
         "turns_fn": lambda build_id: _turns(build_id, session_store),
     }
     if preview_manager is not None:

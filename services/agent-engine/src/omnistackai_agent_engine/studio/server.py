@@ -33,6 +33,7 @@ FileTreeFn = Callable[[str], dict]
 EditFn = Callable[[str, str], dict]
 ReadFileFn = Callable[[str, str], dict]
 ProblemsFn = Callable[[str], dict]
+ProvidersFn = Callable[[], dict]
 
 _MAX_BODY_BYTES = 64 * 1024
 
@@ -52,6 +53,7 @@ def _make_handler(
     turns_fn: FileTreeFn | None = None,
     problems_check_fn: ProblemsFn | None = None,
     problems_get_fn: ProblemsFn | None = None,
+    providers_fn: ProvidersFn | None = None,
     registry: SolutionPackRegistry | None = None,
     ecosystem_registry: EcosystemPackRegistry | None = None,
     switch_surface_fn: PreviewBuildFn | None = None,
@@ -257,6 +259,14 @@ def _make_handler(
                     self._send_json(404, {"error": "preview controls are not enabled"})
                 else:
                     self._send_json(200, status_fn())
+            elif self.path == "/api/providers":
+                if providers_fn is None:
+                    self._send_json(404, {"error": "provider status is not enabled"})
+                    return
+                try:
+                    self._send_json(200, providers_fn())
+                except Exception as error:  # surface any other failure as a clean 502
+                    self._send_json(502, {"error": str(error)})
             elif self.path == "/api/history":
                 if history_fn is None:
                     self._send_json(404, {"error": "preview controls are not enabled"})
@@ -855,6 +865,7 @@ def create_studio_server(
     turns_fn: FileTreeFn | None = None,
     problems_check_fn: ProblemsFn | None = None,
     problems_get_fn: ProblemsFn | None = None,
+    providers_fn: ProvidersFn | None = None,
     solution_pack_registry: SolutionPackRegistry | None = None,
     ecosystem_pack_registry: EcosystemPackRegistry | None = None,
     switch_surface_fn: PreviewBuildFn | None = None,
@@ -904,7 +915,10 @@ def create_studio_server(
     (``POST /api/build/{id}/problems``, R-480, triggers a fresh `tsc` type-check) and
     ``problems_get_fn`` (``GET /api/build/{id}/problems``, the last stored report) may also be wired in
     build-only mode -- the check itself needs the build's own installed `node_modules`/`tsc` (from a prior
-    live-preview install), but not a *currently running* preview.
+    live-preview install), but not a *currently running* preview. ``providers_fn``
+    (``GET /api/providers``, R-482, a zero-arg status view of the model fabric plus which provider would
+    actually run the next real call) may also be wired in build-only mode -- it needs only environment
+    variables and one optional, lightweight local health ping, never a toolchain or running preview.
     """
     return ThreadingHTTPServer(
         (host, port),
@@ -923,6 +937,7 @@ def create_studio_server(
             turns_fn=turns_fn,
             problems_check_fn=problems_check_fn,
             problems_get_fn=problems_get_fn,
+            providers_fn=providers_fn,
             registry=solution_pack_registry,
             ecosystem_registry=ecosystem_pack_registry,
             switch_surface_fn=switch_surface_fn,

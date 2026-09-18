@@ -1,9 +1,33 @@
 # Current Handoff
 
-Task ID: R-481
+Task ID: R-482
 Status: done
 Phase: BASIC/MVP — Founder Stage 0
 Branch: `main`
+
+> **R-482 Completed (2026-09-19): Model Provider settings UI.**
+> - First follow-up after the 7-task Phase D roadmap shipped, per the founder's "complete one by
+>   one all" direction. A real, live Dyad-style provider status page. `platform_overview()` already
+>   existed (real, tested) but only ever generated a static snapshot for `/fabric` — no live
+>   endpoint existed anywhere. New: calling `resolve_generation_provider_from_env()` safely reports
+>   which provider would actually run the *next* build, never surfaced anywhere before.
+> - New agent-engine `GET /api/providers` (build-only mode included); new control-plane
+>   `GET /jobs/providers` (no debit); new authenticated `/settings` page (live "Ready" callout +
+>   provider table, linked from the Studio topbar and home page).
+> - **A real bug found AND FIXED during this task's own live smoke test** (introduced by this
+>   task's own first draft): calling `platform_overview()` before `resolve_generation_provider_
+>   from_env()` read the providers list's `active` flags *before* `.env` had been lazily loaded —
+>   in a fresh process, every cloud provider showed "Needs key" even with a real key configured,
+>   while `activeNow` (computed after the dotenv load) was correct. Fixed by reordering; verified
+>   with `env -i` both reproducing and confirming the fix.
+> - Gates: agent-engine `task verify` **3,629 OK** (4 new); control-plane `go test` all green (48
+>   tests, 3 new); console `typecheck`/`lint`/`build` clean (20 routes, 2 new); repo
+>   `task verify`/`lint`/`security:quick`/`env:check` all pass. **Live**: real `/api/providers` +
+>   `/settings` both correct; **cross-verified `activeNow` against a real build** — the
+>   agent-engine's own log showed real Groq rate-limit retries, confirming the real call matched
+>   `activeNow`'s report exactly.
+> - **NEXT** (per "complete one by one all"): scope and fix the dynamic-route slug-collision
+>   codegen bug found live during R-481. See `.ai/tasks/R-482.md`.
 
 > **R-481 Completed (2026-09-19): Tabbed workspace — the SEVENTH AND FINAL task of the
 > founder-approved 7-task Phase D roadmap (R-475–R-481).**

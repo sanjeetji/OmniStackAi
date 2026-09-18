@@ -2,9 +2,9 @@ import { redirect } from "next/navigation";
 import Link from "next/link";
 import { getCurrentUser } from "@/lib/session";
 import LogoutButton from "../logout-button";
-import { BackArrowIcon, SettingsIcon } from "./studio-icons";
+import { BackArrowIcon } from "../studio/studio-icons";
 
-export default async function StudioLayout({
+export default async function SettingsLayout({
   children,
 }: Readonly<{ children: React.ReactNode }>) {
   const user = await getCurrentUser();
@@ -17,14 +17,9 @@ export default async function StudioLayout({
       <header className="studio-topbar">
         <Link href="/" className="studio-topbar-back" aria-label="Back to home">
           <BackArrowIcon />
-          <span className="studio-topbar-brand">OmniStackAI Studio</span>
+          <span className="studio-topbar-brand">OmniStackAI Settings</span>
         </Link>
-        <div className="studio-topbar-actions">
-          <Link href="/settings" className="studio-topbar-icon-link" aria-label="Settings">
-            <SettingsIcon />
-          </Link>
-          <LogoutButton />
-        </div>
+        <LogoutButton />
       </header>
       <main className="studio-main">{children}</main>
     </div>

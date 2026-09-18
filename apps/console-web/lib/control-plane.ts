@@ -345,3 +345,35 @@ export function getBuildProblems(token: string, buildId: string): Promise<Proble
     headers: { Authorization: `Bearer ${token}` },
   });
 }
+
+/** One provider's status, exactly as `model_gateway/overview.py`'s `platform_overview()` (R-482)
+ * reports it - `active` reflects only whether an API key is configured, never the key itself. */
+export interface ProviderInfo {
+  providerId: string;
+  tier: "local" | "cloud";
+  kind: string;
+  defaultModel: string;
+  active: boolean;
+  keyEnv: string | null;
+}
+
+/** A live status view of the model fabric via `GET /jobs/providers` (R-482) - which providers have
+ * a key configured, plus `activeNow`: the exact provider/model that would run the *next* real
+ * build/edit, resolved live (never a guess). `activeNow` is `null` only if resolving it raised a
+ * genuinely unexpected error (never for "nothing configured" - a real deployment always has at
+ * least local Ollama to fall back to), in which case `activeNowError` carries the real message. */
+export interface ProviderStatus {
+  note: string;
+  routingMode: string;
+  cloudTierSelected: string | null;
+  providers: ProviderInfo[];
+  activeNow: { providerId: string; modelId: string } | null;
+  activeNowError: string | null;
+}
+
+/** Reads the live provider status via `GET /jobs/providers` (R-482) - read-only, no credit debit. */
+export function getProviderStatus(token: string): Promise<ProviderStatus> {
+  return callControlPlane<ProviderStatus>("/jobs/providers", {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+}

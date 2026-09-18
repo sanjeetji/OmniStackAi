@@ -1,27 +1,35 @@
-task_id: R-481
+task_id: R-482
 status: completed
 phase: MVP
 tracker_row: null
 started_at: "2026-09-19"
 completed_at: "2026-09-19"
 objective: >-
-  Seventh and final task of the approved 7-task Phase D roadmap. Restructure /studio's main pane
-  into four real tabs - Preview, Files, Code, Problems - with chat persisting alongside (not as a
-  tab itself), assembling R-474 (files), R-477 (chat), R-479 (preview), and R-480 (problems). Files
-  and Code stay separate per the founder's explicit decision, sharing one lifted selectedFile state.
-  New code-highlight.ts: a hand-rolled tokenizer porting the approach of codegen/nextjs.py's own
-  generated tokenizeCodeLine/normalizeLang, scoped to TS/TSX/JS/JSON/CSS/Markdown/plain. Problems
-  tab is an explicit on-demand "Check for problems" button per R-480's own design, not automatic.
+  Named, independent follow-up from the Phase D roadmap. A real, live Model Provider settings page.
+  platform_overview() already exists (real, tested, metadata-only) but is only ever used to
+  generate a static build-time JSON snapshot for the public /fabric page - no live HTTP endpoint
+  exists anywhere. New: resolve_generation_provider_from_env() always succeeds (falls through to
+  Ollama, never raises) and its returned ModelProvider has a real .provider_id - calling it safely
+  reports which provider would actually run the next build right now. New agent-engine
+  GET /api/providers (build-only mode included, no toolchain needed), new control-plane
+  GET /jobs/providers (no debit), new authenticated console /settings page reusing /fabric's
+  existing table visual language but live-polled instead of a static snapshot.
 allowed_paths:
-  - apps/console-web/app/studio/studio-tabs.tsx
-  - apps/console-web/app/studio/code-highlight.ts
-  - apps/console-web/app/api/jobs/build/[id]/problems/route.ts
-  - apps/console-web/app/studio/studio-chat.tsx
-  - apps/console-web/app/studio/studio-workspace.tsx
+  - services/agent-engine/src/omnistackai_agent_engine/studio/live_serve.py
+  - services/agent-engine/src/omnistackai_agent_engine/studio/server.py
+  - services/agent-engine/tests/test_studio_server.py
+  - services/control-plane/internal/jobs/handler.go
+  - services/control-plane/internal/jobs/handler_test.go
   - apps/console-web/lib/control-plane.ts
+  - apps/console-web/app/api/providers/route.ts
+  - apps/console-web/app/settings/layout.tsx
+  - apps/console-web/app/settings/page.tsx
+  - apps/console-web/app/studio/studio-icons.tsx
+  - apps/console-web/app/studio/layout.tsx
+  - apps/console-web/app/page.tsx
   - apps/console-web/app/globals.css
   - scripts/test.sh
-  - .ai/tasks/R-481.md
+  - .ai/tasks/R-482.md
   - .ai/CURRENT_TASK.yaml
   - .ai/PROJECT_STATE.yaml
   - .ai/WORK_LOG.md
@@ -30,34 +38,35 @@ allowed_paths:
   - CHANGELOG.md
   - docs/PROGRESS.md
   - docs/RESUME_PROMPT.md
-  - R_&_D/OmniStackAI_Commercial_Platform_Kickoff_v1.md
 forbidden_changes:
-  - No changes to services/control-plane or services/agent-engine
+  - No changes to /fabric, data/overview.json, or the console:snapshot task
+  - No BYOK credential entry/editing
   - Do not modify or commit the untracked .claude directory
 required_gates:
-  - "console-web: pnpm run typecheck, pnpm run lint, pnpm run build"
+  - "agent-engine: task verify (0 model/network calls)"
+  - "control-plane: go build ./..., go vet ./..., go test ./..."
   - task verify
   - task lint
   - task security:quick
   - task env:check
-  - "manual smoke (real docker control-plane + real agent-engine studio server in preview mode + next start): full loop - build -> Preview+Files+Code -> edit -> confirm refresh -> Problems -> real tsc check"
+  - "console-web: pnpm run typecheck, pnpm run lint, pnpm run build"
+  - "manual smoke: real signed-in request to /settings shows the real configured provider list and a real active-now provider/model matching what a real build actually used"
 model_tool_trace:
   routing: deterministic_only
   local_calls: 0
   cloud_calls: 0
   note: >-
-    Pure console-web work, 0 model/network calls in any automated gate. The manual smoke test's
-    build+edit calls use whatever provider is configured (real Groq or local Ollama); the Problems
-    check runs a real local tsc, not a model/network call.
+    Go/Python/TS implementation, 0 model/network calls in any automated gate. The live smoke test's
+    activeNow check makes a real, lightweight local Ollama ping (<=1.5s) and/or reads env - never a
+    real model generation call.
 next_action: >-
-  R-481 is complete (see .ai/tasks/R-481.md for full Gates & Evidence) - the seventh and FINAL task
-  of the founder-approved Phase D roadmap (R-475-R-481). All seven tasks are now shipped, tested,
-  gated, and pushed to origin/main. A real, pre-existing codegen bug was found live during R-481's
-  own smoke test (a Next.js dynamic-route slug-name collision, "counterId" vs "counter_id", from
-  the edit-delta path) - not fixed as part of this task, out of scope, worth its own future Tracker
-  ID once scoped. Named, not-yet-scheduled follow-ups per the plan file's "Out of this execution
-  pass" section: R-482 (Model Provider settings UI, independent, can slot in anytime), R-483
-  (real-time build/edit streaming, needs R-475-481 to exist first), per-user backend
-  multi-tenancy (no Tracker ID yet), and Publish/deploy (no backend exists yet). Before starting any
-  of these, or the newly-found route-slug bug, get explicit founder direction on priority - this
-  session's approved plan ends here.
+  R-482 is complete (see .ai/tasks/R-482.md for full Gates & Evidence, including a real
+  dotenv-load-ordering bug found and fixed live during this task's own smoke test - not a
+  pre-existing platform issue, introduced and fixed within this same task). Per the founder's
+  "complete one by one all" direction: NEXT is scoping and fixing the dynamic-route slug-collision
+  codegen bug found live during R-481 (edit-delta path generates a Next.js dynamic route whose slug
+  name can collide, e.g. "counterId" vs "counter_id", causing a real Next.js dev-server crash).
+  After that, R-483 (real-time streaming), per-user multi-tenancy, and Publish/deploy each involve a
+  materially different architecture decision (transport protocol, tenancy model, deploy target) -
+  per the standing "stop and ask for hard-gate architecture decisions" rule, ask the founder which
+  specific approach they want for each BEFORE implementing, rather than assuming.

@@ -1043,6 +1043,64 @@ func TestHandleBuildProblemsGetProxiesVerbatim(t *testing.T) {
 	}
 }
 
+func TestHandleProvidersRejectsMissingToken(t *testing.T) {
+	agentEngine := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		t.Fatal("agent-engine must not be called for an unauthenticated request")
+	}))
+	defer agentEngine.Close()
+
+	server := newTestServer(t, agentEngine.URL, fakeAuthStore{returnErr: auth.ErrSessionNotFound}, &fakeCreditStore{}, 1000)
+
+	resp := getBuildPath(t, server, "", "/jobs/providers")
+	if resp.StatusCode != http.StatusUnauthorized {
+		t.Fatalf("status = %d, want %d", resp.StatusCode, http.StatusUnauthorized)
+	}
+}
+
+func TestHandleProvidersProxiesVerbatimAndDoesNotDebit(t *testing.T) {
+	var requestedPath string
+	agentEngine := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		requestedPath = r.URL.Path
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusOK)
+		_, _ = w.Write([]byte(`{"providers":[{"providerId":"groq","active":true}],"activeNow":{"providerId":"groq","modelId":"llama-3.3-70b-versatile"},"activeNowError":null}`))
+	}))
+	defer agentEngine.Close()
+
+	creditStore := &fakeCreditStore{}
+	server := newTestServer(t, agentEngine.URL, fakeAuthStore{user: newTestUser()}, creditStore, 1000)
+
+	resp := getBuildPath(t, server, validToken, "/jobs/providers")
+	if resp.StatusCode != http.StatusOK {
+		t.Fatalf("status = %d, want %d", resp.StatusCode, http.StatusOK)
+	}
+	if requestedPath != "/api/providers" {
+		t.Fatalf("agent-engine received path = %q, want %q", requestedPath, "/api/providers")
+	}
+	var payload map[string]any
+	decodeJSON(t, resp, &payload)
+	activeNow, _ := payload["activeNow"].(map[string]any)
+	if activeNow["providerId"] != "groq" {
+		t.Fatalf("payload[activeNow] = %v, want the agent-engine's own real status proxied unchanged", payload["activeNow"])
+	}
+	if creditStore.callCount() != 0 {
+		t.Fatalf("DebitCredits called %d times, want 0 (a status read is not billable)", creditStore.callCount())
+	}
+}
+
+func TestHandleProvidersReturnsBadGatewayWhenAgentEngineIsUnreachable(t *testing.T) {
+	closedServer := httptest.NewServer(http.HandlerFunc(func(http.ResponseWriter, *http.Request) {}))
+	unreachableURL := closedServer.URL
+	closedServer.Close()
+
+	server := newTestServer(t, unreachableURL, fakeAuthStore{user: newTestUser()}, &fakeCreditStore{}, 1000)
+
+	resp := getBuildPath(t, server, validToken, "/jobs/providers")
+	if resp.StatusCode != http.StatusBadGateway {
+		t.Fatalf("status = %d, want %d", resp.StatusCode, http.StatusBadGateway)
+	}
+}
+
 func TestHandleBuildReturns500WhenDebitCreditsFails(t *testing.T) {
 	agentEngine := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")

@@ -208,7 +208,7 @@ front-door bricks, R-420 is generated-SQL hardening, R-421..R-426 are Studio pre
 R-427..R-429 are generated-app compile fixes, R-430..R-457 are the first twenty-eight differentiating-spine
 bricks (Scope Compiler through Ecosystem Multi-Surface SLA, SLO, and Error Budget Contracts).
 Git, state files (.ai/), CHANGELOG, and docs/PROGRESS.md remain the executable/detail sources of truth.
-Current through R-481; `task verify` = 3,625 tests (agent-engine) + the Go control-plane's own suite +
+Current through R-482; `task verify` = 3,629 tests (agent-engine) + the Go control-plane's own suite +
 the Next.js console's typecheck/lint/build. R-416 added prompt-to-IR intake, R-417 materialized a generated
 owned repo, R-418 added the local chat studio, R-419 added turnkey local run, and R-420 fixed the two
 SQL defects found by live execution. R-421 added an explicit `task agent-engine:studio:preview` mode:
@@ -697,13 +697,28 @@ WHAT TO DO NEXT
   correctly surfaced as an honest Preview error and independently caught by a real Problems check,
   cross-confirming both features' error-surfacing design. **THIS COMPLETES THE APPROVED 7-TASK
   PHASE D ROADMAP.**
-- NEXT: no pre-approved task remains queued - needs explicit founder direction on priority.
-  R-482 (Model Provider settings UI) is independent, can slot in anytime.
-  R-483 (real-time streaming - its prerequisite, a UI with real progress to stream into, now
-  exists) and per-user backend multi-tenancy (no Tracker ID yet) remain named, not forgotten, gaps
-  to genuine parity. The newly-found dynamic-route slug-collision codegen bug also needs its own
-  scoped Tracker ID. After that, Phase E (plan-gated UI, admin console, payment processor, proposed
-  R-484+) needs its own explicit founder sign-off before starting.
+- R-482 (2026-09-19, done) built the Model Provider settings UI, the first follow-up task after the
+  roadmap, per the founder's "complete one by one all" direction: continue through every named
+  follow-up, one Tracker ID at a time, full discipline. A real, live Dyad-style provider status
+  page - `platform_overview()` already existed but only ever generated a static snapshot for
+  `/fabric`; new: calling `resolve_generation_provider_from_env()` safely reports which provider
+  would actually run the next build, never surfaced anywhere before. New agent-engine
+  `GET /api/providers`, new control-plane `GET /jobs/providers` (no debit), new authenticated
+  `/settings` page. **A real bug was found and fixed during this task's own live smoke test**
+  (introduced by this task's own first draft): a dotenv-load-ordering bug that made the providers
+  list's "active" flags read stale in a fresh process - fixed by reordering, verified with `env -i`.
+  `task verify` 3,629 OK; control-plane `go test` all green (48 tests, 3 new); console
+  `typecheck`/`lint`/`build` clean (20 routes, 2 new). Live: cross-verified `activeNow` against a
+  real build whose own log confirmed the exact same provider was used.
+- NEXT (per "complete one by one all"): scope and fix the dynamic-route slug-collision codegen bug
+  found live during R-481 (edit-delta path can generate colliding Next.js route slugs, e.g.
+  "counterId" vs "counter_id"). After that: R-483 (real-time streaming) and per-user backend
+  multi-tenancy each involve a materially different architecture decision (transport protocol - SSE
+  vs WebSocket; tenancy model) - per the standing "stop and ask for hard-gate architecture
+  decisions" rule, ask the founder which specific approach before implementing, rather than
+  assuming. Publish/deploy likewise needs an explicit deploy-target decision first. After that,
+  Phase E (plan-gated UI, admin console, payment processor, proposed R-484+) needs its own explicit
+  founder sign-off before starting.
   Keep `task verify` model/Docker/DB-free at its core (the console's own build/lint/typecheck gates need
   no live control-plane; any live/model path stays opt-in); preserve single-session ownership and
   explicit trusted-local mode.

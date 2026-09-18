@@ -1,5 +1,46 @@
 # Work Log
 
+## 2026-09-19 — R-482 (Model Provider settings UI)
+
+- **Why:** first follow-up task after the 7-task Phase D roadmap shipped, per the founder's
+  "complete one by one all" direction. A real, live Dyad-style provider status page.
+- **Verified before writing code:** `model_gateway/overview.py`'s `platform_overview()` already
+  existed (real, tested, metadata-only) but was only ever used to generate a static build-time JSON
+  snapshot for the public `/fabric` page — no live HTTP endpoint existed anywhere.
+- **New, never surfaced anywhere before:** `resolve_generation_provider_from_env()` always succeeds
+  (it falls through to local Ollama, never raises for "nothing configured") and its returned
+  `ModelProvider` has a real `.provider_id` — calling it safely reports which provider would
+  actually run the *next* build right now.
+- New agent-engine `GET /api/providers` (wired build-only-mode-inclusive — needs only env vars plus
+  one optional lightweight local ping, never a toolchain or running preview). New control-plane
+  `GET /jobs/providers` (no credit debit — a status read isn't a model call). New authenticated
+  console `/settings` page (new `layout.tsx` mirroring `studio/layout.tsx`'s auth gate, a new
+  `SettingsIcon`, linked from the Studio topbar and the home page) — live "Ready"/"Not ready"
+  callout plus the same provider-table visual language `/fabric` already established, now
+  live-polled instead of a static snapshot.
+- **A real bug found AND FIXED during this task's own live smoke test** (introduced by this task's
+  own first draft, not a pre-existing platform issue): calling `platform_overview()` *before*
+  `resolve_generation_provider_from_env()` meant the providers list's `active` flags were computed
+  before `.env` had been lazily loaded into the process (a side effect of the resolve function's own
+  `load_dotenv=True` default) — in a fresh process that had never handled a build, every cloud
+  provider showed "Needs key" even with a real key configured, while `activeNow` (computed after the
+  dotenv load already happened) correctly named the real provider. An honest but
+  internally-inconsistent response, not a crash — caught only because the live smoke test used a
+  freshly started process, exactly the scenario a real first-time user would hit. Fixed by
+  reordering: resolve `activeNow` first, then `platform_overview()` second — verified with `env -i`
+  (a completely clean environment) both reproducing the bug and confirming the fix.
+- **Gates:** agent-engine `task verify` 3,629 OK (4 new tests). Control-plane `go test` all green
+  (48 tests, 3 new). Console `typecheck`/`lint`/`build` clean (20 routes, 2 new). Repo
+  `task verify`/`lint`/`security:quick`/`env:check` all pass.
+- **Live** (real control-plane rebuilt + real agent-engine Studio server in preview mode, freshly
+  restarted after the fix): real `/api/providers` returned `activeNow: groq` plus a correct
+  provider table; real `/settings` rendered the live "Ready" callout. **Cross-verified `activeNow`
+  against a real build**: the agent-engine's own log showed real Groq rate-limit retries, confirming
+  the real call genuinely used Groq — exactly matching `activeNow`'s own report, not a guess.
+  Unauthenticated calls correctly blocked (401 API, 307 page redirect).
+- **NEXT** (per the founder's "complete one by one all"): scope and fix the dynamic-route
+  slug-collision codegen bug found live during R-481's own smoke test.
+
 ## 2026-09-19 — R-481 (Tabbed workspace) — FINAL task of the 7-task Phase D roadmap
 
 - **Why:** seventh and final task of the approved 7-task Phase D roadmap. Restructure `/studio`'s

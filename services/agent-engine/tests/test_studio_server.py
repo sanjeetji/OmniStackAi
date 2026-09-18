@@ -622,6 +622,43 @@ class TestStudioProblemsRoutes(unittest.TestCase):
             self.assertEqual(_get(base + "/api/preview")[0], 404)
 
 
+class TestStudioProvidersRoute(unittest.TestCase):
+    """R-482: GET /api/providers - a live model-fabric status view."""
+
+    def test_get_providers(self) -> None:
+        overview = {
+            "providers": [{"providerId": "ollama-local", "active": True}],
+            "activeNow": {"providerId": "ollama-local", "modelId": "qwen2.5-coder:14b"},
+            "activeNowError": None,
+        }
+        with running_server(RecordingBuild(STUB_RESULT), providers_fn=lambda: overview) as base:
+            status, data = _get(base + "/api/providers")
+            self.assertEqual(status, 200)
+            body = json.loads(data)
+            self.assertEqual(body["activeNow"]["providerId"], "ollama-local")
+
+    def test_providers_404_when_disabled(self) -> None:
+        with running_server(RecordingBuild(STUB_RESULT)) as base:
+            self.assertEqual(_get(base + "/api/providers")[0], 404)
+
+    def test_providers_maps_unexpected_error_to_502(self) -> None:
+        def providers():
+            raise RuntimeError("boom")
+
+        with running_server(RecordingBuild(STUB_RESULT), providers_fn=providers) as base:
+            status, data = _get(base + "/api/providers")
+            self.assertEqual(status, 502)
+            self.assertIn("boom", json.loads(data)["error"])
+
+    def test_providers_available_without_any_preview_wiring(self) -> None:
+        with running_server(
+            RecordingBuild(STUB_RESULT),
+            providers_fn=lambda: {"providers": [], "activeNow": None, "activeNowError": None},
+        ) as base:
+            self.assertEqual(_get(base + "/api/providers")[0], 200)
+            self.assertEqual(_get(base + "/api/preview")[0], 404)
+
+
 class TestResultDict(unittest.TestCase):
     def test_app_build_result_to_dict_shape(self) -> None:
         ir = example_ir("minimal-blog")

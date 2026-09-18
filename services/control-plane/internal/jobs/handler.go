@@ -27,6 +27,7 @@ func Register(mux *http.ServeMux, deps Deps) {
 	mux.HandleFunc("POST /jobs/build/{id}/preview", handleBuildPreview(deps))
 	mux.HandleFunc("POST /jobs/build/{id}/problems", handleBuildProblemsCheck(deps))
 	mux.HandleFunc("GET /jobs/build/{id}/problems", handleBuildProblemsGet(deps))
+	mux.HandleFunc("GET /jobs/providers", handleProviders(deps))
 }
 
 // handleBuild authenticates the caller and forwards their JSON body verbatim to the agent-engine's
@@ -387,6 +388,20 @@ func handleBuildProblemsGet(deps Deps) http.HandlerFunc {
 			return
 		}
 		proxyGet(w, r, deps, deps.AgentEngineURL+"/api/build/"+url.PathEscape(id)+"/problems")
+	}
+}
+
+// handleProviders proxies GET /api/providers (R-482) verbatim - a live status view of the model
+// fabric (which cloud providers have a key configured, plus which provider would actually run the
+// next real call). Same auth/no-debit shape as handleBuildFiles - a status read isn't a billable
+// model call.
+func handleProviders(deps Deps) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		if _, err := auth.RequireUser(r.Context(), deps.AuthStore, r); err != nil {
+			writeAuthError(w, deps, err)
+			return
+		}
+		proxyGet(w, r, deps, deps.AgentEngineURL+"/api/providers")
 	}
 }
 

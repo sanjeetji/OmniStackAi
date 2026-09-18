@@ -535,4 +535,30 @@ for tab_label in '"Preview"' '"Files"' '"Code"' '"Problems"'; do
   fi
 done
 
+# R-482: Model Provider settings UI.
+for required_file in \
+  "$console_root/app/settings/layout.tsx" \
+  "$console_root/app/settings/page.tsx" \
+  "$console_root/app/api/providers/route.ts"; do
+  if [[ ! -f "$required_file" ]]; then
+    printf 'Missing R-482 contract file: %s\n' "$required_file"
+    exit 1
+  fi
+done
+
+if ! rg -q 'getProviderStatus' "$console_root/lib/control-plane.ts"; then
+  printf 'R-482 must add getProviderStatus() client to lib/control-plane.ts.\n'
+  exit 1
+fi
+
+if ! rg -q 'GET /jobs/providers' "$control_plane_root/internal/jobs/handler.go"; then
+  printf 'R-482 control-plane must register: GET /jobs/providers\n'
+  exit 1
+fi
+
+if ! rg -q 'providers_fn' "$agent_engine_root/src/omnistackai_agent_engine/studio/server.py"; then
+  printf 'R-482 must wire providers_fn into studio/server.py.\n'
+  exit 1
+fi
+
 printf 'Repository contract tests passed.\n'
