@@ -208,7 +208,7 @@ front-door bricks, R-420 is generated-SQL hardening, R-421..R-426 are Studio pre
 R-427..R-429 are generated-app compile fixes, R-430..R-457 are the first twenty-eight differentiating-spine
 bricks (Scope Compiler through Ecosystem Multi-Surface SLA, SLO, and Error Budget Contracts).
 Git, state files (.ai/), CHANGELOG, and docs/PROGRESS.md remain the executable/detail sources of truth.
-Current through R-487; `task verify` = 3,694 tests (agent-engine) + the Go control-plane's own suite +
+Current through R-488; `task verify` = 3,707 tests (agent-engine) + the Go control-plane's own suite +
 the Next.js console's typecheck/lint/build. R-416 added prompt-to-IR intake, R-417 materialized a generated
 owned repo, R-418 added the local chat studio, R-419 added turnkey local run, and R-420 fixed the two
 SQL defects found by live execution. R-421 added an explicit `task agent-engine:studio:preview` mode:
@@ -786,9 +786,19 @@ WHAT TO DO NEXT
   placeholder - fixed with one line, drivers.py added to allowed_paths mid-task. No real
   VERCEL_TOKEN/VERCEL_PROJECT_ID exist in this environment - live-cloud verification honestly
   deferred. `task verify` 3,694 OK (14 new tests); repo gates all pass.
-- NEXT: R-488 (Daytona driver - the third provider, notable because its documented default is
-  plain Docker containers rather than a microVM, a real isolation-strength tradeoff worth
-  surfacing honestly), R-489 (the free WebContainers browser-only option - client-side in the
+- R-488 (2026-09-19, done) is the third of the five-task sequence: a real Daytona driver, whose
+  API is shaped a third distinct way - the create response carries no URL at all, so create()
+  makes a second real call, GET /sandbox/{id}/ports/{port}/preview-url, to get one. A real
+  base-URL ambiguity across Daytona's own docs was found and resolved the same way E2B's was.
+  create() always requests "public": true since SandboxHandle.url has no room for a companion
+  preview-access-token header. A real, honest tradeoff surfaced, not hidden: Daytona's documented
+  default isolation is plain Docker containers, weaker than E2B/Vercel's Firecracker microVMs - not
+  worked around, called out for R-490. No real DAYTONA_API_KEY exists in this environment -
+  live-cloud verification honestly deferred. `task verify` 3,707 OK (13 new tests); repo gates all
+  pass; unlike R-487, no providers.py/drivers.py change was needed this time.
+  **All three sandbox providers the founder asked for (E2B, Vercel Sandbox, Daytona) now have
+  real, tested, pluggable drivers behind one shared contract.**
+- NEXT: R-489 (the free WebContainers browser-only option - client-side in the
   console, Node.js/frontend apps only, an honest documented limitation since WebContainers cannot
   run Python or Go), R-490 (a provider-selection surface exposing the founder's explicit "switch
   easily by cost/speed/smoothness" ask - the point where more than one provider actually gets

@@ -1,9 +1,37 @@
 # Current Handoff
 
-Task ID: R-487
+Task ID: R-488
 Status: done
 Phase: BASIC/MVP — Founder Stage 0
 Branch: `main`
+
+> **R-488 Completed (2026-09-19): Runtime — real Daytona driver.**
+> - Third of the five-task sequence (R-486..R-490). E2B and Vercel Sandbox each proved
+>   `SandboxLifecycleProvider`/`sandbox_http.py` generalize; this task adds Daytona, shaped a
+>   third, genuinely distinct way: the create response carries **no URL at all** — a second real
+>   call, `GET /sandbox/{id}/ports/{port}/preview-url`, is required, verified by a dedicated test
+>   asserting both requests' exact shapes and strict ordering.
+> - `create()` always requests `"public": true`, since a non-public sandbox's preview link needs a
+>   companion `X-Daytona-Preview-Token` header that `SandboxHandle.url`'s single-string shape has
+>   no room for.
+> - **A real base-URL ambiguity across Daytona's own docs** was found and resolved the same way
+>   R-486's E2B v1/v2 ambiguity was — preferring the more specific, structured, directly-fetched
+>   source (`api.daytona.io/sandbox`).
+> - **A real, honest isolation-strength tradeoff, surfaced not hidden**: Daytona's documented
+>   default isolation is plain Docker containers — weaker than E2B/Vercel's Firecracker microVMs.
+>   Not worked around; called out explicitly for whenever R-490's provider-selection surface
+>   exists.
+> - No real `DAYTONA_API_KEY` exists in this environment — live-cloud verification honestly
+>   deferred, not faked.
+> - Gates: agent-engine `task verify` **3,707 OK** (13 new); repo `task verify`/`lint`/
+>   `security:quick`/`env:check` all pass; new `scripts/test.sh` contract block. Unlike R-487, no
+>   `runtime/providers.py`/`drivers.py` edit was needed — `RUNTIME_SPECS["daytona"]` already
+>   existed, so every pre-existing suite passes completely unmodified.
+> - **All three sandbox providers the founder asked for (E2B, Vercel Sandbox, Daytona) now have
+>   real, tested, pluggable drivers behind one shared `SandboxLifecycleProvider` contract.**
+> - **NEXT**: R-489 (free WebContainers browser-only option, Node.js/frontend apps only), R-490
+>   (provider-selection surface exposing the founder's "switch easily" ask). See
+>   `.ai/tasks/R-488.md`.
 
 > **R-487 Completed (2026-09-19): Runtime — real Vercel Sandbox driver.**
 > - Second of the five-task sequence (R-486..R-490). Proves R-486's `SandboxLifecycleProvider`

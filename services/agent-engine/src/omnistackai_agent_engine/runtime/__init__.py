@@ -14,6 +14,7 @@ from .contracts import (
     SandboxHandle,
     SandboxLifecycleProvider,
 )
+from .daytona import DaytonaSandboxProvider
 from .e2b import E2BSandboxProvider, MissingSandboxCredentialError
 from .errors import (
     DeploySelectionError,
@@ -49,6 +50,7 @@ __all__ = [
     "DeployPlan",
     "DeploySelectionError",
     "DeploySetup",
+    "DaytonaSandboxProvider",
     "DeploymentProvider",
     "E2BSandboxProvider",
     "LOCAL_PROVIDER_ID",

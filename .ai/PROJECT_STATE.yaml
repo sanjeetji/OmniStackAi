@@ -2,10 +2,10 @@ schema_version: 1
 project: OmniStackAI
 phase: BASIC/MVP
 founder_stage: 0
-current_task: R-487
+current_task: R-488
 current_status: done
 branch: main
-last_completed_task: R-487
+last_completed_task: R-488
 # TASK COMPILATION AUDIT — 2026-09-16
 # Performed to achieve 100% synchronization across all task-tracking documentation.
 # Tracker workbook expanded to 464 tasks with R-464.
@@ -34,6 +34,33 @@ task_compilation_audit:
       new_status: DONE
       reason: "Task fully completed on 2026-09-11 with 35 tests. Status left stale during rapid development sprint."
 last_completed_task_summary: >-
+  Completed R-488 (2026-09-19): runtime real Daytona driver. Third of the five-task sequence
+  (R-486..R-490). E2B and Vercel Sandbox each proved SandboxLifecycleProvider/sandbox_http.py
+  generalize; this task adds Daytona, whose real API is shaped a third, genuinely distinct way.
+  Design verified against Daytona's real docs (fetched across several pages, no single page had
+  the complete schema). A real base-URL ambiguity across Daytona's own docs (app.daytona.io/api/
+  sandbox vs api.daytona.io/sandbox) was resolved the same way E2B's v1/v2 ambiguity was -
+  preferring the more specific, structured, directly-fetched source. The create response carries
+  no URL at all (unlike E2B's pattern or Vercel's routes[] array) - a second real call, GET
+  /sandbox/{id}/ports/{port}/preview-url, is required, verified by a dedicated test asserting both
+  requests' exact shapes and strict ordering. create() always requests "public": true since a
+  non-public sandbox's preview link needs a companion X-Daytona-Preview-Token header
+  SandboxHandle.url's single-string shape has no room for.
+  A real, honest isolation-strength tradeoff surfaced, not hidden: Daytona's documented default
+  isolation is plain Docker containers, weaker than E2B/Vercel's Firecracker microVMs - not worked
+  around, called out explicitly for R-490.
+  No real DAYTONA_API_KEY exists in this environment - every gate is offline via the same
+  injected-fake-opener pattern established in R-486/R-487; live-cloud verification honestly
+  deferred.
+  Gates: agent-engine task verify 3,707 OK (13 new tests), 0 model/network calls. Unlike R-487, no
+  runtime/providers.py or drivers.py change was needed - RUNTIME_SPECS["daytona"] already existed,
+  so every pre-existing suite passes completely unmodified. Repo task verify/lint/security:quick/
+  env:check all pass; new scripts/test.sh contract block.
+  All three sandbox providers the founder asked for (E2B, Vercel Sandbox, Daytona) now have real,
+  tested, pluggable drivers behind one shared contract.
+  NEXT: R-489 (free WebContainers browser-only option, Node.js/frontend apps only), R-490
+  (provider-selection surface exposing the founder's "switch easily" ask).
+_prior_last_completed_task_summary_R487: >-
   Completed R-487 (2026-09-19): runtime real Vercel Sandbox driver. Second of the five-task
   sequence (R-486..R-490), proving R-486's SandboxLifecycleProvider pattern is genuinely pluggable
   by adding a second, independent real driver against a differently-shaped API, reusing
@@ -1712,14 +1739,14 @@ next_action: >-
   Presented to the founder as a hard-gate (new paid cloud dependency); the founder's answer: build
   real, pluggable drivers for multiple providers (E2B, Vercel Sandbox, Daytona) switchable by
   cost/speed/smoothness, plus a free browser-only option (WebContainers) - a five-task sequence
-  (R-486..R-490). R-486 (real sandbox lifecycle contract + E2B driver) and R-487 (real Vercel
-  Sandbox driver, proving the pattern is genuinely pluggable against a second, differently-shaped
-  API) are both done.
-  NEXT: R-488 (Daytona driver - notable because its documented default is plain Docker containers
-  rather than a microVM, a real isolation-strength tradeoff worth surfacing honestly), R-489 (free
-  WebContainers browser-only option, Node.js/frontend apps only), R-490 (a provider-selection
-  surface exposing the founder's "switch easily" ask - the point where more than one provider
-  actually gets wired into the Studio's real preview flow, deliberately deferred until then). Separately, full
+  (R-486..R-490). R-486 (E2B driver), R-487 (Vercel Sandbox driver), and R-488 (Daytona driver,
+  notable because its documented default isolation is plain Docker containers rather than a
+  microVM, a real tradeoff surfaced honestly) are all done - all three sandbox providers the
+  founder asked for now have real, tested, pluggable drivers behind one shared contract.
+  NEXT: R-489 (free WebContainers browser-only option, Node.js/frontend apps only), R-490 (a
+  provider-selection surface exposing the founder's "switch easily" ask - the point where more
+  than one provider actually gets wired into the Studio's real preview flow, deliberately deferred
+  until then). Separately, full
   per-user *process/tenant* isolation (as opposed to just which sandbox technology runs one
   preview) remains a materially different, larger architecture decision needing its own founder
   sign-off once R-486..R-490 land - the agent-engine has zero containerization today and

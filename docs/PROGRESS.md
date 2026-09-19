@@ -1,4 +1,4 @@
-# OmniStackAI — implementation progress (as of R-487)
+# OmniStackAI — implementation progress (as of R-488)
 
 A living summary of what is built, what is pending, and how to see results. Numbers come from the
 execution tracker (`R_&_D/OmniStackAI_Execution_Tracker_v6.xlsx`, `Phase_Roadmap`, 461 tasks as of
@@ -6,8 +6,21 @@ R-461 completion) plus the state files (`.ai/`), Git history, and CHANGELOG.
 
 ## Headline
 
-- **3,694 automated tests pass** (agent-engine + Go control-plane), fully offline and
+- **3,707 automated tests pass** (agent-engine + Go control-plane), fully offline and
   network-independent (`task verify`), plus the console's own `typecheck`/`lint`/`build` gates.
+- **R-488 — Runtime: real Daytona driver (2026-09-19):** third of the five-task sandbox sequence
+  (R-486..R-490) — **all three sandbox providers the founder asked for (E2B, Vercel Sandbox,
+  Daytona) now have real, tested, pluggable drivers behind one shared
+  `SandboxLifecycleProvider` contract.** Daytona's API is shaped a third, genuinely distinct way:
+  the create response carries no URL at all — a second real call,
+  `GET /sandbox/{id}/ports/{port}/preview-url`, is required (verified against Daytona's real docs,
+  including resolving a real base-URL ambiguity across their own pages). `create()` always
+  requests `"public": true` since `SandboxHandle.url` has no room for a companion preview-token
+  header. A real, honest tradeoff surfaced, not hidden: Daytona's documented default isolation is
+  plain Docker containers, weaker than E2B/Vercel's Firecracker microVMs. No real
+  `DAYTONA_API_KEY` exists in this environment — live-cloud verification honestly deferred.
+  `task verify` **3,707 OK** (13 new tests); repo gates all pass; unlike R-487, no
+  `providers.py`/`drivers.py` change was needed. See `.ai/tasks/R-488.md` for full detail.
 - **R-487 — Runtime: real Vercel Sandbox driver (2026-09-19):** second of the five-task sandbox
   sequence (R-486..R-490), proving R-486's `SandboxLifecycleProvider` pattern is genuinely
   pluggable against a second, differently-shaped API, reusing `sandbox_http.py` completely

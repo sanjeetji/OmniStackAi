@@ -4,6 +4,27 @@ Last updated: 2026-09-19
 ## Current Phase
 Stage 0 (Founder Build Sequence, Brief Section 91) — BASIC/MVP
 
+> **R-488 (2026-09-19): Runtime — real Daytona driver.** Third of the five-task sequence
+> (R-486..R-490). E2B and Vercel Sandbox each proved `SandboxLifecycleProvider`/`sandbox_http.py`
+> generalize; this task adds Daytona, whose real API is shaped a third distinct way: the create
+> response carries **no URL at all** — a second real call,
+> `GET /sandbox/{id}/ports/{port}/preview-url`, is required, verified by a dedicated test asserting
+> both requests' exact shapes and ordering. `create()` always requests `"public": true` since
+> `SandboxHandle.url` has no room for a companion preview-access-token header, which a non-public
+> sandbox's link would otherwise need. **A real base-URL ambiguity across Daytona's own docs** was
+> found and resolved the same way R-486's E2B v1/v2 ambiguity was — preferring the more specific,
+> structured, directly-fetched source. **A real, honest isolation-strength tradeoff surfaced, not
+> hidden**: Daytona's documented default isolation is plain Docker containers, weaker than E2B/
+> Vercel's Firecracker microVMs — this driver does not attempt to select its opt-in stronger modes
+> (undocumented in the fetched pages), called out explicitly for whenever R-490's
+> provider-selection surface exists. No real `DAYTONA_API_KEY` exists in this environment —
+> live-cloud verification honestly deferred. `task verify` **3,707 OK** (13 new tests); repo
+> `task verify`/`lint`/`security:quick`/`env:check` all pass. Unlike R-487, no `providers.py`/
+> `drivers.py` edit was needed at all — `RUNTIME_SPECS["daytona"]` already existed.
+> **All three sandbox providers the founder asked for (E2B, Vercel Sandbox, Daytona) now have
+> real, tested, pluggable drivers behind one shared contract.**
+> NEXT: R-489 (free WebContainers browser option), R-490 (provider-selection surface).
+
 > **R-487 (2026-09-19): Runtime — real Vercel Sandbox driver.** Second of the five-task sequence
 > (R-486..R-490). Proves the `SandboxLifecycleProvider` pattern (introduced in R-486 for E2B) is
 > genuinely pluggable against a second, differently-shaped API, reusing R-486's `sandbox_http.py`

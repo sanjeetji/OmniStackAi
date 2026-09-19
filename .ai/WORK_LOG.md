@@ -1,5 +1,83 @@
 # Work Log
 
+## 2026-09-19 — R-488 (Runtime: real Daytona driver)
+
+- **Why:** third of the five-task sandbox-provider sequence (R-486..R-490). E2B (R-486) and Vercel
+  Sandbox (R-487) each proved `SandboxLifecycleProvider`/`sandbox_http.py` generalize across
+  differently-shaped APIs; this task adds Daytona, whose real API is shaped a *third*, genuinely
+  distinct way.
+- **Design, verified against real, current Daytona documentation before writing any code**:
+  Daytona's docs were fetched across several pages (`daytona.io/docs`, mirror pages, DeepWiki)
+  since no single page carried the complete request/response schema. **A real base-URL ambiguity
+  was found across Daytona's own documentation**: one search snippet showed
+  `app.daytona.io/api/sandbox/...` while a more detailed, schema-bearing page fetched directly
+  showed `https://api.daytona.io/sandbox` with exact request/response field names — resolved the
+  same way R-486's E2B v1/v2 ambiguity was: preferring the more specific, structured,
+  directly-fetched source consistently for every endpoint (`POST/GET/DELETE
+  https://api.daytona.io/sandbox[/{id}]`, `Authorization: Bearer <DAYTONA_API_KEY>`, reusing the
+  existing `RUNTIME_SPECS["daytona"]` key declared since an earlier task and unused until now).
+- **A genuinely new API shape this task had to accommodate**: unlike E2B (a URL pattern built from
+  the sandbox id) and Vercel Sandbox (a `routes[]` array with real URLs already embedded in the
+  create response), Daytona's `POST /sandbox` response carries **no URL at all** — only sandbox
+  metadata (`id`, `state`, ...). Getting a usable preview URL requires a second, separate real
+  HTTP call, `GET /sandbox/{id}/ports/{port}/preview-url`, which returns `{"url": ..., "token":
+  ...}`; `create()` therefore makes two real HTTP requests in sequence rather than one, verified
+  by a dedicated test asserting both requests' exact URLs/methods and their strict ordering, plus
+  a second test confirming that when the first call's response is malformed, the second call is
+  never attempted at all.
+- **A second real, confirmed requirement this task applies correctly**: Daytona's own docs state
+  that a non-public sandbox's preview link requires a companion `X-Daytona-Preview-Token` header
+  to access, while a sandbox created with `"public": true` has a preview link that is "publicly
+  accessible without authentication." Since `SandboxHandle.url` is a single string with no room
+  for a companion per-request auth header (the same shape every other provider in this sequence
+  already assumes), `create()` always sends `"public": true`, verified by an explicit assertion on
+  the sent JSON body.
+- **Every other documented request field left unset rather than guessed**: Daytona's own docs
+  confirm omitting `snapshot` uses "the Daytona default snapshot," and the official Python SDK's
+  own parameter list shows sensible platform defaults for every other field, so this task does not
+  invent values for fields whose exact required/optional status could not be independently
+  confirmed from the fetched documentation pages — the same conservative discipline R-486 already
+  applied to E2B's `templateID` default.
+- **A real, honest isolation-strength tradeoff, surfaced not glossed over**: this five-task
+  sequence's own originating research (R-486's task contract) already established that Daytona's
+  *documented default* sandbox isolation is plain Docker containers — a shared kernel, meaningfully
+  weaker than E2B's and Vercel Sandbox's Firecracker microVMs — with stronger isolation modes
+  (Kata Containers, Sysbox) available only as an explicit opt-in this driver does not attempt to
+  select, since the exact API shape for requesting that opt-in was not documented in any of the
+  pages fetched for this task; called out explicitly in both the code and this log entry so it
+  stays visible to whoever builds R-490's provider-selection surface.
+- **New `runtime/daytona.py`'s `DaytonaSandboxProvider`** implements R-486's
+  `SandboxLifecycleProvider` contract via the exact same shared `sandbox_http.py` helper R-486
+  introduced for E2B and R-487 reused unchanged for Vercel Sandbox — now proven a third time to
+  generalize across a third differently-shaped provider API with zero changes to that shared file.
+- **No real `DAYTONA_API_KEY` exists in this environment** (`.env` checked: absent) — every
+  automated test is offline via the same injected-fake-`OpenerDirector` pattern established in
+  R-486/R-487; real live-cloud verification against an actual Daytona account is honestly not
+  possible here and is not claimed, deferred to whenever the founder provides a real key.
+- **Gates**: agent-engine `task verify` **3,707 tests OK** (13 new in `test_runtime_daytona.py`), 0
+  model/network calls — covering the full two-call create sequence and its exact request shapes,
+  `"public": true` always being sent, the target→port mapping for all four known targets, an
+  unknown target still correctly raising `UnsupportedRuntimeTargetError` before any request, a
+  missing sandbox id in the create response correctly stopping before the second call, a missing
+  preview URL raising a clear error rather than crashing, a real Daytona-shaped 401 error body
+  mapping correctly, the API key never appearing in a `SandboxHandle`'s `repr()`, and
+  `status()`/`kill()` both correctly keyed by the real sandbox id. Repo-wide `task
+  verify`/`lint`/`security:quick`/`env:check` all pass; a new `scripts/test.sh` contract block
+  asserts the new driver file and class exist. **Unlike R-487, this task needed no change to
+  `runtime/providers.py` or `runtime/drivers.py` at all** — `RUNTIME_SPECS["daytona"]` and its
+  corresponding `_SANDBOX_URLS` placeholder both already existed from an earlier task, so every
+  pre-existing suite passes completely unmodified with zero coupling surprises this time.
+- **All three sandbox providers the founder explicitly asked for (E2B, Vercel Sandbox, Daytona)
+  now have real, tested, independently-verified, pluggable drivers behind one shared
+  `SandboxLifecycleProvider` contract** — the founder's "switch easily... based on more cost,
+  speed, smoothness" ask now has three genuinely interchangeable real implementations to switch
+  between, not just one.
+- **Next:** R-489 (the free WebContainers browser-only option — client-side in the console,
+  Node.js/frontend apps only, an honest limitation to document rather than work around) and R-490
+  (a provider-selection surface exposing the founder's "switch easily by cost/speed/smoothness"
+  ask — the point where more than one of these three real providers actually gets wired into the
+  Studio's real preview flow for the first time, deliberately deferred until now).
+
 ## 2026-09-19 — R-487 (Runtime: real Vercel Sandbox driver)
 
 - **Why:** second of the five-task sandbox-provider sequence (R-486..R-490). R-486 proved the

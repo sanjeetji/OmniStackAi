@@ -1,29 +1,26 @@
-task_id: R-487
+task_id: R-488
 status: completed
 phase: MVP
 tracker_row: null
 started_at: "2026-09-19"
 completed_at: "2026-09-19"
 objective: >-
-  Second of the five-task sandbox-provider sequence (R-486..R-490). Proves the
-  SandboxLifecycleProvider pattern (introduced in R-486 for E2B) is genuinely pluggable by adding
-  a real Vercel Sandbox driver against a differently-shaped API, reusing R-486's shared
-  sandbox_http.py unchanged. Verified against Vercel's real REST API (fetched directly from
-  vercel.com/docs, not assumed): POST/GET/DELETE /v2/sandboxes[/{name}], Bearer token auth, a
-  routes[] array giving each port's real url directly (no URL-pattern guessing, unlike E2B).
-  Vercel Sandbox's documented runtime enum has no Go - backend-go is honestly rejected with a
-  specific typed error rather than a wrong/guessed runtime. No real VERCEL_TOKEN/
-  VERCEL_PROJECT_ID exist in this environment, so every gate is offline; live-cloud verification
-  is honestly deferred.
+  Third of the five-task sandbox-provider sequence (R-486..R-490). Adds a real Daytona driver,
+  proving SandboxLifecycleProvider/sandbox_http.py generalize a third time. Verified against
+  Daytona's real REST API (fetched directly): POST/GET/DELETE https://api.daytona.io/sandbox[/{id}],
+  Bearer auth, and a genuinely different shape from both prior drivers - the create response
+  carries no URL at all; a second call, GET .../sandbox/{id}/ports/{port}/preview-url, is required
+  to get the real URL. create() always requests "public": true since SandboxHandle.url has no room
+  for a companion preview-access token. Daytona's documented default isolation is plain Docker
+  containers (weaker than E2B/Vercel's Firecracker microVMs) - a real tradeoff surfaced honestly,
+  not attempted to be worked around. No real DAYTONA_API_KEY exists in this environment, so every
+  gate is offline; live-cloud verification is honestly deferred.
 allowed_paths:
-  - services/agent-engine/src/omnistackai_agent_engine/runtime/vercel_sandbox.py
-  - services/agent-engine/src/omnistackai_agent_engine/runtime/providers.py
+  - services/agent-engine/src/omnistackai_agent_engine/runtime/daytona.py
   - services/agent-engine/src/omnistackai_agent_engine/runtime/__init__.py
-  - services/agent-engine/src/omnistackai_agent_engine/runtime/drivers.py
-  - services/agent-engine/tests/test_runtime_vercel_sandbox.py
-  - .env.example
+  - services/agent-engine/tests/test_runtime_daytona.py
   - scripts/test.sh
-  - .ai/tasks/R-487.md
+  - .ai/tasks/R-488.md
   - .ai/CURRENT_TASK.yaml
   - .ai/PROJECT_STATE.yaml
   - .ai/WORK_LOG.md
@@ -33,12 +30,13 @@ allowed_paths:
   - docs/PROGRESS.md
   - docs/RESUME_PROMPT.md
 forbidden_changes:
-  - No changes to runtime/contracts.py, runtime/sandbox_http.py, or runtime/e2b.py - R-486's contract and shared HTTP helper are reused exactly as they are
-  - No changes to studio/, runtime/local.py, or runtime/drivers.py - purely additive
+  - No changes to runtime/contracts.py, runtime/sandbox_http.py, runtime/e2b.py, or runtime/vercel_sandbox.py
+  - No changes to runtime/providers.py - RUNTIME_SPECS["daytona"] already exists
+  - No changes to studio/, runtime/local.py, or runtime/drivers.py
   - Do not modify or commit the untracked .claude directory
   - No real API call in any automated gate
 required_gates:
-  - "agent-engine: task verify (0 model/network calls, fake HTTP transport stands in for Vercel)"
+  - "agent-engine: task verify (0 model/network calls, fake HTTP transport stands in for Daytona)"
   - task verify
   - task lint
   - task security:quick
@@ -49,13 +47,15 @@ model_tool_trace:
   cloud_calls: 0
   note: >-
     Pure Python stdlib HTTP client implementation, 0 model/network calls in any automated gate.
-    No real VERCEL_TOKEN/VERCEL_PROJECT_ID exist in this environment.
+    No real DAYTONA_API_KEY exists in this environment.
 next_action: >-
-  R-487 shipped: 3,694 agent-engine tests OK (14 new). Vercel's real REST API was verified
-  directly against vercel.com/docs before writing any code. A real ordering bug was caught and
-  fixed (target-unknown vs. provider-doesn't-support-this-target must raise different typed
-  errors). A real mid-task gap was found and fixed with one line (RUNTIME_SPECS entries must have
-  a matching drivers.py _SANDBOX_URLS placeholder for the old planning-stub path). No real
-  VERCEL_TOKEN/VERCEL_PROJECT_ID exist in this environment - live-cloud verification honestly
-  deferred. Next: R-488 (Daytona driver), R-489 (free WebContainers browser option), R-490
-  (provider-selection surface).
+  R-488 shipped: 3,707 agent-engine tests OK (13 new). Daytona's real REST API was verified
+  directly, including a real base-URL ambiguity across their own docs resolved the same way
+  E2B's v1/v2 ambiguity was. A genuinely third API shape confirmed: create() makes two real HTTP
+  calls (create, then a separate preview-url lookup), unlike E2B/Vercel's single-call shapes.
+  Daytona's documented default isolation (plain Docker, weaker than E2B/Vercel's microVMs) is
+  surfaced honestly, not hidden. No real DAYTONA_API_KEY exists in this environment - live-cloud
+  verification honestly deferred. All three sandbox providers (E2B, Vercel Sandbox, Daytona) now
+  have real, tested, pluggable drivers behind one shared contract. Next: R-489 (free WebContainers
+  browser option, no cost/config), R-490 (provider-selection surface exposing the founder's
+  "switch easily" ask).

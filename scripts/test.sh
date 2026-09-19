@@ -639,4 +639,15 @@ if ! rg -qF '"vercel-sandbox"' "$agent_engine_root/src/omnistackai_agent_engine/
   exit 1
 fi
 
+# R-488: real Daytona driver (third of the R-486..R-490 isolation sequence).
+if [[ ! -f "$agent_engine_root/src/omnistackai_agent_engine/runtime/daytona.py" ]]; then
+  printf 'Missing R-488 contract file: %s/src/omnistackai_agent_engine/runtime/daytona.py\n' "$agent_engine_root"
+  exit 1
+fi
+
+if ! rg -qF 'class DaytonaSandboxProvider' "$agent_engine_root/src/omnistackai_agent_engine/runtime/daytona.py"; then
+  printf 'R-488 must add a real DaytonaSandboxProvider driver to runtime/daytona.py.\n'
+  exit 1
+fi
+
 printf 'Repository contract tests passed.\n'
