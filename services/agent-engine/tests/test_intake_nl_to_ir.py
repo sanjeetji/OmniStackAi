@@ -9,6 +9,7 @@ from __future__ import annotations
 import asyncio
 import json
 import unittest
+from collections.abc import AsyncIterator
 
 from omnistackai_agent_engine.application_ir import (
     ApplicationIR,
@@ -23,6 +24,7 @@ from omnistackai_agent_engine.intake import (
     IntakeResult,
     build_intake_messages,
     generate_ir,
+    generate_ir_stream,
     parse_ir_response,
 )
 from omnistackai_agent_engine.model_gateway import (
@@ -30,6 +32,7 @@ from omnistackai_agent_engine.model_gateway import (
     FinishReason,
     GenerateRequest,
     GenerateResponse,
+    StreamEvent,
     TokenUsage,
 )
 
@@ -42,10 +45,12 @@ VALID_IR_JSON = json.dumps(VALID_IR_DICT)
 class StubProvider:
     """In-memory ModelProvider returning a fixed text; records the requests it sees."""
 
-    def __init__(self, text: str, *, provider_id: str = "ollama") -> None:
+    def __init__(self, text: str, *, provider_id: str = "ollama", stream_chunk_size: int = 8) -> None:
         self._text = text
         self._provider_id = provider_id
+        self._stream_chunk_size = stream_chunk_size
         self.requests: list[GenerateRequest] = []
+        self.stream_requests: list[GenerateRequest] = []
 
     @property
     def provider_id(self) -> str:
@@ -61,6 +66,24 @@ class StubProvider:
             TokenUsage(12, 34),
             5,
         )
+
+    async def stream(self, request: GenerateRequest) -> AsyncIterator[StreamEvent]:
+        """R-484: yields `self._text` in several small deltas (not all at once) - a real,
+        in-memory stand-in for a provider's real token-by-token streaming, so
+        `generate_ir_stream`'s own accumulation logic is genuinely exercised, not just handed one
+        big chunk that happens to equal the non-streaming case."""
+        self.stream_requests.append(request)
+        size = max(1, self._stream_chunk_size)
+        chunks = [self._text[i : i + size] for i in range(0, len(self._text), size)] or [""]
+        for sequence, chunk in enumerate(chunks):
+            is_last = sequence == len(chunks) - 1
+            yield StreamEvent(
+                request.request_id,
+                sequence,
+                chunk,
+                is_last,
+                TokenUsage(12, 34) if is_last else None,
+            )
 
 
 def _run(coro):
@@ -204,6 +227,63 @@ class TestGenerateIr(unittest.TestCase):
         self.assertIsNotNone(project.get("app/page.tsx"))
 
 
+class TestGenerateIrStream(unittest.TestCase):
+    async def _collect(self, prompt: str, provider: StubProvider, **kwargs):
+        deltas: list[str] = []
+        result: IntakeResult | None = None
+        async for item in generate_ir_stream(prompt, provider, **kwargs):
+            if isinstance(item, str):
+                deltas.append(item)
+            else:
+                result = item
+        return deltas, result
+
+    def test_happy_path_matches_non_streaming_result(self) -> None:
+        stream_provider = StubProvider(VALID_IR_JSON)
+        deltas, streamed = _run(
+            self._collect("Build a blog", stream_provider, model_id="qwen2.5-coder:14b")
+        )
+        generate_provider = StubProvider(VALID_IR_JSON)
+        direct = _run(generate_ir("Build a blog", generate_provider, model_id="qwen2.5-coder:14b"))
+
+        self.assertIsInstance(streamed, IntakeResult)
+        self.assertGreater(len(deltas), 1)
+        self.assertEqual("".join(deltas), VALID_IR_JSON)
+        self.assertEqual(streamed.raw_text, direct.raw_text)
+        self.assertEqual(streamed.ir.name, direct.ir.name)
+        self.assertFalse(has_errors(streamed.issues))
+
+    def test_request_shape(self) -> None:
+        provider = StubProvider(VALID_IR_JSON)
+        _run(
+            self._collect(
+                "Build a blog", provider, model_id="qwen2.5-coder:14b", max_output_tokens=1500
+            )
+        )
+        self.assertEqual(len(provider.stream_requests), 1)
+        self.assertEqual(len(provider.requests), 0)
+        request = provider.stream_requests[0]
+        self.assertEqual(request.model.provider_id, "ollama")
+        self.assertEqual(request.model.model_id, "qwen2.5-coder:14b")
+        self.assertEqual(request.max_output_tokens, 1500)
+        self.assertEqual(request.messages[0].role, ChatRole.SYSTEM)
+        self.assertGreaterEqual(len(request.messages), 2)
+
+    def test_invalid_model_output_raises(self) -> None:
+        provider = StubProvider("sorry, no JSON here")
+        with self.assertRaises(IntakeResponseError):
+            _run(self._collect("Build a blog", provider, model_id="qwen2.5-coder:14b"))
+
+    def test_result_ir_is_buildable_end_to_end(self) -> None:
+        provider = StubProvider(VALID_IR_JSON)
+        _deltas, result = _run(
+            self._collect("Build a blog", provider, model_id="qwen2.5-coder:14b")
+        )
+        assert result is not None
+        project = NextjsWebAdapter().generate(result.ir)
+        self.assertIsNotNone(project.get("app/page.tsx"))
+
+
 class TestPackageExports(unittest.TestCase):
     def test_public_api(self) -> None:
         import omnistackai_agent_engine.intake as intake
@@ -212,12 +292,14 @@ class TestPackageExports(unittest.TestCase):
             "build_intake_messages",
             "parse_ir_response",
             "generate_ir",
+            "generate_ir_stream",
             "IntakeResult",
             "IntakeError",
             "IntakeResponseError",
         ):
             self.assertTrue(hasattr(intake, name), name)
         self.assertIn("generate_ir", intake.__all__)
+        self.assertIn("generate_ir_stream", intake.__all__)
 
 
 if __name__ == "__main__":

@@ -561,4 +561,30 @@ if ! rg -q 'providers_fn' "$agent_engine_root/src/omnistackai_agent_engine/studi
   exit 1
 fi
 
+# R-484: real-time build streaming (SSE) - backend only, console UI is R-485.
+if ! rg -qF 'def generate_ir_stream' "$agent_engine_root/src/omnistackai_agent_engine/intake/nl_to_ir.py"; then
+  printf 'R-484 must add generate_ir_stream() to intake/nl_to_ir.py.\n'
+  exit 1
+fi
+
+if ! rg -qF 'def build_app_from_prompt_stream' "$agent_engine_root/src/omnistackai_agent_engine/intake/build_app.py"; then
+  printf 'R-484 must add build_app_from_prompt_stream() to intake/build_app.py.\n'
+  exit 1
+fi
+
+if ! rg -qF '"/api/build/stream"' "$agent_engine_root/src/omnistackai_agent_engine/studio/server.py"; then
+  printf 'R-484 must register POST /api/build/stream in studio/server.py.\n'
+  exit 1
+fi
+
+if ! rg -qF 'async def stream' "$agent_engine_root/src/omnistackai_agent_engine/model_gateway/recording.py"; then
+  printf 'R-484 must add RecordingProvider.stream() so a real streamed build is usage-recorded.\n'
+  exit 1
+fi
+
+if ! rg -qF 'POST /jobs/build/stream' "$control_plane_root/internal/jobs/handler.go"; then
+  printf 'R-484 control-plane must register: POST /jobs/build/stream\n'
+  exit 1
+fi
+
 printf 'Repository contract tests passed.\n'

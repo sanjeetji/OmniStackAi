@@ -1,9 +1,44 @@
 # Current Handoff
 
-Task ID: R-483
+Task ID: R-484
 Status: done
 Phase: BASIC/MVP — Founder Stage 0
 Branch: `main`
+
+> **R-484 Completed (2026-09-19): Backend — real-time build streaming (SSE).**
+> - First of the founder's post-roadmap priorities ("streaming first, then scope isolation
+>   properly"), chosen after three parallel research passes (competitor streaming architecture,
+>   per-user isolation scoping, deploy/stack breadth). Backend only — console UI is R-485.
+> - `ModelProvider.stream()` already existed at the `model_gateway` layer but `_build()`'s whole
+>   call chain never called it. Added purely additive streaming twins: `generate_ir_stream()`
+>   (`intake/nl_to_ir.py`), `build_app_from_prompt_stream()` (`intake/build_app.py`),
+>   `_build_stream()` (`studio/live_serve.py`, plain-prompt-only — Solution Pack/Ecosystem/
+>   `hybrid_ui` explicitly rejected via `StreamingBuildNotSupportedError`, matching `_edit()`'s own
+>   scope precedent). New `POST /api/build/stream` (agent-engine SSE) and
+>   `POST /jobs/build/stream` (Go relay via `http.Flusher`, appending a trailing `credits` event
+>   once the upstream `done` event's usage is known — crediting can't happen mid-stream).
+> - **Two real bugs found and fixed, not glossed over**: (1) the SSE route sent
+>   `Connection: keep-alive`, which `BaseHTTPRequestHandler` treats as "never close this socket" —
+>   with no `Content-Length`/chunked framing, that hung every real client; caught by the first
+>   HTTP-level test, fixed to `Connection: close`. (2) `RecordingProvider` (every production
+>   build's real usage-tracking wrapper) had no `.stream()` method — invisible to every mocked
+>   test, only caught by the required live `curl -N` smoke test
+>   (`'RecordingProvider' object has no attribute 'stream'`); fixed with 4 new tests mirroring
+>   `generate()`'s own success/failure ledger-recording shape.
+> - Gates: agent-engine `task verify` **3,658 OK** (27 new); control-plane `go build`/`vet`/`test`
+>   all green (7 new, 55 total); repo `task verify`/`lint`/`security:quick`/`env:check` all pass;
+>   new `scripts/test.sh` contract block. **Live**: a real `curl -N` session through the real Go
+>   control-plane showed genuine token-by-token deltas over ~9 real seconds (timestamped, not
+>   buffered), a real `done` frame (177 files, real git commit sha, real `usage`), and a real
+>   trailing `credits` frame (`credits_spent: 0` — this environment's configured cloud model has no
+>   price-book entry, a pre-existing unrelated fact); all three unsupported build kinds
+>   (`pack_id`/`ecosystem_id`/`hybrid_ui`) confirmed cleanly rejected with a `400` before any SSE
+>   framing began.
+> - **NEXT** (per "streaming first, then scope isolation properly"): R-485 (console: streaming
+>   build UI). Then properly SCOPE (not build) full per-user process/sandbox isolation — a
+>   materially different architecture decision needing explicit founder sign-off; the agent-engine
+>   has zero containerization today and `scripts/test.sh` actively blocks adding it as a Compose
+>   service, which full isolation will need to explicitly revise. See `.ai/tasks/R-484.md`.
 
 > **R-483 Completed (2026-09-19): Fix — dynamic-route slug collision & duplicate FK identifier.**
 > - Second follow-up after the 7-task Phase D roadmap, per "complete one by one all." Fixes the

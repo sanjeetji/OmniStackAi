@@ -15,6 +15,7 @@ single model step and depends only on the vendor-neutral ``ModelProvider`` proto
 from __future__ import annotations
 
 import os
+from collections.abc import AsyncIterator
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -26,7 +27,9 @@ from .nl_to_ir import (
     DEFAULT_MAX_OUTPUT_TOKENS,
     DEFAULT_TEMPLATE_EXAMPLE,
     DEFAULT_TIMEOUT_SECONDS,
+    IntakeResult,
     generate_ir,
+    generate_ir_stream,
 )
 
 
@@ -171,4 +174,50 @@ async def build_app_from_prompt(
         model_id=model_id,
         synthesize_screens=synthesize_screens,
         ui_outcomes=ui_outcomes,
+    )
+
+
+async def build_app_from_prompt_stream(
+    prompt: str,
+    provider: ModelProvider,
+    target_dir: str | os.PathLike[str],
+    *,
+    model_id: str,
+    author_name: str,
+    author_email: str,
+    example_name: str = DEFAULT_TEMPLATE_EXAMPLE,
+    max_output_tokens: int = DEFAULT_MAX_OUTPUT_TOKENS,
+    timeout_seconds: float = DEFAULT_TIMEOUT_SECONDS,
+    overwrite: bool = False,
+) -> AsyncIterator[str | AppBuildResult]:
+    """Streaming twin of `build_app_from_prompt` (R-484): yields text deltas from the IR-generation
+    call as they arrive, then does the existing `build_app_from_ir`'s pure-disk work (assemble +
+    git commit — fast, not usefully streamable token-by-token) once the IR is complete, and yields
+    the final `AppBuildResult`.
+
+    Scoped to the plain-prompt path only, matching `_build_stream`'s own scope — no
+    `synthesize_screens`/`ui_outcomes` here (hybrid-UI's own per-file model calls are not streamed
+    in this task). `build_app_from_prompt` itself is unchanged.
+    """
+    result: IntakeResult | None = None
+    async for item in generate_ir_stream(
+        prompt,
+        provider,
+        model_id=model_id,
+        example_name=example_name,
+        max_output_tokens=max_output_tokens,
+        timeout_seconds=timeout_seconds,
+    ):
+        if isinstance(item, str):
+            yield item
+        else:
+            result = item
+    assert result is not None  # generate_ir_stream always yields exactly one IntakeResult last
+    yield build_app_from_ir(
+        result.ir,
+        target_dir,
+        author_name=author_name,
+        author_email=author_email,
+        prompt=prompt,
+        overwrite=overwrite,
     )

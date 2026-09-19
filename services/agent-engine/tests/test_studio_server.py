@@ -44,6 +44,19 @@ class RecordingBuild:
         return self.result
 
 
+class RecordingBuildStream:
+    """R-484: an in-memory async-generator BuildStreamFn stub, records the prompts it sees."""
+
+    def __init__(self, events: list[dict]) -> None:
+        self.events = events
+        self.prompts: list[str] = []
+
+    async def __call__(self, prompt: str):
+        self.prompts.append(prompt)
+        for event in self.events:
+            yield event
+
+
 @contextmanager
 def running_server(build_fn, **control_kwargs):
     server = create_studio_server(build_fn, host="127.0.0.1", port=0, **control_kwargs)
@@ -76,6 +89,28 @@ def _post(url: str, *, obj=None, raw: bytes | None = None):
             return resp.status, json.loads(resp.read())
     except urllib.error.HTTPError as error:
         return error.code, json.loads(error.read())
+
+
+def _post_sse(url: str, obj: dict):
+    """R-484: POST a JSON body and parse an `text/event-stream` response into a list of the
+    decoded `data:` JSON payloads, in arrival order. urllib.request.urlopen's `.read()` blocks
+    until the connection closes -- fine for asserting event content/order/framing here; real
+    incremental-over-time arrival is verified by the task's live `curl -N` manual smoke test."""
+    body = json.dumps(obj).encode("utf-8")
+    req = urllib.request.Request(
+        url, data=body, headers={"Content-Type": "application/json"}, method="POST"
+    )
+    try:
+        with urllib.request.urlopen(req, timeout=5) as resp:
+            status, raw = resp.status, resp.read().decode("utf-8")
+    except urllib.error.HTTPError as error:
+        status, raw = error.code, error.read().decode("utf-8")
+    events = []
+    for frame in raw.split("\n\n"):
+        frame = frame.strip()
+        if frame.startswith("data: "):
+            events.append(json.loads(frame[len("data: ") :]))
+    return status, events
 
 
 class TestStudioPage(unittest.TestCase):
@@ -536,6 +571,174 @@ class TestStudioEditRoutes(unittest.TestCase):
     def test_page_has_edit_chat_controls(self) -> None:
         for token in ("/edit", "/turns", "Apply change"):
             self.assertIn(token, STUDIO_HTML)
+
+
+class TestStudioBuildStreamRoute(unittest.TestCase):
+    """R-484: POST /api/build/stream - Server-Sent Events for real-time build progress."""
+
+    def test_stream_success_yields_events_in_order(self) -> None:
+        events = [
+            {"phase": "generating_ir", "delta": '{"na'},
+            {"phase": "generating_ir", "delta": 'me": "Recipe Box"}'},
+            {"phase": "done", "id": "1", "name": "Recipe Box", "file_count": 154},
+        ]
+        stream = RecordingBuildStream(events)
+        with running_server(RecordingBuild(STUB_RESULT), build_stream_fn=stream) as base:
+            status, received = _post_sse(base + "/api/build/stream", {"prompt": "Build a recipe box"})
+            self.assertEqual(status, 200)
+            self.assertEqual(received, events)
+            self.assertEqual(stream.prompts, ["Build a recipe box"])
+
+    def test_stream_404_when_disabled(self) -> None:
+        with running_server(RecordingBuild(STUB_RESULT)) as base:
+            status, data = _post(base + "/api/build/stream", obj={"prompt": "x"})
+            self.assertEqual(status, 404)
+            self.assertIn("error", data)
+
+    def test_stream_empty_prompt_is_400(self) -> None:
+        stream = RecordingBuildStream([{"phase": "done"}])
+        with running_server(RecordingBuild(STUB_RESULT), build_stream_fn=stream) as base:
+            status, data = _post(base + "/api/build/stream", obj={"prompt": "   "})
+            self.assertEqual(status, 400)
+            self.assertIn("error", data)
+            self.assertEqual(stream.prompts, [])
+
+    def test_stream_invalid_json_is_400(self) -> None:
+        stream = RecordingBuildStream([{"phase": "done"}])
+        with running_server(RecordingBuild(STUB_RESULT), build_stream_fn=stream) as base:
+            status, data = _post(base + "/api/build/stream", raw=b"not json{")
+            self.assertEqual(status, 400)
+            self.assertIn("error", data)
+            self.assertEqual(stream.prompts, [])
+
+    def test_stream_rejects_pack_id_before_any_sse_framing(self) -> None:
+        stream = RecordingBuildStream([{"phase": "done"}])
+        with running_server(RecordingBuild(STUB_RESULT), build_stream_fn=stream) as base:
+            status, data = _post(
+                base + "/api/build/stream", obj={"prompt": "x", "pack_id": "minimal-blog"}
+            )
+            self.assertEqual(status, 400)
+            self.assertIn("error", data)
+            self.assertEqual(stream.prompts, [])
+
+    def test_stream_rejects_ecosystem_id_before_any_sse_framing(self) -> None:
+        stream = RecordingBuildStream([{"phase": "done"}])
+        with running_server(RecordingBuild(STUB_RESULT), build_stream_fn=stream) as base:
+            status, data = _post(base + "/api/build/stream", obj={"prompt": "x", "ecosystem_id": "e1"})
+            self.assertEqual(status, 400)
+            self.assertIn("error", data)
+            self.assertEqual(stream.prompts, [])
+
+    def test_stream_rejects_hybrid_ui_before_any_sse_framing(self) -> None:
+        stream = RecordingBuildStream([{"phase": "done"}])
+        with running_server(RecordingBuild(STUB_RESULT), build_stream_fn=stream) as base:
+            status, data = _post(base + "/api/build/stream", obj={"prompt": "x", "hybrid_ui": True})
+            self.assertEqual(status, 400)
+            self.assertIn("error", data)
+            self.assertEqual(stream.prompts, [])
+
+    def test_stream_mid_stream_error_is_reported_as_a_final_frame(self) -> None:
+        # Headers are already sent by the time a mid-stream failure happens (R-484's own design:
+        # a clean 400 only for the *pre-stream* rejections above) - the failure must surface as one
+        # last SSE frame, not an unhandled exception in the handler thread.
+        async def failing_stream(prompt: str):
+            yield {"phase": "generating_ir", "delta": "partial"}
+            raise RuntimeError("model connection dropped")
+
+        with running_server(RecordingBuild(STUB_RESULT), build_stream_fn=failing_stream) as base:
+            status, received = _post_sse(base + "/api/build/stream", {"prompt": "Build a blog"})
+            self.assertEqual(status, 200)
+            self.assertEqual(received[0], {"phase": "generating_ir", "delta": "partial"})
+            self.assertEqual(received[-1]["phase"], "error")
+            self.assertIn("model connection dropped", received[-1]["error"])
+
+
+class TestLiveServeBuildStream(unittest.TestCase):
+    """R-484: _build_stream() - the async-generator twin of _build() streaming SSE-ready events."""
+
+    def test_streamed_deltas_reconstruct_the_final_payload(self) -> None:
+        import asyncio
+        from unittest.mock import patch
+        from omnistackai_agent_engine.application_ir import example_ir
+        from omnistackai_agent_engine.model_gateway import StreamEvent, TokenUsage
+        from omnistackai_agent_engine.studio.live_serve import _build_stream
+
+        ir_dict = example_ir("minimal-blog").to_dict()
+        ir_json = json.dumps(ir_dict)
+
+        class _StreamingStubProvider:
+            provider_id = "stub"
+
+            async def generate(self, request):  # pragma: no cover
+                raise AssertionError("generate() must not be called by the streaming path")
+
+            async def stream(self, request):
+                chunks = [ir_json[i : i + 16] for i in range(0, len(ir_json), 16)]
+                for sequence, chunk in enumerate(chunks):
+                    is_last = sequence == len(chunks) - 1
+                    yield StreamEvent(
+                        request.request_id,
+                        sequence,
+                        chunk,
+                        is_last,
+                        TokenUsage(20, 8) if is_last else None,
+                    )
+
+        async def _collect():
+            deltas: list[str] = []
+            final = None
+            with tempfile.TemporaryDirectory() as tmp:
+                with patch(
+                    "omnistackai_agent_engine.studio.live_serve.resolve_generation_provider_from_env",
+                    return_value=(_StreamingStubProvider(), "stub-model", 4096, 5.0),
+                ):
+                    async for event in _build_stream("A tech blog", target_dir=str(Path(tmp) / "blog")):
+                        if event.get("phase") == "generating_ir":
+                            deltas.append(event["delta"])
+                        else:
+                            final = event
+            return deltas, final
+
+        deltas, final = asyncio.run(_collect())
+        self.assertGreater(len(deltas), 1)
+        self.assertEqual("".join(deltas), ir_json)
+        assert final is not None
+        self.assertEqual(final["phase"], "done")
+        self.assertEqual(final["name"], ir_dict["name"])
+        self.assertIn("usage", final)
+
+    def test_solution_pack_rejected_before_any_streaming(self) -> None:
+        import asyncio
+        from omnistackai_agent_engine.studio.live_serve import StreamingBuildNotSupportedError, _build_stream
+
+        async def _run_it():
+            async for _event in _build_stream("A tech blog", pack_id="minimal-blog"):
+                pass
+
+        with self.assertRaises(StreamingBuildNotSupportedError):
+            asyncio.run(_run_it())
+
+    def test_ecosystem_rejected_before_any_streaming(self) -> None:
+        import asyncio
+        from omnistackai_agent_engine.studio.live_serve import StreamingBuildNotSupportedError, _build_stream
+
+        async def _run_it():
+            async for _event in _build_stream("A tech blog", ecosystem_id="e1"):
+                pass
+
+        with self.assertRaises(StreamingBuildNotSupportedError):
+            asyncio.run(_run_it())
+
+    def test_hybrid_ui_rejected_before_any_streaming(self) -> None:
+        import asyncio
+        from omnistackai_agent_engine.studio.live_serve import StreamingBuildNotSupportedError, _build_stream
+
+        async def _run_it():
+            async for _event in _build_stream("A tech blog", hybrid_ui=True):
+                pass
+
+        with self.assertRaises(StreamingBuildNotSupportedError):
+            asyncio.run(_run_it())
 
 
 class TestStudioProblemsRoutes(unittest.TestCase):

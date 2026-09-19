@@ -17,6 +17,7 @@ and records the real outcome (success with real token usage, or failure) into an
 from __future__ import annotations
 
 import time
+from collections.abc import AsyncIterator
 
 from .accounting import UsageLedger
 from .contracts import (
@@ -25,6 +26,7 @@ from .contracts import (
     ModelDescriptor,
     ModelProvider,
     ProviderHealth,
+    StreamEvent,
 )
 from .ollama import OLLAMA_PROVIDER_ID
 
@@ -82,3 +84,37 @@ class RecordingProvider:
             finish_reason=response.finish_reason.value,
         )
         return response
+
+    async def stream(self, request: GenerateRequest) -> AsyncIterator[StreamEvent]:
+        """R-484: streaming twin of ``generate`` - forwards every event from ``inner`` unchanged
+        and records exactly one ledger entry per call, on the final (``done=True``) event's usage
+        or on a failure, mirroring ``generate``'s own success/failure recording shape."""
+        tier = "local" if self._inner.provider_id == OLLAMA_PROVIDER_ID else "cloud"
+        started = time.monotonic()
+        try:
+            async for event in self._inner.stream(request):
+                if event.done:
+                    self._ledger.record_call(
+                        request_id=event.request_id,
+                        provider_id=self._inner.provider_id,
+                        model_id=request.model.model_id,
+                        tier=tier,
+                        complexity=_COMPLEXITY_LABEL,
+                        usage=event.usage,
+                        latency_ms=int((time.monotonic() - started) * 1000),
+                        success=True,
+                    )
+                yield event
+        except Exception as error:
+            self._ledger.record_call(
+                request_id=request.request_id,
+                provider_id=self._inner.provider_id,
+                model_id=request.model.model_id,
+                tier=tier,
+                complexity=_COMPLEXITY_LABEL,
+                usage=None,
+                latency_ms=int((time.monotonic() - started) * 1000),
+                success=False,
+                error_code=getattr(error, "code", type(error).__name__),
+            )
+            raise

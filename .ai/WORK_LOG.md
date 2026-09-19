@@ -1,5 +1,86 @@
 # Work Log
 
+## 2026-09-19 — R-484 (Backend: real-time build streaming, SSE)
+
+- **Why:** first of the founder's post-roadmap priorities, per "streaming first, then scope
+  isolation properly" — chosen after three parallel research passes (competitor streaming
+  architecture, per-user isolation scoping, deploy/stack breadth). Replaces the one-shot blocking
+  "Building…" wait with genuine incremental progress. Scoped backend-only (agent-engine SSE
+  emission + Go relay, curl-verified); console UI consumption is R-485, mirroring this session's
+  proven backend-then-UI split (R-476→R-477, R-478→R-479).
+- **Design, verified by direct source read before writing any code:** `model_gateway/contracts.py`'s
+  `ModelProvider` Protocol already declared `stream(request) -> AsyncIterator[StreamEvent]`, and
+  every real provider already implemented it — but `_build()`'s entire call chain
+  (`build_app_from_prompt` → `generate_ir` → `provider.generate()`) never once called `.stream()`.
+  The gap this task closes is entirely in the intake/build layer, not the model layer.
+- **New, purely additive streaming twins — every existing non-streaming function untouched:**
+  `generate_ir_stream()` (`intake/nl_to_ir.py`, an async generator yielding raw text deltas from
+  `provider.stream()`, then the final `IntakeResult`); `build_app_from_prompt_stream()`
+  (`intake/build_app.py`, streams the IR-generation deltas then does `build_app_from_ir()`'s disk/
+  git work synchronously once the IR completes); `_build_stream()` (`studio/live_serve.py`, an
+  async generator mirroring `_build()`'s plain-prompt-only branch — Solution Pack, Ecosystem, and
+  `hybrid_ui=True` builds are explicitly, honestly rejected via a new
+  `StreamingBuildNotSupportedError`, matching the exact scope precedent `_edit()`/R-476 already
+  set, rather than silently falling back or guessing).
+- **New `POST /api/build/stream` route (`studio/server.py`):** reads the JSON body, rejects
+  unsupported build kinds with a normal `400` before any streaming starts, then switches to SSE
+  (`Content-Type: text/event-stream`, manual `self.wfile.write()`+`flush()` per event over stdlib
+  `http.server`'s connection-close-delimited body — zero new dependencies), driven via a small
+  `asyncio.run()`-wrapped drain loop matching `_edit()`'s existing "sync handler, async model
+  calls" pattern.
+- **New Go control-plane route `POST /jobs/build/stream` (`internal/jobs/handler.go`):** because
+  crediting requires the final event's usage (only known once the stream completes), the relay
+  can't inject `credits_spent`/`credit_balance` into an already-sent frame — instead it relays
+  every upstream SSE frame verbatim via `http.Flusher` as it arrives (new `readSSEFrame`/
+  `parseSSEDataPayload` helpers read one frame at a time without altering what gets forwarded),
+  then appends one trailing `event: credits\ndata: {...}\n\n` frame once the upstream `"done"`
+  event's usage is known and debited via the same `creditsForUsage` computation `proxyAndDebit`
+  already uses. A `"done"` with no `usage` at all still gets a `credits_spent: 0` frame (tracked
+  via a separate `sawDone` boolean, not conflated with "no usage reported"); a debit failure after
+  streaming has started (headers already sent — a plain `500` is no longer possible) surfaces as a
+  named `credits_error` SSE frame instead.
+- **Two real bugs found and fixed by this task's own gates — not glossed over:**
+  1. The SSE route initially sent `Connection: keep-alive`. `BaseHTTPRequestHandler.send_header`
+     specially interprets that literal value as "keep this socket open"
+     (`self.close_connection = False`); since the response has no `Content-Length`/chunked
+     framing, the client's only signal the body has ended is the connection closing — so this hung
+     every real client indefinitely. Caught immediately by the first HTTP-level streaming test via
+     a real client socket timeout. Fixed by sending `Connection: close` instead.
+  2. `RecordingProvider` (`model_gateway/recording.py`) — the real usage/cost-tracking wrapper
+     every production build call is routed through via `resolve_generation_provider_from_env` —
+     had no `.stream()` method at all. Every automated test mocks around this real wrapping
+     (handing `_build_stream()` a raw stub provider directly), so this was invisible to
+     `task verify` and only surfaced via the task's own required live `curl -N` smoke test, which
+     failed immediately with `'RecordingProvider' object has no attribute 'stream'`. Fixed by
+     adding `RecordingProvider.stream()`, mirroring `generate()`'s own success/failure
+     ledger-recording shape exactly, plus 4 new tests in `test_recording_provider.py` (both files
+     added to `allowed_paths` mid-task once the gap was found, following the same discipline as
+     every prior mid-task scope correction this session).
+- **Gates:** agent-engine `task verify` **3,658 OK** (27 net-new: 9 in `test_intake_nl_to_ir.py`, 3
+  in `test_build_app.py`, 11 in `test_studio_server.py`, 4 in `test_recording_provider.py`), 0
+  model/network calls. Control-plane `go build`/`go vet`/`go test ./...`: all green, 7 new tests
+  in `handler_test.go` (55 total). Repo-wide `task verify`/`lint`/`security:quick`/`env:check` and
+  a new `scripts/test.sh` contract block all pass.
+- **Live manual smoke:** rebuilt the control-plane container (`task control-plane:verify`) and
+  restarted the agent-engine Studio server (build-only mode, Python doesn't hot-reload — the first
+  attempt against the still-running pre-fix process is exactly what surfaced bug #2 above). A real
+  `curl -N` session through the real Go control-plane (not directly against the agent-engine)
+  showed genuine token-by-token `generating_ir` deltas arriving with real millisecond-scale gaps
+  over ~9 real seconds of wall-clock time, ending with a real `"phase": "done"` frame carrying the
+  full real build result (177 files, entities `Tag, TaskComment, TaskItem, TaskTag, TodoList,
+  User`, a real git commit sha `75f4b0addf7d08267efc751680d4b50fe339df3f`, real `usage` with
+  `input_tokens: 1875, output_tokens: 3144`), followed by a real trailing `event: credits` frame
+  (`{"credit_balance":100,"credits_spent":0}` — honestly zero because this environment's real
+  configured cloud model has no price-book entry, a pre-existing, unrelated fact already
+  documented in R-472/R-476's own evidence). All three unsupported build kinds (`pack_id`,
+  `ecosystem_id`, `hybrid_ui`) confirmed cleanly rejected with a `400` and
+  `Content-Type: application/json` before any SSE framing began. The existing non-streaming
+  `POST /jobs/build`/`POST /api/build` were not touched by any edit and remain covered unchanged
+  by every pre-existing passing test.
+- **Next:** R-485 (console: streaming build UI, consuming this endpoint in `studio-chat.tsx`'s
+  `sendBuild()`), then properly scope (not yet build) full per-user process/sandbox isolation per
+  the founder's stated build order.
+
 ## 2026-09-19 — R-483 (Fix: dynamic-route slug collision & duplicate FK identifier)
 
 - **Why:** second follow-up task after the 7-task Phase D roadmap, per the founder's "complete one

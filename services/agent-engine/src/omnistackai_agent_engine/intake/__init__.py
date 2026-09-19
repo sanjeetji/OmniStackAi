@@ -8,6 +8,7 @@ from .build_app import (
     app_build_result_to_dict,
     build_app_from_ir,
     build_app_from_prompt,
+    build_app_from_prompt_stream,
 )
 from .errors import IntakeError, IntakeResponseError
 from .provider_resolution import resolve_generation_provider_from_env
@@ -18,6 +19,7 @@ from .nl_to_ir import (
     IntakeResult,
     build_intake_messages,
     generate_ir,
+    generate_ir_stream,
     parse_ir_response,
 )
 from .scope_compiler import (
@@ -59,10 +61,12 @@ __all__ = [
     "build_intake_messages",
     "parse_ir_response",
     "generate_ir",
+    "generate_ir_stream",
     "AppBuildResult",
     "app_build_result_to_dict",
     "build_app_from_ir",
     "build_app_from_prompt",
+    "build_app_from_prompt_stream",
     "resolve_generation_provider_from_env",
     "DEFAULT_TEMPLATE_EXAMPLE",
     "DEFAULT_MAX_OUTPUT_TOKENS",

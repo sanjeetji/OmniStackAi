@@ -8,8 +8,10 @@ No web framework, no external dependencies.
 
 from __future__ import annotations
 
+import asyncio
 import json
 import os
+from collections.abc import AsyncIterator
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from typing import Callable
 from urllib.parse import parse_qs, unquote, urlparse
@@ -34,6 +36,7 @@ EditFn = Callable[[str, str], dict]
 ReadFileFn = Callable[[str, str], dict]
 ProblemsFn = Callable[[str], dict]
 ProvidersFn = Callable[[], dict]
+BuildStreamFn = Callable[[str], AsyncIterator[dict]]
 
 _MAX_BODY_BYTES = 64 * 1024
 
@@ -54,6 +57,7 @@ def _make_handler(
     problems_check_fn: ProblemsFn | None = None,
     problems_get_fn: ProblemsFn | None = None,
     providers_fn: ProvidersFn | None = None,
+    build_stream_fn: BuildStreamFn | None = None,
     registry: SolutionPackRegistry | None = None,
     ecosystem_registry: EcosystemPackRegistry | None = None,
     switch_surface_fn: PreviewBuildFn | None = None,
@@ -228,6 +232,61 @@ def _make_handler(
                 self._send_json(404, {"error": str(error)})
             except Exception as error:  # surface any other failure as a clean 502
                 self._send_json(502, {"error": str(error)})
+
+        def _write_sse_event(self, payload: dict) -> None:
+            """Write one SSE `data:` frame and flush immediately (R-484) - a real, incremental
+            frame the client sees as soon as it's written, not buffered until the connection
+            closes. Tolerates the client having already disconnected (a real, ordinary occurrence
+            for a long-lived stream) rather than raising into the handler thread."""
+            try:
+                self.wfile.write(f"data: {json.dumps(payload)}\n\n".encode("utf-8"))
+                self.wfile.flush()
+            except (BrokenPipeError, ConnectionResetError, OSError):
+                pass
+
+        def _handle_build_stream(self) -> None:
+            data = self._read_json_body()
+            if data is None:
+                return
+            if build_stream_fn is None:
+                self._send_json(404, {"error": "build streaming is not enabled"})
+                return
+            prompt = str(data.get("prompt", "")).strip()
+            if not prompt:
+                self._send_json(400, {"error": "prompt is required"})
+                return
+            # Reject an unsupported build kind BEFORE any SSE framing begins (a plain JSON 400,
+            # never a broken half-open stream) - server.py stays framework-agnostic and testable
+            # with a plain stub by checking this itself, rather than importing live_serve.py's own
+            # StreamingBuildNotSupportedError (which would invert this module's dependency
+            # direction: live_serve.py imports from server.py today, never the reverse).
+            if data.get("pack_id") or data.get("ecosystem_id") or data.get("hybrid_ui"):
+                self._send_json(
+                    400,
+                    {"error": "streaming is only supported for a plain-prompt, non-hybrid_ui build today"},
+                )
+                return
+
+            self.send_response(200)
+            self.send_header("Content-Type", "text/event-stream")
+            self.send_header("Cache-Control", "no-cache")
+            # No Content-Length/chunked framing (by design - see module docstring), so the client's
+            # only way to detect the end of the SSE body is the connection closing. BaseHTTPRequestHandler
+            # special-cases the literal value "keep-alive" in send_header to mean "don't close the
+            # socket" (self.close_connection = False) - sending that here would tell the client to
+            # expect more bytes forever, hanging every real client. "close" is the correct, honest value.
+            self.send_header("Connection", "close")
+            self.send_header("X-Accel-Buffering", "no")  # reverse proxies must not buffer this
+            self.end_headers()
+
+            async def _drain() -> None:
+                async for event in build_stream_fn(prompt):
+                    self._write_sse_event(event)
+
+            try:
+                asyncio.run(_drain())
+            except Exception as error:  # a genuinely unexpected failure mid-stream - report it as
+                self._write_sse_event({"phase": "error", "error": str(error)})  # one last real frame
 
         def _handle_edit(self, build_id: str) -> None:
             data = self._read_json_body()
@@ -788,6 +847,9 @@ def _make_handler(
                 except Exception as error:
                     self._send_json(502, {"error": str(error)})
                 return
+            if self.path == "/api/build/stream":
+                self._handle_build_stream()
+                return
             if self.path != "/api/build":
                 edit_build_id = self._build_id_for_suffix(self.path, "/edit")
                 if edit_build_id is not None:
@@ -866,6 +928,7 @@ def create_studio_server(
     problems_check_fn: ProblemsFn | None = None,
     problems_get_fn: ProblemsFn | None = None,
     providers_fn: ProvidersFn | None = None,
+    build_stream_fn: BuildStreamFn | None = None,
     solution_pack_registry: SolutionPackRegistry | None = None,
     ecosystem_pack_registry: EcosystemPackRegistry | None = None,
     switch_surface_fn: PreviewBuildFn | None = None,
@@ -919,6 +982,9 @@ def create_studio_server(
     (``GET /api/providers``, R-482, a zero-arg status view of the model fabric plus which provider would
     actually run the next real call) may also be wired in build-only mode -- it needs only environment
     variables and one optional, lightweight local health ping, never a toolchain or running preview.
+    ``build_stream_fn`` (``POST /api/build/stream``, R-484) streams real incremental build progress via
+    Server-Sent Events for a plain-prompt, non-``hybrid_ui`` build -- other build kinds are rejected with
+    a plain 400 before any SSE framing begins, proxied through unchanged by every layer above this one.
     """
     return ThreadingHTTPServer(
         (host, port),
@@ -938,6 +1004,7 @@ def create_studio_server(
             problems_check_fn=problems_check_fn,
             problems_get_fn=problems_get_fn,
             providers_fn=providers_fn,
+            build_stream_fn=build_stream_fn,
             registry=solution_pack_registry,
             ecosystem_registry=ecosystem_pack_registry,
             switch_surface_fn=switch_surface_fn,

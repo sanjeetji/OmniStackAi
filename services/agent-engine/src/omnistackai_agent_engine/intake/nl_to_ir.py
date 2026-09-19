@@ -21,6 +21,7 @@ from __future__ import annotations
 
 import json
 import re
+from collections.abc import AsyncIterator
 from dataclasses import dataclass
 
 from ..application_ir import (
@@ -483,3 +484,49 @@ async def generate_ir(
         )
         raise IntakeResponseError(f"generated IR failed validation: {detail}")
     return IntakeResult(ir=ir, issues=issues, raw_text=response.text)
+
+
+async def generate_ir_stream(
+    prompt: str,
+    provider: ModelProvider,
+    *,
+    model_id: str,
+    example_name: str = DEFAULT_TEMPLATE_EXAMPLE,
+    max_output_tokens: int = DEFAULT_MAX_OUTPUT_TOKENS,
+    timeout_seconds: float = DEFAULT_TIMEOUT_SECONDS,
+) -> AsyncIterator[str | IntakeResult]:
+    """Streaming twin of `generate_ir` (R-484): yields raw text deltas as they arrive from the
+    model via `provider.stream()`, then yields the final `IntakeResult` once the complete response
+    has been parsed and validated exactly like `generate_ir` does.
+
+    Callers distinguish a delta from the final result by type: every `str` yielded is an in-order
+    text delta (useful for a live "watching it think" UI even though the accumulated text is not
+    valid JSON until the stream ends); the single, always-last `IntakeResult` is the real, complete,
+    validated outcome — identical in shape to what `generate_ir` itself would have returned for the
+    same prompt. Raises the same `IntakeResponseError` as `generate_ir` for an invalid response;
+    additive only, `generate_ir` itself is unchanged.
+    """
+    messages = build_intake_messages(prompt, example_name=example_name)
+    request = GenerateRequest(
+        _REQUEST_ID,
+        ModelRef(provider.provider_id, model_id),
+        messages,
+        max_output_tokens,
+        timeout_seconds,
+    )
+    chunks: list[str] = []
+    async for event in provider.stream(request):
+        if event.delta:
+            chunks.append(event.delta)
+            yield event.delta
+    text = "".join(chunks)
+    ir = parse_ir_response(text)
+    issues = validate_ir(ir)
+    if has_errors(issues):
+        detail = "; ".join(
+            f"{issue.location}: {issue.message}"
+            for issue in issues
+            if issue.severity is Severity.ERROR
+        )
+        raise IntakeResponseError(f"generated IR failed validation: {detail}")
+    yield IntakeResult(ir=ir, issues=issues, raw_text=text)

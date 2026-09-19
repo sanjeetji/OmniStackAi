@@ -2,10 +2,10 @@ schema_version: 1
 project: OmniStackAI
 phase: BASIC/MVP
 founder_stage: 0
-current_task: R-483
+current_task: R-484
 current_status: done
 branch: main
-last_completed_task: R-483
+last_completed_task: R-484
 # TASK COMPILATION AUDIT — 2026-09-16
 # Performed to achieve 100% synchronization across all task-tracking documentation.
 # Tracker workbook expanded to 464 tasks with R-464.
@@ -34,6 +34,55 @@ task_compilation_audit:
       new_status: DONE
       reason: "Task fully completed on 2026-09-11 with 35 tests. Status left stale during rapid development sprint."
 last_completed_task_summary: >-
+  Completed R-484 (2026-09-19): backend real-time build streaming (SSE). First of the founder's
+  post-roadmap priorities ("streaming first, then scope isolation properly"), chosen after three
+  parallel research passes (competitor streaming architecture, per-user isolation scoping,
+  deploy/stack breadth). Backend only - console UI is R-485.
+  ModelProvider.stream() already existed at the model_gateway layer but _build()'s entire call
+  chain never called it. Added purely additive streaming twins: generate_ir_stream()
+  (intake/nl_to_ir.py), build_app_from_prompt_stream() (intake/build_app.py), _build_stream()
+  (studio/live_serve.py, plain-prompt-only - Solution Pack/Ecosystem/hybrid_ui explicitly rejected
+  via StreamingBuildNotSupportedError, matching _edit()'s own scope precedent). New
+  POST /api/build/stream (agent-engine SSE) and POST /jobs/build/stream (Go relay via
+  http.Flusher, appending a trailing "credits" event once the upstream "done" event's usage is
+  known - crediting can't happen mid-stream; a "done" with no usage still gets a credits_spent: 0
+  frame via a separate sawDone boolean; a debit failure after streaming started surfaces as a
+  named credits_error frame since a plain 500 is no longer possible once headers are sent).
+  Two real bugs found and fixed, not glossed over: (1) the SSE route sent Connection: keep-alive,
+  which BaseHTTPRequestHandler treats as "never close this socket" - since there's no
+  Content-Length/chunked framing, that hung every real client; caught by the first HTTP-level
+  test, fixed to Connection: close. (2) RecordingProvider (every production build's real
+  usage-tracking wrapper via resolve_generation_provider_from_env) had no .stream() method -
+  invisible to every mocked test (they hand _build_stream() a raw stub provider directly), only
+  caught by the task's own required live curl -N smoke test
+  ('RecordingProvider' object has no attribute 'stream'); fixed by adding
+  RecordingProvider.stream(), mirroring generate()'s own success/failure ledger-recording shape,
+  plus 4 new tests in test_recording_provider.py (both files added to allowed_paths mid-task once
+  the gap was found).
+  Gates: agent-engine task verify 3,658 OK (27 new tests: 9 in test_intake_nl_to_ir.py, 3 in
+  test_build_app.py, 11 in test_studio_server.py, 4 in test_recording_provider.py), 0
+  model/network calls. Control-plane go build/vet/test all green (7 new tests in
+  handler_test.go, 55 total). Repo task verify/lint/security:quick/env:check all pass; new
+  scripts/test.sh contract block.
+  Live - a real curl -N session through the real Go control-plane (rebuilt via
+  task control-plane:verify; agent-engine Studio server restarted since Python doesn't hot-reload
+  - the first attempt against the still-running pre-fix process is exactly what surfaced bug #2)
+  showed genuine token-by-token generating_ir deltas with real millisecond-scale gaps over ~9 real
+  seconds, ending with a real "done" frame (177 files, entities Tag/TaskComment/TaskItem/
+  TaskTag/TodoList/User, real git commit sha 75f4b0addf7d08267efc751680d4b50fe339df3f, real usage
+  input_tokens:1875/output_tokens:3144), followed by a real trailing "credits" frame
+  (credit_balance:100, credits_spent:0 - honestly zero, this environment's configured cloud model
+  has no price-book entry, a pre-existing unrelated fact already documented in R-472/R-476's own
+  evidence). All three unsupported build kinds (pack_id/ecosystem_id/hybrid_ui) confirmed cleanly
+  rejected with a 400 and application/json content-type before any SSE framing began. The existing
+  non-streaming POST /jobs/build/POST /api/build were not touched by any edit and remain covered
+  unchanged by every pre-existing passing test.
+  NEXT: R-485 (console: streaming build UI, consuming this endpoint in studio-chat.tsx's
+  sendBuild()). Then properly SCOPE (not build) full per-user process/sandbox isolation as its own
+  multi-task project - a materially different architecture decision needing explicit founder
+  sign-off; the agent-engine has zero containerization today and scripts/test.sh actively blocks
+  adding it as a Compose service, which full isolation will need to explicitly revise.
+_prior_last_completed_task_summary_R483: >-
   Completed R-483 (2026-09-19): fix - dynamic-route slug collision & duplicate FK identifier in the
   edit-delta path. Second follow-up task after the 7-task Phase D roadmap, per the founder's
   "complete one by one all" direction. Fixes the exact real bug found live during R-481's own
@@ -1540,16 +1589,24 @@ blockers: []
 next_action: >-
   The founder-approved 7-task Phase D roadmap (R-475-R-481) shipped, then the founder said
   "Complete one by one all" (2026-09-19) - continue through every named follow-up, one Tracker ID
-  at a time, full discipline, same as every task so far. R-482 (Model Provider settings UI) and
-  R-483 (fix: dynamic-route slug collision + duplicate FK identifier) are both done - the exact
-  originally-reported bug was reproduced live and confirmed fixed (no crash, one consistent route
-  folder, 0 duplicate-identifier tsc errors).
-  NEXT: R-484 (real-time build/edit streaming, renumbered from R-483 now that the bug fix took that
-  number), per-user backend multi-tenancy, and Publish/deploy each involve a materially different
-  architecture decision (transport protocol - SSE vs WebSocket; tenancy model; deploy
-  target/hosting) - per the standing "stop and ask for hard-gate architecture decisions" rule, ask
-  the founder which specific approach for each BEFORE implementing, rather than assuming. Phase E
-  (plan-gated UI, admin console, payment processor, proposed R-485+) still needs its own explicit
-  founder sign-off before starting.
+  at a time, full discipline, same as every task so far. R-482 (Model Provider settings UI), R-483
+  (fix: dynamic-route slug collision + duplicate FK identifier), and R-484 (backend: real-time
+  build streaming via SSE) are all done. After R-484's research passes, the founder gave direction
+  on the three big remaining items: streaming first (done), then scope isolation properly; "Full
+  isolation: per-user processes/sandboxes" for multi-tenancy; Netlify one-click + Vercel/
+  Cloudflare/self-host/GitHub-export as deploy options; Python/Go/Node.js backends (skip Java/
+  MySQL for now); start mobile work (React Native near-term, per research - no competitor at scale
+  generates native Kotlin/Swift).
+  NEXT: R-485 (console: streaming build UI, consuming POST /jobs/build/stream in
+  studio-chat.tsx's sendBuild()). Then properly SCOPE (not yet build) full per-user process/
+  sandbox isolation as its own multi-task project - a materially different architecture decision
+  needing explicit founder sign-off per the standing "stop and ask for hard-gate architecture
+  decisions" rule; the agent-engine has zero containerization today and scripts/test.sh actively
+  blocks adding it as a Compose service, which full isolation will need to explicitly revise (~5-7
+  new subsystems: process orchestrator, sandbox runtime integration, session-to-instance routing,
+  per-user port/DB allocation, state-store externalization, cost/lifecycle policy). Publish/deploy
+  and backend/mobile stack breadth remain named and directionally approved but not yet scoped into
+  task contracts. Phase E (plan-gated UI, admin console, payment processor) still needs its own
+  explicit founder sign-off before starting.
   Keep task verify model/Docker/DB/install/network-free. The UI-component series remains
   paused/resumable; the tracker workbook still lags (ends at R-462).

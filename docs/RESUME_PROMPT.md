@@ -208,7 +208,7 @@ front-door bricks, R-420 is generated-SQL hardening, R-421..R-426 are Studio pre
 R-427..R-429 are generated-app compile fixes, R-430..R-457 are the first twenty-eight differentiating-spine
 bricks (Scope Compiler through Ecosystem Multi-Surface SLA, SLO, and Error Budget Contracts).
 Git, state files (.ai/), CHANGELOG, and docs/PROGRESS.md remain the executable/detail sources of truth.
-Current through R-483; `task verify` = 3,635 tests (agent-engine) + the Go control-plane's own suite +
+Current through R-484; `task verify` = 3,658 tests (agent-engine) + the Go control-plane's own suite +
 the Next.js console's typecheck/lint/build. R-416 added prompt-to-IR intake, R-417 materialized a generated
 owned repo, R-418 added the local chat studio, R-419 added turnkey local run, and R-420 fixed the two
 SQL defects found by live execution. R-421 added an explicit `task agent-engine:studio:preview` mode:
@@ -721,13 +721,37 @@ WHAT TO DO NEXT
   Live: reproduced the exact original scenario end to end - built the same counter app, sent the
   same edit, started the preview successfully (no crash, confirmed via the real log), one
   consistent dynamic route folder on disk, a real tsc check showing 0 duplicate-identifier errors.
-- NEXT (per "complete one by one all"): R-484 (real-time streaming, renumbered from R-483) and
-  per-user backend multi-tenancy each involve a materially different architecture decision
-  (transport protocol - SSE vs WebSocket; tenancy model) - per the standing "stop and ask for
-  hard-gate architecture decisions" rule, ask the founder which specific approach before
-  implementing, rather than assuming. Publish/deploy likewise needs an explicit deploy-target
-  decision first. After that, Phase E (plan-gated UI, admin console, payment processor, proposed
-  R-485+) needs its own explicit founder sign-off before starting.
+- R-484 (2026-09-19, done) built real-time build streaming (SSE) - the founder's first named
+  post-roadmap priority ("streaming first, then scope isolation properly"), chosen after three
+  parallel research passes (competitor streaming architecture, per-user isolation scoping,
+  deploy/stack breadth). Backend only - console UI is R-485. `ModelProvider.stream()` already
+  existed at the model_gateway layer but nothing above it called it; added purely additive
+  streaming twins (generate_ir_stream, build_app_from_prompt_stream, _build_stream, all
+  plain-prompt-only per _edit()'s own scope precedent), new `POST /api/build/stream` (agent-engine
+  SSE) and `POST /jobs/build/stream` (Go relay via http.Flusher + a trailing credits event once
+  the real cost is known). **Two real bugs found and fixed, not glossed over**: (1) the SSE route
+  sent `Connection: keep-alive`, which hung every real client since there's no
+  Content-Length/chunked framing to signal the body's end - fixed to `Connection: close`. (2)
+  RecordingProvider (every production build's real usage-tracking wrapper) had no `.stream()`
+  method - invisible to every mocked test, only caught by the task's own required live `curl -N`
+  smoke test - fixed with 4 new tests. `task verify` 3,658 OK (27 new tests); control-plane
+  `go build`/`vet`/`test` all green (7 new tests, 55 total). Live: a real curl -N session through
+  the real Go control-plane showed genuine token-by-token deltas over ~9 real seconds, a real done
+  frame (177 files, real commit sha), and a real trailing credits frame; all three unsupported
+  build kinds (pack_id/ecosystem_id/hybrid_ui) confirmed cleanly rejected with a 400 before any
+  SSE framing.
+- NEXT (per "streaming first, then scope isolation properly"): R-485 (console: streaming build UI,
+  consuming POST /jobs/build/stream in studio-chat.tsx's sendBuild() via fetch() + manual
+  response.body.getReader() parsing, plus a new Next.js proxy route relaying the upstream stream
+  through after auth-gating). Then properly SCOPE (not yet build) full per-user process/sandbox
+  isolation as its own multi-task project - a materially different architecture decision requiring
+  explicit founder sign-off per the standing "stop and ask for hard-gate architecture decisions"
+  rule (the agent-engine has zero containerization today, and `scripts/test.sh` has an active,
+  enforced gate blocking agent-engine/redis/runner-manager/nats/temporal/kubernetes as Compose
+  services that full isolation will need to explicitly revise). Publish/deploy (multi-target:
+  Netlify one-click, Vercel/Cloudflare/self-host/GitHub-export as options) and backend/mobile stack
+  breadth (Node.js added alongside Python/Go; React Native as the near-term mobile target) remain
+  named, founder-approved-in-direction but not yet scoped into task contracts.
   Keep `task verify` model/Docker/DB-free at its core (the console's own build/lint/typecheck gates need
   no live control-plane; any live/model path stays opt-in); preserve single-session ownership and
   explicit trusted-local mode.

@@ -1,4 +1,4 @@
-# OmniStackAI — implementation progress (as of R-483)
+# OmniStackAI — implementation progress (as of R-484)
 
 A living summary of what is built, what is pending, and how to see results. Numbers come from the
 execution tracker (`R_&_D/OmniStackAI_Execution_Tracker_v6.xlsx`, `Phase_Roadmap`, 461 tasks as of
@@ -6,8 +6,33 @@ R-461 completion) plus the state files (`.ai/`), Git history, and CHANGELOG.
 
 ## Headline
 
-- **3,635 automated tests pass** (agent-engine + Go control-plane), fully offline and
+- **3,658 automated tests pass** (agent-engine + Go control-plane), fully offline and
   network-independent (`task verify`), plus the console's own `typecheck`/`lint`/`build` gates.
+- **R-484 — Backend: real-time build streaming, SSE (2026-09-19):** first of the founder's
+  post-roadmap priorities ("streaming first, then scope isolation properly"), chosen after three
+  parallel research passes (competitor streaming architecture, per-user isolation scoping,
+  deploy/stack breadth). Replaces the one-shot blocking "Building…" wait with genuine incremental
+  progress — backend only, console UI is R-485. New additive streaming twins
+  (`generate_ir_stream`, `build_app_from_prompt_stream`, `_build_stream`) reuse the
+  `ModelProvider.stream()` capability that already existed at the `model_gateway` layer but was
+  never called above it; new `POST /api/build/stream` (agent-engine SSE) and
+  `POST /jobs/build/stream` (Go control-plane, verbatim relay via `http.Flusher` + a trailing
+  `credits` event once the real cost is known). Plain-prompt builds only — Solution Pack/
+  Ecosystem/`hybrid_ui` cleanly rejected with a `400` before any SSE framing begins. **Two real
+  bugs found and fixed, not glossed over**: (1) the SSE route sent `Connection: keep-alive`, which
+  `BaseHTTPRequestHandler` treats as "never close this socket" — since there's no
+  `Content-Length`/chunked framing, that hung every real client; fixed to `Connection: close`,
+  caught by the first HTTP-level test. (2) `RecordingProvider` (the real usage-tracking wrapper
+  every production build call goes through) had no `.stream()` method — every automated test
+  mocked around it, so only the required live `curl -N` smoke test caught it; fixed with 4 new
+  tests mirroring `generate()`'s own success/failure ledger-recording shape. `task verify`
+  **3,658 OK** (27 new tests, 0 model/network calls); control-plane `go build`/`vet`/`test` all
+  green (7 new tests, 55 total). Live: a real `curl -N` session through the real Go control-plane
+  showed genuine token-by-token deltas over ~9 real seconds (timestamped, not buffered), a real
+  `done` frame (177 files, real git commit sha), and a real trailing `credits` frame
+  (`credits_spent: 0` — this environment's configured cloud model has no price-book entry, a
+  pre-existing unrelated fact); all three unsupported build kinds confirmed rejected with a clean
+  `400` before any SSE framing. See `.ai/tasks/R-484.md` for full verification detail.
 - **R-483 — Fix: dynamic-route slug collision & duplicate FK identifier (2026-09-19):** second
   follow-up task after the 7-task Phase D roadmap shipped, per the founder's "complete one by one
   all" direction. Fixes a real, reproducible bug found live during R-481's own manual smoke test: a

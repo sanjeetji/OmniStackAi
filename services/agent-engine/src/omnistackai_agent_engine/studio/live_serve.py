@@ -29,6 +29,7 @@ import re
 import subprocess
 import sys
 import tempfile
+from collections.abc import AsyncIterator
 from decimal import ROUND_HALF_UP, Decimal
 
 from ..application_ir import ApplicationIR
@@ -38,7 +39,7 @@ from ..edit.diff import plan_edit
 from ..intake.app_delta import apply_app_delta, generate_app_delta_proposal
 from ..intake.provider_resolution import resolve_generation_provider_from_env
 from ..model_gateway.overview import platform_overview
-from ..intake.build_app import app_build_result_to_dict, build_app_from_prompt
+from ..intake.build_app import app_build_result_to_dict, build_app_from_prompt, build_app_from_prompt_stream
 from ..model_gateway.accounting import UsageLedger
 from .files import BuildNotFoundError, list_build_files, read_build_file
 from .history import StudioBuildHistory
@@ -518,6 +519,94 @@ def _build(
     return payload
 
 
+class StreamingBuildNotSupportedError(Exception):
+    """Raised for a streaming build request naming a build kind R-484 doesn't stream yet (Solution
+    Pack, Ecosystem, or hybrid_ui) - reported as a clean, honest rejection rather than silently
+    falling back to a blocking build or guessing. The caller (server.py) checks for this BEFORE any
+    SSE framing begins, so the response is a normal JSON 400, never a broken half-open stream."""
+
+
+async def _build_stream(
+    prompt: str,
+    *,
+    pack_id: str | None = None,
+    ecosystem_id: str | None = None,
+    hybrid_ui: bool = False,
+    custom_name: str | None = None,
+    custom_description: str | None = None,
+    output_dir: str | None = None,
+    folder_name: str | None = None,
+    target_dir: str | None = None,
+    preview_manager: StudioPreviewManager | None = None,
+    history: StudioBuildHistory | None = None,
+    session_store: StudioSessionStore | None = None,
+) -> AsyncIterator[dict]:
+    """Streaming twin of `_build` (R-484), scoped to the plain-prompt, non-`hybrid_ui` path only -
+    the same scope precedent `_edit`/R-476 already set for its own single-IR-only build kinds.
+
+    Yields `{"phase": "generating_ir", "delta": "..."}` events as the IR streams in from the model,
+    then one final `{"phase": "done", ...}` event carrying the exact same payload shape `_build`
+    itself returns for a plain-prompt build - including history recording, turn recording (R-476),
+    and preview handling (reusing that logic unchanged, not duplicated).
+    """
+    if pack_id or ecosystem_id or hybrid_ui:
+        raise StreamingBuildNotSupportedError(
+            "streaming is only supported for a plain-prompt, non-hybrid_ui build today"
+        )
+
+    usage_ledger = UsageLedger()
+    provider, model_id, max_output, request_timeout = resolve_generation_provider_from_env(
+        usage_ledger=usage_ledger
+    )
+    chosen_dir = _target_dir_for(
+        prompt,
+        custom_dir=output_dir or target_dir,
+        folder_name=folder_name,
+        custom_name=custom_name,
+    )
+
+    result = None
+    async for item in build_app_from_prompt_stream(
+        prompt,
+        provider,
+        chosen_dir,
+        model_id=model_id,
+        author_name=_AUTHOR_NAME,
+        author_email=_AUTHOR_EMAIL,
+        max_output_tokens=max_output,
+        timeout_seconds=request_timeout,
+        overwrite=True,
+    ):
+        if isinstance(item, str):
+            yield {"phase": "generating_ir", "delta": item}
+        else:
+            result = item
+    assert result is not None  # build_app_from_prompt_stream always yields exactly one result last
+
+    payload = app_build_result_to_dict(result, usage=_usage_summary_to_dict(usage_ledger))
+    payload["hybrid_ui_requested"] = False
+    payload["hybrid_ui_active"] = False
+    editable_ir = result.ir
+
+    if history is not None:
+        payload["id"] = history.record(payload)
+        if session_store is not None:
+            session_store.begin(payload["id"], editable_ir, payload["target_dir"])
+            session_store.record_turn(payload["id"], "user", prompt)
+            session_store.record_turn(
+                payload["id"], "assistant", f"Built {payload.get('name', 'the app')}."
+            )
+    if preview_manager is None:
+        payload["preview"] = {
+            "status": "disabled",
+            "message": "Build-only mode: start the explicit Studio preview command to run generated code.",
+        }
+    else:
+        payload["preview"] = preview_manager.replace(payload["target_dir"])
+
+    yield {"phase": "done", **payload}
+
+
 def _preview_recorded_build(
     build_id: str,
     history: StudioBuildHistory,
@@ -752,6 +841,12 @@ def main() -> None:
         # R-482: needs only env vars + one optional lightweight local ping, never a toolchain or
         # running preview - wired in build-only mode too, same reasoning as the routes above.
         "providers_fn": _provider_status,
+        # R-484: a plain-prompt, non-hybrid_ui build only needs the same model + disk access every
+        # other build-only-mode route above already has - wired unconditionally, not gated behind
+        # preview_manager.
+        "build_stream_fn": lambda prompt: _build_stream(
+            prompt, history=history, session_store=session_store, preview_manager=preview_manager
+        ),
         "turns_fn": lambda build_id: _turns(build_id, session_store),
     }
     if preview_manager is not None:

@@ -1,6 +1,7 @@
 package jobs
 
 import (
+	"bufio"
 	"bytes"
 	"encoding/json"
 	"errors"
@@ -17,6 +18,7 @@ import (
 // what a build produced, and controlling the trusted-local live preview.
 func Register(mux *http.ServeMux, deps Deps) {
 	mux.HandleFunc("POST /jobs/build", handleBuild(deps))
+	mux.HandleFunc("POST /jobs/build/stream", handleBuildStream(deps))
 	mux.HandleFunc("POST /jobs/build/{id}/edit", handleBuildEdit(deps))
 	mux.HandleFunc("GET /jobs/build/{id}/turns", handleBuildTurns(deps))
 	mux.HandleFunc("GET /jobs/build/{id}/files", handleBuildFiles(deps))
@@ -54,6 +56,160 @@ func handleBuild(deps Deps) http.HandlerFunc {
 		}
 
 		proxyAndDebit(w, r, deps, user, deps.AgentEngineURL+"/api/build", body, "job:build")
+	}
+}
+
+// handleBuildStream authenticates the caller and relays the agent-engine's POST /api/build/stream
+// (R-484) as Server-Sent Events, forwarding every upstream frame verbatim as it arrives via
+// http.Flusher. Because the real cost is only known once the upstream "done" event's usage arrives
+// - unlike proxyAndDebit, which decodes the full body before writing any response - crediting
+// happens by appending one trailing "credits" event after relaying "done", not by injecting fields
+// into an already-sent frame.
+func handleBuildStream(deps Deps) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		if controller := http.NewResponseController(w); controller != nil {
+			_ = controller.SetWriteDeadline(time.Now().Add(defaultBuildTimeout))
+		}
+
+		user, err := auth.RequireUser(r.Context(), deps.AuthStore, r)
+		if err != nil {
+			writeAuthError(w, deps, err)
+			return
+		}
+
+		body, err := io.ReadAll(r.Body)
+		_ = r.Body.Close()
+		if err != nil {
+			writeError(w, http.StatusBadRequest, "could not read request body")
+			return
+		}
+
+		upstreamRequest, err := http.NewRequestWithContext(r.Context(), http.MethodPost, deps.AgentEngineURL+"/api/build/stream", bytes.NewReader(body))
+		if err != nil {
+			deps.logger().Error("build stream agent-engine request", "error", err)
+			writeError(w, http.StatusInternalServerError, "could not build upstream request")
+			return
+		}
+		upstreamRequest.Header.Set("Content-Type", "application/json")
+
+		upstreamResponse, err := deps.httpClient().Do(upstreamRequest)
+		if err != nil {
+			deps.logger().Error("call agent-engine build stream", "error", err)
+			writeError(w, http.StatusBadGateway, "could not reach the build service")
+			return
+		}
+		defer func() { _ = upstreamResponse.Body.Close() }()
+
+		if upstreamResponse.StatusCode != http.StatusOK {
+			// A rejected build kind (Solution Pack/Ecosystem/hybrid_ui) or any other pre-stream
+			// failure - the agent-engine sends this as a plain JSON body, never SSE framing, before
+			// any streaming begins (server.py's own documented contract). Proxied through unchanged,
+			// exactly like proxyAndDebit's non-2xx case, with no credits charged.
+			upstreamBody, readErr := io.ReadAll(upstreamResponse.Body)
+			if readErr != nil {
+				deps.logger().Error("read agent-engine build-stream error response", "error", readErr)
+				writeError(w, http.StatusBadGateway, "could not read build service response")
+				return
+			}
+			w.Header().Set("Content-Type", "application/json")
+			w.WriteHeader(upstreamResponse.StatusCode)
+			_, _ = w.Write(upstreamBody)
+			return
+		}
+
+		w.Header().Set("Content-Type", "text/event-stream")
+		w.Header().Set("Cache-Control", "no-cache")
+		w.Header().Set("X-Accel-Buffering", "no")
+		w.WriteHeader(http.StatusOK)
+		flusher, _ := w.(http.Flusher)
+
+		var sawDone bool
+		var doneUsage any
+		reader := bufio.NewReader(upstreamResponse.Body)
+		for {
+			frame, readErr := readSSEFrame(reader)
+			if len(frame) > 0 {
+				if _, writeErr := w.Write(frame); writeErr != nil {
+					return // the client disconnected - nothing left to relay or credit
+				}
+				if flusher != nil {
+					flusher.Flush()
+				}
+				if payload := parseSSEDataPayload(frame); payload != nil {
+					if phase, _ := payload["phase"].(string); phase == "done" {
+						sawDone = true
+						doneUsage = payload["usage"] // nil when the build reported no usage at all
+					}
+				}
+			}
+			if readErr != nil {
+				break // upstream closed the connection - the stream is over either way
+			}
+		}
+
+		if !sawDone {
+			return // no completed build (e.g. a mid-stream "error" frame) - nothing to charge for
+		}
+		requestedCredits := creditsForUsage(doneUsage, deps.CreditsPerUSD)
+		charged, newBalance := int64(0), user.CreditBalance
+		if requestedCredits > 0 {
+			charged, newBalance, err = deps.CreditStore.DebitCredits(r.Context(), user.ID, requestedCredits, "job:build:stream")
+			if err != nil {
+				// The call already happened and cost real money upstream; there is no way to undo it
+				// from here, matching proxyAndDebit's own honest-logging precedent - surfaced as one
+				// last named event rather than silently omitting credits.
+				deps.logger().Error("debit credits for a completed streamed call",
+					"error", err, "user_id", user.ID, "requested_credits", requestedCredits)
+				writeSSEEvent(w, flusher, "credits_error", map[string]any{"error": "the call succeeded but credit accounting failed"})
+				return
+			}
+		}
+		writeSSEEvent(w, flusher, "credits", map[string]any{"credits_spent": charged, "credit_balance": newBalance})
+	}
+}
+
+// readSSEFrame reads one SSE event frame - up through and including its terminating blank line -
+// from reader and returns the exact bytes read, so the relay can forward them verbatim. On EOF it
+// returns whatever partial bytes were read (empty if none) alongside the error.
+func readSSEFrame(reader *bufio.Reader) ([]byte, error) {
+	var buf bytes.Buffer
+	for {
+		line, err := reader.ReadBytes('\n')
+		buf.Write(line)
+		if err != nil {
+			return buf.Bytes(), err
+		}
+		if len(line) == 1 { // a bare "\n" is the blank line terminating the frame
+			return buf.Bytes(), nil
+		}
+	}
+}
+
+// parseSSEDataPayload extracts and decodes a frame's "data: " line as JSON, or nil if the frame
+// carries no such line or the payload isn't valid JSON - used only to detect the "done" phase and
+// read its usage, never to alter what gets relayed.
+func parseSSEDataPayload(frame []byte) map[string]any {
+	for _, line := range bytes.Split(frame, []byte("\n")) {
+		if data, ok := bytes.CutPrefix(line, []byte("data: ")); ok {
+			var payload map[string]any
+			if err := json.Unmarshal(data, &payload); err == nil {
+				return payload
+			}
+		}
+	}
+	return nil
+}
+
+// writeSSEEvent writes one named SSE event frame and flushes immediately, mirroring the
+// agent-engine's own _write_sse_event (R-484).
+func writeSSEEvent(w http.ResponseWriter, flusher http.Flusher, event string, payload any) {
+	body, err := json.Marshal(payload)
+	if err != nil {
+		return
+	}
+	_, _ = w.Write([]byte("event: " + event + "\ndata: " + string(body) + "\n\n"))
+	if flusher != nil {
+		flusher.Flush()
 	}
 }
 

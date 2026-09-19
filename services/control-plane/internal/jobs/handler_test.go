@@ -1117,3 +1117,281 @@ func TestHandleBuildReturns500WhenDebitCreditsFails(t *testing.T) {
 		t.Fatalf("status = %d, want %d", resp.StatusCode, http.StatusInternalServerError)
 	}
 }
+
+// --- R-484: POST /jobs/build/stream (Server-Sent Events relay) ---
+
+func postBuildStream(t *testing.T, server *httptest.Server, authHeader, body string) *http.Response {
+	t.Helper()
+	request, err := http.NewRequest(http.MethodPost, server.URL+"/jobs/build/stream", strings.NewReader(body))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if authHeader != "" {
+		request.Header.Set("Authorization", authHeader)
+	}
+	request.Header.Set("Content-Type", "application/json")
+	resp, err := server.Client().Do(request)
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { _ = resp.Body.Close() })
+	return resp
+}
+
+// sseFrame is one parsed SSE frame: its optional "event:" name (empty for the default event) and
+// its decoded "data:" JSON payload.
+type sseFrame struct {
+	event   string
+	payload map[string]any
+}
+
+func readSSEFrames(t *testing.T, resp *http.Response) []sseFrame {
+	t.Helper()
+	raw, err := io.ReadAll(resp.Body)
+	if err != nil {
+		t.Fatalf("read SSE response body: %v", err)
+	}
+	var frames []sseFrame
+	for _, block := range strings.Split(string(raw), "\n\n") {
+		block = strings.TrimSpace(block)
+		if block == "" {
+			continue
+		}
+		var frame sseFrame
+		for _, line := range strings.Split(block, "\n") {
+			switch {
+			case strings.HasPrefix(line, "event: "):
+				frame.event = strings.TrimPrefix(line, "event: ")
+			case strings.HasPrefix(line, "data: "):
+				if err := json.Unmarshal([]byte(strings.TrimPrefix(line, "data: ")), &frame.payload); err != nil {
+					t.Fatalf("decode SSE data line %q: %v", line, err)
+				}
+			}
+		}
+		frames = append(frames, frame)
+	}
+	return frames
+}
+
+// writeUpstreamSSEEvent writes one `data: {...}\n\n` frame and flushes immediately, mirroring the
+// agent-engine's own real POST /api/build/stream framing (studio/server.py's _write_sse_event).
+func writeUpstreamSSEEvent(t *testing.T, w http.ResponseWriter, payload map[string]any) {
+	t.Helper()
+	body, err := json.Marshal(payload)
+	if err != nil {
+		t.Fatal(err)
+	}
+	_, _ = w.Write([]byte("data: " + string(body) + "\n\n"))
+	if flusher, ok := w.(http.Flusher); ok {
+		flusher.Flush()
+	}
+}
+
+func TestHandleBuildStreamRejectsMissingOrUnknownToken(t *testing.T) {
+	agentEngine := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		t.Fatal("agent-engine must not be called for an unauthenticated request")
+	}))
+	defer agentEngine.Close()
+
+	creditStore := &fakeCreditStore{}
+	server := newTestServer(t, agentEngine.URL, fakeAuthStore{returnErr: auth.ErrSessionNotFound}, creditStore, 1000)
+
+	noHeaderResp := postBuildStream(t, server, "", `{"prompt":"a blog"}`)
+	if noHeaderResp.StatusCode != http.StatusUnauthorized {
+		t.Fatalf("no-header status = %d, want %d", noHeaderResp.StatusCode, http.StatusUnauthorized)
+	}
+	unknownTokenResp := postBuildStream(t, server, validToken, `{"prompt":"a blog"}`)
+	if unknownTokenResp.StatusCode != http.StatusUnauthorized {
+		t.Fatalf("unknown-token status = %d, want %d", unknownTokenResp.StatusCode, http.StatusUnauthorized)
+	}
+	if creditStore.callCount() != 0 {
+		t.Fatalf("DebitCredits called %d times, want 0", creditStore.callCount())
+	}
+}
+
+func TestHandleBuildStreamRelaysFramesVerbatimAndDebitsAfterDone(t *testing.T) {
+	var receivedBody string
+	agentEngine := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		raw, err := io.ReadAll(r.Body)
+		if err != nil {
+			t.Fatal(err)
+		}
+		receivedBody = string(raw)
+		w.Header().Set("Content-Type", "text/event-stream")
+		w.WriteHeader(http.StatusOK)
+		writeUpstreamSSEEvent(t, w, map[string]any{"phase": "generating_ir", "delta": "{\"na"})
+		writeUpstreamSSEEvent(t, w, map[string]any{"phase": "generating_ir", "delta": "me\": \"Blog\"}"})
+		writeUpstreamSSEEvent(t, w, map[string]any{
+			"phase": "done", "id": "1", "name": "Blog", "file_count": 42,
+			"usage": map[string]any{"cost_micros_usd": 250000.0, "total_calls": 2.0},
+		})
+	}))
+	defer agentEngine.Close()
+
+	creditStore := &fakeCreditStore{charged: 250, balance: 750}
+	server := newTestServer(t, agentEngine.URL, fakeAuthStore{user: newTestUser()}, creditStore, 1000)
+
+	const requestBody = `{"prompt":"A tech blog"}`
+	resp := postBuildStream(t, server, validToken, requestBody)
+	if resp.StatusCode != http.StatusOK {
+		t.Fatalf("status = %d, want %d", resp.StatusCode, http.StatusOK)
+	}
+	if receivedBody != requestBody {
+		t.Fatalf("agent-engine received body = %q, want %q (must forward verbatim)", receivedBody, requestBody)
+	}
+
+	frames := readSSEFrames(t, resp)
+	if len(frames) != 4 {
+		t.Fatalf("got %d SSE frames, want 4 (2 deltas + done + credits): %+v", len(frames), frames)
+	}
+	if frames[0].payload["delta"] != "{\"na" || frames[1].payload["delta"] != "me\": \"Blog\"}" {
+		t.Fatalf("delta frames not relayed verbatim/in-order: %+v", frames[:2])
+	}
+	if frames[2].payload["phase"] != "done" || frames[2].payload["name"] != "Blog" {
+		t.Fatalf("done frame not relayed verbatim: %+v", frames[2])
+	}
+	creditsFrame := frames[3]
+	if creditsFrame.event != "credits" {
+		t.Fatalf("trailing frame event = %q, want %q", creditsFrame.event, "credits")
+	}
+	if creditsFrame.payload["credits_spent"].(float64) != 250 {
+		t.Fatalf("credits_spent = %v, want 250", creditsFrame.payload["credits_spent"])
+	}
+	if creditsFrame.payload["credit_balance"].(float64) != 750 {
+		t.Fatalf("credit_balance = %v, want 750", creditsFrame.payload["credit_balance"])
+	}
+
+	if creditStore.callCount() != 1 {
+		t.Fatalf("DebitCredits called %d times, want 1", creditStore.callCount())
+	}
+	call := creditStore.calls[0]
+	if call.userID != "user-1" || call.requested != 250 || call.reason != "job:build:stream" {
+		t.Fatalf("DebitCredits call = %+v, want {user-1 250 job:build:stream}", call)
+	}
+}
+
+func TestHandleBuildStreamAppendsCreditsFrameEvenWithNoUsage(t *testing.T) {
+	agentEngine := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "text/event-stream")
+		w.WriteHeader(http.StatusOK)
+		writeUpstreamSSEEvent(t, w, map[string]any{"phase": "done", "id": "1", "name": "Blog"})
+	}))
+	defer agentEngine.Close()
+
+	creditStore := &fakeCreditStore{}
+	server := newTestServer(t, agentEngine.URL, fakeAuthStore{user: newTestUser()}, creditStore, 1000)
+
+	resp := postBuildStream(t, server, validToken, `{"prompt":"a blog"}`)
+	frames := readSSEFrames(t, resp)
+	if len(frames) != 2 {
+		t.Fatalf("got %d SSE frames, want 2 (done + credits): %+v", len(frames), frames)
+	}
+	creditsFrame := frames[1]
+	if creditsFrame.event != "credits" {
+		t.Fatalf("trailing frame event = %q, want %q", creditsFrame.event, "credits")
+	}
+	if creditsFrame.payload["credits_spent"].(float64) != 0 {
+		t.Fatalf("credits_spent = %v, want 0 (no usage reported)", creditsFrame.payload["credits_spent"])
+	}
+	if creditsFrame.payload["credit_balance"].(float64) != float64(newTestUser().CreditBalance) {
+		t.Fatalf("credit_balance = %v, want the user's unchanged balance", creditsFrame.payload["credit_balance"])
+	}
+	if creditStore.callCount() != 0 {
+		t.Fatalf("DebitCredits called %d times, want 0 (no usage reported)", creditStore.callCount())
+	}
+}
+
+func TestHandleBuildStreamMidStreamErrorFrameIsRelayedWithNoCreditsFrame(t *testing.T) {
+	agentEngine := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "text/event-stream")
+		w.WriteHeader(http.StatusOK)
+		writeUpstreamSSEEvent(t, w, map[string]any{"phase": "generating_ir", "delta": "partial"})
+		writeUpstreamSSEEvent(t, w, map[string]any{"phase": "error", "error": "model connection dropped"})
+	}))
+	defer agentEngine.Close()
+
+	creditStore := &fakeCreditStore{}
+	server := newTestServer(t, agentEngine.URL, fakeAuthStore{user: newTestUser()}, creditStore, 1000)
+
+	resp := postBuildStream(t, server, validToken, `{"prompt":"a blog"}`)
+	frames := readSSEFrames(t, resp)
+	if len(frames) != 2 {
+		t.Fatalf("got %d SSE frames, want 2 (delta + error, no trailing credits): %+v", len(frames), frames)
+	}
+	if frames[1].payload["phase"] != "error" {
+		t.Fatalf("final frame phase = %v, want %q", frames[1].payload["phase"], "error")
+	}
+	if creditStore.callCount() != 0 {
+		t.Fatalf("DebitCredits called %d times, want 0 (build never completed)", creditStore.callCount())
+	}
+}
+
+func TestHandleBuildStreamProxiesUpstreamPreStreamRejectionUnchanged(t *testing.T) {
+	// A Solution Pack/Ecosystem/hybrid_ui request the agent-engine rejects BEFORE any SSE framing
+	// begins - a plain JSON 400, proxied through exactly like proxyAndDebit's non-2xx case.
+	agentEngine := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusBadRequest)
+		_, _ = w.Write([]byte(`{"error":"streaming is only supported for a plain-prompt, non-hybrid_ui build today"}`))
+	}))
+	defer agentEngine.Close()
+
+	creditStore := &fakeCreditStore{}
+	server := newTestServer(t, agentEngine.URL, fakeAuthStore{user: newTestUser()}, creditStore, 1000)
+
+	resp := postBuildStream(t, server, validToken, `{"prompt":"a blog","pack_id":"minimal-blog"}`)
+	if resp.StatusCode != http.StatusBadRequest {
+		t.Fatalf("status = %d, want %d (proxied unchanged)", resp.StatusCode, http.StatusBadRequest)
+	}
+	var payload map[string]any
+	decodeJSON(t, resp, &payload)
+	if payload["error"] != "streaming is only supported for a plain-prompt, non-hybrid_ui build today" {
+		t.Fatalf("payload[error] = %v, want the agent-engine's own error message", payload["error"])
+	}
+	if creditStore.callCount() != 0 {
+		t.Fatalf("DebitCredits called %d times, want 0", creditStore.callCount())
+	}
+}
+
+func TestHandleBuildStreamReturnsBadGatewayWhenAgentEngineIsUnreachable(t *testing.T) {
+	creditStore := &fakeCreditStore{}
+	closedServer := httptest.NewServer(http.HandlerFunc(func(http.ResponseWriter, *http.Request) {}))
+	unreachableURL := closedServer.URL
+	closedServer.Close()
+
+	server := newTestServer(t, unreachableURL, fakeAuthStore{user: newTestUser()}, creditStore, 1000)
+
+	resp := postBuildStream(t, server, validToken, `{"prompt":"a blog"}`)
+	if resp.StatusCode != http.StatusBadGateway {
+		t.Fatalf("status = %d, want %d", resp.StatusCode, http.StatusBadGateway)
+	}
+	if creditStore.callCount() != 0 {
+		t.Fatalf("DebitCredits called %d times, want 0", creditStore.callCount())
+	}
+}
+
+func TestHandleBuildStreamReportsACreditsErrorFrameWhenDebitFails(t *testing.T) {
+	agentEngine := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "text/event-stream")
+		w.WriteHeader(http.StatusOK)
+		writeUpstreamSSEEvent(t, w, map[string]any{
+			"phase": "done", "id": "1", "usage": map[string]any{"cost_micros_usd": 250000.0},
+		})
+	}))
+	defer agentEngine.Close()
+
+	creditStore := &fakeCreditStore{returnErr: errors.New("database is on fire")}
+	server := newTestServer(t, agentEngine.URL, fakeAuthStore{user: newTestUser()}, creditStore, 1000)
+
+	resp := postBuildStream(t, server, validToken, `{"prompt":"a blog"}`)
+	if resp.StatusCode != http.StatusOK {
+		t.Fatalf("status = %d, want %d (headers already sent before the debit failure)", resp.StatusCode, http.StatusOK)
+	}
+	frames := readSSEFrames(t, resp)
+	if len(frames) != 2 {
+		t.Fatalf("got %d SSE frames, want 2 (done + credits_error): %+v", len(frames), frames)
+	}
+	if frames[1].event != "credits_error" {
+		t.Fatalf("trailing frame event = %q, want %q", frames[1].event, "credits_error")
+	}
+}
