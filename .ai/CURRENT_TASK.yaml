@@ -1,36 +1,37 @@
-task_id: R-493
+task_id: R-494
 status: completed
 phase: MVP
 tracker_row: null
 started_at: "2026-09-19"
 completed_at: "2026-09-19"
 objective: >-
-  Third task of the Console UI overhaul (R-491..R-496): rebuild the Studio core the way the
-  reference platforms lay it out - a full-width workspace (AppShell gains layout="full") with the
-  chat rail on the LEFT (minmax(340px,400px)) and the workspace on the right, each scrolling
-  internally at calc(100dvh - 3.5rem); a premium chat thread (role="log"; user bubbles in
-  --primary, assistant bubbles with the brand mark, role="alert" error bubbles, server errors
-  sentence-cased via formatServerError); a real working state (LoaderCircle + live phase label
-  keeping R-485's character count + shimmer Skeleton lines); skeleton bubbles while hydrating; a
-  designed "What do you want to build?" empty state with three example prompts that fill and
-  focus the composer; a composer with focus-within ring, field-sizing-content auto-grow, Enter/
-  Shift+Enter kept, ArrowUp Send button, hint and an "Editing {name}" context line; a New app
-  action (resets state, router.replace("/studio")); a workspace with an indeterminate progress bar
-  while in flight, a designed "Your app will show up here" empty state, and a compact project
-  header (StudioWorkspace rewritten: name, description, entity badges, files/commit/latest-turn
-  usage) above the untouched StudioTabs. studio-icons.tsx becomes a thin Lucide shim (R-475 pins
-  the file; R-494's tabs/preview still import from it). Dead legacy CSS removed; .studio-grid
-  redefined. Chat logic (hydration, SSE parser, edit, 404 recovery, credits, previewVersion, URL)
-  stays byte-for-byte. No API/lib/tabs/preview changes; no new deps.
+  Fourth task of the Console UI overhaul (R-491..R-496): rebuild the four Studio tabs on the
+  vendored shadcn Tabs (line variant, Lucide icons, live file/problem counts). Files becomes a
+  real collapsible tree (file-tree-model.ts pure buildFileTree/ancestorsOf/countFiles +
+  file-tree.tsx FileTree, dirs first, aria-expanded, selected-file ancestors expanded, no 200-item
+  cap). Code becomes tree + viewer with a sticky header (path, language badge, line count, size),
+  the untouched tokenizeCodeLine tokens on the existing .code-tok-* colors, tabular-nums gutter,
+  skeleton loading, alert errors, honest binary/truncated notes. Problems gets the Check button
+  with spinner, a result badge, empty/clean states, per-file groups whose header opens the file
+  in Code, tsc "L12:5 TS2339: msg" lines parsed into chips (unparseable lines verbatim; no
+  invented severities), raw output in <details>. Preview keeps its state machine byte-for-byte
+  and gains a toolbar: status pill, truncated mono URL link, Open in new tab, Desktop/Tablet/Phone
+  width presets (aria-pressed), Restart/Stop buttons, a taller responsive frame, skeleton starting
+  state with real elapsed seconds, designed disabled/error states. Closes the R-477 degradation
+  by fetching the file list on ?build= hydration (fetchBuildFiles at module scope).
+  studio-icons.tsx deleted; the R-475 and R-493 assertions edited deliberately. Legacy
+  tab/code/problems/preview CSS removed. No API/lib changes; no new deps.
 allowed_paths:
+  - apps/console-web/app/studio/studio-tabs.tsx
+  - apps/console-web/app/studio/studio-preview.tsx
+  - apps/console-web/app/studio/file-tree.tsx
+  - apps/console-web/app/studio/file-tree-model.ts
   - apps/console-web/app/studio/studio-chat.tsx
   - apps/console-web/app/studio/studio-workspace.tsx
   - apps/console-web/app/studio/studio-icons.tsx
-  - apps/console-web/app/studio/layout.tsx
-  - apps/console-web/components/app-shell.tsx
   - apps/console-web/app/globals.css
   - scripts/test.sh
-  - .ai/tasks/R-493.md
+  - .ai/tasks/R-494.md
   - .ai/CURRENT_TASK.yaml
   - .ai/PROJECT_STATE.yaml
   - .ai/WORK_LOG.md
@@ -41,39 +42,35 @@ allowed_paths:
   - docs/RESUME_PROMPT.md
   - R_&_D/OmniStackAI_Commercial_Platform_Kickoff_v1.md
 forbidden_changes:
-  - No changes to studio-tabs.tsx, studio-preview.tsx, code-highlight.ts, studio/page.tsx (R-494), lib/*, or any app/api/* route
-  - No behavior change in the chat logic (hydration, SSE parsing, edit, 404 recovery, credits, previewVersion, URL persistence)
-  - No new dependencies; no agent-engine or control-plane changes; no fabricated content
+  - No changes to code-highlight.ts, studio/page.tsx, studio/layout.tsx, lib/*, or any app/api/* route
+  - No behavior change in the preview state machine, file read, problems check, or the chat's SSE/edit/404 logic (the hydration files fetch is the one scoped addition)
+  - No new dependencies; no agent-engine or control-plane changes; no fabricated content or invented severities
   - Do not modify or commit the untracked .claude directory
 required_gates:
   - "console-web: pnpm run typecheck, pnpm run lint, pnpm run build"
-  - "bash scripts/test.sh (new R-493 block)"
+  - "bash scripts/test.sh (R-475 + R-493 assertions edited, new R-494 block)"
   - task verify
   - task lint
   - task security:quick
   - task env:check
-  - "live smoke: next start on 4321; /studio signed in renders the new layout (markers), /studio?build=unknown degrades as before, one real streamed build via /api/jobs/build/stream completes and its id opens in the Studio; 0 server errors; founder eyeballs localhost:4321"
+  - "live smoke: next start on 4321; /studio?build=5 serves the new tabs; tree model run against the real 173-file list; real file read, real problems check (POST) and the preview route exercised through the API against the live stack; 0 server errors; founder eyeballs localhost:4321/studio?build=5 with the agent-engine in preview mode"
 model_tool_trace:
   routing: deterministic_only
   local_calls: 0
-  cloud_calls: 1
-  note: >-
-    Pure TypeScript/TSX/CSS work, 0 model calls inside any gate. The live smoke made ONE real
-    streamed build through the running stack (the configured cloud provider; 9s, 173 files,
-    credits_spent 0 per the pre-existing price-book gap) to prove the end-to-end path still works
-    after the chat component rewrite.
+  cloud_calls: 0
+  note: Pure TypeScript/TSX/CSS work, 0 model calls. The smoke reused build 5 from R-493's real build; the problems check is a local tsc request (409 here - toolchain not installed in build-only mode).
 next_action: >-
-  R-493 shipped: the Studio is now a full-width, chat-left / workspace-right layout on shadcn
-  primitives and Lucide - premium thread with role="log", working state with live character
-  count + shimmer, skeleton hydration, a real "What do you want to build?" empty state whose
-  example prompts were proven runnable by a real 9-second streamed build (173 files), a proper
-  composer, a New app action, a workspace progress bar, a designed empty workspace and a compact
-  project header above the untouched tabs. studio-icons.tsx is a Lucide shim; dead legacy CSS
-  removed (the new contract block caught two leftover @media overrides on its first run). All
-  gates green (3,738 tests); 0 server errors; console running detached on 4321 for the founder.
-  Next: R-494 (Studio tabs) - shadcn Tabs for Preview/Files/Code/Problems; Files as a real tree;
-  Code viewer polish (line numbers/highlighting on the new tokens); Preview frame chrome (status
-  pill, open-in-new-tab, width presets); Problems grouped by file with severity; tabs/preview
-  switch their icon imports to Lucide directly so the studio-icons shim and the R-475 assertion
-  can be retired deliberately; consider fetching the file list on hydration so a restored session
-  isn't empty in Files/Code.
+  R-494 shipped: the four Studio tabs are real Radix tabs with Lucide icons and live counts;
+  Files is a collapsible tree (model verified against the real 173-file build: dirs first,
+  alphabetical, 0 duplicates), Code is tree + viewer with a sticky header and skeleton loading,
+  Problems parses tsc diagnostics per file with a click-through to Code, Preview has a real
+  toolbar (status pill, URL, open-in-new-tab, Desktop/Tablet/Phone presets, Restart/Stop) over
+  an unchanged state machine; the file list is fetched on ?build= hydration (R-477 degradation
+  closed); studio-icons.tsx retired with the R-475/R-493 assertions edited deliberately (the
+  contract tests caught the stale R-493 one). All gates green (3,738 tests); API paths for every
+  tab exercised on build 5 with 0 server errors; the honest limits (no browser; build-only mode
+  -> preview 404 and problems 409) are recorded. Console running detached on 4321. Next: R-495
+  (Settings + Fabric): provider status as real settings cards (Ready / Needs key), the theme
+  toggle in Settings (not a sun/moon switch), the fabric/cost overview with proper data
+  typography on shadcn Card/Table-style markup; then R-496 (motion, states, responsive pass,
+  OG/meta, legacy CSS sweep incl. .spinner/.pill and the .wrap/.masthead/.panel family).

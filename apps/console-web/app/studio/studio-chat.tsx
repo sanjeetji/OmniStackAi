@@ -53,6 +53,20 @@ function nextMessageId(): string {
   return `m${Date.now()}-${messageCounter}`;
 }
 
+/** The build's current file list via `GET /api/jobs/build/{id}/files` (R-474). Empty on any
+ * failure - callers treat "no list" as "keep what we have", never as an error to show. Module
+ * scope (no component state) so both the edit path and the `?build=` hydration effect can use it. */
+async function fetchBuildFiles(id: string): Promise<string[]> {
+  try {
+    const response = await fetch(`/api/jobs/build/${encodeURIComponent(id)}/files`);
+    if (!response.ok) return [];
+    const body = (await response.json()) as BuildFileTreeResponse;
+    return body.files ?? [];
+  } catch {
+    return [];
+  }
+}
+
 export default function StudioChat({ initialCreditBalance }: { initialCreditBalance: number }) {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -120,6 +134,13 @@ export default function StudioChat({ initialCreditBalance }: { initialCreditBala
               kind: "plain" as const,
             })),
           );
+          // R-494: turns alone left the Files/Code tabs empty after a refresh (the R-477
+          // degradation). The file list is cheap and read-only, so fetch it too; the rest of the
+          // snapshot (name, entities, usage) still only exists for builds made in this session.
+          const files = await fetchBuildFiles(urlBuildId);
+          if (!cancelled && files.length > 0) {
+            setWorkspace((prev) => prev ?? { buildId: urlBuildId, entities: [], files });
+          }
         }
       } catch {
         if (!cancelled) {
@@ -146,17 +167,6 @@ export default function StudioChat({ initialCreditBalance }: { initialCreditBala
       ...prev,
       { id: nextMessageId(), role, text, createdAt: Date.now() / 1000, kind },
     ]);
-  }
-
-  async function refreshFiles(id: string): Promise<string[]> {
-    try {
-      const response = await fetch(`/api/jobs/build/${encodeURIComponent(id)}/files`);
-      if (!response.ok) return [];
-      const body = (await response.json()) as BuildFileTreeResponse;
-      return body.files ?? [];
-    } catch {
-      return [];
-    }
   }
 
   /** R-493: the only way to start a second app used to be editing the URL by hand. Resets this
@@ -331,7 +341,7 @@ export default function StudioChat({ initialCreditBalance }: { initialCreditBala
       const result = body as BuildEditResponse;
       appendMessage("assistant", result.diff?.summary || result.rationale || "Edit applied.");
       if (typeof result.credit_balance === "number") setCreditBalance(result.credit_balance);
-      const files = await refreshFiles(id);
+      const files = await fetchBuildFiles(id);
       setWorkspace((prev) => ({
         buildId: id,
         name: prev?.name,

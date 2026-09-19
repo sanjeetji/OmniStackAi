@@ -1,5 +1,46 @@
 # Work Log
 
+## 2026-09-19 — R-494 (Console: Studio tabs — Preview chrome, Files tree, Code viewer, Problems)
+
+- **Why:** R-493 rebuilt the Studio's rail and workspace shell; the four tabs inside it were
+  still the R-481 hand-rolled versions (flat 200-item list, native `<select>`, 560px iframe with
+  two text buttons, plain problems list).
+- **Constraints read first:** R-481 pins `studio-tabs.tsx`, `code-highlight.ts` and the four
+  quoted labels; R-479 pins `studio-preview.tsx`; R-475 pinned `studio-icons.tsx` — retired here
+  with that assertion edited deliberately. **The contract tests then caught my own stale R-493
+  assertion** (it still demanded the shim) on their first run — replaced with a note; and, per
+  the R-493 lesson, I checked `task verify` for the `Ran N tests` line rather than trusting an
+  empty tail (it had run zero tests until `test.sh` passed).
+- **Built:** `studio-tabs.tsx` on the vendored shadcn `Tabs` (real Radix tabs), Lucide icon per
+  trigger, live file/problem counts; **Files** = a collapsible tree (`file-tree-model.ts` pure
+  `buildFileTree`/`ancestorsOf`/`countFiles`; `file-tree.tsx` `FileTree` with `aria-expanded`
+  dirs, depth indentation, selected row, default expansion derived — top-level + ancestors of the
+  selected file — with user toggles as overrides, no effects; no cap); **Code** = tree pane +
+  viewer with sticky header (path, extension badge, lines, size), unchanged tokenizer on the
+  `.code-tok-*` colors, `tabular-nums` gutter, skeleton loading, alert errors, honest
+  binary/truncated notes; **Problems** = Check button with spinner, result badge, empty/clean
+  states, per-file cards whose header opens the file in Code, `parseDiagnostic` for tsc's
+  `L12:5 TS2339: msg` (verbatim fallback, no invented severity), raw output in `<details>`;
+  **Preview** = unchanged state machine + toolbar (status pill, URL, Open in new tab,
+  Desktop/Tablet/Phone `aria-pressed` presets, Restart/Stop), taller frame, skeleton starting
+  state, designed disabled/error states; idle renders the stopped card instead of nothing.
+- **R-477 degradation closed:** `studio-chat.tsx` fetches the file list on `?build=` hydration
+  (`fetchBuildFiles` at module scope; SSE/edit/404 untouched); `StudioWorkspace` shows the
+  restored note with the file count whenever the snapshot has no name.
+- **Mid-task refactor, recorded:** the pure tree functions moved to a React-free `.ts` module so
+  the smoke could run them with `node --experimental-strip-types` against the real file list.
+- **Gates:** typecheck/lint clean first run; build 23 routes; `scripts/test.sh` passes; `task
+  verify` 3,738 OK; lint/security/env pass; re-gated after the refactor.
+- **Live smoke (build 5):** new tabs server-rendered with full ARIA, legacy classes gone; tree
+  model on the real 173 files — 173 leaves, dirs-first alphabetical at every level, depth 7,
+  correct ancestors, 0 duplicates; a real 6,214-byte file read; problems GET 404 → POST **409
+  "tsc is not installed for this app…"** (R-480's honest build-only answer, rendered as the tab's
+  alert); preview POST/GET 404 (the disabled state); 0 server errors. Honest limits: client
+  interactions and the ready/diagnostics states need a browser + `task
+  agent-engine:studio:preview` — the founder is asked to run that and open
+  `localhost:4321/studio?build=5`.
+- **Next:** R-495 (Settings + Fabric).
+
 ## 2026-09-19 — R-493 (Console: Studio core — chat rail + workspace shell on shadcn/Lucide)
 
 - **Why:** the Studio is the product, and after R-491/R-492 it was still the R-477/R-481

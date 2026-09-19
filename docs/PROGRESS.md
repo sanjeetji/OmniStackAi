@@ -1,4 +1,4 @@
-# OmniStackAI — implementation progress (as of R-493)
+# OmniStackAI — implementation progress (as of R-494)
 
 A living summary of what is built, what is pending, and how to see results. Numbers come from the
 execution tracker (`R_&_D/OmniStackAI_Execution_Tracker_v6.xlsx`, `Phase_Roadmap`, 461 tasks as of
@@ -8,6 +8,18 @@ R-461 completion) plus the state files (`.ai/`), Git history, and CHANGELOG.
 
 - **3,738 automated tests pass** (agent-engine + Go control-plane), fully offline and
   network-independent (`task verify`), plus the console's own `typecheck`/`lint`/`build` gates.
+- **R-494 — Console: Studio tabs (2026-09-19):** fourth task of the UI overhaul; the four Studio
+  tabs rebuilt on the vendored shadcn `Tabs` (real Radix tabs) with Lucide icons and live counts.
+  Files = a collapsible tree from a pure model (`file-tree-model.ts`, verified against the real
+  173-file build); Code = tree pane + viewer with sticky header, unchanged tokenizer, skeleton
+  loading; Problems = Check button, result badge, per-file cards opening the file in Code,
+  parsed tsc `L:C TSxxxx` lines; Preview = unchanged state machine under a real toolbar (status
+  pill, URL, Open in new tab, Desktop/Tablet/Phone presets, Restart/Stop). R-477's empty-after-
+  refresh degradation closed (file list fetched on hydration). `studio-icons.tsx` retired; the
+  contract tests caught the stale R-493 assertion. All gates green (**3,738 tests**); API paths
+  per tab exercised on build 5 (real file read; honest 409 "tsc not installed" in build-only
+  mode; preview 404 = disabled state); 0 server errors. Founder: `task agent-engine:studio:preview`
+  then `localhost:4321/studio?build=5`. See `.ai/tasks/R-494.md`.
 - **R-493 — Console: Studio core (2026-09-19):** third task of the UI overhaul; the Studio
   rebuilt the way the reference platforms lay it out — full width (`AppShell layout="full"`),
   chat rail **left** / workspace **right** at `calc(100dvh - 3.5rem)`; `role="log"` thread with

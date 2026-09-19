@@ -37,17 +37,20 @@ export function StudioWorkspace({
   snapshot: WorkspaceSnapshot | null;
   buildId: string | null;
 }) {
-  if (!snapshot) {
+  if (!snapshot || !snapshot.name) {
     if (!buildId) {
       return null;
     }
+    const fileCount = snapshot?.files.length ?? 0;
     return (
       <header className="flex flex-wrap items-start justify-between gap-3">
         <div>
           <h1 className="text-xl font-semibold tracking-tight">Your app</h1>
           <p className="mt-0.5 text-sm text-muted-foreground">
-            Restored from this session&rsquo;s history. File details fill in after your next
-            change.
+            Restored from this session&rsquo;s history.{" "}
+            {fileCount > 0
+              ? `${fileCount.toLocaleString("en-US")} files are listed in Files and Code; entity and usage details fill in after your next change.`
+              : "File details fill in after your next change."}
           </p>
         </div>
         <p className="font-mono text-xs text-muted-foreground">build {buildId.slice(0, 8)}</p>

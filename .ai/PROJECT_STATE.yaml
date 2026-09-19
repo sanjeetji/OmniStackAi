@@ -2,10 +2,10 @@ schema_version: 1
 project: OmniStackAI
 phase: BASIC/MVP
 founder_stage: 0
-current_task: R-493
+current_task: R-494
 current_status: done
 branch: main
-last_completed_task: R-493
+last_completed_task: R-494
 # TASK COMPILATION AUDIT — 2026-09-16
 # Performed to achieve 100% synchronization across all task-tracking documentation.
 # Tracker workbook expanded to 464 tasks with R-464.
@@ -34,6 +34,55 @@ task_compilation_audit:
       new_status: DONE
       reason: "Task fully completed on 2026-09-11 with 35 tests. Status left stale during rapid development sprint."
 last_completed_task_summary: >-
+  Completed R-494 (2026-09-19): Studio tabs - Preview chrome, Files tree, Code viewer, Problems
+  on shadcn Tabs + Lucide. Fourth task of the Console UI overhaul (R-491..R-496). The four tabs
+  inside R-493's workspace were still the R-481 hand-rolled versions (flat 200-item file list,
+  native <select> file picker, 560px iframe with two text buttons, plain problems list).
+  Built: studio-tabs.tsx on the vendored shadcn Tabs (variant="line" - real Radix tabs with
+  roving focus/aria-selected/aria-controls), a Lucide icon per trigger and live counts (files;
+  problems in error/ok tone); Files = a real collapsible tree (file-tree-model.ts: pure
+  buildFileTree/ancestorsOf/countFiles, dirs first then files, alphabetical; file-tree.tsx:
+  FileTree with aria-expanded directories, Folder/FolderOpen/FileText icons, depth indentation,
+  selected row highlighted, top-level dirs + the selected file's ancestors open by default with
+  the user's toggles kept as overrides - derived, no effects; no 200-item cap); Code = the same
+  tree in a 240px pane + a viewer with a sticky header (path, extension badge, line count, size),
+  the untouched tokenizeCodeLine tokens on the existing .code-tok-* theme colors, tabular-nums
+  gutter, skeleton loading, role="alert" errors, honest binary/truncated notes, an empty state
+  that says which pane to click; Problems = Check for problems Button with spinner, result badge
+  (destructive "N problems" / brand "No problems"), "Not checked yet" and CircleCheck clean
+  states, per-file cards whose header button opens the file in Code, tsc "L12:5 TS2339: msg"
+  lines parsed by parseDiagnostic into line:col + code chips + message (unparseable lines
+  verbatim; tsc only emits errors so no severity is invented), raw output_tail behind <details>;
+  Preview = the same state machine byte-for-byte (build-scoped start on buildId/previewVersion,
+  500ms elapsed ticker, 5s crash-detection poll, restart/stop, 404 -> disabled) with a toolbar:
+  StatusPill (Live/Starting/Stopped/Error/Unavailable), truncated mono URL link, Open in new tab
+  icon button, Desktop/Tablet/Phone width presets (aria-pressed segmented group sizing a
+  centered frame container), Restart/Stop Buttons, a h-[calc(100dvh-18rem)] frame, a skeleton
+  starting state with real elapsed seconds, a designed disabled state quoting `task
+  agent-engine:studio:preview`, an alert error state; idle now renders the stopped card instead
+  of nothing. The R-477 degradation is closed: studio-chat.tsx fetches the file list on ?build=
+  hydration (fetchBuildFiles moved to module scope; SSE/edit/404 logic untouched) and
+  StudioWorkspace shows its "restored" note whenever the snapshot has no name, with the file
+  count. studio-icons.tsx deleted; the R-475 assertion edited as planned and - caught by the
+  contract tests on their first run - the R-493 block's own shim assertion replaced with a note.
+  Legacy tab/file-list/file-viewer/code/problems/preview CSS removed (.code-tok-* colors kept).
+  No API/lib changes; no new deps.
+  Gates: typecheck/lint clean first run; build 23 routes; scripts/test.sh passes (after the
+  stale-assertion fix; task verify had run zero tests until then - checked for the "Ran N tests"
+  line per the R-493 lesson); task verify 3,738 OK; lint/security/env pass; re-gated after the
+  mid-task file-tree-model.ts refactor. Live smoke on build 5 (R-493's real build): the new tabs
+  server-render (role="tablist"/"tab", four labels, aria-selected, tabs-trigger slot, hydrating
+  aria-busy, restored header) and every legacy class is gone from the HTML; the tree model run
+  with node --experimental-strip-types against the real 173-file list: 173 leaves, dirs-first
+  alphabetical at every level, depth 7, correct ancestors, 0 duplicates; API paths per tab: a
+  real 6,214-byte file read, problems GET 404 then POST 409 "tsc is not installed for this app;
+  run pnpm install --ignore-scripts ..." (R-480's honest build-only-mode answer, rendered as the
+  tab's alert), preview POST 404 + GET /api/preview 404 (the disabled state). 0 server errors.
+  Honest limits recorded: tab switching, tree toggles, width presets and the ready-state toolbar
+  need a browser and the agent-engine in preview mode - the founder runs `task
+  agent-engine:studio:preview` and opens localhost:4321/studio?build=5.
+  NEXT: R-495 (Settings + Fabric), R-496 (motion/states/polish + legacy CSS sweep).
+_prior_last_completed_task_summary_R493: >-
   Completed R-493 (2026-09-19): Studio core - chat rail + workspace shell on shadcn/Lucide. Third
   task of the Console UI overhaul (R-491..R-496); the Studio is the product and was still the
   R-477/R-481 hand-rolled layout inside the new shell. Constraints read from scripts/test.sh
@@ -1931,10 +1980,12 @@ next_action: >-
   "Full UI overhaul now" (reference bar: Emergent/Lovable/Dyad) - a six-task Console UI overhaul
   (R-491..R-496) is the active priority; R-491 (foundation: Tailwind v4 + shadcn/ui on Radix +
   Geist + next-themes dark-first, R-470 gate retired), R-492 (auth screens + shared app shell
-  with nav/user menu/skip link, branded 404, real dashboard) and R-493 (Studio core: full-width
+  with nav/user menu/skip link, branded 404, real dashboard), R-493 (Studio core: full-width
   chat-left/workspace-right layout, premium thread, working/hydrating/empty states, composer,
-  New app, project header; studio-icons.tsx is a Lucide shim) are done.
-  NEXT: R-494 (Studio tabs), R-495 (Settings/Fabric), R-496 (motion/states/polish) - roadmap in
+  New app, project header) and R-494 (Studio tabs on shadcn Tabs: Files tree, Code tree+viewer,
+  Problems with parsed diagnostics, Preview toolbar with width presets; studio-icons.tsx
+  retired) are done.
+  NEXT: R-495 (Settings/Fabric), R-496 (motion/states/polish + legacy CSS sweep) - roadmap in
   the plan file. Then (not yet scoped): real
   multi-target Publish/deploy (Netlify one-click primary; Vercel/Cloudflare/self-host/GitHub-export
   as secondary options), Node.js backend codegen alongside Python/Go, and mobile (React Native

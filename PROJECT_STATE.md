@@ -4,6 +4,28 @@ Last updated: 2026-09-19
 ## Current Phase
 Stage 0 (Founder Build Sequence, Brief Section 91) — BASIC/MVP
 
+> **R-494 (2026-09-19): Console — Studio tabs (Preview chrome, Files tree, Code viewer, Problems).**
+> Fourth task of the Console UI overhaul. The four tabs inside R-493's workspace are now real
+> Radix tabs (vendored shadcn `Tabs`) with Lucide icons and live counts: **Files** a collapsible
+> tree built by a pure, React-free model (`file-tree-model.ts`, verified with
+> `node --experimental-strip-types` against the real 173-file build: 173 leaves, dirs-first
+> alphabetical at every level, 0 duplicates); **Code** tree pane + viewer with a sticky header,
+> the unchanged tokenizer on the theme's `.code-tok-*` colors, skeleton loading and honest
+> binary/truncated notes; **Problems** a Check button, result badge, per-file cards that open the
+> file in Code, tsc `L:C TSxxxx` lines parsed (verbatim fallback, no invented severities), raw
+> output in `<details>`; **Preview** the unchanged state machine under a real toolbar (status
+> pill, URL, Open in new tab, Desktop/Tablet/Phone presets, Restart/Stop) with designed
+> starting/disabled/error states. The R-477 "empty Files after refresh" degradation is closed by
+> fetching the file list on `?build=` hydration. `studio-icons.tsx` retired — the R-475
+> assertion edited as planned, and **the contract tests caught the stale R-493 shim assertion**
+> on their first run. Gates: typecheck/lint/build clean (23 routes), contract tests, `task
+> verify` **3,738 OK**, lint/security/env. Live on build 5: tabs server-rendered with full ARIA,
+> legacy classes gone, a real 6,214-byte file read, problems POST → the honest 409 "tsc is not
+> installed" of build-only mode, preview 404 (disabled state), **0 server errors**. Honest
+> limits: client interactions and ready/diagnostics states need a browser and `task
+> agent-engine:studio:preview` — founder eyeballs `localhost:4321/studio?build=5`.
+> NEXT: R-495 (Settings + Fabric), R-496 (motion/states/polish + legacy CSS sweep).
+
 > **R-493 (2026-09-19): Console — Studio core (chat rail + workspace shell on shadcn/Lucide).**
 > Third task of the Console UI overhaul; the Studio is the product. Constraints read from
 > `scripts/test.sh` first (R-475 pins `studio-icons.tsx`; R-477 pins `.studio-grid`; R-479/481/485

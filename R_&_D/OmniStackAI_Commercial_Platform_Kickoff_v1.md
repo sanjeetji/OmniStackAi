@@ -435,9 +435,13 @@ discipline):
    designed "What do you want to build?" empty state whose example prompts were proven runnable
    by a real streamed build; `studio-icons.tsx` became a thin Lucide shim (the R-475 contract
    pins the file and the tabs still import it — R-494 retires both deliberately).
-4. **R-494 — Studio tabs.** Files as a real tree; Code viewer polish (line numbers, highlighting);
-   Preview frame chrome (status pill, open-in-new-tab, width presets); Problems grouped by file
-   with severity.
+4. **R-494 — Studio tabs** *(shipped 2026-09-19)*. Real Radix tabs; Files as a collapsible tree
+   from a pure model verified against a real 173-file build; Code as tree + viewer (line numbers,
+   highlighting on the theme colors); Preview frame chrome (status pill, URL, open-in-new-tab,
+   Desktop/Tablet/Phone width presets, Restart/Stop); Problems grouped by file with tsc
+   diagnostics parsed into line:col + code chips (tsc emits only errors, so no severity was
+   invented) and a click-through into Code; the file list is now restored on refresh.
+   `studio-icons.tsx` retired.
 5. **R-495 — Settings + Fabric.** Provider status as real settings cards (Ready / Needs key), the
    theme toggle (in Settings, not a sun/moon switch), fabric/cost overview with proper data
    typography.
@@ -492,9 +496,9 @@ so the founder is asked to eyeball `http://localhost:4321` after each task.
 
 ## 6. How to resume this if the session stops here
 
-**Immediate next action as of 2026-09-19: R-494 (Studio tabs), the fourth item in "Phase E-UI —
-Console UI overhaul" above; R-475 → R-481, R-482 → R-485, R-486 → R-490 and R-491 → R-493 are all
-shipped.** `.ai/PROJECT_STATE.yaml`'s `next_action` and `.ai/CURRENT_TASK.yaml` are the
+**Immediate next action as of 2026-09-19: R-495 (Settings + Fabric), the fifth item in "Phase
+E-UI — Console UI overhaul" above; R-475 → R-481, R-482 → R-485, R-486 → R-490 and R-491 → R-494
+are all shipped.** `.ai/PROJECT_STATE.yaml`'s `next_action` and `.ai/CURRENT_TASK.yaml` are the
 authoritative pointers per `AGENTS.md`'s source-of-truth order (they win over this paragraph if
 they ever disagree) — read them first, but they should already agree with this. The founder's
 Emergent / Lovable / Dyad screenshots, once shared, shape R-493/R-494's Studio screens; R-492 does

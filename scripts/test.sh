@@ -380,10 +380,10 @@ if ! rg -q 'listBuildFiles|readBuildFile' "$console_root/lib/control-plane.ts"; 
   exit 1
 fi
 
-# R-475: Studio visual foundation.
+# R-475: Studio visual foundation. (Its hand-drawn studio-icons.tsx was retired in R-494 - every
+# Studio file now imports Lucide directly; the R-494 block below asserts the file is gone.)
 for required_file in \
-  "$console_root/app/studio/layout.tsx" \
-  "$console_root/app/studio/studio-icons.tsx"; do
+  "$console_root/app/studio/layout.tsx"; do
   if [[ ! -f "$required_file" ]]; then
     printf 'Missing R-475 contract file: %s\n' "$required_file"
     exit 1
@@ -769,10 +769,8 @@ if rg -qF 'from "./studio-icons"' "$console_root/app/studio/studio-chat.tsx"; th
   exit 1
 fi
 
-if ! rg -qF 'from "lucide-react"' "$console_root/app/studio/studio-icons.tsx"; then
-  printf 'R-493 studio-icons.tsx must be a Lucide-backed shim.\n'
-  exit 1
-fi
+# (R-493 turned studio-icons.tsx into a Lucide shim; R-494 then retired the file entirely - see
+# the R-494 block, which asserts it is gone and that no Studio file imports it.)
 
 for marker in 'role="log"' 'EXAMPLE_PROMPTS' 'New app' 'aria-label="Send"' 'formatServerError' 'studio-progress'; do
   if ! rg -qF "$marker" "$console_root/app/studio/studio-chat.tsx"; then
@@ -801,6 +799,53 @@ done
 for live_block in '.studio-grid {' '.studio-progress {' '@keyframes studio-progress'; do
   if ! rg -qF "$live_block" "$console_root/app/globals.css"; then
     printf 'R-493 globals.css must define %s.\n' "$live_block"
+    exit 1
+  fi
+done
+
+# R-494: Studio tabs - Preview chrome, Files tree, Code viewer, Problems on shadcn Tabs + Lucide.
+if [[ -f "$console_root/app/studio/studio-icons.tsx" ]]; then
+  printf 'R-494 retired app/studio/studio-icons.tsx (Lucide is imported directly everywhere).\n'
+  exit 1
+fi
+
+if [[ ! -f "$console_root/app/studio/file-tree.tsx" ]]; then
+  printf 'Missing R-494 contract file: %s/app/studio/file-tree.tsx\n' "$console_root"
+  exit 1
+fi
+
+if rg -q 'studio-icons' "$console_root/app/studio"/*.tsx; then
+  printf 'R-494: no Studio file may still import studio-icons.\n'
+  exit 1
+fi
+
+if ! rg -qF 'buildFileTree' "$console_root/app/studio/file-tree.tsx"; then
+  printf 'R-494 file-tree.tsx must export buildFileTree().\n'
+  exit 1
+fi
+
+for marker in '@/components/ui/tabs' 'TabsTrigger' 'FileTree' 'Check for problems' 'parseDiagnostic'; do
+  if ! rg -qF "$marker" "$console_root/app/studio/studio-tabs.tsx"; then
+    printf 'R-494 studio-tabs.tsx must include %s.\n' "$marker"
+    exit 1
+  fi
+done
+
+for marker in 'WIDTH_PRESETS' 'aria-pressed' 'Open in new tab'; do
+  if ! rg -qF "$marker" "$console_root/app/studio/studio-preview.tsx"; then
+    printf 'R-494 studio-preview.tsx must include %s.\n' "$marker"
+    exit 1
+  fi
+done
+
+if ! rg -qF 'fetchBuildFiles' "$console_root/app/studio/studio-chat.tsx"; then
+  printf 'R-494 studio-chat.tsx must fetch the file list on ?build= hydration.\n'
+  exit 1
+fi
+
+for dead_block in '.tab-bar' '.file-list' '.code-viewer-content' '.problems-tab' '.preview-frame'; do
+  if rg -qF "$dead_block {" "$console_root/app/globals.css"; then
+    printf 'R-494 must remove the dead legacy tab CSS block: %s\n' "$dead_block"
     exit 1
   fi
 done

@@ -1,9 +1,27 @@
 # Current Handoff
 
-Task ID: R-493
+Task ID: R-494
 Status: done
 Phase: BASIC/MVP — Founder Stage 0
 Branch: `main`
+
+> **R-494 Completed (2026-09-19): Console — Studio tabs (Preview chrome, Files tree, Code viewer, Problems).**
+> - The four tabs are real Radix tabs (vendored shadcn `Tabs`, line variant) with Lucide icons
+>   and live counts. **Files** = collapsible tree (`file-tree-model.ts` + `file-tree.tsx`, no
+>   cap); **Code** = tree pane + viewer with sticky header, unchanged tokenizer, skeleton
+>   loading; **Problems** = Check button, result badge, per-file cards that open the file in
+>   Code, tsc `L:C TSxxxx` lines parsed (verbatim fallback), raw output in `<details>`;
+>   **Preview** = unchanged state machine + toolbar (status pill, URL, Open in new tab,
+>   Desktop/Tablet/Phone presets, Restart/Stop), designed starting/disabled/error states.
+> - R-477 degradation closed: the file list is fetched on `?build=` hydration.
+> - `studio-icons.tsx` retired; R-475 assertion edited as planned; the contract tests caught the
+>   stale R-493 shim assertion — replaced with a note. Legacy tab/code/problems/preview CSS gone.
+> - Gates: typecheck/lint/build clean (23 routes), `scripts/test.sh`, `task verify` **3,738 OK**,
+>   lint/security/env. Live (build 5): tabs server-rendered with full ARIA; tree model verified
+>   on the real 173 files; file read OK; problems POST → honest 409 (tsc not installed in
+>   build-only mode); preview 404 (disabled state); 0 server errors. Founder: run
+>   `task agent-engine:studio:preview` and open `localhost:4321/studio?build=5`.
+> - **NEXT**: R-495 (Settings + Fabric). See `.ai/tasks/R-494.md`.
 
 > **R-493 Completed (2026-09-19): Console — Studio core (chat rail + workspace shell on shadcn/Lucide).**
 > - The Studio is now full-width (`AppShell layout="full"`, header container follows the prop),

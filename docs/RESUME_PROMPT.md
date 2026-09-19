@@ -208,7 +208,7 @@ front-door bricks, R-420 is generated-SQL hardening, R-421..R-426 are Studio pre
 R-427..R-429 are generated-app compile fixes, R-430..R-457 are the first twenty-eight differentiating-spine
 bricks (Scope Compiler through Ecosystem Multi-Surface SLA, SLO, and Error Budget Contracts).
 Git, state files (.ai/), CHANGELOG, and docs/PROGRESS.md remain the executable/detail sources of truth.
-Current through R-493; `task verify` = 3,738 tests (agent-engine) + the Go control-plane's own suite +
+Current through R-494; `task verify` = 3,738 tests (agent-engine) + the Go control-plane's own suite +
 the Next.js console's typecheck/lint/build. R-416 added prompt-to-IR intake, R-417 materialized a generated
 owned repo, R-418 added the local chat studio, R-419 added turnkey local run, and R-420 fixed the two
 SQL defects found by live execution. R-421 added an explicit `task agent-engine:studio:preview` mode:
@@ -880,8 +880,22 @@ WHAT TO DO NEXT
   /api/jobs/build/{id}/files on hydration. LESSON: scripts/verify.sh runs scripts/test.sh
   first, so a failing contract block makes `task verify` run ZERO tests - always confirm the
   "Ran N tests" line, never an empty tail.
-- NEXT: R-494 (Studio tabs), R-495 (Settings/Fabric), R-496 (motion/states/polish) - the
-  roadmap is in the plan file. After the UI overhaul
+- R-494 (2026-09-19, done) rebuilt the four Studio tabs on the vendored shadcn Tabs + Lucide:
+  Files = collapsible tree (file-tree-model.ts pure buildFileTree/ancestorsOf/countFiles +
+  file-tree.tsx FileTree; expansion derived from top-level + selected-file ancestors with user
+  toggles as overrides), Code = tree pane + viewer (sticky header, unchanged tokenizeCodeLine on
+  .code-tok-* colors), Problems = Check button + per-file cards + parseDiagnostic for tsc
+  "L12:5 TS2339: msg" lines (verbatim fallback), Preview = unchanged state machine + toolbar
+  (StatusPill, URL, Open in new tab, WIDTH_PRESETS Desktop/Tablet/Phone, Restart/Stop). The file
+  list is now fetched on ?build= hydration (fetchBuildFiles, module scope). studio-icons.tsx is
+  GONE - the R-475 and R-493 test.sh assertions were edited to match; every Studio file imports
+  Lucide directly. Remaining legacy CSS to sweep in R-496: .spinner/.pill/.pill--accent (pinned by
+  the R-475 assertion), the .wrap/.masthead/.panel/.grid/.stat/.badge/.button family (used by
+  /settings and /fabric until R-495), .settings-active-now, .studio-intro. In build-only mode the
+  preview route returns 404 (tab shows the disabled state) and the problems POST returns 409
+  "tsc is not installed" - both honest; run `task agent-engine:studio:preview` to see them live.
+- NEXT: R-495 (Settings/Fabric), R-496 (motion/states/polish + legacy CSS sweep) - the roadmap
+  is in the plan file. After the UI overhaul
   (not yet scoped): real multi-target Publish/deploy (Netlify one-click primary, Vercel/Cloudflare/
   self-host/GitHub-export as secondary options), Node.js backend codegen alongside Python/Go, and
   mobile (React Native near-term). Full per-user process/tenant isolation as a wholesale architecture
