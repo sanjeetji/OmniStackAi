@@ -650,4 +650,19 @@ if ! rg -qF 'class DaytonaSandboxProvider' "$agent_engine_root/src/omnistackai_a
   exit 1
 fi
 
+# R-489: free, self-hosted gVisor driver (fourth of the R-486..R-490 isolation sequence).
+for required_file in \
+  "$agent_engine_root/src/omnistackai_agent_engine/runtime/docker_socket.py" \
+  "$agent_engine_root/src/omnistackai_agent_engine/runtime/gvisor.py"; do
+  if [[ ! -f "$required_file" ]]; then
+    printf 'Missing R-489 contract file: %s\n' "$required_file"
+    exit 1
+  fi
+done
+
+if ! rg -qF 'class GVisorSandboxProvider' "$agent_engine_root/src/omnistackai_agent_engine/runtime/gvisor.py"; then
+  printf 'R-489 must add a real GVisorSandboxProvider driver to runtime/gvisor.py.\n'
+  exit 1
+fi
+
 printf 'Repository contract tests passed.\n'

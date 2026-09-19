@@ -1,9 +1,40 @@
 # Current Handoff
 
-Task ID: R-488
+Task ID: R-489
 Status: done
 Phase: BASIC/MVP — Founder Stage 0
 Branch: `main`
+
+> **R-489 Completed (2026-09-19): Runtime — free, self-hosted gVisor sandbox driver.**
+> - Fourth of the five-task sequence (R-486..R-490) — **replaces the originally planned
+>   WebContainers option**: real research found WebContainers requires a paid commercial license
+>   for any non-prototype use and only runs Node.js anyway, contradicting the "free, no cost" ask.
+> - After comparing every candidate's real licensing (Vercel Sandbox/Fly/CodeSandbox: paid-only;
+>   raw Firecracker: free but a multi-quarter build-your-own-orchestrator project; E2B/Daytona:
+>   open source but self-hosting means running their full orchestrator; gVisor: genuinely free,
+>   open source, small lift), the founder approved gVisor.
+> - The founder then asked two real follow-ups before continuing, both answered directly: (1)
+>   resource cost — light (~50MB binary, ~15-30MB RAM/sandbox, layers onto the Docker daemon
+>   already running); (2) why not use this in production instead of paying — a self-hosted
+>   loopback URL only works for a same-machine viewer; the managed providers' real value beyond
+>   isolation is a global public routing/proxy/scale layer this task doesn't build. Confirmed:
+>   free/dev tier, not a production replacement.
+> - New `runtime/docker_socket.py` (a genuinely different transport — Docker's Unix socket, since
+>   `urllib` has no Unix-socket support) and `runtime/gvisor.py`'s `GVisorSandboxProvider`.
+> - **A real, necessary contract correction found and fixed**: `SandboxHandle`'s https-only URL
+>   validation (from R-486) was too narrow once a local provider existed; relaxed to match
+>   `PreviewPlan`'s own already-established loopback-or-https pattern.
+> - `active` is a live local capability check (is `runsc` registered?), not an env-var check — the
+>   only driver in this sequence with no credential at all. Docker's own image ecosystem covers
+>   Go, unlike Vercel Sandbox (R-487).
+> - No live gVisor/Docker daemon exists in this environment — live verification honestly
+>   deferred, not faked.
+> - Gates: agent-engine `task verify` **3,729 OK** (22 new); repo `task verify`/`lint`/
+>   `security:quick`/`env:check` all pass; new `scripts/test.sh` contract block. Every pre-existing
+>   suite passes unmodified beyond the one deliberate `SandboxHandle` relaxation.
+> - **NEXT**: R-490 (provider-selection surface: free gVisor vs. paid E2B/Vercel/Daytona,
+>   switchable per user/config) — the fifth and final task in this sequence. See
+>   `.ai/tasks/R-489.md`.
 
 > **R-488 Completed (2026-09-19): Runtime — real Daytona driver.**
 > - Third of the five-task sequence (R-486..R-490). E2B and Vercel Sandbox each proved

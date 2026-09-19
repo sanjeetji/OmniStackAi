@@ -208,7 +208,7 @@ front-door bricks, R-420 is generated-SQL hardening, R-421..R-426 are Studio pre
 R-427..R-429 are generated-app compile fixes, R-430..R-457 are the first twenty-eight differentiating-spine
 bricks (Scope Compiler through Ecosystem Multi-Surface SLA, SLO, and Error Budget Contracts).
 Git, state files (.ai/), CHANGELOG, and docs/PROGRESS.md remain the executable/detail sources of truth.
-Current through R-488; `task verify` = 3,707 tests (agent-engine) + the Go control-plane's own suite +
+Current through R-489; `task verify` = 3,729 tests (agent-engine) + the Go control-plane's own suite +
 the Next.js console's typecheck/lint/build. R-416 added prompt-to-IR intake, R-417 materialized a generated
 owned repo, R-418 added the local chat studio, R-419 added turnkey local run, and R-420 fixed the two
 SQL defects found by live execution. R-421 added an explicit `task agent-engine:studio:preview` mode:
@@ -798,11 +798,32 @@ WHAT TO DO NEXT
   pass; unlike R-487, no providers.py/drivers.py change was needed this time.
   **All three sandbox providers the founder asked for (E2B, Vercel Sandbox, Daytona) now have
   real, tested, pluggable drivers behind one shared contract.**
-- NEXT: R-489 (the free WebContainers browser-only option - client-side in the
-  console, Node.js/frontend apps only, an honest documented limitation since WebContainers cannot
-  run Python or Go), R-490 (a provider-selection surface exposing the founder's explicit "switch
-  easily by cost/speed/smoothness" ask - the point where more than one provider actually gets
-  wired into the Studio's real preview flow, deliberately deferred until then). Publish/deploy
+- R-489 (2026-09-19, done) is the fourth of the five-task sequence - and it replaces the
+  originally planned WebContainers option after real research found WebContainers requires a paid
+  commercial license for any non-prototype use, and only runs Node.js anyway (no Python/Go).
+  After comparing every candidate's real licensing (Vercel Sandbox/Fly/CodeSandbox: paid-only; raw
+  Firecracker: free but a multi-quarter build-your-own-orchestrator project; E2B/Daytona: open
+  source but self-hosting means running their full orchestrator; gVisor: genuinely free, open
+  source, small lift), the founder approved gVisor, then asked two real follow-ups before
+  continuing: real resource cost (light - ~50MB binary, ~15-30MB RAM/sandbox, layers onto the
+  Docker daemon already running for Postgres/control-plane) and why not use this in production
+  instead of paying (answered honestly: a self-hosted loopback URL only works for a same-machine
+  viewer; the managed providers' real value beyond isolation is a global public routing/proxy/
+  scale layer this task doesn't build) - positioned explicitly as the free/dev tier, not a
+  production replacement, confirmed by the founder. New docker_socket.py (a genuinely different
+  transport - Docker's Unix socket, since urllib has no Unix-socket support) and gvisor.py's
+  GVisorSandboxProvider. A real, necessary contract correction found and fixed: SandboxHandle's
+  https-only URL validation (from R-486) was too narrow once a local provider existed; relaxed to
+  match PreviewPlan's own loopback-or-https pattern. active is a live local capability check (is
+  runsc registered?), not an env-var check - the only driver with no credential at all. Docker's
+  own image ecosystem covers Go, unlike Vercel Sandbox. No live gVisor/Docker daemon exists in
+  this environment - live verification honestly deferred. `task verify` 3,729 OK (22 new tests);
+  repo gates all pass.
+- NEXT: R-490 (a provider-selection surface exposing the founder's explicit "switch
+  easily by cost/speed/smoothness" ask - free gVisor vs. paid E2B/Vercel/Daytona, switchable per
+  user/config - the point where more than one provider actually gets wired into the Studio's real
+  preview flow, deliberately deferred until then, and the last task in this five-task sequence).
+  Publish/deploy
   (multi-target: Netlify one-click, Vercel/Cloudflare/self-host/GitHub-export as options) and
   backend/mobile stack breadth (Node.js added alongside Python/Go; React Native as the near-term
   mobile target) remain named, founder-approved-in-direction but not yet scoped into task

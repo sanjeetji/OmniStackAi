@@ -111,9 +111,10 @@ class DeploymentProvider(Protocol):
 
 @dataclass(frozen=True, slots=True)
 class SandboxHandle:
-    """A real, live cloud sandbox (R-486) - returned by `SandboxLifecycleProvider.create()` and
+    """A real, live sandbox (R-486) - returned by `SandboxLifecycleProvider.create()` and
     refreshed by `.status()`. Unlike `PreviewPlan` (a pure description of commands to run locally),
-    this represents an actual remote resource that exists until `kill()` is called."""
+    this represents an actual resource (remote or, since R-489's self-hosted gVisor driver, local)
+    that exists until `kill()` is called."""
 
     provider_id: str
     sandbox_id: str
@@ -124,8 +125,12 @@ class SandboxHandle:
         _text(self.provider_id, "provider_id", 64)
         _text(self.sandbox_id, "sandbox_id", 128)
         _text(self.status, "status", 32)
-        if not self.url.startswith("https://"):
-            raise RuntimeProviderError("sandbox url must be an https URL")
+        # R-489: relaxed to match PreviewPlan's own already-established pattern (loopback or
+        # https) once a genuinely local provider (self-hosted gVisor) needed to return a
+        # loopback URL - the original https-only check was correct for R-486..R-488's three
+        # cloud-only providers but too narrow once a local one existed.
+        if not self.url.startswith(("http://127.0.0.1", "http://localhost", "https://")):
+            raise RuntimeProviderError("sandbox url must be a loopback or https URL")
 
 
 @runtime_checkable

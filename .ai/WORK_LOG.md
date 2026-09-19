@@ -1,5 +1,92 @@
 # Work Log
 
+## 2026-09-19 — R-489 (Runtime: free, self-hosted gVisor sandbox driver)
+
+- **Why:** fourth of the five-task sandbox-provider sequence (R-486..R-490) — **replaces the
+  originally planned WebContainers option**. Real research (WebSearch/WebFetch against
+  `webcontainers.io`) found WebContainers requires a paid commercial license for any real
+  (non-prototype) commercial use — free use is explicitly limited to prototypes/POCs — directly
+  contradicting the founder's "free, no cost or too much configuration" ask, and it can only run
+  Node.js anyway (no Python/Go), a real fit problem for this platform's generated backends.
+- **Founder direction, recorded before implementation**: presented the real licensing/self-hosting
+  picture for every credible candidate — Vercel Sandbox/Fly/CodeSandbox (paid-only, no self-host);
+  raw Firecracker (free, open source, but a low-level building block whose self-hosted
+  orchestration is a multi-quarter engineering project, exactly what R-486's own originating
+  research warned against); E2B/Daytona (open source at their core, but self-hosting means
+  operating their full orchestrator yourself); gVisor (genuinely free, open source, and a small,
+  well-trodden lift — a drop-in Docker/OCI runtime, not a new platform to operate). The founder
+  approved gVisor.
+- **Two further real, practical questions asked before continuing, both answered directly**: (1)
+  real resource cost on a dev machine — `runsc` is ~50MB on disk, runs as a lightweight user-space
+  process on the *same* kernel (no VM, unlike Firecracker), layers directly onto the Docker daemon
+  this project's own local Compose stack already runs, ~15-30MB RAM overhead per active sandbox,
+  base images (`node:22-slim`, `python:3.13-slim`, `golang:1.23-alpine`) each a one-time cached
+  download; (2) why not simply use this in production instead of paying for E2B/Vercel Sandbox/
+  Daytona — answered honestly: gVisor solves kernel-level isolation for free, but the three paid
+  providers actually charge for isolation *plus* a globally-distributed public routing/proxy layer
+  with TLS and auto-scaling; a self-hosted gVisor sandbox's URL is a bare loopback address
+  (`http://127.0.0.1:<port>`) that only resolves for a viewer on the same machine, so making it
+  reachable by real remote users at production scale would mean building that entire layer from
+  scratch — the same order of effort the original research already said not to take on. The
+  founder confirmed the intended shape: gVisor as a genuinely free, self-hosted **development/
+  free-tier** option, switchable per user/config alongside the three paid managed providers — not
+  a replacement for any of them.
+- **Design, verified against real, current documentation before writing any code**: the Docker
+  Engine API (a long-established, extremely stable, ubiquitous surface, confirmed via a direct
+  curl-example fetch, not summarized secondhand) — `POST /containers/create` (→ `"Id"`), `POST
+  /containers/{id}/start`, `GET /containers/{id}/json` (`NetworkSettings.Ports` keyed by
+  `"<port>/tcp"`, each a list of `{"HostIp", "HostPort"}`; `State.Status`), `POST
+  /containers/{id}/kill`, `DELETE /containers/{id}`, `GET /info` (`Runtimes`, keyed by runtime
+  name — the live signal this driver uses to detect whether `runsc` is registered).
+- **A genuinely different transport, and the reason this task couldn't reuse `sandbox_http.py`
+  unchanged**: the Docker daemon listens on a **Unix domain socket**
+  (`/var/run/docker.sock` by default), not TCP — `urllib` has no Unix-socket support at all. New
+  `runtime/docker_socket.py` adds a small, purpose-built sibling transport: a
+  `http.client.HTTPConnection` subclass overriding `connect()` to open an `AF_UNIX` socket, the
+  same stdlib idiom `docker-py` itself is built on internally — same safety invariants
+  (bounded response, finite timeout, stable typed errors) and the same testability invariant
+  (every call accepts an injectable `connection`, mirroring the injectable-`opener` pattern for
+  the three cloud drivers).
+- **New `runtime/gvisor.py`'s `GVisorSandboxProvider`** implements R-486's
+  `SandboxLifecycleProvider` on top of this new transport. Two real, honest design differences
+  from every other driver in this sequence: (1) `active` is a **live local capability check**, not
+  an env-var check — this provider has no credential at all, so `active` queries the daemon's own
+  `GET /info` and confirms `"runsc"` genuinely appears in `Runtimes`, defensively returning `False`
+  (never raising) on any connection failure. (2) Unlike Vercel Sandbox (R-487), whose `runtime`
+  enum has no Go at all, Docker's own image ecosystem covers every target this platform generates
+  without exception, including a real `golang:1.23-alpine` mapping for `backend-go`.
+- **A real, necessary correction to R-486's own original contract, found while designing this, not
+  glossed over**: `SandboxHandle.__post_init__` originally required every `url` to start with
+  `https://` unconditionally — correct for three cloud-only providers, but it would have rejected
+  this driver's own legitimate `http://127.0.0.1:<port>` loopback URL outright. Relaxed to match
+  the pattern `PreviewPlan` (the older, pre-R-486 local-preview contract) had already independently
+  established for exactly this reason — confirmed safe first by checking no existing test asserted
+  the old error message's exact text; `contracts.py` added to `allowed_paths` mid-task for this one
+  minimal, well-justified correction, following the same mid-task scope-correction discipline
+  already applied twice before this session (R-484's `RecordingProvider.stream()` gap, R-487's
+  `RUNTIME_SPECS`/`drivers.py` registry-consistency gap).
+- **Scope matches every prior driver in this sequence**: proves real lifecycle management
+  (create/status/kill against a real local Docker daemon), not file-sync/install/run automation or
+  wiring into the Studio's actual preview flow — the same boundary R-486/R-487/R-488 already
+  established.
+- **No live Docker daemon with `runsc` actually installed and registered exists in this
+  environment** — every automated test is offline via an injected fake Unix-socket connection
+  object; real live verification is honestly deferred, matching R-486/R-487/R-488's posture on
+  missing cloud credentials.
+- **Gates**: agent-engine `task verify` **3,729 tests OK** (22 new: 8 in
+  `test_runtime_docker_socket.py`, 14 in `test_runtime_gvisor.py`), 0 model/network/Docker calls —
+  covering the full create→start→inspect sequence and its exact request shapes, all four
+  target→image mappings including Go, an unsupported target rejected before any request, a missing
+  container id stopping before start/inspect, a missing host port raising clearly, a real
+  Docker-shaped 404/500 error body mapping correctly, a connection-level failure mapping to
+  `DockerUnreachableError`, and `status()`/`kill()` (kill-then-remove) both correctly keyed by the
+  real container id. Repo-wide `task verify`/`lint`/`security:quick`/`env:check` all pass; a new
+  `scripts/test.sh` contract block asserts the new driver/transport files and class exist. Every
+  pre-existing suite passes unmodified beyond the one deliberate `SandboxHandle` relaxation.
+- **Next:** R-490 (a provider-selection surface exposing the founder's explicit "switch easily by
+  cost/speed/smoothness" ask — free gVisor vs. paid E2B/Vercel/Daytona, switchable per user/
+  config) — the fifth and final task in this sequence.
+
 ## 2026-09-19 — R-488 (Runtime: real Daytona driver)
 
 - **Why:** third of the five-task sandbox-provider sequence (R-486..R-490). E2B (R-486) and Vercel

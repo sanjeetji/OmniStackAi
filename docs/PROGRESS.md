@@ -1,4 +1,4 @@
-# OmniStackAI — implementation progress (as of R-488)
+# OmniStackAI — implementation progress (as of R-489)
 
 A living summary of what is built, what is pending, and how to see results. Numbers come from the
 execution tracker (`R_&_D/OmniStackAI_Execution_Tracker_v6.xlsx`, `Phase_Roadmap`, 461 tasks as of
@@ -6,8 +6,27 @@ R-461 completion) plus the state files (`.ai/`), Git history, and CHANGELOG.
 
 ## Headline
 
-- **3,707 automated tests pass** (agent-engine + Go control-plane), fully offline and
+- **3,729 automated tests pass** (agent-engine + Go control-plane), fully offline and
   network-independent (`task verify`), plus the console's own `typecheck`/`lint`/`build` gates.
+- **R-489 — Runtime: free, self-hosted gVisor sandbox driver (2026-09-19):** fourth of the
+  five-task sequence (R-486..R-490) — **replaces the originally planned WebContainers option**
+  after real research found it requires a paid commercial license for any non-prototype use and
+  only runs Node.js anyway. After comparing every candidate's real licensing (Vercel Sandbox/Fly/
+  CodeSandbox: paid-only; raw Firecracker: free but a multi-quarter build-your-own-orchestrator
+  project; E2B/Daytona: open source but self-hosting means running their full orchestrator;
+  gVisor: genuinely free, open source, small lift), the founder approved gVisor, then asked two
+  real follow-ups before continuing — resource cost and "why not use this in production instead
+  of paying" — both answered directly: lightweight (~50MB binary, ~15-30MB RAM/sandbox), but a
+  self-hosted loopback URL only works for a same-machine viewer; the managed providers' real value
+  beyond isolation is a global public routing/proxy/scale layer this task doesn't build.
+  Positioned explicitly as the free/dev tier, not a production replacement. A genuinely different
+  transport (Docker's Unix socket, new `docker_socket.py`) and a real, necessary contract
+  correction (relaxed `SandboxHandle`'s https-only URL validation to match `PreviewPlan`'s own
+  loopback-or-https pattern). `active` is a live local capability check (is `runsc` registered?),
+  not an env-var check. Docker's own image ecosystem covers Go, unlike Vercel Sandbox. No live
+  gVisor/Docker daemon exists in this environment — live verification honestly deferred.
+  `task verify` **3,729 OK** (22 new tests); repo gates all pass. See `.ai/tasks/R-489.md` for
+  full detail.
 - **R-488 — Runtime: real Daytona driver (2026-09-19):** third of the five-task sandbox sequence
   (R-486..R-490) — **all three sandbox providers the founder asked for (E2B, Vercel Sandbox,
   Daytona) now have real, tested, pluggable drivers behind one shared

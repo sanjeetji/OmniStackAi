@@ -15,7 +15,9 @@ from .contracts import (
     SandboxLifecycleProvider,
 )
 from .daytona import DaytonaSandboxProvider
+from .docker_socket import DockerHTTPError, DockerUnreachableError
 from .e2b import E2BSandboxProvider, MissingSandboxCredentialError
+from .gvisor import GVisorSandboxProvider
 from .errors import (
     DeploySelectionError,
     RuntimeProviderError,
@@ -52,7 +54,10 @@ __all__ = [
     "DeploySetup",
     "DaytonaSandboxProvider",
     "DeploymentProvider",
+    "DockerHTTPError",
+    "DockerUnreachableError",
     "E2BSandboxProvider",
+    "GVisorSandboxProvider",
     "LOCAL_PROVIDER_ID",
     "LocalRuntimeProvider",
     "MissingSandboxCredentialError",

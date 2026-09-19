@@ -1,26 +1,30 @@
-task_id: R-488
+task_id: R-489
 status: completed
 phase: MVP
 tracker_row: null
 started_at: "2026-09-19"
 completed_at: "2026-09-19"
 objective: >-
-  Third of the five-task sandbox-provider sequence (R-486..R-490). Adds a real Daytona driver,
-  proving SandboxLifecycleProvider/sandbox_http.py generalize a third time. Verified against
-  Daytona's real REST API (fetched directly): POST/GET/DELETE https://api.daytona.io/sandbox[/{id}],
-  Bearer auth, and a genuinely different shape from both prior drivers - the create response
-  carries no URL at all; a second call, GET .../sandbox/{id}/ports/{port}/preview-url, is required
-  to get the real URL. create() always requests "public": true since SandboxHandle.url has no room
-  for a companion preview-access token. Daytona's documented default isolation is plain Docker
-  containers (weaker than E2B/Vercel's Firecracker microVMs) - a real tradeoff surfaced honestly,
-  not attempted to be worked around. No real DAYTONA_API_KEY exists in this environment, so every
-  gate is offline; live-cloud verification is honestly deferred.
+  Fourth of the five-task sandbox-provider sequence (R-486..R-490) - replaces the originally
+  planned WebContainers option after real research found it requires a paid commercial license
+  for any non-prototype use. Adds a real, free, self-hosted SandboxLifecycleProvider backed by
+  gVisor (a genuinely open-source, low-lift Docker/OCI runtime, unlike self-hosting Firecracker or
+  the E2B/Daytona orchestrators). Talks to the LOCAL Docker Engine API over its Unix socket (a new
+  docker_socket.py transport, since urllib has no Unix-socket support) rather than a remote HTTPS
+  API. active checks the local daemon for the runsc runtime being registered - a live capability
+  check, not an env-var check, since this provider has no credential. Positioned explicitly as a
+  free/dev tier alongside the three paid managed providers, not a production replacement - a
+  self-hosted sandbox's loopback URL only works for a same-machine viewer, so production/remote
+  users still need a managed provider's public routing/proxy layer.
 allowed_paths:
-  - services/agent-engine/src/omnistackai_agent_engine/runtime/daytona.py
+  - services/agent-engine/src/omnistackai_agent_engine/runtime/docker_socket.py
+  - services/agent-engine/src/omnistackai_agent_engine/runtime/gvisor.py
+  - services/agent-engine/src/omnistackai_agent_engine/runtime/contracts.py
   - services/agent-engine/src/omnistackai_agent_engine/runtime/__init__.py
-  - services/agent-engine/tests/test_runtime_daytona.py
+  - services/agent-engine/tests/test_runtime_docker_socket.py
+  - services/agent-engine/tests/test_runtime_gvisor.py
   - scripts/test.sh
-  - .ai/tasks/R-488.md
+  - .ai/tasks/R-489.md
   - .ai/CURRENT_TASK.yaml
   - .ai/PROJECT_STATE.yaml
   - .ai/WORK_LOG.md
@@ -30,13 +34,13 @@ allowed_paths:
   - docs/PROGRESS.md
   - docs/RESUME_PROMPT.md
 forbidden_changes:
-  - No changes to runtime/contracts.py, runtime/sandbox_http.py, runtime/e2b.py, or runtime/vercel_sandbox.py
-  - No changes to runtime/providers.py - RUNTIME_SPECS["daytona"] already exists
-  - No changes to studio/, runtime/local.py, or runtime/drivers.py
+  - No changes to runtime/sandbox_http.py, runtime/e2b.py, runtime/vercel_sandbox.py, or runtime/daytona.py
+  - "runtime/contracts.py: only the minimal SandboxHandle URL-validation relaxation - no other change"
+  - No changes to runtime/providers.py, runtime/local.py, runtime/drivers.py, or studio/
   - Do not modify or commit the untracked .claude directory
-  - No real API call in any automated gate
+  - No real Docker daemon call in any automated gate
 required_gates:
-  - "agent-engine: task verify (0 model/network calls, fake HTTP transport stands in for Daytona)"
+  - "agent-engine: task verify (0 model/network calls, 0 real Docker daemon calls, fake Unix-socket connection stands in)"
   - task verify
   - task lint
   - task security:quick
@@ -46,16 +50,16 @@ model_tool_trace:
   local_calls: 0
   cloud_calls: 0
   note: >-
-    Pure Python stdlib HTTP client implementation, 0 model/network calls in any automated gate.
-    No real DAYTONA_API_KEY exists in this environment.
+    Pure Python stdlib Unix-socket HTTP client implementation, 0 model/network/Docker calls in any
+    automated gate. This environment does not have gVisor's runsc installed/registered, so live
+    verification is honestly deferred, matching R-486/487/488's missing-credential posture.
 next_action: >-
-  R-488 shipped: 3,707 agent-engine tests OK (13 new). Daytona's real REST API was verified
-  directly, including a real base-URL ambiguity across their own docs resolved the same way
-  E2B's v1/v2 ambiguity was. A genuinely third API shape confirmed: create() makes two real HTTP
-  calls (create, then a separate preview-url lookup), unlike E2B/Vercel's single-call shapes.
-  Daytona's documented default isolation (plain Docker, weaker than E2B/Vercel's microVMs) is
-  surfaced honestly, not hidden. No real DAYTONA_API_KEY exists in this environment - live-cloud
-  verification honestly deferred. All three sandbox providers (E2B, Vercel Sandbox, Daytona) now
-  have real, tested, pluggable drivers behind one shared contract. Next: R-489 (free WebContainers
-  browser option, no cost/config), R-490 (provider-selection surface exposing the founder's
-  "switch easily" ask).
+  R-489 shipped: 3,729 agent-engine tests OK (22 new). Founder confirmed direction after asking
+  about real resource cost (light: ~50MB binary, ~15-30MB RAM/sandbox) and why not use this in
+  production (self-hosted loopback URLs only work for a same-machine viewer; managed providers'
+  real value is the public routing/proxy/scale layer beyond just isolation) - positioned as
+  free/dev tier, not a production replacement. A real SandboxHandle contract gap was found and
+  fixed (https-only was too narrow once a local provider existed). No live gVisor/Docker daemon
+  exists in this environment - live verification honestly deferred. Next: R-490 (provider-
+  selection surface: free gVisor vs paid E2B/Vercel/Daytona, switchable per user/config) - the
+  last task in this five-task sequence.

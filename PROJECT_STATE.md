@@ -4,6 +4,29 @@ Last updated: 2026-09-19
 ## Current Phase
 Stage 0 (Founder Build Sequence, Brief Section 91) — BASIC/MVP
 
+> **R-489 (2026-09-19): Runtime — free, self-hosted gVisor sandbox driver.** Fourth of the
+> five-task sequence (R-486..R-490) — **replaces the originally planned WebContainers option**:
+> real research found WebContainers requires a paid commercial license for any non-prototype
+> commercial use, contradicting the "free, no cost" ask. After comparing every candidate's real
+> licensing (Vercel Sandbox/Fly/CodeSandbox: paid-only; raw Firecracker: free but a multi-quarter
+> build-your-own-orchestrator project; E2B/Daytona: open source but self-hosting means running
+> their full orchestrator; gVisor: genuinely free, open source, small lift), the founder approved
+> gVisor, then asked two real follow-ups before continuing — resource cost and "why not use this
+> in production instead of paying" — both answered directly: gVisor is lightweight (~50MB binary,
+> ~15-30MB RAM/sandbox), but a self-hosted loopback URL only works for a same-machine viewer; the
+> managed providers' real value beyond isolation is a global public routing/proxy/scale layer this
+> task doesn't build. Positioned explicitly as the free/dev tier, not a production replacement.
+> A genuinely different transport (Docker's Unix socket, not a cloud HTTPS API) — new
+> `docker_socket.py`. A real, necessary contract correction found and fixed:
+> `SandboxHandle`'s https-only URL validation was too narrow once a local provider existed;
+> relaxed to match `PreviewPlan`'s own loopback-or-https pattern. `active` is a live local
+> capability check (is `runsc` registered?), not an env-var check — the only driver in this
+> sequence with no credential at all. Docker's own image ecosystem covers Go, unlike Vercel
+> Sandbox. No live gVisor/Docker daemon exists in this environment — live verification honestly
+> deferred. `task verify` **3,729 OK** (22 new tests); repo gates all pass.
+> NEXT: R-490 (provider-selection surface: free gVisor vs. paid E2B/Vercel/Daytona, switchable per
+> user/config) — the last task in this sequence.
+
 > **R-488 (2026-09-19): Runtime — real Daytona driver.** Third of the five-task sequence
 > (R-486..R-490). E2B and Vercel Sandbox each proved `SandboxLifecycleProvider`/`sandbox_http.py`
 > generalize; this task adds Daytona, whose real API is shaped a third distinct way: the create

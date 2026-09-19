@@ -2,10 +2,10 @@ schema_version: 1
 project: OmniStackAI
 phase: BASIC/MVP
 founder_stage: 0
-current_task: R-488
+current_task: R-489
 current_status: done
 branch: main
-last_completed_task: R-488
+last_completed_task: R-489
 # TASK COMPILATION AUDIT — 2026-09-16
 # Performed to achieve 100% synchronization across all task-tracking documentation.
 # Tracker workbook expanded to 464 tasks with R-464.
@@ -34,6 +34,34 @@ task_compilation_audit:
       new_status: DONE
       reason: "Task fully completed on 2026-09-11 with 35 tests. Status left stale during rapid development sprint."
 last_completed_task_summary: >-
+  Completed R-489 (2026-09-19): runtime free, self-hosted gVisor sandbox driver. Fourth of the
+  five-task sequence (R-486..R-490) - replaces the originally planned WebContainers option after
+  real research found it requires a paid commercial license for any non-prototype use and only
+  runs Node.js anyway.
+  After comparing every candidate's real licensing (Vercel Sandbox/Fly/CodeSandbox: paid-only; raw
+  Firecracker: free but a multi-quarter build-your-own-orchestrator project; E2B/Daytona: open
+  source but self-hosting means running their full orchestrator; gVisor: genuinely free, open
+  source, small lift), the founder approved gVisor, then asked two real follow-ups before
+  continuing: real resource cost (light - ~50MB binary, ~15-30MB RAM/sandbox, layers onto the
+  Docker daemon already running for Postgres/control-plane) and why not use this in production
+  instead of paying (answered honestly: a self-hosted loopback URL only works for a same-machine
+  viewer; the managed providers' real value beyond isolation is a global public routing/proxy/
+  scale layer this task doesn't build) - confirmed: free/dev tier, not a production replacement.
+  New docker_socket.py (Docker's Unix socket - urllib has no Unix-socket support) and gvisor.py's
+  GVisorSandboxProvider (create: POST /containers/create -> start -> inspect for the real
+  auto-assigned host port). A real, necessary contract correction found and fixed: SandboxHandle's
+  https-only URL validation (from R-486) was too narrow once a local provider existed; relaxed to
+  match PreviewPlan's own loopback-or-https pattern. active is a live local capability check (is
+  runsc registered?), not an env-var check - the only driver with no credential at all. Docker's
+  own image ecosystem covers Go, unlike Vercel Sandbox.
+  No live gVisor/Docker daemon exists in this environment - every gate is offline via an injected
+  fake Unix-socket connection; live verification honestly deferred.
+  Gates: agent-engine task verify 3,729 OK (22 new tests), 0 model/network/Docker calls; every
+  pre-existing suite passes unmodified beyond the one deliberate SandboxHandle relaxation. Repo
+  task verify/lint/security:quick/env:check all pass; new scripts/test.sh contract block.
+  NEXT: R-490 (provider-selection surface: free gVisor vs paid E2B/Vercel/Daytona, switchable per
+  user/config) - the fifth and final task in this sequence.
+_prior_last_completed_task_summary_R488: >-
   Completed R-488 (2026-09-19): runtime real Daytona driver. Third of the five-task sequence
   (R-486..R-490). E2B and Vercel Sandbox each proved SandboxLifecycleProvider/sandbox_http.py
   generalize; this task adds Daytona, whose real API is shaped a third, genuinely distinct way.
@@ -1739,14 +1767,16 @@ next_action: >-
   Presented to the founder as a hard-gate (new paid cloud dependency); the founder's answer: build
   real, pluggable drivers for multiple providers (E2B, Vercel Sandbox, Daytona) switchable by
   cost/speed/smoothness, plus a free browser-only option (WebContainers) - a five-task sequence
-  (R-486..R-490). R-486 (E2B driver), R-487 (Vercel Sandbox driver), and R-488 (Daytona driver,
+  (R-486..R-490). R-486 (E2B driver), R-487 (Vercel Sandbox driver), R-488 (Daytona driver,
   notable because its documented default isolation is plain Docker containers rather than a
-  microVM, a real tradeoff surfaced honestly) are all done - all three sandbox providers the
-  founder asked for now have real, tested, pluggable drivers behind one shared contract.
-  NEXT: R-489 (free WebContainers browser-only option, Node.js/frontend apps only), R-490 (a
-  provider-selection surface exposing the founder's "switch easily" ask - the point where more
-  than one provider actually gets wired into the Studio's real preview flow, deliberately deferred
-  until then). Separately, full
+  microVM, a real tradeoff surfaced honestly), and R-489 (a free, self-hosted gVisor driver -
+  replacing the originally planned WebContainers option after real research found it requires a
+  paid commercial license; positioned as a free/dev tier, not a production replacement, per the
+  founder's own confirmation after asking real cost/production-readiness questions) are all done.
+  NEXT: R-490 (a provider-selection surface exposing the founder's "switch easily" ask - free
+  gVisor vs. paid E2B/Vercel/Daytona, switchable per user/config - the point where more than one
+  provider actually gets wired into the Studio's real preview flow, deliberately deferred until
+  then, and the fifth and final task in this sequence). Separately, full
   per-user *process/tenant* isolation (as opposed to just which sandbox technology runs one
   preview) remains a materially different, larger architecture decision needing its own founder
   sign-off once R-486..R-490 land - the agent-engine has zero containerization today and
