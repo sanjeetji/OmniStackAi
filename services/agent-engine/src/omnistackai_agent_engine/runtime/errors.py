@@ -17,3 +17,11 @@ class RuntimeSelectionError(RuntimeProviderError):
 
 class DeploySelectionError(RuntimeProviderError):
     code = "deploy_selection_error"
+
+
+class SandboxSelectionError(RuntimeProviderError):
+    """R-490: raised by build_sandbox_from_env() for an unknown provider name, or a real but
+    currently-inactive one (mirrors RuntimeSelectionError/DeploySelectionError's own precedent:
+    "selecting a keyless cloud provider is a clear error")."""
+
+    code = "sandbox_selection_error"

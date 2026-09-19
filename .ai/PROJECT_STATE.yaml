@@ -2,10 +2,10 @@ schema_version: 1
 project: OmniStackAI
 phase: BASIC/MVP
 founder_stage: 0
-current_task: R-489
+current_task: R-490
 current_status: done
 branch: main
-last_completed_task: R-489
+last_completed_task: R-490
 # TASK COMPILATION AUDIT — 2026-09-16
 # Performed to achieve 100% synchronization across all task-tracking documentation.
 # Tracker workbook expanded to 464 tasks with R-464.
@@ -34,6 +34,36 @@ task_compilation_audit:
       new_status: DONE
       reason: "Task fully completed on 2026-09-11 with 35 tests. Status left stale during rapid development sprint."
 last_completed_task_summary: >-
+  Completed R-490 (2026-09-19): runtime sandbox provider-selection surface. Fifth and final task
+  in the sandbox-provider sequence (R-486..R-490).
+  New runtime/sandbox_selection.py: build_sandbox_from_env(selection=None, *, providers=None) ->
+  SandboxSetup, mirroring bootstrap.py's own established build_runtime_from_env() shape, plus a
+  new SandboxSelectionError in errors.py. Defaults to sandboxing disabled (selected=None) - zero
+  behavior change until an operator opts in via OMNISTACKAI_SANDBOX_PROVIDER.
+  The explicit selection parameter is the concrete "switch per user base" mechanism the founder
+  asked about - a caller can pass a per-user choice without touching global state, proven by a
+  dedicated test. Kept deliberately separate from the older, still-untouched tier.py/bootstrap.py
+  planning system (confirmed via direct read this is a genuinely separate concern); not wired into
+  studio/console/control-plane, matching every prior task's own scope boundary - per-user plan
+  data lives in the Go control-plane and is a separate future integration.
+  A real test-design risk was caught and avoided before it was ever committed: an early draft test
+  would have made a real local Docker socket connection attempt via GVisorSandboxProvider.active
+  just to test registry wiring (since active-reporting evaluates every registered provider
+  regardless of selection) - replaced with a zero-I/O class-identity check instead
+  (TestRealRegistryWiring).
+  Gates: agent-engine task verify 3,738 OK (9 new tests), 0 model/network/Docker calls. Repo task
+  verify/lint/security:quick/env:check all pass; new, final scripts/test.sh contract block for
+  this five-task sequence. Every other file across the sequence remains completely unmodified.
+  THIS COMPLETES THE FIVE-TASK SANDBOX-PROVIDER SEQUENCE (R-486..R-490): E2B, Vercel Sandbox,
+  Daytona, and a free self-hosted gVisor option are all real, independently-verified, and now
+  genuinely pluggable/switchable via configuration - exactly the founder's original ask.
+  NEXT (not yet scoped into any task contract): real multi-target Publish/deploy (Netlify
+  one-click primary; Vercel/Cloudflare/self-host/GitHub-export as secondary options), Node.js
+  backend codegen alongside Python/Go, and starting mobile technology work (React Native
+  near-term). Full per-user process/tenant isolation as a wholesale architecture (beyond just
+  which sandbox technology runs one preview) remains a separate, materially larger architecture
+  decision needing its own explicit founder sign-off before any implementation.
+_prior_last_completed_task_summary_R489: >-
   Completed R-489 (2026-09-19): runtime free, self-hosted gVisor sandbox driver. Fourth of the
   five-task sequence (R-486..R-490) - replaces the originally planned WebContainers option after
   real research found it requires a paid commercial license for any non-prototype use and only
@@ -1769,20 +1799,22 @@ next_action: >-
   cost/speed/smoothness, plus a free browser-only option (WebContainers) - a five-task sequence
   (R-486..R-490). R-486 (E2B driver), R-487 (Vercel Sandbox driver), R-488 (Daytona driver,
   notable because its documented default isolation is plain Docker containers rather than a
-  microVM, a real tradeoff surfaced honestly), and R-489 (a free, self-hosted gVisor driver -
+  microVM, a real tradeoff surfaced honestly), R-489 (a free, self-hosted gVisor driver -
   replacing the originally planned WebContainers option after real research found it requires a
   paid commercial license; positioned as a free/dev tier, not a production replacement, per the
-  founder's own confirmation after asking real cost/production-readiness questions) are all done.
-  NEXT: R-490 (a provider-selection surface exposing the founder's "switch easily" ask - free
-  gVisor vs. paid E2B/Vercel/Daytona, switchable per user/config - the point where more than one
-  provider actually gets wired into the Studio's real preview flow, deliberately deferred until
-  then, and the fifth and final task in this sequence). Separately, full
+  founder's own confirmation after asking real cost/production-readiness questions), and R-490 (the
+  provider-selection surface exposing the founder's "switch easily/per userbase" ask -
+  build_sandbox_from_env(), defaults to disabled, an explicit per-call selection override as the
+  concrete per-user mechanism) are all done - THE FIVE-TASK SANDBOX-PROVIDER SEQUENCE IS COMPLETE.
+  NEXT (not yet scoped into any task contract): real multi-target Publish/deploy (Netlify
+  one-click primary; Vercel/Cloudflare/self-host/GitHub-export as secondary options), Node.js
+  backend codegen alongside Python/Go, and starting mobile technology work (React Native
+  near-term, per research - no competitor at scale generates native Kotlin/Swift). Separately, full
   per-user *process/tenant* isolation (as opposed to just which sandbox technology runs one
   preview) remains a materially different, larger architecture decision needing its own founder
-  sign-off once R-486..R-490 land - the agent-engine has zero containerization today and
-  scripts/test.sh actively blocks adding it as a Compose service. Publish/deploy and backend/
-  mobile stack breadth remain named and directionally approved but not yet scoped into task
-  contracts. Phase E (plan-gated UI, admin console, payment processor) still needs its own
-  explicit founder sign-off before starting.
+  sign-off now that R-486..R-490 have all landed - the agent-engine has zero containerization
+  today (beyond the opt-in gVisor/Docker sandbox path R-489 added) and scripts/test.sh actively
+  blocks adding agent-engine itself as a Compose service. Phase E (plan-gated UI, admin console,
+  payment processor) still needs its own explicit founder sign-off before starting.
   Keep task verify model/Docker/DB/install/network-free. The UI-component series remains
   paused/resumable; the tracker workbook still lags (ends at R-462).

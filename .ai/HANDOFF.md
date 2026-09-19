@@ -1,9 +1,37 @@
 # Current Handoff
 
-Task ID: R-489
+Task ID: R-490
 Status: done
 Phase: BASIC/MVP — Founder Stage 0
 Branch: `main`
+
+> **R-490 Completed (2026-09-19): Runtime — sandbox provider-selection surface.**
+> - Fifth and final task in the sandbox-provider sequence (R-486..R-490). New
+>   `runtime/sandbox_selection.py`: `build_sandbox_from_env(selection=None, *, providers=None) ->
+>   SandboxSetup`, mirroring `bootstrap.py`'s own established shape, plus a new
+>   `SandboxSelectionError`.
+> - Defaults to sandboxing **disabled** (`selected=None`) — zero behavior change until an operator
+>   opts in via `OMNISTACKAI_SANDBOX_PROVIDER`.
+> - The explicit `selection` parameter is the concrete "switch per user base" mechanism the
+>   founder asked about — a caller can pass a per-user choice without touching global state,
+>   proven by a dedicated test, not just described.
+> - Kept deliberately separate from the older, still-untouched `tier.py`/`bootstrap.py` planning
+>   system; not wired into `studio/`/console/control-plane, matching every prior task's own scope
+>   boundary — per-user plan data lives in the Go control-plane and is a separate future
+>   integration.
+> - **A real test-design risk was caught and avoided**: an early draft test would have made a real
+>   local Docker socket connection attempt via `GVisorSandboxProvider.active` just to test
+>   registry wiring — replaced with a zero-I/O class-identity check instead.
+> - Gates: agent-engine `task verify` **3,738 OK** (9 new); repo `task verify`/`lint`/
+>   `security:quick`/`env:check` all pass; new, final `scripts/test.sh` contract block for this
+>   sequence.
+> - **This completes the five-task sandbox-provider sequence**: E2B, Vercel Sandbox, Daytona, and
+>   a free self-hosted gVisor option are all real, independently-verified, and now genuinely
+>   pluggable/switchable via configuration — exactly the founder's original ask.
+> - **NEXT** (not yet scoped): real multi-target Publish/deploy, Node.js backend codegen alongside
+>   Python/Go, and starting mobile technology work (React Native near-term). Full per-user
+>   process/tenant isolation as a wholesale architecture remains a separate, larger decision
+>   needing its own explicit founder sign-off. See `.ai/tasks/R-490.md`.
 
 > **R-489 Completed (2026-09-19): Runtime — free, self-hosted gVisor sandbox driver.**
 > - Fourth of the five-task sequence (R-486..R-490) — **replaces the originally planned

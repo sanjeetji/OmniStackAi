@@ -665,4 +665,20 @@ if ! rg -qF 'class GVisorSandboxProvider' "$agent_engine_root/src/omnistackai_ag
   exit 1
 fi
 
+# R-490: sandbox provider-selection surface (fifth and final task of the R-486..R-490 sequence).
+if [[ ! -f "$agent_engine_root/src/omnistackai_agent_engine/runtime/sandbox_selection.py" ]]; then
+  printf 'Missing R-490 contract file: %s/src/omnistackai_agent_engine/runtime/sandbox_selection.py\n' "$agent_engine_root"
+  exit 1
+fi
+
+if ! rg -qF 'def build_sandbox_from_env' "$agent_engine_root/src/omnistackai_agent_engine/runtime/sandbox_selection.py"; then
+  printf 'R-490 must add build_sandbox_from_env() to runtime/sandbox_selection.py.\n'
+  exit 1
+fi
+
+if ! rg -qF 'class SandboxSelectionError' "$agent_engine_root/src/omnistackai_agent_engine/runtime/errors.py"; then
+  printf 'R-490 must add SandboxSelectionError to runtime/errors.py.\n'
+  exit 1
+fi
+
 printf 'Repository contract tests passed.\n'

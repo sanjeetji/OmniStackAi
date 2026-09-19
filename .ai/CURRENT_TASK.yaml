@@ -1,30 +1,30 @@
-task_id: R-489
+task_id: R-490
 status: completed
 phase: MVP
 tracker_row: null
 started_at: "2026-09-19"
 completed_at: "2026-09-19"
 objective: >-
-  Fourth of the five-task sandbox-provider sequence (R-486..R-490) - replaces the originally
-  planned WebContainers option after real research found it requires a paid commercial license
-  for any non-prototype use. Adds a real, free, self-hosted SandboxLifecycleProvider backed by
-  gVisor (a genuinely open-source, low-lift Docker/OCI runtime, unlike self-hosting Firecracker or
-  the E2B/Daytona orchestrators). Talks to the LOCAL Docker Engine API over its Unix socket (a new
-  docker_socket.py transport, since urllib has no Unix-socket support) rather than a remote HTTPS
-  API. active checks the local daemon for the runsc runtime being registered - a live capability
-  check, not an env-var check, since this provider has no credential. Positioned explicitly as a
-  free/dev tier alongside the three paid managed providers, not a production replacement - a
-  self-hosted sandbox's loopback URL only works for a same-machine viewer, so production/remote
-  users still need a managed provider's public routing/proxy layer.
+  Fifth and final task in the sandbox-provider sequence (R-486..R-490). Adds the missing
+  provider-selection surface making E2B/Vercel Sandbox/Daytona/gVisor genuinely pluggable and
+  switchable via configuration - the founder's explicit ask. New runtime/sandbox_selection.py:
+  a registry of the four real SandboxLifecycleProvider constructors, a SandboxSetup dataclass
+  (active/selected/provider), and build_sandbox_from_env(selection=None, *, providers=None)
+  mirroring bootstrap.py's own established build_runtime_from_env()/build_deploy_from_env() shape.
+  Defaults to sandboxing disabled (selected=None) - zero behavior change until an operator
+  explicitly opts in via OMNISTACKAI_SANDBOX_PROVIDER. The explicit selection parameter is the
+  concrete "switch per userbase" mechanism (a caller can pass a per-user choice), documented as
+  the extension point rather than built further, since real per-user plan wiring lives in the Go
+  control-plane and is a separate, bigger integration. Deliberately not wired into studio/,
+  control-plane, or console - matches every prior task's own scope boundary.
 allowed_paths:
-  - services/agent-engine/src/omnistackai_agent_engine/runtime/docker_socket.py
-  - services/agent-engine/src/omnistackai_agent_engine/runtime/gvisor.py
-  - services/agent-engine/src/omnistackai_agent_engine/runtime/contracts.py
+  - services/agent-engine/src/omnistackai_agent_engine/runtime/sandbox_selection.py
+  - services/agent-engine/src/omnistackai_agent_engine/runtime/errors.py
   - services/agent-engine/src/omnistackai_agent_engine/runtime/__init__.py
-  - services/agent-engine/tests/test_runtime_docker_socket.py
-  - services/agent-engine/tests/test_runtime_gvisor.py
+  - services/agent-engine/tests/test_runtime_sandbox_selection.py
+  - .env.example
   - scripts/test.sh
-  - .ai/tasks/R-489.md
+  - .ai/tasks/R-490.md
   - .ai/CURRENT_TASK.yaml
   - .ai/PROJECT_STATE.yaml
   - .ai/WORK_LOG.md
@@ -34,13 +34,13 @@ allowed_paths:
   - docs/PROGRESS.md
   - docs/RESUME_PROMPT.md
 forbidden_changes:
-  - No changes to runtime/sandbox_http.py, runtime/e2b.py, runtime/vercel_sandbox.py, or runtime/daytona.py
-  - "runtime/contracts.py: only the minimal SandboxHandle URL-validation relaxation - no other change"
-  - No changes to runtime/providers.py, runtime/local.py, runtime/drivers.py, or studio/
+  - No changes to runtime/tier.py, runtime/bootstrap.py, runtime/drivers.py, runtime/local.py, or runtime/providers.py
+  - No changes to runtime/sandbox_http.py, runtime/docker_socket.py, runtime/e2b.py, runtime/vercel_sandbox.py, runtime/daytona.py, runtime/gvisor.py, or runtime/contracts.py
+  - No changes to studio/, the Go control-plane, or apps/console-web
   - Do not modify or commit the untracked .claude directory
-  - No real Docker daemon call in any automated gate
+  - No real network/Docker call in any automated gate
 required_gates:
-  - "agent-engine: task verify (0 model/network calls, 0 real Docker daemon calls, fake Unix-socket connection stands in)"
+  - "agent-engine: task verify (0 model/network/Docker calls, injected fake providers stand in)"
   - task verify
   - task lint
   - task security:quick
@@ -50,16 +50,21 @@ model_tool_trace:
   local_calls: 0
   cloud_calls: 0
   note: >-
-    Pure Python stdlib Unix-socket HTTP client implementation, 0 model/network/Docker calls in any
-    automated gate. This environment does not have gVisor's runsc installed/registered, so live
-    verification is honestly deferred, matching R-486/487/488's missing-credential posture.
+    Pure Python selection/registry logic, 0 model/network/Docker calls in any automated gate.
 next_action: >-
-  R-489 shipped: 3,729 agent-engine tests OK (22 new). Founder confirmed direction after asking
-  about real resource cost (light: ~50MB binary, ~15-30MB RAM/sandbox) and why not use this in
-  production (self-hosted loopback URLs only work for a same-machine viewer; managed providers'
-  real value is the public routing/proxy/scale layer beyond just isolation) - positioned as
-  free/dev tier, not a production replacement. A real SandboxHandle contract gap was found and
-  fixed (https-only was too narrow once a local provider existed). No live gVisor/Docker daemon
-  exists in this environment - live verification honestly deferred. Next: R-490 (provider-
-  selection surface: free gVisor vs paid E2B/Vercel/Daytona, switchable per user/config) - the
-  last task in this five-task sequence.
+  R-490 shipped: 3,738 agent-engine tests OK (9 new). A real test-design risk was caught and
+  avoided (a "real registry" test would have made a real Docker socket connection attempt via
+  GVisorSandboxProvider.active - replaced with a class-identity wiring check instead, zero I/O).
+  This completes the five-task sandbox-provider sequence (R-486..R-490): E2B, Vercel Sandbox,
+  Daytona, and a free self-hosted gVisor option are all real, independently-tested, and now
+  genuinely pluggable/switchable via build_sandbox_from_env() - a single config value or an
+  explicit per-call override (the concrete "switch per userbase" mechanism). Per-user plan-based
+  routing (reading a real user's plan from the Go control-plane) and actually wiring a selected
+  provider into the Studio's preview flow both remain separate, not-yet-scoped future work,
+  consistent with every task in this sequence's own stated boundary.
+  Next (not yet scoped): per the founder's earlier direction, remaining named items are
+  Publish/deploy (multi-target: Netlify one-click, Vercel/Cloudflare/self-host/GitHub-export),
+  Node.js backend codegen support alongside Python/Go, and starting mobile technology work (React
+  Native near-term). Full per-user process/tenant isolation as a wholesale architecture (beyond
+  which sandbox technology runs one preview) remains a separate, larger decision needing its own
+  founder sign-off.

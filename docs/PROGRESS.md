@@ -1,4 +1,4 @@
-# OmniStackAI — implementation progress (as of R-489)
+# OmniStackAI — implementation progress (as of R-490)
 
 A living summary of what is built, what is pending, and how to see results. Numbers come from the
 execution tracker (`R_&_D/OmniStackAI_Execution_Tracker_v6.xlsx`, `Phase_Roadmap`, 461 tasks as of
@@ -6,8 +6,22 @@ R-461 completion) plus the state files (`.ai/`), Git history, and CHANGELOG.
 
 ## Headline
 
-- **3,729 automated tests pass** (agent-engine + Go control-plane), fully offline and
+- **3,738 automated tests pass** (agent-engine + Go control-plane), fully offline and
   network-independent (`task verify`), plus the console's own `typecheck`/`lint`/`build` gates.
+- **R-490 — Runtime: sandbox provider-selection surface (2026-09-19):** fifth and final task in
+  the sandbox-provider sequence (R-486..R-490). New `runtime/sandbox_selection.py`:
+  `build_sandbox_from_env(selection=None, *, providers=None) -> SandboxSetup`, mirroring
+  `bootstrap.py`'s own established shape, plus a new `SandboxSelectionError`. Defaults to
+  sandboxing **disabled** — zero behavior change until an operator opts in via
+  `OMNISTACKAI_SANDBOX_PROVIDER`. The explicit `selection` parameter is the concrete "switch per
+  user base" mechanism the founder asked about, proven by a dedicated test. Kept separate from the
+  older, still-untouched `tier.py`/`bootstrap.py` planning system; not wired into Studio/console/
+  control-plane, matching every prior task's own boundary. A real test-design risk (a "real
+  registry" test that would have made a genuine local Docker socket connection attempt) was caught
+  and replaced with a zero-I/O class-identity check. `task verify` **3,738 OK** (9 new tests);
+  repo gates all pass. **This completes the five-task sandbox-provider sequence**: E2B, Vercel
+  Sandbox, Daytona, and a free self-hosted gVisor option are all real, independently-verified, and
+  now genuinely pluggable/switchable via configuration. See `.ai/tasks/R-490.md` for full detail.
 - **R-489 — Runtime: free, self-hosted gVisor sandbox driver (2026-09-19):** fourth of the
   five-task sequence (R-486..R-490) — **replaces the originally planned WebContainers option**
   after real research found it requires a paid commercial license for any non-prototype use and

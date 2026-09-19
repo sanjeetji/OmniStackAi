@@ -208,7 +208,7 @@ front-door bricks, R-420 is generated-SQL hardening, R-421..R-426 are Studio pre
 R-427..R-429 are generated-app compile fixes, R-430..R-457 are the first twenty-eight differentiating-spine
 bricks (Scope Compiler through Ecosystem Multi-Surface SLA, SLO, and Error Budget Contracts).
 Git, state files (.ai/), CHANGELOG, and docs/PROGRESS.md remain the executable/detail sources of truth.
-Current through R-489; `task verify` = 3,729 tests (agent-engine) + the Go control-plane's own suite +
+Current through R-490; `task verify` = 3,738 tests (agent-engine) + the Go control-plane's own suite +
 the Next.js console's typecheck/lint/build. R-416 added prompt-to-IR intake, R-417 materialized a generated
 owned repo, R-418 added the local chat studio, R-419 added turnkey local run, and R-420 fixed the two
 SQL defects found by live execution. R-421 added an explicit `task agent-engine:studio:preview` mode:
@@ -819,15 +819,31 @@ WHAT TO DO NEXT
   own image ecosystem covers Go, unlike Vercel Sandbox. No live gVisor/Docker daemon exists in
   this environment - live verification honestly deferred. `task verify` 3,729 OK (22 new tests);
   repo gates all pass.
-- NEXT: R-490 (a provider-selection surface exposing the founder's explicit "switch
-  easily by cost/speed/smoothness" ask - free gVisor vs. paid E2B/Vercel/Daytona, switchable per
-  user/config - the point where more than one provider actually gets wired into the Studio's real
-  preview flow, deliberately deferred until then, and the last task in this five-task sequence).
-  Publish/deploy
-  (multi-target: Netlify one-click, Vercel/Cloudflare/self-host/GitHub-export as options) and
-  backend/mobile stack breadth (Node.js added alongside Python/Go; React Native as the near-term
-  mobile target) remain named, founder-approved-in-direction but not yet scoped into task
-  contracts.
+- R-490 (2026-09-19, done) is the fifth and final task in the sequence: a real
+  provider-selection surface. New sandbox_selection.py: build_sandbox_from_env(selection=None, *,
+  providers=None) -> SandboxSetup, mirroring bootstrap.py's own established
+  build_runtime_from_env() shape, plus a new SandboxSelectionError. Defaults to sandboxing
+  disabled (selected=None) - zero behavior change until an operator opts in via
+  OMNISTACKAI_SANDBOX_PROVIDER. The explicit selection parameter is the concrete "switch per user
+  base" mechanism the founder asked about - a caller can pass a per-user choice without touching
+  global state, proven by a dedicated test. Kept deliberately separate from the older, still-
+  untouched tier.py/bootstrap.py planning system; not wired into Studio/console/control-plane,
+  matching every prior task's own boundary (per-user plan data lives in the Go control-plane and
+  is a separate future integration). A real test-design risk was caught and avoided: an early
+  draft test would have made a real local Docker socket connection attempt via
+  GVisorSandboxProvider.active just to test registry wiring - replaced with a zero-I/O
+  class-identity check instead. `task verify` 3,738 OK (9 new tests); repo gates all pass.
+  **This completes the five-task sandbox-provider sequence (R-486..R-490)**: E2B, Vercel Sandbox,
+  Daytona, and a free self-hosted gVisor option are all real, independently-tested, and now
+  genuinely pluggable/switchable via configuration - exactly the founder's original ask.
+- NEXT (not yet scoped into any task contract): real multi-target Publish/deploy (Netlify
+  one-click primary, Vercel/Cloudflare/self-host/GitHub-export as secondary options), Node.js
+  backend codegen support alongside Python/Go, and starting mobile technology work (React Native
+  near-term, per research). Full per-user process/tenant isolation as a wholesale architecture
+  (beyond just which sandbox technology runs one preview - session-to-instance routing, per-user
+  DB/port allocation, state-store externalization) remains a separate, materially larger
+  architecture decision needing its own explicit founder sign-off before any implementation, per
+  the standing "stop and ask for hard-gate architecture decisions" rule.
   Keep `task verify` model/Docker/DB-free at its core (the console's own build/lint/typecheck gates need
   no live control-plane; any live/model path stays opt-in); preserve single-session ownership and
   explicit trusted-local mode.

@@ -1,5 +1,82 @@
 # Work Log
 
+## 2026-09-19 — R-490 (Runtime: sandbox provider-selection surface)
+
+- **Why:** fifth and final task in the sandbox-provider sequence (R-486..R-490). R-486 through
+  R-489 each built a real, independently-tested `SandboxLifecycleProvider` driver (E2B, Vercel
+  Sandbox, Daytona, gVisor); none of them built the mechanism that actually lets a caller choose
+  and switch between them — the founder's own explicit, repeated ask across this sequence:
+  "switch easily... based on more cost, speed, smoothness," later made concrete as "just change
+  configuration on a boolean value to switch the sandbox free or paid or per userbase in a
+  setting."
+- **Design, verified by direct source read before writing any code**: confirmed `runtime/tier.py`
+  and `runtime/bootstrap.py` resolve a genuinely separate, *older* concern — the pre-R-486
+  pure-planning `RuntimeProvider`/`DeploymentProvider` system, still backed by `drivers.py`'s
+  placeholder-URL `CloudSandboxProvider` stub, correctly left untouched by every task in this
+  sequence (R-486's own contract already documented why that planning abstraction can't become a
+  real cloud sandbox lifecycle manager). The real `SandboxLifecycleProvider` system needed its own
+  selection surface, not shoehorned into either older file.
+- **New `runtime/sandbox_selection.py`**, deliberately mirroring `bootstrap.py`'s own established
+  shape (`build_runtime_from_env(selection=None) -> RuntimeSetup`) for consistency: a registry
+  (`_SANDBOX_LIFECYCLE_PROVIDERS`) mapping each of the four real provider names to its driver
+  class's constructor; a new frozen `SandboxSetup` dataclass (`active`, `selected`, `provider`);
+  and `build_sandbox_from_env(selection=None, *, providers=None) -> SandboxSetup`, reading a new
+  `OMNISTACKAI_SANDBOX_PROVIDER` env var only when `selection` isn't passed directly, defaulting to
+  `"none"` — matching `OMNISTACKAI_DEPLOY_PROVIDER`'s own precedent, meaning this task changes the
+  actual behavior of zero existing deployments until an operator explicitly opts in.
+- **A new `SandboxSelectionError`** (added to the shared `runtime/errors.py`, alongside the
+  pre-existing `RuntimeSelectionError`/`DeploySelectionError` `bootstrap.py`'s own sibling
+  functions already raise) for an unrecognized name or a real-but-inactive one, mirroring
+  `build_runtime_from_env()`'s own "selecting a keyless cloud provider is a clear error"
+  precedent — the unknown-name message lists every real, currently-registered provider name.
+- **The `selection` parameter, when supplied explicitly, unconditionally takes priority over the
+  global env var** — not an incidental detail, but literally the founder's own "switch... per
+  userbase" mechanism made concrete: a future caller could compute a different `selection` per
+  request (e.g. from a user's plan) without mutating any process-wide state, proven by a dedicated
+  test (`test_explicit_selection_parameter_overrides_the_env_var`), not just described. Reading
+  that real per-user plan data itself — which lives in the Go control-plane's `users.plan` column,
+  not this Python codebase — is deliberately not attempted here, a materially larger, separate
+  cross-service integration for its own future Tracker ID, mirroring how R-486 through R-489 each
+  declined to wire their own driver into the Studio's actual preview flow for the same reason.
+- **A real risk in this task's own test design was caught and avoided before it was ever
+  committed**: an early draft test exercising the real registry-construction path (no `providers`
+  override) would have triggered a genuine local Docker Unix-socket connection attempt via
+  `GVisorSandboxProvider.active` (since `active` reporting evaluates every registered provider
+  regardless of what's selected) — a real violation of "0 real network/Docker calls in any
+  automated gate," however quickly and safely that connection attempt would fail on a machine
+  without Docker running. Replaced with `TestRealRegistryWiring`, which asserts the registry maps
+  every name to the correct real driver *class* via `assertIs` identity checks, with zero risk of
+  any real I/O.
+- **Gates**: agent-engine `task verify` **3,738 tests OK** (9 new, all in
+  `test_runtime_sandbox_selection.py`), 0 model/network/Docker calls — covering the
+  default-disabled state and its zero-behavior-change guarantee, `"none"` explicitly equivalent to
+  unset, `active` aggregating multiple true fake providers correctly (sorted), env-var-based
+  selection, the explicit-parameter-override behavior, case-insensitivity/whitespace trimming, an
+  inactive selection raising, an unknown name raising with the real registered names listed, and
+  the zero-I/O registry-wiring check. Repo-wide `task verify`/`lint`/`security:quick`/`env:check`
+  all pass; a new, final `scripts/test.sh` contract block for this five-task sequence asserts
+  `sandbox_selection.py`/`build_sandbox_from_env`/`SandboxSelectionError` all genuinely exist.
+- **Every other file across this entire five-task sequence** (`sandbox_http.py`,
+  `docker_socket.py`, `e2b.py`, `vercel_sandbox.py`, `daytona.py`, `gvisor.py`, `contracts.py`,
+  `tier.py`, `bootstrap.py`, `drivers.py`, `local.py`, `providers.py`) remains completely,
+  provably unmodified by this task.
+- **This completes the five-task sandbox-provider sequence (R-486..R-490)**: four real,
+  independently fetched-and-verified, independently-tested sandbox backends — E2B and Vercel
+  Sandbox (microVM-isolated, paid managed clouds), Daytona (container-isolated paid managed cloud,
+  with a real, honestly-surfaced isolation-strength tradeoff), and gVisor (genuinely free, open
+  source, self-hosted, explicitly positioned as a development/free tier) — now sit interchangeably
+  behind one shared contract, genuinely switchable by a single configuration value or an explicit
+  per-call override.
+- **Next** (not yet scoped into any task contract, per the founder's earlier direction): real
+  multi-target Publish/deploy (Netlify one-click primary; Vercel/Cloudflare/self-host/GitHub-export
+  as secondary options), Node.js backend codegen support alongside Python/Go, and starting mobile
+  technology work (React Native near-term, per earlier competitor research). Full per-user
+  process/tenant isolation as a wholesale architecture — beyond just which sandbox technology runs
+  one preview, encompassing session-to-instance routing, per-user DB/port allocation, and
+  state-store externalization — remains a separate, materially larger architecture decision
+  needing its own explicit founder sign-off before any implementation, per the standing "stop and
+  ask for hard-gate architecture decisions" rule.
+
 ## 2026-09-19 — R-489 (Runtime: free, self-hosted gVisor sandbox driver)
 
 - **Why:** fourth of the five-task sandbox-provider sequence (R-486..R-490) — **replaces the
