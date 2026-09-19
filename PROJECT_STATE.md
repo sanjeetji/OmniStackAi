@@ -4,6 +4,31 @@ Last updated: 2026-09-19
 ## Current Phase
 Stage 0 (Founder Build Sequence, Brief Section 91) — BASIC/MVP
 
+> **R-485 (2026-09-19): Console — streaming build UI.** Fast-follow to R-484, closing the loop it
+> opened: `/studio`'s own chat now consumes `POST /jobs/build/stream` for its create-path,
+> replacing the static "Building…" wait with a real, live-updating "Generating your app… (N
+> characters so far)" indicator. New `streamBuildApp()` (`lib/control-plane.ts`) returns the raw
+> upstream `Response` (unlike every other client function, which awaits parsed JSON) so a new
+> proxy route (`app/api/jobs/build/stream/route.ts`) can pipe it straight through unbuffered — one
+> pipe-through correctly handles both real shapes the control-plane can return (a streamed SSE
+> success body, and a plain buffered JSON pre-stream rejection). `studio-chat.tsx` gains
+> `sendBuildStream()`, replacing `sendBuild()`: `fetch()` + manual `response.body.getReader()`
+> framing (not `EventSource`, which cannot send a POST body), handling three real frame shapes
+> verified against R-484's own live output — `generating_ir` deltas (only their length drives the
+> character count; raw partial JSON is never shown, since it would render as visibly broken text),
+> `"done"` (the final result, unchanged rendering from before), and a bare no-`phase` credits frame
+> (the Go relay's trailing event). Edit stays non-streaming, per R-484's own scope boundary.
+> **No browser-automation tool was available this session** — verified instead via `next start` +
+> `curl` through a real cookie-based login session, the same request path a real browser takes.
+> `pnpm run typecheck`/`lint`/`build` all clean (21 routes, 1 new); repo `task verify`/`lint`/
+> `security:quick`/`env:check` all pass (3,658 agent-engine tests unaffected — no backend file
+> touched). Live: a real streamed build through the full console-proxy → Go control-plane →
+> agent-engine path showed genuine incremental frames over ~9 real seconds, a real `done` frame
+> (174 files, real commit sha), and a real trailing `credits` frame; a real follow-up edit on the
+> same build confirmed the edit path is completely unchanged.
+> NEXT: per "streaming first, then scope isolation properly," properly SCOPE (not yet build) full
+> per-user process/sandbox isolation as its own multi-task project.
+
 > **R-484 (2026-09-19): Backend — real-time build streaming (SSE).** First of the founder's
 > post-roadmap priorities ("streaming first, then scope isolation properly"), chosen after three
 > parallel research passes (competitor streaming architecture, per-user isolation scoping, deploy/

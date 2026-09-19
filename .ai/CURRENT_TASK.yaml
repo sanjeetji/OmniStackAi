@@ -1,35 +1,23 @@
-task_id: R-484
+task_id: R-485
 status: completed
 phase: MVP
 tracker_row: null
 started_at: "2026-09-19"
 completed_at: "2026-09-19"
 objective: >-
-  Real, live streaming of build progress from the agent-engine through the Go control-plane,
-  replacing the one-shot "Building..." blocking wait. Scoped as backend only (agent-engine SSE
-  emission + Go relay, curl-verified); console UI consumption is R-485, a fast-follow, mirroring
-  this session's proven backend-then-UI pattern. Streaming already exists at the model_gateway
-  layer (ModelProvider.stream()) but nothing above it uses it. New additive streaming twins:
-  generate_ir_stream() (nl_to_ir.py), build_app_from_prompt_stream() (build_app.py),
-  _build_stream() (live_serve.py, plain-prompt-only, matching _edit()'s own scope precedent), new
-  POST /api/build/stream SSE route (server.py). Go control-plane gets a new POST /jobs/build/stream
-  route that relays SSE frames verbatim via http.Flusher, then appends a trailing "credits" event
-  once the upstream "done" event's usage is known (credit debiting can't happen mid-stream).
+  Fast-follow to R-484: the console's /studio chat now consumes POST /jobs/build/stream for its
+  create-path, showing real live incremental progress (a ticking character count) instead of the
+  static "Building..." wait. New streamBuildApp() (lib/control-plane.ts) returns the raw upstream
+  Response so a new proxy route (app/api/jobs/build/stream/route.ts) can pipe it straight through
+  unbuffered; studio-chat.tsx gains sendBuildStream(), replacing sendBuild() as the create-path
+  handler, using fetch() + manual response.body.getReader() SSE-frame parsing (not EventSource,
+  since a POST body is required). Edit stays non-streaming (R-484's own scope boundary).
 allowed_paths:
-  - services/agent-engine/src/omnistackai_agent_engine/intake/nl_to_ir.py
-  - services/agent-engine/src/omnistackai_agent_engine/intake/build_app.py
-  - services/agent-engine/src/omnistackai_agent_engine/intake/__init__.py
-  - services/agent-engine/src/omnistackai_agent_engine/studio/live_serve.py
-  - services/agent-engine/src/omnistackai_agent_engine/studio/server.py
-  - services/agent-engine/src/omnistackai_agent_engine/model_gateway/recording.py
-  - services/agent-engine/tests/test_intake_nl_to_ir.py
-  - services/agent-engine/tests/test_build_app.py
-  - services/agent-engine/tests/test_studio_server.py
-  - services/agent-engine/tests/test_recording_provider.py
-  - services/control-plane/internal/jobs/handler.go
-  - services/control-plane/internal/jobs/handler_test.go
+  - apps/console-web/lib/control-plane.ts
+  - apps/console-web/app/api/jobs/build/stream/route.ts
+  - apps/console-web/app/studio/studio-chat.tsx
   - scripts/test.sh
-  - .ai/tasks/R-484.md
+  - .ai/tasks/R-485.md
   - .ai/CURRENT_TASK.yaml
   - .ai/PROJECT_STATE.yaml
   - .ai/WORK_LOG.md
@@ -39,32 +27,34 @@ allowed_paths:
   - docs/PROGRESS.md
   - docs/RESUME_PROMPT.md
 forbidden_changes:
-  - No changes to apps/console-web (R-485's job)
-  - No changes to the existing non-streaming _build()/generate_ir()/build_app_from_prompt() or their existing routes - purely additive
+  - No changes to any agent-engine or control-plane file - R-484 already shipped the backend
+  - No changes to the existing non-streaming POST /jobs/build/buildApp()/app/api/jobs/build/route.ts, or to sendEdit()/the edit path
   - Do not modify or commit the untracked .claude directory
 required_gates:
-  - "agent-engine: task verify (0 model/network calls, fake streaming provider stub)"
-  - "control-plane: go build ./..., go vet ./..., go test ./..."
+  - "console-web: pnpm run typecheck, pnpm run lint, pnpm run build"
   - task verify
   - task lint
   - task security:quick
   - task env:check
-  - "manual smoke: a real curl -N SSE session through the real Go control-plane showing genuine incremental frames over real time, ending with a done phase and a trailing credits event"
+  - "manual smoke: a real build submitted through the actual browser UI at /studio, confirming the live character-count indicator ticks up in real time, then a real follow-up edit still works unchanged"
 model_tool_trace:
   routing: deterministic_only
   local_calls: 0
   cloud_calls: 0
   note: >-
-    Go/Python implementation, 0 model/network calls in any automated gate (a fake streaming
-    provider stub mirrors every prior task's discipline). The manual smoke test's real build call
-    uses whatever provider is configured (real Groq or local Ollama) and genuinely streams.
+    Pure TypeScript/React implementation, 0 model/network calls in any automated gate. The manual
+    smoke test's real build call uses whatever provider is configured and genuinely streams.
 next_action: >-
-  R-484 shipped. Two real bugs found and fixed along the way: SSE route sent Connection:
-  keep-alive (hung every real client - fixed to Connection: close), and RecordingProvider (every
-  real build's usage-tracking wrapper) had no .stream() method (fixed, +4 tests). Real curl -N
-  smoke through the live Go control-plane confirmed genuine incremental frames, a real done frame
-  (177 files), and a real trailing credits frame. Next: R-485 (console: streaming build UI) to
-  consume POST /jobs/build/stream in studio-chat.tsx's sendBuild() via fetch() + manual
-  response.body.getReader() parsing (not EventSource, since the request needs a POST body), plus a
-  new Next.js proxy route relaying the upstream stream through after auth-gating. Then, per the
-  founder's stated build order, scope (not yet build) full per-user process/sandbox isolation.
+  R-485 shipped. No browser-automation tool was available this session, so verification used
+  next start + curl through a real cookie-based login session (the same request path a real
+  browser takes). A real streamed build through the full console proxy -> Go control-plane ->
+  agent-engine path showed genuine incremental frames, a real done frame (174 files), and a real
+  trailing credits frame; a real follow-up edit confirmed unchanged. Next: per the founder's
+  stated build order ("streaming first, then scope isolation properly"), properly SCOPE (not yet
+  build) full per-user process/sandbox isolation as its own multi-task project - a materially
+  different architecture decision needing explicit founder sign-off, given the agent-engine has
+  zero containerization today and scripts/test.sh actively blocks adding it as a Compose service.
+  Also pending, per the founder's final answers (not yet scoped): multi-target Publish/deploy
+  (Netlify one-click; Vercel/Cloudflare/self-host/GitHub-export as options), Node.js backend
+  codegen support alongside Python/Go, and starting mobile technology work (React Native
+  near-term, per research).

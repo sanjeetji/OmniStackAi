@@ -168,6 +168,20 @@ export function buildApp(token: string, prompt: string): Promise<BuildJobRespons
   });
 }
 
+/** Starts a streaming build via the control-plane's `POST /jobs/build/stream` (R-484) - returns
+ * the raw upstream `Response`, unlike every other function in this file (which awaits and returns
+ * parsed JSON via `callControlPlane`), so the proxy route can pipe its body straight through
+ * unbuffered. Never throws for a non-2xx response - the caller (`app/api/jobs/build/stream/
+ * route.ts`) relays whatever status/body the control-plane returns rather than inspecting it. */
+export function streamBuildApp(token: string, prompt: string): Promise<Response> {
+  return fetch(`${controlPlaneUrl()}/jobs/build/stream`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+    body: JSON.stringify({ prompt }),
+    cache: "no-store",
+  });
+}
+
 /** A sorted, flat, secret-free file list for a build, exactly as studio/files.py's
  * `list_build_files` (R-467) reports it. */
 export interface BuildFileTreeResponse {

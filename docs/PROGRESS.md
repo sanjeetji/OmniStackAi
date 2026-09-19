@@ -1,4 +1,4 @@
-# OmniStackAI — implementation progress (as of R-484)
+# OmniStackAI — implementation progress (as of R-485)
 
 A living summary of what is built, what is pending, and how to see results. Numbers come from the
 execution tracker (`R_&_D/OmniStackAI_Execution_Tracker_v6.xlsx`, `Phase_Roadmap`, 461 tasks as of
@@ -8,6 +8,24 @@ R-461 completion) plus the state files (`.ai/`), Git history, and CHANGELOG.
 
 - **3,658 automated tests pass** (agent-engine + Go control-plane), fully offline and
   network-independent (`task verify`), plus the console's own `typecheck`/`lint`/`build` gates.
+- **R-485 — Console: streaming build UI (2026-09-19):** fast-follow to R-484, closing the loop it
+  opened. `/studio`'s own chat now consumes `POST /jobs/build/stream` for its create-path,
+  replacing the static "Building…" wait with a real, live-updating "Generating your app… (N
+  characters so far)" indicator. New `streamBuildApp()` returns the raw upstream `Response` so a
+  new proxy route (`app/api/jobs/build/stream/route.ts`) can pipe it straight through unbuffered;
+  `studio-chat.tsx` gains `sendBuildStream()` (fetch + manual SSE-frame parsing, not `EventSource`,
+  since a POST body is required), handling three real frame shapes verified against R-484's own
+  live output — `generating_ir` deltas (character count only; raw partial JSON is never shown to
+  the user), `"done"` (unchanged final rendering), and a bare no-`phase` credits frame. Edit stays
+  non-streaming per R-484's own scope boundary. **No browser-automation tool was available this
+  session** — verified via `next start` + `curl` through a real cookie-based login session, the
+  same request path a real browser takes. `pnpm run typecheck`/`lint`/`build` all clean (21
+  routes, 1 new); repo `task verify`/`lint`/`security:quick`/`env:check` all pass (agent-engine
+  untouched). Live: a real streamed build through the full console-proxy → Go control-plane →
+  agent-engine path showed genuine incremental frames over ~9 real seconds, a real `done` frame
+  (174 files, real commit sha), and a real trailing `credits` frame; a real follow-up edit on the
+  same build confirmed the edit path is completely unchanged. See `.ai/tasks/R-485.md` for full
+  verification detail.
 - **R-484 — Backend: real-time build streaming, SSE (2026-09-19):** first of the founder's
   post-roadmap priorities ("streaming first, then scope isolation properly"), chosen after three
   parallel research passes (competitor streaming architecture, per-user isolation scoping,

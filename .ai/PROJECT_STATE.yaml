@@ -2,10 +2,10 @@ schema_version: 1
 project: OmniStackAI
 phase: BASIC/MVP
 founder_stage: 0
-current_task: R-484
+current_task: R-485
 current_status: done
 branch: main
-last_completed_task: R-484
+last_completed_task: R-485
 # TASK COMPILATION AUDIT — 2026-09-16
 # Performed to achieve 100% synchronization across all task-tracking documentation.
 # Tracker workbook expanded to 464 tasks with R-464.
@@ -34,6 +34,55 @@ task_compilation_audit:
       new_status: DONE
       reason: "Task fully completed on 2026-09-11 with 35 tests. Status left stale during rapid development sprint."
 last_completed_task_summary: >-
+  Completed R-485 (2026-09-19): console streaming build UI. Fast-follow to R-484, closing the loop
+  it opened - /studio's own chat now consumes POST /jobs/build/stream for its create-path,
+  replacing the static "Building..." wait with a real, live-updating "Generating your app... (N
+  characters so far)" indicator.
+  Design verified by direct source read: studio-chat.tsx's create-path is already
+  plain-prompt-only (sendBuild() only ever POSTed {prompt} - Solution Pack/Ecosystem/hybrid_ui
+  builds only exist in the separate raw-HTML Studio page, never this Next.js console), so no
+  build-kind branching is needed here. New streamBuildApp() (lib/control-plane.ts) returns the raw
+  upstream Response (unlike every other client function, which awaits parsed JSON) so a new proxy
+  route (app/api/jobs/build/stream/route.ts) can pipe it straight through unbuffered - one
+  pipe-through correctly handles both real shapes the control-plane can return (streamed SSE
+  success, or a plain buffered JSON pre-stream rejection). studio-chat.tsx gains
+  sendBuildStream(), replacing sendBuild(): fetch() + manual response.body.getReader() framing
+  (not EventSource, which cannot send a POST body), handling three real frame shapes verified
+  against R-484's own live output - generating_ir deltas (character count only; raw partial JSON
+  is never shown, since it would render as visibly broken text), "done" (unchanged final
+  rendering), and a bare no-phase credits frame (the Go relay's trailing event - credits arrive
+  separately from "done" in the streaming path). Edit stays non-streaming, per R-484's own scope
+  boundary.
+  No browser-automation tool was available this session (checked via ToolSearch, only Figma/design
+  tools surfaced) - verified instead via next start (the real production build) plus curl driven
+  through a real, cookie-based login session (POST /api/auth/login with the same real test user
+  from R-484, capturing the real httpOnly omnistackai_session cookie exactly as a browser would) -
+  a faithful behavioral proxy for the browser exercising the identical code path (Route Handler ->
+  fetch -> Go control-plane -> agent-engine), with only the pixels-on-screen part unverified (this
+  task adds no new visual/CSS surface).
+  Gates: pnpm run typecheck/lint clean; pnpm run build -> 21 routes (1 new); repo task
+  verify/lint/security:quick/env:check all pass (3,658 agent-engine tests unaffected - no
+  agent-engine or control-plane file touched).
+  Live - a real curl -N session for {"prompt":"Build a simple bookmarks manager app"} through the
+  full real path (Next.js proxy -> Go control-plane -> agent-engine) showed genuine token-by-token
+  generating_ir deltas with real millisecond-scale gaps over ~9 real seconds, Content-Type:
+  text/event-stream correctly relayed by the new Route Handler, ending with a real "done" frame
+  (174 files, entities Bookmark/BookmarkTag/Folder/Tag/User, real git commit sha
+  317913cdaa02a91fbc44b02f2d0d53d8efc3284d, real usage input_tokens:1875/output_tokens:3725),
+  followed by a real trailing "credits" frame (credit_balance:100, credits_spent:0 - honestly
+  zero, this environment's configured cloud model has no price-book entry). A real request with no
+  session cookie returned a real 401; a real request with no prompt returned a real 400, both
+  rejected before any upstream call. A real follow-up edit on the build just created (POST
+  /api/jobs/build/2/edit) produced a real diff (2 added, 4 modified, 0 deleted, 170 unchanged), a
+  real second commit sha, and correct turn history - confirming the edit path is completely
+  unaffected by this task's changes.
+  NEXT: per "streaming first, then scope isolation properly," properly SCOPE (not yet build) full
+  per-user process/sandbox isolation as its own multi-task project - a materially different
+  architecture decision needing explicit founder sign-off; the agent-engine has zero
+  containerization today and scripts/test.sh actively blocks adding it as a Compose service.
+  Publish/deploy and backend/mobile stack breadth remain named and directionally approved but not
+  yet scoped.
+_prior_last_completed_task_summary_R484: >-
   Completed R-484 (2026-09-19): backend real-time build streaming (SSE). First of the founder's
   post-roadmap priorities ("streaming first, then scope isolation properly"), chosen after three
   parallel research passes (competitor streaming architecture, per-user isolation scoping,
@@ -1590,23 +1639,23 @@ next_action: >-
   The founder-approved 7-task Phase D roadmap (R-475-R-481) shipped, then the founder said
   "Complete one by one all" (2026-09-19) - continue through every named follow-up, one Tracker ID
   at a time, full discipline, same as every task so far. R-482 (Model Provider settings UI), R-483
-  (fix: dynamic-route slug collision + duplicate FK identifier), and R-484 (backend: real-time
-  build streaming via SSE) are all done. After R-484's research passes, the founder gave direction
-  on the three big remaining items: streaming first (done), then scope isolation properly; "Full
-  isolation: per-user processes/sandboxes" for multi-tenancy; Netlify one-click + Vercel/
-  Cloudflare/self-host/GitHub-export as deploy options; Python/Go/Node.js backends (skip Java/
-  MySQL for now); start mobile work (React Native near-term, per research - no competitor at scale
-  generates native Kotlin/Swift).
-  NEXT: R-485 (console: streaming build UI, consuming POST /jobs/build/stream in
-  studio-chat.tsx's sendBuild()). Then properly SCOPE (not yet build) full per-user process/
-  sandbox isolation as its own multi-task project - a materially different architecture decision
-  needing explicit founder sign-off per the standing "stop and ask for hard-gate architecture
-  decisions" rule; the agent-engine has zero containerization today and scripts/test.sh actively
-  blocks adding it as a Compose service, which full isolation will need to explicitly revise (~5-7
-  new subsystems: process orchestrator, sandbox runtime integration, session-to-instance routing,
-  per-user port/DB allocation, state-store externalization, cost/lifecycle policy). Publish/deploy
-  and backend/mobile stack breadth remain named and directionally approved but not yet scoped into
-  task contracts. Phase E (plan-gated UI, admin console, payment processor) still needs its own
-  explicit founder sign-off before starting.
+  (fix: dynamic-route slug collision + duplicate FK identifier), R-484 (backend: real-time build
+  streaming via SSE), and R-485 (console: streaming build UI) are all done - streaming is now
+  fully wired end to end, backend and console both. After R-484's research passes, the founder
+  gave direction on the three big remaining items: streaming first (done), then scope isolation
+  properly; "Full isolation: per-user processes/sandboxes" for multi-tenancy; Netlify one-click +
+  Vercel/Cloudflare/self-host/GitHub-export as deploy options; Python/Go/Node.js backends (skip
+  Java/MySQL for now); start mobile work (React Native near-term, per research - no competitor at
+  scale generates native Kotlin/Swift).
+  NEXT: per "streaming first, then scope isolation properly," properly SCOPE (not yet build) full
+  per-user process/sandbox isolation as its own multi-task project - a materially different
+  architecture decision needing explicit founder sign-off per the standing "stop and ask for
+  hard-gate architecture decisions" rule; the agent-engine has zero containerization today and
+  scripts/test.sh actively blocks adding it as a Compose service, which full isolation will need
+  to explicitly revise (~5-7 new subsystems: process orchestrator, sandbox runtime integration,
+  session-to-instance routing, per-user port/DB allocation, state-store externalization,
+  cost/lifecycle policy). Publish/deploy and backend/mobile stack breadth remain named and
+  directionally approved but not yet scoped into task contracts. Phase E (plan-gated UI, admin
+  console, payment processor) still needs its own explicit founder sign-off before starting.
   Keep task verify model/Docker/DB/install/network-free. The UI-component series remains
   paused/resumable; the tracker workbook still lags (ends at R-462).

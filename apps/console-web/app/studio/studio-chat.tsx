@@ -43,6 +43,10 @@ export default function StudioChat({ initialCreditBalance }: { initialCreditBala
   const [previewVersion, setPreviewVersion] = useState(0);
   const [prompt, setPrompt] = useState("");
   const [submitting, setSubmitting] = useState(false);
+  // R-485: ticks up live as generating_ir deltas arrive during a streaming build - the visible
+  // proof of real incremental progress, reset to 0 whenever a new build starts. Not used for
+  // edits (which stay non-streaming, per R-484's own scope boundary).
+  const [streamChars, setStreamChars] = useState(0);
   const [hydrating, setHydrating] = useState(Boolean(urlBuildId));
   const [creditBalance, setCreditBalance] = useState(initialCreditBalance);
   const threadRef = useRef<HTMLDivElement | null>(null);
@@ -134,7 +138,7 @@ export default function StudioChat({ initialCreditBalance }: { initialCreditBala
 
     try {
       if (buildId === null) {
-        await sendBuild(trimmed);
+        await sendBuildStream(trimmed);
       } else {
         await sendEdit(buildId, trimmed);
       }
@@ -143,39 +147,100 @@ export default function StudioChat({ initialCreditBalance }: { initialCreditBala
     }
   }
 
-  async function sendBuild(text: string) {
+  /** R-485: streams a new build via POST /api/jobs/build/stream (SSE, relaying R-484's
+   * POST /jobs/build/stream) - fetch() + manual response.body.getReader() framing, not
+   * EventSource, since a POST body is required. Splits the buffered text on "\n\n" event
+   * boundaries and parses each frame's "data:" line as JSON. Three real shapes, verified against
+   * R-484's actual live output: a {phase: "generating_ir", delta} frame (only its length is used,
+   * to drive the live character-count indicator - the raw JSON text itself would render as
+   * visibly broken partial JSON, not shown to the user), a {phase: "done", ...} frame (the final
+   * build result, same shape the old non-streaming sendBuild() handled), and a bare
+   * {credit_balance, credits_spent} frame with NO "phase" key at all (the Go relay's trailing
+   * `event: credits` frame - credits arrive separately from "done" in the streaming path, unlike
+   * the non-streaming response's shape, which carries both in one payload). */
+  async function sendBuildStream(text: string) {
+    setStreamChars(0);
     try {
-      const response = await fetch("/api/jobs/build", {
+      const response = await fetch("/api/jobs/build/stream", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ prompt: text }),
       });
-      const body = (await response.json().catch(() => ({}))) as Partial<BuildJobResponse> &
-        ErrorBody;
-      if (!response.ok) {
+      if (!response.ok || !response.body) {
+        const body = (await response.json().catch(() => ({}))) as ErrorBody;
         appendMessage("assistant", body.error ?? `build failed with status ${response.status}`, "error");
         return;
       }
-      const result = body as BuildJobResponse;
-      appendMessage("assistant", `Built ${result.name ?? "the app"}.`);
-      if (typeof result.credit_balance === "number") setCreditBalance(result.credit_balance);
+
+      const reader = response.body.getReader();
+      const decoder = new TextDecoder();
+      let buffer = "";
+      let finalResult: (Partial<BuildJobResponse> & { phase?: string }) | null = null;
+      let streamError: string | null = null;
+
+      while (true) {
+        const { value, done } = await reader.read();
+        if (done) break;
+        buffer += decoder.decode(value, { stream: true });
+
+        let boundary = buffer.indexOf("\n\n");
+        while (boundary !== -1) {
+          const rawFrame = buffer.slice(0, boundary);
+          buffer = buffer.slice(boundary + 2);
+          for (const line of rawFrame.split("\n")) {
+            if (!line.startsWith("data: ")) continue;
+            let payload: Record<string, unknown>;
+            try {
+              payload = JSON.parse(line.slice("data: ".length)) as Record<string, unknown>;
+            } catch {
+              continue;
+            }
+            if (typeof payload.phase === "string") {
+              if (payload.phase === "generating_ir") {
+                const delta = typeof payload.delta === "string" ? payload.delta : "";
+                setStreamChars((chars) => chars + delta.length);
+              } else if (payload.phase === "done") {
+                finalResult = payload as Partial<BuildJobResponse>;
+              } else if (payload.phase === "error") {
+                streamError = typeof payload.error === "string" ? payload.error : "streaming build failed";
+              }
+            } else if (typeof payload.credit_balance === "number") {
+              setCreditBalance(payload.credit_balance);
+            }
+          }
+          boundary = buffer.indexOf("\n\n");
+        }
+      }
+
+      if (streamError) {
+        appendMessage("assistant", streamError, "error");
+        return;
+      }
+      if (!finalResult) {
+        appendMessage("assistant", "the build stream ended unexpectedly", "error");
+        return;
+      }
+
+      appendMessage("assistant", `Built ${finalResult.name ?? "the app"}.`);
       setWorkspace({
-        buildId: result.id,
-        name: result.name,
-        description: result.description,
-        entities: result.entities ?? [],
-        fileCount: result.file_count,
-        commitSha: result.commit_sha,
-        usage: result.usage,
-        files: result.files ?? [],
+        buildId: finalResult.id,
+        name: finalResult.name,
+        description: finalResult.description,
+        entities: finalResult.entities ?? [],
+        fileCount: finalResult.file_count,
+        commitSha: finalResult.commit_sha,
+        usage: finalResult.usage,
+        files: finalResult.files ?? [],
       });
-      if (result.id) {
-        setBuildId(result.id);
-        hydratedFor.current = result.id;
-        router.replace(`/studio?build=${encodeURIComponent(result.id)}`);
+      if (finalResult.id) {
+        setBuildId(finalResult.id);
+        hydratedFor.current = finalResult.id;
+        router.replace(`/studio?build=${encodeURIComponent(finalResult.id)}`);
       }
     } catch {
       appendMessage("assistant", "could not reach the server", "error");
+    } finally {
+      setStreamChars(0);
     }
   }
 
@@ -255,7 +320,12 @@ export default function StudioChat({ initialCreditBalance }: { initialCreditBala
           ))}
           {submitting ? (
             <div className="chat-message chat-message--assistant">
-              <span className="spinner" /> {buildId === null ? "Building…" : "Editing…"}
+              <span className="spinner" />{" "}
+              {buildId === null
+                ? streamChars > 0
+                  ? `Generating your app… (${streamChars.toLocaleString()} characters so far)`
+                  : "Starting…"
+                : "Editing…"}
             </div>
           ) : null}
         </div>

@@ -1,5 +1,82 @@
 # Work Log
 
+## 2026-09-19 — R-485 (Console: streaming build UI)
+
+- **Why:** fast-follow to R-484 (backend SSE build streaming), closing the loop it opened — the
+  console's own `/studio` chat now actually shows real, live incremental progress for a new build,
+  instead of the existing static "Building…" wait.
+- **Design, verified by direct source read before writing any code:** `studio-chat.tsx`'s
+  create-path is already plain-prompt-only (`sendBuild()` only ever POSTed `{prompt}` — it has no
+  Solution Pack/Ecosystem/`hybrid_ui` UI at all, those only exist in the separate raw-HTML Studio
+  page built in earlier tasks, not this Next.js console). Every build this component can ever
+  trigger is therefore exactly the kind R-484's streaming route already supports — no build-kind
+  branching needed here.
+- **New server-side client `streamBuildApp()` (`lib/control-plane.ts`)**: unlike every existing
+  function in this file (which awaits and returns parsed JSON via `callControlPlane<T>`), this
+  returns the raw upstream `Response` unparsed, so the proxy route can pipe its body straight
+  through without buffering it.
+- **New proxy route `app/api/jobs/build/stream/route.ts`**: auth-gates via `getSessionToken()`
+  (same 401-if-missing shape as every other proxy route), validates a non-blank `prompt` (same 400
+  shape as `app/api/jobs/build/route.ts`), then returns `new Response(upstream.body, {status,
+  headers})` — relaying the upstream response through unchanged. This single pipe-through
+  correctly handles both real shapes the control-plane can return: a streamed `text/event-stream`
+  success body, and a plain buffered `application/json` pre-stream rejection — neither this route
+  nor the browser needs to branch on which one it got.
+- **`studio-chat.tsx` gains `sendBuildStream()`**, replacing `sendBuild()` as the create-path
+  handler: `fetch()` + manual `response.body.getReader()` framing (not `EventSource`, which cannot
+  send a POST body) — buffers bytes, splits on `"\n\n"` event boundaries, parses each frame's
+  `data:` line as JSON. Three real shapes, verified against R-484's actual live output: a
+  `{"phase": "generating_ir", "delta": "..."}` frame (only its length is used, to drive a live
+  character-count indicator — the raw JSON text itself would render as visibly broken/meaningless
+  to a non-technical user, and a real-time partial-JSON-aware renderer is a materially larger
+  feature explicitly left out of scope here), a `{"phase": "done", ...}` frame (the final build
+  result, identical rendering to what `sendBuild()` already produced), and a bare `{"credit_
+  balance": ..., "credits_spent": ...}` frame with **no** `"phase"` key at all (the Go relay's
+  trailing `event: credits` frame — confirmed live during R-484 that credits arrive separately
+  from `"done"` in the streaming path, unlike the non-streaming response's shape).
+- **What's shown while streaming, and why**: a live, honest "Generating your app… (N characters so
+  far)" indicator, ticking up in real time as deltas arrive — proving genuine live activity (the
+  founder's actual ask: an engaged, alive feeling from the first response) without fabricating a
+  fake progress percentage or showing broken partial JSON. Replaced by the existing full
+  result-card rendering the instant the `"done"` frame arrives.
+- **The existing non-streaming path is untouched and still real**: `POST /jobs/build`,
+  `app/api/jobs/build/route.ts`, and `buildApp()` all remain exactly as they are — genuinely
+  reachable via direct API use, simply no longer called by this one UI component. Edit stays
+  non-streaming (`sendEdit()` unchanged), per R-484's own scope boundary.
+- **Gates**: `pnpm run typecheck` clean; `pnpm run lint` clean; `pnpm run build` → 21 routes (1
+  new: `/api/jobs/build/stream`), clean. Repo-wide `task verify`/`lint`/`security:quick`/
+  `env:check` all pass (3,658 agent-engine tests unaffected — no agent-engine or control-plane file
+  touched by this task).
+- **Live manual smoke — no browser-automation tool was available this session** (checked via
+  `ToolSearch`, only Figma/design tools surfaced): verified instead via `next start` (the real
+  production build; the previously-running instance on port 4321 was a stale pre-task build and
+  was restarted to pick up the new route) plus `curl` driven through a real, cookie-based login
+  session (`POST /api/auth/login` with the same real test user from R-484, capturing the real
+  httpOnly `omnistackai_session` cookie exactly as a browser would) — a faithful behavioral proxy
+  for the browser exercising the identical code path (Route Handler → fetch → Go control-plane →
+  agent-engine), with only the pixels-on-screen part unverified (this task adds no new visual/CSS
+  surface — the character-count text reuses existing `.chat-message--assistant`/`.spinner`
+  styling unchanged). A real `curl -N` session for `{"prompt":"Build a simple bookmarks manager
+  app"}` through the full real path showed genuine token-by-token `generating_ir` deltas arriving
+  with real millisecond-scale gaps over ~9 real seconds of wall-clock time, `Content-Type:
+  text/event-stream` correctly relayed by the new Route Handler, ending with a real `"phase":
+  "done"` frame (174 files, entities `Bookmark, BookmarkTag, Folder, Tag, User`, a real git commit
+  sha `317913cdaa02a91fbc44b02f2d0d53d8efc3284d`, real usage with `input_tokens: 1875,
+  output_tokens: 3725`), followed by a real trailing `event: credits` frame (`credit_balance: 100,
+  credits_spent: 0` — honestly zero, this environment's configured cloud model has no price-book
+  entry, the same pre-existing fact already documented in R-484's own evidence). A real request
+  with no session cookie returned a real `401 {"error":"not signed in"}`; a real request with no
+  `prompt` returned a real `400 {"error":"prompt is required"}`, both rejected before any upstream
+  call. A real follow-up edit on the build just created (`POST /api/jobs/build/2/edit`,
+  `{"prompt":"add a health check endpoint"}`) produced a real diff (`"2 added, 4 modified, 0
+  deleted, 170 unchanged"`), a real second commit sha, and correct turn history spanning both the
+  original build's and this edit's turns — confirming the edit path is completely unaffected by
+  this task's changes.
+- **Next:** per the founder's stated build order ("streaming first, then scope isolation
+  properly"), properly SCOPE (not yet build) full per-user process/sandbox isolation as its own
+  multi-task project. Publish/deploy and backend/mobile stack breadth remain named and
+  directionally approved but not yet scoped into task contracts.
+
 ## 2026-09-19 — R-484 (Backend: real-time build streaming, SSE)
 
 - **Why:** first of the founder's post-roadmap priorities, per "streaming first, then scope

@@ -587,4 +587,20 @@ if ! rg -qF 'POST /jobs/build/stream' "$control_plane_root/internal/jobs/handler
   exit 1
 fi
 
+# R-485: console streaming build UI.
+if [[ ! -f "$console_root/app/api/jobs/build/stream/route.ts" ]]; then
+  printf 'Missing R-485 contract file: %s/app/api/jobs/build/stream/route.ts\n' "$console_root"
+  exit 1
+fi
+
+if ! rg -qF 'streamBuildApp' "$console_root/lib/control-plane.ts"; then
+  printf 'R-485 must add streamBuildApp() client to lib/control-plane.ts.\n'
+  exit 1
+fi
+
+if ! rg -qF 'sendBuildStream' "$console_root/app/studio/studio-chat.tsx"; then
+  printf 'R-485 must wire sendBuildStream() into studio-chat.tsx.\n'
+  exit 1
+fi
+
 printf 'Repository contract tests passed.\n'

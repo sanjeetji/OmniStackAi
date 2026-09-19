@@ -1,9 +1,43 @@
 # Current Handoff
 
-Task ID: R-484
+Task ID: R-485
 Status: done
 Phase: BASIC/MVP — Founder Stage 0
 Branch: `main`
+
+> **R-485 Completed (2026-09-19): Console — streaming build UI.**
+> - Fast-follow to R-484, closing the loop it opened. `/studio`'s own chat now consumes
+>   `POST /jobs/build/stream` for its create-path, replacing the static "Building…" wait with a
+>   real, live-updating "Generating your app… (N characters so far)" indicator.
+> - New `streamBuildApp()` (`lib/control-plane.ts`) returns the raw upstream `Response` (unlike
+>   every other client function, which awaits parsed JSON) so a new proxy route
+>   (`app/api/jobs/build/stream/route.ts`) can pipe it straight through unbuffered — one
+>   pipe-through correctly handles both real shapes the control-plane can return (streamed SSE
+>   success, or a plain buffered JSON pre-stream rejection).
+> - `studio-chat.tsx` gains `sendBuildStream()`, replacing `sendBuild()`: `fetch()` + manual
+>   `response.body.getReader()` framing (not `EventSource`, which cannot send a POST body),
+>   handling three real frame shapes verified against R-484's own live output — `generating_ir`
+>   deltas (only their length drives the character count; raw partial JSON is never shown, since
+>   it would render as visibly broken text to a non-technical user), `"done"` (unchanged final
+>   rendering), and a bare no-`phase` credits frame (the Go relay's trailing event). Edit stays
+>   non-streaming, per R-484's own scope boundary.
+> - **No browser-automation tool was available this session** (checked via `ToolSearch`) —
+>   verified instead via `next start` (the real production build) plus `curl` driven through a
+>   real, cookie-based login session — the exact same request path a real browser takes, exercising
+>   the identical code path end to end.
+> - Gates: `pnpm run typecheck`/`lint`/`build` all clean (21 routes, 1 new); repo `task
+>   verify`/`lint`/`security:quick`/`env:check` all pass (3,658 agent-engine tests unaffected — no
+>   backend file touched). **Live**: a real streamed build through the full console-proxy → Go
+>   control-plane → agent-engine path showed genuine incremental frames over ~9 real seconds, a
+>   real `done` frame (174 files, real commit sha), and a real trailing `credits` frame; a real
+>   401/400 confirmed the auth/validation gates; a real follow-up edit on the same build confirmed
+>   the edit path is completely unchanged.
+> - **NEXT** (per "streaming first, then scope isolation properly"): properly SCOPE (not yet build)
+>   full per-user process/sandbox isolation as its own multi-task project — a materially different
+>   architecture decision needing explicit founder sign-off; the agent-engine has zero
+>   containerization today and `scripts/test.sh` actively blocks adding it as a Compose service.
+>   Publish/deploy and backend/mobile stack breadth remain named and directionally approved but not
+>   yet scoped. See `.ai/tasks/R-485.md`.
 
 > **R-484 Completed (2026-09-19): Backend — real-time build streaming (SSE).**
 > - First of the founder's post-roadmap priorities ("streaming first, then scope isolation
