@@ -1,4 +1,4 @@
-# OmniStackAI — implementation progress (as of R-496)
+# OmniStackAI — implementation progress (as of R-497)
 
 A living summary of what is built, what is pending, and how to see results. Numbers come from the
 execution tracker (`R_&_D/OmniStackAI_Execution_Tracker_v6.xlsx`, `Phase_Roadmap`, 461 tasks as of
@@ -8,6 +8,16 @@ R-461 completion) plus the state files (`.ai/`), Git history, and CHANGELOG.
 
 - **3,738 automated tests pass** (agent-engine + Go control-plane), fully offline and
   network-independent (`task verify`), plus the console's own `typecheck`/`lint`/`build` gates.
+- **R-497 — Console: Lovable-grade pass (2026-09-19):** after surveying the founder's 96
+  reference screenshots, **Lovable** was chosen as the primary reference (Dyad for the
+  prompt-first home). Built, real behavior only: a prompt-first home composer →
+  `/studio?prompt=`; the Studio pre-fills and starts exactly one build through its existing
+  submit path (ref guard, no setState in an effect); prose assistant rows at 13px; three
+  follow-up chips after a completed build/edit; a shared file-search filter over the Files/Code
+  trees; "Read only" on the viewer. No facades (no Cloud/Publish/Payments panels, no project
+  switcher, no Web/Mobile tabs). All gates green (**3,738 tests**, 25 routes); smoke: hero +
+  composer served, `?prompt=` pre-fills with Send enabled and triggers nothing server-side,
+  `?build=5` unchanged, 0 server errors. See `.ai/tasks/R-497.md`.
 - **R-496 — Console: motion, states & polish (2026-09-19):** sixth and last task of the UI
   overhaul — **the overhaul is complete.** Loading skeletons for Studio and Settings under their
   gates; the provider-status card streams inside `<Suspense>` on the dashboard and Settings;

@@ -208,7 +208,7 @@ front-door bricks, R-420 is generated-SQL hardening, R-421..R-426 are Studio pre
 R-427..R-429 are generated-app compile fixes, R-430..R-457 are the first twenty-eight differentiating-spine
 bricks (Scope Compiler through Ecosystem Multi-Surface SLA, SLO, and Error Budget Contracts).
 Git, state files (.ai/), CHANGELOG, and docs/PROGRESS.md remain the executable/detail sources of truth.
-Current through R-496; `task verify` = 3,738 tests (agent-engine) + the Go control-plane's own suite +
+Current through R-497; `task verify` = 3,738 tests (agent-engine) + the Go control-plane's own suite +
 the Next.js console's typecheck/lint/build. R-416 added prompt-to-IR intake, R-417 materialized a generated
 owned repo, R-418 added the local chat studio, R-419 added turnkey local run, and R-420 fixed the two
 SQL defects found by live execution. R-421 added an explicit `task agent-engine:studio:preview` mode:
@@ -920,6 +920,16 @@ WHAT TO DO NEXT
   them. THE SIX-TASK UI OVERHAUL (R-491..R-496) IS COMPLETE - the founder should eyeball the whole
   product at http://localhost:4321 and share the Emergent/Lovable/Dyad screenshots if a further
   visual pass is wanted.
+- R-497 (2026-09-19, done): the founder's 96 reference screenshots live at
+  ~/Desktop/AI_Platform_Screenshots (folders `Dyad`, `Emergent ` (trailing space), `Lovable
+  Screenshots`); LOVABLE is the chosen primary reference (also in the memory notes). Shipped:
+  components/home-composer.tsx (home hero composer -> /studio?prompt=), studio-chat.tsx reads
+  ?prompt= (never with ?build=), initializes the composer from it and auto-starts ONE build via
+  formRef.current.requestSubmit() in a ref-guarded effect (DOM call, not setState - the
+  set-state-in-effect rule would fail otherwise), prose assistant rows, FOLLOW_UP_PROMPTS chips,
+  FileFilter in studio-tabs.tsx, "Read only" viewer label. Never add facade UI for Lovable
+  features without a backend (Cloud DB, Publish, Payments). A project switcher needs a per-user
+  build list endpoint first.
 - NEXT (needs the founder's pick; none pre-approved). After the UI overhaul
   (not yet scoped): real multi-target Publish/deploy (Netlify one-click primary, Vercel/Cloudflare/
   self-host/GitHub-export as secondary options), Node.js backend codegen alongside Python/Go, and

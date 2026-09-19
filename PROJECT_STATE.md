@@ -4,6 +4,26 @@ Last updated: 2026-09-19
 ## Current Phase
 Stage 0 (Founder Build Sequence, Brief Section 91) — BASIC/MVP
 
+> **R-497 (2026-09-19): Console — Lovable-grade pass after the founder's reference screenshots.**
+> The founder shared 96 screenshots (Dyad 40, Emergent 18, Lovable 38) and asked which to follow;
+> all were reviewed as contact sheets plus the decisive screens at full size. **Lovable** is the
+> primary reference (dark, dense, chat-left project workspace, prose replies, follow-up chips, a
+> real product IA — closest to what R-491..R-496 built); Dyad contributes the prompt-first home;
+> Emergent nothing we lack. Built, real behavior only: a prompt-first home
+> (`components/home-composer.tsx` → `/studio?prompt=`); the Studio pre-fills the composer from
+> `?prompt=` and starts exactly one build through its existing form submit (`requestSubmit()` +
+> ref guard, no setState in an effect), then cleans the URL; prose assistant rows at 13px; three
+> follow-up chips after a completed build/edit; a shared file-search filter over the Files/Code
+> trees; "Read only" on the viewer. Deliberately not borrowed: Lovable's Cloud/Publish/Payments
+> panels (no backend), a project switcher (no per-user build list), Emergent's Web/Mobile tabs
+> (hard gate). Gates: typecheck/lint/build clean (25 routes), contract tests (the home and
+> Studio example prompts are pinned identical), `task verify` **3,738 OK**, lint/security/env.
+> Live: `/` serves the hero + composer + chips; `/studio?prompt=…` server-renders the pre-filled
+> composer with Send enabled and triggers nothing (client effect); `/studio?build=5` unchanged
+> and not pre-filled; **0 server errors**. The founder is asked to run the real flow in a browser.
+> NEXT: the founder's pick — Publish/deploy, sandbox→preview + per-user routing, Node.js codegen,
+> mobile, tenant isolation — or a per-user build list to power a Lovable-style project switcher.
+
 > **R-496 (2026-09-19): Console — motion, states & polish. The six-task Console UI overhaul (R-491..R-496) is complete.**
 > Loading states per Next 16's `loading.js` convention for Studio and Settings under their gated
 > layouts, and the one network-dependent piece — the provider-status card — streamed inside

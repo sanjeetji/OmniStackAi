@@ -455,6 +455,17 @@ discipline):
    CSS retired; the redesign audit checklist recorded honestly. A root `loading.tsx` was found
    live to break the auth redirects (streamed 200 instead of 307) and is now forbidden by a test.
 
+**Reference decision (2026-09-19, after the overhaul shipped):** the founder shared 96 screenshots
+(`~/Desktop/AI_Platform_Screenshots`: Dyad 40, Emergent 18, Lovable 38). All were reviewed;
+**Lovable** is the primary reference — dark, dense, chat-left project workspace, prose replies,
+follow-up chips, a real product IA — with Dyad's prompt-first home as the one added pattern and
+nothing from Emergent we lacked. **R-497** applied it, borrowing only patterns backed by real
+behavior: a prompt-first home that hands its prompt to the Studio (`/studio?prompt=`), which
+starts the build through its existing submit path; prose assistant replies; follow-up
+suggestion chips; file search in the Files/Code trees. Not borrowed on purpose: Lovable's
+Cloud/Database/Publish/Payments panels (no backend), a project switcher (no per-user build list
+yet), Emergent's Web/Mobile tabs (mobile is a hard gate).
+
 **Verification caveat, stated once here and in every task's evidence:** no browser-automation tool
 exists in these sessions. Structure (served HTML, fonts, theme script, every route's status) is
 verified by `curl` against the real running stack; visual quality is the one thing that cannot be,
@@ -504,8 +515,8 @@ so the founder is asked to eyeball `http://localhost:4321` after each task.
 ## 6. How to resume this if the session stops here
 
 **Immediate next action as of 2026-09-19: none pre-approved — the "Phase E-UI — Console UI
-overhaul" (R-491 → R-496) is complete, as are R-475 → R-481, R-482 → R-485 and R-486 → R-490. The
-founder picks the next direction: Publish/deploy (a "new infra" / paid-service decision), wiring
+overhaul" (R-491 → R-496) and its Lovable-grade follow-up (R-497) are complete, as are
+R-475 → R-481, R-482 → R-485 and R-486 → R-490. The founder picks the next direction: Publish/deploy (a "new infra" / paid-service decision), wiring
 the sandbox providers into the Studio preview with per-user free/paid routing, Node.js backend
 codegen, mobile (a hard gate), or per-user tenant isolation of the Studio server (architecture
 sign-off).** `.ai/PROJECT_STATE.yaml`'s `next_action` and `.ai/CURRENT_TASK.yaml` are the

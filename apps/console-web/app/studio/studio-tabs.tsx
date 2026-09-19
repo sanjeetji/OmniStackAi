@@ -9,6 +9,7 @@ import {
   FolderTree,
   LoaderCircle,
   MonitorPlay,
+  Search,
   TriangleAlert,
   type LucideIcon,
 } from "lucide-react";
@@ -16,6 +17,7 @@ import type { BuildFileContentResponse, ProblemsReport } from "@/lib/control-pla
 import { formatServerError } from "@/components/field";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { cn } from "@/lib/utils";
@@ -51,6 +53,8 @@ export function StudioTabs({
   const [activeTab, setActiveTab] = useState<TabKey>("preview");
   const [selectedFile, setSelectedFile] = useState<string | null>(null);
   const [problemCount, setProblemCount] = useState<number | null>(null);
+  // R-497 (Lovable's "Search code"): one filter shared by the Files and Code trees.
+  const [fileQuery, setFileQuery] = useState("");
 
   if (!buildId) {
     return null;
@@ -62,6 +66,9 @@ export function StudioTabs({
   }
 
   const files = workspace?.files ?? [];
+  const query = fileQuery.trim().toLowerCase();
+  const visibleFiles = query ? files.filter((path) => path.toLowerCase().includes(query)) : files;
+  const filter = { query: fileQuery, onQueryChange: setFileQuery, total: files.length };
 
   return (
     <Tabs
@@ -92,12 +99,18 @@ export function StudioTabs({
         <StudioPreview buildId={buildId} previewVersion={previewVersion} />
       </TabsContent>
       <TabsContent value="files">
-        <FilesTab files={files} selectedFile={selectedFile} onOpen={openFileInCode} />
+        <FilesTab
+          files={visibleFiles}
+          filter={filter}
+          selectedFile={selectedFile}
+          onOpen={openFileInCode}
+        />
       </TabsContent>
       <TabsContent value="code">
         <CodeTab
           buildId={buildId}
-          files={files}
+          files={visibleFiles}
+          filter={filter}
           selectedFile={selectedFile}
           onSelect={setSelectedFile}
         />
@@ -146,16 +159,51 @@ function TabEmpty({
   );
 }
 
+interface FileFilterProps {
+  query: string;
+  onQueryChange: (value: string) => void;
+  total: number;
+}
+
+/** The search box above a file tree (R-497). `shown` is the filtered count; `total` the build's. */
+function FileFilter({ filter, shown }: { filter: FileFilterProps; shown: number }) {
+  return (
+    <div className="mb-2 grid gap-1">
+      <div className="relative">
+        <Search
+          className="pointer-events-none absolute top-1/2 left-2.5 size-3.5 -translate-y-1/2 text-muted-foreground"
+          aria-hidden="true"
+        />
+        <Input
+          type="search"
+          aria-label="Search files"
+          placeholder="Search files…"
+          value={filter.query}
+          onChange={(event) => filter.onQueryChange(event.target.value)}
+          className="h-8 pl-8 text-xs"
+        />
+      </div>
+      {filter.query.trim() ? (
+        <p className="px-1 text-[11px] text-muted-foreground tabular-nums" aria-live="polite">
+          {shown} of {filter.total} files match
+        </p>
+      ) : null}
+    </div>
+  );
+}
+
 function FilesTab({
   files,
+  filter,
   selectedFile,
   onOpen,
 }: {
   files: string[];
+  filter: FileFilterProps;
   selectedFile: string | null;
   onOpen: (path: string) => void;
 }) {
-  if (files.length === 0) {
+  if (filter.total === 0) {
     return (
       <TabEmpty
         icon={FolderTree}
@@ -166,7 +214,12 @@ function FilesTab({
   }
   return (
     <div className="rounded-xl border border-border/60 bg-card p-2">
-      <FileTree files={files} selectedFile={selectedFile} onOpen={onOpen} />
+      <FileFilter filter={filter} shown={files.length} />
+      {files.length > 0 ? (
+        <FileTree files={files} selectedFile={selectedFile} onOpen={onOpen} />
+      ) : (
+        <p className="px-2 py-3 text-sm text-muted-foreground">No files match your search.</p>
+      )}
     </div>
   );
 }
@@ -174,11 +227,13 @@ function FilesTab({
 function CodeTab({
   buildId,
   files,
+  filter,
   selectedFile,
   onSelect,
 }: {
   buildId: string;
   files: string[];
+  filter: FileFilterProps;
   selectedFile: string | null;
   onSelect: (path: string) => void;
 }) {
@@ -222,10 +277,13 @@ function CodeTab({
   return (
     <div className="grid gap-3 lg:grid-cols-[240px_minmax(0,1fr)]">
       <div className="rounded-xl border border-border/60 bg-card p-2 lg:max-h-[calc(100dvh-18rem)] lg:overflow-y-auto">
+        {filter.total > 0 ? <FileFilter filter={filter} shown={files.length} /> : null}
         {files.length > 0 ? (
           <FileTree files={files} selectedFile={selectedFile} onOpen={onSelect} />
         ) : (
-          <p className="px-2 py-3 text-sm text-muted-foreground">No files yet.</p>
+          <p className="px-2 py-3 text-sm text-muted-foreground">
+            {filter.total > 0 ? "No files match your search." : "No files yet."}
+          </p>
         )}
       </div>
       <div className="min-w-0">
@@ -319,6 +377,7 @@ function CodeViewer({
         <span className="text-muted-foreground tabular-nums">
           {lines.length.toLocaleString("en-US")} lines · {formatBytes(size)}
         </span>
+        <span className="text-muted-foreground">Read only</span>
       </div>
       <pre className="max-h-[calc(100dvh-20rem)] min-h-64 overflow-auto py-3 font-mono text-[13px] leading-6">
         <code>

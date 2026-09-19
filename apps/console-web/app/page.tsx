@@ -9,13 +9,13 @@ import {
   MessageSquareText,
   MonitorPlay,
   ShieldCheck,
-  Sparkles,
   Wrench,
 } from "lucide-react";
 import { getProviderStatus, type ProviderStatus } from "@/lib/control-plane";
 import { revealStyle } from "@/lib/motion";
 import { getCurrentUser, getSessionToken } from "@/lib/session";
 import AppShell from "@/components/app-shell";
+import HomeComposer from "@/components/home-composer";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -51,20 +51,19 @@ export default async function HomePage() {
 
   return (
     <AppShell user={user}>
-      <header className="reveal flex flex-wrap items-end justify-between gap-4" style={revealStyle(0)}>
-        <div>
-          <p className="text-sm text-muted-foreground">Signed in as {user.email}</p>
-          <h1 className="mt-1 text-balance text-3xl font-semibold tracking-tight">
-            Good to see you, {firstName}
-          </h1>
-        </div>
-        <Button asChild size="lg" className="h-10 px-4">
-          <Link href="/studio">
-            <Sparkles aria-hidden="true" />
-            Open Studio
-          </Link>
-        </Button>
-      </header>
+      {/* Prompt-first home (R-497): the composer is the primary action, as on every reference
+          platform; it hands the prompt to the Studio, which starts the build. */}
+      <section aria-labelledby="build-title" className="reveal" style={revealStyle(0)}>
+        <p className="text-sm text-muted-foreground">Signed in as {user.email}</p>
+        <h1 id="build-title" className="mt-1 text-balance text-3xl font-semibold tracking-tight">
+          What do you want to build, {firstName}?
+        </h1>
+        <p className="mt-2 max-w-xl text-pretty text-sm text-muted-foreground">
+          Describe it in plain language. You get a real codebase, a live preview, and a chat to
+          keep changing it.
+        </p>
+        <HomeComposer className="mt-5 max-w-2xl" />
+      </section>
 
       <div className="mt-8 grid gap-6 lg:grid-cols-12">
         <section

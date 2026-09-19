@@ -1,9 +1,22 @@
 # Current Handoff
 
-Task ID: R-496
+Task ID: R-497
 Status: done
 Phase: BASIC/MVP — Founder Stage 0
 Branch: `main`
+
+> **R-497 Completed (2026-09-19): Console — Lovable-grade pass (prompt-first home, ?prompt= auto-start, prose replies + follow-up chips, file search).**
+> - The founder's 96 reference screenshots (`~/Desktop/AI_Platform_Screenshots`) were surveyed;
+>   **Lovable** is the primary reference, Dyad for the prompt-first home, Emergent nothing new.
+> - `components/home-composer.tsx` → `/studio?prompt=`; the Studio pre-fills and starts exactly
+>   one build through its existing submit path (ref guard, no setState in effect), then cleans the
+>   URL; prose assistant rows; three follow-up chips after a completed build/edit; a shared file
+>   filter above the Files/Code trees; "Read only" on the viewer. No facades (no Cloud/Publish/
+>   Payments panels, no project switcher, no Web/Mobile tabs).
+> - Gates: typecheck/lint/build clean (25 routes), `scripts/test.sh`, `task verify` **3,738 OK**,
+>   lint/security/env. Smoke: hero + composer served; `?prompt=` pre-fills with Send enabled and
+>   triggers nothing server-side; `?build=5` unchanged; 0 server errors. Console on 4321.
+> - **NEXT**: the founder's pick. See `.ai/tasks/R-497.md`.
 
 > **R-496 Completed (2026-09-19): Console — motion, states & polish. The six-task UI overhaul (R-491..R-496) is complete.**
 > - Loading skeletons for Studio and Settings under their gates; the provider-status card streams

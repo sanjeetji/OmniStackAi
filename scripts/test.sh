@@ -970,4 +970,42 @@ for reveal_consumer in app/page.tsx app/settings/page.tsx app/fabric/page.tsx; d
   fi
 done
 
+# R-497: Lovable-grade pass - prompt-first home, ?prompt= auto-start through the existing submit
+# path, prose replies + follow-up chips, file search in the tree.
+if [[ ! -f "$console_root/components/home-composer.tsx" ]]; then
+  printf 'Missing R-497 contract file: %s/components/home-composer.tsx\n' "$console_root"
+  exit 1
+fi
+
+if ! rg -qF 'HomeComposer' "$console_root/app/page.tsx"; then
+  printf 'R-497 the home page must render the HomeComposer.\n'
+  exit 1
+fi
+
+if ! rg -qF '/studio?prompt=' "$console_root/components/home-composer.tsx"; then
+  printf 'R-497 the home composer must hand its prompt to /studio?prompt=.\n'
+  exit 1
+fi
+
+for marker in 'searchParams.get("prompt")' 'requestSubmit' 'FOLLOW_UP_PROMPTS' 'autoStarted'; do
+  if ! rg -qF "$marker" "$console_root/app/studio/studio-chat.tsx"; then
+    printf 'R-497 studio-chat.tsx must include %s.\n' "$marker"
+    exit 1
+  fi
+done
+
+for marker in 'FileFilter' 'Search files' 'Read only'; do
+  if ! rg -qF "$marker" "$console_root/app/studio/studio-tabs.tsx"; then
+    printf 'R-497 studio-tabs.tsx must include %s.\n' "$marker"
+    exit 1
+  fi
+done
+
+# The example prompts stay identical between the home page and the Studio empty state.
+if ! rg -qF 'A task tracker where users create projects and each project has tasks with due dates' "$console_root/components/home-composer.tsx" \
+  || ! rg -qF 'A task tracker where users create projects and each project has tasks with due dates' "$console_root/app/studio/studio-chat.tsx"; then
+  printf 'R-497 the home and Studio example prompts must match.\n'
+  exit 1
+fi
+
 printf 'Repository contract tests passed.\n'

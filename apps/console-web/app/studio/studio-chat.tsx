@@ -47,6 +47,14 @@ const EXAMPLE_PROMPTS = [
   "A simple CRM: companies, contacts and notes, with a search page",
 ];
 
+/* R-497 (after Lovable's follow-up chips): generic next edits the delta engine genuinely handles,
+ * offered after a completed build or edit. They only fill the composer. */
+const FOLLOW_UP_PROMPTS = [
+  "Add user sign-in with email and password",
+  "Add search and filters to the main list",
+  "Add a settings page for the user profile",
+];
+
 let messageCounter = 0;
 function nextMessageId(): string {
   messageCounter += 1;
@@ -71,6 +79,9 @@ export default function StudioChat({ initialCreditBalance }: { initialCreditBala
   const router = useRouter();
   const searchParams = useSearchParams();
   const urlBuildId = searchParams.get("build");
+  // R-497: the home composer hands its prompt over as /studio?prompt=... (never together with a
+  // ?build= - an existing session is never overwritten by a stray query).
+  const urlPrompt = urlBuildId ? null : searchParams.get("prompt");
 
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [buildId, setBuildId] = useState<string | null>(urlBuildId);
@@ -80,7 +91,7 @@ export default function StudioChat({ initialCreditBalance }: { initialCreditBala
   // StudioPreview already re-previews for via its own buildId-change effect, so no bump is
   // needed on a fresh build).
   const [previewVersion, setPreviewVersion] = useState(0);
-  const [prompt, setPrompt] = useState("");
+  const [prompt, setPrompt] = useState(urlPrompt ?? "");
   const [submitting, setSubmitting] = useState(false);
   // R-485: ticks up live as generating_ir deltas arrive during a streaming build - the visible
   // proof of real incremental progress, reset to 0 whenever a new build starts. Not used for
@@ -90,7 +101,9 @@ export default function StudioChat({ initialCreditBalance }: { initialCreditBala
   const [creditBalance, setCreditBalance] = useState(initialCreditBalance);
   const threadRef = useRef<HTMLDivElement | null>(null);
   const textareaRef = useRef<HTMLTextAreaElement | null>(null);
+  const formRef = useRef<HTMLFormElement | null>(null);
   const hydratedFor = useRef<string | null>(null);
+  const autoStarted = useRef(false);
 
   useEffect(() => {
     if (!urlBuildId || hydratedFor.current === urlBuildId) {
@@ -162,6 +175,17 @@ export default function StudioChat({ initialCreditBalance }: { initialCreditBala
     threadRef.current?.scrollTo({ top: threadRef.current.scrollHeight });
   }, [messages, submitting]);
 
+  // R-497: arriving from the home composer starts the build exactly once - through the same form
+  // submit a keypress uses (the composer is pre-filled from the URL), so there is no second code
+  // path and no state is set inside this effect. The query is cleared first; the build's own
+  // ?build=<id> replace happens on completion as always.
+  useEffect(() => {
+    if (!urlPrompt || autoStarted.current) return;
+    autoStarted.current = true;
+    router.replace("/studio");
+    formRef.current?.requestSubmit();
+  }, [urlPrompt, router]);
+
   function appendMessage(role: "user" | "assistant", text: string, kind: "plain" | "error" = "plain") {
     setMessages((prev) => [
       ...prev,
@@ -184,7 +208,7 @@ export default function StudioChat({ initialCreditBalance }: { initialCreditBala
     textareaRef.current?.focus();
   }
 
-  function useExamplePrompt(text: string) {
+  function fillComposer(text: string) {
     setPrompt(text);
     textareaRef.current?.focus();
   }
@@ -366,6 +390,13 @@ export default function StudioChat({ initialCreditBalance }: { initialCreditBala
       : "Applying your change…";
   const showEmptyThread = !hydrating && messages.length === 0 && !submitting;
   const showEmptyWorkspace = buildId === null && workspace === null;
+  const lastMessage = messages[messages.length - 1];
+  const showFollowUps =
+    !submitting &&
+    buildId !== null &&
+    lastMessage !== undefined &&
+    lastMessage.role === "assistant" &&
+    lastMessage.kind === "plain";
 
   return (
     <div className="studio-grid">
@@ -415,13 +446,13 @@ export default function StudioChat({ initialCreditBalance }: { initialCreditBala
             </>
           ) : null}
 
-          {showEmptyThread ? <EmptyThread onPick={useExamplePrompt} /> : null}
+          {showEmptyThread ? <EmptyThread onPick={fillComposer} /> : null}
 
           {messages.map((message) =>
             message.role === "user" ? (
               <div
                 key={message.id}
-                className="reveal max-w-[85%] self-end rounded-2xl rounded-br-md bg-primary px-3.5 py-2.5 text-sm break-words whitespace-pre-wrap text-primary-foreground"
+                className="reveal max-w-[85%] self-end rounded-2xl rounded-br-md bg-primary px-3.5 py-2 text-[13px] leading-relaxed break-words whitespace-pre-wrap text-primary-foreground"
               >
                 {message.text}
               </div>
@@ -429,25 +460,44 @@ export default function StudioChat({ initialCreditBalance }: { initialCreditBala
               <div
                 key={message.id}
                 role="alert"
-                className="reveal flex max-w-[92%] gap-2.5 self-start rounded-2xl rounded-bl-md border border-destructive/30 bg-destructive/10 px-3.5 py-2.5 text-sm break-words whitespace-pre-wrap text-destructive"
+                className="reveal flex max-w-[92%] gap-2.5 self-start rounded-2xl rounded-bl-md border border-destructive/30 bg-destructive/10 px-3.5 py-2 text-[13px] leading-relaxed break-words whitespace-pre-wrap text-destructive"
               >
                 <TriangleAlert className="mt-0.5 size-4 shrink-0" aria-hidden="true" />
                 <span>{message.text}</span>
               </div>
             ) : (
-              <div key={message.id} className="reveal flex max-w-[92%] gap-2.5 self-start">
-                <BrandMark className="mt-1.5 size-5 shrink-0" />
-                <div className="rounded-2xl rounded-bl-md bg-secondary px-3.5 py-2.5 text-sm break-words whitespace-pre-wrap text-secondary-foreground">
+              // Assistant replies read as prose, not bubbles (R-497, after Lovable's thread).
+              <div key={message.id} className="reveal flex gap-2.5 self-stretch py-0.5">
+                <BrandMark className="mt-1 size-4 shrink-0" />
+                <p className="min-w-0 text-[13px] leading-relaxed break-words whitespace-pre-wrap text-foreground">
                   {message.text}
-                </div>
+                </p>
               </div>
             ),
           )}
 
+          {showFollowUps ? (
+            <div
+              className="reveal flex flex-wrap gap-1.5 pl-6.5"
+              aria-label="Suggested next changes"
+            >
+              {FOLLOW_UP_PROMPTS.map((suggestion) => (
+                <button
+                  key={suggestion}
+                  type="button"
+                  onClick={() => fillComposer(suggestion)}
+                  className="rounded-full border border-border/70 bg-background px-2.5 py-1 text-xs text-muted-foreground outline-none transition-colors select-none hover:border-brand/40 hover:text-foreground focus-visible:ring-3 focus-visible:ring-ring/50 active:translate-y-px"
+                >
+                  {suggestion}
+                </button>
+              ))}
+            </div>
+          ) : null}
+
           {submitting ? <WorkingBubble label={workingLabel} /> : null}
         </div>
 
-        <form className="border-t border-border/60 p-3" onSubmit={handleSend}>
+        <form ref={formRef} className="border-t border-border/60 p-3" onSubmit={handleSend}>
           {buildId !== null ? (
             <p className="mb-2 px-1 text-xs text-muted-foreground">
               Editing{" "}
@@ -547,7 +597,7 @@ function WorkingBubble({ label }: { label: string }) {
   return (
     <div className="flex max-w-[92%] gap-2.5 self-start" aria-live="polite">
       <BrandMark className="mt-1.5 size-5 shrink-0" />
-      <div className="grid min-w-56 gap-2.5 rounded-2xl rounded-bl-md bg-secondary px-3.5 py-2.5 text-sm text-secondary-foreground">
+      <div className="grid min-w-56 gap-2.5 rounded-2xl rounded-bl-md bg-secondary px-3.5 py-2.5 text-[13px] text-secondary-foreground">
         <p className="flex items-center gap-2">
           <LoaderCircle className="size-4 shrink-0 animate-spin text-brand" aria-hidden="true" />
           <span>{label}</span>

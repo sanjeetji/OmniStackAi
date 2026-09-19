@@ -1,44 +1,32 @@
-task_id: R-496
+task_id: R-497
 status: completed
 phase: MVP
 tracker_row: null
 started_at: "2026-09-19"
 completed_at: "2026-09-19"
 objective: >-
-  Sixth and last task of the Console UI overhaul (R-491..R-496): the finish. Loading states per
-  Next 16's loading.js convention for Studio and Settings (under their gated layouts) and
-  streamed provider-status cards inside <Suspense> on the dashboard and Settings; error states
-  per error.js (branded app/error.tsx on the documented retry() prop with error.digest shown as
-  a reference; app/global-error.tsx with its own html/body and inline dark styling); OpenGraph/
-  Twitter metadata with a generated 1200x630 PNG via ImageResponse from next/og, metadataBase
-  from the new optional OMNISTACKAI_CONSOLE_PUBLIC_URL (.env.example) falling back to the real
-  dev address; a .reveal rise+fade utility (transform/opacity, staggered via --reveal-index,
-  collapsed by prefers-reduced-motion) on the dashboard, settings, fabric, auth card, 404/error
-  states, Studio empty states and new chat messages; tinted Tailwind shadows via --shadow-tint;
-  the last legacy CSS retired (.pill/.pill--accent/.spinner/@keyframes spin and the dead token
-  aliases) with the R-475 assertion edited to the three radius tokens; the redesign audit
-  checklist recorded honestly in the contract. A root app/loading.tsx was built and REMOVED
-  in-task after the live smoke showed it turned the auth redirects into streamed 200s.
+  Lovable-grade pass on the console, after surveying the founder's 96 reference screenshots
+  (~/Desktop/AI_Platform_Screenshots; Lovable chosen as the primary reference, Dyad for the
+  prompt-first home). Four real patterns, no facades: (1) a prompt-first home - the dashboard
+  hero is a real composer (components/home-composer.tsx: "What do you want to build?", textarea,
+  the three real example chips, Build -> /studio?prompt=...); (2) the Studio picks up ?prompt=
+  with no ?build=, pre-fills the composer and starts exactly one build through the existing form
+  submit path (requestSubmit + a ref guard, no setState in the effect), then cleans the URL;
+  (3) assistant replies as prose rows with a brand-mark gutter (user bubbles kept, error rows
+  kept), rail type at 13px; follow-up suggestion chips after a completed build/edit (three real
+  generic next edits) that fill the composer; (4) a file-search filter above the tree in Files
+  and Code, and an honest "Read only" label on the viewer. Out of scope on purpose: Lovable's
+  Cloud/Publish/Payments panels (no backend), a project switcher (no per-user build list),
+  Emergent's Web/Mobile tabs (mobile is a hard gate).
 allowed_paths:
-  - apps/console-web/app/studio/loading.tsx
-  - apps/console-web/app/settings/loading.tsx
-  - apps/console-web/app/loading.tsx
-  - apps/console-web/app/error.tsx
-  - apps/console-web/app/global-error.tsx
-  - apps/console-web/app/opengraph-image.tsx
-  - apps/console-web/app/twitter-image.tsx
-  - apps/console-web/app/layout.tsx
-  - apps/console-web/lib/motion.ts
+  - apps/console-web/components/home-composer.tsx
   - apps/console-web/app/page.tsx
-  - apps/console-web/app/not-found.tsx
-  - apps/console-web/app/settings/page.tsx
-  - apps/console-web/app/fabric/page.tsx
-  - apps/console-web/components/auth-screen.tsx
   - apps/console-web/app/studio/studio-chat.tsx
+  - apps/console-web/app/studio/studio-tabs.tsx
+  - apps/console-web/app/studio/file-tree.tsx
   - apps/console-web/app/globals.css
-  - .env.example
   - scripts/test.sh
-  - .ai/tasks/R-496.md
+  - .ai/tasks/R-497.md
   - .ai/CURRENT_TASK.yaml
   - .ai/PROJECT_STATE.yaml
   - .ai/WORK_LOG.md
@@ -49,32 +37,30 @@ allowed_paths:
   - docs/RESUME_PROMPT.md
   - R_&_D/OmniStackAI_Commercial_Platform_Kickoff_v1.md
 forbidden_changes:
-  - No changes to lib/control-plane.ts, lib/session.ts, any app/api/* route, the Studio logic, or the shadcn primitives
-  - No behavior changes beyond the new loading/error boundaries; no new dependencies; no fabricated content
-  - Do not modify or commit the untracked .claude directory
+  - No changes to lib/*, any app/api/* route, studio-preview.tsx, code-highlight.ts, or the chat's SSE/edit/404 logic (the ?prompt= auto-start calls the existing path once)
+  - No facade features (no Publish/Share/Cloud/Payments UI without a backend); no invented data
+  - No new dependencies; do not modify or commit the untracked .claude directory
 required_gates:
   - "console-web: pnpm run typecheck, pnpm run lint, pnpm run build"
-  - "bash scripts/test.sh (R-475 assertion edited, new R-496 block)"
+  - "bash scripts/test.sh (new R-497 block)"
   - task verify
   - task lint
   - task security:quick
   - task env:check
-  - "live smoke: next start on 4321; every route responds with the right status signed out and in; served <head> carries og:*/twitter:* with an absolute og:image; /opengraph-image returns a real 1200x630 PNG; reveal classes present; no .pill/.spinner in the stylesheet; 0 server errors"
+  - "live smoke: next start on 4321; / serves the composer + chips; /studio?prompt=hello server-renders the prefilled composer with Send enabled (the auto-start is a client effect - stated honestly, not exercised); /studio?build=5 unchanged and not prefilled; 0 server errors"
 model_tool_trace:
   routing: deterministic_only
   local_calls: 0
   cloud_calls: 0
-  note: Pure TypeScript/TSX/CSS work, 0 model calls.
+  note: Pure TypeScript/TSX work, 0 model calls; the smoke never triggers the auto-start (it needs a browser).
 next_action: >-
-  R-496 shipped and the six-task Console UI overhaul (R-491..R-496) is COMPLETE: Tailwind v4 +
-  shadcn/ui + Geist foundation; auth screens + app shell; Studio core; Studio tabs; Settings +
-  Fabric; motion/states/OG-meta with the legacy CSS fully retired. All gates green (3,738 tests);
-  every route live-smoked with correct status codes; the console is running detached on 4321.
-  The founder should now eyeball the whole product at http://localhost:4321 (sign in, dashboard,
-  Studio with a real build, Settings theme control, Fabric) and share the Emergent/Lovable/Dyad
-  screenshots if a further visual pass is wanted. NEXT direction needs the founder's pick - none
-  is pre-approved: (a) Publish/deploy (Netlify one-click primary; Vercel/Cloudflare/self-host/
-  GitHub export) - a "new infra"/paid-service decision; (b) wiring the R-486..R-490 sandbox
-  providers into the Studio preview path + per-user plan-based free/paid routing; (c) Node.js
-  backend codegen alongside Python/Go; (d) mobile (React Native) - a hard gate; (e) per-user
-  tenant isolation of the Studio server - an architecture decision needing sign-off.
+  R-497 shipped - the Lovable-grade pass is in: prompt-first home, Studio ?prompt= auto-start
+  through the existing submit path, prose replies + follow-up chips, file search + Read only.
+  All gates green (3,738 tests, 25 routes); smoke clean with 0 server errors; console running
+  detached on 4321. The founder should try the real flow in a browser: type a prompt on /, press
+  Build, watch the Studio start it, use a follow-up chip, search the file tree. Next direction
+  still needs the founder's pick (none pre-approved): Publish/deploy (new infra / paid decision),
+  sandbox providers into the Studio preview + per-user free/paid routing, Node.js backend
+  codegen, mobile (hard gate), or per-user tenant isolation of the Studio server (architecture
+  sign-off). A further Lovable-style pass could add a per-user build list (needs a backend
+  endpoint) to power a project switcher - also a scoping decision.

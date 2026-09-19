@@ -2,10 +2,10 @@ schema_version: 1
 project: OmniStackAI
 phase: BASIC/MVP
 founder_stage: 0
-current_task: R-496
+current_task: R-497
 current_status: done
 branch: main
-last_completed_task: R-496
+last_completed_task: R-497
 # TASK COMPILATION AUDIT — 2026-09-16
 # Performed to achieve 100% synchronization across all task-tracking documentation.
 # Tracker workbook expanded to 464 tasks with R-464.
@@ -34,6 +34,51 @@ task_compilation_audit:
       new_status: DONE
       reason: "Task fully completed on 2026-09-11 with 35 tests. Status left stale during rapid development sprint."
 last_completed_task_summary: >-
+  Completed R-497 (2026-09-19): Lovable-grade pass on the console. The founder shared 96
+  reference screenshots (~/Desktop/AI_Platform_Screenshots: Dyad 40, Emergent 18, Lovable 38)
+  and asked which to follow; all were reviewed as labelled contact sheets plus the decisive
+  screens at full size. LOVABLE is the primary reference (dark, dense ~13px, chat-left project
+  workspace, view-switcher pill row, prose assistant replies, follow-up chips, a "More" panel
+  with a real product IA - closest to a multi-service product and to what R-491..R-496 built);
+  Dyad contributes the prompt-first home with example chips (its provider cards were already
+  ours); Emergent only the header credits chip (already present). Recorded in the founder's
+  memory notes and the kickoff doc.
+  Built, borrowing only patterns backed by real behavior: (1) prompt-first home -
+  components/home-composer.tsx ("What do you want to build, <name>?", textarea with
+  field-sizing-content, Build button, the three real example chips as short labels, "Open the
+  Studio ->"), submit -> router.push(/studio?prompt=<encoded>); the old hero "Open Studio" button
+  is gone, the Start building card / streamed provider card / account cards stay below; (2) the
+  Studio reads ?prompt= (ignored whenever ?build= is present), initializes the composer state
+  from it and starts EXACTLY ONE build through the existing form submit path - an effect with a
+  ref guard calls router.replace("/studio") then form.requestSubmit(), DOM/router calls only, no
+  setState in the effect and no second code path; the build's own ?build=<id> replace happens on
+  completion as always; (3) assistant replies render as prose rows with a small brand-mark
+  gutter (Lovable style) - user bubbles and role="alert" error rows kept - and the rail type is
+  13px; after a completed build or edit three follow-up chips appear (Add user sign-in with
+  email and password / Add search and filters to the main list / Add a settings page for the
+  user profile - generic edits the delta engine genuinely handles) that only fill the composer;
+  (4) a FileFilter search box above the tree in both Files and Code (one shared query; "N of M
+  files match"; "No files match your search.") and an honest "Read only" label in the viewer
+  header. Deliberately NOT borrowed: Lovable's Cloud/Database/Storage/Emails/Payments/Publish
+  panels (no backend exists), a project switcher (no per-user build list endpoint), Emergent's
+  Web/Mobile tabs (mobile is a hard gate). No API/lib changes; no new deps.
+  Gates: typecheck/lint clean first run; build 25 routes; scripts/test.sh passes with the new
+  R-497 block (incl. an assertion that the home and Studio example prompts stay identical);
+  task verify 3,738 OK; lint/security/env pass. Live smoke: / serves the hero + composer + chips
+  + "Open the Studio" with the old button gone and everything else unchanged;
+  /studio?prompt=hello%20world server-renders the composer pre-filled ("hello world") with Send
+  ENABLED (verified against the disabled attribute, not the button's disabled: class variants)
+  and no message yet - the auto-start is a client effect, so the smoke triggered no build;
+  /studio empty -> Send disabled; /studio?build=5 unchanged and NOT pre-filled; other routes and
+  redirects unchanged; 0 server errors. Honest limits: auto-start, follow-up chips and the file
+  filter are client behavior (chips need a completed build; the filter sits in inactive Radix tab
+  panels) - covered by typecheck + source assertions + the unchanged build path; the founder is
+  asked to try the flow in a browser.
+  NEXT: needs the founder's pick (none pre-approved) - Publish/deploy, sandbox providers into the
+  Studio preview + per-user routing, Node.js codegen, mobile (hard gate), tenant isolation; or a
+  further Lovable-style pass adding a per-user build list (needs a backend endpoint) to power a
+  project switcher.
+_prior_last_completed_task_summary_R496: >-
   Completed R-496 (2026-09-19): motion, states & polish - the sixth and last task of the Console
   UI overhaul (R-491..R-496), which is now COMPLETE.
   Built: loading states per Next 16's loading.js convention for Studio (a skeleton of the
@@ -2086,8 +2131,10 @@ next_action: >-
   live provider cards; Fabric as a proper data page; the legacy CSS family swept) and R-496
   (loading/error states, streamed provider cards, OG/Twitter meta with a generated image,
   .reveal motion, tinted shadows, the last legacy CSS retired) are done - THE UI OVERHAUL IS
-  COMPLETE. The founder should eyeball the whole product at localhost:4321 and share the
-  Emergent/Lovable/Dyad screenshots if a further visual pass is wanted.
+  COMPLETE - and R-497 followed as a Lovable-grade pass after the founder shared 96 reference
+  screenshots (Lovable chosen as the primary reference; prompt-first home, Studio ?prompt=
+  auto-start, prose replies + follow-up chips, file search). The founder should try the real
+  flow in a browser at localhost:4321.
   NEXT (needs the founder's pick; none pre-approved): real
   multi-target Publish/deploy (Netlify one-click primary; Vercel/Cloudflare/self-host/GitHub-export
   as secondary options), Node.js backend codegen alongside Python/Go, and mobile (React Native

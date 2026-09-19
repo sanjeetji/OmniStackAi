@@ -1,5 +1,34 @@
 # Work Log
 
+## 2026-09-19 — R-497 (Console: Lovable-grade pass after the founder's reference screenshots)
+
+- **Why:** the founder shared 96 screenshots (`~/Desktop/AI_Platform_Screenshots`: Dyad 40,
+  Emergent 18, Lovable 38) and asked which to follow. Reviewed all of them as labelled contact
+  sheets (Pillow, 12 per sheet) and the decisive screens at full size. **Lovable** chosen as
+  the primary reference (dark, dense, chat-left project workspace, prose replies, follow-up
+  chips, a "More" panel with a real product IA); Dyad for the prompt-first home; Emergent only
+  the credits chip we already have. Recorded in memory and the kickoff doc.
+- **Built (real behavior only):** `components/home-composer.tsx` — the dashboard hero is a
+  composer ("What do you want to build, {name}?", chips, Build → `/studio?prompt=`); the Studio
+  reads `?prompt=` (never with `?build=`), pre-fills the composer and starts exactly one build
+  through the existing form submit (`requestSubmit()` + ref guard; no setState in the effect,
+  no second code path), then cleans the URL; assistant replies as prose rows with a brand-mark
+  gutter, 13px rail; three follow-up chips after a completed build/edit that fill the composer;
+  a shared file-search filter above the Files and Code trees ("N of M files match") and a
+  "Read only" label on the viewer. Not borrowed, on purpose: Cloud/Publish/Payments panels (no
+  backend), a project switcher (no per-user build list), Web/Mobile tabs (hard gate).
+- **Gates:** typecheck/lint clean first run; build 25 routes; `scripts/test.sh` passes (new
+  block also pins the home and Studio example prompts to identical strings); `task verify`
+  3,738 OK; lint/security/env pass.
+- **Live smoke:** `/` hero + composer + chips, old "Open Studio" button gone, rest unchanged;
+  `/studio?prompt=hello%20world` server-renders the pre-filled composer with Send enabled and no
+  build triggered (the auto-start is a client effect — verified against the real `disabled`
+  attribute after a first grep matched the `disabled:` class variants); `/studio` empty → Send
+  disabled; `/studio?build=5` unchanged and not pre-filled; 0 server errors. Founder to try the
+  browser flow.
+- **Next:** the founder's pick (Publish/deploy, sandbox→preview + per-user routing, Node.js
+  codegen, mobile, tenant isolation) or a per-user build list to power a project switcher.
+
 ## 2026-09-19 — R-496 (Console: motion, states & polish — the overhaul's last task)
 
 - **Why:** every screen was on the R-491 stack; what remained was the finish — loading and
