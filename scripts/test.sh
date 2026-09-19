@@ -850,4 +850,44 @@ for dead_block in '.tab-bar' '.file-list' '.code-viewer-content' '.problems-tab'
   fi
 done
 
+# R-495: Settings + Fabric on the R-491 stack; the legacy class family is swept (only the
+# R-475-pinned .pill/.pill--accent/.spinner survive until R-496).
+if [[ ! -f "$console_root/components/theme-switcher.tsx" ]]; then
+  printf 'Missing R-495 contract file: %s/components/theme-switcher.tsx\n' "$console_root"
+  exit 1
+fi
+
+for marker in 'useTheme' 'aria-pressed' 'role="group"'; do
+  if ! rg -qF "$marker" "$console_root/components/theme-switcher.tsx"; then
+    printf 'R-495 theme-switcher.tsx must include %s.\n' "$marker"
+    exit 1
+  fi
+done
+
+for marker in 'ThemeSwitcher' 'keyEnv' 'id="account"' 'id="appearance"' 'id="providers"' 'getProviderStatus'; do
+  if ! rg -qF "$marker" "$console_root/app/settings/page.tsx"; then
+    printf 'R-495 settings/page.tsx must include %s.\n' "$marker"
+    exit 1
+  fi
+done
+
+for marker in 'snapshotVersion' 'DiffBlock' 'AppShell' '<caption'; do
+  if ! rg -qF "$marker" "$console_root/app/fabric/page.tsx"; then
+    printf 'R-495 fabric/page.tsx must include %s.\n' "$marker"
+    exit 1
+  fi
+done
+
+if rg -q 'className="(wrap|masthead|panel|studio-intro|settings-active-now)' "$console_root/app" "$console_root/components"; then
+  printf 'R-495: no page may still use the legacy .wrap/.masthead/.panel class family.\n'
+  exit 1
+fi
+
+for dead_block in '.wrap' '.masthead' '.panel' '.badge' '.stat' '.settings-active-now' '.studio-intro'; do
+  if rg -qF "$dead_block {" "$console_root/app/globals.css"; then
+    printf 'R-495 must remove the dead legacy CSS block: %s\n' "$dead_block"
+    exit 1
+  fi
+done
+
 printf 'Repository contract tests passed.\n'

@@ -208,7 +208,7 @@ front-door bricks, R-420 is generated-SQL hardening, R-421..R-426 are Studio pre
 R-427..R-429 are generated-app compile fixes, R-430..R-457 are the first twenty-eight differentiating-spine
 bricks (Scope Compiler through Ecosystem Multi-Surface SLA, SLO, and Error Budget Contracts).
 Git, state files (.ai/), CHANGELOG, and docs/PROGRESS.md remain the executable/detail sources of truth.
-Current through R-494; `task verify` = 3,738 tests (agent-engine) + the Go control-plane's own suite +
+Current through R-495; `task verify` = 3,738 tests (agent-engine) + the Go control-plane's own suite +
 the Next.js console's typecheck/lint/build. R-416 added prompt-to-IR intake, R-417 materialized a generated
 owned repo, R-418 added the local chat studio, R-419 added turnkey local run, and R-420 fixed the two
 SQL defects found by live execution. R-421 added an explicit `task agent-engine:studio:preview` mode:
@@ -894,8 +894,18 @@ WHAT TO DO NEXT
   /settings and /fabric until R-495), .settings-active-now, .studio-intro. In build-only mode the
   preview route returns 404 (tab shows the disabled state) and the problems POST returns 409
   "tsc is not installed" - both honest; run `task agent-engine:studio:preview` to see them live.
-- NEXT: R-495 (Settings/Fabric), R-496 (motion/states/polish + legacy CSS sweep) - the roadmap
-  is in the plan file. After the UI overhaul
+- R-495 (2026-09-19, done) rebuilt /settings (sticky section nav; Account facts; Appearance
+  with components/theme-switcher.tsx - System/Light/Dark on next-themes, hydration-safe via
+  useSyncExternalStore, NOT a useEffect mounted flag: the react-hooks/set-state-in-effect ESLint
+  rule IS enabled in this repo and fails the build on setState inside an effect; Model providers
+  as cards with ProviderInfo.keyEnv "Set X_API_KEY in .env" hints) and /fabric (snapshot badge,
+  captioned Tailwind tables, DiffBlock) and swept 266 lines of legacy CSS. globals.css is now
+  ~367 lines: tokens, base, .grain (absolute, scoped), the R-475-pinned .pill/.pill--accent/
+  .spinner + @keyframes spin, .studio-grid/.studio-progress, .code-tok-* colors. LESSON: never
+  write "*/" inside a CSS comment (e.g. "--radius-*/"); it terminates the comment and breaks the
+  Turbopack build with a CssSyntaxError. R-496 retires the pinned selectors by editing the R-475
+  scripts/test.sh block deliberately.
+- NEXT: R-496 (motion, states & polish) - the roadmap is in the plan file. After the UI overhaul
   (not yet scoped): real multi-target Publish/deploy (Netlify one-click primary, Vercel/Cloudflare/
   self-host/GitHub-export as secondary options), Node.js backend codegen alongside Python/Go, and
   mobile (React Native near-term). Full per-user process/tenant isolation as a wholesale architecture

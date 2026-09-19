@@ -1,4 +1,4 @@
-# OmniStackAI — implementation progress (as of R-494)
+# OmniStackAI — implementation progress (as of R-495)
 
 A living summary of what is built, what is pending, and how to see results. Numbers come from the
 execution tracker (`R_&_D/OmniStackAI_Execution_Tracker_v6.xlsx`, `Phase_Roadmap`, 461 tasks as of
@@ -8,6 +8,17 @@ R-461 completion) plus the state files (`.ai/`), Git history, and CHANGELOG.
 
 - **3,738 automated tests pass** (agent-engine + Go control-plane), fully offline and
   network-independent (`task verify`), plus the console's own `typecheck`/`lint`/`build` gates.
+- **R-495 — Console: Settings + Fabric; legacy CSS sweep (2026-09-19):** fifth task of the UI
+  overhaul; the last two legacy screens rebuilt. Settings: sticky in-page nav, read-only Account
+  facts (honest "no profile editing yet"), a hydration-safe System/Light/Dark control
+  (`components/theme-switcher.tsx`, `useSyncExternalStore`), live Ready summary + 11 provider
+  cards with real `keyEnv` hints (names only). Fabric: snapshot badge + regeneration note,
+  ladder, captioned `tabular-nums` tables, honest zero-usage stat cards, showcase diff; still
+  public. 266 lines of dead legacy CSS removed (only the R-475-pinned `.pill`/`.spinner` remain
+  for R-496); `.grain` scoped to absolute. Three real gate catches fixed first (the
+  `set-state-in-effect` lint rule is enabled; a `*/` in my CSS comment broke the build; `.wrap`
+  survived in a dead `@media` block). All gates green (**3,738 tests**); both pages smoked signed
+  out/in with 0 server errors. See `.ai/tasks/R-495.md`.
 - **R-494 — Console: Studio tabs (2026-09-19):** fourth task of the UI overhaul; the four Studio
   tabs rebuilt on the vendored shadcn `Tabs` (real Radix tabs) with Lucide icons and live counts.
   Files = a collapsible tree from a pure model (`file-tree-model.ts`, verified against the real

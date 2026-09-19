@@ -1,5 +1,42 @@
 # Work Log
 
+## 2026-09-19 — R-495 (Console: Settings + Fabric; legacy CSS sweep)
+
+- **Why:** `/settings` and `/fabric` were the last two screens on the hand-rolled legacy classes
+  — one table titled "Model Providers", and five `.panel`s over a static snapshot.
+- **Built:** Settings — header, `lg` two-column with a sticky in-page nav; Account as a
+  read-only `dl` with the honest "Profile editing isn't available yet." (no fake Save);
+  Appearance with `components/theme-switcher.tsx` (System/Light/Dark segmented control on
+  `next-themes`, `role="group"`, `aria-pressed`, hydration-safe via a `useSyncExternalStore`
+  mounted flag — in Settings, not a header sun/moon switch); Model providers with the live
+  Ready/Not ready summary from the unchanged `getProviderStatus()` call, routing mode / cloud
+  tier / configured count, and a card per provider with a real "Set `KEY_ENV` in `.env`" hint
+  from `ProviderInfo.keyEnv` (names only) and "Runs your next build" on the active one. Fabric
+  — a "snapshot vN" badge and the true regeneration note (`scripts/console.sh snapshot` on
+  every console build), the routing ladder, Providers and Price book as semantic tables with
+  sr-only captions and `tabular-nums`, Usage & resilience stat cards that say "No model calls
+  are recorded in this snapshot." instead of hiding zeros, the builder showcase with gate chips
+  and a `DiffBlock` coloring `+`/`-`/`@@` lines. Still public.
+- **CSS sweep:** 266 lines of the dead legacy family removed by a deterministic script that kept
+  only the R-475-pinned `.pill`/`.pill--accent`/`.spinner`/`@keyframes spin` (and the token
+  aliases); `.grain::before` scoped from `fixed` to `absolute` (it had covered the whole
+  viewport from the auth screen's panel).
+- **Three real gate catches, all mine, fixed before shipping:** `react-hooks/set-state-in-effect`
+  *is* enabled (the mounted-flag effect → `useSyncExternalStore`); my sweep comment contained
+  `--radius-*/`, whose `*/` closed the comment and broke the build with a real
+  `CssSyntaxError`; the dead 640px `@media` block still carried `.wrap` — caught by the new
+  contract block, missed by my line-anchored grep. `task verify` had run zero tests while
+  `test.sh` failed; checked for the count line, re-run → 3,738 OK.
+- **Gates:** typecheck/lint clean, build 23 routes, `scripts/test.sh` passes, `task verify`
+  3,738 OK, lint/security/env pass.
+- **Live smoke:** `/settings` signed in — every section, the theme control in its disabled
+  pre-mount SSR state (by design), Ready · groq, 11 provider cards, 8 real `keyEnv` hints;
+  `/fabric` signed out — snapshot badge, ladder, both captioned tables (11 rows / 20 price
+  cells), the zero-usage note, the diff (12/12/12 colored lines), Sign in / Create account;
+  signed in — account menu; no legacy selectors exist in the stylesheet (HTML "hits" were
+  Tailwind utilities); other routes unchanged; 0 server errors.
+- **Next:** R-496 (motion, states & polish; retire the pinned selectors with the assertion).
+
 ## 2026-09-19 — R-494 (Console: Studio tabs — Preview chrome, Files tree, Code viewer, Problems)
 
 - **Why:** R-493 rebuilt the Studio's rail and workspace shell; the four tabs inside it were

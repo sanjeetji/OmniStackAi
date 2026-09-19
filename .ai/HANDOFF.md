@@ -1,9 +1,25 @@
 # Current Handoff
 
-Task ID: R-494
+Task ID: R-495
 Status: done
 Phase: BASIC/MVP — Founder Stage 0
 Branch: `main`
+
+> **R-495 Completed (2026-09-19): Console — Settings + Fabric; legacy CSS sweep.**
+> - Settings is a real settings page: sticky in-page nav; Account facts (read-only, honest "no
+>   profile editing yet"); Appearance with a hydration-safe System/Light/Dark control
+>   (`components/theme-switcher.tsx`, `useSyncExternalStore` mounted flag); Model providers with
+>   the live Ready summary and 11 cards carrying real `keyEnv` hints (names, never values).
+> - Fabric is a proper data page over the honest snapshot (badge + regeneration note, ladder,
+>   captioned `tabular-nums` tables, zero-usage note, showcase diff). Still public.
+> - 266 lines of dead legacy CSS removed; only the R-475-pinned `.pill`/`.pill--accent`/`.spinner`
+>   (+ token aliases) remain — R-496 retires them with the assertion. `.grain` scoped to absolute.
+> - Three real gate catches fixed first: `react-hooks/set-state-in-effect` is enabled; a `*/`
+>   inside my CSS comment broke the build; `.wrap` survived in a dead `@media` block.
+> - Gates: typecheck/lint/build clean (23 routes), `scripts/test.sh`, `task verify` **3,738 OK**,
+>   lint/security/env. Live: both pages smoked signed out/in, 0 server errors. Console running
+>   detached on 4321 — founder flips the theme on `/settings` and scrolls `/fabric`.
+> - **NEXT**: R-496 (motion, states & polish). See `.ai/tasks/R-495.md`.
 
 > **R-494 Completed (2026-09-19): Console — Studio tabs (Preview chrome, Files tree, Code viewer, Problems).**
 > - The four tabs are real Radix tabs (vendored shadcn `Tabs`, line variant) with Lucide icons

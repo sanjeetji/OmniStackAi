@@ -4,6 +4,28 @@ Last updated: 2026-09-19
 ## Current Phase
 Stage 0 (Founder Build Sequence, Brief Section 91) — BASIC/MVP
 
+> **R-495 (2026-09-19): Console — Settings + Fabric; legacy CSS sweep.**
+> Fifth task of the Console UI overhaul; the last two legacy screens rebuilt on the R-491 stack.
+> **Settings** is a real settings page: a sticky in-page nav; Account as read-only facts with the
+> honest "Profile editing isn't available yet."; Appearance with a three-way System/Light/Dark
+> control on `next-themes` (`components/theme-switcher.tsx`, hydration-safe via a
+> `useSyncExternalStore` mounted flag — in Settings, not a header sun/moon switch); Model
+> providers with the live Ready summary from the unchanged `getProviderStatus()` call and **11
+> provider cards** whose "Needs key" state carries a real `Set KEY_ENV in .env` hint from
+> `ProviderInfo.keyEnv` (variable names only). **Fabric** is a proper data page over the same
+> honest snapshot: a "snapshot vN" badge with the true regeneration note, the routing ladder,
+> captioned `tabular-nums` tables, stat cards that say "No model calls are recorded in this
+> snapshot." rather than hiding zeros, and the showcase diff. **266 lines of dead legacy CSS
+> removed** by a deterministic script; only the R-475-pinned `.pill`/`.pill--accent`/`.spinner`
+> remain (R-496 retires them with the assertion); `.grain` scoped from `fixed` to `absolute`.
+> **Three real gate catches, all mine, fixed first**: the `react-hooks/set-state-in-effect` rule
+> *is* enabled; a `*/` inside my own CSS comment broke the build; `.wrap` survived in a dead
+> `@media` block. Gates: typecheck/lint/build clean (23 routes), contract tests, `task verify`
+> **3,738 OK**, lint/security/env. Live: `/settings` (Ready · groq, 11 cards, 8 real `keyEnv`
+> hints) and `/fabric` (signed out and in) smoked with **0 server errors**. Founder flips the
+> theme on `/settings` and scrolls `/fabric` on `localhost:4321`.
+> NEXT: R-496 (motion, states & polish).
+
 > **R-494 (2026-09-19): Console — Studio tabs (Preview chrome, Files tree, Code viewer, Problems).**
 > Fourth task of the Console UI overhaul. The four tabs inside R-493's workspace are now real
 > Radix tabs (vendored shadcn `Tabs`) with Lucide icons and live counts: **Files** a collapsible

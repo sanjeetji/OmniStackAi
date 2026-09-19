@@ -442,9 +442,12 @@ discipline):
    diagnostics parsed into line:col + code chips (tsc emits only errors, so no severity was
    invented) and a click-through into Code; the file list is now restored on refresh.
    `studio-icons.tsx` retired.
-5. **R-495 — Settings + Fabric.** Provider status as real settings cards (Ready / Needs key), the
-   theme toggle (in Settings, not a sun/moon switch), fabric/cost overview with proper data
-   typography.
+5. **R-495 — Settings + Fabric** *(shipped 2026-09-19)*. Settings as a real settings page:
+   Account facts, a hydration-safe System/Light/Dark control in Settings (not a sun/moon
+   switch), and provider status as cards (Ready / Needs key with the real `KEY_ENV` name to
+   set); Fabric as a proper data page over the honest snapshot (captioned `tabular-nums`
+   tables, stat cards that admit zero usage, the showcase diff). The legacy CSS family was swept
+   (266 lines); only the three selectors the R-475 contract pins remain for R-496.
 6. **R-496 — Motion, states & polish.** Staggered entries, hover/active/focus sweep, loading/
    empty/error audit, responsive pass, OG/meta, final audit checklist.
 
@@ -496,9 +499,9 @@ so the founder is asked to eyeball `http://localhost:4321` after each task.
 
 ## 6. How to resume this if the session stops here
 
-**Immediate next action as of 2026-09-19: R-495 (Settings + Fabric), the fifth item in "Phase
-E-UI — Console UI overhaul" above; R-475 → R-481, R-482 → R-485, R-486 → R-490 and R-491 → R-494
-are all shipped.** `.ai/PROJECT_STATE.yaml`'s `next_action` and `.ai/CURRENT_TASK.yaml` are the
+**Immediate next action as of 2026-09-19: R-496 (motion, states & polish), the sixth and last
+item in "Phase E-UI — Console UI overhaul" above; R-475 → R-481, R-482 → R-485, R-486 → R-490 and
+R-491 → R-495 are all shipped.** `.ai/PROJECT_STATE.yaml`'s `next_action` and `.ai/CURRENT_TASK.yaml` are the
 authoritative pointers per `AGENTS.md`'s source-of-truth order (they win over this paragraph if
 they ever disagree) — read them first, but they should already agree with this. The founder's
 Emergent / Lovable / Dyad screenshots, once shared, shape R-493/R-494's Studio screens; R-492 does

@@ -246,11 +246,12 @@ a {
   }
 }
 
-/* A fixed, pointer-events-none noise overlay that breaks digital flatness on large surfaces.
-   Opt-in via the class; wired into the app shell in R-492. */
+/* A pointer-events-none noise overlay that breaks digital flatness on large surfaces. Opt-in
+   via the class on a positioned container (the auth screen's brand panel uses it); scoped
+   with position:absolute since R-495 - it used to be fixed and covered the whole viewport. */
 .grain::before {
   content: "";
-  position: fixed;
+  position: absolute;
   inset: 0;
   pointer-events: none;
   z-index: 1;
@@ -258,260 +259,9 @@ a {
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
 }
 
-/* ==========================================================================================
-   Legacy console classes - kept intact (only tokens re-pointed) until R-492..R-496 rebuild
-   each screen on the shadcn primitives.
-   ========================================================================================== */
-.wrap {
-  max-width: 720px;
-  margin: 0 auto;
-  padding: 40px 24px 72px;
-}
-
-.wrap--wide {
-  max-width: 1180px;
-}
-
-.masthead {
-  display: flex;
-  justify-content: space-between;
-  gap: 28px;
-  align-items: flex-start;
-  margin-bottom: 12px;
-}
-
-header.masthead h1 {
-  margin: 2px 0 6px;
-  font-size: clamp(26px, 5vw, 40px);
-  letter-spacing: -0.04em;
-}
-
-header.masthead .lede {
-  margin: 0;
-  color: var(--muted-foreground);
-  max-width: 560px;
-  font-size: 15px;
-}
-
-.eyebrow {
-  margin: 0;
-  color: var(--brand);
-  font-size: 11px;
-  font-weight: 700;
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
-}
-
-.panel {
-  background: var(--panel);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-lg);
-  padding: 22px 24px;
-  margin-top: 20px;
-  box-shadow: var(--shadow);
-}
-
-.panel h2 {
-  margin: 0 0 16px;
-  font-size: 18px;
-}
-
-.field {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-  margin-bottom: 16px;
-}
-
-.field label {
-  font-size: 13px;
-  font-weight: 600;
-  color: var(--muted-foreground);
-}
-
-.field input {
-  font: inherit;
-  padding: 10px 12px;
-  border-radius: var(--radius-sm);
-  border: 1px solid var(--input);
-  background: var(--bg);
-  color: var(--text);
-  transition: border-color 0.2s ease;
-}
-
-.field input:focus,
-.field textarea:focus {
-  outline: 2px solid var(--ring);
-  outline-offset: 1px;
-}
-
-.field textarea {
-  font: inherit;
-  padding: 10px 12px;
-  border-radius: var(--radius-sm);
-  border: 1px solid var(--input);
-  background: var(--bg);
-  color: var(--text);
-  resize: vertical;
-  min-height: 88px;
-  transition: border-color 0.2s ease;
-}
-
-.button {
-  font: inherit;
-  font-weight: 600;
-  padding: 10px 18px;
-  border-radius: var(--radius-sm);
-  border: none;
-  background: var(--primary);
-  color: var(--primary-foreground);
-  cursor: pointer;
-  transition:
-    background-color 0.2s ease,
-    color 0.2s ease,
-    border-color 0.2s ease,
-    filter 0.2s ease,
-    transform 0.15s ease;
-}
-
-.button:hover:not(:disabled) {
-  filter: brightness(1.08);
-}
-
-.button:active:not(:disabled) {
-  transform: translateY(1px);
-}
-
-.button:disabled {
-  opacity: 0.6;
-  cursor: not-allowed;
-}
-
-.button--secondary {
-  background: transparent;
-  color: var(--text);
-  border: 1px solid var(--border);
-}
-
-.button--secondary:hover:not(:disabled) {
-  background: var(--accent);
-  filter: none;
-}
-
-.error-banner {
-  background: var(--error-bg);
-  color: var(--error-fg);
-  border-radius: var(--radius-sm);
-  padding: 10px 14px;
-  font-size: 13px;
-  margin-bottom: 16px;
-}
-
-.grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
-  gap: 12px;
-  margin: 16px 0 4px;
-}
-
-.stat {
-  background: var(--bg);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-md);
-  padding: 14px 16px;
-}
-
-.stat .label {
-  color: var(--muted-foreground);
-  font-size: 12px;
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
-}
-
-.stat .value {
-  font-size: 20px;
-  font-weight: 600;
-  margin-top: 4px;
-  text-transform: capitalize;
-  font-variant-numeric: tabular-nums;
-}
-
-.badge {
-  display: inline-block;
-  padding: 2px 9px;
-  border-radius: 999px;
-  font-size: 12px;
-  font-weight: 600;
-}
-
-.badge.on {
-  background: var(--ok-bg);
-  color: var(--ok-fg);
-}
-
-.badge.off {
-  background: var(--off-bg);
-  color: var(--off-fg);
-}
-
-.muted {
-  color: var(--muted-foreground);
-}
-
-table {
-  width: 100%;
-  border-collapse: collapse;
-  font-size: 14px;
-}
-
-th,
-td {
-  text-align: left;
-  padding: 9px 10px;
-  border-bottom: 1px solid var(--border);
-}
-
-th {
-  color: var(--muted-foreground);
-  font-weight: 600;
-  font-size: 12px;
-  text-transform: uppercase;
-  letter-spacing: 0.03em;
-}
-
-tr:last-child td {
-  border-bottom: none;
-}
-
-.mono {
-  font-family: var(--font-mono), ui-monospace, SFMono-Regular, Menlo, monospace;
-  font-size: 13px;
-  font-variant-numeric: tabular-nums;
-}
-
-.num {
-  text-align: right;
-  font-variant-numeric: tabular-nums;
-}
-
-.actions {
-  display: flex;
-  gap: 10px;
-  align-items: center;
-  margin-top: 20px;
-}
-
-.overflow {
-  overflow-x: auto;
-}
-
-.pill-row {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-  margin-top: 8px;
-}
-
+/* Legacy selectors still pinned by the R-475 contract assertion (.pill, .pill--accent, .spinner
+   with its keyframes; the --radius-sm/md/lg and --surface-2 aliases live in :root above).
+   Nothing renders them any more as of R-495 - R-496 retires them with that assertion. */
 .pill {
   display: inline-block;
   padding: 4px 12px;
@@ -544,21 +294,6 @@ tr:last-child td {
   to {
     transform: rotate(360deg);
   }
-}
-
-.settings-active-now {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  background: var(--surface-2);
-  border-radius: var(--radius-md);
-  padding: 12px 16px;
-  font-size: 14px;
-}
-
-.studio-intro {
-  margin: 0 0 16px;
-  font-size: 14px;
 }
 
 /* Studio (R-493): chat rail on the left, workspace on the right, each scrolling on its own inside
@@ -630,13 +365,3 @@ tr:last-child td {
 .dark .code-tok-type { color: oklch(0.82 0.1 220); }
 .dark .code-tok-boolean { color: oklch(0.8 0.12 27); }
 .dark .code-tok-function { color: oklch(0.84 0.08 275); }
-
-@media (max-width: 640px) {
-  .wrap {
-    padding: 28px 16px 56px;
-  }
-
-  .masthead {
-    flex-direction: column;
-  }
-}

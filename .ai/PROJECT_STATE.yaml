@@ -2,10 +2,10 @@ schema_version: 1
 project: OmniStackAI
 phase: BASIC/MVP
 founder_stage: 0
-current_task: R-494
+current_task: R-495
 current_status: done
 branch: main
-last_completed_task: R-494
+last_completed_task: R-495
 # TASK COMPILATION AUDIT — 2026-09-16
 # Performed to achieve 100% synchronization across all task-tracking documentation.
 # Tracker workbook expanded to 464 tasks with R-464.
@@ -34,6 +34,55 @@ task_compilation_audit:
       new_status: DONE
       reason: "Task fully completed on 2026-09-11 with 35 tests. Status left stale during rapid development sprint."
 last_completed_task_summary: >-
+  Completed R-495 (2026-09-19): Settings + Fabric on the R-491 stack, and the legacy CSS sweep.
+  Fifth task of the Console UI overhaul (R-491..R-496); /settings and /fabric were the last two
+  screens on the hand-rolled .panel/.masthead/.badge/.stat/table classes.
+  Built: Settings (server page) - header, lg two-column layout with a sticky in-page nav
+  (Account / Appearance / Model providers anchors, scroll-mt); Account as a read-only dl (name,
+  email, plan badge, tabular credits with the "spent on cloud model calls; local models are free"
+  note, role, BYOK badge) and the honest "Profile editing isn't available yet." line - no fake
+  Save; Appearance with components/theme-switcher.tsx - a three-way System/Light/Dark segmented
+  control (role="group", aria-pressed, Monitor/Sun/Moon) on next-themes' useTheme, hydration-safe
+  via a useSyncExternalStore mounted flag (renders disabled + "Loading your preference…" in SSR,
+  then the real value; true note that the choice is saved in this browser), in Settings rather
+  than a header sun/moon switch; Model providers with the live Ready/Not ready "Your next build
+  uses provider · model" summary from the unchanged getProviderStatus() call, routing mode +
+  cloud tier + "N of M configured" + the payload's note, and a Card size="sm" per provider (mono
+  id, tier badge, kind, default model, Active/Needs key badge, a real "Set KEY_ENV in .env"
+  chip from ProviderInfo.keyEnv - variable NAMES only, the API never returns values - and "Runs
+  your next build" on the active one). Fabric (server page, still public inside the shell) -
+  header with a "snapshot vN" badge and the true note that scripts/console.sh snapshot
+  regenerates data/overview.json from platform_console_snapshot() on every console build; Routing
+  ladder as an ordered list with level chips and tier badges; Providers and Price book as
+  semantic Tailwind tables (sr-only captions, sticky-style header row, tabular-nums right-aligned
+  numbers, overflow-x-auto); Usage & resilience stat cards that say "No model calls are recorded
+  in this snapshot." instead of hiding the zeros, plus circuit breaker and fallback chain facts;
+  Builder showcase cards with verification-gate chips and a DiffBlock coloring +/-/@@ lines. CSS
+  sweep: 266 lines of the dead legacy family removed (.wrap/.masthead/.eyebrow/.panel/.field/
+  .button/.error-banner/.grid/.stat/.badge/.muted/.mono/.num/.actions/.overflow/.pill-row/
+  .settings-active-now/.studio-intro, the legacy table/td/th element rules and the 640px media
+  block); .pill/.pill--accent/.spinner/@keyframes spin and the --radius-*/--surface-2 aliases
+  remain for the R-475 assertion (R-496 retires them with it); .grain::before scoped from
+  position:fixed (it covered the whole viewport from the auth screen) to absolute. No API/lib/
+  data changes; no new deps.
+  Gates - three real catches on the first run, all mine, fixed before shipping: (1) lint failed
+  because react-hooks/set-state-in-effect IS enabled - the mounted-flag useEffect was replaced
+  with useSyncExternalStore; (2) build failed with a CssSyntaxError - my own sweep comment
+  contained "--radius-*/" whose */ closed the comment early; (3) scripts/test.sh found ".wrap {"
+  still in the dead 640px @media block my line-anchored check missed. After fixes:
+  typecheck/lint clean, build 23 routes, scripts/test.sh passes (new R-495 block), task verify
+  3,738 OK (checked for the "Ran N tests" line - it had run zero while test.sh failed),
+  lint/security/env pass. Live smoke: /settings signed in serves every section, the theme
+  control in its disabled pre-mount state (aria-pressed is set on mount - asserted in source,
+  not SSR), Ready · groq, N of 11 configured, 11 provider cards, 8 real keyEnv hints
+  (ANTHROPIC_API_KEY, OPENAI_API_KEY, ...); /fabric signed out serves the snapshot badge, ladder,
+  both captioned tables (11 provider rows, 20 price cells), the honest zero-usage note, the
+  showcase diff (12/12/12 colored lines), Sign in / Create account; signed in it shows the
+  account menu; the only legacy-word hits in the HTML are Tailwind utilities and none of the
+  legacy selectors exist in the stylesheet any more; other routes unchanged; 0 server errors.
+  Console running detached on 4321 - founder eyeballs /settings (flip the theme) and /fabric.
+  NEXT: R-496 (motion, states & polish; retire the R-475-pinned selectors with the assertion).
+_prior_last_completed_task_summary_R494: >-
   Completed R-494 (2026-09-19): Studio tabs - Preview chrome, Files tree, Code viewer, Problems
   on shadcn Tabs + Lucide. Fourth task of the Console UI overhaul (R-491..R-496). The four tabs
   inside R-493's workspace were still the R-481 hand-rolled versions (flat 200-item file list,
@@ -1982,11 +2031,12 @@ next_action: >-
   Geist + next-themes dark-first, R-470 gate retired), R-492 (auth screens + shared app shell
   with nav/user menu/skip link, branded 404, real dashboard), R-493 (Studio core: full-width
   chat-left/workspace-right layout, premium thread, working/hydrating/empty states, composer,
-  New app, project header) and R-494 (Studio tabs on shadcn Tabs: Files tree, Code tree+viewer,
+  New app, project header), R-494 (Studio tabs on shadcn Tabs: Files tree, Code tree+viewer,
   Problems with parsed diagnostics, Preview toolbar with width presets; studio-icons.tsx
-  retired) are done.
-  NEXT: R-495 (Settings/Fabric), R-496 (motion/states/polish + legacy CSS sweep) - roadmap in
-  the plan file. Then (not yet scoped): real
+  retired) and R-495 (Settings as a real settings page with a hydration-safe theme control and
+  live provider cards; Fabric as a proper data page; the legacy CSS family swept) are done.
+  NEXT: R-496 (motion, states & polish; retire the R-475-pinned .pill/.spinner selectors with
+  the assertion) - roadmap in the plan file. Then (not yet scoped): real
   multi-target Publish/deploy (Netlify one-click primary; Vercel/Cloudflare/self-host/GitHub-export
   as secondary options), Node.js backend codegen alongside Python/Go, and mobile (React Native
   near-term, per research - no competitor at scale generates native Kotlin/Swift). Separately, full
