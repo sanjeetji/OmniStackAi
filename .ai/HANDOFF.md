@@ -1,9 +1,34 @@
 # Current Handoff
 
-Task ID: R-490
+Task ID: R-491
 Status: done
 Phase: BASIC/MVP — Founder Stage 0
 Branch: `main`
+
+> **R-491 Completed (2026-09-19): Console — UI foundation (Tailwind v4 + shadcn/ui + Geist).**
+> - First of the six-task Console UI overhaul (R-491..R-496). The founder asked why the UI is
+>   "just simple and very ugly"; honest diagnosis: zero UI dependencies, hand-rolled CSS, an
+>   *enforced* R-470 gate blocking component libraries, every prior task backend-first. Founder
+>   chose "Full UI overhaul now" (reference bar: Emergent/Lovable/Dyad) — that decision retired
+>   the R-470 gate formally, recorded in the contract and in `scripts/test.sh`.
+> - Stack verified against real docs: Tailwind v4 via `@tailwindcss/postcss` (Next 16's own
+>   guide), shadcn/ui on **Radix** with the **Nova preset (= Lucide / Geist)**, `next-themes`
+>   dark-first, Geist + Geist Mono via `next/font`, Lucide, `tw-animate-css`, sonner.
+> - **Real tooling drift**: shadcn CLI v4.21 — `--base <base|radix|aria>` + named presets,
+>   Base UI default, preset names bare; `timeout` doesn't exist on macOS (one attempt silently
+>   never ran). Always read `--help` first.
+> - **Real init bug caught and fixed**: `shadcn init` clobbered legacy `--muted` (text) and
+>   `--accent` (brand) — light mode would have had invisible text/buttons. Full token rewrite:
+>   tinted OKLCH scale, one amber `--brand`, legacy names re-pointed, `.dark` class strategy for
+>   the dark block and syntax colors, one inline token fixed on `/fabric` (allowed_paths extended
+>   mid-task, recorded).
+> - Gates: `typecheck`/`lint`/`build` clean (23 routes, `/icon.svg` new); `scripts/test.sh` passes
+>   with the gate gone; `task verify` **3,738 OK**; lint/security/env pass. Live: every route
+>   smoked (200/307/404 as expected, authenticated API 200), served `<html>` carries both Geist
+>   font classes + theme script, 0 server errors. No browser tool — founder eyeballs
+>   `localhost:4321`.
+> - **NEXT**: R-492 (auth + app shell). Founder's screenshots feed R-493/R-494. See
+>   `.ai/tasks/R-491.md` and the Phase E-UI roadmap in the plan file.
 
 > **R-490 Completed (2026-09-19): Runtime — sandbox provider-selection surface.**
 > - Fifth and final task in the sandbox-provider sequence (R-486..R-490). New

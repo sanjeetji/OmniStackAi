@@ -339,7 +339,9 @@ closed by any task above:
 - **R-484 — Real-time build/edit streaming** *(renumbered again: R-482 went to the real Model
   Provider settings UI shipped 2026-09-19, and R-483 went to a real bug fix found live during
   R-481's own smoke test — a dynamic-route slug-name collision and a duplicate `lib/types.ts`
-  identifier, both in the edit-delta codegen path)*. Lovable/Dyad/Emergent's signature "smoothness" is watching the model write code live
+  identifier, both in the edit-delta codegen path)*. **Shipped 2026-09-19 as R-484 (backend SSE
+  through all three layers) + R-485 (console streaming UI with a live character count).** The
+  paragraph below is kept as the original scoping record. Lovable/Dyad/Emergent's signature "smoothness" is watching the model write code live
   (token-by-token, file-by-file) as it happens. Every task above still uses one blocking HTTP call
   that takes seconds to a few real minutes and then returns everything at once — R-477's chat UI
   would show "Building…" and then a result, not a live-updating stream, without this task. Requires
@@ -363,13 +365,84 @@ closed by any task above:
   its own "new infra" decision requiring explicit founder sign-off before any code gets written for
   it, per this project's standing rules.
 
-**Phase E — Plan/credit UX + admin surface (proposed R-484+)**
+**Phase E — Plan/credit UX + admin surface (proposed, not yet numbered)**
 - Plan-gated feature access in the UI, a credit top-up flow, a `super_admin` console (user
   management, usage, plan overrides — the Dyad "Danger Zone" / Emergent admin-adjacent idea).
 - Actual payment processor integration (Stripe or similar) is intentionally **not** included
   here — that is a "paid cloud service" decision under this project's standing rule ("stop and
   ask before choosing a paid cloud service") and gets its own explicit sign-off when this phase
   is reached, not bundled in silently.
+
+### Sandbox providers (R-486 → R-490, shipped 2026-09-19)
+
+Between the streaming work and the UI overhaul below, the founder chose to build **every**
+per-user sandbox provider pluggably behind one `SandboxLifecycleProvider` contract so the
+platform can later switch on cost/speed/smoothness per user base: **R-486** E2B, **R-487**
+Vercel Sandbox, **R-488** Daytona (all managed/paid, verified against each vendor's live API
+shape), **R-489** gVisor via the local Docker Engine socket (free, self-hosted, loopback-only —
+the founder's requested zero-cost development tier; WebContainers was researched and rejected
+because it needs a paid commercial license), and **R-490** the `OMNISTACKAI_SANDBOX_PROVIDER`
+selection surface (default `none`). No cloud keys exist in this environment, so live-cloud
+verification is honestly deferred; each driver is unit-tested against recorded API shapes. None of
+this is wired into the Studio's preview path yet — that, and per-user plan-based routing between
+free and paid providers, are named follow-ups that need the UI overhaul first.
+
+### Phase E-UI — Console UI overhaul (R-491 → R-496, approved 2026-09-19, **R-491 shipped**)
+
+After the sandbox sequence, the founder asked directly why the platform UI is "just simple and
+very ugly." The honest diagnosis, recorded here rather than softened: the console had **zero UI
+dependencies** (only `next`/`react`/`react-dom` — no component library, icon set, font, or motion),
+all styling was ~860 lines of hand-rolled CSS with one indigo accent, this was a deliberate and
+*enforced* constraint (the R-470 `scripts/test.sh` gate blocked `tailwind|shadcn|…`, and the
+Phase D plan carried a "no new UI dependency without strong justification" rule — visible above in
+R-475's and R-481's "rather than a new dependency" choices), and every task since had prioritized
+backend correctness over visual quality. Offered three options; the founder chose **Full UI
+overhaul now** ("I need proper best UI based platform not just simple a page"; reference bar:
+Emergent / Lovable / Dyad, screenshots to be re-shared).
+
+**That decision supersedes the no-UI-dependency rule and the R-470 gate.** R-491 retired the gate
+formally, with the decision recorded in its contract and in `scripts/test.sh`'s own comment — the
+same way every earlier hard gate in this doc was revised only with explicit founder direction.
+
+Stack (each verified against real, current docs during R-491, not assumed): Tailwind CSS v4 via
+`@tailwindcss/postcss` (Next 16's own bundled guide); shadcn/ui on **Radix** with the **Nova**
+preset (literally "Lucide / Geist" — the exact icon+font choice made independently; Radix chosen
+deliberately over the CLI's new Base UI default); Geist + Geist Mono self-hosted via `next/font`;
+`next-themes`, dark-first (every reference platform is a dark-first dev tool); Lucide icons;
+`tw-animate-css` + CSS motion (no Framer Motion unless a later task proves a need). Design
+language: a cool-tinted OKLCH neutral scale, **one** desaturated amber brand accent (no purple/blue
+"AI gradient"), tinted shadows, real type scale, visible focus rings, skeletons over spinners,
+designed empty/error states, sentence case.
+
+Sequence (each its own `.ai/tasks/R-###.md` contract, full gates, one commit — unchanged
+discipline):
+
+1. **R-491 — UI foundation** *(shipped 2026-09-19)*. Gate retired; stack installed; dark-first
+   token system with every legacy CSS name re-pointed so all existing pages keep rendering; new
+   root layout (fonts, theme provider, toaster, metadata, branded `icon.svg`). Two real things
+   found while doing it, both worked through rather than glossed over: the installed shadcn CLI
+   (v4.21) had materially changed its flags and defaults, and `shadcn init` clobbered two legacy
+   token names (`--muted`, `--accent`) that would have made light mode unreadable — fixed in the
+   token rewrite. Every route live-smoked; 3,738 agent-engine tests unaffected.
+2. **R-492 — Auth + app shell.** Login/register redesign with real inline validation and loading
+   states; top navigation with current-page state; user menu; skip-link; branded 404; a real
+   home/dashboard instead of a link list.
+3. **R-493 — Studio core.** Chat rail + workspace shell rebuilt on shadcn primitives: a premium
+   chat thread, the streaming state (shimmer/skeleton, live character count kept), composer, a
+   designed "getting started" empty state; Lucide replaces the hand-rolled `studio-icons.tsx`.
+4. **R-494 — Studio tabs.** Files as a real tree; Code viewer polish (line numbers, highlighting);
+   Preview frame chrome (status pill, open-in-new-tab, width presets); Problems grouped by file
+   with severity.
+5. **R-495 — Settings + Fabric.** Provider status as real settings cards (Ready / Needs key), the
+   theme toggle (in Settings, not a sun/moon switch), fabric/cost overview with proper data
+   typography.
+6. **R-496 — Motion, states & polish.** Staggered entries, hover/active/focus sweep, loading/
+   empty/error audit, responsive pass, OG/meta, final audit checklist.
+
+**Verification caveat, stated once here and in every task's evidence:** no browser-automation tool
+exists in these sessions. Structure (served HTML, fonts, theme script, every route's status) is
+verified by `curl` against the real running stack; visual quality is the one thing that cannot be,
+so the founder is asked to eyeball `http://localhost:4321` after each task.
 
 ---
 
@@ -414,11 +487,16 @@ closed by any task above:
 
 ## 6. How to resume this if the session stops here
 
-**Immediate next action as of 2026-09-18 (session paused here on the founder's request — "close my
-system and want to start tomorrow"): R-475, the first item in Phase D's "Remaining Phase D roadmap"
-above.** `.ai/PROJECT_STATE.yaml`'s `next_action` and `.ai/CURRENT_TASK.yaml` are the authoritative
-pointers per `AGENTS.md`'s source-of-truth order (they win over this paragraph if they ever
-disagree) — read them first, but they should already agree with this.
+**Immediate next action as of 2026-09-19: R-492 (auth + app shell), the second item in "Phase
+E-UI — Console UI overhaul" above; R-475 → R-481, R-482 → R-485, R-486 → R-490 and R-491 are all
+shipped.** `.ai/PROJECT_STATE.yaml`'s `next_action` and `.ai/CURRENT_TASK.yaml` are the
+authoritative pointers per `AGENTS.md`'s source-of-truth order (they win over this paragraph if
+they ever disagree) — read them first, but they should already agree with this. The founder's
+Emergent / Lovable / Dyad screenshots, once shared, shape R-493/R-494's Studio screens; R-492 does
+not depend on them.
+
+*(The numbered steps below are the original 2026-09-18 resume instructions for R-475, kept as the
+historical record of how Phase D was resumed; the same discipline applies to every task above.)*
 
 1. Read this file in full before touching code.
 2. Read `.ai/PROJECT_STATE.yaml` and `.ai/CURRENT_TASK.yaml` — if they show a different

@@ -1,4 +1,4 @@
-# OmniStackAI — implementation progress (as of R-490)
+# OmniStackAI — implementation progress (as of R-491)
 
 A living summary of what is built, what is pending, and how to see results. Numbers come from the
 execution tracker (`R_&_D/OmniStackAI_Execution_Tracker_v6.xlsx`, `Phase_Roadmap`, 461 tasks as of
@@ -8,6 +8,21 @@ R-461 completion) plus the state files (`.ai/`), Git history, and CHANGELOG.
 
 - **3,738 automated tests pass** (agent-engine + Go control-plane), fully offline and
   network-independent (`task verify`), plus the console's own `typecheck`/`lint`/`build` gates.
+- **R-491 — Console: UI foundation, Tailwind v4 + shadcn/ui + Geist, dark-first (2026-09-19):**
+  first of the six-task Console UI overhaul (R-491..R-496), approved after the founder asked why
+  the UI is "just simple and very ugly" — honest diagnosis: zero UI dependencies, hand-rolled
+  CSS, an *enforced* R-470 gate blocking component libraries, every prior task backend-first.
+  The founder's "Full UI overhaul now" decision retires the gate formally (recorded). Stack
+  verified against real docs: Tailwind v4 via `@tailwindcss/postcss` (Next 16's own guide),
+  shadcn/ui on Radix with the Nova preset (literally "Lucide / Geist" — the exact independent
+  choice), `next-themes` dark-first, Geist + Geist Mono via `next/font`. Real tooling drift
+  (shadcn CLI v4.21's new `--base`/preset model; `timeout` absent on macOS) and a real init bug
+  (`--muted`/`--accent` clobbered → invisible text/buttons in light mode) were worked through and
+  fixed in a full token rewrite (tinted OKLCH scale, one amber brand accent, legacy names
+  re-pointed, `.dark` class strategy). `typecheck`/`lint`/`build` clean (23 routes); repo gates
+  pass; **3,738 tests** unaffected. Live: every route smoked, fonts + theme script present in the
+  served HTML, 0 server errors. Founder eyeballs `localhost:4321` (no browser tool). See
+  `.ai/tasks/R-491.md`.
 - **R-490 — Runtime: sandbox provider-selection surface (2026-09-19):** fifth and final task in
   the sandbox-provider sequence (R-486..R-490). New `runtime/sandbox_selection.py`:
   `build_sandbox_from_env(selection=None, *, providers=None) -> SandboxSetup`, mirroring

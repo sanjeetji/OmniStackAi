@@ -1,63 +1,267 @@
-/* Design tokens carried forward from the Stage-0 static console (apps/console-web/styles.css,
-   removed in R-470) - same palette, same light/dark behavior, now the base for a real app. */
+@import "tailwindcss";
+@import "tw-animate-css";
+@import "shadcn/tailwind.css";
+
+@custom-variant dark (&:is(.dark *));
+
+/* ==========================================================================================
+   Design tokens (R-491) - dark-first.
+
+   One cool-tinted OKLCH neutral scale (hue 255, low chroma) instead of pure gray, and ONE
+   desaturated brand accent (amber) - no purple/blue "AI gradient". shadcn's semantic names are
+   the canonical set. The legacy console names (--bg, --panel, --text, ...) are aliased onto them
+   via var() so every pre-existing class keeps rendering - and follows the theme automatically -
+   while the screens are rebuilt in R-492..R-496.
+
+   Two legacy names collide with shadcn's semantics and were re-pointed in the rules below:
+   legacy --muted (a text color)  -> --muted-foreground
+   legacy --accent (the brand)    -> --brand   (shadcn's --accent is a subtle hover surface)
+   ========================================================================================== */
 :root {
-  --bg: #f6f7f9;
-  --panel: #ffffff;
-  --surface-2: #eef0f4;
-  --border: #e4e7ec;
-  --text: #101828;
-  --muted: #667085;
-  --accent: #4f46e5;
-  --accent-soft-bg: #eef2ff;
-  --accent-soft-fg: #4338ca;
-  --ok-bg: #ecfdf3;
-  --ok-fg: #067647;
-  --off-bg: #f2f4f7;
-  --off-fg: #667085;
-  --error-bg: #fef3f2;
-  --error-fg: #b42318;
-  --shadow: 0 14px 40px rgba(16, 24, 40, 0.08);
-  --radius-sm: 8px;
-  --radius-md: 12px;
-  --radius-lg: 16px;
+  --radius: 0.75rem;
+
+  --background: oklch(0.985 0.003 255);
+  --foreground: oklch(0.18 0.015 255);
+  --card: oklch(1 0 0);
+  --card-foreground: var(--foreground);
+  --popover: oklch(1 0 0);
+  --popover-foreground: var(--foreground);
+  --primary: oklch(0.22 0.02 255);
+  --primary-foreground: oklch(0.985 0.003 255);
+  --secondary: oklch(0.955 0.006 255);
+  --secondary-foreground: oklch(0.24 0.02 255);
+  --muted: oklch(0.955 0.006 255);
+  --muted-foreground: oklch(0.5 0.02 255);
+  --accent: oklch(0.955 0.006 255);
+  --accent-foreground: oklch(0.24 0.02 255);
+  --destructive: oklch(0.58 0.22 27);
+  --border: oklch(0.905 0.008 255);
+  --input: oklch(0.905 0.008 255);
+  --ring: oklch(0.7 0.12 75);
+  --chart-1: oklch(0.66 0.16 68);
+  --chart-2: oklch(0.5 0.02 255);
+  --chart-3: oklch(0.38 0.02 255);
+  --chart-4: oklch(0.72 0.02 255);
+  --chart-5: oklch(0.86 0.01 255);
+  --sidebar: var(--card);
+  --sidebar-foreground: var(--foreground);
+  --sidebar-primary: var(--primary);
+  --sidebar-primary-foreground: var(--primary-foreground);
+  --sidebar-accent: var(--accent);
+  --sidebar-accent-foreground: var(--accent-foreground);
+  --sidebar-border: var(--border);
+  --sidebar-ring: var(--ring);
+
+  /* The one accent. Darker in light mode for contrast on white. */
+  --brand: oklch(0.62 0.16 65);
+  --brand-foreground: oklch(0.985 0.003 255);
+  --brand-soft: oklch(0.95 0.05 80);
+  --brand-soft-foreground: oklch(0.45 0.14 60);
+
+  /* Status */
+  --ok-bg: oklch(0.95 0.04 155);
+  --ok-fg: oklch(0.42 0.12 155);
+  --off-bg: var(--muted);
+  --off-fg: var(--muted-foreground);
+  --error-bg: oklch(0.95 0.03 25);
+  --error-fg: oklch(0.5 0.19 27);
+
+  /* Legacy aliases (follow the theme through var()) */
+  --bg: var(--background);
+  --panel: var(--card);
+  --surface-2: var(--secondary);
+  --text: var(--foreground);
+  --accent-soft-bg: var(--brand-soft);
+  --accent-soft-fg: var(--brand-soft-foreground);
+  --shadow:
+    0 1px 2px oklch(0.18 0.015 255 / 0.06),
+    0 12px 32px -12px oklch(0.18 0.015 255 / 0.18);
+  --radius-sm: calc(var(--radius) * 0.6);
+  --radius-md: calc(var(--radius) * 0.8);
+  --radius-lg: var(--radius);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --bg: #0b0f19;
-    --panel: #131824;
-    --surface-2: #1a2030;
-    --border: #262c3a;
-    --text: #e6e9ef;
-    --muted: #98a2b3;
-    --accent: #a5b4fc;
-    --accent-soft-bg: #1e1b4b;
-    --accent-soft-fg: #c7d2fe;
-    --ok-bg: #05331f;
-    --ok-fg: #6ce9a6;
-    --off-bg: #1c2230;
-    --off-fg: #98a2b3;
-    --error-bg: #3a0f0f;
-    --error-fg: #fda29b;
-    --shadow: 0 14px 40px rgba(0, 0, 0, 0.22);
+.dark {
+  /* Off-black, tinted - never pure #000. */
+  --background: oklch(0.145 0.012 255);
+  --foreground: oklch(0.93 0.008 255);
+  --card: oklch(0.185 0.014 255);
+  --card-foreground: var(--foreground);
+  --popover: oklch(0.2 0.014 255);
+  --popover-foreground: var(--foreground);
+  --primary: oklch(0.93 0.008 255);
+  --primary-foreground: oklch(0.17 0.014 255);
+  --secondary: oklch(0.24 0.014 255);
+  --secondary-foreground: var(--foreground);
+  --muted: oklch(0.24 0.014 255);
+  --muted-foreground: oklch(0.68 0.015 255);
+  --accent: oklch(0.26 0.016 255);
+  --accent-foreground: var(--foreground);
+  --destructive: oklch(0.68 0.19 25);
+  --border: oklch(1 0 0 / 9%);
+  --input: oklch(1 0 0 / 12%);
+  --ring: oklch(0.78 0.14 78);
+  --chart-1: oklch(0.8 0.14 78);
+  --chart-2: oklch(0.68 0.015 255);
+  --chart-3: oklch(0.5 0.015 255);
+  --chart-4: oklch(0.36 0.014 255);
+  --chart-5: oklch(0.26 0.014 255);
+
+  --brand: oklch(0.8 0.14 78);
+  --brand-foreground: oklch(0.17 0.02 70);
+  --brand-soft: oklch(0.8 0.14 78 / 14%);
+  --brand-soft-foreground: oklch(0.86 0.12 82);
+
+  --ok-bg: oklch(0.7 0.15 155 / 14%);
+  --ok-fg: oklch(0.8 0.15 155);
+  --error-bg: oklch(0.68 0.19 25 / 14%);
+  --error-fg: oklch(0.8 0.13 25);
+
+  /* Tinted shadow - carries the background hue rather than flat black. */
+  --shadow:
+    0 1px 2px oklch(0.08 0.012 255 / 0.5),
+    0 16px 40px -16px oklch(0.08 0.012 255 / 0.7);
+}
+
+@theme inline {
+  --font-heading: var(--font-sans);
+  --font-sans: var(--font-sans);
+  --font-mono: var(--font-mono);
+  --color-sidebar-ring: var(--sidebar-ring);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar: var(--sidebar);
+  --color-chart-5: var(--chart-5);
+  --color-chart-4: var(--chart-4);
+  --color-chart-3: var(--chart-3);
+  --color-chart-2: var(--chart-2);
+  --color-chart-1: var(--chart-1);
+  --color-ring: var(--ring);
+  --color-input: var(--input);
+  --color-border: var(--border);
+  --color-destructive: var(--destructive);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-accent: var(--accent);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-muted: var(--muted);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-secondary: var(--secondary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-primary: var(--primary);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-popover: var(--popover);
+  --color-card-foreground: var(--card-foreground);
+  --color-card: var(--card);
+  --color-foreground: var(--foreground);
+  --color-background: var(--background);
+  --color-brand: var(--brand);
+  --color-brand-foreground: var(--brand-foreground);
+  --color-brand-soft: var(--brand-soft);
+  --color-brand-soft-foreground: var(--brand-soft-foreground);
+  --radius-sm: calc(var(--radius) * 0.6);
+  --radius-md: calc(var(--radius) * 0.8);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) * 1.4);
+  --radius-2xl: calc(var(--radius) * 1.8);
+  --radius-3xl: calc(var(--radius) * 2.2);
+  --radius-4xl: calc(var(--radius) * 2.6);
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+  body {
+    @apply bg-background text-foreground;
+  }
+  html {
+    @apply font-sans;
   }
 }
 
+/* ==========================================================================================
+   Base
+   ========================================================================================== */
 * {
   box-sizing: border-box;
 }
 
+html {
+  scroll-behavior: smooth;
+}
+
 body {
   margin: 0;
-  background: var(--bg);
-  color: var(--text);
-  font: 15px/1.5 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  background: var(--background);
+  color: var(--foreground);
+  font-family: var(--font-sans), ui-sans-serif, system-ui, sans-serif;
+  font-size: 15px;
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+h1,
+h2,
+h3 {
+  letter-spacing: -0.02em;
+  text-wrap: balance;
+}
+
+p {
+  text-wrap: pretty;
 }
 
 a {
-  color: var(--accent);
+  color: var(--brand);
+  transition: color 0.2s ease;
 }
 
+::selection {
+  background: var(--brand-soft);
+  color: var(--brand-soft-foreground);
+}
+
+:focus-visible {
+  outline: 2px solid var(--ring);
+  outline-offset: 2px;
+}
+
+* {
+  scrollbar-width: thin;
+  scrollbar-color: color-mix(in oklch, var(--foreground) 18%, transparent) transparent;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* A fixed, pointer-events-none noise overlay that breaks digital flatness on large surfaces.
+   Opt-in via the class; wired into the app shell in R-492. */
+.grain::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 1;
+  opacity: 0.035;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+}
+
+/* ==========================================================================================
+   Legacy console classes - kept intact (only tokens re-pointed) until R-492..R-496 rebuild
+   each screen on the shadcn primitives.
+   ========================================================================================== */
 .wrap {
   max-width: 720px;
   margin: 0 auto;
@@ -84,14 +288,14 @@ header.masthead h1 {
 
 header.masthead .lede {
   margin: 0;
-  color: var(--muted);
+  color: var(--muted-foreground);
   max-width: 560px;
   font-size: 15px;
 }
 
 .eyebrow {
   margin: 0;
-  color: var(--accent);
+  color: var(--brand);
   font-size: 11px;
   font-weight: 700;
   letter-spacing: 0.1em;
@@ -122,21 +326,22 @@ header.masthead .lede {
 .field label {
   font-size: 13px;
   font-weight: 600;
-  color: var(--muted);
+  color: var(--muted-foreground);
 }
 
 .field input {
   font: inherit;
   padding: 10px 12px;
   border-radius: var(--radius-sm);
-  border: 1px solid var(--border);
+  border: 1px solid var(--input);
   background: var(--bg);
   color: var(--text);
+  transition: border-color 0.2s ease;
 }
 
 .field input:focus,
 .field textarea:focus {
-  outline: 2px solid var(--accent);
+  outline: 2px solid var(--ring);
   outline-offset: 1px;
 }
 
@@ -144,11 +349,12 @@ header.masthead .lede {
   font: inherit;
   padding: 10px 12px;
   border-radius: var(--radius-sm);
-  border: 1px solid var(--border);
+  border: 1px solid var(--input);
   background: var(--bg);
   color: var(--text);
   resize: vertical;
   min-height: 88px;
+  transition: border-color 0.2s ease;
 }
 
 .button {
@@ -157,9 +363,23 @@ header.masthead .lede {
   padding: 10px 18px;
   border-radius: var(--radius-sm);
   border: none;
-  background: var(--accent);
-  color: #fff;
+  background: var(--primary);
+  color: var(--primary-foreground);
   cursor: pointer;
+  transition:
+    background-color 0.2s ease,
+    color 0.2s ease,
+    border-color 0.2s ease,
+    filter 0.2s ease,
+    transform 0.15s ease;
+}
+
+.button:hover:not(:disabled) {
+  filter: brightness(1.08);
+}
+
+.button:active:not(:disabled) {
+  transform: translateY(1px);
 }
 
 .button:disabled {
@@ -171,6 +391,11 @@ header.masthead .lede {
   background: transparent;
   color: var(--text);
   border: 1px solid var(--border);
+}
+
+.button--secondary:hover:not(:disabled) {
+  background: var(--accent);
+  filter: none;
 }
 
 .error-banner {
@@ -197,7 +422,7 @@ header.masthead .lede {
 }
 
 .stat .label {
-  color: var(--muted);
+  color: var(--muted-foreground);
   font-size: 12px;
   text-transform: uppercase;
   letter-spacing: 0.04em;
@@ -208,6 +433,7 @@ header.masthead .lede {
   font-weight: 600;
   margin-top: 4px;
   text-transform: capitalize;
+  font-variant-numeric: tabular-nums;
 }
 
 .badge {
@@ -229,7 +455,7 @@ header.masthead .lede {
 }
 
 .muted {
-  color: var(--muted);
+  color: var(--muted-foreground);
 }
 
 table {
@@ -246,7 +472,7 @@ td {
 }
 
 th {
-  color: var(--muted);
+  color: var(--muted-foreground);
   font-weight: 600;
   font-size: 12px;
   text-transform: uppercase;
@@ -258,8 +484,9 @@ tr:last-child td {
 }
 
 .mono {
-  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-family: var(--font-mono), ui-monospace, SFMono-Regular, Menlo, monospace;
   font-size: 13px;
+  font-variant-numeric: tabular-nums;
 }
 
 .num {
@@ -308,7 +535,7 @@ tr:last-child td {
   width: 16px;
   height: 16px;
   border: 2px solid var(--border);
-  border-top-color: var(--accent);
+  border-top-color: var(--brand);
   border-radius: 50%;
   animation: spin 0.7s linear infinite;
 }
@@ -320,7 +547,7 @@ tr:last-child td {
 }
 
 .studio-shell {
-  min-height: 100vh;
+  min-height: 100dvh;
   display: flex;
   flex-direction: column;
 }
@@ -345,7 +572,7 @@ tr:last-child td {
 }
 
 .studio-topbar-back:hover {
-  color: var(--accent);
+  color: var(--brand);
 }
 
 .studio-topbar-brand {
@@ -365,11 +592,14 @@ tr:last-child td {
   width: 36px;
   height: 36px;
   border-radius: var(--radius-sm);
-  color: var(--muted);
+  color: var(--muted-foreground);
+  transition:
+    color 0.2s ease,
+    background-color 0.2s ease;
 }
 
 .studio-topbar-icon-link:hover {
-  color: var(--accent);
+  color: var(--brand);
   background: var(--surface-2);
 }
 
@@ -438,6 +668,7 @@ tr:last-child td {
   padding: 6px 4px;
   cursor: pointer;
   border-radius: 6px;
+  transition: background-color 0.15s ease;
 }
 
 .file-list-item:hover {
@@ -445,8 +676,8 @@ tr:last-child td {
 }
 
 .file-list-item.selected {
-  background: var(--accent);
-  color: #fff;
+  background: var(--brand-soft);
+  color: var(--brand-soft-foreground);
 }
 
 .file-viewer {
@@ -455,7 +686,7 @@ tr:last-child td {
 
 .file-viewer-header {
   font-size: 13px;
-  color: var(--muted);
+  color: var(--muted-foreground);
   margin-bottom: 6px;
 }
 
@@ -481,7 +712,7 @@ tr:last-child td {
 .chat-rail {
   display: flex;
   flex-direction: column;
-  height: calc(100vh - 160px);
+  height: calc(100dvh - 160px);
   min-height: 420px;
   position: sticky;
   top: 20px;
@@ -497,7 +728,7 @@ tr:last-child td {
 }
 
 .chat-empty {
-  color: var(--muted);
+  color: var(--muted-foreground);
   font-size: 13px;
   text-align: center;
   padding: 24px 8px;
@@ -516,8 +747,8 @@ tr:last-child td {
 
 .chat-message--user {
   align-self: flex-end;
-  background: var(--accent);
-  color: #fff;
+  background: var(--primary);
+  color: var(--primary-foreground);
 }
 
 .chat-message--assistant {
@@ -546,7 +777,7 @@ tr:last-child td {
   font: inherit;
   padding: 10px 12px;
   border-radius: var(--radius-sm);
-  border: 1px solid var(--border);
+  border: 1px solid var(--input);
   background: var(--bg);
   color: var(--text);
   resize: none;
@@ -555,7 +786,7 @@ tr:last-child td {
 }
 
 .chat-composer textarea:focus {
-  outline: 2px solid var(--accent);
+  outline: 2px solid var(--ring);
   outline-offset: 1px;
 }
 
@@ -567,10 +798,21 @@ tr:last-child td {
   height: 44px;
   border-radius: var(--radius-sm);
   border: none;
-  background: var(--accent);
-  color: #fff;
+  background: var(--primary);
+  color: var(--primary-foreground);
   cursor: pointer;
   flex-shrink: 0;
+  transition:
+    filter 0.2s ease,
+    transform 0.15s ease;
+}
+
+.chat-send:hover:not(:disabled) {
+  filter: brightness(1.08);
+}
+
+.chat-send:active:not(:disabled) {
+  transform: translateY(1px);
 }
 
 .chat-send:disabled {
@@ -600,14 +842,21 @@ tr:last-child td {
   padding: 12px 18px;
   border: none;
   background: none;
-  color: var(--muted);
+  color: var(--muted-foreground);
   cursor: pointer;
   border-bottom: 2px solid transparent;
+  transition:
+    color 0.2s ease,
+    border-color 0.2s ease;
+}
+
+.tab-button:hover {
+  color: var(--text);
 }
 
 .tab-button--active {
-  color: var(--accent);
-  border-bottom-color: var(--accent);
+  color: var(--text);
+  border-bottom-color: var(--brand);
 }
 
 .tab-panel {
@@ -630,7 +879,7 @@ tr:last-child td {
   font: inherit;
   padding: 8px 10px;
   border-radius: var(--radius-sm);
-  border: 1px solid var(--border);
+  border: 1px solid var(--input);
   background: var(--bg);
   color: var(--text);
 }
@@ -642,6 +891,7 @@ tr:last-child td {
   padding: 14px 0;
   max-height: 520px;
   overflow: auto;
+  font-family: var(--font-mono), ui-monospace, SFMono-Regular, Menlo, monospace;
   font-size: 13px;
   line-height: 1.6;
 }
@@ -656,10 +906,11 @@ tr:last-child td {
   display: inline-block;
   width: 3em;
   flex-shrink: 0;
-  color: var(--muted);
+  color: var(--muted-foreground);
   text-align: right;
   margin-right: 14px;
   user-select: none;
+  font-variant-numeric: tabular-nums;
 }
 
 .code-line-text {
@@ -667,26 +918,26 @@ tr:last-child td {
   word-break: break-word;
 }
 
-.code-tok-keyword { color: #7c3aed; }
-.code-tok-string { color: #067647; }
-.code-tok-comment { color: var(--muted); font-style: italic; }
-.code-tok-number { color: #b42318; }
-.code-tok-type { color: #0e7490; }
-.code-tok-boolean { color: #b42318; }
-.code-tok-function { color: #4338ca; }
+/* Syntax colors: light, then .dark (class strategy - never the OS media query, so the theme
+   toggle stays authoritative). */
+.code-tok-keyword { color: oklch(0.5 0.2 300); }
+.code-tok-string { color: oklch(0.45 0.13 155); }
+.code-tok-comment { color: var(--muted-foreground); font-style: italic; }
+.code-tok-number { color: oklch(0.5 0.19 27); }
+.code-tok-type { color: oklch(0.48 0.1 220); }
+.code-tok-boolean { color: oklch(0.5 0.19 27); }
+.code-tok-function { color: oklch(0.45 0.15 275); }
 .code-tok-variable { color: inherit; }
-.code-tok-operator { color: var(--muted); }
-.code-tok-punctuation { color: var(--muted); }
+.code-tok-operator { color: var(--muted-foreground); }
+.code-tok-punctuation { color: var(--muted-foreground); }
 .code-tok-plain { color: inherit; }
 
-@media (prefers-color-scheme: dark) {
-  .code-tok-keyword { color: #a5b4fc; }
-  .code-tok-string { color: #6ce9a6; }
-  .code-tok-number { color: #fda29b; }
-  .code-tok-type { color: #7dd3fc; }
-  .code-tok-boolean { color: #fda29b; }
-  .code-tok-function { color: #c7d2fe; }
-}
+.dark .code-tok-keyword { color: oklch(0.8 0.1 300); }
+.dark .code-tok-string { color: oklch(0.82 0.13 155); }
+.dark .code-tok-number { color: oklch(0.8 0.12 27); }
+.dark .code-tok-type { color: oklch(0.82 0.1 220); }
+.dark .code-tok-boolean { color: oklch(0.8 0.12 27); }
+.dark .code-tok-function { color: oklch(0.84 0.08 275); }
 
 .problems-tab {
   display: flex;
@@ -747,7 +998,7 @@ tr:last-child td {
 
 .problems-file-group li {
   font-size: 12px;
-  color: var(--muted);
+  color: var(--muted-foreground);
 }
 
 .studio-workspace-column {
@@ -771,7 +1022,7 @@ tr:last-child td {
 }
 
 .preview-url {
-  color: var(--muted);
+  color: var(--muted-foreground);
   font-size: 12px;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -806,12 +1057,12 @@ tr:last-child td {
   display: flex;
   align-items: center;
   gap: 10px;
-  color: var(--muted);
+  color: var(--muted-foreground);
   font-size: 14px;
 }
 
 .preview-disabled code {
-  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-family: var(--font-mono), ui-monospace, SFMono-Regular, Menlo, monospace;
   font-size: 13px;
   background: var(--bg);
   padding: 1px 6px;

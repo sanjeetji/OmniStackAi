@@ -273,10 +273,9 @@ for removed_file in index.html app.js styles.css; do
   fi
 done
 
-if rg -qi 'tailwind|shadcn|styled-components|@emotion|bootstrap|material-ui|@mui' "$console_root/package.json"; then
-  printf 'R-470 must not add a UI/component-library dependency to the console.\n'
-  exit 1
-fi
+# R-470's "no UI/component-library dependency in the console" gate was retired in R-491 with the
+# founder's explicit "Full UI overhaul now" decision (2026-09-19) - the console now standardizes on
+# Tailwind v4 + shadcn/ui (see the R-491 block below, which asserts their presence instead).
 
 if ! rg -q '^\.next/$' "$repo_root/.gitignore"; then
   printf 'Missing .gitignore entry for the console build output: .next/\n'
@@ -678,6 +677,38 @@ fi
 
 if ! rg -qF 'class SandboxSelectionError' "$agent_engine_root/src/omnistackai_agent_engine/runtime/errors.py"; then
   printf 'R-490 must add SandboxSelectionError to runtime/errors.py.\n'
+  exit 1
+fi
+
+# R-491: console UI foundation - Tailwind v4 + shadcn/ui + Geist (the R-470 gate above was retired
+# with the founder's explicit "Full UI overhaul now" decision, 2026-09-19).
+for required_file in \
+  "$console_root/postcss.config.mjs" \
+  "$console_root/components.json" \
+  "$console_root/lib/utils.ts" \
+  "$console_root/components/ui/button.tsx" \
+  "$console_root/app/theme-provider.tsx" \
+  "$console_root/app/icon.svg"; do
+  if [[ ! -f "$required_file" ]]; then
+    printf 'Missing R-491 contract file: %s\n' "$required_file"
+    exit 1
+  fi
+done
+
+for dependency in tailwindcss '@tailwindcss/postcss' shadcn next-themes lucide-react; do
+  if ! rg -qF "\"$dependency\"" "$console_root/package.json"; then
+    printf 'R-491 console must depend on %s.\n' "$dependency"
+    exit 1
+  fi
+done
+
+if ! rg -qF '@import "tailwindcss"' "$console_root/app/globals.css"; then
+  printf 'R-491 must import Tailwind in app/globals.css.\n'
+  exit 1
+fi
+
+if ! rg -qF 'Geist_Mono' "$console_root/app/layout.tsx"; then
+  printf 'R-491 must load Geist and Geist Mono via next/font in app/layout.tsx.\n'
   exit 1
 fi
 

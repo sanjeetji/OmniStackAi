@@ -4,6 +4,30 @@ Last updated: 2026-09-19
 ## Current Phase
 Stage 0 (Founder Build Sequence, Brief Section 91) — BASIC/MVP
 
+> **R-491 (2026-09-19): Console — UI foundation (Tailwind v4 + shadcn/ui + Geist, dark-first).**
+> First of the six-task Console UI overhaul (R-491..R-496), approved after the founder asked why
+> the platform UI is "just simple and very ugly" — honest diagnosis: zero UI dependencies (hand-
+> rolled CSS, OS system font, no component library), an *enforced* R-470 gate blocking them, and
+> every prior task prioritizing backend correctness. Founder's decision ("I need proper best UI
+> based platform not just simple a page"; reference bar: Emergent/Lovable/Dyad) supersedes the
+> gate — retired formally with the decision recorded. Stack verified against real, current docs:
+> Tailwind v4 via `@tailwindcss/postcss` (Next 16's own bundled guide), shadcn/ui on **Radix**
+> with the **Nova preset — literally "Lucide / Geist"**, the exact icon+font choice made
+> independently — `next-themes` dark-first, Geist + Geist Mono self-hosted via `next/font`. **Real
+> tooling drift worked through**: shadcn CLI v4.21 replaced `--base-color` with a `--base`
+> library choice + named presets, defaults to Base UI (not Radix), and one attempt silently never
+> ran because `timeout` doesn't exist on macOS. **A real init bug caught and fixed**: `shadcn
+> init` clobbered the legacy `--muted` (text) and `--accent` (brand) names it shares — light mode
+> would have had invisible muted text and white-on-white buttons; the token rewrite re-points
+> every legacy usage onto a tinted OKLCH scale with one amber brand accent, converts the dark
+> block and syntax colors to the `.dark` class strategy, and fixes one inline token on `/fabric`.
+> `typecheck`/`lint`/`build` clean (23 routes, `/icon.svg` new); `scripts/test.sh` passes with
+> the gate gone; `task verify` **3,738 OK**. Live: every route smoked (200/307/404 as expected,
+> authenticated API 200), served `<html>` carries both Geist font classes + the theme script, 0
+> server errors. No browser tool here — founder eyeballs `localhost:4321`.
+> NEXT: R-492 (auth + app shell), then R-493/R-494 Studio screens informed by the founder's
+> screenshots.
+
 > **R-490 (2026-09-19): Runtime — sandbox provider-selection surface.** Fifth and final task in
 > the sandbox-provider sequence (R-486..R-490). New `runtime/sandbox_selection.py`:
 > `build_sandbox_from_env(selection=None, *, providers=None) -> SandboxSetup`, a registry of the

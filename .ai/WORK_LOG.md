@@ -1,5 +1,60 @@
 # Work Log
 
+## 2026-09-19 — R-491 (Console: UI foundation — Tailwind v4 + shadcn/ui + Geist, dark-first)
+
+- **Why:** after R-486–R-490 shipped, the founder asked why the platform UI is "just simple and
+  very ugly." Honest, specific diagnosis from direct reads: `package.json` had zero UI
+  dependencies (no component library, icon set, font, or motion), all styling was 858 lines of
+  hand-rolled CSS with one indigo accent, this was a deliberate *enforced* constraint
+  (`scripts/test.sh:276`, the R-470 gate, plus the Phase D "no new UI dependency" rule), and
+  every task since prioritized backend correctness. Offered three honest options; the founder
+  chose **Full UI overhaul now** ("I need proper best UI based platform not just simple a page";
+  reference bar: Emergent/Lovable/Dyad, screenshots to be re-shared — none exist in the repo).
+- **Roadmap written first** (plan file, Phase E-UI): R-491 foundation → R-492 auth + app shell →
+  R-493 Studio core → R-494 Studio tabs → R-495 Settings/Fabric → R-496 motion/states/polish.
+- **Gate retired with the decision recorded**: the R-470 `scripts/test.sh` gate blocking
+  `tailwind|shadcn|…` was removed with a comment citing the founder's decision, replaced by an
+  R-491 block asserting the new stack is present — the same "hard gates change only with explicit
+  founder direction" discipline as every prior gate revision.
+- **Stack decisions verified against real, current docs** (not assumed): Tailwind v4 via
+  `@tailwindcss/postcss` per Next 16's own bundled CSS guide (read directly — the console's
+  `AGENTS.md` warns Next 16 differs from training data); shadcn/ui confirmed supporting Tailwind
+  v4 + React 19 + Next 16; Geist + Geist Mono via `next/font/google` per Next 16's font guide;
+  `app/icon.svg` per Next 16's app-icons file convention; `next-themes` dark-first.
+- **Real tooling drift, worked through honestly**: the installed shadcn CLI is v4.21.0 —
+  `--base-color` no longer exists (now `--base <base|radix|aria>` chooses the component library;
+  styling comes from named presets), the default preset `base-nova` is on Base UI not Radix,
+  preset names are bare (`nova`, …), and Tailwind v4 is detected via `@import "tailwindcss"` in
+  the CSS, not a config file. Three attempts failed first — one silently, because `timeout`
+  doesn't exist on macOS (caught by inspecting the empty result). The Nova preset is literally
+  "Lucide / Geist", the exact independent choice; Radix chosen deliberately over the Base UI
+  default as the primitive set correct code can be written against.
+- **A real bug introduced by `shadcn init`, caught and fixed**: init merged its semantic tokens
+  into `:root` and clobbered two shared legacy names — `--muted` (legacy: muted *text*, 17 uses;
+  shadcn: a near-white surface) and `--accent` (legacy: brand/button color, 14 uses; shadcn: a
+  hover surface) — which would have made light mode's muted text near-invisible and primary
+  buttons white-on-white. The full `globals.css` rewrite: shadcn semantic names as canonical, a
+  cool-tinted OKLCH neutral scale, one amber `--brand` accent (no purple/blue AI gradient), tinted
+  shadows, real type scale with `text-wrap: balance`, `tabular-nums`, `:focus-visible` rings,
+  reduced-motion support, themed scrollbars, brand `::selection`, an opt-in `.grain` utility;
+  every legacy name aliased via `var()` (follows the theme automatically), every `var(--muted)` →
+  `var(--muted-foreground)`, brand uses → `--brand`, primary actions → `--primary`, hover/active/
+  transitions added to legacy interactive classes, `100vh` → `100dvh`, and the legacy
+  `prefers-color-scheme` dark block + syntax colors converted to the `.dark` class strategy so
+  `next-themes` stays authoritative. `/fabric`'s one inline `var(--accent)` fixed to
+  `var(--brand)` (allowed_paths extended mid-task, recorded).
+- **Root layout**: Geist/Geist Mono as `--font-sans`/`--font-mono`, `suppressHydrationWarning`,
+  `ThemeProvider` (class, dark default, system-aware), `TooltipProvider`, `Toaster`, title
+  template + real description, branded `icon.svg`. 13 shadcn primitives vendored. No other page
+  markup changed.
+- **Gates**: `typecheck` clean; `lint` (one cosmetic warning fixed) clean; `build` 23 routes;
+  `scripts/test.sh` passes; `task verify` 3,738 OK; lint/security/env pass.
+- **Live smoke**: stale 4321 instance restarted on the new build; every route responds as
+  expected (200 / 307-when-signed-out / 404), authenticated `/api/providers` 200 via a real
+  cookie session, served `<html>` carries both Geist classes + the theme script, `/icon.svg`
+  linked, 0 server errors. No browser tool in this session — founder eyeballs `localhost:4321`.
+- **Next:** R-492 (auth + app shell). Founder's screenshots feed R-493/R-494.
+
 ## 2026-09-19 — R-490 (Runtime: sandbox provider-selection surface)
 
 - **Why:** fifth and final task in the sandbox-provider sequence (R-486..R-490). R-486 through

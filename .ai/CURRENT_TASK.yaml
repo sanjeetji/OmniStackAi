@@ -1,30 +1,36 @@
-task_id: R-490
+task_id: R-491
 status: completed
 phase: MVP
 tracker_row: null
 started_at: "2026-09-19"
 completed_at: "2026-09-19"
 objective: >-
-  Fifth and final task in the sandbox-provider sequence (R-486..R-490). Adds the missing
-  provider-selection surface making E2B/Vercel Sandbox/Daytona/gVisor genuinely pluggable and
-  switchable via configuration - the founder's explicit ask. New runtime/sandbox_selection.py:
-  a registry of the four real SandboxLifecycleProvider constructors, a SandboxSetup dataclass
-  (active/selected/provider), and build_sandbox_from_env(selection=None, *, providers=None)
-  mirroring bootstrap.py's own established build_runtime_from_env()/build_deploy_from_env() shape.
-  Defaults to sandboxing disabled (selected=None) - zero behavior change until an operator
-  explicitly opts in via OMNISTACKAI_SANDBOX_PROVIDER. The explicit selection parameter is the
-  concrete "switch per userbase" mechanism (a caller can pass a per-user choice), documented as
-  the extension point rather than built further, since real per-user plan wiring lives in the Go
-  control-plane and is a separate, bigger integration. Deliberately not wired into studio/,
-  control-plane, or console - matches every prior task's own scope boundary.
+  First of the six-task Console UI overhaul (R-491..R-496), approved by the founder after asking
+  why the platform UI is "just simple and very ugly" ("I need proper best UI based platform not
+  just simple a page"; reference bar: Emergent/Lovable/Dyad). Foundation only: retire the R-470
+  scripts/test.sh gate that blocks UI dependencies (founder sign-off recorded), install Tailwind
+  v4 (@tailwindcss/postcss, per Next 16's own bundled guide) + shadcn/ui (vendored primitives) +
+  next-themes (dark-first) + lucide-react, load Geist/Geist Mono via next/font/google, replace the
+  token system with an OKLCH dark-first scale (one desaturated accent, tinted shadows, real type
+  scale) while re-pointing the legacy CSS variables so every existing class still renders. No
+  page markup changes - every route must build and respond exactly as before. Screen redesigns
+  are R-492..R-496.
 allowed_paths:
-  - services/agent-engine/src/omnistackai_agent_engine/runtime/sandbox_selection.py
-  - services/agent-engine/src/omnistackai_agent_engine/runtime/errors.py
-  - services/agent-engine/src/omnistackai_agent_engine/runtime/__init__.py
-  - services/agent-engine/tests/test_runtime_sandbox_selection.py
-  - .env.example
+  - apps/console-web/package.json
+  - pnpm-lock.yaml
+  - apps/console-web/postcss.config.mjs
+  - apps/console-web/components.json
+  - apps/console-web/components/ui/
+  - apps/console-web/lib/utils.ts
+  - apps/console-web/app/globals.css
+  - apps/console-web/app/layout.tsx
+  - apps/console-web/app/theme-provider.tsx
+  - apps/console-web/app/icon.svg
+  - apps/console-web/app/fabric/page.tsx
+  - apps/console-web/tsconfig.json
+  - apps/console-web/.gitignore
   - scripts/test.sh
-  - .ai/tasks/R-490.md
+  - .ai/tasks/R-491.md
   - .ai/CURRENT_TASK.yaml
   - .ai/PROJECT_STATE.yaml
   - .ai/WORK_LOG.md
@@ -33,38 +39,36 @@ allowed_paths:
   - CHANGELOG.md
   - docs/PROGRESS.md
   - docs/RESUME_PROMPT.md
+  - R_&_D/OmniStackAI_Commercial_Platform_Kickoff_v1.md
 forbidden_changes:
-  - No changes to runtime/tier.py, runtime/bootstrap.py, runtime/drivers.py, runtime/local.py, or runtime/providers.py
-  - No changes to runtime/sandbox_http.py, runtime/docker_socket.py, runtime/e2b.py, runtime/vercel_sandbox.py, runtime/daytona.py, runtime/gvisor.py, or runtime/contracts.py
-  - No changes to studio/, the Go control-plane, or apps/console-web
+  - No page/component markup changes beyond app/layout.tsx - screen redesigns are R-492..R-496; old CSS classes must keep rendering
+  - No changes to lib/control-plane.ts, lib/session.ts, or any app/api/* route
+  - No agent-engine or control-plane changes
   - Do not modify or commit the untracked .claude directory
-  - No real network/Docker call in any automated gate
+  - No real network call in any automated gate (pnpm install runs once during the task, never in task verify)
 required_gates:
-  - "agent-engine: task verify (0 model/network/Docker calls, injected fake providers stand in)"
+  - "console-web: pnpm run typecheck, pnpm run lint, pnpm run build"
   - task verify
   - task lint
   - task security:quick
   - task env:check
+  - "bash scripts/test.sh (R-470 gate retired, new R-491 block passes)"
+  - "live smoke: next start on 4321, curl every page route (200) + one /api route via a real cookie session; founder eyeballs localhost:4321 for the font/theme change since no browser tool exists here"
 model_tool_trace:
   routing: deterministic_only
   local_calls: 0
   cloud_calls: 0
   note: >-
-    Pure Python selection/registry logic, 0 model/network/Docker calls in any automated gate.
+    Pure TypeScript/CSS/config work, 0 model calls. One-time pnpm install of the new UI
+    dependencies happens during the task, never inside an automated gate.
 next_action: >-
-  R-490 shipped: 3,738 agent-engine tests OK (9 new). A real test-design risk was caught and
-  avoided (a "real registry" test would have made a real Docker socket connection attempt via
-  GVisorSandboxProvider.active - replaced with a class-identity wiring check instead, zero I/O).
-  This completes the five-task sandbox-provider sequence (R-486..R-490): E2B, Vercel Sandbox,
-  Daytona, and a free self-hosted gVisor option are all real, independently-tested, and now
-  genuinely pluggable/switchable via build_sandbox_from_env() - a single config value or an
-  explicit per-call override (the concrete "switch per userbase" mechanism). Per-user plan-based
-  routing (reading a real user's plan from the Go control-plane) and actually wiring a selected
-  provider into the Studio's preview flow both remain separate, not-yet-scoped future work,
-  consistent with every task in this sequence's own stated boundary.
-  Next (not yet scoped): per the founder's earlier direction, remaining named items are
-  Publish/deploy (multi-target: Netlify one-click, Vercel/Cloudflare/self-host/GitHub-export),
-  Node.js backend codegen support alongside Python/Go, and starting mobile technology work (React
-  Native near-term). Full per-user process/tenant isolation as a wholesale architecture (beyond
-  which sandbox technology runs one preview) remains a separate, larger decision needing its own
-  founder sign-off.
+  R-491 shipped: the console now runs on Tailwind v4 + shadcn/ui (Radix, Nova preset = Lucide/
+  Geist) + next-themes (dark-first) with a tinted OKLCH token system, Geist/Geist Mono self-hosted
+  via next/font, a branded icon.svg, and the R-470 no-UI-dependency gate retired with the
+  founder's recorded decision. Real tooling drift (shadcn CLI v4.21's new --base/--preset model)
+  and a real init bug (it clobbered the legacy --muted/--accent names) were both worked through
+  honestly. 23 routes build; every route live-smoked; 3,738 agent-engine tests unaffected. The
+  founder is asked to eyeball localhost:4321 (no browser tool here). Next: R-492 (auth + app
+  shell: login/register redesign with real validation, top nav with current-page state, user
+  menu, skip-link, branded 404, home/dashboard) - and the founder's Emergent/Lovable/Dyad
+  screenshots, once shared, feed R-493/R-494's Studio screens.

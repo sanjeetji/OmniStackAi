@@ -208,7 +208,7 @@ front-door bricks, R-420 is generated-SQL hardening, R-421..R-426 are Studio pre
 R-427..R-429 are generated-app compile fixes, R-430..R-457 are the first twenty-eight differentiating-spine
 bricks (Scope Compiler through Ecosystem Multi-Surface SLA, SLO, and Error Budget Contracts).
 Git, state files (.ai/), CHANGELOG, and docs/PROGRESS.md remain the executable/detail sources of truth.
-Current through R-490; `task verify` = 3,738 tests (agent-engine) + the Go control-plane's own suite +
+Current through R-491; `task verify` = 3,738 tests (agent-engine) + the Go control-plane's own suite +
 the Next.js console's typecheck/lint/build. R-416 added prompt-to-IR intake, R-417 materialized a generated
 owned repo, R-418 added the local chat studio, R-419 added turnkey local run, and R-420 fixed the two
 SQL defects found by live execution. R-421 added an explicit `task agent-engine:studio:preview` mode:
@@ -836,10 +836,25 @@ WHAT TO DO NEXT
   **This completes the five-task sandbox-provider sequence (R-486..R-490)**: E2B, Vercel Sandbox,
   Daytona, and a free self-hosted gVisor option are all real, independently-tested, and now
   genuinely pluggable/switchable via configuration - exactly the founder's original ask.
-- NEXT (not yet scoped into any task contract): real multi-target Publish/deploy (Netlify
-  one-click primary, Vercel/Cloudflare/self-host/GitHub-export as secondary options), Node.js
-  backend codegen support alongside Python/Go, and starting mobile technology work (React Native
-  near-term, per research). Full per-user process/tenant isolation as a wholesale architecture
+- R-491 (2026-09-19, done) is the first of the six-task Console UI overhaul (R-491..R-496),
+  approved after the founder asked why the UI is "just simple and very ugly" (honest diagnosis:
+  zero UI dependencies, hand-rolled CSS, an enforced R-470 gate blocking component libraries,
+  every prior task backend-first). The founder chose "Full UI overhaul now" (reference bar:
+  Emergent/Lovable/Dyad; screenshots to be shared) - that decision retired the R-470 gate
+  formally. The console now runs on Tailwind v4 (@tailwindcss/postcss, per Next 16's own bundled
+  guide) + shadcn/ui on Radix with the Nova preset (= Lucide/Geist) + next-themes (dark-first) +
+  Geist/Geist Mono via next/font, with a tinted OKLCH token system and one amber brand accent;
+  legacy CSS names are re-pointed so every old class still renders. Real tooling drift (shadcn
+  CLI v4.21: --base library + named presets, Base UI default; `timeout` absent on macOS) and a
+  real init bug (it clobbered legacy --muted/--accent) were worked through. 23 routes build;
+  every route live-smoked; 3,738 tests unaffected. IMPORTANT: shadcn CLI is v4.x - always read
+  `pnpm dlx shadcn@latest <cmd> --help` before assuming flags. No browser tool exists in these
+  sessions - the founder eyeballs http://localhost:4321.
+- NEXT: R-492 (auth + app shell), R-493 (Studio core), R-494 (Studio tabs), R-495 (Settings/
+  Fabric), R-496 (motion/states/polish) - the roadmap is in the plan file. After the UI overhaul
+  (not yet scoped): real multi-target Publish/deploy (Netlify one-click primary, Vercel/Cloudflare/
+  self-host/GitHub-export as secondary options), Node.js backend codegen alongside Python/Go, and
+  mobile (React Native near-term). Full per-user process/tenant isolation as a wholesale architecture
   (beyond just which sandbox technology runs one preview - session-to-instance routing, per-user
   DB/port allocation, state-store externalization) remains a separate, materially larger
   architecture decision needing its own explicit founder sign-off before any implementation, per

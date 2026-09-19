@@ -2,10 +2,10 @@ schema_version: 1
 project: OmniStackAI
 phase: BASIC/MVP
 founder_stage: 0
-current_task: R-490
+current_task: R-491
 current_status: done
 branch: main
-last_completed_task: R-490
+last_completed_task: R-491
 # TASK COMPILATION AUDIT — 2026-09-16
 # Performed to achieve 100% synchronization across all task-tracking documentation.
 # Tracker workbook expanded to 464 tasks with R-464.
@@ -34,6 +34,34 @@ task_compilation_audit:
       new_status: DONE
       reason: "Task fully completed on 2026-09-11 with 35 tests. Status left stale during rapid development sprint."
 last_completed_task_summary: >-
+  Completed R-491 (2026-09-19): console UI foundation - Tailwind v4 + shadcn/ui + Geist,
+  dark-first. First of the six-task Console UI overhaul (R-491..R-496), approved after the
+  founder asked why the platform UI is "just simple and very ugly." Honest diagnosis: zero UI
+  dependencies, 858 lines of hand-rolled CSS, an ENFORCED R-470 scripts/test.sh gate blocking
+  component libraries, every prior task backend-first. The founder chose "Full UI overhaul now"
+  (reference bar: Emergent/Lovable/Dyad; screenshots to be shared) - that decision retired the
+  R-470 gate formally, recorded in the contract and in scripts/test.sh.
+  Stack verified against real docs: Tailwind v4 via @tailwindcss/postcss (Next 16's own bundled
+  guide), shadcn/ui on Radix with the Nova preset (= Lucide/Geist, the exact independent choice),
+  next-themes dark-first, Geist + Geist Mono via next/font, Lucide, tw-animate-css, sonner; 13
+  primitives vendored. Real tooling drift worked through: shadcn CLI v4.21 replaced --base-color
+  with --base <library> + named presets (Base UI default; Radix chosen deliberately), and
+  `timeout` doesn't exist on macOS (one attempt silently never ran - caught by inspection).
+  A real init bug caught and fixed: shadcn init clobbered legacy --muted (text) and --accent
+  (brand) - light mode would have had invisible text and white-on-white buttons. Full globals.css
+  rewrite: tinted OKLCH scale, one amber --brand accent, every legacy name aliased via var() and
+  re-pointed, primary actions on --primary, hover/active/transitions, 100dvh, .dark class strategy
+  for the dark block and syntax colors; one inline token fixed on /fabric (allowed_paths extended
+  mid-task, recorded). New root layout: fonts, ThemeProvider, TooltipProvider, Toaster, metadata,
+  branded icon.svg. No other page markup changed.
+  Gates: typecheck/lint/build clean (23 routes, /icon.svg new); scripts/test.sh passes with the
+  gate gone; task verify 3,738 OK; lint/security/env pass. Live: every route smoked
+  (200/307/404 as expected, authenticated API 200), served <html> carries both Geist font
+  classes + the theme script, 0 server errors. No browser tool in this session - the founder
+  eyeballs localhost:4321.
+  NEXT: R-492 (auth + app shell), then R-493/R-494 Studio screens informed by the founder's
+  screenshots, R-495 Settings/Fabric, R-496 motion/states/polish.
+_prior_last_completed_task_summary_R490: >-
   Completed R-490 (2026-09-19): runtime sandbox provider-selection surface. Fifth and final task
   in the sandbox-provider sequence (R-486..R-490).
   New runtime/sandbox_selection.py: build_sandbox_from_env(selection=None, *, providers=None) ->
@@ -1806,9 +1834,14 @@ next_action: >-
   provider-selection surface exposing the founder's "switch easily/per userbase" ask -
   build_sandbox_from_env(), defaults to disabled, an explicit per-call selection override as the
   concrete per-user mechanism) are all done - THE FIVE-TASK SANDBOX-PROVIDER SEQUENCE IS COMPLETE.
-  NEXT (not yet scoped into any task contract): real multi-target Publish/deploy (Netlify
-  one-click primary; Vercel/Cloudflare/self-host/GitHub-export as secondary options), Node.js
-  backend codegen alongside Python/Go, and starting mobile technology work (React Native
+  After that sequence the founder asked why the UI is "just simple and very ugly" and chose
+  "Full UI overhaul now" (reference bar: Emergent/Lovable/Dyad) - a six-task Console UI overhaul
+  (R-491..R-496) is the active priority; R-491 (foundation: Tailwind v4 + shadcn/ui on Radix +
+  Geist + next-themes dark-first, R-470 gate retired) is done.
+  NEXT: R-492 (auth + app shell), R-493 (Studio core), R-494 (Studio tabs), R-495 (Settings/
+  Fabric), R-496 (motion/states/polish) - roadmap in the plan file. Then (not yet scoped): real
+  multi-target Publish/deploy (Netlify one-click primary; Vercel/Cloudflare/self-host/GitHub-export
+  as secondary options), Node.js backend codegen alongside Python/Go, and mobile (React Native
   near-term, per research - no competitor at scale generates native Kotlin/Swift). Separately, full
   per-user *process/tenant* isolation (as opposed to just which sandbox technology runs one
   preview) remains a materially different, larger architecture decision needing its own founder

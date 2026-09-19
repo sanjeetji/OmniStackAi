@@ -35,7 +35,7 @@ export default function FabricPage() {
                 borderBottom: "1px solid var(--border)",
               }}
             >
-              <span style={{ fontWeight: 700, width: 34, color: "var(--accent)" }}>
+              <span style={{ fontWeight: 700, width: 34, color: "var(--brand)" }}>
                 {step.level}
               </span>
               <span>{step.action}</span>
