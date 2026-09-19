@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import overview from "@/data/overview.json";
+import { revealStyle } from "@/lib/motion";
 import { getCurrentUser } from "@/lib/session";
 import AppShell from "@/components/app-shell";
 import { Badge } from "@/components/ui/badge";
@@ -29,7 +30,7 @@ export default async function FabricPage() {
 
   return (
     <AppShell user={user}>
-      <header className="flex flex-wrap items-end justify-between gap-4">
+      <header className="reveal flex flex-wrap items-end justify-between gap-4" style={revealStyle(0)}>
         <div className="max-w-2xl">
           <p className="text-sm text-muted-foreground">Founder Stage 0 · local-first</p>
           <h1 className="mt-1 text-balance text-3xl font-semibold tracking-tight">
@@ -50,6 +51,7 @@ export default async function FabricPage() {
 
       <div className="mt-8 grid gap-6">
         <Section
+          index={1}
           title="Routing ladder"
           description={`Routing mode: ${overview.routingMode}. Each level is tried before the next.`}
         >
@@ -75,6 +77,7 @@ export default async function FabricPage() {
 
         <div className="grid gap-6 xl:grid-cols-2">
           <Section
+            index={2}
             title="Providers"
             description={`${configured} of ${providers.length} providers have a key configured in this snapshot.`}
           >
@@ -110,7 +113,7 @@ export default async function FabricPage() {
             </DataTable>
           </Section>
 
-          <Section title="Price book" description="List prices per million tokens, in USD.">
+          <Section index={3} title="Price book" description="List prices per million tokens, in USD.">
             <DataTable
               caption="Price book"
               head={[
@@ -137,6 +140,7 @@ export default async function FabricPage() {
         </div>
 
         <Section
+          index={4}
           title="Usage & resilience"
           description={
             usage.totalCalls === 0
@@ -173,7 +177,7 @@ export default async function FabricPage() {
           </div>
         </Section>
 
-        <Section title="Builder showcase" description={builderShowcase.note}>
+        <Section index={5} title="Builder showcase" description={builderShowcase.note}>
           <div className="grid gap-4">
             <div>
               <h3 className="text-sm font-medium">{builderShowcase.projectPlan.appName}</h3>
@@ -212,16 +216,18 @@ export default async function FabricPage() {
 }
 
 function Section({
+  index,
   title,
   description,
   children,
 }: {
+  index: number;
   title: string;
   description?: string;
   children: React.ReactNode;
 }) {
   return (
-    <Card>
+    <Card className="reveal" style={revealStyle(index)}>
       <CardHeader>
         <CardTitle className="text-lg">{title}</CardTitle>
         {description ? <CardDescription>{description}</CardDescription> : null}

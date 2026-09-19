@@ -208,7 +208,7 @@ front-door bricks, R-420 is generated-SQL hardening, R-421..R-426 are Studio pre
 R-427..R-429 are generated-app compile fixes, R-430..R-457 are the first twenty-eight differentiating-spine
 bricks (Scope Compiler through Ecosystem Multi-Surface SLA, SLO, and Error Budget Contracts).
 Git, state files (.ai/), CHANGELOG, and docs/PROGRESS.md remain the executable/detail sources of truth.
-Current through R-495; `task verify` = 3,738 tests (agent-engine) + the Go control-plane's own suite +
+Current through R-496; `task verify` = 3,738 tests (agent-engine) + the Go control-plane's own suite +
 the Next.js console's typecheck/lint/build. R-416 added prompt-to-IR intake, R-417 materialized a generated
 owned repo, R-418 added the local chat studio, R-419 added turnkey local run, and R-420 fixed the two
 SQL defects found by live execution. R-421 added an explicit `task agent-engine:studio:preview` mode:
@@ -905,7 +905,22 @@ WHAT TO DO NEXT
   write "*/" inside a CSS comment (e.g. "--radius-*/"); it terminates the comment and breaks the
   Turbopack build with a CssSyntaxError. R-496 retires the pinned selectors by editing the R-475
   scripts/test.sh block deliberately.
-- NEXT: R-496 (motion, states & polish) - the roadmap is in the plan file. After the UI overhaul
+- R-496 (2026-09-19, done) finished the overhaul: app/studio/loading.tsx + app/settings/
+  loading.tsx (under their gated layouts), streamed provider cards inside <Suspense> on / and
+  /settings, app/error.tsx (Next 16 `retry()` prop) + app/global-error.tsx, metadataBase from
+  the optional OMNISTACKAI_CONSOLE_PUBLIC_URL (.env.example) with a dev fallback, openGraph/
+  twitter metadata + app/opengraph-image.tsx (ImageResponse from next/og; twitter-image.tsx
+  re-exports it), the .reveal utility + lib/motion.ts revealStyle(), tinted shadows via
+  --shadow-tint, and every legacy selector/alias gone (globals.css 330 lines; the R-475 test.sh
+  block now asserts only --radius-sm/md/lg). HARD-WON RULE: never add a root app/loading.tsx -
+  a Suspense boundary ABOVE a redirect() turns it into a streamed 200 + client-side refresh
+  (signed-out / and /studio answered 200 until it was removed); scripts/test.sh now fails if the
+  file exists. Put loading.tsx only under gated layouts, and stream slow pieces inside pages
+  with <Suspense> below the gate. Also: rg -qF patterns that start with "--" need a "--" before
+  them. THE SIX-TASK UI OVERHAUL (R-491..R-496) IS COMPLETE - the founder should eyeball the whole
+  product at http://localhost:4321 and share the Emergent/Lovable/Dyad screenshots if a further
+  visual pass is wanted.
+- NEXT (needs the founder's pick; none pre-approved). After the UI overhaul
   (not yet scoped): real multi-target Publish/deploy (Netlify one-click primary, Vercel/Cloudflare/
   self-host/GitHub-export as secondary options), Node.js backend codegen alongside Python/Go, and
   mobile (React Native near-term). Full per-user process/tenant isolation as a wholesale architecture

@@ -1,5 +1,42 @@
 # Work Log
 
+## 2026-09-19 — R-496 (Console: motion, states & polish — the overhaul's last task)
+
+- **Why:** every screen was on the R-491 stack; what remained was the finish — loading and
+  error states, social metadata, entry motion, and retiring the last pinned legacy CSS.
+- **Built:** `app/studio/loading.tsx` and `app/settings/loading.tsx` (skeletons under their
+  gated layouts); the dashboard's and Settings' provider-status card streams inside
+  `<Suspense>` below the auth gate (async `ProviderCard` / `ProvidersSection`); `app/error.tsx`
+  (branded, `error.digest` as a reference, Try again on Next 16's documented `retry()`, Go home)
+  and `app/global-error.tsx` (own `html`/`body`, inline dark styling — global styles never
+  reach it); `metadataBase` from the new optional `OMNISTACKAI_CONSOLE_PUBLIC_URL` with a
+  fallback to the real dev address, `openGraph` + `twitter` fields, and a generated 1200×630
+  PNG via `ImageResponse` from `next/og` (`opengraph-image.tsx`, `twitter-image.tsx`
+  re-export); a `.reveal` rise+fade utility (transform/opacity, 60ms stagger via
+  `--reveal-index` from `lib/motion.ts`, collapsed by `prefers-reduced-motion`) on the
+  dashboard, settings, fabric, auth card, 404/error pages, Studio empty states and new chat
+  messages; tinted `shadow-*` utilities via `--shadow-tint`; `.pill`/`.spinner`/`@keyframes
+  spin` and every dead token alias removed; the R-475 assertion edited to the three radius
+  tokens; `globals.css` 330 lines. Redesign audit checklist recorded honestly in the contract.
+- **A real regression caught live, fixed in-task:** a root `app/loading.tsx` (built first) made
+  signed-out `/`, `/studio`, `/settings` answer **200** with `<meta http-equiv="refresh">` and
+  a `NEXT_REDIRECT` payload instead of 307 — a Suspense boundary above `redirect()` makes Next
+  fall back to a client-side redirect. Removed; replaced by the Suspense-below-the-gate pattern;
+  a `test.sh` assertion now forbids a root `loading.tsx` with that note. Also caught: the new
+  contract block's `rg -qF "--shadow-tint"` parsed its pattern as a flag — both loops pass
+  `--` now.
+- **Gates:** typecheck/lint clean; build **25 routes** (the two image routes are new);
+  `scripts/test.sh` passes; `task verify` 3,738 OK; lint/security/env pass.
+- **Live smoke:** every route responds with the right status signed out and in (307s
+  restored); `<head>` carries the full `og:*`/`twitter:*` set with an absolute `og:image`;
+  `/opengraph-image` and `/twitter-image` → 200 `image/png`, 56,598 bytes, `file` says 1200×630
+  RGBA; reveal indexes 0–5 on the right elements; compiled CSS has reduced-motion, `.reveal`,
+  `rise`, `--shadow-tint`, no `.pill`/`.spinner`; streamed provider cards render; 0 server
+  errors. Honest limits: loading fallbacks and the error boundary need a browser.
+- **Next:** the UI overhaul is complete. Direction needs the founder's pick — Publish/deploy,
+  sandbox providers into Studio preview + per-user routing, Node.js codegen, mobile, tenant
+  isolation.
+
 ## 2026-09-19 — R-495 (Console: Settings + Fabric; legacy CSS sweep)
 
 - **Why:** `/settings` and `/fabric` were the last two screens on the hand-rolled legacy classes

@@ -1,3 +1,4 @@
+import { Suspense } from "react";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import {
@@ -12,11 +13,13 @@ import {
   Wrench,
 } from "lucide-react";
 import { getProviderStatus, type ProviderStatus } from "@/lib/control-plane";
+import { revealStyle } from "@/lib/motion";
 import { getCurrentUser, getSessionToken } from "@/lib/session";
 import AppShell from "@/components/app-shell";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Skeleton } from "@/components/ui/skeleton";
 
 /* The loop the Studio actually implements today (build → stream → live preview → multi-turn
  * edits), described plainly. */
@@ -43,26 +46,12 @@ export default async function HomePage() {
   if (!user) {
     redirect("/login");
   }
-
-  // Same live provider status the Settings page shows, so the dashboard answers "can I build
-  // right now?" without a second click. Unreachable → said so, never faked.
   const token = await getSessionToken();
-  let status: ProviderStatus | null = null;
-  let statusError: string | null = null;
-  if (token) {
-    try {
-      status = await getProviderStatus(token);
-    } catch {
-      statusError = "Couldn't reach the model provider status service.";
-    }
-  }
-
   const firstName = user.name.trim().split(/\s+/)[0] || user.name;
-  const configured = status ? status.providers.filter((provider) => provider.active).length : 0;
 
   return (
     <AppShell user={user}>
-      <header className="flex flex-wrap items-end justify-between gap-4">
+      <header className="reveal flex flex-wrap items-end justify-between gap-4" style={revealStyle(0)}>
         <div>
           <p className="text-sm text-muted-foreground">Signed in as {user.email}</p>
           <h1 className="mt-1 text-balance text-3xl font-semibold tracking-tight">
@@ -78,7 +67,11 @@ export default async function HomePage() {
       </header>
 
       <div className="mt-8 grid gap-6 lg:grid-cols-12">
-        <section aria-labelledby="start-building" className="grid gap-6 lg:col-span-7">
+        <section
+          aria-labelledby="start-building"
+          className="reveal grid gap-6 lg:col-span-7"
+          style={revealStyle(1)}
+        >
           <Card>
             <CardHeader>
               <CardTitle id="start-building" className="text-lg">
@@ -116,56 +109,18 @@ export default async function HomePage() {
             </CardContent>
           </Card>
 
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2 text-lg">
-                <Cpu className="size-4 text-muted-foreground" aria-hidden="true" />
-                Model provider
-              </CardTitle>
-              <CardDescription>Which provider would run your next build right now.</CardDescription>
-            </CardHeader>
-            <CardContent className="grid gap-3">
-              {statusError ? (
-                <p role="status" className="text-sm text-destructive">
-                  {statusError}
-                </p>
-              ) : status?.activeNow ? (
-                <div className="flex flex-wrap items-center gap-2">
-                  <Badge className="border-brand/30 bg-brand/15 text-brand">Ready</Badge>
-                  <span className="text-sm">
-                    <span className="font-medium">{status.activeNow.providerId}</span>
-                    <span className="text-muted-foreground"> · </span>
-                    <span className="font-mono text-xs">{status.activeNow.modelId}</span>
-                  </span>
-                </div>
-              ) : status ? (
-                <div className="flex flex-wrap items-center gap-2">
-                  <Badge variant="destructive">Not ready</Badge>
-                  <span className="text-sm text-muted-foreground">
-                    {status.activeNowError ?? "No provider is currently available."}
-                  </span>
-                </div>
-              ) : (
-                <p className="text-sm text-muted-foreground">Provider status is unavailable.</p>
-              )}
-              {status ? (
-                <p className="text-sm text-muted-foreground tabular-nums">
-                  {configured} of {status.providers.length} providers configured.
-                </p>
-              ) : null}
-              <Button asChild variant="link" className="h-auto w-fit px-0">
-                <Link href="/settings">
-                  Manage providers
-                  <ArrowRight aria-hidden="true" />
-                </Link>
-              </Button>
-            </CardContent>
-          </Card>
+          {/* The one network-dependent card streams in behind the auth gate (R-496): the page
+              shell renders immediately with a real 307 for signed-out visitors, and the live
+              provider status fills in as soon as the control-plane answers. */}
+          <Suspense fallback={<ProviderCardSkeleton />}>
+            <ProviderCard token={token} />
+          </Suspense>
         </section>
 
         <aside
           aria-label="Your account"
-          className="grid gap-4 self-start sm:grid-cols-2 lg:col-span-5 lg:grid-cols-1"
+          className="reveal grid gap-4 self-start sm:grid-cols-2 lg:col-span-5 lg:grid-cols-1"
+          style={revealStyle(2)}
         >
           <Card size="sm">
             <CardHeader>
@@ -215,5 +170,85 @@ export default async function HomePage() {
         </aside>
       </div>
     </AppShell>
+  );
+}
+
+function ProviderCardFrame({ children }: { children: React.ReactNode }) {
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle className="flex items-center gap-2 text-lg">
+          <Cpu className="size-4 text-muted-foreground" aria-hidden="true" />
+          Model provider
+        </CardTitle>
+        <CardDescription>Which provider would run your next build right now.</CardDescription>
+      </CardHeader>
+      <CardContent className="grid gap-3">{children}</CardContent>
+    </Card>
+  );
+}
+
+function ProviderCardSkeleton() {
+  return (
+    <ProviderCardFrame>
+      <div className="grid gap-2" role="status" aria-label="Loading provider status" aria-busy="true">
+        <Skeleton className="h-5 w-56" />
+        <Skeleton className="h-4 w-40" />
+      </div>
+    </ProviderCardFrame>
+  );
+}
+
+/** Same live provider status the Settings page shows, so the dashboard answers "can I build
+ * right now?" without a second click. Unreachable → said so, never faked. */
+async function ProviderCard({ token }: { token: string | null }) {
+  let status: ProviderStatus | null = null;
+  let statusError: string | null = null;
+  if (token) {
+    try {
+      status = await getProviderStatus(token);
+    } catch {
+      statusError = "Couldn't reach the model provider status service.";
+    }
+  }
+  const configured = status ? status.providers.filter((provider) => provider.active).length : 0;
+
+  return (
+    <ProviderCardFrame>
+      {statusError ? (
+        <p role="status" className="text-sm text-destructive">
+          {statusError}
+        </p>
+      ) : status?.activeNow ? (
+        <div className="flex flex-wrap items-center gap-2">
+          <Badge className="border-brand/30 bg-brand/15 text-brand">Ready</Badge>
+          <span className="text-sm">
+            <span className="font-medium">{status.activeNow.providerId}</span>
+            <span className="text-muted-foreground"> · </span>
+            <span className="font-mono text-xs">{status.activeNow.modelId}</span>
+          </span>
+        </div>
+      ) : status ? (
+        <div className="flex flex-wrap items-center gap-2">
+          <Badge variant="destructive">Not ready</Badge>
+          <span className="text-sm text-muted-foreground">
+            {status.activeNowError ?? "No provider is currently available."}
+          </span>
+        </div>
+      ) : (
+        <p className="text-sm text-muted-foreground">Provider status is unavailable.</p>
+      )}
+      {status ? (
+        <p className="text-sm text-muted-foreground tabular-nums">
+          {configured} of {status.providers.length} providers configured.
+        </p>
+      ) : null}
+      <Button asChild variant="link" className="h-auto w-fit px-0">
+        <Link href="/settings">
+          Manage providers
+          <ArrowRight aria-hidden="true" />
+        </Link>
+      </Button>
+    </ProviderCardFrame>
   );
 }

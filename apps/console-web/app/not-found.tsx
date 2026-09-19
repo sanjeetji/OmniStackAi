@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
  * the sign-in state is unknown here and a wrong shell would be worse than none. */
 export default function NotFound() {
   return (
-    <main className="flex min-h-dvh flex-col items-center justify-center bg-background px-6 text-center">
+    <main className="reveal flex min-h-dvh flex-col items-center justify-center bg-background px-6 text-center">
       <BrandMark className="size-10" title="OmniStackAI" />
       <p className="mt-8 font-mono text-sm tabular-nums text-muted-foreground">404</p>
       <h1 className="mt-2 text-balance text-3xl font-semibold tracking-tight sm:text-4xl">

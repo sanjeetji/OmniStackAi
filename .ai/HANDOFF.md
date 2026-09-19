@@ -1,9 +1,25 @@
 # Current Handoff
 
-Task ID: R-495
+Task ID: R-496
 Status: done
 Phase: BASIC/MVP — Founder Stage 0
 Branch: `main`
+
+> **R-496 Completed (2026-09-19): Console — motion, states & polish. The six-task UI overhaul (R-491..R-496) is complete.**
+> - Loading skeletons for Studio and Settings under their gates; the provider-status card streams
+>   inside `<Suspense>` on the dashboard and Settings. `error.tsx` (branded, `retry()`, digest
+>   reference) + `global-error.tsx`.
+> - `metadataBase` (optional `OMNISTACKAI_CONSOLE_PUBLIC_URL`, dev fallback to the real address),
+>   `openGraph`/`twitter` fields, generated 1200×630 PNG via `next/og`.
+> - `.reveal` motion (transform/opacity, staggered, reduced-motion-safe) across the screens;
+>   tinted `shadow-*`; the last legacy CSS retired; R-475 assertion edited. `globals.css` 330 lines.
+> - **Regression caught live and fixed**: a root `app/loading.tsx` turned auth redirects into
+>   streamed 200s; removed — a test.sh assertion now forbids it.
+> - Gates: typecheck/lint/build clean (25 routes), `scripts/test.sh`, `task verify` **3,738 OK**,
+>   lint/security/env. Live: correct status codes everywhere, full `og:*`/`twitter:*` head, real
+>   PNG image routes, 0 server errors. Console running detached on 4321.
+> - **NEXT**: needs the founder's pick — Publish/deploy, sandbox providers into Studio preview +
+>   per-user routing, Node.js codegen, mobile, tenant isolation. See `.ai/tasks/R-496.md`.
 
 > **R-495 Completed (2026-09-19): Console — Settings + Fabric; legacy CSS sweep.**
 > - Settings is a real settings page: sticky in-page nav; Account facts (read-only, honest "no

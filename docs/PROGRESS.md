@@ -1,4 +1,4 @@
-# OmniStackAI — implementation progress (as of R-495)
+# OmniStackAI — implementation progress (as of R-496)
 
 A living summary of what is built, what is pending, and how to see results. Numbers come from the
 execution tracker (`R_&_D/OmniStackAI_Execution_Tracker_v6.xlsx`, `Phase_Roadmap`, 461 tasks as of
@@ -8,6 +8,17 @@ R-461 completion) plus the state files (`.ai/`), Git history, and CHANGELOG.
 
 - **3,738 automated tests pass** (agent-engine + Go control-plane), fully offline and
   network-independent (`task verify`), plus the console's own `typecheck`/`lint`/`build` gates.
+- **R-496 — Console: motion, states & polish (2026-09-19):** sixth and last task of the UI
+  overhaul — **the overhaul is complete.** Loading skeletons for Studio and Settings under their
+  gates; the provider-status card streams inside `<Suspense>` on the dashboard and Settings;
+  `error.tsx` (branded, `retry()`, digest reference) and `global-error.tsx`; `metadataBase`
+  (optional `OMNISTACKAI_CONSOLE_PUBLIC_URL`, dev fallback), `openGraph`/`twitter` fields and a
+  generated 1200×630 PNG via `next/og`; `.reveal` motion (transform/opacity, staggered,
+  reduced-motion-safe) across the screens; tinted `shadow-*`; the last legacy CSS retired
+  (`globals.css` 330 lines) with the R-475 assertion edited. A root `loading.tsx` was found live
+  to turn auth redirects into streamed 200s — removed, and now forbidden by a test. All gates
+  green (**3,738 tests**, 25 routes); every route with the right status; full `og:*` head; real
+  PNG image routes; 0 server errors. Audit checklist recorded honestly in `.ai/tasks/R-496.md`.
 - **R-495 — Console: Settings + Fabric; legacy CSS sweep (2026-09-19):** fifth task of the UI
   overhaul; the last two legacy screens rebuilt. Settings: sticky in-page nav, read-only Account
   facts (honest "no profile editing yet"), a hydration-safe System/Light/Dark control

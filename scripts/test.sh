@@ -395,7 +395,9 @@ if ! rg -q 'getCurrentUser' "$console_root/app/studio/layout.tsx"; then
   exit 1
 fi
 
-for design_token in '\-\-radius-sm' '\-\-radius-md' '\-\-radius-lg' '\-\-surface-2' '\.spinner' '\.pill--accent'; do
+# (R-475's --surface-2 alias and its .spinner/.pill--accent classes were retired in R-496 once no
+# screen rendered them; the radius scale it introduced is still the console's - see @theme inline.)
+for design_token in '\-\-radius-sm' '\-\-radius-md' '\-\-radius-lg'; do
   if ! rg -q -- "$design_token" "$console_root/app/globals.css"; then
     printf 'R-475 must add the %s design token/class to globals.css.\n' "$design_token"
     exit 1
@@ -886,6 +888,84 @@ fi
 for dead_block in '.wrap' '.masthead' '.panel' '.badge' '.stat' '.settings-active-now' '.studio-intro'; do
   if rg -qF "$dead_block {" "$console_root/app/globals.css"; then
     printf 'R-495 must remove the dead legacy CSS block: %s\n' "$dead_block"
+    exit 1
+  fi
+done
+
+# R-496: motion, states & polish - loading/error boundaries, OG/meta, .reveal motion, and the
+# last legacy CSS retired.
+for required_file in \
+  "$console_root/app/studio/loading.tsx" \
+  "$console_root/app/settings/loading.tsx" \
+  "$console_root/app/error.tsx" \
+  "$console_root/app/global-error.tsx" \
+  "$console_root/app/opengraph-image.tsx" \
+  "$console_root/app/twitter-image.tsx" \
+  "$console_root/lib/motion.ts"; do
+  if [[ ! -f "$required_file" ]]; then
+    printf 'Missing R-496 contract file: %s\n' "$required_file"
+    exit 1
+  fi
+done
+
+for error_file in app/error.tsx app/global-error.tsx; do
+  for marker in '"use client"' 'retry' 'digest'; do
+    if ! rg -qF "$marker" "$console_root/$error_file"; then
+      printf 'R-496 %s must include %s.\n' "$error_file" "$marker"
+      exit 1
+    fi
+  done
+done
+
+for marker in 'metadataBase' 'openGraph' 'twitter' 'OMNISTACKAI_CONSOLE_PUBLIC_URL'; do
+  if ! rg -qF "$marker" "$console_root/app/layout.tsx"; then
+    printf 'R-496 app/layout.tsx must include %s.\n' "$marker"
+    exit 1
+  fi
+done
+
+if ! rg -qF 'OMNISTACKAI_CONSOLE_PUBLIC_URL=' "$repo_root/.env.example"; then
+  printf 'R-496 must document OMNISTACKAI_CONSOLE_PUBLIC_URL in .env.example.\n'
+  exit 1
+fi
+
+if ! rg -qF 'ImageResponse' "$console_root/app/opengraph-image.tsx"; then
+  printf 'R-496 opengraph-image.tsx must render with ImageResponse from next/og.\n'
+  exit 1
+fi
+
+for live_block in '.reveal {' '@keyframes rise' '--shadow-tint'; do
+  if ! rg -qF -- "$live_block" "$console_root/app/globals.css"; then
+    printf 'R-496 globals.css must define %s.\n' "$live_block"
+    exit 1
+  fi
+done
+
+for dead in '.pill {' '.pill--accent {' '.spinner {' '@keyframes spin' '--bg: var(' '--panel: var(' '--surface-2: var(' '--accent-soft-bg:' '--ok-bg:' '--error-fg:'; do
+  if rg -qF -- "$dead" "$console_root/app/globals.css"; then
+    printf 'R-496 must retire the legacy CSS: %s\n' "$dead"
+    exit 1
+  fi
+done
+
+# No root app/loading.tsx on purpose: a Suspense boundary above the auth gates would turn their
+# redirect() into a streamed 200 + client redirect (found live in R-496). The slow provider fetch
+# streams inside the pages instead, below the gate.
+if [[ -f "$console_root/app/loading.tsx" ]]; then
+  printf 'R-496: no root app/loading.tsx - it breaks the auth redirects (see the note above).\n'
+  exit 1
+fi
+
+for streaming_page in app/page.tsx app/settings/page.tsx; do
+  if ! rg -qF '<Suspense' "$console_root/$streaming_page"; then
+    printf 'R-496 %s must stream its provider status inside a Suspense boundary.\n' "$streaming_page"
+    exit 1
+  fi
+done
+
+for reveal_consumer in app/page.tsx app/settings/page.tsx app/fabric/page.tsx; do
+  if ! rg -qF 'revealStyle' "$console_root/$reveal_consumer"; then
+    printf 'R-496 %s must use the staggered reveal motion.\n' "$reveal_consumer"
     exit 1
   fi
 done

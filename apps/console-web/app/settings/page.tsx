@@ -1,3 +1,4 @@
+import { Suspense } from "react";
 import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import {
@@ -10,6 +11,7 @@ import {
   type LucideIcon,
 } from "lucide-react";
 import { getProviderStatus, type ProviderInfo, type ProviderStatus } from "@/lib/control-plane";
+import { revealStyle } from "@/lib/motion";
 import { getCurrentUser, getSessionToken } from "@/lib/session";
 import ThemeSwitcher from "@/components/theme-switcher";
 import { Badge } from "@/components/ui/badge";
@@ -21,6 +23,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
 
 export const metadata: Metadata = {
@@ -39,22 +42,11 @@ export default async function SettingsPage() {
   if (!user) {
     redirect("/login");
   }
-
   const token = await getSessionToken();
-  let status: ProviderStatus | null = null;
-  let error: string | null = null;
-  if (token) {
-    try {
-      status = await getProviderStatus(token);
-    } catch {
-      error = "Couldn't reach the model provider status service.";
-    }
-  }
-  const configured = status?.providers.filter((provider) => provider.active).length ?? 0;
 
   return (
     <div className="grid gap-8">
-      <header>
+      <header className="reveal" style={revealStyle(0)}>
         <h1 className="text-3xl font-semibold tracking-tight">Settings</h1>
         <p className="mt-1 text-pretty text-sm text-muted-foreground">
           Your account, how the console looks, and which model providers can run your builds.
@@ -79,7 +71,12 @@ export default async function SettingsPage() {
         </nav>
 
         <div className="grid gap-8">
-          <section id="account" aria-labelledby="account-title" className="scroll-mt-20">
+          <section
+            id="account"
+            aria-labelledby="account-title"
+            className="reveal scroll-mt-20"
+            style={revealStyle(1)}
+          >
             <Card>
               <CardHeader>
                 <CardTitle id="account-title" className="text-lg">
@@ -118,7 +115,12 @@ export default async function SettingsPage() {
             </Card>
           </section>
 
-          <section id="appearance" aria-labelledby="appearance-title" className="scroll-mt-20">
+          <section
+            id="appearance"
+            aria-labelledby="appearance-title"
+            className="reveal scroll-mt-20"
+            style={revealStyle(2)}
+          >
             <Card>
               <CardHeader>
                 <CardTitle id="appearance-title" className="text-lg">
@@ -132,82 +134,130 @@ export default async function SettingsPage() {
             </Card>
           </section>
 
-          <section id="providers" aria-labelledby="providers-title" className="scroll-mt-20">
-            <Card>
-              <CardHeader>
-                <CardTitle id="providers-title" className="text-lg">
-                  Model providers
-                </CardTitle>
-                <CardDescription>
-                  Which providers have a key configured, and the one that would run your next
-                  build right now.
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="grid gap-3">
-                {error ? (
-                  <p
-                    role="alert"
-                    className="flex gap-2 rounded-lg border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive"
-                  >
-                    <TriangleAlert className="mt-0.5 size-4 shrink-0" aria-hidden="true" />
-                    {error}
-                  </p>
-                ) : null}
-                {status ? (
-                  <>
-                    <div className="flex flex-wrap items-center gap-2 text-sm">
-                      {status.activeNow ? (
-                        <>
-                          <Badge className="border-brand/30 bg-brand/15 text-brand">Ready</Badge>
-                          <span>
-                            Your next build uses{" "}
-                            <span className="font-medium">{status.activeNow.providerId}</span>
-                            <span className="text-muted-foreground"> · </span>
-                            <span className="font-mono text-xs">{status.activeNow.modelId}</span>
-                          </span>
-                        </>
-                      ) : (
-                        <>
-                          <Badge variant="destructive">Not ready</Badge>
-                          <span className="text-muted-foreground">
-                            {status.activeNowError ?? "No provider is currently available."}
-                          </span>
-                        </>
-                      )}
-                    </div>
-                    <p className="text-xs text-muted-foreground tabular-nums">
-                      Routing mode <span className="font-medium text-foreground">{status.routingMode}</span>
-                      {" · "}cloud tier{" "}
-                      <span className="font-medium text-foreground">
-                        {status.cloudTierSelected ?? "none selected"}
-                      </span>
-                      {" · "}
-                      {configured} of {status.providers.length} providers configured
-                    </p>
-                    {status.note ? (
-                      <p className="text-xs text-muted-foreground">{status.note}</p>
-                    ) : null}
-                  </>
-                ) : null}
-              </CardContent>
-            </Card>
-
-            {status ? (
-              <ul className="mt-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-3" aria-label="Providers">
-                {status.providers.map((provider) => (
-                  <li key={provider.providerId}>
-                    <ProviderCard
-                      provider={provider}
-                      runsNext={status.activeNow?.providerId === provider.providerId}
-                    />
-                  </li>
-                ))}
-              </ul>
-            ) : null}
+          <section
+            id="providers"
+            aria-labelledby="providers-title"
+            className="reveal scroll-mt-20"
+            style={revealStyle(3)}
+          >
+            {/* The only network-dependent section streams in behind the layout's auth gate
+                (R-496), so the rest of Settings renders immediately. */}
+            <Suspense fallback={<ProvidersSkeleton />}>
+              <ProvidersSection token={token} />
+            </Suspense>
           </section>
         </div>
       </div>
     </div>
+  );
+}
+
+function ProvidersFrame({ children }: { children: React.ReactNode }) {
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle id="providers-title" className="text-lg">
+          Model providers
+        </CardTitle>
+        <CardDescription>
+          Which providers have a key configured, and the one that would run your next build
+          right now.
+        </CardDescription>
+      </CardHeader>
+      <CardContent className="grid gap-3">{children}</CardContent>
+    </Card>
+  );
+}
+
+function ProvidersSkeleton() {
+  return (
+    <ProvidersFrame>
+      <div className="grid gap-2" role="status" aria-label="Loading provider status" aria-busy="true">
+        <Skeleton className="h-5 w-64" />
+        <Skeleton className="h-4 w-80 max-w-full" />
+        <div className="mt-2 grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+          {[0, 1, 2].map((index) => (
+            <Skeleton key={index} className="h-24 w-full rounded-xl" />
+          ))}
+        </div>
+      </div>
+    </ProvidersFrame>
+  );
+}
+
+async function ProvidersSection({ token }: { token: string | null }) {
+  let status: ProviderStatus | null = null;
+  let error: string | null = null;
+  if (token) {
+    try {
+      status = await getProviderStatus(token);
+    } catch {
+      error = "Couldn't reach the model provider status service.";
+    }
+  }
+  const configured = status?.providers.filter((provider) => provider.active).length ?? 0;
+
+  return (
+    <>
+      <ProvidersFrame>
+        {error ? (
+          <p
+            role="alert"
+            className="flex gap-2 rounded-lg border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive"
+          >
+            <TriangleAlert className="mt-0.5 size-4 shrink-0" aria-hidden="true" />
+            {error}
+          </p>
+        ) : null}
+        {status ? (
+          <>
+            <div className="flex flex-wrap items-center gap-2 text-sm">
+              {status.activeNow ? (
+                <>
+                  <Badge className="border-brand/30 bg-brand/15 text-brand">Ready</Badge>
+                  <span>
+                    Your next build uses{" "}
+                    <span className="font-medium">{status.activeNow.providerId}</span>
+                    <span className="text-muted-foreground"> · </span>
+                    <span className="font-mono text-xs">{status.activeNow.modelId}</span>
+                  </span>
+                </>
+              ) : (
+                <>
+                  <Badge variant="destructive">Not ready</Badge>
+                  <span className="text-muted-foreground">
+                    {status.activeNowError ?? "No provider is currently available."}
+                  </span>
+                </>
+              )}
+            </div>
+            <p className="text-xs text-muted-foreground tabular-nums">
+              Routing mode <span className="font-medium text-foreground">{status.routingMode}</span>
+              {" · "}cloud tier{" "}
+              <span className="font-medium text-foreground">
+                {status.cloudTierSelected ?? "none selected"}
+              </span>
+              {" · "}
+              {configured} of {status.providers.length} providers configured
+            </p>
+            {status.note ? <p className="text-xs text-muted-foreground">{status.note}</p> : null}
+          </>
+        ) : null}
+      </ProvidersFrame>
+
+      {status ? (
+        <ul className="mt-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-3" aria-label="Providers">
+          {status.providers.map((provider) => (
+            <li key={provider.providerId}>
+              <ProviderCard
+                provider={provider}
+                runsNext={status.activeNow?.providerId === provider.providerId}
+              />
+            </li>
+          ))}
+        </ul>
+      ) : null}
+    </>
   );
 }
 

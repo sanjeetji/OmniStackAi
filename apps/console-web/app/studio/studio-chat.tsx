@@ -421,7 +421,7 @@ export default function StudioChat({ initialCreditBalance }: { initialCreditBala
             message.role === "user" ? (
               <div
                 key={message.id}
-                className="max-w-[85%] self-end rounded-2xl rounded-br-md bg-primary px-3.5 py-2.5 text-sm break-words whitespace-pre-wrap text-primary-foreground"
+                className="reveal max-w-[85%] self-end rounded-2xl rounded-br-md bg-primary px-3.5 py-2.5 text-sm break-words whitespace-pre-wrap text-primary-foreground"
               >
                 {message.text}
               </div>
@@ -429,13 +429,13 @@ export default function StudioChat({ initialCreditBalance }: { initialCreditBala
               <div
                 key={message.id}
                 role="alert"
-                className="flex max-w-[92%] gap-2.5 self-start rounded-2xl rounded-bl-md border border-destructive/30 bg-destructive/10 px-3.5 py-2.5 text-sm break-words whitespace-pre-wrap text-destructive"
+                className="reveal flex max-w-[92%] gap-2.5 self-start rounded-2xl rounded-bl-md border border-destructive/30 bg-destructive/10 px-3.5 py-2.5 text-sm break-words whitespace-pre-wrap text-destructive"
               >
                 <TriangleAlert className="mt-0.5 size-4 shrink-0" aria-hidden="true" />
                 <span>{message.text}</span>
               </div>
             ) : (
-              <div key={message.id} className="flex max-w-[92%] gap-2.5 self-start">
+              <div key={message.id} className="reveal flex max-w-[92%] gap-2.5 self-start">
                 <BrandMark className="mt-1.5 size-5 shrink-0" />
                 <div className="rounded-2xl rounded-bl-md bg-secondary px-3.5 py-2.5 text-sm break-words whitespace-pre-wrap text-secondary-foreground">
                   {message.text}
@@ -516,7 +516,7 @@ export default function StudioChat({ initialCreditBalance }: { initialCreditBala
 
 function EmptyThread({ onPick }: { onPick: (text: string) => void }) {
   return (
-    <div className="my-auto grid gap-4 px-1 py-6 text-center">
+    <div className="reveal my-auto grid gap-4 px-1 py-6 text-center">
       <BrandMark className="mx-auto size-9" />
       <div>
         <h2 className="text-base font-semibold">What do you want to build?</h2>
@@ -582,7 +582,7 @@ const WORKSPACE_CAPABILITIES = [
 
 function EmptyWorkspace() {
   return (
-    <div className="m-auto grid w-full max-w-lg gap-6 py-10 text-center">
+    <div className="reveal m-auto grid w-full max-w-lg gap-6 py-10 text-center">
       <div className="mx-auto flex size-14 items-center justify-center rounded-2xl bg-secondary text-muted-foreground">
         <Sparkles className="size-6" aria-hidden="true" />
       </div>

@@ -5,17 +5,12 @@
 @custom-variant dark (&:is(.dark *));
 
 /* ==========================================================================================
-   Design tokens (R-491) - dark-first.
+   Design tokens (R-491, finished in R-496) - dark-first.
 
    One cool-tinted OKLCH neutral scale (hue 255, low chroma) instead of pure gray, and ONE
    desaturated brand accent (amber) - no purple/blue "AI gradient". shadcn's semantic names are
-   the canonical set. The legacy console names (--bg, --panel, --text, ...) are aliased onto them
-   via var() so every pre-existing class keeps rendering - and follows the theme automatically -
-   while the screens are rebuilt in R-492..R-496.
-
-   Two legacy names collide with shadcn's semantics and were re-pointed in the rules below:
-   legacy --muted (a text color)  -> --muted-foreground
-   legacy --accent (the brand)    -> --brand   (shadcn's --accent is a subtle hover surface)
+   the canonical set; --brand/--brand-soft and --shadow-tint are the only additions. The legacy
+   console aliases that carried the R-491..R-495 screen rebuilds were retired in R-496.
    ========================================================================================== */
 :root {
   --radius: 0.75rem;
@@ -58,24 +53,10 @@
   --brand-soft: oklch(0.95 0.05 80);
   --brand-soft-foreground: oklch(0.45 0.14 60);
 
-  /* Status */
-  --ok-bg: oklch(0.95 0.04 155);
-  --ok-fg: oklch(0.42 0.12 155);
-  --off-bg: var(--muted);
-  --off-fg: var(--muted-foreground);
-  --error-bg: oklch(0.95 0.03 25);
-  --error-fg: oklch(0.5 0.19 27);
+  /* Shadows carry the background hue (tinted, never flat black) - composed in @theme inline. */
+  --shadow-tint: oklch(0.18 0.015 255);
 
-  /* Legacy aliases (follow the theme through var()) */
-  --bg: var(--background);
-  --panel: var(--card);
-  --surface-2: var(--secondary);
-  --text: var(--foreground);
-  --accent-soft-bg: var(--brand-soft);
-  --accent-soft-fg: var(--brand-soft-foreground);
-  --shadow:
-    0 1px 2px oklch(0.18 0.015 255 / 0.06),
-    0 12px 32px -12px oklch(0.18 0.015 255 / 0.18);
+  /* Radius scale, also exposed to Tailwind via @theme inline below. */
   --radius-sm: calc(var(--radius) * 0.6);
   --radius-md: calc(var(--radius) * 0.8);
   --radius-lg: var(--radius);
@@ -112,15 +93,7 @@
   --brand-soft: oklch(0.8 0.14 78 / 14%);
   --brand-soft-foreground: oklch(0.86 0.12 82);
 
-  --ok-bg: oklch(0.7 0.15 155 / 14%);
-  --ok-fg: oklch(0.8 0.15 155);
-  --error-bg: oklch(0.68 0.19 25 / 14%);
-  --error-fg: oklch(0.8 0.13 25);
-
-  /* Tinted shadow - carries the background hue rather than flat black. */
-  --shadow:
-    0 1px 2px oklch(0.08 0.012 255 / 0.5),
-    0 16px 40px -16px oklch(0.08 0.012 255 / 0.7);
+  --shadow-tint: oklch(0.05 0.012 255);
 }
 
 @theme inline {
@@ -162,6 +135,14 @@
   --color-brand-foreground: var(--brand-foreground);
   --color-brand-soft: var(--brand-soft);
   --color-brand-soft-foreground: var(--brand-soft-foreground);
+  /* Tinted shadows for every shadow-* utility (buttons, cards, menus). */
+  --shadow-sm: 0 1px 2px color-mix(in oklch, var(--shadow-tint) 10%, transparent);
+  --shadow-md:
+    0 1px 2px color-mix(in oklch, var(--shadow-tint) 8%, transparent),
+    0 6px 16px -4px color-mix(in oklch, var(--shadow-tint) 16%, transparent);
+  --shadow-lg:
+    0 2px 4px color-mix(in oklch, var(--shadow-tint) 8%, transparent),
+    0 18px 40px -16px color-mix(in oklch, var(--shadow-tint) 32%, transparent);
   --radius-sm: calc(var(--radius) * 0.6);
   --radius-md: calc(var(--radius) * 0.8);
   --radius-lg: var(--radius);
@@ -259,40 +240,22 @@ a {
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
 }
 
-/* Legacy selectors still pinned by the R-475 contract assertion (.pill, .pill--accent, .spinner
-   with its keyframes; the --radius-sm/md/lg and --surface-2 aliases live in :root above).
-   Nothing renders them any more as of R-495 - R-496 retires them with that assertion. */
-.pill {
-  display: inline-block;
-  padding: 4px 12px;
-  border-radius: 999px;
-  font-size: 13px;
-  background: var(--off-bg);
-  color: var(--off-fg);
+/* Entry motion (R-496): an 8px rise + fade, transform/opacity only. Stagger siblings with
+   --reveal-index (60ms steps, see lib/motion.ts). The prefers-reduced-motion block above
+   collapses it to nothing for people who asked for no motion. */
+.reveal {
+  animation: rise 0.45s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+  animation-delay: calc(var(--reveal-index, 0) * 60ms);
 }
 
-.pill--accent {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  background: var(--accent-soft-bg);
-  color: var(--accent-soft-fg);
-  font-weight: 600;
-}
-
-.spinner {
-  display: inline-block;
-  width: 16px;
-  height: 16px;
-  border: 2px solid var(--border);
-  border-top-color: var(--brand);
-  border-radius: 50%;
-  animation: spin 0.7s linear infinite;
-}
-
-@keyframes spin {
+@keyframes rise {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
   to {
-    transform: rotate(360deg);
+    opacity: 1;
+    transform: none;
   }
 }
 

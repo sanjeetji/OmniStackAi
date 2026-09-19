@@ -2,10 +2,10 @@ schema_version: 1
 project: OmniStackAI
 phase: BASIC/MVP
 founder_stage: 0
-current_task: R-495
+current_task: R-496
 current_status: done
 branch: main
-last_completed_task: R-495
+last_completed_task: R-496
 # TASK COMPILATION AUDIT — 2026-09-16
 # Performed to achieve 100% synchronization across all task-tracking documentation.
 # Tracker workbook expanded to 464 tasks with R-464.
@@ -34,6 +34,55 @@ task_compilation_audit:
       new_status: DONE
       reason: "Task fully completed on 2026-09-11 with 35 tests. Status left stale during rapid development sprint."
 last_completed_task_summary: >-
+  Completed R-496 (2026-09-19): motion, states & polish - the sixth and last task of the Console
+  UI overhaul (R-491..R-496), which is now COMPLETE.
+  Built: loading states per Next 16's loading.js convention for Studio (a skeleton of the
+  two-column grid) and Settings (header + section skeletons), both under their gated layouts;
+  the dashboard and Settings stream their one network-dependent piece - the provider-status
+  card - inside <Suspense> with skeleton fallbacks below the auth gate (async ProviderCard /
+  ProvidersSection server components); error states per error.js - app/error.tsx (client,
+  branded, error.digest shown as a mono reference, Try again on the documented retry() prop, Go
+  home) and app/global-error.tsx (own html/body, inline dark styling because global styles never
+  reach it); OpenGraph/Twitter metadata - metadataBase resolved from the new optional
+  OMNISTACKAI_CONSOLE_PUBLIC_URL (.env.example, commented) with a fallback to the console's real
+  dev address http://127.0.0.1:<OMNISTACKAI_CONSOLE_PORT|4321> rather than an invented domain,
+  openGraph + twitter (summary_large_image) fields, and a generated 1200x630 PNG via
+  ImageResponse from next/og (app/opengraph-image.tsx; twitter-image.tsx re-exports it); a
+  .reveal rise+fade utility (transform/opacity only, 60ms stagger via --reveal-index from
+  lib/motion.ts revealStyle(), collapsed by the existing prefers-reduced-motion block) applied
+  to the dashboard header/columns, settings sections, fabric sections, the auth card, the 404
+  and error pages, the Studio empty states and every new chat message; tinted shadows for all
+  shadow-* utilities via --shadow-tint composed in @theme inline; the last legacy CSS retired
+  (.pill/.pill--accent/.spinner/@keyframes spin, the dead --bg/--panel/--surface-2/--text/
+  --accent-soft-*/--shadow/--ok-*/--off-*/--error-* aliases in :root and .dark, the stale token
+  comment) with the R-475 scripts/test.sh assertion edited to the three radius tokens that
+  remain; globals.css is 330 lines. The redesign audit checklist is recorded in the contract
+  with an honest status per item (open by choice: no legal links because no such pages exist,
+  no cookie banner because only the httpOnly session cookie exists; Lucide kept deliberately).
+  A REAL REGRESSION CAUGHT LIVE AND FIXED IN-TASK: a root app/loading.tsx (built first) turned
+  the auth redirects into streamed 200s - signed-out /, /studio, /settings answered 200 with
+  <meta http-equiv="refresh"> + a NEXT_REDIRECT payload instead of 307, because a Suspense
+  boundary above redirect() makes Next fall back to a client-side redirect. Removed; the
+  Suspense-below-the-gate pattern replaced it; a test.sh assertion now forbids a root
+  loading.tsx with that note. Also caught: the new contract block's rg -qF "--shadow-tint"
+  parsed the pattern as a flag - both loops now pass "--".
+  Gates: typecheck/lint clean; build 25 routes (/opengraph-image, /twitter-image new);
+  scripts/test.sh passes; task verify 3,738 OK; lint/security/env pass. Live smoke: every route
+  responds with the right status signed out and in (307s restored); <head> carries og:title/
+  description/url/image (absolute, http://127.0.0.1:4321/opengraph-image?...), og:image:type/
+  width/height/alt, og:type, twitter:card/title/description/image(+alt/type/width/height);
+  /opengraph-image and /twitter-image return 200 image/png, 56,598 bytes, verified by `file` as
+  1200x630 RGBA PNG; reveal elements on / (3, indexes 0-2), /settings (4), /fabric (6), 404 and
+  auth card (1 each); compiled stylesheet has prefers-reduced-motion, .reveal, @keyframes rise,
+  --shadow-tint and no .pill/.spinner; streamed provider cards render (Ready, 11 cards, keyEnv
+  hints); 0 server errors. Console running detached on 4321. Honest limits: loading fallbacks
+  and the error boundary need a browser to exercise; the founder is asked to click between
+  routes, flip reduced-motion, and paste the URL into a chat app to see the social card.
+  NEXT: needs the founder's pick - none pre-approved: Publish/deploy (new infra / paid service
+  decision); wiring the R-486..R-490 sandbox providers into the Studio preview + per-user
+  free/paid routing; Node.js backend codegen; mobile (React Native, hard gate); per-user tenant
+  isolation of the Studio server (architecture sign-off).
+_prior_last_completed_task_summary_R495: >-
   Completed R-495 (2026-09-19): Settings + Fabric on the R-491 stack, and the legacy CSS sweep.
   Fifth task of the Console UI overhaul (R-491..R-496); /settings and /fabric were the last two
   screens on the hand-rolled .panel/.masthead/.badge/.stat/table classes.
@@ -2033,10 +2082,13 @@ next_action: >-
   chat-left/workspace-right layout, premium thread, working/hydrating/empty states, composer,
   New app, project header), R-494 (Studio tabs on shadcn Tabs: Files tree, Code tree+viewer,
   Problems with parsed diagnostics, Preview toolbar with width presets; studio-icons.tsx
-  retired) and R-495 (Settings as a real settings page with a hydration-safe theme control and
-  live provider cards; Fabric as a proper data page; the legacy CSS family swept) are done.
-  NEXT: R-496 (motion, states & polish; retire the R-475-pinned .pill/.spinner selectors with
-  the assertion) - roadmap in the plan file. Then (not yet scoped): real
+  retired), R-495 (Settings as a real settings page with a hydration-safe theme control and
+  live provider cards; Fabric as a proper data page; the legacy CSS family swept) and R-496
+  (loading/error states, streamed provider cards, OG/Twitter meta with a generated image,
+  .reveal motion, tinted shadows, the last legacy CSS retired) are done - THE UI OVERHAUL IS
+  COMPLETE. The founder should eyeball the whole product at localhost:4321 and share the
+  Emergent/Lovable/Dyad screenshots if a further visual pass is wanted.
+  NEXT (needs the founder's pick; none pre-approved): real
   multi-target Publish/deploy (Netlify one-click primary; Vercel/Cloudflare/self-host/GitHub-export
   as secondary options), Node.js backend codegen alongside Python/Go, and mobile (React Native
   near-term, per research - no competitor at scale generates native Kotlin/Swift). Separately, full

@@ -70,7 +70,7 @@ export default function AuthScreen({
           <BrandMark className="size-6" />
           <span className="text-sm font-semibold tracking-tight">OmniStackAI</span>
         </Link>
-        <div className="my-auto w-full max-w-sm self-center py-10">
+        <div className="reveal my-auto w-full max-w-sm self-center py-10">
           <h1 className="text-2xl font-semibold tracking-tight">{title}</h1>
           {description ? (
             <p className="mt-1.5 text-pretty text-sm text-muted-foreground">{description}</p>

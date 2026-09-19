@@ -4,6 +4,30 @@ Last updated: 2026-09-19
 ## Current Phase
 Stage 0 (Founder Build Sequence, Brief Section 91) — BASIC/MVP
 
+> **R-496 (2026-09-19): Console — motion, states & polish. The six-task Console UI overhaul (R-491..R-496) is complete.**
+> Loading states per Next 16's `loading.js` convention for Studio and Settings under their gated
+> layouts, and the one network-dependent piece — the provider-status card — streamed inside
+> `<Suspense>` below the auth gate on the dashboard and Settings; error states per `error.js`
+> (`app/error.tsx` on the documented `retry()` prop with the `digest` shown as a reference;
+> `app/global-error.tsx` with its own document); `metadataBase` from the new optional
+> `OMNISTACKAI_CONSOLE_PUBLIC_URL` (dev fallback to the console's real address), `openGraph` +
+> `twitter` fields and a generated 1200×630 PNG via `ImageResponse` from `next/og`; a `.reveal`
+> rise+fade utility (transform/opacity, 60ms stagger, collapsed under `prefers-reduced-motion`)
+> across the dashboard, settings, fabric, auth, 404/error and Studio empty states and chat
+> messages; tinted `shadow-*` utilities; the last legacy CSS retired with the R-475 assertion
+> edited deliberately — `globals.css` is 330 lines. **A real regression caught by the live smoke
+> and fixed in-task**: a root `app/loading.tsx` turned the signed-out auth redirects into
+> streamed 200s (`<meta http-equiv="refresh">` + a `NEXT_REDIRECT` payload); removed in favor
+> of Suspense-below-the-gate, and a `test.sh` assertion now forbids it. Gates: typecheck/lint/
+> build clean (**25 routes**), contract tests, `task verify` **3,738 OK**, lint/security/env.
+> Live: every route with the right status signed out/in, the full `og:*`/`twitter:*` head with
+> an absolute image URL, real PNG image routes (56.6 KB, 1200×630), reveal indexes on the right
+> elements, **0 server errors**. The redesign audit checklist is in the contract with honest
+> open items (no legal pages exist yet; no cookie banner needed; Lucide kept deliberately).
+> NEXT: the founder picks — Publish/deploy (new infra/paid decision), sandbox providers into the
+> Studio preview + per-user free/paid routing, Node.js codegen, mobile (hard gate), or tenant
+> isolation of the Studio server (architecture sign-off). Eyeball everything at `localhost:4321`.
+
 > **R-495 (2026-09-19): Console — Settings + Fabric; legacy CSS sweep.**
 > Fifth task of the Console UI overhaul; the last two legacy screens rebuilt on the R-491 stack.
 > **Settings** is a real settings page: a sticky in-page nav; Account as read-only facts with the
