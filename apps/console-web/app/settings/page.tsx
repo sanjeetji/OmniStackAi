@@ -2,7 +2,7 @@ import { getProviderStatus, type ProviderStatus } from "@/lib/control-plane";
 import { getSessionToken } from "@/lib/session";
 
 export const metadata = {
-  title: "Settings — OmniStackAI Console",
+  title: "Settings",
 };
 
 export default async function SettingsPage() {

@@ -424,9 +424,11 @@ discipline):
    (v4.21) had materially changed its flags and defaults, and `shadcn init` clobbered two legacy
    token names (`--muted`, `--accent`) that would have made light mode unreadable — fixed in the
    token rewrite. Every route live-smoked; 3,738 agent-engine tests unaffected.
-2. **R-492 — Auth + app shell.** Login/register redesign with real inline validation and loading
-   states; top navigation with current-page state; user menu; skip-link; branded 404; a real
-   home/dashboard instead of a link list.
+2. **R-492 — Auth + app shell** *(shipped 2026-09-19)*. Login/register redesign with real inline
+   validation and loading states; top navigation with current-page state; user menu on a real
+   Radix menu; skip-link; branded 404; a real home/dashboard with live provider status instead of
+   a link list. Kept the existing file layout rather than route groups because eight earlier
+   `scripts/test.sh` contract blocks pin the current page paths — the shell is a shared component.
 3. **R-493 — Studio core.** Chat rail + workspace shell rebuilt on shadcn primitives: a premium
    chat thread, the streaming state (shimmer/skeleton, live character count kept), composer, a
    designed "getting started" empty state; Lucide replaces the hand-rolled `studio-icons.tsx`.
@@ -487,8 +489,8 @@ so the founder is asked to eyeball `http://localhost:4321` after each task.
 
 ## 6. How to resume this if the session stops here
 
-**Immediate next action as of 2026-09-19: R-492 (auth + app shell), the second item in "Phase
-E-UI — Console UI overhaul" above; R-475 → R-481, R-482 → R-485, R-486 → R-490 and R-491 are all
+**Immediate next action as of 2026-09-19: R-493 (Studio core), the third item in "Phase E-UI —
+Console UI overhaul" above; R-475 → R-481, R-482 → R-485, R-486 → R-490, R-491 and R-492 are all
 shipped.** `.ai/PROJECT_STATE.yaml`'s `next_action` and `.ai/CURRENT_TASK.yaml` are the
 authoritative pointers per `AGENTS.md`'s source-of-truth order (they win over this paragraph if
 they ever disagree) — read them first, but they should already agree with this. The founder's

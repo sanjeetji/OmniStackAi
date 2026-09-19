@@ -1,24 +1,31 @@
-import Link from "next/link";
 import overview from "@/data/overview.json";
+import { getCurrentUser } from "@/lib/session";
+import AppShell from "@/components/app-shell";
 
 export const metadata = {
-  title: "Model Fabric — OmniStackAI Console",
+  title: "Model Fabric",
 };
 
-export default function FabricPage() {
+export default async function FabricPage() {
   const { routingLadder, providers, priceBook, resilience, usage, builderShowcase } = overview;
 
+  // This page is public (it renders a static overview); the shell just needs to know whether to
+  // show the account menu or the sign-in actions, and must not break if the control-plane is down.
+  let user = null;
+  try {
+    user = await getCurrentUser();
+  } catch {
+    user = null;
+  }
+
   return (
-    <main className="wrap wrap--wide">
+    <AppShell user={user}>
       <header className="masthead">
         <div>
           <p className="eyebrow">Founder Stage 0 · local-first</p>
           <h1>Model Fabric &amp; Cost Overview</h1>
           <p className="lede">{overview.note}</p>
         </div>
-        <Link href="/" className="button button--secondary">
-          ← Back
-        </Link>
       </header>
 
       <section className="panel">
@@ -158,6 +165,6 @@ export default function FabricPage() {
           {builderShowcase.editPreview.unifiedPatch}
         </pre>
       </section>
-    </main>
+    </AppShell>
   );
 }

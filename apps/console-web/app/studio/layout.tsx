@@ -1,9 +1,9 @@
 import { redirect } from "next/navigation";
-import Link from "next/link";
 import { getCurrentUser } from "@/lib/session";
-import LogoutButton from "../logout-button";
-import { BackArrowIcon, SettingsIcon } from "./studio-icons";
+import AppShell from "@/components/app-shell";
 
+/** The /studio auth gate lives here (R-475) so every Studio view inherits it; the visible chrome
+ * is the shared AppShell (R-492). */
 export default async function StudioLayout({
   children,
 }: Readonly<{ children: React.ReactNode }>) {
@@ -12,21 +12,5 @@ export default async function StudioLayout({
     redirect("/login");
   }
 
-  return (
-    <div className="studio-shell">
-      <header className="studio-topbar">
-        <Link href="/" className="studio-topbar-back" aria-label="Back to home">
-          <BackArrowIcon />
-          <span className="studio-topbar-brand">OmniStackAI Studio</span>
-        </Link>
-        <div className="studio-topbar-actions">
-          <Link href="/settings" className="studio-topbar-icon-link" aria-label="Settings">
-            <SettingsIcon />
-          </Link>
-          <LogoutButton />
-        </div>
-      </header>
-      <main className="studio-main">{children}</main>
-    </div>
-  );
+  return <AppShell user={user}>{children}</AppShell>;
 }

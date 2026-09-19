@@ -4,6 +4,31 @@ Last updated: 2026-09-19
 ## Current Phase
 Stage 0 (Founder Build Sequence, Brief Section 91) — BASIC/MVP
 
+> **R-492 (2026-09-19): Console — auth screens + app shell (nav, user menu, skip link, 404, dashboard).**
+> Second task of the Console UI overhaul and the first one a user sees. Design decision from a
+> direct read of `scripts/test.sh`: eight earlier contract blocks pin the current page paths, so
+> screens were **not** moved into route groups — the shell is a shared server component
+> (`components/app-shell.tsx`) and every per-route auth gate stays where it is. Built on the R-491
+> stack with `globals.css` untouched and no new dependencies: `AppShell` (skip-to-content link,
+> sticky translucent header, brand mark, `AppNav` with `aria-current="page"`, `UserMenu` on a real
+> Radix DropdownMenu with plan/credits/sign-out — `app/logout-button.tsx` retired and deleted,
+> `<main>` keeping the legacy Studio geometry so the untouched workspace still fits);
+> `AuthScreen` split layout with a grain brand panel and three *true* product statements;
+> `login-form`/`register-form` with validation mirroring the server's own limits, inline
+> `aria-invalid`/`aria-describedby` errors cleared on edit, a `role="alert"` server banner
+> (sentence-cased), spinner + disabled submit, show/hide password; login/register pages are now
+> server components (metadata, signed-in visitors → `/`, control-plane-down treated as
+> signed-out); `app/not-found.tsx` per Next 16's convention; a real dashboard on `/` — asymmetric
+> 7/5 layout, honest three-step loop, live provider card via the existing `getProviderStatus()`,
+> plan/credits/role/BYOK — no invented "recent projects". Titles trimmed to the R-491 template;
+> `/fabric` wrapped in the shell, still public. Gates: typecheck/lint clean, build 23 routes,
+> `scripts/test.sh` + new R-492 block, `task verify` **3,738 OK**, lint/security/env. Live: full
+> signed-out/signed-in matrix as designed; dashboard shows **real** data (Ready · groq ·
+> openai/gpt-oss-120b, 3 of 11 providers configured, 100 credits, Radix trigger ARIA);
+> `aria-current` lands on the right link per page; 401/400/200 auth paths; logout 204; **0
+> server errors**. Console left running detached on 4321 — founder eyeballs it (no browser tool).
+> NEXT: R-493 (Studio core), then R-494/R-495/R-496.
+
 > **R-491 (2026-09-19): Console — UI foundation (Tailwind v4 + shadcn/ui + Geist, dark-first).**
 > First of the six-task Console UI overhaul (R-491..R-496), approved after the founder asked why
 > the platform UI is "just simple and very ugly" — honest diagnosis: zero UI dependencies (hand-

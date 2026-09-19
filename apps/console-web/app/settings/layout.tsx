@@ -1,8 +1,6 @@
 import { redirect } from "next/navigation";
-import Link from "next/link";
 import { getCurrentUser } from "@/lib/session";
-import LogoutButton from "../logout-button";
-import { BackArrowIcon } from "../studio/studio-icons";
+import AppShell from "@/components/app-shell";
 
 export default async function SettingsLayout({
   children,
@@ -12,16 +10,5 @@ export default async function SettingsLayout({
     redirect("/login");
   }
 
-  return (
-    <div className="studio-shell">
-      <header className="studio-topbar">
-        <Link href="/" className="studio-topbar-back" aria-label="Back to home">
-          <BackArrowIcon />
-          <span className="studio-topbar-brand">OmniStackAI Settings</span>
-        </Link>
-        <LogoutButton />
-      </header>
-      <main className="studio-main">{children}</main>
-    </div>
-  );
+  return <AppShell user={user}>{children}</AppShell>;
 }

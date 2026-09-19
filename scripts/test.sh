@@ -712,4 +712,55 @@ if ! rg -qF 'Geist_Mono' "$console_root/app/layout.tsx"; then
   exit 1
 fi
 
+# R-492: console auth screens + shared app shell (nav with current-page state, user menu,
+# skip-to-content link, branded 404, home dashboard).
+for required_file in \
+  "$console_root/components/app-shell.tsx" \
+  "$console_root/components/app-nav.tsx" \
+  "$console_root/components/user-menu.tsx" \
+  "$console_root/components/brand-mark.tsx" \
+  "$console_root/components/auth-screen.tsx" \
+  "$console_root/components/field.tsx" \
+  "$console_root/app/not-found.tsx" \
+  "$console_root/app/login/login-form.tsx" \
+  "$console_root/app/register/register-form.tsx"; do
+  if [[ ! -f "$required_file" ]]; then
+    printf 'Missing R-492 contract file: %s\n' "$required_file"
+    exit 1
+  fi
+done
+
+if [[ -f "$console_root/app/logout-button.tsx" ]]; then
+  printf 'R-492 retired app/logout-button.tsx into components/user-menu.tsx.\n'
+  exit 1
+fi
+
+if ! rg -qF 'href="#main"' "$console_root/components/app-shell.tsx"; then
+  printf 'R-492 app shell must include a skip-to-content link targeting #main.\n'
+  exit 1
+fi
+
+for nav_marker in usePathname aria-current; do
+  if ! rg -qF "$nav_marker" "$console_root/components/app-nav.tsx"; then
+    printf 'R-492 app nav must mark the current page (%s).\n' "$nav_marker"
+    exit 1
+  fi
+done
+
+for auth_form in login/login-form.tsx register/register-form.tsx; do
+  for marker in aria-invalid 'role="alert"' noValidate; do
+    if ! rg -qF "$marker" "$console_root/app/$auth_form"; then
+      printf 'R-492 %s must validate inline (%s).\n' "$auth_form" "$marker"
+      exit 1
+    fi
+  done
+done
+
+for shell_consumer in app/page.tsx app/studio/layout.tsx app/settings/layout.tsx app/fabric/page.tsx; do
+  if ! rg -qF 'AppShell' "$console_root/$shell_consumer"; then
+    printf 'R-492 %s must render inside the shared AppShell.\n' "$shell_consumer"
+    exit 1
+  fi
+done
+
 printf 'Repository contract tests passed.\n'

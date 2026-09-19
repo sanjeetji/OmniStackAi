@@ -208,7 +208,7 @@ front-door bricks, R-420 is generated-SQL hardening, R-421..R-426 are Studio pre
 R-427..R-429 are generated-app compile fixes, R-430..R-457 are the first twenty-eight differentiating-spine
 bricks (Scope Compiler through Ecosystem Multi-Surface SLA, SLO, and Error Budget Contracts).
 Git, state files (.ai/), CHANGELOG, and docs/PROGRESS.md remain the executable/detail sources of truth.
-Current through R-491; `task verify` = 3,738 tests (agent-engine) + the Go control-plane's own suite +
+Current through R-492; `task verify` = 3,738 tests (agent-engine) + the Go control-plane's own suite +
 the Next.js console's typecheck/lint/build. R-416 added prompt-to-IR intake, R-417 materialized a generated
 owned repo, R-418 added the local chat studio, R-419 added turnkey local run, and R-420 fixed the two
 SQL defects found by live execution. R-421 added an explicit `task agent-engine:studio:preview` mode:
@@ -850,8 +850,22 @@ WHAT TO DO NEXT
   every route live-smoked; 3,738 tests unaffected. IMPORTANT: shadcn CLI is v4.x - always read
   `pnpm dlx shadcn@latest <cmd> --help` before assuming flags. No browser tool exists in these
   sessions - the founder eyeballs http://localhost:4321.
-- NEXT: R-492 (auth + app shell), R-493 (Studio core), R-494 (Studio tabs), R-495 (Settings/
-  Fabric), R-496 (motion/states/polish) - the roadmap is in the plan file. After the UI overhaul
+- R-492 (2026-09-19, done) shipped the first visible screens of the overhaul: split-screen
+  sign-in / create-account with real inline validation (mirroring the server's limits,
+  aria-invalid/aria-describedby, role="alert" server banner, loading state, show/hide password;
+  signed-in visitors bounce to /), a shared components/app-shell.tsx (skip link to #main, sticky
+  header, AppNav with aria-current, UserMenu on a real Radix DropdownMenu with sign-out -
+  app/logout-button.tsx deleted), app/not-found.tsx, and a real dashboard on / with live
+  provider status via getProviderStatus(). IMPORTANT structural fact: screens were NOT moved into
+  route groups because eight earlier scripts/test.sh blocks assert the literal current paths
+  (app/login/page.tsx, app/studio/layout.tsx containing getCurrentUser, app/settings/layout.tsx,
+  studio-icons.tsx) - keep that layout, or update those blocks deliberately. AppShell's <main>
+  keeps the legacy .studio-main geometry on purpose until R-493 rebuilds the Studio grid. Two
+  SSR facts learned while smoking: React 19 emits noValidate/autoComplete/maxLength camelCase
+  in HTML, and inserts <!-- --> between adjacent text nodes - dump raw tags before believing a
+  grep. The console is running detached on 4321 (log in the session scratchpad).
+- NEXT: R-493 (Studio core), R-494 (Studio tabs), R-495 (Settings/Fabric), R-496 (motion/
+  states/polish) - the roadmap is in the plan file. After the UI overhaul
   (not yet scoped): real multi-target Publish/deploy (Netlify one-click primary, Vercel/Cloudflare/
   self-host/GitHub-export as secondary options), Node.js backend codegen alongside Python/Go, and
   mobile (React Native near-term). Full per-user process/tenant isolation as a wholesale architecture

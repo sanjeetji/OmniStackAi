@@ -1,5 +1,52 @@
 # Work Log
 
+## 2026-09-19 — R-492 (Console: auth screens + app shell — nav, user menu, skip link, 404, dashboard)
+
+- **Why:** second task of the Console UI overhaul and the first one a user actually sees. R-491
+  changed nothing visible beyond fonts/tokens; this task redesigns sign-in / create-account, adds
+  the shared application shell, a branded 404 and a real dashboard.
+- **Design decision from a direct read, not assumption:** route groups (`app/(app)/`,
+  `app/(auth)/`) were the textbook structure — and would have broken eight earlier
+  `scripts/test.sh` contract blocks that assert the literal current paths (`app/login/page.tsx`,
+  `app/studio/layout.tsx` *containing* `getCurrentUser`, `app/settings/layout.tsx`,
+  `studio-icons.tsx`, …). Kept the file layout; the shell is a shared server component every
+  authenticated layout/page wraps itself in. Same visible result, zero contract churn.
+- **Built on the R-491 stack** (shadcn primitives + Lucide + Tailwind utilities; `globals.css`
+  untouched; no new dependencies): `components/app-shell.tsx` (skip link → `#main`, sticky
+  translucent header, brand mark + wordmark, nav, account menu or sign-in actions, `<main>` with
+  the legacy `.studio-main` geometry so the untouched Studio grid still fits);
+  `components/app-nav.tsx` (`usePathname`, `aria-current="page"`); `components/user-menu.tsx` on
+  the vendored `DropdownMenu` — a real Radix menu — with name/email, plan, tabular credits,
+  links, destructive Sign out with loading state (the old `app/logout-button.tsx` retired into
+  it and deleted); `components/auth-screen.tsx` split layout (grain brand panel, one soft brand
+  glow, display headline, three *true* product statements); `login-form.tsx` /
+  `register-form.tsx` with validation mirroring the server's limits, per-field `aria-invalid` +
+  `aria-describedby` errors cleared on edit, `role="alert"` server banner (sentence-cased),
+  spinner + disabled submit, show/hide password (`aria-pressed`), `noValidate` + `aria-busy`;
+  login/register pages became server components (metadata, redirect signed-in visitors to `/`,
+  control-plane-down treated as signed-out so the page still renders); `app/not-found.tsx`
+  (Next 16 `not-found.js` convention, read from the bundled docs — also serves every unmatched
+  URL); `app/page.tsx` dashboard — asymmetric 7/5 layout, honest three-step loop, live provider
+  card reusing `getProviderStatus()` exactly as `/settings` does, plan/credits/role/BYOK cards,
+  no invented "recent projects" (no per-user build history endpoint exists); titles trimmed to
+  the R-491 template; `/fabric` wrapped in the shell with an optional user (stays public).
+- **Gates:** typecheck + lint clean on the first run; build 23 routes (`/login`/`/register` now
+  dynamic since they read the cookie); `scripts/test.sh` passes with a new R-492 block;
+  `task verify` 3,738 OK; lint/security/env pass.
+- **Live smoke (real stack):** signed-out 200/307/404 matrix as designed; served-HTML markers
+  verified per page (template titles, form attributes, skip link, `aria-current` on exactly the
+  right nav link for `/`, `/studio`, `/settings`, `/fabric`, Sign in / Create account on public
+  `/fabric`, 404 copy); auth API through the real control-plane (401 "invalid email or
+  password", 400 malformed, 200 + cookie); signed-in 200 everywhere and 307 from `/login`,
+  `/register` to `/`; dashboard shows real data (Ready · groq · openai/gpt-oss-120b, 3 of 11
+  providers configured, 100 credits, Radix trigger with `aria-haspopup="menu"`); Studio grid +
+  chat rail intact; logout 204 → 307 again; **server log 0 errors**. Console left running
+  detached on 4321 with its own log for the founder.
+- **Smoke observations recorded** (not bugs): React 19 serializes `noValidate`/`autoComplete`/
+  `maxLength` with camelCase names in SSR HTML, and inserts `<!-- -->` between adjacent text
+  nodes — a first grep reported them missing; verified by dumping the raw tags instead.
+- **Next:** R-493 (Studio core). Founder's screenshots shape R-493/R-494.
+
 ## 2026-09-19 — R-491 (Console: UI foundation — Tailwind v4 + shadcn/ui + Geist, dark-first)
 
 - **Why:** after R-486–R-490 shipped, the founder asked why the platform UI is "just simple and

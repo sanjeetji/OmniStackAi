@@ -2,7 +2,7 @@ import { getCurrentUser } from "@/lib/session";
 import StudioChat from "./studio-chat";
 
 export const metadata = {
-  title: "Studio — OmniStackAI Console",
+  title: "Studio",
 };
 
 export default async function StudioPage() {

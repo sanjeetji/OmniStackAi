@@ -1,9 +1,29 @@
 # Current Handoff
 
-Task ID: R-491
+Task ID: R-492
 Status: done
 Phase: BASIC/MVP — Founder Stage 0
 Branch: `main`
+
+> **R-492 Completed (2026-09-19): Console — auth screens + app shell (nav, user menu, 404, dashboard).**
+> - Second task of the Console UI overhaul; the first screens a user sees. **No route-group
+>   move** — eight earlier `scripts/test.sh` blocks assert the current literal paths, so the shell
+>   is a shared server component (`components/app-shell.tsx`) and every existing per-route auth
+>   gate stays put.
+> - New: `AppShell` (skip link → `#main`, sticky header, brand, `AppNav` with `aria-current`,
+>   `UserMenu` on a real Radix DropdownMenu with sign-out — `app/logout-button.tsx` deleted),
+>   `AuthScreen` split layout + `login-form`/`register-form` with validation mirroring the
+>   server's limits, `aria-invalid`/`aria-describedby` inline errors, `role="alert"` server
+>   banner, loading state, show/hide password; login/register pages are server components
+>   (metadata; signed-in visitors → `/`); `app/not-found.tsx`; a real dashboard on `/` with live
+>   provider status via the existing `getProviderStatus()`; titles use the R-491 template;
+>   `/fabric` in the shell, still public. `globals.css` untouched, no new deps.
+> - Gates: typecheck/lint clean, build 23 routes, `scripts/test.sh` (new R-492 block) passes,
+>   `task verify` **3,738 OK**, lint/security/env pass. Live smoke: full signed-out / signed-in
+>   matrix as designed, real provider + credit data on the dashboard, `aria-current` on the right
+>   link per page, 401/400/200 auth paths, logout 204, **0 server errors**. Console left running
+>   detached on 4321 for the founder to eyeball (no browser tool here).
+> - **NEXT**: R-493 (Studio core). See `.ai/tasks/R-492.md`.
 
 > **R-491 Completed (2026-09-19): Console — UI foundation (Tailwind v4 + shadcn/ui + Geist).**
 > - First of the six-task Console UI overhaul (R-491..R-496). The founder asked why the UI is

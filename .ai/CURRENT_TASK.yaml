@@ -1,36 +1,44 @@
-task_id: R-491
+task_id: R-492
 status: completed
 phase: MVP
 tracker_row: null
 started_at: "2026-09-19"
 completed_at: "2026-09-19"
 objective: >-
-  First of the six-task Console UI overhaul (R-491..R-496), approved by the founder after asking
-  why the platform UI is "just simple and very ugly" ("I need proper best UI based platform not
-  just simple a page"; reference bar: Emergent/Lovable/Dyad). Foundation only: retire the R-470
-  scripts/test.sh gate that blocks UI dependencies (founder sign-off recorded), install Tailwind
-  v4 (@tailwindcss/postcss, per Next 16's own bundled guide) + shadcn/ui (vendored primitives) +
-  next-themes (dark-first) + lucide-react, load Geist/Geist Mono via next/font/google, replace the
-  token system with an OKLCH dark-first scale (one desaturated accent, tinted shadows, real type
-  scale) while re-pointing the legacy CSS variables so every existing class still renders. No
-  page markup changes - every route must build and respond exactly as before. Screen redesigns
-  are R-492..R-496.
+  Second task of the Console UI overhaul (R-491..R-496): the first screens a user sees. Redesign
+  /login and /register on shadcn primitives with real client-side validation (mirroring the
+  server's own limits), inline aria-wired field errors, a role="alert" server-error banner, a
+  loading state and a show/hide password toggle; add a shared AppShell (skip-to-content link,
+  sticky header with brand, AppNav with aria-current current-page state, UserMenu on a real
+  DropdownMenu with plan/credits/sign-out) wrapped by every authenticated layout/page and by the
+  public /fabric page; a branded app/not-found.tsx; and a real home dashboard (primary Open Studio
+  action, honest three-step loop, account facts, live model-provider status via the existing
+  getProviderStatus client). No route-group move - eight earlier scripts/test.sh blocks assert the
+  current file paths, so the shell is a shared component and the existing per-route auth gates
+  stay put. app/logout-button.tsx retires into UserMenu. No API, lib, Studio-workspace, or
+  dependency changes; no fabricated content.
 allowed_paths:
-  - apps/console-web/package.json
-  - pnpm-lock.yaml
-  - apps/console-web/postcss.config.mjs
-  - apps/console-web/components.json
-  - apps/console-web/components/ui/
-  - apps/console-web/lib/utils.ts
-  - apps/console-web/app/globals.css
-  - apps/console-web/app/layout.tsx
-  - apps/console-web/app/theme-provider.tsx
-  - apps/console-web/app/icon.svg
+  - apps/console-web/components/app-shell.tsx
+  - apps/console-web/components/app-nav.tsx
+  - apps/console-web/components/user-menu.tsx
+  - apps/console-web/components/brand-mark.tsx
+  - apps/console-web/components/auth-screen.tsx
+  - apps/console-web/components/field.tsx
+  - apps/console-web/app/not-found.tsx
+  - apps/console-web/app/page.tsx
+  - apps/console-web/app/login/page.tsx
+  - apps/console-web/app/login/login-form.tsx
+  - apps/console-web/app/register/page.tsx
+  - apps/console-web/app/register/register-form.tsx
+  - apps/console-web/app/logout-button.tsx
+  - apps/console-web/app/studio/layout.tsx
+  - apps/console-web/app/studio/page.tsx
+  - apps/console-web/app/settings/layout.tsx
+  - apps/console-web/app/settings/page.tsx
   - apps/console-web/app/fabric/page.tsx
-  - apps/console-web/tsconfig.json
-  - apps/console-web/.gitignore
+  - apps/console-web/app/globals.css
   - scripts/test.sh
-  - .ai/tasks/R-491.md
+  - .ai/tasks/R-492.md
   - .ai/CURRENT_TASK.yaml
   - .ai/PROJECT_STATE.yaml
   - .ai/WORK_LOG.md
@@ -41,34 +49,32 @@ allowed_paths:
   - docs/RESUME_PROMPT.md
   - R_&_D/OmniStackAI_Commercial_Platform_Kickoff_v1.md
 forbidden_changes:
-  - No page/component markup changes beyond app/layout.tsx - screen redesigns are R-492..R-496; old CSS classes must keep rendering
-  - No changes to lib/control-plane.ts, lib/session.ts, or any app/api/* route
-  - No agent-engine or control-plane changes
+  - No changes to lib/control-plane.ts, lib/session.ts, or any app/api/* route (auth contract unchanged)
+  - No changes to studio-chat/tabs/preview/workspace, code-highlight.ts, or studio-icons.tsx (R-493/R-494)
+  - No new dependencies; no agent-engine or control-plane changes
+  - No fabricated content (fake projects, stats, testimonials, or legal pages that don't exist)
   - Do not modify or commit the untracked .claude directory
-  - No real network call in any automated gate (pnpm install runs once during the task, never in task verify)
 required_gates:
   - "console-web: pnpm run typecheck, pnpm run lint, pnpm run build"
+  - "bash scripts/test.sh (new R-492 block)"
   - task verify
   - task lint
   - task security:quick
   - task env:check
-  - "bash scripts/test.sh (R-470 gate retired, new R-491 block passes)"
-  - "live smoke: next start on 4321, curl every page route (200) + one /api route via a real cookie session; founder eyeballs localhost:4321 for the font/theme change since no browser tool exists here"
+  - "live smoke: next start on 4321; every page route signed-out and signed-in (307/200/404 as designed), skip link + aria-current + user name present in served HTML, wrong-password 401 banner path, logout 204; founder eyeballs localhost:4321 (no browser tool here)"
 model_tool_trace:
   routing: deterministic_only
   local_calls: 0
   cloud_calls: 0
-  note: >-
-    Pure TypeScript/CSS/config work, 0 model calls. One-time pnpm install of the new UI
-    dependencies happens during the task, never inside an automated gate.
+  note: Pure TypeScript/TSX work on the R-491 stack, 0 model calls.
 next_action: >-
-  R-491 shipped: the console now runs on Tailwind v4 + shadcn/ui (Radix, Nova preset = Lucide/
-  Geist) + next-themes (dark-first) with a tinted OKLCH token system, Geist/Geist Mono self-hosted
-  via next/font, a branded icon.svg, and the R-470 no-UI-dependency gate retired with the
-  founder's recorded decision. Real tooling drift (shadcn CLI v4.21's new --base/--preset model)
-  and a real init bug (it clobbered the legacy --muted/--accent names) were both worked through
-  honestly. 23 routes build; every route live-smoked; 3,738 agent-engine tests unaffected. The
-  founder is asked to eyeball localhost:4321 (no browser tool here). Next: R-492 (auth + app
-  shell: login/register redesign with real validation, top nav with current-page state, user
-  menu, skip-link, branded 404, home/dashboard) - and the founder's Emergent/Lovable/Dyad
-  screenshots, once shared, feed R-493/R-494's Studio screens.
+  R-492 shipped: split-screen sign-in / create-account with real inline validation and server
+  error banners, a shared AppShell (skip link, sticky header, aria-current nav, Radix user menu
+  with sign-out), a branded 404, and a real dashboard showing live provider status and account
+  facts - all inside the existing file layout (no route-group move; eight earlier contract
+  blocks pin the paths). globals.css untouched. All gates green (3,738 tests unaffected); every
+  route live-smoked signed-out and signed-in with 0 server errors; the console is left running
+  detached on 4321 for the founder to eyeball. Next: R-493 (Studio core - chat rail + workspace
+  shell rebuilt on shadcn primitives: premium chat thread, streaming state with shimmer/skeleton
+  and the live character count kept, composer, designed empty state; Lucide replaces
+  studio-icons.tsx). The founder's Emergent/Lovable/Dyad screenshots, once shared, shape it.

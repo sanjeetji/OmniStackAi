@@ -2,10 +2,10 @@ schema_version: 1
 project: OmniStackAI
 phase: BASIC/MVP
 founder_stage: 0
-current_task: R-491
+current_task: R-492
 current_status: done
 branch: main
-last_completed_task: R-491
+last_completed_task: R-492
 # TASK COMPILATION AUDIT — 2026-09-16
 # Performed to achieve 100% synchronization across all task-tracking documentation.
 # Tracker workbook expanded to 464 tasks with R-464.
@@ -34,6 +34,54 @@ task_compilation_audit:
       new_status: DONE
       reason: "Task fully completed on 2026-09-11 with 35 tests. Status left stale during rapid development sprint."
 last_completed_task_summary: >-
+  Completed R-492 (2026-09-19): console auth screens + shared app shell. Second task of the
+  Console UI overhaul (R-491..R-496) and the first one a user sees. Design decision made from a
+  direct read of scripts/test.sh: eight earlier contract blocks (R-470, R-475, R-482, ...) assert
+  the current literal page paths (app/login/page.tsx, app/studio/layout.tsx containing
+  getCurrentUser, app/settings/layout.tsx, studio-icons.tsx), so screens were NOT moved into
+  route groups; the shell is a shared server component (components/app-shell.tsx) every
+  authenticated layout/page wraps itself in, and the per-route auth gates stay where they are.
+  Built: AppShell (skip-to-content link to #main, sticky translucent 56px header with brand mark
+  + wordmark, AppNav, account menu or Sign in / Create account when signed out, <main id="main">
+  keeping the legacy .studio-main geometry so the untouched Studio grid still fits); AppNav
+  (client, usePathname, aria-current="page" on the current section, Lucide icons); UserMenu on
+  the vendored shadcn DropdownMenu (a real Radix menu: aria-haspopup/aria-expanded, keyboard
+  navigable) showing name/email, plan badge, tabular credits, Settings/Fabric links, destructive
+  Sign out with loading state - the old app/logout-button.tsx retired into it and was deleted;
+  AuthScreen split layout (grain brand panel with one soft brand glow, a display headline and
+  three true product statements, collapsing to a brand row on small screens) with login-form /
+  register-form client components: validation mirroring the server's own limits (email format,
+  name required <=200, password 8-128), per-field inline errors wired with aria-invalid +
+  aria-describedby and cleared on edit, a role="alert" banner for the server's message
+  (sentence-cased, e.g. "Invalid email or password."), spinner + disabled submit while in
+  flight, show/hide password with aria-pressed, noValidate + aria-busy on the form; login and
+  register pages are now server components carrying metadata and redirecting an already-signed-in
+  visitor to /; a branded app/not-found.tsx (per Next 16's not-found.js convention, also serves
+  every unmatched URL, returns 404); a real dashboard on / (greeting, primary Open Studio action,
+  an asymmetric 7/5 layout - honest three-step loop + live model-provider card reusing the
+  existing getProviderStatus client exactly like /settings, and plan/credits/role/BYOK cards;
+  no invented "recent projects" since no per-user build history endpoint exists); page titles
+  trimmed to use the R-491 template ("Studio", "Settings", "Model Fabric", + "Sign in",
+  "Create account"); /fabric wrapped in the shell with an optional user (stays public), its own
+  Back button dropped. globals.css untouched; no new dependencies; no API/lib/Studio-workspace
+  changes.
+  Gates: typecheck/lint clean first run; build 23 routes (/login and /register now dynamic since
+  they read the cookie); scripts/test.sh passes with a new R-492 block; task verify 3,738 OK;
+  lint/security/env pass. Live smoke against the real stack, console rebuilt and restarted on
+  4321 (detached with its own log, left running for the founder): signed-out 200/307/404 matrix
+  as designed; served HTML markers verified (template titles, noValidate/autoComplete/maxLength,
+  skip link, nav aria-current on exactly the right link per page, Sign in / Create account on
+  public /fabric, 404 copy); auth API through the real control-plane (401 invalid email or
+  password, 400 malformed, 200 + cookie); signed-in 200 on / /studio /settings /fabric
+  /api/providers and 307 from /login and /register to /; dashboard renders real data (Ready ·
+  groq · openai/gpt-oss-120b, 3 of 11 providers configured, 100 credits, Radix menu trigger);
+  Studio grid + chat rail still present; logout 204 then 307 again. Server log: 0 errors. Two
+  smoke observations recorded (React 19 serializes noValidate/autoComplete/maxLength camelCase
+  in SSR HTML; <!-- --> text separators) - verified by dumping raw tags, not trusting a grep.
+  No browser tool in this session - the founder eyeballs localhost:4321.
+  NEXT: R-493 (Studio core), R-494 (Studio tabs), R-495 (Settings/Fabric), R-496 (motion/
+  states/polish); the founder's Emergent/Lovable/Dyad screenshots shape R-493/R-494.
+_prior_last_completed_task_summary_R491: >-
   Completed R-491 (2026-09-19): console UI foundation - Tailwind v4 + shadcn/ui + Geist,
   dark-first. First of the six-task Console UI overhaul (R-491..R-496), approved after the
   founder asked why the platform UI is "just simple and very ugly." Honest diagnosis: zero UI
@@ -1837,9 +1885,10 @@ next_action: >-
   After that sequence the founder asked why the UI is "just simple and very ugly" and chose
   "Full UI overhaul now" (reference bar: Emergent/Lovable/Dyad) - a six-task Console UI overhaul
   (R-491..R-496) is the active priority; R-491 (foundation: Tailwind v4 + shadcn/ui on Radix +
-  Geist + next-themes dark-first, R-470 gate retired) is done.
-  NEXT: R-492 (auth + app shell), R-493 (Studio core), R-494 (Studio tabs), R-495 (Settings/
-  Fabric), R-496 (motion/states/polish) - roadmap in the plan file. Then (not yet scoped): real
+  Geist + next-themes dark-first, R-470 gate retired) and R-492 (auth screens + shared app shell
+  with nav/user menu/skip link, branded 404, real dashboard) are done.
+  NEXT: R-493 (Studio core), R-494 (Studio tabs), R-495 (Settings/Fabric), R-496 (motion/
+  states/polish) - roadmap in the plan file. Then (not yet scoped): real
   multi-target Publish/deploy (Netlify one-click primary; Vercel/Cloudflare/self-host/GitHub-export
   as secondary options), Node.js backend codegen alongside Python/Go, and mobile (React Native
   near-term, per research - no competitor at scale generates native Kotlin/Swift). Separately, full
