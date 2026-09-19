@@ -11,7 +11,10 @@ from .contracts import (
     PreviewPlan,
     PreviewStep,
     RuntimeProvider,
+    SandboxHandle,
+    SandboxLifecycleProvider,
 )
+from .e2b import E2BSandboxProvider, MissingSandboxCredentialError
 from .errors import (
     DeploySelectionError,
     RuntimeProviderError,
@@ -27,6 +30,7 @@ from .drivers import (
 )
 from .local import LOCAL_PROVIDER_ID, LocalRuntimeProvider, run_preview
 from .providers import DEPLOY_SPECS, RUNTIME_SPECS, ProviderSpec
+from .sandbox_http import SandboxHTTPError, SandboxUnreachableError, request_json
 from .tier import (
     VALID_TIERS,
     PlatformSetup,
@@ -45,8 +49,10 @@ __all__ = [
     "DeploySelectionError",
     "DeploySetup",
     "DeploymentProvider",
+    "E2BSandboxProvider",
     "LOCAL_PROVIDER_ID",
     "LocalRuntimeProvider",
+    "MissingSandboxCredentialError",
     "PlatformSetup",
     "PreviewPlan",
     "PreviewStep",
@@ -56,6 +62,10 @@ __all__ = [
     "RuntimeProviderError",
     "RuntimeSelectionError",
     "RuntimeSetup",
+    "SandboxHandle",
+    "SandboxHTTPError",
+    "SandboxLifecycleProvider",
+    "SandboxUnreachableError",
     "UnsupportedRuntimeTargetError",
     "VALID_TIERS",
     "build_deploy_from_env",
@@ -63,6 +73,7 @@ __all__ = [
     "deploy_driver",
     "format_status",
     "platform_status",
+    "request_json",
     "resolve_platform",
     "resolve_tier",
     "run_deploy",

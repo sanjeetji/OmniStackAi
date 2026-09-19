@@ -1,23 +1,29 @@
-task_id: R-485
+task_id: R-486
 status: completed
 phase: MVP
 tracker_row: null
 started_at: "2026-09-19"
 completed_at: "2026-09-19"
 objective: >-
-  Fast-follow to R-484: the console's /studio chat now consumes POST /jobs/build/stream for its
-  create-path, showing real live incremental progress (a ticking character count) instead of the
-  static "Building..." wait. New streamBuildApp() (lib/control-plane.ts) returns the raw upstream
-  Response so a new proxy route (app/api/jobs/build/stream/route.ts) can pipe it straight through
-  unbuffered; studio-chat.tsx gains sendBuildStream(), replacing sendBuild() as the create-path
-  handler, using fetch() + manual response.body.getReader() SSE-frame parsing (not EventSource,
-  since a POST body is required). Edit stays non-streaming (R-484's own scope boundary).
+  First of a five-task sequence (R-486..R-490) toward the founder's per-user isolation direction,
+  chosen after research confirmed every serious 2025-2026 AI app-builder platform uses a managed
+  microVM/gVisor sandbox provider rather than self-hosting Firecracker/K8s from scratch. This task:
+  a new, additive SandboxHandle/SandboxLifecycleProvider contract (create/status/kill - the
+  existing RuntimeProvider/PreviewPlan is a pure planner, not a real orchestrator, and stays
+  untouched) plus the first real driver, E2BSandboxProvider, verified against E2B's actual
+  documented REST API (POST/GET/DELETE https://api.e2b.app/sandboxes). No real API key exists in
+  this environment, so every gate is offline via an injected fake HTTP transport; live-cloud
+  verification is honestly marked pending a real key from the founder.
 allowed_paths:
-  - apps/console-web/lib/control-plane.ts
-  - apps/console-web/app/api/jobs/build/stream/route.ts
-  - apps/console-web/app/studio/studio-chat.tsx
+  - services/agent-engine/src/omnistackai_agent_engine/runtime/contracts.py
+  - services/agent-engine/src/omnistackai_agent_engine/runtime/sandbox_http.py
+  - services/agent-engine/src/omnistackai_agent_engine/runtime/e2b.py
+  - services/agent-engine/src/omnistackai_agent_engine/runtime/__init__.py
+  - services/agent-engine/tests/test_runtime_sandbox_http.py
+  - services/agent-engine/tests/test_runtime_e2b.py
+  - .env.example
   - scripts/test.sh
-  - .ai/tasks/R-485.md
+  - .ai/tasks/R-486.md
   - .ai/CURRENT_TASK.yaml
   - .ai/PROJECT_STATE.yaml
   - .ai/WORK_LOG.md
@@ -27,34 +33,28 @@ allowed_paths:
   - docs/PROGRESS.md
   - docs/RESUME_PROMPT.md
 forbidden_changes:
-  - No changes to any agent-engine or control-plane file - R-484 already shipped the backend
-  - No changes to the existing non-streaming POST /jobs/build/buildApp()/app/api/jobs/build/route.ts, or to sendEdit()/the edit path
+  - No changes to the existing RuntimeProvider/PreviewPlan/local.py/drivers.py - purely additive
+  - No changes to studio/ - this driver is not wired into the Studio preview flow yet
   - Do not modify or commit the untracked .claude directory
+  - No real API call in any automated gate
 required_gates:
-  - "console-web: pnpm run typecheck, pnpm run lint, pnpm run build"
+  - "agent-engine: task verify (0 model/network calls, fake HTTP transport stands in for E2B)"
   - task verify
   - task lint
   - task security:quick
   - task env:check
-  - "manual smoke: a real build submitted through the actual browser UI at /studio, confirming the live character-count indicator ticks up in real time, then a real follow-up edit still works unchanged"
 model_tool_trace:
   routing: deterministic_only
   local_calls: 0
   cloud_calls: 0
   note: >-
-    Pure TypeScript/React implementation, 0 model/network calls in any automated gate. The manual
-    smoke test's real build call uses whatever provider is configured and genuinely streams.
+    Pure Python stdlib HTTP client implementation, 0 model/network calls in any automated gate.
+    No real E2B_API_KEY exists in this environment - live-cloud verification is honestly deferred,
+    not fabricated.
 next_action: >-
-  R-485 shipped. No browser-automation tool was available this session, so verification used
-  next start + curl through a real cookie-based login session (the same request path a real
-  browser takes). A real streamed build through the full console proxy -> Go control-plane ->
-  agent-engine path showed genuine incremental frames, a real done frame (174 files), and a real
-  trailing credits frame; a real follow-up edit confirmed unchanged. Next: per the founder's
-  stated build order ("streaming first, then scope isolation properly"), properly SCOPE (not yet
-  build) full per-user process/sandbox isolation as its own multi-task project - a materially
-  different architecture decision needing explicit founder sign-off, given the agent-engine has
-  zero containerization today and scripts/test.sh actively blocks adding it as a Compose service.
-  Also pending, per the founder's final answers (not yet scoped): multi-target Publish/deploy
-  (Netlify one-click; Vercel/Cloudflare/self-host/GitHub-export as options), Node.js backend
-  codegen support alongside Python/Go, and starting mobile technology work (React Native
-  near-term, per research).
+  R-486 shipped: 3,680 agent-engine tests OK (22 new), repo gates all pass. E2B's real REST API
+  was verified directly against docs.e2b.dev before writing any code. No real E2B_API_KEY exists
+  in this environment, so live-cloud verification is honestly deferred, not faked. Next: R-487
+  (Vercel Sandbox driver), R-488 (Daytona driver), R-489 (free WebContainers browser option, no
+  cost/config - console-web, client-side, Node.js/frontend apps only), R-490 (provider-selection
+  surface so a build can switch providers by cost/speed/smoothness, the founder's explicit ask).

@@ -603,4 +603,24 @@ if ! rg -qF 'sendBuildStream' "$console_root/app/studio/studio-chat.tsx"; then
   exit 1
 fi
 
+# R-486: real sandbox lifecycle contract + E2B driver (first of the R-486..R-490 isolation sequence).
+for required_file in \
+  "$agent_engine_root/src/omnistackai_agent_engine/runtime/sandbox_http.py" \
+  "$agent_engine_root/src/omnistackai_agent_engine/runtime/e2b.py"; do
+  if [[ ! -f "$required_file" ]]; then
+    printf 'Missing R-486 contract file: %s\n' "$required_file"
+    exit 1
+  fi
+done
+
+if ! rg -qF 'class SandboxLifecycleProvider' "$agent_engine_root/src/omnistackai_agent_engine/runtime/contracts.py"; then
+  printf 'R-486 must add the SandboxLifecycleProvider contract to runtime/contracts.py.\n'
+  exit 1
+fi
+
+if ! rg -qF 'class E2BSandboxProvider' "$agent_engine_root/src/omnistackai_agent_engine/runtime/e2b.py"; then
+  printf 'R-486 must add a real E2BSandboxProvider driver to runtime/e2b.py.\n'
+  exit 1
+fi
+
 printf 'Repository contract tests passed.\n'

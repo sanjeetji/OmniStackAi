@@ -1,9 +1,44 @@
 # Current Handoff
 
-Task ID: R-485
+Task ID: R-486
 Status: done
 Phase: BASIC/MVP — Founder Stage 0
 Branch: `main`
+
+> **R-486 Completed (2026-09-19): Runtime — real sandbox lifecycle contract + E2B driver.**
+> - First of a five-task sequence (R-486..R-490) toward the founder's "Full isolation: per-user
+>   processes/sandboxes" direction. Dedicated research (codebase audit + competitor platforms +
+>   sandbox technology tradeoffs, delegated to a subagent, sourced) confirmed every serious
+>   2025-2026 AI app-builder running real server-side code uses a managed microVM/gVisor sandbox
+>   provider — self-hosting Firecracker/K8s from scratch is a multi-quarter effort this project
+>   doesn't have headcount for.
+> - Presented to the founder via `AskUserQuestion` as a hard-gate decision (a new paid external
+>   cloud dependency, not just an architecture pattern); the founder's answer: build real,
+>   pluggable drivers for **multiple** providers (E2B, Vercel Sandbox, Daytona) so they can be
+>   switched later by cost/speed/smoothness, plus one free option that runs in the browser with no
+>   cost or configuration (WebContainers). This task proves the pattern end-to-end with the first
+>   provider.
+> - Confirmed by direct read: the existing `RuntimeProvider`/`PreviewPlan` abstraction is a pure
+>   *planner* (local install/run commands + a URL), not a real orchestrator — the existing
+>   `CloudSandboxProvider` was a stub reusing a hardcoded placeholder URL, never calling any real
+>   API. New, additive `SandboxHandle`/`SandboxLifecycleProvider` (create/status/kill) alongside
+>   the untouched planner.
+> - New `runtime/sandbox_http.py` (a small, safe, stdlib-only JSON HTTP helper) and
+>   `runtime/e2b.py`'s `E2BSandboxProvider`, verified against E2B's actual documented REST API
+>   (fetched directly from `docs.e2b.dev`, not assumed): `POST`/`DELETE
+>   https://api.e2b.app/sandboxes[/{id}]`, `X-API-Key` auth, public URL pattern
+>   `https://{port}-{sandboxID}.e2b.app`. Target→port mapping reused (not duplicated) from the
+>   existing `LocalRuntimeProvider`.
+> - **No real `E2B_API_KEY` exists in this environment** — every gate is offline via an injected
+>   fake HTTP transport; live-cloud verification is honestly deferred to whenever the founder
+>   provides a real key, not faked.
+> - Gates: agent-engine `task verify` **3,680 OK** (22 new); repo `task verify`/`lint`/
+>   `security:quick`/`env:check` all pass; new `scripts/test.sh` contract block. The pre-existing
+>   `test_runtime.py` suite passes completely unmodified — this task's additions are genuinely
+>   additive.
+> - **NEXT**: R-487 (Vercel Sandbox driver), R-488 (Daytona driver), R-489 (free WebContainers
+>   browser-only option — Node.js/frontend apps only, an honest documented limitation), R-490 (a
+>   provider-selection surface exposing the founder's "switch easily" ask). See `.ai/tasks/R-486.md`.
 
 > **R-485 Completed (2026-09-19): Console — streaming build UI.**
 > - Fast-follow to R-484, closing the loop it opened. `/studio`'s own chat now consumes

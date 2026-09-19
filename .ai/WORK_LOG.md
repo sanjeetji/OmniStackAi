@@ -1,5 +1,103 @@
 # Work Log
 
+## 2026-09-19 — R-486 (Runtime: real sandbox lifecycle contract + E2B driver)
+
+- **Why:** first of a five-task sequence (R-486..R-490) toward the founder's "Full isolation:
+  per-user processes/sandboxes" direction, itself chosen from an earlier `AskUserQuestion` this
+  session. Before writing any code, delegated a combined codebase-audit + competitor-platform +
+  sandbox-technology research task to a subagent (sourced, not from stale training knowledge):
+  confirmed zero containerization exists anywhere in the agent-engine; `scripts/test.sh` has an
+  active enforced gate blocking `agent-engine`/`redis`/`runner-manager`/`nats`/`temporal`/
+  `kubernetes` as Compose services; `services/runner-manager/` is an empty placeholder; the Studio
+  server is a single shared in-memory process with no tenant dimension; the Go control-plane
+  always proxies to one fixed `AgentEngineURL`; Postgres has no per-tenant scheme; and the existing
+  `runtime/` provider abstraction is a real, well-designed Protocol wrapping thin/untested cloud
+  stubs. A platform comparison found every serious 2025-2026 AI app-builder running real
+  server-side code (Vercel Sandbox, E2B, Fly, CodeSandbox) converged on Firecracker microVMs, or
+  gVisor via a managed provider (Lovable→Modal) — only browser-only sandboxing (Bolt.new/StackBlitz
+  WebContainers) sidesteps real server execution entirely, which doesn't fit this platform's
+  Python/Go backend requirement. A technology-tradeoff comparison (Firecracker, gVisor, Kata
+  Containers, plain Docker/cgroups, Kubernetes multi-tenancy) concluded self-hosting any of these
+  from scratch is a multi-quarter platform-engineering effort a single-founder-plus-AI-agent team
+  doesn't have headcount for.
+- **Presented to the founder via `AskUserQuestion`** as a hard-gate decision (adopting a managed
+  sandbox provider is a new paid external cloud dependency, not just an architecture pattern) —
+  the founder's answer: build real, pluggable drivers for multiple providers (E2B, Vercel Sandbox,
+  Daytona) so they can be switched later by cost/speed/smoothness, plus one free option that runs
+  directly in the browser with no cost or configuration (WebContainers). This task proves the
+  pattern end-to-end with the first provider before repeating it three more times.
+- **Design, verified by direct source read before writing any code:** the existing
+  `RuntimeProvider`/`PreviewPlan` abstraction (`runtime/contracts.py`) is a pure *planner* —
+  `preview_plan()` returns a description of local install/run commands plus a URL string, and
+  executing it (`local.run_preview`) runs those commands on the *same* machine. The existing
+  `CloudSandboxProvider` (`runtime/drivers.py`) stub reuses this exact shape with a hardcoded
+  placeholder URL (`https://<id>.e2b.dev`) and never calls any provider's real API — this planning
+  abstraction is correct for local execution and stays completely untouched, because a real cloud
+  sandbox fundamentally needs actual create/get-a-real-id-and-url/later-kill lifecycle management,
+  which a pure "plan" has no room for.
+- **New, additive `SandboxHandle` + `SandboxLifecycleProvider` (`runtime/contracts.py`)**: a
+  `SandboxHandle` (`provider_id`, `sandbox_id`, `url`, `status`) and a Protocol with
+  `create()`/`status()`/`kill()`, genuinely mirroring what a real remote resource needs, alongside
+  (never replacing) the existing `RuntimeProvider`.
+- **New `runtime/sandbox_http.py`**: a small, safe, stdlib-only JSON HTTP helper shared by every
+  sandbox driver this sequence adds (E2B now; Vercel Sandbox/Daytona in R-487/R-488) — bounded
+  response size, a finite timeout, and redirect rejection (an auth header must never be replayed
+  to another host), a purpose-built and much smaller sibling of `model_gateway/cloud.py`'s own
+  HTTP safety net (that file is LLM-completion-specific — streaming, retry-after pacing,
+  finish-reason mapping — none of which a sandbox lifecycle call needs).
+- **New `runtime/e2b.py`'s `E2BSandboxProvider`**, implementing the new contract for real, verified
+  against E2B's actual documented REST API fetched directly from `docs.e2b.dev` (not assumed from
+  training data, and cross-checked against a second, independent fetch to resolve a `/sandboxes`
+  vs `/v2/sandboxes` inconsistency across their own doc pages by preferring the two
+  mutually-consistent, directly-fetched pages): `POST https://api.e2b.app/sandboxes` with
+  `{"templateID", "timeout"}` and an `X-API-Key` header returns `201` with a `sandboxID`; the
+  public URL is built from E2B's own documented pattern `https://{port}-{sandboxID}.e2b.app`;
+  `DELETE https://api.e2b.app/sandboxes/{sandboxID}` returns `204` on success. `templateID`
+  defaults to E2B's own documented generic default (`"base"`, confirmed via a second search),
+  overridable via a new `E2B_TEMPLATE_ID` env var — a real generated OmniStackAI app needs a
+  custom template with the right toolchain pre-installed, a separate, later concern once a real
+  account exists to build one against.
+- **The target→port mapping is reused, not duplicated**: a new `_port_for_target()` helper calls
+  the existing `LocalRuntimeProvider().preview_plan(app_dir, target)` and parses the port out of
+  its returned `http://127.0.0.1:{port}` URL, keeping `local.py` the single source of truth and
+  naturally inheriting its `UnsupportedRuntimeTargetError` for an unknown target.
+- **An honest, documented gap**: E2B's `GET /sandboxes/{id}` status response's exact field shape
+  could not be independently verified from the fetched documentation pages — `status()`
+  defensively looks for a `"state"` string field and falls back to keeping the handle's existing
+  status when absent, rather than guessing and hiding the assumption.
+- **Activated by the existing `RUNTIME_SPECS["e2b"]`'s `E2B_API_KEY`** env var (declared since an
+  earlier task, unused until now) — the same "add a key, it activates" pattern every cloud LLM
+  provider already uses.
+- **No real `E2B_API_KEY` exists in this environment** (`.env` checked: absent; `.env.example`
+  carries only the pre-existing name-only placeholder, now joined by a new `E2B_TEMPLATE_ID`
+  placeholder) — every automated test is offline via an injected fake `OpenerDirector`-shaped
+  transport, mirroring `model_gateway/cloud.py`'s own testable-opener pattern for its LLM adapters;
+  real live-cloud verification against an actual E2B account is honestly not possible here and is
+  not claimed, deferred to whenever the founder provides a real key, exactly matching this
+  project's existing precedent for cloud LLM providers.
+- **Not in scope for this task**: wiring `E2BSandboxProvider` into the Studio's actual preview flow
+  (`studio/preview.py`) or `_build_stream()` — this task proves the driver is real and correctly
+  built against E2B's actual API; swapping what the Studio actually uses for preview is a separate,
+  later decision once more than one provider exists to choose between (R-490's job).
+- **Gates**: agent-engine `task verify` **3,680 tests OK** (22 new: 9 in new
+  `test_runtime_sandbox_http.py`, 13 in new `test_runtime_e2b.py`), 0 model/network calls —
+  covering successful create/kill/status against hand-built E2B-shaped responses, a missing key
+  raising before any request is sent (both `create()` and `kill()`), HTTP error mapping (a real
+  E2B-shaped 401 `{"message","error_code"}` body, and a non-JSON 500 body falling back to a
+  generic message), oversized/malformed response rejection, redirect rejection, an
+  `E2B_TEMPLATE_ID` override, the target→port mapping for all four known targets plus the
+  unsupported-target case, and the API key never appearing in a `SandboxHandle`'s `repr()`; the
+  pre-existing `test_runtime.py` suite passes completely unmodified, confirming this task's
+  additions are genuinely additive and the existing (still-stubbed) `CloudSandboxProvider`/
+  `sandbox_driver()` planning path is untouched. Repo-wide `task verify`/`lint`/`security:quick`/
+  `env:check` all pass; a new `scripts/test.sh` contract block asserts the new contract/driver
+  files and symbols exist.
+- **Next:** R-487 (Vercel Sandbox driver), R-488 (Daytona driver), R-489 (the free WebContainers
+  browser-only option, client-side in the console, Node.js/frontend apps only — an honest,
+  documented limitation since WebContainers cannot run Python or Go), and R-490 (a
+  provider-selection surface exposing the founder's explicit "switch easily by cost/speed/
+  smoothness" ask).
+
 ## 2026-09-19 — R-485 (Console: streaming build UI)
 
 - **Why:** fast-follow to R-484 (backend SSE build streaming), closing the loop it opened — the

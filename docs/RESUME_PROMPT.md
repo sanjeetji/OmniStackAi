@@ -208,7 +208,7 @@ front-door bricks, R-420 is generated-SQL hardening, R-421..R-426 are Studio pre
 R-427..R-429 are generated-app compile fixes, R-430..R-457 are the first twenty-eight differentiating-spine
 bricks (Scope Compiler through Ecosystem Multi-Surface SLA, SLO, and Error Budget Contracts).
 Git, state files (.ai/), CHANGELOG, and docs/PROGRESS.md remain the executable/detail sources of truth.
-Current through R-485; `task verify` = 3,658 tests (agent-engine) + the Go control-plane's own suite +
+Current through R-486; `task verify` = 3,680 tests (agent-engine) + the Go control-plane's own suite +
 the Next.js console's typecheck/lint/build. R-416 added prompt-to-IR intake, R-417 materialized a generated
 owned repo, R-418 added the local chat studio, R-419 added turnkey local run, and R-420 fixed the two
 SQL defects found by live execution. R-421 added an explicit `task agent-engine:studio:preview` mode:
@@ -756,16 +756,30 @@ WHAT TO DO NEXT
   Go control-plane -> agent-engine path showed genuine incremental frames over ~9 real seconds, a
   real done frame (174 files, real commit sha), and a real trailing credits frame; a real follow-up
   edit on the same build confirmed the edit path is completely unchanged.
-- NEXT (per "streaming first, then scope isolation properly"): properly SCOPE (not yet build) full
-  per-user process/sandbox isolation as its own multi-task project - a materially different
-  architecture decision requiring explicit founder sign-off per the standing "stop and ask for
-  hard-gate architecture decisions" rule (the agent-engine has zero containerization today, and
-  `scripts/test.sh` has an active, enforced gate blocking agent-engine/redis/runner-manager/nats/
-  temporal/kubernetes as Compose services that full isolation will need to explicitly revise).
-  Publish/deploy (multi-target: Netlify one-click, Vercel/Cloudflare/self-host/GitHub-export as
-  options) and backend/mobile stack breadth (Node.js added alongside Python/Go; React Native as the
-  near-term mobile target) remain named, founder-approved-in-direction but not yet scoped into task
-  contracts.
+- R-486 (2026-09-19, done) is the first of a five-task sequence (R-486..R-490) toward the
+  founder's "Full isolation: per-user processes/sandboxes" direction. Dedicated research (codebase
+  audit + competitor platforms + sandbox technology tradeoffs) confirmed every serious 2025-2026 AI
+  app-builder running real server-side code uses a managed microVM/gVisor sandbox provider -
+  self-hosting Firecracker/K8s from scratch is a multi-quarter effort this project doesn't have
+  headcount for. Presented as a hard-gate (new paid cloud dependency) via AskUserQuestion; the
+  founder's answer: build real, pluggable drivers for multiple providers (E2B, Vercel Sandbox,
+  Daytona) switchable later by cost/speed/smoothness, plus one free browser-only option
+  (WebContainers). This task proves the pattern with E2B: confirmed the existing
+  RuntimeProvider/PreviewPlan abstraction is a pure planner (describes local commands + a URL, not
+  a real orchestrator) and stays untouched; added additive SandboxHandle/SandboxLifecycleProvider
+  (create/status/kill), a new stdlib-only sandbox_http.py safety wrapper, and E2BSandboxProvider,
+  verified against E2B's real documented REST API (fetched directly from docs.e2b.dev, not
+  assumed). No real E2B_API_KEY exists in this environment - every gate is offline via an injected
+  fake HTTP transport; live-cloud verification is honestly deferred to a real key from the founder.
+  `task verify` 3,680 OK (22 new tests); repo gates all pass.
+- NEXT: R-487 (Vercel Sandbox driver), R-488 (Daytona driver), R-489 (the free WebContainers
+  browser-only option - client-side in the console, Node.js/frontend apps only, an honest
+  documented limitation since WebContainers cannot run Python or Go), R-490 (a provider-selection
+  surface exposing the founder's explicit "switch easily by cost/speed/smoothness" ask). Publish/
+  deploy (multi-target: Netlify one-click, Vercel/Cloudflare/self-host/GitHub-export as options)
+  and backend/mobile stack breadth (Node.js added alongside Python/Go; React Native as the
+  near-term mobile target) remain named, founder-approved-in-direction but not yet scoped into
+  task contracts.
   Keep `task verify` model/Docker/DB-free at its core (the console's own build/lint/typecheck gates need
   no live control-plane; any live/model path stays opt-in); preserve single-session ownership and
   explicit trusted-local mode.

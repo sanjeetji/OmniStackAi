@@ -4,6 +4,30 @@ Last updated: 2026-09-19
 ## Current Phase
 Stage 0 (Founder Build Sequence, Brief Section 91) — BASIC/MVP
 
+> **R-486 (2026-09-19): Runtime — real sandbox lifecycle contract + E2B driver.** First of a
+> five-task sequence (R-486..R-490) toward the founder's "Full isolation: per-user processes/
+> sandboxes" direction. Research (three-way: codebase state, competitor platforms, sandbox
+> technologies) confirmed every serious 2025-2026 AI app-builder running real server-side code
+> uses a managed microVM/gVisor sandbox provider — self-hosting Firecracker/K8s from scratch is a
+> multi-quarter effort this project doesn't have headcount for. The founder's direction: build
+> real, pluggable drivers for multiple providers (E2B, Vercel Sandbox, Daytona) so they can be
+> switched later by cost/speed/smoothness, plus a free local-browser option — this task proves the
+> pattern with the first provider. Confirmed by direct read: the existing `RuntimeProvider`/
+> `PreviewPlan` abstraction is a pure *planner* (describes local commands + a URL), not a real
+> orchestrator — `CloudSandboxProvider` was a stub reusing a hardcoded placeholder URL, never
+> calling any real API. New, additive `SandboxHandle`/`SandboxLifecycleProvider` contract
+> (create/status/kill — a genuine remote-resource lifecycle) alongside the untouched planner. New
+> `runtime/sandbox_http.py` (a small, safe, stdlib-only JSON HTTP helper) and `runtime/e2b.py`'s
+> `E2BSandboxProvider`, verified against E2B's actual documented REST API (fetched directly from
+> `docs.e2b.dev`, not assumed): `POST/DELETE https://api.e2b.app/sandboxes[/{id}]`, `X-API-Key`
+> auth, public URL pattern `https://{port}-{sandboxID}.e2b.app`. No real `E2B_API_KEY` exists in
+> this environment — every gate is offline via an injected fake HTTP transport; live-cloud
+> verification is honestly deferred to whenever the founder provides a real key, not faked.
+> `task verify` **3,680 OK** (22 new tests); repo `task verify`/`lint`/`security:quick`/
+> `env:check` all pass.
+> NEXT: R-487 (Vercel Sandbox driver), R-488 (Daytona driver), R-489 (free WebContainers browser
+> option), R-490 (provider-selection surface).
+
 > **R-485 (2026-09-19): Console — streaming build UI.** Fast-follow to R-484, closing the loop it
 > opened: `/studio`'s own chat now consumes `POST /jobs/build/stream` for its create-path,
 > replacing the static "Building…" wait with a real, live-updating "Generating your app… (N

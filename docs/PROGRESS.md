@@ -1,4 +1,4 @@
-# OmniStackAI — implementation progress (as of R-485)
+# OmniStackAI — implementation progress (as of R-486)
 
 A living summary of what is built, what is pending, and how to see results. Numbers come from the
 execution tracker (`R_&_D/OmniStackAI_Execution_Tracker_v6.xlsx`, `Phase_Roadmap`, 461 tasks as of
@@ -6,8 +6,23 @@ R-461 completion) plus the state files (`.ai/`), Git history, and CHANGELOG.
 
 ## Headline
 
-- **3,658 automated tests pass** (agent-engine + Go control-plane), fully offline and
+- **3,680 automated tests pass** (agent-engine + Go control-plane), fully offline and
   network-independent (`task verify`), plus the console's own `typecheck`/`lint`/`build` gates.
+- **R-486 — Runtime: real sandbox lifecycle contract + E2B driver (2026-09-19):** first of a
+  five-task sequence (R-486..R-490) toward the founder's "Full isolation: per-user processes/
+  sandboxes" direction. Research confirmed every serious 2025-2026 AI app-builder running real
+  server-side code uses a managed microVM/gVisor sandbox provider — self-hosting Firecracker/K8s
+  from scratch is a multi-quarter effort this project doesn't have headcount for. The founder's
+  direction: build real, pluggable drivers for multiple providers (E2B, Vercel Sandbox, Daytona)
+  switchable by cost/speed/smoothness, plus a free local-browser option. This task proves the
+  pattern with E2B: new additive `SandboxHandle`/`SandboxLifecycleProvider` contract (create/
+  status/kill — the existing `RuntimeProvider`/`PreviewPlan` is a pure planner and stays
+  untouched), a new stdlib-only `sandbox_http.py` safety wrapper, and `E2BSandboxProvider`,
+  verified against E2B's real documented REST API (fetched directly, not assumed). No real
+  `E2B_API_KEY` exists in this environment — every gate is offline via an injected fake HTTP
+  transport, and live-cloud verification is honestly deferred to a real key from the founder, not
+  faked. `task verify` **3,680 OK** (22 new tests); repo `task verify`/`lint`/`security:quick`/
+  `env:check` all pass. See `.ai/tasks/R-486.md` for full verification detail.
 - **R-485 — Console: streaming build UI (2026-09-19):** fast-follow to R-484, closing the loop it
   opened. `/studio`'s own chat now consumes `POST /jobs/build/stream` for its create-path,
   replacing the static "Building…" wait with a real, live-updating "Generating your app… (N

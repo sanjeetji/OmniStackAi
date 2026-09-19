@@ -107,3 +107,42 @@ class DeploymentProvider(Protocol):
     def active(self) -> bool: ...
 
     def deploy_plan(self, app_dir: str, target: str) -> DeployPlan: ...
+
+
+@dataclass(frozen=True, slots=True)
+class SandboxHandle:
+    """A real, live cloud sandbox (R-486) - returned by `SandboxLifecycleProvider.create()` and
+    refreshed by `.status()`. Unlike `PreviewPlan` (a pure description of commands to run locally),
+    this represents an actual remote resource that exists until `kill()` is called."""
+
+    provider_id: str
+    sandbox_id: str
+    url: str
+    status: str  # provider-reported (e.g. "running", "killed") - not interpreted further here
+
+    def __post_init__(self) -> None:
+        _text(self.provider_id, "provider_id", 64)
+        _text(self.sandbox_id, "sandbox_id", 128)
+        _text(self.status, "status", 32)
+        if not self.url.startswith("https://"):
+            raise RuntimeProviderError("sandbox url must be an https URL")
+
+
+@runtime_checkable
+class SandboxLifecycleProvider(Protocol):
+    """Manages a real, remote cloud sandbox's lifecycle (R-486) - genuinely creates and kills a
+    resource, unlike `RuntimeProvider`'s pure planning. Additive to `RuntimeProvider`, not a
+    replacement: the local trusted-preview path keeps using `RuntimeProvider`/`PreviewPlan`
+    unchanged. `active` reflects key presence, same as `DeploymentProvider`."""
+
+    @property
+    def id(self) -> str: ...
+
+    @property
+    def active(self) -> bool: ...
+
+    def create(self, app_dir: str, target: str) -> SandboxHandle: ...
+
+    def status(self, handle: SandboxHandle) -> SandboxHandle: ...
+
+    def kill(self, handle: SandboxHandle) -> None: ...
