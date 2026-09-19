@@ -1008,4 +1008,44 @@ if ! rg -qF 'A task tracker where users create projects and each project has tas
   exit 1
 fi
 
+# R-498: platform buildout plan + the single-command local runtime. The plan is a deliverable:
+# it is what lets a paused session resume cold, so its files are pinned like any other contract.
+if [[ ! -f "$repo_root/scripts/omnistack.sh" ]]; then
+  printf 'Missing R-498 contract file: scripts/omnistack.sh\n'
+  exit 1
+fi
+
+for runtime_command in 'up)' 'down)' 'restart)' 'status)' 'logs)' 'doctor)' 'build)' 'verify)'; do
+  if ! rg -qF -- "  $runtime_command" "$repo_root/scripts/omnistack.sh"; then
+    printf 'R-498 scripts/omnistack.sh must implement the %s command.\n' "${runtime_command%)}"
+    exit 1
+  fi
+done
+
+# Preview mode is the default for `up`: starting build-only by accident is what made the Studio's
+# Preview tab look broken. --no-preview must stay available as the explicit safe mode.
+if ! rg -qF -- '--no-preview' "$repo_root/scripts/omnistack.sh"; then
+  printf 'R-498 scripts/omnistack.sh must keep --no-preview as the explicit build-only mode.\n'
+  exit 1
+fi
+
+if ! rg -q '^\.run/$' "$repo_root/.gitignore"; then
+  printf 'R-498 must gitignore the runtime state directory: .run/\n'
+  exit 1
+fi
+
+if [[ ! -f "$repo_root/R_&_D/OmniStackAI_Platform_Buildout_v1.md" ]]; then
+  printf 'Missing R-498 contract file: R_&_D/OmniStackAI_Platform_Buildout_v1.md\n'
+  exit 1
+fi
+
+for spec in F-01-projects F-02-preview F-03-git F-04-skills F-05-secrets F-06-ai-usage \
+  F-07-seo F-08-logs-chat F-09-database F-10-security-tests \
+  G-01-publish G-02-domains G-03-connectors G-04-payments G-05-analytics; do
+  if [[ ! -f "$repo_root/R_&_D/specs/$spec.md" ]]; then
+    printf 'Missing R-498 platform spec: R_&_D/specs/%s.md\n' "$spec"
+    exit 1
+  fi
+done
+
 printf 'Repository contract tests passed.\n'

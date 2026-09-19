@@ -2,10 +2,10 @@ schema_version: 1
 project: OmniStackAI
 phase: BASIC/MVP
 founder_stage: 0
-current_task: R-497
+current_task: R-498
 current_status: done
 branch: main
-last_completed_task: R-497
+last_completed_task: R-498
 # TASK COMPILATION AUDIT — 2026-09-16
 # Performed to achieve 100% synchronization across all task-tracking documentation.
 # Tracker workbook expanded to 464 tasks with R-464.
@@ -34,6 +34,53 @@ task_compilation_audit:
       new_status: DONE
       reason: "Task fully completed on 2026-09-11 with 35 tests. Status left stale during rapid development sprint."
 last_completed_task_summary: >-
+  Completed R-498 (2026-09-19): platform buildout plan (15 specs) + single-command local runtime.
+  The founder reviewed the console live (build 7, "Simple CRM", from 172.28.64.242:4321) and
+  listed what a platform still needs; this task answers it with decisions, specs and tooling, and
+  writes no feature code.
+  VERIFIED FIRST, not assumed: localrun/run.py binds generated apps to 127.0.0.1:<free port>, so
+  the preview URL is loopback-only; studio/history.py is in-memory and studio/session.py holds
+  the editable IR in RAM - proven live, after a Studio restart build 7 returned {"turns": []} and
+  404 for its files and the next build was numbered 1 again; preview itself works (a real build
+  in 30s, then POST .../preview returned ready with web_url 127.0.0.1:59570 in 5s, and fetching
+  it served 200 / 41,338 bytes / <title>Simple Note Taking</title>) - so "Preview is not working"
+  was the Studio running in build-only mode; the control-plane schema is only users/credit_ledger/
+  sessions, so nothing per-project can exist yet; preview already creates a real per-app Postgres
+  with the generated migrations (a DB explorer can be honest); every build is already a real git
+  repo with one commit per build/edit (only the remote, token and UI are missing).
+  DELIVERED: (1) R_&_D/OmniStackAI_Platform_Buildout_v1.md - where we are, a build-now/gated/
+  later/no decision for all 23 requested features with reasons, how "connect GitHub and push"
+  works (a GitHub App, not an OAuth App, and why that also makes Publish nearly free), the
+  two-layer Skills design, why two run commands existed, the dependency graph and the task table;
+  (2) R_&_D/specs/ - 15 implementable specs, each with UI + SQL migration + API + flow +
+  acceptance: F-01 projects, F-02 preview, F-03 git, F-04 skills, F-05 secrets, F-06 AI usage,
+  F-07 SEO, F-08 logs/chat, F-09 database, F-10 security/tests, G-01 publish, G-02 domains,
+  G-03 connectors, G-04 payments, G-05 analytics; (3) scripts/omnistack.sh - one script for the
+  whole local platform (up/down/restart/status/logs/build/doctor/verify/open) with preview mode
+  ON by default and --no-preview as the explicit safe mode; (4) Taskfile aliases up/down/status/
+  logs and .run/ gitignored.
+  FOUNDER DECISIONS RECORDED: domains are bring-your-own only (we will not sell domains or handle
+  domain billing); connect-GitHub-and-push is approved in principle and specified; Skills are
+  worth building and are specified.
+  TWO REAL BUGS IN MY OWN SCRIPT, found by testing and fixed: `down` silently skipped stopping the
+  containers because `[[ -n "$who" ]] && warn ...` was a loop's last command, so a false result
+  aborted the function under set -e; and it still aborted because port_listener's pipeline starts
+  with lsof, which exits 1 when a port is free, and the script runs with pipefail - fixed with a
+  guarded { lsof || true; } and the same guard on two ps pipelines. Also replaced a log-grep mode
+  heuristic (it reported "build-only?" while preview mode was live) with an authoritative probe
+  of /api/preview (200 = preview, 404 = build-only).
+  EVIDENCE: down now stops processes and containers and exits 0 (docker ps empty); a cold up from
+  nothing took 13.8s and reported control-plane :8080 healthy, studio :4173 in preview mode,
+  console :4321, the machine's LAN address and an honest note that previews stay loopback-only
+  until F-02; status shows every component with pid and the real mode; logs console tails the
+  real Next.js output; after the cycle login 200, / 200, /studio 200, /settings 200, /api/preview
+  200. Gates: scripts/test.sh with a new R-498 block (script commands, --no-preview, .run/ in
+  .gitignore, the master doc and all 15 specs), task verify 3,738 OK, lint/security/env pass.
+  NEXT: F-01 (proposed R-499) - projects persisted per user; it is the prerequisite for every
+  other Phase F/G task and also closes the cross-tenant read hole on /jobs/build/{id}/files.
+  Gated and awaiting the founder: G-01 hosting model, G-03 connector list + OAuth registrations,
+  G-04 Stripe/Razorpay test accounts.
+_prior_last_completed_task_summary_R497: >-
   Completed R-497 (2026-09-19): Lovable-grade pass on the console. The founder shared 96
   reference screenshots (~/Desktop/AI_Platform_Screenshots: Dyad 40, Emergent 18, Lovable 38)
   and asked which to follow; all were reviewed as labelled contact sheets plus the decisive

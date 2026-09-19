@@ -1,9 +1,23 @@
 # Current Handoff
 
-Task ID: R-497
+Task ID: R-498
 Status: done
-Phase: BASIC/MVP — Founder Stage 0
+Phase: MVP → Phase F (platform foundation)
 Branch: `main`
+
+> **R-498 Completed (2026-09-19): Platform buildout plan (15 specs) + `scripts/omnistack.sh`.**
+> - **Read first:** `R_&_D/OmniStackAI_Platform_Buildout_v1.md` — decisions for every feature the
+>   founder asked for, the GitHub mechanism, the Skills design, the dependency graph.
+>   Then `R_&_D/specs/F-01-projects.md` and implement it.
+> - **Run the platform with one command:** `./scripts/omnistack.sh up` (preview mode by default),
+>   `status`, `logs studio -f`, `down`. `task up`/`down`/`status`/`logs` alias it.
+> - **Key facts proven in this task:** the preview engine works (30 s build → 5 s preview → the
+>   app served); "Preview isn't working" was build-only mode; **all projects are lost on restart**
+>   (in-memory history — build 7's turns came back empty); `/jobs/build/{id}/files` has no
+>   per-user ownership check (F-01 closes it).
+> - Gates: `scripts/test.sh` (new R-498 block), `task verify` **3,738 OK**, lint/security/env.
+> - **NEXT**: F-01 → R-499, projects persisted per user. **Gated, awaiting the founder:** G-01
+>   hosting model, G-03 connectors + OAuth apps, G-04 payment test accounts.
 
 > **R-497 Completed (2026-09-19): Console — Lovable-grade pass (prompt-first home, ?prompt= auto-start, prose replies + follow-up chips, file search).**
 > - The founder's 96 reference screenshots (`~/Desktop/AI_Platform_Screenshots`) were surveyed;

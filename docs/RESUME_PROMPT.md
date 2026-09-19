@@ -208,7 +208,7 @@ front-door bricks, R-420 is generated-SQL hardening, R-421..R-426 are Studio pre
 R-427..R-429 are generated-app compile fixes, R-430..R-457 are the first twenty-eight differentiating-spine
 bricks (Scope Compiler through Ecosystem Multi-Surface SLA, SLO, and Error Budget Contracts).
 Git, state files (.ai/), CHANGELOG, and docs/PROGRESS.md remain the executable/detail sources of truth.
-Current through R-497; `task verify` = 3,738 tests (agent-engine) + the Go control-plane's own suite +
+Current through R-498; `task verify` = 3,738 tests (agent-engine) + the Go control-plane's own suite +
 the Next.js console's typecheck/lint/build. R-416 added prompt-to-IR intake, R-417 materialized a generated
 owned repo, R-418 added the local chat studio, R-419 added turnkey local run, and R-420 fixed the two
 SQL defects found by live execution. R-421 added an explicit `task agent-engine:studio:preview` mode:
@@ -930,7 +930,24 @@ WHAT TO DO NEXT
   FileFilter in studio-tabs.tsx, "Read only" viewer label. Never add facade UI for Lovable
   features without a backend (Cloud DB, Publish, Payments). A project switcher needs a per-user
   build list endpoint first.
-- NEXT (needs the founder's pick; none pre-approved). After the UI overhaul
+- R-498 (2026-09-19, done) is the plan for everything that comes next. **Start here:**
+  `R_&_D/OmniStackAI_Platform_Buildout_v1.md` (decisions for every feature, the GitHub App
+  mechanism, the Skills design, the dependency graph) and `R_&_D/specs/F-01…G-05` (15 specs, each
+  with UI + SQL migration + API + flow + acceptance). **Run the platform with one command:**
+  `./scripts/omnistack.sh up` (preview mode by default; `--no-preview` is the safe build-only
+  mode), plus `status`, `logs <svc> [-f]`, `down`, `doctor`, `build`, `verify`; `task up`/`down`/
+  `status`/`logs` alias it. Facts proven in R-498: the preview engine works (30 s build, 5 s
+  preview, the running app served) — "preview not working" was build-only mode; generated apps
+  bind to `127.0.0.1` so previews are loopback-only (F-02 adds a same-origin proxy); **the build
+  history and editable IR are in memory, so all projects are lost on restart** (F-01 fixes it);
+  `/jobs/build/{id}/files` has no per-user ownership check (F-01 closes it); preview already
+  creates a real per-app Postgres (F-09 can be honest); every build is already a git repo (F-03
+  only needs a remote + token + UI). SHELL LESSONS baked into `omnistack.sh`: never end a loop
+  body with `cond && cmd` under `set -e`, and `lsof` exits 1 on a free port, which trips
+  `pipefail`.
+- NEXT: **F-01 → R-499, projects persisted per user** (read `R_&_D/specs/F-01-projects.md`).
+  Gated on the founder: G-01 hosting model, G-03 connectors + OAuth apps, G-04 payment test
+  accounts. After the UI overhaul
   (not yet scoped): real multi-target Publish/deploy (Netlify one-click primary, Vercel/Cloudflare/
   self-host/GitHub-export as secondary options), Node.js backend codegen alongside Python/Go, and
   mobile (React Native near-term). Full per-user process/tenant isolation as a wholesale architecture

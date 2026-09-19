@@ -1,5 +1,34 @@
 # Work Log
 
+## 2026-09-19 — R-498 (Platform buildout plan + single-command local runtime)
+
+- **Why:** the founder reviewed the console live and listed what a platform still needs (preview,
+  Publish, Git, domains, Skills, SEO, connectors, payments, usage, logs, SQL, secrets, DB,
+  analytics, chat controls, multi-project), and asked for an overview, a decision per feature,
+  implementable specs so work can pause and resume, an explanation of the two run commands, and
+  one script to run everything.
+- **Verified before writing anything:** preview binds to loopback (`localrun/run.py`); the build
+  history and editable IR are in memory — **proven live**: after a restart, build 7 returned
+  `{"turns": []}` and 404 for files, and the next build was numbered 1; preview itself works (30 s
+  build, 5 s preview, the running app served `<title>Simple Note Taking</title>`), so the
+  founder's "Preview is not working" was build-only mode; the schema has no projects table;
+  preview already creates a real per-app Postgres; every build is already a git repo.
+- **Delivered:** `R_&_D/OmniStackAI_Platform_Buildout_v1.md` (decisions for all 23 features, the
+  GitHub App mechanism, the Skills design, the dependency graph), `R_&_D/specs/` with **15 specs**
+  (UI + migration + API + flow + acceptance each), `scripts/omnistack.sh`
+  (up/down/restart/status/logs/build/doctor/verify/open, **preview by default**), Taskfile
+  aliases, `.run/` gitignored.
+- **Two real bugs in my own script, found by running it:** `down` silently skipped the Docker step
+  because a trailing `&&` was a loop's last command under `set -e`; it still aborted because
+  `lsof` exits 1 on a free port and the script uses `pipefail`. Both fixed and explained in
+  comments. A third issue — `status` guessing the Studio mode from the log and reporting
+  "build-only?" while preview was live — was replaced with an authoritative `/api/preview` probe.
+- **Evidence:** `down` stops processes *and* containers (exit 0, `docker ps` empty); a **cold `up`
+  took 13.8 s**; `status` reports pids and the real mode; login/`/`/`/studio`/`/settings` all 200
+  afterwards. Gates: `scripts/test.sh` + new R-498 block, `task verify` 3,738 OK,
+  lint/security/env.
+- **Next:** F-01 (R-499) projects persistence — the prerequisite for everything else.
+
 ## 2026-09-19 — R-497 (Console: Lovable-grade pass after the founder's reference screenshots)
 
 - **Why:** the founder shared 96 screenshots (`~/Desktop/AI_Platform_Screenshots`: Dyad 40,

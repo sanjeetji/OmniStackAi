@@ -36,3 +36,6 @@ secrets.json
 .claude/
 scratch/
 
+# scripts/omnistack.sh keeps local PIDs and service logs here
+.run/
+

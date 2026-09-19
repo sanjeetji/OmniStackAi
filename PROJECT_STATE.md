@@ -4,6 +4,32 @@ Last updated: 2026-09-19
 ## Current Phase
 Stage 0 (Founder Build Sequence, Brief Section 91) — BASIC/MVP
 
+> **R-498 (2026-09-19): Platform buildout plan (15 specs) + single-command local runtime.**
+> The founder reviewed the console live and listed what a platform still needs. This task answers
+> it with decisions, specs and tooling — **no feature code**. Verified first rather than assumed:
+> the preview engine works (a real build in 30 s, preview ready in 5 s, the running app served
+> `<title>Simple Note Taking</title>`), so "Preview is not working" was the Studio running in
+> **build-only mode**; generated apps bind to `127.0.0.1`, so a preview cannot load from another
+> device; the build history and editable IR are **in memory** — proven live, after a restart the
+> founder's build 7 returned `{"turns": []}` and 404 for its files and the next build was numbered
+> 1 again; there is no projects table and no per-user ownership check on the build routes.
+> Delivered: `R_&_D/OmniStackAI_Platform_Buildout_v1.md` (a build-now / gated / later / no
+> decision for all 23 requested features, how connect-GitHub-and-push works via a GitHub App and
+> why that also makes Publish nearly free, the two-layer Skills design, the dependency graph);
+> **15 implementable specs** in `R_&_D/specs/` (F-01 projects … G-05 analytics), each with UI,
+> SQL migration, API, flow and acceptance; and **`scripts/omnistack.sh`** — one command for the
+> whole platform (`up`/`down`/`restart`/`status`/`logs`/`build`/`doctor`/`verify`/`open`) with
+> **preview mode on by default**, which removes the footgun behind the broken-looking preview.
+> Founder decisions recorded: **domains are bring-your-own only**; GitHub push approved; Skills
+> approved. **Two real bugs in the new script were found by running it and fixed** — a trailing
+> `&&` as a loop's last command aborted `down` under `set -e` (the containers never stopped), and
+> `lsof` exiting 1 on a free port tripped `pipefail`; a log-grep mode heuristic was replaced with
+> an authoritative `/api/preview` probe. Evidence: `down` now stops everything (exit 0, `docker
+> ps` empty); a **cold `up` took 13.8 s**; login and every route 200 afterwards. Gates:
+> `scripts/test.sh` + new R-498 block, `task verify` **3,738 OK**, lint/security/env.
+> NEXT: **F-01 (R-499) projects persistence** — the prerequisite for every other Phase F/G task.
+> Gated on the founder: G-01 hosting model, G-03 connectors, G-04 payment test accounts.
+
 > **R-497 (2026-09-19): Console — Lovable-grade pass after the founder's reference screenshots.**
 > The founder shared 96 screenshots (Dyad 40, Emergent 18, Lovable 38) and asked which to follow;
 > all were reviewed as contact sheets plus the decisive screens at full size. **Lovable** is the

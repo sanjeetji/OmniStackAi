@@ -3,6 +3,26 @@ version: "3"
 silent: true
 
 tasks:
+  up:
+    desc: 'Start the whole platform locally - db + control-plane + Studio (preview mode) + console'
+    cmds:
+      - bash scripts/omnistack.sh up {{.CLI_ARGS}}
+
+  down:
+    desc: Stop everything started by `task up` (the database volume is preserved)
+    cmds:
+      - bash scripts/omnistack.sh down {{.CLI_ARGS}}
+
+  status:
+    desc: Show every platform component, its port and health
+    cmds:
+      - bash scripts/omnistack.sh status
+
+  logs:
+    desc: 'Tail a service log (CLI_ARGS - studio|console|control-plane|postgres [-f])'
+    cmds:
+      - bash scripts/omnistack.sh logs {{.CLI_ARGS}}
+
   doctor:
     desc: Validate repository structure and available local toolchains
     cmds:

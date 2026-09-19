@@ -1,32 +1,29 @@
-task_id: R-497
+task_id: R-498
 status: completed
 phase: MVP
 tracker_row: null
 started_at: "2026-09-19"
 completed_at: "2026-09-19"
 objective: >-
-  Lovable-grade pass on the console, after surveying the founder's 96 reference screenshots
-  (~/Desktop/AI_Platform_Screenshots; Lovable chosen as the primary reference, Dyad for the
-  prompt-first home). Four real patterns, no facades: (1) a prompt-first home - the dashboard
-  hero is a real composer (components/home-composer.tsx: "What do you want to build?", textarea,
-  the three real example chips, Build -> /studio?prompt=...); (2) the Studio picks up ?prompt=
-  with no ?build=, pre-fills the composer and starts exactly one build through the existing form
-  submit path (requestSubmit + a ref guard, no setState in the effect), then cleans the URL;
-  (3) assistant replies as prose rows with a brand-mark gutter (user bubbles kept, error rows
-  kept), rail type at 13px; follow-up suggestion chips after a completed build/edit (three real
-  generic next edits) that fill the composer; (4) a file-search filter above the tree in Files
-  and Code, and an honest "Read only" label on the viewer. Out of scope on purpose: Lovable's
-  Cloud/Publish/Payments panels (no backend), a project switcher (no per-user build list),
-  Emergent's Web/Mobile tabs (mobile is a hard gate).
+  Answer the founder's platform-gap review with (a) a decision per feature, (b) an implementable
+  spec per task so work can pause and resume, (c) an explanation of the two run modes, and (d) a
+  single shell script to run the platform. Delivered: R_&_D/OmniStackAI_Platform_Buildout_v1.md
+  (master: where we are, a build-now/gated/later/no decision for all 23 requested features, the
+  GitHub mechanism, the Skills design, the dependency graph, the task table); R_&_D/specs/ with
+  15 specs each carrying UI + database migration + API + flow + acceptance (F-01 projects, F-02
+  preview, F-03 git, F-04 skills, F-05 secrets, F-06 AI usage, F-07 SEO, F-08 logs/chat, F-09
+  database, F-10 security/tests, G-01 publish, G-02 domains, G-03 connectors, G-04 payments,
+  G-05 analytics); scripts/omnistack.sh (up/down/restart/status/logs/build/doctor/verify/open,
+  preview mode ON by default); Taskfile aliases and .run/ in .gitignore. No feature code.
 allowed_paths:
-  - apps/console-web/components/home-composer.tsx
-  - apps/console-web/app/page.tsx
-  - apps/console-web/app/studio/studio-chat.tsx
-  - apps/console-web/app/studio/studio-tabs.tsx
-  - apps/console-web/app/studio/file-tree.tsx
-  - apps/console-web/app/globals.css
+  - R_&_D/OmniStackAI_Platform_Buildout_v1.md
+  - R_&_D/specs/
+  - R_&_D/OmniStackAI_Commercial_Platform_Kickoff_v1.md
+  - scripts/omnistack.sh
+  - Taskfile.yml
+  - .gitignore
   - scripts/test.sh
-  - .ai/tasks/R-497.md
+  - .ai/tasks/R-498.md
   - .ai/CURRENT_TASK.yaml
   - .ai/PROJECT_STATE.yaml
   - .ai/WORK_LOG.md
@@ -35,32 +32,31 @@ allowed_paths:
   - CHANGELOG.md
   - docs/PROGRESS.md
   - docs/RESUME_PROMPT.md
-  - R_&_D/OmniStackAI_Commercial_Platform_Kickoff_v1.md
 forbidden_changes:
-  - No changes to lib/*, any app/api/* route, studio-preview.tsx, code-highlight.ts, or the chat's SSE/edit/404 logic (the ?prompt= auto-start calls the existing path once)
-  - No facade features (no Publish/Share/Cloud/Payments UI without a backend); no invented data
+  - No feature code (no console, control-plane or agent-engine changes)
   - No new dependencies; do not modify or commit the untracked .claude directory
 required_gates:
-  - "console-web: pnpm run typecheck, pnpm run lint, pnpm run build"
-  - "bash scripts/test.sh (new R-497 block)"
+  - "bash scripts/test.sh (new R-498 block)"
   - task verify
   - task lint
   - task security:quick
   - task env:check
-  - "live smoke: next start on 4321; / serves the composer + chips; /studio?prompt=hello server-renders the prefilled composer with Send enabled (the auto-start is a client effect - stated honestly, not exercised); /studio?build=5 unchanged and not prefilled; 0 server errors"
+  - "live: scripts/omnistack.sh down then a cold up, status, logs - all real"
 model_tool_trace:
   routing: deterministic_only
   local_calls: 0
-  cloud_calls: 0
-  note: Pure TypeScript/TSX work, 0 model calls; the smoke never triggers the auto-start (it needs a browser).
+  cloud_calls: 1
+  note: >-
+    Planning and shell work, 0 model calls in any gate. One real streamed build was made during
+    the investigation to prove the preview path works end to end (30s build, 5s preview,
+    <title>Simple Note Taking</title> served from the running app).
 next_action: >-
-  R-497 shipped - the Lovable-grade pass is in: prompt-first home, Studio ?prompt= auto-start
-  through the existing submit path, prose replies + follow-up chips, file search + Read only.
-  All gates green (3,738 tests, 25 routes); smoke clean with 0 server errors; console running
-  detached on 4321. The founder should try the real flow in a browser: type a prompt on /, press
-  Build, watch the Studio start it, use a follow-up chip, search the file tree. Next direction
-  still needs the founder's pick (none pre-approved): Publish/deploy (new infra / paid decision),
-  sandbox providers into the Studio preview + per-user free/paid routing, Node.js backend
-  codegen, mobile (hard gate), or per-user tenant isolation of the Studio server (architecture
-  sign-off). A further Lovable-style pass could add a per-user build list (needs a backend
-  endpoint) to power a project switcher - also a scoping decision.
+  R-498 shipped: the platform buildout plan (15 specs) and scripts/omnistack.sh are in the repo,
+  so any session can resume cold. NEXT is F-01 (proposed R-499): projects persisted per user -
+  control-plane projects table + agent-engine on-disk workspaces (state.json/turns.jsonl/ir.json)
+  + project list, switcher and General panel, and the per-user ownership check that also closes
+  today's cross-tenant read hole on /jobs/build/{id}/files. It is the prerequisite for every other
+  Phase F/G task. Read R_&_D/specs/F-01-projects.md and implement it as written. Gated items still
+  awaiting the founder: G-01 hosting model (recommendation: deploy from the user's GitHub to their
+  own Vercel/Netlify), G-03 which connectors and their OAuth app registrations, G-04 Stripe and
+  Razorpay test accounts.

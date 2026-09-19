@@ -1,4 +1,4 @@
-# OmniStackAI — implementation progress (as of R-497)
+# OmniStackAI — implementation progress (as of R-498)
 
 A living summary of what is built, what is pending, and how to see results. Numbers come from the
 execution tracker (`R_&_D/OmniStackAI_Execution_Tracker_v6.xlsx`, `Phase_Roadmap`, 461 tasks as of
@@ -8,6 +8,17 @@ R-461 completion) plus the state files (`.ai/`), Git history, and CHANGELOG.
 
 - **3,738 automated tests pass** (agent-engine + Go control-plane), fully offline and
   network-independent (`task verify`), plus the console's own `typecheck`/`lint`/`build` gates.
+- **R-498 — Platform buildout plan + single-command runtime (2026-09-19):** after the founder's
+  live review, a decision for every missing platform feature and **15 implementable specs**
+  (`R_&_D/OmniStackAI_Platform_Buildout_v1.md` + `R_&_D/specs/`), each with UI, SQL migration,
+  API, flow and acceptance — so work can pause and resume cold. Plus `scripts/omnistack.sh`:
+  one command (`up`/`down`/`status`/`logs`/…) for PostgreSQL, the control-plane, the Studio and
+  the console, with **preview mode on by default**. Proven in the investigation: the preview
+  engine works (30 s build → 5 s preview → the app served), so the founder's "preview not
+  working" was build-only mode; and **every project is lost on restart** (in-memory history),
+  which is why F-01 (projects persistence) is next. Two real bugs in the new script were found by
+  running it and fixed (a trailing `&&` under `set -e`; `lsof` exiting 1 under `pipefail`).
+  Gates green (**3,738 tests**). See `.ai/tasks/R-498.md`.
 - **R-497 — Console: Lovable-grade pass (2026-09-19):** after surveying the founder's 96
   reference screenshots, **Lovable** was chosen as the primary reference (Dyad for the
   prompt-first home). Built, real behavior only: a prompt-first home composer →

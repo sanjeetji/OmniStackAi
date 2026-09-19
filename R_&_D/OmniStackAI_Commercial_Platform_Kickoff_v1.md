@@ -514,9 +514,20 @@ so the founder is asked to eyeball `http://localhost:4321` after each task.
 
 ## 6. How to resume this if the session stops here
 
-**Immediate next action as of 2026-09-19: none pre-approved — the "Phase E-UI — Console UI
-overhaul" (R-491 → R-496) and its Lovable-grade follow-up (R-497) are complete, as are
-R-475 → R-481, R-482 → R-485 and R-486 → R-490. The founder picks the next direction: Publish/deploy (a "new infra" / paid-service decision), wiring
+**Superseded for planning purposes by `R_&_D/OmniStackAI_Platform_Buildout_v1.md` (R-498,
+2026-09-19).** That document carries the next two phases — F (platform foundation: projects,
+preview, git, skills, secrets, AI usage, SEO, logs, database, security) and G (publish, domains,
+connectors, payments, analytics) — with one implementable spec per task in `R_&_D/specs/`. This
+file remains the record of Phases A–E. Founder decisions added on 2026-09-19: **domains are
+bring-your-own only** (we will not sell domains or handle domain billing), **connect-GitHub-and-
+push is approved** (specified as a GitHub App in `specs/F-03-git.md`), and **Skills are approved**
+(specified in `specs/F-04-skills.md`). The local platform now starts with a single command —
+`./scripts/omnistack.sh up`, preview mode on by default.
+
+**Immediate next action as of 2026-09-19: F-01 (proposed R-499), projects persisted per user.
+The "Phase E-UI — Console UI overhaul" (R-491 → R-496) and its Lovable-grade follow-up (R-497) are
+complete, as are R-475 → R-481, R-482 → R-485 and R-486 → R-490. Gated items still need the
+founder: Publish/deploy (a "new infra" / paid-service decision), wiring
 the sandbox providers into the Studio preview with per-user free/paid routing, Node.js backend
 codegen, mobile (a hard gate), or per-user tenant isolation of the Studio server (architecture
 sign-off).** `.ai/PROJECT_STATE.yaml`'s `next_action` and `.ai/CURRENT_TASK.yaml` are the
