@@ -1,6 +1,7 @@
 import Link from "next/link";
 import type { ControlPlaneUser } from "@/lib/control-plane";
 import { Button } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
 import AppNav from "./app-nav";
 import BrandMark from "./brand-mark";
 import UserMenu from "./user-menu";
@@ -10,12 +11,18 @@ import UserMenu from "./user-menu";
  * menu (or sign-in actions when signed out), and the `<main>` landmark. Server component; the
  * only client pieces are the nav (needs the pathname) and the menu (needs state).
  *
- * `<main>` keeps the legacy `.studio-main` geometry (1180px, 32/24/72px padding) on purpose: the
- * Studio workspace's own CSS still sizes its chat rail against it until R-493 rebuilds that. */
+ * `layout="contained"` (default) centers content in a 1180px column with page padding;
+ * `layout="full"` hands the whole viewport width to the page as a flex column - the Studio
+ * (R-493) lays out its own chat rail + workspace grid against the full width. */
 export default function AppShell({
   user,
+  layout = "contained",
   children,
-}: Readonly<{ user: ControlPlaneUser | null; children: React.ReactNode }>) {
+}: Readonly<{
+  user: ControlPlaneUser | null;
+  layout?: "contained" | "full";
+  children: React.ReactNode;
+}>) {
   return (
     <div className="flex min-h-dvh flex-col bg-background">
       <a
@@ -25,7 +32,12 @@ export default function AppShell({
         Skip to content
       </a>
       <header className="sticky top-0 z-40 border-b border-border/60 bg-background/80 backdrop-blur supports-[backdrop-filter]:bg-background/70">
-        <div className="mx-auto flex h-14 w-full max-w-[1180px] items-center gap-4 px-6">
+        <div
+          className={cn(
+            "flex h-14 w-full items-center gap-4",
+            layout === "contained" ? "mx-auto max-w-[1180px] px-6" : "px-4",
+          )}
+        >
           <Link
             href="/"
             aria-label="OmniStackAI home"
@@ -54,7 +66,12 @@ export default function AppShell({
       <main
         id="main"
         tabIndex={-1}
-        className="mx-auto w-full max-w-[1180px] flex-1 px-6 pt-8 pb-18 outline-none"
+        className={cn(
+          "flex-1 outline-none",
+          layout === "contained"
+            ? "mx-auto w-full max-w-[1180px] px-6 pt-8 pb-18"
+            : "flex min-h-0 flex-col",
+        )}
       >
         {children}
       </main>

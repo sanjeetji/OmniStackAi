@@ -763,4 +763,46 @@ for shell_consumer in app/page.tsx app/studio/layout.tsx app/settings/layout.tsx
   fi
 done
 
+# R-493: Studio core - chat rail + workspace shell on shadcn primitives and Lucide.
+if rg -qF 'from "./studio-icons"' "$console_root/app/studio/studio-chat.tsx"; then
+  printf 'R-493 studio-chat.tsx must use Lucide directly, not the studio-icons shim.\n'
+  exit 1
+fi
+
+if ! rg -qF 'from "lucide-react"' "$console_root/app/studio/studio-icons.tsx"; then
+  printf 'R-493 studio-icons.tsx must be a Lucide-backed shim.\n'
+  exit 1
+fi
+
+for marker in 'role="log"' 'EXAMPLE_PROMPTS' 'New app' 'aria-label="Send"' 'formatServerError' 'studio-progress'; do
+  if ! rg -qF "$marker" "$console_root/app/studio/studio-chat.tsx"; then
+    printf 'R-493 studio-chat.tsx must include %s.\n' "$marker"
+    exit 1
+  fi
+done
+
+if ! rg -qF 'layout="full"' "$console_root/app/studio/layout.tsx"; then
+  printf 'R-493 the Studio layout must use the full-width AppShell layout.\n'
+  exit 1
+fi
+
+if ! rg -q 'layout\?: "contained" \| "full"' "$console_root/components/app-shell.tsx"; then
+  printf 'R-493 AppShell must expose the layout prop.\n'
+  exit 1
+fi
+
+for dead_block in '.studio-topbar' '.chat-rail' '.studio-main' '.chat-composer' '.workspace-empty'; do
+  if rg -qF "$dead_block {" "$console_root/app/globals.css"; then
+    printf 'R-493 must remove the dead legacy Studio CSS block: %s\n' "$dead_block"
+    exit 1
+  fi
+done
+
+for live_block in '.studio-grid {' '.studio-progress {' '@keyframes studio-progress'; do
+  if ! rg -qF "$live_block" "$console_root/app/globals.css"; then
+    printf 'R-493 globals.css must define %s.\n' "$live_block"
+    exit 1
+  fi
+done
+
 printf 'Repository contract tests passed.\n'

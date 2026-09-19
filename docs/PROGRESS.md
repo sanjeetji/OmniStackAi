@@ -1,4 +1,4 @@
-# OmniStackAI — implementation progress (as of R-492)
+# OmniStackAI — implementation progress (as of R-493)
 
 A living summary of what is built, what is pending, and how to see results. Numbers come from the
 execution tracker (`R_&_D/OmniStackAI_Execution_Tracker_v6.xlsx`, `Phase_Roadmap`, 461 tasks as of
@@ -8,6 +8,18 @@ R-461 completion) plus the state files (`.ai/`), Git history, and CHANGELOG.
 
 - **3,738 automated tests pass** (agent-engine + Go control-plane), fully offline and
   network-independent (`task verify`), plus the console's own `typecheck`/`lint`/`build` gates.
+- **R-493 — Console: Studio core (2026-09-19):** third task of the UI overhaul; the Studio
+  rebuilt the way the reference platforms lay it out — full width (`AppShell layout="full"`),
+  chat rail **left** / workspace **right** at `calc(100dvh - 3.5rem)`; `role="log"` thread with
+  user/assistant/`role="alert"` bubbles, a working bubble with the live character count +
+  shimmer skeletons, skeleton hydration, a "What do you want to build?" empty state with three
+  real example prompts, a proper composer, a **New app** action, a workspace progress bar,
+  designed empty workspace and a compact project header above the untouched tabs. Chat logic
+  byte-for-byte unchanged; `studio-icons.tsx` is a thin Lucide shim (R-475 pins the file; R-494's
+  tabs/preview import it); dead legacy CSS removed — the new contract block caught two leftover
+  `@media` overrides on its first run. All gates green (**3,738 tests**); one real 9-second
+  streamed build with example prompt #1 (173 files) opens in the Studio with hydrated turns;
+  0 server errors. Founder eyeballs `localhost:4321/studio`. See `.ai/tasks/R-493.md`.
 - **R-492 — Console: auth screens + app shell (2026-09-19):** second task of the UI overhaul
   and the first screens a user sees. No route-group move (eight earlier `scripts/test.sh`
   blocks pin the current paths) — a shared `AppShell` server component instead: skip-to-content

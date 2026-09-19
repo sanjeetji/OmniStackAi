@@ -2,10 +2,10 @@ schema_version: 1
 project: OmniStackAI
 phase: BASIC/MVP
 founder_stage: 0
-current_task: R-492
+current_task: R-493
 current_status: done
 branch: main
-last_completed_task: R-492
+last_completed_task: R-493
 # TASK COMPILATION AUDIT — 2026-09-16
 # Performed to achieve 100% synchronization across all task-tracking documentation.
 # Tracker workbook expanded to 464 tasks with R-464.
@@ -34,6 +34,51 @@ task_compilation_audit:
       new_status: DONE
       reason: "Task fully completed on 2026-09-11 with 35 tests. Status left stale during rapid development sprint."
 last_completed_task_summary: >-
+  Completed R-493 (2026-09-19): Studio core - chat rail + workspace shell on shadcn/Lucide. Third
+  task of the Console UI overhaul (R-491..R-496); the Studio is the product and was still the
+  R-477/R-481 hand-rolled layout inside the new shell. Constraints read from scripts/test.sh
+  first: R-475 pins studio-icons.tsx, R-477 pins studio-workspace.tsx and .studio-grid, R-479/
+  R-481/R-485 pin StudioPreview/StudioTabs/sendBuildStream in studio-chat.tsx, and R-494's
+  tabs/preview import icons from studio-icons.tsx - so studio-icons.tsx became a thin Lucide
+  shim (same names, 18px + aria-hidden defaults), .studio-grid kept its name with a new
+  definition, and the chat logic stayed byte-for-byte (hydration, the three-shape SSE parser,
+  edit, 404 recovery, credits, previewVersion, router.replace).
+  Built: AppShell layout="full" (main becomes a flex column; the sticky header container follows
+  the prop too - a real inconsistency the smoke surfaced and fixed in-task); .studio-grid =
+  chat rail minmax(340px,400px) LEFT + workspace minmax(0,1fr) RIGHT at calc(100dvh - 3.5rem),
+  each scrolling internally, stacking below lg; chat rail with project name / credits Badge
+  (tabular) / New app action (there was no way to start a second app without editing the URL);
+  role="log" thread - user bubbles in --primary, assistant bubbles with the brand mark,
+  role="alert" destructive error bubbles, server errors sentence-cased via formatServerError; a
+  working bubble (LoaderCircle + "Starting…" / "Generating your app… N characters so far" /
+  "Applying your change…" + three shimmer Skeleton lines); skeleton bubbles while hydrating; a
+  "What do you want to build?" empty state with three real example prompts that fill and focus
+  the composer; a composer with focus-within ring, field-sizing-content auto-grow, Enter/
+  Shift+Enter, ArrowUp Send, hint, "Editing {name}" context line; workspace with a transform-only
+  indeterminate progress bar while in flight, a designed "Your app will show up here" empty state
+  (Live preview / Files and code / Problems - the tabs' real capabilities), and StudioWorkspace
+  rewritten as a compact project header (name, description, entity badges capped at 8,
+  files/commit/latest-turn usage dl in tabular-nums; a "Restored from this session's history"
+  variant for ?build= rehydration) above the untouched StudioTabs. Dead legacy CSS removed
+  (.studio-shell/.studio-topbar*/.studio-main/.studio-credit-row/.chat-*/.workspace-empty/
+  .studio-workspace-column); .studio-progress + keyframes added. No API/lib/tabs/preview
+  changes; no new deps.
+  Gates: typecheck/lint clean first run (tabs/preview compile untouched against the shim); build
+  23 routes; the new scripts/test.sh R-493 block CAUGHT a real leftover on its first run - two
+  @media blocks still carried .studio-topbar/.studio-main overrides and a 900px .studio-grid/
+  .chat-rail override that would have fought the new 1023px rule - removed; that same failure had
+  made task verify run zero tests (verify.sh runs test.sh first) - noticed from the empty output,
+  re-run: 3,738 OK; lint/security/env pass. Live smoke: /studio signed in serves every new
+  marker, legacy markup gone, full-layout main; /studio?build=does-not-exist renders the
+  hydrating skeletons + restored header; ONE real streamed build with example prompt #1 verbatim:
+  200 text/event-stream, 9s, 2,458 generating_ir frames + done ("Task Tracker", 5 entities, 173
+  files, id 5) + trailing credits frame; /studio?build=5 200, 2 turns hydrated, 173 files;
+  credits 100->100 (credits_spent 0 = the pre-existing R-476 price-book gap). Header container
+  fix verified from served HTML (px-4 on /studio vs mx-auto max-w-[1180px] px-6 on /). 0 server
+  errors. Console left running detached on 4321. No browser tool - the founder eyeballs
+  localhost:4321/studio (click an example prompt, send, watch the working state).
+  NEXT: R-494 (Studio tabs), R-495 (Settings/Fabric), R-496 (motion/states/polish).
+_prior_last_completed_task_summary_R492: >-
   Completed R-492 (2026-09-19): console auth screens + shared app shell. Second task of the
   Console UI overhaul (R-491..R-496) and the first one a user sees. Design decision made from a
   direct read of scripts/test.sh: eight earlier contract blocks (R-470, R-475, R-482, ...) assert
@@ -1885,10 +1930,12 @@ next_action: >-
   After that sequence the founder asked why the UI is "just simple and very ugly" and chose
   "Full UI overhaul now" (reference bar: Emergent/Lovable/Dyad) - a six-task Console UI overhaul
   (R-491..R-496) is the active priority; R-491 (foundation: Tailwind v4 + shadcn/ui on Radix +
-  Geist + next-themes dark-first, R-470 gate retired) and R-492 (auth screens + shared app shell
-  with nav/user menu/skip link, branded 404, real dashboard) are done.
-  NEXT: R-493 (Studio core), R-494 (Studio tabs), R-495 (Settings/Fabric), R-496 (motion/
-  states/polish) - roadmap in the plan file. Then (not yet scoped): real
+  Geist + next-themes dark-first, R-470 gate retired), R-492 (auth screens + shared app shell
+  with nav/user menu/skip link, branded 404, real dashboard) and R-493 (Studio core: full-width
+  chat-left/workspace-right layout, premium thread, working/hydrating/empty states, composer,
+  New app, project header; studio-icons.tsx is a Lucide shim) are done.
+  NEXT: R-494 (Studio tabs), R-495 (Settings/Fabric), R-496 (motion/states/polish) - roadmap in
+  the plan file. Then (not yet scoped): real
   multi-target Publish/deploy (Netlify one-click primary; Vercel/Cloudflare/self-host/GitHub-export
   as secondary options), Node.js backend codegen alongside Python/Go, and mobile (React Native
   near-term, per research - no competitor at scale generates native Kotlin/Swift). Separately, full

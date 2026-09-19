@@ -546,63 +546,6 @@ tr:last-child td {
   }
 }
 
-.studio-shell {
-  min-height: 100dvh;
-  display: flex;
-  flex-direction: column;
-}
-
-.studio-topbar {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 16px;
-  padding: 14px 24px;
-  border-bottom: 1px solid var(--border);
-  background: var(--panel);
-}
-
-.studio-topbar-back {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  color: var(--text);
-  text-decoration: none;
-  font-weight: 600;
-}
-
-.studio-topbar-back:hover {
-  color: var(--brand);
-}
-
-.studio-topbar-brand {
-  font-size: 15px;
-}
-
-.studio-topbar-actions {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-}
-
-.studio-topbar-icon-link {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 36px;
-  height: 36px;
-  border-radius: var(--radius-sm);
-  color: var(--muted-foreground);
-  transition:
-    color 0.2s ease,
-    background-color 0.2s ease;
-}
-
-.studio-topbar-icon-link:hover {
-  color: var(--brand);
-  background: var(--surface-2);
-}
-
 .settings-active-now {
   display: flex;
   align-items: center;
@@ -611,20 +554,6 @@ tr:last-child td {
   border-radius: var(--radius-md);
   padding: 12px 16px;
   font-size: 14px;
-}
-
-.studio-main {
-  flex: 1;
-  width: 100%;
-  max-width: 1180px;
-  margin: 0 auto;
-  padding: 32px 24px 72px;
-}
-
-.studio-credit-row {
-  display: flex;
-  justify-content: flex-end;
-  margin-bottom: 16px;
 }
 
 .studio-intro {
@@ -702,127 +631,53 @@ tr:last-child td {
   font-size: 13px;
 }
 
+/* Studio (R-493): chat rail on the left, workspace on the right, each scrolling on its own inside
+   the viewport height that remains under the 56px app header. Stacks below the lg breakpoint. */
 .studio-grid {
   display: grid;
-  grid-template-columns: 1fr 380px;
-  gap: 20px;
-  align-items: start;
+  grid-template-columns: minmax(340px, 400px) minmax(0, 1fr);
+  height: calc(100dvh - 3.5rem);
+  min-height: 520px;
+  flex: 1;
 }
 
-.chat-rail {
-  display: flex;
-  flex-direction: column;
-  height: calc(100dvh - 160px);
-  min-height: 420px;
+@media (max-width: 1023px) {
+  .studio-grid {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: minmax(420px, 55dvh) auto;
+    height: auto;
+  }
+}
+
+/* Indeterminate progress bar along the top of the workspace while a build/edit is in flight.
+   transform-only animation, so it stays smooth while the main thread parses the stream. */
+.studio-progress {
   position: sticky;
-  top: 20px;
+  top: 0;
+  z-index: 1;
+  height: 2px;
+  width: 100%;
+  overflow: hidden;
+  background: var(--secondary);
 }
 
-.chat-thread {
-  flex: 1;
-  overflow-y: auto;
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-  padding: 4px 2px;
+.studio-progress::after {
+  content: "";
+  display: block;
+  height: 100%;
+  width: 35%;
+  background: var(--brand);
+  border-radius: 999px;
+  animation: studio-progress 1.4s ease-in-out infinite;
 }
 
-.chat-empty {
-  color: var(--muted-foreground);
-  font-size: 13px;
-  text-align: center;
-  padding: 24px 8px;
-  margin: 0;
-}
-
-.chat-message {
-  max-width: 92%;
-  padding: 10px 14px;
-  border-radius: var(--radius-md);
-  font-size: 14px;
-  line-height: 1.45;
-  white-space: pre-wrap;
-  word-break: break-word;
-}
-
-.chat-message--user {
-  align-self: flex-end;
-  background: var(--primary);
-  color: var(--primary-foreground);
-}
-
-.chat-message--assistant {
-  align-self: flex-start;
-  background: var(--surface-2);
-  color: var(--text);
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
-.chat-message--error {
-  align-self: flex-start;
-  background: var(--error-bg);
-  color: var(--error-fg);
-}
-
-.chat-composer {
-  display: flex;
-  gap: 8px;
-  margin-top: 12px;
-}
-
-.chat-composer textarea {
-  flex: 1;
-  font: inherit;
-  padding: 10px 12px;
-  border-radius: var(--radius-sm);
-  border: 1px solid var(--input);
-  background: var(--bg);
-  color: var(--text);
-  resize: none;
-  min-height: 44px;
-  max-height: 140px;
-}
-
-.chat-composer textarea:focus {
-  outline: 2px solid var(--ring);
-  outline-offset: 1px;
-}
-
-.chat-send {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 44px;
-  height: 44px;
-  border-radius: var(--radius-sm);
-  border: none;
-  background: var(--primary);
-  color: var(--primary-foreground);
-  cursor: pointer;
-  flex-shrink: 0;
-  transition:
-    filter 0.2s ease,
-    transform 0.15s ease;
-}
-
-.chat-send:hover:not(:disabled) {
-  filter: brightness(1.08);
-}
-
-.chat-send:active:not(:disabled) {
-  transform: translateY(1px);
-}
-
-.chat-send:disabled {
-  opacity: 0.6;
-  cursor: not-allowed;
-}
-
-.workspace-empty {
-  text-align: center;
-  padding: 60px 24px;
+@keyframes studio-progress {
+  from {
+    transform: translateX(-100%);
+  }
+  to {
+    transform: translateX(300%);
+  }
 }
 
 .studio-tabs {
@@ -1001,12 +856,6 @@ tr:last-child td {
   color: var(--muted-foreground);
 }
 
-.studio-workspace-column {
-  display: flex;
-  flex-direction: column;
-  gap: 20px;
-}
-
 .preview-panel {
   padding: 0;
   overflow: hidden;
@@ -1085,25 +934,5 @@ tr:last-child td {
 
   .masthead {
     flex-direction: column;
-  }
-
-  .studio-topbar {
-    padding: 12px 16px;
-  }
-
-  .studio-main {
-    padding: 24px 16px 56px;
-  }
-}
-
-@media (max-width: 900px) {
-  .studio-grid {
-    grid-template-columns: 1fr;
-  }
-
-  .chat-rail {
-    height: auto;
-    min-height: 320px;
-    position: static;
   }
 }

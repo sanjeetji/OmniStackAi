@@ -1,9 +1,30 @@
 # Current Handoff
 
-Task ID: R-492
+Task ID: R-493
 Status: done
 Phase: BASIC/MVP — Founder Stage 0
 Branch: `main`
+
+> **R-493 Completed (2026-09-19): Console — Studio core (chat rail + workspace shell on shadcn/Lucide).**
+> - The Studio is now full-width (`AppShell layout="full"`, header container follows the prop),
+>   chat rail **left** (`minmax(340px,400px)`) / workspace **right**, each scrolling internally at
+>   `calc(100dvh - 3.5rem)`, stacking below `lg`.
+> - Chat: `role="log"` thread, user/assistant/`role="alert"` error bubbles (server errors
+>   sentence-cased), working bubble with the live character count + shimmer skeletons, skeleton
+>   hydration, "What do you want to build?" empty state with three **real** example prompts,
+>   proper composer (focus-within ring, auto-grow, Enter/Shift+Enter, `ArrowUp` Send), **New app**
+>   action, "Editing {name}" context. Chat logic byte-for-byte unchanged.
+> - Workspace: indeterminate progress bar while in flight, designed empty state, compact project
+>   header (`StudioWorkspace` rewritten) above the untouched `StudioTabs`.
+> - `studio-icons.tsx` is a thin **Lucide shim** (R-475 pins the file; R-494's tabs/preview still
+>   import it). Dead legacy Studio CSS removed; the new contract block caught two leftover
+>   `@media` overrides on its first run.
+> - Gates: typecheck/lint/build clean (23 routes), `scripts/test.sh` passes, `task verify`
+>   **3,738 OK**, lint/security/env pass. Live: every Studio marker served; unknown `?build=`
+>   degrades as before; **one real streamed build** with example prompt #1 (9s, 2,458 deltas,
+>   173 files, id 5) opens in the Studio with 2 hydrated turns; 0 server errors. Console running
+>   detached on 4321 for the founder to eyeball `/studio`.
+> - **NEXT**: R-494 (Studio tabs). See `.ai/tasks/R-493.md`.
 
 > **R-492 Completed (2026-09-19): Console — auth screens + app shell (nav, user menu, 404, dashboard).**
 > - Second task of the Console UI overhaul; the first screens a user sees. **No route-group

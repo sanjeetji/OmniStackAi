@@ -429,9 +429,12 @@ discipline):
    Radix menu; skip-link; branded 404; a real home/dashboard with live provider status instead of
    a link list. Kept the existing file layout rather than route groups because eight earlier
    `scripts/test.sh` contract blocks pin the current page paths — the shell is a shared component.
-3. **R-493 — Studio core.** Chat rail + workspace shell rebuilt on shadcn primitives: a premium
-   chat thread, the streaming state (shimmer/skeleton, live character count kept), composer, a
-   designed "getting started" empty state; Lucide replaces the hand-rolled `studio-icons.tsx`.
+3. **R-493 — Studio core** *(shipped 2026-09-19)*. Chat rail + workspace shell rebuilt on shadcn
+   primitives, full width, chat left / workspace right: a premium chat thread, the streaming
+   state (shimmer skeletons, live character count kept), a real composer, a New app action, a
+   designed "What do you want to build?" empty state whose example prompts were proven runnable
+   by a real streamed build; `studio-icons.tsx` became a thin Lucide shim (the R-475 contract
+   pins the file and the tabs still import it — R-494 retires both deliberately).
 4. **R-494 — Studio tabs.** Files as a real tree; Code viewer polish (line numbers, highlighting);
    Preview frame chrome (status pill, open-in-new-tab, width presets); Problems grouped by file
    with severity.
@@ -489,8 +492,8 @@ so the founder is asked to eyeball `http://localhost:4321` after each task.
 
 ## 6. How to resume this if the session stops here
 
-**Immediate next action as of 2026-09-19: R-493 (Studio core), the third item in "Phase E-UI —
-Console UI overhaul" above; R-475 → R-481, R-482 → R-485, R-486 → R-490, R-491 and R-492 are all
+**Immediate next action as of 2026-09-19: R-494 (Studio tabs), the fourth item in "Phase E-UI —
+Console UI overhaul" above; R-475 → R-481, R-482 → R-485, R-486 → R-490 and R-491 → R-493 are all
 shipped.** `.ai/PROJECT_STATE.yaml`'s `next_action` and `.ai/CURRENT_TASK.yaml` are the
 authoritative pointers per `AGENTS.md`'s source-of-truth order (they win over this paragraph if
 they ever disagree) — read them first, but they should already agree with this. The founder's

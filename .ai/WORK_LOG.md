@@ -1,5 +1,53 @@
 # Work Log
 
+## 2026-09-19 — R-493 (Console: Studio core — chat rail + workspace shell on shadcn/Lucide)
+
+- **Why:** the Studio is the product, and after R-491/R-492 it was still the R-477/R-481
+  hand-rolled layout (right-hand chat panel, plain bubbles, "Loading history…", a stats card, a
+  raw textarea) inside the new shell. This task rebuilds the core the way Lovable / Dyad /
+  Emergent lay it out. The founder's screenshots have not been shared yet; the layout follows
+  the reference platforms' common structure (chat left, workspace right, full width).
+- **Constraints read first, from `scripts/test.sh`:** R-475 pins `studio-icons.tsx`; R-477 pins
+  `studio-workspace.tsx` and `.studio-grid`; R-479/R-481/R-485 pin `StudioPreview`/`StudioTabs`/
+  `sendBuildStream` inside `studio-chat.tsx`; and R-494's `studio-tabs.tsx`/`studio-preview.tsx`
+  import icons from `studio-icons.tsx`. So: `studio-icons.tsx` became a **thin Lucide shim**
+  (same export names, 18px + `aria-hidden` defaults) — one icon family across the console
+  immediately, untouched files keep compiling, R-494 can retire the shim + assertion
+  deliberately; `.studio-grid` kept its name with a new definition; **chat logic stayed
+  byte-for-byte** (hydration, three-shape SSE parser, edit, 404 recovery, credits,
+  `previewVersion`, `router.replace`) — only presentation and error-string casing changed.
+- **Built:** `AppShell layout="full"` (main → flex column; the header container follows the prop
+  too, after the smoke caught it still capped at 1180px); `.studio-grid` chat rail
+  `minmax(340px,400px)` left + workspace right at `calc(100dvh - 3.5rem)`, each scrolling
+  internally, stacking below `lg`; rail header (project name, credits Badge, **New app** action —
+  there was no way to start a second app without editing the URL); `role="log"` thread with
+  user/assistant/`role="alert"` error bubbles, server errors sentence-cased via
+  `formatServerError`; working bubble (`LoaderCircle` + live label keeping R-485's character
+  count + three shimmer `Skeleton` lines); skeleton bubbles while hydrating; "What do you want to
+  build?" empty state with three real example prompts that fill and focus the composer;
+  composer with focus-within ring, `field-sizing-content` auto-grow, Enter/Shift+Enter,
+  `ArrowUp` Send, hint, "Editing {name}" line; workspace with a transform-only indeterminate
+  progress bar, a designed "Your app will show up here" empty state, and `StudioWorkspace`
+  rewritten as a compact project header (entity badges capped at 8, files/commit/latest-turn
+  usage in `tabular-nums`, a "Restored from this session's history" variant) above the untouched
+  `StudioTabs`. Dead legacy CSS removed; `.studio-progress` + keyframes added.
+- **Gates:** typecheck/lint clean first run; build 23 routes. **The new contract block caught a
+  real leftover on its first run** — two `@media` blocks still carried `.studio-topbar`/
+  `.studio-main` overrides and a 900px `.studio-grid`/`.chat-rail` override that would have
+  fought the new 1023px rule; removed. That failure had made `task verify` run zero tests
+  (`verify.sh` runs `test.sh` first) — noticed from the empty output, re-run: 3,738 OK.
+  lint/security/env pass.
+- **Live smoke:** `/studio` signed in serves every new marker, legacy markup gone, full-layout
+  `<main>`; `/studio?build=does-not-exist` renders the hydrating skeletons + restored header;
+  **one real streamed build with example prompt #1 verbatim** — 200 `text/event-stream`, 9s,
+  2,458 `generating_ir` frames + `done` ("Task Tracker", 5 entities, 173 files, id 5) + the
+  trailing credits frame; `/studio?build=5` 200, 2 turns hydrated, 173 files listed; credits
+  100 → 100 (`credits_spent: 0` — the pre-existing R-476 price-book gap, recorded). Header
+  container fix verified from the served HTML of both `/studio` and `/`. **0 server errors.**
+  Console left running detached on 4321 for the founder.
+- **Next:** R-494 (Studio tabs). Consider fetching the file list on `?build=` hydration so a
+  restored session isn't empty in Files/Code (a pre-existing R-477 degradation).
+
 ## 2026-09-19 — R-492 (Console: auth screens + app shell — nav, user menu, skip link, 404, dashboard)
 
 - **Why:** second task of the Console UI overhaul and the first one a user actually sees. R-491

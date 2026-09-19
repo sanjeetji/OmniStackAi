@@ -4,6 +4,26 @@ Last updated: 2026-09-19
 ## Current Phase
 Stage 0 (Founder Build Sequence, Brief Section 91) — BASIC/MVP
 
+> **R-493 (2026-09-19): Console — Studio core (chat rail + workspace shell on shadcn/Lucide).**
+> Third task of the Console UI overhaul; the Studio is the product. Constraints read from
+> `scripts/test.sh` first (R-475 pins `studio-icons.tsx`; R-477 pins `.studio-grid`; R-479/481/485
+> pin `StudioPreview`/`StudioTabs`/`sendBuildStream`; R-494's tabs/preview import the icons), so
+> `studio-icons.tsx` became a thin **Lucide shim**, `.studio-grid` kept its name, and the chat
+> logic stayed byte-for-byte. Built: `AppShell layout="full"`; chat rail **left** / workspace
+> **right** at `calc(100dvh - 3.5rem)`; `role="log"` thread with user/assistant/`role="alert"`
+> bubbles; working bubble with the live character count + shimmer skeletons; skeleton hydration;
+> "What do you want to build?" empty state with three real example prompts; a proper composer;
+> a **New app** action; workspace progress bar, designed empty state and a compact project header
+> above the untouched tabs. Dead legacy CSS removed — **the new contract block caught two leftover
+> `@media` overrides on its first run** (and that failure had made `task verify` run zero tests;
+> noticed, fixed, re-run). Gates: typecheck/lint/build clean (23 routes), contract tests,
+> `task verify` **3,738 OK**, lint/security/env. Live: every Studio marker served; unknown
+> `?build=` degrades as before; **one real streamed build with example prompt #1** (9s, 2,458
+> `generating_ir` deltas, "Task Tracker", 173 files, id 5) opens in the Studio with 2 hydrated
+> turns; header-container inconsistency found and fixed in-task; **0 server errors**. Console
+> running detached on 4321 — founder eyeballs `/studio` (no browser tool).
+> NEXT: R-494 (Studio tabs), R-495 (Settings/Fabric), R-496 (motion/states/polish).
+
 > **R-492 (2026-09-19): Console — auth screens + app shell (nav, user menu, skip link, 404, dashboard).**
 > Second task of the Console UI overhaul and the first one a user sees. Design decision from a
 > direct read of `scripts/test.sh`: eight earlier contract blocks pin the current page paths, so

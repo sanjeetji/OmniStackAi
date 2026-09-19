@@ -1,44 +1,36 @@
-task_id: R-492
+task_id: R-493
 status: completed
 phase: MVP
 tracker_row: null
 started_at: "2026-09-19"
 completed_at: "2026-09-19"
 objective: >-
-  Second task of the Console UI overhaul (R-491..R-496): the first screens a user sees. Redesign
-  /login and /register on shadcn primitives with real client-side validation (mirroring the
-  server's own limits), inline aria-wired field errors, a role="alert" server-error banner, a
-  loading state and a show/hide password toggle; add a shared AppShell (skip-to-content link,
-  sticky header with brand, AppNav with aria-current current-page state, UserMenu on a real
-  DropdownMenu with plan/credits/sign-out) wrapped by every authenticated layout/page and by the
-  public /fabric page; a branded app/not-found.tsx; and a real home dashboard (primary Open Studio
-  action, honest three-step loop, account facts, live model-provider status via the existing
-  getProviderStatus client). No route-group move - eight earlier scripts/test.sh blocks assert the
-  current file paths, so the shell is a shared component and the existing per-route auth gates
-  stay put. app/logout-button.tsx retires into UserMenu. No API, lib, Studio-workspace, or
-  dependency changes; no fabricated content.
+  Third task of the Console UI overhaul (R-491..R-496): rebuild the Studio core the way the
+  reference platforms lay it out - a full-width workspace (AppShell gains layout="full") with the
+  chat rail on the LEFT (minmax(340px,400px)) and the workspace on the right, each scrolling
+  internally at calc(100dvh - 3.5rem); a premium chat thread (role="log"; user bubbles in
+  --primary, assistant bubbles with the brand mark, role="alert" error bubbles, server errors
+  sentence-cased via formatServerError); a real working state (LoaderCircle + live phase label
+  keeping R-485's character count + shimmer Skeleton lines); skeleton bubbles while hydrating; a
+  designed "What do you want to build?" empty state with three example prompts that fill and
+  focus the composer; a composer with focus-within ring, field-sizing-content auto-grow, Enter/
+  Shift+Enter kept, ArrowUp Send button, hint and an "Editing {name}" context line; a New app
+  action (resets state, router.replace("/studio")); a workspace with an indeterminate progress bar
+  while in flight, a designed "Your app will show up here" empty state, and a compact project
+  header (StudioWorkspace rewritten: name, description, entity badges, files/commit/latest-turn
+  usage) above the untouched StudioTabs. studio-icons.tsx becomes a thin Lucide shim (R-475 pins
+  the file; R-494's tabs/preview still import from it). Dead legacy CSS removed; .studio-grid
+  redefined. Chat logic (hydration, SSE parser, edit, 404 recovery, credits, previewVersion, URL)
+  stays byte-for-byte. No API/lib/tabs/preview changes; no new deps.
 allowed_paths:
-  - apps/console-web/components/app-shell.tsx
-  - apps/console-web/components/app-nav.tsx
-  - apps/console-web/components/user-menu.tsx
-  - apps/console-web/components/brand-mark.tsx
-  - apps/console-web/components/auth-screen.tsx
-  - apps/console-web/components/field.tsx
-  - apps/console-web/app/not-found.tsx
-  - apps/console-web/app/page.tsx
-  - apps/console-web/app/login/page.tsx
-  - apps/console-web/app/login/login-form.tsx
-  - apps/console-web/app/register/page.tsx
-  - apps/console-web/app/register/register-form.tsx
-  - apps/console-web/app/logout-button.tsx
+  - apps/console-web/app/studio/studio-chat.tsx
+  - apps/console-web/app/studio/studio-workspace.tsx
+  - apps/console-web/app/studio/studio-icons.tsx
   - apps/console-web/app/studio/layout.tsx
-  - apps/console-web/app/studio/page.tsx
-  - apps/console-web/app/settings/layout.tsx
-  - apps/console-web/app/settings/page.tsx
-  - apps/console-web/app/fabric/page.tsx
+  - apps/console-web/components/app-shell.tsx
   - apps/console-web/app/globals.css
   - scripts/test.sh
-  - .ai/tasks/R-492.md
+  - .ai/tasks/R-493.md
   - .ai/CURRENT_TASK.yaml
   - .ai/PROJECT_STATE.yaml
   - .ai/WORK_LOG.md
@@ -49,32 +41,39 @@ allowed_paths:
   - docs/RESUME_PROMPT.md
   - R_&_D/OmniStackAI_Commercial_Platform_Kickoff_v1.md
 forbidden_changes:
-  - No changes to lib/control-plane.ts, lib/session.ts, or any app/api/* route (auth contract unchanged)
-  - No changes to studio-chat/tabs/preview/workspace, code-highlight.ts, or studio-icons.tsx (R-493/R-494)
-  - No new dependencies; no agent-engine or control-plane changes
-  - No fabricated content (fake projects, stats, testimonials, or legal pages that don't exist)
+  - No changes to studio-tabs.tsx, studio-preview.tsx, code-highlight.ts, studio/page.tsx (R-494), lib/*, or any app/api/* route
+  - No behavior change in the chat logic (hydration, SSE parsing, edit, 404 recovery, credits, previewVersion, URL persistence)
+  - No new dependencies; no agent-engine or control-plane changes; no fabricated content
   - Do not modify or commit the untracked .claude directory
 required_gates:
   - "console-web: pnpm run typecheck, pnpm run lint, pnpm run build"
-  - "bash scripts/test.sh (new R-492 block)"
+  - "bash scripts/test.sh (new R-493 block)"
   - task verify
   - task lint
   - task security:quick
   - task env:check
-  - "live smoke: next start on 4321; every page route signed-out and signed-in (307/200/404 as designed), skip link + aria-current + user name present in served HTML, wrong-password 401 banner path, logout 204; founder eyeballs localhost:4321 (no browser tool here)"
+  - "live smoke: next start on 4321; /studio signed in renders the new layout (markers), /studio?build=unknown degrades as before, one real streamed build via /api/jobs/build/stream completes and its id opens in the Studio; 0 server errors; founder eyeballs localhost:4321"
 model_tool_trace:
   routing: deterministic_only
   local_calls: 0
-  cloud_calls: 0
-  note: Pure TypeScript/TSX work on the R-491 stack, 0 model calls.
+  cloud_calls: 1
+  note: >-
+    Pure TypeScript/TSX/CSS work, 0 model calls inside any gate. The live smoke made ONE real
+    streamed build through the running stack (the configured cloud provider; 9s, 173 files,
+    credits_spent 0 per the pre-existing price-book gap) to prove the end-to-end path still works
+    after the chat component rewrite.
 next_action: >-
-  R-492 shipped: split-screen sign-in / create-account with real inline validation and server
-  error banners, a shared AppShell (skip link, sticky header, aria-current nav, Radix user menu
-  with sign-out), a branded 404, and a real dashboard showing live provider status and account
-  facts - all inside the existing file layout (no route-group move; eight earlier contract
-  blocks pin the paths). globals.css untouched. All gates green (3,738 tests unaffected); every
-  route live-smoked signed-out and signed-in with 0 server errors; the console is left running
-  detached on 4321 for the founder to eyeball. Next: R-493 (Studio core - chat rail + workspace
-  shell rebuilt on shadcn primitives: premium chat thread, streaming state with shimmer/skeleton
-  and the live character count kept, composer, designed empty state; Lucide replaces
-  studio-icons.tsx). The founder's Emergent/Lovable/Dyad screenshots, once shared, shape it.
+  R-493 shipped: the Studio is now a full-width, chat-left / workspace-right layout on shadcn
+  primitives and Lucide - premium thread with role="log", working state with live character
+  count + shimmer, skeleton hydration, a real "What do you want to build?" empty state whose
+  example prompts were proven runnable by a real 9-second streamed build (173 files), a proper
+  composer, a New app action, a workspace progress bar, a designed empty workspace and a compact
+  project header above the untouched tabs. studio-icons.tsx is a Lucide shim; dead legacy CSS
+  removed (the new contract block caught two leftover @media overrides on its first run). All
+  gates green (3,738 tests); 0 server errors; console running detached on 4321 for the founder.
+  Next: R-494 (Studio tabs) - shadcn Tabs for Preview/Files/Code/Problems; Files as a real tree;
+  Code viewer polish (line numbers/highlighting on the new tokens); Preview frame chrome (status
+  pill, open-in-new-tab, width presets); Problems grouped by file with severity; tabs/preview
+  switch their icon imports to Lucide directly so the studio-icons shim and the R-475 assertion
+  can be retired deliberately; consider fetching the file list on hydration so a restored session
+  isn't empty in Files/Code.

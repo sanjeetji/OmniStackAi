@@ -2,6 +2,17 @@
 
 import { useEffect, useRef, useState, type FormEvent } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
+import {
+  ArrowUp,
+  Bug,
+  Coins,
+  FolderTree,
+  LoaderCircle,
+  MonitorPlay,
+  Plus,
+  Sparkles,
+  TriangleAlert,
+} from "lucide-react";
 import type {
   BuildEditResponse,
   BuildFileTreeResponse,
@@ -9,7 +20,11 @@ import type {
   BuildTurnsResponse,
   ChatTurn,
 } from "@/lib/control-plane";
-import { CreditIcon, SendIcon } from "./studio-icons";
+import BrandMark from "@/components/brand-mark";
+import { formatServerError } from "@/components/field";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Skeleton } from "@/components/ui/skeleton";
 import { StudioTabs } from "./studio-tabs";
 import { StudioWorkspace, type WorkspaceSnapshot } from "./studio-workspace";
 
@@ -22,6 +37,15 @@ interface ChatMessage {
 }
 
 type ErrorBody = { error?: string };
+
+/* Real, runnable inputs - entity-style apps the builder genuinely handles - offered as one-click
+ * starting points in the empty state. They fill the composer; nothing is sent until the user
+ * presses Send. */
+const EXAMPLE_PROMPTS = [
+  "A task tracker where users create projects and each project has tasks with due dates",
+  "A recipe box with tags, ratings and a weekly meal plan",
+  "A simple CRM: companies, contacts and notes, with a search page",
+];
 
 let messageCounter = 0;
 function nextMessageId(): string {
@@ -37,9 +61,10 @@ export default function StudioChat({ initialCreditBalance }: { initialCreditBala
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [buildId, setBuildId] = useState<string | null>(urlBuildId);
   const [workspace, setWorkspace] = useState<WorkspaceSnapshot | null>(null);
-  // Bumped after every successful edit so <StudioPreview> re-previews this build - _edit() never
-  // restarts the preview on its own, unlike _build() (which StudioPreview already re-previews for
-  // via its own buildId-change effect, so no bump is needed on a fresh build).
+  // Bumped after every successful edit so <StudioPreview> (rendered by <StudioTabs>) re-previews
+  // this build - _edit() never restarts the preview on its own, unlike _build() (which
+  // StudioPreview already re-previews for via its own buildId-change effect, so no bump is
+  // needed on a fresh build).
   const [previewVersion, setPreviewVersion] = useState(0);
   const [prompt, setPrompt] = useState("");
   const [submitting, setSubmitting] = useState(false);
@@ -50,6 +75,7 @@ export default function StudioChat({ initialCreditBalance }: { initialCreditBala
   const [hydrating, setHydrating] = useState(Boolean(urlBuildId));
   const [creditBalance, setCreditBalance] = useState(initialCreditBalance);
   const threadRef = useRef<HTMLDivElement | null>(null);
+  const textareaRef = useRef<HTMLTextAreaElement | null>(null);
   const hydratedFor = useRef<string | null>(null);
 
   useEffect(() => {
@@ -77,7 +103,10 @@ export default function StudioChat({ initialCreditBalance }: { initialCreditBala
           // agent-engine reports as an empty turns list rather than an error (see the R-477 task
           // contract's Finding). Surface it, but keep buildId - the user can still try sending a
           // message, which will get the real, authoritative answer.
-          setMessages((prev) => [...prev, errorMessage(body.error ?? "could not load this build's history")]);
+          setMessages((prev) => [
+            ...prev,
+            errorMessage(formatServerError(body.error, "Couldn't load this build's history.")),
+          ]);
           return;
         }
         const turns = (body.turns ?? []) as ChatTurn[];
@@ -94,7 +123,10 @@ export default function StudioChat({ initialCreditBalance }: { initialCreditBala
         }
       } catch {
         if (!cancelled) {
-          setMessages((prev) => [...prev, errorMessage("could not reach the server to load history")]);
+          setMessages((prev) => [
+            ...prev,
+            errorMessage("Couldn't reach the server to load this build's history."),
+          ]);
         }
       } finally {
         if (!cancelled) setHydrating(false);
@@ -107,7 +139,7 @@ export default function StudioChat({ initialCreditBalance }: { initialCreditBala
 
   useEffect(() => {
     threadRef.current?.scrollTo({ top: threadRef.current.scrollHeight });
-  }, [messages]);
+  }, [messages, submitting]);
 
   function appendMessage(role: "user" | "assistant", text: string, kind: "plain" | "error" = "plain") {
     setMessages((prev) => [
@@ -125,6 +157,26 @@ export default function StudioChat({ initialCreditBalance }: { initialCreditBala
     } catch {
       return [];
     }
+  }
+
+  /** R-493: the only way to start a second app used to be editing the URL by hand. Resets this
+   * session's thread and workspace and clears `?build=` - the previous build stays on the server
+   * exactly as before, reachable again via its own `?build=<id>` link. */
+  function startNewApp() {
+    if (submitting) return;
+    setBuildId(null);
+    hydratedFor.current = null;
+    setMessages([]);
+    setWorkspace(null);
+    setPrompt("");
+    setStreamChars(0);
+    router.replace("/studio");
+    textareaRef.current?.focus();
+  }
+
+  function useExamplePrompt(text: string) {
+    setPrompt(text);
+    textareaRef.current?.focus();
   }
 
   async function handleSend(event: FormEvent<HTMLFormElement>) {
@@ -168,7 +220,11 @@ export default function StudioChat({ initialCreditBalance }: { initialCreditBala
       });
       if (!response.ok || !response.body) {
         const body = (await response.json().catch(() => ({}))) as ErrorBody;
-        appendMessage("assistant", body.error ?? `build failed with status ${response.status}`, "error");
+        appendMessage(
+          "assistant",
+          formatServerError(body.error, `Build failed with status ${response.status}.`),
+          "error",
+        );
         return;
       }
 
@@ -213,11 +269,11 @@ export default function StudioChat({ initialCreditBalance }: { initialCreditBala
       }
 
       if (streamError) {
-        appendMessage("assistant", streamError, "error");
+        appendMessage("assistant", formatServerError(streamError, "The build failed."), "error");
         return;
       }
       if (!finalResult) {
-        appendMessage("assistant", "the build stream ended unexpectedly", "error");
+        appendMessage("assistant", "The build stream ended unexpectedly.", "error");
         return;
       }
 
@@ -238,7 +294,7 @@ export default function StudioChat({ initialCreditBalance }: { initialCreditBala
         router.replace(`/studio?build=${encodeURIComponent(finalResult.id)}`);
       }
     } catch {
-      appendMessage("assistant", "could not reach the server", "error");
+      appendMessage("assistant", "Couldn't reach the server.", "error");
     } finally {
       setStreamChars(0);
     }
@@ -265,7 +321,11 @@ export default function StudioChat({ initialCreditBalance }: { initialCreditBala
           );
           return;
         }
-        appendMessage("assistant", body.error ?? `edit failed with status ${response.status}`, "error");
+        appendMessage(
+          "assistant",
+          formatServerError(body.error, `Edit failed with status ${response.status}.`),
+          "error",
+        );
         return;
       }
       const result = body as BuildEditResponse;
@@ -284,81 +344,255 @@ export default function StudioChat({ initialCreditBalance }: { initialCreditBala
       }));
       setPreviewVersion((v) => v + 1);
     } catch {
-      appendMessage("assistant", "could not reach the server", "error");
+      appendMessage("assistant", "Couldn't reach the server.", "error");
     }
   }
 
+  const workingLabel =
+    buildId === null
+      ? streamChars > 0
+        ? `Generating your app… ${streamChars.toLocaleString()} characters so far`
+        : "Starting…"
+      : "Applying your change…";
+  const showEmptyThread = !hydrating && messages.length === 0 && !submitting;
+  const showEmptyWorkspace = buildId === null && workspace === null;
+
   return (
     <div className="studio-grid">
-      <div className="studio-workspace-column">
-        <StudioWorkspace snapshot={workspace} />
-        <StudioTabs buildId={buildId} previewVersion={previewVersion} workspace={workspace} />
-      </div>
+      <aside aria-label="Chat" className="flex min-h-0 flex-col border-r border-border/60 bg-card">
+        <header className="flex items-center gap-3 border-b border-border/60 px-4 py-3">
+          <div className="min-w-0 flex-1">
+            <p className="truncate text-sm font-semibold">
+              {workspace?.name ?? (buildId ? "Your app" : "New app")}
+            </p>
+            <p className="truncate text-xs text-muted-foreground">
+              {buildId ? "Chat to keep changing it" : "Describe it to start building"}
+            </p>
+          </div>
+          <Badge
+            variant="secondary"
+            className="gap-1 font-mono tabular-nums"
+            title="Credit balance"
+          >
+            <Coins aria-hidden="true" />
+            {creditBalance.toLocaleString("en-US")}
+          </Badge>
+          {buildId !== null ? (
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={startNewApp}
+              disabled={submitting}
+            >
+              <Plus aria-hidden="true" />
+              New app
+            </Button>
+          ) : null}
+        </header>
 
-      <div className="panel chat-rail">
-        <div className="studio-credit-row">
-          <span className="pill pill--accent">
-            <CreditIcon width={14} height={14} />
-            {creditBalance} credits
-          </span>
+        <div
+          ref={threadRef}
+          role="log"
+          aria-label="Conversation"
+          aria-busy={hydrating}
+          className="flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto px-4 py-4"
+        >
+          {hydrating ? (
+            <>
+              <Skeleton className="h-10 w-3/5 self-end rounded-2xl rounded-br-md" />
+              <Skeleton className="h-16 w-4/5 self-start rounded-2xl rounded-bl-md" />
+            </>
+          ) : null}
+
+          {showEmptyThread ? <EmptyThread onPick={useExamplePrompt} /> : null}
+
+          {messages.map((message) =>
+            message.role === "user" ? (
+              <div
+                key={message.id}
+                className="max-w-[85%] self-end rounded-2xl rounded-br-md bg-primary px-3.5 py-2.5 text-sm break-words whitespace-pre-wrap text-primary-foreground"
+              >
+                {message.text}
+              </div>
+            ) : message.kind === "error" ? (
+              <div
+                key={message.id}
+                role="alert"
+                className="flex max-w-[92%] gap-2.5 self-start rounded-2xl rounded-bl-md border border-destructive/30 bg-destructive/10 px-3.5 py-2.5 text-sm break-words whitespace-pre-wrap text-destructive"
+              >
+                <TriangleAlert className="mt-0.5 size-4 shrink-0" aria-hidden="true" />
+                <span>{message.text}</span>
+              </div>
+            ) : (
+              <div key={message.id} className="flex max-w-[92%] gap-2.5 self-start">
+                <BrandMark className="mt-1.5 size-5 shrink-0" />
+                <div className="rounded-2xl rounded-bl-md bg-secondary px-3.5 py-2.5 text-sm break-words whitespace-pre-wrap text-secondary-foreground">
+                  {message.text}
+                </div>
+              </div>
+            ),
+          )}
+
+          {submitting ? <WorkingBubble label={workingLabel} /> : null}
         </div>
 
-        <div className="chat-thread" ref={threadRef}>
-          {hydrating ? <p className="chat-empty">Loading history…</p> : null}
-          {!hydrating && messages.length === 0 ? (
-            <p className="chat-empty">
-              Describe an app in plain English — it becomes a real, owned Git repository.
+        <form className="border-t border-border/60 p-3" onSubmit={handleSend}>
+          {buildId !== null ? (
+            <p className="mb-2 px-1 text-xs text-muted-foreground">
+              Editing{" "}
+              <span className="font-medium text-foreground">{workspace?.name ?? "this app"}</span>
+              {" — "}changes apply to the same repository.
             </p>
           ) : null}
-          {messages.map((message) => (
-            <div
-              key={message.id}
-              className={`chat-message chat-message--${message.role === "user" ? "user" : message.kind === "error" ? "error" : "assistant"}`}
-            >
-              {message.text}
-            </div>
-          ))}
-          {submitting ? (
-            <div className="chat-message chat-message--assistant">
-              <span className="spinner" />{" "}
-              {buildId === null
-                ? streamChars > 0
-                  ? `Generating your app… (${streamChars.toLocaleString()} characters so far)`
-                  : "Starting…"
-                : "Editing…"}
-            </div>
-          ) : null}
-        </div>
-
-        <form className="chat-composer" onSubmit={handleSend}>
-          <textarea
-            aria-label={buildId === null ? "Describe the app to build" : "Describe the change"}
-            placeholder={
-              buildId === null
-                ? "A task tracker where users create projects and each project has tasks…"
-                : "Add a favorites feature…"
-            }
-            value={prompt}
-            onChange={(event) => setPrompt(event.target.value)}
-            onKeyDown={(event) => {
-              if (event.key === "Enter" && !event.shiftKey) {
-                event.preventDefault();
-                event.currentTarget.form?.requestSubmit();
+          <div className="flex items-end gap-2 rounded-xl border border-input bg-background p-1.5 transition-[color,box-shadow] focus-within:border-ring focus-within:ring-3 focus-within:ring-ring/50">
+            <textarea
+              ref={textareaRef}
+              aria-label={buildId === null ? "Describe the app to build" : "Describe the change"}
+              placeholder={
+                buildId === null
+                  ? "A task tracker where users create projects and each project has tasks…"
+                  : "Add a favorites feature…"
               }
-            }}
-            disabled={submitting}
-            rows={2}
-          />
-          <button
-            type="submit"
-            className="chat-send"
-            disabled={submitting || prompt.trim().length === 0}
-            aria-label="Send"
-          >
-            <SendIcon />
-          </button>
+              value={prompt}
+              onChange={(event) => setPrompt(event.target.value)}
+              onKeyDown={(event) => {
+                if (event.key === "Enter" && !event.shiftKey) {
+                  event.preventDefault();
+                  event.currentTarget.form?.requestSubmit();
+                }
+              }}
+              disabled={submitting}
+              rows={1}
+              className="field-sizing-content max-h-40 min-h-9 flex-1 resize-none bg-transparent px-2 py-1.5 text-sm outline-none placeholder:text-muted-foreground disabled:opacity-60"
+            />
+            <Button
+              type="submit"
+              size="icon"
+              aria-label="Send"
+              disabled={submitting || prompt.trim().length === 0}
+            >
+              {submitting ? (
+                <LoaderCircle className="animate-spin" aria-hidden="true" />
+              ) : (
+                <ArrowUp aria-hidden="true" />
+              )}
+            </Button>
+          </div>
+          <p className="mt-1.5 px-1 text-[11px] text-muted-foreground">
+            Enter to send · Shift+Enter for a new line
+          </p>
         </form>
+      </aside>
+
+      <section aria-label="Workspace" className="relative flex min-h-0 flex-col overflow-y-auto">
+        {submitting ? (
+          <div className="studio-progress" role="progressbar" aria-label="Working" />
+        ) : null}
+        <div className="flex flex-1 flex-col gap-5 p-6">
+          {showEmptyWorkspace ? (
+            <EmptyWorkspace />
+          ) : (
+            <>
+              <StudioWorkspace snapshot={workspace} buildId={buildId} />
+              <StudioTabs buildId={buildId} previewVersion={previewVersion} workspace={workspace} />
+            </>
+          )}
+        </div>
+      </section>
+    </div>
+  );
+}
+
+function EmptyThread({ onPick }: { onPick: (text: string) => void }) {
+  return (
+    <div className="my-auto grid gap-4 px-1 py-6 text-center">
+      <BrandMark className="mx-auto size-9" />
+      <div>
+        <h2 className="text-base font-semibold">What do you want to build?</h2>
+        <p className="mt-1 text-pretty text-sm text-muted-foreground">
+          Describe it in plain language. You get a real codebase, a live preview, and this chat to
+          keep changing it.
+        </p>
       </div>
+      <ul className="grid gap-2 text-left" aria-label="Example prompts">
+        {EXAMPLE_PROMPTS.map((example) => (
+          <li key={example}>
+            <button
+              type="button"
+              onClick={() => onPick(example)}
+              className="flex w-full items-start gap-2 rounded-xl border border-border/70 bg-background px-3 py-2.5 text-left text-sm text-muted-foreground outline-none transition-colors hover:border-brand/40 hover:text-foreground focus-visible:ring-3 focus-visible:ring-ring/50 active:translate-y-px"
+            >
+              <Sparkles className="mt-0.5 size-3.5 shrink-0 text-brand" aria-hidden="true" />
+              <span>{example}</span>
+            </button>
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
+}
+
+function WorkingBubble({ label }: { label: string }) {
+  return (
+    <div className="flex max-w-[92%] gap-2.5 self-start" aria-live="polite">
+      <BrandMark className="mt-1.5 size-5 shrink-0" />
+      <div className="grid min-w-56 gap-2.5 rounded-2xl rounded-bl-md bg-secondary px-3.5 py-2.5 text-sm text-secondary-foreground">
+        <p className="flex items-center gap-2">
+          <LoaderCircle className="size-4 shrink-0 animate-spin text-brand" aria-hidden="true" />
+          <span>{label}</span>
+        </p>
+        <div className="grid gap-1.5" aria-hidden="true">
+          <Skeleton className="h-2.5 w-40" />
+          <Skeleton className="h-2.5 w-52" />
+          <Skeleton className="h-2.5 w-32" />
+        </div>
+      </div>
+    </div>
+  );
+}
+
+const WORKSPACE_CAPABILITIES = [
+  {
+    icon: MonitorPlay,
+    title: "Live preview",
+    body: "The running app, refreshed after every change.",
+  },
+  {
+    icon: FolderTree,
+    title: "Files and code",
+    body: "Every generated file, with syntax highlighting.",
+  },
+  {
+    icon: Bug,
+    title: "Problems",
+    body: "A real TypeScript check, on demand.",
+  },
+];
+
+function EmptyWorkspace() {
+  return (
+    <div className="m-auto grid w-full max-w-lg gap-6 py-10 text-center">
+      <div className="mx-auto flex size-14 items-center justify-center rounded-2xl bg-secondary text-muted-foreground">
+        <Sparkles className="size-6" aria-hidden="true" />
+      </div>
+      <div>
+        <h2 className="text-balance text-xl font-semibold tracking-tight">
+          Your app will show up here
+        </h2>
+        <p className="mt-2 text-pretty text-sm text-muted-foreground">
+          Once the first build finishes, this panel becomes the workspace.
+        </p>
+      </div>
+      <ul className="grid gap-2 text-left sm:grid-cols-3">
+        {WORKSPACE_CAPABILITIES.map(({ icon: Icon, title, body }) => (
+          <li key={title} className="rounded-xl border border-border/70 bg-card p-3">
+            <Icon className="size-4 text-brand" aria-hidden="true" />
+            <p className="mt-2 text-sm font-medium">{title}</p>
+            <p className="mt-0.5 text-xs text-muted-foreground">{body}</p>
+          </li>
+        ))}
+      </ul>
     </div>
   );
 }

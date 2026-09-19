@@ -208,7 +208,7 @@ front-door bricks, R-420 is generated-SQL hardening, R-421..R-426 are Studio pre
 R-427..R-429 are generated-app compile fixes, R-430..R-457 are the first twenty-eight differentiating-spine
 bricks (Scope Compiler through Ecosystem Multi-Surface SLA, SLO, and Error Budget Contracts).
 Git, state files (.ai/), CHANGELOG, and docs/PROGRESS.md remain the executable/detail sources of truth.
-Current through R-492; `task verify` = 3,738 tests (agent-engine) + the Go control-plane's own suite +
+Current through R-493; `task verify` = 3,738 tests (agent-engine) + the Go control-plane's own suite +
 the Next.js console's typecheck/lint/build. R-416 added prompt-to-IR intake, R-417 materialized a generated
 owned repo, R-418 added the local chat studio, R-419 added turnkey local run, and R-420 fixed the two
 SQL defects found by live execution. R-421 added an explicit `task agent-engine:studio:preview` mode:
@@ -864,8 +864,24 @@ WHAT TO DO NEXT
   SSR facts learned while smoking: React 19 emits noValidate/autoComplete/maxLength camelCase
   in HTML, and inserts <!-- --> between adjacent text nodes - dump raw tags before believing a
   grep. The console is running detached on 4321 (log in the session scratchpad).
-- NEXT: R-493 (Studio core), R-494 (Studio tabs), R-495 (Settings/Fabric), R-496 (motion/
-  states/polish) - the roadmap is in the plan file. After the UI overhaul
+- R-493 (2026-09-19, done) rebuilt the Studio core: AppShell layout="full" (header container
+  follows the prop), .studio-grid = chat rail LEFT minmax(340px,400px) + workspace RIGHT at
+  calc(100dvh - 3.5rem) each scrolling internally; role="log" thread, working bubble with the
+  live character count + shimmer skeletons, skeleton hydration, "What do you want to build?"
+  empty state with three real example prompts (proven runnable by a real 9s streamed build, 173
+  files), composer with field-sizing-content auto-grow, New app action, workspace progress bar,
+  designed empty workspace, compact project header (StudioWorkspace now takes {snapshot,
+  buildId}) above the untouched StudioTabs. studio-icons.tsx is a thin Lucide shim because R-475
+  pins the file and studio-tabs/preview still import it - R-494 should switch those to Lucide
+  directly and retire the shim + the R-475 assertion deliberately. Chat logic in studio-chat.tsx
+  is byte-for-byte the R-485 version (hydration, three-shape SSE parser, edit, 404 recovery) -
+  do not "clean it up" casually. Known R-477 degradation still open: after ?build= rehydration
+  the Files/Code tabs are empty until the next edit (no snapshot) - R-494 could fetch
+  /api/jobs/build/{id}/files on hydration. LESSON: scripts/verify.sh runs scripts/test.sh
+  first, so a failing contract block makes `task verify` run ZERO tests - always confirm the
+  "Ran N tests" line, never an empty tail.
+- NEXT: R-494 (Studio tabs), R-495 (Settings/Fabric), R-496 (motion/states/polish) - the
+  roadmap is in the plan file. After the UI overhaul
   (not yet scoped): real multi-target Publish/deploy (Netlify one-click primary, Vercel/Cloudflare/
   self-host/GitHub-export as secondary options), Node.js backend codegen alongside Python/Go, and
   mobile (React Native near-term). Full per-user process/tenant isolation as a wholesale architecture
