@@ -26,10 +26,14 @@ _DEPLOY_RECIPES: dict[str, tuple[tuple[str, str, tuple[str, ...]], ...]] = {
 }
 
 # Sandbox provider -> the https URL pattern where the running app is reached (placeholder host).
+# R-487: vercel-sandbox added to RUNTIME_SPECS alongside a real SandboxLifecycleProvider driver
+# (runtime/vercel_sandbox.py) - this placeholder-planning stub is kept in sync only so this
+# pre-existing map stays exhaustive over RUNTIME_SPECS; the real driver never reads this dict.
 _SANDBOX_URLS: dict[str, str] = {
     "e2b": "https://<id>.e2b.dev",
     "daytona": "https://<workspace>.daytona.io",
     "fly-machines": "https://<app>.fly.dev",
+    "vercel-sandbox": "https://<name>.vercel.run",
 }
 
 

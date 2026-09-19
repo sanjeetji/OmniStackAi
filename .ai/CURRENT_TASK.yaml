@@ -1,29 +1,29 @@
-task_id: R-486
+task_id: R-487
 status: completed
 phase: MVP
 tracker_row: null
 started_at: "2026-09-19"
 completed_at: "2026-09-19"
 objective: >-
-  First of a five-task sequence (R-486..R-490) toward the founder's per-user isolation direction,
-  chosen after research confirmed every serious 2025-2026 AI app-builder platform uses a managed
-  microVM/gVisor sandbox provider rather than self-hosting Firecracker/K8s from scratch. This task:
-  a new, additive SandboxHandle/SandboxLifecycleProvider contract (create/status/kill - the
-  existing RuntimeProvider/PreviewPlan is a pure planner, not a real orchestrator, and stays
-  untouched) plus the first real driver, E2BSandboxProvider, verified against E2B's actual
-  documented REST API (POST/GET/DELETE https://api.e2b.app/sandboxes). No real API key exists in
-  this environment, so every gate is offline via an injected fake HTTP transport; live-cloud
-  verification is honestly marked pending a real key from the founder.
+  Second of the five-task sandbox-provider sequence (R-486..R-490). Proves the
+  SandboxLifecycleProvider pattern (introduced in R-486 for E2B) is genuinely pluggable by adding
+  a real Vercel Sandbox driver against a differently-shaped API, reusing R-486's shared
+  sandbox_http.py unchanged. Verified against Vercel's real REST API (fetched directly from
+  vercel.com/docs, not assumed): POST/GET/DELETE /v2/sandboxes[/{name}], Bearer token auth, a
+  routes[] array giving each port's real url directly (no URL-pattern guessing, unlike E2B).
+  Vercel Sandbox's documented runtime enum has no Go - backend-go is honestly rejected with a
+  specific typed error rather than a wrong/guessed runtime. No real VERCEL_TOKEN/
+  VERCEL_PROJECT_ID exist in this environment, so every gate is offline; live-cloud verification
+  is honestly deferred.
 allowed_paths:
-  - services/agent-engine/src/omnistackai_agent_engine/runtime/contracts.py
-  - services/agent-engine/src/omnistackai_agent_engine/runtime/sandbox_http.py
-  - services/agent-engine/src/omnistackai_agent_engine/runtime/e2b.py
+  - services/agent-engine/src/omnistackai_agent_engine/runtime/vercel_sandbox.py
+  - services/agent-engine/src/omnistackai_agent_engine/runtime/providers.py
   - services/agent-engine/src/omnistackai_agent_engine/runtime/__init__.py
-  - services/agent-engine/tests/test_runtime_sandbox_http.py
-  - services/agent-engine/tests/test_runtime_e2b.py
+  - services/agent-engine/src/omnistackai_agent_engine/runtime/drivers.py
+  - services/agent-engine/tests/test_runtime_vercel_sandbox.py
   - .env.example
   - scripts/test.sh
-  - .ai/tasks/R-486.md
+  - .ai/tasks/R-487.md
   - .ai/CURRENT_TASK.yaml
   - .ai/PROJECT_STATE.yaml
   - .ai/WORK_LOG.md
@@ -33,12 +33,12 @@ allowed_paths:
   - docs/PROGRESS.md
   - docs/RESUME_PROMPT.md
 forbidden_changes:
-  - No changes to the existing RuntimeProvider/PreviewPlan/local.py/drivers.py - purely additive
-  - No changes to studio/ - this driver is not wired into the Studio preview flow yet
+  - No changes to runtime/contracts.py, runtime/sandbox_http.py, or runtime/e2b.py - R-486's contract and shared HTTP helper are reused exactly as they are
+  - No changes to studio/, runtime/local.py, or runtime/drivers.py - purely additive
   - Do not modify or commit the untracked .claude directory
   - No real API call in any automated gate
 required_gates:
-  - "agent-engine: task verify (0 model/network calls, fake HTTP transport stands in for E2B)"
+  - "agent-engine: task verify (0 model/network calls, fake HTTP transport stands in for Vercel)"
   - task verify
   - task lint
   - task security:quick
@@ -49,12 +49,13 @@ model_tool_trace:
   cloud_calls: 0
   note: >-
     Pure Python stdlib HTTP client implementation, 0 model/network calls in any automated gate.
-    No real E2B_API_KEY exists in this environment - live-cloud verification is honestly deferred,
-    not fabricated.
+    No real VERCEL_TOKEN/VERCEL_PROJECT_ID exist in this environment.
 next_action: >-
-  R-486 shipped: 3,680 agent-engine tests OK (22 new), repo gates all pass. E2B's real REST API
-  was verified directly against docs.e2b.dev before writing any code. No real E2B_API_KEY exists
-  in this environment, so live-cloud verification is honestly deferred, not faked. Next: R-487
-  (Vercel Sandbox driver), R-488 (Daytona driver), R-489 (free WebContainers browser option, no
-  cost/config - console-web, client-side, Node.js/frontend apps only), R-490 (provider-selection
-  surface so a build can switch providers by cost/speed/smoothness, the founder's explicit ask).
+  R-487 shipped: 3,694 agent-engine tests OK (14 new). Vercel's real REST API was verified
+  directly against vercel.com/docs before writing any code. A real ordering bug was caught and
+  fixed (target-unknown vs. provider-doesn't-support-this-target must raise different typed
+  errors). A real mid-task gap was found and fixed with one line (RUNTIME_SPECS entries must have
+  a matching drivers.py _SANDBOX_URLS placeholder for the old planning-stub path). No real
+  VERCEL_TOKEN/VERCEL_PROJECT_ID exist in this environment - live-cloud verification honestly
+  deferred. Next: R-488 (Daytona driver), R-489 (free WebContainers browser option), R-490
+  (provider-selection surface).

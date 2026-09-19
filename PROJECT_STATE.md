@@ -4,6 +4,25 @@ Last updated: 2026-09-19
 ## Current Phase
 Stage 0 (Founder Build Sequence, Brief Section 91) — BASIC/MVP
 
+> **R-487 (2026-09-19): Runtime — real Vercel Sandbox driver.** Second of the five-task sequence
+> (R-486..R-490). Proves the `SandboxLifecycleProvider` pattern (introduced in R-486 for E2B) is
+> genuinely pluggable against a second, differently-shaped API, reusing R-486's `sandbox_http.py`
+> completely unchanged. Verified against Vercel's real REST API (fetched directly): `POST/GET/
+> DELETE /v2/sandboxes[/{name}]`, `Bearer` auth, a `routes[]` array giving each port's real public
+> URL directly (no pattern-guessing, unlike E2B). **A real, documented product limitation, not
+> glossed over**: Vercel Sandbox's runtime enum has no Go — `backend-go` is rejected with a
+> specific `UnsupportedSandboxRuntimeError`, distinct from an entirely-unknown-target error. **Two
+> real bugs found and fixed**: (1) the first draft checked provider-runtime-support before
+> validating the target existed at all, misclassifying an unknown target's error; fixed by
+> validating the target first. (2) adding a `RUNTIME_SPECS` entry broke a pre-existing test that
+> enumerates the registry expecting a matching planning-stub placeholder in `drivers.py` — fixed
+> with one added line, `drivers.py` added to `allowed_paths` mid-task. No real `VERCEL_TOKEN`/
+> `VERCEL_PROJECT_ID` exist in this environment — live-cloud verification honestly deferred.
+> `task verify` **3,694 OK** (14 new tests); repo `task verify`/`lint`/`security:quick`/
+> `env:check` all pass.
+> NEXT: R-488 (Daytona driver), R-489 (free WebContainers browser option), R-490
+> (provider-selection surface).
+
 > **R-486 (2026-09-19): Runtime — real sandbox lifecycle contract + E2B driver.** First of a
 > five-task sequence (R-486..R-490) toward the founder's "Full isolation: per-user processes/
 > sandboxes" direction. Research (three-way: codebase state, competitor platforms, sandbox

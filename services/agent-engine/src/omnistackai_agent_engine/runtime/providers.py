@@ -23,6 +23,9 @@ RUNTIME_SPECS: dict[str, ProviderSpec] = {
     "e2b": ProviderSpec("e2b", "sandbox", "E2B_API_KEY", "https://e2b.dev"),
     "daytona": ProviderSpec("daytona", "sandbox", "DAYTONA_API_KEY", "https://daytona.io"),
     "fly-machines": ProviderSpec("fly-machines", "sandbox", "FLY_API_TOKEN", "https://fly.io"),
+    # R-487: reuses VERCEL_TOKEN - the same env var DEPLOY_SPECS["vercel"] already declares for the
+    # CLI-based deploy path (same underlying Vercel account/token, no duplicate credential needed).
+    "vercel-sandbox": ProviderSpec("vercel-sandbox", "sandbox", "VERCEL_TOKEN", "https://vercel.com"),
 }
 
 # Deployment/hosting providers (Tier 2/3).

@@ -1,9 +1,37 @@
 # Current Handoff
 
-Task ID: R-486
+Task ID: R-487
 Status: done
 Phase: BASIC/MVP — Founder Stage 0
 Branch: `main`
+
+> **R-487 Completed (2026-09-19): Runtime — real Vercel Sandbox driver.**
+> - Second of the five-task sequence (R-486..R-490). Proves R-486's `SandboxLifecycleProvider`
+>   pattern is genuinely pluggable by adding a second, independent real driver against a
+>   differently-shaped API, reusing R-486's `sandbox_http.py` completely unchanged.
+> - Verified against Vercel's real REST API (fetched directly from `vercel.com/docs`, not
+>   assumed): `POST/GET/DELETE https://api.vercel.com/v2/sandboxes[/{name}]`, `Authorization:
+>   Bearer <token>` auth, a `routes[]` array giving each requested port's real public URL directly
+>   — no pattern-guessing, a real design difference from E2B, possible only because Vercel's own
+>   response provides it.
+> - **A real, documented product limitation, surfaced honestly**: Vercel Sandbox's own `runtime`
+>   enum has no Go (`node22`/`node24`/`node26`/`python3.13` only) — `backend-go` is rejected with a
+>   new, specific `UnsupportedSandboxRuntimeError`, distinct from "no such target exists at all."
+> - **Two real bugs found and fixed, not glossed over**: (1) the first draft checked
+>   provider-runtime-support *before* validating the target existed at all, misclassifying an
+>   unknown target's error — fixed by validating the target first via the shared
+>   `_port_for_target()` helper. (2) Adding a `RUNTIME_SPECS["vercel-sandbox"]` entry broke a
+>   pre-existing test expecting a matching placeholder in `drivers.py`'s `_SANDBOX_URLS` (the old
+>   planning-stub path) — fixed with one added line, `drivers.py` added to `allowed_paths` mid-task.
+> - **No real `VERCEL_TOKEN`/`VERCEL_PROJECT_ID` exist in this environment** — every gate is
+>   offline via the same injected-fake-opener pattern R-486 established; live-cloud verification
+>   is honestly deferred to whenever the founder provides real credentials, not faked.
+> - Gates: agent-engine `task verify` **3,694 OK** (14 new); repo `task verify`/`lint`/
+>   `security:quick`/`env:check` all pass; new `scripts/test.sh` contract block. Every pre-existing
+>   suite passes unmodified beyond the one-line `drivers.py` fix.
+> - **NEXT**: R-488 (Daytona driver — notable because its documented default is plain Docker
+>   containers, a real isolation-strength tradeoff to surface honestly), R-489 (free WebContainers
+>   browser-only option), R-490 (provider-selection surface). See `.ai/tasks/R-487.md`.
 
 > **R-486 Completed (2026-09-19): Runtime — real sandbox lifecycle contract + E2B driver.**
 > - First of a five-task sequence (R-486..R-490) toward the founder's "Full isolation: per-user

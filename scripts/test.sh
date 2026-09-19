@@ -623,4 +623,20 @@ if ! rg -qF 'class E2BSandboxProvider' "$agent_engine_root/src/omnistackai_agent
   exit 1
 fi
 
+# R-487: real Vercel Sandbox driver (second of the R-486..R-490 isolation sequence).
+if [[ ! -f "$agent_engine_root/src/omnistackai_agent_engine/runtime/vercel_sandbox.py" ]]; then
+  printf 'Missing R-487 contract file: %s/src/omnistackai_agent_engine/runtime/vercel_sandbox.py\n' "$agent_engine_root"
+  exit 1
+fi
+
+if ! rg -qF 'class VercelSandboxProvider' "$agent_engine_root/src/omnistackai_agent_engine/runtime/vercel_sandbox.py"; then
+  printf 'R-487 must add a real VercelSandboxProvider driver to runtime/vercel_sandbox.py.\n'
+  exit 1
+fi
+
+if ! rg -qF '"vercel-sandbox"' "$agent_engine_root/src/omnistackai_agent_engine/runtime/providers.py"; then
+  printf 'R-487 must register a vercel-sandbox entry in runtime/providers.py RUNTIME_SPECS.\n'
+  exit 1
+fi
+
 printf 'Repository contract tests passed.\n'

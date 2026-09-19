@@ -2,10 +2,10 @@ schema_version: 1
 project: OmniStackAI
 phase: BASIC/MVP
 founder_stage: 0
-current_task: R-486
+current_task: R-487
 current_status: done
 branch: main
-last_completed_task: R-486
+last_completed_task: R-487
 # TASK COMPILATION AUDIT — 2026-09-16
 # Performed to achieve 100% synchronization across all task-tracking documentation.
 # Tracker workbook expanded to 464 tasks with R-464.
@@ -34,6 +34,34 @@ task_compilation_audit:
       new_status: DONE
       reason: "Task fully completed on 2026-09-11 with 35 tests. Status left stale during rapid development sprint."
 last_completed_task_summary: >-
+  Completed R-487 (2026-09-19): runtime real Vercel Sandbox driver. Second of the five-task
+  sequence (R-486..R-490), proving R-486's SandboxLifecycleProvider pattern is genuinely pluggable
+  by adding a second, independent real driver against a differently-shaped API, reusing
+  sandbox_http.py completely unchanged.
+  Design verified against Vercel's real REST API (fetched directly, not assumed): POST /v2/sandboxes
+  (only one creation model, "named", persistent:false for ephemeral behavior), GET/DELETE
+  /v2/sandboxes/{name} (both keyed by name, not session.id - confirmed via the official endpoint
+  index), Authorization: Bearer <VERCEL_TOKEN> (reuses DEPLOY_SPECS["vercel"]'s existing token) plus
+  a new required VERCEL_PROJECT_ID. A real design difference from E2B: routes[].url is read
+  directly from the response rather than reconstructed from a guessed pattern.
+  A real, documented product limitation surfaced honestly: Vercel Sandbox's runtime enum has no Go
+  (node22/24/26, python3.13 only) - backend-go is rejected with a specific
+  UnsupportedSandboxRuntimeError, distinct from UnsupportedRuntimeTargetError.
+  Two real bugs found and fixed: (1) an error-classification ordering bug - the first draft checked
+  provider-runtime-support before validating the target existed at all, misclassifying an unknown
+  target's error; fixed by validating the target first via the shared _port_for_target() helper.
+  (2) adding a RUNTIME_SPECS entry broke a pre-existing test (test_tier_drivers.py) expecting a
+  matching drivers.py _SANDBOX_URLS placeholder for the old planning-stub path; fixed with one
+  added line, drivers.py added to allowed_paths mid-task.
+  No real VERCEL_TOKEN/VERCEL_PROJECT_ID exist in this environment - every gate is offline via the
+  same injected-fake-opener pattern R-486 established; live-cloud verification honestly deferred.
+  Gates: agent-engine task verify 3,694 OK (14 new tests), 0 model/network calls; every pre-existing
+  suite passes unmodified beyond the one-line drivers.py fix. Repo task verify/lint/security:quick/
+  env:check all pass; new scripts/test.sh contract block.
+  NEXT: R-488 (Daytona driver - notable because its documented default is plain Docker containers
+  rather than a microVM, a real isolation-strength tradeoff), R-489 (free WebContainers browser-only
+  option), R-490 (provider-selection surface exposing the founder's "switch easily" ask).
+_prior_last_completed_task_summary_R486: >-
   Completed R-486 (2026-09-19): runtime real sandbox lifecycle contract + E2B driver. First of a
   five-task sequence (R-486..R-490) toward the founder's "Full isolation: per-user
   processes/sandboxes" direction. Dedicated research (codebase audit + competitor platforms +
@@ -1684,11 +1712,14 @@ next_action: >-
   Presented to the founder as a hard-gate (new paid cloud dependency); the founder's answer: build
   real, pluggable drivers for multiple providers (E2B, Vercel Sandbox, Daytona) switchable by
   cost/speed/smoothness, plus a free browser-only option (WebContainers) - a five-task sequence
-  (R-486..R-490). R-486 (real sandbox lifecycle contract + E2B driver) is done.
-  NEXT: R-487 (Vercel Sandbox driver), R-488 (Daytona driver), R-489 (free WebContainers
-  browser-only option, Node.js/frontend apps only), R-490 (a provider-selection surface exposing
-  the founder's "switch easily" ask - the point where more than one provider actually gets wired
-  into the Studio's real preview flow, deliberately deferred until then). Separately, full
+  (R-486..R-490). R-486 (real sandbox lifecycle contract + E2B driver) and R-487 (real Vercel
+  Sandbox driver, proving the pattern is genuinely pluggable against a second, differently-shaped
+  API) are both done.
+  NEXT: R-488 (Daytona driver - notable because its documented default is plain Docker containers
+  rather than a microVM, a real isolation-strength tradeoff worth surfacing honestly), R-489 (free
+  WebContainers browser-only option, Node.js/frontend apps only), R-490 (a provider-selection
+  surface exposing the founder's "switch easily" ask - the point where more than one provider
+  actually gets wired into the Studio's real preview flow, deliberately deferred until then). Separately, full
   per-user *process/tenant* isolation (as opposed to just which sandbox technology runs one
   preview) remains a materially different, larger architecture decision needing its own founder
   sign-off once R-486..R-490 land - the agent-engine has zero containerization today and

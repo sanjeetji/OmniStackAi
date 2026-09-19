@@ -31,6 +31,7 @@ from .drivers import (
 from .local import LOCAL_PROVIDER_ID, LocalRuntimeProvider, run_preview
 from .providers import DEPLOY_SPECS, RUNTIME_SPECS, ProviderSpec
 from .sandbox_http import SandboxHTTPError, SandboxUnreachableError, request_json
+from .vercel_sandbox import UnsupportedSandboxRuntimeError, VercelSandboxProvider
 from .tier import (
     VALID_TIERS,
     PlatformSetup,
@@ -67,7 +68,9 @@ __all__ = [
     "SandboxLifecycleProvider",
     "SandboxUnreachableError",
     "UnsupportedRuntimeTargetError",
+    "UnsupportedSandboxRuntimeError",
     "VALID_TIERS",
+    "VercelSandboxProvider",
     "build_deploy_from_env",
     "build_runtime_from_env",
     "deploy_driver",

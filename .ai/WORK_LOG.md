@@ -1,5 +1,81 @@
 # Work Log
 
+## 2026-09-19 — R-487 (Runtime: real Vercel Sandbox driver)
+
+- **Why:** second of the five-task sandbox-provider sequence (R-486..R-490). R-486 proved the
+  `SandboxLifecycleProvider` pattern with E2B; this task proves it is genuinely pluggable by
+  adding a second, independent real driver against a differently-shaped API — the founder's
+  explicit ask ("switch easily... based on more cost, speed, smoothness").
+- **Design, verified against real, current Vercel documentation before writing any code:** fetched
+  the canonical `vercel.com/docs/rest-api#sandboxes` endpoint index (not a single page in
+  isolation) — sandbox creation is `POST /v2/sandboxes` (only one creation model, "named"; no
+  separate "unnamed" endpoint exists; `persistent: false` selects the ephemeral, non-snapshotting
+  behavior this task needs). Status: `GET /v2/sandboxes/{name}`. Termination:
+  `DELETE /v2/sandboxes/{name}` (both keyed by **name**, confirmed via the official endpoint
+  index — not the response's `session.id`; distinct from `POST
+  /v2/sandboxes/sessions/{sessionId}/stop`, which only pauses a resumable session). Auth is
+  `Authorization: Bearer <VERCEL_TOKEN>` — reuses the *same* env var `DEPLOY_SPECS["vercel"]`
+  already declares for the CLI-based deploy path (same underlying account, no duplicate
+  credential). A real, additional required config beyond the token: Vercel's create-sandbox call
+  requires a `projectId` — new `VERCEL_PROJECT_ID` env var, `create()` raises a clear typed error
+  when unset.
+- **A real, meaningful design difference from E2B**: `routes[].url` is used directly from the
+  create response (one entry per requested port, each already carrying its own public URL) rather
+  than reconstructed from a guessed pattern string — possible only because Vercel's own response
+  provides it, unlike E2B's `{port}-{sandboxID}.e2b.app` convention.
+- **A real, documented product limitation, not glossed over**: Vercel Sandbox's documented
+  `runtime` enum is `node22`/`node24`/`node26`/`python3.13` — no Go. `backend-go` (a real, valid
+  target `LocalRuntimeProvider` already supports) is explicitly rejected by this provider with a
+  new, specific `UnsupportedSandboxRuntimeError`, distinct from `UnsupportedRuntimeTargetError`
+  (no target definition exists at all) — a custom OCI `image` field exists in Vercel's schema as a
+  real future escape hatch, deliberately not attempted here since building and maintaining a
+  Go-capable custom image is materially more work than this task's scope.
+- **New `runtime/vercel_sandbox.py`'s `VercelSandboxProvider`**, implementing R-486's
+  `SandboxLifecycleProvider` contract via the exact same shared `sandbox_http.py` helper R-486
+  introduced for E2B, with zero changes to either that file or `contracts.py`/`e2b.py` — the
+  clearest possible proof that shared HTTP-safety module generalizes across differently-shaped
+  provider APIs.
+- **Two real bugs found and fixed by this task's own tests and gates, not glossed over**:
+  1. The first implementation draft checked whether *this provider* supports the target's runtime
+     *before* validating that the target exists at all — an unknown target string like
+     `"flutter"` was therefore misclassified as `UnsupportedSandboxRuntimeError` instead of the
+     correct `UnsupportedRuntimeTargetError`. Fixed by reordering so the shared
+     `_port_for_target()` helper (which validates the target's existence via
+     `LocalRuntimeProvider`, exactly as R-486's E2B driver already does) runs first, with the
+     Vercel-specific runtime-support check only after that succeeds.
+  2. Adding a new `"vercel-sandbox"` entry to the shared `RUNTIME_SPECS` registry (used by both
+     this new real driver and the older, still-stubbed `CloudSandboxProvider`/`sandbox_driver()`
+     planning-stub path from before R-486) broke two pre-existing tests in `test_tier_drivers.py`
+     that enumerate every `RUNTIME_SPECS` entry and expect a matching placeholder URL in
+     `drivers.py`'s `_SANDBOX_URLS` dict. Fixed with a single added line (`"vercel-sandbox":
+     "https://<name>.vercel.run"`), with `drivers.py` added to `allowed_paths` mid-task once the
+     real gap was found, following the same discipline as every prior mid-task scope correction
+     this session — the `CloudSandboxProvider`/`sandbox_driver()` planning logic itself remains
+     completely untouched otherwise.
+- **No real `VERCEL_TOKEN`/`VERCEL_PROJECT_ID` exist in this environment** (`.env` checked:
+  neither present; `.env.example` carries only name-only placeholders) — every automated test is
+  offline via the same injected-fake-`OpenerDirector` pattern R-486 established; real live-cloud
+  verification against an actual Vercel account and project is honestly not possible here and is
+  not claimed, deferred to whenever the founder provides real credentials.
+- **Gates**: agent-engine `task verify` **3,694 tests OK** (14 new in
+  `test_runtime_vercel_sandbox.py`), 0 model/network calls — covering successful create/status/
+  kill against hand-built Vercel-shaped responses, `active` correctly requiring *both* credentials
+  (neither alone sufficient, unlike E2B's single-key requirement), both credentials raising a
+  clear typed error before any request when either is missing, the node/python runtime mapping per
+  target, `backend-go`'s specific rejection, an unknown target still correctly raising
+  `UnsupportedRuntimeTargetError`, a missing matching route producing a clear error rather than a
+  crash, a real Vercel-shaped 401 error body mapping correctly, the token never appearing in a
+  `SandboxHandle`'s `repr()`, and `status()`/`kill()` both correctly keyed by the sandbox's name
+  (not a session id). Repo-wide `task verify`/`lint`/`security:quick`/`env:check` all pass; a new
+  `scripts/test.sh` contract block asserts the new driver file/class/registry-entry exist. Every
+  pre-existing suite passes unmodified beyond the one-line `drivers.py` fix, confirming this
+  task's additions are genuinely additive.
+- **Next:** R-488 (Daytona driver — notable because its documented default is plain Docker
+  containers rather than a microVM, a real isolation-strength tradeoff worth surfacing honestly
+  when that task is scoped), R-489 (the free WebContainers browser-only option), and R-490 (a
+  provider-selection surface exposing the founder's explicit "switch easily by cost/speed/
+  smoothness" ask).
+
 ## 2026-09-19 — R-486 (Runtime: real sandbox lifecycle contract + E2B driver)
 
 - **Why:** first of a five-task sequence (R-486..R-490) toward the founder's "Full isolation:

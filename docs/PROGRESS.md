@@ -1,4 +1,4 @@
-# OmniStackAI — implementation progress (as of R-486)
+# OmniStackAI — implementation progress (as of R-487)
 
 A living summary of what is built, what is pending, and how to see results. Numbers come from the
 execution tracker (`R_&_D/OmniStackAI_Execution_Tracker_v6.xlsx`, `Phase_Roadmap`, 461 tasks as of
@@ -6,8 +6,20 @@ R-461 completion) plus the state files (`.ai/`), Git history, and CHANGELOG.
 
 ## Headline
 
-- **3,680 automated tests pass** (agent-engine + Go control-plane), fully offline and
+- **3,694 automated tests pass** (agent-engine + Go control-plane), fully offline and
   network-independent (`task verify`), plus the console's own `typecheck`/`lint`/`build` gates.
+- **R-487 — Runtime: real Vercel Sandbox driver (2026-09-19):** second of the five-task sandbox
+  sequence (R-486..R-490), proving R-486's `SandboxLifecycleProvider` pattern is genuinely
+  pluggable against a second, differently-shaped API, reusing `sandbox_http.py` completely
+  unchanged. Verified against Vercel's real REST API (fetched directly): `POST/GET/DELETE
+  /v2/sandboxes[/{name}]`, `Bearer` auth, a `routes[]` array giving each port's real URL directly
+  (no pattern-guessing). A real, documented limitation surfaced honestly: Vercel Sandbox's runtime
+  enum has no Go — `backend-go` is rejected with a specific typed error. Two real bugs found and
+  fixed: an error-classification ordering bug (unknown target vs. unsupported-by-this-provider),
+  and a registry/planning-stub consistency gap in `drivers.py` (one line fixed it). No real
+  `VERCEL_TOKEN`/`VERCEL_PROJECT_ID` exist in this environment — live-cloud verification honestly
+  deferred. `task verify` **3,694 OK** (14 new tests); repo gates all pass. See
+  `.ai/tasks/R-487.md` for full detail.
 - **R-486 — Runtime: real sandbox lifecycle contract + E2B driver (2026-09-19):** first of a
   five-task sequence (R-486..R-490) toward the founder's "Full isolation: per-user processes/
   sandboxes" direction. Research confirmed every serious 2025-2026 AI app-builder running real
