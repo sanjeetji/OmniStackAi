@@ -683,3 +683,159 @@ func TestProjectLogsAndCancellation(t *testing.T) {
 		t.Errorf("foreign user got %d, want 404", bResp.StatusCode)
 	}
 }
+
+// ---------------------------------------------------------------------------
+// Database Explorer handler tests (F-09 / R-507)
+// ---------------------------------------------------------------------------
+
+func TestProjectDatabaseExplorer(t *testing.T) {
+	userA := auth.User{ID: "usr_db_a", Email: "owner@test.com", Name: "Owner"}
+	userB := auth.User{ID: "usr_db_b", Email: "other@test.com", Name: "Other"}
+	authStore := fakeAuthStore{user: userA}
+	pStore := newFakeProjectStore()
+
+	projA, _ := pStore.CreateProject(context.Background(), userA.ID, "DB App", "")
+
+	// Mock agent-engine stubs all four DB endpoints.
+	mockAgentEngine := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		switch {
+		case r.URL.Path == "/api/workspaces/"+projA.ID+"/db/tables" && r.Method == http.MethodGet:
+			w.WriteHeader(http.StatusOK)
+			_, _ = w.Write([]byte(`{"db_name":"db_app","tables":[{"name":"users","row_count":5}]}`))
+		case r.URL.Path == "/api/workspaces/"+projA.ID+"/db/tables/users" && r.Method == http.MethodGet:
+			w.WriteHeader(http.StatusOK)
+			_, _ = w.Write([]byte(`{"db_name":"db_app","table":"users","rows":[{"id":"1","name":"Alice"}],"total":1}`))
+		case r.URL.Path == "/api/workspaces/"+projA.ID+"/db/query" && r.Method == http.MethodPost:
+			w.WriteHeader(http.StatusOK)
+			_, _ = w.Write([]byte(`{"db_name":"db_app","rows":[{"id":"1"}],"rowcount":1,"write_mode":false}`))
+		case r.URL.Path == "/api/workspaces/"+projA.ID+"/db/schema" && r.Method == http.MethodGet:
+			w.WriteHeader(http.StatusOK)
+			_, _ = w.Write([]byte(`{"db_name":"db_app","schema_sql":"CREATE TABLE users (id SERIAL PRIMARY KEY);"}`))
+		default:
+			http.NotFound(w, r)
+		}
+	}))
+	defer mockAgentEngine.Close()
+
+	server := setupTestServer(t, authStore, pStore, mockAgentEngine.URL)
+
+	// 1. GET /projects/{id}/db/tables -> 200
+	tablesReq, _ := http.NewRequest(http.MethodGet, server.URL+"/projects/"+projA.ID+"/db/tables", nil)
+	tablesReq.Header.Set("Authorization", testBearer)
+	tablesResp, err := http.DefaultClient.Do(tablesReq)
+	if err != nil {
+		t.Fatalf("GET db/tables: %v", err)
+	}
+	defer tablesResp.Body.Close()
+	if tablesResp.StatusCode != http.StatusOK {
+		t.Errorf("GET db/tables: got %d, want 200", tablesResp.StatusCode)
+	}
+	var tablesBody map[string]any
+	_ = json.NewDecoder(tablesResp.Body).Decode(&tablesBody)
+	if tablesBody["tables"] == nil {
+		t.Error("GET db/tables: expected 'tables' key in response")
+	}
+
+	// 2. GET /projects/{id}/db/tables/{table} -> 200
+	tableRowsReq, _ := http.NewRequest(http.MethodGet,
+		server.URL+"/projects/"+projA.ID+"/db/tables/users?limit=10&offset=0", nil)
+	tableRowsReq.Header.Set("Authorization", testBearer)
+	tableRowsResp, err := http.DefaultClient.Do(tableRowsReq)
+	if err != nil {
+		t.Fatalf("GET db/tables/users: %v", err)
+	}
+	defer tableRowsResp.Body.Close()
+	if tableRowsResp.StatusCode != http.StatusOK {
+		t.Errorf("GET db/tables/{table}: got %d, want 200", tableRowsResp.StatusCode)
+	}
+
+	// 3. POST /projects/{id}/db/query -> 200
+	queryBody := strings.NewReader(`{"sql":"SELECT 1","write":false}`)
+	queryReq, _ := http.NewRequest(http.MethodPost,
+		server.URL+"/projects/"+projA.ID+"/db/query", queryBody)
+	queryReq.Header.Set("Authorization", testBearer)
+	queryReq.Header.Set("Content-Type", "application/json")
+	queryResp, err := http.DefaultClient.Do(queryReq)
+	if err != nil {
+		t.Fatalf("POST db/query: %v", err)
+	}
+	defer queryResp.Body.Close()
+	if queryResp.StatusCode != http.StatusOK {
+		t.Errorf("POST db/query: got %d, want 200", queryResp.StatusCode)
+	}
+	var queryRespBody map[string]any
+	_ = json.NewDecoder(queryResp.Body).Decode(&queryRespBody)
+	if queryRespBody["rows"] == nil {
+		t.Error("POST db/query: expected 'rows' key in response")
+	}
+
+	// 4. GET /projects/{id}/db/schema -> 200
+	schemaReq, _ := http.NewRequest(http.MethodGet,
+		server.URL+"/projects/"+projA.ID+"/db/schema", nil)
+	schemaReq.Header.Set("Authorization", testBearer)
+	schemaResp, err := http.DefaultClient.Do(schemaReq)
+	if err != nil {
+		t.Fatalf("GET db/schema: %v", err)
+	}
+	defer schemaResp.Body.Close()
+	if schemaResp.StatusCode != http.StatusOK {
+		t.Errorf("GET db/schema: got %d, want 200", schemaResp.StatusCode)
+	}
+	var schemaRespBody map[string]any
+	_ = json.NewDecoder(schemaResp.Body).Decode(&schemaRespBody)
+	if schemaRespBody["schema_sql"] == nil {
+		t.Error("GET db/schema: expected 'schema_sql' key in response")
+	}
+
+	// 5. Foreign user gets 404 on all DB endpoints.
+	bServer := setupTestServer(t, fakeAuthStore{user: userB}, pStore, mockAgentEngine.URL)
+	for _, tc := range []struct {
+		method string
+		path   string
+		body   string
+	}{
+		{http.MethodGet, "/projects/" + projA.ID + "/db/tables", ""},
+		{http.MethodGet, "/projects/" + projA.ID + "/db/tables/users", ""},
+		{http.MethodPost, "/projects/" + projA.ID + "/db/query", `{"sql":"SELECT 1"}`},
+		{http.MethodGet, "/projects/" + projA.ID + "/db/schema", ""},
+	} {
+		var bodyReader io.Reader
+		if tc.body != "" {
+			bodyReader = strings.NewReader(tc.body)
+		}
+		req, _ := http.NewRequest(tc.method, bServer.URL+tc.path, bodyReader)
+		req.Header.Set("Authorization", testBearer)
+		if tc.body != "" {
+			req.Header.Set("Content-Type", "application/json")
+		}
+		resp, err := http.DefaultClient.Do(req)
+		if err != nil {
+			t.Fatalf("foreign user %s %s: %v", tc.method, tc.path, err)
+		}
+		_ = resp.Body.Close()
+		if resp.StatusCode != http.StatusNotFound {
+			t.Errorf("foreign user %s %s: got %d, want 404", tc.method, tc.path, resp.StatusCode)
+		}
+	}
+
+	// 6. Unknown project -> 404 for the owner too.
+	for _, tc := range []struct {
+		method string
+		path   string
+	}{
+		{http.MethodGet, "/projects/no-such-proj/db/tables"},
+		{http.MethodGet, "/projects/no-such-proj/db/schema"},
+	} {
+		req, _ := http.NewRequest(tc.method, server.URL+tc.path, nil)
+		req.Header.Set("Authorization", testBearer)
+		resp, err := http.DefaultClient.Do(req)
+		if err != nil {
+			t.Fatalf("unknown project %s %s: %v", tc.method, tc.path, err)
+		}
+		_ = resp.Body.Close()
+		if resp.StatusCode != http.StatusNotFound {
+			t.Errorf("unknown project %s %s: got %d, want 404", tc.method, tc.path, resp.StatusCode)
+		}
+	}
+}

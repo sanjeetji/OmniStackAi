@@ -1564,6 +1564,54 @@ if ! rg -qF 'toggleListening' "$console_root/app/studio/studio-chat.tsx"; then
   exit 1
 fi
 
+for required_db_file in \
+  "$agent_engine_root/src/omnistackai_agent_engine/studio/database.py" \
+  "$console_root/components/project-db-manage.tsx" \
+  "$console_root/app/api/projects/[id]/db/tables/route.ts" \
+  "$console_root/app/api/projects/[id]/db/tables/[table]/route.ts" \
+  "$console_root/app/api/projects/[id]/db/query/route.ts" \
+  "$console_root/app/api/projects/[id]/db/schema/route.ts"; do
+  if [[ ! -f "$required_db_file" ]]; then
+    printf 'Missing R-507 contract file: %s\n' "$required_db_file"
+    exit 1
+  fi
+done
+
+if ! rg -qF 'list_tables' "$agent_engine_root/src/omnistackai_agent_engine/studio/database.py"; then
+  printf 'R-507 database.py must define list_tables.\n'
+  exit 1
+fi
+
+if ! rg -qF 'execute_query' "$agent_engine_root/src/omnistackai_agent_engine/studio/database.py"; then
+  printf 'R-507 database.py must define execute_query.\n'
+  exit 1
+fi
+
+if ! rg -qF 'getProjectDBTables' "$console_root/lib/control-plane.ts"; then
+  printf 'R-507 lib/control-plane.ts must define getProjectDBTables.\n'
+  exit 1
+fi
+
+if ! rg -qF 'executeProjectDBQuery' "$console_root/lib/control-plane.ts"; then
+  printf 'R-507 lib/control-plane.ts must define executeProjectDBQuery.\n'
+  exit 1
+fi
+
+if ! rg -qF 'ProjectDbManage' "$console_root/app/studio/[projectId]/manage/page.tsx"; then
+  printf 'R-507 manage page must render ProjectDbManage.\n'
+  exit 1
+fi
+
+if ! rg -qF '/db/tables' "$control_plane_root/internal/projects/handler.go"; then
+  printf 'R-507 control-plane must register /db/tables route.\n'
+  exit 1
+fi
+
+if ! rg -qF '/db/query' "$control_plane_root/internal/projects/handler.go"; then
+  printf 'R-507 control-plane must register /db/query route.\n'
+  exit 1
+fi
+
 printf 'Repository contract tests passed.\n'
 
 

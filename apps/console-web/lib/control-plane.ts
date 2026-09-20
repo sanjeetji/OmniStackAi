@@ -1409,3 +1409,124 @@ export function streamProjectLogs(
   );
 }
 
+// ---------------------------------------------------------------------------
+// Database Explorer & SQL Editor (F-09 / R-507)
+// ---------------------------------------------------------------------------
+
+export interface DBTable {
+  schema: string;
+  name: string;
+  row_count: number;
+  column_count: number;
+}
+
+export interface DBTablesResponse {
+  db_name: string;
+  tables: DBTable[];
+}
+
+export interface DBColumnMeta {
+  column: string;
+  type: string;
+  nullable: boolean;
+  default: string | null;
+}
+
+export interface DBTableRowsResponse {
+  db_name: string;
+  table: string;
+  schema: string;
+  columns_meta: DBColumnMeta[];
+  columns: string[];
+  rows: Record<string, any>[];
+  total: number;
+  limit: number;
+  offset: number;
+}
+
+export interface DBQueryResult {
+  db_name: string;
+  rows: Record<string, any>[];
+  columns: string[];
+  rowcount: number;
+  duration_ms: number;
+  write_mode: boolean;
+  notice: string;
+}
+
+export interface DBSchemaResponse {
+  db_name: string;
+  schema_sql: string;
+}
+
+export function getProjectDBTables(
+  token: string,
+  projectId: string
+): Promise<DBTablesResponse> {
+  return callControlPlane<DBTablesResponse>(
+    `/projects/${encodeURIComponent(projectId)}/db/tables`,
+    {
+      headers: { Authorization: `Bearer ${token}` },
+    }
+  );
+}
+
+export function getProjectDBTableRows(
+  token: string,
+  projectId: string,
+  table: string,
+  options?: {
+    schema?: string;
+    limit?: number;
+    offset?: number;
+    orderBy?: string;
+    direction?: "ASC" | "DESC";
+  }
+): Promise<DBTableRowsResponse> {
+  const params = new URLSearchParams();
+  if (options?.schema) params.set("schema", options.schema);
+  if (options?.limit !== undefined) params.set("limit", String(options.limit));
+  if (options?.offset !== undefined) params.set("offset", String(options.offset));
+  if (options?.orderBy) params.set("order_by", options.orderBy);
+  if (options?.direction) params.set("direction", options.direction);
+  const q = params.toString();
+  return callControlPlane<DBTableRowsResponse>(
+    `/projects/${encodeURIComponent(projectId)}/db/tables/${encodeURIComponent(table)}${q ? `?${q}` : ""}`,
+    {
+      headers: { Authorization: `Bearer ${token}` },
+    }
+  );
+}
+
+export function executeProjectDBQuery(
+  token: string,
+  projectId: string,
+  sql: string,
+  write?: boolean
+): Promise<DBQueryResult> {
+  return callControlPlane<DBQueryResult>(
+    `/projects/${encodeURIComponent(projectId)}/db/query`,
+    {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${token}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ sql, write: !!write }),
+    }
+  );
+}
+
+export function getProjectDBSchema(
+  token: string,
+  projectId: string
+): Promise<DBSchemaResponse> {
+  return callControlPlane<DBSchemaResponse>(
+    `/projects/${encodeURIComponent(projectId)}/db/schema`,
+    {
+      headers: { Authorization: `Bearer ${token}` },
+    }
+  );
+}
+
+

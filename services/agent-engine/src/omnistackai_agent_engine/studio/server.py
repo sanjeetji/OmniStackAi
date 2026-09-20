@@ -12,6 +12,7 @@ import asyncio
 import io
 import json
 import os
+import re
 from collections.abc import AsyncIterator
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from typing import Callable
@@ -23,6 +24,18 @@ from ..solution_packs import (
     DEFAULT_SOLUTION_PACK_REGISTRY,
     EcosystemPackRegistry,
     SolutionPackRegistry,
+)
+from .database import (
+    DatabaseNotFoundError,
+    QueryExecutionError,
+    QueryTooLargeError,
+    check_database_exists,
+    execute_query,
+    get_database_name,
+    get_schema_sql,
+    get_table_rows,
+    get_table_schema,
+    list_tables,
 )
 from .files import BuildNotFoundError, FileNotFoundInBuildError, PathOutsideBuildError
 from .page import STUDIO_HTML
@@ -595,6 +608,137 @@ def _make_handler(
             res = log_mgr.clear_logs(ws_id, source=source)
             self._send_json(200, res)
 
+        # ------------------------------------------------------------------
+        # Database Explorer handlers (F-09 / R-507)
+        # ------------------------------------------------------------------
+
+        def _db_require_workspace(self, ws_id: str) -> str | None:
+            """Return repo_dir string or send a 404 and return None."""
+            if workspace_store is None:
+                self._send_json(404, {"error": "workspaces are not enabled"})
+                return None
+            try:
+                repo_dir = str(workspace_store.repo_path(ws_id))
+            except Exception:
+                self._send_json(404, {"error": f"workspace {ws_id!r} not found"})
+                return None
+            if not workspace_store.exists(ws_id):
+                self._send_json(404, {"error": f"workspace {ws_id!r} not found"})
+                return None
+            return repo_dir
+
+        def _db_require_database(self, db_name: str) -> bool:
+            """Return True if DB exists, else send 409 and return False."""
+            if not check_database_exists(db_name):
+                self._send_json(409, {
+                    "error": "database does not exist yet — run preview first",
+                    "db_name": db_name,
+                })
+                return False
+            return True
+
+        def _handle_workspace_db_tables(self, ws_id: str) -> None:
+            """GET /api/workspaces/{id}/db/tables"""
+            repo_dir = self._db_require_workspace(ws_id)
+            if repo_dir is None:
+                return
+            db_name = get_database_name(repo_dir)
+            if not self._db_require_database(db_name):
+                return
+            try:
+                tables = list_tables(repo_dir, db_name)
+                self._send_json(200, {"db_name": db_name, "tables": tables})
+            except QueryExecutionError as error:
+                self._send_json(502, {"error": str(error)})
+            except Exception as error:
+                self._send_json(502, {"error": str(error)})
+
+        def _handle_workspace_db_table_rows(self, ws_id: str, table: str, query: str) -> None:
+            """GET /api/workspaces/{id}/db/tables/{table}"""
+            repo_dir = self._db_require_workspace(ws_id)
+            if repo_dir is None:
+                return
+            db_name = get_database_name(repo_dir)
+            if not self._db_require_database(db_name):
+                return
+            params = parse_qs(query)
+            limit = int(params.get("limit", ["100"])[0] or 100)
+            offset = int(params.get("offset", ["0"])[0] or 0)
+            order_by = params.get("order_by", [None])[0]
+            direction = params.get("direction", ["ASC"])[0].upper()
+            schema = params.get("schema", ["public"])[0] or "public"
+            try:
+                rows_data = get_table_rows(
+                    db_name,
+                    table,
+                    schema=schema,
+                    limit=limit,
+                    offset=offset,
+                    order_by=order_by,
+                    direction=direction,
+                )
+                columns_meta = get_table_schema(db_name, table, schema=schema)
+                self._send_json(200, {
+                    "db_name": db_name,
+                    "table": table,
+                    "schema": schema,
+                    "columns_meta": columns_meta,
+                    **rows_data,
+                })
+            except QueryExecutionError as error:
+                self._send_json(502, {"error": str(error)})
+            except Exception as error:
+                self._send_json(502, {"error": str(error)})
+
+        def _handle_workspace_db_query(self, ws_id: str) -> None:
+            """POST /api/workspaces/{id}/db/query"""
+            repo_dir = self._db_require_workspace(ws_id)
+            if repo_dir is None:
+                return
+            db_name = get_database_name(repo_dir)
+            if not self._db_require_database(db_name):
+                return
+            data = self._read_json_body()
+            if data is None:
+                return
+            sql = str(data.get("sql", "")).strip()
+            if not sql:
+                self._send_json(400, {"error": "sql is required"})
+                return
+            write = bool(data.get("write", False))
+            try:
+                from .logs import StudioLogManager
+                log_mgr = StudioLogManager()
+                result = execute_query(
+                    db_name,
+                    sql,
+                    write=write,
+                    log_manager=log_mgr,
+                    workspace_id=ws_id,
+                )
+                self._send_json(200, {"db_name": db_name, **result})
+            except QueryTooLargeError as error:
+                self._send_json(413, {"error": str(error)})
+            except QueryExecutionError as error:
+                self._send_json(422, {"error": str(error)})
+            except Exception as error:
+                self._send_json(502, {"error": str(error)})
+
+        def _handle_workspace_db_schema(self, ws_id: str) -> None:
+            """GET /api/workspaces/{id}/db/schema"""
+            repo_dir = self._db_require_workspace(ws_id)
+            if repo_dir is None:
+                return
+            db_name = get_database_name(repo_dir)
+            sql = get_schema_sql(repo_dir)
+            if sql is None:
+                self._send_json(404, {
+                    "error": "no migration SQL found — build the project first",
+                    "db_name": db_name,
+                })
+                return
+            self._send_json(200, {"db_name": db_name, "schema_sql": sql})
+
         def _handle_file_tree(self, build_id: str) -> None:
             if file_tree_fn is None:
                 self._send_json(404, {"error": "file browsing is not enabled"})
@@ -951,6 +1095,29 @@ def _make_handler(
                 return
             else:
                 path_only = urlparse(self.path).path
+                # --- Database Explorer GET routes (F-09 / R-507) ---
+                # /api/workspaces/{id}/db/tables/{table}
+                _db_table_m = re.fullmatch(
+                    r"/api/workspaces/([^/]+)/db/tables/([^/]+)", path_only
+                )
+                if _db_table_m:
+                    self._handle_workspace_db_table_rows(
+                        unquote(_db_table_m.group(1)),
+                        unquote(_db_table_m.group(2)),
+                        urlparse(self.path).query,
+                    )
+                    return
+                # /api/workspaces/{id}/db/tables
+                ws_db_tables_id = self._workspace_id_for_suffix(path_only, "/db/tables")
+                if ws_db_tables_id is not None:
+                    self._handle_workspace_db_tables(ws_db_tables_id)
+                    return
+                # /api/workspaces/{id}/db/schema
+                ws_db_schema_id = self._workspace_id_for_suffix(path_only, "/db/schema")
+                if ws_db_schema_id is not None:
+                    self._handle_workspace_db_schema(ws_db_schema_id)
+                    return
+                # --- existing workspace GET routes ---
                 ws_files_id = self._workspace_id_for_suffix(path_only, "/files")
                 if ws_files_id is not None:
                     self._handle_workspace_file_tree(ws_files_id)
@@ -1318,6 +1485,12 @@ def _make_handler(
                     self._send_json(502, {"error": str(error)})
                 return
             path_only = urlparse(self.path).path
+            # --- Database Explorer POST routes (F-09 / R-507) ---
+            ws_db_query_id = self._workspace_id_for_suffix(path_only, "/db/query")
+            if ws_db_query_id is not None:
+                self._handle_workspace_db_query(ws_db_query_id)
+                return
+            # --- existing workspace POST routes ---
             ws_cancel_id = self._workspace_id_for_suffix(path_only, "/cancel")
             if ws_cancel_id is not None:
                 self._handle_workspace_cancel(ws_cancel_id)

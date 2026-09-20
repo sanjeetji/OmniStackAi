@@ -4,6 +4,20 @@ Last updated: 2026-09-20
 ## Current Phase
 Stage 0 (Founder Build Sequence, Brief Section 91) — BASIC/MVP
 
+> **R-507 (2026-09-20): Database Explorer & SQL Editor (F-09-database spec).**
+> Implemented PostgreSQL database explorer and SQL editor for generated applications with read-only transaction safety,
+> schema inspection, and a Lovable-grade Console UI in **Studio Manage → Database**.
+> Agent-Engine: Implemented `omnistackai_agent_engine.studio.database` exposing `list_tables`, `get_table_schema`, `get_table_rows`,
+> `execute_query`, and `get_schema_sql` running against the project container (`psql --csv`). Read-only queries wrapped in `BEGIN; ... ROLLBACK;`,
+> explicit write mode toggle, 32 KB SQL limit, 10s timeout, sanitized table/column identifiers, and audit logging via `StudioLogManager`.
+> Control-Plane Backend: Added proxy routes in `internal/projects/handler.go` (`GET /projects/{id}/db/tables`, `GET /projects/{id}/db/tables/{table}`,
+> `POST /projects/{id}/db/query`, `GET /projects/{id}/db/schema`) with tenant isolation and 409 Conflict handling for unprovisioned databases.
+> Console Web UI: Added types and API client functions in `lib/control-plane.ts`, Next.js API proxy routes under `app/api/projects/[id]/db/`,
+> and built `components/project-db-manage.tsx` with tables sidebar with live search, row browser with pagination and column sorting,
+> Structure view with column metadata, SQL Editor with Cmd+Enter execution, Write Mode warning toggle, timing and count chips, and Schema SQL viewer.
+> Gates: 3,815 tests pass, `task verify` passed, `scripts/test.sh` passed, Next.js build clean.
+> NEXT: **F-10 (R-508) Security scanning & automated test runs (spec `R_&_D/specs/F-10-security-tests.md`)**.
+
 > **R-506 (2026-09-20): Logs & live chat streaming (F-08-logs-chat spec).**
 > Implemented structured build and application logs, real build cancellation with 0 git commits, Web Speech API voice input,
 > text file attachments (.md, .txt, .json, .csv, .sql, .ts, .tsx, .py up to 256 KB, max 4), and a Lovable-grade Console UI in **Studio Manage → Logs** (`Lova-17`).

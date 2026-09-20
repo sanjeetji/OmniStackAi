@@ -1,5 +1,43 @@
 # Work Log
 
+## 2026-09-20 — R-507 (F-09 Database Explorer & SQL Editor)
+
+- **Why:** Generated applications create and use real PostgreSQL databases in local development and preview mode. Developers need direct visibility into their tables, column schemas, and live data, as well as the ability to test and run SQL queries safely without external database GUI tools or exposing database credentials. `F-09-database.md` specified an agent-engine database service connecting directly to the workspace container via `psql --csv`, transaction-isolated query execution with automatic rollback for read-only safety, statement timeouts (10s), 32 KB query size limits, control-plane REST proxy endpoints with project ownership isolation, 409 Conflict handling for unprovisioned databases, and a Lovable-grade Console UI in Studio Manage -> Database with table browser, column structure viewer, SQL editor, and migration schema viewer.
+- **Part 1 — Agent-Engine Database Service (`services/agent-engine/`):**
+  - Implemented `studio/database.py`:
+    - `get_database_name(repo_dir)`: Computes the Postgres database name matching preview plan.
+    - `check_database_exists(db_name)`: Probes `pg_database` in the container.
+    - `list_tables(repo_dir, db_name)`: Queries `information_schema.tables` and `pg_stat_user_tables` to list base tables with schema, approximate row count, and column count.
+    - `get_table_schema(db_name, table, schema)`: Fetches column definitions (name, data type, nullable, default).
+    - `get_table_rows(db_name, table, ...)`: Paginated row query with sanitized table/column names, limit/offset, and ASC/DESC sorting.
+    - `execute_query(db_name, sql, write=False, ...)`: Enforces read-only transactions by wrapping queries in `BEGIN; ... ROLLBACK;` by default. When `write=True`, statements execute with autocommit. Enforces 32 KB SQL size limits, 10s statement timeout, records duration and row counts, and logs queries to `StudioLogManager`.
+    - `get_schema_sql(repo_dir)`: Reads `services/api/migrations/0001_init.sql` (or first migration file).
+  - Updated `studio/server.py`: Mounted REST routes `GET /api/workspaces/{id}/db/tables`, `GET /api/workspaces/{id}/db/tables/{table}`, `POST /api/workspaces/{id}/db/query`, and `GET /api/workspaces/{id}/db/schema`, returning HTTP 409 Conflict when database does not exist.
+  - Added unit tests in `tests/test_database_explorer.py`: 30 unit tests covering table listing, schema inspection, pagination, row queries, read-only rollback wrapping, write mode execution, 32 KB size cap, timeout handling, SQL injection protection, and schema reading (all 30 passed).
+- **Part 2 — Control-Plane Backend (`services/control-plane/`):**
+  - Updated `internal/projects/handler.go`: Registered `GET /projects/{id}/db/tables`, `GET /projects/{id}/db/tables/{table}`, `POST /projects/{id}/db/query`, and `GET /projects/{id}/db/schema`.
+  - Implemented proxy handlers with caller ownership verification, URL parameter/query string forwarding, and upstream error mapping (preserving 409 Conflict status).
+  - Added unit test in `internal/projects/projects_test.go`: `TestProjectDatabaseExplorer` verifying all 4 endpoints with upstream agent-engine mocks.
+- **Part 3 — Console Web UI (`apps/console-web/`):**
+  - Updated `lib/control-plane.ts`: Added database interfaces (`DBTable`, `DBTablesResponse`, `DBColumnMeta`, `DBTableRowsResponse`, `DBQueryResult`, `DBSchemaResponse`) and client functions (`getProjectDBTables`, `getProjectDBTableRows`, `executeProjectDBQuery`, `getProjectDBSchema`).
+  - Added Next.js API route proxies: `/api/projects/[id]/db/tables`, `/api/projects/[id]/db/tables/[table]`, `/api/projects/[id]/db/query`, `/api/projects/[id]/db/schema`.
+  - Built `components/project-db-manage.tsx`: Lovable-grade component with three sub-views:
+    - Tables & Data Explorer: Table list sidebar with live search and row count badges; Table Header with total rows; Data tab with sortable columns and pagination; Structure tab with column types, nullability badges, and default values.
+    - SQL Editor: Monospace editor with placeholder, `Cmd+Enter` execution shortcut, Write Mode toggle with amber warning banner, execution duration and row count chips, verbatim error displays, and results table.
+    - Schema SQL Viewer: Migration SQL viewer with one-click clipboard copy.
+    - Unprovisioned DB Empty State: Friendly banner with refresh action when database is not yet created.
+  - Updated `app/studio/[projectId]/manage/page.tsx`: Added Database tab with `Database` icon in sidebar navigation and wired `ProjectDbManage`.
+- **Part 4 — Verification & Contracts:**
+  - Added R-507 contract assertions in `scripts/test.sh`.
+  - `bash scripts/test.sh`: passed.
+  - `cd services/control-plane && go test ./...`: all 14 packages passed.
+  - `PYTHONPATH=src pytest tests/test_database_explorer.py`: 30/30 passed.
+  - `cd apps/console-web && pnpm run typecheck && pnpm run lint`: 0 errors, 0 warnings.
+  - `pnpm run build`: all 28 static routes and dynamic API routes compiled cleanly.
+  - `task verify`: all 3,815 tests passed; Stage 0 verification passed.
+  - `task lint`, `task security:quick`, `task env:check`: all passed.
+- **Next:** Proceed to F-10 (R-508) Security scanning & automated test runs (spec `R_&_D/specs/F-10-security-tests.md`).
+
 ## 2026-09-20 — R-506 (F-08 Logs & Live Chat Streaming)
 
 - **Why:** Developers building with OmniStackAI need complete observability into build/generation events and live preview runtime outputs, the ability to immediately stop in-flight builds without paying for ungenerated tokens or corrupting git history, voice input convenience, and the ability to attach reference files (schemas, markdown, code). `F-08-logs-chat.md` specified structured build logs (`build.jsonl`), preview runner stdout/stderr log rotation (`app.log`) with secrets scrubbing (`***`), REST/SSE logs endpoints, real build cancellation with 0 git commits and consumed-token debiting, Web Speech API voice input, text attachments, and a Lovable-grade Manage -> Logs UI (`Lova-17`).

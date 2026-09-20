@@ -1,5 +1,30 @@
 # Current Handoff
 
+Task ID: R-507
+Status: done
+Phase: MVP → Phase F (platform foundation)
+Branch: `ai/R-507-database-explorer`
+
+> **R-507 Completed (2026-09-20): Database Explorer & SQL Editor (F-09-database spec).**
+> - **Agent-Engine Database Service (`services/agent-engine/`):**
+>   - Implemented `studio/database.py`: Zero external dependencies, queries PostgreSQL container via `psql --csv`. Functions: `get_database_name`, `check_database_exists`, `list_tables` (with schema, row count, column count), `get_table_schema` (column metadata), `get_table_rows` (paginated, sorted, sanitized identifiers), `execute_query` (32 KB limit, 10s statement timeout, wrapped in `BEGIN; ... ROLLBACK;` unless `write=True`, audit logging via `StudioLogManager`), and `get_schema_sql` (`0001_init.sql`).
+>   - Mounted HTTP routes in `studio/server.py`: `GET /api/workspaces/{id}/db/tables`, `GET /api/workspaces/{id}/db/tables/{table}`, `POST /api/workspaces/{id}/db/query`, and `GET /api/workspaces/{id}/db/schema`. Returns HTTP 409 Conflict when database does not exist.
+>   - Added unit tests in `tests/test_database_explorer.py` (30/30 passed).
+> - **Control-Plane Backend (`services/control-plane/`):**
+>   - Handlers in `internal/projects/handler.go`: `GET /projects/{id}/db/tables`, `GET /projects/{id}/db/tables/{table}`, `POST /projects/{id}/db/query`, and `GET /projects/{id}/db/schema` with project ownership verification and query forwarding.
+>   - Added unit test in `internal/projects/projects_test.go`: `TestProjectDatabaseExplorer`.
+> - **Console Web UI (`apps/console-web/`):**
+>   - Client SDK in `lib/control-plane.ts`: interfaces (`DBTable`, `DBTablesResponse`, `DBColumnMeta`, `DBTableRowsResponse`, `DBQueryResult`, `DBSchemaResponse`) and methods (`getProjectDBTables`, `getProjectDBTableRows`, `executeProjectDBQuery`, `getProjectDBSchema`).
+>   - Next.js API route proxies: `/api/projects/[id]/db/tables`, `/api/projects/[id]/db/tables/[table]`, `/api/projects/[id]/db/query`, `/api/projects/[id]/db/schema`.
+>   - Lovable-grade component `components/project-db-manage.tsx`:
+>     - Tables & Data Explorer: Searchable tables sidebar with row count badges, sortable column headers, pagination controls, Structure view with column metadata badges.
+>     - SQL Editor: Monospace editor, `Cmd+Enter` shortcut, Write Mode toggle with warning banner, execution duration / rowcount chips, results table, error banner.
+>     - Schema SQL Viewer: Migration SQL with copy action.
+>     - 409 Conflict empty state when DB not yet created.
+>   - Mounted "Database" tab with `Database` icon in Studio Manage sidebar (`app/studio/[projectId]/manage/page.tsx`).
+> - **Gates:** `bash scripts/test.sh` passed with R-507 assertions, `go test -v ./...` passed (all 14 packages), `task agent-engine:test` passed (30/30 unit tests, 3815 overall suite), Next.js `typecheck`, `lint`, and `build` passed (28 routes clean), `task verify` passed.
+> - **NEXT:** F-10 (R-508) Security scanning & automated test runs (spec `R_&_D/specs/F-10-security-tests.md`).
+
 Task ID: R-506
 Status: done
 Phase: MVP → Phase F (platform foundation)
