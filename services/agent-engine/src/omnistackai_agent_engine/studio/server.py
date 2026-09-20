@@ -102,6 +102,10 @@ def _make_handler(
     workspace_preview_stop_fn: PreviewBuildFn | None = None,
     workspace_problems_check_fn: ProblemsFn | None = None,
     workspace_problems_get_fn: ProblemsFn | None = None,
+    workspace_cancel_fn: Callable[[str], dict] | None = None,
+    workspace_logs_fn: Callable[..., dict] | None = None,
+    workspace_logs_stream_fn: Callable[..., AsyncIterator[dict]] | None = None,
+    workspace_logs_clear_fn: Callable[..., dict] | None = None,
 ) -> type[BaseHTTPRequestHandler]:
     pack_registry = registry or DEFAULT_SOLUTION_PACK_REGISTRY
     eco_registry = ecosystem_registry or DEFAULT_ECOSYSTEM_PACK_REGISTRY
@@ -517,6 +521,80 @@ def _make_handler(
                 return
             self._send_json(200, res)
 
+        def _handle_workspace_cancel(self, ws_id: str) -> None:
+            self._drain_body()
+            if workspace_cancel_fn is not None:
+                try:
+                    res = workspace_cancel_fn(ws_id)
+                    self._send_json(200, res or {"status": "cancelling", "workspace_id": ws_id})
+                    return
+                except Exception as error:
+                    self._send_json(502, {"error": str(error)})
+                    return
+            if workspace_store is not None:
+                workspace_store.set_cancelled(ws_id)
+                self._send_json(200, {"status": "cancelling", "workspace_id": ws_id})
+                return
+            self._send_json(404, {"error": "workspaces are not enabled"})
+
+        def _handle_workspace_logs(self, ws_id: str, query: str) -> None:
+            if workspace_logs_fn is None:
+                from .logs import StudioLogManager
+                log_mgr = StudioLogManager()
+                logs_fn = log_mgr.read_logs
+                logs_stream_fn = log_mgr.stream_logs
+            else:
+                logs_fn = workspace_logs_fn
+                logs_stream_fn = workspace_logs_stream_fn
+
+            params = parse_qs(query)
+            source = params.get("source", ["build"])[0]
+            since_str = params.get("since", [None])[0]
+            since = int(since_str) if since_str and since_str.isdigit() else None
+            follow = params.get("follow", ["0"])[0] in ("1", "true", "yes")
+            limit_str = params.get("limit", ["500"])[0]
+            limit = int(limit_str) if limit_str and limit_str.isdigit() else 500
+
+            if follow and logs_stream_fn is not None:
+                self.send_response(200)
+                self.send_header("Content-Type", "text/event-stream")
+                self.send_header("Cache-Control", "no-cache")
+                self.send_header("Connection", "close")
+                self.send_header("X-Accel-Buffering", "no")
+                self.end_headers()
+
+                async def _drain() -> None:
+                    async for event in logs_stream_fn(ws_id, source=source, since=since):
+                        self._write_sse_event(event)
+
+                try:
+                    asyncio.run(_drain())
+                except Exception as error:
+                    self._write_sse_event({"error": str(error)})
+                return
+
+            try:
+                res = logs_fn(ws_id, source=source, since=since, limit=limit)
+                self._send_json(200, res)
+            except Exception as error:
+                self._send_json(502, {"error": str(error)})
+
+        def _handle_workspace_logs_clear(self, ws_id: str, query: str) -> None:
+            params = parse_qs(query)
+            source = params.get("source", [None])[0]
+            if workspace_logs_clear_fn is not None:
+                try:
+                    res = workspace_logs_clear_fn(ws_id, source=source)
+                    self._send_json(200, res)
+                    return
+                except Exception as error:
+                    self._send_json(502, {"error": str(error)})
+                    return
+            from .logs import StudioLogManager
+            log_mgr = StudioLogManager()
+            res = log_mgr.clear_logs(ws_id, source=source)
+            self._send_json(200, res)
+
         def _handle_file_tree(self, build_id: str) -> None:
             if file_tree_fn is None:
                 self._send_json(404, {"error": "file browsing is not enabled"})
@@ -901,6 +979,10 @@ def _make_handler(
                 if ws_preview_id is not None:
                     self._handle_workspace_preview_status(ws_preview_id)
                     return
+                ws_logs_id = self._workspace_id_for_suffix(path_only, "/logs")
+                if ws_logs_id is not None:
+                    self._handle_workspace_logs(ws_logs_id, urlparse(self.path).query)
+                    return
                 ws_seo_audit_id = self._workspace_id_for_suffix(path_only, "/seo/audit")
                 if ws_seo_audit_id is not None:
                     self._handle_workspace_seo_audit(ws_seo_audit_id)
@@ -1236,6 +1318,10 @@ def _make_handler(
                     self._send_json(502, {"error": str(error)})
                 return
             path_only = urlparse(self.path).path
+            ws_cancel_id = self._workspace_id_for_suffix(path_only, "/cancel")
+            if ws_cancel_id is not None:
+                self._handle_workspace_cancel(ws_cancel_id)
+                return
             ws_stream_id = self._workspace_id_for_suffix(path_only, "/build/stream")
             if ws_stream_id is not None:
                 self._handle_workspace_build_stream(ws_stream_id)
@@ -1346,6 +1432,10 @@ def _make_handler(
 
         def do_DELETE(self) -> None:  # noqa: N802 (http.server API)
             path_only = urlparse(self.path).path
+            ws_logs_id = self._workspace_id_for_suffix(path_only, "/logs")
+            if ws_logs_id is not None:
+                self._handle_workspace_logs_clear(ws_logs_id, urlparse(self.path).query)
+                return
             ws_id = self._workspace_id_for_suffix(path_only, "")
             if ws_id is not None:
                 if workspace_store is None:
@@ -1422,6 +1512,10 @@ def create_studio_server(
     workspace_preview_stop_fn: PreviewBuildFn | None = None,
     workspace_problems_check_fn: ProblemsFn | None = None,
     workspace_problems_get_fn: ProblemsFn | None = None,
+    workspace_cancel_fn: Callable[[str], dict] | None = None,
+    workspace_logs_fn: Callable[..., dict] | None = None,
+    workspace_logs_stream_fn: Callable[..., AsyncIterator[dict]] | None = None,
+    workspace_logs_clear_fn: Callable[..., dict] | None = None,
 ) -> ThreadingHTTPServer:
     """Create (but do not start) a studio server bound to ``host``/``port``.
 
@@ -1507,6 +1601,10 @@ def create_studio_server(
             workspace_preview_stop_fn=workspace_preview_stop_fn,
             workspace_problems_check_fn=workspace_problems_check_fn,
             workspace_problems_get_fn=workspace_problems_get_fn,
+            workspace_cancel_fn=workspace_cancel_fn,
+            workspace_logs_fn=workspace_logs_fn,
+            workspace_logs_stream_fn=workspace_logs_stream_fn,
+            workspace_logs_clear_fn=workspace_logs_clear_fn,
         ),
     )
 

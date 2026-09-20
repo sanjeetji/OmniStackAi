@@ -603,3 +603,83 @@ func TestProjectPreview_Endpoints(t *testing.T) {
 		t.Errorf("foreign user got %d, want 404", bResp.StatusCode)
 	}
 }
+
+func TestProjectLogsAndCancellation(t *testing.T) {
+	userA := auth.User{ID: "usr_logs_a", Email: "owner@test.com", Name: "Owner"}
+	userB := auth.User{ID: "usr_logs_b", Email: "other@test.com", Name: "Other"}
+	authStore := fakeAuthStore{user: userA}
+	pStore := newFakeProjectStore()
+
+	projA, _ := pStore.CreateProject(context.Background(), userA.ID, "App A", "")
+
+	mockAgentEngine := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		switch {
+		case r.URL.Path == "/api/workspaces/"+projA.ID+"/cancel" && r.Method == http.MethodPost:
+			w.Header().Set("Content-Type", "application/json")
+			w.WriteHeader(http.StatusOK)
+			_, _ = w.Write([]byte(`{"status":"cancelling","workspace_id":"` + projA.ID + `"}`))
+		case r.URL.Path == "/api/workspaces/"+projA.ID+"/logs" && r.Method == http.MethodGet:
+			w.Header().Set("Content-Type", "application/json")
+			w.WriteHeader(http.StatusOK)
+			_, _ = w.Write([]byte(`{"source":"build","lines":[{"level":"info","message":"test log"}],"next_cursor":1}`))
+		case r.URL.Path == "/api/workspaces/"+projA.ID+"/logs" && r.Method == http.MethodDelete:
+			w.Header().Set("Content-Type", "application/json")
+			w.WriteHeader(http.StatusOK)
+			_, _ = w.Write([]byte(`{"status":"cleared"}`))
+		default:
+			http.NotFound(w, r)
+		}
+	}))
+	defer mockAgentEngine.Close()
+
+	server := setupTestServer(t, authStore, pStore, mockAgentEngine.URL)
+
+	// 1. POST /projects/{id}/build/cancel returns 200
+	cancelReq, _ := http.NewRequest(http.MethodPost, server.URL+"/projects/"+projA.ID+"/build/cancel", nil)
+	cancelReq.Header.Set("Authorization", testBearer)
+	cancelResp, err := http.DefaultClient.Do(cancelReq)
+	if err != nil {
+		t.Fatalf("POST build cancel: %v", err)
+	}
+	defer cancelResp.Body.Close()
+	if cancelResp.StatusCode != http.StatusOK {
+		t.Errorf("POST build cancel: got %d, want 200", cancelResp.StatusCode)
+	}
+
+	// 2. GET /projects/{id}/logs returns 200
+	logsReq, _ := http.NewRequest(http.MethodGet, server.URL+"/projects/"+projA.ID+"/logs", nil)
+	logsReq.Header.Set("Authorization", testBearer)
+	logsResp, err := http.DefaultClient.Do(logsReq)
+	if err != nil {
+		t.Fatalf("GET logs: %v", err)
+	}
+	defer logsResp.Body.Close()
+	if logsResp.StatusCode != http.StatusOK {
+		t.Errorf("GET logs: got %d, want 200", logsResp.StatusCode)
+	}
+
+	// 3. DELETE /projects/{id}/logs returns 200
+	delReq, _ := http.NewRequest(http.MethodDelete, server.URL+"/projects/"+projA.ID+"/logs", nil)
+	delReq.Header.Set("Authorization", testBearer)
+	delResp, err := http.DefaultClient.Do(delReq)
+	if err != nil {
+		t.Fatalf("DELETE logs: %v", err)
+	}
+	defer delResp.Body.Close()
+	if delResp.StatusCode != http.StatusOK {
+		t.Errorf("DELETE logs: got %d, want 200", delResp.StatusCode)
+	}
+
+	// 4. Foreign user gets 404
+	bServer := setupTestServer(t, fakeAuthStore{user: userB}, pStore, mockAgentEngine.URL)
+	bReq, _ := http.NewRequest(http.MethodGet, bServer.URL+"/projects/"+projA.ID+"/logs", nil)
+	bReq.Header.Set("Authorization", testBearer)
+	bResp, err := http.DefaultClient.Do(bReq)
+	if err != nil {
+		t.Fatalf("foreign user GET logs: %v", err)
+	}
+	defer bResp.Body.Close()
+	if bResp.StatusCode != http.StatusNotFound {
+		t.Errorf("foreign user got %d, want 404", bResp.StatusCode)
+	}
+}

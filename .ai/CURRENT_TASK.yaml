@@ -1,31 +1,35 @@
-task_id: R-505
+task_id: R-506
 status: completed
 phase: MVP
 tracker_row: null
 started_at: "2026-09-20"
 completed_at: "2026-09-20"
 objective: >-
-  Implement F-07 SEO & AI search (spec R_&_D/specs/F-07-seo.md).
-  Codegen for Next.js indexability (sitemap.ts, robots.ts, llms.txt, opengraph-image.tsx, JSON-LD, per-page metadata).
-  PostgreSQL schema 000009_seo (project_seo, project_page_seo).
-  Control-plane REST API (/projects/{id}/seo, /projects/{id}/seo/pages, /projects/{id}/seo/pages/{route}, /projects/{id}/seo/audit, /projects/{id}/seo/suggest).
-  Deterministic SEO audit engine checking generated source (0 credits).
-  Optional model copy suggestion pass with credit confirmation.
-  Lovable-grade Console UI in Studio Manage -> SEO with site defaults, pages table, audit findings, and Google/Social previews.
+  Implement F-08 Logs and chat controls (spec R_&_D/specs/F-08-logs-chat.md).
+  Structured workspace build logs (<workspace>/logs/build.jsonl) and app output logs (<workspace>/logs/app.log).
+  Secrets scrubbing (***) and log rotation (OMNISTACKAI_LOG_MAX_BYTES default 5MB, 3 files).
+  REST and SSE endpoints for workspace logs (GET/DELETE /projects/{id}/logs, GET /projects/{id}/logs/stream).
+  Real build cancellation: Stop button in chat composer triggers AbortController and POST /projects/{id}/build/cancel.
+  Cancellation flag checks during generation loop, clean exit, nothing committed, partial token debiting in model_calls (error_code = 'cancelled').
+  Voice input via Web Speech API (SpeechRecognition) with idle/listening/transcribing states.
+  Attachments support (text-like files up to 256KB max 4, fenced prompt inclusion, vision detection for images).
+  Lovable-grade Manage -> Logs UI (Build/App switch, level filter, search, follow toggle, copy, download).
 allowed_paths:
-  - services/control-plane/migrations/000009_seo.up.sql
-  - services/control-plane/migrations/000009_seo.down.sql
-  - services/control-plane/internal/seo/
-  - services/control-plane/internal/projects/
-  - services/control-plane/cmd/control-plane/
-  - services/agent-engine/src/omnistackai_agent_engine/codegen/nextjs.py
-  - services/agent-engine/src/omnistackai_agent_engine/seo/
-  - services/agent-engine/src/omnistackai_agent_engine/studio/
-  - services/agent-engine/tests/test_seo_codegen_and_audit.py
+  - services/agent-engine/src/omnistackai_agent_engine/studio/logs.py
+  - services/agent-engine/src/omnistackai_agent_engine/studio/workspace.py
+  - services/agent-engine/src/omnistackai_agent_engine/studio/live_serve.py
+  - services/agent-engine/src/omnistackai_agent_engine/studio/server.py
+  - services/agent-engine/src/omnistackai_agent_engine/localrun/run.py
+  - services/agent-engine/tests/test_logs_and_cancellation.py
+  - services/agent-engine/tests/test_edit_loop.py
+  - services/control-plane/internal/projects/handler.go
+  - services/control-plane/internal/projects/projects_test.go
   - apps/console-web/lib/control-plane.ts
-  - apps/console-web/app/api/projects/[id]/seo/
-  - apps/console-web/components/project-seo-manage.tsx
+  - apps/console-web/app/api/projects/[id]/logs/
+  - apps/console-web/app/api/projects/[id]/build/cancel/
+  - apps/console-web/components/project-logs-manage.tsx
   - apps/console-web/app/studio/[projectId]/manage/page.tsx
+  - apps/console-web/app/studio/studio-chat.tsx
   - scripts/test.sh
   - .ai/CURRENT_TASK.yaml
   - .ai/PROJECT_STATE.yaml
@@ -36,8 +40,8 @@ allowed_paths:
 forbidden_changes:
   - Do not change control-plane database from PostgreSQL
   - Do not add external Go or Python dependencies
-  - Do not make model calls for deterministic SEO audit (must be free / 0 credits)
-  - Do not call model for copy suggestion without explicit opt-in and credit cost notice
+  - Do not upload attachment files to external cloud
+  - Do not log raw secret values or environment dumps
 required_gates:
   - bash scripts/test.sh
   - cd services/control-plane && go test -v ./...
@@ -53,10 +57,13 @@ model_tool_trace:
   cloud_calls: 0
   note: Engineering task, 0 model calls required for gates.
 evidence:
-  scripts_test_sh: passed (R-505 contracts green)
-  control_plane_tests: passed (all packages green)
-  agent_engine_tests: passed (3,779 tests passed in 81.9s)
-  console_web_typecheck_and_lint: passed (0 errors, 0 warnings, build 58 routes compiled)
-  task_verify: passed (Stage 0 verification passed)
+  scripts_test_sh: pass (Repository contract tests passed with R-506 block)
+  control_plane_tests: pass (all 14 packages passed, TestProjectLogsAndCancellation passed)
+  agent_engine_tests: pass (3,785 tests passed in 79.9s)
+  console_web_typecheck_and_lint: pass (tsc --noEmit and eslint . passed with 0 errors and 0 warnings)
+  task_verify: pass (Stage 0 verification passed cleanly in 81.6s)
+  task_lint: pass (Lint passed)
+  task_security_quick: pass (Stage 0 secret-policy check passed)
+  task_env_check: pass (Environment contract passed)
 next_action: >-
-  Task complete. Ready for next task in sequence.
+  Proceed to F-09 Database Explorer & SQL Editor (R-507, spec R_&_D/specs/F-09-database-explorer.md).

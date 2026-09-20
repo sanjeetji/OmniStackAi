@@ -96,7 +96,7 @@ class CommitEditTests(TestCase):
     def test_commit_edit_records_a_second_commit(self) -> None:
         ir = example_ir("rideshare-favourites")
         edited = dataclasses.replace(ir, description="Edited description for the commit test.")
-        with tempfile.TemporaryDirectory() as tmp:
+        with tempfile.TemporaryDirectory(ignore_cleanup_errors=True) as tmp:
             create_repository(
                 assemble_project(ir), tmp, author_name="sanjeetji", author_email="sk698166@gmail.com"
             )

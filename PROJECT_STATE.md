@@ -4,6 +4,15 @@ Last updated: 2026-09-20
 ## Current Phase
 Stage 0 (Founder Build Sequence, Brief Section 91) — BASIC/MVP
 
+> **R-506 (2026-09-20): Logs & live chat streaming (F-08-logs-chat spec).**
+> Implemented structured build and application logs, real build cancellation with 0 git commits, Web Speech API voice input,
+> text file attachments (.md, .txt, .json, .csv, .sql, .ts, .tsx, .py up to 256 KB, max 4), and a Lovable-grade Console UI in **Studio Manage → Logs** (`Lova-17`).
+> Agent-Engine: Implemented `StudioLogManager` in `studio/logs.py` (`<workspace>/logs/build.jsonl`, `<workspace>/logs/app.log` with `OMNISTACKAI_LOG_MAX_BYTES` rotation, secrets scrubbing `***`, SSE stream). `live_serve.py` generation loop checks `workspace_store.is_cancelled` between chunks and exits immediately with `phase: cancelled` (committing nothing to git).
+> Control-Plane Backend: Exposed `/projects/{id}/logs`, `/projects/{id}/logs/stream`, `POST /projects/{id}/build/cancel`. In `handleProjectBuildStream`, debits consumed credits and records `model_calls` with `error_code = 'cancelled'`. Client disconnect triggers upstream cancellation.
+> Console Web UI: Mounted Manage → Logs tab (`components/project-logs-manage.tsx`) with Build/App toggle, level filter (`all`/`info`/`warn`/`error`), search, follow toggle, copy, download. Enhanced chat composer (`studio-chat.tsx`) with Stop button (`Square` icon, triggers `AbortController.abort()` and server cancel), Web Speech API mic toggle with listening animation, and paperclip text attachments with chips.
+> Gates: 3,785 tests pass, `task verify` passed, `scripts/test.sh` passed, Next.js typecheck/lint clean.
+> NEXT: **F-09 (R-507) Database Explorer & SQL Editor (spec `R_&_D/specs/F-09-database-explorer.md`)**.
+
 > **R-505 (2026-09-20): SEO & AI search (F-07-seo spec).**
 > Implemented Next.js indexability codegen (`sitemap.ts`, `robots.ts`, `llms.txt`, `opengraph-image.tsx`, JSON-LD structured data, and per-page metadata),
 > PostgreSQL schema migration `000009_seo.up.sql` / `down.sql` (`project_seo` and `project_page_seo`), Go control-plane store and REST handlers
@@ -12,7 +21,6 @@ Stage 0 (Founder Build Sequence, Brief Section 91) — BASIC/MVP
 > and a Lovable-grade Console UI in **Studio Manage → SEO & AI Search** (site defaults, pages table with 50–160 character counters, Google Search & Social card previews,
 > audit findings, and AI copy suggestions with credit cost notice).
 > Gates: 3,779 tests pass, `task verify` passed, `scripts/test.sh` passed, Next.js build clean.
-> NEXT: **F-08 (R-506) Logs & live chat streaming (spec `R_&_D/specs/F-08-logs-chat.md`)**.
 
 > **R-504 (2026-09-20): AI — model configuration (BYOK) and usage per project/account (F-06-ai-usage spec).**
 > Implemented Bring-Your-Own-Key (BYOK) provider key storage encrypted with AES-256-GCM in PostgreSQL `user_provider_keys`,

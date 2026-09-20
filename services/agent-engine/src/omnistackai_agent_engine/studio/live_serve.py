@@ -617,23 +617,46 @@ async def _build_stream(
         custom_name=custom_name,
     )
 
+    from .logs import StudioLogManager
+    log_mgr = StudioLogManager() if (workspace_store is not None and workspace_id) else None
+    if log_mgr is not None:
+        log_mgr.append_build_log(workspace_id, "info", "start", f"Starting build for: {prompt[:120]}")
+
     result = None
-    async for item in build_app_from_prompt_stream(
-        prompt,
-        provider,
-        chosen_dir,
-        model_id=eff_model_id,
-        author_name=_AUTHOR_NAME,
-        author_email=_AUTHOR_EMAIL,
-        max_output_tokens=max_output,
-        timeout_seconds=request_timeout,
-        overwrite=True,
-        context=context,
-    ):
-        if isinstance(item, str):
-            yield {"phase": "generating_ir", "delta": item}
-        else:
-            result = item
+    try:
+        async for item in build_app_from_prompt_stream(
+            prompt,
+            provider,
+            chosen_dir,
+            model_id=eff_model_id,
+            author_name=_AUTHOR_NAME,
+            author_email=_AUTHOR_EMAIL,
+            max_output_tokens=max_output,
+            timeout_seconds=request_timeout,
+            overwrite=True,
+            context=context,
+        ):
+            if workspace_store is not None and workspace_id and workspace_store.is_cancelled(workspace_id):
+                if log_mgr is not None:
+                    log_mgr.append_build_log(workspace_id, "warn", "cancelled", "Build cancelled by user")
+                yield {"phase": "cancelled", "usage": _usage_summary_to_dict(usage_ledger)}
+                return
+
+            if isinstance(item, str):
+                yield {"phase": "generating_ir", "delta": item}
+            else:
+                result = item
+    except Exception as error:
+        if log_mgr is not None:
+            log_mgr.append_build_log(workspace_id, "error", "error", f"Build failed: {error}")
+        raise
+
+    if workspace_store is not None and workspace_id and workspace_store.is_cancelled(workspace_id):
+        if log_mgr is not None:
+            log_mgr.append_build_log(workspace_id, "warn", "cancelled", "Build cancelled by user")
+        yield {"phase": "cancelled", "usage": _usage_summary_to_dict(usage_ledger)}
+        return
+
     assert result is not None  # build_app_from_prompt_stream always yields exactly one result last
 
     payload = app_build_result_to_dict(result, usage=_usage_summary_to_dict(usage_ledger))
@@ -666,6 +689,9 @@ async def _build_stream(
         }
     else:
         payload["preview"] = preview_manager.replace(payload["target_dir"])
+
+    if log_mgr is not None:
+        log_mgr.append_build_log(workspace_id, "info", "done", f"Built {payload.get('name', 'the app')} ({payload.get('file_count', 0)} files)")
 
     yield {"phase": "done", **payload}
 
@@ -900,6 +926,7 @@ async def _workspace_build_stream(
     preview_manager: StudioPreviewManager | None = None,
     **options,
 ) -> AsyncIterator[dict]:
+    workspace_store.clear_cancelled(ws_id)
     with workspace_store.lock(ws_id):
         workspace_store.ensure_workspace(ws_id)
         repo_dir = str(workspace_store.repo_path(ws_id))
@@ -1084,6 +1111,22 @@ def main() -> None:
             raise ProblemsNotCheckedError(f"workspace '{ws_id}' has not been checked for problems yet")
         return report
 
+    from .logs import StudioLogManager
+    log_manager = StudioLogManager()
+
+    def workspace_cancel(ws_id: str) -> dict:
+        workspace_store.set_cancelled(ws_id)
+        return {"status": "cancelling", "workspace_id": ws_id}
+
+    def workspace_logs(ws_id: str, source: str = "build", since: int | None = None, limit: int = 500) -> dict:
+        return log_manager.read_logs(ws_id, source=source, since=since, limit=limit)
+
+    def workspace_logs_stream(ws_id: str, source: str = "build", since: int | None = None) -> AsyncIterator[dict]:
+        return log_manager.stream_logs(ws_id, source=source, since=since)
+
+    def workspace_logs_clear(ws_id: str, source: str | None = None) -> dict:
+        return log_manager.clear_logs(ws_id, source=source)
+
     control_kwargs: dict = {
         "history_fn": history.list,
         "delete_build_fn": delete_build,
@@ -1117,6 +1160,10 @@ def main() -> None:
         "workspace_preview_stop_fn": workspace_preview_stop,
         "workspace_problems_check_fn": workspace_problems_check,
         "workspace_problems_get_fn": workspace_problems_get,
+        "workspace_cancel_fn": workspace_cancel,
+        "workspace_logs_fn": workspace_logs,
+        "workspace_logs_stream_fn": workspace_logs_stream,
+        "workspace_logs_clear_fn": workspace_logs_clear,
     }
     if preview_manager is not None:
         control_kwargs.update(

@@ -1,5 +1,38 @@
 # Work Log
 
+## 2026-09-20 — R-506 (F-08 Logs & Live Chat Streaming)
+
+- **Why:** Developers building with OmniStackAI need complete observability into build/generation events and live preview runtime outputs, the ability to immediately stop in-flight builds without paying for ungenerated tokens or corrupting git history, voice input convenience, and the ability to attach reference files (schemas, markdown, code). `F-08-logs-chat.md` specified structured build logs (`build.jsonl`), preview runner stdout/stderr log rotation (`app.log`) with secrets scrubbing (`***`), REST/SSE logs endpoints, real build cancellation with 0 git commits and consumed-token debiting, Web Speech API voice input, text attachments, and a Lovable-grade Manage -> Logs UI (`Lova-17`).
+- **Part 1 — Agent-Engine Logs & Cancellation (`services/agent-engine/`):**
+  - Implemented `studio/logs.py`: `StudioLogManager` with `append_build_log`, `write_app_log` with file rotation (`OMNISTACKAI_LOG_MAX_BYTES` default 5 MB, max 3 rotated files), `scrub_secrets` replacing known secrets with `***`, `read_logs` with level/search filtering, `stream_logs` SSE generator, and `clear_logs`.
+  - Updated `studio/workspace.py`: Added cancellation flags (`set_cancelled`, `is_cancelled`, `clear_cancelled`), attachments storage (`save_attachment`, `get_attachments`).
+  - Updated `localrun/run.py` & `studio/preview.py`: Added `log_callback` parameter to preview runner daemon threads to tee stdout/stderr directly to `StudioLogManager.write_app_log`.
+  - Updated `studio/live_serve.py`: Emits structured build event logs to `build.jsonl`. Checks `workspace_store.is_cancelled` during token generation and before disk/git operations. On cancellation, immediately breaks without committing anything and yields `phase: cancelled`. Exposed `workspace_cancel`, `workspace_logs`, `workspace_logs_stream`, and `workspace_logs_clear`.
+  - Updated `studio/server.py`: Mounted REST handlers for `/api/workspaces/{id}/cancel`, `/api/workspaces/{id}/logs`, `/api/workspaces/{id}/logs/stream`, and `DELETE /api/workspaces/{id}/logs`.
+  - Added unit tests in `tests/test_logs_and_cancellation.py`: Secrets scrubbing, log rotation, read/clear logs, cancellation flags, attachments, and streaming cancellation with stub provider (all passed).
+- **Part 2 — Control-Plane Backend (`services/control-plane/`):**
+  - Updated `internal/projects/handler.go`: Registered `POST /projects/{id}/build/cancel`, `GET /projects/{id}/logs`, `GET /projects/{id}/logs/stream`, `DELETE /projects/{id}/logs`.
+  - In `handleProjectBuildStream`: Handled `phase == "cancelled"` by debiting credits for actual consumed tokens, recording `model_calls` with `error_code = 'cancelled'`, and relaying frame to client. Added client disconnect detection to cancel upstream agent-engine build immediately.
+  - Added unit tests in `internal/projects/projects_test.go`: `TestProjectLogsAndCancellation` verifying logs retrieval and cancellation flow.
+- **Part 3 — Console Web UI & Chat Controls (`apps/console-web/`):**
+  - Updated `lib/control-plane.ts`: Added `BuildLogEntry`, `ProjectLogsResponse` interfaces and `getProjectLogs`, `clearProjectLogs`, `cancelProjectBuild`, `streamProjectLogs` API methods.
+  - Added Next.js API route proxies: `/api/projects/[id]/logs`, `/api/projects/[id]/logs/stream`, `/api/projects/[id]/build/cancel`.
+  - Built `components/project-logs-manage.tsx`: Lovable `Lova-17` design with Build / App source switch, level filter (`all`, `info`, `warn`, `error`), search query input, follow toggle, copy to clipboard, and log download.
+  - Updated `app/studio/[projectId]/manage/page.tsx`: Mounted "Logs" tab in Studio Manage sidebar with `Terminal` icon.
+  - Updated `app/studio/studio-chat.tsx`:
+    - Real Build Cancellation: When `submitting`, Send button transforms into Stop button with `Square` icon (`aria-label="Stop generation"`). On click, calls `AbortController.abort()`, posts to `/api/projects/{id}/build/cancel`, stops streaming, and appends "Stopped. Nothing was committed."
+    - Voice Input: Web Speech API (`SpeechRecognition` / `webkitSpeechRecognition`) toggle button with animated listening state, transcribing speech into composer.
+    - Attachments: Paperclip button accepting text files (`.md`, `.txt`, `.json`, `.csv`, `.sql`, `.ts`, `.tsx`, `.py`) up to 256 KB (max 4). Displays attachment chips with file size and remove button. Appends content as fenced markdown blocks to prompt. Rejects image files with honest notice on non-vision models.
+- **Part 4 — Verification & Contracts:**
+  - Added R-506 contract assertions in `scripts/test.sh`.
+  - `bash scripts/test.sh`: passed.
+  - `cd services/control-plane && go test ./...`: all 14 packages passed.
+  - `task agent-engine:test`: all 3,785 tests passed.
+  - `cd apps/console-web && pnpm run typecheck && pnpm run lint`: 0 errors, 0 warnings.
+  - `task verify`: Stage 0 verification passed.
+  - `task lint`, `task security:quick`, `task env:check`: all passed.
+- **Next:** Proceed to F-09 (R-507) Database Explorer & SQL Editor (spec `R_&_D/specs/F-09-database-explorer.md`).
+
 ## 2026-09-20 — R-505 (F-07 SEO & AI search)
 
 - **Why:** Generated applications must be indexable by search engines and readable by AI search agents out of the box. `F-07-seo.md` specified Next.js indexability codegen (`sitemap.ts`, `robots.ts`, `llms.txt`, `opengraph-image.tsx`, JSON-LD structured data, and per-page metadata), PostgreSQL schema migration `000009_seo`, Go control-plane store and REST handlers, deterministic SEO audit engine (0 credits, free), and a Lovable-grade Console UI in Studio Manage -> SEO with site defaults, pages table, live Google Search / Social card previews, audit findings, and optional AI copy suggestions.

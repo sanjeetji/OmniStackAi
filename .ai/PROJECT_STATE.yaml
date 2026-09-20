@@ -2,11 +2,19 @@ schema_version: 1
 project: OmniStackAI
 phase: BASIC/MVP
 founder_stage: 0
-current_task: R-506
+current_task: R-507
 current_status: ready
-branch: ai/R-505-seo
-last_completed_task: R-505
+branch: ai/R-506-logs-chat
+last_completed_task: R-506
 last_completed_task_summary: >-
+  Completed R-506 (2026-09-20): Logs & live chat streaming with real build cancellation, voice input, attachments, and Lovable-grade logs console UI (F-08-logs-chat spec).
+  Implemented StudioLogManager in agent-engine with structured JSONL build logs (<workspace>/logs/build.jsonl), preview runner stdout/stderr log teeing (<workspace>/logs/app.log) with automatic log rotation (OMNISTACKAI_LOG_MAX_BYTES default 5MB, 3 files), secrets scrubbing (***), and SSE/REST endpoints.
+  Implemented real build cancellation: composer Stop button triggers AbortController.abort() and POST /projects/{id}/build/cancel; agent-engine checks cancellation flag between streaming chunks and aborts before disk writes or git commits (0 commits on cancel); control-plane debits consumed credits and records in model_calls with error_code = 'cancelled'.
+  Implemented Web Speech API voice input with idle/listening/transcribing states in chat composer.
+  Implemented text-like file attachments (.md, .txt, .json, .csv, .sql, .ts, .tsx, .py up to 256KB, max 4 per message) appended as fenced markdown blocks to prompt, with honest rejection of images on non-vision models.
+  Built Lovable-grade Manage -> Logs UI (Lova-17) in Console Web with Build/App switch, level filters (all/info/warn/error), search filter, follow auto-scroll toggle, copy to clipboard, and log download.
+  All 3,785 tests pass; full task verify, Go tests (all 14 packages), and Next.js typecheck/lint clean.
+_prior_last_completed_task_summary_R505: >-
   Completed R-505 (2026-09-20): SEO & AI search with Next.js indexability codegen, deterministic audit (0 credits), and Lovable-grade Studio Manage UI (F-07-seo spec).
   Implemented Next.js indexability codegen (app/sitemap.ts, app/robots.ts, public/llms.txt, app/opengraph-image.tsx, JSON-LD WebSite & Organization structured data, and per-screen metadata).
   Created PostgreSQL schema migration 000009_seo.up.sql / down.sql adding project_seo (site-level defaults) and project_page_seo (per-page metadata with unique project_id, route).

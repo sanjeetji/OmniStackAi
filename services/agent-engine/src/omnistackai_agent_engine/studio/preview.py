@@ -904,8 +904,10 @@ class StudioPreviewManager:
         repo_dir: str,
         on_phase: Callable[[str], None] | None = None,
         env: Mapping[str, str] | None = None,
+        log_manager: Any = None,
+        secrets: list[str] | None = None,
     ) -> dict:
-        """Start or restart preview for workspace ``ws_id``, tracking phases and ports (F-02, F-05)."""
+        """Start or restart preview for workspace ``ws_id``, tracking phases and ports (F-02, F-05, F-08)."""
         with self._lock:
             existing = self._workspaces.get(ws_id)
             if existing is not None and existing.session is not None:
@@ -935,19 +937,33 @@ class StudioPreviewManager:
                 if on_phase is not None:
                     on_phase(phase)
 
+            from .logs import StudioLogManager
+            active_log_mgr = log_manager or StudioLogManager()
+            def _app_log_cb(line: str) -> None:
+                active_log_mgr.write_app_log(ws_id, line, secrets=secrets)
+
             try:
-                session = self._start_fn(repo_dir, log=None, on_phase=_phase_cb, extra_env=env)
+                session = self._start_fn(
+                    repo_dir,
+                    log=None,
+                    on_phase=_phase_cb,
+                    extra_env=env,
+                    log_callback=_app_log_cb,
+                )
             except TypeError:
                 try:
-                    session = self._start_fn(repo_dir, log=None, on_phase=_phase_cb)
+                    session = self._start_fn(repo_dir, log=None, on_phase=_phase_cb, extra_env=env)
                 except TypeError:
                     try:
-                        session = self._start_fn(repo_dir, log=None)
-                    except Exception:
-                        ws_sess.status = "error"
-                        ws_sess.phase = "error"
-                        ws_sess.message = _PREVIEW_ERROR
-                        return ws_sess.to_dict()
+                        session = self._start_fn(repo_dir, log=None, on_phase=_phase_cb)
+                    except TypeError:
+                        try:
+                            session = self._start_fn(repo_dir, log=None)
+                        except Exception:
+                            ws_sess.status = "error"
+                            ws_sess.phase = "error"
+                            ws_sess.message = _PREVIEW_ERROR
+                            return ws_sess.to_dict()
             except Exception:
                 ws_sess.status = "error"
                 ws_sess.phase = "error"

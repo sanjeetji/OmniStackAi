@@ -140,8 +140,32 @@ def _run_sync(step: RunStep) -> None:
         raise LocalAppRunError(f"step failed: {step.label} (exit {result.returncode})")
 
 
-def _launch(step: RunStep) -> subprocess.Popen:
+def _launch(step: RunStep, log_callback: Callable[[str], None] | None = None) -> subprocess.Popen:
     env = {**os.environ, **dict(step.env)}
+    if log_callback is not None:
+        import threading
+        proc = subprocess.Popen(
+            [step.program, *step.args],
+            cwd=step.cwd,
+            env=env,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.STDOUT,
+            text=True,
+            bufsize=1,
+        )
+
+        def _tee() -> None:
+            try:
+                if proc.stdout:
+                    for line in iter(proc.stdout.readline, ""):
+                        if not line:
+                            break
+                        log_callback(line)
+            except Exception:
+                pass
+
+        threading.Thread(target=_tee, daemon=True).start()
+        return proc
     return subprocess.Popen([step.program, *step.args], cwd=step.cwd, env=env)
 
 
@@ -186,6 +210,7 @@ def start_app(
     health_timeout_seconds: float = 45.0,
     require_ready: bool = True,
     on_phase: Callable[[str], None] | None = None,
+    log_callback: Callable[[str], None] | None = None,
 ) -> LocalAppSession:
     """Start one managed generated-app session and return it only when its targets are ready.
 
@@ -230,7 +255,7 @@ def start_app(
 
             if step.background:
                 emit(f"-> {step.label}")
-                session.processes.append(_launch(step))
+                session.processes.append(_launch(step, log_callback=log_callback))
                 continue
             if _should_skip(step):
                 emit(f"-  {step.label} (already done, skipping)")
@@ -287,6 +312,7 @@ def start_preview_app(
     host: str = "127.0.0.1",
     on_phase: Callable[[str], None] | None = None,
     extra_env: Mapping[str, str] | None = None,
+    log_callback: Callable[[str], None] | None = None,
 ) -> LocalAppSession:
     """Start a managed preview on automatically allocated, collision-free API/web ports.
 
@@ -306,6 +332,7 @@ def start_preview_app(
         log=log,
         health_timeout_seconds=health_timeout_seconds,
         on_phase=on_phase,
+        log_callback=log_callback,
     )
 
 

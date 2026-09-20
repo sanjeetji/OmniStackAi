@@ -1,5 +1,29 @@
 # Current Handoff
 
+Task ID: R-506
+Status: done
+Phase: MVP → Phase F (platform foundation)
+Branch: `ai/R-506-logs-chat`
+
+> **R-506 Completed (2026-09-20): Logs & live chat streaming (F-08-logs-chat spec).**
+> - **Agent-Engine Logs & Cancellation:**
+>   - Implemented `StudioLogManager` in `studio/logs.py`: structured JSONL build logs (`<workspace>/logs/build.jsonl`), preview runner stdout/stderr log rotation (`<workspace>/logs/app.log`) governed by `OMNISTACKAI_LOG_MAX_BYTES` (default 5 MB, 3 files), secrets scrubbing (`***`), read logs with level/search filtering, and SSE log stream generator.
+>   - Cancellation checks: `live_serve.py` checks `workspace_store.is_cancelled` during streaming generation and before disk writes / git commits. Exits immediately with `phase: cancelled` (0 git commits on cancel).
+>   - Added attachments and cancellation flags to `studio/workspace.py`.
+>   - Updated preview runner (`localrun/run.py` & `studio/preview.py`) to tee stdout/stderr to `write_app_log`.
+> - **Control-Plane Backend:**
+>   - Registered endpoints: `POST /projects/{id}/build/cancel`, `GET /projects/{id}/logs`, `GET /projects/{id}/logs/stream`, `DELETE /projects/{id}/logs`.
+>   - In `handleProjectBuildStream`: debited consumed credits on cancellation, recorded `model_calls` row with `error_code = 'cancelled'`, and added client disconnect cancellation trigger.
+> - **Console Web UI & Chat Controls:**
+>   - Types and API client functions in `lib/control-plane.ts` and Next.js proxy routes under `/api/projects/[id]/logs/` and `/api/projects/[id]/build/cancel/`.
+>   - Lovable-grade Manage -> Logs UI (`components/project-logs-manage.tsx`, `Lova-17` design) mounted in Studio Manage (`app/studio/[projectId]/manage/page.tsx`).
+>   - Studio Chat composer (`studio-chat.tsx`):
+>     - Real Build Cancellation: Send button transforms into Stop button with `Square` icon (`aria-label="Stop generation"`). On click: `AbortController.abort()`, calls server cancel, returns to idle, appends "Stopped. Nothing was committed."
+>     - Voice Input: Web Speech API (`SpeechRecognition` / `webkitSpeechRecognition`) toggle button with animated listening state, transcribing voice input into composer.
+>     - Attachments: Paperclip button accepting text files (.md, .txt, .json, .csv, .sql, .ts, .tsx, .py up to 256 KB, max 4) with chips, remove button, and fenced markdown block inclusion. Rejects images with honest notice on non-vision models.
+> - **Gates:** `scripts/test.sh` passed with R-506 assertions, `go test -v ./...` passed (all 14 packages), `task agent-engine:test` passed (3,785 tests OK), Next.js `typecheck` and `lint` passed, `task verify` passed cleanly.
+> - **NEXT:** F-09 (R-507) Database Explorer & SQL Editor (spec `R_&_D/specs/F-09-database-explorer.md`).
+
 Task ID: R-505
 Status: done
 Phase: MVP → Phase F (platform foundation)

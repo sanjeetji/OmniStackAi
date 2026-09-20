@@ -406,3 +406,48 @@ class StudioWorkspaceStore:
             "commit_sha": commit_res.commit_sha,
         }
 
+    def set_cancelled(self, workspace_id: str) -> None:
+        """Mark workspace build/edit operation as cancelled (F-08)."""
+        wpath = self.ensure_workspace(workspace_id)
+        (wpath / ".cancelled").touch(exist_ok=True)
+
+    def is_cancelled(self, workspace_id: str) -> bool:
+        """Return whether cancellation was requested for workspace_id."""
+        return (self.workspace_path(workspace_id) / ".cancelled").is_file()
+
+    def clear_cancelled(self, workspace_id: str) -> None:
+        """Clear cancellation flag for workspace_id."""
+        flag_file = self.workspace_path(workspace_id) / ".cancelled"
+        if flag_file.is_file():
+            try:
+                flag_file.unlink()
+            except OSError:
+                pass
+
+    def save_attachment(
+        self,
+        workspace_id: str,
+        turn_index: int,
+        filename: str,
+        content: bytes | str,
+    ) -> str:
+        """Store attachment file under <workspace>/attachments/<turn>/<filename> (F-08)."""
+        clean_name = Path(filename).name
+        if not clean_name or clean_name in {".", ".."}:
+            clean_name = "attachment.txt"
+        target_dir = self.workspace_path(workspace_id) / "attachments" / str(turn_index)
+        target_dir.mkdir(parents=True, exist_ok=True)
+        file_path = target_dir / clean_name
+        if isinstance(content, str):
+            file_path.write_text(content, encoding="utf-8")
+        else:
+            file_path.write_bytes(content)
+        return str(file_path)
+
+    def get_attachments(self, workspace_id: str, turn_index: int) -> list[str]:
+        """List attachment filenames stored for a given turn."""
+        target_dir = self.workspace_path(workspace_id) / "attachments" / str(turn_index)
+        if not target_dir.is_dir():
+            return []
+        return [f.name for f in target_dir.iterdir() if f.is_file()]
+

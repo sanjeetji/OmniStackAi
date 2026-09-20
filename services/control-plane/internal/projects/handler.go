@@ -77,6 +77,11 @@ func Register(mux *http.ServeMux, deps Deps) {
 	mux.HandleFunc("POST /projects/{id}/seo/audit", handleProjectSEOAudit(deps))
 	mux.HandleFunc("PUT /projects/{id}/seo/page", handleProjectSEOPage(deps))
 	mux.HandleFunc("POST /projects/{id}/seo/suggest", handleProjectSEOSuggest(deps))
+
+	mux.HandleFunc("POST /projects/{id}/build/cancel", handleProjectBuildCancel(deps))
+	mux.HandleFunc("GET /projects/{id}/logs", handleProjectLogs(deps))
+	mux.HandleFunc("GET /projects/{id}/logs/stream", handleProjectLogsStream(deps))
+	mux.HandleFunc("DELETE /projects/{id}/logs", handleProjectLogsClear(deps))
 }
 
 func handleListProjects(deps Deps) http.HandlerFunc {
@@ -349,13 +354,23 @@ func handleProjectBuildStream(deps Deps) http.HandlerFunc {
 		flusher, _ := w.(http.Flusher)
 
 		var sawDone bool
+		var sawCancelled bool
 		var doneUsage any
+		var cancelledUsage any
 		var donePayload map[string]any
 		reader := bufio.NewReader(upstreamResponse.Body)
 		for {
 			frame, readErr := readSSEFrame(reader)
 			if len(frame) > 0 {
 				if _, writeErr := w.Write(frame); writeErr != nil {
+					go func() {
+						cancelURL := deps.AgentEngineURL + "/api/workspaces/" + url.PathEscape(id) + "/cancel"
+						req, _ := http.NewRequestWithContext(context.Background(), http.MethodPost, cancelURL, nil)
+						resp, doErr := deps.httpClient().Do(req)
+						if doErr == nil {
+							_ = resp.Body.Close()
+						}
+					}()
 					return
 				}
 				if flusher != nil {
@@ -366,12 +381,28 @@ func handleProjectBuildStream(deps Deps) http.HandlerFunc {
 						sawDone = true
 						donePayload = payload
 						doneUsage = payload["usage"]
+					} else if phase == "cancelled" {
+						sawCancelled = true
+						cancelledUsage = payload["usage"]
 					}
 				}
 			}
 			if readErr != nil {
 				break
 			}
+		}
+
+		if sawCancelled {
+			requestedCredits := int64(0)
+			if resolved.BilledTo == "platform" {
+				requestedCredits = creditsForUsage(cancelledUsage, deps.CreditsPerUSD)
+			}
+			charged := int64(0)
+			if requestedCredits > 0 {
+				charged, _, _ = deps.ProjectStore.DebitProjectCredits(r.Context(), user.ID, id, requestedCredits, "project:build:cancelled")
+			}
+			_ = ai.RecordUsageCalls(r.Context(), deps.AIStore, user.ID, &id, "build", resolved.BilledTo, cancelledUsage, charged, deps.CreditsPerUSD)
+			return
 		}
 
 		if !sawDone {
@@ -917,5 +948,125 @@ func handleProjectSEOSuggest(deps Deps) http.HandlerFunc {
 		}
 		target := deps.AgentEngineURL + "/api/workspaces/" + url.PathEscape(id) + "/seo/suggest"
 		proxyUpstream(w, r, deps, http.MethodPost, target, r.Body)
+	}
+}
+
+func handleProjectBuildCancel(deps Deps) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		user, err := auth.RequireUser(r.Context(), deps.AuthStore, r)
+		if err != nil {
+			writeAuthError(w, deps, err)
+			return
+		}
+		id := r.PathValue("id")
+		if _, err := deps.ProjectStore.GetProject(r.Context(), id, user.ID); err != nil {
+			writeError(w, http.StatusNotFound, "project not found")
+			return
+		}
+		target := deps.AgentEngineURL + "/api/workspaces/" + url.PathEscape(id) + "/cancel"
+		proxyUpstream(w, r, deps, http.MethodPost, target, r.Body)
+	}
+}
+
+func handleProjectLogs(deps Deps) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		user, err := auth.RequireUser(r.Context(), deps.AuthStore, r)
+		if err != nil {
+			writeAuthError(w, deps, err)
+			return
+		}
+		id := r.PathValue("id")
+		if _, err := deps.ProjectStore.GetProject(r.Context(), id, user.ID); err != nil {
+			writeError(w, http.StatusNotFound, "project not found")
+			return
+		}
+		target := deps.AgentEngineURL + "/api/workspaces/" + url.PathEscape(id) + "/logs"
+		if r.URL.RawQuery != "" {
+			target += "?" + r.URL.RawQuery
+		}
+		proxyGet(w, r, deps, target)
+	}
+}
+
+func handleProjectLogsStream(deps Deps) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		user, err := auth.RequireUser(r.Context(), deps.AuthStore, r)
+		if err != nil {
+			writeAuthError(w, deps, err)
+			return
+		}
+		id := r.PathValue("id")
+		if _, err := deps.ProjectStore.GetProject(r.Context(), id, user.ID); err != nil {
+			writeError(w, http.StatusNotFound, "project not found")
+			return
+		}
+
+		targetURL := deps.AgentEngineURL + "/api/workspaces/" + url.PathEscape(id) + "/logs?follow=1"
+		if r.URL.RawQuery != "" {
+			targetURL += "&" + r.URL.RawQuery
+		}
+		upstreamReq, err := http.NewRequestWithContext(r.Context(), http.MethodGet, targetURL, nil)
+		if err != nil {
+			writeError(w, http.StatusInternalServerError, "could not build upstream request")
+			return
+		}
+
+		resp, err := deps.httpClient().Do(upstreamReq)
+		if err != nil {
+			deps.logger().Error("call agent-engine workspace logs stream", "error", err)
+			writeError(w, http.StatusBadGateway, "could not reach logs service")
+			return
+		}
+		defer func() { _ = resp.Body.Close() }()
+
+		if resp.StatusCode != http.StatusOK {
+			body, _ := io.ReadAll(resp.Body)
+			w.Header().Set("Content-Type", "application/json")
+			w.WriteHeader(resp.StatusCode)
+			_, _ = w.Write(body)
+			return
+		}
+
+		w.Header().Set("Content-Type", "text/event-stream")
+		w.Header().Set("Cache-Control", "no-cache")
+		w.Header().Set("X-Accel-Buffering", "no")
+		w.WriteHeader(http.StatusOK)
+		flusher, _ := w.(http.Flusher)
+
+		reader := bufio.NewReader(resp.Body)
+		for {
+			frame, readErr := readSSEFrame(reader)
+			if len(frame) > 0 {
+				if _, writeErr := w.Write(frame); writeErr != nil {
+					return
+				}
+				if flusher != nil {
+					flusher.Flush()
+				}
+			}
+			if readErr != nil {
+				break
+			}
+		}
+	}
+}
+
+func handleProjectLogsClear(deps Deps) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		user, err := auth.RequireUser(r.Context(), deps.AuthStore, r)
+		if err != nil {
+			writeAuthError(w, deps, err)
+			return
+		}
+		id := r.PathValue("id")
+		if _, err := deps.ProjectStore.GetProject(r.Context(), id, user.ID); err != nil {
+			writeError(w, http.StatusNotFound, "project not found")
+			return
+		}
+		target := deps.AgentEngineURL + "/api/workspaces/" + url.PathEscape(id) + "/logs"
+		if r.URL.RawQuery != "" {
+			target += "?" + r.URL.RawQuery
+		}
+		proxyUpstream(w, r, deps, http.MethodDelete, target, nil)
 	}
 }

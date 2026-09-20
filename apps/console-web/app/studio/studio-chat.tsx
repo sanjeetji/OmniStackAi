@@ -8,11 +8,16 @@ import {
   BookOpen,
   Bug,
   Coins,
+  FileText,
   FolderTree,
   LoaderCircle,
+  Mic,
+  MicOff,
   MonitorPlay,
+  Paperclip,
   Plus,
   Sparkles,
+  Square,
   TriangleAlert,
   X,
 } from "lucide-react";
@@ -41,6 +46,13 @@ interface BuildStreamResult extends Partial<BuildJobResponse> {
   context_truncated?: boolean;
   active_skills?: string[];
   truncated_skills?: string[];
+}
+
+interface AttachmentItem {
+  id: string;
+  name: string;
+  size: number;
+  content: string;
 }
 
 interface ChatMessage {
@@ -137,11 +149,21 @@ export default function StudioChat({
   const [mentionStartIndex, setMentionStartIndex] = useState(0);
   const [selectedMentionIndex, setSelectedMentionIndex] = useState(0);
 
+  // Cancellation, Voice Input, and Attachments (R-506)
+  const [speechSupported, setSpeechSupported] = useState(false);
+  const [isListening, setIsListening] = useState(false);
+  const [attachments, setAttachments] = useState<AttachmentItem[]>([]);
+  const [attachmentError, setAttachmentError] = useState<string | null>(null);
+
   const threadRef = useRef<HTMLDivElement | null>(null);
   const textareaRef = useRef<HTMLTextAreaElement | null>(null);
   const formRef = useRef<HTMLFormElement | null>(null);
   const hydratedFor = useRef<string | null>(null);
   const autoStarted = useRef(false);
+  const abortControllerRef = useRef<AbortController | null>(null);
+  const activeBuildingProjectId = useRef<string | null>(null);
+  const recognitionRef = useRef<any>(null);
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
 
   // Fetch user skills library once for mention autocomplete
   useEffect(() => {
@@ -157,6 +179,156 @@ export default function StudioChat({
       }
     })();
   }, []);
+
+  // Web Speech API initialization
+  useEffect(() => {
+    const win = typeof window !== "undefined" ? (window as any) : {};
+    const SpeechRec = win.SpeechRecognition || win.webkitSpeechRecognition;
+    if (SpeechRec) {
+      void Promise.resolve().then(() => {
+        setSpeechSupported(true);
+      });
+    }
+    return () => {
+      if (recognitionRef.current) {
+        try {
+          recognitionRef.current.abort();
+        } catch {
+          // ignore
+        }
+      }
+    };
+  }, []);
+
+  const toggleListening = () => {
+    if (isListening) {
+      if (recognitionRef.current) {
+        recognitionRef.current.stop();
+      }
+      setIsListening(false);
+      return;
+    }
+    const win = typeof window !== "undefined" ? (window as any) : {};
+    const SpeechRec = win.SpeechRecognition || win.webkitSpeechRecognition;
+    if (!SpeechRec) return;
+
+    try {
+      const rec = new SpeechRec();
+      rec.continuous = true;
+      rec.interimResults = true;
+      rec.lang = "en-US";
+
+      rec.onstart = () => {
+        setIsListening(true);
+      };
+
+      rec.onresult = (event: any) => {
+        let transcript = "";
+        for (let i = event.resultIndex; i < event.results.length; i++) {
+          transcript += event.results[i][0].transcript;
+        }
+        if (transcript.trim()) {
+          setPrompt((prev) => (prev ? `${prev} ${transcript.trim()}` : transcript.trim()));
+        }
+      };
+
+      rec.onerror = (event: any) => {
+        console.warn("Speech recognition error:", event.error);
+        setIsListening(false);
+      };
+
+      rec.onend = () => {
+        setIsListening(false);
+      };
+
+      recognitionRef.current = rec;
+      rec.start();
+    } catch (err) {
+      console.warn("Speech recognition start failed:", err);
+      setIsListening(false);
+    }
+  };
+
+  const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (!files || files.length === 0) return;
+    setAttachmentError(null);
+
+    const allowedExtensions = [
+      ".md", ".txt", ".json", ".csv", ".sql", ".ts", ".tsx", ".py"
+    ];
+    const imageExtensions = [".png", ".jpg", ".jpeg", ".webp", ".gif", ".svg", ".bmp"];
+
+    if (attachments.length + files.length > 4) {
+      setAttachmentError("Maximum 4 attachments per message.");
+      if (fileInputRef.current) fileInputRef.current.value = "";
+      return;
+    }
+
+    const newAttachments: AttachmentItem[] = [];
+    for (let i = 0; i < files.length; i++) {
+      const file = files[i];
+      const name = file.name.toLowerCase();
+      const ext = name.substring(name.lastIndexOf("."));
+
+      if (imageExtensions.includes(ext)) {
+        setAttachmentError("Images are not supported on the active model. Attach text files (.md, .txt, .json, .csv, .sql, .ts, .tsx, .py).");
+        if (fileInputRef.current) fileInputRef.current.value = "";
+        return;
+      }
+
+      if (!allowedExtensions.includes(ext)) {
+        setAttachmentError(`Unsupported file type: ${file.name}. Allowed: ${allowedExtensions.join(", ")}`);
+        if (fileInputRef.current) fileInputRef.current.value = "";
+        return;
+      }
+
+      if (file.size > 256 * 1024) {
+        setAttachmentError(`File ${file.name} exceeds 256 KB limit.`);
+        if (fileInputRef.current) fileInputRef.current.value = "";
+        return;
+      }
+
+      try {
+        const text = await file.text();
+        newAttachments.push({
+          id: `att-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+          name: file.name,
+          size: file.size,
+          content: text,
+        });
+      } catch {
+        setAttachmentError(`Failed to read file ${file.name}.`);
+      }
+    }
+
+    setAttachments((prev) => [...prev, ...newAttachments]);
+    if (fileInputRef.current) fileInputRef.current.value = "";
+  };
+
+  const removeAttachment = (id: string) => {
+    setAttachments((prev) => prev.filter((a) => a.id !== id));
+  };
+
+  const handleCancel = async () => {
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+      abortControllerRef.current = null;
+    }
+    const currentId = activeBuildingProjectId.current || projectId;
+    if (currentId) {
+      try {
+        await fetch(`/api/projects/${encodeURIComponent(currentId)}/build/cancel`, {
+          method: "POST",
+        });
+      } catch {
+        // non-blocking
+      }
+    }
+    appendMessage("assistant", "Stopped. Nothing was committed.");
+    setSubmitting(false);
+    setStreamChars(0);
+  };
 
   // Fetch project knowledge and attached skills
   useEffect(() => {
@@ -394,19 +566,37 @@ export default function StudioChat({
   async function handleSend(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const trimmed = prompt.trim();
-    if (!trimmed || submitting) return;
+    if ((!trimmed && attachments.length === 0) || submitting) return;
 
-    appendMessage("user", trimmed);
+    if (isListening) {
+      recognitionRef.current?.stop();
+      setIsListening(false);
+    }
+
+    let userVisibleText = trimmed;
+    let fullPrompt = trimmed;
+    if (attachments.length > 0) {
+      const attSummary = attachments.map((a) => `📎 ${a.name}`).join(", ");
+      userVisibleText = trimmed ? `${trimmed}\n\n${attSummary}` : attSummary;
+      const blocks = attachments.map((att) => {
+        const ext = att.name.split(".").pop() || "";
+        return `\n\n--- Attachment: ${att.name} ---\n\`\`\`${ext}\n${att.content}\n\`\`\``;
+      });
+      fullPrompt = `${trimmed || "Please review the attached files."}${blocks.join("")}`;
+    }
+
+    appendMessage("user", userVisibleText);
     setPrompt("");
+    setAttachments([]);
     setSubmitting(true);
 
     try {
       if (projectId !== null) {
-        await sendProjectEdit(projectId, trimmed);
+        await sendProjectEdit(projectId, fullPrompt);
       } else if (buildId !== null) {
-        await sendEdit(buildId, trimmed);
+        await sendEdit(buildId, fullPrompt);
       } else {
-        await sendBuildStream(trimmed);
+        await sendBuildStream(fullPrompt);
       }
     } finally {
       setSubmitting(false);
@@ -521,12 +711,16 @@ export default function StudioChat({
   /** Streams a new build (via project if fresh) */
   async function sendBuildStream(text: string) {
     setStreamChars(0);
+    const controller = new AbortController();
+    abortControllerRef.current = controller;
+
     try {
       // 1. Create project
       const createRes = await fetch("/api/projects", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ prompt: text }),
+        signal: controller.signal,
       });
       if (!createRes.ok) {
         const body = (await createRes.json().catch(() => ({}))) as ErrorBody;
@@ -538,6 +732,7 @@ export default function StudioChat({
         return;
       }
       const newProject = (await createRes.json()) as Project;
+      activeBuildingProjectId.current = newProject.id;
       setProjectId(newProject.id);
       setProject(newProject);
       hydratedFor.current = newProject.id;
@@ -551,6 +746,7 @@ export default function StudioChat({
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ prompt: text, mention_skills: mentionList }),
+          signal: controller.signal,
         },
       );
       if (!response.ok || !response.body) {
@@ -590,6 +786,9 @@ export default function StudioChat({
               if (payload.phase === "generating_ir") {
                 const delta = typeof payload.delta === "string" ? payload.delta : "";
                 setStreamChars((chars) => chars + delta.length);
+              } else if (payload.phase === "cancelled") {
+                appendMessage("assistant", "Stopped. Nothing was committed.");
+                return;
               } else if (payload.phase === "done") {
                 finalResult = payload as unknown as BuildStreamResult;
               } else if (payload.phase === "error") {
@@ -643,21 +842,31 @@ export default function StudioChat({
         files: finalResult.files ?? [],
       });
       setPreviewVersion((v) => v + 1);
-    } catch {
+    } catch (err: unknown) {
+      if (err instanceof Error && err.name === "AbortError") {
+        return;
+      }
       appendMessage("assistant", "Couldn't reach the server.", "error");
     } finally {
+      abortControllerRef.current = null;
+      activeBuildingProjectId.current = null;
       setStreamChars(0);
     }
   }
 
   /** Project edit path */
   async function sendProjectEdit(id: string, text: string) {
+    const controller = new AbortController();
+    abortControllerRef.current = controller;
+    activeBuildingProjectId.current = id;
+
     try {
       const mentionList = computeMentionSkills(text);
       const response = await fetch(`/api/projects/${encodeURIComponent(id)}/edit`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ prompt: text, mention_skills: mentionList }),
+        signal: controller.signal,
       });
       const body = (await response.json().catch(() => ({}))) as Partial<BuildEditResponse> &
         ErrorBody & {
@@ -713,8 +922,14 @@ export default function StudioChat({
         files: files.length > 0 ? files : prev?.files ?? [],
       }));
       setPreviewVersion((v) => v + 1);
-    } catch {
+    } catch (err: unknown) {
+      if (err instanceof Error && err.name === "AbortError") {
+        return;
+      }
       appendMessage("assistant", "Couldn't reach the server.", "error");
+    } finally {
+      abortControllerRef.current = null;
+      activeBuildingProjectId.current = null;
     }
   }
 
@@ -1091,7 +1306,53 @@ export default function StudioChat({
             </div>
           )}
 
+          {/* Attachment chips */}
+          {attachments.length > 0 && (
+            <div className="mb-2 flex flex-wrap items-center gap-1.5 px-1">
+              {attachments.map((att) => (
+                <span
+                  key={att.id}
+                  className="inline-flex items-center gap-1.5 rounded-lg border border-border/70 bg-muted/60 px-2.5 py-1 text-xs text-foreground"
+                >
+                  <FileText className="size-3.5 text-muted-foreground shrink-0" />
+                  <span className="font-medium truncate max-w-[150px]">{att.name}</span>
+                  <span className="text-[10px] text-muted-foreground font-mono">
+                    ({Math.round(att.size / 1024) || 1} KB)
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => removeAttachment(att.id)}
+                    className="text-muted-foreground hover:text-destructive ml-0.5"
+                    title="Remove attachment"
+                  >
+                    <X className="size-3" />
+                  </button>
+                </span>
+              ))}
+            </div>
+          )}
+
+          {/* Attachment error */}
+          {attachmentError && (
+            <div className="mb-2 flex items-center justify-between rounded-lg border border-destructive/30 bg-destructive/10 px-2.5 py-1.5 text-xs text-destructive">
+              <span>{attachmentError}</span>
+              <button type="button" onClick={() => setAttachmentError(null)}>
+                <X className="size-3" />
+              </button>
+            </div>
+          )}
+
           <div className="flex items-end gap-2 rounded-xl border border-input bg-background p-1.5 transition-[color,box-shadow] focus-within:border-ring focus-within:ring-3 focus-within:ring-ring/50">
+            {/* Hidden file input for attachments */}
+            <input
+              type="file"
+              ref={fileInputRef}
+              onChange={handleFileSelect}
+              multiple
+              accept=".md,.txt,.json,.csv,.sql,.ts,.tsx,.py,text/plain,application/json,text/markdown,text/csv"
+              className="hidden"
+            />
+
             <textarea
               ref={textareaRef}
               aria-label={
@@ -1109,18 +1370,70 @@ export default function StudioChat({
               rows={1}
               className="field-sizing-content max-h-40 min-h-9 flex-1 resize-none bg-transparent px-2 py-1.5 text-sm outline-none placeholder:text-muted-foreground disabled:opacity-60"
             />
+
+            {/* Paperclip attachment button */}
             <Button
-              type="submit"
+              type="button"
               size="icon"
-              aria-label="Send"
-              disabled={submitting || prompt.trim().length === 0}
+              variant="ghost"
+              onClick={() => fileInputRef.current?.click()}
+              disabled={submitting || attachments.length >= 4}
+              className="size-8 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted/60"
+              title="Attach files (.md, .txt, .json, .csv, .sql, .ts, .tsx, .py)"
+              aria-label="Attach files"
             >
-              {submitting ? (
-                <LoaderCircle className="animate-spin" aria-hidden="true" />
-              ) : (
-                <ArrowUp aria-hidden="true" />
-              )}
+              <Paperclip className="size-4" aria-hidden="true" />
             </Button>
+
+            {/* Mic speech recognition button */}
+            {speechSupported && (
+              <Button
+                type="button"
+                size="icon"
+                variant="ghost"
+                onClick={toggleListening}
+                disabled={submitting}
+                className={cn(
+                  "size-8 rounded-lg transition-colors",
+                  isListening
+                    ? "bg-red-500/15 text-red-600 hover:bg-red-500/25 dark:text-red-400 animate-pulse"
+                    : "text-muted-foreground hover:text-foreground hover:bg-muted/60",
+                )}
+                title={isListening ? "Stop listening" : "Voice input"}
+                aria-label={isListening ? "Stop listening" : "Voice input"}
+              >
+                {isListening ? (
+                  <MicOff className="size-4 text-red-600 dark:text-red-400" aria-hidden="true" />
+                ) : (
+                  <Mic className="size-4" aria-hidden="true" />
+                )}
+              </Button>
+            )}
+
+            {/* Send or Stop button */}
+            {submitting ? (
+              <Button
+                type="button"
+                size="icon"
+                variant="destructive"
+                aria-label="Stop generation"
+                onClick={handleCancel}
+                title="Stop generation"
+                className="size-8 rounded-lg"
+              >
+                <Square className="size-3.5 fill-current" aria-hidden="true" />
+              </Button>
+            ) : (
+              <Button
+                type="submit"
+                size="icon"
+                aria-label="Send"
+                disabled={prompt.trim().length === 0 && attachments.length === 0}
+                className="size-8 rounded-lg"
+              >
+                <ArrowUp aria-hidden="true" />
+              </Button>
+            )}
           </div>
           <p className="mt-1.5 px-1 text-[11px] text-muted-foreground">
             Enter to send · Shift+Enter for a new line · Type @ to mention skills

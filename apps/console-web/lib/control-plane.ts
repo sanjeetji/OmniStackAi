@@ -1329,3 +1329,83 @@ export const suggestProjectPageSEO = (
   data: { route: string; page_name?: string }
 ) => suggestProjectSEOCopy(token, projectId, data.route, data.page_name);
 
+// F-08: Logs and Chat Controls
+export interface BuildLogEntry {
+  ts: number;
+  level: "info" | "warn" | "error";
+  phase: string;
+  message: string;
+}
+
+export interface ProjectLogsResponse {
+  source: "build" | "app";
+  lines: (BuildLogEntry | string)[];
+  next_cursor: number;
+  total: number;
+}
+
+export function getProjectLogs(
+  token: string,
+  projectId: string,
+  source: "build" | "app" = "build",
+  since?: number,
+  limit?: number
+): Promise<ProjectLogsResponse> {
+  const params = new URLSearchParams();
+  params.set("source", source);
+  if (since !== undefined && since !== null) {
+    params.set("since", String(since));
+  }
+  if (limit !== undefined && limit !== null) {
+    params.set("limit", String(limit));
+  }
+  return callControlPlane<ProjectLogsResponse>(
+    `/projects/${encodeURIComponent(projectId)}/logs?${params.toString()}`,
+    {
+      headers: { Authorization: `Bearer ${token}` },
+    }
+  );
+}
+
+export function clearProjectLogs(
+  token: string,
+  projectId: string,
+  source?: "build" | "app"
+): Promise<{ status: string }> {
+  const query = source ? `?source=${encodeURIComponent(source)}` : "";
+  return callControlPlane<{ status: string }>(
+    `/projects/${encodeURIComponent(projectId)}/logs${query}`,
+    {
+      method: "DELETE",
+      headers: { Authorization: `Bearer ${token}` },
+    }
+  );
+}
+
+export function cancelProjectBuild(
+  token: string,
+  projectId: string
+): Promise<{ status: string }> {
+  return callControlPlane<{ status: string }>(
+    `/projects/${encodeURIComponent(projectId)}/build/cancel`,
+    {
+      method: "POST",
+      headers: { Authorization: `Bearer ${token}` },
+    }
+  );
+}
+
+export function streamProjectLogs(
+  token: string,
+  projectId: string,
+  source: "build" | "app" = "build"
+): Promise<Response> {
+  return fetch(
+    `${controlPlaneUrl()}/projects/${encodeURIComponent(projectId)}/logs/stream?source=${encodeURIComponent(source)}`,
+    {
+      headers: { Authorization: `Bearer ${token}` },
+      cache: "no-store",
+    }
+  );
+}
+

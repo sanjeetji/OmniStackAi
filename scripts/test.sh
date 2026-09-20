@@ -1510,6 +1510,60 @@ if ! rg -qF 'ProjectSEOManage' "$console_root/app/studio/[projectId]/manage/page
   exit 1
 fi
 
+# R-506: F-08 Logs & Live Chat Streaming.
+for required_logs_file in \
+  "$agent_engine_root/src/omnistackai_agent_engine/studio/logs.py" \
+  "$agent_engine_root/tests/test_logs_and_cancellation.py" \
+  "$console_root/components/project-logs-manage.tsx" \
+  "$console_root/app/api/projects/[id]/logs/route.ts" \
+  "$console_root/app/api/projects/[id]/logs/stream/route.ts" \
+  "$console_root/app/api/projects/[id]/build/cancel/route.ts"; do
+  if [[ ! -f "$required_logs_file" ]]; then
+    printf 'Missing R-506 contract file: %s\n' "$required_logs_file"
+    exit 1
+  fi
+done
+
+if ! rg -qF 'StudioLogManager' "$agent_engine_root/src/omnistackai_agent_engine/studio/logs.py"; then
+  printf 'R-506 agent-engine must define StudioLogManager.\n'
+  exit 1
+fi
+
+if ! rg -qF 'getProjectLogs' "$console_root/lib/control-plane.ts"; then
+  printf 'R-506 lib/control-plane.ts must define getProjectLogs.\n'
+  exit 1
+fi
+
+if ! rg -qF 'cancelProjectBuild' "$console_root/lib/control-plane.ts"; then
+  printf 'R-506 lib/control-plane.ts must define cancelProjectBuild.\n'
+  exit 1
+fi
+
+if ! rg -qF 'streamProjectLogs' "$console_root/lib/control-plane.ts"; then
+  printf 'R-506 lib/control-plane.ts must define streamProjectLogs.\n'
+  exit 1
+fi
+
+if ! rg -qF 'ProjectLogsManage' "$console_root/app/studio/[projectId]/manage/page.tsx"; then
+  printf 'R-506 manage page must render ProjectLogsManage.\n'
+  exit 1
+fi
+
+if ! rg -qF 'handleCancel' "$console_root/app/studio/studio-chat.tsx"; then
+  printf 'R-506 studio-chat.tsx must implement handleCancel.\n'
+  exit 1
+fi
+
+if ! rg -qF 'handleFileSelect' "$console_root/app/studio/studio-chat.tsx"; then
+  printf 'R-506 studio-chat.tsx must implement handleFileSelect for attachments.\n'
+  exit 1
+fi
+
+if ! rg -qF 'toggleListening' "$console_root/app/studio/studio-chat.tsx"; then
+  printf 'R-506 studio-chat.tsx must implement toggleListening for voice input.\n'
+  exit 1
+fi
+
 printf 'Repository contract tests passed.\n'
 
 
