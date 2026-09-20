@@ -15,14 +15,24 @@ import fcntl
 import json
 import os
 import shutil
+import subprocess
 import tempfile
 import time
+import zipfile
 from contextlib import contextmanager
 from pathlib import Path
 from typing import Generator
 
 from ..application_ir import ApplicationIR
-from .files import BuildNotFoundError, FileNotFoundInBuildError, PathOutsideBuildError, list_build_files, read_build_file
+from .files import (
+    BuildNotFoundError,
+    FileNotFoundInBuildError,
+    PathOutsideBuildError,
+    _is_excluded_dir,
+    _is_secret_env_file,
+    list_build_files,
+    read_build_file,
+)
 
 _WORKSPACE_SCHEMA_VERSION = 1
 _DEFAULT_ROOT = "~/.omnistackai/workspaces"
@@ -36,6 +46,10 @@ class WorkspaceLockedError(Exception):
 
 class WorkspaceNotFoundError(Exception):
     """Raised when the requested workspace does not exist on disk."""
+
+
+class GitOperationError(Exception):
+    """Raised when a workspace git operation (status, push, commit) fails."""
 
 
 class StudioWorkspaceStore:
@@ -195,3 +209,127 @@ class StudioWorkspaceStore:
             return False
         shutil.rmtree(wpath)
         return True
+
+    def export_zip(self, workspace_id: str, out_file: any) -> int:
+        repo_dir = self.workspace_path(workspace_id) / "repo"
+        if not repo_dir.is_dir():
+            raise BuildNotFoundError(f"workspace repo directory does not exist: {repo_dir}")
+
+        count = 0
+        with zipfile.ZipFile(out_file, "w", compression=zipfile.ZIP_DEFLATED) as zf:
+            for dirpath, dirnames, filenames in os.walk(repo_dir):
+                dirnames[:] = [d for d in dirnames if not _is_excluded_dir(d)]
+                for fname in sorted(filenames):
+                    if _is_secret_env_file(fname):
+                        continue
+                    full_path = Path(dirpath) / fname
+                    rel_path = full_path.relative_to(repo_dir)
+                    zf.write(full_path, arcname=str(rel_path))
+                    count += 1
+        return count
+
+    def git_status(self, workspace_id: str) -> dict:
+        repo_dir = self.workspace_path(workspace_id) / "repo"
+        if not repo_dir.is_dir():
+            raise BuildNotFoundError(f"workspace repo directory does not exist: {repo_dir}")
+
+        commit_sha = ""
+        branch = "main"
+        dirty = False
+        ahead_by = 0
+
+        try:
+            res = subprocess.run(
+                ["git", "rev-parse", "HEAD"],
+                cwd=str(repo_dir),
+                capture_output=True,
+                text=True,
+                check=False,
+            )
+            if res.returncode == 0:
+                commit_sha = res.stdout.strip()
+        except Exception:
+            pass
+
+        try:
+            res = subprocess.run(
+                ["git", "rev-parse", "--abbrev-ref", "HEAD"],
+                cwd=str(repo_dir),
+                capture_output=True,
+                text=True,
+                check=False,
+            )
+            if res.returncode == 0 and res.stdout.strip():
+                branch = res.stdout.strip()
+        except Exception:
+            pass
+
+        try:
+            res = subprocess.run(
+                ["git", "status", "--porcelain"],
+                cwd=str(repo_dir),
+                capture_output=True,
+                text=True,
+                check=False,
+            )
+            if res.returncode == 0 and res.stdout.strip():
+                dirty = True
+        except Exception:
+            pass
+
+        return {
+            "commit_sha": commit_sha,
+            "branch": branch,
+            "dirty": dirty,
+            "ahead_by": ahead_by,
+        }
+
+    def git_push(self, workspace_id: str, remote_url: str, branch: str = "main") -> dict:
+        repo_dir = self.workspace_path(workspace_id) / "repo"
+        if not repo_dir.is_dir():
+            raise BuildNotFoundError(f"workspace repo directory does not exist: {repo_dir}")
+
+        if not remote_url:
+            raise GitOperationError("remote_url is required")
+
+        rev = subprocess.run(
+            ["git", "rev-parse", "HEAD"],
+            cwd=str(repo_dir),
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+        if rev.returncode != 0:
+            raise GitOperationError("no commits to push in workspace")
+        commit_sha = rev.stdout.strip()
+
+        # Push to remote without saving credentials in .git/config
+        # We push to the explicit URL refspec: git push <remote_url> HEAD:<branch>
+        push_cmd = ["git", "push", remote_url, f"HEAD:{branch}"]
+        env = dict(os.environ)
+        env["GIT_TERMINAL_PROMPT"] = "0"
+
+        res = subprocess.run(
+            push_cmd,
+            cwd=str(repo_dir),
+            capture_output=True,
+            text=True,
+            env=env,
+            check=False,
+        )
+
+        if res.returncode != 0:
+            # CRITICAL: scrub remote_url and any embedded tokens from stderr/stdout
+            err_msg = res.stderr or res.stdout or f"git push exited with code {res.returncode}"
+            if "@" in remote_url and "://" in remote_url:
+                proto, rest = remote_url.split("://", 1)
+                userpass, hostpath = rest.split("@", 1)
+                err_msg = err_msg.replace(userpass, "[REDACTED]")
+                err_msg = err_msg.replace(remote_url, f"{proto}://[REDACTED]@{hostpath}")
+            raise GitOperationError(f"git push failed: {err_msg.strip()}")
+
+        return {
+            "commit_sha": commit_sha,
+            "branch": branch,
+        }
+

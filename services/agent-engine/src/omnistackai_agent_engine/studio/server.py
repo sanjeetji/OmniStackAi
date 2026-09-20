@@ -9,6 +9,7 @@ No web framework, no external dependencies.
 from __future__ import annotations
 
 import asyncio
+import io
 import json
 import os
 from collections.abc import AsyncIterator
@@ -315,6 +316,57 @@ def _make_handler(
             try:
                 res = workspace_preview_stop_fn(ws_id)
                 self._send_json(200, res)
+            except Exception as error:
+                self._send_json(502, {"error": str(error)})
+
+        def _handle_workspace_export(self, ws_id: str) -> None:
+            if workspace_store is None:
+                self._send_json(404, {"error": "workspaces are not enabled"})
+                return
+            buf = io.BytesIO()
+            try:
+                workspace_store.export_zip(ws_id, buf)
+            except BuildNotFoundError as error:
+                self._send_json(404, {"error": str(error)})
+                return
+            except Exception as error:
+                self._send_json(502, {"error": str(error)})
+                return
+
+            data = buf.getvalue()
+            self.send_response(200)
+            self.send_header("Content-Type", "application/zip")
+            self.send_header("Content-Disposition", f'attachment; filename="{ws_id}.zip"')
+            self.send_header("Content-Length", str(len(data)))
+            self.end_headers()
+            self.wfile.write(data)
+
+        def _handle_workspace_git_status(self, ws_id: str) -> None:
+            if workspace_store is None:
+                self._send_json(404, {"error": "workspaces are not enabled"})
+                return
+            try:
+                res = workspace_store.git_status(ws_id)
+                self._send_json(200, res)
+            except BuildNotFoundError as error:
+                self._send_json(404, {"error": str(error)})
+            except Exception as error:
+                self._send_json(502, {"error": str(error)})
+
+        def _handle_workspace_git_push(self, ws_id: str) -> None:
+            if workspace_store is None:
+                self._send_json(404, {"error": "workspaces are not enabled"})
+                return
+            data = self._read_json_body()
+            if data is None:
+                return
+            remote_url = str(data.get("remote_url", "")).strip()
+            branch = str(data.get("branch", "main")).strip() or "main"
+            try:
+                res = workspace_store.git_push(ws_id, remote_url, branch)
+                self._send_json(200, res)
+            except BuildNotFoundError as error:
+                self._send_json(404, {"error": str(error)})
             except Exception as error:
                 self._send_json(502, {"error": str(error)})
 
@@ -779,6 +831,14 @@ def _make_handler(
                 if ws_problems_id is not None:
                     self._handle_workspace_get_problems(ws_problems_id)
                     return
+                ws_export_id = self._workspace_id_for_suffix(path_only, "/export")
+                if ws_export_id is not None:
+                    self._handle_workspace_export(ws_export_id)
+                    return
+                ws_git_status_id = self._workspace_id_for_suffix(path_only, "/git/status")
+                if ws_git_status_id is not None:
+                    self._handle_workspace_git_status(ws_git_status_id)
+                    return
                 ws_preview_id = self._workspace_id_for_suffix(path_only, "/preview")
                 if ws_preview_id is not None:
                     self._handle_workspace_preview_status(ws_preview_id)
@@ -1137,6 +1197,10 @@ def _make_handler(
             ws_problems_id = self._workspace_id_for_suffix(path_only, "/problems")
             if ws_problems_id is not None:
                 self._handle_workspace_problems_check(ws_problems_id)
+                return
+            ws_git_push_id = self._workspace_id_for_suffix(path_only, "/git/push")
+            if ws_git_push_id is not None:
+                self._handle_workspace_git_push(ws_git_push_id)
                 return
 
             if self.path == "/api/build/stream":

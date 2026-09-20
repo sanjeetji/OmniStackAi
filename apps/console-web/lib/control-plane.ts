@@ -641,3 +641,92 @@ export function getProjectProblems(
   );
 }
 
+export interface GitConnectionStatus {
+  connected: boolean;
+  provider?: string;
+  external_login?: string;
+  installation_id?: string;
+  connected_at?: string;
+}
+
+export interface ProjectGitStatus {
+  connected: boolean;
+  external_login?: string;
+  repo_full_name?: string;
+  repo_url?: string;
+  repo_private?: boolean;
+  last_pushed_sha?: string;
+  last_pushed_at?: string;
+  commit_sha?: string;
+  branch?: string;
+  dirty?: boolean;
+  ahead_by?: number;
+}
+
+export interface CreateRepoParams {
+  name: string;
+  description?: string;
+  private: boolean;
+}
+
+export interface PushResult {
+  commit_sha: string;
+  pushed_at: string;
+}
+
+export function getGitStatus(token: string): Promise<GitConnectionStatus> {
+  return callControlPlane<GitConnectionStatus>("/git/status", {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+}
+
+export function disconnectGit(token: string): Promise<{ disconnected: boolean }> {
+  return callControlPlane<{ disconnected: boolean }>("/git/connection", {
+    method: "DELETE",
+    headers: { Authorization: `Bearer ${token}` },
+  });
+}
+
+export function getProjectGit(
+  token: string,
+  projectId: string,
+): Promise<ProjectGitStatus> {
+  return callControlPlane<ProjectGitStatus>(
+    `/projects/${encodeURIComponent(projectId)}/git`,
+    {
+      headers: { Authorization: `Bearer ${token}` },
+    },
+  );
+}
+
+export function createProjectRepo(
+  token: string,
+  projectId: string,
+  params: CreateRepoParams,
+): Promise<ProjectGitStatus> {
+  return callControlPlane<ProjectGitStatus>(
+    `/projects/${encodeURIComponent(projectId)}/git/repo`,
+    {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify(params),
+    },
+  );
+}
+
+export function pushProjectGit(
+  token: string,
+  projectId: string,
+): Promise<PushResult> {
+  return callControlPlane<PushResult>(
+    `/projects/${encodeURIComponent(projectId)}/git/push`,
+    {
+      method: "POST",
+      headers: { Authorization: `Bearer ${token}` },
+    },
+  );
+}
+

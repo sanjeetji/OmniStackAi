@@ -1,25 +1,31 @@
-task_id: R-500
+task_id: R-501
 status: completed
 phase: MVP
 tracker_row: null
 started_at: "2026-09-20"
 completed_at: "2026-09-20"
 objective: >-
-  Implement F-02 Multi-Process Preview & Diagnostics Service (spec R_&_D/specs/F-02-preview.md).
-  Console same-origin reverse proxy at /preview/{projectId}/** and /preview/{projectId}/api/**,
-  strict SSRF prevention & project ownership validation, agent-engine workspace preview manager
-  with named phase progress (install -> migrate -> start -> ready), idle timeout reaper (30 min),
-  control-plane GET/POST preview routes, auto-start in Studio UI, and build-only mode banner.
+  Implement F-03 Code ownership - download, connect GitHub, push (spec R_&_D/specs/F-03-git.md).
+  Part 1: ZIP export (GET /projects/{id}/export) streaming repo at HEAD without VCS/node_modules/env secrets,
+  Download code button in Studio header and Manage -> Git.
+  Part 2: GitHub App connection, installation token minting, repository creation, and authenticated git push
+  (POST /projects/{id}/git/push and /api/workspaces/{id}/git/push) with zero token leakage in logs, config, or responses.
+  Database migration 000005_git_connections, Go control-plane git handlers & crypto helper, Next.js console UI Manage -> Git.
 allowed_paths:
+  - services/control-plane/migrations/000005_git_connections.up.sql
+  - services/control-plane/migrations/000005_git_connections.down.sql
+  - services/control-plane/internal/git/
+  - services/control-plane/internal/crypto/
+  - services/control-plane/internal/config/
   - services/control-plane/internal/projects/
-  - services/agent-engine/src/omnistackai_agent_engine/studio/preview.py
-  - services/agent-engine/src/omnistackai_agent_engine/studio/server.py
-  - services/agent-engine/src/omnistackai_agent_engine/studio/live_serve.py
-  - services/agent-engine/tests/test_studio_workspace_preview.py
+  - services/control-plane/cmd/control-plane/
+  - services/agent-engine/src/omnistackai_agent_engine/studio/
+  - services/agent-engine/tests/test_studio_workspace_git.py
   - apps/console-web/lib/control-plane.ts
   - apps/console-web/app/api/projects/
-  - apps/console-web/app/preview/
-  - apps/console-web/app/studio/studio-preview.tsx
+  - apps/console-web/app/api/git/
+  - apps/console-web/app/studio/
+  - .env.example
   - scripts/test.sh
   - .ai/CURRENT_TASK.yaml
   - .ai/PROJECT_STATE.yaml
@@ -29,8 +35,8 @@ allowed_paths:
   - CHANGELOG.md
 forbidden_changes:
   - Do not change control-plane database from PostgreSQL
-  - Do not add external npm or python dependencies (agent-engine stays stdlib only)
-  - Do not allow caller-supplied proxy URLs (strict SSRF prevention)
+  - Do not add external Go or Python dependencies (keep 1 direct Go dependency pgx/v5, agent-engine stdlib only)
+  - Do not store unencrypted GitHub tokens or leak tokens in logs, .git/config, or API responses
   - Do not bypass tenant ownership check
 required_gates:
   - bash scripts/test.sh
@@ -47,10 +53,10 @@ model_tool_trace:
   cloud_calls: 0
   note: Engineering task, 0 model calls required for gates.
 evidence:
-  scripts_test_sh: passed
-  control_plane_tests: passed
-  agent_engine_tests: passed (3,750 tests in 79.7s)
-  console_web_typecheck_and_lint: passed
-  task_verify: passed
+  scripts_test_sh: pass (scripts/test.sh verified all R-501 contract files and routes)
+  control_plane_tests: pass (go test -v ./... passed all tests including crypto, git, and migrations)
+  agent_engine_tests: pass (python3 unittest passed all tests including test_studio_workspace_git)
+  console_web_typecheck_and_lint: pass (tsc and eslint passed with 0 errors/warnings; next build succeeded)
+  task_verify: pass (scripts/doctor.sh, lint.sh, test.sh, env-check.sh, security-quick.sh, control-plane test/build, console lint/typecheck/build, agent-engine lint/test all passed)
 next_action: >-
-  Proceed to next tracker task F-03 Git Push / GitHub Export (R-501, spec R_&_D/specs/F-03-git.md).
+  Work completed. Await user permission before committing or pushing changes.

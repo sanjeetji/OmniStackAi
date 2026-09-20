@@ -1,5 +1,45 @@
 # Work Log
 
+## 2026-09-20 — R-501 (F-03 Code ownership — download, connect GitHub, push)
+
+- **Why:** Code ownership is essential to prevent vendor lock-in and enable deployment to Vercel/Netlify. `F-03-git.md` specified two paths: a free, instant no-account `.zip` export, and a full GitHub App connection with installation token minting, repo creation, and authenticated push with zero credential leakage.
+- **Part 1 — Instant Download (.zip) (`services/agent-engine` & `services/control-plane`):**
+  - Implemented `export_zip(workspace_id, out_file)` in `services/agent-engine/src/omnistackai_agent_engine/studio/workspace.py`: streams workspace repo at HEAD into a `.zip` archive on-the-fly, strictly filtering out VCS internals (`.git`), dependencies (`node_modules`), caches (`.next`, `__pycache__`, `.venv`, `venv`), and environment secrets (`.env`, `.env.*` except `.env.example`).
+  - Added route `GET /api/workspaces/{id}/export` in agent-engine server.
+  - Added streaming handler `GET /projects/{id}/export` in control-plane `internal/git/handler.go` with tenant verification and streamed proxying.
+- **Part 2 — GitHub App Integration & Cryptography (`services/control-plane`):**
+  - Created database migration `000005_git_connections.up.sql` / `down.sql`: `git_connections` table with encrypted refresh tokens and scopes, and added `repo_full_name`, `repo_url`, `repo_private`, `last_pushed_sha`, `last_pushed_at` to `projects`.
+  - Cryptography helper `internal/crypto/gcm.go`: standard library AES-256-GCM encryption with 12-byte random nonce and AAD verification. 100% test coverage in `gcm_test.go`.
+  - GitHub App client `internal/git/github.go`: stdlib `crypto/rsa` RS256 JWT minting (`MintAppJWT`), installation access token generation (`MintInstallationToken`), and user repository creation (`CreateUserRepo`). Zero external JWT dependencies.
+  - Store `internal/git/store.go`: manages `git_connections` CRUD and project repo metadata with encrypted storage.
+  - REST Handlers `internal/git/handler.go`: `GET /git/github/authorize`, `GET /git/github/callback`, `GET /git/status`, `DELETE /git/connection`, `GET /projects/{id}/git`, `POST /projects/{id}/git/repo`, `POST /projects/{id}/git/push`, `GET /projects/{id}/export`.
+  - Push safety & zero-leakage: pushes directly to URL refspec `git push <url> HEAD:<branch>` without modifying `.git/config`; scrubs 100% of tokens from stderr, stdout, and error responses with `[REDACTED]`. Verified in unit tests `git_test.go` and `test_studio_workspace_git.py`.
+- **Console Web UI (`apps/console-web`):**
+  - Added Git types and client methods in `lib/control-plane.ts`.
+  - Added Next.js API routes:
+    - `/api/projects/[id]/export/route.ts` (streaming download proxy)
+    - `/api/git/status/route.ts`
+    - `/api/git/connection/route.ts`
+    - `/api/git/github/authorize/route.ts`
+    - `/api/projects/[id]/git/route.ts`
+    - `/api/projects/[id]/git/repo/route.ts`
+    - `/api/projects/[id]/git/push/route.ts`
+  - Rebuilt `apps/console-web/app/studio/[projectId]/manage/page.tsx`:
+    - Added nav switcher between General and Git & GitHub tabs.
+    - Not-connected state: explanation, Connect GitHub button, and Download .zip button.
+    - Connected, no repo: account chip (`@login`, Disconnect), repo name input pre-filled with project slug, Private/Public toggle, Create repository button.
+    - Connected with repo: repo link to GitHub, last pushed commit & time, "N commits ahead" sync badge, Push button with spinner, copyable `git clone` command.
+  - Updated `apps/console-web/app/studio/studio-workspace.tsx`:
+    - Added "Download code" action in header and GitHub repository link once connected.
+- **Evidence & Verification:**
+  - `bash scripts/test.sh`: passed with R-501 contract assertions.
+  - `cd services/control-plane && go test -v ./...`: passed 100% across all packages.
+  - `PYTHONPATH=services/agent-engine/src python3 -m unittest discover -s services/agent-engine/tests`: passed 3,754 tests in 78.9s.
+  - `pnpm --filter omnistackai-console-web typecheck && pnpm --filter omnistackai-console-web lint`: passed with 0 errors/warnings.
+  - `bash scripts/console.sh build`: created Next.js production bundle with all 38 routes.
+  - `bash scripts/verify.sh`: all Stage 0 checks passed.
+- **Next:** Await user permission before committing or pushing code. Proceed to F-04 Skills Engine (R-502, spec `R_&_D/specs/F-04-skills.md`).
+
 ## 2026-09-20 — R-500 (F-02 Multi-Process Preview & Diagnostics Service)
 
 - **Why:** Generated apps bound exclusively to `127.0.0.1:<port>`, preventing preview iframes from loading when accessing the console from mobile devices or other computers on the LAN. In addition, Studio was running in build-only mode without clear phase progress (`install` -> `migrate` -> `start` -> `ready`), lacked idle process harvesting, and gave ambiguous error states. `F-02-preview.md` specified an authenticated same-origin reverse proxy, strict SSRF defense, named lifecycle phase progression, idle reaper, and honest status banners.

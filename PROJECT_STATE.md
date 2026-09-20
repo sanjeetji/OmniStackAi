@@ -4,6 +4,23 @@ Last updated: 2026-09-20
 ## Current Phase
 Stage 0 (Founder Build Sequence, Brief Section 91) — BASIC/MVP
 
+> **R-501 (2026-09-20): Code ownership — download, connect GitHub, push (F-03-git spec).**
+> Implemented instant .zip export and GitHub App connection + push, solving vendor lock-in and enabling code ownership.
+> Part 1 — Instant Download (.zip): Added streaming endpoint `GET /projects/{id}/export` and agent-engine `export_zip`
+> streaming repository at HEAD, strictly excluding VCS internals (`.git`), dependencies (`node_modules`), caches (`.next`,
+> `__pycache__`, `.venv`, `venv`), and environment secrets (`.env`, `.env.*` except `.env.example`) with zero memory buffering.
+> Part 2 — GitHub Integration: Created database migration `000005_git_connections.up.sql` (`git_connections` table and `projects`
+> repo/push tracking columns). Implemented control-plane `internal/crypto` AES-256-GCM encryption with AAD verification for refresh tokens.
+> Implemented standard-library RS256 JWT minting (`internal/git/github.go`) for GitHub App authentication (zero external JWT dependencies),
+> on-demand installation access token minting, user repository creation, and authenticated push (`POST /projects/{id}/git/push`).
+> Pushes directly to refspec URL without storing credentials in `.git/config` and scrubs 100% of tokens from stderr, logs, and responses.
+> Frontend UI: Built Lovable-grade **Manage → Git** settings tab supporting not-connected state (with explanation, Connect GitHub button,
+> and .zip download), connected without repo (with account chip, repo name input, and Private/Public toggle), and connected with repo
+> (repo link, ahead count badge, push button with spinner, and copyable `git clone` command). Added **Download code** button and GitHub
+> repo link in Studio workspace header.
+> Gates: 3,754 tests pass, `task verify` passed, `scripts/test.sh` passed, Next.js build clean.
+> NEXT: **F-04 (R-502) Skills Engine (custom instructions & domain templates)**.
+
 > **R-500 (2026-09-20): Multi-Process Preview & Diagnostics Service (F-02-preview spec).**
 > Implemented authenticated same-origin reverse proxy and lifecycle diagnostics for generated apps.
 > Resolved 127.0.0.1 loopback isolation by introducing Next.js proxy route `/preview/[projectId]/**` and `/preview/[projectId]/api/**`.

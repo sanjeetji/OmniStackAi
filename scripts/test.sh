@@ -1138,8 +1138,57 @@ if ! rg -qF 'def start_workspace' "$agent_engine_root/src/omnistackai_agent_engi
   exit 1
 fi
 
-if ! rg -qF 'def workspace_status' "$agent_engine_root/src/omnistackai_agent_engine/studio/preview.py"; then
-  printf 'R-500 agent-engine StudioPreviewManager must define workspace_status.\n'
+# R-501: Code ownership — download, connect GitHub, push (F-03-git spec).
+for required_git_file in \
+  "$control_plane_root/migrations/000005_git_connections.up.sql" \
+  "$control_plane_root/migrations/000005_git_connections.down.sql" \
+  "$control_plane_root/internal/crypto/gcm.go" \
+  "$control_plane_root/internal/crypto/gcm_test.go" \
+  "$control_plane_root/internal/git/handler.go" \
+  "$control_plane_root/internal/git/github.go" \
+  "$control_plane_root/internal/git/store.go" \
+  "$control_plane_root/internal/git/git_test.go" \
+  "$agent_engine_root/tests/test_studio_workspace_git.py" \
+  "$console_root/app/api/projects/[id]/export/route.ts" \
+  "$console_root/app/api/git/status/route.ts" \
+  "$console_root/app/api/git/connection/route.ts" \
+  "$console_root/app/api/git/github/authorize/route.ts" \
+  "$console_root/app/api/projects/[id]/git/route.ts" \
+  "$console_root/app/api/projects/[id]/git/repo/route.ts" \
+  "$console_root/app/api/projects/[id]/git/push/route.ts"; do
+  if [[ ! -f "$required_git_file" ]]; then
+    printf 'Missing R-501 contract file: %s\n' "$required_git_file"
+    exit 1
+  fi
+done
+
+if ! rg -qF 'CREATE TABLE IF NOT EXISTS git_connections' "$control_plane_root/migrations/000005_git_connections.up.sql"; then
+  printf 'R-501 migration must create git_connections table.\n'
+  exit 1
+fi
+
+if ! rg -qF 'git.Register' "$control_plane_root/cmd/control-plane/main.go"; then
+  printf 'R-501 control-plane main.go must mount git handler.\n'
+  exit 1
+fi
+
+if ! rg -qF 'def export_zip' "$agent_engine_root/src/omnistackai_agent_engine/studio/workspace.py"; then
+  printf 'R-501 agent-engine workspace must define export_zip.\n'
+  exit 1
+fi
+
+if ! rg -qF 'def git_push' "$agent_engine_root/src/omnistackai_agent_engine/studio/workspace.py"; then
+  printf 'R-501 agent-engine workspace must define git_push.\n'
+  exit 1
+fi
+
+if ! rg -qF 'Download code' "$console_root/app/studio/studio-workspace.tsx"; then
+  printf 'R-501 studio-workspace.tsx must provide Download code action.\n'
+  exit 1
+fi
+
+if ! rg -qF 'Connect GitHub' "$console_root/app/studio/[projectId]/manage/page.tsx"; then
+  printf 'R-501 manage page must provide Connect GitHub action.\n'
   exit 1
 fi
 

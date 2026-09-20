@@ -1,5 +1,21 @@
 # Current Handoff
 
+Task ID: R-501
+Status: done
+Phase: MVP → Phase F (platform foundation)
+Branch: `ai/R-501-git-export`
+
+> **R-501 Completed (2026-09-20): Code ownership — download, connect GitHub, push (F-03-git spec).**
+> - **Instant ZIP Download:** Added streaming endpoint `GET /projects/{id}/export` and agent-engine `export_zip` streaming workspace repository at HEAD directly to the user. Strictly filters out `.git/`, `node_modules/`, build caches (`.next/`, `__pycache__/`, `.venv/`, `venv/`), and environment secrets (`.env`, `.env.*` except `.env.example`).
+> - **Database Schema Migration:** `000005_git_connections.up.sql` creates `git_connections` table (with encrypted refresh tokens and scopes) and adds repository/push tracking columns to `projects` (`repo_full_name`, `repo_url`, `repo_private`, `last_pushed_sha`, `last_pushed_at`).
+> - **Cryptographic Security (AES-256-GCM):** Standard-library AES-256-GCM encryption with 12-byte random nonces and AAD binding (`user:provider:token`) in `internal/crypto/gcm.go`.
+> - **GitHub App Integration:** Standard-library RS256 JWT minting (`internal/git/github.go`) for GitHub App authentication (zero external JWT dependencies), on-demand installation access token generation, and user repository creation via GitHub REST API.
+> - **Zero Token Leakage Git Push:** `POST /projects/{id}/git/push` and `/api/workspaces/{id}/git/push` pushes directly via URL refspec without storing credentials in `.git/config`. Explicitly scrubs 100% of tokens from stderr, stdout, and error responses with `[REDACTED]`. Tested in unit tests.
+> - **Web Console UI:** Lovable-grade **Manage → Git** settings tab supporting not-connected state (explanation, Connect GitHub button, Download .zip button), connected without repo (account chip, pre-filled repo name input, Private/Public visibility toggle, Create repository button), and connected with repo (repo link, ahead count badge, Push button with spinner, copyable `git clone` command). Added **Download code** action in Studio workspace header and GitHub repo link once connected.
+> - **Gates:** `scripts/test.sh` passed, `go test -v ./...` passed, `task agent-engine:test` passed (3,754 tests OK), Next.js `typecheck`, `lint`, and `build` passed, `task verify` clean.
+> - **NEXT:** F-04 (R-502) Skills Engine (custom instructions & domain templates, spec `R_&_D/specs/F-04-skills.md`).
+> - **IMPORTANT:** Do NOT commit or push code without user's explicit permission.
+
 Task ID: R-500
 Status: done
 Phase: MVP → Phase F (platform foundation)

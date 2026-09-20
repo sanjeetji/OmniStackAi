@@ -1,6 +1,7 @@
 package config
 
 import (
+	"encoding/base64"
 	"errors"
 	"fmt"
 	"net"
@@ -34,22 +35,27 @@ const (
 
 // Config contains the complete Stage 0 control-plane runtime configuration.
 type Config struct {
-	HTTPAddress         string
-	PostgresHost        string
-	PostgresPort        uint16
-	PostgresDatabase    string
-	PostgresUser        string
-	PostgresPassword    string
-	ReadHeaderTimeout   time.Duration
-	ReadTimeout         time.Duration
-	WriteTimeout        time.Duration
-	IdleTimeout         time.Duration
-	ShutdownTimeout     time.Duration
-	DatabasePingTimeout time.Duration
-	SessionTTL          time.Duration
-	SignupCreditGrant   int64
-	AgentEngineURL      string
-	CreditsPerUSD       float64
+	HTTPAddress           string
+	PostgresHost          string
+	PostgresPort          uint16
+	PostgresDatabase      string
+	PostgresUser          string
+	PostgresPassword      string
+	ReadHeaderTimeout     time.Duration
+	ReadTimeout           time.Duration
+	WriteTimeout          time.Duration
+	IdleTimeout           time.Duration
+	ShutdownTimeout       time.Duration
+	DatabasePingTimeout   time.Duration
+	SessionTTL            time.Duration
+	SignupCreditGrant     int64
+	AgentEngineURL        string
+	CreditsPerUSD         float64
+	GitHubAppID           string
+	GitHubAppClientID     string
+	GitHubAppClientSecret string
+	GitHubAppPrivateKey   string
+	SecretsKey            []byte
 }
 
 // Lookup matches os.LookupEnv and makes configuration loading deterministic in tests.
@@ -131,6 +137,19 @@ func Load(lookup Lookup) (Config, error) {
 		return Config{}, fmt.Errorf("OMNISTACKAI_CREDITS_PER_USD: %w", err)
 	}
 	config.CreditsPerUSD = creditsPerUSD
+
+	config.GitHubAppID = valueOrDefault(lookup, "GITHUB_APP_ID", "")
+	config.GitHubAppClientID = valueOrDefault(lookup, "GITHUB_APP_CLIENT_ID", "")
+	config.GitHubAppClientSecret = valueOrDefault(lookup, "GITHUB_APP_CLIENT_SECRET", "")
+	config.GitHubAppPrivateKey = valueOrDefault(lookup, "GITHUB_APP_PRIVATE_KEY", "")
+
+	rawSecretsKey := valueOrDefault(lookup, "OMNISTACKAI_SECRETS_KEY", "")
+	if rawSecretsKey != "" {
+		keyBytes, err := base64.StdEncoding.DecodeString(rawSecretsKey)
+		if err == nil && len(keyBytes) == 32 {
+			config.SecretsKey = keyBytes
+		}
+	}
 
 	return config, nil
 }

@@ -4,9 +4,21 @@ phase: BASIC/MVP
 founder_stage: 0
 current_task: R-501
 current_status: ready
-branch: ai/R-500-preview-service
-last_completed_task: R-500
+branch: ai/R-501-git-export
+last_completed_task: R-501
 last_completed_task_summary: >-
+  Completed R-501 (2026-09-20): Code ownership — download, connect GitHub, push (F-03-git spec).
+  Implemented instant .zip download (GET /projects/{id}/export) streaming repository at HEAD,
+  strictly excluding .git, node_modules, build caches (.next, __pycache__, .venv), and secret environment
+  files (.env* except .env.example) with zero memory buffering. Implemented GitHub App integration:
+  AES-256-GCM authenticated encryption for OAuth refresh tokens in PostgreSQL (000005_git_connections.up.sql / down.sql),
+  Go RS256 JWT minting from GitHub App private key using crypto/rsa (zero external JWT dependencies), on-demand
+  installation token generation, user repository creation, and secure push (POST /projects/{id}/git/push and
+  /api/workspaces/{id}/git/push) with 100% token scrubbing across stderr, logs, and responses, never storing
+  credentials in .git/config. Implemented Lovable-grade Manage -> Git settings tab with connection states,
+  repository creation form, commit sync badges ("N commits ahead"), copyable git clone command, and Studio
+  header Download code action. 3,754 tests passed; full task verify, contract tests, and Next.js build clean.
+_prior_last_completed_task_summary_R500: >-
   Completed R-500 (2026-09-20): Multi-Process Preview & Diagnostics Service (F-02-preview spec).
   Eliminated 127.0.0.1 loopback isolation for generated apps by introducing an authenticated same-origin
   Next.js reverse proxy at /preview/{projectId}/** and /preview/{projectId}/api/**. Defended strictly against

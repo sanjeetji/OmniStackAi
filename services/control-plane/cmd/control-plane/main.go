@@ -17,6 +17,7 @@ import (
 
 	"github.com/sanjeetji/OmniStackAi/services/control-plane/internal/auth"
 	"github.com/sanjeetji/OmniStackAi/services/control-plane/internal/config"
+	"github.com/sanjeetji/OmniStackAi/services/control-plane/internal/git"
 	"github.com/sanjeetji/OmniStackAi/services/control-plane/internal/health"
 	"github.com/sanjeetji/OmniStackAi/services/control-plane/internal/jobs"
 	"github.com/sanjeetji/OmniStackAi/services/control-plane/internal/password"
@@ -77,6 +78,18 @@ func run(ctx context.Context, logger *slog.Logger) error {
 		AgentEngineURL: runtimeConfig.AgentEngineURL,
 		CreditsPerUSD:  runtimeConfig.CreditsPerUSD,
 		Logger:         logger,
+	})
+	gitStore := git.NewPgStore(pool, runtimeConfig.SecretsKey)
+	git.Register(mux, git.Deps{
+		AuthStore:             userStore,
+		GitStore:              gitStore,
+		ProjectStore:          projectStore,
+		AgentEngineURL:        runtimeConfig.AgentEngineURL,
+		GitHubAppID:           runtimeConfig.GitHubAppID,
+		GitHubAppClientID:     runtimeConfig.GitHubAppClientID,
+		GitHubAppClientSecret: runtimeConfig.GitHubAppClientSecret,
+		GitHubAppPrivateKey:   runtimeConfig.GitHubAppPrivateKey,
+		Logger:                logger,
 	})
 
 	server := &http.Server{
