@@ -14,6 +14,7 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/sanjeetji/OmniStackAi/services/control-plane/internal/ai"
 	"github.com/sanjeetji/OmniStackAi/services/control-plane/internal/auth"
 	"github.com/sanjeetji/OmniStackAi/services/control-plane/internal/skills"
 )
@@ -34,6 +35,7 @@ type Deps struct {
 	ProjectStore   Store
 	SkillStore     skills.Store
 	SecretsStore   SecretsStore
+	AIStore        ai.Store
 	AgentEngineURL string
 	CreditsPerUSD  float64
 	Logger         *slog.Logger
@@ -294,6 +296,16 @@ func handleProjectBuildStream(deps Deps) http.HandlerFunc {
 		if contextPayload != nil {
 			upstreamPayload["context"] = contextPayload
 		}
+		resolved := ai.ResolveModel(r.Context(), deps.AIStore, user.ID, id)
+		if resolved.ProviderID != "" {
+			upstreamPayload["provider_id"] = resolved.ProviderID
+		}
+		if resolved.ModelID != "" {
+			upstreamPayload["model_id"] = resolved.ModelID
+		}
+		if resolved.APIKey != "" {
+			upstreamPayload["api_key"] = resolved.APIKey
+		}
 		reqBody, _ := json.Marshal(upstreamPayload)
 
 		upstreamURL := deps.AgentEngineURL + "/api/workspaces/" + url.PathEscape(id) + "/build/stream"
@@ -362,7 +374,10 @@ func handleProjectBuildStream(deps Deps) http.HandlerFunc {
 			return
 		}
 
-		requestedCredits := creditsForUsage(doneUsage, deps.CreditsPerUSD)
+		requestedCredits := int64(0)
+		if resolved.BilledTo == "platform" {
+			requestedCredits = creditsForUsage(doneUsage, deps.CreditsPerUSD)
+		}
 		charged, newBalance := int64(0), user.CreditBalance
 		if requestedCredits > 0 {
 			charged, newBalance, err = deps.ProjectStore.DebitProjectCredits(r.Context(), user.ID, id, requestedCredits, "project:build:stream")
@@ -373,6 +388,7 @@ func handleProjectBuildStream(deps Deps) http.HandlerFunc {
 				return
 			}
 		}
+		_ = ai.RecordUsageCalls(r.Context(), deps.AIStore, user.ID, &id, "build", resolved.BilledTo, doneUsage, charged, deps.CreditsPerUSD)
 
 		// Update project metadata from done payload
 		appName, _ := donePayload["name"].(string)
@@ -463,6 +479,16 @@ func handleProjectEdit(deps Deps) http.HandlerFunc {
 		if contextPayload != nil {
 			upstreamPayload["context"] = contextPayload
 		}
+		resolved := ai.ResolveModel(r.Context(), deps.AIStore, user.ID, id)
+		if resolved.ProviderID != "" {
+			upstreamPayload["provider_id"] = resolved.ProviderID
+		}
+		if resolved.ModelID != "" {
+			upstreamPayload["model_id"] = resolved.ModelID
+		}
+		if resolved.APIKey != "" {
+			upstreamPayload["api_key"] = resolved.APIKey
+		}
 		reqBody, _ := json.Marshal(upstreamPayload)
 
 		targetURL := deps.AgentEngineURL + "/api/workspaces/" + url.PathEscape(id) + "/edit"
@@ -503,7 +529,10 @@ func handleProjectEdit(deps Deps) http.HandlerFunc {
 			return
 		}
 
-		requestedCredits := creditsForUsage(payload["usage"], deps.CreditsPerUSD)
+		requestedCredits := int64(0)
+		if resolved.BilledTo == "platform" {
+			requestedCredits = creditsForUsage(payload["usage"], deps.CreditsPerUSD)
+		}
 		charged, newBalance := int64(0), user.CreditBalance
 		if requestedCredits > 0 {
 			charged, newBalance, err = deps.ProjectStore.DebitProjectCredits(r.Context(), user.ID, id, requestedCredits, "project:edit")
@@ -514,6 +543,7 @@ func handleProjectEdit(deps Deps) http.HandlerFunc {
 				return
 			}
 		}
+		_ = ai.RecordUsageCalls(r.Context(), deps.AIStore, user.ID, &id, "edit", resolved.BilledTo, payload["usage"], charged, deps.CreditsPerUSD)
 
 		// Update project metadata
 		commitSHA, _ := payload["commit_sha"].(string)

@@ -53,13 +53,33 @@ _MICROS_PER_USD = Decimal(1_000_000)
 
 
 def _usage_summary_to_dict(ledger: UsageLedger) -> dict:
-    """A JSON-safe, secret-free view of ``ledger``'s aggregate cost/usage (R-472).
+    """A JSON-safe, secret-free view of ``ledger``'s aggregate cost/usage (R-472, R-504).
 
     ``cost_micros_usd`` is an int (USD * 1,000,000, rounded) rather than a Decimal or a decimal
     string, so it crosses the eventual Go control-plane boundary with no float/precision risk.
     """
     summary = ledger.summary()
     cost_micros = int((summary.total_cost_usd * _MICROS_PER_USD).to_integral_value(rounding=ROUND_HALF_UP))
+    calls_list = []
+    for r in ledger.records():
+        call_cost_micros = (
+            int((r.cost_usd * _MICROS_PER_USD).to_integral_value(rounding=ROUND_HALF_UP))
+            if r.cost_usd is not None
+            else 0
+        )
+        calls_list.append({
+            "request_id": r.request_id,
+            "provider_id": r.provider_id,
+            "model_id": r.model_id,
+            "tier": r.tier,
+            "complexity": r.complexity,
+            "input_tokens": r.input_tokens,
+            "output_tokens": r.output_tokens,
+            "latency_ms": r.latency_ms,
+            "success": r.success,
+            "error_code": r.error_code,
+            "cost_micros_usd": call_cost_micros,
+        })
     return {
         "total_calls": summary.total_calls,
         "successful_calls": summary.successful_calls,
@@ -68,6 +88,7 @@ def _usage_summary_to_dict(ledger: UsageLedger) -> dict:
         "output_tokens": summary.output_tokens,
         "unpriced_calls": summary.unpriced_calls,
         "cost_micros_usd": cost_micros,
+        "calls": calls_list,
     }
 
 _AUTHOR_NAME = "sanjeetji"
@@ -115,6 +136,10 @@ def _build(
     session_store: StudioSessionStore | None = None,
     workspace_store: StudioWorkspaceStore | None = None,
     workspace_id: str | None = None,
+    provider_id: str | None = None,
+    model_id: str | None = None,
+    api_key: str | None = None,
+    **extra_options,
 ) -> dict:
     """Build an app for one ``/api/build`` request.
 
@@ -460,8 +485,11 @@ def _build(
         }
     else:
         usage_ledger = UsageLedger()
-        provider, model_id, max_output, request_timeout = resolve_generation_provider_from_env(
-            usage_ledger=usage_ledger
+        provider, eff_model_id, max_output, request_timeout = resolve_generation_provider_from_env(
+            usage_ledger=usage_ledger,
+            provider_id=provider_id,
+            model_id=model_id,
+            api_key=api_key,
         )
         chosen_dir = direct_target_dir or _target_dir_for(
             prompt,
@@ -475,7 +503,7 @@ def _build(
                 prompt,
                 provider,
                 chosen_dir,
-                model_id=model_id,
+                model_id=eff_model_id,
                 author_name=_AUTHOR_NAME,
                 author_email=_AUTHOR_EMAIL,
                 max_output_tokens=max_output,
@@ -557,6 +585,10 @@ async def _build_stream(
     workspace_store: StudioWorkspaceStore | None = None,
     workspace_id: str | None = None,
     context: dict | None = None,
+    provider_id: str | None = None,
+    model_id: str | None = None,
+    api_key: str | None = None,
+    **extra_options,
 ) -> AsyncIterator[dict]:
     """Streaming twin of `_build` (R-484), scoped to the plain-prompt, non-`hybrid_ui` path only -
     the same scope precedent `_edit`/R-476 already set for its own single-IR-only build kinds.
@@ -572,8 +604,11 @@ async def _build_stream(
         )
 
     usage_ledger = UsageLedger()
-    provider, model_id, max_output, request_timeout = resolve_generation_provider_from_env(
-        usage_ledger=usage_ledger
+    provider, eff_model_id, max_output, request_timeout = resolve_generation_provider_from_env(
+        usage_ledger=usage_ledger,
+        provider_id=provider_id,
+        model_id=model_id,
+        api_key=api_key,
     )
     chosen_dir = direct_target_dir or _target_dir_for(
         prompt,
@@ -587,7 +622,7 @@ async def _build_stream(
         prompt,
         provider,
         chosen_dir,
-        model_id=model_id,
+        model_id=eff_model_id,
         author_name=_AUTHOR_NAME,
         author_email=_AUTHOR_EMAIL,
         max_output_tokens=max_output,
@@ -732,6 +767,10 @@ async def _edit(
     *,
     history: StudioBuildHistory,
     session_store: StudioSessionStore,
+    provider_id: str | None = None,
+    model_id: str | None = None,
+    api_key: str | None = None,
+    **extra_options,
 ) -> dict:
     """Apply one follow-up prompt to an existing build as a further commit on the same repo (R-468).
 
@@ -756,10 +795,13 @@ async def _edit(
     # had no "usage" key at all, so the control-plane's Job API proxy would debit 0 credits for
     # every edit regardless of what it actually cost. Mirrors _build()'s own exact pattern.
     usage_ledger = UsageLedger()
-    provider, model_id, _max_output, timeout = resolve_generation_provider_from_env(
-        usage_ledger=usage_ledger
+    provider, eff_model_id, _max_output, timeout = resolve_generation_provider_from_env(
+        usage_ledger=usage_ledger,
+        provider_id=provider_id,
+        model_id=model_id,
+        api_key=api_key,
     )
-    proposal = await generate_app_delta_proposal(session.ir, prompt, provider, model_id=model_id, timeout_seconds=timeout)
+    proposal = await generate_app_delta_proposal(session.ir, prompt, provider, model_id=eff_model_id, timeout_seconds=timeout)
     new_ir = apply_app_delta(session.ir, proposal)
     diff = plan_edit(session.ir, new_ir)
 
@@ -878,6 +920,9 @@ async def _workspace_edit(
     *,
     workspace_store: StudioWorkspaceStore,
     context: dict | None = None,
+    provider_id: str | None = None,
+    model_id: str | None = None,
+    api_key: str | None = None,
     **options,
 ) -> dict:
     with workspace_store.lock(ws_id):
@@ -889,11 +934,14 @@ async def _workspace_edit(
             raise BuildNotFoundError(f"workspace '{ws_id}' repo directory does not exist")
 
         usage_ledger = UsageLedger()
-        provider, model_id, _max_output, timeout = resolve_generation_provider_from_env(
-            usage_ledger=usage_ledger
+        provider, eff_model_id, _max_output, timeout = resolve_generation_provider_from_env(
+            usage_ledger=usage_ledger,
+            provider_id=provider_id,
+            model_id=model_id,
+            api_key=api_key,
         )
         proposal = await generate_app_delta_proposal(
-            ir, prompt, provider, model_id=model_id, timeout_seconds=timeout, context=context
+            ir, prompt, provider, model_id=eff_model_id, timeout_seconds=timeout, context=context
         )
         new_ir = apply_app_delta(ir, proposal)
         diff = plan_edit(ir, new_ir)
@@ -976,8 +1024,8 @@ def main() -> None:
         removed = history.remove(build_id)
         return {"removed": removed, **history.list()}
 
-    def edit_build(build_id: str, prompt: str) -> dict:
-        return asyncio.run(_edit(build_id, prompt, history=history, session_store=session_store))
+    def edit_build(build_id: str, prompt: str, **options) -> dict:
+        return asyncio.run(_edit(build_id, prompt, history=history, session_store=session_store, **options))
 
     def workspace_build(ws_id: str, prompt: str, **options) -> dict:
         return _workspace_build(ws_id, prompt, workspace_store=workspace_store, preview_manager=preview_manager, **options)

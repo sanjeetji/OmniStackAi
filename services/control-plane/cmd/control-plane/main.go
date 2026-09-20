@@ -15,6 +15,7 @@ import (
 
 	"github.com/jackc/pgx/v5/pgxpool"
 
+	"github.com/sanjeetji/OmniStackAi/services/control-plane/internal/ai"
 	"github.com/sanjeetji/OmniStackAi/services/control-plane/internal/auth"
 	"github.com/sanjeetji/OmniStackAi/services/control-plane/internal/config"
 	"github.com/sanjeetji/OmniStackAi/services/control-plane/internal/git"
@@ -57,6 +58,7 @@ func run(ctx context.Context, logger *slog.Logger) error {
 
 	userStore := users.New(pool)
 	projectStore := projects.New(pool)
+	aiStore := ai.NewPgStore(pool, runtimeConfig.SecretsKey, runtimeConfig.SecretsKeyPrevious)
 
 	mux := http.NewServeMux()
 	health.Register(mux, pool, runtimeConfig.DatabasePingTimeout)
@@ -67,9 +69,16 @@ func run(ctx context.Context, logger *slog.Logger) error {
 		SignupCredits: runtimeConfig.SignupCreditGrant,
 		Logger:        logger,
 	})
+	ai.Register(mux, ai.Deps{
+		AuthStore:      userStore,
+		AIStore:        aiStore,
+		AgentEngineURL: runtimeConfig.AgentEngineURL,
+		Logger:         logger,
+	})
 	jobs.Register(mux, jobs.Deps{
 		AuthStore:      userStore,
 		CreditStore:    userStore,
+		AIStore:        aiStore,
 		AgentEngineURL: runtimeConfig.AgentEngineURL,
 		CreditsPerUSD:  runtimeConfig.CreditsPerUSD,
 		Logger:         logger,
@@ -91,6 +100,7 @@ func run(ctx context.Context, logger *slog.Logger) error {
 		ProjectStore:   projectStore,
 		SkillStore:     skillsStore,
 		SecretsStore:   secretsStore,
+		AIStore:        aiStore,
 		AgentEngineURL: runtimeConfig.AgentEngineURL,
 		CreditsPerUSD:  runtimeConfig.CreditsPerUSD,
 		Logger:         logger,

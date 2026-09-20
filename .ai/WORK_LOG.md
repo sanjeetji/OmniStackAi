@@ -1,5 +1,49 @@
 # Work Log
 
+## 2026-09-20 — R-504 (F-06 AI — model configuration and usage)
+
+- **Why:** Developers and teams want control over which AI model powers each project (e.g. Claude 3.7 Sonnet for complex apps, Groq Llama 3.3 for rapid scaffolding) and the ability to Bring-Your-Own-Key (BYOK) to avoid platform markups and usage caps. Every model call must be immutably tracked with exact token counts, latency, and cost for transparent accounting. `F-06-ai-usage.md` specified AES-256-GCM encrypted BYOK keys in PostgreSQL, per-project model pinning, an immutable `model_calls` audit table, multi-tier resolution precedence, and a Lovable-grade Console UI in Settings (AI & Usage) and Project Manage.
+- **Part 1 — Database Migration (`services/control-plane/migrations/`):**
+  - Created `000008_ai_usage.up.sql` / `down.sql`:
+    - `user_provider_keys` table: UUID `id`, `user_id` FK (cascade delete), `key_ciphertext BYTEA`, `provider_id TEXT`, `label TEXT`, `created_at`, `updated_at`, `last_used_at`, and unique constraint on `(user_id, provider_id)`.
+    - `model_calls` immutable audit table: `id BIGSERIAL PRIMARY KEY`, `user_id`, `project_id`, `provider_id`, `model_id`, `tier`, `purpose`, `input_tokens`, `output_tokens`, `cost_micros_usd`, `credits_spent`, `billed_to` (`platform`/`byok`/`local`), `success`, `error_code`, `latency_ms`, `created_at`. Added indexes on `(user_id, created_at DESC)` and `(project_id, created_at DESC)`.
+    - Altered `projects` table to add `model_provider_id TEXT` and `model_id TEXT` for per-project pinning.
+- **Part 2 — Control-Plane Backend & Cryptography (`services/control-plane/`):**
+  - Implemented `internal/ai/store.go`:
+    - `Store` interface and `PgStore` implementing AES-256-GCM encryption with AAD bound to `user_id:provider_id`, preventing any user from decrypting another user's keys.
+    - Transparent re-encryption on key rotation via `OMNISTACKAI_SECRETS_KEY_PREVIOUS`.
+    - Store methods: `ListUserKeys`, `GetUserKey`, `SetUserKey`, `DeleteUserKey`, `RecordModelCalls`, `GetProjectUsage`, `GetAccountUsage`, `GetProjectModel`, and `SetProjectModel`.
+  - Implemented `internal/ai/resolution.go`:
+    - `ResolveModel`: Enforces strict precedence: (1) Project pinned model -> (2) User BYOK key (0 credits debited, `billed_to = 'byok'`) -> (3) Platform cloud provider (credits debited, `billed_to = 'platform'`) -> (4) Local Ollama (0 credits, `billed_to = 'local'`).
+    - `RecordUsageCalls`: Maps both granular `calls: [...]` arrays and legacy aggregate summaries into `model_calls` audit rows.
+  - Implemented `internal/ai/handler.go`:
+    - REST handlers: `GET /ai/providers`, `GET /ai/keys`, `PUT /ai/keys/{providerId}`, `DELETE /ai/keys/{providerId}`, `POST /ai/keys/{providerId}/test`, `GET /ai/models`, `GET/PUT /projects/{id}/model`, `GET /projects/{id}/usage`, `GET /usage`.
+    - Write-only security: BYOK keys are never returned in any API response or log.
+    - Key test endpoint makes a 1-token probe without persistent logging.
+  - Added unit tests in `internal/ai/ai_test.go`: AAD protection, key non-leakage, key test validation, project model pinning, and key deletion.
+  - Injected `AIStore` into `cmd/control-plane/main.go`, `internal/projects/handler.go`, and `internal/jobs/handler.go`, recording `model_calls` rows atomically alongside credit debits on builds and edits.
+- **Part 3 — Agent-Engine Integration (`services/agent-engine/`):**
+  - Updated `intake/provider_resolution.py`: `resolve_generation_provider_from_env` accepts explicit `provider_id`, `model_id`, and `api_key`.
+  - Updated `studio/live_serve.py`: Propagates explicit provider/model/key to generation functions, and emits granular `usage.calls: [...]` breakdown in responses.
+  - Added unit tests in `tests/test_studio_workspace_ai.py` verifying explicit provider/model/key resolution and `usage["calls"]` payload structure.
+- **Part 4 — Console-Web Frontend UI (`apps/console-web/`):**
+  - Updated `lib/control-plane.ts`: Added AI types (`KeyMetadata`, `ModelCall`, `UsageTotals`, `DailyUsage`, `PurposeUsage`, `ProjectUsageReport`, `AccountUsageReport`, `ProjectModelConfig`, `ProviderCatalogItem`) and client functions.
+  - Added Next.js API route proxies: `/api/ai/providers`, `/api/ai/keys/[providerId]`, `/api/ai/keys/[providerId]/test`, `/api/projects/[id]/model`, `/api/projects/[id]/usage`, `/api/usage`.
+  - Built `components/ai-keys-manager.tsx`: Client component in Settings for managing BYOK keys with AES-256-GCM encryption notice, test button with latency feedback, and Add/Edit/Delete modals.
+  - Built `components/account-usage-viewer.tsx`: Client component in Settings for account-wide AI usage with KPI cards (calls, tokens, USD cost, credits spent), per-project breakdown table, daily activity table, and 7d/30d/90d range selectors.
+  - Built `components/project-ai-manage.tsx`: Client component in Studio Manage for project-level model pinning and project usage metrics.
+  - Updated `app/settings/page.tsx`: Added "BYOK keys" and "AI usage" sections with in-page nav anchors.
+  - Updated `app/studio/[projectId]/manage/page.tsx`: Added "AI & Model" tab in subnav sidebar rendering `ProjectAIManage`.
+- **Part 5 — Verification & Contracts:**
+  - Added R-504 contract assertions in `scripts/test.sh`.
+  - `bash scripts/test.sh`: passed with R-504 contract assertions.
+  - `cd services/control-plane && go test ./...`: all 13 packages passed.
+  - `bash scripts/agent-engine.sh test`: all 3,769 tests passed.
+  - `cd apps/console-web && pnpm run typecheck && pnpm run lint`: 0 errors/warnings.
+  - `bash scripts/console.sh build`: all 52 routes compiled and built.
+  - `bash scripts/verify.sh`: Stage 0 verification passed.
+- **Next:** Proceed to F-07 (R-505) SEO & AI search (spec `R_&_D/specs/F-07-seo-and-ai-search.md`).
+
 ## 2026-09-20 — R-503 (F-05 Secrets — encrypted per-project configuration)
 
 - **Why:** Real-world generated applications require API keys, payment tokens, SMTP credentials, and database passwords that must never be committed to git, exposed in client responses, or leaked in build streams. `F-05-secrets.md` specified AES-256-GCM encrypted storage in PostgreSQL with Go standard library `crypto/aes` and `crypto/cipher` (zero external Go dependencies), runtime injection into preview processes via `process.env`, and a Lovable-grade Console UI in `Manage → Secrets` with masked values, a 30s reveal timer, key validation, and preview restart prompts.

@@ -1,5 +1,35 @@
 # Current Handoff
 
+Task ID: R-504
+Status: done
+Phase: MVP → Phase F (platform foundation)
+Branch: `ai/R-504-ai-usage`
+
+> **R-504 Completed (2026-09-20): AI — model configuration (BYOK) and usage per project/account (F-06-ai-usage spec).**
+> - **Database Schema Migration:** Created `000008_ai_usage.up.sql` / `down.sql`:
+>   - `user_provider_keys`: UUID `id`, `user_id` FK (cascade delete), `key_ciphertext BYTEA`, `provider_id TEXT`, `label TEXT`, timestamps, unique `(user_id, provider_id)`.
+>   - `model_calls`: `id BIGSERIAL`, `user_id`, `project_id`, `provider_id`, `model_id`, `tier`, `purpose`, `input_tokens`, `output_tokens`, `cost_micros_usd`, `credits_spent`, `billed_to` (`platform`/`byok`/`local`), `success`, `error_code`, `latency_ms`, `created_at`.
+>   - `projects`: Added `model_provider_id TEXT` and `model_id TEXT` for per-project model pinning.
+> - **Control-Plane Backend & Cryptography (AES-256-GCM):**
+>   - Standard-library `crypto/aes` and `crypto/cipher` (zero external Go dependencies).
+>   - 12-byte random nonce and AAD binding `user_id:provider_id` to prevent ciphertext-copy attacks across users.
+>   - Master key `OMNISTACKAI_SECRETS_KEY` with transparent re-encryption on key rotation via `OMNISTACKAI_SECRETS_KEY_PREVIOUS`.
+>   - Store `internal/ai/store.go` and REST handlers `internal/ai/handler.go` (`GET /ai/providers`, `GET /ai/keys`, `PUT /ai/keys/{providerId}`, `DELETE /ai/keys/{providerId}`, `POST /ai/keys/{providerId}/test`, `GET /ai/models`, `GET/PUT /projects/{id}/model`, `GET /projects/{id}/usage`, `GET /usage`).
+>   - Strict resolution precedence (`internal/ai/resolution.go`): Project pinned model -> User BYOK key (0 credits) -> Platform cloud provider (credits debited) -> Local Ollama (0 credits).
+>   - Zero key leakage guarantee: BYOK keys are strictly write-only and never returned in API responses or logs.
+>   - Atomic credit debiting and immutable `model_calls` recording across `projects` and `jobs` handlers.
+> - **Agent-Engine Integration:**
+>   - Updated `intake/provider_resolution.py` to accept explicit `provider_id`, `model_id`, and `api_key`.
+>   - Updated `studio/live_serve.py` build and edit endpoints to propagate resolved model/key parameters and return granular `usage.calls: [...]` breakdown.
+>   - Added unit tests in `tests/test_studio_workspace_ai.py`.
+> - **Console Web UI:**
+>   - Added AI types and client SDK in `lib/control-plane.ts` and Next.js route proxies under `/api/ai/` and `/api/usage/`.
+>   - Built `components/ai-keys-manager.tsx` mounted in `/settings#ai` with AES-256-GCM encryption notice, key test button with latency feedback, and Add/Edit/Delete modals.
+>   - Built `components/account-usage-viewer.tsx` mounted in `/settings#usage` with KPI totals, per-project usage breakdown, daily activity table, and 7d/30d/90d range selectors.
+>   - Built `components/project-ai-manage.tsx` mounted in `/studio/[projectId]/manage` under "AI & Model" tab with model pinning and project usage metrics.
+> - **Gates:** `scripts/test.sh` passed, `go test -v ./...` passed (all 13 packages), `task agent-engine:test` passed (3,769 tests OK), Next.js `typecheck`, `lint`, and `build` passed, `task verify` clean.
+> - **NEXT:** F-07 (R-505) SEO & AI search (spec `R_&_D/specs/F-07-seo-and-ai-search.md`).
+
 Task ID: R-503
 Status: done
 Phase: MVP → Phase F (platform foundation)

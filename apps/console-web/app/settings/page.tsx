@@ -2,6 +2,7 @@ import { Suspense } from "react";
 import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import {
+  Activity,
   CircleCheck,
   Cpu,
   KeyRound,
@@ -14,6 +15,8 @@ import {
 import { getProviderStatus, type ProviderInfo, type ProviderStatus } from "@/lib/control-plane";
 import { revealStyle } from "@/lib/motion";
 import { getCurrentUser, getSessionToken } from "@/lib/session";
+import { AccountUsageViewer } from "@/components/account-usage-viewer";
+import { AIKeysManager } from "@/components/ai-keys-manager";
 import { SkillsLibrary } from "@/components/skills-library";
 import ThemeSwitcher from "@/components/theme-switcher";
 import { Badge } from "@/components/ui/badge";
@@ -37,6 +40,8 @@ const SECTIONS: { id: string; label: string; icon: LucideIcon }[] = [
   { id: "appearance", label: "Appearance", icon: Palette },
   { id: "skills", label: "Skills library", icon: Sparkles },
   { id: "providers", label: "Model providers", icon: Cpu },
+  { id: "byok", label: "BYOK keys", icon: KeyRound },
+  { id: "usage", label: "AI usage", icon: Activity },
 ];
 
 export default async function SettingsPage() {
@@ -157,6 +162,24 @@ export default async function SettingsPage() {
             <Suspense fallback={<ProvidersSkeleton />}>
               <ProvidersSection token={token} />
             </Suspense>
+          </section>
+
+          <section
+            id="byok"
+            aria-labelledby="byok-title"
+            className="reveal scroll-mt-20"
+            style={revealStyle(5)}
+          >
+            <AIKeysManager />
+          </section>
+
+          <section
+            id="usage"
+            aria-labelledby="usage-title"
+            className="reveal scroll-mt-20"
+            style={revealStyle(6)}
+          >
+            <AccountUsageViewer />
           </section>
         </div>
       </div>

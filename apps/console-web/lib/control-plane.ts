@@ -962,5 +962,209 @@ export function revealProjectSecret(
   );
 }
 
+// ---------------------------------------------------------------------------
+// AI & Usage Management (R-504)
+// ---------------------------------------------------------------------------
 
+export interface KeyMetadata {
+  provider_id: string;
+  label: string;
+  created_at: string;
+  last_used_at?: string;
+}
 
+export interface ModelCall {
+  id?: number;
+  user_id: string;
+  project_id?: string;
+  provider_id: string;
+  model_id: string;
+  tier: string;
+  purpose: string;
+  input_tokens: number;
+  output_tokens: number;
+  cost_micros_usd: number;
+  credits_spent: number;
+  billed_to: string;
+  success: boolean;
+  error_code: string;
+  latency_ms: number;
+  created_at: string;
+}
+
+export interface UsageTotals {
+  total_calls: number;
+  successful_calls: number;
+  failed_calls: number;
+  input_tokens: number;
+  output_tokens: number;
+  cost_micros_usd: number;
+  credits_spent: number;
+  unpriced_calls: number;
+}
+
+export interface DailyUsage {
+  date: string;
+  calls: number;
+  input_tokens: number;
+  output_tokens: number;
+  cost_micros_usd: number;
+  credits_spent: number;
+}
+
+export interface PurposeUsage {
+  purpose: string;
+  calls: number;
+  input_tokens: number;
+  output_tokens: number;
+  cost_micros_usd: number;
+  credits_spent: number;
+}
+
+export interface ProjectUsageReport {
+  project_id: string;
+  range_days: number;
+  totals: UsageTotals;
+  by_day: DailyUsage[];
+  by_purpose: Record<string, PurposeUsage>;
+}
+
+export interface ProjectSummaryUsage {
+  project_id: string;
+  project_name: string;
+  calls: number;
+  cost_micros_usd: number;
+  credits_spent: number;
+}
+
+export interface AccountUsageReport {
+  range_days: number;
+  totals: UsageTotals;
+  by_day: DailyUsage[];
+  by_project: ProjectSummaryUsage[];
+  credit_balance: number;
+}
+
+export interface ProjectModelConfig {
+  project_id: string;
+  model_provider_id: string;
+  model_id: string;
+}
+
+export interface ProviderCatalogItem {
+  id: string;
+  name: string;
+  kind: string;
+  configured: boolean;
+  default_model: string;
+  supported_models: string[];
+}
+
+export function getAIProviders(token: string): Promise<{ providers: ProviderCatalogItem[] }> {
+  return callControlPlane<{ providers: ProviderCatalogItem[] }>("/ai/providers", {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+}
+
+export function getUserKeys(token: string): Promise<KeyMetadata[]> {
+  return callControlPlane<KeyMetadata[]>("/ai/keys", {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+}
+
+export function getUserKey(token: string, providerId: string): Promise<KeyMetadata> {
+  return callControlPlane<KeyMetadata>(`/ai/keys/${encodeURIComponent(providerId)}`, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+}
+
+export function setUserKey(
+  token: string,
+  providerId: string,
+  apiKey: string,
+  label: string
+): Promise<{ status: string; key: KeyMetadata }> {
+  return callControlPlane<{ status: string; key: KeyMetadata }>(
+    `/ai/keys/${encodeURIComponent(providerId)}`,
+    {
+      method: "PUT",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify({ api_key: apiKey, label }),
+    }
+  );
+}
+
+export function deleteUserKey(token: string, providerId: string): Promise<{ status: string }> {
+  return callControlPlane<{ status: string }>(`/ai/keys/${encodeURIComponent(providerId)}`, {
+    method: "DELETE",
+    headers: { Authorization: `Bearer ${token}` },
+  });
+}
+
+export function testUserKey(
+  token: string,
+  providerId: string,
+  apiKey?: string
+): Promise<{ success: boolean; latency_ms?: number; message?: string; error?: string }> {
+  return callControlPlane<{ success: boolean; latency_ms?: number; message?: string; error?: string }>(
+    `/ai/keys/${encodeURIComponent(providerId)}/test`,
+    {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify({ api_key: apiKey }),
+    }
+  );
+}
+
+export function getProjectModel(token: string, projectId: string): Promise<ProjectModelConfig> {
+  return callControlPlane<ProjectModelConfig>(
+    `/projects/${encodeURIComponent(projectId)}/model`,
+    {
+      headers: { Authorization: `Bearer ${token}` },
+    }
+  );
+}
+
+export function setProjectModel(
+  token: string,
+  projectId: string,
+  providerId: string,
+  modelId: string
+): Promise<ProjectModelConfig> {
+  return callControlPlane<ProjectModelConfig>(
+    `/projects/${encodeURIComponent(projectId)}/model`,
+    {
+      method: "PUT",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify({ model_provider_id: providerId, model_id: modelId }),
+    }
+  );
+}
+
+export function getProjectUsage(
+  token: string,
+  projectId: string,
+  days: number = 30
+): Promise<ProjectUsageReport> {
+  return callControlPlane<ProjectUsageReport>(
+    `/projects/${encodeURIComponent(projectId)}/usage?days=${days}`,
+    {
+      headers: { Authorization: `Bearer ${token}` },
+    }
+  );
+}
+
+export function getAccountUsage(token: string, days: number = 30): Promise<AccountUsageReport> {
+  return callControlPlane<AccountUsageReport>(`/usage?days=${days}`, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+}

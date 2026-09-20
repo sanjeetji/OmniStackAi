@@ -12,6 +12,7 @@ import {
   CheckCircle2,
   Coins,
   Copy,
+  Cpu,
   Download,
   ExternalLink,
   Eye,
@@ -58,6 +59,7 @@ import type {
 } from "@/lib/control-plane";
 import { formatDateTime, formatRelativeTime } from "@/lib/time";
 import { DeleteDialog } from "@/components/project-dialogs";
+import { ProjectAIManage } from "@/components/project-ai-manage";
 import { SkillEditorDialog } from "@/components/skills-library";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -93,8 +95,8 @@ export default function ProjectManagePage({
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  // Section nav: "general" | "knowledge" | "skills" | "secrets" | "git"
-  const [activeSection, setActiveSection] = useState<"general" | "knowledge" | "skills" | "secrets" | "git">("general");
+  // Section nav: "general" | "knowledge" | "skills" | "secrets" | "git" | "ai"
+  const [activeSection, setActiveSection] = useState<"general" | "knowledge" | "skills" | "secrets" | "git" | "ai">("general");
 
   // General Form state
   const [name, setName] = useState("");
@@ -852,6 +854,21 @@ export default function ProjectManagePage({
                 Connected
               </Badge>
             ) : null}
+          </button>
+          <button
+            type="button"
+            onClick={() => setActiveSection("ai")}
+            className={cn(
+              "w-full flex items-center justify-between px-3 py-2 text-sm font-medium rounded-md transition-colors",
+              activeSection === "ai"
+                ? "bg-secondary text-secondary-foreground"
+                : "text-muted-foreground hover:bg-muted/50 hover:text-foreground",
+            )}
+          >
+            <span className="flex items-center gap-2">
+              <Cpu className="size-4" />
+              AI & Model
+            </span>
           </button>
         </nav>
 
@@ -1635,6 +1652,8 @@ export default function ProjectManagePage({
                 </DialogContent>
               </Dialog>
             </div>
+          ) : activeSection === "ai" ? (
+            <ProjectAIManage projectId={projectId} />
           ) : (
             <>
               {/* Git & GitHub Section */}

@@ -4,6 +4,30 @@ Last updated: 2026-09-20
 ## Current Phase
 Stage 0 (Founder Build Sequence, Brief Section 91) — BASIC/MVP
 
+> **R-504 (2026-09-20): AI — model configuration (BYOK) and usage per project/account (F-06-ai-usage spec).**
+> Implemented Bring-Your-Own-Key (BYOK) provider key storage encrypted with AES-256-GCM in PostgreSQL `user_provider_keys`,
+> per-project model pinning, an immutable `model_calls` audit table, and transparent multi-tier usage tracking across the platform.
+> Database Schema: Created migration `000008_ai_usage.up.sql` / `down.sql`: `user_provider_keys` table with UUID `id`, `user_id`
+> foreign key with cascade delete, `key_ciphertext BYTEA`, `provider_id TEXT`, `label TEXT`, and unique constraint on `(user_id, provider_id)`.
+> Created immutable `model_calls` audit table tracking tokens, latency, cost, and credits, indexed by user and project. Added
+> `model_provider_id` and `model_id` to `projects` table for per-project pinning.
+> Control-Plane Backend: Built `internal/ai` store, resolution engine, and REST handlers (`GET /ai/providers`, `GET /ai/keys`,
+> `PUT /ai/keys/{providerId}`, `DELETE /ai/keys/{providerId}`, `POST /ai/keys/{providerId}/test`, `GET /ai/models`,
+> `GET/PUT /projects/{id}/model`, `GET /projects/{id}/usage`, `GET /usage`) using Go standard library `crypto/aes` and `crypto/cipher`
+> (zero external Go dependencies). Bound ciphertext with AAD `user_id:provider_id` to prevent cross-user key theft.
+> Supported transparent re-encryption on key rotation via `OMNISTACKAI_SECRETS_KEY_PREVIOUS`. Enforced strict model resolution precedence:
+> (1) Project pinned model -> (2) User BYOK key (0 credits debited, `billed_to = 'byok'`) -> (3) Platform cloud provider (credits debited,
+> `billed_to = 'platform'`) -> (4) Local Ollama (0 credits, `billed_to = 'local'`). Guaranteed zero key leakage: keys are strictly write-only
+> and never returned in any API response or log. Injected `AIStore` into `projects` and `jobs` handlers, recording granular `model_calls`
+> rows atomically alongside credit debits.
+> Agent-Engine Integration: Updated `intake/provider_resolution.py` to accept explicit `provider_id`, `model_id`, and `api_key`.
+> Updated `studio/live_serve.py` build and edit endpoints to propagate resolved model/key parameters and return granular `usage.calls: [...]` breakdown.
+> Console Web UI: Built **Settings → AI** (BYOK keys manager with AES-256-GCM notice, key test button with latency feedback, and Add/Edit/Delete modals),
+> **Settings → Usage** (KPI totals, per-project usage breakdown, daily activity table, and 7d/30d/90d range selectors), and
+> **Studio Manage → AI & Model** tab (project model pinning and project-specific usage metrics).
+> Gates: 3,769 tests pass, `task verify` passed, `scripts/test.sh` passed, Next.js build clean.
+> NEXT: **F-07 (R-505) SEO & AI search (spec `R_&_D/specs/F-07-seo-and-ai-search.md`)**.
+
 > **R-503 (2026-09-20): Secrets — encrypted per-project configuration (F-05-secrets spec).**
 > Implemented AES-256-GCM encrypted configuration for generated applications (API keys, SMTP passwords, payment credentials).
 > Database Schema: Created migration `000007_project_secrets.up.sql` / `down.sql`: `project_secrets` table with UUID `id`, `project_id`

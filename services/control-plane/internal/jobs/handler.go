@@ -9,8 +9,10 @@ import (
 	"math"
 	"net/http"
 	"net/url"
+	"strings"
 	"time"
 
+	"github.com/sanjeetji/OmniStackAi/services/control-plane/internal/ai"
 	"github.com/sanjeetji/OmniStackAi/services/control-plane/internal/auth"
 )
 
@@ -84,6 +86,29 @@ func handleBuildStream(deps Deps) http.HandlerFunc {
 			return
 		}
 
+		resolved := ai.ResolveModel(r.Context(), deps.AIStore, user.ID, "")
+		var payloadMap map[string]any
+		if err := json.Unmarshal(body, &payloadMap); err == nil {
+			changed := false
+			if _, ok := payloadMap["provider_id"]; !ok && resolved.ProviderID != "" {
+				payloadMap["provider_id"] = resolved.ProviderID
+				changed = true
+			}
+			if _, ok := payloadMap["model_id"]; !ok && resolved.ModelID != "" {
+				payloadMap["model_id"] = resolved.ModelID
+				changed = true
+			}
+			if _, ok := payloadMap["api_key"]; !ok && resolved.APIKey != "" {
+				payloadMap["api_key"] = resolved.APIKey
+				changed = true
+			}
+			if changed {
+				if newBody, err := json.Marshal(payloadMap); err == nil {
+					body = newBody
+				}
+			}
+		}
+
 		upstreamRequest, err := http.NewRequestWithContext(r.Context(), http.MethodPost, deps.AgentEngineURL+"/api/build/stream", bytes.NewReader(body))
 		if err != nil {
 			deps.logger().Error("build stream agent-engine request", "error", err)
@@ -150,7 +175,10 @@ func handleBuildStream(deps Deps) http.HandlerFunc {
 		if !sawDone {
 			return // no completed build (e.g. a mid-stream "error" frame) - nothing to charge for
 		}
-		requestedCredits := creditsForUsage(doneUsage, deps.CreditsPerUSD)
+		requestedCredits := int64(0)
+		if resolved.BilledTo == "platform" {
+			requestedCredits = creditsForUsage(doneUsage, deps.CreditsPerUSD)
+		}
 		charged, newBalance := int64(0), user.CreditBalance
 		if requestedCredits > 0 {
 			charged, newBalance, err = deps.CreditStore.DebitCredits(r.Context(), user.ID, requestedCredits, "job:build:stream")
@@ -164,6 +192,7 @@ func handleBuildStream(deps Deps) http.HandlerFunc {
 				return
 			}
 		}
+		_ = ai.RecordUsageCalls(r.Context(), deps.AIStore, user.ID, nil, "build", resolved.BilledTo, doneUsage, charged, deps.CreditsPerUSD)
 		writeSSEEvent(w, flusher, "credits", map[string]any{"credits_spent": charged, "credit_balance": newBalance})
 	}
 }
@@ -273,6 +302,29 @@ func handleBuildTurns(deps Deps) http.HandlerFunc {
 // credits_spent/credit_balance. Shared by handleBuild and handleBuildEdit so the "forward, decode,
 // debit, inject" shape lives in exactly one place.
 func proxyAndDebit(w http.ResponseWriter, r *http.Request, deps Deps, user auth.User, targetURL string, body []byte, reason string) {
+	resolved := ai.ResolveModel(r.Context(), deps.AIStore, user.ID, "")
+	var payloadMap map[string]any
+	if err := json.Unmarshal(body, &payloadMap); err == nil {
+		changed := false
+		if _, ok := payloadMap["provider_id"]; !ok && resolved.ProviderID != "" {
+			payloadMap["provider_id"] = resolved.ProviderID
+			changed = true
+		}
+		if _, ok := payloadMap["model_id"]; !ok && resolved.ModelID != "" {
+			payloadMap["model_id"] = resolved.ModelID
+			changed = true
+		}
+		if _, ok := payloadMap["api_key"]; !ok && resolved.APIKey != "" {
+			payloadMap["api_key"] = resolved.APIKey
+			changed = true
+		}
+		if changed {
+			if newBody, err := json.Marshal(payloadMap); err == nil {
+				body = newBody
+			}
+		}
+	}
+
 	upstreamRequest, err := http.NewRequestWithContext(r.Context(), http.MethodPost, targetURL, bytes.NewReader(body))
 	if err != nil {
 		deps.logger().Error("build agent-engine request", "error", err)
@@ -312,7 +364,10 @@ func proxyAndDebit(w http.ResponseWriter, r *http.Request, deps Deps, user auth.
 		return
 	}
 
-	requestedCredits := creditsForUsage(payload["usage"], deps.CreditsPerUSD)
+	requestedCredits := int64(0)
+	if resolved.BilledTo == "platform" {
+		requestedCredits = creditsForUsage(payload["usage"], deps.CreditsPerUSD)
+	}
 	charged, newBalance := int64(0), user.CreditBalance
 	if requestedCredits > 0 {
 		charged, newBalance, err = deps.CreditStore.DebitCredits(r.Context(), user.ID, requestedCredits, reason)
@@ -326,6 +381,12 @@ func proxyAndDebit(w http.ResponseWriter, r *http.Request, deps Deps, user auth.
 			return
 		}
 	}
+
+	purpose := "build"
+	if strings.Contains(reason, "edit") {
+		purpose = "edit"
+	}
+	_ = ai.RecordUsageCalls(r.Context(), deps.AIStore, user.ID, nil, purpose, resolved.BilledTo, payload["usage"], charged, deps.CreditsPerUSD)
 
 	payload["credits_spent"] = charged
 	payload["credit_balance"] = newBalance

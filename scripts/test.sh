@@ -1340,5 +1340,104 @@ if ! rg -qF 'Stored encrypted with AES-256-GCM' "$console_root/app/studio/[proje
   exit 1
 fi
 
+# R-504: F-06 AI — model configuration and usage (BYOK, model pinning, audit ledger).
+for required_ai_file in \
+  "$control_plane_root/migrations/000008_ai_usage.up.sql" \
+  "$control_plane_root/migrations/000008_ai_usage.down.sql" \
+  "$control_plane_root/internal/ai/store.go" \
+  "$control_plane_root/internal/ai/handler.go" \
+  "$control_plane_root/internal/ai/resolution.go" \
+  "$control_plane_root/internal/ai/ai_test.go" \
+  "$agent_engine_root/tests/test_studio_workspace_ai.py" \
+  "$console_root/components/ai-keys-manager.tsx" \
+  "$console_root/components/account-usage-viewer.tsx" \
+  "$console_root/components/project-ai-manage.tsx" \
+  "$console_root/app/api/ai/providers/route.ts" \
+  "$console_root/app/api/ai/keys/[providerId]/route.ts" \
+  "$console_root/app/api/ai/keys/[providerId]/test/route.ts" \
+  "$console_root/app/api/projects/[id]/model/route.ts" \
+  "$console_root/app/api/projects/[id]/usage/route.ts" \
+  "$console_root/app/api/usage/route.ts"; do
+  if [[ ! -f "$required_ai_file" ]]; then
+    printf 'Missing R-504 contract file: %s\n' "$required_ai_file"
+    exit 1
+  fi
+done
+
+if ! rg -qF 'CREATE TABLE IF NOT EXISTS user_provider_keys' "$control_plane_root/migrations/000008_ai_usage.up.sql"; then
+  printf 'R-504 migration must create user_provider_keys table.\n'
+  exit 1
+fi
+
+if ! rg -qF 'CREATE TABLE IF NOT EXISTS model_calls' "$control_plane_root/migrations/000008_ai_usage.up.sql"; then
+  printf 'R-504 migration must create model_calls table.\n'
+  exit 1
+fi
+
+if ! rg -qF 'DROP TABLE IF EXISTS user_provider_keys' "$control_plane_root/migrations/000008_ai_usage.down.sql"; then
+  printf 'R-504 down migration must drop user_provider_keys table.\n'
+  exit 1
+fi
+
+if ! rg -qF 'DROP TABLE IF EXISTS model_calls' "$control_plane_root/migrations/000008_ai_usage.down.sql"; then
+  printf 'R-504 down migration must drop model_calls table.\n'
+  exit 1
+fi
+
+if ! rg -qF 'ai.Register' "$control_plane_root/cmd/control-plane/main.go"; then
+  printf 'R-504 control-plane main.go must register AI handlers.\n'
+  exit 1
+fi
+
+if ! rg -qF 'AIStore' "$control_plane_root/internal/projects/handler.go"; then
+  printf 'R-504 control-plane projects handler must wire AIStore.\n'
+  exit 1
+fi
+
+if ! rg -qF 'AIStore' "$control_plane_root/internal/jobs/types.go"; then
+  printf 'R-504 control-plane jobs types must wire AIStore.\n'
+  exit 1
+fi
+
+if ! rg -qF 'ResolveModel' "$control_plane_root/internal/ai/resolution.go"; then
+  printf 'R-504 control-plane must implement ResolveModel.\n'
+  exit 1
+fi
+
+if ! rg -qF 'RecordUsageCalls' "$control_plane_root/internal/ai/resolution.go"; then
+  printf 'R-504 control-plane must implement RecordUsageCalls.\n'
+  exit 1
+fi
+
+if ! rg -qF 'getUserKeys' "$console_root/lib/control-plane.ts"; then
+  printf 'R-504 lib/control-plane.ts must define getUserKeys.\n'
+  exit 1
+fi
+
+if ! rg -qF 'getAccountUsage' "$console_root/lib/control-plane.ts"; then
+  printf 'R-504 lib/control-plane.ts must define getAccountUsage.\n'
+  exit 1
+fi
+
+if ! rg -qF 'getProjectModel' "$console_root/lib/control-plane.ts"; then
+  printf 'R-504 lib/control-plane.ts must define getProjectModel.\n'
+  exit 1
+fi
+
+if ! rg -qF 'AIKeysManager' "$console_root/app/settings/page.tsx"; then
+  printf 'R-504 settings page must render AIKeysManager.\n'
+  exit 1
+fi
+
+if ! rg -qF 'AccountUsageViewer' "$console_root/app/settings/page.tsx"; then
+  printf 'R-504 settings page must render AccountUsageViewer.\n'
+  exit 1
+fi
+
+if ! rg -qF 'ProjectAIManage' "$console_root/app/studio/[projectId]/manage/page.tsx"; then
+  printf 'R-504 manage page must render ProjectAIManage.\n'
+  exit 1
+fi
+
 printf 'Repository contract tests passed.\n'
 

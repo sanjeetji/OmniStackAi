@@ -1,32 +1,33 @@
-task_id: R-503
+task_id: R-504
 status: completed
 phase: MVP
 tracker_row: null
 started_at: "2026-09-20"
 completed_at: "2026-09-20"
 objective: >-
-  Implement F-05 Secrets (spec R_&_D/specs/F-05-secrets.md).
-  Encrypted per-project configuration (e.g. payment keys, SMTP passwords, third-party API keys)
-  stored in PostgreSQL using AES-256-GCM (Go standard library crypto/aes + crypto/cipher).
-  Master key OMNISTACKAI_SECRETS_KEY with key rotation via OMNISTACKAI_SECRETS_KEY_PREVIOUS.
-  Secrets injected into preview process environment at runtime, never written into repository files,
-  never committed to git, and never included in ZIP exports.
-  Control-plane REST API (/projects/{id}/secrets, PUT, DELETE, POST /reveal/{key}, 503 when unconfigured).
-  Console Web UI (Manage -> Secrets tab with masked values, 30s reveal timer, key validation, and preview restart alert).
+  Implement F-06 AI — model configuration (BYOK) and usage per project/account (spec R_&_D/specs/F-06-ai-usage.md).
+  Bring-Your-Own-Key (BYOK) provider keys stored encrypted with AES-256-GCM in PostgreSQL user_provider_keys.
+  Per-project model pinning in projects.model_provider_id and projects.model_id.
+  Immutable model_calls audit log table tracking tokens, latency, cost, and credits, written in the same transaction as credit debits.
+  Model resolution precedence: Project pinned model -> User BYOK key (0 credits) -> Platform cloud provider (credits) -> Local Ollama (0 credits).
+  Control-plane REST API (/ai/providers, /ai/keys/{providerId}, /ai/keys/{providerId}/test, /ai/models, /projects/{id}/model, /projects/{id}/usage, /usage).
+  Console Web UI: Settings -> AI (BYOK keys with test button), Settings -> Usage (account totals & per-project table), Manage -> AI (project model pinning & usage stats).
 allowed_paths:
-  - services/control-plane/migrations/000007_project_secrets.up.sql
-  - services/control-plane/migrations/000007_project_secrets.down.sql
-  - services/control-plane/internal/secrets/
+  - services/control-plane/migrations/000008_ai_usage.up.sql
+  - services/control-plane/migrations/000008_ai_usage.down.sql
+  - services/control-plane/internal/ai/
   - services/control-plane/internal/projects/
+  - services/control-plane/internal/jobs/
   - services/control-plane/cmd/control-plane/
-  - services/agent-engine/src/omnistackai_agent_engine/localrun/
+  - services/agent-engine/src/omnistackai_agent_engine/intake/provider_resolution.py
   - services/agent-engine/src/omnistackai_agent_engine/studio/
-  - services/agent-engine/tests/test_studio_workspace_secrets.py
+  - services/agent-engine/tests/test_studio_workspace_ai.py
   - apps/console-web/lib/control-plane.ts
+  - apps/console-web/app/api/ai/
   - apps/console-web/app/api/projects/
+  - apps/console-web/app/api/usage/
+  - apps/console-web/app/settings/page.tsx
   - apps/console-web/app/studio/[projectId]/manage/page.tsx
-  - .env.example
-  - scripts/env-check.sh
   - scripts/test.sh
   - .ai/CURRENT_TASK.yaml
   - .ai/PROJECT_STATE.yaml
@@ -37,8 +38,8 @@ allowed_paths:
 forbidden_changes:
   - Do not change control-plane database from PostgreSQL
   - Do not add external Go or Python dependencies
-  - Do not write secrets to repository files, commits, build streams, or ZIP exports
-  - Do not store plaintext secrets if master key is unconfigured (must return 503)
+  - Do not return plaintext or ciphertext BYOK keys from any endpoint
+  - Do not charge credits when BYOK key or local model is used
 required_gates:
   - bash scripts/test.sh
   - cd services/control-plane && go test -v ./...
@@ -55,11 +56,9 @@ model_tool_trace:
   note: Engineering task, 0 model calls required for gates.
 evidence:
   scripts_test_sh: passed
-  control_plane_tests: passed (12 packages, 6 secrets unit tests)
-  agent_engine_tests: passed (3765 tests passed)
+  control_plane_tests: passed
+  agent_engine_tests: passed
   console_web_typecheck_and_lint: passed
-  console_web_build: passed
   task_verify: passed
 next_action: >-
-  Task completed. Commit and push ai/R-503-secrets.
-
+  Ready for user review and commit. Next task: F-07 SEO & AI search (R-505, spec R_&_D/specs/F-07-seo-and-ai-search.md).

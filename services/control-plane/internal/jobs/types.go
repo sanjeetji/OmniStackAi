@@ -11,6 +11,7 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/sanjeetji/OmniStackAi/services/control-plane/internal/ai"
 	"github.com/sanjeetji/OmniStackAi/services/control-plane/internal/auth"
 )
 
@@ -28,6 +29,7 @@ type Deps struct {
 	// so this package never re-implements bearer-token/session lookup.
 	AuthStore      auth.Store
 	CreditStore    CreditStore
+	AIStore        ai.Store
 	AgentEngineURL string
 	// CreditsPerUSD converts a real dollar cost into a credit charge: credits = cost_usd * CreditsPerUSD.
 	CreditsPerUSD float64

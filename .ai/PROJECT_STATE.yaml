@@ -2,11 +2,27 @@ schema_version: 1
 project: OmniStackAI
 phase: BASIC/MVP
 founder_stage: 0
-current_task: R-503
+current_task: R-504
 current_status: completed
-branch: ai/R-503-secrets
-last_completed_task: R-503
+branch: ai/R-504-ai-usage
+last_completed_task: R-504
 last_completed_task_summary: >-
+  Completed R-504 (2026-09-20): AI — model configuration (BYOK) and usage per project/account (F-06-ai-usage spec).
+  Implemented Bring-Your-Own-Key (BYOK) provider key storage encrypted with AES-256-GCM in PostgreSQL user_provider_keys
+  with AAD binding user_id:provider_id, key testing without persistent logging, and zero-key leakage guarantees.
+  Created database migration 000008_ai_usage.up.sql / down.sql adding user_provider_keys, immutable model_calls audit table,
+  and project model pinning columns (model_provider_id, model_id) on projects.
+  Built Go control-plane internal/ai store, resolution engine, and REST handlers (/ai/providers, /ai/keys/{providerId},
+  /ai/keys/{providerId}/test, /ai/models, /projects/{id}/model, /projects/{id}/usage, /usage). Enforced strict resolution precedence:
+  Project pinned model -> User BYOK key (0 credits) -> Platform cloud provider (credits debited) -> Local Ollama (0 credits).
+  Wired atomic credit debiting and model_calls recording across projects and jobs streaming and edit handlers.
+  Updated agent-engine provider_resolution.py and live_serve.py to accept explicit provider_id, model_id, api_key and emit
+  granular usage calls detail.
+  Built Console Web UI: Settings -> AI (BYOK keys manager with AES-256-GCM notice, test button, update/delete modals),
+  Settings -> Usage (KPI totals, per-project breakdown, daily activity table, 7d/30d/90d filters), and
+  Studio Manage -> AI & Model tab (project model pinning, current model summary, project usage table).
+  All 3,769 tests pass; full task verify, Go tests, Next.js build, and security checks clean.
+_prior_last_completed_task_summary_R503: >-
   Completed R-503 (2026-09-20): Secrets — encrypted per-project configuration (F-05-secrets spec).
   Implemented AES-256-GCM authenticated encryption for per-project secrets using Go standard library
   crypto/aes and crypto/cipher with zero external Go dependencies.

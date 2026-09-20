@@ -15,7 +15,8 @@ import os
 from pathlib import Path
 
 from ..model_gateway.accounting import UsageLedger
-from ..model_gateway.bootstrap import build_gateway_from_env
+from ..model_gateway.bootstrap import _cloud_descriptor, build_gateway_from_env
+from ..model_gateway.cloud import create_cloud_provider, resolve_provider_specs
 from ..model_gateway.contracts import ModelProvider
 from ..model_gateway.recording import RecordingProvider
 from ._ollama import build_ollama_provider_from_env
@@ -62,10 +63,14 @@ def resolve_generation_provider_from_env(
     load_dotenv: bool = True,
     prefer_local: bool | None = None,
     usage_ledger: UsageLedger | None = None,
+    provider_id: str | None = None,
+    model_id: str | None = None,
+    api_key: str | None = None,
 ) -> tuple[ModelProvider, str, int, float]:
     """Resolve (provider, model_id, max_output_tokens, request_timeout_seconds).
 
     Smart dual-engine routing:
+    - If explicit provider_id is passed, uses that provider with optional model_id and api_key.
     - If prefer_local is explicitly True or OMNISTACKAI_PREFER_LOCAL is '1'/'true',
       uses local Ollama if reachable; otherwise falls over to cloud.
     - If cloud provider is specified (e.g. Groq) and valid, uses cloud;
@@ -78,6 +83,34 @@ def resolve_generation_provider_from_env(
     if load_dotenv:
         _load_dotenv_if_needed()
 
+    if provider_id:
+        p_id = provider_id.strip().lower()
+        if p_id in ("ollama", "local"):
+            provider, default_model, max_output, timeout = build_ollama_provider_from_env()
+            eff_model = (model_id or default_model).strip()
+            return _maybe_record(provider, usage_ledger), eff_model, max_output, timeout
+        specs = resolve_provider_specs()
+        if p_id in specs:
+            spec = specs[p_id]
+            eff_key = (api_key or os.environ.get(spec.key_env, "")).strip()
+            if eff_key:
+                eff_model = (model_id or os.environ.get(spec.model_env, "") or spec.default_model).strip()
+                desc = _cloud_descriptor(spec.provider_id, eff_model)
+                rate_limit_retries = int(os.environ.get("OMNISTACKAI_RATE_LIMIT_RETRIES", "2"))
+                max_retry_after = float(os.environ.get("OMNISTACKAI_MAX_RETRY_AFTER_SECONDS", "60.0"))
+                provider = create_cloud_provider(
+                    spec,
+                    api_key=eff_key,
+                    descriptor=desc,
+                    rate_limit_retries=rate_limit_retries,
+                    max_retry_after_seconds=max_retry_after,
+                )
+                timeout = float(os.environ.get("OMNISTACKAI_CLOUD_TIMEOUT_SECONDS", "120.0"))
+                logger.info("Resolved explicit provider '%s' with model '%s'", p_id, eff_model)
+                return _maybe_record(provider, usage_ledger), eff_model, desc.max_output_tokens, timeout
+            else:
+                logger.warning("Explicit provider '%s' requested but no API key was provided or configured in %s", p_id, spec.key_env)
+
     env_prefer_local = prefer_local
     if env_prefer_local is None:
         raw_pref = os.environ.get("OMNISTACKAI_PREFER_LOCAL", "").strip().lower()
@@ -89,8 +122,9 @@ def resolve_generation_provider_from_env(
     # If preference is local and Ollama is online, use Ollama immediately
     if env_prefer_local and is_ollama_ready():
         logger.info("Local Ollama is ready and preferred; routing to Ollama")
-        provider, model_id, max_output, timeout = build_ollama_provider_from_env()
-        return _maybe_record(provider, usage_ledger), model_id, max_output, timeout
+        provider, default_model, max_output, timeout = build_ollama_provider_from_env()
+        eff_model = (model_id or default_model).strip()
+        return _maybe_record(provider, usage_ledger), eff_model, max_output, timeout
 
     if cloud_selection and cloud_selection != "none":
         try:
