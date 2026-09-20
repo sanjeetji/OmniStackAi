@@ -20,6 +20,7 @@ import (
 	"github.com/sanjeetji/OmniStackAi/services/control-plane/internal/health"
 	"github.com/sanjeetji/OmniStackAi/services/control-plane/internal/jobs"
 	"github.com/sanjeetji/OmniStackAi/services/control-plane/internal/password"
+	"github.com/sanjeetji/OmniStackAi/services/control-plane/internal/projects"
 	"github.com/sanjeetji/OmniStackAi/services/control-plane/internal/users"
 	"github.com/sanjeetji/OmniStackAi/services/control-plane/migrations"
 )
@@ -52,6 +53,7 @@ func run(ctx context.Context, logger *slog.Logger) error {
 	}
 
 	userStore := users.New(pool)
+	projectStore := projects.New(pool)
 
 	mux := http.NewServeMux()
 	health.Register(mux, pool, runtimeConfig.DatabasePingTimeout)
@@ -65,6 +67,13 @@ func run(ctx context.Context, logger *slog.Logger) error {
 	jobs.Register(mux, jobs.Deps{
 		AuthStore:      userStore,
 		CreditStore:    userStore,
+		AgentEngineURL: runtimeConfig.AgentEngineURL,
+		CreditsPerUSD:  runtimeConfig.CreditsPerUSD,
+		Logger:         logger,
+	})
+	projects.Register(mux, projects.Deps{
+		AuthStore:      userStore,
+		ProjectStore:   projectStore,
 		AgentEngineURL: runtimeConfig.AgentEngineURL,
 		CreditsPerUSD:  runtimeConfig.CreditsPerUSD,
 		Logger:         logger,

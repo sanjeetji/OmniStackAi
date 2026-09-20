@@ -1,8 +1,21 @@
 # Project State — OmniStackAI
-Last updated: 2026-09-19
+Last updated: 2026-09-20
 
 ## Current Phase
 Stage 0 (Founder Build Sequence, Brief Section 91) — BASIC/MVP
+
+> **R-499 (2026-09-20): Projects & Workspaces Persistence (F-01-projects spec).**
+> Fully implemented on-disk workspace persistence and database-backed multi-tenant project management.
+> In PostgreSQL, created `projects` table (`000004_projects.up.sql`) with foreign key to users and unique index
+> `(id, user_id)` enforcing strict tenant isolation. In Go control-plane, built `internal/projects` store
+> and HTTP handlers for project CRUD, credit debits, and project-isolated file access, closing the previous cross-tenant
+> read vulnerability. In Python agent-engine, created `StudioWorkspaceStore` in `studio/workspace.py` writing to
+> `~/.omnistackai/workspaces/<uuid>/` (`repo/`, `state.json`, `turns.jsonl`, `ir.json`, `.lock`), ensuring builds,
+> edits, and turns survive daemon restarts. In Console Web UI, implemented 'Your projects' on the home page,
+> full `/projects` management dashboard (search, filter, sort, rename, duplicate, archive, typed delete),
+> dynamic `/studio/[projectId]` studio routing, `ProjectSwitcher` chat rail header, and Manage General settings
+> (`/studio/[projectId]/manage`). Gates: all 3,746 tests pass, `task verify` green, `scripts/test.sh` green.
+> NEXT: **F-02 (R-500) Multi-Process Preview & Diagnostics Service**.
 
 > **R-498 (2026-09-19): Platform buildout plan (15 specs) + single-command local runtime.**
 > The founder reviewed the console live and listed what a platform still needs. This task answers

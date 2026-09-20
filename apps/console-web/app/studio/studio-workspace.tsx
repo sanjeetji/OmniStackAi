@@ -33,12 +33,14 @@ function formatUsd(micros: number): string {
 export function StudioWorkspace({
   snapshot,
   buildId,
+  projectId,
 }: {
   snapshot: WorkspaceSnapshot | null;
   buildId: string | null;
+  projectId?: string | null;
 }) {
   if (!snapshot || !snapshot.name) {
-    if (!buildId) {
+    if (!buildId && !projectId) {
       return null;
     }
     const fileCount = snapshot?.files.length ?? 0;
@@ -53,7 +55,9 @@ export function StudioWorkspace({
               : "File details fill in after your next change."}
           </p>
         </div>
-        <p className="font-mono text-xs text-muted-foreground">build {buildId.slice(0, 8)}</p>
+        <p className="font-mono text-xs text-muted-foreground">
+          {projectId ? `project ${projectId.slice(0, 8)}` : `build ${(buildId ?? "").slice(0, 8)}`}
+        </p>
       </header>
     );
   }

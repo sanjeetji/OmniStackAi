@@ -27,6 +27,7 @@ from .files import BuildNotFoundError, FileNotFoundInBuildError, PathOutsideBuil
 from .page import STUDIO_HTML
 from .problems import NoWebTargetError, ProblemsNotCheckedError, ToolchainNotInstalledError
 from .session import EditNotSupportedError
+from .workspace import StudioWorkspaceStore, WorkspaceLockedError, WorkspaceNotFoundError
 
 BuildFn = Callable[..., dict]
 ControlFn = Callable[..., dict]
@@ -37,6 +38,8 @@ ReadFileFn = Callable[[str, str], dict]
 ProblemsFn = Callable[[str], dict]
 ProvidersFn = Callable[[], dict]
 BuildStreamFn = Callable[[str], AsyncIterator[dict]]
+WorkspaceBuildFn = Callable[..., dict]
+WorkspaceBuildStreamFn = Callable[..., AsyncIterator[dict]]
 
 _MAX_BODY_BYTES = 64 * 1024
 
@@ -89,6 +92,13 @@ def _make_handler(
     simulate_ecosystem_governance_fn: Callable[..., dict] | ControlFn | None = None,
     get_ecosystem_docs_fn: ControlFn | None = None,
     export_ecosystem_docs_fn: Callable[..., dict] | ControlFn | None = None,
+    workspace_store: StudioWorkspaceStore | None = None,
+    workspace_build_fn: WorkspaceBuildFn | None = None,
+    workspace_build_stream_fn: WorkspaceBuildStreamFn | None = None,
+    workspace_edit_fn: EditFn | None = None,
+    workspace_preview_fn: PreviewBuildFn | None = None,
+    workspace_problems_check_fn: ProblemsFn | None = None,
+    workspace_problems_get_fn: ProblemsFn | None = None,
 ) -> type[BaseHTTPRequestHandler]:
     pack_registry = registry or DEFAULT_SOLUTION_PACK_REGISTRY
     eco_registry = ecosystem_registry or DEFAULT_ECOSYSTEM_PACK_REGISTRY
@@ -165,6 +175,193 @@ def _make_handler(
                 return None
             build_id = unquote(path[len(prefix) : -len(suffix)])
             return build_id if build_id and "/" not in build_id else None
+
+        @staticmethod
+        def _workspace_id_for_suffix(path: str, suffix: str) -> str | None:
+            prefix = "/api/workspaces/"
+            if not path.startswith(prefix):
+                return None
+            if suffix:
+                if not path.endswith(suffix):
+                    return None
+                ws_id = unquote(path[len(prefix) : -len(suffix)])
+            else:
+                ws_id = unquote(path[len(prefix) :])
+            return ws_id if ws_id and "/" not in ws_id else None
+
+        def _handle_workspace_get_state(self, ws_id: str) -> None:
+            if workspace_store is None:
+                self._send_json(404, {"error": "workspaces are not enabled"})
+                return
+            state = workspace_store.get_state(ws_id)
+            if state is None:
+                self._send_json(404, {"error": f"workspace {ws_id} not found"})
+                return
+            self._send_json(200, state)
+
+        def _handle_workspace_file_tree(self, ws_id: str) -> None:
+            if workspace_store is None:
+                self._send_json(404, {"error": "workspaces are not enabled"})
+                return
+            try:
+                self._send_json(200, workspace_store.list_files(ws_id))
+            except BuildNotFoundError as error:
+                self._send_json(404, {"error": str(error)})
+            except Exception as error:
+                self._send_json(502, {"error": str(error)})
+
+        def _handle_workspace_read_file(self, ws_id: str, query: str) -> None:
+            if workspace_store is None:
+                self._send_json(404, {"error": "workspaces are not enabled"})
+                return
+            rel_path = parse_qs(query).get("path", [""])[0]
+            if not rel_path:
+                self._send_json(400, {"error": "path is required"})
+                return
+            try:
+                self._send_json(200, workspace_store.read_file(ws_id, rel_path))
+            except BuildNotFoundError as error:
+                self._send_json(404, {"error": str(error)})
+            except PathOutsideBuildError as error:
+                self._send_json(400, {"error": str(error)})
+            except FileNotFoundInBuildError as error:
+                self._send_json(404, {"error": str(error)})
+            except Exception as error:
+                self._send_json(502, {"error": str(error)})
+
+        def _handle_workspace_turns(self, ws_id: str) -> None:
+            if workspace_store is None:
+                self._send_json(404, {"error": "workspaces are not enabled"})
+                return
+            self._send_json(200, {"turns": workspace_store.get_turns(ws_id)})
+
+        def _handle_workspace_get_problems(self, ws_id: str) -> None:
+            if workspace_problems_get_fn is None:
+                self._send_json(404, {"error": "problems checking is not enabled"})
+                return
+            try:
+                self._send_json(200, workspace_problems_get_fn(ws_id))
+            except ProblemsNotCheckedError as error:
+                self._send_json(404, {"error": str(error)})
+            except BuildNotFoundError as error:
+                self._send_json(404, {"error": str(error)})
+            except Exception as error:
+                self._send_json(502, {"error": str(error)})
+
+        def _handle_workspace_problems_check(self, ws_id: str) -> None:
+            if workspace_problems_check_fn is None:
+                self._send_json(404, {"error": "problems checking is not enabled"})
+                return
+            try:
+                res = workspace_problems_check_fn(ws_id)
+                self._send_json(200, res)
+            except BuildNotFoundError as error:
+                self._send_json(404, {"error": str(error)})
+            except NoWebTargetError as error:
+                self._send_json(400, {"error": str(error)})
+            except ToolchainNotInstalledError as error:
+                self._send_json(409, {"error": str(error)})
+            except Exception as error:
+                self._send_json(502, {"error": str(error)})
+
+        def _handle_workspace_preview(self, ws_id: str) -> None:
+            if workspace_preview_fn is None:
+                self._send_json(404, {"error": "preview is not enabled"})
+                return
+            try:
+                res = workspace_preview_fn(ws_id)
+                self._send_json(200, res)
+            except Exception as error:
+                self._send_json(502, {"error": str(error)})
+
+        def _handle_workspace_build(self, ws_id: str) -> None:
+            data = self._read_json_body()
+            if data is None:
+                return
+            if workspace_build_fn is None:
+                self._send_json(404, {"error": "workspace build is not enabled"})
+                return
+            prompt = str(data.get("prompt", "")).strip()
+            if not prompt:
+                self._send_json(400, {"error": "prompt is required"})
+                return
+            options = {k: v for k, v in data.items() if k != "prompt"}
+            try:
+                res = workspace_build_fn(ws_id, prompt, **options)
+            except WorkspaceLockedError as error:
+                self._send_json(409, {"error": str(error)})
+                return
+            except Exception as error:
+                self._send_json(502, {"error": str(error)})
+                return
+            self._send_json(200, res)
+
+        def _handle_workspace_build_stream(self, ws_id: str) -> None:
+            data = self._read_json_body()
+            if data is None:
+                return
+            if workspace_build_stream_fn is None:
+                self._send_json(404, {"error": "workspace build streaming is not enabled"})
+                return
+            prompt = str(data.get("prompt", "")).strip()
+            if not prompt:
+                self._send_json(400, {"error": "prompt is required"})
+                return
+            if data.get("pack_id") or data.get("ecosystem_id") or data.get("hybrid_ui"):
+                self._send_json(
+                    400,
+                    {"error": "streaming is only supported for a plain-prompt, non-hybrid_ui build today"},
+                )
+                return
+
+            self.send_response(200)
+            self.send_header("Content-Type", "text/event-stream")
+            self.send_header("Cache-Control", "no-cache")
+            self.send_header("Connection", "close")
+            self.send_header("X-Accel-Buffering", "no")
+            self.end_headers()
+
+            options = {k: v for k, v in data.items() if k != "prompt"}
+
+            async def _drain() -> None:
+                async for event in workspace_build_stream_fn(ws_id, prompt, **options):
+                    self._write_sse_event(event)
+
+            try:
+                asyncio.run(_drain())
+            except Exception as error:
+                self._write_sse_event({"phase": "error", "error": str(error)})
+
+        def _handle_workspace_edit(self, ws_id: str) -> None:
+            data = self._read_json_body()
+            if data is None:
+                return
+            if workspace_edit_fn is None:
+                self._send_json(404, {"error": "editing is not enabled"})
+                return
+            prompt = str(data.get("prompt", "")).strip()
+            if not prompt:
+                self._send_json(400, {"error": "prompt is required"})
+                return
+            try:
+                maybe_coro = workspace_edit_fn(ws_id, prompt)
+                if asyncio.iscoroutine(maybe_coro):
+                    res = asyncio.run(maybe_coro)
+                else:
+                    res = maybe_coro
+            except BuildNotFoundError as error:
+                self._send_json(404, {"error": str(error)})
+                return
+            except EditNotSupportedError as error:
+                self._send_json(400, {"error": str(error)})
+                return
+            except WorkspaceLockedError as error:
+                self._send_json(409, {"error": str(error)})
+                return
+            except Exception as error:
+                self._send_json(502, {"error": str(error)})
+                return
+            self._send_json(200, res)
 
         def _handle_file_tree(self, build_id: str) -> None:
             if file_tree_fn is None:
@@ -522,6 +719,27 @@ def _make_handler(
                 return
             else:
                 path_only = urlparse(self.path).path
+                ws_files_id = self._workspace_id_for_suffix(path_only, "/files")
+                if ws_files_id is not None:
+                    self._handle_workspace_file_tree(ws_files_id)
+                    return
+                ws_file_id = self._workspace_id_for_suffix(path_only, "/file")
+                if ws_file_id is not None:
+                    self._handle_workspace_read_file(ws_file_id, urlparse(self.path).query)
+                    return
+                ws_turns_id = self._workspace_id_for_suffix(path_only, "/turns")
+                if ws_turns_id is not None:
+                    self._handle_workspace_turns(ws_turns_id)
+                    return
+                ws_problems_id = self._workspace_id_for_suffix(path_only, "/problems")
+                if ws_problems_id is not None:
+                    self._handle_workspace_get_problems(ws_problems_id)
+                    return
+                ws_state_id = self._workspace_id_for_suffix(path_only, "")
+                if ws_state_id is not None:
+                    self._handle_workspace_get_state(ws_state_id)
+                    return
+
                 files_build_id = self._build_id_for_suffix(path_only, "/files")
                 if files_build_id is not None:
                     self._handle_file_tree(files_build_id)
@@ -847,6 +1065,28 @@ def _make_handler(
                 except Exception as error:
                     self._send_json(502, {"error": str(error)})
                 return
+            path_only = urlparse(self.path).path
+            ws_stream_id = self._workspace_id_for_suffix(path_only, "/build/stream")
+            if ws_stream_id is not None:
+                self._handle_workspace_build_stream(ws_stream_id)
+                return
+            ws_build_id = self._workspace_id_for_suffix(path_only, "/build")
+            if ws_build_id is not None:
+                self._handle_workspace_build(ws_build_id)
+                return
+            ws_edit_id = self._workspace_id_for_suffix(path_only, "/edit")
+            if ws_edit_id is not None:
+                self._handle_workspace_edit(ws_edit_id)
+                return
+            ws_preview_id = self._workspace_id_for_suffix(path_only, "/preview")
+            if ws_preview_id is not None:
+                self._handle_workspace_preview(ws_preview_id)
+                return
+            ws_problems_id = self._workspace_id_for_suffix(path_only, "/problems")
+            if ws_problems_id is not None:
+                self._handle_workspace_problems_check(ws_problems_id)
+                return
+
             if self.path == "/api/build/stream":
                 self._handle_build_stream()
                 return
@@ -906,6 +1146,21 @@ def _make_handler(
                 return
             self._send_json(200, result)
 
+        def do_DELETE(self) -> None:  # noqa: N802 (http.server API)
+            path_only = urlparse(self.path).path
+            ws_id = self._workspace_id_for_suffix(path_only, "")
+            if ws_id is not None:
+                if workspace_store is None:
+                    self._send_json(404, {"error": "workspaces are not enabled"})
+                    return
+                try:
+                    workspace_store.purge(ws_id)
+                    self._send_json(200, {"status": "purged", "id": ws_id})
+                except Exception as error:
+                    self._send_json(502, {"error": str(error)})
+                return
+            self._send_json(404, {"error": "not found"})
+
     return StudioHandler
 
 
@@ -960,6 +1215,13 @@ def create_studio_server(
     simulate_ecosystem_governance_fn: Callable[..., dict] | ControlFn | None = None,
     get_ecosystem_docs_fn: ControlFn | None = None,
     export_ecosystem_docs_fn: Callable[..., dict] | ControlFn | None = None,
+    workspace_store: StudioWorkspaceStore | None = None,
+    workspace_build_fn: WorkspaceBuildFn | None = None,
+    workspace_build_stream_fn: WorkspaceBuildStreamFn | None = None,
+    workspace_edit_fn: EditFn | None = None,
+    workspace_preview_fn: PreviewBuildFn | None = None,
+    workspace_problems_check_fn: ProblemsFn | None = None,
+    workspace_problems_get_fn: ProblemsFn | None = None,
 ) -> ThreadingHTTPServer:
     """Create (but do not start) a studio server bound to ``host``/``port``.
 
@@ -1036,6 +1298,13 @@ def create_studio_server(
             simulate_ecosystem_governance_fn=simulate_ecosystem_governance_fn,
             get_ecosystem_docs_fn=get_ecosystem_docs_fn,
             export_ecosystem_docs_fn=export_ecosystem_docs_fn,
+            workspace_store=workspace_store,
+            workspace_build_fn=workspace_build_fn,
+            workspace_build_stream_fn=workspace_build_stream_fn,
+            workspace_edit_fn=workspace_edit_fn,
+            workspace_preview_fn=workspace_preview_fn,
+            workspace_problems_check_fn=workspace_problems_check_fn,
+            workspace_problems_get_fn=workspace_problems_get_fn,
         ),
     )
 

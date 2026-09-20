@@ -42,9 +42,11 @@ const FRAME_HEIGHT = "h-[calc(100dvh-18rem)] min-h-[480px]";
 export function StudioPreview({
   buildId,
   previewVersion,
+  projectId,
 }: {
   buildId: string | null;
   previewVersion: number;
+  projectId?: string | null;
 }) {
   const [status, setStatus] = useState<PreviewStatus | null>(null);
   // starting/elapsedMs/fetchError travel together as one state value so the effect below only
@@ -63,7 +65,7 @@ export function StudioPreview({
   // previewVersion bumps (the parent bumps it after every successful edit - _edit() never restarts
   // the preview on its own, unlike _build(), so this call is what keeps the iframe fresh).
   useEffect(() => {
-    if (!buildId) {
+    if (!buildId && !projectId) {
       return;
     }
     let cancelled = false;
@@ -71,9 +73,10 @@ export function StudioPreview({
     (async () => {
       setPhase({ starting: true, elapsedMs: 0, fetchError: null });
       try {
-        const { status: httpStatus, body } = await postJSON(
-          `/api/jobs/build/${encodeURIComponent(buildId)}/preview`,
-        );
+        const previewUrl = projectId
+          ? `/api/projects/${encodeURIComponent(projectId)}/preview`
+          : `/api/jobs/build/${encodeURIComponent(buildId!)}/preview`;
+        const { status: httpStatus, body } = await postJSON(previewUrl);
         if (cancelled) return;
         if (httpStatus === 404) {
           setDisabled(true);
@@ -91,7 +94,7 @@ export function StudioPreview({
     return () => {
       cancelled = true;
     };
-  }, [buildId, previewVersion]);
+  }, [buildId, previewVersion, projectId]);
 
   // Real elapsed time while starting - cold starts confirmed live up to ~45s during R-478.
   useEffect(() => {

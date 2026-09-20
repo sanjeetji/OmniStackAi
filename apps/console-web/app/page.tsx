@@ -16,6 +16,7 @@ import { revealStyle } from "@/lib/motion";
 import { getCurrentUser, getSessionToken } from "@/lib/session";
 import AppShell from "@/components/app-shell";
 import HomeComposer from "@/components/home-composer";
+import HomeProjects from "@/components/home-projects";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -63,6 +64,7 @@ export default async function HomePage() {
           keep changing it.
         </p>
         <HomeComposer className="mt-5 max-w-2xl" />
+        <HomeProjects />
       </section>
 
       <div className="mt-8 grid gap-6 lg:grid-cols-12">

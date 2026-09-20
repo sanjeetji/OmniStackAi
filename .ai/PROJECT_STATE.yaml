@@ -2,39 +2,21 @@ schema_version: 1
 project: OmniStackAI
 phase: BASIC/MVP
 founder_stage: 0
-current_task: R-498
-current_status: done
-branch: main
-last_completed_task: R-498
-# TASK COMPILATION AUDIT — 2026-09-16
-# Performed to achieve 100% synchronization across all task-tracking documentation.
-# Tracker workbook expanded to 464 tasks with R-464.
-# All documentation (PROGRESS.md, RESUME_PROMPT.md, PROJECT_STATE.md, WORK_LOG.md, HANDOFF.md) updated.
-task_compilation_audit:
-  performed_at: "2026-09-16"
-  total_tasks: 464
-  done: 252
-  deferred: 1
-  not_started: 211
-  mvp_total: 358
-  mvp_done: 252
-  mvp_completion_pct: 70.4
-  overall_completion_pct: 54.3
-  test_suite_count: 3593
-  changelog_entries: 253
-  missing_entries_backfilled:
-    - R-272
-    - R-314
-    - R-374
-    - R-375
-    - R-376
-  status_corrections:
-    - task: R-360
-      old_status: IN_PROGRESS
-      new_status: DONE
-      reason: "Task fully completed on 2026-09-11 with 35 tests. Status left stale during rapid development sprint."
+current_task: R-500
+current_status: in_progress
+branch: ai/R-499-projects-and-workspaces
+last_completed_task: R-499
 last_completed_task_summary: >-
-  Completed R-498 (2026-09-19): platform buildout plan (15 specs) + single-command local runtime.
+  Completed R-499 (2026-09-20): Projects & Workspaces Persistence (F-01-projects).
+  Implemented PostgreSQL schema migration (000004_projects.up.sql / down.sql) tracking
+  projects with multi-tenant isolation (id, user_id). Created Go control-plane internal/projects
+  store and REST handler, enforcing caller ownership and closing cross-tenant read vulnerability.
+  Implemented Python agent-engine on-disk workspace persistence in studio/workspace.py under
+  ~/.omnistackai/workspaces/<uuid>/ (repo/, state.json, turns.jsonl, ir.json, .lock), surviving
+  process restarts. Built full Next.js console UI: 'Your projects' card grid on home page,
+  full projects dashboard (/projects) with search/filter/sort/rename/duplicate/archive/typed-delete,
+  project studio routing (/studio/[projectId]), ProjectSwitcher chat rail header, and Manage General
+  settings (/studio/[projectId]/manage). All 3,746 tests and full task verify green.
   The founder reviewed the console live (build 7, "Simple CRM", from 172.28.64.242:4321) and
   listed what a platform still needs; this task answers it with decisions, specs and tooling, and
   writes no feature code.

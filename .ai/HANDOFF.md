@@ -1,5 +1,24 @@
 # Current Handoff
 
+Task ID: R-499
+Status: done
+Phase: MVP → Phase F (platform foundation)
+Branch: `ai/R-499-projects-and-workspaces`
+
+> **R-499 Completed (2026-09-20): Projects & Workspaces Persistence (F-01-projects spec).**
+> - **Full On-Disk Workspace Persistence:** `studio/workspace.py` manages `~/.omnistackai/workspaces/<uuid>/`
+>   (`repo/`, `state.json`, `turns.jsonl`, `ir.json`, `.lock`), with atomic writes and flock concurrency.
+>   Projects and turns survive server restarts.
+> - **Database Tracking & Multi-Tenant Security:** PostgreSQL `projects` table (`000004_projects.up.sql`)
+>   with foreign key on `user_id` and unique index `(id, user_id)`. Go control-plane `internal/projects`
+>   enforces caller ownership on all project endpoints (closing the cross-tenant read vulnerability on files).
+> - **Web Console:** 'Your projects' card grid on home page (`/`), full projects dashboard (`/projects`)
+>   with search/filter/sort/rename/duplicate/archive/typed-delete, Studio workspace routing (`/studio/[projectId]`),
+>   `ProjectSwitcher` dropdown header on chat rail, and Project General Settings (`/studio/[projectId]/manage`).
+> - **Gates:** `scripts/test.sh` passed, `task verify` passed (all 3,746 tests OK), `tsc --noEmit` and
+>   `eslint` 100% clean.
+> - **NEXT:** F-02 (R-500) Multi-Process Preview & Diagnostics Service.
+
 Task ID: R-498
 Status: done
 Phase: MVP → Phase F (platform foundation)

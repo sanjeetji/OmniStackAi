@@ -1100,7 +1100,7 @@ class TestStudioSolutionPacks(unittest.TestCase):
         history = StudioBuildHistory()
         session_store = StudioSessionStore()
 
-        with tempfile.TemporaryDirectory() as tmp:
+        with tempfile.TemporaryDirectory(ignore_cleanup_errors=True) as tmp:
             with patch(
                 "omnistackai_agent_engine.studio.live_serve.resolve_generation_provider_from_env",
                 return_value=(_StubProvider(ir_json), "stub-model", 4096, 5.0),

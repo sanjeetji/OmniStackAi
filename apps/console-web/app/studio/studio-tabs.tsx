@@ -45,10 +45,12 @@ export function StudioTabs({
   buildId,
   previewVersion,
   workspace,
+  projectId,
 }: {
   buildId: string | null;
   previewVersion: number;
   workspace: WorkspaceSnapshot | null;
+  projectId?: string | null;
 }) {
   const [activeTab, setActiveTab] = useState<TabKey>("preview");
   const [selectedFile, setSelectedFile] = useState<string | null>(null);
@@ -56,7 +58,7 @@ export function StudioTabs({
   // R-497 (Lovable's "Search code"): one filter shared by the Files and Code trees.
   const [fileQuery, setFileQuery] = useState("");
 
-  if (!buildId) {
+  if (!buildId && !projectId) {
     return null;
   }
 
@@ -78,14 +80,14 @@ export function StudioTabs({
     >
       <TabsList
         variant="line"
-        aria-label="Workspace"
-        className="w-full justify-start gap-1 border-b border-border/60 pb-1"
+        className="w-full justify-start border-b px-0"
+        aria-label="Workspace views"
       >
         {TABS.map(({ key, label, icon: Icon }) => (
-          <TabsTrigger key={key} value={key} className="flex-none px-2.5">
-            <Icon aria-hidden="true" />
-            {label}
-            {key === "files" && files.length > 0 ? (
+          <TabsTrigger key={key} value={key} className="gap-2">
+            <Icon className="size-4" aria-hidden="true" />
+            <span>{label}</span>
+            {key === "files" || key === "code" ? (
               <TabCount value={files.length} />
             ) : null}
             {key === "problems" && problemCount !== null ? (
@@ -96,7 +98,7 @@ export function StudioTabs({
       </TabsList>
 
       <TabsContent value="preview">
-        <StudioPreview buildId={buildId} previewVersion={previewVersion} />
+        <StudioPreview buildId={buildId} previewVersion={previewVersion} projectId={projectId} />
       </TabsContent>
       <TabsContent value="files">
         <FilesTab
@@ -109,6 +111,7 @@ export function StudioTabs({
       <TabsContent value="code">
         <CodeTab
           buildId={buildId}
+          projectId={projectId}
           files={visibleFiles}
           filter={filter}
           selectedFile={selectedFile}
@@ -118,6 +121,7 @@ export function StudioTabs({
       <TabsContent value="problems">
         <ProblemsTab
           buildId={buildId}
+          projectId={projectId}
           onOpenFile={openFileInCode}
           onCountChange={setProblemCount}
         />
@@ -226,12 +230,14 @@ function FilesTab({
 
 function CodeTab({
   buildId,
+  projectId,
   files,
   filter,
   selectedFile,
   onSelect,
 }: {
-  buildId: string;
+  buildId: string | null;
+  projectId?: string | null;
   files: string[];
   filter: FileFilterProps;
   selectedFile: string | null;
@@ -242,7 +248,7 @@ function CodeTab({
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    if (!selectedFile) {
+    if (!selectedFile || (!buildId && !projectId)) {
       return;
     }
     let cancelled = false;
@@ -250,9 +256,10 @@ function CodeTab({
       setLoading(true);
       setError(null);
       try {
-        const response = await fetch(
-          `/api/jobs/build/${encodeURIComponent(buildId)}/file?path=${encodeURIComponent(selectedFile)}`,
-        );
+        const url = projectId
+          ? `/api/projects/${encodeURIComponent(projectId)}/file?path=${encodeURIComponent(selectedFile)}`
+          : `/api/jobs/build/${encodeURIComponent(buildId!)}/file?path=${encodeURIComponent(selectedFile)}`;
+        const response = await fetch(url);
         const body = (await response.json().catch(() => ({}))) as Partial<BuildFileContentResponse> &
           ErrorBody;
         if (cancelled) return;
@@ -272,7 +279,7 @@ function CodeTab({
     return () => {
       cancelled = true;
     };
-  }, [buildId, selectedFile]);
+  }, [buildId, projectId, selectedFile]);
 
   return (
     <div className="grid gap-3 lg:grid-cols-[240px_minmax(0,1fr)]">
@@ -419,10 +426,12 @@ export function parseDiagnostic(
 
 function ProblemsTab({
   buildId,
+  projectId,
   onOpenFile,
   onCountChange,
 }: {
-  buildId: string;
+  buildId: string | null;
+  projectId?: string | null;
   onOpenFile: (path: string) => void;
   onCountChange: (count: number | null) => void;
 }) {
@@ -431,11 +440,18 @@ function ProblemsTab({
   const [checking, setChecking] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  const problemsUrl = projectId
+    ? `/api/projects/${encodeURIComponent(projectId)}/problems`
+    : buildId
+      ? `/api/jobs/build/${encodeURIComponent(buildId)}/problems`
+      : null;
+
   useEffect(() => {
+    if (!problemsUrl) return;
     let cancelled = false;
     (async () => {
       try {
-        const response = await fetch(`/api/jobs/build/${encodeURIComponent(buildId)}/problems`);
+        const response = await fetch(problemsUrl);
         if (cancelled) return;
         if (response.ok) {
           const body = (await response.json()) as ProblemsReport;
@@ -449,17 +465,18 @@ function ProblemsTab({
     return () => {
       cancelled = true;
     };
-  }, [buildId]);
+  }, [problemsUrl]);
 
   useEffect(() => {
     onCountChange(report ? report.error_count : null);
   }, [report, onCountChange]);
 
   async function handleCheck() {
+    if (!problemsUrl) return;
     setChecking(true);
     setError(null);
     try {
-      const response = await fetch(`/api/jobs/build/${encodeURIComponent(buildId)}/problems`, {
+      const response = await fetch(problemsUrl, {
         method: "POST",
       });
       const body = (await response.json().catch(() => ({}))) as Partial<ProblemsReport> & ErrorBody;

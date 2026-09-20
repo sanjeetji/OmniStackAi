@@ -1047,5 +1047,64 @@ for spec in F-01-projects F-02-preview F-03-git F-04-skills F-05-secrets F-06-ai
     exit 1
   fi
 done
+# R-499: Projects & Workspaces Persistence (F-01-projects spec).
+for required_file in \
+  "$control_plane_root/migrations/000004_projects.up.sql" \
+  "$control_plane_root/migrations/000004_projects.down.sql" \
+  "$control_plane_root/internal/projects/store.go" \
+  "$control_plane_root/internal/projects/handler.go" \
+  "$control_plane_root/internal/projects/projects_test.go" \
+  "$agent_engine_root/src/omnistackai_agent_engine/studio/workspace.py" \
+  "$agent_engine_root/tests/test_studio_workspace.py" \
+  "$console_root/app/projects/page.tsx" \
+  "$console_root/app/studio/[projectId]/page.tsx" \
+  "$console_root/app/studio/[projectId]/manage/page.tsx" \
+  "$console_root/components/project-card.tsx" \
+  "$console_root/components/project-dialogs.tsx" \
+  "$console_root/components/project-switcher.tsx" \
+  "$console_root/components/home-projects.tsx" \
+  "$console_root/lib/time.ts"; do
+  if [[ ! -f "$required_file" ]]; then
+    printf 'Missing R-499 contract file: %s\n' "$required_file"
+    exit 1
+  fi
+done
+
+for project_route in \
+  "$console_root/app/api/projects/route.ts" \
+  "$console_root/app/api/projects/[id]/route.ts" \
+  "$console_root/app/api/projects/[id]/opened/route.ts" \
+  "$console_root/app/api/projects/[id]/build/stream/route.ts" \
+  "$console_root/app/api/projects/[id]/edit/route.ts" \
+  "$console_root/app/api/projects/[id]/turns/route.ts" \
+  "$console_root/app/api/projects/[id]/files/route.ts" \
+  "$console_root/app/api/projects/[id]/file/route.ts" \
+  "$console_root/app/api/projects/[id]/preview/route.ts" \
+  "$console_root/app/api/projects/[id]/problems/route.ts"; do
+  if [[ ! -f "$project_route" ]]; then
+    printf 'Missing R-499 API route: %s\n' "$project_route"
+    exit 1
+  fi
+done
+
+if ! rg -qF 'HomeProjects' "$console_root/app/page.tsx"; then
+  printf 'R-499 home page must render HomeProjects.\n'
+  exit 1
+fi
+
+if ! rg -qF 'ProjectSwitcher' "$console_root/app/studio/studio-chat.tsx"; then
+  printf 'R-499 studio-chat.tsx must render ProjectSwitcher.\n'
+  exit 1
+fi
+
+if ! rg -qF 'projects.Register' "$control_plane_root/cmd/control-plane/main.go"; then
+  printf 'R-499 control-plane main.go must mount projects handler.\n'
+  exit 1
+fi
+
+if ! rg -qF 'class StudioWorkspaceStore' "$agent_engine_root/src/omnistackai_agent_engine/studio/workspace.py"; then
+  printf 'R-499 agent-engine must define StudioWorkspaceStore.\n'
+  exit 1
+fi
 
 printf 'Repository contract tests passed.\n'

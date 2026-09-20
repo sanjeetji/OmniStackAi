@@ -19,9 +19,11 @@ import type {
   BuildJobResponse,
   BuildTurnsResponse,
   ChatTurn,
+  Project,
 } from "@/lib/control-plane";
 import BrandMark from "@/components/brand-mark";
 import { formatServerError } from "@/components/field";
+import ProjectSwitcher from "@/components/project-switcher";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -38,17 +40,12 @@ interface ChatMessage {
 
 type ErrorBody = { error?: string };
 
-/* Real, runnable inputs - entity-style apps the builder genuinely handles - offered as one-click
- * starting points in the empty state. They fill the composer; nothing is sent until the user
- * presses Send. */
 const EXAMPLE_PROMPTS = [
   "A task tracker where users create projects and each project has tasks with due dates",
   "A recipe box with tags, ratings and a weekly meal plan",
   "A simple CRM: companies, contacts and notes, with a search page",
 ];
 
-/* R-497 (after Lovable's follow-up chips): generic next edits the delta engine genuinely handles,
- * offered after a completed build or edit. They only fill the composer. */
 const FOLLOW_UP_PROMPTS = [
   "Add user sign-in with email and password",
   "Add search and filters to the main list",
@@ -61,9 +58,6 @@ function nextMessageId(): string {
   return `m${Date.now()}-${messageCounter}`;
 }
 
-/** The build's current file list via `GET /api/jobs/build/{id}/files` (R-474). Empty on any
- * failure - callers treat "no list" as "keep what we have", never as an error to show. Module
- * scope (no component state) so both the edit path and the `?build=` hydration effect can use it. */
 async function fetchBuildFiles(id: string): Promise<string[]> {
   try {
     const response = await fetch(`/api/jobs/build/${encodeURIComponent(id)}/files`);
@@ -75,39 +69,157 @@ async function fetchBuildFiles(id: string): Promise<string[]> {
   }
 }
 
-export default function StudioChat({ initialCreditBalance }: { initialCreditBalance: number }) {
+async function fetchProjectFiles(id: string): Promise<string[]> {
+  try {
+    const response = await fetch(`/api/projects/${encodeURIComponent(id)}/files`);
+    if (!response.ok) return [];
+    const body = (await response.json()) as BuildFileTreeResponse;
+    return body.files ?? [];
+  } catch {
+    return [];
+  }
+}
+
+export default function StudioChat({
+  initialCreditBalance,
+  initialProjectId,
+}: {
+  initialCreditBalance: number;
+  initialProjectId?: string;
+}) {
   const router = useRouter();
   const searchParams = useSearchParams();
   const urlBuildId = searchParams.get("build");
-  // R-497: the home composer hands its prompt over as /studio?prompt=... (never together with a
-  // ?build= - an existing session is never overwritten by a stray query).
   const urlPrompt = urlBuildId ? null : searchParams.get("prompt");
 
-  const [messages, setMessages] = useState<ChatMessage[]>([]);
+  const [projectId, setProjectId] = useState<string | null>(initialProjectId ?? null);
+  const [project, setProject] = useState<Project | null>(null);
   const [buildId, setBuildId] = useState<string | null>(urlBuildId);
+  const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [workspace, setWorkspace] = useState<WorkspaceSnapshot | null>(null);
   // Bumped after every successful edit so <StudioPreview> (rendered by <StudioTabs>) re-previews
-  // this build - _edit() never restarts the preview on its own, unlike _build() (which
-  // StudioPreview already re-previews for via its own buildId-change effect, so no bump is
-  // needed on a fresh build).
   const [previewVersion, setPreviewVersion] = useState(0);
   const [prompt, setPrompt] = useState(urlPrompt ?? "");
   const [submitting, setSubmitting] = useState(false);
-  // R-485: ticks up live as generating_ir deltas arrive during a streaming build - the visible
-  // proof of real incremental progress, reset to 0 whenever a new build starts. Not used for
-  // edits (which stay non-streaming, per R-484's own scope boundary).
   const [streamChars, setStreamChars] = useState(0);
-  const [hydrating, setHydrating] = useState(Boolean(urlBuildId));
+  const [hydrating, setHydrating] = useState(Boolean(initialProjectId || urlBuildId));
   const [creditBalance, setCreditBalance] = useState(initialCreditBalance);
+
   const threadRef = useRef<HTMLDivElement | null>(null);
   const textareaRef = useRef<HTMLTextAreaElement | null>(null);
   const formRef = useRef<HTMLFormElement | null>(null);
   const hydratedFor = useRef<string | null>(null);
   const autoStarted = useRef(false);
 
+  // Hydrate persistent project if initialProjectId is provided
   useEffect(() => {
-    if (!urlBuildId || hydratedFor.current === urlBuildId) {
-      setHydrating(false);
+    if (!initialProjectId || hydratedFor.current === initialProjectId) {
+      return;
+    }
+    hydratedFor.current = initialProjectId;
+    let cancelled = false;
+
+    (async () => {
+      setHydrating(true);
+      try {
+        // 1. Fetch project details
+        const projectRes = await fetch(`/api/projects/${encodeURIComponent(initialProjectId)}`);
+        if (cancelled) return;
+        if (!projectRes.ok) {
+          if (projectRes.status === 404) {
+            setMessages([
+              {
+                id: nextMessageId(),
+                role: "assistant",
+                text: "This project is no longer available.",
+                createdAt: Date.now() / 1000,
+                kind: "error",
+              },
+            ]);
+            return;
+          }
+          const errBody = (await projectRes.json().catch(() => ({}))) as ErrorBody;
+          setMessages([
+            {
+              id: nextMessageId(),
+              role: "assistant",
+              text: formatServerError(errBody.error, "Couldn't load project details."),
+              createdAt: Date.now() / 1000,
+              kind: "error",
+            },
+          ]);
+          return;
+        }
+
+        const projectData = (await projectRes.json()) as Project;
+        setProject(projectData);
+
+        // Touch opened timestamp (fire and forget)
+        void fetch(`/api/projects/${encodeURIComponent(initialProjectId)}/opened`, {
+          method: "POST",
+        }).catch(() => {});
+
+        // 2. Fetch turns history
+        const turnsRes = await fetch(
+          `/api/projects/${encodeURIComponent(initialProjectId)}/turns`,
+        );
+        let projectTurns: ChatTurn[] = [];
+        if (turnsRes.ok) {
+          const turnsBody = (await turnsRes.json()) as BuildTurnsResponse;
+          projectTurns = turnsBody.turns ?? [];
+        }
+
+        if (cancelled) return;
+
+        if (projectTurns.length > 0) {
+          setMessages(
+            projectTurns.map((turn) => ({
+              id: nextMessageId(),
+              role: turn.role === "user" ? "user" : "assistant",
+              text: turn.text,
+              createdAt: turn.created_at,
+              kind: "plain" as const,
+            })),
+          );
+        }
+
+        // 3. Fetch files list
+        const files = await fetchProjectFiles(initialProjectId);
+        if (cancelled) return;
+
+        setWorkspace({
+          buildId: initialProjectId,
+          name: projectData.name,
+          description: projectData.description,
+          entities: [],
+          fileCount: files.length,
+          files,
+        });
+      } catch {
+        if (!cancelled) {
+          setMessages([
+            {
+              id: nextMessageId(),
+              role: "assistant",
+              text: "Couldn't reach the server to load this project.",
+              createdAt: Date.now() / 1000,
+              kind: "error",
+            },
+          ]);
+        }
+      } finally {
+        if (!cancelled) setHydrating(false);
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [initialProjectId]);
+
+  // Legacy hydration: fallback for ?build=<id>
+  useEffect(() => {
+    if (initialProjectId || !urlBuildId || hydratedFor.current === urlBuildId) {
       return;
     }
     hydratedFor.current = urlBuildId;
@@ -119,17 +231,15 @@ export default function StudioChat({ initialCreditBalance }: { initialCreditBala
       createdAt: Date.now() / 1000,
       kind: "error",
     });
+
     (async () => {
+      setHydrating(true);
       try {
         const response = await fetch(`/api/jobs/build/${encodeURIComponent(urlBuildId)}/turns`);
         const body = (await response.json().catch(() => ({}))) as Partial<BuildTurnsResponse> &
           ErrorBody;
         if (cancelled) return;
         if (!response.ok) {
-          // A real, mapped error here (401/502) - not the "unknown build" case, which the
-          // agent-engine reports as an empty turns list rather than an error (see the R-477 task
-          // contract's Finding). Surface it, but keep buildId - the user can still try sending a
-          // message, which will get the real, authoritative answer.
           setMessages((prev) => [
             ...prev,
             errorMessage(formatServerError(body.error, "Couldn't load this build's history.")),
@@ -147,9 +257,6 @@ export default function StudioChat({ initialCreditBalance }: { initialCreditBala
               kind: "plain" as const,
             })),
           );
-          // R-494: turns alone left the Files/Code tabs empty after a refresh (the R-477
-          // degradation). The file list is cheap and read-only, so fetch it too; the rest of the
-          // snapshot (name, entities, usage) still only exists for builds made in this session.
           const files = await fetchBuildFiles(urlBuildId);
           if (!cancelled && files.length > 0) {
             setWorkspace((prev) => prev ?? { buildId: urlBuildId, entities: [], files });
@@ -169,16 +276,13 @@ export default function StudioChat({ initialCreditBalance }: { initialCreditBala
     return () => {
       cancelled = true;
     };
-  }, [urlBuildId]);
+  }, [initialProjectId, urlBuildId]);
 
   useEffect(() => {
     threadRef.current?.scrollTo({ top: threadRef.current.scrollHeight });
   }, [messages, submitting]);
 
-  // R-497: arriving from the home composer starts the build exactly once - through the same form
-  // submit a keypress uses (the composer is pre-filled from the URL), so there is no second code
-  // path and no state is set inside this effect. The query is cleared first; the build's own
-  // ?build=<id> replace happens on completion as always.
+  // Home composer auto-start
   useEffect(() => {
     if (!urlPrompt || autoStarted.current) return;
     autoStarted.current = true;
@@ -186,26 +290,15 @@ export default function StudioChat({ initialCreditBalance }: { initialCreditBala
     formRef.current?.requestSubmit();
   }, [urlPrompt, router]);
 
-  function appendMessage(role: "user" | "assistant", text: string, kind: "plain" | "error" = "plain") {
+  function appendMessage(
+    role: "user" | "assistant",
+    text: string,
+    kind: "plain" | "error" = "plain",
+  ) {
     setMessages((prev) => [
       ...prev,
       { id: nextMessageId(), role, text, createdAt: Date.now() / 1000, kind },
     ]);
-  }
-
-  /** R-493: the only way to start a second app used to be editing the URL by hand. Resets this
-   * session's thread and workspace and clears `?build=` - the previous build stays on the server
-   * exactly as before, reachable again via its own `?build=<id>` link. */
-  function startNewApp() {
-    if (submitting) return;
-    setBuildId(null);
-    hydratedFor.current = null;
-    setMessages([]);
-    setWorkspace(null);
-    setPrompt("");
-    setStreamChars(0);
-    router.replace("/studio");
-    textareaRef.current?.focus();
   }
 
   function fillComposer(text: string) {
@@ -223,35 +316,66 @@ export default function StudioChat({ initialCreditBalance }: { initialCreditBala
     setSubmitting(true);
 
     try {
-      if (buildId === null) {
-        await sendBuildStream(trimmed);
-      } else {
+      if (projectId !== null) {
+        await sendProjectEdit(projectId, trimmed);
+      } else if (buildId !== null) {
         await sendEdit(buildId, trimmed);
+      } else {
+        await sendBuildStream(trimmed);
       }
     } finally {
       setSubmitting(false);
     }
   }
 
-  /** R-485: streams a new build via POST /api/jobs/build/stream (SSE, relaying R-484's
-   * POST /jobs/build/stream) - fetch() + manual response.body.getReader() framing, not
-   * EventSource, since a POST body is required. Splits the buffered text on "\n\n" event
-   * boundaries and parses each frame's "data:" line as JSON. Three real shapes, verified against
-   * R-484's actual live output: a {phase: "generating_ir", delta} frame (only its length is used,
-   * to drive the live character-count indicator - the raw JSON text itself would render as
-   * visibly broken partial JSON, not shown to the user), a {phase: "done", ...} frame (the final
-   * build result, same shape the old non-streaming sendBuild() handled), and a bare
-   * {credit_balance, credits_spent} frame with NO "phase" key at all (the Go relay's trailing
-   * `event: credits` frame - credits arrive separately from "done" in the streaming path, unlike
-   * the non-streaming response's shape, which carries both in one payload). */
+  function startNewApp() {
+    if (submitting) return;
+    setProjectId(null);
+    setProject(null);
+    setBuildId(null);
+    hydratedFor.current = null;
+    setMessages([]);
+    setWorkspace(null);
+    setPrompt("");
+    setStreamChars(0);
+    router.replace("/studio");
+    textareaRef.current?.focus();
+  }
+
+  /** Streams a new build (via project if fresh) */
   async function sendBuildStream(text: string) {
     setStreamChars(0);
     try {
-      const response = await fetch("/api/jobs/build/stream", {
+      // 1. Create project
+      const createRes = await fetch("/api/projects", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ prompt: text }),
       });
+      if (!createRes.ok) {
+        const body = (await createRes.json().catch(() => ({}))) as ErrorBody;
+        appendMessage(
+          "assistant",
+          formatServerError(body.error, `Project creation failed with status ${createRes.status}.`),
+          "error",
+        );
+        return;
+      }
+      const newProject = (await createRes.json()) as Project;
+      setProjectId(newProject.id);
+      setProject(newProject);
+      hydratedFor.current = newProject.id;
+      window.history.replaceState(null, "", `/studio/${encodeURIComponent(newProject.id)}`);
+
+      // 2. Stream build via project endpoint
+      const response = await fetch(
+        `/api/projects/${encodeURIComponent(newProject.id)}/build/stream`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ prompt: text }),
+        },
+      );
       if (!response.ok || !response.body) {
         const body = (await response.json().catch(() => ({}))) as ErrorBody;
         appendMessage(
@@ -292,7 +416,8 @@ export default function StudioChat({ initialCreditBalance }: { initialCreditBala
               } else if (payload.phase === "done") {
                 finalResult = payload as Partial<BuildJobResponse>;
               } else if (payload.phase === "error") {
-                streamError = typeof payload.error === "string" ? payload.error : "streaming build failed";
+                streamError =
+                  typeof payload.error === "string" ? payload.error : "streaming build failed";
               }
             } else if (typeof payload.credit_balance === "number") {
               setCreditBalance(payload.credit_balance);
@@ -311,22 +436,21 @@ export default function StudioChat({ initialCreditBalance }: { initialCreditBala
         return;
       }
 
-      appendMessage("assistant", `Built ${finalResult.name ?? "the app"}.`);
+      appendMessage("assistant", `Built ${finalResult.name ?? newProject.name ?? "the app"}.`);
+      setProject((prev) =>
+        prev ? { ...prev, name: finalResult?.name ?? prev.name, status: "active" } : null,
+      );
       setWorkspace({
-        buildId: finalResult.id,
-        name: finalResult.name,
-        description: finalResult.description,
+        buildId: newProject.id,
+        name: finalResult.name ?? newProject.name,
+        description: finalResult.description ?? newProject.description,
         entities: finalResult.entities ?? [],
         fileCount: finalResult.file_count,
         commitSha: finalResult.commit_sha,
         usage: finalResult.usage,
         files: finalResult.files ?? [],
       });
-      if (finalResult.id) {
-        setBuildId(finalResult.id);
-        hydratedFor.current = finalResult.id;
-        router.replace(`/studio?build=${encodeURIComponent(finalResult.id)}`);
-      }
+      setPreviewVersion((v) => v + 1);
     } catch {
       appendMessage("assistant", "Couldn't reach the server.", "error");
     } finally {
@@ -334,6 +458,53 @@ export default function StudioChat({ initialCreditBalance }: { initialCreditBala
     }
   }
 
+  /** Project edit path */
+  async function sendProjectEdit(id: string, text: string) {
+    try {
+      const response = await fetch(`/api/projects/${encodeURIComponent(id)}/edit`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ prompt: text }),
+      });
+      const body = (await response.json().catch(() => ({}))) as Partial<BuildEditResponse> &
+        ErrorBody;
+      if (!response.ok) {
+        if (response.status === 404) {
+          appendMessage(
+            "assistant",
+            "This project is no longer available.",
+            "error",
+          );
+          return;
+        }
+        appendMessage(
+          "assistant",
+          formatServerError(body.error, `Edit failed with status ${response.status}.`),
+          "error",
+        );
+        return;
+      }
+      const result = body as BuildEditResponse;
+      appendMessage("assistant", result.diff?.summary || result.rationale || "Edit applied.");
+      if (typeof result.credit_balance === "number") setCreditBalance(result.credit_balance);
+      const files = await fetchProjectFiles(id);
+      setWorkspace((prev) => ({
+        buildId: id,
+        name: prev?.name ?? project?.name,
+        description: prev?.description ?? project?.description,
+        entities: result.entities ?? prev?.entities ?? [],
+        fileCount: result.file_count ?? prev?.fileCount,
+        commitSha: result.commit_sha ?? prev?.commitSha,
+        usage: result.usage ?? prev?.usage,
+        files: files.length > 0 ? files : prev?.files ?? [],
+      }));
+      setPreviewVersion((v) => v + 1);
+    } catch {
+      appendMessage("assistant", "Couldn't reach the server.", "error");
+    }
+  }
+
+  /** Legacy edit path for builds without project */
   async function sendEdit(id: string, text: string) {
     try {
       const response = await fetch(`/api/jobs/build/${encodeURIComponent(id)}/edit`, {
@@ -382,18 +553,19 @@ export default function StudioChat({ initialCreditBalance }: { initialCreditBala
     }
   }
 
+  const activeProjectId = projectId ?? buildId;
   const workingLabel =
-    buildId === null
+    activeProjectId === null
       ? streamChars > 0
         ? `Generating your app… ${streamChars.toLocaleString()} characters so far`
         : "Starting…"
       : "Applying your change…";
   const showEmptyThread = !hydrating && messages.length === 0 && !submitting;
-  const showEmptyWorkspace = buildId === null && workspace === null;
+  const showEmptyWorkspace = activeProjectId === null && workspace === null;
   const lastMessage = messages[messages.length - 1];
   const showFollowUps =
     !submitting &&
-    buildId !== null &&
+    activeProjectId !== null &&
     lastMessage !== undefined &&
     lastMessage.role === "assistant" &&
     lastMessage.kind === "plain";
@@ -402,34 +574,33 @@ export default function StudioChat({ initialCreditBalance }: { initialCreditBala
     <div className="studio-grid">
       <aside aria-label="Chat" className="flex min-h-0 flex-col border-r border-border/60 bg-card">
         <header className="flex items-center gap-3 border-b border-border/60 px-4 py-3">
-          <div className="min-w-0 flex-1">
-            <p className="truncate text-sm font-semibold">
-              {workspace?.name ?? (buildId ? "Your app" : "New app")}
-            </p>
-            <p className="truncate text-xs text-muted-foreground">
-              {buildId ? "Chat to keep changing it" : "Describe it to start building"}
-            </p>
-          </div>
-          <Badge
-            variant="secondary"
-            className="gap-1 font-mono tabular-nums"
-            title="Credit balance"
-          >
-            <Coins aria-hidden="true" />
-            {creditBalance.toLocaleString("en-US")}
-          </Badge>
-          {buildId !== null ? (
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              onClick={startNewApp}
-              disabled={submitting}
+          <ProjectSwitcher
+            currentProject={project}
+            currentProjectId={projectId}
+            currentProjectName={project?.name ?? workspace?.name}
+          />
+          <div className="ml-auto flex items-center gap-2">
+            <Badge
+              variant="secondary"
+              className="gap-1 font-mono tabular-nums"
+              title="Credit balance"
             >
-              <Plus aria-hidden="true" />
-              New app
-            </Button>
-          ) : null}
+              <Coins aria-hidden="true" />
+              {creditBalance.toLocaleString("en-US")}
+            </Badge>
+            {activeProjectId !== null ? (
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={startNewApp}
+                disabled={submitting}
+              >
+                <Plus aria-hidden="true" />
+                New app
+              </Button>
+            ) : null}
+          </div>
         </header>
 
         <div
@@ -466,7 +637,6 @@ export default function StudioChat({ initialCreditBalance }: { initialCreditBala
                 <span>{message.text}</span>
               </div>
             ) : (
-              // Assistant replies read as prose, not bubbles (R-497, after Lovable's thread).
               <div key={message.id} className="reveal flex gap-2.5 self-stretch py-0.5">
                 <BrandMark className="mt-1 size-4 shrink-0" />
                 <p className="min-w-0 text-[13px] leading-relaxed break-words whitespace-pre-wrap text-foreground">
@@ -498,19 +668,21 @@ export default function StudioChat({ initialCreditBalance }: { initialCreditBala
         </div>
 
         <form ref={formRef} className="border-t border-border/60 p-3" onSubmit={handleSend}>
-          {buildId !== null ? (
+          {activeProjectId !== null ? (
             <p className="mb-2 px-1 text-xs text-muted-foreground">
               Editing{" "}
-              <span className="font-medium text-foreground">{workspace?.name ?? "this app"}</span>
-              {" — "}changes apply to the same repository.
+              <span className="font-medium text-foreground">
+                {workspace?.name ?? project?.name ?? "this app"}
+              </span>
+              {" — "}changes apply to the same project.
             </p>
           ) : null}
           <div className="flex items-end gap-2 rounded-xl border border-input bg-background p-1.5 transition-[color,box-shadow] focus-within:border-ring focus-within:ring-3 focus-within:ring-ring/50">
             <textarea
               ref={textareaRef}
-              aria-label={buildId === null ? "Describe the app to build" : "Describe the change"}
+              aria-label={activeProjectId === null ? "Describe the app to build" : "Describe the change"}
               placeholder={
-                buildId === null
+                activeProjectId === null
                   ? "A task tracker where users create projects and each project has tasks…"
                   : "Add a favorites feature…"
               }
@@ -554,8 +726,13 @@ export default function StudioChat({ initialCreditBalance }: { initialCreditBala
             <EmptyWorkspace />
           ) : (
             <>
-              <StudioWorkspace snapshot={workspace} buildId={buildId} />
-              <StudioTabs buildId={buildId} previewVersion={previewVersion} workspace={workspace} />
+              <StudioWorkspace snapshot={workspace} buildId={buildId} projectId={projectId} />
+              <StudioTabs
+                buildId={buildId}
+                previewVersion={previewVersion}
+                workspace={workspace}
+                projectId={projectId}
+              />
             </>
           )}
         </div>

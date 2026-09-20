@@ -1,5 +1,45 @@
 # Work Log
 
+## 2026-09-20 — R-499 (F-01 Projects & Workspaces Persistence)
+
+- **Why:** projects and edits previously lived only in RAM in `studio/session.py` and `studio/history.py`.
+  Process restarts destroyed turns, files, and state, and build URLs `/jobs/build/{id}/files` had no
+  tenant isolation check (cross-tenant read vulnerability). `F-01-projects.md` specified true on-disk
+  workspace persistence, database tracking in PostgreSQL, project management UI, and tenant isolation.
+- **Database & Control-Plane (`services/control-plane`):**
+  - Migration `000004_projects.up.sql` / `down.sql`: `projects` table with UUID primary key, `user_id` foreign key,
+    composite unique index `(id, user_id)` for tenant isolation, `name`, `description`, `last_prompt`,
+    `status` ('active' | 'archived'), `state` ('created' | 'building' | 'ready' | 'failed'), `entities`, `preview_url`,
+    `opened_at`, `created_at`, `updated_at`.
+  - Package `internal/projects`: `Store` interface & `PgStore` implementing tenant-isolated CRUD, atomic credit
+    debits on builds/edits, touched-opened timestamp updates, and soft/hard deletes.
+  - REST Handler `internal/projects/handler.go`: endpoints `GET /projects`, `POST /projects`, `GET /projects/{id}`,
+    `PATCH /projects/{id}`, `DELETE /projects/{id}`, `POST /projects/{id}/opened`, `POST /projects/{id}/build/stream`,
+    `POST /projects/{id}/edit`, `GET /projects/{id}/turns`, `GET /projects/{id}/files`, `GET /projects/{id}/file`,
+    `GET/POST /projects/{id}/preview`, `GET/POST /projects/{id}/problems`.
+  - Registered in `cmd/control-plane/main.go`. Unit test suite in `internal/projects/projects_test.go` (100% pass).
+- **Agent Engine (`services/agent-engine`):**
+  - Module `studio/workspace.py`: `StudioWorkspaceStore` with root `~/.omnistackai/workspaces/<uuid>/`.
+    Stores `repo/` (git repo), `state.json` (atomic write via tempfile + `os.replace`), `turns.jsonl` (append-only log),
+    `ir.json` (deserialized IR snapshot), `.lock` (`fcntl.flock` concurrency protection). Survives daemon restarts.
+  - Updated `studio/server.py` with `/api/workspaces/<id>` routes and concurrency locking.
+  - Updated `studio/live_serve.py` with `_workspace_build`, `_workspace_build_stream`, `_workspace_edit`.
+  - Unit tests in `tests/test_studio_workspace.py` (8/8 pass).
+- **Console Web UI (`apps/console-web`):**
+  - Updated `lib/control-plane.ts` with typed project API clients and data structures.
+  - Created `lib/time.ts` for relative timestamp formatting ("5m ago", "yesterday").
+  - Created 10 Next.js API route handlers proxying project endpoints securely with session cookies.
+  - Created components: `ProjectCard`, `ProjectDialogs` (rename, delete, duplicate), `HomeProjects`, `ProjectSwitcher`.
+  - Created pages: `/projects` dashboard (search, active/archived tabs, sort by updated/created/name),
+    `/studio/[projectId]` studio workspace routing, `/studio/[projectId]/manage` General settings panel.
+  - Wired `ProjectSwitcher` and on-disk workspace hydration into `studio-chat.tsx` and `studio-tabs.tsx`.
+- **Evidence & Verification:**
+  - `bash scripts/test.sh` passing with newly pinned R-499 contracts.
+  - `pnpm --filter omnistackai-console-web run typecheck` and `lint` 100% clean (0 errors, 0 warnings).
+  - All 3,746 agent-engine tests passing (`Ran 3746 tests in 78.396s, OK`).
+  - Full platform `task verify` passed with code 0.
+- **Next:** Proceed to F-02 Preview & Diagnostics Service (R-500).
+
 ## 2026-09-19 — R-498 (Platform buildout plan + single-command local runtime)
 
 - **Why:** the founder reviewed the console live and listed what a platform still needs (preview,

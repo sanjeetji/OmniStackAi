@@ -391,3 +391,224 @@ export function getProviderStatus(token: string): Promise<ProviderStatus> {
     headers: { Authorization: `Bearer ${token}` },
   });
 }
+
+// ---------------------------------------------------------------------------
+// Projects & Workspaces (F-01 / R-499)
+// ---------------------------------------------------------------------------
+
+export interface Project {
+  id: string;
+  user_id: string;
+  name: string;
+  description: string;
+  status: "active" | "archived" | "deleted";
+  last_prompt: string;
+  entities: string[];
+  file_count: number;
+  commit_sha: string;
+  credits_spent: number;
+  created_at: string;
+  updated_at: string;
+  last_opened_at: string;
+}
+
+export interface ProjectListResponse {
+  projects: Project[];
+}
+
+export interface CreateProjectRequest {
+  name: string;
+  description?: string;
+  prompt?: string;
+}
+
+export interface UpdateProjectRequest {
+  name?: string;
+  description?: string;
+}
+
+export function listProjects(
+  token: string,
+  options?: { status?: string; sort?: string; limit?: number; offset?: number }
+): Promise<ProjectListResponse> {
+  const params = new URLSearchParams();
+  if (options?.status) params.set("status", options.status);
+  if (options?.sort) params.set("sort", options.sort);
+  if (options?.limit) params.set("limit", options.limit.toString());
+  if (options?.offset) params.set("offset", options.offset.toString());
+  const qs = params.toString() ? `?${params.toString()}` : "";
+  return callControlPlane<ProjectListResponse>(`/projects${qs}`, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+}
+
+export function createProject(
+  token: string,
+  req: CreateProjectRequest
+): Promise<Project> {
+  return callControlPlane<Project>("/projects", {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${token}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(req),
+  });
+}
+
+export function getProject(token: string, projectId: string): Promise<Project> {
+  return callControlPlane<Project>(`/projects/${encodeURIComponent(projectId)}`, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+}
+
+export function updateProject(
+  token: string,
+  projectId: string,
+  req: UpdateProjectRequest
+): Promise<Project> {
+  return callControlPlane<Project>(`/projects/${encodeURIComponent(projectId)}`, {
+    method: "PATCH",
+    headers: {
+      Authorization: `Bearer ${token}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(req),
+  });
+}
+
+export function deleteProject(
+  token: string,
+  projectId: string,
+  purge: boolean = false
+): Promise<{ status: string }> {
+  const qs = purge ? "?purge=true" : "";
+  return callControlPlane<{ status: string }>(
+    `/projects/${encodeURIComponent(projectId)}${qs}`,
+    {
+      method: "DELETE",
+      headers: { Authorization: `Bearer ${token}` },
+    }
+  );
+}
+
+export function touchProjectOpened(
+  token: string,
+  projectId: string
+): Promise<void> {
+  return callControlPlane<void>(
+    `/projects/${encodeURIComponent(projectId)}/opened`,
+    {
+      method: "POST",
+      headers: { Authorization: `Bearer ${token}` },
+    }
+  );
+}
+
+export function streamProjectBuild(
+  token: string,
+  projectId: string,
+  prompt: string
+): Promise<Response> {
+  return fetch(`${controlPlaneUrl()}/projects/${encodeURIComponent(projectId)}/build/stream`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+    body: JSON.stringify({ prompt }),
+    cache: "no-store",
+  });
+}
+
+export function getProjectTurns(
+  token: string,
+  projectId: string
+): Promise<BuildTurnsResponse> {
+  return callControlPlane<BuildTurnsResponse>(
+    `/projects/${encodeURIComponent(projectId)}/turns`,
+    {
+      headers: { Authorization: `Bearer ${token}` },
+    }
+  );
+}
+
+export function getProjectFiles(
+  token: string,
+  projectId: string
+): Promise<BuildFileTreeResponse> {
+  return callControlPlane<BuildFileTreeResponse>(
+    `/projects/${encodeURIComponent(projectId)}/files`,
+    {
+      headers: { Authorization: `Bearer ${token}` },
+    }
+  );
+}
+
+export function getProjectFile(
+  token: string,
+  projectId: string,
+  filePath: string
+): Promise<BuildFileContentResponse> {
+  const qs = `?path=${encodeURIComponent(filePath)}`;
+  return callControlPlane<BuildFileContentResponse>(
+    `/projects/${encodeURIComponent(projectId)}/file${qs}`,
+    {
+      headers: { Authorization: `Bearer ${token}` },
+    }
+  );
+}
+
+export function editProject(
+  token: string,
+  projectId: string,
+  prompt: string
+): Promise<BuildEditResponse> {
+  return callControlPlane<BuildEditResponse>(
+    `/projects/${encodeURIComponent(projectId)}/edit`,
+    {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${token}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ prompt }),
+    }
+  );
+}
+
+export function previewProject(
+  token: string,
+  projectId: string
+): Promise<PreviewStatus> {
+  return callControlPlane<PreviewStatus>(
+    `/projects/${encodeURIComponent(projectId)}/preview`,
+    {
+      method: "POST",
+      headers: { Authorization: `Bearer ${token}` },
+    }
+  );
+}
+
+export function checkProjectProblems(
+  token: string,
+  projectId: string
+): Promise<ProblemsReport> {
+  return callControlPlane<ProblemsReport>(
+    `/projects/${encodeURIComponent(projectId)}/problems`,
+    {
+      method: "POST",
+      headers: { Authorization: `Bearer ${token}` },
+    }
+  );
+}
+
+export function getProjectProblems(
+  token: string,
+  projectId: string
+): Promise<ProblemsReport> {
+  return callControlPlane<ProblemsReport>(
+    `/projects/${encodeURIComponent(projectId)}/problems`,
+    {
+      headers: { Authorization: `Bearer ${token}` },
+    }
+  );
+}
+

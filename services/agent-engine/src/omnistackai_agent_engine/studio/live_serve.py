@@ -47,6 +47,7 @@ from .preview import StudioPreviewManager
 from .problems import ProblemsNotCheckedError, StudioProblemsStore, check_build_problems
 from .server import create_studio_server
 from .session import EditNotSupportedError, StudioSessionStore
+from .workspace import StudioWorkspaceStore, WorkspaceLockedError
 
 _MICROS_PER_USD = Decimal(1_000_000)
 
@@ -107,10 +108,13 @@ def _build(
     output_dir: str | None = None,
     folder_name: str | None = None,
     target_dir: str | None = None,
+    direct_target_dir: str | None = None,
     hybrid_ui: bool = False,
     preview_manager: StudioPreviewManager | None = None,
     history: StudioBuildHistory | None = None,
     session_store: StudioSessionStore | None = None,
+    workspace_store: StudioWorkspaceStore | None = None,
+    workspace_id: str | None = None,
 ) -> dict:
     """Build an app for one ``/api/build`` request.
 
@@ -135,7 +139,7 @@ def _build(
             raise ValueError(f"Unknown Ecosystem Pack '{ecosystem_id}'")
         eco_pkg = eco_pack.to_package()
 
-        target_dir = _target_dir_for(
+        target_dir = direct_target_dir or _target_dir_for(
             prompt,
             custom_dir=output_dir or target_dir,
             folder_name=folder_name,
@@ -406,7 +410,7 @@ def _build(
                 pass
 
         app_result = apply_solution_pack_manifest(manifest, proposal=proposal)
-        target_dir = _target_dir_for(
+        target_dir = direct_target_dir or _target_dir_for(
             prompt,
             custom_dir=output_dir or target_dir,
             folder_name=folder_name,
@@ -459,7 +463,7 @@ def _build(
         provider, model_id, max_output, request_timeout = resolve_generation_provider_from_env(
             usage_ledger=usage_ledger
         )
-        chosen_dir = _target_dir_for(
+        chosen_dir = direct_target_dir or _target_dir_for(
             prompt,
             custom_dir=output_dir or target_dir,
             folder_name=folder_name,
@@ -503,6 +507,15 @@ def _build(
             session_store.record_turn(
                 payload["id"], "assistant", f"Built {payload.get('name', 'the app')}."
             )
+    if workspace_store is not None and workspace_id:
+        payload["id"] = workspace_id
+        if editable_ir is not None:
+            workspace_store.save_ir(workspace_id, editable_ir)
+        workspace_store.append_turn(workspace_id, "user", prompt)
+        workspace_store.append_turn(
+            workspace_id, "assistant", f"Built {payload.get('name', 'the app')}."
+        )
+        workspace_store.save_state(workspace_id, payload)
     if preview_manager is None:
         payload["preview"] = {
             "status": "disabled",
@@ -537,9 +550,12 @@ async def _build_stream(
     output_dir: str | None = None,
     folder_name: str | None = None,
     target_dir: str | None = None,
+    direct_target_dir: str | None = None,
     preview_manager: StudioPreviewManager | None = None,
     history: StudioBuildHistory | None = None,
     session_store: StudioSessionStore | None = None,
+    workspace_store: StudioWorkspaceStore | None = None,
+    workspace_id: str | None = None,
 ) -> AsyncIterator[dict]:
     """Streaming twin of `_build` (R-484), scoped to the plain-prompt, non-`hybrid_ui` path only -
     the same scope precedent `_edit`/R-476 already set for its own single-IR-only build kinds.
@@ -558,7 +574,7 @@ async def _build_stream(
     provider, model_id, max_output, request_timeout = resolve_generation_provider_from_env(
         usage_ledger=usage_ledger
     )
-    chosen_dir = _target_dir_for(
+    chosen_dir = direct_target_dir or _target_dir_for(
         prompt,
         custom_dir=output_dir or target_dir,
         folder_name=folder_name,
@@ -596,6 +612,15 @@ async def _build_stream(
             session_store.record_turn(
                 payload["id"], "assistant", f"Built {payload.get('name', 'the app')}."
             )
+    if workspace_store is not None and workspace_id:
+        payload["id"] = workspace_id
+        if editable_ir is not None:
+            workspace_store.save_ir(workspace_id, editable_ir)
+        workspace_store.append_turn(workspace_id, "user", prompt)
+        workspace_store.append_turn(
+            workspace_id, "assistant", f"Built {payload.get('name', 'the app')}."
+        )
+        workspace_store.save_state(workspace_id, payload)
     if preview_manager is None:
         payload["preview"] = {
             "status": "disabled",
@@ -801,6 +826,118 @@ def _open_recorded_build(build_id: str, history: StudioBuildHistory) -> dict:
     return {"status": "error", "message": "Could not open the project folder on this machine."}
 
 
+def _workspace_build(
+    ws_id: str,
+    prompt: str,
+    *,
+    workspace_store: StudioWorkspaceStore,
+    preview_manager: StudioPreviewManager | None = None,
+    **options,
+) -> dict:
+    with workspace_store.lock(ws_id):
+        workspace_store.ensure_workspace(ws_id)
+        repo_dir = str(workspace_store.repo_path(ws_id))
+        return _build(
+            prompt,
+            direct_target_dir=repo_dir,
+            workspace_store=workspace_store,
+            workspace_id=ws_id,
+            preview_manager=preview_manager,
+            **options,
+        )
+
+
+async def _workspace_build_stream(
+    ws_id: str,
+    prompt: str,
+    *,
+    workspace_store: StudioWorkspaceStore,
+    preview_manager: StudioPreviewManager | None = None,
+    **options,
+) -> AsyncIterator[dict]:
+    with workspace_store.lock(ws_id):
+        workspace_store.ensure_workspace(ws_id)
+        repo_dir = str(workspace_store.repo_path(ws_id))
+        async for event in _build_stream(
+            prompt,
+            direct_target_dir=repo_dir,
+            workspace_store=workspace_store,
+            workspace_id=ws_id,
+            preview_manager=preview_manager,
+            **options,
+        ):
+            yield event
+
+
+async def _workspace_edit(
+    ws_id: str,
+    prompt: str,
+    *,
+    workspace_store: StudioWorkspaceStore,
+) -> dict:
+    with workspace_store.lock(ws_id):
+        ir = workspace_store.load_ir(ws_id)
+        if ir is None:
+            raise BuildNotFoundError(f"workspace '{ws_id}' not found or has no IR; build first")
+        repo_dir = str(workspace_store.repo_path(ws_id))
+        if not os.path.isdir(repo_dir):
+            raise BuildNotFoundError(f"workspace '{ws_id}' repo directory does not exist")
+
+        usage_ledger = UsageLedger()
+        provider, model_id, _max_output, timeout = resolve_generation_provider_from_env(
+            usage_ledger=usage_ledger
+        )
+        proposal = await generate_app_delta_proposal(ir, prompt, provider, model_id=model_id, timeout_seconds=timeout)
+        new_ir = apply_app_delta(ir, proposal)
+        diff = plan_edit(ir, new_ir)
+
+        if diff.is_empty():
+            workspace_store.append_turn(ws_id, "user", prompt)
+            workspace_store.append_turn(ws_id, "assistant", "No file changes were needed for that request.")
+            state = workspace_store.get_state(ws_id) or {}
+            return {
+                "id": ws_id,
+                "diff": {"added": [], "modified": [], "deleted": [], "summary": diff.summary()},
+                "entities": [entity.name for entity in ir.entities],
+                "file_count": state.get("file_count", 0),
+                "commit_sha": state.get("commit_sha", ""),
+                "rationale": proposal.rationale,
+                "turns": workspace_store.get_turns(ws_id),
+                "usage": _usage_summary_to_dict(usage_ledger),
+            }
+
+        result = commit_edit(
+            diff, repo_dir, author_name=_AUTHOR_NAME, author_email=_AUTHOR_EMAIL,
+            message=f"edit: {prompt.strip()[:72]}",
+        )
+        workspace_store.save_ir(ws_id, new_ir)
+        workspace_store.append_turn(ws_id, "user", prompt)
+        workspace_store.append_turn(ws_id, "assistant", diff.summary())
+
+        file_count = len(assemble_project(new_ir).files())
+        state = workspace_store.get_state(ws_id) or {}
+        state["file_count"] = file_count
+        state["commit_sha"] = result.commit_sha
+        state["entities"] = [entity.name for entity in new_ir.entities]
+        workspace_store.save_state(ws_id, state)
+
+        return {
+            "id": ws_id,
+            "commit_sha": result.commit_sha,
+            "entities": [entity.name for entity in new_ir.entities],
+            "file_count": file_count,
+            "diff": {
+                "added": list(diff.added_files.keys()),
+                "modified": list(diff.modified_files.keys()),
+                "deleted": list(diff.deleted_files),
+                "summary": diff.summary(),
+            },
+            "rationale": proposal.rationale,
+            "turns": workspace_store.get_turns(ws_id),
+            "usage": _usage_summary_to_dict(usage_ledger),
+        }
+
+
 def _preview_enabled() -> bool:
     return os.environ.get("OMNISTACKAI_STUDIO_LIVE_PREVIEW", "0").strip().lower() in {
         "1", "true", "yes", "on"
@@ -814,6 +951,7 @@ def main() -> None:
     history = StudioBuildHistory()
     session_store = StudioSessionStore()
     problems_store = StudioProblemsStore()
+    workspace_store = StudioWorkspaceStore()
 
     def build(prompt: str, **options) -> dict:
         return _build(prompt, preview_manager=preview_manager, history=history, session_store=session_store, **options)
@@ -824,6 +962,43 @@ def main() -> None:
 
     def edit_build(build_id: str, prompt: str) -> dict:
         return asyncio.run(_edit(build_id, prompt, history=history, session_store=session_store))
+
+    def workspace_build(ws_id: str, prompt: str, **options) -> dict:
+        return _workspace_build(ws_id, prompt, workspace_store=workspace_store, preview_manager=preview_manager, **options)
+
+    def workspace_build_stream(ws_id: str, prompt: str, **options) -> AsyncIterator[dict]:
+        return _workspace_build_stream(ws_id, prompt, workspace_store=workspace_store, preview_manager=preview_manager, **options)
+
+    def workspace_edit(ws_id: str, prompt: str) -> dict:
+        return asyncio.run(_workspace_edit(ws_id, prompt, workspace_store=workspace_store))
+
+    def workspace_preview(ws_id: str) -> dict:
+        if preview_manager is None:
+            return {
+                "status": "disabled",
+                "message": "Build-only mode: start the explicit Studio preview command to run generated code.",
+            }
+        repo_dir = str(workspace_store.repo_path(ws_id))
+        if not os.path.isdir(repo_dir):
+            raise BuildNotFoundError(f"workspace '{ws_id}' has no repo to preview")
+        return preview_manager.replace(repo_dir)
+
+    def workspace_problems_check(ws_id: str) -> dict:
+        repo_dir = str(workspace_store.repo_path(ws_id))
+        if not os.path.isdir(repo_dir):
+            raise BuildNotFoundError(f"workspace '{ws_id}' has no repo")
+        report = check_build_problems(repo_dir)
+        problems_store.set(ws_id, report)
+        return report
+
+    def workspace_problems_get(ws_id: str) -> dict:
+        repo_dir = str(workspace_store.repo_path(ws_id))
+        if not os.path.isdir(repo_dir):
+            raise BuildNotFoundError(f"workspace '{ws_id}' has no repo")
+        report = problems_store.get(ws_id)
+        if report is None:
+            raise ProblemsNotCheckedError(f"workspace '{ws_id}' has not been checked for problems yet")
+        return report
 
     control_kwargs: dict = {
         "history_fn": history.list,
@@ -848,6 +1023,14 @@ def main() -> None:
             prompt, history=history, session_store=session_store, preview_manager=preview_manager
         ),
         "turns_fn": lambda build_id: _turns(build_id, session_store),
+        # F-01 / R-499: Persistent workspace capabilities
+        "workspace_store": workspace_store,
+        "workspace_build_fn": workspace_build,
+        "workspace_build_stream_fn": workspace_build_stream,
+        "workspace_edit_fn": workspace_edit,
+        "workspace_preview_fn": workspace_preview,
+        "workspace_problems_check_fn": workspace_problems_check,
+        "workspace_problems_get_fn": workspace_problems_get,
     }
     if preview_manager is not None:
         control_kwargs.update(

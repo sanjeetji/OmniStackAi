@@ -17,6 +17,7 @@ from .page import STUDIO_HTML
 from .preview import StudioPreviewManager
 from .server import BuildFn, create_studio_server
 from .session import EditNotSupportedError, SessionEntry, StudioSessionStore
+from .workspace import StudioWorkspaceStore, WorkspaceLockedError, WorkspaceNotFoundError
 
 __all__ = [
     "STUDIO_HTML",
@@ -30,6 +31,9 @@ __all__ = [
     "StudioFilesError",
     "StudioPreviewManager",
     "StudioSessionStore",
+    "StudioWorkspaceStore",
+    "WorkspaceLockedError",
+    "WorkspaceNotFoundError",
     "create_studio_server",
     "list_build_files",
     "read_build_file",
