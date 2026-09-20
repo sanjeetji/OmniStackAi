@@ -1646,5 +1646,153 @@ export function getProjectTestReport(
   );
 }
 
+// --- G-01 Publish v1 / R-509 Deployments & Connections ---
+
+export interface DeployConnectionStatus {
+  provider: "vercel" | "netlify";
+  connected: boolean;
+  account_label?: string;
+  connected_at?: string;
+}
+
+export interface DeploymentRecord {
+  id: string;
+  project_id: string;
+  user_id: string;
+  provider: "vercel" | "netlify";
+  external_id?: string;
+  status: "queued" | "building" | "ready" | "error" | "canceled";
+  url?: string;
+  commit_sha?: string;
+  error_message?: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface PublishReadiness {
+  path: 1 | 2 | 3;
+  path_description: string;
+  has_backend: boolean;
+  has_db: boolean;
+  render_yaml?: string;
+  fly_toml?: string;
+  git_connected: boolean;
+  repo_name: string;
+  provider_connected: boolean;
+  provider: string;
+  account_label?: string;
+  secrets_count: number;
+  missing_secrets: string[];
+  latest_deployment?: DeploymentRecord;
+  live_url?: string;
+}
+
+export interface TriggerPublishResponse {
+  deployment: DeploymentRecord;
+  live_url: string;
+}
+
+export function getDeployConnection(
+  token: string,
+  provider: "vercel" | "netlify"
+): Promise<DeployConnectionStatus> {
+  return callControlPlane<DeployConnectionStatus>(
+    `/deploy/connections/${encodeURIComponent(provider)}`,
+    {
+      headers: { Authorization: `Bearer ${token}` },
+    }
+  );
+}
+
+export function saveDeployConnection(
+  token: string,
+  provider: "vercel" | "netlify",
+  apiKey: string,
+  accountLabel?: string
+): Promise<DeployConnectionStatus> {
+  return callControlPlane<DeployConnectionStatus>(
+    `/deploy/connections/${encodeURIComponent(provider)}`,
+    {
+      method: "PUT",
+      headers: {
+        Authorization: `Bearer ${token}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        api_key: apiKey,
+        account_label: accountLabel ?? "",
+      }),
+    }
+  );
+}
+
+export function deleteDeployConnection(
+  token: string,
+  provider: "vercel" | "netlify"
+): Promise<{ ok: boolean }> {
+  return callControlPlane<{ ok: boolean }>(
+    `/deploy/connections/${encodeURIComponent(provider)}`,
+    {
+      method: "DELETE",
+      headers: { Authorization: `Bearer ${token}` },
+    }
+  );
+}
+
+export function getPublishReadiness(
+  token: string,
+  projectId: string
+): Promise<PublishReadiness> {
+  return callControlPlane<PublishReadiness>(
+    `/projects/${encodeURIComponent(projectId)}/publish`,
+    {
+      headers: { Authorization: `Bearer ${token}` },
+    }
+  );
+}
+
+export function triggerPublish(
+  token: string,
+  projectId: string,
+  provider?: "vercel" | "netlify"
+): Promise<TriggerPublishResponse> {
+  return callControlPlane<TriggerPublishResponse>(
+    `/projects/${encodeURIComponent(projectId)}/publish`,
+    {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${token}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(provider ? { provider } : {}),
+    }
+  );
+}
+
+export function getProjectDeployments(
+  token: string,
+  projectId: string
+): Promise<{ deployments: DeploymentRecord[] }> {
+  return callControlPlane<{ deployments: DeploymentRecord[] }>(
+    `/projects/${encodeURIComponent(projectId)}/deployments`,
+    {
+      headers: { Authorization: `Bearer ${token}` },
+    }
+  );
+}
+
+export function getProjectDeployment(
+  token: string,
+  projectId: string,
+  deploymentId: string
+): Promise<{ deployment: DeploymentRecord }> {
+  return callControlPlane<{ deployment: DeploymentRecord }>(
+    `/projects/${encodeURIComponent(projectId)}/deployments/${encodeURIComponent(deploymentId)}`,
+    {
+      headers: { Authorization: `Bearer ${token}` },
+    }
+  );
+}
+
 
 

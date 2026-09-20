@@ -1,34 +1,39 @@
-task_id: R-508
-status: complete
+task_id: R-509
+status: completed
 phase: MVP
 tracker_row: null
 started_at: "2026-09-20"
 completed_at: "2026-09-20"
 objective: >-
-  Implement F-10 Security scanning & automated test runs (spec R_&_D/specs/F-10-security-tests.md).
-  Part 1 (Security): Dependency audit (pnpm audit, pip-audit, govulncheck), deterministic secret scan
-  of generated source code (key prefixes, base64 blobs, .env), and framework security rules
-  (dangerouslySetInnerHTML, CORS wildcard with auth, httpOnly/SameSite cookies, SQL string interpolation).
-  Findings report severity, rule, file, line, message, fix suggestion. Checks list pass/fail/skipped
-  (missing tools reported as skipped, never passed).
-  Part 2 (Tests): Run test suites for web (pnpm test), Python (pytest/unittest), and Go (go test ./...),
-  parse outputs into {suite, name, status, duration_ms, message}, and provide honest empty state when no tests exist.
-  REST endpoints: POST /projects/{id}/security/scan, GET /projects/{id}/security, POST /projects/{id}/tests/run, GET /projects/{id}/tests.
-  Console UI in Studio Manage -> Security and Studio Manage -> Tests tabs.
+  Implement G-01 Publish v1 — Deploy from user's GitHub to their Vercel/Netlify account (spec R_&_D/specs/G-01-publish.md).
+  Includes: (1) PostgreSQL migration 000010_deployments (deploy_connections, deployments, projects columns);
+  (2) Control-plane deploy package with AES-256-GCM token encryption, Vercel and Netlify standard-library drivers,
+  readiness evaluator, deploy trigger, project secret environment variable propagation, and history polling;
+  (3) Agent-engine publish readiness evaluator in studio/publish.py (path 1: web only, path 2: web + backend with render.yaml/fly.toml guidance,
+  path 3: needs database with external PostgreSQL URL guidance);
+  (4) Console Web UI: Studio header Publish dialog, Studio Manage -> Publish tab (live URL, status, history table, redeploy, backend guidance),
+  and Settings -> Hosting (Vercel and Netlify personal access token manager).
 allowed_paths:
-  - services/agent-engine/src/omnistackai_agent_engine/studio/security.py
-  - services/agent-engine/src/omnistackai_agent_engine/studio/tests_runner.py
+  - services/control-plane/migrations/000010_deployments.up.sql
+  - services/control-plane/migrations/000010_deployments.down.sql
+  - services/control-plane/internal/deploy/store.go
+  - services/control-plane/internal/deploy/provider.go
+  - services/control-plane/internal/deploy/handler.go
+  - services/control-plane/internal/deploy/deploy_test.go
+  - services/control-plane/cmd/control-plane/main.go
+  - services/agent-engine/src/omnistackai_agent_engine/studio/publish.py
   - services/agent-engine/src/omnistackai_agent_engine/studio/server.py
-  - services/agent-engine/src/omnistackai_agent_engine/studio/workspace.py
-  - services/agent-engine/tests/test_security_and_tests.py
-  - services/control-plane/internal/projects/handler.go
-  - services/control-plane/internal/projects/projects_test.go
+  - services/agent-engine/tests/test_publish_readiness.py
   - apps/console-web/lib/control-plane.ts
-  - apps/console-web/app/api/projects/[id]/security/
-  - apps/console-web/app/api/projects/[id]/tests/
-  - apps/console-web/components/project-security-manage.tsx
-  - apps/console-web/components/project-tests-manage.tsx
+  - apps/console-web/app/api/deploy/
+  - apps/console-web/app/api/projects/[id]/publish/
+  - apps/console-web/app/api/projects/[id]/deployments/
+  - apps/console-web/components/hosting-keys-manager.tsx
+  - apps/console-web/components/publish-dialog.tsx
+  - apps/console-web/components/project-publish-manage.tsx
   - apps/console-web/app/studio/[projectId]/manage/page.tsx
+  - apps/console-web/app/studio/studio-workspace.tsx
+  - apps/console-web/app/settings/page.tsx
   - scripts/test.sh
   - .ai/CURRENT_TASK.yaml
   - .ai/PROJECT_STATE.yaml
@@ -37,31 +42,29 @@ allowed_paths:
   - PROJECT_STATE.md
   - CHANGELOG.md
 forbidden_changes:
+  - Do not add external Go or Python dependencies (zero new deps; Go keeps 1 direct dep: pgx/v5)
   - Do not change control-plane database from PostgreSQL
-  - Do not add external Go or Python dependencies (zero new deps)
-  - Do not report missing toolchains as passed (must report as skipped)
-  - Do not invent vulnerability scores or fake security assessments
+  - Do not store unencrypted hosting tokens (AES-256-GCM encryption required)
+  - Do not log or leak tokens to browser or git
+  - Do not claim apps are live when they are not (honest paths 1, 2, 3)
 required_gates:
   - bash scripts/test.sh
-  - cd services/control-plane && go test -v ./...
-  - task agent-engine:test
+  - cd services/control-plane && go test -v ./internal/deploy/...
+  - cd services/control-plane && go test ./...
+  - PYTHONPATH=src python3 -m unittest tests/test_publish_readiness.py
   - cd apps/console-web && pnpm run typecheck && pnpm run lint
   - task verify
   - task lint
-  - task security:quick
-  - task env:check
 model_tool_trace:
   routing: deterministic_only
   local_calls: 0
   cloud_calls: 0
   note: Engineering task, 0 model calls required for gates.
 evidence:
-  scripts_test_sh: passed (Repository contract tests passed, R-508 contracts verified)
-  control_plane_tests: passed (all internal/projects tests pass including TestProjectSecurityAndTests)
-  agent_engine_tests: passed (12/12 test_security_and_tests.py passed, 3827 full suite passed)
-  console_web_typecheck_and_lint: passed (tsc --noEmit, eslint, next build all clean)
-  task_verify: passed (all 3827 agent-engine tests, Go tests, Next.js build, contract tests passed)
-  task_lint: passed
-  task_security_quick: passed
-  task_env_check: passed
-next_action: complete
+  scripts_test_sh: passed (Repository contract tests passed)
+  control_plane_tests: passed (ok internal/deploy, ok all control-plane tests)
+  agent_engine_tests: passed (Ran 4 tests in 0.005s OK)
+  console_web_typecheck_and_lint: passed (typecheck 0 errors, eslint 0 errors)
+  task_verify: passed (Ran 3831 tests in 86.466s, Stage 0 verification passed)
+  task_lint: passed (Lint passed)
+next_action: completed

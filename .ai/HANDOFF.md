@@ -1,5 +1,33 @@
 # Current Handoff
 
+Task ID: R-509
+Status: done
+Phase: MVP → Phase G (publish & deployments)
+Branch: `ai/R-509-publish`
+
+> **R-509 Completed (2026-09-20): G-01 Publish v1 — Deploy from user's GitHub to their Vercel/Netlify account (`R_&_D/specs/G-01-publish.md`).**
+> - **Database Migrations (`services/control-plane/migrations/`):**
+>   - Created `000010_deployments.up.sql` / `down.sql`: `deploy_connections` (AES-256-GCM encrypted tokens), `deployments` (history with commit SHA, status, live URL), and added `deploy_provider`, `deploy_external_id`, and `live_url` columns to `projects`.
+> - **Control-Plane Backend (`services/control-plane/internal/deploy/`):**
+>   - `store.go`: PostgreSQL store with AES-256-GCM authenticated encryption, AAD binding (`user_id:provider`), and key rotation support.
+>   - `provider.go`: `DeployProvider` interface with standard-library `net/http` implementations for `VercelProvider` (`api.vercel.com/v13/deployments`) and `NetlifyProvider` (`api.netlify.com/api/v1/sites`). Zero new Go dependencies (`github.com/jackc/pgx/v5` remains the single direct dependency).
+>   - `handler.go`: Endpoints for connections (`GET/PUT/DELETE /deploy/connections/{provider}`), publish readiness (`GET /projects/{id}/publish`), publish trigger with secret env propagation (`POST /projects/{id}/publish`), and deployment history (`GET /projects/{id}/deployments`, `GET /projects/{id}/deployments/{depId}`).
+>   - `deploy_test.go`: Comprehensive unit tests for crypto, connections, readiness, and deploy triggering.
+>   - Registered in `cmd/control-plane/main.go`.
+> - **Agent-Engine Publish Evaluator (`services/agent-engine/`):**
+>   - `studio/publish.py`: Deterministically evaluates project architecture into Path 1 (Web-only -> Vercel/Netlify), Path 2 (Web + backend -> starter `render.yaml`/`fly.toml` guidance), and Path 3 (Full-stack with DB -> external PostgreSQL `DATABASE_URL` guidance).
+>   - Mounted `GET /api/workspaces/{id}/publish/readiness` in `studio/server.py`.
+>   - Unit tests in `tests/test_publish_readiness.py`: Path 1, Path 2, Path 3, custom YAML preservation, env var detection (all 4 passed).
+> - **Console Web UI (`apps/console-web/`):**
+>   - Types and SDK methods in `lib/control-plane.ts`.
+>   - Next.js API route proxies under `/api/deploy/connections/[provider]` and `/api/projects/[id]/publish`.
+>   - `components/hosting-keys-manager.tsx`: Settings -> Hosting tab for managing Vercel and Netlify personal access tokens with AES-256-GCM encryption notice and documentation links.
+>   - `components/publish-dialog.tsx`: Modal in Studio Header with path assessment badge, GitHub check, provider selector, inline token connector, secrets count notice, deploy trigger, and live site link.
+>   - `components/project-publish-manage.tsx`: Studio Manage -> Publish tab with live production card, visit site, redeploy, backend guidance configs, and deployment history table.
+>   - Mounted components in `app/settings/page.tsx`, `app/studio/studio-workspace.tsx`, and `app/studio/[projectId]/manage/page.tsx`.
+> - **Gates:** `bash scripts/test.sh` passed with R-509 assertions, `go test ./...` passed (all 14 packages), `task agent-engine:test` passed, Next.js `typecheck`, `lint`, and `build` passed (28 routes clean), `task verify` passed (3,831 tests passed).
+> - **NEXT:** Next roadmap task in Phase G.
+
 Task ID: R-508
 Status: done
 Phase: MVP → Phase F (platform foundation)

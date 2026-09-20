@@ -1,10 +1,11 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Download, ExternalLink } from "lucide-react";
+import { ArrowUpRight, Download, ExternalLink, Globe } from "lucide-react";
 import type { BuildJobUsage, ProjectGitStatus } from "@/lib/control-plane";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { PublishDialog } from "@/components/publish-dialog";
 
 function GithubIcon({ className = "size-3.5" }: { className?: string }) {
   return (
@@ -61,6 +62,7 @@ export function StudioWorkspace({
   projectId?: string | null;
 }) {
   const [gitStatus, setGitStatus] = useState<ProjectGitStatus | null>(null);
+  const [publishDialogOpen, setPublishDialogOpen] = useState(false);
 
   useEffect(() => {
     if (!projectId) return;
@@ -99,17 +101,36 @@ export function StudioWorkspace({
         </div>
         <div className="flex items-center gap-2">
           {projectId ? (
-            <Button asChild variant="outline" size="sm" className="h-8 gap-1.5 text-xs">
-              <a href={`/api/projects/${encodeURIComponent(projectId)}/export`} download>
-                <Download className="size-3.5" />
-                Download code
-              </a>
-            </Button>
+            <>
+              <Button
+                variant="default"
+                size="sm"
+                className="h-8 gap-1.5 text-xs bg-primary hover:bg-primary/90 text-primary-foreground font-medium shadow-sm"
+                onClick={() => setPublishDialogOpen(true)}
+              >
+                <Globe className="size-3.5" />
+                Publish
+              </Button>
+              <Button asChild variant="outline" size="sm" className="h-8 gap-1.5 text-xs">
+                <a href={`/api/projects/${encodeURIComponent(projectId)}/export`} download>
+                  <Download className="size-3.5" />
+                  Download code
+                </a>
+              </Button>
+            </>
           ) : null}
           <p className="font-mono text-xs text-muted-foreground">
             {projectId ? `project ${projectId.slice(0, 8)}` : `build ${(buildId ?? "").slice(0, 8)}`}
           </p>
         </div>
+        {projectId && (
+          <PublishDialog
+            projectId={projectId}
+            projectName={snapshot?.name ?? "Your App"}
+            open={publishDialogOpen}
+            onOpenChange={setPublishDialogOpen}
+          />
+        )}
       </header>
     );
   }
@@ -158,12 +179,23 @@ export function StudioWorkspace({
 
       <div className="flex flex-col items-end gap-2 shrink-0">
         {projectId ? (
-          <Button asChild variant="outline" size="sm" className="h-8 gap-1.5 text-xs">
-            <a href={`/api/projects/${encodeURIComponent(projectId)}/export`} download>
-              <Download className="size-3.5" />
-              Download code
-            </a>
-          </Button>
+          <div className="flex items-center gap-2">
+            <Button
+              variant="default"
+              size="sm"
+              className="h-8 gap-1.5 text-xs bg-primary hover:bg-primary/90 text-primary-foreground font-medium shadow-sm"
+              onClick={() => setPublishDialogOpen(true)}
+            >
+              <Globe className="size-3.5" />
+              Publish
+            </Button>
+            <Button asChild variant="outline" size="sm" className="h-8 gap-1.5 text-xs">
+              <a href={`/api/projects/${encodeURIComponent(projectId)}/export`} download>
+                <Download className="size-3.5" />
+                Download code
+              </a>
+            </Button>
+          </div>
         ) : null}
         <dl className="grid shrink-0 grid-cols-[auto_auto] gap-x-3 gap-y-1 text-xs text-muted-foreground">
           <dt>Files</dt>
@@ -197,6 +229,14 @@ export function StudioWorkspace({
           ) : null}
         </dl>
       </div>
+      {projectId && (
+        <PublishDialog
+          projectId={projectId}
+          projectName={snapshot.name ?? "Your App"}
+          open={publishDialogOpen}
+          onOpenChange={setPublishDialogOpen}
+        />
+      )}
     </header>
   );
 }

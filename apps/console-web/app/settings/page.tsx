@@ -5,6 +5,7 @@ import {
   Activity,
   CircleCheck,
   Cpu,
+  Globe,
   KeyRound,
   Palette,
   Sparkles,
@@ -17,6 +18,7 @@ import { revealStyle } from "@/lib/motion";
 import { getCurrentUser, getSessionToken } from "@/lib/session";
 import { AccountUsageViewer } from "@/components/account-usage-viewer";
 import { AIKeysManager } from "@/components/ai-keys-manager";
+import { HostingKeysManager } from "@/components/hosting-keys-manager";
 import { SkillsLibrary } from "@/components/skills-library";
 import ThemeSwitcher from "@/components/theme-switcher";
 import { Badge } from "@/components/ui/badge";
@@ -41,6 +43,7 @@ const SECTIONS: { id: string; label: string; icon: LucideIcon }[] = [
   { id: "skills", label: "Skills library", icon: Sparkles },
   { id: "providers", label: "Model providers", icon: Cpu },
   { id: "byok", label: "BYOK keys", icon: KeyRound },
+  { id: "hosting", label: "Hosting", icon: Globe },
   { id: "usage", label: "AI usage", icon: Activity },
 ];
 
@@ -174,10 +177,19 @@ export default async function SettingsPage() {
           </section>
 
           <section
+            id="hosting"
+            aria-labelledby="hosting-title"
+            className="reveal scroll-mt-20"
+            style={revealStyle(6)}
+          >
+            <HostingKeysManager />
+          </section>
+
+          <section
             id="usage"
             aria-labelledby="usage-title"
             className="reveal scroll-mt-20"
-            style={revealStyle(6)}
+            style={revealStyle(7)}
           >
             <AccountUsageViewer />
           </section>

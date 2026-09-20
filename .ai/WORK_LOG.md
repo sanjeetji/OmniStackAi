@@ -1,5 +1,46 @@
 # Work Log
 
+## 2026-09-20 — R-509 (G-01 Publish v1: GitHub -> Vercel / Netlify)
+
+- **Why:** Enable developers to deploy generated applications directly from their connected GitHub repository to their own Vercel or Netlify account via personal access tokens (`R_&_D/specs/G-01-publish.md`), achieving ₹0 hosting infrastructure cost for OmniStackAI while delivering seamless 1-click cloud deployments.
+- **Part 1 — Database Migrations (`services/control-plane/migrations/`):**
+  - Created `000010_deployments.up.sql` and `000010_deployments.down.sql`:
+    - `deploy_connections`: User provider connections (`provider` IN ('vercel', 'netlify'), `encrypted_api_key`, `key_id`, `account_label`, `created_at`, `updated_at`).
+    - `deployments`: Project deployment history (`project_id`, `user_id`, `provider`, `external_id`, `status` IN ('queued', 'building', 'ready', 'error', 'canceled'), `url`, `commit_sha`, `error_message`, `created_at`, `updated_at`).
+    - Added `deploy_provider`, `deploy_external_id`, and `live_url` columns to `projects`.
+- **Part 2 — Control-Plane Backend (`services/control-plane/internal/deploy/`):**
+  - Implemented `store.go`: AES-256-GCM authenticated encryption with user_id:provider AAD binding and key rotation support; PostgreSQL CRUD for connections, deployments, and project live status.
+  - Implemented `provider.go`: `DeployProvider` interface with standard library `net/http` implementations for `VercelProvider` (`api.vercel.com/v13/deployments`) and `NetlifyProvider` (`api.netlify.com/api/v1/sites`). Strictly zero new Go dependencies (`github.com/jackc/pgx/v5` remains the single direct dependency).
+  - Implemented `handler.go`:
+    - `GET/PUT/DELETE /deploy/connections/{provider}`: Connection lifecycle with encrypted storage.
+    - `GET /projects/{id}/publish`: Publish readiness evaluation combining git status, connected provider, secrets count, and architecture requirements.
+    - `POST /projects/{id}/publish`: Atomic deployment trigger forwarding git repository details and encrypted project secrets as environment variables.
+    - `GET /projects/{id}/deployments` & `GET /projects/{id}/deployments/{depId}`: Deployment history and status polling.
+  - Added unit tests in `deploy_test.go`: Full coverage of connection lifecycle, AES-256-GCM crypto, publish readiness evaluation, and deployment triggering.
+  - Registered `deployStore` and handlers in `cmd/control-plane/main.go`.
+- **Part 3 — Agent-Engine Publish Evaluator (`services/agent-engine/`):**
+  - Implemented `studio/publish.py`:
+    - `evaluate_publish_readiness(repo_dir)`: Deterministically evaluates project architecture into:
+      - **Path 1**: Web-only (static/SSR Next.js/HTML, deploys completely to Vercel/Netlify).
+      - **Path 2**: Web + separate backend service (generates starter `render.yaml` and `fly.toml` for 1-click backend deployment).
+      - **Path 3**: Full-stack with Database (detects migrations, Prisma, or Postgres connection strings; provides guidance for Neon/Supabase PostgreSQL connection string via `DATABASE_URL`).
+  - Mounted `GET /api/workspaces/{id}/publish/readiness` in `studio/server.py`.
+  - Added unit tests in `tests/test_publish_readiness.py`: Verified Path 1, Path 2, Path 3, custom `render.yaml` preservation, and environment variable detection.
+- **Part 4 — Console Web UI (`apps/console-web/`):**
+  - Updated `lib/control-plane.ts`: Added types (`DeployConnectionStatus`, `DeploymentRecord`, `PublishReadiness`, `TriggerPublishResponse`) and API methods (`getDeployConnection`, `saveDeployConnection`, `deleteDeployConnection`, `getPublishReadiness`, `triggerPublish`, `getProjectDeployments`, `getProjectDeployment`).
+  - Added Next.js API route proxies:
+    - `/api/deploy/connections/[provider]`
+    - `/api/projects/[id]/publish`
+    - `/api/projects/[id]/deployments`
+    - `/api/projects/[id]/deployments/[depId]`
+  - Built `components/hosting-keys-manager.tsx`: Settings -> Hosting tab for managing Vercel and Netlify personal access tokens with AES-256-GCM encryption notice and token generation documentation links.
+  - Built `components/publish-dialog.tsx`: Modal opened from Studio Workspace Header with architecture assessment badge, GitHub repository check, provider selector, inline token connector, secrets count notice, deploy trigger, and live site link.
+  - Built `components/project-publish-manage.tsx`: Studio Manage -> Publish tab with live production card, visit site, redeploy, backend guidance configs, and deployment history table.
+  - Mounted `HostingKeysManager` on `app/settings/page.tsx`, `PublishDialog` on `app/studio/studio-workspace.tsx`, and `ProjectPublishManage` on `app/studio/[projectId]/manage/page.tsx`.
+- **Part 5 — Verification & Contract Testing:**
+  - Updated `scripts/test.sh` with R-509 contract assertions.
+  - Verified Go tests (`go test ./...` in `services/control-plane`), Python tests (`test_publish_readiness.py`), Next.js typecheck, lint, and production build (`next build`), and full `task verify` (3,831 tests pass).
+
 ## 2026-09-20 — R-508 (F-10 Security Scanning & Automated Tests)
 
 - **Why:** Generated applications require automated verification of dependency safety, credential exposure prevention, framework security rules, and test execution across heterogeneous stacks (web, Python, Go) without inventing fake scores or vanity badges. `F-10-security-tests.md` specified deterministic dependency audits (`pnpm audit`, `pip-audit`, `govulncheck`) with honest skipped state for uninstalled toolchains, secret scanning over generated source code for API key prefixes, base64 private keys, and live `.env` files, framework rules checks (`dangerouslySetInnerHTML`, wildcard CORS with auth, `httpOnly`/`SameSite` cookies, raw SQL concatenation), test discovery and execution (`pnpm test`, `pytest`/`unittest`, `go test ./...`), control-plane REST proxy endpoints with project tenant isolation, and Lovable/Dyad-grade Console UI in Studio Manage -> Security and Studio Manage -> Tests tabs.

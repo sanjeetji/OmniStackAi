@@ -200,7 +200,7 @@ F-01 Projects ─┬─ F-02 Preview ──┬─ F-09 DB explorer + SQL
 
 | Task | Tracker | Title | Gate | Spec |
 | --- | --- | --- | --- | --- |
-| G-01 | R-509 | Publish v1 — deploy from the user's GitHub to their Vercel/Netlify | Which hosting model? | `specs/G-01-publish.md` |
+| G-01 | R-509 | Publish v1 — deploy from the user's GitHub to their Vercel/Netlify | Completed (2026-09-20) | `specs/G-01-publish.md` |
 | G-02 | R-510 | Custom domain (bring your own) | After G-01 | `specs/G-02-domains.md` |
 | G-03 | R-511 | Connectors — framework + Google Analytics + email | Which providers; OAuth apps to register | `specs/G-03-connectors.md` |
 | G-04 | R-512 | Payments in generated apps — Stripe + Razorpay | Test accounts | `specs/G-04-payments.md` |

@@ -20,6 +20,7 @@ import {
   EyeOff,
   FileCode2,
   GitBranch,
+  Globe,
   Key,
   LoaderCircle,
   Lock,
@@ -68,6 +69,7 @@ import { ProjectLogsManage } from "@/components/project-logs-manage";
 import { ProjectSEOManage } from "@/components/project-seo-manage";
 import { ProjectSecurityManage } from "@/components/project-security-manage";
 import { ProjectTestsManage } from "@/components/project-tests-manage";
+import { ProjectPublishManage } from "@/components/project-publish-manage";
 import { SkillEditorDialog } from "@/components/skills-library";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -103,9 +105,9 @@ export default function ProjectManagePage({
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  // Section nav: "general" | "knowledge" | "skills" | "secrets" | "git" | "ai" | "seo" | "logs" | "database" | "security" | "tests"
+  // Section nav: "general" | "knowledge" | "skills" | "secrets" | "git" | "ai" | "seo" | "logs" | "database" | "security" | "tests" | "publish"
   const [activeSection, setActiveSection] = useState<
-    "general" | "knowledge" | "skills" | "secrets" | "git" | "ai" | "seo" | "logs" | "database" | "security" | "tests"
+    "general" | "knowledge" | "skills" | "secrets" | "git" | "ai" | "seo" | "logs" | "database" | "security" | "tests" | "publish"
   >("general");
 
   // General Form state
@@ -955,6 +957,21 @@ export default function ProjectManagePage({
               Tests
             </span>
           </button>
+          <button
+            type="button"
+            onClick={() => setActiveSection("publish")}
+            className={cn(
+              "w-full flex items-center justify-between px-3 py-2 text-sm font-medium rounded-md transition-colors",
+              activeSection === "publish"
+                ? "bg-secondary text-secondary-foreground"
+                : "text-muted-foreground hover:bg-muted/50 hover:text-foreground",
+            )}
+          >
+            <span className="flex items-center gap-2">
+              <Globe className="size-4" />
+              Publish
+            </span>
+          </button>
         </nav>
 
         {/* Section content */}
@@ -1749,6 +1766,8 @@ export default function ProjectManagePage({
             <ProjectSecurityManage projectId={projectId} />
           ) : activeSection === "tests" ? (
             <ProjectTestsManage projectId={projectId} />
+          ) : activeSection === "publish" ? (
+            <ProjectPublishManage projectId={projectId} projectName={project?.name || "Project"} />
           ) : (
             <>
               {/* Git & GitHub Section */}

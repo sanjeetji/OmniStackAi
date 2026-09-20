@@ -1677,6 +1677,67 @@ if ! rg -qF '/tests/run' "$control_plane_root/internal/projects/handler.go"; the
   exit 1
 fi
 
+# R-509 (G-01 Publish v1): deployments migration, deploy package, publish evaluator, and console-web publish UI
+for required_deploy_file in \
+  "$control_plane_root/migrations/000010_deployments.up.sql" \
+  "$control_plane_root/migrations/000010_deployments.down.sql" \
+  "$control_plane_root/internal/deploy/store.go" \
+  "$control_plane_root/internal/deploy/provider.go" \
+  "$control_plane_root/internal/deploy/handler.go" \
+  "$agent_engine_root/src/omnistackai_agent_engine/studio/publish.py" \
+  "$console_root/components/hosting-keys-manager.tsx" \
+  "$console_root/components/publish-dialog.tsx" \
+  "$console_root/components/project-publish-manage.tsx" \
+  "$console_root/app/api/deploy/connections/[provider]/route.ts" \
+  "$console_root/app/api/projects/[id]/publish/route.ts" \
+  "$console_root/app/api/projects/[id]/deployments/route.ts"; do
+  if [[ ! -f "$required_deploy_file" ]]; then
+    printf 'Missing R-509 contract file: %s\n' "$required_deploy_file"
+    exit 1
+  fi
+done
+
+if ! rg -qF 'evaluate_publish_readiness' "$agent_engine_root/src/omnistackai_agent_engine/studio/publish.py"; then
+  printf 'R-509 publish.py must define evaluate_publish_readiness.\n'
+  exit 1
+fi
+
+if ! rg -qF '/publish/readiness' "$agent_engine_root/src/omnistackai_agent_engine/studio/server.py"; then
+  printf 'R-509 agent-engine must route /publish/readiness.\n'
+  exit 1
+fi
+
+if ! rg -qF 'getDeployConnection' "$console_root/lib/control-plane.ts"; then
+  printf 'R-509 lib/control-plane.ts must define getDeployConnection.\n'
+  exit 1
+fi
+
+if ! rg -qF 'triggerPublish' "$console_root/lib/control-plane.ts"; then
+  printf 'R-509 lib/control-plane.ts must define triggerPublish.\n'
+  exit 1
+fi
+
+if ! rg -qF 'HostingKeysManager' "$console_root/app/settings/page.tsx"; then
+  printf 'R-509 settings page must render HostingKeysManager.\n'
+  exit 1
+fi
+
+if ! rg -qF 'PublishDialog' "$console_root/app/studio/studio-workspace.tsx"; then
+  printf 'R-509 studio workspace must render PublishDialog.\n'
+  exit 1
+fi
+
+if ! rg -qF 'ProjectPublishManage' "$console_root/app/studio/[projectId]/manage/page.tsx"; then
+  printf 'R-509 manage page must render ProjectPublishManage.\n'
+  exit 1
+fi
+
+if ! rg -qF 'deploy.Register' "$control_plane_root/cmd/control-plane/main.go"; then
+  printf 'R-509 control-plane main must register deploy routes.\n'
+  exit 1
+fi
+
 printf 'Repository contract tests passed.\n'
+
 
 

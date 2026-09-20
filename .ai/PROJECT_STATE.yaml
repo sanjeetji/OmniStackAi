@@ -4,24 +4,23 @@ phase: BASIC/MVP
 founder_stage: 0
 current_task: null
 current_status: ready
-branch: ai/R-508-security-tests
-last_completed_task: R-508
+branch: ai/R-509-publish
+last_completed_task: R-509
 last_completed_task_summary: >-
+  Completed R-509 (2026-09-20): G-01 Publish v1 — Deploy from user's GitHub to their Vercel/Netlify account (spec R_&_D/specs/G-01-publish.md).
+  1) PostgreSQL migration 000010_deployments: created deploy_connections (AES-256-GCM encrypted tokens), deployments (history with commit sha, status, URL),
+  and added deploy_provider, deploy_external_id, and live_url columns to projects.
+  2) Go control-plane internal/deploy: built store with AES-256-GCM authenticated encryption and key rotation; Vercel and Netlify drivers using Go standard library
+  http only (0 new dependencies; pgx/v5 remains the single direct dependency); handlers for connections, readiness, trigger publish, and deployment history with tenant isolation.
+  3) Agent-engine studio/publish.py: deterministic architecture evaluator classifying projects into Path 1 (Web-only -> Vercel/Netlify), Path 2 (Web + backend ->
+  starter render.yaml/fly.toml guidance), and Path 3 (Full-stack with DB -> external PostgreSQL DATABASE_URL guidance); wired GET /api/workspaces/{id}/publish/readiness.
+  4) Console-Web UI:
+     - Settings -> Hosting: HostingKeysManager with AES-256-GCM encrypted Personal Access Token input and verification for Vercel and Netlify (₹0 hosting cost to OmniStackAI).
+     - Studio Workspace Header: Publish button with Globe icon opening PublishDialog (assessment path badge, provider selector, GitHub check, inline token connect, trigger button, live site celebration).
+     - Studio Manage -> Publish tab: ProjectPublishManage with live production environment card, visit site, redeploy, backend guidance configs, and deployment history table.
+  All 3,831 agent-engine tests, 14 Go packages, and Next.js build/typecheck/lint clean.
+_prior_last_completed_task_summary_R508: >-
   Completed R-508 (2026-09-20): Security Scanning & Automated Tests (F-10 spec).
-  Part 1 (Security): Built deterministic security scanner in agent-engine studio/security.py covering:
-  1) Dependency audits (pnpm audit, pip-audit, govulncheck) with honest reporting of uninstalled tools as skipped;
-  2) Secret scanning of generated source code (hardcoded API key prefixes, base64 private keys, live .env files);
-  3) Framework security checks (dangerouslySetInnerHTML, wildcard CORS with auth, httpOnly/SameSite cookies, raw SQL concatenation).
-  Findings report severity, rule, file, line, message, and suggested fix; clean scans display 'No issues found by these checks'.
-  Part 2 (Tests): Built automated test discovery and execution engine in agent-engine studio/tests_runner.py covering:
-  web (pnpm test), Python (pytest/unittest), and Go (go test ./...), parsing results into structured test cases and suites
-  with honest empty state when no tests exist.
-  Added control-plane proxy routes in internal/projects/handler.go (POST /projects/{id}/security/scan, GET /projects/{id}/security,
-  POST /projects/{id}/tests/run, GET /projects/{id}/tests) with tenant isolation.
-  Built Console Web UI: lib/control-plane.ts types and client SDK, Next.js API route proxies under app/api/projects/[id]/,
-  and Lovable-grade components in Studio Manage: ProjectSecurityManage (findings by severity/file, checks status checklist, Fix with AI)
-  and ProjectTestsManage (total/passed/failed/skipped summary bar, per-suite runner view, terminal output, empty state with Ask Chat action).
-  All 3,827 agent-engine tests, 14 Go packages, and Next.js typecheck/lint/build clean.
 _prior_last_completed_task_summary_R507: >-
   Completed R-507 (2026-09-20): Database Explorer & SQL Editor (F-09-database spec).
   Implemented agent-engine database service in studio/database.py and studio/server.py exposing PostgreSQL

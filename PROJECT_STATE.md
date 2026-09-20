@@ -4,6 +4,15 @@ Last updated: 2026-09-20
 ## Current Phase
 Stage 0 (Founder Build Sequence, Brief Section 91) — BASIC/MVP
 
+> **R-509 (2026-09-20): G-01 Publish v1 — Deploy from GitHub to Vercel/Netlify (`R_&_D/specs/G-01-publish.md`).**
+> Implemented 1-click cloud publishing from connected GitHub repositories to user-owned Vercel or Netlify accounts via personal access tokens with ₹0 hosting infrastructure cost for OmniStackAI.
+> Database: PostgreSQL migration `000010_deployments` created `deploy_connections` (AES-256-GCM encrypted tokens), `deployments` (history with commit SHA, status, live URL), and added `deploy_provider`, `deploy_external_id`, and `live_url` to `projects`.
+> Control-Plane Backend: `internal/deploy` package with AES-256-GCM authenticated encryption, AAD binding (`user_id:provider`), and key rotation; standard-library `net/http` drivers for Vercel and Netlify (0 new Go dependencies; `pgx/v5` remains the single direct dependency); handlers for connections, publish readiness, publish triggering with secret env propagation, and deployment polling with tenant isolation.
+> Agent-Engine: `studio/publish.py` deterministically evaluating project architecture into Path 1 (Web-only -> Vercel/Netlify), Path 2 (Web + backend -> starter `render.yaml`/`fly.toml`), and Path 3 (Full-stack with DB -> external PostgreSQL `DATABASE_URL` guidance). Mounted `GET /api/workspaces/{id}/publish/readiness`.
+> Console Web UI: `HostingKeysManager` on `/settings#hosting`, `PublishDialog` on Studio Header with architecture assessment badge, GitHub check, provider selector, inline token connector, secrets count notice, deploy trigger, and live site celebration; and `ProjectPublishManage` in Studio Manage → Publish tab with live production card, visit site, redeploy, backend guidance configs, and deployment history table.
+> Gates: 3,831 tests pass, `task verify` passed, `scripts/test.sh` passed, Next.js build clean.
+> NEXT: **Phase G continued**.
+
 > **R-508 (2026-09-20): Security Scanning & Automated Tests (F-10 spec).**
 > Implemented real dependency audits, deterministic secret scanning, framework security checks, and automated test runners
 > across web (pnpm), Python (pytest/unittest), and Go (go test ./...) with a Lovable/Dyad-grade Console UI in **Studio Manage → Security**

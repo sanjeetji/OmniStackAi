@@ -40,6 +40,7 @@ from .database import (
 from .files import BuildNotFoundError, FileNotFoundInBuildError, PathOutsideBuildError
 from .page import STUDIO_HTML
 from .problems import NoWebTargetError, ProblemsNotCheckedError, ToolchainNotInstalledError
+from .publish import evaluate_publish_readiness
 from .security import get_last_security_report, run_security_scan
 from .session import EditNotSupportedError
 from .tests_runner import get_last_test_report, run_project_tests
@@ -786,6 +787,17 @@ def _make_handler(
                 return
             self._send_json(200, report)
 
+        def _handle_workspace_publish_readiness(self, ws_id: str) -> None:
+            """GET /api/workspaces/{id}/publish/readiness (G-01 / R-509)"""
+            repo_dir = self._db_require_workspace(ws_id)
+            if repo_dir is None:
+                return
+            try:
+                readiness = evaluate_publish_readiness(repo_dir)
+                self._send_json(200, readiness)
+            except Exception as error:
+                self._send_json(502, {"error": str(error)})
+
         def _handle_file_tree(self, build_id: str) -> None:
             if file_tree_fn is None:
                 self._send_json(404, {"error": "file browsing is not enabled"})
@@ -1173,6 +1185,11 @@ def _make_handler(
                 ws_tests_id = self._workspace_id_for_suffix(path_only, "/tests")
                 if ws_tests_id is not None:
                     self._handle_workspace_tests_get(ws_tests_id)
+                    return
+                # /api/workspaces/{id}/publish/readiness (G-01 / R-509)
+                ws_publish_id = self._workspace_id_for_suffix(path_only, "/publish/readiness")
+                if ws_publish_id is not None:
+                    self._handle_workspace_publish_readiness(ws_publish_id)
                     return
                 # --- existing workspace GET routes ---
                 ws_files_id = self._workspace_id_for_suffix(path_only, "/files")
