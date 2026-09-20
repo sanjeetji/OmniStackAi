@@ -25,6 +25,9 @@ from ..solution_packs import (
     EcosystemPackRegistry,
     SolutionPackRegistry,
 )
+from pathlib import Path
+
+from .connectors import ConnectorError, apply_connector, remove_connector
 from .database import (
     DatabaseNotFoundError,
     QueryExecutionError,
@@ -795,6 +798,51 @@ def _make_handler(
             try:
                 readiness = evaluate_publish_readiness(repo_dir)
                 self._send_json(200, readiness)
+            except Exception as error:
+                self._send_json(502, {"error": str(error)})
+
+        # --- Connectors codegen handlers (G-03 / R-511) ---
+        def _handle_workspace_connector_apply(self, ws_id: str) -> None:
+            """POST /api/workspaces/{id}/connectors/apply"""
+            repo_dir_str = self._db_require_workspace(ws_id)
+            if repo_dir_str is None:
+                return
+            data = self._read_json_body()
+            if data is None:
+                return
+            provider = str(data.get("provider", "")).strip()
+            if not provider:
+                self._send_json(400, {"error": "provider is required"})
+                return
+            config = data.get("config", {})
+            if not isinstance(config, dict):
+                self._send_json(400, {"error": "config must be an object"})
+                return
+            try:
+                result = apply_connector(Path(repo_dir_str), provider, config)
+                self._send_json(200, result)
+            except ConnectorError as error:
+                self._send_json(400, {"error": str(error)})
+            except Exception as error:
+                self._send_json(502, {"error": str(error)})
+
+        def _handle_workspace_connector_remove(self, ws_id: str) -> None:
+            """POST /api/workspaces/{id}/connectors/remove"""
+            repo_dir_str = self._db_require_workspace(ws_id)
+            if repo_dir_str is None:
+                return
+            data = self._read_json_body()
+            if data is None:
+                return
+            provider = str(data.get("provider", "")).strip()
+            if not provider:
+                self._send_json(400, {"error": "provider is required"})
+                return
+            try:
+                result = remove_connector(Path(repo_dir_str), provider)
+                self._send_json(200, result)
+            except ConnectorError as error:
+                self._send_json(400, {"error": str(error)})
             except Exception as error:
                 self._send_json(502, {"error": str(error)})
 
@@ -1572,6 +1620,15 @@ def _make_handler(
             ws_tests_run_id = self._workspace_id_for_suffix(path_only, "/tests/run")
             if ws_tests_run_id is not None:
                 self._handle_workspace_tests_run(ws_tests_run_id)
+                return
+            # --- Connectors codegen POST routes (G-03 / R-511) ---
+            ws_conn_apply_id = self._workspace_id_for_suffix(path_only, "/connectors/apply")
+            if ws_conn_apply_id is not None:
+                self._handle_workspace_connector_apply(ws_conn_apply_id)
+                return
+            ws_conn_remove_id = self._workspace_id_for_suffix(path_only, "/connectors/remove")
+            if ws_conn_remove_id is not None:
+                self._handle_workspace_connector_remove(ws_conn_remove_id)
                 return
             # --- existing workspace POST routes ---
             ws_cancel_id = self._workspace_id_for_suffix(path_only, "/cancel")

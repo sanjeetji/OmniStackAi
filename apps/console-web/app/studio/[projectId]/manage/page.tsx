@@ -33,6 +33,7 @@ import {
   Terminal,
   Trash2,
   Unlink,
+  Plug,
   X,
 } from "lucide-react";
 
@@ -71,6 +72,7 @@ import { ProjectSecurityManage } from "@/components/project-security-manage";
 import { ProjectTestsManage } from "@/components/project-tests-manage";
 import { ProjectPublishManage } from "@/components/project-publish-manage";
 import { ProjectDomainManage } from "@/components/project-domain-manage";
+import { ProjectConnectorsManage } from "@/components/project-connectors-manage";
 import { SkillEditorDialog } from "@/components/skills-library";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -106,9 +108,9 @@ export default function ProjectManagePage({
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  // Section nav: "general" | "knowledge" | "skills" | "secrets" | "git" | "ai" | "seo" | "logs" | "database" | "security" | "tests" | "publish" | "domains"
+  // Section nav: "general" | "knowledge" | "skills" | "secrets" | "git" | "ai" | "seo" | "logs" | "database" | "security" | "tests" | "publish" | "domains" | "connectors"
   const [activeSection, setActiveSection] = useState<
-    "general" | "knowledge" | "skills" | "secrets" | "git" | "ai" | "seo" | "logs" | "database" | "security" | "tests" | "publish" | "domains"
+    "general" | "knowledge" | "skills" | "secrets" | "git" | "ai" | "seo" | "logs" | "database" | "security" | "tests" | "publish" | "domains" | "connectors"
   >("general");
 
   // General Form state
@@ -988,6 +990,21 @@ export default function ProjectManagePage({
               Domain
             </span>
           </button>
+          <button
+            type="button"
+            onClick={() => setActiveSection("connectors")}
+            className={cn(
+              "w-full flex items-center justify-between px-3 py-2 text-sm font-medium rounded-md transition-colors",
+              activeSection === "connectors"
+                ? "bg-secondary text-secondary-foreground"
+                : "text-muted-foreground hover:bg-muted/50 hover:text-foreground",
+            )}
+          >
+            <span className="flex items-center gap-2">
+              <Plug className="size-4" />
+              Connectors
+            </span>
+          </button>
         </nav>
 
         {/* Section content */}
@@ -1786,6 +1803,8 @@ export default function ProjectManagePage({
             <ProjectPublishManage projectId={projectId} projectName={project?.name || "Project"} />
           ) : activeSection === "domains" ? (
             <ProjectDomainManage projectId={projectId} projectName={project?.name || "Project"} />
+          ) : activeSection === "connectors" ? (
+            <ProjectConnectorsManage projectId={projectId} projectName={project?.name || "Project"} />
           ) : (
             <>
               {/* Git & GitHub Section */}

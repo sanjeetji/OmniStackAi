@@ -1,5 +1,34 @@
 # Current Handoff
 
+Task ID: R-511
+Status: done
+Phase: MVP → Phase G (connectors)
+Branch: `ai/R-511-connectors`
+
+> **R-511 Completed (2026-09-20): G-03 Connectors v1 (`R_&_D/specs/G-03-connectors.md`).**
+> - **Database Migration (`services/control-plane/migrations/`):**
+>   - Created `000012_connectors.up.sql` / `down.sql`:
+>     - `connector_accounts`: user credentials with encrypted refresh tokens (`user_id`, `provider`, `external_account`, `refresh_token_ciphertext`, `scopes`).
+>     - `project_connectors`: project-scoped connector binding (`project_id`, `provider`, `connector_account_id`, `config` JSONB, `enabled`).
+> - **Control-Plane Backend (`services/control-plane/internal/connectors/`):**
+>   - `catalog.go`: Honest catalogue rule enforced (`ga4`, `resend`, `smtp`) with categories, auth types, config schemas, and generated files descriptions.
+>   - `store.go`: PostgreSQL store with tenant isolation, sensitive field masking, and configuration lifecycle.
+>   - `handler.go`: REST endpoints (`GET /connectors`, `GET /projects/{id}/connectors`, `PUT /projects/{id}/connectors/{provider}`, `DELETE /projects/{id}/connectors/{provider}`, `POST /projects/{id}/connectors/{provider}/test`).
+>   - Zero new external Go dependencies (`github.com/jackc/pgx/v5` remains the sole direct dependency).
+>   - Unit tests in `connectors_test.go`: All tests pass.
+>   - Registered in `cmd/control-plane/main.go`.
+> - **Agent-Engine Codegen Hooks (`services/agent-engine/`):**
+>   - `studio/connectors.py`: `apply_connector` injects Google Tag script into `app/layout.tsx` for GA4; creates `lib/email.ts` + `app/api/send/route.ts` using Resend REST API (zero npm dependencies) and SMTP; commits additions to Git. `remove_connector` cleans up generated code and layout edits on disconnect and commits removal to Git.
+>   - Mounted `POST /api/workspaces/{id}/connectors/apply` and `POST /api/workspaces/{id}/connectors/remove` in `studio/server.py`.
+>   - Unit tests in `tests/test_connectors.py`: All 6 tests pass.
+> - **Console Web UI (`apps/console-web/`):**
+>   - Types and SDK methods in `lib/control-plane.ts`.
+>   - API route proxies under `/api/connectors` and `/api/projects/[id]/connectors/`.
+>   - `components/project-connectors-manage.tsx`: Manage -> Connectors tab with connector cards, state chips (`Connected` / `Not connected`), configuration drawers with generated code explanation, live credential testing, and "Request a Connector" dialog capturing future OAuth requests.
+>   - Mounted Connectors tab in `app/studio/[projectId]/manage/page.tsx`.
+> - **Gates:** `bash scripts/test.sh` passed with R-511 assertions, `go test ./...` passed (all 16 packages), Next.js build/typecheck/lint passed, `task verify` passed (all 3,837 agent-engine tests pass).
+> - **NEXT:** Next roadmap task in Phase G.
+
 Task ID: R-510
 Status: done
 Phase: MVP → Phase G (custom domains)

@@ -1,5 +1,40 @@
 # Work Log
 
+## 2026-09-20 — R-511 (G-03 Connectors v1)
+
+- **Why:** Enable generated apps to communicate with 3rd-party services (Google Analytics 4, Resend, and SMTP) using developer credentials (`R_&_D/specs/G-03-connectors.md`). Follows the strict **Honest Catalogue Rule**: ships few, working, and honest connectors only — zero deceptive 113-service marketing stubs.
+- **Part 1 — Database Migration (`services/control-plane/migrations/`):**
+  - Created `000012_connectors.up.sql` and `000012_connectors.down.sql`:
+    - `connector_accounts`: user-level credentials and encrypted refresh tokens (`user_id`, `provider`, `external_account`, `refresh_token_ciphertext`, `scopes`).
+    - `project_connectors`: project-scoped connector binding (`project_id`, `provider`, `connector_account_id`, `config` JSONB, `enabled`).
+- **Part 2 — Control-Plane Backend (`services/control-plane/internal/connectors/`):**
+  - Implemented `catalog.go`: Honest catalogue of working connectors (`ga4`, `resend`, `smtp`) with category, auth type, config schema, and generated files descriptions.
+  - Implemented `store.go`: `PgStore` managing project connectors CRUD with sensitive field masking and timestamp tracking.
+  - Implemented `handler.go`: REST handlers (`GET /connectors`, `GET /projects/{id}/connectors`, `PUT /projects/{id}/connectors/{provider}`, `DELETE /projects/{id}/connectors/{provider}`, `POST /projects/{id}/connectors/{provider}/test`).
+  - Added unit tests in `connectors_test.go`: Catalog schema checks, store lifecycle, and validation.
+  - Registered `connectors.Register` in `cmd/control-plane/main.go`.
+- **Part 3 — Agent-Engine Codegen Hooks (`services/agent-engine/`):**
+  - Implemented `studio/connectors.py`:
+    - `apply_connector`: Generates `components/GoogleAnalytics.tsx` and injects tag into `app/layout.tsx` for GA4; generates `lib/email.ts` and `app/api/send/route.ts` for Resend and SMTP; commits additions to Git.
+    - `remove_connector`: Removes generated files and reverts layout modifications on disconnect; commits clean removal to Git.
+  - Mounted routes in `studio/server.py`: `POST /api/workspaces/{id}/connectors/apply` and `POST /api/workspaces/{id}/connectors/remove`.
+  - Added unit tests in `tests/test_connectors.py` (all 6 tests pass).
+- **Part 4 — Console Web UI (`apps/console-web/`):**
+  - Extended `lib/control-plane.ts`: Added `ConnectorDefinition`, `ProjectConnector`, and client methods (`listConnectorsCatalog`, `listProjectConnectors`, `saveProjectConnector`, `deleteProjectConnector`, `testProjectConnector`).
+  - Added Next.js API routes:
+    - `/api/connectors`
+    - `/api/projects/[id]/connectors`
+    - `/api/projects/[id]/connectors/[provider]`
+    - `/api/projects/[id]/connectors/[provider]/test`
+  - Created `components/project-connectors-manage.tsx`:
+    - Clean connector grid with state chips (Connected / Not connected).
+    - Configuration drawer displaying exact generated files, input fields with secret toggles, live connection testing, and one-click disconnect.
+    - Honest "Request a Connector" dialog capturing user requests for future OAuth apps (Google Calendar, Gmail, Slack).
+  - Mounted Connectors tab in `app/studio/[projectId]/manage/page.tsx`.
+- **Part 5 — Verification & Contract Testing:**
+  - Added R-511 assertions to `scripts/test.sh`.
+  - Verified: `task lint` (clean), `go test ./...` across all 16 control-plane packages (clean), Next.js build/typecheck/lint (clean), and full `task verify` (all 3,837 agent-engine tests pass).
+
 ## 2026-09-20 — R-510 (G-02 Custom Domain: Bring Your Own)
 
 - **Why:** Allow developers to connect their own custom domains (from Cloudflare, GoDaddy, Namecheap, Hostinger, BigRock, etc.) to their published OmniStackAI applications (`R_&_D/specs/G-02-domains.md`), with ₹0 domain registrar, purchasing, renewal, or WHOIS overhead for the platform.

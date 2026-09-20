@@ -1885,5 +1885,122 @@ export function deleteProjectDomain(
   );
 }
 
+// ---------------------------------------------------------------------------
+// Connectors (G-03 / R-511)
+// ---------------------------------------------------------------------------
+
+export interface ConnectorConfigField {
+  name: string;
+  label: string;
+  type: string;
+  required: boolean;
+  secret: boolean;
+  placeholder?: string;
+  default?: string;
+  help?: string;
+}
+
+export interface ConnectorDefinition {
+  id: string;
+  name: string;
+  category: string;
+  description: string;
+  icon: string;
+  auth_type: "none" | "api_key" | "oauth2";
+  docs_url: string;
+  config_fields: ConnectorConfigField[];
+  generated_files: string[];
+}
+
+export interface ProjectConnector {
+  id: string;
+  project_id: string;
+  provider: string;
+  connector_account_id?: string;
+  config: Record<string, any>;
+  enabled: boolean;
+  created_at: string;
+}
+
+export interface ConnectorTestResult {
+  success: boolean;
+  message: string;
+  details?: Record<string, any>;
+}
+
+export function listConnectorsCatalog(
+  token: string
+): Promise<{ connectors: ConnectorDefinition[] }> {
+  return callControlPlane<{ connectors: ConnectorDefinition[] }>("/connectors", {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+}
+
+export function listProjectConnectors(
+  token: string,
+  projectId: string
+): Promise<{ connectors: ProjectConnector[] }> {
+  return callControlPlane<{ connectors: ProjectConnector[] }>(
+    `/projects/${encodeURIComponent(projectId)}/connectors`,
+    {
+      headers: { Authorization: `Bearer ${token}` },
+    }
+  );
+}
+
+export function saveProjectConnector(
+  token: string,
+  projectId: string,
+  provider: string,
+  config: Record<string, any>,
+  enabled = true
+): Promise<ProjectConnector> {
+  return callControlPlane<ProjectConnector>(
+    `/projects/${encodeURIComponent(projectId)}/connectors/${encodeURIComponent(provider)}`,
+    {
+      method: "PUT",
+      headers: {
+        Authorization: `Bearer ${token}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ config, enabled }),
+    }
+  );
+}
+
+export function deleteProjectConnector(
+  token: string,
+  projectId: string,
+  provider: string
+): Promise<{ deleted: boolean }> {
+  return callControlPlane<{ deleted: boolean }>(
+    `/projects/${encodeURIComponent(projectId)}/connectors/${encodeURIComponent(provider)}`,
+    {
+      method: "DELETE",
+      headers: { Authorization: `Bearer ${token}` },
+    }
+  );
+}
+
+export function testProjectConnector(
+  token: string,
+  projectId: string,
+  provider: string,
+  config?: Record<string, any>
+): Promise<ConnectorTestResult> {
+  return callControlPlane<ConnectorTestResult>(
+    `/projects/${encodeURIComponent(projectId)}/connectors/${encodeURIComponent(provider)}/test`,
+    {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${token}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(config ? { config } : {}),
+    }
+  );
+}
+
+
 
 

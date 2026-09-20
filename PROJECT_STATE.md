@@ -4,6 +4,16 @@ Last updated: 2026-09-20
 ## Current Phase
 Stage 0 (Founder Build Sequence, Brief Section 91) — BASIC/MVP
 
+> **R-511 (2026-09-20): G-03 Connectors v1 (`R_&_D/specs/G-03-connectors.md`).**
+> Implemented clean connector framework for generated apps to communicate with 3rd-party services using developer credentials, adhering to the Honest Catalogue Rule (zero fake 113-service marketing cards).
+> Supported out of the box: Google Analytics 4 (GA4 measurement ID tag injection into layout), Resend (zero-npm-dep REST API transactional email helper), and custom SMTP (typed dispatcher).
+> Database: PostgreSQL migration `000012_connectors` created `connector_accounts` (user credentials with encrypted refresh tokens) and `project_connectors` (project-scoped config & enabled state).
+> Control-Plane Backend: `internal/connectors` package with Catalog, PgStore, and REST handlers (`/connectors`, `/projects/{id}/connectors`, `/projects/{id}/connectors/{provider}`, `/projects/{id}/connectors/{provider}/test`). Zero new Go dependencies (`github.com/jackc/pgx/v5` remains the single direct dependency).
+> Agent-Engine: `studio/connectors.py` with `apply_connector` and `remove_connector` codegen hooks committing code additions and removals directly to the project's Git repository.
+> Console Web UI: Studio Manage → Connectors tab with `ProjectConnectorsManage` (state chips, generated code explanation drawers, live credential testing, and "Request a Connector" dialog capturing future OAuth requests).
+> Gates: All 3,837 tests pass, `task verify` passed, `scripts/test.sh` passed, Next.js build clean.
+> NEXT: **Phase G continued**.
+
 > **R-510 (2026-09-20): G-02 Custom Domain — Bring Your Own (`R_&_D/specs/G-02-domains.md`).**
 > Implemented bring-your-own custom domain management for OmniStackAI applications with ₹0 platform cost, zero domain registrar/renewal/WHOIS overhead.
 > Database: PostgreSQL migration `000011_domains` created `project_domains` with global `UNIQUE(hostname)` anti-hijack constraint, provider, DNS record types, real TLS status, and primary flag.

@@ -1,32 +1,36 @@
-task_id: R-510
+task_id: R-511
 status: completed
 phase: MVP
 tracker_row: null
 started_at: "2026-09-20"
 completed_at: "2026-09-20"
 objective: >-
-  Implement G-02 Custom Domain — Bring Your Own (spec R_&_D/specs/G-02-domains.md).
-  Includes: (1) PostgreSQL migration 000011_domains (project_domains table with unique hostname constraint, DNS record requirements, and TLS status);
-  (2) Control-plane internal/domains package with RFC 1123 hostname validation, standard-library DNS lookup (CNAME/A),
-  provider domain attachment and verification (Vercel & Netlify API drivers), and primary domain switching;
-  (3) Console-Web UI: Studio Manage -> Domain tab (empty state, live hostname format validation, DNS instructions card with copy buttons,
-  registrar guides for Cloudflare, GoDaddy, Namecheap, Hostinger, BigRock, real-time DNS/TLS status badges, "Check now" action, and primary toggle);
-  (4) Quality gates: scripts/test.sh contract assertions, Go unit tests, Next.js typecheck/lint, task verify.
+  Implement G-03 Connectors v1 (spec R_&_D/specs/G-03-connectors.md).
+  Includes: (1) PostgreSQL migration 000012_connectors (connector_accounts and project_connectors tables);
+  (2) Control-plane internal/connectors package with catalog, store, and REST handlers (/connectors, /projects/{id}/connectors,
+  /projects/{id}/connectors/{provider}, /projects/{id}/connectors/{provider}/test);
+  (3) Agent-engine studio/connectors.py with codegen hooks for Google Analytics 4 (layout tag injection) and Transactional Email
+  (Resend & SMTP lib/email.ts + server action), plus clean removal on disconnect;
+  (4) Console-Web UI: Studio Manage -> Connectors tab with connector cards, configuration dialog explaining generated code,
+  live testing, and "Request a Connector" dialog;
+  (5) Quality gates: scripts/test.sh contract assertions, Go tests, Python tests, Next.js typecheck/lint, task verify.
 allowed_paths:
-  - COMMANDS.md
-  - services/control-plane/migrations/000011_domains.up.sql
-  - services/control-plane/migrations/000011_domains.down.sql
-  - services/control-plane/internal/deploy/provider.go
-  - services/control-plane/internal/domains/store.go
-  - services/control-plane/internal/domains/verifier.go
-  - services/control-plane/internal/domains/handler.go
-  - services/control-plane/internal/domains/domains_test.go
+  - services/control-plane/migrations/000012_connectors.up.sql
+  - services/control-plane/migrations/000012_connectors.down.sql
+  - services/control-plane/internal/connectors/catalog.go
+  - services/control-plane/internal/connectors/store.go
+  - services/control-plane/internal/connectors/handler.go
+  - services/control-plane/internal/connectors/connectors_test.go
   - services/control-plane/cmd/control-plane/main.go
+  - services/agent-engine/src/omnistackai_agent_engine/studio/connectors.py
+  - services/agent-engine/src/omnistackai_agent_engine/studio/server.py
+  - services/agent-engine/tests/test_connectors.py
   - apps/console-web/lib/control-plane.ts
-  - apps/console-web/app/api/projects/[id]/domains/route.ts
-  - apps/console-web/app/api/projects/[id]/domains/[domainId]/route.ts
-  - apps/console-web/app/api/projects/[id]/domains/[domainId]/verify/route.ts
-  - apps/console-web/components/project-domain-manage.tsx
+  - apps/console-web/app/api/connectors/route.ts
+  - apps/console-web/app/api/projects/[id]/connectors/route.ts
+  - apps/console-web/app/api/projects/[id]/connectors/[provider]/route.ts
+  - apps/console-web/app/api/projects/[id]/connectors/[provider]/test/route.ts
+  - apps/console-web/components/project-connectors-manage.tsx
   - apps/console-web/app/studio/[projectId]/manage/page.tsx
   - scripts/test.sh
   - .ai/CURRENT_TASK.yaml
@@ -38,13 +42,14 @@ allowed_paths:
 forbidden_changes:
   - Do not add external Go or Python dependencies (zero new deps; Go keeps 1 direct dep: pgx/v5)
   - Do not change control-plane database from PostgreSQL
-  - Do not sell domains, handle domain billing, registrar transfers, or WHOIS
-  - Do not fake TLS or DNS status badges (honest reporting of provider certificate state)
+  - Do not ship fake or non-functioning connectors (no fake 113-service marketing lists)
+  - Do not store unencrypted credentials
 required_gates:
   - bash scripts/test.sh
-  - cd services/control-plane && go test -v ./internal/domains/...
+  - cd services/control-plane && go test -v ./internal/connectors/...
   - cd services/control-plane && go test -v ./migrations/...
   - cd services/control-plane && go test ./...
+  - PYTHONPATH=src python3 -m unittest tests/test_connectors.py
   - cd apps/console-web && pnpm run typecheck && pnpm run lint
   - task verify
   - task lint
@@ -54,9 +59,10 @@ model_tool_trace:
   cloud_calls: 0
   note: Engineering task, 0 model calls required for gates.
 evidence:
-  scripts_test_sh: passed (Repository contract tests passed)
-  control_plane_tests: passed (ok internal/domains, ok internal/deploy, ok migrations, ok all control-plane tests)
-  console_web_typecheck_and_lint: passed (typecheck 0 errors, eslint 0 errors)
-  task_verify: passed (Ran 3831 tests in 87.374s, Stage 0 verification passed)
-  task_lint: passed (Lint passed)
-next_action: completed
+  scripts_test_sh: passed
+  control_plane_tests: passed
+  agent_engine_tests: passed (3837 tests OK)
+  console_web_typecheck_and_lint: passed
+  task_verify: passed
+  task_lint: passed
+next_action: complete

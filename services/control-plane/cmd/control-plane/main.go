@@ -18,6 +18,7 @@ import (
 	"github.com/sanjeetji/OmniStackAi/services/control-plane/internal/ai"
 	"github.com/sanjeetji/OmniStackAi/services/control-plane/internal/auth"
 	"github.com/sanjeetji/OmniStackAi/services/control-plane/internal/config"
+	"github.com/sanjeetji/OmniStackAi/services/control-plane/internal/connectors"
 	"github.com/sanjeetji/OmniStackAi/services/control-plane/internal/deploy"
 	"github.com/sanjeetji/OmniStackAi/services/control-plane/internal/domains"
 	"github.com/sanjeetji/OmniStackAi/services/control-plane/internal/git"
@@ -145,6 +146,14 @@ func run(ctx context.Context, logger *slog.Logger) error {
 		DomainStore:  domainStore,
 		DeployStore:  deployStore,
 		Logger:       logger,
+	})
+	connectorStore := connectors.NewPgStore(pool)
+	connectors.Register(mux, connectors.Deps{
+		AuthStore:      userStore,
+		ProjectStore:   projectStore,
+		ConnectorStore: connectorStore,
+		AgentEngineURL: runtimeConfig.AgentEngineURL,
+		Logger:         logger,
 	})
 
 	server := &http.Server{

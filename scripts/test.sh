@@ -1779,7 +1779,59 @@ if ! rg -qF 'domains.Register' "$control_plane_root/cmd/control-plane/main.go"; 
   exit 1
 fi
 
+# R-511 (G-03 Connectors v1): connectors migration, control-plane package, agent-engine codegen, and console-web UI
+for required_connector_file in \
+  "$control_plane_root/migrations/000012_connectors.up.sql" \
+  "$control_plane_root/migrations/000012_connectors.down.sql" \
+  "$control_plane_root/internal/connectors/catalog.go" \
+  "$control_plane_root/internal/connectors/store.go" \
+  "$control_plane_root/internal/connectors/handler.go" \
+  "$control_plane_root/internal/connectors/connectors_test.go" \
+  "$agent_engine_root/src/omnistackai_agent_engine/studio/connectors.py" \
+  "$agent_engine_root/tests/test_connectors.py" \
+  "$console_root/components/project-connectors-manage.tsx" \
+  "$console_root/app/api/connectors/route.ts" \
+  "$console_root/app/api/projects/[id]/connectors/route.ts" \
+  "$console_root/app/api/projects/[id]/connectors/[provider]/route.ts" \
+  "$console_root/app/api/projects/[id]/connectors/[provider]/test/route.ts"; do
+  if [[ ! -f "$required_connector_file" ]]; then
+    printf 'Missing R-511 contract file: %s\n' "$required_connector_file"
+    exit 1
+  fi
+done
+
+if ! rg -qF 'project_connectors' "$control_plane_root/migrations/000012_connectors.up.sql"; then
+  printf 'R-511 000012_connectors.up.sql must create project_connectors table.\n'
+  exit 1
+fi
+
+if ! rg -qF 'connector_accounts' "$control_plane_root/migrations/000012_connectors.up.sql"; then
+  printf 'R-511 000012_connectors.up.sql must create connector_accounts table.\n'
+  exit 1
+fi
+
+if ! rg -qF 'connectors.Register' "$control_plane_root/cmd/control-plane/main.go"; then
+  printf 'R-511 control-plane main must register connectors routes.\n'
+  exit 1
+fi
+
+if ! rg -qF 'apply_connector' "$agent_engine_root/src/omnistackai_agent_engine/studio/connectors.py"; then
+  printf 'R-511 connectors.py must define apply_connector.\n'
+  exit 1
+fi
+
+if ! rg -qF 'remove_connector' "$agent_engine_root/src/omnistackai_agent_engine/studio/connectors.py"; then
+  printf 'R-511 connectors.py must define remove_connector.\n'
+  exit 1
+fi
+
+if ! rg -qF 'ProjectConnectorsManage' "$console_root/app/studio/[projectId]/manage/page.tsx"; then
+  printf 'R-511 manage page must render ProjectConnectorsManage.\n'
+  exit 1
+fi
+
 printf 'Repository contract tests passed.\n'
+
 
 
 
