@@ -72441,6 +72441,31 @@ def _layout_file(ir: ApplicationIR) -> str:
             "          {children}\n"
             "        </ToastProvider>\n"
         )
+    escaped_name = _escape_ts(ir.name)
+    escaped_desc = _escape_ts(ir.description)
+    json_ld = (
+        '        <script\n'
+        '          type="application/ld+json"\n'
+        '          dangerouslySetInnerHTML={{\n'
+        '            __html: JSON.stringify({\n'
+        '              "@context": "https://schema.org",\n'
+        '              "@graph": [\n'
+        '                {\n'
+        '                  "@type": "WebSite",\n'
+        f'                  "name": "{escaped_name}",\n'
+        f'                  "description": "{escaped_desc}",\n'
+        '                  "url": "/",\n'
+        '                },\n'
+        '                {\n'
+        '                  "@type": "Organization",\n'
+        f'                  "name": "{escaped_name}",\n'
+        '                  "url": "/",\n'
+        '                },\n'
+        '              ],\n'
+        '            }),\n'
+        '          }}\n'
+        '        />\n'
+    )
     return (
         'import type { Metadata } from "next";\n'
         'import "./globals.css";\n'
@@ -72448,17 +72473,175 @@ def _layout_file(ir: ApplicationIR) -> str:
         'import { ToastProvider } from "@/components/toast";\n'
         f"{auth_import}\n"
         "export const metadata: Metadata = {\n"
-        f'  title: "{_escape_ts(ir.name)}",\n'
-        f'  description: "{_escape_ts(ir.description)}",\n'
+        '  metadataBase: new URL(process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000"),\n'
+        "  title: {\n"
+        f'    default: "{escaped_name}",\n'
+        f'    template: "%s · {escaped_name}",\n'
+        "  },\n"
+        f'  description: "{escaped_desc}",\n'
+        "  openGraph: {\n"
+        f'    title: "{escaped_name}",\n'
+        f'    description: "{escaped_desc}",\n'
+        f'    siteName: "{escaped_name}",\n'
+        '    type: "website",\n'
+        "  },\n"
+        "  twitter: {\n"
+        '    card: "summary_large_image",\n'
+        f'    title: "{escaped_name}",\n'
+        f'    description: "{escaped_desc}",\n'
+        "  },\n"
+        "  alternates: {\n"
+        '    canonical: "/",\n'
+        "  },\n"
         "};\n\n"
         "export default function RootLayout({ children }: { children: React.ReactNode }) {\n"
         "  return (\n"
         '    <html lang="en">\n'
         '      <body style={{ margin: 0, background: "var(--color-background-subtle, #f8fafc)", color: "var(--color-text, #0f172a)", fontFamily: "var(--font-sans, system-ui, -apple-system, sans-serif)" }}>\n'
+        f"{json_ld}"
         f"{body_content}"
         "      </body>\n"
         "    </html>\n"
         "  );\n"
+        "}\n"
+    )
+
+
+def _sitemap_file(ir: ApplicationIR) -> str:
+    routes_entries = [
+        "    {\n"
+        "      url: baseUrl,\n"
+        "      lastModified: new Date(),\n"
+        '      changeFrequency: "daily",\n'
+        "      priority: 1.0,\n"
+        "    },"
+    ]
+    for s in ir.screens:
+        routes_entries.append(
+            "    {\n"
+            f'      url: `${{baseUrl}}/{s.id}`,\n'
+            "      lastModified: new Date(),\n"
+            '      changeFrequency: "weekly",\n'
+            "      priority: 0.8,\n"
+            "    },"
+        )
+    routes_block = "\n".join(routes_entries)
+    return (
+        'import type { MetadataRoute } from "next";\n\n'
+        "export default async function sitemap(): Promise<MetadataRoute.Sitemap> {\n"
+        '  const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";\n'
+        "  return [\n"
+        f"{routes_block}\n"
+        "  ];\n"
+        "}\n"
+    )
+
+
+def _robots_file(ir: ApplicationIR) -> str:
+    return (
+        'import type { MetadataRoute } from "next";\n\n'
+        "export default function robots(): MetadataRoute.Robots {\n"
+        '  const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";\n'
+        '  const discourage = process.env.NEXT_PUBLIC_DISCOURAGE_SEARCH === "true";\n'
+        "  return {\n"
+        "    rules: {\n"
+        '      userAgent: "*",\n'
+        '      allow: discourage ? undefined : "/",\n'
+        '      disallow: discourage ? "/" : undefined,\n'
+        "    },\n"
+        "    sitemap: `${baseUrl}/sitemap.xml`,\n"
+        "  };\n"
+        "}\n"
+    )
+
+
+def _llms_txt_file(ir: ApplicationIR) -> str:
+    lines = [
+        f"# {ir.name}",
+        "",
+        f"> {ir.description}",
+        "",
+        "## Routes",
+        "- `/`: Home overview and dashboard",
+    ]
+    for s in ir.screens:
+        title = getattr(s, "title", None) or s.id.replace("_", " ").capitalize()
+        desc = getattr(s, "description", None) or f"{title} page"
+        lines.append(f"- `/{s.id}`: {title} — {desc}")
+    lines.extend([
+        "",
+        "## Content Policy",
+        f"This service provides {ir.description}. AI crawlers and search agents are permitted to index public pages.",
+        "",
+    ])
+    return "\n".join(lines)
+
+
+def _opengraph_image_file(ir: ApplicationIR) -> str:
+    escaped_name = _escape_ts(ir.name)
+    escaped_desc = _escape_ts(ir.description)
+    return (
+        'import { ImageResponse } from "next/og";\n\n'
+        'export const runtime = "edge";\n'
+        f'export const alt = "{escaped_name}";\n'
+        "export const size = { width: 1200, height: 630 };\n"
+        'export const contentType = "image/png";\n\n'
+        "export default async function Image() {\n"
+        "  return new ImageResponse(\n"
+        "    (\n"
+        "      <div\n"
+        "        style={{\n"
+        '          display: "flex",\n'
+        '          flexDirection: "column",\n'
+        '          alignItems: "center",\n'
+        '          justifyContent: "center",\n'
+        '          width: "100%",\n'
+        '          height: "100%",\n'
+        '          backgroundColor: "#0f172a",\n'
+        '          color: "#f8fafc",\n'
+        '          padding: "48px",\n'
+        '          fontFamily: "system-ui, -apple-system, sans-serif",\n'
+        "        }}\n"
+        "      >\n"
+        '        <h1 style={{ fontSize: "64px", fontWeight: "bold", margin: "0 0 16px 0", letterSpacing: "-0.02em" }}>\n'
+        f"          {escaped_name}\n"
+        "        </h1>\n"
+        '        <p style={{ fontSize: "28px", color: "#94a3b8", textAlign: "center", maxWidth: "800px", margin: 0 }}>\n'
+        f"          {escaped_desc}\n"
+        "        </p>\n"
+        "      </div>\n"
+        "    ),\n"
+        "    { ...size }\n"
+        "  );\n"
+        "}\n"
+    )
+
+
+def _screen_layout_file(screen: Screen, ir: ApplicationIR) -> str:
+    title = getattr(screen, "title", None) or screen.id.replace("_", " ").capitalize()
+    desc = getattr(screen, "description", None) or f"View and manage {screen.id.replace('_', ' ')} in {ir.name}."
+    escaped_title = _escape_ts(title)
+    escaped_desc = _escape_ts(desc)
+    return (
+        'import type { Metadata } from "next";\n\n'
+        "export const metadata: Metadata = {\n"
+        f'  title: "{escaped_title}",\n'
+        f'  description: "{escaped_desc}",\n'
+        "  openGraph: {\n"
+        f'    title: "{escaped_title}",\n'
+        f'    description: "{escaped_desc}",\n'
+        "  },\n"
+        "  twitter: {\n"
+        '    card: "summary_large_image",\n'
+        f'    title: "{escaped_title}",\n'
+        f'    description: "{escaped_desc}",\n'
+        "  },\n"
+        "  alternates: {\n"
+        f'    canonical: "/{screen.id}",\n'
+        "  },\n"
+        "};\n\n"
+        "export default function ScreenLayout({ children }: { children: React.ReactNode }) {\n"
+        "  return <>{children}</>;\n"
         "}\n"
     )
 
@@ -72811,9 +72994,14 @@ class NextjsWebAdapter:
             GeneratedFile("lib/types.ts", _types_file(ir)),
             GeneratedFile("lib/api.ts", _api_client_file(ir)),
             GeneratedFile("lib/hooks.ts", _hooks_file(ir)),
+            GeneratedFile("app/sitemap.ts", _sitemap_file(ir)),
+            GeneratedFile("app/robots.ts", _robots_file(ir)),
+            GeneratedFile("public/llms.txt", _llms_txt_file(ir)),
+            GeneratedFile("app/opengraph-image.tsx", _opengraph_image_file(ir)),
         ]
 
         for screen in ir.screens:
+            files.append(GeneratedFile(f"app/{screen.id}/layout.tsx", _screen_layout_file(screen, ir)))
             files.append(
                 GeneratedFile(
                     f"app/{screen.id}/page.tsx",

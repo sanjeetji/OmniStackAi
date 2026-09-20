@@ -1168,3 +1168,164 @@ export function getAccountUsage(token: string, days: number = 30): Promise<Accou
     headers: { Authorization: `Bearer ${token}` },
   });
 }
+
+export interface ProjectSEO {
+  project_id: string;
+  site_name: string;
+  default_title: string;
+  description: string;
+  canonical_host: string;
+  discourage: boolean;
+  updated_at: string;
+}
+
+export interface ProjectPageSEO {
+  id?: string;
+  project_id: string;
+  route: string;
+  title: string;
+  description: string;
+  noindex: boolean;
+  updated_at?: string;
+}
+
+export interface SEOFinding {
+  id: string;
+  severity: "error" | "warning" | "info";
+  category?: "meta" | "content" | "technical" | "ai-readiness";
+  route?: string;
+  file: string;
+  line?: number;
+  message?: string;
+  title?: string;
+  description?: string;
+  suggestion?: string;
+  fix_prompt?: string;
+}
+
+export interface SEOPageMetadata {
+  route: string;
+  title: string;
+  description: string;
+  has_h1: boolean;
+  og_title: string;
+  og_description: string;
+  canonical: string;
+  noindex: boolean;
+}
+
+export interface SEOAuditReport {
+  score: number;
+  passed?: number;
+  total?: number;
+  counts?: {
+    total: number;
+    errors: number;
+    warnings: number;
+    info: number;
+  };
+  findings: SEOFinding[];
+  pages?: SEOPageMetadata[];
+  files_present?: {
+    sitemap: boolean;
+    robots: boolean;
+    llms_txt: boolean;
+    og_image: boolean;
+  };
+}
+
+export interface SEOSuggestion {
+  suggested_title: string;
+  suggested_description: string;
+}
+
+export function getProjectSEO(token: string, projectId: string): Promise<ProjectSEO> {
+  return callControlPlane<ProjectSEO>(`/projects/${encodeURIComponent(projectId)}/seo`, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+}
+
+export function setProjectSEO(
+  token: string,
+  projectId: string,
+  seo: Partial<ProjectSEO>
+): Promise<ProjectSEO> {
+  return callControlPlane<ProjectSEO>(`/projects/${encodeURIComponent(projectId)}/seo`, {
+    method: "PUT",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify(seo),
+  });
+}
+
+export function getProjectPageSEOs(token: string, projectId: string): Promise<ProjectPageSEO[]> {
+  return callControlPlane<ProjectPageSEO[]>(`/projects/${encodeURIComponent(projectId)}/seo/pages`, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+}
+
+export function setProjectPageSEO(
+  token: string,
+  projectId: string,
+  route: string,
+  page: Partial<ProjectPageSEO>
+): Promise<ProjectPageSEO> {
+  const normalizedRoute = route.startsWith("/") ? route.slice(1) : route;
+  const pathSuffix = normalizedRoute ? `/${encodeURIComponent(normalizedRoute)}` : "";
+  return callControlPlane<ProjectPageSEO>(
+    `/projects/${encodeURIComponent(projectId)}/seo/pages${pathSuffix}`,
+    {
+      method: "PUT",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify({ ...page, route: route || "/" }),
+    }
+  );
+}
+
+export function auditProjectSEO(token: string, projectId: string): Promise<SEOAuditReport> {
+  return callControlPlane<SEOAuditReport>(
+    `/projects/${encodeURIComponent(projectId)}/seo/audit`,
+    {
+      method: "POST",
+      headers: { Authorization: `Bearer ${token}` },
+    }
+  );
+}
+
+export function suggestProjectSEOCopy(
+  token: string,
+  projectId: string,
+  route: string,
+  pageName?: string
+): Promise<SEOSuggestion> {
+  return callControlPlane<SEOSuggestion>(
+    `/projects/${encodeURIComponent(projectId)}/seo/suggest`,
+    {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify({ route, page_name: pageName }),
+    }
+  );
+}
+
+// Aliases for compatibility with any existing calls
+export const getProjectSEOAudit = auditProjectSEO;
+export const updateProjectPageSEO = (
+  token: string,
+  projectId: string,
+  data: { route: string; title: string; description: string; noindex?: boolean }
+) => setProjectPageSEO(token, projectId, data.route, data);
+export const suggestProjectPageSEO = (
+  token: string,
+  projectId: string,
+  data: { route: string; page_name?: string }
+) => suggestProjectSEOCopy(token, projectId, data.route, data.page_name);
+

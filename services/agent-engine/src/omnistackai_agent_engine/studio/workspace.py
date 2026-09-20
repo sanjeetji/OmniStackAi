@@ -14,6 +14,7 @@ from __future__ import annotations
 import fcntl
 import json
 import os
+import re
 import shutil
 import subprocess
 import tempfile
@@ -331,5 +332,77 @@ class StudioWorkspaceStore:
         return {
             "commit_sha": commit_sha,
             "branch": branch,
+        }
+
+    def update_page_seo(
+        self,
+        workspace_id: str,
+        route: str,
+        title: str,
+        description: str,
+        noindex: bool = False,
+    ) -> dict:
+        """Update or create the page metadata layout file and commit the change to the workspace repo."""
+        repo_dir = self.repo_path(workspace_id)
+        if not repo_dir.is_dir():
+            raise BuildNotFoundError(f"workspace repo directory does not exist: {repo_dir}")
+
+        normalized = route.strip("/")
+        if not normalized:
+            layout_file = repo_dir / "app" / "layout.tsx"
+            if layout_file.is_file():
+                content = layout_file.read_text(encoding="utf-8")
+                escaped_title = title.replace("\\", "\\\\").replace('"', '\\"')
+                escaped_desc = description.replace("\\", "\\\\").replace('"', '\\"')
+                content = re.sub(r'default:\s*"[^"]*"', f'default: "{escaped_title}"', content)
+                content = re.sub(r'description:\s*"[^"]*"', f'description: "{escaped_desc}"', content)
+                layout_file.write_text(content, encoding="utf-8")
+        else:
+            layout_file = repo_dir / "app" / normalized / "layout.tsx"
+            layout_file.parent.mkdir(parents=True, exist_ok=True)
+            escaped_title = title.replace("\\", "\\\\").replace('"', '\\"')
+            escaped_desc = description.replace("\\", "\\\\").replace('"', '\\"')
+            canonical = f"/{normalized}"
+            robots_block = "  robots: { index: false, follow: false },\n" if noindex else ""
+            content = (
+                'import type { Metadata } from "next";\n\n'
+                "export const metadata: Metadata = {\n"
+                f'  title: "{escaped_title}",\n'
+                f'  description: "{escaped_desc}",\n'
+                f"{robots_block}"
+                "  openGraph: {\n"
+                f'    title: "{escaped_title}",\n'
+                f'    description: "{escaped_desc}",\n'
+                "  },\n"
+                "  twitter: {\n"
+                '    card: "summary_large_image",\n'
+                f'    title: "{escaped_title}",\n'
+                f'    description: "{escaped_desc}",\n'
+                "  },\n"
+                "  alternates: {\n"
+                f'    canonical: "{canonical}",\n'
+                "  },\n"
+                "};\n\n"
+                "export default function ScreenLayout({ children }: { children: React.ReactNode }) {\n"
+                "  return <>{children}</>;\n"
+                "}\n"
+            )
+            layout_file.write_text(content, encoding="utf-8")
+
+        from ..git_service import commit_all
+
+        commit_res = commit_all(
+            repo_dir,
+            author_name="OmniStackAI",
+            author_email="agent@omnistackai.internal",
+            message=f"seo: update metadata for {route or '/'}",
+        )
+        state = self.get_state(workspace_id) or {}
+        state["commit_sha"] = commit_res.commit_sha
+        self.save_state(workspace_id, state)
+        return {
+            "workspace_id": workspace_id,
+            "route": route,
+            "commit_sha": commit_res.commit_sha,
         }
 

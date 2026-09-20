@@ -4,6 +4,16 @@ Last updated: 2026-09-20
 ## Current Phase
 Stage 0 (Founder Build Sequence, Brief Section 91) — BASIC/MVP
 
+> **R-505 (2026-09-20): SEO & AI search (F-07-seo spec).**
+> Implemented Next.js indexability codegen (`sitemap.ts`, `robots.ts`, `llms.txt`, `opengraph-image.tsx`, JSON-LD structured data, and per-page metadata),
+> PostgreSQL schema migration `000009_seo.up.sql` / `down.sql` (`project_seo` and `project_page_seo`), Go control-plane store and REST handlers
+> (`/projects/{id}/seo`, `/projects/{id}/seo/pages`, `/projects/{id}/seo/pages/{route...}`, `/projects/{id}/seo/audit`, `/projects/{id}/seo/suggest`),
+> deterministic SEO audit engine (0 credits) computing 0–100 health score with line-level findings, workspace repository git commit generation on page metadata edits,
+> and a Lovable-grade Console UI in **Studio Manage → SEO & AI Search** (site defaults, pages table with 50–160 character counters, Google Search & Social card previews,
+> audit findings, and AI copy suggestions with credit cost notice).
+> Gates: 3,779 tests pass, `task verify` passed, `scripts/test.sh` passed, Next.js build clean.
+> NEXT: **F-08 (R-506) Logs & live chat streaming (spec `R_&_D/specs/F-08-logs-chat.md`)**.
+
 > **R-504 (2026-09-20): AI — model configuration (BYOK) and usage per project/account (F-06-ai-usage spec).**
 > Implemented Bring-Your-Own-Key (BYOK) provider key storage encrypted with AES-256-GCM in PostgreSQL `user_provider_keys`,
 > per-project model pinning, an immutable `model_calls` audit table, and transparent multi-tier usage tracking across the platform.

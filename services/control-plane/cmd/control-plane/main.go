@@ -24,6 +24,7 @@ import (
 	"github.com/sanjeetji/OmniStackAi/services/control-plane/internal/password"
 	"github.com/sanjeetji/OmniStackAi/services/control-plane/internal/projects"
 	"github.com/sanjeetji/OmniStackAi/services/control-plane/internal/secrets"
+	"github.com/sanjeetji/OmniStackAi/services/control-plane/internal/seo"
 	"github.com/sanjeetji/OmniStackAi/services/control-plane/internal/skills"
 	"github.com/sanjeetji/OmniStackAi/services/control-plane/internal/users"
 	"github.com/sanjeetji/OmniStackAi/services/control-plane/migrations"
@@ -116,6 +117,14 @@ func run(ctx context.Context, logger *slog.Logger) error {
 		GitHubAppClientSecret: runtimeConfig.GitHubAppClientSecret,
 		GitHubAppPrivateKey:   runtimeConfig.GitHubAppPrivateKey,
 		Logger:                logger,
+	})
+	seoStore := seo.NewPgStore(pool)
+	seo.Register(mux, seo.Deps{
+		SEOStore:       seoStore,
+		AIStore:        aiStore,
+		AuthStore:      userStore,
+		AgentEngineURL: runtimeConfig.AgentEngineURL,
+		Logger:         logger,
 	})
 
 	server := &http.Server{

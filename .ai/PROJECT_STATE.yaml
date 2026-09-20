@@ -2,11 +2,20 @@ schema_version: 1
 project: OmniStackAI
 phase: BASIC/MVP
 founder_stage: 0
-current_task: R-504
-current_status: completed
-branch: ai/R-504-ai-usage
-last_completed_task: R-504
+current_task: R-506
+current_status: ready
+branch: ai/R-505-seo
+last_completed_task: R-505
 last_completed_task_summary: >-
+  Completed R-505 (2026-09-20): SEO & AI search with Next.js indexability codegen, deterministic audit (0 credits), and Lovable-grade Studio Manage UI (F-07-seo spec).
+  Implemented Next.js indexability codegen (app/sitemap.ts, app/robots.ts, public/llms.txt, app/opengraph-image.tsx, JSON-LD WebSite & Organization structured data, and per-screen metadata).
+  Created PostgreSQL schema migration 000009_seo.up.sql / down.sql adding project_seo (site-level defaults) and project_page_seo (per-page metadata with unique project_id, route).
+  Built Go control-plane internal/seo store and REST handlers (/projects/{id}/seo, /projects/{id}/seo/pages, /projects/{id}/seo/pages/{route...}, /projects/{id}/seo/audit, /projects/{id}/seo/suggest) with tenant isolation and ownership checks.
+  Built deterministic SEO audit engine in agent-engine seo/audit.py checking generated source code with 0 credits and computing 0-100 health score with line-level findings.
+  Updated agent-engine studio/workspace.py with update_page_seo committing metadata changes to the project git repository.
+  Built Console Web UI: lib/control-plane.ts SEO types and API clients, proxy routes under app/api/projects/[id]/seo/, and Lovable-grade components/project-seo-manage.tsx mounted in Studio Manage -> SEO & AI Search tab (site defaults, pages table with 50-160 char length meters, Google Search & Social card previews, deterministic audit findings, and AI copy suggestions with credit cost notice).
+  All 3,779 tests pass; full task verify, Go tests (all 14 packages), and Next.js typecheck/lint clean.
+_prior_last_completed_task_summary_R504: >-
   Completed R-504 (2026-09-20): AI — model configuration (BYOK) and usage per project/account (F-06-ai-usage spec).
   Implemented Bring-Your-Own-Key (BYOK) provider key storage encrypted with AES-256-GCM in PostgreSQL user_provider_keys
   with AAD binding user_id:provider_id, key testing without persistent logging, and zero-key leakage guarantees.

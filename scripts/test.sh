@@ -1439,5 +1439,77 @@ if ! rg -qF 'ProjectAIManage' "$console_root/app/studio/[projectId]/manage/page.
   exit 1
 fi
 
+# R-505: F-07 SEO & AI search.
+for required_seo_file in \
+  "$control_plane_root/migrations/000009_seo.up.sql" \
+  "$control_plane_root/migrations/000009_seo.down.sql" \
+  "$control_plane_root/internal/seo/store.go" \
+  "$control_plane_root/internal/seo/handler.go" \
+  "$control_plane_root/internal/seo/seo_test.go" \
+  "$agent_engine_root/src/omnistackai_agent_engine/seo/audit.py" \
+  "$agent_engine_root/tests/test_seo_codegen_and_audit.py" \
+  "$console_root/components/project-seo-manage.tsx" \
+  "$console_root/app/api/projects/[id]/seo/route.ts" \
+  "$console_root/app/api/projects/[id]/seo/pages/route.ts" \
+  "$console_root/app/api/projects/[id]/seo/pages/[...route]/route.ts" \
+  "$console_root/app/api/projects/[id]/seo/audit/route.ts" \
+  "$console_root/app/api/projects/[id]/seo/suggest/route.ts"; do
+  if [[ ! -f "$required_seo_file" ]]; then
+    printf 'Missing R-505 contract file: %s\n' "$required_seo_file"
+    exit 1
+  fi
+done
+
+if ! rg -qF 'CREATE TABLE IF NOT EXISTS project_seo' "$control_plane_root/migrations/000009_seo.up.sql"; then
+  printf 'R-505 migration must create project_seo table.\n'
+  exit 1
+fi
+
+if ! rg -qF 'CREATE TABLE IF NOT EXISTS project_page_seo' "$control_plane_root/migrations/000009_seo.up.sql"; then
+  printf 'R-505 migration must create project_page_seo table.\n'
+  exit 1
+fi
+
+if ! rg -qF 'DROP TABLE IF EXISTS project_page_seo' "$control_plane_root/migrations/000009_seo.down.sql"; then
+  printf 'R-505 down migration must drop project_page_seo table.\n'
+  exit 1
+fi
+
+if ! rg -qF 'DROP TABLE IF EXISTS project_seo' "$control_plane_root/migrations/000009_seo.down.sql"; then
+  printf 'R-505 down migration must drop project_seo table.\n'
+  exit 1
+fi
+
+if ! rg -qF 'seo.Register' "$control_plane_root/cmd/control-plane/main.go"; then
+  printf 'R-505 control-plane main.go must register SEO handlers.\n'
+  exit 1
+fi
+
+if ! rg -qF 'getProjectSEO' "$console_root/lib/control-plane.ts"; then
+  printf 'R-505 lib/control-plane.ts must define getProjectSEO.\n'
+  exit 1
+fi
+
+if ! rg -qF 'getProjectPageSEOs' "$console_root/lib/control-plane.ts"; then
+  printf 'R-505 lib/control-plane.ts must define getProjectPageSEOs.\n'
+  exit 1
+fi
+
+if ! rg -qF 'auditProjectSEO' "$console_root/lib/control-plane.ts"; then
+  printf 'R-505 lib/control-plane.ts must define auditProjectSEO.\n'
+  exit 1
+fi
+
+if ! rg -qF 'suggestProjectSEOCopy' "$console_root/lib/control-plane.ts"; then
+  printf 'R-505 lib/control-plane.ts must define suggestProjectSEOCopy.\n'
+  exit 1
+fi
+
+if ! rg -qF 'ProjectSEOManage' "$console_root/app/studio/[projectId]/manage/page.tsx"; then
+  printf 'R-505 manage page must render ProjectSEOManage.\n'
+  exit 1
+fi
+
 printf 'Repository contract tests passed.\n'
+
 

@@ -1,5 +1,43 @@
 # Work Log
 
+## 2026-09-20 — R-505 (F-07 SEO & AI search)
+
+- **Why:** Generated applications must be indexable by search engines and readable by AI search agents out of the box. `F-07-seo.md` specified Next.js indexability codegen (`sitemap.ts`, `robots.ts`, `llms.txt`, `opengraph-image.tsx`, JSON-LD structured data, and per-page metadata), PostgreSQL schema migration `000009_seo`, Go control-plane store and REST handlers, deterministic SEO audit engine (0 credits, free), and a Lovable-grade Console UI in Studio Manage -> SEO with site defaults, pages table, live Google Search / Social card previews, audit findings, and optional AI copy suggestions.
+- **Part 1 — Codegen for Next.js Indexability (`services/agent-engine/codegen/nextjs.py`):**
+  - Generated `app/sitemap.ts` enumerating indexable routes with priorities and change frequencies.
+  - Generated `app/robots.ts` pointing to `sitemap.xml` and respecting `NEXT_PUBLIC_DISCOURAGE_SEARCH`.
+  - Generated `public/llms.txt` defining application purpose, routes, and content policy for AI search crawlers.
+  - Generated `app/opengraph-image.tsx` using `next/og` (1200×630) for social share preview cards.
+  - Injected JSON-LD structured data (`WebSite` and `Organization`) into `app/layout.tsx`.
+  - Generated per-screen layout metadata (`title`, `description`, `openGraph`, `twitter`, `alternates.canonical`).
+- **Part 2 — Database Migration (`services/control-plane/migrations/`):**
+  - Created `000009_seo.up.sql` / `down.sql`:
+    - `project_seo`: `project_id` PK (FK cascade), `site_name`, `default_title`, `description`, `canonical_host`, `discourage`, `updated_at`.
+    - `project_page_seo`: `id` UUID PK, `project_id` FK (cascade), `route`, `title`, `description`, `noindex`, `updated_at`, unique `(project_id, route)`.
+- **Part 3 — Go Control-Plane Backend (`services/control-plane/`):**
+  - Implemented `internal/seo/store.go`: `Store` interface and `PgStore` with tenant isolation and ownership checks (`GetProjectSEO`, `SetProjectSEO`, `GetProjectPageSEOs`, `GetProjectPageSEO`, `SetProjectPageSEO`, `DeleteProjectPageSEO`).
+  - Implemented `internal/seo/handler.go`: REST handlers for `GET/PUT /projects/{id}/seo`, `GET /projects/{id}/seo/pages`, `PUT /projects/{id}/seo/pages/{route...}`, `POST /projects/{id}/seo/audit`, and `POST /projects/{id}/seo/suggest`.
+  - Added unit tests in `internal/seo/seo_test.go` verifying defaults, tenant isolation (foreign project 404), page updates, and page listings.
+  - Registered `seo.Register` in `cmd/control-plane/main.go`.
+- **Part 4 — Deterministic SEO Audit Engine (`services/agent-engine/`):**
+  - Implemented `seo/audit.py`: Checks generated files for missing/duplicate titles, description lengths (50–160 chars), missing canonical URLs, missing OpenGraph images, missing or multiple `<h1>` headings, images without `alt`, routes missing from `sitemap.ts`, unintentional `noindex`, and missing `public/llms.txt`. Calculates 0–100 health score with line-level findings (0 credits).
+  - Updated `studio/workspace.py`: `update_page_seo` updates `app/[route]/layout.tsx` and commits changes to git workspace repository.
+  - Added unit tests in `tests/test_seo_codegen_and_audit.py`: Codegen presence, sitemap/robots/llms.txt/og-image content, audit passing on generated apps, audit detecting flaws on broken apps, and workspace git commit creation.
+- **Part 5 — Console-Web Frontend UI (`apps/console-web/`):**
+  - Updated `lib/control-plane.ts`: Added SEO types (`ProjectSEO`, `ProjectPageSEO`, `SEOFinding`, `SEOAuditReport`, `SEOSuggestion`) and client functions (`getProjectSEO`, `setProjectSEO`, `getProjectPageSEOs`, `setProjectPageSEO`, `auditProjectSEO`, `suggestProjectSEOCopy`).
+  - Added Next.js API route proxies: `/api/projects/[id]/seo`, `/api/projects/[id]/seo/pages`, `/api/projects/[id]/seo/pages/[...route]`, `/api/projects/[id]/seo/audit`, `/api/projects/[id]/seo/suggest`.
+  - Built `components/project-seo-manage.tsx`: Lovable-grade SEO management component with site defaults, pages table with 50–160 character counters, Google Search and Social share live simulators, deterministic audit panel with health score and line-level findings, and AI copy suggestions with explicit credit confirmation notice.
+  - Updated `app/studio/[projectId]/manage/page.tsx`: Added "SEO & AI Search" tab in sidebar navigation.
+- **Part 6 — Verification & Contracts:**
+  - Added R-505 contract assertions in `scripts/test.sh`.
+  - `bash scripts/test.sh`: passed with R-505 contract assertions.
+  - `cd services/control-plane && go test ./...`: all 14 packages passed.
+  - `bash scripts/agent-engine.sh test`: all 3,779 tests passed.
+  - `cd apps/console-web && pnpm run typecheck && pnpm run lint`: 0 errors, 0 warnings.
+  - `bash scripts/console.sh build`: all 58 routes compiled and built cleanly.
+  - `bash scripts/verify.sh`: Stage 0 verification passed.
+- **Next:** Proceed to F-08 (R-506) Logs & live chat streaming (spec `R_&_D/specs/F-08-logs-chat.md`).
+
 ## 2026-09-20 — R-504 (F-06 AI — model configuration and usage)
 
 - **Why:** Developers and teams want control over which AI model powers each project (e.g. Claude 3.7 Sonnet for complex apps, Groq Llama 3.3 for rapid scaffolding) and the ability to Bring-Your-Own-Key (BYOK) to avoid platform markups and usage caps. Every model call must be immutably tracked with exact token counts, latency, and cost for transparent accounting. `F-06-ai-usage.md` specified AES-256-GCM encrypted BYOK keys in PostgreSQL, per-project model pinning, an immutable `model_calls` audit table, multi-tier resolution precedence, and a Lovable-grade Console UI in Settings (AI & Usage) and Project Manage.

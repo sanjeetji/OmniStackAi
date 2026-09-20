@@ -1,32 +1,30 @@
-task_id: R-504
+task_id: R-505
 status: completed
 phase: MVP
 tracker_row: null
 started_at: "2026-09-20"
 completed_at: "2026-09-20"
 objective: >-
-  Implement F-06 AI — model configuration (BYOK) and usage per project/account (spec R_&_D/specs/F-06-ai-usage.md).
-  Bring-Your-Own-Key (BYOK) provider keys stored encrypted with AES-256-GCM in PostgreSQL user_provider_keys.
-  Per-project model pinning in projects.model_provider_id and projects.model_id.
-  Immutable model_calls audit log table tracking tokens, latency, cost, and credits, written in the same transaction as credit debits.
-  Model resolution precedence: Project pinned model -> User BYOK key (0 credits) -> Platform cloud provider (credits) -> Local Ollama (0 credits).
-  Control-plane REST API (/ai/providers, /ai/keys/{providerId}, /ai/keys/{providerId}/test, /ai/models, /projects/{id}/model, /projects/{id}/usage, /usage).
-  Console Web UI: Settings -> AI (BYOK keys with test button), Settings -> Usage (account totals & per-project table), Manage -> AI (project model pinning & usage stats).
+  Implement F-07 SEO & AI search (spec R_&_D/specs/F-07-seo.md).
+  Codegen for Next.js indexability (sitemap.ts, robots.ts, llms.txt, opengraph-image.tsx, JSON-LD, per-page metadata).
+  PostgreSQL schema 000009_seo (project_seo, project_page_seo).
+  Control-plane REST API (/projects/{id}/seo, /projects/{id}/seo/pages, /projects/{id}/seo/pages/{route}, /projects/{id}/seo/audit, /projects/{id}/seo/suggest).
+  Deterministic SEO audit engine checking generated source (0 credits).
+  Optional model copy suggestion pass with credit confirmation.
+  Lovable-grade Console UI in Studio Manage -> SEO with site defaults, pages table, audit findings, and Google/Social previews.
 allowed_paths:
-  - services/control-plane/migrations/000008_ai_usage.up.sql
-  - services/control-plane/migrations/000008_ai_usage.down.sql
-  - services/control-plane/internal/ai/
+  - services/control-plane/migrations/000009_seo.up.sql
+  - services/control-plane/migrations/000009_seo.down.sql
+  - services/control-plane/internal/seo/
   - services/control-plane/internal/projects/
-  - services/control-plane/internal/jobs/
   - services/control-plane/cmd/control-plane/
-  - services/agent-engine/src/omnistackai_agent_engine/intake/provider_resolution.py
+  - services/agent-engine/src/omnistackai_agent_engine/codegen/nextjs.py
+  - services/agent-engine/src/omnistackai_agent_engine/seo/
   - services/agent-engine/src/omnistackai_agent_engine/studio/
-  - services/agent-engine/tests/test_studio_workspace_ai.py
+  - services/agent-engine/tests/test_seo_codegen_and_audit.py
   - apps/console-web/lib/control-plane.ts
-  - apps/console-web/app/api/ai/
-  - apps/console-web/app/api/projects/
-  - apps/console-web/app/api/usage/
-  - apps/console-web/app/settings/page.tsx
+  - apps/console-web/app/api/projects/[id]/seo/
+  - apps/console-web/components/project-seo-manage.tsx
   - apps/console-web/app/studio/[projectId]/manage/page.tsx
   - scripts/test.sh
   - .ai/CURRENT_TASK.yaml
@@ -38,8 +36,8 @@ allowed_paths:
 forbidden_changes:
   - Do not change control-plane database from PostgreSQL
   - Do not add external Go or Python dependencies
-  - Do not return plaintext or ciphertext BYOK keys from any endpoint
-  - Do not charge credits when BYOK key or local model is used
+  - Do not make model calls for deterministic SEO audit (must be free / 0 credits)
+  - Do not call model for copy suggestion without explicit opt-in and credit cost notice
 required_gates:
   - bash scripts/test.sh
   - cd services/control-plane && go test -v ./...
@@ -55,10 +53,10 @@ model_tool_trace:
   cloud_calls: 0
   note: Engineering task, 0 model calls required for gates.
 evidence:
-  scripts_test_sh: passed
-  control_plane_tests: passed
-  agent_engine_tests: passed
-  console_web_typecheck_and_lint: passed
-  task_verify: passed
+  scripts_test_sh: passed (R-505 contracts green)
+  control_plane_tests: passed (all packages green)
+  agent_engine_tests: passed (3,779 tests passed in 81.9s)
+  console_web_typecheck_and_lint: passed (0 errors, 0 warnings, build 58 routes compiled)
+  task_verify: passed (Stage 0 verification passed)
 next_action: >-
-  Ready for user review and commit. Next task: F-07 SEO & AI search (R-505, spec R_&_D/specs/F-07-seo-and-ai-search.md).
+  Task complete. Ready for next task in sequence.

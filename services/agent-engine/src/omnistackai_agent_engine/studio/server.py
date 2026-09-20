@@ -380,6 +380,50 @@ def _make_handler(
             except Exception as error:
                 self._send_json(502, {"error": str(error)})
 
+        def _handle_workspace_seo_audit(self, ws_id: str) -> None:
+            if workspace_store is None:
+                self._send_json(404, {"error": "workspaces are not enabled"})
+                return
+            try:
+                repo_dir = workspace_store.repo_path(ws_id)
+                from ..seo import audit_project_seo
+                res = audit_project_seo(repo_dir)
+                self._send_json(200, res)
+            except BuildNotFoundError as error:
+                self._send_json(404, {"error": str(error)})
+            except Exception as error:
+                self._send_json(502, {"error": str(error)})
+
+        def _handle_workspace_seo_page(self, ws_id: str) -> None:
+            if workspace_store is None:
+                self._send_json(404, {"error": "workspaces are not enabled"})
+                return
+            data = self._read_json_body() or {}
+            route = str(data.get("route", "/"))
+            title = str(data.get("title", ""))
+            description = str(data.get("description", ""))
+            noindex = bool(data.get("noindex", False))
+            try:
+                res = workspace_store.update_page_seo(ws_id, route, title, description, noindex)
+                self._send_json(200, res)
+            except BuildNotFoundError as error:
+                self._send_json(404, {"error": str(error)})
+            except Exception as error:
+                self._send_json(502, {"error": str(error)})
+
+        def _handle_workspace_seo_suggest(self, ws_id: str) -> None:
+            data = self._read_json_body() or {}
+            route = str(data.get("route", "/"))
+            page_name = str(data.get("page_name", "")).strip()
+            if not page_name:
+                page_name = route.strip("/").replace("-", " ").capitalize() or "Home"
+            title_suggestion = f"{page_name} — Fast, Reliable & Secure"
+            desc_suggestion = f"Discover and explore {page_name.lower()} with intuitive features, real-time updates, and seamless performance designed for modern teams."
+            self._send_json(200, {
+                "suggested_title": title_suggestion,
+                "suggested_description": desc_suggestion,
+            })
+
         def _handle_workspace_build(self, ws_id: str) -> None:
             data = self._read_json_body()
             if data is None:
@@ -857,6 +901,10 @@ def _make_handler(
                 if ws_preview_id is not None:
                     self._handle_workspace_preview_status(ws_preview_id)
                     return
+                ws_seo_audit_id = self._workspace_id_for_suffix(path_only, "/seo/audit")
+                if ws_seo_audit_id is not None:
+                    self._handle_workspace_seo_audit(ws_seo_audit_id)
+                    return
                 ws_state_id = self._workspace_id_for_suffix(path_only, "")
                 if ws_state_id is not None:
                     self._handle_workspace_get_state(ws_state_id)
@@ -1216,6 +1264,18 @@ def _make_handler(
             if ws_git_push_id is not None:
                 self._handle_workspace_git_push(ws_git_push_id)
                 return
+            ws_seo_audit_id = self._workspace_id_for_suffix(path_only, "/seo/audit")
+            if ws_seo_audit_id is not None:
+                self._handle_workspace_seo_audit(ws_seo_audit_id)
+                return
+            ws_seo_suggest_id = self._workspace_id_for_suffix(path_only, "/seo/suggest")
+            if ws_seo_suggest_id is not None:
+                self._handle_workspace_seo_suggest(ws_seo_suggest_id)
+                return
+            ws_seo_page_id = self._workspace_id_for_suffix(path_only, "/seo/page")
+            if ws_seo_page_id is not None:
+                self._handle_workspace_seo_page(ws_seo_page_id)
+                return
 
             if self.path == "/api/build/stream":
                 self._handle_build_stream()
@@ -1275,6 +1335,14 @@ def _make_handler(
                 self._send_json(502, {"error": str(error)})
                 return
             self._send_json(200, result)
+
+        def do_PUT(self) -> None:  # noqa: N802 (http.server API)
+            path_only = urlparse(self.path).path
+            ws_seo_page_id = self._workspace_id_for_suffix(path_only, "/seo/page")
+            if ws_seo_page_id is not None:
+                self._handle_workspace_seo_page(ws_seo_page_id)
+                return
+            self._send_json(404, {"error": "not found"})
 
         def do_DELETE(self) -> None:  # noqa: N802 (http.server API)
             path_only = urlparse(self.path).path

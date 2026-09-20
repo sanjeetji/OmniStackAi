@@ -73,6 +73,10 @@ func Register(mux *http.ServeMux, deps Deps) {
 	mux.HandleFunc("POST /projects/{id}/preview/stop", handleProjectPreviewStop(deps))
 	mux.HandleFunc("POST /projects/{id}/problems", handleProjectProblemsCheck(deps))
 	mux.HandleFunc("GET /projects/{id}/problems", handleProjectProblemsGet(deps))
+	mux.HandleFunc("GET /projects/{id}/seo/audit", handleProjectSEOAudit(deps))
+	mux.HandleFunc("POST /projects/{id}/seo/audit", handleProjectSEOAudit(deps))
+	mux.HandleFunc("PUT /projects/{id}/seo/page", handleProjectSEOPage(deps))
+	mux.HandleFunc("POST /projects/{id}/seo/suggest", handleProjectSEOSuggest(deps))
 }
 
 func handleListProjects(deps Deps) http.HandlerFunc {
@@ -859,4 +863,59 @@ func writeAuthError(w http.ResponseWriter, deps Deps, err error) {
 	}
 	deps.logger().Error("unexpected auth error", "error", err)
 	writeError(w, http.StatusInternalServerError, "authentication check failed")
+}
+
+func handleProjectSEOAudit(deps Deps) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		user, err := auth.RequireUser(r.Context(), deps.AuthStore, r)
+		if err != nil {
+			writeAuthError(w, deps, err)
+			return
+		}
+		id := r.PathValue("id")
+		if _, err := deps.ProjectStore.GetProject(r.Context(), id, user.ID); err != nil {
+			writeError(w, http.StatusNotFound, "project not found")
+			return
+		}
+		target := deps.AgentEngineURL + "/api/workspaces/" + url.PathEscape(id) + "/seo/audit"
+		if r.Method == http.MethodPost {
+			proxyUpstream(w, r, deps, http.MethodPost, target, r.Body)
+		} else {
+			proxyGet(w, r, deps, target)
+		}
+	}
+}
+
+func handleProjectSEOPage(deps Deps) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		user, err := auth.RequireUser(r.Context(), deps.AuthStore, r)
+		if err != nil {
+			writeAuthError(w, deps, err)
+			return
+		}
+		id := r.PathValue("id")
+		if _, err := deps.ProjectStore.GetProject(r.Context(), id, user.ID); err != nil {
+			writeError(w, http.StatusNotFound, "project not found")
+			return
+		}
+		target := deps.AgentEngineURL + "/api/workspaces/" + url.PathEscape(id) + "/seo/page"
+		proxyUpstream(w, r, deps, http.MethodPut, target, r.Body)
+	}
+}
+
+func handleProjectSEOSuggest(deps Deps) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		user, err := auth.RequireUser(r.Context(), deps.AuthStore, r)
+		if err != nil {
+			writeAuthError(w, deps, err)
+			return
+		}
+		id := r.PathValue("id")
+		if _, err := deps.ProjectStore.GetProject(r.Context(), id, user.ID); err != nil {
+			writeError(w, http.StatusNotFound, "project not found")
+			return
+		}
+		target := deps.AgentEngineURL + "/api/workspaces/" + url.PathEscape(id) + "/seo/suggest"
+		proxyUpstream(w, r, deps, http.MethodPost, target, r.Body)
+	}
 }

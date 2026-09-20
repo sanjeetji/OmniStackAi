@@ -24,6 +24,7 @@ import {
   Lock,
   Plus,
   RefreshCw,
+  Search,
   Settings,
   ShieldAlert,
   Sparkles,
@@ -60,6 +61,7 @@ import type {
 import { formatDateTime, formatRelativeTime } from "@/lib/time";
 import { DeleteDialog } from "@/components/project-dialogs";
 import { ProjectAIManage } from "@/components/project-ai-manage";
+import { ProjectSEOManage } from "@/components/project-seo-manage";
 import { SkillEditorDialog } from "@/components/skills-library";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -95,8 +97,8 @@ export default function ProjectManagePage({
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  // Section nav: "general" | "knowledge" | "skills" | "secrets" | "git" | "ai"
-  const [activeSection, setActiveSection] = useState<"general" | "knowledge" | "skills" | "secrets" | "git" | "ai">("general");
+  // Section nav: "general" | "knowledge" | "skills" | "secrets" | "git" | "ai" | "seo"
+  const [activeSection, setActiveSection] = useState<"general" | "knowledge" | "skills" | "secrets" | "git" | "ai" | "seo">("general");
 
   // General Form state
   const [name, setName] = useState("");
@@ -868,6 +870,21 @@ export default function ProjectManagePage({
             <span className="flex items-center gap-2">
               <Cpu className="size-4" />
               AI & Model
+            </span>
+          </button>
+          <button
+            type="button"
+            onClick={() => setActiveSection("seo")}
+            className={cn(
+              "w-full flex items-center justify-between px-3 py-2 text-sm font-medium rounded-md transition-colors",
+              activeSection === "seo"
+                ? "bg-secondary text-secondary-foreground"
+                : "text-muted-foreground hover:bg-muted/50 hover:text-foreground",
+            )}
+          >
+            <span className="flex items-center gap-2">
+              <Search className="size-4" />
+              SEO & AI Search
             </span>
           </button>
         </nav>
@@ -1654,6 +1671,8 @@ export default function ProjectManagePage({
             </div>
           ) : activeSection === "ai" ? (
             <ProjectAIManage projectId={projectId} />
+          ) : activeSection === "seo" ? (
+            <ProjectSEOManage projectId={projectId} projectName={project.name} />
           ) : (
             <>
               {/* Git & GitHub Section */}

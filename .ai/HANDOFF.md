@@ -1,5 +1,37 @@
 # Current Handoff
 
+Task ID: R-505
+Status: done
+Phase: MVP → Phase F (platform foundation)
+Branch: `ai/R-505-seo`
+
+> **R-505 Completed (2026-09-20): SEO & AI search (F-07-seo spec).**
+> - **Codegen for Next.js Indexability:**
+>   - Generated `app/sitemap.ts` enumerating indexable routes with priorities and change frequencies.
+>   - Generated `app/robots.ts` pointing to `sitemap.xml` and respecting `NEXT_PUBLIC_DISCOURAGE_SEARCH`.
+>   - Generated `public/llms.txt` defining application purpose, routes, and content policy for AI search crawlers.
+>   - Generated `app/opengraph-image.tsx` using `next/og` (1200×630) for social share preview cards.
+>   - Injected JSON-LD structured data (`WebSite` and `Organization`) into `app/layout.tsx`.
+>   - Generated per-screen layout metadata (`title`, `description`, `openGraph`, `twitter`, `alternates.canonical`).
+> - **Database Schema Migration:** Created `000009_seo.up.sql` / `down.sql`:
+>   - `project_seo`: `project_id` PK (FK cascade), `site_name`, `default_title`, `description`, `canonical_host`, `discourage`, `updated_at`.
+>   - `project_page_seo`: `id` UUID PK, `project_id` FK (cascade), `route`, `title`, `description`, `noindex`, `updated_at`, unique `(project_id, route)`.
+> - **Control-Plane Backend:**
+>   - Implemented `internal/seo/store.go` with tenant isolation and caller ownership checks.
+>   - Implemented `internal/seo/handler.go` REST handlers: `GET/PUT /projects/{id}/seo`, `GET /projects/{id}/seo/pages`, `PUT /projects/{id}/seo/pages/{route...}`, `POST /projects/{id}/seo/audit`, `POST /projects/{id}/seo/suggest`.
+>   - Registered `seo.Register` in `cmd/control-plane/main.go`.
+> - **Deterministic SEO Audit Engine (0 Credits):**
+>   - Implemented `seo/audit.py`: Checks generated source files for missing/duplicate titles, description lengths (50–160 chars), missing canonical URLs, missing OpenGraph images, missing or multiple `<h1>` headings, images without `alt`, routes missing from `sitemap.ts`, unintentional `noindex`, and missing `public/llms.txt`. Calculates 0–100 health score with line-level findings (0 credits).
+>   - Updated `studio/workspace.py`: `update_page_seo` updates `app/[route]/layout.tsx` and commits changes to git workspace repository.
+>   - Added unit tests in `tests/test_seo_codegen_and_audit.py`.
+> - **Console Web UI:**
+>   - Updated `lib/control-plane.ts` with SEO types and API client functions.
+>   - Added Next.js API route proxies under `/api/projects/[id]/seo/`.
+>   - Built `components/project-seo-manage.tsx`: Lovable-grade SEO management component with site defaults, pages table with 50–160 character counters, Google Search and Social share live simulators, deterministic audit panel with health score and line-level findings, and AI copy suggestions with credit confirmation notice.
+>   - Mounted "SEO & AI Search" tab in Studio Manage sidebar (`app/studio/[projectId]/manage/page.tsx`).
+> - **Gates:** `scripts/test.sh` passed, `go test -v ./...` passed (all 14 packages), `task agent-engine:test` passed (3,779 tests OK), Next.js `typecheck` and `lint` passed, `task verify` clean.
+> - **NEXT:** F-08 (R-506) Logs & live chat streaming (spec `R_&_D/specs/F-08-logs-chat.md`).
+
 Task ID: R-504
 Status: done
 Phase: MVP → Phase F (platform foundation)
