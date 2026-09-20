@@ -839,3 +839,108 @@ func TestProjectDatabaseExplorer(t *testing.T) {
 		}
 	}
 }
+
+func TestProjectSecurityAndTests(t *testing.T) {
+	userA := auth.User{ID: "usr-sec-a", Email: "owner-sec@example.com"}
+	userB := auth.User{ID: "usr-sec-b", Email: "foreign-sec@example.com"}
+
+	mockAgentEngine := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		switch {
+		case strings.HasSuffix(r.URL.Path, "/security/scan"):
+			w.WriteHeader(http.StatusOK)
+			_, _ = w.Write([]byte(`{"findings":[],"checks":[{"name":"Secret scan","status":"passed"}],"summary":{"total_issues":0}}`))
+		case strings.HasSuffix(r.URL.Path, "/security"):
+			w.WriteHeader(http.StatusOK)
+			_, _ = w.Write([]byte(`{"findings":[],"checks":[{"name":"Secret scan","status":"passed"}],"summary":{"total_issues":0}}`))
+		case strings.HasSuffix(r.URL.Path, "/tests/run"):
+			w.WriteHeader(http.StatusOK)
+			_, _ = w.Write([]byte(`{"suites":[{"name":"Web App Tests","status":"passed","passed":1,"failed":0}],"summary":{"total":1,"passed":1}}`))
+		case strings.HasSuffix(r.URL.Path, "/tests"):
+			w.WriteHeader(http.StatusOK)
+			_, _ = w.Write([]byte(`{"suites":[{"name":"Web App Tests","status":"passed","passed":1,"failed":0}],"summary":{"total":1,"passed":1}}`))
+		default:
+			http.NotFound(w, r)
+		}
+	}))
+	defer mockAgentEngine.Close()
+
+	pStore := newFakeProjectStore()
+	projA, err := pStore.CreateProject(context.Background(), userA.ID, "Sec Project", "")
+	if err != nil {
+		t.Fatalf("CreateProject: %v", err)
+	}
+
+	server := setupTestServer(t, fakeAuthStore{user: userA}, pStore, mockAgentEngine.URL)
+
+	// 1. POST security/scan
+	scanReq, _ := http.NewRequest(http.MethodPost, server.URL+"/projects/"+projA.ID+"/security/scan", nil)
+	scanReq.Header.Set("Authorization", testBearer)
+	scanResp, err := http.DefaultClient.Do(scanReq)
+	if err != nil {
+		t.Fatalf("POST security/scan: %v", err)
+	}
+	defer scanResp.Body.Close()
+	if scanResp.StatusCode != http.StatusOK {
+		t.Errorf("POST security/scan: got %d, want 200", scanResp.StatusCode)
+	}
+
+	// 2. GET security
+	secReq, _ := http.NewRequest(http.MethodGet, server.URL+"/projects/"+projA.ID+"/security", nil)
+	secReq.Header.Set("Authorization", testBearer)
+	secResp, err := http.DefaultClient.Do(secReq)
+	if err != nil {
+		t.Fatalf("GET security: %v", err)
+	}
+	defer secResp.Body.Close()
+	if secResp.StatusCode != http.StatusOK {
+		t.Errorf("GET security: got %d, want 200", secResp.StatusCode)
+	}
+
+	// 3. POST tests/run
+	testsRunReq, _ := http.NewRequest(http.MethodPost, server.URL+"/projects/"+projA.ID+"/tests/run", nil)
+	testsRunReq.Header.Set("Authorization", testBearer)
+	testsRunResp, err := http.DefaultClient.Do(testsRunReq)
+	if err != nil {
+		t.Fatalf("POST tests/run: %v", err)
+	}
+	defer testsRunResp.Body.Close()
+	if testsRunResp.StatusCode != http.StatusOK {
+		t.Errorf("POST tests/run: got %d, want 200", testsRunResp.StatusCode)
+	}
+
+	// 4. GET tests
+	testsGetReq, _ := http.NewRequest(http.MethodGet, server.URL+"/projects/"+projA.ID+"/tests", nil)
+	testsGetReq.Header.Set("Authorization", testBearer)
+	testsGetResp, err := http.DefaultClient.Do(testsGetReq)
+	if err != nil {
+		t.Fatalf("GET tests: %v", err)
+	}
+	defer testsGetResp.Body.Close()
+	if testsGetResp.StatusCode != http.StatusOK {
+		t.Errorf("GET tests: got %d, want 200", testsGetResp.StatusCode)
+	}
+
+	// 5. Foreign user gets 404
+	bServer := setupTestServer(t, fakeAuthStore{user: userB}, pStore, mockAgentEngine.URL)
+	for _, tc := range []struct {
+		method string
+		path   string
+	}{
+		{http.MethodPost, "/projects/" + projA.ID + "/security/scan"},
+		{http.MethodGet, "/projects/" + projA.ID + "/security"},
+		{http.MethodPost, "/projects/" + projA.ID + "/tests/run"},
+		{http.MethodGet, "/projects/" + projA.ID + "/tests"},
+	} {
+		req, _ := http.NewRequest(tc.method, bServer.URL+tc.path, nil)
+		req.Header.Set("Authorization", testBearer)
+		resp, err := http.DefaultClient.Do(req)
+		if err != nil {
+			t.Fatalf("foreign user %s %s: %v", tc.method, tc.path, err)
+		}
+		_ = resp.Body.Close()
+		if resp.StatusCode != http.StatusNotFound {
+			t.Errorf("foreign user %s %s: got %d, want 404", tc.method, tc.path, resp.StatusCode)
+		}
+	}
+}

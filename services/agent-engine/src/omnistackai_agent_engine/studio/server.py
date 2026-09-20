@@ -40,7 +40,9 @@ from .database import (
 from .files import BuildNotFoundError, FileNotFoundInBuildError, PathOutsideBuildError
 from .page import STUDIO_HTML
 from .problems import NoWebTargetError, ProblemsNotCheckedError, ToolchainNotInstalledError
+from .security import get_last_security_report, run_security_scan
 from .session import EditNotSupportedError
+from .tests_runner import get_last_test_report, run_project_tests
 from .workspace import StudioWorkspaceStore, WorkspaceLockedError, WorkspaceNotFoundError
 
 BuildFn = Callable[..., dict]
@@ -739,6 +741,51 @@ def _make_handler(
                 return
             self._send_json(200, {"db_name": db_name, "schema_sql": sql})
 
+        # --- Security scan & Tests handlers (F-10 / R-508) ---
+        def _handle_workspace_security_scan(self, ws_id: str) -> None:
+            """POST /api/workspaces/{id}/security/scan"""
+            repo_dir = self._db_require_workspace(ws_id)
+            if repo_dir is None:
+                return
+            try:
+                report = run_security_scan(repo_dir)
+                self._send_json(200, report)
+            except Exception as error:
+                self._send_json(502, {"error": str(error)})
+
+        def _handle_workspace_security_get(self, ws_id: str) -> None:
+            """GET /api/workspaces/{id}/security"""
+            repo_dir = self._db_require_workspace(ws_id)
+            if repo_dir is None:
+                return
+            report = get_last_security_report(repo_dir)
+            if report is None:
+                self._send_json(404, {"error": "security scan has not been run yet"})
+                return
+            self._send_json(200, report)
+
+        def _handle_workspace_tests_run(self, ws_id: str) -> None:
+            """POST /api/workspaces/{id}/tests/run"""
+            repo_dir = self._db_require_workspace(ws_id)
+            if repo_dir is None:
+                return
+            try:
+                report = run_project_tests(repo_dir)
+                self._send_json(200, report)
+            except Exception as error:
+                self._send_json(502, {"error": str(error)})
+
+        def _handle_workspace_tests_get(self, ws_id: str) -> None:
+            """GET /api/workspaces/{id}/tests"""
+            repo_dir = self._db_require_workspace(ws_id)
+            if repo_dir is None:
+                return
+            report = get_last_test_report(repo_dir)
+            if report is None:
+                self._send_json(404, {"error": "tests have not been run yet"})
+                return
+            self._send_json(200, report)
+
         def _handle_file_tree(self, build_id: str) -> None:
             if file_tree_fn is None:
                 self._send_json(404, {"error": "file browsing is not enabled"})
@@ -1117,6 +1164,16 @@ def _make_handler(
                 if ws_db_schema_id is not None:
                     self._handle_workspace_db_schema(ws_db_schema_id)
                     return
+                # /api/workspaces/{id}/security (F-10 / R-508)
+                ws_security_id = self._workspace_id_for_suffix(path_only, "/security")
+                if ws_security_id is not None:
+                    self._handle_workspace_security_get(ws_security_id)
+                    return
+                # /api/workspaces/{id}/tests (F-10 / R-508)
+                ws_tests_id = self._workspace_id_for_suffix(path_only, "/tests")
+                if ws_tests_id is not None:
+                    self._handle_workspace_tests_get(ws_tests_id)
+                    return
                 # --- existing workspace GET routes ---
                 ws_files_id = self._workspace_id_for_suffix(path_only, "/files")
                 if ws_files_id is not None:
@@ -1489,6 +1546,15 @@ def _make_handler(
             ws_db_query_id = self._workspace_id_for_suffix(path_only, "/db/query")
             if ws_db_query_id is not None:
                 self._handle_workspace_db_query(ws_db_query_id)
+                return
+            # --- Security scan & Tests POST routes (F-10 / R-508) ---
+            ws_security_scan_id = self._workspace_id_for_suffix(path_only, "/security/scan")
+            if ws_security_scan_id is not None:
+                self._handle_workspace_security_scan(ws_security_scan_id)
+                return
+            ws_tests_run_id = self._workspace_id_for_suffix(path_only, "/tests/run")
+            if ws_tests_run_id is not None:
+                self._handle_workspace_tests_run(ws_tests_run_id)
                 return
             # --- existing workspace POST routes ---
             ws_cancel_id = self._workspace_id_for_suffix(path_only, "/cancel")

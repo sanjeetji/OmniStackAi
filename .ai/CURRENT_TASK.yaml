@@ -1,32 +1,33 @@
-task_id: R-507
-status: completed
+task_id: R-508
+status: complete
 phase: MVP
 tracker_row: null
 started_at: "2026-09-20"
 completed_at: "2026-09-20"
 objective: >-
-  Implement F-09 Database explorer & SQL editor (spec R_&_D/specs/F-09-database.md).
-  Expose PostgreSQL tables and schema from the generated app's preview database.
-  Agent-engine owns connection via project postgres container (psql --csv --pset=null=\N, zero new deps).
-  Explorer queries strictly validated against information_schema.tables; injection attempts fail closed.
-  SQL editor accepts arbitrary SQL, executed inside transaction rolled back unless Write mode enabled.
-  Statement timeout (SET LOCAL statement_timeout = '10s'), max 500 rows limit with truncated flag.
-  Forbidden statements refused (DROP DATABASE, CREATE/ALTER/DROP ROLE, COPY ... TO/FROM PROGRAM, etc.).
-  Query logging via F-08 logger with duration and row count.
-  REST endpoints: GET /projects/{id}/db/tables, GET /projects/{id}/db/tables/{table}, POST /projects/{id}/db/query, GET /projects/{id}/db/schema.
-  409 Conflict with "Start the preview to create this project's database" when no database exists yet.
-  Lovable-grade Manage -> Database UI (Explorer with table list, row counts, column badges, sortable grid, pagination, json viewer, NULL badges; SQL Editor with ⌘↵ shortcut, Write-mode toggle + warning, timing/count badges, verbatim Postgres error panel, results grid; 409 empty state with Start button).
+  Implement F-10 Security scanning & automated test runs (spec R_&_D/specs/F-10-security-tests.md).
+  Part 1 (Security): Dependency audit (pnpm audit, pip-audit, govulncheck), deterministic secret scan
+  of generated source code (key prefixes, base64 blobs, .env), and framework security rules
+  (dangerouslySetInnerHTML, CORS wildcard with auth, httpOnly/SameSite cookies, SQL string interpolation).
+  Findings report severity, rule, file, line, message, fix suggestion. Checks list pass/fail/skipped
+  (missing tools reported as skipped, never passed).
+  Part 2 (Tests): Run test suites for web (pnpm test), Python (pytest/unittest), and Go (go test ./...),
+  parse outputs into {suite, name, status, duration_ms, message}, and provide honest empty state when no tests exist.
+  REST endpoints: POST /projects/{id}/security/scan, GET /projects/{id}/security, POST /projects/{id}/tests/run, GET /projects/{id}/tests.
+  Console UI in Studio Manage -> Security and Studio Manage -> Tests tabs.
 allowed_paths:
-  - services/agent-engine/src/omnistackai_agent_engine/studio/database.py
+  - services/agent-engine/src/omnistackai_agent_engine/studio/security.py
+  - services/agent-engine/src/omnistackai_agent_engine/studio/tests_runner.py
   - services/agent-engine/src/omnistackai_agent_engine/studio/server.py
-  - services/agent-engine/src/omnistackai_agent_engine/studio/preview.py
-  - services/agent-engine/tests/test_database_explorer.py
+  - services/agent-engine/src/omnistackai_agent_engine/studio/workspace.py
+  - services/agent-engine/tests/test_security_and_tests.py
   - services/control-plane/internal/projects/handler.go
   - services/control-plane/internal/projects/projects_test.go
   - apps/console-web/lib/control-plane.ts
-  - apps/console-web/app/api/projects/[id]/db/
-  - apps/console-web/app/studio/code-highlight.ts
-  - apps/console-web/components/project-db-manage.tsx
+  - apps/console-web/app/api/projects/[id]/security/
+  - apps/console-web/app/api/projects/[id]/tests/
+  - apps/console-web/components/project-security-manage.tsx
+  - apps/console-web/components/project-tests-manage.tsx
   - apps/console-web/app/studio/[projectId]/manage/page.tsx
   - scripts/test.sh
   - .ai/CURRENT_TASK.yaml
@@ -38,8 +39,8 @@ allowed_paths:
 forbidden_changes:
   - Do not change control-plane database from PostgreSQL
   - Do not add external Go or Python dependencies (zero new deps)
-  - Do not return raw database URL or credentials to the browser
-  - Do not allow mutation during read-only queries (must rollback)
+  - Do not report missing toolchains as passed (must report as skipped)
+  - Do not invent vulnerability scores or fake security assessments
 required_gates:
   - bash scripts/test.sh
   - cd services/control-plane && go test -v ./...
@@ -55,14 +56,12 @@ model_tool_trace:
   cloud_calls: 0
   note: Engineering task, 0 model calls required for gates.
 evidence:
-  scripts_test_sh: passed
-  control_plane_tests: passed
-  agent_engine_tests: passed (30/30 unit tests passed; 3815 overall suite passed)
-  console_web_typecheck_and_lint: passed (0 errors, 0 warnings; next build 28 static routes passed)
-  task_verify: passed (Ran 3815 tests, Stage 0 verification passed)
+  scripts_test_sh: passed (Repository contract tests passed, R-508 contracts verified)
+  control_plane_tests: passed (all internal/projects tests pass including TestProjectSecurityAndTests)
+  agent_engine_tests: passed (12/12 test_security_and_tests.py passed, 3827 full suite passed)
+  console_web_typecheck_and_lint: passed (tsc --noEmit, eslint, next build all clean)
+  task_verify: passed (all 3827 agent-engine tests, Go tests, Next.js build, contract tests passed)
   task_lint: passed
   task_security_quick: passed
   task_env_check: passed
-next_action: >-
-  Task R-507 complete. Proceed to F-10 (R-508) Security scanning & automated test runs.
-
+next_action: complete

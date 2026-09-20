@@ -1,5 +1,35 @@
 # Current Handoff
 
+Task ID: R-508
+Status: done
+Phase: MVP → Phase F (platform foundation)
+Branch: `ai/R-508-security-tests`
+
+> **R-508 Completed (2026-09-20): Security Scanning & Automated Tests (F-10 spec).**
+> - **Agent-Engine Security Scanner & Test Runner (`services/agent-engine/`):**
+>   - Implemented `studio/security.py`:
+>     - Real dependency audits (`pnpm audit --json`, `pip-audit --format=json`, `govulncheck -json ./...`). Uninstalled tools reported honestly as `skipped: <tool> not installed`, never as passed.
+>     - Deterministic secret scanner covering API key prefixes (`sk-...`, `AIza...`, `AKIA...`, `ghp_...`, `stripe_secret`), private key blocks (`BEGIN ... PRIVATE KEY`), and live `.env` files (ignoring `.env.example`).
+>     - Framework security rules checking for `dangerouslySetInnerHTML`, wildcard CORS with auth, cookies missing `httpOnly`/`SameSite`, and raw SQL string interpolation.
+>     - Report caching to `.omnistackai/security_report.json`. Clean scans produce "No issues found by these checks" with checks listed.
+>   - Implemented `studio/tests_runner.py`:
+>     - Discovers runnable test suites for web (`pnpm test`), Python (`pytest` / `unittest`), and Go (`go test ./...`).
+>     - Executes suites, parses output with regexes into structured `{suite, name, status, duration_ms, message}`, and captures raw terminal output.
+>     - Report caching to `.omnistackai/test_report.json`. Honest empty state (`no_tests`) when no suites exist.
+>   - Mounted HTTP routes in `studio/server.py`: `POST /api/workspaces/{id}/security/scan`, `GET /api/workspaces/{id}/security`, `POST /api/workspaces/{id}/tests/run`, and `GET /api/workspaces/{id}/tests`.
+>   - Unit tests in `tests/test_security_and_tests.py`: 12 comprehensive unit tests covering all scanners, runners, and endpoints (all 12 passed).
+> - **Control-Plane Backend (`services/control-plane/`):**
+>   - Handlers in `internal/projects/handler.go`: `POST /projects/{id}/security/scan`, `GET /projects/{id}/security`, `POST /projects/{id}/tests/run`, `GET /projects/{id}/tests` with project ownership isolation.
+>   - Unit tests in `internal/projects/projects_test.go`: `TestProjectSecurityAndTests`.
+> - **Console Web UI (`apps/console-web/`):**
+>   - Types and API client functions in `lib/control-plane.ts`.
+>   - Next.js API route proxies: `/api/projects/[id]/security/scan`, `/api/projects/[id]/security`, `/api/projects/[id]/tests/run`, `/api/projects/[id]/tests`.
+>   - `components/project-security-manage.tsx`: Lovable/Dyad-grade Manage -> Security UI: Total/Critical/High/Medium/Low metric cards, checks performed checklist with status badges and uninstalled tool notes, clean state card, findings accordion grouped by file/severity, suggested fixes, search and severity filters, and "Fix with AI" prompt generation.
+>   - `components/project-tests-manage.tsx`: Lovable/Dyad-grade Manage -> Tests UI: Total/Passed/Failed/Skipped/Duration summary bar, per-suite runner view, terminal output, failure messages, "Fix with AI", and honest empty state with "Ask Chat to Add Tests" action.
+>   - Mounted Security and Tests tabs in Studio Manage navigation (`app/studio/[projectId]/manage/page.tsx`).
+> - **Gates:** `bash scripts/test.sh` passed with R-508 assertions, `go test ./...` passed (all 14 packages), `task agent-engine:test` passed (3,827 tests OK), Next.js `typecheck`, `lint`, and `build` passed (28 routes clean), `task verify` passed.
+> - **NEXT:** Next roadmap task in Phase F.
+
 Task ID: R-507
 Status: done
 Phase: MVP → Phase F (platform foundation)

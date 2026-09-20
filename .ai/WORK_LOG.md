@@ -1,5 +1,52 @@
 # Work Log
 
+## 2026-09-20 — R-508 (F-10 Security Scanning & Automated Tests)
+
+- **Why:** Generated applications require automated verification of dependency safety, credential exposure prevention, framework security rules, and test execution across heterogeneous stacks (web, Python, Go) without inventing fake scores or vanity badges. `F-10-security-tests.md` specified deterministic dependency audits (`pnpm audit`, `pip-audit`, `govulncheck`) with honest skipped state for uninstalled toolchains, secret scanning over generated source code for API key prefixes, base64 private keys, and live `.env` files, framework rules checks (`dangerouslySetInnerHTML`, wildcard CORS with auth, `httpOnly`/`SameSite` cookies, raw SQL concatenation), test discovery and execution (`pnpm test`, `pytest`/`unittest`, `go test ./...`), control-plane REST proxy endpoints with project tenant isolation, and Lovable/Dyad-grade Console UI in Studio Manage -> Security and Studio Manage -> Tests tabs.
+- **Part 1 — Agent-Engine Security & Test Runners (`services/agent-engine/`):**
+  - Implemented `studio/security.py`:
+    - `run_security_scan(repo_dir)`: Coordinates dependency audits, deterministic secret scans, and framework security checks. Caches report to `.omnistackai/security_report.json`.
+    - `_scan_secrets_in_repo(repo_dir)`: Detects provider API keys (`sk-[A-Za-z0-9_-]{20,}`, `AIza[0-9A-Za-z-_]{35}`, `AKIA[0-9A-Z]{16}`, `ghp_[A-Za-z0-9]{36}`, `stripe_secret`), private key blocks (`-----BEGIN ... PRIVATE KEY-----`), and live `.env` files (ignoring `.env.example`).
+    - `_scan_framework_rules(repo_dir)`: Inspects source files for `dangerouslySetInnerHTML`, wildcard CORS with credentials/auth, cookies lacking `httpOnly` or `SameSite`, and raw SQL string interpolation.
+    - `_run_dependency_audits(repo_dir)`: Executes `pnpm audit --json`, `pip-audit --format=json`, and `govulncheck -json ./...` when manifest files exist. Reports missing tools honestly as `skipped: <tool> not installed`, never as passed.
+    - `get_last_security_report(repo_dir)`: Retrieves cached report.
+  - Implemented `studio/tests_runner.py`:
+    - `run_project_tests(repo_dir)`: Detects and runs available test suites (`pnpm test`, `python3 -m unittest` / `pytest`, `go test ./...`). Caches report to `.omnistackai/test_report.json`.
+    - `_detect_test_suites(repo_dir)`: Discovers runnable suites from `package.json`, Python test files/directories, and Go `*_test.go` files.
+    - `_run_single_suite(suite_info, repo_dir)`: Executes runner with timeout, captures output, and parses test names, durations, and status using regex patterns. Returns honest empty state (`no_tests`) when no suites are found.
+    - `get_last_test_report(repo_dir)`: Retrieves cached report.
+  - Updated `studio/server.py`: Mounted REST handlers `POST /api/workspaces/{id}/security/scan`, `GET /api/workspaces/{id}/security`, `POST /api/workspaces/{id}/tests/run`, and `GET /api/workspaces/{id}/tests`.
+  - Added unit tests in `tests/test_security_and_tests.py`: 12 comprehensive unit tests covering secret scans, framework checks, dependency audit skipping, clean reports, test runner discovery, honest empty state, result parsing, and REST endpoints (all 12 passed).
+- **Part 2 — Control-Plane Backend (`services/control-plane/`):**
+  - Updated `internal/projects/handler.go`: Registered `POST /projects/{id}/security/scan`, `GET /projects/{id}/security`, `POST /projects/{id}/tests/run`, `GET /projects/{id}/tests`.
+  - Implemented proxy handlers with caller ownership verification, streaming/response forwarding, and upstream error handling.
+  - Added unit test in `internal/projects/projects_test.go`: `TestProjectSecurityAndTests` verifying all 4 endpoints with upstream agent-engine mocks.
+- **Part 3 — Console Web UI (`apps/console-web/`):**
+  - Updated `lib/control-plane.ts`: Added types (`SecurityFinding`, `SecurityCheck`, `ProjectSecurityReport`, `TestCaseResult`, `TestSuiteResult`, `ProjectTestReport`) and client SDK functions (`runProjectSecurityScan`, `getProjectSecurityReport`, `runProjectTests`, `getProjectTestReport`).
+  - Added Next.js API route proxies: `/api/projects/[id]/security/scan`, `/api/projects/[id]/security`, `/api/projects/[id]/tests/run`, `/api/projects/[id]/tests`.
+  - Built `components/project-security-manage.tsx`: Lovable/Dyad-grade Manage -> Security UI:
+    - Summary metric cards: Total Findings, Critical, High, Medium, Low.
+    - Checks performed checklist with Pass, Issues Found, and Skipped badges with honest uninstalled-tool notes.
+    - Clean state card: "No issues found by these checks" when clean.
+    - Findings accordion grouped by file and severity, with code location, rule explanation, suggested fix, and "Fix with AI" action (copies prompt and navigates to Studio chat).
+    - Severity filter and search bar.
+  - Built `components/project-tests-manage.tsx`: Lovable/Dyad-grade Manage -> Tests UI:
+    - Summary bar: Total tests, Passed, Failed, Skipped, and total Duration.
+    - Per-suite cards with runner badges, status badges, duration chips, collapsible raw output terminal, and individual test cases.
+    - Failed test details with error messages and "Fix with AI" action.
+    - Honest empty state: "This project has no test suite yet — ask the chat to add one" with "Ask Chat to Add Tests" action.
+  - Updated `app/studio/[projectId]/manage/page.tsx`: Added `Security` and `Tests` navigation tabs in sidebar and mounted both components.
+- **Part 4 — Verification & Contracts:**
+  - Added R-508 contract assertions in `scripts/test.sh`.
+  - `bash scripts/test.sh`: passed.
+  - `cd services/control-plane && go test ./...`: all 14 packages passed.
+  - `PYTHONPATH=src pytest tests/test_security_and_tests.py`: 12/12 passed.
+  - `cd apps/console-web && pnpm run typecheck && pnpm run lint`: 0 errors, 0 warnings.
+  - `pnpm run build`: all 28 static routes and dynamic API routes compiled cleanly.
+  - `task verify`: all 3,827 tests passed; Stage 0 verification passed.
+  - `task lint`, `task security:quick`, `task env:check`: all passed.
+- **Next:** Review roadmap and founder build sequence for next tasks.
+
 ## 2026-09-20 — R-507 (F-09 Database Explorer & SQL Editor)
 
 - **Why:** Generated applications create and use real PostgreSQL databases in local development and preview mode. Developers need direct visibility into their tables, column schemas, and live data, as well as the ability to test and run SQL queries safely without external database GUI tools or exposing database credentials. `F-09-database.md` specified an agent-engine database service connecting directly to the workspace container via `psql --csv`, transaction-isolated query execution with automatic rollback for read-only safety, statement timeouts (10s), 32 KB query size limits, control-plane REST proxy endpoints with project ownership isolation, 409 Conflict handling for unprovisioned databases, and a Lovable-grade Console UI in Studio Manage -> Database with table browser, column structure viewer, SQL editor, and migration schema viewer.

@@ -4,6 +4,25 @@ Last updated: 2026-09-20
 ## Current Phase
 Stage 0 (Founder Build Sequence, Brief Section 91) — BASIC/MVP
 
+> **R-508 (2026-09-20): Security Scanning & Automated Tests (F-10 spec).**
+> Implemented real dependency audits, deterministic secret scanning, framework security checks, and automated test runners
+> across web (pnpm), Python (pytest/unittest), and Go (go test ./...) with a Lovable/Dyad-grade Console UI in **Studio Manage → Security**
+> and **Studio Manage → Tests**.
+> Agent-Engine: Implemented `omnistackai_agent_engine.studio.security` running real dependency audits (`pnpm audit`, `pip-audit`, `govulncheck`),
+> reporting uninstalled toolchains honestly as `skipped: <tool> not installed` (never as passed). Secret scanning inspects generated source
+> for hardcoded API keys (`sk-...`, `AIza...`, `AKIA...`, `ghp_...`, `stripe_secret`), private keys, and `.env` files. Framework checks
+> verify `dangerouslySetInnerHTML`, wildcard CORS with auth, cookies missing `httpOnly`/`SameSite`, and SQL string interpolation.
+> Implemented `omnistackai_agent_engine.studio.tests_runner` detecting and executing test suites, parsing test outcomes into structured cases,
+> and providing an honest empty state ("This project has no test suite yet — ask the chat to add one").
+> Control-Plane Backend: Added proxy routes in `internal/projects/handler.go` (`POST /projects/{id}/security/scan`, `GET /projects/{id}/security`,
+> `POST /projects/{id}/tests/run`, `GET /projects/{id}/tests`) with tenant isolation.
+> Console Web UI: Added types and API client functions in `lib/control-plane.ts`, Next.js API proxy routes under `app/api/projects/[id]/security`
+> and `app/api/projects/[id]/tests`, and built `components/project-security-manage.tsx` and `components/project-tests-manage.tsx`
+> with findings grouped by severity/file, checks performed checklist, clean state display, summary bars, per-suite runner view, terminal output,
+> and "Fix with AI" action.
+> Gates: 3,827 tests pass, `task verify` passed, `scripts/test.sh` passed, Next.js build clean.
+> NEXT: **Phase F continued**.
+
 > **R-507 (2026-09-20): Database Explorer & SQL Editor (F-09-database spec).**
 > Implemented PostgreSQL database explorer and SQL editor for generated applications with read-only transaction safety,
 > schema inspection, and a Lovable-grade Console UI in **Studio Manage → Database**.

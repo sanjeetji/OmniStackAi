@@ -88,6 +88,12 @@ func Register(mux *http.ServeMux, deps Deps) {
 	mux.HandleFunc("GET /projects/{id}/db/tables/{table}", handleProjectDBTableRows(deps))
 	mux.HandleFunc("POST /projects/{id}/db/query", handleProjectDBQuery(deps))
 	mux.HandleFunc("GET /projects/{id}/db/schema", handleProjectDBSchema(deps))
+
+	// Security scan & Tests (F-10 / R-508)
+	mux.HandleFunc("POST /projects/{id}/security/scan", handleProjectSecurityScan(deps))
+	mux.HandleFunc("GET /projects/{id}/security", handleProjectSecurityGet(deps))
+	mux.HandleFunc("POST /projects/{id}/tests/run", handleProjectTestsRun(deps))
+	mux.HandleFunc("GET /projects/{id}/tests", handleProjectTestsGet(deps))
 }
 
 func handleListProjects(deps Deps) http.HandlerFunc {
@@ -1149,6 +1155,78 @@ func handleProjectDBSchema(deps Deps) http.HandlerFunc {
 			return
 		}
 		target := deps.AgentEngineURL + "/api/workspaces/" + url.PathEscape(id) + "/db/schema"
+		proxyGet(w, r, deps, target)
+	}
+}
+
+// ---------------------------------------------------------------------------
+// Security scan & Tests (F-10 / R-508)
+// ---------------------------------------------------------------------------
+
+func handleProjectSecurityScan(deps Deps) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		user, err := auth.RequireUser(r.Context(), deps.AuthStore, r)
+		if err != nil {
+			writeAuthError(w, deps, err)
+			return
+		}
+		id := r.PathValue("id")
+		if _, err := deps.ProjectStore.GetProject(r.Context(), id, user.ID); err != nil {
+			writeError(w, http.StatusNotFound, "project not found")
+			return
+		}
+		target := deps.AgentEngineURL + "/api/workspaces/" + url.PathEscape(id) + "/security/scan"
+		proxyUpstream(w, r, deps, http.MethodPost, target, r.Body)
+	}
+}
+
+func handleProjectSecurityGet(deps Deps) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		user, err := auth.RequireUser(r.Context(), deps.AuthStore, r)
+		if err != nil {
+			writeAuthError(w, deps, err)
+			return
+		}
+		id := r.PathValue("id")
+		if _, err := deps.ProjectStore.GetProject(r.Context(), id, user.ID); err != nil {
+			writeError(w, http.StatusNotFound, "project not found")
+			return
+		}
+		target := deps.AgentEngineURL + "/api/workspaces/" + url.PathEscape(id) + "/security"
+		proxyGet(w, r, deps, target)
+	}
+}
+
+func handleProjectTestsRun(deps Deps) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		user, err := auth.RequireUser(r.Context(), deps.AuthStore, r)
+		if err != nil {
+			writeAuthError(w, deps, err)
+			return
+		}
+		id := r.PathValue("id")
+		if _, err := deps.ProjectStore.GetProject(r.Context(), id, user.ID); err != nil {
+			writeError(w, http.StatusNotFound, "project not found")
+			return
+		}
+		target := deps.AgentEngineURL + "/api/workspaces/" + url.PathEscape(id) + "/tests/run"
+		proxyUpstream(w, r, deps, http.MethodPost, target, r.Body)
+	}
+}
+
+func handleProjectTestsGet(deps Deps) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		user, err := auth.RequireUser(r.Context(), deps.AuthStore, r)
+		if err != nil {
+			writeAuthError(w, deps, err)
+			return
+		}
+		id := r.PathValue("id")
+		if _, err := deps.ProjectStore.GetProject(r.Context(), id, user.ID); err != nil {
+			writeError(w, http.StatusNotFound, "project not found")
+			return
+		}
+		target := deps.AgentEngineURL + "/api/workspaces/" + url.PathEscape(id) + "/tests"
 		proxyGet(w, r, deps, target)
 	}
 }

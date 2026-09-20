@@ -1529,4 +1529,122 @@ export function getProjectDBSchema(
   );
 }
 
+// ---------------------------------------------------------------------------
+// Security scan & Tests (F-10 / R-508)
+// ---------------------------------------------------------------------------
+
+export interface SecurityFinding {
+  id: string;
+  severity: "critical" | "high" | "medium" | "low" | "info";
+  rule: string;
+  file?: string;
+  line?: number;
+  message: string;
+  fix?: string;
+}
+
+export interface SecurityCheck {
+  name: string;
+  status: "passed" | "failed" | "skipped";
+  note?: string;
+}
+
+export interface ProjectSecurityReport {
+  findings: SecurityFinding[];
+  checks: SecurityCheck[];
+  summary: {
+    critical: number;
+    high: number;
+    medium: number;
+    low: number;
+    info: number;
+    total_issues: number;
+  };
+  scanned_at: string;
+}
+
+export interface TestCaseResult {
+  name: string;
+  status: "passed" | "failed" | "skipped";
+  duration_ms: number;
+  message?: string;
+}
+
+export interface TestSuiteResult {
+  name: string;
+  passed: number;
+  failed: number;
+  skipped: number;
+  duration_ms: number;
+  status: "passed" | "failed" | "skipped";
+  tests: TestCaseResult[];
+  raw_output?: string;
+  message?: string;
+}
+
+export interface ProjectTestReport {
+  suites: TestSuiteResult[];
+  summary: {
+    total: number;
+    passed: number;
+    failed: number;
+    skipped: number;
+    duration_ms: number;
+  };
+  raw_output: string;
+  message?: string | null;
+  ran_at: string;
+}
+
+export function runProjectSecurityScan(
+  token: string,
+  projectId: string
+): Promise<ProjectSecurityReport> {
+  return callControlPlane<ProjectSecurityReport>(
+    `/projects/${encodeURIComponent(projectId)}/security/scan`,
+    {
+      method: "POST",
+      headers: { Authorization: `Bearer ${token}` },
+    }
+  );
+}
+
+export function getProjectSecurityReport(
+  token: string,
+  projectId: string
+): Promise<ProjectSecurityReport> {
+  return callControlPlane<ProjectSecurityReport>(
+    `/projects/${encodeURIComponent(projectId)}/security`,
+    {
+      headers: { Authorization: `Bearer ${token}` },
+    }
+  );
+}
+
+export function runProjectTests(
+  token: string,
+  projectId: string
+): Promise<ProjectTestReport> {
+  return callControlPlane<ProjectTestReport>(
+    `/projects/${encodeURIComponent(projectId)}/tests/run`,
+    {
+      method: "POST",
+      headers: { Authorization: `Bearer ${token}` },
+    }
+  );
+}
+
+export function getProjectTestReport(
+  token: string,
+  projectId: string
+): Promise<ProjectTestReport> {
+  return callControlPlane<ProjectTestReport>(
+    `/projects/${encodeURIComponent(projectId)}/tests`,
+    {
+      headers: { Authorization: `Bearer ${token}` },
+    }
+  );
+}
+
+
 

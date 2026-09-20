@@ -1612,6 +1612,71 @@ if ! rg -qF '/db/query' "$control_plane_root/internal/projects/handler.go"; then
   exit 1
 fi
 
+for required_sec_test_file in \
+  "$agent_engine_root/src/omnistackai_agent_engine/studio/security.py" \
+  "$agent_engine_root/src/omnistackai_agent_engine/studio/tests_runner.py" \
+  "$console_root/components/project-security-manage.tsx" \
+  "$console_root/components/project-tests-manage.tsx" \
+  "$console_root/app/api/projects/[id]/security/scan/route.ts" \
+  "$console_root/app/api/projects/[id]/security/route.ts" \
+  "$console_root/app/api/projects/[id]/tests/run/route.ts" \
+  "$console_root/app/api/projects/[id]/tests/route.ts"; do
+  if [[ ! -f "$required_sec_test_file" ]]; then
+    printf 'Missing R-508 contract file: %s\n' "$required_sec_test_file"
+    exit 1
+  fi
+done
+
+if ! rg -qF 'run_security_scan' "$agent_engine_root/src/omnistackai_agent_engine/studio/security.py"; then
+  printf 'R-508 security.py must define run_security_scan.\n'
+  exit 1
+fi
+
+if ! rg -qF 'get_last_security_report' "$agent_engine_root/src/omnistackai_agent_engine/studio/security.py"; then
+  printf 'R-508 security.py must define get_last_security_report.\n'
+  exit 1
+fi
+
+if ! rg -qF 'run_project_tests' "$agent_engine_root/src/omnistackai_agent_engine/studio/tests_runner.py"; then
+  printf 'R-508 tests_runner.py must define run_project_tests.\n'
+  exit 1
+fi
+
+if ! rg -qF 'get_last_test_report' "$agent_engine_root/src/omnistackai_agent_engine/studio/tests_runner.py"; then
+  printf 'R-508 tests_runner.py must define get_last_test_report.\n'
+  exit 1
+fi
+
+if ! rg -qF 'runProjectSecurityScan' "$console_root/lib/control-plane.ts"; then
+  printf 'R-508 lib/control-plane.ts must define runProjectSecurityScan.\n'
+  exit 1
+fi
+
+if ! rg -qF 'runProjectTests' "$console_root/lib/control-plane.ts"; then
+  printf 'R-508 lib/control-plane.ts must define runProjectTests.\n'
+  exit 1
+fi
+
+if ! rg -qF 'ProjectSecurityManage' "$console_root/app/studio/[projectId]/manage/page.tsx"; then
+  printf 'R-508 manage page must render ProjectSecurityManage.\n'
+  exit 1
+fi
+
+if ! rg -qF 'ProjectTestsManage' "$console_root/app/studio/[projectId]/manage/page.tsx"; then
+  printf 'R-508 manage page must render ProjectTestsManage.\n'
+  exit 1
+fi
+
+if ! rg -qF '/security/scan' "$control_plane_root/internal/projects/handler.go"; then
+  printf 'R-508 control-plane must register /security/scan route.\n'
+  exit 1
+fi
+
+if ! rg -qF '/tests/run' "$control_plane_root/internal/projects/handler.go"; then
+  printf 'R-508 control-plane must register /tests/run route.\n'
+  exit 1
+fi
+
 printf 'Repository contract tests passed.\n'
 
 
