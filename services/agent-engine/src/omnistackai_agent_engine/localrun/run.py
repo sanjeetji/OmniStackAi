@@ -20,6 +20,7 @@ import urllib.error
 import urllib.parse
 import urllib.request
 from pathlib import Path
+from typing import Callable
 
 from .plan import RunPlan, RunStep, build_run_plan
 
@@ -179,6 +180,7 @@ def start_app(
     log=print,
     health_timeout_seconds: float = 45.0,
     require_ready: bool = True,
+    on_phase: Callable[[str], None] | None = None,
 ) -> LocalAppSession:
     """Start one managed generated-app session and return it only when its targets are ready.
 
@@ -207,7 +209,20 @@ def start_app(
                 if not _port_available(url):
                     raise LocalAppRunError(f"local preview port is already in use: {url}")
 
+        current_phase = None
         for step in active_plan.steps:
+            if step.background:
+                step_phase = "start"
+            elif any(k in step.label.lower() for k in ("database", "migration")):
+                step_phase = "migrate"
+            else:
+                step_phase = "install"
+
+            if step_phase != current_phase:
+                current_phase = step_phase
+                if on_phase is not None:
+                    on_phase(current_phase)
+
             if step.background:
                 emit(f"-> {step.label}")
                 session.processes.append(_launch(step))
@@ -217,6 +232,11 @@ def start_app(
                 continue
             emit(f"-> {step.label}")
             _run_sync(step)
+
+        if current_phase != "start" and (active_plan.backend_kind != "none" or active_plan.has_web):
+            current_phase = "start"
+            if on_phase is not None:
+                on_phase("start")
 
         if active_plan.backend_kind != "none":
             emit("Waiting for the API to be healthy ...")
@@ -245,6 +265,9 @@ def start_app(
                 if session.web_ready
                 else f"Web not ready yet at {active_plan.web_url} (it may still be starting)"
             )
+
+        if on_phase is not None:
+            on_phase("ready")
     except BaseException:
         session.stop()
         raise
@@ -252,7 +275,12 @@ def start_app(
 
 
 def start_preview_app(
-    repo_dir: str, *, log=None, health_timeout_seconds: float = 45.0, host: str = "127.0.0.1"
+    repo_dir: str,
+    *,
+    log=None,
+    health_timeout_seconds: float = 45.0,
+    host: str = "127.0.0.1",
+    on_phase: Callable[[str], None] | None = None,
 ) -> LocalAppSession:
     """Start a managed preview on automatically allocated, collision-free API/web ports.
 
@@ -267,7 +295,11 @@ def start_preview_app(
     api_port, web_port = allocate_preview_ports(host)
     plan = _plan_from_env(str(root), api_port=api_port, web_port=web_port)
     return start_app(
-        str(root), plan=plan, log=log, health_timeout_seconds=health_timeout_seconds
+        str(root),
+        plan=plan,
+        log=log,
+        health_timeout_seconds=health_timeout_seconds,
+        on_phase=on_phase,
     )
 
 

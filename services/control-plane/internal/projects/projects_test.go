@@ -498,3 +498,108 @@ func TestProjectBuildStreamRelayAndDebiting(t *testing.T) {
 		t.Errorf("debit record project id = %s, want %s", pStore.debitCalls[0].projectID, proj.ID)
 	}
 }
+
+func TestProjectPreview_Endpoints(t *testing.T) {
+	pStore := newFakeProjectStore()
+	userA := auth.User{ID: "usr-a", Email: "a@example.com"}
+	userB := auth.User{ID: "usr-b", Email: "b@example.com"}
+	authStore := fakeAuthStore{user: userA}
+
+	projA, _ := pStore.CreateProject(context.Background(), userA.ID, "Alpha App", "")
+
+	mockAgentEngine := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		expectedPath := "/api/workspaces/" + projA.ID + "/preview"
+		if r.URL.Path == expectedPath && r.Method == http.MethodGet {
+			w.Header().Set("Content-Type", "application/json")
+			_ = json.NewEncoder(w).Encode(map[string]any{
+				"status":     "ready",
+				"phase":      "ready",
+				"web_url":    "http://127.0.0.1:41001",
+				"api_url":    "http://127.0.0.1:41002",
+				"web_port":   41001,
+				"api_port":   41002,
+				"elapsed_ms": 500,
+			})
+			return
+		}
+		if r.URL.Path == expectedPath && r.Method == http.MethodPost {
+			w.Header().Set("Content-Type", "application/json")
+			_ = json.NewEncoder(w).Encode(map[string]any{
+				"status":     "ready",
+				"phase":      "ready",
+				"web_url":    "http://127.0.0.1:41001",
+				"api_url":    "http://127.0.0.1:41002",
+				"web_port":   41001,
+				"api_port":   41002,
+				"elapsed_ms": 1200,
+			})
+			return
+		}
+		if r.URL.Path == expectedPath+"/stop" && r.Method == http.MethodPost {
+			w.Header().Set("Content-Type", "application/json")
+			_ = json.NewEncoder(w).Encode(map[string]any{
+				"status": "stopped",
+				"phase":  "stopped",
+			})
+			return
+		}
+		w.WriteHeader(http.StatusNotFound)
+	}))
+	defer mockAgentEngine.Close()
+
+	server := setupTestServer(t, authStore, pStore, mockAgentEngine.URL)
+
+	// 1. GET /projects/{id}/preview for owner returns 200 with preview info
+	req, _ := http.NewRequest(http.MethodGet, server.URL+"/projects/"+projA.ID+"/preview", nil)
+	req.Header.Set("Authorization", testBearer)
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		t.Fatalf("GET preview: %v", err)
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusOK {
+		t.Errorf("GET preview: got %d, want 200", resp.StatusCode)
+	}
+	var getBody map[string]any
+	_ = json.NewDecoder(resp.Body).Decode(&getBody)
+	if getBody["web_port"] != float64(41001) {
+		t.Errorf("web_port = %v, want 41001", getBody["web_port"])
+	}
+
+	// 2. POST /projects/{id}/preview returns 200 with started preview info
+	postReq, _ := http.NewRequest(http.MethodPost, server.URL+"/projects/"+projA.ID+"/preview", nil)
+	postReq.Header.Set("Authorization", testBearer)
+	postResp, err := http.DefaultClient.Do(postReq)
+	if err != nil {
+		t.Fatalf("POST preview: %v", err)
+	}
+	defer postResp.Body.Close()
+	if postResp.StatusCode != http.StatusOK {
+		t.Errorf("POST preview: got %d, want 200", postResp.StatusCode)
+	}
+
+	// 3. POST /projects/{id}/preview/stop returns 200 stopped status
+	stopReq, _ := http.NewRequest(http.MethodPost, server.URL+"/projects/"+projA.ID+"/preview/stop", nil)
+	stopReq.Header.Set("Authorization", testBearer)
+	stopResp, err := http.DefaultClient.Do(stopReq)
+	if err != nil {
+		t.Fatalf("POST preview/stop: %v", err)
+	}
+	defer stopResp.Body.Close()
+	if stopResp.StatusCode != http.StatusOK {
+		t.Errorf("POST preview/stop: got %d, want 200", stopResp.StatusCode)
+	}
+
+	// 4. Foreign user (userB) requesting projA gets 404
+	bServer := setupTestServer(t, fakeAuthStore{user: userB}, pStore, mockAgentEngine.URL)
+	bReq, _ := http.NewRequest(http.MethodGet, bServer.URL+"/projects/"+projA.ID+"/preview", nil)
+	bReq.Header.Set("Authorization", testBearer)
+	bResp, err := http.DefaultClient.Do(bReq)
+	if err != nil {
+		t.Fatalf("foreign user GET preview: %v", err)
+	}
+	defer bResp.Body.Close()
+	if bResp.StatusCode != http.StatusNotFound {
+		t.Errorf("foreign user got %d, want 404", bResp.StatusCode)
+	}
+}

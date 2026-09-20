@@ -1107,4 +1107,40 @@ if ! rg -qF 'class StudioWorkspaceStore' "$agent_engine_root/src/omnistackai_age
   exit 1
 fi
 
+# R-500: Multi-Process Preview & Diagnostics Service (F-02-preview spec).
+for required_file in \
+  "$console_root/app/preview/[projectId]/[[...path]]/route.ts" \
+  "$console_root/app/api/projects/[id]/preview/stop/route.ts" \
+  "$agent_engine_root/tests/test_studio_workspace_preview.py"; do
+  if [[ ! -f "$required_file" ]]; then
+    printf 'Missing R-500 contract file: %s\n' "$required_file"
+    exit 1
+  fi
+done
+
+if ! rg -qF 'GET /projects/{id}/preview' "$control_plane_root/internal/projects/handler.go"; then
+  printf 'R-500 control-plane must register GET /projects/{id}/preview route.\n'
+  exit 1
+fi
+
+if ! rg -qF 'POST /projects/{id}/preview/stop' "$control_plane_root/internal/projects/handler.go"; then
+  printf 'R-500 control-plane must register POST /projects/{id}/preview/stop route.\n'
+  exit 1
+fi
+
+if ! rg -qF './scripts/omnistack.sh up' "$console_root/app/studio/studio-preview.tsx"; then
+  printf 'R-500 studio-preview.tsx must suggest ./scripts/omnistack.sh up in build-only mode.\n'
+  exit 1
+fi
+
+if ! rg -qF 'def start_workspace' "$agent_engine_root/src/omnistackai_agent_engine/studio/preview.py"; then
+  printf 'R-500 agent-engine StudioPreviewManager must define start_workspace.\n'
+  exit 1
+fi
+
+if ! rg -qF 'def workspace_status' "$agent_engine_root/src/omnistackai_agent_engine/studio/preview.py"; then
+  printf 'R-500 agent-engine StudioPreviewManager must define workspace_status.\n'
+  exit 1
+fi
+
 printf 'Repository contract tests passed.\n'

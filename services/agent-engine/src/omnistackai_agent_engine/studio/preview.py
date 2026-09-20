@@ -10,7 +10,10 @@ independent process management, and bounded status/stop/restart controls.
 from __future__ import annotations
 
 from threading import RLock
+import os
+import time
 from typing import Any, Callable, Mapping
+import urllib.parse
 
 from ..localrun import LocalAppSession, start_preview_app
 from ..solution_packs.ecosystem_auth import (
@@ -97,6 +100,55 @@ _STOPPED = {"status": "stopped", "message": "Preview stopped."}
 _EXITED = {"status": "stopped", "message": "The preview stopped running. Restart to run it again."}
 
 
+class WorkspacePreviewSession:
+    """In-memory state and subprocess tracking for a single workspace preview (F-02 / R-500)."""
+
+    def __init__(
+        self,
+        ws_id: str,
+        repo_dir: str,
+        *,
+        session: LocalAppSession | None = None,
+        status: str = "idle",
+        phase: str = "idle",
+        web_url: str | None = None,
+        api_url: str | None = None,
+        web_port: int | None = None,
+        api_port: int | None = None,
+        message: str = "",
+    ) -> None:
+        self.ws_id = ws_id
+        self.repo_dir = repo_dir
+        self.session = session
+        self.status = status
+        self.phase = phase
+        self.web_url = web_url
+        self.api_url = api_url
+        self.web_port = web_port
+        self.api_port = api_port
+        self.started_at = time.time()
+        self.last_active_at = time.time()
+        self.message = message
+
+    def to_dict(self) -> dict:
+        elapsed_ms = int((time.time() - self.started_at) * 1000)
+        res: dict[str, Any] = {
+            "status": self.status,
+            "phase": self.phase,
+            "message": self.message,
+            "elapsed_ms": elapsed_ms,
+        }
+        if self.web_url is not None:
+            res["web_url"] = self.web_url
+        if self.api_url is not None:
+            res["api_url"] = self.api_url
+        if self.web_port is not None:
+            res["web_port"] = self.web_port
+        if self.api_port is not None:
+            res["api_port"] = self.api_port
+        return res
+
+
 class StudioPreviewManager:
     """Serialize preview replacement, manage local app sessions, and expose controls."""
 
@@ -106,6 +158,9 @@ class StudioPreviewManager:
         self._last_repo_dir: str | None = None
         self._state: dict = dict(_IDLE)
         self._lock = RLock()
+
+        # Workspace-scoped previews (F-02 / R-500)
+        self._workspaces: dict[str, WorkspacePreviewSession] = {}
 
         # Multi-surface ecosystem state (R-446/R-447/R-448/R-449)
         self._is_ecosystem = False
@@ -770,6 +825,13 @@ class StudioPreviewManager:
         for session in self._sessions.values():
             session.stop()
         self._sessions.clear()
+        for ws_sess in self._workspaces.values():
+            if ws_sess.session is not None:
+                ws_sess.session.stop()
+                ws_sess.session = None
+                ws_sess.status = "stopped"
+                ws_sess.phase = "stopped"
+        self._workspaces.clear()
         self._auth_contract = None
         self._state_binding = None
         self._demo_tokens.clear()
@@ -795,6 +857,145 @@ class StudioPreviewManager:
         self._governance_engine = None
         self._docs_contract = None
         self._docs_engine = None
+
+    def _idle_timeout_seconds(self) -> float:
+        try:
+            minutes = int(os.environ.get("OMNISTACKAI_PREVIEW_IDLE_MINUTES", "30"))
+        except (ValueError, TypeError):
+            minutes = 30
+        return max(1.0, float(minutes * 60))
+
+    def workspace_status(self, ws_id: str) -> dict:
+        """Return status for a workspace preview, checking idle reaper and process liveness (F-02)."""
+        with self._lock:
+            session = self._workspaces.get(ws_id)
+            if session is None:
+                return {
+                    "status": "idle",
+                    "phase": "idle",
+                    "message": "No preview is running yet for this workspace.",
+                    "elapsed_ms": 0,
+                }
+            now = time.time()
+            # Check idle timeout
+            if session.status == "ready" and (now - session.last_active_at) > self._idle_timeout_seconds():
+                if session.session is not None:
+                    session.session.stop()
+                    session.session = None
+                session.status = "stopped"
+                session.phase = "stopped"
+                session.message = "stopped — start again"
+                return session.to_dict()
+
+            # Check process liveness
+            if session.session is not None and not session.session.is_alive():
+                session.session.stop()
+                session.session = None
+                session.status = "stopped"
+                session.phase = "stopped"
+                session.message = "The preview stopped running. Restart to run it again."
+
+            session.last_active_at = now
+            return session.to_dict()
+
+    def start_workspace(
+        self,
+        ws_id: str,
+        repo_dir: str,
+        on_phase: Callable[[str], None] | None = None,
+    ) -> dict:
+        """Start or restart preview for workspace ``ws_id``, tracking phases and ports (F-02)."""
+        with self._lock:
+            existing = self._workspaces.get(ws_id)
+            if existing is not None and existing.session is not None:
+                existing.session.stop()
+                existing.session = None
+
+            ws_sess = WorkspacePreviewSession(
+                ws_id,
+                repo_dir,
+                status="starting",
+                phase="install",
+                message="Starting preview...",
+            )
+            self._workspaces[ws_id] = ws_sess
+
+            def _phase_cb(phase: str) -> None:
+                ws_sess.phase = phase
+                if phase == "install":
+                    ws_sess.message = "Installing dependencies..."
+                elif phase == "migrate":
+                    ws_sess.message = "Running database migrations..."
+                elif phase == "start":
+                    ws_sess.message = "Starting local application servers..."
+                elif phase == "ready":
+                    ws_sess.status = "ready"
+                    ws_sess.message = "The generated application is running locally."
+                if on_phase is not None:
+                    on_phase(phase)
+
+            try:
+                session = self._start_fn(repo_dir, log=None, on_phase=_phase_cb)
+            except TypeError:
+                try:
+                    session = self._start_fn(repo_dir, log=None)
+                except Exception:
+                    ws_sess.status = "error"
+                    ws_sess.phase = "error"
+                    ws_sess.message = _PREVIEW_ERROR
+                    return ws_sess.to_dict()
+            except Exception:
+                ws_sess.status = "error"
+                ws_sess.phase = "error"
+                ws_sess.message = _PREVIEW_ERROR
+                return ws_sess.to_dict()
+
+            if not session.plan.has_web:
+                session.stop()
+                ws_sess.status = "unavailable"
+                ws_sess.phase = "stopped"
+                ws_sess.message = "This generated project has no web target to preview."
+                return ws_sess.to_dict()
+
+            if not session.web_ready:
+                session.stop()
+                ws_sess.status = "error"
+                ws_sess.phase = "error"
+                ws_sess.message = _PREVIEW_ERROR
+                return ws_sess.to_dict()
+
+            ws_sess.session = session
+            ws_sess.status = "ready"
+            ws_sess.phase = "ready"
+            ws_sess.web_url = session.plan.web_url
+            try:
+                ws_sess.web_port = urllib.parse.urlparse(session.plan.web_url).port
+            except Exception:
+                ws_sess.web_port = None
+
+            if session.plan.backend_kind != "none" and session.api_ready:
+                ws_sess.api_url = session.plan.api_url
+                try:
+                    ws_sess.api_port = urllib.parse.urlparse(session.plan.api_url).port
+                except Exception:
+                    ws_sess.api_port = None
+
+            ws_sess.message = "The generated application is running locally."
+            return ws_sess.to_dict()
+
+    def stop_workspace(self, ws_id: str) -> dict:
+        """Stop preview session for workspace ``ws_id`` (F-02)."""
+        with self._lock:
+            session = self._workspaces.get(ws_id)
+            if session is None:
+                return {"status": "stopped", "phase": "stopped", "message": "Preview stopped."}
+            if session.session is not None:
+                session.session.stop()
+                session.session = None
+            session.status = "stopped"
+            session.phase = "stopped"
+            session.message = "Preview stopped."
+            return session.to_dict()
 
     def get_ecosystem_auth(self) -> dict:
         """Inspect the active ecosystem's auth contract, role matrix, and surface demo tokens."""

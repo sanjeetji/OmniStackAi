@@ -23,6 +23,12 @@ const POLL_INTERVAL_MS = 5000;
 
 type ErrorBody = { error?: string };
 
+async function getJSON(path: string): Promise<{ status: number; body: PreviewStatus | ErrorBody }> {
+  const response = await fetch(path, { method: "GET" });
+  const body = (await response.json().catch(() => ({}))) as PreviewStatus | ErrorBody;
+  return { status: response.status, body };
+}
+
 async function postJSON(path: string): Promise<{ status: number; body: PreviewStatus | ErrorBody }> {
   const response = await fetch(path, { method: "POST" });
   const body = (await response.json().catch(() => ({}))) as PreviewStatus | ErrorBody;
@@ -39,6 +45,13 @@ const WIDTH_PRESETS: { key: PresetKey; label: string; icon: LucideIcon; maxWidth
 
 const FRAME_HEIGHT = "h-[calc(100dvh-18rem)] min-h-[480px]";
 
+const PHASE_LABELS: Record<string, string> = {
+  install: "Installing dependencies…",
+  migrate: "Running database migrations…",
+  start: "Starting development servers…",
+  ready: "Application ready",
+};
+
 export function StudioPreview({
   buildId,
   previewVersion,
@@ -49,8 +62,6 @@ export function StudioPreview({
   projectId?: string | null;
 }) {
   const [status, setStatus] = useState<PreviewStatus | null>(null);
-  // starting/elapsedMs/fetchError travel together as one state value so the effect below only
-  // ever needs one setState call at its start, not several cascading ones.
   const [phase, setPhase] = useState<{ starting: boolean; elapsedMs: number; fetchError: string | null }>({
     starting: false,
     elapsedMs: 0,
@@ -61,21 +72,40 @@ export function StudioPreview({
   const [preset, setPreset] = useState<PresetKey>("desktop");
   const startedAtRef = useRef<number | null>(null);
 
-  // Start (or re-start) the preview for this build whenever buildId first becomes real, or
-  // previewVersion bumps (the parent bumps it after every successful edit - _edit() never restarts
-  // the preview on its own, unlike _build(), so this call is what keeps the iframe fresh).
+  // Auto-start or refresh preview for this project / build
   useEffect(() => {
     if (!buildId && !projectId) {
       return;
     }
     let cancelled = false;
     startedAtRef.current = Date.now();
+
     (async () => {
       setPhase({ starting: true, elapsedMs: 0, fetchError: null });
       try {
         const previewUrl = projectId
           ? `/api/projects/${encodeURIComponent(projectId)}/preview`
           : `/api/jobs/build/${encodeURIComponent(buildId!)}/preview`;
+
+        // Check current status first if projectId is present
+        if (projectId && previewVersion === 0) {
+          const { status: checkStatus, body: checkBody } = await getJSON(previewUrl);
+          if (cancelled) return;
+          if (checkStatus === 404) {
+            setDisabled(true);
+            setStatus(null);
+            return;
+          }
+          const curr = checkBody as PreviewStatus;
+          if (curr.status === "ready") {
+            setDisabled(false);
+            setStatus(curr);
+            setPhase((p) => ({ ...p, starting: false }));
+            return;
+          }
+        }
+
+        // Start (or re-start) preview
         const { status: httpStatus, body } = await postJSON(previewUrl);
         if (cancelled) return;
         if (httpStatus === 404) {
@@ -91,12 +121,13 @@ export function StudioPreview({
         if (!cancelled) setPhase((p) => ({ ...p, starting: false }));
       }
     })();
+
     return () => {
       cancelled = true;
     };
   }, [buildId, previewVersion, projectId]);
 
-  // Real elapsed time while starting - cold starts confirmed live up to ~45s during R-478.
+  // Real elapsed time while starting
   useEffect(() => {
     if (!phase.starting) return;
     const tick = setInterval(() => {
@@ -105,30 +136,40 @@ export function StudioPreview({
     return () => clearInterval(tick);
   }, [phase.starting]);
 
-  // Crash detection, not progress-watching: preview start is synchronous, so the only thing worth
-  // polling for is a "ready" preview whose subprocess died on its own since the last check.
+  // Periodic liveness check while ready
   useEffect(() => {
-    if (!buildId || disabled || status?.status !== "ready") return;
+    if (!buildId && !projectId) return;
+    if (disabled || status?.status !== "ready") return;
+
+    const pollUrl = projectId
+      ? `/api/projects/${encodeURIComponent(projectId)}/preview`
+      : "/api/preview";
+
     const interval = setInterval(async () => {
       try {
-        const response = await fetch("/api/preview");
-        if (response.status === 404) {
+        const { status: httpStatus, body } = await getJSON(pollUrl);
+        if (httpStatus === 404) {
           setDisabled(true);
           return;
         }
-        const body = (await response.json().catch(() => null)) as PreviewStatus | null;
-        if (body) setStatus(body);
+        if (body && "status" in body) {
+          setStatus(body as PreviewStatus);
+        }
       } catch {
-        // A transient poll failure isn't worth surfacing - the next tick retries.
+        // Transient fetch failure is ignored until next tick
       }
     }, POLL_INTERVAL_MS);
+
     return () => clearInterval(interval);
-  }, [buildId, disabled, status?.status]);
+  }, [buildId, projectId, disabled, status?.status]);
 
   async function handleRestart() {
     setBusy(true);
     try {
-      const { status: httpStatus, body } = await postJSON("/api/preview/restart");
+      const restartUrl = projectId
+        ? `/api/projects/${encodeURIComponent(projectId)}/preview`
+        : "/api/preview/restart";
+      const { status: httpStatus, body } = await postJSON(restartUrl);
       if (httpStatus === 404) {
         setDisabled(true);
       } else {
@@ -144,7 +185,10 @@ export function StudioPreview({
   async function handleStop() {
     setBusy(true);
     try {
-      const { status: httpStatus, body } = await postJSON("/api/preview/stop");
+      const stopUrl = projectId
+        ? `/api/projects/${encodeURIComponent(projectId)}/preview/stop`
+        : "/api/preview/stop";
+      const { status: httpStatus, body } = await postJSON(stopUrl);
       if (httpStatus === 404) {
         setDisabled(true);
       } else {
@@ -157,7 +201,7 @@ export function StudioPreview({
     }
   }
 
-  if (!buildId) return null;
+  if (!buildId && !projectId) return null;
 
   if (disabled) {
     return (
@@ -165,10 +209,10 @@ export function StudioPreview({
         <MonitorOff className="size-5 text-muted-foreground" aria-hidden="true" />
         <p className="text-sm font-medium">Live preview isn&rsquo;t running</p>
         <p className="max-w-sm text-pretty text-sm text-muted-foreground">
-          Start the agent-engine in preview mode, then open this tab again:
+          This server runs in build-only mode. Restart it with:
         </p>
         <code className="mt-1 rounded-lg bg-muted px-2.5 py-1.5 font-mono text-xs">
-          task agent-engine:studio:preview
+          ./scripts/omnistack.sh up
         </code>
       </div>
     );
@@ -191,12 +235,13 @@ export function StudioPreview({
   }
 
   if (phase.starting) {
+    const activePhaseLabel = (status?.phase && PHASE_LABELS[status.phase]) || "Starting preview…";
     return (
       <div className="overflow-hidden rounded-xl border border-border/60 bg-card" aria-busy="true">
         <div className="flex items-center gap-2 border-b border-border/60 px-3 py-2 text-xs">
           <StatusPill tone="starting" />
           <span className="text-muted-foreground tabular-nums">
-            Starting preview… {Math.round(phase.elapsedMs / 1000)}s
+            {activePhaseLabel} {Math.round(phase.elapsedMs / 1000)}s
           </span>
         </div>
         <div className="p-3">
@@ -212,17 +257,20 @@ export function StudioPreview({
 
   if (status.status === "ready" && status.web_url) {
     const active = WIDTH_PRESETS.find((entry) => entry.key === preset) ?? WIDTH_PRESETS[0];
+    const proxyUrl = projectId ? `/preview/${encodeURIComponent(projectId)}/` : status.web_url;
+    const targetUrl = proxyUrl;
+
     return (
       <div className="overflow-hidden rounded-xl border border-border/60 bg-card">
         <div className="flex flex-wrap items-center gap-2 border-b border-border/60 px-3 py-2">
           <StatusPill tone="live" />
           <a
-            href={status.web_url}
+            href={targetUrl}
             target="_blank"
             rel="noreferrer"
             className="min-w-0 flex-1 truncate font-mono text-xs text-muted-foreground transition-colors hover:text-foreground"
           >
-            {status.web_url}
+            {targetUrl}
           </a>
           <div
             role="group"
@@ -247,7 +295,7 @@ export function StudioPreview({
             ))}
           </div>
           <Button asChild variant="ghost" size="icon-sm" aria-label="Open in new tab">
-            <a href={status.web_url} target="_blank" rel="noreferrer">
+            <a href={targetUrl} target="_blank" rel="noreferrer">
               <ExternalLink aria-hidden="true" />
             </a>
           </Button>
@@ -266,7 +314,7 @@ export function StudioPreview({
             style={{ maxWidth: active.maxWidth }}
           >
             <iframe
-              src={status.web_url}
+              src={targetUrl}
               className={cn("block w-full", FRAME_HEIGHT)}
               title="Live preview"
             />
@@ -285,7 +333,7 @@ export function StudioPreview({
       {status.status !== "unavailable" ? (
         <Button type="button" variant="outline" size="sm" onClick={handleRestart} disabled={busy}>
           <RefreshCw className={cn(busy && "animate-spin")} aria-hidden="true" />
-          Restart
+          {status.status === "stopped" ? "Start" : "Restart"}
         </Button>
       ) : null}
     </div>

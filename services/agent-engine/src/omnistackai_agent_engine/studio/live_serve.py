@@ -972,16 +972,32 @@ def main() -> None:
     def workspace_edit(ws_id: str, prompt: str) -> dict:
         return asyncio.run(_workspace_edit(ws_id, prompt, workspace_store=workspace_store))
 
-    def workspace_preview(ws_id: str) -> dict:
+    def workspace_preview(ws_id: str, on_phase: Callable[[str], None] | None = None) -> dict:
         if preview_manager is None:
             return {
                 "status": "disabled",
-                "message": "Build-only mode: start the explicit Studio preview command to run generated code.",
+                "message": "This server runs in build-only mode. Restart it with ./scripts/omnistack.sh up to run your app.",
             }
         repo_dir = str(workspace_store.repo_path(ws_id))
         if not os.path.isdir(repo_dir):
             raise BuildNotFoundError(f"workspace '{ws_id}' has no repo to preview")
-        return preview_manager.replace(repo_dir)
+        return preview_manager.start_workspace(ws_id, repo_dir, on_phase=on_phase)
+
+    def workspace_preview_status(ws_id: str) -> dict:
+        if preview_manager is None:
+            return {
+                "status": "disabled",
+                "message": "This server runs in build-only mode. Restart it with ./scripts/omnistack.sh up to run your app.",
+            }
+        return preview_manager.workspace_status(ws_id)
+
+    def workspace_preview_stop(ws_id: str) -> dict:
+        if preview_manager is None:
+            return {
+                "status": "disabled",
+                "message": "This server runs in build-only mode. Restart it with ./scripts/omnistack.sh up to run your app.",
+            }
+        return preview_manager.stop_workspace(ws_id)
 
     def workspace_problems_check(ws_id: str) -> dict:
         repo_dir = str(workspace_store.repo_path(ws_id))
@@ -1029,6 +1045,8 @@ def main() -> None:
         "workspace_build_stream_fn": workspace_build_stream,
         "workspace_edit_fn": workspace_edit,
         "workspace_preview_fn": workspace_preview,
+        "workspace_preview_status_fn": workspace_preview_status,
+        "workspace_preview_stop_fn": workspace_preview_stop,
         "workspace_problems_check_fn": workspace_problems_check,
         "workspace_problems_get_fn": workspace_problems_get,
     }

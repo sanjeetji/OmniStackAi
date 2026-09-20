@@ -288,10 +288,14 @@ export function getBuildTurns(token: string, buildId: string): Promise<BuildTurn
  * `"unavailable"` (the generated project has no web target), `"ready"` (`web_url` always present,
  * `api_url` only when the generated project also has a backend). */
 export interface PreviewStatus {
-  status: "idle" | "stopped" | "error" | "unavailable" | "ready";
+  status: "idle" | "starting" | "stopped" | "error" | "unavailable" | "ready";
   message: string;
+  phase?: "idle" | "install" | "migrate" | "start" | "ready" | "stopped" | "error";
+  elapsed_ms?: number;
   web_url?: string;
   api_url?: string;
+  web_port?: number;
+  api_port?: number;
 }
 
 /** Reads the singleton preview's current status via `GET /jobs/preview` (R-478) - read-only, no
@@ -574,12 +578,37 @@ export function editProject(
   );
 }
 
+export function getProjectPreview(
+  token: string,
+  projectId: string
+): Promise<PreviewStatus> {
+  return callControlPlane<PreviewStatus>(
+    `/projects/${encodeURIComponent(projectId)}/preview`,
+    {
+      headers: { Authorization: `Bearer ${token}` },
+    }
+  );
+}
+
 export function previewProject(
   token: string,
   projectId: string
 ): Promise<PreviewStatus> {
   return callControlPlane<PreviewStatus>(
     `/projects/${encodeURIComponent(projectId)}/preview`,
+    {
+      method: "POST",
+      headers: { Authorization: `Bearer ${token}` },
+    }
+  );
+}
+
+export function stopProjectPreview(
+  token: string,
+  projectId: string
+): Promise<PreviewStatus> {
+  return callControlPlane<PreviewStatus>(
+    `/projects/${encodeURIComponent(projectId)}/preview/stop`,
     {
       method: "POST",
       headers: { Authorization: `Bearer ${token}` },

@@ -97,6 +97,8 @@ def _make_handler(
     workspace_build_stream_fn: WorkspaceBuildStreamFn | None = None,
     workspace_edit_fn: EditFn | None = None,
     workspace_preview_fn: PreviewBuildFn | None = None,
+    workspace_preview_status_fn: PreviewBuildFn | None = None,
+    workspace_preview_stop_fn: PreviewBuildFn | None = None,
     workspace_problems_check_fn: ProblemsFn | None = None,
     workspace_problems_get_fn: ProblemsFn | None = None,
 ) -> type[BaseHTTPRequestHandler]:
@@ -268,8 +270,50 @@ def _make_handler(
             if workspace_preview_fn is None:
                 self._send_json(404, {"error": "preview is not enabled"})
                 return
+            accept_header = self.headers.get("Accept", "")
+            if "text/event-stream" in accept_header:
+                self.send_response(200)
+                self.send_header("Content-Type", "text/event-stream")
+                self.send_header("Cache-Control", "no-cache")
+                self.send_header("Connection", "close")
+                self.send_header("X-Accel-Buffering", "no")
+                self.end_headers()
+
+                def _stream_cb(phase: str) -> None:
+                    self._write_sse_event({"status": "starting", "phase": phase})
+
+                try:
+                    res = workspace_preview_fn(ws_id, on_phase=_stream_cb)
+                except TypeError:
+                    res = workspace_preview_fn(ws_id)
+                except Exception as error:
+                    self._write_sse_event({"status": "error", "phase": "error", "error": str(error)})
+                    return
+                self._write_sse_event(res)
+                return
+
             try:
                 res = workspace_preview_fn(ws_id)
+                self._send_json(200, res)
+            except Exception as error:
+                self._send_json(502, {"error": str(error)})
+
+        def _handle_workspace_preview_status(self, ws_id: str) -> None:
+            if workspace_preview_status_fn is None:
+                self._send_json(404, {"error": "preview is not enabled"})
+                return
+            try:
+                res = workspace_preview_status_fn(ws_id)
+                self._send_json(200, res)
+            except Exception as error:
+                self._send_json(502, {"error": str(error)})
+
+        def _handle_workspace_preview_stop(self, ws_id: str) -> None:
+            if workspace_preview_stop_fn is None:
+                self._send_json(404, {"error": "preview is not enabled"})
+                return
+            try:
+                res = workspace_preview_stop_fn(ws_id)
                 self._send_json(200, res)
             except Exception as error:
                 self._send_json(502, {"error": str(error)})
@@ -735,6 +779,10 @@ def _make_handler(
                 if ws_problems_id is not None:
                     self._handle_workspace_get_problems(ws_problems_id)
                     return
+                ws_preview_id = self._workspace_id_for_suffix(path_only, "/preview")
+                if ws_preview_id is not None:
+                    self._handle_workspace_preview_status(ws_preview_id)
+                    return
                 ws_state_id = self._workspace_id_for_suffix(path_only, "")
                 if ws_state_id is not None:
                     self._handle_workspace_get_state(ws_state_id)
@@ -1078,6 +1126,10 @@ def _make_handler(
             if ws_edit_id is not None:
                 self._handle_workspace_edit(ws_edit_id)
                 return
+            ws_preview_stop_id = self._workspace_id_for_suffix(path_only, "/preview/stop")
+            if ws_preview_stop_id is not None:
+                self._handle_workspace_preview_stop(ws_preview_stop_id)
+                return
             ws_preview_id = self._workspace_id_for_suffix(path_only, "/preview")
             if ws_preview_id is not None:
                 self._handle_workspace_preview(ws_preview_id)
@@ -1220,6 +1272,8 @@ def create_studio_server(
     workspace_build_stream_fn: WorkspaceBuildStreamFn | None = None,
     workspace_edit_fn: EditFn | None = None,
     workspace_preview_fn: PreviewBuildFn | None = None,
+    workspace_preview_status_fn: PreviewBuildFn | None = None,
+    workspace_preview_stop_fn: PreviewBuildFn | None = None,
     workspace_problems_check_fn: ProblemsFn | None = None,
     workspace_problems_get_fn: ProblemsFn | None = None,
 ) -> ThreadingHTTPServer:
@@ -1303,6 +1357,8 @@ def create_studio_server(
             workspace_build_stream_fn=workspace_build_stream_fn,
             workspace_edit_fn=workspace_edit_fn,
             workspace_preview_fn=workspace_preview_fn,
+            workspace_preview_status_fn=workspace_preview_status_fn,
+            workspace_preview_stop_fn=workspace_preview_stop_fn,
             workspace_problems_check_fn=workspace_problems_check_fn,
             workspace_problems_get_fn=workspace_problems_get_fn,
         ),

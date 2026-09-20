@@ -1,5 +1,49 @@
 # Work Log
 
+## 2026-09-20 — R-500 (F-02 Multi-Process Preview & Diagnostics Service)
+
+- **Why:** Generated apps bound exclusively to `127.0.0.1:<port>`, preventing preview iframes from loading when accessing the console from mobile devices or other computers on the LAN. In addition, Studio was running in build-only mode without clear phase progress (`install` -> `migrate` -> `start` -> `ready`), lacked idle process harvesting, and gave ambiguous error states. `F-02-preview.md` specified an authenticated same-origin reverse proxy, strict SSRF defense, named lifecycle phase progression, idle reaper, and honest status banners.
+- **Reverse Proxy & SSRF Prevention (`apps/console-web`):**
+  - Created `apps/console-web/app/preview/[projectId]/[[...path]]/route.ts`: authenticated streaming reverse proxy mounted at `/preview/${projectId}/**`.
+  - SSRF Defense: strictly verifies session authentication and project ownership against Control Plane `GET /projects/{id}`; retrieves internal port only from trusted control-plane state (never trusts caller headers or query parameters); validates loopback address (`127.0.0.1` / `localhost`).
+  - HTML & Path Rewriting: injects `<base href="/preview/${projectId}/">` into HTML responses; dynamically rewrites root-relative Next.js chunk references (`/_next/` to `/preview/${projectId}/_next/`); rewrites `Location` redirect headers and `Set-Cookie` paths to preserve subpath isolation.
+  - Streaming: supports chunked streaming for HTML, text, and binary assets (images, fonts, bundles) with hop-by-hop header stripping.
+- **Agent Engine Preview Management (`services/agent-engine`):**
+  - Updated `localrun/run.py` to support `on_phase` callbacks during app initialization.
+  - Updated `studio/preview.py`:
+    - Created `WorkspacePreviewSession` tracking lifecycle phase, process IDs, web/api ports, start/elapsed times, and last access timestamps.
+    - Implemented `start_workspace`, `workspace_status`, and `stop_workspace`.
+    - Implemented an automatic idle timeout reaper governed by `OMNISTACKAI_PREVIEW_IDLE_MINUTES` (defaults to 30 min) to reap inactive preview processes.
+  - Updated `studio/live_serve.py` and `studio/server.py` with routes:
+    - `GET /api/workspaces/{id}/preview` (status inspection)
+    - `POST /api/workspaces/{id}/preview` (start with JSON response or text/event-stream SSE events)
+    - `POST /api/workspaces/{id}/preview/stop` (stop running preview session)
+  - Unit tests in `tests/test_studio_workspace_preview.py` (4/4 tests pass).
+- **Control Plane (`services/control-plane`):**
+  - Implemented routes in `internal/projects/handler.go`:
+    - `GET /projects/{id}/preview`
+    - `POST /projects/{id}/preview`
+    - `POST /projects/{id}/preview/stop`
+  - Validates project ownership via `Store.Get` (returning 404 for non-owners) and forwards to agent-engine preview API.
+  - Unit tests in `internal/projects/projects_test.go` covering owner access, agent-engine proxying, and foreign user 404 isolation.
+- **Console Web UI (`apps/console-web`):**
+  - Extended `lib/control-plane.ts` with `PreviewStatus` (`phase`, `elapsed_ms`, `web_port`, `api_port`) and `getProjectPreview`/`stopProjectPreview` clients.
+  - Added Next.js route handlers `app/api/projects/[id]/preview/route.ts` and `app/api/projects/[id]/preview/stop/route.ts`.
+  - Updated `app/studio/studio-preview.tsx`:
+    - Set iframe source to `/preview/${projectId}/`.
+    - Auto-starts preview when `projectId` loads.
+    - Visualizes real-time phase progression (`install` -> `migrate` -> `start` -> `ready`) with live timer.
+    - Honest build-only banner: *"This server runs in build-only mode. Restart it with: ./scripts/omnistack.sh up"*.
+    - Connected Restart and Stop controls to preview API endpoints.
+- **Evidence & Verification:**
+  - `bash scripts/test.sh` passing with R-500 assertions.
+  - `go test -v ./...` in `services/control-plane` passed (0 failures).
+  - `pnpm run typecheck && pnpm run lint` in `apps/console-web` passed (0 errors, 0 warnings).
+  - `python3 -m unittest services/agent-engine/tests/test_studio_workspace_preview.py` passed (4 tests in 0.5s).
+  - All 3,750 agent-engine tests passed in 79.7s.
+  - Full platform `task verify` passed with code 0 (`Ran 3750 tests in 79.716s, OK. Stage 0 verification passed.`).
+- **Next:** Proceed to F-03 Git Push / GitHub Export (R-501, spec `R_&_D/specs/F-03-git.md`).
+
 ## 2026-09-20 — R-499 (F-01 Projects & Workspaces Persistence)
 
 - **Why:** projects and edits previously lived only in RAM in `studio/session.py` and `studio/history.py`.

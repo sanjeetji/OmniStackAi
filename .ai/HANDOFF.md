@@ -1,5 +1,20 @@
 # Current Handoff
 
+Task ID: R-500
+Status: done
+Phase: MVP → Phase F (platform foundation)
+Branch: `ai/R-500-preview-service`
+
+> **R-500 Completed (2026-09-20): Multi-Process Preview & Diagnostics Service (F-02-preview spec).**
+> - **Authenticated Same-Origin Reverse Proxy:** Next.js route at `/preview/[projectId]/[[...path]]/route.ts` streams preview HTML, assets, and APIs from internal loopback apps.
+> - **Strict SSRF Defense & Tenant Security:** Internal port is queried solely via Control Plane ownership check on authenticated user; validates destination is strictly loopback (`127.0.0.1` / `localhost`). Foreign users receive 404.
+> - **HTML & Path Rewriting:** Dynamically injects `<base href="/preview/${projectId}/">`, rewrites `/_next/` chunk paths to `/preview/${projectId}/_next/`, and adjusts `Location` redirects and `Set-Cookie` paths.
+> - **Agent Engine Workspace Preview Manager:** Added `WorkspacePreviewSession` with named phases (`install` -> `migrate` -> `start` -> `ready`), process PID tracking, and an idle timeout reaper (`OMNISTACKAI_PREVIEW_IDLE_MINUTES`, default 30 min).
+> - **Control-Plane Preview Endpoints:** Added `GET /projects/{id}/preview`, `POST /projects/{id}/preview`, and `POST /projects/{id}/preview/stop` with tenant verification.
+> - **Web Console Studio UI:** `StudioPreview` auto-starts on project load, tracks named phase progress with live timer, provides restart and stop buttons, and displays honest build-only banner when preview mode is disabled.
+> - **Gates:** `scripts/test.sh` passed, `task verify` passed (all 3,750 tests OK), `tsc --noEmit` and `eslint` 100% clean.
+> - **NEXT:** F-03 (R-501) Git Push / GitHub Export (spec `R_&_D/specs/F-03-git.md`).
+
 Task ID: R-499
 Status: done
 Phase: MVP → Phase F (platform foundation)

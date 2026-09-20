@@ -59,7 +59,9 @@ func Register(mux *http.ServeMux, deps Deps) {
 	mux.HandleFunc("GET /projects/{id}/turns", handleProjectTurns(deps))
 	mux.HandleFunc("GET /projects/{id}/files", handleProjectFiles(deps))
 	mux.HandleFunc("GET /projects/{id}/file", handleProjectFile(deps))
+	mux.HandleFunc("GET /projects/{id}/preview", handleProjectPreviewGet(deps))
 	mux.HandleFunc("POST /projects/{id}/preview", handleProjectPreview(deps))
+	mux.HandleFunc("POST /projects/{id}/preview/stop", handleProjectPreviewStop(deps))
 	mux.HandleFunc("POST /projects/{id}/problems", handleProjectProblemsCheck(deps))
 	mux.HandleFunc("GET /projects/{id}/problems", handleProjectProblemsGet(deps))
 }
@@ -554,6 +556,23 @@ func handleProjectFile(deps Deps) http.HandlerFunc {
 	}
 }
 
+func handleProjectPreviewGet(deps Deps) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		user, err := auth.RequireUser(r.Context(), deps.AuthStore, r)
+		if err != nil {
+			writeAuthError(w, deps, err)
+			return
+		}
+		id := r.PathValue("id")
+		if _, err := deps.ProjectStore.GetProject(r.Context(), id, user.ID); err != nil {
+			writeError(w, http.StatusNotFound, "project not found")
+			return
+		}
+		target := deps.AgentEngineURL + "/api/workspaces/" + url.PathEscape(id) + "/preview"
+		proxyGet(w, r, deps, target)
+	}
+}
+
 func handleProjectPreview(deps Deps) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		if controller := http.NewResponseController(w); controller != nil {
@@ -570,6 +589,23 @@ func handleProjectPreview(deps Deps) http.HandlerFunc {
 			return
 		}
 		target := deps.AgentEngineURL + "/api/workspaces/" + url.PathEscape(id) + "/preview"
+		proxyUpstream(w, r, deps, http.MethodPost, target, nil)
+	}
+}
+
+func handleProjectPreviewStop(deps Deps) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		user, err := auth.RequireUser(r.Context(), deps.AuthStore, r)
+		if err != nil {
+			writeAuthError(w, deps, err)
+			return
+		}
+		id := r.PathValue("id")
+		if _, err := deps.ProjectStore.GetProject(r.Context(), id, user.ID); err != nil {
+			writeError(w, http.StatusNotFound, "project not found")
+			return
+		}
+		target := deps.AgentEngineURL + "/api/workspaces/" + url.PathEscape(id) + "/preview/stop"
 		proxyUpstream(w, r, deps, http.MethodPost, target, nil)
 	}
 }

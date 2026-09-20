@@ -4,6 +4,21 @@ Last updated: 2026-09-20
 ## Current Phase
 Stage 0 (Founder Build Sequence, Brief Section 91) — BASIC/MVP
 
+> **R-500 (2026-09-20): Multi-Process Preview & Diagnostics Service (F-02-preview spec).**
+> Implemented authenticated same-origin reverse proxy and lifecycle diagnostics for generated apps.
+> Resolved 127.0.0.1 loopback isolation by introducing Next.js proxy route `/preview/[projectId]/**` and `/preview/[projectId]/api/**`.
+> Enforced strict SSRF defense: destination port is resolved solely via Control-Plane project ownership checks on authenticated user;
+> loopback IP validation prevents internal or external network scanning; non-owners receive 404.
+> Proxied HTML injects `<base href="/preview/${projectId}/">` and rewrites `/_next/` chunk paths, Location headers, and Set-Cookie paths
+> to maintain full application functionality across LAN devices and browsers.
+> Upgraded agent-engine localrun and preview manager with named phase progression (`install` -> `migrate` -> `start` -> `ready`),
+> process PID tracking, and an idle timeout reaper (`OMNISTACKAI_PREVIEW_IDLE_MINUTES`, default 30m).
+> Added control-plane `GET/POST /projects/{id}/preview` and `POST /projects/{id}/preview/stop`.
+> Console Web UI auto-starts previews, visualizes real-time phase progress with live timer, provides restart/stop controls,
+> and displays an honest build-only banner when preview mode is disabled.
+> Gates: 3,750 tests pass, `task verify` passed, `scripts/test.sh` passed.
+> NEXT: **F-03 (R-501) Git Push / GitHub Export (spec `R_&_D/specs/F-03-git.md`)**.
+
 > **R-499 (2026-09-20): Projects & Workspaces Persistence (F-01-projects spec).**
 > Fully implemented on-disk workspace persistence and database-backed multi-tenant project management.
 > In PostgreSQL, created `projects` table (`000004_projects.up.sql`) with foreign key to users and unique index
