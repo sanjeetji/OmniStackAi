@@ -1192,4 +1192,90 @@ if ! rg -qF 'Connect GitHub' "$console_root/app/studio/[projectId]/manage/page.t
   exit 1
 fi
 
+# R-502: Knowledge & Skills — custom instructions & domain templates (F-04-skills spec).
+for required_skills_file in \
+  "$control_plane_root/migrations/000006_skills.up.sql" \
+  "$control_plane_root/migrations/000006_skills.down.sql" \
+  "$control_plane_root/internal/skills/store.go" \
+  "$control_plane_root/internal/skills/handler.go" \
+  "$control_plane_root/internal/skills/skills_test.go" \
+  "$agent_engine_root/src/omnistackai_agent_engine/intake/context.py" \
+  "$agent_engine_root/tests/test_skills_context.py" \
+  "$console_root/components/skills-library.tsx" \
+  "$console_root/app/api/skills/route.ts" \
+  "$console_root/app/api/skills/[id]/route.ts" \
+  "$console_root/app/api/projects/[id]/knowledge/route.ts" \
+  "$console_root/app/api/projects/[id]/skills/route.ts" \
+  "$console_root/app/api/projects/[id]/skills/[skillId]/route.ts"; do
+  if [[ ! -f "$required_skills_file" ]]; then
+    printf 'Missing R-502 contract file: %s\n' "$required_skills_file"
+    exit 1
+  fi
+done
+
+if ! rg -qF 'CREATE TABLE IF NOT EXISTS skills' "$control_plane_root/migrations/000006_skills.up.sql"; then
+  printf 'R-502 migration must create skills table.\n'
+  exit 1
+fi
+
+if ! rg -qF 'CREATE TABLE IF NOT EXISTS project_skills' "$control_plane_root/migrations/000006_skills.up.sql"; then
+  printf 'R-502 migration must create project_skills table.\n'
+  exit 1
+fi
+
+if ! rg -qF 'ADD COLUMN IF NOT EXISTS knowledge' "$control_plane_root/migrations/000006_skills.up.sql"; then
+  printf 'R-502 migration must add knowledge column to projects.\n'
+  exit 1
+fi
+
+if ! rg -qF 'skills.Register' "$control_plane_root/cmd/control-plane/main.go"; then
+  printf 'R-502 control-plane main.go must mount skills handler.\n'
+  exit 1
+fi
+
+if ! rg -qF 'ResolveContext' "$control_plane_root/internal/projects/handler.go"; then
+  printf 'R-502 control-plane projects handler must call ResolveContext.\n'
+  exit 1
+fi
+
+if ! rg -qF 'def assemble_context' "$agent_engine_root/src/omnistackai_agent_engine/intake/context.py"; then
+  printf 'R-502 agent-engine must define assemble_context.\n'
+  exit 1
+fi
+
+if ! rg -qF 'OMNISTACKAI_CONTEXT_MAX_CHARS' "$agent_engine_root/src/omnistackai_agent_engine/intake/context.py"; then
+  printf 'R-502 agent-engine context.py must reference OMNISTACKAI_CONTEXT_MAX_CHARS.\n'
+  exit 1
+fi
+
+if ! rg -qF 'context_truncated' "$agent_engine_root/src/omnistackai_agent_engine/intake/nl_to_ir.py"; then
+  printf 'R-502 agent-engine nl_to_ir.py must handle context_truncated.\n'
+  exit 1
+fi
+
+if ! rg -qF 'context_truncated' "$agent_engine_root/src/omnistackai_agent_engine/intake/app_delta.py"; then
+  printf 'R-502 agent-engine app_delta.py must handle context_truncated.\n'
+  exit 1
+fi
+
+if ! rg -qF 'Skills library' "$console_root/app/settings/page.tsx"; then
+  printf 'R-502 settings page must include Skills library section.\n'
+  exit 1
+fi
+
+if ! rg -qF 'Project Knowledge' "$console_root/app/studio/[projectId]/manage/page.tsx"; then
+  printf 'R-502 manage page must include Project Knowledge.\n'
+  exit 1
+fi
+
+if ! rg -qF 'Project Skills' "$console_root/app/studio/[projectId]/manage/page.tsx"; then
+  printf 'R-502 manage page must include Project Skills.\n'
+  exit 1
+fi
+
+if ! rg -qF 'computeMentionSkills' "$console_root/app/studio/studio-chat.tsx"; then
+  printf 'R-502 studio-chat.tsx must define computeMentionSkills.\n'
+  exit 1
+fi
+
 printf 'Repository contract tests passed.\n'

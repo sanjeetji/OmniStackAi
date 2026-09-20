@@ -730,3 +730,155 @@ export function pushProjectGit(
   );
 }
 
+// ----------------------------------------------------------------------------
+// F-04 / R-502: Knowledge & Skills
+// ----------------------------------------------------------------------------
+
+export interface Skill {
+  id: string;
+  user_id: string;
+  name: string;
+  title: string;
+  description: string;
+  body: string;
+  is_default: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface ProjectKnowledge {
+  knowledge: string;
+  updated_at: string;
+}
+
+export interface CreateSkillParams {
+  name: string;
+  title: string;
+  description?: string;
+  body: string;
+  is_default?: boolean;
+}
+
+export interface UpdateSkillParams {
+  title?: string;
+  description?: string;
+  body?: string;
+  is_default?: boolean;
+}
+
+export function listSkills(token: string): Promise<Skill[]> {
+  return callControlPlane<{ skills: Skill[] }>("/skills", {
+    headers: { Authorization: `Bearer ${token}` },
+  }).then((res) => res.skills ?? []);
+}
+
+export function createSkill(token: string, params: CreateSkillParams): Promise<Skill> {
+  return callControlPlane<Skill>("/skills", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify(params),
+  });
+}
+
+export function getSkill(token: string, skillId: string): Promise<Skill> {
+  return callControlPlane<Skill>(`/skills/${encodeURIComponent(skillId)}`, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+}
+
+export function updateSkill(
+  token: string,
+  skillId: string,
+  params: UpdateSkillParams
+): Promise<Skill> {
+  return callControlPlane<Skill>(`/skills/${encodeURIComponent(skillId)}`, {
+    method: "PATCH",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify(params),
+  });
+}
+
+export function deleteSkill(token: string, skillId: string): Promise<{ deleted: boolean }> {
+  return callControlPlane<{ deleted: boolean }>(`/skills/${encodeURIComponent(skillId)}`, {
+    method: "DELETE",
+    headers: { Authorization: `Bearer ${token}` },
+  });
+}
+
+export function getProjectKnowledge(
+  token: string,
+  projectId: string
+): Promise<ProjectKnowledge> {
+  return callControlPlane<ProjectKnowledge>(
+    `/projects/${encodeURIComponent(projectId)}/knowledge`,
+    {
+      headers: { Authorization: `Bearer ${token}` },
+    }
+  );
+}
+
+export function updateProjectKnowledge(
+  token: string,
+  projectId: string,
+  knowledge: string
+): Promise<ProjectKnowledge> {
+  return callControlPlane<ProjectKnowledge>(
+    `/projects/${encodeURIComponent(projectId)}/knowledge`,
+    {
+      method: "PUT",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify({ knowledge }),
+    }
+  );
+}
+
+export function listProjectSkills(
+  token: string,
+  projectId: string
+): Promise<Skill[]> {
+  return callControlPlane<{ skills: Skill[] }>(
+    `/projects/${encodeURIComponent(projectId)}/skills`,
+    {
+      headers: { Authorization: `Bearer ${token}` },
+    }
+  ).then((res) => res.skills ?? []);
+}
+
+export function attachProjectSkill(
+  token: string,
+  projectId: string,
+  skillId: string
+): Promise<{ attached: boolean }> {
+  return callControlPlane<{ attached: boolean }>(
+    `/projects/${encodeURIComponent(projectId)}/skills/${encodeURIComponent(skillId)}`,
+    {
+      method: "PUT",
+      headers: { Authorization: `Bearer ${token}` },
+    }
+  );
+}
+
+export function detachProjectSkill(
+  token: string,
+  projectId: string,
+  skillId: string
+): Promise<{ detached: boolean }> {
+  return callControlPlane<{ detached: boolean }>(
+    `/projects/${encodeURIComponent(projectId)}/skills/${encodeURIComponent(skillId)}`,
+    {
+      method: "DELETE",
+      headers: { Authorization: `Bearer ${token}` },
+    }
+  );
+}
+
+

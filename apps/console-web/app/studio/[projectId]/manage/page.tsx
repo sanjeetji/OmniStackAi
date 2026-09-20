@@ -7,6 +7,7 @@ import {
   AlertCircle,
   Archive,
   ArrowLeft,
+  BookOpen,
   Check,
   CheckCircle2,
   Coins,
@@ -17,11 +18,14 @@ import {
   GitBranch,
   LoaderCircle,
   Lock,
+  Plus,
   RefreshCw,
   Settings,
   ShieldAlert,
+  Sparkles,
   Trash2,
   Unlink,
+  X,
 } from "lucide-react";
 
 function GithubIcon({ className = "size-4" }: { className?: string }) {
@@ -45,9 +49,12 @@ import type {
   GitConnectionStatus,
   Project,
   ProjectGitStatus,
+  ProjectKnowledge,
+  Skill,
 } from "@/lib/control-plane";
 import { formatDateTime, formatRelativeTime } from "@/lib/time";
 import { DeleteDialog } from "@/components/project-dialogs";
+import { SkillEditorDialog } from "@/components/skills-library";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -58,6 +65,14 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { cn } from "@/lib/utils";
@@ -74,14 +89,32 @@ export default function ProjectManagePage({
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  // Section nav: "general" | "git"
-  const [activeSection, setActiveSection] = useState<"general" | "git">("general");
+  // Section nav: "general" | "knowledge" | "skills" | "git"
+  const [activeSection, setActiveSection] = useState<"general" | "knowledge" | "skills" | "git">("general");
 
   // General Form state
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
   const [saving, setSaving] = useState(false);
   const [savedSuccess, setSavedSuccess] = useState(false);
+
+  // Knowledge state (16 KB max)
+  const [knowledge, setKnowledge] = useState("");
+  const [knowledgeUpdatedAt, setKnowledgeUpdatedAt] = useState<string | null>(null);
+  const [loadingKnowledge, setLoadingKnowledge] = useState(false);
+  const [savingKnowledge, setSavingKnowledge] = useState(false);
+  const [savedKnowledgeSuccess, setSavedKnowledgeSuccess] = useState(false);
+  const [knowledgeError, setKnowledgeError] = useState<string | null>(null);
+
+  // Skills state
+  const [projectSkills, setProjectSkills] = useState<Skill[]>([]);
+  const [allUserSkills, setAllUserSkills] = useState<Skill[]>([]);
+  const [loadingSkills, setLoadingSkills] = useState(false);
+  const [skillsError, setSkillsError] = useState<string | null>(null);
+  const [attachingSkillId, setAttachingSkillId] = useState<string | null>(null);
+  const [detachingSkillId, setDetachingSkillId] = useState<string | null>(null);
+  const [addSkillDialogOpen, setAddSkillDialogOpen] = useState(false);
+  const [newSkillDialogOpen, setNewSkillDialogOpen] = useState(false);
 
   // Git state
   const [gitStatus, setGitStatus] = useState<GitConnectionStatus | null>(null);
@@ -212,6 +245,157 @@ export default function ProjectManagePage({
       active = false;
     };
   }, [activeSection, projectId]);
+
+  const fetchKnowledge = async () => {
+    setLoadingKnowledge(true);
+    setKnowledgeError(null);
+    try {
+      const resp = await fetch(`/api/projects/${encodeURIComponent(projectId)}/knowledge`);
+      if (!resp.ok) throw new Error("Failed to load project knowledge");
+      const data: ProjectKnowledge = await resp.json();
+      setKnowledge(data.knowledge || "");
+      setKnowledgeUpdatedAt(data.updated_at || null);
+    } catch (err: unknown) {
+      setKnowledgeError(err instanceof Error ? err.message : "Failed to load knowledge");
+    } finally {
+      setLoadingKnowledge(false);
+    }
+  };
+
+  const fetchProjectSkills = async () => {
+    setLoadingSkills(true);
+    setSkillsError(null);
+    try {
+      const [projSkillsRes, allSkillsRes] = await Promise.all([
+        fetch(`/api/projects/${encodeURIComponent(projectId)}/skills`),
+        fetch("/api/skills"),
+      ]);
+      if (projSkillsRes.ok) {
+        const data = await projSkillsRes.json();
+        setProjectSkills(data.skills ?? []);
+      }
+      if (allSkillsRes.ok) {
+        const data = await allSkillsRes.json();
+        setAllUserSkills(data.skills ?? []);
+      }
+    } catch (err: unknown) {
+      setSkillsError(err instanceof Error ? err.message : "Failed to load skills");
+    } finally {
+      setLoadingSkills(false);
+    }
+  };
+
+  useEffect(() => {
+    let active = true;
+    if (activeSection === "knowledge") {
+      void (async () => {
+        try {
+          const resp = await fetch(`/api/projects/${encodeURIComponent(projectId)}/knowledge`);
+          if (!resp.ok) throw new Error("Failed to load project knowledge");
+          const data: ProjectKnowledge = await resp.json();
+          if (active) {
+            setKnowledge(data.knowledge || "");
+            setKnowledgeUpdatedAt(data.updated_at || null);
+          }
+        } catch (err: unknown) {
+          if (active) setKnowledgeError(err instanceof Error ? err.message : "Failed to load knowledge");
+        } finally {
+          if (active) setLoadingKnowledge(false);
+        }
+      })();
+    } else if (activeSection === "skills") {
+      void (async () => {
+        try {
+          const [projSkillsRes, allSkillsRes] = await Promise.all([
+            fetch(`/api/projects/${encodeURIComponent(projectId)}/skills`),
+            fetch("/api/skills"),
+          ]);
+          if (!active) return;
+          if (projSkillsRes.ok) {
+            const data = await projSkillsRes.json();
+            setProjectSkills(data.skills ?? []);
+          }
+          if (allSkillsRes.ok) {
+            const data = await allSkillsRes.json();
+            setAllUserSkills(data.skills ?? []);
+          }
+        } catch (err: unknown) {
+          if (active) setSkillsError(err instanceof Error ? err.message : "Failed to load skills");
+        } finally {
+          if (active) setLoadingSkills(false);
+        }
+      })();
+    }
+    return () => {
+      active = false;
+    };
+  }, [activeSection, projectId]);
+
+  const handleSaveKnowledge = async (e: FormEvent) => {
+    e.preventDefault();
+    setSavingKnowledge(true);
+    setSavedKnowledgeSuccess(false);
+    setKnowledgeError(null);
+    try {
+      const resp = await fetch(`/api/projects/${encodeURIComponent(projectId)}/knowledge`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ knowledge }),
+      });
+      if (!resp.ok) {
+        const errData = await resp.json().catch(() => ({}));
+        throw new Error(errData.error || "Failed to save project knowledge");
+      }
+      const data: ProjectKnowledge = await resp.json();
+      setKnowledge(data.knowledge);
+      setKnowledgeUpdatedAt(data.updated_at);
+      setSavedKnowledgeSuccess(true);
+      setTimeout(() => setSavedKnowledgeSuccess(false), 3000);
+    } catch (err: unknown) {
+      setKnowledgeError(err instanceof Error ? err.message : "Failed to save knowledge");
+    } finally {
+      setSavingKnowledge(false);
+    }
+  };
+
+  const handleAttachSkill = async (skillId: string) => {
+    setAttachingSkillId(skillId);
+    try {
+      const resp = await fetch(
+        `/api/projects/${encodeURIComponent(projectId)}/skills/${encodeURIComponent(skillId)}`,
+        { method: "PUT" },
+      );
+      if (!resp.ok) {
+        const errData = await resp.json().catch(() => ({}));
+        throw new Error(errData.error || "Failed to attach skill");
+      }
+      setAddSkillDialogOpen(false);
+      await fetchProjectSkills();
+    } catch (err: unknown) {
+      alert(err instanceof Error ? err.message : "Failed to attach skill");
+    } finally {
+      setAttachingSkillId(null);
+    }
+  };
+
+  const handleDetachSkill = async (skillId: string) => {
+    setDetachingSkillId(skillId);
+    try {
+      const resp = await fetch(
+        `/api/projects/${encodeURIComponent(projectId)}/skills/${encodeURIComponent(skillId)}`,
+        { method: "DELETE" },
+      );
+      if (!resp.ok) {
+        const errData = await resp.json().catch(() => ({}));
+        throw new Error(errData.error || "Failed to detach skill");
+      }
+      await fetchProjectSkills();
+    } catch (err: unknown) {
+      alert(err instanceof Error ? err.message : "Failed to detach skill");
+    } finally {
+      setDetachingSkillId(null);
+    }
+  };
 
   const handleSaveGeneral = async (e: FormEvent) => {
     e.preventDefault();
@@ -433,6 +617,46 @@ export default function ProjectManagePage({
           </button>
           <button
             type="button"
+            onClick={() => setActiveSection("knowledge")}
+            className={cn(
+              "w-full flex items-center justify-between px-3 py-2 text-sm font-medium rounded-md transition-colors",
+              activeSection === "knowledge"
+                ? "bg-secondary text-secondary-foreground"
+                : "text-muted-foreground hover:bg-muted/50 hover:text-foreground",
+            )}
+          >
+            <span className="flex items-center gap-2">
+              <BookOpen className="size-4" />
+              Knowledge
+            </span>
+            {knowledge ? (
+              <Badge variant="outline" className="text-[10px] px-1 py-0 h-4 border-brand/40 text-brand">
+                Active
+              </Badge>
+            ) : null}
+          </button>
+          <button
+            type="button"
+            onClick={() => setActiveSection("skills")}
+            className={cn(
+              "w-full flex items-center justify-between px-3 py-2 text-sm font-medium rounded-md transition-colors",
+              activeSection === "skills"
+                ? "bg-secondary text-secondary-foreground"
+                : "text-muted-foreground hover:bg-muted/50 hover:text-foreground",
+            )}
+          >
+            <span className="flex items-center gap-2">
+              <Sparkles className="size-4" />
+              Skills
+            </span>
+            {projectSkills.length > 0 ? (
+              <Badge variant="secondary" className="text-[10px] px-1.5 py-0 h-4 font-mono">
+                {projectSkills.length}
+              </Badge>
+            ) : null}
+          </button>
+          <button
+            type="button"
             onClick={() => setActiveSection("git")}
             className={cn(
               "w-full flex items-center justify-between px-3 py-2 text-sm font-medium rounded-md transition-colors",
@@ -617,6 +841,294 @@ export default function ProjectManagePage({
                   </div>
                 </CardContent>
               </Card>
+            </>
+          ) : activeSection === "knowledge" ? (
+            <>
+              {/* Knowledge Section */}
+              <Card>
+                <form onSubmit={handleSaveKnowledge}>
+                  <CardHeader>
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <CardTitle className="text-lg flex items-center gap-2">
+                          <BookOpen className="size-4 text-brand" />
+                          Project Knowledge
+                        </CardTitle>
+                        <CardDescription>
+                          Persistent brief and domain context injected into every build and edit of this project.
+                        </CardDescription>
+                      </div>
+                      <Badge variant="outline" className="text-xs">
+                        Applied to every message
+                      </Badge>
+                    </div>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    {knowledgeError && (
+                      <div
+                        role="alert"
+                        className="flex gap-2 rounded-lg border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive"
+                      >
+                        <AlertCircle className="mt-0.5 size-4 shrink-0" />
+                        {knowledgeError}
+                      </div>
+                    )}
+
+                    <div className="grid gap-2">
+                      <div className="flex items-center justify-between">
+                        <Label htmlFor="project-knowledge">Knowledge Brief</Label>
+                        <span
+                          className={cn(
+                            "text-xs tabular-nums",
+                            knowledge.length > 16384 ? "text-destructive font-semibold" : "text-muted-foreground"
+                          )}
+                        >
+                          {knowledge.length.toLocaleString()} / 16,384 chars
+                        </span>
+                      </div>
+                      <textarea
+                        id="project-knowledge"
+                        value={knowledge}
+                        onChange={(e) => setKnowledge(e.target.value)}
+                        placeholder="Define background context, architectural principles, domain entities, or business rules for this project..."
+                        rows={12}
+                        disabled={loadingKnowledge || savingKnowledge}
+                        className="w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm font-mono placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-50"
+                      />
+                      <p className="text-xs text-muted-foreground">
+                        Project knowledge is always prioritized over skills when assembling prompt context.
+                      </p>
+                    </div>
+                  </CardContent>
+                  <CardFooter className="flex items-center justify-between border-t px-6 py-3">
+                    <div className="flex items-center gap-2">
+                      {savedKnowledgeSuccess ? (
+                        <span className="flex items-center gap-1 text-xs text-green-600 dark:text-green-400">
+                          <Check className="size-3.5" />
+                          Knowledge saved successfully
+                        </span>
+                      ) : (
+                        <span className="text-xs text-muted-foreground">
+                          {knowledgeUpdatedAt
+                            ? `Saved ${formatRelativeTime(knowledgeUpdatedAt)}`
+                            : "Never saved"}
+                        </span>
+                      )}
+                    </div>
+                    <Button
+                      type="submit"
+                      size="sm"
+                      disabled={savingKnowledge || loadingKnowledge || knowledge.length > 16384}
+                    >
+                      {savingKnowledge ? (
+                        <>
+                          <LoaderCircle className="size-3.5 animate-spin mr-1.5" />
+                          Saving...
+                        </>
+                      ) : (
+                        "Save knowledge"
+                      )}
+                    </Button>
+                  </CardFooter>
+                </form>
+              </Card>
+            </>
+          ) : activeSection === "skills" ? (
+            <>
+              {/* Skills Section */}
+              <Card>
+                <CardHeader>
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <CardTitle className="text-lg flex items-center gap-2">
+                        <Sparkles className="size-4 text-brand" />
+                        Project Skills
+                      </CardTitle>
+                      <CardDescription>
+                        Custom instruction sets attached to this project and applied to each build.
+                      </CardDescription>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => setAddSkillDialogOpen(true)}
+                        className="gap-1.5"
+                      >
+                        <Plus className="size-3.5" />
+                        Add from library
+                      </Button>
+                      <Button
+                        size="sm"
+                        onClick={() => setNewSkillDialogOpen(true)}
+                        className="gap-1.5"
+                      >
+                        <Plus className="size-3.5" />
+                        New skill
+                      </Button>
+                    </div>
+                  </div>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  {skillsError && (
+                    <div
+                      role="alert"
+                      className="flex gap-2 rounded-lg border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive"
+                    >
+                      <AlertCircle className="mt-0.5 size-4 shrink-0" />
+                      {skillsError}
+                    </div>
+                  )}
+
+                  {loadingSkills ? (
+                    <div className="flex items-center justify-center py-10 text-muted-foreground">
+                      <LoaderCircle className="size-5 animate-spin mr-2" />
+                      Loading project skills...
+                    </div>
+                  ) : projectSkills.length === 0 ? (
+                    <div className="rounded-xl border border-dashed border-border/80 p-8 text-center">
+                      <Sparkles className="mx-auto size-8 text-muted-foreground/60" />
+                      <h3 className="mt-2 text-sm font-semibold">No skills attached yet</h3>
+                      <p className="mt-1 text-xs text-muted-foreground max-w-sm mx-auto">
+                        Attach skills from your library or create new ones to guide this project&apos;s code style and rules.
+                      </p>
+                      <div className="mt-4 flex items-center justify-center gap-2">
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => setAddSkillDialogOpen(true)}
+                          className="gap-1.5"
+                        >
+                          <Plus className="size-3.5" />
+                          Add from library
+                        </Button>
+                        <Button
+                          size="sm"
+                          onClick={() => setNewSkillDialogOpen(true)}
+                          className="gap-1.5"
+                        >
+                          <Plus className="size-3.5" />
+                          Create new skill
+                        </Button>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="grid gap-3 sm:grid-cols-2">
+                      {projectSkills.map((skill) => (
+                        <Card key={skill.id} size="sm" className="flex flex-col justify-between">
+                          <CardHeader className="pb-2">
+                            <div className="flex items-start justify-between gap-2">
+                              <div className="min-w-0">
+                                <CardTitle className="truncate text-sm font-semibold">{skill.title}</CardTitle>
+                                <span className="font-mono text-xs text-brand font-medium">@{skill.name}</span>
+                              </div>
+                              {skill.is_default && (
+                                <Badge variant="secondary" className="text-[10px] uppercase tracking-wider shrink-0">
+                                  Default
+                                </Badge>
+                              )}
+                            </div>
+                            {skill.description && (
+                              <CardDescription className="line-clamp-2 text-xs mt-1">
+                                {skill.description}
+                              </CardDescription>
+                            )}
+                          </CardHeader>
+                          <CardContent className="pt-0 pb-2">
+                            <div className="rounded bg-muted/50 p-2 font-mono text-[11px] text-muted-foreground line-clamp-3">
+                              {skill.body}
+                            </div>
+                          </CardContent>
+                          <CardFooter className="pt-2 border-t flex items-center justify-between text-xs text-muted-foreground">
+                            <span>{skill.body.length.toLocaleString()} chars</span>
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              className="h-7 text-xs text-destructive hover:text-destructive gap-1 px-2"
+                              disabled={detachingSkillId === skill.id}
+                              onClick={() => handleDetachSkill(skill.id)}
+                            >
+                              {detachingSkillId === skill.id ? (
+                                <LoaderCircle className="size-3 animate-spin" />
+                              ) : (
+                                <Unlink className="size-3" />
+                              )}
+                              Detach
+                            </Button>
+                          </CardFooter>
+                        </Card>
+                      ))}
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+
+              {/* Add From Library Dialog */}
+              <Dialog open={addSkillDialogOpen} onOpenChange={setAddSkillDialogOpen}>
+                <DialogContent className="sm:max-w-lg">
+                  <DialogHeader>
+                    <DialogTitle>Add Skill from Library</DialogTitle>
+                    <DialogDescription>
+                      Select an existing skill from your account library to attach to this project.
+                    </DialogDescription>
+                  </DialogHeader>
+                  <div className="max-h-[60vh] overflow-y-auto space-y-2 py-2">
+                    {allUserSkills.filter((s) => !projectSkills.some((ps) => ps.id === s.id)).length === 0 ? (
+                      <div className="py-6 text-center text-xs text-muted-foreground">
+                        All skills in your library are already attached, or no skills exist yet.
+                      </div>
+                    ) : (
+                      allUserSkills
+                        .filter((s) => !projectSkills.some((ps) => ps.id === s.id))
+                        .map((skill) => (
+                          <div
+                            key={skill.id}
+                            className="flex items-center justify-between p-3 rounded-lg border border-border/70 hover:bg-muted/30 transition-colors"
+                          >
+                            <div className="min-w-0 pr-3">
+                              <h4 className="text-sm font-medium truncate">{skill.title}</h4>
+                              <div className="flex items-center gap-2 mt-0.5">
+                                <span className="font-mono text-xs text-brand">@{skill.name}</span>
+                                {skill.description && (
+                                  <span className="text-xs text-muted-foreground truncate max-w-xs">
+                                    · {skill.description}
+                                  </span>
+                                )}
+                              </div>
+                            </div>
+                            <Button
+                              size="sm"
+                              disabled={attachingSkillId === skill.id}
+                              onClick={() => handleAttachSkill(skill.id)}
+                            >
+                              {attachingSkillId === skill.id ? (
+                                <LoaderCircle className="size-3.5 animate-spin" />
+                              ) : (
+                                "Attach"
+                              )}
+                            </Button>
+                          </div>
+                        ))
+                    )}
+                  </div>
+                  <DialogFooter className="border-t pt-3">
+                    <Button variant="outline" onClick={() => setAddSkillDialogOpen(false)}>
+                      Close
+                    </Button>
+                  </DialogFooter>
+                </DialogContent>
+              </Dialog>
+
+              {/* New Skill Shortcut Dialog */}
+              <SkillEditorDialog
+                open={newSkillDialogOpen}
+                onOpenChange={setNewSkillDialogOpen}
+                skill={null}
+                onSaved={async () => {
+                  setNewSkillDialogOpen(false);
+                  await fetchProjectSkills();
+                }}
+              />
             </>
           ) : (
             <>

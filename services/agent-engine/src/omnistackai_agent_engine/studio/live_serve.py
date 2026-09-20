@@ -556,6 +556,7 @@ async def _build_stream(
     session_store: StudioSessionStore | None = None,
     workspace_store: StudioWorkspaceStore | None = None,
     workspace_id: str | None = None,
+    context: dict | None = None,
 ) -> AsyncIterator[dict]:
     """Streaming twin of `_build` (R-484), scoped to the plain-prompt, non-`hybrid_ui` path only -
     the same scope precedent `_edit`/R-476 already set for its own single-IR-only build kinds.
@@ -592,6 +593,7 @@ async def _build_stream(
         max_output_tokens=max_output,
         timeout_seconds=request_timeout,
         overwrite=True,
+        context=context,
     ):
         if isinstance(item, str):
             yield {"phase": "generating_ir", "delta": item}
@@ -604,13 +606,14 @@ async def _build_stream(
     payload["hybrid_ui_active"] = False
     editable_ir = result.ir
 
+    trunc_note = " (Note: Context was truncated due to length limits.)" if result.context_truncated else ""
     if history is not None:
         payload["id"] = history.record(payload)
         if session_store is not None:
             session_store.begin(payload["id"], editable_ir, payload["target_dir"])
             session_store.record_turn(payload["id"], "user", prompt)
             session_store.record_turn(
-                payload["id"], "assistant", f"Built {payload.get('name', 'the app')}."
+                payload["id"], "assistant", f"Built {payload.get('name', 'the app')}.{trunc_note}"
             )
     if workspace_store is not None and workspace_id:
         payload["id"] = workspace_id
@@ -618,7 +621,7 @@ async def _build_stream(
             workspace_store.save_ir(workspace_id, editable_ir)
         workspace_store.append_turn(workspace_id, "user", prompt)
         workspace_store.append_turn(
-            workspace_id, "assistant", f"Built {payload.get('name', 'the app')}."
+            workspace_id, "assistant", f"Built {payload.get('name', 'the app')}.{trunc_note}"
         )
         workspace_store.save_state(workspace_id, payload)
     if preview_manager is None:
@@ -874,6 +877,8 @@ async def _workspace_edit(
     prompt: str,
     *,
     workspace_store: StudioWorkspaceStore,
+    context: dict | None = None,
+    **options,
 ) -> dict:
     with workspace_store.lock(ws_id):
         ir = workspace_store.load_ir(ws_id)
@@ -887,13 +892,18 @@ async def _workspace_edit(
         provider, model_id, _max_output, timeout = resolve_generation_provider_from_env(
             usage_ledger=usage_ledger
         )
-        proposal = await generate_app_delta_proposal(ir, prompt, provider, model_id=model_id, timeout_seconds=timeout)
+        proposal = await generate_app_delta_proposal(
+            ir, prompt, provider, model_id=model_id, timeout_seconds=timeout, context=context
+        )
         new_ir = apply_app_delta(ir, proposal)
         diff = plan_edit(ir, new_ir)
 
+        trunc_note = " (Note: Context was truncated due to length limits.)" if proposal.context_truncated else ""
         if diff.is_empty():
             workspace_store.append_turn(ws_id, "user", prompt)
-            workspace_store.append_turn(ws_id, "assistant", "No file changes were needed for that request.")
+            workspace_store.append_turn(
+                ws_id, "assistant", f"No file changes were needed for that request.{trunc_note}"
+            )
             state = workspace_store.get_state(ws_id) or {}
             return {
                 "id": ws_id,
@@ -902,6 +912,9 @@ async def _workspace_edit(
                 "file_count": state.get("file_count", 0),
                 "commit_sha": state.get("commit_sha", ""),
                 "rationale": proposal.rationale,
+                "context_truncated": proposal.context_truncated,
+                "active_skills": list(proposal.active_skills),
+                "truncated_skills": list(proposal.truncated_skills),
                 "turns": workspace_store.get_turns(ws_id),
                 "usage": _usage_summary_to_dict(usage_ledger),
             }
@@ -912,7 +925,7 @@ async def _workspace_edit(
         )
         workspace_store.save_ir(ws_id, new_ir)
         workspace_store.append_turn(ws_id, "user", prompt)
-        workspace_store.append_turn(ws_id, "assistant", diff.summary())
+        workspace_store.append_turn(ws_id, "assistant", f"{diff.summary()}{trunc_note}")
 
         file_count = len(assemble_project(new_ir).files())
         state = workspace_store.get_state(ws_id) or {}
@@ -933,6 +946,9 @@ async def _workspace_edit(
                 "summary": diff.summary(),
             },
             "rationale": proposal.rationale,
+            "context_truncated": proposal.context_truncated,
+            "active_skills": list(proposal.active_skills),
+            "truncated_skills": list(proposal.truncated_skills),
             "turns": workspace_store.get_turns(ws_id),
             "usage": _usage_summary_to_dict(usage_ledger),
         }
@@ -969,8 +985,8 @@ def main() -> None:
     def workspace_build_stream(ws_id: str, prompt: str, **options) -> AsyncIterator[dict]:
         return _workspace_build_stream(ws_id, prompt, workspace_store=workspace_store, preview_manager=preview_manager, **options)
 
-    def workspace_edit(ws_id: str, prompt: str) -> dict:
-        return asyncio.run(_workspace_edit(ws_id, prompt, workspace_store=workspace_store))
+    def workspace_edit(ws_id: str, prompt: str, **options) -> dict:
+        return asyncio.run(_workspace_edit(ws_id, prompt, workspace_store=workspace_store, **options))
 
     def workspace_preview(ws_id: str, on_phase: Callable[[str], None] | None = None) -> dict:
         if preview_manager is None:

@@ -3,7 +3,9 @@
 import { useEffect, useRef, useState, type FormEvent } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import {
+  AlertCircle,
   ArrowUp,
+  BookOpen,
   Bug,
   Coins,
   FolderTree,
@@ -12,6 +14,7 @@ import {
   Plus,
   Sparkles,
   TriangleAlert,
+  X,
 } from "lucide-react";
 import type {
   BuildEditResponse,
@@ -20,6 +23,8 @@ import type {
   BuildTurnsResponse,
   ChatTurn,
   Project,
+  ProjectKnowledge,
+  Skill,
 } from "@/lib/control-plane";
 import BrandMark from "@/components/brand-mark";
 import { formatServerError } from "@/components/field";
@@ -27,8 +32,16 @@ import ProjectSwitcher from "@/components/project-switcher";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
+import { cn } from "@/lib/utils";
 import { StudioTabs } from "./studio-tabs";
 import { StudioWorkspace, type WorkspaceSnapshot } from "./studio-workspace";
+
+interface BuildStreamResult extends Partial<BuildJobResponse> {
+  phase?: string;
+  context_truncated?: boolean;
+  active_skills?: string[];
+  truncated_skills?: string[];
+}
 
 interface ChatMessage {
   id: string;
@@ -105,11 +118,83 @@ export default function StudioChat({
   const [hydrating, setHydrating] = useState(Boolean(initialProjectId || urlBuildId));
   const [creditBalance, setCreditBalance] = useState(initialCreditBalance);
 
+  // Skills & Knowledge state
+  const [projectKnowledge, setProjectKnowledge] = useState<ProjectKnowledge | null>(null);
+  const [attachedSkills, setAttachedSkills] = useState<Skill[]>([]);
+  const [allUserSkills, setAllUserSkills] = useState<Skill[]>([]);
+  const [excludedSkills, setExcludedSkills] = useState<Set<string>>(new Set());
+  const [excludeKnowledge, setExcludeKnowledge] = useState(false);
+  const [mentionSkills, setMentionSkills] = useState<Set<string>>(new Set());
+  const [truncationWarning, setTruncationWarning] = useState<{
+    truncated: boolean;
+    activeSkills: string[];
+    truncatedSkills: string[];
+  } | null>(null);
+
+  // Mention autocomplete state
+  const [mentionPickerOpen, setMentionPickerOpen] = useState(false);
+  const [mentionQuery, setMentionQuery] = useState("");
+  const [mentionStartIndex, setMentionStartIndex] = useState(0);
+  const [selectedMentionIndex, setSelectedMentionIndex] = useState(0);
+
   const threadRef = useRef<HTMLDivElement | null>(null);
   const textareaRef = useRef<HTMLTextAreaElement | null>(null);
   const formRef = useRef<HTMLFormElement | null>(null);
   const hydratedFor = useRef<string | null>(null);
   const autoStarted = useRef(false);
+
+  // Fetch user skills library once for mention autocomplete
+  useEffect(() => {
+    void (async () => {
+      try {
+        const res = await fetch("/api/skills");
+        if (res.ok) {
+          const data = await res.json();
+          setAllUserSkills(data.skills ?? []);
+        }
+      } catch {
+        // non-blocking
+      }
+    })();
+  }, []);
+
+  // Fetch project knowledge and attached skills
+  useEffect(() => {
+    let active = true;
+    if (!projectId) {
+      void Promise.resolve().then(() => {
+        if (active) {
+          setProjectKnowledge(null);
+          setAttachedSkills([]);
+        }
+      });
+      return () => {
+        active = false;
+      };
+    }
+    void (async () => {
+      try {
+        const [knowRes, skillsRes] = await Promise.all([
+          fetch(`/api/projects/${encodeURIComponent(projectId)}/knowledge`),
+          fetch(`/api/projects/${encodeURIComponent(projectId)}/skills`),
+        ]);
+        if (!active) return;
+        if (knowRes.ok) {
+          const k: ProjectKnowledge = await knowRes.json();
+          setProjectKnowledge(k);
+        }
+        if (skillsRes.ok) {
+          const s = await skillsRes.json();
+          setAttachedSkills(s.skills ?? []);
+        }
+      } catch {
+        // non-blocking
+      }
+    })();
+    return () => {
+      active = false;
+    };
+  }, [projectId]);
 
   // Hydrate persistent project if initialProjectId is provided
   useEffect(() => {
@@ -342,6 +427,97 @@ export default function StudioChat({
     textareaRef.current?.focus();
   }
 
+  const computeMentionSkills = (text: string): string[] => {
+    const textMentions = Array.from(text.matchAll(/@([a-z0-9]+(?:-[a-z0-9]+)*)/g)).map(
+      (m) => m[1],
+    );
+    const set = new Set<string>();
+    for (const s of attachedSkills) {
+      if (!excludedSkills.has(s.name)) {
+        set.add(s.name);
+      }
+    }
+    for (const m of mentionSkills) {
+      if (!excludedSkills.has(m)) {
+        set.add(m);
+      }
+    }
+    for (const m of textMentions) {
+      if (!excludedSkills.has(m)) {
+        set.add(m);
+      }
+    }
+    return Array.from(set);
+  };
+
+  const filteredSkills = allUserSkills.filter((s) =>
+    s.name.toLowerCase().includes(mentionQuery),
+  );
+
+  const handlePromptChange = (event: React.ChangeEvent<HTMLTextAreaElement>) => {
+    const val = event.target.value;
+    const sel = event.target.selectionStart;
+    setPrompt(val);
+
+    const textBefore = val.slice(0, sel);
+    const match = textBefore.match(/(?:^|\s)@([a-z0-9-]*)$/i);
+    if (match) {
+      setMentionQuery(match[1].toLowerCase());
+      setMentionStartIndex(sel - match[1].length - 1);
+      setMentionPickerOpen(true);
+      setSelectedMentionIndex(0);
+    } else {
+      setMentionPickerOpen(false);
+    }
+  };
+
+  const insertMention = (skillName: string) => {
+    const before = prompt.slice(0, mentionStartIndex);
+    const after = prompt.slice(mentionStartIndex + mentionQuery.length + 1);
+    const newText = `${before}@${skillName} ${after}`;
+    setPrompt(newText);
+    setMentionPickerOpen(false);
+    setMentionSkills((prev) => new Set(prev).add(skillName));
+    setTimeout(() => {
+      if (textareaRef.current) {
+        textareaRef.current.focus();
+        const cursor = before.length + skillName.length + 2;
+        textareaRef.current.setSelectionRange(cursor, cursor);
+      }
+    }, 0);
+  };
+
+  const handlePromptKeyDown = (event: React.KeyboardEvent<HTMLTextAreaElement>) => {
+    if (mentionPickerOpen && filteredSkills.length > 0) {
+      if (event.key === "ArrowDown") {
+        event.preventDefault();
+        setSelectedMentionIndex((i) => (i + 1) % filteredSkills.length);
+        return;
+      }
+      if (event.key === "ArrowUp") {
+        event.preventDefault();
+        setSelectedMentionIndex((i) => (i - 1 + filteredSkills.length) % filteredSkills.length);
+        return;
+      }
+      if (event.key === "Enter" || event.key === "Tab") {
+        event.preventDefault();
+        if (filteredSkills[selectedMentionIndex]) {
+          insertMention(filteredSkills[selectedMentionIndex].name);
+        }
+        return;
+      }
+      if (event.key === "Escape") {
+        event.preventDefault();
+        setMentionPickerOpen(false);
+        return;
+      }
+    }
+    if (event.key === "Enter" && !event.shiftKey) {
+      event.preventDefault();
+      event.currentTarget.form?.requestSubmit();
+    }
+  };
+
   /** Streams a new build (via project if fresh) */
   async function sendBuildStream(text: string) {
     setStreamChars(0);
@@ -368,12 +544,13 @@ export default function StudioChat({
       window.history.replaceState(null, "", `/studio/${encodeURIComponent(newProject.id)}`);
 
       // 2. Stream build via project endpoint
+      const mentionList = computeMentionSkills(text);
       const response = await fetch(
         `/api/projects/${encodeURIComponent(newProject.id)}/build/stream`,
         {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ prompt: text }),
+          body: JSON.stringify({ prompt: text, mention_skills: mentionList }),
         },
       );
       if (!response.ok || !response.body) {
@@ -389,7 +566,7 @@ export default function StudioChat({
       const reader = response.body.getReader();
       const decoder = new TextDecoder();
       let buffer = "";
-      let finalResult: (Partial<BuildJobResponse> & { phase?: string }) | null = null;
+      let finalResult: BuildStreamResult | null = null;
       let streamError: string | null = null;
 
       while (true) {
@@ -414,7 +591,7 @@ export default function StudioChat({
                 const delta = typeof payload.delta === "string" ? payload.delta : "";
                 setStreamChars((chars) => chars + delta.length);
               } else if (payload.phase === "done") {
-                finalResult = payload as Partial<BuildJobResponse>;
+                finalResult = payload as unknown as BuildStreamResult;
               } else if (payload.phase === "error") {
                 streamError =
                   typeof payload.error === "string" ? payload.error : "streaming build failed";
@@ -435,6 +612,21 @@ export default function StudioChat({
         appendMessage("assistant", "The build stream ended unexpectedly.", "error");
         return;
       }
+
+      if (finalResult.context_truncated) {
+        setTruncationWarning({
+          truncated: true,
+          activeSkills: Array.isArray(finalResult.active_skills) ? finalResult.active_skills : [],
+          truncatedSkills: Array.isArray(finalResult.truncated_skills)
+            ? finalResult.truncated_skills
+            : [],
+        });
+      } else {
+        setTruncationWarning(null);
+      }
+      setExcludedSkills(new Set());
+      setExcludeKnowledge(false);
+      setMentionSkills(new Set());
 
       appendMessage("assistant", `Built ${finalResult.name ?? newProject.name ?? "the app"}.`);
       setProject((prev) =>
@@ -461,13 +653,18 @@ export default function StudioChat({
   /** Project edit path */
   async function sendProjectEdit(id: string, text: string) {
     try {
+      const mentionList = computeMentionSkills(text);
       const response = await fetch(`/api/projects/${encodeURIComponent(id)}/edit`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ prompt: text }),
+        body: JSON.stringify({ prompt: text, mention_skills: mentionList }),
       });
       const body = (await response.json().catch(() => ({}))) as Partial<BuildEditResponse> &
-        ErrorBody;
+        ErrorBody & {
+          context_truncated?: boolean;
+          active_skills?: string[];
+          truncated_skills?: string[];
+        };
       if (!response.ok) {
         if (response.status === 404) {
           appendMessage(
@@ -484,7 +681,24 @@ export default function StudioChat({
         );
         return;
       }
-      const result = body as BuildEditResponse;
+      const result = body as BuildEditResponse & {
+        context_truncated?: boolean;
+        active_skills?: string[];
+        truncated_skills?: string[];
+      };
+      if (result.context_truncated) {
+        setTruncationWarning({
+          truncated: true,
+          activeSkills: Array.isArray(result.active_skills) ? result.active_skills : [],
+          truncatedSkills: Array.isArray(result.truncated_skills) ? result.truncated_skills : [],
+        });
+      } else {
+        setTruncationWarning(null);
+      }
+      setExcludedSkills(new Set());
+      setExcludeKnowledge(false);
+      setMentionSkills(new Set());
+
       appendMessage("assistant", result.diff?.summary || result.rationale || "Edit applied.");
       if (typeof result.credit_balance === "number") setCreditBalance(result.credit_balance);
       const files = await fetchProjectFiles(id);
@@ -667,6 +881,47 @@ export default function StudioChat({
           {submitting ? <WorkingBubble label={workingLabel} /> : null}
         </div>
 
+        {truncationWarning?.truncated && (
+          <div
+            role="alert"
+            className="mx-3 mb-2 flex items-start justify-between gap-2 rounded-lg border border-amber-500/40 bg-amber-500/10 p-2.5 text-xs text-amber-800 dark:text-amber-200"
+          >
+            <div className="flex items-start gap-2">
+              <AlertCircle className="size-4 shrink-0 text-amber-600 dark:text-amber-400 mt-0.5" />
+              <div>
+                <p className="font-semibold">Context truncated to fit prompt limit</p>
+                <p className="text-[11px] opacity-90 mt-0.5">
+                  Project knowledge was prioritized; some skills were omitted.
+                  {truncationWarning.truncatedSkills.length > 0 && (
+                    <span>
+                      {" "}Omitted:{" "}
+                      <span className="font-mono">
+                        {truncationWarning.truncatedSkills.map((s) => `@${s}`).join(", ")}
+                      </span>.
+                    </span>
+                  )}
+                  {truncationWarning.activeSkills.length > 0 && (
+                    <span>
+                      {" "}Active:{" "}
+                      <span className="font-mono">
+                        {truncationWarning.activeSkills.map((s) => `@${s}`).join(", ")}
+                      </span>.
+                    </span>
+                  )}
+                </p>
+              </div>
+            </div>
+            <button
+              type="button"
+              onClick={() => setTruncationWarning(null)}
+              className="text-amber-700 dark:text-amber-300 hover:text-amber-950 dark:hover:text-amber-100"
+              title="Dismiss"
+            >
+              <X className="size-3.5" />
+            </button>
+          </div>
+        )}
+
         <form ref={formRef} className="border-t border-border/60 p-3" onSubmit={handleSend}>
           {activeProjectId !== null ? (
             <p className="mb-2 px-1 text-xs text-muted-foreground">
@@ -677,23 +932,179 @@ export default function StudioChat({
               {" — "}changes apply to the same project.
             </p>
           ) : null}
+
+          {/* Active Context Chips Row */}
+          {(projectKnowledge?.knowledge || attachedSkills.length > 0 || mentionSkills.size > 0) && (
+            <div className="mb-2 flex flex-wrap items-center gap-1.5 px-1 text-xs">
+              <span className="text-[11px] font-medium text-muted-foreground mr-0.5">Context:</span>
+              {projectKnowledge?.knowledge && (
+                <span
+                  className={cn(
+                    "inline-flex items-center gap-1 rounded-md px-2 py-0.5 text-xs transition-colors",
+                    excludeKnowledge
+                      ? "border border-dashed border-border/60 text-muted-foreground/50 line-through cursor-pointer"
+                      : "bg-brand/10 border border-brand/30 text-brand font-medium",
+                  )}
+                  title={
+                    excludeKnowledge
+                      ? "Click to include project knowledge"
+                      : "Project knowledge applied to every message. Click x to exclude for next message."
+                  }
+                  onClick={excludeKnowledge ? () => setExcludeKnowledge(false) : undefined}
+                >
+                  <BookOpen className="size-3 shrink-0" />
+                  Knowledge
+                  {!excludeKnowledge && (
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setExcludeKnowledge(true);
+                      }}
+                      className="hover:text-foreground text-brand/80 ml-0.5"
+                      title="Exclude for next message"
+                    >
+                      <X className="size-3" />
+                    </button>
+                  )}
+                </span>
+              )}
+
+              {attachedSkills.map((s) => {
+                const isExcluded = excludedSkills.has(s.name);
+                return (
+                  <span
+                    key={s.id}
+                    className={cn(
+                      "inline-flex items-center gap-1 rounded-md px-2 py-0.5 text-xs transition-colors",
+                      isExcluded
+                        ? "border border-dashed border-border/60 text-muted-foreground/50 line-through cursor-pointer"
+                        : "bg-secondary text-secondary-foreground font-mono",
+                    )}
+                    title={
+                      isExcluded
+                        ? `Click to include @${s.name}`
+                        : `${s.title}: ${s.description || s.body.slice(0, 100)}. Click x to exclude for next message.`
+                    }
+                    onClick={
+                      isExcluded
+                        ? () =>
+                            setExcludedSkills((prev) => {
+                              const next = new Set(prev);
+                              next.delete(s.name);
+                              return next;
+                            })
+                        : undefined
+                    }
+                  >
+                    <span>@{s.name}</span>
+                    {!isExcluded && (
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setExcludedSkills((prev) => new Set(prev).add(s.name));
+                        }}
+                        className="hover:text-destructive text-muted-foreground ml-0.5"
+                        title="Exclude for next message"
+                      >
+                        <X className="size-3" />
+                      </button>
+                    )}
+                  </span>
+                );
+              })}
+
+              {Array.from(mentionSkills)
+                .filter((m) => !attachedSkills.some((s) => s.name === m))
+                .map((name) => {
+                  const isExcluded = excludedSkills.has(name);
+                  return (
+                    <span
+                      key={name}
+                      className={cn(
+                        "inline-flex items-center gap-1 rounded-md px-2 py-0.5 text-xs transition-colors",
+                        isExcluded
+                          ? "border border-dashed border-border/60 text-muted-foreground/50 line-through cursor-pointer"
+                          : "bg-brand/10 border border-brand/30 text-brand font-mono",
+                      )}
+                      title={`Mentioned skill @${name}`}
+                      onClick={
+                        isExcluded
+                          ? () =>
+                              setExcludedSkills((prev) => {
+                                const next = new Set(prev);
+                                next.delete(name);
+                                return next;
+                              })
+                          : undefined
+                      }
+                    >
+                      <span>@{name}</span>
+                      {!isExcluded && (
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setMentionSkills((prev) => {
+                              const next = new Set(prev);
+                              next.delete(name);
+                              return next;
+                            });
+                          }}
+                          className="hover:text-destructive text-muted-foreground ml-0.5"
+                          title="Remove mention"
+                        >
+                          <X className="size-3" />
+                        </button>
+                      )}
+                    </span>
+                  );
+                })}
+            </div>
+          )}
+
+          {/* Autocomplete picker for @mentions */}
+          {mentionPickerOpen && filteredSkills.length > 0 && (
+            <div className="mb-2 max-h-48 overflow-y-auto rounded-lg border border-border bg-popover p-1 shadow-lg text-popover-foreground text-xs">
+              <div className="px-2 py-1 text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">
+                Skills Library (@mention)
+              </div>
+              {filteredSkills.map((skill, idx) => (
+                <button
+                  key={skill.id}
+                  type="button"
+                  onClick={() => insertMention(skill.name)}
+                  className={cn(
+                    "w-full flex items-center justify-between rounded-md px-2 py-1.5 text-left transition-colors",
+                    idx === selectedMentionIndex
+                      ? "bg-accent text-accent-foreground font-medium"
+                      : "hover:bg-muted/50",
+                  )}
+                >
+                  <span className="font-mono font-medium text-brand">@{skill.name}</span>
+                  <span className="text-muted-foreground text-[11px] truncate max-w-[200px]">
+                    {skill.title}
+                  </span>
+                </button>
+              ))}
+            </div>
+          )}
+
           <div className="flex items-end gap-2 rounded-xl border border-input bg-background p-1.5 transition-[color,box-shadow] focus-within:border-ring focus-within:ring-3 focus-within:ring-ring/50">
             <textarea
               ref={textareaRef}
-              aria-label={activeProjectId === null ? "Describe the app to build" : "Describe the change"}
+              aria-label={
+                activeProjectId === null ? "Describe the app to build" : "Describe the change"
+              }
               placeholder={
                 activeProjectId === null
-                  ? "A task tracker where users create projects and each project has tasks…"
-                  : "Add a favorites feature…"
+                  ? "A task tracker where users create projects and each project has tasks… (type @ for skills)"
+                  : "Add a favorites feature… (type @ for skills)"
               }
               value={prompt}
-              onChange={(event) => setPrompt(event.target.value)}
-              onKeyDown={(event) => {
-                if (event.key === "Enter" && !event.shiftKey) {
-                  event.preventDefault();
-                  event.currentTarget.form?.requestSubmit();
-                }
-              }}
+              onChange={handlePromptChange}
+              onKeyDown={handlePromptKeyDown}
               disabled={submitting}
               rows={1}
               className="field-sizing-content max-h-40 min-h-9 flex-1 resize-none bg-transparent px-2 py-1.5 text-sm outline-none placeholder:text-muted-foreground disabled:opacity-60"
@@ -712,7 +1123,7 @@ export default function StudioChat({
             </Button>
           </div>
           <p className="mt-1.5 px-1 text-[11px] text-muted-foreground">
-            Enter to send · Shift+Enter for a new line
+            Enter to send · Shift+Enter for a new line · Type @ to mention skills
           </p>
         </form>
       </aside>

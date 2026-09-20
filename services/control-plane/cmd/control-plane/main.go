@@ -22,6 +22,7 @@ import (
 	"github.com/sanjeetji/OmniStackAi/services/control-plane/internal/jobs"
 	"github.com/sanjeetji/OmniStackAi/services/control-plane/internal/password"
 	"github.com/sanjeetji/OmniStackAi/services/control-plane/internal/projects"
+	"github.com/sanjeetji/OmniStackAi/services/control-plane/internal/skills"
 	"github.com/sanjeetji/OmniStackAi/services/control-plane/internal/users"
 	"github.com/sanjeetji/OmniStackAi/services/control-plane/migrations"
 )
@@ -72,9 +73,16 @@ func run(ctx context.Context, logger *slog.Logger) error {
 		CreditsPerUSD:  runtimeConfig.CreditsPerUSD,
 		Logger:         logger,
 	})
+	skillsStore := skills.NewPgStore(pool)
+	skills.Register(mux, skills.Deps{
+		AuthStore:  userStore,
+		SkillStore: skillsStore,
+		Logger:     logger,
+	})
 	projects.Register(mux, projects.Deps{
 		AuthStore:      userStore,
 		ProjectStore:   projectStore,
+		SkillStore:     skillsStore,
 		AgentEngineURL: runtimeConfig.AgentEngineURL,
 		CreditsPerUSD:  runtimeConfig.CreditsPerUSD,
 		Logger:         logger,

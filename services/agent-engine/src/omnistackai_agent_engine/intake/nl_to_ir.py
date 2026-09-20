@@ -23,6 +23,7 @@ import json
 import re
 from collections.abc import AsyncIterator
 from dataclasses import dataclass
+from typing import Any
 
 from ..application_ir import (
     ApplicationIR,
@@ -51,6 +52,7 @@ from ..model_gateway import (
     ModelProvider,
     ModelRef,
 )
+from .context import assemble_context
 from .errors import IntakeError, IntakeResponseError
 
 DEFAULT_TEMPLATE_EXAMPLE = "minimal-blog"
@@ -66,6 +68,9 @@ class IntakeResult:
     ir: ApplicationIR
     issues: tuple[Issue, ...]
     raw_text: str
+    context_truncated: bool = False
+    active_skills: tuple[str, ...] = ()
+    truncated_skills: tuple[str, ...] = ()
 
 
 def _system_instruction(example_name: str) -> str:
@@ -129,19 +134,25 @@ def _system_instruction(example_name: str) -> str:
 
 
 def build_intake_messages(
-    prompt: str, *, example_name: str = DEFAULT_TEMPLATE_EXAMPLE
+    prompt: str,
+    *,
+    example_name: str = DEFAULT_TEMPLATE_EXAMPLE,
+    context_text: str | None = None,
 ) -> tuple[Message, ...]:
     """Build the (system, user) messages instructing a model to emit an Application IR."""
     cleaned = prompt.strip()
     if not cleaned:
         raise IntakeError("prompt must be a non-empty application description")
+    system_text = _system_instruction(example_name).strip()
+    if context_text and context_text.strip():
+        system_text = f"{context_text.strip()}\n\n{system_text}"
     user = (
         "Application description:\n"
         f"{cleaned}\n\n"
         "Return only the Application IR JSON object."
     )
     return (
-        Message(ChatRole.SYSTEM, _system_instruction(example_name).strip()),
+        Message(ChatRole.SYSTEM, system_text),
         Message(ChatRole.USER, user.strip()),
     )
 
@@ -459,13 +470,23 @@ async def generate_ir(
     example_name: str = DEFAULT_TEMPLATE_EXAMPLE,
     max_output_tokens: int = DEFAULT_MAX_OUTPUT_TOKENS,
     timeout_seconds: float = DEFAULT_TIMEOUT_SECONDS,
+    context: dict[str, Any] | str | None = None,
 ) -> IntakeResult:
     """Compile a natural-language prompt into a validated Application IR via ``provider``.
 
     Raises IntakeResponseError if the model output cannot be parsed into a structurally
     valid IR, or if the resulting IR fails semantic validation.
     """
-    messages = build_intake_messages(prompt, example_name=example_name)
+    context_text = ""
+    is_truncated = False
+    active_skills: list[str] = []
+    truncated_skills: list[str] = []
+    if isinstance(context, dict):
+        context_text, is_truncated, active_skills, truncated_skills = assemble_context(context)
+    elif isinstance(context, str):
+        context_text = context
+
+    messages = build_intake_messages(prompt, example_name=example_name, context_text=context_text)
     request = GenerateRequest(
         _REQUEST_ID,
         ModelRef(provider.provider_id, model_id),
@@ -483,7 +504,14 @@ async def generate_ir(
             if issue.severity is Severity.ERROR
         )
         raise IntakeResponseError(f"generated IR failed validation: {detail}")
-    return IntakeResult(ir=ir, issues=issues, raw_text=response.text)
+    return IntakeResult(
+        ir=ir,
+        issues=issues,
+        raw_text=response.text,
+        context_truncated=is_truncated,
+        active_skills=tuple(active_skills),
+        truncated_skills=tuple(truncated_skills),
+    )
 
 
 async def generate_ir_stream(
@@ -494,19 +522,22 @@ async def generate_ir_stream(
     example_name: str = DEFAULT_TEMPLATE_EXAMPLE,
     max_output_tokens: int = DEFAULT_MAX_OUTPUT_TOKENS,
     timeout_seconds: float = DEFAULT_TIMEOUT_SECONDS,
+    context: dict[str, Any] | str | None = None,
 ) -> AsyncIterator[str | IntakeResult]:
     """Streaming twin of `generate_ir` (R-484): yields raw text deltas as they arrive from the
     model via `provider.stream()`, then yields the final `IntakeResult` once the complete response
     has been parsed and validated exactly like `generate_ir` does.
-
-    Callers distinguish a delta from the final result by type: every `str` yielded is an in-order
-    text delta (useful for a live "watching it think" UI even though the accumulated text is not
-    valid JSON until the stream ends); the single, always-last `IntakeResult` is the real, complete,
-    validated outcome — identical in shape to what `generate_ir` itself would have returned for the
-    same prompt. Raises the same `IntakeResponseError` as `generate_ir` for an invalid response;
-    additive only, `generate_ir` itself is unchanged.
     """
-    messages = build_intake_messages(prompt, example_name=example_name)
+    context_text = ""
+    is_truncated = False
+    active_skills: list[str] = []
+    truncated_skills: list[str] = []
+    if isinstance(context, dict):
+        context_text, is_truncated, active_skills, truncated_skills = assemble_context(context)
+    elif isinstance(context, str):
+        context_text = context
+
+    messages = build_intake_messages(prompt, example_name=example_name, context_text=context_text)
     request = GenerateRequest(
         _REQUEST_ID,
         ModelRef(provider.provider_id, model_id),
@@ -529,4 +560,11 @@ async def generate_ir_stream(
             if issue.severity is Severity.ERROR
         )
         raise IntakeResponseError(f"generated IR failed validation: {detail}")
-    yield IntakeResult(ir=ir, issues=issues, raw_text=text)
+    yield IntakeResult(
+        ir=ir,
+        issues=issues,
+        raw_text=text,
+        context_truncated=is_truncated,
+        active_skills=tuple(active_skills),
+        truncated_skills=tuple(truncated_skills),
+    )

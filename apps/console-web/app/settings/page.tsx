@@ -6,6 +6,7 @@ import {
   Cpu,
   KeyRound,
   Palette,
+  Sparkles,
   TriangleAlert,
   UserRound,
   type LucideIcon,
@@ -13,6 +14,7 @@ import {
 import { getProviderStatus, type ProviderInfo, type ProviderStatus } from "@/lib/control-plane";
 import { revealStyle } from "@/lib/motion";
 import { getCurrentUser, getSessionToken } from "@/lib/session";
+import { SkillsLibrary } from "@/components/skills-library";
 import ThemeSwitcher from "@/components/theme-switcher";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -33,6 +35,7 @@ export const metadata: Metadata = {
 const SECTIONS: { id: string; label: string; icon: LucideIcon }[] = [
   { id: "account", label: "Account", icon: UserRound },
   { id: "appearance", label: "Appearance", icon: Palette },
+  { id: "skills", label: "Skills library", icon: Sparkles },
   { id: "providers", label: "Model providers", icon: Cpu },
 ];
 
@@ -135,10 +138,19 @@ export default async function SettingsPage() {
           </section>
 
           <section
+            id="skills"
+            aria-labelledby="skills-title"
+            className="reveal scroll-mt-20"
+            style={revealStyle(3)}
+          >
+            <SkillsLibrary />
+          </section>
+
+          <section
             id="providers"
             aria-labelledby="providers-title"
             className="reveal scroll-mt-20"
-            style={revealStyle(3)}
+            style={revealStyle(4)}
           >
             {/* The only network-dependent section streams in behind the layout's auth gate
                 (R-496), so the rest of Settings renders immediately. */}

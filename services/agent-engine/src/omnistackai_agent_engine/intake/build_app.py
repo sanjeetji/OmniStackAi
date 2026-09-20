@@ -42,6 +42,9 @@ class AppBuildResult:
     target_dir: str
     file_count: int
     commit_sha: str
+    context_truncated: bool = False
+    active_skills: tuple[str, ...] = ()
+    truncated_skills: tuple[str, ...] = ()
 
 
 def build_app_from_ir(
@@ -56,6 +59,9 @@ def build_app_from_ir(
     model_id: str | None = None,
     synthesize_screens: bool = False,
     ui_outcomes: list | None = None,
+    context_truncated: bool = False,
+    active_skills: tuple[str, ...] = (),
+    truncated_skills: tuple[str, ...] = (),
 ) -> AppBuildResult:
     """Assemble ``ir`` into a monorepo and materialize it as an owned Git repo at ``target_dir``.
 
@@ -84,6 +90,9 @@ def build_app_from_ir(
         target_dir=repo.target_dir,
         file_count=repo.file_count,
         commit_sha=repo.commit_sha,
+        context_truncated=context_truncated,
+        active_skills=active_skills,
+        truncated_skills=truncated_skills,
     )
 
 
@@ -94,17 +103,7 @@ def app_build_result_to_dict(
     ui_outcomes: list | None = None,
     usage: dict | None = None,
 ) -> dict:
-    """A JSON-safe view of an AppBuildResult for the studio/API (no secrets).
-
-    ``ui_outcomes`` (R-467) is a list of R-465 ``UiSynthesisOutcome`` records from a hybrid
-    (``synthesize_screens=True``) build; when given and non-empty, an ``"ui_outcomes"`` key is added
-    (each entry via its own ``.to_dict()`` -- already JSON-safe and secret-free). Omitted entirely when
-    ``None`` or empty, so every existing caller's output is unchanged.
-
-    ``usage`` (R-472) is an already-JSON-safe cost/token summary dict (see
-    ``studio/live_serve.py``'s ``_usage_summary_to_dict``); when given, a ``"usage"`` key is added
-    unchanged. Omitted entirely when ``None``, so every existing caller's output is unchanged.
-    """
+    """A JSON-safe view of an AppBuildResult for the studio/API (no secrets)."""
     root = Path(result.target_dir)
     files: list[str] = []
     if root.is_dir():
@@ -126,6 +125,9 @@ def app_build_result_to_dict(
         "target_dir": result.target_dir,
         "commit_sha": result.commit_sha,
         "files": files,
+        "context_truncated": result.context_truncated,
+        "active_skills": list(result.active_skills),
+        "truncated_skills": list(result.truncated_skills),
     }
     if ui_outcomes:
         payload["ui_outcomes"] = [outcome.to_dict() for outcome in ui_outcomes]
@@ -148,6 +150,7 @@ async def build_app_from_prompt(
     overwrite: bool = False,
     synthesize_screens: bool = False,
     ui_outcomes: list | None = None,
+    context: dict | str | None = None,
 ) -> AppBuildResult:
     """Compile ``prompt`` into an IR via ``provider`` and materialize an owned Git repo.
 
@@ -162,6 +165,7 @@ async def build_app_from_prompt(
         example_name=example_name,
         max_output_tokens=max_output_tokens,
         timeout_seconds=timeout_seconds,
+        context=context,
     )
     return build_app_from_ir(
         result.ir,
@@ -174,6 +178,9 @@ async def build_app_from_prompt(
         model_id=model_id,
         synthesize_screens=synthesize_screens,
         ui_outcomes=ui_outcomes,
+        context_truncated=result.context_truncated,
+        active_skills=result.active_skills,
+        truncated_skills=result.truncated_skills,
     )
 
 
@@ -189,15 +196,12 @@ async def build_app_from_prompt_stream(
     max_output_tokens: int = DEFAULT_MAX_OUTPUT_TOKENS,
     timeout_seconds: float = DEFAULT_TIMEOUT_SECONDS,
     overwrite: bool = False,
+    context: dict | str | None = None,
 ) -> AsyncIterator[str | AppBuildResult]:
     """Streaming twin of `build_app_from_prompt` (R-484): yields text deltas from the IR-generation
     call as they arrive, then does the existing `build_app_from_ir`'s pure-disk work (assemble +
     git commit — fast, not usefully streamable token-by-token) once the IR is complete, and yields
     the final `AppBuildResult`.
-
-    Scoped to the plain-prompt path only, matching `_build_stream`'s own scope — no
-    `synthesize_screens`/`ui_outcomes` here (hybrid-UI's own per-file model calls are not streamed
-    in this task). `build_app_from_prompt` itself is unchanged.
     """
     result: IntakeResult | None = None
     async for item in generate_ir_stream(
@@ -207,6 +211,7 @@ async def build_app_from_prompt_stream(
         example_name=example_name,
         max_output_tokens=max_output_tokens,
         timeout_seconds=timeout_seconds,
+        context=context,
     ):
         if isinstance(item, str):
             yield item
@@ -220,4 +225,7 @@ async def build_app_from_prompt_stream(
         author_email=author_email,
         prompt=prompt,
         overwrite=overwrite,
+        context_truncated=result.context_truncated,
+        active_skills=result.active_skills,
+        truncated_skills=result.truncated_skills,
     )

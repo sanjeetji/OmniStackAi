@@ -15,6 +15,7 @@ import (
 	"time"
 
 	"github.com/sanjeetji/OmniStackAi/services/control-plane/internal/auth"
+	"github.com/sanjeetji/OmniStackAi/services/control-plane/internal/skills"
 )
 
 const (
@@ -27,6 +28,7 @@ const (
 type Deps struct {
 	AuthStore      auth.Store
 	ProjectStore   Store
+	SkillStore     skills.Store
 	AgentEngineURL string
 	CreditsPerUSD  float64
 	Logger         *slog.Logger
@@ -265,12 +267,32 @@ func handleProjectBuildStream(deps Deps) http.HandlerFunc {
 		}
 
 		var parsedBody struct {
-			Prompt string `json:"prompt"`
+			Prompt        string   `json:"prompt"`
+			MentionSkills []string `json:"mention_skills"`
 		}
 		_ = json.Unmarshal(body, &parsedBody)
 
+		var contextPayload any
+		if deps.SkillStore != nil {
+			ctxBlock, err := deps.SkillStore.ResolveContext(r.Context(), user.ID, id, parsedBody.MentionSkills)
+			if err != nil {
+				deps.logger().Warn("failed to resolve skills context", "error", err, "project_id", id)
+			} else if ctxBlock != nil {
+				contextPayload = ctxBlock
+			}
+		}
+
+		var upstreamPayload map[string]any
+		if err := json.Unmarshal(body, &upstreamPayload); err != nil {
+			upstreamPayload = make(map[string]any)
+		}
+		if contextPayload != nil {
+			upstreamPayload["context"] = contextPayload
+		}
+		reqBody, _ := json.Marshal(upstreamPayload)
+
 		upstreamURL := deps.AgentEngineURL + "/api/workspaces/" + url.PathEscape(id) + "/build/stream"
-		upstreamRequest, err := http.NewRequestWithContext(r.Context(), http.MethodPost, upstreamURL, bytes.NewReader(body))
+		upstreamRequest, err := http.NewRequestWithContext(r.Context(), http.MethodPost, upstreamURL, bytes.NewReader(reqBody))
 		if err != nil {
 			deps.logger().Error("project build stream agent-engine request", "error", err)
 			writeError(w, http.StatusInternalServerError, "could not build upstream request")
@@ -414,12 +436,32 @@ func handleProjectEdit(deps Deps) http.HandlerFunc {
 		}
 
 		var parsedBody struct {
-			Prompt string `json:"prompt"`
+			Prompt        string   `json:"prompt"`
+			MentionSkills []string `json:"mention_skills"`
 		}
 		_ = json.Unmarshal(body, &parsedBody)
 
+		var contextPayload any
+		if deps.SkillStore != nil {
+			ctxBlock, err := deps.SkillStore.ResolveContext(r.Context(), user.ID, id, parsedBody.MentionSkills)
+			if err != nil {
+				deps.logger().Warn("failed to resolve skills context for edit", "error", err, "project_id", id)
+			} else if ctxBlock != nil {
+				contextPayload = ctxBlock
+			}
+		}
+
+		var upstreamPayload map[string]any
+		if err := json.Unmarshal(body, &upstreamPayload); err != nil {
+			upstreamPayload = make(map[string]any)
+		}
+		if contextPayload != nil {
+			upstreamPayload["context"] = contextPayload
+		}
+		reqBody, _ := json.Marshal(upstreamPayload)
+
 		targetURL := deps.AgentEngineURL + "/api/workspaces/" + url.PathEscape(id) + "/edit"
-		upstreamRequest, err := http.NewRequestWithContext(r.Context(), http.MethodPost, targetURL, bytes.NewReader(body))
+		upstreamRequest, err := http.NewRequestWithContext(r.Context(), http.MethodPost, targetURL, bytes.NewReader(reqBody))
 		if err != nil {
 			deps.logger().Error("build agent-engine project edit request", "error", err)
 			writeError(w, http.StatusInternalServerError, "could not build upstream request")

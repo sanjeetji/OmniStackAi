@@ -31,6 +31,7 @@ from ..application_ir import (
 from ..application_ir.errors import ApplicationIRError
 from ..application_ir.validate import has_errors
 from ..model_gateway import ChatRole, GenerateRequest, Message, ModelProvider, ModelRef
+from .context import assemble_context
 
 MAX_DELTA_ENTITIES = 8
 MAX_DELTA_APIS = 16
@@ -80,6 +81,9 @@ class AppDeltaProposal:
     apis: tuple[ApiEndpoint, ...] = ()
     screens: tuple[Screen, ...] = ()
     rationale: str = ""
+    context_truncated: bool = False
+    active_skills: tuple[str, ...] = ()
+    truncated_skills: tuple[str, ...] = ()
 
     def __post_init__(self) -> None:
         if not isinstance(self.entities, tuple):
@@ -123,15 +127,25 @@ class AppDeltaProposal:
             raise AppDeltaError("rationale must not contain control characters")
 
     def to_dict(self) -> dict[str, Any]:
-        return {
+        d: dict[str, Any] = {
             "entities": [entity.to_dict() for entity in self.entities],
             "apis": [api.to_dict() for api in self.apis],
             "screens": [screen.to_dict() for screen in self.screens],
             "rationale": self.rationale,
         }
+        if self.context_truncated or self.active_skills or self.truncated_skills:
+            d["context_truncated"] = self.context_truncated
+            d["active_skills"] = list(self.active_skills)
+            d["truncated_skills"] = list(self.truncated_skills)
+        return d
 
 
-def build_app_delta_messages(base_ir: ApplicationIR, follow_up_prompt: str) -> tuple[Message, Message]:
+def build_app_delta_messages(
+    base_ir: ApplicationIR,
+    follow_up_prompt: str,
+    *,
+    context_text: str | None = None,
+) -> tuple[Message, Message]:
     """Build the bounded JSON-only instruction for proposing a follow-up delta onto ``base_ir``."""
     if not isinstance(follow_up_prompt, str) or not follow_up_prompt.strip():
         raise AppDeltaError("follow-up prompt must be non-empty text")
@@ -173,6 +187,8 @@ def build_app_delta_messages(base_ir: ApplicationIR, follow_up_prompt: str) -> t
         f"- rationale: concise explanation of the delta, at most {MAX_RATIONALE_LENGTH} characters.\n"
         "- Do not output source code, file paths, shell commands, or values not justified by the request."
     )
+    if context_text and context_text.strip():
+        system = f"{context_text.strip()}\n\n{system}"
     user = (
         f"Existing Entities: {json.dumps(existing_entities, sort_keys=True)}\n"
         f"Existing APIs: {json.dumps(existing_apis, sort_keys=True)}\n"
@@ -455,6 +471,7 @@ async def generate_app_delta_proposal(
     max_output_tokens: int = DEFAULT_APP_DELTA_MAX_OUTPUT_TOKENS,
     timeout_seconds: float = DEFAULT_APP_DELTA_TIMEOUT_SECONDS,
     max_attempts: int = DEFAULT_MAX_ATTEMPTS,
+    context: dict[str, Any] | str | None = None,
 ) -> AppDeltaProposal:
     """Generate a validated AppDeltaProposal, retrying only on a parse/validation rejection.
 
@@ -466,7 +483,16 @@ async def generate_app_delta_proposal(
     resolved_model_id = model_id or (ref.model_id if ref else "model")
     target = ModelRef(resolved_provider_id, resolved_model_id)
 
-    messages = list(build_app_delta_messages(base_ir, follow_up_prompt))
+    context_text = ""
+    is_truncated = False
+    active_skills: list[str] = []
+    truncated_skills: list[str] = []
+    if isinstance(context, dict):
+        context_text, is_truncated, active_skills, truncated_skills = assemble_context(context)
+    elif isinstance(context, str):
+        context_text = context
+
+    messages = list(build_app_delta_messages(base_ir, follow_up_prompt, context_text=context_text))
     attempts_allowed = max(1, int(max_attempts))
     last_reason = ""
     for attempt in range(1, attempts_allowed + 1):
@@ -479,7 +505,16 @@ async def generate_app_delta_proposal(
         )
         response = await provider.generate(request)  # exceptions propagate immediately; never retried
         try:
-            return parse_app_delta_proposal(response.text, base_ir=base_ir)
+            prop = parse_app_delta_proposal(response.text, base_ir=base_ir)
+            return AppDeltaProposal(
+                entities=prop.entities,
+                apis=prop.apis,
+                screens=prop.screens,
+                rationale=prop.rationale,
+                context_truncated=is_truncated,
+                active_skills=tuple(active_skills),
+                truncated_skills=tuple(truncated_skills),
+            )
         except AppDeltaError as error:
             last_reason = str(error)
             if attempt >= attempts_allowed:

@@ -1,5 +1,36 @@
 # Work Log
 
+## 2026-09-20 — R-502 (F-04 Knowledge & Skills Engine)
+
+- **Why:** Custom instructions and domain-specific knowledge are necessary for guiding AI app generation without repeated prompting. `F-04-skills.md` specified a two-tier model: project-level Knowledge (injected into every prompt for that project) and account-level Skills (reusable across projects, attachable, or `@mentionable` per message), with deterministic context assembly bounded by a server-side cap and honest truncation reporting.
+- **Part 1 — Database & Control-Plane (`services/control-plane`):**
+  - Created database migration `000006_skills.up.sql` / `down.sql`: `skills` table (account-scoped, unique `(user_id, slug)`, 8 KB body cap), `project_skills` junction table, and `knowledge` column in `projects` (16 KB cap).
+  - Implemented `internal/skills/store.go` and `handler.go`: CRUD endpoints (`/skills`, `/skills/{id}`), project knowledge (`GET/PUT /projects/{id}/knowledge`), and project skills (`GET/POST /projects/{id}/skills`, `DELETE /projects/{id}/skills/{skillId}`) with caller ownership verification.
+  - Implemented `ResolveContext(ctx, userID, projectID, mentions)`: resolves project knowledge, attached skills, and `@mentioned` skills with tenant isolation.
+  - Updated `internal/projects/handler.go` to inject `ResolveContext` into agent-engine `/build` and `/edit` payloads as `"context"`.
+  - Added unit and HTTP integration tests in `skills_test.go`.
+- **Part 2 — Agent-Engine Context Assembly (`services/agent-engine`):**
+  - Implemented `assemble_context(...)` in `src/omnistackai_agent_engine/intake/context.py`: bounded by `OMNISTACKAI_CONTEXT_MAX_CHARS` (default 24k chars).
+  - Deterministic priority: Knowledge first, then attached and mentioned skills alphabetically. Truncates cleanly at skill boundaries when over budget, returning `context_truncated: true`, `active_skills`, and `truncated_skills`. Zero external dependencies.
+  - Integrated into `intake/nl_to_ir.py`, `intake/build_app.py`, `intake/app_delta.py`, `studio/live_serve.py`, and `studio/server.py`. System prompt injects context instructions without leaking skill bodies into client responses.
+  - Added 9 unit tests in `tests/test_skills_context.py` covering knowledge-only, skills-only, combined, truncation, and empty contexts.
+  - Ensured backward compatibility in `AppDeltaProposal.to_dict()`.
+- **Part 3 — Console-Web Frontend UI (`apps/console-web`):**
+  - Added Skills and Knowledge types and API client functions in `lib/control-plane.ts`.
+  - Added Next.js API routes under `/api/skills/`, `/api/skills/[id]/`, `/api/projects/[id]/knowledge/`, and `/api/projects/[id]/skills/`.
+  - Built `components/skills-library.tsx`: Account skills library with search, cards, delete confirmation, and `SkillEditorDialog`/`SkillEditorForm` (kebab-case slug validation, 8 KB counter, live "What the model will see" preview, 4 starter templates: "Stripe Billing & Subscriptions", "Tailwind + Radix UI Design System", "Strict TypeScript & Zod Schemas", "Audit Logging & Security Headers").
+  - Mounted skills library in `/settings#skills`.
+  - Updated `/studio/[projectId]/manage/page.tsx`: Added "Knowledge" tab (16 KB counter, autosave/save status) and "Skills" tab (attached skills list, library picker modal, detach action, "New skill" shortcut).
+  - Updated `studio-chat.tsx`: Added active context chips with next-message toggle, inline `@` skill mention autocomplete popover, and amber `context_truncated` banner when instructions exceed the server cap.
+- **Evidence & Verification:**
+  - `bash scripts/test.sh`: passed with R-502 contract assertions.
+  - `cd services/control-plane && go test -v ./...`: passed 100% across all packages.
+  - `PYTHONPATH=services/agent-engine/src python3 -m unittest discover -s services/agent-engine/tests`: passed 3,763 tests in 82.5s.
+  - `pnpm --filter omnistackai-console-web typecheck && pnpm --filter omnistackai-console-web lint`: clean with 0 errors/warnings.
+  - `bash scripts/console.sh build`: successfully generated all 46 routes.
+  - `bash scripts/verify.sh`: all Stage 0 checks passed.
+- **Next:** Proceed to F-05 (R-503) Secrets — encrypted per-project configuration (spec `R_&_D/specs/F-05-secrets.md`).
+
 ## 2026-09-20 — R-501 (F-03 Code ownership — download, connect GitHub, push)
 
 - **Why:** Code ownership is essential to prevent vendor lock-in and enable deployment to Vercel/Netlify. `F-03-git.md` specified two paths: a free, instant no-account `.zip` export, and a full GitHub App connection with installation token minting, repo creation, and authenticated push with zero credential leakage.

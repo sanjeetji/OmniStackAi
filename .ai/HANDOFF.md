@@ -1,5 +1,21 @@
 # Current Handoff
 
+Task ID: R-502
+Status: done
+Phase: MVP → Phase F (platform foundation)
+Branch: `ai/R-502-skills-engine`
+
+> **R-502 Completed (2026-09-20): Skills engine — custom instructions & domain templates (F-04-skills spec).**
+> - **Database & Schema:** Created migration `000006_skills.up.sql` (`skills`, `project_skills` junction table, and `knowledge` column in `projects`).
+> - **Control-Plane API:** Implemented `internal/skills` store & REST handlers for skills CRUD, project knowledge, and project skill attachments. Implemented `ResolveContext` injecting knowledge, attached skills, and `@mentioned` skills into agent-engine `/build` and `/edit` requests.
+> - **Agent-Engine Context Assembly:** Implemented `assemble_context` in `intake/context.py` bounded by `OMNISTACKAI_CONTEXT_MAX_CHARS` (24k chars) with deterministic knowledge priority, clean boundary truncation, and `context_truncated` alerting. Propagated through system prompt in `nl_to_ir.py`, `build_app.py`, and `app_delta.py` without leaking skill bodies to browser responses.
+> - **Web Console Frontend:**
+>   - Account Skills Library in `/settings#skills` with kebab-case slug validation, 8 KB counter, live prompt preview, and 4 starter templates.
+>   - Manage Project Knowledge tab (16 KB counter, autosave/save status) and Skills tab (attached skills list, library picker, detach, new skill shortcut) in `/studio/[projectId]/manage`.
+>   - Studio Chat active context chips with toggle, inline `@` skill mention autocomplete popover, and amber `context_truncated` banner.
+> - **Gates:** `scripts/test.sh` passed, `go test -v ./...` passed, `task agent-engine:test` passed (3,763 tests OK), Next.js `typecheck`, `lint`, and `build` passed, `task verify` clean.
+> - **NEXT:** F-05 (R-503) Secrets — encrypted per-project configuration (spec `R_&_D/specs/F-05-secrets.md`).
+
 Task ID: R-501
 Status: done
 Phase: MVP → Phase F (platform foundation)

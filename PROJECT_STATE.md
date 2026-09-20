@@ -4,6 +4,27 @@ Last updated: 2026-09-20
 ## Current Phase
 Stage 0 (Founder Build Sequence, Brief Section 91) — BASIC/MVP
 
+> **R-502 (2026-09-20): Knowledge & Skills — custom instructions & domain templates (F-04-skills spec).**
+> Implemented a complete two-layer custom instructions system for project-level briefs and account-level reusable skills.
+> Layer 1 — Project Knowledge: Persistent per-project brief (up to 16,384 characters) injected into every build and edit of that project,
+> prioritized ahead of any user skills in prompt context. Stored in `projects.knowledge` via PostgreSQL migration `000006_skills.up.sql`.
+> Layer 2 — User Skills: Reusable instruction sets (up to 8,192 characters each) with lower-kebab-case identifiers (`^[a-z0-9]+(-[a-z0-9]+)*$`),
+> attachable to specific projects (`project_skills` junction table), set as account defaults (`is_default`), or invoked ad-hoc in single
+> messages via `@mentions`.
+> Control-Plane Backend: Built `internal/skills` store and REST handlers (`/skills`, `/skills/{id}`, `/projects/{id}/knowledge`,
+> `/projects/{id}/skills`, `/projects/{id}/skills/{skillId}`) and context resolution engine (`ResolveContext`). Updated projects handler to forward
+> resolved context to the agent-engine on all build and edit requests.
+> Agent-Engine Context Injection: Implemented `intake/context.py` with deterministic context assembly obeying `OMNISTACKAI_CONTEXT_MAX_CHARS`
+> (default 24k cap), prioritizing knowledge, sorting skills, and cleanly truncating from the end with `context_truncated: true` and active/truncated
+> skill lists. Injected into system prompt ahead of schema/rules in `nl_to_ir` and `app_delta`. Protected user privacy by never leaking full skill
+> bodies back to the browser in chat/build streams.
+> Console Web UI: Added **Manage → Knowledge** tab (16 KB textarea, character counter, saved-at timestamp), **Manage → Skills** tab
+> (attached skills list, detach action, "Add from library" picker, "New skill" shortcut), **Settings → Skills library** (account skills cards,
+> skill editor dialog with live "What the model will see" preview and 4 one-click starter templates), and **Studio chat composer** (active context
+> chips with next-message toggle, inline `@` autocomplete popover, and honest amber `context_truncated` alert banner).
+> Gates: 3,763 tests pass, `task verify` passed, `scripts/test.sh` passed, Next.js build clean.
+> NEXT: **F-05 (R-503) Secrets — encrypted per-project configuration (spec `R_&_D/specs/F-05-secrets.md`)**.
+
 > **R-501 (2026-09-20): Code ownership — download, connect GitHub, push (F-03-git spec).**
 > Implemented instant .zip export and GitHub App connection + push, solving vendor lock-in and enabling code ownership.
 > Part 1 — Instant Download (.zip): Added streaming endpoint `GET /projects/{id}/export` and agent-engine `export_zip`

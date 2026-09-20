@@ -439,8 +439,12 @@ def _make_handler(
             if not prompt:
                 self._send_json(400, {"error": "prompt is required"})
                 return
+            options = {k: v for k, v in data.items() if k != "prompt"}
             try:
-                maybe_coro = workspace_edit_fn(ws_id, prompt)
+                try:
+                    maybe_coro = workspace_edit_fn(ws_id, prompt, **options)
+                except TypeError:
+                    maybe_coro = workspace_edit_fn(ws_id, prompt)
                 if asyncio.iscoroutine(maybe_coro):
                     res = asyncio.run(maybe_coro)
                 else:
