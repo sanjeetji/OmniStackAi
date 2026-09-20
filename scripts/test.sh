@@ -1737,6 +1737,48 @@ if ! rg -qF 'deploy.Register' "$control_plane_root/cmd/control-plane/main.go"; t
   exit 1
 fi
 
+# R-510 (G-02 Custom Domains): domains migration, domains package, verifier, and console-web domain UI
+for required_domain_file in \
+  "$control_plane_root/migrations/000011_domains.up.sql" \
+  "$control_plane_root/migrations/000011_domains.down.sql" \
+  "$control_plane_root/internal/domains/store.go" \
+  "$control_plane_root/internal/domains/verifier.go" \
+  "$control_plane_root/internal/domains/handler.go" \
+  "$console_root/components/project-domain-manage.tsx" \
+  "$console_root/app/api/projects/[id]/domains/route.ts" \
+  "$console_root/app/api/projects/[id]/domains/[domainId]/route.ts" \
+  "$console_root/app/api/projects/[id]/domains/[domainId]/verify/route.ts"; do
+  if [[ ! -f "$required_domain_file" ]]; then
+    printf 'Missing R-510 contract file: %s\n' "$required_domain_file"
+    exit 1
+  fi
+done
+
+if ! rg -qF 'UNIQUE' "$control_plane_root/migrations/000011_domains.up.sql"; then
+  printf 'R-510 000011_domains.up.sql must enforce UNIQUE hostname constraint for anti-hijacking.\n'
+  exit 1
+fi
+
+if ! rg -qF 'listProjectDomains' "$console_root/lib/control-plane.ts"; then
+  printf 'R-510 lib/control-plane.ts must define listProjectDomains.\n'
+  exit 1
+fi
+
+if ! rg -qF 'verifyProjectDomain' "$console_root/lib/control-plane.ts"; then
+  printf 'R-510 lib/control-plane.ts must define verifyProjectDomain.\n'
+  exit 1
+fi
+
+if ! rg -qF 'ProjectDomainManage' "$console_root/app/studio/[projectId]/manage/page.tsx"; then
+  printf 'R-510 manage page must render ProjectDomainManage.\n'
+  exit 1
+fi
+
+if ! rg -qF 'domains.Register' "$control_plane_root/cmd/control-plane/main.go"; then
+  printf 'R-510 control-plane main must register domains routes.\n'
+  exit 1
+fi
+
 printf 'Repository contract tests passed.\n'
 
 

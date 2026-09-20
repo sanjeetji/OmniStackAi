@@ -1794,5 +1794,96 @@ export function getProjectDeployment(
   );
 }
 
+// R-510 (G-02 Custom Domains)
+export interface ProjectDomain {
+  id: string;
+  project_id: string;
+  hostname: string;
+  provider: string;
+  record_type: string;
+  record_name: string;
+  record_value: string;
+  status: "pending" | "verifying" | "verified" | "failed" | "removed";
+  tls_status: "pending" | "issued" | "failed";
+  is_primary: boolean;
+  last_checked_at?: string;
+  verified_at?: string;
+  error?: string;
+  created_at: string;
+}
+
+export function listProjectDomains(
+  token: string,
+  projectId: string
+): Promise<{ domains: ProjectDomain[] }> {
+  return callControlPlane<{ domains: ProjectDomain[] }>(
+    `/projects/${encodeURIComponent(projectId)}/domains`,
+    {
+      headers: { Authorization: `Bearer ${token}` },
+    }
+  );
+}
+
+export function addProjectDomain(
+  token: string,
+  projectId: string,
+  hostname: string,
+  provider?: string
+): Promise<ProjectDomain> {
+  return callControlPlane<ProjectDomain>(
+    `/projects/${encodeURIComponent(projectId)}/domains`,
+    {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${token}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ hostname, provider }),
+    }
+  );
+}
+
+export function verifyProjectDomain(
+  token: string,
+  projectId: string,
+  domainId: string
+): Promise<ProjectDomain> {
+  return callControlPlane<ProjectDomain>(
+    `/projects/${encodeURIComponent(projectId)}/domains/${encodeURIComponent(domainId)}/verify`,
+    {
+      method: "POST",
+      headers: { Authorization: `Bearer ${token}` },
+    }
+  );
+}
+
+export function setPrimaryDomain(
+  token: string,
+  projectId: string,
+  domainId: string
+): Promise<ProjectDomain> {
+  return callControlPlane<ProjectDomain>(
+    `/projects/${encodeURIComponent(projectId)}/domains/${encodeURIComponent(domainId)}/primary`,
+    {
+      method: "PUT",
+      headers: { Authorization: `Bearer ${token}` },
+    }
+  );
+}
+
+export function deleteProjectDomain(
+  token: string,
+  projectId: string,
+  domainId: string
+): Promise<{ deleted: boolean }> {
+  return callControlPlane<{ deleted: boolean }>(
+    `/projects/${encodeURIComponent(projectId)}/domains/${encodeURIComponent(domainId)}`,
+    {
+      method: "DELETE",
+      headers: { Authorization: `Bearer ${token}` },
+    }
+  );
+}
+
 
 

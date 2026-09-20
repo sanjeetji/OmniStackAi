@@ -1,5 +1,28 @@
 # Current Handoff
 
+Task ID: R-510
+Status: done
+Phase: MVP → Phase G (custom domains)
+Branch: `ai/R-510-custom-domains`
+
+> **R-510 Completed (2026-09-20): G-02 Custom Domain — Bring Your Own (`R_&_D/specs/G-02-domains.md`).**
+> - **Database Migration (`services/control-plane/migrations/`):**
+>   - Created `000011_domains.up.sql` / `down.sql`: table `project_domains` with global `UNIQUE (hostname)` anti-hijacking check, `provider`, `record_type`, `record_name`, `record_value`, `status`, `tls_status`, `is_primary`, `last_checked_at`, `verified_at`, `error`, `created_at`.
+> - **Control-Plane Backend (`services/control-plane/internal/domains/` & `internal/deploy/`):**
+>   - Extended `DeployProvider` interface in `internal/deploy/provider.go` with domain methods: `AddDomain`, `VerifyDomain`, `RemoveDomain` for `VercelProvider`, `NetlifyProvider`, and `mockDeployProvider`.
+>   - `internal/domains/store.go`: PostgreSQL store with tenant-isolated domain listing, creation, atomic primary domain designation, and status updating.
+>   - `internal/domains/verifier.go`: RFC 1123 hostname syntax validation, anti-hijack checks, rejection of IP addresses and bare TLDs; apex vs subdomain classification; standard-library DNS verification (`net.LookupCNAME` / `net.LookupIP`).
+>   - `internal/domains/handler.go`: REST endpoints (`GET/POST /projects/{id}/domains`, `POST /projects/{id}/domains/{domainId}/verify`, `PUT /projects/{id}/domains/{domainId}/primary`, `DELETE /projects/{id}/domains/{domainId}`) with two-phase verification rule (both standard DNS and provider verification must agree before marking verified) and honest TLS status reporting.
+>   - Unit tests in `domains_test.go`: All tests pass.
+>   - Registered in `cmd/control-plane/main.go`.
+> - **Console Web UI (`apps/console-web/`):**
+>   - Client SDK and types in `lib/control-plane.ts`.
+>   - API route proxies under `/api/projects/[id]/domains/`.
+>   - `components/project-domain-manage.tsx`: Manage -> Domain tab with zero-markup info notice, live hostname format validation, copyable DNS instruction cards (CNAME/A) with visual feedback, step-by-step registrar setup guides with direct dashboard links for Cloudflare, GoDaddy, Namecheap, Hostinger, BigRock, real-time DNS and TLS status badges, "Check DNS now" live polling, propagation disclaimer (minutes to 48 hours), primary domain toggle, and domain removal.
+>   - Mounted Domain tab in Studio Manage (`app/studio/[projectId]/manage/page.tsx`).
+> - **Gates:** `bash scripts/test.sh` passed with R-510 assertions, `go test ./...` passed (all 15 packages), Next.js `typecheck` and `lint` passed, `task verify` passed (3,831 tests passed).
+> - **NEXT:** Next roadmap task in Phase G.
+
 Task ID: R-509
 Status: done
 Phase: MVP → Phase G (publish & deployments)

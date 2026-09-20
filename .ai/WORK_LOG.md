@@ -1,6 +1,37 @@
 # Work Log
 
-## 2026-09-20 — R-509 (G-01 Publish v1: GitHub -> Vercel / Netlify)
+## 2026-09-20 — R-510 (G-02 Custom Domain: Bring Your Own)
+
+- **Why:** Allow developers to connect their own custom domains (from Cloudflare, GoDaddy, Namecheap, Hostinger, BigRock, etc.) to their published OmniStackAI applications (`R_&_D/specs/G-02-domains.md`), with ₹0 domain registrar, purchasing, renewal, or WHOIS overhead for the platform.
+- **Part 1 — Database Migration (`services/control-plane/migrations/`):**
+  - Created `000011_domains.up.sql` and `000011_domains.down.sql`:
+    - `project_domains`: `id`, `project_id` (CASCADE), `hostname` (UNIQUE anti-hijack constraint), `provider`, `record_type`, `record_name`, `record_value`, `status` ('pending', 'verifying', 'verified', 'failed', 'removed'), `tls_status` ('pending', 'issued', 'failed'), `is_primary`, `last_checked_at`, `verified_at`, `error`, `created_at`.
+    - Created indexes on `project_id` and `hostname`.
+- **Part 2 — Control-Plane Backend (`services/control-plane/internal/domains/` & `internal/deploy/`):**
+  - Extended `DeployProvider` in `internal/deploy/provider.go` with domain methods: `AddDomain`, `VerifyDomain`, `RemoveDomain` for `VercelProvider`, `NetlifyProvider`, and `mockDeployProvider`.
+  - Implemented `internal/domains/store.go`: `PgStore` managing domain CRUD, primary domain designation with atomic transactions, and status updates.
+  - Implemented `internal/domains/verifier.go`: RFC 1123 hostname syntax validation, prohibition of IP addresses, bare TLDs, and platform domains; apex vs subdomain detection; standard-library DNS verification (`net.LookupCNAME` / `net.LookupIP`).
+  - Implemented `internal/domains/handler.go`: REST endpoints (`GET/POST /projects/{id}/domains`, `POST /projects/{id}/domains/{domainId}/verify`, `PUT /projects/{id}/domains/{domainId}/primary`, `DELETE /projects/{id}/domains/{domainId}`) with strict tenant isolation, anti-hijacking prevention (409 Conflict), and two-phase DNS + provider verification rule.
+  - Added comprehensive unit tests in `domains_test.go`: RFC 1123 validation, apex classification, DNS record calculation, mock resolver lifecycle, and anti-hijacking conflict checks.
+  - Registered `domains.Register` in `cmd/control-plane/main.go`.
+- **Part 3 — Console Web UI (`apps/console-web/`):**
+  - Updated `lib/control-plane.ts`: Added `ProjectDomain` interface and client SDK functions (`listProjectDomains`, `addProjectDomain`, `verifyProjectDomain`, `setPrimaryDomain`, `deleteProjectDomain`).
+  - Added Next.js API route proxies:
+    - `/api/projects/[id]/domains`
+    - `/api/projects/[id]/domains/[domainId]`
+    - `/api/projects/[id]/domains/[domainId]/verify`
+  - Created `components/project-domain-manage.tsx`:
+    - Clean, modern UI with empty state and informative zero-markup disclaimer.
+    - Live RFC 1123 format validation with instant error messages.
+    - DNS instruction cards (Type, Name/Host, Target/Value) with one-click copy buttons and visual feedback.
+    - Step-by-step registrar setup guides with direct links for Cloudflare, GoDaddy, Namecheap, Hostinger, BigRock.
+    - Honest DNS status badges (Connected / Resolving / Pending) and real TLS badges (Active / Pending / Failed) — never fake locks.
+    - "Check DNS now" live polling action and propagation expectations notice (minutes to 48 hours).
+    - Primary domain badge and toggle, and domain disconnect action.
+  - Mounted `ProjectDomainManage` into `apps/console-web/app/studio/[projectId]/manage/page.tsx` under the new **Domain** tab.
+- **Part 4 — Verification & Contract Testing:**
+  - Added R-510 assertions to `scripts/test.sh`.
+  - Verified with `task lint` (clean), Go tests across all 15 packages (clean), Next.js typecheck and lint (clean), and full `task verify` (3,831 tests pass).
 
 - **Why:** Enable developers to deploy generated applications directly from their connected GitHub repository to their own Vercel or Netlify account via personal access tokens (`R_&_D/specs/G-01-publish.md`), achieving ₹0 hosting infrastructure cost for OmniStackAI while delivering seamless 1-click cloud deployments.
 - **Part 1 — Database Migrations (`services/control-plane/migrations/`):**

@@ -23,6 +23,9 @@ type DeployProvider interface {
 	TriggerDeploy(ctx context.Context, token, externalID, projectName, repoFullName, commitSHA string) (deploymentID, liveURL string, err error)
 	GetDeployment(ctx context.Context, token, deploymentID string) (status, liveURL, logURL, errorMsg string, err error)
 	SetEnv(ctx context.Context, token, externalID string, env map[string]string) error
+	AddDomain(ctx context.Context, token, externalID, hostname string) (recordType, recordName, recordValue string, verified bool, err error)
+	VerifyDomain(ctx context.Context, token, externalID, hostname string) (dnsVerified, tlsIssued bool, errorMsg string, err error)
+	RemoveDomain(ctx context.Context, token, externalID, hostname string) error
 }
 
 // VercelProvider implements DeployProvider for Vercel REST API v10/v13
@@ -294,6 +297,126 @@ func (v *VercelProvider) GetDeployment(ctx context.Context, token, deploymentID 
 	return status, liveURL, data.InspectorURL, data.ErrorMessage, nil
 }
 
+func (v *VercelProvider) AddDomain(ctx context.Context, token, externalID, hostname string) (string, string, string, bool, error) {
+	payload := map[string]any{
+		"name": hostname,
+	}
+	bodyBytes, _ := json.Marshal(payload)
+	req, err := http.NewRequestWithContext(ctx, "POST", v.BaseURL+"/v9/projects/"+externalID+"/domains", bytes.NewReader(bodyBytes))
+	if err != nil {
+		return "", "", "", false, err
+	}
+	req.Header.Set("Authorization", "Bearer "+token)
+	req.Header.Set("Content-Type", "application/json")
+
+	resp, err := v.HTTPClient.Do(req)
+	if err != nil {
+		return "", "", "", false, fmt.Errorf("%w: %v", ErrProviderAPIFailed, err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode >= 400 && resp.StatusCode != http.StatusConflict {
+		b, _ := io.ReadAll(resp.Body)
+		return "", "", "", false, fmt.Errorf("%w: HTTP %d: %s", ErrProviderAPIFailed, resp.StatusCode, string(b))
+	}
+
+	var data struct {
+		Name         string `json:"name"`
+		ApexName     string `json:"apexName"`
+		Verified     bool   `json:"verified"`
+		Verification []struct {
+			Type   string `json:"type"`
+			Domain string `json:"domain"`
+			Value  string `json:"value"`
+			Reason string `json:"reason"`
+		} `json:"verification"`
+	}
+	if resp.StatusCode == http.StatusOK || resp.StatusCode == http.StatusCreated {
+		_ = json.NewDecoder(resp.Body).Decode(&data)
+	}
+
+	isApex := data.ApexName == hostname || (data.ApexName == "" && strings.Count(hostname, ".") == 1)
+	recordType := "CNAME"
+	recordName := strings.Split(hostname, ".")[0]
+	recordValue := "cname.vercel-dns.com"
+	if isApex {
+		recordType = "A"
+		recordName = "@"
+		recordValue = "76.76.21.21"
+	}
+	if len(data.Verification) > 0 {
+		recordType = data.Verification[0].Type
+		recordValue = data.Verification[0].Value
+		recordName = data.Verification[0].Domain
+	}
+
+	return recordType, recordName, recordValue, data.Verified, nil
+}
+
+func (v *VercelProvider) VerifyDomain(ctx context.Context, token, externalID, hostname string) (bool, bool, string, error) {
+	reqVerify, err := http.NewRequestWithContext(ctx, "POST", v.BaseURL+"/v9/projects/"+externalID+"/domains/"+hostname+"/verify", nil)
+	if err == nil {
+		reqVerify.Header.Set("Authorization", "Bearer "+token)
+		if resp, err := v.HTTPClient.Do(reqVerify); err == nil {
+			_ = resp.Body.Close()
+		}
+	}
+
+	req, err := http.NewRequestWithContext(ctx, "GET", v.BaseURL+"/v9/projects/"+externalID+"/domains/"+hostname, nil)
+	if err != nil {
+		return false, false, "", err
+	}
+	req.Header.Set("Authorization", "Bearer "+token)
+
+	resp, err := v.HTTPClient.Do(req)
+	if err != nil {
+		return false, false, "", fmt.Errorf("%w: %v", ErrProviderAPIFailed, err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode >= 400 {
+		b, _ := io.ReadAll(resp.Body)
+		return false, false, string(b), fmt.Errorf("%w: HTTP %d: %s", ErrProviderAPIFailed, resp.StatusCode, string(b))
+	}
+
+	var data struct {
+		Name     string `json:"name"`
+		Verified bool   `json:"verified"`
+		Error    struct {
+			Code    string `json:"code"`
+			Message string `json:"message"`
+		} `json:"error"`
+	}
+	if err := json.NewDecoder(resp.Body).Decode(&data); err != nil {
+		return false, false, "", err
+	}
+
+	if !data.Verified {
+		errMsg := data.Error.Message
+		if errMsg == "" {
+			errMsg = "DNS records not yet propagated to Vercel"
+		}
+		return false, false, errMsg, nil
+	}
+
+	return true, true, "", nil
+}
+
+func (v *VercelProvider) RemoveDomain(ctx context.Context, token, externalID, hostname string) error {
+	req, err := http.NewRequestWithContext(ctx, "DELETE", v.BaseURL+"/v9/projects/"+externalID+"/domains/"+hostname, nil)
+	if err != nil {
+		return err
+	}
+	req.Header.Set("Authorization", "Bearer "+token)
+
+	resp, err := v.HTTPClient.Do(req)
+	if err != nil {
+		return fmt.Errorf("%w: %v", ErrProviderAPIFailed, err)
+	}
+	defer resp.Body.Close()
+	return nil
+}
+
 // NetlifyProvider implements DeployProvider for Netlify API v1
 type NetlifyProvider struct {
 	BaseURL    string
@@ -509,4 +632,88 @@ func (n *NetlifyProvider) GetDeployment(ctx context.Context, token, deploymentID
 	}
 
 	return status, liveURL, data.AdminURL, data.Error, nil
+}
+
+func (n *NetlifyProvider) AddDomain(ctx context.Context, token, externalID, hostname string) (string, string, string, bool, error) {
+	payload := map[string]any{
+		"domain": hostname,
+	}
+	bodyBytes, _ := json.Marshal(payload)
+	req, err := http.NewRequestWithContext(ctx, "POST", n.BaseURL+"/api/v1/sites/"+externalID+"/domain_aliases", bytes.NewReader(bodyBytes))
+	if err == nil {
+		req.Header.Set("Authorization", "Bearer "+token)
+		req.Header.Set("Content-Type", "application/json")
+		if resp, err := n.HTTPClient.Do(req); err == nil {
+			_ = resp.Body.Close()
+		}
+	}
+
+	isApex := strings.Count(hostname, ".") == 1
+	recordType := "CNAME"
+	recordName := strings.Split(hostname, ".")[0]
+	recordValue := externalID + ".netlify.app"
+	if isApex {
+		recordType = "A"
+		recordName = "@"
+		recordValue = "75.2.60.5"
+	}
+	return recordType, recordName, recordValue, false, nil
+}
+
+func (n *NetlifyProvider) VerifyDomain(ctx context.Context, token, externalID, hostname string) (bool, bool, string, error) {
+	req, err := http.NewRequestWithContext(ctx, "GET", n.BaseURL+"/api/v1/sites/"+externalID, nil)
+	if err != nil {
+		return false, false, "", err
+	}
+	req.Header.Set("Authorization", "Bearer "+token)
+
+	resp, err := n.HTTPClient.Do(req)
+	if err != nil {
+		return false, false, "", fmt.Errorf("%w: %v", ErrProviderAPIFailed, err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode >= 400 {
+		b, _ := io.ReadAll(resp.Body)
+		return false, false, string(b), fmt.Errorf("%w: HTTP %d: %s", ErrProviderAPIFailed, resp.StatusCode, string(b))
+	}
+
+	var data struct {
+		CustomDomain  string   `json:"custom_domain"`
+		DomainAliases []string `json:"domain_aliases"`
+		SSL           bool     `json:"ssl"`
+	}
+	if err := json.NewDecoder(resp.Body).Decode(&data); err != nil {
+		return false, false, "", err
+	}
+
+	found := data.CustomDomain == hostname
+	if !found {
+		for _, a := range data.DomainAliases {
+			if a == hostname {
+				found = true
+				break
+			}
+		}
+	}
+
+	if !found {
+		return false, false, "Domain not attached to Netlify site", nil
+	}
+	return true, data.SSL, "", nil
+}
+
+func (n *NetlifyProvider) RemoveDomain(ctx context.Context, token, externalID, hostname string) error {
+	req, err := http.NewRequestWithContext(ctx, "DELETE", n.BaseURL+"/api/v1/sites/"+externalID+"/domain_aliases/"+hostname, nil)
+	if err != nil {
+		return err
+	}
+	req.Header.Set("Authorization", "Bearer "+token)
+
+	resp, err := n.HTTPClient.Do(req)
+	if err != nil {
+		return fmt.Errorf("%w: %v", ErrProviderAPIFailed, err)
+	}
+	defer resp.Body.Close()
+	return nil
 }

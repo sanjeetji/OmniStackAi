@@ -252,6 +252,19 @@ func (m *mockDeployProvider) SetEnv(ctx context.Context, token, externalID strin
 	m.envPassed = env
 	return nil
 }
+func (m *mockDeployProvider) AddDomain(ctx context.Context, token, externalID, hostname string) (string, string, string, bool, error) {
+	if strings.Count(hostname, ".") == 1 {
+		return "A", "@", "76.76.21.21", false, nil
+	}
+	sub := strings.Split(hostname, ".")[0]
+	return "CNAME", sub, "cname.vercel-dns.com", false, nil
+}
+func (m *mockDeployProvider) VerifyDomain(ctx context.Context, token, externalID, hostname string) (bool, bool, string, error) {
+	return true, true, "", nil
+}
+func (m *mockDeployProvider) RemoveDomain(ctx context.Context, token, externalID, hostname string) error {
+	return nil
+}
 
 func TestDeployConnectionLifecycle(t *testing.T) {
 	authStore := fakeAuthStore{

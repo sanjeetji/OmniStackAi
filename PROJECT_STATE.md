@@ -4,6 +4,14 @@ Last updated: 2026-09-20
 ## Current Phase
 Stage 0 (Founder Build Sequence, Brief Section 91) — BASIC/MVP
 
+> **R-510 (2026-09-20): G-02 Custom Domain — Bring Your Own (`R_&_D/specs/G-02-domains.md`).**
+> Implemented bring-your-own custom domain management for OmniStackAI applications with ₹0 platform cost, zero domain registrar/renewal/WHOIS overhead.
+> Database: PostgreSQL migration `000011_domains` created `project_domains` with global `UNIQUE(hostname)` anti-hijack constraint, provider, DNS record types, real TLS status, and primary flag.
+> Control-Plane Backend: `internal/domains` package with RFC 1123 format validation, rejection of IP addresses and bare TLDs, standard-library DNS verification (`net.LookupCNAME` / `net.LookupIP`), provider domain synchronization (Vercel & Netlify API drivers), primary domain switching, and delete with provider sync.
+> Console Web UI: Studio Manage → Domain tab with zero-markup info notice, live RFC 1123 hostname validation, copyable DNS instruction cards (Type, Name/Host, Value/Target with copied feedback), step-by-step registrar setup guides with direct links for Cloudflare, GoDaddy, Namecheap, Hostinger, BigRock, real-time DNS & TLS status badges (never fake), "Check DNS now" action with live polling, and propagation notice (minutes to 48 hours).
+> Gates: 3,831 tests pass, `task verify` passed, `scripts/test.sh` passed, Next.js build clean.
+> NEXT: **Phase G continued**.
+
 > **R-509 (2026-09-20): G-01 Publish v1 — Deploy from GitHub to Vercel/Netlify (`R_&_D/specs/G-01-publish.md`).**
 > Implemented 1-click cloud publishing from connected GitHub repositories to user-owned Vercel or Netlify accounts via personal access tokens with ₹0 hosting infrastructure cost for OmniStackAI.
 > Database: PostgreSQL migration `000010_deployments` created `deploy_connections` (AES-256-GCM encrypted tokens), `deployments` (history with commit SHA, status, live URL), and added `deploy_provider`, `deploy_external_id`, and `live_url` to `projects`.
