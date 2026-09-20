@@ -1,5 +1,29 @@
 # Current Handoff
 
+Task ID: R-503
+Status: done
+Phase: MVP → Phase F (platform foundation)
+Branch: `ai/R-503-secrets`
+
+> **R-503 Completed (2026-09-20): Secrets — encrypted per-project configuration (F-05-secrets spec).**
+> - **Database Schema Migration:** Created `000007_project_secrets.up.sql` / `down.sql`: `project_secrets` table with UUID `id`, `project_id` foreign key (cascade delete), `key ~ '^[A-Z][A-Z0-9_]*$'` constraint, `value_ciphertext BYTEA`, `description TEXT`, `created_at`, `updated_at`, `last_used_at`, and unique constraint on `(project_id, key)`.
+> - **Control-Plane Backend & Cryptography (AES-256-GCM):**
+>   - Standard-library `crypto/aes` and `crypto/cipher` (zero external Go dependencies).
+>   - 12-byte random nonce and AAD binding `project_id:key` to prevent ciphertext-copy attacks across projects or keys.
+>   - Master key `OMNISTACKAI_SECRETS_KEY` with transparent re-encryption on key rotation via `OMNISTACKAI_SECRETS_KEY_PREVIOUS`.
+>   - Store `internal/secrets/store.go` and REST handlers `internal/secrets/handler.go` (`GET /projects/{id}/secrets`, `PUT /projects/{id}/secrets/{key}`, `DELETE /projects/{id}/secrets/{key}`, `POST /projects/{id}/secrets/reveal/{key}`).
+>   - Returns HTTP 503 when master key is unconfigured (never storing plaintext) and enforces strict caller project ownership.
+>   - Injected `SecretsStore` into projects handler and forwarded decrypted secrets map as `{"env": secrets}` in `handleProjectPreview`.
+> - **Agent-Engine Runtime Injection:**
+>   - Updated `localrun/plan.py`, `localrun/run.py`, and `studio/server.py` to accept `extra_env` / `env` and inject secrets directly into preview runner processes (`process.env`) at runtime.
+>   - Guaranteed zero secrets leakage: secrets are never written into workspace repository files on disk, git commits, or exported ZIPs.
+> - **Console Web UI:**
+>   - Added `SecretMetadata`, `SetSecretParams`, `SecretRevealResponse` and client functions in `lib/control-plane.ts`.
+>   - Added Next.js API routes `/api/projects/[id]/secrets`, `/api/projects/[id]/secrets/[key]`, and `/api/projects/[id]/secrets/reveal/[key]`.
+>   - Built `Manage → Secrets` tab in `/studio/[projectId]/manage/page.tsx` with masked table display (`••••••••`), 30-second reveal countdown timer, UPPER_SNAKE_CASE validation, copy key action, Add/Edit dialog, Delete confirmation, and preview restart prompt banner.
+> - **Gates:** `scripts/test.sh` passed, `go test -v ./...` passed (all 12 packages), `task agent-engine:test` passed (3,765 tests OK), Next.js `typecheck`, `lint`, and `build` passed, `task verify` clean.
+> - **NEXT:** F-06 (R-504) AI — model configuration (BYOK) and usage per project/account (spec `R_&_D/specs/F-06-ai-usage.md`).
+
 Task ID: R-502
 Status: done
 Phase: MVP → Phase F (platform foundation)

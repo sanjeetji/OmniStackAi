@@ -881,4 +881,86 @@ export function detachProjectSkill(
   );
 }
 
+// ---------------------------------------------------------------------------
+// Secrets (F-05)
+// ---------------------------------------------------------------------------
+
+export interface SecretMetadata {
+  key: string;
+  description: string;
+  created_at: string;
+  updated_at: string;
+  last_used_at?: string;
+}
+
+export interface SetSecretParams {
+  value: string;
+  description?: string;
+}
+
+export interface SecretRevealResponse {
+  key: string;
+  value: string;
+}
+
+export function getProjectSecrets(
+  token: string,
+  projectId: string
+): Promise<SecretMetadata[]> {
+  return callControlPlane<SecretMetadata[]>(
+    `/projects/${encodeURIComponent(projectId)}/secrets`,
+    {
+      headers: { Authorization: `Bearer ${token}` },
+    }
+  );
+}
+
+export function setProjectSecret(
+  token: string,
+  projectId: string,
+  key: string,
+  params: SetSecretParams
+): Promise<SecretMetadata> {
+  return callControlPlane<SecretMetadata>(
+    `/projects/${encodeURIComponent(projectId)}/secrets/${encodeURIComponent(key)}`,
+    {
+      method: "PUT",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify(params),
+    }
+  );
+}
+
+export function deleteProjectSecret(
+  token: string,
+  projectId: string,
+  key: string
+): Promise<void> {
+  return callControlPlane<void>(
+    `/projects/${encodeURIComponent(projectId)}/secrets/${encodeURIComponent(key)}`,
+    {
+      method: "DELETE",
+      headers: { Authorization: `Bearer ${token}` },
+    }
+  );
+}
+
+export function revealProjectSecret(
+  token: string,
+  projectId: string,
+  key: string
+): Promise<SecretRevealResponse> {
+  return callControlPlane<SecretRevealResponse>(
+    `/projects/${encodeURIComponent(projectId)}/secrets/reveal/${encodeURIComponent(key)}`,
+    {
+      method: "POST",
+      headers: { Authorization: `Bearer ${token}` },
+    }
+  );
+}
+
+
 

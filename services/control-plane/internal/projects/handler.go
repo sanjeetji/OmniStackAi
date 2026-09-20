@@ -25,10 +25,15 @@ const (
 	defaultProxyTimeout    = 15 * time.Second
 )
 
+type SecretsStore interface {
+	ForProject(ctx context.Context, projectID string) (map[string]string, error)
+}
+
 type Deps struct {
 	AuthStore      auth.Store
 	ProjectStore   Store
 	SkillStore     skills.Store
+	SecretsStore   SecretsStore
 	AgentEngineURL string
 	CreditsPerUSD  float64
 	Logger         *slog.Logger
@@ -630,8 +635,19 @@ func handleProjectPreview(deps Deps) http.HandlerFunc {
 			writeError(w, http.StatusNotFound, "project not found")
 			return
 		}
+
+		var bodyReader io.Reader
+		if deps.SecretsStore != nil {
+			if sec, err := deps.SecretsStore.ForProject(r.Context(), id); err == nil && len(sec) > 0 {
+				payload := map[string]any{"env": sec}
+				if bodyBytes, err := json.Marshal(payload); err == nil {
+					bodyReader = bytes.NewReader(bodyBytes)
+				}
+			}
+		}
+
 		target := deps.AgentEngineURL + "/api/workspaces/" + url.PathEscape(id) + "/preview"
-		proxyUpstream(w, r, deps, http.MethodPost, target, nil)
+		proxyUpstream(w, r, deps, http.MethodPost, target, bodyReader)
 	}
 }
 

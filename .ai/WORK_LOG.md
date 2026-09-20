@@ -1,5 +1,35 @@
 # Work Log
 
+## 2026-09-20 — R-503 (F-05 Secrets — encrypted per-project configuration)
+
+- **Why:** Real-world generated applications require API keys, payment tokens, SMTP credentials, and database passwords that must never be committed to git, exposed in client responses, or leaked in build streams. `F-05-secrets.md` specified AES-256-GCM encrypted storage in PostgreSQL with Go standard library `crypto/aes` and `crypto/cipher` (zero external Go dependencies), runtime injection into preview processes via `process.env`, and a Lovable-grade Console UI in `Manage → Secrets` with masked values, a 30s reveal timer, key validation, and preview restart prompts.
+- **Part 1 — Database Migration (`services/control-plane/migrations/`):**
+  - Created `000007_project_secrets.up.sql` / `down.sql`: `project_secrets` table with UUID `id`, `project_id` foreign key (cascade delete), `key ~ '^[A-Z][A-Z0-9_]*$'` constraint, `value_ciphertext BYTEA`, `description TEXT`, `created_at`, `updated_at`, `last_used_at`, and unique constraint on `(project_id, key)`.
+- **Part 2 — Control-Plane Backend (`services/control-plane/`):**
+  - Updated `internal/config/config.go`: Added `SecretsKeyPrevious` field from `OMNISTACKAI_SECRETS_KEY_PREVIOUS` for transparent key rotation.
+  - Implemented `internal/secrets/store.go`: `Store` interface and `PgStore` with AES-256-GCM encryption using AAD `project_id:key`, tamper rejection, transparent re-encryption on key rotation, `ListSecrets`, `SetSecret`, `DeleteSecret`, `RevealSecret`, and `ForProject`.
+  - Implemented `internal/secrets/handler.go`: REST handlers for `GET /projects/{id}/secrets`, `PUT /projects/{id}/secrets/{key}`, `DELETE /projects/{id}/secrets/{key}`, and `POST /projects/{id}/secrets/reveal/{key}`. Returns HTTP 503 when master key is unconfigured (never storing plaintext) and verifies caller project ownership.
+  - Added unit tests in `internal/secrets/secrets_test.go`: Key pattern validation, store availability, AAD tamper protection, key rotation, and HTTP handler authorization / tenant isolation.
+  - Updated `internal/projects/handler.go` and `cmd/control-plane/main.go`: Injected `SecretsStore` into projects handler and forwarded decrypted secrets map as `{"env": secrets}` in `handleProjectPreview`.
+- **Part 3 — Agent-Engine Runtime Injection (`services/agent-engine/`):**
+  - Updated `localrun/plan.py`: `build_run_plan` accepts `extra_env` and merges it into backend and web `RunStep` environments.
+  - Updated `localrun/run.py`: `_plan_from_env` and `start_preview_app` accept and forward `extra_env`.
+  - Updated `studio/preview.py`, `studio/live_serve.py`, and `studio/server.py`: `_handle_workspace_preview` parses `env` from JSON body and injects it into workspace preview runner.
+  - Added unit tests in `tests/test_studio_workspace_secrets.py`: Verifies decrypted secrets are present in preview process environments and never written to repository files on disk.
+- **Part 4 — Console-Web Frontend UI (`apps/console-web/`):**
+  - Updated `lib/control-plane.ts`: Added `SecretMetadata`, `SetSecretParams`, `SecretRevealResponse` and client functions `getProjectSecrets`, `setProjectSecret`, `deleteProjectSecret`, `revealProjectSecret`.
+  - Added Next.js API routes: `/api/projects/[id]/secrets/route.ts`, `/api/projects/[id]/secrets/[key]/route.ts`, and `/api/projects/[id]/secrets/reveal/[key]/route.ts`.
+  - Updated `app/studio/[projectId]/manage/page.tsx`: Added Secrets subnav tab, masked table display (`••••••••`), 30-second reveal countdown timer, UPPER_SNAKE_CASE client validation, Add/Edit dialog, Delete confirmation, copy key action, and preview restart banner.
+- **Part 5 — Verification & Contracts:**
+  - Updated `.env.example`, `scripts/env-check.sh`, and `scripts/test.sh` with R-503 contract checks.
+  - `bash scripts/test.sh`: passed with R-503 assertions.
+  - `cd services/control-plane && go test -v ./...`: all 12 packages passed.
+  - `bash scripts/agent-engine.sh test`: all 3,765 tests passed.
+  - `cd apps/console-web && pnpm run typecheck && pnpm run lint`: 0 errors/warnings.
+  - `bash scripts/console.sh build`: all 48 routes compiled and built.
+  - `bash scripts/verify.sh`: Stage 0 verification passed.
+- **Next:** Proceed to F-06 (R-504) AI — model configuration (BYOK) and usage per project/account (spec `R_&_D/specs/F-06-ai-usage.md`).
+
 ## 2026-09-20 — R-502 (F-04 Knowledge & Skills Engine)
 
 - **Why:** Custom instructions and domain-specific knowledge are necessary for guiding AI app generation without repeated prompting. `F-04-skills.md` specified a two-tier model: project-level Knowledge (injected into every prompt for that project) and account-level Skills (reusable across projects, attachable, or `@mentionable` per message), with deterministic context assembly bounded by a server-side cap and honest truncation reporting.

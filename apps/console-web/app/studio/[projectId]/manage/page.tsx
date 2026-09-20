@@ -14,8 +14,11 @@ import {
   Copy,
   Download,
   ExternalLink,
+  Eye,
+  EyeOff,
   FileCode2,
   GitBranch,
+  Key,
   LoaderCircle,
   Lock,
   Plus,
@@ -50,6 +53,7 @@ import type {
   Project,
   ProjectGitStatus,
   ProjectKnowledge,
+  SecretMetadata,
   Skill,
 } from "@/lib/control-plane";
 import { formatDateTime, formatRelativeTime } from "@/lib/time";
@@ -89,8 +93,8 @@ export default function ProjectManagePage({
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  // Section nav: "general" | "knowledge" | "skills" | "git"
-  const [activeSection, setActiveSection] = useState<"general" | "knowledge" | "skills" | "git">("general");
+  // Section nav: "general" | "knowledge" | "skills" | "secrets" | "git"
+  const [activeSection, setActiveSection] = useState<"general" | "knowledge" | "skills" | "secrets" | "git">("general");
 
   // General Form state
   const [name, setName] = useState("");
@@ -130,6 +134,26 @@ export default function ProjectManagePage({
   const [copiedClone, setCopiedClone] = useState(false);
   const [repoName, setRepoName] = useState("");
   const [repoPrivate, setRepoPrivate] = useState(true);
+
+  // Secrets state (F-05)
+  const [secrets, setSecrets] = useState<SecretMetadata[]>([]);
+  const [loadingSecrets, setLoadingSecrets] = useState(false);
+  const [secretsError, setSecretsError] = useState<string | null>(null);
+  const [revealedSecrets, setRevealedSecrets] = useState<Record<string, { value: string; expiresAt: number }>>({});
+  const [revealingKey, setRevealingKey] = useState<string | null>(null);
+  const [addSecretOpen, setAddSecretOpen] = useState(false);
+  const [editingSecret, setEditingSecret] = useState(false);
+  const [secretKey, setSecretKey] = useState("");
+  const [secretValue, setSecretValue] = useState("");
+  const [secretDescription, setSecretDescription] = useState("");
+  const [secretKeyError, setSecretKeyError] = useState<string | null>(null);
+  const [savingSecret, setSavingSecret] = useState(false);
+  const [deleteSecretKey, setDeleteSecretKey] = useState<string | null>(null);
+  const [deletingSecret, setDeletingSecret] = useState(false);
+  const [secretsUpdated, setSecretsUpdated] = useState(false);
+  const [restartingPreview, setRestartingPreview] = useState(false);
+  const [copiedKey, setCopiedKey] = useState<string | null>(null);
+  const [now, setNow] = useState(0);
 
   // Delete dialog
   const [deleteOpen, setDeleteOpen] = useState(false);
@@ -285,6 +309,28 @@ export default function ProjectManagePage({
     }
   };
 
+  const fetchSecrets = async () => {
+    setLoadingSecrets(true);
+    setSecretsError(null);
+    try {
+      const resp = await fetch(`/api/projects/${encodeURIComponent(projectId)}/secrets`);
+      if (!resp.ok) throw new Error("Failed to load project secrets");
+      const data = await resp.json();
+      setSecrets(data.secrets ?? []);
+    } catch (err: unknown) {
+      setSecretsError(err instanceof Error ? err.message : "Failed to load secrets");
+    } finally {
+      setLoadingSecrets(false);
+    }
+  };
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setNow(Date.now());
+    }, 1000);
+    return () => clearInterval(interval);
+  }, []);
+
   useEffect(() => {
     let active = true;
     if (activeSection === "knowledge") {
@@ -323,6 +369,21 @@ export default function ProjectManagePage({
           if (active) setSkillsError(err instanceof Error ? err.message : "Failed to load skills");
         } finally {
           if (active) setLoadingSkills(false);
+        }
+      })();
+    } else if (activeSection === "secrets") {
+      void (async () => {
+        try {
+          const resp = await fetch(`/api/projects/${encodeURIComponent(projectId)}/secrets`);
+          if (!resp.ok) throw new Error("Failed to load project secrets");
+          const data = await resp.json();
+          if (active) {
+            setSecrets(data.secrets ?? []);
+          }
+        } catch (err: unknown) {
+          if (active) setSecretsError(err instanceof Error ? err.message : "Failed to load secrets");
+        } finally {
+          if (active) setLoadingSecrets(false);
         }
       })();
     }
@@ -552,6 +613,103 @@ export default function ProjectManagePage({
     setTimeout(() => setCopiedClone(false), 2000);
   };
 
+  const handleRevealSecret = async (key: string) => {
+    setRevealingKey(key);
+    try {
+      const resp = await fetch(`/api/projects/${encodeURIComponent(projectId)}/secrets/reveal/${encodeURIComponent(key)}`, {
+        method: "POST",
+      });
+      if (!resp.ok) throw new Error("Failed to reveal secret");
+      const data = await resp.json();
+      setRevealedSecrets((prev) => ({
+        ...prev,
+        [key]: { value: data.value, expiresAt: Date.now() + 30000 },
+      }));
+    } catch (err: unknown) {
+      setSecretsError(err instanceof Error ? err.message : "Failed to reveal secret");
+    } finally {
+      setRevealingKey(null);
+    }
+  };
+
+  const handleHideSecret = (key: string) => {
+    setRevealedSecrets((prev) => {
+      const next = { ...prev };
+      delete next[key];
+      return next;
+    });
+  };
+
+  const handleSaveSecret = async (e: FormEvent) => {
+    e.preventDefault();
+    const key = secretKey.trim().toUpperCase();
+    if (!editingSecret && !/^[A-Z][A-Z0-9_]*$/.test(key)) {
+      setSecretKeyError("Key must be UPPER_SNAKE_CASE (e.g. STRIPE_API_KEY)");
+      return;
+    }
+    setSavingSecret(true);
+    setSecretsError(null);
+    try {
+      const resp = await fetch(`/api/projects/${encodeURIComponent(projectId)}/secrets/${encodeURIComponent(key)}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          value: secretValue,
+          description: secretDescription.trim() || undefined,
+        }),
+      });
+      if (!resp.ok) {
+        const data = await resp.json();
+        throw new Error(data.error || "Failed to save secret");
+      }
+      setAddSecretOpen(false);
+      setSecretsUpdated(true);
+      await fetchSecrets();
+    } catch (err: unknown) {
+      setSecretsError(err instanceof Error ? err.message : "Failed to save secret");
+    } finally {
+      setSavingSecret(false);
+    }
+  };
+
+  const handleConfirmDeleteSecret = async () => {
+    if (!deleteSecretKey) return;
+    setDeletingSecret(true);
+    try {
+      const resp = await fetch(`/api/projects/${encodeURIComponent(projectId)}/secrets/${encodeURIComponent(deleteSecretKey)}`, {
+        method: "DELETE",
+      });
+      if (!resp.ok) throw new Error("Failed to delete secret");
+      setDeleteSecretKey(null);
+      setSecretsUpdated(true);
+      await fetchSecrets();
+    } catch (err: unknown) {
+      setSecretsError(err instanceof Error ? err.message : "Failed to delete secret");
+    } finally {
+      setDeletingSecret(false);
+    }
+  };
+
+  const handleRestartPreview = async () => {
+    setRestartingPreview(true);
+    try {
+      await fetch(`/api/projects/${encodeURIComponent(projectId)}/preview`, {
+        method: "POST",
+      });
+      setSecretsUpdated(false);
+    } catch {
+      // Ignored
+    } finally {
+      setRestartingPreview(false);
+    }
+  };
+
+  const handleCopySecret = (key: string, text: string) => {
+    void navigator.clipboard.writeText(text);
+    setCopiedKey(key);
+    setTimeout(() => setCopiedKey(null), 2000);
+  };
+
   if (loading) {
     return (
       <div className="mx-auto max-w-5xl px-4 py-8">
@@ -652,6 +810,26 @@ export default function ProjectManagePage({
             {projectSkills.length > 0 ? (
               <Badge variant="secondary" className="text-[10px] px-1.5 py-0 h-4 font-mono">
                 {projectSkills.length}
+              </Badge>
+            ) : null}
+          </button>
+          <button
+            type="button"
+            onClick={() => setActiveSection("secrets")}
+            className={cn(
+              "w-full flex items-center justify-between px-3 py-2 text-sm font-medium rounded-md transition-colors",
+              activeSection === "secrets"
+                ? "bg-secondary text-secondary-foreground"
+                : "text-muted-foreground hover:bg-muted/50 hover:text-foreground",
+            )}
+          >
+            <span className="flex items-center gap-2">
+              <Key className="size-4" />
+              Secrets
+            </span>
+            {secrets.length > 0 ? (
+              <Badge variant="secondary" className="text-[10px] px-1.5 py-0 h-4 font-mono">
+                {secrets.length}
               </Badge>
             ) : null}
           </button>
@@ -1130,6 +1308,333 @@ export default function ProjectManagePage({
                 }}
               />
             </>
+          ) : activeSection === "secrets" ? (
+            <div className="space-y-6">
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                <div>
+                  <h2 className="text-xl font-semibold tracking-tight">Environment Secrets</h2>
+                  <p className="text-sm text-muted-foreground mt-1">
+                    Encrypted environment variables injected into preview and deployment processes.
+                  </p>
+                </div>
+                <Button
+                  onClick={() => {
+                    setSecretKey("");
+                    setSecretValue("");
+                    setSecretDescription("");
+                    setSecretKeyError(null);
+                    setEditingSecret(false);
+                    setAddSecretOpen(true);
+                  }}
+                  size="sm"
+                  className="gap-2 shrink-0"
+                >
+                  <Plus className="size-4" />
+                  Add secret
+                </Button>
+              </div>
+
+              {secretsUpdated ? (
+                <div className="flex items-center justify-between gap-3 rounded-lg border border-amber-500/30 bg-amber-500/10 p-3.5 text-sm text-amber-700 dark:text-amber-400">
+                  <div className="flex items-center gap-2">
+                    <AlertCircle className="size-4 shrink-0" />
+                    <span>Secrets have been updated. Restart the preview to apply changes.</span>
+                  </div>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="border-amber-500/30 hover:bg-amber-500/20 text-xs h-7 gap-1.5"
+                    onClick={handleRestartPreview}
+                    disabled={restartingPreview}
+                  >
+                    <RefreshCw className={cn("size-3", restartingPreview && "animate-spin")} />
+                    Restart preview
+                  </Button>
+                </div>
+              ) : null}
+
+              {secretsError ? (
+                <div className="rounded-lg border border-destructive/30 bg-destructive/10 p-4 text-sm text-destructive flex items-start gap-3">
+                  <AlertCircle className="size-5 shrink-0 mt-0.5" />
+                  <div className="flex-1">
+                    <p className="font-semibold">Error</p>
+                    <p className="mt-1 text-xs font-mono">{secretsError}</p>
+                  </div>
+                </div>
+              ) : null}
+
+              <Card>
+                <CardHeader className="pb-3">
+                  <div className="flex items-center gap-2 text-xs text-muted-foreground bg-muted/40 p-2.5 rounded-md border border-border/50">
+                    <ShieldAlert className="size-4 text-brand shrink-0" />
+                    <span>
+                      Stored encrypted with AES-256-GCM. Injected directly into your app&apos;s runtime environment when it runs or deploys. Never written into your source code or repository.
+                    </span>
+                  </div>
+                </CardHeader>
+                <CardContent>
+                  {loadingSecrets ? (
+                    <div className="space-y-2 py-4">
+                      <div className="h-10 animate-pulse rounded bg-muted/50" />
+                      <div className="h-10 animate-pulse rounded bg-muted/50" />
+                    </div>
+                  ) : secrets.length === 0 ? (
+                    <div className="py-12 text-center">
+                      <div className="mx-auto flex size-12 items-center justify-center rounded-full bg-muted/50 text-muted-foreground mb-3">
+                        <Key className="size-6" />
+                      </div>
+                      <h3 className="text-sm font-medium text-foreground">No secrets configured</h3>
+                      <p className="text-xs text-muted-foreground mt-1 max-w-sm mx-auto">
+                        Add environment variables such as <code className="font-mono">STRIPE_SECRET_KEY</code> or <code className="font-mono">SMTP_PASSWORD</code> that your app needs at runtime.
+                      </p>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="mt-4 gap-2"
+                        onClick={() => {
+                          setSecretKey("");
+                          setSecretValue("");
+                          setSecretDescription("");
+                          setSecretKeyError(null);
+                          setEditingSecret(false);
+                          setAddSecretOpen(true);
+                        }}
+                      >
+                        <Plus className="size-3.5" />
+                        Add your first secret
+                      </Button>
+                    </div>
+                  ) : (
+                    <div className="overflow-x-auto">
+                      <table className="w-full text-sm">
+                        <thead>
+                          <tr className="border-b text-left text-xs font-medium text-muted-foreground">
+                            <th className="pb-2.5 font-medium">Key</th>
+                            <th className="pb-2.5 font-medium">Value</th>
+                            <th className="pb-2.5 font-medium">Description</th>
+                            <th className="pb-2.5 font-medium">Updated</th>
+                            <th className="pb-2.5 font-medium text-right">Actions</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-border/40">
+                          {secrets.map((s) => {
+                            const isRevealed = Boolean(revealedSecrets[s.key]);
+                            const revealed = revealedSecrets[s.key];
+                            const remainingSeconds = revealed ? Math.max(0, Math.ceil((revealed.expiresAt - now) / 1000)) : 0;
+                            return (
+                              <tr key={s.key} className="group hover:bg-muted/20">
+                                <td className="py-3 pr-4 font-mono text-xs font-semibold text-foreground">
+                                  <div className="flex items-center gap-1.5">
+                                    <span>{s.key}</span>
+                                    <button
+                                      type="button"
+                                      onClick={() => handleCopySecret(s.key, s.key)}
+                                      className="opacity-0 group-hover:opacity-100 text-muted-foreground hover:text-foreground transition-opacity"
+                                      title="Copy key"
+                                    >
+                                      {copiedKey === s.key ? <Check className="size-3 text-emerald-500" /> : <Copy className="size-3" />}
+                                    </button>
+                                  </div>
+                                </td>
+                                <td className="py-3 pr-4 font-mono text-xs">
+                                  <div className="flex items-center gap-2">
+                                    {isRevealed ? (
+                                      <>
+                                        <span className="bg-muted px-2 py-0.5 rounded text-foreground max-w-[200px] truncate">
+                                          {revealed?.value}
+                                        </span>
+                                        <span className="text-[10px] text-amber-600 dark:text-amber-400 font-sans">
+                                          ({remainingSeconds}s)
+                                        </span>
+                                        <Button
+                                          variant="ghost"
+                                          size="sm"
+                                          className="h-6 w-6 p-0 text-muted-foreground hover:text-foreground"
+                                          onClick={() => handleHideSecret(s.key)}
+                                          title="Hide value"
+                                        >
+                                          <EyeOff className="size-3.5" />
+                                        </Button>
+                                      </>
+                                    ) : (
+                                      <>
+                                        <span className="text-muted-foreground tracking-widest">••••••••</span>
+                                        <Button
+                                          variant="ghost"
+                                          size="sm"
+                                          className="h-6 w-6 p-0 text-muted-foreground hover:text-foreground"
+                                          onClick={() => handleRevealSecret(s.key)}
+                                          disabled={revealingKey === s.key}
+                                          title="Show value (30s)"
+                                        >
+                                          {revealingKey === s.key ? (
+                                            <LoaderCircle className="size-3.5 animate-spin" />
+                                          ) : (
+                                            <Eye className="size-3.5" />
+                                          )}
+                                        </Button>
+                                      </>
+                                    )}
+                                  </div>
+                                </td>
+                                <td className="py-3 pr-4 text-xs text-muted-foreground max-w-[200px] truncate">
+                                  {s.description || "—"}
+                                </td>
+                                <td className="py-3 pr-4 text-xs text-muted-foreground whitespace-nowrap">
+                                  {s.updated_at ? formatRelativeTime(s.updated_at) : "—"}
+                                </td>
+                                <td className="py-3 text-right whitespace-nowrap">
+                                  <div className="flex items-center justify-end gap-1">
+                                    <Button
+                                      variant="ghost"
+                                      size="sm"
+                                      className="h-7 px-2 text-xs"
+                                      onClick={() => {
+                                        setSecretKey(s.key);
+                                        setSecretValue("");
+                                        setSecretDescription(s.description);
+                                        setSecretKeyError(null);
+                                        setEditingSecret(true);
+                                        setAddSecretOpen(true);
+                                      }}
+                                    >
+                                      Edit
+                                    </Button>
+                                    <Button
+                                      variant="ghost"
+                                      size="sm"
+                                      className="h-7 px-2 text-xs text-destructive hover:text-destructive"
+                                      onClick={() => setDeleteSecretKey(s.key)}
+                                    >
+                                      Delete
+                                    </Button>
+                                  </div>
+                                </td>
+                              </tr>
+                            );
+                          })}
+                        </tbody>
+                      </table>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+
+              {/* Add/Edit Secret Dialog */}
+              <Dialog open={addSecretOpen} onOpenChange={setAddSecretOpen}>
+                <DialogContent className="sm:max-w-md">
+                  <DialogHeader>
+                    <DialogTitle>{editingSecret ? `Edit secret: ${secretKey}` : "Add environment secret"}</DialogTitle>
+                    <DialogDescription>
+                      {editingSecret
+                        ? "Update the secret value or description. Key cannot be changed."
+                        : "Set an environment variable that will be encrypted and available to your application at runtime."}
+                    </DialogDescription>
+                  </DialogHeader>
+                  <form onSubmit={handleSaveSecret} className="space-y-4 py-2">
+                    {!editingSecret ? (
+                      <div className="space-y-1.5">
+                        <Label htmlFor="secret-key">Key Name</Label>
+                        <Input
+                          id="secret-key"
+                          placeholder="e.g. STRIPE_API_KEY"
+                          value={secretKey}
+                          onChange={(e) => {
+                            const val = e.target.value.toUpperCase();
+                            setSecretKey(val);
+                            if (val && !/^[A-Z][A-Z0-9_]*$/.test(val)) {
+                              setSecretKeyError("Must be UPPER_SNAKE_CASE (starts with A-Z, only A-Z, 0-9, and _)");
+                            } else {
+                              setSecretKeyError(null);
+                            }
+                          }}
+                          className="font-mono text-xs uppercase"
+                          required
+                        />
+                        {secretKeyError ? (
+                          <p className="text-[11px] text-destructive">{secretKeyError}</p>
+                        ) : (
+                          <p className="text-[11px] text-muted-foreground">
+                            Use UPPER_SNAKE_CASE. Maps directly to process.env in your app.
+                          </p>
+                        )}
+                      </div>
+                    ) : null}
+
+                    <div className="space-y-1.5">
+                      <Label htmlFor="secret-val">{editingSecret ? "New Value (leave blank to keep current)" : "Secret Value"}</Label>
+                      <Input
+                        id="secret-val"
+                        type="password"
+                        placeholder={editingSecret ? "••••••••" : "Paste secret value"}
+                        value={secretValue}
+                        onChange={(e) => setSecretValue(e.target.value)}
+                        className="font-mono text-xs"
+                        required={!editingSecret}
+                      />
+                    </div>
+
+                    <div className="space-y-1.5">
+                      <Label htmlFor="secret-desc">Description (optional)</Label>
+                      <Input
+                        id="secret-desc"
+                        placeholder="e.g. Stripe production publishable/secret key"
+                        value={secretDescription}
+                        onChange={(e) => setSecretDescription(e.target.value)}
+                        className="text-xs"
+                      />
+                    </div>
+
+                    <div className="rounded-md bg-muted/40 p-2.5 text-[11px] text-muted-foreground border border-border/50">
+                      Stored encrypted (AES-256-GCM). Used when your app runs and when you publish it. Never written into your code or git.
+                    </div>
+
+                    <DialogFooter className="gap-2 sm:gap-0 pt-2">
+                      <Button type="button" variant="outline" onClick={() => setAddSecretOpen(false)} disabled={savingSecret}>
+                        Cancel
+                      </Button>
+                      <Button type="submit" disabled={savingSecret || (!editingSecret && Boolean(secretKeyError))}>
+                        {savingSecret ? (
+                          <>
+                            <LoaderCircle className="size-3.5 animate-spin mr-1.5" />
+                            Saving...
+                          </>
+                        ) : (
+                          "Save secret"
+                        )}
+                      </Button>
+                    </DialogFooter>
+                  </form>
+                </DialogContent>
+              </Dialog>
+
+              {/* Delete Secret Confirmation Dialog */}
+              <Dialog open={Boolean(deleteSecretKey)} onOpenChange={(open) => !open && setDeleteSecretKey(null)}>
+                <DialogContent className="sm:max-w-sm">
+                  <DialogHeader>
+                    <DialogTitle>Delete secret</DialogTitle>
+                    <DialogDescription>
+                      Are you sure you want to delete <code className="font-mono font-semibold text-foreground">{deleteSecretKey}</code>? Any running or future app instances relying on this secret will no longer have access to it.
+                    </DialogDescription>
+                  </DialogHeader>
+                  <DialogFooter className="gap-2 sm:gap-0 pt-2">
+                    <Button variant="outline" onClick={() => setDeleteSecretKey(null)} disabled={deletingSecret}>
+                      Cancel
+                    </Button>
+                    <Button variant="destructive" onClick={handleConfirmDeleteSecret} disabled={deletingSecret}>
+                      {deletingSecret ? (
+                        <>
+                          <LoaderCircle className="size-3.5 animate-spin mr-1.5" />
+                          Deleting...
+                        </>
+                      ) : (
+                        "Delete secret"
+                      )}
+                    </Button>
+                  </DialogFooter>
+                </DialogContent>
+              </Dialog>
+            </div>
           ) : (
             <>
               {/* Git & GitHub Section */}

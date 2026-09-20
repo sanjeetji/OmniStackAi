@@ -4,6 +4,24 @@ Last updated: 2026-09-20
 ## Current Phase
 Stage 0 (Founder Build Sequence, Brief Section 91) — BASIC/MVP
 
+> **R-503 (2026-09-20): Secrets — encrypted per-project configuration (F-05-secrets spec).**
+> Implemented AES-256-GCM encrypted configuration for generated applications (API keys, SMTP passwords, payment credentials).
+> Database Schema: Created migration `000007_project_secrets.up.sql` / `down.sql`: `project_secrets` table with UUID `id`, `project_id`
+> foreign key with cascade delete, `key ~ '^[A-Z][A-Z0-9_]*$'` constraint, `value_ciphertext BYTEA`, `description TEXT`,
+> and unique constraint on `(project_id, key)`.
+> Control-Plane Backend: Built `internal/secrets` store and REST handlers (`GET /projects/{id}/secrets`, `PUT /projects/{id}/secrets/{key}`,
+> `DELETE /projects/{id}/secrets/{key}`, and `POST /projects/{id}/secrets/reveal/{key}`) using Go standard library `crypto/aes` and `crypto/cipher`
+> (zero external Go dependencies). Bound ciphertext with AAD `project_id:key` to prevent cross-project or cross-key tampering.
+> Supported transparent re-encryption on key rotation via `OMNISTACKAI_SECRETS_KEY_PREVIOUS`. Unconfigured master key returns HTTP 503 instead
+> of storing plaintext. Injected `SecretsStore` into projects handler and forwarded decrypted secrets map to agent-engine during preview.
+> Agent-Engine Runtime Injection: Updated `localrun/plan.py`, `localrun/run.py`, and `studio/server.py` to accept `extra_env` / `env` and
+> inject decrypted secrets directly into preview runner processes (`process.env`) at runtime. Secrets are never written to repository files on disk,
+> git commits, or exported ZIP archives.
+> Console Web UI: Built **Manage → Secrets** tab in `/studio/[projectId]/manage/page.tsx` with masked table display (`••••••••`),
+> 30-second reveal countdown timer, UPPER_SNAKE_CASE validation, copy key action, Add/Edit dialog, Delete confirmation, and preview restart prompt banner.
+> Gates: 3,765 tests pass, `task verify` passed, `scripts/test.sh` passed, Next.js build clean.
+> NEXT: **F-06 (R-504) AI — model configuration (BYOK) and usage per project/account (spec `R_&_D/specs/F-06-ai-usage.md`)**.
+
 > **R-502 (2026-09-20): Knowledge & Skills — custom instructions & domain templates (F-04-skills spec).**
 > Implemented a complete two-layer custom instructions system for project-level briefs and account-level reusable skills.
 > Layer 1 — Project Knowledge: Persistent per-project brief (up to 16,384 characters) injected into every build and edit of that project,

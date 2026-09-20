@@ -2,11 +2,28 @@ schema_version: 1
 project: OmniStackAI
 phase: BASIC/MVP
 founder_stage: 0
-current_task: R-502
+current_task: R-503
 current_status: completed
-branch: ai/R-502-skills-engine
-last_completed_task: R-502
+branch: ai/R-503-secrets
+last_completed_task: R-503
 last_completed_task_summary: >-
+  Completed R-503 (2026-09-20): Secrets — encrypted per-project configuration (F-05-secrets spec).
+  Implemented AES-256-GCM authenticated encryption for per-project secrets using Go standard library
+  crypto/aes and crypto/cipher with zero external Go dependencies.
+  Created database migration 000007_project_secrets.up.sql / down.sql (project_secrets table with
+  UUID id, project_id foreign key, UPPER_SNAKE_CASE key check, BYTEA ciphertext, description,
+  and timestamps). Built Go control-plane internal/secrets store and REST handlers (GET, PUT, DELETE,
+  POST /reveal/{key}) with caller project ownership verification, AAD binding to project_id:key,
+  and transparent re-encryption on key rotation via OMNISTACKAI_SECRETS_KEY_PREVIOUS. Endpoints return
+  HTTP 503 when master key is unconfigured. Updated projects handler to forward decrypted secrets
+  to agent-engine during preview.
+  Updated agent-engine localrun and studio preview to accept extra_env and inject decrypted secrets
+  directly into preview runner processes (process.env) at runtime, never writing secrets to repository files,
+  never committing to git, and never including in ZIP exports.
+  Built Console Web UI: Manage -> Secrets subnav tab with masked values (••••••••), 30-second reveal timer,
+  UPPER_SNAKE_CASE validation, copy key action, and preview restart prompt banner.
+  All 3,765 tests pass; full task verify, Go tests, Next.js build, and security checks clean.
+_prior_last_completed_task_summary_R502: >-
   Completed R-502 (2026-09-20): Knowledge & Skills — custom instructions & domain templates (F-04-skills spec).
   Implemented two-layer custom instructions system: Layer 1 Project Knowledge (persistent per-project brief up to 16 KB
   injected into every build and edit) and Layer 2 User Skills (reusable instruction sets up to 8 KB each attachable to projects,

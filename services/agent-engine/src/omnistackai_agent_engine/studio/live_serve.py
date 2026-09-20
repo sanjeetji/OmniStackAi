@@ -988,7 +988,11 @@ def main() -> None:
     def workspace_edit(ws_id: str, prompt: str, **options) -> dict:
         return asyncio.run(_workspace_edit(ws_id, prompt, workspace_store=workspace_store, **options))
 
-    def workspace_preview(ws_id: str, on_phase: Callable[[str], None] | None = None) -> dict:
+    def workspace_preview(
+        ws_id: str,
+        on_phase: Callable[[str], None] | None = None,
+        env: Mapping[str, str] | None = None,
+    ) -> dict:
         if preview_manager is None:
             return {
                 "status": "disabled",
@@ -997,7 +1001,7 @@ def main() -> None:
         repo_dir = str(workspace_store.repo_path(ws_id))
         if not os.path.isdir(repo_dir):
             raise BuildNotFoundError(f"workspace '{ws_id}' has no repo to preview")
-        return preview_manager.start_workspace(ws_id, repo_dir, on_phase=on_phase)
+        return preview_manager.start_workspace(ws_id, repo_dir, on_phase=on_phase, env=env)
 
     def workspace_preview_status(ws_id: str) -> dict:
         if preview_manager is None:

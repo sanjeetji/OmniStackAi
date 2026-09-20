@@ -903,8 +903,9 @@ class StudioPreviewManager:
         ws_id: str,
         repo_dir: str,
         on_phase: Callable[[str], None] | None = None,
+        env: Mapping[str, str] | None = None,
     ) -> dict:
-        """Start or restart preview for workspace ``ws_id``, tracking phases and ports (F-02)."""
+        """Start or restart preview for workspace ``ws_id``, tracking phases and ports (F-02, F-05)."""
         with self._lock:
             existing = self._workspaces.get(ws_id)
             if existing is not None and existing.session is not None:
@@ -935,15 +936,18 @@ class StudioPreviewManager:
                     on_phase(phase)
 
             try:
-                session = self._start_fn(repo_dir, log=None, on_phase=_phase_cb)
+                session = self._start_fn(repo_dir, log=None, on_phase=_phase_cb, extra_env=env)
             except TypeError:
                 try:
-                    session = self._start_fn(repo_dir, log=None)
-                except Exception:
-                    ws_sess.status = "error"
-                    ws_sess.phase = "error"
-                    ws_sess.message = _PREVIEW_ERROR
-                    return ws_sess.to_dict()
+                    session = self._start_fn(repo_dir, log=None, on_phase=_phase_cb)
+                except TypeError:
+                    try:
+                        session = self._start_fn(repo_dir, log=None)
+                    except Exception:
+                        ws_sess.status = "error"
+                        ws_sess.phase = "error"
+                        ws_sess.message = _PREVIEW_ERROR
+                        return ws_sess.to_dict()
             except Exception:
                 ws_sess.status = "error"
                 ws_sess.phase = "error"

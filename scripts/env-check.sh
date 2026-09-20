@@ -21,6 +21,7 @@ required_names=(
   OMNISTACKAI_POSTGRES_USER
   OMNISTACKAI_POSTGRES_PASSWORD
   OMNISTACKAI_POSTGRES_PORT
+  OMNISTACKAI_SECRETS_KEY
 )
 for config_name in "${required_names[@]}"; do
   if ! rg -q "^${config_name}=" "$repo_root/.env.example"; then

@@ -1278,4 +1278,67 @@ if ! rg -qF 'computeMentionSkills' "$console_root/app/studio/studio-chat.tsx"; t
   exit 1
 fi
 
+# R-503: F-05 Secrets — encrypted per-project configuration.
+for required_secrets_file in \
+  "$control_plane_root/migrations/000007_project_secrets.up.sql" \
+  "$control_plane_root/migrations/000007_project_secrets.down.sql" \
+  "$control_plane_root/internal/secrets/store.go" \
+  "$control_plane_root/internal/secrets/handler.go" \
+  "$control_plane_root/internal/secrets/secrets_test.go" \
+  "$agent_engine_root/tests/test_studio_workspace_secrets.py" \
+  "$console_root/app/api/projects/[id]/secrets/route.ts" \
+  "$console_root/app/api/projects/[id]/secrets/[key]/route.ts" \
+  "$console_root/app/api/projects/[id]/secrets/reveal/[key]/route.ts"; do
+  if [[ ! -f "$required_secrets_file" ]]; then
+    printf 'Missing R-503 contract file: %s\n' "$required_secrets_file"
+    exit 1
+  fi
+done
+
+if ! rg -qF 'CREATE TABLE IF NOT EXISTS project_secrets' "$control_plane_root/migrations/000007_project_secrets.up.sql"; then
+  printf 'R-503 migration must create project_secrets table.\n'
+  exit 1
+fi
+
+if ! rg -qF 'DROP TABLE IF EXISTS project_secrets' "$control_plane_root/migrations/000007_project_secrets.down.sql"; then
+  printf 'R-503 down migration must drop project_secrets table.\n'
+  exit 1
+fi
+
+if ! rg -qF 'secrets.Register' "$control_plane_root/cmd/control-plane/main.go"; then
+  printf 'R-503 control-plane main.go must mount secrets handler.\n'
+  exit 1
+fi
+
+if ! rg -qF 'SecretsStore' "$control_plane_root/internal/projects/handler.go"; then
+  printf 'R-503 control-plane projects handler must wire SecretsStore.\n'
+  exit 1
+fi
+
+if ! rg -qF 'SecretsKeyPrevious' "$control_plane_root/internal/config/config.go"; then
+  printf 'R-503 control-plane config must support SecretsKeyPrevious for key rotation.\n'
+  exit 1
+fi
+
+if ! rg -qF 'extra_env' "$agent_engine_root/src/omnistackai_agent_engine/localrun/plan.py"; then
+  printf 'R-503 agent-engine plan.py must support extra_env.\n'
+  exit 1
+fi
+
+if ! rg -qF 'getProjectSecrets' "$console_root/lib/control-plane.ts"; then
+  printf 'R-503 lib/control-plane.ts must define getProjectSecrets.\n'
+  exit 1
+fi
+
+if ! rg -qF 'revealProjectSecret' "$console_root/lib/control-plane.ts"; then
+  printf 'R-503 lib/control-plane.ts must define revealProjectSecret.\n'
+  exit 1
+fi
+
+if ! rg -qF 'Stored encrypted with AES-256-GCM' "$console_root/app/studio/[projectId]/manage/page.tsx"; then
+  printf 'R-503 manage page must include encrypted secrets notice.\n'
+  exit 1
+fi
+
 printf 'Repository contract tests passed.\n'
+

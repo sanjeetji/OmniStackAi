@@ -271,6 +271,10 @@ def _make_handler(
             if workspace_preview_fn is None:
                 self._send_json(404, {"error": "preview is not enabled"})
                 return
+
+            body_data = self._read_json_body() if int(self.headers.get("Content-Length", 0) or 0) > 0 else {}
+            extra_env = body_data.get("env") if isinstance(body_data, dict) and isinstance(body_data.get("env"), dict) else None
+
             accept_header = self.headers.get("Accept", "")
             if "text/event-stream" in accept_header:
                 self.send_response(200)
@@ -284,9 +288,12 @@ def _make_handler(
                     self._write_sse_event({"status": "starting", "phase": phase})
 
                 try:
-                    res = workspace_preview_fn(ws_id, on_phase=_stream_cb)
+                    res = workspace_preview_fn(ws_id, on_phase=_stream_cb, env=extra_env)
                 except TypeError:
-                    res = workspace_preview_fn(ws_id)
+                    try:
+                        res = workspace_preview_fn(ws_id, on_phase=_stream_cb)
+                    except TypeError:
+                        res = workspace_preview_fn(ws_id)
                 except Exception as error:
                     self._write_sse_event({"status": "error", "phase": "error", "error": str(error)})
                     return
@@ -294,7 +301,10 @@ def _make_handler(
                 return
 
             try:
-                res = workspace_preview_fn(ws_id)
+                try:
+                    res = workspace_preview_fn(ws_id, env=extra_env)
+                except TypeError:
+                    res = workspace_preview_fn(ws_id)
                 self._send_json(200, res)
             except Exception as error:
                 self._send_json(502, {"error": str(error)})

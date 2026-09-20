@@ -69,7 +69,11 @@ class LocalAppSession:
 
 
 def _plan_from_env(
-    repo_dir: str, *, api_port: int | None = None, web_port: int | None = None
+    repo_dir: str,
+    *,
+    api_port: int | None = None,
+    web_port: int | None = None,
+    extra_env: Mapping[str, str] | None = None,
 ) -> RunPlan:
     return build_run_plan(
         repo_dir,
@@ -82,6 +86,7 @@ def _plan_from_env(
         api_port=api_port if api_port is not None else int(os.environ.get("OMNISTACKAI_APP_API_PORT", "8000")),
         web_port=web_port if web_port is not None else int(os.environ.get("OMNISTACKAI_APP_WEB_PORT", "3000")),
         jwt_secret=os.environ.get("OMNISTACKAI_APP_JWT_SECRET", "local-dev-secret"),
+        extra_env=extra_env,
     )
 
 
@@ -281,6 +286,7 @@ def start_preview_app(
     health_timeout_seconds: float = 45.0,
     host: str = "127.0.0.1",
     on_phase: Callable[[str], None] | None = None,
+    extra_env: Mapping[str, str] | None = None,
 ) -> LocalAppSession:
     """Start a managed preview on automatically allocated, collision-free API/web ports.
 
@@ -293,7 +299,7 @@ def start_preview_app(
     if not root.is_dir():
         raise LocalAppRunError(f"not a directory: {root}")
     api_port, web_port = allocate_preview_ports(host)
-    plan = _plan_from_env(str(root), api_port=api_port, web_port=web_port)
+    plan = _plan_from_env(str(root), api_port=api_port, web_port=web_port, extra_env=extra_env)
     return start_app(
         str(root),
         plan=plan,

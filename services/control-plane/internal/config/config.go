@@ -56,6 +56,7 @@ type Config struct {
 	GitHubAppClientSecret string
 	GitHubAppPrivateKey   string
 	SecretsKey            []byte
+	SecretsKeyPrevious    []byte
 }
 
 // Lookup matches os.LookupEnv and makes configuration loading deterministic in tests.
@@ -148,6 +149,14 @@ func Load(lookup Lookup) (Config, error) {
 		keyBytes, err := base64.StdEncoding.DecodeString(rawSecretsKey)
 		if err == nil && len(keyBytes) == 32 {
 			config.SecretsKey = keyBytes
+		}
+	}
+
+	rawPreviousKey := valueOrDefault(lookup, "OMNISTACKAI_SECRETS_KEY_PREVIOUS", "")
+	if rawPreviousKey != "" {
+		keyBytes, err := base64.StdEncoding.DecodeString(rawPreviousKey)
+		if err == nil && len(keyBytes) == 32 {
+			config.SecretsKeyPrevious = keyBytes
 		}
 	}
 

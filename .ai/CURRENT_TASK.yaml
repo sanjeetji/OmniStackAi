@@ -1,32 +1,32 @@
-task_id: R-502
+task_id: R-503
 status: completed
 phase: MVP
 tracker_row: null
 started_at: "2026-09-20"
 completed_at: "2026-09-20"
 objective: >-
-  Implement F-04 Knowledge & Skills (spec R_&_D/specs/F-04-skills.md).
-  Layer 1: Project Knowledge — persistent per-project brief (up to 16 KB) injected into every build and edit.
-  Layer 2: User Skills — reusable instruction sets (up to 8 KB each) attachable to projects, set as account defaults,
-  or used ad-hoc in single messages via @mentions.
-  Assemble bounded context ahead of user prompt with OMNISTACKAI_CONTEXT_MAX_CHARS cap (default 24k) and deterministic
-  truncation reporting. Database migration 000006_skills, Go control-plane skills routes, Agent-Engine context injection,
-  and Console Web UI (Manage -> Knowledge, Manage -> Skills, Settings -> Skills, Composer active chips & @mentions).
+  Implement F-05 Secrets (spec R_&_D/specs/F-05-secrets.md).
+  Encrypted per-project configuration (e.g. payment keys, SMTP passwords, third-party API keys)
+  stored in PostgreSQL using AES-256-GCM (Go standard library crypto/aes + crypto/cipher).
+  Master key OMNISTACKAI_SECRETS_KEY with key rotation via OMNISTACKAI_SECRETS_KEY_PREVIOUS.
+  Secrets injected into preview process environment at runtime, never written into repository files,
+  never committed to git, and never included in ZIP exports.
+  Control-plane REST API (/projects/{id}/secrets, PUT, DELETE, POST /reveal/{key}, 503 when unconfigured).
+  Console Web UI (Manage -> Secrets tab with masked values, 30s reveal timer, key validation, and preview restart alert).
 allowed_paths:
-  - services/control-plane/migrations/000006_skills.up.sql
-  - services/control-plane/migrations/000006_skills.down.sql
-  - services/control-plane/internal/skills/
+  - services/control-plane/migrations/000007_project_secrets.up.sql
+  - services/control-plane/migrations/000007_project_secrets.down.sql
+  - services/control-plane/internal/secrets/
   - services/control-plane/internal/projects/
   - services/control-plane/cmd/control-plane/
-  - services/agent-engine/src/omnistackai_agent_engine/intake/
+  - services/agent-engine/src/omnistackai_agent_engine/localrun/
   - services/agent-engine/src/omnistackai_agent_engine/studio/
-  - services/agent-engine/tests/test_skills_context.py
+  - services/agent-engine/tests/test_studio_workspace_secrets.py
   - apps/console-web/lib/control-plane.ts
-  - apps/console-web/app/api/skills/
   - apps/console-web/app/api/projects/
-  - apps/console-web/app/studio/
-  - apps/console-web/app/settings/
-  - apps/console-web/components/skills-library.tsx
+  - apps/console-web/app/studio/[projectId]/manage/page.tsx
+  - .env.example
+  - scripts/env-check.sh
   - scripts/test.sh
   - .ai/CURRENT_TASK.yaml
   - .ai/PROJECT_STATE.yaml
@@ -37,8 +37,8 @@ allowed_paths:
 forbidden_changes:
   - Do not change control-plane database from PostgreSQL
   - Do not add external Go or Python dependencies
-  - Do not echo full skill bodies or context back to the browser in chat/build streams
-  - Do not silently drop instructions on truncation (must report context_truncated)
+  - Do not write secrets to repository files, commits, build streams, or ZIP exports
+  - Do not store plaintext secrets if master key is unconfigured (must return 503)
 required_gates:
   - bash scripts/test.sh
   - cd services/control-plane && go test -v ./...
@@ -55,9 +55,11 @@ model_tool_trace:
   note: Engineering task, 0 model calls required for gates.
 evidence:
   scripts_test_sh: passed
-  control_plane_tests: passed (12 test suites, go vet clean, gofmt clean)
-  agent_engine_tests: passed (3,763 tests OK, lint clean)
-  console_web_typecheck_and_lint: passed (tsc --noEmit clean, eslint clean, Next.js build clean)
-  task_verify: passed (Stage 0 verification passed)
+  control_plane_tests: passed (12 packages, 6 secrets unit tests)
+  agent_engine_tests: passed (3765 tests passed)
+  console_web_typecheck_and_lint: passed
+  console_web_build: passed
+  task_verify: passed
 next_action: >-
-  Proceed to F-05 (Tracker ID: R-503): Secrets — encrypted per-project configuration (spec R_&_D/specs/F-05-secrets.md).
+  Task completed. Commit and push ai/R-503-secrets.
+

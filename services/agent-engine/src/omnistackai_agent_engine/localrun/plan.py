@@ -101,6 +101,7 @@ def build_run_plan(
     api_port: int = 8000,
     web_port: int = 3000,
     jwt_secret: str = "local-dev-secret",
+    extra_env: Mapping[str, str] | None = None,
 ) -> RunPlan:
     """Compose the ordered plan to run the generated repo at ``repo_dir`` locally."""
     root = Path(repo_dir)
@@ -114,6 +115,8 @@ def build_run_plan(
     api_url = f"http://{db_host}:{api_port}"
     web_url = f"http://127.0.0.1:{web_port}"
     database_url = f"postgresql://{db_user}:{db_password}@{db_host}:{db_port}/{database}"
+
+    extra_tuples = tuple((k, str(v)) for k, v in sorted(extra_env.items())) if extra_env else ()
 
     steps: list[RunStep] = []
 
@@ -184,7 +187,7 @@ def build_run_plan(
                 program=".venv/bin/uvicorn",
                 args=("app.main:app", "--host", "127.0.0.1", "--port", str(api_port)),
                 cwd=str(api_dir),
-                env=(("DATABASE_URL", database_url), ("JWT_SECRET", jwt_secret)),
+                env=(("DATABASE_URL", database_url), ("JWT_SECRET", jwt_secret)) + extra_tuples,
                 background=True,
             )
         )
@@ -200,7 +203,7 @@ def build_run_plan(
                     ("JWT_SECRET", jwt_secret),
                     ("PORT", str(api_port)),
                     ("ADDR", f":{api_port}"),
-                ),
+                ) + extra_tuples,
                 background=True,
             )
         )
@@ -223,7 +226,7 @@ def build_run_plan(
                 program="./node_modules/.bin/next",
                 args=("dev", "-p", str(web_port)),
                 cwd=str(web_dir),
-                env=(("NEXT_PUBLIC_API_URL", api_url),),
+                env=(("NEXT_PUBLIC_API_URL", api_url),) + extra_tuples,
                 background=True,
             )
         )
