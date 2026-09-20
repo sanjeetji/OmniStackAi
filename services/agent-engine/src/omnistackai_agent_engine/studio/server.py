@@ -28,6 +28,7 @@ from ..solution_packs import (
 from pathlib import Path
 
 from .connectors import ConnectorError, apply_connector, remove_connector
+from .payments import PaymentsError, apply_payments, remove_payments
 from .database import (
     DatabaseNotFoundError,
     QueryExecutionError,
@@ -846,6 +847,47 @@ def _make_handler(
             except Exception as error:
                 self._send_json(502, {"error": str(error)})
 
+        # --- Payments codegen handlers (G-04 / R-512) ---
+        def _handle_workspace_payments_apply(self, ws_id: str) -> None:
+            """POST /api/workspaces/{id}/payments/apply"""
+            repo_dir_str = self._db_require_workspace(ws_id)
+            if repo_dir_str is None:
+                return
+            data = self._read_json_body()
+            if data is None:
+                return
+            gateway = str(data.get("gateway", "")).strip().lower()
+            if not gateway:
+                self._send_json(400, {"error": "gateway is required"})
+                return
+            try:
+                result = apply_payments(Path(repo_dir_str), gateway)
+                self._send_json(200, result)
+            except PaymentsError as error:
+                self._send_json(400, {"error": str(error)})
+            except Exception as error:
+                self._send_json(502, {"error": str(error)})
+
+        def _handle_workspace_payments_remove(self, ws_id: str) -> None:
+            """POST /api/workspaces/{id}/payments/remove"""
+            repo_dir_str = self._db_require_workspace(ws_id)
+            if repo_dir_str is None:
+                return
+            data = self._read_json_body()
+            if data is None:
+                return
+            gateway = str(data.get("gateway", "")).strip().lower()
+            if not gateway:
+                self._send_json(400, {"error": "gateway is required"})
+                return
+            try:
+                result = remove_payments(Path(repo_dir_str), gateway)
+                self._send_json(200, result)
+            except PaymentsError as error:
+                self._send_json(400, {"error": str(error)})
+            except Exception as error:
+                self._send_json(502, {"error": str(error)})
+
         def _handle_file_tree(self, build_id: str) -> None:
             if file_tree_fn is None:
                 self._send_json(404, {"error": "file browsing is not enabled"})
@@ -1629,6 +1671,15 @@ def _make_handler(
             ws_conn_remove_id = self._workspace_id_for_suffix(path_only, "/connectors/remove")
             if ws_conn_remove_id is not None:
                 self._handle_workspace_connector_remove(ws_conn_remove_id)
+                return
+            # --- Payments codegen POST routes (G-04 / R-512) ---
+            ws_pay_apply_id = self._workspace_id_for_suffix(path_only, "/payments/apply")
+            if ws_pay_apply_id is not None:
+                self._handle_workspace_payments_apply(ws_pay_apply_id)
+                return
+            ws_pay_remove_id = self._workspace_id_for_suffix(path_only, "/payments/remove")
+            if ws_pay_remove_id is not None:
+                self._handle_workspace_payments_remove(ws_pay_remove_id)
                 return
             # --- existing workspace POST routes ---
             ws_cancel_id = self._workspace_id_for_suffix(path_only, "/cancel")

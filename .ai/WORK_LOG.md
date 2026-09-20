@@ -1,5 +1,37 @@
 # Work Log
 
+## 2026-09-20 — R-512 (G-04 Payment Gateways in Generated Apps — Stripe & Razorpay)
+
+- **Why:** Enable generated applications to accept real customer payments ("my store takes money") with zero PCI scope for the platform, strict HMAC-SHA256 signature verification, and event idempotency (`R_&_D/specs/G-04-payments.md`).
+- **Part 1 — Database Migration (`services/control-plane/migrations/`):**
+  - Created `000013_project_payments.up.sql` and `000013_project_payments.down.sql`:
+    - Added `payment_gateway` TEXT column to `projects` table with CHECK constraint `('', 'stripe', 'razorpay')` and default `''`.
+- **Part 2 — Control-Plane Backend (`services/control-plane/internal/payments/`):**
+  - Implemented `store.go`: `PgStore` managing project payment gateway configuration with validation (`stripe`, `razorpay`, `""`).
+  - Implemented `handler.go`: REST endpoints (`GET /projects/{id}/payments`, `PUT /projects/{id}/payments`, `DELETE /projects/{id}/payments`), required secrets inspection (`STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`, `NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY`, `RAZORPAY_KEY_ID`, `RAZORPAY_KEY_SECRET`, `RAZORPAY_WEBHOOK_SECRET`) checking "set" vs "not_set" without ever leaking key values, and live webhook endpoint URL formatting.
+  - Implemented unit tests in `payments_test.go` (100% pass).
+  - Registered `payments.Register` in `cmd/control-plane/main.go`. Zero new external Go dependencies (`github.com/jackc/pgx/v5` remains sole direct dependency).
+- **Part 3 — Agent-Engine Codegen Hooks (`services/agent-engine/`):**
+  - Implemented `studio/payments.py`:
+    - `apply_payments`: Generates `lib/payments/stripe.ts` (typed checkout & HMAC signature verification, zero npm dependencies), `app/api/checkout/route.ts`, `app/api/webhooks/stripe/route.ts` (HMAC-SHA256 signature validation & in-memory event deduplication), `app/checkout/success/page.tsx`, `app/checkout/cancel/page.tsx`, and `tests/payments/test_stripe_webhook.js` for Stripe; generates `lib/payments/razorpay.ts` (typed orders & signature verification), `app/api/checkout/route.ts`, `app/api/webhooks/razorpay/route.ts`, success/cancel pages, and verification tests for Razorpay; updates `.env.example`; commits additions to Git.
+    - `remove_payments`: Cleanly unlinks generated payment files, strips keys from `.env.example`, and commits clean removal to Git.
+  - Mounted routes in `studio/server.py`: `POST /api/workspaces/{id}/payments/apply` and `POST /api/workspaces/{id}/payments/remove`.
+  - Added unit tests in `tests/test_payments.py` testing codegen, live Node HMAC verification script execution (3/3 passed), and HTTP API endpoints.
+- **Part 4 — Console Web UI (`apps/console-web/`):**
+  - Extended `lib/control-plane.ts`: Added `PaymentKeyStatus`, `ProjectPaymentsResponse`, and client functions (`getProjectPayments`, `setProjectPaymentGateway`, `clearProjectPaymentGateway`).
+  - Added Next.js API proxy route `app/api/projects/[id]/payments/route.ts` (`GET`, `PUT`, `DELETE`).
+  - Created `components/project-payments-manage.tsx`:
+    - Stripe & Razorpay gateway cards with supported payment method tags.
+    - Generated code file breakdown with explanations.
+    - Required secret keys checklist with direct deep links to Manage -> Secrets.
+    - Copyable live webhook URL with setup instructions for Stripe & Razorpay dashboards.
+    - Test Mode Sandbox guidance with test card numbers and simulated UPI VPA.
+    - Disconnect gateway confirmation modal.
+  - Mounted Payments tab in Studio Manage sidebar (`app/studio/[projectId]/manage/page.tsx`).
+- **Part 5 — Verification & Contract Testing:**
+  - Added R-512 contract assertions to `scripts/test.sh`.
+  - Verified: `task lint` (clean), `go test ./...` across all 17 control-plane packages (clean), Next.js build/typecheck/lint (clean), and full `task verify` (all 3,841 agent-engine tests pass).
+
 ## 2026-09-20 — R-511 (G-03 Connectors v1)
 
 - **Why:** Enable generated apps to communicate with 3rd-party services (Google Analytics 4, Resend, and SMTP) using developer credentials (`R_&_D/specs/G-03-connectors.md`). Follows the strict **Honest Catalogue Rule**: ships few, working, and honest connectors only — zero deceptive 113-service marketing stubs.

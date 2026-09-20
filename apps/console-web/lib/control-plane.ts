@@ -2001,6 +2001,67 @@ export function testProjectConnector(
   );
 }
 
+// --- Payment Gateways (G-04 / R-512) ---
+
+export interface PaymentKeyStatus {
+  key: string;
+  required: boolean;
+  status: "set" | "not_set";
+  description: string;
+}
+
+export interface ProjectPaymentsResponse {
+  project_id: string;
+  payment_gateway: "stripe" | "razorpay" | "";
+  key_statuses: PaymentKeyStatus[];
+  webhook_url: string;
+  instructions: string;
+}
+
+export function getProjectPayments(
+  token: string,
+  projectId: string
+): Promise<ProjectPaymentsResponse> {
+  return callControlPlane<ProjectPaymentsResponse>(
+    `/projects/${encodeURIComponent(projectId)}/payments`,
+    {
+      headers: { Authorization: `Bearer ${token}` },
+    }
+  );
+}
+
+export function setProjectPaymentGateway(
+  token: string,
+  projectId: string,
+  paymentGateway: "stripe" | "razorpay"
+): Promise<ProjectPaymentsResponse> {
+  return callControlPlane<ProjectPaymentsResponse>(
+    `/projects/${encodeURIComponent(projectId)}/payments`,
+    {
+      method: "PUT",
+      headers: {
+        Authorization: `Bearer ${token}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ payment_gateway: paymentGateway }),
+    }
+  );
+}
+
+export function clearProjectPaymentGateway(
+  token: string,
+  projectId: string
+): Promise<{ project_id: string; payment_gateway: string; cleared: boolean }> {
+  return callControlPlane<{ project_id: string; payment_gateway: string; cleared: boolean }>(
+    `/projects/${encodeURIComponent(projectId)}/payments`,
+    {
+      method: "DELETE",
+      headers: { Authorization: `Bearer ${token}` },
+    }
+  );
+}
+
+
 
 
 

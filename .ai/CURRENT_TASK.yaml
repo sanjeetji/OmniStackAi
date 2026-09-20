@@ -1,36 +1,34 @@
-task_id: R-511
+task_id: R-512
 status: completed
 phase: MVP
 tracker_row: null
 started_at: "2026-09-20"
 completed_at: "2026-09-20"
 objective: >-
-  Implement G-03 Connectors v1 (spec R_&_D/specs/G-03-connectors.md).
-  Includes: (1) PostgreSQL migration 000012_connectors (connector_accounts and project_connectors tables);
-  (2) Control-plane internal/connectors package with catalog, store, and REST handlers (/connectors, /projects/{id}/connectors,
-  /projects/{id}/connectors/{provider}, /projects/{id}/connectors/{provider}/test);
-  (3) Agent-engine studio/connectors.py with codegen hooks for Google Analytics 4 (layout tag injection) and Transactional Email
-  (Resend & SMTP lib/email.ts + server action), plus clean removal on disconnect;
-  (4) Console-Web UI: Studio Manage -> Connectors tab with connector cards, configuration dialog explaining generated code,
-  live testing, and "Request a Connector" dialog;
-  (5) Quality gates: scripts/test.sh contract assertions, Go tests, Python tests, Next.js typecheck/lint, task verify.
+  Implement G-04 Payment Gateways in generated apps — Stripe & Razorpay (spec R_&_D/specs/G-04-payments.md).
+  Includes: (1) PostgreSQL migration 000013_project_payments adding payment_gateway column to projects;
+  (2) Control-plane internal/payments package with store, REST handlers (GET/PUT/DELETE /projects/{id}/payments)
+  inspecting required secrets status without exposing keys and calculating live webhook endpoints;
+  (3) Agent-engine studio/payments.py with codegen hooks for Stripe (lib/payments/stripe.ts, app/api/checkout/route.ts,
+  app/api/webhooks/stripe/route.ts, app/checkout/success/page.tsx, app/checkout/cancel/page.tsx) and Razorpay
+  (lib/payments/razorpay.ts, UPI & card checkout, webhook signature verification, idempotency);
+  (4) Clean removal on disable committing changes to Git;
+  (5) Console-Web UI: Studio Manage -> Payments tab with Stripe & Razorpay cards, setup checklist, webhook copy box,
+  live secrets status indicators (never rendering keys), and test mode badge;
+  (6) Quality gates: scripts/test.sh contract assertions, Go tests, Python tests, Next.js build/lint, task verify.
 allowed_paths:
-  - services/control-plane/migrations/000012_connectors.up.sql
-  - services/control-plane/migrations/000012_connectors.down.sql
-  - services/control-plane/internal/connectors/catalog.go
-  - services/control-plane/internal/connectors/store.go
-  - services/control-plane/internal/connectors/handler.go
-  - services/control-plane/internal/connectors/connectors_test.go
+  - services/control-plane/migrations/000013_project_payments.up.sql
+  - services/control-plane/migrations/000013_project_payments.down.sql
+  - services/control-plane/internal/payments/store.go
+  - services/control-plane/internal/payments/handler.go
+  - services/control-plane/internal/payments/payments_test.go
   - services/control-plane/cmd/control-plane/main.go
-  - services/agent-engine/src/omnistackai_agent_engine/studio/connectors.py
+  - services/agent-engine/src/omnistackai_agent_engine/studio/payments.py
   - services/agent-engine/src/omnistackai_agent_engine/studio/server.py
-  - services/agent-engine/tests/test_connectors.py
+  - services/agent-engine/tests/test_payments.py
   - apps/console-web/lib/control-plane.ts
-  - apps/console-web/app/api/connectors/route.ts
-  - apps/console-web/app/api/projects/[id]/connectors/route.ts
-  - apps/console-web/app/api/projects/[id]/connectors/[provider]/route.ts
-  - apps/console-web/app/api/projects/[id]/connectors/[provider]/test/route.ts
-  - apps/console-web/components/project-connectors-manage.tsx
+  - apps/console-web/app/api/projects/[id]/payments/route.ts
+  - apps/console-web/components/project-payments-manage.tsx
   - apps/console-web/app/studio/[projectId]/manage/page.tsx
   - scripts/test.sh
   - .ai/CURRENT_TASK.yaml
@@ -42,14 +40,14 @@ allowed_paths:
 forbidden_changes:
   - Do not add external Go or Python dependencies (zero new deps; Go keeps 1 direct dep: pgx/v5)
   - Do not change control-plane database from PostgreSQL
-  - Do not ship fake or non-functioning connectors (no fake 113-service marketing lists)
-  - Do not store unencrypted credentials
+  - Do not store users' customer payment details in platform database (keeps platform out of PCI scope)
+  - Do not render secret keys in client responses or UI
 required_gates:
   - bash scripts/test.sh
-  - cd services/control-plane && go test -v ./internal/connectors/...
+  - cd services/control-plane && go test -v ./internal/payments/...
   - cd services/control-plane && go test -v ./migrations/...
   - cd services/control-plane && go test ./...
-  - PYTHONPATH=src python3 -m unittest tests/test_connectors.py
+  - PYTHONPATH=src python3 -m unittest tests/test_payments.py
   - cd apps/console-web && pnpm run typecheck && pnpm run lint
   - task verify
   - task lint
@@ -60,9 +58,9 @@ model_tool_trace:
   note: Engineering task, 0 model calls required for gates.
 evidence:
   scripts_test_sh: passed
-  control_plane_tests: passed
-  agent_engine_tests: passed (3837 tests OK)
-  console_web_typecheck_and_lint: passed
-  task_verify: passed
+  control_plane_tests: passed (all 17 internal packages)
+  agent_engine_tests: passed (3841 tests, OK)
+  console_web_typecheck_and_lint: passed (0 errors, 0 warnings)
+  task_verify: passed (Ran 3841 tests in 89.517s, Stage 0 verification passed)
   task_lint: passed
-next_action: complete
+next_action: complete_task_and_checkpoint

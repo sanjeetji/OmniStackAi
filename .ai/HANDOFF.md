@@ -1,5 +1,33 @@
 # Current Handoff
 
+Task ID: R-512
+Status: done
+Phase: MVP → Phase G (payments)
+Branch: `ai/R-512-payments`
+
+> **R-512 Completed (2026-09-20): G-04 Payment Gateways in Generated Apps — Stripe & Razorpay (`R_&_D/specs/G-04-payments.md`).**
+> - **Isolation & Security:**
+>   - Zero PCI scope for OmniStackAI platform (never stores or routes customer credit cards or banking credentials).
+>   - Webhook endpoints enforce HMAC-SHA256 signature verification and in-memory event deduplication.
+> - **Database Migration (`services/control-plane/migrations/`):**
+>   - Created `000013_project_payments.up.sql` and `down.sql`: added `payment_gateway` TEXT column with CHECK constraint `('', 'stripe', 'razorpay')`.
+> - **Control-Plane Backend (`services/control-plane/internal/payments/`):**
+>   - `store.go`: PostgreSQL store for `payment_gateway` CRUD.
+>   - `handler.go`: REST endpoints (`GET/PUT/DELETE /projects/{id}/payments`), required secrets inspection (`STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`, `NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY`, `RAZORPAY_KEY_ID`, `RAZORPAY_KEY_SECRET`, `RAZORPAY_WEBHOOK_SECRET`) checking "set" vs "not_set" without leaking key values, and live webhook endpoint URL generation.
+>   - Zero new external Go dependencies (`github.com/jackc/pgx/v5` remains sole direct dependency).
+>   - Unit tests in `payments_test.go`: All tests pass. Registered in `cmd/control-plane/main.go`.
+> - **Agent-Engine Codegen Hooks (`services/agent-engine/`):**
+>   - `studio/payments.py`: `apply_payments` generates `lib/payments/stripe.ts` (typed checkout & webhook verification, zero npm dependencies), `app/api/checkout/route.ts`, `app/api/webhooks/stripe/route.ts`, `app/checkout/success/page.tsx`, `app/checkout/cancel/page.tsx`, and `tests/payments/test_stripe_webhook.js` for Stripe; generates `lib/payments/razorpay.ts`, `app/api/checkout/route.ts`, `app/api/webhooks/razorpay/route.ts`, success/cancel pages, and verification tests for Razorpay; commits additions to Git. `remove_payments` removes code and commits clean removal to Git.
+>   - Mounted `POST /api/workspaces/{id}/payments/apply` and `POST /api/workspaces/{id}/payments/remove` in `studio/server.py`.
+>   - Unit tests in `tests/test_payments.py`: All 4 tests pass including live node HMAC verification scripts.
+> - **Console Web UI (`apps/console-web/`):**
+>   - Types and SDK methods in `lib/control-plane.ts`.
+>   - Next.js API route proxy `app/api/projects/[id]/payments/route.ts`.
+>   - `components/project-payments-manage.tsx`: Manage -> Payments tab with Stripe & Razorpay cards, generated code files breakdown, required secret keys checklist with deep links to Manage -> Secrets, copyable live webhook URL, test mode sandbox tips, and disconnect confirm modal.
+>   - Mounted Payments tab in `app/studio/[projectId]/manage/page.tsx`.
+> - **Gates:** `bash scripts/test.sh` passed with R-512 assertions, `go test ./...` passed (all 17 packages), Next.js build/typecheck/lint passed, `task verify` passed (all 3,841 agent-engine tests pass).
+> - **NEXT:** Next roadmap task in Phase G.
+
 Task ID: R-511
 Status: done
 Phase: MVP → Phase G (connectors)

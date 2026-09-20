@@ -4,6 +4,18 @@ Last updated: 2026-09-20
 ## Current Phase
 Stage 0 (Founder Build Sequence, Brief Section 91) — BASIC/MVP
 
+> **R-512 (2026-09-20): G-04 Payment Gateways in Generated Apps — Stripe & Razorpay (`R_&_D/specs/G-04-payments.md`).**
+> Implemented production payment gateway integration for generated apps with zero PCI scope for the platform, strict HMAC-SHA256 signature verification, and event idempotency.
+> Supported gateways:
+> 1. Stripe: Global standard (cards, wallets, 135+ currencies). Generates `lib/payments/stripe.ts` (typed checkout & signature verification, zero npm dependencies), `app/api/checkout/route.ts`, `app/api/webhooks/stripe/route.ts`, success/cancel pages, and deterministic test suite.
+> 2. Razorpay: India standard (UPI, QR, cards, netbanking, INR settlement). Generates `lib/payments/razorpay.ts` (typed orders & signature verification), `app/api/checkout/route.ts`, `app/api/webhooks/razorpay/route.ts`, success/cancel pages, and deterministic test suite.
+> Database: PostgreSQL migration `000013_project_payments` added `payment_gateway` TEXT column to `projects` table with CHECK constraint `('', 'stripe', 'razorpay')`.
+> Control-Plane Backend: `internal/payments` package with `store.go`, `handler.go` (`GET/PUT/DELETE /projects/{id}/payments`), required secrets inspection (`STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`, `NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY`, `RAZORPAY_KEY_ID`, `RAZORPAY_KEY_SECRET`, `RAZORPAY_WEBHOOK_SECRET`) checking "set" vs "not_set" without leaking key values, and live webhook endpoint URL generation. Zero new Go dependencies (`github.com/jackc/pgx/v5` remains the sole direct dependency).
+> Agent-Engine: `studio/payments.py` with `apply_payments` and `remove_payments` codegen hooks committing additions and clean removals directly to the project's Git repository.
+> Console Web UI: Studio Manage → Payments tab with `ProjectPaymentsManage` (gateway cards, generated code files breakdown, required secret keys checklist with deep links to Manage -> Secrets, copyable live webhook URL, test mode sandbox tips, and disconnect confirm modal).
+> Gates: All 3,841 tests pass, `task verify` passed, `scripts/test.sh` passed, Next.js build clean.
+> NEXT: **Phase G continued**.
+
 > **R-511 (2026-09-20): G-03 Connectors v1 (`R_&_D/specs/G-03-connectors.md`).**
 > Implemented clean connector framework for generated apps to communicate with 3rd-party services using developer credentials, adhering to the Honest Catalogue Rule (zero fake 113-service marketing cards).
 > Supported out of the box: Google Analytics 4 (GA4 measurement ID tag injection into layout), Resend (zero-npm-dep REST API transactional email helper), and custom SMTP (typed dispatcher).

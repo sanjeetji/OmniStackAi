@@ -4,20 +4,21 @@ phase: BASIC/MVP
 founder_stage: 0
 current_task: null
 current_status: ready
-branch: ai/R-511-connectors
-last_completed_task: R-511
+branch: ai/R-512-payments
+last_completed_task: R-512
 last_completed_task_summary: >-
+  Completed R-512 (2026-09-20): G-04 Payment Gateways in Generated Apps — Stripe & Razorpay (spec R_&_D/specs/G-04-payments.md).
+  1) Isolation & Security: Zero PCI scope for OmniStackAI platform (never touches/stores card numbers). Webhooks cryptographically verified via HMAC-SHA256 with event deduplication.
+  2) Database: PostgreSQL migration 000013_project_payments adding payment_gateway text column to projects with check constraint ('', 'stripe', 'razorpay').
+  3) Control-plane: internal/payments package with store and REST endpoints (GET/PUT/DELETE /projects/{id}/payments) inspecting required secrets status without exposing keys and generating live webhook URLs. Zero new Go dependencies (pgx/v5 remains sole direct dependency).
+  4) Agent-engine: studio/payments.py with apply_payments and remove_payments codegen hooks:
+     - Stripe: lib/payments/stripe.ts (typed checkout and webhook verification, zero npm dependencies), app/api/checkout/route.ts, app/api/webhooks/stripe/route.ts, success/cancel pages, and deterministic test suite.
+     - Razorpay: lib/payments/razorpay.ts (typed orders and HMAC signature verification), app/api/checkout/route.ts, app/api/webhooks/razorpay/route.ts, success/cancel pages, and deterministic test suite.
+     - Clean Git commits on enable and disable.
+  5) Console-Web UI: Studio Manage -> Payments tab with ProjectPaymentsManage (Stripe & Razorpay cards, setup checklist, deep links to Secrets, copyable live webhook URL, test mode sandbox tips, and disconnect confirm modal).
+  All 3,841 agent-engine tests, 17 Go packages, Next.js build/typecheck/lint, and task verify clean.
+_prior_last_completed_task_summary_R511: >-
   Completed R-511 (2026-09-20): G-03 Connectors v1 (spec R_&_D/specs/G-03-connectors.md).
-  1) Framework: Honest catalogue rule enforced (no fake 113-service marketing cards). Supported out of the box:
-     - Google Analytics 4 (ga4): measurement ID injection into layout, components/GoogleAnalytics.tsx.
-     - Transactional Email (resend): zero-npm-dep Resend REST API integration generating lib/email.ts and app/api/send/route.ts.
-     - Custom SMTP (smtp): typed dispatcher generating lib/email.ts and app/api/send/route.ts.
-  2) Database: migration 000012_connectors with connector_accounts (encrypted tokens) and project_connectors (project-scoped config & enabled state).
-  3) Control-plane: internal/connectors package with Catalog, PgStore, and REST handlers (/connectors, /projects/{id}/connectors,
-     /projects/{id}/connectors/{provider}, /projects/{id}/connectors/{provider}/test). Zero new Go dependencies.
-  4) Agent-engine: studio/connectors.py with apply_connector and remove_connector codegen hooks committing changes directly to the project's Git repository.
-  5) Console-Web UI: Studio Manage -> Connectors tab with ProjectConnectorsManage (state chips, generated code explanation drawers, live credential testing, and "Request a Connector" dialog).
-  All 3,837 agent-engine tests, 16 Go packages, Next.js build/typecheck/lint, and task verify clean.
 _prior_last_completed_task_summary_R510: >-
   Completed R-510 (2026-09-20): G-02 Custom Domain — Bring Your Own (spec R_&_D/specs/G-02-domains.md).
   1) Zero domain registrar, purchasing, renewal, or WHOIS overhead for OmniStackAI (₹0 cost to platform).

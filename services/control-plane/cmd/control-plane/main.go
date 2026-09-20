@@ -25,6 +25,7 @@ import (
 	"github.com/sanjeetji/OmniStackAi/services/control-plane/internal/health"
 	"github.com/sanjeetji/OmniStackAi/services/control-plane/internal/jobs"
 	"github.com/sanjeetji/OmniStackAi/services/control-plane/internal/password"
+	"github.com/sanjeetji/OmniStackAi/services/control-plane/internal/payments"
 	"github.com/sanjeetji/OmniStackAi/services/control-plane/internal/projects"
 	"github.com/sanjeetji/OmniStackAi/services/control-plane/internal/secrets"
 	"github.com/sanjeetji/OmniStackAi/services/control-plane/internal/seo"
@@ -152,6 +153,15 @@ func run(ctx context.Context, logger *slog.Logger) error {
 		AuthStore:      userStore,
 		ProjectStore:   projectStore,
 		ConnectorStore: connectorStore,
+		AgentEngineURL: runtimeConfig.AgentEngineURL,
+		Logger:         logger,
+	})
+	paymentsStore := payments.NewPgStore(pool)
+	payments.Register(mux, payments.Deps{
+		AuthStore:      userStore,
+		ProjectStore:   projectStore,
+		PaymentsStore:  paymentsStore,
+		SecretsStore:   secretsStore,
 		AgentEngineURL: runtimeConfig.AgentEngineURL,
 		Logger:         logger,
 	})

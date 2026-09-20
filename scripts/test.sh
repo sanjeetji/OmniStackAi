@@ -1830,6 +1830,53 @@ if ! rg -qF 'ProjectConnectorsManage' "$console_root/app/studio/[projectId]/mana
   exit 1
 fi
 
+# R-512 (G-04 Payments in Generated Apps — Stripe & Razorpay): migration, control-plane package, agent-engine codegen, and console-web UI
+for required_payment_file in \
+  "$control_plane_root/migrations/000013_project_payments.up.sql" \
+  "$control_plane_root/migrations/000013_project_payments.down.sql" \
+  "$control_plane_root/internal/payments/store.go" \
+  "$control_plane_root/internal/payments/handler.go" \
+  "$control_plane_root/internal/payments/payments_test.go" \
+  "$agent_engine_root/src/omnistackai_agent_engine/studio/payments.py" \
+  "$agent_engine_root/tests/test_payments.py" \
+  "$console_root/components/project-payments-manage.tsx" \
+  "$console_root/app/api/projects/[id]/payments/route.ts"; do
+  if [[ ! -f "$required_payment_file" ]]; then
+    printf 'Missing R-512 contract file: %s\n' "$required_payment_file"
+    exit 1
+  fi
+done
+
+if ! rg -qF 'payment_gateway' "$control_plane_root/migrations/000013_project_payments.up.sql"; then
+  printf 'R-512 000013_project_payments.up.sql must add payment_gateway column.\n'
+  exit 1
+fi
+
+if ! rg -qF 'payments.Register' "$control_plane_root/cmd/control-plane/main.go"; then
+  printf 'R-512 control-plane main must register payments routes.\n'
+  exit 1
+fi
+
+if ! rg -qF 'apply_payments' "$agent_engine_root/src/omnistackai_agent_engine/studio/payments.py"; then
+  printf 'R-512 payments.py must define apply_payments.\n'
+  exit 1
+fi
+
+if ! rg -qF 'remove_payments' "$agent_engine_root/src/omnistackai_agent_engine/studio/payments.py"; then
+  printf 'R-512 payments.py must define remove_payments.\n'
+  exit 1
+fi
+
+if ! rg -qF '_handle_workspace_payments_apply' "$agent_engine_root/src/omnistackai_agent_engine/studio/server.py"; then
+  printf 'R-512 server.py must route workspace payments apply.\n'
+  exit 1
+fi
+
+if ! rg -qF 'ProjectPaymentsManage' "$console_root/app/studio/[projectId]/manage/page.tsx"; then
+  printf 'R-512 manage page must render ProjectPaymentsManage.\n'
+  exit 1
+fi
+
 printf 'Repository contract tests passed.\n'
 
 
