@@ -1,5 +1,11 @@
 # Work Log
 
+## 2026-09-22 — R-528 (RideNow part 3/4: driver PWA)
+
+- The driver product: sign in or apply, go online on a map with surge zones, accept requests from the offer sheet, run the trip (arrive, PIN, complete, collect cash, rate the rider), then earnings with a daily chart, wallet payouts, history, ratings with coaching, account (vehicle, documents with expiry warnings, simulated or GPS location), help threads and notifications. Installable as a PWA.
+- Found live: the home page called an endpoint the API did not have (`/driver/zones`, now added). A new offline test cross-checks every API path in the rider and driver apps against the API's routes. Also fixed page titles on nested pages in both apps.
+- Evidence: tsc + next build clean; live preview: 13 driver pages 200, manifest served, workflow 5/5 (new payout test), driver endpoint script all passed. `task verify` 3,976 OK. Smoke passed.
+
 ## 2026-09-22 — R-527 (RideNow part 2/4: rider app + shared package)
 
 - The rider product: landing page, sign-in (email or OTP), map-first booking with fares for every vehicle, live trip with a moving car, PIN, cancel, receipt and rating, history, wallet with card top-up, saved places, promos, account, help-centre threads and notifications. The shared package adds a typed client with token refresh, an SSE hook and an offline SVG city map.

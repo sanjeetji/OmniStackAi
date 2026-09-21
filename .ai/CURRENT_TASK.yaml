@@ -1,22 +1,16 @@
-task_id: R-527
-status: completed
+task_id: R-528
+status: done
 phase: MVP
 tracker_row: null
 started_at: "2026-09-22"
-completed_at: "2026-09-22"
 objective: >-
-  RideNow part 2/4: apps/rider (landing, auth, book, live trip + receipt/rating, trips, wallet,
-  places, promos, account, help + threads, notifications) and packages/shared (typed API client with
-  refresh, types, formatters, SSE hook, offline SVG city map).
+  RideNow part 3/4: apps/driver PWA (dark, mobile-first): home with online switch + surge map,
+  incoming offer sheet with countdown, active trip flow (pickup, PIN, complete, cash, rate rider),
+  earnings with charts, wallet + payouts, history, ratings, account + documents, help, notifications;
+  simulated or device location reporting.
 allowed_paths:
   - templates/catalog/_ride-now/
   - services/agent-engine/tests/test_template_ride_now.py
-  - services/agent-engine/src/omnistackai_agent_engine/localrun/multiapp.py
-  - services/agent-engine/src/omnistackai_agent_engine/studio/preview.py
-  - services/agent-engine/src/omnistackai_agent_engine/studio/live_serve.py
-  - services/agent-engine/tests/test_localrun_multiapp.py
-  - services/agent-engine/tests/test_studio_preview_multiapp.py
-  - apps/console-web/app/preview/[projectId]/[[...path]]/route.ts
   - scripts/test.sh
   - .ai/
   - PROJECT_STATE.md
@@ -25,19 +19,13 @@ allowed_paths:
   - docs/RESUME_PROMPT.md
 forbidden_changes:
   - Template stays hidden (_ride-now) until R-529
-  - No external map tiles or keys; no secrets
   - task verify stays offline with 0 model calls
 required_gates:
-  - tsc + next build (scratch install); shared unit tests offline
-  - live multi-app preview (api + rider) pages 200 + scripted journey
-  - task verify / lint / security:quick / env:check
+  - tsc + next build (scratch install)
+  - live preview (api + rider + driver): pages 200, manifest, cross-app ride through the proxy
+  - task verify / lint / security:quick / env:check / smoke-core.sh
 model_tool_trace:
   routing: deterministic_only
   local_calls: 0
   cloud_calls: 0
-evidence:
-  build: "shared + rider tsc exit 0; next build 15 routes"
-  live: "preview ready 13s; 14 pages 200 via proxy; workflow 4/4; SSE through proxy; restart x2 clean"
-  platform_fixes: "preview processes reaped + SIGTERM clean shutdown; proxy origin rewrite for Next 16 dev origins (LAN 403 -> 200)"
-  stage_0_verify: "task verify 3974 OK; smoke-core 17/17"
-next_action: R-528 RideNow driver PWA (apps/driver)
+next_action: R-529 admin/ops app, template.json, screenshots, publish ride-now, §43 checklist, 3 scripted chat edits

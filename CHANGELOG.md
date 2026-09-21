@@ -1,5 +1,7 @@
 # Changelog
 
+2026-09-22  R-528  RideNow template part 3/4: `apps/driver`, an installable dark PWA (sign in, apply, home with online switch and surge-zone map, offer sheet, trip flow with PIN, cash or wallet and rider rating, earnings chart, wallet payouts, history, ratings, account with documents and location mode, help threads, notifications). API: `GET /driver/zones`. Tests: every API path the apps call must exist (offline), and a live driver payout workflow. Nested page titles fixed in both apps.
+
 2026-09-22  R-527  RideNow template part 2/4: `packages/shared` (typed API client with token refresh, SSE hook, formatters, offline SVG Bengaluru map) and `apps/rider` on Next 16 / React 19 / Tailwind 4 (landing, auth, booking, live trip, receipt and rating, trips, wallet, places, promos, account, help threads, notifications). Platform: template previews no longer outlive a Studio restart (SIGTERM clean shutdown + recorded process groups reaped), and the preview proxy presents template UI requests as their own origin so Next 16 serves dev assets to LAN devices.
 
 2026-09-22  R-526  RideNow template part 1/4 (hidden draft): TypeScript API on Hono + pg with a trip state machine, real-driver-first dispatch with simulated demo drivers, upfront fares with surge and promos, ledger wallets (commission, refunds, payouts), mock payments/SMS/maps, SSE realtime, ratings, support, admin operations and OpenAPI; 5 migrations; deterministic seed (430 trips, balanced ledger); 20 unit tests run offline plus a live 4-scenario workflow test.

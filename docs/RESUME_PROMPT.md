@@ -380,8 +380,9 @@ RULES (non-negotiable)
   SHA == local HEAD. Never claim unexecuted tests.
 
 WHAT TO DO NEXT
-- LATEST (2026-09-22): R-527 (RideNow part 2/4: rider app + shared) is done. Next: R-528 driver PWA,
-  then R-529 admin + publish. The master plan is in .ai/tasks/R-526.md.
+- LATEST (2026-09-22): R-528 (RideNow part 3/4: driver PWA) is done. Next: R-529 admin/ops app +
+  template.json + screenshots + publish `ride-now`. The master plan is in .ai/tasks/R-526.md.
+  Earlier: R-527 (rider app + shared package).
   Earlier: R-525 (T-4 code-edit agent). Earlier: R-524 (chat edits work on Gemini).
   Earlier: R-523 (T-3 marketplace UI) is done. Earlier: R-522 (Google
   provider runs builds; .env model gemini-3-flash-preview) is done. Earlier: R-521 (core-loop hotfix: generated apps run again) is done; see

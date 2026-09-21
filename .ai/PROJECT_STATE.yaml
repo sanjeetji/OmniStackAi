@@ -5,8 +5,10 @@ founder_stage: 0
 current_task: null
 current_status: ready
 branch: ai/R-517-node-backend
-last_completed_task: R-527
+last_completed_task: R-528
 last_completed_task_summary: >-
+  Completed R-528 (2026-09-22): RideNow part 3/4. apps/driver PWA (dark, mobile-first, 13 pages + manifest): online switch with surge-zone map, offer sheet, trip flow (arrive, PIN, complete, cash or wallet, rate rider, cancel with reason), earnings chart, wallet and payouts, trip history and detail, ratings, account with vehicle, documents and location mode, apply, help threads, notifications. Added GET /driver/zones, an offline test that every API path the apps call exists, and a live payout test (workflow 5/5).
+_prior_last_completed_task_summary_R527: >-
   Completed R-527 (2026-09-22): RideNow part 2/4. packages/shared (typed API client, SSE hook, formatters, offline SVG Bengaluru map) and apps/rider (Next 16/React 19/Tailwind 4, 15 routes from landing to live trip, wallet and help threads). Live in the preview: pages 200, workflow 4/4, SSE through the proxy. Fixed two platform bugs found live: previews orphaned by Studio restarts (reaper + SIGTERM shutdown), and Next 16 dev-origin 403 from LAN devices (proxy origin rewrite).
 _prior_last_completed_task_summary_R526: >-
   Completed R-526 (2026-09-22): RideNow part 1/4. TypeScript API (Hono + pg on Node >= 22.18): trip state machine, dispatch with simulated drivers, upfront fares/surge/promos, ledger wallets, mock payments/SMS/maps, SSE, ratings, support, admin, OpenAPI. 5 migrations and a deterministic seed (430 trips, balanced ledger). Unit 20/20 and live workflow 4/4. Hidden draft at templates/catalog/_ride-now.

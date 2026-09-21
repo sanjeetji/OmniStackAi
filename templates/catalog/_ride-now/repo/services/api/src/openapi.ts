@@ -34,6 +34,7 @@ export const openapi = {
     "/driver/me": { get: op("Driver profile, vehicle and documents", "driver") },
     "/driver/online": { post: op("Go online or offline", "driver") },
     "/driver/location": { post: op("Report location", "driver") },
+    "/driver/zones": { get: op("Active surge zones", "driver") },
     "/driver/offers/current": { get: op("The pending ride request", "driver") },
     "/driver/offers/{id}/accept": { post: op("Accept a ride request", "driver") },
     "/driver/offers/{id}/decline": { post: op("Decline a ride request", "driver") },

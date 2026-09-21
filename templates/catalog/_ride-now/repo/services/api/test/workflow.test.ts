@@ -161,3 +161,29 @@ test("admin: dashboard, refund, suspend and pricing", { skip, timeout: 60_000 },
   const audit = (await call("/admin/audit", { token: admin })).data.entries;
   assert.ok(audit.some((e: { action: string }) => e.action === "trip.refund"));
 });
+
+test("driver payouts: one at a time, an admin decides, a rejection returns the money", { skip, timeout: 60_000 }, async () => {
+  const driver = await login("ravi@ridenow.test", "Driver@2026");
+  const admin = await login("admin@ridenow.test", "Admin@2026");
+  // Settle anything already in flight (the demo data has one) so the driver can ask again.
+  const me = (await call("/driver/me", { token: driver })).data;
+  const pending = (await call("/admin/payouts?status=requested", { token: admin })).data.payouts;
+  for (const p of pending.filter((p: { driver_id: string }) => p.driver_id === me.id)) {
+    assert.equal((await call(`/admin/payouts/${p.id}/decision`, { token: admin, body: { decision: "paid" } })).status, 200);
+  }
+  const before = (await call("/driver/wallet", { token: driver })).data;
+  assert.ok(before.balance >= before.min_payout, "the demo driver has enough to withdraw");
+  assert.equal((await call("/driver/payouts", { token: driver, body: { amount: before.balance + 1 } })).data.code, "insufficient_balance");
+  const requested = await call("/driver/payouts", { token: driver, body: { amount: before.min_payout } });
+  assert.equal(requested.status, 201);
+  assert.equal(requested.data.balance, Math.round((before.balance - before.min_payout) * 100) / 100);
+  assert.equal((await call("/driver/payouts", { token: driver, body: { amount: before.min_payout } })).status, 409, "only one payout at a time");
+
+  assert.equal((await call(`/admin/payouts/${requested.data.id}/decision`, { token: admin, body: { decision: "rejected" } })).status, 200);
+  const after = (await call("/driver/wallet", { token: driver })).data;
+  assert.equal(after.balance, before.balance, "a rejected payout goes back to the wallet");
+  assert.equal(after.payouts.find((p: { id: string }) => p.id === requested.data.id).status, "rejected");
+  const inbox = (await call("/support/notifications", { token: driver })).data.notifications;
+  assert.ok(inbox.some((n: { title: string }) => n.title === "Payout rejected"));
+  assert.equal((await call(`/admin/payouts/${requested.data.id}/decision`, { token: admin, body: { decision: "paid" } })).status, 409);
+});

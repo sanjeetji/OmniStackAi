@@ -1,0 +1,65 @@
+@import "tailwindcss";
+@source "../../../packages/shared/src";
+
+/* RideNow Driver: dark, high-contrast, big touch targets for night driving. */
+@theme {
+  --font-sans: var(--font-sora), ui-sans-serif, system-ui, sans-serif;
+  --color-bg: #0b0e13;
+  --color-surface: #141922;
+  --color-raised: #1c2330;
+  --color-line: #2a3342;
+  --color-fg: #f3f5f8;
+  --color-fg-muted: #93a0b4;
+  --color-go: #22d37d;
+  --color-go-deep: #13a860;
+  --color-go-soft: rgb(34 211 125 / 0.14);
+  --color-warn: #ffb020;
+  --color-warn-soft: rgb(255 176 32 / 0.14);
+  --color-danger: #ff5a5f;
+  --color-danger-soft: rgb(255 90 95 / 0.14);
+  --color-info: #5aa9ff;
+  --radius-card: 1.25rem;
+}
+
+:root {
+  color-scheme: dark;
+  --map-land: #10151c;
+  --map-water: #12304a;
+  --map-park: #132a1f;
+  --map-road: #232c39;
+  --map-road-major: #3a3222;
+  --map-label: #5d6a7e;
+  --map-route: #22d37d;
+  --map-route-halo: #0b0e13;
+  --map-pickup: #22d37d;
+  --map-drop: #ffb020;
+  --map-car: #f3f5f8;
+  --map-label-bg: #f3f5f8;
+  --map-label-fg: #0b0e13;
+  --map-zone: rgb(255 176 32 / 0.12);
+  --map-zone-stroke: rgb(255 176 32 / 0.55);
+  --map-zone-text: #ffb020;
+}
+
+body {
+  background: var(--color-bg);
+  color: var(--color-fg);
+  -webkit-font-smoothing: antialiased;
+  -webkit-tap-highlight-color: transparent;
+}
+
+@keyframes drv-rise {
+  from { opacity: 0; transform: translateY(24px); }
+  to { opacity: 1; transform: none; }
+}
+.drv-rise { animation: drv-rise 0.35s cubic-bezier(0.2, 0.8, 0.2, 1) both; }
+
+@keyframes drv-glow {
+  0%, 100% { box-shadow: 0 0 0 0 rgb(34 211 125 / 0.55); }
+  50% { box-shadow: 0 0 0 14px rgb(34 211 125 / 0); }
+}
+.drv-glow { animation: drv-glow 2s ease-out infinite; }
+
+@media (prefers-reduced-motion: reduce) {
+  .drv-rise, .drv-glow { animation: none; }
+}

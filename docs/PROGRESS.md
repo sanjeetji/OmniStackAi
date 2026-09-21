@@ -6,6 +6,7 @@ R-461 completion) plus the state files (`.ai/`), Git history, and CHANGELOG.
 
 ## Headline
 
+- **R-528 — RideNow driver app (2026-09-22):** the installable driver PWA, live in the preview with the rider app and API. `task verify` = 3,976 tests.
 - **R-527 — RideNow rider app (2026-09-22):** the customer web app and shared package, live in the preview. `task verify` = 3,974 tests.
 - **R-526 — RideNow API (2026-09-22):** the first marketplace template's backend, database and demo data, tested live. `task verify` = 3,971 tests.
 - **R-525 — code-edit agent (2026-09-21):** customise template projects by chat, including removing features and changing the database. `task verify` = 3,968 tests.

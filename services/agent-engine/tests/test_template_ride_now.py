@@ -74,5 +74,52 @@ class RideNowApiTests(unittest.TestCase):
             self.assertIn(login, head)
 
 
+API_MOUNTS = ("/auth", "/rider", "/driver", "/admin", "/support", "/stream")
+# A string literal in app code that names an API path, e.g. "/driver/me" or `/driver/trips/${id}/arrive`.
+_API_LITERAL = re.compile(r"[\"`](/(?:auth|rider|driver|admin|support|stream)(?:/[^\"`?\s]*)?)(?:\?[^\"`]*)?[\"`]")
+_ROUTE = re.compile(r"(\w+)Routes\.(?:get|post|patch|put|delete)\(\"([^\"]*)\"")
+
+
+def _api_routes(api: Path) -> list[re.Pattern[str]]:
+    mounts = {"public": "", "auth": "/auth", "rider": "/rider", "driver": "/driver", "admin": "/admin", "support": "/support", "stream": "/stream"}
+    patterns = []
+    for source in (api / "src" / "routes").glob("*.ts"):
+        for group, path in _ROUTE.findall(source.read_text(encoding="utf-8")):
+            full = (mounts[group] + path).rstrip("/") or "/"
+            patterns.append(re.compile("^" + re.sub(r":\w+", "[^/]+", full) + "$"))
+    return patterns
+
+
+@unittest.skipUnless(API.is_dir(), "needs the RideNow template")
+class RideNowAppsTests(unittest.TestCase):
+    """R-528: the apps are complete, and every API path their code names exists in the API."""
+
+    def test_driver_app_pages_and_pwa_files(self) -> None:
+        driver = API.parents[1] / "apps" / "driver"
+        for page in ("", "login", "apply", "trip", "earnings", "wallet", "trips", "trips/[id]", "ratings", "account",
+                     "help", "help/[id]", "notifications"):
+            self.assertTrue((driver / "app" / page / "page.tsx").is_file(), f"driver page missing: /{page}")
+        for extra in ("app/manifest.ts", "app/not-found.tsx", "public/icon.svg", "public/icon-maskable.svg", "components/offer-sheet.tsx"):
+            self.assertTrue((driver / extra).is_file(), extra)
+        manifest = (driver / "app" / "manifest.ts").read_text(encoding="utf-8")
+        self.assertIn('display: "standalone"', manifest)
+        self.assertIn("BASE_PATH", manifest, "the manifest must respect the preview base path")
+
+    def test_every_api_path_used_by_the_apps_exists(self) -> None:
+        routes = _api_routes(API)
+        self.assertGreater(len(routes), 60)
+        checked = 0
+        for app in ("rider", "driver"):
+            root = API.parents[1] / "apps" / app
+            for source in [*root.rglob("*.ts"), *root.rglob("*.tsx")]:
+                if "node_modules" in source.parts or ".next" in source.parts:
+                    continue
+                for path in _API_LITERAL.findall(source.read_text(encoding="utf-8")):
+                    concrete = re.sub(r"\$\{[^}]*\}", "x", path).rstrip("/")
+                    checked += 1
+                    self.assertTrue(any(r.match(concrete) for r in routes), f"{source.relative_to(root)} calls {path}, which the API does not define")
+        self.assertGreater(checked, 40)
+
+
 if __name__ == "__main__":
     unittest.main()

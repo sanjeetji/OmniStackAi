@@ -4,6 +4,9 @@ Last updated: 2026-09-21
 ## Current Phase
 Stage 0 (Founder Build Sequence, Brief Section 91) — BASIC/MVP
 
+> **R-528 (2026-09-22): RideNow part 3/4.** The driver PWA (13 pages, installable) is built and
+> verified live alongside the rider app and the API. Next: R-529, the admin app and publishing.
+
 > **R-527 (2026-09-22): RideNow part 2/4.** The rider web app (15 routes) and shared package are
 > built and verified live in the preview. Two preview bugs affecting every template are fixed
 > (orphaned processes after restarts, LAN dev-origin 403).

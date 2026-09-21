@@ -2204,4 +2204,23 @@ if ! rg -qF 'headers.set("origin", target.origin)' "$repo_root/apps/console-web/
   exit 1
 fi
 
+# R-528 (Phase T, T-6 part 3 - RideNow driver app, a PWA):
+for required in apps/driver/app/page.tsx apps/driver/app/trip/page.tsx apps/driver/app/earnings/page.tsx \
+  apps/driver/app/wallet/page.tsx "apps/driver/app/trips/[id]/page.tsx" apps/driver/app/account/page.tsx \
+  apps/driver/app/apply/page.tsx apps/driver/app/manifest.ts apps/driver/lib/driver.tsx apps/driver/components/offer-sheet.tsx; do
+  if [[ ! -f "$ride_now_repo/$required" ]]; then
+    printf 'R-528 RideNow driver file missing: %s\n' "$required"
+    exit 1
+  fi
+done
+if ! rg -qF 'driverRoutes.get("/zones"' "$ride_now_api/src/routes/driver.ts" \
+  || ! rg -qF 'test_every_api_path_used_by_the_apps_exists' "$agent_engine_root/tests/test_template_ride_now.py"; then
+  printf 'R-528 every API path the RideNow apps call must exist, and a test must keep it that way.\n'
+  exit 1
+fi
+if ! rg -qF 'driver payouts: one at a time' "$ride_now_api/test/workflow.test.ts"; then
+  printf 'R-528 the live workflow must cover driver payouts.\n'
+  exit 1
+fi
+
 printf 'Repository contract tests passed.\n'

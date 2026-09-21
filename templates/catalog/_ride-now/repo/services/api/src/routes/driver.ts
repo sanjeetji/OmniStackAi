@@ -90,6 +90,12 @@ driverRoutes.post("/location", async (c) => {
   return c.json({ ok: true });
 });
 
+/** Active surge zones, so drivers can head to where demand is high. */
+driverRoutes.get("/zones", async (c) => {
+  const rows = await query<Record<string, any>>("SELECT id, name, center_lat, center_lng, radius_km, surge, active FROM zones WHERE active ORDER BY surge DESC, name");
+  return c.json({ zones: rows.map((z) => ({ ...z, radius_km: num(z.radius_km), surge: num(z.surge) })) });
+});
+
 driverRoutes.get("/offers/current", async (c) => {
   const row = await one<{ id: string }>(
     "SELECT id FROM ride_offers WHERE driver_id = $1 AND status = 'pending' AND expires_at > now() ORDER BY offered_at DESC LIMIT 1",
