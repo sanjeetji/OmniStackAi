@@ -1,0 +1,14 @@
+{
+  "name": "ridenow",
+  "private": true,
+  "description": "RideNow: rider web app, driver app, operations console and API.",
+  "packageManager": "pnpm@11.19.0",
+  "scripts": {
+    "dev:api": "pnpm --filter @ridenow/api dev",
+    "dev:rider": "pnpm --filter @ridenow/rider dev",
+    "dev:driver": "pnpm --filter @ridenow/driver dev",
+    "dev:admin": "pnpm --filter @ridenow/admin dev",
+    "test": "pnpm --filter @ridenow/api test",
+    "typecheck": "pnpm -r typecheck"
+  }
+}

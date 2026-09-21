@@ -1,9 +1,14 @@
 # Current Handoff
 
-Task ID: R-525
+Task ID: R-526
 Status: done
 Phase: MVP
 Branch: `ai/R-517-node-backend`
+
+> **R-526 Completed (2026-09-22): RideNow API, database and demo data** (hidden draft
+> `templates/catalog/_ride-now`). The master plan for all four apps is in `.ai/tasks/R-526.md`.
+> **Next:** R-527, the rider web app. The Studio `.env` now uses the founder's new Google key with
+> `gemini-3-flash-preview`.
 
 > **R-525 Completed (2026-09-21): code-edit agent (T-4).** Chat edits on template projects change
 > the real code, are checked, and are committed (or fully rolled back). `.env` model is now

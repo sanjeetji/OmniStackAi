@@ -6,6 +6,7 @@ R-461 completion) plus the state files (`.ai/`), Git history, and CHANGELOG.
 
 ## Headline
 
+- **R-526 — RideNow API (2026-09-22):** the first marketplace template's backend, database and demo data, tested live. `task verify` = 3,971 tests.
 - **R-525 — code-edit agent (2026-09-21):** customise template projects by chat, including removing features and changing the database. `task verify` = 3,968 tests.
 - **R-524 — edits work on Gemini (2026-09-21):** the full core loop passes on Google. `task verify` = 3,946 tests.
 - **R-523 — Template marketplace UI (2026-09-21):** browse, inspect and use templates from the console. `task verify` = 3,943 tests.

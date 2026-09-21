@@ -1,5 +1,11 @@
 # Work Log
 
+## 2026-09-22 — R-526 (RideNow part 1/4: API, database, demo data)
+
+- RideNow's backend: a TypeScript API (no build step on Node 22.18+) with the full ride-hailing domain: dispatch that prefers real drivers and uses simulated demo drivers, a PIN-gated trip state machine, upfront fares with surge and promos, a balanced wallet ledger with commission, refunds and payouts, SSE realtime, support and an admin audit trail.
+- Demo data is generated deterministically by reusing the API's own fare code; on a fresh DB the ledger balances exactly. Unit tests 20/20 (they caught a floating-point rounding bug). The live workflow is 4/4 against the running API.
+- The template stays a hidden draft (`_ride-now`) until the three apps are done (R-527 to R-529).
+
 ## 2026-09-21 — R-525 (T-4 code-edit agent)
 
 - Template projects can now be changed by chat: add, remove and change features, including database changes through new migrations. The agent edits real files, checks them, repairs once or rolls back fully, and commits only what it touched.

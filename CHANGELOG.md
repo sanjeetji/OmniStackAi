@@ -1,5 +1,7 @@
 # Changelog
 
+2026-09-22  R-526  RideNow template part 1/4 (hidden draft): TypeScript API on Hono + pg with a trip state machine, real-driver-first dispatch with simulated demo drivers, upfront fares with surge and promos, ledger wallets (commission, refunds, payouts), mock payments/SMS/maps, SSE realtime, ratings, support, admin operations and OpenAPI; 5 migrations; deterministic seed (430 trips, balanced ledger); 20 unit tests run offline plus a live 4-scenario workflow test.
+
 2026-09-21  R-525  T-4 code-edit agent: template projects are edited by chat. It selects files, emits line-delimited WRITE/REPLACE/DELETE blocks, validates and applies them (paths, sizes, exact single matches), verifies (tsc, node --check, JSON, omnistack.json, base-path-safe links, no duplicated module structure) with one repair round or a full rollback, and commits only the touched paths. Edit failures return 422 with nothing saved. The Studio composer is enabled for template projects.
 
 2026-09-21  R-524  Chat edits use the provider's output budget (never below 2,048 tokens). Gemini counts reasoning against the budget, so edit replies were cut off mid-JSON and every edit failed on Google.

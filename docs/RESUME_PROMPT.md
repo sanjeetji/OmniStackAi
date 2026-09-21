@@ -380,8 +380,9 @@ RULES (non-negotiable)
   SHA == local HEAD. Never claim unexecuted tests.
 
 WHAT TO DO NEXT
-- LATEST (2026-09-21): R-525 (T-4 code-edit agent) is done. Next: T-5 workspace upgrades, then T-6
-  RideNow (every template needs full per-role page sets). Earlier: R-524 (chat edits work on Gemini).
+- LATEST (2026-09-22): R-526 (RideNow part 1/4: API/DB/seed) is done; the master plan is in
+  .ai/tasks/R-526.md. Next: R-527 rider web app, R-528 driver PWA, R-529 admin + publish.
+  Earlier: R-525 (T-4 code-edit agent). Earlier: R-524 (chat edits work on Gemini).
   Earlier: R-523 (T-3 marketplace UI) is done. Earlier: R-522 (Google
   provider runs builds; .env model gemini-3-flash-preview) is done. Earlier: R-521 (core-loop hotfix: generated apps run again) is done; see
   .ai/tasks/R-521.md. Always run ./scripts/smoke-core.sh (17 checks incl.

@@ -4,6 +4,10 @@ Last updated: 2026-09-21
 ## Current Phase
 Stage 0 (Founder Build Sequence, Brief Section 91) — BASIC/MVP
 
+> **R-526 (2026-09-22): RideNow part 1/4.** The first real template's API, database and demo data
+> are built and tested live (workflow 4/4). The rider, driver and admin apps follow in R-527 to
+> R-529.
+
 > **R-525 (2026-09-21): T-4 code-edit agent.** Chat changes on template projects (add, remove or
 > change features, DB migrations) are made in the real code, checked, then committed or rolled back.
 

@@ -2170,4 +2170,19 @@ if ! rg -qF '_workspace_code_edit' "$agent_engine_root/src/omnistackai_agent_eng
   exit 1
 fi
 
+# R-526 (Phase T, T-6 part 1 - RideNow API, database and demo data):
+ride_now_api="$repo_root/templates/catalog/_ride-now/repo/services/api"
+[[ -d "$repo_root/templates/catalog/ride-now" ]] && ride_now_api="$repo_root/templates/catalog/ride-now/repo/services/api"
+for required in src/index.ts src/services/dispatch.ts src/services/trips.ts src/lib/trip-state.ts src/openapi.ts \
+  migrations/001_core.sql migrations/005_support.sql seed/001_demo.sql scripts/generate-seed.mjs test/workflow.test.ts; do
+  if [[ ! -f "$ride_now_api/$required" ]]; then
+    printf 'R-526 RideNow API file missing: %s\n' "$required"
+    exit 1
+  fi
+done
+if [[ ! -f "$agent_engine_root/tests/test_template_ride_now.py" ]]; then
+  printf 'R-526 the RideNow unit tests and seed check must run in the offline suite.\n'
+  exit 1
+fi
+
 printf 'Repository contract tests passed.\n'

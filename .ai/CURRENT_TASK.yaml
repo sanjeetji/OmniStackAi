@@ -1,21 +1,17 @@
-task_id: R-525
+task_id: R-526
 status: completed
 phase: MVP
 tracker_row: null
 started_at: "2026-09-21"
-completed_at: "2026-09-21"
+completed_at: "2026-09-22"
 objective: >-
-  T-4 code-edit agent: template projects are edited by chat through select-files -> edit blocks ->
-  validate/apply -> verify (+1 repair, else rollback) -> commit touched paths only. Studio composer
-  enabled for template projects.
+  RideNow template part 1/4: services/api (TypeScript on Node >= 22.18, Hono + pg), migrations,
+  deterministic demo seed (generator shipped), trip state machine, dispatch with simulated drivers,
+  fares/surge/promos, wallet ledger + mock payments, SSE, ratings, support, audit, OpenAPI; unit tests
+  (node --test, offline) + live workflow test. Built under templates/catalog/_ride-now (hidden draft).
 allowed_paths:
-  - services/agent-engine/src/omnistackai_agent_engine/studio/code_edit.py
-  - services/agent-engine/src/omnistackai_agent_engine/studio/live_serve.py
-  - services/agent-engine/tests/test_code_edit.py
-  - services/agent-engine/tests/test_studio_templates.py
-  - services/agent-engine/tests/fixtures/code_edit_duplicated_page.jsx
-  - services/agent-engine/src/omnistackai_agent_engine/studio/server.py
-  - apps/console-web/app/studio/studio-chat.tsx
+  - templates/catalog/_ride-now/
+  - services/agent-engine/tests/test_template_ride_now.py
   - scripts/test.sh
   - .ai/
   - PROJECT_STATE.md
@@ -23,18 +19,20 @@ allowed_paths:
   - docs/PROGRESS.md
   - docs/RESUME_PROMPT.md
 forbidden_changes:
-  - Prompt-built projects keep the IR edit path
-  - Never git add -A in the code-edit commit; never write outside the repo, .git, node_modules or real .env files
+  - Template stays hidden (_ride-now) until R-529
+  - No real credentials; mock providers only; demo OTP only in preview
   - task verify stays offline with 0 model calls
 required_gates:
-  - test_code_edit (stub providers); task verify / lint / security:quick / env:check
-  - live: 3 scripted edits on the fixture template (Gemini) + smoke-core.sh
+  - node --test unit tests (offline, via agent-engine suite)
+  - live: fresh DB migrations + seed + workflow test against the running API
+  - task verify / lint / security:quick / env:check
 model_tool_trace:
   routing: deterministic_only
   local_calls: 0
   cloud_calls: 0
 evidence:
-  tests: "test_code_edit 22 OK; task verify 3968 OK"
-  live: "3 scripted edits committed (add page [repaired], remove feature, DB column via new migration); all verified in the running preview"
-  smoke: "smoke-core.sh 17/17"
-next_action: T-5 workspace upgrades (diff view per edit, editable code, API explorer), then T-6 RideNow
+  typecheck: "tsc strict exit 0"
+  unit: "20/20 (found and fixed a money rounding bug)"
+  live: "fresh DB: migrations + seed load, ledger integrity 0 errors; workflow 4/4 against the running API"
+  stage_0_verify: "task verify 3971 OK"
+next_action: R-527 RideNow rider web app (apps/rider) + packages/shared
