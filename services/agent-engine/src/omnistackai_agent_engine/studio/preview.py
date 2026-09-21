@@ -9,13 +9,20 @@ independent process management, and bounded status/stop/restart controls.
 
 from __future__ import annotations
 
-from threading import RLock
+from threading import RLock, Thread
 import os
 import time
 from typing import Any, Callable, Mapping
 import urllib.parse
 
 from ..localrun import LocalAppSession, start_preview_app
+from ..localrun.multiapp import (
+    MultiAppPlan,
+    ProjectManifestError,
+    load_project_manifest,
+    plan_from_env as multiapp_plan_from_env,
+    start_multiapp,
+)
 from ..solution_packs.ecosystem_auth import (
     CrossAppAuthMatrix,
     EcosystemAuthContract,
@@ -129,6 +136,12 @@ class WorkspacePreviewSession:
         self.started_at = time.time()
         self.last_active_at = time.time()
         self.message = message
+        # Multi-app template projects (R-520): every app of the project, its readiness, and the
+        # demo logins from the project's omnistack.json.
+        self.kind = "single"
+        self.apps: list[dict] | None = None
+        self.demo_users: list[dict] | None = None
+        self.cancelled = False
 
     def to_dict(self) -> dict:
         elapsed_ms = int((time.time() - self.started_at) * 1000)
@@ -146,14 +159,27 @@ class WorkspacePreviewSession:
             res["web_port"] = self.web_port
         if self.api_port is not None:
             res["api_port"] = self.api_port
+        res["kind"] = self.kind
+        if self.apps is not None:
+            res["apps"] = [dict(app) for app in self.apps]
+        if self.demo_users is not None:
+            res["demo_users"] = [dict(user) for user in self.demo_users]
         return res
 
 
 class StudioPreviewManager:
     """Serialize preview replacement, manage local app sessions, and expose controls."""
 
-    def __init__(self, *, start_fn: StartFn = start_preview_app) -> None:
+    def __init__(
+        self,
+        *,
+        start_fn: StartFn = start_preview_app,
+        multiapp_plan_fn: Callable[..., MultiAppPlan] = multiapp_plan_from_env,
+        multiapp_start_fn: Callable[..., Any] = start_multiapp,
+    ) -> None:
         self._start_fn = start_fn
+        self._multiapp_plan_fn = multiapp_plan_fn
+        self._multiapp_start_fn = multiapp_start_fn
         self._session: LocalAppSession | None = None
         self._last_repo_dir: str | None = None
         self._state: dict = dict(_IDLE)
@@ -826,6 +852,7 @@ class StudioPreviewManager:
             session.stop()
         self._sessions.clear()
         for ws_sess in self._workspaces.values():
+            ws_sess.cancelled = True
             if ws_sess.session is not None:
                 ws_sess.session.stop()
                 ws_sess.session = None
@@ -889,6 +916,9 @@ class StudioPreviewManager:
 
             # Check process liveness
             if session.session is not None and not session.session.is_alive():
+                if session.apps is not None:
+                    for app in session.apps:
+                        app["ready"] = False
                 session.session.stop()
                 session.session = None
                 session.status = "stopped"
@@ -907,7 +937,24 @@ class StudioPreviewManager:
         log_manager: Any = None,
         secrets: list[str] | None = None,
     ) -> dict:
-        """Start or restart preview for workspace ``ws_id``, tracking phases and ports (F-02, F-05, F-08)."""
+        """Start or restart preview for workspace ``ws_id``, tracking phases and ports (F-02, F-05, F-08).
+
+        A project with an ``omnistack.json`` (a template copy, R-520) runs all of its apps and
+        starts asynchronously: this returns ``starting`` at once and ``workspace_status`` reports
+        progress. Every other project keeps the synchronous single-app preview below.
+        """
+        try:
+            manifest = load_project_manifest(repo_dir)
+        except ProjectManifestError as error:
+            with self._lock:
+                ws_sess = WorkspacePreviewSession(
+                    ws_id, repo_dir, status="error", phase="error", message=f"omnistack.json: {error}"
+                )
+                self._replace_workspace_locked(ws_id, ws_sess)
+                return ws_sess.to_dict()
+        if manifest is not None:
+            return self._start_multiapp_workspace(ws_id, repo_dir, manifest, on_phase, env, log_manager, secrets)
+
         with self._lock:
             existing = self._workspaces.get(ws_id)
             if existing is not None and existing.session is not None:
@@ -1003,12 +1050,128 @@ class StudioPreviewManager:
             ws_sess.message = "The generated application is running locally."
             return ws_sess.to_dict()
 
+    def _replace_workspace_locked(self, ws_id: str, ws_sess: WorkspacePreviewSession) -> None:
+        existing = self._workspaces.get(ws_id)
+        if existing is not None:
+            existing.cancelled = True
+            if existing.session is not None:
+                existing.session.stop()
+                existing.session = None
+        self._workspaces[ws_id] = ws_sess
+
+    def _start_multiapp_workspace(
+        self,
+        ws_id: str,
+        repo_dir: str,
+        manifest: dict,
+        on_phase: Callable[[str], None] | None,
+        env: Mapping[str, str] | None,
+        log_manager: Any,
+        secrets: list[str] | None,
+    ) -> dict:
+        """Start every app of a template project in the background (R-520)."""
+        with self._lock:
+            ws_sess = WorkspacePreviewSession(
+                ws_id, repo_dir, status="starting", phase="install", message="Preparing the apps..."
+            )
+            ws_sess.kind = "multi"
+            ws_sess.demo_users = [
+                {k: str(u.get(k, "")) for k in ("role", "name", "email", "password")}
+                for u in manifest.get("demo_users", [])
+                if isinstance(u, dict)
+            ]
+            self._replace_workspace_locked(ws_id, ws_sess)
+            try:
+                plan = self._multiapp_plan_fn(repo_dir, manifest, project_id=ws_id, extra_env=env)
+            except Exception as error:  # a bad manifest or no free ports
+                ws_sess.status = "error"
+                ws_sess.phase = "error"
+                ws_sess.message = f"Preview could not be planned: {error}"
+                return ws_sess.to_dict()
+            ws_sess.apps = [{**app.to_dict(), "ready": False} for app in plan.apps]
+            snapshot = ws_sess.to_dict()
+
+        from .logs import StudioLogManager
+
+        active_log_mgr = log_manager or StudioLogManager()
+        masked = list(secrets or []) + list(plan.secrets)
+
+        def _log(line: str) -> None:
+            active_log_mgr.write_app_log(ws_id, line, secrets=masked)
+
+        def _phase(phase: str) -> None:
+            messages = {
+                "install": "Installing dependencies...",
+                "migrate": "Creating the database, running migrations and loading demo data...",
+                "start": "Starting the apps...",
+            }
+            with self._lock:
+                if phase != "ready":
+                    ws_sess.phase = phase
+                    ws_sess.message = messages.get(phase, ws_sess.message)
+            if on_phase is not None:
+                try:
+                    on_phase(phase)
+                except Exception:
+                    pass
+
+        def _app_ready(app_id: str) -> None:
+            with self._lock:
+                for app in ws_sess.apps or []:
+                    if app["id"] == app_id:
+                        app["ready"] = True
+
+        def _run() -> None:
+            try:
+                session = self._multiapp_start_fn(
+                    plan,
+                    on_phase=_phase,
+                    on_app_ready=_app_ready,
+                    log_callback=_log,
+                    cancelled=lambda: ws_sess.cancelled,
+                )
+            except Exception as error:
+                message = str(error)
+                for secret in masked:
+                    if secret:
+                        message = message.replace(secret, "***")
+                with self._lock:
+                    if not ws_sess.cancelled:
+                        ws_sess.status = "error"
+                        ws_sess.phase = "error"
+                        ws_sess.message = f"Preview could not start: {message}"
+                return
+            with self._lock:
+                if ws_sess.cancelled or self._workspaces.get(ws_id) is not ws_sess:
+                    session.stop()
+                    return
+                ws_sess.session = session
+                ws_sess.status = "ready"
+                ws_sess.phase = "ready"
+                ws_sess.message = "All apps are running locally."
+                ws_sess.last_active_at = time.time()
+                first_ui = next((a for a in plan.apps if a.kind != "api"), None)
+                api = next((a for a in plan.apps if a.kind == "api"), None)
+                if first_ui is not None:
+                    ws_sess.web_url = first_ui.internal_url
+                    ws_sess.web_port = first_ui.port
+                if api is not None:
+                    ws_sess.api_url = api.internal_url
+                    ws_sess.api_port = api.port
+
+        Thread(target=_run, name=f"preview-{ws_id}", daemon=True).start()
+        return snapshot
+
     def stop_workspace(self, ws_id: str) -> dict:
         """Stop preview session for workspace ``ws_id`` (F-02)."""
         with self._lock:
             session = self._workspaces.get(ws_id)
             if session is None:
                 return {"status": "stopped", "phase": "stopped", "message": "Preview stopped."}
+            session.cancelled = True
+            if session.apps is not None:
+                for app in session.apps:
+                    app["ready"] = False
             if session.session is not None:
                 session.session.stop()
                 session.session = None

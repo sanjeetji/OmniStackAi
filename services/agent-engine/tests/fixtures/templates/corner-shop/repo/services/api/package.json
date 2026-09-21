@@ -1,1 +1,7 @@
-{ "name": "corner-shop-api", "private": true, "type": "module", "scripts": { "dev": "node src/index.js" } }
+{
+  "name": "corner-shop-api",
+  "private": true,
+  "type": "module",
+  "scripts": { "dev": "node src/index.js" },
+  "dependencies": { "pg": "8.13.1" }
+}

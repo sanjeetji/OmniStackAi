@@ -160,6 +160,24 @@ class ValidateTemplateTests(unittest.TestCase):
                     lambda d, n=name: (d / "repo" / "apps" / "web" / n).mkdir(), name
                 )
 
+    def test_omnistack_json_is_reserved(self) -> None:
+        self._assert_error(
+            lambda d: (d / "repo" / "omnistack.json").write_text("{}", encoding="utf-8"), "omnistack.json"
+        )
+
+    def test_at_most_one_api_app(self) -> None:
+        def mutate(d: Path) -> None:
+            data = json.loads((d / "template.json").read_text(encoding="utf-8"))
+            data["apps"][0]["kind"] = "api"
+            (d / "template.json").write_text(json.dumps(data), encoding="utf-8")
+            (d / "repo" / "apps" / "web" / "migrations").mkdir()
+            (d / "repo" / "apps" / "web" / "migrations" / "001.sql").write_text("SELECT 1;", encoding="utf-8")
+
+        self._assert_error(mutate, "at most one api app")
+
+    def test_app_needs_package_json(self) -> None:
+        self._assert_error(lambda d: (d / "repo" / "apps" / "admin" / "package.json").unlink(), "package.json")
+
     def test_repo_rejects_symlinks(self) -> None:
         self._assert_error(
             lambda d: (d / "repo" / "link").symlink_to("/etc/hosts"), "symlink"
@@ -203,7 +221,7 @@ class TemplateCatalogTests(unittest.TestCase):
             detail = catalog.get(SLUG)
             self.assertEqual(detail["demo_users"][0]["email"], "asha@corner-shop.test")
             self.assertEqual(detail["digest"], template_digest(FIXTURES / SLUG / "repo"))
-            self.assertEqual(detail["file_count"], 9)
+            self.assertEqual(detail["file_count"], 17)
 
     def test_unknown_or_invalid_slug_is_not_found(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
@@ -250,7 +268,7 @@ class InstantiateTemplateTests(unittest.TestCase):
 
         repo = self.store.repo_path(ws_id)
         self.assertEqual(result["id"], ws_id)
-        self.assertEqual(result["file_count"], 9)
+        self.assertEqual(result["file_count"], 18)  # the 17 template files + omnistack.json
         self.assertEqual(result["name"], "Corner Shop")
         self.assertEqual(result["entities"], ["Product", "Order"])
         self.assertEqual(result["template"]["slug"], SLUG)
@@ -263,6 +281,13 @@ class InstantiateTemplateTests(unittest.TestCase):
         self.assertEqual(log, ["Template: Corner Shop v1.0.0"])
         self.assertEqual(_git(repo, "status", "--porcelain"), "")
         self.assertTrue((repo / "services" / "api" / "migrations" / "001_init.sql").is_file())
+
+        # The copy describes itself (R-520): apps and demo logins, committed with the code.
+        manifest = json.loads((repo / "omnistack.json").read_text(encoding="utf-8"))
+        self.assertEqual(manifest["template"], {"slug": SLUG, "version": "1.0.0"})
+        self.assertEqual([a["id"] for a in manifest["apps"]], ["web", "admin", "api"])
+        self.assertEqual(manifest["demo_users"][0]["email"], "asha@corner-shop.test")
+        self.assertIn("omnistack.json", _git(repo, "ls-files").splitlines())
 
         state = self.store.get_state(ws_id)
         self.assertEqual(state["kind"], "template")

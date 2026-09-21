@@ -1,27 +1,28 @@
-task_id: R-519
+task_id: R-520
 status: completed
 phase: MVP
 tracker_row: null
 started_at: "2026-09-21"
 completed_at: "2026-09-21"
 objective: >-
-  T-1 Template format + registry: templates/catalog/<slug>/{template.json, repo/, media/}; strict
-  validator + digest + catalogue + instantiation in the agent-engine (studio/templates.py); control-plane
-  GET /templates, GET /templates/{slug}, POST /templates/{slug}/use, GET /projects/{id}/template with a
-  project_templates table. "Use template" creates the user's own project copy; the original stays
-  unchanged and identical for every user. Template workspaces are protected from prompt rebuilds and
-  IR edits until the code-edit agent (T-4).
+  T-2 Multi-app preview for template projects: omnistack.json runtime manifest written into each
+  template copy; localrun/multiapp.py (plan, process-group session, readiness, minimal env);
+  asynchronous template preview in studio/preview.py with per-app status and demo users; console
+  proxy routes /preview/<project>/<app>/..., Preview tab app switcher, phone frame for PWA apps,
+  demo-logins panel. The prompt-built single-app preview path is unchanged.
 allowed_paths:
+  - services/agent-engine/src/omnistackai_agent_engine/localrun/multiapp.py
+  - services/agent-engine/src/omnistackai_agent_engine/localrun/__init__.py
+  - services/agent-engine/src/omnistackai_agent_engine/studio/preview.py
   - services/agent-engine/src/omnistackai_agent_engine/studio/templates.py
-  - services/agent-engine/src/omnistackai_agent_engine/studio/server.py
-  - services/agent-engine/src/omnistackai_agent_engine/studio/live_serve.py
+  - services/agent-engine/tests/test_localrun_multiapp.py
   - services/agent-engine/tests/test_studio_templates.py
+  - services/agent-engine/tests/test_studio_preview_multiapp.py
   - services/agent-engine/tests/fixtures/templates/
-  - services/control-plane/internal/templates/
-  - services/control-plane/cmd/control-plane/main.go
-  - services/control-plane/cmd/control-plane/main_test.go
-  - services/control-plane/migrations/000016_project_templates.up.sql
-  - services/control-plane/migrations/000016_project_templates.down.sql
+  - apps/console-web/app/preview/[projectId]/[[...path]]/route.ts
+  - apps/console-web/app/studio/studio-preview.tsx
+  - apps/console-web/app/studio/studio-preview-apps.tsx
+  - apps/console-web/lib/control-plane.ts
   - templates/catalog/README.md
   - scripts/test.sh
   - .ai/
@@ -30,24 +31,24 @@ allowed_paths:
   - docs/PROGRESS.md
   - docs/RESUME_PROMPT.md
 forbidden_changes:
-  - No change to the prompt -> IR -> codegen path or existing project SQL
-  - No new Go dependency (pgx/v5 only) and agent-engine stays stdlib-only
+  - localrun/plan.py and localrun/run.py behaviour (prompt-built preview) unchanged
+  - No new Go/Python dependency; no new console dependency
   - task verify stays offline with 0 model calls
 required_gates:
-  - focused agent-engine tests (test_studio_templates)
-  - cd services/control-plane && go vet ./... && go test ./... && gofmt -l .
+  - focused agent-engine tests
+  - control-plane go test ./...
+  - console typecheck / lint / build
   - bash scripts/test.sh
   - task verify / task lint / task security:quick / task env:check
-  - ./scripts/smoke-core.sh (core loop stays green) + live use-template smoke
+  - ./scripts/smoke-core.sh + live multi-app preview of the corner-shop fixture
 model_tool_trace:
   routing: deterministic_only
   local_calls: 0
   cloud_calls: 0
 evidence:
-  template_tests: "test_studio_templates: 33 OK; related studio suites 145 OK"
-  go_test: "all packages ok; vet + gofmt clean"
-  contract_tests: "scripts/test.sh passed"
-  stage_0_verify: "task verify: 3895 tests OK"
-  live_use_template: "201 in 0.09s; two users get independent repos; original unchanged; edits/rebuilds refused with 400"
-  core_loop: "smoke-core.sh 14/14 (build 205s, edit commit 5ec6341)"
-next_action: T-2 multi-app preview (run a Node API + several Next apps from a template project, app switcher, demo users panel, phone frame for PWA apps)
+  focused_tests: "multiapp 17 + preview multiapp 8 + templates 36: OK (real local processes)"
+  stage_0_verify: "task verify: 3923 tests OK"
+  console: "typecheck clean; lint 0 errors; build OK"
+  live_multiapp: "fixture template: all 3 apps ready in 21s; web/admin/api served through the proxy; isolation 404s; stop leaves no processes"
+  core_loop: "smoke-core.sh 14/14"
+next_action: R-521 fix generated components/toast.tsx syntax error (every prompt-built app home page 500s)

@@ -1,5 +1,12 @@
 # Work Log
 
+## 2026-09-21 — R-520 (T-2 Multi-app preview)
+
+- **What:** template projects run all their apps in the Preview tab. Each app gets its own path (`/preview/<project>/<app>`, Next `basePath`). They share one API and a fresh seeded database. The Preview tab has an app switcher, a phone frame for PWA apps and a demo-logins panel. The start is asynchronous with a per-app checklist.
+- **Safety:** each app runs in its own process group (stop leaves nothing behind) and gets a minimal environment (no Studio model keys). The prompt-built preview runner is unchanged.
+- **Evidence:** 25 new tests with real local processes. `task verify` 3,923 OK. Live fixture: 3 apps ready in 21 s, all served through the console proxy, isolation holds, stop is clean. Core smoke 14/14.
+- **Found:** generated `components/toast.tsx` syntax error since `1fe1015`. Every prompt-built app's home page returns 500. Fixing next (R-521).
+
 ## 2026-09-21 — R-519 (T-1 Template format + registry)
 
 - **Why:** Phase T needs a template format. The founder's model: the original template never changes and is the same for everyone. "Use template" gives each user their own editable project copy.

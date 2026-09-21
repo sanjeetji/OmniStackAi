@@ -1,9 +1,14 @@
 # Current Handoff
 
-Task ID: R-519
+Task ID: R-520
 Status: done
 Phase: MVP
 Branch: `ai/R-517-node-backend`
+
+> **R-520 Completed (2026-09-21): T-2 Multi-app preview.** Template projects run every app in
+> the Preview tab (switcher, phone frame for PWAs, demo logins). The runtime contract is in
+> `templates/catalog/README.md`. **Next: R-521**, the generated `toast.tsx` syntax error that
+> breaks every prompt-built app's home page (from `1fe1015`). Then T-3 marketplace UI.
 
 > **R-519 Completed (2026-09-21): T-1 Template format + registry.** Templates live in
 > `templates/catalog/<slug>/` (format: `templates/catalog/README.md`). `POST /templates/{slug}/use`

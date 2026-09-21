@@ -18,8 +18,11 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
+import { MultiAppPreview } from "./studio-preview-apps";
 
 const POLL_INTERVAL_MS = 5000;
+// Template projects start in the background (R-520); poll faster while they do.
+const STARTING_POLL_INTERVAL_MS = 1500;
 
 type ErrorBody = { error?: string };
 
@@ -97,7 +100,9 @@ export function StudioPreview({
             return;
           }
           const curr = checkBody as PreviewStatus;
-          if (curr.status === "ready") {
+          // "starting": a template preview is already on its way (e.g. after a page reload);
+          // follow it instead of restarting it.
+          if (curr.status === "ready" || curr.status === "starting") {
             setDisabled(false);
             setStatus(curr);
             setPhase((p) => ({ ...p, starting: false }));
@@ -135,6 +140,27 @@ export function StudioPreview({
     }, 500);
     return () => clearInterval(tick);
   }, [phase.starting]);
+
+  // Follow a template preview that is starting in the background (R-520)
+  useEffect(() => {
+    if (!projectId || disabled || status?.status !== "starting") return;
+    const url = `/api/projects/${encodeURIComponent(projectId)}/preview`;
+    const interval = setInterval(async () => {
+      try {
+        const { status: httpStatus, body } = await getJSON(url);
+        if (httpStatus === 404) {
+          setDisabled(true);
+          return;
+        }
+        if (body && "status" in body) {
+          setStatus(body as PreviewStatus);
+        }
+      } catch {
+        // Transient fetch failure is ignored until next tick
+      }
+    }, STARTING_POLL_INTERVAL_MS);
+    return () => clearInterval(interval);
+  }, [projectId, disabled, status?.status]);
 
   // Periodic liveness check while ready
   useEffect(() => {
@@ -253,6 +279,18 @@ export function StudioPreview({
 
   if (!status) {
     return null;
+  }
+
+  if (projectId && status.kind === "multi" && (status.status === "ready" || status.status === "starting")) {
+    return (
+      <MultiAppPreview
+        projectId={projectId}
+        status={status}
+        busy={busy}
+        onRestart={handleRestart}
+        onStop={handleStop}
+      />
+    );
   }
 
   if (status.status === "ready" && status.web_url) {

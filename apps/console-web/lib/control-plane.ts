@@ -303,6 +303,29 @@ export interface PreviewStatus {
   api_url?: string;
   web_port?: number;
   api_port?: number;
+  /** "multi" for template projects that run several apps (R-520). */
+  kind?: "single" | "multi";
+  apps?: PreviewApp[];
+  demo_users?: PreviewDemoUser[];
+}
+
+/** One app of a multi-app (template) preview. `path` is where the console serves it. */
+export interface PreviewApp {
+  id: string;
+  name: string;
+  kind: "web" | "admin" | "pwa" | "api";
+  port: number;
+  path: string;
+  url: string;
+  ready: boolean;
+}
+
+/** A local demo login shipped with a template, shown next to the preview. */
+export interface PreviewDemoUser {
+  role: string;
+  name: string;
+  email: string;
+  password: string;
 }
 
 /** Reads the singleton preview's current status via `GET /jobs/preview` (R-478) - read-only, no

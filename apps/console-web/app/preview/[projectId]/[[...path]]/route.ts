@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getProjectPreview } from "@/lib/control-plane";
+import { getProjectPreview, type PreviewApp } from "@/lib/control-plane";
 import { getSessionToken } from "@/lib/session";
 
 interface RouteParams {
@@ -41,6 +41,11 @@ async function handleProxy(request: NextRequest, { params }: RouteParams): Promi
       `<!DOCTYPE html><html><head><meta charset="utf-8"><title>Preview</title><style>body{font-family:system-ui,sans-serif;display:grid;place-content:center;height:100vh;margin:0;background:#09090b;color:#a1a1aa;text-align:center}</style></head><body><h2>Preview Not Ready</h2><p>${escapeHtml(message)}</p></body></html>`,
       { status: 503, headers: { "Content-Type": "text/html; charset=utf-8" } }
     );
+  }
+
+  // Template projects run several apps, each under its own base path (R-520).
+  if (preview.kind === "multi" && preview.apps && preview.apps.length > 0) {
+    return proxyMultiApp(request, projectId, pathSegments, preview.apps);
   }
 
   // SSRF Prevention: strict loopback validation on target URL
@@ -169,6 +174,97 @@ async function handleProxy(request: NextRequest, { params }: RouteParams): Promi
     status: upstreamResponse.status,
     headers: responseHeaders,
   });
+}
+
+/**
+ * Multi-app previews (template projects, R-520). Every app runs under its own base path,
+ * `/preview/<project>/<app>`. Web, admin and PWA apps are Next.js apps built with that `basePath`,
+ * so the request path is forwarded unchanged and no HTML rewriting is needed. The API app is served
+ * at `/preview/<project>/<api-id>` with that prefix stripped. Targets are loopback only.
+ */
+async function proxyMultiApp(
+  request: NextRequest,
+  projectId: string,
+  pathSegments: string[],
+  apps: PreviewApp[],
+): Promise<Response> {
+  const projectBase = `/preview/${encodeURIComponent(projectId)}`;
+  if (pathSegments.length === 0) {
+    const first = apps.find((app) => app.kind !== "api") ?? apps[0];
+    // Relative on purpose: behind `next start` the request origin can read as localhost, which
+    // would send a phone or another machine on the LAN to the wrong host.
+    return new NextResponse(null, { status: 307, headers: { Location: `${projectBase}/${first.id}` } });
+  }
+
+  const app = apps.find((candidate) => candidate.id === pathSegments[0]);
+  if (!app) {
+    return NextResponse.json({ error: "no such app in this preview" }, { status: 404 });
+  }
+  if (!app.ready) {
+    return new NextResponse(
+      `<!DOCTYPE html><html><head><meta charset="utf-8"><title>Preview</title><style>body{font-family:system-ui,sans-serif;display:grid;place-content:center;height:100vh;margin:0;background:#09090b;color:#a1a1aa;text-align:center}</style></head><body><h2>${escapeHtml(app.name)} is not ready</h2><p>Restart the preview to run it again.</p></body></html>`,
+      { status: 503, headers: { "Content-Type": "text/html; charset=utf-8" } },
+    );
+  }
+
+  let target: URL;
+  try {
+    target = new URL(app.url);
+  } catch {
+    return NextResponse.json({ error: "invalid preview target" }, { status: 502 });
+  }
+  if (!ALLOWED_LOOPBACK_HOSTS.has(target.hostname)) {
+    return NextResponse.json({ error: "forbidden target host" }, { status: 403 });
+  }
+
+  const appBase = `${projectBase}/${app.id}`;
+  const pathname = request.nextUrl.pathname;
+  if (!pathname.startsWith(appBase)) {
+    return NextResponse.json({ error: "preview path mismatch" }, { status: 400 });
+  }
+  const upstreamPath = app.kind === "api" ? pathname.slice(appBase.length) || "/" : pathname;
+  const upstreamUrl = `${target.origin}${upstreamPath}${request.nextUrl.search}`;
+
+  const headers = new Headers();
+  request.headers.forEach((value, key) => {
+    const lower = key.toLowerCase();
+    if (!["host", "connection", "content-length", "transfer-encoding"].includes(lower)) {
+      headers.set(key, value);
+    }
+  });
+
+  let upstream: Response;
+  try {
+    upstream = await fetch(upstreamUrl, {
+      method: request.method,
+      headers,
+      body: ["GET", "HEAD"].includes(request.method) ? undefined : request.body,
+      redirect: "manual",
+      // @ts-expect-error duplex is required by Node fetch for a streaming request body
+      duplex: "half",
+    });
+  } catch {
+    return NextResponse.json({ error: `could not reach ${app.name}` }, { status: 502 });
+  }
+
+  const responseHeaders = new Headers();
+  upstream.headers.forEach((value, key) => {
+    const lower = key.toLowerCase();
+    if (lower !== "content-length" && lower !== "transfer-encoding") {
+      responseHeaders.set(key, value);
+    }
+  });
+  const location = upstream.headers.get("location");
+  if (location) {
+    let rewritten = location.startsWith(target.origin) ? location.slice(target.origin.length) : location;
+    // Next apps already redirect within their basePath; the API does not know its public prefix.
+    if (app.kind === "api" && rewritten.startsWith("/")) {
+      rewritten = `${appBase}${rewritten}`;
+    }
+    responseHeaders.set("location", rewritten);
+  }
+
+  return new NextResponse(upstream.body, { status: upstream.status, headers: responseHeaders });
 }
 
 function escapeHtml(str: string): string {

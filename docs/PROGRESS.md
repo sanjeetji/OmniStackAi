@@ -6,6 +6,9 @@ R-461 completion) plus the state files (`.ai/`), Git history, and CHANGELOG.
 
 ## Headline
 
+- **R-520 — T-2 Multi-app preview (2026-09-21):** a template project's apps (web, admin, mobile
+  PWA, API) run together in the Preview tab with an app switcher and demo logins.
+  `task verify` = 3,923 tests.
 - **R-519 — T-1 Template format + registry (2026-09-21):** templates are read-only golden repos
   with a validated manifest. "Use template" creates the user's own project copy. Format:
   `templates/catalog/README.md`. `task verify` = 3,895 tests.

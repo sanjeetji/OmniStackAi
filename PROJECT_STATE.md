@@ -4,6 +4,9 @@ Last updated: 2026-09-21
 ## Current Phase
 Stage 0 (Founder Build Sequence, Brief Section 91) — BASIC/MVP
 
+> **R-520 (2026-09-21): T-2 Multi-app preview.** Template projects preview all their apps
+> together (shared API and seeded DB), with an app switcher, a phone frame for PWAs and demo logins.
+
 > **R-519 (2026-09-21): T-1 Template format + registry.** A template is a read-only golden repo
 > plus `template.json` in `templates/catalog/`. "Use template" creates the user's own project copy
 > (fresh git history, recorded provenance), and the original stays identical for everyone.

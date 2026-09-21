@@ -54,5 +54,27 @@ Directories whose names start with `.` or `_` are ignored (useful for drafts).
 - The platform computes a digest (`sha256` over every file path and its content) so each project
   can prove which original it started from.
 
+## How the preview runs a template project
+
+"Use template" writes `omnistack.json` (apps, roles, demo logins) into the user's copy, so
+templates must not ship a file with that name. The Preview tab reads it and runs every app together:
+
+- **Dependencies:** one `pnpm install` at the repo root when `pnpm-workspace.yaml` exists (recommended),
+  otherwise one per app. Every app directory needs a `package.json` with a `dev` script. The
+  platform runs `pnpm run dev`.
+- **Database:** a fresh database per project. The API app's `migrations/*.sql` run first, then its
+  `seed/*.sql`, both in file-name order. Seed files carry the demo data and demo users.
+- **Environment:** every app gets `PORT`.
+  - The `api` app also gets `DATABASE_URL`, `JWT_SECRET` (new for every preview) and
+    `PUBLIC_BASE_PATH`. It must answer `GET /health` with 200 once it can reach the database.
+  - `web`, `admin` and `pwa` apps (Next.js) get `BASE_PATH`, which must be used as Next's
+    `basePath`. They also get `API_URL` (the API's internal address, for server-side calls) and
+    `NEXT_PUBLIC_API_URL` (the API's public path, for browser calls).
+  - Project secrets set in the Studio are added. The Studio's own keys are never passed to apps.
+- **Addresses:** each app is served at `/preview/<project>/<app-id>`. The API is served at
+  `/preview/<project>/<api-id>` with that prefix removed before the request reaches it.
+- **Limitation:** hot reload over WebSocket does not pass through the preview proxy yet. Reload the
+  page to see code changes.
+
 A template that breaks any rule is not listed. The Studio prints the reasons when it starts. The
 agent-engine tests (`tests/test_studio_templates.py`) validate every template in this catalogue.

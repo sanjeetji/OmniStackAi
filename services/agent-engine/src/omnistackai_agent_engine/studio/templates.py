@@ -48,6 +48,8 @@ _MAX_FILES = 5_000
 _MAX_BYTES = 50 * 1024 * 1024
 _MAX_TAGLINE = 140
 
+PROJECT_MANIFEST = "omnistack.json"
+
 _AUTHOR_NAME = "OmniStackAI"
 _AUTHOR_EMAIL = "agent@omnistackai.internal"
 
@@ -164,6 +166,8 @@ def _objects(manifest: dict, key: str, errors: list[str], *, required: bool = Tr
 
 def _validate_apps(apps: list[dict], repo_dir: Path, errors: list[str]) -> None:
     seen: set[str] = set()
+    if sum(1 for app in apps if app.get("kind") == "api") > 1:
+        errors.append("a template can have at most one api app (every app shares it)")
     for index, app in enumerate(apps):
         label = f"apps[{index}]"
         app_id = app.get("id")
@@ -186,6 +190,8 @@ def _validate_apps(apps: list[dict], repo_dir: Path, errors: list[str]) -> None:
         if not app_dir.is_dir():
             errors.append(f"{label}.path {rel.as_posix()} does not exist in repo/")
             continue
+        if not (app_dir / "package.json").is_file():
+            errors.append(f"{label} needs {rel.as_posix()}/package.json with a dev script")
         if kind == "api":
             migrations = app_dir / "migrations"
             if not migrations.is_dir() or not any(migrations.glob("*.sql")):
@@ -234,6 +240,8 @@ def validate_template(template_dir: str | os.PathLike[str]) -> list[str]:
         errors.extend(problems)
         if not files:
             errors.append("repo/ is empty")
+        if PROJECT_MANIFEST in files:
+            errors.append(f"repo/{PROJECT_MANIFEST} is reserved: the platform writes it into each project")
         _validate_apps(_objects(manifest, "apps", errors), repo_dir, errors)
 
     role_ids: set[str] = set()
@@ -409,6 +417,11 @@ def instantiate_template(
                 shutil.copy2(source / rel, destination)
             if template_digest(target) != template["digest"]:
                 raise TemplateInstantiationError("the copied files do not match the template digest")
+            # The project describes itself: which apps it has and how to log in to them (R-520).
+            # It is part of the user's copy, so later edits can add or change apps.
+            (target / PROJECT_MANIFEST).write_text(
+                json.dumps(project_manifest(template), indent=2) + "\n", encoding="utf-8"
+            )
 
             _git(target, "init", "-q")
             _git(target, "add", "-A")
@@ -437,7 +450,7 @@ def instantiate_template(
                 "description": template["tagline"],
                 "template": provenance,
                 "entities": list(template["entities"]),
-                "file_count": len(files),
+                "file_count": len(files) + 1,
                 "commit_sha": commit_sha,
             },
         )
@@ -455,9 +468,28 @@ def instantiate_template(
         "name": template["name"],
         "description": template["tagline"],
         "commit_sha": commit_sha,
-        "file_count": len(files),
+        "file_count": len(files) + 1,
         "entities": list(template["entities"]),
         "template": provenance,
+    }
+
+
+def project_manifest(template: dict) -> dict:
+    """The ``omnistack.json`` written into a project copied from ``template``."""
+
+    return {
+        "schema_version": 1,
+        "name": template["name"],
+        "template": {"slug": template["slug"], "version": template["version"]},
+        "apps": [
+            {"id": a["id"], "name": a["name"], "kind": a["kind"], "path": a["path"]}
+            for a in template["apps"]
+        ],
+        "roles": [{"id": r["id"], "name": r["name"]} for r in template["roles"]],
+        "demo_users": [
+            {"role": u["role"], "name": u["name"], "email": u["email"], "password": u["password"]}
+            for u in template["demo_users"]
+        ],
     }
 
 

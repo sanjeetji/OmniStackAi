@@ -2075,4 +2075,29 @@ if [[ ! -f "$agent_engine_root/tests/fixtures/templates/corner-shop/template.jso
   exit 1
 fi
 
+# R-520 (Phase T, T-2 - multi-app preview for template projects):
+multiapp_py="$agent_engine_root/src/omnistackai_agent_engine/localrun/multiapp.py"
+if ! rg -qF 'def build_multiapp_plan(' "$multiapp_py" || ! rg -qF 'start_new_session=True' "$multiapp_py" \
+  || ! rg -qF 'os.killpg' "$multiapp_py"; then
+  printf 'R-520 localrun/multiapp.py must plan apps and run each in its own process group.\n'
+  exit 1
+fi
+if rg -q 'os\.environ\)' "$multiapp_py" || ! rg -qF 'def base_environment(' "$multiapp_py"; then
+  printf 'R-520 template app processes must get a minimal environment, never the full Studio env.\n'
+  exit 1
+fi
+if ! rg -qF '_start_multiapp_workspace' "$agent_engine_root/src/omnistackai_agent_engine/studio/preview.py"; then
+  printf 'R-520 the preview manager must start template projects asynchronously.\n'
+  exit 1
+fi
+if ! rg -qF 'PROJECT_MANIFEST' "$agent_engine_root/src/omnistackai_agent_engine/studio/templates.py"; then
+  printf 'R-520 use-template must write omnistack.json into the project.\n'
+  exit 1
+fi
+if ! rg -qF 'proxyMultiApp' "$repo_root/apps/console-web/app/preview/[projectId]/[[...path]]/route.ts" \
+  || ! rg -qF 'MultiAppPreview' "$repo_root/apps/console-web/app/studio/studio-preview.tsx"; then
+  printf 'R-520 the console must proxy and show multi-app previews.\n'
+  exit 1
+fi
+
 printf 'Repository contract tests passed.\n'
