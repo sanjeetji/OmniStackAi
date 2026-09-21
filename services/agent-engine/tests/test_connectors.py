@@ -103,14 +103,23 @@ class TestConnectorsCodegen(unittest.TestCase):
         self.assertEqual(res["status"], "applied")
 
         email_ts = self.repo_dir / "lib" / "email.ts"
+        templates_ts = self.repo_dir / "lib" / "email-templates.ts"
         route_ts = self.repo_dir / "app" / "api" / "send" / "route.ts"
+        contact_form_tsx = self.repo_dir / "components" / "contact-form.tsx"
         env_file = self.repo_dir / ".env.local"
 
         self.assertTrue(email_ts.is_file())
+        self.assertTrue(templates_ts.is_file())
         self.assertTrue(route_ts.is_file())
+        self.assertTrue(contact_form_tsx.is_file())
         self.assertTrue(env_file.is_file())
 
         self.assertIn("https://api.resend.com/emails", email_ts.read_text())
+        self.assertIn("welcomeEmailTemplate", templates_ts.read_text())
+        self.assertIn("otpVerificationTemplate", templates_ts.read_text())
+        self.assertIn("passwordResetTemplate", templates_ts.read_text())
+        self.assertIn("notificationTemplate", templates_ts.read_text())
+        self.assertIn("ContactForm", contact_form_tsx.read_text())
         self.assertIn("RESEND_API_KEY=re_123456789", env_file.read_text())
         self.assertIn("RESEND_FROM_EMAIL=notifications@myapp.com", env_file.read_text())
 
@@ -118,7 +127,9 @@ class TestConnectorsCodegen(unittest.TestCase):
         remove_res = remove_connector(self.repo_dir, "resend")
         self.assertEqual(remove_res["status"], "removed")
         self.assertFalse(email_ts.is_file())
+        self.assertFalse(templates_ts.is_file())
         self.assertFalse(route_ts.is_file())
+        self.assertFalse(contact_form_tsx.is_file())
         self.assertNotIn("RESEND_", env_file.read_text())
 
     def test_smtp_apply_and_remove(self) -> None:
@@ -133,20 +144,67 @@ class TestConnectorsCodegen(unittest.TestCase):
         self.assertEqual(res["status"], "applied")
 
         email_ts = self.repo_dir / "lib" / "email.ts"
+        templates_ts = self.repo_dir / "lib" / "email-templates.ts"
         route_ts = self.repo_dir / "app" / "api" / "send" / "route.ts"
+        contact_form_tsx = self.repo_dir / "components" / "contact-form.tsx"
         env_file = self.repo_dir / ".env.local"
 
         self.assertTrue(email_ts.is_file())
+        self.assertTrue(templates_ts.is_file())
         self.assertTrue(route_ts.is_file())
+        self.assertTrue(contact_form_tsx.is_file())
         self.assertIn("SMTP_HOST=smtp.mailgun.org", env_file.read_text())
         self.assertIn("SMTP_USER=postmaster@mail.example.com", env_file.read_text())
+        
+        # Verify socket client implementation uses node:net and node:tls (zero external npm dependencies)
+        smtp_code = email_ts.read_text()
+        self.assertIn("import * as net from 'node:net';", smtp_code)
+        self.assertIn("import * as tls from 'node:tls';", smtp_code)
+        self.assertIn("AUTH LOGIN", smtp_code)
+        self.assertIn("STARTTLS", smtp_code)
 
         # 2. Remove SMTP
         remove_res = remove_connector(self.repo_dir, "smtp")
         self.assertEqual(remove_res["status"], "removed")
         self.assertFalse(email_ts.is_file())
+        self.assertFalse(templates_ts.is_file())
         self.assertFalse(route_ts.is_file())
+        self.assertFalse(contact_form_tsx.is_file())
         self.assertNotIn("SMTP_", env_file.read_text())
+
+    def test_email_templates_node_execution(self) -> None:
+        apply_connector(self.repo_dir, "smtp", {
+            "host": "smtp.example.com",
+            "username": "user",
+            "password": "pwd",
+        })
+        templates_ts = self.repo_dir / "lib" / "email-templates.ts"
+        self.assertTrue(templates_ts.is_file())
+
+        test_script = (
+            templates_ts.read_text()
+            + "\n"
+            + "const res = welcomeEmailTemplate({ name: 'Alice', appName: 'DemoApp' });\n"
+            + "if (!res.subject.includes('Welcome') || !res.html.includes('Alice')) process.exit(1);\n"
+            + "const otp = otpVerificationTemplate({ code: '123456', appName: 'DemoApp' });\n"
+            + "if (!otp.subject.includes('123456')) process.exit(2);\n"
+            + "const reset = passwordResetTemplate({ appName: 'DemoApp', resetUrl: 'https://demo.app/reset' });\n"
+            + "if (!reset.html.includes('https://demo.app/reset')) process.exit(3);\n"
+            + "const notif = notificationTemplate({ title: 'Alert', message: 'Hello world', appName: 'DemoApp' });\n"
+            + "if (!notif.html.includes('Hello world')) process.exit(4);\n"
+            + "console.log('TEMPLATES_OK');\n"
+        )
+        test_file = self.repo_dir / "test_templates.ts"
+        test_file.write_text(test_script, encoding="utf-8")
+
+        res = subprocess.run(
+            ["node", "--experimental-strip-types", str(test_file)],
+            cwd=str(self.repo_dir),
+            capture_output=True,
+            text=True,
+        )
+        self.assertEqual(res.returncode, 0, f"Node template execution failed: {res.stderr}")
+        self.assertIn("TEMPLATES_OK", res.stdout)
 
     def test_unsupported_provider(self) -> None:
         with self.assertRaises(ConnectorError):

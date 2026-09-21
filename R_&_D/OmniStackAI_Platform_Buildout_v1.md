@@ -221,5 +221,26 @@ F-01 Projects ─┬─ F-02 Preview ──┬─ F-09 DB explorer + SQL
 - **No facades.** A screen ships only when the thing behind it is real. Where something is
   genuinely unavailable (no toolchain, no key, no deployment), the UI says so plainly.
 - **Secrets never reach the browser**, never enter a log, never enter a generated file.
-- **UI reference:** Lovable (`~/Desktop/AI_Platform_Screenshots/Lovable Screenshots`), per the
+- UI reference: Lovable (`~/Desktop/AI_Platform_Screenshots/Lovable Screenshots`), per the
   R-497 decision. Each spec cites the screens it follows.
+
+---
+
+## 8. 🗺️ What to Build Next (Recommended Priority Order)
+
+Adopted from the *Product Experience & Competitive Excellence Roadmap (Sep 2026)* to give OmniStackAI product parity and structural differentiation over v0, Lovable, Bolt, Dyad, and Emergent.
+
+| Priority | Tracker | Initiative / Feature | Target Outcome | Competitor Benchmark |
+| :--- | :--- | :--- | :--- | :--- |
+| **P0 (Next)** | **R-518** | **Starter Gallery + Solution Packs (Template Marketplace)** | Visual catalog of 10+ industry blueprints; 1-click fork into project; 0-token start + AI Delta. | v0 templates, Lovable starters |
+| **P0** | **R-519** | **Simple Mode vs Pro Mode + "What I Understood" Intent Cards** | 1-box prompt start with smart stack defaults; interactive intent card with role/surface/flow toggles before code gen. | Bolt simple start, v0 intent cards |
+| **P0** | **R-520** | **Visual Click-to-Edit Mode (Change-Impact Scoped)** | Click any element in preview iframe to inspect/edit style/copy; scoped strictly to design tokens/CSS without breaking backend. | v0 Design Mode, Lovable visual edits |
+| **P0** | **R-521** | **Multi-App Ecosystem Switcher & Persona Simulator** | Switch live preview between Customer Web, Courier Mobile, and Admin Portal; shared test session data across surfaces. | **Flagship Differentiator (No competitor has this)** |
+| **P0** | **R-522** | **Instant Preview Preservation & Turbo Fast-Path Edits** | Keep previous preview interactive during builds; sub-5s hot reload for style/copy edits (`P50 < 5s`). | v0 instant preview, Dyad Turbo |
+| **P0** | **R-523** | **Automatic Error Detect ➔ Fix ➔ Verify ➔ Retry Loop** | Bounded state machine catching preview/build errors, applying AST patches, and hot-reloading with Preview Error Bar. | Dyad auto-fix, Emergent agents |
+| **P0** | **R-524** | **Human-Friendly Version Timeline & Safe Semantic Undo** | Visual Google-Docs-like history rail with preview thumbnails; restore/undo without destroying later work. | Lovable version history, Bolt history |
+| **P0** | **R-525** | **Pre-Deployment "Safe to Ship" Health Check** | One-click preflight verification (build, secrets, migrations, SEO, SSL) with clear green/amber score before deploy. | Emergent pre-deploy health check |
+| **P1** | **R-526** | **Style DNA UI + Brand Kit Studio** | Organization-wide color/radius/typography brand profiles; recompile design across all surfaces without touching logic. | v0 design systems |
+| **P1** | **R-527** | **Multi-Source Project Intake (Figma & Screenshot-to-App)** | Drag-and-drop UI screenshot or Figma link into composer; extract layout/tokens into Style DNA. | v0 Figma, Bolt Figma |
+| **P1** | **R-528** | **Preview-Pinned Comments & `@Omni` Feedback Threads** | Drop a pin on preview elements with `@Omni` instructions; targeted diff proposals without full app rewrites. | Lovable preview comments |
+| **P1** | **R-529** | **Flutter Mobile Framework Adapter** | `GenerationTarget.FLUTTER` for cross-platform mobile apps alongside React Native using unified Application IR. | Unique mobile multi-stack advantage |

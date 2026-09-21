@@ -8,6 +8,7 @@ import (
 	"log/slog"
 	"net/http"
 	"regexp"
+	"strconv"
 	"strings"
 	"time"
 
@@ -273,13 +274,22 @@ func handleTestConnector(deps Deps) http.HandlerFunc {
 		case "smtp":
 			host := strings.TrimSpace(fmt.Sprintf("%v", body.Config["host"]))
 			user := strings.TrimSpace(fmt.Sprintf("%v", body.Config["username"]))
+			portStr := strings.TrimSpace(fmt.Sprintf("%v", body.Config["port"]))
+			if portStr == "" || portStr == "<nil>" {
+				portStr = "587"
+			}
 			if host == "" || user == "" {
 				writeError(w, http.StatusBadRequest, "SMTP host and username are required")
 				return
 			}
+			portNum, err := strconv.Atoi(portStr)
+			if err != nil || portNum < 1 || portNum > 65535 {
+				writeError(w, http.StatusBadRequest, "Invalid SMTP port (must be between 1 and 65535)")
+				return
+			}
 			writeJSON(w, http.StatusOK, map[string]any{
 				"success": true,
-				"message": fmt.Sprintf("SMTP settings valid for host %s", host),
+				"message": fmt.Sprintf("SMTP configuration valid for %s:%d (auth user: %s)", host, portNum, user),
 			})
 			return
 

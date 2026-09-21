@@ -46,6 +46,8 @@ def fallback_provider_ids_from_env() -> tuple[str, ...]:
     for name in (part.strip().lower() for part in raw.split(",")):
         if not name:
             continue
+        if name == "gemini":
+            name = "google"
         if name in _LOCAL_ALIASES:
             ids.append(OLLAMA_PROVIDER_ID)
         elif name in specs:
@@ -106,12 +108,13 @@ def _ollama_descriptor() -> ModelDescriptor:
 
 
 def _cloud_descriptor(provider_id: str, model_id: str) -> ModelDescriptor:
+    default_max_output = 8_192 if provider_id == "google-gemini" else 4_096
     return ModelDescriptor(
         ModelRef(provider_id, model_id),
         _text_capabilities(),
         _int_env("OMNISTACKAI_CLOUD_CONTEXT_WINDOW_TOKENS", 128_000),
         _int_env("OMNISTACKAI_CLOUD_SAFE_INPUT_TOKENS", 120_000),
-        _int_env("OMNISTACKAI_CLOUD_MAX_OUTPUT_TOKENS", 4_096),
+        _int_env("OMNISTACKAI_CLOUD_MAX_OUTPUT_TOKENS", default_max_output),
     )
 
 
@@ -136,9 +139,14 @@ def build_gateway_from_env(recorder: UsageLedger | None = None) -> GatewayBootst
     cloud_descriptors: dict[str, ModelDescriptor] = {}
     for name, spec in provider_specs.items():
         api_key = os.environ.get(spec.key_env, "")
+        if name == "google" and not api_key.strip():
+            api_key = os.environ.get("GEMINI_API_KEY", "")
         if not api_key.strip():
             continue  # provider stays inactive until its key is supplied
-        model_id = os.environ.get(spec.model_env, "") or spec.default_model
+        model_id = os.environ.get(spec.model_env, "")
+        if name == "google" and not model_id.strip():
+            model_id = os.environ.get("OMNISTACKAI_GEMINI_MODEL", "")
+        model_id = model_id or spec.default_model
         descriptor = _cloud_descriptor(spec.provider_id, model_id)
         registry.register(
             create_cloud_provider(
@@ -146,13 +154,15 @@ def build_gateway_from_env(recorder: UsageLedger | None = None) -> GatewayBootst
                 api_key=api_key,
                 descriptor=descriptor,
                 # R-466: how a 429 is paced. Free tiers may ask for waits above the default 60s cap.
-                rate_limit_retries=_int_env("OMNISTACKAI_RATE_LIMIT_RETRIES", 2),
+                rate_limit_retries=_int_env("OMNISTACKAI_RATE_LIMIT_RETRIES", 4),
                 max_retry_after_seconds=_float_env("OMNISTACKAI_MAX_RETRY_AFTER_SECONDS", 60.0),
             )
         )
         cloud_descriptors[name] = descriptor
 
     selection = (os.environ.get("OMNISTACKAI_CLOUD_PROVIDER", "none") or "none").strip().lower()
+    if selection == "gemini":
+        selection = "google"
     cloud_model: ModelDescriptor | None = None
     cloud_tier_provider_id: str | None = None
     if selection not in ("", "none"):
@@ -174,6 +184,8 @@ def build_gateway_from_env(recorder: UsageLedger | None = None) -> GatewayBootst
     for name in (part.strip().lower() for part in raw_chain.split(",")):
         if not name:
             continue
+        if name == "gemini":
+            name = "google"
         if name in _LOCAL_ALIASES:
             descriptor = ollama_descriptor
         elif name in provider_specs:

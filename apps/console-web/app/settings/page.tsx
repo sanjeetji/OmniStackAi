@@ -11,6 +11,7 @@ import {
   Sparkles,
   TriangleAlert,
   UserRound,
+  Users,
   type LucideIcon,
 } from "lucide-react";
 import { getProviderStatus, type ProviderInfo, type ProviderStatus } from "@/lib/control-plane";
@@ -21,6 +22,7 @@ import { AIKeysManager } from "@/components/ai-keys-manager";
 import { HostingKeysManager } from "@/components/hosting-keys-manager";
 import { SkillsLibrary } from "@/components/skills-library";
 import ThemeSwitcher from "@/components/theme-switcher";
+import { WorkspaceManage } from "@/components/workspace-manage";
 import { Badge } from "@/components/ui/badge";
 import {
   Card,
@@ -39,6 +41,7 @@ export const metadata: Metadata = {
 
 const SECTIONS: { id: string; label: string; icon: LucideIcon }[] = [
   { id: "account", label: "Account", icon: UserRound },
+  { id: "team", label: "Team & Workspaces", icon: Users },
   { id: "appearance", label: "Appearance", icon: Palette },
   { id: "skills", label: "Skills library", icon: Sparkles },
   { id: "providers", label: "Model providers", icon: Cpu },
@@ -127,10 +130,19 @@ export default async function SettingsPage() {
           </section>
 
           <section
+            id="team"
+            aria-labelledby="team-title"
+            className="reveal scroll-mt-20"
+            style={revealStyle(2)}
+          >
+            <WorkspaceManage />
+          </section>
+
+          <section
             id="appearance"
             aria-labelledby="appearance-title"
             className="reveal scroll-mt-20"
-            style={revealStyle(2)}
+            style={revealStyle(3)}
           >
             <Card>
               <CardHeader>

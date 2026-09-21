@@ -4,19 +4,36 @@ phase: BASIC/MVP
 founder_stage: 0
 current_task: null
 current_status: ready
-branch: ai/R-512-payments
-last_completed_task: R-512
+branch: ai/R-517-node-backend
+last_completed_task: R-517
 last_completed_task_summary: >-
+  Completed R-517 (2026-09-21): Node.js backend codegen — Express/Hono alongside Python/Go.
+  1) NodeBackendAdapter (services/agent-engine codegen/backend_node.py):
+     - First-class TypeScript Node.js backend generation target (GenerationTarget.BACKEND_NODE / BackendStrategy.NODE).
+     - Supports both Express (default) and Hono (@hono/node-server) framework variants.
+     - Emits complete, idiomatic TypeScript project layout: package.json (ESM), tsconfig.json,
+       src/index.ts, src/app.ts, src/config.ts, src/models/types.ts, src/models/validation.ts (Zod schemas),
+       src/routes/<resource>.ts, src/middleware/auth.ts (JWT verification), src/db/pool.ts, src/db/<entity>.ts (PostgreSQL data access),
+       contracts/openapi.json, schema.sql, seed.sql, .env.example, and README.md.
+  2) Route Wiring & Operations:
+     - Leverages route_wiring.py for full CRUD operation synthesis (Op.LIST, Op.GET, Op.CREATE, Op.UPDATE, Op.DELETE, Op.LIST_BY).
+  3) Assembler Integration:
+     - Mapped BackendStrategy.NODE to GenerationTarget.BACKEND_NODE in assembler.py.
+     - Registered NodeBackendAdapter in default_registry().
+     - Exported NodeBackendAdapter, ExpressBackendAdapter, HonoBackendAdapter from codegen package.
+  4) Verification:
+     - 10 comprehensive unit tests in test_backend_node.py (Express, Hono, route wiring, models, Zod, auth, determinism, Node.js syntax parsing).
+     - Full test suite passed (3,861/3,861 tests in 91.6s).
+     - Contract tests in scripts/test.sh passed.
+     - Full Stage 0 verification (bash scripts/verify.sh) passed clean.
+_prior_last_completed_task_summary_R516: >-
+  Completed R-516 (2026-09-21): Email feature — SMTP / Resend integration in generated apps.
+_prior_last_completed_task_summary_R515: >-
+  Completed R-515 (2026-09-21): Team / Org model — multi-member workspaces & shared projects (Brief v6 Sections 7 and 17).
+_prior_last_completed_task_summary_R514: >-
+  Completed R-514 (2026-09-21): Mobile (React Native / Expo) Framework Adapter (spec Section 37 and 6.4 of Brief v6).
+_prior_last_completed_task_summary_R512: >-
   Completed R-512 (2026-09-20): G-04 Payment Gateways in Generated Apps — Stripe & Razorpay (spec R_&_D/specs/G-04-payments.md).
-  1) Isolation & Security: Zero PCI scope for OmniStackAI platform (never touches/stores card numbers). Webhooks cryptographically verified via HMAC-SHA256 with event deduplication.
-  2) Database: PostgreSQL migration 000013_project_payments adding payment_gateway text column to projects with check constraint ('', 'stripe', 'razorpay').
-  3) Control-plane: internal/payments package with store and REST endpoints (GET/PUT/DELETE /projects/{id}/payments) inspecting required secrets status without exposing keys and generating live webhook URLs. Zero new Go dependencies (pgx/v5 remains sole direct dependency).
-  4) Agent-engine: studio/payments.py with apply_payments and remove_payments codegen hooks:
-     - Stripe: lib/payments/stripe.ts (typed checkout and webhook verification, zero npm dependencies), app/api/checkout/route.ts, app/api/webhooks/stripe/route.ts, success/cancel pages, and deterministic test suite.
-     - Razorpay: lib/payments/razorpay.ts (typed orders and HMAC signature verification), app/api/checkout/route.ts, app/api/webhooks/razorpay/route.ts, success/cancel pages, and deterministic test suite.
-     - Clean Git commits on enable and disable.
-  5) Console-Web UI: Studio Manage -> Payments tab with ProjectPaymentsManage (Stripe & Razorpay cards, setup checklist, deep links to Secrets, copyable live webhook URL, test mode sandbox tips, and disconnect confirm modal).
-  All 3,841 agent-engine tests, 17 Go packages, Next.js build/typecheck/lint, and task verify clean.
 _prior_last_completed_task_summary_R511: >-
   Completed R-511 (2026-09-20): G-03 Connectors v1 (spec R_&_D/specs/G-03-connectors.md).
 _prior_last_completed_task_summary_R510: >-

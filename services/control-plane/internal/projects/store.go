@@ -20,6 +20,8 @@ var (
 type Project struct {
 	ID           string          `json:"id"`
 	UserID       string          `json:"user_id"`
+	WorkspaceID  string          `json:"workspace_id,omitempty"`
+	CreatorName  string          `json:"creator_name,omitempty"`
 	Name         string          `json:"name"`
 	Description  string          `json:"description"`
 	Status       string          `json:"status"`
@@ -36,7 +38,9 @@ type Project struct {
 
 type Store interface {
 	CreateProject(ctx context.Context, userID, name, description string) (Project, error)
+	CreateProjectInWorkspace(ctx context.Context, userID, workspaceID, name, description string) (Project, error)
 	ListProjects(ctx context.Context, userID, status string, limit int) ([]Project, error)
+	ListWorkspaceProjects(ctx context.Context, userID, workspaceID, status string, limit int) ([]Project, error)
 	GetProject(ctx context.Context, id, userID string) (Project, error)
 	UpdateProject(ctx context.Context, id, userID string, name, description *string) (Project, error)
 	UpdateProjectBuildResult(ctx context.Context, id, userID string, name, prompt, commitSHA string, entities json.RawMessage, fileCount int, messageDelta int) error
@@ -44,6 +48,7 @@ type Store interface {
 	ArchiveProject(ctx context.Context, id, userID string) error
 	DeleteProject(ctx context.Context, id, userID string) error
 	TouchProjectOpened(ctx context.Context, id, userID string) error
+	GetUserProjectRole(ctx context.Context, projectID, userID string) (string, error)
 }
 
 type PgStore struct {
@@ -57,66 +62,121 @@ func New(pool *pgxpool.Pool) *PgStore {
 }
 
 func (s *PgStore) CreateProject(ctx context.Context, userID, name, description string) (Project, error) {
+	return s.CreateProjectInWorkspace(ctx, userID, "", name, description)
+}
+
+func (s *PgStore) CreateProjectInWorkspace(ctx context.Context, userID, workspaceID, name, description string) (Project, error) {
 	name = strings.TrimSpace(name)
 	if name == "" {
 		name = "Untitled project"
 	}
 	description = strings.TrimSpace(description)
 
+	var wsID *string
+	workspaceID = strings.TrimSpace(workspaceID)
+	if workspaceID != "" {
+		// Verify caller is member of specified workspace with at least member role
+		var role string
+		err := s.pool.QueryRow(ctx, `
+			SELECT role FROM workspace_members
+			WHERE workspace_id = $1 AND user_id = $2
+		`, workspaceID, userID).Scan(&role)
+		if errors.Is(err, pgx.ErrNoRows) {
+			return Project{}, ErrUnauthorized
+		}
+		if err != nil {
+			return Project{}, fmt.Errorf("projects: check workspace role: %w", err)
+		}
+		if role != "owner" && role != "admin" && role != "member" {
+			return Project{}, errors.New("projects: viewers cannot create projects")
+		}
+		wsID = &workspaceID
+	} else {
+		// Resolve user's default workspace
+		var defaultID string
+		err := s.pool.QueryRow(ctx, `
+			SELECT w.id FROM workspaces w
+			JOIN workspace_members wm ON wm.workspace_id = w.id
+			WHERE wm.user_id = $1 AND w.is_default = true
+			LIMIT 1
+		`, userID).Scan(&defaultID)
+		if err == nil {
+			wsID = &defaultID
+		}
+	}
+
 	var p Project
 	var entitiesBytes []byte
+	var dbWsID *string
 	err := s.pool.QueryRow(ctx, `
-		INSERT INTO projects (user_id, name, description, entities)
-		VALUES ($1, $2, $3, '[]'::jsonb)
-		RETURNING id, user_id, name, description, status, entities, file_count, commit_sha,
+		INSERT INTO projects (user_id, workspace_id, name, description, entities)
+		VALUES ($1, $2, $3, $4, '[]'::jsonb)
+		RETURNING id, user_id, workspace_id, name, description, status, entities, file_count, commit_sha,
 		          credits_spent, message_count, last_prompt, created_at, updated_at, last_opened_at
-	`, userID, name, description).Scan(
-		&p.ID, &p.UserID, &p.Name, &p.Description, &p.Status, &entitiesBytes, &p.FileCount, &p.CommitSHA,
+	`, userID, wsID, name, description).Scan(
+		&p.ID, &p.UserID, &dbWsID, &p.Name, &p.Description, &p.Status, &entitiesBytes, &p.FileCount, &p.CommitSHA,
 		&p.CreditsSpent, &p.MessageCount, &p.LastPrompt, &p.CreatedAt, &p.UpdatedAt, &p.LastOpenedAt,
 	)
 	if err != nil {
 		return Project{}, fmt.Errorf("projects: create project: %w", err)
+	}
+	if dbWsID != nil {
+		p.WorkspaceID = *dbWsID
 	}
 	p.Entities = entitiesBytes
 	return p, nil
 }
 
 func (s *PgStore) ListProjects(ctx context.Context, userID, status string, limit int) ([]Project, error) {
+	return s.ListWorkspaceProjects(ctx, userID, "", status, limit)
+}
+
+func (s *PgStore) ListWorkspaceProjects(ctx context.Context, userID, workspaceID, status string, limit int) ([]Project, error) {
 	if limit <= 0 || limit > 100 {
 		limit = 50
 	}
 
-	var rows pgx.Rows
-	var err error
-	if status == "archived" {
-		rows, err = s.pool.Query(ctx, `
-			SELECT id, user_id, name, description, status, entities, file_count, commit_sha,
-			       credits_spent, message_count, last_prompt, created_at, updated_at, last_opened_at
-			FROM projects
-			WHERE user_id = $1 AND status = 'archived'
-			ORDER BY updated_at DESC
-			LIMIT $2
-		`, userID, limit)
-	} else if status == "all" {
-		rows, err = s.pool.Query(ctx, `
-			SELECT id, user_id, name, description, status, entities, file_count, commit_sha,
-			       credits_spent, message_count, last_prompt, created_at, updated_at, last_opened_at
-			FROM projects
-			WHERE user_id = $1
-			ORDER BY updated_at DESC
-			LIMIT $2
-		`, userID, limit)
-	} else {
-		// default active
-		rows, err = s.pool.Query(ctx, `
-			SELECT id, user_id, name, description, status, entities, file_count, commit_sha,
-			       credits_spent, message_count, last_prompt, created_at, updated_at, last_opened_at
-			FROM projects
-			WHERE user_id = $1 AND status = 'active'
-			ORDER BY updated_at DESC
-			LIMIT $2
-		`, userID, limit)
+	whereClause := `
+		WHERE (
+			p.user_id = $1
+			OR (p.workspace_id IS NOT NULL AND EXISTS (
+				SELECT 1 FROM workspace_members wm WHERE wm.workspace_id = p.workspace_id AND wm.user_id = $1
+			))
+		)
+	`
+	args := []any{userID, limit}
+
+	workspaceID = strings.TrimSpace(workspaceID)
+	if workspaceID != "" {
+		whereClause = `
+			WHERE p.workspace_id = $3 AND (
+				p.user_id = $1
+				OR EXISTS (
+					SELECT 1 FROM workspace_members wm WHERE wm.workspace_id = $3 AND wm.user_id = $1
+				)
+			)
+		`
+		args = []any{userID, limit, workspaceID}
 	}
+
+	if status == "archived" {
+		whereClause += " AND p.status = 'archived'"
+	} else if status != "all" {
+		whereClause += " AND p.status = 'active'"
+	}
+
+	query := fmt.Sprintf(`
+		SELECT p.id, p.user_id, p.workspace_id, COALESCE(u.name, 'User'),
+		       p.name, p.description, p.status, p.entities, p.file_count, p.commit_sha,
+		       p.credits_spent, p.message_count, p.last_prompt, p.created_at, p.updated_at, p.last_opened_at
+		FROM projects p
+		LEFT JOIN users u ON u.id = p.user_id
+		%s
+		ORDER BY p.updated_at DESC
+		LIMIT $2
+	`, whereClause)
+
+	rows, err := s.pool.Query(ctx, query, args...)
 	if err != nil {
 		return nil, fmt.Errorf("projects: list projects: %w", err)
 	}
@@ -126,11 +186,19 @@ func (s *PgStore) ListProjects(ctx context.Context, userID, status string, limit
 	for rows.Next() {
 		var p Project
 		var entitiesBytes []byte
+		var dbWsID *string
+		var creatorName *string
 		if err := rows.Scan(
-			&p.ID, &p.UserID, &p.Name, &p.Description, &p.Status, &entitiesBytes, &p.FileCount, &p.CommitSHA,
+			&p.ID, &p.UserID, &dbWsID, &creatorName, &p.Name, &p.Description, &p.Status, &entitiesBytes, &p.FileCount, &p.CommitSHA,
 			&p.CreditsSpent, &p.MessageCount, &p.LastPrompt, &p.CreatedAt, &p.UpdatedAt, &p.LastOpenedAt,
 		); err != nil {
 			return nil, fmt.Errorf("projects: scan project: %w", err)
+		}
+		if dbWsID != nil {
+			p.WorkspaceID = *dbWsID
+		}
+		if creatorName != nil {
+			p.CreatorName = *creatorName
 		}
 		p.Entities = entitiesBytes
 		result = append(result, p)
@@ -147,13 +215,22 @@ func (s *PgStore) ListProjects(ctx context.Context, userID, status string, limit
 func (s *PgStore) GetProject(ctx context.Context, id, userID string) (Project, error) {
 	var p Project
 	var entitiesBytes []byte
+	var dbWsID *string
+	var creatorName *string
 	err := s.pool.QueryRow(ctx, `
-		SELECT id, user_id, name, description, status, entities, file_count, commit_sha,
-		       credits_spent, message_count, last_prompt, created_at, updated_at, last_opened_at
-		FROM projects
-		WHERE id = $1 AND user_id = $2
+		SELECT p.id, p.user_id, p.workspace_id, COALESCE(u.name, 'User'),
+		       p.name, p.description, p.status, p.entities, p.file_count, p.commit_sha,
+		       p.credits_spent, p.message_count, p.last_prompt, p.created_at, p.updated_at, p.last_opened_at
+		FROM projects p
+		LEFT JOIN users u ON u.id = p.user_id
+		WHERE p.id = $1 AND (
+			p.user_id = $2
+			OR (p.workspace_id IS NOT NULL AND EXISTS (
+				SELECT 1 FROM workspace_members wm WHERE wm.workspace_id = p.workspace_id AND wm.user_id = $2
+			))
+		)
 	`, id, userID).Scan(
-		&p.ID, &p.UserID, &p.Name, &p.Description, &p.Status, &entitiesBytes, &p.FileCount, &p.CommitSHA,
+		&p.ID, &p.UserID, &dbWsID, &creatorName, &p.Name, &p.Description, &p.Status, &entitiesBytes, &p.FileCount, &p.CommitSHA,
 		&p.CreditsSpent, &p.MessageCount, &p.LastPrompt, &p.CreatedAt, &p.UpdatedAt, &p.LastOpenedAt,
 	)
 	if errors.Is(err, pgx.ErrNoRows) {
@@ -161,6 +238,12 @@ func (s *PgStore) GetProject(ctx context.Context, id, userID string) (Project, e
 	}
 	if err != nil {
 		return Project{}, fmt.Errorf("projects: get project: %w", err)
+	}
+	if dbWsID != nil {
+		p.WorkspaceID = *dbWsID
+	}
+	if creatorName != nil {
+		p.CreatorName = *creatorName
 	}
 	p.Entities = entitiesBytes
 	return p, nil
@@ -183,14 +266,21 @@ func (s *PgStore) UpdateProject(ctx context.Context, id, userID string, name, de
 
 	var p Project
 	var entitiesBytes []byte
+	var dbWsID *string
 	err = s.pool.QueryRow(ctx, `
 		UPDATE projects
 		SET name = $1, description = $2, updated_at = now()
-		WHERE id = $3 AND user_id = $4
-		RETURNING id, user_id, name, description, status, entities, file_count, commit_sha,
+		WHERE id = $3 AND (
+			user_id = $4
+			OR (workspace_id IS NOT NULL AND EXISTS (
+				SELECT 1 FROM workspace_members wm
+				WHERE wm.workspace_id = projects.workspace_id AND wm.user_id = $4 AND wm.role IN ('owner', 'admin', 'member')
+			))
+		)
+		RETURNING id, user_id, workspace_id, name, description, status, entities, file_count, commit_sha,
 		          credits_spent, message_count, last_prompt, created_at, updated_at, last_opened_at
 	`, newName, newDesc, id, userID).Scan(
-		&p.ID, &p.UserID, &p.Name, &p.Description, &p.Status, &entitiesBytes, &p.FileCount, &p.CommitSHA,
+		&p.ID, &p.UserID, &dbWsID, &p.Name, &p.Description, &p.Status, &entitiesBytes, &p.FileCount, &p.CommitSHA,
 		&p.CreditsSpent, &p.MessageCount, &p.LastPrompt, &p.CreatedAt, &p.UpdatedAt, &p.LastOpenedAt,
 	)
 	if errors.Is(err, pgx.ErrNoRows) {
@@ -199,6 +289,10 @@ func (s *PgStore) UpdateProject(ctx context.Context, id, userID string, name, de
 	if err != nil {
 		return Project{}, fmt.Errorf("projects: update project: %w", err)
 	}
+	if dbWsID != nil {
+		p.WorkspaceID = *dbWsID
+	}
+	p.CreatorName = current.CreatorName
 	p.Entities = entitiesBytes
 	return p, nil
 }
@@ -207,7 +301,12 @@ func (s *PgStore) TouchProjectOpened(ctx context.Context, id, userID string) err
 	_, err := s.pool.Exec(ctx, `
 		UPDATE projects
 		SET last_opened_at = now()
-		WHERE id = $1 AND user_id = $2
+		WHERE id = $1 AND (
+			user_id = $2
+			OR (workspace_id IS NOT NULL AND EXISTS (
+				SELECT 1 FROM workspace_members wm WHERE wm.workspace_id = projects.workspace_id AND wm.user_id = $2
+			))
+		)
 	`, id, userID)
 	return err
 }
@@ -224,7 +323,6 @@ func (s *PgStore) UpdateProjectBuildResult(
 		entities = json.RawMessage("[]")
 	}
 
-	// Only override name if current name is "Untitled project" or empty, or if explicit non-empty name given
 	tag, err := s.pool.Exec(ctx, `
 		UPDATE projects
 		SET name = CASE WHEN name = 'Untitled project' AND $1 != '' THEN $1 ELSE name END,
@@ -235,7 +333,13 @@ func (s *PgStore) UpdateProjectBuildResult(
 		    message_count = message_count + $6,
 		    updated_at = now(),
 		    last_opened_at = now()
-		WHERE id = $7 AND user_id = $8
+		WHERE id = $7 AND (
+			user_id = $8
+			OR (workspace_id IS NOT NULL AND EXISTS (
+				SELECT 1 FROM workspace_members wm
+				WHERE wm.workspace_id = projects.workspace_id AND wm.user_id = $8 AND wm.role IN ('owner', 'admin', 'member')
+			))
+		)
 	`, strings.TrimSpace(name), prompt, commitSHA, entities, fileCount, messageDelta, id, userID)
 	if err != nil {
 		return fmt.Errorf("projects: update build result: %w", err)
@@ -304,7 +408,13 @@ func (s *PgStore) ArchiveProject(ctx context.Context, id, userID string) error {
 	tag, err := s.pool.Exec(ctx, `
 		UPDATE projects
 		SET status = 'archived', updated_at = now()
-		WHERE id = $1 AND user_id = $2
+		WHERE id = $1 AND (
+			user_id = $2
+			OR (workspace_id IS NOT NULL AND EXISTS (
+				SELECT 1 FROM workspace_members wm
+				WHERE wm.workspace_id = projects.workspace_id AND wm.user_id = $2 AND wm.role IN ('owner', 'admin')
+			))
+		)
 	`, id, userID)
 	if err != nil {
 		return err
@@ -318,7 +428,13 @@ func (s *PgStore) ArchiveProject(ctx context.Context, id, userID string) error {
 func (s *PgStore) DeleteProject(ctx context.Context, id, userID string) error {
 	tag, err := s.pool.Exec(ctx, `
 		DELETE FROM projects
-		WHERE id = $1 AND user_id = $2
+		WHERE id = $1 AND (
+			user_id = $2
+			OR (workspace_id IS NOT NULL AND EXISTS (
+				SELECT 1 FROM workspace_members wm
+				WHERE wm.workspace_id = projects.workspace_id AND wm.user_id = $2 AND wm.role IN ('owner', 'admin')
+			))
+		)
 	`, id, userID)
 	if err != nil {
 		return err
@@ -327,4 +443,39 @@ func (s *PgStore) DeleteProject(ctx context.Context, id, userID string) error {
 		return ErrProjectNotFound
 	}
 	return nil
+}
+
+func (s *PgStore) GetUserProjectRole(ctx context.Context, projectID, userID string) (string, error) {
+	var isCreator bool
+	var dbWsID *string
+	err := s.pool.QueryRow(ctx, `
+		SELECT user_id = $2, workspace_id
+		FROM projects
+		WHERE id = $1
+	`, projectID, userID).Scan(&isCreator, &dbWsID)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return "", ErrProjectNotFound
+	}
+	if err != nil {
+		return "", err
+	}
+	if isCreator {
+		return "owner", nil
+	}
+	if dbWsID == nil || *dbWsID == "" {
+		return "", ErrUnauthorized
+	}
+
+	var role string
+	err = s.pool.QueryRow(ctx, `
+		SELECT role FROM workspace_members
+		WHERE workspace_id = $1 AND user_id = $2
+	`, *dbWsID, userID).Scan(&role)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return "", ErrUnauthorized
+	}
+	if err != nil {
+		return "", err
+	}
+	return role, nil
 }

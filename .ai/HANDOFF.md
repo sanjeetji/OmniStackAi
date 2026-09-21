@@ -1,5 +1,98 @@
 # Current Handoff
 
+Task ID: R-517
+Status: done
+Phase: MVP
+Branch: `ai/R-517-node-backend`
+
+> **R-517 Completed (2026-09-21): Node.js backend codegen — Express/Hono alongside Python/Go.**
+> - **First-class Node.js Backend Code Generation (`GenerationTarget.BACKEND_NODE` / `BackendStrategy.NODE`):**
+>   - Implemented `NodeBackendAdapter`, `ExpressBackendAdapter`, and `HonoBackendAdapter` in `services/agent-engine/src/omnistackai_agent_engine/codegen/backend_node.py`.
+>   - Framework auto-detection: defaults to Express, switches to Hono if `framework="hono"` or if `"hono"` is mentioned in prompt/IR name.
+>   - Complete, idiomatic TypeScript project structure generated:
+>     - `package.json` (ESM configured, scripts, express/hono dependencies, zod, pg).
+>     - `tsconfig.json` (ES2022, NodeNext, strict mode).
+>     - `src/config.ts` (strongly-typed environment configuration).
+>     - `src/index.ts` & `src/app.ts` (server startup, graceful shutdown, CORS, JSON parsing, logging, route registration).
+>     - `src/models/types.ts` & `src/models/validation.ts` (TypeScript interfaces and Zod runtime validation schemas).
+>     - `src/middleware/auth.ts` (JWT bearer authentication).
+>     - `src/db/pool.ts` & `src/db/<entity>.ts` (PostgreSQL query layer with in-memory fallback).
+>     - `src/routes/<resource>.ts` (wired REST CRUD handlers using `route_wiring.py` for Op.LIST, Op.GET, Op.CREATE, Op.UPDATE, Op.DELETE, Op.LIST_BY).
+>     - `contracts/openapi.json`, `schema.sql`, `seed.sql`, `.env.example`, `README.md`.
+> - **Assembler & Registry Integration:**
+>   - Mapped `BackendStrategy.NODE` to `GenerationTarget.BACKEND_NODE` in `assembler.py`.
+>   - Registered `NodeBackendAdapter` in `default_registry()`.
+>   - Exported in `codegen/__init__.py`.
+> - **Verification Evidence:**
+>   - `PYTHONPATH=services/agent-engine/src pytest services/agent-engine/tests/test_backend_node.py` (10 passed in 0.19s, including live Node.js syntax parsing).
+>   - `PYTHONPATH=services/agent-engine/src pytest services/agent-engine/tests/test_assembler.py` (6 passed in 0.40s).
+>   - `cd services/control-plane && go test ./...` (clean, all 19 packages passed).
+>   - `bash scripts/test.sh` (clean repository contract tests).
+>   - `bash scripts/verify.sh` / `task verify` (3,861 tests passed in 91.6s, Stage 0 clean).
+> - **NEXT:** Ready for next roadmap task.
+
+Task ID: R-516
+Status: done
+Phase: MVP
+Branch: `ai/R-516-email-integration`
+
+> **R-516 Completed (2026-09-21): Email feature — SMTP / Resend integration in generated apps.**
+> - **Pure Node.js Standard-Library Socket Client (`lib/email.ts`):**
+>   - Zero external npm dependencies (eliminating `nodemailer` supply chain vulnerabilities, CVE risks, and bundle overhead).
+>   - Implements RFC 5321 / RFC 4954 socket protocol directly using `node:net`, `node:tls`, and `node:crypto`.
+>   - Handles both direct TLS (port 465) and STARTTLS (port 587/25) with dynamic socket upgrade.
+>   - Supports `AUTH LOGIN` (Base64 username and password handshakes), MIME multipart/alternative structuring, and 15-second timeout protections.
+> - **Resend REST API Integration (`lib/email.ts`):**
+>   - Zero dependencies, native fetch dispatch to `https://api.resend.com/emails`.
+>   - Typed `SendEmailOptions` (`to`, `subject`, `html`, `text`, `from`, `replyTo`, `cc`, `bcc`) and granular error messages.
+> - **Pre-built Responsive HTML Templates (`lib/email-templates.ts`):**
+>   - Universal inline-CSS responsive templates: `welcomeEmailTemplate`, `otpVerificationTemplate`, `passwordResetTemplate`, and `notificationTemplate`.
+>   - Verified via live Node.js runtime execution (`--experimental-strip-types`).
+> - **Interactive Contact Form UI (`components/contact-form.tsx`):**
+>   - Client-side React form component submitting to `/api/send` route with loading indicator and success/error status badges.
+> - **Control-Plane Backend (`services/control-plane/internal/connectors/`):**
+>   - Updated catalog generated files metadata for both `resend` and `smtp`.
+>   - Enhanced `handleTestConnector` with live port range validation (1-65535), hostname validation, and Resend key verification.
+>   - All 19 Go control-plane packages pass cleanly.
+> - **Console Web UI (`apps/console-web/components/project-connectors-manage.tsx`):**
+>   - Configuration drawer displays pre-built email templates guide, live example code snippet, and one-click copy button.
+> - **Verification Evidence:**
+>   - `PYTHONPATH=services/agent-engine/src pytest services/agent-engine/tests/test_connectors.py` (7/7 passed in 1.78s).
+>   - `cd services/control-plane && go test ./...` (clean).
+>   - `cd apps/console-web && pnpm run typecheck && pnpm run lint` (clean).
+>   - `bash scripts/test.sh` (clean).
+>   - `task verify` (3,851 tests passed in 90.7s, Next.js build succeeded, Stage 0 clean).
+> - **NEXT:** Ready for next roadmap task.
+
+Task ID: R-515
+Status: done
+Phase: MVP
+Branch: `ai/R-515-team-org-workspaces`
+
+> **R-515 Completed (2026-09-21): Team / Org model — multi-member workspaces & shared projects (Brief v6 Sections 7 and 17).**
+> - **Architecture & Tenancy:**
+>   - Implemented hierarchical tenancy (`Organization -> Workspace -> Project -> Environment -> Target -> Deployment`).
+>   - RBAC rules: `owner` (full workspace control & deletion), `admin` (invites, member management, workspace settings), `member` (project CRUD, builds, prompt/chat), `viewer` (read-only code & preview).
+> - **Database Migration (`services/control-plane/migrations/`):**
+>   - `000015_organizations_workspaces.up.sql` and `down.sql`: added `organizations`, `workspaces`, `workspace_members`, `workspace_invites` tables.
+>   - Added `workspace_id` foreign key on `projects`.
+>   - Automatic backfill establishing personal org and default workspace for all existing users and linking their projects.
+> - **Control-Plane Backend (`services/control-plane/internal/workspaces/`):**
+>   - `store.go`: PostgreSQL store for workspace lifecycle, membership management, and secure tokenized invites.
+>   - `handler.go`: REST endpoints for workspace CRUD, member listing, role updating, member removal, invitation creation, revocation, and atomic join acceptance.
+>   - Zero new external Go dependencies (`github.com/jackc/pgx/v5` remains sole direct dependency).
+>   - Unit tests in `workspaces_test.go`: All pass. Registered in `cmd/control-plane/main.go`.
+> - **Control-Plane Projects Multi-tenancy (`services/control-plane/internal/projects/`):**
+>   - Updated projects store and handler to support workspace tenancy, `workspace_id` filtering, and shared project access checks across creator and workspace members.
+> - **Console Web UI (`apps/console-web/`):**
+>   - Types and SDK methods in `lib/control-plane.ts`.
+>   - Next.js API route proxies under `app/api/workspaces/` and invite acceptance page at `app/invite/[token]/page.tsx`.
+>   - `components/workspace-switcher.tsx`: Sticky top header dropdown with active workspace, role badge, quick switcher, and "+ Create workspace" modal.
+>   - `components/workspace-manage.tsx`: Dedicated Lovable-grade team & workspace management interface in Settings -> Team & Workspaces (members table, role selector, invite modal with copyable link, pending invites table with revoke, workspace settings, danger zone).
+>   - Updated `app/projects/page.tsx`: Workspace filtering and creator badge on project cards.
+> - **Gates:** `bash scripts/test.sh` passed with R-515 assertions, `go test ./...` passed (all 19 packages), Next.js build/typecheck/lint passed, `task verify` passed (3,850 tests passed, Stage 0 clean).
+> - **NEXT:** Ready for next roadmap task.
+
 Task ID: R-512
 Status: done
 Phase: MVP → Phase G (payments)

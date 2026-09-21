@@ -118,6 +118,8 @@ def resolve_generation_provider_from_env(
             env_prefer_local = True
 
     cloud_selection = (os.environ.get("OMNISTACKAI_CLOUD_PROVIDER", "") or "").strip().lower()
+    if cloud_selection == "gemini":
+        cloud_selection = "google"
 
     # If preference is local and Ollama is online, use Ollama immediately
     if env_prefer_local and is_ollama_ready():
@@ -132,8 +134,12 @@ def resolve_generation_provider_from_env(
             if boot.cloud_tier_provider_id:
                 provider = boot.registry.get(boot.cloud_tier_provider_id)
                 # Resolve active model id
+                desc = getattr(provider, "descriptor", None) or getattr(provider, "_descriptor", None)
                 profiles = getattr(provider, "profiles", lambda: ())()
-                if profiles:
+                if desc is not None:
+                    model_id = desc.model.model_id
+                    max_output = desc.max_output_tokens
+                elif profiles:
                     model_id = profiles[0].descriptor.model.model_id
                     max_output = profiles[0].descriptor.max_output_tokens
                 else:

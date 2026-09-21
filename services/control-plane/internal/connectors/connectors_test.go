@@ -49,8 +49,17 @@ type fakeProjectStore struct {
 func (f fakeProjectStore) CreateProject(ctx context.Context, userID, name, description string) (projects.Project, error) {
 	return f.project, f.err
 }
+func (f fakeProjectStore) CreateProjectInWorkspace(ctx context.Context, userID, workspaceID, name, description string) (projects.Project, error) {
+	return f.project, f.err
+}
 func (f fakeProjectStore) ListProjects(ctx context.Context, userID, status string, limit int) ([]projects.Project, error) {
 	return []projects.Project{f.project}, f.err
+}
+func (f fakeProjectStore) ListWorkspaceProjects(ctx context.Context, userID, workspaceID, status string, limit int) ([]projects.Project, error) {
+	return []projects.Project{f.project}, f.err
+}
+func (f fakeProjectStore) GetUserProjectRole(ctx context.Context, projectID, userID string) (string, error) {
+	return "owner", nil
 }
 func (f fakeProjectStore) GetProject(ctx context.Context, id, userID string) (projects.Project, error) {
 	if f.err != nil {
@@ -222,5 +231,51 @@ func TestProjectConnectorsLifecycle(t *testing.T) {
 	mux.ServeHTTP(w, req)
 	if w.Code != http.StatusOK {
 		t.Fatalf("DELETE /connectors/ga4 status = %d", w.Code)
+	}
+
+	// 7. Test Resend invalid api_key
+	req = httptest.NewRequest("POST", "/projects/proj-123/connectors/resend/test", bytes.NewReader([]byte(`{"config":{"api_key":"invalid","from_email":"test@example.com"}}`)))
+	req.Header.Set("Authorization", "Bearer token")
+	w = httptest.NewRecorder()
+	mux.ServeHTTP(w, req)
+	if w.Code != http.StatusBadRequest {
+		t.Fatalf("POST /test invalid Resend status = %d, want 400", w.Code)
+	}
+
+	// 8. Test Resend valid config
+	req = httptest.NewRequest("POST", "/projects/proj-123/connectors/resend/test", bytes.NewReader([]byte(`{"config":{"api_key":"re_abcdef123456","from_email":"onboarding@resend.dev"}}`)))
+	req.Header.Set("Authorization", "Bearer token")
+	w = httptest.NewRecorder()
+	mux.ServeHTTP(w, req)
+	if w.Code != http.StatusOK {
+		t.Fatalf("POST /test valid Resend status = %d, want 200", w.Code)
+	}
+
+	// 9. Test SMTP invalid port
+	req = httptest.NewRequest("POST", "/projects/proj-123/connectors/smtp/test", bytes.NewReader([]byte(`{"config":{"host":"smtp.example.com","username":"u","port":"999999"}}`)))
+	req.Header.Set("Authorization", "Bearer token")
+	w = httptest.NewRecorder()
+	mux.ServeHTTP(w, req)
+	if w.Code != http.StatusBadRequest {
+		t.Fatalf("POST /test invalid SMTP port status = %d, want 400", w.Code)
+	}
+
+	// 10. Test SMTP valid config
+	req = httptest.NewRequest("POST", "/projects/proj-123/connectors/smtp/test", bytes.NewReader([]byte(`{"config":{"host":"smtp.example.com","username":"user@example.com","password":"pwd","port":"587"}}`)))
+	req.Header.Set("Authorization", "Bearer token")
+	w = httptest.NewRecorder()
+	mux.ServeHTTP(w, req)
+	if w.Code != http.StatusOK {
+		t.Fatalf("POST /test valid SMTP status = %d, want 200", w.Code)
+	}
+
+	// 11. Save SMTP connector
+	saveSMTP := bytes.NewReader([]byte(`{"config":{"host":"smtp.example.com","username":"user@example.com","password":"pwd","port":"587","from_email":"noreply@example.com"}}`))
+	req = httptest.NewRequest("PUT", "/projects/proj-123/connectors/smtp", saveSMTP)
+	req.Header.Set("Authorization", "Bearer token")
+	w = httptest.NewRecorder()
+	mux.ServeHTTP(w, req)
+	if w.Code != http.StatusOK {
+		t.Fatalf("PUT /connectors/smtp status = %d", w.Code)
 	}
 }

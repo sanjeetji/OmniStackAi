@@ -1,5 +1,108 @@
 # Work Log
 
+## 2026-09-21 — R-517 (Node.js backend codegen — Express/Hono alongside Python/Go)
+
+- **Why:** Provide first-class, deterministic Node.js backend code generation (`GenerationTarget.BACKEND_NODE` / `BackendStrategy.NODE`) alongside existing Python (FastAPI) and Go (`net/http`) backend adapters.
+- **Part 1 — Node.js Backend Adapters (`services/agent-engine/src/omnistackai_agent_engine/codegen/backend_node.py`):**
+  - Implemented `NodeBackendAdapter`, `ExpressBackendAdapter`, and `HonoBackendAdapter`.
+  - Framework switching: defaults to Express, automatically selects Hono when `framework="hono"` or when `"hono"` is present in the application description or name.
+  - Complete, idiomatic TypeScript project structure:
+    - `package.json`: ESM-configured with production scripts (`dev`, `build`, `start`), framework dependencies (`express` or `hono` + `@hono/node-server`), TypeScript & type definitions (`@types/express`, `@types/node`, `typescript`, `tsx`), and data validation (`zod`).
+    - `tsconfig.json`: Modern NodeNext module resolution, ES2022 target, strict mode enabled.
+    - `src/config.ts`: Environment configuration with type casting and sensible fallbacks (`PORT`, `DATABASE_URL`, `JWT_SECRET`, `CORS_ORIGIN`).
+    - `src/index.ts`: Server startup logic, graceful shutdown handling (`SIGTERM`/`SIGINT`), and port binding.
+    - `src/app.ts`: HTTP application configuration, CORS middleware, JSON body parsing, request logging, and router mounting.
+    - `src/models/types.ts`: TypeScript interfaces for every entity, create/update input payloads, and paginated responses.
+    - `src/models/validation.ts`: Zod schemas for runtime request payload validation with inferred TypeScript types.
+    - `src/middleware/auth.ts`: JWT authentication middleware with Bearer token parsing and header injection.
+    - `src/db/pool.ts` & `src/db/<entity>.ts`: PostgreSQL data access with pooled connections (`pg`) and seamless in-memory fallback for local development.
+    - `src/routes/<resource>.ts`: Resource routers wired with existing `route_wiring.py` for standard CRUD operations (`Op.LIST`, `Op.GET`, `Op.CREATE`, `Op.UPDATE`, `Op.DELETE`, `Op.LIST_BY`).
+    - `contracts/openapi.json`: OpenAPI 3.0 contract rendered via `render_openapi_json`.
+    - `schema.sql` & `seed.sql`: PostgreSQL DDL schema and initial seed data.
+    - `.env.example` & `README.md`: Environment setup instructions and developer documentation.
+- **Part 2 — Codegen Assembler Integration:**
+  - Exported adapters in `codegen/__init__.py` and included in `__all__`.
+  - Updated `assembler.py`: mapped `BackendStrategy.NODE` to `GenerationTarget.BACKEND_NODE` in `_BACKEND_TARGET` and registered `NodeBackendAdapter` in `default_registry()`.
+  - Added R-517 contract assertions to `scripts/test.sh`.
+- **Part 3 — Unit Testing & Verification:**
+  - Added 10 tests in `test_backend_node.py` covering Express, Hono, route wiring, models, Zod validation, JWT auth, determinism, and live Node.js syntax parsing.
+  - Updated assembler tests in `test_assembler.py`.
+  - Verified full test suite (3,861/3,861 agent-engine tests passed in 91.6s, all Go packages clean, Next.js build clean, Stage 0 verification passed).
+
+## 2026-09-21 — R-516 (Email feature — SMTP / Resend integration in generated apps)
+
+- **Why:** Provide turnkey, production-grade Transactional Email capabilities for generated Next.js apps with zero external npm dependencies:
+  1. Pure Node.js standard-library socket client in `lib/email.ts` using `node:net`, `node:tls`, and `node:crypto` speaking RFC 5321/4954 with direct TLS (port 465) and STARTTLS (port 587/25) upgrade support, AUTH LOGIN / PLAIN, and MIME formatting.
+  2. Resend REST API integration in `lib/email.ts` using native `fetch` with typed options (`to`, `subject`, `html`, `text`, `from`, `replyTo`, `cc`, `bcc`) and robust error reporting.
+  3. Pre-built responsive HTML email templates in `lib/email-templates.ts` (`welcomeEmailTemplate`, `otpVerificationTemplate`, `passwordResetTemplate`, `notificationTemplate`) with inline CSS and plaintext fallbacks.
+  4. Interactive Contact Form UI component (`components/contact-form.tsx`) wired to `/api/send` route.
+  5. Go control-plane test verification in `internal/connectors/handler.go` and catalog update in `internal/connectors/catalog.go`.
+  6. Console Web UI helper snippets and template previews in `components/project-connectors-manage.tsx`.
+  7. Verification: 7/7 Python tests (including Node.js template execution), 19/19 Go control-plane packages, Next.js build/typecheck/lint, contract tests in `scripts/test.sh`, and `task verify` (3,851 tests passed, Stage 0 clean).
+
+## 2026-09-21 — R-515 (Team / Org model — multi-member workspaces, shared projects)
+
+- **Why:** Implement Organization and multi-member Workspace tenancy model as specified in Sections 7 and 17 of `R_&_D/OmniStackAI_Implementation_Brief_v6.md` (`Organization -> Workspace -> Project -> Environment -> Target -> Deployment`), enabling collaborative multi-member workspaces with shared projects, member invites, role-based access control (`owner`, `admin`, `member`, `viewer`), and backwards compatibility for existing single-user projects.
+- **Part 1 — Database Migration (`services/control-plane/migrations/`):**
+  - Created `000015_organizations_workspaces.up.sql` and `000015_organizations_workspaces.down.sql`.
+  - Added tables: `organizations`, `workspaces`, `workspace_members`, `workspace_invites`.
+  - Added `workspace_id` foreign key on `projects`.
+  - Automatic backfill establishing personal org and default workspace for all existing users and linking their projects.
+- **Part 2 — Control-Plane Backend (`services/control-plane/internal/workspaces/`):**
+  - Implemented `store.go`: PostgreSQL data access for workspaces, members, and invites with strict RBAC rules.
+  - Implemented `handler.go`: REST endpoints for workspace CRUD, member listing, role updating, member removal, invitation creation, revocation, and atomic join acceptance.
+  - Implemented unit tests in `workspaces_test.go` (100% pass).
+  - Registered `workspaces.Register` in `cmd/control-plane/main.go`. Zero new external Go dependencies (`github.com/jackc/pgx/v5` remains sole direct dependency).
+- **Part 3 — Control-Plane Projects Multi-tenancy (`services/control-plane/internal/projects/`):**
+  - Updated projects store and handler to support workspace tenancy, `workspace_id` filtering, and shared project access checks across creator and workspace members.
+- **Part 4 — Console Web UI (`apps/console-web/`):**
+  - Extended `lib/control-plane.ts`: Added `Workspace`, `WorkspaceMember`, `WorkspaceInvite`, and API client functions.
+  - Added Next.js API route proxies under `app/api/workspaces/` and invite acceptance page at `app/invite/[token]/page.tsx`.
+  - Created `components/workspace-switcher.tsx`: Sticky top header dropdown with active workspace, role badge, quick switcher, and "+ Create workspace" modal.
+  - Created `components/workspace-manage.tsx`: Dedicated Lovable-grade team & workspace management interface in Settings -> Team & Workspaces (members table, role selector, invite modal with copyable link, pending invites table with revoke, workspace settings, danger zone).
+  - Updated `app/projects/page.tsx`: Workspace filtering and creator badge on project cards.
+- **Part 5 — Verification & Contract Testing:**
+  - Added R-515 contract assertions to `scripts/test.sh`.
+  - Verified: `task lint` (clean), `go test ./...` across all 19 control-plane packages (clean), Next.js build/typecheck/lint (clean), and full `task verify` (3,850 tests passed, Stage 0 clean).
+
+## 2026-09-21 — R-514 (Mobile React Native / Expo Framework Adapter)
+
+- **Why:** Deliver production-grade React Native (Expo SDK 51) framework adapter un-gating cross-platform mobile application synthesis for the platform (`R_&_D/OmniStackAI_Implementation_Brief_v6.md` Section 37 & 6.4).
+- **Part 1 — Framework Adapter (`services/agent-engine/src/omnistackai_agent_engine/codegen/react_native.py`):**
+  - Implemented `ReactNativeAdapter` satisfying the `FrameworkAdapter` protocol for `GenerationTarget.REACT_NATIVE`.
+- **Part 2 — Expo TypeScript Project Architecture:**
+  - Emits clean, production-ready mobile files: `package.json` (Expo 51, React Native 0.74, React Navigation Native Stack, Lucide icons), `app.json` (orientation, splash, bundle identifier, adaptive icons), `tsconfig.json`, `babel.config.js`, `index.js`.
+- **Part 3 — Design System & Tokens:**
+  - Generates `src/design-system/tokens.ts` embedding brand tokens (`BrandTokens`: primary color, dark primary, radii, spacing, typography) and native UI components (`Button`, `Card`, `Badge`, `Input`, `StatCard`, `ScreenContainer`).
+- **Part 4 — Shared Data & Auth Layer:**
+  - Generates `src/shared/api/client.ts` with typed HTTP client communicating with backend endpoints, and `src/shared/auth/AuthContext.tsx` providing user authentication, token storage, and session state.
+- **Part 5 — Entity Features:**
+  - Generates `src/features/<entity>/` with TypeScript models, CRUD API clients, `use<Entity>s` hooks, `ListScreen` (FlatList, search, KPI tiles, delete CTA), and `DetailScreen` (typed form inputs, create/edit modes, save handlers).
+- **Part 6 — App Shell & Navigation:**
+  - Generates `src/app/screens/OverviewScreen.tsx`, `src/app/navigation/RootNavigator.tsx` (NativeStack), and `src/app/App.tsx` (SafeAreaProvider, AuthProvider, NavigationContainer).
+- **Part 7 — Monorepo Assembly:**
+  - Registered in `default_registry()` and wired into `assembler.py` under `apps/mobile/` when `ir.project_strategy.mobile_profile` is `MobileProfile.REACT_NATIVE`.
+- **Part 8 — Verification:**
+  - Added 9 unit tests in `test_react_native_adapter.py`, updated assembler tests to 6 passed, all 3,850/3,850 Python tests pass, 18 Go packages pass, Next.js build/typecheck/lint clean, and full `task verify` clean.
+
+## 2026-09-20 — R-513 (Analytics for published apps — G-05-analytics)
+
+- **Why:** Deliver visitor traffic analytics for published applications with zero storage load on OmniStackAI, adhering to privacy laws by reading the Google Analytics 4 (GA4) Data API directly with the user's OAuth credentials.
+- **Part 1 — Database Migration (`services/control-plane/migrations/`):**
+  - Created `000014_project_analytics.up.sql` and `down.sql`: added `analytics_provider` and `analytics_property_id` columns to `projects` table.
+- **Part 2 — Control-Plane Backend (`services/control-plane/internal/analytics/`):**
+  - Implemented `store.go`: PostgreSQL data access for project analytics settings.
+  - Implemented `ga4.go`: standard-library `net/http` client querying Google Analytics Data API v1beta (`runReport`) with 5-minute caching, returning active users, sessions, pageviews, average engagement time, top pages, referrers, device categories, and country distribution.
+  - Implemented `handler.go`: REST endpoints `GET/PUT/DELETE /projects/{id}/analytics` with caller project ownership verification.
+  - Added unit tests in `analytics_test.go` (100% pass).
+  - Registered in `cmd/control-plane/main.go`.
+- **Part 3 — Console Web UI (`apps/console-web/`):**
+  - Added analytics types and client SDK methods in `lib/control-plane.ts`.
+  - Added Next.js API route proxies under `app/api/projects/[id]/analytics/`.
+  - Created `components/project-analytics-manage.tsx`: Lovable-grade dashboard with KPI cards, time range filter (24h, 7d, 30d, 90d), top pages table, referrers chart, device/country breakdowns, and property configuration modal. Mounted in Studio Manage under Analytics tab.
+- **Part 4 — Verification:**
+  - Go control-plane tests clean, Next.js build/lint clean, and full `task verify` clean.
+
 ## 2026-09-20 — R-512 (G-04 Payment Gateways in Generated Apps — Stripe & Razorpay)
 
 - **Why:** Enable generated applications to accept real customer payments ("my store takes money") with zero PCI scope for the platform, strict HMAC-SHA256 signature verification, and event idempotency (`R_&_D/specs/G-04-payments.md`).

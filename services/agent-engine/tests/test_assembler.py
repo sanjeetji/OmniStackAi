@@ -28,10 +28,16 @@ from omnistackai_agent_engine.git_service import create_repository
 
 
 class DefaultRegistryTests(TestCase):
-    def test_has_three_adapters(self) -> None:
+    def test_has_five_adapters(self) -> None:
         self.assertEqual(
             set(default_registry().targets()),
-            {GenerationTarget.NEXTJS_WEB, GenerationTarget.BACKEND_PYTHON, GenerationTarget.BACKEND_GO},
+            {
+                GenerationTarget.NEXTJS_WEB,
+                GenerationTarget.BACKEND_PYTHON,
+                GenerationTarget.BACKEND_GO,
+                GenerationTarget.REACT_NATIVE,
+                GenerationTarget.BACKEND_NODE,
+            },
         )
 
 
@@ -58,7 +64,7 @@ class AssembleTests(TestCase):
         self.assertNotIn("apps/admin/package.json", paths)
         self.assertIn("admin_strategy", project.get("README.md").content)
 
-    def test_node_backend_is_skipped(self) -> None:
+    def test_node_backend_is_assembled(self) -> None:
         ir = ApplicationIR(
             name="Api Only", description="d", platforms=(Platform.BACKEND,),
             project_strategy=ProjectStrategy(
@@ -68,8 +74,11 @@ class AssembleTests(TestCase):
             entities=(Entity("Thing", (Field("id", FieldType.UUID),)),),
         )
         project = assemble_project(ir)
-        self.assertFalse(any(p.startswith("services/api/") for p in project.paths()))
-        self.assertIn("backend_strategy", project.get("README.md").content)
+        paths = set(project.paths())
+        self.assertTrue(any(p.startswith("services/api/") for p in paths))
+        self.assertIn("services/api/package.json", paths)
+        self.assertIn("services/api/src/index.ts", paths)
+        self.assertIn("services/api", project.get("README.md").content)
 
     def test_deterministic(self) -> None:
         ir = example_ir("rideshare-favourites")

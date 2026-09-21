@@ -50,8 +50,17 @@ type fakeProjectStore struct {
 func (f fakeProjectStore) CreateProject(ctx context.Context, userID, name, description string) (projects.Project, error) {
 	return f.project, f.err
 }
+func (f fakeProjectStore) CreateProjectInWorkspace(ctx context.Context, userID, workspaceID, name, description string) (projects.Project, error) {
+	return f.project, f.err
+}
 func (f fakeProjectStore) ListProjects(ctx context.Context, userID, status string, limit int) ([]projects.Project, error) {
 	return []projects.Project{f.project}, f.err
+}
+func (f fakeProjectStore) ListWorkspaceProjects(ctx context.Context, userID, workspaceID, status string, limit int) ([]projects.Project, error) {
+	return []projects.Project{f.project}, f.err
+}
+func (f fakeProjectStore) GetUserProjectRole(ctx context.Context, projectID, userID string) (string, error) {
+	return "owner", nil
 }
 func (f fakeProjectStore) GetProject(ctx context.Context, id, userID string) (projects.Project, error) {
 	if f.err != nil {

@@ -80,7 +80,9 @@ var Catalog = []ConnectorDefinition{
 		},
 		Generated: []string{
 			"lib/email.ts: Typed sendEmail helper using Resend REST API (zero npm dependencies)",
-			"app/api/send/route.ts: Example server action for sending emails",
+			"lib/email-templates.ts: Responsive HTML templates (Welcome, OTP, Password Reset, Notification)",
+			"app/api/send/route.ts: API route for email dispatch with validation",
+			"components/contact-form.tsx: Interactive contact form UI component",
 		},
 	},
 	{
@@ -134,7 +136,10 @@ var Catalog = []ConnectorDefinition{
 			},
 		},
 		Generated: []string{
-			"lib/email.ts: SMTP client configuration and sendEmail helper",
+			"lib/email.ts: Pure Node.js RFC 5321 socket client with TLS & STARTTLS (zero npm dependencies)",
+			"lib/email-templates.ts: Responsive HTML templates (Welcome, OTP, Password Reset, Notification)",
+			"app/api/send/route.ts: API route for email dispatch with validation",
+			"components/contact-form.tsx: Interactive contact form UI component",
 		},
 	},
 }

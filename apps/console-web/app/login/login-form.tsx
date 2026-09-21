@@ -1,7 +1,6 @@
 "use client";
 
 import { useState, type ChangeEvent, type FormEvent } from "react";
-import { useRouter } from "next/navigation";
 import { Eye, EyeOff, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -21,7 +20,6 @@ interface Values {
 type Errors = Partial<Record<keyof Values, string>>;
 
 export default function LoginForm() {
-  const router = useRouter();
   const [values, setValues] = useState<Values>({ email: "", password: "" });
   const [errors, setErrors] = useState<Errors>({});
   const [serverError, setServerError] = useState<string | null>(null);
@@ -61,8 +59,9 @@ export default function LoginForm() {
         setServerError(formatServerError(body.error, "Sign in failed."));
         return;
       }
-      router.push("/");
-      router.refresh();
+      // Full navigation so the server-component re-render picks up the new cookie
+      // immediately, without the router-cache race that `router.push + refresh` can hit.
+      window.location.href = "/";
     } catch {
       setServerError("Couldn't reach the server. Check your connection and try again.");
     } finally {
@@ -114,9 +113,10 @@ export default function LoginForm() {
             type="button"
             variant="ghost"
             size="icon-sm"
-            className="absolute top-0.5 right-0.5 text-muted-foreground"
+            className="absolute top-0.5 right-0.5 z-10 text-muted-foreground"
             aria-label={showPassword ? "Hide password" : "Show password"}
             aria-pressed={showPassword}
+            onMouseDown={(e) => e.preventDefault()}
             onClick={() => setShowPassword((current) => !current)}
           >
             {showPassword ? <EyeOff aria-hidden="true" /> : <Eye aria-hidden="true" />}

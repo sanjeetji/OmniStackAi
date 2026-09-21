@@ -9,6 +9,7 @@ import {
   MoreVertical,
   Pencil,
   Trash2,
+  User,
 } from "lucide-react";
 import type { Project } from "@/lib/control-plane";
 import { formatRelativeTime } from "@/lib/time";
@@ -111,22 +112,30 @@ export default function ProjectCard({
       </CardHeader>
 
       <CardContent className="pb-3">
-        {project.entities && project.entities.length > 0 ? (
-          <div className="flex flex-wrap gap-1">
-            {project.entities.slice(0, 3).map((entity) => (
-              <Badge key={entity} variant="secondary" className="px-1.5 py-0 text-[10px]">
-                {entity}
-              </Badge>
-            ))}
-            {project.entities.length > 3 && (
-              <Badge variant="outline" className="px-1.5 py-0 text-[10px] text-muted-foreground">
-                +{project.entities.length - 3}
-              </Badge>
-            )}
-          </div>
-        ) : (
-          <p className="text-xs text-muted-foreground">No entities</p>
-        )}
+        <div className="flex flex-wrap items-center gap-1.5">
+          {project.creator_name && (
+            <Badge variant="outline" className="px-1.5 py-0 text-[10px] text-muted-foreground gap-1">
+              <User className="size-2.5" />
+              {project.creator_name}
+            </Badge>
+          )}
+          {project.entities && project.entities.length > 0 ? (
+            <>
+              {project.entities.slice(0, 3).map((entity) => (
+                <Badge key={entity} variant="secondary" className="px-1.5 py-0 text-[10px]">
+                  {entity}
+                </Badge>
+              ))}
+              {project.entities.length > 3 && (
+                <Badge variant="outline" className="px-1.5 py-0 text-[10px] text-muted-foreground">
+                  +{project.entities.length - 3}
+                </Badge>
+              )}
+            </>
+          ) : (
+            !project.creator_name && <p className="text-xs text-muted-foreground">No entities</p>
+          )}
+        </div>
       </CardContent>
 
       <CardFooter className="flex items-center justify-between border-t bg-muted/20 px-4 py-2 text-xs text-muted-foreground">

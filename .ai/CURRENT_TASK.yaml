@@ -1,35 +1,30 @@
-task_id: R-512
+task_id: R-517
 status: completed
 phase: MVP
 tracker_row: null
-started_at: "2026-09-20"
-completed_at: "2026-09-20"
+started_at: "2026-09-21"
+completed_at: "2026-09-21"
 objective: >-
-  Implement G-04 Payment Gateways in generated apps — Stripe & Razorpay (spec R_&_D/specs/G-04-payments.md).
-  Includes: (1) PostgreSQL migration 000013_project_payments adding payment_gateway column to projects;
-  (2) Control-plane internal/payments package with store, REST handlers (GET/PUT/DELETE /projects/{id}/payments)
-  inspecting required secrets status without exposing keys and calculating live webhook endpoints;
-  (3) Agent-engine studio/payments.py with codegen hooks for Stripe (lib/payments/stripe.ts, app/api/checkout/route.ts,
-  app/api/webhooks/stripe/route.ts, app/checkout/success/page.tsx, app/checkout/cancel/page.tsx) and Razorpay
-  (lib/payments/razorpay.ts, UPI & card checkout, webhook signature verification, idempotency);
-  (4) Clean removal on disable committing changes to Git;
-  (5) Console-Web UI: Studio Manage -> Payments tab with Stripe & Razorpay cards, setup checklist, webhook copy box,
-  live secrets status indicators (never rendering keys), and test mode badge;
-  (6) Quality gates: scripts/test.sh contract assertions, Go tests, Python tests, Next.js build/lint, task verify.
+  Implement Node.js backend codegen — Express/Hono alongside Python/Go (GenerationTarget.BACKEND_NODE).
+  Includes:
+  (1) NodeBackendAdapter in services/agent-engine/src/omnistackai_agent_engine/codegen/backend_node.py
+      supporting both Express and Hono framework variants;
+  (2) Pure and deterministic code generation: package.json (ESM), tsconfig.json, src/index.ts, src/app.ts,
+      src/config.ts, src/models/types.ts, src/models/validation.ts (Zod), src/routes/<resource>.ts,
+      src/middleware/auth.ts (JWT), src/db/pool.ts & src/db/<entity>.ts (PostgreSQL data access),
+      contracts/openapi.json, schema.sql, seed.sql, .env.example, README.md;
+  (3) Full route wiring using route_wiring.py for Op.LIST, Op.GET, Op.CREATE, Op.UPDATE, Op.DELETE, Op.LIST_BY;
+  (4) Assembler integration: wire BackendStrategy.NODE into _BACKEND_TARGET in assembler.py and register
+      NodeBackendAdapter in default_registry();
+  (5) Unit tests in test_backend_node.py, update test_assembler.py;
+  (6) Contract assertions in scripts/test.sh;
+  (7) Verification: pytest, go test, console-web check, scripts/test.sh, and task verify.
 allowed_paths:
-  - services/control-plane/migrations/000013_project_payments.up.sql
-  - services/control-plane/migrations/000013_project_payments.down.sql
-  - services/control-plane/internal/payments/store.go
-  - services/control-plane/internal/payments/handler.go
-  - services/control-plane/internal/payments/payments_test.go
-  - services/control-plane/cmd/control-plane/main.go
-  - services/agent-engine/src/omnistackai_agent_engine/studio/payments.py
-  - services/agent-engine/src/omnistackai_agent_engine/studio/server.py
-  - services/agent-engine/tests/test_payments.py
-  - apps/console-web/lib/control-plane.ts
-  - apps/console-web/app/api/projects/[id]/payments/route.ts
-  - apps/console-web/components/project-payments-manage.tsx
-  - apps/console-web/app/studio/[projectId]/manage/page.tsx
+  - services/agent-engine/src/omnistackai_agent_engine/codegen/backend_node.py
+  - services/agent-engine/src/omnistackai_agent_engine/codegen/__init__.py
+  - services/agent-engine/src/omnistackai_agent_engine/codegen/assembler.py
+  - services/agent-engine/tests/test_backend_node.py
+  - services/agent-engine/tests/test_assembler.py
   - scripts/test.sh
   - .ai/CURRENT_TASK.yaml
   - .ai/PROJECT_STATE.yaml
@@ -38,29 +33,25 @@ allowed_paths:
   - PROJECT_STATE.md
   - CHANGELOG.md
 forbidden_changes:
-  - Do not add external Go or Python dependencies (zero new deps; Go keeps 1 direct dep: pgx/v5)
-  - Do not change control-plane database from PostgreSQL
-  - Do not store users' customer payment details in platform database (keeps platform out of PCI scope)
-  - Do not render secret keys in client responses or UI
+  - Do not add external Go dependencies (pgx/v5 remains sole direct dependency)
+  - Do not break existing Python (FastAPI) or Go (net/http) backend adapters
+  - Generated Node.js code must be 100% deterministic and syntactically valid TypeScript
 required_gates:
-  - bash scripts/test.sh
-  - cd services/control-plane && go test -v ./internal/payments/...
-  - cd services/control-plane && go test -v ./migrations/...
+  - PYTHONPATH=services/agent-engine/src pytest services/agent-engine/tests/test_backend_node.py
+  - PYTHONPATH=services/agent-engine/src pytest services/agent-engine/tests/test_assembler.py
   - cd services/control-plane && go test ./...
-  - PYTHONPATH=src python3 -m unittest tests/test_payments.py
-  - cd apps/console-web && pnpm run typecheck && pnpm run lint
+  - bash scripts/test.sh
   - task verify
-  - task lint
 model_tool_trace:
   routing: deterministic_only
   local_calls: 0
   cloud_calls: 0
-  note: Engineering task, 0 model calls required for gates.
+  note: Node.js backend codegen (Express/Hono).
 evidence:
-  scripts_test_sh: passed
-  control_plane_tests: passed (all 17 internal packages)
-  agent_engine_tests: passed (3841 tests, OK)
-  console_web_typecheck_and_lint: passed (0 errors, 0 warnings)
-  task_verify: passed (Ran 3841 tests in 89.517s, Stage 0 verification passed)
-  task_lint: passed
-next_action: complete_task_and_checkpoint
+  test_backend_node: "10 passed in 0.19s"
+  test_assembler: "6 passed in 0.40s"
+  go_test: "all packages ok"
+  contract_tests: "scripts/test.sh passed"
+  stage_0_verify: "bash scripts/verify.sh passed (3861 tests in 91.584s)"
+next_action: await_user_instruction
+

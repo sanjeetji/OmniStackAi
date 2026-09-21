@@ -9,22 +9,103 @@ repository. Pure and deterministic — nothing is installed, built, run, or writ
 
 from __future__ import annotations
 
+import re
 from dataclasses import dataclass
 
-from ..application_ir import ApplicationIR, BackendStrategy, WebStrategy
+from ..application_ir import ApplicationIR, BackendStrategy, BrandTokens, MobileProfile, WebStrategy
 from ..model_gateway import ModelProvider
 from .adapter import AdapterRegistry, GenerationTarget
 from .backend_go import GoBackendAdapter
 from .backend_python import PythonBackendAdapter
+from .backend_node import NodeBackendAdapter
 from .files import GeneratedFile, GeneratedProject
 from .nextjs import NextjsWebAdapter
 from .openapi import render_openapi_json
+from .react_native import ReactNativeAdapter
+
+# ---------------------------------------------------------------------------
+# Brand token extraction (R-514) — deterministic, 0 model calls
+# ---------------------------------------------------------------------------
+
+_HEX_RE = re.compile(r"#([0-9a-fA-F]{6}|[0-9a-fA-F]{3})\b")
+
+# Common web-safe font family names we recognise by keyword
+_KNOWN_FONTS: list[tuple[re.Pattern[str], str]] = [
+    (re.compile(r"\binter\b", re.I), "Inter"),
+    (re.compile(r"\bgeist\b", re.I), "Geist"),
+    (re.compile(r"\broboto\b", re.I), "Roboto"),
+    (re.compile(r"\bpoppins\b", re.I), "Poppins"),
+    (re.compile(r"\bmontserrat\b", re.I), "Montserrat"),
+    (re.compile(r"\bopen.?sans\b", re.I), "Open Sans"),
+    (re.compile(r"\blato\b", re.I), "Lato"),
+    (re.compile(r"\bnunito\b", re.I), "Nunito"),
+    (re.compile(r"\braboto\b", re.I), "Raleway"),
+    (re.compile(r"\braleway\b", re.I), "Raleway"),
+    (re.compile(r"\bplayfair\b", re.I), "Playfair Display"),
+    (re.compile(r"\bmerriweather\b", re.I), "Merriweather"),
+    (re.compile(r"\bsource.?sans\b", re.I), "Source Sans 3"),
+    (re.compile(r"\bnoto.?sans\b", re.I), "Noto Sans"),
+    (re.compile(r"\bubuntu\b", re.I), "Ubuntu"),
+    (re.compile(r"\boxanium\b", re.I), "Oxanium"),
+    (re.compile(r"\bspace.?grotesk\b", re.I), "Space Grotesk"),
+    (re.compile(r"\bdm.?sans\b", re.I), "DM Sans"),
+    (re.compile(r"\bfigtree\b", re.I), "Figtree"),
+    (re.compile(r"\bmanrope\b", re.I), "Manrope"),
+]
+
+# Radius keyword → BrandTokens radius alias
+_RADIUS_MAP: list[tuple[re.Pattern[str], str]] = [
+    (re.compile(r"\bsharp\b|\bno.?rounded?\b|\bsquare\b", re.I), "none"),
+    (re.compile(r"\bslightly.?rounded?\b", re.I), "sm"),
+    (re.compile(r"\bpill\b|\bfully.?rounded?\b|\bvery.?rounded?\b", re.I), "full"),
+    (re.compile(r"\blarge.?rounded?\b|\bextra.?rounded?\b", re.I), "xl"),
+    (re.compile(r"\bsoft\b|\brounded?\b", re.I), "lg"),
+]
+
+
+def extract_brand_tokens(user_prompt: str, *, ir_name: str = "") -> BrandTokens:
+    """Deterministically extract brand cues from the user prompt (R-514).
+
+    Searches for hex color mentions, known font-family keywords, and radius adjectives.
+    Falls back silently to BrandTokens defaults when nothing is found.
+    No model calls — zero credits.
+    """
+    text = f"{user_prompt} {ir_name}"
+
+    # -- primary_color: first hex color found in the prompt ------------------
+    hex_match = _HEX_RE.search(text)
+    primary_color = hex_match.group(0) if hex_match else BrandTokens.primary_color  # type: ignore[attr-defined]
+
+    # -- font_family: first known font keyword --------------------------------
+    font_family = BrandTokens.font_family  # type: ignore[attr-defined]
+    for pattern, font_name in _KNOWN_FONTS:
+        if pattern.search(text):
+            font_family = font_name
+            break
+
+    # -- border_radius: first radius keyword ----------------------------------
+    border_radius = BrandTokens.border_radius  # type: ignore[attr-defined]
+    for pattern, alias in _RADIUS_MAP:
+        if pattern.search(text):
+            border_radius = alias
+            break
+
+    try:
+        return BrandTokens(
+            primary_color=primary_color,
+            font_family=font_family,
+            border_radius=border_radius,
+        )
+    except Exception:  # noqa: BLE001 — bad hex from prompt; use defaults
+        return BrandTokens(font_family=font_family, border_radius=border_radius)
+
 
 MONOREPO_TARGET = "customer-monorepo"
 
 _BACKEND_TARGET = {
     BackendStrategy.GO: GenerationTarget.BACKEND_GO,
     BackendStrategy.PYTHON: GenerationTarget.BACKEND_PYTHON,
+    BackendStrategy.NODE: GenerationTarget.BACKEND_NODE,
 }
 
 
@@ -35,6 +116,8 @@ def default_registry() -> AdapterRegistry:
     registry.register(NextjsWebAdapter())
     registry.register(PythonBackendAdapter())
     registry.register(GoBackendAdapter())
+    registry.register(ReactNativeAdapter())
+    registry.register(NodeBackendAdapter())
     return registry
 
 
@@ -99,7 +182,9 @@ def _plan_assembly(ir: ApplicationIR) -> tuple[list[AssembledApp], list[str]]:
 
     if strategy.admin_strategy.value != "none":
         skipped.append(f"admin_strategy {strategy.admin_strategy.value!r} is not assembled yet")
-    if strategy.mobile_profile.value != "none":
+    if strategy.mobile_profile is MobileProfile.REACT_NATIVE:
+        apps.append(AssembledApp("mobile (React Native)", "apps/mobile", GenerationTarget.REACT_NATIVE.value))
+    elif strategy.mobile_profile.value != "none":
         skipped.append(f"mobile_profile {strategy.mobile_profile.value!r} is not assembled yet")
     return apps, skipped
 

@@ -18,6 +18,8 @@ from .assembler import (
 )
 from .backend_go import GoBackendAdapter
 from .backend_python import PythonBackendAdapter
+from .backend_node import ExpressBackendAdapter, HonoBackendAdapter, NodeBackendAdapter
+from .react_native import ReactNativeAdapter
 from .data_access import go_data_access_files, python_data_access_files
 from .field_validation import (
     VALIDATOR_REQUIRE,
@@ -186,10 +188,14 @@ __all__ = [
     "GenerationError",
     "GenerationTarget",
     "GoBackendAdapter",
+    "HonoBackendAdapter",
     "InvalidGeneratedFileError",
     "MONOREPO_TARGET",
     "NextjsWebAdapter",
+    "NodeBackendAdapter",
+    "ExpressBackendAdapter",
     "PythonBackendAdapter",
+    "ReactNativeAdapter",
     "UnsupportedTargetError",
     "FieldRules",
     "VALIDATOR_REQUIRE",

@@ -321,7 +321,31 @@ def _to_snake(val: str, default: str = "item") -> str:
 
 def _sanitize_ir_dict(data: dict) -> dict:
     """Coerce common LLM syntax variances into strict Application IR schemas."""
+    # If the payload is completely devoid of entities and project_strategy,
+    # it is not an IR payload (e.g. invalid test input like '{"name": "x"}').
+    if "project_strategy" not in data and "entities" not in data:
+        return data
+
     data.setdefault("schema_version", IR_SCHEMA_VERSION)
+
+    # Name & Description
+    raw_name = data.get("name") or data.get("app_name") or data.get("title")
+    if not raw_name or not str(raw_name).strip():
+        if data.get("entities") and isinstance(data["entities"], list) and data["entities"]:
+            first_entity = data["entities"][0].get("name", "Workspace") if isinstance(data["entities"][0], dict) else "Workspace"
+            raw_name = f"{first_entity} Manager"
+        else:
+            raw_name = "Modern Application"
+    data["name"] = str(raw_name).strip()
+
+    raw_desc = data.get("description")
+    if not raw_desc or not str(raw_desc).strip():
+        data["description"] = f"Production workspace for {data['name']}"
+    data["description"] = str(data["description"]).strip()
+
+    # Platforms
+    if "platforms" not in data or not data["platforms"]:
+        data["platforms"] = ["web", "backend"]
 
     # Project strategy
     if "project_strategy" not in data or not isinstance(data["project_strategy"], dict):
@@ -346,6 +370,27 @@ def _sanitize_ir_dict(data: dict) -> dict:
         # ensure web_strategy is 'nextjs' so the Admin Panel UI is assembled into apps/web.
         if strat.get("web_strategy") == "none" and strat.get("admin_strategy") in ("nextjs", "react"):
             strat["web_strategy"] = "nextjs"
+
+    # Roles
+    if "roles" not in data or not isinstance(data["roles"], list) or not data["roles"]:
+        data["roles"] = [
+            {"id": "admin", "description": "Administrator with full access"},
+            {"id": "user", "description": "Standard user access"},
+        ]
+    else:
+        valid_roles = []
+        for r in data["roles"]:
+            if not isinstance(r, dict):
+                continue
+            r["id"] = _to_snake(r.get("id", "user"))
+            r["description"] = str(r.get("description", "Role")).strip() or "Role"
+            valid_roles.append(r)
+        if not valid_roles:
+            valid_roles = [
+                {"id": "admin", "description": "Administrator with full access"},
+                {"id": "user", "description": "Standard user access"},
+            ]
+        data["roles"] = valid_roles
 
     # APIs
     if "apis" in data and isinstance(data["apis"], list):
@@ -381,13 +426,40 @@ def _sanitize_ir_dict(data: dict) -> dict:
         data["apis"] = valid_apis
 
     # Screens
-    if "screens" in data and isinstance(data["screens"], list):
+    if ("screens" not in data or not isinstance(data["screens"], list) or not data["screens"]) and data.get("entities"):
+        screens = []
+        for ent in data["entities"]:
+            if not isinstance(ent, dict):
+                continue
+            e_name = ent.get("name", "Item")
+            e_slug = _to_snake(e_name)
+            screens.append({
+                "id": f"{e_slug}_list",
+                "role": "user",
+                "components": ["list"],
+                "actions": ["view", "delete"],
+                "navigation": [f"{e_slug}_editor"],
+            })
+            screens.append({
+                "id": f"{e_slug}_editor",
+                "role": "user",
+                "components": ["form"],
+                "actions": ["create", "edit"],
+                "navigation": [f"{e_slug}_list"],
+            })
+        data["screens"] = screens
+    elif "screens" in data and isinstance(data["screens"], list):
         valid_screens = []
+        role_ids = {r["id"] for r in data.get("roles", []) if isinstance(r, dict)}
         for s in data["screens"]:
             if not isinstance(s, dict):
                 continue
             s["id"] = _to_snake(s.get("id", "screen"))
-            s["role"] = _to_snake(s.get("role", "user"))
+            s_role = _to_snake(s.get("role", "user"))
+            if s_role not in role_ids and role_ids:
+                data.setdefault("roles", []).append({"id": s_role, "description": f"{s_role.capitalize()} role"})
+                role_ids.add(s_role)
+            s["role"] = s_role
             s["components"] = [str(c).strip() for c in s.get("components", ()) if str(c).strip()]
             s["actions"] = [str(a).strip() for a in s.get("actions", ()) if str(a).strip()]
             s["navigation"] = [str(n).strip() for n in s.get("navigation", ()) if str(n).strip()]

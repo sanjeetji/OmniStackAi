@@ -17,6 +17,7 @@ import type { Project } from "@/lib/control-plane";
 import AppShell from "@/components/app-shell";
 import ProjectCard from "@/components/project-card";
 import { DeleteDialog, RenameDialog } from "@/components/project-dialogs";
+import { getActiveWorkspaceId } from "@/components/workspace-switcher";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -25,6 +26,7 @@ export default function ProjectsPage() {
   const [projects, setProjects] = useState<Project[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [workspaceId, setWorkspaceId] = useState<string | null>(() => getActiveWorkspaceId());
 
   // Filters and sorting
   const [statusFilter, setStatusFilter] = useState<"active" | "archived">("active");
@@ -39,7 +41,8 @@ export default function ProjectsPage() {
     setLoading(true);
     setError(null);
     try {
-      const resp = await fetch(`/api/projects?status=${statusFilter}&sort=${sortBy}`);
+      const wsParam = workspaceId ? `&workspace_id=${encodeURIComponent(workspaceId)}` : "";
+      const resp = await fetch(`/api/projects?status=${statusFilter}&sort=${sortBy}${wsParam}`);
       if (!resp.ok) {
         throw new Error("Could not load projects");
       }
@@ -53,10 +56,22 @@ export default function ProjectsPage() {
   };
 
   useEffect(() => {
+    const handleWsChange = (e: Event) => {
+      const customEvent = e as CustomEvent<{ workspaceId: string }>;
+      if (customEvent.detail?.workspaceId) {
+        setWorkspaceId(customEvent.detail.workspaceId);
+      }
+    };
+    window.addEventListener("workspace-changed", handleWsChange);
+    return () => window.removeEventListener("workspace-changed", handleWsChange);
+  }, []);
+
+  useEffect(() => {
     let active = true;
     void (async () => {
       try {
-        const resp = await fetch(`/api/projects?status=${statusFilter}&sort=${sortBy}`);
+        const wsParam = workspaceId ? `&workspace_id=${encodeURIComponent(workspaceId)}` : "";
+        const resp = await fetch(`/api/projects?status=${statusFilter}&sort=${sortBy}${wsParam}`);
         if (!resp.ok) throw new Error("Could not load projects");
         const data = await resp.json();
         if (active) {
@@ -72,7 +87,7 @@ export default function ProjectsPage() {
     return () => {
       active = false;
     };
-  }, [statusFilter, sortBy]);
+  }, [statusFilter, sortBy, workspaceId]);
 
   const filteredProjects = useMemo(() => {
     if (!searchQuery.trim()) return projects;
@@ -128,6 +143,7 @@ export default function ProjectsPage() {
           name: `${project.name} (Copy)`,
           description: project.description,
           prompt: project.last_prompt,
+          workspace_id: project.workspace_id || workspaceId || undefined,
         }),
       });
       if (!resp.ok) {

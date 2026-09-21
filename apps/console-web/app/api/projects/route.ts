@@ -16,13 +16,14 @@ export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url);
   const status = searchParams.get("status") ?? undefined;
   const sort = searchParams.get("sort") ?? undefined;
+  const workspaceId = searchParams.get("workspace_id") ?? undefined;
   const limitParam = searchParams.get("limit");
   const offsetParam = searchParams.get("offset");
   const limit = limitParam ? parseInt(limitParam, 10) : undefined;
   const offset = offsetParam ? parseInt(offsetParam, 10) : undefined;
 
   try {
-    const data = await listProjects(token, { status, sort, limit, offset });
+    const data = await listProjects(token, { status, sort, limit, offset, workspace_id: workspaceId });
     return NextResponse.json(data, { status: 200 });
   } catch (error) {
     if (error instanceof ControlPlaneError) {
@@ -54,6 +55,7 @@ export async function POST(request: NextRequest) {
       name: body.name.trim(),
       description: body.description?.trim(),
       prompt: body.prompt?.trim(),
+      workspace_id: body.workspace_id,
     });
     return NextResponse.json(project, { status: 201 });
   } catch (error) {

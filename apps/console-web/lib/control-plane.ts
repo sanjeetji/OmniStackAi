@@ -403,6 +403,8 @@ export function getProviderStatus(token: string): Promise<ProviderStatus> {
 export interface Project {
   id: string;
   user_id: string;
+  workspace_id?: string;
+  creator_name?: string;
   name: string;
   description: string;
   status: "active" | "archived" | "deleted";
@@ -424,6 +426,7 @@ export interface CreateProjectRequest {
   name: string;
   description?: string;
   prompt?: string;
+  workspace_id?: string;
 }
 
 export interface UpdateProjectRequest {
@@ -433,13 +436,14 @@ export interface UpdateProjectRequest {
 
 export function listProjects(
   token: string,
-  options?: { status?: string; sort?: string; limit?: number; offset?: number }
+  options?: { status?: string; sort?: string; limit?: number; offset?: number; workspace_id?: string }
 ): Promise<ProjectListResponse> {
   const params = new URLSearchParams();
   if (options?.status) params.set("status", options.status);
   if (options?.sort) params.set("sort", options.sort);
   if (options?.limit) params.set("limit", options.limit.toString());
   if (options?.offset) params.set("offset", options.offset.toString());
+  if (options?.workspace_id) params.set("workspace_id", options.workspace_id);
   const qs = params.toString() ? `?${params.toString()}` : "";
   return callControlPlane<ProjectListResponse>(`/projects${qs}`, {
     headers: { Authorization: `Bearer ${token}` },
@@ -2062,6 +2066,347 @@ export function clearProjectPaymentGateway(
 }
 
 
+// ─────────────────────────────────────────────────────────────────────────────
+// Analytics (R-513 / G-05)
+// ─────────────────────────────────────────────────────────────────────────────
+
+/** Status of the analytics configuration for a project. */
+export interface ProjectAnalyticsResponse {
+  project_id: string;
+  provider: "" | "ga4";
+  property_id: string;
+  /** true when provider !== "" && property_id !== "" */
+  connected: boolean;
+  /** true when the GA4 OAuth connector is active */
+  ga4_linked: boolean;
+  /** true when the project has at least one live deployment */
+  published: boolean;
+  /** current live URL of the published project */
+  live_url: string;
+}
+
+export interface AnalyticsDailyPoint {
+  date: string; // "2024-01-15"
+  sessions: number;
+  users: number;
+}
+
+export interface AnalyticsTopItem {
+  label: string;
+  value: number;
+  fraction: number; // 0..1
+}
+
+export interface AnalyticsDeviceSplit {
+  mobile: number;
+  desktop: number;
+  tablet: number;
+}
+
+export interface AnalyticsCountryItem {
+  country: string;
+  sessions: number;
+  fraction: number;
+}
+
+export interface AnalyticsReport {
+  range: "24h" | "7d" | "30d";
+  property_id: string;
+  cached_at: string; // ISO 8601
+  empty: boolean;
+  active_users: number;
+  sessions: number;
+  pageviews: number;
+  avg_engagement_seconds: number;
+  bounce_rate: number; // 0..1
+  timeline: AnalyticsDailyPoint[];
+  top_pages: AnalyticsTopItem[];
+  top_referrers: AnalyticsTopItem[];
+  devices: AnalyticsDeviceSplit;
+  countries: AnalyticsCountryItem[];
+}
+
+/** GET /projects/{id}/analytics */
+export function getProjectAnalytics(
+  token: string,
+  projectId: string
+): Promise<ProjectAnalyticsResponse> {
+  return callControlPlane<ProjectAnalyticsResponse>(
+    `/projects/${encodeURIComponent(projectId)}/analytics`,
+    { headers: { Authorization: `Bearer ${token}` } }
+  );
+}
+
+/** PUT /projects/{id}/analytics */
+export function updateProjectAnalytics(
+  token: string,
+  projectId: string,
+  provider: "ga4",
+  propertyId: string
+): Promise<{ project_id: string; provider: string; property_id: string; status: string }> {
+  return callControlPlane<{ project_id: string; provider: string; property_id: string; status: string }>(
+    `/projects/${encodeURIComponent(projectId)}/analytics`,
+    {
+      method: "PUT",
+      headers: {
+        Authorization: `Bearer ${token}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ provider, property_id: propertyId }),
+    }
+  );
+}
+
+/** DELETE /projects/{id}/analytics */
+export function disconnectProjectAnalytics(
+  token: string,
+  projectId: string
+): Promise<{ deleted: boolean }> {
+  return callControlPlane<{ deleted: boolean }>(
+    `/projects/${encodeURIComponent(projectId)}/analytics`,
+    {
+      method: "DELETE",
+      headers: { Authorization: `Bearer ${token}` },
+    }
+  );
+}
+
+/** GET /projects/{id}/analytics/report?range=... */
+export function getProjectAnalyticsReport(
+  token: string,
+  projectId: string,
+  range: "24h" | "7d" | "30d" = "7d"
+): Promise<AnalyticsReport> {
+  return callControlPlane<AnalyticsReport>(
+    `/projects/${encodeURIComponent(projectId)}/analytics/report?range=${range}`,
+    { headers: { Authorization: `Bearer ${token}` } }
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Team & Workspaces (R-515)
+// ---------------------------------------------------------------------------
+
+export type WorkspaceRole = "owner" | "admin" | "member" | "viewer";
+
+export interface Workspace {
+  id: string;
+  org_id: string;
+  name: string;
+  slug: string;
+  is_default: boolean;
+  role: WorkspaceRole;
+  member_count: number;
+  project_count: number;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface WorkspaceMember {
+  id: string;
+  workspace_id: string;
+  user_id: string;
+  user_name: string;
+  user_email: string;
+  role: WorkspaceRole;
+  created_at: string;
+}
+
+export interface WorkspaceInvite {
+  id: string;
+  workspace_id: string;
+  inviter_id: string;
+  inviter_name?: string;
+  email: string;
+  role: WorkspaceRole;
+  token: string;
+  status: "pending" | "accepted" | "revoked" | "expired";
+  expires_at: string;
+  created_at: string;
+}
+
+export interface CreateWorkspaceRequest {
+  name: string;
+  slug?: string;
+  organization_id?: string;
+}
+
+export interface UpdateWorkspaceRequest {
+  name?: string;
+  slug?: string;
+}
+
+export interface InviteMemberRequest {
+  email: string;
+  role?: WorkspaceRole;
+}
+
+/** GET /workspaces */
+export function listWorkspaces(token: string): Promise<{ workspaces: Workspace[] }> {
+  return callControlPlane<{ workspaces: Workspace[] }>("/workspaces", {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+}
+
+/** POST /workspaces */
+export function createWorkspace(
+  token: string,
+  req: string | CreateWorkspaceRequest
+): Promise<Workspace> {
+  const body = typeof req === "string" ? { name: req } : req;
+  return callControlPlane<Workspace>("/workspaces", {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${token}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(body),
+  });
+}
+
+/** GET /workspaces/{id} */
+export function getWorkspace(token: string, workspaceId: string): Promise<Workspace> {
+  return callControlPlane<Workspace>(`/workspaces/${encodeURIComponent(workspaceId)}`, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+}
+
+/** PATCH /workspaces/{id} */
+export function updateWorkspace(
+  token: string,
+  workspaceId: string,
+  req: string | UpdateWorkspaceRequest
+): Promise<Workspace> {
+  const body = typeof req === "string" ? { name: req } : req;
+  return callControlPlane<Workspace>(`/workspaces/${encodeURIComponent(workspaceId)}`, {
+    method: "PATCH",
+    headers: {
+      Authorization: `Bearer ${token}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(body),
+  });
+}
+
+/** DELETE /workspaces/{id} */
+export function deleteWorkspace(token: string, workspaceId: string): Promise<{ ok: boolean }> {
+  return callControlPlane<{ ok: boolean }>(`/workspaces/${encodeURIComponent(workspaceId)}`, {
+    method: "DELETE",
+    headers: { Authorization: `Bearer ${token}` },
+  });
+}
+
+/** GET /workspaces/{id}/members */
+export function listWorkspaceMembers(
+  token: string,
+  workspaceId: string
+): Promise<{ members: WorkspaceMember[] }> {
+  return callControlPlane<{ members: WorkspaceMember[] }>(
+    `/workspaces/${encodeURIComponent(workspaceId)}/members`,
+    {
+      headers: { Authorization: `Bearer ${token}` },
+    }
+  );
+}
+
+/** POST /workspaces/{id}/invites */
+export function inviteWorkspaceMember(
+  token: string,
+  workspaceId: string,
+  emailOrReq: string | InviteMemberRequest,
+  maybeRole?: WorkspaceRole
+): Promise<WorkspaceInvite> {
+  const body =
+    typeof emailOrReq === "string"
+      ? { email: emailOrReq, role: maybeRole || "member" }
+      : { email: emailOrReq.email, role: emailOrReq.role || "member" };
+
+  return callControlPlane<WorkspaceInvite>(
+    `/workspaces/${encodeURIComponent(workspaceId)}/invites`,
+    {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${token}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(body),
+    }
+  );
+}
+
+/** GET /workspaces/{id}/invites */
+export function listWorkspaceInvites(
+  token: string,
+  workspaceId: string
+): Promise<{ invites: WorkspaceInvite[] }> {
+  return callControlPlane<{ invites: WorkspaceInvite[] }>(
+    `/workspaces/${encodeURIComponent(workspaceId)}/invites`,
+    {
+      headers: { Authorization: `Bearer ${token}` },
+    }
+  );
+}
+
+/** DELETE /workspaces/{id}/invites/{inviteId} */
+export function revokeWorkspaceInvite(
+  token: string,
+  workspaceId: string,
+  inviteId: string
+): Promise<{ ok: boolean }> {
+  return callControlPlane<{ ok: boolean }>(
+    `/workspaces/${encodeURIComponent(workspaceId)}/invites/${encodeURIComponent(inviteId)}`,
+    {
+      method: "DELETE",
+      headers: { Authorization: `Bearer ${token}` },
+    }
+  );
+}
+
+/** POST /workspaces/invites/{token}/accept */
+export function acceptWorkspaceInvite(token: string, inviteToken: string): Promise<Workspace> {
+  return callControlPlane<Workspace>(
+    `/workspaces/invites/${encodeURIComponent(inviteToken)}/accept`,
+    {
+      method: "POST",
+      headers: { Authorization: `Bearer ${token}` },
+    }
+  );
+}
+
+/** PATCH /workspaces/{id}/members/{userId} */
+export function updateWorkspaceMemberRole(
+  token: string,
+  workspaceId: string,
+  userId: string,
+  role: WorkspaceRole
+): Promise<{ ok: boolean }> {
+  return callControlPlane<{ ok: boolean }>(
+    `/workspaces/${encodeURIComponent(workspaceId)}/members/${encodeURIComponent(userId)}`,
+    {
+      method: "PATCH",
+      headers: {
+        Authorization: `Bearer ${token}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ role }),
+    }
+  );
+}
+
+/** DELETE /workspaces/{id}/members/{userId} */
+export function removeWorkspaceMember(
+  token: string,
+  workspaceId: string,
+  userId: string
+): Promise<{ ok: boolean }> {
+  return callControlPlane<{ ok: boolean }>(
+    `/workspaces/${encodeURIComponent(workspaceId)}/members/${encodeURIComponent(userId)}`,
+    {
+      method: "DELETE",
+      headers: { Authorization: `Bearer ${token}` },
+    }
+  );
+}
 
 
 

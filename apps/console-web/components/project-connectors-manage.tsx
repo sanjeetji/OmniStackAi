@@ -88,6 +88,15 @@ export function ProjectConnectorsManage({
   const [requestedServiceName, setRequestedServiceName] = useState("");
   const [requestedUseCase, setRequestedUseCase] = useState("");
   const [requestSubmitted, setRequestSubmitted] = useState(false);
+  const [copiedSnippet, setCopiedSnippet] = useState(false);
+
+  const copySnippet = (code: string) => {
+    if (typeof navigator !== "undefined" && navigator.clipboard) {
+      void navigator.clipboard.writeText(code);
+      setCopiedSnippet(true);
+      setTimeout(() => setCopiedSnippet(false), 2000);
+    }
+  };
 
   const fetchData = useCallback(async () => {
     try {
@@ -512,6 +521,76 @@ export function ProjectConnectorsManage({
                   Disabling this connector in the future will automatically remove these files and revert layout modifications with a clean Git commit.
                 </p>
               </div>
+
+              {/* Email Usage & Template Helper */}
+              {(selectedConnector.id === "resend" || selectedConnector.id === "smtp") && (
+                <div className="p-3.5 rounded-lg bg-indigo-50/50 dark:bg-indigo-950/20 border border-indigo-200/50 dark:border-indigo-800/40 space-y-2.5">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2 text-xs font-semibold text-foreground">
+                      <Mail className="size-4 text-indigo-500" />
+                      Usage in your Next.js Code
+                    </div>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      onClick={() =>
+                        copySnippet(`import { sendEmail } from '@/lib/email';
+import { welcomeEmailTemplate } from '@/lib/email-templates';
+
+const tpl = welcomeEmailTemplate({
+  name: 'Alex',
+  appName: '${projectName}',
+  loginUrl: 'https://yourdomain.com/login',
+});
+
+await sendEmail({
+  to: 'alex@example.com',
+  subject: tpl.subject,
+  html: tpl.html,
+  text: tpl.text,
+});`)
+                      }
+                      className="h-6 px-2 text-[11px] gap-1 text-muted-foreground hover:text-foreground"
+                    >
+                      {copiedSnippet ? (
+                        <>
+                          <Check className="size-3 text-emerald-500" /> Copied
+                        </>
+                      ) : (
+                        <>
+                          <Copy className="size-3" /> Copy Snippet
+                        </>
+                      )}
+                    </Button>
+                  </div>
+                  <pre className="p-2.5 rounded bg-black/5 dark:bg-black/40 font-mono text-[11px] leading-relaxed overflow-x-auto text-foreground/90">
+{`import { sendEmail } from '@/lib/email';
+import { welcomeEmailTemplate } from '@/lib/email-templates';
+
+// 1. Dispatch using pre-built responsive templates:
+const tpl = welcomeEmailTemplate({
+  name: 'Alex',
+  appName: '${projectName}',
+  loginUrl: 'https://yourdomain.com/login',
+});
+
+await sendEmail({
+  to: 'alex@example.com',
+  subject: tpl.subject,
+  html: tpl.html,
+  text: tpl.text,
+});
+
+// 2. Or embed the contact form UI in any page:
+// import { ContactForm } from '@/components/contact-form';`}
+                  </pre>
+                  <p className="text-[11px] text-muted-foreground">
+                    Available templates in <code className="font-mono text-[10px] bg-muted px-1 py-0.5 rounded">lib/email-templates.ts</code>:
+                    Welcome, OTP / verification codes, Password reset, and Notifications.
+                  </p>
+                </div>
+              )}
 
               {/* Form Fields */}
               <div className="space-y-4">

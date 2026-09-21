@@ -104,8 +104,17 @@ type mockProjectStore struct {
 func (m *mockProjectStore) CreateProject(ctx context.Context, userID, name, description string) (projects.Project, error) {
 	return projects.Project{}, nil
 }
+func (m *mockProjectStore) CreateProjectInWorkspace(ctx context.Context, userID, workspaceID, name, description string) (projects.Project, error) {
+	return projects.Project{}, nil
+}
 func (m *mockProjectStore) ListProjects(ctx context.Context, userID, status string, limit int) ([]projects.Project, error) {
 	return nil, nil
+}
+func (m *mockProjectStore) ListWorkspaceProjects(ctx context.Context, userID, workspaceID, status string, limit int) ([]projects.Project, error) {
+	return nil, nil
+}
+func (m *mockProjectStore) GetUserProjectRole(ctx context.Context, projectID, userID string) (string, error) {
+	return "owner", nil
 }
 func (m *mockProjectStore) GetProject(ctx context.Context, id, userID string) (projects.Project, error) {
 	if m.proj == nil || m.proj.UserID != userID || m.proj.ID != id {

@@ -9,7 +9,7 @@ losslessly through `to_dict`/`from_dict` with an explicit schema version.
 from __future__ import annotations
 
 import re
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from enum import StrEnum
 from typing import Any
 
@@ -559,6 +559,76 @@ class Fixture:
         return {"entity": self.entity, "rows": [dict(row) for row in self.rows]}
 
 
+# ---------------------------------------------------------------------------
+# Brand identity (R-514: Modern Generated UI)
+# ---------------------------------------------------------------------------
+
+_HEX_COLOR_RE = re.compile(r"^#([0-9a-fA-F]{6}|[0-9a-fA-F]{3})$")
+_ALLOWED_RADII = frozenset({"none", "sm", "md", "lg", "xl", "2xl", "full"})
+_SAFE_FONT_RE = re.compile(r"^[A-Za-z0-9 _,\-\.]{1,120}$")
+
+_DEFAULT_BRAND_PRIMARY = "#2563eb"
+_DEFAULT_BRAND_DARK_PRIMARY = "#3b82f6"
+_DEFAULT_BRAND_FONT = "Inter"
+_DEFAULT_BRAND_RADIUS = "md"
+
+
+def _validate_hex_color(value: str, name: str) -> str:
+    if not isinstance(value, str) or not _HEX_COLOR_RE.match(value):
+        raise InvalidIRError(f"{name} must be a valid 3- or 6-digit hex color (e.g. '#7c3aed'): {value!r}")
+    # Normalise 3-digit shorthand to 6-digit
+    if len(value) == 4:
+        r, g, b = value[1], value[2], value[3]
+        return f"#{r}{r}{g}{g}{b}{b}"
+    return value.lower()
+
+
+@dataclass(frozen=True, slots=True)
+class BrandTokens:
+    """Visual brand identity injected into every generated app (R-514).
+
+    All fields are optional with sensible defaults; a caller may supply a full set or let the
+    code-generator fall back to the platform defaults.  ``primary_color`` and
+    ``dark_primary_color`` must be valid 6-digit hex strings.  ``font_family`` is a free
+    CSS font-family string (validated for safe characters only).  ``border_radius`` must be
+    one of the Tailwind radius aliases used by the generated token CSS.
+    """
+
+    primary_color: str = _DEFAULT_BRAND_PRIMARY
+    dark_primary_color: str = _DEFAULT_BRAND_DARK_PRIMARY
+    font_family: str = _DEFAULT_BRAND_FONT
+    border_radius: str = _DEFAULT_BRAND_RADIUS
+
+    def __post_init__(self) -> None:
+        object.__setattr__(self, "primary_color", _validate_hex_color(self.primary_color, "primary_color"))
+        object.__setattr__(self, "dark_primary_color", _validate_hex_color(self.dark_primary_color, "dark_primary_color"))
+        if not isinstance(self.font_family, str) or not _SAFE_FONT_RE.match(self.font_family):
+            raise InvalidIRError(
+                f"font_family must be a safe CSS font-family string (1-120 chars): {self.font_family!r}"
+            )
+        if self.border_radius not in _ALLOWED_RADII:
+            raise InvalidIRError(
+                f"border_radius must be one of: {', '.join(sorted(_ALLOWED_RADII))}; got {self.border_radius!r}"
+            )
+
+    def to_dict(self) -> dict[str, str]:
+        return {
+            "primary_color": self.primary_color,
+            "dark_primary_color": self.dark_primary_color,
+            "font_family": self.font_family,
+            "border_radius": self.border_radius,
+        }
+
+    @classmethod
+    def from_dict(cls, data: dict[str, Any]) -> "BrandTokens":
+        return cls(
+            primary_color=data.get("primary_color", _DEFAULT_BRAND_PRIMARY),
+            dark_primary_color=data.get("dark_primary_color", _DEFAULT_BRAND_DARK_PRIMARY),
+            font_family=data.get("font_family", _DEFAULT_BRAND_FONT),
+            border_radius=data.get("border_radius", _DEFAULT_BRAND_RADIUS),
+        )
+
+
 @dataclass(frozen=True, slots=True)
 class ApplicationIR:
     name: str
@@ -571,6 +641,7 @@ class ApplicationIR:
     screens: tuple[Screen, ...] = ()
     acceptance_criteria: tuple[AcceptanceCriterion, ...] = ()
     fixtures: tuple[Fixture, ...] = ()
+    brand: BrandTokens = field(default_factory=BrandTokens)
     schema_version: int = IR_SCHEMA_VERSION
 
     def __post_init__(self) -> None:
@@ -618,7 +689,7 @@ class ApplicationIR:
                 raise InvalidIRError(f"screen {screen.id!r} references unknown role {screen.role!r}")
 
     def to_dict(self) -> dict[str, Any]:
-        return {
+        d: dict[str, Any] = {
             "schema_version": self.schema_version,
             "name": self.name,
             "description": self.description,
@@ -631,6 +702,9 @@ class ApplicationIR:
             "acceptance_criteria": [c.to_dict() for c in self.acceptance_criteria],
             "fixtures": [f.to_dict() for f in self.fixtures],
         }
+        if self.brand != BrandTokens():
+            d["brand"] = self.brand.to_dict()
+        return d
 
     @classmethod
     def from_dict(cls, data: dict[str, Any]) -> "ApplicationIR":
@@ -692,6 +766,7 @@ class ApplicationIR:
                     Fixture(fx["entity"], tuple(dict(row) for row in fx.get("rows", ())))
                     for fx in data.get("fixtures", ())
                 ),
+                brand=BrandTokens.from_dict(data["brand"]) if "brand" in data else BrandTokens(),
                 schema_version=version,
             )
         except (KeyError, TypeError) as error:

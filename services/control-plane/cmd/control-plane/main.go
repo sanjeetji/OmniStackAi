@@ -16,6 +16,7 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	"github.com/sanjeetji/OmniStackAi/services/control-plane/internal/ai"
+	"github.com/sanjeetji/OmniStackAi/services/control-plane/internal/analytics"
 	"github.com/sanjeetji/OmniStackAi/services/control-plane/internal/auth"
 	"github.com/sanjeetji/OmniStackAi/services/control-plane/internal/config"
 	"github.com/sanjeetji/OmniStackAi/services/control-plane/internal/connectors"
@@ -31,6 +32,7 @@ import (
 	"github.com/sanjeetji/OmniStackAi/services/control-plane/internal/seo"
 	"github.com/sanjeetji/OmniStackAi/services/control-plane/internal/skills"
 	"github.com/sanjeetji/OmniStackAi/services/control-plane/internal/users"
+	"github.com/sanjeetji/OmniStackAi/services/control-plane/internal/workspaces"
 	"github.com/sanjeetji/OmniStackAi/services/control-plane/migrations"
 )
 
@@ -100,6 +102,12 @@ func run(ctx context.Context, logger *slog.Logger) error {
 		AuthStore:    userStore,
 		Logger:       logger,
 	})
+	workspacesStore := workspaces.New(pool)
+	workspaces.Register(mux, workspaces.Deps{
+		AuthStore:      userStore,
+		WorkspaceStore: workspacesStore,
+		Logger:         logger,
+	})
 	projects.Register(mux, projects.Deps{
 		AuthStore:      userStore,
 		ProjectStore:   projectStore,
@@ -163,6 +171,17 @@ func run(ctx context.Context, logger *slog.Logger) error {
 		PaymentsStore:  paymentsStore,
 		SecretsStore:   secretsStore,
 		AgentEngineURL: runtimeConfig.AgentEngineURL,
+		Logger:         logger,
+	})
+	analyticsStore := analytics.NewPgStore(pool)
+	ga4Client := analytics.NewGA4Client(nil)
+	analytics.Register(mux, analytics.Deps{
+		AuthStore:      userStore,
+		ProjectStore:   projectStore,
+		AnalyticsStore: analyticsStore,
+		ConnectorStore: connectorStore,
+		DeployStore:    deployStore,
+		GA4Client:      ga4Client,
 		Logger:         logger,
 	})
 

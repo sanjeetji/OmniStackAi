@@ -5,6 +5,7 @@ import { cn } from "@/lib/utils";
 import AppNav from "./app-nav";
 import BrandMark from "./brand-mark";
 import UserMenu from "./user-menu";
+import WorkspaceSwitcher from "./workspace-switcher";
 
 /** The application shell every signed-in screen (and the public /fabric page) renders inside:
  * a skip-to-content link, a sticky header with the brand, primary navigation and the account
@@ -38,14 +39,22 @@ export default function AppShell({
             layout === "contained" ? "mx-auto max-w-[1180px] px-6" : "px-4",
           )}
         >
-          <Link
-            href="/"
-            aria-label="OmniStackAI home"
-            className="flex items-center gap-2 rounded-lg outline-none focus-visible:ring-3 focus-visible:ring-ring/50"
-          >
-            <BrandMark className="size-6" />
-            <span className="text-sm font-semibold tracking-tight">OmniStackAI</span>
-          </Link>
+          <div className="flex items-center gap-3">
+            <Link
+              href="/"
+              aria-label="OmniStackAI home"
+              className="flex items-center gap-2 rounded-lg outline-none focus-visible:ring-3 focus-visible:ring-ring/50"
+            >
+              <BrandMark className="size-6" />
+              <span className="text-sm font-semibold tracking-tight">OmniStackAI</span>
+            </Link>
+            {user && (
+              <>
+                <span className="text-border/60 font-light select-none">/</span>
+                <WorkspaceSwitcher />
+              </>
+            )}
+          </div>
           <AppNav />
           <div className="ml-auto flex items-center gap-2">
             {user ? (

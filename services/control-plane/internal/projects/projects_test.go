@@ -92,6 +92,18 @@ func (s *fakeProjectStore) CreateProject(_ context.Context, userID, name, descri
 	return p, nil
 }
 
+func (s *fakeProjectStore) CreateProjectInWorkspace(ctx context.Context, userID, workspaceID, name, description string) (Project, error) {
+	p, err := s.CreateProject(ctx, userID, name, description)
+	if err != nil {
+		return Project{}, err
+	}
+	p.WorkspaceID = workspaceID
+	s.mu.Lock()
+	s.projects[p.ID] = p
+	s.mu.Unlock()
+	return p, nil
+}
+
 func (s *fakeProjectStore) ListProjects(_ context.Context, userID, status string, _ int) ([]Project, error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
@@ -109,6 +121,14 @@ func (s *fakeProjectStore) ListProjects(_ context.Context, userID, status string
 		list = append(list, p)
 	}
 	return list, nil
+}
+
+func (s *fakeProjectStore) ListWorkspaceProjects(ctx context.Context, userID, workspaceID, status string, limit int) ([]Project, error) {
+	return s.ListProjects(ctx, userID, status, limit)
+}
+
+func (s *fakeProjectStore) GetUserProjectRole(_ context.Context, projectID, userID string) (string, error) {
+	return "owner", nil
 }
 
 func (s *fakeProjectStore) GetProject(_ context.Context, id, userID string) (Project, error) {

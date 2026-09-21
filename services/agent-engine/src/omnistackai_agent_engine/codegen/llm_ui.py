@@ -32,14 +32,23 @@ logger = logging.getLogger(__name__)
 
 # Bare packages the generated project actually installs. Anything else that merely *starts* with "react"
 # (react-icons, react-query, ...) is NOT installed and is rejected.
-ALLOWED_EXACT_IMPORTS: frozenset[str] = frozenset({"react", "react-dom"})
-# Allowed import prefixes: platform modules and relative paths.
+ALLOWED_EXACT_IMPORTS: frozenset[str] = frozenset({
+    "react",
+    "react-dom",
+    # UI stack shipped by the code generator (Tailwind / shadcn ecosystem).
+    "lucide-react",
+    "clsx",
+    "class-variance-authority",
+    "tailwind-merge",
+})
+# Allowed import prefixes: platform modules, relative paths, and Radix UI primitives used by shadcn.
 ALLOWED_IMPORT_PREFIXES: tuple[str, ...] = (
-    "@/components/",
+    "@/components/",  # includes @/components/ui/* (shadcn primitives)
     "@/lib/",
     "next/",
     "./",
     "../",
+    "@radix-ui/",  # lean Radix primitives (react-slot, etc.) bundled with shadcn components
 )
 
 MARKER_PREFIX = "// [OmniStackAI] Mode: LLM-Synthesized Bespoke UI"
@@ -53,11 +62,22 @@ _SYSTEM_MESSAGE = (
 
 # Curated prop hints for the most-used components. The FULL, real export list is injected by
 # nextjs.summarize_components (derived from the shipped component files), so the model never guesses names.
-COMPONENT_PROP_HINTS = """KEY COMPONENT PROPS (each from '@/components/<file>' as listed above):
+COMPONENT_PROP_HINTS = """KEY COMPONENT PROPS:
+SHADCN UI PRIMITIVES (from '@/components/ui/<file>' — prefer these for common elements):
+- Button: import { Button } from '@/components/ui/button';  { variant?: 'default'|'destructive'|'outline'|'secondary'|'ghost'|'link', size?: 'default'|'sm'|'lg'|'icon', asChild?: boolean }
+- Card/CardHeader/CardTitle/CardDescription/CardContent/CardFooter: import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from '@/components/ui/card'
+- Input: import { Input } from '@/components/ui/input';  standard <input> with Tailwind ring/border styling
+- Badge: import { Badge } from '@/components/ui/badge';  { variant?: 'default'|'secondary'|'destructive'|'outline'|'success'|'warning' }
+- Label: import { Label } from '@/components/ui/label'
+- Separator: import { Separator } from '@/components/ui/separator';  { orientation?: 'horizontal'|'vertical' }
+- Skeleton: import { Skeleton } from '@/components/ui/skeleton';  pass className for sizing e.g. className="h-4 w-32"
+- Alert/AlertTitle/AlertDescription: import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';  { variant?: 'default'|'destructive' }
+- cn() helper: import { cn } from '@/lib/utils';  merges Tailwind classes conditionally
+- Icons: import { LayoutDashboard, Users, Settings, Bell, Search, ChevronDown, Loader2, Plus, Pencil, Trash2, Eye, EyeOff, X, Check, AlertCircle, Info, TrendingUp, TrendingDown } from 'lucide-react';
+RICH CUSTOM COMPONENTS (from '@/components/<file>' — for advanced/data-heavy UI):
 - StatCard compound: <StatCard><StatCardHeader title="Label" icon="📊" /><StatCardValue value="123" subtext="info" /></StatCard>
 - DataGrid: { columns: Array<{ key: string, header: string }>, data: any[], sortable?: boolean }  (columns use `header`, never `label`)
 - Tabs: { tabs: Array<{ id: string, label: string }>, activeTab: string, onChange: (id: string) => void }
-- Badge: { variant?: 'default' | 'success' | 'warning' | 'error' | 'info', children: ReactNode }
 - Avatar: { name?: string, src?: string, size?: 'sm' | 'md' | 'lg' }
 - Progress: { value: number, max?: number, variant?: string }
 - Dialog: { open?: boolean, onOpenChange?: (open: boolean) => void, children: ReactNode }  (use `open`, never `isOpen`)
@@ -66,31 +86,19 @@ COMPONENT_PROP_HINTS = """KEY COMPONENT PROPS (each from '@/components/<file>' a
 - Toast: useToast() => { toast: (opts: { title: string, description?: string, variant?: 'default' | 'success' | 'destructive' }) => void }
 """
 
-_ADMIN_ARCHETYPE = """ARCHETYPE: MODERN SAAS ADMIN PANEL / WORKSPACE
-Design a complete, production-grade SaaS Admin Panel with drawer navigation:
-1. Left Collapsible Drawer / Sidebar Navigation:
-   - Sidebar header: App logo badge, title, and collapse toggle button.
-   - Navigation links with icons (e.g. Dashboard, Management tables, Settings).
-   - Sub-items with bullet dots and an active pill state (use the primary token).
-2. Top Navigation Bar:
-   - Global search input.
-   - Right controls: Notification bell, User Avatar.
-   - User Avatar dropdown: if this app has an auth provider, show user email/name, Settings, Reset Password
-     (`/forgot-password`) and Sign Out (calling `logout()`); otherwise a simple Settings link.
-3. Main View Modes (toggleable via state):
-   - Data Management Table View:
-     - Page Title (e.g. Management, Settings).
-     - Filter bar: Status dropdown, and '+ Add [Entity]' button.
-     - Table card with columns: ID, Name/Title, Status pill, Actions ('Edit' & 'Delete' buttons).
-   - Analytics Stat Cards: metric counters for key entities."""
+_ADMIN_ARCHETYPE = """ARCHETYPE: MODERN SAAS ADMIN PANEL
+Design a complete SaaS Admin Panel using shadcn ui/ components and Tailwind classes:
+1. Left Collapsible Sidebar: Logo badge, title, collapse toggle, links with Lucide icons (Dashboard, Users, Settings), active pills.
+2. Top Bar (sticky, border-b): Global search <Input>, Bell icon, User Avatar with dropdown (profile, settings, sign out).
+3. Main Grid: Metric cards with shadcn <Card>, <DataGrid> table, filter bar with '+ Add [Entity]' <Button>, loading skeletons."""
 
 _WEBSITE_ARCHETYPE = """ARCHETYPE: MODERN PUBLIC WEBSITE / E-COMMERCE
-Design a world-class consumer-facing public web experience:
-1. Modern Navigation Header: Brand logo, category links, search, cart/actions, and user auth buttons.
-2. Dynamic Hero Banner: Compelling headline, value proposition, high-contrast CTA buttons, and floating metric chips.
-3. Feature / Product Showcase: Responsive grid with product/service cards, prices, rating badges, and action buttons.
-4. Interactive Testimonials & Social Proof: Rating cards and customer feedback quotes.
-5. Modern Footer: Sitemap links, newsletter subscription input, and copyright."""
+Design a consumer web experience using shadcn ui/ components and Tailwind:
+1. Sticky Header: Brand logo, links, search <Input>, auth <Button>.
+2. Hero Banner: Bold headline, value prop, CTA <Button>s, floating metric chips.
+3. Feature Showcase: Responsive grid (grid-cols-1 md:grid-cols-3 gap-6) with shadcn <Card>s, badges, and action buttons.
+4. Testimonials: shadcn <Card>s with <Avatar> and rating stars.
+5. Footer: Sitemap links and copyright."""
 
 _DYNAMIC_IMPORT_RE = re.compile(r"\b(?:require|import)\s*\(")
 _QUOTED_SOURCE_RE = re.compile(r"""['"]([^'"]+)['"]""")
@@ -282,10 +290,12 @@ def _core_rules(ir: ApplicationIR) -> str:
    page/pageSize as params. If the data layer says NO hooks exist, do not import '@/lib/hooks'.
 4. NULL SAFETY: hook `data` can be null while loading — ALWAYS write `(data ?? []).map(...)`,
    `(data ?? []).filter(...)`, `data?.length ?? 0`.
-5. STYLING: styles/tokens.css is already loaded by app/globals.css. Style with inline `style={{{{...}}}}` or scoped
-   `<style jsx>` using the DESIGN TOKENS via `var(--color-…)`, `var(--space-…)`, `var(--radius-…)`,
-   `var(--shadow-…)`, `var(--font-size-…)`. NEVER hardcode hex colors and do NOT use Tailwind classes (it is not
-   installed). Dark mode works automatically through the tokens.
+5. STYLING: Use **Tailwind CSS utility classes** as the primary method. The design system CSS variables
+   (`var(--color-*)', `var(--space-*)', `var(--radius-*)`) are bridged to Tailwind semantic names
+   (bg-primary, text-foreground, border-border, etc.) so Tailwind classes automatically match the brand.
+   Use `cn()` from '@/lib/utils' to merge classes conditionally. Use shadcn `@/components/ui/*`
+   (Button, Card, Input, Badge, Label, Skeleton, Alert, Separator) for common UI elements. NEVER hardcode
+   hex colors. Dark mode is automatic via CSS variables + Tailwind `dark:` variants.
 {auth_rule}7. DATA GRID columns use `header` (never `label`); DIALOG uses `open`/`onOpenChange` (never `isOpen`);
    STAT CARDS use the compound form shown above.
 8. ZERO PLACEHOLDERS: complete, functional JSX with real buttons, inputs, and loading / empty / error states.

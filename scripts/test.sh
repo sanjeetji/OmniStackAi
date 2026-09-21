@@ -1877,6 +1877,146 @@ if ! rg -qF 'ProjectPaymentsManage' "$console_root/app/studio/[projectId]/manage
   exit 1
 fi
 
+# R-515 (Team / Org model — multi-member workspaces, shared projects): migration, workspaces package, member RBAC, invitations, console-web switcher & management
+for required_workspace_file in \
+  "$control_plane_root/migrations/000015_organizations_workspaces.up.sql" \
+  "$control_plane_root/migrations/000015_organizations_workspaces.down.sql" \
+  "$control_plane_root/internal/workspaces/store.go" \
+  "$control_plane_root/internal/workspaces/handler.go" \
+  "$control_plane_root/internal/workspaces/workspaces_test.go" \
+  "$console_root/components/workspace-switcher.tsx" \
+  "$console_root/components/workspace-manage.tsx" \
+  "$console_root/app/api/workspaces/route.ts" \
+  "$console_root/app/api/workspaces/[id]/route.ts" \
+  "$console_root/app/api/workspaces/[id]/members/route.ts" \
+  "$console_root/app/api/workspaces/[id]/invites/route.ts" \
+  "$console_root/app/api/workspaces/invites/[token]/accept/route.ts" \
+  "$console_root/app/invite/[token]/page.tsx"; do
+  if [[ ! -f "$required_workspace_file" ]]; then
+    printf 'Missing R-515 contract file: %s\n' "$required_workspace_file"
+    exit 1
+  fi
+done
+
+if ! rg -qF 'workspaces.Register' "$control_plane_root/cmd/control-plane/main.go"; then
+  printf 'R-515 control-plane main must register workspaces routes.\n'
+  exit 1
+fi
+
+if ! rg -qF 'workspace_members' "$control_plane_root/migrations/000015_organizations_workspaces.up.sql"; then
+  printf 'R-515 000015_organizations_workspaces.up.sql must create workspace_members table.\n'
+  exit 1
+fi
+
+if ! rg -qF 'listWorkspaces' "$console_root/lib/control-plane.ts"; then
+  printf 'R-515 lib/control-plane.ts must define listWorkspaces.\n'
+  exit 1
+fi
+
+if ! rg -qF 'inviteWorkspaceMember' "$console_root/lib/control-plane.ts"; then
+  printf 'R-515 lib/control-plane.ts must define inviteWorkspaceMember.\n'
+  exit 1
+fi
+
+if ! rg -qF 'WorkspaceSwitcher' "$console_root/components/app-shell.tsx"; then
+  printf 'R-515 app-shell must render WorkspaceSwitcher.\n'
+  exit 1
+fi
+
+if ! rg -qF 'WorkspaceManage' "$console_root/app/settings/page.tsx"; then
+  printf 'R-515 settings page must render WorkspaceManage.\n'
+  exit 1
+fi
+
+# R-516 (Email feature — SMTP / Resend integration in generated apps):
+# pure Node.js standard-library socket client, Resend REST client, email templates, contact form UI, zero npm dependencies
+if ! rg -qF 'EMAIL_TEMPLATES_TS' "$agent_engine_root/src/omnistackai_agent_engine/studio/connectors.py"; then
+  printf 'R-516 connectors.py must define EMAIL_TEMPLATES_TS.\n'
+  exit 1
+fi
+
+if ! rg -qF 'CONTACT_FORM_TSX' "$agent_engine_root/src/omnistackai_agent_engine/studio/connectors.py"; then
+  printf 'R-516 connectors.py must define CONTACT_FORM_TSX.\n'
+  exit 1
+fi
+
+if ! rg -qF 'welcomeEmailTemplate' "$agent_engine_root/src/omnistackai_agent_engine/studio/connectors.py"; then
+  printf 'R-516 connectors.py must export welcomeEmailTemplate.\n'
+  exit 1
+fi
+
+if ! rg -qF 'otpVerificationTemplate' "$agent_engine_root/src/omnistackai_agent_engine/studio/connectors.py"; then
+  printf 'R-516 connectors.py must export otpVerificationTemplate.\n'
+  exit 1
+fi
+
+if ! rg -qF "node:net" "$agent_engine_root/src/omnistackai_agent_engine/studio/connectors.py"; then
+  printf 'R-516 SMTP client must use node:net with zero external npm dependencies.\n'
+  exit 1
+fi
+
+if ! rg -qF "STARTTLS" "$agent_engine_root/src/omnistackai_agent_engine/studio/connectors.py"; then
+  printf 'R-516 SMTP client must implement STARTTLS handshake.\n'
+  exit 1
+fi
+
+if ! rg -qF "lib/email-templates.ts" "$control_plane_root/internal/connectors/catalog.go"; then
+  printf 'R-516 catalog.go must declare lib/email-templates.ts in generated files.\n'
+  exit 1
+fi
+
+if ! rg -qF "components/contact-form.tsx" "$control_plane_root/internal/connectors/catalog.go"; then
+  printf 'R-516 catalog.go must declare components/contact-form.tsx in generated files.\n'
+  exit 1
+fi
+
+# R-517 (Node.js backend codegen — Express/Hono alongside Python/Go):
+# First-class TypeScript Node.js backend generation with Express and Hono support
+if [[ ! -f "$agent_engine_root/src/omnistackai_agent_engine/codegen/backend_node.py" ]]; then
+  printf 'Missing R-517 contract file: codegen/backend_node.py\n'
+  exit 1
+fi
+
+if [[ ! -f "$agent_engine_root/tests/test_backend_node.py" ]]; then
+  printf 'Missing R-517 contract file: tests/test_backend_node.py\n'
+  exit 1
+fi
+
+if ! rg -qF 'class NodeBackendAdapter' "$agent_engine_root/src/omnistackai_agent_engine/codegen/backend_node.py"; then
+  printf 'R-517 backend_node.py must define NodeBackendAdapter.\n'
+  exit 1
+fi
+
+if ! rg -qF 'class ExpressBackendAdapter' "$agent_engine_root/src/omnistackai_agent_engine/codegen/backend_node.py"; then
+  printf 'R-517 backend_node.py must define ExpressBackendAdapter.\n'
+  exit 1
+fi
+
+if ! rg -qF 'class HonoBackendAdapter' "$agent_engine_root/src/omnistackai_agent_engine/codegen/backend_node.py"; then
+  printf 'R-517 backend_node.py must define HonoBackendAdapter.\n'
+  exit 1
+fi
+
+if ! rg -qF '"NodeBackendAdapter"' "$agent_engine_root/src/omnistackai_agent_engine/codegen/__init__.py"; then
+  printf 'R-517 codegen/__init__.py must export NodeBackendAdapter.\n'
+  exit 1
+fi
+
+if ! rg -qF 'BACKEND_NODE = "backend-node"' "$agent_engine_root/src/omnistackai_agent_engine/codegen/adapter.py"; then
+  printf 'R-517 adapter.py GenerationTarget must define BACKEND_NODE.\n'
+  exit 1
+fi
+
+if ! rg -qF 'NodeBackendAdapter' "$agent_engine_root/src/omnistackai_agent_engine/codegen/assembler.py"; then
+  printf 'R-517 assembler.py default_registry must register NodeBackendAdapter.\n'
+  exit 1
+fi
+
+if [[ ! -d "$repo_root/templates/backend-node" ]]; then
+  printf 'R-517 templates/backend-node directory must exist.\n'
+  exit 1
+fi
+
 printf 'Repository contract tests passed.\n'
 
 

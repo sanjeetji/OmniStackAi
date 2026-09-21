@@ -105,6 +105,7 @@ func handleListProjects(deps Deps) http.HandlerFunc {
 		}
 
 		status := r.URL.Query().Get("status")
+		workspaceID := r.URL.Query().Get("workspace_id")
 		limit := 50
 		if lStr := r.URL.Query().Get("limit"); lStr != "" {
 			if parsed, err := strconv.Atoi(lStr); err == nil && parsed > 0 {
@@ -112,7 +113,12 @@ func handleListProjects(deps Deps) http.HandlerFunc {
 			}
 		}
 
-		list, err := deps.ProjectStore.ListProjects(r.Context(), user.ID, status, limit)
+		var list []Project
+		if workspaceID != "" {
+			list, err = deps.ProjectStore.ListWorkspaceProjects(r.Context(), user.ID, workspaceID, status, limit)
+		} else {
+			list, err = deps.ProjectStore.ListProjects(r.Context(), user.ID, status, limit)
+		}
 		if err != nil {
 			deps.logger().Error("list projects", "error", err)
 			writeError(w, http.StatusInternalServerError, "could not list projects")
@@ -134,12 +140,18 @@ func handleCreateProject(deps Deps) http.HandlerFunc {
 		var req struct {
 			Name        string `json:"name"`
 			Description string `json:"description"`
+			WorkspaceID string `json:"workspace_id"`
 		}
 		if r.Body != nil {
 			_ = json.NewDecoder(r.Body).Decode(&req)
 		}
 
-		p, err := deps.ProjectStore.CreateProject(r.Context(), user.ID, req.Name, req.Description)
+		var p Project
+		if req.WorkspaceID != "" {
+			p, err = deps.ProjectStore.CreateProjectInWorkspace(r.Context(), user.ID, req.WorkspaceID, req.Name, req.Description)
+		} else {
+			p, err = deps.ProjectStore.CreateProject(r.Context(), user.ID, req.Name, req.Description)
+		}
 		if err != nil {
 			deps.logger().Error("create project", "error", err)
 			writeError(w, http.StatusInternalServerError, "could not create project")

@@ -312,6 +312,10 @@ class _HttpCloudProvider:
     def provider_id(self) -> str:
         return self._provider_id
 
+    @property
+    def descriptor(self) -> ModelDescriptor:
+        return self._descriptor
+
     def _auth_key(self) -> str:
         return self.__api_key
 
@@ -751,9 +755,11 @@ class GeminiProvider(_HttpCloudProvider):
             raise ProviderResponseError(f"{self._provider_id} response has no candidates")
         content = candidates[0].get("content")
         parts = content.get("parts") if isinstance(content, dict) else None
-        if not isinstance(parts, list):
+        if parts is None:
+            parts = []
+        elif not isinstance(parts, list):
             raise ProviderResponseError(f"{self._provider_id} response parts are invalid")
-        text = "".join(p["text"] for p in parts if isinstance(p, dict) and isinstance(p.get("text"), str))
+        text = "".join(p.get("text", "") for p in parts if isinstance(p, dict) and isinstance(p.get("text"), str))
         finish = _GEMINI_FINISH.get(candidates[0].get("finishReason"), FinishReason.STOP)
         usage = payload.get("usageMetadata")
         if not isinstance(usage, dict):

@@ -7,6 +7,7 @@ import {
   AlertCircle,
   Archive,
   ArrowLeft,
+  BarChart3,
   BookOpen,
   Check,
   CheckCircle2,
@@ -75,6 +76,7 @@ import { ProjectPublishManage } from "@/components/project-publish-manage";
 import { ProjectDomainManage } from "@/components/project-domain-manage";
 import { ProjectConnectorsManage } from "@/components/project-connectors-manage";
 import { ProjectPaymentsManage } from "@/components/project-payments-manage";
+import { ProjectAnalyticsManage } from "@/components/project-analytics-manage";
 import { SkillEditorDialog } from "@/components/skills-library";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -110,9 +112,9 @@ export default function ProjectManagePage({
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  // Section nav: "general" | "knowledge" | "skills" | "secrets" | "git" | "ai" | "seo" | "logs" | "database" | "security" | "tests" | "publish" | "domains" | "connectors" | "payments"
+  // Section nav: "general" | "knowledge" | "skills" | "secrets" | "git" | "ai" | "seo" | "logs" | "database" | "security" | "tests" | "publish" | "domains" | "connectors" | "payments" | "analytics"
   const [activeSection, setActiveSection] = useState<
-    "general" | "knowledge" | "skills" | "secrets" | "git" | "ai" | "seo" | "logs" | "database" | "security" | "tests" | "publish" | "domains" | "connectors" | "payments"
+    "general" | "knowledge" | "skills" | "secrets" | "git" | "ai" | "seo" | "logs" | "database" | "security" | "tests" | "publish" | "domains" | "connectors" | "payments" | "analytics"
   >("general");
 
   // General Form state
@@ -1022,6 +1024,21 @@ export default function ProjectManagePage({
               Payments
             </span>
           </button>
+          <button
+            type="button"
+            onClick={() => setActiveSection("analytics")}
+            className={cn(
+              "w-full flex items-center justify-between px-3 py-2 text-sm font-medium rounded-md transition-colors",
+              activeSection === "analytics"
+                ? "bg-secondary text-secondary-foreground"
+                : "text-muted-foreground hover:bg-muted/50 hover:text-foreground",
+            )}
+          >
+            <span className="flex items-center gap-2">
+              <BarChart3 className="size-4" />
+              Analytics
+            </span>
+          </button>
         </nav>
 
         {/* Section content */}
@@ -1824,6 +1841,8 @@ export default function ProjectManagePage({
             <ProjectConnectorsManage projectId={projectId} projectName={project?.name || "Project"} />
           ) : activeSection === "payments" ? (
             <ProjectPaymentsManage projectId={projectId} projectName={project?.name || "Project"} />
+          ) : activeSection === "analytics" ? (
+            <ProjectAnalyticsManage projectId={projectId} projectName={project?.name || "Project"} />
           ) : (
             <>
               {/* Git & GitHub Section */}
