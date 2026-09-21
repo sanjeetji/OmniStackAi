@@ -1,5 +1,7 @@
 # Changelog
 
+2026-09-21  R-525  T-4 code-edit agent: template projects are edited by chat. It selects files, emits line-delimited WRITE/REPLACE/DELETE blocks, validates and applies them (paths, sizes, exact single matches), verifies (tsc, node --check, JSON, omnistack.json, base-path-safe links, no duplicated module structure) with one repair round or a full rollback, and commits only the touched paths. Edit failures return 422 with nothing saved. The Studio composer is enabled for template projects.
+
 2026-09-21  R-524  Chat edits use the provider's output budget (never below 2,048 tokens). Gemini counts reasoning against the budget, so edit replies were cut off mid-JSON and every edit failed on Google.
 
 2026-09-21  R-523  T-3 Template marketplace in the console: `/templates` (search, category filters, cards, empty state) and `/templates/[slug]` (apps, features, roles, demo logins, data, integrations, stack, screenshots) with a Use template dialog that opens the new project in the Studio; Templates nav item and home entry; the Studio explains template projects; template covers/screenshots served declared-only through agent-engine -> control-plane -> console.

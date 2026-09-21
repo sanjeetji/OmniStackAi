@@ -113,8 +113,8 @@ export default function StudioChat({
 }: {
   initialCreditBalance: number;
   initialProjectId?: string;
-  /** Set when the project was created from a marketplace template (R-523). Chat edits for these
-   * projects arrive with the code-edit agent, so the composer explains that instead of failing. */
+  /** Set when the project was created from a marketplace template (R-523). Its chat edits are made
+   * by the code-edit agent, which changes the real files, checks them and commits (R-525). */
   startedFromTemplate?: { name: string; version: string };
 }) {
   const router = useRouter();
@@ -571,7 +571,7 @@ export default function StudioChat({
   async function handleSend(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const trimmed = prompt.trim();
-    if ((!trimmed && attachments.length === 0) || submitting || startedFromTemplate) return;
+    if ((!trimmed && attachments.length === 0) || submitting) return;
 
     if (isListening) {
       recognitionRef.current?.stop();
@@ -1149,8 +1149,8 @@ export default function StudioChat({
               <p className="text-pretty text-muted-foreground">
                 Started from the{" "}
                 <span className="font-medium text-foreground">{startedFromTemplate.name}</span>{" "}
-                template (v{startedFromTemplate.version}). This project is your own copy: run it in
-                Preview and browse its code. Changing it by chat is coming next.
+                template (v{startedFromTemplate.version}). It&rsquo;s your own copy: ask for any change
+                and it&rsquo;s made in the code, checked, and saved as a new version.
               </p>
             </div>
           ) : activeProjectId !== null ? (
@@ -1381,7 +1381,7 @@ export default function StudioChat({
               value={prompt}
               onChange={handlePromptChange}
               onKeyDown={handlePromptKeyDown}
-              disabled={submitting || Boolean(startedFromTemplate)}
+              disabled={submitting}
               rows={1}
               className="field-sizing-content max-h-40 min-h-9 flex-1 resize-none bg-transparent px-2 py-1.5 text-sm outline-none placeholder:text-muted-foreground disabled:opacity-60"
             />
@@ -1443,9 +1443,7 @@ export default function StudioChat({
                 type="submit"
                 size="icon"
                 aria-label="Send"
-                disabled={
-                  Boolean(startedFromTemplate) || (prompt.trim().length === 0 && attachments.length === 0)
-                }
+                disabled={prompt.trim().length === 0 && attachments.length === 0}
                 className="size-8 rounded-lg"
               >
                 <ArrowUp aria-hidden="true" />

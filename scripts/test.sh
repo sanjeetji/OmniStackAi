@@ -2057,8 +2057,9 @@ if ! rg -qF 'def instantiate_template(' "$agent_engine_root/src/omnistackai_agen
   printf 'R-519 studio/templates.py must instantiate templates into kind=template workspaces.\n'
   exit 1
 fi
-if [[ "$(rg -c '_refuse_template_workspace\(workspace_store, ws_id' "$agent_engine_root/src/omnistackai_agent_engine/studio/live_serve.py")" != "3" ]]; then
-  printf 'R-519 prompt builds, streamed builds and IR edits must all refuse template workspaces.\n'
+if [[ "$(rg -c '_refuse_template_workspace\(workspace_store, ws_id' "$agent_engine_root/src/omnistackai_agent_engine/studio/live_serve.py")" != "2" ]]; then
+  # R-525: the third (IR edit) path now routes template projects to the code-edit agent.
+  printf 'R-519 prompt builds and streamed builds must both refuse template workspaces.\n'
   exit 1
 fi
 if ! rg -qF '"POST /templates/{slug}/use"' "$control_plane_root/internal/templates/handler.go" \
@@ -2147,6 +2148,25 @@ if ! rg -qF 'def asset(' "$agent_engine_root/src/omnistackai_agent_engine/studio
 fi
 if ! rg -qF 'startedFromTemplate' "$console_root/app/studio/studio-chat.tsx"; then
   printf 'R-523 the Studio must explain template projects instead of failing chat edits.\n'
+  exit 1
+fi
+
+# R-525 (Phase T, T-4 - code-edit agent for template projects):
+code_edit_py="$agent_engine_root/src/omnistackai_agent_engine/studio/code_edit.py"
+if [[ ! -f "$code_edit_py" ]] || ! rg -qF 'async def run_code_edit(' "$code_edit_py"; then
+  printf 'R-525 studio/code_edit.py must provide run_code_edit.\n'
+  exit 1
+fi
+if rg -q '"add", "-A"\)' "$code_edit_py" || ! rg -qF '"add", "-A", "--", *paths' "$code_edit_py"; then
+  printf 'R-525 code edits must stage only the touched paths, never the whole tree.\n'
+  exit 1
+fi
+if ! rg -qF 'restore(repo, original)' "$code_edit_py"; then
+  printf 'R-525 a failed code edit must restore every touched file.\n'
+  exit 1
+fi
+if ! rg -qF '_workspace_code_edit' "$agent_engine_root/src/omnistackai_agent_engine/studio/live_serve.py"; then
+  printf 'R-525 template workspace edits must route to the code-edit agent.\n'
   exit 1
 fi
 

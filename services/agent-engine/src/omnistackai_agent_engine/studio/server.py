@@ -46,6 +46,7 @@ from .page import STUDIO_HTML
 from .problems import NoWebTargetError, ProblemsNotCheckedError, ToolchainNotInstalledError
 from .publish import evaluate_publish_readiness
 from .security import get_last_security_report, run_security_scan
+from .code_edit import CodeEditError
 from .session import EditNotSupportedError
 from .templates import (
     TemplateCatalog,
@@ -611,6 +612,10 @@ def _make_handler(
                 return
             except WorkspaceLockedError as error:
                 self._send_json(409, {"error": str(error)})
+                return
+            except CodeEditError as error:
+                # The code-edit agent could not make a safe change; nothing was saved (R-525).
+                self._send_json(422, {"error": str(error)})
                 return
             except Exception as error:
                 self._send_json(502, {"error": str(error)})

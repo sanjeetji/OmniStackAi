@@ -325,15 +325,27 @@ class InstantiateTemplateTests(unittest.TestCase):
 
 
 class TemplateWorkspaceGuardTests(unittest.TestCase):
-    """A template project must not be overwritten by a prompt build or run through the IR edit path."""
+    """A template project must never be overwritten by a prompt build (R-519). Chat edits go to the
+    code-edit agent (R-525), not the IR edit path, which has no IR to work on."""
 
-    def test_prompt_build_and_ir_edit_are_refused(self) -> None:
+    def test_prompt_build_refused_and_chat_edit_uses_the_code_agent(self) -> None:
         import asyncio
+        from types import SimpleNamespace
+        from unittest.mock import patch
 
         from omnistackai_agent_engine.studio.live_serve import (
             _workspace_build,
             _workspace_edit,
         )
+
+        class Scripted:
+            provider_id = "stub"
+
+            def __init__(self, replies):  # noqa: ANN001
+                self.replies = list(replies)
+
+            async def generate(self, request):  # noqa: ANN001
+                return SimpleNamespace(text=self.replies.pop(0))
 
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
@@ -343,12 +355,27 @@ class TemplateWorkspaceGuardTests(unittest.TestCase):
             instantiate_template(TemplateCatalog(root / "catalog"), store, ws_id, SLUG)
             head = _git(store.repo_path(ws_id), "rev-parse", "HEAD")
 
-            with self.assertRaises(EditNotSupportedError) as edit_error:
-                asyncio.run(_workspace_edit(ws_id, "add a wishlist", workspace_store=store))
-            self.assertIn("template", str(edit_error.exception))
             with self.assertRaises(EditNotSupportedError):
                 _workspace_build(ws_id, "a todo app", workspace_store=store)
             self.assertEqual(_git(store.repo_path(ws_id), "rev-parse", "HEAD"), head)
+
+            provider = Scripted([
+                json.dumps({"plan": "add a wishlist page", "files": ["apps/web/app/page.jsx"]}),
+                "@@@ SUMMARY\nAdded a wishlist page.\n@@@ WRITE apps/web/app/wishlist/page.jsx\n"
+                "export default function Wishlist() {\n  return <main>Wishlist</main>;\n}\n@@@ END\n",
+            ])
+            with patch(
+                "omnistackai_agent_engine.studio.live_serve.resolve_generation_provider_from_env",
+                return_value=(provider, "stub-model", 8192, 5.0),
+            ):
+                result = asyncio.run(_workspace_edit(ws_id, "add a wishlist", workspace_store=store))
+
+            self.assertEqual(result["diff"]["added"], ["apps/web/app/wishlist/page.jsx"])
+            self.assertEqual(result["rationale"], "Added a wishlist page.")
+            self.assertNotEqual(result["commit_sha"], head)
+            self.assertEqual(store.get_state(ws_id)["commit_sha"], result["commit_sha"])
+            self.assertEqual([t["role"] for t in result["turns"]][-2:], ["user", "assistant"])
+            self.assertEqual(store.get_state(ws_id)["kind"], "template")
 
 
 class TemplateRoutesTests(unittest.TestCase):

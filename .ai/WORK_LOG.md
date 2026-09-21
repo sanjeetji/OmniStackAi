@@ -1,5 +1,11 @@
 # Work Log
 
+## 2026-09-21 — R-525 (T-4 code-edit agent)
+
+- Template projects can now be changed by chat: add, remove and change features, including database changes through new migrations. The agent edits real files, checks them, repairs once or rolls back fully, and commits only what it touched.
+- Live testing found two model failure modes that the rules alone didn't prevent: raw `<a href="/...">` links that escape the base path, and a whole file pasted into a REPLACE. Both are now deterministic verification errors (the real broken file is a test fixture). The Gemini daily quota for `gemini-3-flash-preview` ran out, so `.env` now uses `gemini-3.1-flash-lite-preview`.
+- Evidence: 22 new tests. `task verify` 3,968 OK. 3 live edits verified in the running app. Smoke 17/17.
+
 ## 2026-09-21 — R-524 (chat edits use the provider output budget)
 
 - Gemini edit replies were truncated at a fixed 2,048 output tokens (reasoning counts against it). Edits now get the provider's budget. Smoke 17/17 twice on Google.

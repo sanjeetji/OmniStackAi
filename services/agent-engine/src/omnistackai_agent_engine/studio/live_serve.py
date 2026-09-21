@@ -989,7 +989,13 @@ async def _workspace_edit(
     api_key: str | None = None,
     **options,
 ) -> dict:
-    _refuse_template_workspace(workspace_store, ws_id, "the prompt-to-app edit")
+    if is_template_workspace(workspace_store, ws_id) is not None:
+        # Template projects are edited by the code-edit agent (R-525): they are hand-built code
+        # with no IR, and users need to change and remove features, not only add them.
+        return await _workspace_code_edit(
+            ws_id, prompt, workspace_store=workspace_store, context=context,
+            provider_id=provider_id, model_id=model_id, api_key=api_key,
+        )
     with workspace_store.lock(ws_id):
         ir = workspace_store.load_ir(ws_id)
         if ir is None:
@@ -1063,6 +1069,87 @@ async def _workspace_edit(
             "context_truncated": proposal.context_truncated,
             "active_skills": list(proposal.active_skills),
             "truncated_skills": list(proposal.truncated_skills),
+            "turns": workspace_store.get_turns(ws_id),
+            "usage": _usage_summary_to_dict(usage_ledger),
+        }
+
+
+async def _workspace_code_edit(
+    ws_id: str,
+    prompt: str,
+    *,
+    workspace_store: StudioWorkspaceStore,
+    context: dict | None = None,
+    provider_id: str | None = None,
+    model_id: str | None = None,
+    api_key: str | None = None,
+) -> dict:
+    """Change a template project's code by chat (R-525). Raises CodeEditError (nothing saved)."""
+    from ..intake.context import assemble_context
+    from .code_edit import CodeEditError, run_code_edit
+
+    with workspace_store.lock(ws_id):
+        repo_dir = workspace_store.repo_path(ws_id)
+        usage_ledger = UsageLedger()
+        provider, eff_model_id, max_output, timeout = resolve_generation_provider_from_env(
+            usage_ledger=usage_ledger,
+            provider_id=provider_id,
+            model_id=model_id,
+            api_key=api_key,
+        )
+        context_text = assemble_context(context)[0] if isinstance(context, dict) else ""
+        workspace_store.append_turn(ws_id, "user", prompt)
+        try:
+            result = await run_code_edit(
+                repo_dir,
+                prompt,
+                provider,
+                model_id=eff_model_id,
+                max_output_tokens=_edit_output_budget(max_output),
+                timeout_seconds=timeout,
+                context_text=context_text,
+            )
+        except CodeEditError as error:
+            workspace_store.append_turn(ws_id, "assistant", f"I couldn't make that change: {error}")
+            raise
+
+        verification = result["verification"]
+        note = ""
+        if verification["checked"]:
+            note += f" Checked: {len(verification['checked'])} item(s)."
+        if verification["not_checked"]:
+            note += " Some files can only be checked after the preview installs dependencies."
+        if result["repaired"]:
+            note += " The first attempt failed its checks and was fixed."
+        workspace_store.append_turn(ws_id, "assistant", f"{result['summary']}{note}")
+
+        tracked = subprocess.run(
+            ["git", "ls-files"], cwd=str(repo_dir), capture_output=True, text=True, check=False
+        ).stdout.splitlines()
+        state = workspace_store.get_state(ws_id) or {}
+        state["commit_sha"] = result["commit_sha"]
+        state["file_count"] = len(tracked)
+        workspace_store.save_state(ws_id, state)
+
+        added, modified, deleted = result["added"], result["modified"], result["deleted"]
+        return {
+            "id": ws_id,
+            "commit_sha": result["commit_sha"],
+            "entities": list(state.get("entities", [])),
+            "file_count": len(tracked),
+            "diff": {
+                "added": added,
+                "modified": modified,
+                "deleted": deleted,
+                "summary": f"{len(added)} added, {len(modified)} modified, {len(deleted)} deleted",
+            },
+            "rationale": result["summary"],
+            "plan": result["plan"],
+            "verification": verification,
+            "repaired": result["repaired"],
+            "context_truncated": False,
+            "active_skills": [],
+            "truncated_skills": [],
             "turns": workspace_store.get_turns(ws_id),
             "usage": _usage_summary_to_dict(usage_ledger),
         }

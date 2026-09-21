@@ -1,9 +1,14 @@
 # Current Handoff
 
-Task ID: R-524
+Task ID: R-525
 Status: done
 Phase: MVP
 Branch: `ai/R-517-node-backend`
+
+> **R-525 Completed (2026-09-21): code-edit agent (T-4).** Chat edits on template projects change
+> the real code, are checked, and are committed (or fully rolled back). `.env` model is now
+> `gemini-3.1-flash-lite-preview` because the daily quota for `gemini-3-flash-preview` ran out.
+> **Next:** T-5 workspace upgrades, then T-6 RideNow (see memory: templates need full page sets).
 
 > **R-524 Completed (2026-09-21): chat edits work on Gemini.** **Next:** T-4 code-edit agent.
 

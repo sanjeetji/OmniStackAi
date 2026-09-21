@@ -4,6 +4,9 @@ Last updated: 2026-09-21
 ## Current Phase
 Stage 0 (Founder Build Sequence, Brief Section 91) — BASIC/MVP
 
+> **R-525 (2026-09-21): T-4 code-edit agent.** Chat changes on template projects (add, remove or
+> change features, DB migrations) are made in the real code, checked, then committed or rolled back.
+
 > **R-524 (2026-09-21): chat edits work on Gemini** (output budget no longer capped at 2,048).
 
 > **R-523 (2026-09-21): T-3 Template marketplace in the console.** Browse and search templates,
