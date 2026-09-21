@@ -26,6 +26,7 @@ from __future__ import annotations
 import asyncio
 import os
 import re
+import signal
 import subprocess
 import sys
 import tempfile
@@ -1345,6 +1346,13 @@ def main() -> None:
     else:
         print("Trusted-local preview mode: generated code will run on this machine.")
     print("Type an app description and click Build. Ctrl+C to stop.")
+
+    # A plain SIGTERM (how ./scripts/omnistack.sh stops the Studio) would end the process without
+    # running the cleanup below, leaving template previews (their own process groups) running.
+    def _terminate(signum, frame):  # noqa: ANN001, ARG001
+        raise KeyboardInterrupt
+
+    signal.signal(signal.SIGTERM, _terminate)
     try:
         server.serve_forever()
     except KeyboardInterrupt:

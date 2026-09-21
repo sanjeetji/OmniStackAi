@@ -1,17 +1,22 @@
-task_id: R-526
+task_id: R-527
 status: completed
 phase: MVP
 tracker_row: null
-started_at: "2026-09-21"
+started_at: "2026-09-22"
 completed_at: "2026-09-22"
 objective: >-
-  RideNow template part 1/4: services/api (TypeScript on Node >= 22.18, Hono + pg), migrations,
-  deterministic demo seed (generator shipped), trip state machine, dispatch with simulated drivers,
-  fares/surge/promos, wallet ledger + mock payments, SSE, ratings, support, audit, OpenAPI; unit tests
-  (node --test, offline) + live workflow test. Built under templates/catalog/_ride-now (hidden draft).
+  RideNow part 2/4: apps/rider (landing, auth, book, live trip + receipt/rating, trips, wallet,
+  places, promos, account, help + threads, notifications) and packages/shared (typed API client with
+  refresh, types, formatters, SSE hook, offline SVG city map).
 allowed_paths:
   - templates/catalog/_ride-now/
   - services/agent-engine/tests/test_template_ride_now.py
+  - services/agent-engine/src/omnistackai_agent_engine/localrun/multiapp.py
+  - services/agent-engine/src/omnistackai_agent_engine/studio/preview.py
+  - services/agent-engine/src/omnistackai_agent_engine/studio/live_serve.py
+  - services/agent-engine/tests/test_localrun_multiapp.py
+  - services/agent-engine/tests/test_studio_preview_multiapp.py
+  - apps/console-web/app/preview/[projectId]/[[...path]]/route.ts
   - scripts/test.sh
   - .ai/
   - PROJECT_STATE.md
@@ -20,19 +25,19 @@ allowed_paths:
   - docs/RESUME_PROMPT.md
 forbidden_changes:
   - Template stays hidden (_ride-now) until R-529
-  - No real credentials; mock providers only; demo OTP only in preview
+  - No external map tiles or keys; no secrets
   - task verify stays offline with 0 model calls
 required_gates:
-  - node --test unit tests (offline, via agent-engine suite)
-  - live: fresh DB migrations + seed + workflow test against the running API
+  - tsc + next build (scratch install); shared unit tests offline
+  - live multi-app preview (api + rider) pages 200 + scripted journey
   - task verify / lint / security:quick / env:check
 model_tool_trace:
   routing: deterministic_only
   local_calls: 0
   cloud_calls: 0
 evidence:
-  typecheck: "tsc strict exit 0"
-  unit: "20/20 (found and fixed a money rounding bug)"
-  live: "fresh DB: migrations + seed load, ledger integrity 0 errors; workflow 4/4 against the running API"
-  stage_0_verify: "task verify 3971 OK"
-next_action: R-527 RideNow rider web app (apps/rider) + packages/shared
+  build: "shared + rider tsc exit 0; next build 15 routes"
+  live: "preview ready 13s; 14 pages 200 via proxy; workflow 4/4; SSE through proxy; restart x2 clean"
+  platform_fixes: "preview processes reaped + SIGTERM clean shutdown; proxy origin rewrite for Next 16 dev origins (LAN 403 -> 200)"
+  stage_0_verify: "task verify 3974 OK; smoke-core 17/17"
+next_action: R-528 RideNow driver PWA (apps/driver)

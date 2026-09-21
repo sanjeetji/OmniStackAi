@@ -5,8 +5,10 @@ founder_stage: 0
 current_task: null
 current_status: ready
 branch: ai/R-517-node-backend
-last_completed_task: R-526
+last_completed_task: R-527
 last_completed_task_summary: >-
+  Completed R-527 (2026-09-22): RideNow part 2/4. packages/shared (typed API client, SSE hook, formatters, offline SVG Bengaluru map) and apps/rider (Next 16/React 19/Tailwind 4, 15 routes from landing to live trip, wallet and help threads). Live in the preview: pages 200, workflow 4/4, SSE through the proxy. Fixed two platform bugs found live: previews orphaned by Studio restarts (reaper + SIGTERM shutdown), and Next 16 dev-origin 403 from LAN devices (proxy origin rewrite).
+_prior_last_completed_task_summary_R526: >-
   Completed R-526 (2026-09-22): RideNow part 1/4. TypeScript API (Hono + pg on Node >= 22.18): trip state machine, dispatch with simulated drivers, upfront fares/surge/promos, ledger wallets, mock payments/SMS/maps, SSE, ratings, support, admin, OpenAPI. 5 migrations and a deterministic seed (430 trips, balanced ledger). Unit 20/20 and live workflow 4/4. Hidden draft at templates/catalog/_ride-now.
 _prior_last_completed_task_summary_R525: >-
   Completed R-525 (2026-09-21): T-4 code-edit agent. Template projects are edited by chat: select files, then line-delimited edit blocks, validate/apply, verify (tsc, node --check, JSON, manifest, base-path links, duplicate structure) with one repair round or a full rollback, then commit touched paths only. Live: add, remove and DB-migration edits all verified in the running preview.

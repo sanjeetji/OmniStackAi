@@ -80,7 +80,7 @@ class MultiAppPreviewManagerTests(unittest.TestCase):
         session = FakeSession()
         received: dict = {}
 
-        def fake_start(plan, *, on_phase, on_app_ready, log_callback, cancelled):  # noqa: ANN001
+        def fake_start(plan, *, on_phase, on_app_ready, log_callback, cancelled, **_):  # noqa: ANN001
             received["env"] = dict(plan.apps[0].env)
             gate.wait(5)
             on_phase("install")

@@ -336,5 +336,48 @@ class StartMultiAppTests(unittest.TestCase):
         self.assertIn("stopped", str(error.exception))
 
 
+class StaleProcessReaperTests(unittest.TestCase):
+    """R-527 live finding: after a Studio restart, the previous preview's `next dev` kept running
+    (its own process group) and Next 16 refused the new start. Sessions now record their process
+    groups, and the next start of the same project clears survivors."""
+
+    def test_pid_file_is_written_and_removed_on_stop(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            repo = _make_repo(root / "repo")
+            (repo / "server.py").write_text(_SERVER, encoding="utf-8")
+            pid_file = root / "preview-pids.json"
+            plan = build_multiapp_plan(repo, MANIFEST, project_id=PROJECT, ports=allocate_ports(3))
+            apps = tuple(dataclasses.replace(a, command=(sys.executable, str(repo / "server.py"), "/")) for a in plan.apps)
+            session = start_multiapp(dataclasses.replace(plan, apps=apps, setup=()), health_timeout_seconds=20, pid_file=pid_file)
+            recorded = json.loads(pid_file.read_text(encoding="utf-8"))
+            self.assertEqual(sorted(recorded), sorted(p.pid for p in session.processes.values()))
+            session.stop()
+            self.assertFalse(pid_file.exists())
+
+    def test_reap_kills_recorded_node_like_groups_only(self) -> None:
+        import subprocess
+
+        from omnistackai_agent_engine.localrun.multiapp import reap_stale_processes
+
+        with tempfile.TemporaryDirectory() as tmp:
+            pid_file = Path(tmp) / "preview-pids.json"
+            # A stand-in for an orphaned `next dev`: a process named node in its own session.
+            node_like = subprocess.Popen(["/bin/sh", "-c", "exec -a node sleep 300"], start_new_session=True)
+            unrelated = subprocess.Popen(["sleep", "300"], start_new_session=True)
+            try:
+                pid_file.write_text(json.dumps([node_like.pid, unrelated.pid, 999999]), encoding="utf-8")
+                killed = reap_stale_processes(pid_file)
+                self.assertEqual(killed, [node_like.pid])
+                node_like.wait(timeout=5)
+                self.assertIsNone(unrelated.poll(), "a process that is not node/pnpm/next is never killed")
+                self.assertFalse(pid_file.exists())
+            finally:
+                for proc in (node_like, unrelated):
+                    if proc.poll() is None:
+                        proc.kill()
+                        proc.wait(timeout=5)
+
+
 if __name__ == "__main__":
     unittest.main()

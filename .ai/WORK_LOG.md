@@ -1,5 +1,11 @@
 # Work Log
 
+## 2026-09-22 — R-527 (RideNow part 2/4: rider app + shared package)
+
+- The rider product: landing page, sign-in (email or OTP), map-first booking with fares for every vehicle, live trip with a moving car, PIN, cancel, receipt and rating, history, wallet with card top-up, saved places, promos, account, help-centre threads and notifications. The shared package adds a typed client with token refresh, an SSE hook and an offline SVG city map.
+- Live testing found two platform bugs, both fixed: template previews survived Studio restarts (so Next 16 refused to start again), and Next 16 blocked dev assets for LAN devices (403).
+- Evidence: tsc + next build clean. Live preview: pages 200, workflow 4/4, SSE through the proxy, clean restarts. `task verify` 3,974 OK. Smoke 17/17.
+
 ## 2026-09-22 — R-526 (RideNow part 1/4: API, database, demo data)
 
 - RideNow's backend: a TypeScript API (no build step on Node 22.18+) with the full ride-hailing domain: dispatch that prefers real drivers and uses simulated demo drivers, a PIN-gated trip state machine, upfront fares with surge and promos, a balanced wallet ledger with commission, refunds and payouts, SSE realtime, support and an admin audit trail.

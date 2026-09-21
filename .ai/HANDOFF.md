@@ -1,9 +1,12 @@
 # Current Handoff
 
-Task ID: R-526
+Task ID: R-527
 Status: done
 Phase: MVP
 Branch: `ai/R-517-node-backend`
+
+> **R-527 Completed (2026-09-22): RideNow rider app + shared package.** Also fixed preview processes
+> orphaned by Studio restarts, and the LAN dev-origin 403. **Next:** R-528, the driver PWA.
 
 > **R-526 Completed (2026-09-22): RideNow API, database and demo data** (hidden draft
 > `templates/catalog/_ride-now`). The master plan for all four apps is in `.ai/tasks/R-526.md`.

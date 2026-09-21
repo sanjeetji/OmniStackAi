@@ -232,6 +232,22 @@ async function proxyMultiApp(
       headers.set(key, value);
     }
   });
+  if (app.kind !== "api") {
+    // Next.js 16 dev servers refuse dev assets to other origins (allowedDevOrigins). The browser's
+    // origin here is the console (possibly a LAN address such as a phone uses), so the app would
+    // render but never hydrate. The console has already checked the session and project, so the
+    // request is presented as the app's own local origin.
+    if (headers.has("origin")) headers.set("origin", target.origin);
+    const referer = headers.get("referer");
+    if (referer) {
+      try {
+        const parsed = new URL(referer);
+        headers.set("referer", `${target.origin}${parsed.pathname}${parsed.search}`);
+      } catch {
+        headers.delete("referer");
+      }
+    }
+  }
 
   let upstream: Response;
   try {

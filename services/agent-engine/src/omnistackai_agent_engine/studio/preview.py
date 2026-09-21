@@ -14,6 +14,7 @@ import os
 import time
 from typing import Any, Callable, Mapping
 import urllib.parse
+from pathlib import Path
 
 from ..localrun import LocalAppSession, start_preview_app
 from ..localrun.multiapp import (
@@ -1129,6 +1130,9 @@ class StudioPreviewManager:
                     on_app_ready=_app_ready,
                     log_callback=_log,
                     cancelled=lambda: ws_sess.cancelled,
+                    # Next to the repo, not in it: survivors of a Studio restart are cleared on the
+                    # next start of this project (R-527).
+                    pid_file=Path(repo_dir).parent / ".preview-pids.json",
                 )
             except Exception as error:
                 message = str(error)

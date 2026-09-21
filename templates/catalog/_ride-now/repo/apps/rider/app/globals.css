@@ -1,0 +1,67 @@
+@import "tailwindcss";
+@source "../../../packages/shared/src";
+
+/* RideNow rider: light, bold, map-first. Ink with RideNow amber for primary actions. */
+@theme {
+  --font-sans: var(--font-jakarta), ui-sans-serif, system-ui, sans-serif;
+  --color-ink: #0b1b2b;
+  --color-ink-soft: #334155;
+  --color-muted: #64748b;
+  --color-line: #e6e8ec;
+  --color-canvas: #f7f7f4;
+  --color-card: #ffffff;
+  --color-amber: #ffb020;
+  --color-amber-deep: #e59400;
+  --color-amber-soft: #fff4dc;
+  --color-teal: #0f766e;
+  --color-teal-soft: #e6f4f2;
+  --color-danger: #dc2626;
+  --color-danger-soft: #fdecec;
+  --color-success: #16a34a;
+  --color-success-soft: #e8f6ed;
+  --radius-card: 1.25rem;
+  --shadow-card: 0 1px 2px rgb(11 27 43 / 0.04), 0 8px 24px -12px rgb(11 27 43 / 0.18);
+  --shadow-float: 0 18px 50px -18px rgb(11 27 43 / 0.35);
+}
+
+:root {
+  --map-land: #eef0e8;
+  --map-water: #c7e3f4;
+  --map-park: #d6e9cc;
+  --map-road: #ffffff;
+  --map-road-major: #ffe3a3;
+  --map-label: #7b8494;
+  --map-route: #0b1b2b;
+  --map-pickup: #16a34a;
+  --map-drop: #0b1b2b;
+  --map-car: #0b1b2b;
+  --map-label-bg: #0b1b2b;
+}
+
+html {
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+body {
+  background: var(--color-canvas);
+  color: var(--color-ink);
+}
+
+@keyframes rn-pulse {
+  0%, 100% { transform: scale(1); opacity: 0.55; }
+  50% { transform: scale(1.35); opacity: 0.15; }
+}
+
+@keyframes rn-rise {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: none; }
+}
+
+.rn-rise {
+  animation: rn-rise 0.45s cubic-bezier(0.2, 0.7, 0.2, 1) both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .rn-rise { animation: none; }
+}

@@ -4,6 +4,10 @@ Last updated: 2026-09-21
 ## Current Phase
 Stage 0 (Founder Build Sequence, Brief Section 91) — BASIC/MVP
 
+> **R-527 (2026-09-22): RideNow part 2/4.** The rider web app (15 routes) and shared package are
+> built and verified live in the preview. Two preview bugs affecting every template are fixed
+> (orphaned processes after restarts, LAN dev-origin 403).
+
 > **R-526 (2026-09-22): RideNow part 1/4.** The first real template's API, database and demo data
 > are built and tested live (workflow 4/4). The rider, driver and admin apps follow in R-527 to
 > R-529.

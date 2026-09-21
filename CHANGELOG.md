@@ -1,5 +1,7 @@
 # Changelog
 
+2026-09-22  R-527  RideNow template part 2/4: `packages/shared` (typed API client with token refresh, SSE hook, formatters, offline SVG Bengaluru map) and `apps/rider` on Next 16 / React 19 / Tailwind 4 (landing, auth, booking, live trip, receipt and rating, trips, wallet, places, promos, account, help threads, notifications). Platform: template previews no longer outlive a Studio restart (SIGTERM clean shutdown + recorded process groups reaped), and the preview proxy presents template UI requests as their own origin so Next 16 serves dev assets to LAN devices.
+
 2026-09-22  R-526  RideNow template part 1/4 (hidden draft): TypeScript API on Hono + pg with a trip state machine, real-driver-first dispatch with simulated demo drivers, upfront fares with surge and promos, ledger wallets (commission, refunds, payouts), mock payments/SMS/maps, SSE realtime, ratings, support, admin operations and OpenAPI; 5 migrations; deterministic seed (430 trips, balanced ledger); 20 unit tests run offline plus a live 4-scenario workflow test.
 
 2026-09-21  R-525  T-4 code-edit agent: template projects are edited by chat. It selects files, emits line-delimited WRITE/REPLACE/DELETE blocks, validates and applies them (paths, sizes, exact single matches), verifies (tsc, node --check, JSON, omnistack.json, base-path-safe links, no duplicated module structure) with one repair round or a full rollback, and commits only the touched paths. Edit failures return 422 with nothing saved. The Studio composer is enabled for template projects.

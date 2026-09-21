@@ -45,6 +45,17 @@ class RideNowApiTests(unittest.TestCase):
         self.assertIsNotNone(passed)
         self.assertGreaterEqual(int(passed.group(1)), 20)
 
+    def test_shared_package_tests_pass(self) -> None:
+        shared = API.parents[1] / "packages" / "shared"
+        if not shared.is_dir():
+            self.skipTest("packages/shared arrives with R-527")
+        tests = sorted(str(p.relative_to(shared)) for p in (shared / "test").glob("*.test.ts"))
+        result = subprocess.run(
+            ["node", "--test", *tests], cwd=str(shared), capture_output=True, text=True, timeout=120, check=False,
+            env={"PATH": os.environ.get("PATH", ""), "HOME": os.environ.get("HOME", "")},
+        )
+        self.assertEqual(result.returncode, 0, result.stdout[-2000:] + result.stderr[-1000:])
+
     def test_seed_matches_its_generator(self) -> None:
         result = subprocess.run(
             ["node", "scripts/generate-seed.mjs"], cwd=str(API), capture_output=True, timeout=180, check=False,

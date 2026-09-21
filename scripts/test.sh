@@ -2185,4 +2185,23 @@ if [[ ! -f "$agent_engine_root/tests/test_template_ride_now.py" ]]; then
   exit 1
 fi
 
+# R-527 (Phase T, T-6 part 2 - RideNow rider web app, shared package, preview fixes):
+ride_now_repo="$(dirname "$(dirname "$ride_now_api")")"
+for required in apps/rider/app/page.tsx "apps/rider/app/(app)/ride/page.tsx" "apps/rider/app/(app)/trip/[id]/page.tsx" \
+  "apps/rider/app/(app)/wallet/page.tsx" "apps/rider/app/(app)/help/[id]/page.tsx" packages/shared/src/api.ts packages/shared/src/city-map.tsx; do
+  if [[ ! -f "$ride_now_repo/$required" ]]; then
+    printf 'R-527 RideNow file missing: %s\n' "$required"
+    exit 1
+  fi
+done
+if ! rg -qF 'def reap_stale_processes(' "$agent_engine_root/src/omnistackai_agent_engine/localrun/multiapp.py" \
+  || ! rg -qF 'signal.signal(signal.SIGTERM, _terminate)' "$agent_engine_root/src/omnistackai_agent_engine/studio/live_serve.py"; then
+  printf 'R-527 template previews must not outlive a Studio restart.\n'
+  exit 1
+fi
+if ! rg -qF 'headers.set("origin", target.origin)' "$repo_root/apps/console-web/app/preview/[projectId]/[[...path]]/route.ts"; then
+  printf 'R-527 the preview proxy must present template UI requests as their own origin (Next 16 dev origins).\n'
+  exit 1
+fi
+
 printf 'Repository contract tests passed.\n'

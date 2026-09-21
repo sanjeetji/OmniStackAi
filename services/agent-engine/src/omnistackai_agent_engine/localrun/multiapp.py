@@ -369,14 +369,28 @@ def base_environment(*, for_setup: bool = False, source: Mapping[str, str] | Non
 
 
 class MultiAppSession:
-    """The running processes of one multi-app project; each app is its own process group."""
+    """The running processes of one multi-app project; each app is its own process group.
 
-    def __init__(self, plan: MultiAppPlan) -> None:
+    With a `pid_file`, the process-group ids are recorded while the session runs, so a later start
+    can clear survivors if this process died without stopping them (R-527).
+    """
+
+    def __init__(self, plan: MultiAppPlan, pid_file: Path | None = None) -> None:
         self.plan = plan
         self.processes: dict[str, subprocess.Popen] = {}
         self.ready: dict[str, bool] = {app.id: False for app in plan.apps}
+        self.pid_file = pid_file
         self._stopped = False
         self._lock = threading.Lock()
+
+    def record_pids(self) -> None:
+        if self.pid_file is None:
+            return
+        try:
+            self.pid_file.parent.mkdir(parents=True, exist_ok=True)
+            self.pid_file.write_text(json.dumps(sorted(p.pid for p in self.processes.values())), encoding="utf-8")
+        except OSError:
+            pass
 
     def is_alive(self) -> bool:
         if self._stopped or not self.processes:
@@ -412,6 +426,11 @@ class MultiAppSession:
                     process.stdout.close()
                 except OSError:
                     pass
+        if self.pid_file is not None:
+            try:
+                self.pid_file.unlink()
+            except OSError:
+                pass
 
 
 def _signal_group(process: subprocess.Popen, sig: signal.Signals) -> None:
@@ -419,6 +438,63 @@ def _signal_group(process: subprocess.Popen, sig: signal.Signals) -> None:
         os.killpg(process.pid, sig)
     except (ProcessLookupError, PermissionError, OSError):
         pass
+
+
+_OUR_COMMANDS = re.compile(r"(^|/)(node|pnpm|npm|next-server|next)(\s|$|\b)")
+
+
+def reap_stale_processes(pid_file: Path | None) -> list[int]:
+    """Kill process groups a previous session recorded but never stopped (the Studio was restarted
+    or killed). Only groups still running node, pnpm or next are touched, so a reused pid that now
+    belongs to something else is left alone. Returns the process-group ids that were killed."""
+
+    if pid_file is None or not pid_file.is_file():
+        return []
+    try:
+        recorded = [int(pid) for pid in json.loads(pid_file.read_text(encoding="utf-8"))]
+    except (OSError, ValueError, TypeError):
+        recorded = []
+    try:
+        listing = subprocess.run(["ps", "-A", "-o", "pgid=,args="], capture_output=True, text=True, check=False).stdout
+    except OSError:
+        listing = ""
+    groups: dict[int, list[str]] = {}
+    for line in listing.splitlines():
+        parts = line.strip().split(None, 1)
+        if len(parts) == 2 and parts[0].isdigit():
+            groups.setdefault(int(parts[0]), []).append(parts[1])
+    killed: list[int] = []
+    for pgid in recorded:
+        commands = groups.get(pgid, [])
+        if commands and any(_OUR_COMMANDS.search(cmd) for cmd in commands):
+            _signal_group_id(pgid, signal.SIGTERM)
+            killed.append(pgid)
+    if killed:
+        deadline = time.time() + 5
+        while time.time() < deadline and any(_group_alive(pgid) for pgid in killed):
+            time.sleep(0.1)
+        for pgid in killed:
+            _signal_group_id(pgid, signal.SIGKILL)
+    try:
+        pid_file.unlink()
+    except OSError:
+        pass
+    return killed
+
+
+def _signal_group_id(pgid: int, sig: signal.Signals) -> None:
+    try:
+        os.killpg(pgid, sig)
+    except (ProcessLookupError, PermissionError, OSError):
+        pass
+
+
+def _group_alive(pgid: int) -> bool:
+    try:
+        os.killpg(pgid, 0)
+        return True
+    except (ProcessLookupError, PermissionError, OSError):
+        return False
 
 
 def _run_setup_step(step: RunStep) -> None:
@@ -496,10 +572,12 @@ def start_multiapp(
     health_timeout_seconds: float = 240.0,
     cancelled: Callable[[], bool] | None = None,
     run_step: Callable[[RunStep], None] = _run_setup_step,
+    pid_file: Path | None = None,
 ) -> MultiAppSession:
     """Set up and start every app; return only when all are ready. Cleans up on any failure."""
 
-    session = MultiAppSession(plan)
+    reap_stale_processes(pid_file)
+    session = MultiAppSession(plan, pid_file)
 
     def check_cancelled() -> None:
         if cancelled is not None and cancelled():
@@ -525,6 +603,7 @@ def start_multiapp(
         phase("start")
         for app in plan.apps:
             session.processes[app.id] = _launch(app, log_callback)
+        session.record_pids()
 
         deadline = time.time() + health_timeout_seconds
         pending = list(plan.apps)
