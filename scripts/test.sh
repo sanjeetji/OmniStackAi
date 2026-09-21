@@ -2223,4 +2223,21 @@ if ! rg -qF 'driver payouts: one at a time' "$ride_now_api/test/workflow.test.ts
   exit 1
 fi
 
+# R-529 (Phase T handoff document and draft-template demo):
+if [[ ! -f "$repo_root/R_&_D/OmniStackAI_Template_Marketplace_Plan_v1.md" ]] \
+  || ! rg -qF '## 5. The publish checklist' "$repo_root/R_&_D/OmniStackAI_Template_Marketplace_Plan_v1.md" \
+  || ! rg -qF '## 8. Demo guide' "$repo_root/R_&_D/OmniStackAI_Template_Marketplace_Plan_v1.md"; then
+  printf 'R-529 the Phase T handoff document (method, publish checklist, demo guide) is required.\n'
+  exit 1
+fi
+if [[ ! -x "$repo_root/scripts/preview-drafts.sh" ]] || ! bash -n "$repo_root/scripts/preview-drafts.sh" \
+  || ! rg -qF -- '--exclude node_modules' "$repo_root/scripts/preview-drafts.sh"; then
+  printf 'R-529 scripts/preview-drafts.sh must exist, parse, and never copy dependencies into a catalogue.\n'
+  exit 1
+fi
+if [[ -d "$repo_root/templates/catalog/_ride-now" ]] && ! python3 -c "import json,sys; d=json.load(open(sys.argv[1])); assert d['slug']=='ride-now' and {a['id'] for a in d['apps']} >= {'rider','driver','api'}" "$repo_root/templates/catalog/_ride-now/template.json"; then
+  printf 'R-529 the RideNow draft needs its template.json (slug ride-now, rider/driver/api apps).\n'
+  exit 1
+fi
+
 printf 'Repository contract tests passed.\n'

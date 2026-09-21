@@ -1,5 +1,11 @@
 # Work Log
 
+## 2026-09-22 — R-529 (Phase T handoff doc + draft demo)
+
+- The founder asked for a document to continue with any AI tool, and for a way to show the whole platform. Wrote `R_&_D/OmniStackAI_Template_Marketplace_Plan_v1.md`: the method proven on RideNow, the publish checklist, specifications for the 9 remaining templates, and a demo guide checked against the real console routes.
+- Added `scripts/preview-drafts.sh`, which lists draft templates in the marketplace without changing the repo, and saved RideNow's draft manifest into the repo. Verified live: RideNow listed, Use template, preview ready, pages 200.
+- The RideNow admin + publish task is now R-530.
+
 ## 2026-09-22 — R-528 (RideNow part 3/4: driver PWA)
 
 - The driver product: sign in or apply, go online on a map with surge zones, accept requests from the offer sheet, run the trip (arrive, PIN, complete, collect cash, rate the rider), then earnings with a daily chart, wallet payouts, history, ratings with coaching, account (vehicle, documents with expiry warnings, simulated or GPS location), help threads and notifications. Installable as a PWA.

@@ -1,31 +1,29 @@
-task_id: R-528
+task_id: R-529
 status: done
 phase: MVP
 tracker_row: null
 started_at: "2026-09-22"
 objective: >-
-  RideNow part 3/4: apps/driver PWA (dark, mobile-first): home with online switch + surge map,
-  incoming offer sheet with countdown, active trip flow (pickup, PIN, complete, cash, rate rider),
-  earnings with charts, wallet + payouts, history, ratings, account + documents, help, notifications;
-  simulated or device location reporting.
+  Phase T handoff document in R_&_D (remaining templates and tasks, tool-agnostic), a script to
+  show draft templates in the marketplace for demos, and RideNow's draft manifest in the repo.
 allowed_paths:
-  - templates/catalog/_ride-now/
-  - services/agent-engine/tests/test_template_ride_now.py
+  - R_&_D/OmniStackAI_Template_Marketplace_Plan_v1.md
+  - scripts/preview-drafts.sh
   - scripts/test.sh
+  - templates/catalog/_ride-now/template.json
   - .ai/
   - PROJECT_STATE.md
   - CHANGELOG.md
   - docs/PROGRESS.md
   - docs/RESUME_PROMPT.md
 forbidden_changes:
-  - Template stays hidden (_ride-now) until R-529
+  - Template stays hidden (_ride-now) until R-530
   - task verify stays offline with 0 model calls
 required_gates:
-  - tsc + next build (scratch install)
-  - live preview (api + rider + driver): pages 200, manifest, cross-app ride through the proxy
-  - task verify / lint / security:quick / env:check / smoke-core.sh
+  - preview-drafts.sh lists ride-now and a live Use template + preview works
+  - task verify / lint / security:quick / env:check
 model_tool_trace:
   routing: deterministic_only
   local_calls: 0
   cloud_calls: 0
-next_action: R-529 admin/ops app, template.json, screenshots, publish ride-now, §43 checklist, 3 scripted chat edits
+next_action: R-530 RideNow admin/ops app, template.json, screenshots, publish ride-now, publish checklist, 3 scripted chat edits

@@ -1,14 +1,18 @@
 # Current Handoff
 
-Task ID: R-528
+Task ID: R-529
 Status: done
 Phase: MVP
 Branch: `ai/R-517-node-backend`
 
+> **R-529 Completed (2026-09-22): Phase T handoff doc**,
+> `R_&_D/OmniStackAI_Template_Marketplace_Plan_v1.md`: remaining templates, method, checklist and
+> demo guide. `./scripts/preview-drafts.sh` shows draft templates for demos. **Next:** R-530,
+> the RideNow admin app, then publish.
+
 > **R-528 Completed (2026-09-22): RideNow driver PWA** (13 pages, installable manifest, offer sheet,
 > trip flow with PIN, earnings, payouts, documents). Also added `/driver/zones`, a test that every
-> API path the apps call exists, and a live payout workflow test. **Next:** R-529 (admin app +
-> publish). Screenshots need a new approach; see `.ai/tasks/R-528.md`.
+> API path the apps call exists, and a live payout workflow test. Screenshots need a new approach; see `.ai/tasks/R-528.md`.
 
 > **R-527 Completed (2026-09-22): RideNow rider app + shared package.** Also fixed preview processes
 > orphaned by Studio restarts, and the LAN dev-origin 403. **Next:** R-528, the driver PWA.

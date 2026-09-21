@@ -1,5 +1,7 @@
 # Changelog
 
+2026-09-22  R-529  Phase T handoff document (`R_&_D/OmniStackAI_Template_Marketplace_Plan_v1.md`: template method, publish checklist, specs for the 9 remaining templates, demo guide). `scripts/preview-drafts.sh` shows draft templates in the marketplace for demos. RideNow's draft `template.json` is now in the repo.
+
 2026-09-22  R-528  RideNow template part 3/4: `apps/driver`, an installable dark PWA (sign in, apply, home with online switch and surge-zone map, offer sheet, trip flow with PIN, cash or wallet and rider rating, earnings chart, wallet payouts, history, ratings, account with documents and location mode, help threads, notifications). API: `GET /driver/zones`. Tests: every API path the apps call must exist (offline), and a live driver payout workflow. Nested page titles fixed in both apps.
 
 2026-09-22  R-527  RideNow template part 2/4: `packages/shared` (typed API client with token refresh, SSE hook, formatters, offline SVG Bengaluru map) and `apps/rider` on Next 16 / React 19 / Tailwind 4 (landing, auth, booking, live trip, receipt and rating, trips, wallet, places, promos, account, help threads, notifications). Platform: template previews no longer outlive a Studio restart (SIGTERM clean shutdown + recorded process groups reaped), and the preview proxy presents template UI requests as their own origin so Next 16 serves dev assets to LAN devices.
