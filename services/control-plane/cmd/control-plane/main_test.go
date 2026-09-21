@@ -47,6 +47,7 @@ func TestNewMuxRoutesAreReachable(t *testing.T) {
 		{http.MethodGet, "/connectors"},
 		{http.MethodGet, "/templates"},
 		{http.MethodGet, "/templates/ride-now"},
+		{http.MethodGet, "/templates/ride-now/assets/media/cover.png"},
 		{http.MethodPost, "/templates/ride-now/use"},
 		{http.MethodGet, "/projects/abc/template"},
 	}

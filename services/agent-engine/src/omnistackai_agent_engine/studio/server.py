@@ -472,6 +472,18 @@ def _make_handler(
             except TemplateNotFoundError as error:
                 self._send_json(404, {"error": str(error)})
 
+        def _handle_template_asset(self, slug: str, rel: str) -> None:
+            """GET /api/templates/{slug}/assets/{path}: a declared cover or screenshot (R-523)."""
+            if template_catalog is None:
+                self._send_json(404, {"error": "the template catalogue is not enabled"})
+                return
+            try:
+                path, content_type = template_catalog.asset(slug, rel)
+            except TemplateNotFoundError:
+                self._send_json(404, {"error": "asset not found"})
+                return
+            self._send(200, content_type, path.read_bytes())
+
         def _handle_workspace_from_template(self, ws_id: str) -> None:
             """POST /api/workspaces/{id}/from-template {slug} (R-519): the user's own copy."""
             data = self._read_json_body()
@@ -1119,6 +1131,9 @@ def _make_handler(
                     self._send_json(200, history_fn())
             elif self.path == "/api/templates":
                 self._handle_templates_list()
+            elif self.path.startswith("/api/templates/") and "/assets/" in self.path:
+                slug, _, rel = self.path[len("/api/templates/"):].partition("/assets/")
+                self._handle_template_asset(unquote(slug), unquote(rel.split("?", 1)[0]))
             elif self.path.startswith("/api/templates/") and "/" not in unquote(self.path[len("/api/templates/"):]):
                 self._handle_template_detail(unquote(self.path[len("/api/templates/"):]))
             elif self.path == "/api/solution-packs":

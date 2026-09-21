@@ -2,12 +2,13 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { LayoutDashboard, Layers, Settings2, Sparkles } from "lucide-react";
+import { LayoutDashboard, LayoutTemplate, Layers, Settings2, Sparkles } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const ITEMS = [
   { href: "/", label: "Home", icon: LayoutDashboard },
   { href: "/studio", label: "Studio", icon: Sparkles },
+  { href: "/templates", label: "Templates", icon: LayoutTemplate },
   { href: "/settings", label: "Settings", icon: Settings2 },
   { href: "/fabric", label: "Fabric", icon: Layers },
 ] as const;

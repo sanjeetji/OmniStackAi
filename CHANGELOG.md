@@ -1,5 +1,7 @@
 # Changelog
 
+2026-09-21  R-523  T-3 Template marketplace in the console: `/templates` (search, category filters, cards, empty state) and `/templates/[slug]` (apps, features, roles, demo logins, data, integrations, stack, screenshots) with a Use template dialog that opens the new project in the Studio; Templates nav item and home entry; the Studio explains template projects; template covers/screenshots served declared-only through agent-engine -> control-plane -> console.
+
 2026-09-21  R-522  Google (Gemini) provider runs builds. The default cloud safe-input budget now fits beside the output (Google's 8,192 output + 120,000 input overflowed the 128,000 window, so it could never bootstrap), and 429 plus temporary 502/503/504 are retried with bounded backoff in `generate` and when opening a stream (500 still fails at once).
 
 2026-09-21  R-521  Core-loop hotfix: generated apps run again. Generated `components/toast.tsx` syntax and fallback type (every home page returned 500), leaked Python `ir.roles` and the wrong `register()` call on the sign-up page, seed labels in uuid columns mapped to stable UUIDs (preview seeding aborted), and the Python auth router moved to the app's psycopg helper (it imported a nonexistent `get_db_pool`). Self-registration always gets the default role, password reset by email alone returns 501, the preview proxy buffers request bodies (401 was surfacing as 502), a shadowed dead function was removed (output byte-identical), and `smoke-core.sh` checks the generated preview.

@@ -64,6 +64,13 @@ export default async function HomePage() {
           keep changing it.
         </p>
         <HomeComposer className="mt-5 max-w-2xl" />
+        <p className="mt-3 text-sm text-muted-foreground">
+          Or{" "}
+          <Link href="/templates" className="font-medium text-foreground underline-offset-4 hover:underline">
+            start from a template
+          </Link>
+          : a complete app for your industry that you can use as is or reshape.
+        </p>
         <HomeProjects />
       </section>
 

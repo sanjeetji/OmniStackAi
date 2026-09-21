@@ -20,6 +20,7 @@ import {
   Square,
   TriangleAlert,
   X,
+  LayoutTemplate,
 } from "lucide-react";
 import type {
   BuildEditResponse,
@@ -108,9 +109,13 @@ async function fetchProjectFiles(id: string): Promise<string[]> {
 export default function StudioChat({
   initialCreditBalance,
   initialProjectId,
+  startedFromTemplate,
 }: {
   initialCreditBalance: number;
   initialProjectId?: string;
+  /** Set when the project was created from a marketplace template (R-523). Chat edits for these
+   * projects arrive with the code-edit agent, so the composer explains that instead of failing. */
+  startedFromTemplate?: { name: string; version: string };
 }) {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -566,7 +571,7 @@ export default function StudioChat({
   async function handleSend(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const trimmed = prompt.trim();
-    if ((!trimmed && attachments.length === 0) || submitting) return;
+    if ((!trimmed && attachments.length === 0) || submitting || startedFromTemplate) return;
 
     if (isListening) {
       recognitionRef.current?.stop();
@@ -1138,7 +1143,17 @@ export default function StudioChat({
         )}
 
         <form ref={formRef} className="border-t border-border/60 p-3" onSubmit={handleSend}>
-          {activeProjectId !== null ? (
+          {startedFromTemplate ? (
+            <div className="mb-2 flex items-start gap-2 rounded-lg border border-border/60 bg-muted/50 px-3 py-2 text-xs">
+              <LayoutTemplate className="mt-0.5 size-3.5 shrink-0 text-muted-foreground" aria-hidden="true" />
+              <p className="text-pretty text-muted-foreground">
+                Started from the{" "}
+                <span className="font-medium text-foreground">{startedFromTemplate.name}</span>{" "}
+                template (v{startedFromTemplate.version}). This project is your own copy: run it in
+                Preview and browse its code. Changing it by chat is coming next.
+              </p>
+            </div>
+          ) : activeProjectId !== null ? (
             <p className="mb-2 px-1 text-xs text-muted-foreground">
               Editing{" "}
               <span className="font-medium text-foreground">
@@ -1366,7 +1381,7 @@ export default function StudioChat({
               value={prompt}
               onChange={handlePromptChange}
               onKeyDown={handlePromptKeyDown}
-              disabled={submitting}
+              disabled={submitting || Boolean(startedFromTemplate)}
               rows={1}
               className="field-sizing-content max-h-40 min-h-9 flex-1 resize-none bg-transparent px-2 py-1.5 text-sm outline-none placeholder:text-muted-foreground disabled:opacity-60"
             />
@@ -1428,7 +1443,9 @@ export default function StudioChat({
                 type="submit"
                 size="icon"
                 aria-label="Send"
-                disabled={prompt.trim().length === 0 && attachments.length === 0}
+                disabled={
+                  Boolean(startedFromTemplate) || (prompt.trim().length === 0 && attachments.length === 0)
+                }
                 className="size-8 rounded-lg"
               >
                 <ArrowUp aria-hidden="true" />

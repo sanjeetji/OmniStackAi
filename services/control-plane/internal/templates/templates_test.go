@@ -136,6 +136,12 @@ func (e *fakeEngine) handler(t *testing.T) http.Handler {
 		switch {
 		case r.Method == http.MethodGet && r.URL.Path == "/api/templates":
 			_, _ = io.WriteString(w, `{"templates":[{"slug":"ride-now","name":"RideNow"}]}`)
+		case r.Method == http.MethodGet && r.URL.Path == "/api/templates/ride-now/assets/media/cover.png":
+			w.Header().Set("Content-Type", "image/png")
+			_, _ = io.WriteString(w, "PNGDATA")
+		case r.Method == http.MethodGet && strings.Contains(r.URL.Path, "/assets/"):
+			w.WriteHeader(http.StatusNotFound)
+			_, _ = io.WriteString(w, `{"error":"asset not found"}`)
 		case r.Method == http.MethodGet && r.URL.Path == "/api/templates/ride-now":
 			_, _ = io.WriteString(w, `{"slug":"ride-now","name":"RideNow","tagline":"Ride-hailing for your city.","version":"1.0.0"}`)
 		case r.Method == http.MethodGet && strings.HasPrefix(r.URL.Path, "/api/templates/"):
@@ -349,5 +355,29 @@ func TestProjectTemplateProvenance(t *testing.T) {
 	rec = h.do(http.MethodGet, "/projects/"+id+"/template", "", false)
 	if rec.Code != http.StatusUnauthorized {
 		t.Fatalf("unauthenticated = %d, want 401", rec.Code)
+	}
+}
+
+func TestTemplateAssetsArePublicCacheableAndPassThroughContentType(t *testing.T) {
+	h := newHarness(t)
+	rec := h.do(http.MethodGet, "/templates/ride-now/assets/media/cover.png", "", false)
+	if rec.Code != http.StatusOK || rec.Body.String() != "PNGDATA" {
+		t.Fatalf("asset = %d %q", rec.Code, rec.Body.String())
+	}
+	if got := rec.Header().Get("Content-Type"); got != "image/png" {
+		t.Fatalf("content type = %q", got)
+	}
+	if got := rec.Header().Get("Cache-Control"); !strings.Contains(got, "max-age") {
+		t.Fatalf("cache control = %q", got)
+	}
+	if got := rec.Header().Get("X-Content-Type-Options"); got != "nosniff" {
+		t.Fatalf("nosniff missing: %q", got)
+	}
+	rec = h.do(http.MethodGet, "/templates/ride-now/assets/template.json", "", false)
+	if rec.Code != http.StatusNotFound {
+		t.Fatalf("undeclared asset = %d, want 404", rec.Code)
+	}
+	if rec.Header().Get("Cache-Control") != "" {
+		t.Fatalf("a 404 must not be cached")
 	}
 }

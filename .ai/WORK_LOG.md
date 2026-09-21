@@ -1,5 +1,10 @@
 # Work Log
 
+## 2026-09-21 — R-523 (T-3 Template marketplace in the console)
+
+- `/templates` and `/templates/[slug]`, a Use template dialog that opens the new project in the Studio, a Templates nav item and home link, a Studio notice for template projects, and template covers and screenshots served declared-only (agent-engine to control-plane to console, sandboxed SVG).
+- Live: the full journey on the fixture catalogue (3-app preview in 13 s). The real catalogue shows a designed empty state until T-6. The smoke found Gemini truncating chat edits at 2,048 output tokens (R-524).
+
 ## 2026-09-21 — R-522 (Google provider runs builds)
 
 - The founder added a Google key, but the provider never bootstrapped: 120,000 safe input + 8,192 output was more than the 128,000 window. Fixed the default. Then Gemini 503s ("high demand") aborted builds because only non-streaming 429s were retried. Now 429 and 502/503/504 are paced in both paths.

@@ -57,6 +57,7 @@ func Register(mux *http.ServeMux, deps Deps) {
 	// The catalogue is public so people can browse templates before they sign up.
 	mux.HandleFunc("GET /templates", handleListTemplates(deps))
 	mux.HandleFunc("GET /templates/{slug}", handleGetTemplate(deps))
+	mux.HandleFunc("GET /templates/{slug}/assets/{path...}", handleTemplateAsset(deps))
 	mux.HandleFunc("POST /templates/{slug}/use", handleUseTemplate(deps))
 	mux.HandleFunc("GET /projects/{id}/template", handleProjectTemplate(deps))
 }
@@ -133,6 +134,43 @@ func handleListTemplates(deps Deps) http.HandlerFunc {
 func handleGetTemplate(deps Deps) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		relay(w, deps, r, "/api/templates/"+url.PathEscape(r.PathValue("slug")))
+	}
+}
+
+// handleTemplateAsset relays a template cover or screenshot (R-523). The agent-engine serves only
+// files the manifest declares. Images are public and cacheable, like the catalogue itself.
+func handleTemplateAsset(deps Deps) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		path := "/api/templates/" + url.PathEscape(r.PathValue("slug")) + "/assets/"
+		for i, segment := range strings.Split(r.PathValue("path"), "/") {
+			if i > 0 {
+				path += "/"
+			}
+			path += url.PathEscape(segment)
+		}
+		ctx, cancel := context.WithTimeout(r.Context(), catalogTimeout)
+		defer cancel()
+		request, err := http.NewRequestWithContext(ctx, http.MethodGet, deps.AgentEngineURL+path, nil)
+		if err != nil {
+			writeError(w, http.StatusInternalServerError, "could not build upstream request")
+			return
+		}
+		response, err := deps.httpClient().Do(request)
+		if err != nil {
+			deps.logger().Error("fetch template asset", "error", err)
+			writeError(w, http.StatusBadGateway, "could not reach the template catalogue")
+			return
+		}
+		defer func() { _ = response.Body.Close() }()
+		if response.StatusCode != http.StatusOK {
+			writeError(w, http.StatusNotFound, "asset not found")
+			return
+		}
+		w.Header().Set("Content-Type", response.Header.Get("Content-Type"))
+		w.Header().Set("Cache-Control", "public, max-age=3600")
+		w.Header().Set("X-Content-Type-Options", "nosniff")
+		w.WriteHeader(http.StatusOK)
+		_, _ = io.Copy(w, io.LimitReader(response.Body, maxUpstreamBody*4))
 	}
 }
 

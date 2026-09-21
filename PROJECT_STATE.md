@@ -4,6 +4,9 @@ Last updated: 2026-09-21
 ## Current Phase
 Stage 0 (Founder Build Sequence, Brief Section 91) — BASIC/MVP
 
+> **R-523 (2026-09-21): T-3 Template marketplace in the console.** Browse and search templates,
+> read a full detail page, then "Use template" to get your own project in the Studio.
+
 > **R-522 (2026-09-21): Google (Gemini) runs builds.** Fixed a token-budget bootstrap bug and
 > added paced retries for temporary 502/503/504. Builds take about 30 s instead of about 3 minutes
 > on local Ollama.

@@ -418,3 +418,50 @@ class TemplateRoutesTests(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class TemplateAssetTests(unittest.TestCase):
+    """R-523: covers and screenshots are served, but only the files the manifest declares."""
+
+    def setUp(self) -> None:
+        self._tmp = tempfile.TemporaryDirectory()
+        root = Path(self._tmp.name)
+        template = _copy_fixture(root / "catalog")
+        (template / "media" / "shot-1.png").write_bytes(b"\x89PNG\r\n\x1a\nfake")
+        _edit_manifest(template, screenshots=["media/shot-1.png"])
+        self.catalog = TemplateCatalog(root / "catalog")
+
+    def tearDown(self) -> None:
+        self._tmp.cleanup()
+
+    def test_declared_assets_resolve_with_content_type(self) -> None:
+        path, content_type = self.catalog.asset(SLUG, "media/cover.svg")
+        self.assertEqual(path.name, "cover.svg")
+        self.assertEqual(content_type, "image/svg+xml")
+        self.assertEqual(self.catalog.asset(SLUG, "media/shot-1.png")[1], "image/png")
+
+    def test_undeclared_or_escaping_paths_are_not_found(self) -> None:
+        for rel in ("template.json", "repo/README.md", "../corner-shop/template.json", "media/../template.json", ""):
+            with self.subTest(rel=rel):
+                with self.assertRaises(TemplateNotFoundError):
+                    self.catalog.asset(SLUG, rel)
+        with self.assertRaises(TemplateNotFoundError):
+            self.catalog.asset("nope", "media/cover.svg")
+
+    def test_http_route(self) -> None:
+        server = create_studio_server(lambda prompt, **_: {}, port=0, template_catalog=self.catalog)
+        threading.Thread(target=server.serve_forever, daemon=True).start()
+        try:
+            base = f"http://127.0.0.1:{server.server_port}/api/templates/{SLUG}/assets"
+            with urlopen(f"{base}/media/cover.svg", timeout=10) as response:
+                self.assertEqual(response.status, 200)
+                self.assertEqual(response.headers["Content-Type"], "image/svg+xml")
+                self.assertIn(b"<svg", response.read())
+            for bad in ("/template.json", "/repo/README.md", "/media/%2e%2e/template.json"):
+                with self.subTest(path=bad):
+                    with self.assertRaises(HTTPError) as error:
+                        urlopen(base + bad, timeout=10)
+                    self.assertEqual(error.exception.code, 404)
+        finally:
+            server.shutdown()
+            server.server_close()

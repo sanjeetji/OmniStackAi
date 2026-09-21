@@ -2127,4 +2127,27 @@ if [[ "$(rg -c '^def _forgot_password_page' "$codegen_dir/nextjs.py")" != "1" ]]
   exit 1
 fi
 
+# R-523 (Phase T, T-3 - template marketplace in the console):
+console_root="$repo_root/apps/console-web"
+for required in "app/templates/page.tsx" "app/templates/[slug]/page.tsx" "app/api/templates/[slug]/use/route.ts" \
+  "app/template-assets/[slug]/[...path]/route.ts" "components/template-use-button.tsx" "components/template-catalog.tsx"; do
+  if [[ ! -f "$console_root/$required" ]]; then
+    printf 'R-523 console file missing: %s\n' "$required"
+    exit 1
+  fi
+done
+if ! rg -qF 'href: "/templates"' "$console_root/components/app-nav.tsx"; then
+  printf 'R-523 the primary nav must link to /templates.\n'
+  exit 1
+fi
+if ! rg -qF 'def asset(' "$agent_engine_root/src/omnistackai_agent_engine/studio/templates.py" \
+  || ! rg -qF '"GET /templates/{slug}/assets/{path...}"' "$control_plane_root/internal/templates/handler.go"; then
+  printf 'R-523 template assets must be served (declared files only) through the control-plane.\n'
+  exit 1
+fi
+if ! rg -qF 'startedFromTemplate' "$console_root/app/studio/studio-chat.tsx"; then
+  printf 'R-523 the Studio must explain template projects instead of failing chat edits.\n'
+  exit 1
+fi
+
 printf 'Repository contract tests passed.\n'

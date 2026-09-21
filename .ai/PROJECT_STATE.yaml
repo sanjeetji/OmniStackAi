@@ -5,8 +5,10 @@ founder_stage: 0
 current_task: null
 current_status: ready
 branch: ai/R-517-node-backend
-last_completed_task: R-522
+last_completed_task: R-523
 last_completed_task_summary: >-
+  Completed R-523 (2026-09-21): T-3 template marketplace in the console: /templates (search, categories, cards, empty state), /templates/[slug] (apps, features, roles, demo logins, data, integrations, stack, screens, Use template dialog -> Studio), nav and home entry, Studio template notice, template assets served declared-only. Live journey verified.
+_prior_last_completed_task_summary_R522: >-
   Completed R-522 (2026-09-21): Google provider runs builds. Default safe input now fits beside the output (Google could never bootstrap), and 429/502/503/504 get bounded backoff in generate and stream open. .env model is now gemini-3-flash-preview (3.5-flash was overloaded). Smoke 17/17 on Google, build 29s.
 _prior_last_completed_task_summary_R521: >-
   Completed R-521 (2026-09-21): core-loop hotfix. Generated apps run again. Fixed toast.tsx syntax and fallback type (every home page returned 500), a leaked Python `ir.roles` and the wrong register() call on the sign-up page, seed labels in uuid columns (the preview aborted), and the Python auth router (nonexistent get_db_pool, asyncpg vs psycopg). Closed self-chosen roles and reset-by-email before they could go live, and fixed the preview proxy's 401-to-502 on streamed bodies. Smoke now checks the preview (17/17).

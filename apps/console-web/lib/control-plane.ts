@@ -2441,3 +2441,88 @@ export function removeWorkspaceMember(
 
 
 
+
+// --- Template marketplace (Phase T, T-3 / R-523) ---------------------------------------------
+
+export type TemplateAppKind = "web" | "admin" | "pwa" | "api";
+
+export interface TemplateApp {
+  id: string;
+  name: string;
+  kind: TemplateAppKind;
+  path: string;
+}
+
+export interface TemplateIntegration {
+  id: string;
+  kind: string;
+  provider: string;
+  mock: boolean;
+}
+
+/** A catalogue card. Demo logins and full role descriptions are only in `TemplateDetail`. */
+export interface TemplateSummary {
+  slug: string;
+  name: string;
+  version: string;
+  category: string;
+  tagline: string;
+  apps: TemplateApp[];
+  app_kinds: TemplateAppKind[];
+  roles: { id: string; name: string }[];
+  entities: string[];
+  features: string[];
+  integrations?: TemplateIntegration[];
+  stack: string[];
+  cover?: string;
+  screenshots?: string[];
+  digest: string;
+  file_count: number;
+}
+
+export interface TemplateDetail extends TemplateSummary {
+  description: string;
+  roles: { id: string; name: string; description: string }[];
+  demo_users: { role: string; name: string; email: string; password: string }[];
+}
+
+export interface TemplateProvenance {
+  slug: string;
+  version: string;
+  digest: string;
+  created_at: string;
+}
+
+export interface UseTemplateResponse {
+  project: Project;
+  template: TemplateProvenance;
+}
+
+/** The public template catalogue (only templates that pass validation). */
+export function listTemplates(): Promise<{ templates: TemplateSummary[] }> {
+  return callControlPlane<{ templates: TemplateSummary[] }>("/templates", {});
+}
+
+export function getTemplate(slug: string): Promise<TemplateDetail> {
+  return callControlPlane<TemplateDetail>(`/templates/${encodeURIComponent(slug)}`, {});
+}
+
+/** Creates the caller's own project copied from the template; the original is never changed. */
+export function createProjectFromTemplate(
+  token: string,
+  slug: string,
+  body: { name?: string; workspace_id?: string } = {},
+): Promise<UseTemplateResponse> {
+  return callControlPlane<UseTemplateResponse>(`/templates/${encodeURIComponent(slug)}/use`, {
+    method: "POST",
+    headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+  });
+}
+
+/** Which template a project was started from; rejects with a 404 ControlPlaneError if none. */
+export function getProjectTemplate(token: string, projectId: string): Promise<TemplateProvenance> {
+  return callControlPlane<TemplateProvenance>(`/projects/${encodeURIComponent(projectId)}/template`, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+}

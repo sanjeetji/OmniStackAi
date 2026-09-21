@@ -285,6 +285,16 @@ def validate_template(template_dir: str | os.PathLike[str]) -> list[str]:
 # --- catalogue ---------------------------------------------------------------------------------
 
 
+_ASSET_TYPES = {
+    ".png": "image/png",
+    ".jpg": "image/jpeg",
+    ".jpeg": "image/jpeg",
+    ".webp": "image/webp",
+    ".gif": "image/gif",
+    ".svg": "image/svg+xml",
+    ".avif": "image/avif",
+}
+
 _SUMMARY_KEYS = (
     "slug",
     "name",
@@ -370,6 +380,21 @@ class TemplateCatalog:
         if template is None:
             raise TemplateNotFoundError(f"template {slug!r} not found")
         return json.loads(json.dumps(template))
+
+    def asset(self, slug: str, rel_path: str) -> tuple[Path, str]:
+        """A cover or screenshot of a template: (file, content type). Only the files the manifest
+        declares can be served, so nothing else in the template directory is reachable (R-523)."""
+
+        template = self.get(slug)
+        declared = {template.get("cover")} | set(template.get("screenshots") or [])
+        declared.discard(None)
+        rel = _safe_relative(rel_path)
+        if rel is None or rel.as_posix() not in declared:
+            raise TemplateNotFoundError(f"template {slug!r} has no asset {rel_path!r}")
+        path = (self._root / slug / rel).resolve()
+        if not path.is_file() or (self._root / slug).resolve() not in path.parents:
+            raise TemplateNotFoundError(f"template {slug!r} has no asset {rel_path!r}")
+        return path, _ASSET_TYPES.get(path.suffix.lower(), "application/octet-stream")
 
     def repo_dir(self, slug: str) -> Path:
         self.get(slug)

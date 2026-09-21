@@ -1,9 +1,12 @@
 # Current Handoff
 
-Task ID: R-522
+Task ID: R-523
 Status: done
 Phase: MVP
 Branch: `ai/R-517-node-backend`
+
+> **R-523 Completed (2026-09-21): T-3 marketplace UI** (`/templates`, `/templates/[slug]`, Use
+> template, Studio notice). **Next: R-524** (chat edits truncated on Gemini), then T-4 code-edit agent.
 
 > **R-522 Completed (2026-09-21): Google (Gemini) runs builds.** `.env` uses
 > `OMNISTACKAI_GOOGLE_MODEL=gemini-3-flash-preview`. Smoke 17/17 with a 29 s build. **Next:** T-3.
