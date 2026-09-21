@@ -1,9 +1,16 @@
 # Current Handoff
 
-Task ID: R-518
+Task ID: R-519
 Status: done
 Phase: MVP
 Branch: `ai/R-517-node-backend`
+
+> **R-519 Completed (2026-09-21): T-1 Template format + registry.** Templates live in
+> `templates/catalog/<slug>/` (format: `templates/catalog/README.md`). `POST /templates/{slug}/use`
+> gives the caller their own project copy; the original is never modified. Template projects refuse
+> prompt rebuilds and IR edits until T-4. Test a catalogue locally with
+> `OMNISTACKAI_TEMPLATE_CATALOG=$PWD/services/agent-engine/tests/fixtures/templates ./scripts/omnistack.sh restart`.
+> **Next:** T-2 multi-app preview.
 
 > **R-518 Completed (2026-09-21): T-0 Stabilise the core.** See `.ai/tasks/R-518.md` for the 10 defects
 > found and fixed (the control-plane now starts, build streams complete, chat edits commit and report

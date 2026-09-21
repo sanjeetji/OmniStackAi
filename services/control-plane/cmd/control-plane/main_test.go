@@ -45,6 +45,10 @@ func TestNewMuxRoutesAreReachable(t *testing.T) {
 		{http.MethodGet, "/skills"},
 		{http.MethodGet, "/workspaces"},
 		{http.MethodGet, "/connectors"},
+		{http.MethodGet, "/templates"},
+		{http.MethodGet, "/templates/ride-now"},
+		{http.MethodPost, "/templates/ride-now/use"},
+		{http.MethodGet, "/projects/abc/template"},
 	}
 	for _, tc := range cases {
 		request := httptest.NewRequest(tc.method, tc.path, nil)

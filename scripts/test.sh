@@ -2047,4 +2047,32 @@ if rg -q 'diff\.(added_files|modified_files|deleted_files)' "$agent_engine_root/
   exit 1
 fi
 
+# R-519 (Phase T, T-1 - template format + registry: the original stays read-only, "use" makes the user's own copy):
+if [[ ! -f "$repo_root/templates/catalog/README.md" ]]; then
+  printf 'R-519 templates/catalog/README.md must document the template format.\n'
+  exit 1
+fi
+if ! rg -qF 'def instantiate_template(' "$agent_engine_root/src/omnistackai_agent_engine/studio/templates.py" \
+  || ! rg -qF '"kind": "template"' "$agent_engine_root/src/omnistackai_agent_engine/studio/templates.py"; then
+  printf 'R-519 studio/templates.py must instantiate templates into kind=template workspaces.\n'
+  exit 1
+fi
+if [[ "$(rg -c '_refuse_template_workspace\(workspace_store, ws_id' "$agent_engine_root/src/omnistackai_agent_engine/studio/live_serve.py")" != "3" ]]; then
+  printf 'R-519 prompt builds, streamed builds and IR edits must all refuse template workspaces.\n'
+  exit 1
+fi
+if ! rg -qF '"POST /templates/{slug}/use"' "$control_plane_root/internal/templates/handler.go" \
+  || ! rg -qF 'templates.Register(mux' "$control_plane_root/cmd/control-plane/main.go"; then
+  printf 'R-519 the control-plane must serve the template routes.\n'
+  exit 1
+fi
+if ! rg -qF 'CREATE TABLE IF NOT EXISTS project_templates' "$control_plane_root/migrations/000016_project_templates.up.sql"; then
+  printf 'R-519 migration 000016 must create project_templates.\n'
+  exit 1
+fi
+if [[ ! -f "$agent_engine_root/tests/fixtures/templates/corner-shop/template.json" ]]; then
+  printf 'R-519 the corner-shop test fixture template must exist.\n'
+  exit 1
+fi
+
 printf 'Repository contract tests passed.\n'

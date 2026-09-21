@@ -47,6 +47,7 @@ from .preview import StudioPreviewManager
 from .problems import ProblemsNotCheckedError, StudioProblemsStore, check_build_problems
 from .server import create_studio_server
 from .session import EditNotSupportedError, StudioSessionStore
+from .templates import TemplateCatalog, is_template_workspace
 from .workspace import StudioWorkspaceStore, WorkspaceLockedError
 
 _MICROS_PER_USD = Decimal(1_000_000)
@@ -897,6 +898,23 @@ def _open_recorded_build(build_id: str, history: StudioBuildHistory) -> dict:
     return {"status": "error", "message": "Could not open the project folder on this machine."}
 
 
+def _refuse_template_workspace(workspace_store: StudioWorkspaceStore, ws_id: str, action: str) -> None:
+    """Template projects are hand-built code, not generated from an IR (R-519).
+
+    A prompt build would replace the template's code and the IR edit path has no IR to edit, so
+    both are refused with a clear message. Chat edits for template projects arrive with the
+    code-edit agent (Phase T, T-4).
+    """
+
+    provenance = is_template_workspace(workspace_store, ws_id)
+    if provenance is not None:
+        raise EditNotSupportedError(
+            f"This project was started from the '{provenance.get('slug', 'unknown')}' template, so "
+            f"{action} is not available for it yet. Chat edits for template projects arrive with "
+            "the code-edit agent."
+        )
+
+
 def _workspace_build(
     ws_id: str,
     prompt: str,
@@ -905,6 +923,7 @@ def _workspace_build(
     preview_manager: StudioPreviewManager | None = None,
     **options,
 ) -> dict:
+    _refuse_template_workspace(workspace_store, ws_id, "rebuilding it from a prompt")
     with workspace_store.lock(ws_id):
         workspace_store.ensure_workspace(ws_id)
         repo_dir = str(workspace_store.repo_path(ws_id))
@@ -926,6 +945,7 @@ async def _workspace_build_stream(
     preview_manager: StudioPreviewManager | None = None,
     **options,
 ) -> AsyncIterator[dict]:
+    _refuse_template_workspace(workspace_store, ws_id, "rebuilding it from a prompt")
     workspace_store.clear_cancelled(ws_id)
     with workspace_store.lock(ws_id):
         workspace_store.ensure_workspace(ws_id)
@@ -952,6 +972,7 @@ async def _workspace_edit(
     api_key: str | None = None,
     **options,
 ) -> dict:
+    _refuse_template_workspace(workspace_store, ws_id, "the prompt-to-app edit")
     with workspace_store.lock(ws_id):
         ir = workspace_store.load_ir(ws_id)
         if ir is None:
@@ -1204,6 +1225,13 @@ def main() -> None:
             ),
             open_dir_fn=lambda build_id: _open_recorded_build(build_id, history),
         )
+
+    # R-519: the template catalogue (templates/catalog, or OMNISTACKAI_TEMPLATE_CATALOG). Copying a
+    # template executes nothing, so it is available in build-only mode too.
+    template_catalog = TemplateCatalog()
+    control_kwargs["template_catalog"] = template_catalog
+    for slug, problems in template_catalog.errors().items():
+        print(f"Template '{slug}' is not listed: {'; '.join(problems[:3])}", file=sys.stderr)
 
     server = create_studio_server(build, host=host, port=port, **control_kwargs)
     print(f"OmniStackAI Studio -> http://{host}:{port}")

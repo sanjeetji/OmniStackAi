@@ -1,0 +1,28 @@
+{
+  "schema_version": 1,
+  "slug": "corner-shop",
+  "name": "Corner Shop",
+  "version": "1.0.0",
+  "category": "commerce",
+  "tagline": "A small shop with a storefront, an admin panel and one API.",
+  "description": "Test fixture for the template catalogue. Not a real template.",
+  "apps": [
+    {"id": "web", "name": "Storefront", "kind": "web", "path": "apps/web"},
+    {"id": "admin", "name": "Admin", "kind": "admin", "path": "apps/admin"},
+    {"id": "api", "name": "API", "kind": "api", "path": "services/api"}
+  ],
+  "roles": [
+    {"id": "customer", "name": "Customer", "description": "Browses and buys."},
+    {"id": "admin", "name": "Admin", "description": "Runs the shop."}
+  ],
+  "entities": ["Product", "Order"],
+  "features": ["Product catalogue", "Checkout"],
+  "integrations": [{"id": "payments", "kind": "payments", "provider": "stripe", "mock": true}],
+  "demo_users": [
+    {"role": "customer", "name": "Asha Rao", "email": "asha@corner-shop.test", "password": "demo-customer-1"},
+    {"role": "admin", "name": "Leo Park", "email": "leo@corner-shop.test", "password": "demo-admin-1"}
+  ],
+  "stack": ["Next.js", "Node", "PostgreSQL"],
+  "cover": "media/cover.svg",
+  "screenshots": []
+}

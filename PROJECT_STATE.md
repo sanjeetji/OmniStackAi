@@ -4,6 +4,11 @@ Last updated: 2026-09-21
 ## Current Phase
 Stage 0 (Founder Build Sequence, Brief Section 91) — BASIC/MVP
 
+> **R-519 (2026-09-21): T-1 Template format + registry.** A template is a read-only golden repo
+> plus `template.json` in `templates/catalog/`. "Use template" creates the user's own project copy
+> (fresh git history, recorded provenance), and the original stays identical for everyone.
+> Catalogue routes are public; use and provenance need auth.
+
 > **R-518 (2026-09-21): T-0 Stabilise the core.** The core loop now works live end to end:
 > register, create from a prompt, streamed build, rename, reopen, chat edit commit, and restart
 > persistence. 10 defects fixed (startup panic, missing `/opened`, `users.full_name` SQL, 15 s stream

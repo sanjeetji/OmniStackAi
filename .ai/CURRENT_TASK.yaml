@@ -1,31 +1,28 @@
-task_id: R-518
+task_id: R-519
 status: completed
 phase: MVP
 tracker_row: null
 started_at: "2026-09-21"
 completed_at: "2026-09-21"
 objective: >-
-  T-0 Stabilise the core before Phase T (Template Marketplace): prove register -> create from a
-  prompt -> build stream -> rename -> /opened -> chat edit -> restart persistence works live, and
-  fix everything that blocks it (control-plane startup panic, missing /opened, users.full_name SQL,
-  15 s client timeout cutting build streams, console 204/name/mention_skills handling, agent-engine
-  workspace edit ProjectDiff crash, stale control-plane image in omnistack.sh).
+  T-1 Template format + registry: templates/catalog/<slug>/{template.json, repo/, media/}; strict
+  validator + digest + catalogue + instantiation in the agent-engine (studio/templates.py); control-plane
+  GET /templates, GET /templates/{slug}, POST /templates/{slug}/use, GET /projects/{id}/template with a
+  project_templates table. "Use template" creates the user's own project copy; the original stays
+  unchanged and identical for every user. Template workspaces are protected from prompt rebuilds and
+  IR edits until the code-edit agent (T-4).
 allowed_paths:
+  - services/agent-engine/src/omnistackai_agent_engine/studio/templates.py
+  - services/agent-engine/src/omnistackai_agent_engine/studio/server.py
+  - services/agent-engine/src/omnistackai_agent_engine/studio/live_serve.py
+  - services/agent-engine/tests/test_studio_templates.py
+  - services/agent-engine/tests/fixtures/templates/
+  - services/control-plane/internal/templates/
   - services/control-plane/cmd/control-plane/main.go
   - services/control-plane/cmd/control-plane/main_test.go
-  - services/control-plane/internal/projects/handler.go
-  - services/control-plane/internal/projects/projects_test.go
-  - services/control-plane/internal/projects/store.go
-  - services/control-plane/internal/workspaces/store.go
-  - services/control-plane/migrations/000015_organizations_workspaces.up.sql
-  - services/control-plane/migrations/migrations_test.go
-  - services/agent-engine/src/omnistackai_agent_engine/studio/live_serve.py
-  - services/agent-engine/tests/test_studio_edit.py
-  - apps/console-web/app/api/projects/route.ts
-  - apps/console-web/app/api/projects/[id]/build/stream/route.ts
-  - apps/console-web/lib/control-plane.ts
-  - scripts/omnistack.sh
-  - scripts/smoke-core.sh
+  - services/control-plane/migrations/000016_project_templates.up.sql
+  - services/control-plane/migrations/000016_project_templates.down.sql
+  - templates/catalog/README.md
   - scripts/test.sh
   - .ai/
   - PROJECT_STATE.md
@@ -33,28 +30,24 @@ allowed_paths:
   - docs/PROGRESS.md
   - docs/RESUME_PROMPT.md
 forbidden_changes:
-  - No new Go dependency (pgx/v5 stays the only direct dependency)
-  - No change to the prompt -> IR -> codegen path
+  - No change to the prompt -> IR -> codegen path or existing project SQL
+  - No new Go dependency (pgx/v5 only) and agent-engine stays stdlib-only
   - task verify stays offline with 0 model calls
 required_gates:
+  - focused agent-engine tests (test_studio_templates)
   - cd services/control-plane && go vet ./... && go test ./... && gofmt -l .
-  - console typecheck / lint / build
   - bash scripts/test.sh
   - task verify / task lint / task security:quick / task env:check
-  - ./scripts/smoke-core.sh (live) + restart persistence check
+  - ./scripts/smoke-core.sh (core loop stays green) + live use-template smoke
 model_tool_trace:
   routing: deterministic_only
   local_calls: 0
   cloud_calls: 0
-  note: automated gates make 0 model calls; the live smoke used local Ollama.
 evidence:
-  go_test: "21 packages ok; vet + gofmt clean"
-  agent_engine_focused: "test_studio_edit + test_studio_workspace: 18 OK"
-  contract_tests: "scripts/test.sh passed; R-518 block proven to fail on regression"
-  stage_0_verify: "task verify: 3862 tests OK"
-  console: "typecheck clean; lint 0 errors (2 pre-existing warnings); build 30/30 pages"
-  live_smoke: "smoke-core.sh 14/14 pass (build 163s, edit commit 5da064c)"
-  restart_persistence: "after restart: project intact, edit 200, 7 added / 12 modified, commit 4d6f770"
-next_action: >-
-  Ask the founder before pushing (a push also publishes the unpushed R-499..R-517 commits).
-  Then T-1: template format + registry.
+  template_tests: "test_studio_templates: 33 OK; related studio suites 145 OK"
+  go_test: "all packages ok; vet + gofmt clean"
+  contract_tests: "scripts/test.sh passed"
+  stage_0_verify: "task verify: 3895 tests OK"
+  live_use_template: "201 in 0.09s; two users get independent repos; original unchanged; edits/rebuilds refused with 400"
+  core_loop: "smoke-core.sh 14/14 (build 205s, edit commit 5ec6341)"
+next_action: T-2 multi-app preview (run a Node API + several Next apps from a template project, app switcher, demo users panel, phone frame for PWA apps)

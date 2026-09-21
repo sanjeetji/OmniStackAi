@@ -47,6 +47,14 @@ from .problems import NoWebTargetError, ProblemsNotCheckedError, ToolchainNotIns
 from .publish import evaluate_publish_readiness
 from .security import get_last_security_report, run_security_scan
 from .session import EditNotSupportedError
+from .templates import (
+    TemplateCatalog,
+    TemplateInstantiationError,
+    TemplateNotFoundError,
+    TemplateTargetNotEmptyError,
+    instantiate_template,
+    is_template_workspace,
+)
 from .tests_runner import get_last_test_report, run_project_tests
 from .workspace import StudioWorkspaceStore, WorkspaceLockedError, WorkspaceNotFoundError
 
@@ -126,6 +134,7 @@ def _make_handler(
     workspace_logs_fn: Callable[..., dict] | None = None,
     workspace_logs_stream_fn: Callable[..., AsyncIterator[dict]] | None = None,
     workspace_logs_clear_fn: Callable[..., dict] | None = None,
+    template_catalog: TemplateCatalog | None = None,
 ) -> type[BaseHTTPRequestHandler]:
     pack_registry = registry or DEFAULT_SOLUTION_PACK_REGISTRY
     eco_registry = ecosystem_registry or DEFAULT_ECOSYSTEM_PACK_REGISTRY
@@ -448,6 +457,49 @@ def _make_handler(
                 "suggested_description": desc_suggestion,
             })
 
+        def _handle_templates_list(self) -> None:
+            if template_catalog is None:
+                self._send_json(404, {"error": "the template catalogue is not enabled"})
+                return
+            self._send_json(200, {"templates": template_catalog.list()})
+
+        def _handle_template_detail(self, slug: str) -> None:
+            if template_catalog is None:
+                self._send_json(404, {"error": "the template catalogue is not enabled"})
+                return
+            try:
+                self._send_json(200, template_catalog.get(slug))
+            except TemplateNotFoundError as error:
+                self._send_json(404, {"error": str(error)})
+
+        def _handle_workspace_from_template(self, ws_id: str) -> None:
+            """POST /api/workspaces/{id}/from-template {slug} (R-519): the user's own copy."""
+            data = self._read_json_body()
+            if data is None:
+                return
+            if template_catalog is None or workspace_store is None:
+                self._send_json(404, {"error": "the template catalogue is not enabled"})
+                return
+            slug = str(data.get("slug", "")).strip()
+            if not slug:
+                self._send_json(400, {"error": "slug is required"})
+                return
+            try:
+                res = instantiate_template(template_catalog, workspace_store, ws_id, slug)
+            except TemplateNotFoundError as error:
+                self._send_json(404, {"error": str(error)})
+                return
+            except (TemplateTargetNotEmptyError, WorkspaceLockedError) as error:
+                self._send_json(409, {"error": str(error)})
+                return
+            except ValueError as error:
+                self._send_json(400, {"error": str(error)})
+                return
+            except TemplateInstantiationError as error:
+                self._send_json(502, {"error": str(error)})
+                return
+            self._send_json(201, res)
+
         def _handle_workspace_build(self, ws_id: str) -> None:
             data = self._read_json_body()
             if data is None:
@@ -464,6 +516,9 @@ def _make_handler(
                 res = workspace_build_fn(ws_id, prompt, **options)
             except WorkspaceLockedError as error:
                 self._send_json(409, {"error": str(error)})
+                return
+            except EditNotSupportedError as error:
+                self._send_json(400, {"error": str(error)})
                 return
             except Exception as error:
                 self._send_json(502, {"error": str(error)})
@@ -485,6 +540,15 @@ def _make_handler(
                 self._send_json(
                     400,
                     {"error": "streaming is only supported for a plain-prompt, non-hybrid_ui build today"},
+                )
+                return
+            if workspace_store is not None and is_template_workspace(workspace_store, ws_id) is not None:
+                # Refuse before any SSE framing so the caller gets a plain 400 (R-519).
+                self._send_json(
+                    400,
+                    {"error": "This project was started from a template; rebuilding it from a prompt "
+                              "would replace the template's code. Chat edits for template projects "
+                              "arrive with the code-edit agent."},
                 )
                 return
 
@@ -1053,6 +1117,10 @@ def _make_handler(
                     self._send_json(404, {"error": "preview controls are not enabled"})
                 else:
                     self._send_json(200, history_fn())
+            elif self.path == "/api/templates":
+                self._handle_templates_list()
+            elif self.path.startswith("/api/templates/") and "/" not in unquote(self.path[len("/api/templates/"):]):
+                self._handle_template_detail(unquote(self.path[len("/api/templates/"):]))
             elif self.path == "/api/solution-packs":
                 self._send_json(200, {"packs": [p.to_dict() for p in pack_registry.packs]})
             elif self.path == "/api/ecosystem-packs":
@@ -1649,6 +1717,10 @@ def _make_handler(
                     self._send_json(502, {"error": str(error)})
                 return
             path_only = urlparse(self.path).path
+            ws_template_id = self._workspace_id_for_suffix(path_only, "/from-template")
+            if ws_template_id is not None:
+                self._handle_workspace_from_template(ws_template_id)
+                return
             # --- Database Explorer POST routes (F-09 / R-507) ---
             ws_db_query_id = self._workspace_id_for_suffix(path_only, "/db/query")
             if ws_db_query_id is not None:
@@ -1880,6 +1952,7 @@ def create_studio_server(
     workspace_logs_fn: Callable[..., dict] | None = None,
     workspace_logs_stream_fn: Callable[..., AsyncIterator[dict]] | None = None,
     workspace_logs_clear_fn: Callable[..., dict] | None = None,
+    template_catalog: TemplateCatalog | None = None,
 ) -> ThreadingHTTPServer:
     """Create (but do not start) a studio server bound to ``host``/``port``.
 
@@ -1969,6 +2042,7 @@ def create_studio_server(
             workspace_logs_fn=workspace_logs_fn,
             workspace_logs_stream_fn=workspace_logs_stream_fn,
             workspace_logs_clear_fn=workspace_logs_clear_fn,
+            template_catalog=template_catalog,
         ),
     )
 

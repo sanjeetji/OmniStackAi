@@ -6,6 +6,9 @@ R-461 completion) plus the state files (`.ai/`), Git history, and CHANGELOG.
 
 ## Headline
 
+- **R-519 — T-1 Template format + registry (2026-09-21):** templates are read-only golden repos
+  with a validated manifest. "Use template" creates the user's own project copy. Format:
+  `templates/catalog/README.md`. `task verify` = 3,895 tests.
 - **R-518 — T-0 Stabilise the core (2026-09-21):** the full prompt -> build -> edit loop verified
   live through the console, including restart persistence. 10 defects that blocked it are fixed.
   `scripts/smoke-core.sh` runs the loop on demand. `task verify` = 3,862 tests. Next: Phase T

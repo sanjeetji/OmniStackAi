@@ -1,0 +1,1 @@
+{ "name": "corner-shop-admin", "private": true, "scripts": { "dev": "next dev" } }

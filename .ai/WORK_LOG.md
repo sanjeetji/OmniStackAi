@@ -1,5 +1,12 @@
 # Work Log
 
+## 2026-09-21 — R-519 (T-1 Template format + registry)
+
+- **Why:** Phase T needs a template format. The founder's model: the original template never changes and is the same for everyone. "Use template" gives each user their own editable project copy.
+- **Design:** a template is a hand-built golden `repo/` plus `template.json` under `templates/catalog/<slug>/`. It is strictly validated (apps, roles, demo users, migrations for API apps, no secrets, `.git`, `node_modules` or symlinks) and content-digested. Instantiation copies the repo into the project workspace, makes a fresh git repo with one commit, and writes `kind: "template"` plus slug, version and digest. Provenance lives in its own `project_templates` table, so no existing project query changed.
+- **Protection:** prompt rebuilds and IR edits refuse template projects with a clear 400 until the code-edit agent (T-4). `use` rolls back fully (project row and workspace) on any failure.
+- **Evidence:** 33 new Python tests and a new Go package test suite. `task verify` 3,895 OK. Live: two users, independent copies, original unchanged. Core smoke 14/14.
+
 ## 2026-09-21 — R-518 (T-0 Stabilise the core)
 
 - **Why:** Phase T (Template Marketplace) was approved on the condition that the core prompt -> app -> edit loop must not break. First, prove it works live.

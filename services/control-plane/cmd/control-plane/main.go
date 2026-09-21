@@ -31,6 +31,7 @@ import (
 	"github.com/sanjeetji/OmniStackAi/services/control-plane/internal/secrets"
 	"github.com/sanjeetji/OmniStackAi/services/control-plane/internal/seo"
 	"github.com/sanjeetji/OmniStackAi/services/control-plane/internal/skills"
+	"github.com/sanjeetji/OmniStackAi/services/control-plane/internal/templates"
 	"github.com/sanjeetji/OmniStackAi/services/control-plane/internal/users"
 	"github.com/sanjeetji/OmniStackAi/services/control-plane/internal/workspaces"
 	"github.com/sanjeetji/OmniStackAi/services/control-plane/migrations"
@@ -156,6 +157,14 @@ func newMux(pool *pgxpool.Pool, runtimeConfig config.Config, logger *slog.Logger
 		AIStore:        aiStore,
 		AgentEngineURL: runtimeConfig.AgentEngineURL,
 		CreditsPerUSD:  runtimeConfig.CreditsPerUSD,
+		Logger:         logger,
+	})
+	// Template marketplace (Phase T, T-1 / R-519)
+	templates.Register(mux, templates.Deps{
+		AuthStore:      userStore,
+		ProjectStore:   projectStore,
+		TemplateStore:  templates.New(pool),
+		AgentEngineURL: runtimeConfig.AgentEngineURL,
 		Logger:         logger,
 	})
 	gitStore := git.NewPgStore(pool, runtimeConfig.SecretsKey)

@@ -5,8 +5,10 @@ founder_stage: 0
 current_task: null
 current_status: ready
 branch: ai/R-517-node-backend
-last_completed_task: R-518
+last_completed_task: R-519
 last_completed_task_summary: >-
+  Completed R-519 (2026-09-21): T-1 template format + registry. templates/catalog/<slug>/{template.json, repo/, media/} with a strict validator and content digest (studio/templates.py). Studio routes GET /api/templates, GET /api/templates/{slug}, POST /api/workspaces/{id}/from-template. Control-plane internal/templates: public catalogue, POST /templates/{slug}/use (the caller's own project copy, with full rollback on failure), GET /projects/{id}/template, and the project_templates table (migration 000016). Template workspaces are protected from prompt rebuilds and IR edits until the code-edit agent (T-4). task verify 3,895 OK. Live: two users got independent copies and the original stayed unchanged. Core smoke 14/14.
+_prior_last_completed_task_summary_R518: >-
   Completed R-518 (2026-09-21): T-0 Stabilise the core. The R-499..R-517 control-plane code had never run live (omnistack.sh reused a 2026-09-19 image). Rebuilt from source and fixed: ServeMux startup panic (duplicate seo routes, newMux + route-table test), missing POST /projects/{id}/opened, migration 000015 and 4 store queries reading users.name (column is full_name), 15 s client timeout cutting every build stream (per-call context budgets), console name/mention_skills/204 handling, agent-engine _workspace_edit reading non-existent ProjectDiff.added_files (every real chat edit committed then 502'd), and omnistack.sh up now builds the image. New scripts/smoke-core.sh: live core loop 14/14 pass; restart persistence + post-restart edit commit proven. task verify 3,862 OK.
 _prior_last_completed_task_summary_R517: >-
   Completed R-517 (2026-09-21): Node.js backend codegen — Express/Hono alongside Python/Go.
