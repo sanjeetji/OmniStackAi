@@ -109,12 +109,18 @@ def _ollama_descriptor() -> ModelDescriptor:
 
 def _cloud_descriptor(provider_id: str, model_id: str) -> ModelDescriptor:
     default_max_output = 8_192 if provider_id == "google-gemini" else 4_096
+    context_window = _int_env("OMNISTACKAI_CLOUD_CONTEXT_WINDOW_TOKENS", 128_000)
+    max_output = _int_env("OMNISTACKAI_CLOUD_MAX_OUTPUT_TOKENS", default_max_output)
+    # R-522: the safe input budget defaults to what fits beside the output. A fixed 120,000 plus
+    # Google's 8,192 output overflowed the 128,000 window, so Google could never bootstrap.
+    # An explicitly configured value is still validated, never silently shrunk.
+    safe_input = _int_env("OMNISTACKAI_CLOUD_SAFE_INPUT_TOKENS", min(120_000, max(1, context_window - max_output)))
     return ModelDescriptor(
         ModelRef(provider_id, model_id),
         _text_capabilities(),
-        _int_env("OMNISTACKAI_CLOUD_CONTEXT_WINDOW_TOKENS", 128_000),
-        _int_env("OMNISTACKAI_CLOUD_SAFE_INPUT_TOKENS", 120_000),
-        _int_env("OMNISTACKAI_CLOUD_MAX_OUTPUT_TOKENS", default_max_output),
+        context_window,
+        safe_input,
+        max_output,
     )
 
 

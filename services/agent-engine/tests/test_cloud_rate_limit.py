@@ -240,3 +240,37 @@ class PacingTests(TestCase):
             _provider(SequenceOpener([]), _SleepRecorder(), max_retry_after_seconds=0)
         with self.assertRaises(InvalidProviderConfigurationError):
             _provider(SequenceOpener([]), _SleepRecorder(), rate_limit_retries=True)
+
+
+class TransientOverloadTests(TestCase):
+    """R-522: Gemini answers 503 "model is currently experiencing high demand" during demand spikes.
+    That aborted whole builds. 502/503/504 now get the same bounded backoff as a 429. 500 still
+    fails at once (see test_other_statuses_keep_status_code_and_are_not_retried)."""
+
+    def test_503_is_retried_with_backoff_then_succeeds(self) -> None:
+        sleep = _SleepRecorder()
+        opener = SequenceOpener([_http_error(503, body="high demand"), _http_error(504), _OK_PAYLOAD])
+        response = asyncio.run(_provider(opener, sleep).generate(_request()))
+        self.assertEqual(response.text, "hi")
+        self.assertEqual(len(opener.requests), 3)
+        self.assertEqual(len(sleep.calls), 2)
+        self.assertLess(sleep.calls[0], sleep.calls[1])  # exponential backoff
+
+    def test_503_gives_up_after_the_retry_budget(self) -> None:
+        sleep = _SleepRecorder()
+        opener = SequenceOpener([_http_error(503)] * 3)
+        with self.assertRaises(ProviderHTTPError) as raised:
+            asyncio.run(_provider(opener, sleep, rate_limit_retries=2).generate(_request()))
+        self.assertEqual(raised.exception.status_code, 503)
+        self.assertEqual(len(opener.requests), 3)
+
+    def test_stream_open_is_retried_on_503(self) -> None:
+        sleep = _SleepRecorder()
+        opener = SequenceOpener([_http_error(503), {"ok": True}])
+        provider = _provider(opener, sleep)
+        from time import monotonic
+
+        response = asyncio.run(provider._open_stream_with_retry("/chat/completions", {}, {}, monotonic() + 30))
+        self.assertEqual(response.status, 200)
+        self.assertEqual(len(opener.requests), 2)
+        self.assertEqual(len(sleep.calls), 1)

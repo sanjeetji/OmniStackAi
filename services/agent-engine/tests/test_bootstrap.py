@@ -112,3 +112,31 @@ class FallbackWiringTests(TestCase):
         with patch.dict("os.environ", _env(OMNISTACKAI_FALLBACK_PROVIDERS="anthropic"), clear=True):
             with self.assertRaises(CloudProviderSelectionError):
                 build_gateway_from_env()
+
+
+class CloudTokenBudgetTests(TestCase):
+    """R-522: the Google defaults (8,192 output + 120,000 safe input) overflowed the 128,000 context
+    window, so a Google key could never bootstrap and every build fell back to local Ollama."""
+
+    def test_google_with_default_limits_bootstraps(self) -> None:
+        env = _env(GOOGLE_API_KEY="fake-key", OMNISTACKAI_CLOUD_PROVIDER="google")
+        with patch.dict("os.environ", env, clear=True):
+            boot = build_gateway_from_env()
+        self.assertEqual(boot.cloud_tier_provider_id, "google-gemini")
+
+    def test_safe_input_defaults_to_what_fits_beside_the_output(self) -> None:
+        from omnistackai_agent_engine.model_gateway.bootstrap import _cloud_descriptor
+
+        env = _env(OMNISTACKAI_CLOUD_MAX_OUTPUT_TOKENS="16384")
+        with patch.dict("os.environ", env, clear=True):
+            descriptor = _cloud_descriptor("anthropic", "m")
+        self.assertEqual(descriptor.max_output_tokens, 16_384)
+        self.assertLessEqual(descriptor.safe_input_tokens + descriptor.max_output_tokens, descriptor.context_window_tokens)
+
+    def test_explicit_values_are_still_validated(self) -> None:
+        from omnistackai_agent_engine.model_gateway.bootstrap import _cloud_descriptor
+
+        env = _env(OMNISTACKAI_CLOUD_SAFE_INPUT_TOKENS="127000", OMNISTACKAI_CLOUD_MAX_OUTPUT_TOKENS="8192")
+        with patch.dict("os.environ", env, clear=True):
+            with self.assertRaises(ValueError):
+                _cloud_descriptor("google-gemini", "m")

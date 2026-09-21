@@ -83,6 +83,15 @@ _BACKOFF_BASE_SECONDS = 2.0
 _RETRY_AFTER_PAD_SECONDS = 0.5  # provider clocks are coarse; land just after the window reopens
 
 
+# R-522: temporary unavailability ("model is currently experiencing high demand" is a Gemini 503).
+# Paced exactly like a 429. A 500 is a real server error and still fails at once.
+_TRANSIENT_STATUSES = frozenset({502, 503, 504})
+
+
+def _is_retryable(error: ProviderHTTPError) -> bool:
+    return isinstance(error, ProviderRateLimitedError) or error.status_code in _TRANSIENT_STATUSES
+
+
 def parse_retry_after(headers: Any, body: str = "", *, now: datetime | None = None) -> float | None:
     """How long a provider asked us to wait, in seconds, or None when it did not say.
 
@@ -338,27 +347,30 @@ class _HttpCloudProvider:
             try:
                 response = await self._post_json(path, headers, payload, request.timeout_seconds)
                 break
-            except ProviderRateLimitedError as error:
-                # R-466: pace on 429 only — wait what the provider asked (bounded), re-send the same request.
+            except ProviderHTTPError as error:
+                # R-466: pace on 429 - wait what the provider asked (bounded), re-send the same request.
+                # R-522: a temporary 502/503/504 is paced the same way.
+                if not _is_retryable(error):
+                    raise
                 delay = self._rate_limit_delay(error, attempt)
                 if delay is None:
                     hinted = error.retry_after_seconds
                     if hinted is not None and hinted + _RETRY_AFTER_PAD_SECONDS > self._max_retry_after_seconds:
                         logger.warning(
-                            "%s is rate-limited (429) and asked for a %.0fs wait, above the %.0fs cap "
+                            "%s is rate-limited or overloaded and asked for a %.0fs wait, above the %.0fs cap "
                             "(OMNISTACKAI_MAX_RETRY_AFTER_SECONDS); giving up",
                             self._provider_id, hinted, self._max_retry_after_seconds,
                         )
                     else:
                         logger.warning(
-                            "%s is rate-limited (429); the retry budget of %d is spent; giving up",
-                            self._provider_id, self._rate_limit_retries,
+                            "%s answered %s; the retry budget of %d is spent; giving up",
+                            self._provider_id, error.status_code, self._rate_limit_retries,
                         )
                     raise
                 attempt += 1
                 logger.warning(
-                    "%s is rate-limited (429); waiting %.1fs before re-sending (retry %d/%d)",
-                    self._provider_id, delay, attempt, self._rate_limit_retries,
+                    "%s answered %s; waiting %.1fs before re-sending (retry %d/%d)",
+                    self._provider_id, error.status_code, delay, attempt, self._rate_limit_retries,
                 )
                 await self._sleep(delay)
         text, finish_reason, usage = self._parse(response, request)
@@ -372,10 +384,7 @@ class _HttpCloudProvider:
         path, headers, payload = self._build_stream(request)
         deadline = monotonic() + request.timeout_seconds
         async with self._semaphore:
-            response = await self._run_blocking(
-                lambda: self._open_post_stream(path, headers, payload, self._remaining(deadline)),
-                self._remaining(deadline),
-            )
+            response = await self._open_stream_with_retry(path, headers, payload, deadline)
             try:
                 async for event in self._consume_sse(request, self._iter_sse(response, deadline)):
                     yield event
@@ -384,6 +393,34 @@ class _HttpCloudProvider:
                     await asyncio.shield(asyncio.to_thread(response.close))
                 except Exception:
                     pass
+
+    async def _open_stream_with_retry(
+        self, path: str, headers: dict[str, str], payload: dict[str, Any], deadline: float
+    ) -> Any:
+        """Open the stream, pacing a 429 or a temporary 502/503/504 like ``generate`` does (R-522).
+
+        Safe to retry: nothing has been received yet when opening fails.
+        """
+
+        attempt = 0
+        while True:
+            try:
+                return await self._run_blocking(
+                    lambda: self._open_post_stream(path, headers, payload, self._remaining(deadline)),
+                    self._remaining(deadline),
+                )
+            except ProviderHTTPError as error:
+                if not _is_retryable(error):
+                    raise
+                delay = self._rate_limit_delay(error, attempt)
+                if delay is None or delay >= self._remaining(deadline):
+                    raise
+                attempt += 1
+                logger.warning(
+                    "%s answered %s while opening a stream; waiting %.1fs (retry %d/%d)",
+                    self._provider_id, error.status_code, delay, attempt, self._rate_limit_retries,
+                )
+                await self._sleep(delay)
 
     def _build_stream(self, request: GenerateRequest) -> tuple[str, dict[str, str], dict[str, Any]]:
         raise NotImplementedError
@@ -566,7 +603,7 @@ class _HttpCloudProvider:
             return ProviderRateLimitedError(msg, status_code=code, retry_after_seconds=retry_after)
         return ProviderHTTPError(msg, status_code=code, retry_after_seconds=retry_after)
 
-    def _rate_limit_delay(self, error: ProviderRateLimitedError, attempt: int) -> float | None:
+    def _rate_limit_delay(self, error: ProviderHTTPError, attempt: int) -> float | None:
         """Seconds to wait before re-sending after a 429, or None when the adapter must give up.
 
         Uses the provider's own hint (plus a small pad) when it gave one, else exponential backoff;

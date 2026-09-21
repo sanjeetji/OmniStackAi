@@ -1,9 +1,12 @@
 # Current Handoff
 
-Task ID: R-521
+Task ID: R-522
 Status: done
 Phase: MVP
 Branch: `ai/R-517-node-backend`
+
+> **R-522 Completed (2026-09-21): Google (Gemini) runs builds.** `.env` uses
+> `OMNISTACKAI_GOOGLE_MODEL=gemini-3-flash-preview`. Smoke 17/17 with a 29 s build. **Next:** T-3.
 
 > **R-521 Completed (2026-09-21): generated apps run again.** Home pages compile, previews seed,
 > and sign-up and login work. Registration can't pick a role and reset-by-email is refused. The core

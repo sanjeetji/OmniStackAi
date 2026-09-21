@@ -1,5 +1,10 @@
 # Work Log
 
+## 2026-09-21 — R-522 (Google provider runs builds)
+
+- The founder added a Google key, but the provider never bootstrapped: 120,000 safe input + 8,192 output was more than the 128,000 window. Fixed the default. Then Gemini 503s ("high demand") aborted builds because only non-streaming 429s were retried. Now 429 and 502/503/504 are paced in both paths.
+- Live: `gemini-3.5-flash` was overloaded and `gemini-3.6-flash` timed out on builds, so `.env` now uses `gemini-3-flash-preview` (not committed; the key is untouched). Smoke 17/17, build 29 s (Ollama 124–243 s).
+
 ## 2026-09-21 — R-521 (core-loop hotfix: generated apps run again)
 
 - **Why:** checking the single-app preview during R-520 showed every prompt-built app's home page returning 500. `tsc` on the live app found a toast.tsx syntax error plus 3 hidden type errors, all from `1fe1015`. The new smoke preview check then caught seed aborts (`"user123"` in uuid columns). A live sign-up showed the Python auth router could not run at all (`get_db_pool`, wrong driver).

@@ -1,22 +1,18 @@
-task_id: R-521
+task_id: R-522
 status: completed
 phase: MVP
 tracker_row: null
 started_at: "2026-09-21"
 completed_at: "2026-09-21"
 objective: >-
-  Core-loop hotfix: generated Next.js web app compiles again (toast.tsx syntax + fallback type) and
-  sign-up works (leaked Python `ir.roles` in register page, wrong register() call shape). All four
-  defects came in with 1fe1015. Add regression tests and a preview check to scripts/smoke-core.sh.
+  Make the Google (Gemini) provider run builds: default safe-input budget fits beside the output
+  (Google could never bootstrap), and 429 plus temporary 502/503/504 are retried with bounded backoff
+  in generate and when opening a stream.
 allowed_paths:
-  - services/agent-engine/src/omnistackai_agent_engine/codegen/nextjs.py
-  - services/agent-engine/src/omnistackai_agent_engine/codegen/seed_sql.py
-  - services/agent-engine/src/omnistackai_agent_engine/codegen/auth_guard.py
-  - services/agent-engine/tests/test_seed_sql.py
-  - services/agent-engine/tests/test_toast_notifications.py
-  - services/agent-engine/tests/test_generated_web_app_integrity.py
-  - scripts/smoke-core.sh
-  - apps/console-web/app/preview/[projectId]/[[...path]]/route.ts
+  - services/agent-engine/src/omnistackai_agent_engine/model_gateway/bootstrap.py
+  - services/agent-engine/src/omnistackai_agent_engine/model_gateway/cloud.py
+  - services/agent-engine/tests/test_bootstrap.py
+  - services/agent-engine/tests/test_cloud_rate_limit.py
   - scripts/test.sh
   - .ai/
   - PROJECT_STATE.md
@@ -24,19 +20,18 @@ allowed_paths:
   - docs/PROGRESS.md
   - docs/RESUME_PROMPT.md
 forbidden_changes:
-  - No behaviour change beyond the four defects (role selection policy stays as generated)
+  - No API key in source, logs or commits
   - task verify stays offline with 0 model calls
 required_gates:
-  - focused tests + generated minimal-blog web app type-checks with its own tsc
-  - task verify / task lint / task security:quick / task env:check / task builder:demo -- minimal-blog
-  - ./scripts/smoke-core.sh (with preview check)
+  - test_bootstrap, test_cloud_rate_limit
+  - task verify / task lint / task security:quick / task env:check
+  - ./scripts/smoke-core.sh on Google
 model_tool_trace:
   routing: deterministic_only
   local_calls: 0
   cloud_calls: 0
+  note: live smoke and model probes used the founder's Google key (a few calls)
 evidence:
-  generated_app_tsc: "fresh minimal-blog web app: tsc exit 0 (was 1 syntax + 3 type errors)"
-  stage_0_verify: "task verify: 3934 tests OK; builder:demo OK"
-  core_smoke: "17/17 incl. new preview check (home page 200 through the proxy)"
-  generated_auth_live: "register 201 role=user even when admin requested; login token; bad password 401; reset-by-email 501"
+  tests: "bootstrap +3, cloud_rate_limit +3; task verify 3940 OK"
+  live: "Google bootstraps; smoke 17/17 on gemini-3-flash-preview (build 29s)"
 next_action: T-3 marketplace UI (console /templates + /templates/[slug], Use Template)

@@ -6,6 +6,7 @@ R-461 completion) plus the state files (`.ai/`), Git history, and CHANGELOG.
 
 ## Headline
 
+- **R-522 — Google provider live (2026-09-21):** builds run on Gemini in about 30 s. `task verify` = 3,940 tests.
 - **R-521 — generated apps run again (2026-09-21):** fixed defects that broke every prompt-built
   app's home page, previews and sign-up. Closed a self-chosen admin role and password reset by
   email alone. The core smoke now proves the generated preview loads. `task verify` = 3,934 tests.

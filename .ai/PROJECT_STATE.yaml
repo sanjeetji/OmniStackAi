@@ -5,8 +5,10 @@ founder_stage: 0
 current_task: null
 current_status: ready
 branch: ai/R-517-node-backend
-last_completed_task: R-521
+last_completed_task: R-522
 last_completed_task_summary: >-
+  Completed R-522 (2026-09-21): Google provider runs builds. Default safe input now fits beside the output (Google could never bootstrap), and 429/502/503/504 get bounded backoff in generate and stream open. .env model is now gemini-3-flash-preview (3.5-flash was overloaded). Smoke 17/17 on Google, build 29s.
+_prior_last_completed_task_summary_R521: >-
   Completed R-521 (2026-09-21): core-loop hotfix. Generated apps run again. Fixed toast.tsx syntax and fallback type (every home page returned 500), a leaked Python `ir.roles` and the wrong register() call on the sign-up page, seed labels in uuid columns (the preview aborted), and the Python auth router (nonexistent get_db_pool, asyncpg vs psycopg). Closed self-chosen roles and reset-by-email before they could go live, and fixed the preview proxy's 401-to-502 on streamed bodies. Smoke now checks the preview (17/17).
 _prior_last_completed_task_summary_R520: >-
   Completed R-520 (2026-09-21): T-2 multi-app preview. Template copies carry omnistack.json. localrun/multiapp.py plans and runs every app (fresh DB + migrations + seed, one pnpm install, pnpm run dev per app in its own process group, minimal env). Template previews start asynchronously with per-app readiness and demo logins. The console proxy serves /preview/<project>/<app> via Next basePath, and the Preview tab has an app switcher, a phone frame for PWAs and a demo-logins panel. Live: 3 apps ready in 21s. Found: the generated toast.tsx syntax error breaks prompt-built home pages (R-521).

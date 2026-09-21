@@ -4,6 +4,10 @@ Last updated: 2026-09-21
 ## Current Phase
 Stage 0 (Founder Build Sequence, Brief Section 91) — BASIC/MVP
 
+> **R-522 (2026-09-21): Google (Gemini) runs builds.** Fixed a token-budget bootstrap bug and
+> added paced retries for temporary 502/503/504. Builds take about 30 s instead of about 3 minutes
+> on local Ollama.
+
 > **R-521 (2026-09-21): generated apps run again.** Fixed 10 defects (most from `1fe1015`) that
 > made every prompt-built home page 500, aborted previews on seed data and broke sign-up. Sign-up
 > can't choose a role and reset-by-email is refused. `smoke-core.sh` now checks the preview too.
