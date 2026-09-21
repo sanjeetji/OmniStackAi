@@ -222,6 +222,7 @@ def python_auth_router_file(ir: ApplicationIR) -> str:  # noqa: ARG001
         "except ImportError:  # pragma: no cover\n"
         "    asyncpg = None  # type: ignore[assignment]\n\n"
         'JWT_ALGORITHM = "HS256"\n'
+        'DEFAULT_ROLE = "user"  # every self-registered account starts with this role\n'
         "TOKEN_EXPIRE_HOURS = 24\n\n"
         "router = APIRouter(tags=[\"auth\"])\n\n\n"
         "# ---------------------------------------------------------------------------\n"
@@ -283,24 +284,24 @@ def python_auth_router_file(ir: ApplicationIR) -> str:  # noqa: ARG001
         "# ---------------------------------------------------------------------------\n\n"
         '@router.post("/register", response_model=TokenResponse, status_code=201)\n'
         "async def register(body: RegisterRequest) -> TokenResponse:\n"
-        '    """Register a new user account and return a signed JWT."""\n'
-        "    from app.config import get_db_pool  # lazy to avoid import-time side effects\n\n"
-        "    pool = await get_db_pool()\n"
-        "    async with pool.acquire() as conn:\n"
-        "        existing = await conn.fetchrow(\n"
-        '            "SELECT id FROM \\"users\\" WHERE email = $1", body.email\n'
-        "        )\n"
-        "        if existing:\n"
+        '    """Register a new account and return a signed JWT.\n\n'
+        "    Every self-registered account gets the default role. The role in the request is ignored,\n"
+        "    so nobody can sign themselves up as an admin; admins assign other roles.\n"
+        '    """\n'
+        "    from app.db import connect\n\n"
+        "    async with await connect() as conn, conn.cursor() as cur:\n"
+        '        await cur.execute("SELECT id FROM \\"users\\" WHERE email = %s", (body.email,))\n'
+        "        if await cur.fetchone():\n"
         '            raise HTTPException(status_code=409, detail="email_already_registered")\n'
-        "        password_hash = hash_password(body.password)\n"
-        "        row = await conn.fetchrow(\n"
+        "        await cur.execute(\n"
         "            \"\"\"\n"
         "            INSERT INTO \\\"users\\\" (email, password_hash, full_name, role)\n"
-        "            VALUES ($1, $2, $3, $4)\n"
-        "            RETURNING id::text, email, full_name, role\n"
+        "            VALUES (%s, %s, %s, %s)\n"
+        "            RETURNING id::text AS id, email, full_name, role\n"
         "            \"\"\",\n"
-        "            body.email, password_hash, body.full_name, body.role,\n"
+        "            (body.email, hash_password(body.password), body.full_name, DEFAULT_ROLE),\n"
         "        )\n"
+        "        row = await cur.fetchone()\n"
         "    user = UserOut(\n"
         '        id=row["id"], email=row["email"],\n'
         '        full_name=row["full_name"], role=row["role"],\n'
@@ -310,13 +311,13 @@ def python_auth_router_file(ir: ApplicationIR) -> str:  # noqa: ARG001
         '@router.post("/login", response_model=TokenResponse)\n'
         "async def login(body: LoginRequest) -> TokenResponse:\n"
         '    """Authenticate with email + password and return a signed JWT."""\n'
-        "    from app.config import get_db_pool\n\n"
-        "    pool = await get_db_pool()\n"
-        "    async with pool.acquire() as conn:\n"
-        "        row = await conn.fetchrow(\n"
-        '            "SELECT id::text, email, password_hash, full_name, role FROM \\"users\\" WHERE email = $1",\n'
-        "            body.email,\n"
+        "    from app.db import connect\n\n"
+        "    async with await connect() as conn, conn.cursor() as cur:\n"
+        "        await cur.execute(\n"
+        '            "SELECT id::text AS id, email, password_hash, full_name, role FROM \\"users\\" WHERE email = %s",\n'
+        "            (body.email,),\n"
         "        )\n"
+        "        row = await cur.fetchone()\n"
         "    if not row or not verify_password(body.password, row[\"password_hash\"]):\n"
         '        raise HTTPException(\n'
         "            status_code=status.HTTP_401_UNAUTHORIZED,\n"
@@ -355,17 +356,9 @@ def python_auth_router_file(ir: ApplicationIR) -> str:  # noqa: ARG001
         '    """Initiate password recovery."""\n'
         '    return {"status": "ok", "message": "Password reset link dispatched"}\n\n\n'
         '@router.post("/reset-password")\n'
-        'async def reset_password(body: ResetPasswordRequest) -> dict[str, str]:\n'
-        '    """Update account password in PostgreSQL users table."""\n'
-        '    from app.config import get_db_pool\n\n'
-        '    pool = await get_db_pool()\n'
-        '    new_hash = hash_password(body.new_password)\n'
-        '    async with pool.acquire() as conn:\n'
-        '        result = await conn.execute(\n'
-        '            "UPDATE \\\"users\\\" SET password_hash = $1 WHERE email = $2",\n'
-        '            new_hash, body.email,\n'
-        '        )\n'
-        '    if result == "UPDATE 0":\n'
-        '        raise HTTPException(status_code=404, detail="user_not_found")\n'
-        '    return {"status": "ok", "message": "Password updated successfully"}\n'
+        'async def reset_password(body: ResetPasswordRequest) -> dict[str, str]:  # noqa: ARG001\n'
+        '    """Not available until reset links are signed and emailed.\n\n'
+        "    Setting a password from an email address alone would let anyone take over any account.\n"
+        '    """\n'
+        '    raise HTTPException(status_code=501, detail="password_reset_not_configured")\n'
     )

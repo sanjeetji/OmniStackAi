@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
 # Live smoke test of the platform's core loop, through the console exactly as the Studio calls it:
 #   register -> create a project from a prompt only -> stream the build -> the project is renamed
-#   from "Untitled project" -> /opened -> turns + files exist -> a chat edit commits.
+#   from "Untitled project" -> /opened -> turns + files exist -> the preview runs and the home page
+#   loads (SMOKE_SKIP_PREVIEW=1 skips) -> a chat edit commits.
 #
 # Needs the platform running (./scripts/omnistack.sh up) and a working model provider.
 # It makes real model calls (one build, one edit). It is never part of `task verify`.
@@ -62,6 +63,25 @@ curl -s -b "$jar" -o "$work/turns.json" "$B/api/projects/$project_id/turns"
 check "chat turns persisted" "$(json "$work/turns.json" "['turns'].__len__()")" '^[1-9]'
 curl -s -b "$jar" -o "$work/files.json" "$B/api/projects/$project_id/files"
 check "files listed" "$(json "$work/files.json" "['files'].__len__()")" '^[1-9]'
+
+# The generated app must actually run: start its preview and load its home page through the console
+# proxy (R-521, after a generator syntax error made every generated home page return 500).
+if [[ "${SMOKE_SKIP_PREVIEW:-0}" != "1" ]]; then
+  started=$(date +%s)
+  code=$(curl -s -b "$jar" -o "$work/preview.json" -w '%{http_code}' --max-time 600 -X POST "$B/api/projects/$project_id/preview")
+  check "preview start" "$code" '^200$'
+  status="$(json "$work/preview.json" "['status']")"
+  while [[ "$status" == "starting" && $(( $(date +%s) - started )) -lt 600 ]]; do
+    sleep 3
+    curl -s -b "$jar" -o "$work/preview.json" "$B/api/projects/$project_id/preview"
+    status="$(json "$work/preview.json" "['status']")"
+  done
+  check "preview ready ($(( $(date +%s) - started ))s)" "$status" '^ready$'
+  [[ "$status" == "ready" ]] || json "$work/preview.json" "['message']"
+  code=$(curl -s -L -b "$jar" -o "$work/home.html" -w '%{http_code}' --max-time 120 "$B/preview/$project_id")
+  check "generated home page loads through the proxy" "$code" '^200$'
+  curl -s -b "$jar" -o /dev/null -X POST "$B/api/projects/$project_id/preview/stop"
+fi
 
 if [[ "${SMOKE_SKIP_EDIT:-0}" != "1" ]]; then
   code=$(curl -s -b "$jar" -o "$work/edit.json" -w '%{http_code}' --max-time 600 \

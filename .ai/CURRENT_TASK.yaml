@@ -1,29 +1,22 @@
-task_id: R-520
+task_id: R-521
 status: completed
 phase: MVP
 tracker_row: null
 started_at: "2026-09-21"
 completed_at: "2026-09-21"
 objective: >-
-  T-2 Multi-app preview for template projects: omnistack.json runtime manifest written into each
-  template copy; localrun/multiapp.py (plan, process-group session, readiness, minimal env);
-  asynchronous template preview in studio/preview.py with per-app status and demo users; console
-  proxy routes /preview/<project>/<app>/..., Preview tab app switcher, phone frame for PWA apps,
-  demo-logins panel. The prompt-built single-app preview path is unchanged.
+  Core-loop hotfix: generated Next.js web app compiles again (toast.tsx syntax + fallback type) and
+  sign-up works (leaked Python `ir.roles` in register page, wrong register() call shape). All four
+  defects came in with 1fe1015. Add regression tests and a preview check to scripts/smoke-core.sh.
 allowed_paths:
-  - services/agent-engine/src/omnistackai_agent_engine/localrun/multiapp.py
-  - services/agent-engine/src/omnistackai_agent_engine/localrun/__init__.py
-  - services/agent-engine/src/omnistackai_agent_engine/studio/preview.py
-  - services/agent-engine/src/omnistackai_agent_engine/studio/templates.py
-  - services/agent-engine/tests/test_localrun_multiapp.py
-  - services/agent-engine/tests/test_studio_templates.py
-  - services/agent-engine/tests/test_studio_preview_multiapp.py
-  - services/agent-engine/tests/fixtures/templates/
+  - services/agent-engine/src/omnistackai_agent_engine/codegen/nextjs.py
+  - services/agent-engine/src/omnistackai_agent_engine/codegen/seed_sql.py
+  - services/agent-engine/src/omnistackai_agent_engine/codegen/auth_guard.py
+  - services/agent-engine/tests/test_seed_sql.py
+  - services/agent-engine/tests/test_toast_notifications.py
+  - services/agent-engine/tests/test_generated_web_app_integrity.py
+  - scripts/smoke-core.sh
   - apps/console-web/app/preview/[projectId]/[[...path]]/route.ts
-  - apps/console-web/app/studio/studio-preview.tsx
-  - apps/console-web/app/studio/studio-preview-apps.tsx
-  - apps/console-web/lib/control-plane.ts
-  - templates/catalog/README.md
   - scripts/test.sh
   - .ai/
   - PROJECT_STATE.md
@@ -31,24 +24,19 @@ allowed_paths:
   - docs/PROGRESS.md
   - docs/RESUME_PROMPT.md
 forbidden_changes:
-  - localrun/plan.py and localrun/run.py behaviour (prompt-built preview) unchanged
-  - No new Go/Python dependency; no new console dependency
+  - No behaviour change beyond the four defects (role selection policy stays as generated)
   - task verify stays offline with 0 model calls
 required_gates:
-  - focused agent-engine tests
-  - control-plane go test ./...
-  - console typecheck / lint / build
-  - bash scripts/test.sh
-  - task verify / task lint / task security:quick / task env:check
-  - ./scripts/smoke-core.sh + live multi-app preview of the corner-shop fixture
+  - focused tests + generated minimal-blog web app type-checks with its own tsc
+  - task verify / task lint / task security:quick / task env:check / task builder:demo -- minimal-blog
+  - ./scripts/smoke-core.sh (with preview check)
 model_tool_trace:
   routing: deterministic_only
   local_calls: 0
   cloud_calls: 0
 evidence:
-  focused_tests: "multiapp 17 + preview multiapp 8 + templates 36: OK (real local processes)"
-  stage_0_verify: "task verify: 3923 tests OK"
-  console: "typecheck clean; lint 0 errors; build OK"
-  live_multiapp: "fixture template: all 3 apps ready in 21s; web/admin/api served through the proxy; isolation 404s; stop leaves no processes"
-  core_loop: "smoke-core.sh 14/14"
-next_action: R-521 fix generated components/toast.tsx syntax error (every prompt-built app home page 500s)
+  generated_app_tsc: "fresh minimal-blog web app: tsc exit 0 (was 1 syntax + 3 type errors)"
+  stage_0_verify: "task verify: 3934 tests OK; builder:demo OK"
+  core_smoke: "17/17 incl. new preview check (home page 200 through the proxy)"
+  generated_auth_live: "register 201 role=user even when admin requested; login token; bad password 401; reset-by-email 501"
+next_action: T-3 marketplace UI (console /templates + /templates/[slug], Use Template)

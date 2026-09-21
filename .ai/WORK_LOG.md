@@ -1,5 +1,11 @@
 # Work Log
 
+## 2026-09-21 — R-521 (core-loop hotfix: generated apps run again)
+
+- **Why:** checking the single-app preview during R-520 showed every prompt-built app's home page returning 500. `tsc` on the live app found a toast.tsx syntax error plus 3 hidden type errors, all from `1fe1015`. The new smoke preview check then caught seed aborts (`"user123"` in uuid columns). A live sign-up showed the Python auth router could not run at all (`get_db_pool`, wrong driver).
+- **Safety:** fixing auth would have switched on two holes: self-chosen admin role and password reset by email alone. Registration now always assigns the default role, and reset returns 501 until emailed reset links exist.
+- **Evidence:** fresh generated app `tsc` 0 errors. `task verify` 3,934 OK. Smoke 17/17 with the preview check. Live sign-up, login, 401 and reset refusal all verified through the preview proxy (after fixing its 401-to-502 body-streaming bug).
+
 ## 2026-09-21 — R-520 (T-2 Multi-app preview)
 
 - **What:** template projects run all their apps in the Preview tab. Each app gets its own path (`/preview/<project>/<app>`, Next `basePath`). They share one API and a fresh seeded database. The Preview tab has an app switcher, a phone frame for PWA apps and a demo-logins panel. The start is asynchronous with a per-app checklist.

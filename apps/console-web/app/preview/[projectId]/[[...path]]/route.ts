@@ -101,10 +101,10 @@ async function handleProxy(request: NextRequest, { params }: RouteParams): Promi
     upstreamResponse = await fetch(upstreamUrl, {
       method,
       headers: forwardHeaders,
-      body: hasBody ? request.body : undefined,
+      // Buffered, not streamed: Node's fetch turns a 401 answer to a streamed request body into a
+      // network error (it cannot replay the body), which surfaced as 502 for every failed login.
+      body: hasBody ? await request.arrayBuffer() : undefined,
       redirect: "manual",
-      // @ts-expect-error duplex is required by Next.js edge/node fetch for streaming request body
-      duplex: "half",
     });
   } catch {
     return NextResponse.json({ error: "could not reach preview service" }, { status: 502 });
@@ -238,10 +238,9 @@ async function proxyMultiApp(
     upstream = await fetch(upstreamUrl, {
       method: request.method,
       headers,
-      body: ["GET", "HEAD"].includes(request.method) ? undefined : request.body,
+      // Buffered for the same reason as the single-app path above (401 on a streamed body).
+      body: ["GET", "HEAD"].includes(request.method) ? undefined : await request.arrayBuffer(),
       redirect: "manual",
-      // @ts-expect-error duplex is required by Node fetch for a streaming request body
-      duplex: "half",
     });
   } catch {
     return NextResponse.json({ error: `could not reach ${app.name}` }, { status: 502 });

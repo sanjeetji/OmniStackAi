@@ -60,10 +60,11 @@ class SqlLiteralTests(TestCase):
 class RenderSeedTests(TestCase):
     def test_insert_shape_and_alphabetical_columns(self) -> None:
         entity = Entity("Widget", (Field("id", FieldType.UUID), Field("label", FieldType.STRING)))
-        fixtures = (Fixture("Widget", ({"label": "A", "id": "x"},)),)
+        widget_id = "5b0f2c8e-7c1d-4e2a-9f3b-1a2b3c4d5e6f"
+        fixtures = (Fixture("Widget", ({"label": "A", "id": widget_id},)),)
         sql = render_postgres_seed(_ir((entity,), fixtures))
         # columns sorted alphabetically (id before label), values parameter-free literals
-        self.assertIn('INSERT INTO "widget" ("id", "label") VALUES (\'x\', \'A\');', sql)
+        self.assertIn(f'INSERT INTO "widget" ("id", "label") VALUES (\'{widget_id}\', \'A\');', sql)
 
     def test_no_fixtures_is_empty(self) -> None:
         entity = Entity("Widget", (Field("id", FieldType.UUID),))
@@ -129,3 +130,48 @@ class RoundTripTests(TestCase):
         self.assertEqual(ApplicationIR.from_dict(ir.to_dict()), ir)
         self.assertEqual(normalize_ir(ir).fixtures, tuple(sorted(ir.fixtures, key=lambda f: f.entity)))
         self.assertTrue(normalize_ir(ir).fixtures)  # not dropped
+
+
+class UuidFixtureLabelTests(TestCase):
+    """R-521: models often write labels like "user123" into uuid columns. Postgres rejects them
+    ("invalid input syntax for type uuid"), which aborted every preview of such an app. A label is
+    mapped to a deterministic UUID, the same label always to the same UUID, so rows that refer to
+    each other stay linked. Real UUIDs and non-uuid columns are left exactly as authored."""
+
+    def _render(self) -> str:
+        user = Entity(name="Member", fields=(Field("id", FieldType.UUID, required=True), Field("name", FieldType.STRING)))
+        habit = Entity(
+            name="Habit",
+            fields=(
+                Field("id", FieldType.UUID, required=True),
+                Field("user_id", FieldType.UUID),
+                Field("code", FieldType.STRING),
+            ),
+        )
+        return render_postgres_seed(
+            _ir(
+                (user, habit),
+                (
+                    Fixture(entity="Member", rows=({"id": "user123", "name": "Asha"},)),
+                    Fixture(
+                        entity="Habit",
+                        rows=(
+                            {"id": "11111111-1111-1111-1111-111111111111", "user_id": "user123", "code": "user123"},
+                        ),
+                    ),
+                ),
+            )
+        )
+
+    def test_labels_in_uuid_columns_become_stable_uuids(self) -> None:
+        import re
+        import uuid
+
+        sql = self._render()
+        expected = str(uuid.uuid5(uuid.NAMESPACE_URL, "omnistackai:fixture:user123"))
+        self.assertIn(f"'{expected}'", sql)
+        self.assertEqual(sql.count(f"'{expected}'"), 2)  # Member.id and Habit.user_id stay linked
+        self.assertIn("'11111111-1111-1111-1111-111111111111'", sql)  # a real UUID is untouched
+        self.assertIn("VALUES ('user123', ", sql)  # the string column keeps the authored label
+        for literal in re.findall(r"'([0-9a-f-]{36})'", sql):
+            uuid.UUID(literal)

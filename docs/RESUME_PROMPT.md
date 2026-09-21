@@ -380,8 +380,9 @@ RULES (non-negotiable)
   SHA == local HEAD. Never claim unexecuted tests.
 
 WHAT TO DO NEXT
-- LATEST (2026-09-21): R-520 (T-2 multi-app preview) is done; see .ai/tasks/R-520.md. Next: R-521
-  (generated toast.tsx syntax error breaking prompt-built apps), then T-3 marketplace UI.
+- LATEST (2026-09-21): R-521 (core-loop hotfix: generated apps run again) is done; see
+  .ai/tasks/R-521.md. Next: T-3 marketplace UI. Always run ./scripts/smoke-core.sh (17 checks incl.
+  the generated preview) after generator changes. Earlier: R-520 (T-2 multi-app preview) is done.
   Earlier: R-519 (T-1 template format + registry) is done; see .ai/tasks/R-519.md and
   templates/catalog/README.md. Earlier: R-518 (T-0 Stabilise the core) is done; see .ai/tasks/R-518.md. Phase T,
   the Template Marketplace (7 categories, 10 hand-built golden-repo templates), is approved. Next is

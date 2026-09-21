@@ -1,9 +1,13 @@
 # Current Handoff
 
-Task ID: R-520
+Task ID: R-521
 Status: done
 Phase: MVP
 Branch: `ai/R-517-node-backend`
+
+> **R-521 Completed (2026-09-21): generated apps run again.** Home pages compile, previews seed,
+> and sign-up and login work. Registration can't pick a role and reset-by-email is refused. The core
+> smoke now also checks the generated app's preview (17 checks). **Next:** T-3 marketplace UI.
 
 > **R-520 Completed (2026-09-21): T-2 Multi-app preview.** Template projects run every app in
 > the Preview tab (switcher, phone frame for PWAs, demo logins). The runtime contract is in

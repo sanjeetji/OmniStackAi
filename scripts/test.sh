@@ -2100,4 +2100,31 @@ if ! rg -qF 'proxyMultiApp' "$repo_root/apps/console-web/app/preview/[projectId]
   exit 1
 fi
 
+# R-521 (generated apps run again: web compiles, previews seed, sign-up/login work, safely):
+codegen_dir="$agent_engine_root/src/omnistackai_agent_engine/codegen"
+if [[ ! -f "$agent_engine_root/tests/test_generated_web_app_integrity.py" ]]; then
+  printf 'R-521 the generated web app integrity tests must exist.\n'
+  exit 1
+fi
+if rg -qF 'get_db_pool' "$codegen_dir/auth_guard.py" || rg -qF 'body.role' "$codegen_dir/auth_guard.py"; then
+  printf 'R-521 the generated auth router must use app.db.connect and never trust a client-sent role.\n'
+  exit 1
+fi
+if ! rg -qF 'password_reset_not_configured' "$codegen_dir/auth_guard.py"; then
+  printf 'R-521 password reset by email alone must stay refused until emailed reset links exist.\n'
+  exit 1
+fi
+if ! rg -qF 'def _uuid_for(' "$codegen_dir/seed_sql.py"; then
+  printf 'R-521 seed SQL must map labels in uuid columns to stable UUIDs.\n'
+  exit 1
+fi
+if ! rg -qF 'SMOKE_SKIP_PREVIEW' "$repo_root/scripts/smoke-core.sh"; then
+  printf 'R-521 the core smoke must check that the generated app preview loads.\n'
+  exit 1
+fi
+if [[ "$(rg -c '^def _forgot_password_page' "$codegen_dir/nextjs.py")" != "1" ]]; then
+  printf 'R-521 nextjs.py must define _forgot_password_page exactly once.\n'
+  exit 1
+fi
+
 printf 'Repository contract tests passed.\n'

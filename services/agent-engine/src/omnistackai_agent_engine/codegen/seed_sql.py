@@ -6,14 +6,20 @@ simply not inserted (it falls to the schema's DB default / NULL). Pure and deter
 connects to or runs a database. This is the one place the codebase produces SQL value literals, so it
 owns the quoting: single quotes are doubled, bool -> TRUE/FALSE, None -> NULL, and dict/list -> a jsonb
 literal. Standard-conforming strings are assumed (only single-quote doubling is needed).
+
+One normalisation (R-521): a non-UUID label in a ``uuid`` column (models often write ``"user123"``)
+is rendered as a deterministic UUID derived from the label, the same label always giving the same
+UUID so rows that refer to each other stay linked. Postgres rejects the raw label, which aborted the
+whole seed migration and with it the app's preview.
 """
 
 from __future__ import annotations
 
 import json
+import uuid
 from typing import Any
 
-from ..application_ir import ApplicationIR
+from ..application_ir import ApplicationIR, FieldType
 from .schema_sql import ordered_entities, sql_identifier, table_name
 
 
@@ -29,6 +35,17 @@ def _sql_literal(value: Any) -> str:
     if isinstance(value, (dict, list)):
         return "'" + json.dumps(value, sort_keys=True).replace("'", "''") + "'::jsonb"
     raise TypeError(f"unsupported seed value type: {type(value).__name__}")
+
+
+def _uuid_for(value: Any) -> Any:
+    """A fixture value for a uuid column: real UUIDs as authored, labels mapped to a stable UUID."""
+
+    if not isinstance(value, str):
+        return value
+    try:
+        return str(uuid.UUID(value))
+    except ValueError:
+        return str(uuid.uuid5(uuid.NAMESPACE_URL, f"omnistackai:fixture:{value}"))
 
 
 def render_postgres_seed(ir: ApplicationIR) -> str:
@@ -49,12 +66,20 @@ def render_postgres_seed(ir: ApplicationIR) -> str:
         enumerate(ir.fixtures),
         key=lambda item: (entity_order.get(item[1].entity, len(entity_order)), item[0]),
     )
+    uuid_columns = {
+        entity.name: {field.name for field in entity.fields if field.type == FieldType.UUID}
+        for entity in ir.entities
+    }
     for _, fixture in fixtures:
         table = sql_identifier(table_name(fixture.entity))
+        uuid_fields = uuid_columns.get(fixture.entity, set())
         for row in fixture.rows:
             columns = sorted(row)
             column_sql = ", ".join(sql_identifier(column) for column in columns)
-            value_sql = ", ".join(_sql_literal(row[column]) for column in columns)
+            value_sql = ", ".join(
+                _sql_literal(_uuid_for(row[column]) if column in uuid_fields else row[column])
+                for column in columns
+            )
             blocks.append(f"INSERT INTO {table} ({column_sql}) VALUES ({value_sql});")
         blocks.append("")
 
