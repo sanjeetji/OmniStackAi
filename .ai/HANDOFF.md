@@ -1,9 +1,15 @@
 # Current Handoff
 
-Task ID: R-517
+Task ID: R-518
 Status: done
 Phase: MVP
 Branch: `ai/R-517-node-backend`
+
+> **R-518 Completed (2026-09-21): T-0 Stabilise the core.** See `.ai/tasks/R-518.md` for the 10 defects
+> found and fixed (the control-plane now starts, build streams complete, chat edits commit and report
+> correctly, projects survive restarts). Live check: `./scripts/smoke-core.sh` (needs `omnistack.sh up`).
+> **Next:** ask the founder before pushing (a push also publishes the unpushed R-499..R-517 commits),
+> then T-1 template format + registry (see `docs/RESUME_PROMPT.md`, WHAT TO DO NEXT).
 
 > **R-517 Completed (2026-09-21): Node.js backend codegen — Express/Hono alongside Python/Go.**
 > - **First-class Node.js Backend Code Generation (`GenerationTarget.BACKEND_NODE` / `BackendStrategy.NODE`):**

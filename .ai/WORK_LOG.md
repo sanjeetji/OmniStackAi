@@ -1,5 +1,14 @@
 # Work Log
 
+## 2026-09-21 — R-518 (T-0 Stabilise the core)
+
+- **Why:** Phase T (Template Marketplace) was approved on the condition that the core prompt -> app -> edit loop must not break. First, prove it works live.
+- **Found:** `omnistack.sh up` reused a control-plane image from 2026-09-19, so R-499..R-517 had never run against a real DB. After rebuilding, each defect was reproduced live and then fixed: startup ServeMux panic (duplicate `seo/audit|suggest`), missing `/opened`, `users.name` in migration 000015 and 4 store queries, the 15 s `http.Client.Timeout` cutting every build stream, console create-without-name 400, dropped `mention_skills`, 204 parsed as JSON (502), and the agent-engine `_workspace_edit` `ProjectDiff.added_files` crash (edits committed, then reported as 502).
+- **Tests added:** `cmd/control-plane/main_test.go` (full route table), slow-upstream stream relay, no-overall-client-timeout, migration-comment semicolon guard, `WorkspaceEditTests` (real committed workspace edit), and the `scripts/test.sh` R-518 block.
+- **Live:** `scripts/smoke-core.sh` 14/14. Restart persistence plus a post-restart edit gave 7 added / 12 modified, commit `4d6f770`.
+- **Gates:** go vet/test (21 pkgs), console typecheck/lint/build, scripts/test.sh, task verify (3,862 OK), lint, security:quick, env:check.
+- **Reported, not fixed:** google provider `.env` token limits; generated seed uuid "user1"; add-only delta engine.
+
 ## 2026-09-21 — R-517 (Node.js backend codegen — Express/Hono alongside Python/Go)
 
 - **Why:** Provide first-class, deterministic Node.js backend code generation (`GenerationTarget.BACKEND_NODE` / `BackendStrategy.NODE`) alongside existing Python (FastAPI) and Go (`net/http`) backend adapters.

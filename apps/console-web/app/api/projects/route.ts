@@ -46,13 +46,20 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "invalid request body" }, { status: 400 });
   }
 
-  if (typeof body.name !== "string" || body.name.trim().length === 0) {
-    return NextResponse.json({ error: "name is required" }, { status: 400 });
+  if (body === null || typeof body !== "object") {
+    return NextResponse.json({ error: "invalid request body" }, { status: 400 });
+  }
+  if (body.name !== undefined && typeof body.name !== "string") {
+    return NextResponse.json({ error: "name must be a string" }, { status: 400 });
   }
 
+  // A name is optional. The Studio creates the project from the first prompt with no name; the
+  // control-plane stores "Untitled project" and replaces it with the generated app's own name
+  // after the first build (projects/store.go UpdateProjectBuildResult). Requiring a name here
+  // made the Studio's very first message fail with 400 "name is required" (R-518).
   try {
     const project = await createProject(token, {
-      name: body.name.trim(),
+      name: body.name?.trim() || "Untitled project",
       description: body.description?.trim(),
       prompt: body.prompt?.trim(),
       workspace_id: body.workspace_id,

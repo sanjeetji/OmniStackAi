@@ -206,7 +206,11 @@ cmd_up() {
   mkdir -p "$run_dir"
 
   step "PostgreSQL + control-plane (Docker)"
-  compose up -d --wait postgres control-plane >/dev/null
+  # --build: the control-plane runs from an image, so without a rebuild `up` silently serves
+  # whatever Go code was baked in last time. That hid a startup panic and every route added in
+  # R-499..R-517 (found in R-518). Docker's layer cache keeps an unchanged rebuild to seconds.
+  log "  building the control-plane image from source (cached layers make this quick)"
+  compose up -d --build --wait postgres control-plane >/dev/null
   if wait_http "http://127.0.0.1:$CONTROL_PLANE_PORT/healthz" 60; then
     ok "control-plane healthy on :$CONTROL_PLANE_PORT (postgres :$POSTGRES_PORT)"
   else

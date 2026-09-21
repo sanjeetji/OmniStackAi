@@ -6,6 +6,10 @@ R-461 completion) plus the state files (`.ai/`), Git history, and CHANGELOG.
 
 ## Headline
 
+- **R-518 — T-0 Stabilise the core (2026-09-21):** the full prompt -> build -> edit loop verified
+  live through the console, including restart persistence. 10 defects that blocked it are fixed.
+  `scripts/smoke-core.sh` runs the loop on demand. `task verify` = 3,862 tests. Next: Phase T
+  (Template Marketplace), T-1 template format + registry.
 - **3,738 automated tests pass** (agent-engine + Go control-plane), fully offline and
   network-independent (`task verify`), plus the console's own `typecheck`/`lint`/`build` gates.
 - **R-498 — Platform buildout plan + single-command runtime (2026-09-19):** after the founder's

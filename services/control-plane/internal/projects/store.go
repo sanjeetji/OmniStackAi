@@ -166,7 +166,7 @@ func (s *PgStore) ListWorkspaceProjects(ctx context.Context, userID, workspaceID
 	}
 
 	query := fmt.Sprintf(`
-		SELECT p.id, p.user_id, p.workspace_id, COALESCE(u.name, 'User'),
+		SELECT p.id, p.user_id, p.workspace_id, COALESCE(NULLIF(u.full_name, ''), 'User'),
 		       p.name, p.description, p.status, p.entities, p.file_count, p.commit_sha,
 		       p.credits_spent, p.message_count, p.last_prompt, p.created_at, p.updated_at, p.last_opened_at
 		FROM projects p
@@ -218,7 +218,7 @@ func (s *PgStore) GetProject(ctx context.Context, id, userID string) (Project, e
 	var dbWsID *string
 	var creatorName *string
 	err := s.pool.QueryRow(ctx, `
-		SELECT p.id, p.user_id, p.workspace_id, COALESCE(u.name, 'User'),
+		SELECT p.id, p.user_id, p.workspace_id, COALESCE(NULLIF(u.full_name, ''), 'User'),
 		       p.name, p.description, p.status, p.entities, p.file_count, p.commit_sha,
 		       p.credits_spent, p.message_count, p.last_prompt, p.created_at, p.updated_at, p.last_opened_at
 		FROM projects p

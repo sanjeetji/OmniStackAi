@@ -63,6 +63,46 @@ func run(ctx context.Context, logger *slog.Logger) error {
 		return fmt.Errorf("apply migrations: %w", err)
 	}
 
+	mux := newMux(pool, runtimeConfig, logger)
+
+	server := &http.Server{
+		Addr:              runtimeConfig.HTTPAddress,
+		Handler:           mux,
+		ReadHeaderTimeout: runtimeConfig.ReadHeaderTimeout,
+		ReadTimeout:       runtimeConfig.ReadTimeout,
+		WriteTimeout:      runtimeConfig.WriteTimeout,
+		IdleTimeout:       runtimeConfig.IdleTimeout,
+		ErrorLog:          slog.NewLogLogger(logger.Handler(), slog.LevelError),
+	}
+
+	serverErrors := make(chan error, 1)
+	go func() {
+		logger.Info("control-plane listening", "address", runtimeConfig.HTTPAddress)
+		serverErrors <- server.ListenAndServe()
+	}()
+
+	select {
+	case <-ctx.Done():
+		shutdownContext, cancel := context.WithTimeout(context.Background(), runtimeConfig.ShutdownTimeout)
+		defer cancel()
+		if err := server.Shutdown(shutdownContext); err != nil {
+			return err
+		}
+		logger.Info("control-plane shutdown complete")
+		return nil
+	case err := <-serverErrors:
+		if errors.Is(err, http.ErrServerClosed) {
+			return nil
+		}
+		return err
+	}
+}
+
+// newMux wires every package's routes onto one ServeMux. It is separate from run() so a test can
+// build the real, complete route table without a database: Go's ServeMux panics when two packages
+// register the same pattern, and that must fail a unit test rather than the container at startup
+// (R-518). Stores only hold the pool; nothing here touches the database.
+func newMux(pool *pgxpool.Pool, runtimeConfig config.Config, logger *slog.Logger) *http.ServeMux {
 	userStore := users.New(pool)
 	projectStore := projects.New(pool)
 	aiStore := ai.NewPgStore(pool, runtimeConfig.SecretsKey, runtimeConfig.SecretsKeyPrevious)
@@ -184,38 +224,7 @@ func run(ctx context.Context, logger *slog.Logger) error {
 		GA4Client:      ga4Client,
 		Logger:         logger,
 	})
-
-	server := &http.Server{
-		Addr:              runtimeConfig.HTTPAddress,
-		Handler:           mux,
-		ReadHeaderTimeout: runtimeConfig.ReadHeaderTimeout,
-		ReadTimeout:       runtimeConfig.ReadTimeout,
-		WriteTimeout:      runtimeConfig.WriteTimeout,
-		IdleTimeout:       runtimeConfig.IdleTimeout,
-		ErrorLog:          slog.NewLogLogger(logger.Handler(), slog.LevelError),
-	}
-
-	serverErrors := make(chan error, 1)
-	go func() {
-		logger.Info("control-plane listening", "address", runtimeConfig.HTTPAddress)
-		serverErrors <- server.ListenAndServe()
-	}()
-
-	select {
-	case <-ctx.Done():
-		shutdownContext, cancel := context.WithTimeout(context.Background(), runtimeConfig.ShutdownTimeout)
-		defer cancel()
-		if err := server.Shutdown(shutdownContext); err != nil {
-			return err
-		}
-		logger.Info("control-plane shutdown complete")
-		return nil
-	case err := <-serverErrors:
-		if errors.Is(err, http.ErrServerClosed) {
-			return nil
-		}
-		return err
-	}
+	return mux
 }
 
 // passwordHasher adapts the internal/password package's functions to the auth.Hasher interface,

@@ -1,6 +1,9 @@
 package migrations
 
-import "testing"
+import (
+	"strings"
+	"testing"
+)
 
 func TestStatementsDropsTransactionControl(t *testing.T) {
 	sql := "BEGIN;\n\nCREATE TABLE IF NOT EXISTS example (id INT);\n\nINSERT INTO example (id) VALUES (1);\n\nCOMMIT;\n"
@@ -62,5 +65,23 @@ func TestLoadMigrationsFindsEmbeddedFilesInAscendingVersionOrder(t *testing.T) {
 	}
 	if !foundVersion2 {
 		t.Fatalf("loadMigrations() did not find version 2 (000002_users_auth_billing.up.sql)")
+	}
+}
+
+// TestNoMigrationCommentContainsASemicolon guards the runner's one real constraint: statements()
+// splits on every ';', including inside `--` comments, so a comment with a semicolon turns its
+// tail into a bogus SQL statement and the control-plane cannot start (hit in R-518).
+func TestNoMigrationCommentContainsASemicolon(t *testing.T) {
+	loaded, err := loadMigrations()
+	if err != nil {
+		t.Fatalf("loadMigrations() error = %v", err)
+	}
+	for _, m := range loaded {
+		for lineNumber, line := range strings.Split(m.sql, "\n") {
+			if idx := strings.Index(line, "--"); idx >= 0 && strings.Contains(line[idx:], ";") {
+				t.Errorf("%s:%d: a comment contains ';', which the statement splitter treats as SQL: %q",
+					m.name, lineNumber+1, strings.TrimSpace(line))
+			}
+		}
 	}
 }

@@ -65,7 +65,14 @@ async function callControlPlane<T>(
   if (!response.ok) {
     throw new ControlPlaneError(response.status, await parseErrorBody(response));
   }
-  return (await response.json()) as T;
+  // A 204 (or any empty body) has nothing to parse. Calling response.json() on it throws, which
+  // every console route reported as "could not reach the control-plane" (502) - e.g. POST
+  // /projects/{id}/opened answered 204 and the Studio logged a failure on every load (R-518).
+  if (response.status === 204 || response.headers.get("content-length") === "0") {
+    return undefined as T;
+  }
+  const text = await response.text();
+  return (text ? JSON.parse(text) : undefined) as T;
 }
 
 export function registerAccount(
@@ -423,7 +430,7 @@ export interface ProjectListResponse {
 }
 
 export interface CreateProjectRequest {
-  name: string;
+  name?: string;
   description?: string;
   prompt?: string;
   workspace_id?: string;
@@ -516,12 +523,13 @@ export function touchProjectOpened(
 export function streamProjectBuild(
   token: string,
   projectId: string,
-  prompt: string
+  prompt: string,
+  mentionSkills: string[] = [],
 ): Promise<Response> {
   return fetch(`${controlPlaneUrl()}/projects/${encodeURIComponent(projectId)}/build/stream`, {
     method: "POST",
     headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-    body: JSON.stringify({ prompt }),
+    body: JSON.stringify({ prompt, mention_skills: mentionSkills }),
     cache: "no-store",
   });
 }

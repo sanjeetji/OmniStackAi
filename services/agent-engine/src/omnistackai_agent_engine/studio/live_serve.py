@@ -1015,9 +1015,9 @@ async def _workspace_edit(
             "entities": [entity.name for entity in new_ir.entities],
             "file_count": file_count,
             "diff": {
-                "added": list(diff.added_files.keys()),
-                "modified": list(diff.modified_files.keys()),
-                "deleted": list(diff.deleted_files),
+                "added": list(diff.added()),
+                "modified": list(diff.modified()),
+                "deleted": list(diff.deleted()),
                 "summary": diff.summary(),
             },
             "rationale": proposal.rationale,

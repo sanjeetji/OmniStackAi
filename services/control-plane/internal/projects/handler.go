@@ -49,11 +49,36 @@ func (d Deps) logger() *slog.Logger {
 	return slog.Default()
 }
 
+// httpClient has no overall Timeout on purpose. http.Client.Timeout also covers reading the
+// response body, so the old 15 s client cut every streamed build (and every edit, preview,
+// problems check, scan and test run) at 15 s - the console received an empty 200 while the
+// agent-engine kept working and held the workspace lock (R-518). Each call now carries its own
+// budget in its request context: quick reads keep defaultProxyTimeout, long operations get
+// their own budget, and streams live until the client disconnects.
 func (d Deps) httpClient() *http.Client {
 	if d.HTTPClient != nil {
 		return d.HTTPClient
 	}
-	return &http.Client{Timeout: defaultProxyTimeout}
+	return &http.Client{}
+}
+
+// upstreamContext bounds one upstream call. budget <= 0 means "until the caller disconnects".
+func upstreamContext(parent context.Context, budget time.Duration) (context.Context, context.CancelFunc) {
+	if budget <= 0 {
+		return context.WithCancel(parent)
+	}
+	return context.WithTimeout(parent, budget)
+}
+
+// extendWriteDeadline lifts the server-wide WriteTimeout (15 s by default) for a slow route.
+// budget <= 0 removes the deadline entirely, which is what an open-ended stream needs.
+func extendWriteDeadline(w http.ResponseWriter, budget time.Duration) {
+	controller := http.NewResponseController(w)
+	if budget <= 0 {
+		_ = controller.SetWriteDeadline(time.Time{})
+		return
+	}
+	_ = controller.SetWriteDeadline(time.Now().Add(budget))
 }
 
 func Register(mux *http.ServeMux, deps Deps) {
@@ -73,10 +98,12 @@ func Register(mux *http.ServeMux, deps Deps) {
 	mux.HandleFunc("POST /projects/{id}/preview/stop", handleProjectPreviewStop(deps))
 	mux.HandleFunc("POST /projects/{id}/problems", handleProjectProblemsCheck(deps))
 	mux.HandleFunc("GET /projects/{id}/problems", handleProjectProblemsGet(deps))
+	// POST /projects/{id}/seo/audit and POST /projects/{id}/seo/suggest are owned by the seo
+	// package (internal/seo/handler.go). Registering them here too made ServeMux panic at startup
+	// (R-518); cmd/control-plane/main_test.go now guards the complete route table.
 	mux.HandleFunc("GET /projects/{id}/seo/audit", handleProjectSEOAudit(deps))
-	mux.HandleFunc("POST /projects/{id}/seo/audit", handleProjectSEOAudit(deps))
 	mux.HandleFunc("PUT /projects/{id}/seo/page", handleProjectSEOPage(deps))
-	mux.HandleFunc("POST /projects/{id}/seo/suggest", handleProjectSEOSuggest(deps))
+	mux.HandleFunc("POST /projects/{id}/opened", handleProjectOpened(deps))
 
 	mux.HandleFunc("POST /projects/{id}/build/cancel", handleProjectBuildCancel(deps))
 	mux.HandleFunc("GET /projects/{id}/logs", handleProjectLogs(deps))
@@ -246,7 +273,9 @@ func handleDeleteProject(deps Deps) http.HandlerFunc {
 			// Also request agent-engine to delete the workspace directory
 			go func() {
 				reqURL := deps.AgentEngineURL + "/api/workspaces/" + url.PathEscape(id)
-				req, reqErr := http.NewRequestWithContext(context.Background(), http.MethodDelete, reqURL, nil)
+				purgeCtx, purgeCancel := context.WithTimeout(context.Background(), defaultProxyTimeout)
+				defer purgeCancel()
+				req, reqErr := http.NewRequestWithContext(purgeCtx, http.MethodDelete, reqURL, nil)
 				if reqErr == nil {
 					resp, doErr := deps.httpClient().Do(req)
 					if doErr == nil {
@@ -342,7 +371,9 @@ func handleProjectBuildStream(deps Deps) http.HandlerFunc {
 		reqBody, _ := json.Marshal(upstreamPayload)
 
 		upstreamURL := deps.AgentEngineURL + "/api/workspaces/" + url.PathEscape(id) + "/build/stream"
-		upstreamRequest, err := http.NewRequestWithContext(r.Context(), http.MethodPost, upstreamURL, bytes.NewReader(reqBody))
+		buildCtx, buildCancel := upstreamContext(r.Context(), defaultBuildTimeout)
+		defer buildCancel()
+		upstreamRequest, err := http.NewRequestWithContext(buildCtx, http.MethodPost, upstreamURL, bytes.NewReader(reqBody))
 		if err != nil {
 			deps.logger().Error("project build stream agent-engine request", "error", err)
 			writeError(w, http.StatusInternalServerError, "could not build upstream request")
@@ -389,7 +420,9 @@ func handleProjectBuildStream(deps Deps) http.HandlerFunc {
 				if _, writeErr := w.Write(frame); writeErr != nil {
 					go func() {
 						cancelURL := deps.AgentEngineURL + "/api/workspaces/" + url.PathEscape(id) + "/cancel"
-						req, _ := http.NewRequestWithContext(context.Background(), http.MethodPost, cancelURL, nil)
+						cancelCtx, cancelDone := context.WithTimeout(context.Background(), defaultProxyTimeout)
+						defer cancelDone()
+						req, _ := http.NewRequestWithContext(cancelCtx, http.MethodPost, cancelURL, nil)
 						resp, doErr := deps.httpClient().Do(req)
 						if doErr == nil {
 							_ = resp.Body.Close()
@@ -551,7 +584,9 @@ func handleProjectEdit(deps Deps) http.HandlerFunc {
 		reqBody, _ := json.Marshal(upstreamPayload)
 
 		targetURL := deps.AgentEngineURL + "/api/workspaces/" + url.PathEscape(id) + "/edit"
-		upstreamRequest, err := http.NewRequestWithContext(r.Context(), http.MethodPost, targetURL, bytes.NewReader(reqBody))
+		editCtx, editCancel := upstreamContext(r.Context(), defaultBuildTimeout)
+		defer editCancel()
+		upstreamRequest, err := http.NewRequestWithContext(editCtx, http.MethodPost, targetURL, bytes.NewReader(reqBody))
 		if err != nil {
 			deps.logger().Error("build agent-engine project edit request", "error", err)
 			writeError(w, http.StatusInternalServerError, "could not build upstream request")
@@ -736,7 +771,7 @@ func handleProjectPreview(deps Deps) http.HandlerFunc {
 		}
 
 		target := deps.AgentEngineURL + "/api/workspaces/" + url.PathEscape(id) + "/preview"
-		proxyUpstream(w, r, deps, http.MethodPost, target, bodyReader)
+		proxyUpstreamWithin(w, r, deps, http.MethodPost, target, bodyReader, defaultPreviewTimeout)
 	}
 }
 
@@ -773,7 +808,7 @@ func handleProjectProblemsCheck(deps Deps) http.HandlerFunc {
 			return
 		}
 		target := deps.AgentEngineURL + "/api/workspaces/" + url.PathEscape(id) + "/problems"
-		proxyUpstream(w, r, deps, http.MethodPost, target, nil)
+		proxyUpstreamWithin(w, r, deps, http.MethodPost, target, nil, defaultProblemsTimeout)
 	}
 }
 
@@ -798,8 +833,21 @@ func proxyGet(w http.ResponseWriter, r *http.Request, deps Deps, targetURL strin
 	proxyUpstream(w, r, deps, http.MethodGet, targetURL, nil)
 }
 
+// proxyUpstream relays a quick request with the default 15 s budget.
 func proxyUpstream(w http.ResponseWriter, r *http.Request, deps Deps, method string, targetURL string, body io.Reader) {
-	upstreamRequest, err := http.NewRequestWithContext(r.Context(), method, targetURL, body)
+	proxyUpstreamWithin(w, r, deps, method, targetURL, body, defaultProxyTimeout)
+}
+
+// proxyUpstreamWithin relays a request that may legitimately take longer (a model call, a
+// toolchain run). It also lifts the server's write deadline to match, or the response would be
+// dropped at the server-wide WriteTimeout even though the upstream call succeeded.
+func proxyUpstreamWithin(w http.ResponseWriter, r *http.Request, deps Deps, method string, targetURL string, body io.Reader, budget time.Duration) {
+	if budget > defaultProxyTimeout {
+		extendWriteDeadline(w, budget+5*time.Second)
+	}
+	ctx, cancel := upstreamContext(r.Context(), budget)
+	defer cancel()
+	upstreamRequest, err := http.NewRequestWithContext(ctx, method, targetURL, body)
 	if err != nil {
 		deps.logger().Error("build proxy request", "error", err)
 		writeError(w, http.StatusInternalServerError, "could not build upstream request")
@@ -958,7 +1006,10 @@ func handleProjectSEOPage(deps Deps) http.HandlerFunc {
 	}
 }
 
-func handleProjectSEOSuggest(deps Deps) http.HandlerFunc {
+// handleProjectOpened records that the user opened a project (the console calls it when the
+// Studio loads one). It existed in the console client since F-01 but was never registered, so
+// every Studio load logged a failed request (R-518). Ownership is checked; the answer is 204.
+func handleProjectOpened(deps Deps) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		user, err := auth.RequireUser(r.Context(), deps.AuthStore, r)
 		if err != nil {
@@ -967,11 +1018,20 @@ func handleProjectSEOSuggest(deps Deps) http.HandlerFunc {
 		}
 		id := r.PathValue("id")
 		if _, err := deps.ProjectStore.GetProject(r.Context(), id, user.ID); err != nil {
-			writeError(w, http.StatusNotFound, "project not found")
+			if errors.Is(err, ErrProjectNotFound) {
+				writeError(w, http.StatusNotFound, "project not found")
+				return
+			}
+			deps.logger().Error("opened: get project", "error", err)
+			writeError(w, http.StatusInternalServerError, "could not get project")
 			return
 		}
-		target := deps.AgentEngineURL + "/api/workspaces/" + url.PathEscape(id) + "/seo/suggest"
-		proxyUpstream(w, r, deps, http.MethodPost, target, r.Body)
+		if err := deps.ProjectStore.TouchProjectOpened(r.Context(), id, user.ID); err != nil {
+			deps.logger().Error("opened: touch project", "error", err)
+			writeError(w, http.StatusInternalServerError, "could not record project open")
+			return
+		}
+		w.WriteHeader(http.StatusNoContent)
 	}
 }
 
@@ -1029,6 +1089,9 @@ func handleProjectLogsStream(deps Deps) http.HandlerFunc {
 		if r.URL.RawQuery != "" {
 			targetURL += "&" + r.URL.RawQuery
 		}
+		// An open-ended tail: no write deadline and no call budget - it ends when the client
+		// disconnects (r.Context() is cancelled) or the upstream closes the stream.
+		extendWriteDeadline(w, 0)
 		upstreamReq, err := http.NewRequestWithContext(r.Context(), http.MethodGet, targetURL, nil)
 		if err != nil {
 			writeError(w, http.StatusInternalServerError, "could not build upstream request")
@@ -1150,7 +1213,7 @@ func handleProjectDBQuery(deps Deps) http.HandlerFunc {
 			return
 		}
 		target := deps.AgentEngineURL + "/api/workspaces/" + url.PathEscape(id) + "/db/query"
-		proxyUpstream(w, r, deps, http.MethodPost, target, r.Body)
+		proxyUpstreamWithin(w, r, deps, http.MethodPost, target, r.Body, defaultPreviewTimeout)
 	}
 }
 
@@ -1188,7 +1251,7 @@ func handleProjectSecurityScan(deps Deps) http.HandlerFunc {
 			return
 		}
 		target := deps.AgentEngineURL + "/api/workspaces/" + url.PathEscape(id) + "/security/scan"
-		proxyUpstream(w, r, deps, http.MethodPost, target, r.Body)
+		proxyUpstreamWithin(w, r, deps, http.MethodPost, target, r.Body, defaultBuildTimeout)
 	}
 }
 
@@ -1222,7 +1285,7 @@ func handleProjectTestsRun(deps Deps) http.HandlerFunc {
 			return
 		}
 		target := deps.AgentEngineURL + "/api/workspaces/" + url.PathEscape(id) + "/tests/run"
-		proxyUpstream(w, r, deps, http.MethodPost, target, r.Body)
+		proxyUpstreamWithin(w, r, deps, http.MethodPost, target, r.Body, defaultBuildTimeout)
 	}
 }
 

@@ -410,7 +410,7 @@ func (s *PgStore) ListMembers(ctx context.Context, workspaceID, userID string) (
 	}
 
 	rows, err := s.pool.Query(ctx, `
-		SELECT wm.id, wm.workspace_id, wm.user_id, COALESCE(u.name, 'User') AS user_name, u.email, wm.role, wm.created_at
+		SELECT wm.id, wm.workspace_id, wm.user_id, COALESCE(NULLIF(u.full_name, ''), 'User') AS user_name, u.email, wm.role, wm.created_at
 		FROM workspace_members wm
 		JOIN users u ON u.id = wm.user_id
 		WHERE wm.workspace_id = $1
@@ -513,7 +513,7 @@ func (s *PgStore) ListInvites(ctx context.Context, workspaceID, userID string) (
 	}
 
 	rows, err := s.pool.Query(ctx, `
-		SELECT wi.id, wi.workspace_id, wi.inviter_id, COALESCE(u.name, 'Admin') AS inviter_name,
+		SELECT wi.id, wi.workspace_id, wi.inviter_id, COALESCE(NULLIF(u.full_name, ''), 'Admin') AS inviter_name,
 		       wi.email, wi.role, wi.token, wi.status, wi.expires_at, wi.created_at
 		FROM workspace_invites wi
 		LEFT JOIN users u ON u.id = wi.inviter_id

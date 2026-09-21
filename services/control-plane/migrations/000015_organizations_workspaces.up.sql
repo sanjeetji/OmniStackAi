@@ -54,12 +54,15 @@ ALTER TABLE projects
 
 CREATE INDEX IF NOT EXISTS projects_workspace_id_idx ON projects (workspace_id);
 
--- Backfill: Create organization for any existing users
+-- Backfill: Create organization for any existing users. The users column is full_name (added in
+-- 000003). This read `name`, which does not exist, so the control-plane could not start on any
+-- database that already had users (found in R-518). Note: never put a semicolon in a comment
+-- here, the migration runner splits statements on every semicolon.
 INSERT INTO organizations (id, name, slug, owner_id)
 SELECT gen_random_uuid(),
-       COALESCE(NULLIF(TRIM(name), ''), 'Personal') || ' Org',
-       'org-' || SUBSTRING(id::text, 1, 8) || '-' || SUBSTRING(gen_random_uuid()::text, 1, 4),
-       id
+       COALESCE(NULLIF(TRIM(u.full_name), ''), 'Personal') || ' Org',
+       'org-' || SUBSTRING(u.id::text, 1, 8) || '-' || SUBSTRING(gen_random_uuid()::text, 1, 4),
+       u.id
 FROM users u
 WHERE NOT EXISTS (
     SELECT 1 FROM organizations o WHERE o.owner_id = u.id

@@ -964,3 +964,63 @@ func TestProjectSecurityAndTests(t *testing.T) {
 		}
 	}
 }
+
+// TestDefaultHTTPClientHasNoOverallTimeout pins the R-518 defect: http.Client.Timeout also covers
+// reading the response body, so the old 15 s default cut every streamed build (and every edit,
+// scan and test run) at 15 s and the console received an empty 200. Per-call budgets now live in
+// request contexts (upstreamContext) instead.
+func TestDefaultHTTPClientHasNoOverallTimeout(t *testing.T) {
+	if got := (Deps{}).httpClient().Timeout; got != 0 {
+		t.Fatalf("default httpClient().Timeout = %v, want 0 (budgets belong in request contexts)", got)
+	}
+	ctx, cancel := upstreamContext(context.Background(), defaultBuildTimeout)
+	defer cancel()
+	deadline, ok := ctx.Deadline()
+	if !ok || time.Until(deadline) < defaultBuildTimeout-time.Second {
+		t.Fatalf("build budget deadline = %v (ok=%v), want about %v from now", deadline, ok, defaultBuildTimeout)
+	}
+	open, cancelOpen := upstreamContext(context.Background(), 0)
+	defer cancelOpen()
+	if _, ok := open.Deadline(); ok {
+		t.Fatal("a zero budget must mean no deadline (open-ended streams)")
+	}
+}
+
+// TestProjectBuildStreamRelaysSlowUpstreamCompletely drives a build whose frames arrive with gaps,
+// the way a real model streams, and requires every frame plus the trailing credits event.
+func TestProjectBuildStreamRelaysSlowUpstreamCompletely(t *testing.T) {
+	userA := testUser("user-slow")
+	authStore := fakeAuthStore{user: userA}
+	pStore := newFakeProjectStore()
+	proj, _ := pStore.CreateProject(context.Background(), userA.ID, "Untitled project", "")
+
+	mockAgentEngine := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "text/event-stream")
+		flusher := w.(http.Flusher)
+		for i := 0; i < 5; i++ {
+			_, _ = w.Write([]byte("event: delta\ndata: {\"phase\":\"generating_ir\",\"delta\":\"x\"}\n\n"))
+			flusher.Flush()
+			time.Sleep(150 * time.Millisecond)
+		}
+		_, _ = w.Write([]byte("event: done\ndata: {\"phase\":\"done\",\"name\":\"Slow App\",\"file_count\":3,\"entities\":[],\"usage\":{\"cost_micros_usd\":0}}\n\n"))
+		flusher.Flush()
+	}))
+	defer mockAgentEngine.Close()
+
+	server := setupTestServer(t, authStore, pStore, mockAgentEngine.URL)
+	req, _ := http.NewRequest(http.MethodPost, server.URL+"/projects/"+proj.ID+"/build/stream", strings.NewReader(`{"prompt":"slow"}`))
+	req.Header.Set("Authorization", testBearer)
+	req.Header.Set("Content-Type", "application/json")
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		t.Fatalf("POST build/stream: %v", err)
+	}
+	defer resp.Body.Close()
+	body, _ := io.ReadAll(resp.Body)
+	if got := strings.Count(string(body), "event: delta"); got != 5 {
+		t.Fatalf("relayed %d delta frames, want 5; body=%s", got, body)
+	}
+	if !strings.Contains(string(body), "event: done") {
+		t.Fatalf("missing done frame; body=%s", body)
+	}
+}

@@ -380,6 +380,11 @@ RULES (non-negotiable)
   SHA == local HEAD. Never claim unexecuted tests.
 
 WHAT TO DO NEXT
+- LATEST (2026-09-21): R-518 (T-0 Stabilise the core) is done; see .ai/tasks/R-518.md. Phase T,
+  the Template Marketplace (7 categories, 10 hand-built golden-repo templates), is approved. Next is
+  T-1: template format + registry (templates/catalog/<slug>/template.json + repo/, loader in
+  studio/templates.py, control-plane GET /templates, GET /templates/{slug}, POST /templates/{slug}/use).
+  Before claiming the core works, run ./scripts/smoke-core.sh against ./scripts/omnistack.sh up.
 - R-430 through R-453 are DONE — the DIFFERENTIATING SPINE now proposes a curated multi-app ecosystem,
   materializes it as multiple owned repos, and can explicitly refine an unknown domain through local Ollama
   before using the same deterministic planner. R-433 then gives each surface a bounded read/write entity

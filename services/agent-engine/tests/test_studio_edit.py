@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import asyncio
 import json
+import shutil
 import subprocess
 import tempfile
 import unittest
@@ -19,8 +20,9 @@ from unittest.mock import patch
 from omnistackai_agent_engine.application_ir import example_ir
 from omnistackai_agent_engine.studio.files import BuildNotFoundError
 from omnistackai_agent_engine.studio.history import StudioBuildHistory
-from omnistackai_agent_engine.studio.live_serve import _build, _edit
+from omnistackai_agent_engine.studio.live_serve import _build, _edit, _workspace_edit
 from omnistackai_agent_engine.studio.session import EditNotSupportedError, StudioSessionStore
+from omnistackai_agent_engine.studio.workspace import StudioWorkspaceStore
 
 _VALID_DELTA = json.dumps({
     "entities": [
@@ -307,6 +309,53 @@ class EditEndToEndTests(unittest.TestCase):
                     asyncio.run(_edit(build_id, "add x", history=history, session_store=session_store))
             self.assertEqual(failing.calls, 1)
             self.assertEqual(len(_git_log_oneline(repo_dir)), 1)
+
+
+class WorkspaceEditTests(unittest.TestCase):
+    """R-518: `_workspace_edit` (the persisted-project path the console uses) with a real change.
+
+    It read `diff.added_files`, which ProjectDiff never had, so every edit that changed files was
+    committed and then answered as an error (502 in the Studio). Only no-op edits ever succeeded.
+    """
+
+    def test_workspace_edit_that_changes_files_commits_and_reports_the_diff(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            store = StudioWorkspaceStore(Path(tmp) / "workspaces")
+            ws_id = "7d3f0c52-1f4e-4a54-9a2d-2b8f6f0e9c11"
+            provider = StubProvider([json.dumps(example_ir("minimal-blog").to_dict())])
+            with patch(
+                "omnistackai_agent_engine.studio.live_serve.resolve_generation_provider_from_env",
+                return_value=(provider, "stub-model", 4096, 5.0),
+            ):
+                payload = _build(
+                    "A tech blog",
+                    target_dir=str(Path(tmp) / "blog"),
+                    history=StudioBuildHistory(),
+                    session_store=StudioSessionStore(),
+                )
+            repo_dir = str(store.repo_path(ws_id))
+            shutil.copytree(payload["target_dir"], repo_dir)
+            store.save_ir(ws_id, example_ir("minimal-blog"))
+            self.assertEqual(len(_git_log_oneline(repo_dir)), 1)
+
+            with patch(
+                "omnistackai_agent_engine.studio.live_serve.resolve_generation_provider_from_env",
+                return_value=(StubProvider([_VALID_DELTA]), "stub-model", 4096, 5.0),
+            ):
+                result = asyncio.run(
+                    _workspace_edit(ws_id, "add a favorites feature", workspace_store=store)
+                )
+
+            self.assertGreater(len(result["diff"]["added"]), 0)
+            self.assertTrue(all(isinstance(path, str) for path in result["diff"]["added"]))
+            self.assertIsInstance(result["diff"]["modified"], list)
+            self.assertIsInstance(result["diff"]["deleted"], list)
+            self.assertIn("Favorite", result["entities"])
+            log = _git_log_oneline(repo_dir)
+            self.assertEqual(len(log), 2)
+            self.assertTrue(log[0].startswith(result["commit_sha"][:7]))
+            # The response is JSON-serialisable, as the HTTP handler needs.
+            json.dumps(result)
 
 
 if __name__ == "__main__":

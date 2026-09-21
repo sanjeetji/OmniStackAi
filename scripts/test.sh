@@ -2017,8 +2017,34 @@ if [[ ! -d "$repo_root/templates/backend-node" ]]; then
   exit 1
 fi
 
+# R-518 (Stabilise the core - the control-plane starts, and prompt -> build -> edit works live):
+if ! rg -qF 'func newMux(' "$control_plane_root/cmd/control-plane/main.go" || [[ ! -f "$control_plane_root/cmd/control-plane/main_test.go" ]]; then
+  printf 'R-518 main.go must build routes in newMux() and main_test.go must test the full route table.\n'
+  exit 1
+fi
+if ! rg -qF '"POST /projects/{id}/opened"' "$control_plane_root/internal/projects/handler.go"; then
+  printf 'R-518 the control-plane must serve POST /projects/{id}/opened.\n'
+  exit 1
+fi
+if rg -q '"POST /projects/\{id\}/seo/(audit|suggest)"' "$control_plane_root/internal/projects/handler.go"; then
+  printf 'R-518 POST seo/audit|suggest belong to internal/seo only (duplicates panic the ServeMux).\n'
+  exit 1
+fi
+if rg -q '\bu\.name\b' "$control_plane_root/internal" "$control_plane_root/migrations"; then
+  printf 'R-518 the users column is full_name, never u.name.\n'
+  exit 1
+fi
+if ! rg -qF 'compose up -d --build --wait' "$repo_root/scripts/omnistack.sh"; then
+  printf 'R-518 omnistack.sh up must build the control-plane image from source.\n'
+  exit 1
+fi
+if [[ ! -x "$repo_root/scripts/smoke-core.sh" ]]; then
+  printf 'R-518 scripts/smoke-core.sh (live core-loop smoke) must exist and be executable.\n'
+  exit 1
+fi
+if rg -q 'diff\.(added_files|modified_files|deleted_files)' "$agent_engine_root/src"; then
+  printf 'R-518 ProjectDiff exposes added()/modified()/deleted(), not *_files attributes.\n'
+  exit 1
+fi
+
 printf 'Repository contract tests passed.\n'
-
-
-
-

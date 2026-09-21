@@ -4,6 +4,12 @@ Last updated: 2026-09-21
 ## Current Phase
 Stage 0 (Founder Build Sequence, Brief Section 91) — BASIC/MVP
 
+> **R-518 (2026-09-21): T-0 Stabilise the core.** The core loop now works live end to end:
+> register, create from a prompt, streamed build, rename, reopen, chat edit commit, and restart
+> persistence. 10 defects fixed (startup panic, missing `/opened`, `users.full_name` SQL, 15 s stream
+> cut-off, console 204/name/skills handling, workspace-edit crash, stale image). `scripts/smoke-core.sh`
+> is the live regression check.
+
 > **R-517 (2026-09-21): Node.js backend codegen — Express/Hono alongside Python/Go.**
 > Implemented first-class, deterministic Node.js backend code generation (`GenerationTarget.BACKEND_NODE` / `BackendStrategy.NODE`) alongside Python (FastAPI) and Go (`net/http`) backend adapters.
 > Key capabilities:
