@@ -1,9 +1,11 @@
 # Current Handoff
 
-Task ID: R-523
+Task ID: R-524
 Status: done
 Phase: MVP
 Branch: `ai/R-517-node-backend`
+
+> **R-524 Completed (2026-09-21): chat edits work on Gemini.** **Next:** T-4 code-edit agent.
 
 > **R-523 Completed (2026-09-21): T-3 marketplace UI** (`/templates`, `/templates/[slug]`, Use
 > template, Studio notice). **Next: R-524** (chat edits truncated on Gemini), then T-4 code-edit agent.

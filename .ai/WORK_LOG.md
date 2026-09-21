@@ -1,5 +1,9 @@
 # Work Log
 
+## 2026-09-21 — R-524 (chat edits use the provider output budget)
+
+- Gemini edit replies were truncated at a fixed 2,048 output tokens (reasoning counts against it). Edits now get the provider's budget. Smoke 17/17 twice on Google.
+
 ## 2026-09-21 — R-523 (T-3 Template marketplace in the console)
 
 - `/templates` and `/templates/[slug]`, a Use template dialog that opens the new project in the Studio, a Templates nav item and home link, a Studio notice for template projects, and template covers and screenshots served declared-only (agent-engine to control-plane to console, sandboxed SVG).

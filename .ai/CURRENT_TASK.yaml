@@ -1,49 +1,29 @@
-task_id: R-523
+task_id: R-524
 status: completed
 phase: MVP
 tracker_row: null
 started_at: "2026-09-21"
 completed_at: "2026-09-21"
 objective: >-
-  T-3 Template marketplace UI: /templates (search, category filters, cards, empty state),
-  /templates/[slug] (apps, features, roles, demo logins, entities, integrations, stack, screenshots,
-  Use template dialog -> Studio), Templates nav + home entry, Studio notice for template projects,
-  template media served agent-engine -> control-plane -> console.
+  Chat edits use the provider's output budget (never below 2,048) so Gemini edit replies are not cut
+  off mid-JSON.
 allowed_paths:
-  - services/agent-engine/src/omnistackai_agent_engine/studio/templates.py
-  - services/agent-engine/src/omnistackai_agent_engine/studio/server.py
-  - services/agent-engine/tests/test_studio_templates.py
-  - services/control-plane/internal/templates/
-  - services/control-plane/cmd/control-plane/main_test.go
-  - apps/console-web/app/templates/
-  - apps/console-web/app/template-assets/
-  - apps/console-web/components/template-meta.ts
-  - apps/console-web/app/api/templates/
-  - apps/console-web/app/studio/[projectId]/page.tsx
-  - apps/console-web/app/studio/studio-chat.tsx
-  - apps/console-web/app/page.tsx
-  - apps/console-web/components/app-nav.tsx
-  - apps/console-web/components/template-*.tsx
-  - apps/console-web/lib/control-plane.ts
-  - scripts/test.sh
+  - services/agent-engine/src/omnistackai_agent_engine/studio/live_serve.py
+  - services/agent-engine/tests/test_studio_edit.py
   - .ai/
   - PROJECT_STATE.md
   - CHANGELOG.md
   - docs/PROGRESS.md
   - docs/RESUME_PROMPT.md
 forbidden_changes:
-  - No new console dependency; no change to the prompt build path
   - task verify stays offline with 0 model calls
 required_gates:
-  - agent-engine media tests; control-plane go test ./...; console typecheck/lint/build
-  - bash scripts/test.sh; task verify / lint / security:quick / env:check
-  - live fixture-catalogue walkthrough + smoke-core.sh
+  - test_studio_edit; task verify / lint / security:quick / env:check; smoke-core.sh on Google
 model_tool_trace:
   routing: deterministic_only
   local_calls: 0
   cloud_calls: 0
 evidence:
-  tests: "templates 39 OK; go ok; task verify 3943 OK; console build OK"
-  live: "browse -> detail -> use -> Studio notice -> 3-app preview ready 13s; empty state on real catalogue"
-  smoke: "build/preview/home pass on Google; chat edit 502 (Gemini truncation at 2,048 output tokens) -> R-524"
-next_action: R-524 chat edits use the provider output budget (Gemini truncation), then T-4 code-edit agent
+  tests: "EditOutputBudgetTests fail-first then OK; task verify 3946 OK"
+  live: "smoke-core.sh on Google 17/17 twice (edits commit)"
+next_action: T-4 code-edit agent for template projects (plan -> file selection -> diffs -> typecheck/tests -> commit)

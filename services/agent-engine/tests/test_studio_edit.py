@@ -358,5 +358,63 @@ class WorkspaceEditTests(unittest.TestCase):
             json.dumps(result)
 
 
+class EditOutputBudgetTests(unittest.TestCase):
+    """R-524: chat edits asked for at most 2,048 output tokens whatever the provider allowed. Gemini
+    counts its reasoning against that budget, so edit replies were cut off mid-JSON ("Unterminated
+    string") and every edit failed. Edits now get the provider's budget, never less than 2,048."""
+
+    def _build_stub(self) -> StubProvider:
+        return StubProvider([json.dumps(example_ir("minimal-blog").to_dict())])
+
+    def _workspace_edit_budget(self, provider_budget: int) -> int:
+        with tempfile.TemporaryDirectory() as tmp:
+            store = StudioWorkspaceStore(Path(tmp) / "workspaces")
+            ws_id = "7d3f0c52-1f4e-4a54-9a2d-2b8f6f0e9c12"
+            with patch(
+                "omnistackai_agent_engine.studio.live_serve.resolve_generation_provider_from_env",
+                return_value=(self._build_stub(), "stub-model", 4096, 5.0),
+            ):
+                payload = _build(
+                    "A tech blog",
+                    target_dir=str(Path(tmp) / "blog"),
+                    history=StudioBuildHistory(),
+                    session_store=StudioSessionStore(),
+                )
+            shutil.copytree(payload["target_dir"], str(store.repo_path(ws_id)))
+            store.save_ir(ws_id, example_ir("minimal-blog"))
+            provider = StubProvider([_VALID_DELTA])
+            with patch(
+                "omnistackai_agent_engine.studio.live_serve.resolve_generation_provider_from_env",
+                return_value=(provider, "stub-model", provider_budget, 5.0),
+            ):
+                asyncio.run(_workspace_edit(ws_id, "add a favorites feature", workspace_store=store))
+            return provider.requests[0].max_output_tokens
+
+    def test_workspace_edit_uses_the_provider_budget(self) -> None:
+        self.assertEqual(self._workspace_edit_budget(8192), 8192)
+
+    def test_workspace_edit_never_goes_below_the_edit_default(self) -> None:
+        self.assertEqual(self._workspace_edit_budget(1024), 2048)
+
+    def test_legacy_edit_uses_the_provider_budget(self) -> None:
+        history = StudioBuildHistory()
+        session_store = StudioSessionStore()
+        with tempfile.TemporaryDirectory() as tmp:
+            with patch(
+                "omnistackai_agent_engine.studio.live_serve.resolve_generation_provider_from_env",
+                return_value=(self._build_stub(), "stub-model", 4096, 5.0),
+            ):
+                build_id = _build(
+                    "A tech blog", target_dir=str(Path(tmp) / "blog"), history=history, session_store=session_store
+                )["id"]
+            provider = StubProvider([_VALID_DELTA])
+            with patch(
+                "omnistackai_agent_engine.studio.live_serve.resolve_generation_provider_from_env",
+                return_value=(provider, "stub-model", 8192, 5.0),
+            ):
+                asyncio.run(_edit(build_id, "add a favorites feature", history=history, session_store=session_store))
+            self.assertEqual(provider.requests[0].max_output_tokens, 8192)
+
+
 if __name__ == "__main__":
     unittest.main()

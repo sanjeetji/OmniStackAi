@@ -1,5 +1,7 @@
 # Changelog
 
+2026-09-21  R-524  Chat edits use the provider's output budget (never below 2,048 tokens). Gemini counts reasoning against the budget, so edit replies were cut off mid-JSON and every edit failed on Google.
+
 2026-09-21  R-523  T-3 Template marketplace in the console: `/templates` (search, category filters, cards, empty state) and `/templates/[slug]` (apps, features, roles, demo logins, data, integrations, stack, screenshots) with a Use template dialog that opens the new project in the Studio; Templates nav item and home entry; the Studio explains template projects; template covers/screenshots served declared-only through agent-engine -> control-plane -> console.
 
 2026-09-21  R-522  Google (Gemini) provider runs builds. The default cloud safe-input budget now fits beside the output (Google's 8,192 output + 120,000 input overflowed the 128,000 window, so it could never bootstrap), and 429 plus temporary 502/503/504 are retried with bounded backoff in `generate` and when opening a stream (500 still fails at once).

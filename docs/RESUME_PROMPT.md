@@ -380,8 +380,8 @@ RULES (non-negotiable)
   SHA == local HEAD. Never claim unexecuted tests.
 
 WHAT TO DO NEXT
-- LATEST (2026-09-21): R-523 (T-3 marketplace UI) is done. Next: R-524 (chat edits truncated on
-  Gemini: edit output capped at 2,048 tokens), then T-4 code-edit agent. Earlier: R-522 (Google
+- LATEST (2026-09-21): R-524 (chat edits work on Gemini) is done. Next: T-4 code-edit agent.
+  Earlier: R-523 (T-3 marketplace UI) is done. Earlier: R-522 (Google
   provider runs builds; .env model gemini-3-flash-preview) is done. Earlier: R-521 (core-loop hotfix: generated apps run again) is done; see
   .ai/tasks/R-521.md. Always run ./scripts/smoke-core.sh (17 checks incl.
   the generated preview) after generator changes. Earlier: R-520 (T-2 multi-app preview) is done.

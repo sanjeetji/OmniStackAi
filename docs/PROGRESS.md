@@ -6,6 +6,7 @@ R-461 completion) plus the state files (`.ai/`), Git history, and CHANGELOG.
 
 ## Headline
 
+- **R-524 — edits work on Gemini (2026-09-21):** the full core loop passes on Google. `task verify` = 3,946 tests.
 - **R-523 — Template marketplace UI (2026-09-21):** browse, inspect and use templates from the console. `task verify` = 3,943 tests.
 - **R-522 — Google provider live (2026-09-21):** builds run on Gemini in about 30 s. `task verify` = 3,940 tests.
 - **R-521 — generated apps run again (2026-09-21):** fixed defects that broke every prompt-built

@@ -36,7 +36,11 @@ from ..application_ir import ApplicationIR
 from ..codegen import assemble_project
 from ..edit.apply import commit_edit
 from ..edit.diff import plan_edit
-from ..intake.app_delta import apply_app_delta, generate_app_delta_proposal
+from ..intake.app_delta import (
+    DEFAULT_APP_DELTA_MAX_OUTPUT_TOKENS,
+    apply_app_delta,
+    generate_app_delta_proposal,
+)
 from ..intake.provider_resolution import resolve_generation_provider_from_env
 from ..model_gateway.overview import platform_overview
 from ..intake.build_app import app_build_result_to_dict, build_app_from_prompt, build_app_from_prompt_stream
@@ -828,7 +832,10 @@ async def _edit(
         model_id=model_id,
         api_key=api_key,
     )
-    proposal = await generate_app_delta_proposal(session.ir, prompt, provider, model_id=eff_model_id, timeout_seconds=timeout)
+    proposal = await generate_app_delta_proposal(
+        session.ir, prompt, provider, model_id=eff_model_id, timeout_seconds=timeout,
+        max_output_tokens=_edit_output_budget(_max_output),
+    )
     new_ir = apply_app_delta(session.ir, proposal)
     diff = plan_edit(session.ir, new_ir)
 
@@ -896,6 +903,16 @@ def _open_recorded_build(build_id: str, history: StudioBuildHistory) -> dict:
     if _open_path(entry["target_dir"]):
         return {"status": "opened", "message": "Opened the generated project folder."}
     return {"status": "error", "message": "Could not open the project folder on this machine."}
+
+
+def _edit_output_budget(provider_max_output: int) -> int:
+    """The output budget for a chat edit: the provider's own, never below the edit default (R-524).
+
+    A fixed 2,048 cut Gemini's replies off mid-JSON, because its reasoning counts against the output
+    budget, so every edit on Gemini failed with "Unterminated string".
+    """
+
+    return max(DEFAULT_APP_DELTA_MAX_OUTPUT_TOKENS, int(provider_max_output or 0))
 
 
 def _refuse_template_workspace(workspace_store: StudioWorkspaceStore, ws_id: str, action: str) -> None:
@@ -989,7 +1006,8 @@ async def _workspace_edit(
             api_key=api_key,
         )
         proposal = await generate_app_delta_proposal(
-            ir, prompt, provider, model_id=eff_model_id, timeout_seconds=timeout, context=context
+            ir, prompt, provider, model_id=eff_model_id, timeout_seconds=timeout, context=context,
+            max_output_tokens=_edit_output_budget(_max_output),
         )
         new_ir = apply_app_delta(ir, proposal)
         diff = plan_edit(ir, new_ir)
