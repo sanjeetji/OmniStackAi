@@ -54,6 +54,9 @@ found_and_fixed:
 found_not_fixed:
   - "The console is itself a Next app, so its own server answers RSC navigation requests to /preview/... before the proxy code runs (proved: a bogus project id returns 307, not 404). It redirects to its own _rsc hash while the previewed app redirects to a different one, so client-side link prefetch/navigation bounces between them. Initial page loads, forms and buttons are unaffected. Fix needs a preview path that is not a Next route: middleware rewrite, or serving previews from the Studio/control-plane instead."
 next_action: >-
+  Install Ollama (or use a cloud key that answers), then finish publish checklist item 9: the three
+  scripted chat edits on a fresh ride-now project, preview started first. See the resume section at
+  the top of .ai/HANDOFF.md. Then:
   R-531 (Bazaar 1/4, the multi-vendor marketplace API) per section 6.1 of the Phase T plan, unless the
   founder prefers the marketplace overview pages (template screen galleries) or the preview RSC fix first.
   Outstanding for R-530: publish checklist item 9 (three scripted chat edits) and ./scripts/smoke-core.sh
