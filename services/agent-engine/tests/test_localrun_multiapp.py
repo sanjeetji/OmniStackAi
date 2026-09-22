@@ -107,6 +107,36 @@ class PlanTests(unittest.TestCase):
             **kwargs,
         )
 
+    def test_apps_with_a_build_are_served_from_it_not_from_a_dev_server(self) -> None:
+        """R-530: a dev server's hot-reload socket cannot pass the preview proxy, and a Turbopack
+        dev app never hydrates without it, so anything buildable is built and served."""
+        with tempfile.TemporaryDirectory() as tmp:
+            repo = _make_repo(Path(tmp))
+            for app in ("apps/web", "apps/courier"):
+                (repo / app / "package.json").write_text(
+                    '{"scripts": {"dev": "next dev", "build": "next build", "start": "next start"}}', encoding="utf-8"
+                )
+            plan = self._plan(repo)
+            web, courier, api = plan.apps
+            self.assertEqual(web.command, ("pnpm", "run", "start"))
+            self.assertEqual(courier.command, ("pnpm", "run", "start"))
+            self.assertEqual(api.command, ("pnpm", "run", "dev"), "the API has no build script")
+
+            builds = [step for step in plan.setup if step.args[:2] == ("run", "build")]
+            self.assertEqual([step.cwd for step in builds], [web.cwd, courier.cwd])
+            # Next inlines NEXT_PUBLIC_* and the base path at build time, so the build must carry
+            # exactly the environment the app will run with.
+            self.assertEqual(dict(builds[0].env)["NEXT_PUBLIC_API_URL"], f"/preview/{PROJECT}/api")
+            self.assertEqual(dict(builds[0].env)["BASE_PATH"], f"/preview/{PROJECT}/web")
+            install = next(i for i, step in enumerate(plan.setup) if step.args[:1] == ("install",))
+            self.assertLess(install, plan.setup.index(builds[0]), "dependencies are installed before the build")
+
+    def test_apps_without_a_build_fall_back_to_the_dev_server(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            plan = self._plan(_make_repo(Path(tmp)))  # fixtures ship a dev script only
+            self.assertEqual([app.command for app in plan.apps], [("pnpm", "run", "dev")] * 3)
+            self.assertEqual([s for s in plan.setup if s.args[:2] == ("run", "build")], [])
+
     def test_apps_get_ports_paths_and_env_by_kind(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             plan = self._plan(_make_repo(Path(tmp)))

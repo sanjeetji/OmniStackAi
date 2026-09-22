@@ -975,6 +975,8 @@ class StudioPreviewManager:
                 ws_sess.phase = phase
                 if phase == "install":
                     ws_sess.message = "Installing dependencies..."
+                elif phase == "build":
+                    ws_sess.message = "Building the apps..."
                 elif phase == "migrate":
                     ws_sess.message = "Running database migrations..."
                 elif phase == "start":

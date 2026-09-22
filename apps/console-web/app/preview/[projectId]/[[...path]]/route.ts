@@ -113,8 +113,7 @@ async function handleProxy(request: NextRequest, { params }: RouteParams): Promi
   // Build response headers
   const responseHeaders = new Headers();
   upstreamResponse.headers.forEach((value, key) => {
-    const lower = key.toLowerCase();
-    if (lower !== "content-length" && lower !== "transfer-encoding") {
+    if (!isDecodedAwayHeader(key)) {
       responseHeaders.set(key, value);
     }
   });
@@ -264,8 +263,7 @@ async function proxyMultiApp(
 
   const responseHeaders = new Headers();
   upstream.headers.forEach((value, key) => {
-    const lower = key.toLowerCase();
-    if (lower !== "content-length" && lower !== "transfer-encoding") {
+    if (!isDecodedAwayHeader(key)) {
       responseHeaders.set(key, value);
     }
   });
@@ -280,6 +278,19 @@ async function proxyMultiApp(
   }
 
   return new NextResponse(upstream.body, { status: upstream.status, headers: responseHeaders });
+}
+
+/**
+ * Headers that must not be copied from the upstream answer (R-530).
+ *
+ * `fetch` decompresses the body for us, so forwarding the upstream `content-encoding` tells the
+ * browser to gunzip plain bytes and it fails the whole navigation with ERR_CONTENT_DECODING_FAILED.
+ * curl never sees this: without `Accept-Encoding` the app answers uncompressed. `content-length`
+ * and `transfer-encoding` describe the encoded body for the same reason.
+ */
+function isDecodedAwayHeader(name: string): boolean {
+  const lower = name.toLowerCase();
+  return lower === "content-encoding" || lower === "content-length" || lower === "transfer-encoding";
 }
 
 function escapeHtml(str: string): string {

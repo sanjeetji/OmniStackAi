@@ -160,6 +160,16 @@ class ValidateTemplateTests(unittest.TestCase):
                     lambda d, n=name: (d / "repo" / "apps" / "web" / n).mkdir(), name
                 )
 
+    def test_desktop_junk_is_ignored_not_rejected(self) -> None:
+        """R-530: Finder leaves .DS_Store everywhere; it must not reach a user's copy or the digest."""
+        with tempfile.TemporaryDirectory() as tmp:
+            template_dir = _copy_fixture(Path(tmp))
+            before = template_digest(template_dir / "repo")
+            (template_dir / "repo" / ".DS_Store").write_bytes(b"\x00junk")
+            (template_dir / "repo" / "apps" / "Thumbs.db").write_bytes(b"junk")
+            self.assertEqual(validate_template(template_dir), [])
+            self.assertEqual(template_digest(template_dir / "repo"), before)
+
     def test_omnistack_json_is_reserved(self) -> None:
         self._assert_error(
             lambda d: (d / "repo" / "omnistack.json").write_text("{}", encoding="utf-8"), "omnistack.json"

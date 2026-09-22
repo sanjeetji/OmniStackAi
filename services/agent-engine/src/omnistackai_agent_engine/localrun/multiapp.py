@@ -139,6 +139,9 @@ class AppRun:
     cwd: str
     port: int
     public_path: str  # the path the console serves this app under
+    # `plan` serves a production build whenever the app has one (see `_serves_a_build`); the dev
+    # server below is only the fallback, because its hot-reload socket cannot pass through the
+    # console's preview proxy and a Turbopack dev app never hydrates without it.
     command: tuple[str, ...] = ("pnpm", "run", "dev")
     env: tuple[tuple[str, str], ...] = ()
 
@@ -244,6 +247,7 @@ def build_multiapp_plan(
                     ("API_URL", f"http://127.0.0.1:{api_port}"),
                     ("NEXT_PUBLIC_API_URL", api_public),
                 ]
+        app_env = tuple(env) + extra
         apps.append(
             AppRun(
                 id=spec["id"],
@@ -252,7 +256,8 @@ def build_multiapp_plan(
                 cwd=cwd,
                 port=port,
                 public_path=public_path,
-                env=tuple(env) + extra,
+                command=("pnpm", "run", "start") if _serves_a_build(Path(cwd)) else ("pnpm", "run", "dev"),
+                env=app_env,
             )
         )
 
@@ -304,6 +309,20 @@ def build_multiapp_plan(
                 )
             )
 
+    # Build every app that ships build+start, with the same environment it will run with: Next
+    # inlines NEXT_PUBLIC_* and the base path at build time.
+    for app in apps:
+        if app.command[-1] == "start":
+            setup.append(
+                RunStep(
+                    label=f"build {app.name}",
+                    program="pnpm",
+                    args=("run", "build"),
+                    cwd=app.cwd,
+                    env=app.env,
+                )
+            )
+
     return MultiAppPlan(
         repo_dir=str(root),
         project_id=project_id,
@@ -312,6 +331,23 @@ def build_multiapp_plan(
         setup=tuple(setup),
         secrets=tuple(s for s in (db_password, jwt_secret) if s),
     )
+
+
+def _serves_a_build(app_dir: Path) -> bool:
+    """True when the app has both ``build`` and ``start`` scripts, so the preview can serve a
+    production build instead of a dev server (R-530).
+
+    A dev server is the wrong thing to put behind the preview proxy: the proxy cannot carry the
+    hot-reload WebSocket, and a Next.js app built with Turbopack never hydrates without it, so
+    every page renders but nothing responds to a click. A production build has no such socket, and
+    it is also what the user will deploy.
+    """
+
+    try:
+        scripts = json.loads((app_dir / "package.json").read_text(encoding="utf-8")).get("scripts")
+    except (OSError, json.JSONDecodeError, UnicodeDecodeError):
+        return False
+    return isinstance(scripts, dict) and bool(scripts.get("build")) and bool(scripts.get("start"))
 
 
 def allocate_ports(count: int, host: str = "127.0.0.1") -> list[int]:
@@ -591,7 +627,10 @@ def start_multiapp(
         current = None
         for step in plan.setup:
             check_cancelled()
-            step_phase = "install" if step.program == "pnpm" else "migrate"
+            if step.program == "pnpm":
+                step_phase = "build" if "build" in step.args else "install"
+            else:
+                step_phase = "migrate"
             if step_phase != current:
                 current = step_phase
                 phase(step_phase)

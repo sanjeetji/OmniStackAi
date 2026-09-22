@@ -1,4 +1,4 @@
-# OmniStackAI — implementation progress (as of R-498)
+# OmniStackAI — implementation progress (as of R-530)
 
 A living summary of what is built, what is pending, and how to see results. Numbers come from the
 execution tracker (`R_&_D/OmniStackAI_Execution_Tracker_v6.xlsx`, `Phase_Roadmap`, 461 tasks as of
@@ -6,6 +6,7 @@ R-461 completion) plus the state files (`.ai/`), Git history, and CHANGELOG.
 
 ## Headline
 
+- **R-530 — RideNow published (2026-09-23):** the operations console completes the template, 48 screenshots were captured from the running apps, and `ride-now` v1.0.0 is in the marketplace. Previews now build and serve production apps, so a preview is interactive in a browser for the first time. `task verify` = 3,980 tests.
 - **R-529 — Phase T handoff (2026-09-22):** `R_&_D/OmniStackAI_Template_Marketplace_Plan_v1.md` (remaining templates, method, demo guide) and `scripts/preview-drafts.sh`.
 - **R-528 — RideNow driver app (2026-09-22):** the installable driver PWA, live in the preview with the rider app and API. `task verify` = 3,976 tests.
 - **R-527 — RideNow rider app (2026-09-22):** the customer web app and shared package, live in the preview. `task verify` = 3,974 tests.

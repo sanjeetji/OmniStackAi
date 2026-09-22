@@ -1,9 +1,21 @@
 # Current Handoff
 
-Task ID: R-529
-Status: done
+Task ID: R-530
+Status: done (publish checklist item 9 outstanding)
 Phase: MVP
-Branch: `ai/R-517-node-backend`
+Branch: `ai/R-530-ridenow-admin`
+
+> **R-530 Completed (2026-09-23): RideNow is published.** The operations console (`apps/admin`, 18
+> pages) completes the template, 48 screenshots plus a cover were captured from the running apps
+> (`scripts/capture-template-screens.mjs`, Playwright in a scratch folder only), and
+> `templates/catalog/ride-now` v1.0.0 is listed in the marketplace. Driving a preview with a real
+> browser for the first time exposed five platform defects, all fixed: the proxy's
+> `content-encoding`, dev-server previews that never hydrate (they now build and serve production),
+> `.DS_Store` shipped to users, Python tests reporting 0 passed without pytest, and git's background
+> `gc` racing with project copy/delete. **Outstanding:** the three scripted chat edits and
+> `smoke-core.sh` need a model provider (no key, no Ollama on this machine). **Recorded for its own
+> task:** client-side navigation in previews falls back to full page loads because the console's own
+> Next server answers RSC requests to `/preview/...` first. **Next:** R-531, Bazaar 1/4.
 
 > **R-529 Completed (2026-09-22): Phase T handoff doc**,
 > `R_&_D/OmniStackAI_Template_Marketplace_Plan_v1.md`: remaining templates, method, checklist and

@@ -44,6 +44,8 @@ _SEMVER_RE = re.compile(r"^\d+\.\d+\.\d+$")
 _EMAIL_RE = re.compile(r"^[^@\s]+@[^@\s]+\.[^@\s]+$")
 _FORBIDDEN_DIRS = frozenset({".git", "node_modules", ".next", ".turbo", "__pycache__"})
 _ALLOWED_ENV_FILES = frozenset({".env.example"})
+# Desktop junk: never copied into a user's project and never part of the digest (R-530).
+_JUNK_FILES = frozenset({".DS_Store", "Thumbs.db", "desktop.ini"})
 _MAX_FILES = 5_000
 _MAX_BYTES = 50 * 1024 * 1024
 _MAX_TAGLINE = 140
@@ -101,6 +103,8 @@ def _repo_files(repo_dir: Path) -> tuple[list[str], list[str]]:
             rel = path.relative_to(repo_dir).as_posix()
             if path.is_symlink():
                 problems.append(f"repo/{rel}: symlinks are not allowed")
+                continue
+            if name in _JUNK_FILES:
                 continue
             if (name == ".env" or name.startswith(".env.")) and name not in _ALLOWED_ENV_FILES:
                 problems.append(f"repo/{rel}: real .env files are not allowed (ship .env.example)")
@@ -407,6 +411,14 @@ class TemplateCatalog:
 def _git(repo: Path, *args: str) -> str:
     env = dict(os.environ)
     env["GIT_TERMINAL_PROMPT"] = "0"
+    # Git 2.5x starts a detached `gc --auto` after a commit, which keeps writing inside .git
+    # while the platform may be copying or removing that project. These repositories are small
+    # and the platform owns their lifecycle, so never let git maintain them in the background.
+    env["GIT_CONFIG_COUNT"] = "2"
+    env["GIT_CONFIG_KEY_0"] = "gc.auto"
+    env["GIT_CONFIG_VALUE_0"] = "0"
+    env["GIT_CONFIG_KEY_1"] = "maintenance.auto"
+    env["GIT_CONFIG_VALUE_1"] = "false"
     env["GIT_AUTHOR_NAME"] = env["GIT_COMMITTER_NAME"] = _AUTHOR_NAME
     env["GIT_AUTHOR_EMAIL"] = env["GIT_COMMITTER_EMAIL"] = _AUTHOR_EMAIL
     process = subprocess.run(

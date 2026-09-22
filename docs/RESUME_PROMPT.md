@@ -12,7 +12,7 @@ builder: describe an app -> it generates a real, owned multi-platform app with v
 
 REPOSITORY
 - GitHub: https://github.com/sanjeetji/OmniStackAi.git
-- Local:  /Users/sanjeet_kumar/Documents/Projects/Startup/Omnistackai
+- Local:  /Users/sanjeet_kumar/Documents/Projects/Startup/Omnistackai (on a second Mac: ~/Documents/Sanjeet/Startup/OmniStackAi)
 - Work on and commit DIRECTLY to branch `main` (it is the ONLY branch and the GitHub default; it
   contains all work). The founder consolidated onto main and deleted per-task branches — do NOT create
   new ai/<task-id> branches; keep the Tracker-ID discipline (tag commits [R-###]). Git identity:

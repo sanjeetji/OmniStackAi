@@ -309,6 +309,14 @@ class StudioWorkspaceStore:
         push_cmd = ["git", "push", remote_url, f"HEAD:{branch}"]
         env = dict(os.environ)
         env["GIT_TERMINAL_PROMPT"] = "0"
+        # Git 2.5x starts a detached `gc --auto` after a commit, which keeps writing inside .git
+        # while the platform may be copying or removing that project. These repositories are small
+        # and the platform owns their lifecycle, so never let git maintain them in the background.
+        env["GIT_CONFIG_COUNT"] = "2"
+        env["GIT_CONFIG_KEY_0"] = "gc.auto"
+        env["GIT_CONFIG_VALUE_0"] = "0"
+        env["GIT_CONFIG_KEY_1"] = "maintenance.auto"
+        env["GIT_CONFIG_VALUE_1"] = "false"
 
         res = subprocess.run(
             push_cmd,

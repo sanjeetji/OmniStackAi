@@ -92,7 +92,7 @@ def _api_routes(api: Path) -> list[re.Pattern[str]]:
 
 @unittest.skipUnless(API.is_dir(), "needs the RideNow template")
 class RideNowAppsTests(unittest.TestCase):
-    """R-528: the apps are complete, and every API path their code names exists in the API."""
+    """R-528/R-530: the apps are complete, and every API path their code names exists in the API."""
 
     def test_driver_app_pages_and_pwa_files(self) -> None:
         driver = API.parents[1] / "apps" / "driver"
@@ -105,11 +105,25 @@ class RideNowAppsTests(unittest.TestCase):
         self.assertIn('display: "standalone"', manifest)
         self.assertIn("BASE_PATH", manifest, "the manifest must respect the preview base path")
 
+    def test_ops_app_pages_and_admin_only_sign_in(self) -> None:
+        """R-530: the operations console has the full page set and signs in as admin only."""
+        admin = API.parents[1] / "apps" / "admin"
+        for page in ("", "login", "live", "trips", "trips/[id]", "riders", "riders/[id]", "drivers", "drivers/[id]",
+                     "pricing", "zones", "promos", "payouts", "finance", "tickets", "tickets/[id]", "audit", "settings"):
+            self.assertTrue((admin / "app" / page / "page.tsx").is_file(), f"ops page missing: /{page}")
+        for extra in ("app/not-found.tsx", "app/icon.svg", "lib/session.tsx", "components/shell.tsx"):
+            self.assertTrue((admin / extra).is_file(), extra)
+        login = (admin / "app" / "login" / "page.tsx").read_text(encoding="utf-8")
+        self.assertIn('role: "admin"', login, "the ops sign-in must ask the API for an admin account")
+        session = (admin / "lib" / "session.tsx").read_text(encoding="utf-8")
+        self.assertIn('role !== "admin"', session, "a stored non-admin session must be dropped")
+        self.assertIn("ridenow.admin.session", (admin / "lib" / "api.ts").read_text(encoding="utf-8"))
+
     def test_every_api_path_used_by_the_apps_exists(self) -> None:
         routes = _api_routes(API)
         self.assertGreater(len(routes), 60)
         checked = 0
-        for app in ("rider", "driver"):
+        for app in ("rider", "driver", "admin"):
             root = API.parents[1] / "apps" / app
             for source in [*root.rglob("*.ts"), *root.rglob("*.tsx")]:
                 if "node_modules" in source.parts or ".next" in source.parts:
@@ -118,7 +132,7 @@ class RideNowAppsTests(unittest.TestCase):
                     concrete = re.sub(r"\$\{[^}]*\}", "x", path).rstrip("/")
                     checked += 1
                     self.assertTrue(any(r.match(concrete) for r in routes), f"{source.relative_to(root)} calls {path}, which the API does not define")
-        self.assertGreater(checked, 40)
+        self.assertGreater(checked, 70)
 
 
 if __name__ == "__main__":

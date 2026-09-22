@@ -1,29 +1,60 @@
-task_id: R-529
+task_id: R-530
 status: done
 phase: MVP
 tracker_row: null
 started_at: "2026-09-22"
+branch: ai/R-530-ridenow-admin
 objective: >-
-  Phase T handoff document in R_&_D (remaining templates and tasks, tool-agnostic), a script to
-  show draft templates in the marketplace for demos, and RideNow's draft manifest in the repo.
+  RideNow part 4 of 4: the operations app (apps/admin, full page set from .ai/tasks/R-526.md),
+  screenshots of every page of every app taken with Playwright from a scratch folder, a complete
+  template.json, the publish checklist, then rename _ride-now to ride-now so it is listed.
 allowed_paths:
-  - R_&_D/OmniStackAI_Template_Marketplace_Plan_v1.md
-  - scripts/preview-drafts.sh
-  - scripts/test.sh
-  - templates/catalog/_ride-now/template.json
+  - templates/catalog/_ride-now/ (renamed to templates/catalog/ride-now/ at publish)
+  # Added 2026-09-22: the live gate drove a preview with a real browser for the first time and
+  # found the preview path broken for every project, not just this template. Fixing it is part of
+  # "the template works live" (founder: "I need advanced, smooth & complete functionality").
+  - apps/console-web/app/preview/[projectId]/[[...path]]/route.ts
+  - apps/console-web/app/studio/studio-preview-apps.tsx
+  - services/agent-engine/src/omnistackai_agent_engine/localrun/multiapp.py
+  - services/agent-engine/src/omnistackai_agent_engine/studio/preview.py
+  - services/agent-engine/tests/test_localrun_multiapp.py
+  - services/agent-engine/tests/test_studio_templates.py
+  - services/agent-engine/tests/test_template_ride_now.py
+  - services/agent-engine/src/omnistackai_agent_engine/studio/templates.py
+  - scripts/
   - .ai/
   - PROJECT_STATE.md
   - CHANGELOG.md
   - docs/PROGRESS.md
   - docs/RESUME_PROMPT.md
+  - R_&_D/OmniStackAI_Template_Marketplace_Plan_v1.md
 forbidden_changes:
-  - Template stays hidden (_ride-now) until R-530
+  - No new template dependency beyond the pinned stack of the other RideNow apps
+  - No Playwright or browser tooling as a template or platform dependency (scratch folder only)
   - task verify stays offline with 0 model calls
+  - No real credentials in the template
 required_gates:
-  - preview-drafts.sh lists ride-now and a live Use template + preview works
-  - task verify / lint / security:quick / env:check
+  - apps/admin tsc + next build in a scratch install; other apps and the API still type-check
+  - Live preview with api, rider, driver, admin; every ops page 200 through the proxy; rider/driver refused by ops
+  - workflow.test.ts against the preview
+  - test_template_ride_now.py covers ops pages and API path cross-check
+  - Publish checklist items 1-8 and 10 with evidence; item 9 only if a model is available
+  - task verify / lint / security:quick / env:check / smoke-core.sh
 model_tool_trace:
   routing: deterministic_only
   local_calls: 0
   cloud_calls: 0
-next_action: R-530 RideNow admin/ops app, template.json, screenshots, publish ride-now, publish checklist, 3 scripted chat edits
+blockers:
+  - "2026-09-22: this Mac had no toolchain (node, pnpm, go, docker, task, python 3.13). Homebrew install running (node, pnpm, go, go-task, python@3.13, colima, docker CLI, docker-compose). Docker engine is Colima, not Docker Desktop (founder's instruction)."
+  - "No .env in this checkout: chat edits (checklist item 9) need a provider key or local Ollama."
+found_and_fixed:
+  - "Preview proxy forwarded the upstream content-encoding while fetch had already decoded the body: every browser failed the page with ERR_CONTENT_DECODING_FAILED. curl never saw it (it sends no Accept-Encoding)."
+  - "Previews ran each app with a dev server. Its hot-reload socket cannot pass the proxy, and a Turbopack dev app never hydrates without it, so every preview page rendered but nothing responded to a click. Previews now build once and serve the production build (RideNow: ready in 46 s including builds)."
+  - "Finder .DS_Store files were copied into every project made from a template and counted in its digest."
+found_not_fixed:
+  - "The console is itself a Next app, so its own server answers RSC navigation requests to /preview/... before the proxy code runs (proved: a bogus project id returns 307, not 404). It redirects to its own _rsc hash while the previewed app redirects to a different one, so client-side link prefetch/navigation bounces between them. Initial page loads, forms and buttons are unaffected. Fix needs a preview path that is not a Next route: middleware rewrite, or serving previews from the Studio/control-plane instead."
+next_action: >-
+  R-531 (Bazaar 1/4, the multi-vendor marketplace API) per section 6.1 of the Phase T plan, unless the
+  founder prefers the marketplace overview pages (template screen galleries) or the preview RSC fix first.
+  Outstanding for R-530: publish checklist item 9 (three scripted chat edits) and ./scripts/smoke-core.sh
+  both need a model provider - put a key in .env or install Ollama with a model.

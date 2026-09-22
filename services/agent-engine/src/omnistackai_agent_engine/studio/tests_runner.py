@@ -96,6 +96,13 @@ def _run_single_suite(suite_info: dict[str, Any]) -> dict[str, Any]:
     elif kind == "python":
         if shutil.which("pytest"):
             cmd = ["pytest", "-v"]
+        elif (Path(cwd) / "tests").is_dir():
+            # Since Python 3.11, `unittest discover` no longer recurses into a directory that is
+            # not an importable package, so plain `discover` finds nothing in the usual layout
+            # (tests/test_*.py with no __init__.py). Start in that folder, which then becomes the
+            # import root. Without this, a project's Python tests silently report zero tests
+            # wherever pytest is not installed (R-530).
+            cmd = ["python3", "-m", "unittest", "discover", "-v", "-s", "tests"]
         else:
             cmd = ["python3", "-m", "unittest", "discover", "-v"]
     elif kind == "go":

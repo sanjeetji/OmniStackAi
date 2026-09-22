@@ -1,8 +1,18 @@
 # Project State — OmniStackAI
-Last updated: 2026-09-21
+Last updated: 2026-09-23
 
 ## Current Phase
 Stage 0 (Founder Build Sequence, Brief Section 91) — BASIC/MVP
+
+> **R-530 (2026-09-23): RideNow is published.** The operations console (`apps/admin`, 18 pages:
+> dashboard, live map, trips, riders, drivers with document review, pricing, surge zones, promos,
+> payouts, finance, support, audit, settings) completes the template. 48 screenshots of every page
+> of all three apps plus a cover were captured from the running apps, and
+> `templates/catalog/ride-now` v1.0.0 is listed in the marketplace. Driving a preview with a real
+> browser for the first time exposed five platform defects, all fixed — most importantly that no
+> preview page loaded in a browser (the proxy's `content-encoding`) and that none was interactive
+> (dev servers never hydrate behind the proxy; previews now build and serve production). Next:
+> R-531, Bazaar.
 
 > **R-529 (2026-09-22): Phase T handoff doc.** `R_&_D/OmniStackAI_Template_Marketplace_Plan_v1.md`
 > holds the remaining templates, the method and a demo guide. `./scripts/preview-drafts.sh` shows

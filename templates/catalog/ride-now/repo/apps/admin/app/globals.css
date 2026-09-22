@@ -1,0 +1,94 @@
+@import "tailwindcss";
+@source "../../../packages/shared/src";
+
+/* RideNow Ops: a light, dense, desktop-first control room. Dark ink sidebar, cool slate canvas,
+   8px corners, compact tables, signal blue for actions and RideNow amber for the brand. */
+@theme {
+  --font-sans: var(--font-instrument), ui-sans-serif, system-ui, sans-serif;
+  --font-mono: ui-monospace, "SF Mono", "Cascadia Mono", Menlo, monospace;
+  --color-canvas: #f2f4f8;
+  --color-panel: #ffffff;
+  --color-sunken: #f7f8fb;
+  --color-line: #e2e6ee;
+  --color-line-strong: #ccd3df;
+  --color-ink: #0d1626;
+  --color-ink-2: #384357;
+  --color-muted: #687387;
+  --color-side: #0b1320;
+  --color-side-2: #152033;
+  --color-side-line: #1f2b40;
+  --color-side-fg: #c3cddd;
+  --color-side-muted: #7d8aa1;
+  --color-signal: #2f5bff;
+  --color-signal-deep: #1d44d8;
+  --color-signal-soft: #e9eeff;
+  --color-brand: #ffb020;
+  --color-ok: #0e8a4f;
+  --color-ok-soft: #e4f5ec;
+  --color-warn: #b76a00;
+  --color-warn-soft: #fff3de;
+  --color-bad: #cf2f2f;
+  --color-bad-soft: #fdebeb;
+  --color-info: #0a74a0;
+  --color-info-soft: #e3f3fa;
+  --radius-box: 0.5rem;
+  --shadow-panel: 0 1px 2px rgb(13 22 38 / 0.05);
+  --shadow-pop: 0 12px 40px -12px rgb(13 22 38 / 0.35);
+}
+
+:root {
+  color-scheme: light;
+  /* The shared city map, themed for operations: free cars green, busy cars blue. */
+  --map-land: #edf0f4;
+  --map-water: #cadcee;
+  --map-park: #d9e8d5;
+  --map-road: #ffffff;
+  --map-road-major: #f3e0b4;
+  --map-label: #7a8496;
+  --map-route: #2f5bff;
+  --map-route-halo: #ffffff;
+  --map-pickup: #0e8a4f;
+  --map-drop: #0d1626;
+  --map-car: #0e8a4f;
+  --map-car-busy: #2f5bff;
+  --map-car-muted: #9aa3b2;
+  --map-label-bg: #0d1626;
+  --map-label-fg: #ffffff;
+  --map-zone: rgb(255 176 32 / 0.14);
+  --map-zone-stroke: rgb(214 138 0 / 0.7);
+  --map-zone-text: #9a5b00;
+}
+
+body {
+  background: var(--color-canvas);
+  color: var(--color-ink);
+  font-size: 14px;
+  -webkit-font-smoothing: antialiased;
+  font-feature-settings: "tnum" 0;
+}
+
+.num {
+  font-variant-numeric: tabular-nums;
+}
+
+@keyframes ops-in {
+  from { opacity: 0; transform: translateY(6px); }
+  to { opacity: 1; transform: none; }
+}
+.ops-in { animation: ops-in 0.25s ease-out both; }
+
+@keyframes ops-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.35; }
+}
+.ops-pulse { animation: ops-pulse 1.6s ease-in-out infinite; }
+
+@media (prefers-reduced-motion: reduce) {
+  .ops-in, .ops-pulse { animation: none; }
+}
+
+/* Settings → Compact tables (applied on <html data-density="compact">). */
+:root[data-density="compact"] td {
+  padding-top: 0.3rem;
+  padding-bottom: 0.3rem;
+}

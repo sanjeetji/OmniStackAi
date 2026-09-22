@@ -312,6 +312,14 @@ def restore(repo_dir: str | os.PathLike[str], original: dict[str, bytes | None])
 def _git(repo: Path, *args: str) -> str:
     env = dict(os.environ)
     env["GIT_TERMINAL_PROMPT"] = "0"
+    # Git 2.5x starts a detached `gc --auto` after a commit, which keeps writing inside .git
+    # while the platform may be copying or removing that project. These repositories are small
+    # and the platform owns their lifecycle, so never let git maintain them in the background.
+    env["GIT_CONFIG_COUNT"] = "2"
+    env["GIT_CONFIG_KEY_0"] = "gc.auto"
+    env["GIT_CONFIG_VALUE_0"] = "0"
+    env["GIT_CONFIG_KEY_1"] = "maintenance.auto"
+    env["GIT_CONFIG_VALUE_1"] = "false"
     env["GIT_AUTHOR_NAME"] = env["GIT_COMMITTER_NAME"] = _AUTHOR_NAME
     env["GIT_AUTHOR_EMAIL"] = env["GIT_COMMITTER_EMAIL"] = _AUTHOR_EMAIL
     process = subprocess.run(["git", *args], cwd=str(repo), env=env, capture_output=True, text=True, check=False)

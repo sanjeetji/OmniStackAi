@@ -4,10 +4,14 @@ phase: BASIC/MVP
 founder_stage: 0
 current_task: null
 current_status: ready
-branch: ai/R-517-node-backend
-last_completed_task: R-529
+branch: ai/R-530-ridenow-admin
+last_completed_task: R-530
 last_completed_task_summary: >-
-  Completed R-529 (2026-09-22): Phase T handoff document R_&_D/OmniStackAI_Template_Marketplace_Plan_v1.md (state, template method, publish checklist, specs for the 9 remaining templates, demo guide), scripts/preview-drafts.sh to show draft templates, and RideNow's draft template.json in the repo. The RideNow admin + publish task is renumbered R-530.
+  Completed R-530 (2026-09-23): RideNow part 4/4 and publish. apps/admin "RideNow Ops" (18 pages: dashboard, live map, trips and investigation, riders, drivers with document review, pricing, surge zones, promos, payouts, finance, support desk, audit, settings) with its own light control-room design. 48 screenshots of every page of all three apps plus a cover, captured by scripts/capture-template-screens.mjs (Playwright from a scratch folder, staging live scenes), which solves R-528's blocker. templates/catalog/ride-now is published (v1.0.0, 4 apps, cover, 8 highlights). The live gate found and fixed five platform defects the curl-only checks had missed: the preview proxy forwarded content-encoding for an already-decoded body (no preview page loaded in any browser); previews ran dev servers that never hydrate behind the proxy (they now build and serve production); .DS_Store was copied into every project; a project's Python tests reported 0 passed without pytest; git's background gc raced with project copy/delete.
+_prior_last_completed_task_summary_R529: >-
+  Completed R-529 (2026-09-22): Phase T handoff document R_&_D/OmniStackAI_Template_Marketplace_Plan_v1.md
+  (state, template method, publish checklist, specs for the 9 remaining templates, demo guide),
+  scripts/preview-drafts.sh to show draft templates, and RideNow's draft template.json in the repo.
 _prior_last_completed_task_summary_R528: >-
   Completed R-528 (2026-09-22): RideNow part 3/4. apps/driver PWA (dark, mobile-first, 13 pages + manifest): online switch with surge-zone map, offer sheet, trip flow (arrive, PIN, complete, cash or wallet, rate rider, cancel with reason), earnings chart, wallet and payouts, trip history and detail, ratings, account with vehicle, documents and location mode, apply, help threads, notifications. Added GET /driver/zones, an offline test that every API path the apps call exists, and a live payout test (workflow 5/5).
 _prior_last_completed_task_summary_R527: >-

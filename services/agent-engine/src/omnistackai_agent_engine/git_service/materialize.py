@@ -115,6 +115,14 @@ def commit_all(
 def _git(cwd: Path, args: list[str], *, identity: tuple[str, str] | None = None) -> str:
     env = dict(os.environ)
     env["GIT_TERMINAL_PROMPT"] = "0"
+    # Git 2.5x starts a detached `gc --auto` after a commit, which keeps writing inside .git
+    # while the platform may be copying or removing that project. These repositories are small
+    # and the platform owns their lifecycle, so never let git maintain them in the background.
+    env["GIT_CONFIG_COUNT"] = "2"
+    env["GIT_CONFIG_KEY_0"] = "gc.auto"
+    env["GIT_CONFIG_VALUE_0"] = "0"
+    env["GIT_CONFIG_KEY_1"] = "maintenance.auto"
+    env["GIT_CONFIG_VALUE_1"] = "false"
     if identity is not None:
         name, email = identity
         env["GIT_AUTHOR_NAME"] = env["GIT_COMMITTER_NAME"] = name

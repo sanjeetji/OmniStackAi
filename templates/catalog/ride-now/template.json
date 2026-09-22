@@ -1,0 +1,57 @@
+{
+  "schema_version": 1,
+  "slug": "ride-now",
+  "name": "RideNow",
+  "version": "1.0.0",
+  "category": "mobility",
+  "tagline": "Ride-hailing for one city: rider app, driver app, ops console, live dispatch, wallets and payouts.",
+  "description": "A complete ride-hailing product for Bengaluru, built as three apps on one TypeScript API and one PostgreSQL database.\n\nRiders book with upfront fares, surge and promo codes, watch the car arrive on a live map, start the ride with a PIN, pay by wallet or cash and rate the driver. Drivers go online, receive timed offers, run the trip, and track earnings, payouts, ratings and documents. The operations team runs the city: a live map of drivers and trips, trip investigation with the full dispatch and money trail, refunds, rider and driver accounts, document review and approval, pricing per vehicle type, surge zones, promo codes, driver payouts, a finance view of the platform ledger, a support desk and an audit log of every operator action.\n\nEverything runs without credentials: payments, SMS and maps are mocks behind interfaces, and simulated demo drivers accept and complete rides on their own, so one person can see the whole flow. Sign in with the demo logins below, or make it yours by chat.",
+  "apps": [
+    { "id": "rider", "name": "Rider app", "kind": "web", "path": "apps/rider" },
+    { "id": "driver", "name": "Driver app", "kind": "pwa", "path": "apps/driver" },
+    { "id": "admin", "name": "Ops console", "kind": "admin", "path": "apps/admin" },
+    { "id": "api", "name": "API", "kind": "api", "path": "services/api" }
+  ],
+  "roles": [
+    { "id": "rider", "name": "Rider", "description": "Books rides, pays by wallet or cash, rates drivers." },
+    { "id": "driver", "name": "Driver", "description": "Goes online, accepts and completes rides, withdraws earnings." },
+    { "id": "admin", "name": "Operations", "description": "Runs the city: dispatch, drivers, pricing, refunds, payouts and support." }
+  ],
+  "entities": ["Trip", "Offer", "Driver", "Vehicle type", "Surge zone", "Promo code", "Wallet transaction", "Payout", "Rating", "Support ticket", "Audit entry"],
+  "features": [
+    "Upfront fares per vehicle type with surge and promo codes",
+    "Live dispatch with timed offers and re-dispatch",
+    "Live trip tracking over server-sent events",
+    "PIN-verified ride start",
+    "Wallet with card top-up, cash trips and commission",
+    "Driver earnings, payouts and ratings",
+    "Support tickets with message threads",
+    "Ops live map of drivers, trips and surge zones",
+    "Trip investigation with dispatch trail, ledger and refunds",
+    "Driver onboarding: document review and approval",
+    "Pricing, surge zones and promo codes controlled from the console",
+    "Audit log of every operator action"
+  ],
+  "integrations": [
+    { "id": "payments", "kind": "payments", "provider": "mock", "mock": true },
+    { "id": "sms", "kind": "sms", "provider": "mock", "mock": true },
+    { "id": "maps", "kind": "maps", "provider": "mock", "mock": true }
+  ],
+  "demo_users": [
+    { "role": "rider", "name": "Asha Rao", "email": "asha@ridenow.test", "password": "Rider@2026" },
+    { "role": "driver", "name": "Ravi Kumar", "email": "ravi@ridenow.test", "password": "Driver@2026" },
+    { "role": "admin", "name": "Neha Kapoor", "email": "admin@ridenow.test", "password": "Admin@2026" }
+  ],
+  "stack": ["Next.js 16", "React 19", "Tailwind CSS 4", "TypeScript", "Hono", "PostgreSQL", "Server-sent events"],
+  "cover": "media/cover.jpg",
+  "screenshots": [
+    "media/rider/landing.jpg",
+    "media/rider/book.jpg",
+    "media/rider/live-trip.jpg",
+    "media/driver/offer.jpg",
+    "media/driver/to-pickup.jpg",
+    "media/admin/dashboard.jpg",
+    "media/admin/live-map.jpg",
+    "media/admin/trip-detail.jpg"
+  ]
+}

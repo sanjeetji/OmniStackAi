@@ -31,6 +31,7 @@ const KIND_ICON: Record<PreviewApp["kind"], LucideIcon> = {
 
 const PHASE_LABELS: Record<string, string> = {
   install: "Installing dependencies",
+  build: "Building the apps",
   migrate: "Setting up the database and demo data",
   start: "Starting the apps",
   ready: "Ready",

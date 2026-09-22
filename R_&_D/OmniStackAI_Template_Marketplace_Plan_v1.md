@@ -1,6 +1,6 @@
 # OmniStackAI: Template Marketplace (Phase T), plan and handoff (v1)
 
-**Written 2026-09-22, after R-528. Companion to `OmniStackAI_Platform_Buildout_v1.md` (Phase F).**
+**Written 2026-09-22, after R-528; updated 2026-09-23, after R-530. Companion to `OmniStackAI_Platform_Buildout_v1.md` (Phase F).**
 
 This document lets any engineer or AI coding tool (Claude Code, Cursor, Codex, Gemini, …) continue
 Phase T without this conversation. It covers:
@@ -15,7 +15,7 @@ The repository's own rules still apply on top of this document: `AGENTS.md`, `CL
 
 ---
 
-## 1. Where we are (2026-09-22)
+## 1. Where we are (2026-09-23)
 
 **The core platform works end to end and is on `main`** (Phases A to E, the ungated Phase F items, and T-0 to T-4).
 
@@ -23,15 +23,17 @@ The repository's own rules still apply on top of this document: `AGENTS.md`, `CL
 | --- | --- |
 | Prompt to app | Chat in the Studio produces a real repo (Next.js + API + DB) with git history. Streaming build, chat edits, Problems (tsc), live preview. |
 | Projects | Persisted per user in the control-plane: list, rename, reopen, manage page. |
-| Preview | Every project runs locally on demand. It is reached through the console's same-origin proxy (`/preview/<project>/<app>`), so it also works from other devices on the LAN. Multi-app template projects run all apps plus a fresh Postgres with migrations and seed. |
+| Preview | Every project runs locally on demand, as a production build served behind the console's same-origin proxy (`/preview/<project>/<app>`), so it also works from other devices on the LAN. Multi-app template projects run all apps plus a fresh Postgres with migrations and seed. |
 | Template marketplace (T-1 to T-3) | `/templates` (search, categories, cards) and `/templates/<slug>` (apps, roles, features, stack, demo logins, "Use template"). "Use template" copies the golden repo into a new project with its own git history. |
 | Code-edit agent (T-4) | Template projects are customised by chat. It picks files, edits them, runs tsc and other checks, gets one repair round, then commits the touched paths or rolls back fully. |
 | Model providers | Google Gemini (`gemini-3-flash-preview`, key in the untracked `.env`), local Ollama fallback. |
-| Tests | `task verify`: 3,976 offline tests, 0 model calls. `./scripts/smoke-core.sh`: the full core loop against the running stack. |
+| Tests | `task verify`: 3,980 offline tests, 0 model calls. `./scripts/smoke-core.sh`: the full core loop against the running stack. |
 
-**Templates: 1 of 10 in progress.** RideNow (mobility) is 3 of 4 parts done: API, rider app and
-driver app. It is a hidden draft in `templates/catalog/_ride-now/`, not listed until it passes the
-publish checklist (§5).
+**Templates: 1 of 10 published.** RideNow (mobility) is complete — API, rider app, driver app and
+operations console — and listed as `templates/catalog/ride-now/` v1.0.0 with a cover and 48 screens
+captured from the running apps. One item of the publish checklist still owes evidence: the three
+scripted chat edits (§5, item 9) need a model provider, which the machine that finished R-530 did
+not have.
 
 | Task | What | Status |
 | --- | --- | --- |
@@ -42,8 +44,16 @@ publish checklist (§5).
 | R-527 | RideNow 2/4: rider web app and `packages/shared` | done |
 | R-528 | RideNow 3/4: driver PWA | done |
 | R-529 | This document, the draft-template demo script, RideNow's draft manifest | done |
-| **R-530** | **RideNow 4/4: admin/ops app, then publish `ride-now`** | **next** |
-| later | 9 more templates (§6), then T-5 workspace upgrades (§7) | planned |
+| R-530 | RideNow 4/4: operations console, 48 screenshots, published `ride-now` v1.0.0 | done |
+| **R-531** | **Bazaar 1/4 (§6.1): API, database and demo data** | **next** |
+| later | 8 more templates (§6), then T-5 workspace upgrades (§7) | planned |
+
+**R-530 also fixed the preview path**, which no browser had ever driven before: previews now build
+each app once and serve the production build (a dev server's hot-reload socket cannot pass the
+console proxy, and a Turbopack dev app never hydrates without it), and the proxy no longer forwards
+`content-encoding` for a body it has already decoded. One known limit remains: client-side link
+navigation inside a preview falls back to a full page load, because the console is itself a Next app
+and answers RSC navigation requests to `/preview/...` before the proxy code runs.
 
 ---
 
@@ -74,7 +84,8 @@ stack, and verified like product code.
 ```
 templates/catalog/<slug>/            (_<slug>/ while it is a hidden draft)
   template.json                      manifest: schema in templates/catalog/README.md
-  media/                             cover.png + screenshots (required at publish)
+  capture.mjs                        how to screenshot this template (§4); not copied to users
+  media/                             cover.jpg, screens.json and one image per page (§4)
   repo/                              the golden repository users receive
     package.json, pnpm-workspace.yaml (apps/*, services/*, packages/*), .gitignore, .env.example
     services/api/                    one TypeScript API for every app
@@ -202,18 +213,20 @@ cancelled, pending, …) so every screen has data, and three documented demo log
    - change a workflow.
 10. Offline gates are in `task verify`; `smoke-core.sh` passes.
 
-**Open problem for screenshots (must be solved in R-530).** Headless Chrome on the dev Mac cannot
-capture signed-in pages:
+**Screenshots: solved in R-530** with option (b), Playwright in a scratch folder only. Use the
+runner and give the template its own plan:
 
-- DevTools `Page.captureScreenshot` hangs because the headless window has no display link.
-- `--screenshot` with `--virtual-time-budget` stalls while the app's SSE stream is open.
-- The `--screenshot` window is also at least 500 px wide.
+```bash
+npm i --prefix "$SCRATCH/pw" playwright && npx --prefix "$SCRATCH/pw" playwright install chromium-headless-shell
+node scripts/capture-template-screens.mjs --template templates/catalog/<slug> --playwright "$SCRATCH/pw" \
+  --api http://127.0.0.1:4000 --app <app>=http://127.0.0.1:3101 ...
+```
 
-Options, in order:
-
-- (a) install `chrome-headless-shell`, which supports `HeadlessExperimental.beginFrame`;
-- (b) Playwright in a scratch folder only (never a template or platform dependency);
-- (c) the founder captures them in a real browser.
+`templates/catalog/<slug>/capture.mjs` lists the demo users, the storage key each app uses and one
+`shot()` per page, and can stage live scenes through the API first (RideNow books a ride so the
+driver's offer sheet, the rider's live trip and the ops live map are real). The runner writes
+`media/<app>/<name>.jpg`, a `media/screens.json` describing every screen, and a composed cover. Run
+the apps as production builds against a freshly seeded database; never capture a dev server.
 
 ---
 

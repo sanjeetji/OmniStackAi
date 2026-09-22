@@ -2235,8 +2235,62 @@ if [[ ! -x "$repo_root/scripts/preview-drafts.sh" ]] || ! bash -n "$repo_root/sc
   printf 'R-529 scripts/preview-drafts.sh must exist, parse, and never copy dependencies into a catalogue.\n'
   exit 1
 fi
-if [[ -d "$repo_root/templates/catalog/_ride-now" ]] && ! python3 -c "import json,sys; d=json.load(open(sys.argv[1])); assert d['slug']=='ride-now' and {a['id'] for a in d['apps']} >= {'rider','driver','api'}" "$repo_root/templates/catalog/_ride-now/template.json"; then
+if [[ -d "$repo_root/templates/catalog/_ride-now" ]] && ! python3 -c "import json,sys; d=json.load(open(sys.argv[1])); assert d['slug']=='ride-now' and {a['id'] for a in d['apps']} >= {'rider','driver','api'}" "$repo_root/templates/catalog/_ride-now/template.json"; then  # published in R-530, so this guards the draft only
   printf 'R-529 the RideNow draft needs its template.json (slug ride-now, rider/driver/api apps).\n'
+  exit 1
+fi
+
+# R-530 (Phase T, T-6 part 4 - RideNow operations console, screenshots, publish):
+for required in apps/admin/app/page.tsx apps/admin/app/live/page.tsx "apps/admin/app/trips/[id]/page.tsx" \
+  "apps/admin/app/drivers/[id]/page.tsx" apps/admin/app/pricing/page.tsx apps/admin/app/zones/page.tsx \
+  apps/admin/app/payouts/page.tsx apps/admin/app/finance/page.tsx apps/admin/app/audit/page.tsx \
+  apps/admin/lib/session.tsx apps/admin/components/shell.tsx; do
+  if [[ ! -f "$ride_now_repo/$required" ]]; then
+    printf 'R-530 RideNow ops console file missing: %s\n' "$required"
+    exit 1
+  fi
+done
+if ! rg -qF 'role: "admin"' "$ride_now_repo/apps/admin/app/login/page.tsx"; then
+  printf 'R-530 the ops console must sign in as an admin account only.\n'
+  exit 1
+fi
+if [[ -d "$repo_root/templates/catalog/ride-now" ]]; then
+  if ! python3 - "$repo_root/templates/catalog/ride-now" <<'PY'; then
+import json, sys
+from pathlib import Path
+
+root = Path(sys.argv[1])
+manifest = json.loads((root / "template.json").read_text(encoding="utf-8"))
+assert {a["id"] for a in manifest["apps"]} >= {"rider", "driver", "admin", "api"}, "rider, driver, admin and api apps"
+assert manifest.get("cover"), "a cover image"
+shots = manifest.get("screenshots") or []
+assert len(shots) >= 4, "at least 4 screenshots"
+for rel in [manifest["cover"], *shots]:
+    assert (root / rel).is_file(), f"missing media file {rel}"
+PY
+    printf 'R-530 the published RideNow manifest needs its four apps, a cover and at least 4 screenshots.\n'
+    exit 1
+  fi
+fi
+if [[ ! -f "$repo_root/scripts/capture-template-screens.mjs" ]] \
+  || ! rg -qF 'playwright' "$repo_root/scripts/capture-template-screens.mjs"; then
+  printf 'R-530 the screenshot capture script is required (Playwright stays in a scratch folder).\n'
+  exit 1
+fi
+if rg -qF '"playwright"' "$repo_root/package.json" "$repo_root/apps/console-web/package.json"; then
+  printf 'R-530 Playwright must never become a platform dependency.\n'
+  exit 1
+fi
+# Previews serve a production build: a dev server's hot-reload socket cannot pass the preview proxy
+# and a Turbopack dev app never hydrates without it.
+if ! rg -qF '_serves_a_build' "$agent_engine_root/src/omnistackai_agent_engine/localrun/multiapp.py" \
+  || ! rg -qF 'test_apps_with_a_build_are_served_from_it_not_from_a_dev_server' "$agent_engine_root/tests/test_localrun_multiapp.py"; then
+  printf 'R-530 multi-app previews must serve a production build when the app has one.\n'
+  exit 1
+fi
+# The proxy decodes bodies, so it must never forward the upstream content-encoding.
+if ! rg -qF 'isDecodedAwayHeader' "$repo_root/apps/console-web/app/preview/[projectId]/[[...path]]/route.ts"; then
+  printf 'R-530 the preview proxy must strip content-encoding from decoded responses.\n'
   exit 1
 fi
 
