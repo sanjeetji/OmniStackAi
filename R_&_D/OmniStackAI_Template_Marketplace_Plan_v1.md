@@ -45,7 +45,11 @@ not have.
 | R-528 | RideNow 3/4: driver PWA | done |
 | R-529 | This document, the draft-template demo script, RideNow's draft manifest | done |
 | R-530 | RideNow 4/4: operations console, 48 screenshots, published `ride-now` v1.0.0 | done |
-| **R-531** | **Bazaar 1/4 (§6.1): API, database and demo data** | **next** |
+| R-531 | Bazaar 1/4 (§6.1): API, database and demo data | done |
+| R-532 | Bazaar 2/4 (§6.1): Shared library and buyer storefront web app | done |
+| R-533 | Bazaar 3/4 (§6.1): Artisan vendor portal | done |
+| R-534 | Bazaar 4/4 (§6.1): Operations console, 48 screenshots, published `bazaar` v1.0.0 | done |
+| **R-535** | **CareClinic 1/4 (§6.2): Clinical care API, database and demo data** | **next** |
 | later | 8 more templates (§6), then T-5 workspace upgrades (§7) | planned |
 
 **R-530 also fixed the preview path**, which no browser had ever driven before: previews now build

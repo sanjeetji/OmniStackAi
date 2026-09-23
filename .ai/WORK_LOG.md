@@ -1,5 +1,43 @@
 # Work Log
 
+## 2026-09-23 — R-534 (Bazaar part 4/4: Marketplace Operations Console, 48 Screenshots & Catalog Publication)
+
+- **Marketplace Operations Console (`apps/admin` on Next.js 16 + React 19 + Turbopack + Tailwind CSS 4):**
+  - High-density control-room operations theme with charcoal/slate dark foundations, ivory typography, and crisp status badges.
+  - Components: `demo-banner.tsx` (1-click Vikram Malhotra login), `admin-sidebar.tsx`, `admin-header.tsx`, `stat-card.tsx`, `admin-shell.tsx`.
+  - 18 routes matching `template.json`:
+    - `/login`: Admin sign-in with 1-click credentials for Vikram Malhotra (`admin@bazaar.test` / `Admin@2026`).
+    - `/`: Overview Dashboard (GMV, net commission revenue, vendor count, 14-day GMV chart, and pending queues).
+    - `/shops`: Vendor Directory with search, status filters, GI badges, and rating averages.
+    - `/shops/[id]`: Vendor Profile Review with atelier bio, craft lineage, commission overrides, and audit actions.
+    - `/shops/[id]/kyc`: KYC Verification & Approval console with artisan document inspection, license details, and one-click approve/reject.
+    - `/orders`: Global Orders List with search, date filters, split shipment badges, and CSV export.
+    - `/orders/[id]`: Deep Order Investigation with multi-vendor consignments, payment breakdown, ledger lines, and cancel/refund.
+    - `/shipments`: Global Shipments Monitor cross-vendor logistics board with carrier status indicators.
+    - `/finance`: Platform Financials dashboard with escrow pool balance, commission revenue, and pending payables.
+    - `/finance/ledger`: Double-Entry Ledger Audit journal verifying that debits equal credits.
+    - `/settlements`: Settlement Batches console with payout lists and batch generation.
+    - `/settlements/[id]`: Approve Payout Batch with line-item breakdown per vendor, clawbacks, and bank disbursement approval.
+    - `/coupons`: Promotional Coupons manager with usage stats and pause/resume.
+    - `/coupons/new`: Create Promotional Coupon form with code, percentage/flat discounts, min spend, and expiry rules.
+    - `/reviews`: Review Moderation console with rating distribution, customer feedback, and moderation actions.
+    - `/audit`: Operator Audit Logs tracking administrative status transitions and overrides.
+    - `/settings`: Platform System Settings with default commission rate, escrow duration, and mock adapter toggles.
+    - `/live-map`: Live Logistics Map with nationwide SVG craft map and live consignment dispatch metrics.
+- **API & Client SDK Extensions:**
+  - Extended `services/api/src/routes/admin.ts` with comprehensive handlers for metrics, shops, kyc approval, commission overrides, orders, cancellation, shipments, finance, ledger entries, settlements, payout approvals, coupons, reviews, audit logs, and settings.
+  - Added typed admin methods and session storage token fallback keys (`bazaar.buyer.session`, `bazaar.seller.session`, `bazaar.admin.session`) in `@bazaar/shared`.
+- **48 Screenshots & Cover Capture:**
+  - Automated screenshot capture plan `templates/catalog/bazaar/capture.mjs` running via Playwright in scratch environment against seeded database.
+  - Captured 48/48 high-fidelity screenshots across buyer (16), seller (14), and admin (18), plus composed terracotta & gold `media/cover.jpg`.
+- **Template Publication & Clean-up:**
+  - Promoted template from `templates/catalog/_bazaar` to public catalog `templates/catalog/bazaar`.
+  - Updated `template.json`: slug to `bazaar`, category to `commerce`, and synchronized seller screenshot filenames.
+  - Pruned transient `node_modules` and `.next` build directories from `templates/catalog/bazaar/repo` to maintain golden source template standards.
+- **Verification & Gates:**
+  - `services/agent-engine/tests/test_studio_templates.py`: 40/40 tests passed (validating both `ride-now` and `bazaar` catalogs).
+  - Full Stage 0 offline verification (`task verify`): 3,983/3,983 tests passed in 103.6s with 0 model calls.
+
 ## 2026-09-23 — R-533 (Bazaar part 3/4: artisan vendor portal `apps/seller`)
 
 - **Artisan Vendor Portal (`apps/seller` on Next.js 16 + React 19 + Turbopack + Tailwind CSS 4):**

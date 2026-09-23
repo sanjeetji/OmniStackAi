@@ -1,32 +1,36 @@
-task_id: R-533
+task_id: R-534
 status: completed
 phase: MVP
 tracker_row: 7
 started_at: "2026-09-23"
 completed_at: "2026-09-23"
-branch: ai/R-533-bazaar-seller
+branch: ai/R-534-bazaar-admin
 objective: >-
-  Bazaar part 3 of 4: Vendor Portal web application (apps/seller on Next.js 16 + React 19 + Tailwind CSS 4)
-  for artisan sellers and craft guilds: workshop KYC, product catalog management with variant matrix,
-  5-stage split shipment fulfillment (accept -> pack -> dispatch with carrier AWB), double-entry ledger
-  earnings & payout settlements, customer reviews & replies, and direct login as Master Craftsman Kripal Singh.
+  Bazaar part 4 of 4: Marketplace Operations Console (apps/admin on Next.js 16 + React 19 + Tailwind CSS 4),
+  Playwright 48 screenshots & cover capture, and template publication to templates/catalog/bazaar (T-7).
 allowed_paths:
   - templates/catalog/_bazaar/
+  - templates/catalog/bazaar/
   - .ai/
   - PROJECT_STATE.md
   - CHANGELOG.md
+  - R_&_D/OmniStackAI_Template_Marketplace_Plan_v1.md
 forbidden_changes:
   - No new template dependency beyond the pinned stack
   - task verify stays offline with 0 model calls
   - No real credentials in the template
 required_gates:
-  - apps/seller builds cleanly with next build (Next.js 16 App Router)
-  - vendor shipment lifecycle actions connect to Hono backend
+  - apps/admin builds cleanly with next build (Next.js 16 App Router, 18 routes)
+  - 48 screenshots + cover captured cleanly via capture.mjs
+  - catalog validation passes with 0 errors
   - task verify passes
 model_tool_trace:
   routing: deterministic_only
   local_calls: 0
   cloud_calls: 0
 blockers: []
-found_and_fixed: []
+found_and_fixed:
+  - "Template category validation: category updated from 'ecommerce' to approved 'commerce' in template.json."
+  - "Media file alignment: synchronized seller screenshot filenames in template.json with capture script output."
+  - "Pristine template clean-up: stripped transient build/runtime artifacts (.next, node_modules) from templates/catalog/bazaar/repo before catalog publication."
 found_not_fixed: []
