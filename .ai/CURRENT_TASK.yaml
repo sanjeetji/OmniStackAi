@@ -1,16 +1,16 @@
-task_id: R-534
+task_id: R-535
 status: completed
 phase: MVP
-tracker_row: 7
+tracker_row: 8
 started_at: "2026-09-23"
 completed_at: "2026-09-23"
-branch: ai/R-534-bazaar-admin
+branch: ai/R-535-careclinic-api
 objective: >-
-  Bazaar part 4 of 4: Marketplace Operations Console (apps/admin on Next.js 16 + React 19 + Tailwind CSS 4),
-  Playwright 48 screenshots & cover capture, and template publication to templates/catalog/bazaar (T-7).
+  CareClinic part 1 of 4: Clinical Care & Telemedicine API, Database Migrations (001_core through 005_audit_telehealth),
+  Domain Services (scheduling, clinical SOAP, immutable prescriptions, billing, chart access audit),
+  deterministic seed fixtures (12 doctors, 150 patients, 900 appointments), and template.json manifest (T-8).
 allowed_paths:
-  - templates/catalog/_bazaar/
-  - templates/catalog/bazaar/
+  - templates/catalog/_care-clinic/
   - .ai/
   - PROJECT_STATE.md
   - CHANGELOG.md
@@ -20,17 +20,14 @@ forbidden_changes:
   - task verify stays offline with 0 model calls
   - No real credentials in the template
 required_gates:
-  - apps/admin builds cleanly with next build (Next.js 16 App Router, 18 routes)
-  - 48 screenshots + cover captured cleanly via capture.mjs
-  - catalog validation passes with 0 errors
+  - API unit tests pass (100% clean)
+  - seed generator produces valid, deterministic PostgreSQL fixtures
+  - catalog validation passes for _care-clinic draft
   - task verify passes
 model_tool_trace:
   routing: deterministic_only
   local_calls: 0
   cloud_calls: 0
 blockers: []
-found_and_fixed:
-  - "Template category validation: category updated from 'ecommerce' to approved 'commerce' in template.json."
-  - "Media file alignment: synchronized seller screenshot filenames in template.json with capture script output."
-  - "Pristine template clean-up: stripped transient build/runtime artifacts (.next, node_modules) from templates/catalog/bazaar/repo before catalog publication."
+found_and_fixed: []
 found_not_fixed: []

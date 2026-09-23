@@ -1,0 +1,11 @@
+{
+  "name": "care-clinic",
+  "private": true,
+  "description": "CareClinic: patient portal, doctor workstation, clinic ops console and API.",
+  "packageManager": "pnpm@11.19.0",
+  "scripts": {
+    "dev:api": "pnpm --filter @careclinic/api dev",
+    "test": "pnpm --filter @careclinic/api test",
+    "typecheck": "pnpm -r typecheck"
+  }
+}

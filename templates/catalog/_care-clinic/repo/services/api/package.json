@@ -1,0 +1,24 @@
+{
+  "name": "@careclinic/api",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "engines": { "node": ">=22.18" },
+  "scripts": {
+    "dev": "node --watch src/index.ts",
+    "start": "node src/index.ts",
+    "test": "node --test test/*.test.ts",
+    "typecheck": "tsc --noEmit -p .",
+    "seed:generate": "node scripts/generate-seed.mjs > seed/001_demo.sql"
+  },
+  "dependencies": {
+    "@hono/node-server": "1.14.4",
+    "hono": "4.7.11",
+    "pg": "8.13.1"
+  },
+  "devDependencies": {
+    "@types/node": "22.15.30",
+    "@types/pg": "8.11.14",
+    "typescript": "5.9.2"
+  }
+}

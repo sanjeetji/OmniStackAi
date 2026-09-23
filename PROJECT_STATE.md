@@ -4,6 +4,10 @@ Last updated: 2026-09-23
 ## Current Phase
 Stage 0 (Founder Build Sequence, Brief Section 91) — BASIC/MVP
 
+> **R-535 (2026-09-23): CareClinic (Part 1 of 4: Clinical Care & Telemedicine API, Database Migrations, Domain Services & Deterministic Seed).**
+> Built hidden draft template at `templates/catalog/_care-clinic`: root `template.json` manifest with 4 apps (`patient`, `doctor`, `admin`, `api`), 4 roles (`patient`, `doctor`, `receptionist`, `admin`), 18 entities, 10 features, 3 demo users (`ananya@careclinic.test`, `dr.rajesh@careclinic.test`, `admin@careclinic.test`), and 48 screen definitions.
+> 5 PostgreSQL database migrations (`001_core.sql` through `005_audit_telehealth.sql` with `uq_doctor_slot` slot uniqueness constraint, immutable e-prescriptions, and HIPAA-compliant chart access audit logs). Complete Hono TypeScript `services/api` on Node >= 22.18 with domain services (scheduling & 20-min dynamic slot generator, 5-stage appointment state machine `booked` -> `checked_in` -> `in_consult` -> `completed`, SOAP notes, ICD-10 diagnoses, immutable prescriptions, billing & refund rules, HIPAA chart access audit logging, and WebRTC telehealth sessions); deterministic seed generator (`scripts/generate-seed.mjs` -> `seed/001_demo.sql` with 12 doctors across 8 specialties, 150 patients, 900 appointments, consultations, prescriptions, and lab orders); 18/18 API unit tests (100% pass in 374ms); 40/40 template studio tests passed; Stage 0 verification (3,983 tests passed fully offline with 0 model calls). Next: CareClinic (Part 2/4: Shared Library `@careclinic/shared` & Patient Web App `apps/patient`).
+
 > **R-534 (2026-09-23): Bazaar (Part 4 of 4: Marketplace Operations Console `apps/admin`, Playwright 48 screenshots & Publication).**
 > Built `apps/admin` on Next.js 16 App Router + React 19 + Turbopack + Tailwind CSS 4 with high-density control-room operations styling.
 > Includes 18 routes: Overview Dashboard, Vendor Directory, Vendor Profile Review & Commission Overrides, KYC Verification & Approval,

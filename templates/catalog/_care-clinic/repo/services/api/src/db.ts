@@ -1,0 +1,37 @@
+/** PostgreSQL database connection pool and transactional helper for CareClinic API. */
+
+import pg from "pg";
+import { config } from "./config.ts";
+
+const { Pool } = pg;
+
+export const pool = new Pool({
+  connectionString: config.databaseUrl,
+  max: 20,
+  idleTimeoutMillis: 30000,
+  connectionTimeoutMillis: 5000,
+});
+
+export async function query<T extends pg.QueryResultRow = any>(
+  text: string,
+  params?: any[]
+): Promise<pg.QueryResult<T>> {
+  return pool.query<T>(text, params);
+}
+
+export async function withTransaction<T>(
+  fn: (client: pg.PoolClient) => Promise<T>
+): Promise<T> {
+  const client = await pool.connect();
+  try {
+    await client.query("BEGIN");
+    const result = await fn(client);
+    await client.query("COMMIT");
+    return result;
+  } catch (error) {
+    await client.query("ROLLBACK");
+    throw error;
+  } finally {
+    client.release();
+  }
+}

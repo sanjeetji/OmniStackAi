@@ -1,6 +1,44 @@
 # Work Log
 
-## 2026-09-23 — R-534 (Bazaar part 4/4: Marketplace Operations Console, 48 Screenshots & Catalog Publication)
+## 2026-09-23 — R-535 (CareClinic part 1/4: Clinical Care & Telemedicine API, Database & Seed)
+
+- **Template Scaffold & Manifest (`templates/catalog/_care-clinic`):**
+  - Created root `template.json` draft manifest: schema version 1, slug `_care-clinic`, category `healthcare`, 4 apps (`patient`, `doctor`, `admin`, `api`), 4 roles (`patient`, `doctor`, `receptionist`, `admin`), 18 entities, 10 features, 3 demo users (`ananya@careclinic.test`, `dr.rajesh@careclinic.test`, `admin@careclinic.test`), and 48 screen definitions.
+  - Tagline strictly <= 140 chars: "Clinical care, appointment scheduling, telemedicine video visits, electronic health records, and practice management for modern clinics."
+- **Monorepo Workspace & Migrations (`services/api`):**
+  - Configured monorepo root `package.json` and `pnpm-workspace.yaml`.
+  - Built `services/api` (`@careclinic/api`, Hono 4.7.11, pg 8.13.1, `@hono/node-server`, Node >= 22.18).
+  - 5 PostgreSQL migrations:
+    - `001_core.sql`: `users`, `clinics`, `doctor_profiles`, `patient_profiles`, `family_members`.
+    - `002_scheduling.sql`: `doctor_availability`, `schedule_overrides`, `appointments` with database constraint `uq_doctor_slot UNIQUE (doctor_id, scheduled_date, start_time)` (guaranteeing zero double-booking).
+    - `003_clinical.sql`: `medical_histories`, `vitals_records`, `consultations`, `diagnoses` (ICD-10 codes), `prescriptions` (with `is_immutable` flag and digital signature), `prescription_items`, `lab_test_catalog`, `lab_orders`, `lab_order_items`.
+    - `004_billing.sql`: `invoices`, `invoice_items`, `refunds`.
+    - `005_audit_telehealth.sql`: `telehealth_sessions`, `chart_access_logs` (HIPAA-compliant immutable audit trail), `patient_reviews`, `notifications`.
+- **Domain Services & Routes (`services/api/src/`):**
+  - `lib/errors.ts`: Standard typed HTTP error hierarchy conforming to Node strip-types (no TS parameter properties in classes).
+  - `lib/money.ts`: Currency formatting and deterministic UTC-based cancellation refund calculation (>24h 100%, 4-24h 70%, <4h 0%).
+  - `lib/appointment-state.ts`: 5-stage lifecycle state machine (`booked` -> `checked_in` -> `in_consult` -> `completed`, plus `cancelled`/`no_show`).
+  - `lib/slot-generator.ts`: Dynamic 20-minute slot generator computing available windows against doctor availability, shifts, and booked appointments.
+  - `auth/password.ts`: Zero-dependency scrypt password hashing and `timingSafeEqual` verification.
+  - `auth/tokens.ts`: HS256 JWT tokens.
+  - `auth/middleware.ts`: `requireAuth`, `requireRole`, `optionalAuth`.
+  - `services/scheduling.ts`: Slot availability query, double-booking prevention, appointment booking, check-in with token assignment, and cancellation with refund policy.
+  - `services/clinical.ts`: Mandatory chart access audit logging, patient chart retrieval, SOAP clinical notes recording, ICD-10 diagnoses, immutable e-prescriptions, and lab ordering.
+  - `services/billing.ts`: Invoice payments and receipts.
+  - `services/telehealth.ts`: Room token generation, session joining, and call duration tracking.
+  - `routes/stream.ts`: `/api/stream` SSE notification bus (`appointment_booked`, `queue_updated`, `consultation_started`, `prescription_issued`, `payment_received`).
+  - `routes/public.ts`: `/health`, `/auth/login`, `/auth/register`, `/api/public/clinics`, `/api/public/doctors`, `/api/public/doctors/:id`, `/api/public/specialties`, `/api/public/lab-tests`.
+  - `routes/patient.ts`: Complete patient portal endpoints (appointments, slot picker, booking, cancellation, prescriptions, lab reports, vitals logging, family members, invoices & payments, reviews, telehealth).
+  - `routes/doctor.ts`: Complete clinical workstation endpoints (dashboard metrics, today's queue with tokens, patient chart with audit, start consult, SOAP notes, e-prescribe, order labs, schedule settings, reviews, telehealth call).
+  - `routes/admin.ts`: Front desk & clinic ops endpoints (dashboard overview, front desk queue, patient arrival check-in, immediate walk-in booking, global appointments master, doctor roster & room assignments, billing cashier, lab queue & results upload, refunds, HIPAA chart access audit logs, settings, public OPD queue display board).
+- **Deterministic Seed Data:**
+  - `scripts/generate-seed.mjs` outputs `seed/001_demo.sql` (5,617 lines, 1.9 MB): 1 clinic ("CareClinic Indiranagar"), 2 staff (Kavita Nair, Suresh Gowda), 12 doctors across 8 specialties with precomputed scrypt password hashes, 10 lab catalog tests, 150 patients (including demo patient Ananya Deshmukh and family), and 900 appointments (700 past with consultations, SOAP notes, ICD-10 diagnoses, prescriptions, lab orders, invoices; and 200 today/upcoming with active queue tokens 1-15).
+- **Verification & Gates:**
+  - `node --test templates/catalog/_care-clinic/repo/services/api/test/*.test.ts`: 18/18 tests passed in 374ms (auth, appointment lifecycle, slot generation, cancellation refund policy, clinical rules & immutability).
+  - `services/agent-engine/tests/test_studio_templates.py`: 40/40 tests passed in 3.515s.
+  - Full Stage 0 offline verification (`task verify`): 3,983/3,983 tests passed in 100.176s with 0 model calls.
+
+
 
 - **Marketplace Operations Console (`apps/admin` on Next.js 16 + React 19 + Turbopack + Tailwind CSS 4):**
   - High-density control-room operations theme with charcoal/slate dark foundations, ivory typography, and crisp status badges.
