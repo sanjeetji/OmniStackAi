@@ -1,14 +1,18 @@
-task_id: R-535
+task_id: R-536
 status: completed
 phase: MVP
 tracker_row: 8
 started_at: "2026-09-23"
 completed_at: "2026-09-23"
-branch: ai/R-535-careclinic-api
+branch: ai/R-536-careclinic-patient
 objective: >-
-  CareClinic part 1 of 4: Clinical Care & Telemedicine API, Database Migrations (001_core through 005_audit_telehealth),
-  Domain Services (scheduling, clinical SOAP, immutable prescriptions, billing, chart access audit),
-  deterministic seed fixtures (12 doctors, 150 patients, 900 appointments), and template.json manifest (T-8).
+  CareClinic part 2 of 4: Shared Library (@careclinic/shared) and Patient Web Application (apps/patient).
+  Build canonical domain models, typed API client SDK, SSE hook, and calm clinical styling (soft teal, white,
+  Plus Jakarta Sans, accessible contrast) across 16 patient routes: Home, Doctor Search & Filters, Doctor Profile
+  & Schedule, Slot Picker & Appointment Booking, Appointments List, Appointment Details (reschedule/cancel),
+  Telehealth Video Visit Room, Digital Prescriptions archive & PDF viewer, Lab Reports with test parameters,
+  Health Records (vitals log & history), Family Members management, Invoices & Receipt payment, Patient Reviews,
+  Notifications, and Patient Authentication (1-click Ananya Deshmukh demo login).
 allowed_paths:
   - templates/catalog/_care-clinic/
   - .ai/
@@ -21,7 +25,7 @@ forbidden_changes:
   - No real credentials in the template
 required_gates:
   - API unit tests pass (100% clean)
-  - seed generator produces valid, deterministic PostgreSQL fixtures
+  - @careclinic/patient builds cleanly with Next.js Turbopack
   - catalog validation passes for _care-clinic draft
   - task verify passes
 model_tool_trace:

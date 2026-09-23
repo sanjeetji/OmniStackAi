@@ -1,6 +1,41 @@
 # Work Log
 
-## 2026-09-23 — R-535 (CareClinic part 1/4: Clinical Care & Telemedicine API, Database & Seed)
+## 2026-09-23 — R-536 (CareClinic part 2/4: Shared Library & Patient Web App)
+
+- **Shared Domain Package (`packages/shared` / `@careclinic/shared`):**
+  - Canonical domain types: `User`, `Clinic`, `DoctorProfile`, `DoctorShift`, `PatientProfile`, `FamilyMember`, `Appointment`, `AvailableSlot`, `MedicalHistory`, `VitalsRecord`, `Consultation`, `Diagnosis`, `Prescription`, `PrescriptionItem`, `LabTest`, `LabOrder`, `LabOrderItem`, `Invoice`, `TelehealthSession`, `PatientReview`, `NotificationItem`.
+  - Clinical formatters & domain calculations: `formatINR`, `formatSlotTime`, `formatDate`, `getAppointmentStatusBadge`, `getPaymentStatusBadge`, `calculateCancellationRefund` (>24h 100%, 4-24h 70%, <4h 0%), and `evaluateBloodPressure`.
+  - Universal typed client `CareClinicApiClient` handling token management (browser `localStorage` fallback) and typed methods for public, patient, doctor, and admin endpoints.
+  - Real-time `useStream` SSE event bus client hook.
+- **Patient Portal (`apps/patient` on Next.js 16 App Router + React 19 + Turbopack + Tailwind CSS 4):**
+  - Calm clinical design aesthetic: soft teal (`#0D9488`), clean white cards, slate typography, Plus Jakarta Sans, and accessible high contrast.
+  - Core components: `DemoBanner` (1-click Ananya Deshmukh sign-in), `PatientHeader` (navigation, emergency links, notifications), `PatientFooter` (NABH accreditation, emergency 108 helpline, OPD hours), `DoctorCard` (fees, rating, room, book CTA), `VitalsModal` (interactive BP, pulse, temp, SpO2, glucose recording).
+  - 16 Patient Portal routes matching `template.json`:
+    - `/`: Patient Home (search doctor bar, active appointment banner with queue token, 6 clinical service cards, featured specialists, clinical benchmark).
+    - `/doctors`: Doctor Directory (specialty filter pills, consultation mode toggle, sorting by rating/fee/experience, doctor cards).
+    - `/doctors/[id]`: Doctor Profile (credentials, registration #, weekly OPD shift timetable, verified patient reviews, sticky booking widget).
+    - `/book/[doctorId]`: Interactive Slot Picker & Booking (mode selector, patient/family selector, 7-day calendar, 20-min dynamic slot grid, symptoms note, instant reservation).
+    - `/book`: Redirects to doctor directory.
+    - `/checkout/[appointmentId]`: Consultation Fee Payment (transparent fee breakdown, UPI / Card / Clinic Desk payment alternatives, secure payment confirmation).
+    - `/appointments/[id]/confirmation`: Booking Confirmation (appointment code, queue token #, reporting instructions, clinic arrival guidelines).
+    - `/appointments`: My Appointments (Upcoming / Past / All tabs, status badges, tokens, prescription & telehealth links).
+    - `/appointments/[id]`: Appointment Detail (4-stage stepper, doctor & venue details, cancellation modal with refund policy calculator).
+    - `/telehealth/[appointmentId]`: Telehealth Video Room (simulated WebRTC video call with doctor stream, local patient camera PIP, call controls, in-call chat, and shared vitals).
+    - `/prescriptions`: Digital Prescriptions (searchable archive, digital signature badges).
+    - `/prescriptions/[id]`: Printable Clinical Rx Slip (CareClinic letterhead, doctor credentials, ICD-10 diagnosis, structured medication table, lifestyle advice, print/PDF button).
+    - `/lab-reports`: Diagnostic Lab Reports (NABL status badges, ordered panels).
+    - `/lab-reports/[id]`: Detailed Diagnostic Report (itemized parameters, observed values, biological reference ranges, abnormal flags, pathologist sign-off).
+    - `/records`: Medical Records & Vitals (longitudinal vitals cards with BP category evaluation, allergies, chronic conditions, medication list, interactive vitals log modal).
+    - `/family`: Family Health Profiles (dependent cards, add family member modal, unified booking).
+    - `/invoices`: Billing Invoices (itemized statements, payment status, receipt download).
+    - `/login`: Patient Sign In (1-click Ananya Deshmukh demo login, patient self-registration).
+- **Verification & Gates:**
+  - `pnpm --filter @careclinic/patient build`: Turbopack production build succeeded; 19/19 routes compiled with 0 errors.
+  - `node --test templates/catalog/_care-clinic/repo/services/api/test/*.test.ts`: 18/18 API unit tests passed.
+  - `services/agent-engine/tests/test_studio_templates.py`: 40/40 tests passed in 3.531s.
+  - Full Stage 0 offline verification (`task verify`): 3,983/3,983 tests passed in 97.564s with 0 model calls.
+
+
 
 - **Template Scaffold & Manifest (`templates/catalog/_care-clinic`):**
   - Created root `template.json` draft manifest: schema version 1, slug `_care-clinic`, category `healthcare`, 4 apps (`patient`, `doctor`, `admin`, `api`), 4 roles (`patient`, `doctor`, `receptionist`, `admin`), 18 entities, 10 features, 3 demo users (`ananya@careclinic.test`, `dr.rajesh@careclinic.test`, `admin@careclinic.test`), and 48 screen definitions.

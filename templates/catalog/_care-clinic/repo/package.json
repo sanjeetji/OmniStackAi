@@ -5,6 +5,9 @@
   "packageManager": "pnpm@11.19.0",
   "scripts": {
     "dev:api": "pnpm --filter @careclinic/api dev",
+    "dev:patient": "pnpm --filter @careclinic/patient dev",
+    "build:patient": "pnpm --filter @careclinic/patient build",
+    "build": "pnpm -r --filter '!@careclinic/api' build",
     "test": "pnpm --filter @careclinic/api test",
     "typecheck": "pnpm -r typecheck"
   }

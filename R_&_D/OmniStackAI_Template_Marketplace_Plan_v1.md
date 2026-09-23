@@ -50,7 +50,8 @@ not have.
 | R-533 | Bazaar 3/4 (§6.1): Artisan vendor portal | done |
 | R-534 | Bazaar 4/4 (§6.1): Operations console, 48 screenshots, published `bazaar` v1.0.0 | done |
 | R-535 | CareClinic 1/4 (§6.2): Clinical care API, database and demo data | done |
-| **R-536** | **CareClinic 2/4 (§6.2): Shared library and patient web app** | **next** |
+| R-536 | CareClinic 2/4 (§6.2): Shared library and patient web app | done |
+| **R-537** | **CareClinic 3/4 (§6.2): Doctor telehealth and clinical workstation** | **next** |
 | later | 8 more templates (§6), then T-5 workspace upgrades (§7) | planned |
 
 **R-530 also fixed the preview path**, which no browser had ever driven before: previews now build
