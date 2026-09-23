@@ -1,339 +1,228 @@
 "use client";
 
-import { useState } from "react";
+import { use, useState } from "react";
 import Link from "next/link";
-import { useParams } from "next/navigation";
-import { AdminHeader } from "@/components/admin-header";
-import {
-  ShoppingBag,
-  Truck,
-  CreditCard,
-  Receipt,
-  User,
-  MapPin,
-  CheckCircle2,
-  Clock,
-  ArrowLeft,
-  Store,
-  ExternalLink,
-  ShieldCheck,
-  Ban,
-  RotateCcw,
-} from "lucide-react";
-import { formatCurrency, formatDate } from "@bazaar/shared";
+import { ArrowLeft, Ban, Package, Receipt, Truck } from "lucide-react";
+import { api } from "@bazaar/shared";
+import { Shell } from "../../../components/shell";
+import { Panel, Table, Row, Cell, Badge, Button, DataState, ErrorNote, Field, inputClass } from "../../../components/ui";
+import { useApi, useAction } from "../../../lib/use-api";
+import { useSession } from "../../../lib/session";
+import { count, inr, num, stamp, titleCase, tone } from "../../../lib/format";
 
-export default function AdminOrderDetailPage() {
-  const params = useParams();
-  const orderId = (params?.id as string) || "ord-8831";
+export default function OrderInvestigation({ params }: { params: Promise<{ id: string }> }) {
+  const { id } = use(params);
+  const { notify } = useSession();
+  const order = useApi(() => api.getAdminOrder(id), [id]);
+  const { run, busy, error } = useAction();
+  const [reason, setReason] = useState("");
+  const [cancelling, setCancelling] = useState(false);
 
-  const [orderStatus, setOrderStatus] = useState<string>("processing");
-  const [refundIssued, setRefundIssued] = useState(false);
-
-  const order = {
-    id: orderId,
-    orderNumber: "BAZ-2026-8831",
-    createdAt: "2026-09-23T10:14:00Z",
-    status: orderStatus,
-    totalCents: 1840000,
-    subtotalCents: 1690000,
-    shippingFeeCents: 150000,
-    customer: {
-      name: "Priya Sharma",
-      email: "priya@bazaar.test",
-      phone: "+91 98765 43210",
-      shippingAddress: "Flat 402, Heritage Palms, Indiranagar, Bengaluru, Karnataka 560038",
-    },
-    payment: {
-      provider: "Mock Card Gateway",
-      paymentId: "PAY_MOCK_99214_SUCCESS",
-      method: "Mastercard •••• 4242",
-      status: "captured",
-    },
-    shipments: [
-      {
-        id: "shp-8831-01",
-        shopName: "Jaipur Blue Art Pottery",
-        shopSlug: "jaipur-blue-pottery",
-        status: "packed",
-        courierName: "Blue Dart Express",
-        trackingNumber: "BD-88392190-IN",
-        subtotalCents: 940000,
-        commissionCents: 94000,
-        vendorPayoutCents: 846000,
-        items: [
-          {
-            title: "Royal Mughal Cobalt Floral Vase (12\")",
-            sku: "JBP-MUG-12",
-            quantity: 1,
-            unitPriceCents: 245000,
-          },
-          {
-            title: "Traditional Floral Tile Coasters (Set of 6)",
-            sku: "JBP-CST-06",
-            quantity: 2,
-            unitPriceCents: 85000,
-          },
-        ],
-      },
-      {
-        id: "shp-8831-02",
-        shopName: "Varanasi Heritage Weaves",
-        shopSlug: "varanasi-weaves",
-        status: "accepted",
-        courierName: "Delhivery Surface",
-        trackingNumber: "DEL-44120982-IN",
-        subtotalCents: 900000,
-        commissionCents: 72000, // 8% preferred commission
-        vendorPayoutCents: 828000,
-        items: [
-          {
-            title: "Authentic Zari Katan Silk Stole",
-            sku: "VNS-KAT-SILK",
-            quantity: 1,
-            unitPriceCents: 900000,
-          },
-        ],
-      },
-    ],
-    ledgerEntries: [
-      {
-        id: "led-01",
-        debit: "shopper_account (Priya Sharma)",
-        credit: "platform_escrow_pool",
-        amountCents: 1840000,
-        type: "order_payment",
-        description: "Customer checkout authorization and escrow hold",
-      },
-      {
-        id: "led-02",
-        debit: "platform_escrow_pool",
-        credit: "platform_revenue",
-        amountCents: 166000,
-        type: "commission_fee",
-        description: "Platform take-rate commission withholdings across 2 workshops",
-      },
-      {
-        id: "led-03",
-        debit: "platform_escrow_pool",
-        credit: "vendor_payable (Jaipur Blue Pottery)",
-        amountCents: 846000,
-        type: "vendor_credit",
-        description: "Escrow payable allocation for shipment shp-8831-01",
-      },
-      {
-        id: "led-04",
-        debit: "platform_escrow_pool",
-        credit: "vendor_payable (Varanasi Weaves)",
-        amountCents: 828000,
-        type: "vendor_credit",
-        description: "Escrow payable allocation for shipment shp-8831-02",
-      },
-    ],
-  };
-
-  const handleCancelOrder = () => {
-    setOrderStatus("cancelled");
-  };
-
-  const handleIssueRefund = () => {
-    setRefundIssued(true);
-    setTimeout(() => setRefundIssued(false), 4000);
-  };
+  async function cancel() {
+    const ok = await run(() => api.cancelAdminOrder(id, reason.trim()));
+    if (ok) {
+      notify({ title: "Order cancelled", detail: "The ledger has been reversed", tone: "alert" });
+      setCancelling(false);
+      setReason("");
+      order.refresh();
+    }
+  }
 
   return (
-    <div className="flex-1 flex flex-col">
-      <AdminHeader
-        title={`Order Investigation: ${order.orderNumber}`}
-        subtitle={`Placed on ${formatDate(order.createdAt)} • Total: ${formatCurrency(order.totalCents)}`}
-        badge={order.status.toUpperCase()}
-      />
+    <Shell
+      title="Order"
+      subtitle="The whole trail: what was bought, who ships it, and where the money went"
+      actions={
+        <Button href="/orders" variant="quiet" size="sm">
+          <ArrowLeft size={13} /> Orders
+        </Button>
+      }
+    >
+      {error && <div className="mb-3"><ErrorNote message={error} /></div>}
 
-      <div className="p-6 space-y-6 flex-1 max-w-6xl">
-        <Link
-          href="/orders"
-          className="inline-flex items-center gap-1.5 text-xs text-slate-400 hover:text-white transition"
-        >
-          <ArrowLeft className="w-3.5 h-3.5" />
-          Back to Global Orders
-        </Link>
-
-        {/* Customer & Payment Overview */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          {/* Customer Destination */}
-          <div className="bg-slate-900 border border-slate-800 rounded-xl p-5 space-y-3">
-            <h3 className="text-xs font-semibold text-slate-400 uppercase tracking-wider flex items-center gap-1.5">
-              <User className="w-4 h-4 text-amber-400" />
-              Customer Information
-            </h3>
-            <div className="text-xs space-y-1.5">
-              <div className="text-white font-bold">{order.customer.name}</div>
-              <div className="text-slate-300 font-mono text-[11px]">{order.customer.email}</div>
-              <div className="text-slate-400">{order.customer.phone}</div>
-              <div className="pt-2 text-slate-300 flex items-start gap-1.5">
-                <MapPin className="w-3.5 h-3.5 text-amber-400 shrink-0 mt-0.5" />
-                <span>{order.customer.shippingAddress}</span>
-              </div>
-            </div>
-          </div>
-
-          {/* Payment Gateway */}
-          <div className="bg-slate-900 border border-slate-800 rounded-xl p-5 space-y-3">
-            <h3 className="text-xs font-semibold text-slate-400 uppercase tracking-wider flex items-center gap-1.5">
-              <CreditCard className="w-4 h-4 text-emerald-400" />
-              Payment Gateway Capture
-            </h3>
-            <div className="text-xs space-y-1.5">
-              <div className="text-emerald-400 font-mono font-bold flex items-center gap-1.5">
-                <CheckCircle2 className="w-3.5 h-3.5" />
-                PAYMENT_SUCCESS
-              </div>
-              <div className="text-slate-300">{order.payment.method}</div>
-              <div className="text-slate-400 font-mono text-[11px]">
-                Ref: {order.payment.paymentId}
-              </div>
-              <div className="text-slate-400">Gateway: {order.payment.provider}</div>
-            </div>
-          </div>
-
-          {/* Order Actions */}
-          <div className="bg-slate-900 border border-slate-800 rounded-xl p-5 space-y-3 flex flex-col justify-between">
-            <h3 className="text-xs font-semibold text-slate-400 uppercase tracking-wider flex items-center gap-1.5">
-              <ShieldCheck className="w-4 h-4 text-sky-400" />
-              Operator Control Actions
-            </h3>
-            <div className="space-y-2">
-              <button
-                type="button"
-                onClick={handleIssueRefund}
-                className="w-full py-2 rounded-lg bg-amber-600/20 hover:bg-amber-600/30 border border-amber-500/30 text-amber-300 text-xs font-semibold flex items-center justify-center gap-1.5 transition cursor-pointer"
-              >
-                <RotateCcw className="w-3.5 h-3.5" />
-                Issue Escrow Refund to Buyer
-              </button>
-              <button
-                type="button"
-                onClick={handleCancelOrder}
-                className="w-full py-2 rounded-lg bg-rose-600/20 hover:bg-rose-600/30 border border-rose-500/30 text-rose-300 text-xs font-semibold flex items-center justify-center gap-1.5 transition cursor-pointer"
-              >
-                <Ban className="w-3.5 h-3.5" />
-                Cancel Entire Split Order
-              </button>
-            </div>
-            {refundIssued && (
-              <div className="text-[11px] text-emerald-400 font-medium flex items-center gap-1">
-                <CheckCircle2 className="w-3 h-3" />
-                Full refund entry posted to double-entry ledger.
-              </div>
-            )}
-          </div>
-        </div>
-
-        {/* Split Shipments Breakdown */}
-        <div className="space-y-4">
-          <div className="flex items-center justify-between">
-            <h3 className="text-sm font-bold text-white flex items-center gap-2">
-              <Truck className="w-4 h-4 text-amber-400" />
-              Independent Vendor Consignments ({order.shipments.length} Ateliers)
-            </h3>
-            <span className="text-xs text-slate-400 font-mono">
-              Fulfillment state machine operates autonomously per vendor
-            </span>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {order.shipments.map((shp) => (
-              <div
-                key={shp.id}
-                className="bg-slate-900 border border-slate-800 rounded-xl p-5 space-y-4"
-              >
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <Store className="w-4 h-4 text-amber-400" />
-                    <span className="font-bold text-white text-xs">{shp.shopName}</span>
-                  </div>
-                  <span className="px-2 py-0.5 rounded-full bg-sky-500/10 text-sky-400 border border-sky-500/20 font-mono text-[10px] font-semibold">
-                    {shp.status.toUpperCase()}
-                  </span>
-                </div>
-
-                <div className="p-2.5 rounded-lg bg-slate-950 border border-slate-800 text-xs space-y-1 font-mono">
-                  <div className="text-slate-400">Consignment: {shp.id}</div>
-                  <div className="text-slate-200">Carrier: {shp.courierName}</div>
-                  <div className="text-amber-400">AWB: {shp.trackingNumber}</div>
-                </div>
-
-                <div className="space-y-2">
-                  <div className="text-[11px] font-semibold uppercase tracking-wider text-slate-400">
-                    Consignment Items
-                  </div>
-                  {shp.items.map((item, idx) => (
-                    <div
-                      key={idx}
-                      className="flex items-center justify-between text-xs py-1 border-b border-slate-800/80 last:border-0"
-                    >
-                      <span className="text-slate-200">
-                        {item.quantity}x {item.title}
-                      </span>
-                      <span className="font-mono text-white">
-                        {formatCurrency(item.unitPriceCents * item.quantity)}
-                      </span>
+      <DataState state={order}>
+        {(data) => {
+          const closed = ["cancelled", "completed"].includes(data.order.status);
+          return (
+            <div className="grid gap-3 lg:grid-cols-[1.5fr_1fr]">
+              <div className="space-y-3">
+                <Panel>
+                  <div className="flex flex-wrap items-start justify-between gap-3">
+                    <div>
+                      <p className="tabular text-[12px] text-[var(--muted)]">{data.order.order_number}</p>
+                      <h2 className="mt-0.5 text-[18px] font-semibold tracking-tight text-slate-100">
+                        {inr(data.order.total_cents)}
+                      </h2>
+                      <p className="text-[12.5px] text-[var(--muted-light)]">Placed {stamp(data.order.created_at)}</p>
                     </div>
-                  ))}
-                </div>
+                    <Badge tone={tone.order(data.order.status)}>{titleCase(data.order.status)}</Badge>
+                  </div>
 
-                <div className="pt-2 border-t border-slate-800 flex items-center justify-between text-xs">
-                  <span className="text-slate-400">Artisan Payout Net:</span>
-                  <span className="font-mono font-bold text-emerald-400">
-                    {formatCurrency(shp.vendorPayoutCents)}
-                  </span>
-                </div>
+                  <dl className="mt-4 grid gap-3 sm:grid-cols-3">
+                    {[
+                      ["Items", inr(data.order.subtotal_cents)],
+                      ["Delivery", inr(data.order.shipping_cents)],
+                      ["Discount", data.order.discount_cents ? `− ${inr(data.order.discount_cents)}` : "—"],
+                    ].map(([label, value]) => (
+                      <div key={label}>
+                        <dt className="text-[11px] font-semibold uppercase tracking-[0.08em] text-[var(--muted)]">{label}</dt>
+                        <dd className="tabular mt-0.5 text-[13px] text-slate-200">{value}</dd>
+                      </div>
+                    ))}
+                  </dl>
+                </Panel>
+
+                <Panel title="What was bought" padded={false}>
+                  <Table head={["Item", "Workshop", "Qty", "Unit", "Line"]}>
+                    {(data.items ?? []).map((item: any) => (
+                      <Row key={item.id}>
+                        <Cell>
+                          <p className="text-slate-200">{item.product_title ?? item.title}</p>
+                          {item.variant_label && (
+                            <p className="text-[11px] text-[var(--muted)]">{item.variant_label}</p>
+                          )}
+                        </Cell>
+                        <Cell muted>{item.shop_name ?? "—"}</Cell>
+                        <Cell align="right" muted>{count(item.quantity)}</Cell>
+                        <Cell align="right" muted>{inr(item.unit_price_cents)}</Cell>
+                        <Cell align="right">{inr(num(item.unit_price_cents) * num(item.quantity))}</Cell>
+                      </Row>
+                    ))}
+                  </Table>
+                </Panel>
+
+                <Panel
+                  title="Consignments"
+                  subtitle="One order splits into one consignment per workshop"
+                  padded={false}
+                >
+                  {(data.shipments ?? []).length === 0 ? (
+                    <p className="px-4 py-8 text-center text-[13px] text-[var(--muted-light)]">
+                      No consignment has been raised yet.
+                    </p>
+                  ) : (
+                    <ul className="divide-y divide-[var(--surface-border)]">
+                      {(data.shipments ?? []).map((shipment: any) => (
+                        <li key={shipment.id} className="px-4 py-3">
+                          <div className="flex flex-wrap items-start justify-between gap-2">
+                            <div className="min-w-0">
+                              <p className="text-[13px] font-medium text-slate-200">
+                                {shipment.shop_name ?? "Workshop"}
+                              </p>
+                              <p className="tabular text-[11.5px] text-[var(--muted)]">
+                                {shipment.shipment_number ?? shipment.id.slice(0, 8)}
+                                {shipment.tracking_number ? ` · AWB ${shipment.tracking_number}` : ""}
+                                {shipment.carrier ? ` · ${shipment.carrier}` : ""}
+                              </p>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <span className="tabular text-[12.5px] text-slate-200">
+                                {inr(shipment.subtotal_cents ?? shipment.total_cents)}
+                              </span>
+                              <Badge tone={tone.shipment(shipment.status)}>{titleCase(shipment.status)}</Badge>
+                            </div>
+                          </div>
+
+                          {(shipment.trackingEvents ?? []).length > 0 && (
+                            <ol className="mt-2 space-y-1 border-l border-[var(--surface-border)] pl-3">
+                              {shipment.trackingEvents.map((event: any) => (
+                                <li key={event.id} className="text-[11.5px] text-[var(--muted-light)]">
+                                  <span className="text-slate-300">{titleCase(event.status)}</span>
+                                  {event.location ? ` · ${event.location}` : ""} · {stamp(event.created_at)}
+                                </li>
+                              ))}
+                            </ol>
+                          )}
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                </Panel>
               </div>
-            ))}
-          </div>
-        </div>
 
-        {/* Double-Entry Ledger Audit Trail for this Order */}
-        <div className="bg-slate-900 border border-slate-800 rounded-xl overflow-hidden">
-          <div className="p-4 border-b border-slate-800 flex items-center justify-between">
-            <h3 className="text-sm font-bold text-white flex items-center gap-2">
-              <Receipt className="w-4 h-4 text-emerald-400" />
-              Double-Entry Ledger Audit Journal Trail
-            </h3>
-            <span className="text-xs text-emerald-400 font-mono font-semibold">
-              Σ Debits = Σ Credits (Balanced)
-            </span>
-          </div>
+              <div className="space-y-3">
+                <Panel title="Shopper">
+                  <p className="text-[13px] font-medium text-slate-200">{data.order.shopper_name ?? "—"}</p>
+                  <p className="text-[12px] text-[var(--muted-light)]">{data.order.shopper_email ?? ""}</p>
+                  {data.order.shipping_address_json && (
+                    <p className="mt-2 rounded-lg bg-[var(--background)] p-2.5 text-[12px] leading-relaxed text-[var(--muted-light)]">
+                      {typeof data.order.shipping_address_json === "string"
+                        ? data.order.shipping_address_json
+                        : [
+                            data.order.shipping_address_json.recipientName,
+                            data.order.shipping_address_json.street,
+                            data.order.shipping_address_json.city,
+                            data.order.shipping_address_json.state,
+                            data.order.shipping_address_json.postalCode,
+                          ]
+                            .filter(Boolean)
+                            .join(", ")}
+                    </p>
+                  )}
+                </Panel>
 
-          <table className="w-full text-xs text-left">
-            <thead className="bg-slate-950 text-slate-400 uppercase tracking-wider font-semibold border-b border-slate-800">
-              <tr>
-                <th className="px-4 py-3">Debit Account</th>
-                <th className="px-4 py-3">Credit Account</th>
-                <th className="px-4 py-3">Amount</th>
-                <th className="px-4 py-3">Entry Type</th>
-                <th className="px-4 py-3">Journal Description</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-800/80">
-              {order.ledgerEntries.map((led) => (
-                <tr key={led.id} className="hover:bg-slate-800/40 transition">
-                  <td className="px-4 py-3 font-mono text-slate-300">{led.debit}</td>
-                  <td className="px-4 py-3 font-mono text-slate-300">{led.credit}</td>
-                  <td className="px-4 py-3 font-mono font-bold text-amber-400">
-                    {formatCurrency(led.amountCents)}
-                  </td>
-                  <td className="px-4 py-3">
-                    <span className="px-1.5 py-0.5 rounded bg-slate-800 text-slate-300 font-mono text-[10px]">
-                      {led.type}
-                    </span>
-                  </td>
-                  <td className="px-4 py-3 text-slate-400">{led.description}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      </div>
-    </div>
+                <Panel title="Where the money went" subtitle="Postings from the double-entry ledger" padded={false}>
+                  {(data.ledgerEntries ?? []).length === 0 ? (
+                    <p className="px-4 py-6 text-center text-[12.5px] text-[var(--muted-light)]">
+                      No posting recorded against this order.
+                    </p>
+                  ) : (
+                    <ul className="divide-y divide-[var(--surface-border)]">
+                      {(data.ledgerEntries ?? []).map((entry: any) => (
+                        <li key={entry.id} className="flex items-start justify-between gap-2 px-4 py-2.5">
+                          <div className="min-w-0">
+                            <p className="text-[12.5px] text-slate-200">{titleCase(entry.entry_type)}</p>
+                            <p className="text-[11px] text-[var(--muted)]">
+                              {titleCase(entry.debit_holder)} → {titleCase(entry.credit_holder)}
+                            </p>
+                          </div>
+                          <span className="tabular shrink-0 text-[12.5px] text-slate-200">
+                            {inr(entry.amount_cents)}
+                          </span>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                  <div className="border-t border-[var(--surface-border)] px-4 py-2.5">
+                    <Link href="/finance/ledger" className="text-[12px] font-semibold text-[var(--accent-light)] hover:underline">
+                      Open the full ledger
+                    </Link>
+                  </div>
+                </Panel>
+
+                {!closed && (
+                  <Panel title="Cancel this order" subtitle="Reverses every posting and releases the stock">
+                    {cancelling ? (
+                      <div className="space-y-2">
+                        <Field label="Reason">
+                          <textarea
+                            className={`${inputClass} min-h-16`}
+                            value={reason}
+                            onChange={(event) => setReason(event.target.value)}
+                            placeholder="Why is the order being cancelled?"
+                          />
+                        </Field>
+                        <div className="flex gap-2">
+                          <Button variant="danger" size="sm" disabled={busy || !reason.trim()} onClick={() => void cancel()}>
+                            Confirm cancellation
+                          </Button>
+                          <Button variant="quiet" size="sm" onClick={() => setCancelling(false)}>
+                            Keep it
+                          </Button>
+                        </div>
+                      </div>
+                    ) : (
+                      <Button variant="quiet" size="sm" onClick={() => setCancelling(true)}>
+                        <Ban size={13} /> Cancel and refund
+                      </Button>
+                    )}
+                  </Panel>
+                )}
+              </div>
+            </div>
+          );
+        }}
+      </DataState>
+    </Shell>
   );
 }

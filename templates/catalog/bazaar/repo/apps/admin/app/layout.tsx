@@ -1,21 +1,23 @@
 import type { Metadata } from "next";
 import "./globals.css";
-import { AdminShell } from "@/components/admin-shell";
+import { OperatorSessionProvider } from "../lib/session";
 
 export const metadata: Metadata = {
-  title: "Bazaar Marketplace Operations Console",
-  description: "Marketplace operator supervisor console for multi-vendor onboarding, KYC, ledger audit, and order fulfillment.",
+  title: {
+    default: "Bazaar Ops",
+    template: "%s · Bazaar Ops",
+  },
+  description:
+    "Marketplace operations: vendor onboarding and KYC, orders and consignments, the double-entry ledger, settlements, coupons, reviews and the audit trail.",
 };
 
-export default function RootLayout({
-  children,
-}: {
-  children: React.ReactNode;
-}) {
+export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en">
-      <body className="antialiased bg-slate-950 text-slate-100">
-        <AdminShell>{children}</AdminShell>
+      <body className="antialiased bg-[var(--background)] text-slate-100">
+        {/* Every screen is a client screen behind the operator guard; the provider owns the session
+            and the one event-stream connection the whole console shares. */}
+        <OperatorSessionProvider>{children}</OperatorSessionProvider>
       </body>
     </html>
   );

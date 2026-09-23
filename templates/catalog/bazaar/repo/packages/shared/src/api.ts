@@ -11,6 +11,10 @@ import type {
   UserAddress,
   Shop,
   AuthResponse,
+  AdminMetrics,
+  PlatformFinancials,
+  LedgerEntryRow,
+  AdminOrderRow,
 } from "./types";
 
 export class ApiError extends Error {
@@ -33,11 +37,13 @@ export class BazaarApiClient {
     baseUrl?: string;
     getToken?: () => string | null;
   } = {}) {
+    // NEXT_PUBLIC_API_URL is inlined at build time and is what the OmniStack preview sets, so it
+    // must win in the browser too: every app there is served on its own port.
     this.baseUrl =
       options.baseUrl ||
-      (typeof window !== "undefined"
-        ? (window as any).__BAZAAR_API_URL__ || "http://localhost:4000"
-        : process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000");
+      (typeof process !== "undefined" && process.env?.NEXT_PUBLIC_API_URL) ||
+      (typeof window !== "undefined" ? (window as any).__BAZAAR_API_URL__ : null) ||
+      "http://127.0.0.1:4000";
 
     this.getToken =
       options.getToken ||
@@ -325,6 +331,10 @@ export class BazaarApiClient {
     });
   }
 
+  async getMyReviews(): Promise<{ reviews: any[]; awaitingReview: any[] }> {
+    return this.request("/api/shopper/reviews");
+  }
+
   async submitReview(data: {
     productId: string;
     rating: number;
@@ -344,6 +354,22 @@ export class BazaarApiClient {
     return res.shop;
   }
 
+  async updateShop(data: {
+    name?: string;
+    tagline?: string;
+    description?: string;
+    logoUrl?: string;
+    bannerUrl?: string;
+    bankName?: string;
+    bankAccountLast4?: string;
+    bankIfscCode?: string;
+  }): Promise<{ shop: Shop }> {
+    return this.request("/api/vendor/shop", {
+      method: "PUT",
+      body: JSON.stringify(data),
+    });
+  }
+
   async getVendorDashboard(): Promise<{ metrics: Record<string, any> }> {
     return this.request("/api/vendor/dashboard");
   }
@@ -356,6 +382,38 @@ export class BazaarApiClient {
     return this.request("/api/vendor/products", {
       method: "POST",
       body: JSON.stringify(data),
+    });
+  }
+
+  async getVendorProduct(id: string): Promise<{ product: Product; variants: any[] }> {
+    return this.request(`/api/vendor/products/${id}`);
+  }
+
+  async updateVendorProduct(
+    id: string,
+    data: {
+      title?: string;
+      description?: string;
+      basePriceCents?: number;
+      comparePriceCents?: number;
+      isPublished?: boolean;
+      tags?: string[];
+    }
+  ): Promise<{ product: Product }> {
+    return this.request(`/api/vendor/products/${id}`, {
+      method: "PUT",
+      body: JSON.stringify(data),
+    });
+  }
+
+  async getVendorReviews(): Promise<{ reviews: any[] }> {
+    return this.request("/api/vendor/reviews");
+  }
+
+  async replyToReview(reviewId: string, reply: string): Promise<{ review: Review }> {
+    return this.request(`/api/vendor/reviews/${reviewId}/reply`, {
+      method: "POST",
+      body: JSON.stringify({ reply }),
     });
   }
 
@@ -397,7 +455,7 @@ export class BazaarApiClient {
   }
 
   // --- Admin APIs ---
-  async getAdminMetrics(): Promise<{ metrics: Record<string, any> }> {
+  async getAdminMetrics(): Promise<{ metrics: AdminMetrics }> {
     return this.request("/api/admin/metrics");
   }
 
@@ -424,13 +482,19 @@ export class BazaarApiClient {
     });
   }
 
-  async getAdminOrders(status?: string): Promise<{ orders: Order[] }> {
-    const qs = status ? `?status=${status}` : "";
-    return this.request(`/api/admin/orders${qs}`);
+  async getAdminOrders(
+    params: { status?: string; limit?: number; offset?: number } = {}
+  ): Promise<{ orders: AdminOrderRow[] }> {
+    const search = new URLSearchParams();
+    if (params.status) search.set("status", params.status);
+    if (params.limit !== undefined) search.set("limit", String(params.limit));
+    if (params.offset !== undefined) search.set("offset", String(params.offset));
+    const qs = search.toString();
+    return this.request(`/api/admin/orders${qs ? `?${qs}` : ""}`);
   }
 
   async getAdminOrder(id: string): Promise<{
-    order: Order;
+    order: AdminOrderRow;
     items: any[];
     shipments: any[];
     ledgerEntries: any[];
@@ -438,8 +502,11 @@ export class BazaarApiClient {
     return this.request(`/api/admin/orders/${id}`);
   }
 
-  async cancelAdminOrder(id: string): Promise<{ order: Order }> {
-    return this.request(`/api/admin/orders/${id}/cancel`, { method: "POST" });
+  async cancelAdminOrder(id: string, reason?: string): Promise<{ order: Order; refundedCents: number }> {
+    return this.request(`/api/admin/orders/${id}/cancel`, {
+      method: "POST",
+      body: JSON.stringify({ reason }),
+    });
   }
 
   async getAdminShipments(status?: string): Promise<{ shipments: any[] }> {
@@ -447,7 +514,7 @@ export class BazaarApiClient {
     return this.request(`/api/admin/shipments${qs}`);
   }
 
-  async getAdminFinance(): Promise<{ summary: any; recentEntries: any[] }> {
+  async getAdminFinance(): Promise<{ summary: PlatformFinancials; recentEntries: LedgerEntryRow[] }> {
     return this.request("/api/admin/finance");
   }
 
@@ -479,7 +546,16 @@ export class BazaarApiClient {
     return this.request("/api/admin/coupons");
   }
 
-  async createAdminCoupon(data: any): Promise<{ coupon: any }> {
+  async createAdminCoupon(data: {
+    code: string;
+    description?: string;
+    discountType: "percentage" | "fixed";
+    discountValue: number;
+    minOrderCents?: number;
+    maxDiscountCents?: number;
+    usageLimit?: number;
+    expiresAt?: string;
+  }): Promise<{ coupon: any }> {
     return this.request("/api/admin/coupons", {
       method: "POST",
       body: JSON.stringify(data),

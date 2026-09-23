@@ -253,7 +253,7 @@ export interface Coupon {
 
 export interface LedgerAccount {
   id: string;
-  holder_type: "platform" | "vendor" | "shopper";
+  holder_type: "platform" | "platform_revenue" | "vendor" | "shopper";
   holder_id: string | null;
   currency: string;
   balance_cents: number;
@@ -293,3 +293,44 @@ export interface AuthResponse {
   user: User;
   shop?: Shop | null;
 }
+
+// --- Marketplace operations console ---------------------------------------------------------------
+// What /api/admin/* returns. Money is always an integer number of paise.
+
+export interface PlatformFinancials {
+  platformCashBalanceCents: number;
+  platformRevenueCents: number;
+  totalVendorPayablesCents: number;
+  totalSettlementsPaidCents: number;
+}
+
+export interface LedgerEntryRow {
+  id: string;
+  debit_account_id: string;
+  credit_account_id: string;
+  amount_cents: string | number;
+  entry_type: string;
+  reference_type: string | null;
+  reference_id: string | null;
+  memo: string | null;
+  created_at: string;
+  debit_holder: string;
+  credit_holder: string;
+}
+
+export interface AdminMetrics {
+  totalGmvCents: number;
+  totalOrdersCount: number;
+  totalShopsCount: number;
+  totalShoppersCount: number;
+  pendingKycCount: number;
+  pendingSettlementsCount: number;
+  dailyVolume: { date: string; gmvCents: number; orderCount: number }[];
+  financials: PlatformFinancials;
+}
+
+export type AdminOrderRow = Order & {
+  shopper_name?: string | null;
+  shopper_email?: string | null;
+  shipment_count?: string | number | null;
+};

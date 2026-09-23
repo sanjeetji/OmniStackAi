@@ -1,10 +1,11 @@
 /** Operator administration routes for multi-vendor supervision, KYC, orders, and settlements. */
 
 import { Hono } from "hono";
-import { query } from "../db.ts";
+import { query, withTransaction } from "../db.ts";
 import { authenticate, requireRole } from "../auth/middleware.ts";
 import { ledgerService } from "../services/ledger.ts";
 import { BadRequestError, NotFoundError } from "../lib/errors.ts";
+import { eventBus } from "../lib/events.ts";
 
 export const adminRoutes = new Hono();
 
@@ -221,7 +222,9 @@ adminRoutes.get("/orders", async (c) => {
   const res = await query(
     `SELECT o.*, u.name AS customer_name, u.email AS customer_email,
             (SELECT COUNT(*) FROM shipments s WHERE s.order_id = o.id) AS shipment_count,
-            (SELECT COUNT(*) FROM order_items oi WHERE oi.order_id = o.id) AS item_count
+            (SELECT COUNT(*) FROM shipment_items si
+              JOIN shipments s2 ON s2.id = si.shipment_id
+             WHERE s2.order_id = o.id) AS item_count
      FROM orders o
      JOIN users u ON u.id = o.user_id
      ${whereClause}
@@ -252,12 +255,13 @@ adminRoutes.get("/orders/:id", async (c) => {
   const order = ordRes.rows[0];
 
   const itemsRes = await query(
-    `SELECT oi.*, p.name AS product_name, pv.sku, pv.variant_attributes_json, s.name AS shop_name
-     FROM order_items oi
-     JOIN products p ON p.id = oi.product_id
-     JOIN product_variants pv ON pv.id = oi.variant_id
-     JOIN shops s ON s.id = oi.shop_id
-     WHERE oi.order_id = $1`,
+    `SELECT si.*, si.product_title, si.variant_title, si.unit_price_cents, si.quantity,
+            s.name AS shop_name
+     FROM shipment_items si
+     JOIN shipments sh ON sh.id = si.shipment_id
+     JOIN shops s ON s.id = sh.shop_id
+     WHERE sh.order_id = $1
+     ORDER BY s.name ASC`,
     [orderId]
   );
 
@@ -274,7 +278,7 @@ adminRoutes.get("/orders/:id", async (c) => {
   let trackingEvents: any[] = [];
   if (shipmentIds.length > 0) {
     const trackRes = await query(
-      `SELECT * FROM tracking_events WHERE shipment_id = ANY($1) ORDER BY event_time ASC`,
+      `SELECT * FROM shipment_tracking_events WHERE shipment_id = ANY($1) ORDER BY occurred_at ASC`,
       [shipmentIds]
     );
     trackingEvents = trackRes.rows;
@@ -304,19 +308,76 @@ adminRoutes.get("/orders/:id", async (c) => {
 // Admin Cancel Order
 adminRoutes.post("/orders/:id/cancel", async (c) => {
   const orderId = c.req.param("id");
-  const ordRes = await query(`UPDATE orders SET status = 'cancelled' WHERE id = $1 RETURNING *`, [orderId]);
-  if (ordRes.rows.length === 0) throw new NotFoundError("Order not found");
-
-  await query(`UPDATE shipments SET status = 'cancelled' WHERE order_id = $1`, [orderId]);
+  const body = await c.req.json().catch(() => ({}));
+  const reason = typeof body.reason === "string" && body.reason.trim()
+    ? body.reason.trim()
+    : "Administrative cancellation";
 
   const user = c.get("user");
-  await query(
-    `INSERT INTO audit_logs (actor_id, action, entity_type, entity_id, metadata_json)
-     VALUES ($1, 'cancel_order', 'order', $2, $3)`,
-    [user.userId, orderId, JSON.stringify({ reason: "Administrative cancellation" })]
-  );
 
-  return c.json({ order: ordRes.rows[0] });
+  return withTransaction(async (client) => {
+    const ordRes = await client.query(
+      `SELECT * FROM orders WHERE id = $1 FOR UPDATE`,
+      [orderId]
+    );
+    if (ordRes.rows.length === 0) throw new NotFoundError("Order not found");
+    const order = ordRes.rows[0];
+    if (order.status === "cancelled") {
+      return c.json({ order, refundedCents: 0 });
+    }
+
+    // A cancelled order must not leave money posted against it: every entry raised for this
+    // order is reversed, so the ledger still sums to zero and no vendor is credited for a
+    // consignment that will never ship.
+    const entriesRes = await client.query(
+      `SELECT * FROM ledger_entries WHERE reference_type = 'order' AND reference_id = $1`,
+      [orderId]
+    );
+
+    let refundedCents = 0;
+    for (const entry of entriesRes.rows) {
+      await ledgerService.postEntry(
+        {
+          entryType: "shopper_refund",
+          // Reversing an entry means posting it the other way round.
+          debitAccountId: entry.credit_account_id,
+          creditAccountId: entry.debit_account_id,
+          amountCents: parseInt(entry.amount_cents, 10),
+          referenceType: "order",
+          referenceId: orderId,
+          description: `Reversal of ${entry.entry_type}: ${reason}`,
+        },
+        client
+      );
+      if (entry.entry_type === "order_payment") {
+        refundedCents += parseInt(entry.amount_cents, 10);
+      }
+    }
+
+    const updated = await client.query(
+      `UPDATE orders SET status = 'cancelled' WHERE id = $1 RETURNING *`,
+      [orderId]
+    );
+    await client.query(
+      `UPDATE shipments SET status = 'cancelled' WHERE order_id = $1 AND status <> 'delivered'`,
+      [orderId]
+    );
+
+    await client.query(
+      `INSERT INTO audit_logs (actor_id, action, entity_type, entity_id, metadata_json)
+       VALUES ($1, 'cancel_order', 'order', $2, $3)`,
+      [user.userId, orderId, JSON.stringify({ reason, reversedEntries: entriesRes.rows.length, refundedCents })]
+    );
+
+    eventBus.broadcast({
+      type: "order.cancelled",
+      recipientUserId: order.user_id,
+      payload: { orderId, orderNumber: order.order_number, refundedCents },
+      timestamp: new Date().toISOString(),
+    });
+
+    return c.json({ order: updated.rows[0], refundedCents });
+  });
 });
 
 // Global Shipments Monitor
@@ -398,7 +459,7 @@ adminRoutes.get("/finance/ledger", async (c) => {
 adminRoutes.get("/settlements", async (c) => {
   const res = await query(
     `SELECT sb.*, sh.name AS shop_name, sh.slug AS shop_slug,
-            sh.bank_details_json
+            sh.bank_name, sh.bank_account_last4, sh.bank_ifsc_code
      FROM settlement_batches sb
      JOIN shops sh ON sh.id = sb.shop_id
      ORDER BY sb.created_at DESC
@@ -412,7 +473,8 @@ adminRoutes.get("/settlements", async (c) => {
 adminRoutes.get("/settlements/:id", async (c) => {
   const batchId = c.req.param("id");
   const res = await query(
-    `SELECT sb.*, sh.name AS shop_name, sh.slug AS shop_slug, sh.bank_details_json,
+    `SELECT sb.*, sh.name AS shop_name, sh.slug AS shop_slug,
+            sh.bank_name, sh.bank_account_last4, sh.bank_ifsc_code,
             u.name AS owner_name, u.email AS owner_email
      FROM settlement_batches sb
      JOIN shops sh ON sh.id = sb.shop_id
@@ -458,7 +520,7 @@ adminRoutes.post("/settlements/generate", async (c) => {
   const { shopId } = await c.req.json();
   if (!shopId) throw new BadRequestError("shopId is required");
 
-  const batch = await ledgerService.settleVendorPayout(shopId);
+  const batch = await ledgerService.createSettlementBatch(shopId);
 
   const user = c.get("user");
   await query(
@@ -536,9 +598,9 @@ adminRoutes.post("/coupons/:id/toggle", async (c) => {
 // Reviews Moderation
 adminRoutes.get("/reviews", async (c) => {
   const res = await query(
-    `SELECT r.*, p.name AS product_name, p.slug AS product_slug,
+    `SELECT r.*, p.title AS product_title, p.slug AS product_slug,
             s.name AS shop_name, s.slug AS shop_slug,
-            u.name AS user_name, u.email AS user_email
+            u.name AS shopper_name, u.email AS shopper_email
      FROM reviews r
      JOIN products p ON p.id = r.product_id
      JOIN shops s ON s.id = r.shop_id

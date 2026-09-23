@@ -196,3 +196,102 @@ vendorRoutes.post("/settlements/request", async (c) => {
   const batch = await ledgerService.createSettlementBatch(shopId);
   return c.json({ settlement: batch }, 201);
 });
+
+// One listing, with its variants, for the workshop's own editor.
+vendorRoutes.get("/products/:id", async (c) => {
+  const shopId = c.get("shopId");
+  if (!shopId) throw new NotFoundError("Vendor shop profile not found");
+  const productId = c.req.param("id");
+
+  const res = await query(
+    `SELECT * FROM products WHERE id = $1 AND shop_id = $2`,
+    [productId, shopId]
+  );
+  if (res.rows.length === 0) {
+    throw new NotFoundError("Listing not found, or it belongs to another workshop");
+  }
+
+  const variants = await query(
+    `SELECT * FROM product_variants WHERE product_id = $1 ORDER BY created_at ASC`,
+    [productId]
+  );
+
+  return c.json({ product: res.rows[0], variants: variants.rows });
+});
+
+vendorRoutes.put("/products/:id", async (c) => {
+  const shopId = c.get("shopId");
+  if (!shopId) throw new NotFoundError("Vendor shop profile not found");
+  const productId = c.req.param("id");
+  const body = await c.req.json().catch(() => ({}));
+
+  const owned = await query(`SELECT id FROM products WHERE id = $1 AND shop_id = $2`, [productId, shopId]);
+  if (owned.rows.length === 0) {
+    throw new NotFoundError("Listing not found, or it belongs to another workshop");
+  }
+
+  const res = await query(
+    `UPDATE products
+        SET title = COALESCE($2, title),
+            description = COALESCE($3, description),
+            base_price_cents = COALESCE($4, base_price_cents),
+            compare_price_cents = COALESCE($5, compare_price_cents),
+            is_published = COALESCE($6, is_published),
+            tags = COALESCE($7, tags),
+            updated_at = NOW()
+      WHERE id = $1
+      RETURNING *`,
+    [
+      productId,
+      body.title ?? null,
+      body.description ?? null,
+      body.basePriceCents ?? null,
+      body.comparePriceCents ?? null,
+      body.isPublished ?? null,
+      body.tags ?? null,
+    ]
+  );
+
+  return c.json({ product: res.rows[0] });
+});
+
+// What shoppers said about this workshop, and the replies it has given.
+vendorRoutes.get("/reviews", async (c) => {
+  const shopId = c.get("shopId");
+  if (!shopId) throw new NotFoundError("Vendor shop profile not found");
+
+  const res = await query(
+    `SELECT r.*, p.title AS product_title, p.slug AS product_slug, u.name AS shopper_name
+       FROM reviews r
+       JOIN products p ON p.id = r.product_id
+       JOIN users u ON u.id = r.user_id
+      WHERE r.shop_id = $1
+      ORDER BY r.created_at DESC`,
+    [shopId]
+  );
+
+  return c.json({ reviews: res.rows });
+});
+
+vendorRoutes.post("/reviews/:id/reply", async (c) => {
+  const shopId = c.get("shopId");
+  if (!shopId) throw new NotFoundError("Vendor shop profile not found");
+  const reviewId = c.req.param("id");
+  const body = await c.req.json().catch(() => ({}));
+  const reply = typeof body.reply === "string" ? body.reply.trim() : "";
+
+  if (!reply) throw new BadRequestError("reply is required");
+
+  const res = await query(
+    `UPDATE reviews
+        SET vendor_reply = $3, vendor_replied_at = NOW(), updated_at = NOW()
+      WHERE id = $1 AND shop_id = $2
+      RETURNING *`,
+    [reviewId, shopId, reply]
+  );
+  if (res.rows.length === 0) {
+    throw new NotFoundError("Review not found, or it is about another workshop");
+  }
+
+  return c.json({ review: res.rows[0] });
+});

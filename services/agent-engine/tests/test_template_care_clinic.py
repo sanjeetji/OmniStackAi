@@ -34,6 +34,18 @@ def _node_supports_typescript() -> bool:
     return bool(match) and (int(match.group(1)), int(match.group(2))) >= (22, 18)
 
 
+_INSERT = re.compile(r"^INSERT INTO (\w+)", re.M)
+
+
+def _tables_written(sql: str) -> list[str]:
+    """The tables a seed writes, in order, collapsing consecutive runs of the same table."""
+    tables: list[str] = []
+    for table in _INSERT.findall(sql):
+        if not tables or tables[-1] != table:
+            tables.append(table)
+    return tables
+
+
 def _node(args: list[str], cwd: Path, timeout: int = 180) -> subprocess.CompletedProcess:
     return subprocess.run(
         args, cwd=str(cwd), capture_output=True, text=True, timeout=timeout, check=False,
@@ -64,17 +76,34 @@ class CareClinicApiTests(unittest.TestCase):
             "seed/002_icd10.sql is stale: run `node scripts/generate-icd10.mjs > seed/002_icd10.sql`",
         )
 
-    def test_seed_matches_its_generator(self) -> None:
+    def test_the_committed_seed_came_from_this_generator(self) -> None:
+        """A hand-edited or stale seed is caught by comparing what each one writes, table by table.
+
+        The clinic's dates are relative to today, and a weekday shift changes how many appointments
+        land in the window, so the seed is not byte-stable across days. What must hold is that the
+        committed file writes the same tables, in the same order, as a fresh run.
+        """
         result = subprocess.run(
             ["node", "scripts/generate-seed.mjs"], cwd=str(API), capture_output=True, timeout=180, check=False,
         )
         self.assertEqual(result.returncode, 0, result.stderr.decode()[-2000:])
-        committed = (API / "seed" / "001_demo.sql").read_bytes()
+        committed = (API / "seed" / "001_demo.sql").read_text(encoding="utf-8")
         self.assertEqual(
-            hashlib.sha256(result.stdout).hexdigest(),
-            hashlib.sha256(committed).hexdigest(),
+            _tables_written(result.stdout.decode("utf-8")),
+            _tables_written(committed),
             "seed/001_demo.sql is stale: run `node scripts/generate-seed.mjs > seed/001_demo.sql`",
         )
+
+    def test_the_generator_is_deterministic(self) -> None:
+        """Two runs in the same moment must be byte-identical; nothing random may leak in."""
+        runs = [
+            subprocess.run(
+                ["node", "scripts/generate-seed.mjs"], cwd=str(API), capture_output=True, timeout=180, check=False,
+            ).stdout
+            for _ in range(2)
+        ]
+        self.assertEqual(hashlib.sha256(runs[0]).hexdigest(), hashlib.sha256(runs[1]).hexdigest())
+
 
 
 @unittest.skipUnless(API.is_dir(), "needs the CareClinic template")

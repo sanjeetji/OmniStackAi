@@ -1,388 +1,215 @@
 "use client";
 
 import { useState } from "react";
-import Link from "next/link";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
+import { ArrowLeft, Plus, Trash2 } from "lucide-react";
 import { api } from "@bazaar/shared";
 import { SellerHeader } from "@/components/seller-header";
-import { ArrowLeft, Plus, Trash2, CheckCircle } from "lucide-react";
+import { useApi, useAction } from "@/lib/use-api";
+import { inr } from "@/lib/format";
 
-interface VariantFormRow {
+interface VariantDraft {
   sku: string;
   title: string;
-  color: string;
-  size: string;
-  priceRupees: number;
-  stock: number;
-  imageUrl: string;
+  optionColor: string;
+  optionSize: string;
+  price: string;
+  stock: string;
 }
 
-export default function NewProductPage() {
+const EMPTY: VariantDraft = { sku: "", title: "", optionColor: "", optionSize: "", price: "", stock: "0" };
+
+function slugify(value: string): string {
+  return value
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-|-$/g, "")
+    .slice(0, 200);
+}
+
+export default function NewListing() {
   const router = useRouter();
-  const [submitting, setSubmitting] = useState(false);
-  const [success, setSuccess] = useState(false);
+  const categories = useApi(() => api.getCategories(), []);
+  const { run, busy, error } = useAction();
 
-  // Form states
   const [title, setTitle] = useState("");
-  const [categorySlug, setCategorySlug] = useState("blue-pottery");
+  const [categoryId, setCategoryId] = useState("");
   const [description, setDescription] = useState("");
-  const [basePriceRupees, setBasePriceRupees] = useState(2500);
-  const [comparePriceRupees, setComparePriceRupees] = useState(3000);
-  const [tags, setTags] = useState("handmade, quartz, traditional, heritage");
-  const [isPublished, setIsPublished] = useState(true);
+  const [tags, setTags] = useState("");
+  const [basePrice, setBasePrice] = useState("");
+  const [comparePrice, setComparePrice] = useState("");
+  const [variants, setVariants] = useState<VariantDraft[]>([{ ...EMPTY, title: "Standard" }]);
 
-  // Variants matrix
-  const [variants, setVariants] = useState<VariantFormRow[]>([
-    {
-      sku: "JBP-VASE-BLU-12",
-      title: "Cobalt Blue / 12 inch",
-      color: "Cobalt Blue",
-      size: "12 inch",
-      priceRupees: 2500,
-      stock: 10,
-      imageUrl:
-        "https://images.unsplash.com/photo-1578749556568-bc2c40e68b61?auto=format&fit=crop&w=600&q=80",
-    },
-  ]);
+  const field = "w-full rounded-xl border border-slate-700 bg-slate-900 px-3 py-2 text-sm text-slate-100 outline-none focus:border-amber-500";
+  const label = "mb-1 block text-[11px] font-semibold uppercase tracking-wider text-slate-400";
 
-  function handleAddVariant() {
-    setVariants([
-      ...variants,
-      {
-        sku: `JBP-VAR-${Date.now().toString().slice(-4)}`,
-        title: "Turquoise / 10 inch",
-        color: "Turquoise",
-        size: "10 inch",
-        priceRupees: 2100,
-        stock: 8,
-        imageUrl:
-          "https://images.unsplash.com/photo-1578749556568-bc2c40e68b61?auto=format&fit=crop&w=600&q=80",
-      },
-    ]);
+  function updateVariant(index: number, patch: Partial<VariantDraft>) {
+    setVariants((current) => current.map((variant, i) => (i === index ? { ...variant, ...patch } : variant)));
   }
 
-  function handleRemoveVariant(index: number) {
-    if (variants.length <= 1) return;
-    setVariants(variants.filter((_, idx) => idx !== index));
-  }
-
-  function handleVariantChange(index: number, field: keyof VariantFormRow, value: any) {
-    const updated = [...variants];
-    updated[index] = { ...updated[index], [field]: value };
-    setVariants(updated);
-  }
-
-  async function handleSubmit(e: React.FormEvent) {
-    e.preventDefault();
-    if (!title.trim()) return;
-
-    try {
-      setSubmitting(true);
-      const payload = {
-        title,
-        slug: title
-          .toLowerCase()
-          .replace(/[^a-z0-9]+/g, "-")
-          .replace(/(^-|-$)/g, ""),
-        categorySlug,
-        description,
-        tags: tags.split(",").map((t) => t.trim()),
-        basePriceCents: Math.round(basePriceRupees * 100),
-        comparePriceCents: comparePriceRupees ? Math.round(comparePriceRupees * 100) : null,
-        isPublished,
-        variants: variants.map((v) => ({
-          sku: v.sku,
-          title: v.title,
-          optionColor: v.color,
-          optionSize: v.size,
-          priceCents: Math.round(v.priceRupees * 100),
-          stockQuantity: v.stock,
-          imageUrl: v.imageUrl,
+  async function create() {
+    const ok = await run(async () => {
+      const product = await api.createVendorProduct({
+        categoryId,
+        title: title.trim(),
+        slug: slugify(title),
+        description: description.trim(),
+        tags: tags
+          .split(",")
+          .map((tag) => tag.trim())
+          .filter(Boolean),
+        basePriceCents: Math.round(Number(basePrice) * 100),
+        comparePriceCents: comparePrice ? Math.round(Number(comparePrice) * 100) : undefined,
+        variants: variants.map((variant, index) => ({
+          sku: variant.sku.trim() || `${slugify(title).slice(0, 12).toUpperCase()}-${index + 1}`,
+          title: variant.title.trim() || "Standard",
+          optionColor: variant.optionColor.trim() || undefined,
+          optionSize: variant.optionSize.trim() || undefined,
+          priceCents: Math.round(Number(variant.price || basePrice) * 100),
+          stockQuantity: Number(variant.stock) || 0,
         })),
-      };
-
-      await api.createVendorProduct(payload);
-      setSuccess(true);
-      setTimeout(() => router.push("/products"), 1500);
-    } catch {
-      // Offline fallback
-      setSuccess(true);
-      setTimeout(() => router.push("/products"), 1500);
-    } finally {
-      setSubmitting(false);
-    }
+      });
+      router.push(`/products/${product.product.id}`);
+    });
+    return ok;
   }
+
+  const valid = title.trim() && categoryId && description.trim() && Number(basePrice) > 0;
 
   return (
-    <div className="flex-1 pb-16">
-      <SellerHeader
-        title="Create New Craft Artifact"
-        description="List handcrafted masterpieces with multi-variant options, sizes, and artisan background."
-      />
+    <>
+      <SellerHeader title="New listing" description="One craft, with every size or colour you make it in" />
 
-      <main className="max-w-4xl mx-auto px-6 py-8">
-        <Link
-          href="/products"
-          className="inline-flex items-center gap-1.5 text-xs font-semibold text-stone-600 hover:text-stone-900 mb-6"
-        >
-          <ArrowLeft className="w-4 h-4" />
-          <span>Back to Catalog</span>
+      <div className="p-6">
+        <Link href="/products" className="mb-4 inline-flex items-center gap-1.5 text-xs font-semibold text-slate-400 hover:text-slate-200">
+          <ArrowLeft className="h-3.5 w-3.5" /> Catalogue
         </Link>
 
-        {success && (
-          <div className="mb-6 p-4 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-900 text-xs font-semibold flex items-center gap-2">
-            <CheckCircle className="w-4 h-4 text-emerald-700" />
-            <span>Craft successfully listed! Redirecting to catalog...</span>
+        {error && (
+          <div className="mb-4 rounded-xl border border-rose-500/30 bg-rose-500/10 px-4 py-2.5 text-sm text-rose-300">
+            {error}
           </div>
         )}
 
-        <form onSubmit={handleSubmit} className="space-y-8">
-          {/* General Information */}
-          <div className="bg-white p-6 rounded-2xl border border-stone-200/80 shadow-2xs space-y-4">
-            <h3 className="text-sm font-bold uppercase tracking-wider text-stone-500">
-              General Craft Identity
-            </h3>
-
+        <form
+          className="grid gap-5 lg:grid-cols-[1.4fr_1fr]"
+          onSubmit={(event) => {
+            event.preventDefault();
+            void create();
+          }}
+        >
+          <section className="space-y-4 rounded-2xl border border-slate-800 bg-slate-900/60 p-5">
             <div>
-              <label className="block text-xs font-semibold text-stone-700 uppercase mb-1">
-                Artifact Title
-              </label>
-              <input
-                type="text"
-                value={title}
-                onChange={(e) => setTitle(e.target.value)}
-                placeholder="e.g. Hand-Painted Royal Blue Terracotta Vase"
-                required
-                className="w-full text-sm rounded-xl border border-stone-300 p-3 focus:outline-none focus:border-amber-700"
-              />
-            </div>
-
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div>
-                <label className="block text-xs font-semibold text-stone-700 uppercase mb-1">
-                  Craft Category
-                </label>
-                <select
-                  value={categorySlug}
-                  onChange={(e) => setCategorySlug(e.target.value)}
-                  className="w-full text-sm rounded-xl border border-stone-300 p-3 bg-white focus:outline-none focus:border-amber-700"
-                >
-                  <option value="blue-pottery">Jaipur Blue Pottery</option>
-                  <option value="banarasi-silk">Banarasi Handloom Silk</option>
-                  <option value="brass-metalware">Moradabad Brass Guild</option>
-                  <option value="wood-carving">Saharanpur Wood Carving</option>
-                  <option value="kashmiri-shawls">Kashmiri Pashmina</option>
-                </select>
-              </div>
-
-              <div>
-                <label className="block text-xs font-semibold text-stone-700 uppercase mb-1">
-                  Craft Tags (comma separated)
-                </label>
-                <input
-                  type="text"
-                  value={tags}
-                  onChange={(e) => setTags(e.target.value)}
-                  placeholder="handmade, unesco, heritage, pottery"
-                  className="w-full text-sm rounded-xl border border-stone-300 p-3 focus:outline-none focus:border-amber-700"
-                />
-              </div>
+              <label className={label}>Title</label>
+              <input className={field} value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Hand-painted blue pottery vase" required />
+              {title && <p className="mt-1 text-[11px] text-slate-500">Address: /{slugify(title)}</p>}
             </div>
 
             <div>
-              <label className="block text-xs font-semibold text-stone-700 uppercase mb-1">
-                Artisan Story, Materials & Technique
-              </label>
+              <label className={label}>Craft category</label>
+              <select className={field} value={categoryId} onChange={(e) => setCategoryId(e.target.value)} required>
+                <option value="">Choose a category</option>
+                {(categories.data ?? []).map((category: any) => (
+                  <option key={category.id} value={category.id}>
+                    {category.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div>
+              <label className={label}>About this piece</label>
               <textarea
+                className={`${field} min-h-32`}
                 value={description}
                 onChange={(e) => setDescription(e.target.value)}
-                rows={4}
-                placeholder="Describe how this piece was crafted, the mineral glaze composition, kiln firing technique, and heritage motifs..."
+                placeholder="The technique, the materials, how long it takes to make, how to care for it."
                 required
-                className="w-full text-sm rounded-xl border border-stone-300 p-3 focus:outline-none focus:border-amber-700"
               />
             </div>
-          </div>
 
-          {/* Pricing Section */}
-          <div className="bg-white p-6 rounded-2xl border border-stone-200/80 shadow-2xs space-y-4">
-            <h3 className="text-sm font-bold uppercase tracking-wider text-stone-500">
-              Pricing (INR ₹)
-            </h3>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div>
-                <label className="block text-xs font-semibold text-stone-700 uppercase mb-1">
-                  Base Retail Price (₹)
-                </label>
-                <input
-                  type="number"
-                  value={basePriceRupees}
-                  onChange={(e) => setBasePriceRupees(Number(e.target.value))}
-                  required
-                  min={100}
-                  className="w-full text-sm rounded-xl border border-stone-300 p-3 focus:outline-none focus:border-amber-700 font-mono"
-                />
-              </div>
-
-              <div>
-                <label className="block text-xs font-semibold text-stone-700 uppercase mb-1">
-                  Compare at / MRP Price (₹) (Optional)
-                </label>
-                <input
-                  type="number"
-                  value={comparePriceRupees}
-                  onChange={(e) => setComparePriceRupees(Number(e.target.value))}
-                  min={100}
-                  className="w-full text-sm rounded-xl border border-stone-300 p-3 focus:outline-none focus:border-amber-700 font-mono"
-                />
-              </div>
-            </div>
-          </div>
-
-          {/* Multi-Variant Matrix */}
-          <div className="bg-white p-6 rounded-2xl border border-stone-200/80 shadow-2xs space-y-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <h3 className="text-sm font-bold uppercase tracking-wider text-stone-500">
-                  Multi-Variant Matrix
-                </h3>
-                <p className="text-xs text-stone-500 mt-0.5">
-                  Configure size and color combinations with dedicated SKUs and stock counts.
-                </p>
-              </div>
-              <button
-                type="button"
-                onClick={handleAddVariant}
-                className="px-3.5 py-1.5 rounded-xl border border-stone-300 hover:bg-stone-100 text-xs font-semibold text-stone-700 flex items-center gap-1 transition"
-              >
-                <Plus className="w-3.5 h-3.5" />
-                <span>Add Variant</span>
-              </button>
-            </div>
-
-            <div className="space-y-4">
-              {variants.map((v, idx) => (
-                <div
-                  key={idx}
-                  className="p-4 bg-stone-50/70 rounded-xl border border-stone-200/70 space-y-3"
-                >
-                  <div className="flex items-center justify-between">
-                    <span className="text-xs font-bold text-stone-700">Variant #{idx + 1}</span>
-                    {variants.length > 1 && (
-                      <button
-                        type="button"
-                        onClick={() => handleRemoveVariant(idx)}
-                        className="text-red-600 hover:text-red-800 text-xs flex items-center gap-1 font-medium"
-                      >
-                        <Trash2 className="w-3.5 h-3.5" />
-                        <span>Remove</span>
-                      </button>
-                    )}
-                  </div>
-
-                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-                    <div>
-                      <label className="block text-[11px] font-semibold text-stone-600 mb-0.5">
-                        SKU
-                      </label>
-                      <input
-                        type="text"
-                        value={v.sku}
-                        onChange={(e) => handleVariantChange(idx, "sku", e.target.value)}
-                        required
-                        className="w-full text-xs rounded-lg border border-stone-300 p-2 font-mono bg-white"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-[11px] font-semibold text-stone-600 mb-0.5">
-                        Color
-                      </label>
-                      <input
-                        type="text"
-                        value={v.color}
-                        onChange={(e) => handleVariantChange(idx, "color", e.target.value)}
-                        placeholder="Cobalt Blue"
-                        className="w-full text-xs rounded-lg border border-stone-300 p-2 bg-white"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-[11px] font-semibold text-stone-600 mb-0.5">
-                        Size
-                      </label>
-                      <input
-                        type="text"
-                        value={v.size}
-                        onChange={(e) => handleVariantChange(idx, "size", e.target.value)}
-                        placeholder="12 inch"
-                        className="w-full text-xs rounded-lg border border-stone-300 p-2 bg-white"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-[11px] font-semibold text-stone-600 mb-0.5">
-                        Stock Units
-                      </label>
-                      <input
-                        type="number"
-                        value={v.stock}
-                        onChange={(e) => handleVariantChange(idx, "stock", Number(e.target.value))}
-                        min={0}
-                        required
-                        className="w-full text-xs rounded-lg border border-stone-300 p-2 font-mono bg-white"
-                      />
-                    </div>
-                  </div>
-
-                  <div>
-                    <label className="block text-[11px] font-semibold text-stone-600 mb-0.5">
-                      Image URL
-                    </label>
-                    <input
-                      type="url"
-                      value={v.imageUrl}
-                      onChange={(e) => handleVariantChange(idx, "imageUrl", e.target.value)}
-                      placeholder="https://images.unsplash.com/..."
-                      className="w-full text-xs rounded-lg border border-stone-300 p-2 font-mono bg-white"
-                    />
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          {/* Publishing Controls */}
-          <div className="bg-white p-6 rounded-2xl border border-stone-200/80 shadow-2xs flex items-center justify-between">
             <div>
-              <p className="text-sm font-bold text-stone-900">Publish Immediately</p>
-              <p className="text-xs text-stone-500">
-                Make visible across the Bazaar public storefront immediately upon saving.
+              <label className={label}>Tags</label>
+              <input className={field} value={tags} onChange={(e) => setTags(e.target.value)} placeholder="handmade, heritage, gi-tag" />
+              <p className="mt-1 text-[11px] text-slate-500">Comma separated. Shoppers search these.</p>
+            </div>
+
+            <div className="grid gap-3 sm:grid-cols-2">
+              <div>
+                <label className={label}>Price (₹)</label>
+                <input className={field} type="number" min="1" value={basePrice} onChange={(e) => setBasePrice(e.target.value)} required />
+              </div>
+              <div>
+                <label className={label}>Was (₹)</label>
+                <input className={field} type="number" min="0" value={comparePrice} onChange={(e) => setComparePrice(e.target.value)} />
+                <p className="mt-1 text-[11px] text-slate-500">Shown struck through. Leave blank if not on offer.</p>
+              </div>
+            </div>
+          </section>
+
+          <section className="space-y-4">
+            <div className="rounded-2xl border border-slate-800 bg-slate-900/60 p-5">
+              <div className="mb-3 flex items-center justify-between">
+                <h2 className="text-sm font-bold text-slate-100">Variants</h2>
+                <button
+                  type="button"
+                  onClick={() => setVariants((current) => [...current, { ...EMPTY }])}
+                  className="inline-flex items-center gap-1 rounded-lg border border-slate-700 px-2 py-1 text-xs font-semibold text-slate-300 hover:bg-slate-800"
+                >
+                  <Plus className="h-3 w-3" /> Add
+                </button>
+              </div>
+
+              <div className="space-y-3">
+                {variants.map((variant, index) => (
+                  <div key={index} className="rounded-xl border border-slate-800 p-3">
+                    <div className="mb-2 flex items-center justify-between">
+                      <span className="text-[11px] font-semibold uppercase tracking-wider text-slate-500">
+                        Variant {index + 1}
+                      </span>
+                      {variants.length > 1 && (
+                        <button
+                          type="button"
+                          onClick={() => setVariants((current) => current.filter((_, i) => i !== index))}
+                          className="text-slate-500 hover:text-rose-400"
+                          aria-label="Remove variant"
+                        >
+                          <Trash2 className="h-3.5 w-3.5" />
+                        </button>
+                      )}
+                    </div>
+                    <div className="space-y-2">
+                      <input className={field} value={variant.title} onChange={(e) => updateVariant(index, { title: e.target.value })} placeholder="Name, e.g. Large" />
+                      <div className="grid grid-cols-2 gap-2">
+                        <input className={field} value={variant.optionColor} onChange={(e) => updateVariant(index, { optionColor: e.target.value })} placeholder="Colour" />
+                        <input className={field} value={variant.optionSize} onChange={(e) => updateVariant(index, { optionSize: e.target.value })} placeholder="Size" />
+                      </div>
+                      <div className="grid grid-cols-2 gap-2">
+                        <input className={field} type="number" value={variant.price} onChange={(e) => updateVariant(index, { price: e.target.value })} placeholder={basePrice || "Price"} />
+                        <input className={field} type="number" min="0" value={variant.stock} onChange={(e) => updateVariant(index, { stock: e.target.value })} placeholder="Stock" />
+                      </div>
+                      <input className={field} value={variant.sku} onChange={(e) => updateVariant(index, { sku: e.target.value })} placeholder="SKU (generated if blank)" />
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              <p className="mt-3 border-t border-slate-800 pt-3 text-[11px] text-slate-500">
+                Stock is held the moment a shopper checks out, so it cannot be oversold.
               </p>
             </div>
-            <input
-              type="checkbox"
-              checked={isPublished}
-              onChange={(e) => setIsPublished(e.target.checked)}
-              className="w-5 h-5 text-amber-800 rounded border-stone-300"
-            />
-          </div>
 
-          {/* Actions */}
-          <div className="flex items-center justify-end gap-3 pt-4">
-            <Link
-              href="/products"
-              className="px-5 py-2.5 rounded-xl border border-stone-300 hover:bg-stone-100 text-xs font-semibold text-stone-700 transition"
-            >
-              Cancel
-            </Link>
             <button
               type="submit"
-              disabled={submitting}
-              className="px-6 py-2.5 bg-amber-800 hover:bg-amber-900 text-white rounded-xl text-xs font-bold transition disabled:opacity-50 shadow-sm"
+              disabled={busy || !valid}
+              className="w-full rounded-xl bg-amber-500 px-4 py-2.5 text-sm font-bold text-slate-950 transition hover:bg-amber-400 disabled:opacity-50"
             >
-              {submitting ? "Publishing Craft..." : "Publish Craft to Storefront"}
+              {busy ? "Publishing" : `Publish for ${basePrice ? inr(Number(basePrice) * 100) : "—"}`}
             </button>
-          </div>
+          </section>
         </form>
-      </main>
-    </div>
+      </div>
+    </>
   );
 }

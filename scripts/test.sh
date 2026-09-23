@@ -2417,4 +2417,30 @@ for section in 'fresh` — Factory reset' 'admin` — Administer platform accoun
   fi
 done
 
+# R-540: every published template must reach its own API. Three shipped with apps that rendered
+# invented data instead, so this applies to the whole catalogue, not one template at a time.
+if [[ ! -f "$repo_root/services/agent-engine/tests/test_template_quality.py" ]]; then
+  printf 'R-540 the catalogue-wide template quality gate is required.\n'
+  exit 1
+fi
+for guard in test_every_page_reaches_its_api test_no_sign_in_writes_a_fake_token \
+  test_a_one_click_demo_login_uses_a_seeded_account test_dynamic_segments_are_real_route_folders; do
+  if ! rg -qF "$guard" "$repo_root/services/agent-engine/tests/test_template_quality.py"; then
+    printf 'R-540 the template quality gate must still check: %s\n' "$guard"
+    exit 1
+  fi
+done
+# Bazaar's books must be generated, not asserted: the console reads them as the source of truth.
+bazaar_seed="$repo_root/templates/catalog/bazaar/repo/services/api/scripts/generate-seed.mjs"
+if [[ -f "$bazaar_seed" ]]; then
+  if ! rg -qF 'a double-entry book must total zero' "$bazaar_seed"; then
+    printf "R-540 the Bazaar seed must derive account balances from its postings.\n"
+    exit 1
+  fi
+  if rg -qF 'randomUUID()' "$bazaar_seed"; then
+    printf 'R-540 the Bazaar seed must be deterministic; randomUUID makes every run differ.\n'
+    exit 1
+  fi
+fi
+
 printf 'Repository contract tests passed.\n'

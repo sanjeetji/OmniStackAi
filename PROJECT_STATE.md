@@ -4,6 +4,13 @@ Last updated: 2026-09-23
 ## Current Phase
 Stage 0 (Founder Build Sequence, Brief Section 91) — BASIC/MVP
 
+> **R-540 (2026-09-24): every published template audited; Bazaar rebuilt against its own API.**
+> One question of all three templates — does each page actually call the API? `ride-now` and `care-clinic` came back sound; **`bazaar` was 18 of 44 pages, with its operations console at 0 of 18**. Every console page rendered a fabricated array and sign-in wrote a demo token without calling the API. All 18 rewritten, plus the seller's listing editor, new-listing form, reviews and settings, and the buyer's reviews screen.
+> Four admin endpoints returned 500 to every caller (a table and three columns that do not exist), and generating a settlement batch called a method that was never written.
+> **The books were fiction:** cash and commission resolved to the same account row, and the seed asserted round balances with zero postings behind them. Migration 006 separates `platform_revenue`; the seed now generates 180 orders, 216 consignments and 564 postings and derives every balance — the ledger sums to zero and all 11 accounts reconcile.
+> `test_template_quality.py` applies eight checks to the whole catalogue, in `task verify`, so **T-9 and every future template are covered before publication**.
+> **Next:** T-9 Pocket (digital wallet), then the small billing-enforcement task.
+
 > **R-539 (2026-09-23): the CareClinic doctor workstation rebuilt against the API, plus the platform's own `fresh` and `admin` commands.**
 > `apps/doctor` was the same kind of mock the clinic console had been: every screen rendered hard-coded state, and only the dashboard, the queue and the patient chart called the API at all. All 15 screens now read live clinic data behind a shared doctor session, guard and event stream: dashboard, queue, the consultation with SOAP notes, e-prescription and lab orders, the patient chart and history, OPD hours, leave, earnings, reviews and the video room.
 > New API: `GET /api/doctor/consult/:appointmentId` (the whole consultation context in one read, 404 for another doctor's patient), `GET /api/doctor/earnings`, `POST`/`DELETE /api/doctor/schedule/overrides`, and `GET /api/public/icd10` over a new `icd10_catalog` table of 70 codes.

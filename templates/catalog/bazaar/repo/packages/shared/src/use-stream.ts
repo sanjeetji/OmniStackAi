@@ -20,11 +20,12 @@ export function useStream(options: {
   const [events, setEvents] = useState<StreamEvent[]>([]);
   const eventSourceRef = useRef<EventSource | null>(null);
 
+  // Same resolution order as the API client, so the stream follows the API wherever it is served.
   const baseUrl =
     options.baseUrl ||
-    (typeof window !== "undefined"
-      ? (window as any).__BAZAAR_API_URL__ || "http://localhost:4000"
-      : "");
+    (typeof process !== "undefined" && process.env?.NEXT_PUBLIC_API_URL) ||
+    (typeof window !== "undefined" ? (window as any).__BAZAAR_API_URL__ : null) ||
+    "http://127.0.0.1:4000";
 
   const enabled = options.enabled !== false;
 

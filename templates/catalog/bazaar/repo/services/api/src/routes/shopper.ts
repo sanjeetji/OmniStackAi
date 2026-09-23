@@ -212,3 +212,39 @@ shopperRoutes.get("/notifications", async (c) => {
   );
   return c.json({ notifications: res.rows });
 });
+
+// The reviews this shopper has written, and the delivered items they could still review.
+shopperRoutes.get("/reviews", async (c) => {
+  const user = c.get("user");
+
+  const mine = await query(
+    `SELECT r.*, p.title AS product_title, p.slug AS product_slug, s.name AS shop_name, s.slug AS shop_slug
+       FROM reviews r
+       JOIN products p ON p.id = r.product_id
+       JOIN shops s ON s.id = r.shop_id
+      WHERE r.user_id = $1
+      ORDER BY r.created_at DESC`,
+    [user.userId]
+  );
+
+  // Anything delivered to them that they have not reviewed yet.
+  const awaiting = await query(
+    `SELECT DISTINCT p.id AS product_id, p.title AS product_title, p.slug AS product_slug,
+            s.name AS shop_name, sh.delivered_at
+       FROM shipments sh
+       JOIN orders o ON o.id = sh.order_id
+       JOIN shipment_items si ON si.shipment_id = sh.id
+       JOIN products p ON p.id = si.product_id
+       JOIN shops s ON s.id = p.shop_id
+      WHERE o.user_id = $1
+        AND sh.status = 'delivered'
+        AND NOT EXISTS (
+          SELECT 1 FROM reviews r WHERE r.product_id = p.id AND r.user_id = $1
+        )
+      ORDER BY sh.delivered_at DESC NULLS LAST
+      LIMIT 20`,
+    [user.userId]
+  );
+
+  return c.json({ reviews: mine.rows, awaitingReview: awaiting.rows });
+});

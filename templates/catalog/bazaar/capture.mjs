@@ -1,21 +1,68 @@
-// Bazaar screenshot plan for scripts/capture-template-screens.mjs (R-534).
-// Captures all 48 screens across storefront (buyer), vendor portal (seller),
-// and marketplace console (admin), plus a composed marketing cover image.
+// Bazaar screenshot plan for scripts/capture-template-screens.mjs (R-534, corrected in R-540).
+// Captures all 48 screens across the storefront (buyer), the vendor portal (seller) and the
+// marketplace operations console (admin), plus a composed cover image.
+//
+// Every route that takes an id resolves it from the running API first, so the shots are of real
+// records in the seeded marketplace rather than placeholders.
 
 export const users = {
   buyer: { email: "priya@bazaar.test", password: "Shopper@2026", role: "shopper" },
-  seller: { email: "kripal@bazaar.test", password: "Vendor@2026", role: "vendor" },
+  seller: { email: "aryan@bazaar.test", password: "Vendor@2026", role: "vendor" },
   admin: { email: "admin@bazaar.test", password: "Admin@2026", role: "admin" },
-  guest: { email: "ananya.demo@bazaar.test", password: "Ananya@2026", role: "shopper" },
 };
 
-export const storageKeys = {
-  buyer: "bazaar.buyer.session",
-  seller: "bazaar.seller.session",
-  admin: "bazaar.admin.session",
-};
+/**
+ * The apps keep the bearer token under `bazaar_token`, with the signed-in user beside it, which is
+ * what packages/shared/src/api.ts reads on start-up.
+ */
+export function storage(_app, session) {
+  const token = session.token ?? session.access_token;
+  return [
+    ["bazaar_token", token],
+    ["bazaar_user", JSON.stringify(session.user)],
+  ];
+}
 
-export default async function capture({ api, session, open, shot, render, image, sleep }) {
+export default async function capture({ api, shot: rawShot, render, image }) {
+  // Every screen is captured as that app's demo user. The sign-in pages and the public storefront
+  // are the exceptions: they are what a signed-out visitor sees.
+  const SIGNED_OUT = new Set(["login", "signup"]);
+  const shot = (options) =>
+    rawShot({ as: SIGNED_OUT.has(options.name) ? null : options.app, ...options });
+
+  // Real records from the seeded marketplace, so no screen shows a placeholder id.
+  const [adminOrders, adminShops, settlements, vendorProducts, vendorShipments, buyerOrders, categories, publicProducts] =
+    await Promise.all([
+      api("admin", "GET", "/api/admin/orders?limit=20"),
+      api("admin", "GET", "/api/admin/shops"),
+      api("admin", "GET", "/api/admin/settlements"),
+      api("seller", "GET", "/api/vendor/products"),
+      api("seller", "GET", "/api/vendor/shipments"),
+      api("buyer", "GET", "/api/shopper/orders"),
+      api(null, "GET", "/api/public/categories"),
+      api(null, "GET", "/api/public/products"),
+    ]);
+
+  const shop = adminShops.shops.find((s) => s.kyc_status === "pending") ?? adminShops.shops[0];
+  const deliveredOrder =
+    adminOrders.orders.find((o) => o.status === "completed") ?? adminOrders.orders[0];
+  const buyerOrder = (buyerOrders.orders ?? buyerOrders)[0];
+  const shipment =
+    vendorShipments.shipments.find((s) => s.status === "shipped") ?? vendorShipments.shipments[0];
+  const product = publicProducts.products[0];
+
+  const id = {
+    order: deliveredOrder.id,
+    buyerOrder: buyerOrder?.id ?? deliveredOrder.id,
+    shop: shop.id,
+    shopSlug: adminShops.shops[0].slug,
+    settlement: settlements.settlements[0]?.id,
+    vendorProduct: vendorProducts.products[0].id,
+    shipment: shipment?.id,
+    category: categories.categories[0].slug,
+    productPath: `${product.shop_slug ?? adminShops.shops[0].slug}/${product.slug}`,
+  };
+
   // --- Buyer Storefront (16 screens) -------------------------------------------------------------
   await shot({
     app: "buyer",
@@ -29,7 +76,7 @@ export default async function capture({ api, session, open, shot, render, image,
   await shot({
     app: "buyer",
     name: "category",
-    route: "/category/home-decor",
+    route: `/category/${id.category}`,
     displayRoute: "/category/[slug]",
     title: "Category Catalog",
     description: "Category craft collection with price filtering, artisan workshop provenance, and sort facets.",
@@ -38,7 +85,7 @@ export default async function capture({ api, session, open, shot, render, image,
   await shot({
     app: "buyer",
     name: "product-detail",
-    route: "/products/jaipur-blue-pottery/royal-mughal-cobalt-vase",
+    route: `/products/${id.productPath}`,
     displayRoute: "/products/[shopSlug]/[productSlug]",
     title: "Product Details",
     description: "High-resolution craft gallery, variant selector, real-time inventory badge, atelier story, and verified reviews.",
@@ -48,7 +95,7 @@ export default async function capture({ api, session, open, shot, render, image,
   await shot({
     app: "buyer",
     name: "shop-profile",
-    route: "/shops/jaipur-blue-pottery",
+    route: `/shops/${id.shopSlug}`,
     displayRoute: "/shops/[slug]",
     title: "Artisan Shop Storefront",
     description: "Dedicated seller page featuring brand bio, GI-tag accreditation badge, and curated store catalog.",
@@ -75,7 +122,7 @@ export default async function capture({ api, session, open, shot, render, image,
   await shot({
     app: "buyer",
     name: "order-confirmation",
-    route: "/orders/ord-8831/confirmation",
+    route: `/orders/${id.buyerOrder}/confirmation`,
     displayRoute: "/orders/[id]/confirmation",
     title: "Order Placed Confirmation",
     description: "Receipt detailing split shipments across independent artisan ateliers with estimated dispatch dates.",
@@ -93,7 +140,7 @@ export default async function capture({ api, session, open, shot, render, image,
   await shot({
     app: "buyer",
     name: "order-detail",
-    route: "/orders/ord-8831",
+    route: `/orders/${id.buyerOrder}`,
     displayRoute: "/orders/[id]",
     as: "buyer",
     title: "Order Breakdown",
@@ -103,7 +150,7 @@ export default async function capture({ api, session, open, shot, render, image,
   await shot({
     app: "buyer",
     name: "live-tracking",
-    route: "/orders/ord-8831/live",
+    route: `/orders/${id.buyerOrder}/live`,
     displayRoute: "/orders/[id]/live",
     title: "Live Courier Tracking",
     description: "Real-time SSE tracking map displaying simulated courier van movement towards delivery point.",
@@ -113,7 +160,7 @@ export default async function capture({ api, session, open, shot, render, image,
   await shot({
     app: "buyer",
     name: "shipment-tracking",
-    route: "/shipments/shp-8831-01/track",
+    route: `/shipments/${id.shipment}/track`,
     displayRoute: "/shipments/[id]/track",
     title: "Shipment Tracking Timeline",
     description: "Milestone timeline verifying courier transit checkpoints from Jaipur workshop to Bengaluru delivery hub.",
@@ -219,7 +266,7 @@ export default async function capture({ api, session, open, shot, render, image,
   await shot({
     app: "seller",
     name: "shipment-detail",
-    route: "/shipments/shp-8831-01",
+    route: `/shipments/${id.shipment}`,
     displayRoute: "/shipments/[id]",
     as: "seller",
     title: "Shipment Detail & Packing",
@@ -230,7 +277,7 @@ export default async function capture({ api, session, open, shot, render, image,
   await shot({
     app: "seller",
     name: "shipping-label",
-    route: "/shipments/shp-8831-01",
+    route: `/shipments/${id.shipment}`,
     displayRoute: "/shipments/[id]",
     as: "seller",
     title: "Shipping Label & Slip",
@@ -240,7 +287,7 @@ export default async function capture({ api, session, open, shot, render, image,
   await shot({
     app: "seller",
     name: "courier-dispatch",
-    route: "/shipments/shp-8831-01",
+    route: `/shipments/${id.shipment}`,
     displayRoute: "/shipments/[id]",
     as: "seller",
     title: "Courier Dispatch Handover",
@@ -324,7 +371,7 @@ export default async function capture({ api, session, open, shot, render, image,
   await shot({
     app: "admin",
     name: "shop-review",
-    route: "/shops/shop-001",
+    route: `/shops/${id.shop}`,
     displayRoute: "/shops/[id]",
     as: "admin",
     title: "Vendor Profile Review",
@@ -334,7 +381,7 @@ export default async function capture({ api, session, open, shot, render, image,
   await shot({
     app: "admin",
     name: "kyc-approval",
-    route: "/shops/shop-001/kyc",
+    route: `/shops/${id.shop}/kyc`,
     displayRoute: "/shops/[id]/kyc",
     as: "admin",
     title: "KYC Verification & Approval",
@@ -354,7 +401,7 @@ export default async function capture({ api, session, open, shot, render, image,
   await shot({
     app: "admin",
     name: "order-detail",
-    route: "/orders/ord-8831",
+    route: `/orders/${id.order}`,
     displayRoute: "/orders/[id]",
     as: "admin",
     title: "Order Investigation",
@@ -402,7 +449,7 @@ export default async function capture({ api, session, open, shot, render, image,
   await shot({
     app: "admin",
     name: "payout-approval",
-    route: "/settlements/set-002",
+    route: `/settlements/${id.settlement}`,
     displayRoute: "/settlements/[id]",
     as: "admin",
     title: "Approve Payout Batch",

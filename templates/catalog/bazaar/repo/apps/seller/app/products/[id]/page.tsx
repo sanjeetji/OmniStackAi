@@ -2,163 +2,190 @@
 
 import { use, useEffect, useState } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
-import { api, formatPrice } from "@bazaar/shared";
+import { ArrowLeft, Eye, EyeOff, Package, Save, Star } from "lucide-react";
+import { api } from "@bazaar/shared";
 import { SellerHeader } from "@/components/seller-header";
-import { ArrowLeft, CheckCircle } from "lucide-react";
+import { useApi, useAction } from "@/lib/use-api";
+import { count, day, inr, num } from "@/lib/format";
 
-interface PageProps {
-  params: Promise<{ id: string }>;
-}
-
-export default function EditProductPage({ params }: PageProps) {
+export default function EditListing({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
-  const router = useRouter();
-  const [loading, setLoading] = useState(false);
-  const [saving, setSaving] = useState(false);
-  const [success, setSuccess] = useState(false);
-
-  const [title, setTitle] = useState("Hand-Painted Royal Blue Terracotta Vase");
-  const [description, setDescription] = useState(
-    "Traditional Jaipur blue pottery vase handcrafted using ground quartz and copper oxide."
-  );
-  const [basePriceRupees, setBasePriceRupees] = useState(2400);
-  const [stockQty, setStockQty] = useState(14);
-  const [isPublished, setIsPublished] = useState(true);
+  const listing = useApi(() => api.getVendorProduct(id), [id]);
+  const { run, busy, error } = useAction();
+  const [saved, setSaved] = useState(false);
+  const [form, setForm] = useState({ title: "", description: "", price: "", comparePrice: "", tags: "" });
+  const [loaded, setLoaded] = useState(false);
 
   useEffect(() => {
-    // Attempt load product
-    async function load() {
-      try {
-        setLoading(true);
-        // api loads or fallback
-      } finally {
-        setLoading(false);
-      }
-    }
-    load();
-  }, [id]);
+    if (!listing.data || loaded) return;
+    const p = listing.data.product;
+    setForm({
+      title: p.title ?? "",
+      description: p.description ?? "",
+      price: String(num(p.base_price_cents) / 100),
+      comparePrice: p.compare_price_cents ? String(num(p.compare_price_cents) / 100) : "",
+      tags: (p.tags ?? []).join(", "),
+    });
+    setLoaded(true);
+  }, [listing.data, loaded]);
 
-  async function handleSave(e: React.FormEvent) {
-    e.preventDefault();
-    setSaving(true);
-    try {
-      setSuccess(true);
-      setTimeout(() => router.push("/products"), 1500);
-    } finally {
-      setSaving(false);
+  async function save(patch?: { isPublished?: boolean }) {
+    const ok = await run(() =>
+      api.updateVendorProduct(id, {
+        title: form.title.trim(),
+        description: form.description.trim(),
+        basePriceCents: Math.round(Number(form.price) * 100),
+        comparePriceCents: form.comparePrice ? Math.round(Number(form.comparePrice) * 100) : undefined,
+        tags: form.tags.split(",").map((tag) => tag.trim()).filter(Boolean),
+        ...patch,
+      })
+    );
+    if (ok) {
+      setSaved(true);
+      setTimeout(() => setSaved(false), 3000);
+      listing.refresh();
     }
   }
 
-  return (
-    <div className="flex-1 pb-16">
-      <SellerHeader
-        title="Edit Craft Listing"
-        description={`Product ID: ${id} • Jaipur Blue Pottery Collection`}
-      />
+  const field = "w-full rounded-xl border border-slate-700 bg-slate-900 px-3 py-2 text-sm text-slate-100 outline-none focus:border-amber-500";
+  const label = "mb-1 block text-[11px] font-semibold uppercase tracking-wider text-slate-400";
 
-      <main className="max-w-4xl mx-auto px-6 py-8">
-        <Link
-          href="/products"
-          className="inline-flex items-center gap-1.5 text-xs font-semibold text-stone-600 hover:text-stone-900 mb-6"
-        >
-          <ArrowLeft className="w-4 h-4" />
-          <span>Back to Catalog</span>
+  return (
+    <>
+      <SellerHeader title="Edit listing" description="What shoppers see, and what you have in stock" />
+
+      <div className="p-6">
+        <Link href="/products" className="mb-4 inline-flex items-center gap-1.5 text-xs font-semibold text-slate-400 hover:text-slate-200">
+          <ArrowLeft className="h-3.5 w-3.5" /> Catalogue
         </Link>
 
-        {success && (
-          <div className="mb-6 p-4 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-900 text-xs font-semibold flex items-center gap-2">
-            <CheckCircle className="w-4 h-4 text-emerald-700" />
-            <span>Listing updated successfully!</span>
+        {error && (
+          <div className="mb-4 rounded-xl border border-rose-500/30 bg-rose-500/10 px-4 py-2.5 text-sm text-rose-300">
+            {error}
+          </div>
+        )}
+        {saved && (
+          <div className="mb-4 rounded-xl border border-emerald-500/30 bg-emerald-500/10 px-4 py-2.5 text-sm text-emerald-300">
+            Saved.
           </div>
         )}
 
-        <form onSubmit={handleSave} className="space-y-6">
-          <div className="bg-white p-6 rounded-2xl border border-stone-200/80 shadow-2xs space-y-4">
-            <div>
-              <label className="block text-xs font-semibold text-stone-700 uppercase mb-1">
-                Artifact Title
-              </label>
-              <input
-                type="text"
-                value={title}
-                onChange={(e) => setTitle(e.target.value)}
-                required
-                className="w-full text-sm rounded-xl border border-stone-300 p-3"
-              />
-            </div>
-
-            <div>
-              <label className="block text-xs font-semibold text-stone-700 uppercase mb-1">
-                Description & Technique
-              </label>
-              <textarea
-                value={description}
-                onChange={(e) => setDescription(e.target.value)}
-                rows={4}
-                required
-                className="w-full text-sm rounded-xl border border-stone-300 p-3"
-              />
-            </div>
-
-            <div className="grid grid-cols-2 gap-4">
+        {listing.error && !listing.data ? (
+          <p className="rounded-xl border border-rose-500/30 bg-rose-500/10 px-4 py-3 text-sm text-rose-300">
+            {listing.error}
+          </p>
+        ) : !listing.data ? (
+          <p aria-busy="true" className="text-sm text-slate-400">Loading the listing…</p>
+        ) : (
+          <div className="grid gap-5 lg:grid-cols-[1.4fr_1fr]">
+            <section className="space-y-4 rounded-2xl border border-slate-800 bg-slate-900/60 p-5">
               <div>
-                <label className="block text-xs font-semibold text-stone-700 uppercase mb-1">
-                  Retail Price (₹)
-                </label>
-                <input
-                  type="number"
-                  value={basePriceRupees}
-                  onChange={(e) => setBasePriceRupees(Number(e.target.value))}
-                  min={100}
-                  required
-                  className="w-full text-sm rounded-xl border border-stone-300 p-3 font-mono"
-                />
+                <label className={label}>Title</label>
+                <input className={field} value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} />
+              </div>
+              <div>
+                <label className={label}>About this piece</label>
+                <textarea className={`${field} min-h-32`} value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} />
+              </div>
+              <div className="grid gap-3 sm:grid-cols-2">
+                <div>
+                  <label className={label}>Price (₹)</label>
+                  <input className={field} type="number" min="1" value={form.price} onChange={(e) => setForm({ ...form, price: e.target.value })} />
+                </div>
+                <div>
+                  <label className={label}>Was (₹)</label>
+                  <input className={field} type="number" min="0" value={form.comparePrice} onChange={(e) => setForm({ ...form, comparePrice: e.target.value })} />
+                </div>
+              </div>
+              <div>
+                <label className={label}>Tags</label>
+                <input className={field} value={form.tags} onChange={(e) => setForm({ ...form, tags: e.target.value })} />
               </div>
 
-              <div>
-                <label className="block text-xs font-semibold text-stone-700 uppercase mb-1">
-                  Total Allocated Stock
-                </label>
-                <input
-                  type="number"
-                  value={stockQty}
-                  onChange={(e) => setStockQty(Number(e.target.value))}
-                  min={0}
-                  required
-                  className="w-full text-sm rounded-xl border border-stone-300 p-3 font-mono"
-                />
+              <div className="flex flex-wrap gap-2 border-t border-slate-800 pt-4">
+                <button
+                  onClick={() => void save()}
+                  disabled={busy}
+                  className="inline-flex items-center gap-2 rounded-xl bg-amber-500 px-4 py-2 text-sm font-bold text-slate-950 transition hover:bg-amber-400 disabled:opacity-50"
+                >
+                  <Save className="h-4 w-4" /> {busy ? "Saving" : "Save"}
+                </button>
+                <button
+                  onClick={() => void save({ isPublished: !listing.data!.product.is_published })}
+                  disabled={busy}
+                  className="inline-flex items-center gap-2 rounded-xl border border-slate-700 px-4 py-2 text-sm font-semibold text-slate-300 transition hover:bg-slate-800 disabled:opacity-50"
+                >
+                  {listing.data.product.is_published ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                  {listing.data.product.is_published ? "Hide from the shop" : "Put it back on sale"}
+                </button>
               </div>
-            </div>
+            </section>
 
-            <div className="flex items-center justify-between pt-2">
-              <span className="text-xs font-semibold text-stone-700">Published Status</span>
-              <input
-                type="checkbox"
-                checked={isPublished}
-                onChange={(e) => setIsPublished(e.target.checked)}
-                className="w-5 h-5 text-amber-800 rounded border-stone-300"
-              />
-            </div>
-          </div>
+            <section className="space-y-4">
+              <div className="rounded-2xl border border-slate-800 bg-slate-900/60 p-5">
+                <h2 className="mb-3 flex items-center gap-2 text-sm font-bold text-slate-100">
+                  <Package className="h-4 w-4 text-amber-400" /> Variants and stock
+                </h2>
+                {listing.data.variants.length === 0 ? (
+                  <p className="text-sm text-slate-400">No variant on this listing.</p>
+                ) : (
+                  <ul className="space-y-2">
+                    {listing.data.variants.map((variant: any) => (
+                      <li key={variant.id} className="flex items-center justify-between gap-3 rounded-xl border border-slate-800 px-3 py-2">
+                        <div className="min-w-0">
+                          <p className="truncate text-sm text-slate-200">{variant.title}</p>
+                          <p className="truncate text-[11px] text-slate-500">
+                            {variant.sku}
+                            {variant.option_color ? ` · ${variant.option_color}` : ""}
+                            {variant.option_size ? ` · ${variant.option_size}` : ""}
+                          </p>
+                        </div>
+                        <div className="shrink-0 text-right">
+                          <p className="text-sm font-semibold text-slate-200">{inr(variant.price_cents)}</p>
+                          <p
+                            className={
+                              num(variant.stock_quantity) === 0
+                                ? "text-[11px] font-semibold text-rose-400"
+                                : num(variant.stock_quantity) < 5
+                                  ? "text-[11px] font-semibold text-amber-400"
+                                  : "text-[11px] text-slate-500"
+                            }
+                          >
+                            {count(variant.stock_quantity)} in stock
+                          </p>
+                        </div>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </div>
 
-          <div className="flex justify-end gap-3">
-            <Link
-              href="/products"
-              className="px-5 py-2.5 rounded-xl border border-stone-300 text-stone-700 text-xs font-semibold"
-            >
-              Cancel
-            </Link>
-            <button
-              type="submit"
-              disabled={saving}
-              className="px-6 py-2.5 bg-amber-800 hover:bg-amber-900 text-white rounded-xl text-xs font-bold transition disabled:opacity-50"
-            >
-              {saving ? "Saving Changes..." : "Save Changes"}
-            </button>
+              <div className="rounded-2xl border border-slate-800 bg-slate-900/60 p-5 text-sm">
+                <h2 className="mb-3 text-sm font-bold text-slate-100">How it is doing</h2>
+                <dl className="space-y-2 text-slate-400">
+                  <div className="flex justify-between">
+                    <dt>Rating</dt>
+                    <dd className="inline-flex items-center gap-1 font-semibold text-slate-200">
+                      <Star className="h-3.5 w-3.5 fill-amber-400 text-amber-400" />
+                      {Number(listing.data.product.rating_avg).toFixed(1)} · {listing.data.product.rating_count}
+                    </dd>
+                  </div>
+                  <div className="flex justify-between">
+                    <dt>On sale</dt>
+                    <dd className="font-semibold text-slate-200">
+                      {listing.data.product.is_published ? "Yes" : "Hidden"}
+                    </dd>
+                  </div>
+                  <div className="flex justify-between">
+                    <dt>Listed</dt>
+                    <dd className="font-semibold text-slate-200">{day(listing.data.product.created_at)}</dd>
+                  </div>
+                </dl>
+              </div>
+            </section>
           </div>
-        </form>
-      </main>
-    </div>
+        )}
+      </div>
+    </>
   );
 }

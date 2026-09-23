@@ -1,223 +1,168 @@
 "use client";
 
 import { useState } from "react";
-import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { AdminHeader } from "@/components/admin-header";
-import {
-  Tag,
-  ArrowLeft,
-  Percent,
-  CheckCircle2,
-  Sparkles,
-  Calendar,
-} from "lucide-react";
-import { formatCurrency } from "@bazaar/shared";
+import { ArrowLeft, Tag } from "lucide-react";
+import { api } from "@bazaar/shared";
+import { Shell } from "../../../components/shell";
+import { Panel, Button, ErrorNote, Field, inputClass } from "../../../components/ui";
+import { useAction } from "../../../lib/use-api";
+import { useSession } from "../../../lib/session";
+import { inr } from "../../../lib/format";
 
-export default function AdminCreateCouponPage() {
+export default function NewCoupon() {
   const router = useRouter();
+  const { notify } = useSession();
+  const { run, busy, error } = useAction();
 
-  const [code, setCode] = useState("CRAFTFEST20");
-  const [description, setDescription] = useState("20% off on all artisan woodwork and handlooms");
-  const [discountType, setDiscountType] = useState<"percentage" | "flat">("percentage");
-  const [discountValue, setDiscountValue] = useState(20);
-  const [minOrder, setMinOrder] = useState(2500);
-  const [maxDiscount, setMaxDiscount] = useState(1500);
-  const [usageLimit, setUsageLimit] = useState(250);
-  const [expiresAt, setExpiresAt] = useState("2026-11-30");
-  const [created, setCreated] = useState(false);
+  const [code, setCode] = useState("");
+  const [description, setDescription] = useState("");
+  const [discountType, setDiscountType] = useState<"percentage" | "fixed">("percentage");
+  const [value, setValue] = useState("10");
+  const [minOrder, setMinOrder] = useState("");
+  const [maxDiscount, setMaxDiscount] = useState("");
+  const [usageLimit, setUsageLimit] = useState("");
+  const [validUntil, setValidUntil] = useState("");
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    setCreated(true);
-    setTimeout(() => {
+  async function create() {
+    const ok = await run(() =>
+      api.createAdminCoupon({
+        code: code.trim().toUpperCase(),
+        description: description.trim() || undefined,
+        discountType,
+        discountValue: Number(value),
+        minOrderCents: minOrder ? Math.round(Number(minOrder) * 100) : undefined,
+        maxDiscountCents: maxDiscount ? Math.round(Number(maxDiscount) * 100) : undefined,
+        usageLimit: usageLimit ? Number(usageLimit) : undefined,
+        expiresAt: validUntil || undefined,
+      })
+    );
+    if (ok) {
+      notify({ title: "Coupon created", detail: code.trim().toUpperCase(), tone: "good" });
       router.push("/coupons");
-    }, 1200);
-  };
+    }
+  }
+
+  const example = 250000; // ₹2,500 basket
+  const preview =
+    discountType === "percentage"
+      ? Math.min(
+          Math.round((example * Number(value || 0)) / 100),
+          maxDiscount ? Math.round(Number(maxDiscount) * 100) : Number.MAX_SAFE_INTEGER
+        )
+      : Math.round(Number(value || 0) * 100);
 
   return (
-    <div className="flex-1 flex flex-col">
-      <AdminHeader
-        title="Create Promotional Coupon"
-        subtitle="Configure discount rules, cart thresholds, and customer redemption limits."
-      />
+    <Shell
+      title="New coupon"
+      subtitle="Shoppers apply it at checkout; the API validates it before the order is priced"
+      actions={
+        <Button href="/coupons" variant="quiet" size="sm">
+          <ArrowLeft size={13} /> Coupons
+        </Button>
+      }
+    >
+      {error && <div className="mb-3"><ErrorNote message={error} /></div>}
 
-      <div className="p-6 space-y-6 flex-1 max-w-4xl">
-        <Link
-          href="/coupons"
-          className="inline-flex items-center gap-1.5 text-xs text-slate-400 hover:text-white transition"
-        >
-          <ArrowLeft className="w-3.5 h-3.5" />
-          Back to Coupons
-        </Link>
-
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          {/* Coupon Form */}
+      <div className="mx-auto grid max-w-3xl gap-3 lg:grid-cols-[1.4fr_1fr]">
+        <Panel title="The coupon">
           <form
-            onSubmit={handleSubmit}
-            className="md:col-span-2 bg-slate-900 border border-slate-800 rounded-xl p-6 space-y-4 text-xs"
+            className="space-y-3"
+            onSubmit={(event) => {
+              event.preventDefault();
+              void create();
+            }}
           >
-            <div>
-              <label className="block text-slate-300 font-semibold mb-1">
-                Coupon Code
-              </label>
+            <Field label="Code" hint="What the shopper types. Upper case, no spaces.">
               <input
-                type="text"
-                required
+                className={`${inputClass} uppercase`}
                 value={code}
-                onChange={(e) => setCode(e.target.value.toUpperCase())}
-                placeholder="e.g. HERITAGE20"
-                className="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-white font-mono uppercase font-bold tracking-wider focus:outline-none focus:border-amber-500"
-              />
-            </div>
-
-            <div>
-              <label className="block text-slate-300 font-semibold mb-1">
-                Marketing Description
-              </label>
-              <input
-                type="text"
+                onChange={(event) => setCode(event.target.value.replace(/\s/g, ""))}
+                placeholder="FESTIVE25"
                 required
-                value={description}
-                onChange={(e) => setDescription(e.target.value)}
-                placeholder="e.g. 15% off across all handloom sarees"
-                className="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-amber-500"
               />
-            </div>
+            </Field>
 
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <label className="block text-slate-300 font-semibold mb-1">
-                  Discount Type
-                </label>
+            <Field label="Description" hint="Shown in the coupon list, not to shoppers.">
+              <input
+                className={inputClass}
+                value={description}
+                onChange={(event) => setDescription(event.target.value)}
+                placeholder="Diwali campaign"
+              />
+            </Field>
+
+            <div className="grid grid-cols-2 gap-2">
+              <Field label="Kind">
                 <select
+                  className={inputClass}
                   value={discountType}
-                  onChange={(e) => setDiscountType(e.target.value as any)}
-                  className="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-amber-500"
+                  onChange={(event) => setDiscountType(event.target.value as "percentage" | "fixed")}
                 >
-                  <option value="percentage">Percentage Discount (%)</option>
-                  <option value="flat">Flat Amount Discount (₹)</option>
+                  <option value="percentage">Percentage off</option>
+                  <option value="fixed">Fixed amount off</option>
                 </select>
-              </div>
-
-              <div>
-                <label className="block text-slate-300 font-semibold mb-1">
-                  Discount Value {discountType === "percentage" ? "(%)" : "(₹)"}
-                </label>
+              </Field>
+              <Field label={discountType === "percentage" ? "Percent" : "Rupees"}>
                 <input
+                  className={inputClass}
                   type="number"
                   min="1"
+                  value={value}
+                  onChange={(event) => setValue(event.target.value)}
                   required
-                  value={discountValue}
-                  onChange={(e) => setDiscountValue(parseInt(e.target.value || "0", 10))}
-                  className="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-white font-mono font-bold focus:outline-none focus:border-amber-500"
                 />
-              </div>
+              </Field>
             </div>
 
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <label className="block text-slate-300 font-semibold mb-1">
-                  Minimum Cart Spend (₹)
-                </label>
-                <input
-                  type="number"
-                  min="0"
-                  value={minOrder}
-                  onChange={(e) => setMinOrder(parseInt(e.target.value || "0", 10))}
-                  className="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-white font-mono focus:outline-none focus:border-amber-500"
-                />
-              </div>
-
-              <div>
-                <label className="block text-slate-300 font-semibold mb-1">
-                  Maximum Discount Cap (₹)
-                </label>
-                <input
-                  type="number"
-                  min="0"
-                  value={maxDiscount}
-                  onChange={(e) => setMaxDiscount(parseInt(e.target.value || "0", 10))}
-                  className="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-white font-mono focus:outline-none focus:border-amber-500"
-                />
-              </div>
+            <div className="grid grid-cols-2 gap-2">
+              <Field label="Minimum order (₹)" hint="Leave blank for no minimum.">
+                <input className={inputClass} type="number" min="0" value={minOrder} onChange={(event) => setMinOrder(event.target.value)} />
+              </Field>
+              {discountType === "percentage" && (
+                <Field label="Cap the discount at (₹)">
+                  <input className={inputClass} type="number" min="0" value={maxDiscount} onChange={(event) => setMaxDiscount(event.target.value)} />
+                </Field>
+              )}
             </div>
 
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <label className="block text-slate-300 font-semibold mb-1">
-                  Redemption Limit
-                </label>
-                <input
-                  type="number"
-                  min="1"
-                  value={usageLimit}
-                  onChange={(e) => setUsageLimit(parseInt(e.target.value || "0", 10))}
-                  className="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-white font-mono focus:outline-none focus:border-amber-500"
-                />
-              </div>
-
-              <div>
-                <label className="block text-slate-300 font-semibold mb-1">
-                  Expiration Date
-                </label>
-                <input
-                  type="date"
-                  value={expiresAt}
-                  onChange={(e) => setExpiresAt(e.target.value)}
-                  className="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-amber-500"
-                />
-              </div>
+            <div className="grid grid-cols-2 gap-2">
+              <Field label="Total redemptions" hint="Blank means unlimited.">
+                <input className={inputClass} type="number" min="1" value={usageLimit} onChange={(event) => setUsageLimit(event.target.value)} />
+              </Field>
+              <Field label="Valid until">
+                <input className={inputClass} type="date" value={validUntil} onChange={(event) => setValidUntil(event.target.value)} />
+              </Field>
             </div>
 
-            <button
-              type="submit"
-              className="w-full py-2.5 rounded-lg bg-amber-600 hover:bg-amber-500 text-white font-semibold transition cursor-pointer"
-            >
-              Publish Active Coupon
-            </button>
-
-            {created && (
-              <div className="p-3 rounded-lg bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 flex items-center gap-2">
-                <CheckCircle2 className="w-4 h-4" />
-                Coupon {code} published and activated across buyer storefront carts.
-              </div>
-            )}
+            <Button type="submit" disabled={busy || !code.trim() || !value}>
+              <Tag size={13} /> {busy ? "Creating" : "Create the coupon"}
+            </Button>
           </form>
+        </Panel>
 
-          {/* Live Storefront Preview */}
-          <div className="space-y-4">
-            <div className="bg-slate-900 border border-slate-800 rounded-xl p-5 space-y-3">
-              <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider flex items-center gap-1.5">
-                <Sparkles className="w-3.5 h-3.5 text-amber-400" />
-                Storefront Badge Preview
-              </span>
-
-              <div className="p-4 rounded-xl bg-gradient-to-br from-amber-950/60 to-slate-950 border border-amber-500/30 text-xs space-y-2">
-                <div className="flex items-center justify-between">
-                  <span className="font-mono font-bold text-amber-300 text-sm tracking-wide">
-                    {code || "PROMO_CODE"}
-                  </span>
-                  <span className="px-1.5 py-0.5 rounded bg-amber-400/20 text-amber-300 font-mono text-[10px] font-bold">
-                    {discountType === "percentage" ? `${discountValue}% OFF` : `₹${discountValue} OFF`}
-                  </span>
-                </div>
-                <p className="text-slate-300 text-[11px] leading-relaxed">
-                  {description || "Marketing offer description."}
-                </p>
-                <div className="pt-2 border-t border-amber-500/20 text-[10px] text-slate-400 font-mono flex justify-between">
-                  <span>Min Cart: ₹{minOrder}</span>
-                  <span>Expires: {expiresAt}</span>
-                </div>
-              </div>
-
-              <p className="text-[11px] text-slate-400">
-                Shoppers can apply this code directly in the multi-vendor shopping cart and checkout review.
-              </p>
+        <Panel title="On a ₹2,500 basket" subtitle="What a shopper would see">
+          <div className="space-y-2 text-[13px]">
+            <div className="flex justify-between">
+              <span className="text-[var(--muted-light)]">Basket</span>
+              <span className="tabular text-slate-200">{inr(example)}</span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-[var(--muted-light)]">{code.trim().toUpperCase() || "COUPON"}</span>
+              <span className="tabular text-[var(--rose)]">− {inr(preview)}</span>
+            </div>
+            <div className="flex justify-between border-t border-[var(--surface-border)] pt-2 font-semibold">
+              <span className="text-slate-100">They pay</span>
+              <span className="tabular text-slate-100">{inr(Math.max(0, example - preview))}</span>
             </div>
           </div>
-        </div>
+          {minOrder && Number(minOrder) * 100 > example && (
+            <p className="mt-3 rounded-lg border border-amber-500/30 bg-amber-500/10 px-2.5 py-1.5 text-[11.5px] text-amber-300">
+              This basket is below the ₹{minOrder} minimum, so the coupon would be refused.
+            </p>
+          )}
+        </Panel>
       </div>
-    </div>
+    </Shell>
   );
 }

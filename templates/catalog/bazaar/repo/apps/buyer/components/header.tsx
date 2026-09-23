@@ -35,6 +35,14 @@ export function Header() {
       } catch {}
     }
 
+    // The cart belongs to a signed-in shopper. Asking for it while signed out is a 401 on every
+    // public page, so only poll once there is a session.
+    const signedIn = typeof localStorage !== "undefined" && Boolean(localStorage.getItem("bazaar_token"));
+    if (!signedIn) {
+      setCartCount(0);
+      return;
+    }
+
     const loadCart = async () => {
       try {
         const cart = await api.getCart();

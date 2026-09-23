@@ -8,7 +8,8 @@ export interface BazaarEvent {
     | "shipment.updated"
     | "inventory.low"
     | "return.requested"
-    | "settlement.processed";
+    | "settlement.processed"
+    | "order.cancelled";
   recipientUserId?: string;
   recipientShopId?: string;
   payload: Record<string, any>;

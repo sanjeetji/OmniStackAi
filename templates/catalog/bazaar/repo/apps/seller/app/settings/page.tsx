@@ -1,185 +1,186 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { Landmark, Save, ShieldCheck, Store } from "lucide-react";
+import { api } from "@bazaar/shared";
 import { SellerHeader } from "@/components/seller-header";
-import { ShieldCheck, CheckCircle2, Building2, MapPin } from "lucide-react";
+import { useApi, useAction } from "@/lib/use-api";
+import { day, titleCase } from "@/lib/format";
 
-export default function SellerSettingsPage() {
+export default function AtelierSettings() {
+  const shop = useApi(() => api.getVendorShop(), []);
+  const { run, busy, error } = useAction();
   const [saved, setSaved] = useState(false);
-  const [shopName, setShopName] = useState("Jaipur Blue Art Pottery");
-  const [tagline, setTagline] = useState(
-    "Authentic UNESCO Heritage GI-tagged Blue Pottery Handcrafted in Rajasthan"
-  );
-  const [description, setDescription] = useState(
-    "Preserving the classical 19th-century Jaipur blue pottery technique pioneered by Kripal Singh Shekhawat. Every item is molded by hand using quartz powder, Fuller's earth, and katira gond, without using clay."
-  );
-  const [bankName, setBankName] = useState("HDFC Bank Ltd");
-  const [accountNumber, setAccountNumber] = useState("50100294109412");
-  const [ifsc, setIfsc] = useState("HDFC0001248");
+  const [form, setForm] = useState({
+    name: "",
+    tagline: "",
+    description: "",
+    bankName: "",
+    bankAccountLast4: "",
+    bankIfscCode: "",
+  });
+  const [loaded, setLoaded] = useState(false);
 
-  function handleSave(e: React.FormEvent) {
-    e.preventDefault();
-    setSaved(true);
-    setTimeout(() => setSaved(false), 4000);
+  useEffect(() => {
+    if (!shop.data || loaded) return;
+    setForm({
+      name: shop.data.name ?? "",
+      tagline: shop.data.tagline ?? "",
+      description: shop.data.description ?? "",
+      bankName: shop.data.bank_name ?? "",
+      bankAccountLast4: shop.data.bank_account_last4 ?? "",
+      bankIfscCode: shop.data.bank_ifsc_code ?? "",
+    });
+    setLoaded(true);
+  }, [shop.data, loaded]);
+
+  async function save() {
+    const ok = await run(() => api.updateShop(form));
+    if (ok) {
+      setSaved(true);
+      setTimeout(() => setSaved(false), 3000);
+      shop.refresh();
+    }
   }
 
-  return (
-    <div className="flex-1 pb-16">
-      <SellerHeader
-        title="Workshop & Atelier Settings"
-        description="Verify artisan credentials, bank settlement details, and public craft profile."
-      />
+  const field = "w-full rounded-xl border border-slate-700 bg-slate-900 px-3 py-2 text-sm text-slate-100 outline-none focus:border-amber-500";
+  const label = "mb-1 block text-[11px] font-semibold uppercase tracking-wider text-slate-400";
 
-      <main className="max-w-4xl mx-auto px-6 py-8 space-y-6">
+  return (
+    <>
+      <SellerHeader title="Atelier settings" description="Your workshop as shoppers see it, and where you are paid" />
+
+      <div className="p-6">
+        {error && (
+          <div className="mb-4 rounded-xl border border-rose-500/30 bg-rose-500/10 px-4 py-2.5 text-sm text-rose-300">
+            {error}
+          </div>
+        )}
         {saved && (
-          <div className="p-4 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-900 text-xs font-semibold flex items-center gap-2 shadow-2xs">
-            <CheckCircle2 className="w-4 h-4 text-emerald-700" />
-            <span>Workshop settings and bank settlement credentials updated!</span>
+          <div className="mb-4 rounded-xl border border-emerald-500/30 bg-emerald-500/10 px-4 py-2.5 text-sm text-emerald-300">
+            Saved. Shoppers see the change immediately.
           </div>
         )}
 
-        {/* KYC Verification Card */}
-        <div className="bg-emerald-900 text-white p-6 rounded-2xl shadow-md flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-          <div className="flex items-start gap-4">
-            <div className="w-12 h-12 rounded-xl bg-emerald-800 text-emerald-200 flex items-center justify-center text-2xl font-bold flex-shrink-0">
-              <ShieldCheck className="w-6 h-6 text-emerald-300" />
-            </div>
-            <div>
-              <div className="flex items-center gap-2">
-                <h2 className="text-base font-bold">Government Certified Master Artisan</h2>
-                <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-700 text-white uppercase">
-                  KYC Verified
-                </span>
+        {shop.error && !shop.data ? (
+          <p className="rounded-xl border border-rose-500/30 bg-rose-500/10 px-4 py-3 text-sm text-rose-300">
+            {shop.error}
+          </p>
+        ) : !shop.data ? (
+          <p aria-busy="true" className="text-sm text-slate-400">Loading your workshop…</p>
+        ) : (
+          <div className="grid gap-5 lg:grid-cols-[1.4fr_1fr]">
+            <section className="rounded-2xl border border-slate-800 bg-slate-900/60 p-5">
+              <h2 className="mb-4 flex items-center gap-2 text-sm font-bold text-slate-100">
+                <Store className="h-4 w-4 text-amber-400" /> Your workshop
+              </h2>
+              <div className="space-y-4">
+                <div>
+                  <label className={label}>Name</label>
+                  <input className={field} value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} />
+                </div>
+                <div>
+                  <label className={label}>Tagline</label>
+                  <input className={field} value={form.tagline} onChange={(e) => setForm({ ...form, tagline: e.target.value })} />
+                </div>
+                <div>
+                  <label className={label}>About the craft</label>
+                  <textarea
+                    className={`${field} min-h-28`}
+                    value={form.description}
+                    onChange={(e) => setForm({ ...form, description: e.target.value })}
+                  />
+                </div>
+
+                <h3 className="flex items-center gap-2 border-t border-slate-800 pt-4 text-sm font-bold text-slate-100">
+                  <Landmark className="h-4 w-4 text-amber-400" /> Where you are settled
+                </h3>
+                <div className="grid gap-3 sm:grid-cols-3">
+                  <div className="sm:col-span-2">
+                    <label className={label}>Bank</label>
+                    <input className={field} value={form.bankName} onChange={(e) => setForm({ ...form, bankName: e.target.value })} />
+                  </div>
+                  <div>
+                    <label className={label}>Last 4</label>
+                    <input
+                      className={field}
+                      maxLength={4}
+                      value={form.bankAccountLast4}
+                      onChange={(e) => setForm({ ...form, bankAccountLast4: e.target.value })}
+                    />
+                  </div>
+                </div>
+                <div>
+                  <label className={label}>IFSC</label>
+                  <input
+                    className={`${field} uppercase`}
+                    value={form.bankIfscCode}
+                    onChange={(e) => setForm({ ...form, bankIfscCode: e.target.value.toUpperCase() })}
+                  />
+                </div>
+
+                <button
+                  onClick={() => void save()}
+                  disabled={busy}
+                  className="inline-flex items-center gap-2 rounded-xl bg-amber-500 px-4 py-2 text-sm font-bold text-slate-950 transition hover:bg-amber-400 disabled:opacity-50"
+                >
+                  <Save className="h-4 w-4" /> {busy ? "Saving" : "Save"}
+                </button>
               </div>
-              <p className="text-xs text-emerald-100/80 mt-1 max-w-lg">
-                GI Tag Registration #39 (Jaipur Blue Pottery). Fully verified by the Crafts Council of
-                India. Standard platform commission capped at 10.00%.
-              </p>
-            </div>
+            </section>
+
+            <section className="space-y-4">
+              <div className="rounded-2xl border border-slate-800 bg-slate-900/60 p-5">
+                <h2 className="mb-3 flex items-center gap-2 text-sm font-bold text-slate-100">
+                  <ShieldCheck className="h-4 w-4 text-amber-400" /> Verification
+                </h2>
+                <div className="flex items-center justify-between">
+                  <span className="text-sm text-slate-400">KYC status</span>
+                  <span
+                    className={
+                      shop.data.kyc_status === "verified"
+                        ? "rounded-full bg-emerald-500/10 px-2.5 py-1 text-xs font-bold text-emerald-400 ring-1 ring-inset ring-emerald-500/30"
+                        : "rounded-full bg-amber-500/10 px-2.5 py-1 text-xs font-bold text-amber-400 ring-1 ring-inset ring-amber-500/30"
+                    }
+                  >
+                    {titleCase(shop.data.kyc_status)}
+                  </span>
+                </div>
+                <p className="mt-2 text-xs leading-relaxed text-slate-400">
+                  {shop.data.kyc_status === "verified"
+                    ? "You are verified and may list and sell."
+                    : "A marketplace operator reviews your documents before you can sell. You will be told either way."}
+                </p>
+              </div>
+
+              <div className="rounded-2xl border border-slate-800 bg-slate-900/60 p-5 text-sm">
+                <h2 className="mb-3 text-sm font-bold text-slate-100">Your terms</h2>
+                <dl className="space-y-2 text-slate-400">
+                  <div className="flex justify-between">
+                    <dt>Commission</dt>
+                    <dd className="font-semibold text-slate-200">
+                      {(shop.data.commission_rate_basis_points / 100).toFixed(1)}%
+                    </dd>
+                  </div>
+                  <div className="flex justify-between">
+                    <dt>Rating</dt>
+                    <dd className="font-semibold text-slate-200">
+                      {Number(shop.data.rating_avg).toFixed(1)} · {shop.data.rating_count}
+                    </dd>
+                  </div>
+                  <div className="flex justify-between">
+                    <dt>Joined</dt>
+                    <dd className="font-semibold text-slate-200">{day(shop.data.created_at)}</dd>
+                  </div>
+                </dl>
+                <p className="mt-3 border-t border-slate-800 pt-3 text-xs text-slate-500">
+                  Your commission is set by the marketplace. Ask an operator to change it.
+                </p>
+              </div>
+            </section>
           </div>
-        </div>
-
-        <form onSubmit={handleSave} className="space-y-6">
-          {/* Atelier Brand Profile */}
-          <div className="bg-white p-6 rounded-2xl border border-stone-200/80 shadow-2xs space-y-4">
-            <h3 className="text-sm font-bold uppercase tracking-wider text-stone-500">
-              Workshop Brand Profile
-            </h3>
-
-            <div>
-              <label className="block text-xs font-semibold text-stone-700 uppercase mb-1">
-                Atelier Workshop Name
-              </label>
-              <input
-                type="text"
-                value={shopName}
-                onChange={(e) => setShopName(e.target.value)}
-                required
-                className="w-full text-sm rounded-xl border border-stone-300 p-3"
-              />
-            </div>
-
-            <div>
-              <label className="block text-xs font-semibold text-stone-700 uppercase mb-1">
-                Storefront Headline & Tagline
-              </label>
-              <input
-                type="text"
-                value={tagline}
-                onChange={(e) => setTagline(e.target.value)}
-                required
-                className="w-full text-sm rounded-xl border border-stone-300 p-3"
-              />
-            </div>
-
-            <div>
-              <label className="block text-xs font-semibold text-stone-700 uppercase mb-1">
-                Heritage Story & Studio Bio
-              </label>
-              <textarea
-                value={description}
-                onChange={(e) => setDescription(e.target.value)}
-                rows={4}
-                required
-                className="w-full text-sm rounded-xl border border-stone-300 p-3"
-              />
-            </div>
-
-            <div>
-              <label className="block text-xs font-semibold text-stone-700 uppercase mb-1">
-                Studio Workshop Address
-              </label>
-              <div className="p-3 bg-stone-50 rounded-xl border border-stone-200 text-xs text-stone-700 flex items-start gap-2">
-                <MapPin className="w-4 h-4 text-amber-800 flex-shrink-0 mt-0.5" />
-                <span>Kripal Kumbh Studio, B-18 Shiv Marg, Bani Park, Jaipur, Rajasthan 302016</span>
-              </div>
-            </div>
-          </div>
-
-          {/* Direct Bank Settlement Credentials */}
-          <div className="bg-white p-6 rounded-2xl border border-stone-200/80 shadow-2xs space-y-4">
-            <div className="flex items-center gap-2">
-              <Building2 className="w-4 h-4 text-amber-800" />
-              <h3 className="text-sm font-bold uppercase tracking-wider text-stone-500">
-                Direct NEFT / RTGS Bank Account
-              </h3>
-            </div>
-            <p className="text-xs text-stone-500">
-              Escrow payouts are settled automatically to this bank account upon your withdrawal requests.
-            </p>
-
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-              <div>
-                <label className="block text-xs font-semibold text-stone-700 uppercase mb-1">
-                  Bank Name
-                </label>
-                <input
-                  type="text"
-                  value={bankName}
-                  onChange={(e) => setBankName(e.target.value)}
-                  required
-                  className="w-full text-sm rounded-xl border border-stone-300 p-3"
-                />
-              </div>
-
-              <div>
-                <label className="block text-xs font-semibold text-stone-700 uppercase mb-1">
-                  Account Number
-                </label>
-                <input
-                  type="text"
-                  value={accountNumber}
-                  onChange={(e) => setAccountNumber(e.target.value)}
-                  required
-                  className="w-full text-sm rounded-xl border border-stone-300 p-3 font-mono"
-                />
-              </div>
-
-              <div>
-                <label className="block text-xs font-semibold text-stone-700 uppercase mb-1">
-                  IFSC Code
-                </label>
-                <input
-                  type="text"
-                  value={ifsc}
-                  onChange={(e) => setIfsc(e.target.value)}
-                  required
-                  className="w-full text-sm rounded-xl border border-stone-300 p-3 font-mono"
-                />
-              </div>
-            </div>
-          </div>
-
-          <div className="flex justify-end">
-            <button
-              type="submit"
-              className="px-6 py-2.5 bg-amber-800 hover:bg-amber-900 text-white rounded-xl text-xs font-bold transition shadow-sm"
-            >
-              Save Workshop Profile
-            </button>
-          </div>
-        </form>
-      </main>
-    </div>
+        )}
+      </div>
+    </>
   );
 }

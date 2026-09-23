@@ -1,5 +1,64 @@
 # Work Log
 
+## 2026-09-24 — R-540 (catalogue audit; Bazaar rebuilt against its own API)
+
+- **The audit.** A single question asked of all three published templates: does each page actually
+  call the API, or is it rendering invented data? `ride-now` 42/45 and `care-clinic` 48/51 (the
+  remainder being sign-in screens that delegate to a session provider and one redirect) — sound.
+  **`bazaar` 18/44, with `apps/admin` at 0/18.**
+- **Bazaar's console, rewritten.** All 18 pages, against endpoints that already existed: dashboard,
+  workshops, workshop profile, KYC review, orders, order investigation, consignments, live
+  logistics, financials, ledger, settlements, settlement batch, coupons, new coupon, reviews, audit
+  trail, settings, sign-in. Behind an operator session and guard, in the marketplace's own dark
+  amber control-room design (distinct from CareClinic's light console and RideNow's ops app).
+- **Bazaar's seller and buyer.** Real listing editor and new-listing form (with a variant matrix),
+  reviews with vendor replies, and atelier settings; the buyer gained a real reviews screen showing
+  what they have written and what they could still review.
+- **API defects, each a 500 for every caller.**
+  - `/admin/orders` and `/admin/orders/:id` selected from `order_items` — no such table; items live
+    on the consignment (`shipment_items`).
+  - `/admin/settlements` and `/admin/settlements/:id` selected `sh.bank_details_json` — the shop's
+    bank details are three columns.
+  - `/admin/reviews` selected `p.name` — the product column is `title`.
+  - Order detail read `tracking_events` — the table is `shipment_tracking_events`, and its
+    timestamp is `occurred_at`.
+  - `POST /admin/settlements/generate` called `ledgerService.settleVendorPayout`, which does not
+    exist. The method is `createSettlementBatch`.
+- **The money model.** `getOrCreateAccount("platform", null)` was called for both the cash account
+  and the revenue account, but `accounts` is unique on (holder_type, holder_id, currency) — so they
+  were the *same row*, and commission earned could never be distinguished from money held for
+  vendors. Migration `006_platform_revenue.sql` adds a `platform_revenue` holder type.
+- **The books.** The seed asserted round balances (platform cash 24,850,000; every vendor
+  18,500,000) with **zero ledger entries behind them**, while the console's whole claim is that
+  figures are derived from the ledger. The seed now generates 40 shoppers, 180 orders, 216
+  consignments, 802 tracking events, 8 settlement batches and 564 postings, and writes each account
+  with the balance summed from its own postings. Verified in PostgreSQL: the ledger totals zero,
+  and all 11 accounts reconcile exactly against their postings.
+- **Also fixed.** Product variant ids came from `randomUUID()`, so no two runs of the seed matched;
+  the buyer and seller one-click demo logins used accounts the seed never creates
+  (`priya.sharma@example.com`, `kripal.singh@example.com`), so the first thing any user clicked
+  failed; the buyer header polled `/api/shopper/cart` every five seconds while signed out, logging
+  a 401 on every public page; neither the API client nor the SSE hook read `NEXT_PUBLIC_API_URL` in
+  the browser, so in an OmniStack preview both always called `localhost:4000`; the capture plan
+  signed no one in and pointed at placeholder ids.
+- **The gate.** `services/agent-engine/tests/test_template_quality.py` applies eight checks to the
+  whole catalogue instead of one template at a time: every page reaches its API, no link points at
+  a placeholder id, no dynamic segment is URL-encoded, no sign-in writes a fabricated token, every
+  advertised demo login exists in the seed, every one-click login can actually sign in, every
+  manifest screen has its image on disk, and no template ships `node_modules`. It runs inside
+  `task verify`, so T-9 and every later template are covered before they can be published.
+- **A test that could not have held.** `test_seed_matches_its_generator` compared the committed
+  CareClinic seed byte-for-byte against a fresh run. That seed's dates are relative to today and a
+  weekday shift changes how many appointments fall in the window, so it failed the moment the date
+  rolled over. Replaced with two checks that do hold: the generator is byte-identical across two
+  runs in the same moment (catching randomness), and the committed seed writes the same tables in
+  the same order as a fresh run (catching staleness and hand edits).
+- **Evidence.** 40/40 Bazaar pages opened in a real browser as their demo user, with no page errors
+  and no failed requests; 48 screens recaptured from live data plus the cover; 19/19 Bazaar API
+  unit tests; `pnpm -r typecheck` clean across five packages; `task verify` 4,015 tests OK with 0
+  model calls; lint, security:quick, env:check, the repository contract tests, and `go test ./...`
+  (22 packages) all green; `validate_template` clean for all three published templates.
+
 ## 2026-09-23 — R-539 (CareClinic doctor workstation on the API; the platform's own account commands)
 
 - **`apps/doctor` rebuilt against the API.**

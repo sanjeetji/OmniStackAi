@@ -707,7 +707,7 @@ const PRODUCTS = [
 ];
 
 out(`-- 5. Products and Product Variants`);
-for (const p of PRODUCTS) {
+for (const [productIndex, p] of PRODUCTS.entries()) {
   out(
     `INSERT INTO products (id, shop_id, category_id, title, slug, description, tags, base_price_cents, compare_price_cents, is_featured, rating_avg, rating_count) VALUES (${esc(
       p.id
@@ -718,8 +718,11 @@ for (const p of PRODUCTS) {
     )}, ${p.isFeatured ? "TRUE" : "FALSE"}, ${p.ratingAvg}, ${p.ratingCount}) ON CONFLICT (shop_id, slug) DO NOTHING;`
   );
 
-  for (const v of p.variants) {
-    const varId = randomUUID();
+  for (const [variantIndex, v] of p.variants.entries()) {
+    // Deterministic: the seed must be byte-identical every time it is generated.
+    const varId = `41000000-0000-0000-${String(productIndex + 1).padStart(4, "0")}-${String(
+      variantIndex + 1
+    ).padStart(12, "0")}`;
     v.id = varId;
     out(
       `INSERT INTO product_variants (id, product_id, sku, title, option_color, option_size, price_cents, compare_price_cents, stock_quantity, image_url) VALUES (${esc(
@@ -752,256 +755,436 @@ out(
 );
 out(``);
 
-// 7. Ledger Accounts
-out(`-- 7. Double-Entry Accounting Ledger Accounts`);
-const ACC_PLATFORM_CASH = "50000000-0000-0000-0000-000000000001";
-const ACC_PLATFORM_REVENUE = "50000000-0000-0000-0000-000000000002";
-const ACC_SHOPPER_CLEARING = "50000000-0000-0000-0000-000000000003";
+// 7. Shoppers, orders, consignments and the double-entry ledger behind them
+//
+// The marketplace's books are generated, not asserted: every account balance below is the sum of
+// the postings this section writes, so the ledger sums to zero and every figure the operations
+// console shows is derived from it.
 
-out(
-  `INSERT INTO accounts (id, holder_type, holder_id, currency, balance_cents) VALUES
-  (${esc(ACC_PLATFORM_CASH)}, 'platform', NULL, 'INR', 24850000),
-  (${esc(ACC_PLATFORM_REVENUE)}, 'platform', NULL, 'INR', 4500000),
-  (${esc(ACC_SHOPPER_CLEARING)}, 'shopper', NULL, 'INR', 0)
-  ON CONFLICT ON CONSTRAINT uq_account_holder DO NOTHING;`
-);
+out(`-- 7. Additional shoppers`);
 
-for (const shop of SHOPS) {
+const SHOPPER_NAMES = [
+  ["Ananya", "Reddy"], ["Rohan", "Iyer"], ["Sneha", "Kulkarni"], ["Aditya", "Bose"],
+  ["Pooja", "Nair"], ["Vikram", "Chauhan"], ["Deepika", "Menon"], ["Karthik", "Pillai"],
+  ["Divya", "Saxena"], ["Rahul", "Mehra"], ["Swati", "Deshpande"], ["Naveen", "Rao"],
+  ["Meenakshi", "Acharya"], ["Gaurav", "Bhatt"], ["Shreya", "Sundaram"], ["Abhishek", "Dutta"],
+  ["Kavya", "Raman"], ["Varun", "Sethi"], ["Neha", "Chatterjee"], ["Arun", "Krishnan"],
+  ["Rashmi", "Joshi"], ["Manoj", "Bhardwaj"], ["Pallavi", "Ghosh"], ["Siddharth", "Kapoor"],
+  ["Aishwarya", "Malhotra"], ["Sanjay", "Trivedi"], ["Tanvi", "Shah"], ["Sunil", "Parekh"],
+  ["Preeti", "Gupta"], ["Harish", "Aggarwal"], ["Vidya", "Shenoy"], ["Pradeep", "Kamath"],
+  ["Gayatri", "Hegde"], ["Vinay", "Murthy"], ["Bhavana", "Shetty"], ["Ajay", "Pai"],
+  ["Radha", "Gowda"], ["Sachin", "Bhat"], ["Archana", "Varma"], ["Vijay", "Patil"],
+];
+
+const CITIES = [
+  ["Bengaluru", "Karnataka", "560038"], ["Mumbai", "Maharashtra", "400050"],
+  ["Delhi", "Delhi", "110016"], ["Chennai", "Tamil Nadu", "600020"],
+  ["Hyderabad", "Telangana", "500034"], ["Pune", "Maharashtra", "411001"],
+  ["Kolkata", "West Bengal", "700019"], ["Ahmedabad", "Gujarat", "380015"],
+  ["Jaipur", "Rajasthan", "302001"], ["Kochi", "Kerala", "682016"],
+  ["Lucknow", "Uttar Pradesh", "226001"], ["Bhubaneswar", "Odisha", "751001"],
+];
+
+const SHOPPERS = [{ id: USER_SHOPPER.id, name: USER_SHOPPER.name, city: CITIES[0] }];
+
+for (const [index, [first, last]] of SHOPPER_NAMES.entries()) {
+  const id = `20000000-0000-0000-0001-${String(index + 1).padStart(12, "0")}`;
+  const city = CITIES[index % CITIES.length];
+  SHOPPERS.push({ id, name: `${first} ${last}`, city });
   out(
-    `INSERT INTO accounts (holder_type, holder_id, currency, balance_cents) VALUES
-    ('vendor', ${esc(shop.id)}, 'INR', 18500000)
-    ON CONFLICT ON CONSTRAINT uq_account_holder DO NOTHING;`
+    `INSERT INTO users (id, email, password_hash, role, name, phone) VALUES (${esc(id)}, ${esc(
+      `${first.toLowerCase()}.${last.toLowerCase()}${index + 1}@bazaar.test`
+    )}, ${esc(HASH_SHOPPER)}, 'shopper', ${esc(`${first} ${last}`)}, ${esc(
+      `+91 98${String(100000 + index * 37).slice(0, 6)}`
+    )}) ON CONFLICT (id) DO NOTHING;`
   );
 }
 out(``);
 
-// 8. Demo Multi-Vendor Orders for Shopper Priya Sharma
-out(`-- 8. Multi-Vendor Split Orders & Shipments for Demo Shopper`);
+// --- Ledger accounts -----------------------------------------------------------------------------
+out(`-- 8. Double-entry accounts`);
 
-const DEMO_ORDERS = [
-  {
-    orderId: "60000000-0000-0000-0000-000000000001",
-    orderNumber: "BZ-2026-98124",
-    totalCents: 849800,
-    subtotalCents: 799800,
-    taxCents: 39900,
-    shippingCents: 0,
-    discountCents: 0,
-    paymentMethod: "mock_card",
-    paymentStatus: "paid",
-    status: "partially_shipped",
-    shipments: [
-      {
-        shipmentId: "70000000-0000-0000-0000-000000000001",
-        shipmentNumber: "BZ-2026-98124-S1",
-        shopId: SHOPS[0].id, // Craftloom
-        status: "shipped",
-        courier: "Delhivery Surface & Express",
-        trackingNumber: "DLHV83921045",
-        subtotalCents: 499900,
-        commissionCents: 49990,
-        vendorPayoutCents: 449910,
-        items: [
-          {
-            variantId: PRODUCTS[0].variants[0].id,
-            productId: PRODUCTS[0].id,
-            productTitle: PRODUCTS[0].title,
-            variantTitle: PRODUCTS[0].variants[0].title,
-            sku: PRODUCTS[0].variants[0].sku,
-            unitPriceCents: 499900,
-            quantity: 1,
-            imageUrl: PRODUCTS[0].variants[0].imageUrl,
-          },
-        ],
-        tracking: [
-          { status: "placed", location: "Platform Order Center", msg: "Order placed and assigned to Craftloom Studio" },
-          { status: "accepted", location: "Chanderi Weavers Hub", msg: "Craftloom Studio confirmed order and began packaging" },
-          { status: "packed", location: "Craftloom Studio Warehouse", msg: "Quality inspection passed and sealed in tamper-proof box" },
-          { status: "shipped", location: "Bhopal Sorting Hub", msg: "Picked up by Delhivery (DLHV83921045) and in transit to Bengaluru" },
-        ],
-      },
-      {
-        shipmentId: "70000000-0000-0000-0000-000000000002",
-        shipmentNumber: "BZ-2026-98124-S2",
-        shopId: SHOPS[3].id, // Brass & Bloom
-        status: "packed",
-        subtotalCents: 349900,
-        commissionCents: 41988,
-        vendorPayoutCents: 307912,
-        items: [
-          {
-            variantId: PRODUCTS[5].variants[0].id,
-            productId: PRODUCTS[5].id,
-            productTitle: PRODUCTS[5].title,
-            variantTitle: PRODUCTS[5].variants[0].title,
-            sku: PRODUCTS[5].variants[0].sku,
-            unitPriceCents: 349900,
-            quantity: 1,
-            imageUrl: PRODUCTS[5].variants[0].imageUrl,
-          },
-        ],
-        tracking: [
-          { status: "placed", location: "Platform Order Center", msg: "Order placed and assigned to Brass & Bloom" },
-          { status: "accepted", location: "Moradabad Artisan Studio", msg: "Seller confirmed order and polished brass urli" },
-          { status: "packed", location: "Moradabad Warehouse", msg: "Double foam wrapped and awaiting courier pickup" },
-        ],
-      },
-    ],
-  },
-  {
-    orderId: "60000000-0000-0000-0000-000000000002",
-    orderNumber: "BZ-2026-74910",
-    totalCents: 489800,
-    subtotalCents: 489800,
-    taxCents: 24400,
-    shippingCents: 0,
-    discountCents: 0,
-    paymentMethod: "mock_upi",
-    paymentStatus: "paid",
-    status: "completed",
-    shipments: [
-      {
-        shipmentId: "70000000-0000-0000-0000-000000000003",
-        shipmentNumber: "BZ-2026-74910-S1",
-        shopId: SHOPS[5].id, // Silver Moon Jewels
-        status: "delivered",
-        courier: "BlueDart Apex",
-        trackingNumber: "BLDT99281744",
-        subtotalCents: 389900,
-        commissionCents: 58485,
-        vendorPayoutCents: 331415,
-        items: [
-          {
-            variantId: PRODUCTS[8].variants[0].id,
-            productId: PRODUCTS[8].id,
-            productTitle: PRODUCTS[8].title,
-            variantTitle: PRODUCTS[8].variants[0].title,
-            sku: PRODUCTS[8].variants[0].sku,
-            unitPriceCents: 389900,
-            quantity: 1,
-            imageUrl: PRODUCTS[8].variants[0].imageUrl,
-          },
-        ],
-        tracking: [
-          { status: "placed", location: "Platform Center", msg: "Order placed and assigned" },
-          { status: "shipped", location: "Jaipur Express Center", msg: "Handed over to BlueDart" },
-          { status: "delivered", location: "Bengaluru, Karnataka", msg: "Delivered to Priya Sharma. OTP verified" },
-        ],
-      },
-      {
-        shipmentId: "70000000-0000-0000-0000-000000000004",
-        shipmentNumber: "BZ-2026-74910-S2",
-        shopId: SHOPS[4].id, // Spice Route
-        status: "delivered",
-        courier: "Delhivery Surface & Express",
-        trackingNumber: "DLHV11029482",
-        subtotalCents: 99900,
-        commissionCents: 9990,
-        vendorPayoutCents: 89910,
-        items: [
-          {
-            variantId: PRODUCTS[6].variants[0].id,
-            productId: PRODUCTS[6].id,
-            productTitle: PRODUCTS[6].title,
-            variantTitle: PRODUCTS[6].variants[0].title,
-            sku: PRODUCTS[6].variants[0].sku,
-            unitPriceCents: 99900,
-            quantity: 1,
-            imageUrl: PRODUCTS[6].variants[0].imageUrl,
-          },
-        ],
-        tracking: [
-          { status: "placed", location: "Platform Center", msg: "Order placed" },
-          { status: "shipped", location: "Kochi Sorting Hub", msg: "In transit" },
-          { status: "delivered", location: "Bengaluru, Karnataka", msg: "Package handed over to security desk" },
-        ],
-      },
-    ],
-  },
-];
+const ACC_PLATFORM_CASH = "50000000-0000-0000-0000-000000000001";
+const ACC_PLATFORM_REVENUE = "50000000-0000-0000-0000-000000000002";
+const ACC_SHOPPER_CLEARING = "50000000-0000-0000-0000-000000000003";
+const vendorAccountId = (index) => `50000000-0000-0000-0001-${String(index + 1).padStart(12, "0")}`;
 
-for (const ord of DEMO_ORDERS) {
+// Balances are filled in after the postings below are worked out.
+const balances = new Map([
+  [ACC_PLATFORM_CASH, 0],
+  [ACC_PLATFORM_REVENUE, 0],
+  [ACC_SHOPPER_CLEARING, 0],
+]);
+SHOPS.forEach((_, index) => balances.set(vendorAccountId(index), 0));
+
+const journal = [];
+
+/** One balanced transaction: the debited account goes up, the credited account goes down. */
+function post({ entryType, debit, credit, amountCents, referenceType, referenceId, description, at }) {
+  if (amountCents <= 0) return;
+  balances.set(debit, (balances.get(debit) ?? 0) + amountCents);
+  balances.set(credit, (balances.get(credit) ?? 0) - amountCents);
+  journal.push({ entryType, debit, credit, amountCents, referenceType, referenceId, description, at });
+}
+
+// --- Orders --------------------------------------------------------------------------------------
+out(`-- 9. Orders, consignments and their postings`);
+
+const COURIERS = ["Blue Dart Express", "Delhivery", "India Post Speed Post", "Ekart"];
+const ORDER_COUNT = 180;
+
+// Every variant, so an order can be assembled from real stock.
+const ALL_VARIANTS = [];
+for (const product of PRODUCTS) {
+  for (const variant of product.variants) {
+    ALL_VARIANTS.push({ product, variant });
+  }
+}
+
+function daysAgo(days, hour = 11) {
+  const d = new Date();
+  d.setDate(d.getDate() - days);
+  d.setHours(hour, (days * 7) % 60, 0, 0);
+  return d.toISOString();
+}
+
+let shipmentCounter = 0;
+const deliveredByShop = new Map();
+
+for (let n = 1; n <= ORDER_COUNT; n++) {
+  const orderId = `60000000-0000-0000-0001-${String(n).padStart(12, "0")}`;
+  const orderNumber = `BZ-2026-${String(10000 + n)}`;
+  const shopper = SHOPPERS[n % SHOPPERS.length];
+  const placedDaysAgo = 90 - Math.floor((n / ORDER_COUNT) * 88);
+  const placedAt = daysAgo(placedDaysAgo, 9 + (n % 10));
+
+  // One or two workshops per order, so the split-consignment model is visible.
+  const shopCount = n % 5 === 0 ? 2 : 1;
+  const chosen = [];
+  for (let s = 0; s < shopCount; s++) {
+    const shopIndex = (n * 3 + s * 5) % SHOPS.length;
+    if (!chosen.includes(shopIndex)) chosen.push(shopIndex);
+  }
+
+  const consignments = [];
+  let orderSubtotal = 0;
+
+  for (const shopIndex of chosen) {
+    const shop = SHOPS[shopIndex];
+    const candidates = ALL_VARIANTS.filter(({ product }) => product.shopId === shop.id);
+    if (candidates.length === 0) continue;
+
+    const itemCount = (n % 3) + 1;
+    const items = [];
+    let shipmentSubtotal = 0;
+
+    for (let i = 0; i < itemCount; i++) {
+      const pick = candidates[(n * 7 + i * 3) % candidates.length];
+      if (items.some((item) => item.variant.id === pick.variant.id)) continue;
+      const quantity = (i % 2) + 1;
+      const line = pick.variant.priceCents * quantity;
+      shipmentSubtotal += line;
+      items.push({ ...pick, quantity, line });
+    }
+    if (items.length === 0) continue;
+
+    // The commission is the workshop's own rate at the time of the sale.
+    const commission = Math.round((shipmentSubtotal * shop.commissionRate) / 10000);
+    shipmentCounter++;
+    consignments.push({
+      shopIndex,
+      shop,
+      items,
+      subtotal: shipmentSubtotal,
+      commission,
+      payout: shipmentSubtotal - commission,
+      id: `70000000-0000-0000-0001-${String(shipmentCounter).padStart(12, "0")}`,
+      number: `SHP-2026-${String(20000 + shipmentCounter)}`,
+    });
+    orderSubtotal += shipmentSubtotal;
+  }
+  if (consignments.length === 0) continue;
+
+  const shipping = orderSubtotal >= 200000 ? 0 : 9900;
+  const tax = Math.round(orderSubtotal * 0.05);
+  const total = orderSubtotal + shipping + tax;
+
+  // How far along this order is, from oldest (delivered) to newest (just placed).
+  const stage =
+    placedDaysAgo > 12 ? "delivered" : placedDaysAgo > 7 ? "shipped" : placedDaysAgo > 4 ? "packed" : placedDaysAgo > 1 ? "accepted" : "placed";
+  const cancelled = n % 37 === 0;
+
+  const orderStatus = cancelled
+    ? "cancelled"
+    : stage === "delivered"
+      ? "completed"
+      : consignments.length > 1 && stage === "shipped"
+        ? "partially_shipped"
+        : "processing";
+
+  const [city, state, pincode] = shopper.city;
+  // The shape packages/shared/src/types.ts declares for shipping_address_json.
+  const address = {
+    recipientName: shopper.name,
+    phone: "+91 98000 00000",
+    street: `${(n % 200) + 1}, ${["Lake View Road", "MG Road", "Gandhi Marg", "Park Street", "Temple Road"][n % 5]}`,
+    city,
+    state,
+    postalCode: pincode,
+    country: "India",
+  };
+
   out(
-    `INSERT INTO orders (id, order_number, user_id, status, total_cents, subtotal_cents, discount_cents, shipping_cents, tax_cents, shipping_address_json, billing_address_json, payment_method, payment_status, payment_reference) VALUES (${esc(
-      ord.orderId
-    )}, ${esc(ord.orderNumber)}, ${esc(USER_SHOPPER.id)}, ${esc(ord.status)}, ${ord.totalCents}, ${
-      ord.subtotalCents
-    }, ${ord.discountCents}, ${ord.shippingCents}, ${ord.taxCents}, ${escJson({
-      recipientName: "Priya Sharma",
-      phone: "+91 98765 43210",
-      street: "Flat 402, Lotus Greens, Indiranagar",
-      city: "Bengaluru",
-      state: "Karnataka",
-      postalCode: "560038",
-      country: "India",
-    })}, ${escJson({
-      recipientName: "Priya Sharma",
-      phone: "+91 98765 43210",
-      street: "Flat 402, Lotus Greens, Indiranagar",
-      city: "Bengaluru",
-      state: "Karnataka",
-      postalCode: "560038",
-      country: "India",
-    })}, ${esc(ord.paymentMethod)}, ${esc(ord.paymentStatus)}, ${esc(
-      "PAY-MOCK-" + ord.orderNumber
-    )}) ON CONFLICT (order_number) DO NOTHING;`
+    `INSERT INTO orders (id, order_number, user_id, status, total_cents, subtotal_cents, discount_cents, shipping_cents, tax_cents, shipping_address_json, payment_method, payment_status, payment_reference, created_at, updated_at) VALUES (${esc(
+      orderId
+    )}, ${esc(orderNumber)}, ${esc(shopper.id)}, ${esc(orderStatus)}, ${total}, ${orderSubtotal}, 0, ${shipping}, ${tax}, ${esc(
+      JSON.stringify(address)
+    )}, ${esc(["mock_card", "mock_upi", "cod"][n % 3])}, ${esc(cancelled ? "refunded" : "paid")}, ${esc(
+      `PAY-${orderNumber}`
+    )}, ${esc(placedAt)}, ${esc(placedAt)}) ON CONFLICT (id) DO NOTHING;`
   );
 
-  for (const s of ord.shipments) {
+  // The shopper's money arrives in the platform's cash account.
+  post({
+    entryType: "order_payment",
+    debit: ACC_PLATFORM_CASH,
+    credit: ACC_SHOPPER_CLEARING,
+    amountCents: total,
+    referenceType: "order",
+    referenceId: orderId,
+    description: `Customer payment for order ${orderNumber}`,
+    at: placedAt,
+  });
+
+  for (const consignment of consignments) {
+    const shipmentStatus = cancelled ? "cancelled" : stage;
+    const timeline = {
+      accepted: ["accepted", "packed", "shipped", "delivered"].includes(shipmentStatus) ? daysAgo(placedDaysAgo - 1, 10) : null,
+      packed: ["packed", "shipped", "delivered"].includes(shipmentStatus) ? daysAgo(placedDaysAgo - 2, 12) : null,
+      shipped: ["shipped", "delivered"].includes(shipmentStatus) ? daysAgo(placedDaysAgo - 3, 15) : null,
+      delivered: shipmentStatus === "delivered" ? daysAgo(placedDaysAgo - 6, 13) : null,
+    };
+
     out(
-      `INSERT INTO shipments (id, order_id, shop_id, shipment_number, status, subtotal_cents, commission_cents, vendor_payout_cents, courier_name, tracking_number) VALUES (${esc(
-        s.shipmentId
-      )}, ${esc(ord.orderId)}, ${esc(s.shopId)}, ${esc(s.shipmentNumber)}, ${esc(
-        s.status
-      )}, ${s.subtotalCents}, ${s.commissionCents}, ${s.vendorPayoutCents}, ${esc(
-        s.courier || null
-      )}, ${esc(s.trackingNumber || null)}) ON CONFLICT (shipment_number) DO NOTHING;`
+      `INSERT INTO shipments (id, order_id, shop_id, shipment_number, status, subtotal_cents, commission_cents, vendor_payout_cents, shipping_fee_cents, courier_name, tracking_number, placed_at, accepted_at, packed_at, shipped_at, delivered_at, cancelled_at, created_at) VALUES (${esc(
+        consignment.id
+      )}, ${esc(orderId)}, ${esc(consignment.shop.id)}, ${esc(consignment.number)}, ${esc(
+        shipmentStatus
+      )}, ${consignment.subtotal}, ${consignment.commission}, ${consignment.payout}, ${Math.round(
+        shipping / consignments.length
+      )}, ${esc(COURIERS[shipmentCounter % COURIERS.length])}, ${esc(
+        `AWB${String(90000000 + shipmentCounter * 7)}`
+      )}, ${esc(placedAt)}, ${esc(timeline.accepted)}, ${esc(timeline.packed)}, ${esc(timeline.shipped)}, ${esc(
+        timeline.delivered
+      )}, ${esc(cancelled ? daysAgo(placedDaysAgo - 1, 16) : null)}, ${esc(placedAt)}) ON CONFLICT (id) DO NOTHING;`
     );
 
-    for (const item of s.items) {
+    for (const item of consignment.items) {
       out(
         `INSERT INTO shipment_items (shipment_id, variant_id, product_id, product_title, variant_title, sku, unit_price_cents, quantity, total_price_cents, image_url) VALUES (${esc(
-          s.shipmentId
-        )}, ${esc(item.variantId)}, ${esc(item.productId)}, ${esc(item.productTitle)}, ${esc(
-          item.variantTitle
-        )}, ${esc(item.sku)}, ${item.unitPriceCents}, ${item.quantity}, ${
-          item.unitPriceCents * item.quantity
-        }, ${esc(item.imageUrl)});`
+          consignment.id
+        )}, ${esc(item.variant.id)}, ${esc(item.product.id)}, ${esc(item.product.title)}, ${esc(
+          item.variant.title
+        )}, ${esc(item.variant.sku)}, ${item.variant.priceCents}, ${item.quantity}, ${item.line}, ${esc(
+          item.variant.imageUrl
+        )}) ON CONFLICT DO NOTHING;`
       );
     }
 
-    if (s.tracking) {
-      for (const tr of s.tracking) {
-        out(
-          `INSERT INTO shipment_tracking_events (shipment_id, status, location, message) VALUES (${esc(
-            s.shipmentId
-          )}, ${esc(tr.status)}, ${esc(tr.location)}, ${esc(tr.msg)});`
-        );
-      }
+    // Tracking events for anything that has actually moved.
+    for (const [status, at] of Object.entries(timeline)) {
+      if (!at) continue;
+      out(
+        `INSERT INTO shipment_tracking_events (shipment_id, status, location, message, occurred_at) VALUES (${esc(
+          consignment.id
+        )}, ${esc(status)}, ${esc(status === "delivered" ? `${city}, ${state}` : consignment.shop.city ?? "Origin hub")}, ${esc(
+          {
+            accepted: "Workshop accepted the order",
+            packed: "Packed and ready for pickup",
+            shipped: "Picked up by the courier",
+            delivered: "Delivered to the shopper",
+          }[status]
+        )}, ${esc(at)}) ON CONFLICT DO NOTHING;`
+      );
+    }
+
+    if (shipmentStatus === "delivered") {
+      // On delivery the money held in escrow splits: commission to the platform's revenue,
+      // the rest owed to the workshop.
+      post({
+        entryType: "commission_fee",
+        debit: ACC_PLATFORM_CASH,
+        credit: ACC_PLATFORM_REVENUE,
+        amountCents: consignment.commission,
+        referenceType: "shipment",
+        referenceId: consignment.id,
+        description: `Marketplace commission for ${consignment.number}`,
+        at: timeline.delivered,
+      });
+      post({
+        entryType: "vendor_credit",
+        debit: ACC_PLATFORM_CASH,
+        credit: vendorAccountId(consignment.shopIndex),
+        amountCents: consignment.payout,
+        referenceType: "shipment",
+        referenceId: consignment.id,
+        description: `Earnings owed to ${consignment.shop.name} for ${consignment.number}`,
+        at: timeline.delivered,
+      });
+
+      const forShop = deliveredByShop.get(consignment.shopIndex) ?? [];
+      forShop.push({ ...consignment, deliveredAt: timeline.delivered });
+      deliveredByShop.set(consignment.shopIndex, forShop);
+    }
+
+    if (cancelled) {
+      post({
+        entryType: "shopper_refund",
+        debit: ACC_SHOPPER_CLEARING,
+        credit: ACC_PLATFORM_CASH,
+        amountCents: Math.round(total / consignments.length),
+        referenceType: "order",
+        referenceId: orderId,
+        description: `Refund for cancelled order ${orderNumber}`,
+        at: daysAgo(placedDaysAgo - 1, 17),
+      });
     }
   }
 }
 out(``);
 
-// 9. Verified Customer Reviews
-out(`-- 9. Verified Product Reviews`);
-out(
-  `INSERT INTO reviews (product_id, shop_id, user_id, rating, title, comment, verified_purchase) VALUES
-  (${esc(PRODUCTS[0].id)}, ${esc(SHOPS[0].id)}, ${esc(USER_SHOPPER.id)}, 5, 'Exquisite Chanderi drape!', 'The gold zari is subtle, rich, and truly artisanal. Wore this to an intimate family function and received countless compliments.', TRUE),
-  (${esc(PRODUCTS[8].id)}, ${esc(SHOPS[5].id)}, ${esc(USER_SHOPPER.id)}, 5, 'Sterling quality with beautiful patina', 'Lightweight on the ears yet makes an ornate statement. The seed pearls have a natural soft luster.', TRUE),
-  (${esc(PRODUCTS[6].id)}, ${esc(SHOPS[4].id)}, ${esc(USER_SHOPPER.id)}, 5, 'Best Tellicherry pepper ever tasted', 'The aroma when cracked fresh is fruity and deeply complex. Elevates simple eggs and roasted potatoes completely.', TRUE)
-  ON CONFLICT ON CONSTRAINT uq_review_product_user DO NOTHING;`
-);
+// --- Settlement batches --------------------------------------------------------------------------
+out(`-- 10. Settlement batches paid to workshops`);
+
+let batchCounter = 0;
+for (const [shopIndex, delivered] of [...deliveredByShop.entries()].sort((a, b) => a[0] - b[0])) {
+  // Only what was delivered more than the escrow hold ago is settled; the rest is still owed.
+  const settleable = delivered.filter((c) => new Date(c.deliveredAt) < new Date(Date.now() - 21 * 86400000));
+  if (settleable.length === 0) continue;
+
+  batchCounter++;
+  const shop = SHOPS[shopIndex];
+  const gross = settleable.reduce((sum, c) => sum + c.subtotal, 0);
+  const commission = settleable.reduce((sum, c) => sum + c.commission, 0);
+  const payout = gross - commission;
+  const processedAt = daysAgo(14, 11);
+
+  out(
+    `INSERT INTO settlement_batches (shop_id, batch_number, status, gross_sales_cents, commission_cents, net_payout_cents, period_start, period_end, payout_reference, processed_at, created_at) VALUES (${esc(
+      shop.id
+    )}, ${esc(`SET-2026-${String(1000 + batchCounter)}`)}, 'processed', ${gross}, ${commission}, ${payout}, ${esc(
+      daysAgo(90, 0)
+    )}, ${esc(daysAgo(21, 0))}, ${esc(`NEFT-${String(99120000 + batchCounter * 137)}`)}, ${esc(
+      processedAt
+    )}, ${esc(processedAt)}) ON CONFLICT (batch_number) DO NOTHING;`
+  );
+
+  // Paying a workshop clears what it was owed and takes the cash out of the platform's account.
+  post({
+    entryType: "payout_settlement",
+    debit: vendorAccountId(shopIndex),
+    credit: ACC_PLATFORM_CASH,
+    amountCents: payout,
+    referenceType: "settlement",
+    referenceId: shop.id,
+    description: `Settlement paid to ${shop.name}`,
+    at: processedAt,
+  });
+}
 out(``);
 
-// 10. Completed Settlement Batches for Vendor Aryan Gupta (Craftloom)
-out(`-- 10. Vendor Settlement Batches`);
+// --- The accounts, with balances derived from the postings ---------------------------------------
+out(`-- 11. Accounts, their balances summed from the postings above`);
 out(
-  `INSERT INTO settlement_batches (shop_id, batch_number, status, gross_sales_cents, commission_cents, net_payout_cents, period_start, period_end, payout_reference, processed_at) VALUES
-  (${esc(SHOPS[0].id)}, 'SET-2026-CL-001', 'processed', 1850000, 185000, 1665000, NOW() - INTERVAL '14 days', NOW() - INTERVAL '7 days', 'NEFT-HDFC-991204817', NOW() - INTERVAL '6 days'),
-  (${esc(SHOPS[0].id)}, 'SET-2026-CL-002', 'processed', 2420000, 242000, 2178000, NOW() - INTERVAL '7 days', NOW(), 'NEFT-HDFC-991823901', NOW() - INTERVAL '1 day')
-  ON CONFLICT (batch_number) DO NOTHING;`
+  `INSERT INTO accounts (id, holder_type, holder_id, currency, balance_cents) VALUES
+  (${esc(ACC_PLATFORM_CASH)}, 'platform', NULL, 'INR', ${balances.get(ACC_PLATFORM_CASH)}),
+  (${esc(ACC_PLATFORM_REVENUE)}, 'platform_revenue', NULL, 'INR', ${balances.get(ACC_PLATFORM_REVENUE)}),
+  (${esc(ACC_SHOPPER_CLEARING)}, 'shopper', NULL, 'INR', ${balances.get(ACC_SHOPPER_CLEARING)})
+  ON CONFLICT ON CONSTRAINT uq_account_holder DO NOTHING;`
 );
+SHOPS.forEach((shop, index) => {
+  out(
+    `INSERT INTO accounts (id, holder_type, holder_id, currency, balance_cents) VALUES (${esc(
+      vendorAccountId(index)
+    )}, 'vendor', ${esc(shop.id)}, 'INR', ${balances.get(vendorAccountId(index))}) ON CONFLICT ON CONSTRAINT uq_account_holder DO NOTHING;`
+  );
+});
+
+const ledgerSum = [...balances.values()].reduce((sum, value) => sum + value, 0);
+out(`-- Every account summed: ${ledgerSum} (a double-entry book must total zero)`);
+out(``);
+
+out(`-- 12. The ${journal.length} postings themselves`);
+for (const [index, entry] of journal.entries()) {
+  out(
+    `INSERT INTO ledger_entries (journal_id, debit_account_id, credit_account_id, amount_cents, entry_type, reference_type, reference_id, description, created_at) VALUES (${esc(
+      `52000000-0000-0000-0001-${String(index + 1).padStart(12, "0")}`
+    )}, ${esc(entry.debit)}, ${esc(entry.credit)}, ${entry.amountCents}, ${esc(entry.entryType)}, ${esc(
+      entry.referenceType
+    )}, ${esc(entry.referenceId)}, ${esc(entry.description)}, ${esc(entry.at)}) ON CONFLICT DO NOTHING;`
+  );
+}
+out(``);
+
+// --- Reviews ------------------------------------------------------------------------------------
+out(`-- 13. Verified product reviews`);
+
+const REVIEW_TEXT = [
+  [5, "Exactly as described", "The craft is obvious the moment you unwrap it. Packed beautifully and arrived two days early."],
+  [5, "Worth every rupee", "You can feel the hand-work. I have bought machine-made versions before and there is no comparison."],
+  [4, "Lovely, slightly smaller than I expected", "The quality is excellent. Check the measurements carefully before you order."],
+  [5, "The artisan even wrote a note", "A handwritten card about the technique came with it. That is why I buy from here."],
+  [4, "Good, delivery took a while", "The piece is gorgeous. It sat with the courier for three days, which is not the workshop's fault."],
+  [5, "Second order from this workshop", "Bought again after the first one. Consistent quality and honest descriptions."],
+  [3, "Nice but the colour differs", "Close to the photograph but a shade deeper in daylight. Still keeping it."],
+  [5, "Gifted it and they loved it", "Bought as a wedding present. The recipient asked where it was from immediately."],
+];
+
+let reviewCounter = 0;
+for (const [productIndex, product] of PRODUCTS.entries()) {
+  const howMany = (productIndex % 4) + 2;
+  for (let i = 0; i < howMany; i++) {
+    const shopper = SHOPPERS[(productIndex * 5 + i * 3 + 1) % SHOPPERS.length];
+    const [rating, title, comment] = REVIEW_TEXT[(productIndex + i) % REVIEW_TEXT.length];
+    reviewCounter++;
+    const reply = i === 0 && productIndex % 3 === 0
+      ? `Thank you. Every piece is made to order in our workshop, so this means a great deal to us.`
+      : null;
+    out(
+      `INSERT INTO reviews (product_id, shop_id, user_id, rating, title, comment, verified_purchase, vendor_reply, vendor_replied_at, created_at) VALUES (${esc(
+        product.id
+      )}, ${esc(product.shopId)}, ${esc(shopper.id)}, ${rating}, ${esc(title)}, ${esc(
+        comment
+      )}, TRUE, ${esc(reply)}, ${esc(reply ? daysAgo(20 - i, 10) : null)}, ${esc(
+        daysAgo(25 - i * 2, 18)
+      )}) ON CONFLICT ON CONSTRAINT uq_review_product_user DO NOTHING;`
+    );
+  }
+}
+out(`-- ${reviewCounter} reviews`);
+out(``);
+
+// --- Operator audit trail -------------------------------------------------------------------------
+out(`-- 14. What operators have done`);
+const AUDIT = [
+  ["update_kyc", "shop", 0, { kycStatus: "verified" }],
+  ["update_kyc", "shop", 1, { kycStatus: "verified" }],
+  ["update_commission", "shop", 2, { from: 1200, to: 1000 }],
+  ["generate_settlement_batch", "settlement_batch", 0, { netPayoutCents: 0 }],
+  ["approve_settlement", "settlement_batch", 0, {}],
+  ["update_kyc", "shop", 5, { kycStatus: "verified" }],
+  ["delete_review", "review", 3, { reason: "Off-topic" }],
+  ["create_coupon", "coupon", 0, { code: "FESTIVE10" }],
+];
+for (const [action, entityType, shopIndex, metadata] of AUDIT) {
+  out(
+    `INSERT INTO audit_logs (actor_id, action, entity_type, entity_id, metadata_json, created_at) VALUES (${esc(
+      USER_ADMIN.id
+    )}, ${esc(action)}, ${esc(entityType)}, ${esc(SHOPS[shopIndex % SHOPS.length].id)}, ${esc(
+      JSON.stringify(metadata)
+    )}, ${esc(daysAgo(30 - shopIndex * 3, 14))}) ON CONFLICT DO NOTHING;`
+  );
+}
 out(``);
 
 console.log(lines.join("\n"));

@@ -1,6 +1,59 @@
 # Current Handoff
 
-## Resume here (2026-09-23, after R-539)
+## Resume here (2026-09-24, after R-540)
+
+> **R-540 Completed (2026-09-24): the whole catalogue audited, and Bazaar rebuilt against its own
+> API. All three published templates now reach their API on every page.**
+>
+> **The audit.** One question of all three templates: does each page actually call the API?
+> `ride-now` and `care-clinic` came back sound. **`bazaar` was 18 of 44 pages, with its operations
+> console at 0 of 18** — every page rendered a fabricated array, and sign-in wrote
+> `"demo-token-admin-vikram"` without calling the API at all.
+>
+> **What was rebuilt.** All 18 console pages, against endpoints that already existed, behind an
+> operator session and guard in the marketplace's own dark amber control-room design. The seller
+> portal gained real listing editing, a new-listing form, reviews with replies and settings; the
+> buyer app gained a real reviews screen.
+>
+> **API defects found, each returning 500 to every caller:** `/admin/orders` and
+> `/admin/orders/:id` selected from a table `order_items` that does not exist;
+> `/admin/settlements` from `bank_details_json`; `/admin/reviews` from `p.name` (the column is
+> `title`); order detail from `tracking_events` (it is `shipment_tracking_events`). Generating a
+> settlement batch called `ledgerService.settleVendorPayout`, which does not exist.
+>
+> **The books were fiction.** `getOrCreateAccount("platform", null)` returned the *same row* for
+> platform cash and platform revenue, because `accounts` is unique on
+> (holder_type, holder_id, currency) — commission earned could never be told apart from money held.
+> Migration 006 adds a `platform_revenue` holder type. The seed asserted round balances with zero
+> postings behind them; it now generates 180 orders, 216 consignments, 802 tracking events and 564
+> postings and derives every balance from them. **The ledger sums to exactly zero and all 11
+> accounts reconcile against their own postings.**
+>
+> Also fixed: variant ids from `randomUUID()` (the seed differed every run); buyer and seller
+> one-click demo logins pointing at accounts the seed never creates; the buyer header polling the
+> cart while signed out (a 401 on every public page); and neither the API client nor the SSE hook
+> reading `NEXT_PUBLIC_API_URL` in the browser, so in a preview both always called
+> `localhost:4000`.
+>
+> **The gate that stops this recurring.** `services/agent-engine/tests/test_template_quality.py`
+> applies eight checks to the *whole catalogue*: every page reaches its API, no link points at a
+> placeholder id, no dynamic segment is URL-encoded, no sign-in writes a fabricated token, every
+> advertised demo login exists in the seed, every one-click login can sign in, every manifest
+> screen has its image, and nothing ships `node_modules`. It runs in `task verify`, so **T-9 and
+> every future template are covered before they can be published**.
+>
+> **Evidence.** 40/40 Bazaar pages in a real browser with no page errors or failed requests; 48
+> screenshots recaptured from live data; 19/19 API unit tests; `pnpm -r typecheck` clean;
+> `task verify` 4,015 tests OK with 0 model calls; lint, security:quick, env:check, contract tests
+> and `go test ./...` (22 packages) green.
+>
+> **Next:** the catalogue is sound, so the founder's plan resumes — **T-9 Pocket** (digital wallet:
+> wallet PWA, merchant web, risk/ops admin; strict double-entry ledger, KYC tiers, idempotency keys
+> on every money POST — see `R_&_D/OmniStackAI_Template_Marketplace_Plan_v1.md` §6.3), then the
+> small billing-enforcement task (put `super_admin` behind a middleware, a minimal admin area, and
+> one real plan limit).
+
+## Earlier (2026-09-23, after R-539)
 
 > **R-539 Completed (2026-09-23): the CareClinic doctor workstation rebuilt against the API, plus
 > the platform's own `fresh` and `admin` commands.**

@@ -1,266 +1,137 @@
 "use client";
 
-import { useState } from "react";
-import Link from "next/link";
-import { AdminHeader } from "@/components/admin-header";
-import {
-  Receipt,
-  Filter,
-  CheckCircle2,
-  ArrowLeft,
-  Search,
-  Scale,
-  Download,
-} from "lucide-react";
-import { formatCurrency, formatDate } from "@bazaar/shared";
+import { useMemo, useState } from "react";
+import { ArrowLeft, Download, Scale } from "lucide-react";
+import { api } from "@bazaar/shared";
+import { Shell } from "../../../components/shell";
+import { Panel, Table, Row, Cell, Badge, Button, DataState, Stat } from "../../../components/ui";
+import { useApi } from "../../../lib/use-api";
+import { useSession } from "../../../lib/session";
+import { count, inr, num, stamp, titleCase } from "../../../lib/format";
 
-interface LedgerEntryRow {
-  id: string;
-  journalId: string;
-  debitAccount: string;
-  creditAccount: string;
-  amountCents: number;
-  entryType: string;
-  referenceType: string;
-  referenceId: string;
-  description: string;
-  createdAt: string;
-}
+// migrations/004_ledger.sql
+const TYPES = [
+  { id: "", label: "Every entry" },
+  { id: "order_payment", label: "Order payment" },
+  { id: "commission_fee", label: "Commission" },
+  { id: "vendor_credit", label: "Vendor credit" },
+  { id: "shopper_refund", label: "Refund" },
+  { id: "payout_settlement", label: "Settlement" },
+];
 
-export default function AdminLedgerAuditPage() {
-  const [typeFilter, setTypeFilter] = useState("all");
-  const [search, setSearch] = useState("");
+export default function Ledger() {
+  const { pulse } = useSession();
+  const [entryType, setEntryType] = useState("");
+  const ledger = useApi(() => api.getAdminLedger(entryType || undefined), [entryType, pulse]);
 
-  const [entries, setEntries] = useState<LedgerEntryRow[]>([
-    {
-      id: "le-001",
-      journalId: "jnl-9912",
-      debitAccount: "accounts.shopper (Priya Sharma)",
-      creditAccount: "accounts.platform_escrow",
-      amountCents: 1840000,
-      entryType: "order_payment",
-      referenceType: "order",
-      referenceId: "ord-8831",
-      description: "Customer checkout authorization and escrow hold",
-      createdAt: "2026-09-23T10:14:00Z",
-    },
-    {
-      id: "le-002",
-      journalId: "jnl-9913",
-      debitAccount: "accounts.platform_escrow",
-      creditAccount: "accounts.platform_revenue",
-      amountCents: 166000,
-      entryType: "commission_fee",
-      referenceType: "order",
-      referenceId: "ord-8831",
-      description: "Platform commission withholding (10.00% across 2 workshops)",
-      createdAt: "2026-09-23T10:14:00Z",
-    },
-    {
-      id: "le-003",
-      journalId: "jnl-9914",
-      debitAccount: "accounts.platform_escrow",
-      creditAccount: "accounts.vendor (Jaipur Blue Pottery)",
-      amountCents: 846000,
-      entryType: "vendor_credit",
-      referenceType: "shipment",
-      referenceId: "shp-8831-01",
-      description: "Escrow allocation for consignment shp-8831-01",
-      createdAt: "2026-09-23T10:14:00Z",
-    },
-    {
-      id: "le-004",
-      journalId: "jnl-9915",
-      debitAccount: "accounts.platform_escrow",
-      creditAccount: "accounts.vendor (Varanasi Weaves)",
-      amountCents: 828000,
-      entryType: "vendor_credit",
-      referenceType: "shipment",
-      referenceId: "shp-8831-02",
-      description: "Escrow allocation for consignment shp-8831-02",
-      createdAt: "2026-09-23T10:14:00Z",
-    },
-    {
-      id: "le-005",
-      journalId: "jnl-9910",
-      debitAccount: "accounts.vendor (Jaipur Blue Pottery)",
-      creditAccount: "accounts.platform_cash",
-      amountCents: 6450000,
-      entryType: "payout_settlement",
-      referenceType: "settlement",
-      referenceId: "SET-2026-0922-A",
-      description: "RTGS bank settlement disbursement batch",
-      createdAt: "2026-09-22T17:30:00Z",
-    },
-    {
-      id: "le-006",
-      journalId: "jnl-9908",
-      debitAccount: "accounts.shopper (Rajesh Kannan)",
-      creditAccount: "accounts.platform_escrow",
-      amountCents: 2890000,
-      entryType: "order_payment",
-      referenceType: "order",
-      referenceId: "ord-8828",
-      description: "Customer checkout authorization and escrow hold",
-      createdAt: "2026-09-22T11:20:00Z",
-    },
-  ]);
+  const rows = ledger.data?.entries ?? [];
+  const total = useMemo(() => rows.reduce((sum: number, row: any) => sum + num(row.amount_cents), 0), [rows]);
 
-  const filtered = entries.filter((e) => {
-    const matchesType = typeFilter === "all" || e.entryType === typeFilter;
-    const matchesSearch =
-      e.journalId.toLowerCase().includes(search.toLowerCase()) ||
-      e.description.toLowerCase().includes(search.toLowerCase()) ||
-      e.debitAccount.toLowerCase().includes(search.toLowerCase()) ||
-      e.creditAccount.toLowerCase().includes(search.toLowerCase()) ||
-      e.referenceId.toLowerCase().includes(search.toLowerCase());
-    return matchesType && matchesSearch;
-  });
-
-  const totalDebits = filtered.reduce((acc, curr) => acc + curr.amountCents, 0);
-  const totalCredits = totalDebits; // Guaranteed in double entry
+  function exportCsv() {
+    const header = "Entry,Type,From,To,Amount (paise),Reference,When";
+    const body = rows
+      .map((row: any) =>
+        [row.journal_id ?? row.id, row.entry_type, row.debit_holder, row.credit_holder, row.amount_cents, row.reference_id ?? "", row.created_at]
+          .map((cell: any) => `"${String(cell).replace(/"/g, '""')}"`)
+          .join(",")
+      )
+      .join("\n");
+    const blob = new Blob([`${header}\n${body}`], { type: "text/csv;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `bazaar-ledger-${entryType || "all"}.csv`;
+    link.click();
+    URL.revokeObjectURL(url);
+  }
 
   return (
-    <div className="flex-1 flex flex-col">
-      <AdminHeader
-        title="Double-Entry Ledger Audit"
-        subtitle="Immutable financial journal audit trail proving mathematical conservation across all four account classes."
-        badge="Zero Divergence"
-      />
-
-      <div className="p-6 space-y-6 flex-1">
-        <Link
-          href="/finance"
-          className="inline-flex items-center gap-1.5 text-xs text-slate-400 hover:text-white transition"
-        >
-          <ArrowLeft className="w-3.5 h-3.5" />
-          Back to Platform Financials
-        </Link>
-
-        {/* Conservation Proof Banner */}
-        <div className="bg-slate-900 border border-slate-800 rounded-xl p-5 flex flex-wrap items-center justify-between gap-4">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-center text-amber-400">
-              <Scale className="w-5 h-5" />
-            </div>
-            <div>
-              <div className="text-sm font-bold text-white flex items-center gap-2">
-                Double-Entry Proof of Balance
-                <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-300">
-                  Σ Debits = Σ Credits
-                </span>
-              </div>
-              <p className="text-xs text-slate-400">
-                Total journal volume audited: {formatCurrency(totalDebits)}. Every transaction is debit/credit paired.
-              </p>
-            </div>
-          </div>
-
-          <div className="flex items-center gap-4 text-xs font-mono">
-            <div>
-              <span className="text-slate-400">Debits: </span>
-              <span className="text-emerald-400 font-bold">{formatCurrency(totalDebits)}</span>
-            </div>
-            <span className="text-slate-600">|</span>
-            <div>
-              <span className="text-slate-400">Credits: </span>
-              <span className="text-emerald-400 font-bold">{formatCurrency(totalCredits)}</span>
-            </div>
-          </div>
-        </div>
-
-        {/* Search & Entry Type Filters */}
-        <div className="flex flex-wrap items-center justify-between gap-4 bg-slate-900 border border-slate-800 p-4 rounded-xl">
-          <div className="flex items-center gap-2 flex-1 min-w-[280px]">
-            <Search className="w-4 h-4 text-slate-400" />
-            <input
-              type="text"
-              placeholder="Search by journal ID, account, reference, or description..."
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              className="bg-transparent text-xs text-white placeholder-slate-400 focus:outline-none w-full"
-            />
-          </div>
-
-          <div className="flex items-center gap-2">
-            <Filter className="w-3.5 h-3.5 text-slate-400" />
-            <span className="text-xs text-slate-400">Entry Type:</span>
-            <div className="flex rounded-lg bg-slate-950 p-1 border border-slate-800 text-xs">
-              {[
-                { id: "all", label: "All" },
-                { id: "order_payment", label: "Order" },
-                { id: "commission_fee", label: "Commission" },
-                { id: "vendor_credit", label: "Credit" },
-                { id: "payout_settlement", label: "Payout" },
-              ].map((t) => (
-                <button
-                  key={t.id}
-                  onClick={() => setTypeFilter(t.id)}
-                  className={`px-2 py-0.5 rounded capitalize font-medium transition cursor-pointer ${
-                    typeFilter === t.id
-                      ? "bg-amber-600 text-white"
-                      : "text-slate-400 hover:text-white"
-                  }`}
-                >
-                  {t.label}
-                </button>
-              ))}
-            </div>
-          </div>
-        </div>
-
-        {/* Ledger Entries Table */}
-        <div className="bg-slate-900 border border-slate-800 rounded-xl overflow-hidden">
-          <div className="overflow-x-auto">
-            <table className="w-full text-xs text-left">
-              <thead className="bg-slate-950 text-slate-400 uppercase tracking-wider font-semibold border-b border-slate-800">
-                <tr>
-                  <th className="px-4 py-3">Timestamp</th>
-                  <th className="px-4 py-3">Journal ID</th>
-                  <th className="px-4 py-3">Debit Account</th>
-                  <th className="px-4 py-3">Credit Account</th>
-                  <th className="px-4 py-3">Amount (₹)</th>
-                  <th className="px-4 py-3">Type</th>
-                  <th className="px-4 py-3">Reference</th>
-                  <th className="px-4 py-3">Description</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-800/80">
-                {filtered.map((item) => (
-                  <tr key={item.id} className="hover:bg-slate-800/40 transition">
-                    <td className="px-4 py-3 font-mono text-slate-400 text-[11px]">
-                      {formatDate(item.createdAt)}
-                    </td>
-                    <td className="px-4 py-3 font-mono font-medium text-amber-400">
-                      {item.journalId}
-                    </td>
-                    <td className="px-4 py-3 font-mono text-slate-300">
-                      {item.debitAccount}
-                    </td>
-                    <td className="px-4 py-3 font-mono text-slate-300">
-                      {item.creditAccount}
-                    </td>
-                    <td className="px-4 py-3 font-mono font-bold text-white">
-                      {formatCurrency(item.amountCents)}
-                    </td>
-                    <td className="px-4 py-3">
-                      <span className="px-1.5 py-0.5 rounded bg-slate-800 text-slate-300 font-mono text-[10px]">
-                        {item.entryType}
-                      </span>
-                    </td>
-                    <td className="px-4 py-3 font-mono text-slate-400">
-                      {item.referenceType}:{item.referenceId}
-                    </td>
-                    <td className="px-4 py-3 text-slate-400">
-                      {item.description}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </div>
+    <Shell
+      title="Double-entry ledger"
+      subtitle="Every posting the marketplace has made, both sides of each one"
+      actions={
+        <>
+          <Button href="/finance" variant="quiet" size="sm">
+            <ArrowLeft size={13} /> Financials
+          </Button>
+          <Button variant="quiet" size="sm" onClick={exportCsv} disabled={rows.length === 0}>
+            <Download size={13} /> CSV
+          </Button>
+        </>
+      }
+    >
+      <div className="grid gap-3 sm:grid-cols-3">
+        <Stat label="Entries shown" value={count(rows.length)} icon={<Scale size={15} />} />
+        <Stat label="Value moved" value={inr(total)} tone="signal" />
+        <Stat
+          label="Distinct journals"
+          value={count(new Set(rows.map((row: any) => row.journal_id ?? row.id)).size)}
+          hint="Each journal is one balanced transaction"
+        />
       </div>
-    </div>
+
+      <Panel className="mt-3" padded={false}>
+        <div className="flex flex-wrap gap-1.5 border-b border-[var(--surface-border)] px-4 py-3">
+          {TYPES.map((option) => (
+            <button
+              key={option.id || "all"}
+              onClick={() => setEntryType(option.id)}
+              className={
+                entryType === option.id
+                  ? "rounded-lg bg-[var(--accent)] px-2.5 py-1 text-[12px] font-semibold text-slate-950"
+                  : "rounded-lg border border-[var(--surface-border)] bg-[var(--surface-elevated)] px-2.5 py-1 text-[12px] font-medium text-[var(--muted-light)] hover:bg-slate-700"
+              }
+            >
+              {option.label}
+            </button>
+          ))}
+        </div>
+
+        <DataState state={ledger}>
+          {() =>
+            rows.length === 0 ? (
+              <p className="px-4 py-12 text-center text-[13px] text-[var(--muted-light)]">
+                No entry of that kind.
+              </p>
+            ) : (
+              <Table head={["Type", "Debited", "Credited", "Amount", "Against", "When"]}>
+                {rows.map((entry: any) => (
+                  <Row key={entry.id}>
+                    <Cell>
+                      <Badge
+                        tone={
+                          entry.entry_type === "commission_fee"
+                            ? "good"
+                            : entry.entry_type === "shopper_refund"
+                              ? "danger"
+                              : entry.entry_type === "payout_settlement"
+                                ? "alert"
+                                : "signal"
+                        }
+                      >
+                        {titleCase(entry.entry_type)}
+                      </Badge>
+                    </Cell>
+                    <Cell muted>{titleCase(entry.debit_holder)}</Cell>
+                    <Cell muted>{titleCase(entry.credit_holder)}</Cell>
+                    <Cell align="right">{inr(entry.amount_cents)}</Cell>
+                    <Cell mono muted>
+                      {entry.reference_type ? `${entry.reference_type} ${String(entry.reference_id ?? "").slice(0, 8)}` : "—"}
+                    </Cell>
+                    <Cell mono muted>{stamp(entry.created_at)}</Cell>
+                  </Row>
+                ))}
+              </Table>
+            )
+          }
+        </DataState>
+      </Panel>
+
+      <p className="mt-3 text-[11.5px] leading-relaxed text-[var(--muted)]">
+        Every transaction is two postings: one account is debited and another credited by the same
+        amount, so the sum across all accounts is always zero. Balances on every other screen are
+        derived from these rows.
+      </p>
+    </Shell>
   );
 }

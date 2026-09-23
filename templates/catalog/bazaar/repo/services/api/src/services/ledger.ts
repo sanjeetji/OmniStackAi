@@ -1,13 +1,13 @@
 /** Double-entry financial ledger service for Bazaar multi-party accounting. */
 
 import { randomUUID } from "node:crypto";
-import type { PoolClient } from "pg";
+import type { PoolClient, QueryResultRow } from "pg";
 import { query, withTransaction } from "../db.ts";
 import { BadRequestError, NotFoundError } from "../lib/errors.ts";
 
 export interface Account {
   id: string;
-  holder_type: "platform" | "vendor" | "shopper";
+  holder_type: "platform" | "platform_revenue" | "vendor" | "shopper";
   holder_id: string | null;
   currency: string;
   balance_cents: number;
@@ -34,12 +34,16 @@ export interface LedgerEntry {
 export class LedgerService {
   /** Gets an existing account or creates it if not yet present. */
   async getOrCreateAccount(
-    holderType: "platform" | "vendor" | "shopper",
+    holderType: "platform" | "platform_revenue" | "vendor" | "shopper",
     holderId: string | null,
     currency = "INR",
     client?: PoolClient
   ): Promise<Account> {
-    const runner = client || { query };
+    // Either a transaction client or the pool: both expose the same query(text, params) shape.
+    // Either a transaction client or the pool: both expose the same query(text, params) shape.
+    const runner: {
+      query: <R extends QueryResultRow = any>(text: string, values?: unknown[]) => Promise<{ rows: R[] }>;
+    } = client ?? { query: (text, values) => query(text, values as any[]) as any };
 
     const sqlSelect = holderId
       ? `SELECT * FROM accounts WHERE holder_type = $1 AND holder_id = $2 AND currency = $3`
@@ -152,7 +156,9 @@ export class LedgerService {
     client?: PoolClient
   ): Promise<void> {
     const shopperClearing = await this.getOrCreateAccount("shopper", null, "INR", client);
-    const platformRevenue = await this.getOrCreateAccount("platform", null, "INR", client);
+    // Commission earned is its own account: 'platform' holds cash the marketplace is looking
+    // after, 'platform_revenue' is what it has actually earned (migration 006).
+    const platformRevenue = await this.getOrCreateAccount("platform_revenue", null, "INR", client);
     const vendorPayable = await this.getOrCreateAccount("vendor", shopId, "INR", client);
 
     // 1. Commission portion to platform
@@ -308,6 +314,8 @@ export class LedgerService {
       const bal = parseInt(a.balance_cents, 10);
       if (a.holder_type === "platform") {
         platformCash += bal;
+      } else if (a.holder_type === "platform_revenue") {
+        platformRevenue += Math.abs(bal);
       } else if (a.holder_type === "vendor") {
         vendorPayables += Math.abs(bal);
       }

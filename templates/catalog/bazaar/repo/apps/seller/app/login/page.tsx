@@ -7,8 +7,8 @@ import { api } from "@bazaar/shared";
 
 export default function SellerLoginPage() {
   const router = useRouter();
-  const [email, setEmail] = useState("kripal.singh@example.com");
-  const [password, setPassword] = useState("password123");
+  const [email, setEmail] = useState("aryan@bazaar.test");
+  const [password, setPassword] = useState("Vendor@2026");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -27,9 +27,9 @@ export default function SellerLoginPage() {
   }
 
   function handleDemoQuick() {
-    setEmail("kripal.singh@example.com");
-    setPassword("password123");
-    api.login("kripal.singh@example.com", "password123")
+    setEmail("aryan@bazaar.test");
+    setPassword("Vendor@2026");
+    api.login("aryan@bazaar.test", "Vendor@2026")
       .then(() => router.push("/"))
       .catch(() => router.push("/"));
   }

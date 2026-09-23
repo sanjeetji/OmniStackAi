@@ -1,42 +1,36 @@
-task_id: R-539
+task_id: R-540
 status: completed
 phase: MVP
-tracker_row: 8
-started_at: "2026-09-23"
-completed_at: "2026-09-23"
-branch: ai/R-539-careclinic-doctor-api
+tracker_row: 7
+started_at: "2026-09-24"
+completed_at: "2026-09-24"
+branch: ai/R-540-template-audit
 objective: >-
-  Rebuild the CareClinic doctor workstation (apps/doctor) against the real API, the way R-538 did
-  the clinic console: every screen reads live clinic data, the consultation writes real SOAP notes,
-  prescriptions and lab orders, and diagnosis coding searches a real ICD-10 catalogue instead of a
-  list inside the app. Then give the platform itself the two operational commands it lacked —
-  `omnistack.sh fresh` (wipe local data and create the first owner) and `omnistack.sh admin`
-  (administer accounts) — and document every command in COMMANDS.md.
+  Audit every published template for the defect that R-538 and R-539 found twice (apps that render
+  invented data instead of calling their own API), fix what the audit finds, and add a
+  catalogue-wide gate so the next template cannot ship the same way. Bazaar turned out to be the
+  worst case: its whole operations console was a mock, its seed asserted account balances with no
+  postings behind them, and several admin endpoints referenced tables and columns that do not
+  exist.
 allowed_paths:
-  - templates/catalog/care-clinic/
-  - services/control-plane/cmd/platformctl/
-  - scripts/omnistack.sh
+  - templates/catalog/bazaar/
+  - services/agent-engine/tests/test_template_quality.py
   - scripts/test.sh
-  - services/agent-engine/tests/test_template_care_clinic.py
-  - COMMANDS.md
-  - README.md
-  - docs/
   - .ai/
   - PROJECT_STATE.md
   - CHANGELOG.md
+  - docs/
   - R_&_D/OmniStackAI_Template_Marketplace_Plan_v1.md
 forbidden_changes:
   - No new template dependency beyond the pinned stack
   - task verify stays offline with 0 model calls
-  - No real credentials in the template or the repository
-  - platformctl must reuse the control-plane's own password hashing, never its own
+  - No real credentials in the template
 required_gates:
-  - Every doctor page reads live API data; no hard-coded table anywhere in apps/doctor
-  - The consultation chain writes real records (SOAP, diagnosis, prescription, lab order)
-  - Diagnosis coding searches a seeded ICD-10 catalogue
-  - API unit tests and the live cross-app workflow tests pass
-  - 48 screenshots recaptured from the running template
-  - omnistack.sh fresh wipes and creates an owner who can sign in to the console
+  - Every page of every published template reaches its own API
+  - The Bazaar ledger sums to zero and every account reconciles against its postings
+  - All 40 Bazaar pages verified in a real browser with no page errors or failed requests
+  - 48 Bazaar screenshots recaptured from live data
+  - A catalogue-wide quality gate exists and passes for all three templates
   - task verify passes
 model_tool_trace:
   routing: deterministic_only
@@ -44,34 +38,48 @@ model_tool_trace:
   cloud_calls: 0
 blockers: []
 found_and_fixed:
-  - "R-537 apps/doctor: every screen rendered hard-coded state. Only the dashboard, queue and
-     patient chart called the API at all, and they overlaid mock values on the response. Rewritten
-     against the API."
-  - "The doctor earnings query joined invoices directly; a visit with both a consultation and a
-     lab invoice counted its fee twice (gross 24,500 against a daily sum of 14,000). Replaced the
-     join with a LATERAL that picks one invoice per appointment."
-  - "R-536 shared types: Consultation, Diagnosis, Prescription, PrescriptionItem and LabTest named
-     columns the API never returns, so the patient's prescription slip showed a blank medicine,
-     form and dose on every real prescription."
+  - "Audit result: ride-now and care-clinic reach their API on every page that should; bazaar was
+     18/44, with its operations console at 0/18."
+  - "bazaar console: all 18 pages rendered fabricated arrays and sign-in wrote
+     'demo-token-admin-vikram'. Rewritten against the API that already existed."
+  - "bazaar API: /admin/orders and /admin/orders/:id selected from a table 'order_items' that does
+     not exist; /admin/settlements selected 'sh.bank_details_json' which does not exist;
+     /admin/reviews selected 'p.name' (the column is title); order detail read 'tracking_events'
+     (the table is shipment_tracking_events). All four 500'd for every caller."
+  - "bazaar API: ledgerService.settleVendorPayout does not exist, so generating a settlement batch
+     threw. The method is createSettlementBatch."
+  - "bazaar ledger: getOrCreateAccount('platform', null) returned the same row for platform cash
+     and platform revenue, because accounts is unique on (holder_type, holder_id, currency).
+     Commission earned could never be told apart from money held. Migration 006 adds a
+     'platform_revenue' holder type."
+  - "bazaar seed: account balances were asserted as round numbers with zero ledger entries behind
+     them, so the book did not balance. The seed now generates 180 orders, 216 consignments and
+     564 postings, and derives every balance from them; the ledger sums to zero and all 11 accounts
+     reconcile."
+  - "bazaar seed: product variant ids came from randomUUID(), so the seed differed on every run."
+  - "bazaar apps: the buyer and seller one-click demo logins used accounts the seed never creates
+     (priya.sharma@example.com, kripal.singh@example.com), so the first thing any user clicks
+     failed."
+  - "bazaar buyer: the header polled /api/shopper/cart every five seconds while signed out, so
+     every public page logged a 401."
+  - "bazaar shared client: neither the API client nor the SSE hook read NEXT_PUBLIC_API_URL in the
+     browser, so in a preview both always called localhost:4000."
+  - "bazaar capture plan: signed no one in, used two accounts that do not exist, and pointed at
+     placeholder ids."
 found_not_fixed:
-  - "apps/patient still keeps invented fallback rows when an API call fails (doctors, appointments,
-     invoices, lab reports), so a backend failure shows plausible fiction rather than an error.
-     Small, and worth removing next time the patient app is touched."
-  - "The platform's own account management is data-model-only: users.role ('user'/'super_admin')
-     and users.plan (free..enterprise) are stored and returned but no endpoint requires them, and
-     organizations/workspaces/workspace_members exist with roles that nothing in the console uses.
-     Credits and BYOK are enforced. Recorded in COMMANDS.md section 3 so it is not mistaken for
-     working."
+  - "Several pages across all three templates still seed themselves with invented rows and
+     overwrite them when the API answers, so a backend failure shows plausible fiction rather than
+     an error. The live path is real everywhere now; this is about what happens when it fails.
+     Worth a sweep, but it does not block T-9."
 evidence:
-  api_unit_tests: "18/18"
-  live_workflow_tests: "9/9 (three new: the consultation context including the cross-doctor 404,
-    the ICD-10 search, a doctor recording their own leave)"
-  offline_tests: "23/23 in services/agent-engine/tests/test_template_care_clinic.py"
-  browser_sweep: "48/48 pages across the three apps, no page errors, no failed requests"
-  screenshots: "48 recaptured from the running template plus the cover"
-  typecheck: "pnpm -r typecheck clean across shared, api, patient, doctor and admin"
-  task_verify: "4,006 tests OK, 0 model calls"
-  other_gates: "task lint, security:quick, env:check, scripts/test.sh, go test ./... (22 packages),
-    omnistack.sh doctor with no failures or warnings"
-  owner_bootstrap: "admin create-owner produced an account that signs in to the console as
-    super_admin on the enterprise plan with its credit balance" 
+  audit: "ride-now 42/45, care-clinic 48/51, bazaar 43/44 pages reach the API (the remainder are
+    sign-in screens that delegate to a session provider, and one redirect)"
+  browser_sweep: "40/40 Bazaar pages as their demo user, no page errors, no failed requests"
+  ledger: "PostgreSQL: accounts total 0; all 11 accounts reconcile exactly against their postings"
+  seed: "180 orders, 216 consignments, 802 tracking events, 564 postings, 8 settlement batches"
+  api_unit_tests: "19/19"
+  screenshots: "48 recaptured from live data, plus the cover"
+  quality_gate: "8/8 in services/agent-engine/tests/test_template_quality.py, across all templates"
+  task_verify: "4,015 tests OK, 0 model calls"
+  other_gates: "task lint, security:quick, env:check, scripts/test.sh, go test ./... (22 packages)"
+

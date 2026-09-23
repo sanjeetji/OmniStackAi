@@ -7,8 +7,8 @@ import { api } from "@bazaar/shared";
 
 export default function LoginPage() {
   const router = useRouter();
-  const [email, setEmail] = useState("priya.sharma@example.com");
-  const [password, setPassword] = useState("password123");
+  const [email, setEmail] = useState("priya@bazaar.test");
+  const [password, setPassword] = useState("Shopper@2026");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -27,10 +27,10 @@ export default function LoginPage() {
   }
 
   function handleQuickDemoFill() {
-    setEmail("priya.sharma@example.com");
-    setPassword("password123");
+    setEmail("priya@bazaar.test");
+    setPassword("Shopper@2026");
     // Trigger login directly
-    api.login("priya.sharma@example.com", "password123")
+    api.login("priya@bazaar.test", "Shopper@2026")
       .then(() => router.push("/orders"))
       .catch(() => router.push("/orders")); // Graceful offline fallback
   }
@@ -105,7 +105,7 @@ export default function LoginPage() {
               <label className="block text-xs font-semibold text-stone-700 uppercase">
                 Password
               </label>
-              <span className="text-xs text-stone-400">demo: password123</span>
+              <span className="text-xs text-stone-400">demo: Shopper@2026</span>
             </div>
             <input
               type="password"
