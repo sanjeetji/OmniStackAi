@@ -4,6 +4,14 @@ Last updated: 2026-09-23
 ## Current Phase
 Stage 0 (Founder Build Sequence, Brief Section 91) — BASIC/MVP
 
+> **R-530 follow-up (2026-09-23): the platform runs on any new machine.** `docs/SETUP.md` is the
+> requirement and install contract, and `./scripts/omnistack.sh doctor` checks all of it (Python
+> 3.13, Node 22.18+, ripgrep, the compose plugin, a sourceable `.env`, a container-safe
+> agent-engine URL, a cloud token budget that fits). Ollama is installed with Qwen 2.5 Coder;
+> running on it exposed three real platform defects, now fixed: a fixed 5-minute upstream budget, an
+> edit parser that threw away good work over formatting, and an editor left blind when the model
+> named files that do not exist.
+
 > **R-530 (2026-09-23): RideNow is published.** The operations console (`apps/admin`, 18 pages:
 > dashboard, live map, trips, riders, drivers with document review, pricing, surge zones, promos,
 > payouts, finance, support, audit, settings) completes the template. 48 screenshots of every page

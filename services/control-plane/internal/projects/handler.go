@@ -11,7 +11,9 @@ import (
 	"math"
 	"net/http"
 	"net/url"
+	"os"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/sanjeetji/OmniStackAi/services/control-plane/internal/ai"
@@ -20,11 +22,26 @@ import (
 )
 
 const (
-	defaultBuildTimeout    = 5 * time.Minute
 	defaultPreviewTimeout  = 60 * time.Second
 	defaultProblemsTimeout = 90 * time.Second
 	defaultProxyTimeout    = 15 * time.Second
 )
+
+// How long one build or chat edit may take upstream. Five minutes is right for a cloud model, but
+// a local model on a laptop answers the same edit in several minutes, and when this budget expires
+// the caller sees "could not reach the control-plane" while the edit is still running and the
+// workspace stays locked (R-530). Set OMNISTACKAI_AGENT_CALL_TIMEOUT (for example 30m) when the
+// platform runs on Ollama.
+var defaultBuildTimeout = durationFromEnv("OMNISTACKAI_AGENT_CALL_TIMEOUT", 5*time.Minute)
+
+func durationFromEnv(name string, fallback time.Duration) time.Duration {
+	if raw := strings.TrimSpace(os.Getenv(name)); raw != "" {
+		if parsed, err := time.ParseDuration(raw); err == nil && parsed > 0 {
+			return parsed
+		}
+	}
+	return fallback
+}
 
 type SecretsStore interface {
 	ForProject(ctx context.Context, projectID string) (map[string]string, error)

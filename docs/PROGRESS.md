@@ -6,6 +6,7 @@ R-461 completion) plus the state files (`.ai/`), Git history, and CHANGELOG.
 
 ## Headline
 
+- **R-530 follow-up — the platform on a fresh machine (2026-09-23):** `docs/SETUP.md` plus a `doctor` that checks every requirement. Ollama is installed and works for the free tier, but chat edits still want a cloud model: local 7B/14B models invent file paths, and the platform correctly refuses every such edit. `task verify` = 3,983 tests.
 - **R-530 — RideNow published (2026-09-23):** the operations console completes the template, 48 screenshots were captured from the running apps, and `ride-now` v1.0.0 is in the marketplace. Previews now build and serve production apps, so a preview is interactive in a browser for the first time. `task verify` = 3,980 tests.
 - **R-529 — Phase T handoff (2026-09-22):** `R_&_D/OmniStackAI_Template_Marketplace_Plan_v1.md` (remaining templates, method, demo guide) and `scripts/preview-drafts.sh`.
 - **R-528 — RideNow driver app (2026-09-22):** the installable driver PWA, live in the preview with the rider app and API. `task verify` = 3,976 tests.

@@ -2294,4 +2294,17 @@ if ! rg -qF 'isDecodedAwayHeader' "$repo_root/apps/console-web/app/preview/[proj
   exit 1
 fi
 
+# R-530 (follow-up): a new machine must have one place that lists every requirement, and doctor
+# must check the traps that have actually broken a fresh install.
+if [[ ! -f "$repo_root/docs/SETUP.md" ]] || ! rg -qF 'omnistack.sh doctor' "$repo_root/docs/SETUP.md"; then
+  printf 'R-530 docs/SETUP.md must exist and point at the doctor command.\n'
+  exit 1
+fi
+for guard in 'python3 is 3.13' 'docker compose plugin' '.env can be sourced' 'host.docker.internal'; do
+  if ! rg -qF "$guard" "$repo_root/scripts/omnistack.sh"; then
+    printf 'R-530 omnistack.sh doctor must still check: %s\n' "$guard"
+    exit 1
+  fi
+done
+
 printf 'Repository contract tests passed.\n'

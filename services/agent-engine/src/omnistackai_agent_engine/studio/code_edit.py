@@ -134,8 +134,9 @@ def parse_edit_reply(text: str) -> EditReply:
                     raise CodeEditError("text after @@@ END")
                 continue
             if mode is None:
-                if line.strip():
-                    raise CodeEditError("the reply must start with @@@ SUMMARY")
+                # Small local models almost always open with a sentence ("Sure, here is the
+                # change:") before the first directive. Skip anything before it rather than
+                # refusing the whole reply (R-530).
                 continue
             buffer.append(line)
             continue
@@ -166,11 +167,13 @@ def parse_edit_reply(text: str) -> EditReply:
             mode = "SUMMARY"
     if not ended:
         raise CodeEditError("the reply was cut off before @@@ END; make a smaller change or use REPLACE instead of WRITE")
-    summary = " ".join(part for part in summary_lines if part).strip()
-    if not summary:
-        raise CodeEditError("the reply needs a @@@ SUMMARY")
     if not ops:
         raise CodeEditError("the reply contains no WRITE, REPLACE or DELETE operations")
+    summary = " ".join(part for part in summary_lines if part).strip()
+    if not summary:
+        # A missing summary is cosmetic when the operations themselves parsed; describe them
+        # rather than throwing the work away.
+        summary = "Changed " + ", ".join(dict.fromkeys(op.path for op in ops))
     if len(ops) > MAX_OPERATIONS:
         raise CodeEditError(f"too many operations ({len(ops)}); at most {MAX_OPERATIONS}")
     return EditReply(summary=summary[:600], ops=tuple(ops))
@@ -560,6 +563,46 @@ def _files_text(repo: Path, paths: list[str]) -> tuple[str, frozenset[str]]:
     return "\n\n".join(parts), frozenset(truncated)
 
 
+# Words that say nothing about which file to open.
+_STOPWORDS = frozenset(
+    "a an and are add adds added also app apps as at be but by can change changes changed create "
+    "do does for from get give has have how in into is it its make makes making new not of on only "
+    "or page pages please remove removes removed screen set should show shows so that the their "
+    "then there this to toggle update updates use used user users want when where which with "
+    "without work works".split()
+)
+
+
+def pick_files_by_name(prompt: str, index_paths: list[str], limit: int = MAX_SELECTED_FILES) -> list[str]:
+    """Rank real repository paths against the words in the request.
+
+    A small local model often answers the selection step with paths that do not exist, which used
+    to leave the edit step with no file contents at all — so it invented both paths and text, and
+    every edit was rejected. This deterministic fallback keeps the editor looking at real code
+    (R-530).
+    """
+
+    words = {w for w in re.split(r"[^a-z0-9]+", prompt.lower()) if len(w) > 2 and w not in _STOPWORDS}
+    if not words:
+        return []
+    scored: list[tuple[int, int, str]] = []
+    for path in index_paths:
+        lowered = path.lower()
+        segments = re.split(r"[^a-z0-9]+", lowered)
+        score = 0
+        for word in words:
+            if word in segments:
+                score += 3                      # a path segment is exactly the word
+            elif word in lowered:
+                score += 1                      # the word appears somewhere in the path
+            if word.rstrip("s") != word and word.rstrip("s") in segments:
+                score += 2                      # "rides" matching a "ride" segment
+        if score:
+            scored.append((-score, len(path), path))
+    scored.sort()
+    return [path for _, _, path in scored[:limit]]
+
+
 def _extract_json(text: str) -> dict:
     stripped = (text or "").strip()
     first, last = stripped.find("{"), stripped.rfind("}")
@@ -619,14 +662,21 @@ async def run_code_edit(
     context_block = f"\n\nProject knowledge and skills:\n{context_text}" if context_text.strip() else ""
 
     # 1. select files
-    selection = _extract_json(await ask([
-        _msg(ChatRole.SYSTEM, _SELECT_SYSTEM),
-        _msg(ChatRole.USER, f"Request: {prompt}{context_block}\n\nomnistack.json:\n{manifest_text}\n\nFile index:\n{_index_text(index)}"),
-    ]))
-    plan = str(selection.get("plan", "")).strip()[:2_000]
-    wanted = [p for p in selection.get("files", []) if isinstance(p, str)]
-    cleaned = [p.strip()[2:] if p.strip().startswith("./") else p.strip() for p in wanted]
-    files = [p for p in dict.fromkeys(cleaned) if p in index_paths][:MAX_SELECTED_FILES]
+    plan = ""
+    files: list[str] = []
+    try:
+        selection = _extract_json(await ask([
+            _msg(ChatRole.SYSTEM, _SELECT_SYSTEM),
+            _msg(ChatRole.USER, f"Request: {prompt}{context_block}\n\nomnistack.json:\n{manifest_text}\n\nFile index:\n{_index_text(index)}"),
+        ]))
+        plan = str(selection.get("plan", "")).strip()[:2_000]
+        wanted = [p for p in selection.get("files", []) if isinstance(p, str)]
+        cleaned = [p.strip()[2:] if p.strip().startswith("./") else p.strip() for p in wanted]
+        files = [p for p in dict.fromkeys(cleaned) if p in index_paths][:MAX_SELECTED_FILES]
+    except CodeEditError:
+        files = []  # the fallback below keeps the edit grounded in real files
+    if not files:
+        files = pick_files_by_name(prompt, index_paths)
 
     # 2. edit (one retry when the reply is rejected)
     files_text, truncated = _files_text(repo, files)
@@ -713,6 +763,13 @@ async def _edit_round(
             messages.append(_msg(ChatRole.ASSISTANT, reply[:20_000]))
             messages.append(Message(
                 ChatRole.USER,
-                f"That reply was rejected: {last_error}\nReply again in the exact format, ending with @@@ END.",
+                f"That reply was rejected: {last_error}\n"
+                "Reply again with nothing but the format below, ending with @@@ END. Use real file "
+                "paths from the files shown above, never the placeholders:\n"
+                "@@@ SUMMARY\n<what you changed, in one line>\n"
+                "@@@ REPLACE <a path shown above>\n@@@ FIND\n<exact text copied from that file>\n"
+                "@@@ WITH\n<the replacement text>\n"
+                "@@@ END\n"
+                "Prefer REPLACE over WRITE: WRITE needs the complete file and may not fit.",
             ))
     raise CodeEditError(f"the model's edit could not be applied: {last_error}")

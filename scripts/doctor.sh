@@ -16,7 +16,7 @@ required_files=(
   pnpm-workspace.yaml
 )
 
-required_commands=(git node pnpm python3 docker go)
+required_commands=(git node pnpm python3 docker go rg)
 optional_commands=(uv ollama)
 
 for relative_path in "${required_files[@]}"; do

@@ -46,17 +46,23 @@ model_tool_trace:
   cloud_calls: 0
 blockers:
   - "2026-09-22: this Mac had no toolchain (node, pnpm, go, docker, task, python 3.13). Homebrew install running (node, pnpm, go, go-task, python@3.13, colima, docker CLI, docker-compose). Docker engine is Colima, not Docker Desktop (founder's instruction)."
-  - "No .env in this checkout: chat edits (checklist item 9) need a provider key or local Ollama."
+  - "2026-09-23: Ollama installed with qwen2.5-coder 7b and 14b. Both are too weak for the exact-match edit protocol (they invent paths even with the real files in the prompt); the platform refused every bad edit. Chat edits want a cloud model."
+  - "2026-09-23: Google free-tier quota (429) blocks the last two scripted edits; the first one passed end to end."
 found_and_fixed:
+  - "The control-plane gave every build or chat edit a fixed 5-minute budget, which a local model exceeds; it then reported \"could not reach the control-plane\" while the edit kept running and holding the workspace lock. Now OMNISTACKAI_AGENT_CALL_TIMEOUT (default 5m)."
+  - "The edit parser rejected a reply that opened with a sentence, or that omitted the summary, throwing away operations that had parsed. Small models do both constantly."
+  - "When the model named files that do not exist, the edit step received no file contents at all and then invented paths and text. A deterministic fallback now ranks real repository paths against the request."
+  - "omnistack.sh doctor missed every trap that breaks a fresh machine (python 3.13, node >= 22.18, ripgrep, compose plugin, unsourceable .env, container-unsafe agent URL, a cloud token budget that does not fit its window)."
+  - ".env.example could not be used as shipped: an unquoted gateway prompt killed start-up, the agent-engine URL pointed at 127.0.0.1 (the container itself), and the Ollama budgets were too small for chat edits."
   - "Preview proxy forwarded the upstream content-encoding while fetch had already decoded the body: every browser failed the page with ERR_CONTENT_DECODING_FAILED. curl never saw it (it sends no Accept-Encoding)."
   - "Previews ran each app with a dev server. Its hot-reload socket cannot pass the proxy, and a Turbopack dev app never hydrates without it, so every preview page rendered but nothing responded to a click. Previews now build once and serve the production build (RideNow: ready in 46 s including builds)."
   - "Finder .DS_Store files were copied into every project made from a template and counted in its digest."
 found_not_fixed:
   - "The console is itself a Next app, so its own server answers RSC navigation requests to /preview/... before the proxy code runs (proved: a bogus project id returns 307, not 404). It redirects to its own _rsc hash while the previewed app redirects to a different one, so client-side link prefetch/navigation bounces between them. Initial page loads, forms and buttons are unaffected. Fix needs a preview path that is not a Next route: middleware rewrite, or serving previews from the Studio/control-plane instead."
 next_action: >-
-  Install Ollama (or use a cloud key that answers), then finish publish checklist item 9: the three
-  scripted chat edits on a fresh ride-now project, preview started first. See the resume section at
-  the top of .ai/HANDOFF.md. Then:
+  Finish publish checklist item 9 when provider quota allows: two scripted edits remain (remove a
+  feature, change a workflow) on a fresh ride-now project with the preview started first; the
+  scripts are in the handoff. Then:
   R-531 (Bazaar 1/4, the multi-vendor marketplace API) per section 6.1 of the Phase T plan, unless the
   founder prefers the marketplace overview pages (template screen galleries) or the preview RSC fix first.
   Outstanding for R-530: publish checklist item 9 (three scripted chat edits) and ./scripts/smoke-core.sh

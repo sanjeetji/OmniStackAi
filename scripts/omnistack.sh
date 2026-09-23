@@ -149,24 +149,108 @@ require_env_file() {
 # Commands
 # ---------------------------------------------------------------------------------------------
 
+# Every version trap that has actually cost someone an afternoon lives here, so a new machine
+# fails loudly at `doctor` instead of deep inside a build. See docs/SETUP.md.
+at_least() { # at_least <have> <want>: true when <have> is >= <want>
+  [[ "$(printf '%s\n%s\n' "$2" "$1" | sort -V | head -1)" == "$2" ]]
+}
+
 cmd_doctor() {
   local problems=0
   step "Tools"
-  for tool in docker python3 pnpm node curl; do
-    if have "$tool"; then ok "$tool  $("$tool" --version 2>&1 | head -1)"; else fail "$tool is missing"; problems=$((problems + 1)); fi
+  for tool in docker python3 pnpm node curl go task rg; do
+    if ! have "$tool"; then fail "$tool is missing (see docs/SETUP.md)"; problems=$((problems + 1)); continue; fi
+    # `go --version` is an error; go wants a subcommand.
+    if [[ "$tool" == "go" ]]; then ok "go  $(go version 2>&1 | head -1)"; else ok "$tool  $("$tool" --version 2>&1 | head -1)"; fi
   done
+  if have python3; then
+    local py; py="$(python3 -c 'import sys; print("%d.%d.%d" % sys.version_info[:3])' 2>/dev/null || echo 0)"
+    if [[ "${py%%.*}.$(printf '%s' "${py#*.}" | cut -d. -f1)" == "3.13" ]]; then
+      ok "python3 is 3.13 ($py)"
+    else
+      fail "python3 is $py, but the agent-engine requires 3.13.x — put Homebrew's python@3.13 first on PATH:"
+      log '        export PATH="/opt/homebrew/opt/python@3.13/libexec/bin:$PATH"'
+      problems=$((problems + 1))
+    fi
+  fi
+  if have node; then
+    local nodev; nodev="$(node --version 2>/dev/null | tr -d 'v')"
+    if at_least "$nodev" 22.18; then ok "node is new enough for template APIs ($nodev)"; else fail "node $nodev is older than 22.18, which template APIs need to run TypeScript directly"; problems=$((problems + 1)); fi
+  fi
+  if have docker; then
+    if docker compose version >/dev/null 2>&1; then
+      ok "docker compose plugin"
+    else
+      fail 'docker compose plugin not found — add {"cliPluginsExtraDirs": ["/opt/homebrew/lib/docker/cli-plugins"]} to ~/.docker/config.json'
+      problems=$((problems + 1))
+    fi
+  fi
 
   step "Configuration"
-  if [[ -f "$env_file" ]]; then ok ".env present"; else fail ".env missing (cp .env.example .env)"; problems=$((problems + 1)); fi
-  if docker info >/dev/null 2>&1; then ok "docker daemon reachable"; else fail "docker daemon not reachable"; problems=$((problems + 1)); fi
+  if [[ -f "$env_file" ]]; then
+    ok ".env present"
+    # scripts/console.sh sources .env, so an unquoted value with spaces takes the whole start-up
+    # down with a confusing "command not found" (.env.example ships one: R-530).
+    if (set -a; source "$env_file") >/dev/null 2>&1; then
+      ok ".env can be sourced"
+    else
+      fail ".env has a line the shell cannot read — quote values containing spaces or ':'"
+      (set -a; source "$env_file") 2>&1 | head -2 | sed 's/^/        /'
+      problems=$((problems + 1))
+    fi
+    local engine_url; engine_url="$(env_value OMNISTACKAI_AGENT_ENGINE_URL "")"
+    if [[ "$engine_url" == *"127.0.0.1"* || "$engine_url" == *"localhost"* ]]; then
+      fail "OMNISTACKAI_AGENT_ENGINE_URL is $engine_url, which inside the control-plane container means the container itself"
+      log "        use http://host.docker.internal:$STUDIO_PORT"
+      problems=$((problems + 1))
+    fi
+  else
+    fail ".env missing (cp .env.example .env, then set a local-only password — see docs/SETUP.md)"
+    problems=$((problems + 1))
+  fi
+  if docker info >/dev/null 2>&1; then ok "docker daemon reachable"; else fail "docker daemon not reachable (start it with: colima start)"; problems=$((problems + 1)); fi
+  # A cloud model whose safe input plus maximum output exceeds its context window cannot be built,
+  # and the platform then quietly falls back to Ollama and reports "Ollama is unavailable" (R-530).
+  local ctx_window safe_in max_out
+  ctx_window="$(env_value OMNISTACKAI_CLOUD_CONTEXT_WINDOW_TOKENS 128000)"
+  safe_in="$(env_value OMNISTACKAI_CLOUD_SAFE_INPUT_TOKENS 0)"
+  max_out="$(env_value OMNISTACKAI_CLOUD_MAX_OUTPUT_TOKENS 0)"
+  if [[ "$safe_in" =~ ^[0-9]+$ && "$max_out" =~ ^[0-9]+$ && "$ctx_window" =~ ^[0-9]+$ ]] && (( safe_in + max_out > ctx_window )); then
+    fail "cloud token budget does not fit: safe input $safe_in + max output $max_out > context window $ctx_window"
+    log "        lower OMNISTACKAI_CLOUD_SAFE_INPUT_TOKENS, or raise OMNISTACKAI_CLOUD_CONTEXT_WINDOW_TOKENS"
+    problems=$((problems + 1))
+  fi
   if [[ -d "$repo_root/apps/console-web/node_modules" ]]; then ok "console dependencies installed"; else warn "console dependencies missing - run: $0 build"; fi
   if [[ -d "$repo_root/apps/console-web/.next" ]]; then ok "console production build present"; else warn "no console build yet - run: $0 build"; fi
 
   step "Model provider"
+  local cloud_provider; cloud_provider="$(env_value OMNISTACKAI_CLOUD_PROVIDER none)"
   if [[ "$(http_code "$OLLAMA_URL/api/version")" == "200" ]]; then
-    ok "local Ollama reachable at $OLLAMA_URL (free tier)"
+    local models=""; models="$(curl -fsS --max-time 5 "$OLLAMA_URL/api/tags" 2>/dev/null | grep -o '"name":"[^"]*"' | cut -d'"' -f4 | paste -sd' ' - || true)"
+    if [[ -n "$models" ]]; then
+      ok "local Ollama reachable with: $models"
+    else
+      warn "local Ollama is running but has no model — pull one, e.g.: ollama pull qwen2.5-coder:7b"
+    fi
+  elif [[ "$cloud_provider" == "none" || -z "$cloud_provider" ]]; then
+    warn "no model provider: Ollama is not running and OMNISTACKAI_CLOUD_PROVIDER is none."
+    log "        Builds and chat edits need one; templates, previews and task verify do not."
   else
-    warn "local Ollama not reachable at $OLLAMA_URL - cloud provider keys in .env will be used"
+    local key_name="" key_value=""
+    case "$cloud_provider" in
+      google) key_name=GOOGLE_API_KEY ;;
+      anthropic) key_name=ANTHROPIC_API_KEY ;;
+      openai) key_name=OPENAI_API_KEY ;;
+      openrouter) key_name=OPENROUTER_API_KEY ;;
+      *) key_name="" ;;
+    esac
+    if [[ -n "$key_name" ]]; then key_value="$(env_value "$key_name" "")"; fi
+    if [[ -n "$key_name" && -z "$key_value" ]]; then
+      fail "OMNISTACKAI_CLOUD_PROVIDER=$cloud_provider but $key_name is empty in .env"
+      problems=$((problems + 1))
+    else
+      ok "cloud provider $cloud_provider configured (Ollama not running, so it handles every call)"
+    fi
   fi
 
   step "Ports"

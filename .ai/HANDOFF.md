@@ -2,41 +2,27 @@
 
 ## Resume here (2026-09-23, after R-530)
 
-**One thing is outstanding on R-530: publish checklist item 9, the three scripted chat edits.**
-Everything else is done, verified and committed. It needs a model provider that answers reliably;
-the founder is installing Ollama next.
+**The platform is fully set up on this Mac** and `docs/SETUP.md` now describes that setup for any
+new machine (`./scripts/omnistack.sh doctor` checks all of it).
 
-1. Start everything: `./scripts/omnistack.sh up` (Docker/Colima must be running: `colima start`).
-   Homebrew's Python 3.13 must be first on PATH:
-   `export PATH="/opt/homebrew/opt/python@3.13/libexec/bin:$PATH"`.
-2. With Ollama: `ollama pull qwen2.5-coder:14b` (about 9 GB), then in `.env` set
-   `OMNISTACKAI_CLOUD_PROVIDER=none`, `OMNISTACKAI_OLLAMA_MODEL=qwen2.5-coder:14b`,
-   `OMNISTACKAI_OLLAMA_CONTEXT_WINDOW_TOKENS=32768`, `OMNISTACKAI_OLLAMA_SAFE_INPUT_TOKENS=24576`,
-   `OMNISTACKAI_OLLAMA_MAX_OUTPUT_TOKENS=4096`, and restart. Shrink Colima to ~4 GB first
-   (`colima stop && colima start --cpu 4 --memory 4`) so the model has RAM on a 16 GB machine.
-3. Run the three edits on a fresh project made from `ride-now`: use template, **start the preview
-   first** (the code-edit agent can only type-check once dependencies exist), then add a feature,
-   remove a feature and change a workflow, checking each is committed and the repo still
-   type-checks. Then `./scripts/smoke-core.sh` for the prompt-to-app loop.
-4. Record the evidence in `.ai/tasks/R-530.md` and close the checklist item.
+**Only one thing is outstanding on R-530:** two of the three scripted chat edits (publish checklist
+item 9). The first one passed end to end on `gemini-3-flash-preview` — a real six-file change,
+type-checked and committed. The other two stopped on Google's free-tier quota (HTTP 429), not on
+platform code. To finish: put a key with quota in `.env` (or any provider that answers), then run
+the remaining two edits on a fresh project from `ride-now`, **starting the preview first** so the
+code-edit agent can type-check, and record the evidence in `.ai/tasks/R-530.md`.
 
-**Provider notes from 2026-09-23** (all failures were provider-side, not platform code):
-the first Google key was not a Gemini API key (`AQ.Ab8…`) and returned 404/quota errors; the
-replacement key authenticates, but the newer models answer `503 high demand` in bursts; the
-OpenRouter key has little credit left and a ~20,000 prompt-token cap per request, so large edit
-prompts are refused with `402`. `gemini-3.1-flash-lite` was reliable but weak (it produced a
-migration instead of the UI change it was asked for); one verified edit did land on
-`gemini-3.8-flash`. The code-edit agent itself behaved correctly throughout: when an edit failed
-type-checking it refused and saved nothing.
+**Model provider notes.** Ollama is installed and running as a service with `qwen2.5-coder:7b` and
+`:14b`. Both are too weak for the exact-match edit protocol: they invent file paths even when the
+real files are in the prompt (verified by capturing the assembled prompt). The platform refused
+every bad edit and saved nothing. Use a cloud model for chat edits; local is fine for the free
+tier's other work. Set `OMNISTACKAI_AGENT_CALL_TIMEOUT=30m` when running on Ollama, and keep
+`safe input + max output <= context window` or the cloud provider silently falls back to Ollama.
 
-**Also worth knowing:** `.env.example` cannot be sourced as-is
-(`OMNISTACKAI_GATEWAY_PROMPT` has an unquoted value with spaces, so `scripts/console.sh` dies with
-`line 14: with: command not found`). Fixed in the local `.env` only.
-
-Task ID: R-530
-Status: done (publish checklist item 9 outstanding)
-Phase: MVP
-Branch: `ai/R-530-ridenow-admin`
+**Known environment defect on this Mac:** Homebrew's Python 3.13 on macOS 26 ships a `pyexpat`
+linked against a newer `libexpat` than the OS provides, so a generated **Python** backend cannot
+create its virtualenv (`ensurepip` fails) and `smoke-core.sh` stops at that preview. Templates are
+unaffected. Workarounds in `docs/SETUP.md`.
 
 > **R-530 Completed (2026-09-23): RideNow is published.** The operations console (`apps/admin`, 18
 > pages) completes the template, 48 screenshots plus a cover were captured from the running apps

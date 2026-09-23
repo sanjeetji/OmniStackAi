@@ -17,6 +17,9 @@ from pathlib import Path
 from types import SimpleNamespace
 
 from omnistackai_agent_engine.studio.code_edit import (
+    pick_files_by_name,
+)
+from omnistackai_agent_engine.studio.code_edit import (
     CodeEditError,
     EditOp,
     Verification,
@@ -106,21 +109,55 @@ class ParseTests(unittest.TestCase):
     def test_tolerates_a_markdown_fence(self) -> None:
         self.assertEqual(len(parse_edit_reply("```\n" + GOOD_EDIT + "```\n").ops), 3)
 
+    def test_tolerates_what_small_models_add(self) -> None:
+        """R-530: a local model nearly always writes a sentence first, and sometimes forgets the
+        summary. Neither is a reason to throw away operations that parsed."""
+        preamble = parse_edit_reply("Sure! Here you go:\n\n" + GOOD_EDIT)
+        self.assertEqual([op.kind for op in preamble.ops], ["write", "replace", "delete"])
+        self.assertEqual(preamble.summary, "Added an About page and removed the live product count.")
+
+        no_summary = parse_edit_reply("@@@ SUMMARY\n\n@@@ DELETE a.js\n@@@ END\n")
+        self.assertEqual([op.kind for op in no_summary.ops], ["delete"])
+        self.assertIn("a.js", no_summary.summary)
+
     def test_rejections(self) -> None:
         cases = {
             "cut off": GOOD_EDIT.replace("@@@ END\n", ""),
-            "must start": "Sure! Here you go\n" + GOOD_EDIT,
             "FIND must follow": "@@@ SUMMARY\nx\n@@@ FIND\na\n@@@ END\n",
             "WITH must follow": "@@@ SUMMARY\nx\n@@@ REPLACE a.js\n@@@ WITH\nb\n@@@ END\n",
             "no WRITE": "@@@ SUMMARY\nnothing\n@@@ END\n",
             "needs a file path": "@@@ SUMMARY\nx\n@@@ WRITE\ny\n@@@ END\n",
-            "needs a @@@ SUMMARY": "@@@ SUMMARY\n\n@@@ DELETE a.js\n@@@ END\n",
         }
         for needle, text in cases.items():
             with self.subTest(case=needle):
                 with self.assertRaises(CodeEditError) as error:
                     parse_edit_reply(text)
                 self.assertIn(needle, str(error.exception))
+
+
+class PickFilesByNameTests(unittest.TestCase):
+    """R-530: when the model names files that do not exist, the editor must still see real code."""
+
+    PATHS = [
+        "apps/rider/app/(app)/ride/page.tsx",
+        "apps/rider/app/(app)/promos/page.tsx",
+        "apps/driver/app/trip/page.tsx",
+        "apps/admin/app/pricing/page.tsx",
+        "services/api/src/routes/rider.ts",
+        "services/api/src/services/trips.ts",
+        "README.md",
+    ]
+
+    def test_ranks_paths_by_the_words_in_the_request(self) -> None:
+        picked = pick_files_by_name("Add a women-only rides toggle to the booking screen in the rider app", self.PATHS)
+        self.assertIn("apps/rider/app/(app)/ride/page.tsx", picked[:3])
+        self.assertNotIn("README.md", picked)
+
+        pin = pick_files_by_name("Change the driver trip start PIN to 6 digits", self.PATHS)
+        self.assertEqual(pin[0], "apps/driver/app/trip/page.tsx")
+
+    def test_a_request_with_no_useful_words_selects_nothing(self) -> None:
+        self.assertEqual(pick_files_by_name("please make it better", self.PATHS), [])
 
 
 class ComputeChangesTests(_ProjectCase):

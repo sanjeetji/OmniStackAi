@@ -6,6 +6,8 @@ contracts added by completed Tracker IDs. Read the state files for the exact cur
 
 ## Start or resume work
 
+0. New machine? Follow [SETUP.md](SETUP.md) first (tools, `.env`, Docker), then
+   `./scripts/omnistack.sh doctor`.
 0. Navigate to the project root: `cd ~/Documents/Projects/Startup/Omnistackai` (all commands run from this directory).
 1. Read `AGENTS.md`.
 2. Read `.ai/PROJECT_STATE.yaml` and `.ai/CURRENT_TASK.yaml`.

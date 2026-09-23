@@ -48,6 +48,8 @@ services:
       # Docker Engine too, not just Docker Desktop/Colima where it already works.
       OMNISTACKAI_AGENT_ENGINE_URL: ${OMNISTACKAI_AGENT_ENGINE_URL:-http://host.docker.internal:4173}
       OMNISTACKAI_CREDITS_PER_USD: ${OMNISTACKAI_CREDITS_PER_USD:-1000}
+      # A local model needs far longer than a cloud one for a build or a chat edit (R-530).
+      OMNISTACKAI_AGENT_CALL_TIMEOUT: ${OMNISTACKAI_AGENT_CALL_TIMEOUT:-5m}
     extra_hosts:
       - "host.docker.internal:host-gateway"
     ports:
