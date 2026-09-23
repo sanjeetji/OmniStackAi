@@ -1,18 +1,19 @@
 # Current Handoff
 
-## Resume here (2026-09-23, after R-531)
+## Resume here (2026-09-23, after R-532)
 
-> **R-531 Completed (2026-09-23): Bazaar (Part 1 of 4: API, Database & Demo Data).** Multi-Vendor
-> Commerce Platform hidden draft scaffolded at `templates/catalog/_bazaar`. Includes 5 complete
-> PostgreSQL database migrations (`001_core.sql` through `005_engagement.sql`), Hono TypeScript
-> backend API on Node >= 22.18, multi-vendor order split checkout, 5-stage shipment fulfillment
-> state machine, multi-party double-entry accounting ledger, promo coupons engine, mock payments and
-> courier providers, real-time SSE event bus, deterministic demo seed fixtures
-> (`scripts/generate-seed.mjs` -> `seed/001_demo.sql` with 3 demo credentials, 8 shops, 11 products with
-> variants, and orders), and root `template.json` defining 48 screen journeys. 19/19 unit tests passed
-> in 247ms, 40/40 template studio tests passed, and full Stage 0 `task verify` passed (3,983 tests, 0 failures,
-> 100% offline).
-> **Next:** R-532, Bazaar (Part 2 of 4: Storefront Web Application `apps/buyer`).
+> **R-532 Completed (2026-09-23): Bazaar (Part 2 of 4: Shared Library & Storefront Web App `apps/buyer`).**
+> Multi-Vendor Commerce Platform storefront web application built on Next.js 16 App Router + React 19 +
+> Turbopack + Tailwind CSS 4 with custom terracotta/saffron/indigo artisan styling. Includes `@bazaar/shared`
+> (`packages/shared`: canonical types, universal typed API client, currency/status helpers, and SSE `useStream` hook)
+> and 17 storefront routes (11 static prerendered, 6 dynamic): Marketplace Home, Category Catalog, Product
+> Details with variant matrix, Artisan Shop Profile, Multi-Vendor Cart grouped by seller, Checkout with
+> Suspense boundary & mock payment methods, Customer Orders History, Deep Order Investigation with 5-stage
+> progress bar & return request modal, Real-time Delivery Radar with animated GPS telemetry, Public Shipment
+> Tracking timeline, Customer Reviews with artisan replies, Address Book, and Patron Authentication (1-click
+> Priya Sharma login & signup). All 19 API tests passed; 40 template studio tests passed; Next.js production
+> build succeeded with 0 errors; full Stage 0 verify (3,983 tests) passed offline with 0 model calls.
+> **Next:** R-533, Bazaar (Part 3 of 4: Vendor Portal `apps/seller`).
 
 **The platform is fully set up on this Mac** and `docs/SETUP.md` now describes that setup for any
 new machine (`./scripts/omnistack.sh doctor` checks all of it).

@@ -4,6 +4,18 @@ Last updated: 2026-09-23
 ## Current Phase
 Stage 0 (Founder Build Sequence, Brief Section 91) — BASIC/MVP
 
+> **R-532 (2026-09-23): Bazaar (Part 2 of 4: Shared Library & Storefront Web App `apps/buyer`).**
+> Multi-Vendor Commerce Platform storefront web application built on Next.js 16 App Router + React 19 +
+> Turbopack + Tailwind CSS 4 with custom terracotta/saffron/indigo artisan styling. Includes `@bazaar/shared`
+> (`packages/shared`: canonical types, universal typed API client, currency/status helpers, and SSE `useStream` hook)
+> and 17 storefront routes (11 static prerendered, 6 dynamic): Marketplace Home, Category Catalog, Product
+> Details with variant matrix, Artisan Shop Profile, Multi-Vendor Cart grouped by seller, Checkout with
+> Suspense boundary & mock payment methods, Customer Orders History, Deep Order Investigation with 5-stage
+> progress bar & return request modal, Real-time Delivery Radar with animated GPS telemetry, Public Shipment
+> Tracking timeline, Customer Reviews with artisan replies, Address Book, and Patron Authentication (1-click
+> Priya Sharma login & signup). All 19 API tests passed; 40 template studio tests passed; Next.js production
+> build succeeded with 0 errors; full Stage 0 verify (3,983 tests) passed offline with 0 model calls. Next: R-533, Bazaar Vendor Portal `apps/seller`.
+
 > **R-531 (2026-09-23): Bazaar (Part 1 of 4: API, Database & Demo Data).** Multi-Vendor
 > Commerce Platform hidden draft scaffolded at `templates/catalog/_bazaar`. Includes 5 complete
 > PostgreSQL database migrations (`001_core.sql` through `005_engagement.sql`), Hono TypeScript

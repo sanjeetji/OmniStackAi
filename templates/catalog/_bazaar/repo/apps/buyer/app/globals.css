@@ -1,0 +1,40 @@
+@import "tailwindcss";
+@source "../../../packages/shared/src";
+
+/* Bazaar Storefront: warm terracotta, indigo ink, sand canvas, and saffron accents. */
+@theme {
+  --font-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  --color-canvas: #fbf9f5;
+  --color-card: #ffffff;
+  --color-ink: #141b24;
+  --color-ink-muted: #5e6977;
+  --color-border: #ede6dc;
+  --color-terracotta: #c05638;
+  --color-terracotta-dark: #a2442a;
+  --color-terracotta-soft: #fbf0ec;
+  --color-saffron: #d97706;
+  --color-saffron-soft: #fef3c7;
+  --color-indigo-rich: #1e293b;
+  --color-forest: #2d6a4f;
+  --color-forest-soft: #edf7f2;
+}
+
+html {
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+body {
+  background-color: var(--color-canvas);
+  color: var(--color-ink);
+  font-family: var(--font-sans);
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(6px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.animate-fade-in {
+  animation: fadeIn 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}

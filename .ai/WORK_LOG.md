@@ -1,5 +1,36 @@
 # Work Log
 
+## 2026-09-23 — R-532 (Bazaar part 2/4: shared client library & storefront web app)
+
+- **Shared Domain Library (`packages/shared`):**
+  - Canonical TypeScript types for users, shops, categories, products, variants, carts, split orders, shipments, ledger, coupons, and reviews (`src/types.ts`).
+  - Universal typed `BazaarApiClient` supporting authentication token persistence, error normalization, public catalog browsing, multi-vendor cart/checkout, tracking, and review actions (`src/api.ts`).
+  - Formatting utilities for INR/USD currency, date/time, and status badges (`src/format.ts`).
+  - React SSE hook `useStream` for real-time order and fulfillment notifications with keepalive and auto-reconnect (`src/use-stream.ts`).
+- **Storefront Web Application (`apps/buyer` on Next.js 16 + React 19 + Turbopack + Tailwind CSS 4):**
+  - Artisanal palette inspired by heritage Indian crafts (warm terracotta, deep saffron, indigo, and sand).
+  - 11 static prerendered pages and 6 dynamic routes:
+    - `/`: Marketplace Home (curated hero, craft categories, masterpieces showcase, artisan workshop spotlight, multi-vendor value proposition).
+    - `/category/[slug]`: Category catalog with sorting and product grid.
+    - `/products/[shopSlug]/[productSlug]`: Product details with image gallery, variant matrix, stock badge, seller atelier card, and customer reviews.
+    - `/shops/[slug]`: Artisan shop storefront profile, bio, ratings, and catalog.
+    - `/cart`: Multi-vendor cart partitioned by craft workshop, coupon validator, and free shipping threshold bar.
+    - `/checkout`: Checkout page with saved address selector, new address form, payment options (Card, UPI, COD), and order summary, wrapped in Suspense.
+    - `/orders`: Customer orders list with split shipment badges, status filter, and quick tracking links.
+    - `/orders/[id]`: Deep order investigation showing split shipments across vendors with courier tracking numbers, 5-stage visual progress tracker, and return request modal.
+    - `/orders/[id]/confirmation`: Order success receipt with breakdown of multi-vendor consignments.
+    - `/orders/[id]/live`: Live GPS radar map with simulated vehicle telemetry and real-time SSE stream console.
+    - `/shipments/[id]/track`: Public shipment tracking timeline with courier milestones.
+    - `/reviews`: Customer reviews overview with star rating submission form and artisan replies.
+    - `/addresses`: Saved delivery address book with default address switcher.
+    - `/account`: Customer profile with impact counters, quick links, and dispatch notification toggles.
+    - `/login` & `/signup`: Shopper authentication with 1-click Priya Sharma demo patron credentials.
+- **Verification & Gates:**
+  - `pnpm --filter @bazaar/buyer build`: 100% clean production compilation in Turbopack, 11 static pages generated, 0 TypeScript/RSC errors.
+  - `pnpm --filter @bazaar/api test`: 19/19 tests passed in 248ms.
+  - `python3 -m unittest services/agent-engine/tests/test_studio_templates.py`: 40/40 tests passed in 3.477s.
+  - `task verify`: 3,983 tests passed offline with 0 model calls.
+
 ## 2026-09-23 — R-531 (Bazaar part 1/4: multi-vendor commerce API, database migrations, ledger & deterministic fixtures)
 
 - **Template foundation.** Scaffolded hidden draft `templates/catalog/_bazaar` (part 1 of 4) for the multi-vendor commerce platform product.

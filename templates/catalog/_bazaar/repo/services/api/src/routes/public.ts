@@ -4,6 +4,7 @@ import { Hono } from "hono";
 import { query } from "../db.ts";
 import { catalogService } from "../services/catalog.ts";
 import { orderService } from "../services/orders.ts";
+import { fulfillmentService } from "../services/fulfillment.ts";
 import { hashPassword, verifyPassword } from "../auth/password.ts";
 import { generateToken } from "../auth/tokens.ts";
 import { BadRequestError, UnauthorizedError, ConflictError, NotFoundError } from "../lib/errors.ts";
@@ -93,6 +94,13 @@ publicRoutes.post("/coupons/validate", async (c) => {
 
   const result = await orderService.validateCoupon(code, subtotalCents || 0);
   return c.json(result);
+});
+
+// Track Shipment (Public by shipment ID)
+publicRoutes.get("/shipments/:id/track", async (c) => {
+  const shipmentId = c.req.param("id");
+  const shipment = await fulfillmentService.getShipmentDetail(shipmentId);
+  return c.json({ shipment });
 });
 
 // Auth: Login
