@@ -1,0 +1,434 @@
+[
+  {
+    "app": "patient",
+    "title": "Patient Home",
+    "description": "Personalized clinical landing with active appointment banner, queue token countdown, and doctor specialties.",
+    "route": "/",
+    "device": "desktop",
+    "highlight": true,
+    "image": "media/patient/home.jpg"
+  },
+  {
+    "app": "patient",
+    "title": "Doctor Directory",
+    "description": "Searchable specialist directory filtered by department, consultation mode, and consultation tariffs.",
+    "route": "/doctors",
+    "device": "desktop",
+    "highlight": true,
+    "image": "media/patient/doctors.jpg"
+  },
+  {
+    "app": "patient",
+    "title": "Doctor Profile",
+    "description": "Physician credentials, medical council registration, OPD shift timetable, and verified patient reviews.",
+    "route": "/doctors/[id]",
+    "device": "desktop",
+    "highlight": false,
+    "image": "media/patient/doctor-profile.jpg"
+  },
+  {
+    "app": "patient",
+    "title": "Book Appointment",
+    "description": "7-day calendar view with dynamic 20-minute slot matrix, family dependent selector, and intake notes.",
+    "route": "/book/[doctorId]",
+    "device": "desktop",
+    "highlight": true,
+    "image": "media/patient/booking.jpg"
+  },
+  {
+    "app": "patient",
+    "title": "Consultation Fee Payment",
+    "description": "Checkout summary with instant UPI QR, card processing, and clinic desk payment alternatives.",
+    "route": "/checkout/[appointmentId]",
+    "device": "desktop",
+    "highlight": false,
+    "image": "media/patient/payment.jpg"
+  },
+  {
+    "app": "patient",
+    "title": "Booking Confirmation",
+    "description": "Downloadable booking receipt with sequential token number, clinic chamber location, and arrival rules.",
+    "route": "/appointments/[id]/confirmation",
+    "device": "desktop",
+    "highlight": false,
+    "image": "media/patient/booking-confirmation.jpg"
+  },
+  {
+    "app": "patient",
+    "title": "My Appointments",
+    "description": "Upcoming and past appointment tracking with real-time status badges and 1-click video join.",
+    "route": "/appointments",
+    "device": "desktop",
+    "highlight": true,
+    "image": "media/patient/appointments.jpg"
+  },
+  {
+    "app": "patient",
+    "title": "Appointment Detail",
+    "description": "Detailed consultation tracker with 4-stage milestone stepper and tiered cancellation refund calculator.",
+    "route": "/appointments/[id]",
+    "device": "desktop",
+    "highlight": false,
+    "image": "media/patient/appointment-detail.jpg"
+  },
+  {
+    "app": "patient",
+    "title": "Telehealth Video Room",
+    "description": "WebRTC peer consultation with physician video feed, patient self-view PIP, and encrypted in-call chat.",
+    "route": "/telehealth/[appointmentId]",
+    "device": "desktop",
+    "highlight": true,
+    "image": "media/patient/telehealth-room.jpg"
+  },
+  {
+    "app": "patient",
+    "title": "Digital Prescriptions",
+    "description": "Searchable medication history with cryptographic verification badges and dosage guidelines.",
+    "route": "/prescriptions",
+    "device": "desktop",
+    "highlight": true,
+    "image": "media/patient/prescriptions.jpg"
+  },
+  {
+    "app": "patient",
+    "title": "Prescription View",
+    "description": "NABH-compliant printable clinical prescription slip with ICD-10 diagnosis, dosage, and doctor sign-off.",
+    "route": "/prescriptions/[id]",
+    "device": "desktop",
+    "highlight": false,
+    "image": "media/patient/prescription-detail.jpg"
+  },
+  {
+    "app": "patient",
+    "title": "Diagnostic Lab Reports",
+    "description": "Diagnostic pathology reports archive with reference intervals, abnormal flags, and laboratory pathologist verification.",
+    "route": "/lab-reports",
+    "device": "desktop",
+    "highlight": false,
+    "image": "media/patient/lab-reports.jpg"
+  },
+  {
+    "app": "patient",
+    "title": "Medical Records & Vitals",
+    "description": "Personal health record tracking blood pressure, pulse, glucose levels, drug allergies, and immunization history.",
+    "route": "/records",
+    "device": "desktop",
+    "highlight": false,
+    "image": "media/patient/medical-records.jpg"
+  },
+  {
+    "app": "patient",
+    "title": "Family Members",
+    "description": "Household dependents directory enabling unified appointment booking and pediatric records management.",
+    "route": "/family",
+    "device": "desktop",
+    "highlight": false,
+    "image": "media/patient/family-members.jpg"
+  },
+  {
+    "app": "patient",
+    "title": "Billing Invoices",
+    "description": "Itemized consultation receipts, diagnostic test charges, and tax invoice downloads.",
+    "route": "/invoices",
+    "device": "desktop",
+    "highlight": false,
+    "image": "media/patient/invoices.jpg"
+  },
+  {
+    "app": "patient",
+    "title": "Patient Sign In",
+    "description": "Patient authentication with 1-click Ananya Deshmukh demo credentials and new patient onboarding.",
+    "route": "/login",
+    "device": "desktop",
+    "highlight": false,
+    "image": "media/patient/login.jpg"
+  },
+  {
+    "app": "doctor",
+    "title": "Doctor Sign In",
+    "description": "Physician authentication with 1-click Dr. Rajesh Varma (Cardiology) demo credentials.",
+    "route": "/login",
+    "device": "desktop",
+    "highlight": false,
+    "image": "media/doctor/login.jpg"
+  },
+  {
+    "app": "doctor",
+    "title": "Physician Dashboard",
+    "description": "Clinical command center with daily appointment metrics, active patient spotlight, and urgent diagnostic alerts.",
+    "route": "/",
+    "device": "desktop",
+    "highlight": true,
+    "image": "media/doctor/dashboard.jpg"
+  },
+  {
+    "app": "doctor",
+    "title": "Today's Patient Queue",
+    "description": "Live outpatient queue with token numbers, arrival status, wait timers, and 1-click consultation initiation.",
+    "route": "/queue",
+    "device": "desktop",
+    "highlight": true,
+    "image": "media/doctor/queue.jpg"
+  },
+  {
+    "app": "doctor",
+    "title": "Clinical Consultation Screen",
+    "description": "Active consultation workspace integrating patient demographics, vital signs, allergy warnings, and action tabs.",
+    "route": "/consult/[appointmentId]",
+    "device": "desktop",
+    "highlight": true,
+    "image": "media/doctor/consultation.jpg"
+  },
+  {
+    "app": "doctor",
+    "title": "SOAP Clinical Notes",
+    "description": "Structured medical documentation (Subjective, Objective, Assessment, Plan) with ICD-10 diagnostic coding.",
+    "route": "/consult/[appointmentId]/soap",
+    "device": "desktop",
+    "highlight": false,
+    "image": "media/doctor/soap-notes.jpg"
+  },
+  {
+    "app": "doctor",
+    "title": "E-Prescription Builder",
+    "description": "Multi-item digital prescription generator with dosage, frequency, food timing, and cryptographic signature.",
+    "route": "/consult/[appointmentId]/prescription",
+    "device": "desktop",
+    "highlight": true,
+    "image": "media/doctor/prescription-builder.jpg"
+  },
+  {
+    "app": "doctor",
+    "title": "Diagnostic Lab Order",
+    "description": "Pathology and radiology test ordering console with clinical indications and urgent turnaround prioritization.",
+    "route": "/consult/[appointmentId]/labs",
+    "device": "desktop",
+    "highlight": false,
+    "image": "media/doctor/lab-order.jpg"
+  },
+  {
+    "app": "doctor",
+    "title": "Patient Medical Chart",
+    "description": "Longitudinal health record displaying historical encounters, vital sign trajectories, and HIPAA audit badge.",
+    "route": "/patients/[id]",
+    "device": "desktop",
+    "highlight": false,
+    "image": "media/doctor/patient-chart.jpg"
+  },
+  {
+    "app": "doctor",
+    "title": "Patient List",
+    "description": "Comprehensive medical directory with chronic condition filters, last consultation dates, and panel indicators.",
+    "route": "/patients",
+    "device": "desktop",
+    "highlight": false,
+    "image": "media/doctor/patient-history.jpg"
+  },
+  {
+    "app": "doctor",
+    "title": "Schedule Configuration",
+    "description": "Weekly consultation availability schedule, slot duration controls, and session capacity quotas.",
+    "route": "/schedule",
+    "device": "desktop",
+    "highlight": false,
+    "image": "media/doctor/schedule-settings.jpg"
+  },
+  {
+    "app": "doctor",
+    "title": "Availability Rules",
+    "description": "Physician leave requests, emergency slot blocking, and holiday schedule overrides.",
+    "route": "/schedule/rules",
+    "device": "desktop",
+    "highlight": false,
+    "image": "media/doctor/availability-rules.jpg"
+  },
+  {
+    "app": "doctor",
+    "title": "Doctor Earnings & Payouts",
+    "description": "Consultation revenue breakdown by in-clinic vs video consults, cashier settlements, and payout statements.",
+    "route": "/earnings",
+    "device": "desktop",
+    "highlight": false,
+    "image": "media/doctor/earnings.jpg"
+  },
+  {
+    "app": "doctor",
+    "title": "Patient Reviews",
+    "description": "Patient feedback and clinical rating aggregation with department benchmark comparison.",
+    "route": "/reviews",
+    "device": "desktop",
+    "highlight": false,
+    "image": "media/doctor/reviews.jpg"
+  },
+  {
+    "app": "doctor",
+    "title": "Doctor Telehealth Interface",
+    "description": "Physician video consultation console with floating patient chart and concurrent prescription draft.",
+    "route": "/telehealth/[appointmentId]",
+    "device": "desktop",
+    "highlight": true,
+    "image": "media/doctor/telehealth-call.jpg"
+  },
+  {
+    "app": "admin",
+    "title": "Staff Sign In",
+    "description": "Clinic staff sign-in. Patient and doctor accounts are refused by the API with a 403.",
+    "route": "/login",
+    "device": "desktop",
+    "highlight": false,
+    "image": "media/admin/login.jpg"
+  },
+  {
+    "app": "admin",
+    "title": "Clinic Operations Dashboard",
+    "description": "Comprehensive clinic KPI overview: daily footfall, active consults, revenue, and queue health.",
+    "route": "/",
+    "device": "desktop",
+    "highlight": true,
+    "image": "media/admin/dashboard.jpg"
+  },
+  {
+    "app": "admin",
+    "title": "Front Desk Reception",
+    "description": "Primary reception console: token queue advancement, patient lookups, and room allocations.",
+    "route": "/front-desk",
+    "device": "desktop",
+    "highlight": true,
+    "image": "media/admin/front-desk.jpg"
+  },
+  {
+    "app": "admin",
+    "title": "Patient Check-In",
+    "description": "One-click arrival check-in issuing sequential physical queue token number and SMS notice.",
+    "route": "/check-in",
+    "device": "desktop",
+    "highlight": false,
+    "image": "media/admin/check-in.jpg"
+  },
+  {
+    "app": "admin",
+    "title": "Walk-In Appointment Booking",
+    "description": "Rapid walk-in scheduling assigning immediate next-available slot with on-duty physician.",
+    "route": "/walk-in",
+    "device": "desktop",
+    "highlight": false,
+    "image": "media/admin/walk-in.jpg"
+  },
+  {
+    "app": "admin",
+    "title": "Global Appointments Master",
+    "description": "Complete clinic appointments directory with date range picker, specialty filters, and CSV export.",
+    "route": "/appointments",
+    "device": "desktop",
+    "highlight": false,
+    "image": "media/admin/appointments.jpg"
+  },
+  {
+    "app": "admin",
+    "title": "Appointment Investigation",
+    "description": "Deep appointment audit showing timeline, vitals records, billing status, and cancellation trail.",
+    "route": "/appointments/[id]",
+    "device": "desktop",
+    "highlight": false,
+    "image": "media/admin/appointment-detail.jpg"
+  },
+  {
+    "app": "admin",
+    "title": "Doctor Staff Directory",
+    "description": "Physician credentialing management, license verification, specialty tagging, and room mapping.",
+    "route": "/doctors",
+    "device": "desktop",
+    "highlight": false,
+    "image": "media/admin/doctors.jpg"
+  },
+  {
+    "app": "admin",
+    "title": "Doctor Rostering & Schedules",
+    "description": "Clinic-wide doctor schedule calendar monitoring on-duty hours and planned physician leaves.",
+    "route": "/doctors/[id]/schedule",
+    "device": "desktop",
+    "highlight": false,
+    "image": "media/admin/doctor-schedule.jpg"
+  },
+  {
+    "app": "admin",
+    "title": "Consultation Room Allocation",
+    "description": "Physical OPD examination room roster assigning active doctors to physical chambers.",
+    "route": "/rooms",
+    "device": "desktop",
+    "highlight": false,
+    "image": "media/admin/rooms.jpg"
+  },
+  {
+    "app": "admin",
+    "title": "Clinic Billing & Cashier",
+    "description": "Front desk billing desk handling cash, card, and UPI collections for consultations and tests.",
+    "route": "/billing",
+    "device": "desktop",
+    "highlight": false,
+    "image": "media/admin/billing.jpg"
+  },
+  {
+    "app": "admin",
+    "title": "Invoice Details & Receipts",
+    "description": "Itemized official medical receipt with GST compliance, clinic letterhead, and payment proof.",
+    "route": "/billing/[id]",
+    "device": "desktop",
+    "highlight": false,
+    "image": "media/admin/invoice-detail.jpg"
+  },
+  {
+    "app": "admin",
+    "title": "Cancellation & Refunds",
+    "description": "Dispute and cancellation policy settlement processing automatic partial or full refunds.",
+    "route": "/refunds",
+    "device": "desktop",
+    "highlight": false,
+    "image": "media/admin/refunds.jpg"
+  },
+  {
+    "app": "admin",
+    "title": "Diagnostic Lab Management",
+    "description": "Lab test catalog pricing, order processing queue, and technician report upload portal.",
+    "route": "/labs",
+    "device": "desktop",
+    "highlight": false,
+    "image": "media/admin/lab-management.jpg"
+  },
+  {
+    "app": "admin",
+    "title": "Clinical Analytics & Footfall",
+    "description": "Multi-dimensional reports on daily patient footfall, specialty distribution, and no-show rates.",
+    "route": "/reports",
+    "device": "desktop",
+    "highlight": false,
+    "image": "media/admin/reports.jpg"
+  },
+  {
+    "app": "admin",
+    "title": "Security & Chart Access Audit",
+    "description": "HIPAA-compliant immutable audit log recording every electronic health record query by staff.",
+    "route": "/audit",
+    "device": "desktop",
+    "highlight": true,
+    "image": "media/admin/audit-logs.jpg"
+  },
+  {
+    "app": "admin",
+    "title": "Clinic System Settings",
+    "description": "Default consultation slot duration, cancellation refund policies, and mock provider toggles.",
+    "route": "/settings",
+    "device": "desktop",
+    "highlight": false,
+    "image": "media/admin/settings.jpg"
+  },
+  {
+    "app": "admin",
+    "title": "Live OPD Queue Display Board",
+    "description": "Waiting room TV monitor display board broadcasting live token numbers calling patients to OPD rooms.",
+    "route": "/queue-display",
+    "device": "desktop",
+    "highlight": true,
+    "image": "media/admin/live-queue-board.jpg"
+  }
+]

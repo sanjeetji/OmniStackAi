@@ -1,6 +1,59 @@
 # Current Handoff
 
-## Resume here (2026-09-23, after R-537)
+## Resume here (2026-09-23, after R-538)
+
+> **R-538 Completed (2026-09-23): CareClinic (part 4 of 4) — the clinic operations console, 48
+> screenshots, and publication to `templates/catalog/care-clinic` v1.0.0 (category healthcare).**
+>
+> **The console.** `apps/admin` ("CareClinic Ops") across 18 routes: operations dashboard, front
+> desk, check-in, walk-in booking, appointments and appointment investigation, doctors, doctor
+> rostering with absences, the room board, the cashier and its itemised receipt, refunds, the
+> diagnostics bench with result entry, reports, the chart-access audit, settings, and a
+> waiting-room display board. It has its own control-room design (dark ink rail, cool slate canvas,
+> a cyan signal accent, dense 13px tables with tabular figures), a staff-only guard, one shared SSE
+> connection, and a fallback poll.
+>
+> **What the draft actually was.** All 18 console pages rendered hard-coded arrays and sign-in
+> wrote `"mock-jwt-admin-token"` without calling the API, so the console never talked to the
+> backend. It is rewritten against the API, with new endpoints (`/api/admin/rooms`,
+> `/doctors/:id/schedule` and `schedule-override`, `/invoices/:id` and `/collect`,
+> `/appointments/:id/cancel`, `/labs/:id` and `/labs/:id/status`, `/queue/:id/call`, `/reports`),
+> admin SDK methods and types in `@careclinic/shared`, and role-aware sign-in.
+>
+> **Defects found in R-535 to R-537 and fixed here.**
+> - The seed never loaded into PostgreSQL: 48 appointment end times were `HH:60:00`, and
+>   `queue_status` was copied from the appointment status although `no_show` is not one of its
+>   values.
+> - Nine tables were never written (vitals, lab orders and results, invoice line items, refunds,
+>   reviews, telehealth sessions, notifications, schedule overrides).
+> - The demo patient's own appointments all landed on cancelled or no-show, so her chart was empty;
+>   she now has a five-visit history across specialties, including two paediatric visits for her
+>   son.
+> - Seven patient-app route folders were URL-encoded (`%5Bid%5D`), so every detail page 404'd on a
+>   real id. Doctor cards linked to `/doctors/undefined`; three doctor-app links pointed at a
+>   hard-coded `pat-1`.
+> - `services/api` did not type-check (untyped Hono context), and the shared types named columns
+>   the API never returns (`fee_inr`, `paid_amount`, `is_abnormal`, `clinical_indication`).
+> - Document numbers came from `COUNT(*) + 1`, which collides with the first prescription issued
+>   against the seeded data.
+>
+> **Evidence.** 18/18 API unit tests; 6/6 live cross-app workflow tests against a running instance;
+> 18/18 new offline tests (`test_template_care_clinic.py`); 48/48 pages opened in a real browser
+> signed in as their demo user, with no page errors and no failed requests; 48 screens plus a
+> composed cover captured from the running template; the published template used and previewed
+> through the console, with every page fetched through the authenticated proxy.
+>
+> **Known, not fixed — needs its own task.** `apps/doctor` (R-537) has the same problem the console
+> had: the consultation, SOAP, prescription, lab-order, telehealth, reviews, earnings, schedule and
+> patient-history screens render hard-coded state rather than API data. Only the dashboard, the
+> queue and the patient chart read the API at all, and even those overlay mock values. The pages
+> render and the screenshots are real, but the workstation is not wired to the backend. The patient
+> app also keeps invented fallback rows that hide an API failure instead of surfacing it.
+>
+> **Next:** rebuild `apps/doctor` against the API the way the console now is (suggested R-539),
+> then continue the template catalogue (T-9).
+
+## Earlier (2026-09-23, after R-537)
 
 > **R-537 Completed (2026-09-23): CareClinic (Part 3 of 4: Doctor Telehealth & Clinical Workstation `apps/doctor`).**
 > Built `apps/doctor` on Next.js 16 App Router + React 19 + Turbopack + Tailwind CSS 4 with high-efficiency clinical workstation styling (slate/navy foundations, clinical emerald/cyan accents, keyboard shortcuts, accessible contrast) across 15 doctor routes:

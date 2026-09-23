@@ -2307,4 +2307,67 @@ for guard in 'python3 is 3.13' 'docker compose plugin' '.env can be sourced' 'ho
   fi
 done
 
+# R-538: CareClinic (T-8) is published, its console is not a mock, and the seed's two original
+# defects stay fixed.
+care_clinic="$repo_root/templates/catalog/care-clinic"
+if [[ -d "$care_clinic" ]]; then
+  if [[ ! -f "$repo_root/services/agent-engine/tests/test_template_care_clinic.py" ]]; then
+    printf 'R-538 CareClinic needs its offline test file.\n'
+    exit 1
+  fi
+  for required in repo/README.md repo/.env.example repo/.gitignore media/cover.jpg media/screens.json \
+    repo/services/api/test/workflow.test.ts repo/services/api/src/lib/document-number.ts \
+    repo/apps/admin/lib/session.tsx repo/apps/admin/components/shell.tsx; do
+    if [[ ! -f "$care_clinic/$required" ]]; then
+      printf 'R-538 the published CareClinic template needs %s.\n' "$required"
+      exit 1
+    fi
+  done
+  # Every console page reads the API; the first cut of them rendered hard-coded arrays.
+  for page in front-desk check-in walk-in appointments doctors rooms billing refunds labs reports audit settings; do
+    if ! rg -qF 'defaultApiClient.' "$care_clinic/repo/apps/admin/app/$page/page.tsx"; then
+      printf 'R-538 the CareClinic console page /%s must read the API, not a hard-coded table.\n' "$page"
+      exit 1
+    fi
+  done
+  # Dynamic segments must be real route folders: they were once URL-encoded, so every detail page
+  # 404'd on a real id.
+  if find "$care_clinic/repo/apps" -name '*%5B*' -print -quit | rg -q .; then
+    printf 'R-538 CareClinic has a URL-encoded dynamic route folder; rename it to [param].\n'
+    exit 1
+  fi
+  # The seed only loads if these two hold.
+  if rg -q "'[0-9]{2}:(6[0-9]|[7-9][0-9]):[0-9]{2}'" "$care_clinic/repo/services/api/seed/001_demo.sql"; then
+    printf 'R-538 the CareClinic seed has an out-of-range time of day.\n'
+    exit 1
+  fi
+  if ! rg -qF 'queueStatusFor' "$care_clinic/repo/services/api/scripts/generate-seed.mjs"; then
+    printf 'R-538 the CareClinic seed must map appointment status to the queue_status vocabulary.\n'
+    exit 1
+  fi
+  # Document numbers come from the highest already issued, never from COUNT(*), which collides.
+  if rg -qF 'COUNT(*) as total FROM prescriptions' "$care_clinic/repo/services/api/src/services/clinical.ts"; then
+    printf 'R-538 CareClinic document numbers must not be derived from COUNT(*).\n'
+    exit 1
+  fi
+  if ! python3 - "$care_clinic" <<'CARECLINIC_MANIFEST'; then
+import json, sys
+from pathlib import Path
+
+root = Path(sys.argv[1])
+manifest = json.loads((root / "template.json").read_text(encoding="utf-8"))
+assert manifest["slug"] == "care-clinic", "slug care-clinic"
+assert manifest["category"] == "healthcare", "category healthcare"
+assert {a["id"] for a in manifest["apps"]} >= {"patient", "doctor", "admin", "api"}, "four apps"
+assert manifest.get("cover"), "a cover image"
+screens = manifest.get("screens") or []
+assert len(screens) == 48, f"48 screens, found {len(screens)}"
+for rel in [manifest["cover"], *(manifest.get("screenshots") or [])]:
+    assert (root / rel).is_file(), f"missing media file {rel}"
+CARECLINIC_MANIFEST
+    printf 'R-538 the published CareClinic manifest needs its four apps, a cover and 48 screens.\n'
+    exit 1
+  fi
+fi
+
 printf 'Repository contract tests passed.\n'

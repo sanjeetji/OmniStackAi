@@ -61,9 +61,14 @@ async function main() {
   const screens = [];
   let failures = 0;
 
+  /** A template's /auth/login may answer with `access_token`, `token`, or both. */
+  function bearer(session) {
+    return session.access_token ?? session.token;
+  }
+
   async function call(as, method, route, body) {
     const headers = { "Content-Type": "application/json" };
-    if (as) headers.Authorization = `Bearer ${(await session(as)).access_token}`;
+    if (as) headers.Authorization = `Bearer ${bearer(await session(as))}`;
     const response = await fetch(`${args.api}${route}`, { method, headers, body: body === undefined ? undefined : JSON.stringify(body) });
     const text = await response.text();
     const data = text ? JSON.parse(text) : null;
@@ -86,9 +91,16 @@ async function main() {
     if (!contexts.has(key)) {
       const context = await browser.newContext({ ...DEVICES[device], locale: "en-IN", timezoneId: "Asia/Kolkata", colorScheme: "light" });
       if (as) {
-        const stored = JSON.stringify(await session(as));
-        const storageKey = plan.storageKeys[app];
-        await context.addInitScript(([k, v]) => window.localStorage.setItem(k, v), [storageKey, stored]);
+        // A template says how its apps persist a session. `storage(app, session, as)` returning
+        // [key, value] pairs is the general form; `storageKeys[app]` is the shorthand for an app
+        // that stores the whole login response under one key.
+        const current = await session(as);
+        const entries = plan.storage
+          ? plan.storage(app, current, as)
+          : [[plan.storageKeys[app], JSON.stringify(current)]];
+        await context.addInitScript((pairs) => {
+          for (const [key, value] of pairs) window.localStorage.setItem(key, value);
+        }, entries);
       }
       contexts.set(key, context);
     }

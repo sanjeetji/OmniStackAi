@@ -1,5 +1,61 @@
 # Work Log
 
+## 2026-09-23 — R-538 (CareClinic part 4/4: clinic operations console, screenshots, publish)
+
+- **The console (`apps/admin`, "CareClinic Ops"), rewritten against the API.**
+  - The draft was a static mock: every one of the 18 pages rendered hard-coded arrays, and
+    `handleLogin` wrote `"mock-jwt-admin-token"` to local storage without calling the API. Only
+    three files in the whole app referenced the API client, and none of them fetched anything.
+  - New foundations: `lib/session.tsx` (staff session, one shared SSE connection, toasts, a chime
+    for a called token, per-workstation preferences), `lib/use-api.ts` (`useApi` keeps the previous
+    rows on screen while refreshing, `useAction`, `useInterval`), `lib/format.ts` (PostgreSQL
+    returns counts and sums as strings; the console formats them, never does arithmetic on them),
+    `components/shell.tsx` (the rail, the live badge, and the guard that renders nothing until
+    there is a staff session), `components/ui.tsx`, `components/charts.tsx` (plain SVG, no chart
+    library).
+  - Its own design: dark ink rail, cool slate canvas, a cyan "signal" accent that belongs to the
+    console alone (the patient portal is teal, the workstation emerald), dense 13px tables with
+    tabular figures.
+  - The waiting-room board (`/queue-display`) is deliberately outside the chrome and outside the
+    guard: `/api/admin/queue-display` is the one admin route the API leaves public, and it returns
+    names and token numbers only.
+- **API.** New admin endpoints: `/api/admin/rooms`, `/doctors/:id/schedule` and
+  `/doctors/:id/schedule-override`, `/invoices/:id` and `/invoices/:id/collect`,
+  `/appointments/:id/cancel`, `/labs/:id` and `/labs/:id/status`, `/queue/:id/call`, `/reports`.
+  `POST /auth/login` now takes the role the app is for and answers 403 for an account of another
+  kind. `src/lib/document-number.ts` derives the next APT/INV/RX/REF/LAB number from the highest
+  already issued.
+- **Shared library.** Admin SDK methods and the row types behind them; `useStream` registers every
+  event the API broadcasts and follows `NEXT_PUBLIC_API_URL`; the domain types now name the columns
+  the API actually returns.
+- **Defects found in R-535 to R-537 and fixed here.**
+  - The seed had never loaded into PostgreSQL. 48 appointment end times were `HH:60:00` (minutes
+    added without carrying), and `queue_status` was set from the appointment status even though
+    `no_show` is not in its check constraint. The load aborted at the first of each.
+  - Nine tables were never written at all: `vitals_records`, `lab_orders`, `lab_order_items`,
+    `invoice_items`, `refunds`, `patient_reviews`, `telehealth_sessions`, `notifications`,
+    `schedule_overrides`. The screens that read them had nothing to show.
+  - The demo patient's own appointments all fell on cancelled or no-show, so the account the demo
+    signs in with had an empty chart. She now has a five-visit history across specialties, with
+    two paediatric visits booked for her son.
+  - Seven patient-app route folders were URL-encoded (`appointments/%5Bid%5D`), which Next treats
+    as a literal path, so every detail page returned 404 for a real id.
+  - Doctor cards linked to `/doctors/undefined` (the public directory returns `id`, the card read
+    `doctor_id`), and three doctor-app links pointed at a hard-coded `pat-1`.
+  - `services/api` did not type-check: the Hono context was untyped, so `c.get("user")` was
+    `unknown` in 44 places.
+  - Surnames were allocated in blocks of 50, so a screen of patients read "Deshmukh" all the way
+    down.
+- **Evidence.** 18/18 API unit tests; 6/6 live cross-app workflow tests (`test/workflow.test.ts`,
+  new); 18/18 offline tests (`test_template_care_clinic.py`, new); a browser sweep of 48/48 pages
+  across the three apps, each signed in as its demo user, with no page errors and no failed
+  requests; 48 screens (patient 16, doctor 14, admin 18) plus a composed cover captured from the
+  running template; the live gate through the console 40/40 with the preview ready in 35 s;
+  `pnpm -r typecheck` clean; the repository contract tests and `task verify` green.
+- **Known, not fixed.** `apps/doctor` (R-537) has the same defect the console had: the
+  consultation, SOAP, prescription, lab-order, telehealth, reviews, earnings, schedule and
+  patient-history screens render hard-coded state rather than API data. It needs its own task.
+
 ## 2026-09-23 — R-537 (CareClinic part 3/4: Doctor Telehealth & Clinical Workstation)
 
 - **Doctor Workstation App (`apps/doctor` on Next.js 16 App Router + React 19 + Turbopack + Tailwind CSS 4):**
