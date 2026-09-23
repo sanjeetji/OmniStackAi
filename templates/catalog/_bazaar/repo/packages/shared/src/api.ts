@@ -11,7 +11,7 @@ import type {
   UserAddress,
   Shop,
   AuthResponse,
-} from "./types.ts";
+} from "./types";
 
 export class ApiError extends Error {
   status: number;

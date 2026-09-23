@@ -1,5 +1,29 @@
 # Work Log
 
+## 2026-09-23 — R-533 (Bazaar part 3/4: artisan vendor portal `apps/seller`)
+
+- **Artisan Vendor Portal (`apps/seller` on Next.js 16 + React 19 + Turbopack + Tailwind CSS 4):**
+  - Workshop & atelier design system with slate/charcoal foundations and warm bronze/amber accents.
+  - 10 static prerendered pages and 2 dynamic routes:
+    - `/`: Workshop Operations Dashboard with gross sales, net payout (90% split), action alerts for pending orders, recent shipments, and low stock warnings.
+    - `/shipments`: Multi-stage fulfillment board with status tabs and state machine action triggers (Accept, Pack, Dispatch with Blue Dart, Confirm Delivery).
+    - `/shipments/[id]`: Deep consignment investigation, 5-stage visual progress tracker, customer shipping destination, financial accounting breakdown, and milestone audit log.
+    - `/products`: Artisan craft catalog with search, category filtering, stock availability badges, and direct links to public storefront.
+    - `/products/new`: Craft listing creation form with multi-variant generator matrix (SKU, color, size, price ₹, stock units, image URL).
+    - `/products/[id]`: Product and inventory editor.
+    - `/payouts`: Escrow ledger dashboard, 3-card balance summary, double-entry audit trail, and "Withdraw to Bank (RTGS)" settlement batch processor.
+    - `/reviews`: Customer feedback manager with 4.9 average rating badge and direct artisan reply dialog.
+    - `/settings`: Atelier workshop profile, GI-tag KYC verification (#39 Jaipur Blue Pottery), and direct NEFT/RTGS bank account configuration.
+    - `/login`: Artisan merchant authentication with 1-click Kripal Singh demo credentials.
+- **Shared Library Refinements (`packages/shared`):**
+  - Standardized extensionless imports in `src/index.ts` and `src/api.ts` for dual-compatibility with Next.js Turbopack and Node.js test runners.
+- **Verification & Gates:**
+  - `pnpm --filter @bazaar/seller build`: Succeeded in Turbopack, 10 static pages prerendered, 2 dynamic routes, 0 errors.
+  - `pnpm --filter @bazaar/buyer build`: Succeeded in Turbopack, 11 static pages prerendered, 6 dynamic routes, 0 errors.
+  - `pnpm --filter @bazaar/api test`: 19/19 tests passed in 263ms.
+  - `python3 -m unittest services/agent-engine/tests/test_studio_templates.py`: 40/40 tests passed in 3.428s.
+  - `task verify`: 3,983 tests passed offline with 0 model calls.
+
 ## 2026-09-23 — R-532 (Bazaar part 2/4: shared client library & storefront web app)
 
 - **Shared Domain Library (`packages/shared`):**

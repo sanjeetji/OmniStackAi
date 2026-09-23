@@ -1,6 +1,18 @@
 # Current Handoff
 
-## Resume here (2026-09-23, after R-532)
+## Resume here (2026-09-23, after R-533)
+
+> **R-533 Completed (2026-09-23): Bazaar (Part 3 of 4: Artisan Vendor Portal `apps/seller`).**
+> Artisan & craft guild vendor portal built on Next.js 16 App Router + React 19 + Turbopack + Tailwind CSS 4
+> with atelier workshop slate/charcoal/bronze styling. Includes 10 static prerendered pages and 2 dynamic routes:
+> Workshop Operations Dashboard (`/`), Multi-stage Fulfillment Board (`/shipments`), Consignment Investigation &
+> Lifecycle Controller (`/shipments/[id]`), Artisan Craft Catalog (`/products`), Craft Listing Creation Form with
+> multi-variant matrix (`/products/new`), Product Editor (`/products/[id]`), Escrow Ledger & RTGS Payout Processor
+> (`/payouts`), Customer Reviews & Replies Manager (`/reviews`), Atelier Settings & GI-tag KYC (`/settings`), and
+> Artisan Authentication (`/login`) with 1-click Kripal Singh demo credentials. Standardized extensionless imports
+> in `@bazaar/shared`. All builds succeeded in Turbopack (0 errors); all 19 API tests passed; 40 template studio
+> tests passed; full Stage 0 verify (3,983 tests) passed offline with 0 model calls.
+> **Next:** R-534, Bazaar (Part 4 of 4: Marketplace Operations Console `apps/admin`, Playwright 48 screenshots & Publication).
 
 > **R-532 Completed (2026-09-23): Bazaar (Part 2 of 4: Shared Library & Storefront Web App `apps/buyer`).**
 > Multi-Vendor Commerce Platform storefront web application built on Next.js 16 App Router + React 19 +
@@ -13,7 +25,6 @@
 > Tracking timeline, Customer Reviews with artisan replies, Address Book, and Patron Authentication (1-click
 > Priya Sharma login & signup). All 19 API tests passed; 40 template studio tests passed; Next.js production
 > build succeeded with 0 errors; full Stage 0 verify (3,983 tests) passed offline with 0 model calls.
-> **Next:** R-533, Bazaar (Part 3 of 4: Vendor Portal `apps/seller`).
 
 **The platform is fully set up on this Mac** and `docs/SETUP.md` now describes that setup for any
 new machine (`./scripts/omnistack.sh doctor` checks all of it).
