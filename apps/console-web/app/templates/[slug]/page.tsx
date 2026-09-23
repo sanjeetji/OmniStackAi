@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
-import { ArrowLeft, Check, Database, KeyRound, Plug, Users } from "lucide-react";
+import { ArrowLeft, Check, Database, KeyRound, Plug, Sparkles, Users } from "lucide-react";
 import { ControlPlaneError, getTemplate, type TemplateDetail } from "@/lib/control-plane";
 import { revealStyle } from "@/lib/motion";
 import { getCurrentUser } from "@/lib/session";
@@ -8,6 +8,8 @@ import AppShell from "@/components/app-shell";
 import TemplateUseButton from "@/components/template-use-button";
 import { APP_KIND_META, categoryMeta, templateAssetUrl } from "@/components/template-meta";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { TemplateShowcaseInteractive } from "@/components/template-showcase-interactive";
 
 export const dynamic = "force-dynamic";
 
@@ -52,6 +54,7 @@ export default async function TemplatePage({ params }: { params: Promise<{ slug:
         All templates
       </Link>
 
+      {/* Header Banner */}
       <header className="reveal mt-4 grid gap-6 lg:grid-cols-12" style={revealStyle(0)}>
         <div className="lg:col-span-7">
           <div className="flex flex-wrap items-center gap-2">
@@ -62,15 +65,28 @@ export default async function TemplatePage({ params }: { params: Promise<{ slug:
             <span className="text-xs tabular-nums text-muted-foreground">
               v{template.version} · {template.file_count} files
             </span>
+            {template.screens && (
+              <Badge variant="outline" className="border-brand/40 text-brand">
+                {template.screens.length} Captured Screens
+              </Badge>
+            )}
           </div>
           <h1 className="mt-2 text-balance text-4xl font-semibold tracking-tight">{template.name}</h1>
           <p className="mt-2 max-w-xl text-pretty text-lg text-muted-foreground">{template.tagline}</p>
           <div className="mt-5 flex flex-wrap items-center gap-3">
             <TemplateUseButton slug={template.slug} templateName={template.name} />
-            <p className="text-xs text-muted-foreground">Your own copy. The original never changes.</p>
+            <Button asChild variant="outline" className="gap-1.5 shadow-xs">
+              <a href="#interactive-hub">
+                <Sparkles className="size-3.5 text-brand" aria-hidden="true" />
+                <span>Explore Live Flow</span>
+              </a>
+            </Button>
+            <Button asChild variant="ghost">
+              <a href="#screens-journey">All Screens ({template.screens?.length || template.screenshots?.length || 48})</a>
+            </Button>
           </div>
         </div>
-        <div className="overflow-hidden rounded-xl border border-border/60 bg-muted lg:col-span-5">
+        <div className="overflow-hidden rounded-xl border border-border/60 bg-muted lg:col-span-5 shadow-sm">
           {template.cover ? (
             // eslint-disable-next-line @next/next/no-img-element -- relayed as-is
             <img src={templateAssetUrl(template.slug, template.cover)} alt={`${template.name} preview`} className="aspect-[16/10] size-full object-cover" />
@@ -82,9 +98,15 @@ export default async function TemplatePage({ params }: { params: Promise<{ slug:
         </div>
       </header>
 
-      <div className="mt-10 grid gap-10 lg:grid-cols-12">
+      {/* Main Interactive Showcase (Switcher, Phone/Desktop frames, QR modal, 48-screen gallery & lightbox) */}
+      <div className="mt-12">
+        <TemplateShowcaseInteractive template={template} />
+      </div>
+
+      {/* Architecture, Details, and Specs */}
+      <div className="mt-16 border-t border-border/60 pt-12 grid gap-10 lg:grid-cols-12">
         <div className="grid content-start gap-10 lg:col-span-8">
-          <Section title="About" index={1}>
+          <Section title="About this product" index={1}>
             <p className="max-w-prose whitespace-pre-line text-pretty text-sm leading-relaxed text-muted-foreground">
               {template.description}
             </p>
@@ -96,7 +118,7 @@ export default async function TemplatePage({ params }: { params: Promise<{ slug:
                 const meta = APP_KIND_META[app.kind];
                 const Icon = meta.icon;
                 return (
-                  <li key={app.id} className="flex items-start gap-3 rounded-xl border border-border/60 bg-card p-4">
+                  <li key={app.id} className="flex items-start gap-3 rounded-xl border border-border/60 bg-card p-4 shadow-xs">
                     <span className="grid size-9 shrink-0 place-items-center rounded-lg bg-secondary">
                       <Icon className="size-4" aria-hidden="true" />
                     </span>
@@ -111,36 +133,23 @@ export default async function TemplatePage({ params }: { params: Promise<{ slug:
             </ul>
           </Section>
 
-          <Section title={`${template.features.length} features`} index={3}>
+          <Section title={`${template.features.length} built-in capabilities`} index={3}>
             <ul className="grid gap-x-6 gap-y-2 sm:grid-cols-2">
               {template.features.map((feature) => (
                 <li key={feature} className="flex items-start gap-2 text-sm">
                   <Check className="mt-0.5 size-4 shrink-0 text-brand" aria-hidden="true" />
-                  {feature}
+                  <span>{feature}</span>
                 </li>
               ))}
             </ul>
           </Section>
-
-          {template.screenshots && template.screenshots.length > 0 ? (
-            <Section title="Screens" index={4}>
-              <ul className="grid gap-3 sm:grid-cols-2">
-                {template.screenshots.map((shot, index) => (
-                  <li key={shot} className="overflow-hidden rounded-xl border border-border/60 bg-muted">
-                    {/* eslint-disable-next-line @next/next/no-img-element -- relayed as-is */}
-                    <img src={templateAssetUrl(template.slug, shot)} alt={`${template.name} screen ${index + 1}`} className="w-full" loading="lazy" />
-                  </li>
-                ))}
-              </ul>
-            </Section>
-          ) : null}
         </div>
 
         <aside className="grid content-start gap-8 lg:col-span-4">
           <Section title="Who uses it" icon={Users} index={2}>
             <ul className="grid gap-2">
               {template.roles.map((role) => (
-                <li key={role.id} className="rounded-lg bg-muted/50 px-3 py-2">
+                <li key={role.id} className="rounded-lg bg-muted/50 px-3 py-2 border border-border/40">
                   <p className="text-sm font-medium">{role.name}</p>
                   <p className="text-xs text-muted-foreground">{role.description}</p>
                 </li>
@@ -149,20 +158,23 @@ export default async function TemplatePage({ params }: { params: Promise<{ slug:
           </Section>
 
           {template.demo_users.length > 0 ? (
-            <Section title="Demo logins" icon={KeyRound} index={3}>
-              <p className="-mt-1 mb-2 text-xs text-muted-foreground">For trying the preview locally.</p>
-              <ul className="grid gap-1.5">
-                {template.demo_users.map((user) => (
-                  <li key={user.email} className="flex items-center justify-between gap-2 text-sm">
-                    <span className="truncate font-mono text-xs">{user.email}</span>
-                    <Badge variant="outline" className="shrink-0 capitalize">{user.role}</Badge>
+            <Section title="Demo credentials" icon={KeyRound} index={3}>
+              <p className="-mt-1 mb-2 text-xs text-muted-foreground">Pre-seeded accounts ready to explore.</p>
+              <ul className="grid gap-2">
+                {template.demo_users.map((u) => (
+                  <li key={u.email} className="flex flex-col gap-0.5 rounded-lg border border-border/50 bg-card p-2 text-xs">
+                    <div className="flex items-center justify-between gap-1">
+                      <span className="font-medium text-foreground">{u.name}</span>
+                      <Badge variant="outline" className="text-[10px] capitalize">{u.role}</Badge>
+                    </div>
+                    <span className="font-mono text-muted-foreground">{u.email}</span>
                   </li>
                 ))}
               </ul>
             </Section>
           ) : null}
 
-          <Section title="Data" icon={Database} index={4}>
+          <Section title="Data entities" icon={Database} index={4}>
             <ul className="flex flex-wrap gap-1.5">
               {template.entities.map((entity) => (
                 <li key={entity}>
@@ -173,15 +185,15 @@ export default async function TemplatePage({ params }: { params: Promise<{ slug:
           </Section>
 
           {template.integrations && template.integrations.length > 0 ? (
-            <Section title="Integrations" icon={Plug} index={5}>
+            <Section title="Plug-and-play integrations" icon={Plug} index={5}>
               <ul className="grid gap-1.5">
                 {template.integrations.map((integration) => (
-                  <li key={integration.id} className="flex items-center justify-between gap-2 text-sm">
+                  <li key={integration.id} className="flex items-center justify-between gap-2 text-sm rounded-lg bg-muted/40 px-3 py-2">
                     <span className="capitalize">
-                      {integration.kind} <span className="text-muted-foreground">· {integration.provider}</span>
+                      {integration.kind} <span className="text-muted-foreground text-xs">({integration.provider})</span>
                     </span>
                     {integration.mock ? (
-                      <Badge variant="secondary" className="font-normal">Works without keys</Badge>
+                      <Badge variant="secondary" className="font-normal text-[11px]">Works offline</Badge>
                     ) : null}
                   </li>
                 ))}
@@ -189,7 +201,7 @@ export default async function TemplatePage({ params }: { params: Promise<{ slug:
             </Section>
           ) : null}
 
-          <Section title="Built with" index={6}>
+          <Section title="Tech stack" index={6}>
             <ul className="flex flex-wrap gap-1.5">
               {template.stack.map((item) => (
                 <li key={item}>
@@ -217,8 +229,8 @@ function Section({
 }) {
   return (
     <section className="reveal" style={revealStyle(index)}>
-      <h2 className="mb-3 flex items-center gap-1.5 text-sm font-semibold tracking-tight">
-        {Icon ? <Icon className="size-4 text-muted-foreground" /> : null}
+      <h2 className="mb-3 flex items-center gap-1.5 text-sm font-semibold tracking-tight text-foreground">
+        {Icon ? <Icon className="size-4 text-muted-foreground" aria-hidden="true" /> : null}
         {title}
       </h2>
       {children}

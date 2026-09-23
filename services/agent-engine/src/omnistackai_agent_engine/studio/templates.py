@@ -312,6 +312,7 @@ _SUMMARY_KEYS = (
     "stack",
     "cover",
     "screenshots",
+    "screens",
 )
 
 

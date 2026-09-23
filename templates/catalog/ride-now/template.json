@@ -7,17 +7,61 @@
   "tagline": "Ride-hailing for one city: rider app, driver app, ops console, live dispatch, wallets and payouts.",
   "description": "A complete ride-hailing product for Bengaluru, built as three apps on one TypeScript API and one PostgreSQL database.\n\nRiders book with upfront fares, surge and promo codes, watch the car arrive on a live map, start the ride with a PIN, pay by wallet or cash and rate the driver. Drivers go online, receive timed offers, run the trip, and track earnings, payouts, ratings and documents. The operations team runs the city: a live map of drivers and trips, trip investigation with the full dispatch and money trail, refunds, rider and driver accounts, document review and approval, pricing per vehicle type, surge zones, promo codes, driver payouts, a finance view of the platform ledger, a support desk and an audit log of every operator action.\n\nEverything runs without credentials: payments, SMS and maps are mocks behind interfaces, and simulated demo drivers accept and complete rides on their own, so one person can see the whole flow. Sign in with the demo logins below, or make it yours by chat.",
   "apps": [
-    { "id": "rider", "name": "Rider app", "kind": "web", "path": "apps/rider" },
-    { "id": "driver", "name": "Driver app", "kind": "pwa", "path": "apps/driver" },
-    { "id": "admin", "name": "Ops console", "kind": "admin", "path": "apps/admin" },
-    { "id": "api", "name": "API", "kind": "api", "path": "services/api" }
+    {
+      "id": "rider",
+      "name": "Rider app",
+      "kind": "web",
+      "path": "apps/rider"
+    },
+    {
+      "id": "driver",
+      "name": "Driver app",
+      "kind": "pwa",
+      "path": "apps/driver"
+    },
+    {
+      "id": "admin",
+      "name": "Ops console",
+      "kind": "admin",
+      "path": "apps/admin"
+    },
+    {
+      "id": "api",
+      "name": "API",
+      "kind": "api",
+      "path": "services/api"
+    }
   ],
   "roles": [
-    { "id": "rider", "name": "Rider", "description": "Books rides, pays by wallet or cash, rates drivers." },
-    { "id": "driver", "name": "Driver", "description": "Goes online, accepts and completes rides, withdraws earnings." },
-    { "id": "admin", "name": "Operations", "description": "Runs the city: dispatch, drivers, pricing, refunds, payouts and support." }
+    {
+      "id": "rider",
+      "name": "Rider",
+      "description": "Books rides, pays by wallet or cash, rates drivers."
+    },
+    {
+      "id": "driver",
+      "name": "Driver",
+      "description": "Goes online, accepts and completes rides, withdraws earnings."
+    },
+    {
+      "id": "admin",
+      "name": "Operations",
+      "description": "Runs the city: dispatch, drivers, pricing, refunds, payouts and support."
+    }
   ],
-  "entities": ["Trip", "Offer", "Driver", "Vehicle type", "Surge zone", "Promo code", "Wallet transaction", "Payout", "Rating", "Support ticket", "Audit entry"],
+  "entities": [
+    "Trip",
+    "Offer",
+    "Driver",
+    "Vehicle type",
+    "Surge zone",
+    "Promo code",
+    "Wallet transaction",
+    "Payout",
+    "Rating",
+    "Support ticket",
+    "Audit entry"
+  ],
   "features": [
     "Upfront fares per vehicle type with surge and promo codes",
     "Live dispatch with timed offers and re-dispatch",
@@ -33,25 +77,537 @@
     "Audit log of every operator action"
   ],
   "integrations": [
-    { "id": "payments", "kind": "payments", "provider": "mock", "mock": true },
-    { "id": "sms", "kind": "sms", "provider": "mock", "mock": true },
-    { "id": "maps", "kind": "maps", "provider": "mock", "mock": true }
+    {
+      "id": "payments",
+      "kind": "payments",
+      "provider": "mock",
+      "mock": true
+    },
+    {
+      "id": "sms",
+      "kind": "sms",
+      "provider": "mock",
+      "mock": true
+    },
+    {
+      "id": "maps",
+      "kind": "maps",
+      "provider": "mock",
+      "mock": true
+    }
   ],
   "demo_users": [
-    { "role": "rider", "name": "Asha Rao", "email": "asha@ridenow.test", "password": "Rider@2026" },
-    { "role": "driver", "name": "Ravi Kumar", "email": "ravi@ridenow.test", "password": "Driver@2026" },
-    { "role": "admin", "name": "Neha Kapoor", "email": "admin@ridenow.test", "password": "Admin@2026" }
+    {
+      "role": "rider",
+      "name": "Asha Rao",
+      "email": "asha@ridenow.test",
+      "password": "Rider@2026"
+    },
+    {
+      "role": "driver",
+      "name": "Ravi Kumar",
+      "email": "ravi@ridenow.test",
+      "password": "Driver@2026"
+    },
+    {
+      "role": "admin",
+      "name": "Neha Kapoor",
+      "email": "admin@ridenow.test",
+      "password": "Admin@2026"
+    }
   ],
-  "stack": ["Next.js 16", "React 19", "Tailwind CSS 4", "TypeScript", "Hono", "PostgreSQL", "Server-sent events"],
+  "stack": [
+    "Next.js 16",
+    "React 19",
+    "Tailwind CSS 4",
+    "TypeScript",
+    "Hono",
+    "PostgreSQL",
+    "Server-sent events"
+  ],
   "cover": "media/cover.jpg",
   "screenshots": [
     "media/rider/landing.jpg",
+    "media/rider/login.jpg",
+    "media/rider/signup.jpg",
     "media/rider/book.jpg",
-    "media/rider/live-trip.jpg",
+    "media/rider/trips.jpg",
+    "media/rider/trip-receipt.jpg",
+    "media/rider/wallet.jpg",
+    "media/rider/places.jpg",
+    "media/rider/promos.jpg",
+    "media/rider/account.jpg",
+    "media/rider/help.jpg",
+    "media/rider/ticket.jpg",
+    "media/rider/notifications.jpg",
+    "media/driver/login.jpg",
+    "media/driver/apply.jpg",
+    "media/driver/home-offline.jpg",
+    "media/driver/earnings.jpg",
+    "media/driver/wallet.jpg",
+    "media/driver/trips.jpg",
+    "media/driver/trip-detail.jpg",
+    "media/driver/ratings.jpg",
+    "media/driver/account.jpg",
+    "media/driver/help.jpg",
+    "media/driver/ticket.jpg",
+    "media/driver/notifications.jpg",
+    "media/admin/login.jpg",
+    "media/admin/dashboard.jpg",
+    "media/admin/trips.jpg",
+    "media/admin/trip-detail.jpg",
+    "media/admin/riders.jpg",
+    "media/admin/rider-detail.jpg",
+    "media/admin/drivers.jpg",
+    "media/admin/driver-review.jpg",
+    "media/admin/pricing.jpg",
+    "media/admin/zones.jpg",
+    "media/admin/promos.jpg",
+    "media/admin/payouts.jpg",
+    "media/admin/finance.jpg",
+    "media/admin/support.jpg",
+    "media/admin/ticket.jpg",
+    "media/admin/audit.jpg",
+    "media/admin/settings.jpg",
+    "media/driver/home-online.jpg",
     "media/driver/offer.jpg",
     "media/driver/to-pickup.jpg",
-    "media/admin/dashboard.jpg",
+    "media/rider/live-trip.jpg",
     "media/admin/live-map.jpg",
-    "media/admin/trip-detail.jpg"
+    "media/driver/verify-pin.jpg"
+  ],
+  "screens": [
+    {
+      "app": "rider",
+      "title": "Landing page",
+      "description": "Hero with an instant fare check, how it works, vehicle types, safety, cities and FAQ.",
+      "route": "/",
+      "device": "desktop",
+      "highlight": true,
+      "image": "media/rider/landing.jpg"
+    },
+    {
+      "app": "rider",
+      "title": "Sign in",
+      "description": "Password or phone OTP sign-in (the OTP is sent by a mock SMS provider in the demo).",
+      "route": "/login",
+      "device": "desktop",
+      "highlight": false,
+      "image": "media/rider/login.jpg"
+    },
+    {
+      "app": "rider",
+      "title": "Create an account",
+      "description": "New riders get a ₹100 welcome credit in their wallet.",
+      "route": "/signup",
+      "device": "desktop",
+      "highlight": false,
+      "image": "media/rider/signup.jpg"
+    },
+    {
+      "app": "rider",
+      "title": "Book a ride",
+      "description": "Pickup and drop from search, saved places or the map; upfront fares for every vehicle type with surge, promo codes, and wallet or cash.",
+      "route": "/ride",
+      "device": "desktop",
+      "highlight": true,
+      "image": "media/rider/book.jpg"
+    },
+    {
+      "app": "rider",
+      "title": "Trip history",
+      "description": "Every ride with its status, fare and rating.",
+      "route": "/trips",
+      "device": "desktop",
+      "highlight": false,
+      "image": "media/rider/trips.jpg"
+    },
+    {
+      "app": "rider",
+      "title": "Trip receipt",
+      "description": "Route, driver, fare breakdown, payment, the rating given, and help with this ride.",
+      "route": "/trips/[id]",
+      "device": "desktop",
+      "highlight": false,
+      "image": "media/rider/trip-receipt.jpg"
+    },
+    {
+      "app": "rider",
+      "title": "Wallet",
+      "description": "Balance, add money by card (mock payment provider) and every transaction.",
+      "route": "/wallet",
+      "device": "desktop",
+      "highlight": false,
+      "image": "media/rider/wallet.jpg"
+    },
+    {
+      "app": "rider",
+      "title": "Saved places",
+      "description": "Home, work and favourites, picked on the map.",
+      "route": "/places",
+      "device": "desktop",
+      "highlight": false,
+      "image": "media/rider/places.jpg"
+    },
+    {
+      "app": "rider",
+      "title": "Offers",
+      "description": "Promo codes the rider can use, with limits and expiry.",
+      "route": "/promos",
+      "device": "desktop",
+      "highlight": false,
+      "image": "media/rider/promos.jpg"
+    },
+    {
+      "app": "rider",
+      "title": "Account",
+      "description": "Profile, phone and sign-out.",
+      "route": "/account",
+      "device": "desktop",
+      "highlight": false,
+      "image": "media/rider/account.jpg"
+    },
+    {
+      "app": "rider",
+      "title": "Help centre",
+      "description": "Answers to common questions and the rider's support tickets.",
+      "route": "/help",
+      "device": "desktop",
+      "highlight": false,
+      "image": "media/rider/help.jpg"
+    },
+    {
+      "app": "rider",
+      "title": "Support conversation",
+      "description": "A ticket thread with RideNow support.",
+      "route": "/help/[id]",
+      "device": "desktop",
+      "highlight": false,
+      "image": "media/rider/ticket.jpg"
+    },
+    {
+      "app": "rider",
+      "title": "Notifications",
+      "description": "Trip, wallet and support updates.",
+      "route": "/notifications",
+      "device": "desktop",
+      "highlight": false,
+      "image": "media/rider/notifications.jpg"
+    },
+    {
+      "app": "driver",
+      "title": "Driver sign-in",
+      "description": "Sign in to go online; new drivers apply from here.",
+      "route": "/login",
+      "device": "phone",
+      "highlight": false,
+      "image": "media/driver/login.jpg"
+    },
+    {
+      "app": "driver",
+      "title": "Apply to drive",
+      "description": "Personal and vehicle details; operations review the documents before approval.",
+      "route": "/apply",
+      "device": "phone",
+      "highlight": false,
+      "image": "media/driver/apply.jpg"
+    },
+    {
+      "app": "driver",
+      "title": "Home, offline",
+      "description": "Today's earnings, trips, acceptance and rating, surge zones on the map, and the go-online switch.",
+      "route": "/",
+      "device": "phone",
+      "highlight": false,
+      "image": "media/driver/home-offline.jpg"
+    },
+    {
+      "app": "driver",
+      "title": "Earnings",
+      "description": "Day, week or month totals with a per-day chart, trips, online time and cash collected.",
+      "route": "/earnings",
+      "device": "phone",
+      "highlight": false,
+      "image": "media/driver/earnings.jpg"
+    },
+    {
+      "app": "driver",
+      "title": "Wallet and payouts",
+      "description": "Balance, withdraw to the bank (one request at a time) and the ledger.",
+      "route": "/wallet",
+      "device": "phone",
+      "highlight": false,
+      "image": "media/driver/wallet.jpg"
+    },
+    {
+      "app": "driver",
+      "title": "Trip history",
+      "description": "Past rides grouped by day with earnings.",
+      "route": "/trips",
+      "device": "phone",
+      "highlight": false,
+      "image": "media/driver/trips.jpg"
+    },
+    {
+      "app": "driver",
+      "title": "Trip details",
+      "description": "Earning breakdown, commission and the rating received.",
+      "route": "/trips/[id]",
+      "device": "phone",
+      "highlight": false,
+      "image": "media/driver/trip-detail.jpg"
+    },
+    {
+      "app": "driver",
+      "title": "Ratings",
+      "description": "Average rating, star breakdown, top compliments and recent comments.",
+      "route": "/ratings",
+      "device": "phone",
+      "highlight": false,
+      "image": "media/driver/ratings.jpg"
+    },
+    {
+      "app": "driver",
+      "title": "Account",
+      "description": "Profile, vehicle, document status with expiry warnings, and location mode.",
+      "route": "/account",
+      "device": "phone",
+      "highlight": false,
+      "image": "media/driver/account.jpg"
+    },
+    {
+      "app": "driver",
+      "title": "Help",
+      "description": "Driver support topics and tickets.",
+      "route": "/help",
+      "device": "phone",
+      "highlight": false,
+      "image": "media/driver/help.jpg"
+    },
+    {
+      "app": "driver",
+      "title": "Support conversation",
+      "description": "A driver's ticket thread with operations.",
+      "route": "/help/[id]",
+      "device": "phone",
+      "highlight": false,
+      "image": "media/driver/ticket.jpg"
+    },
+    {
+      "app": "driver",
+      "title": "Notifications",
+      "description": "Payouts, account and trip updates.",
+      "route": "/notifications",
+      "device": "phone",
+      "highlight": false,
+      "image": "media/driver/notifications.jpg"
+    },
+    {
+      "app": "admin",
+      "title": "Ops sign-in",
+      "description": "Operations accounts only; rider and driver accounts are refused.",
+      "route": "/login",
+      "device": "desktop",
+      "highlight": false,
+      "image": "media/admin/login.jpg"
+    },
+    {
+      "app": "admin",
+      "title": "Dashboard",
+      "description": "Trips, gross bookings, revenue and completion rate with trends, a 14-day chart, vehicle mix, top drivers and work queues.",
+      "route": "/",
+      "device": "desktop",
+      "highlight": true,
+      "image": "media/admin/dashboard.jpg"
+    },
+    {
+      "app": "admin",
+      "title": "Trips",
+      "description": "Every ride request with status, vehicle and search filters, paging and CSV export.",
+      "route": "/trips",
+      "device": "desktop",
+      "highlight": false,
+      "image": "media/admin/trips.jpg"
+    },
+    {
+      "app": "admin",
+      "title": "Trip investigation",
+      "description": "Route map, status timeline, dispatch offers, fare breakdown, ledger lines and ratings, with cancel and refund.",
+      "route": "/trips/[id]",
+      "device": "desktop",
+      "highlight": false,
+      "image": "media/admin/trip-detail.jpg"
+    },
+    {
+      "app": "admin",
+      "title": "Riders",
+      "description": "Search riders with trips, spend, rating and wallet balance.",
+      "route": "/riders",
+      "device": "desktop",
+      "highlight": false,
+      "image": "media/admin/riders.jpg"
+    },
+    {
+      "app": "admin",
+      "title": "Rider profile",
+      "description": "Wallet, recent trips, ledger and tickets; suspend or adjust the wallet.",
+      "route": "/riders/[id]",
+      "device": "desktop",
+      "highlight": false,
+      "image": "media/admin/rider-detail.jpg"
+    },
+    {
+      "app": "admin",
+      "title": "Drivers",
+      "description": "Status filters, vehicles, documents waiting, rating, acceptance and wallet.",
+      "route": "/drivers",
+      "device": "desktop",
+      "highlight": false,
+      "image": "media/admin/drivers.jpg"
+    },
+    {
+      "app": "admin",
+      "title": "Driver review",
+      "description": "Approve or reject each document, then approve the driver to go online.",
+      "route": "/drivers/[id]",
+      "device": "desktop",
+      "highlight": false,
+      "image": "media/admin/driver-review.jpg"
+    },
+    {
+      "app": "admin",
+      "title": "Pricing",
+      "description": "Base, per km, per minute, minimum, booking fee and commission per vehicle type, with a live sample fare.",
+      "route": "/pricing",
+      "device": "desktop",
+      "highlight": false,
+      "image": "media/admin/pricing.jpg"
+    },
+    {
+      "app": "admin",
+      "title": "Surge zones",
+      "description": "Zones on the city map with a surge multiplier and on/off switch each.",
+      "route": "/zones",
+      "device": "desktop",
+      "highlight": false,
+      "image": "media/admin/zones.jpg"
+    },
+    {
+      "app": "admin",
+      "title": "Promo codes",
+      "description": "Usage and discount given per code; create, pause and resume.",
+      "route": "/promos",
+      "device": "desktop",
+      "highlight": false,
+      "image": "media/admin/promos.jpg"
+    },
+    {
+      "app": "admin",
+      "title": "Payouts",
+      "description": "Driver withdrawal requests to pay or reject.",
+      "route": "/payouts",
+      "device": "desktop",
+      "highlight": false,
+      "image": "media/admin/payouts.jpg"
+    },
+    {
+      "app": "admin",
+      "title": "Finance",
+      "description": "Platform balance, 30-day movements, money owed to drivers and rider wallet float.",
+      "route": "/finance",
+      "device": "desktop",
+      "highlight": false,
+      "image": "media/admin/finance.jpg"
+    },
+    {
+      "app": "admin",
+      "title": "Support queue",
+      "description": "Rider and driver tickets by status and priority.",
+      "route": "/tickets",
+      "device": "desktop",
+      "highlight": false,
+      "image": "media/admin/support.jpg"
+    },
+    {
+      "app": "admin",
+      "title": "Ticket thread",
+      "description": "Reply with canned answers, set priority and resolve.",
+      "route": "/tickets/[id]",
+      "device": "desktop",
+      "highlight": false,
+      "image": "media/admin/ticket.jpg"
+    },
+    {
+      "app": "admin",
+      "title": "Audit log",
+      "description": "Every refund, approval, pricing change and payout, with who did it.",
+      "route": "/audit",
+      "device": "desktop",
+      "highlight": false,
+      "image": "media/admin/audit.jpg"
+    },
+    {
+      "app": "admin",
+      "title": "Settings",
+      "description": "Operator account, device preferences, and which providers are mocks and where real ones plug in.",
+      "route": "/settings",
+      "device": "desktop",
+      "highlight": false,
+      "image": "media/admin/settings.jpg"
+    },
+    {
+      "app": "driver",
+      "title": "Home, online",
+      "description": "Online with the position shown to dispatch; requests arrive here.",
+      "route": "/",
+      "device": "phone",
+      "highlight": false,
+      "image": "media/driver/home-online.jpg"
+    },
+    {
+      "app": "driver",
+      "title": "Incoming ride request",
+      "description": "Fare, your earning, pickup distance, trip length, rider rating and payment, with a countdown to accept or decline.",
+      "route": "/",
+      "device": "phone",
+      "highlight": true,
+      "image": "media/driver/offer.jpg"
+    },
+    {
+      "app": "driver",
+      "title": "Heading to pickup",
+      "description": "The rider, pickup on the map, call, and “I've arrived”.",
+      "route": "/trip",
+      "device": "phone",
+      "highlight": true,
+      "image": "media/driver/to-pickup.jpg"
+    },
+    {
+      "app": "rider",
+      "title": "Live trip",
+      "description": "Driver and car details, the start PIN, the car moving on the map and the status timeline, with cancel and share.",
+      "route": "/trip/[id]",
+      "device": "desktop",
+      "highlight": true,
+      "image": "media/rider/live-trip.jpg"
+    },
+    {
+      "app": "admin",
+      "title": "Live map",
+      "description": "Online drivers (free or on a trip), riders waiting for pickup and surge zones, updating as cars move.",
+      "route": "/live",
+      "device": "desktop",
+      "highlight": true,
+      "image": "media/admin/live-map.jpg"
+    },
+    {
+      "app": "driver",
+      "title": "Verify the rider's PIN",
+      "description": "The ride starts only with the 4-digit PIN the rider sees in their app.",
+      "route": "/trip",
+      "device": "phone",
+      "highlight": false,
+      "image": "media/driver/verify-pin.jpg"
+    }
   ]
 }

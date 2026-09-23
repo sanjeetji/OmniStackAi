@@ -2460,6 +2460,16 @@ export interface TemplateIntegration {
   mock: boolean;
 }
 
+export interface TemplateScreen {
+  app: string;
+  title: string;
+  description: string;
+  route: string;
+  device: "desktop" | "mobile" | string;
+  highlight: boolean;
+  image: string;
+}
+
 /** A catalogue card. Demo logins and full role descriptions are only in `TemplateDetail`. */
 export interface TemplateSummary {
   slug: string;
@@ -2476,6 +2486,7 @@ export interface TemplateSummary {
   stack: string[];
   cover?: string;
   screenshots?: string[];
+  screens?: TemplateScreen[];
   digest: string;
   file_count: number;
 }
