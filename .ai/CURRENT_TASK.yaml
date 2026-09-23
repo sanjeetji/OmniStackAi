@@ -1,31 +1,26 @@
-task_id: R-538
-status: completed
+task_id: R-539
+status: in_progress
 phase: MVP
 tracker_row: 8
 started_at: "2026-09-23"
-completed_at: "2026-09-23"
-branch: ai/R-538-careclinic-admin
+completed_at: null
+branch: ai/R-539-careclinic-doctor-api
 objective: >-
-  CareClinic part 4 of 4: Front Desk & Clinic Ops Console (apps/admin), Playwright 48 screenshots + cover,
-  and publication to templates/catalog/care-clinic. Build control-room styled clinic operations console
-  on Next.js 16 + React 19 + Turbopack + Tailwind CSS 4 across 18 routes: Staff Sign In (/login),
-  Operations Dashboard (/), Front Desk Reception (/front-desk), Patient Check-In (/check-in),
-  Walk-In Booking (/walk-in), Appointments Master (/appointments), Appointment Investigation (/appointments/[id]),
-  Doctor Directory (/doctors), Doctor Rostering & Schedules (/doctors/[id]/schedule), Room Allocation (/rooms),
-  Clinic Cashier & Billing (/billing), Invoice Details & Receipts (/billing/[id]), Cancellation & Refunds (/refunds),
-  Diagnostic Lab Management (/labs), Clinical Analytics & Footfall (/reports), HIPAA Security & Audit (/audit),
-  Clinic Settings (/settings), and Live OPD Waiting Room TV Display Board (/queue-display).
-  Extend @careclinic/shared with admin SDK methods. Capture all 48 screens + cover image with Playwright.
-  Publish template from templates/catalog/_care-clinic to templates/catalog/care-clinic.
+  Rebuild the CareClinic doctor workstation (apps/doctor) against the real API, the way R-538 did
+  the clinic console: every screen reads live clinic data, the consultation writes real SOAP notes,
+  prescriptions and lab orders, and diagnosis coding searches a real ICD-10 catalogue instead of a
+  list inside the app. Then give the platform itself the two operational commands it lacked —
+  `omnistack.sh fresh` (wipe local data and create the first owner) and `omnistack.sh admin`
+  (administer accounts) — and document every command in COMMANDS.md.
 allowed_paths:
-  - templates/catalog/_care-clinic/
   - templates/catalog/care-clinic/
-  # Recorded 2026-09-23 while starting the work: the same paths R-530 needed to publish a
-  # template, which this task's first draft left out.
-  - scripts/capture-template-screens.mjs
+  - services/control-plane/cmd/platformctl/
+  - scripts/omnistack.sh
   - scripts/test.sh
   - services/agent-engine/tests/test_template_care_clinic.py
-  - docs/PROGRESS.md
+  - COMMANDS.md
+  - README.md
+  - docs/
   - .ai/
   - PROJECT_STATE.md
   - CHANGELOG.md
@@ -33,15 +28,15 @@ allowed_paths:
 forbidden_changes:
   - No new template dependency beyond the pinned stack
   - task verify stays offline with 0 model calls
-  - No real credentials in the template
+  - No real credentials in the template or the repository
+  - platformctl must reuse the control-plane's own password hashing, never its own
 required_gates:
-  - Every admin page reads live API data; no hard-coded tables anywhere in apps/admin
-  - Admin sign-in goes through POST /auth/login and a patient or doctor account is refused
-  - API unit tests pass (100% clean)
-  - The seed loads into an empty PostgreSQL with ON_ERROR_STOP and every table has rows
-  - @careclinic/admin builds cleanly with Next.js Turbopack
-  - All 48 screenshots + cover.jpg generated and verified in media/
-  - catalog validation passes for published care-clinic template (v1.0.0)
+  - Every doctor page reads live API data; no hard-coded table anywhere in apps/doctor
+  - The consultation chain writes real records (SOAP, diagnosis, prescription, lab order)
+  - Diagnosis coding searches a seeded ICD-10 catalogue
+  - API unit tests and the live cross-app workflow tests pass
+  - 48 screenshots recaptured from the running template
+  - omnistack.sh fresh wipes and creates an owner who can sign in to the console
   - task verify passes
 model_tool_trace:
   routing: deterministic_only
@@ -49,37 +44,13 @@ model_tool_trace:
   cloud_calls: 0
 blockers: []
 found_and_fixed:
-  - "R-535 seed: 48 appointment end times were HH:60:00, which PostgreSQL rejects, so the seed
-     never loaded. Fixed the slot arithmetic and regenerated."
-  - "R-535 seed: queue_status was set from the appointment status, but 'no_show' is not in the
-     queue_status vocabulary, so the load aborted. Added an explicit mapping."
-  - "R-535 seed: nine tables were never written (vitals, labs, invoice items, refunds, reviews,
-     telehealth sessions, notifications, schedule overrides). Added them."
-  - "R-535 seed: the demo patient's own appointments all landed on cancelled/no-show, so her
-     chart was empty. Gave her an explicit five-visit history."
-  - "R-535 API: services/api did not type-check (untyped Hono context). Added a typed AppEnv."
-  - "R-538 draft apps/admin: all 18 pages rendered hard-coded arrays and sign-in wrote a fake
-     token. Rewritten against the real API."
-found_not_fixed:
-  - "apps/doctor (R-537) has the same defect the console had: the consultation, SOAP, prescription,
-     lab-order, telehealth, reviews, earnings, schedule and patient-history screens render
-     hard-coded state instead of API data. Only the dashboard, the queue and the patient chart read
-     the API at all, and those overlay mock values. The pages render and the screenshots are of real
-     pages, but the workstation is not wired to the backend. Needs its own task (suggested R-539)."
-  - "apps/patient keeps invented fallback rows for a failed API call (doctors, appointments,
-     invoices, lab reports). The live path is real, but a backend failure shows plausible fiction
-     rather than an error. Worth removing when the doctor app is rebuilt."
-evidence:
-  api_unit_tests: "18/18 pass (node --test, no database)"
-  live_workflow_tests: "6/6 pass against a running instance (role isolation, booking and
-    double-booking, check-in and token call, consultation to signed prescription to audit,
-    cashier collection, report arithmetic)"
-  offline_tests: "18/18 in services/agent-engine/tests/test_template_care_clinic.py"
-  browser_sweep: "48/48 pages across the three apps, signed in as their demo user, with no page
-    errors and no failed requests"
-  screenshots: "48 screens (patient 16, doctor 14, admin 18) plus a composed cover, 4.5 MB"
-  live_gate: "40/40 through the console: catalogue, use template, preview ready in 35 s, every page
-    through the authenticated proxy, an unknown path still 404s"
-  typecheck: "pnpm -r typecheck clean across shared, api, patient, doctor and admin"
-  catalog: "validate_template('templates/catalog/care-clinic') returns no errors; listed beside
-    bazaar and ride-now" 
+  - "R-537 apps/doctor: every screen rendered hard-coded state. Only the dashboard, queue and
+     patient chart called the API at all, and they overlaid mock values on the response. Rewritten
+     against the API."
+  - "The doctor earnings query joined invoices directly; a visit with both a consultation and a
+     lab invoice counted its fee twice (gross 24,500 against a daily sum of 14,000). Replaced the
+     join with a LATERAL that picks one invoice per appointment."
+  - "R-536 shared types: Consultation, Diagnosis, Prescription, PrescriptionItem and LabTest named
+     columns the API never returns, so the patient's prescription slip showed a blank medicine,
+     form and dose on every real prescription."
+found_not_fixed: []

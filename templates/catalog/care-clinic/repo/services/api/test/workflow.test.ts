@@ -242,3 +242,88 @@ test("the clinic's reports add up", { skip }, async () => {
   assert.equal(rooms.status, 200);
   assert.equal(rooms.data.rooms.length, 12, "every doctor has a chamber row");
 });
+
+test("the workstation reads its screens from the API", { skip }, async () => {
+  const doctor = await login(DOCTOR.email, DOCTOR.password, "doctor");
+
+  const queue = await call("/api/doctor/queue", { token: doctor });
+  assert.equal(queue.status, 200);
+  const visit =
+    queue.data.queue.find((a: any) => a.status === "in_consult") ??
+    queue.data.queue.find((a: any) => a.consultation_id) ??
+    queue.data.queue[0];
+  if (!visit) return; // nothing on the list in this run
+
+  const context = await call(`/api/doctor/consult/${visit.id}`, { token: doctor });
+  assert.equal(context.status, 200, JSON.stringify(context.data));
+  assert.equal(context.data.appointment.id, visit.id);
+  assert.ok(context.data.appointment.patient_name, "the patient in the chair has a name");
+  assert.ok(Array.isArray(context.data.vitals), "the desk's vitals come with the context");
+  assert.ok(Array.isArray(context.data.previousVisits), "previous visits come with the context");
+  assert.ok(context.data.medicalHistory, "allergies and chronic conditions come with the context");
+
+  // A consultation that belongs to another doctor is not readable.
+  const otherDoctorsVisit = await call("/api/admin/appointments?status=completed", {
+    token: await login(STAFF.email, STAFF.password, "admin"),
+  });
+  const foreign = otherDoctorsVisit.data.appointments.find((a: any) => a.doctor_id !== visit.doctor_id);
+  if (foreign) {
+    const refused = await call(`/api/doctor/consult/${foreign.id}`, { token: doctor });
+    assert.equal(refused.status, 404, "another doctor's consultation must not be readable");
+  }
+
+  const earnings = await call("/api/doctor/earnings?days=30", { token: doctor });
+  assert.equal(earnings.status, 200);
+  assert.ok(Array.isArray(earnings.data.daily));
+  assert.ok(earnings.data.totals, "earnings come with a headline total");
+  const dailyEarned = earnings.data.daily.reduce((sum: number, row: any) => sum + Number(row.earned), 0);
+  assert.equal(dailyEarned, Number(earnings.data.totals.gross), "the daily rows must add up to the total");
+
+  const reviews = await call("/api/doctor/reviews", { token: doctor });
+  assert.equal(reviews.status, 200);
+  assert.ok(Array.isArray(reviews.data.reviews));
+});
+
+test("the diagnosis picker searches a real catalogue", { skip }, async () => {
+  const all = await call("/api/public/icd10", {});
+  assert.equal(all.status, 200);
+  assert.ok(all.data.codes.length >= 20, "the clinic ships a usable ICD-10 subset");
+
+  const hypertension = await call("/api/public/icd10?q=hypertension", {});
+  assert.equal(hypertension.status, 200);
+  assert.ok(
+    hypertension.data.codes.some((code: any) => code.code === "I10"),
+    "searching for hypertension must find I10"
+  );
+
+  const byCode = await call("/api/public/icd10?q=J45", {});
+  assert.ok(byCode.data.codes.some((code: any) => code.code.startsWith("J45")), "a code search works too");
+});
+
+test("a doctor records their own leave", { skip }, async () => {
+  const doctor = await login(DOCTOR.email, DOCTOR.password, "doctor");
+
+  const away = new Date();
+  away.setDate(away.getDate() + 45);
+  const date = away.toISOString().slice(0, 10);
+
+  const created = await call("/api/doctor/schedule/overrides", {
+    token: doctor,
+    body: { date, isLeave: true, reason: "Workflow test leave" },
+  });
+  assert.equal(created.status, 201, JSON.stringify(created.data));
+  const overrideId = created.data.override.id;
+
+  const schedule = await call("/api/doctor/schedule", { token: doctor });
+  assert.equal(schedule.status, 200);
+  assert.ok(
+    schedule.data.overrides.some((o: any) => o.id === overrideId),
+    "the absence must appear on the doctor's own schedule"
+  );
+
+  const removed = await call(`/api/doctor/schedule/overrides/${overrideId}`, {
+    token: doctor,
+    method: "DELETE",
+  });
+  assert.equal(removed.status, 200);
+});

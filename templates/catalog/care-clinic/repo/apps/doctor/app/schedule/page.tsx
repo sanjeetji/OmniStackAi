@@ -1,426 +1,191 @@
 "use client";
 
-import { useState } from "react";
-import Link from "next/link";
-import {
-  Calendar,
-  Clock,
-  CheckCircle2,
-  AlertCircle,
-  Sliders,
-  Save,
-  ArrowRight,
-  ShieldCheck,
-  Building,
-  Video,
-} from "lucide-react";
+import { useEffect, useState } from "react";
+import { Clock, Save, SlidersHorizontal } from "lucide-react";
+import { defaultApiClient } from "@careclinic/shared";
+import { Shell } from "../../components/shell";
+import { Panel, Button, DataState, ErrorNote, Stat, inputClass } from "../../components/ui";
+import { useApi, useAction } from "../../lib/use-api";
+import { useSession } from "../../lib/session";
+import { clock } from "../../lib/format";
 
-interface DaySchedule {
-  day: string;
-  enabled: boolean;
-  morningStart: string;
-  morningEnd: string;
-  eveningStart: string;
-  eveningEnd: string;
-  telehealthStart: string;
-  telehealthEnd: string;
-  telehealthEnabled: boolean;
+const DAYS = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
+
+interface ShiftDraft {
+  day_of_week: number;
+  start_time: string;
+  end_time: string;
+  slot_duration_mins: number;
+  is_available: boolean;
 }
 
-const DEFAULT_SCHEDULE: DaySchedule[] = [
-  {
-    day: "Monday",
-    enabled: true,
-    morningStart: "09:00",
-    morningEnd: "13:00",
-    eveningStart: "17:00",
-    eveningEnd: "20:00",
-    telehealthStart: "14:00",
-    telehealthEnd: "16:00",
-    telehealthEnabled: true,
-  },
-  {
-    day: "Tuesday",
-    enabled: true,
-    morningStart: "09:00",
-    morningEnd: "13:00",
-    eveningStart: "17:00",
-    eveningEnd: "20:00",
-    telehealthStart: "14:00",
-    telehealthEnd: "16:00",
-    telehealthEnabled: true,
-  },
-  {
-    day: "Wednesday",
-    enabled: true,
-    morningStart: "09:00",
-    morningEnd: "13:00",
-    eveningStart: "17:00",
-    eveningEnd: "20:00",
-    telehealthStart: "14:00",
-    telehealthEnd: "16:00",
-    telehealthEnabled: false,
-  },
-  {
-    day: "Thursday",
-    enabled: true,
-    morningStart: "09:00",
-    morningEnd: "13:00",
-    eveningStart: "17:00",
-    eveningEnd: "20:00",
-    telehealthStart: "14:00",
-    telehealthEnd: "16:00",
-    telehealthEnabled: true,
-  },
-  {
-    day: "Friday",
-    enabled: true,
-    morningStart: "09:00",
-    morningEnd: "13:00",
-    eveningStart: "17:00",
-    eveningEnd: "20:00",
-    telehealthStart: "14:00",
-    telehealthEnd: "16:00",
-    telehealthEnabled: true,
-  },
-  {
-    day: "Saturday",
-    enabled: true,
-    morningStart: "09:30",
-    morningEnd: "13:30",
-    eveningStart: "",
-    eveningEnd: "",
-    telehealthStart: "15:00",
-    telehealthEnd: "17:00",
-    telehealthEnabled: true,
-  },
-  {
-    day: "Sunday",
-    enabled: false,
-    morningStart: "",
-    morningEnd: "",
-    eveningStart: "",
-    eveningEnd: "",
-    telehealthStart: "",
-    telehealthEnd: "",
-    telehealthEnabled: false,
-  },
-];
+/** "09:00:00" and "09:00" both come back from the API and the input; normalise to HH:MM. */
+function hhmm(value: string): string {
+  return value.slice(0, 5);
+}
 
-export default function DoctorSchedulePage() {
-  const [schedule, setSchedule] = useState<DaySchedule[]>(DEFAULT_SCHEDULE);
-  const [slotDuration, setSlotDuration] = useState<number>(20);
-  const [bufferTime, setBufferTime] = useState<number>(5);
-  const [saved, setSaved] = useState(false);
+export default function OpdHours() {
+  const { notify } = useSession();
+  const schedule = useApi(() => defaultApiClient.getDoctorSchedule(), []);
+  const { run, busy, error } = useAction();
+  const [shifts, setShifts] = useState<ShiftDraft[]>([]);
+  const [loaded, setLoaded] = useState(false);
 
-  const toggleDay = (index: number) => {
-    setSchedule((prev) =>
-      prev.map((item, i) =>
-        i === index ? { ...item, enabled: !item.enabled } : item
-      )
+  useEffect(() => {
+    if (!schedule.data || loaded) return;
+    setShifts(
+      schedule.data.shifts.map((shift) => ({
+        day_of_week: shift.day_of_week,
+        start_time: hhmm(shift.start_time),
+        end_time: hhmm(shift.end_time),
+        slot_duration_mins: shift.slot_duration_mins,
+        is_available: shift.is_available,
+      }))
     );
-  };
+    setLoaded(true);
+  }, [schedule.data, loaded]);
 
-  const updateTime = (
-    index: number,
-    field: keyof DaySchedule,
-    value: any
-  ) => {
-    setSchedule((prev) =>
-      prev.map((item, i) =>
-        i === index ? { ...item, [field]: value } : item
-      )
-    );
-  };
+  function update(index: number, patch: Partial<ShiftDraft>) {
+    setShifts((current) => current.map((shift, i) => (i === index ? { ...shift, ...patch } : shift)));
+  }
 
-  const handleSave = () => {
-    setSaved(true);
-    setTimeout(() => setSaved(false), 3000);
-  };
+  function addShift(day: number) {
+    setShifts((current) => [
+      ...current,
+      { day_of_week: day, start_time: "09:00", end_time: "13:00", slot_duration_mins: 20, is_available: true },
+    ]);
+  }
 
-  // Capacity estimate:
-  const activeDays = schedule.filter((d) => d.enabled).length;
-  const estimatedWeeklySlots = activeDays * (slotDuration === 15 ? 28 : slotDuration === 20 ? 21 : 14);
+  async function save() {
+    const ok = await run(async () => {
+      await defaultApiClient.updateDoctorSchedule(
+        shifts.map((shift) => ({
+          dayOfWeek: shift.day_of_week,
+          startTime: `${shift.start_time}:00`,
+          endTime: `${shift.end_time}:00`,
+          slotDurationMins: shift.slot_duration_mins,
+          isAvailable: shift.is_available,
+        }))
+      );
+      schedule.refresh();
+    });
+    if (ok) notify({ title: "OPD hours saved", detail: "New slots follow this rule", tone: "good" });
+  }
+
+  const weeklyHours = shifts
+    .filter((shift) => shift.is_available)
+    .reduce((sum, shift) => {
+      const [sh, sm] = shift.start_time.split(":").map(Number);
+      const [eh, em] = shift.end_time.split(":").map(Number);
+      return sum + Math.max(0, eh * 60 + em - (sh * 60 + sm)) / 60;
+    }, 0);
+  const slotsPerWeek = shifts
+    .filter((shift) => shift.is_available)
+    .reduce((sum, shift) => {
+      const [sh, sm] = shift.start_time.split(":").map(Number);
+      const [eh, em] = shift.end_time.split(":").map(Number);
+      return sum + Math.floor(Math.max(0, eh * 60 + em - (sh * 60 + sm)) / shift.slot_duration_mins);
+    }, 0);
 
   return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-        <div>
-          <div className="flex items-center gap-2 mb-1">
-            <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-emerald-100 text-emerald-800">
-              <ShieldCheck className="w-3.5 h-3.5" />
-              OPD Timetable Engine
-            </span>
-          </div>
-          <h1 className="text-2xl font-bold text-slate-900 tracking-tight">
-            Schedule Configuration
-          </h1>
-          <p className="text-sm text-slate-500">
-            Define recurring weekly clinic hours, consultation slot granularity, and telemedicine blocks.
-          </p>
-        </div>
+    <Shell
+      title="OPD hours"
+      subtitle="The rule your appointment slots are generated from"
+      actions={
+        <Button href="/schedule/rules" variant="quiet" size="sm">
+          <SlidersHorizontal size={13} /> Leave and changes
+        </Button>
+      }
+    >
+      {error && <div className="mb-3"><ErrorNote message={error} /></div>}
 
-        <div className="flex items-center gap-3">
-          <Link
-            href="/schedule/rules"
-            className="px-4 py-2 border border-slate-300 rounded-xl text-xs font-semibold text-slate-700 hover:bg-slate-100 inline-flex items-center gap-1.5 transition-colors"
-          >
-            <span>Availability Rules</span>
-            <ArrowRight className="w-3.5 h-3.5" />
-          </Link>
-
-          <button
-            onClick={handleSave}
-            className="px-5 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold inline-flex items-center gap-2 shadow-xs transition-colors"
-          >
-            <Save className="w-4 h-4" />
-            <span>Save Timetable</span>
-          </button>
-        </div>
+      <div className="grid gap-3 sm:grid-cols-3">
+        <Stat label="Clinic hours a week" value={`${weeklyHours.toFixed(0)}h`} icon={<Clock size={15} />} />
+        <Stat label="Slots a week" value={slotsPerWeek} tone="signal" hint="At the durations below" />
+        <Stat label="Days you sit" value={new Set(shifts.filter((s) => s.is_available).map((s) => s.day_of_week)).size} />
       </div>
 
-      {saved && (
-        <div className="p-4 bg-emerald-50 border border-emerald-200 rounded-xl flex items-center gap-3 text-emerald-800 text-sm animate-in fade-in duration-200">
-          <CheckCircle2 className="w-5 h-5 text-emerald-600 shrink-0" />
-          <span className="font-semibold">
-            Weekly schedule matrix successfully committed to OPD slot booking engine.
-          </span>
-        </div>
-      )}
+      <Panel className="mt-3" title="Weekly rule" subtitle="Each row is one sitting; a day can have more than one">
+        <DataState state={schedule}>
+          {() => (
+            <div className="space-y-4">
+              {DAYS.map((name, day) => {
+                const rows = shifts
+                  .map((shift, index) => ({ shift, index }))
+                  .filter(({ shift }) => shift.day_of_week === day);
 
-      {/* Global Shift & Slot Settings */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-xs space-y-3">
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-bold uppercase tracking-wider text-slate-400">
-              Slot Granularity
-            </span>
-            <Sliders className="w-4 h-4 text-emerald-600" />
-          </div>
-          <p className="text-xs text-slate-500">
-            Duration allocated per standard patient consultation.
-          </p>
-          <div className="grid grid-cols-3 gap-2">
-            {[15, 20, 30].map((mins) => (
-              <button
-                key={mins}
-                onClick={() => setSlotDuration(mins)}
-                className={`py-2 px-3 rounded-lg text-xs font-bold transition-colors ${
-                  slotDuration === mins
-                    ? "bg-emerald-600 text-white shadow-xs"
-                    : "bg-slate-100 text-slate-600 hover:bg-slate-200"
-                }`}
-              >
-                {mins} mins
-              </button>
-            ))}
-          </div>
-        </div>
-
-        <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-xs space-y-3">
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-bold uppercase tracking-wider text-slate-400">
-              Consultation Buffer
-            </span>
-            <Clock className="w-4 h-4 text-teal-600" />
-          </div>
-          <p className="text-xs text-slate-500">
-            Sanitization and charting interval between tokens.
-          </p>
-          <div className="grid grid-cols-3 gap-2">
-            {[0, 5, 10].map((mins) => (
-              <button
-                key={mins}
-                onClick={() => setBufferTime(mins)}
-                className={`py-2 px-3 rounded-lg text-xs font-bold transition-colors ${
-                  bufferTime === mins
-                    ? "bg-slate-900 text-white shadow-xs"
-                    : "bg-slate-100 text-slate-600 hover:bg-slate-200"
-                }`}
-              >
-                {mins} mins
-              </button>
-            ))}
-          </div>
-        </div>
-
-        <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-xs space-y-2">
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-bold uppercase tracking-wider text-slate-400">
-              Assigned Chamber
-            </span>
-            <Building className="w-4 h-4 text-indigo-600" />
-          </div>
-          <p className="text-base font-bold text-slate-900">OPD Chamber 101</p>
-          <p className="text-xs text-slate-500">
-            Cardiology Wing • First Floor • Desk A
-          </p>
-          <span className="inline-block text-[11px] font-semibold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-md">
-            Biometric Access Active
-          </span>
-        </div>
-      </div>
-
-      {/* Weekly Matrix Table */}
-      <div className="bg-white rounded-xl border border-slate-200 shadow-xs overflow-hidden">
-        <div className="p-4 border-b border-slate-200 bg-slate-50 flex items-center justify-between">
-          <div>
-            <h2 className="text-sm font-bold text-slate-900">Weekly Shift Matrix</h2>
-            <p className="text-xs text-slate-500">
-              Configure shift hours for in-clinic OPD and video telemedicine sessions.
-            </p>
-          </div>
-          <span className="text-xs font-semibold text-slate-600 bg-white px-3 py-1 rounded-lg border border-slate-200">
-            ~{estimatedWeeklySlots} total slots / week
-          </span>
-        </div>
-
-        <div className="divide-y divide-slate-100">
-          {schedule.map((item, index) => (
-            <div
-              key={item.day}
-              className={`p-4 transition-colors ${
-                item.enabled ? "bg-white" : "bg-slate-50/50"
-              }`}
-            >
-              <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
-                {/* Day Toggle */}
-                <div className="flex items-center gap-3 w-40">
-                  <input
-                    type="checkbox"
-                    checked={item.enabled}
-                    onChange={() => toggleDay(index)}
-                    className="w-4 h-4 text-emerald-600 rounded-sm border-slate-300 focus:ring-emerald-500 cursor-pointer"
-                  />
-                  <div>
-                    <span
-                      className={`text-sm font-bold block ${
-                        item.enabled ? "text-slate-900" : "text-slate-400"
-                      }`}
-                    >
-                      {item.day}
-                    </span>
-                    <span className="text-[11px] text-slate-400 block">
-                      {item.enabled ? "Active Clinic Day" : "Off Duty / Weekly Off"}
-                    </span>
-                  </div>
-                </div>
-
-                {/* Shift Hours Inputs */}
-                {item.enabled ? (
-                  <div className="flex-1 grid grid-cols-1 md:grid-cols-3 gap-4">
-                    {/* Morning Shift */}
-                    <div className="bg-slate-50 p-3 rounded-lg border border-slate-200">
-                      <div className="flex items-center justify-between mb-1.5">
-                        <span className="text-[11px] font-bold text-slate-700 uppercase">
-                          Morning OPD
-                        </span>
-                        <span className="text-[10px] text-slate-400 font-mono">In-Clinic</span>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <input
-                          type="time"
-                          value={item.morningStart}
-                          onChange={(e) =>
-                            updateTime(index, "morningStart", e.target.value)
-                          }
-                          className="w-full text-xs font-mono py-1 px-2 border border-slate-300 rounded-md bg-white text-slate-800"
-                        />
-                        <span className="text-xs text-slate-400">to</span>
-                        <input
-                          type="time"
-                          value={item.morningEnd}
-                          onChange={(e) =>
-                            updateTime(index, "morningEnd", e.target.value)
-                          }
-                          className="w-full text-xs font-mono py-1 px-2 border border-slate-300 rounded-md bg-white text-slate-800"
-                        />
-                      </div>
+                return (
+                  <div key={name} className="rounded-xl border border-[var(--color-border)] p-3">
+                    <div className="mb-2 flex items-center justify-between">
+                      <p className="text-[13px] font-semibold text-[var(--color-ink)]">{name}</p>
+                      <Button size="sm" variant="ghost" onClick={() => addShift(day)}>
+                        Add a sitting
+                      </Button>
                     </div>
 
-                    {/* Evening Shift */}
-                    <div className="bg-slate-50 p-3 rounded-lg border border-slate-200">
-                      <div className="flex items-center justify-between mb-1.5">
-                        <span className="text-[11px] font-bold text-slate-700 uppercase">
-                          Evening OPD
-                        </span>
-                        <span className="text-[10px] text-slate-400 font-mono">In-Clinic</span>
+                    {rows.length === 0 ? (
+                      <p className="text-[12.5px] text-[var(--color-ink-muted)]">No clinic on this day.</p>
+                    ) : (
+                      <div className="space-y-2">
+                        {rows.map(({ shift, index }) => (
+                          <div key={index} className="flex flex-wrap items-center gap-2">
+                            <input
+                              className={`${inputClass} w-28`}
+                              type="time"
+                              value={shift.start_time}
+                              onChange={(event) => update(index, { start_time: event.target.value })}
+                            />
+                            <span className="text-[12px] text-[var(--color-ink-muted)]">to</span>
+                            <input
+                              className={`${inputClass} w-28`}
+                              type="time"
+                              value={shift.end_time}
+                              onChange={(event) => update(index, { end_time: event.target.value })}
+                            />
+                            <select
+                              className={`${inputClass} w-28`}
+                              value={shift.slot_duration_mins}
+                              onChange={(event) => update(index, { slot_duration_mins: Number(event.target.value) })}
+                            >
+                              {[10, 15, 20, 30, 45].map((mins) => (
+                                <option key={mins} value={mins}>
+                                  {mins} min slots
+                                </option>
+                              ))}
+                            </select>
+                            <label className="flex items-center gap-1.5 text-[12.5px] text-[var(--color-ink-muted)]">
+                              <input
+                                type="checkbox"
+                                className="h-4 w-4 accent-[var(--color-emerald-brand)]"
+                                checked={shift.is_available}
+                                onChange={(event) => update(index, { is_available: event.target.checked })}
+                              />
+                              Open
+                            </label>
+                            <button
+                              onClick={() => setShifts((current) => current.filter((_, i) => i !== index))}
+                              className="text-[12px] text-slate-400 hover:text-red-600"
+                            >
+                              Remove
+                            </button>
+                          </div>
+                        ))}
                       </div>
-                      <div className="flex items-center gap-2">
-                        <input
-                          type="time"
-                          value={item.eveningStart}
-                          onChange={(e) =>
-                            updateTime(index, "eveningStart", e.target.value)
-                          }
-                          className="w-full text-xs font-mono py-1 px-2 border border-slate-300 rounded-md bg-white text-slate-800"
-                        />
-                        <span className="text-xs text-slate-400">to</span>
-                        <input
-                          type="time"
-                          value={item.eveningEnd}
-                          onChange={(e) =>
-                            updateTime(index, "eveningEnd", e.target.value)
-                          }
-                          className="w-full text-xs font-mono py-1 px-2 border border-slate-300 rounded-md bg-white text-slate-800"
-                        />
-                      </div>
-                    </div>
+                    )}
+                  </div>
+                );
+              })}
 
-                    {/* Telehealth Block */}
-                    <div className="bg-teal-50/60 p-3 rounded-lg border border-teal-200/70">
-                      <div className="flex items-center justify-between mb-1.5">
-                        <span className="text-[11px] font-bold text-teal-900 uppercase flex items-center gap-1">
-                          <Video className="w-3 h-3 text-teal-600" />
-                          Telehealth Window
-                        </span>
-                        <input
-                          type="checkbox"
-                          checked={item.telehealthEnabled}
-                          onChange={(e) =>
-                            updateTime(index, "telehealthEnabled", e.target.checked)
-                          }
-                          className="w-3.5 h-3.5 text-teal-600 rounded-sm focus:ring-teal-500"
-                        />
-                      </div>
-                      {item.telehealthEnabled ? (
-                        <div className="flex items-center gap-2">
-                          <input
-                            type="time"
-                            value={item.telehealthStart}
-                            onChange={(e) =>
-                              updateTime(index, "telehealthStart", e.target.value)
-                            }
-                            className="w-full text-xs font-mono py-1 px-2 border border-teal-300 rounded-md bg-white text-slate-800"
-                          />
-                          <span className="text-xs text-teal-600">to</span>
-                          <input
-                            type="time"
-                            value={item.telehealthEnd}
-                            onChange={(e) =>
-                              updateTime(index, "telehealthEnd", e.target.value)
-                            }
-                            className="w-full text-xs font-mono py-1 px-2 border border-teal-300 rounded-md bg-white text-slate-800"
-                          />
-                        </div>
-                      ) : (
-                        <span className="text-xs text-teal-600/70 italic block py-1">
-                          Telehealth disabled for this day
-                        </span>
-                      )}
-                    </div>
-                  </div>
-                ) : (
-                  <div className="flex-1 py-3 text-xs text-slate-400 italic">
-                    Chamber closed. Patients cannot book appointments on this day.
-                  </div>
-                )}
-              </div>
+              <Button disabled={busy} onClick={() => void save()}>
+                <Save size={13} /> {busy ? "Saving" : "Save the weekly rule"}
+              </Button>
+              <p className="text-[11.5px] text-[var(--color-ink-muted)]">
+                Saving replaces your whole rule. Appointments already booked are not moved.
+              </p>
             </div>
-          ))}
-        </div>
-      </div>
-    </div>
+          )}
+        </DataState>
+      </Panel>
+    </Shell>
   );
 }

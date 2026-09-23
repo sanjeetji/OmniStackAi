@@ -50,7 +50,7 @@ export default function PrescriptionDetailPage() {
           subjective: "Patient presented with intermittent exertional dyspnea and morning occipital headaches for 2 weeks.",
           assessment: "Essential Primary Hypertension (ICD-10: I10), Stage 1 with mild exertional tachycardia.",
           plan: "Initiate low-dose ARB therapy, dietary sodium restriction <2g/day, lipid profile workup, and repeat BP check in 3 weeks.",
-          notes: "Strict low-sodium diet, 30 min daily brisk walk, monitor blood pressure weekly.",
+          diagnosis_summary: "Strict low-sodium diet, 30 min daily brisk walk, monitor blood pressure weekly.",
           is_immutable: true,
           digital_signature: "SHA256:7f9a88c241e05d4b8e...VERIFIED_KMC_48291",
           signed_at: "2026-09-18T10:45:00Z",
@@ -59,10 +59,10 @@ export default function PrescriptionDetailPage() {
         setItems([
           {
             id: "item-1",
-            medication_name: "Telmisartan",
-            form: "Tablet",
-            dosage: "40 mg",
-            route: "Oral",
+            prescription_id: "rx-demo",
+            medicine_name: "Telmisartan",
+            dosage_form: "Tablet",
+            strength: "40 mg",
             frequency: "Once daily",
             timing: "After breakfast",
             duration_days: 30,
@@ -70,10 +70,10 @@ export default function PrescriptionDetailPage() {
           },
           {
             id: "item-2",
-            medication_name: "Atorvastatin",
-            form: "Tablet",
-            dosage: "10 mg",
-            route: "Oral",
+            prescription_id: "rx-demo",
+            medicine_name: "Atorvastatin",
+            dosage_form: "Tablet",
+            strength: "10 mg",
             frequency: "Once daily",
             timing: "At bedtime",
             duration_days: 30,
@@ -81,10 +81,10 @@ export default function PrescriptionDetailPage() {
           },
           {
             id: "item-3",
-            medication_name: "Paracetamol",
-            form: "Tablet",
-            dosage: "650 mg",
-            route: "Oral",
+            prescription_id: "rx-demo",
+            medicine_name: "Paracetamol",
+            dosage_form: "Tablet",
+            strength: "650 mg",
             frequency: "SOS (As needed)",
             timing: "After food",
             duration_days: 5,
@@ -229,10 +229,10 @@ export default function PrescriptionDetailPage() {
                   <tr key={idx} className="hover:bg-slate-50/60">
                     <td className="py-3 text-slate-400 font-semibold">{idx + 1}</td>
                     <td className="py-3 font-bold text-slate-900">
-                      <div>{item.medication_name}</div>
-                      <div className="text-[10px] text-slate-400 font-normal">{item.form}</div>
+                      <div>{item.medicine_name}</div>
+                      <div className="text-[10px] text-slate-400 font-normal">{item.dosage_form}</div>
                     </td>
-                    <td className="py-3 font-semibold text-teal-800">{item.dosage}</td>
+                    <td className="py-3 font-semibold text-teal-800">{item.strength}</td>
                     <td className="py-3 text-slate-700">
                       <div>{item.frequency}</div>
                       <div className="text-[11px] text-teal-700">{item.timing}</div>
@@ -247,10 +247,10 @@ export default function PrescriptionDetailPage() {
         </div>
 
         {/* Physician's Advice */}
-        {prescription.notes && (
+        {prescription.diagnosis_summary && (
           <div className="space-y-1.5 text-xs bg-slate-50 p-4 rounded-2xl border border-slate-100">
-            <span className="font-bold text-slate-800 block">General Advice & Lifestyle Modifications:</span>
-            <p className="text-slate-600 leading-relaxed">{prescription.notes}</p>
+            <span className="font-bold text-slate-800 block">Written for:</span>
+            <p className="text-slate-600 leading-relaxed">{prescription.diagnosis_summary}</p>
           </div>
         )}
 

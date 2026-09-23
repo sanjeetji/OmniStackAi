@@ -43,7 +43,7 @@ export default function DigitalPrescriptionsPage() {
             is_immutable: true,
             signed_at: "2026-09-18T10:45:00Z",
             created_at: "2026-09-18T10:45:00Z",
-            notes: "Maintain low sodium diet, 30 min daily brisk walk, monitor blood pressure weekly.",
+            diagnosis_summary: "Maintain low sodium diet, 30 min daily brisk walk, monitor blood pressure weekly.",
           },
           {
             id: "rx-102",
@@ -61,7 +61,7 @@ export default function DigitalPrescriptionsPage() {
             is_immutable: true,
             signed_at: "2026-08-15T11:20:00Z",
             created_at: "2026-08-15T11:20:00Z",
-            notes: "Apply topical ointment twice daily on affected dry skin areas.",
+            diagnosis_summary: "Apply topical ointment twice daily on affected dry skin areas.",
           },
         ]);
       } finally {
@@ -152,9 +152,9 @@ export default function DigitalPrescriptionsPage() {
                   )}
                 </div>
 
-                {rx.notes && (
+                {rx.diagnosis_summary && (
                   <p className="text-xs text-slate-600 bg-slate-50 p-3 rounded-2xl border border-slate-100 line-clamp-2 leading-relaxed">
-                    "{rx.notes}"
+                    "{rx.diagnosis_summary}"
                   </p>
                 )}
               </div>

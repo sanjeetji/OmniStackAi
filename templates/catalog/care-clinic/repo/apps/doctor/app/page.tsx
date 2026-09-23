@@ -1,401 +1,222 @@
 "use client";
 
-import { useState, useEffect } from "react";
 import Link from "next/link";
 import {
-  Users,
-  Clock,
-  CheckCircle2,
-  DollarSign,
   AlertTriangle,
-  ArrowRight,
-  Stethoscope,
+  CheckCircle2,
+  ClipboardList,
+  IndianRupee,
+  Play,
+  Users,
   Video,
-  Building2,
-  FileText,
-  FlaskConical,
-  Activity,
-  Calendar,
-  Sparkles,
-  ChevronRight,
 } from "lucide-react";
-import { defaultApiClient, formatINR, formatSlotTime } from "@careclinic/shared";
+import { defaultApiClient } from "@careclinic/shared";
+import { Shell } from "../components/shell";
+import { Panel, Stat, Badge, Button, DataState, Table, Row, Cell } from "../components/ui";
+import { useApi, useInterval } from "../lib/use-api";
+import { useSession } from "../lib/session";
+import { clock, count, minutesSince, money, num, titleCase, tone } from "../lib/format";
 
-export default function DoctorDashboardPage() {
-  const [metrics, setMetrics] = useState<any>({
-    today_total: 15,
-    waiting_count: 6,
-    in_consult_count: 1,
-    completed_count: 8,
-    video_count: 4,
-    today_earnings: 9800,
-  });
-  const [activeConsultation, setActiveConsultation] = useState<any>(null);
-  const [queue, setQueue] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
+export default function ClinicalDashboard() {
+  const { pulse, doctor } = useSession();
+  const dashboard = useApi(() => defaultApiClient.getDoctorDashboard(), [pulse]);
+  const queue = useApi(() => defaultApiClient.getDoctorQueue(), [pulse]);
 
-  useEffect(() => {
-    async function loadDashboard() {
-      try {
-        const [dashRes, qRes] = await Promise.allSettled([
-          defaultApiClient.getDoctorDashboard(),
-          defaultApiClient.getDoctorQueue(),
-        ]);
+  useInterval(() => {
+    dashboard.refresh();
+    queue.refresh();
+  }, 20_000);
 
-        if (dashRes.status === "fulfilled" && dashRes.value.metrics) {
-          setMetrics(dashRes.value.metrics);
-          setActiveConsultation(dashRes.value.activeConsultation);
-        } else {
-          // Fallback demo active consult
-          setActiveConsultation({
-            id: "apt-201",
-            appointment_number: "APT-202609-089",
-            patient_name: "Ananya Deshmukh",
-            patient_age: 32,
-            gender: "female",
-            blood_group: "O+",
-            token_number: 4,
-            start_time: "10:20:00",
-            status: "in_consult",
-            appointment_type: "in_clinic",
-            notes: "Intermittent chest tightness after climbing stairs, mild morning occipital headaches.",
-          });
-        }
-
-        if (qRes.status === "fulfilled" && qRes.value.queue) {
-          setQueue(qRes.value.queue);
-        } else {
-          setQueue([
-            {
-              id: "apt-202",
-              token_number: 5,
-              patient_name: "Ramesh Narayan",
-              patient_age: 58,
-              gender: "male",
-              start_time: "10:40:00",
-              status: "checked_in",
-              appointment_type: "in_clinic",
-              notes: "Post-angioplasty 6-month routine review and lipid check.",
-            },
-            {
-              id: "apt-203",
-              token_number: 6,
-              patient_name: "Pooja Hegde",
-              patient_age: 29,
-              gender: "female",
-              start_time: "11:00:00",
-              status: "booked",
-              appointment_type: "video",
-              notes: "Palpitations during stressful workdays; ECG review.",
-            },
-            {
-              id: "apt-204",
-              token_number: 7,
-              patient_name: "Siddharth Rao",
-              patient_age: 44,
-              gender: "male",
-              start_time: "11:20:00",
-              status: "booked",
-              appointment_type: "in_clinic",
-              notes: "Hypertension medication dosage titration.",
-            },
-          ]);
-        }
-      } finally {
-        setLoading(false);
-      }
-    }
-
-    loadDashboard();
-  }, []);
-
-  const kpis = [
-    {
-      title: "Today's Consultations",
-      value: metrics.today_total || 15,
-      sub: "Total booked slots",
-      icon: Users,
-      color: "bg-blue-50 text-blue-700 border-blue-100",
-    },
-    {
-      title: "Waiting in OPD Queue",
-      value: metrics.waiting_count || 6,
-      sub: "Arrived & checked in",
-      icon: Clock,
-      color: "bg-amber-50 text-amber-700 border-amber-100",
-    },
-    {
-      title: "Completed Visits",
-      value: metrics.completed_count || 8,
-      sub: "Rx issued & signed",
-      icon: CheckCircle2,
-      color: "bg-emerald-50 text-emerald-700 border-emerald-100",
-    },
-    {
-      title: "Today's Clinical Revenue",
-      value: formatINR(metrics.today_earnings || 9800),
-      sub: "Consultation fees collected",
-      icon: DollarSign,
-      color: "bg-teal-50 text-teal-700 border-teal-100",
-    },
-  ];
+  const metrics = dashboard.data?.metrics;
+  const active = dashboard.data?.activeConsultation ?? null;
+  const rows = queue.data?.queue ?? [];
+  const waiting = rows.filter((a) => a.status === "checked_in");
+  const next = waiting[0] ?? null;
+  const upcomingVideo = rows.filter((a) => a.appointment_type === "video" && a.status !== "completed");
 
   return (
-    <div className="space-y-6">
-      {/* Top Greeting & OPD Mode */}
-      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-extrabold text-slate-900 tracking-tight">
-            Clinical Dashboard
-          </h1>
-          <p className="text-xs text-slate-500 mt-0.5">
-            Real-time outpatient queue, active consultations, and diagnostic alerts.
-          </p>
-        </div>
+    <Shell
+      title={`Good day, ${doctor?.full_name?.split(" ").slice(0, 2).join(" ") ?? "Doctor"}`}
+      subtitle="Your clinic today"
+      actions={<Button href="/queue" size="sm">Open the queue</Button>}
+    >
+      <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+        <Stat label="On today's list" value={count(metrics?.today_total)} hint={`${count(metrics?.completed_count)} seen`} icon={<ClipboardList size={15} />} />
+        <Stat
+          label="Waiting for you"
+          value={count(metrics?.waiting_count)}
+          tone={num(metrics?.waiting_count) > 4 ? "alert" : "signal"}
+          hint={`${count(metrics?.pending_count)} yet to arrive`}
+          icon={<Users size={15} />}
+        />
+        <Stat label="Video visits" value={count(metrics?.video_count)} hint="Booked for today" icon={<Video size={15} />} />
+        <Stat label="Billed today" value={money(metrics?.today_earnings)} tone="good" hint="Completed consultations" icon={<IndianRupee size={15} />} />
+      </div>
 
-        <Link
-          href="/queue"
-          className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs px-4 py-2.5 rounded-xl transition-all shadow-xs flex items-center gap-1.5"
+      <div className="mt-3 grid gap-3 xl:grid-cols-[1.4fr_1fr]">
+        <Panel
+          title={active ? "In the chair" : "Nobody in the chair"}
+          subtitle={active ? "The consultation you are in the middle of" : "Call the next token when you are ready"}
         >
-          <Users className="w-4 h-4" />
-          <span>Open Patient Queue Board</span>
-        </Link>
-      </div>
-
-      {/* KPI Cards Grid */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        {kpis.map((kpi, idx) => {
-          const Icon = kpi.icon;
-          return (
-            <div
-              key={idx}
-              className="bg-white rounded-3xl p-5 border border-slate-200 shadow-xs flex items-start justify-between"
-            >
-              <div className="space-y-1">
-                <span className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider block">
-                  {kpi.title}
-                </span>
-                <span className="text-2xl font-black text-slate-900 block">{kpi.value}</span>
-                <span className="text-[11px] text-slate-500 block">{kpi.sub}</span>
-              </div>
-
-              <div className={`p-3 rounded-2xl border ${kpi.color}`}>
-                <Icon className="w-5 h-5" />
-              </div>
-            </div>
-          );
-        })}
-      </div>
-
-      {/* Active Consultation Spotlight Card */}
-      {activeConsultation && (
-        <div className="bg-gradient-to-r from-slate-900 via-slate-900 to-teal-950 rounded-3xl p-6 sm:p-7 text-white shadow-md border border-slate-800 space-y-4">
-          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
-            <div className="flex items-center gap-2">
-              <span className="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse"></span>
-              <span className="text-xs font-bold uppercase tracking-wider text-emerald-400">
-                Patient In Consultation Room • Token #{activeConsultation.token_number || 4}
-              </span>
-            </div>
-
-            <span className="text-xs text-slate-400">
-              Reporting: {formatSlotTime(activeConsultation.start_time)} •{" "}
-              <span className="capitalize">{activeConsultation.appointment_type.replace("_", " ")}</span>
-            </span>
-          </div>
-
-          <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-6 border-t border-slate-800 pt-4">
-            <div className="space-y-1">
-              <h2 className="text-xl sm:text-2xl font-extrabold text-white">
-                {activeConsultation.patient_name}
-              </h2>
-              <div className="flex flex-wrap items-center gap-3 text-xs text-slate-300">
-                <span>Age: {activeConsultation.patient_age || 32} Yrs</span>
-                <span>•</span>
-                <span className="capitalize">{activeConsultation.gender || "Female"}</span>
-                <span>•</span>
-                <span>Blood: {activeConsultation.blood_group || "O+"}</span>
-              </div>
-              {activeConsultation.notes && (
-                <p className="text-xs text-teal-200/90 italic pt-1">
-                  Chief Complaint: "{activeConsultation.notes}"
-                </p>
-              )}
-            </div>
-
-            {/* Direct Workflow Buttons */}
-            <div className="flex flex-wrap items-center gap-2.5">
-              <Link
-                href={`/consult/${activeConsultation.id}/soap`}
-                className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs px-4 py-2.5 rounded-xl transition-all shadow-xs flex items-center gap-1.5"
-              >
-                <FileText className="w-4 h-4" />
-                <span>Write SOAP Note</span>
-              </Link>
-
-              <Link
-                href={`/consult/${activeConsultation.id}/prescription`}
-                className="bg-teal-600 hover:bg-teal-700 text-white font-bold text-xs px-4 py-2.5 rounded-xl transition-all shadow-xs flex items-center gap-1.5"
-              >
-                <Stethoscope className="w-4 h-4" />
-                <span>E-Prescribe</span>
-              </Link>
-
-              {activeConsultation.appointment_type === "video" && (
-                <Link
-                  href={`/telehealth/${activeConsultation.id}`}
-                  className="bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs px-4 py-2.5 rounded-xl transition-all shadow-xs flex items-center gap-1.5"
-                >
-                  <Video className="w-4 h-4" />
-                  <span>Call Station</span>
-                </Link>
-              )}
-
-              <Link
-                href={activeConsultation ? `/patients/${activeConsultation.patient_id}` : "/patients"}
-                className="border border-slate-700 hover:border-slate-600 text-slate-300 hover:text-white font-semibold text-xs px-3.5 py-2.5 rounded-xl transition-colors"
-              >
-                Full Chart
-              </Link>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Two Column Layout: Waiting Queue Preview & Urgent Clinical Alerts */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Next Patients in Waiting Queue (2 Cols) */}
-        <div className="lg:col-span-2 bg-white rounded-3xl p-6 border border-slate-200 shadow-xs space-y-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <Users className="w-5 h-5 text-emerald-600" />
-              <h2 className="text-base font-bold text-slate-900">Next Up in OPD Queue</h2>
-            </div>
-            <Link
-              href="/queue"
-              className="text-xs font-bold text-emerald-700 hover:text-emerald-800 flex items-center gap-1"
-            >
-              <span>View Full Queue ({queue.length})</span>
-              <ArrowRight className="w-3.5 h-3.5" />
-            </Link>
-          </div>
-
-          <div className="space-y-3">
-            {queue.slice(0, 4).map((item) => (
-              <div
-                key={item.id}
-                className="p-4 rounded-2xl border border-slate-100 hover:border-slate-200 bg-slate-50/50 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 transition-all"
-              >
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-xl bg-slate-900 text-white font-bold flex items-center justify-center text-sm shrink-0">
-                    #{item.token_number || "--"}
+          <DataState state={dashboard}>
+            {() =>
+              active ? (
+                <div>
+                  <div className="flex flex-wrap items-start justify-between gap-3">
+                    <div>
+                      <h3 className="text-[18px] font-semibold tracking-tight text-[var(--color-ink)]">
+                        {active.patient_name}
+                      </h3>
+                      <p className="text-[12.5px] text-[var(--color-ink-muted)]">
+                        Token {active.token_number ?? "—"} · {clock(active.start_time)} ·{" "}
+                        {active.patient_age ? `${active.patient_age} yrs` : "age not recorded"}
+                        {active.gender ? `, ${titleCase(active.gender)}` : ""}
+                        {active.blood_group ? ` · ${active.blood_group}` : ""}
+                      </p>
+                    </div>
+                    <div className="flex flex-col items-end gap-1.5">
+                      <Badge tone="alert">In consultation</Badge>
+                      {active.started_at && (
+                        <span className="tabular text-[11.5px] text-[var(--color-ink-muted)]">
+                          {minutesSince(active.started_at)} min so far
+                        </span>
+                      )}
+                    </div>
                   </div>
-                  <div>
-                    <h3 className="text-sm font-bold text-slate-900">{item.patient_name}</h3>
-                    <p className="text-xs text-slate-500">
-                      {item.patient_age} Yrs • {item.gender} • Slot: {formatSlotTime(item.start_time)}
-                    </p>
-                    {item.notes && (
-                      <p className="text-[11px] text-slate-600 line-clamp-1 mt-0.5">
-                        Note: {item.notes}
+
+                  <div className="mt-4 flex flex-wrap gap-2">
+                    <Button href={`/consult/${active.id}`}>
+                      <Play size={13} /> Back to the consultation
+                    </Button>
+                    {active.appointment_type === "video" && (
+                      <Button href={`/telehealth/${active.id}`} variant="quiet">
+                        <Video size={13} /> Video room
+                      </Button>
+                    )}
+                    <Button href={`/patients/${active.patient_id}`} variant="quiet">
+                      Full chart
+                    </Button>
+                  </div>
+                </div>
+              ) : next ? (
+                <div>
+                  <p className="text-[12.5px] text-[var(--color-ink-muted)]">Next in the queue</p>
+                  <h3 className="mt-1 text-[18px] font-semibold tracking-tight text-[var(--color-ink)]">
+                    {next.patient_name}
+                  </h3>
+                  <p className="text-[12.5px] text-[var(--color-ink-muted)]">
+                    Token {next.token_number ?? "—"} · {clock(next.start_time)}
+                    {next.family_member_name ? ` · for ${next.family_member_name}` : ""}
+                  </p>
+                  <div className="mt-4">
+                    <Button href={`/consult/${next.id}`}>
+                      <Play size={13} /> Start the consultation
+                    </Button>
+                  </div>
+                </div>
+              ) : (
+                <p className="flex items-center gap-2 py-6 text-[13px] text-[var(--color-ink-muted)]">
+                  <CheckCircle2 size={15} className="text-emerald-600" />
+                  Nobody is waiting. The desk will send the next patient through.
+                </p>
+              )
+            }
+          </DataState>
+        </Panel>
+
+        <Panel title="Worth a look" subtitle="Things on today's list that need a decision" padded={false}>
+          <DataState state={queue}>
+            {() => {
+              const notes: { text: string; href: string; tone: "alert" | "info" }[] = [];
+              if (upcomingVideo.length > 0) {
+                notes.push({
+                  text: `${upcomingVideo.length} video visit${upcomingVideo.length > 1 ? "s" : ""} to join today`,
+                  href: "/queue",
+                  tone: "info",
+                });
+              }
+              const noShows = rows.filter((a) => a.status === "no_show");
+              if (noShows.length > 0) {
+                notes.push({ text: `${noShows.length} patient did not arrive`, href: "/queue", tone: "alert" });
+              }
+              const unsigned = rows.filter((a) => a.consultation_id && !a.prescription_id && a.status === "completed");
+              if (unsigned.length > 0) {
+                notes.push({
+                  text: `${unsigned.length} completed visit${unsigned.length > 1 ? "s" : ""} with no prescription`,
+                  href: "/queue",
+                  tone: "alert",
+                });
+              }
+              if (notes.length === 0) {
+                return (
+                  <p className="px-4 py-8 text-center text-[12.5px] text-[var(--color-ink-muted)]">
+                    Nothing needs your attention.
+                  </p>
+                );
+              }
+              return (
+                <ul className="divide-y divide-[var(--color-border)]">
+                  {notes.map((note) => (
+                    <li key={note.text}>
+                      <Link href={note.href} className="flex items-center gap-2.5 px-4 py-3 hover:bg-slate-50">
+                        <AlertTriangle
+                          size={14}
+                          className={note.tone === "alert" ? "shrink-0 text-amber-600" : "shrink-0 text-sky-600"}
+                        />
+                        <span className="text-[12.5px] text-[var(--color-ink)]">{note.text}</span>
+                      </Link>
+                    </li>
+                  ))}
+                </ul>
+              );
+            }}
+          </DataState>
+        </Panel>
+      </div>
+
+      <Panel
+        className="mt-3"
+        title="Today's list"
+        subtitle="In token order"
+        padded={false}
+        actions={<Button href="/queue" variant="ghost" size="sm">Open the queue</Button>}
+      >
+        <DataState state={queue} empty={{ title: "Nothing booked today", detail: "Your next clinic day will appear here." }}>
+          {(data) => (
+            <Table head={["Token", "Patient", "Time", "Type", "Status", ""]}>
+              {data.queue.slice(0, 10).map((entry) => (
+                <Row key={entry.id}>
+                  <Cell mono>{entry.token_number ?? "—"}</Cell>
+                  <Cell>
+                    <p className="font-medium text-[var(--color-ink)]">{entry.patient_name}</p>
+                    {entry.family_member_name && (
+                      <p className="text-[11px] text-[var(--color-ink-subtle)]">
+                        for {entry.family_member_name} ({entry.family_member_rel})
                       </p>
                     )}
-                  </div>
-                </div>
-
-                <div className="flex items-center gap-2 w-full sm:w-auto justify-end">
-                  {item.appointment_type === "video" ? (
-                    <span className="text-[10px] text-blue-700 bg-blue-50 px-2 py-0.5 rounded font-semibold flex items-center gap-1">
-                      <Video className="w-3 h-3" /> Video
-                    </span>
-                  ) : (
-                    <span className="text-[10px] text-slate-700 bg-slate-100 px-2 py-0.5 rounded font-semibold flex items-center gap-1">
-                      <Building2 className="w-3 h-3" /> In-Clinic
-                    </span>
-                  )}
-
-                  <Link
-                    href={`/consult/${item.id}`}
-                    className="bg-slate-900 hover:bg-slate-800 text-white font-semibold text-xs px-3.5 py-1.5 rounded-xl transition-colors shadow-2xs"
-                  >
-                    Call Patient
-                  </Link>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-
-        {/* Right Column: Clinical Alerts & Quick Actions (1 Col) */}
-        <div className="space-y-6">
-          {/* Urgent Diagnostic Alerts */}
-          <div className="bg-white rounded-3xl p-6 border border-slate-200 shadow-xs space-y-3">
-            <div className="flex items-center gap-2 text-rose-700 font-bold text-sm">
-              <AlertTriangle className="w-4 h-4 text-rose-600" />
-              <span>Diagnostic Alerts</span>
-            </div>
-
-            <div className="space-y-2.5 text-xs">
-              <div className="p-3 rounded-2xl bg-rose-50 border border-rose-100 space-y-1">
-                <div className="flex items-center justify-between font-bold text-rose-900">
-                  <span>Ananya Deshmukh</span>
-                  <span className="text-[10px] bg-rose-200/80 px-1.5 py-0.5 rounded">High LDL</span>
-                </div>
-                <p className="text-rose-800 text-[11px]">
-                  LDL Cholesterol: 108 mg/dL (Ref &lt; 100 mg/dL). Statin titrate review needed.
-                </p>
-              </div>
-
-              <div className="p-3 rounded-2xl bg-amber-50 border border-amber-100 space-y-1">
-                <div className="flex items-center justify-between font-bold text-amber-900">
-                  <span>Ramesh Narayan</span>
-                  <span className="text-[10px] bg-amber-200/80 px-1.5 py-0.5 rounded">BP 142/90</span>
-                </div>
-                <p className="text-amber-800 text-[11px]">
-                  Elevated systolic recorded at reception vitals check.
-                </p>
-              </div>
-            </div>
-          </div>
-
-          {/* Quick Physician Links */}
-          <div className="bg-white rounded-3xl p-6 border border-slate-200 shadow-xs space-y-3">
-            <h3 className="text-xs font-bold uppercase tracking-wider text-slate-400">
-              Quick Shortcuts
-            </h3>
-            <div className="grid grid-cols-2 gap-2 text-xs font-semibold">
-              <Link
-                href="/schedule"
-                className="p-3 rounded-2xl border border-slate-100 hover:border-emerald-200 hover:bg-emerald-50/40 text-slate-700 transition-all flex flex-col items-center gap-1.5 text-center"
-              >
-                <Calendar className="w-4 h-4 text-emerald-600" />
-                <span>OPD Shifts</span>
-              </Link>
-              <Link
-                href="/earnings"
-                className="p-3 rounded-2xl border border-slate-100 hover:border-emerald-200 hover:bg-emerald-50/40 text-slate-700 transition-all flex flex-col items-center gap-1.5 text-center"
-              >
-                <DollarSign className="w-4 h-4 text-emerald-600" />
-                <span>Earnings</span>
-              </Link>
-              <Link
-                href="/reviews"
-                className="p-3 rounded-2xl border border-slate-100 hover:border-emerald-200 hover:bg-emerald-50/40 text-slate-700 transition-all flex flex-col items-center gap-1.5 text-center"
-              >
-                <Sparkles className="w-4 h-4 text-emerald-600" />
-                <span>Reviews</span>
-              </Link>
-              <Link
-                href="/patients"
-                className="p-3 rounded-2xl border border-slate-100 hover:border-emerald-200 hover:bg-emerald-50/40 text-slate-700 transition-all flex flex-col items-center gap-1.5 text-center"
-              >
-                <Activity className="w-4 h-4 text-emerald-600" />
-                <span>Charts</span>
-              </Link>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
+                  </Cell>
+                  <Cell mono muted>{clock(entry.start_time)}</Cell>
+                  <Cell>
+                    <Badge tone={entry.appointment_type === "video" ? "signal" : "neutral"}>
+                      {entry.appointment_type === "video" ? "Video" : "In clinic"}
+                    </Badge>
+                  </Cell>
+                  <Cell>
+                    <Badge tone={tone.appointment(entry.status)}>{titleCase(entry.status)}</Badge>
+                  </Cell>
+                  <Cell align="right">
+                    {(entry.status === "checked_in" || entry.status === "in_consult") && (
+                      <Button size="sm" href={`/consult/${entry.id}`}>
+                        {entry.status === "in_consult" ? "Resume" : "Start"}
+                      </Button>
+                    )}
+                  </Cell>
+                </Row>
+              ))}
+            </Table>
+          )}
+        </DataState>
+      </Panel>
+    </Shell>
   );
 }

@@ -1,391 +1,300 @@
 "use client";
 
-import { useState } from "react";
-import { useParams, useRouter } from "next/navigation";
-import Link from "next/link";
-import {
-  Stethoscope,
-  Plus,
-  Trash2,
-  ShieldCheck,
-  CheckCircle2,
-  AlertTriangle,
-  ArrowLeft,
-  Pill,
-  Save,
-  ArrowRight,
-} from "lucide-react";
+import { use, useState } from "react";
+import { useRouter } from "next/navigation";
+import { Lock, Pill, Plus, ShieldCheck, Trash2 } from "lucide-react";
 import { defaultApiClient } from "@careclinic/shared";
+import { Shell } from "../../../../components/shell";
+import { ConsultFrame, BackToQueue } from "../../../../components/consult-frame";
+import { Panel, Badge, Button, DataState, ErrorNote, Field, inputClass } from "../../../../components/ui";
+import { useApi, useAction } from "../../../../lib/use-api";
+import { useSession } from "../../../../lib/session";
+import { readFrequency, stamp, titleCase } from "../../../../lib/format";
 
-interface RxRow {
-  medication_name: string;
-  form: string;
-  dosage: string;
-  route: string;
+interface Draft {
+  medicineName: string;
+  genericName: string;
+  dosageForm: string;
+  strength: string;
   frequency: string;
   timing: string;
-  duration_days: number;
+  durationDays: number;
   instructions: string;
 }
 
-export default function PrescriptionBuilderPage() {
-  const params = useParams();
+const EMPTY: Draft = {
+  medicineName: "",
+  genericName: "",
+  dosageForm: "tablet",
+  strength: "",
+  frequency: "1-0-1",
+  timing: "after_food",
+  durationDays: 7,
+  instructions: "",
+};
+
+// The vocabularies the database enforces (migrations/003_clinical.sql).
+const FORMS = ["tablet", "capsule", "syrup", "injection", "inhaler", "drops", "ointment"];
+const TIMINGS = ["after_food", "before_food", "with_food", "empty_stomach", "as_needed"];
+const FREQUENCIES = ["1-0-0", "0-0-1", "1-0-1", "1-1-1", "0-1-0", "1-1-0", "SOS"];
+
+export default function PrescriptionBuilder({ params }: { params: Promise<{ appointmentId: string }> }) {
+  const { appointmentId } = use(params);
   const router = useRouter();
-  const appointmentId = (params?.appointmentId as string) || "apt-201";
+  const { notify } = useSession();
+  const context = useApi(() => defaultApiClient.getConsultContext(appointmentId), [appointmentId]);
+  const { run, busy, error } = useAction();
 
-  const [diagnosisSummary, setDiagnosisSummary] = useState(
-    "Essential Primary Hypertension (I10) & Hyperlipidemia (E78.5)"
-  );
-  const [items, setItems] = useState<RxRow[]>([
-    {
-      medication_name: "Telmisartan",
-      form: "Tablet",
-      dosage: "40 mg",
-      route: "Oral",
-      frequency: "Once daily",
-      timing: "After breakfast",
-      duration_days: 30,
-      instructions: "Take consistently each morning at same time.",
-    },
-    {
-      medication_name: "Atorvastatin",
-      form: "Tablet",
-      dosage: "10 mg",
-      route: "Oral",
-      frequency: "Once daily",
-      timing: "At bedtime",
-      duration_days: 30,
-      instructions: "For cardioprotective lipid management.",
-    },
-  ]);
+  const [items, setItems] = useState<Draft[]>([]);
+  const [draft, setDraft] = useState<Draft>(EMPTY);
+  const [summary, setSummary] = useState("");
 
-  const [signing, setSigning] = useState(false);
-  const [signedPrescription, setSignedPrescription] = useState<any>(null);
-  const [allergyAlert, setAllergyAlert] = useState("");
+  function addDraft() {
+    if (!draft.medicineName.trim() || !draft.strength.trim()) return;
+    setItems((current) => [...current, draft]);
+    setDraft(EMPTY);
+  }
 
-  const handleAddItem = () => {
-    setItems([
-      ...items,
-      {
-        medication_name: "",
-        form: "Tablet",
-        dosage: "",
-        route: "Oral",
-        frequency: "Once daily",
-        timing: "After food",
-        duration_days: 14,
-        instructions: "",
-      },
-    ]);
-  };
-
-  const handleRemoveItem = (index: number) => {
-    setItems(items.filter((_, i) => i !== index));
-  };
-
-  const handleUpdateItem = (index: number, field: keyof RxRow, val: any) => {
-    const next = [...items];
-    (next[index] as any)[field] = val;
-
-    // Check allergy conflict
-    if (field === "medication_name" && val.toLowerCase().includes("penicillin")) {
-      setAllergyAlert("CRITICAL ALLERGY CONFLICT: Patient is allergic to Penicillin!");
-    } else {
-      setAllergyAlert("");
-    }
-
-    setItems(next);
-  };
-
-  const handleSignAndIssue = async () => {
-    setSigning(true);
-    try {
-      const res = await defaultApiClient.issuePrescription(appointmentId, {
+  async function sign(diagnosisSummary: string) {
+    const ok = await run(async () => {
+      await defaultApiClient.issuePrescription(appointmentId, {
         diagnosisSummary,
-        items,
+        items: items.map((item) => ({
+          medicineName: item.medicineName.trim(),
+          genericName: item.genericName.trim() || undefined,
+          dosageForm: item.dosageForm,
+          strength: item.strength.trim(),
+          frequency: item.frequency,
+          timing: item.timing,
+          durationDays: item.durationDays,
+          instructions: item.instructions.trim() || undefined,
+        })),
       });
-      setSignedPrescription(res.prescription);
-    } catch {
-      // preview fallback
-      setSignedPrescription({
-        prescription_number: "RX-2026-00142",
-        is_immutable: true,
-        digital_signature: "SHA256:7f9a88c241e05d4b8e...VERIFIED_KMC_48291",
-        signed_at: new Date().toISOString(),
-      });
-    } finally {
-      setSigning(false);
+      context.refresh();
+    });
+    if (ok) {
+      notify({ title: "Prescription signed", detail: "It cannot be edited after this", tone: "good" });
+      setItems([]);
+      router.push(`/consult/${appointmentId}`);
     }
-  };
+  }
 
   return (
-    <div className="max-w-5xl mx-auto space-y-6">
-      {/* Top Header */}
-      <div className="flex items-center justify-between">
-        <Link
-          href={`/consult/${appointmentId}`}
-          className="inline-flex items-center gap-1.5 text-xs font-semibold text-slate-500 hover:text-slate-900 transition-colors"
-        >
-          <ArrowLeft className="w-4 h-4" />
-          Back to Consultation Overview
-        </Link>
+    <Shell title="Prescription" subtitle="Signed once, then locked" actions={<BackToQueue />}>
+      {error && <div className="mb-3"><ErrorNote message={error} /></div>}
 
-        <div className="flex items-center gap-2">
-          {signedPrescription && (
-            <span className="text-xs text-emerald-700 bg-emerald-50 px-2.5 py-1 rounded-lg border border-emerald-200 font-semibold flex items-center gap-1">
-              <ShieldCheck className="w-3.5 h-3.5" />
-              <span>Signed & Certified (Immutable)</span>
-            </span>
-          )}
+      <DataState state={context}>
+        {(data) => {
+          const existing = data.prescription;
+          const diagnosisSummary =
+            summary ||
+            data.diagnoses.find((d) => d.is_primary)?.condition_name ||
+            data.diagnoses[0]?.condition_name ||
+            data.consultation?.assessment ||
+            "";
 
-          <button
-            onClick={handleSignAndIssue}
-            disabled={signing || !!signedPrescription || items.length === 0}
-            className="bg-emerald-600 hover:bg-emerald-700 disabled:bg-slate-300 text-white font-bold text-xs px-4 py-2 rounded-xl transition-all shadow-xs flex items-center gap-1.5 cursor-pointer"
-          >
-            <ShieldCheck className="w-3.5 h-3.5" />
-            <span>
-              {signing
-                ? "Signing Cryptographically..."
-                : signedPrescription
-                ? "Prescription Finalized"
-                : "Sign & Issue Digital Rx"}
-            </span>
-          </button>
-        </div>
-      </div>
+          if (existing) {
+            return (
+              <ConsultFrame context={data} appointmentId={appointmentId}>
+                <Panel
+                  title={`Prescription ${existing.prescription_number}`}
+                  subtitle={`Signed ${stamp(existing.signed_at)}`}
+                  actions={existing.is_immutable ? <Badge tone="good"><Lock size={11} /> Locked</Badge> : undefined}
+                >
+                  <p className="text-[13px] text-[var(--color-ink)]">
+                    <span className="font-semibold">For: </span>
+                    {existing.diagnosis_summary}
+                  </p>
 
-      {/* Patient & Allergy Banner */}
-      <div className="bg-white rounded-3xl p-5 border border-slate-200 shadow-2xs flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
-        <div>
-          <span className="text-[10px] uppercase font-bold text-slate-400">Digital Prescription Builder</span>
-          <h1 className="text-lg font-bold text-slate-900">Ananya Deshmukh • Token #4</h1>
-        </div>
+                  <ul className="mt-3 divide-y divide-[var(--color-border)] rounded-lg border border-[var(--color-border)]">
+                    {data.prescriptionItems.map((item) => (
+                      <li key={item.id} className="px-3 py-2.5">
+                        <div className="flex flex-wrap items-baseline justify-between gap-2">
+                          <p className="text-[13px] font-semibold text-[var(--color-ink)]">
+                            {item.medicine_name} {item.strength}
+                          </p>
+                          <span className="tabular text-[12px] text-[var(--color-ink-muted)]">
+                            {item.frequency} · {item.duration_days} days
+                          </span>
+                        </div>
+                        <p className="text-[12px] text-[var(--color-ink-muted)]">
+                          {titleCase(item.dosage_form)} · {readFrequency(item.frequency)} ·{" "}
+                          {titleCase(item.timing)}
+                        </p>
+                        {item.instructions && (
+                          <p className="mt-0.5 text-[11.5px] text-[var(--color-ink-subtle)]">{item.instructions}</p>
+                        )}
+                      </li>
+                    ))}
+                  </ul>
 
-        <div className="flex items-center gap-2 bg-rose-50 text-rose-800 text-xs px-3 py-1 rounded-xl border border-rose-200 font-semibold">
-          <AlertTriangle className="w-3.5 h-3.5 text-rose-600" />
-          <span>Patient Allergy: Penicillin</span>
-        </div>
-      </div>
+                  <p className="mt-3 flex items-center gap-1.5 text-[11.5px] text-[var(--color-ink-muted)]">
+                    <ShieldCheck size={13} className="text-emerald-600" />
+                    Digitally signed. A correction is a new prescription, never an edit to this one.
+                  </p>
+                </Panel>
+              </ConsultFrame>
+            );
+          }
 
-      {allergyAlert && (
-        <div className="p-3.5 rounded-2xl bg-rose-600 text-white text-xs font-bold flex items-center gap-2 animate-fade-in shadow-md">
-          <AlertTriangle className="w-5 h-5 shrink-0" />
-          <span>{allergyAlert}</span>
-        </div>
-      )}
+          return (
+            <ConsultFrame context={data} appointmentId={appointmentId}>
+              <div className="grid gap-3 lg:grid-cols-[1fr_1fr]">
+                <Panel title="Add a medicine">
+                  <div className="space-y-3">
+                    <Field label="Medicine">
+                      <input
+                        className={inputClass}
+                        value={draft.medicineName}
+                        onChange={(event) => setDraft({ ...draft, medicineName: event.target.value })}
+                        placeholder="Brand or generic name"
+                      />
+                    </Field>
+                    <div className="grid grid-cols-2 gap-2">
+                      <Field label="Strength">
+                        <input
+                          className={inputClass}
+                          value={draft.strength}
+                          onChange={(event) => setDraft({ ...draft, strength: event.target.value })}
+                          placeholder="500mg"
+                        />
+                      </Field>
+                      <Field label="Form">
+                        <select
+                          className={inputClass}
+                          value={draft.dosageForm}
+                          onChange={(event) => setDraft({ ...draft, dosageForm: event.target.value })}
+                        >
+                          {FORMS.map((form) => (
+                            <option key={form} value={form}>
+                              {titleCase(form)}
+                            </option>
+                          ))}
+                        </select>
+                      </Field>
+                    </div>
+                    <div className="grid grid-cols-3 gap-2">
+                      <Field label="Frequency">
+                        <select
+                          className={inputClass}
+                          value={draft.frequency}
+                          onChange={(event) => setDraft({ ...draft, frequency: event.target.value })}
+                        >
+                          {FREQUENCIES.map((frequency) => (
+                            <option key={frequency} value={frequency}>
+                              {frequency}
+                            </option>
+                          ))}
+                        </select>
+                      </Field>
+                      <Field label="Timing">
+                        <select
+                          className={inputClass}
+                          value={draft.timing}
+                          onChange={(event) => setDraft({ ...draft, timing: event.target.value })}
+                        >
+                          {TIMINGS.map((timing) => (
+                            <option key={timing} value={timing}>
+                              {titleCase(timing)}
+                            </option>
+                          ))}
+                        </select>
+                      </Field>
+                      <Field label="Days">
+                        <input
+                          className={inputClass}
+                          type="number"
+                          min={1}
+                          max={180}
+                          value={draft.durationDays}
+                          onChange={(event) => setDraft({ ...draft, durationDays: Number(event.target.value) })}
+                        />
+                      </Field>
+                    </div>
+                    <Field label="Instructions" hint="Printed on the slip for the patient.">
+                      <input
+                        className={inputClass}
+                        value={draft.instructions}
+                        onChange={(event) => setDraft({ ...draft, instructions: event.target.value })}
+                        placeholder="Take with warm water"
+                      />
+                    </Field>
 
-      {/* Diagnosis Summary Field */}
-      <div className="bg-white rounded-3xl p-6 border border-slate-200 shadow-xs space-y-2">
-        <label className="text-xs font-bold text-slate-700 block uppercase tracking-wide">
-          Clinical Diagnosis Summary on Rx
-        </label>
-        <input
-          type="text"
-          value={diagnosisSummary}
-          disabled={!!signedPrescription}
-          onChange={(e) => setDiagnosisSummary(e.target.value)}
-          placeholder="e.g. Essential Primary Hypertension, Stage 1"
-          className="w-full text-xs px-3.5 py-2.5 border border-slate-200 rounded-xl focus:border-emerald-500 focus:outline-hidden font-semibold text-slate-800"
-        />
-      </div>
+                    <p className="text-[11.5px] text-[var(--color-ink-muted)]">
+                      {draft.frequency === "SOS"
+                        ? "As needed"
+                        : `${readFrequency(draft.frequency)}, ${titleCase(draft.timing).toLowerCase()}`}
+                      {draft.durationDays ? `, for ${draft.durationDays} days` : ""}.
+                    </p>
 
-      {/* Medication List Table */}
-      <div className="bg-white rounded-3xl p-6 border border-slate-200 shadow-xs space-y-4">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2 font-bold text-slate-900 text-sm">
-            <Pill className="w-4 h-4 text-emerald-600" />
-            <span>Prescribed Medications ({items.length})</span>
-          </div>
+                    <Button variant="quiet" onClick={addDraft} disabled={!draft.medicineName.trim() || !draft.strength.trim()}>
+                      <Plus size={13} /> Add to the prescription
+                    </Button>
+                  </div>
+                </Panel>
 
-          {!signedPrescription && (
-            <button
-              onClick={handleAddItem}
-              className="bg-emerald-50 hover:bg-emerald-100 text-emerald-800 font-semibold text-xs px-3 py-1.5 rounded-xl transition-colors flex items-center gap-1 cursor-pointer"
-            >
-              <Plus className="w-3.5 h-3.5" />
-              <span>Add Medication</span>
-            </button>
-          )}
-        </div>
-
-        <div className="space-y-3">
-          {items.map((item, idx) => (
-            <div
-              key={idx}
-              className="p-4 rounded-2xl border border-slate-200 bg-slate-50/40 space-y-3"
-            >
-              <div className="grid grid-cols-1 sm:grid-cols-4 gap-2 text-xs">
-                {/* Drug Name */}
-                <div className="sm:col-span-2">
-                  <label className="text-[10px] uppercase font-bold text-slate-400 block mb-0.5">
-                    Drug Name
-                  </label>
-                  <input
-                    type="text"
-                    disabled={!!signedPrescription}
-                    placeholder="e.g. Telmisartan"
-                    value={item.medication_name}
-                    onChange={(e) => handleUpdateItem(idx, "medication_name", e.target.value)}
-                    className="w-full text-xs px-3 py-2 bg-white border border-slate-200 rounded-xl focus:border-emerald-500 focus:outline-hidden font-bold text-slate-800"
-                  />
-                </div>
-
-                {/* Form */}
-                <div>
-                  <label className="text-[10px] uppercase font-bold text-slate-400 block mb-0.5">
-                    Form
-                  </label>
-                  <select
-                    disabled={!!signedPrescription}
-                    value={item.form}
-                    onChange={(e) => handleUpdateItem(idx, "form", e.target.value)}
-                    className="w-full text-xs px-3 py-2 bg-white border border-slate-200 rounded-xl focus:border-emerald-500 focus:outline-hidden text-slate-700"
-                  >
-                    <option value="Tablet">Tablet</option>
-                    <option value="Capsule">Capsule</option>
-                    <option value="Syrup">Syrup</option>
-                    <option value="Injection">Injection</option>
-                    <option value="Ointment">Ointment</option>
-                    <option value="Drops">Drops</option>
-                  </select>
-                </div>
-
-                {/* Dosage */}
-                <div>
-                  <label className="text-[10px] uppercase font-bold text-slate-400 block mb-0.5">
-                    Dosage
-                  </label>
-                  <input
-                    type="text"
-                    disabled={!!signedPrescription}
-                    placeholder="e.g. 40 mg"
-                    value={item.dosage}
-                    onChange={(e) => handleUpdateItem(idx, "dosage", e.target.value)}
-                    className="w-full text-xs px-3 py-2 bg-white border border-slate-200 rounded-xl focus:border-emerald-500 focus:outline-hidden font-medium text-slate-800"
-                  />
-                </div>
-              </div>
-
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-xs">
-                {/* Frequency */}
-                <div>
-                  <label className="text-[10px] uppercase font-bold text-slate-400 block mb-0.5">
-                    Frequency
-                  </label>
-                  <select
-                    disabled={!!signedPrescription}
-                    value={item.frequency}
-                    onChange={(e) => handleUpdateItem(idx, "frequency", e.target.value)}
-                    className="w-full text-xs px-3 py-2 bg-white border border-slate-200 rounded-xl focus:border-emerald-500 focus:outline-hidden text-slate-700"
-                  >
-                    <option value="Once daily">Once daily (OD)</option>
-                    <option value="Twice daily">Twice daily (BD)</option>
-                    <option value="Thrice daily">Thrice daily (TDS)</option>
-                    <option value="Four times daily">Four times daily (QID)</option>
-                    <option value="SOS (As needed)">SOS (As needed)</option>
-                  </select>
-                </div>
-
-                {/* Timing */}
-                <div>
-                  <label className="text-[10px] uppercase font-bold text-slate-400 block mb-0.5">
-                    Timing
-                  </label>
-                  <select
-                    disabled={!!signedPrescription}
-                    value={item.timing}
-                    onChange={(e) => handleUpdateItem(idx, "timing", e.target.value)}
-                    className="w-full text-xs px-3 py-2 bg-white border border-slate-200 rounded-xl focus:border-emerald-500 focus:outline-hidden text-slate-700"
-                  >
-                    <option value="After breakfast">After breakfast</option>
-                    <option value="After lunch">After lunch</option>
-                    <option value="After dinner">After dinner</option>
-                    <option value="Before meals">Before meals</option>
-                    <option value="At bedtime">At bedtime</option>
-                  </select>
-                </div>
-
-                {/* Duration Days */}
-                <div>
-                  <label className="text-[10px] uppercase font-bold text-slate-400 block mb-0.5">
-                    Duration (Days)
-                  </label>
-                  <input
-                    type="number"
-                    disabled={!!signedPrescription}
-                    value={item.duration_days}
-                    onChange={(e) =>
-                      handleUpdateItem(idx, "duration_days", parseInt(e.target.value, 10) || 1)
-                    }
-                    className="w-full text-xs px-3 py-2 bg-white border border-slate-200 rounded-xl focus:border-emerald-500 focus:outline-hidden text-slate-800"
-                  />
-                </div>
-
-                {/* Remove button */}
-                <div className="flex items-end justify-end">
-                  {!signedPrescription && items.length > 1 && (
-                    <button
-                      type="button"
-                      onClick={() => handleRemoveItem(idx)}
-                      className="text-slate-400 hover:text-rose-600 p-2 transition-colors cursor-pointer"
-                      title="Remove row"
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </button>
+                <Panel title="The prescription" subtitle={`${items.length} medicine${items.length === 1 ? "" : "s"}`}>
+                  {data.medicalHistory.allergies?.length > 0 && (
+                    <p className="mb-3 rounded-lg border border-red-200 bg-red-50 px-2.5 py-1.5 text-[12px] text-red-800">
+                      Allergic to {data.medicalHistory.allergies.join(", ")}
+                    </p>
                   )}
-                </div>
+
+                  <Field label="Written for">
+                    <input
+                      className={inputClass}
+                      value={diagnosisSummary}
+                      onChange={(event) => setSummary(event.target.value)}
+                      placeholder="The condition this prescription treats"
+                    />
+                  </Field>
+
+                  {items.length === 0 ? (
+                    <p className="mt-3 flex items-center gap-2 py-8 text-center text-[12.5px] text-[var(--color-ink-muted)]">
+                      <Pill size={15} className="text-slate-400" /> Nothing added yet.
+                    </p>
+                  ) : (
+                    <ul className="mt-3 divide-y divide-[var(--color-border)] rounded-lg border border-[var(--color-border)]">
+                      {items.map((item, index) => (
+                        <li key={`${item.medicineName}-${index}`} className="flex items-start justify-between gap-2 px-3 py-2.5">
+                          <div className="min-w-0">
+                            <p className="text-[12.5px] font-semibold text-[var(--color-ink)]">
+                              {item.medicineName} {item.strength}
+                            </p>
+                            <p className="text-[11.5px] text-[var(--color-ink-muted)]">
+                              {titleCase(item.dosageForm)} · {item.frequency} · {titleCase(item.timing)} ·{" "}
+                              {item.durationDays} days
+                            </p>
+                          </div>
+                          <button
+                            onClick={() => setItems((current) => current.filter((_, i) => i !== index))}
+                            aria-label="Remove"
+                            className="shrink-0 text-slate-400 hover:text-red-600"
+                          >
+                            <Trash2 size={14} />
+                          </button>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+
+                  <div className="mt-4 border-t border-[var(--color-border)] pt-3">
+                    <Button
+                      disabled={busy || items.length === 0 || !diagnosisSummary.trim() || !data.consultation}
+                      onClick={() => void sign(diagnosisSummary.trim())}
+                    >
+                      <ShieldCheck size={13} /> {busy ? "Signing" : "Sign and issue"}
+                    </Button>
+                    <p className="mt-1.5 text-[11.5px] text-[var(--color-ink-muted)]">
+                      Signing locks the prescription. The patient can read it immediately.
+                    </p>
+                  </div>
+                </Panel>
               </div>
-
-              {/* Instructions */}
-              <div>
-                <input
-                  type="text"
-                  disabled={!!signedPrescription}
-                  placeholder="Special instructions (e.g. do not abruptly discontinue)..."
-                  value={item.instructions}
-                  onChange={(e) => handleUpdateItem(idx, "instructions", e.target.value)}
-                  className="w-full text-xs px-3 py-1.5 bg-white border border-slate-200 rounded-xl focus:border-emerald-500 focus:outline-hidden text-slate-600"
-                />
-              </div>
-            </div>
-          ))}
-        </div>
-      </div>
-
-      {/* Signature Confirmation Details */}
-      {signedPrescription && (
-        <div className="p-5 rounded-3xl bg-emerald-50 border border-emerald-200 text-xs space-y-1 text-emerald-950 animate-fade-in">
-          <div className="flex items-center gap-1.5 font-bold text-emerald-800">
-            <ShieldCheck className="w-4 h-4 text-emerald-600" />
-            <span>Prescription Digitally Signed by Dr. Rajesh Varma, MD (KMC Reg: 48291)</span>
-          </div>
-          <p className="text-[11px] font-mono text-emerald-700">
-            Hash: {signedPrescription.digital_signature || "SHA256:7f9a88c241e05d4b8e"}
-          </p>
-          <p className="text-slate-500 text-[11px]">
-            Prescription #{signedPrescription.prescription_number || "RX-2026-00142"} is now immutable and immediately viewable in patient’s digital portal.
-          </p>
-        </div>
-      )}
-
-      {/* Next Flow Bar */}
-      <div className="flex items-center justify-between pt-2">
-        <Link
-          href={`/consult/${appointmentId}/soap`}
-          className="text-xs font-semibold text-slate-500 hover:text-slate-800"
-        >
-          ← Edit SOAP Clinical Notes
-        </Link>
-
-        <Link
-          href={`/consult/${appointmentId}/labs`}
-          className="bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs px-5 py-2.5 rounded-xl transition-all shadow-xs flex items-center gap-1.5"
-        >
-          <span>Next: Diagnostic Lab Orders</span>
-          <ArrowRight className="w-3.5 h-3.5" />
-        </Link>
-      </div>
-    </div>
+            </ConsultFrame>
+          );
+        }}
+      </DataState>
+    </Shell>
   );
 }

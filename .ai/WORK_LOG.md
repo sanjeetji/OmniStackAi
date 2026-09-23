@@ -1,5 +1,56 @@
 # Work Log
 
+## 2026-09-23 — R-539 (CareClinic doctor workstation on the API; the platform's own account commands)
+
+- **`apps/doctor` rebuilt against the API.**
+  - What it was: all 15 screens rendered hard-coded arrays and objects. Only `/`, `/queue` and
+    `/patients/[id]` called the API at all, and each overlaid invented values on the response, so
+    the screen showed fiction even when the request succeeded.
+  - New foundations, mirroring the console: `lib/session.tsx` (doctor session, one shared SSE
+    connection, toasts), `lib/use-api.ts`, `lib/format.ts` (plus `readFrequency` for the "1-0-1"
+    notation and `minutesSince` for time in the chair), `components/shell.tsx` with the guard,
+    `components/ui.tsx`, `components/charts.tsx`, and `components/consult-frame.tsx` — the patient
+    banner, allergy strip, desk vitals and tab strip every consultation screen shares.
+  - The consultation chain is real: opening the screen moves a checked-in patient to `in_consult`,
+    the SOAP screen writes notes and ICD-10 diagnoses, the prescription screen signs and then
+    renders a locked slip, the lab screen raises an order from the clinic's own catalogue, and
+    completing the visit releases the patient to the desk.
+- **API added for it.**
+  - `GET /api/doctor/consult/:appointmentId`: appointment, patient, allergies and chronic
+    conditions, the desk's vitals, the consultation, diagnoses, prescription and items, lab orders,
+    and previous completed visits — in one read. It is scoped to the signed-in doctor, so another
+    doctor's patient is a 404, and it writes a chart-access row like every other chart read.
+  - `GET /api/doctor/earnings`, `POST`/`DELETE /api/doctor/schedule/overrides`.
+  - `GET /api/public/icd10` over `icd10_catalog` (migration `006_icd10.sql`, generated seed
+    `002_icd10.sql`, 70 codes a multi-specialty clinic actually reaches for).
+- **Defects found and fixed.**
+  - The earnings totals joined `invoices` directly. A visit with both a consultation invoice and a
+    diagnostics invoice produced two rows, so `SUM(a.fee_amount)` counted the consultation fee
+    twice: a headline of 24,500 against daily rows summing to 14,000. The workflow test asserts
+    the daily rows add up to the headline, which is how it was caught. Fixed with a LATERAL that
+    picks one invoice per appointment.
+  - `Consultation`, `Diagnosis`, `Prescription`, `PrescriptionItem` and `LabTest` in
+    `@careclinic/shared` named columns the API never returns (`ended_at`, `icd10_description`,
+    `medication_name`, `dosage`, `form`, `route`, `notes`). The patient's printable prescription
+    read three of them, so the medicine name, form and dose were blank on every real prescription.
+- **The platform's own commands.**
+  - `omnistack.sh fresh`: removes the PostgreSQL volume and the Studio workspace, starts clean,
+    and creates the first owner. It demands the word `wipe` unless `--yes` is given, and names
+    exactly what it will destroy before asking.
+  - `omnistack.sh admin`: `list-users`, `create-owner`, `set-role`, `set-plan`, `grant-credits`,
+    through `services/control-plane/cmd/platformctl`. It reuses `internal/password`, so an account
+    it creates verifies against the API like any other; `grant-credits` writes to `credit_ledger`
+    with the balance after, inside a transaction.
+  - `COMMANDS.md` gained the factory reset, account administration, a table of what the
+    role/plan/credit model enforces today (credits and BYOK: yes; roles and plans: stored but not
+    enforced; organisations: tables only), and how to work on a template.
+- **Evidence.** 18/18 API unit tests; 9/9 live cross-app workflow tests (three new: the workstation
+  context including the cross-doctor 404, the ICD-10 search, and a doctor recording their own
+  leave); 23/23 offline tests; 48/48 pages in a real browser with no page errors or failed
+  requests; 48 screens recaptured from the running template; `pnpm -r typecheck` clean across five
+  packages; `go test ./...` 22 packages; an owner created by `admin create-owner` signs in to the
+  console as `super_admin` on the `enterprise` plan with its credits.
+
 ## 2026-09-23 — R-538 (CareClinic part 4/4: clinic operations console, screenshots, publish)
 
 - **The console (`apps/admin`, "CareClinic Ops"), rewritten against the API.**

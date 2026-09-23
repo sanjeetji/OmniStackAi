@@ -1,188 +1,151 @@
 "use client";
 
-import { useState } from "react";
-import { useParams } from "next/navigation";
-import Link from "next/link";
-import {
-  FileText,
-  AlertTriangle,
-  Heart,
-  Pill,
-  Scissors,
-  Users,
-  ShieldCheck,
-  ArrowLeft,
-  Plus,
-} from "lucide-react";
+import { use } from "react";
+import { ArrowLeft, FlaskConical, Pill, Stethoscope } from "lucide-react";
+import { defaultApiClient } from "@careclinic/shared";
+import { Shell } from "../../../../components/shell";
+import { Panel, Badge, Button, DataState } from "../../../../components/ui";
+import { TrendChart } from "../../../../components/charts";
+import { useApi } from "../../../../lib/use-api";
+import { dayShort, day, stamp, titleCase, tone } from "../../../../lib/format";
 
-export default function ComprehensiveMedicalHistoryPage() {
-  const params = useParams();
-  const patientId = (params?.id as string) || "pat-1";
+type Entry =
+  | { kind: "consultation"; at: string; title: string; detail: string; sub: string }
+  | { kind: "prescription"; at: string; title: string; detail: string; sub: string }
+  | { kind: "lab"; at: string; title: string; detail: string; sub: string; status: string };
 
-  const [history, setHistory] = useState({
-    allergies: [
-      { name: "Penicillin", reaction: "Moderate skin rash & angioedema", verified: true },
-      { name: "Sulfa Drugs", reaction: "Mild gastrointestinal upset", verified: false },
-    ],
-    chronicConditions: [
-      { condition: "Stage 1 Essential Hypertension", diagnosedYear: 2024, status: "Active (Managed)" },
-      { condition: "Dyslipidemia", diagnosedYear: 2025, status: "Diet & Statin controlled" },
-    ],
-    activeMedications: [
-      { name: "Telmisartan", dose: "40 mg", freq: "Once daily" },
-      { name: "Atorvastatin", dose: "10 mg", freq: "Once daily at bedtime" },
-    ],
-    pastSurgeries: [
-      { procedure: "Appendectomy (Laparoscopic)", year: 2018, hospital: "Manipal Hospital" },
-    ],
-    familyHistory: [
-      { relative: "Father", conditions: "Hypertension, Coronary Artery Disease (Onset age 62)" },
-      { relative: "Mother", conditions: "Type 2 Diabetes Mellitus" },
-    ],
-    lifestyle: {
-      smoking: "Never smoker",
-      alcohol: "Occasional social wine",
-      diet: "Predominantly vegetarian, low sodium",
-      physicalActivity: "Brisk walking 30 mins, 4 days/week",
-    },
-  });
+export default function PatientHistory({ params }: { params: Promise<{ id: string }> }) {
+  const { id } = use(params);
+  const chart = useApi(() => defaultApiClient.getPatientChart(id), [id]);
 
   return (
-    <div className="max-w-4xl mx-auto space-y-6">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <Link
-          href={`/patients/${patientId}`}
-          className="inline-flex items-center gap-1.5 text-xs font-semibold text-slate-500 hover:text-slate-900 transition-colors"
-        >
-          <ArrowLeft className="w-4 h-4" />
-          Back to Patient Chart
-        </Link>
+    <Shell
+      title="Longitudinal history"
+      subtitle="Every encounter on record, newest first"
+      actions={
+        <Button href={`/patients/${id}`} variant="quiet" size="sm">
+          <ArrowLeft size={13} /> Chart
+        </Button>
+      }
+    >
+      <DataState state={chart}>
+        {(data) => {
+          const entries: Entry[] = [
+            ...data.consultations.map((c) => ({
+              kind: "consultation" as const,
+              at: String(c.completed_at ?? c.scheduled_date),
+              title: c.assessment ?? "Consultation",
+              detail: c.plan ?? "",
+              sub: `${c.doctor_name} · ${c.appointment_number}`,
+            })),
+            ...data.prescriptions.map((rx) => ({
+              kind: "prescription" as const,
+              at: String(rx.signed_at ?? rx.created_at),
+              title: rx.diagnosis_summary,
+              detail: `Prescription ${rx.prescription_number}`,
+              sub: rx.doctor_name,
+            })),
+            ...data.labOrders.map((order) => ({
+              kind: "lab" as const,
+              at: String(order.completed_at ?? order.created_at),
+              title: `Lab order ${order.order_number}`,
+              detail: "",
+              sub: order.doctor_name,
+              status: order.status,
+            })),
+          ].sort((a, b) => new Date(b.at).getTime() - new Date(a.at).getTime());
 
-        <span className="text-xs text-slate-400">UHID: CC-PAT-001</span>
-      </div>
+          const bp = [...data.vitals]
+            .filter((v) => v.bp_systolic)
+            .reverse()
+            .map((v) => ({
+              label: dayShort(v.recorded_at),
+              value: Number(v.bp_systolic),
+              secondary: Number(v.bp_diastolic),
+            }));
 
-      <div className="bg-white rounded-3xl p-6 border border-slate-200 shadow-xs flex items-center justify-between">
-        <div>
-          <span className="text-[10px] uppercase font-bold text-slate-400">Comprehensive Clinical History</span>
-          <h1 className="text-xl font-bold text-slate-900">Ananya Deshmukh (Age 32, Female)</h1>
-        </div>
-        <div className="text-xs text-emerald-700 bg-emerald-50 px-3 py-1.5 rounded-xl border border-emerald-200 font-semibold">
-          Verified Electronic Health Record
-        </div>
-      </div>
+          return (
+            <div className="grid gap-3 lg:grid-cols-[1.5fr_1fr]">
+              <Panel title="Timeline" subtitle={`${entries.length} entries`} padded={false}>
+                {entries.length === 0 ? (
+                  <p className="px-4 py-12 text-center text-[13px] text-[var(--color-ink-muted)]">
+                    Nothing on record for this patient yet.
+                  </p>
+                ) : (
+                  <ol className="divide-y divide-[var(--color-border)]">
+                    {entries.map((entry, index) => (
+                      <li key={`${entry.kind}-${index}`} className="flex gap-3 px-4 py-3">
+                        <span className="mt-0.5 shrink-0 text-slate-400">
+                          {entry.kind === "consultation" ? (
+                            <Stethoscope size={15} />
+                          ) : entry.kind === "prescription" ? (
+                            <Pill size={15} />
+                          ) : (
+                            <FlaskConical size={15} />
+                          )}
+                        </span>
+                        <div className="min-w-0 flex-1">
+                          <div className="flex flex-wrap items-baseline justify-between gap-2">
+                            <p className="text-[13px] font-semibold text-[var(--color-ink)]">{entry.title}</p>
+                            <span className="tabular shrink-0 text-[11.5px] text-[var(--color-ink-subtle)]">
+                              {stamp(entry.at)}
+                            </span>
+                          </div>
+                          {entry.detail && (
+                            <p className="mt-0.5 text-[12.5px] leading-relaxed text-[var(--color-ink-muted)]">
+                              {entry.detail}
+                            </p>
+                          )}
+                          <div className="mt-1 flex items-center gap-2">
+                            <span className="text-[11.5px] text-[var(--color-ink-subtle)]">{entry.sub}</span>
+                            {entry.kind === "lab" && (
+                              <Badge tone={tone.lab(entry.status)}>{titleCase(entry.status)}</Badge>
+                            )}
+                          </div>
+                        </div>
+                      </li>
+                    ))}
+                  </ol>
+                )}
+              </Panel>
 
-      {/* Allergies Card */}
-      <div className="bg-white rounded-3xl p-6 border border-rose-200 shadow-xs space-y-3">
-        <div className="flex items-center gap-2 text-rose-800 font-bold text-sm">
-          <AlertTriangle className="w-4 h-4 text-rose-600" />
-          <span>Known Drug & Substance Allergies</span>
-        </div>
+              <div className="space-y-3">
+                <Panel title="Blood pressure" subtitle="Bars are systolic; the amber tick is diastolic">
+                  {bp.length === 0 ? (
+                    <p className="py-8 text-center text-[12.5px] text-[var(--color-ink-muted)]">
+                      No blood-pressure readings on record.
+                    </p>
+                  ) : (
+                    <TrendChart series={bp} height={150} />
+                  )}
+                </Panel>
 
-        <div className="space-y-2 text-xs">
-          {history.allergies.map((a, i) => (
-            <div
-              key={i}
-              className="p-3 rounded-2xl bg-rose-50/70 border border-rose-100 flex items-center justify-between"
-            >
-              <div>
-                <span className="font-extrabold text-rose-900 text-sm">{a.name}</span>
-                <span className="text-rose-700 block mt-0.5">Reaction: {a.reaction}</span>
+                <Panel title="Recorded vitals" padded={false}>
+                  {data.vitals.length === 0 ? (
+                    <p className="px-4 py-6 text-center text-[12.5px] text-[var(--color-ink-muted)]">None.</p>
+                  ) : (
+                    <ul className="divide-y divide-[var(--color-border)]">
+                      {data.vitals.map((vital) => (
+                        <li key={vital.id} className="px-4 py-2.5">
+                          <p className="tabular text-[12.5px] text-[var(--color-ink)]">
+                            {vital.bp_systolic ? `${vital.bp_systolic}/${vital.bp_diastolic} mmHg` : "—"}
+                            {vital.heart_rate ? ` · ${vital.heart_rate} bpm` : ""}
+                            {vital.spo2_percent ? ` · SpO₂ ${vital.spo2_percent}%` : ""}
+                          </p>
+                          <p className="text-[11px] text-[var(--color-ink-subtle)]">
+                            {stamp(vital.recorded_at)}
+                            {vital.notes ? ` · ${vital.notes}` : ""}
+                          </p>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                </Panel>
               </div>
-              <span className="text-[10px] uppercase font-bold text-rose-800 bg-rose-200/70 px-2 py-0.5 rounded">
-                Verified Allergy
-              </span>
             </div>
-          ))}
-        </div>
-      </div>
-
-      {/* Chronic Conditions */}
-      <div className="bg-white rounded-3xl p-6 border border-slate-200 shadow-xs space-y-3">
-        <div className="flex items-center gap-2 font-bold text-slate-900 text-sm">
-          <Heart className="w-4 h-4 text-emerald-600" />
-          <span>Chronic Diagnoses & Conditions</span>
-        </div>
-
-        <div className="space-y-2 text-xs">
-          {history.chronicConditions.map((c, i) => (
-            <div
-              key={i}
-              className="p-3 rounded-2xl bg-slate-50 border border-slate-100 flex items-center justify-between"
-            >
-              <div>
-                <span className="font-bold text-slate-900">{c.condition}</span>
-                <span className="text-slate-500 block text-[11px]">Diagnosed: {c.diagnosedYear}</span>
-              </div>
-              <span className="text-[10px] text-teal-800 bg-teal-50 px-2.5 py-1 rounded-lg font-semibold border border-teal-200">
-                {c.status}
-              </span>
-            </div>
-          ))}
-        </div>
-      </div>
-
-      {/* Family History & Past Surgeries Grid */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-        {/* Past Surgeries */}
-        <div className="bg-white rounded-3xl p-6 border border-slate-200 shadow-xs space-y-3">
-          <div className="flex items-center gap-2 font-bold text-slate-900 text-sm">
-            <Scissors className="w-4 h-4 text-slate-600" />
-            <span>Past Surgical Procedures</span>
-          </div>
-
-          <div className="space-y-2 text-xs">
-            {history.pastSurgeries.map((s, i) => (
-              <div key={i} className="p-3 rounded-2xl bg-slate-50 border border-slate-100">
-                <span className="font-bold text-slate-900 block">{s.procedure}</span>
-                <span className="text-slate-500 text-[11px] block mt-0.5">
-                  Year: {s.year} • {s.hospital}
-                </span>
-              </div>
-            ))}
-          </div>
-        </div>
-
-        {/* Family Medical History */}
-        <div className="bg-white rounded-3xl p-6 border border-slate-200 shadow-xs space-y-3">
-          <div className="flex items-center gap-2 font-bold text-slate-900 text-sm">
-            <Users className="w-4 h-4 text-slate-600" />
-            <span>Family Health History</span>
-          </div>
-
-          <div className="space-y-2 text-xs">
-            {history.familyHistory.map((f, i) => (
-              <div key={i} className="p-3 rounded-2xl bg-slate-50 border border-slate-100">
-                <span className="font-bold text-slate-900 block">{f.relative}</span>
-                <span className="text-slate-600 text-[11px] block mt-0.5">{f.conditions}</span>
-              </div>
-            ))}
-          </div>
-        </div>
-      </div>
-
-      {/* Social & Lifestyle Profile */}
-      <div className="bg-white rounded-3xl p-6 border border-slate-200 shadow-xs space-y-3">
-        <h2 className="text-sm font-bold text-slate-900">Lifestyle & Cardiovascular Risk Profile</h2>
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs">
-          <div className="p-3 rounded-xl bg-slate-50 border border-slate-100">
-            <span className="text-slate-400 text-[10px] block font-bold">Tobacco</span>
-            <span className="font-semibold text-slate-800">{history.lifestyle.smoking}</span>
-          </div>
-          <div className="p-3 rounded-xl bg-slate-50 border border-slate-100">
-            <span className="text-slate-400 text-[10px] block font-bold">Alcohol</span>
-            <span className="font-semibold text-slate-800">{history.lifestyle.alcohol}</span>
-          </div>
-          <div className="p-3 rounded-xl bg-slate-50 border border-slate-100">
-            <span className="text-slate-400 text-[10px] block font-bold">Diet</span>
-            <span className="font-semibold text-slate-800">{history.lifestyle.diet}</span>
-          </div>
-          <div className="p-3 rounded-xl bg-slate-50 border border-slate-100">
-            <span className="text-slate-400 text-[10px] block font-bold">Exercise</span>
-            <span className="font-semibold text-slate-800">{history.lifestyle.physicalActivity}</span>
-          </div>
-        </div>
-      </div>
-    </div>
+          );
+        }}
+      </DataState>
+    </Shell>
   );
 }

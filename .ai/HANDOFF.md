@@ -1,6 +1,52 @@
 # Current Handoff
 
-## Resume here (2026-09-23, after R-538)
+## Resume here (2026-09-23, after R-539)
+
+> **R-539 Completed (2026-09-23): the CareClinic doctor workstation rebuilt against the API, plus
+> the platform's own `fresh` and `admin` commands.**
+>
+> **The workstation.** `apps/doctor` was the same kind of mock the clinic console had been: every
+> screen rendered hard-coded state, and only the dashboard, the queue and the patient chart called
+> the API at all — those overlaid invented values on the response. All 15 screens now read live
+> clinic data behind a shared doctor session, guard and event stream: dashboard, today's queue, the
+> consultation with SOAP notes, e-prescription and lab orders, the patient chart and longitudinal
+> history, OPD hours, leave and altered hours, earnings, reviews, and the video room.
+>
+> **New API.** `GET /api/doctor/consult/:appointmentId` returns the whole consultation context in
+> one read (patient, allergies, desk vitals, the consultation, diagnoses, prescription and items,
+> lab orders, previous visits) and answers 404 for another doctor's patient.
+> `GET /api/doctor/earnings`, `POST`/`DELETE /api/doctor/schedule/overrides`, and
+> `GET /api/public/icd10` over a new `icd10_catalog` table (migration 006, 70 codes), so the
+> diagnosis picker searches real reference data rather than a list inside the app.
+>
+> **Defects found and fixed.**
+> - The doctor earnings query joined invoices directly, so a visit with both a consultation and a
+>   diagnostics invoice counted its consultation fee twice — a headline of 24,500 against daily
+>   rows summing to 14,000. The invoice is now picked with a LATERAL.
+> - The shared types for `Consultation`, `Diagnosis`, `Prescription`, `PrescriptionItem` and
+>   `LabTest` named columns the API never returns, which is why the **patient's** prescription slip
+>   printed a blank medicine name, form and dose on every real prescription.
+>
+> **The platform's own commands.** `./scripts/omnistack.sh fresh` destroys every byte of local
+> platform data (the PostgreSQL volume and every generated project), starts clean and creates the
+> first owner as a `super_admin` on the `enterprise` plan; it demands an explicit `wipe` first.
+> `./scripts/omnistack.sh admin` (`list-users`, `create-owner`, `set-role`, `set-plan`,
+> `grant-credits`) administers accounts through a new `services/control-plane/cmd/platformctl`,
+> which reuses the control-plane's own PBKDF2 hashing. `COMMANDS.md` documents all of it, including
+> a section on exactly what the role/plan/credit model does and does not enforce yet.
+>
+> **Evidence.** 18/18 API unit tests; 9/9 live cross-app workflow tests; 23/23 offline tests;
+> 48/48 pages verified in a real browser signed in as their demo user; 48 screens recaptured;
+> `pnpm -r typecheck` clean; `go test ./...` 22 packages; an owner created by `admin create-owner`
+> signs in to the console as `super_admin` on the `enterprise` plan.
+>
+> **Next:** the founder's open question is whether to build platform user management (plan limits,
+> an admin area, subscription billing) before continuing the template catalogue. The catalogue's
+> next row is **T-9, Pocket** — a digital wallet (wallet PWA, merchant web, risk/ops admin) with a
+> strict double-entry ledger, KYC tiers and idempotency keys. See
+> `R_&_D/OmniStackAI_Template_Marketplace_Plan_v1.md` §6.3.
+
+## Earlier (2026-09-23, after R-538)
 
 > **R-538 Completed (2026-09-23): CareClinic (part 4 of 4) — the clinic operations console, 48
 > screenshots, and publication to `templates/catalog/care-clinic` v1.0.0 (category healthcare).**

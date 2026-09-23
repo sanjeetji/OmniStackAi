@@ -167,6 +167,9 @@ task lint
 Stop everything with `./scripts/omnistack.sh down`, and `colima stop` before shutting the machine
 down.
 
+Every command — running, administering accounts, starting over, verifying, working on a template —
+is in [COMMANDS.md](../COMMANDS.md).
+
 ---
 
 ## 6. Troubleshooting

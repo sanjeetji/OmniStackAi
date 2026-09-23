@@ -7,6 +7,7 @@ import { ClinicalService } from "../services/clinical.ts";
 import { TelehealthService } from "../services/telehealth.ts";
 import { BadRequestError, NotFoundError } from "../lib/errors.ts";
 import { nextDocumentNumber } from "../lib/document-number.ts";
+import { broadcastEvent } from "./stream.ts";
 
 export const doctorRoutes = new Hono<AppEnv>();
 
@@ -309,4 +310,223 @@ doctorRoutes.post("/api/doctor/telehealth/:appointmentId/end", async (c) => {
   const aptId = c.req.param("appointmentId");
   const session = await TelehealthService.endRoom(aptId);
   return c.json({ session });
+});
+
+// Everything the consultation screens need in one read: the patient in the chair, what the desk
+// recorded, and whatever this consultation has produced so far.
+doctorRoutes.get("/api/doctor/consult/:appointmentId", async (c) => {
+  const doctorId = getDoctorId(c);
+  const appointmentId = c.req.param("appointmentId");
+
+  const aptRes = await query(
+    `SELECT a.*, u.full_name as patient_name, u.email as patient_email, u.phone as patient_phone,
+            u.avatar_url as patient_avatar,
+            p.dob, p.gender, p.blood_group, p.height_cm, p.weight_kg,
+            p.emergency_contact, p.emergency_phone,
+            EXTRACT(YEAR FROM AGE(p.dob)) as patient_age,
+            fm.full_name as family_member_name, fm.relationship as family_member_rel,
+            dp.room_number
+     FROM appointments a
+     JOIN users u ON u.id = a.patient_id
+     LEFT JOIN patient_profiles p ON p.patient_id = u.id
+     LEFT JOIN family_members fm ON fm.id = a.for_family_member_id
+     LEFT JOIN doctor_profiles dp ON dp.doctor_id = a.doctor_id
+     WHERE a.id = $1 AND a.doctor_id = $2`,
+    [appointmentId, doctorId]
+  );
+  if (aptRes.rows.length === 0) {
+    throw new NotFoundError("Appointment not found, or it belongs to another doctor");
+  }
+  const appointment = aptRes.rows[0];
+
+  const [history, vitals, consultation] = await Promise.all([
+    query(
+      `SELECT allergies, chronic_conditions, current_medications, past_surgeries,
+              family_history, lifestyle_notes
+       FROM medical_histories WHERE patient_id = $1`,
+      [appointment.patient_id]
+    ),
+    query(
+      `SELECT * FROM vitals_records WHERE patient_id = $1 ORDER BY recorded_at DESC LIMIT 5`,
+      [appointment.patient_id]
+    ),
+    query(`SELECT * FROM consultations WHERE appointment_id = $1`, [appointmentId]),
+  ]);
+
+  const current = consultation.rows[0] ?? null;
+  let diagnoses: any[] = [];
+  let prescription: any = null;
+  let prescriptionItems: any[] = [];
+  let labOrders: any[] = [];
+
+  if (current) {
+    const [diagRes, rxRes, labRes] = await Promise.all([
+      query(`SELECT * FROM diagnoses WHERE consultation_id = $1 ORDER BY is_primary DESC`, [current.id]),
+      query(`SELECT * FROM prescriptions WHERE consultation_id = $1`, [current.id]),
+      query(
+        `SELECT lo.*, COUNT(loi.id) AS test_count
+         FROM lab_orders lo
+         LEFT JOIN lab_order_items loi ON loi.lab_order_id = lo.id
+         WHERE lo.consultation_id = $1
+         GROUP BY lo.id
+         ORDER BY lo.created_at DESC`,
+        [current.id]
+      ),
+    ]);
+    diagnoses = diagRes.rows;
+    prescription = rxRes.rows[0] ?? null;
+    labOrders = labRes.rows;
+    if (prescription) {
+      const itemsRes = await query(
+        `SELECT * FROM prescription_items WHERE prescription_id = $1 ORDER BY id ASC`,
+        [prescription.id]
+      );
+      prescriptionItems = itemsRes.rows;
+    }
+  }
+
+  // Previous visits with this patient, so the doctor can see what was done last time.
+  const priorRes = await query(
+    `SELECT c.id, c.assessment, c.plan, c.completed_at, a.scheduled_date, u.full_name as doctor_name
+     FROM consultations c
+     JOIN appointments a ON a.id = c.appointment_id
+     JOIN users u ON u.id = c.doctor_id
+     WHERE c.patient_id = $1 AND c.appointment_id <> $2 AND c.completed_at IS NOT NULL
+     ORDER BY a.scheduled_date DESC LIMIT 5`,
+    [appointment.patient_id, appointmentId]
+  );
+
+  await ClinicalService.logChartAccess(appointment.patient_id, doctorId, "view_chart", appointmentId);
+
+  return c.json({
+    appointment,
+    medicalHistory: history.rows[0] ?? {
+      allergies: [],
+      chronic_conditions: [],
+      current_medications: [],
+      past_surgeries: [],
+    },
+    vitals: vitals.rows,
+    consultation: current,
+    diagnoses,
+    prescription,
+    prescriptionItems,
+    labOrders,
+    previousVisits: priorRes.rows,
+  });
+});
+
+// What the doctor has earned, and how the clinic settled it.
+doctorRoutes.get("/api/doctor/earnings", async (c) => {
+  const doctorId = getDoctorId(c);
+  const days = Math.min(Math.max(parseInt(c.req.query("days") || "30", 10) || 30, 7), 180);
+
+  const [totals, daily, byType, recent] = await Promise.all([
+    query(
+      // A visit can have more than one invoice (the consultation, then the diagnostics), so the
+      // invoice is picked with a LATERAL rather than joined: a plain join would count the
+      // consultation fee once per invoice.
+      `SELECT
+         COUNT(*) FILTER (WHERE a.status = 'completed') AS consultations,
+         COALESCE(SUM(a.fee_amount) FILTER (WHERE a.status = 'completed'), 0) AS gross,
+         COALESCE(SUM(a.fee_amount) FILTER (WHERE a.status = 'completed' AND inv.payment_status = 'paid'), 0) AS settled,
+         COALESCE(SUM(a.fee_amount) FILTER (WHERE a.status = 'completed' AND inv.payment_status = 'pending'), 0) AS outstanding,
+         COUNT(*) FILTER (WHERE a.status = 'no_show') AS no_show,
+         COUNT(*) FILTER (WHERE a.status = 'cancelled') AS cancelled
+       FROM appointments a
+       LEFT JOIN LATERAL (
+         SELECT i.payment_status FROM invoices i
+          WHERE i.appointment_id = a.id
+          ORDER BY i.created_at ASC
+          LIMIT 1
+       ) inv ON TRUE
+       WHERE a.doctor_id = $1
+         AND a.scheduled_date > CURRENT_DATE - ($2::int || ' days')::interval
+         AND a.scheduled_date <= CURRENT_DATE`,
+      [doctorId, days]
+    ),
+    query(
+      `SELECT a.scheduled_date,
+              COUNT(*) FILTER (WHERE a.status = 'completed') AS consultations,
+              COALESCE(SUM(a.fee_amount) FILTER (WHERE a.status = 'completed'), 0) AS earned
+       FROM appointments a
+       WHERE a.doctor_id = $1
+         AND a.scheduled_date > CURRENT_DATE - ($2::int || ' days')::interval
+         AND a.scheduled_date <= CURRENT_DATE
+       GROUP BY a.scheduled_date
+       ORDER BY a.scheduled_date ASC`,
+      [doctorId, days]
+    ),
+    query(
+      `SELECT a.appointment_type,
+              COUNT(*) FILTER (WHERE a.status = 'completed') AS consultations,
+              COALESCE(SUM(a.fee_amount) FILTER (WHERE a.status = 'completed'), 0) AS earned
+       FROM appointments a
+       WHERE a.doctor_id = $1
+         AND a.scheduled_date > CURRENT_DATE - ($2::int || ' days')::interval
+         AND a.scheduled_date <= CURRENT_DATE
+       GROUP BY a.appointment_type`,
+      [doctorId, days]
+    ),
+    query(
+      `SELECT a.id, a.appointment_number, a.scheduled_date, a.start_time, a.appointment_type,
+              a.fee_amount, a.status, u.full_name AS patient_name,
+              inv.invoice_number, inv.payment_status, inv.payment_method, inv.paid_at
+       FROM appointments a
+       JOIN users u ON u.id = a.patient_id
+       LEFT JOIN LATERAL (
+         SELECT i.invoice_number, i.payment_status, i.payment_method, i.paid_at
+           FROM invoices i
+          WHERE i.appointment_id = a.id
+          ORDER BY i.created_at ASC
+          LIMIT 1
+       ) inv ON TRUE
+       WHERE a.doctor_id = $1 AND a.status = 'completed'
+       ORDER BY a.scheduled_date DESC, a.start_time DESC
+       LIMIT 40`,
+      [doctorId]
+    ),
+  ]);
+
+  return c.json({
+    days,
+    totals: totals.rows[0],
+    daily: daily.rows,
+    byType: byType.rows,
+    recent: recent.rows,
+  });
+});
+
+// Planned absences and altered hours the doctor records for themselves.
+doctorRoutes.post("/api/doctor/schedule/overrides", async (c) => {
+  const doctorId = getDoctorId(c);
+  const body = await c.req.json().catch(() => ({}));
+  const { date, isLeave = true, customStartTime, customEndTime, reason } = body;
+
+  if (!date) throw new BadRequestError("date is required");
+  if (!isLeave && (!customStartTime || !customEndTime)) {
+    throw new BadRequestError("customStartTime and customEndTime are required for altered hours");
+  }
+
+  const res = await query(
+    `INSERT INTO schedule_overrides (doctor_id, date, is_leave, custom_start_time, custom_end_time, reason)
+     VALUES ($1, $2, $3, $4, $5, $6)
+     RETURNING *`,
+    [doctorId, date, isLeave, customStartTime || null, customEndTime || null, reason || null]
+  );
+
+  broadcastEvent("schedule_updated", { doctorId, date, isLeave });
+  return c.json({ override: res.rows[0] }, 201);
+});
+
+doctorRoutes.delete("/api/doctor/schedule/overrides/:id", async (c) => {
+  const doctorId = getDoctorId(c);
+  const res = await query(
+    `DELETE FROM schedule_overrides WHERE id = $1 AND doctor_id = $2 RETURNING id`,
+    [c.req.param("id"), doctorId]
+  );
+  if (res.rows.length === 0) throw new NotFoundError("Override not found");
+
+  broadcastEvent("schedule_updated", { doctorId });
+  return c.json({ deleted: res.rows[0].id });
 });

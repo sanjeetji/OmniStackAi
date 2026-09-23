@@ -38,6 +38,16 @@ import type {
   RefundRow,
   RoomRow,
   ScheduleOverride,
+  ConsultContext,
+  DoctorDashboard,
+  DoctorEarnings,
+  DoctorQueueEntry,
+  DoctorReview,
+  DoctorPatientRow,
+  Icd10Code,
+  PatientChart,
+  Consultation,
+  Diagnosis,
 } from "./types";
 
 export interface ApiClientOptions {
@@ -378,42 +388,41 @@ export class CareClinicApiClient {
   }
 
   // --- Doctor Workstation ---
-  public async getDoctorDashboard(): Promise<{
-    metrics: {
-      today_total: number;
-      pending_count: number;
-      waiting_count: number;
-      in_consult_count: number;
-      completed_count: number;
-      video_count: number;
-      today_earnings: number;
-    };
-    activeConsultation?: any;
-  }> {
-    return this.request("/api/doctor/dashboard");
+  public async getDoctorDashboard(): Promise<DoctorDashboard> {
+    return this.request<DoctorDashboard>("/api/doctor/dashboard");
   }
 
-  public async getDoctorQueue(date?: string): Promise<{ queue: any[] }> {
+  public async getDoctorQueue(date?: string): Promise<{ queue: DoctorQueueEntry[] }> {
     const qs = date ? `?date=${encodeURIComponent(date)}` : "";
     return this.request(`/api/doctor/queue${qs}`);
   }
 
-  public async getDoctorPatients(q?: string): Promise<{ patients: any[] }> {
+  public async getDoctorPatients(q?: string): Promise<{ patients: DoctorPatientRow[] }> {
     const qs = q ? `?q=${encodeURIComponent(q)}` : "";
     return this.request(`/api/doctor/patients${qs}`);
   }
 
-  public async getPatientChart(patientId: string): Promise<any> {
-    return this.request(`/api/doctor/patients/${patientId}/chart`);
+  public async getPatientChart(patientId: string): Promise<PatientChart> {
+    return this.request<PatientChart>(`/api/doctor/patients/${patientId}/chart`);
   }
 
-  public async startConsultation(appointmentId: string): Promise<{ consultation: any }> {
+  public async startConsultation(appointmentId: string): Promise<{ consultation: Consultation }> {
     return this.request(`/api/doctor/consult/${appointmentId}/start`, {
       method: "POST",
     });
   }
 
-  public async saveSoapNotes(appointmentId: string, data: any): Promise<{ consultation: any }> {
+  public async saveSoapNotes(
+    appointmentId: string,
+    data: {
+      subjective?: string;
+      objective?: string;
+      assessment?: string;
+      plan?: string;
+      followUpDate?: string;
+      diagnoses?: { icd10Code: string; conditionName: string; isPrimary?: boolean; notes?: string }[];
+    }
+  ): Promise<{ consultation: Consultation }> {
     return this.request(`/api/doctor/consult/${appointmentId}/soap`, {
       method: "POST",
       body: JSON.stringify(data),
@@ -422,8 +431,20 @@ export class CareClinicApiClient {
 
   public async issuePrescription(
     appointmentId: string,
-    data: { diagnosisSummary: string; items: any[] }
-  ): Promise<{ prescription: any }> {
+    data: {
+      diagnosisSummary: string;
+      items: {
+        medicineName: string;
+        genericName?: string;
+        dosageForm: string;
+        strength: string;
+        frequency: string;
+        timing: string;
+        durationDays?: number;
+        instructions?: string;
+      }[];
+    }
+  ): Promise<{ prescription: Prescription }> {
     return this.request(`/api/doctor/consult/${appointmentId}/prescribe`, {
       method: "POST",
       body: JSON.stringify(data),
@@ -433,31 +454,41 @@ export class CareClinicApiClient {
   public async orderLabs(
     appointmentId: string,
     testCodes: string[]
-  ): Promise<{ order: any; tests: any[] }> {
+  ): Promise<{ order: LabOrder; tests: LabTest[] }> {
     return this.request(`/api/doctor/consult/${appointmentId}/labs`, {
       method: "POST",
       body: JSON.stringify({ testCodes }),
     });
   }
 
-  public async completeConsultation(appointmentId: string): Promise<any> {
+  public async completeConsultation(
+    appointmentId: string
+  ): Promise<{ consultation: Consultation; appointment: Appointment }> {
     return this.request(`/api/doctor/consult/${appointmentId}/complete`, {
       method: "POST",
     });
   }
 
-  public async getDoctorSchedule(): Promise<{ shifts: any[]; overrides: any[] }> {
+  public async getDoctorSchedule(): Promise<{ shifts: DoctorShift[]; overrides: ScheduleOverride[] }> {
     return this.request("/api/doctor/schedule");
   }
 
-  public async updateDoctorSchedule(shifts: any[]): Promise<{ success: boolean; count: number }> {
+  public async updateDoctorSchedule(
+    shifts: {
+      dayOfWeek: number;
+      startTime: string;
+      endTime: string;
+      slotDurationMins?: number;
+      isAvailable?: boolean;
+    }[]
+  ): Promise<{ success: boolean; count: number }> {
     return this.request("/api/doctor/schedule", {
       method: "PUT",
       body: JSON.stringify({ shifts }),
     });
   }
 
-  public async getDoctorReviews(): Promise<{ reviews: any[] }> {
+  public async getDoctorReviews(): Promise<{ reviews: DoctorReview[] }> {
     return this.request("/api/doctor/reviews");
   }
 
@@ -639,6 +670,44 @@ export class CareClinicApiClient {
 
   public async getClinicReports(days = 30): Promise<ClinicReports> {
     return this.request<ClinicReports>(`/api/admin/reports?days=${days}`);
+  }
+
+  // --- Clinical workstation (added with the API-backed rewrite) ---
+  /** Everything the consultation screens need in one read. */
+  public async getConsultContext(appointmentId: string): Promise<ConsultContext> {
+    return this.request<ConsultContext>(`/api/doctor/consult/${appointmentId}`);
+  }
+
+  public async getDoctorEarnings(days = 30): Promise<DoctorEarnings> {
+    return this.request<DoctorEarnings>(`/api/doctor/earnings?days=${days}`);
+  }
+
+  public async addDoctorScheduleOverride(input: {
+    date: string;
+    isLeave: boolean;
+    customStartTime?: string;
+    customEndTime?: string;
+    reason?: string;
+  }): Promise<{ override: ScheduleOverride }> {
+    return this.request<{ override: ScheduleOverride }>("/api/doctor/schedule/overrides", {
+      method: "POST",
+      body: JSON.stringify(input),
+    });
+  }
+
+  public async removeDoctorScheduleOverride(id: string): Promise<{ deleted: string }> {
+    return this.request<{ deleted: string }>(`/api/doctor/schedule/overrides/${id}`, {
+      method: "DELETE",
+    });
+  }
+
+  /** The ICD-10 codes the diagnosis picker searches. */
+  public async searchIcd10(q?: string, specialty?: string): Promise<{ codes: Icd10Code[] }> {
+    const search = new URLSearchParams();
+    if (q) search.set("q", q);
+    if (specialty) search.set("specialty", specialty);
+    const qs = search.toString();
+    return this.request<{ codes: Icd10Code[] }>(`/api/public/icd10${qs ? `?${qs}` : ""}`);
   }
 }
 

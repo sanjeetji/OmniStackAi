@@ -1,149 +1,146 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import {
-  Stethoscope,
-  Lock,
-  Mail,
-  ShieldCheck,
-  UserCheck,
-  ArrowRight,
-  AlertCircle,
-  Building2,
-} from "lucide-react";
-import { defaultApiClient } from "@careclinic/shared";
+import { Loader2, ShieldCheck, Stethoscope } from "lucide-react";
+import { useSession } from "../../lib/session";
+import { errorText } from "../../lib/use-api";
+import { Button, Field, inputClass, ErrorNote } from "../../components/ui";
 
-export default function DoctorLoginPage() {
+/** The physician the seeded clinic ships with. Demo data only; no real credential is in the repo. */
+const DEMO_DOCTOR = {
+  email: "dr.rajesh@careclinic.test",
+  password: "Doctor@2026",
+  name: "Dr. Rajesh Varma, MD, DM",
+  role: "Cardiology and internal medicine",
+};
+
+export default function DoctorSignIn() {
+  const { signIn, doctor, ready } = useSession();
   const router = useRouter();
-  const [email, setEmail] = useState("dr.rajesh@careclinic.test");
-  const [password, setPassword] = useState("Doctor@2026");
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState("");
+  const [email, setEmail] = useState(DEMO_DOCTOR.email);
+  const [password, setPassword] = useState(DEMO_DOCTOR.password);
+  const [error, setError] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setLoading(true);
-    setError("");
+  useEffect(() => {
+    if (ready && doctor) router.replace("/");
+  }, [ready, doctor, router]);
 
+  async function submit(nextEmail = email, nextPassword = password) {
+    setBusy(true);
+    setError(null);
     try {
-      await defaultApiClient.login(email, password);
-      router.push("/");
-    } catch (err: any) {
-      setError(err.message || "Invalid doctor credentials");
+      await signIn(nextEmail, nextPassword);
+    } catch (cause) {
+      setError(errorText(cause));
     } finally {
-      setLoading(false);
+      setBusy(false);
     }
-  };
-
-  const handleDemoLogin = async () => {
-    setEmail("dr.rajesh@careclinic.test");
-    setPassword("Doctor@2026");
-    setLoading(true);
-    setError("");
-
-    try {
-      await defaultApiClient.login("dr.rajesh@careclinic.test", "Doctor@2026");
-      router.push("/");
-    } catch (err: any) {
-      setError(err.message || "Failed to sign in demo doctor");
-      setLoading(false);
-    }
-  };
+  }
 
   return (
-    <div className="max-w-md mx-auto py-12 space-y-6">
-      <div className="text-center space-y-2">
-        <div className="w-12 h-12 rounded-2xl bg-emerald-600 text-white flex items-center justify-center mx-auto shadow-sm">
-          <Stethoscope className="w-7 h-7 text-white" />
-        </div>
-        <h1 className="text-2xl font-black text-slate-900 tracking-tight">
-          Physician Sign In
-        </h1>
-        <p className="text-xs text-slate-500">
-          CareClinic Clinical Workstation & Telehealth Management Console
-        </p>
-      </div>
-
-      {/* 1-Click Demo Login Box */}
-      <div className="bg-gradient-to-r from-emerald-50 to-teal-50 p-4 rounded-3xl border border-emerald-200 text-xs space-y-2.5">
-        <div className="flex items-center justify-between">
-          <span className="font-bold text-emerald-950 flex items-center gap-1.5">
-            <UserCheck className="w-4 h-4 text-emerald-600" />
-            <span>Pre-Configured Demo Physician</span>
+    <main className="grid min-h-screen lg:grid-cols-[1.1fr_1fr]">
+      <section className="hidden flex-col justify-between bg-[var(--color-sidebar)] p-10 lg:flex">
+        <div className="flex items-center gap-2.5">
+          <span className="grid h-10 w-10 place-items-center rounded-xl bg-[var(--color-emerald-brand)] text-white">
+            <Stethoscope size={19} />
           </span>
-          <span className="text-[10px] uppercase font-bold text-emerald-800 bg-emerald-200/80 px-2 py-0.5 rounded">
-            Cardiology
-          </span>
-        </div>
-        <p className="text-emerald-900/90 text-[11px] leading-relaxed">
-          Sign in as <strong>Dr. Rajesh Varma, MD</strong> (OPD Room 101, 15 pre-seeded appointments, live queue tokens, and active patient chart).
-        </p>
-        <button
-          type="button"
-          onClick={handleDemoLogin}
-          disabled={loading}
-          className="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs py-2.5 rounded-xl transition-all shadow-xs cursor-pointer flex items-center justify-center gap-1.5"
-        >
-          <span>1-Click Dr. Rajesh Varma Login</span>
-          <ArrowRight className="w-3.5 h-3.5" />
-        </button>
-      </div>
-
-      {error && (
-        <div className="p-3.5 rounded-2xl bg-rose-50 border border-rose-200 text-rose-800 text-xs flex items-center gap-2">
-          <AlertCircle className="w-4 h-4 text-rose-600 shrink-0" />
-          <span>{error}</span>
-        </div>
-      )}
-
-      {/* Login Card */}
-      <div className="bg-white rounded-3xl p-6 sm:p-8 border border-slate-200 shadow-xs">
-        <form onSubmit={handleSubmit} className="space-y-4 text-xs">
           <div>
-            <label className="block font-semibold text-slate-700 mb-1">
-              Physician Email / Staff ID
-            </label>
-            <div className="relative flex items-center">
-              <Mail className="w-4 h-4 text-slate-400 absolute left-3" />
-              <input
-                type="email"
-                required
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                className="w-full pl-9 pr-3 py-2.5 border border-slate-200 rounded-xl focus:border-emerald-500 focus:outline-hidden"
-              />
-            </div>
+            <p className="text-[14px] font-semibold text-white">CareClinic Workstation</p>
+            <p className="text-[11px] text-slate-400">Indiranagar branch · Bengaluru</p>
           </div>
+        </div>
 
-          <div>
-            <label className="block font-semibold text-slate-700 mb-1">Password</label>
-            <div className="relative flex items-center">
-              <Lock className="w-4 h-4 text-slate-400 absolute left-3" />
-              <input
-                type="password"
-                required
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                className="w-full pl-9 pr-3 py-2.5 border border-slate-200 rounded-xl focus:border-emerald-500 focus:outline-hidden"
-              />
-            </div>
-          </div>
+        <div className="max-w-md">
+          <h1 className="text-[30px] font-semibold leading-tight tracking-tight text-white">
+            Your clinic day, in one screen.
+          </h1>
+          <p className="mt-3 text-[13px] leading-relaxed text-slate-400">
+            Today's token queue, the patient in the chair with their allergies and vitals in front of
+            you, SOAP notes and ICD-10 coding, a prescription that is signed and then locked, lab
+            orders, and the whole chart a click away.
+          </p>
+          <ul className="mt-6 space-y-2 text-[12.5px] text-slate-300">
+            {[
+              "Consultations move one way: checked in, in consult, completed",
+              "A signed prescription can never be edited, only replaced",
+              "Every chart you open is written to the clinic's audit log",
+            ].map((line) => (
+              <li key={line} className="flex items-start gap-2">
+                <ShieldCheck size={14} className="mt-0.5 shrink-0 text-emerald-400" />
+                {line}
+              </li>
+            ))}
+          </ul>
+        </div>
 
-          <button
-            type="submit"
-            disabled={loading}
-            className="w-full bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs sm:text-sm py-3 rounded-2xl transition-all shadow-md cursor-pointer mt-2"
+        <p className="text-[11px] text-slate-500">Physician access only. Every record you open is recorded.</p>
+      </section>
+
+      <section className="flex items-center justify-center bg-[var(--color-canvas)] p-6">
+        <div className="w-full max-w-sm">
+          <h2 className="text-[21px] font-semibold tracking-tight text-[var(--color-ink)]">Doctor sign in</h2>
+          <p className="mt-1 text-[12.5px] text-[var(--color-ink-muted)]">
+            Physician accounts only. Patient and front-desk accounts are refused here.
+          </p>
+
+          <form
+            className="mt-6 space-y-3"
+            onSubmit={(event) => {
+              event.preventDefault();
+              void submit();
+            }}
           >
-            {loading ? "Authenticating..." : "Unlock Clinical Station"}
-          </button>
-        </form>
-      </div>
+            <Field label="Work email">
+              <input
+                className={inputClass}
+                type="email"
+                value={email}
+                autoComplete="username"
+                onChange={(event) => setEmail(event.target.value)}
+                required
+              />
+            </Field>
+            <Field label="Password">
+              <input
+                className={inputClass}
+                type="password"
+                value={password}
+                autoComplete="current-password"
+                onChange={(event) => setPassword(event.target.value)}
+                required
+              />
+            </Field>
 
-      <div className="text-center text-[11px] text-slate-400 flex items-center justify-center gap-1">
-        <ShieldCheck className="w-3.5 h-3.5 text-emerald-600" />
-        <span>CareClinic Clinical Auth • HIPAA Audit Trail Enforced</span>
-      </div>
-    </div>
+            {error && <ErrorNote message={error} />}
+
+            <button
+              type="submit"
+              disabled={busy}
+              className="flex w-full items-center justify-center gap-2 rounded-xl bg-[var(--color-emerald-brand)] py-2.5 text-[13px] font-semibold text-white transition hover:bg-[var(--color-emerald-dark)] disabled:opacity-60"
+            >
+              {busy && <Loader2 size={14} className="animate-spin" />}
+              {busy ? "Signing in" : "Sign in"}
+            </button>
+          </form>
+
+          <div className="mt-6 rounded-xl border border-[var(--color-border)] bg-white p-3">
+            <p className="text-[11px] font-semibold uppercase tracking-[0.08em] text-slate-400">
+              Demo physician
+            </p>
+            <div className="mt-2 flex items-center justify-between gap-2">
+              <div className="min-w-0">
+                <p className="truncate text-[12.5px] font-medium text-[var(--color-ink)]">{DEMO_DOCTOR.name}</p>
+                <p className="truncate text-[11px] text-[var(--color-ink-muted)]">{DEMO_DOCTOR.role}</p>
+              </div>
+              <Button size="sm" variant="quiet" onClick={() => void submit(DEMO_DOCTOR.email, DEMO_DOCTOR.password)}>
+                Use
+              </Button>
+            </div>
+          </div>
+        </div>
+      </section>
+    </main>
   );
 }

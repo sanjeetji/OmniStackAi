@@ -1,270 +1,210 @@
 "use client";
 
-import { useState } from "react";
-import { useParams, useRouter } from "next/navigation";
-import Link from "next/link";
-import {
-  FlaskConical,
-  CheckCircle2,
-  Clock,
-  ArrowLeft,
-  Check,
-  AlertCircle,
-  FileCheck,
-} from "lucide-react";
-import { defaultApiClient, formatINR } from "@careclinic/shared";
+import { use, useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
+import { Check, FlaskConical, Search, Send } from "lucide-react";
+import { defaultApiClient } from "@careclinic/shared";
+import { Shell } from "../../../../components/shell";
+import { ConsultFrame, BackToQueue } from "../../../../components/consult-frame";
+import { Panel, Badge, Button, DataState, ErrorNote, inputClass } from "../../../../components/ui";
+import { useApi, useAction } from "../../../../lib/use-api";
+import { useSession } from "../../../../lib/session";
+import { money, stamp, titleCase, tone } from "../../../../lib/format";
 
-interface LabTestCatalogItem {
-  code: string;
-  name: string;
-  category: string;
-  turnaround_hours: number;
-  standard_fee_inr: number;
-  sample: string;
-}
-
-export default function LabOrderGeneratorPage() {
-  const params = useParams();
+export default function LabOrders({ params }: { params: Promise<{ appointmentId: string }> }) {
+  const { appointmentId } = use(params);
   const router = useRouter();
-  const appointmentId = (params?.appointmentId as string) || "apt-201";
+  const { notify } = useSession();
+  const context = useApi(() => defaultApiClient.getConsultContext(appointmentId), [appointmentId]);
+  const catalog = useApi(() => defaultApiClient.getLabTests(), []);
+  const { run, busy, error } = useAction();
 
-  const [catalog, setCatalog] = useState<LabTestCatalogItem[]>([
-    {
-      code: "LIPID-01",
-      name: "Comprehensive Lipid Profile",
-      category: "Biochemistry",
-      turnaround_hours: 6,
-      standard_fee_inr: 650,
-      sample: "Fasting Venous Blood",
-    },
-    {
-      code: "FBS-01",
-      name: "Fasting Blood Glucose (FBS)",
-      category: "Biochemistry",
-      turnaround_hours: 4,
-      standard_fee_inr: 150,
-      sample: "Sodium Fluoride Blood",
-    },
-    {
-      code: "HBA1C-01",
-      name: "Glycated Hemoglobin (HbA1c)",
-      category: "Biochemistry",
-      turnaround_hours: 6,
-      standard_fee_inr: 500,
-      sample: "EDTA Whole Blood",
-    },
-    {
-      code: "CBC-01",
-      name: "Complete Blood Count with ESR",
-      category: "Hematology",
-      turnaround_hours: 4,
-      standard_fee_inr: 350,
-      sample: "EDTA Whole Blood",
-    },
-    {
-      code: "RFT-01",
-      name: "Renal Function Test (Creatinine & Urea)",
-      category: "Biochemistry",
-      turnaround_hours: 6,
-      standard_fee_inr: 550,
-      sample: "Serum",
-    },
-    {
-      code: "TSH-01",
-      name: "Thyroid Stimulating Hormone (TSH)",
-      category: "Endocrinology",
-      turnaround_hours: 8,
-      standard_fee_inr: 400,
-      sample: "Serum",
-    },
-    {
-      code: "ECG-01",
-      name: "12-Lead Diagnostic Resting ECG",
-      category: "Cardiology Diagnostics",
-      turnaround_hours: 1,
-      standard_fee_inr: 450,
-      sample: "Physiological Recording",
-    },
-  ]);
+  const [picked, setPicked] = useState<string[]>([]);
+  const [search, setSearch] = useState("");
 
-  const [selectedCodes, setSelectedCodes] = useState<string[]>(["LIPID-01", "FBS-01", "ECG-01"]);
-  const [indication, setIndication] = useState("Hypertension risk stratification and exertional evaluation.");
-  const [isUrgent, setIsUrgent] = useState(false);
-  const [submitting, setSubmitting] = useState(false);
-  const [createdOrder, setCreatedOrder] = useState<any>(null);
+  const tests = catalog.data?.tests ?? [];
+  const shown = useMemo(() => {
+    const term = search.trim().toLowerCase();
+    if (!term) return tests;
+    return tests.filter(
+      (test) =>
+        test.name.toLowerCase().includes(term) ||
+        test.code.toLowerCase().includes(term) ||
+        test.category.toLowerCase().includes(term)
+    );
+  }, [tests, search]);
 
-  const toggleTest = (code: string) => {
-    if (selectedCodes.includes(code)) {
-      setSelectedCodes(selectedCodes.filter((c) => c !== code));
-    } else {
-      setSelectedCodes([...selectedCodes, code]);
+  const byCategory = useMemo(() => {
+    const groups = new Map<string, typeof tests>();
+    for (const test of shown) {
+      const list = groups.get(test.category) ?? [];
+      list.push(test);
+      groups.set(test.category, list);
     }
-  };
+    return [...groups.entries()].sort(([a], [b]) => a.localeCompare(b));
+  }, [shown]);
 
-  const handleOrder = async () => {
-    if (selectedCodes.length === 0) return;
-    setSubmitting(true);
+  const total = tests.filter((t) => picked.includes(t.code)).reduce((sum, t) => sum + t.standard_fee_inr, 0);
 
-    try {
-      const res = await defaultApiClient.orderLabs(appointmentId, selectedCodes);
-      setCreatedOrder(res.order);
-    } catch {
-      // preview fallback
-      setCreatedOrder({
-        order_number: "LAB-2026-00105",
-        status: "ordered",
-        created_at: new Date().toISOString(),
-      });
-    } finally {
-      setSubmitting(false);
+  function toggle(code: string) {
+    setPicked((current) => (current.includes(code) ? current.filter((c) => c !== code) : [...current, code]));
+  }
+
+  async function order() {
+    const ok = await run(async () => {
+      await defaultApiClient.orderLabs(appointmentId, picked);
+      context.refresh();
+    });
+    if (ok) {
+      notify({ title: "Lab order raised", detail: "The bench will collect the sample", tone: "good" });
+      setPicked([]);
+      router.push(`/consult/${appointmentId}`);
     }
-  };
-
-  const totalFee = selectedCodes.reduce((sum, code) => {
-    const item = catalog.find((c) => c.code === code);
-    return sum + (item?.standard_fee_inr || 0);
-  }, 0);
+  }
 
   return (
-    <div className="max-w-4xl mx-auto space-y-6">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <Link
-          href={`/consult/${appointmentId}`}
-          className="inline-flex items-center gap-1.5 text-xs font-semibold text-slate-500 hover:text-slate-900 transition-colors"
-        >
-          <ArrowLeft className="w-4 h-4" />
-          Back to Consultation Overview
-        </Link>
+    <Shell title="Lab orders" subtitle="Investigations for this visit" actions={<BackToQueue />}>
+      {error && <div className="mb-3"><ErrorNote message={error} /></div>}
 
-        {createdOrder && (
-          <span className="text-xs text-purple-800 bg-purple-50 px-3 py-1 rounded-xl border border-purple-200 font-bold flex items-center gap-1.5 animate-fade-in">
-            <CheckCircle2 className="w-4 h-4 text-purple-600" />
-            <span>Order #{createdOrder.order_number} Dispatched to Lab</span>
-          </span>
-        )}
-      </div>
-
-      {/* Patient Card */}
-      <div className="bg-white rounded-3xl p-5 border border-slate-200 shadow-2xs flex items-center justify-between">
-        <div>
-          <span className="text-[10px] uppercase font-bold text-slate-400">Diagnostic Laboratory Requisition</span>
-          <h1 className="text-lg font-bold text-slate-900">Ananya Deshmukh • Token #4</h1>
-        </div>
-        <div className="text-right text-xs text-slate-500">
-          <span>In-House Laboratory • CareClinic Indiranagar</span>
-        </div>
-      </div>
-
-      {/* Clinical Indication */}
-      <div className="bg-white rounded-3xl p-6 border border-slate-200 shadow-xs space-y-3">
-        <div className="flex items-center justify-between">
-          <label className="text-xs font-bold text-slate-700 block uppercase tracking-wide">
-            Clinical Indication / Diagnosis Notes
-          </label>
-          <label className="flex items-center gap-2 cursor-pointer text-xs font-semibold text-slate-700">
-            <input
-              type="checkbox"
-              checked={isUrgent}
-              onChange={(e) => setIsUrgent(e.target.checked)}
-              className="text-rose-600 rounded"
-            />
-            <span className={isUrgent ? "text-rose-600 font-bold" : ""}>Urgent / Stat Priority</span>
-          </label>
-        </div>
-        <textarea
-          rows={2}
-          value={indication}
-          onChange={(e) => setIndication(e.target.value)}
-          placeholder="Reason for diagnostic workup..."
-          className="w-full text-xs p-3 border border-slate-200 rounded-xl focus:border-purple-500 focus:outline-hidden"
-        />
-      </div>
-
-      {/* Test Catalog Multi-Select */}
-      <div className="bg-white rounded-3xl p-6 border border-slate-200 shadow-xs space-y-4">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2 font-bold text-slate-900 text-sm">
-            <FlaskConical className="w-4 h-4 text-purple-600" />
-            <span>Available Diagnostic Test Catalog</span>
-          </div>
-          <span className="text-xs font-semibold text-purple-700">
-            {selectedCodes.length} Tests Selected ({formatINR(totalFee)})
-          </span>
-        </div>
-
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-          {catalog.map((t) => {
-            const isSelected = selectedCodes.includes(t.code);
-            return (
-              <div
-                key={t.code}
-                onClick={() => !createdOrder && toggleTest(t.code)}
-                className={`p-4 rounded-2xl border transition-all cursor-pointer flex items-start justify-between gap-3 ${
-                  isSelected
-                    ? "bg-purple-50/70 border-purple-300 ring-1 ring-purple-200"
-                    : "bg-white border-slate-200 hover:border-slate-300"
-                }`}
+      <DataState state={context}>
+        {(data) => (
+          <ConsultFrame context={data} appointmentId={appointmentId}>
+            <div className="grid gap-3 lg:grid-cols-[1.5fr_1fr]">
+              <Panel
+                title="Test catalogue"
+                subtitle="Prices and turnaround are the clinic's own"
+                padded={false}
+                actions={
+                  <div className="relative w-56">
+                    <Search size={14} className="pointer-events-none absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400" />
+                    <input
+                      className={`${inputClass} pl-8`}
+                      placeholder="Find a test"
+                      value={search}
+                      onChange={(event) => setSearch(event.target.value)}
+                    />
+                  </div>
+                }
               >
-                <div className="space-y-1">
-                  <div className="flex items-center gap-2">
-                    <span className="text-xs font-bold text-slate-900">{t.name}</span>
-                  </div>
-                  <div className="text-[11px] text-slate-500">
-                    Category: {t.category} • Sample: {t.sample}
-                  </div>
-                  <div className="flex items-center gap-2 text-[10px] text-purple-800 font-semibold pt-0.5">
-                    <Clock className="w-3 h-3 text-purple-600" />
-                    <span>Report in {t.turnaround_hours} hours</span>
-                  </div>
-                </div>
+                <DataState state={catalog}>
+                  {() =>
+                    byCategory.length === 0 ? (
+                      <p className="px-4 py-10 text-center text-[13px] text-[var(--color-ink-muted)]">
+                        No test matches that search.
+                      </p>
+                    ) : (
+                      <div>
+                        {byCategory.map(([category, list]) => (
+                          <section key={category}>
+                            <p className="border-b border-[var(--color-border)] bg-slate-50 px-4 py-1.5 text-[11px] font-semibold uppercase tracking-[0.08em] text-slate-500">
+                              {titleCase(category)}
+                            </p>
+                            <ul className="divide-y divide-[var(--color-border)]">
+                              {list.map((test) => {
+                                const chosen = picked.includes(test.code);
+                                return (
+                                  <li key={test.id}>
+                                    <button
+                                      onClick={() => toggle(test.code)}
+                                      className={
+                                        chosen
+                                          ? "flex w-full items-center justify-between gap-3 bg-emerald-50 px-4 py-2.5 text-left"
+                                          : "flex w-full items-center justify-between gap-3 px-4 py-2.5 text-left hover:bg-slate-50"
+                                      }
+                                    >
+                                      <div className="min-w-0">
+                                        <p className="truncate text-[12.5px] font-medium text-[var(--color-ink)]">
+                                          {test.name}
+                                        </p>
+                                        <p className="tabular text-[11px] text-[var(--color-ink-subtle)]">
+                                          {test.code} · {test.sample_type} · reported in {test.turnaround_hours}h
+                                          {test.fasting_required ? " · fasting" : ""}
+                                        </p>
+                                      </div>
+                                      <div className="flex shrink-0 items-center gap-2">
+                                        <span className="tabular text-[12px] text-[var(--color-ink)]">
+                                          {money(test.standard_fee_inr)}
+                                        </span>
+                                        {chosen && <Check size={14} className="text-emerald-600" />}
+                                      </div>
+                                    </button>
+                                  </li>
+                                );
+                              })}
+                            </ul>
+                          </section>
+                        ))}
+                      </div>
+                    )
+                  }
+                </DataState>
+              </Panel>
 
-                <div className="flex flex-col items-end justify-between h-full shrink-0">
-                  <span className="text-xs font-extrabold text-slate-900">
-                    {formatINR(t.standard_fee_inr)}
-                  </span>
-                  <div
-                    className={`w-5 h-5 rounded-md flex items-center justify-center mt-3 border transition-colors ${
-                      isSelected
-                        ? "bg-purple-600 border-purple-600 text-white"
-                        : "border-slate-300 bg-white"
-                    }`}
-                  >
-                    {isSelected && <Check className="w-3.5 h-3.5" />}
+              <div className="space-y-3">
+                <Panel title="This order" subtitle={`${picked.length} test${picked.length === 1 ? "" : "s"} selected`}>
+                  {picked.length === 0 ? (
+                    <p className="flex items-center gap-2 py-8 text-[12.5px] text-[var(--color-ink-muted)]">
+                      <FlaskConical size={15} className="text-slate-400" /> Choose tests from the catalogue.
+                    </p>
+                  ) : (
+                    <>
+                      <ul className="space-y-1.5">
+                        {tests
+                          .filter((test) => picked.includes(test.code))
+                          .map((test) => (
+                            <li key={test.code} className="flex items-baseline justify-between gap-2 text-[12.5px]">
+                              <span className="truncate text-[var(--color-ink)]">{test.name}</span>
+                              <span className="tabular shrink-0 text-[var(--color-ink-muted)]">
+                                {money(test.standard_fee_inr)}
+                              </span>
+                            </li>
+                          ))}
+                      </ul>
+                      <div className="mt-3 flex items-baseline justify-between border-t border-[var(--color-border)] pt-2 text-[13px] font-semibold">
+                        <span>Billed to the patient</span>
+                        <span className="tabular">{money(total)}</span>
+                      </div>
+                    </>
+                  )}
+
+                  <div className="mt-4">
+                    <Button disabled={busy || picked.length === 0 || !data.consultation} onClick={() => void order()}>
+                      <Send size={13} /> {busy ? "Raising" : "Raise the order"}
+                    </Button>
+                    <p className="mt-1.5 text-[11.5px] text-[var(--color-ink-muted)]">
+                      The diagnostics bench collects the sample and publishes the report, which lands in the
+                      patient's records and yours.
+                    </p>
                   </div>
-                </div>
+                </Panel>
+
+                <Panel title="Already ordered this visit" padded={false}>
+                  {data.labOrders.length === 0 ? (
+                    <p className="px-4 py-6 text-center text-[12.5px] text-[var(--color-ink-muted)]">Nothing yet.</p>
+                  ) : (
+                    <ul className="divide-y divide-[var(--color-border)]">
+                      {data.labOrders.map((order) => (
+                        <li key={order.id} className="flex items-center justify-between gap-2 px-4 py-2.5">
+                          <div className="min-w-0">
+                            <p className="tabular text-[12.5px] font-medium text-[var(--color-ink)]">
+                              {order.order_number}
+                            </p>
+                            <p className="text-[11px] text-[var(--color-ink-subtle)]">
+                              {order.test_count} test{Number(order.test_count) === 1 ? "" : "s"} ·{" "}
+                              {stamp(order.created_at)}
+                            </p>
+                          </div>
+                          <Badge tone={tone.lab(order.status)}>{titleCase(order.status)}</Badge>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                </Panel>
               </div>
-            );
-          })}
-        </div>
-      </div>
-
-      {/* Order Dispatch Action */}
-      <div className="bg-white p-5 rounded-3xl border border-slate-200 shadow-xs flex flex-col sm:flex-row items-center justify-between gap-4">
-        <div>
-          <div className="text-xs text-slate-500">
-            Selected tests will be routed to CareClinic Pathology & Phlebotomy queue.
-          </div>
-          <div className="text-sm font-bold text-slate-900 mt-0.5">
-            Total Diagnostic Fees: {formatINR(totalFee)}
-          </div>
-        </div>
-
-        <button
-          onClick={handleOrder}
-          disabled={submitting || selectedCodes.length === 0 || !!createdOrder}
-          className="w-full sm:w-auto bg-purple-600 hover:bg-purple-700 disabled:bg-slate-300 text-white font-bold text-xs sm:text-sm px-6 py-3 rounded-2xl transition-all shadow-md cursor-pointer flex items-center justify-center gap-2"
-        >
-          <FlaskConical className="w-4 h-4" />
-          <span>
-            {submitting
-              ? "Dispatching Order..."
-              : createdOrder
-              ? "Requisition Dispatched"
-              : `Confirm Lab Order (${selectedCodes.length} Tests)`}
-          </span>
-        </button>
-      </div>
-    </div>
+            </div>
+          </ConsultFrame>
+        )}
+      </DataState>
+    </Shell>
   );
 }

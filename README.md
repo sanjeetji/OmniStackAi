@@ -12,6 +12,7 @@ contract. Read `docs/START_HERE.md` and `.ai/PROJECT_STATE.yaml` before beginnin
 ## Set up a new machine
 
 `docs/SETUP.md` lists every requirement (Node 22.18+, pnpm, Go, Python 3.13, Task, ripgrep, Colima
+- [Commands](COMMANDS.md) — every command to run, administer and verify the platform.
 and the Docker CLI), the install commands, the three pieces of `.env` configuration that are easy
 to miss, and a troubleshooting table. Run `./scripts/omnistack.sh doctor` first on any new machine:
 it checks all of it and prints the exact fix for anything missing.

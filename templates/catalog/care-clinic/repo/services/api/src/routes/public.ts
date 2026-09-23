@@ -244,3 +244,26 @@ publicRoutes.get("/api/public/lab-tests", async (c) => {
   );
   return c.json({ tests: res.rows });
 });
+
+// ICD-10 codes the diagnosis picker searches. Public: it is a reference list, not clinic data.
+publicRoutes.get("/api/public/icd10", async (c) => {
+  const q = c.req.query("q")?.trim().toLowerCase();
+  const specialty = c.req.query("specialty")?.trim();
+
+  const params: unknown[] = [];
+  let sql = `SELECT code, condition_name, chapter, specialty, is_common FROM icd10_catalog WHERE 1=1`;
+
+  if (q) {
+    params.push(`%${q}%`);
+    sql += ` AND (LOWER(condition_name) LIKE $${params.length} OR LOWER(code) LIKE $${params.length})`;
+  }
+  if (specialty) {
+    params.push(specialty);
+    sql += ` AND specialty = $${params.length}`;
+  }
+
+  sql += ` ORDER BY is_common DESC, condition_name ASC LIMIT 40`;
+
+  const res = await query(sql, params);
+  return c.json({ codes: res.rows });
+});

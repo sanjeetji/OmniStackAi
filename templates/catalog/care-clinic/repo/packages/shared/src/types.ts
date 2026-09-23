@@ -171,6 +171,7 @@ export interface VitalsRecord {
   heart_rate?: number | null;
   temperature_f?: number | null;
   spo2_percent?: number | null;
+  respiratory_rate?: number | null;
   blood_glucose_mg_dl?: number | null;
   notes?: string | null;
   recorded_at: string;
@@ -181,33 +182,39 @@ export interface Consultation {
   appointment_id: string;
   doctor_id: string;
   patient_id: string;
-  subjective?: string | null; // Chief complaints & history
-  objective?: string | null;  // Physical exam & vitals
+  subjective?: string | null; // Chief complaint and history
+  objective?: string | null;  // Examination and the vitals acted on
   assessment?: string | null; // Clinical impression
-  plan?: string | null;       // Treatment plan & lifestyle advice
+  plan?: string | null;       // Treatment, advice and investigations
+  follow_up_date?: string | null;
   started_at: string;
-  ended_at?: string | null;
+  completed_at?: string | null;
+  created_at?: string;
 }
 
 export interface Diagnosis {
   id: string;
   consultation_id: string;
   icd10_code: string;
-  icd10_description: string;
+  condition_name: string;
   is_primary: boolean;
   notes?: string | null;
 }
 
 export interface PrescriptionItem {
-  id?: string;
-  prescription_id?: string;
-  medication_name: string;
-  dosage: string;
-  form: string; // tablet, syrup, injection, ointment, drops
-  route: string; // oral, topical, iv, inhalation
-  frequency: string; // once daily, twice daily, tds, qid, sos
+  id: string;
+  prescription_id: string;
+  medicine_name: string;
+  generic_name?: string | null;
+  /** tablet, capsule, syrup, injection, inhaler, drops, ointment */
+  dosage_form: string;
+  /** "500mg", "200/6mcg" */
+  strength: string;
+  /** "1-0-1": morning, afternoon, night */
+  frequency: string;
+  /** after_food, before_food, with_food, empty_stomach, as_needed */
+  timing: string;
   duration_days: number;
-  timing: string; // before food, after food, with meals
   instructions?: string | null;
 }
 
@@ -217,7 +224,7 @@ export interface Prescription {
   consultation_id: string;
   patient_id: string;
   doctor_id: string;
-  notes?: string | null;
+  diagnosis_summary: string;
   is_immutable: boolean;
   digital_signature?: string | null;
   signed_at?: string | null;
@@ -246,6 +253,7 @@ export interface LabTest {
   standard_fee_inr: number;
   turnaround_hours: number;
   sample_type: string;
+  fasting_required?: boolean;
 }
 
 export interface LabOrderItem {
@@ -585,4 +593,152 @@ export interface QueueDisplayEntry {
   room_number: string | null;
   specialties: string[];
   patient_name: string;
+}
+
+// --- Clinical workstation ------------------------------------------------------------------------
+// The rows /api/doctor/* returns. PostgreSQL sends COUNT() and SUM() as strings over the wire, so
+// counters are typed as strings and formatted, never arithmetic-ed, in the UI.
+
+export interface DoctorDashboard {
+  metrics: {
+    today_total: string;
+    pending_count: string;
+    waiting_count: string;
+    in_consult_count: string;
+    completed_count: string;
+    video_count: string;
+    today_earnings: string;
+  };
+  activeConsultation:
+    | (Appointment & {
+        patient_name: string;
+        patient_avatar: string | null;
+        gender: string | null;
+        blood_group: string | null;
+        patient_age: string | null;
+        consultation_id: string | null;
+        started_at?: string | null;
+      })
+    | null;
+}
+
+export type DoctorQueueEntry = Appointment & {
+  patient_name: string;
+  patient_phone: string | null;
+  gender: string | null;
+  blood_group: string | null;
+  patient_age: string | null;
+  family_member_name: string | null;
+  family_member_rel: string | null;
+  consultation_id: string | null;
+  prescription_id: string | null;
+};
+
+export interface DoctorPatientRow {
+  id: string;
+  full_name: string;
+  email: string;
+  phone: string | null;
+  gender: string | null;
+  blood_group: string | null;
+  age: string | null;
+  visit_count: string;
+  last_visit_date: string | null;
+}
+
+export interface PatientChart {
+  profile: {
+    id: string;
+    full_name: string;
+    email: string;
+    phone: string | null;
+    dob: string | null;
+    gender: string | null;
+    blood_group: string | null;
+    height_cm: number | null;
+    weight_kg: number | null;
+    emergency_contact: string | null;
+    emergency_phone: string | null;
+  };
+  medicalHistory: MedicalHistory;
+  vitals: VitalsRecord[];
+  consultations: (Consultation & {
+    appointment_number: string;
+    scheduled_date: string;
+    doctor_name: string;
+  })[];
+  prescriptions: (Prescription & { doctor_name: string })[];
+  labOrders: (LabOrder & { doctor_name: string })[];
+}
+
+export interface ConsultContext {
+  appointment: Appointment & {
+    patient_name: string;
+    patient_email: string;
+    patient_phone: string | null;
+    patient_avatar: string | null;
+    dob: string | null;
+    gender: string | null;
+    blood_group: string | null;
+    height_cm: number | null;
+    weight_kg: number | null;
+    emergency_contact: string | null;
+    emergency_phone: string | null;
+    patient_age: string | null;
+    family_member_name: string | null;
+    family_member_rel: string | null;
+  };
+  medicalHistory: MedicalHistory;
+  vitals: VitalsRecord[];
+  consultation: Consultation | null;
+  diagnoses: Diagnosis[];
+  prescription: Prescription | null;
+  prescriptionItems: PrescriptionItem[];
+  labOrders: (LabOrder & { test_count: string })[];
+  previousVisits: {
+    id: string;
+    assessment: string | null;
+    plan: string | null;
+    completed_at: string | null;
+    scheduled_date: string;
+    doctor_name: string;
+  }[];
+}
+
+export interface DoctorEarnings {
+  days: number;
+  totals: {
+    consultations: string;
+    gross: string;
+    settled: string;
+    outstanding: string;
+    no_show: string;
+    cancelled: string;
+  };
+  daily: { scheduled_date: string; consultations: string; earned: string }[];
+  byType: { appointment_type: AppointmentType; consultations: string; earned: string }[];
+  recent: {
+    id: string;
+    appointment_number: string;
+    scheduled_date: string;
+    start_time: string;
+    appointment_type: AppointmentType;
+    fee_amount: number;
+    status: AppointmentStatus;
+    patient_name: string;
+    invoice_number: string | null;
+    payment_status: PaymentStatus | null;
+    payment_method: string | null;
+    paid_at: string | null;
+  }[];
+}
+
+export type DoctorReview = PatientReview & { patient_name: string };
+
+export interface Icd10Code {
+  code: string;
+  condition_name: string;
+  chapter: string;
+  specialty: string | null;
+  is_common: boolean;
 }

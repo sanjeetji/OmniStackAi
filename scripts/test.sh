@@ -2350,6 +2350,26 @@ if [[ -d "$care_clinic" ]]; then
     printf 'R-538 CareClinic document numbers must not be derived from COUNT(*).\n'
     exit 1
   fi
+  # R-539: the doctor workstation reads the API too, and no link points at a placeholder id.
+  for page in queue patients schedule earnings reviews; do
+    if ! rg -qF 'defaultApiClient.' "$care_clinic/repo/apps/doctor/app/$page/page.tsx"; then
+      printf 'R-539 the CareClinic workstation page /%s must read the API, not a hard-coded table.\n' "$page"
+      exit 1
+    fi
+  done
+  if ! rg -qF 'login(email, password, "doctor")' "$care_clinic/repo/apps/doctor/lib/session.tsx"; then
+    printf 'R-539 the workstation must sign in as a doctor account.\n'
+    exit 1
+  fi
+  if rg -q 'href=.{1,2}/(patients/pat-|doctors/doc-)' "$care_clinic/repo/apps"; then
+    printf 'R-539 a CareClinic link points at a placeholder id.\n'
+    exit 1
+  fi
+  if [[ ! -f "$care_clinic/repo/services/api/seed/002_icd10.sql" ]]; then
+    printf 'R-539 the ICD-10 catalogue seed is required for the diagnosis picker.\n'
+    exit 1
+  fi
+
   if ! python3 - "$care_clinic" <<'CARECLINIC_MANIFEST'; then
 import json, sys
 from pathlib import Path
@@ -2369,5 +2389,32 @@ CARECLINIC_MANIFEST
     exit 1
   fi
 fi
+
+# R-539 (follow-up): a fresh machine can wipe local data and create the platform's first owner,
+# and account administration exists as a real command, not a note in a document.
+if ! rg -qF 'cmd_fresh()' "$repo_root/scripts/omnistack.sh" \
+  || ! rg -qF 'cmd_admin()' "$repo_root/scripts/omnistack.sh"; then
+  printf 'R-539 omnistack.sh must offer the fresh and admin commands.\n'
+  exit 1
+fi
+if ! rg -qF "Type 'wipe' to confirm" "$repo_root/scripts/omnistack.sh"; then
+  printf 'R-539 fresh must ask for an explicit confirmation before destroying data.\n'
+  exit 1
+fi
+if [[ ! -f "$repo_root/services/control-plane/cmd/platformctl/main.go" ]]; then
+  printf 'R-539 the platformctl account tool is required.\n'
+  exit 1
+fi
+# The tool must reuse the control-plane's own hashing, never roll its own.
+if ! rg -qF 'internal/password' "$repo_root/services/control-plane/cmd/platformctl/main.go"; then
+  printf 'R-539 platformctl must hash passwords with the control-plane password package.\n'
+  exit 1
+fi
+for section in 'fresh` — Factory reset' 'admin` — Administer platform accounts' 'Accounts, roles and plans'; do
+  if ! rg -qF "$section" "$repo_root/COMMANDS.md"; then
+    printf 'R-539 COMMANDS.md must document: %s\n' "$section"
+    exit 1
+  fi
+done
 
 printf 'Repository contract tests passed.\n'

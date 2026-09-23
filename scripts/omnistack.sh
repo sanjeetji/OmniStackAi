@@ -398,6 +398,94 @@ cmd_down() {
 
 cmd_restart() { cmd_down --keep-db; cmd_up "$@"; }
 
+# Database access for the admin commands. The control-plane owns the schema; these talk to the
+# same PostgreSQL it runs against.
+postgres_user() { env_value OMNISTACKAI_POSTGRES_USER omnistackai; }
+postgres_db() { env_value OMNISTACKAI_POSTGRES_DB omnistackai; }
+postgres_password() { env_value OMNISTACKAI_POSTGRES_PASSWORD ""; }
+
+database_url() {
+  printf 'postgres://%s:%s@127.0.0.1:%s/%s?sslmode=disable' \
+    "$(postgres_user)" "$(postgres_password)" "$POSTGRES_PORT" "$(postgres_db)"
+}
+
+cmd_admin() {
+  require_env_file
+  local password
+  password="$(postgres_password)"
+  [[ -n "$password" ]] || die "OMNISTACKAI_POSTGRES_PASSWORD is not set in $env_file"
+  if ! docker ps --format '{{.Names}}' 2>/dev/null | grep -q 'postgres'; then
+    die "PostgreSQL is not running. Start it with: $0 up"
+  fi
+  ( cd "$repo_root/services/control-plane" && DATABASE_URL="$(database_url)" go run ./cmd/platformctl "$@" )
+}
+
+cmd_fresh() {
+  local assume_yes=0 owner_email="" owner_name="" owner_password=""
+  while (( $# > 0 )); do
+    case "$1" in
+      --yes|-y)   assume_yes=1 ;;
+      --email)    shift; owner_email="${1:-}" ;;
+      --name)     shift; owner_name="${1:-}" ;;
+      --password) shift; owner_password="${1:-}" ;;
+      *) die "Unknown option for fresh: $1" ;;
+    esac
+    shift
+  done
+
+  require_env_file
+
+  printf '\n'
+  warn "fresh DESTROYS every byte of local platform data:"
+  printf '    - the PostgreSQL volume: accounts, projects, sessions, billing, analytics\n'
+  printf '    - every generated project and its git history under the Studio workspace\n'
+  printf '    - running previews and their databases\n'
+  printf '  Templates in templates/catalog are part of the repository and are NOT touched.\n\n'
+
+  if (( ! assume_yes )); then
+    local answer
+    read -r -p "  Type 'wipe' to confirm: " answer
+    [[ "$answer" == "wipe" ]] || die "Nothing was deleted."
+  fi
+
+  step "Stopping everything"
+  cmd_down >/dev/null 2>&1 || true
+
+  step "Removing the database volume and the workspace"
+  compose down -v >/dev/null 2>&1 || true
+  local workspace
+  workspace="$(env_value OMNISTACKAI_STUDIO_WORKSPACE_ROOT "$repo_root/.omnistackai/workspaces")"
+  if [[ -d "$workspace" && "$workspace" == "$repo_root"/* ]]; then
+    rm -rf "$workspace"
+    ok "workspace removed: ${workspace#"$repo_root"/}"
+  fi
+  ok "database volume removed"
+
+  step "Starting a clean platform"
+  cmd_up
+
+  # The control-plane applies its migrations on start-up, so the schema exists by now.
+  step "Creating the platform owner"
+  if [[ -z "$owner_email" ]]; then
+    read -r -p "  Owner email: " owner_email
+    [[ -n "$owner_email" ]] || die "An owner email is required."
+  fi
+  if [[ -z "$owner_name" ]]; then
+    read -r -p "  Owner name (optional): " owner_name || true
+  fi
+
+  local args=(create-owner --email "$owner_email")
+  [[ -n "$owner_name" ]] && args+=(--name "$owner_name")
+  [[ -n "$owner_password" ]] && args+=(--password "$owner_password")
+
+  ( cd "$repo_root/services/control-plane" && DATABASE_URL="$(database_url)" go run ./cmd/platformctl "${args[@]}" )
+
+  printf '\n'
+  ok "the platform is fresh and you are its owner"
+  printf '  Sign in at %s with that email and password.\n' "$(console_url)"
+  printf '  Manage accounts with: %s admin list-users\n\n' "$0"
+}
+
 cmd_status() {
   step "OmniStackAI"
   local code who pid
@@ -493,6 +581,12 @@ Usage: $0 <command> [options]
                     never executes generated code.
   down [--keep-db]  Stop the console and Studio, then the containers. The database volume is kept.
   restart [...]     down --keep-db, then up (accepts the same options as up).
+  fresh [--yes] [--email E] [--name N] [--password P]
+                    DESTROY every byte of local platform data (the database volume and every
+                    generated project), start clean, and create the platform owner. Asks for
+                    confirmation and for the owner's details unless they are given.
+  admin <cmd> ...   Administer accounts: list-users, create-owner, set-role, set-plan,
+                    grant-credits. Run '$0 admin help' for the details.
   status            Show every component, its port and health.
   logs <svc> [-f]   Tail a log: studio | console | control-plane | postgres.
   build             Build the console for production (snapshot + next build).
@@ -510,6 +604,8 @@ case "${1:-help}" in
   down)     shift; cmd_down "$@" ;;
   restart)  shift; cmd_restart "$@" ;;
   status)   shift; cmd_status "$@" ;;
+  fresh)    shift; cmd_fresh "$@" ;;
+  admin)    shift; cmd_admin "$@" ;;
   logs)     shift; cmd_logs "$@" ;;
   build)    shift; cmd_build "$@" ;;
   doctor)   shift; cmd_doctor "$@" ;;

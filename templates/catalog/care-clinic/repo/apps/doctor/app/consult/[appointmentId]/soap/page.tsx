@@ -1,280 +1,280 @@
 "use client";
 
-import { useState } from "react";
-import { useParams, useRouter } from "next/navigation";
-import Link from "next/link";
-import {
-  FileText,
-  Save,
-  CheckCircle2,
-  ArrowLeft,
-  Search,
-  Plus,
-  X,
-  ShieldCheck,
-  Stethoscope,
-} from "lucide-react";
-import { defaultApiClient } from "@careclinic/shared";
+import { use, useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
+import { Check, Lock, Plus, Save, Search, X } from "lucide-react";
+import { defaultApiClient, type Icd10Code } from "@careclinic/shared";
+import { Shell } from "../../../../components/shell";
+import { ConsultFrame, BackToQueue } from "../../../../components/consult-frame";
+import { Panel, Badge, Button, DataState, ErrorNote, Field, inputClass } from "../../../../components/ui";
+import { useApi, useAction } from "../../../../lib/use-api";
+import { useSession } from "../../../../lib/session";
 
-export default function SoapNotesPage() {
-  const params = useParams();
+interface PickedDiagnosis {
+  icd10Code: string;
+  conditionName: string;
+  isPrimary: boolean;
+}
+
+const SECTIONS = [
+  {
+    key: "subjective" as const,
+    label: "Subjective",
+    hint: "What the patient tells you: the complaint, how long, what makes it better or worse.",
+    placeholder: "Reports…",
+  },
+  {
+    key: "objective" as const,
+    label: "Objective",
+    hint: "What you find: the examination, the vitals you acted on, anything measured.",
+    placeholder: "On examination…",
+  },
+  {
+    key: "assessment" as const,
+    label: "Assessment",
+    hint: "Your clinical impression, and what you have ruled out.",
+    placeholder: "Impression…",
+  },
+  {
+    key: "plan" as const,
+    label: "Plan",
+    hint: "Treatment, advice, investigations and when to come back.",
+    placeholder: "Plan…",
+  },
+];
+
+export default function SoapNotes({ params }: { params: Promise<{ appointmentId: string }> }) {
+  const { appointmentId } = use(params);
   const router = useRouter();
-  const appointmentId = (params?.appointmentId as string) || "apt-201";
+  const { notify } = useSession();
+  const context = useApi(() => defaultApiClient.getConsultContext(appointmentId), [appointmentId]);
+  const { run, busy, error } = useAction();
 
-  const [subjective, setSubjective] = useState(
-    "Patient reports intermittent tightness across anterior chest after climbing two flights of stairs, resolving with rest. Mild dull occipital headache upon waking up for past 10 days. No orthopnea, no pedal edema."
-  );
-  const [objective, setObjective] = useState(
-    "Vitals: BP 120/80 mmHg, HR 72 bpm regular, SpO2 98% room air, Temp 98.4°F.\nPhysical Exam: CVS: Normal S1, S2 audible, no murmurs or S3 gallop. RS: Vesicular breath sounds bilaterally, no wheezes or crackles. Peripheral pulses: Radial and dorsalis pedis equal bilaterally."
-  );
-  const [assessment, setAssessment] = useState(
-    "Stage 1 Essential Primary Hypertension with exertional discomfort. Likely early hypertensive response to exertion. Differentials: Angina pectoris vs muscular chest wall strain."
-  );
-  const [plan, setPlan] = useState(
-    "1. Initiate ARB (Telmisartan 40mg PO OD in morning).\n2. Order Comprehensive Lipid Profile & 12-lead resting ECG.\n3. Lifestyle: Dietary sodium restriction < 2g/day, brisk walking 30 mins 5x/week.\n4. Follow-up: Revisit in 3 weeks with 7-day home BP log."
-  );
+  const [notes, setNotes] = useState({ subjective: "", objective: "", assessment: "", plan: "" });
+  const [followUp, setFollowUp] = useState("");
+  const [picked, setPicked] = useState<PickedDiagnosis[]>([]);
+  const [search, setSearch] = useState("");
+  const [loaded, setLoaded] = useState(false);
 
-  const [icdCodes, setIcdCodes] = useState([
-    { code: "I10", desc: "Essential (primary) hypertension", isPrimary: true },
-    { code: "E78.5", desc: "Hyperlipidemia, unspecified", isPrimary: false },
-  ]);
+  const codes = useApi(() => defaultApiClient.searchIcd10(search || undefined), [search]);
 
-  const [searchIcd, setSearchIcd] = useState("");
-  const [saving, setSaving] = useState(false);
-  const [savedSuccess, setSavedSuccess] = useState(false);
+  useEffect(() => {
+    const data = context.data;
+    if (!data || loaded) return;
+    setNotes({
+      subjective: data.consultation?.subjective ?? "",
+      objective: data.consultation?.objective ?? "",
+      assessment: data.consultation?.assessment ?? "",
+      plan: data.consultation?.plan ?? "",
+    });
+    setFollowUp(data.consultation?.follow_up_date ? String(data.consultation.follow_up_date).slice(0, 10) : "");
+    setPicked(
+      data.diagnoses.map((d) => ({
+        icd10Code: d.icd10_code,
+        conditionName: d.condition_name,
+        isPrimary: d.is_primary,
+      }))
+    );
+    setLoaded(true);
+  }, [context.data, loaded]);
 
-  const commonIcdOptions = [
-    { code: "I10", desc: "Essential (primary) hypertension" },
-    { code: "E11.9", desc: "Type 2 diabetes mellitus without complications" },
-    { code: "E78.5", desc: "Hyperlipidemia, unspecified" },
-    { code: "I20.9", desc: "Angina pectoris, unspecified" },
-    { code: "R07.9", desc: "Chest pain, unspecified" },
-    { code: "G43.909", desc: "Migraine, unspecified" },
-    { code: "J06.9", desc: "Acute upper respiratory infection" },
-  ];
+  function add(code: Icd10Code) {
+    setPicked((current) =>
+      current.some((d) => d.icd10Code === code.code)
+        ? current
+        : [
+            ...current,
+            { icd10Code: code.code, conditionName: code.condition_name, isPrimary: current.length === 0 },
+          ]
+    );
+    setSearch("");
+  }
 
-  const handleAddIcd = (item: { code: string; desc: string }) => {
-    if (!icdCodes.some((c) => c.code === item.code)) {
-      setIcdCodes([...icdCodes, { ...item, isPrimary: false }]);
-    }
-    setSearchIcd("");
-  };
+  function remove(code: string) {
+    setPicked((current) => {
+      const next = current.filter((d) => d.icd10Code !== code);
+      if (next.length > 0 && !next.some((d) => d.isPrimary)) next[0].isPrimary = true;
+      return [...next];
+    });
+  }
 
-  const handleRemoveIcd = (code: string) => {
-    setIcdCodes(icdCodes.filter((c) => c.code !== code));
-  };
-
-  const handleSave = async () => {
-    setSaving(true);
-    setSavedSuccess(false);
-
-    try {
+  async function save() {
+    const ok = await run(async () => {
       await defaultApiClient.saveSoapNotes(appointmentId, {
-        subjective,
-        objective,
-        assessment,
-        plan,
-        diagnoses: icdCodes.map((c) => ({
-          icd10Code: c.code,
-          icd10Description: c.desc,
-          isPrimary: c.isPrimary,
-        })),
+        ...notes,
+        followUpDate: followUp || undefined,
+        diagnoses: picked,
       });
-      setSavedSuccess(true);
-      setTimeout(() => setSavedSuccess(false), 3000);
-    } catch {
-      // preview graceful fallback
-      setSavedSuccess(true);
-      setTimeout(() => setSavedSuccess(false), 3000);
-    } finally {
-      setSaving(false);
+      context.refresh();
+    });
+    if (ok) {
+      notify({ title: "Notes saved", tone: "good" });
+      router.push(`/consult/${appointmentId}`);
     }
-  };
+  }
+
+  const locked = Boolean(context.data?.consultation?.completed_at);
 
   return (
-    <div className="max-w-4xl mx-auto space-y-6">
-      {/* Top Header */}
-      <div className="flex items-center justify-between">
-        <Link
-          href={`/consult/${appointmentId}`}
-          className="inline-flex items-center gap-1.5 text-xs font-semibold text-slate-500 hover:text-slate-900 transition-colors"
-        >
-          <ArrowLeft className="w-4 h-4" />
-          Back to Consultation Overview
-        </Link>
+    <Shell title="SOAP notes" subtitle="Subjective, objective, assessment, plan" actions={<BackToQueue />}>
+      {error && <div className="mb-3"><ErrorNote message={error} /></div>}
 
-        <div className="flex items-center gap-2">
-          {savedSuccess && (
-            <span className="text-xs text-emerald-700 bg-emerald-50 px-2.5 py-1 rounded-lg border border-emerald-200 font-semibold flex items-center gap-1 animate-fade-in">
-              <CheckCircle2 className="w-3.5 h-3.5" />
-              <span>SOAP Notes Saved & Audited</span>
-            </span>
-          )}
+      <DataState state={context}>
+        {(data) => (
+          <ConsultFrame context={data} appointmentId={appointmentId}>
+            {locked && (
+              <div className="flex items-center gap-2 rounded-lg border border-[var(--color-border)] bg-slate-50 px-3 py-2 text-[12.5px] text-[var(--color-ink-muted)]">
+                <Lock size={14} /> This consultation is completed. The notes are kept as written.
+              </div>
+            )}
 
-          <button
-            onClick={handleSave}
-            disabled={saving}
-            className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs px-4 py-2 rounded-xl transition-all shadow-xs flex items-center gap-1.5 cursor-pointer"
-          >
-            <Save className="w-3.5 h-3.5" />
-            <span>{saving ? "Saving..." : "Save Clinical Notes"}</span>
-          </button>
-        </div>
-      </div>
+            <div className="grid gap-3 lg:grid-cols-[1.5fr_1fr]">
+              <Panel title="The note" subtitle="Saved together; the API keeps one note per consultation">
+                <div className="space-y-4">
+                  {SECTIONS.map((section) => (
+                    <Field key={section.key} label={section.label} hint={section.hint}>
+                      <textarea
+                        className={`${inputClass} min-h-24 leading-relaxed`}
+                        value={notes[section.key]}
+                        placeholder={section.placeholder}
+                        disabled={locked}
+                        onChange={(event) => setNotes({ ...notes, [section.key]: event.target.value })}
+                      />
+                    </Field>
+                  ))}
 
-      {/* Patient Title Bar */}
-      <div className="bg-white rounded-3xl p-5 border border-slate-200 shadow-2xs flex items-center justify-between">
-        <div>
-          <span className="text-[10px] uppercase font-bold text-slate-400">Consultation Documentation</span>
-          <h1 className="text-lg font-bold text-slate-900">Ananya Deshmukh • Token #4</h1>
-        </div>
-        <div className="text-right text-xs text-slate-500">
-          <span>KMC Provider: <strong>Dr. Rajesh Varma, MD</strong></span>
-        </div>
-      </div>
+                  <Field label="Follow-up" hint="Leave blank if no review is needed.">
+                    <input
+                      className={inputClass}
+                      type="date"
+                      value={followUp}
+                      disabled={locked}
+                      onChange={(event) => setFollowUp(event.target.value)}
+                    />
+                  </Field>
 
-      {/* Structured SOAP 4-Quadrant Layout */}
-      <div className="space-y-5">
-        {/* S - Subjective */}
-        <div className="bg-white rounded-3xl p-6 border border-slate-200 shadow-xs space-y-2">
-          <div className="flex items-center justify-between">
-            <label className="text-xs font-extrabold text-slate-900 flex items-center gap-2 uppercase tracking-wide">
-              <span className="w-6 h-6 rounded-lg bg-blue-100 text-blue-700 flex items-center justify-center text-xs font-black">
-                S
-              </span>
-              <span>Subjective (Chief Complaints & History)</span>
-            </label>
-            <span className="text-[11px] text-slate-400">Patient reported symptoms</span>
-          </div>
-          <textarea
-            rows={3}
-            value={subjective}
-            onChange={(e) => setSubjective(e.target.value)}
-            className="w-full text-xs p-3.5 border border-slate-200 rounded-2xl focus:border-emerald-500 focus:outline-hidden leading-relaxed"
-          />
-        </div>
-
-        {/* O - Objective */}
-        <div className="bg-white rounded-3xl p-6 border border-slate-200 shadow-xs space-y-2">
-          <div className="flex items-center justify-between">
-            <label className="text-xs font-extrabold text-slate-900 flex items-center gap-2 uppercase tracking-wide">
-              <span className="w-6 h-6 rounded-lg bg-teal-100 text-teal-700 flex items-center justify-center text-xs font-black">
-                O
-              </span>
-              <span>Objective (Physical Examination & Vitals)</span>
-            </label>
-            <span className="text-[11px] text-slate-400">Observed clinical findings</span>
-          </div>
-          <textarea
-            rows={3}
-            value={objective}
-            onChange={(e) => setObjective(e.target.value)}
-            className="w-full text-xs p-3.5 border border-slate-200 rounded-2xl focus:border-emerald-500 focus:outline-hidden leading-relaxed"
-          />
-        </div>
-
-        {/* A - Assessment & ICD-10 Diagnoses */}
-        <div className="bg-white rounded-3xl p-6 border border-slate-200 shadow-xs space-y-3">
-          <div className="flex items-center justify-between">
-            <label className="text-xs font-extrabold text-slate-900 flex items-center gap-2 uppercase tracking-wide">
-              <span className="w-6 h-6 rounded-lg bg-purple-100 text-purple-700 flex items-center justify-center text-xs font-black">
-                A
-              </span>
-              <span>Assessment & ICD-10 Coding</span>
-            </label>
-            <span className="text-[11px] text-slate-400">Clinical impression</span>
-          </div>
-          <textarea
-            rows={2}
-            value={assessment}
-            onChange={(e) => setAssessment(e.target.value)}
-            className="w-full text-xs p-3.5 border border-slate-200 rounded-2xl focus:border-emerald-500 focus:outline-hidden leading-relaxed"
-          />
-
-          {/* ICD-10 Tag Selector */}
-          <div className="pt-2 border-t border-slate-100 space-y-2">
-            <span className="text-[11px] font-bold text-slate-700 block">
-              Assigned ICD-10 Diagnostic Codes:
-            </span>
-
-            <div className="flex flex-wrap gap-2">
-              {icdCodes.map((item) => (
-                <span
-                  key={item.code}
-                  className="bg-purple-50 border border-purple-200 text-purple-900 px-3 py-1 rounded-xl text-xs font-medium flex items-center gap-1.5"
-                >
-                  <strong>{item.code}</strong> - {item.desc}
-                  {item.isPrimary && (
-                    <span className="text-[10px] bg-purple-200 text-purple-800 px-1.5 py-0.2 rounded font-bold">
-                      Primary
-                    </span>
+                  {!locked && (
+                    <Button disabled={busy || !notes.assessment.trim()} onClick={() => void save()}>
+                      <Save size={13} /> {busy ? "Saving" : "Save the note"}
+                    </Button>
                   )}
-                  <button
-                    type="button"
-                    onClick={() => handleRemoveIcd(item.code)}
-                    className="text-purple-400 hover:text-purple-700 p-0.5 cursor-pointer"
-                  >
-                    <X className="w-3 h-3" />
-                  </button>
-                </span>
-              ))}
+                </div>
+              </Panel>
+
+              <div className="space-y-3">
+                <Panel title="Diagnosis" subtitle="ICD-10, searched from the clinic's catalogue">
+                  {picked.length > 0 && (
+                    <ul className="mb-3 space-y-1.5">
+                      {picked.map((diagnosis) => (
+                        <li
+                          key={diagnosis.icd10Code}
+                          className="flex items-start justify-between gap-2 rounded-lg border border-[var(--color-border)] px-2.5 py-1.5"
+                        >
+                          <div className="min-w-0">
+                            <p className="text-[12.5px] font-medium text-[var(--color-ink)]">
+                              {diagnosis.conditionName}
+                            </p>
+                            <p className="tabular text-[11px] text-[var(--color-ink-subtle)]">{diagnosis.icd10Code}</p>
+                          </div>
+                          <div className="flex shrink-0 items-center gap-1">
+                            <button
+                              onClick={() =>
+                                setPicked((current) =>
+                                  current.map((d) => ({ ...d, isPrimary: d.icd10Code === diagnosis.icd10Code }))
+                                )
+                              }
+                              disabled={locked}
+                              title="Mark as the primary diagnosis"
+                              className={
+                                diagnosis.isPrimary
+                                  ? "rounded bg-sky-50 px-1.5 py-0.5 text-[11px] font-semibold text-sky-700 ring-1 ring-inset ring-sky-200"
+                                  : "rounded px-1.5 py-0.5 text-[11px] text-slate-400 hover:text-slate-700"
+                              }
+                            >
+                              {diagnosis.isPrimary ? "Primary" : "Set primary"}
+                            </button>
+                            {!locked && (
+                              <button
+                                onClick={() => remove(diagnosis.icd10Code)}
+                                aria-label="Remove"
+                                className="text-slate-400 hover:text-red-600"
+                              >
+                                <X size={13} />
+                              </button>
+                            )}
+                          </div>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+
+                  {!locked && (
+                    <>
+                      <div className="relative">
+                        <Search size={14} className="pointer-events-none absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400" />
+                        <input
+                          className={`${inputClass} pl-8`}
+                          placeholder="Search a condition or code"
+                          value={search}
+                          onChange={(event) => setSearch(event.target.value)}
+                        />
+                      </div>
+
+                      <DataState state={codes}>
+                        {(list) => (
+                          <ul className="mt-2 max-h-72 divide-y divide-[var(--color-border)] overflow-y-auto rounded-lg border border-[var(--color-border)]">
+                            {list.codes.map((code) => (
+                              <li key={code.code}>
+                                <button
+                                  onClick={() => add(code)}
+                                  className="flex w-full items-center justify-between gap-2 px-2.5 py-2 text-left hover:bg-slate-50"
+                                >
+                                  <div className="min-w-0">
+                                    <p className="truncate text-[12.5px] text-[var(--color-ink)]">
+                                      {code.condition_name}
+                                    </p>
+                                    <p className="tabular text-[11px] text-[var(--color-ink-subtle)]">
+                                      {code.code} · {code.specialty ?? code.chapter}
+                                    </p>
+                                  </div>
+                                  {picked.some((d) => d.icd10Code === code.code) ? (
+                                    <Check size={14} className="shrink-0 text-emerald-600" />
+                                  ) : (
+                                    <Plus size={14} className="shrink-0 text-slate-400" />
+                                  )}
+                                </button>
+                              </li>
+                            ))}
+                          </ul>
+                        )}
+                      </DataState>
+                    </>
+                  )}
+                </Panel>
+
+                {data.previousVisits.length > 0 && (
+                  <Panel title="What you wrote last time" padded={false}>
+                    <ul className="divide-y divide-[var(--color-border)]">
+                      {data.previousVisits.slice(0, 3).map((visit) => (
+                        <li key={visit.id} className="px-4 py-2.5">
+                          <p className="text-[12.5px] font-medium text-[var(--color-ink)]">
+                            {visit.assessment ?? "Consultation"}
+                          </p>
+                          {visit.plan && (
+                            <p className="mt-0.5 text-[11.5px] leading-relaxed text-[var(--color-ink-muted)]">
+                              {visit.plan}
+                            </p>
+                          )}
+                        </li>
+                      ))}
+                    </ul>
+                  </Panel>
+                )}
+              </div>
             </div>
-
-            {/* Quick add ICD dropdown */}
-            <div className="flex items-center gap-2 pt-1">
-              <select
-                value={searchIcd}
-                onChange={(e) => {
-                  const found = commonIcdOptions.find((opt) => opt.code === e.target.value);
-                  if (found) handleAddIcd(found);
-                }}
-                className="text-xs px-3 py-1.5 border border-slate-200 rounded-xl focus:border-emerald-500 focus:outline-hidden bg-white text-slate-700"
-              >
-                <option value="">+ Add ICD-10 Diagnosis...</option>
-                {commonIcdOptions.map((opt) => (
-                  <option key={opt.code} value={opt.code}>
-                    {opt.code} — {opt.desc}
-                  </option>
-                ))}
-              </select>
-            </div>
-          </div>
-        </div>
-
-        {/* P - Plan */}
-        <div className="bg-white rounded-3xl p-6 border border-slate-200 shadow-xs space-y-2">
-          <div className="flex items-center justify-between">
-            <label className="text-xs font-extrabold text-slate-900 flex items-center gap-2 uppercase tracking-wide">
-              <span className="w-6 h-6 rounded-lg bg-emerald-100 text-emerald-700 flex items-center justify-center text-xs font-black">
-                P
-              </span>
-              <span>Plan (Treatment & Lifestyle Advice)</span>
-            </label>
-            <span className="text-[11px] text-slate-400">Therapeutic regimen</span>
-          </div>
-          <textarea
-            rows={3}
-            value={plan}
-            onChange={(e) => setPlan(e.target.value)}
-            className="w-full text-xs p-3.5 border border-slate-200 rounded-2xl focus:border-emerald-500 focus:outline-hidden leading-relaxed"
-          />
-        </div>
-      </div>
-
-      {/* Footer Audit Notice */}
-      <div className="flex items-center justify-between text-xs text-slate-400 pt-2">
-        <div className="flex items-center gap-1.5">
-          <ShieldCheck className="w-4 h-4 text-emerald-600" />
-          <span>HIPAA Audit Trail: Changes to this SOAP note are versioned with cryptographic hashes.</span>
-        </div>
-
-        <Link
-          href={`/consult/${appointmentId}/prescription`}
-          className="bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs px-4 py-2 rounded-xl transition-all shadow-xs"
-        >
-          Next: Build Prescription →
-        </Link>
-      </div>
-    </div>
+          </ConsultFrame>
+        )}
+      </DataState>
+    </Shell>
   );
 }

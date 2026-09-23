@@ -52,6 +52,18 @@ class CareClinicApiTests(unittest.TestCase):
         self.assertIsNotNone(passed)
         self.assertGreaterEqual(int(passed.group(1)), 15)
 
+    def test_icd10_seed_matches_its_generator(self) -> None:
+        result = subprocess.run(
+            ["node", "scripts/generate-icd10.mjs"], cwd=str(API), capture_output=True, timeout=60, check=False,
+        )
+        self.assertEqual(result.returncode, 0, result.stderr.decode()[-2000:])
+        committed = (API / "seed" / "002_icd10.sql").read_bytes()
+        self.assertEqual(
+            hashlib.sha256(result.stdout).hexdigest(),
+            hashlib.sha256(committed).hexdigest(),
+            "seed/002_icd10.sql is stale: run `node scripts/generate-icd10.mjs > seed/002_icd10.sql`",
+        )
+
     def test_seed_matches_its_generator(self) -> None:
         result = subprocess.run(
             ["node", "scripts/generate-seed.mjs"], cwd=str(API), capture_output=True, timeout=180, check=False,
@@ -98,6 +110,13 @@ class CareClinicSeedTests(unittest.TestCase):
                       "invoices", "invoice_items", "refunds", "telehealth_sessions",
                       "chart_access_logs", "patient_reviews", "notifications"):
             self.assertIn(f"INSERT INTO {table} ", self.seed, f"the seed never writes {table}")
+
+    def test_the_icd10_catalogue_is_seeded(self) -> None:
+        """The diagnosis picker searches this table; an empty one makes SOAP coding impossible."""
+        icd = (API / "seed" / "002_icd10.sql").read_text(encoding="utf-8")
+        self.assertGreaterEqual(icd.count("INSERT INTO icd10_catalog"), 40)
+        for code in ("'I10'", "'E11.9'", "'J45.909'"):
+            self.assertIn(code, icd)
 
     def test_the_demo_patient_has_a_chart_worth_opening(self) -> None:
         demo = "50000000-0000-0000-0000-000000000001"
@@ -184,6 +203,37 @@ class CareClinicAppsTests(unittest.TestCase):
                 continue
             source = page.read_text(encoding="utf-8")
             self.assertIn("defaultApiClient.", source, f"/{name} does not call the API")
+
+    def test_the_workstation_reads_the_api_rather_than_a_hard_coded_table(self) -> None:
+        """R-539: every doctor screen was a static mock. Each one must now load from the API."""
+        doctor = REPO / "apps" / "doctor" / "app"
+        exempt = {"login"}
+        for page in sorted(doctor.rglob("page.tsx")):
+            name = page.parent.relative_to(doctor).as_posix()
+            if name.split("/")[0] in exempt:
+                continue
+            source = page.read_text(encoding="utf-8")
+            self.assertIn("defaultApiClient.", source, f"/{name} does not call the API")
+
+    def test_the_workstation_has_its_own_session_and_guard(self) -> None:
+        doctor = REPO / "apps" / "doctor"
+        for extra in ("lib/session.tsx", "lib/use-api.ts", "lib/format.ts", "components/shell.tsx",
+                      "components/ui.tsx", "components/charts.tsx", "components/consult-frame.tsx"):
+            self.assertTrue((doctor / extra).is_file(), extra)
+        session = (doctor / "lib" / "session.tsx").read_text(encoding="utf-8")
+        self.assertIn('login(email, password, "doctor")', session, "the workstation signs in as a doctor")
+        self.assertIn('stored.role === "doctor"', session, "a stored non-doctor session must be dropped")
+
+    def test_no_placeholder_ids_are_linked_anywhere(self) -> None:
+        """Links once pointed at a hard-coded patient, so they 404'd for everyone."""
+        for app in ("patient", "doctor", "admin"):
+            for source in (REPO / "apps" / app).rglob("*.tsx"):
+                if "node_modules" in source.parts or ".next" in source.parts:
+                    continue
+                text = source.read_text(encoding="utf-8")
+                for placeholder in ('href={`/patients/pat-', 'href="/patients/pat-',
+                                    'href={`/doctors/doc-', 'href="/doctors/doc-'):
+                    self.assertNotIn(placeholder, text, f"{source.name} links to a placeholder id")
 
     def test_role_isolation_is_enforced_by_the_api(self) -> None:
         public = (API / "src" / "routes" / "public.ts").read_text(encoding="utf-8")
