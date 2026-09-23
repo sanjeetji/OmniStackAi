@@ -347,6 +347,106 @@ export class CareClinicApiClient {
       body: JSON.stringify(data),
     });
   }
+
+  // --- Doctor Workstation ---
+  public async getDoctorDashboard(): Promise<{
+    metrics: {
+      today_total: number;
+      pending_count: number;
+      waiting_count: number;
+      in_consult_count: number;
+      completed_count: number;
+      video_count: number;
+      today_earnings: number;
+    };
+    activeConsultation?: any;
+  }> {
+    return this.request("/api/doctor/dashboard");
+  }
+
+  public async getDoctorQueue(date?: string): Promise<{ queue: any[] }> {
+    const qs = date ? `?date=${encodeURIComponent(date)}` : "";
+    return this.request(`/api/doctor/queue${qs}`);
+  }
+
+  public async getDoctorPatients(q?: string): Promise<{ patients: any[] }> {
+    const qs = q ? `?q=${encodeURIComponent(q)}` : "";
+    return this.request(`/api/doctor/patients${qs}`);
+  }
+
+  public async getPatientChart(patientId: string): Promise<any> {
+    return this.request(`/api/doctor/patients/${patientId}/chart`);
+  }
+
+  public async startConsultation(appointmentId: string): Promise<{ consultation: any }> {
+    return this.request(`/api/doctor/consult/${appointmentId}/start`, {
+      method: "POST",
+    });
+  }
+
+  public async saveSoapNotes(appointmentId: string, data: any): Promise<{ consultation: any }> {
+    return this.request(`/api/doctor/consult/${appointmentId}/soap`, {
+      method: "POST",
+      body: JSON.stringify(data),
+    });
+  }
+
+  public async issuePrescription(
+    appointmentId: string,
+    data: { diagnosisSummary: string; items: any[] }
+  ): Promise<{ prescription: any }> {
+    return this.request(`/api/doctor/consult/${appointmentId}/prescribe`, {
+      method: "POST",
+      body: JSON.stringify(data),
+    });
+  }
+
+  public async orderLabs(
+    appointmentId: string,
+    testCodes: string[]
+  ): Promise<{ order: any; tests: any[] }> {
+    return this.request(`/api/doctor/consult/${appointmentId}/labs`, {
+      method: "POST",
+      body: JSON.stringify({ testCodes }),
+    });
+  }
+
+  public async completeConsultation(appointmentId: string): Promise<any> {
+    return this.request(`/api/doctor/consult/${appointmentId}/complete`, {
+      method: "POST",
+    });
+  }
+
+  public async getDoctorSchedule(): Promise<{ shifts: any[]; overrides: any[] }> {
+    return this.request("/api/doctor/schedule");
+  }
+
+  public async updateDoctorSchedule(shifts: any[]): Promise<{ success: boolean; count: number }> {
+    return this.request("/api/doctor/schedule", {
+      method: "PUT",
+      body: JSON.stringify({ shifts }),
+    });
+  }
+
+  public async getDoctorReviews(): Promise<{ reviews: any[] }> {
+    return this.request("/api/doctor/reviews");
+  }
+
+  public async getDoctorTelehealth(appointmentId: string): Promise<{ session: any }> {
+    return this.request(`/api/doctor/telehealth/${appointmentId}`);
+  }
+
+  public async joinDoctorTelehealth(appointmentId: string): Promise<{ session: any }> {
+    return this.request(`/api/doctor/telehealth/${appointmentId}/join`, {
+      method: "POST",
+    });
+  }
+
+  public async endDoctorTelehealth(appointmentId: string): Promise<{ session: any }> {
+    return this.request(`/api/doctor/telehealth/${appointmentId}/end`, {
+      method: "POST",
+    });
+  }
 }
 
 export const defaultApiClient = new CareClinicApiClient();

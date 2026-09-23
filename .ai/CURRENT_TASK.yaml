@@ -1,18 +1,18 @@
-task_id: R-536
+task_id: R-537
 status: completed
 phase: MVP
 tracker_row: 8
 started_at: "2026-09-23"
 completed_at: "2026-09-23"
-branch: ai/R-536-careclinic-patient
+branch: ai/R-537-careclinic-doctor
 objective: >-
-  CareClinic part 2 of 4: Shared Library (@careclinic/shared) and Patient Web Application (apps/patient).
-  Build canonical domain models, typed API client SDK, SSE hook, and calm clinical styling (soft teal, white,
-  Plus Jakarta Sans, accessible contrast) across 16 patient routes: Home, Doctor Search & Filters, Doctor Profile
-  & Schedule, Slot Picker & Appointment Booking, Appointments List, Appointment Details (reschedule/cancel),
-  Telehealth Video Visit Room, Digital Prescriptions archive & PDF viewer, Lab Reports with test parameters,
-  Health Records (vitals log & history), Family Members management, Invoices & Receipt payment, Patient Reviews,
-  Notifications, and Patient Authentication (1-click Ananya Deshmukh demo login).
+  CareClinic part 3 of 4: Doctor Telehealth & Clinical Workstation (apps/doctor).
+  Build tablet/desktop-optimized physician clinical workstation on Next.js 16 + React 19 + Turbopack + Tailwind CSS 4
+  across 14 doctor routes: Doctor Sign In (1-click Dr. Rajesh Varma demo login), Clinical Dashboard with OPD metrics,
+  Today's Patient Queue with live tokens 1-15, Active Consultation room, Structured SOAP Clinical Documentation,
+  Digital Prescription Builder with cryptographic signature, Diagnostic Lab Order generator, Patient Longitudinal Chart
+  with mandatory HIPAA audit logging, Medical History & Allergies, Schedule & Shifts Settings, Schedule Overrides,
+  Earnings & Revenue Statements, Patient Reviews, and Telehealth Doctor Call Station.
 allowed_paths:
   - templates/catalog/_care-clinic/
   - .ai/
@@ -25,7 +25,7 @@ forbidden_changes:
   - No real credentials in the template
 required_gates:
   - API unit tests pass (100% clean)
-  - @careclinic/patient builds cleanly with Next.js Turbopack
+  - @careclinic/doctor builds cleanly with Next.js Turbopack
   - catalog validation passes for _care-clinic draft
   - task verify passes
 model_tool_trace:
