@@ -74,13 +74,21 @@ export default async function TemplatePage({ params }: { params: Promise<{ slug:
           <h1 className="mt-2 text-balance text-4xl font-semibold tracking-tight">{template.name}</h1>
           <p className="mt-2 max-w-xl text-pretty text-lg text-muted-foreground">{template.tagline}</p>
           <div className="mt-5 flex flex-wrap items-center gap-3">
-            <TemplateUseButton slug={template.slug} templateName={template.name} />
-            <Button asChild variant="outline" className="gap-1.5 shadow-xs">
-              <a href="#interactive-hub">
-                <Sparkles className="size-3.5 text-brand" aria-hidden="true" />
-                <span>Explore Live Flow</span>
-              </a>
-            </Button>
+            <TemplateUseButton
+              slug={template.slug}
+              templateName={template.name}
+              label="Launch Live Interactive Demo"
+              autoCreate={true}
+              size="lg"
+              className="bg-brand text-white hover:bg-brand/90"
+            />
+            <TemplateUseButton
+              slug={template.slug}
+              templateName={template.name}
+              label="Customize in Studio"
+              variant="outline"
+              size="lg"
+            />
             <Button asChild variant="ghost">
               <a href="#screens-journey">All Screens ({template.screens?.length || template.screenshots?.length || 48})</a>
             </Button>

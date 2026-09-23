@@ -11,6 +11,7 @@ import {
   KeyRound,
   LayoutDashboard,
   Maximize2,
+  Play,
   QrCode as QrIcon,
   Server,
   Smartphone,
@@ -22,6 +23,7 @@ import type { TemplateApp, TemplateDetail, TemplateScreen } from "@/lib/control-
 import { templateAssetUrl } from "@/components/template-meta";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import TemplateUseButton from "@/components/template-use-button";
 import {
   Dialog,
   DialogContent,
@@ -219,6 +221,29 @@ export function TemplateShowcaseInteractive({ template }: TemplateShowcaseIntera
             </div>
           </div>
         )}
+
+        {/* Live Running Instance Callout */}
+        <div className="mb-4 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-brand/30 bg-brand/10 p-3.5 text-sm">
+          <div className="flex items-center gap-3">
+            <span className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-brand text-white shadow-xs">
+              <Play className="fill-current size-4" aria-hidden="true" />
+            </span>
+            <div>
+              <p className="font-semibold text-foreground">Want to click around and test the functional software?</p>
+              <p className="text-xs text-muted-foreground">
+                The frame below shows high-resolution walkthrough scenes. To test the live functional apps (live admin tables, ride bookings, dispatch locks):
+              </p>
+            </div>
+          </div>
+          <TemplateUseButton
+            slug={template.slug}
+            templateName={template.name}
+            label="Launch Live Interactive Apps"
+            autoCreate={true}
+            size="sm"
+            className="bg-brand text-white hover:bg-brand/90"
+          />
+        </div>
 
         {/* The Realistic App Frame */}
         <div className="overflow-hidden rounded-2xl border border-border/80 bg-card shadow-md">
