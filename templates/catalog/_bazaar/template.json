@@ -1,0 +1,615 @@
+{
+  "schema_version": 1,
+  "slug": "_bazaar",
+  "name": "Bazaar",
+  "version": "1.0.0",
+  "category": "ecommerce",
+  "tagline": "Multi-vendor commerce platform: storefront, vendor portal, admin console, split orders, double-entry ledger and tracking.",
+  "description": "A complete multi-vendor commerce product for artisan, handloom, and direct-to-consumer brands, built as three apps on one TypeScript API and one PostgreSQL database.\n\nShoppers browse curated collections, filter by category and artisan shop, add products from multiple vendors into a single cart, checkout with upfront delivery fees and coupons, track independent per-vendor shipments in real time, and leave verified reviews. Vendors manage their storefront profile and bank accounts, list products with multi-variant matrices (SKU, size, color, inventory), fulfill orders through an auditable 5-step shipping state machine, generate shipping labels and courier tracking, and receive automated payout settlements. The operations team supervises the marketplace: vendor KYC verification and onboarding, global order tracking, commission rules per shop, financial double-entry ledger audits, and payout approvals.\n\nEverything runs offline and without paid credentials: payments and courier logistics are simulated mocks behind clean platform provider interfaces, and comprehensive deterministic seed fixtures populate over 20 shops, 50+ products, and dozens of orders and ledger entries out of the box. Sign in with the demo logins below, or customize via chat.",
+  "apps": [
+    {
+      "id": "buyer",
+      "name": "Storefront",
+      "kind": "web",
+      "path": "apps/buyer"
+    },
+    {
+      "id": "seller",
+      "name": "Vendor Portal",
+      "kind": "web",
+      "path": "apps/seller"
+    },
+    {
+      "id": "admin",
+      "name": "Marketplace Console",
+      "kind": "admin",
+      "path": "apps/admin"
+    },
+    {
+      "id": "api",
+      "name": "API",
+      "kind": "api",
+      "path": "services/api"
+    }
+  ],
+  "roles": [
+    {
+      "id": "shopper",
+      "name": "Shopper",
+      "description": "Explores shops, buys multi-vendor carts, tracks shipments, and writes reviews."
+    },
+    {
+      "id": "vendor",
+      "name": "Vendor",
+      "description": "Manages catalog, inventory, packs and ships orders, and tracks payout settlements."
+    },
+    {
+      "id": "admin",
+      "name": "Marketplace Admin",
+      "description": "Supervises marketplace: KYC verification, orders, commissions, ledger, and payouts."
+    }
+  ],
+  "entities": [
+    "Shop",
+    "Product",
+    "ProductVariant",
+    "Cart",
+    "Order",
+    "Shipment",
+    "ShipmentItem",
+    "TrackingEvent",
+    "ReturnRequest",
+    "LedgerAccount",
+    "LedgerEntry",
+    "SettlementBatch",
+    "Review",
+    "Coupon",
+    "AuditLog"
+  ],
+  "features": [
+    "Multi-vendor shared shopping cart with automatic per-vendor split order fulfillment",
+    "Variant matrix with dynamic SKU, color, size, and real-time inventory reservation",
+    "5-stage shipment state machine (placed -> accepted -> packed -> shipped -> delivered)",
+    "Real-time courier dispatch and checkpoint tracking over Server-Sent Events",
+    "Double-entry multi-party accounting ledger with platform commission withholding",
+    "Automated vendor payout settlement batches with direct bank transfer reconciliation",
+    "Verified purchase buyer reviews with rating score aggregation",
+    "Percentage and flat promotional coupons with order caps and expiry rules",
+    "Vendor KYC onboarding and store verification workflow",
+    "Platform operator audit log tracking administrative overrides and status transitions"
+  ],
+  "integrations": [
+    {
+      "id": "payments",
+      "kind": "payments",
+      "provider": "mock",
+      "mock": true
+    },
+    {
+      "id": "logistics",
+      "kind": "logistics",
+      "provider": "mock",
+      "mock": true
+    },
+    {
+      "id": "notifications",
+      "kind": "notifications",
+      "provider": "mock",
+      "mock": true
+    }
+  ],
+  "demo_users": [
+    {
+      "role": "shopper",
+      "name": "Priya Sharma",
+      "email": "priya@bazaar.test",
+      "password": "Shopper@2026"
+    },
+    {
+      "role": "vendor",
+      "name": "Aryan Gupta",
+      "email": "aryan@bazaar.test",
+      "password": "Vendor@2026"
+    },
+    {
+      "role": "admin",
+      "name": "Vikram Mehta",
+      "email": "admin@bazaar.test",
+      "password": "Admin@2026"
+    }
+  ],
+  "stack": [
+    "Next.js 16",
+    "React 19",
+    "Tailwind CSS 4",
+    "TypeScript",
+    "Hono",
+    "PostgreSQL",
+    "Server-sent events"
+  ],
+  "cover": "media/cover.jpg",
+  "screenshots": [
+    "media/buyer/home.jpg",
+    "media/buyer/category.jpg",
+    "media/buyer/product-detail.jpg",
+    "media/buyer/cart.jpg",
+    "media/buyer/checkout.jpg",
+    "media/buyer/order-confirmation.jpg",
+    "media/buyer/orders.jpg",
+    "media/buyer/order-detail.jpg",
+    "media/buyer/shipment-tracking.jpg",
+    "media/buyer/reviews.jpg",
+    "media/buyer/account.jpg",
+    "media/buyer/addresses.jpg",
+    "media/buyer/login.jpg",
+    "media/buyer/signup.jpg",
+    "media/seller/login.jpg",
+    "media/seller/dashboard.jpg",
+    "media/seller/products.jpg",
+    "media/seller/product-create.jpg",
+    "media/seller/inventory.jpg",
+    "media/seller/orders.jpg",
+    "media/seller/shipment-detail.jpg",
+    "media/seller/pack-label.jpg",
+    "media/seller/dispatch.jpg",
+    "media/seller/returns.jpg",
+    "media/seller/ledger.jpg",
+    "media/seller/settlements.jpg",
+    "media/seller/store-profile.jpg",
+    "media/seller/bank-settings.jpg",
+    "media/admin/login.jpg",
+    "media/admin/dashboard.jpg",
+    "media/admin/shops.jpg",
+    "media/admin/shop-review.jpg",
+    "media/admin/kyc-approval.jpg",
+    "media/admin/orders.jpg",
+    "media/admin/order-detail.jpg",
+    "media/admin/shipments.jpg",
+    "media/admin/finance.jpg",
+    "media/admin/ledger-audit.jpg",
+    "media/admin/settlements.jpg",
+    "media/admin/payout-approval.jpg",
+    "media/admin/coupons.jpg",
+    "media/admin/coupon-create.jpg",
+    "media/admin/reviews-moderation.jpg",
+    "media/admin/audit-logs.jpg",
+    "media/admin/system-settings.jpg",
+    "media/buyer/shop-profile.jpg",
+    "media/buyer/live-tracking.jpg",
+    "media/admin/live-shipments-map.jpg"
+  ],
+  "screens": [
+    {
+      "app": "buyer",
+      "title": "Marketplace Home",
+      "description": "Hero banner, curated artisan categories, featured collections, and trending products.",
+      "route": "/",
+      "device": "desktop",
+      "highlight": true,
+      "image": "media/buyer/home.jpg"
+    },
+    {
+      "app": "buyer",
+      "title": "Category Catalog",
+      "description": "Filtered product listings with price range, artisan tags, sort orders, and instant add-to-cart.",
+      "route": "/category/[slug]",
+      "device": "desktop",
+      "highlight": false,
+      "image": "media/buyer/category.jpg"
+    },
+    {
+      "app": "buyer",
+      "title": "Product Details",
+      "description": "High-res gallery, size and color variant selectors, live stock indicator, seller card, and verified reviews.",
+      "route": "/products/[shopSlug]/[productSlug]",
+      "device": "desktop",
+      "highlight": true,
+      "image": "media/buyer/product-detail.jpg"
+    },
+    {
+      "app": "buyer",
+      "title": "Multi-Vendor Shopping Cart",
+      "description": "Items grouped automatically by vendor shop with subtotal breakdown and coupon application.",
+      "route": "/cart",
+      "device": "desktop",
+      "highlight": true,
+      "image": "media/buyer/cart.jpg"
+    },
+    {
+      "app": "buyer",
+      "title": "Checkout",
+      "description": "Shipping address selector, payment method selection (Card, UPI, COD), and order summary.",
+      "route": "/checkout",
+      "device": "desktop",
+      "highlight": true,
+      "image": "media/buyer/checkout.jpg"
+    },
+    {
+      "app": "buyer",
+      "title": "Order Placed Confirmation",
+      "description": "Order receipt showcasing partitioned vendor shipments and estimated delivery dates.",
+      "route": "/orders/[id]/confirmation",
+      "device": "desktop",
+      "highlight": false,
+      "image": "media/buyer/order-confirmation.jpg"
+    },
+    {
+      "app": "buyer",
+      "title": "Orders History",
+      "description": "List of past customer orders with live status badges and item thumbnails.",
+      "route": "/orders",
+      "device": "desktop",
+      "highlight": false,
+      "image": "media/buyer/orders.jpg"
+    },
+    {
+      "app": "buyer",
+      "title": "Order Breakdown",
+      "description": "Full order investigation showing each seller's independent shipment and courier tracking numbers.",
+      "route": "/orders/[id]",
+      "device": "desktop",
+      "highlight": true,
+      "image": "media/buyer/order-detail.jpg"
+    },
+    {
+      "app": "buyer",
+      "title": "Shipment Tracking Timeline",
+      "description": "Live courier tracking checkpoints from origin seller warehouse to customer doorstep.",
+      "route": "/shipments/[id]/track",
+      "device": "desktop",
+      "highlight": true,
+      "image": "media/buyer/shipment-tracking.jpg"
+    },
+    {
+      "app": "buyer",
+      "title": "Customer Reviews",
+      "description": "Product review submission form with star ratings and verified buyer badge.",
+      "route": "/reviews",
+      "device": "desktop",
+      "highlight": false,
+      "image": "media/buyer/reviews.jpg"
+    },
+    {
+      "app": "buyer",
+      "title": "Customer Account",
+      "description": "User profile, contact information, and security preferences.",
+      "route": "/account",
+      "device": "desktop",
+      "highlight": false,
+      "image": "media/buyer/account.jpg"
+    },
+    {
+      "app": "buyer",
+      "title": "Saved Addresses",
+      "description": "Manage home and work delivery locations.",
+      "route": "/addresses",
+      "device": "desktop",
+      "highlight": false,
+      "image": "media/buyer/addresses.jpg"
+    },
+    {
+      "app": "buyer",
+      "title": "Shopper Sign In",
+      "description": "Secure password or one-click demo login.",
+      "route": "/login",
+      "device": "desktop",
+      "highlight": false,
+      "image": "media/buyer/login.jpg"
+    },
+    {
+      "app": "buyer",
+      "title": "Shopper Registration",
+      "description": "Create a new buyer account.",
+      "route": "/signup",
+      "device": "desktop",
+      "highlight": false,
+      "image": "media/buyer/signup.jpg"
+    },
+    {
+      "app": "seller",
+      "title": "Vendor Sign In",
+      "description": "Merchant authentication portal.",
+      "route": "/login",
+      "device": "desktop",
+      "highlight": false,
+      "image": "media/seller/login.jpg"
+    },
+    {
+      "app": "seller",
+      "title": "Vendor Dashboard",
+      "description": "Real-time sales revenue, pending fulfillment queue, active products, and store rating.",
+      "route": "/",
+      "device": "desktop",
+      "highlight": true,
+      "image": "media/seller/dashboard.jpg"
+    },
+    {
+      "app": "seller",
+      "title": "Product Catalog",
+      "description": "Merchant product inventory with variant breakdown and quick stock updates.",
+      "route": "/products",
+      "device": "desktop",
+      "highlight": false,
+      "image": "media/seller/products.jpg"
+    },
+    {
+      "app": "seller",
+      "title": "Add New Product",
+      "description": "Multi-variant product creator with pricing, SKU matrix, image URLs, and stock levels.",
+      "route": "/products/new",
+      "device": "desktop",
+      "highlight": true,
+      "image": "media/seller/product-create.jpg"
+    },
+    {
+      "app": "seller",
+      "title": "Inventory Management",
+      "description": "Stock balance logs, reserved quantities, and restock audit records.",
+      "route": "/inventory",
+      "device": "desktop",
+      "highlight": false,
+      "image": "media/seller/inventory.jpg"
+    },
+    {
+      "app": "seller",
+      "title": "Orders & Shipments Queue",
+      "description": "Fulfillment pipeline categorized by placed, accepted, packed, and shipped status.",
+      "route": "/shipments",
+      "device": "desktop",
+      "highlight": true,
+      "image": "media/seller/orders.jpg"
+    },
+    {
+      "app": "seller",
+      "title": "Shipment Detail & Packing",
+      "description": "Customer delivery address, ordered item line items, and fulfillment state actions.",
+      "route": "/shipments/[id]",
+      "device": "desktop",
+      "highlight": true,
+      "image": "media/seller/shipment-detail.jpg"
+    },
+    {
+      "app": "seller",
+      "title": "Shipping Label & Slip",
+      "description": "Printable packing slip with barcode, courier routing, and sender address.",
+      "route": "/shipments/[id]/label",
+      "device": "desktop",
+      "highlight": false,
+      "image": "media/seller/pack-label.jpg"
+    },
+    {
+      "app": "seller",
+      "title": "Courier Dispatch Handover",
+      "description": "Assign courier partner (Delhivery, BlueDart) and generate tracking manifest.",
+      "route": "/shipments/[id]/dispatch",
+      "device": "desktop",
+      "highlight": false,
+      "image": "media/seller/dispatch.jpg"
+    },
+    {
+      "app": "seller",
+      "title": "Return Requests",
+      "description": "Buyer return requests with reason and approval actions.",
+      "route": "/returns",
+      "device": "desktop",
+      "highlight": false,
+      "image": "media/seller/returns.jpg"
+    },
+    {
+      "app": "seller",
+      "title": "Vendor Financial Ledger",
+      "description": "Double-entry transaction audit: gross credits, platform commission deductions, and net balance.",
+      "route": "/ledger",
+      "device": "desktop",
+      "highlight": true,
+      "image": "media/seller/ledger.jpg"
+    },
+    {
+      "app": "seller",
+      "title": "Payout Settlements",
+      "description": "Weekly bank payout batches with NEFT transaction references and payout request button.",
+      "route": "/settlements",
+      "device": "desktop",
+      "highlight": false,
+      "image": "media/seller/settlements.jpg"
+    },
+    {
+      "app": "seller",
+      "title": "Shop Profile Settings",
+      "description": "Store name, brand story, logo, banner imagery, and customer contact details.",
+      "route": "/settings/profile",
+      "device": "desktop",
+      "highlight": false,
+      "image": "media/seller/store-profile.jpg"
+    },
+    {
+      "app": "seller",
+      "title": "Bank Account Details",
+      "description": "Bank account number, IFSC code, and beneficiary name for direct payout disbursements.",
+      "route": "/settings/bank",
+      "device": "desktop",
+      "highlight": false,
+      "image": "media/seller/bank-settings.jpg"
+    },
+    {
+      "app": "admin",
+      "title": "Operator Sign In",
+      "description": "Marketplace administrator authentication.",
+      "route": "/login",
+      "device": "desktop",
+      "highlight": false,
+      "image": "media/admin/login.jpg"
+    },
+    {
+      "app": "admin",
+      "title": "Marketplace Overview",
+      "description": "Total GMV, marketplace net commissions, active vendor count, total orders, and financial summaries.",
+      "route": "/",
+      "device": "desktop",
+      "highlight": true,
+      "image": "media/admin/dashboard.jpg"
+    },
+    {
+      "app": "admin",
+      "title": "Vendor Directory",
+      "description": "List of all onboarded shops with KYC verification badges, rating averages, and product counts.",
+      "route": "/shops",
+      "device": "desktop",
+      "highlight": false,
+      "image": "media/admin/shops.jpg"
+    },
+    {
+      "app": "admin",
+      "title": "Vendor Profile Review",
+      "description": "Deep dive into a merchant: sales history, active listings, bank info, and dispute rate.",
+      "route": "/shops/[id]",
+      "device": "desktop",
+      "highlight": false,
+      "image": "media/admin/shop-review.jpg"
+    },
+    {
+      "app": "admin",
+      "title": "KYC Verification & Approval",
+      "description": "Approve, suspend, or reject vendor seller licenses with audit logging.",
+      "route": "/shops/[id]/kyc",
+      "device": "desktop",
+      "highlight": true,
+      "image": "media/admin/kyc-approval.jpg"
+    },
+    {
+      "app": "admin",
+      "title": "Global Orders List",
+      "description": "Platform-wide order registry with multi-status filters, date pickers, and split shipment indicators.",
+      "route": "/orders",
+      "device": "desktop",
+      "highlight": false,
+      "image": "media/admin/orders.jpg"
+    },
+    {
+      "app": "admin",
+      "title": "Order Investigation",
+      "description": "Examine buyer payment status, split shipments across multiple vendors, and ledger fee breakdown.",
+      "route": "/orders/[id]",
+      "device": "desktop",
+      "highlight": true,
+      "image": "media/admin/order-detail.jpg"
+    },
+    {
+      "app": "admin",
+      "title": "Global Shipments Monitor",
+      "description": "Cross-vendor logistics view tracking dispatch delays and courier bottlenecks.",
+      "route": "/shipments",
+      "device": "desktop",
+      "highlight": false,
+      "image": "media/admin/shipments.jpg"
+    },
+    {
+      "app": "admin",
+      "title": "Platform Financials",
+      "description": "Marketplace cash balance in escrow, earned commission revenues, and unpaid vendor payables.",
+      "route": "/finance",
+      "device": "desktop",
+      "highlight": true,
+      "image": "media/admin/finance.jpg"
+    },
+    {
+      "app": "admin",
+      "title": "Double-Entry Ledger Audit",
+      "description": "Complete double-entry journal trail verifying that debits and credits balance across all accounts.",
+      "route": "/finance/ledger",
+      "device": "desktop",
+      "highlight": false,
+      "image": "media/admin/ledger-audit.jpg"
+    },
+    {
+      "app": "admin",
+      "title": "Settlement Batches",
+      "description": "Pending and completed vendor payout batches waiting for bank transfer disbursement.",
+      "route": "/settlements",
+      "device": "desktop",
+      "highlight": false,
+      "image": "media/admin/settlements.jpg"
+    },
+    {
+      "app": "admin",
+      "title": "Approve Payout Batch",
+      "description": "Review net payout calculations, deduct refund clawbacks, and approve settlement batch for payment.",
+      "route": "/settlements/[id]",
+      "device": "desktop",
+      "highlight": true,
+      "image": "media/admin/payout-approval.jpg"
+    },
+    {
+      "app": "admin",
+      "title": "Promotional Coupons",
+      "description": "Manage active marketplace promo discount codes with redemption metrics.",
+      "route": "/coupons",
+      "device": "desktop",
+      "highlight": false,
+      "image": "media/admin/coupons.jpg"
+    },
+    {
+      "app": "admin",
+      "title": "Create Coupon",
+      "description": "Create new percentage or flat discount coupon with spending minimums and caps.",
+      "route": "/coupons/new",
+      "device": "desktop",
+      "highlight": false,
+      "image": "media/admin/coupon-create.jpg"
+    },
+    {
+      "app": "admin",
+      "title": "Review Moderation",
+      "description": "Audit customer product feedback and flag fraudulent ratings.",
+      "route": "/reviews",
+      "device": "desktop",
+      "highlight": false,
+      "image": "media/admin/reviews-moderation.jpg"
+    },
+    {
+      "app": "admin",
+      "title": "Audit Logs",
+      "description": "Tamper-evident record of all operator actions: KYC status changes, payouts, and commission adjustments.",
+      "route": "/audit",
+      "device": "desktop",
+      "highlight": false,
+      "image": "media/admin/audit-logs.jpg"
+    },
+    {
+      "app": "admin",
+      "title": "Platform Settings",
+      "description": "Default marketplace commission rates, tax rates, and mock/production integration toggles.",
+      "route": "/settings",
+      "device": "desktop",
+      "highlight": false,
+      "image": "media/admin/system-settings.jpg"
+    },
+    {
+      "app": "buyer",
+      "title": "Artisan Shop Storefront",
+      "description": "Dedicated seller page featuring brand bio, badge, and curated store catalog.",
+      "route": "/shops/[slug]",
+      "device": "desktop",
+      "highlight": true,
+      "image": "media/buyer/shop-profile.jpg"
+    },
+    {
+      "app": "buyer",
+      "title": "Live Courier Tracking",
+      "description": "Real-time SSE tracking map displaying simulated courier van movement towards delivery point.",
+      "route": "/orders/[id]/live",
+      "device": "desktop",
+      "highlight": true,
+      "image": "media/buyer/live-tracking.jpg"
+    },
+    {
+      "app": "admin",
+      "title": "Live Logistics Map",
+      "description": "Nationwide shipment dispatch map showing live fulfillment density across vendor hubs.",
+      "route": "/live-map",
+      "device": "desktop",
+      "highlight": true,
+      "image": "media/admin/live-shipments-map.jpg"
+    }
+  ]
+}

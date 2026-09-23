@@ -4,6 +4,17 @@ Last updated: 2026-09-23
 ## Current Phase
 Stage 0 (Founder Build Sequence, Brief Section 91) — BASIC/MVP
 
+> **R-531 (2026-09-23): Bazaar (Part 1 of 4: API, Database & Demo Data).** Multi-Vendor
+> Commerce Platform hidden draft scaffolded at `templates/catalog/_bazaar`. Includes 5 complete
+> PostgreSQL database migrations (`001_core.sql` through `005_engagement.sql`), Hono TypeScript
+> backend API on Node >= 22.18, multi-vendor order split checkout, 5-stage shipment fulfillment
+> state machine, multi-party double-entry accounting ledger, promo coupons engine, mock payments and
+> courier providers, real-time SSE event bus, deterministic demo seed fixtures
+> (`scripts/generate-seed.mjs` -> `seed/001_demo.sql` with 3 demo credentials, 8 shops, 11 products with
+> variants, and orders), and root `template.json` defining 48 screen journeys. 19/19 unit tests passed
+> in 247ms, 40/40 template studio tests passed, and full Stage 0 `task verify` passed (3,983 tests, 0 failures,
+> 100% offline). Next: R-532, Bazaar Storefront `apps/buyer`.
+
 > **R-530 follow-up (2026-09-23): the platform runs on any new machine.** `docs/SETUP.md` is the
 > requirement and install contract, and `./scripts/omnistack.sh doctor` checks all of it (Python
 > 3.13, Node 22.18+, ripgrep, the compose plugin, a sourceable `.env`, a container-safe

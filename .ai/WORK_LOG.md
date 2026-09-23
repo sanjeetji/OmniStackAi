@@ -1,5 +1,32 @@
 # Work Log
 
+## 2026-09-23 — R-531 (Bazaar part 1/4: multi-vendor commerce API, database migrations, ledger & deterministic fixtures)
+
+- **Template foundation.** Scaffolded hidden draft `templates/catalog/_bazaar` (part 1 of 4) for the multi-vendor commerce platform product.
+- **Database & Domain Migrations (`migrations/001..005`):**
+  - `001_core.sql`: users, sessions, addresses, vendor shops (KYC status, bank details, ratings).
+  - `002_catalog.sql`: category hierarchy, products, multi-variant matrix (SKU, size, color, stock, reserved stock), inventory logs.
+  - `003_orders.sql`: carts, cart items, parent orders, split shipments (sub-orders), shipment items, courier tracking events, return requests.
+  - `004_ledger.sql`: multi-party double-entry accounting accounts (platform, vendor, shopper), ledger entries, and settlement batches.
+  - `005_engagement.sql`: verified purchase customer reviews, promo discount coupons (percentage & flat with caps), notifications, and audit logs.
+- **Domain Services & Routes (`services/api` on Node >= 22.18):**
+  - `src/lib/shipment-state.ts`: 5-stage shipment finite state machine (`placed` -> `accepted` -> `packed` -> `shipped` -> `delivered`, with `cancelled` and `returned`).
+  - `src/lib/money.ts`: Currency formatting and commission splits (basis points).
+  - `src/lib/events.ts`: EventBus for real-time SSE broadcasts.
+  - `src/auth/`: Scrypt password hashing, native HS256 JWT generation and validation, Hono auth middleware.
+  - `src/providers/`: Mock payments (Card, UPI, COD), mock courier logistics (Delhivery, BlueDart, Shadowfax), notification dispatcher.
+  - `src/services/`: Catalog service, multi-vendor order split checkout service, fulfillment service, double-entry ledger & payout settlement service.
+  - `src/routes/`: Storefront public API (`/api/public/*`), shopper authenticated API (`/api/shopper/*`), vendor merchant portal (`/api/vendor/*`), operator admin console (`/api/admin/*`), and real-time SSE stream (`/api/stream`).
+  - `src/app.ts` & `src/index.ts`: Hono application setup with CORS, health check, and error handlers.
+- **Deterministic Demo Seed Generator (`scripts/generate-seed.mjs` -> `seed/001_demo.sql`):**
+  - Generates 3 demo user credentials (Priya Sharma / `Shopper@2026`, Aryan Gupta / `Vendor@2026`, Vikram Mehta / `Admin@2026`), 8 verified shops across diverse craft categories, 11 products with 25+ variants, inventory logs, addresses, multi-vendor split orders, and double-entry ledger postings.
+- **Root Template Manifest (`template.json`):**
+  - Declares 48 planned screen journeys across buyer, seller, and admin applications.
+- **Verification & Gates:**
+  - 19/19 unit tests passed in 247ms via `node --test test/*.test.ts`.
+  - 40/40 template studio tests passed (`test_studio_templates.py`).
+  - Full Stage 0 verification (`task verify`): 3,983 tests passed fully offline with 0 model calls.
+
 ## 2026-09-23 — R-530 (RideNow part 4/4: operations console, screenshots, publish)
 
 - **Ops console.** `apps/admin` ("RideNow Ops"), 18 pages on the existing `/admin/*` and `/support/*` endpoints: dashboard (KPIs with week-over-week deltas, a 14-day chart, vehicle mix, top drivers, work queues), live map, trips and trip investigation (timeline, dispatch offers, ledger, cancel, refund), riders, drivers with document review and approval, pricing with a live sample fare, surge zones, promo codes, payouts, finance, support desk with canned replies, audit log and settings. Its own light control-room design (dark ink sidebar, Instrument Sans, 8 px radii), so it looks nothing like the rider or driver apps. Admin-only sign-in; a stored non-admin session is dropped.

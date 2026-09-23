@@ -1,0 +1,11 @@
+{
+  "name": "bazaar",
+  "private": true,
+  "description": "Bazaar: shopper storefront, vendor portal, admin control room and API.",
+  "packageManager": "pnpm@11.19.0",
+  "scripts": {
+    "dev:api": "pnpm --filter @bazaar/api dev",
+    "test": "pnpm --filter @bazaar/api test",
+    "typecheck": "pnpm -r typecheck"
+  }
+}

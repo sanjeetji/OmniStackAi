@@ -4,9 +4,11 @@ phase: BASIC/MVP
 founder_stage: 0
 current_task: null
 current_status: ready
-branch: ai/R-530-ridenow-admin
-last_completed_task: R-530
+branch: ai/R-531-bazaar-api
+last_completed_task: R-531
 last_completed_task_summary: >-
+  Completed R-531 (2026-09-23): Bazaar part 1/4 (Multi-Vendor Commerce Platform API & Database). Built in hidden draft templates/catalog/_bazaar: 5 PostgreSQL migrations (core, catalog, orders, double-entry ledger, engagement); full Hono TypeScript services/api with domain services (split checkout, 5-stage shipment state machine, multi-party ledger, inventory reservation, SSE tracking events); deterministic seed generator (scripts/generate-seed.mjs -> seed/001_demo.sql with 3 demo logins, 8 shops, 11 products with variants, and multi-vendor orders); root template.json with 48 screen journeys; 19 API unit tests (100% pass in 247ms); 40 template studio tests passed; and Stage 0 verification (3,983 tests passed fully offline with 0 model calls).
+_prior_last_completed_task_summary_R530: >-
   Completed R-530 (2026-09-23): RideNow part 4/4 and publish. apps/admin "RideNow Ops" (18 pages: dashboard, live map, trips and investigation, riders, drivers with document review, pricing, surge zones, promos, payouts, finance, support desk, audit, settings) with its own light control-room design. 48 screenshots of every page of all three apps plus a cover, captured by scripts/capture-template-screens.mjs (Playwright from a scratch folder, staging live scenes), which solves R-528's blocker. templates/catalog/ride-now is published (v1.0.0, 4 apps, cover, 8 highlights). The live gate found and fixed five platform defects the curl-only checks had missed: the preview proxy forwarded content-encoding for an already-decoded body (no preview page loaded in any browser); previews ran dev servers that never hydrate behind the proxy (they now build and serve production); .DS_Store was copied into every project; a project's Python tests reported 0 passed without pytest; git's background gc raced with project copy/delete.
 _prior_last_completed_task_summary_R529: >-
   Completed R-529 (2026-09-22): Phase T handoff document R_&_D/OmniStackAI_Template_Marketplace_Plan_v1.md
