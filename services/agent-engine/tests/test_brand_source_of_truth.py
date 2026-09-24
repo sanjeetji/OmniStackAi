@@ -223,3 +223,108 @@ class BinaryFilesSurviveAssembly(TestCase):
         icon = files["apps/mobile/assets/icon.png"]
         self.assertTrue(icon.base64_encoded, "the icon lost its binary flag during assembly")
         self.assertEqual(base64.b64decode(icon.content)[:8], b"\x89PNG\r\n\x1a\n")
+
+
+class OnlyTheIdentifierIsRefused(TestCase):
+    """R-550: the one irreversible decision in publishing, and only that one.
+
+    Apple ties the bundle identifier to the App Store Connect record; Google Play uses it as the
+    listing's primary key and never lets one be reused. Changing it after publication does not
+    update the app — it makes a different one, with no reviews and no update path for existing
+    users. Icon, colours, font and display name can all change in an update, so blocking those
+    would be wrong and would teach a user to ignore the tool.
+    """
+
+    def setUp(self) -> None:
+        self.files = _project()
+        self.brand = json.loads(self.files["brand.json"].content)
+
+    def test_the_published_identifier_is_recorded_separately(self) -> None:
+        """A lone `published: true` cannot tell anyone whether the identifier beside it still is
+        the one the stores know."""
+        identity = self.brand["identity"]
+        self.assertIn("publishedBundleId", identity)
+        self.assertIsNone(identity["publishedBundleId"])
+
+    def test_a_check_script_is_generated_and_wired_in(self) -> None:
+        self.assertIn("brand/check.mjs", self.files)
+        scripts = json.loads(self.files["package.json"].content)["scripts"]
+        self.assertEqual(scripts["brand:check"], "node brand/check.mjs")
+        # Regenerating from a brand.json that cannot be shipped helps nobody.
+        self.assertIn("check.mjs", self.files["brand/generate.mjs"].content)
+
+    def test_the_refusal_explains_itself(self) -> None:
+        check = self.files["brand/check.mjs"].content
+        for phrase in ("App Store", "Google Play", "no reviews", "Restore it to"):
+            with self.subTest(phrase=phrase):
+                self.assertIn(phrase, check)
+
+    def test_what_is_still_allowed_is_stated_too(self) -> None:
+        """Saying what a user *can* still change matters as much as the refusal."""
+        check = self.files["brand/check.mjs"].content
+        self.assertIn("icon, colours, font or display name is fine", check)
+        self.assertIn("buildNumber", check)
+
+
+class TheChatAgentKnowsWhereBrandingLives(TestCase):
+    def test_a_branding_request_selects_brand_json(self) -> None:
+        """"make it green" names no file; ranking by word overlap would never find it."""
+        from omnistackai_agent_engine.studio.code_edit import pick_files_by_name
+
+        paths = ["brand.json", "apps/web/app/page.tsx", "apps/web/styles/tokens.css"]
+        for prompt in ("make it green", "change the logo", "rename the app to Bakery"):
+            with self.subTest(prompt=prompt):
+                self.assertEqual(pick_files_by_name(prompt, paths)[0], "brand.json")
+
+    def test_an_unrelated_request_does_not(self) -> None:
+        from omnistackai_agent_engine.studio.code_edit import pick_files_by_name
+
+        paths = ["brand.json", "apps/web/app/page.tsx"]
+        self.assertNotIn("brand.json", pick_files_by_name("add a waitlist to the booking screen", paths))
+
+    def test_the_agent_refuses_to_change_a_published_identifier(self) -> None:
+        import tempfile
+        from pathlib import Path
+
+        from omnistackai_agent_engine.studio.code_edit import published_identity_violation
+
+        root = Path(tempfile.mkdtemp())
+        (root / "brand.json").write_text(json.dumps({
+            "identity": {"bundleId": "com.mine.app", "published": True, "publishedBundleId": "com.mine.app"}
+        }), encoding="utf-8")
+        proposed = json.dumps({
+            "identity": {"bundleId": "com.someoneelse.app", "published": True, "publishedBundleId": "com.mine.app"}
+        })
+        violation = published_identity_violation(root, {"brand.json": proposed})
+        self.assertIsNotNone(violation)
+        self.assertIn("com.mine.app", violation)
+        self.assertIn("no update path", violation)
+
+    def test_it_allows_everything_else(self) -> None:
+        import tempfile
+        from pathlib import Path
+
+        from omnistackai_agent_engine.studio.code_edit import published_identity_violation
+
+        root = Path(tempfile.mkdtemp())
+        (root / "brand.json").write_text(json.dumps({
+            "identity": {"bundleId": "com.mine.app", "published": True, "publishedBundleId": "com.mine.app"}
+        }), encoding="utf-8")
+        recoloured = json.dumps({
+            "primaryColor": "#7c3aed", "name": "Renamed",
+            "identity": {"bundleId": "com.mine.app", "published": True, "publishedBundleId": "com.mine.app"},
+        })
+        self.assertIsNone(published_identity_violation(root, {"brand.json": recoloured}))
+
+    def test_an_unpublished_project_may_change_its_identifier(self) -> None:
+        import tempfile
+        from pathlib import Path
+
+        from omnistackai_agent_engine.studio.code_edit import published_identity_violation
+
+        root = Path(tempfile.mkdtemp())
+        (root / "brand.json").write_text(json.dumps({
+            "identity": {"bundleId": "com.mine.app", "published": False, "publishedBundleId": None}
+        }), encoding="utf-8")
+        proposed = json.dumps({"identity": {"bundleId": "com.yourco.app", "published": False}})
+        self.assertIsNone(published_identity_violation(root, {"brand.json": proposed}))

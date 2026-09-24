@@ -4,6 +4,14 @@ Last updated: 2026-09-24
 ## Current Phase
 Stage 0 (Founder Build Sequence, Brief Section 91) — BASIC/MVP
 
+> **R-550 (2026-09-24): before publishing, change anything; afterwards, one thing is refused — with the reason.**
+> Nothing stopped a `bundleId` change after publication, which is the only irreversible decision in the flow: Apple ties it to the App Store Connect record, Google Play uses it as the listing's primary key and never lets one be reused, so a different identifier is a *different app* — no reviews, no ratings, no update path.
+> `brand.json` now records `publishedBundleId` beside `published`, which is what makes a later change detectable. `brand/check.mjs` refuses a mismatch and explains it; the chat agent enforces the same rule **inside** the block that restores every file, so a refusal really does leave nothing saved.
+> **Only the identifier is refused.** Icon, colours, font and display name stay legal in an update — blocking them would be wrong. They warn instead, naming the cost: higher `buildNumber`/`versionCode`, a new build, another review, and the listing title edited in each console.
+> The agent now knows where branding lives: "make it green", "change the logo" and "rename the app" all select `brand.json`; "add a waitlist to the booking screen" does not.
+> Evidence: unpublished passes; published-unchanged passes with the warning; published-then-edited exits 1 with the explanation. 9 new tests; `task verify` 4,159 OK offline, 0 model calls.
+> **Option C is complete.** Next: R-551, the `omnistack.sh` command set — and a `doctor` that verifies the interpreter actually works rather than only matching a version string.
+
 > **R-549 (2026-09-24): a rebrand reaches the web app and the admin console, not only the phone.**
 > CSS cannot read JSON at runtime, so the two Next.js apps were left behind by R-548. Each now has a `lib/brand.ts` importing `brand.json` and the **same** `derive.mjs` the mobile config uses, emitted into `<head>` after `tokens.css`. Colours, fonts and corners need no regeneration — edit, reload, done.
 > Icons are binary, so `pnpm run brand` regenerates them with a plain-Node PNG encoder. **It never overwrites your artwork:** generated icons carry a marker; a file without one is left alone.

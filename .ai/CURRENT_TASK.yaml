@@ -1,29 +1,27 @@
-task_id: R-549
+task_id: R-550
 status: completed
 phase: MVP
-tracker_row: 15
+tracker_row: 17
 started_at: "2026-09-24"
 completed_at: "2026-09-24"
-branch: ai/R-549-brand-reaches-web
+branch: ai/R-550-publish-rules
 objective: >-
-  Branding is scattered across files that do not know about each other. Changing one colour means
-  editing `apps/web/styles/tokens.css`, the same eleven variables again in `apps/admin`,
-  `apps/mobile/app.json` twice, and `apps/mobile/src/design-system/tokens.ts` — then regenerating
-  four PNGs by hand, which a user cannot do at all because the generator is Python inside the
-  platform. Changing the app's *name* is worse: it appears in `app.json`, both `package.json`s, the
-  READMEs and the bundle identifier.
-  Give every generated project one `brand.json` that the apps derive from, using Expo's documented
-  dynamic-config pattern (`app.config.js`) rather than a static `app.json`. This is the foundation
-  the founder chose ("Option C"): R-549 regenerates icons from it, R-550 adds publish-state rules
-  and teaches the chat agent to edit it.
+  R-548 and R-549 made `brand.json` the one place branding lives and got a rebrand to every
+  surface. Two things are left before that is genuinely safe and genuinely usable. First, nothing
+  stops someone changing `identity.bundleId` after they have published — the one irreversible
+  decision in the whole flow, because Apple ties it to the App Store Connect record and Google Play
+  uses it as the listing's primary key and never lets anyone reuse one. Today the file merely warns
+  in a comment. Second, a user asking the chat agent to "make it green" has no reason to land on
+  `brand.json`: the file-selection heuristic ranks paths by word overlap, and nothing points at it.
+  Add a real rule with a real explanation, and teach the agent where branding lives.
 founder_gate: >-
-  Founder chose Option C on 2026-09-24 and asked that a user be able to change colour, icon and
-  name before publishing, by chat or by hand. Correction recorded during planning and agreed: only
-  the bundle identifier is permanent after publishing — icon, colours and display name can all
-  change in an update, so the later guard must refuse the identifier and warn on the rest rather
-  than blocking everything.
+  Founder asked on 2026-09-24 for changes before publishing to be easy by chat or by hand, and for
+  a change after publishing to come back with the reason rather than silently succeeding. Agreed
+  during planning: only the identifier is refused. Icon, colours and display name can all change in
+  an update, so those warn rather than block — refusing them would be wrong.
 allowed_paths:
   - services/agent-engine/src/omnistackai_agent_engine/codegen/
+  - services/agent-engine/src/omnistackai_agent_engine/studio/code_edit.py
   - services/agent-engine/tests/
   - scripts/test.sh
   - .ai/
@@ -31,18 +29,17 @@ allowed_paths:
   - CHANGELOG.md
   - apps/console-web/data/overview.json
 forbidden_changes:
-  - No new dependency in generated projects; app.config.js is plain Node
-  - No credential value in brand.json — it is branding, not configuration for secrets
-  - The app must still bundle, and icons stay valid PNGs at the sizes Expo expects
-  - Generated output stays byte-stable for a given IR and prompt
+  - Icon, colour, font and display-name changes must NOT be blocked after publishing — they are legal
+  - No credential value anywhere
+  - The app must still bundle and icons stay valid PNGs
   - task verify stays offline with 0 model calls
 required_gates:
-  - A generated project contains one brand.json holding name, colour, font, radius and identifier
-  - apps/mobile reads it through app.config.js, and the static app.json no longer competes with it
-  - The web and admin token stylesheets carry the same colour brand.json declares
-  - The React Native design tokens carry it too, so all three surfaces agree
-  - brand.json documents that the identifier is permanent once published
-  - Editing brand.json alone changes what every surface renders
+  - brand.json records the identifier that was published, so a later change is detectable
+  - A check refuses a bundleId that no longer matches the published one, and says why
+  - The same check passes cleanly for an unpublished project, whatever the identifier is
+  - Changing colour, font or display name after publishing is allowed, with a warning naming the new build and version bump
+  - The chat agent selects brand.json for a branding request
+  - The chat agent refuses to edit the identifier of a published project
   - task verify passes offline with 0 model calls
 model_tool_trace:
   routing: deterministic_only
@@ -50,24 +47,14 @@ model_tool_trace:
   cloud_calls: 0
 blockers: []
 deferred:
-  - "R-549: `pnpm run brand` regenerates icons from brand.json, skipping any the user has replaced"
-  - "R-550: publish-state rules (identifier refused, the rest warned) and the chat agent editing brand.json"
+  - "R-551: omnistack.sh command set — start/stop, and a doctor that verifies the interpreter actually works rather than only matching a version string"
 evidence:
-  - "task verify: 4,143 tests OK, offline, 0 model calls; scripts/test.sh, lint, security:quick green"
-  - "live: Expo started against the generated monorepo and served a manifest carrying brand.json's values (splash bg #16a34a)"
-  - "live: hand-editing brand.json to 'Bakery Shop' / '#7c3aed' changed the manifest's name, slug and splash colour on reload"
-  - "live: bundleId stayed com.minimal.blog through that rename, which is the point of it being its own field"
-  - "a test executes the generated derive.mjs through Node and compares all palettes against the Python for eight colours"
-  - "11 new offline tests in tests/test_brand_source_of_truth.py"
+  - "task verify: 4,159 tests OK, offline, 0 model calls; scripts/test.sh, lint, security:quick green"
+  - "live: unpublished project passes; published with an unchanged identifier passes with the update-cost warning; published then edited exits 1 with the full explanation"
+  - "the agent guard refuses the published-identifier change, allows a recolour and rename of a published app, and allows an identifier change on an unpublished one"
+  - "'make it green', 'change the logo' and 'rename the app' all select brand.json; 'add a waitlist to the booking screen' does not"
+  - "9 new offline tests, 27 in tests/test_brand_source_of_truth.py"
 found_and_fixed:
-  - "the JS and Python palette derivations differed on five of seven colours: Python's round() is half-to-even, JavaScript's Math.round() is half-up. A rebranded project would have drifted by one channel from what the platform generates."
-  - "a static app.json alongside app.config.js would have let a user edit the losing file with no way to tell why nothing changed; only the dynamic config is generated now"
+  - "the refusal was first placed after the try/except that restores files, so it would have raised with the change still written to disk — the opposite of what 'nothing was saved' promises"
+  - "embedding the check script through a Python heredoc collapsed its escape sequences and produced invalid JavaScript; it is now embedded verbatim from a file"
 
-r549_evidence:
-  - "task verify: 4,150 tests OK, offline, 0 model calls; scripts/test.sh, lint, security:quick green"
-  - "live: with one icon replaced by hand, `node brand/generate.mjs` kept it and regenerated exactly the other three"
-  - "the regenerated PNGs are byte-for-byte identical to the platform's Python output, SHA-256 verified across all three"
-  - "7 new offline tests, 18 in tests/test_brand_source_of_truth.py"
-r549_found_and_fixed:
-  - "the generated-icon marker existed only in the JavaScript generator, so a fresh project's Python-generated icons looked user-supplied and `pnpm run brand` silently refused to update any of them"
-  - "_prefixed rebuilt each GeneratedFile with only the path and the executable bit, dropping base64_encoded, so every icon became an ASCII text file the moment it moved into apps/mobile/ — the adapter's own tests passed because they never go through assembly"

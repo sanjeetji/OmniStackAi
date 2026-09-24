@@ -2664,4 +2664,25 @@ if ! rg -qF 'base64_encoded=f.base64_encoded' \
   exit 1
 fi
 
+# R-550: the bundle identifier is the one irreversible decision in publishing, so it is the one
+# thing refused. Icon, colours, font and display name stay legal after publication — blocking them
+# would be wrong and would teach a user to ignore the tool.
+for guard in test_the_published_identifier_is_recorded_separately \
+  test_the_refusal_explains_itself \
+  test_what_is_still_allowed_is_stated_too \
+  test_a_branding_request_selects_brand_json \
+  test_the_agent_refuses_to_change_a_published_identifier \
+  test_it_allows_everything_else; do
+  if ! rg -qF "$guard" "$r548_tests"; then
+    printf 'R-550 the publish-rule gate must still check: %s\n' "$guard"
+    exit 1
+  fi
+done
+# The refusal must roll the change back; raising outside the try would leave it written to disk.
+if ! rg -qU 'violation = published_identity_violation\(repo, changes\)(.|\n)*?except BaseException:(.|\n)*?restore\(repo, original\)' \
+  "$repo_root/services/agent-engine/src/omnistackai_agent_engine/studio/code_edit.py"; then
+  printf 'R-550 the identifier refusal must be inside the try that restores the files.\n'
+  exit 1
+fi
+
 printf 'Repository contract tests passed.\n'

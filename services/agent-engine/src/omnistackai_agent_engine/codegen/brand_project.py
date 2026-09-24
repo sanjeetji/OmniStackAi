@@ -52,6 +52,10 @@ def brand_json(ir: ApplicationIR, slug: str) -> GeneratedFile:
             ],
             "bundleId": bundle_identifier(slug),
             "published": False,
+            # R-550: set to the value of bundleId at the moment you publish. Keeping it separate is
+            # what makes a later change *detectable* — a lone `published: true` flag cannot tell
+            # anyone whether the identifier beside it is still the one the stores know.
+            "publishedBundleId": None,
         },
     }
     return GeneratedFile("brand.json", json.dumps(document, indent=2) + "\n")
@@ -339,9 +343,14 @@ import path from 'node:path';
 import zlib from 'node:zlib';
 import crypto from 'node:crypto';
 import { fileURLToPath } from 'node:url';
+import { execFileSync } from 'node:child_process';
 import { rgb } from './derive.mjs';
 
 const here = path.dirname(fileURLToPath(import.meta.url));
+
+// R-550: never regenerate from a brand.json that is invalid, or from one whose identifier has
+// drifted since publication. Writing icons for an app that can no longer be shipped helps nobody.
+execFileSync(process.execPath, [path.join(here, 'check.mjs')], { stdio: 'inherit' });
 const root = path.resolve(here, '..');
 const brand = JSON.parse(fs.readFileSync(path.join(root, 'brand.json'), 'utf8'));
 
@@ -486,6 +495,16 @@ console.log('Colours, fonts and corners need no regeneration — the apps read b
     )
 
 
+def brand_check_mjs() -> GeneratedFile:
+    """`pnpm run brand:check` — the one rule that cannot be undone (R-550).
+
+    Only the identifier is refused. Icon, colours and display name can all change in an update,
+    so blocking those would be wrong and would teach a user to ignore the tool. They warn
+    instead, naming what a change actually costs: a new build, a higher version, another review.
+    """
+    return GeneratedFile("brand/check.mjs", '#!/usr/bin/env node\n// Validates ../brand.json. Run by `pnpm run brand:check`, and by `pnpm run brand` before it\n// regenerates anything.\n//\n// There is exactly one thing here that cannot be undone, so it is the only thing refused.\n\nimport fs from \'node:fs\';\nimport path from \'node:path\';\nimport { fileURLToPath } from \'node:url\';\nimport { rgb } from \'./derive.mjs\';\n\nconst root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), \'..\');\nconst brand = JSON.parse(fs.readFileSync(path.join(root, \'brand.json\'), \'utf8\'));\nconst identity = brand.identity ?? {};\n\nconst errors = [];\nconst warnings = [];\n\nif (!brand.name || typeof brand.name !== \'string\') {\n  errors.push(\'name must be a non-empty string.\');\n}\n\ntry {\n  rgb(brand.primaryColor);\n} catch (error) {\n  errors.push(String(error.message));\n}\n\nconst IDENTIFIER = /^[a-z][a-z0-9]*(\\.[a-z][a-z0-9]*)+$/;\n\nif (!identity.bundleId) {\n  errors.push(\'identity.bundleId is required to build this app.\');\n} else if (!IDENTIFIER.test(identity.bundleId)) {\n  errors.push(\n    `identity.bundleId "${identity.bundleId}" is not a valid reverse-DNS identifier. Both stores ` +\n      \'require something like com.yourcompany.yourapp: lowercase, dot-separated, each part \' +\n      \'starting with a letter.\'\n  );\n}\n\nif (identity.published) {\n  if (!identity.publishedBundleId) {\n    errors.push(\n      \'identity.published is true but identity.publishedBundleId is not set. Record the \' +\n        \'identifier you published with, so a later change can be caught.\'\n    );\n  } else if (identity.publishedBundleId !== identity.bundleId) {\n    errors.push(\n      [\n        \'The bundle identifier has changed since this app was published.\',\n        \'\',\n        `  published with: ${identity.publishedBundleId}`,\n        `  brand.json now: ${identity.bundleId}`,\n        \'\',\n        \'This is the one change that cannot be made. Apple ties the identifier to the App Store\',\n        "Connect record, and Google Play uses it as the listing\'s primary key and never lets",\n        \'anyone reuse one. Building with a different identifier does not update your app: it is\',\n        \'a different app, with no reviews, no ratings, and no update path for anyone who already\',\n        \'installed yours.\',\n        \'\',\n        `Restore it to ${identity.publishedBundleId}. If you genuinely want a separate app, start`,\n        \'a new project rather than renaming this one.\',\n      ].join(\'\\n\')\n    );\n  }\n\n  // Everything else is legal after publishing, and saying so matters as much as the refusal above.\n  warnings.push(\n    [\n      \'This app is published. Changing its icon, colours, font or display name is fine, but it\',\n      \'reaches users only through a new build:\',\n      \'  1. raise buildNumber (iOS) and versionCode (Android)\',\n      \'  2. eas build --platform all --profile production\',\n      \'  3. eas submit --platform all --profile production, then wait for review\',\n      \'A display-name change also needs the listing title edited in each store console.\',\n    ].join(\'\\n\')\n  );\n}\n\nfor (const warning of warnings) console.warn(`\\nwarning: ${warning}\\n`);\n\nif (errors.length) {\n  console.error(\'\\nbrand.json is not valid:\\n\');\n  for (const error of errors) console.error(`  - ${error}\\n`);\n  process.exit(1);\n}\n\nconsole.log(\'brand.json looks good.\');\n')
+
+
 def brand_files(ir: ApplicationIR, slug: str) -> list[GeneratedFile]:
     """The root-level branding files, shared by every app in the monorepo."""
-    return [brand_json(ir, slug), derive_mjs(), brand_script_mjs(), brand_readme()]
+    return [brand_json(ir, slug), derive_mjs(), brand_script_mjs(), brand_check_mjs(), brand_readme()]

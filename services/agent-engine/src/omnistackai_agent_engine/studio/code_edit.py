@@ -573,6 +573,55 @@ _STOPWORDS = frozenset(
 )
 
 
+#: R-550: a request that is really about branding. Every one of these is now answered by editing
+#: brand.json, which the apps derive from, rather than by hunting through stylesheets.
+_BRANDING_WORDS = {
+    "brand", "branding", "colour", "color", "colours", "colors", "theme", "palette",
+    "logo", "icon", "icons", "splash", "font", "fonts", "typeface", "typography",
+    "rename", "renamed", "rebrand", "appearance", "corners", "rounded", "radius",
+    "red", "green", "blue", "purple", "orange", "yellow", "teal", "pink", "black", "white",
+}
+
+
+def published_identity_violation(repo_dir: str | os.PathLike[str], changes: dict) -> str | None:
+    """The one edit that must be refused rather than repaired (R-550).
+
+    Apple ties the bundle identifier to the App Store Connect record, and Google Play uses it as
+    the listing's primary key and never lets anyone reuse one. Changing it after publication does
+    not update the app — it makes a different one, with no reviews, no ratings and no update path
+    for anyone who already installed the original. That is not a mistake a repair round should get
+    to fix; it is a change that should not happen.
+
+    Everything else about a published app — icon, colours, font, display name — is legal, and is
+    deliberately not blocked here.
+    """
+    content = changes.get("brand.json")
+    if content is None:  # untouched, or deleted (which the path rules already reject)
+        return None
+    previous_path = Path(repo_dir) / "brand.json"
+    if not previous_path.is_file():
+        return None
+    try:
+        previous = json.loads(previous_path.read_text(encoding="utf-8")).get("identity") or {}
+        proposed = json.loads(content).get("identity") or {}
+    except (json.JSONDecodeError, UnicodeDecodeError):
+        return None  # malformed JSON is the verifier's business, not this guard's
+
+    published_as = previous.get("publishedBundleId")
+    if not previous.get("published") or not published_as:
+        return None
+    if proposed.get("bundleId") == published_as:
+        return None
+    return (
+        f"this app was published as {published_as}, and a store bundle identifier cannot be "
+        f"changed afterwards — Apple ties it to the App Store Connect record and Google Play "
+        f"never lets one be reused, so building under {proposed.get('bundleId')!r} would create a "
+        f"separate app with no reviews, no ratings and no update path for your existing users. "
+        f"Its icon, colours, font and display name can all still be changed; only the identifier "
+        f"cannot."
+    )
+
+
 def pick_files_by_name(prompt: str, index_paths: list[str], limit: int = MAX_SELECTED_FILES) -> list[str]:
     """Rank real repository paths against the words in the request.
 
@@ -585,6 +634,11 @@ def pick_files_by_name(prompt: str, index_paths: list[str], limit: int = MAX_SEL
     words = {w for w in re.split(r"[^a-z0-9]+", prompt.lower()) if len(w) > 2 and w not in _STOPWORDS}
     if not words:
         return []
+    # R-550: "make it green" names no file, and ranking by word overlap would never find the one
+    # place a colour is now defined. Branding lives in brand.json; say so rather than hoping.
+    ranked: list[str] = []
+    if words & _BRANDING_WORDS and "brand.json" in index_paths:
+        ranked.append("brand.json")
     scored: list[tuple[int, int, str]] = []
     for path in index_paths:
         lowered = path.lower()
@@ -600,7 +654,8 @@ def pick_files_by_name(prompt: str, index_paths: list[str], limit: int = MAX_SEL
         if score:
             scored.append((-score, len(path), path))
     scored.sort()
-    return [path for _, _, path in scored[:limit]]
+    ranked += [path for _, _, path in scored if path not in ranked]
+    return ranked[:limit]
 
 
 def _extract_json(text: str) -> dict:
@@ -720,6 +775,12 @@ async def run_code_edit(
                 raise CodeEditError(
                     "the change did not pass its checks, so nothing was saved: " + "; ".join(verification.errors[:5])
                 )
+        # R-550: the one edit that is refused rather than repaired. Checked inside the try, so the
+        # handler below restores every file — outside it, a violation would raise with the change
+        # still written to disk, which is the opposite of what "nothing was saved" promises.
+        violation = published_identity_violation(repo, changes)
+        if violation is not None:
+            raise CodeEditError(f"nothing was saved: {violation}")
     except BaseException:
         restore(repo, original)
         raise

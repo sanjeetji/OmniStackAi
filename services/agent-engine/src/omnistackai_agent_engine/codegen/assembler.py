@@ -327,6 +327,7 @@ def assemble_project(
                         "private": True,
                         "scripts": {
                             "brand": "node brand/generate.mjs",
+                            "brand:check": "node brand/check.mjs",
                         },
                     },
                     indent=2,
