@@ -4,6 +4,13 @@ Last updated: 2026-09-24
 ## Current Phase
 Stage 0 (Founder Build Sequence, Brief Section 91) — BASIC/MVP
 
+> **R-555 (2026-09-24): a prompt that names a second kind of user builds the whole ecosystem.**
+> The planner alone was not the signal — it plans three surfaces for "a simple blog" — so always building `complete` would hand someone four directories they never asked for.
+> **The rule: an ecosystem is built when the prompt names a second kind of person.** A customer or an admin does not count on its own, because a single app is already both. A courier, merchant or doctor does. Deterministic and offline: one sentence must not build different shapes on different runs.
+> Two false positives fixed — "an online store" matched *merchant* on a word that names the product, and "a dashboard for admins" counted admin as a second party. Whole-word matching, so "driven" is not a driver.
+> Evidence: *"a food delivery app with customers, drivers and restaurants"* → **one** repo, 675 files, one commit, `apps/web` + `apps/merchant` + `apps/driver` + `apps/admin` + one `services/api`, and it says why. "a simple blog" still builds one app. 15 new tests; `task verify` 4,203 OK offline, 0 model calls.
+> **The founder's "single app to complete eco-system" requirement is now met from a prompt.**
+
 > **R-554 (2026-09-24): a planned ecosystem assembles into one monorepo over one API and one database.**
 > `build_ecosystem` made each surface its own repo with its own backend and database — four disconnected apps, where the courier could not see the customer's order.
 > `codegen/ecosystem_assembler.py` puts every surface under `apps/<id>/` over one `services/api`, one `brand.json`, one contract. The customer app lands in `apps/web` and the dashboard in `apps/admin`, the ids R-553's runner and the console already understand.

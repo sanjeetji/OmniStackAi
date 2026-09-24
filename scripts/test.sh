@@ -2785,4 +2785,32 @@ if ! rg -qF 'set(existing.required_roles) | set(api.required_roles)' \
   exit 1
 fi
 
+# R-555: whether a prompt builds one app or four is a product decision, so it is deterministic,
+# offline and explainable. The planner alone is not the signal — it plans three surfaces for "a
+# simple blog" — so the rule is whether the prompt names a SECOND kind of person. Neither a
+# customer nor an admin counts on its own, because a single app is already both.
+r555_tests="$repo_root/services/agent-engine/tests/test_ecosystem_from_prompt.py"
+if [[ ! -f "$r555_tests" ]]; then
+  printf 'R-555 the ecosystem-from-prompt gate is required.\n'
+  exit 1
+fi
+for guard in test_a_second_party_builds_an_ecosystem \
+  test_one_kind_of_user_builds_one_app \
+  test_an_admin_alone_is_not_a_second_party \
+  test_a_word_naming_the_product_is_not_a_person \
+  test_the_decision_is_deterministic \
+  test_it_is_one_git_repository \
+  test_the_repository_holds_the_apps_and_one_api; do
+  if ! rg -qF "$guard" "$r555_tests"; then
+    printf 'R-555 the ecosystem-from-prompt gate must still check: %s\n' "$guard"
+    exit 1
+  fi
+done
+# No model call may decide this: the same sentence must always build the same shape.
+if rg -qF 'ModelProvider' \
+  "$repo_root/services/agent-engine/src/omnistackai_agent_engine/intake/ecosystem_intent.py"; then
+  printf 'R-555 the ecosystem decision must stay deterministic and offline.\n'
+  exit 1
+fi
+
 printf 'Repository contract tests passed.\n'

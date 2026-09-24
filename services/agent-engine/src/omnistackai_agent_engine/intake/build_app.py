@@ -23,6 +23,7 @@ from ..application_ir import ApplicationIR
 from ..codegen import assemble_project
 from ..git_service import create_repository
 from ..model_gateway import ModelProvider
+from .ecosystem_intent import detect_ecosystem_intent
 from .nl_to_ir import (
     DEFAULT_MAX_OUTPUT_TOKENS,
     DEFAULT_TEMPLATE_EXAMPLE,
@@ -45,6 +46,10 @@ class AppBuildResult:
     context_truncated: bool = False
     active_skills: tuple[str, ...] = ()
     truncated_skills: tuple[str, ...] = ()
+    #: R-555: set when the prompt named a second kind of user and the whole ecosystem was built.
+    #: `ecosystem_reason` is shown to the user, because "you got four apps" needs a because.
+    ecosystem_apps: tuple[str, ...] = ()
+    ecosystem_reason: str = ""
 
 
 def build_app_from_ir(
@@ -136,6 +141,58 @@ def app_build_result_to_dict(
     return payload
 
 
+def build_ecosystem_from_plan(
+    plan,
+    target_dir: str | os.PathLike[str],
+    *,
+    author_name: str,
+    author_email: str,
+    prompt: str = "",
+    overwrite: bool = False,
+    provider: ModelProvider | None = None,
+    reason: str = "",
+    context_truncated: bool = False,
+    active_skills: tuple[str, ...] = (),
+    truncated_skills: tuple[str, ...] = (),
+) -> AppBuildResult:
+    """Materialize a planned ecosystem as one owned Git repo (R-555).
+
+    One repo rather than one per surface: the apps share a database, so splitting them would mean
+    the courier could not see the customer's order. `ir` on the result is the union the shared
+    backend was generated from — the thing that describes the whole product rather than one app.
+    """
+    from ..codegen.ecosystem_assembler import assemble_ecosystem, surface_directory, union_ir
+
+    project = assemble_ecosystem(plan, provider=provider, prompt=prompt)
+    shared = union_ir(plan)
+    repo = create_repository(
+        project,
+        target_dir,
+        author_name=author_name,
+        author_email=author_email,
+        commit_message=f"Initial commit: {shared.name}",
+        overwrite=overwrite,
+    )
+    taken: set[str] = set()
+    directories = []
+    for app in plan.apps:
+        directory = surface_directory(app.surface.kind, taken)
+        taken.add(directory)
+        directories.append(directory)
+    return AppBuildResult(
+        prompt=prompt,
+        ir=shared,
+        target_dir=repo.target_dir,
+        file_count=repo.file_count,
+        commit_sha=repo.commit_sha,
+        context_truncated=context_truncated,
+        active_skills=active_skills,
+        truncated_skills=truncated_skills,
+        ecosystem_apps=tuple(directories),
+        ecosystem_reason=reason,
+    )
+
+
 async def build_app_from_prompt(
     prompt: str,
     provider: ModelProvider,
@@ -158,6 +215,28 @@ async def build_app_from_prompt(
     into a valid Application IR. ``synthesize_screens`` (R-465) additionally lets the same provider write
     every screen page (the overview page is always model-written when a provider is given).
     """
+    # R-555: does this prompt want one app or a whole ecosystem? Decided from the prompt alone,
+    # deterministically and offline — whether a build produces one app or four must not vary
+    # between runs of the same sentence, and it is not a judgement for a small local model.
+    intent = detect_ecosystem_intent(prompt)
+    if intent.build_ecosystem:
+        # Local import: `ecosystem` imports AppBuildResult from this module, so a top-level import
+        # here would be a cycle.
+        from .ecosystem import plan_ecosystem_from_prompt
+
+        plan = plan_ecosystem_from_prompt(prompt, intent.option_id)
+        if len(plan.apps) > 1:
+            return build_ecosystem_from_plan(
+                plan,
+                target_dir,
+                author_name=author_name,
+                author_email=author_email,
+                prompt=prompt,
+                overwrite=overwrite,
+                provider=provider,
+                reason=intent.reason,
+            )
+
     result = await generate_ir(
         prompt,
         provider,

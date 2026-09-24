@@ -1,25 +1,26 @@
-task_id: R-554
+task_id: R-555
 status: completed
 phase: MVP
-tracker_row: 20
+tracker_row: 21
 started_at: "2026-09-24"
 completed_at: "2026-09-24"
-branch: ai/R-554-ecosystem-monorepo
+branch: ai/R-555-ecosystem-from-prompt
 objective: >-
-  `plan_ecosystem_from_prompt` plans four role-scoped surfaces for a food-delivery prompt — a
-  customer ordering app, a merchant portal, a courier dispatch app and a super-admin dashboard —
-  and `build_ecosystem` materialises each one as **its own separate Git repo with its own backend
-  and its own database**. That is four disconnected apps, not an ecosystem: the courier's app
-  cannot see the customer's order, which is the entire point of the thing.
-  Assemble a plan into **one** monorepo instead: every surface under `apps/<id>/`, over one
-  `services/api` and one database, the way the hand-built templates do it. Each app keeps its own
-  entity scope and its own role; the backend serves the union so every surface's calls resolve.
+  R-554 assembles a planned ecosystem into one monorepo over one API and one database, and nothing
+  calls it: `build_app_from_prompt` still produces a single app. Wire it, and answer the question
+  that wiring forces — when should a prompt build four apps rather than one?
+  The planner is keyword-driven and confident: "a simple blog" plans three surfaces and
+  "a todo list app" plans two, so always building the `complete` option would hand someone four
+  directories they never asked for. The signal that actually distinguishes the two cases is
+  whether the prompt **names more than one kind of person**. "with customers, drivers and
+  restaurants" does; "a simple blog" does not. That is the rule, and it is deterministic.
 founder_gate: >-
-  The founder's recurring requirement, restated on 2026-09-24: "single app to complete eco-system".
-  R-553 removed the preview's two-app ceiling so such a project can be run at all.
+  Founder's recurring requirement "single app to complete eco-system", and on 2026-09-24 they left
+  the choice of trigger to me. Recorded here so the decision is reviewable rather than implicit:
+  a prompt builds an ecosystem only when it names a second kind of user.
 allowed_paths:
-  - services/agent-engine/src/omnistackai_agent_engine/codegen/
   - services/agent-engine/src/omnistackai_agent_engine/intake/
+  - services/agent-engine/src/omnistackai_agent_engine/codegen/
   - services/agent-engine/tests/
   - scripts/test.sh
   - .ai/
@@ -27,36 +28,34 @@ allowed_paths:
   - CHANGELOG.md
   - apps/console-web/data/overview.json
 forbidden_changes:
-  - build_ecosystem keeps working as it does; this adds an assembler beside it, it does not replace it
-  - assemble_project for a single IR is untouched
-  - No new agent-engine runtime dependency
-  - Deterministic output — the same plan assembles byte-identically twice
+  - A prompt naming one kind of user keeps producing exactly what it does today
+  - The detector is deterministic and offline — no model call decides this
+  - build_ecosystem and assemble_project are untouched
   - task verify stays offline with 0 model calls
 required_gates:
-  - A four-surface plan assembles into one project with four app directories and exactly one services/api
-  - The backend's IR is the union of every surface's entities, roles and endpoints, so no surface calls a route that does not exist
-  - Each surface app keeps its own entity scope, so a courier app does not ship the menu editor
-  - A union entity takes the superset of its fields, so no surface loses a column
-  - The customer-facing surface lands in apps/web and the admin dashboard in apps/admin, which the runner already treats specially
-  - One brand.json, one database, one OpenAPI contract for the whole ecosystem
+  - A prompt naming several kinds of user builds the whole ecosystem, one repo, one API
+  - A prompt naming one kind of user builds the single app it does today, unchanged
+  - The decision is deterministic and explainable, and the reason is reported in the build result
+  - The assembled ecosystem is a valid git repo the preview can run
   - task verify passes offline with 0 model calls
 model_tool_trace:
   routing: deterministic_only
   local_calls: 0
   cloud_calls: 0
 blockers: []
-deferred:
-  - "R-555: use the assembler from the build path so a prompt produces the whole ecosystem"
 evidence:
-  - "task verify: 4,188 tests OK, offline, 0 model calls; scripts/test.sh, lint, security:quick green"
-  - "the food-delivery plan assembles to apps/web, apps/merchant, apps/driver, apps/admin and exactly one services/api"
-  - "the union holds 3 entities, 4 roles and 17 endpoints against surfaces declaring 11, 17, 8 and 11"
-  - "every route any surface calls resolves on the shared server with the roles it expects, checked exhaustively"
-  - "the courier app ships no menu editor or menu list; the merchant portal has the editor; the customer app browses but cannot edit"
-  - "a booking prompt gives web, provider, admin; output is byte-identical across two runs"
-  - "21 new offline tests in tests/test_ecosystem_monorepo.py"
-design_notes:
-  - "entities merge by superset of fields, not first-wins: a backend missing a column silently breaks whichever surface needed it"
-  - "endpoints merge by union of roles, not first-wins: DELETE /orders/{orderId} is reached by all four roles here"
-  - "screens are dropped from the union deliberately - they belong to the app that renders them"
+  - "task verify: 4,203 tests OK, offline, 0 model calls; scripts/test.sh, lint, security:quick green"
+  - "end to end: 'a food delivery app with customers, drivers and restaurants' materialises one git repo of 675 files in a single commit"
+  - "that repo holds apps/web, apps/merchant, apps/driver, apps/admin and exactly one services/api, with one brand.json and one contract"
+  - "the build reports: 'the request names courier and merchant alongside the people they serve, so each side gets its own app over one shared API and database'"
+  - "'a simple blog', 'a todo list app' and 'a website to sell my product' still build the single app they did before"
+  - "15 new offline tests in tests/test_ecosystem_from_prompt.py"
+decision_recorded:
+  - "an ecosystem is built when the prompt names a SECOND kind of person; a customer or an admin does not count on its own, because a single app is already both"
+  - "the planner is not the signal: it plans three surfaces for 'a simple blog', so always building `complete` would hand someone four directories they never asked for"
+found_and_fixed:
+  - "'an online store to sell my products' matched merchant on the word 'store', which names the product rather than a person; shop/store/business removed from that group"
+  - "'a dashboard for admins' counted admin as a second party although a single app already ships an admin console"
+  - "the reason text pluralised backwards ('each side get its own app')"
+  - "a circular import: intake/ecosystem.py already imports AppBuildResult from build_app.py, so the new import is local to the one call site"
 
