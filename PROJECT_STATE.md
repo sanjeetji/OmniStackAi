@@ -4,6 +4,13 @@ Last updated: 2026-09-24
 ## Current Phase
 Stage 0 (Founder Build Sequence, Brief Section 91) — BASIC/MVP
 
+> **R-554 (2026-09-24): a planned ecosystem assembles into one monorepo over one API and one database.**
+> `build_ecosystem` made each surface its own repo with its own backend and database — four disconnected apps, where the courier could not see the customer's order.
+> `codegen/ecosystem_assembler.py` puts every surface under `apps/<id>/` over one `services/api`, one `brand.json`, one contract. The customer app lands in `apps/web` and the dashboard in `apps/admin`, the ids R-553's runner and the console already understand.
+> **The backend is the union of every surface's IR** — entities by superset of fields, endpoints by union of roles (`DELETE /orders/{id}` is reached by all four roles; first-wins would have 403'd three of them). Each app keeps its own scope: the courier app ships no menu editor, the merchant portal does.
+> Evidence: four apps + one API; union of 3 entities / 4 roles / 17 endpoints against surfaces declaring 11, 17, 8, 11; every surface route resolves with the roles it expects, checked exhaustively; byte-identical across runs. 21 new tests; `task verify` 4,188 OK offline, 0 model calls.
+> **Next:** R-555 — use it from the build path, so a prompt produces the whole ecosystem.
+
 > **R-553 (2026-09-24): the preview runs any number of apps, not the two it was told about.**
 > The runner hard-coded `apps/web`, `apps/admin` and `services/api`, so every new surface needed another copy of the same block — and `plan_ecosystem_from_prompt` already plans **four role-scoped surfaces** for a food-delivery prompt that none of them could preview.
 > `discover_web_apps` finds every `apps/*` with a package.json in a stable order (`web`, `admin`, then sorted); one loop starts each on its own allocated port and base path; `allocate_free_ports` replaces the fixed four; each is waited for, because a surface nobody probes is reported ready before it can answer.

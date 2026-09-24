@@ -1,27 +1,25 @@
-task_id: R-553
+task_id: R-554
 status: completed
 phase: MVP
-tracker_row: 19
+tracker_row: 20
 started_at: "2026-09-24"
 completed_at: "2026-09-24"
-branch: ai/R-553-preview-any-apps
+branch: ai/R-554-ecosystem-monorepo
 objective: >-
-  `localrun/plan.py` hard-codes exactly three apps: `apps/web`, `apps/admin` and `services/api`.
-  Each was added by hand — R-542 for the console, R-545 for the mobile app — and every new surface
-  needs another copy of the same block. That ceiling is now in the way: `plan_ecosystem_from_prompt`
-  already plans four role-scoped surfaces for a food-delivery prompt (customer app, merchant
-  portal, courier dispatch, super-admin), and none of them could be previewed because the runner
-  only knows two names.
-  Generalise it: discover every `apps/*` that has a package.json, run them all, and report them
-  all. Keep `web` and `admin` special only where they genuinely are — the base path a proxy serves
-  them under, and which one a bare preview URL redirects to.
+  `plan_ecosystem_from_prompt` plans four role-scoped surfaces for a food-delivery prompt — a
+  customer ordering app, a merchant portal, a courier dispatch app and a super-admin dashboard —
+  and `build_ecosystem` materialises each one as **its own separate Git repo with its own backend
+  and its own database**. That is four disconnected apps, not an ecosystem: the courier's app
+  cannot see the customer's order, which is the entire point of the thing.
+  Assemble a plan into **one** monorepo instead: every surface under `apps/<id>/`, over one
+  `services/api` and one database, the way the hand-built templates do it. Each app keeps its own
+  entity scope and its own role; the backend serves the union so every surface's calls resolve.
 founder_gate: >-
-  Prerequisite for the founder's "single app to complete eco-system" requirement, restated on
-  2026-09-24. R-554 assembles an ecosystem into one monorepo sharing one API and database;
-  this makes such a project previewable at all.
+  The founder's recurring requirement, restated on 2026-09-24: "single app to complete eco-system".
+  R-553 removed the preview's two-app ceiling so such a project can be run at all.
 allowed_paths:
-  - services/agent-engine/src/omnistackai_agent_engine/localrun/
-  - services/agent-engine/src/omnistackai_agent_engine/studio/preview.py
+  - services/agent-engine/src/omnistackai_agent_engine/codegen/
+  - services/agent-engine/src/omnistackai_agent_engine/intake/
   - services/agent-engine/tests/
   - scripts/test.sh
   - .ai/
@@ -29,17 +27,18 @@ allowed_paths:
   - CHANGELOG.md
   - apps/console-web/data/overview.json
 forbidden_changes:
-  - A project with only apps/web must produce exactly the run plan it does today
-  - A project with apps/web + apps/admin must behave exactly as R-542 left it
-  - The mobile app keeps its own handling — Expo is not a proxied web app
+  - build_ecosystem keeps working as it does; this adds an assembler beside it, it does not replace it
+  - assemble_project for a single IR is untouched
   - No new agent-engine runtime dependency
+  - Deterministic output — the same plan assembles byte-identically twice
   - task verify stays offline with 0 model calls
 required_gates:
-  - Every apps/* directory with a package.json is installed, started on its own port and reported
-  - Discovery is deterministic, so two runs of the same project produce the same plan
-  - apps/web and apps/admin keep their existing ids, ports and base paths
-  - apps/mobile is still handled as Expo and never proxied
-  - A bare preview URL still redirects to the public web app
+  - A four-surface plan assembles into one project with four app directories and exactly one services/api
+  - The backend's IR is the union of every surface's entities, roles and endpoints, so no surface calls a route that does not exist
+  - Each surface app keeps its own entity scope, so a courier app does not ship the menu editor
+  - A union entity takes the superset of its fields, so no surface loses a column
+  - The customer-facing surface lands in apps/web and the admin dashboard in apps/admin, which the runner already treats specially
+  - One brand.json, one database, one OpenAPI contract for the whole ecosystem
   - task verify passes offline with 0 model calls
 model_tool_trace:
   routing: deterministic_only
@@ -47,15 +46,17 @@ model_tool_trace:
   cloud_calls: 0
 blockers: []
 deferred:
-  - "R-554: assemble an ecosystem plan into one monorepo — N role-scoped apps over one API and one database"
-  - "R-555: use it from the build path so a prompt produces the whole ecosystem"
+  - "R-555: use the assembler from the build path so a prompt produces the whole ecosystem"
 evidence:
-  - "task verify: 4,167 tests OK, offline, 0 model calls; scripts/test.sh, lint, security:quick green"
-  - "a four-surface project starts web, admin, courier-dispatch and merchant-portal on four distinct ports with four distinct base paths"
-  - "the preview reports six entries: four web surfaces, the API and the Expo app"
-  - "a one-surface project and a web+admin project produce exactly the plans they did before"
-  - "8 new offline tests in tests/test_mobile_app_runs.py"
-found_and_fixed:
-  - "surfaces beyond web and admin were never waited for, so they would have been reported ready before they could answer"
-  - "allocate_preview_ports4 fixed the count at four; an ecosystem has as many surfaces as its plan produced"
+  - "task verify: 4,188 tests OK, offline, 0 model calls; scripts/test.sh, lint, security:quick green"
+  - "the food-delivery plan assembles to apps/web, apps/merchant, apps/driver, apps/admin and exactly one services/api"
+  - "the union holds 3 entities, 4 roles and 17 endpoints against surfaces declaring 11, 17, 8 and 11"
+  - "every route any surface calls resolves on the shared server with the roles it expects, checked exhaustively"
+  - "the courier app ships no menu editor or menu list; the merchant portal has the editor; the customer app browses but cannot edit"
+  - "a booking prompt gives web, provider, admin; output is byte-identical across two runs"
+  - "21 new offline tests in tests/test_ecosystem_monorepo.py"
+design_notes:
+  - "entities merge by superset of fields, not first-wins: a backend missing a column silently breaks whichever surface needed it"
+  - "endpoints merge by union of roles, not first-wins: DELETE /orders/{orderId} is reached by all four roles here"
+  - "screens are dropped from the union deliberately - they belong to the app that renders them"
 

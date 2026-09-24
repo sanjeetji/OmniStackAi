@@ -2758,4 +2758,31 @@ if ! rg -qF 'def discover_web_apps' \
   exit 1
 fi
 
+# R-554: an ecosystem is one product. `intake.build_ecosystem` makes each surface its own repo
+# with its own backend and database, which is four disconnected apps — the courier cannot see the
+# customer's order. The invariant that makes one monorepo work: every route a surface calls must
+# exist on the shared server, and every role allowed there must be allowed on the server too.
+r554_tests="$repo_root/services/agent-engine/tests/test_ecosystem_monorepo.py"
+if [[ ! -f "$r554_tests" ]]; then
+  printf 'R-554 the ecosystem monorepo gate is required.\n'
+  exit 1
+fi
+for guard in test_there_is_exactly_one_backend \
+  test_every_route_any_surface_calls_exists_on_the_server \
+  test_a_role_allowed_in_a_surface_is_allowed_on_the_server \
+  test_a_shared_entity_keeps_every_surfaces_fields \
+  test_a_courier_app_does_not_ship_a_menu_editor \
+  test_the_same_plan_assembles_byte_identically_twice; do
+  if ! rg -qF "$guard" "$r554_tests"; then
+    printf 'R-554 the ecosystem gate must still check: %s\n' "$guard"
+    exit 1
+  fi
+done
+# The union must merge roles, not take the first surface's: four roles reach DELETE /orders/{id}.
+if ! rg -qF 'set(existing.required_roles) | set(api.required_roles)' \
+  "$repo_root/services/agent-engine/src/omnistackai_agent_engine/codegen/ecosystem_assembler.py"; then
+  printf 'R-554 the shared server must admit every role any surface allows on a route.\n'
+  exit 1
+fi
+
 printf 'Repository contract tests passed.\n'
