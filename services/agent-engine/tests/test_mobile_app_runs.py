@@ -196,3 +196,75 @@ class TheGeneratedAppCanActuallyBundle(TestCase):
         entry = files["index.js"]
         self.assertIn("./src/app/App", entry)
         self.assertIn("src/app/App.tsx", files)
+
+
+class ThePreviewRunsAnyNumberOfApps(TestCase):
+    """R-553: the runner hard-coded apps/web, apps/admin and services/api. Every new surface
+    needed another copy of the same block, and `plan_ecosystem_from_prompt` already plans four
+    role-scoped surfaces for a food-delivery prompt — none of which could be previewed.
+    """
+
+    def _ecosystem(self):
+        root = _repo("web", "admin", "courier-dispatch", "merchant-portal", backend=True)
+        return build_run_plan(
+            str(root), public_base="/preview/p1", web_port=3000, admin_port=3100,
+            extra_app_ports=(3200, 3300),
+        )
+
+    def test_every_app_directory_is_discovered(self) -> None:
+        from omnistackai_agent_engine.localrun.plan import discover_web_apps
+
+        root = _repo("courier-dispatch", "web", "merchant-portal", "admin", "mobile")
+        (root / "apps" / "not-an-app").mkdir()
+        # web and admin first, then the rest sorted; mobile is Expo and excluded; a directory
+        # without a package.json is not an app.
+        self.assertEqual(
+            discover_web_apps(root), ("web", "admin", "courier-dispatch", "merchant-portal")
+        )
+
+    def test_discovery_is_deterministic(self) -> None:
+        from omnistackai_agent_engine.localrun.plan import discover_web_apps
+
+        root = _repo("zeta", "web", "alpha", "admin")
+        self.assertEqual(discover_web_apps(root), discover_web_apps(root))
+
+    def test_each_surface_is_installed_and_started_on_its_own_port(self) -> None:
+        plan = self._ecosystem()
+        started = [s for s in plan.steps if s.background and s.cwd and "/apps/" in s.cwd]
+        self.assertEqual(len(started), 4, [s.label for s in started])
+        ports = {dict(s.env).get("BASE_PATH") for s in started}
+        self.assertEqual(len(ports), 4, ports)
+
+    def test_each_surface_gets_its_own_base_path(self) -> None:
+        plan = self._ecosystem()
+        paths = {a["id"]: a["path"] for a in plan.preview_apps()}
+        self.assertEqual(paths["courier-dispatch"], "/preview/p1/courier-dispatch")
+        self.assertEqual(paths["merchant-portal"], "/preview/p1/merchant-portal")
+
+    def test_a_role_surface_is_named_readably(self) -> None:
+        names = {a["id"]: a["name"] for a in self._ecosystem().preview_apps()}
+        self.assertEqual(names["courier-dispatch"], "Courier Dispatch")
+        self.assertEqual(names["web"], "Web app")
+        self.assertEqual(names["admin"], "Admin console")
+
+    def test_web_and_admin_keep_their_kinds(self) -> None:
+        """The console renders them specially; a role surface is a plain web app."""
+        kinds = {a["id"]: a["kind"] for a in self._ecosystem().preview_apps()}
+        self.assertEqual(kinds["web"], "web")
+        self.assertEqual(kinds["admin"], "admin")
+        self.assertEqual(kinds["courier-dispatch"], "web")
+
+    def test_a_single_app_project_is_still_single_app(self) -> None:
+        """Nothing about a one-surface project changes."""
+        plan = build_run_plan(str(_repo("web")), public_base="/preview/p1")
+        self.assertFalse(plan.multi_app)
+        self.assertEqual(plan.preview_apps(), ())
+        self.assertEqual(dict(
+            next(s for s in plan.steps if s.background and s.cwd and "apps/web" in s.cwd).env
+        )["BASE_PATH"], "")
+
+    def test_two_surfaces_behave_as_they_did_before(self) -> None:
+        plan = build_run_plan(str(_repo("web", "admin")), public_base="/preview/p1",
+                              web_port=3000, admin_port=3100)
+        paths = {a["id"]: a["path"] for a in plan.preview_apps()}
+        self.assertEqual(paths, {"web": "/preview/p1/web", "admin": "/preview/p1/admin"})

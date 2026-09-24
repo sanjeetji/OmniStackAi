@@ -83,6 +83,9 @@ class RunPlan:
     has_mobile: bool = False
     mobile_url: str = ""
     expo_url: str = ""
+    #: R-553: (id, url) per discovered web surface, in the order they are started. Empty for a
+    #: plan built before this existed, so `preview_apps()` falls back to web/admin.
+    web_surfaces: tuple[tuple[str, str], ...] = ()
     steps: tuple[RunStep, ...] = field(default_factory=tuple)
 
     def to_dict(self) -> dict:
@@ -114,21 +117,21 @@ class RunPlan:
         if not self.multi_app and not self.has_mobile:
             return ()
         base = self.public_base.rstrip("/")
+        # R-553: whatever apps/ actually held. `web` and `admin` keep their names and kinds so the
+        # console renders them as it always has; a role-scoped surface is titled from its directory
+        # and rendered as a plain web app.
+        surfaces = self.web_surfaces or (("web", self.web_url), ("admin", self.admin_url))
+        titles = {"web": "Web app", "admin": "Admin console"}
         apps: list[dict] = [
             {
-                "id": "web",
-                "name": "Web app",
-                "kind": "web",
-                "url": self.web_url,
-                "path": f"{base}/web",
-            },
-            {
-                "id": "admin",
-                "name": "Admin console",
-                "kind": "admin",
-                "url": self.admin_url,
-                "path": f"{base}/admin",
-            },
+                "id": app_id,
+                "name": titles.get(app_id, app_id.replace("-", " ").replace("_", " ").title()),
+                "kind": app_id if app_id in ("web", "admin") else "web",
+                "url": url,
+                "path": f"{base}/{app_id}",
+            }
+            for app_id, url in surfaces
+            if url
         ]
         if self.backend_kind != "none":
             apps.append(
@@ -179,6 +182,33 @@ def lan_address(fallback: str = "127.0.0.1") -> str:
     return address if isinstance(address, str) and address else fallback
 
 
+#: R-553: `web` and `admin` keep fixed ids so existing previews, proxy paths and tests are
+#: unchanged; `mobile` is Expo and is handled separately, never as a proxied web app. Anything else
+#: under apps/ is a role-scoped surface an ecosystem plan produced, and is discovered rather than
+#: named — the alternative is another hand-written block per surface, which is the ceiling this
+#: removes.
+RESERVED_APP_IDS = ("web", "admin", "mobile")
+
+
+def discover_web_apps(root: Path) -> tuple[str, ...]:
+    """Every runnable web app under apps/, in a stable order: web, admin, then the rest sorted.
+
+    Sorted rather than filesystem order, because a run plan that changes between two runs of the
+    same project is a plan nobody can reason about.
+    """
+    apps_dir = root / "apps"
+    if not apps_dir.is_dir():
+        return ()
+    found = {
+        entry.name
+        for entry in apps_dir.iterdir()
+        if entry.is_dir() and (entry / "package.json").is_file() and entry.name != "mobile"
+    }
+    ordered = [name for name in ("web", "admin") if name in found]
+    ordered += sorted(found - set(ordered))
+    return tuple(ordered)
+
+
 def _backend_kind(api_dir: Path) -> str:
     if (api_dir / "requirements.txt").is_file():
         return "python"
@@ -201,6 +231,7 @@ def build_run_plan(
     web_port: int = 3000,
     admin_port: int = 3100,
     mobile_port: int = 8081,
+    extra_app_ports: tuple[int, ...] = (),
     public_base: str = "",
     jwt_secret: str = "local-dev-secret",
     extra_env: Mapping[str, str] | None = None,
@@ -213,8 +244,12 @@ def build_run_plan(
     app_slug = _slug(root.name)
     database = db_name or app_slug
     backend_kind = _backend_kind(api_dir)
-    has_web = (web_dir / "package.json").is_file()
-    has_admin = (admin_dir / "package.json").is_file()
+    # R-553: discovered rather than named. `web` and `admin` keep their meaning; anything else
+    # under apps/ is a role-scoped surface (a courier dispatch app, a merchant portal) that an
+    # ecosystem plan produced.
+    web_apps = discover_web_apps(root)
+    has_web = "web" in web_apps
+    has_admin = "admin" in web_apps
     mobile_dir = root / "apps" / "mobile"
     has_mobile = (mobile_dir / "package.json").is_file()
 
@@ -229,10 +264,28 @@ def build_run_plan(
     # R-542: with two Next apps in one project the console serves each under its own base path,
     # exactly as template previews do. Only then — a single-app project keeps serving at the root,
     # so nothing about today's behaviour changes for it.
-    multi_app = has_admin and bool(public_base)
+    # More than one UI means the console serves each under its own base path, as template previews
+    # already do. One UI keeps serving at the root, so a single-app project is untouched.
+    multi_app = len(web_apps) > 1 and bool(public_base)
     base = public_base.rstrip("/")
-    web_base_path = f"{base}/web" if multi_app else ""
-    admin_base_path = f"{base}/admin" if multi_app else ""
+
+    # `web` and `admin` keep the ports they were allocated; further surfaces take the extras, and
+    # fall back to a deterministic offset so a caller that has not allocated any still gets a
+    # usable plan rather than a crash.
+    app_ports: dict[str, int] = {}
+    spare = list(extra_app_ports)
+    for app_id in web_apps:
+        if app_id == "web":
+            app_ports[app_id] = web_port
+        elif app_id == "admin":
+            app_ports[app_id] = admin_port
+        elif spare:
+            app_ports[app_id] = spare.pop(0)
+        else:
+            app_ports[app_id] = admin_port + 1 + len(app_ports)
+
+    web_base_path = f"{base}/web" if multi_app and has_web else ""
+    admin_base_path = f"{base}/admin" if multi_app and has_admin else ""
     # Relative on purpose: the browser loads the app from the console's origin, so a loopback
     # address here would break every API call from another device on the LAN.
     public_api_url = f"{base}/api" if multi_app else api_url
@@ -330,53 +383,36 @@ def build_run_plan(
             )
         )
 
-    # --- web (run the Next binary directly, never `pnpm dev`) ---
-    if has_web:
+    # --- web surfaces (R-553): one loop over whatever apps/ actually contains ---
+    # `web` and `admin` keep their ids, ports and base paths so existing previews are unchanged;
+    # anything else is a role-scoped surface an ecosystem plan produced. Adding a surface used to
+    # mean copying this block again, which is the ceiling that stopped an ecosystem being
+    # previewable at all.
+    for index, app_id in enumerate(web_apps):
+        app_dir = root / "apps" / app_id
+        port = app_ports[app_id]
+        url = f"http://127.0.0.1:{port}"
+        base_path = f"{base}/{app_id}" if multi_app else ""
         steps.append(
             RunStep(
-                # --ignore-scripts avoids pnpm's ERR_PNPM_IGNORED_BUILDS exit-1 on native
-                # build scripts (e.g. sharp), which `next dev` does not need.
-                label="install web dependencies (pnpm)",
+                # --ignore-scripts avoids pnpm's ERR_PNPM_IGNORED_BUILDS exit-1 on native build
+                # scripts (e.g. sharp), which `next dev` does not need.
+                label=f"install {app_id} dependencies (pnpm)",
                 program="pnpm",
                 args=("install", "--ignore-scripts", "--ignore-workspace"),
-                cwd=str(web_dir),
+                cwd=str(app_dir),
             )
         )
         steps.append(
             RunStep(
-                label=f"start web app (next dev) on {web_url}",
+                label=f"start {app_id} app (next dev) on {url}",
                 program="./node_modules/.bin/next",
-                args=("dev", "-p", str(web_port)),
-                cwd=str(web_dir),
+                args=("dev", "-p", str(port)),
+                cwd=str(app_dir),
                 env=(
                     ("NEXT_PUBLIC_API_URL", public_api_url),
-                    ("BASE_PATH", web_base_path),
-                    ("NEXT_PUBLIC_BASE_PATH", web_base_path),
-                ) + extra_tuples,
-                background=True,
-            )
-        )
-
-    # --- admin console (R-541) — same shape as the web app, its own port ---
-    if has_admin:
-        steps.append(
-            RunStep(
-                label="install admin dependencies (pnpm)",
-                program="pnpm",
-                args=("install", "--ignore-scripts", "--ignore-workspace"),
-                cwd=str(admin_dir),
-            )
-        )
-        steps.append(
-            RunStep(
-                label=f"start admin console (next dev) on {admin_url}",
-                program="./node_modules/.bin/next",
-                args=("dev", "-p", str(admin_port)),
-                cwd=str(admin_dir),
-                env=(
-                    ("NEXT_PUBLIC_API_URL", public_api_url),
-                    ("BASE_PATH", admin_base_path),
-                    ("NEXT_PUBLIC_BASE_PATH", admin_base_path),
+                    ("BASE_PATH", base_path),
+                    ("NEXT_PUBLIC_BASE_PATH", base_path),
                 ) + extra_tuples,
                 background=True,
             )
@@ -423,6 +459,7 @@ def build_run_plan(
         public_base=base,
         has_mobile=has_mobile,
         mobile_url=mobile_url,
+        web_surfaces=tuple((app_id, f"http://127.0.0.1:{app_ports[app_id]}") for app_id in web_apps),
         expo_url=expo_url,
         web_health_url=f"{web_url}{web_base_path}",
         admin_health_url=f"{admin_url}{admin_base_path}" if has_admin else "",

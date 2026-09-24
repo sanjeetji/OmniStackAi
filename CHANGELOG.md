@@ -1,5 +1,17 @@
 # Changelog
 
+2026-09-24  R-553  The preview runs any number of apps, not the two it was told about. `localrun/plan.py` hard-coded `apps/web`, `apps/admin` and `services/api`; each was added by hand (R-542 for the console, R-545 for the mobile app) and every further surface needed another copy of the same block. That ceiling was directly in the way: `plan_ecosystem_from_prompt` already plans **four role-scoped surfaces** for a food-delivery prompt — a customer ordering app, a merchant portal, a courier dispatch app and a super-admin dashboard, each with its own entity scope — and none of them could be previewed, because the runner only knew two names.
+
+`discover_web_apps` now finds every `apps/*` holding a `package.json` and returns them in a stable order: `web`, then `admin`, then the rest sorted. Sorted rather than filesystem order, because a run plan that changes between two runs of one project is a plan nobody can reason about. `mobile` is excluded and still handled as Expo — a native app is not a proxied web app. One loop installs and starts each surface on its own allocated port under its own base path, `allocate_free_ports` replaces the fixed four (an ecosystem has as many surfaces as its plan produced, not a number anyone can hard-code), and the preview payload reports every one with a readable name derived from its directory.
+
+Each surface is also *waited for*. A surface nobody probes is reported ready before it can answer, and the first thing a user does is click it.
+
+Nothing about the existing shapes changes, which is what the tests hold: a one-surface project produces the plan it always did, with no base path; a `web` + `admin` project behaves exactly as R-542 left it, same ids, same ports, same paths; `web` and `admin` keep their kinds so the console renders them specially, while a role surface is a plain web app.
+
+Evidence: a four-surface project starts `web`, `admin`, `courier-dispatch` and `merchant-portal` on four distinct ports with four distinct base paths, and the preview reports six entries including the API and the Expo app. 8 new offline tests. `task verify` 4,167 OK offline with 0 model calls; `scripts/test.sh` green with an R-553 block; lint and security:quick pass.
+
+Next: R-554 assembles an ecosystem plan into **one** monorepo — N role-scoped apps over one API and one database. `build_ecosystem` today materialises each surface as its own separate repo with its own backend, which is four disconnected apps rather than an ecosystem: the courier could not see the customer's order.
+
 2026-09-24  R-552  `start` and `status` now print every address a person needs, from one shared table. `start` listed three URLs and `status` listed ports without them, so neither answered "where is the API" or "which model am I on" — and the two lists were separate code that had already drifted. There is now a single `print_endpoints` and both call it: the console and its LAN address, the Studio and control-plane APIs with their health endpoints, PostgreSQL with its database and user, Ollama with the model actually loaded, and the URL shape a generated project's apps are previewed at. `status` keeps its per-component health, pid and the Studio's mode on top.
 
 The model probe is deliberately pure shell — `curl | tr | sed` — rather than shelling out to an interpreter. A status command must not depend on the very thing `doctor` exists to report as broken, and on this machine the default `python3` is exactly that.

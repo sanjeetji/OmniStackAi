@@ -2738,4 +2738,24 @@ if rg -qF '/usr/bin/python3 -c' "$repo_root/scripts/omnistack.sh"; then
   exit 1
 fi
 
+# R-553: the runner hard-coded apps/web and apps/admin, so every new surface needed another copy
+# of the same block — and an ecosystem plan's four role-scoped surfaces could not be previewed at
+# all. Discovery replaces naming.
+for guard in test_every_app_directory_is_discovered \
+  test_discovery_is_deterministic \
+  test_each_surface_is_installed_and_started_on_its_own_port \
+  test_each_surface_gets_its_own_base_path \
+  test_a_single_app_project_is_still_single_app \
+  test_two_surfaces_behave_as_they_did_before; do
+  if ! rg -qF "$guard" "$r545_tests"; then
+    printf 'R-553 the multi-surface gate must still check: %s\n' "$guard"
+    exit 1
+  fi
+done
+if ! rg -qF 'def discover_web_apps' \
+  "$repo_root/services/agent-engine/src/omnistackai_agent_engine/localrun/plan.py"; then
+  printf 'R-553 the run plan must discover apps/ rather than naming them.\n'
+  exit 1
+fi
+
 printf 'Repository contract tests passed.\n'

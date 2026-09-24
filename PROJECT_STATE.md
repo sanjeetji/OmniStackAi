@@ -4,6 +4,13 @@ Last updated: 2026-09-24
 ## Current Phase
 Stage 0 (Founder Build Sequence, Brief Section 91) — BASIC/MVP
 
+> **R-553 (2026-09-24): the preview runs any number of apps, not the two it was told about.**
+> The runner hard-coded `apps/web`, `apps/admin` and `services/api`, so every new surface needed another copy of the same block — and `plan_ecosystem_from_prompt` already plans **four role-scoped surfaces** for a food-delivery prompt that none of them could preview.
+> `discover_web_apps` finds every `apps/*` with a package.json in a stable order (`web`, `admin`, then sorted); one loop starts each on its own allocated port and base path; `allocate_free_ports` replaces the fixed four; each is waited for, because a surface nobody probes is reported ready before it can answer.
+> A one-surface project and a `web`+`admin` project are byte-for-byte unchanged, which the tests hold.
+> Evidence: four surfaces on four ports with four base paths; the preview reports six entries including the API and Expo. 8 new tests; `task verify` 4,167 OK offline, 0 model calls.
+> **Next:** R-554 — assemble an ecosystem into **one** monorepo over one API and one database. `build_ecosystem` currently makes each surface a separate repo with its own backend, so the courier could not see the customer's order.
+
 > **R-551 (2026-09-24): `doctor` checks that the toolchain works, and the command set is complete.**
 > `doctor` printed `ok python3 is 3.13` on this machine while `python3 -m venv` was completely broken — so every generated Python backend refused to start and it looked like a platform bug. Its remedy even recommended the broken path.
 > The cause ran five layers deep: Homebrew's `pyexpat` fails to `dlopen` → `plistlib` breaks → `platform.mac_ver()` empties → pip's `truststore` raises `int('')` → `ensurepip` and `venv` fail. `doctor` now imports pyexpat and actually creates a throwaway virtualenv, and names a remedy that works (`uv python install 3.13` + a `~/.local/bin/python3` symlink).

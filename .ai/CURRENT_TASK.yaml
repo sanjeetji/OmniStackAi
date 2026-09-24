@@ -1,57 +1,61 @@
-task_id: R-551
+task_id: R-553
 status: completed
 phase: MVP
-tracker_row: 18
+tracker_row: 19
 started_at: "2026-09-24"
 completed_at: "2026-09-24"
-branch: ai/R-551-platform-commands
+branch: ai/R-553-preview-any-apps
 objective: >-
-  `doctor` reports on the Python *version string* and nothing else. On this machine it printed
-  "ok python3 is 3.13 (3.13.15)" while `python3 -m venv` was completely broken — Homebrew's
-  python@3.13 and @3.14 both ship a pyexpat that fails to dlopen, which breaks plistlib, which
-  makes `platform.mac_ver()` return empty strings, which makes pip's vendored truststore raise on
-  `int('')`. Every Python-backend preview failed and `doctor` said the toolchain was fine; its
-  remedy even recommends the broken path. A doctor that passes on a broken toolchain is worse than
-  none, because it sends you looking in the wrong place.
-  Make it check that the interpreter *works*, and finish the command set the founder reaches for:
-  `start` and `stop` beside `up` and `down`, and a usage screen that reads as a set rather than a
-  list.
+  `localrun/plan.py` hard-codes exactly three apps: `apps/web`, `apps/admin` and `services/api`.
+  Each was added by hand — R-542 for the console, R-545 for the mobile app — and every new surface
+  needs another copy of the same block. That ceiling is now in the way: `plan_ecosystem_from_prompt`
+  already plans four role-scoped surfaces for a food-delivery prompt (customer app, merchant
+  portal, courier dispatch, super-admin), and none of them could be previewed because the runner
+  only knows two names.
+  Generalise it: discover every `apps/*` that has a package.json, run them all, and report them
+  all. Keep `web` and `admin` special only where they genuinely are — the base path a proxy serves
+  them under, and which one a bare preview URL redirects to.
 founder_gate: >-
-  Founder asked on 2026-09-24 for the omnistack.sh commands to be "proper functional", naming
-  fresh, start, status and verify.
+  Prerequisite for the founder's "single app to complete eco-system" requirement, restated on
+  2026-09-24. R-554 assembles an ecosystem into one monorepo sharing one API and database;
+  this makes such a project previewable at all.
 allowed_paths:
-  - scripts/omnistack.sh
-  - scripts/test.sh
-  - COMMANDS.md
+  - services/agent-engine/src/omnistackai_agent_engine/localrun/
+  - services/agent-engine/src/omnistackai_agent_engine/studio/preview.py
   - services/agent-engine/tests/
+  - scripts/test.sh
   - .ai/
   - PROJECT_STATE.md
   - CHANGELOG.md
+  - apps/console-web/data/overview.json
 forbidden_changes:
-  - No change to what `fresh` destroys or to its confirmation prompt
-  - No new dependency; the script stays POSIX-ish bash using tools `doctor` already requires
-  - Existing command names keep working — `up` and `down` are not renamed, only joined
+  - A project with only apps/web must produce exactly the run plan it does today
+  - A project with apps/web + apps/admin must behave exactly as R-542 left it
+  - The mobile app keeps its own handling — Expo is not a proxied web app
+  - No new agent-engine runtime dependency
   - task verify stays offline with 0 model calls
 required_gates:
-  - doctor fails when the interpreter cannot create a virtualenv, naming the real cause
-  - doctor names a remedy that works on this machine, not one that is itself broken
-  - start and stop exist and behave as up and down
-  - every command in the usage screen is dispatched, and every dispatched command is documented
-  - COMMANDS.md matches the script
+  - Every apps/* directory with a package.json is installed, started on its own port and reported
+  - Discovery is deterministic, so two runs of the same project produce the same plan
+  - apps/web and apps/admin keep their existing ids, ports and base paths
+  - apps/mobile is still handled as Expo and never proxied
+  - A bare preview URL still redirects to the public web app
   - task verify passes offline with 0 model calls
 model_tool_trace:
   routing: deterministic_only
   local_calls: 0
   cloud_calls: 0
 blockers: []
+deferred:
+  - "R-554: assemble an ecosystem plan into one monorepo — N role-scoped apps over one API and one database"
+  - "R-555: use it from the build path so a prompt produces the whole ecosystem"
 evidence:
-  - "doctor fails with the real cause and a working remedy on the broken interpreter, and passes both checks on the fixed one"
-  - "live: `stop` then `start` brought the platform back - control-plane :8080, studio :4173, console :4321 all healthy"
-  - "live: `status` reports every component healthy; `verify` runs the full gate set and exits 0"
-  - "task verify passes offline with 0 model calls; scripts/test.sh, lint and security:quick green"
+  - "task verify: 4,167 tests OK, offline, 0 model calls; scripts/test.sh, lint, security:quick green"
+  - "a four-surface project starts web, admin, courier-dispatch and merchant-portal on four distinct ports with four distinct base paths"
+  - "the preview reports six entries: four web surfaces, the API and the Expo app"
+  - "a one-surface project and a web+admin project produce exactly the plans they did before"
+  - "8 new offline tests in tests/test_mobile_app_runs.py"
 found_and_fixed:
-  - "doctor reported a healthy toolchain while python3 -m venv was broken, because it only compared a version string"
-  - "the remedy doctor printed recommended the Homebrew path that is itself the broken one on this machine"
-  - "the R-498 contract test matched the literal 'up)', so merging up and start into one dispatch arm broke it; it now matches a name as a dispatch alternative"
-  - "that test had never covered start, stop, fresh, admin or open at all"
+  - "surfaces beyond web and admin were never waited for, so they would have been reported ready before they could answer"
+  - "allocate_preview_ports4 fixed the count at four; an ecosystem has as many surfaces as its plan produced"
 

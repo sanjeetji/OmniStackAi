@@ -77,6 +77,7 @@ def _plan_from_env(
     web_port: int | None = None,
     admin_port: int | None = None,
     mobile_port: int | None = None,
+    extra_app_ports: tuple[int, ...] = (),
     public_base: str = "",
     extra_env: Mapping[str, str] | None = None,
 ) -> RunPlan:
@@ -92,6 +93,7 @@ def _plan_from_env(
         web_port=web_port if web_port is not None else int(os.environ.get("OMNISTACKAI_APP_WEB_PORT", "3000")),
         admin_port=admin_port if admin_port is not None else int(os.environ.get("OMNISTACKAI_APP_ADMIN_PORT", "3100")),
         mobile_port=mobile_port if mobile_port is not None else int(os.environ.get("OMNISTACKAI_APP_MOBILE_PORT", "8081")),
+        extra_app_ports=extra_app_ports,
         public_base=public_base,
         jwt_secret=os.environ.get("OMNISTACKAI_APP_JWT_SECRET", "local-dev-secret"),
         extra_env=extra_env,
@@ -121,6 +123,26 @@ def allocate_preview_ports3(host: str = "127.0.0.1") -> tuple[int, int, int]:
     """Three distinct free loopback ports: API, web and the admin console (R-542)."""
     api, web, admin, _mobile = allocate_preview_ports4(host)
     return api, web, admin
+
+
+def allocate_free_ports(count: int, host: str = "127.0.0.1") -> tuple[int, ...]:
+    """`count` distinct free loopback ports (R-553).
+
+    All sockets are held open together while their assigned ports are read, so the set is distinct
+    and free at that moment. Generalised from the fixed four because an ecosystem has as many web
+    surfaces as its plan produced, not a number anyone can hard-code.
+    """
+    if count <= 0:
+        return ()
+    family = socket.AF_INET6 if ":" in host else socket.AF_INET
+    socks = [socket.socket(family, socket.SOCK_STREAM) for _ in range(count)]
+    try:
+        for sock in socks:
+            sock.bind((host, 0))
+        return tuple(sock.getsockname()[1] for sock in socks)
+    finally:
+        for sock in socks:
+            sock.close()
 
 
 def allocate_preview_ports4(host: str = "127.0.0.1") -> tuple[int, int, int, int]:
@@ -343,6 +365,16 @@ def start_app(
                 else f"Admin not ready yet at {admin_probe} (it may still be starting)"
             )
 
+        # R-553: a surface nobody waits for is reported ready before it can answer, and the first
+        # thing a user does is click it.
+        for app_id, url in getattr(active_plan, "web_surfaces", ()) or ():
+            if app_id in ("web", "admin"):
+                continue  # already probed above, with their base paths
+            emit(f"Waiting for {app_id} ...")
+            probe = f"{url}{active_plan.public_base.rstrip('/')}/{app_id}" if active_plan.multi_app else url
+            if not _wait_healthy(probe, timeout_seconds=health_timeout_seconds) and require_ready:
+                raise LocalAppRunError(f"{app_id} did not become ready at {probe}")
+
         if getattr(active_plan, "has_mobile", False):
             emit("Waiting for the Expo dev server ...")
             # R-545: deliberately NOT gated on `require_ready`. The mobile app is an extra surface;
@@ -386,13 +418,20 @@ def start_preview_app(
     root = Path(repo_dir).expanduser().resolve()
     if not root.is_dir():
         raise LocalAppRunError(f"not a directory: {root}")
-    api_port, web_port, admin_port, mobile_port = allocate_preview_ports4(host)
+    # R-553: an ecosystem has as many web surfaces as its plan produced, so count them before
+    # allocating rather than assuming two.
+    from .plan import discover_web_apps
+
+    extra_count = max(0, len(discover_web_apps(root)) - 2)  # web and admin already have ports
+    ports = allocate_free_ports(4 + extra_count, host)
+    api_port, web_port, admin_port, mobile_port = ports[:4]
     plan = _plan_from_env(
         str(root),
         api_port=api_port,
         web_port=web_port,
         admin_port=admin_port,
         mobile_port=mobile_port,
+        extra_app_ports=ports[4:],
         public_base=public_base,
         extra_env=extra_env,
     )
