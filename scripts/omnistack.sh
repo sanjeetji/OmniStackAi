@@ -168,9 +168,40 @@ cmd_doctor() {
     if [[ "${py%%.*}.$(printf '%s' "${py#*.}" | cut -d. -f1)" == "3.13" ]]; then
       ok "python3 is 3.13 ($py)"
     else
-      fail "python3 is $py, but the agent-engine requires 3.13.x — put Homebrew's python@3.13 first on PATH:"
-      log '        export PATH="/opt/homebrew/opt/python@3.13/libexec/bin:$PATH"'
+      fail "python3 is $py, but the agent-engine requires 3.13.x."
+      log "        A working 3.13 is easiest via uv: brew install uv && uv python install 3.13"
+      log '        then: ln -sf "$(uv python find 3.13)" ~/.local/bin/python3'
+      log '        and put ~/.local/bin first on PATH.'
       problems=$((problems + 1))
+    fi
+
+    # R-551: a version string says nothing about whether the interpreter WORKS. Homebrew's
+    # python@3.13 and @3.14 on this machine both ship a pyexpat that fails to dlopen, which breaks
+    # plistlib, which empties platform.mac_ver(), which makes pip's vendored truststore raise on
+    # int(''). Every Python-backend preview failed while doctor reported the toolchain was fine.
+    # These two checks are what actually has to hold, so they are what is checked.
+    if ! python3 -c 'import xml.parsers.expat' >/dev/null 2>&1; then
+      fail "python3 cannot import pyexpat, so plistlib and anything parsing XML will fail."
+      log "        This is a broken interpreter build, not your project. Symptom: platform.mac_ver()"
+      log "        returns empty strings, pip then raises on int(''), and 'python3 -m venv' fails, so"
+      log "        no Python-backend preview can start."
+      log "        Fix: brew install uv && uv python install 3.13"
+      log '              ln -sf "$(uv python find 3.13)" ~/.local/bin/python3'
+      log '              export PATH="$HOME/.local/bin:$PATH"'
+      problems=$((problems + 1))
+    else
+      local venv_probe; venv_probe="$(mktemp -d)"
+      if python3 -m venv "$venv_probe/v" >/dev/null 2>&1 && [[ -x "$venv_probe/v/bin/pip" ]]; then
+        ok "python3 can create a virtualenv with pip (generated backends will install)"
+      else
+        fail "python3 cannot create a working virtualenv, so every generated Python backend will fail to start."
+        log "        Reproduce with: python3 -m venv /tmp/probe"
+        log "        Fix: brew install uv && uv python install 3.13"
+        log '              ln -sf "$(uv python find 3.13)" ~/.local/bin/python3'
+        log '              export PATH="$HOME/.local/bin:$PATH"'
+        problems=$((problems + 1))
+      fi
+      rm -rf "$venv_probe"
     fi
   fi
   if have node; then
@@ -574,25 +605,37 @@ OmniStackAI - local platform runner
 
 Usage: $0 <command> [options]
 
-  up [--no-preview] [--no-console] [--dev]
+Running the platform
+
+  start | up [--no-preview] [--no-console] [--dev]
                     Start PostgreSQL, the control-plane, the agent-engine Studio and the console.
                     Preview mode is ON by default: generated apps are installed and run locally so
-                    the Studio's Preview tab works. --no-preview starts the build-only mode that
-                    never executes generated code.
-  down [--keep-db]  Stop the console and Studio, then the containers. The database volume is kept.
-  restart [...]     down --keep-db, then up (accepts the same options as up).
+                    previews, multi-app template projects and publishing all work. --no-preview
+                    starts the build-only mode that never executes generated code.
+  stop | down [--keep-db]
+                    Stop the console and Studio, then the containers. The database volume is kept.
+  restart [...]     stop --keep-db, then start (accepts the same options as start).
+  status            Every component, its port and its health.
+  open              Open the console in a browser.
+  logs <svc> [-f]   Tail a log: studio | console | control-plane | postgres.
+
+Data and accounts
   fresh [--yes] [--email E] [--name N] [--password P]
                     DESTROY every byte of local platform data (the database volume and every
                     generated project), start clean, and create the platform owner. Asks for
                     confirmation and for the owner's details unless they are given.
   admin <cmd> ...   Administer accounts: list-users, create-owner, set-role, set-plan,
                     grant-credits. Run '$0 admin help' for the details.
-  status            Show every component, its port and health.
-  logs <svc> [-f]   Tail a log: studio | console | control-plane | postgres.
+
+Development
+
+  doctor            Check tools, .env, dependencies, the local model and the ports. This also
+                    verifies that python3 can actually create a virtualenv — a version number
+                    alone does not mean the interpreter works, and a broken one silently breaks
+                    every generated Python backend.
+  verify            Run the repository's full gate set (contract tests, task verify, lint,
+                    security and the environment contract).
   build             Build the console for production (snapshot + next build).
-  doctor            Check tools, .env, dependencies, the local model and the ports.
-  verify            Run the repository's full gate set.
-  open              Open the console in a browser.
   help              This message.
 
 Files: PIDs and logs live in .run/ (gitignored).
@@ -600,8 +643,10 @@ USAGE
 }
 
 case "${1:-help}" in
-  up)       shift; cmd_up "$@" ;;
-  down)     shift; cmd_down "$@" ;;
+  # R-551: `start` and `stop` are what people reach for. They are the same commands, not aliases
+  # that drift: both names dispatch to one implementation.
+  up|start) shift; cmd_up "$@" ;;
+  down|stop) shift; cmd_down "$@" ;;
   restart)  shift; cmd_restart "$@" ;;
   status)   shift; cmd_status "$@" ;;
   fresh)    shift; cmd_fresh "$@" ;;

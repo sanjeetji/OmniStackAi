@@ -157,6 +157,48 @@ identical to one created by signing up.
 
 ---
 
+## 2b. Starting and stopping (R-551)
+
+`start` and `stop` are the names most people reach for; `up` and `down` are the same commands.
+Both names dispatch to one implementation, so they cannot drift apart.
+
+```bash
+./scripts/omnistack.sh start          # PostgreSQL, control-plane, Studio, console
+./scripts/omnistack.sh status         # every component, its port and its health
+./scripts/omnistack.sh stop           # stops everything; the database volume is kept
+./scripts/omnistack.sh restart        # stop --keep-db, then start
+```
+
+### `doctor` checks that the toolchain *works*
+
+A version number says nothing about whether an interpreter functions. On a machine where
+Homebrew's `python@3.13` shipped a broken `pyexpat`, `doctor` reported the toolchain was fine
+while `python3 -m venv` failed completely — so every generated Python backend refused to start and
+the error looked like a platform bug. `doctor` now checks the two things that actually have to
+hold:
+
+```bash
+./scripts/omnistack.sh doctor
+  ok    python3 is 3.13 (3.13.15)
+  ok    python3 can create a virtualenv with pip (generated backends will install)
+```
+
+If either fails it names the cause and a remedy that works:
+
+```bash
+brew install uv && uv python install 3.13
+ln -sf "$(uv python find 3.13)" ~/.local/bin/python3
+export PATH="$HOME/.local/bin:$PATH"
+```
+
+### `verify` runs the whole gate set
+
+```bash
+./scripts/omnistack.sh verify   # contract tests, task verify, lint, security, env contract
+```
+
+---
+
 ## 3. Accounts, roles and plans
 
 ### What exists today

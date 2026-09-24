@@ -4,6 +4,12 @@ Last updated: 2026-09-24
 ## Current Phase
 Stage 0 (Founder Build Sequence, Brief Section 91) — BASIC/MVP
 
+> **R-551 (2026-09-24): `doctor` checks that the toolchain works, and the command set is complete.**
+> `doctor` printed `ok python3 is 3.13` on this machine while `python3 -m venv` was completely broken — so every generated Python backend refused to start and it looked like a platform bug. Its remedy even recommended the broken path.
+> The cause ran five layers deep: Homebrew's `pyexpat` fails to `dlopen` → `plistlib` breaks → `platform.mac_ver()` empties → pip's `truststore` raises `int('')` → `ensurepip` and `venv` fail. `doctor` now imports pyexpat and actually creates a throwaway virtualenv, and names a remedy that works (`uv python install 3.13` + a `~/.local/bin/python3` symlink).
+> `start` and `stop` join `up` and `down`, sharing one case arm so they cannot drift. A contract test now checks every documented command dispatches and every dispatched one is documented — the old R-498 check matched the literal `up)` and had never covered `start`, `stop`, `fresh`, `admin` or `open`.
+> Evidence: doctor fails with the real cause on the broken interpreter and passes on the fixed one; `stop` then `start` brought the platform back healthy on all four ports; `status` clean; `verify` exits 0.
+
 > **R-550 (2026-09-24): before publishing, change anything; afterwards, one thing is refused — with the reason.**
 > Nothing stopped a `bundleId` change after publication, which is the only irreversible decision in the flow: Apple ties it to the App Store Connect record, Google Play uses it as the listing's primary key and never lets one be reused, so a different identifier is a *different app* — no reviews, no ratings, no update path.
 > `brand.json` now records `publishedBundleId` beside `published`, which is what makes a later change detectable. `brand/check.mjs` refuses a mismatch and explains it; the chat agent enforces the same rule **inside** the block that restores every file, so a refusal really does leave nothing saved.

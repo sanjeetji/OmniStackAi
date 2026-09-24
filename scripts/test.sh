@@ -1015,9 +1015,12 @@ if [[ ! -f "$repo_root/scripts/omnistack.sh" ]]; then
   exit 1
 fi
 
-for runtime_command in 'up)' 'down)' 'restart)' 'status)' 'logs)' 'doctor)' 'build)' 'verify)'; do
-  if ! rg -qF -- "  $runtime_command" "$repo_root/scripts/omnistack.sh"; then
-    printf 'R-498 scripts/omnistack.sh must implement the %s command.\n' "${runtime_command%)}"
+# R-551: matched as a dispatch alternative rather than a literal "name)", because `up` and `start`
+# (and `down` and `stop`) now share one case arm — the names are alternatives, not aliases that
+# could drift apart.
+for runtime_command in up down restart status logs doctor build verify start stop fresh admin open; do
+  if ! rg -q -- "^  [a-z|_-]*\\b${runtime_command}\\b[a-z|_-]*\\)" "$repo_root/scripts/omnistack.sh"; then
+    printf 'R-498 scripts/omnistack.sh must implement the %s command.\n' "$runtime_command"
     exit 1
   fi
 done
@@ -2682,6 +2685,33 @@ done
 if ! rg -qU 'violation = published_identity_violation\(repo, changes\)(.|\n)*?except BaseException:(.|\n)*?restore\(repo, original\)' \
   "$repo_root/services/agent-engine/src/omnistackai_agent_engine/studio/code_edit.py"; then
   printf 'R-550 the identifier refusal must be inside the try that restores the files.\n'
+  exit 1
+fi
+
+# R-551: a doctor that passes on a broken toolchain is worse than none — it sends you looking in
+# the wrong place. Homebrew's python@3.13 on this machine reported the right version while
+# `python3 -m venv` was completely broken, so every generated Python backend failed to start and
+# doctor said the tools were fine. It must check that the interpreter WORKS, not that it matches.
+if ! rg -qF 'import xml.parsers.expat' "$repo_root/scripts/omnistack.sh"; then
+  printf 'R-551 doctor must verify python3 can import pyexpat, not just report its version.\n'
+  exit 1
+fi
+if ! rg -qF 'python3 -m venv "$venv_probe/v"' "$repo_root/scripts/omnistack.sh"; then
+  printf 'R-551 doctor must verify python3 can create a working virtualenv.\n'
+  exit 1
+fi
+# The remedy it prints has to be one that works; the old one recommended the broken path.
+if ! rg -qF 'uv python install 3.13' "$repo_root/scripts/omnistack.sh"; then
+  printf 'R-551 doctor must name a remedy that produces a working interpreter.\n'
+  exit 1
+fi
+# Every documented command must dispatch, and every dispatched command must be documented.
+omnistack_doc_missing=0
+for name in start stop up down restart status open logs fresh admin doctor verify build; do
+  rg -q -- "^  [a-z |]*\\b${name}\\b" "$repo_root/scripts/omnistack.sh" || omnistack_doc_missing=1
+done
+if [[ "$omnistack_doc_missing" -ne 0 ]]; then
+  printf 'R-551 every omnistack.sh command must appear in its usage screen.\n'
   exit 1
 fi
 

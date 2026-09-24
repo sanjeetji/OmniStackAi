@@ -1,60 +1,57 @@
-task_id: R-550
+task_id: R-551
 status: completed
 phase: MVP
-tracker_row: 17
+tracker_row: 18
 started_at: "2026-09-24"
 completed_at: "2026-09-24"
-branch: ai/R-550-publish-rules
+branch: ai/R-551-platform-commands
 objective: >-
-  R-548 and R-549 made `brand.json` the one place branding lives and got a rebrand to every
-  surface. Two things are left before that is genuinely safe and genuinely usable. First, nothing
-  stops someone changing `identity.bundleId` after they have published — the one irreversible
-  decision in the whole flow, because Apple ties it to the App Store Connect record and Google Play
-  uses it as the listing's primary key and never lets anyone reuse one. Today the file merely warns
-  in a comment. Second, a user asking the chat agent to "make it green" has no reason to land on
-  `brand.json`: the file-selection heuristic ranks paths by word overlap, and nothing points at it.
-  Add a real rule with a real explanation, and teach the agent where branding lives.
+  `doctor` reports on the Python *version string* and nothing else. On this machine it printed
+  "ok python3 is 3.13 (3.13.15)" while `python3 -m venv` was completely broken — Homebrew's
+  python@3.13 and @3.14 both ship a pyexpat that fails to dlopen, which breaks plistlib, which
+  makes `platform.mac_ver()` return empty strings, which makes pip's vendored truststore raise on
+  `int('')`. Every Python-backend preview failed and `doctor` said the toolchain was fine; its
+  remedy even recommends the broken path. A doctor that passes on a broken toolchain is worse than
+  none, because it sends you looking in the wrong place.
+  Make it check that the interpreter *works*, and finish the command set the founder reaches for:
+  `start` and `stop` beside `up` and `down`, and a usage screen that reads as a set rather than a
+  list.
 founder_gate: >-
-  Founder asked on 2026-09-24 for changes before publishing to be easy by chat or by hand, and for
-  a change after publishing to come back with the reason rather than silently succeeding. Agreed
-  during planning: only the identifier is refused. Icon, colours and display name can all change in
-  an update, so those warn rather than block — refusing them would be wrong.
+  Founder asked on 2026-09-24 for the omnistack.sh commands to be "proper functional", naming
+  fresh, start, status and verify.
 allowed_paths:
-  - services/agent-engine/src/omnistackai_agent_engine/codegen/
-  - services/agent-engine/src/omnistackai_agent_engine/studio/code_edit.py
-  - services/agent-engine/tests/
+  - scripts/omnistack.sh
   - scripts/test.sh
+  - COMMANDS.md
+  - services/agent-engine/tests/
   - .ai/
   - PROJECT_STATE.md
   - CHANGELOG.md
-  - apps/console-web/data/overview.json
 forbidden_changes:
-  - Icon, colour, font and display-name changes must NOT be blocked after publishing — they are legal
-  - No credential value anywhere
-  - The app must still bundle and icons stay valid PNGs
+  - No change to what `fresh` destroys or to its confirmation prompt
+  - No new dependency; the script stays POSIX-ish bash using tools `doctor` already requires
+  - Existing command names keep working — `up` and `down` are not renamed, only joined
   - task verify stays offline with 0 model calls
 required_gates:
-  - brand.json records the identifier that was published, so a later change is detectable
-  - A check refuses a bundleId that no longer matches the published one, and says why
-  - The same check passes cleanly for an unpublished project, whatever the identifier is
-  - Changing colour, font or display name after publishing is allowed, with a warning naming the new build and version bump
-  - The chat agent selects brand.json for a branding request
-  - The chat agent refuses to edit the identifier of a published project
+  - doctor fails when the interpreter cannot create a virtualenv, naming the real cause
+  - doctor names a remedy that works on this machine, not one that is itself broken
+  - start and stop exist and behave as up and down
+  - every command in the usage screen is dispatched, and every dispatched command is documented
+  - COMMANDS.md matches the script
   - task verify passes offline with 0 model calls
 model_tool_trace:
   routing: deterministic_only
   local_calls: 0
   cloud_calls: 0
 blockers: []
-deferred:
-  - "R-551: omnistack.sh command set — start/stop, and a doctor that verifies the interpreter actually works rather than only matching a version string"
 evidence:
-  - "task verify: 4,159 tests OK, offline, 0 model calls; scripts/test.sh, lint, security:quick green"
-  - "live: unpublished project passes; published with an unchanged identifier passes with the update-cost warning; published then edited exits 1 with the full explanation"
-  - "the agent guard refuses the published-identifier change, allows a recolour and rename of a published app, and allows an identifier change on an unpublished one"
-  - "'make it green', 'change the logo' and 'rename the app' all select brand.json; 'add a waitlist to the booking screen' does not"
-  - "9 new offline tests, 27 in tests/test_brand_source_of_truth.py"
+  - "doctor fails with the real cause and a working remedy on the broken interpreter, and passes both checks on the fixed one"
+  - "live: `stop` then `start` brought the platform back - control-plane :8080, studio :4173, console :4321 all healthy"
+  - "live: `status` reports every component healthy; `verify` runs the full gate set and exits 0"
+  - "task verify passes offline with 0 model calls; scripts/test.sh, lint and security:quick green"
 found_and_fixed:
-  - "the refusal was first placed after the try/except that restores files, so it would have raised with the change still written to disk — the opposite of what 'nothing was saved' promises"
-  - "embedding the check script through a Python heredoc collapsed its escape sequences and produced invalid JavaScript; it is now embedded verbatim from a file"
+  - "doctor reported a healthy toolchain while python3 -m venv was broken, because it only compared a version string"
+  - "the remedy doctor printed recommended the Homebrew path that is itself the broken one on this machine"
+  - "the R-498 contract test matched the literal 'up)', so merging up and start into one dispatch arm broke it; it now matches a name as a dispatch alternative"
+  - "that test had never covered start, stop, fresh, admin or open at all"
 
