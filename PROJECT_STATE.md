@@ -4,6 +4,12 @@ Last updated: 2026-09-24
 ## Current Phase
 Stage 0 (Founder Build Sequence, Brief Section 91) — BASIC/MVP
 
+> **R-542b (2026-09-24): the live journey, and the three defects it found.**
+> Running the real thing found what 4,029 offline tests had not. **The readiness probe hit the app's origin, and an app under a base path answers 404 at `/`** — so the preview started both apps and then declared them dead. The admin console was never waited for and was reported `ready: true` regardless; and `_should_skip` did not know about the console, so it reinstalled its dependencies on every preview start.
+> Verified after the fix: `status: ready`, `kind: multi`, both apps ready; `/preview/<id>/web` 200 with the landing page, `/preview/<id>/admin` 200 with the dashboard, assets resolving per app, root redirecting to `/web`.
+> **Environment blocker (not ours, not fixed):** Homebrew's python@3.13/3.14 here have a broken `pyexpat`, which breaks `plistlib`, so `platform.mac_ver()` is empty, so pip's `truststore` raises `int('')` — **`python3 -m venv` fails and no Python-backend preview can run on this machine**. The live check therefore ran with the backend parked, and the API-through-proxy path is still unverified. `uv` installed as groundwork.
+> **Next:** R-543 the archetype family; then the venv/pip fix; then R-544 local-model fallback.
+
 > **R-542 (2026-09-24): the admin console is reachable in the Studio.**
 > R-541 assembled `apps/admin` and started it, but the preview reported a single app, so the console ran and shipped in the user's repo while being invisible in the product. A project with a console now reports as a multi-app preview, and the console's existing `MultiAppPreview` switcher and proxy serve it — **no `apps/console-web` change was needed**.
 > The proxy forwards the full pathname upstream, so each app has to be served under its own base path. The generated `next.config.mjs` ignored `BASE_PATH`, which would have left a proxied app rendering at the wrong base with no assets; it now honours it as the template configs do. `build_run_plan` gained `public_base` and gives each UI its own base path, pointing the API base at the proxied `/preview/<id>/api` — relative, so calls survive from another device on the LAN.

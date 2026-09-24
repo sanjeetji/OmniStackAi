@@ -1065,8 +1065,13 @@ class StudioPreviewManager:
             preview_apps = getattr(session.plan, "preview_apps", lambda: ())()
             if preview_apps:
                 ws_sess.kind = "multi"
+                ready_by_kind = {
+                    "web": session.web_ready,
+                    "admin": getattr(session, "admin_ready", False),
+                    "api": session.api_ready,
+                }
                 ws_sess.apps = [
-                    {**app, "ready": True if app["kind"] != "api" else session.api_ready}
+                    {**app, "ready": bool(ready_by_kind.get(app["kind"], False))}
                     for app in preview_apps
                 ]
                 ws_sess.message = "The generated web app and admin console are running locally."

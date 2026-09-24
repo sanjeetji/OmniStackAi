@@ -73,6 +73,11 @@ class RunPlan:
     # base path. False keeps the single-app preview exactly as it was.
     multi_app: bool = False
     public_base: str = ""
+    # R-542: with a base path the app no longer answers at "/" — a readiness probe against the
+    # origin gets a 404 and the preview is declared dead. These are where each app actually
+    # serves its home page, which is what readiness must check.
+    web_health_url: str = ""
+    admin_health_url: str = ""
     steps: tuple[RunStep, ...] = field(default_factory=tuple)
 
     def to_dict(self) -> dict:
@@ -342,5 +347,7 @@ def build_run_plan(
         admin_url=admin_url,
         multi_app=multi_app,
         public_base=base,
+        web_health_url=f"{web_url}{web_base_path}",
+        admin_health_url=f"{admin_url}{admin_base_path}" if has_admin else "",
         steps=tuple(steps),
     )

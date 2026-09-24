@@ -56,7 +56,24 @@ deferred:
 found_and_fixed:
   - "the generated next.config.mjs had no basePath at all, so an app served under the console's proxy would have rendered at the wrong base and never loaded its assets"
   - "the preview reported a single app even when the run plan had started two, leaving the admin console invisible in the Studio"
+live_verification:
+  - "ran the real journey: prompt -> build -> preview -> both apps through the console proxy"
+  - "the build produced apps/web (landing page) and apps/admin (use client dashboard) from one prompt"
+  - "preview reports status ready, kind multi, web and admin both ready on their own ports"
+  - "GET /preview/<id>/web -> 200, 45,474 bytes, <h1>OmniNews</h1> + 'What you can do here'"
+  - "GET /preview/<id>/admin -> 200, 52,275 bytes, 'System Operational' + 'Entities' + 'Screens'"
+  - "assets resolve per app: /preview/<id>/web/_next/... and /preview/<id>/admin/_next/..."
+  - "GET /preview/<id> -> 307 to /preview/<id>/web"
+found_by_the_live_check:
+  - "the readiness probe hit the origin, but an app under a base path answers 404 at '/', so the preview started both apps and then declared them dead. Every offline test passed while this was broken."
+  - "the admin console was never waited for and was reported ready=True unconditionally"
+  - "_should_skip only knew 'install web dependencies', so the console reinstalled its dependencies on every preview start"
 not_done:
-  - "the live journey (prompt, build, open the preview, switch to the console in a browser) has not been run; the evidence is builds and offline tests"
+  - "the API through the proxy is unverified: this machine cannot create a Python venv at all (see environment_blocker), so the live check ran with the backend parked"
+environment_blocker:
+  - "Homebrew python@3.13 and python@3.14 both have a broken pyexpat: dlopen fails on _XML_SetAllocTrackerActivationThreshold against /usr/lib/libexpat.1.dylib"
+  - "that breaks plistlib, so platform.mac_ver() returns ('', ('', '', ''), '')"
+  - "pip 26.2's vendored truststore then does int('') and raises, so ensurepip and every `python3 -m venv` fail"
+  - "consequence: no Python-backend preview can run on this machine. Pre-existing, unrelated to R-541/R-542, and needs its own task"
 considered_and_rejected:
   - "emitting omnistack.json and reusing the template multi-app runner: its validator requires a package.json for every listed app, which a Python or Go backend does not have"

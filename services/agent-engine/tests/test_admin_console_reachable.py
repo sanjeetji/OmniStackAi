@@ -129,3 +129,53 @@ class PortAllocation(TestCase):
     def test_the_two_port_allocator_still_works_for_existing_callers(self) -> None:
         api, web = allocate_preview_ports()
         self.assertNotEqual(api, web)
+
+
+class DependencyInstallsAreNotRepeated(TestCase):
+    def test_an_already_installed_admin_console_skips_its_install_step(self) -> None:
+        """R-542: `_should_skip` only knew about "install web dependencies", so the console
+        reinstalled its dependencies on every preview start."""
+        from omnistackai_agent_engine.localrun.run import _should_skip
+
+        root = Path(_repo_with("web", "admin"))
+        plan = build_run_plan(str(root), public_base=PUBLIC_BASE)
+        install = [s for s in plan.steps if s.label.startswith("install admin dependencies")]
+        self.assertEqual(len(install), 1)
+
+        # Nothing installed yet: the step must run.
+        self.assertFalse(_should_skip(install[0]))
+
+        # Once next is present in the console's own node_modules, it must be skipped.
+        binv = root / "apps" / "admin" / "node_modules" / ".bin"
+        binv.mkdir(parents=True)
+        (binv / "next").write_text("#!/bin/sh\n", encoding="utf-8")
+        self.assertTrue(_should_skip(install[0]))
+
+
+class ReadinessFollowsTheBasePath(TestCase):
+    """R-542 live-check finding: the preview started both apps and then declared them dead.
+
+    `_wait_healthy` requires HTTP 200, and an app mounted under a base path answers 404 at "/".
+    Probing the origin therefore failed a perfectly healthy app. Found only by running the real
+    journey — every offline test passed while this was broken.
+    """
+
+    def test_multi_app_probes_each_app_at_its_base_path(self) -> None:
+        plan = build_run_plan(_repo_with("web", "admin"), public_base=PUBLIC_BASE)
+        self.assertEqual(plan.web_health_url, f"{plan.web_url}{PUBLIC_BASE}/web")
+        self.assertEqual(plan.admin_health_url, f"{plan.admin_url}{PUBLIC_BASE}/admin")
+        # The proxy still targets the bare origin, so the two must not be confused.
+        self.assertNotEqual(plan.web_health_url, plan.web_url)
+
+    def test_a_single_app_project_probes_the_root(self) -> None:
+        plan = build_run_plan(_repo_with("web"), public_base=PUBLIC_BASE)
+        self.assertEqual(plan.web_health_url, plan.web_url)
+        self.assertEqual(plan.admin_health_url, "")
+
+    def test_the_admin_console_is_waited_for(self) -> None:
+        """It was reported ready=True unconditionally, which was simply untrue."""
+        from omnistackai_agent_engine.localrun.run import LocalAppSession
+
+        plan = build_run_plan(_repo_with("web", "admin"), public_base=PUBLIC_BASE)
+        session = LocalAppSession(plan)
+        self.assertFalse(session.admin_ready)

@@ -37,6 +37,7 @@ class LocalAppSession:
         self.processes = [] if processes is None else processes
         self.api_ready = False
         self.web_ready = False
+        self.admin_ready = False
         self._stopped = False
 
     def is_alive(self) -> bool:
@@ -135,7 +136,11 @@ def _should_skip(step: RunStep) -> bool:
     cwd = Path(step.cwd) if step.cwd else Path.cwd()
     if step.label.startswith("create backend virtualenv") and (cwd / ".venv").is_dir():
         return True
-    if step.label.startswith("install web dependencies") and (cwd / "node_modules" / ".bin" / "next").exists():
+    # R-542: the admin console installs into its own directory, so it needs the same check —
+    # without it every preview start reinstalls its dependencies from scratch.
+    if step.label.startswith(("install web dependencies", "install admin dependencies")) and (
+        cwd / "node_modules" / ".bin" / "next"
+    ).exists():
         return True
     return False
 
@@ -298,16 +303,30 @@ def start_app(
 
         if active_plan.has_web:
             emit("Waiting for the web app to be ready ...")
-            session.web_ready = _wait_healthy(
-                active_plan.web_url, timeout_seconds=health_timeout_seconds
-            )
+            # R-542: probe where the app actually serves. Under a base path "/" is a 404, so
+            # probing the origin would declare a perfectly healthy app dead.
+            web_probe = active_plan.web_health_url or active_plan.web_url
+            session.web_ready = _wait_healthy(web_probe, timeout_seconds=health_timeout_seconds)
             _ensure_background_processes_running(session)
             if not session.web_ready and require_ready:
-                raise LocalAppRunError(f"web app did not become ready at {active_plan.web_url}")
+                raise LocalAppRunError(f"web app did not become ready at {web_probe}")
             emit(
-                f"Web ready: {active_plan.web_url}"
+                f"Web ready: {web_probe}"
                 if session.web_ready
-                else f"Web not ready yet at {active_plan.web_url} (it may still be starting)"
+                else f"Web not ready yet at {web_probe} (it may still be starting)"
+            )
+
+        if getattr(active_plan, "has_admin", False):
+            emit("Waiting for the admin console to be ready ...")
+            admin_probe = active_plan.admin_health_url or active_plan.admin_url
+            session.admin_ready = _wait_healthy(admin_probe, timeout_seconds=health_timeout_seconds)
+            _ensure_background_processes_running(session)
+            if not session.admin_ready and require_ready:
+                raise LocalAppRunError(f"admin console did not become ready at {admin_probe}")
+            emit(
+                f"Admin ready: {admin_probe}"
+                if session.admin_ready
+                else f"Admin not ready yet at {admin_probe} (it may still be starting)"
             )
 
         if on_phase is not None:
