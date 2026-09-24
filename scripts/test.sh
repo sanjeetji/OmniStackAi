@@ -2550,4 +2550,30 @@ if rg -qF 'GeneratedFile("styles/tokens.css", _DESIGN_TOKENS_CSS)' \
   exit 1
 fi
 
+# R-545: the generated Expo app must actually run. The adapter had never been exercised: two
+# defects meant no generated mobile app had ever bundled, so it would have failed on a phone at
+# the first import. These checks are static so they hold the line offline, without a bundler.
+r545_tests="$repo_root/services/agent-engine/tests/test_mobile_app_runs.py"
+if [[ ! -f "$r545_tests" ]]; then
+  printf 'R-545 the mobile-app gate is required.\n'
+  exit 1
+fi
+for guard in test_every_relative_import_resolves_to_a_generated_file \
+  test_the_babel_runtime_helpers_are_declared \
+  test_the_api_base_is_the_lan_address_not_loopback \
+  test_expo_runs_in_lan_mode_so_a_phone_can_reach_it \
+  test_expo_is_started_non_interactively \
+  test_a_project_without_a_mobile_app_is_untouched; do
+  if ! rg -qF "$guard" "$r545_tests"; then
+    printf 'R-545 the mobile gate must still check: %s\n' "$guard"
+    exit 1
+  fi
+done
+# A phone is a different device: a loopback API base silently fails every request the app makes.
+if rg -qF '("EXPO_PUBLIC_API_URL", f"http://127.0.0.1' \
+  "$repo_root/services/agent-engine/src/omnistackai_agent_engine/localrun/plan.py"; then
+  printf 'R-545 the mobile API base must be the LAN address, not loopback.\n'
+  exit 1
+fi
+
 printf 'Repository contract tests passed.\n'

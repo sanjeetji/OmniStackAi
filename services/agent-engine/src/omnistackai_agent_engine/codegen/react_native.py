@@ -106,6 +106,12 @@ class ReactNativeAdapter:
                 "web": "expo start --web",
             },
             "dependencies": {
+                # R-545: babel-preset-expo transpiles through @babel/plugin-transform-runtime,
+                # whose output imports @babel/runtime helpers at runtime. Undeclared, pnpm's
+                # strict resolution cannot find them and the very first bundle fails with
+                # "Unable to resolve module @babel/runtime/helpers/interopRequireDefault" —
+                # the app never opened on a phone.
+                "@babel/runtime": "^7.25.0",
                 "@react-navigation/native": "^6.1.18",
                 "@react-navigation/native-stack": "^6.10.1",
                 "expo": "~51.0.0",
@@ -1083,14 +1089,18 @@ const styles = StyleSheet.create({
             )
             entity_nav_cards.append(card_str)
 
+        # R-545: this file is emitted at src/app/screens/OverviewScreen.tsx, so reaching
+        # src/design-system takes two levels (screens -> app -> src). It used one, and Metro
+        # failed to resolve every component on the app's own home screen — the first thing a
+        # phone would have tried to render. The navigator and App.tsx depths were already right.
         overview_template = """import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
-import { ScreenContainer } from '../design-system/components/ScreenContainer';
-import { Card } from '../design-system/components/Card';
-import { StatCard } from '../design-system/components/StatCard';
-import { Badge } from '../design-system/components/Badge';
-import { Button } from '../design-system/components/Button';
-import { tokens } from '../design-system/tokens';
+import { ScreenContainer } from '../../design-system/components/ScreenContainer';
+import { Card } from '../../design-system/components/Card';
+import { StatCard } from '../../design-system/components/StatCard';
+import { Badge } from '../../design-system/components/Badge';
+import { Button } from '../../design-system/components/Button';
+import { tokens } from '../../design-system/tokens';
 
 export const OverviewScreen = ({ navigation }: any) => {
   return (

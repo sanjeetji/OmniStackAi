@@ -10,6 +10,7 @@ offline (it only reads the repo layout and composes commands as data); the opt-i
 from __future__ import annotations
 
 import re
+import socket
 import urllib.parse
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -78,6 +79,10 @@ class RunPlan:
     # serves its home page, which is what readiness must check.
     web_health_url: str = ""
     admin_health_url: str = ""
+    # R-545: the generated Expo app. `expo_url` is what the QR encodes — Expo Go opens exp:// URLs.
+    has_mobile: bool = False
+    mobile_url: str = ""
+    expo_url: str = ""
     steps: tuple[RunStep, ...] = field(default_factory=tuple)
 
     def to_dict(self) -> dict:
@@ -89,10 +94,13 @@ class RunPlan:
             "backend_kind": self.backend_kind,
             "has_web": self.has_web,
             "has_admin": self.has_admin,
+            "has_mobile": self.has_mobile,
             "multi_app": self.multi_app,
             "api_url": self.api_url,
             "web_url": self.web_url,
             "admin_url": self.admin_url,
+            "mobile_url": self.mobile_url,
+            "expo_url": self.expo_url,
             "steps": [step.to_dict(mask=mask) for step in self.steps],
         }
 
@@ -103,7 +111,7 @@ class RunPlan:
         `web_url` preview it always has. Shape matches the console's `PreviewApp`, which template
         previews already populate — which is why the console needs no change to show these.
         """
-        if not self.multi_app:
+        if not self.multi_app and not self.has_mobile:
             return ()
         base = self.public_base.rstrip("/")
         apps: list[dict] = [
@@ -132,10 +140,43 @@ class RunPlan:
                     "path": f"{base}/api",
                 }
             )
+        if self.has_mobile:
+            # R-545: not proxied. Expo Go talks to the dev server directly over the LAN, so the
+            # console shows the exp:// URL as a QR rather than an iframe — a native app cannot be
+            # rendered in one. `scan` is what the phone reads.
+            apps.append(
+                {
+                    "id": "mobile",
+                    "name": "Mobile app (Expo)",
+                    "kind": "mobile",
+                    "url": self.mobile_url,
+                    "path": "",
+                    "scan": self.expo_url,
+                }
+            )
         for app in apps:
             parsed = urllib.parse.urlparse(app["url"])
             app["port"] = parsed.port or 0
         return tuple(apps)
+
+
+def lan_address(fallback: str = "127.0.0.1") -> str:
+    """This machine's LAN IPv4, for URLs a phone has to reach (R-545).
+
+    A phone scanning the Expo QR is a different device: `127.0.0.1` is the phone itself, so an app
+    pointed there silently fails every API call. Opening a UDP socket toward a routable address
+    makes the OS pick the outbound interface and reveals its address; no packet is actually sent,
+    and nothing here requires the network to be up — it falls back to loopback when it is not.
+    """
+    sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+    try:
+        sock.connect(("192.0.2.1", 9))  # TEST-NET-1: reserved, never routed, never answered.
+        address = sock.getsockname()[0]
+    except OSError:
+        return fallback
+    finally:
+        sock.close()
+    return address if isinstance(address, str) and address else fallback
 
 
 def _backend_kind(api_dir: Path) -> str:
@@ -159,6 +200,7 @@ def build_run_plan(
     api_port: int = 8000,
     web_port: int = 3000,
     admin_port: int = 3100,
+    mobile_port: int = 8081,
     public_base: str = "",
     jwt_secret: str = "local-dev-secret",
     extra_env: Mapping[str, str] | None = None,
@@ -173,10 +215,16 @@ def build_run_plan(
     backend_kind = _backend_kind(api_dir)
     has_web = (web_dir / "package.json").is_file()
     has_admin = (admin_dir / "package.json").is_file()
+    mobile_dir = root / "apps" / "mobile"
+    has_mobile = (mobile_dir / "package.json").is_file()
 
     api_url = f"http://{db_host}:{api_port}"
     web_url = f"http://127.0.0.1:{web_port}"
     admin_url = f"http://127.0.0.1:{admin_port}" if has_admin else ""
+    # R-545: Expo binds on the LAN so a phone can reach it; the QR encodes the exp:// form.
+    lan = lan_address() if has_mobile else "127.0.0.1"
+    mobile_url = f"http://{lan}:{mobile_port}" if has_mobile else ""
+    expo_url = f"exp://{lan}:{mobile_port}" if has_mobile else ""
 
     # R-542: with two Next apps in one project the console serves each under its own base path,
     # exactly as template previews do. Only then — a single-app project keeps serving at the root,
@@ -334,6 +382,32 @@ def build_run_plan(
             )
         )
 
+    # --- mobile (R-545): Expo in LAN mode, so Expo Go on a real phone can open it ---
+    if has_mobile:
+        steps.append(
+            RunStep(
+                label="install mobile dependencies (pnpm)",
+                program="pnpm",
+                args=("install", "--ignore-scripts", "--ignore-workspace"),
+                cwd=str(mobile_dir),
+            )
+        )
+        steps.append(
+            RunStep(
+                label=f"start mobile app (expo) on {mobile_url}",
+                program="./node_modules/.bin/expo",
+                args=("start", "--lan", "--port", str(mobile_port)),
+                cwd=str(mobile_dir),
+                env=(
+                    # The phone is a different device: a loopback API base fails every call.
+                    ("EXPO_PUBLIC_API_URL", f"http://{lan}:{api_port}"),
+                    ("CI", "1"),  # keeps Expo non-interactive; it otherwise waits on a keypress.
+                    ("BROWSER", "none"),
+                ) + extra_tuples,
+                background=True,
+            )
+        )
+
     return RunPlan(
         repo_dir=str(root),
         app_slug=app_slug,
@@ -347,6 +421,9 @@ def build_run_plan(
         admin_url=admin_url,
         multi_app=multi_app,
         public_base=base,
+        has_mobile=has_mobile,
+        mobile_url=mobile_url,
+        expo_url=expo_url,
         web_health_url=f"{web_url}{web_base_path}",
         admin_health_url=f"{admin_url}{admin_base_path}" if has_admin else "",
         steps=tuple(steps),

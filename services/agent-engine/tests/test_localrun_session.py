@@ -191,8 +191,8 @@ class TestPreviewPortAllocation(unittest.TestCase):
 
             with (
                 patch(
-                    "omnistackai_agent_engine.localrun.run.allocate_preview_ports3",
-                    return_value=(9101, 9102, 9103),
+                    "omnistackai_agent_engine.localrun.run.allocate_preview_ports4",
+                    return_value=(9101, 9102, 9103, 9104),
                 ),
                 patch("omnistackai_agent_engine.localrun.run.start_app", side_effect=fake_start_app),
             ):
@@ -203,9 +203,10 @@ class TestPreviewPortAllocation(unittest.TestCase):
             # Allocated ports were threaded into the run plan (and thus NEXT_PUBLIC_API_URL).
             self.assertEqual(plan.api_url, "http://127.0.0.1:9101")
             self.assertEqual(plan.web_url, "http://127.0.0.1:9102")
-            # R-542: a third port is reserved for the admin console. The repo here has no
-            # apps/admin, so the plan is still single-app and reports no admin url.
+            # R-542/R-545: third and fourth ports are reserved for the admin console and the
+            # Expo dev server. This repo has neither, so the plan stays single-app.
             self.assertFalse(plan.has_admin)
+            self.assertFalse(plan.has_mobile)
             self.assertFalse(plan.multi_app)
             self.assertEqual(plan.preview_apps(), ())
 

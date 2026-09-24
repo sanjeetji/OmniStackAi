@@ -1,23 +1,31 @@
-task_id: R-544
+task_id: R-545
 status: completed
 phase: MVP
-tracker_row: 11
+tracker_row: 12
 started_at: "2026-09-24"
 completed_at: "2026-09-24"
-branch: ai/R-544-brand-tokens
+branch: ai/R-545-mobile-app-runs
 objective: >-
-  A user can ask for a red shop or a rounded, serif brand and the generated app comes out the same
-  blue as every other one. The brand pipeline is disconnected in three separate places:
-  `nl_to_ir` never asks the model for a brand, so a prompt-built IR always carries the defaults;
-  `extract_brand_tokens` (R-514) exists but is called from nowhere in src or tests, so the
-  deterministic cues in the prompt are never read; and `styles/tokens.css` is emitted as a static
-  string that never consults `ir.brand`, so even a brand that *is* set is ignored. The only place a
-  requested colour surfaces today is a swatch inside `components/color-picker.tsx`.
-  Connect it end to end, deterministically, so the colour, font and corner style a user asks for
-  actually reach the app they get. Tailwind already maps `primary` to `var(--color-primary)`, so
-  the token CSS is the single seam that makes every component follow.
+  `codegen/react_native.py` emits a genuine Expo app — 27 files, a design system, navigation, an
+  API client, auth context and per-entity screens, with iOS and Android bundle identifiers already
+  set. The platform can do nothing with it: `APP_KINDS` is ("web", "admin", "pwa", "api") with no
+  mobile kind, and `localrun/plan.py` contains zero references to `apps/mobile`. A user who asks
+  for a mobile app gets working code the platform never installs, starts, previews or offers a QR
+  for. Make the generated mobile app run: install it, start Expo, and put its QR in front of the
+  user so they can open it in Expo Go on a real phone. The console already has a from-scratch QR
+  component and a phone frame; what is missing is a running app to point them at.
+  PWA stays the default for generated apps — this adds React Native alongside it, it does not
+  replace it.
+founder_gate: >-
+  AGENTS.md forbids starting native mobile work without approval. The founder asked for it
+  explicitly on 2026-09-24 ("we need to build feature for React Native also, and it should be
+  fully functional, so that user can publish the app in Google and App stores"). Recorded here as
+  the approval. No paid service is used or required by this task; store submission needs an Apple
+  Developer account, a Google Play account and an EAS account, and is a separate gated decision.
 allowed_paths:
-  - services/agent-engine/src/omnistackai_agent_engine/codegen/
+  - services/agent-engine/src/omnistackai_agent_engine/localrun/
+  - services/agent-engine/src/omnistackai_agent_engine/studio/preview.py
+  - services/agent-engine/src/omnistackai_agent_engine/codegen/react_native.py
   - services/agent-engine/tests/
   - scripts/test.sh
   - .ai/
@@ -25,19 +33,16 @@ allowed_paths:
   - CHANGELOG.md
   - apps/console-web/data/overview.json
 forbidden_changes:
-  - No new runtime dependency in the agent-engine (stdlib only; colour maths is pure Python)
-  - No new dependency in generated projects beyond the pinned Next.js stack
+  - No paid cloud service, no EAS build, no store submission in this task
+  - PWA remains the default; nothing about the existing pwa kind changes
+  - No new agent-engine runtime dependency (stdlib only)
+  - A project without apps/mobile behaves exactly as it does today
   - task verify stays offline with 0 model calls
-  - Dark mode must keep working — the dark theme's primary has to be derived, not left behind
-  - Deterministic output stays byte-stable for a given IR and prompt
-  - A project with no brand cue keeps exactly today's default palette, byte for byte
 required_gates:
-  - A prompt naming a colour produces a generated app whose tokens.css carries that colour
-  - Colour names work, not only hex; the extractor reads "a red shop" as well as "#ff0000"
-  - The derived hover, focus and subtle shades are valid hex and visibly distinct from the base
-  - The dark theme's primary is derived from the same brand, so dark mode is not left blue
-  - font_family and border_radius from the prompt reach the CSS too
-  - An IR with default brand emits byte-identical CSS to today's static string
+  - A project containing apps/mobile is installed and started by the run plan on its own port
+  - The preview reports the mobile app with its Expo URL and the QR payload a phone can scan
+  - The mobile app's API base is the machine's LAN address, not 127.0.0.1, or a phone cannot reach it
+  - A project without apps/mobile produces a byte-identical run plan to today
   - task verify passes offline with 0 model calls
 model_tool_trace:
   routing: deterministic_only
@@ -45,21 +50,17 @@ model_tool_trace:
   cloud_calls: 0
 blockers: []
 deferred:
-  - The generated Expo mobile app still cannot be run or previewed (APP_KINDS has no mobile kind, and plan.py has no apps/mobile) — needs its own task
-  - Layout variants within one archetype, so two storefronts also differ
-  - Wiring plan_ecosystem_from_prompt so one prompt can produce four apps
+  - "R-546: eas.json, real icon and splash assets, versionCode/buildNumber, permissions, the iOS privacy manifest, a user-owned bundle identifier and store metadata — everything needed to build for the stores, none of it needing an account"
+  - "R-547 (gated on the founder buying accounts): actually submitting to Google Play and the App Store"
 evidence:
-  - "task verify: 4,081 tests OK, offline, 0 model calls"
-  - "scripts/test.sh green with a new R-544 block; lint and security:quick pass"
-  - "'a red shop for my bakery' -> --color-primary: #dc2626"
-  - "'a green booking site with rounded corners' -> #16a34a and --radius-md: 0.5rem"
-  - "'a plain internal tool' -> the default palette, byte for byte unchanged"
-  - "no #2563eb or #3b82f6 survives anywhere in a rebranded stylesheet, including the dark blocks and the focus ring"
-  - "20 new offline tests in tests/test_brand_tokens.py"
+  - "task verify: 4,099 tests OK, offline, 0 model calls"
+  - "scripts/test.sh green with a new R-545 block; lint and security:quick pass"
+  - "live: the generated app installed, Expo started in LAN mode, iOS bundle HTTP 200 6,532,286 bytes"
+  - "live: Android bundle HTTP 200 6,551,905 bytes through the same server"
+  - "live: the manifest a phone fetches reports runtimeVersion exposdk:51.0.0 and a launchAsset URL on the LAN"
+  - "18 new offline tests in tests/test_mobile_app_runs.py"
 found_and_fixed:
-  - "extract_brand_tokens was called from nowhere in src or tests, so prompt brand cues were never read"
-  - "and it raised on every call: BrandTokens.font_family on a slotted dataclass returns the slot descriptor, not the default"
-  - "styles/tokens.css was emitted as a static string that never consulted ir.brand"
-  - "the extractor only matched hex codes, so 'a red shop' was read as 'no colour mentioned'"
-  - "the focus ring (--color-border-focus) kept the default blue on a rebranded app"
-  - "no foreground contrast rule existed, so a yellow brand would have had unreadable white button text"
+  - "@babel/runtime was undeclared, so the very first Metro bundle failed: babel-preset-expo emits imports of its helpers and pnpm's strict resolution cannot find them"
+  - "src/app/screens/OverviewScreen.tsx imported ../design-system/... but sits two levels deep, so Metro resolved none of the components on the app's home screen"
+  - "the Expo adapter had never been executed end to end, so neither defect had ever been seen"
+  - "Expo in CI mode skips the dev server rather than failing when its port is taken; the platform allocates a fresh port each time, so this only bites manual runs"

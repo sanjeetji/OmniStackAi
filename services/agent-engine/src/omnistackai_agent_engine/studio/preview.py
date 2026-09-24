@@ -1069,6 +1069,7 @@ class StudioPreviewManager:
                     "web": session.web_ready,
                     "admin": getattr(session, "admin_ready", False),
                     "api": session.api_ready,
+                    "mobile": getattr(session, "mobile_ready", False),
                 }
                 ws_sess.apps = [
                     {**app, "ready": bool(ready_by_kind.get(app["kind"], False))}

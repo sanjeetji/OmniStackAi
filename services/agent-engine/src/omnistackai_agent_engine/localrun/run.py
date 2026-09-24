@@ -38,6 +38,7 @@ class LocalAppSession:
         self.api_ready = False
         self.web_ready = False
         self.admin_ready = False
+        self.mobile_ready = False
         self._stopped = False
 
     def is_alive(self) -> bool:
@@ -75,6 +76,7 @@ def _plan_from_env(
     api_port: int | None = None,
     web_port: int | None = None,
     admin_port: int | None = None,
+    mobile_port: int | None = None,
     public_base: str = "",
     extra_env: Mapping[str, str] | None = None,
 ) -> RunPlan:
@@ -89,6 +91,7 @@ def _plan_from_env(
         api_port=api_port if api_port is not None else int(os.environ.get("OMNISTACKAI_APP_API_PORT", "8000")),
         web_port=web_port if web_port is not None else int(os.environ.get("OMNISTACKAI_APP_WEB_PORT", "3000")),
         admin_port=admin_port if admin_port is not None else int(os.environ.get("OMNISTACKAI_APP_ADMIN_PORT", "3100")),
+        mobile_port=mobile_port if mobile_port is not None else int(os.environ.get("OMNISTACKAI_APP_MOBILE_PORT", "8081")),
         public_base=public_base,
         jwt_secret=os.environ.get("OMNISTACKAI_APP_JWT_SECRET", "local-dev-secret"),
         extra_env=extra_env,
@@ -115,14 +118,20 @@ def allocate_preview_ports(host: str = "127.0.0.1") -> tuple[int, int]:
 
 
 def allocate_preview_ports3(host: str = "127.0.0.1") -> tuple[int, int, int]:
-    """Three distinct free loopback ports: API, web and the admin console (R-542).
+    """Three distinct free loopback ports: API, web and the admin console (R-542)."""
+    api, web, admin, _mobile = allocate_preview_ports4(host)
+    return api, web, admin
 
-    All sockets are held open together while their OS-assigned ports are read, so the three are
-    guaranteed distinct. The admin port is allocated whether or not the project has a console —
-    binding and releasing a socket is cheap, and it keeps allocation in one place.
+
+def allocate_preview_ports4(host: str = "127.0.0.1") -> tuple[int, int, int, int]:
+    """Four distinct free ports: API, web, admin console and the Expo dev server (R-545).
+
+    All sockets are held open together while their OS-assigned ports are read, so every port is
+    distinct and free. They are allocated whether or not the project has each app — binding and
+    releasing a socket is cheap, and it keeps allocation in one place.
     """
     family = socket.AF_INET6 if ":" in host else socket.AF_INET
-    socks = [socket.socket(family, socket.SOCK_STREAM) for _ in range(3)]
+    socks = [socket.socket(family, socket.SOCK_STREAM) for _ in range(4)]
     try:
         for sock in socks:
             sock.bind((host, 0))
@@ -140,6 +149,11 @@ def _should_skip(step: RunStep) -> bool:
     # without it every preview start reinstalls its dependencies from scratch.
     if step.label.startswith(("install web dependencies", "install admin dependencies")) and (
         cwd / "node_modules" / ".bin" / "next"
+    ).exists():
+        return True
+    # R-545: the Expo app installs into its own directory and has no `next` binary.
+    if step.label.startswith("install mobile dependencies") and (
+        cwd / "node_modules" / ".bin" / "expo"
     ).exists():
         return True
     return False
@@ -329,6 +343,20 @@ def start_app(
                 else f"Admin not ready yet at {admin_probe} (it may still be starting)"
             )
 
+        if getattr(active_plan, "has_mobile", False):
+            emit("Waiting for the Expo dev server ...")
+            # R-545: deliberately NOT gated on `require_ready`. The mobile app is an extra surface;
+            # a slow or failed Expo start must not tear down a working web and admin preview. It is
+            # reported as not ready instead, and the rest of the preview stands.
+            session.mobile_ready = _wait_healthy(
+                active_plan.mobile_url, timeout_seconds=min(health_timeout_seconds, 60.0)
+            )
+            emit(
+                f"Mobile ready: {active_plan.expo_url}"
+                if session.mobile_ready
+                else f"Mobile not ready yet at {active_plan.mobile_url} (Expo may still be starting)"
+            )
+
         if on_phase is not None:
             on_phase("ready")
     except BaseException:
@@ -358,12 +386,13 @@ def start_preview_app(
     root = Path(repo_dir).expanduser().resolve()
     if not root.is_dir():
         raise LocalAppRunError(f"not a directory: {root}")
-    api_port, web_port, admin_port = allocate_preview_ports3(host)
+    api_port, web_port, admin_port, mobile_port = allocate_preview_ports4(host)
     plan = _plan_from_env(
         str(root),
         api_port=api_port,
         web_port=web_port,
         admin_port=admin_port,
+        mobile_port=mobile_port,
         public_base=public_base,
         extra_env=extra_env,
     )

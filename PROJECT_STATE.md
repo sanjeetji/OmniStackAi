@@ -4,6 +4,12 @@ Last updated: 2026-09-24
 ## Current Phase
 Stage 0 (Founder Build Sequence, Brief Section 91) — BASIC/MVP
 
+> **R-545 (2026-09-24): the generated mobile app runs, and a phone can open it.**
+> The Expo adapter had been emitting a real app that the platform could do nothing with — no mobile kind in `APP_KINDS`, no `apps/mobile` anywhere in `plan.py`. It is now installed and started in LAN mode on its own port, and the preview reports the `exp://` URL for a QR. Not proxied: a native app is not an iframe, so the QR *is* the preview. `EXPO_PUBLIC_API_URL` points at the **LAN address** — on a phone, loopback is the phone itself.
+> **The adapter had never been run, and no generated mobile app had ever bundled.** `@babel/runtime` was undeclared (the first bundle failed outright), and `OverviewScreen.tsx` imported `../design-system/...` when it needed `../../` — Metro could not resolve one component on the home screen. Both now have static gates that catch the same defects offline.
+> Evidence: live, both platforms bundled through the running Expo server — iOS 6,532,286 bytes and Android 6,551,905 bytes, HTTP 200 each, manifest reporting `exposdk:51.0.0`. 18 new tests; `task verify` 4,099 OK offline, 0 model calls.
+> **Next:** R-546 — `eas.json`, icon and splash assets, versionCode/buildNumber, permissions, the iOS privacy manifest, a user-owned bundle identifier and store metadata. No account needed to generate any of it. R-547, actually submitting, needs Apple ($99/yr), Google Play ($25) and an EAS account.
+
 > **R-544 (2026-09-24): the brand a user asks for now reaches the app they get.**
 > Asking for a red shop produced the same blue app as everything else, because the pipeline was broken in three places at once: `nl_to_ir` never asks the model for a brand; `extract_brand_tokens` was **called from nowhere** and would have **raised** if it had been (a slotted dataclass has no class-level defaults); and `styles/tokens.css` was a **static string** that never read `ir.brand`. A requested colour surfaced only in a `color-picker` swatch.
 > New `codegen/brand.py` derives a full palette from one colour in plain Python — mixing toward black/white so shades keep the hue, deriving the dark theme from the same brand, carrying the focus ring, and picking button text by WCAG luminance so a yellow brand is still readable. The extractor now reads **colour names**, not only hex.
