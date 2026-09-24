@@ -4,6 +4,12 @@ Last updated: 2026-09-24
 ## Current Phase
 Stage 0 (Founder Build Sequence, Brief Section 91) — BASIC/MVP
 
+> **R-555b (2026-09-24): the console's own build path takes the ecosystem branch — proven end to end.**
+> R-555 wired `build_app_from_prompt`; **the console streams and calls `build_app_from_prompt_stream`**, which was not. Every offline test passed against the function that had been wired rather than the one the product uses — the same shape as R-549's `_prefixed` defect, and the second time this session that only a live run caught it.
+> Both entry points now branch, a contract test requires it, and the streaming path says what it is doing (a deterministic plan has no model output to relay, so the console would otherwise go silent).
+> **Live through the console, 18 checks passed, 0 failed:** "a food delivery app with customers, drivers and restaurants" → one project with `apps/web`, `apps/admin`, `apps/driver`, `apps/merchant`, exactly one `services/api` and `brand.json`; preview `kind: multi`, all five surfaces ready; every surface HTTP 200 through the proxy with a real page; the shared API answered; all four pages distinct.
+> The ecosystem branch uses **no model**, so it cannot fail on an invalid IR — which is how the single-app path failed on the first attempt. `task verify` 4,207 OK offline, 0 model calls.
+
 > **R-555 (2026-09-24): a prompt that names a second kind of user builds the whole ecosystem.**
 > The planner alone was not the signal — it plans three surfaces for "a simple blog" — so always building `complete` would hand someone four directories they never asked for.
 > **The rule: an ecosystem is built when the prompt names a second kind of person.** A customer or an admin does not count on its own, because a single app is already both. A courier, merchant or doctor does. Deterministic and offline: one sentence must not build different shapes on different runs.

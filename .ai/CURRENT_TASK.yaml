@@ -53,7 +53,15 @@ evidence:
 decision_recorded:
   - "an ecosystem is built when the prompt names a SECOND kind of person; a customer or an admin does not count on its own, because a single app is already both"
   - "the planner is not the signal: it plans three surfaces for 'a simple blog', so always building `complete` would hand someone four directories they never asked for"
+live_verification:
+  - "18 checks passed, 0 failed, end to end through the console with Gemini configured"
+  - "one project holding apps/web, apps/admin, apps/driver, apps/merchant and exactly one services/api, with brand.json"
+  - "preview kind: multi with all five surfaces ready"
+  - "every surface HTTP 200 through the console proxy: web 49,838 / admin 51,798 / driver 43,339 / merchant 51,748 bytes"
+  - "the shared API answered at /preview/<id>/api/openapi.json"
+  - "all four pages distinct, so the role scoping did not collapse"
 found_and_fixed:
+  - "the console streams its builds and calls build_app_from_prompt_stream, which R-555 never wired - every offline test passed against the twin that had been wired rather than the one the product uses"
   - "'an online store to sell my products' matched merchant on the word 'store', which names the product rather than a person; shop/store/business removed from that group"
   - "'a dashboard for admins' counted admin as a second party although a single app already ships an admin console"
   - "the reason text pluralised backwards ('each side get its own app')"

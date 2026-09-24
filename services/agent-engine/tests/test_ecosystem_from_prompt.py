@@ -134,3 +134,58 @@ class AnEcosystemMaterialisesAsOneRepo(TestCase):
         from pathlib import Path
 
         self.assertTrue((Path(self.result.target_dir) / "brand.json").is_file())
+
+
+class BothBuildPathsTakeTheSameBranch(TestCase):
+    """R-555: the console streams its builds, so it calls `build_app_from_prompt_stream`.
+
+    Wiring only the non-streaming twin left the product on the single-app branch while every
+    offline test passed — they called the function that had been wired, not the one the console
+    uses. A live run through the console exposed it in one attempt. These tests exist so the two
+    paths cannot drift apart again.
+    """
+
+    PROMPT = "a food delivery app with customers, drivers and restaurants"
+
+    def _stream(self, prompt: str):
+        import asyncio
+
+        from omnistackai_agent_engine.intake.build_app import build_app_from_prompt_stream
+
+        async def run():
+            items = []
+            async for item in build_app_from_prompt_stream(
+                prompt,
+                None,  # the ecosystem branch is deterministic and needs no provider
+                tempfile.mkdtemp() + "/eco",
+                model_id="unused",
+                author_name="Test",
+                author_email="test@example.test",
+            ):
+                items.append(item)
+            return items
+
+        return asyncio.run(run())
+
+    def test_the_streaming_path_builds_the_ecosystem_too(self) -> None:
+        result = self._stream(self.PROMPT)[-1]
+        self.assertEqual(result.ecosystem_apps, ("web", "merchant", "driver", "admin"))
+
+    def test_it_needs_no_model_at_all(self) -> None:
+        """The ecosystem is planned deterministically, so it cannot fail on an invalid IR — the
+        failure mode that stopped the single-app path in the live run."""
+        result = self._stream(self.PROMPT)[-1]
+        self.assertGreater(result.file_count, 100)
+
+    def test_it_says_what_it_is_doing(self) -> None:
+        """There is no model stream to relay, so without this the console goes silent for the
+        whole build."""
+        messages = [i for i in self._stream(self.PROMPT) if isinstance(i, str)]
+        self.assertTrue(any("4 apps over one API" in m for m in messages), messages)
+        self.assertTrue(any("alongside the people they serve" in m for m in messages), messages)
+
+    def test_a_single_app_prompt_still_reaches_the_model_path(self) -> None:
+        """It must not swallow prompts that should be compiled by a model: with no provider the
+        single-app branch is expected to fail rather than silently build something."""
+        with self.assertRaises(Exception):
+            self._stream("a simple blog")

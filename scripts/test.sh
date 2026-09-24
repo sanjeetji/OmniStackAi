@@ -2794,7 +2794,9 @@ if [[ ! -f "$r555_tests" ]]; then
   printf 'R-555 the ecosystem-from-prompt gate is required.\n'
   exit 1
 fi
-for guard in test_a_second_party_builds_an_ecosystem \
+for guard in test_the_streaming_path_builds_the_ecosystem_too \
+  test_a_single_app_prompt_still_reaches_the_model_path \
+  test_a_second_party_builds_an_ecosystem \
   test_one_kind_of_user_builds_one_app \
   test_an_admin_alone_is_not_a_second_party \
   test_a_word_naming_the_product_is_not_a_person \
@@ -2810,6 +2812,13 @@ done
 if rg -qF 'ModelProvider' \
   "$repo_root/services/agent-engine/src/omnistackai_agent_engine/intake/ecosystem_intent.py"; then
   printf 'R-555 the ecosystem decision must stay deterministic and offline.\n'
+  exit 1
+fi
+
+# The console streams its builds, so both entry points must branch. Wiring only one left the
+# product on the single-app path while every offline test passed.
+if [[ "$(rg -c 'detect_ecosystem_intent\(prompt\)' "$repo_root/services/agent-engine/src/omnistackai_agent_engine/intake/build_app.py" || echo 0)" -lt 2 ]]; then
+  printf 'R-555 both build_app_from_prompt and its streaming twin must take the ecosystem branch.\n'
   exit 1
 fi
 

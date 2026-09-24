@@ -282,6 +282,33 @@ async def build_app_from_prompt_stream(
     git commit — fast, not usefully streamable token-by-token) once the IR is complete, and yields
     the final `AppBuildResult`.
     """
+    # R-555: the same decision as the non-streaming twin, and the one the console actually takes.
+    # Wiring only `build_app_from_prompt` left this path on the single-app branch, which a live run
+    # through the console exposed immediately: the offline tests called the function I had wired,
+    # not the one the product uses.
+    intent = detect_ecosystem_intent(prompt)
+    if intent.build_ecosystem:
+        from .ecosystem import plan_ecosystem_from_prompt  # local: `ecosystem` imports this module
+
+        plan = plan_ecosystem_from_prompt(prompt, intent.option_id)
+        if len(plan.apps) > 1:
+            names = ", ".join(app.ir.name for app in plan.apps)
+            # The ecosystem is planned deterministically, so there is no model stream to relay.
+            # Say what is happening instead of going silent for the length of a build.
+            yield f"Planning {len(plan.apps)} apps over one API and one database: {names}.\n"
+            yield f"{intent.reason}.\n"
+            yield build_ecosystem_from_plan(
+                plan,
+                target_dir,
+                author_name=author_name,
+                author_email=author_email,
+                prompt=prompt,
+                overwrite=overwrite,
+                provider=provider,
+                reason=intent.reason,
+            )
+            return
+
     result: IntakeResult | None = None
     async for item in generate_ir_stream(
         prompt,
