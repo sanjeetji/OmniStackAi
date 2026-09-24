@@ -189,3 +189,57 @@ class BothBuildPathsTakeTheSameBranch(TestCase):
         single-app branch is expected to fail rather than silently build something."""
         with self.assertRaises(Exception):
             self._stream("a simple blog")
+
+
+class TheDecisionReachesTheConsole(TestCase):
+    """R-557: the result carried `ecosystem_apps` and `ecosystem_reason`, and
+    `app_build_result_to_dict` dropped both — so a user who received four apps saw four
+    directories and no reason for them."""
+
+    def _dict_for(self, prompt: str) -> dict:
+        import asyncio
+
+        from omnistackai_agent_engine.intake.build_app import (
+            app_build_result_to_dict,
+            build_app_from_prompt_stream,
+        )
+
+        async def run():
+            items = []
+            async for item in build_app_from_prompt_stream(
+                prompt, None, tempfile.mkdtemp() + "/eco",
+                model_id="unused", author_name="T", author_email="t@example.test",
+            ):
+                items.append(item)
+            return items[-1]
+
+        return app_build_result_to_dict(asyncio.run(run()))
+
+    def test_an_ecosystem_build_carries_its_apps_and_its_reason(self) -> None:
+        payload = self._dict_for("a food delivery app with customers, drivers and restaurants")
+        self.assertEqual(payload["ecosystem_apps"], ["web", "merchant", "driver", "admin"])
+        self.assertIn("alongside the people they serve", payload["ecosystem_reason"])
+
+    def test_the_reason_is_plain_text(self) -> None:
+        """The console renders it as text, never as HTML. Generated copy has no business being
+        able to inject markup, and asserting it here keeps that true at the source."""
+        payload = self._dict_for("a food delivery app with customers, drivers and restaurants")
+        for char in ("<", ">", "&lt;"):
+            self.assertNotIn(char, payload["ecosystem_reason"])
+
+    def test_a_single_app_build_carries_neither(self) -> None:
+        """Absence is what tells the console to render nothing: an empty panel reading "1 app"
+        would be noise on every ordinary build."""
+        from omnistackai_agent_engine.application_ir import example_ir
+        from omnistackai_agent_engine.intake.build_app import (
+            app_build_result_to_dict,
+            build_app_from_ir,
+        )
+
+        result = build_app_from_ir(
+            example_ir("minimal-blog"), tempfile.mkdtemp() + "/one",
+            author_name="T", author_email="t@example.test",
+        )
+        payload = app_build_result_to_dict(result)
+        self.assertNotIn("ecosystem_apps", payload)
+        self.assertNotIn("ecosystem_reason", payload)

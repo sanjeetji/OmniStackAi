@@ -845,6 +845,9 @@ export default function StudioChat({
         commitSha: finalResult.commit_sha,
         usage: finalResult.usage,
         files: finalResult.files ?? [],
+        // R-557: only set when several apps were built, so an ordinary build renders nothing.
+        ecosystemApps: finalResult.ecosystem_apps,
+        ecosystemReason: finalResult.ecosystem_reason,
       });
       setPreviewVersion((v) => v + 1);
     } catch (err: unknown) {
@@ -924,6 +927,10 @@ export default function StudioChat({
         fileCount: result.file_count ?? prev?.fileCount,
         commitSha: result.commit_sha ?? prev?.commitSha,
         usage: result.usage ?? prev?.usage,
+        // A chat edit never builds apps, so it carries the project's existing shape forward
+        // rather than reading fields an edit response has no reason to hold.
+        ecosystemApps: prev?.ecosystemApps,
+        ecosystemReason: prev?.ecosystemReason,
         files: files.length > 0 ? files : prev?.files ?? [],
       }));
       setPreviewVersion((v) => v + 1);
@@ -979,6 +986,10 @@ export default function StudioChat({
         fileCount: result.file_count ?? prev?.fileCount,
         commitSha: result.commit_sha ?? prev?.commitSha,
         usage: result.usage ?? prev?.usage,
+        // A chat edit never builds apps, so it carries the project's existing shape forward
+        // rather than reading fields an edit response has no reason to hold.
+        ecosystemApps: prev?.ecosystemApps,
+        ecosystemReason: prev?.ecosystemReason,
         files: files.length > 0 ? files : prev?.files ?? [],
       }));
       setPreviewVersion((v) => v + 1);

@@ -133,6 +133,17 @@ def app_build_result_to_dict(
         "context_truncated": result.context_truncated,
         "active_skills": list(result.active_skills),
         "truncated_skills": list(result.truncated_skills),
+        # R-557: carried so the console can say why a project has four apps in it. Absent for a
+        # single-app build, which is how the console knows to render nothing extra — an empty
+        # panel reading "1 app" would be noise on every ordinary build.
+        **(
+            {
+                "ecosystem_apps": list(result.ecosystem_apps),
+                "ecosystem_reason": result.ecosystem_reason,
+            }
+            if result.ecosystem_apps
+            else {}
+        ),
     }
     if ui_outcomes:
         payload["ui_outcomes"] = [outcome.to_dict() for outcome in ui_outcomes]

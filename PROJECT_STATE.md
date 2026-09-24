@@ -4,6 +4,13 @@ Last updated: 2026-09-24
 ## Current Phase
 Stage 0 (Founder Build Sequence, Brief Section 91) — BASIC/MVP
 
+> **R-557 (2026-09-24): the console says why a project has four apps in it.**
+> The build streamed a line that then scrolled away, and `app_build_result_to_dict` **dropped `ecosystem_apps` and `ecosystem_reason`** — so a user who received four apps saw four directories and no reason for them.
+> Both now travel with the result, and the Studio header renders how many apps, which ones, and the sentence explaining it — emitted **only** when several were built, so an ordinary build shows nothing.
+> Rendered as text, never HTML: a gate refuses `dangerouslySetInnerHTML` there, and another asserts the generated sentence carries no angle brackets at the source.
+> **TypeScript caught a modelling error:** two of the three snapshot sites are chat *edits*, reading a field a `BuildEditResponse` has no reason to hold. An edit never builds apps, so they now carry the existing shape forward.
+> Evidence, live: a real console build streamed the plan and its payload carried `["web","merchant","driver","admin"]` with the reason. `tsc --noEmit` clean; `task verify` 4,223 OK offline, 0 model calls.
+
 > **R-556 (2026-09-24): two products in one archetype no longer render the same page.**
 > R-543 stopped a shop and a blog looking alike; two shops still did — one structure, different nouns.
 > Four genuinely different arrangements — **centred**, **split**, **banner**, **editorial** — seeded from the product name, which gives the two properties in tension: different products differ, one product stays stable. Hashed, not `len(name) % n`, so adjacent names do not collapse. A gate refuses `random` in that module.

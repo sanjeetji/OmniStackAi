@@ -156,6 +156,10 @@ export interface BuildJobResponse {
   file_count?: number;
   commit_sha?: string;
   files?: string[];
+  /** R-557: present only when the prompt named a second kind of user and several apps were built.
+   * Absent for an ordinary single-app build, which is how the console knows to render nothing. */
+  ecosystem_apps?: string[];
+  ecosystem_reason?: string;
   usage?: BuildJobUsage;
   credits_spent: number;
   credit_balance: number;

@@ -1,5 +1,15 @@
 # Changelog
 
+2026-09-24  R-557  The console says why a project has four apps in it. A user describing a food delivery app with customers, drivers and restaurants received four apps over one API and no explanation: the build streamed a line while it ran, then that scrolled away, and `app_build_result_to_dict` **dropped `ecosystem_apps` and `ecosystem_reason` entirely**, so they never left the agent-engine. What remained on screen was four directories and no reason for them.
+
+Both fields now travel with the build result, and the Studio header renders a small panel under the entity badges: how many apps, which ones, and the sentence explaining the decision. They are emitted **only** when several apps were built — absence is what tells the console to render nothing, because an empty panel reading "1 app" would be noise on every ordinary build.
+
+The reason is rendered as text and never as HTML. It is generated copy, and there is no reason for it to be able to inject markup into the console; a contract test refuses `dangerouslySetInnerHTML` in that component, and another asserts the generated sentence carries no angle brackets at the source.
+
+TypeScript caught a real modelling error: two of the three snapshot sites are **chat edits**, not builds, and were reading `result.ecosystem_apps` from a `BuildEditResponse` that has no such field — it typed as `{}`. An edit never builds apps, so those sites now carry the project's existing shape forward rather than reading a field an edit response has no reason to hold.
+
+Evidence, live through the console: a real build streamed *"Planning 4 apps over one API and one database: Customer Ordering App, Merchant Portal, Courier Dispatch App, Super-Admin Dashboard"* and its final payload carried `ecosystem_apps: ["web", "merchant", "driver", "admin"]` with the reason. `tsc --noEmit` clean; 3 new offline tests. `task verify` 4,223 OK offline with 0 model calls; `scripts/test.sh` green with an R-557 block; lint and security:quick pass.
+
 2026-09-24  R-556  Two products in one archetype no longer render the same page. R-543 stopped a shop, a blog and a booking site looking alike; two shops still did. `_public_home_page` rendered one structure — centred hero, offering grid, browse row, footer — and only the words changed, so two people building storefronts got the same page with different nouns. That is the repetitiveness archetypes alone did not fix.
 
 `codegen/layout.py` adds four genuinely different arrangements: **centred** (hero over a card grid), **split** (hero beside a panel, offering as a numbered list), **banner** (a full-bleed brand band, offering as wide rows) and **editorial** (large type, no ornament, offering as a plain index). Not different padding values — different structures, so a visitor cannot tell two of them came from one generator.

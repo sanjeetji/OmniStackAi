@@ -1,57 +1,51 @@
-task_id: R-556
+task_id: R-557
 status: completed
 phase: MVP
-tracker_row: 22
+tracker_row: 23
 started_at: "2026-09-24"
 completed_at: "2026-09-24"
-branch: ai/R-556-layout-variants
+branch: ai/R-557-console-shows-ecosystem
 objective: >-
-  R-543 gave the generator an archetype family, so a shop, a blog and a booking site no longer look
-  alike. Two shops still do. `_public_home_page` renders one fixed structure — centred hero, then
-  an offering grid, then a browse row, then a footer — and only the words change. Two people
-  building storefronts get the same page with different nouns, which is the repetitiveness the
-  founder keeps naming.
-  Give the deterministic generator real layout variants: genuinely different structures, chosen by
-  a seed derived from the product itself, so two projects differ while one project stays stable.
+  A user who describes a food delivery app with customers, drivers and restaurants now receives
+  four apps over one API — and no explanation. The build streams a line while it runs, then that
+  scrolls away; the result carries `ecosystem_apps` and `ecosystem_reason`, and
+  `app_build_result_to_dict` drops both, so they never leave the agent-engine at all. What is left
+  on screen is four directories and no reason for them.
+  Carry the decision through to the console and show it: which apps were built, and why there is
+  more than one.
 founder_gate: >-
-  The founder's standing complaint since 2026-09-24: generated UIs should be "modern, cool,
-  non-repetitive". R-543 fixed across archetypes; this fixes within one.
+  Founder asked on 2026-09-24 to finish this. It is the last item from the ecosystem queue, and
+  the first console-web change of the session.
 allowed_paths:
-  - services/agent-engine/src/omnistackai_agent_engine/codegen/
+  - services/agent-engine/src/omnistackai_agent_engine/intake/build_app.py
   - services/agent-engine/tests/
+  - apps/console-web/
   - scripts/test.sh
   - .ai/
   - PROJECT_STATE.md
   - CHANGELOG.md
-  - apps/console-web/data/overview.json
 forbidden_changes:
-  - The admin console keeps its dashboard home and R-275's diff invariance
-  - Every variant must pass the engine's own JSX validator
-  - Deterministic — one project renders the same layout on every run
-  - No new dependency in generated projects
+  - A single-app build must look exactly as it does today, with no empty ecosystem panel
+  - No new console dependency
+  - The reason is generated text, not free-form model output, so it is rendered as text and never as HTML
   - task verify stays offline with 0 model calls
 required_gates:
-  - Two different products in one archetype render structurally different pages, not just different words
-  - One product renders the same layout on every run
-  - Every variant passes clean_and_validate_jsx, including against an IR with no entities or screens
-  - Every variant still carries the archetype's own language and call to action
-  - Every variant still renders the brand colour from brand.json
+  - app_build_result_to_dict carries the apps that were built and the reason
+  - A single-app build carries neither, so the console has nothing to render
+  - The console shows the app list and the reason after an ecosystem build
+  - The console shows nothing extra after a single-app build
   - task verify passes offline with 0 model calls
 model_tool_trace:
   routing: deterministic_only
   local_calls: 0
   cloud_calls: 0
 blockers: []
-deferred:
-  - The console showing the ecosystem reason rather than only streaming it
 evidence:
-  - "task verify: 4,207 tests OK, offline, 0 model calls; scripts/test.sh, lint, security:quick green"
-  - "four storefronts render four distinct pages across three different arrangements"
-  - "the same product renders identically twice"
-  - "every variant passes clean_and_validate_jsx, including against an IR with no entities or screens"
-  - "no variant is a client component, and every one still renders var(--color-primary)"
-  - "13 new offline tests in tests/test_layout_variants.py"
+  - "task verify: 4,223 tests OK, offline, 0 model calls; scripts/test.sh, lint, security:quick green"
+  - "tsc --noEmit clean across apps/console-web"
+  - "live: a real console build streamed 'Planning 4 apps over one API and one database' and its payload carried ecosystem_apps ['web','merchant','driver','admin'] with the reason"
+  - "3 new offline tests covering presence, absence for a single app, and that the reason is plain text"
 found_and_fixed:
-  - "R-543's test required every archetype to show an eyebrow, but the editorial variant drops it by design; requiring it would force every arrangement to look the same in the one place they should differ, so the test moved to the call to action and section heading"
-  - "a nested-quote f-string for the centring margins was a syntax error; precomputed instead"
+  - "app_build_result_to_dict dropped ecosystem_apps and ecosystem_reason, so they never left the agent-engine and the console could not have rendered them"
+  - "two of the three workspace snapshot sites are chat edits reading result.ecosystem_apps from a BuildEditResponse that has no such field; an edit never builds apps, so they carry the existing shape forward instead"
 

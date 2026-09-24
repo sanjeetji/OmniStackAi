@@ -39,6 +39,10 @@ export interface WorkspaceSnapshot {
   commitSha?: string;
   usage?: BuildJobUsage;
   files: string[];
+  /** R-557: the apps an ecosystem build produced, and why there is more than one. Empty for a
+   * single-app build — a user who received four directories should not have to guess. */
+  ecosystemApps?: string[];
+  ecosystemReason?: string;
 }
 
 const MAX_ENTITY_BADGES = 8;
@@ -174,6 +178,27 @@ export function StudioWorkspace({
               </li>
             ) : null}
           </ul>
+        ) : null}
+        {snapshot.ecosystemApps && snapshot.ecosystemApps.length > 1 ? (
+          <div className="mt-3 rounded-lg border border-border/60 bg-muted/40 p-3">
+            <p className="text-xs font-medium text-foreground">
+              {snapshot.ecosystemApps.length} apps, one API and one database
+            </p>
+            <ul aria-label="Apps in this project" className="mt-1.5 flex flex-wrap gap-1.5">
+              {snapshot.ecosystemApps.map((app) => (
+                <li key={app}>
+                  <Badge variant="secondary">{app}</Badge>
+                </li>
+              ))}
+            </ul>
+            {snapshot.ecosystemReason ? (
+              // Rendered as text, never as HTML: it is generated copy, and there is no reason for
+              // it to be able to inject markup into the console.
+              <p className="mt-2 text-pretty text-xs text-muted-foreground">
+                {snapshot.ecosystemReason}
+              </p>
+            ) : null}
+          </div>
         ) : null}
       </div>
 

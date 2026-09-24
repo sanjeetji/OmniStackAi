@@ -2849,4 +2849,20 @@ if rg -qE '\b(random|randint|choice|shuffle|uuid4|time\(\))' \
   exit 1
 fi
 
+# R-557: a user who received four apps saw four directories and no reason for them — the fields
+# existed on the result and app_build_result_to_dict dropped them.
+for guard in test_an_ecosystem_build_carries_its_apps_and_its_reason \
+  test_a_single_app_build_carries_neither \
+  test_the_reason_is_plain_text; do
+  if ! rg -qF "$guard" "$r555_tests"; then
+    printf 'R-557 the console-visibility gate must still check: %s\n' "$guard"
+    exit 1
+  fi
+done
+# Generated copy must never be able to inject markup into the console.
+if rg -qF 'dangerouslySetInnerHTML' "$repo_root/apps/console-web/app/studio/studio-workspace.tsx"; then
+  printf 'R-557 the ecosystem reason must be rendered as text, never as HTML.\n'
+  exit 1
+fi
+
 printf 'Repository contract tests passed.\n'
