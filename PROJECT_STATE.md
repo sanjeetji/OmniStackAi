@@ -4,6 +4,13 @@ Last updated: 2026-09-24
 ## Current Phase
 Stage 0 (Founder Build Sequence, Brief Section 91) — BASIC/MVP
 
+> **R-542 (2026-09-24): the admin console is reachable in the Studio.**
+> R-541 assembled `apps/admin` and started it, but the preview reported a single app, so the console ran and shipped in the user's repo while being invisible in the product. A project with a console now reports as a multi-app preview, and the console's existing `MultiAppPreview` switcher and proxy serve it — **no `apps/console-web` change was needed**.
+> The proxy forwards the full pathname upstream, so each app has to be served under its own base path. The generated `next.config.mjs` ignored `BASE_PATH`, which would have left a proxied app rendering at the wrong base with no assets; it now honours it as the template configs do. `build_run_plan` gained `public_base` and gives each UI its own base path, pointing the API base at the proxied `/preview/<id>/api` — relative, so calls survive from another device on the LAN.
+> A project without a console is untouched, as is any caller passing no `public_base` (`task app:run`).
+> Evidence: `next build` with `BASE_PATH` set, exit 0, `routes-manifest.json` records the basePath, no config warnings on the pinned Next 15.5.4; 12 new offline tests; `task verify` 4,041 OK offline, 0 model calls.
+> **Next:** R-543 — the wider archetype family (storefront, blog, booking, directory) in both the deterministic and model paths; then R-544, a guaranteed local-model fallback.
+
 > **R-541 (2026-09-24): one prompt now delivers every app it asked for, and each app looks like itself.**
 > `nl_to_ir` has always defaulted `admin_strategy` to `"nextjs"`, so **every prompt-built project was asking for an admin panel** — and the assembler recorded it as "not assembled yet" and dropped it, because `GenerationTarget.NEXTJS_ADMIN` was declared with no adapter behind it. It then forced `web_strategy` back on so the console could hide in `apps/web`, which also gave admin-only requests a public website nobody asked for.
 > `NextjsAdminAdapter` implements the declared target; `apps/web` and `apps/admin` are now assembled side by side with distinct package names, and an admin-only request stays admin-only.

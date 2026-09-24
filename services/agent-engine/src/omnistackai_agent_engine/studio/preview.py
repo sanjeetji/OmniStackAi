@@ -1005,6 +1005,9 @@ class StudioPreviewManager:
                     on_phase=_phase_cb,
                     extra_env=env,
                     log_callback=_app_log_cb,
+                    # R-542: a project with an admin console runs two UIs, and the console serves
+                    # each under its own base path. Everything else keeps the single-app preview.
+                    public_base=f"/preview/{urllib.parse.quote(ws_id, safe='')}",
                 )
             except TypeError:
                 try:
@@ -1056,7 +1059,19 @@ class StudioPreviewManager:
                 except Exception:
                     ws_sess.api_port = None
 
-            ws_sess.message = "The generated application is running locally."
+            # R-542: report the console as a second app so the Studio's existing multi-app
+            # switcher and proxy serve it. `preview_apps()` is empty for a single-app project,
+            # which therefore keeps reporting exactly the payload it always has.
+            preview_apps = getattr(session.plan, "preview_apps", lambda: ())()
+            if preview_apps:
+                ws_sess.kind = "multi"
+                ws_sess.apps = [
+                    {**app, "ready": True if app["kind"] != "api" else session.api_ready}
+                    for app in preview_apps
+                ]
+                ws_sess.message = "The generated web app and admin console are running locally."
+            else:
+                ws_sess.message = "The generated application is running locally."
             return ws_sess.to_dict()
 
     def _replace_workspace_locked(self, ws_id: str, ws_sess: WorkspacePreviewSession) -> None:

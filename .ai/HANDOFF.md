@@ -1,5 +1,39 @@
 # Current Handoff
 
+## Resume here (2026-09-24, after R-542)
+
+> **R-542 Completed (2026-09-24): the admin console is reachable in the Studio.**
+>
+> R-541 assembled `apps/admin` and started it; the preview still reported one app, so the console
+> ran and shipped in the user's repo while being invisible in the product. A project with a console
+> now reports as a multi-app preview, and the console's existing `MultiAppPreview` switcher and
+> `/preview/<project>/<app>` proxy serve it — **no `apps/console-web` change was needed**.
+>
+> The proxy forwards the full pathname upstream, so each app must be served under its own base
+> path. The generated `next.config.mjs` had no `basePath`; it now honours `BASE_PATH` as the
+> template configs do, with `allowedDevOrigins` so a proxied dev server still hydrates.
+> `build_run_plan` gained `public_base` and gives each UI its own base path, pointing the API base
+> at the proxied `/preview/<id>/api` — relative, so calls survive from a device on the LAN.
+> A project without a console, and any caller passing no `public_base` (`task app:run`), is
+> untouched.
+>
+> **Evidence.** `next build` with `BASE_PATH` set: exit 0, `routes-manifest.json` records the
+> basePath, no config warnings on the pinned Next 15.5.4. 12 new offline tests. `task verify`
+> 4,041 OK offline with 0 model calls; `scripts/test.sh` green; lint and security:quick pass.
+>
+> **Do this first.** The live journey has not been run: start the platform, prompt for a site with
+> an admin panel, open the preview and switch to the console in a real browser. Everything above
+> is builds and offline tests.
+>
+> **Then R-543** — the wider archetype family. There are still only two archetypes
+> (`public_website`, `admin_panel`), so a storefront and a blog get the same landing page shape,
+> and `nextjs.py` has no archetype awareness beyond the home page.
+>
+> **Then R-544** — make a local model the guaranteed fallback. `qwen2.5-coder:7b` is installed and
+> `model_gateway/ollama.py` exists. Note the honest limit: a 7B model fails `clean_and_validate_jsx`
+> more often than a frontier model, and each failure falls back to the byte-identical deterministic
+> template — which is exactly the repetition R-543 is meant to reduce.
+
 ## Resume here (2026-09-24, after R-541)
 
 > **R-541 Completed (2026-09-24): one prompt delivers every app it asked for, and each app looks

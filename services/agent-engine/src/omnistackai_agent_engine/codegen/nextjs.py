@@ -73898,14 +73898,25 @@ _LAYOUT = (
 _NEXT_CONFIG = (
     "/** @type {import('next').NextConfig} */\n"
     "const isProd = process.env.NODE_ENV === \"production\";\n"
+    "// R-542: when this project runs more than one app, the OmniStack preview serves each one\n"
+    "// under its own base path (/preview/<project>/<app>) behind the console's proxy. Unset\n"
+    "// outside a preview, so a plain `pnpm dev` still serves the app at the root.\n"
+    "const basePath = process.env.BASE_PATH || \"\";\n"
+    "const extraDevOrigins = (process.env.ALLOWED_DEV_ORIGINS ?? \"\")\n"
+    "  .split(\",\")\n"
+    "  .map((s) => s.trim())\n"
+    "  .filter(Boolean);\n"
     "const securityHeaders = [\n"
     '  { key: "X-Content-Type-Options", value: "nosniff" },\n'
     '  ...(isProd ? [{ key: "X-Frame-Options", value: "DENY" }] : []),\n'
     '  { key: "Referrer-Policy", value: "no-referrer" },\n'
     "];\n\n"
     "const nextConfig = {\n"
+    "  basePath,\n"
     "  reactStrictMode: true,\n"
     "  poweredByHeader: false,\n"
+    '  allowedDevOrigins: ["127.0.0.1", ...extraDevOrigins],\n'
+    "  env: { NEXT_PUBLIC_BASE_PATH: basePath },\n"
     "  async headers() {\n"
     '    return [{ source: "/:path*", headers: securityHeaders }];\n'
     "  },\n"

@@ -191,8 +191,8 @@ class TestPreviewPortAllocation(unittest.TestCase):
 
             with (
                 patch(
-                    "omnistackai_agent_engine.localrun.run.allocate_preview_ports",
-                    return_value=(9101, 9102),
+                    "omnistackai_agent_engine.localrun.run.allocate_preview_ports3",
+                    return_value=(9101, 9102, 9103),
                 ),
                 patch("omnistackai_agent_engine.localrun.run.start_app", side_effect=fake_start_app),
             ):
@@ -203,6 +203,11 @@ class TestPreviewPortAllocation(unittest.TestCase):
             # Allocated ports were threaded into the run plan (and thus NEXT_PUBLIC_API_URL).
             self.assertEqual(plan.api_url, "http://127.0.0.1:9101")
             self.assertEqual(plan.web_url, "http://127.0.0.1:9102")
+            # R-542: a third port is reserved for the admin console. The repo here has no
+            # apps/admin, so the plan is still single-app and reports no admin url.
+            self.assertFalse(plan.has_admin)
+            self.assertFalse(plan.multi_app)
+            self.assertEqual(plan.preview_apps(), ())
 
     def test_start_preview_app_rejects_missing_repo(self) -> None:
         missing = str(Path(tempfile.gettempdir()) / "omnistackai-r422-does-not-exist")

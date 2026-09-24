@@ -73,6 +73,8 @@ def _plan_from_env(
     *,
     api_port: int | None = None,
     web_port: int | None = None,
+    admin_port: int | None = None,
+    public_base: str = "",
     extra_env: Mapping[str, str] | None = None,
 ) -> RunPlan:
     return build_run_plan(
@@ -85,6 +87,8 @@ def _plan_from_env(
         maintenance_db=os.environ.get("OMNISTACKAI_POSTGRES_DB", "omnistackai"),
         api_port=api_port if api_port is not None else int(os.environ.get("OMNISTACKAI_APP_API_PORT", "8000")),
         web_port=web_port if web_port is not None else int(os.environ.get("OMNISTACKAI_APP_WEB_PORT", "3000")),
+        admin_port=admin_port if admin_port is not None else int(os.environ.get("OMNISTACKAI_APP_ADMIN_PORT", "3100")),
+        public_base=public_base,
         jwt_secret=os.environ.get("OMNISTACKAI_APP_JWT_SECRET", "local-dev-secret"),
         extra_env=extra_env,
     )
@@ -105,16 +109,26 @@ def allocate_preview_ports(host: str = "127.0.0.1") -> tuple[int, int]:
     ports are guaranteed distinct and free — a preview never collides with an existing local app
     (e.g. a `task app:run` on 3000/8000) or a prior preview.
     """
+    api_port, web_port, _admin_port = allocate_preview_ports3(host)
+    return api_port, web_port
+
+
+def allocate_preview_ports3(host: str = "127.0.0.1") -> tuple[int, int, int]:
+    """Three distinct free loopback ports: API, web and the admin console (R-542).
+
+    All sockets are held open together while their OS-assigned ports are read, so the three are
+    guaranteed distinct. The admin port is allocated whether or not the project has a console —
+    binding and releasing a socket is cheap, and it keeps allocation in one place.
+    """
     family = socket.AF_INET6 if ":" in host else socket.AF_INET
-    api_sock = socket.socket(family, socket.SOCK_STREAM)
-    web_sock = socket.socket(family, socket.SOCK_STREAM)
+    socks = [socket.socket(family, socket.SOCK_STREAM) for _ in range(3)]
     try:
-        api_sock.bind((host, 0))
-        web_sock.bind((host, 0))
-        return api_sock.getsockname()[1], web_sock.getsockname()[1]
+        for sock in socks:
+            sock.bind((host, 0))
+        return tuple(sock.getsockname()[1] for sock in socks)  # type: ignore[return-value]
     finally:
-        api_sock.close()
-        web_sock.close()
+        for sock in socks:
+            sock.close()
 
 
 def _should_skip(step: RunStep) -> bool:
@@ -313,6 +327,7 @@ def start_preview_app(
     on_phase: Callable[[str], None] | None = None,
     extra_env: Mapping[str, str] | None = None,
     log_callback: Callable[[str], None] | None = None,
+    public_base: str = "",
 ) -> LocalAppSession:
     """Start a managed preview on automatically allocated, collision-free API/web ports.
 
@@ -324,8 +339,15 @@ def start_preview_app(
     root = Path(repo_dir).expanduser().resolve()
     if not root.is_dir():
         raise LocalAppRunError(f"not a directory: {root}")
-    api_port, web_port = allocate_preview_ports(host)
-    plan = _plan_from_env(str(root), api_port=api_port, web_port=web_port, extra_env=extra_env)
+    api_port, web_port, admin_port = allocate_preview_ports3(host)
+    plan = _plan_from_env(
+        str(root),
+        api_port=api_port,
+        web_port=web_port,
+        admin_port=admin_port,
+        public_base=public_base,
+        extra_env=extra_env,
+    )
     return start_app(
         str(root),
         plan=plan,

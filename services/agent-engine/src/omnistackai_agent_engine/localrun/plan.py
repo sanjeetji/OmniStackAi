@@ -10,6 +10,7 @@ offline (it only reads the repo layout and composes commands as data); the opt-i
 from __future__ import annotations
 
 import re
+import urllib.parse
 from dataclasses import dataclass, field
 from pathlib import Path
 
@@ -68,6 +69,10 @@ class RunPlan:
     # app. Defaulted so every existing caller and recorded plan stays valid.
     has_admin: bool = False
     admin_url: str = ""
+    # R-542: set when the project runs more than one UI and the console serves each under its own
+    # base path. False keeps the single-app preview exactly as it was.
+    multi_app: bool = False
+    public_base: str = ""
     steps: tuple[RunStep, ...] = field(default_factory=tuple)
 
     def to_dict(self) -> dict:
@@ -79,11 +84,53 @@ class RunPlan:
             "backend_kind": self.backend_kind,
             "has_web": self.has_web,
             "has_admin": self.has_admin,
+            "multi_app": self.multi_app,
             "api_url": self.api_url,
             "web_url": self.web_url,
             "admin_url": self.admin_url,
             "steps": [step.to_dict(mask=mask) for step in self.steps],
         }
+
+    def preview_apps(self) -> tuple[dict, ...]:
+        """The app list a multi-app preview payload reports, in switcher order.
+
+        Empty unless this plan is multi-app, so a single-app project keeps reporting the plain
+        `web_url` preview it always has. Shape matches the console's `PreviewApp`, which template
+        previews already populate — which is why the console needs no change to show these.
+        """
+        if not self.multi_app:
+            return ()
+        base = self.public_base.rstrip("/")
+        apps: list[dict] = [
+            {
+                "id": "web",
+                "name": "Web app",
+                "kind": "web",
+                "url": self.web_url,
+                "path": f"{base}/web",
+            },
+            {
+                "id": "admin",
+                "name": "Admin console",
+                "kind": "admin",
+                "url": self.admin_url,
+                "path": f"{base}/admin",
+            },
+        ]
+        if self.backend_kind != "none":
+            apps.append(
+                {
+                    "id": "api",
+                    "name": "API",
+                    "kind": "api",
+                    "url": self.api_url,
+                    "path": f"{base}/api",
+                }
+            )
+        for app in apps:
+            parsed = urllib.parse.urlparse(app["url"])
+            app["port"] = parsed.port or 0
+        return tuple(apps)
 
 
 def _backend_kind(api_dir: Path) -> str:
@@ -107,6 +154,7 @@ def build_run_plan(
     api_port: int = 8000,
     web_port: int = 3000,
     admin_port: int = 3100,
+    public_base: str = "",
     jwt_secret: str = "local-dev-secret",
     extra_env: Mapping[str, str] | None = None,
 ) -> RunPlan:
@@ -124,6 +172,17 @@ def build_run_plan(
     api_url = f"http://{db_host}:{api_port}"
     web_url = f"http://127.0.0.1:{web_port}"
     admin_url = f"http://127.0.0.1:{admin_port}" if has_admin else ""
+
+    # R-542: with two Next apps in one project the console serves each under its own base path,
+    # exactly as template previews do. Only then — a single-app project keeps serving at the root,
+    # so nothing about today's behaviour changes for it.
+    multi_app = has_admin and bool(public_base)
+    base = public_base.rstrip("/")
+    web_base_path = f"{base}/web" if multi_app else ""
+    admin_base_path = f"{base}/admin" if multi_app else ""
+    # Relative on purpose: the browser loads the app from the console's origin, so a loopback
+    # address here would break every API call from another device on the LAN.
+    public_api_url = f"{base}/api" if multi_app else api_url
     database_url = f"postgresql://{db_user}:{db_password}@{db_host}:{db_port}/{database}"
 
     extra_tuples = tuple((k, str(v)) for k, v in sorted(extra_env.items())) if extra_env else ()
@@ -236,7 +295,11 @@ def build_run_plan(
                 program="./node_modules/.bin/next",
                 args=("dev", "-p", str(web_port)),
                 cwd=str(web_dir),
-                env=(("NEXT_PUBLIC_API_URL", api_url),) + extra_tuples,
+                env=(
+                    ("NEXT_PUBLIC_API_URL", public_api_url),
+                    ("BASE_PATH", web_base_path),
+                    ("NEXT_PUBLIC_BASE_PATH", web_base_path),
+                ) + extra_tuples,
                 background=True,
             )
         )
@@ -257,7 +320,11 @@ def build_run_plan(
                 program="./node_modules/.bin/next",
                 args=("dev", "-p", str(admin_port)),
                 cwd=str(admin_dir),
-                env=(("NEXT_PUBLIC_API_URL", api_url),) + extra_tuples,
+                env=(
+                    ("NEXT_PUBLIC_API_URL", public_api_url),
+                    ("BASE_PATH", admin_base_path),
+                    ("NEXT_PUBLIC_BASE_PATH", admin_base_path),
+                ) + extra_tuples,
                 background=True,
             )
         )
@@ -273,5 +340,7 @@ def build_run_plan(
         db_password=db_password,
         has_admin=has_admin,
         admin_url=admin_url,
+        multi_app=multi_app,
+        public_base=base,
         steps=tuple(steps),
     )

@@ -1,5 +1,41 @@
 # Work Log
 
+## 2026-09-24 — R-542 (the admin console, reachable)
+
+- **The gap R-541 left.** The console was assembled and started, but `preview.py` reported one
+  app, so the Studio showed only the public site. Present in the repo, invisible in the product —
+  the same class of half-finished work this repo has been repeatedly caught by.
+
+- **The seam.** The console already has `MultiAppPreview` and a `/preview/<project>/<app>` proxy
+  for template previews, and `PreviewApp.kind` already includes `"admin"`. So the whole job was to
+  make a prompt-built project *report* itself the way a template does. **No `apps/console-web`
+  change was needed.**
+
+- **What that required.** `proxyMultiApp` forwards the full pathname upstream for non-api apps, so
+  each app must actually be served under its own base path. The generated `next.config.mjs` had no
+  `basePath` at all — an app proxied under `/preview/<id>/admin` would have rendered at the wrong
+  base and never loaded its assets. It now reads `BASE_PATH` exactly as the template configs do,
+  and `allowedDevOrigins` so a dev server reached through the console's origin still hydrates.
+
+- **The API base.** Template previews point `NEXT_PUBLIC_API_URL` at the *public* proxied path
+  rather than a loopback URL, because the browser loads the app from the console's origin — a
+  `127.0.0.1` base breaks every call from a phone on the LAN. Multi-app prompt projects now do the
+  same. Single-app projects keep the absolute URL they have always had.
+
+- **Considered and rejected.** Emitting an `omnistack.json` and reusing the template runner: its
+  validator requires a `package.json` for every listed app, which a Python or Go backend does not
+  have. Extending the run planner was the smaller, safer seam and left `multiapp.py` untouched.
+
+- **Evidence.** `next build` with `BASE_PATH=/preview/proj-1/web` — exit 0, and
+  `.next/routes-manifest.json` records `basePath: "/preview/proj-1/web"`. No config warnings from
+  the pinned Next 15.5.4, so `allowedDevOrigins` is accepted there. 12 new offline tests, three of
+  which assert the *unchanged* single-app path. `task verify` 4,041 OK offline, 0 model calls;
+  `scripts/test.sh` green with a new R-542 block; lint and security:quick pass.
+
+- **Not verified live.** The end-to-end journey — prompt, build, open the preview, switch to the
+  admin console in a browser — has not been run; the evidence above is builds and offline tests.
+  Worth doing before this is called finished.
+
 ## 2026-09-24 — R-541 (the admin app that was always requested, and a home page per audience)
 
 - **The question that started it.** "If a user prompts *create a website to sell my product*, do

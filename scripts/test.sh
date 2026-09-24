@@ -2473,4 +2473,28 @@ if rg -qF 'strat["web_strategy"] = "nextjs"' \
   exit 1
 fi
 
+# R-542: the admin console R-541 assembles must be reachable in the Studio, not just present in
+# the repo. The console's proxy forwards the full pathname upstream, so each app has to be served
+# under its own base path — a generated next.config that ignores BASE_PATH renders at the wrong
+# base and never loads its assets.
+r542_tests="$repo_root/services/agent-engine/tests/test_admin_console_reachable.py"
+if [[ ! -f "$r542_tests" ]]; then
+  printf 'R-542 the reachable-admin-console gate is required.\n'
+  exit 1
+fi
+for guard in test_next_config_honours_base_path \
+  test_each_app_is_started_with_its_base_path \
+  test_the_api_base_is_relative_so_it_survives_the_proxy \
+  test_a_single_app_project_keeps_serving_at_the_root; do
+  if ! rg -qF "$guard" "$r542_tests"; then
+    printf 'R-542 the reachable-console gate must still check: %s\n' "$guard"
+    exit 1
+  fi
+done
+if ! rg -qF 'process.env.BASE_PATH' \
+  "$repo_root/services/agent-engine/src/omnistackai_agent_engine/codegen/nextjs.py"; then
+  printf 'R-542 the generated next.config must honour BASE_PATH.\n'
+  exit 1
+fi
+
 printf 'Repository contract tests passed.\n'
